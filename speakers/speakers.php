@@ -68,6 +68,10 @@ function render( $attributes ) {
 		$attributes['track'] = implode( ',', $attributes['track'] );
 	}
 
+	if ( is_array( $attributes['groups'] ) ) {
+		$attributes['groups'] = implode( ',', $attributes['groups'] );
+	}
+
 	return $wcpt_plugin->shortcode_speakers( $attributes, '' );
 }
 
@@ -81,23 +85,19 @@ function get_l10n_strings() {
 		'block_label'               => __( 'Speakers', 'wordcamporg' ),
 		'block_description'         => __( 'Add a list of speakers.' ),
 
-		'speaker_posts_panel_title' => __( 'Speaker Posts', 'wordcamporg' ),
+		'speaker_posts_panel_title' => __( 'Speaker Settings', 'wordcamporg' ),
 		'show_all_posts_label'      => __( 'Show all', 'wordcamporg' ),
 		'posts_per_page_label'      => __( 'Number to show', 'wordcamporg' ),
+		'track_label'               => __( 'From which session tracks?', 'wordcamporg' ),
+		'track_help'                => __( 'Multiple tracks can be chosen.', 'wordcamporg' ),
+		'groups_label'              => __( 'From which speaker groups?', 'wordcamporg' ),
+		'groups_help'               => __( 'Multiple groups can be chosen.', 'wordcamporg' ),
 		'sort_label'                => __( 'Sort by', 'wordcamporg' ),
-		'speaker_link_label'        => __( 'Link to single post', 'wordcamporg' ),
-		'speaker_link_help'         => __( 'This will not appear in the block preview.', 'wordcamporg' ),
-
-		'avatars_panel_title'       => __( 'Avatars', 'wordcamporg' ),
+		'speaker_link_label'        => __( 'Link titles to single posts', 'wordcamporg' ),
+		'speaker_link_help'         => __( 'These will not appear in the block preview.', 'wordcamporg' ),
 		'show_avatars_label'        => __( 'Show avatars', 'wordcamporg' ),
 		'avatar_size_label'         => __( 'Avatar size (px)', 'wordcamporg' ),
 		'avatar_size_help'          => __( 'Height and width in pixels.', 'wordcamporg' ),
-
-		'track_panel_title'         => __( 'Session Tracks', 'wordcamporg' ),
-		'track_label'               => __( 'Tracks', 'wordcamporg' ),
-		'track_help'                => __( 'Multiple tracks can be chosen.', 'wordcamporg' ),
-
-		'groups_label'              => __( 'Groups', 'wordcamporg' ),
 	);
 }
 
@@ -118,10 +118,28 @@ function get_attributes_schema() {
 			'maximum' => 100,
 			'default' => 10,
 		),
+		'track'          => array(
+			'type'  => 'array',
+			'items' => array(
+				'type' => 'string',
+				'enum' => wp_list_pluck( get_available_terms( 'wcb_track' ), 'value' ),
+			),
+		),
+		'groups'         => array(
+			'type'  => 'array',
+			'items' => array(
+				'type' => 'string',
+				'enum' => wp_list_pluck( get_available_terms( 'wcb_speaker_group' ), 'value' ),
+			),
+		),
 		'sort'           => array(
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_sort_options(), 'value' ),
 			'default' => 'title_asc',
+		),
+		'speaker_link'   => array(
+			'type'    => 'bool',
+			'default' => false,
 		),
 		'show_avatars'   => array(
 			'type'    => 'bool',
@@ -132,18 +150,6 @@ function get_attributes_schema() {
 			'minimum' => 64,
 			'maximum' => 512,
 			'default' => 100,
-		),
-		'speaker_link'   => array(
-			'type'    => 'bool',
-			'default' => false,
-		),
-		'track'          => array(
-			'type' => 'array',
-			'enum' => wp_list_pluck( get_available_terms( 'wcb_track' ), 'value' ),
-		),
-		'groups'         => array(
-			'type' => 'array',
-			'enum' => wp_list_pluck( get_available_terms( 'wcb_speaker_group' ), 'value' ),
 		),
 	);
 }

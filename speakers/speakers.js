@@ -19,10 +19,7 @@ registerBlockType( 'wordcamp/speakers', {
 	category: 'wordcamp',
 
 	edit: function( props ) {
-		var speakerControls = [],
-			avatarControls = [],
-			trackControls = [],
-			groupControls = [];
+		var speakerControls = [];
 
 		speakerControls.push(
 			el( PanelRow, {}, [
@@ -53,6 +50,32 @@ registerBlockType( 'wordcamp/speakers', {
 		speakerControls.push(
 			//el( PanelRow, {}, [
 				el( SelectControl, {
+					label: data.l10n['track_label'],
+					help: data.l10n['track_help'],
+					value: props.attributes['track'],
+					options: data.options['track'],
+					multiple: true,
+					onChange: ( value ) => { props.setAttributes( { 'track': value } ); },
+				} ),
+			//] )
+		);
+
+		speakerControls.push(
+			//el( PanelRow, {}, [
+				el( SelectControl, {
+					label: data.l10n['groups_label'],
+					help: data.l10n['groups_help'],
+					value: props.attributes['groups'],
+					options: data.options['groups'],
+					multiple: true,
+					onChange: ( value ) => { props.setAttributes( { 'groups': value } ); },
+				} ),
+			//] )
+		);
+
+		speakerControls.push(
+			//el( PanelRow, {}, [
+				el( SelectControl, {
 					label: data.l10n['sort_label'],
 					value: props.attributes['sort'],
 					options: data.options['sort'],
@@ -72,7 +95,7 @@ registerBlockType( 'wordcamp/speakers', {
 			] )
 		);
 
-		avatarControls.push(
+		speakerControls.push(
 			el( PanelRow, {}, [
 				el( CheckboxControl, {
 					label: data.l10n['show_avatars_label'],
@@ -83,7 +106,7 @@ registerBlockType( 'wordcamp/speakers', {
 		);
 
 		if ( props.attributes['show_avatars'] ) {
-			avatarControls.push(
+			speakerControls.push(
 				//el( PanelRow, {}, [
 					el( RangeControl, {
 						label: data.l10n['avatar_size_label'],
@@ -99,19 +122,6 @@ registerBlockType( 'wordcamp/speakers', {
 			);
 		}
 
-		trackControls.push(
-			//el( PanelRow, {}, [
-				el( SelectControl, {
-					label: data.l10n['track_label'],
-					help: data.l10n['track_help'],
-					value: props.attributes['track'],
-					options: data.options['track'],
-					multiple: true,
-					onChange: ( value ) => { props.setAttributes( { 'track': value } ); },
-				} ),
-			//] )
-		);
-
 		return [
 			el( ServerSideRender, {
 				block: 'wordcamp/speakers',
@@ -123,18 +133,6 @@ registerBlockType( 'wordcamp/speakers', {
 						title: data.l10n['speaker_posts_panel_title'],
 					},
 					speakerControls
-				),
-				el( PanelBody,
-					{
-						title: data.l10n['avatars_panel_title'],
-					},
-					avatarControls
-				),
-				el( PanelBody,
-					{
-						title: data.l10n['track_panel_title'],
-					},
-					trackControls
 				),
 			] ),
 		];

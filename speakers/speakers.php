@@ -192,17 +192,21 @@ function get_sort_options() {
  * @return array
  */
 function get_available_terms( $taxonomy_id ) {
-	$terms = get_terms( array(
-		'taxonomy'   => $taxonomy_id,
-		'hide_empty' => false,
-	) );
-
 	$all_items = array(
 		array(
 			'label' => __( 'All', 'wordcamporg' ),
 			'value' => '',
 		),
 	);
+
+	$terms = get_terms( array(
+		'taxonomy'   => $taxonomy_id,
+		'hide_empty' => false,
+	) );
+
+	if ( ! is_array( $terms ) ) {
+		return $all_items;
+	}
 
 	return array_reduce( $terms, function( $carry, $item ) {
 		$carry[] = array(

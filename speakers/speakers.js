@@ -33,6 +33,7 @@ registerBlockType( 'wordcamp/speakers', {
 
 		if ( ! props.attributes['show_all_posts'] ) {
 			speakerControls.push(
+				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 				//el( PanelRow, {}, [
 					el( RangeControl, {
 						label: data.l10n['posts_per_page_label'],

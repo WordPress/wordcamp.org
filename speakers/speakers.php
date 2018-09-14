@@ -37,6 +37,9 @@ function init() {
 		'attributes'      => get_attributes_schema(),
 		'editor_script'   => $script_slug,
 		'render_callback' => __NAMESPACE__ . '\render',
+		'supports'        => array(
+			'customClassName' => false,
+		),
 	) );
 }
 
@@ -150,6 +153,9 @@ function get_attributes_schema() {
 			'minimum' => 64,
 			'maximum' => 512,
 			'default' => 100,
+		),
+		'className'      => array(
+			'type' => 'string',
 		),
 	);
 }

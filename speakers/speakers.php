@@ -85,22 +85,20 @@ function render( $attributes ) {
  */
 function get_l10n_strings() {
 	return array(
-		'block_label'               => __( 'Speakers', 'wordcamporg' ),
-		'block_description'         => __( 'Add a list of speakers.' ),
-
-		'speaker_posts_panel_title' => __( 'Speaker Settings', 'wordcamporg' ),
-		'show_all_posts_label'      => __( 'Show all', 'wordcamporg' ),
-		'posts_per_page_label'      => __( 'Number to show', 'wordcamporg' ),
-		'track_label'               => __( 'From which session tracks?', 'wordcamporg' ),
-		'track_help'                => __( 'Multiple tracks can be chosen.', 'wordcamporg' ),
-		'groups_label'              => __( 'From which speaker groups?', 'wordcamporg' ),
-		'groups_help'               => __( 'Multiple groups can be chosen.', 'wordcamporg' ),
-		'sort_label'                => __( 'Sort by', 'wordcamporg' ),
-		'speaker_link_label'        => __( 'Link titles to single posts', 'wordcamporg' ),
-		'speaker_link_help'         => __( 'These will not appear in the block preview.', 'wordcamporg' ),
-		'show_avatars_label'        => __( 'Show avatars', 'wordcamporg' ),
-		'avatar_size_label'         => __( 'Avatar size (px)', 'wordcamporg' ),
-		'avatar_size_help'          => __( 'Height and width in pixels.', 'wordcamporg' ),
+		'block_label'          => __( 'Speakers', 'wordcamporg' ),
+		'block_description'    => __( 'Add a list of speakers.' ),
+		'panel_which_title'    => __( 'Which Speakers?', 'wordcamporg' ),
+		'track_label'          => __( 'From which session tracks?', 'wordcamporg' ),
+		'groups_label'         => __( 'From which speaker groups?', 'wordcamporg' ),
+		'show_all_posts_label' => __( 'Show all', 'wordcamporg' ),
+		'posts_per_page_label' => __( 'Number to show', 'wordcamporg' ),
+		'sort_label'           => __( 'Sort by', 'wordcamporg' ),
+		'panel_display_title'  => __( 'Speaker Display', 'wordcamporg' ),
+		'speaker_link_label'   => __( 'Link titles to single posts', 'wordcamporg' ),
+		'speaker_link_help'    => __( 'These will not appear in the block preview.', 'wordcamporg' ),
+		'show_avatars_label'   => __( 'Show avatars', 'wordcamporg' ),
+		'avatar_size_label'    => __( 'Avatar size (px)', 'wordcamporg' ),
+		'avatar_size_help'     => __( 'Height and width in pixels.', 'wordcamporg' ),
 	);
 }
 

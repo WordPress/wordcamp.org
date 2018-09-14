@@ -19,9 +19,40 @@ registerBlockType( 'wordcamp/speakers', {
 	category: 'wordcamp',
 
 	edit: function( props ) {
-		var speakerControls = [];
+		var whichControls = [],
+			displayControls = [];
 
-		speakerControls.push(
+		if ( data.options['track'].length > 1 ) {
+			whichControls.push(
+				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
+				//el( PanelRow, {}, [
+					el( SelectControl, {
+						label: data.l10n['track_label'],
+						value: props.attributes['track'],
+						options: data.options['track'],
+						multiple: true,
+						onChange: ( value ) => { props.setAttributes( { 'track': value } ); },
+					} ),
+				//] )
+			);
+		}
+
+		if ( data.options['groups'].length > 1 ) {
+			whichControls.push(
+				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
+				//el( PanelRow, {}, [
+					el( SelectControl, {
+						label: data.l10n['groups_label'],
+						value: props.attributes['groups'],
+						options: data.options['groups'],
+						multiple: true,
+						onChange: ( value ) => { props.setAttributes( { 'groups': value } ); },
+					} ),
+				//] )
+			);
+		}
+
+		whichControls.push(
 			el( PanelRow, {}, [
 				el( CheckboxControl, {
 					label: data.l10n['show_all_posts_label'],
@@ -32,7 +63,7 @@ registerBlockType( 'wordcamp/speakers', {
 		);
 
 		if ( ! props.attributes['show_all_posts'] ) {
-			speakerControls.push(
+			whichControls.push(
 				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 				//el( PanelRow, {}, [
 					el( RangeControl, {
@@ -48,33 +79,8 @@ registerBlockType( 'wordcamp/speakers', {
 			);
 		}
 
-		speakerControls.push(
-			//el( PanelRow, {}, [
-				el( SelectControl, {
-					label: data.l10n['track_label'],
-					help: data.l10n['track_help'],
-					value: props.attributes['track'],
-					options: data.options['track'],
-					multiple: true,
-					onChange: ( value ) => { props.setAttributes( { 'track': value } ); },
-				} ),
-			//] )
-		);
-
-		speakerControls.push(
-			//el( PanelRow, {}, [
-				el( SelectControl, {
-					label: data.l10n['groups_label'],
-					help: data.l10n['groups_help'],
-					value: props.attributes['groups'],
-					options: data.options['groups'],
-					multiple: true,
-					onChange: ( value ) => { props.setAttributes( { 'groups': value } ); },
-				} ),
-			//] )
-		);
-
-		speakerControls.push(
+		whichControls.push(
+			// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 			//el( PanelRow, {}, [
 				el( SelectControl, {
 					label: data.l10n['sort_label'],
@@ -85,7 +91,7 @@ registerBlockType( 'wordcamp/speakers', {
 			//] )
 		);
 
-		speakerControls.push(
+		displayControls.push(
 			el( PanelRow, {}, [
 				el( CheckboxControl, {
 					label: data.l10n['speaker_link_label'],
@@ -96,7 +102,7 @@ registerBlockType( 'wordcamp/speakers', {
 			] )
 		);
 
-		speakerControls.push(
+		displayControls.push(
 			el( PanelRow, {}, [
 				el( CheckboxControl, {
 					label: data.l10n['show_avatars_label'],
@@ -107,7 +113,8 @@ registerBlockType( 'wordcamp/speakers', {
 		);
 
 		if ( props.attributes['show_avatars'] ) {
-			speakerControls.push(
+			displayControls.push(
+				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 				//el( PanelRow, {}, [
 					el( RangeControl, {
 						label: data.l10n['avatar_size_label'],
@@ -131,9 +138,17 @@ registerBlockType( 'wordcamp/speakers', {
 			el( InspectorControls, {}, [
 				el( PanelBody,
 					{
-						title: data.l10n['speaker_posts_panel_title'],
+						title: data.l10n['panel_which_title'],
+						initialOpen: true,
 					},
-					speakerControls
+					whichControls
+				),
+				el( PanelBody,
+					{
+						title: data.l10n['panel_display_title'],
+						initialOpen: false,
+					},
+					displayControls
 				),
 			] ),
 		];

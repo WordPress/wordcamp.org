@@ -6,7 +6,9 @@ defined( 'WPINC' ) || die();
 use WordCamp_Post_Types_Plugin;
 
 /**
+ * Register block types and enqueue scripts.
  *
+ * @return void
  */
 function init() {
 	$script_slug     = 'block-wordcamp-speakers';
@@ -16,7 +18,8 @@ function init() {
 		$script_slug,
 		plugins_url( $script_filename, __FILE__ ),
 		array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-editor' ),
-		filemtime( trailingslashit( plugin_dir_path( __FILE__ ) ) . $script_filename )
+		filemtime( trailingslashit( plugin_dir_path( __FILE__ ) ) . $script_filename ),
+		false
 	);
 
 	wp_localize_script(
@@ -46,7 +49,9 @@ function init() {
 add_action( 'init', __NAMESPACE__ . '\init' );
 
 /**
+ * Run the shortcode callback after normalizing attribute values.
  *
+ * @return string
  */
 function render( $attributes ) {
 	/** @var WordCamp_Post_Types_Plugin $wcpt_plugin */
@@ -79,7 +84,7 @@ function render( $attributes ) {
 }
 
 /**
- *
+ * Get the translated strings for localizing the JS.
  *
  * @return array
  */
@@ -103,7 +108,7 @@ function get_l10n_strings() {
 }
 
 /**
- *
+ * Get the schema for the block's attributes.
  *
  * @return array
  */
@@ -159,7 +164,7 @@ function get_attributes_schema() {
 }
 
 /**
- *
+ * Get the labels and values of the Sort By options.
  *
  * @return array
  */
@@ -189,7 +194,7 @@ function get_sort_options() {
 }
 
 /**
- *
+ * Get the available terms, each with label and value, for a particular taxonomy.
  *
  * @param string $taxonomy_id
  *

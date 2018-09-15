@@ -6,7 +6,9 @@ defined( 'WPINC' ) || die();
 use WP_Post;
 
 /**
+ * Load files.
  *
+ * @return void
  */
 function load() {
 	if ( ! function_exists( 'register_block_type' ) ) {
@@ -19,7 +21,7 @@ function load() {
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 
 /**
- *
+ * Add block categories for custom blocks.
  *
  * @param array   $default_categories
  * @param WP_Post $post

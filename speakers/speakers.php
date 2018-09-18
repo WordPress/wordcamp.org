@@ -157,9 +157,6 @@ function get_attributes_schema() {
 			'maximum' => 512,
 			'default' => 100,
 		),
-		'className'      => array(
-			'type' => 'string',
-		),
 	);
 }
 

@@ -15,7 +15,7 @@ function load() {
 		return;
 	}
 
-	require_once trailingslashit( plugin_dir_path( __FILE__ ) ) . 'speakers/speakers.php';
+	require_once plugin_dir_path( __FILE__ ) . 'speakers/speakers.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );

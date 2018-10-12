@@ -44,6 +44,11 @@
 /******/ 		}
 /******/ 	};
 /******/
+/******/ 	// define __esModule on exports
+/******/ 	__webpack_require__.r = function(exports) {
+/******/ 		Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 	};
+/******/
 /******/ 	// getDefaultExport function for compatibility with non-harmony modules
 /******/ 	__webpack_require__.n = function(module) {
 /******/ 		var getter = module && module.__esModule ?
@@ -59,239 +64,34 @@
 /******/ 	// __webpack_public_path__
 /******/ 	__webpack_require__.p = "";
 /******/
+/******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 0);
+/******/ 	return __webpack_require__(__webpack_require__.s = "./assets/src/blocks.js");
 /******/ })
 /************************************************************************/
-/******/ ([
-/* 0 */
+/******/ ({
+
+/***/ "./assets/src/blocks.js":
+/*!******************************!*\
+  !*** ./assets/src/blocks.js ***!
+  \******************************/
+/*! no exports provided */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__speakers__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__speakers___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_0__speakers__);
-/**
- * Internal dependencies
- */
-
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var _speakers__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speakers */ \"./assets/src/speakers.js\");\n/* harmony import */ var _speakers__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_speakers__WEBPACK_IMPORTED_MODULE_0__);\n/**\n * Internal dependencies\n */\n\n\n//# sourceURL=webpack:///./assets/src/blocks.js?");
 
 /***/ }),
-/* 1 */
-/***/ (function(module, __webpack_exports__) {
 
-"use strict";
-// License: GPLv2+
+/***/ "./assets/src/speakers.js":
+/*!********************************!*\
+  !*** ./assets/src/speakers.js ***!
+  \********************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
 
-var registerBlockType = wp.blocks.registerBlockType;
-var InspectorControls = wp.editor.InspectorControls;
-var _wp$components = wp.components,
-    ServerSideRender = _wp$components.ServerSideRender,
-    PanelBody = _wp$components.PanelBody,
-    PanelRow = _wp$components.PanelRow,
-    CheckboxControl = _wp$components.CheckboxControl,
-    RangeControl = _wp$components.RangeControl,
-    SelectControl = _wp$components.SelectControl,
-    TextControl = _wp$components.TextControl;
-
-
-var el = wp.element.createElement,
-    data = WordCampBlocks.speakers || {};
-
-var supports = {
-	className: false
-};
-
-/* todo We might be able to use this instead of the PHP version once this becomes fully native JS instead of SSR.
-const schema = {
-	'show_all_posts': {
-		type: 'boolean',
-		default: true,
-	},
-	'posts_per_page': {
-		type: 'integer',
-		minimum: 1,
-		maximum: 100,
-		default: 10,
-	},
-	'track': {
-		type: 'array',
-		items: {
-			type: 'string',
-			enum: data.options.track, //todo
-		}
-	},
-	'groups': {
-		type: 'array',
-		items: {
-			type: 'string',
-			enum: data.options.groups, //todo
-		}
-	},
-	'sort': {
-		type: 'string',
-		enum: data.options.sort, //todo
-		default: 'title_asc',
-	},
-	'speaker_link': {
-		type: 'boolean',
-		default: false,
-	},
-	'show_avatars': {
-		type: 'boolean',
-		default: true,
-	},
-	'avatar_size': {
-		type: 'integer',
-		minimum: 64,
-		maximum: 512,
-		default: 100,
-	},
-};
-*/
-
-var schema = data.schema;
-
-registerBlockType('wordcamp/speakers', {
-	title: data.l10n['block_label'],
-	description: data.l10n['block_description'],
-	icon: 'megaphone',
-	category: 'wordcamp',
-	attributes: schema,
-	supports: supports,
-
-	edit: function edit(props) {
-		var whichControls = [],
-		    displayControls = [];
-
-		if (data.options['track'].length > 1) {
-			whichControls.push(
-			// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
-			//el( PanelRow, {}, [
-			el(SelectControl, {
-				label: data.l10n['track_label'],
-				value: props.attributes['track'],
-				options: data.options['track'],
-				multiple: true,
-				onChange: function onChange(value) {
-					props.setAttributes({ 'track': value });
-				}
-			})
-			//] )
-			);
-		}
-
-		if (data.options['groups'].length > 1) {
-			whichControls.push(
-			// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
-			//el( PanelRow, {}, [
-			el(SelectControl, {
-				label: data.l10n['groups_label'],
-				value: props.attributes['groups'],
-				options: data.options['groups'],
-				multiple: true,
-				onChange: function onChange(value) {
-					props.setAttributes({ 'groups': value });
-				}
-			})
-			//] )
-			);
-		}
-
-		whichControls.push(el(PanelRow, {}, [el(CheckboxControl, {
-			label: data.l10n['show_all_posts_label'],
-			checked: props.attributes['show_all_posts'],
-			onChange: function onChange(value) {
-				props.setAttributes({ 'show_all_posts': value });
-			}
-		})]));
-
-		if (!props.attributes['show_all_posts']) {
-			whichControls.push(
-			// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
-			//el( PanelRow, {}, [
-			el(RangeControl, {
-				label: data.l10n['posts_per_page_label'],
-				value: props.attributes['posts_per_page'],
-				min: schema['posts_per_page'].minimum,
-				max: schema['posts_per_page'].maximum,
-				initialPosition: schema['posts_per_page'].default,
-				allowReset: true,
-				onChange: function onChange(value) {
-					props.setAttributes({ 'posts_per_page': value });
-				}
-			})
-			//] )
-			);
-		}
-
-		whichControls.push(
-		// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
-		//el( PanelRow, {}, [
-		el(SelectControl, {
-			label: data.l10n['sort_label'],
-			value: props.attributes['sort'],
-			options: data.options['sort'],
-			onChange: function onChange(value) {
-				props.setAttributes({ 'sort': value });
-			}
-		})
-		//] )
-		);
-
-		displayControls.push(el(PanelRow, {}, [el(CheckboxControl, {
-			label: data.l10n['speaker_link_label'],
-			help: data.l10n['speaker_link_help'],
-			checked: props.attributes['speaker_link'],
-			onChange: function onChange(value) {
-				props.setAttributes({ 'speaker_link': value });
-			}
-		})]));
-
-		displayControls.push(el(PanelRow, {}, [el(CheckboxControl, {
-			label: data.l10n['show_avatars_label'],
-			checked: props.attributes['show_avatars'],
-			onChange: function onChange(value) {
-				props.setAttributes({ 'show_avatars': value });
-			}
-		})]));
-
-		if (props.attributes['show_avatars']) {
-			displayControls.push(
-			// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
-			//el( PanelRow, {}, [
-			el(RangeControl, {
-				label: data.l10n['avatar_size_label'],
-				help: data.l10n['avatar_size_help'],
-				value: props.attributes['avatar_size'],
-				min: schema['avatar_size'].minimum,
-				max: schema['avatar_size'].maximum,
-				initialPosition: schema['avatar_size'].default,
-				allowReset: true,
-				onChange: function onChange(value) {
-					props.setAttributes({ 'avatar_size': value });
-				}
-			})
-			//] )
-			);
-		}
-
-		return [el(ServerSideRender, {
-			block: 'wordcamp/speakers',
-			attributes: props.attributes
-		}), el(InspectorControls, {}, [el(PanelBody, {
-			title: data.l10n['panel_which_title'],
-			initialOpen: true
-		}, whichControls), el(PanelBody, {
-			title: data.l10n['panel_display_title'],
-			initialOpen: false
-		}, displayControls)])];
-	},
-
-	save: function save() {
-		return null;
-	}
-});
+eval("// License: GPLv2+\nvar registerBlockType = wp.blocks.registerBlockType;\nvar InspectorControls = wp.editor.InspectorControls;\nvar _wp$components = wp.components,\n    ServerSideRender = _wp$components.ServerSideRender,\n    PanelBody = _wp$components.PanelBody,\n    PanelRow = _wp$components.PanelRow,\n    CheckboxControl = _wp$components.CheckboxControl,\n    RangeControl = _wp$components.RangeControl,\n    SelectControl = _wp$components.SelectControl,\n    TextControl = _wp$components.TextControl;\nvar el = wp.element.createElement,\n    data = WordCampBlocks.speakers || {};\nvar supports = {\n  className: false\n};\n/* todo We might be able to use this instead of the PHP version once this becomes fully native JS instead of SSR.\nconst schema = {\n\t'show_all_posts': {\n\t\ttype: 'boolean',\n\t\tdefault: true,\n\t},\n\t'posts_per_page': {\n\t\ttype: 'integer',\n\t\tminimum: 1,\n\t\tmaximum: 100,\n\t\tdefault: 10,\n\t},\n\t'track': {\n\t\ttype: 'array',\n\t\titems: {\n\t\t\ttype: 'string',\n\t\t\tenum: data.options.track, //todo\n\t\t}\n\t},\n\t'groups': {\n\t\ttype: 'array',\n\t\titems: {\n\t\t\ttype: 'string',\n\t\t\tenum: data.options.groups, //todo\n\t\t}\n\t},\n\t'sort': {\n\t\ttype: 'string',\n\t\tenum: data.options.sort, //todo\n\t\tdefault: 'title_asc',\n\t},\n\t'speaker_link': {\n\t\ttype: 'boolean',\n\t\tdefault: false,\n\t},\n\t'show_avatars': {\n\t\ttype: 'boolean',\n\t\tdefault: true,\n\t},\n\t'avatar_size': {\n\t\ttype: 'integer',\n\t\tminimum: 64,\n\t\tmaximum: 512,\n\t\tdefault: 100,\n\t},\n};\n*/\n\nvar schema = data.schema;\nregisterBlockType('wordcamp/speakers', {\n  title: data.l10n['block_label'],\n  description: data.l10n['block_description'],\n  icon: 'megaphone',\n  category: 'wordcamp',\n  attributes: schema,\n  supports: supports,\n  edit: function edit(props) {\n    var whichControls = [],\n        displayControls = [];\n\n    if (data.options['track'].length > 1) {\n      whichControls.push( // Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564\n      //el( PanelRow, {}, [\n      el(SelectControl, {\n        label: data.l10n['track_label'],\n        value: props.attributes['track'],\n        options: data.options['track'],\n        multiple: true,\n        onChange: function onChange(value) {\n          props.setAttributes({\n            'track': value\n          });\n        }\n      }) //] )\n      );\n    }\n\n    if (data.options['groups'].length > 1) {\n      whichControls.push( // Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564\n      //el( PanelRow, {}, [\n      el(SelectControl, {\n        label: data.l10n['groups_label'],\n        value: props.attributes['groups'],\n        options: data.options['groups'],\n        multiple: true,\n        onChange: function onChange(value) {\n          props.setAttributes({\n            'groups': value\n          });\n        }\n      }) //] )\n      );\n    }\n\n    whichControls.push(el(PanelRow, {}, [el(CheckboxControl, {\n      label: data.l10n['show_all_posts_label'],\n      checked: props.attributes['show_all_posts'],\n      onChange: function onChange(value) {\n        props.setAttributes({\n          'show_all_posts': value\n        });\n      }\n    })]));\n\n    if (!props.attributes['show_all_posts']) {\n      whichControls.push( // Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564\n      //el( PanelRow, {}, [\n      el(RangeControl, {\n        label: data.l10n['posts_per_page_label'],\n        value: props.attributes['posts_per_page'],\n        min: schema['posts_per_page'].minimum,\n        max: schema['posts_per_page'].maximum,\n        initialPosition: schema['posts_per_page'].default,\n        allowReset: true,\n        onChange: function onChange(value) {\n          props.setAttributes({\n            'posts_per_page': value\n          });\n        }\n      }) //] )\n      );\n    }\n\n    whichControls.push( // Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564\n    //el( PanelRow, {}, [\n    el(SelectControl, {\n      label: data.l10n['sort_label'],\n      value: props.attributes['sort'],\n      options: data.options['sort'],\n      onChange: function onChange(value) {\n        props.setAttributes({\n          'sort': value\n        });\n      }\n    }) //] )\n    );\n    displayControls.push(el(PanelRow, {}, [el(CheckboxControl, {\n      label: data.l10n['speaker_link_label'],\n      help: data.l10n['speaker_link_help'],\n      checked: props.attributes['speaker_link'],\n      onChange: function onChange(value) {\n        props.setAttributes({\n          'speaker_link': value\n        });\n      }\n    })]));\n    displayControls.push(el(PanelRow, {}, [el(CheckboxControl, {\n      label: data.l10n['show_avatars_label'],\n      checked: props.attributes['show_avatars'],\n      onChange: function onChange(value) {\n        props.setAttributes({\n          'show_avatars': value\n        });\n      }\n    })]));\n\n    if (props.attributes['show_avatars']) {\n      displayControls.push( // Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564\n      //el( PanelRow, {}, [\n      el(RangeControl, {\n        label: data.l10n['avatar_size_label'],\n        help: data.l10n['avatar_size_help'],\n        value: props.attributes['avatar_size'],\n        min: schema['avatar_size'].minimum,\n        max: schema['avatar_size'].maximum,\n        initialPosition: schema['avatar_size'].default,\n        allowReset: true,\n        onChange: function onChange(value) {\n          props.setAttributes({\n            'avatar_size': value\n          });\n        }\n      }) //] )\n      );\n    }\n\n    return [el(ServerSideRender, {\n      block: 'wordcamp/speakers',\n      attributes: props.attributes\n    }), el(InspectorControls, {}, [el(PanelBody, {\n      title: data.l10n['panel_which_title'],\n      initialOpen: true\n    }, whichControls), el(PanelBody, {\n      title: data.l10n['panel_display_title'],\n      initialOpen: false\n    }, displayControls)])];\n  },\n  save: function save() {\n    return null;\n  }\n});\n\n//# sourceURL=webpack:///./assets/src/speakers.js?");
 
 /***/ })
-/******/ ]);
+
+/******/ });

@@ -1,7 +1,10 @@
-var webpack = require( 'webpack' ),
-	NODE_ENV = process.env.NODE_ENV || 'development',
+const webpack = require( 'webpack' );
 
-	webpackConfig = {
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+const webpackConfig = {
+		mode: NODE_ENV === 'production' ? 'production' : 'development',
+
 		entry: {
 			blocks: './assets/src/blocks.js',
 		},
@@ -10,11 +13,13 @@ var webpack = require( 'webpack' ),
 			path: __dirname + '/assets',
 		},
 		module: {
-			loaders: [
+			rules: [
 				{
-					test: /.js$/,
-					loader: 'babel-loader',
-					exclude: /node_modules/,
+					test: /\.js$/,
+					exclude: [
+						/node_modules/,
+					],
+					use: 'babel-loader',
 				},
 			],
 		},
@@ -22,7 +27,7 @@ var webpack = require( 'webpack' ),
 			new webpack.DefinePlugin( {
 				'process.env.NODE_ENV': JSON.stringify( NODE_ENV )
 			} ),
-		]
+		],
 	};
 
 if ( 'production' === NODE_ENV ) {

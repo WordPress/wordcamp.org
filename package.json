@@ -1,7 +1,14 @@
 {
   "name": "wordcamp-blocks",
+  "description": "Blocks for WordCamp.org",
   "version": "1.0.0",
   "license": "GPL-2.0-or-later",
+  "private": true,
+  "scripts": {
+    "start": "cross-env BABEL_ENV=development NODE_ENV=development webpack --watch",
+    "build": "cross-env BABEL_ENV=production NODE_ENV=production webpack && npm run makepot",
+    "makepot": "wp i18n make-pot . localization/_syntaxhighlighter-template.po --merge=localization/blocks.pot --skip-js"
+  },
   "devDependencies": {
     "@wordpress/babel-plugin-makepot": "^1.0.0",
     "@wordpress/babel-preset-default": "^1.1.2",
@@ -48,10 +55,5 @@
         }
       ]
     ]
-  },
-  "scripts": {
-    "dev": "cross-env BABEL_ENV=development NODE_ENV=development webpack --watch",
-    "build": "cross-env BABEL_ENV=production NODE_ENV=production webpack && npm run makepot",
-    "makepot": "wp i18n make-pot . localization/_syntaxhighlighter-template.po --merge=localization/blocks.pot --skip-js"
   }
 }

@@ -15,7 +15,7 @@ function load() {
 		return;
 	}
 
-	require_once plugin_dir_path( __FILE__ ) . 'speakers/speakers.php';
+	require_once plugin_dir_path( __FILE__ ) . 'includes/speakers.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
@@ -38,3 +38,34 @@ function register_block_categories( $default_categories, $post ) {
 }
 
 add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories', 10, 2 );
+
+/**
+ * Enqueue assets.
+ *
+ * @return void
+ */
+function enqueue_assets() {
+	wp_enqueue_script(
+		'wordcamp-blocks',
+		plugins_url( 'assets/blocks.js', __FILE__ ),
+		array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-editor' ),
+		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.js' ),
+		false
+	);
+
+	/**
+	 *
+	 */
+	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
+
+	wp_add_inline_script(
+		'wordcamp-blocks',
+		sprintf(
+			'var WordCampBlocks = %s;',
+			wp_json_encode( $data )
+		),
+		'before'
+	);
+}
+
+add_action( 'enqueue_block_assets', __NAMESPACE__ . '\enqueue_assets' );

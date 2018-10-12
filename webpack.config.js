@@ -3,13 +3,12 @@ var webpack = require( 'webpack' ),
 
 	webpackConfig = {
 		entry: {
-			speakers: './speakers/src/speakers.js',
+			blocks: './assets/src/blocks.js',
 		},
 		output: {
-			filename: './[name]/[name].js',
-			path: __dirname,
+			filename: '[name].js',
+			path: __dirname + '/assets',
 		},
-
 		module: {
 			loaders: [
 				{
@@ -19,7 +18,6 @@ var webpack = require( 'webpack' ),
 				},
 			],
 		},
-
 		plugins: [
 			new webpack.DefinePlugin( {
 				'process.env.NODE_ENV': JSON.stringify( NODE_ENV )

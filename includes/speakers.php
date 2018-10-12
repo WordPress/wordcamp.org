@@ -11,42 +11,40 @@ use WordCamp_Post_Types_Plugin;
  * @return void
  */
 function init() {
-	$script_slug     = 'block-wordcamp-speakers';
-	$script_filename = 'speakers.js';
-
-	wp_register_script(
-		$script_slug,
-		plugins_url( $script_filename, __FILE__ ),
-		array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-editor' ),
-		filemtime( trailingslashit( plugin_dir_path( __FILE__ ) ) . $script_filename ),
-		false
-	);
-
-	wp_localize_script(
-		$script_slug,
-		'WordCampBlocksSpeakers',
-		array(
-			'l10n'    => get_l10n_strings(),
-			'schema'  => get_attributes_schema(),
-			'options' => array(
-				'sort'   => get_sort_options(),
-				'track'  => get_available_terms( 'wcb_track' ),
-				'groups' => get_available_terms( 'wcb_speaker_group' ),
-			),
-		)
-	);
-
 	register_block_type( 'wordcamp/speakers', array(
 		'attributes'      => get_attributes_schema(),
-		'editor_script'   => $script_slug,
+		//'editor_script'   => $script_slug,
 		'render_callback' => __NAMESPACE__ . '\render',
-		'supports'        => array(
-			'customClassName' => false,
-		),
+		//'supports'        => array(
+		//	'customClassName' => false,
+		//),
 	) );
 }
 
 add_action( 'init', __NAMESPACE__ . '\init' );
+
+/**
+ *
+ *
+ * @param array $data
+ *
+ * @return array
+ */
+function add_script_data( array $data ) {
+	$data['speakers'] = [
+		'l10n'    => get_l10n_strings(),
+		'schema'  => get_attributes_schema(),
+		'options' => array(
+			'sort'   => get_sort_options(),
+			'track'  => get_available_terms( 'wcb_track' ),
+			'groups' => get_available_terms( 'wcb_speaker_group' ),
+		),
+	];
+
+	return $data;
+}
+
+add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
 
 /**
  * Run the shortcode callback after normalizing attribute values.

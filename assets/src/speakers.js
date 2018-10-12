@@ -1,22 +1,73 @@
 // License: GPLv2+
 
+const { registerBlockType } = wp.blocks;
+const { InspectorControls } = wp.editor;
+const { ServerSideRender, PanelBody, PanelRow, CheckboxControl, RangeControl, SelectControl, TextControl } = wp.components;
+
 var el = wp.element.createElement,
-	registerBlockType = wp.blocks.registerBlockType,
-	ServerSideRender = wp.components.ServerSideRender,
-	InspectorControls = wp.editor.InspectorControls,
-	PanelBody = wp.components.PanelBody,
-	PanelRow = wp.components.PanelRow,
-	CheckboxControl = wp.components.CheckboxControl,
-	RangeControl = wp.components.RangeControl,
-	SelectControl = wp.components.SelectControl,
-	TextControl = wp.components.TextControl,
-	data = WordCampBlocksSpeakers;
+	data = WordCampBlocks.speakers || {};
+
+const supports = {
+	className: false,
+};
+
+/* todo We might be able to use this instead of the PHP version once this becomes fully native JS instead of SSR.
+const schema = {
+	'show_all_posts': {
+		type: 'boolean',
+		default: true,
+	},
+	'posts_per_page': {
+		type: 'integer',
+		minimum: 1,
+		maximum: 100,
+		default: 10,
+	},
+	'track': {
+		type: 'array',
+		items: {
+			type: 'string',
+			enum: data.options.track, //todo
+		}
+	},
+	'groups': {
+		type: 'array',
+		items: {
+			type: 'string',
+			enum: data.options.groups, //todo
+		}
+	},
+	'sort': {
+		type: 'string',
+		enum: data.options.sort, //todo
+		default: 'title_asc',
+	},
+	'speaker_link': {
+		type: 'boolean',
+		default: false,
+	},
+	'show_avatars': {
+		type: 'boolean',
+		default: true,
+	},
+	'avatar_size': {
+		type: 'integer',
+		minimum: 64,
+		maximum: 512,
+		default: 100,
+	},
+};
+*/
+
+const schema = data.schema;
 
 registerBlockType( 'wordcamp/speakers', {
 	title: data.l10n['block_label'],
 	description: data.l10n['block_description'],
 	icon: 'megaphone',
 	category: 'wordcamp',
+	attributes: schema,
+	supports,
 
 	edit: function( props ) {
 		var whichControls = [],
@@ -69,9 +120,9 @@ registerBlockType( 'wordcamp/speakers', {
 					el( RangeControl, {
 						label: data.l10n['posts_per_page_label'],
 						value: props.attributes['posts_per_page'],
-						min: data.schema['posts_per_page'].minimum,
-						max: data.schema['posts_per_page'].maximum,
-						initialPosition: data.schema['posts_per_page'].default,
+						min: schema['posts_per_page'].minimum,
+						max: schema['posts_per_page'].maximum,
+						initialPosition: schema['posts_per_page'].default,
 						allowReset: true,
 						onChange: ( value ) => { props.setAttributes( { 'posts_per_page': value } ); },
 					} ),
@@ -120,9 +171,9 @@ registerBlockType( 'wordcamp/speakers', {
 						label: data.l10n['avatar_size_label'],
 						help: data.l10n['avatar_size_help'],
 						value: props.attributes['avatar_size'],
-						min: data.schema['avatar_size'].minimum,
-						max: data.schema['avatar_size'].maximum,
-						initialPosition: data.schema['avatar_size'].default,
+						min: schema['avatar_size'].minimum,
+						max: schema['avatar_size'].maximum,
+						initialPosition: schema['avatar_size'].default,
 						allowReset: true,
 						onChange: ( value ) => { props.setAttributes( { 'avatar_size': value } ); },
 					} ),

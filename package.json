@@ -22,8 +22,8 @@
   },
   "scripts": {
     "start": "cross-env BABEL_ENV=development NODE_ENV=development webpack --watch",
-    "build": "cross-env BABEL_ENV=production NODE_ENV=production webpack && npm run makepot",
-    "makepot": "wp i18n make-pot . localization/_syntaxhighlighter-template.po --merge=localization/blocks.pot --skip-js"
+    "build": "cross-env BABEL_ENV=production NODE_ENV=production webpack && npm run php-l10n && rm blocks.pot",
+    "php-l10n": "pot-to-php ./blocks.pot ./l10n.php wordcamporg"
   },
   "babel": {
     "presets": [

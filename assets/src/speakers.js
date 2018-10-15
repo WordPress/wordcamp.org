@@ -1,11 +1,18 @@
-// License: GPLv2+
+// todo Deprecate this
+var el = wp.element.createElement;
 
+/**
+ * External dependencies
+ */
+const data = WordCampBlocks.speakers || {};
+
+/**
+ * WordPress dependencies
+ */
+const { __ } = wp.i18n;
 const { registerBlockType } = wp.blocks;
 const { InspectorControls } = wp.editor;
 const { ServerSideRender, PanelBody, PanelRow, CheckboxControl, RangeControl, SelectControl, TextControl } = wp.components;
-
-var el = wp.element.createElement,
-	data = WordCampBlocks.speakers || {};
 
 const supports = {
 	className: false,
@@ -62,8 +69,8 @@ const schema = {
 const schema = data.schema;
 
 registerBlockType( 'wordcamp/speakers', {
-	title: data.l10n['block_label'],
-	description: data.l10n['block_description'],
+	title: __( 'Speakers', 'wordcamporg' ),
+	description: __( 'Add a list of speakers.', 'wordcamporg' ),
 	icon: 'megaphone',
 	category: 'wordcamp',
 	attributes: schema,
@@ -78,7 +85,7 @@ registerBlockType( 'wordcamp/speakers', {
 				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 				//el( PanelRow, {}, [
 					el( SelectControl, {
-						label: data.l10n['track_label'],
+						label: __( 'From which session tracks?', 'wordcamporg' ),
 						value: props.attributes['track'],
 						options: data.options['track'],
 						multiple: true,
@@ -93,7 +100,7 @@ registerBlockType( 'wordcamp/speakers', {
 				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 				//el( PanelRow, {}, [
 					el( SelectControl, {
-						label: data.l10n['groups_label'],
+						label: __( 'From which speaker groups?', 'wordcamporg' ),
 						value: props.attributes['groups'],
 						options: data.options['groups'],
 						multiple: true,
@@ -106,7 +113,7 @@ registerBlockType( 'wordcamp/speakers', {
 		whichControls.push(
 			el( PanelRow, {}, [
 				el( CheckboxControl, {
-					label: data.l10n['show_all_posts_label'],
+					label: __( 'Show all', 'wordcamporg' ),
 					checked: props.attributes['show_all_posts'],
 					onChange: ( value ) => { props.setAttributes( { 'show_all_posts': value } ); },
 				} ),
@@ -118,7 +125,7 @@ registerBlockType( 'wordcamp/speakers', {
 				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 				//el( PanelRow, {}, [
 					el( RangeControl, {
-						label: data.l10n['posts_per_page_label'],
+						label: __( 'Number to show', 'wordcamporg' ),
 						value: props.attributes['posts_per_page'],
 						min: schema['posts_per_page'].minimum,
 						max: schema['posts_per_page'].maximum,
@@ -134,7 +141,7 @@ registerBlockType( 'wordcamp/speakers', {
 			// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 			//el( PanelRow, {}, [
 				el( SelectControl, {
-					label: data.l10n['sort_label'],
+					label: __( 'Sort by', 'wordcamporg' ),
 					value: props.attributes['sort'],
 					options: data.options['sort'],
 					onChange: ( value ) => { props.setAttributes( { 'sort': value } ); },
@@ -145,8 +152,8 @@ registerBlockType( 'wordcamp/speakers', {
 		displayControls.push(
 			el( PanelRow, {}, [
 				el( CheckboxControl, {
-					label: data.l10n['speaker_link_label'],
-					help: data.l10n['speaker_link_help'],
+					label: __( 'Link titles to single posts', 'wordcamporg' ),
+					help: __( 'These will not appear in the block preview.', 'wordcamporg' ),
 					checked: props.attributes['speaker_link'],
 					onChange: ( value ) => { props.setAttributes( { 'speaker_link': value } ); },
 				} ),
@@ -156,7 +163,7 @@ registerBlockType( 'wordcamp/speakers', {
 		displayControls.push(
 			el( PanelRow, {}, [
 				el( CheckboxControl, {
-					label: data.l10n['show_avatars_label'],
+					label: __( 'Show avatars', 'wordcamporg' ),
 					checked: props.attributes['show_avatars'],
 					onChange: ( value ) => { props.setAttributes( { 'show_avatars': value } ); },
 				} ),
@@ -168,8 +175,8 @@ registerBlockType( 'wordcamp/speakers', {
 				// Some controls currently have broken layout within a PanelRow. See https://github.com/WordPress/gutenberg/pull/4564
 				//el( PanelRow, {}, [
 					el( RangeControl, {
-						label: data.l10n['avatar_size_label'],
-						help: data.l10n['avatar_size_help'],
+						label: __( 'Avatar size (px)', 'wordcamporg' ),
+						help: __( 'Height and width in pixels.', 'wordcamporg' ),
 						value: props.attributes['avatar_size'],
 						min: schema['avatar_size'].minimum,
 						max: schema['avatar_size'].maximum,
@@ -189,14 +196,14 @@ registerBlockType( 'wordcamp/speakers', {
 			el( InspectorControls, {}, [
 				el( PanelBody,
 					{
-						title: data.l10n['panel_which_title'],
+						title: __( 'Which Speakers?', 'wordcamporg' ),
 						initialOpen: true,
 					},
 					whichControls
 				),
 				el( PanelBody,
 					{
-						title: data.l10n['panel_display_title'],
+						title: __( 'Speaker Display', 'wordcamporg' ),
 						initialOpen: false,
 					},
 					displayControls

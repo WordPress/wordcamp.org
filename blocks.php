@@ -48,15 +48,21 @@ function enqueue_assets() {
 	wp_enqueue_script(
 		'wordcamp-blocks',
 		plugins_url( 'assets/blocks.js', __FILE__ ),
-		array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-editor' ),
+		array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-editor', 'wp-i18n' ),
 		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.js' ),
 		false
 	);
 
+	$data = [
+		'l10n' => gutenberg_get_jed_locale_data( 'wordcamporg' ),
+	];
+
 	/**
+	 * Filter: Add/modify data sent to WordCamp Blocks JS scripts.
 	 *
+	 * @param array $data Associative multidimensional array of data.
 	 */
-	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
+	$data = apply_filters( 'wordcamp_blocks_script_data', $data );
 
 	wp_add_inline_script(
 		'wordcamp-blocks',

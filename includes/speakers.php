@@ -32,7 +32,6 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  */
 function add_script_data( array $data ) {
 	$data['speakers'] = [
-		'l10n'    => get_l10n_strings(),
 		'schema'  => get_attributes_schema(),
 		'options' => array(
 			'sort'   => get_sort_options(),
@@ -79,30 +78,6 @@ function render( $attributes ) {
 	}
 
 	return $wcpt_plugin->shortcode_speakers( $attributes, '' );
-}
-
-/**
- * Get the translated strings for localizing the JS.
- *
- * @return array
- */
-function get_l10n_strings() {
-	return array(
-		'block_label'          => __( 'Speakers', 'wordcamporg' ),
-		'block_description'    => __( 'Add a list of speakers.' ),
-		'panel_which_title'    => __( 'Which Speakers?', 'wordcamporg' ),
-		'track_label'          => __( 'From which session tracks?', 'wordcamporg' ),
-		'groups_label'         => __( 'From which speaker groups?', 'wordcamporg' ),
-		'show_all_posts_label' => __( 'Show all', 'wordcamporg' ),
-		'posts_per_page_label' => __( 'Number to show', 'wordcamporg' ),
-		'sort_label'           => __( 'Sort by', 'wordcamporg' ),
-		'panel_display_title'  => __( 'Speaker Display', 'wordcamporg' ),
-		'speaker_link_label'   => __( 'Link titles to single posts', 'wordcamporg' ),
-		'speaker_link_help'    => __( 'These will not appear in the block preview.', 'wordcamporg' ),
-		'show_avatars_label'   => __( 'Show avatars', 'wordcamporg' ),
-		'avatar_size_label'    => __( 'Avatar size (px)', 'wordcamporg' ),
-		'avatar_size_help'     => __( 'Height and width in pixels.', 'wordcamporg' ),
-	);
 }
 
 /**

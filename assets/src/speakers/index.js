@@ -14,6 +14,11 @@ const { registerBlockType } = wp.blocks;
 const { InspectorControls } = wp.editor;
 const { ServerSideRender, PanelBody, PanelRow, CheckboxControl, RangeControl, SelectControl, TextControl } = wp.components;
 
+/**
+ * Internal dependencies
+ */
+import edit from './edit.jsx';
+
 const supports = {
 	className: false,
 };
@@ -68,6 +73,22 @@ const schema = {
 
 const schema = data.schema;
 
+export const name = 'wordcamp/speakers';
+
+export const settings = {
+	title: __( 'Speakers', 'wordcamporg' ),
+	description: __( 'Add a list of speakers.', 'wordcamporg' ),
+	icon: 'megaphone',
+	category: 'wordcamp',
+	supports,
+	attributes: schema,
+	edit,
+	save: function() {
+		return null;
+	},
+};
+
+/*
 registerBlockType( 'wordcamp/speakers', {
 	title: __( 'Speakers', 'wordcamporg' ),
 	description: __( 'Add a list of speakers.', 'wordcamporg' ),
@@ -216,3 +237,4 @@ registerBlockType( 'wordcamp/speakers', {
 		return null;
 	},
 } );
+*/

@@ -9,13 +9,13 @@ const webpackConfig = {
 		blocks: './assets/src/blocks.js',
 	},
 	output: {
-		filename: '[name].js',
+		filename: '[name].min.js',
 		path: __dirname + '/assets',
 	},
 	module: {
 		rules: [
 			{
-				test: /\.js$/,
+				test: /\.jsx?$/,
 				exclude: [
 					/node_modules/,
 				],

@@ -47,9 +47,9 @@ add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories', 10
 function enqueue_assets() {
 	wp_enqueue_script(
 		'wordcamp-blocks',
-		plugins_url( 'assets/blocks.js', __FILE__ ),
+		plugins_url( 'assets/blocks.min.js', __FILE__ ),
 		array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-editor', 'wp-i18n' ),
-		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.js' ),
+		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.min.js' ),
 		false
 	);
 

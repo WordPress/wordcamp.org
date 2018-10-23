@@ -2,47 +2,37 @@
  * External dependencies
  */
 import classnames from 'classnames';
+import { isUndefined, pickBy, split } from 'lodash';
 const data = WordCampBlocks.speakers || {};
 
 /**
  * WordPress dependencies
  */
-const { __ } = wp.i18n;
-const { Component, Fragment } = wp.element;
+const { CheckboxControl, Disabled, PanelBody, PanelRow, Placeholder, RangeControl, SelectControl, Spinner } = wp.components;
+const { withSelect } = wp.data;
 const { InspectorControls } = wp.editor;
-const { ServerSideRender, PanelBody, PanelRow, CheckboxControl, RangeControl, SelectControl } = wp.components;
+const { Component, Fragment, RawHTML } = wp.element;
+const { decodeEntities } = wp.htmlEntities;
+const { __ } = wp.i18n;
+const { addQueryArgs } = wp.url;
+
+/**
+ * Internal dependencies
+ */
+import { settings } from './index';
+
+const MAX_POSTS = 100;
 
 class SpeakersEdit extends Component {
 	render() {
-		const { options, schema } = data;
+		const schema = settings.attributes;
+		const { options } = data;
 		const { attributes, setAttributes, speakerPosts } = this.props;
-		const { show_all_posts, posts_per_page, track, groups, sort, speaker_link, show_avatars, avatar_size } = attributes;
+		const { show_all_posts, posts_per_page, sort, speaker_link, show_avatars, avatar_size } = attributes;
 
 		const inspectorControls = (
 			<InspectorControls>
 				<PanelBody title={ __( 'Which Speakers?', 'wordcamporg' ) } initialOpen={ true }>
-					{ options['track'].length > 1 &&
-						/*<PanelRow>*/
-							<SelectControl
-								label={ __( 'From which session tracks?', 'wordcamporg' ) }
-								value={ track }
-								options={ options['track'] }
-								multiple={ true }
-								onChange={ ( value ) => setAttributes( { 'track': value } ) }
-							/>
-						/*</PanelRow>*/
-					}
-					{ options['groups'].length > 1 &&
-						/*<PanelRow>*/
-							<SelectControl
-								label={ __( 'From which speaker groups?', 'wordcamporg' ) }
-								value={ groups }
-								options={ options['groups'] }
-								multiple={ true }
-								onChange={ ( value ) => setAttributes( { 'groups': value } ) }
-							/>
-						/*</PanelRow>*/
-					}
 					<PanelRow>
 						<CheckboxControl
 							label={ __( 'Show all', 'wordcamporg' ) }
@@ -54,30 +44,29 @@ class SpeakersEdit extends Component {
 						/*<PanelRow>*/
 							<RangeControl
 								label={ __( 'Number to show', 'wordcamporg' ) }
-								value={ posts_per_page }
-								min={ schema['posts_per_page'].minimum }
-								max={ schema['posts_per_page'].maximum }
-								initialPosition={ schema['posts_per_page'].default }
+								value={ Number( posts_per_page ) }
+								min={ Number( schema['posts_per_page'].minimum ) }
+								max={ MAX_POSTS }
+								initialPosition={ Number( schema['posts_per_page'].default ) }
 								allowReset={ true }
 								onChange={ ( value ) => setAttributes( { 'posts_per_page': value } ) }
 							/>
 						/*</PanelRow>*/
 					}
-					/*<PanelRow>*/
+					{ /*<PanelRow>*/ }
 						<SelectControl
 							label={ __( 'Sort by', 'wordcamporg' ) }
 							value={ sort }
 							options={ options['sort'] }
 							onChange={ ( value ) => setAttributes( { 'sort': value } ) }
 						/>
-					/*</PanelRow>*/
+					{ /*</PanelRow>*/ }
 				</PanelBody>
 
 				<PanelBody title={ __( 'Speaker Display', 'wordcamporg' ) } initialOpen={ false }>
 					<PanelRow>
 						<CheckboxControl
 							label={ __( 'Link titles to single posts', 'wordcamporg' ) }
-							help={ __( 'These will not appear in the block preview.', 'wordcamporg' ) }
 							checked={ speaker_link }
 							onChange={ ( value ) => setAttributes( { 'speaker_link': value } ) }
 						/>
@@ -94,31 +83,74 @@ class SpeakersEdit extends Component {
 							<RangeControl
 								label={ __( 'Avatar size (px)', 'wordcamporg' ) }
 								help={ __( 'Height and width in pixels.', 'wordcamporg' ) }
-								value={ avatar_size }
-								min={ schema['avatar_size'].minimum }
-								max={ schema['avatar_size'].maximum }
-								initialPosition={ schema['avatar_size'].default }
+								value={ Number( avatar_size ) }
+								min={ Number( schema['avatar_size'].minimum ) }
+								max={ Number( schema['avatar_size'].maximum ) }
+								initialPosition={ Number( schema['avatar_size'].default ) }
 								allowReset={ true }
 								onChange={ ( value ) => setAttributes( { 'avatar_size': value } ) }
 							/>
 						/*</PanelRow>*/
 					}
-
 				</PanelBody>
 			</InspectorControls>
 		);
 
-		return ( /* This does not work yet */
+		const hasPosts = Array.isArray( speakerPosts ) && speakerPosts.length;
+		if ( ! hasPosts ) {
+			return (
+				<Fragment>
+					{ inspectorControls }
+					<Placeholder
+						icon="megaphone"
+						label={ __( 'Speakers' ) }
+					>
+						{ ! Array.isArray( speakerPosts ) ?
+							<Spinner /> :
+							__( 'No posts found.' )
+						}
+					</Placeholder>
+				</Fragment>
+			);
+		}
+
+		return (
 			<Fragment>
 				{ inspectorControls }
-				<div
-					className={ 'wcorg-speakers' }
-				>
+				<div className={ 'wcorg-speakers' }>
 					{ speakerPosts.map( ( post, i ) =>
 						<div
-							id={ post.slug }
+							key={ i }
+							id={ 'wcorg-speaker-' + post.slug }
+							className={ classnames( 'wcorg-speaker', 'wcorg-speaker-' + post.slug ) }
 						>
-
+							<h2>
+								{ speaker_link ?
+									<Disabled>
+										<a href={ post.link }>
+											{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
+										</a>
+									</Disabled> :
+									decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' )
+								}
+							</h2>
+							<div className={ 'wcorg-speaker-description' }>
+								{ show_avatars &&
+									/* todo Turn this into a component */
+									<img
+										className={ classnames( 'avatar', 'avatar-' + avatar_size, 'photo' ) }
+										src={ addQueryArgs( post['avatar_urls']['24'], { s: avatar_size } ) }
+										srcSet={ addQueryArgs( post['avatar_urls']['24'], { s: avatar_size * 2 } ) + ' 2x' }
+										width={ avatar_size }
+										height={ avatar_size }
+									/>
+								}
+								<Disabled>
+									<RawHTML>
+										{ post.content.rendered.trim() }
+									</RawHTML>
+								</Disabled>
+							</div>
 						</div>
 					) }
 				</div>
@@ -127,6 +159,19 @@ class SpeakersEdit extends Component {
 	}
 }
 
+export default withSelect( ( select, props ) => {
+	const { show_all_posts, posts_per_page, sort } = props.attributes;
+	const { getEntityRecords } = select( 'core' );
+	const [ orderby, order ] = split( sort, '_', 2 );
 
-// todo
-export default withSelect(  )( SpeakersEdit );
+	const speakersQuery = pickBy( {
+		orderby: orderby,
+		order: order,
+		per_page: show_all_posts ? MAX_POSTS : posts_per_page, // -1 is not allowed for per_page.
+		_embed: true
+	}, ( value ) => ! isUndefined( value ) );
+
+	return {
+		speakerPosts: getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),
+	};
+} )( SpeakersEdit );

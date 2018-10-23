@@ -48,7 +48,16 @@ function enqueue_assets() {
 	wp_enqueue_script(
 		'wordcamp-blocks',
 		plugins_url( 'assets/blocks.min.js', __FILE__ ),
-		array( 'wp-blocks', 'wp-element', 'wp-components', 'wp-editor', 'wp-i18n' ),
+		array(
+			'wp-blocks',
+			'wp-components',
+			'wp-data',
+			'wp-editor',
+			'wp-element',
+			'wp-html-entities',
+			'wp-i18n',
+			'wp-url',
+		),
 		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.min.js' ),
 		false
 	);

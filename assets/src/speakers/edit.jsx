@@ -159,7 +159,7 @@ class SpeakersEdit extends Component {
 	}
 }
 
-export default withSelect( ( select, props ) => {
+const speakersSelect = ( select, props ) => {
 	const { show_all_posts, posts_per_page, sort } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
 	const [ orderby, order ] = split( sort, '_', 2 );
@@ -174,4 +174,6 @@ export default withSelect( ( select, props ) => {
 	return {
 		speakerPosts: getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),
 	};
-} )( SpeakersEdit );
+};
+
+export const edit = withSelect( speakersSelect )( SpeakersEdit );

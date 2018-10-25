@@ -8,10 +8,6 @@ const { __ } = wp.i18n;
  */
 import { edit } from './edit.jsx';
 
-const supports = {
-	className: false,
-};
-
 export const name = 'wordcamp/speakers';
 
 export const settings = {
@@ -19,7 +15,6 @@ export const settings = {
 	description: __( 'Add a list of speakers.', 'wordcamporg' ),
 	icon: 'megaphone',
 	category: 'wordcamp',
-	supports: supports,
 	edit,
 	save: function() {
 		return null;

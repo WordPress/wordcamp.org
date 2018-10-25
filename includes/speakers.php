@@ -142,6 +142,9 @@ function get_attributes_schema() {
 			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 			'default' => 'title_asc',
 		),
+		'className'      => array(
+			'type' => 'string',
+		),
 	];
 }
 

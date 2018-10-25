@@ -12,6 +12,7 @@ use WordCamp_Post_Types_Plugin;
  */
 function init() {
 	register_block_type( 'wordcamp/speakers', array(
+		'attributes'      => get_attributes_schema(),
 		'render_callback' => __NAMESPACE__ . '\render',
 	) );
 }
@@ -27,6 +28,7 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  */
 function add_script_data( array $data ) {
 	$data['speakers'] = [
+		'schema'  => get_attributes_schema(),
 		'options' => array(
 			'sort' => get_sort_options(),
 		),
@@ -70,6 +72,45 @@ function render( $attributes ) {
 	}
 
 	return $wcpt_plugin->shortcode_speakers( $attributes, '' );
+}
+
+/**
+ * Get the schema for the block's attributes.
+ *
+ * @return array
+ */
+function get_attributes_schema() {
+	return array(
+		'show_all_posts' => array(
+			'type'    => 'bool',
+			'default' => true,
+		),
+		'posts_per_page' => array(
+			'type'    => 'integer',
+			'minimum' => 1,
+			'maximum' => 100,
+			'default' => 10,
+		),
+		'sort'           => array(
+			'type'    => 'string',
+			'enum'    => wp_list_pluck( get_sort_options(), 'value' ),
+			'default' => 'title_asc',
+		),
+		'speaker_link'   => array(
+			'type'    => 'bool',
+			'default' => false,
+		),
+		'show_avatars'   => array(
+			'type'    => 'bool',
+			'default' => true,
+		),
+		'avatar_size'    => array(
+			'type'    => 'integer',
+			'minimum' => 64,
+			'maximum' => 512,
+			'default' => 100,
+		),
+	);
 }
 
 /**

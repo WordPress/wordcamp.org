@@ -62,16 +62,12 @@ function enqueue_assets() {
 		false
 	);
 
-	$data = [
-		'l10n' => gutenberg_get_jed_locale_data( 'wordcamporg' ),
-	];
-
 	/**
 	 * Filter: Add/modify data sent to WordCamp Blocks JS scripts.
 	 *
 	 * @param array $data Associative multidimensional array of data.
 	 */
-	$data = apply_filters( 'wordcamp_blocks_script_data', $data );
+	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
 
 	wp_add_inline_script(
 		'wordcamp-blocks',
@@ -83,4 +79,18 @@ function enqueue_assets() {
 	);
 }
 
-add_action( 'enqueue_block_assets', __NAMESPACE__ . '\enqueue_assets' );
+add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
+
+/**
+ * Localize scripts.
+ *
+ * @return void
+ */
+function localize() {
+	wp_add_inline_script(
+		'wp-i18n',
+		'wp.i18n.setLocaleData( ' . wp_json_encode( gutenberg_get_jed_locale_data( 'wordcamporg' ) ) . ' );'
+	);
+}
+
+add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\localize' );

@@ -2,8 +2,8 @@
  * External dependencies
  */
 import classnames from 'classnames';
-import { isUndefined, pickBy, split } from 'lodash';
-const data = WordCampBlocks.speakers || {};
+const { isUndefined, pickBy, split } = window.lodash;
+const data = window.WordCampBlocks.speakers || {};
 
 /**
  * WordPress dependencies
@@ -16,17 +16,11 @@ const { decodeEntities } = wp.htmlEntities;
 const { __ } = wp.i18n;
 const { addQueryArgs } = wp.url;
 
-/**
- * Internal dependencies
- */
-import { settings } from './index';
-
 const MAX_POSTS = 100;
 
 class SpeakersEdit extends Component {
 	render() {
-		const schema = settings.attributes;
-		const { options } = data;
+		const { schema, options } = data;
 		const { attributes, setAttributes, speakerPosts } = this.props;
 		const { show_all_posts, posts_per_page, sort, speaker_link, show_avatars, avatar_size } = attributes;
 

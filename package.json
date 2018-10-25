@@ -9,19 +9,19 @@
 		"npm": ">=6.0.0"
 	},
 	"dependencies": {
-		"@wordpress/element": "^2.1.4",
-		"@wordpress/i18n": "^3.0.1",
-		"classnames": "^2.2.5",
-		"lodash": "^4.17.10"
+		"classnames": "^2.2.5"
 	},
 	"devDependencies": {
 		"@wordpress/babel-plugin-import-jsx-pragma": "^1.1.2",
 		"@wordpress/babel-plugin-makepot": "^2.1.2",
 		"@wordpress/babel-preset-default": "^3.0.1",
 		"@wordpress/browserslist-config": "^2.2.2",
+		"@wordpress/element": "^2.1.4",
+		"@wordpress/i18n": "^3.0.1",
 		"@babel/core": "^7.0.0",
 		"@babel/runtime-corejs2": "^7.0.0",
 		"babel-loader": "^8.0.4",
+		"lodash": "^4.17.10",
 		"cross-env": "^5.2.0",
 		"webpack": "^4.8.3",
 		"webpack-cli": "^2.1.3"

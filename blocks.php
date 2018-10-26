@@ -62,17 +62,22 @@ function enqueue_assets() {
 		false
 	);
 
+	$data = array(
+		'localeData' => gutenberg_get_jed_locale_data( 'wordcamporg' )
+	);
+
 	/**
 	 * Filter: Add/modify data sent to WordCamp Blocks JS scripts.
 	 *
 	 * @param array $data Associative multidimensional array of data.
 	 */
-	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
+	$data = apply_filters( 'wordcamp_blocks_script_data', $data );
 
 	wp_add_inline_script(
 		'wordcamp-blocks',
-		sprintf(
-			'var WordCampBlocks = %s;',
+		sprintf( "
+			var WordCampBlocks = %s;
+			wp.i18n.setLocaleData( WordCampBlocks.localeData, 'wordcamporg' );",
 			wp_json_encode( $data )
 		),
 		'before'
@@ -80,20 +85,6 @@ function enqueue_assets() {
 }
 
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
-
-/**
- * Localize scripts.
- *
- * @return void
- */
-function localize() {
-	wp_add_inline_script(
-		'wp-i18n',
-		'wp.i18n.setLocaleData( ' . wp_json_encode( gutenberg_get_jed_locale_data( 'wordcamporg' ) ) . ' );'
-	);
-}
-
-add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\localize' );
 
 /**
  * Fix a CSS bug in Gutenberg when PanelRows are used with RangeControls.

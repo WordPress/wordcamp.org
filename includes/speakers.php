@@ -63,14 +63,6 @@ function render( $attributes ) {
 		$attributes['speaker_link'] = 'permalink';
 	}
 
-	if ( is_array( $attributes['track'] ) ) {
-		$attributes['track'] = implode( ',', $attributes['track'] );
-	}
-
-	if ( is_array( $attributes['groups'] ) ) {
-		$attributes['groups'] = implode( ',', $attributes['groups'] );
-	}
-
 	return $wcpt_plugin->shortcode_speakers( $attributes, '' );
 }
 

@@ -35,7 +35,7 @@ class SpeakersEdit extends Component {
 						/>
 					</PanelRow>
 					{ ! show_all_posts &&
-						/*<PanelRow>*/
+						<PanelRow>
 							<RangeControl
 								label={ __( 'Number to show', 'wordcamporg' ) }
 								value={ Number( posts_per_page ) }
@@ -45,16 +45,16 @@ class SpeakersEdit extends Component {
 								allowReset={ true }
 								onChange={ ( value ) => setAttributes( { 'posts_per_page': value } ) }
 							/>
-						/*</PanelRow>*/
+						</PanelRow>
 					}
-					{ /*<PanelRow>*/ }
+					<PanelRow>
 						<SelectControl
 							label={ __( 'Sort by', 'wordcamporg' ) }
 							value={ sort }
 							options={ options['sort'] }
 							onChange={ ( value ) => setAttributes( { 'sort': value } ) }
 						/>
-					{ /*</PanelRow>*/ }
+					</PanelRow>
 				</PanelBody>
 
 				<PanelBody title={ __( 'Speaker Display', 'wordcamporg' ) } initialOpen={ false }>
@@ -73,7 +73,7 @@ class SpeakersEdit extends Component {
 						/>
 					</PanelRow>
 					{ show_avatars &&
-						/*<PanelRow>*/
+						<PanelRow>
 							<RangeControl
 								label={ __( 'Avatar size (px)', 'wordcamporg' ) }
 								help={ __( 'Height and width in pixels.', 'wordcamporg' ) }
@@ -84,7 +84,7 @@ class SpeakersEdit extends Component {
 								allowReset={ true }
 								onChange={ ( value ) => setAttributes( { 'avatar_size': value } ) }
 							/>
-						/*</PanelRow>*/
+						</PanelRow>
 					}
 				</PanelBody>
 			</InspectorControls>

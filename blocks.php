@@ -94,3 +94,22 @@ function localize() {
 }
 
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\localize' );
+
+/**
+ * Fix a CSS bug in Gutenberg when PanelRows are used with RangeControls.
+ *
+ * @todo Remove this when https://github.com/WordPress/gutenberg/pull/4564 is fixed.
+ */
+function fix_core_max_width_bug() {
+	?>
+
+	<style>
+		.components-panel__row label {
+			max-width: 100% !important;
+		}
+	</style>
+
+	<?php
+}
+
+add_action( 'admin_print_styles', __NAMESPACE__ . '\fix_core_max_width_bug' );

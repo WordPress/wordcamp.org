@@ -14,7 +14,7 @@ module.exports = function( api ) {
 			],
 		],
 		env: {
-			production: {
+			development: {
 				plugins: [
 					[
 						'@wordpress/babel-plugin-makepot',

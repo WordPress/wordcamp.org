@@ -39,7 +39,7 @@
 		"package*.json"
 	],
 	"scripts": {
-		"watch": "cross-env BABEL_ENV=development NODE_ENV=development webpack --watch",
+		"start": "cross-env BABEL_ENV=development NODE_ENV=development webpack --watch",
 		"build": "cross-env BABEL_ENV=development NODE_ENV=development webpack && npm run php-l10n && rm blocks.pot && npm run lint",
 		"lint": "eslint $(git diff master --name-only) $(git diff --cached --name-only) --ignore-pattern '!.eslintrc.js' --quiet",
 		"php-l10n": "pot-to-php ./blocks.pot ./l10n.php wordcamporg"

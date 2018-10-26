@@ -1,6 +1,5 @@
 <?php
 namespace WordCamp\Blocks;
-error_log("This should be loaded");
 defined( 'WPINC' ) || die();
 
 use WP_Post;

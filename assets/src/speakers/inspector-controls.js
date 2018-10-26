@@ -3,7 +3,7 @@ const {CheckboxControl, PanelBody, PanelRow, RangeControl, SelectControl} = wp.c
 const {InspectorControls} = wp.editor;
 const {__} = wp.i18n;
 const data = window.WordCampBlocks.speakers || {};
-
+const MAX_POSTS = 100;
 
 class SpeakerInspectorControls extends Component {
 	render() {

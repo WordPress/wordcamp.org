@@ -1,33 +1,38 @@
-
+/**
+ * External dependencies
+ */
 import classnames from 'classnames';
 
+/**
+ * WordPress dependencies
+ */
 const { BaseControl, Button, ButtonGroup, RangeControl } = wp.components;
-const { __ } = wp.i18n;
+const { __, _x } = wp.i18n;
 import { withInstanceId } from '@wordpress/compose';
 
 const sizePresets = [
 	{
-		name: __( 'Small' ),
-		shortName: __( 'S' ),
+		name: __( 'Small', 'wordcamporg' ),
+		shortName: _x( 'S', 'size small', 'wordcamporg' ),
 		size: 90,
 		slug: 'small',
 	},
 	{
-		name: __( 'Regular' ),
-		shortName: __( 'M' ),
+		name: __( 'Regular', 'wordcamporg' ),
+		shortName: _x( 'M', 'size medium', 'wordcamporg' ),
 		size: 150,
 		slug: 'regular',
 	},
 	{
-		name: __( 'Large' ),
-		shortName: __( 'L' ),
+		name: __( 'Large', 'wordcamporg' ),
+		shortName: _x( 'L', 'size large', 'wordcamporg' ),
 		size: 300,
 		slug: 'large',
 	},
 	{
-		name: __( 'Larger' ),
-		shortName: __( 'XL' ),
-		size: 600,
+		name: __( 'Larger', 'wordcamporg' ),
+		shortName: _x( 'XL', 'size extra large', 'wordcamporg' ),
+		size: 500,
 		slug: 'larger',
 	},
 ];
@@ -43,10 +48,6 @@ function AvatarSizeControl( {
 	...props
 } ) {
 	const id = `wordcamp-inspector-avatar-size-control-${ instanceId }`;
-
-	const updateSize = ( size ) => {
-
-	};
 
 	return (
 		<BaseControl
@@ -66,9 +67,9 @@ function AvatarSizeControl( {
 							isSmall
 							isPrimary={ isCurrent }
 							aria-pressed={ isCurrent }
-							onClick={ updateSize( size ) }
+							onClick={ () => onChange( Number( size ) ) }
 						>
-							{ shortName }
+							{ shortName || name }
 						</Button>
 					);
 				} ) }
@@ -76,19 +77,18 @@ function AvatarSizeControl( {
 
 			<Button
 				isSmall
-				onClick={  }
+				onClick={ () => onChange( Number( initialPosition ) ) }
 			>
 				{ __( 'Reset', 'wordcamporg' ) }
 			</Button>
 
 			<RangeControl
-				value={  }
-				min={  }
-				max={  }
-				initialPosition={  }
-				onChange{  }
-				beforeIcon={  }
-				afterIcon={  }
+				value={ value }
+				initialPosition={ initialPosition }
+				onChange={ onChange }
+				beforeIcon={ 'format-image' }
+				afterIcon={ 'format-image' }
+				{ ...props }
 			/>
 		</BaseControl>
 	);

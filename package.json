@@ -18,6 +18,7 @@
 		"@wordpress/babel-plugin-makepot": "2.1.2",
 		"@wordpress/babel-preset-default": "3.0.1",
 		"@wordpress/browserslist-config": "2.2.2",
+		"@wordpress/compose": "2.1.0",
 		"@wordpress/element": "2.1.4",
 		"@wordpress/i18n": "3.0.1",
 		"babel-eslint": "10.0.1",

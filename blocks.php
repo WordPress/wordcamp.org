@@ -1,5 +1,4 @@
 <?php
-
 namespace WordCamp\Blocks;
 defined( 'WPINC' ) || die();
 
@@ -45,6 +44,13 @@ add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories', 10
  * @return void
  */
 function enqueue_assets() {
+	wp_enqueue_style(
+		'wordcamp-blocks',
+		plugins_url( 'assets/blocks.min.css', __FILE__ ),
+		[],
+		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.min.css' )
+	);
+
 	wp_enqueue_script(
 		'wordcamp-blocks',
 		plugins_url( 'assets/blocks.min.js', __FILE__ ),
@@ -62,17 +68,22 @@ function enqueue_assets() {
 		false
 	);
 
+	$data = array(
+		'localeData' => gutenberg_get_jed_locale_data( 'wordcamporg' )
+	);
+
 	/**
 	 * Filter: Add/modify data sent to WordCamp Blocks JS scripts.
 	 *
 	 * @param array $data Associative multidimensional array of data.
 	 */
-	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
+	$data = apply_filters( 'wordcamp_blocks_script_data', $data );
 
 	wp_add_inline_script(
 		'wordcamp-blocks',
-		sprintf(
-			'var WordCampBlocks = %s;',
+		sprintf( "
+			var WordCampBlocks = %s;
+			wp.i18n.setLocaleData( WordCampBlocks.localeData, 'wordcamporg' );",
 			wp_json_encode( $data )
 		),
 		'before'
@@ -82,15 +93,20 @@ function enqueue_assets() {
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
- * Localize scripts.
+ * Fix a CSS bug in Gutenberg when PanelRows are used with RangeControls.
  *
- * @return void
+ * @todo Remove this when https://github.com/WordPress/gutenberg/pull/4564 is fixed.
  */
-function localize() {
-	wp_add_inline_script(
-		'wp-i18n',
-		'wp.i18n.setLocaleData( ' . wp_json_encode( gutenberg_get_jed_locale_data( 'wordcamporg' ) ) . ' );'
-	);
+function fix_core_max_width_bug() {
+	?>
+
+	<style>
+		.components-panel__row label {
+			max-width: 100% !important;
+		}
+	</style>
+
+	<?php
 }
 
-add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\localize' );
+add_action( 'admin_print_styles', __NAMESPACE__ . '\fix_core_max_width_bug' );

@@ -6,7 +6,7 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import { edit } from './edit.jsx';
+import { edit } from './edit.js';
 
 const supports = {
 	className: false,

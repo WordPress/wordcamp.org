@@ -45,7 +45,7 @@ module.exports = {
 	 *
 	 * - Consecutive assignment statements should be aligned on the `=` operator. See https://github.com/eslint/eslint/issues/11025.
 	 * - Consecutive import statements should be aligned on the `from` keyword. See https://github.com/eslint/eslint/issues/11025.
-	 * - Attributes within multi-line JSX elements should be aligned on the `=` operator.
+	 * - Attributes within multi-line JSX elements should be aligned on the `=` operator. See https://github.com/yannickcr/eslint-plugin-react/issues/2030.
 	 */
 	rules: {
 		/* eslint-disable quote-props, no-console *//*

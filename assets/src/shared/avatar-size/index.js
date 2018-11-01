@@ -94,4 +94,4 @@ function AvatarSizeControl( {
 	);
 }
 
-export default withInstanceId( AvatarSizeControl )
+export default withInstanceId( AvatarSizeControl );

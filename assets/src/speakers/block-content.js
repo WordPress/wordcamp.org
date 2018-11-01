@@ -9,6 +9,8 @@ const { decodeEntities } = wp.htmlEntities;
 const { __ } = wp.i18n;
 const { addQueryArgs } = wp.url;
 
+import AvatarImage from '../shared/avatar';
+
 class SpeakerBlockContent extends Component {
 	render() {
 		const { attributes, speakerPosts } = this.props;
@@ -37,14 +39,11 @@ class SpeakerBlockContent extends Component {
 						</h2>
 						<div className={ 'wcorg-speaker-description' }>
 							{ show_avatars &&
-							/* todo Turn this into a component */
-							<img
-								className={ classnames( 'avatar', 'avatar-' + avatar_size, 'photo' ) }
-								src={ addQueryArgs( post[ 'avatar_urls' ][ '24' ], { s: avatar_size } ) }
-								srcSet={ addQueryArgs( post[ 'avatar_urls' ][ '24' ], { s: avatar_size * 2 } ) + ' 2x' }
-								width={ avatar_size }
-								height={ avatar_size }
-							/>
+								<AvatarImage
+									name={ decodeEntities( post.title.rendered.trim() ) || '' }
+									size={ avatar_size }
+									url={ post[ 'avatar_urls' ][ '24' ] }
+								/>
 							}
 							<Disabled>
 								<RawHTML>

@@ -8,7 +8,13 @@ import classnames from 'classnames';
  */
 const { BaseControl, Button, ButtonGroup, RangeControl } = wp.components;
 const { __, _x } = wp.i18n;
+
 import { withInstanceId } from '@wordpress/compose';
+
+/**
+ * Internal dependencies
+ */
+import './style.scss';
 
 const sizePresets = [
 	{
@@ -56,33 +62,38 @@ function AvatarSizeControl( {
 			label={ label }
 			help={ help }
 		>
-			<ButtonGroup>
-				{ sizePresets.map( ( preset ) => {
-					const { name, shortName, size, slug } = preset;
-					const isCurrent = value === size;
+			<div className={ 'wordcamp-components-avatar-size-buttons' }>
+				<ButtonGroup>
+					{ sizePresets.map( ( preset ) => {
+						const { name, shortName, size, slug } = preset;
+						const isCurrent = value === size;
 
-					return (
-						<Button
-							key={ slug }
-							isSmall
-							isPrimary={ isCurrent }
-							aria-pressed={ isCurrent }
-							onClick={ () => onChange( Number( size ) ) }
-						>
-							{ shortName || name }
-						</Button>
-					);
-				} ) }
-			</ButtonGroup>
+						return (
+							<Button
+								key={ slug }
+								isLarge
+								isPrimary={ isCurrent }
+								aria-pressed={ isCurrent }
+								onClick={ () => onChange( Number( size ) ) }
+							>
+								{ shortName || name }
+							</Button>
+						);
+					} ) }
+				</ButtonGroup>
 
-			<Button
-				isSmall
-				onClick={ () => onChange( Number( initialPosition ) ) }
-			>
-				{ __( 'Reset', 'wordcamporg' ) }
-			</Button>
+				<Button
+					className={ 'wordcamp-components-avatar-size-button-reset' }
+					isLarge
+					isDefault
+					onClick={ () => onChange( Number( initialPosition ) ) }
+				>
+					{ __( 'Reset', 'wordcamporg' ) }
+				</Button>
+			</div>
 
 			<RangeControl
+				className={ 'wordcamp-components-avatar-size-range' }
 				value={ value }
 				initialPosition={ initialPosition }
 				onChange={ onChange }

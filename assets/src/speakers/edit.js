@@ -2,8 +2,6 @@
  * External dependencies
  */
 const { isUndefined, pickBy, split } = window.lodash;
-import SpeakerInspectorControls from './inspector-controls';
-import SpeakerBlockContent from './block-content';
 
 /**
  * WordPress dependencies
@@ -13,35 +11,23 @@ const { withSelect } = wp.data;
 const { Component, Fragment } = wp.element;
 const { __ } = wp.i18n;
 
+/**
+ * Internal dependencies
+ */
+import SpeakerInspectorControls from './inspector-controls';
+import SpeakerBlockContent from './block-content';
+
 const MAX_POSTS = 100;
 
 class SpeakersEdit extends Component {
-
-	inspectorControls() {
-		return (
-			<SpeakerInspectorControls
-				attributes = { this.props.attributes }
-				setAttributes = { this.props.setAttributes }
-			/>
-		)
-	}
-
-	blockContent() {
-		return (
-			<SpeakerBlockContent
-				attributes = { this.props.attributes }
-				speakerPosts = { this.props.speakerPosts }
-			/>
-		)
-	}
-
 	render() {
 		const { speakerPosts } = this.props;
 		const hasPosts = Array.isArray( speakerPosts ) && speakerPosts.length;
+
 		if ( ! hasPosts ) {
 			return (
 				<Fragment>
-					{ this.inspectorControls() }
+					<SpeakerInspectorControls { ...this.props } />
 					<Placeholder
 						icon="megaphone"
 						label={ __( 'Speakers' ) }
@@ -57,8 +43,8 @@ class SpeakersEdit extends Component {
 
 		return (
 			<Fragment>
-				{ this.inspectorControls() }
-				{ this.blockContent() }
+				<SpeakerInspectorControls { ...this.props } />
+				<SpeakerBlockContent { ...this.props } />
 			</Fragment>
 		);
 	}

@@ -3,6 +3,9 @@ const { CheckboxControl, PanelBody, PanelRow, RangeControl, SelectControl } = wp
 const { InspectorControls } = wp.editor;
 const { __ } = wp.i18n;
 const data = window.WordCampBlocks.speakers || {};
+
+import AvatarSizeControl from '../shared/avatar-size';
+
 const MAX_POSTS = 100;
 
 class SpeakerInspectorControls extends Component {
@@ -61,14 +64,12 @@ class SpeakerInspectorControls extends Component {
 					</PanelRow>
 					{ show_avatars &&
 						<PanelRow>
-							<RangeControl
-								label={ __( 'Avatar size (px)', 'wordcamporg' ) }
-								help={ __( 'Height and width in pixels.', 'wordcamporg' ) }
+							<AvatarSizeControl
+								label={ __( 'Size', 'wordcamporg' ) }
 								value={ Number( avatar_size ) }
 								min={ Number( schema[ 'avatar_size' ].minimum ) }
 								max={ Number( schema[ 'avatar_size' ].maximum ) }
 								initialPosition={ Number( schema[ 'avatar_size' ].default ) }
-								allowReset={ true }
 								onChange={ ( value ) => setAttributes( { avatar_size: value } ) }
 							/>
 						</PanelRow>

@@ -10,4 +10,4 @@
 *Running:* 
 1. `cd` into the project directory.
 2. Run `npm run build` to initialize the build files.
-3. Run `npm run watch`  while developing to continuously watch the files.
+3. Run `npm start`  while developing to continuously watch the files.

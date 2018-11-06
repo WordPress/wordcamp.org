@@ -101,9 +101,9 @@ function get_attributes_schema() {
 		],
 		'avatar_size'    => [
 			'type'    => 'integer',
-			'minimum' => 64,
-			'maximum' => 512,
-			'default' => 100,
+			'minimum' => 25,
+			'maximum' => 600,
+			'default' => 150,
 		],
 		'avatar_align'   => [
 			'type'    => 'string',

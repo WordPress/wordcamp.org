@@ -3,7 +3,7 @@
  */
 const { PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
 const { InspectorControls } = wp.editor;
-const { Component } = wp.element;
+const { Component, Fragment } = wp.element;
 const { __ } = wp.i18n;
 
 /**
@@ -31,7 +31,7 @@ class SpeakerInspectorControls extends Component {
 						/>
 					</PanelRow>
 					{ show_avatars &&
-						<div>
+						<Fragment>
 							<PanelRow>
 								<AvatarSizeControl
 									label={ __( 'Size', 'wordcamporg' ) }
@@ -49,7 +49,7 @@ class SpeakerInspectorControls extends Component {
 									onChange={ ( value ) => setAttributes( { avatar_align: value } ) }
 								/>
 							</PanelRow>
-						</div>
+						</Fragment>
 					}
 				</PanelBody>
 

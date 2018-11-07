@@ -10,6 +10,11 @@ const { BaseControl, ButtonGroup, IconButton } = wp.components;
 
 import { withInstanceId } from '@wordpress/compose';
 
+/**
+ * Internal dependencies
+ */
+import './style.scss';
+
 const data = window.WordCampBlocks.speakers || {};
 
 function ImageAlignmentControl( {

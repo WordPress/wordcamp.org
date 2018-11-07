@@ -12,14 +12,14 @@ import { withInstanceId } from '@wordpress/compose';
 
 const data = window.WordCampBlocks.speakers || {};
 
-function ImageAlignmentControl(
+function ImageAlignmentControl( {
 	className,
 	label,
 	help,
 	value,
 	instanceId,
-	onChange
-) {
+	onChange,
+} ) {
 	const { options } = data;
 	const id = `wordcamp-inspector-image-alignment-control-${ instanceId }`;
 

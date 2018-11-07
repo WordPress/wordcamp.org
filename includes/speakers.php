@@ -30,7 +30,10 @@ function add_script_data( array $data ) {
 	$data['speakers'] = [
 		'schema'  => get_attributes_schema(),
 		'options' => array(
-			'sort' => get_sort_options(),
+			'align'   => get_options( 'align' ),
+			'content' => get_options( 'content' ),
+			'mode'    => get_options( 'mode' ),
+			'sort'    => get_options( 'sort' ),
 		),
 	];
 
@@ -72,61 +75,155 @@ function render( $attributes ) {
  * @return array
  */
 function get_attributes_schema() {
-	return array(
-		'show_all_posts' => array(
+	return [
+		'mode'           => [
+			'type'    => 'string',
+			'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
+			'default' => '',
+		],
+		'post_ids'       => [
+			'type'    => 'array',
+			'default' => [],
+			'items'   => [
+				'type' => 'integer',
+			],
+		],
+		'term_ids'       => [
+			'type'    => 'array',
+			'default' => [],
+			'items'   => [
+				'type' => 'integer',
+			],
+		],
+		'show_avatars'   => [
 			'type'    => 'bool',
 			'default' => true,
-		),
-		'posts_per_page' => array(
+		],
+		'avatar_size'    => [
 			'type'    => 'integer',
-			'minimum' => 1,
-			'maximum' => 100,
-			'default' => 10,
-		),
-		'sort'           => array(
+			'minimum' => 25,
+			'maximum' => 600,
+			'default' => 150,
+		],
+		'avatar_align'   => [
 			'type'    => 'string',
-			'enum'    => wp_list_pluck( get_sort_options(), 'value' ),
-			'default' => 'title_asc',
-		),
+			'enum'    => wp_list_pluck( get_options( 'align' ), 'value' ),
+			'default' => 'none',
+		],
+		'content'        => [
+			'type'    => 'string',
+			'enum'    => wp_list_pluck( get_options( 'content' ), 'value' ),
+			'default' => 'full',
+		],
+		'excerpt_length' => [
+			'type'    => 'integer',
+			'minimum' => 10,
+			'maximum' => 1000,
+			'default' => 55,
+		],
 		'speaker_link'   => array(
 			'type'    => 'bool',
 			'default' => false,
 		),
-		'show_avatars'   => array(
+		'show_session'   => array(
 			'type'    => 'bool',
-			'default' => true,
+			'default' => false,
 		),
-		'avatar_size'    => array(
-			'type'    => 'integer',
-			'minimum' => 50,
-			'maximum' => 600,
-			'default' => 150,
+		'sort'           => array(
+			'type'    => 'string',
+			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
+			'default' => 'title_asc',
 		),
-	);
+		'className'      => array(
+			'type' => 'string',
+		),
+	];
 }
 
 /**
- * Get the labels and values of the Sort By options.
+ * Get the label/value pairs for a type of options.
+ *
+ * @param string $type
  *
  * @return array
  */
-function get_sort_options() {
-	return array(
-		array(
-			'label' => _x( 'A → Z', 'sort option', 'wordcamporg' ),
-			'value' => 'title_asc',
-		),
-		array(
-			'label' => _x( 'Z → A', 'sort option', 'wordcamporg' ),
-			'value' => 'title_desc',
-		),
-		array(
-			'label' => _x( 'Newest to Oldest', 'sort option', 'wordcamporg' ),
-			'value' => 'date_desc',
-		),
-		array(
-			'label' => _x( 'Oldest to Newest', 'sort option', 'wordcamporg' ),
-			'value' => 'date_asc',
-		),
-	);
+function get_options( $type ) {
+	$options = [];
+
+	switch ( $type ) {
+		case 'align':
+			$options = [
+				[
+					'label' => _x( 'None', 'alignment option', 'wordcamporg' ),
+					'value' => 'none',
+				],
+				[
+					'label' => _x( 'Left', 'alignment option', 'wordcamporg' ),
+					'value' => 'left',
+				],
+				[
+					'label' => _x( 'Center', 'alignment option', 'wordcamporg' ),
+					'value' => 'center',
+				],
+				[
+					'label' => _x( 'Right', 'alignment option', 'wordcamporg' ),
+					'value' => 'right',
+				],
+			];
+			break;
+		case 'content':
+			$options = [
+				[
+					'label' => _x( 'Full', 'content option', 'wordcamporg' ),
+					'value' => 'full',
+				],
+				[
+					'label' => _x( 'Excerpt', 'content option', 'wordcamporg' ),
+					'value' => 'excerpt',
+				],
+				[
+					'label' => _x( 'None', 'content option', 'wordcamporg' ),
+					'value' => 'none',
+				],
+			];
+			break;
+		case 'mode':
+			$options = [
+				[
+					'label' => '',
+					'value' => '',
+				],
+				[
+					'label' => _x( 'List all speakers', 'mode option', 'wordcamporg' ),
+					'value' => 'query',
+				],
+				[
+					'label' => _x( 'Choose specific speakers', 'mode option', 'wordcamporg' ),
+					'value' => 'specific',
+				],
+			];
+			break;
+		case 'sort':
+			$options = [
+				[
+					'label' => _x( 'A → Z', 'sort option', 'wordcamporg' ),
+					'value' => 'title_asc',
+				],
+				[
+					'label' => _x( 'Z → A', 'sort option', 'wordcamporg' ),
+					'value' => 'title_desc',
+				],
+				[
+					'label' => _x( 'Newest to Oldest', 'sort option', 'wordcamporg' ),
+					'value' => 'date_desc',
+				],
+				[
+					'label' => _x( 'Oldest to Newest', 'sort option', 'wordcamporg' ),
+					'value' => 'date_asc',
+				],
+			];
+			break;
+	}
+
+	return $options;
 }

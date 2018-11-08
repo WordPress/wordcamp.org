@@ -7,6 +7,7 @@ const { __ } = wp.i18n;
  * Internal dependencies
  */
 import { edit } from './edit.js';
+import './style.scss';
 
 export const name = 'wordcamp/speakers';
 

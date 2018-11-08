@@ -7,11 +7,10 @@ const { Disabled } = wp.components;
 const { Component, RawHTML } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
 const { __ } = wp.i18n;
-const { addQueryArgs } = wp.url;
 
 import AvatarImage from '../shared/avatar';
 
-class SpeakerBlockContent extends Component {
+class SpeakersBlockContent extends Component {
 	render() {
 		const { attributes, speakerPosts } = this.props;
 		const { speaker_link, show_avatars, avatar_size } = attributes;
@@ -58,4 +57,4 @@ class SpeakerBlockContent extends Component {
 	}
 }
 
-export default SpeakerBlockContent;
+export default SpeakersBlockContent;

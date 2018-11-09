@@ -63,6 +63,7 @@ function enqueue_assets() {
 			'wp-html-entities',
 			'wp-i18n',
 			'wp-url',
+			'lodash',
 		),
 		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.min.js' ),
 		false

@@ -1,9 +1,4 @@
 /**
- * External dependencies
- */
-const { isUndefined, pickBy, split } = window.lodash;
-
-/**
  * WordPress dependencies
  */
 const { withSelect } = wp.data;
@@ -31,7 +26,7 @@ class SpeakersEdit extends Component {
 const speakersSelect = ( select, props ) => {
 	const { mode, post_ids, term_ids, sort } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
-	const [ orderby, order ] = split( sort, '_', 2 );
+	const [ orderby, order ] = _.split( sort, '_', 2 );
 
 	const args = {
 		orderby: orderby,
@@ -40,11 +35,16 @@ const speakersSelect = ( select, props ) => {
 		_embed: true,
 	};
 
-	if ( 'specific' === mode && Array.isArray( post_ids ) ) {
+	if ( 'specific_posts' === mode && Array.isArray( post_ids ) ) {
 		args.include = post_ids;
 	}
 
-	const speakersQuery = pickBy( args, ( value ) => ! isUndefined( value ) );
+	if ( 'specific_terms' === mode && Array.isArray( term_ids ) ) {
+		args.filter.taxonomy = 'wcb_speaker_group';
+		args.filter.term = term_ids;
+	}
+
+	const speakersQuery = _.pickBy( args, ( value ) => ! _.isUndefined( value ) );
 
 	return {
 		speakerPosts: getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),

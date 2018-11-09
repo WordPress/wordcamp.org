@@ -1,12 +1,7 @@
 /**
- * External dependencies
- */
-const { find } = window.lodash;
-
-/**
  * WordPress dependencies
  */
-const { Button, Placeholder, Spinner, TextControl } = wp.components;
+const { Button, Placeholder, Spinner } = wp.components;
 const { Component, Fragment } = wp.element;
 const { __ } = wp.i18n;
 
@@ -14,6 +9,7 @@ const { __ } = wp.i18n;
  * Internal dependencies
  */
 import SpeakersBlockContent from './block-content';
+import SpeakersSelect from './speakers-select';
 
 const data = window.WordCampBlocks.speakers || {};
 
@@ -40,21 +36,39 @@ class SpeakersBlockControls extends Component {
 		}
 
 		switch ( mode ) {
-			case 'query' :
+			case 'all' :
 				return (
 					<SpeakersBlockContent { ...this.props } />
 				);
 
-			case 'specific' :
+			case 'specific_posts' :
+				const postsLabel = _.find( options.mode, ( modeOption ) => {
+					return 'specific_posts' === modeOption.value;
+				} ).label;
+
 				return (
 					<Fragment>
 						<SpeakersBlockContent { ...this.props } />
 						<Placeholder
-							label={ __( 'Add more speakers', 'wordcamporg' ) }
+							label={ postsLabel }
 						>
-							<TextControl
-								label={ 'Temporary input' }
-							/>
+							<SpeakersSelect { ...this.props } />
+						</Placeholder>
+					</Fragment>
+				);
+
+			case 'specific_terms' :
+				const termsLabel = _.find( options.mode, ( modeOption ) => {
+					return 'specific_terms' === modeOption.value;
+				} ).label;
+
+				return (
+					<Fragment>
+						<SpeakersBlockContent { ...this.props } />
+						<Placeholder
+							label={ termsLabel }
+						>
+							<SpeakersSelect { ...this.props } />
 						</Placeholder>
 					</Fragment>
 				);
@@ -69,19 +83,18 @@ class SpeakersBlockControls extends Component {
 					<Button
 						isDefault
 						isLarge
-						onClick={ () => { setAttributes( { mode: 'query' } ) } }
+						onClick={ () => { setAttributes( { mode: 'all' } ); } }
 					>
-						{ find( options.mode, ( modeOption ) => {
-							return 'query' === modeOption.value;
+						{ _.find( options.mode, ( modeOption ) => {
+							return 'all' === modeOption.value;
 						} ).label }
 					</Button>
 				</div>
 
 				<div className={ 'wordcamp-block-speakers-mode-option' }>
-					<TextControl
-						label={ find( options.mode, ( modeOption ) => {
-							return 'specific' === modeOption.value;
-						} ).label }
+					<SpeakersSelect
+						label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
+						{ ...this.props }
 					/>
 				</div>
 			</Placeholder>

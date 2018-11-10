@@ -13,89 +13,6 @@ const { __ } = wp.i18n;
 import AvatarImage from '../shared/avatar';
 import VersatileSelect from '../shared/versatile-select';
 
-const optionImage = ( optionData ) => {
-	const { type } = optionData;
-
-	let image;
-
-	switch ( type ) {
-		case 'post' :
-			image = (
-				<AvatarImage
-					className={ 'wordcamp-speakers-select-option-avatar' }
-					name={ optionData.label }
-					size={ 30 }
-					url={ optionData.avatar }
-				/>
-			);
-			break;
-
-		case 'term' :
-			image = (
-				<Dashicon
-					className={ 'wordcamp-speakers-select-option-icon' }
-					icon={ 'megaphone' }
-					size={ 30 }
-				/>
-			);
-			break;
-	}
-
-	return image;
-};
-
-const optionLabel = ( optionData ) => {
-	const { type } = optionData;
-
-	let label;
-
-	switch ( type ) {
-		case 'post' :
-			label = (
-				<span className={ 'wordcamp-speakers-select-option-label' }>
-					{ optionData.label }
-				</span>
-			);
-			break;
-
-		case 'term' :
-			label = (
-				<span className={ 'wordcamp-speakers-select-option-label' }>
-					{ optionData.label }
-					<span className={ 'wordcamp-speakers-select-option-label-term-count' }>
-						{ optionData.count }
-					</span>
-				</span>
-			);
-			break;
-	}
-
-	return label;
-};
-
-const optionFilter = ( option ) => {
-	const { selectedOptions } = this.state;
-	let chosen;
-
-	if ( ! _.isUndefined( selectedOptions ) ) {
-		chosen = selectedOptions.pop().type;
-	}
-
-	if ( chosen !== option.type ) {
-		return false;
-	}
-
-	if ( 'specific_terms' === mode && 'post' === option.type ) {
-		return false;
-	}
-
-	if ( 'specific_posts' === mode && 'term' === option.type ) {
-		return false;
-	}
-
-	return true;
-};
-
 class SpeakersSelect extends Component {
 	constructor( props ) {
 		super( props );
@@ -103,6 +20,92 @@ class SpeakersSelect extends Component {
 		this.state = {
 			selectedOptions: [],
 		};
+
+		this.optionFilter = this.optionFilter.bind( this );
+		this.render = this.render.bind( this );
+	}
+
+	static optionImage( optionData ) {
+		const { type } = optionData;
+
+		let image;
+
+		switch ( type ) {
+			case 'post' :
+				image = (
+					<AvatarImage
+						className={ 'wordcamp-speakers-select-option-avatar' }
+						name={ optionData.label }
+						size={ 30 }
+						url={ optionData.avatar }
+					/>
+				);
+				break;
+
+			case 'term' :
+				image = (
+					<Dashicon
+						className={ 'wordcamp-speakers-select-option-icon' }
+						icon={ 'megaphone' }
+						size={ 30 }
+					/>
+				);
+				break;
+		}
+
+		return image;
+	}
+
+	static optionLabel( optionData ) {
+		const { type } = optionData;
+
+		let label;
+
+		switch ( type ) {
+			case 'post' :
+				label = (
+					<span className={ 'wordcamp-speakers-select-option-label' }>
+						{ optionData.label }
+					</span>
+				);
+				break;
+
+			case 'term' :
+				label = (
+					<span className={ 'wordcamp-speakers-select-option-label' }>
+						{ optionData.label }
+						<span className={ 'wordcamp-speakers-select-option-label-term-count' }>
+							{ optionData.count }
+						</span>
+					</span>
+				);
+				break;
+		}
+
+		return label;
+	}
+
+	optionFilter( option ) {
+		const { selectedOptions } = this.state;
+		let chosen;
+
+		if ( ! _.isUndefined( selectedOptions ) ) {
+			chosen = selectedOptions.pop().type;
+		}
+
+		if ( chosen !== option.type ) {
+			return false;
+		}
+
+		if ( 'specific_terms' === mode && 'post' === option.type ) {
+			return false;
+		}
+
+		if ( 'specific_posts' === mode && 'term' === option.type ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	render() {
@@ -126,7 +129,7 @@ class SpeakersSelect extends Component {
 				label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
 				value={ currentValue }
 				options={ selectOptions }
-				filterOption={ optionFilter }
+				filterOption={ this.optionFilter }
 				formatGroupLabel={ ( groupData ) => {
 					return (
 						<span className={ 'wordcamp-speakers-select-option-group-label' }>
@@ -140,8 +143,8 @@ class SpeakersSelect extends Component {
 				formatOptionLabel={ ( optionData ) => {
 					return (
 						<Fragment>
-							{ optionImage( optionData ) }
-							{ optionLabel( optionData ) }
+							{ this.constructor.optionImage( optionData ) }
+							{ this.constructor.optionLabel( optionData ) }
 						</Fragment>
 					);
 				} }

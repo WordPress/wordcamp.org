@@ -62,6 +62,10 @@ const webpackConfig = {
 			},
 		},
 	],
+	externals: {
+		'react': 'React',
+		'react-dom': 'ReactDOM',
+	},
 };
 
 module.exports = webpackConfig;

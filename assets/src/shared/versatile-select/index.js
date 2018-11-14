@@ -30,7 +30,7 @@ class VersatileSelect extends Component {
 		return (
 			<BaseControl
 				id={ id }
-				className={ classnames( 'wordcamp-components-image-alignment', className ) }
+				className={ classnames( 'wordcamp-components-versatile-select', className ) }
 				label={ label }
 				help={ help }
 			>

@@ -55,15 +55,16 @@ function enqueue_assets() {
 		'wordcamp-blocks',
 		plugins_url( 'assets/blocks.min.js', __FILE__ ),
 		array(
+			'lodash',
 			'wp-blocks',
 			'wp-components',
+			'wp-compose',
 			'wp-data',
 			'wp-editor',
 			'wp-element',
 			'wp-html-entities',
 			'wp-i18n',
 			'wp-url',
-			'lodash',
 		),
 		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.min.js' ),
 		false

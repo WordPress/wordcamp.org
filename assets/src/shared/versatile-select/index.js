@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import AsyncSelect from 'react-select/lib/Async';
+import Select from 'react-select';
 import classnames from 'classnames';
 import { map } from 'lodash';
 
@@ -24,7 +24,7 @@ class VersatileSelect extends Component {
 	}
 
 	render() {
-		const { className, label, help, value, instanceId, onChange, options, submitLabel } = this.props;
+		const { className, label, help, instanceId, onChange, submitLabel } = this.props;
 		const id = `wordcamp-block-versatile-select-control-${ instanceId }`;
 
 		return (
@@ -34,24 +34,19 @@ class VersatileSelect extends Component {
 				label={ label }
 				help={ help }
 			>
-				<AsyncSelect
+				<Select
 					isMulti={ true }
 					closeMenuOnSelect={ false }
-					options={ options }
-					value={ value }
+					{ ...this.props }
 					onChange={ ( selectedOptions ) => {
 						this.setState( { selectedOptions: selectedOptions } );
 					} }
-
 				/>
 				<Button
-					isPrimary
 					isDefault
 					onClick={ () => {
 						const { selectedOptions } = this.state;
-						const selected = map( selectedOptions, 'value' );
-
-						onChange( selected );
+						onChange( selectedOptions );
 					} }
 				>
 					{ submitLabel || __( 'Select', 'wordcamporg' ) }

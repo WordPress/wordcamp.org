@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { isUndefined, map } from 'lodash';
+import { filter, includes, map } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -22,11 +22,7 @@ class SpeakersSelect extends Component {
 	constructor( props ) {
 		super( props );
 
-		this.state = {
-			selectedOptions: [],
-		};
-
-		this.optionFilter = this.optionFilter.bind( this );
+		this.optionDisabled = this.optionDisabled.bind( this );
 		this.render = this.render.bind( this );
 	}
 
@@ -90,43 +86,45 @@ class SpeakersSelect extends Component {
 		return label;
 	}
 
-	optionFilter( option ) {
-		const { selectedOptions } = this.state;
+	optionDisabled( option, selected ) {
+		const { mode } = this.props.attributes;
 		let chosen;
 
-		if ( ! isUndefined( selectedOptions ) ) {
-			chosen = selectedOptions.pop().type;
-		}
-
-		if ( chosen !== option.type ) {
-			return false;
+		if ( Array.isArray( selected ) && selected.length ) {
+			chosen = selected[ 0 ].type;
 		}
 
 		if ( 'specific_terms' === mode && 'post' === option.type ) {
-			return false;
+			return true;
 		}
 
 		if ( 'specific_posts' === mode && 'term' === option.type ) {
-			return false;
+			return true;
 		}
 
-		return true;
+		return chosen && chosen !== option.type;
 	}
 
 	render() {
 		const { attributes, setAttributes, selectOptions } = this.props;
 		const { mode, post_ids, term_ids } = attributes;
 
-		let currentValue;
+		let currentValue, ids;
 
 		switch ( mode ) {
 			case 'specific_posts' :
-				currentValue = post_ids;
+				ids = post_ids;
 				break;
 
 			case 'specific_terms' :
-				currentValue = term_ids;
+				ids = term_ids;
 				break;
+		}
+
+		if ( ids ) {
+			currentValue = filter( selectOptions[0].options, ( o ) => {
+				return includes( ids, o.value );
+			} );
 		}
 
 		return (
@@ -134,7 +132,7 @@ class SpeakersSelect extends Component {
 				label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
 				value={ currentValue }
 				options={ selectOptions }
-				filterOption={ this.optionFilter }
+				isOptionDisabled={ this.optionDisabled }
 				formatGroupLabel={ ( groupData ) => {
 					return (
 						<span className={ 'wordcamp-speakers-select-option-group-label' }>
@@ -153,17 +151,17 @@ class SpeakersSelect extends Component {
 						</Fragment>
 					);
 				} }
-				onChange={ ( value ) => {
-					const { selectedOptions } = this.state;
+				onChange={ ( selectedOptions ) => {
+					const value = map( selectedOptions, 'value' );
 
-					if ( ! value ) {
+					if ( ! value.length ) {
 						setAttributes( {
 							mode: '',
 							post_ids: [],
 							term_ids: [],
 						} );
 					} else {
-						const chosen = selectedOptions.pop().type;
+						const chosen = selectedOptions[ 0 ].type;
 
 						switch ( chosen ) {
 							case 'post' :

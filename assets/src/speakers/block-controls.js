@@ -55,6 +55,7 @@ class SpeakersBlockControls extends Component {
 					<Fragment>
 						<SpeakersBlockContent { ...this.props } />
 						<Placeholder
+							icon="megaphone"
 							label={ postsLabel }
 						>
 							<SpeakersSelect { ...this.props } />
@@ -71,6 +72,7 @@ class SpeakersBlockControls extends Component {
 					<Fragment>
 						<SpeakersBlockContent { ...this.props } />
 						<Placeholder
+							icon="megaphone"
 							label={ termsLabel }
 						>
 							<SpeakersSelect { ...this.props } />

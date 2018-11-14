@@ -8,7 +8,7 @@ import { filter, includes, map } from 'lodash';
  */
 const { Dashicon } = wp.components;
 const { withSelect } = wp.data;
-const { Component, Fragment } = wp.element;
+const { Component } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
 const { __ } = wp.i18n;
 
@@ -37,7 +37,7 @@ class SpeakersSelect extends Component {
 					<AvatarImage
 						className={ 'wordcamp-speakers-select-option-avatar' }
 						name={ optionData.label }
-						size={ 30 }
+						size={ 24 }
 						url={ optionData.avatar }
 					/>
 				);
@@ -45,11 +45,13 @@ class SpeakersSelect extends Component {
 
 			case 'term' :
 				image = (
-					<Dashicon
-						className={ 'wordcamp-speakers-select-option-icon' }
-						icon={ 'megaphone' }
-						size={ 30 }
-					/>
+					<div className={ 'wordcamp-speakers-select-option-icon-container' }>
+						<Dashicon
+							className={ 'wordcamp-speakers-select-option-icon' }
+							icon={ 'megaphone' }
+							size={ 16 }
+						/>
+					</div>
 				);
 				break;
 		}
@@ -106,7 +108,7 @@ class SpeakersSelect extends Component {
 	}
 
 	render() {
-		const { attributes, setAttributes, selectOptions } = this.props;
+		const { label, attributes, setAttributes, selectOptions } = this.props;
 		const { mode, post_ids, term_ids } = attributes;
 
 		let currentValue, ids;
@@ -129,7 +131,7 @@ class SpeakersSelect extends Component {
 
 		return (
 			<VersatileSelect
-				label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
+				label={ label }
 				value={ currentValue }
 				options={ selectOptions }
 				isOptionDisabled={ this.optionDisabled }
@@ -137,18 +139,15 @@ class SpeakersSelect extends Component {
 					return (
 						<span className={ 'wordcamp-speakers-select-option-group-label' }>
 							{ groupData.label }
-							<span className={ 'wordcamp-speakers-select-option-group-item-count' }>
-								{ groupData.options.length }
-							</span>
 						</span>
 					);
 				} }
 				formatOptionLabel={ ( optionData ) => {
 					return (
-						<Fragment>
+						<div className={ 'wordcamp-speakers-select-option' }>
 							{ this.constructor.optionImage( optionData ) }
 							{ this.constructor.optionLabel( optionData ) }
-						</Fragment>
+						</div>
 					);
 				} }
 				onChange={ ( selectedOptions ) => {

@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import { isUndefined, pickBy, split } from 'lodash';
+
+/**
  * WordPress dependencies
  */
 const { withSelect } = wp.data;
@@ -26,7 +31,7 @@ class SpeakersEdit extends Component {
 const speakersSelect = ( select, props ) => {
 	const { mode, post_ids, term_ids, sort } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
-	const [ orderby, order ] = _.split( sort, '_', 2 );
+	const [ orderby, order ] = split( sort, '_', 2 );
 
 	const args = {
 		orderby: orderby,
@@ -40,11 +45,13 @@ const speakersSelect = ( select, props ) => {
 	}
 
 	if ( 'specific_terms' === mode && Array.isArray( term_ids ) ) {
-		args.filter.taxonomy = 'wcb_speaker_group';
-		args.filter.term = term_ids;
+		args.filter = {
+			taxonomy: 'wcb_speaker_group',
+			term: term_ids,
+		};
 	}
 
-	const speakersQuery = _.pickBy( args, ( value ) => ! _.isUndefined( value ) );
+	const speakersQuery = pickBy( args, ( value ) => ! isUndefined( value ) );
 
 	return {
 		speakerPosts: getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),

@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import { isUndefined, map } from 'lodash';
+
+/**
  * WordPress dependencies
  */
 const { Dashicon } = wp.components;
@@ -89,7 +94,7 @@ class SpeakersSelect extends Component {
 		const { selectedOptions } = this.state;
 		let chosen;
 
-		if ( ! _.isUndefined( selectedOptions ) ) {
+		if ( ! isUndefined( selectedOptions ) ) {
 			chosen = selectedOptions.pop().type;
 		}
 
@@ -198,7 +203,7 @@ const optionsSelect = ( select, props ) => {
 
 		options.push( {
 			label: __( 'Groups', 'wordcamporg' ),
-			options: _.map( terms || [], ( term ) => {
+			options: map( terms || [], ( term ) => {
 				return {
 					label: decodeEntities( term.name ) || __( '(Untitled)', 'wordcamporg' ),
 					value: term.id,
@@ -219,7 +224,7 @@ const optionsSelect = ( select, props ) => {
 
 		options.push( {
 			label: __( 'Speakers', 'wordcamporg' ),
-			options: _.map( posts || [], ( post ) => {
+			options: map( posts || [], ( post ) => {
 				return {
 					label: decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
 					value: post.id,

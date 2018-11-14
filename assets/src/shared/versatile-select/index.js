@@ -3,6 +3,7 @@
  */
 import AsyncSelect from 'react-select/lib/Async';
 import classnames from 'classnames';
+import { map } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -48,7 +49,7 @@ class VersatileSelect extends Component {
 					isDefault
 					onClick={ () => {
 						const { selectedOptions } = this.state;
-						const selected = _.map( selectedOptions, 'value' );
+						const selected = map( selectedOptions, 'value' );
 
 						onChange( selected );
 					} }

@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import { find } from 'lodash';
+
+/**
  * WordPress dependencies
  */
 const { Button, Placeholder, Spinner } = wp.components;
@@ -42,7 +47,7 @@ class SpeakersBlockControls extends Component {
 				);
 
 			case 'specific_posts' :
-				const postsLabel = _.find( options.mode, ( modeOption ) => {
+				const postsLabel = find( options.mode, ( modeOption ) => {
 					return 'specific_posts' === modeOption.value;
 				} ).label;
 
@@ -58,7 +63,7 @@ class SpeakersBlockControls extends Component {
 				);
 
 			case 'specific_terms' :
-				const termsLabel = _.find( options.mode, ( modeOption ) => {
+				const termsLabel = find( options.mode, ( modeOption ) => {
 					return 'specific_terms' === modeOption.value;
 				} ).label;
 
@@ -85,7 +90,7 @@ class SpeakersBlockControls extends Component {
 						isLarge
 						onClick={ () => { setAttributes( { mode: 'all' } ); } }
 					>
-						{ _.find( options.mode, ( modeOption ) => {
+						{ find( options.mode, ( modeOption ) => {
 							return 'all' === modeOption.value;
 						} ).label }
 					</Button>

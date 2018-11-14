@@ -3,7 +3,6 @@
  */
 import Select from 'react-select';
 import classnames from 'classnames';
-import { map } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -11,6 +10,11 @@ import { map } from 'lodash';
 const { BaseControl, Button } = wp.components;
 const { Component } = wp.element;
 const { __ } = wp.i18n;
+
+/**
+ * Internal dependencies
+ */
+import './style.scss';
 
 class VersatileSelect extends Component {
 	constructor( props ) {
@@ -34,23 +38,29 @@ class VersatileSelect extends Component {
 				label={ label }
 				help={ help }
 			>
-				<Select
-					isMulti={ true }
-					closeMenuOnSelect={ false }
-					{ ...this.props }
-					onChange={ ( selectedOptions ) => {
-						this.setState( { selectedOptions: selectedOptions } );
-					} }
-				/>
-				<Button
-					isDefault
-					onClick={ () => {
-						const { selectedOptions } = this.state;
-						onChange( selectedOptions );
-					} }
-				>
-					{ submitLabel || __( 'Select', 'wordcamporg' ) }
-				</Button>
+				<div className={ 'wordcamp-components-versatile-select-inner' }>
+					<Select
+						isMulti={ true }
+						closeMenuOnSelect={ false }
+						menuIsOpen={true}
+						{ ...this.props }
+						className={ 'wordcamp-components-versatile-select-select' }
+						onChange={ ( selectedOptions ) => {
+							this.setState( { selectedOptions: selectedOptions } );
+						} }
+					/>
+					<Button
+						className={ 'wordcamp-components-versatile-select-button' }
+						isLarge
+						isDefault
+						onClick={ () => {
+							const { selectedOptions } = this.state;
+							onChange( selectedOptions );
+						} }
+					>
+						{ submitLabel || __( 'Select', 'wordcamporg' ) }
+					</Button>
+				</div>
 			</BaseControl>
 		);
 	}

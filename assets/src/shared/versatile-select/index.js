@@ -21,7 +21,7 @@ class VersatileSelect extends Component {
 		super( props );
 
 		this.state = {
-			selectedOptions: [],
+			selectedOptions: null,
 		};
 
 		this.render = this.render.bind( this );
@@ -30,7 +30,7 @@ class VersatileSelect extends Component {
 	render() {
 		const { className, label, help, instanceId, onChange, submitLabel } = this.props;
 		const id = `wordcamp-block-versatile-select-control-${ instanceId }`;
-
+		const value = this.state.selectedOptions || this.props.value;
 		return (
 			<BaseControl
 				id={ id }
@@ -41,9 +41,8 @@ class VersatileSelect extends Component {
 				<div className={ 'wordcamp-components-versatile-select-inner' }>
 					<Select
 						isMulti={ true }
-						closeMenuOnSelect={ false }
-						menuIsOpen={true}
 						{ ...this.props }
+						value={ value }
 						className={ 'wordcamp-components-versatile-select-select' }
 						onChange={ ( selectedOptions ) => {
 							this.setState( { selectedOptions: selectedOptions } );

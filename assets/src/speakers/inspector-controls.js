@@ -17,7 +17,7 @@ const data = window.WordCampBlocks.speakers || {};
 class SpeakerInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes } = this.props;
-		const { show_avatars, avatar_size, avatar_align, content, speaker_link, show_session, sort } = attributes;
+		const { show_avatars, avatar_size, speaker_link, sort } = attributes;
 		const { schema, options } = data;
 
 		return (
@@ -42,40 +42,17 @@ class SpeakerInspectorControls extends Component {
 									onChange={ ( value ) => setAttributes( { avatar_size: value } ) }
 								/>
 							</PanelRow>
-							<PanelRow>
-								<ImageAlignmentControl
-									label={ __( 'Alignment', 'wordcamporg' ) }
-									value={ avatar_align }
-									onChange={ ( value ) => setAttributes( { avatar_align: value } ) }
-								/>
-							</PanelRow>
 						</Fragment>
 					}
 				</PanelBody>
 
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ false }>
 					<PanelRow>
-						<SelectControl
-							label={ __( 'Biography Length', 'wordcamporg' ) }
-							value={ content }
-							options={ options.content }
-							onChange={ ( value ) => setAttributes( { content: value } ) }
-						/>
-					</PanelRow>
-					<PanelRow>
 						<ToggleControl
 							label={ __( 'Speaker Link', 'wordcamporg' ) }
 							help={ __( "Link to a speaker's biography page", 'wordcamporg' ) }
 							checked={ speaker_link }
 							onChange={ ( value ) => setAttributes( { speaker_link: value } ) }
-						/>
-					</PanelRow>
-					<PanelRow>
-						<ToggleControl
-							label={ __( 'Session Information', 'wordcamporg' ) }
-							help={ __( "Show speaker's session name, time, and track", 'wordcamporg' ) }
-							checked={ show_session }
-							onChange={ ( value ) => setAttributes( { show_session: value } ) }
 						/>
 					</PanelRow>
 				</PanelBody>

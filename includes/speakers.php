@@ -51,10 +51,6 @@ function render( $attributes ) {
 	/** @var WordCamp_Post_Types_Plugin $wcpt_plugin */
 	global $wcpt_plugin;
 
-	if ( true === $attributes['show_all_posts'] ) {
-		$attributes['posts_per_page'] = -1;
-	}
-
 	$sort = explode( '_', $attributes['sort'] );
 
 	if ( 2 === count( $sort ) ) {

@@ -316,6 +316,10 @@ class WordCamp_Post_Types_Plugin {
 			'speaker_link'   => '',
 			'track'          => '',
 			'groups'         => '',
+			'mode'           => 'all',
+			'post_ids'       => array(),
+			'term_ids'       => array(),
+			'avatar_align'   => 'none',
 		), $attr );
 
 		foreach ( array( 'orderby', 'order', 'speaker_link' ) as $key_for_case_sensitive_value ) {
@@ -390,6 +394,21 @@ class WordCamp_Post_Types_Plugin {
 					'field'    => 'slug',
 					'terms'    => $attr['groups'],
 				),
+			);
+		}
+
+		/**
+		 * Speaker block only attributes
+		 */
+		if ( 'specific_posts' === $attr['mode'] ) {
+			$speaker_args['post__in'] = $attr['post_ids'];
+		} elseif ( 'specific_terms' === $attr['mode'] ) {
+			$speaker_args['tax_query'] = array(
+				array(
+					'taxonomy' => 'wcb_speaker_group',
+					'field'    => 'slug',
+					'terms'    => $attr['specified_terms'],
+				)
 			);
 		}
 

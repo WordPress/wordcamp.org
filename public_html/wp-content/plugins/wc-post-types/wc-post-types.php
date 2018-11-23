@@ -305,7 +305,6 @@ class WordCamp_Post_Types_Plugin {
 	 */
 	function shortcode_speakers( $attr, $content ) {
 		global $post;
-
 		// Prepare the shortcode arguments
 		$attr = shortcode_atts( array(
 			'show_avatars'   => true,
@@ -406,8 +405,8 @@ class WordCamp_Post_Types_Plugin {
 			$speaker_args['tax_query'] = array(
 				array(
 					'taxonomy' => 'wcb_speaker_group',
-					'field'    => 'slug',
-					'terms'    => $attr['specified_terms'],
+					'field'    => 'term_id',
+					'terms'    => $attr['term_ids'],
 				)
 			);
 		}

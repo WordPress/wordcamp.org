@@ -14,11 +14,27 @@ before_script:
   # Install WordCamp Coding Standards.
   - curl https://meta.svn.wordpress.org/sites/trunk/wordcamp.org/phpcs.xml.dist > $TRAVIS_BUILD_DIR/phpcs.xml.dist
 
+  # Create a empty file, which will be passed to phpcs along with all the changed files. This will make sure that incase no php file changes are there, phpcs will not assume that it has to scan whole directory.
+  - touch $TRAVIS_BUILD_DIR/tmp.php
+
 
 script:
+
   # Run Code Standard Test
+
+  # Exporting list of changed files in CHANGED_FILES variable
+  # diff: Get the changed files
+  #   --name-only: Get only name of changed files
+  #   --diff-filter=AM: Get only (A)dded or (M)odified files. We do not care about deleted files for coding standard test.
+  #   $TRAVIS_BRANCH: Base branch we want to merge. Usually this will be master
+  #   $TRAVIS_BRANCH...HEAD: List of commits not present in $TRAVIS_BRANCH, but present in HEAD
+  # tr '\n' ' ': Convert from list of filenames seperated by `\n` to list of filenames seperated by ' '
+  - export CHANGED_FILES=$(git diff --name-only --diff-filter=AM $TRAVIS_BRANCH...HEAD | tr '\n' ' ')
+
   # `wpcs` is where we have installed the code sniffer
   # -v flag: Print verbose output
   # -n flag: Do not print warnings
   # -p flag: Show progress of the run
-  - wpcs/vendor/bin/phpcs -v -n -p $TRAVIS_BUILD_DIR
+  # --extensions=php: Only sniff php files
+  # tmp.php: So that phpcs do not assume that it has to scan all files in case no php files are changed.
+  - wpcs/vendor/bin/phpcs -v -n -p --extensions=php $TRAVIS_BUILD_DIR/tmp.php $(echo $CHANGED_FILES)

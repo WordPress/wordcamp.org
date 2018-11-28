@@ -1,0 +1,24 @@
+# Travis CI configuration file.
+# @link https://travis-ci.org/
+
+# Declare project language and PHP versions to test against.
+# @link http://about.travis-ci.org/docs/user/languages/php/
+language: php
+php:
+  - 7.2
+
+before_script:
+  # Setup code sniffer to run WordPress Code Standard tests
+  - composer create-project wp-coding-standards/wpcs --no-dev
+
+  # Install WordCamp Coding Standards.
+  - curl https://meta.svn.wordpress.org/sites/trunk/wordcamp.org/phpcs.xml.dist > $TRAVIS_BUILD_DIR/phpcs.xml.dist
+
+
+script:
+  # Run Code Standard Test
+  # `wpcs` is where we have installed the code sniffer
+  # -v flag: Print verbose output
+  # -n flag: Do not print warnings
+  # -p flag: Show progress of the run
+  - wpcs/vendor/bin/phpcs -v -n -p $TRAVIS_BUILD_DIR

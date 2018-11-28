@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-const { isUndefined, pickBy, split } = window.lodash;
+import { isUndefined, pickBy, split } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -40,8 +40,15 @@ const speakersSelect = ( select, props ) => {
 		_embed: true,
 	};
 
-	if ( 'specific' === mode && Array.isArray( post_ids ) ) {
+	if ( 'specific_posts' === mode && Array.isArray( post_ids ) ) {
 		args.include = post_ids;
+	}
+
+	if ( 'specific_terms' === mode && Array.isArray( term_ids ) ) {
+		args.filter = {
+			taxonomy: 'wcb_speaker_group',
+			term: term_ids,
+		};
 	}
 
 	const speakersQuery = pickBy( args, ( value ) => ! isUndefined( value ) );

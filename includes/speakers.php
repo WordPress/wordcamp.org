@@ -195,11 +195,15 @@ function get_options( $type ) {
 				],
 				[
 					'label' => _x( 'List all speakers', 'mode option', 'wordcamporg' ),
-					'value' => 'query',
+					'value' => 'all',
 				],
 				[
-					'label' => _x( 'Choose specific speakers', 'mode option', 'wordcamporg' ),
-					'value' => 'specific',
+					'label' => _x( 'Add a speaker', 'mode option', 'wordcamporg' ),
+					'value' => 'specific_posts',
+				],
+				[
+					'label' => _x( 'Add a group', 'mode option', 'wordcamporg' ),
+					'value' => 'specific_terms',
 				],
 			];
 			break;

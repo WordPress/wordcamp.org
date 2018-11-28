@@ -7,8 +7,7 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { BaseControl, ButtonGroup, IconButton } = wp.components;
-
-import { withInstanceId } from '@wordpress/compose';
+const { withInstanceId } = wp.compose;
 
 /**
  * Internal dependencies

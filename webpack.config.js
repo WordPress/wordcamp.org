@@ -5,6 +5,12 @@ const MiniCssExtractPlugin = require( 'mini-css-extract-plugin' );
 
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+const externals = {
+	react: 'React',
+	'react-dom': 'ReactDOM',
+	lodash: 'lodash',
+};
+
 const webpackConfig = {
 	mode: NODE_ENV === 'production' ? 'production' : 'development',
 
@@ -62,6 +68,7 @@ const webpackConfig = {
 			},
 		},
 	],
+	externals,
 };
 
 module.exports = webpackConfig;

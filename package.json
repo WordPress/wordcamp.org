@@ -9,7 +9,8 @@
 		"npm": ">=6.0.0"
 	},
 	"dependencies": {
-		"classnames": "2.2.6"
+		"classnames": "2.2.6",
+		"react-select": "2.1.1"
 	},
 	"devDependencies": {
 		"@babel/core": "7.1.2",
@@ -21,6 +22,7 @@
 		"@wordpress/compose": "2.1.0",
 		"@wordpress/element": "2.1.4",
 		"@wordpress/i18n": "3.0.1",
+		"acorn": "6.0.4",
 		"babel-eslint": "10.0.1",
 		"babel-loader": "8.0.4",
 		"cross-env": "5.2.0",

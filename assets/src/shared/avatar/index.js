@@ -23,7 +23,7 @@ function AvatarImage( {
 
 	return (
 		<img
-			className={ classnames( 'wordcamp-component-avatar', 'avatar-' + size, 'photo', className ) }
+			className={ classnames( 'avatar', 'avatar-' + size, 'photo', className ) }
 			src={ getSizedURL( url, size ) }
 			srcSet={ getSizedURL( url, size * 2 ) + ' 2x' }
 			alt={ alt }

@@ -3,6 +3,8 @@
 namespace WordCamp\Blocks\Speakers;
 defined( 'WPINC' ) || die();
 
+use WP_Post;
+use WordCamp\Blocks;
 use WordCamp_Post_Types_Plugin;
 
 /**
@@ -32,6 +34,7 @@ function add_script_data( array $data ) {
 		'options' => array(
 			'align'   => get_options( 'align' ),
 			'content' => get_options( 'content' ),
+			'display' => get_options( 'display' ),
 			'mode'    => get_options( 'mode' ),
 			'sort'    => get_options( 'sort' ),
 		),
@@ -43,30 +46,124 @@ function add_script_data( array $data ) {
 add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
 
 /**
- * Run the shortcode callback after normalizing attribute values.
+ * Render the block on the front end.
+ *
+ * @param array $attributes Block attributes.
  *
  * @return string
  */
 function render( $attributes ) {
-	/** @var WordCamp_Post_Types_Plugin $wcpt_plugin */
-	global $wcpt_plugin;
+	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
+	$attributes = wp_parse_args( $attributes, $defaults );
 
-	if ( true === $attributes['show_all_posts'] ) {
-		$attributes['posts_per_page'] = -1;
+	$speakers = get_speaker_posts( $attributes );
+	$sessions = [];
+
+	if ( ! empty( $speakers ) && true === $attributes['show_session'] ) {
+		$sessions = get_speaker_sessions( wp_list_pluck( $speakers, 'ID' ) );
 	}
+
+	ob_start();
+	require Blocks\PLUGIN_DIR . 'view/speakers.php';
+	$html = ob_get_clean();
+
+	return $html;
+}
+
+
+function get_speaker_posts( array $attributes ) {
+	$post_args = [
+		'post_type'      => 'wcb_speaker',
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+	];
 
 	$sort = explode( '_', $attributes['sort'] );
 
 	if ( 2 === count( $sort ) ) {
-		$attributes['orderby'] = $sort[0];
-		$attributes['order']   = $sort[1];
+		$post_args['orderby'] = $sort[0];
+		$post_args['order']   = $sort[1];
 	}
 
-	if ( true === $attributes['speaker_link'] ) {
-		$attributes['speaker_link'] = 'permalink';
+	switch ( $attributes['mode'] ) {
+		case 'specific_posts' :
+			$post_args['post__in'] = $attributes['post_ids'];
+			break;
+
+		case 'specific_terms' :
+			$post_args['tax_query'] = [
+				[
+					'taxonomy' => 'wcb_speaker_group',
+					'field'    => 'id',
+					'terms'    => $attributes['term_ids'],
+				],
+			];
+			break;
 	}
 
-	return $wcpt_plugin->shortcode_speakers( $attributes, '' );
+	return get_posts( $post_args );
+}
+
+
+function get_speaker_sessions( array $speaker_ids ) {
+	$sessions_by_speaker = [];
+
+	$session_args = [
+		'post_type'      => 'wcb_session',
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+		'meta_key'       => '_wcpt_session_time',
+		'orderby'        => 'meta_value_num',
+	];
+
+	$session_posts = get_posts( $session_args );
+
+	foreach ( $session_posts as $session ) {
+		$session_speaker_ids = get_post_meta( $session->ID, '_wcpt_speaker_id', false );
+
+		foreach ( $session_speaker_ids as $speaker_id ) {
+			if ( in_array( $speaker_id, $speaker_ids ) ) {
+				if ( ! isset( $sessions_by_speaker[ $speaker_id ] ) ) {
+					$sessions_by_speaker[ $speaker_id ] = [];
+				}
+
+				$sessions_by_speaker[ $speaker_id ][] = $session;
+			}
+		}
+	}
+
+	return $sessions_by_speaker;
+}
+
+/**
+ * Generate an excerpt for a post with a maximum specified length.
+ *
+ * @param WP_Post $post
+ * @param int     $excerpt_length
+ *
+ * @return string
+ */
+function get_speaker_excerpt( WP_Post $post, $excerpt_length ) {
+	$excerpt_length = absint( $excerpt_length );
+	$excerpt_more   = __( '&hellip;', 'wordcamporg' );
+
+	if ( has_excerpt( $post ) ) {
+		$content = $post->post_excerpt;
+	} else {
+		$content = get_the_content( '' );
+
+		$content = strip_shortcodes( $content );
+		$content = excerpt_remove_blocks( $content );
+
+		/** This filter is documented in wp-includes/post-template.php */
+		$content = apply_filters( 'the_content', $content );
+		$content = str_replace( ']]>', ']]&gt;', $content );
+	}
+
+	$excerpt = wp_trim_words( $content, $excerpt_length, $excerpt_more );
+
+	/** This filter is documented in wp-includes/post-template.php */
+	return apply_filters( 'the_excerpt', $excerpt );
 }
 
 /**
@@ -95,6 +192,20 @@ function get_attributes_schema() {
 				'type' => 'integer',
 			],
 		],
+		'sort'           => [
+			'type'    => 'string',
+			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
+			'default' => 'title_asc',
+		],
+		'display'     => [
+			'type'    => 'string',
+			'enum'    => wp_list_pluck( get_options( 'display' ), 'value' ),
+			'default' => 'list',
+		],
+		'className'      => [
+			'type'    => 'string',
+			'default' => '',
+		],
 		'show_avatars'   => [
 			'type'    => 'bool',
 			'default' => true,
@@ -121,22 +232,14 @@ function get_attributes_schema() {
 			'maximum' => 1000,
 			'default' => 55,
 		],
-		'speaker_link'   => array(
+		'speaker_link'   => [
 			'type'    => 'bool',
 			'default' => false,
-		),
-		'show_session'   => array(
+		],
+		'show_session'   => [
 			'type'    => 'bool',
 			'default' => false,
-		),
-		'sort'           => array(
-			'type'    => 'string',
-			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
-			'default' => 'title_asc',
-		),
-		'className'      => array(
-			'type' => 'string',
-		),
+		],
 	];
 }
 
@@ -184,6 +287,18 @@ function get_options( $type ) {
 				[
 					'label' => _x( 'None', 'content option', 'wordcamporg' ),
 					'value' => 'none',
+				],
+			];
+			break;
+		case 'display':
+			$options = [
+				[
+					'label' => _x( 'List', 'content option', 'wordcamporg' ),
+					'value' => 'list',
+				],
+				[
+					'label' => _x( 'Grid', 'content option', 'wordcamporg' ),
+					'value' => 'grid',
 				],
 			];
 			break;

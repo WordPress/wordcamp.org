@@ -4,6 +4,9 @@ defined( 'WPINC' ) || die();
 
 use WP_Post;
 
+define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
+define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
+
 /**
  * Load files.
  *
@@ -14,7 +17,7 @@ function load() {
 		return;
 	}
 
-	require_once plugin_dir_path( __FILE__ ) . 'includes/speakers.php';
+	require_once PLUGIN_DIR . 'includes/speakers.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
@@ -46,14 +49,14 @@ add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories', 10
 function enqueue_assets() {
 	wp_enqueue_style(
 		'wordcamp-blocks',
-		plugins_url( 'assets/blocks.min.css', __FILE__ ),
+		PLUGIN_URL . 'assets/blocks.min.css',
 		[],
-		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.min.css' )
+		filemtime( PLUGIN_DIR . 'assets/blocks.min.css' )
 	);
 
 	wp_enqueue_script(
 		'wordcamp-blocks',
-		plugins_url( 'assets/blocks.min.js', __FILE__ ),
+		PLUGIN_URL . 'assets/blocks.min.js',
 		array(
 			'lodash',
 			'wp-blocks',
@@ -66,7 +69,7 @@ function enqueue_assets() {
 			'wp-i18n',
 			'wp-url',
 		),
-		filemtime( plugin_dir_path( __FILE__ ) . 'assets/blocks.min.js' ),
+		filemtime( PLUGIN_DIR . 'assets/blocks.min.js' ),
 		false
 	);
 

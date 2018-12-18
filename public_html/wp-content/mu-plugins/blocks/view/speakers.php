@@ -8,12 +8,12 @@ defined( 'WPINC' ) || die();
 /** @var array $sessions */
 ?>
 
-<?php if ( ! empty( $posts ) ) : ?>
+<?php if ( ! empty( $speakers ) ) : ?>
 	<ul class="wordcamp-speakers-block wordcamp-speakers-block-<?php echo sanitize_html_class( $attributes['display'] ); ?> <?php echo sanitize_html_class( $attributes['className'] ); ?>">
 		<?php foreach ( $speakers as $post ) : setup_postdata( $post ); ?>
 			<li class="wordcamp-speaker wordcamp-speaker-<?php echo sanitize_html_class( $post->post_name ); ?>">
 				<h3 class="wordcamp-speaker-name-heading">
-					<?php the_title(); ?>
+					<?php echo get_the_title( $post ); ?>
 				</h3>
 
 				<?php if ( true === $attributes['show_avatars'] ) : ?>
@@ -61,19 +61,26 @@ defined( 'WPINC' ) || die();
 								<a class="wordcamp-speaker-session-link" href="<?php echo esc_url( get_permalink( $session ) ); ?>">
 									<?php echo get_the_title( $session ); ?>
 								</a>
-								<br />
 								<span class="wordcamp-speaker-session-info">
 									<?php if ( ! empty( $tracks = get_the_terms( $session, 'wcb_track' ) ) && ! is_wp_error( $tracks ) ) : ?>
 										<?php
 											printf(
-												/* translators: 1: A date and time; 2: a location; */
-												esc_html__( '%1$s in %2$s', 'wordcamporg' ),
-												date_i18n( _x( 'l, F jS, Y \at g:i a', 'date format', 'wordcamporg' ), $session->_wcpt_session_time ),
+												/* translators: 1: A date; 2: A time; 3: A location; */
+												esc_html__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
+												date_i18n( get_option( 'date_format' ), $session->_wcpt_session_time ),
+												date_i18n( get_option( 'time_format' ), $session->_wcpt_session_time ),
 												esc_html( $tracks[0]->name )
 											);
 										?>
 									<?php else : ?>
-										<?php echo date_i18n( _x( 'l, F jS, Y \at g:i a', 'date format', 'wordcamporg' ), $session->_wcpt_session_time ); ?>
+										<?php
+											printf(
+												/* translators: 1: A date; 2: A time; */
+												esc_html__( '%1$s at %2$s', 'wordcamporg' ),
+												date_i18n( get_option( 'date_format' ), $session->_wcpt_session_time ),
+												date_i18n( get_option( 'time_format' ), $session->_wcpt_session_time )
+											);
+										?>
 									<?php endif; ?>
 								</span>
 							</li>

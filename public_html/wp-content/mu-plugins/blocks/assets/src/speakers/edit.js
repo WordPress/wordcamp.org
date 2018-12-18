@@ -29,7 +29,7 @@ class SpeakersEdit extends Component {
 }
 
 const speakersSelect = ( select, props ) => {
-	const { mode, post_ids, term_ids, sort } = props.attributes;
+	const { mode, post_ids, term_ids, sort, show_session } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
 	const [ orderby, order ] = split( sort, '_', 2 );
 
@@ -38,6 +38,7 @@ const speakersSelect = ( select, props ) => {
 		order: order,
 		per_page: MAX_POSTS, // -1 is not allowed for per_page.
 		_embed: true,
+		context: 'view',
 	};
 
 	if ( 'specific_posts' === mode && Array.isArray( post_ids ) ) {
@@ -55,6 +56,7 @@ const speakersSelect = ( select, props ) => {
 
 	return {
 		speakerPosts: getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),
+		tracks: getEntityRecords( 'taxonomy', 'wcb_track', { per_page: MAX_POSTS } ),
 	};
 };
 

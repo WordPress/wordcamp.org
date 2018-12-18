@@ -1,58 +1,131 @@
+/**
+ * External dependencies
+ */
+import { find, get, head } from 'lodash';
 import classnames from 'classnames';
 
 /**
  * WordPress dependencies
  */
 const { Disabled } = wp.components;
-const { Component, RawHTML } = wp.element;
+const { Component, Fragment, RawHTML } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
-const { __ } = wp.i18n;
+const { __, _n } = wp.i18n;
 
 import AvatarImage from '../shared/avatar';
 
 class SpeakersBlockContent extends Component {
 	render() {
-		const { attributes, speakerPosts } = this.props;
-		const { speaker_link, show_avatars, avatar_size } = attributes;
+		const { attributes, speakerPosts, tracks } = this.props;
+		const {
+			display, className, show_avatars,
+			avatar_size, avatar_align, content,
+			excerpt_length, speaker_link, show_session
+		} = attributes;
+
+		const containerClasses = [
+			'wordcamp-speakers-block',
+			'wordcamp-speakers-block-' + display,
+			className
+		];
 
 		return (
-			<div className={ 'wcorg-speakers' }>
+			<ul className={ classnames( containerClasses ) }>
 				{ speakerPosts.map( ( post, i ) =>
-					<div
+					<li
 						key={ i }
-						id={ 'wcorg-speaker-' + post.slug }
-						className={ classnames( 'wcorg-speaker', 'wcorg-speaker-' + post.slug ) }
+						className={ classnames( 'wordcamp-speaker', 'wordcamp-speaker-' + post.slug ) }
 					>
-						<h2>
-							{ speaker_link ?
-								<Disabled>
-									<a href={ post.link }>
-										{
-											decodeEntities( post.title.rendered.trim() ) ||
-											__( '(Untitled)', 'wordcamporg' )
-										}
-									</a>
-								</Disabled> :
-								decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' )
-							}
-						</h2>
-						<div className={ 'wcorg-speaker-description' }>
-							{ show_avatars &&
-								<AvatarImage
-									name={ decodeEntities( post.title.rendered.trim() ) || '' }
-									size={ avatar_size }
-									url={ post[ 'avatar_urls' ][ '24' ] }
-								/>
-							}
-							<Disabled>
-								<RawHTML>
-									{ post.content.rendered.trim() }
-								</RawHTML>
-							</Disabled>
-						</div>
-					</div>,
+						<h3 className={ 'wordcamp-speaker-name-heading' }>
+							{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
+						</h3>
+
+						{ show_avatars &&
+							<AvatarImage
+								className={ classnames( 'wordcamp-speaker-avatar', 'align-' + avatar_align ) }
+								name={ decodeEntities( post.title.rendered.trim() ) || '' }
+								size={ avatar_size }
+								url={ post[ 'avatar_urls' ][ '24' ] }
+							/>
+						}
+
+						{ ( 'none' !== content || true === speaker_link ) &&
+							<div className={ 'wordcamp-speaker-content' }>
+								{ 'full' === content &&
+									<Disabled>
+										<RawHTML>
+											{ post.content.rendered.trim() }
+										</RawHTML>
+									</Disabled>
+								}
+								{ 'excerpt' === content &&
+									<Disabled>
+										<RawHTML>
+											{ 'todo' }
+										</RawHTML>
+									</Disabled>
+								}
+								{ true === speaker_link &&
+									<Disabled>
+										<a
+											className={ 'wordcamp-speaker-more-link' }
+											href={ post.link }
+										>
+											{ __( 'Read more', 'wordcamporg' ) }
+										</a>
+									</Disabled>
+								}
+							</div>
+						}
+
+						{ true === show_session && post._embedded.sessions.length &&
+							<Fragment>
+								<h4 className={ 'wordcamp-speaker-session-heading' }>
+									{ _n( 'Session', 'Sessions', post._embedded.sessions.length, 'wordcamporg' ) }
+								</h4>
+
+								<ul className={ 'wordcamp-speaker-session-list' }>
+									{ post._embedded.sessions.map( ( session, x ) =>
+										<li
+											key={ x }
+											className={ 'wordcamp-speaker-session-content' }
+										>
+											<Disabled>
+												<a
+													className={ 'wordcamp-speaker-session-link' }
+													href={ session.link }
+												>
+													{ decodeEntities( session.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
+												</a>
+												<br/>
+												<span className={ 'wordcamp-speaker-session-info' }>
+													{ session.session_track.length &&
+														sprintf(
+															/* translators: 1: A date; 2: A time; 3: A location; */
+															__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
+															session.session_date_time.date,
+															session.session_date_time.time,
+															get( find( tracks, ( value ) => { return parseInt( value.id ) === head( session.session_track ) } ), 'name' )
+														)
+													}
+													{ ! session.session_track.length &&
+														sprintf(
+															/* translators: 1: A date; 2: A time; */
+															__( '%1$s at %2$s', 'wordcamporg' ),
+															session.session_date_time.date,
+															session.session_date_time.time
+														)
+													}
+												</span>
+											</Disabled>
+										</li>
+									) }
+								</ul>
+							</Fragment>
+						}
+					</li>,
 				) }
-			</div>
+			</ul>
 		);
 	}
 }

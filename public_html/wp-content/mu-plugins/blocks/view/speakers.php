@@ -18,7 +18,7 @@ defined( 'WPINC' ) || die();
 
 				<?php if ( true === $attributes['show_avatars'] ) : ?>
 					<?php
-					get_avatar(
+					echo get_avatar(
 						$post->_wcb_speaker_email,
 						$attributes['avatar_size'],
 						'',
@@ -37,15 +37,11 @@ defined( 'WPINC' ) || die();
 				<?php if ( 'none' !== $attributes['content'] || true === $attributes['speaker_link'] ) : ?>
 					<div class="wordcamp-speaker-content">
 						<?php if ( 'full' === $attributes['content'] ) : ?>
-							<?php the_content(); ?>
+							<?php echo trim( apply_filters( 'the_content', maybe_add_more_link( get_the_content( '' ), $attributes['speaker_link'], $post ) ) ); ?>
 						<?php elseif ( 'excerpt' === $attributes['content'] ) : ?>
-							<?php get_speaker_excerpt( $post, $attributes['excerpt_length'] ) ?>
-						<?php endif; ?>
-
-						<?php if ( true === $attributes['speaker_link'] ) : ?>
-							<a class="wordcamp-speaker-more-link" href="<?php echo esc_url( get_permalink( $post ) ); ?>">
-								<?php esc_html_e( 'Read more', 'wordcamporg' ) ?>
-							</a>
+							<?php echo trim( apply_filters( 'the_excerpt', maybe_add_more_link( get_the_excerpt(), $attributes['speaker_link'], $post ) ) ); ?>
+						<?php elseif ( 'none' === $attributes['content'] ) : ?>
+							<?php echo trim( maybe_add_more_link( '', $attributes['speaker_link'], $post ) ); ?>
 						<?php endif; ?>
 					</div>
 				<?php endif; ?>

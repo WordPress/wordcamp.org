@@ -70,7 +70,47 @@ function render( $attributes ) {
 	return $html;
 }
 
+/**
+ * Append a "Read more" link to a content string.
+ *
+ * @todo This is kind of hacky, maybe find a way to do this that doesn't involve regex.
+ *
+ * @param $content
+ *
+ * @return string
+ */
+function maybe_add_more_link( $content, $add, $post ) {
+	if ( $add ) {
+		$url  = get_permalink( $post );
+		$more = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( $url ),
+			__( 'Read more', 'wordcamporg' )
+		);
 
+		$pattern = '/<\/p>$/';
+
+		if ( preg_match( $pattern, $content ) ) {
+			$content = preg_replace(
+				$pattern,
+				' ' . $more . '</p>',
+				$content
+			);
+		} else {
+			$content .= ' ' . $more;
+		}
+	}
+
+	return $content;
+}
+
+/**
+ * Get the posts to display in the block.
+ *
+ * @param array $attributes
+ *
+ * @return array
+ */
 function get_speaker_posts( array $attributes ) {
 	$post_args = [
 		'post_type'      => 'wcb_speaker',
@@ -104,7 +144,13 @@ function get_speaker_posts( array $attributes ) {
 	return get_posts( $post_args );
 }
 
-
+/**
+ * Get session posts grouped by speaker.
+ *
+ * @param array $speaker_ids
+ *
+ * @return array
+ */
 function get_speaker_sessions( array $speaker_ids ) {
 	$sessions_by_speaker = [];
 

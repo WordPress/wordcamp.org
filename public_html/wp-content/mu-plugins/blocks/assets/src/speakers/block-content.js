@@ -10,17 +10,36 @@ import classnames from 'classnames';
 const { Disabled } = wp.components;
 const { Component, Fragment, RawHTML } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
-const { __, _n } = wp.i18n;
+const { __, _n, sprintf } = wp.i18n;
 
 import AvatarImage from '../shared/avatar';
 
 class SpeakersBlockContent extends Component {
+	static maybeAddMoreLink( content, add ) {
+		if ( add ) {
+			const more = sprintf(
+				'<a href="#" class="wordcamp-speaker-more-link">%s</a>',
+				__( 'Read more', 'wordcamporg' )
+			);
+
+			const pattern = /<\/p>$/;
+
+			if ( Array.isArray( content.match( pattern ) ) ) {
+				content = content.replace( pattern, ' ' + more + '</p>' );
+			} else {
+				content += ' ' + more;
+			}
+		}
+
+		return content;
+	}
+
 	render() {
 		const { attributes, speakerPosts, tracks } = this.props;
 		const {
 			display, className, show_avatars,
 			avatar_size, avatar_align, content,
-			excerpt_length, speaker_link, show_session
+			speaker_link, show_session
 		} = attributes;
 
 		const containerClasses = [
@@ -54,25 +73,22 @@ class SpeakersBlockContent extends Component {
 								{ 'full' === content &&
 									<Disabled>
 										<RawHTML>
-											{ post.content.rendered.trim() }
+											{ this.constructor.maybeAddMoreLink( post.content.rendered.trim(), speaker_link ).trim() }
 										</RawHTML>
 									</Disabled>
 								}
 								{ 'excerpt' === content &&
 									<Disabled>
 										<RawHTML>
-											{ 'todo' }
+											{ this.constructor.maybeAddMoreLink( post.excerpt.rendered.trim(), speaker_link ).trim() }
 										</RawHTML>
 									</Disabled>
 								}
-								{ true === speaker_link &&
+								{ 'none' === content &&
 									<Disabled>
-										<a
-											className={ 'wordcamp-speaker-more-link' }
-											href={ post.link }
-										>
-											{ __( 'Read more', 'wordcamporg' ) }
-										</a>
+										<RawHTML>
+											{ this.constructor.maybeAddMoreLink( '', speaker_link ).trim() }
+										</RawHTML>
 									</Disabled>
 								}
 							</div>

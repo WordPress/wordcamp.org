@@ -19,17 +19,23 @@ const MAX_POSTS = 100;
 
 class SpeakersEdit extends Component {
 	render() {
+		const { mode } = this.props.attributes;
+
 		return (
 			<Fragment>
-				<SpeakersInspectorControls { ...this.props } />
 				<SpeakersBlockControls { ...this.props } />
+				{ mode &&
+					<Fragment>
+						<SpeakersInspectorControls { ...this.props } />
+					</Fragment>
+				}
 			</Fragment>
 		);
 	}
 }
 
 const speakersSelect = ( select, props ) => {
-	const { mode, post_ids, term_ids, sort, show_session } = props.attributes;
+	const { mode, post_ids, term_ids, sort } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
 	const [ orderby, order ] = split( sort, '_', 2 );
 

@@ -34,7 +34,7 @@ function add_script_data( array $data ) {
 		'options' => array(
 			'align'   => get_options( 'align' ),
 			'content' => get_options( 'content' ),
-			'display' => get_options( 'display' ),
+			'layout'  => get_options( 'layout' ),
 			'mode'    => get_options( 'mode' ),
 			'sort'    => get_options( 'sort' ),
 		),
@@ -212,7 +212,7 @@ function get_attributes_schema() {
 			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 			'default' => 'title_asc',
 		],
-		'display'     => [
+		'layout'         => [
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'display' ), 'value' ),
 			'default' => 'list',
@@ -299,7 +299,7 @@ function get_options( $type ) {
 				],
 			];
 			break;
-		case 'display':
+		case 'layout':
 			$options = [
 				[
 					'label' => _x( 'List', 'content option', 'wordcamporg' ),

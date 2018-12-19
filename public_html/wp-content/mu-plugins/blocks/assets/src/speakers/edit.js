@@ -12,8 +12,9 @@ const { Component, Fragment } = wp.element;
 /**
  * Internal dependencies
  */
-import SpeakersInspectorControls from './inspector-controls';
 import SpeakersBlockControls from './block-controls';
+import SpeakersInspectorControls from './inspector-controls';
+import SpeakersToolbar from './toolbar';
 
 const MAX_POSTS = 100;
 
@@ -27,6 +28,7 @@ class SpeakersEdit extends Component {
 				{ mode &&
 					<Fragment>
 						<SpeakersInspectorControls { ...this.props } />
+						<SpeakersToolbar { ...this.props } />
 					</Fragment>
 				}
 			</Fragment>

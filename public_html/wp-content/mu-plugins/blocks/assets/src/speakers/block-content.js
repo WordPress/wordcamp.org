@@ -37,14 +37,14 @@ class SpeakersBlockContent extends Component {
 	render() {
 		const { attributes, speakerPosts, tracks } = this.props;
 		const {
-			display, className, show_avatars,
+			layout, className, show_avatars,
 			avatar_size, avatar_align, content,
 			speaker_link, show_session
 		} = attributes;
 
 		const containerClasses = [
 			'wordcamp-speakers-block',
-			'wordcamp-speakers-block-' + display,
+			'wordcamp-speakers-block-' + layout,
 			className
 		];
 

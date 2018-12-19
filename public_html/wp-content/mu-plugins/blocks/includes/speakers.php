@@ -136,37 +136,6 @@ function get_speaker_sessions( array $speaker_ids ) {
 }
 
 /**
- * Generate an excerpt for a post with a maximum specified length.
- *
- * @param WP_Post $post
- * @param int     $excerpt_length
- *
- * @return string
- */
-function get_speaker_excerpt( WP_Post $post, $excerpt_length ) {
-	$excerpt_length = absint( $excerpt_length );
-	$excerpt_more   = __( '&hellip;', 'wordcamporg' );
-
-	if ( has_excerpt( $post ) ) {
-		$content = $post->post_excerpt;
-	} else {
-		$content = get_the_content( '' );
-
-		$content = strip_shortcodes( $content );
-		$content = excerpt_remove_blocks( $content );
-
-		/** This filter is documented in wp-includes/post-template.php */
-		$content = apply_filters( 'the_content', $content );
-		$content = str_replace( ']]>', ']]&gt;', $content );
-	}
-
-	$excerpt = wp_trim_words( $content, $excerpt_length, $excerpt_more );
-
-	/** This filter is documented in wp-includes/post-template.php */
-	return apply_filters( 'the_excerpt', $excerpt );
-}
-
-/**
  * Get the schema for the block's attributes.
  *
  * @return array
@@ -225,12 +194,6 @@ function get_attributes_schema() {
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'content' ), 'value' ),
 			'default' => 'full',
-		],
-		'excerpt_length' => [
-			'type'    => 'integer',
-			'minimum' => 10,
-			'maximum' => 1000,
-			'default' => 55,
 		],
 		'speaker_link'   => [
 			'type'    => 'bool',

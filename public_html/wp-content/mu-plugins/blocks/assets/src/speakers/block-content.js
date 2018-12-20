@@ -37,16 +37,20 @@ class SpeakersBlockContent extends Component {
 	render() {
 		const { attributes, speakerPosts, tracks } = this.props;
 		const {
-			layout, className, show_avatars,
-			avatar_size, avatar_align, content,
-			speaker_link, show_session
+			layout, grid_columns, className,
+			show_avatars, avatar_size, avatar_align,
+			content, speaker_link, show_session
 		} = attributes;
 
-		const containerClasses = [
+		let containerClasses = [
 			'wordcamp-speakers-block',
-			'wordcamp-speakers-block-' + layout,
+			'layout-' + layout,
 			className
 		];
+
+		if ( 'grid' === layout ) {
+			containerClasses.push( 'grid-columns-' + Number( grid_columns ) )
+		}
 
 		return (
 			<ul className={ classnames( containerClasses ) }>

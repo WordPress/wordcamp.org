@@ -9,7 +9,14 @@ defined( 'WPINC' ) || die();
 ?>
 
 <?php if ( ! empty( $speakers ) ) : ?>
-	<ul class="wordcamp-speakers-block wordcamp-speakers-block-<?php echo sanitize_html_class( $attributes['layout'] ); ?> <?php echo sanitize_html_class( $attributes['className'] ); ?>">
+	<ul
+		class="
+			wordcamp-speakers-block
+			layout-<?php echo sanitize_html_class( $attributes['layout'] ); ?>
+			<?php echo ( 'grid' === $attributes['layout'] ) ? 'grid-columns-' . absint( $attributes['grid_columns'] ) : ''; ?>
+			<?php echo sanitize_html_class( $attributes['className'] ); ?>
+		"
+	>
 		<?php foreach ( $speakers as $post ) : setup_postdata( $post ); ?>
 			<li class="wordcamp-speaker wordcamp-speaker-<?php echo sanitize_html_class( $post->post_name ); ?>">
 				<h3 class="wordcamp-speaker-name-heading">

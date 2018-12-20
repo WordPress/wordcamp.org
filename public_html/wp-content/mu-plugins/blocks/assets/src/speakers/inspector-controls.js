@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-const { PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
+const { PanelBody, PanelRow, RangeControl, SelectControl, ToggleControl } = wp.components;
 const { InspectorControls } = wp.editor;
 const { Component, Fragment } = wp.element;
 const { __ } = wp.i18n;
@@ -17,11 +17,26 @@ const data = window.WordCampBlocks.speakers || {};
 class SpeakerInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes } = this.props;
-		const { show_avatars, avatar_size, avatar_align, content, speaker_link, show_session, sort } = attributes;
+		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, speaker_link, show_session, sort } = attributes;
 		const { schema, options } = data;
 
 		return (
 			<InspectorControls>
+				{ 'grid' === layout &&
+					<PanelBody title={ __( 'Layout', 'wordcamporg' ) } initialOpen={ true }>
+						<PanelRow>
+							<RangeControl
+								label={ __( 'Grid Columns', 'wordcamporg' ) }
+								value={ Number( grid_columns ) }
+								min={ Number( schema[ 'grid_columns' ].minimum ) }
+								max={ Number( schema[ 'grid_columns' ].maximum ) }
+								initialPosition={ Number( schema[ 'grid_columns' ].default ) }
+								onChange={ ( value ) => setAttributes( { grid_columns: value } ) }
+							/>
+						</PanelRow>
+					</PanelBody>
+				}
+
 				<PanelBody title={ __( 'Avatar Settings', 'wordcamporg' ) } initialOpen={ true }>
 					<PanelRow>
 						<ToggleControl

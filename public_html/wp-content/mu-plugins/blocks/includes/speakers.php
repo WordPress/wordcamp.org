@@ -217,6 +217,12 @@ function get_attributes_schema() {
 			'enum'    => wp_list_pluck( get_options( 'display' ), 'value' ),
 			'default' => 'list',
 		],
+		'grid_columns'   => [
+			'type'    => 'integer',
+			'minimum' => 2,
+			'maximum' => 4,
+			'default' => 2,
+		],
 		'className'      => [
 			'type'    => 'string',
 			'default' => '',

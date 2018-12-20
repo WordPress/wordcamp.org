@@ -13,17 +13,5 @@ module.exports = function( api ) {
 				},
 			],
 		],
-		env: {
-			development: {
-				plugins: [
-					[
-						'@wordpress/babel-plugin-makepot',
-						{
-							output: 'blocks.pot',
-						},
-					],
-				],
-			},
-		},
 	};
 };

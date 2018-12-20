@@ -50,23 +50,6 @@ const webpackConfig = {
 		new webpack.DefinePlugin( {
 			'process.env.NODE_ENV': JSON.stringify( NODE_ENV )
 		} ),
-		{ // https://stackoverflow.com/a/49786887/402766
-			apply: ( compiler ) => {
-				compiler.hooks.afterEmit.tap( 'AfterEmitPlugin', () => {
-					[
-						'npm run php-l10n',
-					].forEach( ( cmd ) => {
-						exec(
-							cmd,
-							( err, stdout, stderr ) => {
-								if ( stdout ) process.stdout.write( stdout );
-								if ( stderr ) process.stderr.write( stderr );
-							}
-						);
-					} );
-				} );
-			},
-		},
 	],
 	externals,
 };

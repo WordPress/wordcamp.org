@@ -16,7 +16,6 @@
 		"@babel/core": "7.1.2",
 		"@babel/runtime-corejs2": "7.1.2",
 		"@wordpress/babel-plugin-import-jsx-pragma": "1.1.2",
-		"@wordpress/babel-plugin-makepot": "2.1.2",
 		"@wordpress/babel-preset-default": "3.0.1",
 		"@wordpress/browserslist-config": "2.2.2",
 		"@wordpress/compose": "2.1.0",
@@ -48,7 +47,6 @@
 	"scripts": {
 		"start": "cross-env BABEL_ENV=development NODE_ENV=development webpack --watch",
 		"build": "cross-env BABEL_ENV=development NODE_ENV=development webpack",
-		"lint": "eslint $(git diff master --name-only) $(git diff --cached --name-only) --ignore-pattern '!.eslintrc.js' --quiet",
-		"php-l10n": "pot-to-php ./blocks.pot ./l10n.php wordcamporg"
+		"lint": "eslint $(git diff master --name-only) $(git diff --cached --name-only) --ignore-pattern '!.eslintrc.js' --quiet"
 	}
 }

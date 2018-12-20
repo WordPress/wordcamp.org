@@ -3,9 +3,7 @@
 namespace WordCamp\Blocks\Speakers;
 defined( 'WPINC' ) || die();
 
-use WP_Post;
 use WordCamp\Blocks;
-use WordCamp_Post_Types_Plugin;
 
 /**
  * Register block types and enqueue scripts.
@@ -16,34 +14,13 @@ function init() {
 	register_block_type( 'wordcamp/speakers', array(
 		'attributes'      => get_attributes_schema(),
 		'render_callback' => __NAMESPACE__ . '\render',
+		'editor_script'   => 'wordcamp-blocks',
+		'editor_style'    => 'wordcamp-blocks',
+		'style'           => 'wordcamp-blocks',
 	) );
 }
 
 add_action( 'init', __NAMESPACE__ . '\init' );
-
-/**
- *
- *
- * @param array $data
- *
- * @return array
- */
-function add_script_data( array $data ) {
-	$data['speakers'] = [
-		'schema'  => get_attributes_schema(),
-		'options' => array(
-			'align'   => get_options( 'align' ),
-			'content' => get_options( 'content' ),
-			'layout'  => get_options( 'layout' ),
-			'mode'    => get_options( 'mode' ),
-			'sort'    => get_options( 'sort' ),
-		),
-	];
-
-	return $data;
-}
-
-add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
 
 /**
  * Render the block on the front end.
@@ -71,38 +48,28 @@ function render( $attributes ) {
 }
 
 /**
- * Append a "Read more" link to a content string.
+ * Add data to be used by the JS scripts in the block editor.
  *
- * @todo This is kind of hacky, maybe find a way to do this that doesn't involve regex.
+ * @param array $data
  *
- * @param $content
- *
- * @return string
+ * @return array
  */
-function maybe_add_more_link( $content, $add, $post ) {
-	if ( $add ) {
-		$url  = get_permalink( $post );
-		$more = sprintf(
-			'<a href="%s">%s</a>',
-			esc_url( $url ),
-			__( 'Read more', 'wordcamporg' )
-		);
+function add_script_data( array $data ) {
+	$data['speakers'] = [
+		'schema'  => get_attributes_schema(),
+		'options' => array(
+			'align'   => get_options( 'align' ),
+			'content' => get_options( 'content' ),
+			'layout'  => get_options( 'layout' ),
+			'mode'    => get_options( 'mode' ),
+			'sort'    => get_options( 'sort' ),
+		),
+	];
 
-		$pattern = '/<\/p>$/';
-
-		if ( preg_match( $pattern, $content ) ) {
-			$content = preg_replace(
-				$pattern,
-				' ' . $more . '</p>',
-				$content
-			);
-		} else {
-			$content .= ' ' . $more;
-		}
-	}
-
-	return $content;
+	return $data;
 }
+
+add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
 
 /**
  * Get the posts to display in the block.
@@ -360,4 +327,38 @@ function get_options( $type ) {
 	}
 
 	return $options;
+}
+
+/**
+ * Append a "Read more" link to a content string, within the same paragraph tag, if applicable.
+ *
+ * @todo This is kind of hacky, maybe find a way to do this that doesn't involve regex.
+ *
+ * @param $content
+ *
+ * @return string
+ */
+function maybe_add_more_link( $content, $add, $post ) {
+	if ( $add ) {
+		$url  = get_permalink( $post );
+		$more = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( $url ),
+			__( 'Read more', 'wordcamporg' )
+		);
+
+		$pattern = '/<\/p>$/';
+
+		if ( preg_match( $pattern, $content ) ) {
+			$content = preg_replace(
+				$pattern,
+				' ' . $more . '</p>',
+				$content
+			);
+		} else {
+			$content .= ' ' . $more;
+		}
+	}
+
+	return $content;
 }

@@ -15,6 +15,7 @@ const { Component, Fragment } = wp.element;
 import SpeakersBlockControls from './block-controls';
 import SpeakersInspectorControls from './inspector-controls';
 import SpeakersToolbar from './toolbar';
+import './edit.scss';
 
 const MAX_POSTS = 100;
 

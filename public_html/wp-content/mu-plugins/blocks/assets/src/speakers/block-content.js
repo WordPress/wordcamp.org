@@ -12,7 +12,11 @@ const { Component, Fragment, RawHTML } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
 const { __, _n, sprintf } = wp.i18n;
 
+/**
+ * Internal dependencies
+ */
 import AvatarImage from '../shared/avatar';
+import './block-content.scss';
 
 class SpeakersBlockContent extends Component {
 	static maybeAddMoreLink( content, add ) {

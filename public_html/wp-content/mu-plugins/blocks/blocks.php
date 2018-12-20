@@ -42,19 +42,21 @@ function register_block_categories( $default_categories, $post ) {
 add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories', 10, 2 );
 
 /**
- * Enqueue assets.
+ * Register assets.
+ *
+ * The assets get enqueued automatically by the registered block types.
  *
  * @return void
  */
-function enqueue_assets() {
-	wp_enqueue_style(
+function register_assets() {
+	wp_register_style(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'assets/blocks.min.css',
 		[],
 		filemtime( PLUGIN_DIR . 'assets/blocks.min.css' )
 	);
 
-	wp_enqueue_script(
+	wp_register_script(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'assets/blocks.min.js',
 		array(
@@ -95,7 +97,7 @@ function enqueue_assets() {
 	}
 }
 
-add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
+add_action( 'init', __NAMESPACE__ . '\register_assets', 9 );
 
 /**
  * Fix a CSS bug in Gutenberg when PanelRows are used with RangeControls.

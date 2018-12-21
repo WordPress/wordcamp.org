@@ -10,7 +10,6 @@ import * as speakers from './speakers/';
 
 [
 	speakers,
-	//
 ].forEach( ( { name, settings } ) => {
 	registerBlockType( name, settings );
 } );

@@ -43,17 +43,17 @@ class SpeakersBlockContent extends Component {
 		const {
 			layout, grid_columns, className,
 			show_avatars, avatar_size, avatar_align,
-			content, speaker_link, show_session
+			content, speaker_link, show_session,
 		} = attributes;
 
 		let containerClasses = [
 			'wordcamp-speakers-block',
 			'layout-' + layout,
-			className
+			className,
 		];
 
 		if ( 'grid' === layout ) {
-			containerClasses.push( 'grid-columns-' + Number( grid_columns ) )
+			containerClasses.push( 'grid-columns-' + Number( grid_columns ) );
 		}
 
 		return (
@@ -121,7 +121,7 @@ class SpeakersBlockContent extends Component {
 												>
 													{ decodeEntities( session.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
 												</a>
-												<br/>
+												<br />
 												<span className={ 'wordcamp-speaker-session-info' }>
 													{ session.session_track.length &&
 														sprintf(

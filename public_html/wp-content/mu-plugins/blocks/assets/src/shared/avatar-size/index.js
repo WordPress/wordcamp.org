@@ -17,28 +17,28 @@ import './style.scss';
 
 const sizePresets = [
 	{
-		name: __( 'Small', 'wordcamporg' ),
-		shortName: _x( 'S', 'size small', 'wordcamporg' ),
-		size: 90,
-		slug: 'small',
+		name      : __( 'Small', 'wordcamporg' ),
+		shortName : _x( 'S', 'size small', 'wordcamporg' ),
+		size      : 90,
+		slug      : 'small',
 	},
 	{
-		name: __( 'Regular', 'wordcamporg' ),
-		shortName: _x( 'M', 'size medium', 'wordcamporg' ),
-		size: 150,
-		slug: 'regular',
+		name      : __( 'Regular', 'wordcamporg' ),
+		shortName : _x( 'M', 'size medium', 'wordcamporg' ),
+		size      : 150,
+		slug      : 'regular',
 	},
 	{
-		name: __( 'Large', 'wordcamporg' ),
-		shortName: _x( 'L', 'size large', 'wordcamporg' ),
-		size: 300,
-		slug: 'large',
+		name      : __( 'Large', 'wordcamporg' ),
+		shortName : _x( 'L', 'size large', 'wordcamporg' ),
+		size      : 300,
+		slug      : 'large',
 	},
 	{
-		name: __( 'Larger', 'wordcamporg' ),
-		shortName: _x( 'XL', 'size extra large', 'wordcamporg' ),
-		size: 500,
-		slug: 'larger',
+		name      : __( 'Larger', 'wordcamporg' ),
+		shortName : _x( 'XL', 'size extra large', 'wordcamporg' ),
+		size      : 500,
+		slug      : 'larger',
 	},
 ];
 

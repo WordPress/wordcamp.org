@@ -124,7 +124,7 @@ class SpeakersSelect extends Component {
 		}
 
 		if ( ids ) {
-			currentValue = filter( selectOptions[0].options, ( o ) => {
+			currentValue = filter( selectOptions[ 0 ].options, ( o ) => {
 				return includes( ids, o.value );
 			} );
 		}
@@ -155,9 +155,9 @@ class SpeakersSelect extends Component {
 
 					if ( ! value.length ) {
 						setAttributes( {
-							mode: '',
-							post_ids: [],
-							term_ids: [],
+							mode     : '',
+							post_ids : [],
+							term_ids : [],
 						} );
 					} else {
 						const chosen = selectedOptions[ 0 ].type;
@@ -165,15 +165,15 @@ class SpeakersSelect extends Component {
 						switch ( chosen ) {
 							case 'post' :
 								setAttributes( {
-									mode: 'specific_posts',
-									post_ids: value,
+									mode     : 'specific_posts',
+									post_ids : value,
 								} );
 								break;
 
 							case 'term' :
 								setAttributes( {
-									mode: 'specific_terms',
-									term_ids: value,
+									mode     : 'specific_terms',
+									term_ids : value,
 								} );
 								break;
 						}
@@ -193,19 +193,19 @@ const optionsSelect = ( select, props ) => {
 
 	if ( ! mode || 'specific_terms' === mode ) {
 		const terms = getEntityRecords( 'taxonomy', 'wcb_speaker_group', {
-			orderby: 'name',
-			order: 'asc',
-			per_page: 100,
+			orderby  : 'name',
+			order    : 'asc',
+			per_page : 100,
 		} );
 
 		options.push( {
-			label: __( 'Groups', 'wordcamporg' ),
-			options: map( terms || [], ( term ) => {
+			label   : __( 'Groups', 'wordcamporg' ),
+			options : map( terms || [], ( term ) => {
 				return {
-					label: decodeEntities( term.name ) || __( '(Untitled)', 'wordcamporg' ),
-					value: term.id,
-					type: 'term',
-					count: term.count,
+					label : decodeEntities( term.name ) || __( '(Untitled)', 'wordcamporg' ),
+					value : term.id,
+					type  : 'term',
+					count : term.count,
 				};
 			} ),
 		} );
@@ -213,20 +213,20 @@ const optionsSelect = ( select, props ) => {
 
 	if ( ! mode || 'specific_posts' === mode ) {
 		const posts = getEntityRecords( 'postType', 'wcb_speaker', {
-			orderby: 'title',
-			order: 'asc',
-			per_page: 100,
-			_embed: true,
+			orderby  : 'title',
+			order    : 'asc',
+			per_page : 100,
+			_embed   : true,
 		} );
 
 		options.push( {
-			label: __( 'Speakers', 'wordcamporg' ),
-			options: map( posts || [], ( post ) => {
+			label   : __( 'Speakers', 'wordcamporg' ),
+			options : map( posts || [], ( post ) => {
 				return {
-					label: decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
-					value: post.id,
-					type: 'post',
-					avatar: post[ 'avatar_urls' ][ '24' ],
+					label  : decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
+					value  : post.id,
+					type   : 'post',
+					avatar : post[ 'avatar_urls' ][ '24' ],
 				};
 			} ),
 		} );

@@ -31,6 +31,7 @@ class VersatileSelect extends Component {
 		const { className, label, help, instanceId, onChange, submitLabel } = this.props;
 		const id = `wordcamp-block-versatile-select-control-${ instanceId }`;
 		const value = this.state.selectedOptions || this.props.value;
+
 		return (
 			<BaseControl
 				id={ id }

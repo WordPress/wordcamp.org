@@ -43,11 +43,11 @@ const speakersSelect = ( select, props ) => {
 	const [ orderby, order ] = split( sort, '_', 2 );
 
 	const args = {
-		orderby: orderby,
-		order: order,
-		per_page: MAX_POSTS, // -1 is not allowed for per_page.
-		_embed: true,
-		context: 'view',
+		orderby  : orderby,
+		order    : order,
+		per_page : MAX_POSTS, // -1 is not allowed for per_page.
+		_embed   : true,
+		context  : 'view',
 	};
 
 	if ( 'specific_posts' === mode && Array.isArray( post_ids ) ) {
@@ -55,14 +55,14 @@ const speakersSelect = ( select, props ) => {
 	}
 
 	if ( 'specific_terms' === mode && Array.isArray( term_ids ) ) {
-		args['speaker_group'] = term_ids;
+		args[ 'speaker_group' ] = term_ids;
 	}
 
 	const speakersQuery = pickBy( args, ( value ) => ! isUndefined( value ) );
 
 	return {
-		speakerPosts: getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),
-		tracks: getEntityRecords( 'taxonomy', 'wcb_track', { per_page: MAX_POSTS } ),
+		speakerPosts : getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),
+		tracks       : getEntityRecords( 'taxonomy', 'wcb_track', { per_page: MAX_POSTS } ),
 	};
 };
 

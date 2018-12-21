@@ -11,12 +11,12 @@ import { edit } from './edit.js';
 export const name = 'wordcamp/speakers';
 
 export const settings = {
-	title: __( 'Speakers', 'wordcamporg' ),
-	description: __( 'Add a list of speakers.', 'wordcamporg' ),
-	icon: 'megaphone',
-	category: 'wordcamp',
+	title       : __( 'Speakers', 'wordcamporg' ),
+	description : __( 'Add a list of speakers.', 'wordcamporg' ),
+	icon        : 'megaphone',
+	category    : 'wordcamp',
 	edit,
-	save: function() {
+	save        : function() {
 		return null;
 	},
 };

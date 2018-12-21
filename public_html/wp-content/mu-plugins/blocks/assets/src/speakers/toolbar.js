@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-const { Toolbar, ToolbarButton } = wp.components;
+const { Toolbar } = wp.components;
 const { BlockControls } = wp.editor;
 const { Component } = wp.element;
 
@@ -21,10 +21,12 @@ class SpeakersToolbar extends Component {
 						const isActive = layout === option.value;
 
 						return {
-							icon: icon,
-							title: option.label,
-							isActive: isActive,
-							onClick: () => setAttributes( { layout: option.value } ),
+							icon     : icon,
+							title    : option.label,
+							isActive : isActive,
+							onClick  : () => {
+								setAttributes( { layout: option.value } );
+							},
 						};
 					} ) }
 				/>

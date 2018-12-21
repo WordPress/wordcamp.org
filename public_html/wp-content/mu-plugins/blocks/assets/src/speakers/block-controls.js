@@ -90,7 +90,9 @@ class SpeakersBlockControls extends Component {
 					<Button
 						isDefault
 						isLarge
-						onClick={ () => { setAttributes( { mode: 'all' } ); } }
+						onClick={ () => {
+							setAttributes( { mode: 'all' } );
+						} }
 					>
 						{ find( options.mode, ( modeOption ) => {
 							return 'all' === modeOption.value;

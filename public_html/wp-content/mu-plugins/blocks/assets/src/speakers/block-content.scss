@@ -19,6 +19,7 @@
 	}
 
 	.wordcamp-speaker:after {
+		/* why not use the existing wp-clearfix class? */
 		content: "";
 		display: table;
 		clear: both;

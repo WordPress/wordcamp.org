@@ -24,6 +24,10 @@ const webpackConfig = {
 	output: {
 		filename: '[name].min.js',
 		path: path.resolve( __dirname, 'assets' ),
+		// should we leave the js un-minified in dev mode, so that it's easier to debug?
+
+		// the browser debugger isn't usable b/c it can only see the minified file, i'm guessing we need source maps enabled
+		// er, well, it seems like it works sometimes, and doesn't others
 	},
 	module: {
 		rules: [

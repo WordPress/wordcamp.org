@@ -32,6 +32,7 @@ module.exports = {
 		document       : true,
 		module         : true,
 		window         : true,
+		require        : true,	// if we keep require, we should add this. seems like we should switch to `import`, though, b/c that's more modern, and allows webpack to do "tree shaking" to reduce the build size
 		WordCampBlocks : true,
 	},
 

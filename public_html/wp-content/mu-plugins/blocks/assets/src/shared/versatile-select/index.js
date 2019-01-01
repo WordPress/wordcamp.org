@@ -19,6 +19,10 @@ import './style.scss';
 class VersatileSelect extends Component {
 	constructor( props ) {
 		super( props );
+		// do we need to pass props here, or is just calling super() enough? i think it should be if all we want is to access `this`
+		// passing `props` is only needed when we want to reference `this.props` inside the constructor
+		// https://stackoverflow.com/questions/30571875/whats-the-difference-between-super-and-superprops-in-react-when-using-e
+		// if we change it here, we should change the other instances as well
 
 		this.state = {
 			selectedOptions: null,

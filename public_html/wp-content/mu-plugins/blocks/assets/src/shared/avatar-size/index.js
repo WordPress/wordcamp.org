@@ -51,6 +51,7 @@ function AvatarSizeControl( {
 	onChange,
 	initialPosition,
 	...props
+	// i may just be misunderstanding the spread operator, but it seems like a bad idea to have arbitrary inputs mapped to fixed function params. wouldn't we want the params to be explicitly and unchanging?
 } ) {
 	const id = `wordcamp-inspector-avatar-size-control-${ instanceId }`;
 

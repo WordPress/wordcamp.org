@@ -64,6 +64,9 @@ function add_script_data( array $data ) {
 			'mode'    => get_options( 'mode' ),
 			'sort'    => get_options( 'sort' ),
 		),
+		// would ^ be easier if the get_options() had a `default` case that just returned all of them?
+		// that way this would just be `options => get_options()` instead of listing each one manually
+		// get_options would need to be refactored a bit, so maybe not worth it
 	];
 
 	return $data;

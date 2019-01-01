@@ -38,6 +38,7 @@ function ImageAlignmentControl( {
 				{ options.align.map( ( alignment ) => {
 					const optLabel = alignment.label;
 					const optValue = alignment.value;
+					// should we use `const { label, value } = alignment;` here for consistency?
 					const isCurrent = value === optValue;
 					const iconSlug = `align-${ optValue }`;
 

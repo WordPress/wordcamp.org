@@ -18,5 +18,9 @@ export const settings = {
 	edit,
 	save        : function() {
 		return null;
+		// should we return a cached copy of the markup here, as a failsafe in case we ever want to disable this block or make some big changes to it?
+		// disabling it entirely seems unlikely, but we might eventually want to build a v2 from scratch or something
+		// not having to worry about back-compat might give us some flexibility in the future
+		// https://wordpress.org/gutenberg/handbook/designers-developers/developers/block-api/block-edit-save/#save
 	},
 };

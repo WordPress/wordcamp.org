@@ -26,6 +26,34 @@ class SpeakersBlockControls extends Component {
 
 		const hasPosts = Array.isArray( speakerPosts ) && speakerPosts.length;
 
+		/*
+		 what do you think about modularizing all these different returns into named functions?
+		 it seems like it'd be easier to scan the structure and also focus on individual parts that way
+		 that could also simplify the structure into a single if..then..else block, rather than an if, a switch, and an implicit else
+
+		```
+		let content;
+
+		if ( mode && ! hasPosts ) {
+			content = noPostsPlaceholder();
+		} elseif ( 'all' === mode ) {
+			content = ( <SpeakersBlockContent { ...this.props } /> );
+		} elseif ( 'specific_posts' === mode ) {
+			content = specificPostsView();
+		} elseif ( 'specific_terms' === mode ) {
+			content = specificTermsView();
+		} else {
+			content = newBlockPlaceholder();
+		}
+
+		return content;
+		```
+
+		that'd also resolve the CS violation about returning from switch statements
+		https://make.wordpress.org/core/handbook/best-practices/coding-standards/javascript/#switch-statements
+
+		 */
+
 		if ( mode && ! hasPosts ) {
 			return (
 				<Placeholder

@@ -18,6 +18,10 @@ const { __ } = wp.i18n;
 import AvatarImage from '../shared/avatar';
 import VersatileSelect from '../shared/versatile-select';
 
+// lots of stuff here, can/should some of it be black-boxed into VersitileSelect, so it's DRY when we start using this component in other blocks?
+
+// this is pretty big, could it be broken reasonably down into smaller components?
+
 class SpeakersSelect extends Component {
 	constructor( props ) {
 		super( props );
@@ -39,6 +43,8 @@ class SpeakersSelect extends Component {
 						name={ optionData.label }
 						size={ 24 }
 						url={ optionData.avatar }
+
+						// formatting is messed up when no gravatar exists for user
 					/>
 				);
 				break;
@@ -61,6 +67,7 @@ class SpeakersSelect extends Component {
 
 	static optionLabel( optionData ) {
 		const { type } = optionData;
+		// would it be better to include label and count in ^, and then name the return value something like `labelMarkup` ?
 
 		let label;
 
@@ -125,6 +132,7 @@ class SpeakersSelect extends Component {
 
 		if ( ids ) {
 			currentValue = filter( selectOptions[ 0 ].options, ( o ) => {
+				// what is `o`? an option? the name should be descriptive and obvious
 				return includes( ids, o.value );
 			} );
 		}
@@ -151,9 +159,12 @@ class SpeakersSelect extends Component {
 					);
 				} }
 				onChange={ ( selectedOptions ) => {
+					// this seems like it's big enough that it'd be more readable if it were modularized into a named function
+					// even the smaller ones above feel like they could be too. if it's not a 1-liner then it makes the element harder to scan quickly, and mixes logic with markup
 					const value = map( selectedOptions, 'value' );
 
 					if ( ! value.length ) {
+						// i think this would flow better if it were `if ( value.length ) { stuff } else { other stuff }`. `if ( ! true } {} else {}` is a bit awkward to read
 						setAttributes( {
 							mode     : '',
 							post_ids : [],
@@ -192,6 +203,8 @@ const optionsSelect = ( select, props ) => {
 	let options = [];
 
 	if ( ! mode || 'specific_terms' === mode ) {
+		// should there be some kind of UI to let the user know they can only select groups at the start, and can't mix speakers/groups?
+
 		const terms = getEntityRecords( 'taxonomy', 'wcb_speaker_group', {
 			orderby  : 'name',
 			order    : 'asc',

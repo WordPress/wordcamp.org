@@ -1,3 +1,9 @@
+.wordcamp-clearfix:after {
+	content: "";
+	display: table;
+	clear: both;
+}
+
 .wordcamp-speakers-block {
 	&,
 	.editor-styles-wrapper & {
@@ -16,12 +22,6 @@
 		&.grid-columns-4 {
 			grid-template-columns: repeat( 4, 1fr );
 		}
-	}
-
-	.wordcamp-speaker:after {
-		content: "";
-		display: table;
-		clear: both;
 	}
 }
 

@@ -27,8 +27,8 @@ if ( ! class_exists( 'MeetupAdmin' ) ) :
 			add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_update_meetup_data' ) );
 			add_action( 'wcpt_metabox_value', array( $this, 'render_co_organizers_list' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'meetup_organizers_changed' ), 10, 2 );
-			add_action( 'transition_post_status', array( $this, 'maybe_update_organizers' ), 10, 3 );
 			add_action( 'transition_post_status', array( $this, 'trigger_status_change_action' ), 10, 3 );
+			add_action( 'wcpt_meetup_status_changed_to_wcpt-mtp-active', array( $this, 'update_organizers_for_active_meetup' ) );
 		}
 
 		/**
@@ -449,34 +449,19 @@ if ( ! class_exists( 'MeetupAdmin' ) ) :
 		}
 
 		/**
-		 * If status is set to `Active in the Chapter` then add badges for all organizers in the list.
+		 * Get the list of organizers for a newly-active meetup and trigger an update.
 		 *
-		 * @param string  $new_status
-		 * @param string  $old_status
-		 * @param WP_Post $post
+		 * @hooked action wcpt_meetup_status_changed_to_wcpt-mtp-active
+		 *
+		 * @param WP_Post $post The meetup post that has just changed to active status.
 		 */
-		public function maybe_update_organizers( $new_status, $old_status, $post ) {
-
-			if ( $this->get_event_type() !== get_post_type() ) {
-				return;
-			}
-
-			if ( 'wcpt-mtp-active' !== $post->post_status ) {
-				return;
-			}
-
-			if ( $new_status === $old_status ) {
-				// When both the status are same (and set to active), then we do not need to do anything. This is handled by meetup_organizers_changed function.
-				return;
-			}
-
+		public function update_organizers_for_active_meetup( $post ) {
 			$organizers_list = $this->get_organizer_list(
 				get_post_meta( $post->ID, 'Primary organizer WordPress.org username', true ),
 				get_post_meta( $post->ID, 'Co-Organizers usernames (seperated by comma)', true )
 			);
 
 			$this->update_meetup_organizers( $organizers_list, $post );
-
 		}
 
 		/**

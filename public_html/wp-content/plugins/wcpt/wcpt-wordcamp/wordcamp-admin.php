@@ -655,6 +655,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		/**
 		 * Trigger actions related to WordCamps being scheduled.
 		 *
+		 * We need to create our own custom action hook here instead of using the
+		 * "{$new_status}_{$post->post_type}" hook in Core because we don't want it to
+		 * trigger when the old status is the same as the new.
+		 *
+		 * @todo Maybe refactor this to follow the newer implementation in Meetup_Admin::trigger_status_change_action
+		 *
 		 * @param string  $new_status
 		 * @param string  $old_status
 		 * @param WP_Post $post

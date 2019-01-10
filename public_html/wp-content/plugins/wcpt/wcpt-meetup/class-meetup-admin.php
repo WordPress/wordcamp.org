@@ -28,6 +28,7 @@ if ( ! class_exists( 'MeetupAdmin' ) ) :
 			add_action( 'wcpt_metabox_value', array( $this, 'render_co_organizers_list' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'meetup_organizers_changed' ), 10, 2 );
 			add_action( 'transition_post_status', array( $this, 'maybe_update_organizers' ), 10, 3 );
+			add_action( 'transition_post_status', array( $this, 'trigger_status_change_action' ), 10, 3 );
 		}
 
 		/**
@@ -509,6 +510,39 @@ if ( ! class_exists( 'MeetupAdmin' ) ) :
 			if ( ! empty( $organizers ) ) {
 				do_action( 'update_meetup_organizers', $organizers, $post );
 			}
+		}
+
+		/**
+		 * Trigger an action hook when a meetup status changes.
+		 *
+		 * We need to create our own custom action hook here instead of using the
+		 * "{$new_status}_{$post->post_type}" hook in Core because we don't want it to
+		 * trigger when the old status is the same as the new.
+		 *
+		 * @param string  $new_status
+		 * @param string  $old_status
+		 * @param WP_Post $post
+		 *
+		 * @return void
+		 */
+		public function trigger_status_change_action( $new_status, $old_status, $post ) {
+			if ( empty( $post->post_type ) || $this->get_event_type() !== $post->post_type ) {
+				return;
+			}
+
+			if ( $new_status === $old_status ) {
+				return;
+			}
+
+			/**
+			 * Action: Meetup post status has changed.
+			 *
+			 * The dynamic portion of the hook name, `$new_status`, is the ID string of the new post status.
+			 *
+			 * @param WP_Post $post
+			 * @param string  $old_status
+			 */
+			do_action( "wcpt_meetup_status_changed_to_{$new_status}", $post, $old_status );
 		}
 
 		/**

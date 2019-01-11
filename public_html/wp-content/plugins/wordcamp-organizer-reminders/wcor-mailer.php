@@ -59,6 +59,18 @@ class WCOR_Mailer {
 					),
 				),
 			),
+
+			'wcor_meetup_active_in_chapter' => array(
+				'name'    => 'Meetup group is active in the chapter',
+				'actions' => array(
+					array(
+						'name'       => 'wcpt_meetup_status_changed_to_wcpt-mtp-active',
+						'callback'   => 'send_trigger_meetup_active_in_chapter',
+						'priority'   => 10,
+						'parameters' => 1,
+					),
+				),
+			),
 		);
 
 		add_action( 'wcor_send_timed_emails', array( $this, 'send_timed_emails' ) );
@@ -679,24 +691,35 @@ class WCOR_Mailer {
 	}
 
 	/**
+	 * Sends e-mails hooked to the wcor_meetup_active_in_chapter trigger.
+	 *
+	 * This fires when a Meetup post is set to `Active in the chapter` status.
+	 *
+	 * @param WP_Post $meetup_post
+	 */
+	public function send_trigger_meetup_active_in_chapter( $meetup_post ) {
+		$this->send_triggered_emails( $meetup_post, 'wcor_meetup_active_in_chapter' );
+	}
+
+	/**
 	 * Send emails associated with the given trigger.
 	 *
 	 * This will save a record of which e-mails have already been sent and avoid sending duplicates.
 	 *
-	 * @param WP_Post $wordcamp
-	 * @param string $trigger
+	 * @param WP_Post $post    The WordCamp or Meetup post.
+	 * @param string  $trigger
 	 */
-	protected function send_triggered_emails( $wordcamp, $trigger ) {
-		$sent_email_ids = (array) get_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', true );
+	protected function send_triggered_emails( $post, $trigger ) {
+		$sent_email_ids = (array) get_post_meta( $post->ID, 'wcor_sent_email_ids', true );
 		$emails         = $this->get_triggered_posts( $trigger );
 
 		foreach( $emails as $email ) {
-			$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
+			$recipient = $this->get_recipients( $post->ID, $email->ID );
 
 			if ( ! in_array( $email->ID, $sent_email_ids ) ) {
-				if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
+				if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $post ) ) {
 					$sent_email_ids[] = $email->ID;
-					update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );
+					update_post_meta( $post->ID, 'wcor_sent_email_ids', $sent_email_ids );
 				}
 			}
 		}

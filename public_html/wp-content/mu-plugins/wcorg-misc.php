@@ -481,6 +481,16 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
+	// Always use the ABSPATH constant in the keys here to avoid path disclosure.
+	$error_ignorelist = [
+		// See https://core.trac.wordpress.org/ticket/29204
+		ABSPATH . 'wp-includes/SimplePie/Registry.php:215' => 'Non-static method WP_Feed_Cache::create() should not be called statically',
+	];
+
+	if ( isset( $error_ignorelist[ "$file:$line" ] ) && false !== strpos( $err_msg, $error_ignorelist[ "$file:$line" ] ) ) {
+		return false;
+	}
+
 	// Max file length for ubuntu system is 255.
 	$err_key = substr( base64_encode("$file-$line-$err_no" ), -254 );
 

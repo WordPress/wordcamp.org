@@ -525,7 +525,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 
 	$domain    = get_site_url();
 	$page_slug = esc_html( trim( $_SERVER['REQUEST_URI'], '/' ) );
-	$text      = $text . "Message : \"$err_msg\" occured on \"$file:$line\" \n Domain: $domain \n Page: $page_slug \n Error type: $err_no";
+	$text      = $text . "Message : \"$err_msg\" occurred on \"$file:$line\" \n Domain: $domain \n Page: $page_slug \n Error type: $err_no";
 
 	$message = array(
 		'fallback'    => $text,

@@ -466,7 +466,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
-	$error_whitelist = array(
+	$error_safelist = [
 		E_ERROR,
 		E_USER_ERROR,
 		E_CORE_ERROR,
@@ -475,9 +475,9 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 		E_NOTICE,
 		E_DEPRECATED,
 		E_WARNING,
-	);
+	];
 
-	if ( ! in_array( $err_no, $error_whitelist ) ) {
+	if ( ! in_array( $err_no, $error_safelist ) ) {
 		return false;
 	}
 

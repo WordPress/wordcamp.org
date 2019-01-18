@@ -15,6 +15,8 @@ define( 'REDACT_PAID_REQUESTS_CRON_ID', 'wcb_redact_paid_requests' );
 
 /*
  * Core functionality and helper functions shared between modules
+ *
+ * @todo the import/export stuff should be moved to its own file for better organization.
  */
 
 add_action( 'network_admin_menu', __NAMESPACE__ . '\register_budgets_menu' );
@@ -26,6 +28,8 @@ add_action( 'admin_init', __NAMESPACE__ . '\process_export_request' );
 add_action( 'admin_init', __NAMESPACE__ . '\process_action_approve', 11 );
 add_action( 'admin_init', __NAMESPACE__ . '\process_action_set_pending_payment', 11 );
 add_action( 'admin_init', __NAMESPACE__ . '\process_import_request', 11 );
+
+//add_action( 'save_post', __NAMESPACE__ . '\maybe_automatically_approve_request', 11, 2 ); // After `WCB_Payment_Request::save_payment()` and `WordCamp\Budgets\Reimbursement_Requests::save_request()`.
 
 add_action( REDACT_PAID_REQUESTS_CRON_ID, __NAMESPACE__ . '\redact_paid_requests' );
 
@@ -627,6 +631,10 @@ function convert_currency( $from, $to, $amount ) {
  * Approve a payment or reimbursement request.
  */
 function process_action_approve() {
+	// call this when user submits, will need way to bypass nonce, maybe just $force or $auto param
+		// or maybe modularize so can call model parts and this remains as controller. yeah, that's probably better
+		// that would be a separate commit
+
 	if ( ! current_user_can( 'manage_network' ) )
 		return;
 
@@ -655,9 +663,85 @@ function process_action_approve() {
 	\WordCamp_Budgets::log( $post->ID, get_current_user_id(), 'Request approved via Network Admin', array(
 		'action' => 'approved',
 	) );
+	// edit this to say 'manually approved by {name}' or 'automatically approved' ?
 
 	restore_current_blog();
 	add_settings_error( 'wcb-dashboard', 'success', 'Success! Request has been marked as Approved.', 'updated' );
+		// don't do this for auto-approve?
+}
+
+// phpdoc
+function maybe_automatically_approve_request( $request_id, $request ) {
+	$relevant_post_types = array(
+		WCP_Payment_Request::POST_TYPE,
+		Reimbursement_Requests\POST_TYPE
+	);
+
+	if ( ! in_array( $request->post_type, $relevant_post_types, true ) ) {
+		return;
+	}
+
+	if ( 'wcb-pending-approval' !== $request->post_status ) {
+		return;
+	}
+
+	if ( request_can_be_automatically_approved( $request ) ) {
+		wp_die( 'automatically approved!' );
+		//process_action_approve(); // pass params, maybe need to modularize it so it can be called
+		// if do that, then need to add current_user_can, and maybe verify_nonce to this?
+
+		// watch out for recursive loop when calling this
+	}
+}
+
+// phpdoc
+function request_can_be_automatically_approved( $request ) {
+	$meets_criteria = true;
+	$expenses       = array();
+
+	switch ( $request->post_type ) {
+		case WCP_Payment_Request::POST_TYPE:
+			$expenses[] = array(
+				'category' => $request->_camppayments_payment_category,
+				'currency' => $request->_camppayments_currency,
+				'amount'   => $request->_camppayments_payment_amount,
+			);
+			break;
+
+		case Reimbursement_Requests\POST_TYPE:
+			foreach( $request->_wcbrr_expenses as $expense ) {
+				$expenses[] = array(
+					'category' => $expense['_wcbrr_category'],
+					'currency' => $request->_wcbrr_currency,
+					'amount' => $expense['_wcbrr_amount'],
+				);
+			}
+			break;
+	}
+
+	var_dump($expenses);
+	return;
+	wp_die();
+	if ( empty( $expenses ) ) {
+		return false;
+	}
+
+
+	foreach ( $expenses as $expense ) {
+		//	* has to match line item in approved budget
+		//	* has to be equal to or less than the amount of the approved budget - need to count all approved requests for that item, not just the current one
+			// get spent line item total for all requests/imbursemsnts in this category
+		//	* need to make sure there's also an attachment (but no easy way for us to verify that the attachment is correct, just trust that it is)
+		//	* double check that currency is the same, just in case some have vendors that take different currencies
+
+		// if any of those false, set $meets_criteria to false
+	};
+
+	// maybe make exception for `other` category, b/c could be weird things in there that want manual approval?
+		// leaning towards just treat like any other category, but maybe ask team
+
+	var_dump($request, $meets_criteria );wp_die();
+	return $meets_criteria;
 }
 
 /**
@@ -989,3 +1073,14 @@ function get_encrypted_field_prefix( $post_type ) {
 class WCB_Import_Results {
 	public static $data;
 }
+
+
+add_action( 'admin_head', function() {
+	if ( current_user_can( 'manage_network' ) ) {
+		return;
+	}
+
+	maybe_automatically_approve_request( 122944, get_post( 122944 ) );
+	maybe_automatically_approve_request( 122938, get_post( 122938 ) );
+	wp_die('fin');
+} );

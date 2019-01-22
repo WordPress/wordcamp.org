@@ -111,6 +111,15 @@ class WCP_Payment_Request {
 	}
 
 	/**
+	 * Get a list of statuses for which posts can be edited by non-admins.
+	 *
+	 * @return array
+	 */
+	protected static function get_editable_statuses() {
+		return [ 'auto-draft', 'draft', 'wcb-incomplete' ];
+	}
+
+	/**
 	 * Register meta boxes
 	 */
 	public function init_meta_boxes() {
@@ -230,7 +239,7 @@ class WCP_Payment_Request {
 			$post->post_status = $back_compat_statuses[ $post->post_status ];
 		}
 
-		$editable_statuses = array( 'auto-draft', 'draft', 'wcb-incomplete' );
+		$editable_statuses = self::get_editable_statuses();
 		$current_user_can_edit_request = false;
 		$submit_text = esc_html_x( 'Update', 'payment request', 'wordcamporg' );
 		$submit_note = '';
@@ -583,7 +592,7 @@ class WCP_Payment_Request {
 
 		// Submit for Review button was clicked.
 		if ( ! current_user_can( 'manage_network' ) ) {
-			$editable_statuses = array( 'auto-draft', 'draft', 'wcb-incomplete' );
+			$editable_statuses = self::get_editable_statuses();
 			if ( ! empty( $post_data_raw['wcb-update'] ) && in_array( $post_data['post_status'], $editable_statuses ) ) {
 				$post_data['post_status'] = 'wcb-pending-approval';
 			}

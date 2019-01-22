@@ -1,3 +1,13 @@
+<?php
+/** @var WP_Post $post */
+/** @var WCP_Payment_Request $this */
+/** @var bool $current_user_can_edit_request */
+/** @var string $submit_text */
+/** @var string $submit_note */
+/** @var bool $date_vendor_paid_readonly */
+/** @var string $incomplete_notes */
+/** @var bool $incomplete_readonly */
+?>
 <div id="submitpost" class="wcb submitbox">
 	<div id="minor-publishing">
 
@@ -39,7 +49,7 @@
 						<?php if ( current_user_can( 'manage_network' ) ) : ?>
 
 							<select id="wcb_status" name="post_status">
-								<?php foreach ( self::get_post_statuses() as $status ) : ?>
+								<?php foreach ( WCP_Payment_Request::get_post_statuses() as $status ) : ?>
 									<?php $status = get_post_status_object( $status ); ?>
 									<option value="<?php echo esc_attr( $status->name ); ?>" <?php selected( $post->post_status, $status->name ); ?> >
 										<?php echo esc_html( $status->label ); ?>
@@ -86,23 +96,24 @@
 	<div id="major-publishing-actions">
 		<?php if ( $current_user_can_edit_request ) : ?>
 
-			<?php if ( !empty( $submit_note ) ) : ?>
+			<?php if ( ! empty( $submit_note ) ) : ?>
 				<div><?php echo $submit_note; ?></div>
 			<?php endif; ?>
 
-
-			<div id="delete-action">
-				<?php if ( current_user_can( 'delete_post', $post->ID ) ) : ?>
+			<?php if ( current_user_can( 'delete_post', $post->ID ) ) : ?>
+				<div id="delete-action">
 					<a class="submitdelete deletion" href="<?php echo get_delete_post_link( $post->ID ); ?>">
 						<?php _e( 'Delete', 'wordcamporg' ); ?>
 					</a>
-				<?php endif; ?>
-			</div>
+				</div>
+			<?php endif; ?>
 
-			<div id="publishing-action">
-				<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr( $submit_text ) ?>" />
-				<?php submit_button( $submit_text, 'primary button-large', 'wcb-update', false, array( 'accesskey' => 'p' ) ); ?>
-			</div>
+			<?php if ( $this->can_submit_request( $post ) ) : ?>
+				<div id="publishing-action">
+					<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr( $submit_text ) ?>" />
+					<?php submit_button( $submit_text, 'primary button-large', 'wcb-update', false, array( 'accesskey' => 'p' ) ); ?>
+				</div>
+			<?php endif; ?>
 
 			<div class="clear"></div>
 

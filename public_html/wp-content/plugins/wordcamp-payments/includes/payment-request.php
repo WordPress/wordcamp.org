@@ -247,8 +247,13 @@ class WCP_Payment_Request {
 		if ( current_user_can( 'manage_network' ) ) {
 			$current_user_can_edit_request = true;
 		} elseif ( in_array( $post->post_status, $editable_statuses ) ) {
-			$submit_text = esc_html__( 'Submit for Review', 'wordcamporg' );
-			$submit_note = esc_html__( 'Once submitted for review, this request can not be edited.', 'wordcamporg' );
+			if ( $this->can_submit_request( $post ) ) {
+				$submit_text = esc_html__( 'Submit for Review', 'wordcamporg' );
+				$submit_note = esc_html__( 'Once submitted for review, this request can not be edited.', 'wordcamporg' );
+			} else {
+				$submit_note = esc_html__( 'Documentation must be attached and saved to the draft before this request can be submitted.', 'wordcamporg' );
+			}
+
 			$current_user_can_edit_request = true;
 		}
 

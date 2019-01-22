@@ -464,6 +464,21 @@ class WCP_Payment_Request {
 	}
 
 	/**
+	 * Check if a post meets the requirements to be submitted for review.
+	 *
+	 * @param WP_Post $post
+	 */
+	protected function can_submit_request( $post ) {
+		$files = WordCamp_Budgets::get_attached_files( $post );
+
+		if ( empty( $files ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * Get the value of a given field.
 	 *
 	 * @param string $name

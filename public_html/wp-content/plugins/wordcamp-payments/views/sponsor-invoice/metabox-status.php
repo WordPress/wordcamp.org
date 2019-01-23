@@ -76,7 +76,7 @@ defined( 'WPINC' ) or die();
 		<?php elseif ( ! $current_user_can_submit_request ) : ?>
 
 			<p>
-				<?php _e( "Invoices can't be submitted until your WordCamp has been added to the official schedule.", 'wordcamporg' ); ?>
+				<?php _e( "Invoices can't be submitted until your venue contract has been signed.", 'wordcamporg' ); ?>
 			</p>
 
 		<?php else : ?>

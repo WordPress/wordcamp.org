@@ -292,7 +292,7 @@ function render_status_metabox( $post ) {
 	if ( current_user_can( 'manage_network' ) ) {
 		$current_user_can_edit_request = true;
 	} elseif ( in_array( $post->post_status, $editable_statuses ) ) {
-		if ( can_submit_request( $post ) ) {
+		if ( WordCamp_Budgets::can_submit_request( $post ) ) {
 			$submit_text = esc_html__( 'Submit for Review', 'wordcamporg' );
 			$submit_note = esc_html__( 'Once submitted for review, this request cannot be edited.', 'wordcamporg' );
 		} else {
@@ -410,21 +410,6 @@ function display_post_states( $states ) {
 	}
 
 	return $states;
-}
-
-/**
- * Check if a post meets the requirements to be submitted for review.
- *
- * @param WP_Post $post
- */
-function can_submit_request( $post ) {
-	$files = WordCamp_Budgets::get_attached_files( $post );
-
-	if ( empty( $files ) ) {
-		return false;
-	}
-
-	return true;
 }
 
 /**

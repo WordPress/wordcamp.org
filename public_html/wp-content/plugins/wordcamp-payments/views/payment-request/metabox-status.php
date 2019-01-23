@@ -4,6 +4,7 @@
 /** @var bool $current_user_can_edit_request */
 /** @var string $submit_text */
 /** @var string $submit_note */
+/** @var string $submit_note_class */
 /** @var bool $date_vendor_paid_readonly */
 /** @var string $incomplete_notes */
 /** @var bool $incomplete_readonly */
@@ -97,7 +98,7 @@
 		<?php if ( $current_user_can_edit_request ) : ?>
 
 			<?php if ( ! empty( $submit_note ) ) : ?>
-				<div><?php echo $submit_note; ?></div>
+				<div class="notice notice-<?php echo esc_attr( $submit_note_class ); ?> inline"><?php echo wpautop( $submit_note ); ?></div>
 			<?php endif; ?>
 
 			<?php if ( current_user_can( 'delete_post', $post->ID ) ) : ?>

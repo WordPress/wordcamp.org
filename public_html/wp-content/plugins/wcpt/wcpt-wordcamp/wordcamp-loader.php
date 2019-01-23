@@ -250,6 +250,21 @@ class WordCamp_Loader extends Event_Loader {
 	}
 
 	/**
+	 * Get all the status that occur after a camp has a signed contract.
+	 *
+	 * @return array
+	 */
+	public static function get_after_contract_statuses() {
+		return array_merge(
+			array(
+				'wcpt-needs-fill-list',
+				'wcpt-needs-schedule',
+			),
+			self::get_public_post_statuses()
+		);
+	}
+
+	/**
 	 * Get the milestones that correspond to each status
 	 *
 	 * @return array

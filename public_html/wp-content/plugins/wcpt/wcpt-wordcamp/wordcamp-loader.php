@@ -255,12 +255,11 @@ class WordCamp_Loader extends Event_Loader {
 	 * @return array
 	 */
 	public static function get_after_contract_statuses() {
-		return array_merge(
-			array(
-				'wcpt-needs-fill-list',
-				'wcpt-needs-schedule',
-			),
-			self::get_public_post_statuses()
+		return array(
+			'wcpt-needs-fill-list',
+			'wcpt-needs-schedule',
+			'wcpt-scheduled',
+			'wcpt-closed',
 		);
 	}
 

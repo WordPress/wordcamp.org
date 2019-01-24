@@ -3,15 +3,17 @@
 namespace WordCamp\Budgets\Reimbursement_Requests;
 defined( 'WPINC' ) or die();
 
-/** @var \WP_Post $post */
-/** @var bool $current_user_can_edit_request */
-/** @var string $request_id */
-/** @var string $requested_by */
-/** @var string $incomplete_notes */
-/** @var bool $incomplete_readonly */
-/** @var string $submit_text */
-/** @var string $submit_note */
-/** @var string $submit_note_class */
+/**
+ * @var \WP_Post $post
+ * @var bool     $current_user_can_edit_request
+ * @var string   $request_id
+ * @var string   $requested_by
+ * @var string   $incomplete_notes
+ * @var bool     $incomplete_readonly
+ * @var string   $submit_text
+ * @var string   $submit_note
+ * @var string   $submit_note_class
+ */
 ?>
 
 <div id="submitpost" class="wcb submitbox">

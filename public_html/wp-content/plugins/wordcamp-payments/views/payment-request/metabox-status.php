@@ -1,13 +1,15 @@
 <?php
-/** @var WP_Post $post */
-/** @var WCP_Payment_Request $this */
-/** @var bool $current_user_can_edit_request */
-/** @var string $submit_text */
-/** @var string $submit_note */
-/** @var string $submit_note_class */
-/** @var bool $date_vendor_paid_readonly */
-/** @var string $incomplete_notes */
-/** @var bool $incomplete_readonly */
+/**
+ * @var WP_Post             $post
+ * @var WCP_Payment_Request $this
+ * @var bool                $current_user_can_edit_request
+ * @var string              $submit_text
+ * @var string              $submit_note
+ * @var string              $submit_note_class
+ * @var bool                $date_vendor_paid_readonly
+ * @var string              $incomplete_notes
+ * @var bool                $incomplete_readonly
+ */
 ?>
 <div id="submitpost" class="wcb submitbox">
 	<div id="minor-publishing">

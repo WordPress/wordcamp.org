@@ -249,10 +249,10 @@ class WCP_Payment_Request {
 			$current_user_can_edit_request = true;
 		} elseif ( in_array( $post->post_status, $editable_statuses ) ) {
 			if ( WordCamp_Budgets::can_submit_request( $post ) ) {
-				$submit_text = esc_html__( 'Submit for Review', 'wordcamporg' );
-				$submit_note = esc_html__( 'Once submitted for review, this request cannot be edited.', 'wordcamporg' );
+				$submit_text = __( 'Submit for Review', 'wordcamporg' );
+				$submit_note = __( 'Once submitted for review, this request cannot be edited.', 'wordcamporg' );
 			} else {
-				$submit_note = esc_html__( 'Please add an invoice or other supporting documentation in the Files section and save the draft.', 'wordcamporg' );
+				$submit_note = __( 'Please add an invoice or other supporting documentation in the Files section and save the draft.', 'wordcamporg' );
 				$submit_note_class = 'error';
 			}
 

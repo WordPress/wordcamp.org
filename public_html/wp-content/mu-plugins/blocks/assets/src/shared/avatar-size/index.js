@@ -46,9 +46,9 @@ function AvatarSizeControl( {
 	label,
 	help,
 	value,
-	onChange,
 	initialPosition,
-	...props
+	onChange,
+	rangeProps,
 } ) {
 	return (
 		<BaseControl
@@ -93,7 +93,7 @@ function AvatarSizeControl( {
 				onChange={ onChange }
 				beforeIcon={ 'format-image' }
 				afterIcon={ 'format-image' }
-				{ ...props }
+				{ ...rangeProps }
 			/>
 		</BaseControl>
 	);

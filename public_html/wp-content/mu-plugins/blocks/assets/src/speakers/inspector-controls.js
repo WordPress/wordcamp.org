@@ -51,10 +51,12 @@ class SpeakerInspectorControls extends Component {
 								<AvatarSizeControl
 									label={ __( 'Size', 'wordcamporg' ) }
 									value={ Number( avatar_size ) }
-									min={ Number( schema[ 'avatar_size' ].minimum ) }
-									max={ Number( schema[ 'avatar_size' ].maximum ) }
 									initialPosition={ Number( schema[ 'avatar_size' ].default ) }
 									onChange={ ( value ) => setAttributes( { avatar_size: value } ) }
+									rangeProps={ {
+										min: Number( schema[ 'avatar_size' ].minimum ),
+										max: Number( schema[ 'avatar_size' ].maximum ),
+									} }
 								/>
 							</PanelRow>
 							<PanelRow>

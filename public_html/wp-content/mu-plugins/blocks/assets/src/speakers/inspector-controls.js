@@ -64,6 +64,7 @@ class SpeakerInspectorControls extends Component {
 									label={ __( 'Alignment', 'wordcamporg' ) }
 									value={ avatar_align }
 									onChange={ ( value ) => setAttributes( { avatar_align: value } ) }
+									alignOptions={ options.align }
 								/>
 							</PanelRow>
 						</Fragment>

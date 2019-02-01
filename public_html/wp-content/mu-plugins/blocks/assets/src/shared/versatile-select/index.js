@@ -44,7 +44,7 @@ class VersatileSelect extends Component {
 						value={ value }
 						className="wordcamp-components-versatile-select-select"
 						onChange={ ( selectedOptions ) => {
-							this.setState( { selectedOptions: selectedOptions } );
+							this.setState( { selectedOptions } );
 						} }
 					/>
 					<Button

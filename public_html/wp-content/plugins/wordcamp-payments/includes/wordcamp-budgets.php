@@ -2668,6 +2668,23 @@ class WordCamp_Budgets {
 	}
 
 	/**
+	 * Check if a request post meets the requirements to be submitted for review.
+	 *
+	 * @param WP_Post $post
+	 */
+	public static function can_submit_request( $post ) {
+		if ( ! current_user_can( 'manage_network' ) ) {
+			// A request must have documentation attached before it can be submitted.
+			$files = self::get_attached_files( $post );
+			if ( empty( $files ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Get the files attached to a post
 	 *
 	 * @param WP_Post $post

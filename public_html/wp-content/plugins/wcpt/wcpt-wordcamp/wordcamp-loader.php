@@ -6,8 +6,6 @@ define( 'WCPT_SLUG',           'wordcamps'          );
 define( 'WCPT_DEFAULT_STATUS', 'wcpt-needs-vetting' );
 define( 'WCPT_FINAL_STATUS',   'wcpt-closed'        );
 
-require_once WCPT_DIR . 'wcpt-event/class-event-loader.php';
-
 if ( ! class_exists( 'WordCamp_Loader' ) ) :
 /**
  * WordCamp_Loader
@@ -248,6 +246,20 @@ class WordCamp_Loader extends Event_Loader {
 			),
 			\WordCamp_Loader::get_pre_planning_post_statuses(),
 			array( 'wcpt-scheduled' )
+		);
+	}
+
+	/**
+	 * Get all the status that occur after a camp has a signed contract.
+	 *
+	 * @return array
+	 */
+	public static function get_after_contract_statuses() {
+		return array(
+			'wcpt-needs-fill-list',
+			'wcpt-needs-schedule',
+			'wcpt-scheduled',
+			'wcpt-closed',
 		);
 	}
 

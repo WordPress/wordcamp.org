@@ -23,7 +23,6 @@ class SpeakersSelect extends Component {
 		super( props );
 
 		this.optionDisabled = this.optionDisabled.bind( this );
-		this.render = this.render.bind( this );
 	}
 
 	static optionImage( optionData ) {

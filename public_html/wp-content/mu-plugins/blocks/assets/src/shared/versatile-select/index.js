@@ -23,8 +23,6 @@ class VersatileSelect extends Component {
 		this.state = {
 			selectedOptions: null,
 		};
-
-		this.render = this.render.bind( this );
 	}
 
 	render() {

@@ -22,7 +22,7 @@ class SpeakersBlockControls extends Component {
 	render() {
 		const { attributes, setAttributes, speakerPosts } = this.props;
 		const { mode } = attributes;
-		const { options } = data;
+		const { mode: modeOptions = {} } = data.options;
 
 		const hasPosts = Array.isArray( speakerPosts ) && speakerPosts.length;
 
@@ -47,7 +47,7 @@ class SpeakersBlockControls extends Component {
 				);
 
 			case 'specific_posts' :
-				const postsLabel = find( options.mode, ( modeOption ) => {
+				const postsLabel = find( modeOptions, ( modeOption ) => {
 					return 'specific_posts' === modeOption.value;
 				} ).label;
 
@@ -64,7 +64,7 @@ class SpeakersBlockControls extends Component {
 				);
 
 			case 'specific_terms' :
-				const termsLabel = find( options.mode, ( modeOption ) => {
+				const termsLabel = find( modeOptions, ( modeOption ) => {
 					return 'specific_terms' === modeOption.value;
 				} ).label;
 
@@ -94,7 +94,7 @@ class SpeakersBlockControls extends Component {
 							setAttributes( { mode: 'all' } );
 						} }
 					>
-						{ find( options.mode, ( modeOption ) => {
+						{ find( modeOptions, ( modeOption ) => {
 							return 'all' === modeOption.value;
 						} ).label }
 					</Button>

@@ -14,11 +14,30 @@ import ImageAlignmentControl from '../shared/image-alignment';
 
 const data = window.WordCampBlocks.speakers || {};
 
+const DEFAULT_SCHEMA = {
+	grid_columns: {
+		default: 2,
+		minimum: 2,
+		maximum: 4,
+	},
+	avatar_size: {
+		default: 150,
+		minimum: 25,
+		maximum: 600,
+	},
+};
+
+const DEFAULT_OPTIONS = {
+	align: {},
+	content: {},
+	sort: {},
+};
+
 class SpeakerInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes } = this.props;
 		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, speaker_link, show_session, sort } = attributes;
-		const { schema, options } = data;
+		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = data;
 
 		return (
 			<InspectorControls>

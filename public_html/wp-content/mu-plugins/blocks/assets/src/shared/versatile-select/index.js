@@ -37,18 +37,18 @@ class VersatileSelect extends Component {
 				label={ label }
 				help={ help }
 			>
-				<div className={ 'wordcamp-components-versatile-select-inner' }>
+				<div className="wordcamp-components-versatile-select-inner">
 					<Select
 						isMulti={ true }
 						{ ...this.props }
 						value={ value }
-						className={ 'wordcamp-components-versatile-select-select' }
+						className="wordcamp-components-versatile-select-select"
 						onChange={ ( selectedOptions ) => {
 							this.setState( { selectedOptions: selectedOptions } );
 						} }
 					/>
 					<Button
-						className={ 'wordcamp-components-versatile-select-button' }
+						className="wordcamp-components-versatile-select-button"
 						isLarge
 						isDefault
 						onClick={ () => {

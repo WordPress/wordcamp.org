@@ -83,10 +83,10 @@ class SpeakersBlockControls extends Component {
 
 		return (
 			<Placeholder
-				icon={ 'megaphone' }
+				icon="megaphone"
 				label={ __( 'Speakers', 'wordcamporg' ) }
 			>
-				<div className={ 'wordcamp-block-speakers-mode-option' }>
+				<div className="wordcamp-block-speakers-mode-option">
 					<Button
 						isDefault
 						isLarge
@@ -100,7 +100,7 @@ class SpeakersBlockControls extends Component {
 					</Button>
 				</div>
 
-				<div className={ 'wordcamp-block-speakers-mode-option' }>
+				<div className="wordcamp-block-speakers-mode-option">
 					<SpeakersSelect
 						label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
 						{ ...this.props }

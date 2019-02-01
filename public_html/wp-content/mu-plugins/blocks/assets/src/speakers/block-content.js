@@ -67,7 +67,7 @@ class SpeakersBlockContent extends Component {
 							'wordcamp-clearfix'
 						) }
 					>
-						<h3 className={ 'wordcamp-speaker-name-heading' }>
+						<h3 className="wordcamp-speaker-name-heading">
 							{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
 						</h3>
 
@@ -81,7 +81,7 @@ class SpeakersBlockContent extends Component {
 						}
 
 						{ ( 'none' !== content || true === speaker_link ) &&
-							<div className={ 'wordcamp-speaker-content' }>
+							<div className="wordcamp-speaker-content">
 								{ 'full' === content &&
 									<Disabled>
 										<RawHTML>
@@ -108,25 +108,25 @@ class SpeakersBlockContent extends Component {
 
 						{ true === show_session && post._embedded.sessions &&
 							<Fragment>
-								<h4 className={ 'wordcamp-speaker-session-heading' }>
+								<h4 className="wordcamp-speaker-session-heading">
 									{ _n( 'Session', 'Sessions', post._embedded.sessions.length, 'wordcamporg' ) }
 								</h4>
 
-								<ul className={ 'wordcamp-speaker-session-list' }>
+								<ul className="wordcamp-speaker-session-list">
 									{ post._embedded.sessions.map( ( session, x ) =>
 										<li
 											key={ x }
-											className={ 'wordcamp-speaker-session-content' }
+											className="wordcamp-speaker-session-content"
 										>
 											<Disabled>
 												<a
-													className={ 'wordcamp-speaker-session-link' }
+													className="wordcamp-speaker-session-link"
 													href={ session.link }
 												>
 													{ decodeEntities( session.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
 												</a>
 												<br />
-												<span className={ 'wordcamp-speaker-session-info' }>
+												<span className="wordcamp-speaker-session-info">
 													{ session.session_track.length &&
 														sprintf(
 															/* translators: 1: A date; 2: A time; 3: A location; */

@@ -56,7 +56,7 @@ function AvatarSizeControl( {
 			label={ label }
 			help={ help }
 		>
-			<div className={ 'wordcamp-components-avatar-size-buttons' }>
+			<div className="wordcamp-components-avatar-size-buttons">
 				<ButtonGroup>
 					{ sizePresets.map( ( preset ) => {
 						const { name, shortName, size, slug } = preset;
@@ -77,7 +77,7 @@ function AvatarSizeControl( {
 				</ButtonGroup>
 
 				<Button
-					className={ 'wordcamp-components-avatar-size-button-reset' }
+					className="wordcamp-components-avatar-size-button-reset"
 					isLarge
 					isDefault
 					onClick={ () => onChange( Number( initialPosition ) ) }
@@ -87,12 +87,12 @@ function AvatarSizeControl( {
 			</div>
 
 			<RangeControl
-				className={ 'wordcamp-components-avatar-size-range' }
+				className="wordcamp-components-avatar-size-range"
 				value={ value }
 				initialPosition={ initialPosition }
 				onChange={ onChange }
-				beforeIcon={ 'format-image' }
-				afterIcon={ 'format-image' }
+				beforeIcon="format-image"
+				afterIcon="format-image"
 				{ ...rangeProps }
 			/>
 		</BaseControl>

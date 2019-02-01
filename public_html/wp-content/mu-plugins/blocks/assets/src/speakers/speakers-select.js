@@ -34,7 +34,7 @@ class SpeakersSelect extends Component {
 			case 'post' :
 				image = (
 					<AvatarImage
-						className={ 'wordcamp-speakers-select-option-avatar' }
+						className="wordcamp-speakers-select-option-avatar"
 						name={ optionData.label }
 						size={ 24 }
 						url={ optionData.avatar }
@@ -44,9 +44,9 @@ class SpeakersSelect extends Component {
 
 			case 'term' :
 				image = (
-					<div className={ 'wordcamp-speakers-select-option-icon-container' }>
+					<div className="wordcamp-speakers-select-option-icon-container">
 						<Dashicon
-							className={ 'wordcamp-speakers-select-option-icon' }
+							className="wordcamp-speakers-select-option-icon"
 							icon={ 'megaphone' }
 							size={ 16 }
 						/>
@@ -66,7 +66,7 @@ class SpeakersSelect extends Component {
 		switch ( type ) {
 			case 'post' :
 				label = (
-					<span className={ 'wordcamp-speakers-select-option-label' }>
+					<span className="wordcamp-speakers-select-option-label">
 						{ optionData.label }
 					</span>
 				);
@@ -74,9 +74,9 @@ class SpeakersSelect extends Component {
 
 			case 'term' :
 				label = (
-					<span className={ 'wordcamp-speakers-select-option-label' }>
+					<span className="wordcamp-speakers-select-option-label">
 						{ optionData.label }
-						<span className={ 'wordcamp-speakers-select-option-label-term-count' }>
+						<span className="wordcamp-speakers-select-option-label-term-count">
 							{ optionData.count }
 						</span>
 					</span>
@@ -136,14 +136,14 @@ class SpeakersSelect extends Component {
 				isOptionDisabled={ this.optionDisabled }
 				formatGroupLabel={ ( groupData ) => {
 					return (
-						<span className={ 'wordcamp-speakers-select-option-group-label' }>
+						<span className="wordcamp-speakers-select-option-group-label">
 							{ groupData.label }
 						</span>
 					);
 				} }
 				formatOptionLabel={ ( optionData ) => {
 					return (
-						<div className={ 'wordcamp-speakers-select-option' }>
+						<div className="wordcamp-speakers-select-option">
 							{ this.constructor.optionImage( optionData ) }
 							{ this.constructor.optionLabel( optionData ) }
 						</div>

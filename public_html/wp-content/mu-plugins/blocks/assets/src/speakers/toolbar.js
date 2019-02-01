@@ -11,7 +11,7 @@ class SpeakersToolbar extends Component {
 	render() {
 		const { attributes, setAttributes } = this.props;
 		const { layout } = attributes;
-		const { options: layoutOptions = {} } = data;
+		const { layout: layoutOptions = {} } = data.options;
 
 		return (
 			<BlockControls>

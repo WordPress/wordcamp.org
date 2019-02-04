@@ -225,7 +225,7 @@ const optionsSelect = ( select, props ) => {
 					label  : decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
 					value  : post.id,
 					type   : 'post',
-					avatar : post[ 'avatar_urls' ][ '24' ],
+					avatar : post.avatar_urls[ '24' ],
 				};
 			} ),
 		} );

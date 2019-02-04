@@ -55,7 +55,7 @@ const speakersSelect = ( select, props ) => {
 	}
 
 	if ( 'specific_terms' === mode && Array.isArray( term_ids ) ) {
-		args[ 'speaker_group' ] = term_ids;
+		args.speaker_group = term_ids;
 	}
 
 	const speakersQuery = pickBy( args, ( value ) => ! isUndefined( value ) );

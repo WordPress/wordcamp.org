@@ -76,7 +76,7 @@ class SpeakersBlockContent extends Component {
 								className={ classnames( 'wordcamp-speaker-avatar', 'align-' + avatar_align ) }
 								name={ decodeEntities( post.title.rendered.trim() ) || '' }
 								size={ avatar_size }
-								url={ post[ 'avatar_urls' ][ '24' ] }
+								url={ post.avatar_urls[ '24' ] }
 							/>
 						}
 

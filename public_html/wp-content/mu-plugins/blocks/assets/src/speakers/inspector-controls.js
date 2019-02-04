@@ -47,9 +47,9 @@ class SpeakerInspectorControls extends Component {
 							<RangeControl
 								label={ __( 'Grid Columns', 'wordcamporg' ) }
 								value={ Number( grid_columns ) }
-								min={ Number( schema[ 'grid_columns' ].minimum ) }
-								max={ Number( schema[ 'grid_columns' ].maximum ) }
-								initialPosition={ Number( schema[ 'grid_columns' ].default ) }
+								min={ Number( schema.grid_columns.minimum ) }
+								max={ Number( schema.grid_columns.maximum ) }
+								initialPosition={ Number( schema.grid_columns.default ) }
 								onChange={ ( value ) => setAttributes( { grid_columns: value } ) }
 							/>
 						</PanelRow>
@@ -70,11 +70,11 @@ class SpeakerInspectorControls extends Component {
 								<AvatarSizeControl
 									label={ __( 'Size', 'wordcamporg' ) }
 									value={ Number( avatar_size ) }
-									initialPosition={ Number( schema[ 'avatar_size' ].default ) }
+									initialPosition={ Number( schema.avatar_size.default ) }
 									onChange={ ( value ) => setAttributes( { avatar_size: value } ) }
 									rangeProps={ {
-										min: Number( schema[ 'avatar_size' ].minimum ),
-										max: Number( schema[ 'avatar_size' ].maximum ),
+										min: Number( schema.avatar_size.minimum ),
+										max: Number( schema.avatar_size.maximum ),
 									} }
 								/>
 							</PanelRow>

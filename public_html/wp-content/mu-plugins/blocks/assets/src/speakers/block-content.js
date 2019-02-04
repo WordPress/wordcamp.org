@@ -58,9 +58,9 @@ class SpeakersBlockContent extends Component {
 
 		return (
 			<ul className={ classnames( containerClasses ) }>
-				{ speakerPosts.map( ( post, i ) =>
+				{ speakerPosts.map( ( post ) =>
 					<li
-						key={ i }
+						key={ post.slug }
 						className={ classnames(
 							'wordcamp-speaker',
 							'wordcamp-speaker-' + decodeEntities( post.slug ),
@@ -113,9 +113,9 @@ class SpeakersBlockContent extends Component {
 								</h4>
 
 								<ul className="wordcamp-speaker-session-list">
-									{ post._embedded.sessions.map( ( session, x ) =>
+									{ post._embedded.sessions.map( ( session ) =>
 										<li
-											key={ x }
+											key={ session.slug }
 											className="wordcamp-speaker-session-content"
 										>
 											<Disabled>

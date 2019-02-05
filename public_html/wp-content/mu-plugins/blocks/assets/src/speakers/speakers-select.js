@@ -177,7 +177,7 @@ const optionsSelect = ( select, props ) => {
 	const { mode } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
 
-	let options = [];
+	const options = [];
 
 	if ( ! mode || 'specific_terms' === mode ) {
 		const terms = getEntityRecords( 'taxonomy', 'wcb_speaker_group', {

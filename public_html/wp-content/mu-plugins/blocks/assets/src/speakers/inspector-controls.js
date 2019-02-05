@@ -16,21 +16,21 @@ const data = window.WordCampBlocks.speakers || {};
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {
-		default: 2,
-		minimum: 2,
-		maximum: 4,
+		default : 2,
+		minimum : 2,
+		maximum : 4,
 	},
 	avatar_size: {
-		default: 150,
-		minimum: 25,
-		maximum: 600,
+		default : 150,
+		minimum : 25,
+		maximum : 600,
 	},
 };
 
 const DEFAULT_OPTIONS = {
-	align: {},
-	content: {},
-	sort: {},
+	align   : {},
+	content : {},
+	sort    : {},
 };
 
 class SpeakerInspectorControls extends Component {
@@ -73,8 +73,8 @@ class SpeakerInspectorControls extends Component {
 									initialPosition={ Number( schema.avatar_size.default ) }
 									onChange={ ( value ) => setAttributes( { avatar_size: value } ) }
 									rangeProps={ {
-										min: Number( schema.avatar_size.minimum ),
-										max: Number( schema.avatar_size.maximum ),
+										min : Number( schema.avatar_size.minimum ),
+										max : Number( schema.avatar_size.maximum ),
 									} }
 								/>
 							</PanelRow>

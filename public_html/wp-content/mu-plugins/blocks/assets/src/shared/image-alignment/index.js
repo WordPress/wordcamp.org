@@ -28,11 +28,13 @@ function ImageAlignmentControl( {
 					const iconSlug = `align-${ alignment.value }`;
 
 					return {
-						title : alignment.label,
-						icon : iconSlug,
+						title    : alignment.label,
+						icon     : iconSlug,
 						isActive : isActive,
-						onClick : () => { onChange( alignment.value ); }
-					}
+						onClick  : () => {
+							onChange( alignment.value );
+						},
+					};
 				} ) }
 			/>
 		</BaseControl>

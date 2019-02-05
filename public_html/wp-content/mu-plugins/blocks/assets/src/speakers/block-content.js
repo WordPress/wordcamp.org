@@ -46,7 +46,7 @@ class SpeakersBlockContent extends Component {
 			content, speaker_link, show_session,
 		} = attributes;
 
-		let containerClasses = [
+		const containerClasses = [
 			'wordcamp-speakers-block',
 			'layout-' + layout,
 			className,
@@ -133,7 +133,9 @@ class SpeakersBlockContent extends Component {
 															__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
 															session.session_date_time.date,
 															session.session_date_time.time,
-															get( find( tracks, ( value ) => { return parseInt( value.id ) === head( session.session_track ) } ), 'name' )
+															get( find( tracks, ( value ) => {
+																return parseInt( value.id ) === head( session.session_track );
+															} ), 'name' )
 														)
 													}
 													{ ! session.session_track.length &&

@@ -13,10 +13,6 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
  * @return void
  */
 function load() {
-	if ( ! function_exists( 'register_block_type' ) ) {
-		return;
-	}
-
 	require_once PLUGIN_DIR . 'includes/speakers.php';
 }
 
@@ -91,10 +87,7 @@ function register_assets() {
 		'before'
 	);
 
-	if ( function_exists( 'wp_set_script_translations' ) ) {
-		// todo: Remove the existence check once we are running on 5.0.x
-		wp_set_script_translations( 'wordcamp-blocks', 'wordcamporg' );
-	}
+	wp_set_script_translations( 'wordcamp-blocks', 'wordcamporg' );
 }
 
 add_action( 'init', __NAMESPACE__ . '\register_assets', 9 );

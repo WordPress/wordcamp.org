@@ -18,73 +18,65 @@ const { __ } = wp.i18n;
 import AvatarImage from '../shared/avatar';
 import VersatileSelect from '../shared/versatile-select';
 
+function SpeakersOption( {
+	type,
+	label  = '',
+	avatar = '',
+	count  = 0,
+} ) {
+	let image, content;
+
+	switch ( type ) {
+		case 'post' :
+			image = (
+				<AvatarImage
+					className="wordcamp-speakers-select-option-avatar"
+					name={ label }
+					size={ 24 }
+					url={ avatar }
+				/>
+			);
+			content = (
+				<span className="wordcamp-speakers-select-option-label">
+					{ label }
+				</span>
+			);
+			break;
+
+		case 'term' :
+			image = (
+				<div className="wordcamp-speakers-select-option-icon-container">
+					<Dashicon
+						className="wordcamp-speakers-select-option-icon"
+						icon={ 'megaphone' }
+						size={ 16 }
+					/>
+				</div>
+			);
+			content = (
+				<span className="wordcamp-speakers-select-option-label">
+					{ label }
+					<span className="wordcamp-speakers-select-option-label-term-count">
+						{ count }
+					</span>
+				</span>
+			);
+			break;
+	}
+
+	return (
+		<div className="wordcamp-speakers-select-option">
+			{ image }
+			{ content }
+		</div>
+	);
+}
+
 class SpeakersSelect extends Component {
 	constructor( props ) {
 		super( props );
 
 		this.optionDisabled = this.optionDisabled.bind( this );
-	}
-
-	static optionImage( optionData ) {
-		const { type } = optionData;
-
-		let image;
-
-		switch ( type ) {
-			case 'post' :
-				image = (
-					<AvatarImage
-						className="wordcamp-speakers-select-option-avatar"
-						name={ optionData.label }
-						size={ 24 }
-						url={ optionData.avatar }
-					/>
-				);
-				break;
-
-			case 'term' :
-				image = (
-					<div className="wordcamp-speakers-select-option-icon-container">
-						<Dashicon
-							className="wordcamp-speakers-select-option-icon"
-							icon={ 'megaphone' }
-							size={ 16 }
-						/>
-					</div>
-				);
-				break;
-		}
-
-		return image;
-	}
-
-	static optionLabel( optionData ) {
-		const { type } = optionData;
-
-		let label;
-
-		switch ( type ) {
-			case 'post' :
-				label = (
-					<span className="wordcamp-speakers-select-option-label">
-						{ optionData.label }
-					</span>
-				);
-				break;
-
-			case 'term' :
-				label = (
-					<span className="wordcamp-speakers-select-option-label">
-						{ optionData.label }
-						<span className="wordcamp-speakers-select-option-label-term-count">
-							{ optionData.count }
-						</span>
-					</span>
-				);
-				break;
-		}
-
-		return label;
 	}
 
 	optionDisabled( option, selected ) {
@@ -143,10 +135,7 @@ class SpeakersSelect extends Component {
 				} }
 				formatOptionLabel={ ( optionData ) => {
 					return (
-						<div className="wordcamp-speakers-select-option">
-							{ this.constructor.optionImage( optionData ) }
-							{ this.constructor.optionLabel( optionData ) }
-						</div>
+						<SpeakersOption { ...optionData } />
 					);
 				} }
 				onChange={ ( selectedOptions ) => {

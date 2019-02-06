@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"classnames": "2.2.6",
+		"dompurify": "1.0.9",
 		"react-select": "2.3.0"
 	},
 	"devDependencies": {

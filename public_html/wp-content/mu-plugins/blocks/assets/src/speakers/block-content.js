@@ -8,7 +8,7 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Disabled } = wp.components;
-const { Component, Fragment, RawHTML } = wp.element;
+const { Component, Fragment } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
 const { __, _n, sprintf } = wp.i18n;
 
@@ -16,6 +16,7 @@ const { __, _n, sprintf } = wp.i18n;
  * Internal dependencies
  */
 import AvatarImage from '../shared/avatar';
+import SanitizedHTML from '../shared/sanitized-html';
 import './block-content.scss';
 
 class SpeakersBlockContent extends Component {
@@ -84,23 +85,23 @@ class SpeakersBlockContent extends Component {
 							<div className="wordcamp-speaker-content">
 								{ 'full' === content &&
 									<Disabled>
-										<RawHTML>
+										<SanitizedHTML>
 											{ this.constructor.maybeAddMoreLink( post.content.rendered.trim(), speaker_link ).trim() }
-										</RawHTML>
+										</SanitizedHTML>
 									</Disabled>
 								}
 								{ 'excerpt' === content &&
 									<Disabled>
-										<RawHTML>
+										<SanitizedHTML>
 											{ this.constructor.maybeAddMoreLink( post.excerpt.rendered.trim(), speaker_link ).trim() }
-										</RawHTML>
+										</SanitizedHTML>
 									</Disabled>
 								}
 								{ 'none' === content &&
 									<Disabled>
-										<RawHTML>
+										<SanitizedHTML>
 											{ this.constructor.maybeAddMoreLink( '', speaker_link ).trim() }
-										</RawHTML>
+										</SanitizedHTML>
 									</Disabled>
 								}
 							</div>

@@ -1,0 +1,13 @@
+version: "3.2"
+services:
+  wordcamp.test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - "./public_html:/usr/src/public_html"
+    ports:
+      - "1234:80"
+      - "443:443"
+      - "1080:1080"
+    command: bash -c "nginx && php-fpm"

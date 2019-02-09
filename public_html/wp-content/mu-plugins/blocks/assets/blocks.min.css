@@ -82,13 +82,19 @@
   display: flex;
   align-items: center; }
 
+.wordcamp-speakers-select-loading-container,
 .wordcamp-speakers-select-option-icon-container {
-  background-color: #f3f3f4;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 24px; }
+
+.wordcamp-speakers-select-option-icon-container {
+  background-color: #f3f3f4; }
+
+.wordcamp-speakers-select-loading-container .components-spinner {
+  margin: 0; }
 
 .wordcamp-speakers-select-option-label {
   margin: 0 0.5em; }

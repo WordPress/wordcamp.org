@@ -8,6 +8,7 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { BaseControl, Button } = wp.components;
+const { withInstanceId } = wp.compose;
 const { Component } = wp.element;
 const { __ } = wp.i18n;
 
@@ -39,6 +40,7 @@ class VersatileSelect extends Component {
 			>
 				<div className="wordcamp-components-versatile-select-inner">
 					<Select
+						id={ id }
 						isMulti={ true }
 						{ ...this.props }
 						value={ value }
@@ -64,4 +66,4 @@ class VersatileSelect extends Component {
 	}
 }
 
-export default VersatileSelect;
+export default withInstanceId( VersatileSelect );

@@ -57,6 +57,7 @@ function register_assets() {
 		PLUGIN_URL . 'assets/blocks.min.js',
 		array(
 			'lodash',
+			'wp-api-fetch',
 			'wp-blocks',
 			'wp-components',
 			'wp-compose',

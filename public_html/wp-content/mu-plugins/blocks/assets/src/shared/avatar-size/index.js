@@ -57,7 +57,7 @@ function AvatarSizeControl( {
 			help={ help }
 		>
 			<div className="wordcamp-components-avatar-size-buttons">
-				<ButtonGroup>
+				<ButtonGroup aria-label={ label }>
 					{ sizePresets.map( ( preset ) => {
 						const { name, shortName, size, slug } = preset;
 						const isCurrent = value === size;
@@ -67,6 +67,7 @@ function AvatarSizeControl( {
 								key={ slug }
 								isLarge
 								isPrimary={ isCurrent }
+								aria-label={ name }
 								aria-pressed={ isCurrent }
 								onClick={ () => onChange( Number( size ) ) }
 							>
@@ -93,6 +94,7 @@ function AvatarSizeControl( {
 				onChange={ onChange }
 				beforeIcon="format-image"
 				afterIcon="format-image"
+				aria-label={ label }
 				{ ...rangeProps }
 			/>
 		</BaseControl>

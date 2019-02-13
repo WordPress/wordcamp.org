@@ -1,17 +1,15 @@
 /**
  * External dependencies
  */
-import { filter, includes, map } from 'lodash';
+import { includes } from 'lodash';
 
 /**
  * WordPress dependencies
  */
-const apiFetch = wp.apiFetch;
-const { Dashicon, Spinner } = wp.components;
+const { Dashicon } = wp.components;
 const { Component } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
 const { __ } = wp.i18n;
-const { addQueryArgs } = wp.url;
 
 /**
  * Internal dependencies
@@ -19,28 +17,14 @@ const { addQueryArgs } = wp.url;
 import AvatarImage from '../shared/avatar';
 import VersatileSelect from '../shared/versatile-select';
 
-const POSTS_QUERY = {
-	orderby  : 'title',
-	order    : 'asc',
-	per_page : 100,
-	_embed   : true,
-};
-
-const TERMS_QUERY = {
-	orderby  : 'name',
-	order    : 'asc',
-	per_page : 100,
-};
-
 class SpeakersSelect extends Component {
 	constructor( props ) {
 		super( props );
 
 		this.state = {
-			postsLoaded : false,
-			posts       : [],
-			termsLoaded : false,
-			terms       : [],
+			posts   : [],
+			terms   : [],
+			loading : true,
 		};
 
 		this.buildSelectOptions = this.buildSelectOptions.bind( this );
@@ -50,36 +34,11 @@ class SpeakersSelect extends Component {
 	componentWillMount() {
 		this.isStillMounted = true;
 
-		this.termsFetchRequest = apiFetch( {
-			path: addQueryArgs( `/wp/v2/speaker_group`, TERMS_QUERY ),
-		} ).then(
-			( fetchedTerms ) => {
-				const terms = map( fetchedTerms || [], ( term ) => {
-					return {
-						label : decodeEntities( term.name ) || __( '(Untitled)', 'wordcamporg' ),
-						value : term.id,
-						type  : 'term',
-						count : term.count,
-					};
-				} );
+		const { allSpeakerPosts, allSpeakerTerms } = this.props;
 
-				if ( this.isStillMounted ) {
-					this.setState( { terms, termsLoaded: true } );
-				}
-			}
-		).catch(
-			() => {
-				if ( this.isStillMounted ) {
-					this.setState( { terms: [], termsLoaded: true } );
-				}
-			}
-		);
-
-		this.postsFetchRequest = apiFetch( {
-			path: addQueryArgs( `/wp/v2/speakers`, POSTS_QUERY ),
-		} ).then(
+		const parsedPosts = allSpeakerPosts.then(
 			( fetchedPosts ) => {
-				const posts = map( fetchedPosts || [], ( post ) => {
+				const posts = fetchedPosts.map( ( post ) => {
 					return {
 						label  : decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
 						value  : post.id,
@@ -89,16 +48,31 @@ class SpeakersSelect extends Component {
 				} );
 
 				if ( this.isStillMounted ) {
-					this.setState( { posts, postsLoaded: true } );
-				}
-			}
-		).catch(
-			() => {
-				if ( this.isStillMounted ) {
-					this.setState( { posts: [], postsLoaded: true } );
+					this.setState( { posts } );
 				}
 			}
 		);
+
+		const parsedTerms = allSpeakerTerms.then(
+			( fetchedTerms ) => {
+				const terms = fetchedTerms.map( ( term ) => {
+					return {
+						label : decodeEntities( term.name ) || __( '(Untitled)', 'wordcamporg' ),
+						value : term.id,
+						type  : 'term',
+						count : term.count,
+					};
+				} );
+
+				if ( this.isStillMounted ) {
+					this.setState( { terms } );
+				}
+			}
+		);
+
+		Promise.all( [ parsedPosts, parsedTerms ] ).then( () => {
+			this.setState( { loading: false } );
+		} );
 	}
 
 	componentWillUnmount() {
@@ -106,16 +80,8 @@ class SpeakersSelect extends Component {
 	}
 
 	buildSelectOptions( mode ) {
-		const { termsLoaded, terms, postsLoaded, posts } = this.state;
+		const { posts, terms } = this.state;
 		const options = [];
-
-		if ( ! termsLoaded || ! postsLoaded ) {
-			return [ {
-				label : __( 'Loading', 'wordcamporg' ),
-				value : '',
-				type  : 'loading',
-			} ];
-		}
 
 		if ( ! mode || 'specific_terms' === mode ) {
 			options.push( {
@@ -160,48 +126,29 @@ class SpeakersSelect extends Component {
 	render() {
 		const { label, attributes, setAttributes } = this.props;
 		const { mode, post_ids, term_ids } = attributes;
+		const options = this.buildSelectOptions( mode );
 
-		const selectOptions = this.buildSelectOptions( mode );
+		let value = [];
 
-		let currentValue;
-
-		switch ( mode ) {
-			case 'specific_posts' :
-				currentValue = filter( selectOptions[ 0 ].options, ( option ) => {
-					return includes( post_ids, option.value );
-				} );
-				break;
-
-			case 'specific_terms' :
-				currentValue = filter( selectOptions[ 0 ].options, ( option ) => {
-					return includes( term_ids, option.value );
-				} );
-				break;
+		if ( 'specific_posts' === mode && options.length ) {
+			value = options[ 0 ].options.filter( ( option ) => {
+				return includes( post_ids, option.value );
+			} );
+		} else if ( 'specific_terms' === mode && options.length ) {
+			value = options[ 0 ].options.filter( ( option ) => {
+				return includes( term_ids, option.value );
+			} );
 		}
 
 		return (
 			<VersatileSelect
 				className="wordcamp-speakers-select"
 				label={ label }
-				value={ currentValue }
-				options={ selectOptions }
-				isOptionDisabled={ this.isOptionDisabled }
-				formatGroupLabel={ ( groupData ) => {
-					return (
-						<span className="wordcamp-speakers-select-option-group-label">
-							{ groupData.label }
-						</span>
-					);
-				} }
-				formatOptionLabel={ ( optionData ) => {
-					return (
-						<SpeakersOption { ...optionData } />
-					);
-				} }
+				value={ value }
 				onChange={ ( selectedOptions ) => {
-					const value = map( selectedOptions, 'value' );
+					const newValue = selectedOptions.map( ( option ) => option.value );
 
-					if ( ! value.length ) {
+					if ( ! newValue.length ) {
 						setAttributes( {
 							mode     : '',
 							post_ids : [],
@@ -214,18 +161,36 @@ class SpeakersSelect extends Component {
 							case 'post' :
 								setAttributes( {
 									mode     : 'specific_posts',
-									post_ids : value,
+									post_ids : newValue,
 								} );
 								break;
 
 							case 'term' :
 								setAttributes( {
 									mode     : 'specific_terms',
-									term_ids : value,
+									term_ids : newValue,
 								} );
 								break;
 						}
 					}
+				} }
+				selectProps={ {
+					isLoading        : this.state.loading,
+					options          : options,
+					isMulti          : true,
+					isOptionDisabled : this.isOptionDisabled,
+					formatGroupLabel : ( groupData ) => {
+						return (
+							<span className="wordcamp-speakers-select-option-group-label">
+								{ groupData.label }
+							</span>
+						);
+					},
+					formatOptionLabel: ( optionData ) => {
+						return (
+							<SpeakersOption { ...optionData } />
+						);
+					},
 				} }
 			/>
 		);
@@ -268,19 +233,6 @@ function SpeakersOption( { type, label = '', avatar = '', count = 0 } ) {
 					<span className="wordcamp-speakers-select-option-label-term-count">
 						{ count }
 					</span>
-				</span>
-			);
-			break;
-
-		case 'loading' :
-			image = (
-				<div className="wordcamp-speakers-select-loading-container">
-					<Spinner />
-				</div>
-			);
-			content = (
-				<span className="wordcamp-speakers-select-option-label">
-					{ label }
 				</span>
 			);
 			break;

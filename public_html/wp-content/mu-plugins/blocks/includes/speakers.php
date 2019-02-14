@@ -306,11 +306,11 @@ function get_options( $type ) {
 					'value' => 'all',
 				],
 				[
-					'label' => _x( 'Add a speaker', 'mode option', 'wordcamporg' ),
+					'label' => _x( 'Choose speakers', 'mode option', 'wordcamporg' ),
 					'value' => 'specific_posts',
 				],
 				[
-					'label' => _x( 'Add a group', 'mode option', 'wordcamporg' ),
+					'label' => _x( 'Choose groups', 'mode option', 'wordcamporg' ),
 					'value' => 'specific_terms',
 				],
 			];

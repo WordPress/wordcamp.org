@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { find, get, head } from 'lodash';
+import { get } from 'lodash';
 import classnames from 'classnames';
 
 /**
@@ -121,8 +121,9 @@ class SpeakersBlockContent extends Component {
 															__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
 															session.session_date_time.date,
 															session.session_date_time.time,
-															get( find( tracks, ( value ) => {
-																return parseInt( value.id ) === head( session.session_track );
+															get( tracks.find( ( value ) => {
+																const [ firstTrackId ] = session.session_track;
+																return parseInt( value.id ) === firstTrackId;
 															} ), 'name' )
 														)
 													}

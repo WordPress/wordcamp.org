@@ -2,8 +2,6 @@
 namespace WordCamp\Blocks;
 defined( 'WPINC' ) || die();
 
-use WP_Post;
-
 define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
 define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
 
@@ -21,12 +19,11 @@ add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 /**
  * Add block categories for custom blocks.
  *
- * @param array   $default_categories
- * @param WP_Post $post
+ * @param array $default_categories
  *
  * @return array
  */
-function register_block_categories( $default_categories, $post ) {
+function register_block_categories( $default_categories ) {
 	$default_categories[] = array(
 		'slug'  => 'wordcamp',
 		'title' => __( 'WordCamp Blocks', 'wordcamporg' ),
@@ -35,7 +32,7 @@ function register_block_categories( $default_categories, $post ) {
 	return $default_categories;
 }
 
-add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories', 10, 2 );
+add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories' );
 
 /**
  * Register assets.

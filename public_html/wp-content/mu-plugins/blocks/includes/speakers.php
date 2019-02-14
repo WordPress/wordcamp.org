@@ -1,5 +1,4 @@
 <?php
-
 namespace WordCamp\Blocks\Speakers;
 defined( 'WPINC' ) || die();
 
@@ -12,13 +11,16 @@ use WordCamp\Blocks;
  * @return void
  */
 function init() {
-	register_block_type( 'wordcamp/speakers', array(
-		'attributes'      => get_attributes_schema(),
-		'render_callback' => __NAMESPACE__ . '\render',
-		'editor_script'   => 'wordcamp-blocks',
-		'editor_style'    => 'wordcamp-blocks',
-		'style'           => 'wordcamp-blocks',
-	) );
+	register_block_type(
+		'wordcamp/speakers',
+		[
+			'attributes'      => get_attributes_schema(),
+			'render_callback' => __NAMESPACE__ . '\render',
+			'editor_script'   => 'wordcamp-blocks',
+			'editor_style'    => 'wordcamp-blocks',
+			'style'           => 'wordcamp-blocks',
+		]
+	);
 }
 
 add_action( 'init', __NAMESPACE__ . '\init' );
@@ -35,11 +37,23 @@ function render( $attributes ) {
 	$attributes = wp_parse_args( $attributes, $defaults );
 
 	$speakers = get_speaker_posts( $attributes );
-	$sessions = [];
 
+	$sessions = [];
 	if ( ! empty( $speakers ) && true === $attributes['show_session'] ) {
 		$sessions = get_speaker_sessions( wp_list_pluck( $speakers, 'ID' ) );
 	}
+
+	$container_classes = [
+		'wordcamp-speakers-block',
+		'layout-' . sanitize_html_class( $attributes['layout'] ),
+		sanitize_html_class( $attributes['className'] ),
+	];
+
+	if ( 'grid' === $attributes['layout'] ) {
+		$container_classes[] = 'grid-columns-' . absint( $attributes['grid_columns'] );
+	}
+
+	$container_classes = implode( ' ', $container_classes );
 
 	ob_start();
 	require Blocks\PLUGIN_DIR . 'view/speakers.php';
@@ -94,11 +108,11 @@ function get_speaker_posts( array $attributes ) {
 	}
 
 	switch ( $attributes['mode'] ) {
-		case 'specific_posts' :
+		case 'specific_posts':
 			$post_args['post__in'] = $attributes['post_ids'];
 			break;
 
-		case 'specific_terms' :
+		case 'specific_terms':
 			$post_args['tax_query'] = [
 				[
 					'taxonomy' => 'wcb_speaker_group',
@@ -136,7 +150,7 @@ function get_speaker_sessions( array $speaker_ids ) {
 		$session_speaker_ids = get_post_meta( $session->ID, '_wcpt_speaker_id', false );
 
 		foreach ( $session_speaker_ids as $speaker_id ) {
-			if ( in_array( $speaker_id, $speaker_ids ) ) {
+			if ( in_array( $speaker_id, $speaker_ids, true ) ) {
 				if ( ! isset( $sessions_by_speaker[ $speaker_id ] ) ) {
 					$sessions_by_speaker[ $speaker_id ] = [];
 				}
@@ -156,66 +170,66 @@ function get_speaker_sessions( array $speaker_ids ) {
  */
 function get_attributes_schema() {
 	return [
-		'mode'           => [
+		'mode'         => [
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 			'default' => '',
 		],
-		'post_ids'       => [
+		'post_ids'     => [
 			'type'    => 'array',
 			'default' => [],
 			'items'   => [
 				'type' => 'integer',
 			],
 		],
-		'term_ids'       => [
+		'term_ids'     => [
 			'type'    => 'array',
 			'default' => [],
 			'items'   => [
 				'type' => 'integer',
 			],
 		],
-		'sort'           => [
+		'sort'         => [
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 			'default' => 'title_asc',
 		],
-		'layout'         => [
+		'layout'       => [
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'display' ), 'value' ),
 			'default' => 'list',
 		],
-		'grid_columns'   => [
+		'grid_columns' => [
 			'type'    => 'integer',
 			'minimum' => 2,
 			'maximum' => 4,
 			'default' => 2,
 		],
-		'className'      => [
+		'className'    => [
 			'type'    => 'string',
 			'default' => '',
 		],
-		'show_avatars'   => [
+		'show_avatars' => [
 			'type'    => 'bool',
 			'default' => true,
 		],
-		'avatar_size'    => [
+		'avatar_size'  => [
 			'type'    => 'integer',
 			'minimum' => 25,
 			'maximum' => 600,
 			'default' => 150,
 		],
-		'avatar_align'   => [
+		'avatar_align' => [
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'align' ), 'value' ),
 			'default' => 'none',
 		],
-		'content'        => [
+		'content'      => [
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'content' ), 'value' ),
 			'default' => 'full',
 		],
-		'show_session'   => [
+		'show_session' => [
 			'type'    => 'bool',
 			'default' => false,
 		],

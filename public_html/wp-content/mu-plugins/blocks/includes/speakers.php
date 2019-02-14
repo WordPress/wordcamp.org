@@ -72,13 +72,7 @@ function render( $attributes ) {
 function add_script_data( array $data ) {
 	$data['speakers'] = [
 		'schema'  => get_attributes_schema(),
-		'options' => array(
-			'align'   => get_options( 'align' ),
-			'content' => get_options( 'content' ),
-			'layout'  => get_options( 'layout' ),
-			'mode'    => get_options( 'mode' ),
-			'sort'    => get_options( 'sort' ),
-		),
+		'options' => get_options(),
 	];
 
 	return $data;
@@ -237,104 +231,100 @@ function get_attributes_schema() {
 }
 
 /**
- * Get the label/value pairs for a type of options.
+ * Get the label/value pairs for all options or a specific type.
  *
  * @param string $type
  *
  * @return array
  */
-function get_options( $type ) {
-	$options = [];
+function get_options( $type = '' ) {
+	$options = [
+		'align'   => [
+			[
+				'label' => _x( 'None', 'alignment option', 'wordcamporg' ),
+				'value' => 'none',
+			],
+			[
+				'label' => _x( 'Left', 'alignment option', 'wordcamporg' ),
+				'value' => 'left',
+			],
+			[
+				'label' => _x( 'Center', 'alignment option', 'wordcamporg' ),
+				'value' => 'center',
+			],
+			[
+				'label' => _x( 'Right', 'alignment option', 'wordcamporg' ),
+				'value' => 'right',
+			],
+		],
+		'content' => [
+			[
+				'label' => _x( 'Full', 'content option', 'wordcamporg' ),
+				'value' => 'full',
+			],
+			[
+				'label' => _x( 'Excerpt', 'content option', 'wordcamporg' ),
+				'value' => 'excerpt',
+			],
+			[
+				'label' => _x( 'None', 'content option', 'wordcamporg' ),
+				'value' => 'none',
+			],
+		],
+		'layout'  => [
+			[
+				'label' => _x( 'List', 'content option', 'wordcamporg' ),
+				'value' => 'list',
+			],
+			[
+				'label' => _x( 'Grid', 'content option', 'wordcamporg' ),
+				'value' => 'grid',
+			],
+		],
+		'mode'    => [
+			[
+				'label' => '',
+				'value' => '',
+			],
+			[
+				'label' => _x( 'List all speakers', 'mode option', 'wordcamporg' ),
+				'value' => 'all',
+			],
+			[
+				'label' => _x( 'Choose speakers', 'mode option', 'wordcamporg' ),
+				'value' => 'specific_posts',
+			],
+			[
+				'label' => _x( 'Choose groups', 'mode option', 'wordcamporg' ),
+				'value' => 'specific_terms',
+			],
+		],
+		'sort'    => [
+			[
+				'label' => _x( 'A → Z', 'sort option', 'wordcamporg' ),
+				'value' => 'title_asc',
+			],
+			[
+				'label' => _x( 'Z → A', 'sort option', 'wordcamporg' ),
+				'value' => 'title_desc',
+			],
+			[
+				'label' => _x( 'Newest to Oldest', 'sort option', 'wordcamporg' ),
+				'value' => 'date_desc',
+			],
+			[
+				'label' => _x( 'Oldest to Newest', 'sort option', 'wordcamporg' ),
+				'value' => 'date_asc',
+			],
+		],
+	];
 
-	switch ( $type ) {
-		case 'align':
-			$options = [
-				[
-					'label' => _x( 'None', 'alignment option', 'wordcamporg' ),
-					'value' => 'none',
-				],
-				[
-					'label' => _x( 'Left', 'alignment option', 'wordcamporg' ),
-					'value' => 'left',
-				],
-				[
-					'label' => _x( 'Center', 'alignment option', 'wordcamporg' ),
-					'value' => 'center',
-				],
-				[
-					'label' => _x( 'Right', 'alignment option', 'wordcamporg' ),
-					'value' => 'right',
-				],
-			];
-			break;
-		case 'content':
-			$options = [
-				[
-					'label' => _x( 'Full', 'content option', 'wordcamporg' ),
-					'value' => 'full',
-				],
-				[
-					'label' => _x( 'Excerpt', 'content option', 'wordcamporg' ),
-					'value' => 'excerpt',
-				],
-				[
-					'label' => _x( 'None', 'content option', 'wordcamporg' ),
-					'value' => 'none',
-				],
-			];
-			break;
-		case 'layout':
-			$options = [
-				[
-					'label' => _x( 'List', 'content option', 'wordcamporg' ),
-					'value' => 'list',
-				],
-				[
-					'label' => _x( 'Grid', 'content option', 'wordcamporg' ),
-					'value' => 'grid',
-				],
-			];
-			break;
-		case 'mode':
-			$options = [
-				[
-					'label' => '',
-					'value' => '',
-				],
-				[
-					'label' => _x( 'List all speakers', 'mode option', 'wordcamporg' ),
-					'value' => 'all',
-				],
-				[
-					'label' => _x( 'Choose speakers', 'mode option', 'wordcamporg' ),
-					'value' => 'specific_posts',
-				],
-				[
-					'label' => _x( 'Choose groups', 'mode option', 'wordcamporg' ),
-					'value' => 'specific_terms',
-				],
-			];
-			break;
-		case 'sort':
-			$options = [
-				[
-					'label' => _x( 'A → Z', 'sort option', 'wordcamporg' ),
-					'value' => 'title_asc',
-				],
-				[
-					'label' => _x( 'Z → A', 'sort option', 'wordcamporg' ),
-					'value' => 'title_desc',
-				],
-				[
-					'label' => _x( 'Newest to Oldest', 'sort option', 'wordcamporg' ),
-					'value' => 'date_desc',
-				],
-				[
-					'label' => _x( 'Oldest to Newest', 'sort option', 'wordcamporg' ),
-					'value' => 'date_asc',
-				],
-			];
-			break;
+	if ( $type ) {
+		if ( ! empty( $options[ $type ] ) ) {
+			return $options[ $type ];
+		} else {
+			return [];
+		}
 	}
 
 	return $options;

@@ -10,9 +10,12 @@ defined( 'WPINC' ) || die();
 $container_classes = [
 	'wordcamp-speakers-block',
 	'layout-' . sanitize_html_class( $attributes['layout'] ),
-	( 'grid' === $attributes['layout'] ) ? 'grid-columns-' . absint( $attributes['grid_columns'] ) : '',
 	sanitize_html_class( $attributes['className'] ),
 ];
+
+if ( 'grid' === $attributes['layout'] ) {
+	$container_classes[] = 'grid-columns-' . absint( $attributes['grid_columns'] );
+}
 ?>
 
 <?php if ( ! empty( $speakers ) ) : ?>
@@ -20,35 +23,47 @@ $container_classes = [
 		<?php foreach ( $speakers as $post ) : setup_postdata( $post ); ?>
 			<li class="wordcamp-speaker wordcamp-speaker-<?php echo sanitize_html_class( $post->post_name ); ?> wordcamp-clearfix">
 				<h3 class="wordcamp-speaker-name-heading">
-					<?php echo get_the_title( $post ); ?>
+					<a href="<?php echo esc_url( get_permalink( $post ) ) ?>">
+						<?php echo get_the_title( $post ); ?>
+					</a>
 				</h3>
 
 				<?php if ( true === $attributes['show_avatars'] ) : ?>
-					<?php
-					echo get_avatar(
-						$post->_wcb_speaker_email,
-						$attributes['avatar_size'],
-						'',
-						sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $post ) ),
-						[
-							'class'         => [
-								'wordcamp-speaker-avatar',
-								'align-' . sanitize_html_class( $attributes['avatar_align'] )
-							],
-							'force_display' => true,
-						]
-					);
-					?>
+					<a href="<?php echo esc_url( get_permalink( $post ) ) ?>">
+						<?php
+						echo get_avatar(
+							$post->_wcb_speaker_email,
+							$attributes['avatar_size'],
+							'',
+							sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $post ) ),
+							[
+								'class'         => [
+									'wordcamp-speaker-avatar',
+									'align-' . sanitize_html_class( $attributes['avatar_align'] )
+								],
+								'force_display' => true,
+							]
+						);
+						?>
+					</a>
 				<?php endif; ?>
 
-				<?php if ( 'none' !== $attributes['content'] || true === $attributes['speaker_link'] ) : ?>
-					<div class="wordcamp-speaker-content">
+				<?php if ( 'none' !== $attributes['content'] ) : ?>
+					<div class="wordcamp-speaker-content wordcamp-speaker-content-<?php echo esc_attr( $attributes['content'] ); ?>">
 						<?php if ( 'full' === $attributes['content'] ) : ?>
-							<?php echo trim( apply_filters( 'the_content', maybe_add_more_link( get_the_content( '' ), $attributes['speaker_link'], $post ) ) ); ?>
+							<?php echo get_all_the_content( $post ); ?>
+							<p>
+								<a href="<?php echo esc_url( get_permalink( $post ) ) ?>" class="wordcamp-speaker-permalink">
+									<?php esc_html_e( 'Permalink', 'wordcamporg' ); ?>
+								</a>
+							</p>
 						<?php elseif ( 'excerpt' === $attributes['content'] ) : ?>
-							<?php echo trim( apply_filters( 'the_excerpt', maybe_add_more_link( get_the_excerpt(), $attributes['speaker_link'], $post ) ) ); ?>
-						<?php elseif ( 'none' === $attributes['content'] ) : ?>
-							<?php echo trim( maybe_add_more_link( '', $attributes['speaker_link'], $post ) ); ?>
+							<?php the_excerpt(); ?>
+							<p>
+								<a href="<?php echo esc_url( get_permalink( $post ) ) ?>" class="wordcamp-speaker-permalink">
+									<?php esc_html_e( 'Read more', 'wordcamporg' ); ?>
+								</a>
+							</p>
 						<?php endif; ?>
 					</div>
 				<?php endif; ?>

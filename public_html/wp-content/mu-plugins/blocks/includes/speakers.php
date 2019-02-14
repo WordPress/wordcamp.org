@@ -3,6 +3,7 @@
 namespace WordCamp\Blocks\Speakers;
 defined( 'WPINC' ) || die();
 
+use WP_Post;
 use WordCamp\Blocks;
 
 /**
@@ -214,10 +215,6 @@ function get_attributes_schema() {
 			'enum'    => wp_list_pluck( get_options( 'content' ), 'value' ),
 			'default' => 'full',
 		],
-		'speaker_link'   => [
-			'type'    => 'bool',
-			'default' => false,
-		],
 		'show_session'   => [
 			'type'    => 'bool',
 			'default' => false,
@@ -330,35 +327,26 @@ function get_options( $type ) {
 }
 
 /**
- * Append a "Read more" link to a content string, within the same paragraph tag, if applicable.
+ * Get the full content of a post, ignoring more and noteaser tags and pagination.
  *
- * @todo This is kind of hacky, maybe find a way to do this that doesn't involve regex.
+ * This works similarly to `the_content`, including applying filters, but:
+ * - It skips all of the logic in `get_the_content` that deals with tags like <!--more--> and
+ *   <!--noteaser-->, as well as pagination and global state variables like `$page`, `$more`, and
+ *   `$multipage`.
+ * - It returns a string of content, rather than echoing it.
  *
- * @param $content
+ * @param int|WP_Post $post Post ID or post object.
  *
- * @return string
+ * @return string The full, filtered post content.
  */
-function maybe_add_more_link( $content, $add, $post ) {
-	if ( $add ) {
-		$url  = get_permalink( $post );
-		$more = sprintf(
-			'<a href="%s">%s</a>',
-			esc_url( $url ),
-			__( 'Read more', 'wordcamporg' )
-		);
+function get_all_the_content( $post ) {
+	$post = get_post( $post );
 
-		$pattern = '/<\/p>$/';
+	$content = $post->post_content;
 
-		if ( preg_match( $pattern, $content ) ) {
-			$content = preg_replace(
-				$pattern,
-				' ' . $more . '</p>',
-				$content
-			);
-		} else {
-			$content .= ' ' . $more;
-		}
-	}
+	/** This filter is documented in wp-includes/post-template.php */
+	$content = apply_filters( 'the_content', $content );
+	$content = str_replace( ']]>', ']]&gt;', $content );
 
 	return $content;
 }

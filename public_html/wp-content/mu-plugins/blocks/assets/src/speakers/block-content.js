@@ -19,31 +19,12 @@ import AvatarImage from '../shared/avatar';
 import './block-content.scss';
 
 class SpeakersBlockContent extends Component {
-	static maybeAddMoreLink( content, add ) {
-		if ( add ) {
-			const more = sprintf(
-				'<a href="#" class="wordcamp-speaker-more-link">%s</a>',
-				__( 'Read more', 'wordcamporg' )
-			);
-
-			const pattern = /<\/p>$/;
-
-			if ( Array.isArray( content.match( pattern ) ) ) {
-				content = content.replace( pattern, ' ' + more + '</p>' );
-			} else {
-				content += ' ' + more;
-			}
-		}
-
-		return content;
-	}
-
 	render() {
 		const { attributes, speakerPosts, tracks } = this.props;
 		const {
 			layout, grid_columns, className,
 			show_avatars, avatar_size, avatar_align,
-			content, speaker_link, show_session,
+			content, show_session,
 		} = attributes;
 
 		const containerClasses = [
@@ -68,39 +49,46 @@ class SpeakersBlockContent extends Component {
 						) }
 					>
 						<h3 className="wordcamp-speaker-name-heading">
-							{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
+							<Disabled>
+								<a href={ post.link }>
+									{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
+								</a>
+							</Disabled>
 						</h3>
 
 						{ show_avatars &&
-							<AvatarImage
-								className={ classnames( 'wordcamp-speaker-avatar', 'align-' + avatar_align ) }
-								name={ decodeEntities( post.title.rendered.trim() ) || '' }
-								size={ avatar_size }
-								url={ post.avatar_urls[ '24' ] }
-							/>
+							<Disabled>
+								<a href={ post.link }>
+									<AvatarImage
+										className={ classnames( 'wordcamp-speaker-avatar', 'align-' + avatar_align ) }
+										name={ decodeEntities( post.title.rendered.trim() ) || '' }
+										size={ avatar_size }
+										url={ post.avatar_urls[ '24' ] }
+									/>
+								</a>
+							</Disabled>
 						}
 
-						{ ( 'none' !== content || true === speaker_link ) &&
-							<div className="wordcamp-speaker-content">
+						{ ( 'none' !== content ) &&
+							<div className={ classnames( 'wordcamp-speaker-content', 'wordcamp-speaker-content-' + content ) }>
 								{ 'full' === content &&
 									<Disabled>
-										<RawHTML>
-											{ this.constructor.maybeAddMoreLink( post.content.rendered.trim(), speaker_link ).trim() }
-										</RawHTML>
+										<RawHTML children={ post.content.rendered.trim() } />
+										<p>
+											<a href={ post.link } className="wordcamp-speaker-permalink">
+												{ __( 'Permalink', 'wordcamporg' ) }
+											</a>
+										</p>
 									</Disabled>
 								}
 								{ 'excerpt' === content &&
 									<Disabled>
-										<RawHTML>
-											{ this.constructor.maybeAddMoreLink( post.excerpt.rendered.trim(), speaker_link ).trim() }
-										</RawHTML>
-									</Disabled>
-								}
-								{ 'none' === content &&
-									<Disabled>
-										<RawHTML>
-											{ this.constructor.maybeAddMoreLink( '', speaker_link ).trim() }
-										</RawHTML>
+										<RawHTML children={ post.excerpt.rendered.trim() } />
+										<p>
+											<a href={ post.link } className="wordcamp-speaker-permalink">
+												{ __( 'Read more', 'wordcamporg' ) }
+											</a>
+										</p>
 									</Disabled>
 								}
 							</div>

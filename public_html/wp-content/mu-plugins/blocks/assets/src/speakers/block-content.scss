@@ -10,7 +10,14 @@
 	&#{&},
 	.block-editor &#{&} {
 		list-style: none;
-		margin: 0;
+		margin: 0 0 1em 0;
+	}
+
+	&.layout-list > li {
+		margin-bottom: 1em;
+		&:last-child {
+			margin-bottom: 0;
+		}
 	}
 
 	@media ( min-width: 400px ) {

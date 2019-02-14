@@ -36,7 +36,7 @@ const DEFAULT_OPTIONS = {
 class SpeakerInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes } = this.props;
-		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, speaker_link, show_session, sort } = attributes;
+		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, show_session, sort } = attributes;
 		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = data;
 
 		return (
@@ -97,14 +97,6 @@ class SpeakerInspectorControls extends Component {
 							value={ content }
 							options={ options.content }
 							onChange={ ( value ) => setAttributes( { content: value } ) }
-						/>
-					</PanelRow>
-					<PanelRow>
-						<ToggleControl
-							label={ __( 'Speaker Link', 'wordcamporg' ) }
-							help={ __( "Link to a speaker's biography page", 'wordcamporg' ) }
-							checked={ speaker_link }
-							onChange={ ( value ) => setAttributes( { speaker_link: value } ) }
 						/>
 					</PanelRow>
 					<PanelRow>

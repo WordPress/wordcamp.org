@@ -46,7 +46,7 @@ defined( 'WPINC' ) || die();
 							<?php echo get_all_the_content( $speaker ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 							<p>
 								<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>" class="wordcamp-speaker-permalink">
-									<?php esc_html_e( 'Permalink', 'wordcamporg' ); ?>
+									<?php esc_html_e( 'Visit speaker page', 'wordcamporg' ); ?>
 								</a>
 							</p>
 						<?php elseif ( 'excerpt' === $attributes['content'] ) : ?>

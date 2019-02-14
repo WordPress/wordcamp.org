@@ -76,7 +76,7 @@ class SpeakersBlockContent extends Component {
 										<RawHTML children={ post.content.rendered.trim() } />
 										<p>
 											<a href={ post.link } className="wordcamp-speaker-permalink">
-												{ __( 'Permalink', 'wordcamporg' ) }
+												{ __( 'Visit speaker page', 'wordcamporg' ) }
 											</a>
 										</p>
 									</Disabled>

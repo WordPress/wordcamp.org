@@ -148,13 +148,7 @@ class SpeakersSelect extends Component {
 				onChange={ ( selectedOptions ) => {
 					const newValue = selectedOptions.map( ( option ) => option.value );
 
-					if ( ! newValue.length ) {
-						setAttributes( {
-							mode     : '',
-							post_ids : [],
-							term_ids : [],
-						} );
-					} else {
+					if ( newValue.length ) {
 						const chosen = selectedOptions[ 0 ].type;
 
 						switch ( chosen ) {
@@ -172,6 +166,12 @@ class SpeakersSelect extends Component {
 								} );
 								break;
 						}
+					} else {
+						setAttributes( {
+							mode     : '',
+							post_ids : [],
+							term_ids : [],
+						} );
 					}
 				} }
 				selectProps={ {

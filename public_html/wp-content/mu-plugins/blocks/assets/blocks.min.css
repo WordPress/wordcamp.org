@@ -9,7 +9,11 @@
   .wordcamp-speakers-block.wordcamp-speakers-block,
   .block-editor .wordcamp-speakers-block.wordcamp-speakers-block {
     list-style: none;
-    margin: 0; }
+    margin: 0 0 1em 0; }
+  .wordcamp-speakers-block.layout-list > li {
+    margin-bottom: 1em; }
+    .wordcamp-speakers-block.layout-list > li:last-child {
+      margin-bottom: 0; }
   @media (min-width: 400px) {
     .wordcamp-speakers-block.layout-grid {
       display: grid;

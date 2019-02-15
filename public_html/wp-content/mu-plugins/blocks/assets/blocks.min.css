@@ -41,18 +41,16 @@
     list-style: none;
     margin: 0; }
 
-.wordcamp-speaker-avatar.align-left, .wordcamp-speaker-avatar.align-center, .wordcamp-speaker-avatar.align-right {
-  display: block; }
-
-.wordcamp-speaker-avatar.align-left {
+.wordcamp-speaker-avatar-container.align-left {
   float: left;
   margin-right: 1em; }
 
-.wordcamp-speaker-avatar.align-center {
+.wordcamp-speaker-avatar-container.align-center {
   margin-left: auto;
-  margin-right: auto; }
+  margin-right: auto;
+  text-align: center; }
 
-.wordcamp-speaker-avatar.align-right {
+.wordcamp-speaker-avatar-container.align-right {
   float: right;
   margin-left: 1em; }
 

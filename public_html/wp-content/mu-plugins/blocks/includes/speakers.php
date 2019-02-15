@@ -223,6 +223,10 @@ function get_attributes_schema() {
 			'enum'    => wp_list_pluck( get_options( 'content' ), 'value' ),
 			'default' => 'full',
 		],
+		'excerpt_more' => [
+			'type'    => 'bool',
+			'default' => false,
+		],
 		'show_session' => [
 			'type'    => 'bool',
 			'default' => false,

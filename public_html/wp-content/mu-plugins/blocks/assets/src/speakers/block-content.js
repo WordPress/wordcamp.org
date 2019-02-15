@@ -24,7 +24,7 @@ class SpeakersBlockContent extends Component {
 		const {
 			layout, grid_columns, className,
 			show_avatars, avatar_size, avatar_align,
-			content, show_session,
+			content, excerpt_more, show_session,
 		} = attributes;
 
 		const containerClasses = [
@@ -57,25 +57,27 @@ class SpeakersBlockContent extends Component {
 						</h3>
 
 						{ show_avatars &&
-							<Disabled>
-								<a href={ post.link }>
-									<AvatarImage
-										className={ classnames( 'wordcamp-speaker-avatar', 'align-' + avatar_align ) }
-										name={ decodeEntities( post.title.rendered.trim() ) || '' }
-										size={ avatar_size }
-										url={ post.avatar_urls[ '24' ] }
-									/>
-								</a>
-							</Disabled>
+							<div className={ classnames( 'wordcamp-speaker-avatar-container', 'align-' + decodeEntities( avatar_align ) ) }>
+								<Disabled>
+									<a href={ post.link } className="wordcamp-speaker-avatar-link">
+										<AvatarImage
+											className="wordcamp-speaker-avatar"
+											name={ decodeEntities( post.title.rendered.trim() ) || '' }
+											size={ avatar_size }
+											url={ post.avatar_urls[ '24' ] }
+										/>
+									</a>
+								</Disabled>
+							</div>
 						}
 
 						{ ( 'none' !== content ) &&
-							<div className={ classnames( 'wordcamp-speaker-content', 'wordcamp-speaker-content-' + content ) }>
+							<div className={ classnames( 'wordcamp-speaker-content', 'wordcamp-speaker-content-' + decodeEntities( content ) ) }>
 								{ 'full' === content &&
 									<Disabled>
 										<RawHTML children={ post.content.rendered.trim() } />
-										<p>
-											<a href={ post.link } className="wordcamp-speaker-permalink">
+										<p className="wordcamp-speaker-permalink">
+											<a href={ post.link }>
 												{ __( 'Visit speaker page', 'wordcamporg' ) }
 											</a>
 										</p>
@@ -84,11 +86,13 @@ class SpeakersBlockContent extends Component {
 								{ 'excerpt' === content &&
 									<Disabled>
 										<RawHTML children={ post.excerpt.rendered.trim() } />
-										<p>
-											<a href={ post.link } className="wordcamp-speaker-permalink">
-												{ __( 'Read more', 'wordcamporg' ) }
-											</a>
-										</p>
+										{ excerpt_more &&
+											<p className="wordcamp-speaker-permalink">
+												<a href={ post.link }>
+													{ __( 'Read more', 'wordcamporg' ) }
+												</a>
+											</p>
+										}
 									</Disabled>
 								}
 							</div>

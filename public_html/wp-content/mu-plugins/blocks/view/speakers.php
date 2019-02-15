@@ -1,5 +1,4 @@
 <?php
-
 namespace WordCamp\Blocks\Speakers;
 defined( 'WPINC' ) || die();
 
@@ -21,41 +20,42 @@ defined( 'WPINC' ) || die();
 				</h3>
 
 				<?php if ( true === $attributes['show_avatars'] ) : ?>
-					<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>">
-						<?php
-						echo get_avatar(
-							$speaker->_wcb_speaker_email,
-							$attributes['avatar_size'],
-							'',
-							sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $speaker ) ),
-							[
-								'class'         => [
-									'wordcamp-speaker-avatar',
-									'align-' . sanitize_html_class( $attributes['avatar_align'] ),
-								],
-								'force_display' => true,
-							]
-						);
-						?>
-					</a>
+					<div class="wordcamp-speaker-avatar-container align-<?php echo esc_attr( $attributes['avatar_align'] ); ?>">
+						<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>" class="wordcamp-speaker-avatar-link">
+							<?php
+							echo get_avatar(
+								$speaker->_wcb_speaker_email,
+								$attributes['avatar_size'],
+								'',
+								sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $speaker ) ),
+								[
+									'class'         => 'wordcamp-speaker-avatar',
+									'force_display' => true,
+								]
+							);
+							?>
+						</a>
+					</div>
 				<?php endif; ?>
 
 				<?php if ( 'none' !== $attributes['content'] ) : ?>
 					<div class="wordcamp-speaker-content wordcamp-speaker-content-<?php echo esc_attr( $attributes['content'] ); ?>">
 						<?php if ( 'full' === $attributes['content'] ) : ?>
-							<?php echo get_all_the_content( $speaker ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-							<p>
-								<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>" class="wordcamp-speaker-permalink">
+							<?php echo wpautop( get_all_the_content( $speaker ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
+							<p class="wordcamp-speaker-permalink">
+								<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>">
 									<?php esc_html_e( 'Visit speaker page', 'wordcamporg' ); ?>
 								</a>
 							</p>
 						<?php elseif ( 'excerpt' === $attributes['content'] ) : ?>
-							<?php the_excerpt(); ?>
-							<p>
-								<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>" class="wordcamp-speaker-permalink">
-									<?php esc_html_e( 'Read more', 'wordcamporg' ); ?>
-								</a>
-							</p>
+							<?php wpautop( the_excerpt() ); ?>
+							<?php if ( true === $attributes['excerpt_more'] ) : ?>
+								<p class="wordcamp-speaker-permalink">
+									<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>" class="wordcamp-speaker-permalink">
+										<?php esc_html_e( 'Read more', 'wordcamporg' ); ?>
+									</a>
+								</p>
+							<?php endif; ?>
 						<?php endif; ?>
 					</div>
 				<?php endif; ?>
@@ -66,13 +66,15 @@ defined( 'WPINC' ) || die();
 					</h4>
 
 					<ul class="wordcamp-speaker-session-list">
-						<?php foreach ( $sessions[ $speaker->ID ] as $session ) : ?>
+						<?php foreach ( $sessions[ $speaker->ID ] as $session ) :
+							$tracks = get_the_terms( $session, 'wcb_track' );
+							?>
 							<li class="wordcamp-speaker-session-content">
 								<a class="wordcamp-speaker-session-link" href="<?php echo esc_url( get_permalink( $session ) ); ?>">
 									<?php echo get_the_title( $session ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 								</a>
 								<span class="wordcamp-speaker-session-info">
-									<?php if ( ! empty( $tracks = get_the_terms( $session, 'wcb_track' ) ) && ! is_wp_error( $tracks ) ) : ?>
+									<?php if ( ! is_wp_error( $tracks ) && ! empty( $tracks ) ) : ?>
 										<?php
 											printf(
 												/* translators: 1: A date; 2: A time; 3: A location; */

@@ -60,13 +60,7 @@
 	}
 }
 
-.wordcamp-speaker-avatar {
-	&.align-left,
-	&.align-center,
-	&.align-right {
-		display: block;
-	}
-
+.wordcamp-speaker-avatar-container {
 	&.align-left {
 		float: left;
 		margin-right: 1em;
@@ -75,6 +69,7 @@
 	&.align-center {
 		margin-left: auto;
 		margin-right: auto;
+		text-align: center;
 	}
 
 	&.align-right {

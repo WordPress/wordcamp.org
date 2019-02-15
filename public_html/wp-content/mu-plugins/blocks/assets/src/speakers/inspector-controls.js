@@ -36,7 +36,7 @@ const DEFAULT_OPTIONS = {
 class SpeakerInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes } = this.props;
-		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, show_session, sort } = attributes;
+		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, excerpt_more, show_session, sort } = attributes;
 		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = data;
 
 		return (
@@ -99,6 +99,16 @@ class SpeakerInspectorControls extends Component {
 							onChange={ ( value ) => setAttributes( { content: value } ) }
 						/>
 					</PanelRow>
+					{ 'excerpt' === content &&
+						<PanelRow>
+							<ToggleControl
+								label={ __( 'Read More Link', 'wordcamporg' ) }
+								help={ __( 'Show a link at the end of the excerpt (some themes already include this)', 'wordcamporg' ) }
+								checked={ excerpt_more }
+								onChange={ ( value ) => setAttributes( { excerpt_more: value } ) }
+							/>
+						</PanelRow>
+					}
 					<PanelRow>
 						<ToggleControl
 							label={ __( 'Session Information', 'wordcamporg' ) }

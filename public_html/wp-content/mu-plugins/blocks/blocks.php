@@ -11,6 +11,7 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
  * @return void
  */
 function load() {
+	require_once PLUGIN_DIR . 'includes/sessions.php';
 	require_once PLUGIN_DIR . 'includes/speakers.php';
 }
 

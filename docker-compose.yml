@@ -10,4 +10,4 @@ services:
       - "1234:80"
       - "443:443"
       - "1080:1080"
-    command: bash -c "nginx && php-fpm"
+    command: bash -c "nginx && mailcatcher && php-fpm"

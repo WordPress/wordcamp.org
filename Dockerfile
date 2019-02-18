@@ -29,9 +29,10 @@ RUN sed -i -e "s/#FromLineOverride=YES/FromLineOverride=YES/" /etc/ssmtp/ssmtp.c
 RUN sed -i -e "s/mailhub=mail/mailhub=127.0.0.1:1025/" /etc/ssmtp/ssmtp.conf
 RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
 
-
 # utils
 RUN apt-get install vim -y
+
+COPY php-fpm.conf /usr/local/etc/php-fpm.d/zz-www.conf
 
 CMD tail -f /dev/null
 

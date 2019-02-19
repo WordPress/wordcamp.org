@@ -13,7 +13,17 @@ register_shutdown_function( 'send_fatal_to_slack' );
 /**
  * Error handler to send errors to Slack.
  *
- * Always return false so that default error handling still occurs as well.
+ * Note: This should always return false so that default error handling still occurs as well.
+ *
+ * @todo We should consider splitting the functionality here into two or more separate functions.
+ *       This way logging errors to files could be separate from sending messages to Slack. This would
+ *       also potentially allow us to load the error logging part earlier, before WP functions
+ *       are available.
+ *
+ * @param int    $err_no
+ * @param string $err_msg
+ * @param string $file
+ * @param int    $line
  *
  * @return bool
  */
@@ -59,20 +69,16 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
-	// Max file length for ubuntu system is 255.
-	$err_key = substr( base64_encode("$file-$line-$err_no" ), -254 );
-
+	$err_key    = substr( base64_encode("$file-$line-$err_no" ), -254 ); // Max file length for ubuntu is 255.
 	$error_file = ERROR_RATE_LIMITING_DIR . "/$err_key";
-
-	$text = '';
-
-	$data = array(
+	$text       = '';
+	$data       = array(
 		'last_reported_at' => time(),
 		'error_count'      => 0, // since last reported.
 	);
 
 	if ( ! file_exists( $error_file ) ) {
-		$text = 'Error occured. ';
+		$text .= '[Error]';
 		file_put_contents( $error_file, wp_json_encode( $data ) );
 	} else {
 		$data                 = json_decode( file_get_contents( $error_file ), true );
@@ -80,9 +86,9 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 		$time_elasped         = time() - $data['last_reported_at'];
 
 		if ( $time_elasped > 600 ) {
-			$text                     = "Still happening. Happened ${data['error_count']} time(s) since last reported. ";
-			$data['last_reported_at'] = time();
-			$data['error_count']      = 0;
+			$text                     .= "[Repeating Error] ${data['error_count']} time(s) since last reported.";
+			$data['last_reported_at']  = time();
+			$data['error_count']       = 0;
 
 			file_put_contents( $error_file, wp_json_encode( $data ) );
 		} else {
@@ -93,7 +99,8 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 
 	$domain    = get_site_url();
 	$page_slug = esc_html( trim( $_SERVER['REQUEST_URI'], '/' ) );
-	$text      = $text . "Message : \"$err_msg\" occurred on \"$file:$line\" \n Domain: $domain \n Page: $page_slug \n Error type: $err_no";
+
+	$text .= " Message: \"$err_msg\" occurred on \"$file:$line\" \n Domain: $domain \n Page: $page_slug \n Error type: $err_no ";
 
 	$message = array(
 		'fallback'    => $text,
@@ -134,6 +141,7 @@ function send_fatal_to_slack() {
 
 /**
  * Check and create filesystem dirs to manage rate limiting in error handling.
+ *
  * For legacy bugs we are doing rate limiting via filesystem. We would be investigating to see if we can instead use memcache to rate limit sometime in the future.
  *
  * @return bool Return true if file permissions etc are present
@@ -147,6 +155,8 @@ function init_error_handling() {
 }
 
 /**
+ * Remove temporary error rate limiting files.
+ *
  * Function `send_error_to_slack` above also creates a bunch of files in /tmp/error_limiting folder in order to rate limit the notification.
  * This function will be used as a cron to clear these error_limiting files periodically.
  */

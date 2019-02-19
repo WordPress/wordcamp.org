@@ -34,5 +34,10 @@ RUN apt-get install vim -y
 
 COPY php-fpm.conf /usr/local/etc/php-fpm.d/zz-www.conf
 
+# Setup Gutenberg blocks
+RUN apt-get install -y gnupg2 && curl -sL https://deb.nodesource.com/setup_11.x | bash -
+RUN apt-get install -y nodejs
+RUN cd wp-content/mu-plugins/blocks && npm install
+
 CMD tail -f /dev/null
 

@@ -46,13 +46,19 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 
 	$error_safelist = [
 		E_ERROR,
-		E_USER_ERROR,
 		E_CORE_ERROR,
 		E_COMPILE_ERROR,
-		E_PARSE,
-		E_NOTICE,
-		E_DEPRECATED,
+		E_USER_ERROR,
 		E_WARNING,
+		E_PARSE,
+		E_CORE_WARNING,
+		E_COMPILE_WARNING,
+		E_USER_WARNING,
+		E_NOTICE,
+		E_USER_NOTICE,
+		E_STRICT,
+		E_DEPRECATED,
+		E_USER_DEPRECATED,
 	];
 
 	if ( ! in_array( $err_no, $error_safelist ) ) {
@@ -71,47 +77,98 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line ) {
 
 	$err_key    = substr( base64_encode("$file-$line-$err_no" ), -254 ); // Max file length for ubuntu is 255.
 	$error_file = ERROR_RATE_LIMITING_DIR . "/$err_key";
-	$text       = '';
 	$data       = array(
 		'last_reported_at' => time(),
 		'error_count'      => 0, // since last reported.
 	);
+	$messages    = explode( 'Stack trace:', $err_msg, 2 );
+	$pretext     = $messages[0] ?: '';
+	$stack_trace = ( ! empty( $messages[1] ) ) ? trim( sanitize_text_field( $messages[1] ) ) : '';
+	$footer      = '';
 
 	if ( ! file_exists( $error_file ) ) {
-		$text .= '[Error]';
 		file_put_contents( $error_file, wp_json_encode( $data ) );
 	} else {
 		$data                 = json_decode( file_get_contents( $error_file ), true );
 		$data['error_count'] += 1;
-		$time_elasped         = time() - $data['last_reported_at'];
+		$time_elapsed         = time() - $data['last_reported_at'];
 
-		if ( $time_elasped > 600 ) {
-			$text                     .= "[Repeating Error] ${data['error_count']} time(s) since last reported.";
+		if ( $time_elapsed > 600 ) {
 			$data['last_reported_at']  = time();
 			$data['error_count']       = 0;
-
 			file_put_contents( $error_file, wp_json_encode( $data ) );
+
+			$footer .= "Occurred *${data['error_count']} time(s)* since last reported";
 		} else {
 			file_put_contents( $error_file, wp_json_encode( $data ) );
 			return false;
 		}
 	}
 
-	$domain    = get_site_url();
-	$page_slug = esc_html( trim( $_SERVER['REQUEST_URI'], '/' ) );
+	$domain    = esc_url( get_site_url() );
+	$page_slug = sanitize_text_field( untrailingslashit( $_SERVER['REQUEST_URI'] ) ) ?: '/';
 
-	$text .= " Message: \"$err_msg\" occurred on \"$file:$line\" \n Domain: $domain \n Page: $page_slug \n Error type: $err_no ";
+	switch( $err_no ) {
+		case E_ERROR:
+		case E_CORE_ERROR:
+		case E_COMPILE_ERROR :
+		case E_USER_ERROR:
+		default:
+			$color = '#ff0000'; // Red.
+			break;
+		case E_WARNING:
+		case E_PARSE:
+		case E_CORE_WARNING:
+		case E_COMPILE_WARNING:
+		case E_USER_WARNING:
+			$color = '#ffa500'; // Orange.
+			break;
+		case E_NOTICE:
+		case E_USER_NOTICE:
+		case E_STRICT:
+		case E_DEPRECATED:
+		case E_USER_DEPRECATED:
+			$color = '#ffff00'; // Yellow.
+			break;
+	}
 
-	$message = array(
-		'fallback'    => $text,
-		'color'       => '#ff0000',
-		'pretext'     => "Error on \"$file:$line\" ",
-		'author_name' => $domain,
-		'text'        => $text,
+	$fields = [
+		[
+			'title' => 'Domain',
+			'value' => $domain,
+			'short' => false,
+		],
+		[
+			'title' => 'Page',
+			'value' => $page_slug,
+			'short' => false,
+		],
+		[
+			'title' => 'File',
+			'value' => "$file:$line",
+			'short' => false,
+		],
+	];
+
+	if ( $stack_trace ) {
+		$fields[] = [
+			'title' => 'Stack Trace',
+			'value' => $stack_trace,
+			'short' => false,
+		];
+	}
+
+	$attachment = array(
+		'fallback'    => $pretext,
+		'pretext'     => $pretext,
+		'color'       => $color,
+		'author_name' => 'WordCamp Logger',
+		'fields'      => $fields,
+		'footer'      => $footer,
 	);
 
 	$send = new \Dotorg\Slack\Send( SLACK_ERROR_REPORT_URL );
-	$send->add_attachment( $message );
+	$send->add_attachment( $attachment );
 
 	if ( 'production' === WORDCAMP_ENVIRONMENT ) {
 		$send->send( WORDCAMP_LOGS_SLACK_CHANNEL );

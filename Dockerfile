@@ -37,7 +37,7 @@ COPY php-fpm.conf /usr/local/etc/php-fpm.d/zz-www.conf
 # Setup Gutenberg blocks
 RUN apt-get install -y gnupg2 && curl -sL https://deb.nodesource.com/setup_11.x | bash -
 RUN apt-get install -y nodejs
-RUN cd wp-content/mu-plugins/blocks && npm install
+RUN npm --prefix ./wp-content/mu-plugins/blocks install ./wp-content/mu-plugins/blocks
 
 CMD tail -f /dev/null
 

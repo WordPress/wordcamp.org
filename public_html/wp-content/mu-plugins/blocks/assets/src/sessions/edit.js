@@ -109,15 +109,15 @@ const sessionsSelect = ( select, props ) => {
 		args.order = order;
 	}
 
-	if ( 'specific_posts' === mode && Array.isArray( post_ids ) ) {
+	if ( 'post' === mode && Array.isArray( post_ids ) ) {
 		args.include = post_ids;
 	}
 
-	if ( 'specific_tracks' === mode && Array.isArray( track_ids ) ) {
+	if ( 'track' === mode && Array.isArray( track_ids ) ) {
 		args.session_track = track_ids;
 	}
 
-	if ( 'specific_categories' === mode && Array.isArray( category_ids ) ) {
+	if ( 'category' === mode && Array.isArray( category_ids ) ) {
 		args.session_category = category_ids;
 	}
 

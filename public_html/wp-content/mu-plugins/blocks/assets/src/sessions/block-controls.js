@@ -39,9 +39,9 @@ class SessionsBlockControls extends BlockControls {
 				);
 				break;
 
-			case 'specific_posts' :
-			case 'specific_tracks' :
-			case 'specific_categories' :
+			case 'post' :
+			case 'track' :
+			case 'category' :
 				output = (
 					<PlaceholderSpecificMode
 						label={ this.getModeLabel( mode ) }

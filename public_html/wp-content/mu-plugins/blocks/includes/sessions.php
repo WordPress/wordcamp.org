@@ -206,15 +206,15 @@ function get_options( $type = '' ) {
 			],
 			[
 				'label' => _x( 'Choose sessions', 'mode option', 'wordcamporg' ),
-				'value' => 'specific_posts',
+				'value' => 'post',
 			],
 			[
 				'label' => _x( 'Choose tracks', 'mode option', 'wordcamporg' ),
-				'value' => 'specific_tracks',
+				'value' => 'track',
 			],
 			[
 				'label' => _x( 'Choose session categories', 'mode option', 'wordcamporg' ),
-				'value' => 'specific_categories',
+				'value' => 'category',
 			],
 		],
 		'sort'    => [

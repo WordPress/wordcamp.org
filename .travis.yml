@@ -1,13 +1,43 @@
-# Travis CI configuration file.
-# @link https://travis-ci.org/
+# travis-ci.org continuous integration testing.
 
-# Declare project language and PHP versions to test against.
-# @link http://about.travis-ci.org/docs/user/languages/php/
+dist: xenial
+
 language: php
 php:
   - 7.2
 
+addons:
+  mariadb: '10.2'
+
+cache:
+  apt: true
+  directories:
+    # core
+    - core-test-framework
+
+
+env:
+  global:
+    - WP_TESTS_DIR=core-test-framework
+    # ^ needs to be absolute? if so, how to tell what pwd is?
+
+before_install:
+  # Download Core unit tests
+  - travis_retry svn export https://develop.svn.wordpress.org/trunk/tests/phpunit/ core-test-framework
+
+  # need a Core install too - latest stable
+
+  # Setup database
+  mysql -u root -e "CREATE DATABASE wordpress_tests;"
+  cp wp-tests-config-sample.php wp-tests-config.php
+  sed -i "s/youremptytestdbnamehere/wordpress_tests/" wp-tests-config.php
+  sed -i "s/yourusernamehere/root/" wp-tests-config.php
+  sed -i "s/yourpasswordhere//" wp-tests-config.php
+
 before_script:
+  # Remove Xdebug for a huge performance increase:
+  - phpenv config-rm xdebug.ini
+
   # Setup code sniffer to run WordPress Code Standard tests
   - composer create-project wp-coding-standards/wpcs --no-dev
 
@@ -20,6 +50,18 @@ before_script:
 
   # Create a empty file, which will be passed to phpcs along with all the changed files. This will make sure that incase no php file changes are there, phpcs will not assume that it has to scan whole directory.
   - touch $TRAVIS_BUILD_DIR/tmp.php
+
+  # install phpunit 6.3
+  - travis_retry composer global require "phpunit/phpunit:^6"
+
+
+
+#  - mysql --version
+#  - which phpunit
+#  - phpunit --version
+
+
+
 
 script:
 
@@ -41,3 +83,6 @@ script:
   # --extensions=php: Only sniff php files
   # tmp.php: So that phpcs do not assume that it has to scan all files in case no php files are changed.
   - wpcs/vendor/bin/phpcs -v -n -p --extensions=php $TRAVIS_BUILD_DIR/tmp.php $(echo $CHANGED_FILES)
+
+# Run unit test suite
+  - phpunit

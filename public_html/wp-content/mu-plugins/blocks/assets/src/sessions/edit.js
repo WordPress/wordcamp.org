@@ -17,7 +17,7 @@ const { addQueryArgs } = wp.url;
 import SessionsBlockControls from "./block-controls";
 import SessionsInspectorControls from "./inspector-controls";
 
-const data = window.WordCampBlocks.sessions || {};
+const blockData = window.WordCampBlocks.sessions || {};
 
 const SESSIONS_ICON = 'list-view';
 const MAX_POSTS = 100;
@@ -74,13 +74,11 @@ class SessionsEdit extends Component {
 
 	render() {
 		const { mode } = this.props.attributes;
-		const { mode: modeOptions = {} } = data.options;
 
 		return (
 			<Fragment>
 				<SessionsBlockControls
 					icon={ SESSIONS_ICON }
-					modeOptions={ modeOptions }
 					{ ...this.props }
 					{ ...this.state }
 				/>
@@ -144,7 +142,7 @@ const sessionsSelect = ( select, props ) => {
 		} );
 	}
 
-	return { sessionPosts };
+	return { blockData, sessionPosts };
 };
 
 export const edit = withSelect( sessionsSelect )( SessionsEdit );

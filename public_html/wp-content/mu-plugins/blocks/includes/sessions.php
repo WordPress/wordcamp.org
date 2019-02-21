@@ -264,7 +264,37 @@ function get_session_posts( array $attributes ) {
 		'post_type'      => 'wcb_session',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
+		'meta_query'     => [
+			'relation' => 'AND',
+			[
+				'relation' => 'OR',
+				[
+					'key'     => '_wcpt_session_type',
+					'value'   => 'session',
+					'compare' => '=',
+				],
+				[
+					'key'     => '_wcpt_session_type',
+					'value'   => '',
+					'compare' => 'NOT EXISTS',
+				],
+			],
+		],
 	];
+
+	if ( ! empty( $attributes['filter_date'] ) ) {
+		$start = strtotime( $attributes['filter_date'] );
+		$end   = strtotime( $attributes['filter_date'] . ' + 1 day' );
+
+		if ( $start && $end ) {
+			$post_args['meta_query'][] = [
+				'key'     => '_wcpt_session_time',
+				'value'   => [ $start, $end ],
+				'compare' => 'BETWEEN',
+				'type'    => 'NUMERIC',
+			];
+		}
+	}
 
 	switch ( $attributes['sort'] ) {
 		case 'session_time':

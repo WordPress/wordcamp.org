@@ -11,9 +11,9 @@ export class BlockControls extends Component {
 	}
 
 	getModeLabel( value ) {
-		const { modeOptions } = this.props;
+		const { mode } = this.props.blockData.options;
 
-		return modeOptions.find( ( modeOption ) => {
+		return mode.find( ( modeOption ) => {
 			return value === modeOption.value;
 		} ).label;
 	}

@@ -65,9 +65,12 @@ function render( $attributes ) {
  * @return array
  */
 function add_script_data( array $data ) {
+	$wordcamp = get_wordcamp_post();
+
 	$data['sessions'] = [
-		'schema'  => get_attributes_schema(),
-		'options' => get_options(),
+		'schema'     => get_attributes_schema(),
+		'options'    => get_options(),
+		'start_date' => ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'] ) ? $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] : '',
 	];
 
 	return $data;
@@ -114,6 +117,10 @@ function get_attributes_schema() {
 			'default' => 'title_asc',
 		],
 		'filter_date'   => [
+			'type'    => 'bool',
+			'default' => false,
+		],
+		'date'          => [
 			'type'    => 'string',
 			'default' => '',
 		],
@@ -288,9 +295,9 @@ function get_session_posts( array $attributes ) {
 		],
 	];
 
-	if ( ! empty( $attributes['filter_date'] ) ) {
-		$start = strtotime( $attributes['filter_date'] );
-		$end   = strtotime( $attributes['filter_date'] . ' + 1 day' );
+	if ( $attributes['filter_date'] && ! empty( $attributes['date'] ) ) {
+		$start = strtotime( $attributes['date'] );
+		$end   = strtotime( $attributes['date'] . ' + 1 day' );
 
 		if ( $start && $end ) {
 			$post_args['meta_query'][] = [

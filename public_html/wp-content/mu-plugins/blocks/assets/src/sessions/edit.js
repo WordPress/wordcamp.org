@@ -93,7 +93,7 @@ class SessionsEdit extends Component {
 }
 
 const sessionsSelect = ( select, props ) => {
-	const { mode, post_ids, track_ids, category_ids, sort, filter_date } = props.attributes;
+	const { mode, post_ids, track_ids, category_ids, sort, filter_date, date } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
 
 	const args = {
@@ -126,11 +126,11 @@ const sessionsSelect = ( select, props ) => {
 	let sessionPosts = getEntityRecords( 'postType', 'wcb_session', sessionsQuery );
 
 	// todo Is there a way to do this filtering and sorting via REST API parameters?
-	if ( filter_date ) {
+	if ( filter_date && date ) {
 		sessionPosts.filter( ( session ) => {
 			const { _wcpt_session_time } = session;
-			const startDate = new Date( filter_date );
-			const endDate = new Date( filter_date ).setDate( startDate.getDate() + 1 );
+			const startDate = new Date( date );
+			const endDate = new Date( date ).setDate( startDate.getDate() + 1 );
 
 			return _wcpt_session_time >= startDate && _wcpt_session_time <= endDate;
 		} );

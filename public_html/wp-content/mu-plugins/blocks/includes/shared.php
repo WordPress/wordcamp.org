@@ -49,14 +49,14 @@ function array_to_human_readable_list( array $array ) {
 		case 2:
 			$list = sprintf(
 				/* translators: Each %s is a person's name. */
-				__( '%s and %s', 'wordcamporg' ),
+				__( '%1$s and %2$s', 'wordcamporg' ),
 				array_shift( $array ),
 				array_shift( $array )
 			);
 			break;
 		default:
 			/* translators: used between list items, there is a space after the comma */
-			$item_separator = __( ', ', 'wordcamporg' );
+			$item_separator = esc_html__( ', ', 'wordcamporg' );
 
 			$initial = array_slice( $array, 0, $count - 1 );
 			$initial = implode( $item_separator, $initial ) . $item_separator;

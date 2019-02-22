@@ -33,10 +33,10 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  * @return string
  */
 function render( $attributes ) {
+	$html       = '';
 	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
 	$attributes = wp_parse_args( $attributes, $defaults );
-
-	$speakers = get_speaker_posts( $attributes );
+	$speakers   = get_speaker_posts( $attributes );
 
 	$sessions = [];
 	if ( ! empty( $speakers ) && true === $attributes['show_session'] ) {
@@ -48,16 +48,16 @@ function render( $attributes ) {
 		'layout-' . sanitize_html_class( $attributes['layout'] ),
 		sanitize_html_class( $attributes['className'] ),
 	];
-
 	if ( 'grid' === $attributes['layout'] ) {
 		$container_classes[] = 'grid-columns-' . absint( $attributes['grid_columns'] );
 	}
-
 	$container_classes = implode( ' ', $container_classes );
 
-	ob_start();
-	require Blocks\PLUGIN_DIR . 'view/speakers.php';
-	$html = ob_get_clean();
+	if ( $attributes['mode'] ) {
+		ob_start();
+		require Blocks\PLUGIN_DIR . 'view/speakers.php';
+		$html = ob_get_clean();
+	}
 
 	return $html;
 }

@@ -32,10 +32,10 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  * @return string
  */
 function render( $attributes ) {
+	$html       = '';
 	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
 	$attributes = wp_parse_args( $attributes, $defaults );
-
-	$sessions = get_session_posts( $attributes );
+	$sessions   = get_session_posts( $attributes );
 
 	$speakers = [];
 	if ( ! empty( $sessions ) && true === $attributes['show_speaker'] ) {
@@ -46,12 +46,13 @@ function render( $attributes ) {
 		'wordcamp-sessions-block',
 		sanitize_html_class( $attributes['className'] ),
 	];
-
 	$container_classes = implode( ' ', $container_classes );
 
-	ob_start();
-	require Blocks\PLUGIN_DIR . 'view/sessions.php';
-	$html = ob_get_clean();
+	if ( $attributes['mode'] ) {
+		ob_start();
+		require Blocks\PLUGIN_DIR . 'view/sessions.php';
+		$html = ob_get_clean();
+	}
 
 	return $html;
 }

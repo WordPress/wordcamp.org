@@ -2,6 +2,8 @@
 namespace WordCamp\Blocks\Speakers;
 defined( 'WPINC' ) || die();
 
+use function WordCamp\Blocks\Shared\{ get_all_the_content };
+
 /** @var array  $attributes */
 /** @var array  $speakers */
 /** @var array  $sessions */

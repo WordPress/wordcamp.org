@@ -35,7 +35,12 @@ function render( $attributes ) {
 	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
 	$attributes = wp_parse_args( $attributes, $defaults );
 
+	$sessions = get_session_posts( $attributes );
 
+	$speakers = [];
+	if ( ! empty( $sessions ) && true === $attributes['show_speaker'] ) {
+		$speakers = get_session_speakers( wp_list_pluck( $sessions, 'ID' ) );
+	}
 
 	$container_classes = [
 		'wordcamp-sessions-block',
@@ -115,6 +120,10 @@ function get_attributes_schema() {
 			'type'    => 'string',
 			'default' => '',
 		],
+		'show_speaker'  => [
+			'type'    => 'bool',
+			'default' => false,
+		],
 		'show_images'   => [
 			'type'    => 'bool',
 			'default' => true,
@@ -139,15 +148,11 @@ function get_attributes_schema() {
 			'type'    => 'bool',
 			'default' => false,
 		],
+		'show_meta'     => [
+			'type'    => 'bool',
+			'default' => false,
+		],
 		'show_category' => [
-			'type'    => 'bool',
-			'default' => false,
-		],
-		'show_track'    => [
-			'type'    => 'bool',
-			'default' => false,
-		],
-		'show_speaker'  => [
 			'type'    => 'bool',
 			'default' => false,
 		],
@@ -373,6 +378,8 @@ function get_session_speakers( array $session_ids ) {
 				'post_status'    => 'publish',
 				'posts_per_page' => -1,
 				'post__in'       => $speaker_ids,
+				'orderby'        => 'post__in',
+				'order'          => 'ASC',
 			];
 
 			$speakers_by_session[ $session->ID ] = get_posts( $speaker_args );

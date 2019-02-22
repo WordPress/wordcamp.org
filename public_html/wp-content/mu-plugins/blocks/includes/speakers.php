@@ -333,28 +333,3 @@ function get_options( $type = '' ) {
 
 	return $options;
 }
-
-/**
- * Get the full content of a post, ignoring more and noteaser tags and pagination.
- *
- * This works similarly to `the_content`, including applying filters, but:
- * - It skips all of the logic in `get_the_content` that deals with tags like <!--more--> and
- *   <!--noteaser-->, as well as pagination and global state variables like `$page`, `$more`, and
- *   `$multipage`.
- * - It returns a string of content, rather than echoing it.
- *
- * @param int|WP_Post $post Post ID or post object.
- *
- * @return string The full, filtered post content.
- */
-function get_all_the_content( $post ) {
-	$post = get_post( $post );
-
-	$content = $post->post_content;
-
-	/** This filter is documented in wp-includes/post-template.php */
-	$content = apply_filters( 'the_content', $content );
-	$content = str_replace( ']]>', ']]&gt;', $content );
-
-	return $content;
-}

@@ -8,6 +8,7 @@ const { __ } = wp.i18n;
  * Internal dependencies
  */
 import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from "../shared/block-controls";
+import SessionsSelect from './sessions-select';
 
 const LABEL = __( 'Sessions', 'wordcamporg' );
 
@@ -39,9 +40,9 @@ class SessionsBlockControls extends BlockControls {
 				);
 				break;
 
-			case 'post' :
-			case 'track' :
-			case 'category' :
+			case 'wcb_session' :
+			case 'wcb_track' :
+			case 'wcb_session_category' :
 				output = (
 					<PlaceholderSpecificMode
 						label={ this.getModeLabel( mode ) }
@@ -75,8 +76,8 @@ class SessionsBlockControls extends BlockControls {
 						</div>
 
 						<div className="wordcamp-block-mode-option">
-							<SpeakersSelect
-								label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
+							<SessionsSelect
+								label={ __( 'Choose specific sessions, tracks, or categories', 'wordcamporg' ) }
 								{ ...this.props }
 							/>
 						</div>

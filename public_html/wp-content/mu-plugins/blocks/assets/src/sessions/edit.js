@@ -93,7 +93,7 @@ class SessionsEdit extends Component {
 }
 
 const sessionsSelect = ( select, props ) => {
-	const { mode, post_ids, track_ids, category_ids, sort, filter_date, date } = props.attributes;
+	const { mode, item_ids, sort, filter_date, date } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
 
 	const args = {
@@ -109,16 +109,18 @@ const sessionsSelect = ( select, props ) => {
 		args.order = order;
 	}
 
-	if ( 'post' === mode && Array.isArray( post_ids ) ) {
-		args.include = post_ids;
-	}
-
-	if ( 'track' === mode && Array.isArray( track_ids ) ) {
-		args.session_track = track_ids;
-	}
-
-	if ( 'category' === mode && Array.isArray( category_ids ) ) {
-		args.session_category = category_ids;
+	if ( Array.isArray( item_ids ) ) {
+		switch ( mode ) {
+			case 'wcb_session':
+				args.include = item_ids;
+				break;
+			case 'wcb_track':
+				args.session_track = item_ids;
+				break;
+			case 'wcb_session_category':
+				args.session_category = item_ids;
+				break;
+		}
 	}
 
 	const sessionsQuery = pickBy( args, ( value ) => ! isUndefined( value ) );

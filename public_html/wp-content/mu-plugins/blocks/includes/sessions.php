@@ -65,12 +65,17 @@ function render( $attributes ) {
  * @return array
  */
 function add_script_data( array $data ) {
-	$wordcamp = get_wordcamp_post();
+	$wordcamp   = get_wordcamp_post();
+	$start_date = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'] ) ? $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] : '';
+
+	if ( $start_date ) {
+		$start_date = date( 'Y-m-d', $start_date );
+	}
 
 	$data['sessions'] = [
 		'schema'     => get_attributes_schema(),
 		'options'    => get_options(),
-		'start_date' => ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'] ) ? $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] : '',
+		'start_date' => $start_date,
 	];
 
 	return $data;
@@ -90,21 +95,7 @@ function get_attributes_schema() {
 			'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 			'default' => '',
 		],
-		'post_ids'      => [
-			'type'    => 'array',
-			'default' => [],
-			'items'   => [
-				'type' => 'integer',
-			],
-		],
-		'track_ids'     => [
-			'type'    => 'array',
-			'default' => [],
-			'items'   => [
-				'type' => 'integer',
-			],
-		],
-		'category_ids'  => [
+		'item_ids'      => [
 			'type'    => 'array',
 			'default' => [],
 			'items'   => [
@@ -219,15 +210,15 @@ function get_options( $type = '' ) {
 			],
 			[
 				'label' => _x( 'Choose sessions', 'mode option', 'wordcamporg' ),
-				'value' => 'post',
+				'value' => 'wcb_session',
 			],
 			[
 				'label' => _x( 'Choose tracks', 'mode option', 'wordcamporg' ),
-				'value' => 'track',
+				'value' => 'wcb_track',
 			],
 			[
 				'label' => _x( 'Choose session categories', 'mode option', 'wordcamporg' ),
-				'value' => 'category',
+				'value' => 'wcb_session_category',
 			],
 		],
 		'sort'    => [
@@ -330,26 +321,17 @@ function get_session_posts( array $attributes ) {
 	}
 
 	switch ( $attributes['mode'] ) {
-		case 'specific_posts':
-			$post_args['post__in'] = $attributes['post_ids'];
+		case 'wcb_session':
+			$post_args['post__in'] = $attributes['item_ids'];
 			break;
 
-		case 'specific_tracks':
+		case 'wcb_track':
+		case 'wcb_session_category':
 			$post_args['tax_query'] = [
 				[
-					'taxonomy' => 'wcb_track',
+					'taxonomy' => $attributes['mode'],
 					'field'    => 'id',
-					'terms'    => $attributes['track_ids'],
-				],
-			];
-			break;
-
-		case 'specific_categories':
-			$post_args['tax_query'] = [
-				[
-					'taxonomy' => 'wcb_session_category',
-					'field'    => 'id',
-					'terms'    => $attributes['category_ids'],
+					'terms'    => $attributes['item_ids'],
 				],
 			];
 			break;

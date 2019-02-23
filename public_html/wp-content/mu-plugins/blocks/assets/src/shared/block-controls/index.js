@@ -2,6 +2,7 @@
  * WordPress dependencies
  */
 const { Placeholder, Spinner } = wp.components;
+const { Component, Fragment } = wp.element;
 
 export class BlockControls extends Component {
 	constructor( props ) {

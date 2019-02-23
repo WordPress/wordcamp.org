@@ -63,7 +63,7 @@ function array_to_human_readable_list( array $array ) {
 			$last    = array_slice( $array, -1, 1 )[0];
 
 			$list = sprintf(
-				/* translators: 1: A list of names. 2: The last item in a list of names. */
+				/* translators: 1: A list of items. 2: The last item in a list of items. */
 				__( '%1$s and %2$s', 'wordcamporg' ),
 				$initial,
 				$last

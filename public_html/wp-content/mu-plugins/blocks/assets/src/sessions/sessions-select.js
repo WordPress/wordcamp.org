@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { includes } from 'lodash';
+import { get, includes } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -40,17 +40,13 @@ class SessionsSelect extends Component {
 		promises.push( allSessionPosts.then(
 			( fetchedPosts ) => {
 				const posts = fetchedPosts.map( ( post ) => {
-					let image = '';
-
-					if ( post._embedded.hasOwnProperty( 'wp:featuredmedia' ) && post._embedded['wp:featuredmedia'].length ) {
-						[ image ] = post._embedded['wp:featuredmedia']
-					}
+					const image = get( post, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' );
 
 					return {
 						label : decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
 						value : post.id,
-						type  : 'post',
-						image : image.media_details.sizes.thumbnail.source_url || '',
+						type  : 'wcb_session',
+						image : image,
 					};
 				} );
 
@@ -68,7 +64,7 @@ class SessionsSelect extends Component {
 							label : decodeEntities( term.name ) || __( '(Untitled)', 'wordcamporg' ),
 							value : term.id,
 							type  : term.taxonomy,
-							count : term.count,
+							count : term.count || 0,
 						};
 					} );
 

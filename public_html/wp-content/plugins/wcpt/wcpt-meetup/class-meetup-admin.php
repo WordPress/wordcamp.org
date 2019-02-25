@@ -510,10 +510,14 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 *
 		 * @param WP_Post $meetup Meetup post object.
 		 *
-		 * @return bool|string
+		 * @return null|bool|string
 		 */
 		public static function notify_new_meetup_group_in_slack( $meetup ) {
-
+			$new_group_notification_key = 'Sent new group notification';
+			$already_notified           = get_post_meta( $meetup->ID, $new_group_notification_key, true );
+			if( $already_notified ) {
+				return null;
+			}
 			// Not translating strings here because these will be sent to Slack.
 			$city            = get_post_meta( $meetup->ID, 'Meetup Location', true );
 			$organizer_slack = get_post_meta( $meetup->ID, 'Slack', true );
@@ -529,7 +533,11 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			$attachment = create_event_status_attachment( $message, $meetup->ID, $title );
 
-			return wcpt_slack_notify( COMMUNITY_EVENTS_SLACK, $attachment );
+			$notification_sent = wcpt_slack_notify( COMMUNITY_EVENTS_SLACK, $attachment );
+			if ( $notification_sent ) {
+				update_post_meta( $meetup->ID, $new_group_notification_key, true );
+			}
+			return $notification_sent;
 		}
 
 		/**

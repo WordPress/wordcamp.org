@@ -314,7 +314,7 @@ abstract class Event_Admin {
 	abstract public function notify_application_status_in_slack( $new_status, $old_status, WP_Post $event );
 
 	/**
-	 * Schedule notificaiton for declined application. Currently supports WordCamp and Meetup
+	 * Schedule notification for declined application. Currently supports WordCamp and Meetup.
 	 *
 	 * @param WP_Post $event Event object.
 	 * @param string  $label Could be WordCamp or Meetup.
@@ -330,8 +330,16 @@ abstract class Event_Admin {
 	 * @param int    $event_id
 	 * @param string $label
 	 * @param string $location
+	 *
+	 * @return null|bool|string
 	 */
 	public static function send_decline_notification( $event_id, $label, $location ) {
+		$declined_notification_key = 'Sent declined notification';
+		$already_notified          = get_post_meta( $event_id, $declined_notification_key, true );
+		if ( $already_notified ) {
+			return null;
+		}
+
 		$message = sprintf(
 			'A %s application for %s has been declined, and the applicant has been informed via email.',
 			$label,
@@ -339,7 +347,12 @@ abstract class Event_Admin {
 		);
 
 		$attachment = create_event_status_attachment( $message, $event_id, '' );
-		wcpt_slack_notify( COMMUNITY_TEAM_SLACK, $attachment );
+
+		$notification_sent = wcpt_slack_notify( COMMUNITY_TEAM_SLACK, $attachment );
+		if ( $notification_sent ) {
+			update_post_meta( $event_id, $declined_notification_key, true );
+		}
+		return $notification_sent;
 	}
 
 	/**

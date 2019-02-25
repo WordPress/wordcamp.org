@@ -526,8 +526,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			$message = sprintf(
 				"Let's welcome the new WordPress meetup group%s%s, to the chapter! :tada: :community: :wordpress:\n%s",
-				isset( $city ) ? " in $city," : '',
-				isset( $organizer_slack ) ? " organized by @$organizer_slack" : '',
+				! empty( $city ) ? " in $city," : '',
+				! empty( $organizer_slack ) ? " organized by @$organizer_slack" : '',
 				$meetup_link
 			);
 

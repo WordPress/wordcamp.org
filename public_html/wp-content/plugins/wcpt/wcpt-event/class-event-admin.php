@@ -258,6 +258,7 @@ abstract class Event_Admin {
 	 *
 	 * @return string
 	 */
+	// phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
 	public function set_locale_to_en_US() {
 		return 'en_US';
 	}
@@ -455,6 +456,7 @@ abstract class Event_Admin {
 		}
 
 		// Don't add/remove meta on trash, untrash, restore, etc.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( empty( $_POST['action'] ) || 'editpost' !== $_POST['action'] ) {
 			return;
 		}
@@ -465,7 +467,6 @@ abstract class Event_Admin {
 				wp_die( 'Unable to verify nonce.' );
 			}
 		}
-
 
 		$meta_keys = $this->meta_keys();
 		$orig_meta_values = get_post_meta( $post_id );

@@ -49,7 +49,7 @@ function array_to_human_readable_list( array $array ) {
 		case 2:
 			$list = sprintf(
 				/* translators: Each %s is a person's name. */
-				__( '%1$s and %2$s', 'wordcamporg' ),
+				_x( '%1$s and %2$s', 'list of two items', 'wordcamporg' ),
 				array_shift( $array ),
 				array_shift( $array )
 			);
@@ -64,7 +64,7 @@ function array_to_human_readable_list( array $array ) {
 
 			$list = sprintf(
 				/* translators: 1: A list of items. 2: The last item in a list of items. */
-				__( '%1$s and %2$s', 'wordcamporg' ),
+				_x( '%1$s and %2$s', 'list of three or more items', 'wordcamporg' ),
 				$initial,
 				$last
 			);

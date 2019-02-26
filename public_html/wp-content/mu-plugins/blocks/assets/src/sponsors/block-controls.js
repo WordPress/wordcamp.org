@@ -1,6 +1,8 @@
 /**
  * WordPress dependencies.
  */
+import Placeholder from 'react-select/src/components/Placeholder';
+
 const { __ } = wp.i18n;
 
 /**
@@ -8,8 +10,19 @@ const { __ } = wp.i18n;
  */
 import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from "../shared/block-controls";
 import SponsorBlockContent from './block-content';
+import VersatileSelect from '../shared/versatile-select';
 
 const LABEL = __( 'Sponsors', 'wordcamporg' );
+
+/**
+ * Render select box for selecting sponsors.
+ */
+function SponsorSelect( { select, props } ) {
+	return (
+		<VersatileSelect
+		/>
+	)
+}
 
 /**
  * Implements sponsor block controls.
@@ -21,14 +34,13 @@ class SponsorBlockControls extends BlockControls {
 	 */
 	render() {
 		const { sponsorPosts, attributes } = this.props;
-		const mode = attributes.modes || 'all';
-		console.log(sponsorPosts);
+		const { mode } = attributes;
 
 		const hasPosts = Array.isArray( sponsorPosts ) && sponsorPosts.length;
 
-		console.log("Mode: ", mode, " hasPosrs: ", hasPosts);
+		console.log("Mode is: ", mode);
+		// Check if posts are still loading.
 		if ( mode && ! hasPosts ) {
-			console.log("Should have come here...");
 			return (
 				<PlaceholderNoContent
 					label = { LABEL }
@@ -39,14 +51,27 @@ class SponsorBlockControls extends BlockControls {
 			)
 		}
 
+		let output;
+
+		switch ( mode ) {
+			case 'all' :
+				output = (
+					<SponsorBlockContent { ...this.props } />
+				);
+				break;
+			default:
+				output = (
+					<Placeholder
+					/>
+				)
+		}
+
 		return (
-			<SponsorBlockContent
-				{ ...this.props }
-				{ ...this.state }
-			/>
-		)
-
-
+				<SponsorBlockContent
+					{ ...this.props }
+					{ ...this.state }
+				/>
+			);
 	}
 
 }

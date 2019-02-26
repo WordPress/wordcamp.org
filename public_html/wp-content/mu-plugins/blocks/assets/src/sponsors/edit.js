@@ -11,6 +11,8 @@ import SponsorBlocksControls from './block-controls';
 const { withSelect } = wp.data;
 const { Component, Fragment } = wp.element;
 
+const MAX_PAGE = 100;
+
 class SponsorsEdit extends Component {
 
 	/**
@@ -27,15 +29,19 @@ class SponsorsEdit extends Component {
 	 */
 	render() {
 
+		const { mode } = this.props.attributes;
+
 		return (
 			<Fragment>
 				<SponsorBlocksControls
 					{ ...this.props }
 					{ ...this.state }
 				/>
+				{ mode &&
 				<Fragment>
-					<SponsorInspectorControls { ...this.props } />
+					<SponsorInspectorControls {...this.props} />
 				</Fragment>
+				}
 			</Fragment>
 		)
 	}
@@ -50,7 +56,21 @@ class SponsorsEdit extends Component {
 const sponsorSelect = ( select, props ) => {
 	const { getEntityRecords } = select( 'core' );
 
-	let sponsorPosts = getEntityRecords( 'postType', 'wcb_sponsor', { _embed: true } );
+	const { mode, post_ids, sort } = props.attributes;
+
+	const query = {
+		orderby : 'title',
+		order   : 'asc',
+		per_page: MAX_PAGE,
+		_embed  : true,
+	};
+
+	if ( Array.isArray( post_ids ) ) {
+		query.include = post_ids;
+	}
+
+	let sponsorPosts = getEntityRecords( 'postType', 'wcb_sponsor', query );
+
 	return {
 		sponsorPosts
 	}

@@ -30,6 +30,9 @@ function SponsorDetail( { sponsorPost } ) {
 class SponsorBlockContent extends Component {
 
 	render() {
+
+		console.log("Comes here to..");
+
 		const { attributes, sponsorPosts } = this.props;
 		return (
 			<ul>

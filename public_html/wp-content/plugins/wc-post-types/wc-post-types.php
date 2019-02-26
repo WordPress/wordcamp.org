@@ -2181,7 +2181,7 @@ class WordCamp_Post_Types_Plugin {
 			array(
 				'labels'          => $labels,
 				'rewrite'         => array( 'slug' => 'session', 'with_front' => false, ),
-				'supports'        => array( 'title', 'editor', 'author', 'revisions', 'thumbnail', 'custom-fields' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'thumbnail', 'custom-fields' ),
 				'menu_position'   => 21,
 				'public'          => true,
 				'show_ui'         => true,

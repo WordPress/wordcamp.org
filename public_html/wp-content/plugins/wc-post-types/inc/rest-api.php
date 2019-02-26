@@ -143,16 +143,14 @@ function register_additional_rest_fields() {
 			'schema'       => [
 				'description' => __( 'Date and time of the session', 'wordcamporg' ),
 				'type'        => 'object',
-				'context'     => array( 'embed', 'view' ),
+				'context'     => array( 'embed', 'view', 'edit' ),
 				'readonly'    => true,
 				'properties'  => [
 					'date' => [
 						'type'    => 'string',
-						'context' => array( 'embed', 'view' ),
 					],
 					'time' => [
 						'type'    => 'string',
-						'context' => array( 'embed', 'view' ),
 					],
 				],
 			],

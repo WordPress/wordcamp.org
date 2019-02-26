@@ -1,8 +1,9 @@
 /**
- Displays sponsor block.
- **/
+ * Displays sponsor block.
+ */
 
 import SponsorInspectorControls from './inspector-controls';
+import SponsorBlocksControls from './block-controls';
 
 /**
  WordPress dependencies.
@@ -25,9 +26,16 @@ class SponsorsEdit extends Component {
 	 * Renders SponsorEdit component.
 	 */
 	render() {
+
 		return (
 			<Fragment>
-				<SponsorInspectorControls/>
+				<SponsorBlocksControls
+					{ ...this.props }
+					{ ...this.state }
+				/>
+				<Fragment>
+					<SponsorInspectorControls { ...this.props } />
+				</Fragment>
 			</Fragment>
 		)
 	}
@@ -42,7 +50,7 @@ class SponsorsEdit extends Component {
 const sponsorSelect = ( select, props ) => {
 	const { getEntityRecords } = select( 'core' );
 
-	let sponsorPosts = getEntityRecords( 'postType', 'wcb_sponsor' );
+	let sponsorPosts = getEntityRecords( 'postType', 'wcb_sponsor', { _embed: true } );
 	return {
 		sponsorPosts
 	}

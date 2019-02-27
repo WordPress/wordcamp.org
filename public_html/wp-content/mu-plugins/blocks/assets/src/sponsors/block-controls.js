@@ -1,9 +1,10 @@
 /**
  * WordPress dependencies.
  */
-import Placeholder from 'react-select/src/components/Placeholder';
-
 const { __ } = wp.i18n;
+const { Placeholder } = wp.components;
+const { Component } = wp.element;
+const { decodeEntities } = wp.htmlEntities;
 
 /**
  * Internal dependencies.
@@ -12,16 +13,59 @@ import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from "..
 import SponsorBlockContent from './block-content';
 import VersatileSelect from '../shared/versatile-select';
 
+
+
 const LABEL = __( 'Sponsors', 'wordcamporg' );
 
 /**
  * Render select box for selecting sponsors.
  */
-function SponsorSelect( { select, props } ) {
-	return (
-		<VersatileSelect
-		/>
-	)
+class SponsorSelect extends Component {
+
+	constructor( props ) {
+		super( props );
+		this.state = {
+			loading: true,
+			wcb_sponsors: [],
+		}
+	}
+
+	onChange( selectedOptions ) {
+		console.log("This called: ", selectedOptions, this.props);
+	}
+
+	render() {
+		const { label, attributes, setAttributes, sponsorPosts } = this.props;
+		const { mode, item_ids } = attributes;
+
+		const sponsorOptions = ( sponsorPosts || [] ).map( ( sponsor ) => {
+			return {
+				label: decodeEntities( sponsor.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
+				value: sponsor.id,
+				type: 'post',
+			}
+		} );
+
+		const options = [
+			{
+				label: __( 'Sponsors', 'wordcamporg' ),
+				options: sponsorOptions,
+			}
+		];
+
+		console.log("Options", options);
+		return (
+			<VersatileSelect
+				className="wordcamp-sponsors-select"
+				selectProps = { {
+					options: options,
+					isMulti: true,
+					isLoading: this.state.loading,
+				} }
+				onChange={ this.onChange }
+			/>
+		)
+	}
 }
 
 /**
@@ -61,17 +105,13 @@ class SponsorBlockControls extends BlockControls {
 				break;
 			default:
 				output = (
-					<Placeholder
+					<SponsorSelect
+						{ ...this.props }
 					/>
 				)
 		}
 
-		return (
-				<SponsorBlockContent
-					{ ...this.props }
-					{ ...this.state }
-				/>
-			);
+		return output;
 	}
 
 }

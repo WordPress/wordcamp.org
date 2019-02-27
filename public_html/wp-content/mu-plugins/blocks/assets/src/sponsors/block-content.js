@@ -31,7 +31,7 @@ class SponsorBlockContent extends Component {
 
 	render() {
 
-		console.log("Comes here to..");
+		console.log("Comes here..");
 
 		const { attributes, sponsorPosts } = this.props;
 		return (

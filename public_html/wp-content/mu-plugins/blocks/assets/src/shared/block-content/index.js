@@ -63,7 +63,7 @@ export function arrayToHumanReadableList( array ) {
  * @returns {*}
  * @constructor
  */
-export function WCPTFeaturedImage( { post, imageClass, defaultImageClass } ) {
+export function FeaturedImage({ post, imageClass, defaultImageClass } ) {
 	let image;
 
 	const url = get( post, '_embedded[\'wp:featuredmedia\'][0].media_details.sizes.thumbnail.source_url', '' );

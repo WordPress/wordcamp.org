@@ -1,7 +1,6 @@
 /**
  * Displays sponsor block.
  */
-
 import SponsorInspectorControls from './inspector-controls';
 import SponsorBlocksControls from './block-controls';
 
@@ -10,6 +9,8 @@ import SponsorBlocksControls from './block-controls';
  **/
 const { withSelect } = wp.data;
 const { Component, Fragment } = wp.element;
+const apiFetch = wp.apiFetch;
+const { addQueryArgs } = wp.url;
 
 const MAX_PAGE = 100;
 
@@ -35,7 +36,6 @@ class SponsorsEdit extends Component {
 			<Fragment>
 				<SponsorBlocksControls
 					{ ...this.props }
-					{ ...this.state }
 				/>
 				{ mode &&
 				<Fragment>
@@ -56,9 +56,9 @@ class SponsorsEdit extends Component {
 const sponsorSelect = ( select, props ) => {
 	const { getEntityRecords } = select( 'core' );
 
-	const { mode, post_ids, sort } = props.attributes;
+	const { mode, post_ids, sort, term_ids } = props.attributes;
 
-	const query = {
+	const sponsorQuery = {
 		orderby : 'title',
 		order   : 'asc',
 		per_page: MAX_PAGE,
@@ -66,13 +66,23 @@ const sponsorSelect = ( select, props ) => {
 	};
 
 	if ( Array.isArray( post_ids ) ) {
-		query.include = post_ids;
+		sponsorQuery.include = post_ids;
 	}
 
-	let sponsorPosts = getEntityRecords( 'postType', 'wcb_sponsor', query );
+	const sponsorLevelQuery = {
+		orderby : 'id',
+		order: 'asc',
+		per_page: MAX_PAGE,
+		_embed: true
+	};
+
+	if ( Array.isArray( term_ids ) ) {
+		sponsorLevelQuery.include = term_ids;
+	}
 
 	return {
-		sponsorPosts
+		sponsorPosts: apiFetch( { path: addQueryArgs( '/wp/v2/sponsors', sponsorQuery ) } ),
+		sponsorLevels: apiFetch( { path: addQueryArgs('/wp/v2/sponsor_level', sponsorLevelQuery ) } )
 	}
 };
 

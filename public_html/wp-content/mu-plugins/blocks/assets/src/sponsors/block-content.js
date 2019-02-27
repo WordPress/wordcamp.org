@@ -1,6 +1,6 @@
 import RawHTML from '@wordpress/element/build-module/raw-html';
 import {get} from 'lodash';
-import {WCPTFeaturedImage} from '../shared/block-content';
+import {FeaturedImage} from '../shared/block-content';
 
 const { Component } = wp.element;
 
@@ -12,7 +12,7 @@ function SponsorDetail( { sponsorPost } ) {
 
 	return (
 		<div className={"wordcamp-sponsor-details"}>
-			<WCPTFeaturedImage
+			<FeaturedImage
 				post={ sponsorPost }
 				imageClass={ "wordcamp-sponsor-featured-image" }
 				defaultImageClass={ "wordcamp-sponsor-def-image" }

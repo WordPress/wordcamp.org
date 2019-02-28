@@ -789,54 +789,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 					}
 				}
 			}
-			// Disabling the new organizer notification because its a lot of work, and not always possible to find someone's wporg username from their meetup profile
-			// self::new_meetup_organizers_notify( $new_meetup_org_data );
 		}
 
-		/**
-		 * Send email containing new meetup organizers to WordCamp Support team. Also adds a tag - `Needs to update Organizer list`
-		 *
-		 * @param array $new_meetup_org_data
-		 */
-		public static function new_meetup_organizers_notify( $new_meetup_org_data ) {
-			if ( empty( $new_meetup_org_data ) ) {
-				return;
-			}
-
-			$template = <<<HTML
-Hi,
-<br><br>
-New organizers have been added for following meetups. Please update their wporg usernames in their meetup tracker page.
-<br><br>
-HTML;
-			$count = 0;
-			foreach ( $new_meetup_org_data as $post_id => $new_meetup_org ) {
-				$count ++;
-				$title = get_the_title( $post_id );
-				$meetup_tracker_url = get_site_url() . "/wp-admin/post.php?post=$post_id&action=edit";
-				$template = $template . "$count. <a href='$meetup_tracker_url' rel='noreferrer' target='_blank' >$title</a> : ";
-				$meetup_group_url = get_post_meta( $post_id, 'Meetup URL', true );
-				$meetup_members = array();
-				foreach ( $new_meetup_org as $organizer ) {
-					$organizer_id = esc_html( $organizer['id'] );
-					$organizer_name = esc_html( $organizer['name'] );
-					$meetup_members[] = "<a href='$meetup_group_url/members/$organizer_id' target='_blank' rel='noreferrer' >$organizer_name</a>";
-				}
-				$template = $template . join( ', ', $meetup_members ) . '<br>';
-
-				// Add a tag for meetup.
-				wp_set_object_terms( $post_id, 'Needs to update Organizer list', 'meetup_tags', true );
-			}
-			wp_mail(
-				array( 'support@wordcamp.org' ),
-				'New Meetup organizer added',
-				$template,
-				array(
-					'From:         noreply@wordcamp.org',
-					'Content-Type: text/html; charset=UTF-8',
-				)
-			);
-		}
 	}
 
 endif;

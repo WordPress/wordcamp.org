@@ -63,6 +63,7 @@ abstract class Event_Application {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- We do not verify nonce for frontend forms because WP Super Cache may cache an expired nonce token.
 		if ( isset( $_POST['submit-application'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing
 			$this->submit_application( $_POST );
 		} else {
 			$countries = wcorg_get_countries();

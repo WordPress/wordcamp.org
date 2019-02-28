@@ -746,10 +746,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @return null|bool|string
 		 */
 		public static function notify_new_wordcamp_in_slack( $wordcamp ) {
-			$scheduled_notification_key = 'Sent scheduled notification';
-			$already_notified           = get_post_meta( $wordcamp->ID, $scheduled_notification_key, true );
-			if ( $already_notified ) {
-				return;
+			$scheduled_notification_key = 'sent_scheduled_notification';
+			if ( get_post_meta( $wordcamp->ID, $scheduled_notification_key, true ) ) {
+				return null;
 			}
 
 			// Not translating any string because they will be sent to slack.

@@ -513,9 +513,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @return null|bool|string
 		 */
 		public static function notify_new_meetup_group_in_slack( $meetup ) {
-			$new_group_notification_key = 'Sent new group notification';
-			$already_notified           = get_post_meta( $meetup->ID, $new_group_notification_key, true );
-			if ( $already_notified ) {
+			$new_group_notification_key = 'sent_new_group_notification';
+			if ( get_post_meta( $meetup->ID, $new_group_notification_key, true ) ) {
 				return null;
 			}
 			// Not translating strings here because these will be sent to Slack.
@@ -526,8 +525,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			$message = sprintf(
 				"Let's welcome the new WordPress meetup group%s%s, to the chapter! :tada: :community: :wordpress:\n%s",
-				! empty( $city ) ? " in $city," : '',
-				! empty( $organizer_slack ) ? " organized by @$organizer_slack" : '',
+				empty( $city ) ? '' : " in $city,",
+				empty( $organizer_slack ) ? '' : " organized by @$organizer_slack",
 				$meetup_link
 			);
 

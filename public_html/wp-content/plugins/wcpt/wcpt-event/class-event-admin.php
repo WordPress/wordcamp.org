@@ -258,8 +258,7 @@ abstract class Event_Admin {
 	 *
 	 * @return string
 	 */
-	// phpcs:ignore WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid
-	public function set_locale_to_en_US() {
+	public function set_locale_to_en_us() {
 		return 'en_US';
 	}
 
@@ -280,7 +279,7 @@ abstract class Event_Admin {
 		}
 
 		// Ensure status labels are in English.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		add_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
 
 		$old_status = get_post_status_object( $old_status );
 		$new_status = get_post_status_object( $new_status );
@@ -302,7 +301,7 @@ abstract class Event_Admin {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		remove_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
 	}
 
 	/**
@@ -335,9 +334,8 @@ abstract class Event_Admin {
 	 * @return null|bool|string
 	 */
 	public static function send_decline_notification( $event_id, $label, $location ) {
-		$declined_notification_key = 'Sent declined notification';
-		$already_notified          = get_post_meta( $event_id, $declined_notification_key, true );
-		if ( $already_notified ) {
+		$declined_notification_key = 'sent_declined_notification';
+		if ( get_post_meta( $event_id, $declined_notification_key, true ) ) {
 			return null;
 		}
 

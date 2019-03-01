@@ -218,8 +218,14 @@ class SponsorBlockControls extends BlockControls {
 						return false;
 					}
 				);
+				break;
 			default:
 				break;
+		}
+
+		if ( Array.isArray( fetchedPosts ) && fetchedPosts.length ) {
+			// Temp for testing.
+			selectedPosts = fetchedPosts;
 		}
 
 		return (

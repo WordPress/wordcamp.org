@@ -105,20 +105,46 @@ export default class FeaturedImage extends Component {
 	 */
 	getSizedUrl( height, width ) {
 		const { sizes } = this.state;
-		// Reject all the images with less height or width then 20px.
-		const possibleImages = sizes.filter( ( size ) => {
-				if ( size.height < height - 20 || size.width < width - 20 ) {
-					return false;
+
+		// Lets loop through all possible images, see if we have an image that matches out aspect ration. if we have, we will return it. Also keep track of image which has the most closest aspect ration.
+		let smallestImage;
+		let selectedImage;
+		const requiredAspectRatio = width / height;
+
+		sizes.each( ( size ) =>
+			{
+				if ( selectedImage ) {
+					// We have already found our required image.
+					return;
+				}
+
+				// Reject all the images with less height or width then 20px.
+				if ( size.height < height - 20 || size.width < width - 20) {
+					return;
+				}
+
+				// Keep track of smallest image that is similar or bigger than our requirments. In case we won't find any image with similar aspect ratio, we will use this.
+				if ( ! smallestImage ) {
+					smallestImage = size;
+				}
+
+				if (size.aspectRatio > requiredAspectRatio - 0.25 &&
+					size.aspectRatio < requiredAspectRatio + 0.25) {
+					// This image has similar aspect ratio to what we need. Also, since possibleImage array is sorted from lowest size, this is also the lowest size image that we can use. Lets go ahead and use this image.
+					selectedImage = size;
 				}
 			}
 		);
 
-		// All images are small, lets just return the largest image url.
-		if ( ! possibleImages.length ) {
-			return sizes[ sizes.length - 1 ].source_url;
+		if ( selectedImage ) {
+			return selectedImage;
+		} else if ( smallestImage ) {
+			return smallestImage;
+		} else {
+			// All images are small, lets just return the largest image url.
+			return sizes[ sizes.length - 1 ];
 		}
 
-		// Lets loop through all available images, keep track of the aspect
 	}
 
 	render() {
@@ -126,7 +152,7 @@ export default class FeaturedImage extends Component {
 		return(
 			<img
 				className={ classnames( 'featured-image', className ) }
-				src = { this.getSizedUrl() }
+				src = { get( this.getSizedUrl(), 'source_url', '' ) }
 				alt = { alt }
 			/>
 		)

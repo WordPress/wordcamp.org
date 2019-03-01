@@ -34,7 +34,7 @@ function SponsorPostOption( sponsor ) {
 					width={24}
 					height={24}
 					src={ imageUrl }
-					alt={sponsor.label + " Logo"}
+					alt={ sponsor.label }
 				/>
 			}
 			{ sponsor.label }
@@ -85,6 +85,7 @@ class SponsorBlockControls extends BlockControls {
 					}
 				);
 				if ( this.isStillMounted ) {
+					this.setState( { fetchedPosts } );
 					this.setState( { posts } );
 				}
 			}
@@ -104,6 +105,7 @@ class SponsorBlockControls extends BlockControls {
 				} );
 
 				if ( this.isStillMounted ) {
+					this.setState( { fetchedTerms } );
 					this.setState( { terms } );
 				}
 			}
@@ -162,8 +164,6 @@ class SponsorBlockControls extends BlockControls {
 	 */
 	buildSelectOptions() {
 		const { posts, terms } = this.state;
-		const { attributes } = this.props;
-		const { mode } = attributes;
 		const options = [];
 
 		options.push( {
@@ -184,12 +184,13 @@ class SponsorBlockControls extends BlockControls {
 	 */
 	render() {
 		const { sponsorPosts, attributes } = this.props;
-		const { mode } = attributes;
-
-		const hasPosts = Array.isArray( sponsorPosts ) && sponsorPosts.length;
+		const { mode, post_ids, term_ids } = attributes;
+		const { fetchedPosts } = this.state;
+		const hasPosts = Array.isArray( fetchedPosts ) && fetchedPosts.length;
 
 		// Check if posts are still loading.
 		if ( mode && ! hasPosts ) {
+
 			return (
 				<PlaceholderNoContent
 					label = { LABEL }
@@ -200,43 +201,58 @@ class SponsorBlockControls extends BlockControls {
 			)
 		}
 
-		let output;
+		let selectedPosts = [];
 
 		switch ( mode ) {
 			case 'all' :
-				output = (
-					<SponsorBlockContent { ...this.props } />
+				selectedPosts = fetchedPosts;
+				break;
+			case 'specific_posts' :
+				selectedPosts = fetchedPosts.filter( ( post ) => {
+						return post_ids.indexOf( post.id ) !== -1;
+					}
 				);
 				break;
+			case 'specific_terms' :
+				selectedPosts = fetchedPosts.filter( ( post ) => {
+						return false;
+					}
+				);
 			default:
-				output = (
-					<CustomPostTypeSelect
-						buildSelectOptions = {
-							() => {
-								return this.buildSelectOptions()
-							}
-						}
-						isLoading = { this.state.loading }
-						onChange = {
-							() => {
-								return this.onChange.apply( arguments );
-							}
-						}
-						selectProps = {
-							{
-								formatOptionLabel: ( optionData ) => {
-									return (
-										<SponsorOption { ...optionData } />
-									);
-								}
-							}
-						}
-						{ ...this.props }
-					/>
-				)
+				break;
 		}
 
-		return output;
+		return (
+			<div>
+				<SponsorBlockContent
+					selectedPosts = { selectedPosts }
+					{ ...this.props }
+				/>
+				<CustomPostTypeSelect
+					buildSelectOptions = {
+						() => {
+							return this.buildSelectOptions()
+						}
+					}
+					isLoading = { this.state.loading }
+					onChange = {
+						( selectedOptions ) => {
+							return this.onChange( selectedOptions );
+						}
+					}
+					selectProps = {
+						{
+							formatOptionLabel : ( optionData ) => {
+								return (
+									<SponsorOption { ...optionData } />
+								);
+							}
+						}
+					}
+					{ ...this.props }
+				/>
+			</div>
+		);
 	}
 
 }

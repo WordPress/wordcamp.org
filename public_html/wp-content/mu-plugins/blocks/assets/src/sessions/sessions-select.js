@@ -133,7 +133,9 @@ class SessionsSelect extends Component {
 		let value = [];
 
 		if ( mode && item_ids.length ) {
-			value = options[ 0 ].options.filter( ( option ) => {
+			const modeOptions = get( options, '[0].options', [] );
+
+			value = modeOptions.filter( ( option ) => {
 				return includes( item_ids, option.value );
 			} );
 		}

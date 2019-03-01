@@ -269,7 +269,7 @@ class WordCamp_Forms_To_Drafts {
 	 *   taxonomy and the selected term is applied to the drafted post. Maybe need to send PR to add filter to
 	 *   insert custom fields programmatically.
 	 * - Sideload the logo from submitted URL and set it as the featured image.
-	 * - Add a Company Description field to the form stub, or populate content from something else?
+	 * - Add a Company Description field to the Call For Sponsors form stub, or populate content from something else?
 	 * - Also ensure content is formatted for the block editor.
 	 *
 	 * @param int   $submission_id

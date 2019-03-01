@@ -380,7 +380,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_speaker( $speaker ) {
-		$content = ( ! empty( $speaker['Your Bio'] ) ) ?: '';
+		$content = ( ! empty( $speaker['Your Bio'] ) ) ? $speaker['Your Bio'] : '';
 
 		if ( $content ) {
 			$content = wpautop( $content );
@@ -416,7 +416,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int | WP_Error
 	 */
 	protected function create_draft_session( $session, $speaker ) {
-		$content = ( ! empty( $session['Topic Description'] ) ) ?: '';
+		$content = ( ! empty( $session['Topic Description'] ) ) ? $session['Topic Description'] : '';
 
 		if ( $content ) {
 			$content = wpautop( $content );

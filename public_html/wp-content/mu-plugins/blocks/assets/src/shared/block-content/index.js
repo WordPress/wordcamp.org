@@ -4,53 +4,170 @@
 import { get } from 'lodash';
 import classnames from 'classnames';
 
-
 /**
  * WordPress dependencies
  */
-const { __, _x, sprintf } = wp.i18n;
-const { decodeEntities } = wp.htmlEntities;
+const { __ } = wp.i18n;
 
+/**
+ * Split a string into an array with sprintf-style tokens as the delimiter.
+ *
+ * Including the entire match as a capture group causes the tokens to be included in the array
+ * as separate items instead of being removed.
+ *
+ * This allows translated strings, which may contain tokens in different positions than they have
+ * in English, to be manipulated, modified, and included as an array of child elements in a
+ * React template.
+ *
+ * See also arrayTokenReplace
+ *
+ * Example:
+ *
+ *   tokenSplit( 'I accuse %1$s in the %2$s with the %3$s!' )
+ *
+ *   becomes
+ *
+ *   [ 'I accuse ', '%1$s', ' in the ', '%2$s', ' with the ', '%3$s', '!' ]
+ *
+ * @param {String} string
+ *
+ * @returns {Array}
+ */
+export function tokenSplit( string ) {
+	const regex = /(%[1-9]?\$?[sd]+)/;
 
-export function arrayToHumanReadableList( array ) {
+	return string.split( regex );
+}
+
+/**
+ * Replace array items that are sprintf-style tokens with argument values.
+ *
+ * This allows tokens to be replaced with complex objects such as React elements, instead of just strings.
+ * This way, for example, a translation can include both plain strings and HTML and be inserted as an array
+ * of child elements into a React template without having to use RawHTML.
+ *
+ * See also tokenSplit
+ *
+ * Example:
+ *
+ *   arrayTokenReplace(
+ *       [ 'I accuse ', '%1$s', ' in the ', '%2$s', ' with the ', '%3$s', '!' ],
+ *       [ 'Professor Plum', 'Conservatory', 'Wrench' ]
+ *   )
+ *
+ *   becomes
+ *
+ *   [ 'I accuse ', 'Professor Plum', ' in the ', 'Conservatory', ' with the ', 'Wrench', '!' ]
+ *
+ * @param {Array} source
+ * @param {Array} args
+ *
+ * @returns {Array}
+ */
+export function arrayTokenReplace( source, args ) {
+	let specificArgIndex,
+		nextArgIndex = 0;
+
+	return source.flatMap( ( value ) => {
+		const regex = /^%([1-9])?\$?[sd]+$/;
+		const match = value.match( regex );
+
+		if ( Array.isArray( match ) ) {
+			if ( match.length > 1 && 'undefined' !== typeof match[1] ) {
+				specificArgIndex = Number( match[1] ) - 1;
+
+				if ( 'undefined' !== typeof args[ specificArgIndex ] ) {
+					value = args[ specificArgIndex ];
+				}
+			} else {
+				value = args[ nextArgIndex ];
+
+				nextArgIndex ++;
+			}
+		}
+
+		return value;
+	} );
+}
+
+/**
+ * Insert a separator item in between each item in an array.
+ *
+ * See https://stackoverflow.com/a/23619085/402766
+ *
+ * @param {Array} array
+ * @param {String} separator
+ *
+ * @returns {Array}
+ */
+export function intersperse( array, separator ) {
+	if ( ! array.length ) {
+		return [];
+	}
+
+	return array
+		.slice( 1 )
+		.reduce(
+			( accumulator, curValue, curIndex ) => {
+				const sep = ( typeof separator === 'function' ) ? sep( curIndex ) : separator;
+
+				return accumulator.concat( [ sep, curValue ] );
+			},
+			[ array[0] ]
+		);
+}
+
+/**
+ * Add proper list grammar to an array of strings.
+ *
+ * Insert punctuation and conjunctions in between array items so that when it is joined into
+ * a single string, it is a human-readable list.
+ *
+ * Example:
+ *
+ *   listify( [ '<em>apples</em>', '<strong>oranges</strong>', '<del>bananas</del>' ] )
+ *
+ *   becomes
+ *
+ *   [ '<em>apples</em>', ', ', '<strong>oranges</strong>', ', ', ' and ', '<del>bananas</del>' ]
+ *
+ *   so that when the array is joined, it becomes
+ *
+ *   '<em>apples</em>, <strong>oranges</strong>, and <del>bananas</del>'
+ *
+ * @param {Array} array
+ *
+ * @returns {Array}
+ */
+export function listify( array ) {
+	let list = [];
+
+	/* translators: used between list items, there is a space after the comma */
+	const separator = __( ', ', 'wordcamporg' );
+	/* translators: preceding the last item in a list, there are spaces on both sides */
+	const conjunction = __( ' and ', 'wordcamporg' );
+
 	if ( ! Array.isArray( array ) ) {
-		return '';
+		return list;
 	}
 
 	const count = array.length;
-	let list = '';
 
 	switch ( count ) {
 		case 0:
 			break;
 		case 1:
-			[ list ] = array;
+			list = array;
 			break;
 		case 2:
-			const [ first, second ] = array;
-			list = sprintf(
-				/* translators: Each %s is a person's name. */
-				_x( '%1$s and %2$s', 'list of two items', 'wordcamporg' ),
-				first,
-				second
-			);
+			list = intersperse( array, conjunction );
 			break;
 		default:
-			/* translators: used between list items, there is a space after the comma */
-			const item_separator = __( ', ', 'wordcamporg' );
 			let [ last, ...initial ] = [ ...array ].reverse();
 
-			initial = initial.join( item_separator ) + item_separator;
-
-			list = sprintf(
-				/* translators: 1: A list of items. 2: The last item in a list of items. */
-				_x( '%1$s and %2$s', 'list of three or more items', 'wordcamporg' ),
-				initial,
-				last
-			);
+			list = intersperse( initial, separator ).concat( [ separator, conjunction, last ] );
 			break;
 	}
 
 	return list;
 }
-

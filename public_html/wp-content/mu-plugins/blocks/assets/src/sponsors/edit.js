@@ -28,15 +28,18 @@ class SponsorsEdit extends Component {
 	/**
 	 * Renders SponsorEdit component.
 	 */
-	render() {
-
+	render() {;
 		const { mode } = this.props.attributes;
+		console.log("Attributes are: ", this.props.attributes);
 
 		return (
 			<Fragment>
-				<SponsorBlocksControls
-					{ ...this.props }
-				/>
+				{
+					'all' !== mode &&
+					<SponsorBlocksControls
+						{ ...this.props }
+					/>
+				}
 				<Fragment>
 					<SponsorInspectorControls {...this.props} />
 				</Fragment>

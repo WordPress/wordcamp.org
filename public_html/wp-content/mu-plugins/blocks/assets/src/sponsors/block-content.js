@@ -29,7 +29,6 @@ class SponsorBlockContent extends Component {
 	render() {
 		const { selectedPosts, attributes } = this.props;
 		const { featuredImageSize } = attributes;
-		console.log("rendering now...", featuredImageSize);
 		return (
 			<ul>
 				{

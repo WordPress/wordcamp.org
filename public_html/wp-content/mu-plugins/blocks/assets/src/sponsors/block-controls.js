@@ -190,7 +190,6 @@ class SponsorBlockControls extends BlockControls {
 
 		// Check if posts are still loading.
 		if ( mode && ! hasPosts ) {
-
 			return (
 				<PlaceholderNoContent
 					label = { LABEL }
@@ -221,11 +220,6 @@ class SponsorBlockControls extends BlockControls {
 				break;
 			default:
 				break;
-		}
-
-		if ( Array.isArray( fetchedPosts ) && fetchedPosts.length ) {
-			// Temp for testing.
-			selectedPosts = fetchedPosts;
 		}
 
 		return (

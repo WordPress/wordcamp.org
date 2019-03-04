@@ -14,6 +14,7 @@ function load() {
 	require_once PLUGIN_DIR . 'includes/shared.php';
 	require_once PLUGIN_DIR . 'includes/sessions.php';
 	require_once PLUGIN_DIR . 'includes/speakers.php';
+	require_once PLUGIN_DIR . 'includes/sponsors.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );

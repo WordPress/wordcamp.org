@@ -15,7 +15,6 @@ class SponsorInspectorControls extends Component {
 	setFeaturedImageSize( value ) {
 		const { setAttributes } = this.props;
 		const { height, width } = SponsorInspectorControls.getSizeChart()[ value ];
-		console.log("Setting attr: ", height, width, value);
 		setAttributes( { featuredImageSize: { height, width } } );
 	}
 

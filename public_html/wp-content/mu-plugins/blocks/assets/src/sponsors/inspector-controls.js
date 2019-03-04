@@ -3,7 +3,7 @@
  */
 const { Component, Fragment } = wp.element;
 const { InspectorControls } = wp.editor;
-const { PanelBody } = wp.components;
+const { PanelBody, PanelRow, SelectControl } = wp.components;
 const { __ } = wp.i18n;
 
 
@@ -12,12 +12,25 @@ const { __ } = wp.i18n;
  */
 class SponsorInspectorControls extends Component {
 
+	setFeaturedImageSize( value ) {
+		const { setAttributes } = this.props;
+		const { height, width } = SponsorInspectorControls.getSizeChart()[ value ];
+		console.log("Setting attr: ", height, width, value);
+		setAttributes( { featuredImageSize: { height, width } } );
+	}
+
 	/**
 	 * Renders inspector controls.
 	 */
 	render() {
 
 		const { attributes, setAttributes } = this.props;
+		const { featuredImageSize } = attributes;
+		const featuredImageSizeOptions = [
+			{ label: __( 'Small', 'wordcamporg' ), value: 's' },
+			{ label: __( 'Medium', 'wordcamporg' ), value: 'm' },
+			{ label: __( 'Large', 'wordcamporg' ), value: 'l' },
+		];
 
 		return (
 			<InspectorControls>
@@ -25,12 +38,16 @@ class SponsorInspectorControls extends Component {
 					title = { __( 'Content Settings' ) }
 					initialOpen = { true }
 				>
+					<PanelRow>
+						Featured Image Size
+					</PanelRow>
+					<PanelRow>
+
+					</PanelRow>
 				</PanelBody>
 			</InspectorControls>
 		)
-
 	}
-
 }
 
 export default SponsorInspectorControls;

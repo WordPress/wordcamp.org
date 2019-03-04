@@ -37,11 +37,9 @@ class SponsorsEdit extends Component {
 				<SponsorBlocksControls
 					{ ...this.props }
 				/>
-				{ mode &&
 				<Fragment>
 					<SponsorInspectorControls {...this.props} />
 				</Fragment>
-				}
 			</Fragment>
 		)
 	}

@@ -4,14 +4,14 @@ import FeaturedImage from '../shared/featured-image';
 
 const { Component } = wp.element;
 
-function SponsorDetail( { sponsorPost } ) {
+function SponsorDetail( { sponsorPost, featuredImageSize } ) {
 	const featuredImageSizes = get( sponsorPost, "_embedded.wp:featuredmedia[0].media_details.sizes", {} );
 
 	return (
 		<div className={"wordcamp-sponsor-details"}>
 			<FeaturedImage
 				wpMediaDetails = { featuredImageSizes }
-				size = { 'm' }
+				size = { featuredImageSize }
 				alt = { sponsorPost.title.rendered }
 			/>
 			<div className={"wordcamp-sponsor-name"}>
@@ -27,13 +27,18 @@ function SponsorDetail( { sponsorPost } ) {
 class SponsorBlockContent extends Component {
 
 	render() {
-		const { selectedPosts } = this.props;
+		const { selectedPosts, attributes } = this.props;
+		const { featuredImageSize } = attributes;
+		console.log("rendering now...", featuredImageSize);
 		return (
 			<ul>
 				{
 					selectedPosts.map( ( post ) => {
 						return (
-							<SponsorDetail sponsorPost={ post }/>
+							<SponsorDetail
+								sponsorPost={ post }
+								featuredImageSize={ featuredImageSize }
+							/>
 						)
 					} )
 				}

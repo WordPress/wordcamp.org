@@ -32,9 +32,8 @@ export default class FeaturedImage extends Component {
 	 * 		}
 	 * 		...
 	 * ]
-	 * @param props.size Size of image. Supported values are "icon, thumbnail, s, m, l, xl, max".
 	 * @param props.height Height in pixels for image.
-	 * @param props.width Width in pixels for image. If both height and width are provided then they take precedence over `size`.
+	 * @param props.width Width in pixels for image.
 	 * @param props.className Classname for image element
 	 * @param props.alt Alt text for image
 	 */
@@ -87,10 +86,10 @@ export default class FeaturedImage extends Component {
 
 		// Lets sort the available images based on area and then aspect ratio.
 		sizes.sort( ( size1, size2 ) => {
-				if ( size1.aspectRatio < size2.aspectRatio ) {
+				if ( size1.area < size2.area ) {
 					return -1;
-				} else if ( size1.aspectRatio === size2.aspectRatio ) {
-					return size1.area < size2.area ? -1 : 1;
+				} else if ( size1.area === size2.area ) {
+					return size1.aspectRatio < size2.aspectRatio ? -1 : 1;
 				} else {
 					return 1;
 				}
@@ -103,17 +102,6 @@ export default class FeaturedImage extends Component {
 				...this.state
 			}
 		);
-	}
-
-	static getSizeChart() {
-		return {
-			'icon'      : { height: 20, width: 20 },
-			'thumbnail' : { height: 150, width: 150 },
-			's'         : { height: 44, width: 150 },
-			'm'         : { height: 87, width: 300 },
-			'l'         : { height: 296, width: 1024
-			},
-		}
 	}
 
 
@@ -146,7 +134,7 @@ export default class FeaturedImage extends Component {
 
 			// Keep track of smallest image that is similar or bigger than our requirements. In case we won't find any image with similar aspect ratio, we will use this.
 			// Since images are sorted by size, this will be the first image that is not rejected by the size filter above.
-			if (!smallestImage) {
+			if ( ! smallestImage ) {
 				smallestImage = size;
 			}
 
@@ -175,19 +163,13 @@ export default class FeaturedImage extends Component {
 	 * @returns {*}
 	 */
 	render() {
-		const { className, alt, size } = this.props;
+		const { className, alt } = this.props;
 
-		let imageSize;
-		if ( size ) {
-			imageSize = FeaturedImage.getSizeChart()[ size ];
-		} else {
-			imageSize = this.props || { height: 150, width: 150 };
-		}
+		const imageSize = this.props.size || { height: 150, width: 150 };
 
 		const { height, width } = imageSize;
 
 		const imageURL = this.getSizedUrl( height, width );
-
 		return(
 			<img
 				className={ classnames( 'featured-image', className ) }

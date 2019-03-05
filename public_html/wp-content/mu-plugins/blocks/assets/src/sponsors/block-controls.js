@@ -183,10 +183,11 @@ class SponsorBlockControls extends BlockControls {
 	 * Renders Sponsor Block Control view
 	 */
 	render() {
-		const { sponsorPosts, attributes } = this.props;
+		const { sponsorPosts, attributes, setAttributes } = this.props;
 		const { mode, post_ids, term_ids } = attributes;
 		const { fetchedPosts } = this.state;
 		const hasPosts = Array.isArray( fetchedPosts ) && fetchedPosts.length;
+		console.log("This called.. Attr are: ", attributes );
 
 		// Check if posts are still loading.
 		if ( mode && ! hasPosts ) {
@@ -249,6 +250,11 @@ class SponsorBlockControls extends BlockControls {
 							}
 						}
 					}
+					onButtonClick = { () => { setAttributes( { mode: 'all' } ); } }
+					buttonLabel = { __( 'List all sponsors', 'wordcamporg' ) }
+					iconName = "heart"
+					label = { __( 'Sponsors', 'wordcamporg' ) }
+					selectLabel = { __( 'Choose specific speakers or levels', 'wordcamporg' ) }
 					{ ...this.props }
 				/>
 			</div>

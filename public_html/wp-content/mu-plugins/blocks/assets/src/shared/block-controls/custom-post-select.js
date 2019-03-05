@@ -1,19 +1,15 @@
 /**
- * External dependencies.
- */
-import { includes } from 'lodash';
-
-
-/**
  * WordPress dependencies.
  */
 const { __ } = wp.i18n;
 const { Component } = wp.element;
+const { Button, Placeholder, Spinner } = wp.components;
 
 /**
  * Internal dependencies.
  */
 import VersatileSelect from '../../shared/versatile-select';
+import './custom-post-select.scss';
 
 /**
  * Render select box for custom posts. At any point of time, all selected options can only belong to one group.
@@ -81,27 +77,46 @@ class CustomPostTypeSelect extends Component {
 	}
 
 	render() {
-		const { selectProps, label, buildSelectOptions, selectClassname, onChange } = this.props;
+		const {
+			selectProps, selectLabel, buildSelectOptions, selectClassname, onChange, iconName, label, placeholderClassname, onButtonClick, buttonLabel
+		} = this.props;
 
 		const options = buildSelectOptions();
 		let value = [];
 		return (
-			<VersatileSelect
-				className={ selectClassname }
+			<Placeholder
+				icon={ iconName }
 				label = { label }
-				value = { value }
-				selectProps = {
-					{
-						options: options,
-						isMulti: true,
-						isOptionDisabled: ( option, selected ) => {
-							return this.isOptionDisabled( option, selected);
-						},
-						...selectProps
-					}
-				}
-				onChange= { onChange }
-			/>
+				className = { placeholderClassname }
+			>
+				<div className='wordcamp-component-custom-post-select-button-container' >
+					<Button
+						isDefault
+						isLarge
+						onClick = { onButtonClick }
+					>
+						{ buttonLabel }
+					</Button>
+				</div>
+				<div className='wordcamp-component-custom-post-select-container' >
+					<VersatileSelect
+						className={ selectClassname }
+						label = { selectLabel }
+						value = { value }
+						selectProps = {
+							{
+								options: options,
+								isMulti: true,
+								isOptionDisabled: ( option, selected ) => {
+									return this.isOptionDisabled( option, selected);
+								},
+								...selectProps
+							}
+						}
+						onChange= { onChange }
+					/>
+				</div>
+			</Placeholder>
 		)
 	}
 }

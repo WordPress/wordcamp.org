@@ -2,7 +2,7 @@
  * Displays sponsor block.
  */
 import SponsorInspectorControls from './inspector-controls';
-import SponsorBlocksControls from './block-controls';
+import SponsorBlockControls from './block-controls';
 
 /**
  WordPress dependencies.
@@ -30,13 +30,11 @@ class SponsorsEdit extends Component {
 	 */
 	render() {;
 		const { mode } = this.props.attributes;
-		console.log("Attributes are: ", this.props.attributes);
 
 		return (
 			<Fragment>
 				{
-					'all' !== mode &&
-					<SponsorBlocksControls
+					<SponsorBlockControls
 						{ ...this.props }
 					/>
 				}

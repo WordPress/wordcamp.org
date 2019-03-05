@@ -128,9 +128,9 @@ const sessionsSelect = ( select, props ) => {
 	let sessionPosts = getEntityRecords( 'postType', 'wcb_session', sessionsQuery );
 
 	// todo Is there a way to do this filtering and sorting via REST API parameters?
-	if ( filter_date && date ) {
+	if ( Array.isArray( sessionPosts ) && filter_date && date ) {
 		sessionPosts.filter( ( session ) => {
-			const { _wcpt_session_time } = session;
+			const { _wcpt_session_time } = session.meta;
 			const startDate = new Date( date );
 			const endDate = new Date( date ).setDate( startDate.getDate() + 1 );
 
@@ -138,9 +138,9 @@ const sessionsSelect = ( select, props ) => {
 		} );
 	}
 
-	if ( 'session_time' === sort ) {
+	if ( Array.isArray( sessionPosts ) && 'session_time' === sort ) {
 		sessionPosts.sort( ( a, b ) => {
-			return Number( a._wcpt_session_time ) - Number( b._wcpt_session_time );
+			return Number( a.meta._wcpt_session_time ) - Number( b.meta._wcpt_session_time );
 		} );
 	}
 

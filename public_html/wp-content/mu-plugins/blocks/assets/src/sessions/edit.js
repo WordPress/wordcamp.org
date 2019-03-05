@@ -129,12 +129,13 @@ const sessionsSelect = ( select, props ) => {
 
 	// todo Is there a way to do this filtering and sorting via REST API parameters?
 	if ( Array.isArray( sessionPosts ) && filter_date && date ) {
-		sessionPosts.filter( ( session ) => {
-			const { _wcpt_session_time } = session.meta;
-			const startDate = new Date( date );
-			const endDate = new Date( date ).setDate( startDate.getDate() + 1 );
+		const filterDate = new Date( date ).getDate();
 
-			return _wcpt_session_time >= startDate && _wcpt_session_time <= endDate;
+		sessionPosts = sessionPosts.filter( ( session ) => {
+			const { _wcpt_session_time } = session.meta;
+			const sessionDate = new Date( _wcpt_session_time * 1000 ).getDate();
+
+			return sessionDate === filterDate;
 		} );
 	}
 

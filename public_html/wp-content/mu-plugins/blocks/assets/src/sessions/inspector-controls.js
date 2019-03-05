@@ -14,7 +14,7 @@ import ImageAlignmentControl from '../shared/image-alignment';
 class SessionsInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes, blockData } = this.props;
-		const { show_speaker, show_images, image_size, image_align, content, excerpt_more, show_meta, show_category, sort, filter_date } = attributes;
+		const { show_speaker, show_images, image_size, image_align, content, excerpt_more, show_meta, show_category, sort, filter_date, date } = attributes;
 		const { start_date, options, schema } = blockData;
 
 		return(
@@ -81,7 +81,7 @@ class SessionsInspectorControls extends Component {
 						<Fragment>
 							<PanelRow>
 								<ToggleControl
-									label={ __( 'Date filter', 'wordcamporg' ) }
+									label={ __( 'Filter by date', 'wordcamporg' ) }
 									help={ __( 'Show sessions from a specific date.', 'wordcamporg' ) }
 									checked={ filter_date }
 									onChange={ ( value ) => setAttributes( { filter_date: value } ) }

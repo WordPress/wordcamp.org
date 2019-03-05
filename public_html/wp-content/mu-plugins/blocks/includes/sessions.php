@@ -105,7 +105,7 @@ function get_attributes_schema() {
 		'sort'          => [
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
-			'default' => 'title_asc',
+			'default' => 'session_time',
 		],
 		'filter_date'   => [
 			'type'    => 'bool',
@@ -223,7 +223,7 @@ function get_options( $type = '' ) {
 		],
 		'sort'    => [
 			[
-				'label' => _x( 'Session Time', 'sort option', 'wordcamporg' ),
+				'label' => _x( 'Day and Time', 'sort option', 'wordcamporg' ),
 				'value' => 'session_time',
 			],
 			[

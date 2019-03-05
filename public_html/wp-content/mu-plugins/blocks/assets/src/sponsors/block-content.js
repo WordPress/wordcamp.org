@@ -1,5 +1,5 @@
 import { get } from 'lodash';
-import RawHTML from '@wordpress/element/build-module/raw-html';
+const { RawHTML } = wp.element;
 import FeaturedImage from '../shared/featured-image';
 
 const { Component } = wp.element;

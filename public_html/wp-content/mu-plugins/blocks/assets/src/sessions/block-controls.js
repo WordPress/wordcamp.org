@@ -25,9 +25,7 @@ class SessionsBlockControls extends BlockControls {
 				<PlaceholderNoContent
 					icon={ icon }
 					label={ LABEL }
-					loading={ () => {
-						return ! Array.isArray( sessionPosts );
-					} }
+					loading={ ! Array.isArray( sessionPosts ) }
 				/>
 			);
 		}

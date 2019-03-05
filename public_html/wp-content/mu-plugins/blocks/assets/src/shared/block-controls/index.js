@@ -3,6 +3,7 @@
  */
 const { Placeholder, Spinner } = wp.components;
 const { Component, Fragment } = wp.element;
+const { __ } = wp.i18n;
 
 export class BlockControls extends Component {
 	constructor( props ) {

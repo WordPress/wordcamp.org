@@ -247,18 +247,13 @@ class SponsorBlockControls extends BlockControls {
 		}
 
 		let selectedOptions = [];
-		let showPosts = [];
 
 		switch ( mode ) {
 			case 'all' :
-				showPosts = fetchedPosts;
 				break;
 			case 'specific_posts' :
 				selectedOptions = posts.filter( ( post ) => {
 					return includes( post_ids, post.value );
-				} );
-				showPosts = fetchedPosts.filter( ( post ) => {
-					return includes( post_ids, post.id );
 				} );
 				break;
 			case 'specific_terms' :
@@ -304,6 +299,7 @@ class SponsorBlockControls extends BlockControls {
 					iconName = "heart"
 					label = { __( 'Sponsors', 'wordcamporg' ) }
 					selectLabel = { __( 'Choose specific speakers or levels', 'wordcamporg' ) }
+					selectedOptions = { selectedOptions }
 					{ ...this.props }
 				/>
 			</div>

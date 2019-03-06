@@ -98,6 +98,7 @@ class SponsorBlockControls extends BlockControls {
 					break;
 			}
 		}
+		console.log("This called. Selected posts: ", selectedPosts );
 		this.setState( { selectedPosts } );
 	}
 

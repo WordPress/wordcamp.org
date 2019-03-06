@@ -35,6 +35,32 @@ function get_attribute_schema() {
 				'type' => 'integer',
 			),
 		),
+		'show_name' => array(
+			'type' => 'bool',
+			'default' => true,
+		),
+		'show_logo' => array(
+			'type' => 'bool',
+			'default' => true,
+		),
+		'show_desc' => array(
+			'type' => 'bool',
+			'default' => true,
+		),
+		'columns' => array(
+			'type' => 'integer',
+			'minimum' => 1,
+			'maximum' => 4,
+			'default' => 1
+		),
+		'sponsor_logo_height' => array(
+			'type' => 'integer',
+			'default' => 150
+		),
+		'sponsor_logo_width' => array(
+			'type' => 'integer',
+			'default' => 150
+		),
 	);
 }
 

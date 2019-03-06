@@ -175,8 +175,8 @@ export default class FeaturedImage extends Component {
 				className={ classnames( 'featured-image', className ) }
 				src = { imageURL }
 				alt = { alt }
-				height={ height }
-				width={ width }
+				style = { { height: height + "px"} }
+				width={ width + 'px' }
 			/>
 		)
 	}

@@ -269,39 +269,47 @@ class SponsorBlockControls extends BlockControls {
 			<div>
 
 				<SponsorBlockContent
-					selectedPosts={selectedPosts}
+					selectedPosts={ selectedPosts }
 					{...this.props}
 				/>
 
+				{'all' !== mode &&
 				<CustomPostTypeSelect
-					buildSelectOptions = {
+					buildSelectOptions={
 						() => {
 							return this.buildSelectOptions()
 						}
 					}
-					isLoading = { this.state.loading }
-					onChange = {
-						( selectedOptions ) => {
-							return this.onChange( selectedOptions );
+					isLoading={this.state.loading}
+					onChange={
+						(selectedOptions) => {
+							return this.onChange(selectedOptions);
 						}
 					}
-					selectProps = {
+					selectProps={
 						{
-							formatOptionLabel : ( optionData ) => {
+							formatOptionLabel: (optionData) => {
 								return (
-									<SponsorOption { ...optionData } />
+									<SponsorOption {...optionData} />
 								);
 							}
 						}
 					}
-					onButtonClick = { () => { setAttributes( { mode: 'all' } ); } }
-					buttonLabel = { __( 'List all sponsors', 'wordcamporg' ) }
-					iconName = "heart"
-					label = { __( 'Sponsors', 'wordcamporg' ) }
-					selectLabel = { __( 'Choose specific speakers or levels', 'wordcamporg' ) }
-					selectedOptions = { selectedOptions }
-					{ ...this.props }
+					onButtonClick={
+						() => {
+							setAttributes( { mode: 'all' } );
+							setTimeout( () => this.setSelectedPosts() );
+						}
+					}
+					buttonLabel={__('List all sponsors', 'wordcamporg')}
+					iconName="heart"
+					label={__('Sponsors', 'wordcamporg')}
+					selectLabel={__('Choose specific speakers or levels',
+						'wordcamporg')}
+					selectedOptions={selectedOptions}
+					{...this.props}
 				/>
+				}
 			</div>
 		);
 	}

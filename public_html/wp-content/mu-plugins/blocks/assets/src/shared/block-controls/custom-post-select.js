@@ -78,11 +78,11 @@ class CustomPostTypeSelect extends Component {
 
 	render() {
 		const {
-			selectProps, selectLabel, buildSelectOptions, selectClassname, onChange, iconName, label, placeholderClassname, onButtonClick, buttonLabel
+			selectProps, selectLabel, buildSelectOptions, selectClassname, onChange, iconName, label, placeholderClassname, onButtonClick, buttonLabel, selectedOptions
 		} = this.props;
 
 		const options = buildSelectOptions();
-		let value = [];
+		let value = selectedOptions || [];
 		return (
 			<Placeholder
 				icon={ iconName }

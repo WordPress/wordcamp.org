@@ -1,4 +1,4 @@
-import { get } from 'lodash';
+import { get, includes, intersection } from 'lodash';
 
 /**
  * WordPress dependencies.
@@ -59,12 +59,51 @@ class SponsorBlockControls extends BlockControls {
 			posts   : [],
 			terms   : [],
 			loading : true,
+			selectedPosts : [],
 		};
 	}
 
 	/**
+	 * Set selectedPosts in state so that SponsorsContentBlock can use them.
+	 */
+	setSelectedPosts() {
+		const { fetchedPosts } = this.state;
+		const { attributes } = this.props;
+		const { post_ids, term_ids, mode } = attributes;
+
+		if ( ! fetchedPosts || ! fetchedPosts.length ) {
+			return;
+		}
+
+		const selectedPosts = [];
+		for ( const post of fetchedPosts ) {
+			if ( ! post.hasOwnProperty( 'id' ) ) {
+				continue;
+			}
+			switch ( mode ) {
+				case 'all':
+					selectedPosts.push( post );
+					break;
+				case 'specific_posts':
+					if ( -1 !== post_ids.indexOf( post.id ) ) {
+						selectedPosts.push( post );
+					}
+					break;
+				case 'specific_terms':
+					if ( intersection( term_ids, post.sponsor_level || [] ) .length ) {
+						selectedPosts.push( post );
+					}
+					break;
+				default :
+					break;
+			}
+		}
+		this.setState( { selectedPosts } );
+	}
+
+	/**
 	 * Initialize posts and terms arrays and sets loading state till promises
-	 * are not resolved.
+	 * are not resolved. We will also set posts and terms in array that we want to display.
 	 */
 	componentWillMount() {
 		this.isStillMounted = true;
@@ -73,7 +112,10 @@ class SponsorBlockControls extends BlockControls {
 
 		const parsedPosts = sponsorPosts.then(
 			( fetchedPosts ) => {
-				const posts = fetchedPosts.map( ( post ) => {
+
+				const posts = fetchedPosts.map(
+					( post ) => {
+
 						return {
 							label: decodeEntities(post.title.rendered.trim()) ||
 								__('(Untitled)', 'wordcamporg'),
@@ -115,6 +157,8 @@ class SponsorBlockControls extends BlockControls {
 
 		Promise.all( [ parsedPosts, parsedTerms ] ).then( () => {
 			this.setState( { loading: false } );
+			// Enqueue set selected posts in next event loop, so that state is up to date when `setSelectedPosts` method actually runs.
+			setTimeout( () => this.setSelectedPosts() );
 		} );
 	}
 
@@ -157,6 +201,8 @@ class SponsorBlockControls extends BlockControls {
 				term_ids : [],
 			} );
 		}
+
+		setTimeout( () => this.setSelectedPosts() );
 	}
 
 	/**
@@ -185,9 +231,8 @@ class SponsorBlockControls extends BlockControls {
 	render() {
 		const { sponsorPosts, attributes, setAttributes } = this.props;
 		const { mode, post_ids, term_ids } = attributes;
-		const { fetchedPosts } = this.state;
+		const { fetchedPosts, posts, terms, selectedPosts } = this.state;
 		const hasPosts = Array.isArray( fetchedPosts ) && fetchedPosts.length;
-		console.log("This called.. Attr are: ", attributes );
 
 		// Check if posts are still loading.
 		if ( mode && ! hasPosts ) {
@@ -201,23 +246,25 @@ class SponsorBlockControls extends BlockControls {
 			)
 		}
 
-		let selectedPosts = [];
+		let selectedOptions = [];
+		let showPosts = [];
 
 		switch ( mode ) {
 			case 'all' :
-				selectedPosts = fetchedPosts;
+				showPosts = fetchedPosts;
 				break;
 			case 'specific_posts' :
-				selectedPosts = fetchedPosts.filter( ( post ) => {
-						return post_ids.indexOf( post.id ) !== -1;
-					}
-				);
+				selectedOptions = posts.filter( ( post ) => {
+					return includes( post_ids, post.value );
+				} );
+				showPosts = fetchedPosts.filter( ( post ) => {
+					return includes( post_ids, post.id );
+				} );
 				break;
 			case 'specific_terms' :
-				selectedPosts = fetchedPosts.filter( ( post ) => {
-						return false;
-					}
-				);
+				selectedOptions = terms.filter( ( term ) => {
+					return includes( term_ids, term.value );
+				} );
 				break;
 			default:
 				break;
@@ -225,10 +272,12 @@ class SponsorBlockControls extends BlockControls {
 
 		return (
 			<div>
+
 				<SponsorBlockContent
-					selectedPosts = { selectedPosts }
-					{ ...this.props }
+					selectedPosts={selectedPosts}
+					{...this.props}
 				/>
+
 				<CustomPostTypeSelect
 					buildSelectOptions = {
 						() => {

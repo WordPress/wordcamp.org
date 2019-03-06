@@ -23,12 +23,17 @@ class SponsorsEdit extends Component {
 	 */
 	constructor( props ) {
 		super( props );
+		this.state = {
+			allSponsorPosts : null,
+			allSponsorTerms : null,
+			isLoading       : null,
+		}
 	}
 
 	/**
 	 * Renders SponsorEdit component.
 	 */
-	render() {;
+	render() {
 		const { mode } = this.props.attributes;
 
 		return (
@@ -47,15 +52,13 @@ class SponsorsEdit extends Component {
 }
 
 /**
- * API call for wcb_sponsor post type data.
+ * API call for wcb_sponsor post type data. Fetches all sponsor and terms posts.
  *
  * @param select
  * @param props
  */
 const sponsorSelect = ( select, props ) => {
-	const { getEntityRecords } = select( 'core' );
-
-	const { mode, post_ids, sort, term_ids } = props.attributes;
+	const { post_ids, term_ids } = props.attributes;
 
 	const sponsorQuery = {
 		orderby : 'title',
@@ -64,20 +67,12 @@ const sponsorSelect = ( select, props ) => {
 		_embed  : true,
 	};
 
-	if ( Array.isArray( post_ids ) ) {
-		sponsorQuery.include = post_ids;
-	}
-
 	const sponsorLevelQuery = {
 		orderby : 'id',
 		order: 'asc',
 		per_page: MAX_PAGE,
 		_embed: true
 	};
-
-	if ( Array.isArray( term_ids ) ) {
-		sponsorLevelQuery.include = term_ids;
-	}
 
 	return {
 		sponsorPosts: apiFetch( { path: addQueryArgs( '/wp/v2/sponsors', sponsorQuery ) } ),

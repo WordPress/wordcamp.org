@@ -14,7 +14,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 	<ul class="<?php echo esc_attr( $container_classes ); ?>">
 		<?php foreach ( $sessions as $session ) : setup_postdata( $session ); // phpcs:ignore Squiz.ControlStructures.ControlSignature ?>
 			<li class="wordcamp-session wordcamp-session-<?php echo sanitize_html_class( $session->post_name ); ?> wordcamp-clearfix">
-				<h3 class="wordcamp-session-title">
+				<h3 class="wordcamp-item-title wordcamp-session-title">
 					<a href="<?php echo esc_url( get_permalink( $session ) ); ?>">
 						<?php echo get_the_title( $session ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 					</a>
@@ -32,7 +32,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 						$speakers[ $session->ID ]
 					);
 					?>
-					<div class="wordcamp-session-meta wordcamp-session-speakers">
+					<div class="wordcamp-item-meta wordcamp-session-speakers">
 						<?php
 						printf(
 							/* translators: %s is a list of names. */
@@ -86,7 +86,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 				<?php endif; ?>
 
 				<?php if ( $attributes['show_meta'] || $attributes['show_category'] ) : ?>
-					<div class="wordcamp-session-meta wordcamp-session-details">
+					<div class="wordcamp-item-meta wordcamp-session-details">
 						<?php if ( $attributes['show_meta'] ) :
 							$tracks = get_the_terms( $session, 'wcb_track' );
 							?>

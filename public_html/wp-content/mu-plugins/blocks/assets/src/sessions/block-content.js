@@ -8,14 +8,15 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Disabled } = wp.components;
-const { Component, RawHTML } = wp.element;
+const { Component } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
 const { __ } = wp.i18n;
 
 /**
  * Internal dependencies
  */
-import { tokenSplit, arrayTokenReplace, intersperse, listify } from "../shared/block-content";
+import { ItemTitle, ItemHTMLContent } from "../shared/block-content";
+import { tokenSplit, arrayTokenReplace, intersperse, listify } from "../shared/i18n";
 
 function SessionSpeakers( { session } ) {
 	let speakers;
@@ -39,7 +40,7 @@ function SessionSpeakers( { session } ) {
 	);
 
 	return (
-		<div className="wordcamp-session-meta wordcamp-session-speakers">
+		<div className="wordcamp-item-meta wordcamp-session-speakers">
 			{ speakers }
 		</div>
 	);
@@ -134,7 +135,7 @@ function SessionDetails( { session, show_meta, show_category } ) {
 	}
 
 	return (
-		<div className="wordcamp-session-meta wordcamp-session-details">
+		<div className="wordcamp-item-meta wordcamp-session-details">
 			{ meta }
 			{ category }
 		</div>
@@ -167,16 +168,15 @@ class SessionsBlockContent extends Component {
 							'wordcamp-clearfix'
 						) }
 					>
-						<h3 className="wordcamp-session-title">
-							<Disabled>
-								<a href={ post.link }>
-									{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
-								</a>
-							</Disabled>
-						</h3>
+						<ItemTitle
+							className="wordcamp-session-title"
+							headingLevel={ 3 }
+							title={ post.title.rendered.trim() }
+							link={ post.link }
+						/>
 
 						{ show_speaker && this.hasSpeaker( post ) &&
-							<SessionSpeakers session={ post }/>
+							<SessionSpeakers session={ post } />
 						}
 
 						{ show_images && get( post, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' ) &&
@@ -192,30 +192,12 @@ class SessionsBlockContent extends Component {
 						}
 
 						{ 'none' !== content &&
-							<div className={ classnames( 'wordcamp-session-content', 'wordcamp-session-content-' + decodeEntities( content ) ) }>
-								{ 'full' === content &&
-									<Disabled>
-										<RawHTML children={ post.content.rendered.trim() } />
-										<p className="wordcamp-session-permalink">
-											<a href={ post.link }>
-												{ __( 'Visit session page', 'wordcamporg' ) }
-											</a>
-										</p>
-									</Disabled>
-								}
-								{ 'excerpt' === content &&
-									<Disabled>
-										<RawHTML children={ post.excerpt.rendered.trim() } />
-										{ excerpt_more &&
-										<p className="wordcamp-session-permalink">
-											<a href={ post.link }>
-												{ __( 'Read more', 'wordcamporg' ) }
-											</a>
-										</p>
-										}
-									</Disabled>
-								}
-							</div>
+							<ItemHTMLContent
+								className={ classnames( 'wordcamp-session-content-' + decodeEntities( content ) ) }
+								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
+								link={ ( 'full' === content || excerpt_more ) ? post.link : null }
+								linkText={ 'full' === content ? __( 'Visit session page', 'wordcamporg' ) : __( 'Read more', 'wordcamporg' ) }
+							/>
 						}
 
 						{ ( show_meta || show_category ) &&

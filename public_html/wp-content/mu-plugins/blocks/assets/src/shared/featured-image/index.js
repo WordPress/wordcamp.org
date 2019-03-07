@@ -36,6 +36,7 @@ export default class FeaturedImage extends Component {
 	 * @param props.width Width in pixels for image.
 	 * @param props.className Classname for image element
 	 * @param props.alt Alt text for image
+	 * @param props.onChange Function callback for when Image URL is changed. Current URL will be passed as a parameter.
 	 */
 	constructor( props ) {
 		super( props );
@@ -163,13 +164,19 @@ export default class FeaturedImage extends Component {
 	 * @returns {*}
 	 */
 	render() {
-		const { className, alt } = this.props;
+		const { className, alt, onChange } = this.props;
 
 		const imageSize = this.props.size || { height: 150, width: 150 };
 
 		const { height, width } = imageSize;
 
 		const imageURL = this.getSizedUrl( height, width );
+		if ( imageURL !== this.currentImageURL ) {
+			this.currentImageURL = imageURL;
+			if ( typeof( onChange ) === 'function' ) {
+				onChange( imageURL );
+			}
+		}
 		return(
 			<img
 				className={ classnames( 'featured-image', className ) }

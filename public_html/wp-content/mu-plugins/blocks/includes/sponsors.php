@@ -35,6 +35,8 @@ function render( $attributes ) {
 	$html = '';
 	$sponsors = get_sponsor_posts( $attributes );
 
+	$sponsor_featured_urls = json_decode( urldecode( $attributes['sponsor_image_urls'] ), true );
+
 	if ( $attributes['mode'] ) {
 		ob_start();
 		require Blocks\PLUGIN_DIR . 'view/sponsors.php';
@@ -76,7 +78,6 @@ function get_sponsor_posts( $attributes ) {
 			];
 			break;
 	}
-	error_log("Post args: " . print_r( $post_args, true  ) );
 	return get_posts( $post_args );
 }
 
@@ -103,6 +104,10 @@ function get_attributes_schema() {
 			'items' => array(
 				'type' => 'integer',
 			),
+		),
+		'sponsor_image_urls' => array(
+			'type' => 'string',
+			'default' => '{}',
 		),
 		'show_name' => array(
 			'type' => 'bool',

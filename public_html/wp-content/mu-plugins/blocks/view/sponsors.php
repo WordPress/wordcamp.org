@@ -7,6 +7,7 @@
 	/** @var array  $attributes */
 	/** @var array  $sponsors */
 	/** @var string $container_classes */
+	/** @var array $sponsor_featured_urls */
 
 ?>
 
@@ -17,10 +18,10 @@
 		<li class="wordcamp-sponsor wordcamp-sponsor-<?php echo sanitize_html_class( $sponsor->post_name ); ?> wordcamp-clearfix">
 			<div class="wordcamp-sponsor-details">
 
-				<?php if ( $attributes['show_logo'] ) { ?>
+				<?php if ( $attributes['show_logo'] && $sponsor_featured_urls[ $sponsor->ID ] ) { ?>
 					<img
 						class="featured-image wordcamp-sponsor-featured-image wordcamp-sponsor-logo"
-						src="<?php echo esc_attr( $attributes['sponsor-logo-url'][ $sponsor->ID ]) ?>"
+						src="<?php echo esc_attr( $sponsor_featured_urls[ $sponsor->ID ] ) ?>"
 						alt="<?php echo esc_attr( $sponsor->post_title ) ?>"
 						style=" height: <?php echo esc_attr( $attributes['sponsor_logo_height'] ) ?>px; "
 						width="<?php echo esc_attr( $attributes['sponsor_logo_width'] ) ?>px; "

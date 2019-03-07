@@ -1,9 +1,19 @@
 /**
+ * External dependencies
+ */
+import classnames from 'classnames';
+
+/**
  * WordPress dependencies
  */
 const { Placeholder, Spinner } = wp.components;
 const { Component, Fragment } = wp.element;
 const { __ } = wp.i18n;
+
+/**
+ * Internal dependencies
+ */
+import './style.scss';
 
 export class BlockControls extends Component {
 	constructor( props ) {
@@ -21,9 +31,16 @@ export class BlockControls extends Component {
 	}
 }
 
-export function PlaceholderNoContent( { icon, label, loading } ) {
+export function PlaceholderNoContent( { className, icon, label, loading } ) {
+	const classes = [
+		'wordcamp-block-edit-placeholder',
+		'wordcamp-block-edit-placeholder-no-content',
+		className
+	];
+
 	return (
 		<Placeholder
+			className={ classnames( classes ) }
 			icon={ icon }
 			label={ label }
 		>
@@ -35,11 +52,18 @@ export function PlaceholderNoContent( { icon, label, loading } ) {
 	);
 }
 
-export function PlaceholderSpecificMode( { label, icon, content, placeholderChildren } ) {
+export function PlaceholderSpecificMode( { className, label, icon, content, placeholderChildren } ) {
+	const classes = [
+		'wordcamp-block-edit-placeholder',
+		'wordcamp-block-edit-placeholder-specific-mode',
+		className
+	];
+
 	return (
 		<Fragment>
 			{ content }
 			<Placeholder
+				className={ classnames( classes ) }
 				label={ label }
 				icon={ icon }
 			>

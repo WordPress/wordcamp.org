@@ -59,10 +59,11 @@ class SessionsBlockControls extends BlockControls {
 			default :
 				output = (
 					<Placeholder
+						className={ classnames( 'wordcamp-block-edit-placeholder', 'wordcamp-block-edit-placeholder-no-mode' ) }
 						icon={ icon }
 						label={ LABEL }
 					>
-						<div className="wordcamp-block-mode-option">
+						<div className="wordcamp-block-edit-mode-option">
 							<Button
 								isDefault
 								isLarge
@@ -74,7 +75,7 @@ class SessionsBlockControls extends BlockControls {
 							</Button>
 						</div>
 
-						<div className="wordcamp-block-mode-option">
+						<div className="wordcamp-block-edit-mode-option">
 							<SessionsSelect
 								label={ __( 'Choose specific sessions, tracks, or categories', 'wordcamporg' ) }
 								{ ...this.props }

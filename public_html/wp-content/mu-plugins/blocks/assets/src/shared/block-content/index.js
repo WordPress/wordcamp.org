@@ -11,6 +11,11 @@ const { Fragment, RawHTML } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
 const { __ } = wp.i18n;
 
+/**
+ * Internal dependencies
+ */
+import './style.scss';
+
 export function ItemTitle( { headingLevel, className, title, link } ) {
 	const validLevels = [ 1, 2, 3, 4, 5, 6 ];
 	let itemTag;

@@ -44,6 +44,7 @@ function render( $attributes ) {
 
 	$container_classes = [
 		'wordcamp-block',
+		'wordcamp-block-post-list',
 		'wordcamp-sessions-block',
 		sanitize_html_class( $attributes['className'] ),
 	];

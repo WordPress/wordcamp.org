@@ -153,6 +153,7 @@ class SessionsBlockContent extends Component {
 
 		const containerClasses = [
 			'wordcamp-block',
+			'wordcamp-block-post-list',
 			'wordcamp-sessions-block',
 			className
 		];
@@ -163,6 +164,7 @@ class SessionsBlockContent extends Component {
 					<li
 						key={ post.slug }
 						className={ classnames(
+							'wordcamp-block-post-list-item',
 							'wordcamp-session',
 							'wordcamp-session-' + decodeEntities( post.slug ),
 							'wordcamp-clearfix'

@@ -13,7 +13,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 <?php if ( ! empty( $sessions ) ) : ?>
 	<ul class="<?php echo esc_attr( $container_classes ); ?>">
 		<?php foreach ( $sessions as $session ) : setup_postdata( $session ); // phpcs:ignore Squiz.ControlStructures.ControlSignature ?>
-			<li class="wordcamp-session wordcamp-session-<?php echo sanitize_html_class( $session->post_name ); ?> wordcamp-clearfix">
+			<li class="wordcamp-block-post-list-item wordcamp-session wordcamp-session-<?php echo sanitize_html_class( $session->post_name ); ?> wordcamp-clearfix">
 				<h3 class="wordcamp-item-title wordcamp-session-title">
 					<a href="<?php echo esc_url( get_permalink( $session ) ); ?>">
 						<?php echo get_the_title( $session ); // phpcs:ignore WordPress.Security.EscapeOutput ?>

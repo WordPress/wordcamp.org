@@ -58,7 +58,6 @@ class SponsorsEdit extends Component {
  * @param props
  */
 const sponsorSelect = ( select, props ) => {
-	const { post_ids, term_ids } = props.attributes;
 
 	const sponsorQuery = {
 		orderby : 'title',

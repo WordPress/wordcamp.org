@@ -17,21 +17,21 @@ function SponsorDetail( { sponsorPost, attributes } ) {
 
 	return (
 		<div className={"wordcamp-sponsor-details"}>
-			{show_logo &&
+			{ ( show_logo || show_logo === undefined ) &&
 			<FeaturedImage
 				wpMediaDetails={featuredImageSizes}
 				size={featuredImageSize}
 				alt={sponsorPost.title.rendered}
 			/>
 			}
-			{show_name &&
+			{ ( show_name || show_name === undefined ) &&
 			<div className={"wordcamp-sponsor-name"}>
 				<a href={sponsorPost.link}>
 					<h3> {sponsorPost.title.rendered} </h3>
 				</a>
 			</div>
 			}
-			{show_desc &&
+			{ ( show_desc || show_desc === undefined ) &&
 			<RawHTML>
 				{sponsorPost.content.rendered}
 			</RawHTML>
@@ -44,9 +44,10 @@ class SponsorBlockContent extends Component {
 
 	render() {
 		const { selectedPosts, attributes } = this.props;
-		const { columns } = attributes;
+		const columns = attributes.columns || 1;
 		const containerClasses = [
 			'wordcamp-sponsors-block',
+			'wordcamp-sponsors-list',
 		];
 		if ( 1 !== columns ) {
 			containerClasses.push( 'grid-columns-' + Number( columns ) );

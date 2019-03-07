@@ -3,15 +3,12 @@
 	display: table;
 	clear: both;
 }
+.edit-post-visual-editor ul:not(.wp-block-gallery).wordcamp-sponsors-block.wordcamp-sponsors-list {
+	list-style-type: none;
+	margin: 0 0 1em 0;
+}
 
 .wordcamp-sponsors-block {
-	/* The double-ampersand defeats an overzealous ul rule in Core's editor-blocks.css. */
-	/* https://css-tricks.com/the-sass-ampersand/#article-header-id-11 */
-	&#{&},
-	.block-editor &#{&} {
-		list-style: none;
-		margin: 0 0 1em 0;
-	}
 
 	&.layout-list > li {
 		margin-bottom: 1em;

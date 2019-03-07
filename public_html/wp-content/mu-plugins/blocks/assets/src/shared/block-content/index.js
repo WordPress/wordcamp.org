@@ -18,12 +18,12 @@ import './style.scss';
 
 export function ItemTitle( { headingLevel, className, title, link } ) {
 	const validLevels = [ 1, 2, 3, 4, 5, 6 ];
-	let itemTag;
+	let Tag;
 
 	if ( validLevels.includes( headingLevel ) ) {
-		itemTag = 'h' + headingLevel;
+		Tag = 'h' + headingLevel;
 	} else {
-		itemTag = 'h3';
+		Tag = 'h3';
 	}
 
 	const classes = [
@@ -34,7 +34,7 @@ export function ItemTitle( { headingLevel, className, title, link } ) {
 	const content = title || __( '(Untitled)', 'wordcamporg' );
 
 	return (
-		<itemTag className={ classnames( classes ) }>
+		<Tag className={ classnames( classes ) }>
 			{ link &&
 				<Disabled>
 					<a href={ link }>
@@ -47,7 +47,7 @@ export function ItemTitle( { headingLevel, className, title, link } ) {
 					{ decodeEntities( content ) }
 				</Fragment>
 			}
-		</itemTag>
+		</Tag>
 	);
 }
 

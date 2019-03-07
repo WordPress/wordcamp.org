@@ -3,7 +3,8 @@
 	display: table;
 	clear: both;
 }
-.edit-post-visual-editor ul:not(.wp-block-gallery).wordcamp-sponsors-block.wordcamp-sponsors-list {
+.edit-post-visual-editor ul:not(.wp-block-gallery).wordcamp-sponsors-block.wordcamp-sponsors-list,
+ul.wordcamp-sponsors-block.wordcamp-sponsors-list {
 	list-style-type: none;
 	margin: 0 0 1em 0;
 }

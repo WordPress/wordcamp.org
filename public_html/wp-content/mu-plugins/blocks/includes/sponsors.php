@@ -35,7 +35,24 @@ function render( $attributes ) {
 	$html = '';
 	$sponsors = get_sponsor_posts( $attributes );
 
-	$sponsor_featured_urls = json_decode( urldecode( $attributes['sponsor_image_urls'] ), true );
+	$sponsor_featured_urls = array();
+
+	if ( ! empty( $attributes['sponsor_image_urls'] ) ) {
+		$sponsor_featured_urls = json_decode( urldecode( $attributes['sponsor_image_urls'] ), true );
+	}
+
+	$container_classes = array(
+		'wordcamp-sponsors-block',
+		'wordcamp-sponsors-list',
+	);
+
+	if ( ! empty( $attributes['columns'] ) && 1 !== $attributes['columns'] ) {
+		$columns = (int) $attributes['columns'];
+		$container_classes[] = 'grid-columns-' . $columns;
+		$container_classes[] = 'layout-grid';
+		$container_classes[] = 'layout-' . $columns;
+	}
+	$container_classes = implode( ' ', $container_classes );
 
 	if ( $attributes['mode'] ) {
 		ob_start();
@@ -62,6 +79,8 @@ function get_sponsor_posts( $attributes ) {
 		'post_type'      => 'wcb_sponsor',
 		'post_status'    => 'publish',
 		'posts_per_page' => - 1,
+		'orderby'        => 'title',
+		'order'          => 'asc',
 	);
 
 	switch ( $attributes[ 'mode' ] ) {
@@ -71,7 +90,7 @@ function get_sponsor_posts( $attributes ) {
 		case 'specific_terms':
 			$post_args['tax_query'] = [
 				[
-					'taxonomy' => 'wcb_speaker_group',
+					'taxonomy' => 'wcb_sponsor_level',
 					'field'    => 'id',
 					'terms'    => $attributes['term_ids'],
 				],

@@ -174,7 +174,7 @@ class SponsorBlockControls extends BlockControls {
 	 */
 	onChange( selectedOptions ) {
 		const { setAttributes } = this.props;
-		const newValue = selectedOptions.map( ( option ) => option.value );
+		const newValue = ( selectedOptions || [] ).map( ( option ) => option.value );
 
 		if ( newValue.length ) {
 			const chosen = selectedOptions[ 0 ].type;

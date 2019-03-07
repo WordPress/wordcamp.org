@@ -68,13 +68,9 @@ class SponsorBlockContent extends Component {
 		sponsor_image_urls[ sponsorId ] = imageURL;
 		this.sponsorImageUrl = sponsor_image_urls;
 
-		// Setting attributes in next event loop to prevent race conditions between multiple FeaturedImage content.
-		setTimeout( () => {
-			const { setAttributes } = this.props;
-			const sponsor_image_urls_latest = this.sponsorImageUrl;
-			setAttributes( { sponsor_image_urls: encodeURIComponent( JSON.stringify( sponsor_image_urls_latest ) ) } );
-		});
-
+		const { setAttributes } = this.props;
+		const sponsor_image_urls_latest = this.sponsorImageUrl;
+		setAttributes( { sponsor_image_urls: encodeURIComponent( JSON.stringify( sponsor_image_urls_latest ) ) } );
 	}
 
 	/**

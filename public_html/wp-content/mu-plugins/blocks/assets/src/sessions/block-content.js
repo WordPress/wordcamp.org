@@ -39,7 +39,7 @@ function SessionSpeakers( { session } ) {
 	);
 
 	return (
-		<div className="wordcamp-session-speakers">
+		<div className="wordcamp-session-meta wordcamp-session-speakers">
 			{ speakers }
 		</div>
 	);
@@ -102,7 +102,7 @@ function SessionDetails( { session, show_meta, show_category } ) {
 		}
 
 		meta = (
-			<div className="wordcamp-session-details-meta">
+			<div className="wordcamp-session-time-location">
 				{ metaContent }
 			</div>
 		);
@@ -127,14 +127,14 @@ function SessionDetails( { session, show_meta, show_category } ) {
 			} );
 
 		category = (
-			<div className="wordcamp-session-details-categories">
+			<div className="wordcamp-session-categories">
 				{ intersperse( categories, separator ) }
 			</div>
 		);
 	}
 
 	return (
-		<div className="wordcamp-session-details">
+		<div className="wordcamp-session-meta wordcamp-session-details">
 			{ meta }
 			{ category }
 		</div>
@@ -151,6 +151,7 @@ class SessionsBlockContent extends Component {
 		const { className, show_speaker, show_images, image_align, image_size, content, excerpt_more, show_meta, show_category } = attributes;
 
 		const containerClasses = [
+			'wordcamp-block',
 			'wordcamp-sessions-block',
 			className
 		];
@@ -166,7 +167,7 @@ class SessionsBlockContent extends Component {
 							'wordcamp-clearfix'
 						) }
 					>
-						<h3 className="wordcamp-session-title-heading">
+						<h3 className="wordcamp-session-title">
 							<Disabled>
 								<a href={ post.link }>
 									{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }

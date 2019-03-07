@@ -14,7 +14,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 	<ul class="<?php echo esc_attr( $container_classes ); ?>">
 		<?php foreach ( $sessions as $session ) : setup_postdata( $session ); // phpcs:ignore Squiz.ControlStructures.ControlSignature ?>
 			<li class="wordcamp-session wordcamp-session-<?php echo sanitize_html_class( $session->post_name ); ?> wordcamp-clearfix">
-				<h3 class="wordcamp-session-title-heading">
+				<h3 class="wordcamp-session-title">
 					<a href="<?php echo esc_url( get_permalink( $session ) ); ?>">
 						<?php echo get_the_title( $session ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
 					</a>
@@ -32,7 +32,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 						$speakers[ $session->ID ]
 					);
 					?>
-					<div class="wordcamp-session-speakers">
+					<div class="wordcamp-session-meta wordcamp-session-speakers">
 						<?php
 						printf(
 							/* translators: %s is a list of names. */
@@ -86,11 +86,11 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 				<?php endif; ?>
 
 				<?php if ( $attributes['show_meta'] || $attributes['show_category'] ) : ?>
-					<div class="wordcamp-session-details">
+					<div class="wordcamp-session-meta wordcamp-session-details">
 						<?php if ( $attributes['show_meta'] ) :
 							$tracks = get_the_terms( $session, 'wcb_track' );
 							?>
-							<div class="wordcamp-session-details-meta">
+							<div class="wordcamp-session-time-location">
 								<?php if ( ! is_wp_error( $tracks ) && ! empty( $tracks ) ) :
 									printf(
 										/* translators: 1: A date; 2: A time; 3: A location; */
@@ -125,7 +125,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 								get_the_terms( $session, 'wcb_session_category' )
 							);
 							?>
-							<div class="wordcamp-session-details-categories">
+							<div class="wordcamp-session-categories">
 								<?php /* translators: used between list items, there is a space after the comma */
 								echo implode( esc_html__( ', ', 'wordcamporg' ), $categories ); // phpcs:ignore WordPress.Security.EscapeOutput
 								?>

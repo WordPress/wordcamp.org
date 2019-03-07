@@ -67,17 +67,9 @@ function render( $attributes ) {
  * @return array
  */
 function add_script_data( array $data ) {
-	$wordcamp   = get_wordcamp_post();
-	$start_date = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'] ) ? $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] : '';
-
-	if ( $start_date ) {
-		$start_date = date( 'Y-m-d', $start_date );
-	}
-
 	$data['sessions'] = [
-		'schema'     => get_attributes_schema(),
-		'options'    => get_options(),
-		'start_date' => $start_date,
+		'schema'  => get_attributes_schema(),
+		'options' => get_options(),
 	];
 
 	return $data;
@@ -108,14 +100,6 @@ function get_attributes_schema() {
 			'type'    => 'string',
 			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 			'default' => 'session_time',
-		],
-		'filter_date'   => [
-			'type'    => 'bool',
-			'default' => false,
-		],
-		'date'          => [
-			'type'    => 'string',
-			'default' => '',
 		],
 		'className'     => [
 			'type'    => 'string',
@@ -287,20 +271,6 @@ function get_session_posts( array $attributes ) {
 			],
 		],
 	];
-
-	if ( $attributes['filter_date'] && ! empty( $attributes['date'] ) ) {
-		$start = strtotime( $attributes['date'] );
-		$end   = strtotime( $attributes['date'] . ' + 1 day' );
-
-		if ( $start && $end ) {
-			$post_args['meta_query'][] = [
-				'key'     => '_wcpt_session_time',
-				'value'   => [ $start, $end ],
-				'compare' => 'BETWEEN',
-				'type'    => 'NUMERIC',
-			];
-		}
-	}
 
 	switch ( $attributes['sort'] ) {
 		case 'session_time':

@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-const { DatePicker, PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
+const { PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
 const { InspectorControls } = wp.editor;
 const { Component, Fragment } = wp.element;
 const { __ } = wp.i18n;
@@ -14,8 +14,8 @@ import ImageAlignmentControl from '../shared/image-alignment';
 class SessionsInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes, blockData } = this.props;
-		const { show_speaker, show_images, image_size, image_align, content, excerpt_more, show_meta, show_category, sort, filter_date, date } = attributes;
-		const { start_date, options, schema } = blockData;
+		const { show_speaker, show_images, image_size, image_align, content, excerpt_more, show_meta, show_category, sort } = attributes;
+		const { options } = blockData;
 
 		return(
 			<InspectorControls>
@@ -68,7 +68,7 @@ class SessionsInspectorControls extends Component {
 
 				</PanelBody>
 
-				<PanelBody title={ __( 'Sorting and Filtering', 'wordcamporg' ) }>
+				<PanelBody title={ __( 'Sorting', 'wordcamporg' ) }>
 					<PanelRow>
 						<SelectControl
 							label={ __( 'Sort by', 'wordcamporg' ) }
@@ -77,26 +77,6 @@ class SessionsInspectorControls extends Component {
 							onChange={ ( value ) => setAttributes( { sort: value } ) }
 						/>
 					</PanelRow>
-					{ start_date &&
-						<Fragment>
-							<PanelRow>
-								<ToggleControl
-									label={ __( 'Filter by date', 'wordcamporg' ) }
-									help={ __( 'Show sessions from a specific date.', 'wordcamporg' ) }
-									checked={ filter_date }
-									onChange={ ( value ) => setAttributes( { filter_date: value } ) }
-								/>
-							</PanelRow>
-							{ filter_date &&
-								<PanelRow>
-									<DatePicker
-										currentDate={ date ? new Date( date ) : new Date( start_date ) }
-										onChange={ ( value ) => setAttributes( { date: value } ) }
-									/>
-								</PanelRow>
-							}
-						</Fragment>
-					}
 				</PanelBody>
 			</InspectorControls>
 		);

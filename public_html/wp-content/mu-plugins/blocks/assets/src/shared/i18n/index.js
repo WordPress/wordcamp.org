@@ -28,7 +28,7 @@ const { __ } = wp.i18n;
  * @returns {Array}
  */
 export function tokenSplit( string ) {
-	const regex = /(%[1-9]?\$?[sd]+)/;
+	const regex = /(%[1-9]?\$?s)/;
 
 	return string.split( regex );
 }
@@ -63,7 +63,7 @@ export function arrayTokenReplace( source, args ) {
 		nextArgIndex = 0;
 
 	return source.flatMap( ( value ) => {
-		const regex = /^%([1-9])?\$?[sd]+$/;
+		const regex = /^%([1-9])?\$?s$/;
 		const match = value.match( regex );
 
 		if ( Array.isArray( match ) ) {

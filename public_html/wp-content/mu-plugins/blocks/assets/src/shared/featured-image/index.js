@@ -74,8 +74,6 @@ export default class FeaturedImage extends Component {
 	 * Pre-calculate and store aspect ratio of all images. This will help us in picking the best image available for the size that we have.
 	 */
 	parseAvailableSizes( availableSizes ) {
-		let largestSizeValue = 0;
-		let largestSize = {};
 		// Lets pre-calculate aspect ratio of all images. Also cache the largest area image.
 		const sizes = availableSizes.map( ( size ) => {
 			return {
@@ -98,10 +96,7 @@ export default class FeaturedImage extends Component {
 		);
 
 		this.setState(
-			{
-				sizes,
-				...this.state
-			}
+			{ sizes }
 		);
 	}
 

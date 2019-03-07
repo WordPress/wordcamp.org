@@ -304,7 +304,7 @@ class SponsorBlockControls extends BlockControls {
 					buttonLabel={__('List all sponsors', 'wordcamporg')}
 					iconName="heart"
 					label={__('Sponsors', 'wordcamporg')}
-					selectLabel={__('Choose specific speakers or levels',
+					selectLabel={__('Choose specific sponsors or levels',
 						'wordcamporg')}
 					selectedOptions={selectedOptions}
 					{...this.props}

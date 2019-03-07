@@ -19,6 +19,7 @@ function SponsorDetail( { sponsorPost, attributes } ) {
 		<div className={"wordcamp-sponsor-details"}>
 			{ ( show_logo || show_logo === undefined ) &&
 			<FeaturedImage
+				className={"wordcamp-sponsor-featured-image wordcamp-sponsor-logo"}
 				wpMediaDetails={featuredImageSizes}
 				size={featuredImageSize}
 				alt={sponsorPost.title.rendered}
@@ -54,6 +55,7 @@ class SponsorBlockContent extends Component {
 			containerClasses.push( 'layout-grid' );
 			containerClasses.push( 'layout-' + columns );
 		}
+		console.log( 'Sponsor posts', selectedPosts);
 
 		return (
 			<ul className={ classnames( containerClasses ) } >
@@ -63,7 +65,8 @@ class SponsorBlockContent extends Component {
 							<li
 								className={ classnames(
 									'wordcamp-sponsor',
-									'wordcamp-clearfix'
+									'wordcamp-clearfix',
+									'wordcamp-sponsor-' + post.slug
 								)}
 							>
 								<SponsorDetail

@@ -1,6 +1,8 @@
 <?php
 namespace WordCamp\Blocks\Sponsors;
-use function WordCamp\Blocks\Speakers\get_attributes_schema;
+defined( 'WPINC' ) || die();
+
+use WordCamp\Blocks;
 
 defined( 'WPINC' ) || die();
 
@@ -11,12 +13,79 @@ function init() {
 	register_block_type(
 		'wordcamp/sponsors',
 		[
-			'attributes' => get_attributes_schema(),
+			'attributes'      => get_attributes_schema(),
+			'editor_script'   => 'wordcamp-blocks',
+			'editor_style'    => 'wordcamp-blocks',
+			'style'           => 'wordcamp-blocks',
+			'render_callback' => __NAMESPACE__ . '\render',
 		]
 	);
 }
 
-function get_attribute_schema() {
+add_action( 'init', __NAMESPACE__ . '\init' );
+
+/**
+ * Renders content of Sponsor block based on attributes.
+ *
+ * @param $attributes
+ *
+ * @return false|string
+ */
+function render( $attributes ) {
+	$html = '';
+	$sponsors = get_sponsor_posts( $attributes );
+
+	if ( $attributes['mode'] ) {
+		ob_start();
+		require Blocks\PLUGIN_DIR . 'view/sponsors.php';
+		$html = ob_get_clean();
+	}
+
+	return $html;
+}
+
+/**
+ * Return sponsor posts what will rendered based on attributes.
+ *
+ * @param $attributes
+ *
+ * @return array
+ */
+function get_sponsor_posts( $attributes ) {
+	if ( empty( $attributes[ 'mode' ] ) ) {
+		return array();
+	}
+
+	$post_args = array(
+		'post_type'      => 'wcb_sponsor',
+		'post_status'    => 'publish',
+		'posts_per_page' => - 1,
+	);
+
+	switch ( $attributes[ 'mode' ] ) {
+		case 'specific_posts':
+			$post_args['post__in'] = $attributes['post_ids'];
+			break;
+		case 'specific_terms':
+			$post_args['tax_query'] = [
+				[
+					'taxonomy' => 'wcb_speaker_group',
+					'field'    => 'id',
+					'terms'    => $attributes['term_ids'],
+				],
+			];
+			break;
+	}
+	error_log("Post args: " . print_r( $post_args, true  ) );
+	return get_posts( $post_args );
+}
+
+/**
+ * Get attribute schema for Sponsor block
+ *
+ * @return array
+ */
+function get_attributes_schema() {
 	return array(
 		'mode' => array(
 			'type' => 'string',
@@ -63,5 +132,3 @@ function get_attribute_schema() {
 		),
 	);
 }
-
-add_action( 'init', __NAMESPACE__ . '\init' );

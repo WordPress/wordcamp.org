@@ -28,7 +28,6 @@ class SpeakersSelect extends Component {
 		};
 
 		this.buildSelectOptions = this.buildSelectOptions.bind( this );
-		this.onChange = this.onChange.bind( this );
 	}
 
 	componentWillMount() {
@@ -99,27 +98,8 @@ class SpeakersSelect extends Component {
 		return options;
 	}
 
-	onChange( selectedOptions ) {
-		const { setAttributes } = this.props;
-		const newValue = selectedOptions.map( ( option ) => option.value );
-
-		if ( newValue.length ) {
-			const chosen = selectedOptions[ 0 ].type;
-
-			setAttributes( {
-				mode     : chosen,
-				item_ids : newValue,
-			} );
-		} else {
-			setAttributes( {
-				mode     : '',
-				item_ids : [],
-			} );
-		}
-	}
-
 	render() {
-		const { label, attributes } = this.props;
+		const { label, attributes, setAttributes } = this.props;
 		const { mode, item_ids } = attributes;
 		const options = this.buildSelectOptions( mode );
 
@@ -139,7 +119,7 @@ class SpeakersSelect extends Component {
 				label={ label }
 				value={ value }
 				buildSelectOptions={ this.buildSelectOptions }
-				onChange={ this.onChange }
+				onChange={ ( value ) => setAttributes( value ) }
 				mode={ mode }
 				selectProps={ {
 					isLoading        : this.state.loading,

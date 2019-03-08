@@ -26,6 +26,7 @@ class ItemSelect extends Component {
 		};
 
 		this.isOptionDisabled = this.isOptionDisabled.bind( this );
+		this.getNewAttributes = this.getNewAttributes.bind( this );
 	}
 
 	/**
@@ -53,6 +54,28 @@ class ItemSelect extends Component {
 		}
 
 		return chosen && chosen !== option.type;
+	}
+
+	getNewAttributes() {
+		const { selectedOptions } = this.state;
+		const newValue = selectedOptions.map( ( option ) => option.value ) || [];
+		let attributes = {};
+
+		if ( newValue.length ) {
+			const chosen = selectedOptions[ 0 ].type;
+
+			attributes = {
+				mode     : chosen,
+				item_ids : newValue,
+			};
+		} else {
+			attributes = {
+				mode     : '',
+				item_ids : [],
+			};
+		}
+
+		return attributes;
 	}
 
 	render() {
@@ -93,7 +116,7 @@ class ItemSelect extends Component {
 						className="wordcamp-item-select-button"
 						isLarge
 						isDefault
-						onClick={ () => onChange( this.state.selectedOptions || [] ) }
+						onClick={ () => onChange( this.getNewAttributes() ) }
 					>
 						{ submitLabel || __( 'Select', 'wordcamporg' ) }
 					</Button>

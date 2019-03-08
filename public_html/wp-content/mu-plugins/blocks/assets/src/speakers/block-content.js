@@ -8,9 +8,9 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Disabled } = wp.components;
-const { Component, Fragment, RawHTML } = wp.element;
+const { Component, Fragment } = wp.element;
 const { decodeEntities } = wp.htmlEntities;
-const { __, _n, sprintf } = wp.i18n;
+const { __, _n } = wp.i18n;
 
 /**
  * Internal dependencies

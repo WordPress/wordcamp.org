@@ -17,7 +17,7 @@ export default class FeaturedImage extends Component {
 	 * Constructor for component. Size can be provided, if height and width both are provided, then they take precedence over size.
 	 *
 	 * @param props Props for function.
-	 * @oaram props.wpMediaDetails Available sizes of images in the format as returned by WP API. This is the `sizes` object inside `media_details` inside `wp:featuredMedia` object. Not required if `props.availableSizes is present.
+	 * @param props.wpMediaDetails Available sizes of images in the format as returned by WP API. This is the `sizes` object inside `media_details` inside `wp:featuredMedia` object. Not required if `props.availableSizes is present.
 	 * @param props.availableSizes Available sizes of image along with source URL. Not required if `props.wpMediaDetails` is present. Should be in this format:
 	 * [
 	 * 		{
@@ -42,6 +42,9 @@ export default class FeaturedImage extends Component {
 		super( props );
 	}
 
+	/**
+	 * Runs `parseAvailableSizes` to pre-calculate image information.
+	 */
 	componentWillMount() {
 		let availableSizes;
 		const { wpMediaDetails } = this.props;
@@ -100,7 +103,6 @@ export default class FeaturedImage extends Component {
 		);
 	}
 
-
 	/**
 	 * Returns URL of appropriate image. We find appropriate by looking for an image with similar aspect ratio, and similar or greater area.
 	 * If there is no image with similar aspect ratio or area, we will return strictly bigger image then currently requested.
@@ -112,7 +114,7 @@ export default class FeaturedImage extends Component {
 	 */
 	getSizedUrl( height, width ) {
 		const { sizes } = this.state;
-		if ( ! sizes ) {
+		if ( ! sizes || sizes.length === 0 ) {
 			return "";
 		}
 

@@ -23,60 +23,56 @@ class SponsorsEdit extends Component {
 	 */
 	constructor( props ) {
 		super( props );
-		this.state = {
-			allSponsorPosts : null,
-			allSponsorTerms : null,
-			isLoading       : null,
-		}
+		this.state = {};
+	}
+
+	componentWillMount() {
+		const sponsorQuery = {
+			orderby : 'title',
+			order   : 'asc',
+			per_page: MAX_PAGE,
+			_embed  : true,
+		};
+
+		const sponsorLevelQuery = {
+			orderby : 'id',
+			order: 'asc',
+			per_page: MAX_PAGE,
+			_embed: true
+		};
+
+		this.setState(
+			{
+				sponsorPosts: apiFetch( { path: addQueryArgs( '/wp/v2/sponsors', sponsorQuery ) } ),
+				sponsorLevels: apiFetch( { path: addQueryArgs('/wp/v2/sponsor_level', sponsorLevelQuery ) } )
+			}
+		);
 	}
 
 	/**
 	 * Renders SponsorEdit component.
 	 */
 	render() {
-		const { mode } = this.props.attributes;
+		const { sponsorPosts, sponsorLevels } = this.state;
 
 		return (
 			<Fragment>
 				{
 					<SponsorBlockControls
+						sponsorPosts = { sponsorPosts }
+						sponsorLevels = { sponsorLevels }
 						{ ...this.props }
 					/>
 				}
 				<Fragment>
-					<SponsorInspectorControls {...this.props} />
+					<SponsorInspectorControls
+						sponsorPosts = { sponsorPosts }
+						sponsorLevels = { sponsorLevels }
+						{...this.props} />
 				</Fragment>
 			</Fragment>
 		)
 	}
 }
 
-/**
- * API call for wcb_sponsor post type data. Fetches all sponsor and terms posts.
- *
- * @param select
- * @param props
- */
-const sponsorSelect = ( select, props ) => {
-
-	const sponsorQuery = {
-		orderby : 'title',
-		order   : 'asc',
-		per_page: MAX_PAGE,
-		_embed  : true,
-	};
-
-	const sponsorLevelQuery = {
-		orderby : 'id',
-		order: 'asc',
-		per_page: MAX_PAGE,
-		_embed: true
-	};
-
-	return {
-		sponsorPosts: apiFetch( { path: addQueryArgs( '/wp/v2/sponsors', sponsorQuery ) } ),
-		sponsorLevels: apiFetch( { path: addQueryArgs('/wp/v2/sponsor_level', sponsorLevelQuery ) } )
-	}
-};
-
-export const edit = withSelect( sponsorSelect )( SponsorsEdit );
+export const edit = SponsorsEdit;

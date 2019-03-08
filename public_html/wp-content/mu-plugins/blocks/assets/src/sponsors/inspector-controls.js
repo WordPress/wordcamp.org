@@ -29,12 +29,6 @@ const sizePresets = [
  */
 class SponsorInspectorControls extends Component {
 
-	setFeaturedImageSize( value ) {
-		const { setAttributes } = this.props;
-		const { height, width } = SponsorInspectorControls.getSizeChart()[ value ];
-		setAttributes( { featuredImageSize: { height, width } } );
-	}
-
 	onPresetSizeClick( size ) {
 		const { setAttributes } = this.props;
 		setAttributes( { sponsor_logo_height: size[ 'height' ], sponsor_logo_width: size[ 'width' ] } );

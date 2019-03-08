@@ -14,7 +14,7 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import VersatileSelect from '../shared/versatile-select';
+import ItemSelect from '../shared/item-select';
 
 class SessionsSelect extends Component {
 	constructor( props ) {
@@ -28,7 +28,7 @@ class SessionsSelect extends Component {
 		};
 
 		this.buildSelectOptions = this.buildSelectOptions.bind( this );
-		this.isOptionDisabled = this.isOptionDisabled.bind( this );
+		this.onChange = this.onChange.bind( this );
 	}
 
 	componentWillMount() {
@@ -106,27 +106,27 @@ class SessionsSelect extends Component {
 		return options;
 	}
 
-	isOptionDisabled( option, selected ) {
-		const { mode } = this.props.attributes;
-		let chosen;
+	onChange( selectedOptions ) {
+		const { setAttributes } = this.props;
+		const newValue = selectedOptions.map( ( option ) => option.value );
 
-		if ( 'loading' === option.type ) {
-			return true;
+		if ( newValue.length ) {
+			const chosen = selectedOptions[ 0 ].type;
+
+			setAttributes( {
+				mode     : chosen,
+				item_ids : newValue,
+			} );
+		} else {
+			setAttributes( {
+				mode     : '',
+				item_ids : [],
+			} );
 		}
-
-		if ( Array.isArray( selected ) && selected.length ) {
-			chosen = selected[ 0 ].type;
-		}
-
-		if ( mode && mode !== option.type ) {
-			return true;
-		}
-
-		return chosen && chosen !== option.type;
 	}
 
 	render() {
-		const { label, attributes, setAttributes } = this.props;
+		const { label, attributes } = this.props;
 		const { mode, item_ids } = attributes;
 		const options = this.buildSelectOptions( mode );
 
@@ -141,35 +141,18 @@ class SessionsSelect extends Component {
 		}
 
 		return (
-			<VersatileSelect
+			<ItemSelect
 				className="wordcamp-sessions-select"
 				label={ label }
 				value={ value }
-				onChange={ ( selectedOptions ) => {
-					const newValue = selectedOptions.map( ( option ) => option.value );
-
-					if ( newValue.length ) {
-						const chosen = selectedOptions[ 0 ].type;
-
-						setAttributes( {
-							mode     : chosen,
-							item_ids : newValue,
-						} );
-					} else {
-						setAttributes( {
-							mode     : '',
-							item_ids : [],
-						} );
-					}
-				} }
+				buildSelectOptions={ this.buildSelectOptions }
+				onChange={ this.onChange }
+				mode={ mode }
 				selectProps={ {
 					isLoading        : this.state.loading,
-					options          : options,
-					isMulti          : true,
-					isOptionDisabled : this.isOptionDisabled,
 					formatGroupLabel : ( groupData ) => {
 						return (
-							<span className="wordcamp-sessions-select-option-group-label">
+							<span className="wordcamp-item-select-option-group-label">
 								{ groupData.label }
 							</span>
 						);
@@ -193,7 +176,7 @@ function SessionsOption( { type, label = '', image = '', count = 0 } ) {
 			if ( image ) {
 				optImage = (
 					<img
-						className="wordcamp-block-select-option-image"
+						className="wordcamp-item-select-option-image"
 						src={ image }
 						alt={ label }
 						width={ 24 }
@@ -202,9 +185,9 @@ function SessionsOption( { type, label = '', image = '', count = 0 } ) {
 				);
 			} else {
 				optImage = (
-					<div className="wordcamp-block-select-option-icon-container">
+					<div className="wordcamp-item-select-option-icon-container">
 						<Dashicon
-							className="wordcamp-block-select-option-icon"
+							className="wordcamp-item-select-option-icon"
 							icon={ 'list-view' }
 							size={ 16 }
 						/>
@@ -212,7 +195,7 @@ function SessionsOption( { type, label = '', image = '', count = 0 } ) {
 				);
 			}
 			optContent = (
-				<span className="wordcamp-block-select-option-label">
+				<span className="wordcamp-item-select-option-label">
 					{ label }
 				</span>
 			);
@@ -221,18 +204,18 @@ function SessionsOption( { type, label = '', image = '', count = 0 } ) {
 		case 'wcb_track' :
 		case 'wcb_session_category' :
 			optImage = (
-				<div className="wordcamp-block-select-option-icon-container">
+				<div className="wordcamp-item-select-option-icon-container">
 					<Dashicon
-						className="wordcamp-block-select-option-icon"
+						className="wordcamp-item-select-option-icon"
 						icon={ 'list-view' }
 						size={ 16 }
 					/>
 				</div>
 			);
 			optContent = (
-				<span className="wordcamp-block-select-option-label">
+				<span className="wordcamp-item-select-option-label">
 					{ label }
-					<span className="wordcamp-block-select-option-label-term-count">
+					<span className="wordcamp-item-select-option-label-term-count">
 						{ count }
 					</span>
 				</span>
@@ -241,7 +224,7 @@ function SessionsOption( { type, label = '', image = '', count = 0 } ) {
 	}
 
 	return (
-		<div className="wordcamp-block-select-option">
+		<div className="wordcamp-item-select-option">
 			{ optImage }
 			{ optContent }
 		</div>

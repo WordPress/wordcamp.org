@@ -27,12 +27,12 @@ function SpeakerSessions( { speaker, tracks } ) {
 
 	if ( sessions.length ) {
 		output = (
-			<Fragment>
-				<h4 className="wordcamp-speaker-session-heading">
+			<div className={ classnames( 'wordcamp-item-meta', 'wordcamp-speaker-sessions' ) }>
+				<h4 className="wordcamp-speaker-sessions-heading">
 					{ _n( 'Session', 'Sessions', sessions.length, 'wordcamporg' ) }
 				</h4>
 
-				<ul className="wordcamp-speaker-session-list">
+				<ul className="wordcamp-speaker-sessions-list">
 					{ sessions.map( ( session ) =>
 						<li
 							key={ session.slug }
@@ -45,7 +45,6 @@ function SpeakerSessions( { speaker, tracks } ) {
 								>
 									{ decodeEntities( session.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
 								</a>
-								<br />
 								<span className="wordcamp-speaker-session-info">
 									{ session.session_track.length &&
 										arrayTokenReplace(
@@ -72,7 +71,7 @@ function SpeakerSessions( { speaker, tracks } ) {
 						</li>
 					) }
 				</ul>
-			</Fragment>
+			</div>
 		);
 	}
 

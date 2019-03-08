@@ -64,10 +64,10 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 				<?php endif; ?>
 
 				<?php if ( 'none' !== $attributes['content'] ) : ?>
-					<div class="wordcamp-session-content wordcamp-session-content-<?php echo esc_attr( $attributes['content'] ); ?>">
+					<div class="wordcamp-item-content wordcamp-session-content-<?php echo esc_attr( $attributes['content'] ); ?>">
 						<?php if ( 'full' === $attributes['content'] ) : ?>
 							<?php echo wpautop( get_all_the_content( $session ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-							<p class="wordcamp-session-permalink">
+							<p class="wordcamp-item-permalink">
 								<a href="<?php echo esc_url( get_permalink( $session ) ); ?>">
 									<?php esc_html_e( 'Visit session page', 'wordcamporg' ); ?>
 								</a>
@@ -75,7 +75,7 @@ use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readab
 						<?php elseif ( 'excerpt' === $attributes['content'] ) : ?>
 							<?php wpautop( the_excerpt() ); ?>
 							<?php if ( true === $attributes['excerpt_more'] ) : ?>
-								<p class="wordcamp-session-permalink">
+								<p class="wordcamp-item-permalink">
 									<a href="<?php echo esc_url( get_permalink( $session ) ); ?>" class="wordcamp-session-permalink">
 										<?php esc_html_e( 'Read more', 'wordcamporg' ); ?>
 									</a>

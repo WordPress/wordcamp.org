@@ -93,7 +93,7 @@ class ItemSelect extends Component {
 						className="wordcamp-item-select-button"
 						isLarge
 						isDefault
-						onClick={ () => onChange( this.state.selectedOptions ) }
+						onClick={ () => onChange( this.state.selectedOptions || [] ) }
 					>
 						{ submitLabel || __( 'Select', 'wordcamporg' ) }
 					</Button>

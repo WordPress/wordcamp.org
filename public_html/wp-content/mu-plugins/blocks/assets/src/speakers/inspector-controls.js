@@ -12,8 +12,6 @@ const { __ } = wp.i18n;
 import AvatarSizeControl from '../shared/avatar-size';
 import ImageAlignmentControl from '../shared/image-alignment';
 
-const data = window.WordCampBlocks.speakers || {};
-
 const DEFAULT_SCHEMA = {
 	grid_columns: {
 		default : 2,
@@ -35,9 +33,9 @@ const DEFAULT_OPTIONS = {
 
 class SpeakerInspectorControls extends Component {
 	render() {
-		const { attributes, setAttributes } = this.props;
+		const { attributes, setAttributes, blockData } = this.props;
 		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, excerpt_more, show_session, sort } = attributes;
-		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = data;
+		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = blockData;
 
 		return (
 			<InspectorControls>

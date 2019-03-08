@@ -19,6 +19,9 @@ import SpeakersInspectorControls from './inspector-controls';
 import SpeakersToolbar from './toolbar';
 import './edit.scss';
 
+const blockData = window.WordCampBlocks.speakers || {};
+
+const SPEAKERS_ICON = 'megaphone';
 const MAX_POSTS = 100;
 
 const ALL_POSTS_QUERY = {
@@ -71,7 +74,11 @@ class SpeakersEdit extends Component {
 
 		return (
 			<Fragment>
-				<SpeakersBlockControls { ...this.props } { ...this.state } />
+				<SpeakersBlockControls
+					icon={ SPEAKERS_ICON }
+					{ ...this.props }
+					{ ...this.state }
+				/>
 				{ mode &&
 					<Fragment>
 						<SpeakersInspectorControls { ...this.props } />
@@ -84,7 +91,7 @@ class SpeakersEdit extends Component {
 }
 
 const speakersSelect = ( select, props ) => {
-	const { mode, post_ids, term_ids, sort } = props.attributes;
+	const { mode, item_ids, sort } = props.attributes;
 	const { getEntityRecords } = select( 'core' );
 	const [ orderby, order ] = split( sort, '_', 2 );
 
@@ -96,17 +103,21 @@ const speakersSelect = ( select, props ) => {
 		context  : 'view',
 	};
 
-	if ( 'specific_posts' === mode && Array.isArray( post_ids ) ) {
-		args.include = post_ids;
-	}
-
-	if ( 'specific_terms' === mode && Array.isArray( term_ids ) ) {
-		args.speaker_group = term_ids;
+	if ( Array.isArray( item_ids ) ) {
+		switch ( mode ) {
+			case 'wcb_speaker':
+				args.include = item_ids;
+				break;
+			case 'wcb_speaker_group':
+				args.speaker_group = item_ids;
+				break;
+		}
 	}
 
 	const speakersQuery = pickBy( args, ( value ) => ! isUndefined( value ) );
 
 	return {
+		blockData,
 		speakerPosts : getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),
 		tracks       : getEntityRecords( 'taxonomy', 'wcb_track', { per_page: MAX_POSTS } ),
 	};

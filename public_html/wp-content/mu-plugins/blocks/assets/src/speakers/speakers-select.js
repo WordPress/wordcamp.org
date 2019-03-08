@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { includes } from 'lodash';
+import {get, includes} from 'lodash';
 
 /**
  * WordPress dependencies
@@ -15,20 +15,20 @@ const { __ } = wp.i18n;
  * Internal dependencies
  */
 import AvatarImage from '../shared/avatar';
-import VersatileSelect from '../shared/versatile-select';
+import ItemSelect from '../shared/item-select';
 
 class SpeakersSelect extends Component {
 	constructor( props ) {
 		super( props );
 
 		this.state = {
-			posts   : [],
-			terms   : [],
-			loading : true,
+			wcb_speaker       : [],
+			wcb_speaker_group : [],
+			loading           : true,
 		};
 
 		this.buildSelectOptions = this.buildSelectOptions.bind( this );
-		this.isOptionDisabled = this.isOptionDisabled.bind( this );
+		this.onChange = this.onChange.bind( this );
 	}
 
 	componentWillMount() {
@@ -42,13 +42,13 @@ class SpeakersSelect extends Component {
 					return {
 						label  : decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ),
 						value  : post.id,
-						type   : 'post',
+						type   : 'wcb_speaker',
 						avatar : post.avatar_urls[ '24' ],
 					};
 				} );
 
 				if ( this.isStillMounted ) {
-					this.setState( { posts } );
+					this.setState( { wcb_speaker: posts } );
 				}
 			}
 		);
@@ -59,13 +59,13 @@ class SpeakersSelect extends Component {
 					return {
 						label : decodeEntities( term.name ) || __( '(Untitled)', 'wordcamporg' ),
 						value : term.id,
-						type  : 'term',
+						type  : 'wcb_speaker_group',
 						count : term.count,
 					};
 				} );
 
 				if ( this.isStillMounted ) {
-					this.setState( { terms } );
+					this.setState( { wcb_speaker_group: terms } );
 				}
 			}
 		);
@@ -80,108 +80,72 @@ class SpeakersSelect extends Component {
 	}
 
 	buildSelectOptions( mode ) {
-		const { posts, terms } = this.state;
 		const options = [];
 
-		if ( ! mode || 'specific_terms' === mode ) {
-			options.push( {
-				label   : __( 'Groups', 'wordcamporg' ),
-				options : terms,
-			} );
-		}
+		const labels = {
+			wcb_speaker       : __( 'Speakers', 'wordcamporg' ),
+			wcb_speaker_group : __( 'Groups', 'wordcamporg' ),
+		};
 
-		if ( ! mode || 'specific_posts' === mode ) {
-			options.push( {
-				label   : __( 'Speakers', 'wordcamporg' ),
-				options : posts,
-			} );
+		for ( const type in this.state ) {
+			if ( this.state.hasOwnProperty( type ) && ( ! mode || type === mode ) && this.state[ type ].length ) {
+				options.push( {
+					label   : labels[ type ],
+					options : this.state[ type ],
+				} );
+			}
 		}
 
 		return options;
 	}
 
-	isOptionDisabled( option, selected ) {
-		const { mode } = this.props.attributes;
-		let chosen;
+	onChange( selectedOptions ) {
+		const { setAttributes } = this.props;
+		const newValue = selectedOptions.map( ( option ) => option.value );
 
-		if ( 'loading' === option.type ) {
-			return true;
+		if ( newValue.length ) {
+			const chosen = selectedOptions[ 0 ].type;
+
+			setAttributes( {
+				mode     : chosen,
+				item_ids : newValue,
+			} );
+		} else {
+			setAttributes( {
+				mode     : '',
+				item_ids : [],
+			} );
 		}
-
-		if ( Array.isArray( selected ) && selected.length ) {
-			chosen = selected[ 0 ].type;
-		}
-
-		if ( 'specific_terms' === mode && 'post' === option.type ) {
-			return true;
-		}
-
-		if ( 'specific_posts' === mode && 'term' === option.type ) {
-			return true;
-		}
-
-		return chosen && chosen !== option.type;
 	}
 
 	render() {
-		const { label, attributes, setAttributes } = this.props;
-		const { mode, post_ids, term_ids } = attributes;
+		const { label, attributes } = this.props;
+		const { mode, item_ids } = attributes;
 		const options = this.buildSelectOptions( mode );
 
 		let value = [];
 
-		if ( 'specific_posts' === mode && options.length ) {
-			value = options[ 0 ].options.filter( ( option ) => {
-				return includes( post_ids, option.value );
-			} );
-		} else if ( 'specific_terms' === mode && options.length ) {
-			value = options[ 0 ].options.filter( ( option ) => {
-				return includes( term_ids, option.value );
+		if ( mode && item_ids.length ) {
+			const modeOptions = get( options, '[0].options', [] );
+
+			value = modeOptions.filter( ( option ) => {
+				return includes( item_ids, option.value );
 			} );
 		}
 
 		return (
-			<VersatileSelect
+			<ItemSelect
 				className="wordcamp-speakers-select"
 				label={ label }
 				value={ value }
-				onChange={ ( selectedOptions ) => {
-					const newValue = selectedOptions.map( ( option ) => option.value );
-
-					if ( newValue.length ) {
-						const chosen = selectedOptions[ 0 ].type;
-
-						switch ( chosen ) {
-							case 'post' :
-								setAttributes( {
-									mode     : 'specific_posts',
-									post_ids : newValue,
-								} );
-								break;
-
-							case 'term' :
-								setAttributes( {
-									mode     : 'specific_terms',
-									term_ids : newValue,
-								} );
-								break;
-						}
-					} else {
-						setAttributes( {
-							mode     : '',
-							post_ids : [],
-							term_ids : [],
-						} );
-					}
-				} }
+				buildSelectOptions={ this.buildSelectOptions }
+				onChange={ this.onChange }
+				mode={ mode }
 				selectProps={ {
 					isLoading        : this.state.loading,
-					options          : options,
-					isMulti          : true,
-					isOptionDisabled : this.isOptionDisabled,
 					formatGroupLabel : ( groupData ) => {
 						return (
-							<span className="wordcamp-speakers-select-option-group-label">
+							<span className="wordcamp-item-select-option-group-label">
 								{ groupData.label }
 							</span>
 						);
@@ -201,36 +165,36 @@ function SpeakersOption( { type, label = '', avatar = '', count = 0 } ) {
 	let image, content;
 
 	switch ( type ) {
-		case 'post' :
+		case 'wcb_speaker' :
 			image = (
 				<AvatarImage
-					className="wordcamp-speakers-select-option-avatar"
+					className="wordcamp-item-select-option-avatar"
 					name={ label }
 					size={ 24 }
 					url={ avatar }
 				/>
 			);
 			content = (
-				<span className="wordcamp-speakers-select-option-label">
+				<span className="wordcamp-item-select-option-label">
 					{ label }
 				</span>
 			);
 			break;
 
-		case 'term' :
+		case 'wcb_speaker_group' :
 			image = (
-				<div className="wordcamp-speakers-select-option-icon-container">
+				<div className="wordcamp-item-select-option-icon-container">
 					<Dashicon
-						className="wordcamp-speakers-select-option-icon"
+						className="wordcamp-item-select-option-icon"
 						icon={ 'megaphone' }
 						size={ 16 }
 					/>
 				</div>
 			);
 			content = (
-				<span className="wordcamp-speakers-select-option-label">
+				<span className="wordcamp-item-select-option-label">
 					{ label }
-					<span className="wordcamp-speakers-select-option-label-term-count">
+					<span className="wordcamp-item-select-option-label-term-count">
 						{ count }
 					</span>
 				</span>
@@ -239,7 +203,7 @@ function SpeakersOption( { type, label = '', avatar = '', count = 0 } ) {
 	}
 
 	return (
-		<div className="wordcamp-speakers-select-option">
+		<div className="wordcamp-item-select-option">
 			{ image }
 			{ content }
 		</div>

@@ -104,16 +104,16 @@ function get_speaker_posts( array $attributes ) {
 	}
 
 	switch ( $attributes['mode'] ) {
-		case 'specific_posts':
-			$post_args['post__in'] = $attributes['post_ids'];
+		case 'wcb_speaker':
+			$post_args['post__in'] = $attributes['item_ids'];
 			break;
 
-		case 'specific_terms':
+		case 'wcb_speaker_group':
 			$post_args['tax_query'] = [
 				[
-					'taxonomy' => 'wcb_speaker_group',
+					'taxonomy' => $attributes['mode'],
 					'field'    => 'id',
-					'terms'    => $attributes['term_ids'],
+					'terms'    => $attributes['item_ids'],
 				],
 			];
 			break;
@@ -171,14 +171,7 @@ function get_attributes_schema() {
 			'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 			'default' => '',
 		],
-		'post_ids'     => [
-			'type'    => 'array',
-			'default' => [],
-			'items'   => [
-				'type' => 'integer',
-			],
-		],
-		'term_ids'     => [
+		'item_ids'     => [
 			'type'    => 'array',
 			'default' => [],
 			'items'   => [
@@ -298,11 +291,11 @@ function get_options( $type = '' ) {
 			],
 			[
 				'label' => _x( 'Choose speakers', 'mode option', 'wordcamporg' ),
-				'value' => 'specific_posts',
+				'value' => 'wcb_speaker',
 			],
 			[
 				'label' => _x( 'Choose groups', 'mode option', 'wordcamporg' ),
-				'value' => 'specific_terms',
+				'value' => 'wcb_speaker_group',
 			],
 		],
 		'sort'    => [

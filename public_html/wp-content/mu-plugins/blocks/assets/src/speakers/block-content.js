@@ -16,6 +16,7 @@ const { __, _n, sprintf } = wp.i18n;
  * Internal dependencies
  */
 import AvatarImage from '../shared/avatar';
+import { ItemTitle, ItemHTMLContent } from "../shared/block-content";
 import './block-content.scss';
 
 class SpeakersBlockContent extends Component {
@@ -48,13 +49,12 @@ class SpeakersBlockContent extends Component {
 							'wordcamp-clearfix'
 						) }
 					>
-						<h3 className="wordcamp-speaker-name-heading">
-							<Disabled>
-								<a href={ post.link }>
-									{ decodeEntities( post.title.rendered.trim() ) || __( '(Untitled)', 'wordcamporg' ) }
-								</a>
-							</Disabled>
-						</h3>
+						<ItemTitle
+							className="wordcamp-speaker-title"
+							headingLevel={ 3 }
+							title={ post.title.rendered.trim() }
+							link={ post.link }
+						/>
 
 						{ show_avatars &&
 							<div className={ classnames( 'wordcamp-speaker-avatar-container', 'align-' + decodeEntities( avatar_align ) ) }>
@@ -72,30 +72,12 @@ class SpeakersBlockContent extends Component {
 						}
 
 						{ ( 'none' !== content ) &&
-							<div className={ classnames( 'wordcamp-speaker-content', 'wordcamp-speaker-content-' + decodeEntities( content ) ) }>
-								{ 'full' === content &&
-									<Disabled>
-										<RawHTML children={ post.content.rendered.trim() } />
-										<p className="wordcamp-speaker-permalink">
-											<a href={ post.link }>
-												{ __( 'Visit speaker page', 'wordcamporg' ) }
-											</a>
-										</p>
-									</Disabled>
-								}
-								{ 'excerpt' === content &&
-									<Disabled>
-										<RawHTML children={ post.excerpt.rendered.trim() } />
-										{ excerpt_more &&
-											<p className="wordcamp-speaker-permalink">
-												<a href={ post.link }>
-													{ __( 'Read more', 'wordcamporg' ) }
-												</a>
-											</p>
-										}
-									</Disabled>
-								}
-							</div>
+							<ItemHTMLContent
+								className={ classnames( 'wordcamp-speaker-content-' + decodeEntities( content ) ) }
+								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
+								link={ ( 'full' === content || excerpt_more ) ? post.link : null }
+								linkText={ 'full' === content ? __( 'Visit session page', 'wordcamporg' ) : __( 'Read more', 'wordcamporg' ) }
+							/>
 						}
 
 						{ true === show_session && post._embedded.sessions &&

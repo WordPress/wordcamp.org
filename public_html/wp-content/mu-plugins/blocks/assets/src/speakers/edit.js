@@ -17,7 +17,6 @@ const { addQueryArgs } = wp.url;
 import SpeakersBlockControls from './block-controls';
 import SpeakersInspectorControls from './inspector-controls';
 import SpeakersToolbar from './toolbar';
-import './edit.scss';
 
 const blockData = window.WordCampBlocks.speakers || {};
 

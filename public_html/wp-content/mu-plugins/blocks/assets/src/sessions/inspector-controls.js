@@ -17,7 +17,7 @@ class SessionsInspectorControls extends Component {
 		const { show_speaker, show_images, image_size, image_align, content, excerpt_more, show_meta, show_category, sort } = attributes;
 		const { options } = blockData;
 
-		return(
+		return (
 			<InspectorControls>
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ true }>
 					<PanelRow>

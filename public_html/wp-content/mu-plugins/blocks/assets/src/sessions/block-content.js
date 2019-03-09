@@ -15,11 +15,10 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import { ItemTitle, ItemHTMLContent } from "../shared/block-content";
-import { tokenSplit, arrayTokenReplace, intersperse, listify } from "../shared/i18n";
+import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
+import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../shared/i18n';
 
 function SessionSpeakers( { session } ) {
-	let speakers;
 	let speakerData = get( session, '_embedded.speakers', [] );
 
 	speakerData = speakerData.map( ( speaker ) => {
@@ -30,10 +29,17 @@ function SessionSpeakers( { session } ) {
 			return decodeEntities( title.trim() );
 		}
 
-		return ( <a href={ link }>{ decodeEntities( title.trim() ) }</a> );
+		return (
+			<a
+				key={ link }
+				href={ link }
+			>
+				{ decodeEntities( title.trim() ) }
+			</a>
+		);
 	} );
 
-	speakers = arrayTokenReplace(
+	const speakers = arrayTokenReplace(
 		/* translators: %s is a list of names. */
 		tokenSplit( __( 'Presented by %s', 'wordcamporg' ) ),
 		[ listify( speakerData ) ]
@@ -61,7 +67,7 @@ function SessionImage( { session } ) {
 		);
 	} else {
 		image = (
-			<div className="wordcamp-session-default-image"/>
+			<div className="wordcamp-session-default-image" />
 		);
 	}
 
@@ -88,7 +94,7 @@ function SessionDetails( { session, show_meta, show_category } ) {
 						<span className={ classnames( 'wordcamp-session-track', 'wordcamp-session-track-' + decodeEntities( firstTrack.slug.trim() ) ) }>
 							{ decodeEntities( firstTrack.name.trim() ) }
 						</span>
-					)
+					),
 				]
 			);
 		} else {
@@ -155,7 +161,7 @@ class SessionsBlockContent extends Component {
 			'wordcamp-block',
 			'wordcamp-block-post-list',
 			'wordcamp-sessions-block',
-			className
+			className,
 		];
 
 		return (

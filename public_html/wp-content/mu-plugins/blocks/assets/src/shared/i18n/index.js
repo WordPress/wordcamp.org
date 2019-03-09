@@ -23,9 +23,9 @@ const { __ } = wp.i18n;
  *
  *   [ 'I accuse ', '%1$s', ' in the ', '%2$s', ' with the ', '%3$s', '!' ]
  *
- * @param {String} string
+ * @param {string} string
  *
- * @returns {Array}
+ * @return {Array} The split string.
  */
 export function tokenSplit( string ) {
 	const regex = /(%[1-9]?\$?s)/;
@@ -56,7 +56,7 @@ export function tokenSplit( string ) {
  * @param {Array} source
  * @param {Array} args
  *
- * @returns {Array}
+ * @return {Array} Array with token items replaced.
  */
 export function arrayTokenReplace( source, args ) {
 	let specificArgIndex,
@@ -67,8 +67,8 @@ export function arrayTokenReplace( source, args ) {
 		const match = value.match( regex );
 
 		if ( Array.isArray( match ) ) {
-			if ( match.length > 1 && 'undefined' !== typeof match[1] ) {
-				specificArgIndex = Number( match[1] ) - 1;
+			if ( match.length > 1 && 'undefined' !== typeof match[ 1 ] ) {
+				specificArgIndex = Number( match[ 1 ] ) - 1;
 
 				if ( 'undefined' !== typeof args[ specificArgIndex ] ) {
 					value = args[ specificArgIndex ];
@@ -76,7 +76,7 @@ export function arrayTokenReplace( source, args ) {
 			} else {
 				value = args[ nextArgIndex ];
 
-				nextArgIndex ++;
+				nextArgIndex++;
 			}
 		}
 
@@ -90,9 +90,9 @@ export function arrayTokenReplace( source, args ) {
  * See https://stackoverflow.com/a/23619085/402766
  *
  * @param {Array} array
- * @param {String} separator
+ * @param {string} separator
  *
- * @returns {Array}
+ * @return {Array} Array with separator items.
  */
 export function intersperse( array, separator ) {
 	if ( ! array.length ) {
@@ -107,7 +107,7 @@ export function intersperse( array, separator ) {
 
 				return accumulator.concat( [ sep, curValue ] );
 			},
-			[ array[0] ]
+			[ array[ 0 ] ]
 		);
 }
 
@@ -131,7 +131,7 @@ export function intersperse( array, separator ) {
  *
  * @param {Array} array
  *
- * @returns {Array}
+ * @return {Array} Array with separator items.
  */
 export function listify( array ) {
 	let list = [];
@@ -157,7 +157,7 @@ export function listify( array ) {
 			list = intersperse( array, conjunction );
 			break;
 		default:
-			let [ last, ...initial ] = [ ...array ].reverse();
+			const [ last, ...initial ] = [ ...array ].reverse();
 
 			list = intersperse( initial, separator ).concat( [ separator, conjunction, last ] );
 			break;

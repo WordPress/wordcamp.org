@@ -29,14 +29,6 @@ class ItemSelect extends Component {
 		this.getNewAttributes = this.getNewAttributes.bind( this );
 	}
 
-	/**
-	 * Checks if an option is disabled, based on whether selected option belongs to the same category as current option.
-	 *
-	 * @param {Object} option
-	 * @param {Array} selected
-	 *
-	 * @returns {Boolean}
-	 */
 	isOptionDisabled( option, selected ) {
 		const { mode } = this.props;
 		let chosen;
@@ -91,7 +83,7 @@ class ItemSelect extends Component {
 			options          : buildSelectOptions(),
 			isMulti          : true,
 			isOptionDisabled : this.isOptionDisabled,
-			...selectProps
+			...selectProps,
 		};
 
 		return (

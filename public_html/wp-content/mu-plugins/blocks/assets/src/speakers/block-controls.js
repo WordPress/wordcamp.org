@@ -7,13 +7,12 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Button, Placeholder } = wp.components;
-const { Component, Fragment } = wp.element;
 const { __ } = wp.i18n;
 
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from "../shared/block-controls";
+import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from '../shared/block-controls';
 import SpeakersBlockContent from './block-content';
 import SpeakersSelect from './speakers-select';
 

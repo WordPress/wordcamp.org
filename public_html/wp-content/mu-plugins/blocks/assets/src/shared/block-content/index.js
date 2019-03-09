@@ -28,7 +28,7 @@ export function ItemTitle( { headingLevel, className, title, link } ) {
 
 	const classes = [
 		'wordcamp-item-title',
-		className
+		className,
 	];
 
 	const content = title || __( '(Untitled)', 'wordcamporg' );
@@ -54,7 +54,7 @@ export function ItemTitle( { headingLevel, className, title, link } ) {
 export function ItemHTMLContent( { className, content, link, linkText } ) {
 	const classes = [
 		'wordcamp-item-content',
-		className
+		className,
 	];
 
 	return (

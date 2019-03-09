@@ -12,7 +12,7 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from "../shared/block-controls";
+import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from '../shared/block-controls';
 import SessionsBlockContent from './block-content';
 import SessionsSelect from './sessions-select';
 

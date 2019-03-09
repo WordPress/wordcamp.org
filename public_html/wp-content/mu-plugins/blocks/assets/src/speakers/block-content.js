@@ -16,14 +16,14 @@ const { __, _n } = wp.i18n;
  * Internal dependencies
  */
 import AvatarImage from '../shared/avatar';
-import { ItemTitle, ItemHTMLContent } from "../shared/block-content";
-import { tokenSplit, arrayTokenReplace } from "../shared/i18n";
+import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
+import { tokenSplit, arrayTokenReplace } from '../shared/i18n';
 import './block-content.scss';
 
 function SpeakerSessions( { speaker, tracks } ) {
 	const sessions = get( speaker, '_embedded.sessions', [] );
 
-	let output =( <Fragment>{ null }</Fragment> );
+	let output = ( <Fragment>{ null }</Fragment> );
 
 	if ( sessions.length ) {
 		output = (

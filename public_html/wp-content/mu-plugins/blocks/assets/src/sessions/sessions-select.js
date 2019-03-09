@@ -126,7 +126,7 @@ class SessionsSelect extends Component {
 				label={ label }
 				value={ value }
 				buildSelectOptions={ this.buildSelectOptions }
-				onChange={ ( value ) => setAttributes( value ) }
+				onChange={ ( changed ) => setAttributes( changed ) }
 				mode={ mode }
 				selectProps={ {
 					isLoading        : this.state.loading,

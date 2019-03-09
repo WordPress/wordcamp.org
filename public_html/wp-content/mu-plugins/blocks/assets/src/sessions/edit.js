@@ -14,8 +14,8 @@ const { addQueryArgs } = wp.url;
 /**
  * Internal dependencies
  */
-import SessionsBlockControls from "./block-controls";
-import SessionsInspectorControls from "./inspector-controls";
+import SessionsBlockControls from './block-controls';
+import SessionsInspectorControls from './inspector-controls';
 
 const blockData = window.WordCampBlocks.sessions || {};
 
@@ -125,7 +125,7 @@ const sessionsSelect = ( select, props ) => {
 
 	const sessionsQuery = pickBy( args, ( value ) => ! isUndefined( value ) );
 
-	let sessionPosts = getEntityRecords( 'postType', 'wcb_session', sessionsQuery );
+	const sessionPosts = getEntityRecords( 'postType', 'wcb_session', sessionsQuery );
 
 	// todo Is there a way to do this sorting via REST API parameters?
 	if ( Array.isArray( sessionPosts ) && 'session_time' === sort ) {

@@ -35,7 +35,7 @@ export function PlaceholderNoContent( { className, icon, label, loading } ) {
 	const classes = [
 		'wordcamp-block-edit-placeholder',
 		'wordcamp-block-edit-placeholder-no-content',
-		className
+		className,
 	];
 
 	return (
@@ -56,7 +56,7 @@ export function PlaceholderSpecificMode( { className, label, icon, content, plac
 	const classes = [
 		'wordcamp-block-edit-placeholder',
 		'wordcamp-block-edit-placeholder-specific-mode',
-		className
+		className,
 	];
 
 	return (

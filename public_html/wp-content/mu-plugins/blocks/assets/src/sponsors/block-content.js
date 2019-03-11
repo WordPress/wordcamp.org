@@ -1,11 +1,19 @@
+/**
+ * External dependencies.
+ */
 import { get } from 'lodash';
+
+/**
+ * WordPress dependencies.
+ */
 const { RawHTML } = wp.element;
-import classnames from 'classnames';
+const { Component } = wp.element;
+
+/**
+ * Internal dependencies.
+ */
 import FeaturedImage from '../shared/featured-image';
 import GridContentLayout from '../shared/grid-layout/block-content';
-import './block-content.scss';
-
-const { Component } = wp.element;
 
 /**
  * Renders individual sponsor post inside editor.

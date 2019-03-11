@@ -18,6 +18,7 @@ const { __, _n } = wp.i18n;
 import AvatarImage from '../shared/avatar';
 import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
 import { tokenSplit, arrayTokenReplace } from '../shared/i18n';
+import GridContentLayout from '../shared/grid-layout/block-content';
 import './block-content.scss';
 
 function SpeakerSessions( { speaker, tracks } ) {
@@ -82,30 +83,20 @@ class SpeakersBlockContent extends Component {
 	render() {
 		const { attributes, speakerPosts, tracks } = this.props;
 		const {
-			layout, grid_columns, className,
 			show_avatars, avatar_size, avatar_align,
 			content, excerpt_more, show_session,
 		} = attributes;
 
-		const containerClasses = [
-			'wordcamp-speakers-block',
-			'layout-' + layout,
-			className,
-		];
-
-		if ( 'grid' === layout ) {
-			containerClasses.push( 'grid-columns-' + Number( grid_columns ) );
-		}
-
 		return (
-			<ul className={ classnames( containerClasses ) }>
+			<GridContentLayout
+				{ ...this.props }
+			>
 				{ speakerPosts.map( ( post ) =>
-					<li
+					<div
 						key={ post.slug }
 						className={ classnames(
 							'wordcamp-speaker',
 							'wordcamp-speaker-' + decodeEntities( post.slug ),
-							'wordcamp-clearfix'
 						) }
 					>
 						<ItemTitle
@@ -145,9 +136,9 @@ class SpeakersBlockContent extends Component {
 								tracks={ tracks }
 							/>
 						}
-					</li>,
+					</div>,
 				) }
-			</ul>
+			</GridContentLayout>
 		);
 	}
 }

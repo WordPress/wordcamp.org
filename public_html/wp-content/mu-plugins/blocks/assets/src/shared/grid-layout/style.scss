@@ -3,13 +3,13 @@
 	display: table;
 	clear: both;
 }
-.edit-post-visual-editor ul:not(.wp-block-gallery).wordcamp-sponsors-block.wordcamp-sponsors-list,
-ul.wordcamp-sponsors-block.wordcamp-sponsors-list {
-	list-style-type: none;
-	margin: 0 0 1em 0;
-}
 
-.wordcamp-sponsors-block {
+.wordcamp-block-post-list {
+
+	li.wordcamp-grid-layout-item {
+		list-style: none;
+		margin: 0 0 1em 0;
+	}
 
 	&.layout-list > li {
 		margin-bottom: 1em;
@@ -29,7 +29,7 @@ ul.wordcamp-sponsors-block.wordcamp-sponsors-list {
 			/* https://stackoverflow.com/a/43312314 */
 			min-height: 0;
 			min-width: 0;
-			& .wordcamp-speaker {
+			& .wordcamp-block-post-list-item {
 				overflow: hidden;
 				min-width: 0;
 			}

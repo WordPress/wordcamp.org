@@ -9,6 +9,11 @@ import classnames from 'classnames';
 const { Component } = wp.element;
 
 /**
+ * Internal dependencies.
+ */
+import './style.scss';
+
+/**
  * Implements grid / list layout for WordCamp blocks.
  * Uses attribute `layout` and `columnns`.
  */

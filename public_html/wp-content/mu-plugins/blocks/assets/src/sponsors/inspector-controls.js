@@ -41,7 +41,7 @@ class SponsorInspectorControls extends Component {
 
 		const { attributes, setAttributes } = this.props;
 		const {
-			show_name, show_logo, show_desc, columns, sponsor_logo_height, sponsor_logo_width
+			show_name, show_logo, show_desc, columns, sponsor_logo_height, sponsor_logo_width, layout, mode
 		} = attributes;
 
 		const sortByOptions = [
@@ -51,6 +51,24 @@ class SponsorInspectorControls extends Component {
 
 		return (
 			<InspectorControls>
+				{ 'grid' === layout &&
+				<PanelBody>
+					<PanelBody
+						title = { __( 'Layout', 'wordcamporg' ) }
+						initialOpen = { true }
+					>
+						<PanelRow>
+							<RangeControl
+								label={ __( 'Columns', 'wordcamporg' ) }
+								value={ columns || 2 }
+								min = { 2 }
+								max = { 4 }
+								onChange = { ( option ) => setAttributes( { columns: option } ) }
+							/>
+						</PanelRow>
+					</PanelBody>
+				</PanelBody>
+				}
 				<PanelBody
 					title = { __( 'Content Settings', 'wordcamporg' ) }
 					initialOpen = { true }
@@ -121,20 +139,6 @@ class SponsorInspectorControls extends Component {
 								/>
 							</PanelRow>
 						</BaseControl>
-					</PanelRow>
-				</PanelBody>
-				<PanelBody
-					title = { __( 'Layout', 'wordcamporg' ) }
-					initialOpen = { true }
-				>
-					<PanelRow>
-						<RangeControl
-							label={ __( 'Columns', 'wordcamporg' ) }
-							value={ columns || 1 }
-							min = { 1 }
-							max = { 4 }
-							onChange = { ( option ) => setAttributes( { columns: option } ) }
-						/>
 					</PanelRow>
 				</PanelBody>
 			</InspectorControls>

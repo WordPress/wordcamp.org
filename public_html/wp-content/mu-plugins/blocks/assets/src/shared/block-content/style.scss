@@ -5,10 +5,8 @@
 }
 
 .wordcamp-block-post-list {
-	/* The double-ampersand defeats an overzealous ul rule in Core's editor-blocks.css. */
-	/* https://css-tricks.com/the-sass-ampersand/#article-header-id-11 */
-	&#{&},
-	.block-editor &#{&} {
+
+	li.wordcamp-grid-layout-item {
 		list-style: none;
 		margin: 0 0 1em 0;
 	}

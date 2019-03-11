@@ -3,6 +3,7 @@
  */
 import SponsorInspectorControls from './inspector-controls';
 import SponsorBlockControls from './block-controls';
+import GridToolbar from '../shared/grid-layout/toolbar';
 
 /**
  WordPress dependencies.
@@ -54,6 +55,8 @@ class SponsorsEdit extends Component {
 	 */
 	render() {
 		const { sponsorPosts, sponsorLevels } = this.state;
+		const { attributes } = this.props;
+		const { mode } = attributes;
 
 		return (
 			<Fragment>
@@ -68,7 +71,13 @@ class SponsorsEdit extends Component {
 					<SponsorInspectorControls
 						sponsorPosts = { sponsorPosts }
 						sponsorLevels = { sponsorLevels }
-						{...this.props} />
+						{...this.props}
+					/>
+					{mode &&
+					<GridToolbar
+						{...this.props}
+					/>
+					}
 				</Fragment>
 			</Fragment>
 		)

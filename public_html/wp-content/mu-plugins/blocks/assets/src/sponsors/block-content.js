@@ -2,6 +2,7 @@ import { get } from 'lodash';
 const { RawHTML } = wp.element;
 import classnames from 'classnames';
 import FeaturedImage from '../shared/featured-image';
+import GridContentLayout from '../shared/grid-layout/block-content';
 import './block-content.scss';
 
 const { Component } = wp.element;
@@ -25,7 +26,7 @@ function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
 	const featuredImageSizes = get( sponsorPost, "_embedded.wp:featuredmedia[0].media_details.sizes", {} );
 
 	return (
-		<div className={"wordcamp-sponsor-details"}>
+		<div className={ "wordcamp-sponsor-details"}>
 			{ ( show_logo || show_logo === undefined ) &&
 			<FeaturedImage
 				className={"wordcamp-sponsor-featured-image wordcamp-sponsor-logo"}
@@ -80,29 +81,14 @@ class SponsorBlockContent extends Component {
 	 */
 	render() {
 		const { selectedPosts, attributes } = this.props;
-		const columns = attributes.columns || 1;
-		const containerClasses = [
-			'wordcamp-sponsors-block',
-			'wordcamp-sponsors-list',
-		];
-		if ( 1 !== columns ) {
-			containerClasses.push( 'grid-columns-' + Number( columns ) );
-			containerClasses.push( 'layout-grid' );
-			containerClasses.push( 'layout-' + columns );
-		}
 
 		return (
-			<ul className={ classnames( containerClasses ) } >
+			<GridContentLayout
+				{ ...this.props }
+			>
 				{
 					selectedPosts.map( ( post ) => {
 						return (
-							<li
-								className={ classnames(
-									'wordcamp-sponsor',
-									'wordcamp-clearfix',
-									'wordcamp-sponsor-' + post.slug
-								)}
-							>
 								<SponsorDetail
 									sponsorPost={ post }
 									attributes={ attributes }
@@ -112,11 +98,10 @@ class SponsorBlockContent extends Component {
 										}
 									}
 								/>
-							</li>
 						)
 					} )
 				}
-			</ul>
+			</GridContentLayout>
 		)
 	}
 

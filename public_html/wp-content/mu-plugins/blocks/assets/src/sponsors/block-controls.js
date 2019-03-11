@@ -11,8 +11,8 @@ const { __ } = wp.i18n;
  */
 import { BlockControls, PlaceholderNoContent } from "../shared/block-controls";
 import SponsorBlockContent from './block-content';
-import CustomPostTypeSelect from '../shared/block-controls/custom-post-select'
-import FeaturedImage from '../shared/featured-image';
+import ItemSelect from '../shared/item-select'
+const { Button, Placeholder } = wp.components;
 
 const LABEL = __( 'Sponsors', 'wordcamporg' );
 
@@ -172,12 +172,12 @@ class SponsorBlockControls extends BlockControls {
 	 *
 	 * @param selectedOptions Array of values, type of selected options
 	 */
-	onChange( selectedOptions ) {
+	onChange( selectedOptions = {} ) {
 		const { setAttributes } = this.props;
-		const newValue = ( selectedOptions || [] ).map( ( option ) => option.value );
+		const newValue = selectedOptions.item_ids;
+		const chosen = selectedOptions.mode;
 
-		if ( newValue.length ) {
-			const chosen = selectedOptions[ 0 ].type;
+		if ( newValue && chosen ) {
 
 			switch ( chosen ) {
 				case 'post' :
@@ -274,41 +274,53 @@ class SponsorBlockControls extends BlockControls {
 				/>
 
 				{'all' !== mode &&
-				<CustomPostTypeSelect
-					buildSelectOptions={
-						() => {
-							return this.buildSelectOptions()
-						}
-					}
-					isLoading={this.state.loading}
-					onChange={
-						(selectedOptions) => {
-							return this.onChange(selectedOptions);
-						}
-					}
-					selectProps={
-						{
-							formatOptionLabel: (optionData) => {
-								return (
-									<SponsorOption {...optionData} />
-								);
-							}
-						}
-					}
-					onButtonClick={
-						() => {
-							setAttributes( { mode: 'all' } );
-							setTimeout( () => this.setSelectedPosts() );
-						}
-					}
-					buttonLabel={__('List all sponsors', 'wordcamporg')}
-					iconName="heart"
-					label={__('Sponsors', 'wordcamporg')}
-					selectLabel={__('Choose specific sponsors or levels',
-						'wordcamporg')}
-					selectedOptions={selectedOptions}
-					{...this.props}
-				/>
+					<Placeholder
+						icon='heart'
+						label = { __('Sponsors', 'wordcamporg') }
+					>
+						<div className='' >
+							<Button
+								isDefault
+								isLarge
+								onClick = {
+									() => {
+										setAttributes( { mode: 'all' } );
+										setTimeout( () => this.setSelectedPosts() );
+									}
+								}
+							>
+								{ __('List all sponsors', 'wordcamporg') }
+							</Button>
+						</div>
+						<div className="wordcamp-block-edit-mode-option">
+							<ItemSelect
+								buildSelectOptions={
+									() => {
+										return this.buildSelectOptions()
+									}
+								}
+								isLoading={this.state.loading}
+								onChange={
+									(selectedOptions) => {
+										return this.onChange(selectedOptions);
+									}
+								}
+								selectProps={
+									{
+										formatOptionLabel: (optionData) => {
+											return (
+												<SponsorOption {...optionData} />
+											);
+										}
+									}
+								}
+								label={__('Or, choose specific sponsors or levels',
+									'wordcamporg')}
+								value={ selectedOptions }
+								{...this.props}
+							/>
+						</div>
+					</Placeholder>
 				}
 			</div>
 		);

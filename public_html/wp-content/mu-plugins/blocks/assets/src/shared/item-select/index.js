@@ -93,7 +93,7 @@ class ItemSelect extends Component {
 				label={ label }
 				help={ help }
 			>
-				<div className="wordcamp-item-select-inner">
+				<div className="wordcaselectedOptionsmp-item-select-inner">
 					<Select
 						id={ id }
 						className="wordcamp-item-select-select"

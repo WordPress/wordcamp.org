@@ -6,7 +6,7 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies.
  */
-const { Component, Fragment, RawHTML } = wp.element;
+const { Component } = wp.element;
 
 /**
  * Displays featured image, can be linked with block control for size. Fetches the smallest possible image size required to render the current size.
@@ -176,11 +176,10 @@ export default class FeaturedImage extends Component {
 		}
 		return(
 			<img
-				className={ classnames( 'featured-image', className ) }
+				className={ classnames( 'wordcamp-featured-image', className ) }
 				src = { imageURL }
 				alt = { alt }
-				style = { { height: height + "px"} }
-				width={ width + 'px' }
+				style = { { height: height + 'px', width: width + 'px' } }
 			/>
 		)
 	}

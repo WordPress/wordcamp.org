@@ -3,6 +3,7 @@ namespace WordCamp\Blocks\Sponsors;
 defined( 'WPINC' ) || die();
 
 use function WordCamp\Blocks\Shared\{ get_all_the_content };
+use function WordCamp\Blocks\Shared\Components\{ render_featured_image };
 
 /** @var array     $attributes */
 /** @var \WP_Post  $sponsor */
@@ -14,13 +15,13 @@ setup_postdata( $sponsor );
 <div class="wordcamp-sponsor-details <?php echo sanitize_html_class( $sponsor->post_name ); ?> ">
 
 	<?php if ( $attributes['show_logo'] && $sponsor_featured_urls[ $sponsor->ID ] ) { ?>
-		<img
-			class="featured-image wordcamp-sponsor-featured-image wordcamp-sponsor-logo"
-			src="<?php echo esc_attr( $sponsor_featured_urls[ $sponsor->ID ] ) ?>"
-			alt="<?php echo esc_attr( $sponsor->post_title ) ?>"
-			style=" height: <?php echo esc_attr( $attributes['sponsor_logo_height'] ) ?>px; "
-			width="<?php echo esc_attr( $attributes['sponsor_logo_width'] ) ?>px; "
-		/>
+		<?php echo render_featured_image(
+			array( 'wordcamp-sponsor-featured-image' ),
+			$sponsor,
+			$attributes['sponsor_logo_height'],
+			$attributes['sponsor_logo_width'],
+			$sponsor->post_title
+		); ?>
 	<?php } ?>
 
 	<?php if ( $attributes['show_name'] ) { ?>

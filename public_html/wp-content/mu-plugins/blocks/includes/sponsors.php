@@ -3,6 +3,7 @@ namespace WordCamp\Blocks\Sponsors;
 defined( 'WPINC' ) || die();
 
 use WordCamp\Blocks;
+use function WordCamp\Blocks\Shared\Components\{ render_grid_layout };
 
 defined( 'WPINC' ) || die();
 
@@ -46,20 +47,15 @@ function render( $attributes ) {
 		'wordcamp-sponsors-list',
 	);
 
-	if ( ! empty( $attributes['columns'] ) && 1 !== $attributes['columns'] ) {
-		$columns = (int) $attributes['columns'];
-		$container_classes[] = 'grid-columns-' . $columns;
-		$container_classes[] = 'layout-grid';
-		$container_classes[] = 'layout-' . $columns;
-	}
-	$container_classes = implode( ' ', $container_classes );
+	$rendered_sponsor_posts = array();
 
-	if ( $attributes['mode'] ) {
+	foreach ( $sponsors as $sponsor ) {
 		ob_start();
 		require Blocks\PLUGIN_DIR . 'view/sponsors.php';
-		$html = ob_get_clean();
+		$rendered_sponsor_posts[] = ob_get_clean();
 	}
 
+	$html = render_grid_layout( $attributes['layout'], $attributes['grid_columns'], $rendered_sponsor_posts, $container_classes );
 	return $html;
 }
 
@@ -140,12 +136,17 @@ function get_attributes_schema() {
 			'type' => 'bool',
 			'default' => true,
 		),
-		'columns' => array(
+		'grid_columns' => array(
 			'type' => 'integer',
 			'minimum' => 1,
 			'maximum' => 4,
 			'default' => 1
 		),
+		'layout' => [
+			'type'    => 'string',
+			'enum'    => array( 'list', 'grid' ),
+			'default' => 'list',
+		],
 		'sponsor_logo_height' => array(
 			'type' => 'integer',
 			'default' => 150

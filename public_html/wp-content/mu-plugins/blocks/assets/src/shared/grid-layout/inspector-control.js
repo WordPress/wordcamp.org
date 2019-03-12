@@ -24,6 +24,8 @@ class GridInspectorControl extends Component {
 		if ( 'grid' !== layout ) {
 			return null;
 		}
+		const schema = DEFAULT_SCHEMA;
+
 		return(
 			<PanelBody>
 				<PanelBody

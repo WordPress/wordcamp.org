@@ -39,7 +39,7 @@ class GridContentLayout extends Component {
 						( childComponent ) => {
 							return (
 								<li
-									className={ classnames( 'wordcamp-grid-layout-item', 'wordcamp-clearfix' ) }
+									className={ classnames( 'wordcamp-grid-layout-item', 'wordcamp-block-post-list-item', 'wordcamp-clearfix' ) }
 								>
 									{ childComponent }
 								</li>

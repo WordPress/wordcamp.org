@@ -14,8 +14,7 @@ const { Component } = wp.element;
 import './style.scss';
 
 /**
- * Implements grid / list layout for WordCamp blocks.
- * Uses attribute `layout` and `columnns`.
+ * Implements grid / list layout for WordCamp blocks. Should be used with rest of the components in this folder. Uses attribute `layout` and `columnns`.
  */
 class GridContentLayout extends Component {
 

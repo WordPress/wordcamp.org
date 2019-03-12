@@ -11,6 +11,7 @@ const { __ } = wp.i18n;
  */
 import AvatarSizeControl from '../shared/avatar-size';
 import ImageAlignmentControl from '../shared/image-alignment';
+import GridInspectorControl from '../shared/grid-layout/inspector-control';
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {
@@ -34,26 +35,14 @@ const DEFAULT_OPTIONS = {
 class SpeakerInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes, blockData } = this.props;
-		const { layout, grid_columns, show_avatars, avatar_size, avatar_align, content, excerpt_more, show_session, sort } = attributes;
+		const { show_avatars, avatar_size, avatar_align, content, excerpt_more, show_session, sort } = attributes;
 		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = blockData;
 
 		return (
 			<InspectorControls>
-				{ 'grid' === layout &&
-					<PanelBody title={ __( 'Layout', 'wordcamporg' ) } initialOpen={ true }>
-						<PanelRow>
-							<RangeControl
-								label={ __( 'Grid Columns', 'wordcamporg' ) }
-								value={ Number( grid_columns ) }
-								min={ Number( schema.grid_columns.minimum ) }
-								max={ Number( schema.grid_columns.maximum ) }
-								initialPosition={ Number( schema.grid_columns.default ) }
-								onChange={ ( value ) => setAttributes( { grid_columns: value } ) }
-							/>
-						</PanelRow>
-					</PanelBody>
-				}
-
+				<GridInspectorControl
+					{ ...this.props }
+				/>
 				<PanelBody title={ __( 'Avatar Settings', 'wordcamporg' ) } initialOpen={ true }>
 					<PanelRow>
 						<ToggleControl

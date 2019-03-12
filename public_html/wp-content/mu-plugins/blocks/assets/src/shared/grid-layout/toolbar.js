@@ -8,8 +8,7 @@ const { Component } = wp.element;
 
 /**
  * Add option to select between grid and list layout.
- * This just adds the "grid" and "list" button in block toolbar, functionality
- * still needs to be connected to it separately.
+ * This just adds the "grid" and "list" button in block toolbar, functionality still needs to be connected to it separately. Other components in this folder can be used to provide functionality.
  *
  * Sets attribute `layout` to `grid` / `list`. Also sets `grid_columns` to 2 for `grid`, and 1 for `list`.
  */

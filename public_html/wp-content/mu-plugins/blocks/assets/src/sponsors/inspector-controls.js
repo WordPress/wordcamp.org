@@ -3,8 +3,13 @@
  */
 const { Component } = wp.element;
 const { InspectorControls } = wp.editor;
-const { PanelBody, PanelRow, ToggleControl, TextControl, Button, RangeControl, BaseControl } = wp.components;
+const { PanelBody, PanelRow, ToggleControl, TextControl, Button, BaseControl } = wp.components;
 const { __, _x } = wp.i18n;
+
+/**
+ * Internal dependencies
+ */
+import GridInspectorControl from '../shared/grid-layout/inspector-control';
 
 const sizePresets = [
 	{
@@ -41,7 +46,7 @@ class SponsorInspectorControls extends Component {
 
 		const { attributes, setAttributes } = this.props;
 		const {
-			show_name, show_logo, show_desc, columns, sponsor_logo_height, sponsor_logo_width, layout, mode
+			show_name, show_logo, show_desc, sponsor_logo_height, sponsor_logo_width
 		} = attributes;
 
 		const sortByOptions = [
@@ -51,24 +56,9 @@ class SponsorInspectorControls extends Component {
 
 		return (
 			<InspectorControls>
-				{ 'grid' === layout &&
-				<PanelBody>
-					<PanelBody
-						title = { __( 'Layout', 'wordcamporg' ) }
-						initialOpen = { true }
-					>
-						<PanelRow>
-							<RangeControl
-								label={ __( 'Columns', 'wordcamporg' ) }
-								value={ columns || 2 }
-								min = { 2 }
-								max = { 4 }
-								onChange = { ( option ) => setAttributes( { columns: option } ) }
-							/>
-						</PanelRow>
-					</PanelBody>
-				</PanelBody>
-				}
+				<GridInspectorControl
+					{ ...this.props }
+				/>
 				<PanelBody
 					title = { __( 'Content Settings', 'wordcamporg' ) }
 					initialOpen = { true }

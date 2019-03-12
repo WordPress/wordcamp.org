@@ -27,9 +27,9 @@ import GridContentLayout from '../shared/grid-layout/block-content';
 function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
 
 	const {
-		show_name, show_logo, show_desc, sponsor_logo_height, sponsor_logo_width
+		show_name, show_logo, show_desc, featured_image_height, featured_image_width
 	} = attributes;
-	const featuredImageSize = { height: sponsor_logo_height, width: sponsor_logo_width };
+	const featuredImageSize = { height: featured_image_height, width: featured_image_width };
 
 	const featuredImageSizes = get( sponsorPost, "_embedded.wp:featuredmedia[0].media_details.sizes", {} );
 

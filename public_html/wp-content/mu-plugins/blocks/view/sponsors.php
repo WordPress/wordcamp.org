@@ -18,8 +18,8 @@ setup_postdata( $sponsor );
 		<?php echo render_featured_image(
 			array( 'wordcamp-sponsor-featured-image' ),
 			$sponsor,
-			$attributes['sponsor_logo_height'],
-			$attributes['sponsor_logo_width'],
+			$attributes['featured_image_height'],
+			$attributes['featured_image_width'],
 			$sponsor->post_title
 		); ?>
 	<?php } ?>

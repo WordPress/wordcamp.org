@@ -147,11 +147,11 @@ function get_attributes_schema() {
 			'enum'    => array( 'list', 'grid' ),
 			'default' => 'list',
 		],
-		'sponsor_logo_height' => array(
+		'featured_image_height' => array(
 			'type' => 'integer',
 			'default' => 150
 		),
-		'sponsor_logo_width' => array(
+		'featured_image_width' => array(
 			'type' => 'integer',
 			'default' => 150
 		),

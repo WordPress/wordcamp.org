@@ -11,6 +11,7 @@ const { __ } = wp.i18n;
  */
 import GridInspectorControl from '../shared/grid-layout/inspector-control';
 import FeaturedImageInspectorControls from '../shared/featured-image/inspector-control';
+
 /**
  * Class for defining Inspector control in sponsor block.
  */

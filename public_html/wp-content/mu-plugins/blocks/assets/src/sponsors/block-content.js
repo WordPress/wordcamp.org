@@ -2,11 +2,11 @@
  * External dependencies.
  */
 import { get } from 'lodash';
+import classnames from 'classnames';
 
 /**
  * WordPress dependencies.
  */
-const { RawHTML } = wp.element;
 const { Component } = wp.element;
 
 /**
@@ -14,6 +14,7 @@ const { Component } = wp.element;
  */
 import FeaturedImage from '../shared/featured-image';
 import GridContentLayout from '../shared/grid-layout/block-content';
+import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
 
 /**
  * Renders individual sponsor post inside editor.
@@ -35,6 +36,15 @@ function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
 
 	return (
 		<div className={ "wordcamp-sponsor-details"}>
+
+			{ ( show_name || show_name === undefined ) &&
+			<ItemTitle
+				className='wordcamp-sponsor-title'
+				headingLevel={ 3 }
+				title={ sponsorPost.title.rendered.trim() }
+				link={ sponsorPost.link }
+			/>
+			}
 			{ ( show_logo || show_logo === undefined ) &&
 			<FeaturedImage
 				className={"wordcamp-sponsor-featured-image wordcamp-sponsor-logo"}
@@ -44,17 +54,11 @@ function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
 				onChange={onFeatureImageChange}
 			/>
 			}
-			{ ( show_name || show_name === undefined ) &&
-			<div className={"wordcamp-sponsor-name"}>
-				<a href={sponsorPost.link}>
-					<h3> {sponsorPost.title.rendered} </h3>
-				</a>
-			</div>
-			}
 			{ ( show_desc || show_desc === undefined ) &&
-			<RawHTML>
-				{sponsorPost.content.rendered}
-			</RawHTML>
+			<ItemHTMLContent
+				className={ classnames( 'wordcamp-sponsor-content' ) }
+				content={ sponsorPost.content.rendered.trim() }
+			/>
 			}
 		</div>
 	);

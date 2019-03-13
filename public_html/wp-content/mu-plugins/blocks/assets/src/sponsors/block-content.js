@@ -1,7 +1,7 @@
 /**
  * External dependencies.
  */
-import { get } from 'lodash';
+import { get, difference } from 'lodash';
 import classnames from 'classnames';
 
 /**
@@ -69,9 +69,18 @@ function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
  */
 class SponsorBlockContent extends Component {
 
+	constructor( props ) {
+		super( props );
+		this.state = {
+			selectedPosts: [],
+			sortBy: 'name_asc',
+		};
+	}
 	/**
 	 * Call back for when featured image URL is changed for a post.
-	 * We are storing the URL object as JSON stringified value because I was not able to get object type to work properly. Maybe its not supported in Gutenberg yet.
+	 * We are storing the URL object as JSON stringified value because I was
+	 * not able to get object type to work properly. Maybe its not supported in
+	 * Gutenberg yet.
 	 *
 	 * @param sponsorId
 	 * @param imageURL
@@ -86,13 +95,70 @@ class SponsorBlockContent extends Component {
 		setAttributes( { sponsor_image_urls: encodeURIComponent( JSON.stringify( sponsor_image_urls_latest ) ) } );
 	}
 
+	componentWillReceiveProps( nextProps ) {
+		// Sort the sponsor posts. Since this could potentially be expensive, lets do it in componentWillReceiveProps hook and set state with result if anything is changed.
+		const { selectedPosts: newSelectedPosts, attributes: newAttributes, sponsorTermOrder: newSponsorTermOrder } = nextProps;
+		const { sort_by: newSortBy } = newAttributes;
+		const newSelectedPostIds = newSelectedPosts.map( post => post.id ).sort();
+
+		const { selectedPosts, sortBy } = this.state;
+		const selectedPostsIds = selectedPosts.map( post => post.id ).sort();
+
+		console.log( "Params: ", sortBy, newSortBy, selectedPostsIds, newSelectedPostIds );
+		if ( sortBy === newSortBy && newSelectedPosts.length === selectedPosts.length && difference( selectedPostsIds, newSelectedPostIds ).length === 0 ) {
+			// Everything is same. Lets bail.
+			return;
+		}
+		console.log("Going to sort now", newSelectedPosts.map( post => post.title.rendered ) );
+		let sortedPosts;
+
+		switch ( newSortBy ) {
+			case 'sponsor_level' :
+				if ( ! Array.isArray( newSponsorTermOrder ) ||
+					newSponsorTermOrder.length === 0 ) {
+					break;
+				}
+				sortedPosts = newSelectedPosts.sort( ( sponsor1, sponsor2 ) => {
+					return newSponsorTermOrder.indexOf( ( sponsor1.sponsor_level || [] )[0] ) - newSponsorTermOrder.indexOf( ( sponsor2.sponsor_level || [] )[0] )
+				} );
+				break;
+
+			case 'name_desc' :
+				sortedPosts = newSelectedPosts.sort( ( sponsor1, sponsor2 ) => {
+					const title1 = sponsor1.title.rendered.trim();
+					const title2 = sponsor2.title.rendered.trim();
+					return title1 > title2 ? -1 : 1 ;
+				} );
+				break;
+
+			case 'name_asc' :
+			default:
+				sortedPosts = newSelectedPosts.sort( ( sponsor1, sponsor2 ) => {
+					const title1 = sponsor1.title.rendered.trim();
+					const title2 = sponsor2.title.rendered.trim();
+					console.log("[asc] Comparing ", title1, "with", title2, title1 < title2 ? -1 : 1 );
+					return title1 < title2 ? -1 : 1 ;
+				} );
+				break;
+		}
+		console.log("New sorted: ", sortedPosts.map( post => post.title.rendered ) );
+		this.setState(
+			{
+				selectedPosts: sortedPosts,
+				sortBy: newSortBy,
+			}
+		);
+	}
+
 	/**
 	 * Renders Sponsor Block content inside editor.
 	 *
 	 * @returns {*}
 	 */
 	render() {
-		const { selectedPosts, attributes } = this.props;
+		const { attributes } = this.props;
+		const { selectedPosts } = this.state;
+		console.log("Received sorted: ", selectedPosts.map( post => post.title.rendered ) );
 
 		return (
 			<GridContentLayout

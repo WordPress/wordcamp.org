@@ -3,7 +3,7 @@
  */
 const { Component } = wp.element;
 const { InspectorControls } = wp.editor;
-const { PanelBody, PanelRow, ToggleControl } = wp.components;
+const { PanelBody, PanelRow, ToggleControl, SelectControl } = wp.components;
 const { __ } = wp.i18n;
 
 /**
@@ -22,9 +22,15 @@ class SponsorInspectorControls extends Component {
 	 */
 	render() {
 
+		const sortOptions = [
+			{ label : __( 'Name (A to Z)', 'wordcamporg' ), value : 'name_asc' },
+			{ label : __( 'Name (Z to A)', 'wordcamporg' ), value : 'name_desc' },
+			{ label : __( 'Sponsor Level', 'wordcamporg' ), value : 'sponsor_level' },
+		];
+
 		const { attributes, setAttributes } = this.props;
 		const {
-			show_name, show_logo, show_desc
+			show_name, show_logo, show_desc, sort_by
 		} = attributes;
 
 		return (
@@ -58,6 +64,15 @@ class SponsorInspectorControls extends Component {
 							help = { __( 'Show or hide sponsor description', 'wordcamporg' ) }
 							checked = { show_desc === undefined ? true : show_desc }
 							onChange={ ( value ) => setAttributes( { show_desc: value } ) }
+						/>
+					</PanelRow>
+					<PanelRow>
+						<SelectControl
+							label = { __( 'Sort by', 'wordcamporg' ) }
+							options = { sortOptions }
+							value = { sort_by || 'name_asc' }
+							onChange={ ( value ) => setAttributes( { sort_by: value } ) }
+							help = { __( 'Select whether to sort by name or sponsor level. Order of sponsor level can be configure by going to Sponsor -> Order Sponsor Levels admin menu.') }
 						/>
 					</PanelRow>
 				</PanelBody>

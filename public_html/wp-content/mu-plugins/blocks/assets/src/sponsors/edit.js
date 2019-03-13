@@ -45,7 +45,8 @@ class SponsorsEdit extends Component {
 		this.setState(
 			{
 				sponsorPosts: apiFetch( { path: addQueryArgs( '/wp/v2/sponsors', sponsorQuery ) } ),
-				sponsorLevels: apiFetch( { path: addQueryArgs('/wp/v2/sponsor_level', sponsorLevelQuery ) } )
+				sponsorLevels: apiFetch( { path: addQueryArgs( '/wp/v2/sponsor_level', sponsorLevelQuery ) } ),
+				siteSettings: apiFetch( { path: addQueryArgs( '/wp/v2/settings', {} ) } ),
 			}
 		);
 	}
@@ -54,7 +55,7 @@ class SponsorsEdit extends Component {
 	 * Renders SponsorEdit component.
 	 */
 	render() {
-		const { sponsorPosts, sponsorLevels } = this.state;
+		const { sponsorPosts, sponsorLevels, siteSettings } = this.state;
 		const { attributes } = this.props;
 		const { mode } = attributes;
 
@@ -64,6 +65,7 @@ class SponsorsEdit extends Component {
 					<SponsorBlockControls
 						sponsorPosts = { sponsorPosts }
 						sponsorLevels = { sponsorLevels }
+						siteSettings = { siteSettings }
 						{ ...this.props }
 					/>
 				}

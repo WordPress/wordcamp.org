@@ -60,6 +60,7 @@ class SponsorBlockControls extends BlockControls {
 			terms   : [],
 			loading : true,
 			selectedPosts : [],
+			sponsorTermOrder : []
 		};
 	}
 
@@ -67,7 +68,7 @@ class SponsorBlockControls extends BlockControls {
 	 * Set selectedPosts in state so that SponsorsContentBlock can use them.
 	 */
 	setSelectedPosts() {
-		const { fetchedPosts } = this.state;
+		const { fetchedPosts, sponsorTermOrder } = this.state;
 		const { attributes } = this.props;
 		const { post_ids, term_ids, mode } = attributes;
 
@@ -108,7 +109,7 @@ class SponsorBlockControls extends BlockControls {
 	componentWillMount() {
 		this.isStillMounted = true;
 
-		const { sponsorPosts, sponsorLevels } = this.props;
+		const { sponsorPosts, sponsorLevels, siteSettings } = this.props;
 
 		const parsedPosts = sponsorPosts.then(
 			( fetchedPosts ) => {
@@ -155,7 +156,14 @@ class SponsorBlockControls extends BlockControls {
 			console.error("Error fetching data", e );
 		});
 
-		Promise.all( [ parsedPosts, parsedTerms ] ).then( () => {
+		const parsedSettings = siteSettings.then(
+			( fetchedSettings ) => {
+				const sponsorTermOrder = fetchedSettings.wcb_sponsor_level_order;
+				this.setState( { sponsorTermOrder } );
+			}
+		);
+
+		Promise.all( [ parsedPosts, parsedTerms, parsedSettings ] ).then( () => {
 			this.setState( { loading: false } );
 			// Enqueue set selected posts in next event loop, so that state is up to date when `setSelectedPosts` method actually runs.
 			setTimeout( () => this.setSelectedPosts() );
@@ -231,7 +239,7 @@ class SponsorBlockControls extends BlockControls {
 	render() {
 		const { sponsorPosts, attributes, setAttributes } = this.props;
 		const { mode, post_ids, term_ids } = attributes;
-		const { fetchedPosts, posts, terms, selectedPosts } = this.state;
+		const { fetchedPosts, posts, terms, selectedPosts, sponsorTermOrder } = this.state;
 		const hasPosts = Array.isArray( fetchedPosts ) && fetchedPosts.length;
 
 		// Check if posts are still loading.
@@ -270,6 +278,7 @@ class SponsorBlockControls extends BlockControls {
 
 				<SponsorBlockContent
 					selectedPosts={ selectedPosts }
+					sponsorTermOrder = { sponsorTermOrder }
 					{...this.props}
 				/>
 

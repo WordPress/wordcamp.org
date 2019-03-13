@@ -25,6 +25,13 @@ function init() {
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
+function testing_my_fun( $response, $item, $request ) {
+	error_log( "Response: " . print_r( $response, true ) );
+	return $response;
+
+}
+add_filter( 'rest_prepare_taxanomy', __NAMESPACE__ . '\testing_my_fun', 10, 3 );
+
 /**
  * Renders content of Sponsor block based on attributes.
  *
@@ -154,6 +161,10 @@ function get_attributes_schema() {
 		'featured_image_width' => array(
 			'type' => 'integer',
 			'default' => 150
+		),
+		'sort_by' => array(
+			'type' => 'string',
+			'default' => 'name_asc',
 		),
 	);
 }

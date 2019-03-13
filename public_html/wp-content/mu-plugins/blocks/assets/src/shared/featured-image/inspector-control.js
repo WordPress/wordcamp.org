@@ -81,6 +81,7 @@ class FeaturedImageInspectorControls extends Component {
 		return (
 			<PanelBody
 				title = { title }
+				initialopen = { false }
 			>
 				<PanelRow>
 					<BaseControl

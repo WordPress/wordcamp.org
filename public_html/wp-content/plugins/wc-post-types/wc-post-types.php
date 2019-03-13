@@ -70,13 +70,30 @@ class WordCamp_Post_Types_Plugin {
 
 	function init() {
 		do_action( 'wcpt_back_compat_init' );
+
+		if ( is_user_logged_in() ) {
+			register_setting(
+				'wcb_sponsor_options',
+				'wcb_sponsor_level_order',
+				array(
+					'sanitize_callback' => array( $this, 'validate_sponsor_options' ),
+					'show_in_rest' => array(
+						'schema' => array(
+							'type' => 'array',
+							'items' => array(
+								'type' => 'integer',
+							),
+						)
+					)
+				)
+			);
+		}
 	}
 
 	/**
 	 * Runs during admin_init.
 	 */
 	function admin_init() {
-		register_setting( 'wcb_sponsor_options', 'wcb_sponsor_level_order', array( $this, 'validate_sponsor_options' ) );
 		add_action( 'pre_get_posts', array( $this, 'admin_pre_get_posts' ) );
 	}
 

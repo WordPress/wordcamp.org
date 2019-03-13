@@ -236,4 +236,6 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			$result
 		);
 	}
+
+	// new test for manual, or does this cover it still?
 }

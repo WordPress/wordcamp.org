@@ -1,0 +1,147 @@
+<?php
+
+defined( 'WPINC' ) || die();
+
+/**
+ * @var WP_Post $post
+ * @var bool    $current_user_can_edit_request
+ * @var string  $submit_text
+ * @var string  $submit_note
+ * @var string  $submit_note_class
+ */
+// update ^
+
+?>
+
+<?php
+/**
+ * @var WP_Post             $post
+ * @var WCP_Payment_Request $this
+ * @var bool                $current_user_can_edit_request
+ * @var string              $submit_text
+ * @var string              $submit_note
+ * @var string              $submit_note_class
+ * @var bool                $date_vendor_paid_readonly
+ * @var string              $incomplete_notes
+ * @var bool                $incomplete_readonly
+ */
+?>
+<div id="submitpost" class="wcb submitbox">
+	<div id="minor-publishing">
+
+		<?php if ( $current_user_can_edit_request && ! current_user_can( 'manage_network' ) ) : ?>
+		<div id="minor-publishing-actions">
+			<div id="save-action">
+				<?php submit_button( esc_html__( 'Save Draft', 'wordcamporg' ), 'button', 'wcb-save-draft', false ); ?>
+				<span class="spinner"></span>
+			</div>
+			<div class="clear"></div>
+		</div>
+		<?php endif; ?>
+
+		<div id="misc-publishing-actions">
+			<div class="misc-pub-section">
+				<?php _e( 'ID:', 'wordcamporg' ); ?>
+				<span>
+					<?php echo esc_html( $this->get_field_value( 'request_id', $post ) ); ?>
+				</span>
+			</div>
+
+			<div class="misc-pub-section">
+				<?php _e( 'Requested By:', 'wordcamporg' ); ?>
+				<span>
+					<?php echo esc_html( $this->get_field_value( 'requester', $post ) ); ?>
+				</span>
+			</div>
+
+			<?php if ( $post->post_status != 'auto-draft' ) : ?>
+			<div class="misc-pub-section">
+				<?php $this->render_text_input( $post, 'Date Vendor was Paid', 'date_vendor_paid', '', 'date', array(), $date_vendor_paid_readonly, false ); ?>
+			</div>
+
+			<div class="misc-pub-section misc-pub-post-status">
+				<label>
+					<?php _e( 'Status:' ) ?>
+
+					<span id="post-status-display">
+						<?php if ( current_user_can( 'manage_network' ) ) : ?>
+
+							<select id="wcb_status" name="post_status">
+								<?php foreach ( WCP_Payment_Request::get_post_statuses() as $status ) : ?>
+									<?php $status = get_post_status_object( $status ); ?>
+									<option value="<?php echo esc_attr( $status->name ); ?>" <?php selected( $post->post_status, $status->name ); ?> >
+										<?php echo esc_html( $status->label ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+
+						<?php else : ?>
+
+							<?php $status = get_post_status_object( $post->post_status ); ?>
+							<?php echo esc_html( $status->label ); ?>
+							<input type="hidden" name="post_status" value="<?php echo esc_attr( $post->post_status ); ?>" />
+
+						<?php endif; ?>
+					</span>
+				</label>
+			</div>
+			<?php endif; ?>
+
+			<div class="misc-pub-section hide-if-js wcb-mark-incomplete-notes">
+				<label for="wcp_mark_incomplete_notes">
+					<?php esc_html_e( 'What information is needed?', 'wordcamporg' ); ?>
+				</label>
+
+				<textarea
+					id="wcp_mark_incomplete_notes"
+					name="wcp_mark_incomplete_notes"
+					class="large-text"
+					rows="5"
+					placeholder="<?php esc_html_e( 'Need to attach receipt, etc', 'wordcamporg' ); ?>"
+					<?php echo $incomplete_readonly; ?>
+				><?php
+					echo esc_textarea( $incomplete_notes );
+				?></textarea>
+			</div>
+
+			<div class="clear"></div>
+		</div> <!-- #misc-publishing-actions -->
+
+		<div class="clear"></div>
+	</div> <!-- #minor-publishing -->
+
+	<div id="major-publishing-actions">
+		want buttons to save draft, move to trash, or send
+		<?php if ( $current_user_can_edit_request ) : ?>
+
+			<?php if ( ! empty( $submit_note ) ) : ?>
+				<div class="notice notice-<?php echo esc_attr( $submit_note_class ); ?> inline">
+					<?php echo wpautop( esc_html( $submit_note ) ); ?>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( current_user_can( 'delete_post', $post->ID ) ) : ?>
+				<div id="delete-action">
+					<a class="submitdelete deletion" href="<?php echo get_delete_post_link( $post->ID ); ?>">
+						<?php _e( 'Delete', 'wordcamporg' ); ?>
+					</a>
+				</div>
+			<?php endif; ?>
+
+			<?php if ( \WordCamp_Budgets::can_submit_request( $post ) ) : ?>
+				<div id="publishing-action">
+					<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr( $submit_text ) ?>" />
+					<?php submit_button( $submit_text, 'primary button-large', 'wcb-update', false, array( 'accesskey' => 'p' ) ); ?>
+				</div>
+			<?php endif; ?>
+
+			<div class="clear"></div>
+
+		<?php else : ?>
+
+			<?php _e( 'This request can not be edited.', 'wordcamporg' ); ?>
+
+		<?php endif; ?>
+	</div> <!-- #major-publishing-actions -->
+
+</div> <!-- .submitbox -->

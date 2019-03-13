@@ -414,11 +414,13 @@ class WCOR_Mailer {
 			$recipients[] = $dest;
 		}
 
+		// Camera Wrangler.
 		if ( in_array( 'wcor_send_camera_wrangler', $send_where ) ) {
 			$region_id = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
 			$recipients[] = MES_Region::get_camera_wranger_from_region( $region_id );
 		}
 
+		// Organizing Team.
 		if ( in_array( 'wcor_send_organizers', $send_where ) ) {
 			$email_address_key = wcpt_key_to_str( 'E-mail Address', 'wcpt_' );
 
@@ -430,6 +432,20 @@ class WCOR_Mailer {
 				$recipients[] = sanitize_email( $_POST[ $email_address_key ] );
 			} else {
 				$recipients[] = sanitize_email( get_post_meta( $wordcamp_id, 'E-mail Address', true ) );
+			}
+		}
+
+		// All camps in a given status.
+		if ( in_array( 'wcor_send_status', $send_where ) ) {
+			$status              = get_post_meta( $wordcamp_id, 'wcor_which_status', true );
+			$wordcamps_in_status = get_wordcamps( array( 'post_status' => $status ) );
+
+			foreach ( $wordcamps_in_status as $wordcamp ) {
+				$address = $wordcamp->{'E-mail Address'};
+
+				if ( is_email( $address ) ) {
+					$recipients[] = $address;
+				}
 			}
 		}
 
@@ -467,6 +483,15 @@ class WCOR_Mailer {
 	 */
 	public function send_manual_email( $email, $wordcamp ) {
 		$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
+
+		//var_dump($recipient);wp_die();
+		// if empty recip, return false, also log error details
+
+		// sending to all camps in a status is different than all otehrs. those all send to a single camp in the context of that camp
+		// for sending to all camps, if any placeholders are used, those'll have to be generated each time in the context of the current camp
+		// ugh
+
+		// maybe create a 2nd metabox for this, and rename the other to make the distinction between the two clear
 
 		return $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp );
 	}

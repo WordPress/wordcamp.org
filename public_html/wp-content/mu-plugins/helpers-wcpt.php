@@ -252,3 +252,60 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 	return ob_get_clean();
 }
+
+/**
+ * Get a <select> dropdown of `wordcamp` post statuses with a select2 UI.
+ *
+ * The calling plugin is responsible for validating and processing the form, this just outputs a single field.
+ *
+ * @param string $name          Optional. The `name` attribute for the `select` element. Defaults to `wordcamp_status`.
+ * @param array  $query_options Optional. Extra arguments to pass to `get_posts()`. Defaults to the values in `get_wordcamps()`.
+ * @param int    $selected      Optional. The list option to select. Defaults to not selecting any.
+ * @param string $label         Optinoal. The text for the wrapping <label> element.
+ *
+ * @return string The HTML for the <select> list.
+ */
+function get_wordcamp_status_dropdown( $name = 'wordcamp_status', $query_options = array(), $selected = 0, $label = null ) {
+	// todo make this a JS function instead? how to share it?
+	// should be a shared G component? does G already have a fancy dropdown? if so then use that instead
+
+	$statuses = WordCamp_Loader::get_post_statuses();
+
+	if ( ! $label ) {
+		$label = __( 'Select a Status:', 'wordcamporg' );
+	}
+
+	wp_enqueue_script( 'select2' );
+	wp_enqueue_style(  'select2' );
+
+	ob_start();
+
+	?>
+
+	<label for="<?php echo esc_attr( $name ); ?>">
+		<?php echo esc_html( $label ); ?>
+	</label>
+
+	<select id="<?php echo esc_attr( $name ); ?>" name="<?php echo esc_attr( $name ); ?>" class="select2">
+		<option value=""></option>
+
+		<?php foreach ( $statuses as $slug => $label ) : ?>
+			<option
+				value="<?php echo esc_attr( $slug ); ?>"
+				<?php selected( $selected, $slug ); ?>
+			>
+				<?php echo esc_html( $label ); ?>
+			</option>
+		<?php endforeach; ?>
+	</select>
+
+	<script>
+		jQuery( document ).ready( function() {
+			jQuery( '.select2' ).select2();
+		} );
+	</script>
+
+	<?php
+
+	return ob_get_clean();
+}

@@ -263,7 +263,7 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
-	 * Retrieve the contact form shortcode string
+	 * Loop through all pages and renders first contact-us form or contact-us block
 	 *
 	 * We can't just create an arbitrary shortcode because of https://github.com/Automattic/jetpack/issues/102. Instead we have to use a form that's tied to a page.
 	 * This is somewhat fragile, though. It should work in most cases because the first $page that contains [contact-form] will be the one we automatically create
@@ -274,8 +274,8 @@ class WordCamp_Coming_Soon_Page {
 	 * @return string|false
 	 */
 	public function get_contact_form_shortcode() {
-		$contact_form_shortcode = false;
-		$shortcode_regex        = get_shortcode_regex();
+		$contact_form_content = false;
+		$shortcode_regex      = get_shortcode_regex();
 
 		$all_pages = get_posts( array(
 			'post_type'      => 'page',
@@ -285,6 +285,10 @@ class WordCamp_Coming_Soon_Page {
 		foreach ( $all_pages as $page ) {
 			preg_match_all( '/' . $shortcode_regex . '/s', $page->post_content, $matches, PREG_SET_ORDER );
 
+			if ( $contact_form_content ) {
+				break;
+			}
+
 			foreach ( $matches as $shortcode ) {
 				if ( 'contact-form' === $shortcode[2] ) {
 					global $post;
@@ -293,15 +297,31 @@ class WordCamp_Coming_Soon_Page {
 
 					ob_start();
 					echo do_shortcode( $shortcode[0] );
-					$contact_form_shortcode = ob_get_clean();
+					$contact_form_content = ob_get_clean();
 
+					wp_reset_postdata();
+					break;
+				}
+			}
+
+			// Along with shortcodes, also check for blocks.
+			if ( ! has_blocks( $page->post_content ) || $contact_form_content ) {
+				continue;
+			}
+			$blocks = parse_blocks( $page->post_content );
+			foreach( $blocks as $block ) {
+				if ( 'jetpack/contact-form' === $block['blockName'] ) {
+					global $post;
+					$post = $page;
+					setup_postdata( $post );
+					$contact_form_content = render_block( $block );
 					wp_reset_postdata();
 					break;
 				}
 			}
 		}
 
-		return $contact_form_shortcode;
+		return $contact_form_content;
 	}
 
 	/**

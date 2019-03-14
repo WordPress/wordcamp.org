@@ -25,13 +25,6 @@ function init() {
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
-function testing_my_fun( $response, $item, $request ) {
-	error_log( "Response: " . print_r( $response, true ) );
-	return $response;
-
-}
-add_filter( 'rest_prepare_taxanomy', __NAMESPACE__ . '\testing_my_fun', 10, 3 );
-
 /**
  * Renders content of Sponsor block based on attributes.
  *
@@ -40,14 +33,7 @@ add_filter( 'rest_prepare_taxanomy', __NAMESPACE__ . '\testing_my_fun', 10, 3 );
  * @return false|string
  */
 function render( $attributes ) {
-	$html = '';
 	$sponsors = get_sponsor_posts( $attributes );
-
-	$sponsor_featured_urls = array();
-
-	if ( ! empty( $attributes['sponsor_image_urls'] ) ) {
-		$sponsor_featured_urls = json_decode( urldecode( $attributes['sponsor_image_urls'] ), true );
-	}
 
 	$container_classes = array(
 		'wordcamp-sponsors-block',
@@ -82,8 +68,6 @@ function get_sponsor_posts( $attributes ) {
 		'post_type'      => 'wcb_sponsor',
 		'post_status'    => 'publish',
 		'posts_per_page' => - 1,
-		'orderby'        => 'title',
-		'order'          => 'asc',
 	);
 
 	switch ( $attributes[ 'mode' ] ) {
@@ -100,7 +84,67 @@ function get_sponsor_posts( $attributes ) {
 			];
 			break;
 	}
-	return get_posts( $post_args );
+
+	switch ( $attributes[ 'sort_by' ] ) {
+		case 'name_asc':
+			$post_args['orderby'] = 'title';
+			$post_args['order']   = 'asc';
+			break;
+		case 'name_desc' :
+			$post_args['orderby'] = 'title';
+			$post_args['order']   = 'desc';
+			break;
+		// We will deal with case `sponsor_level` later.
+	}
+
+	$posts = get_posts( $post_args );
+
+	if ( 'sponsor_level' === $attributes[ 'sort_by' ] ) {
+		usort( $posts, sponsor_level_sort( $posts ) );
+	}
+
+	return $posts;
+}
+
+/**
+ * Helper function for sorting based on sponsor levels.
+ *
+ * @param array $posts Sponsor posts to sort.
+ *
+ * @return
+ */
+function sponsor_level_sort( $posts ) {
+	$sponsor_level_order = get_option( 'wcb_sponsor_level_order' );
+	$sponsor_terms_cache = array();
+
+	//Build the terms cache.
+	foreach ( $posts as $post ) {
+		$sponsor_level_terms = get_the_terms( $post->ID, 'wcb_sponsor_level' );
+		if ( is_array( $sponsor_level_terms ) ) {
+			$sponsor_terms_cache[ $post->ID ] = wp_list_pluck( $sponsor_level_terms, 'term_id' )[0];
+		} else {
+			$sponsor_terms_cache[ $post->ID ] = array();
+		}
+	}
+
+	return function ( $sponsor1, $sponsor2 ) use ( $sponsor_level_order, $sponsor_terms_cache ) {
+		$index1 = array_search( $sponsor_terms_cache[ $sponsor1->ID ], $sponsor_level_order );
+		$index2 = array_search( $sponsor_terms_cache[ $sponsor2->ID ], $sponsor_level_order );
+
+		if ( false === $index1 && false === $index2 ) {
+			return 0;
+		}
+
+		if ( false === $index1 ) {
+			return 1;
+		}
+
+		if ( false === $index2 ) {
+			return -1;
+		}
+
+		return $index1 - $index2;
+	};
 }
 
 /**

@@ -20,7 +20,7 @@ setup_postdata( $sponsor );
 		</h3>
 	<?php } ?>
 
-	<?php if ( $attributes['show_logo'] && $sponsor_featured_urls[ $sponsor->ID ] ) { ?>
+	<?php if ( $attributes['show_logo'] ) { ?>
 		<?php echo render_featured_image(
 			array( 'wordcamp-sponsor-featured-image' ),
 			$sponsor,

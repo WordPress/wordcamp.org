@@ -104,12 +104,11 @@ class SponsorBlockContent extends Component {
 		const { selectedPosts, sortBy } = this.state;
 		const selectedPostsIds = selectedPosts.map( post => post.id ).sort();
 
-		console.log( "Params: ", sortBy, newSortBy, selectedPostsIds, newSelectedPostIds );
 		if ( sortBy === newSortBy && newSelectedPosts.length === selectedPosts.length && difference( selectedPostsIds, newSelectedPostIds ).length === 0 ) {
-			// Everything is same. Lets bail.
+			// Everything is same. No need to calculate sorting. Lets bail.
 			return;
 		}
-		console.log("Going to sort now", newSelectedPosts.map( post => post.title.rendered ) );
+
 		let sortedPosts;
 
 		switch ( newSortBy ) {
@@ -136,12 +135,10 @@ class SponsorBlockContent extends Component {
 				sortedPosts = newSelectedPosts.sort( ( sponsor1, sponsor2 ) => {
 					const title1 = sponsor1.title.rendered.trim();
 					const title2 = sponsor2.title.rendered.trim();
-					console.log("[asc] Comparing ", title1, "with", title2, title1 < title2 ? -1 : 1 );
 					return title1 < title2 ? -1 : 1 ;
 				} );
 				break;
 		}
-		console.log("New sorted: ", sortedPosts.map( post => post.title.rendered ) );
 		this.setState(
 			{
 				selectedPosts: sortedPosts,
@@ -158,7 +155,6 @@ class SponsorBlockContent extends Component {
 	render() {
 		const { attributes } = this.props;
 		const { selectedPosts } = this.state;
-		console.log("Received sorted: ", selectedPosts.map( post => post.title.rendered ) );
 
 		return (
 			<GridContentLayout

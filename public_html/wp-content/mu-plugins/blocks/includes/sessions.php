@@ -1,9 +1,10 @@
 <?php
-namespace WordCamp\Blocks\Sessions;
-defined( 'WPINC' ) || die();
 
+namespace WordCamp\Blocks\Sessions;
 use WordCamp\Blocks;
 use function WordCamp\Blocks\Shared\Components\{ render_grid_layout };
+
+defined( 'WPINC' ) || die();
 
 /**
  * Register block types and enqueue scripts.

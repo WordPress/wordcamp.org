@@ -1,7 +1,6 @@
 <?php
-namespace WordCamp\Blocks\Sponsors;
-defined( 'WPINC' ) || die();
 
+namespace WordCamp\Blocks\Sponsors;
 use WordCamp\Blocks;
 use function WordCamp\Blocks\Shared\Components\{ render_grid_layout };
 

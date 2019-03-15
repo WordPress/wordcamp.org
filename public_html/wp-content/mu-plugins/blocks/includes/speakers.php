@@ -1,9 +1,9 @@
 <?php
-namespace WordCamp\Blocks\Speakers;
-defined( 'WPINC' ) || die();
 
-use WP_Post;
+namespace WordCamp\Blocks\Speakers;
 use WordCamp\Blocks;
+
+defined( 'WPINC' ) || die();
 
 /**
  * Register block types and enqueue scripts.

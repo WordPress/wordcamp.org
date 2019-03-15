@@ -39,7 +39,7 @@ export default class FeaturedImage extends Component {
 	 * @param props.onChange Function callback for when Image URL is changed. Current URL will be passed as a parameter.
 	 */
 	constructor( props ) {
-		super( props );
+		super();
 	}
 
 	/**

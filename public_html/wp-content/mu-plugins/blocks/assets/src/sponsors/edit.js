@@ -23,7 +23,8 @@ class SponsorsEdit extends Component {
 	 * @param props
 	 */
 	constructor( props ) {
-		super( props );
+		super();
+
 		this.state = {};
 	}
 

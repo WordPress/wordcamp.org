@@ -70,7 +70,8 @@ function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
 class SponsorBlockContent extends Component {
 
 	constructor( props ) {
-		super( props );
+		super();
+
 		this.state = {
 			selectedPosts: [],
 			sortBy: 'name_asc',

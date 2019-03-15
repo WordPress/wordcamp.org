@@ -38,7 +38,7 @@ const ALL_TERMS_QUERY = {
 
 class SpeakersEdit extends Component {
 	constructor( props ) {
-		super( props );
+		super();
 
 		this.state = {
 			allSpeakerPosts : null,

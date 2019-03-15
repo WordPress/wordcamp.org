@@ -10,6 +10,7 @@ const { __ } = wp.i18n;
  * Internal dependencies
  */
 import GridInspectorControl from '../shared/grid-layout/inspector-control';
+import FeaturedImageInspectorControls from '../shared/featured-image/inspector-control';
 
 class SessionsInspectorControls extends Component {
 	render() {
@@ -65,9 +66,12 @@ class SessionsInspectorControls extends Component {
 					</PanelRow>
 				</PanelBody>
 
-				<PanelBody title={ __( 'Image Settings', 'wordcamporg' ) }>
-
-				</PanelBody>
+				<FeaturedImageInspectorControls
+					title = { __( 'Image size', 'wordcamporg' ) }
+					help = { __( 'Specify image height and width, or select a predefined size.', 'wordcamporg' ) }
+					selectLabel = { __( 'Size', 'wordcamporg') }
+					{ ...this.props }
+				/>
 
 				<PanelBody title={ __( 'Sorting', 'wordcamporg' ) }>
 					<PanelRow>

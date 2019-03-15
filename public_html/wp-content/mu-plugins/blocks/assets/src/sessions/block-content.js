@@ -18,6 +18,7 @@ const { __ } = wp.i18n;
 import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
 import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../shared/i18n';
 import GridContentLayout from '../shared/grid-layout/block-content';
+import FeaturedImage from '../shared/featured-image';
 
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
@@ -156,14 +157,8 @@ class SessionsBlockContent extends Component {
 
 	render() {
 		const { attributes, sessionPosts } = this.props;
-		const { className, show_speaker, show_images, image_align, image_size, content, excerpt_more, show_meta, show_category } = attributes;
-
-		const containerClasses = [
-			'wordcamp-block',
-			'wordcamp-block-post-list',
-			'wordcamp-sessions-block',
-			className,
-		];
+		const { className, show_speaker, show_images, image_align, featured_image_height, featured_image_width, content, excerpt_more, show_meta, show_category } = attributes;
+		const featuredImageSize = { height: featured_image_height, width: featured_image_width };
 
 		return (
 			<GridContentLayout { ...this.props } >
@@ -188,16 +183,13 @@ class SessionsBlockContent extends Component {
 							<SessionSpeakers session={ post } />
 						}
 
-						{ show_images && get( post, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' ) &&
-							<div className={ classnames( 'wordcamp-session-image-container', 'align-' + decodeEntities( image_align ) ) }>
-								<Disabled>
-									<a href={ post.link } className="wordcamp-session-image-link">
-										<SessionImage
-											session={ post }
-										/>
-									</a>
-								</Disabled>
-							</div>
+						{ show_images &&
+							<FeaturedImage
+								className={'wordcamp-session-image-container align-' + decodeEntities( image_align )  }
+								size={featuredImageSize}
+								wpMediaDetails={ get( post, "_embedded.wp:featuredmedia[0].media_details.sizes", {} ) }
+								alt={post.title.rendered}
+							/>
 						}
 
 						{ 'none' !== content &&

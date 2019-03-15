@@ -3,6 +3,7 @@ namespace WordCamp\Blocks\Sessions;
 defined( 'WPINC' ) || die();
 
 use function WordCamp\Blocks\Shared\{ get_all_the_content, array_to_human_readable_list };
+use function WordCamp\Blocks\Shared\Components\{ render_featured_image };
 
 /** @var array  $attributes */
 /** @var \WP_Post  $session */
@@ -44,23 +45,12 @@ setup_postdata( $session );
 	<?php endif; ?>
 
 	<?php if ( true === $attributes['show_images'] ) : ?>
-		<div class="wordcamp-session-image-container align-<?php echo esc_attr( $attributes['image_align'] ); ?>">
-			<a href="<?php echo esc_url( get_permalink( $session ) ); ?>" class="wordcamp-session-image-link">
-				<?php if ( get_post_thumbnail_id( $session ) ) : ?>
-					<?php
-					echo get_the_post_thumbnail(
-						$session,
-						[ $attributes['image_size'], 9999 ],
-						[
-							'class' => 'wordcamp-session-image',
-						]
-					);
-					?>
-				<?php else : ?>
-					<div class="wordcamp-session-default-image"></div>
-				<?php endif; ?>
-			</a>
-		</div>
+		<?php echo render_featured_image(
+				array( 'wordcamp-session-image-container', 'align-' . esc_attr( $attributes['image_align'] ) ),
+				$session,
+				$attributes['featured_image_height'],
+				$attributes['featured_image_width']
+		); ?>
 	<?php endif; ?>
 
 	<?php if ( 'none' !== $attributes['content'] ) : ?>

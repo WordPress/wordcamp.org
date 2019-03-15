@@ -62,7 +62,13 @@ function render( $attributes ) {
 		$rendered_session_posts[] = ob_get_clean();
 	}
 
-	return render_grid_layout( $attributes['layout'], $attributes['grid_columns'], $rendered_session_posts, $container_classes );
+	$html = render_grid_layout(
+		$attributes['layout'],
+		$attributes['grid_columns'],
+		$rendered_session_posts,
+		$container_classes
+	);
+	return $html;
 }
 
 /**
@@ -157,6 +163,14 @@ function get_attributes_schema() {
 			'minimum' => 1,
 			'maximum' => 4,
 			'default' => 1
+		),
+		'featured_image_height' => array(
+			'type' => 'integer',
+			'default' => 150
+		),
+		'featured_image_width' => array(
+			'type' => 'integer',
+			'default' => 150
 		),
 	];
 }

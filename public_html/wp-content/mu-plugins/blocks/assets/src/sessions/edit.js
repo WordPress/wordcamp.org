@@ -16,6 +16,7 @@ const { addQueryArgs } = wp.url;
  */
 import SessionsBlockControls from './block-controls';
 import SessionsInspectorControls from './inspector-controls';
+import GridToolbar from '../shared/grid-layout/toolbar';
 
 const blockData = window.WordCampBlocks.sessions || {};
 
@@ -85,6 +86,7 @@ class SessionsEdit extends Component {
 				{ mode &&
 				<Fragment>
 					<SessionsInspectorControls { ...this.props } />
+					<GridToolbar { ...this.props } />
 				</Fragment>
 				}
 			</Fragment>

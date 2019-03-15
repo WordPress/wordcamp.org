@@ -17,6 +17,7 @@ const { __ } = wp.i18n;
  */
 import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
 import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../shared/i18n';
+import GridContentLayout from '../shared/grid-layout/block-content';
 
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
@@ -165,9 +166,9 @@ class SessionsBlockContent extends Component {
 		];
 
 		return (
-			<ul className={ classnames( containerClasses ) }>
+			<GridContentLayout { ...this.props } >
 				{ sessionPosts.map( ( post ) =>
-					<li
+					<div
 						key={ post.slug }
 						className={ classnames(
 							'wordcamp-block-post-list-item',
@@ -215,9 +216,9 @@ class SessionsBlockContent extends Component {
 								show_category={ show_category }
 							/>
 						}
-					</li>
+					</div>
 				) }
-			</ul>
+			</GridContentLayout>
 		);
 	}
 }

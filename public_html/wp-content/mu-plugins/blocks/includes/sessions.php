@@ -3,6 +3,7 @@ namespace WordCamp\Blocks\Sessions;
 defined( 'WPINC' ) || die();
 
 use WordCamp\Blocks;
+use function WordCamp\Blocks\Shared\Components\{ render_grid_layout };
 
 /**
  * Register block types and enqueue scripts.
@@ -32,6 +33,11 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  * @return string
  */
 function render( $attributes ) {
+
+	if ( ! $attributes['mode'] ) {
+		return;
+	}
+
 	$html       = '';
 	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
 	$attributes = wp_parse_args( $attributes, $defaults );
@@ -48,15 +54,15 @@ function render( $attributes ) {
 		'wordcamp-sessions-block',
 		sanitize_html_class( $attributes['className'] ),
 	];
-	$container_classes = implode( ' ', $container_classes );
 
-	if ( $attributes['mode'] ) {
+	$rendered_session_posts = [];
+	foreach ( $sessions as $session ) {
 		ob_start();
 		require Blocks\PLUGIN_DIR . 'view/sessions.php';
-		$html = ob_get_clean();
+		$rendered_session_posts[] = ob_get_clean();
 	}
 
-	return $html;
+	return render_grid_layout( $attributes['layout'], $attributes['grid_columns'], $rendered_session_posts, $container_classes );
 }
 
 /**
@@ -141,6 +147,17 @@ function get_attributes_schema() {
 			'type'    => 'bool',
 			'default' => false,
 		],
+		'layout' => [
+			'type'    => 'string',
+			'enum'    => array( 'list', 'grid' ),
+			'default' => 'list',
+		],
+		'grid_columns' => array(
+			'type' => 'integer',
+			'minimum' => 1,
+			'maximum' => 4,
+			'default' => 1
+		),
 	];
 }
 

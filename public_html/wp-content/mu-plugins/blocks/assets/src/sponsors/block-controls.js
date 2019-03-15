@@ -44,7 +44,12 @@ function SponsorPostOption( sponsor ) {
 
 function SponsorLevelOption( sponsorLevel ) {
 	return(
-		<span>{ sponsorLevel.label }</span>
+		<span className="wordcamp-item-select-option-label">
+			{ sponsorLevel.label }
+			<span className="wordcamp-item-select-option-label-term-count">
+				{ sponsorLevel.count }
+			</span>
+		</span>
 	);
 }
 

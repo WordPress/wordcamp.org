@@ -18,12 +18,10 @@ import './style.scss';
 
 export function ItemTitle( { headingLevel, className, title, link } ) {
 	const validLevels = [ 1, 2, 3, 4, 5, 6 ];
-	let Tag;
+	let Tag = 'h3';
 
 	if ( validLevels.includes( headingLevel ) ) {
 		Tag = 'h' + headingLevel;
-	} else {
-		Tag = 'h3';
 	}
 
 	const classes = [
@@ -42,6 +40,7 @@ export function ItemTitle( { headingLevel, className, title, link } ) {
 					</a>
 				</Disabled>
 			}
+
 			{ ! link &&
 				<Fragment>
 					{ decodeEntities( content ) }

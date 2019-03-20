@@ -2403,6 +2403,8 @@ class WordCamp_Post_Types_Plugin {
 				'hierarchical' => true,
 				'public'       => true,
 				'show_ui'      => true,
+				'show_in_rest' => true,
+				'rest_base'    => 'organizer_team',
 			)
 		);
 

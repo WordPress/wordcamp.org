@@ -64,7 +64,7 @@ add_action( 'init', __NAMESPACE__ . '\expose_public_post_meta' );
  */
 function register_additional_rest_fields() {
 	/**
-	 * Speaker avatars.
+	 * Speaker/organizer avatars.
 	 *
 	 * We can't expose a Speaker's e-mail address in the API response, but can we go ahead
 	 * and derive their Gravatar URL and expose that instead.
@@ -82,37 +82,29 @@ function register_additional_rest_fields() {
 		);
 	}
 
+	$avatar_schema = array(
+		'description' => __( 'Avatar URLs for the speaker.', 'wordcamporg' ),
+		'type'        => 'object',
+		'context'     => array( 'embed', 'view', 'edit' ),
+		'readonly'    => true,
+		'properties'  => $avatar_properties,
+	);
+
 	register_rest_field(
 		'wcb_speaker',
 		'avatar_urls',
 		array(
-			'get_callback' => function ( $speaker_post ) {
-				$speaker_post = (object) $speaker_post;
-				$avatar_urls  = [];
+			'get_callback' => __NAMESPACE__ . '\get_avatar_urls_from_username_email',
+			'schema'       => $avatar_schema,
+		)
+	);
 
-				if ( $speaker_email = get_post_meta( $speaker_post->id, '_wcb_speaker_email', true ) ) {
-					$avatar_urls = rest_get_avatar_urls( $speaker_email );
-				} elseif ( $speaker_user_id = get_post_meta( $speaker_post->id, '_wcpt_user_id', true ) ) {
-					$speaker = get_user_by( 'id', $speaker_user_id );
-
-					if ( $speaker ) {
-						$avatar_urls = rest_get_avatar_urls( $speaker->user_email );
-					}
-				}
-
-				if ( empty( $avatar_urls ) ) {
-					$avatar_urls = rest_get_avatar_urls( '' );
-				}
-
-				return $avatar_urls;
-			},
-			'schema'       => array(
-				'description' => __( 'Avatar URLs for the speaker.', 'wordcamporg' ),
-				'type'        => 'object',
-				'context'     => array( 'embed', 'view', 'edit' ),
-				'readonly'    => true,
-				'properties'  => $avatar_properties,
-			),
+	register_rest_field(
+		'wcb_organizer',
+		'avatar_urls',
+		array(
+			'get_callback' => __NAMESPACE__ . '\get_avatar_urls_from_username_email',
+			'schema'       => $avatar_schema,
 		)
 	);
 
@@ -155,9 +147,35 @@ function register_additional_rest_fields() {
 		]
 	);
 }
-
-
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
+
+/**
+ * Get the URLs for an avatar based on an email address or username.
+ *
+ * @param array $post
+ *
+ * @return array
+ */
+function get_avatar_urls_from_username_email( $post ) {
+	$post        = (object) $post;
+	$avatar_urls = [];
+
+	if ( $email = get_post_meta( $post->id, '_wcb_speaker_email', true ) ) {
+		$avatar_urls = rest_get_avatar_urls( $email );
+	} elseif ( $user_id = get_post_meta( $post->id, '_wcpt_user_id', true ) ) {
+		$user = get_user_by( 'id', $user_id );
+
+		if ( $user ) {
+			$avatar_urls = rest_get_avatar_urls( $user->user_email );
+		}
+	}
+
+	if ( empty( $avatar_urls ) ) {
+		$avatar_urls = rest_get_avatar_urls( '' );
+	}
+
+	return $avatar_urls;
+}
 
 
 /**

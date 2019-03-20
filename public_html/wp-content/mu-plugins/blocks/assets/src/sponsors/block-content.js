@@ -28,9 +28,8 @@ import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
 function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
 
 	const {
-		show_name, show_logo, show_desc, featured_image_height, featured_image_width
+		show_name, show_logo, show_desc
 	} = attributes;
-	const featuredImageSize = { height: featured_image_height, width: featured_image_width };
 
 	const featuredImageSizes = get( sponsorPost, "_embedded.wp:featuredmedia[0].media_details.sizes", {} );
 
@@ -49,9 +48,8 @@ function SponsorDetail( { sponsorPost, attributes, onFeatureImageChange } ) {
 			<FeaturedImage
 				className={"wordcamp-sponsor-featured-image wordcamp-sponsor-logo"}
 				wpMediaDetails={featuredImageSizes}
-				size={featuredImageSize}
 				alt={sponsorPost.title.rendered}
-				onChange={onFeatureImageChange}
+				attributes={attributes}
 			/>
 			}
 			{ ( show_desc || show_desc === undefined ) &&
@@ -167,11 +165,6 @@ class SponsorBlockContent extends Component {
 								<SponsorDetail
 									sponsorPost={ post }
 									attributes={ attributes }
-									onFeatureImageChange = {
-										( imageURL ) => {
-											this.setFeaturedImageURL( post.id, imageURL );
-										}
-									}
 								/>
 						)
 					} )

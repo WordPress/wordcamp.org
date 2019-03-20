@@ -2,8 +2,9 @@
  * WordPress dependencies.
  */
 const { Component } = wp.element;
-const { PanelBody, PanelRow, TextControl, BaseControl, SelectControl } = wp.components;
+const { PanelBody, PanelRow, TextControl, BaseControl, SelectControl, ToggleControl } = wp.components;
 const { __ } = wp.i18n;
+import './style.scss';
 
 /**
  * Not sure if these sizes are actually useful.
@@ -11,39 +12,23 @@ const { __ } = wp.i18n;
 const sizePresets = [
 	{
 		label : __( 'Thumbnail', 'wordcamporg' ),
-		value : '150x150',
+		value : '150',
 	},
 	{
-		label : __( 'Small - 1:1', 'wordcamporg' ),
-		value : '200x200',
+		label : __( 'Thumbnail - Large', 'wordcamporg' ),
+		value : '926',
 	},
 	{
-		label : __( 'Small - 3:2', 'wordcamporg' ),
-		value : '270x180',
+		label : __( 'Medium', 'wordcamporg' ),
+		value : '300',
 	},
 	{
-		label : __( 'Small - 4:3', 'wordcamporg' ),
-		value : '300x225',
+		label : __( 'Medium - Large', 'wordcamporg' ),
+		value : '768',
 	},
 	{
-		label : __( 'Medium - 1:1', 'wordcamporg' ),
-		value : '400x400',
-	},
-	{
-		label : __( 'Medium - 3:2', 'wordcamporg' ),
-		value : '480x320',
-	},
-	{
-		label : __( 'Medium - 4:3', 'wordcamporg' ),
-		value : '480x360',
-	},
-	{
-		label : __( 'Medium - 16:9', 'wordcamporg' ),
-		value : '720x405',
-	},
-	{
-		label : __( 'Large - 16:9', 'wordcamporg' ),
-		value : '1280x720'
+		label : __( 'Large', 'wordcamporg' ),
+		value : '1024',
 	},
 	{
 		label : __( '(Custom)', 'wordcamporg' ),
@@ -65,19 +50,14 @@ class FeaturedImageInspectorControls extends Component {
 			return;
 		}
 		const { setAttributes } = this.props;
-		const sizeFields = size.split('x');
-		const width = sizeFields[0];
-		const height = sizeFields[1];
-		setAttributes( { featured_image_height: Number( height ), featured_image_width: Number( width ) } );
+		setAttributes( { featured_image_width: Number( size ) } );
 	}
 
 	render() {
-		const { attributes, setAttributes, title, help, selectLabel } = this.props;
-		const {
-			featured_image_height, featured_image_width
-		} = attributes;
-		const sizeString = featured_image_width + 'x' + featured_image_height;
-		const selectedValue = this.availableSizes.indexOf( sizeString ) === -1 ? '' : sizeString;
+
+		const { attributes, setAttributes, title, help, selectLabel, cropLabel } = this.props;
+		const { featured_image_width } = attributes;
+		const selectedValue = this.availableSizes.indexOf( featured_image_width.toString() ) === -1 ? '' : featured_image_width.toString();
 		return (
 			<PanelBody
 				title = { title }
@@ -93,14 +73,6 @@ class FeaturedImageInspectorControls extends Component {
 								value={ selectedValue }
 								options={ sizePresets }
 								onChange={ ( size ) => this.onPresetSizeSelect( size ) }
-							/>
-						</PanelRow>
-						<PanelRow>
-							<TextControl
-								label = { __( 'Height (in px)', 'wordcamporg' ) }
-								type = 'number'
-								value = { featured_image_height }
-								onChange = { ( height ) => setAttributes( { featured_image_height: Number( height ) } ) }
 							/>
 						</PanelRow>
 						<PanelRow>

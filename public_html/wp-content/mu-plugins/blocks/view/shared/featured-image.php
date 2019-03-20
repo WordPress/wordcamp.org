@@ -17,14 +17,21 @@ function render_featured_image( $class_names, $post, $height, $width ) {
 	$class_names[] = 'wordcamp-featured-image';
 	$class_names[] = 'wordcamp-featured-image-' . $post->post_name;
 	$class_names = implode( ' ', $class_names );
-	$style = esc_attr( 'height: ' . $height . 'px; width: ' . $width . 'px;' );
+	$attachment_id = get_post_thumbnail_id( $post->ID );
+	$image_data = wp_get_attachment_metadata( $attachment_id );
+	$size = 'post-thumbnail';
+	if ( is_array( $image_data ) && isset( $image_data['sizes'] ) && isset( $image_data['sizes']['full'] ) ) {
+		$aspect_ratio = $image_data['sizes']['full']['height'] / $image_data['sizes']['full']['width'];
+		$height = $aspect_ratio * $width;
+		$size = array( $width, $height );
+	}
+
 	return get_the_post_thumbnail(
 		$post,
-		array( $width, $height ),
+		$size,
 		array(
 			'class' => esc_attr( $class_names ),
 			'alt'   => esc_attr( $post->post_name ),
-			'style' => $style,
 		)
 	);
 }

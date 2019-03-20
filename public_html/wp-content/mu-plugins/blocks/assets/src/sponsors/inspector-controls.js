@@ -78,7 +78,7 @@ class SponsorInspectorControls extends Component {
 				</PanelBody>
 				<FeaturedImageInspectorControls
 					title = { __( 'Logo size', 'wordcamporg' ) }
-					help = { __( 'Specify logo height and width, or select a predefined size.', 'wordcamporg' ) }
+					help = { __( 'Specify logo width, or select a predefined size.', 'wordcamporg' ) }
 					selectLabel = { __( 'Size', 'wordcamporg') }
 					{ ...this.props }
 				/>

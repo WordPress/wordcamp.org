@@ -69,54 +69,52 @@ function register_additional_rest_fields() {
 	 * We can't expose a Speaker's e-mail address in the API response, but can we go ahead
 	 * and derive their Gravatar URL and expose that instead.
 	 */
-	if ( get_option( 'show_avatars' ) ) {
-		$avatar_properties = array();
-		$avatar_sizes      = rest_get_avatar_sizes();
+	$avatar_properties = array();
+	$avatar_sizes      = rest_get_avatar_sizes();
 
-		foreach ( $avatar_sizes as $size ) {
-			$avatar_properties[ $size ] = array(
-				/* translators: %d: avatar image size in pixels */
-				'description' => sprintf( __( 'Avatar URL with image size of %d pixels.' ), $size ),
-				'type'        => 'string',
-				'format'      => 'uri',
-				'context'     => array( 'embed', 'view', 'edit' ),
-			);
-		}
-
-		register_rest_field(
-			'wcb_speaker',
-			'avatar_urls',
-			array(
-				'get_callback' => function ( $speaker_post ) {
-					$speaker_post = (object) $speaker_post;
-					$avatar_urls  = [];
-
-					if ( $speaker_email = get_post_meta( $speaker_post->id, '_wcb_speaker_email', true ) ) {
-						$avatar_urls = rest_get_avatar_urls( $speaker_email );
-					} elseif ( $speaker_user_id = get_post_meta( $speaker_post->id, '_wcpt_user_id', true ) ) {
-						$speaker = get_user_by( 'id', $speaker_user_id );
-
-						if ( $speaker ) {
-							$avatar_urls = rest_get_avatar_urls( $speaker->user_email );
-						}
-					}
-
-					if ( empty( $avatar_urls ) ) {
-						$avatar_urls = rest_get_avatar_urls( '' );
-					}
-
-					return $avatar_urls;
-				},
-				'schema'       => array(
-					'description' => __( 'Avatar URLs for the speaker.', 'wordcamporg' ),
-					'type'        => 'object',
-					'context'     => array( 'embed', 'view', 'edit' ),
-					'readonly'    => true,
-					'properties'  => $avatar_properties,
-				),
-			)
+	foreach ( $avatar_sizes as $size ) {
+		$avatar_properties[ $size ] = array(
+			/* translators: %d: avatar image size in pixels */
+			'description' => sprintf( __( 'Avatar URL with image size of %d pixels.' ), $size ),
+			'type'        => 'string',
+			'format'      => 'uri',
+			'context'     => array( 'embed', 'view', 'edit' ),
 		);
-	} // End if().
+	}
+
+	register_rest_field(
+		'wcb_speaker',
+		'avatar_urls',
+		array(
+			'get_callback' => function ( $speaker_post ) {
+				$speaker_post = (object) $speaker_post;
+				$avatar_urls  = [];
+
+				if ( $speaker_email = get_post_meta( $speaker_post->id, '_wcb_speaker_email', true ) ) {
+					$avatar_urls = rest_get_avatar_urls( $speaker_email );
+				} elseif ( $speaker_user_id = get_post_meta( $speaker_post->id, '_wcpt_user_id', true ) ) {
+					$speaker = get_user_by( 'id', $speaker_user_id );
+
+					if ( $speaker ) {
+						$avatar_urls = rest_get_avatar_urls( $speaker->user_email );
+					}
+				}
+
+				if ( empty( $avatar_urls ) ) {
+					$avatar_urls = rest_get_avatar_urls( '' );
+				}
+
+				return $avatar_urls;
+			},
+			'schema'       => array(
+				'description' => __( 'Avatar URLs for the speaker.', 'wordcamporg' ),
+				'type'        => 'object',
+				'context'     => array( 'embed', 'view', 'edit' ),
+				'readonly'    => true,
+				'properties'  => $avatar_properties,
+			),
+		)
+	);
 
 	/**
 	 * Session date and time

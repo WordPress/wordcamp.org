@@ -2272,7 +2272,7 @@ class WordCamp_Post_Types_Plugin {
 			array(
 				'labels'          => $labels,
 				'rewrite'         => array( 'slug' => 'organizer', 'with_front' => false, ),
-				'supports'        => array( 'title', 'editor', 'revisions' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions' ),
 				'menu_position'   => 22,
 				'public'          => false,
 					// todo public or publicly_queryable = true, so consistent with others? at the very least set show_in_json = true

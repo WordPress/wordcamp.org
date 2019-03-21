@@ -49,9 +49,14 @@ class ItemSelect extends Component {
 	}
 
 	getNewAttributes() {
-		const { selectedOptions } = this.state;
-		const newValue = selectedOptions.map( ( option ) => option.value ) || [];
 		let attributes = {};
+		const { selectedOptions } = this.state;
+
+		if ( null === selectedOptions ) {
+			return attributes;
+		}
+
+		const newValue = selectedOptions.map( ( option ) => option.value ) || [];
 
 		if ( newValue.length ) {
 			const chosen = selectedOptions[ 0 ].type;

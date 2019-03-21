@@ -19,7 +19,7 @@ import './style.scss';
 
 class VersatileSelect extends Component {
 	constructor( props ) {
-		super( props );
+		super();
 
 		this.state = {
 			selectedOptions: null,

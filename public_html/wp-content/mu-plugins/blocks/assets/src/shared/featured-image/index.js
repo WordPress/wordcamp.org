@@ -67,9 +67,7 @@ export default class FeaturedImage extends Component {
 	 * @returns {*}
 	 */
 	render() {
-		const { className, alt, attributes } = this.props;
-
-		const { featured_image_width } = attributes;
+		const { className, alt, featured_image_width } = this.props;
 		const image = this.getFullImage();
 
 		const width = featured_image_width || 150 ;

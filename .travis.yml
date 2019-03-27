@@ -9,8 +9,7 @@ matrix:
   # Declare project language and PHP versions to test against.
   # @link http://about.travis-ci.org/docs/user/languages/php/
   - language: php
-    php:
-      - 7.2
+    php: 7.2
 
     before_script:
       # Setup code sniffer to run WordPress Code Standard tests
@@ -49,8 +48,7 @@ matrix:
 
   # Config for eslint
   - language: node_js
-    node_js:
-      - "11.10"
+    node_js: 11.10
 
     # Cache dependencies to reduce build time
     cache:
@@ -59,7 +57,7 @@ matrix:
 
     before_script:
       # Create a empty file, which will be passed to eslint. This is same step as above for PHPCS.
-      - touch $TRAVIS_BUILD_DIR/tmp.php
+      - touch $TRAVIS_BUILD_DIR/tmp.js
 
       # Go to block directory
       - cd $TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks
@@ -72,4 +70,4 @@ matrix:
       - export CHANGED_FILES=$(git diff --name-only --diff-filter=AM $TRAVIS_BRANCH...HEAD . | awk -v build_dir=$(echo $TRAVIS_BUILD_DIR/) '$0=build_dir$0' | tr '\n' ' ')
 
       # Runs eslint on changed files.
-      - npm run lint:js $(echo $CHANGED_FILES)
+      - npm run lint:js $TRAVIS_BUILD_DIR/tmp.js $(echo $CHANGED_FILES)

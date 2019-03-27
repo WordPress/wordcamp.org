@@ -75,4 +75,4 @@ matrix:
         - export CHANGED_FILES=$(git diff --name-only --diff-filter=AM $TRAVIS_BRANCH...HEAD . | awk -v build_dir=$(echo $TRAVIS_BUILD_DIR/) '$0=build_dir$0' | tr '\n' ' ')
 
         # Runs eslint on changed files.
-        - npm run lint:js $TRAVIS_BUILD_DIR/tmp.js $(echo $CHANGED_FILES)
+        - echo `pwd` && cd $TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks && npm run lint:js $TRAVIS_BUILD_DIR/tmp.js $(echo $CHANGED_FILES)

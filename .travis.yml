@@ -6,6 +6,7 @@
 matrix:
 
   include:
+
     # Config for PHPCS
     # Declare project language and PHP versions to test against.
     # @link http://about.travis-ci.org/docs/user/languages/php/
@@ -62,6 +63,9 @@ matrix:
 
         # Go to block directory
         - cd $TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks
+
+        # Install npm dependencies
+        - npm install
 
       # Run eslint tests
       script:

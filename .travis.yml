@@ -3,9 +3,8 @@
 
 # Using matrix to build run phpcs as well as eslint
 # @link https://stackoverflow.com/a/44054333/1845153
-matrix:
-
-  include:
+language: node_js
+node_js: 11.10
 
   #   # Config for PHPCS
   #   # Declare project language and PHP versions to test against.
@@ -49,30 +48,28 @@ matrix:
   #       - wpcs/vendor/bin/phpcs -v -n -p --extensions=php $TRAVIS_BUILD_DIR/tmp.php $(echo $CHANGED_FILES)
 
     # Config for eslint
-    - language: node_js
-      node_js: 11.10
+  
+# Cache dependencies to reduce build time
+cache:
+  directories:
+  - $TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks/node_modules
 
-      # Cache dependencies to reduce build time
-      cache:
-        directories:
-        - $TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks/node_modules
+before_script:
+  # Create a empty file, which will be passed to eslint. This is same step as above for PHPCS.
+  - touch $TRAVIS_BUILD_DIR/tmp.js
 
-      before_script:
-        # Create a empty file, which will be passed to eslint. This is same step as above for PHPCS.
-        - touch $TRAVIS_BUILD_DIR/tmp.js
+  # Go to block directory
+  - cd $TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks
 
-        # Go to block directory
-        - cd $TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks
+  # Install npm dependencies
+  - npm install
 
-        # Install npm dependencies
-        - npm install
+# Run eslint tests
+script:
 
-      # Run eslint tests
-      script:
+  # Similar to PHPCS config above, get all the changed files.
+  # Uses awk to prefix build directory path before each file.
+  - export CHANGED_FILES=$(git diff --name-only --diff-filter=AM $TRAVIS_BRANCH...HEAD . | awk -v build_dir=$(echo $TRAVIS_BUILD_DIR/) '$0=build_dir$0' | tr '\n' ' ')
 
-        # Similar to PHPCS config above, get all the changed files.
-        # Uses awk to prefix build directory path before each file.
-        - export CHANGED_FILES=$(git diff --name-only --diff-filter=AM $TRAVIS_BRANCH...HEAD . | awk -v build_dir=$(echo $TRAVIS_BUILD_DIR/) '$0=build_dir$0' | tr '\n' ' ')
-
-        # Runs eslint on changed files.
-        - npm run lint:js --init --no-eslintrc -c . $TRAVIS_BUILD_DIR/tmp.js $(echo $CHANGED_FILES)
+  # Runs eslint on changed files.
+  - npm run lint:js --init --no-eslintrc -c . $TRAVIS_BUILD_DIR/tmp.js $(echo $CHANGED_FILES)

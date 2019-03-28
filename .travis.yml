@@ -5,7 +5,7 @@
 # @link https://stackoverflow.com/a/44054333/1845153
 matrix:
 
-  # include:
+  include:
 
   #   # Config for PHPCS
   #   # Declare project language and PHP versions to test against.

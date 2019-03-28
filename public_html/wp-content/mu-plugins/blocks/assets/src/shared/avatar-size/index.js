@@ -2,6 +2,7 @@
  * External dependencies
  */
 import classnames from 'classnames';
+import { debounce } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -47,7 +48,12 @@ class AvatarSizeControl extends Component {
 		super();
 
 		this.state = {
-			value : props.value
+			value    : props.value,
+			onChange : debounce( props.onChange, 10 ) // higher values lead to a noticeable degradation in visual feedback.
+
+			// converting from props to state just to debounce feels like maybe it's the wrong way?
+			// maybe related to https://github.com/vasanthk/react-bits/blob/master/anti-patterns/01.props-in-initial-state.md
+			// ^ might also mean that tracking value in state is also wrong?
 		};
 
 
@@ -56,7 +62,7 @@ class AvatarSizeControl extends Component {
 
 	onChange( value ) {
 		this.setState( { value: value } );
-		this.props.onChange( value );
+		this.state.onChange( value );
 	}
 
 	render() {

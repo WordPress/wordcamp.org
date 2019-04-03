@@ -63,6 +63,27 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		// Attendees list shortcode handlers.
 		add_filter( 'shortcode_atts_camptix_attendees', array( $this, 'shortcode_attendees_atts' ), 10, 3 );
 		add_filter( 'camptix_attendees_shortcode_query_args', array( $this, 'shortcode_attendees_query' ), 10, 2 );
+
+		add_filter( 'camptix_attendance_ui_extras', array( $this, 'attendance_ui_extras' ), 10, 2 );
+	}
+
+	public function attendance_ui_extras( $extras, $attendee ) {
+		$attendee_flags = (array) get_post_meta( $attendee->ID, 'camptix-admin-flag' );
+		if ( $attendee_flags ) {
+			$flags = array();
+			foreach ( $attendee_flags as $flag ) {
+				$flags[] = $this->flags[ $flag ];
+			}
+
+			$extras = array_merge(
+				array(
+					array( implode( ', ', $flags ) ),
+				),
+				$extras
+			);
+		}
+
+		return $extras;
 	}
 
 	/**

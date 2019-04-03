@@ -72,7 +72,9 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		if ( $attendee_flags ) {
 			$flags = array();
 			foreach ( $attendee_flags as $flag ) {
-				$flags[] = $this->flags[ $flag ];
+				if ( isset( $this->flags[ $flag ] ) ) {
+					$flags[] = $this->flags[ $flag ];
+				}
 			}
 
 			$extras = array_merge(

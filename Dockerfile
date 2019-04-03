@@ -13,6 +13,11 @@ RUN cd ~ && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout wordcamp
 RUN cp ~/wordcamp.crt /etc/ssl/certs/wordcamp.crt
 RUN cp ~/wordcamp.key /etc/ssl/private/wordcamp.key
 
+# Install wkhtmltopdf for camptix invoices. See https://stackoverflow.com/a/38336153/1845153
+RUN curl -L https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz > wkhtmltox.tar.xz
+RUN tar xvf wkhtmltox.tar.xz
+RUN mv wkhtmltox/bin/wkhtmlto* /usr/bin/
+
 # Install cli
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
 RUN chmod +x wp-cli.phar

@@ -46,8 +46,8 @@ $camptix_options = $camptix->get_options();
 		</div>
 
 		<div class="extras">
-			 <# for (extra in data.extras ) {
-				var item = data.extras[extra];
+			 <# for ( var i in data.extras ) {
+				var item = data.extras[i];
 				if ( item.length > 1 ) { #>
 					<strong>{{ item[0] }}:</strong> {{ item[1] }}<br>
 				<# } else { #>

@@ -69,14 +69,15 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 
 	public function attendance_ui_extras( $extras, $attendee ) {
 		$attendee_flags = (array) get_post_meta( $attendee->ID, 'camptix-admin-flag' );
-		if ( $attendee_flags ) {
-			$flags = array();
-			foreach ( $attendee_flags as $flag ) {
-				if ( isset( $this->flags[ $flag ] ) ) {
-					$flags[] = $this->flags[ $flag ];
-				}
-			}
 
+		$flags = array();
+		foreach ( $attendee_flags as $flag ) {
+			if ( isset( $this->flags[ $flag ] ) ) {
+				$flags[] = $this->flags[ $flag ];
+			}
+		}
+
+		if ( $flags ) {
 			$extras = array_merge(
 				array(
 					array( implode( ', ', $flags ) ),

@@ -234,7 +234,9 @@ class CampTix_Attendance extends CampTix_Addon {
 			];
 		}
 
-		// Allow other plugins/Camptix Addons to register extra fields.
+		/**
+		 * Allow other plugins/Camptix Addons to register extra fields.
+		 */
 		$extras = apply_filters( 'camptix_attendance_ui_extras', $extras, $attendee );
 
 		return array(

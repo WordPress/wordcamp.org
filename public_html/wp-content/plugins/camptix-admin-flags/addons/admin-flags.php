@@ -416,8 +416,8 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 	/**
 	 * Register Admin flags to be shown in the Attendance UI.
 	 *
-	 * @param $extras   array   List of 'Extra fields' to show.
-	 * @param $attendee WP_Post The Attendee WP_Post being displayed.
+	 * @param array   $extras   List of 'Extra fields' to show.
+	 * @param WP_Post $attendee The Attendee WP_Post being displayed.
 	 */
 	public function attendance_ui_extras( $extras, $attendee ) {
 		$attendee_flags = (array) get_post_meta( $attendee->ID, 'camptix-admin-flag' );

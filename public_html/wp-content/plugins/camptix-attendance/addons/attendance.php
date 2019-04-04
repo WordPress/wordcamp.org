@@ -360,10 +360,8 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * to be output into the Attendance UI.
 	 */
 	public function field_questions() {
-		$questions = get_posts( array(
-			'post_type' => 'tix_question',
-			'number'    => -1,
-		) );
+		global $camptix;
+		$questions = $camptix->get_all_questions();
 
 		echo '<p>' . esc_html__( 'Show the following ticket questions in the Attendance UI.', 'wordcamporg' ) . '</p>';
 

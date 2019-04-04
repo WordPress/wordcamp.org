@@ -228,7 +228,7 @@ class CampTix_Attendance extends CampTix_Addon {
 
 			$question_post = get_post( $question_id );
 			$extras[]      = [
-				html_entity_decode( $question_post->post_title ),
+				html_entity_decode( apply_filters( 'the_title', $question_post->post_title ) ), // Escaped on display
 				// The attendees selection, which may be an array.
 				is_array( $questions[ $question_id ] ) ? implode( ', ', $questions[ $question_id ] ) : $questions[ $question_id ],
 			];
@@ -373,7 +373,7 @@ class CampTix_Attendance extends CampTix_Addon {
 				'<label><input type="checkbox" name="camptix_options[attendance-questions][]" value="%s" %s> %s %s</label><br>',
 				esc_attr( $question->ID ),
 				checked( in_array( $question->ID, $this->questions, true ), true, false ),
-				esc_html( $question->post_title ),
+				esc_html( apply_filters( 'the_title', $question->post_title ) ),
 				$selections ? '<em>' . implode( ', ', $selections ) . '</em>' : ''
 			);
 		}

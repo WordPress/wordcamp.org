@@ -3,7 +3,7 @@
  * Allows event organizers to track which attendees showed up to the event.
  */
 class CampTix_Attendance extends CampTix_Addon {
-	public $secret = '';
+	public $secret    = '';
 	public $questions = array();
 	/**
 	 * Runs during CampTix init.
@@ -19,8 +19,9 @@ class CampTix_Attendance extends CampTix_Addon {
 		}
 
 		$camptix_options = $camptix->get_options();
-		if ( empty( $camptix_options['attendance-secret'] ) )
+		if ( empty( $camptix_options['attendance-secret'] ) ) {
 			return;
+		}
 
 		$this->secret = $camptix_options['attendance-secret'];
 
@@ -28,8 +29,9 @@ class CampTix_Attendance extends CampTix_Addon {
 			$this->questions = $camptix_options['attendance-questions'];
 		}
 
-		if ( empty( $camptix_options['attendance-enabled'] ) )
+		if ( empty( $camptix_options['attendance-enabled'] ) ) {
 			return;
+		}
 
 		add_filter( 'wp_ajax_camptix-attendance', array( $this, 'ajax_callback' ) );
 		add_filter( 'wp_ajax_nopriv_camptix-attendance', array( $this, 'ajax_callback' ) );
@@ -50,7 +52,7 @@ class CampTix_Attendance extends CampTix_Addon {
 		global $camptix;
 
 		wp_enqueue_script( 'jquery-fastbutton', plugins_url( '/assets/jquery.fastbutton.js', __FILE__ ), array( 'jquery' ) );
-		wp_enqueue_script( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.js' , __FILE__ ), array( 'backbone', 'jquery', 'wp-util', 'jquery-fastbutton' ) );
+		wp_enqueue_script( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.js', __FILE__ ), array( 'backbone', 'jquery', 'wp-util', 'jquery-fastbutton' ) );
 		wp_enqueue_style( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.css', __FILE__ ), array( 'dashicons' ) );
 
 		$camptix->tmp( 'attendance_tickets', $this->get_tickets() );
@@ -64,8 +66,9 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * on the requested CampTix action. Also validates keys.
 	 */
 	public function ajax_callback() {
-		if ( empty( $_REQUEST['camptix_secret'] ) || $_REQUEST['camptix_secret'] != $this->secret )
+		if ( empty( $_REQUEST['camptix_secret'] ) || $_REQUEST['camptix_secret'] != $this->secret ) {
 			return;
+		}
 
 		$action = $_REQUEST['camptix_action'];
 		if ( 'sync-model' == $action ) {
@@ -81,14 +84,16 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * Sets are removes the attended flag for a given camptix_id.
 	 */
 	public function _ajax_sync_model() {
-		if ( empty( $_REQUEST['camptix_id'] ) )
+		if ( empty( $_REQUEST['camptix_id'] ) ) {
 			return;
+		}
 
 		$attendee_id = absint( $_REQUEST['camptix_id'] );
-		$attendee = get_post( $attendee_id );
+		$attendee    = get_post( $attendee_id );
 
-		if ( ! $attendee || 'tix_attendee' != $attendee->post_type || 'publish' != $attendee->post_status )
+		if ( ! $attendee || 'tix_attendee' != $attendee->post_type || 'publish' != $attendee->post_status ) {
 			return;
+		}
 
 		if ( isset( $_REQUEST['camptix_set_attendance'] ) ) {
 			if ( 'true' == $_REQUEST['camptix_set_attendance'] ) {
@@ -113,8 +118,9 @@ class CampTix_Attendance extends CampTix_Addon {
 		global $wpdb;
 
 		$paged = 1;
-		if ( ! empty( $_REQUEST['camptix_paged'] ) )
+		if ( ! empty( $_REQUEST['camptix_paged'] ) ) {
 			$paged = absint( $_REQUEST['camptix_paged'] );
+		}
 
 		$ticket_ids = wp_list_pluck( $this->get_tickets(), 'ID' );
 
@@ -151,37 +157,41 @@ class CampTix_Attendance extends CampTix_Addon {
 		}
 
 		$filters = array();
-		if ( ! empty( $_REQUEST['camptix_filters'] ) )
+		if ( ! empty( $_REQUEST['camptix_filters'] ) ) {
 			$filters = (array) $_REQUEST['camptix_filters'];
+		}
 
 		$filters = wp_parse_args( (array) $_REQUEST['camptix_filters'], array(
 			'attendance' => 'none',
-			'tickets' => array(),
+			'tickets'    => array(),
 		) );
 
 		$filters['search'] = ! empty( $_REQUEST['camptix_search'] ) ? $_REQUEST['camptix_search'] : '';
 
 		// Filter by attendance.
-		if ( in_array( $filters['attendance'], array( 'attending', 'not-attending' ) ) )
+		if ( in_array( $filters['attendance'], array( 'attending', 'not-attending' ) ) ) {
 			$this->_filter_query_attendance( $filters['attendance'] );
+		}
 
 		// Filter by ticket type.
 		$filters['tickets'] = array_intersect( $filters['tickets'], $ticket_ids );
 		if ( count( array_diff( $ticket_ids, $filters['tickets'] ) ) > 0 ) {
 
 			// No tickets selected.
-			if ( empty( $filters['tickets'] ) )
+			if ( empty( $filters['tickets'] ) ) {
 				return wp_send_json_success( array() );
+			}
 
 			$this->_filter_query_tickets( $filters['tickets'] );
 		}
 
 		// Filter by search query.
-		if ( ! empty( $filters['search'] ) )
+		if ( ! empty( $filters['search'] ) ) {
 			$this->_filter_query_search( $filters['search'] );
+		}
 
 		$query_args['suppress_filters'] = false;
-		$attendees = get_posts( $query_args );
+		$attendees                      = get_posts( $query_args );
 
 		$output = array();
 		foreach ( $attendees as $attendee ) {
@@ -217,10 +227,10 @@ class CampTix_Attendance extends CampTix_Addon {
 			}
 
 			$question_post = get_post( $question_id );
-			$extras[] = [
+			$extras[]      = [
 				html_entity_decode( $question_post->post_title ),
 				// The attendees selection, which may be an array.
-				is_array( $questions[ $question_id ] ) ? implode( ', ', $questions[ $question_id ] ) : $questions[ $question_id ]
+				is_array( $questions[ $question_id ] ) ? implode( ', ', $questions[ $question_id ] ) : $questions[ $question_id ],
 			];
 		}
 
@@ -228,12 +238,12 @@ class CampTix_Attendance extends CampTix_Addon {
 		$extras = apply_filters( 'camptix_attendance_ui_extras', $extras, $attendee );
 
 		return array(
-			'id' => $attendee->ID,
+			'id'        => $attendee->ID,
 			'firstName' => $first_name,
-			'lastName' => $last_name,
-			'avatar' => esc_url_raw( $avatar_url ),
-			'status' => $status,
-			'extras' => $extras,
+			'lastName'  => $last_name,
+			'avatar'    => esc_url_raw( $avatar_url ),
+			'status'    => $status,
+			'extras'    => $extras,
 		);
 	}
 
@@ -270,8 +280,8 @@ class CampTix_Attendance extends CampTix_Addon {
 		add_filter( 'posts_clauses', function( $clauses ) use ( $ticket_ids ) {
 			global $wpdb;
 
-			$clauses['join'] .= " INNER JOIN $wpdb->postmeta tix_ticket_id ON ( ID = tix_ticket_id.post_id AND tix_ticket_id.meta_key = 'tix_ticket_id' ) ";
-			$clauses['where'] .= sprintf( " AND ( tix_ticket_id.meta_value IN ( %s ) ) ", implode( ', ', array_map( 'absint', $ticket_ids ) ) );
+			$clauses['join']  .= " INNER JOIN $wpdb->postmeta tix_ticket_id ON ( ID = tix_ticket_id.post_id AND tix_ticket_id.meta_key = 'tix_ticket_id' ) ";
+			$clauses['where'] .= sprintf( ' AND ( tix_ticket_id.meta_value IN ( %s ) ) ', implode( ', ', array_map( 'absint', $ticket_ids ) ) );
 			return $clauses;
 		} );
 	}
@@ -285,10 +295,11 @@ class CampTix_Attendance extends CampTix_Addon {
 
 			$clauses['join'] .= " LEFT JOIN $wpdb->postmeta tix_attended ON ( ID = tix_attended.post_id AND tix_attended.meta_key = 'tix_attended' ) ";
 
-			if ( 'attending' == $attendance )
-				$clauses['where'] .=  " AND ( tix_attended.meta_value = 1 ) ";
-			else
-				$clauses['where'] .= " AND ( tix_attended.meta_value IS NULL ) ";
+			if ( 'attending' == $attendance ) {
+				$clauses['where'] .= ' AND ( tix_attended.meta_value = 1 ) ';
+			} else {
+				$clauses['where'] .= ' AND ( tix_attended.meta_value IS NULL ) ';
+			}
 
 			return $clauses;
 		} );
@@ -309,8 +320,9 @@ class CampTix_Attendance extends CampTix_Addon {
 	public function setup_controls( $section ) {
 		global $camptix;
 
-		if ( 'attendance-ui' != $section )
+		if ( 'attendance-ui' != $section ) {
 			return;
+		}
 
 		add_settings_section( 'general', esc_html__( 'Attendance UI', 'wordcamporg' ), array( $this, 'setup_controls_section' ), 'camptix_options' );
 
@@ -350,7 +362,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	public function field_questions() {
 		$questions = get_posts( array(
 			'post_type' => 'tix_question',
-			'number' => -1
+			'number'    => -1,
 		) );
 
 		echo '<p>' . esc_html__( 'Show the following ticket questions in the Attendance UI.', 'wordcamporg' ) . '</p>';
@@ -383,14 +395,17 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * Runs whenever the CampTix option is updated.
 	 */
 	public function validate_options( $output, $input ) {
-		if ( isset( $input['attendance-enabled'] ) )
+		if ( isset( $input['attendance-enabled'] ) ) {
 			$output['attendance-enabled'] = (bool) $input['attendance-enabled'];
+		}
 
-		if ( ! empty( $input['attendance-generate'] ) )
+		if ( ! empty( $input['attendance-generate'] ) ) {
 			$output['attendance-secret'] = wp_generate_password( 32, false, false );
+		}
 
-		if ( ! empty( $input['attendance-questions'] ) )
+		if ( ! empty( $input['attendance-questions'] ) ) {
 			$output['attendance-questions'] = array_map( 'intval', $input['attendance-questions'] );
+		}
 
 		return $output;
 	}
@@ -401,12 +416,13 @@ class CampTix_Attendance extends CampTix_Addon {
 	 * Returns an array of published tickets registered with CampTix.
 	 */
 	public function get_tickets() {
-		if ( isset( $this->tickets ) )
+		if ( isset( $this->tickets ) ) {
 			return $this->tickets;
+		}
 
 		$this->tickets = get_posts( array(
-			'post_type' => 'tix_ticket',
-			'post_status' => 'publish',
+			'post_type'      => 'tix_ticket',
+			'post_status'    => 'publish',
 			'posts_per_page' => -1,
 		) );
 

@@ -12,6 +12,6 @@
  * Register this addon with CampTix.
  */
 function camptix_admin_flags_register() {
-	require_once( plugin_dir_path( __FILE__ ) . 'addons/admin-flags.php' );
+	require_once plugin_dir_path( __FILE__ ) . 'addons/admin-flags.php';
 }
 add_action( 'camptix_load_addons', 'camptix_admin_flags_register' );

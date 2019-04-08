@@ -27,45 +27,49 @@ class SpeakersSelect extends Component {
 		};
 
 		this.buildSelectOptions = this.buildSelectOptions.bind( this );
-		this.fetchSelectOptions( props );
 	}
 
-	fetchSelectOptions( props ) {
+	static getDerivedStateFromProps( props, state ) {
 		const { allSpeakerPosts, allSpeakerTerms } = props;
 
-		const parsedPosts = allSpeakerPosts.then(
-			( fetchedPosts ) => {
-				const posts = fetchedPosts.map( ( post ) => {
-					return {
-						label  : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
-						value  : post.id,
-						type   : 'wcb_speaker',
-						avatar : post.avatar_urls[ '24' ],
-					};
-				} );
+		if ( false === state.loading ) {
+			return;
+		}
 
-				this.setState( { wcb_speaker: posts } );
-			}
-		);
+		let speakersLoaded = false;
+		let termsLoaded = false;
 
-		const parsedTerms = allSpeakerTerms.then(
-			( fetchedTerms ) => {
-				const terms = fetchedTerms.map( ( term ) => {
-					return {
-						label : term.name || __( '(Untitled)', 'wordcamporg' ),
-						value : term.id,
-						type  : 'wcb_speaker_group',
-						count : term.count,
-					};
-				} );
+		if ( allSpeakerPosts && allSpeakerPosts.length > 0 ) {
+			state.wcb_speaker = allSpeakerPosts.map( ( post ) => {
+				return {
+					label: decodeEntities(post.title.rendered.trim()) ||
+						__('(Untitled)', 'wordcamporg'),
+					value: post.id,
+					type: 'wcb_speaker',
+					avatar: post.avatar_urls['24'],
+				};
+			});
+			speakersLoaded = true;
+		}
 
-				this.setState( { wcb_speaker_group: terms } );
-			}
-		);
+		if ( allSpeakerTerms && allSpeakerTerms.length > 0 ) {
+			state.wcb_speaker_group = allSpeakerTerms.map((term) => {
+				return {
+					label: decodeEntities(term.name) ||
+						__('(Untitled)', 'wordcamporg'),
+					value: term.id,
+					type: 'wcb_speaker_group',
+					count: term.count,
+				};
+			});
+			termsLoaded = true
+		}
 
-		Promise.all( [ parsedPosts, parsedTerms ] ).then( () => {
-			this.setState( { loading: false } );
-		} );
+		if ( speakersLoaded && termsLoaded ) {
+			state.loading = false;
+		}
+
+		return state;
 	}
 
 	buildSelectOptions( mode ) {

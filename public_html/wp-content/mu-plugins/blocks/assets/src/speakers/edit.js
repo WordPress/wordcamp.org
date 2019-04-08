@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { isUndefined, pickBy, split } from 'lodash';
+import { orderBy, intersection, split } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -10,6 +10,7 @@ const apiFetch = wp.apiFetch;
 const { withSelect } = wp.data;
 const { Component, Fragment } = wp.element;
 const { addQueryArgs } = wp.url;
+const { dispatch } = wp.data;
 
 /**
  * Internal dependencies
@@ -18,6 +19,7 @@ import SpeakersBlockControls from './block-controls';
 import SpeakersInspectorControls from './inspector-controls';
 import SpeakersToolbar from './toolbar';
 import { ICON }        from './index';
+import { WC_BLOCKS_STORE } from '../blocks-store';
 
 const blockData = window.WordCampBlocks.speakers || {};
 
@@ -40,21 +42,10 @@ class SpeakersEdit extends Component {
 	constructor( props ) {
 		super( props );
 
-		this.fetchSpeakers();
-	}
+		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakers' );
+		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakerTracks' );
+		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakerGroups' );
 
-	fetchSpeakers() {
-		const allSpeakerPosts = apiFetch( {
-			path: addQueryArgs( `/wp/v2/speakers`, ALL_POSTS_QUERY ),
-		} );
-		const allSpeakerTerms = apiFetch( {
-			path: addQueryArgs( `/wp/v2/speaker_group`, ALL_TERMS_QUERY ),
-		} );
-
-		this.state = {
-			allSpeakerPosts : allSpeakerPosts, // Promise
-			allSpeakerTerms : allSpeakerTerms, // Promise
-		}
 	}
 
 	render() {
@@ -80,34 +71,33 @@ class SpeakersEdit extends Component {
 
 const speakersSelect = ( select, props ) => {
 	const { mode, item_ids, sort } = props.attributes;
-	const { getEntityRecords } = select( 'core' );
 	const [ orderby, order ] = split( sort, '_', 2 );
 
-	const args = {
-		orderby  : orderby,
-		order    : order,
-		per_page : MAX_POSTS, // -1 is not allowed for per_page.
-		_embed   : true,
-		context  : 'view',
+	const args = {};
+
+	args.orderBy = ( results ) => {
+		return orderBy( results, [ 'title' === orderby ? 'title.rendered' : orderby ], [ order ] );
 	};
 
 	if ( Array.isArray( item_ids ) ) {
 		switch ( mode ) {
 			case 'wcb_speaker':
-				args.include = item_ids;
+				args.entityIds = item_ids;
 				break;
 			case 'wcb_speaker_group':
-				args.speaker_group = item_ids;
+				args.filterEntities = item => intersection( item.speaker_group, item_ids ).length > 0;
 				break;
 		}
 	}
 
-	const speakersQuery = pickBy( args, ( value ) => ! isUndefined( value ) );
+	const { getEntities } = select( WC_BLOCKS_STORE );
 
 	return {
-		blockData    : blockData,
-		speakerPosts : getEntityRecords( 'postType', 'wcb_speaker', speakersQuery ),
-		tracks       : getEntityRecords( 'taxonomy', 'wcb_track', { per_page: MAX_POSTS } ),
+		blockData,
+		speakerPosts    : getEntities( 'speakers', args ),
+		tracks          : getEntities( 'speakerTracks' ),
+		allSpeakerPosts : getEntities( 'speakers' ),
+		allSpeakerTerms : getEntities( 'speakerGroups' ),
 	};
 };
 

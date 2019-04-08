@@ -209,7 +209,7 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		$extras = array();
 
-		// By default, allow certain questions to be included
+		// By default, allow certain questions to be included.
 		$questions = get_post_meta( $attendee->ID, 'tix_questions', true );
 		foreach ( $this->questions as $question_id ) {
 			if ( ! isset( $questions[ $question_id ] ) ) {
@@ -220,7 +220,7 @@ class CampTix_Attendance extends CampTix_Addon {
 			$extras[] = [
 				html_entity_decode( apply_filters( 'the_title', $question_post->post_title ) ), // Escaped on display
 				// The attendees selection, which may be an array.
-				is_array( $questions[ $question_id ] ) ? implode( ', ', $questions[ $question_id ] ) : $questions[ $question_id ]
+				is_array( $questions[ $question_id ] ) ? implode( ', ', $questions[ $question_id ] ) : $questions[ $question_id ],
 			];
 		}
 
@@ -362,7 +362,7 @@ class CampTix_Attendance extends CampTix_Addon {
 				esc_attr( $question->ID ),
 				checked( in_array( $question->ID, $this->questions, true ), true, false ),
 				esc_html( apply_filters( 'the_title', $question->post_title ) ),
-				$selections ? '<em>' . implode( ', ', $selections ) . '</em>' : ''
+				$selections ? '<em>' . esc_html( implode( ', ', $selections ) ) . '</em>' : ''
 			);
 		}
 

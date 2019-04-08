@@ -430,11 +430,9 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		}
 
 		if ( $flags ) {
-			$extras = array_merge(
-				array(
-					array( implode( ', ', $flags ) ),
-				),
-				$extras
+			array_unshift(
+				$extras,
+				array( implode( ', ', $flags ) )
 			);
 		}
 

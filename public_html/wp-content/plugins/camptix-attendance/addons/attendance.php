@@ -391,7 +391,7 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		if ( ! empty( $input['attendance-questions'] ) ) {
 			$output['attendance-questions'] = array_map( 'intval', $input['attendance-questions'] );
-		} else {
+		} elseif ( isset( $input['attendance-enabled'] ) ) {
 			$output['attendance-questions'] = array();
 		}
 

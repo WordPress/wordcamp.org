@@ -2,6 +2,7 @@
 
 namespace WordCamp\Blocks\Speakers;
 use WordCamp\Blocks;
+use WordCamp\Blocks\Shared\Definitions;
 
 defined( 'WPINC' ) || die();
 
@@ -165,68 +166,50 @@ function get_speaker_sessions( array $speaker_ids ) {
  * @return array
  */
 function get_attributes_schema() {
-	return [
-		'mode'         => [
-			'type'    => 'string',
-			'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
-			'default' => '',
-		],
-		'item_ids'     => [
-			'type'    => 'array',
-			'default' => [],
-			'items'   => [
-				'type' => 'integer',
+	$schema = array_merge(
+		Definitions\get_shared_definitions( [
+			'align',
+			'className',
+			'content',
+			'excerpt_more',
+			'grid_columns',
+			'item_ids',
+			'layout',
+		], 'attribute' ),
+		[
+			'avatar_align' => [
+				'type'    => 'string',
+				'enum'    => wp_list_pluck( get_options( 'align_image' ), 'value' ),
+				'default' => 'none',
 			],
-		],
-		'sort'         => [
-			'type'    => 'string',
-			'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
-			'default' => 'title_asc',
-		],
-		'layout'       => [
-			'type'    => 'string',
-			'enum'    => wp_list_pluck( get_options( 'display' ), 'value' ),
-			'default' => 'list',
-		],
-		'grid_columns' => [
-			'type'    => 'integer',
-			'minimum' => 2,
-			'maximum' => 4,
-			'default' => 2,
-		],
-		'className'    => [
-			'type'    => 'string',
-			'default' => '',
-		],
-		'show_avatars' => [
-			'type'    => 'bool',
-			'default' => true,
-		],
-		'avatar_size'  => [
-			'type'    => 'integer',
-			'minimum' => 25,
-			'maximum' => 600,
-			'default' => 150,
-		],
-		'avatar_align' => [
-			'type'    => 'string',
-			'enum'    => wp_list_pluck( get_options( 'align' ), 'value' ),
-			'default' => 'none',
-		],
-		'content'      => [
-			'type'    => 'string',
-			'enum'    => wp_list_pluck( get_options( 'content' ), 'value' ),
-			'default' => 'full',
-		],
-		'excerpt_more' => [
-			'type'    => 'bool',
-			'default' => false,
-		],
-		'show_session' => [
-			'type'    => 'bool',
-			'default' => false,
-		],
-	];
+			'avatar_size'  => [
+				'type'    => 'integer',
+				'minimum' => 25,
+				'maximum' => 600,
+				'default' => 150,
+			],
+			'mode'         => [
+				'type'    => 'string',
+				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
+				'default' => '',
+			],
+			'show_avatars' => [
+				'type'    => 'bool',
+				'default' => true,
+			],
+			'show_session' => [
+				'type'    => 'bool',
+				'default' => false,
+			],
+			'sort'         => [
+				'type'    => 'string',
+				'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
+				'default' => 'title_asc',
+			],
+		]
+	);
+
+	return $schema;
 }
 
 /**
@@ -237,86 +220,38 @@ function get_attributes_schema() {
  * @return array
  */
 function get_options( $type = '' ) {
-	$options = [
-		'align'   => [
-			[
-				'label' => _x( 'None', 'alignment option', 'wordcamporg' ),
-				'value' => 'none',
+	$options = array_merge(
+		Definitions\get_shared_definitions( [
+			'align_block',
+			'align_image',
+			'content',
+			'layout',
+		], 'option' ),
+		[
+			'mode' => [
+				[
+					'label' => '',
+					'value' => '',
+				],
+				[
+					'label' => _x( 'List all speakers', 'mode option', 'wordcamporg' ),
+					'value' => 'all',
+				],
+				[
+					'label' => _x( 'Choose speakers', 'mode option', 'wordcamporg' ),
+					'value' => 'wcb_speaker',
+				],
+				[
+					'label' => _x( 'Choose groups', 'mode option', 'wordcamporg' ),
+					'value' => 'wcb_speaker_group',
+				],
 			],
-			[
-				'label' => _x( 'Left', 'alignment option', 'wordcamporg' ),
-				'value' => 'left',
-			],
-			[
-				'label' => _x( 'Center', 'alignment option', 'wordcamporg' ),
-				'value' => 'center',
-			],
-			[
-				'label' => _x( 'Right', 'alignment option', 'wordcamporg' ),
-				'value' => 'right',
-			],
-		],
-		'content' => [
-			[
-				'label' => _x( 'Full', 'content option', 'wordcamporg' ),
-				'value' => 'full',
-			],
-			[
-				'label' => _x( 'Excerpt', 'content option', 'wordcamporg' ),
-				'value' => 'excerpt',
-			],
-			[
-				'label' => _x( 'None', 'content option', 'wordcamporg' ),
-				'value' => 'none',
-			],
-		],
-		'layout'  => [
-			[
-				'label' => _x( 'List', 'content option', 'wordcamporg' ),
-				'value' => 'list',
-			],
-			[
-				'label' => _x( 'Grid', 'content option', 'wordcamporg' ),
-				'value' => 'grid',
-			],
-		],
-		'mode'    => [
-			[
-				'label' => '',
-				'value' => '',
-			],
-			[
-				'label' => _x( 'List all speakers', 'mode option', 'wordcamporg' ),
-				'value' => 'all',
-			],
-			[
-				'label' => _x( 'Choose speakers', 'mode option', 'wordcamporg' ),
-				'value' => 'wcb_speaker',
-			],
-			[
-				'label' => _x( 'Choose groups', 'mode option', 'wordcamporg' ),
-				'value' => 'wcb_speaker_group',
-			],
-		],
-		'sort'    => [
-			[
-				'label' => _x( 'A → Z', 'sort option', 'wordcamporg' ),
-				'value' => 'title_asc',
-			],
-			[
-				'label' => _x( 'Z → A', 'sort option', 'wordcamporg' ),
-				'value' => 'title_desc',
-			],
-			[
-				'label' => _x( 'Newest to Oldest', 'sort option', 'wordcamporg' ),
-				'value' => 'date_desc',
-			],
-			[
-				'label' => _x( 'Oldest to Newest', 'sort option', 'wordcamporg' ),
-				'value' => 'date_asc',
-			],
-		],
-	];
+			'sort' => array_merge(
+				Definitions\get_shared_definition( 'sort_title', 'option' ),
+				Definitions\get_shared_definition( 'sort_date', 'option' )
+			),
+		]
+	);
 
 	if ( $type ) {
 		if ( ! empty( $options[ $type ] ) ) {

@@ -2,7 +2,7 @@
 
 namespace WordCamp\Blocks\Speakers;
 use WordCamp\Blocks;
-use WordCamp\Blocks\Shared\Definitions;
+use function WordCamp\Blocks\Shared\Definitions\{ get_shared_definitions, get_shared_definition };
 
 defined( 'WPINC' ) || die();
 
@@ -167,40 +167,33 @@ function get_speaker_sessions( array $speaker_ids ) {
  */
 function get_attributes_schema() {
 	$schema = array_merge(
-		Definitions\get_shared_definitions( [
-			'align',
-			'className',
-			'content',
-			'excerpt_more',
-			'grid_columns',
-			'item_ids',
-			'layout',
-		], 'attribute' ),
-		[
-			'avatar_align' => [
-				'type'    => 'string',
-				'enum'    => wp_list_pluck( get_options( 'align_image' ), 'value' ),
-				'default' => 'none',
+		get_shared_definitions(
+			[
+				'content',
+				'grid_columns',
+				'item_ids',
+				'layout',
 			],
+			'attribute'
+		),
+		[
+			'align'        => get_shared_definition( 'align_block', 'attribute' ),
+			'avatar_align' => get_shared_definition( 'align_image', 'attribute' ),
 			'avatar_size'  => [
 				'type'    => 'integer',
 				'minimum' => 25,
 				'maximum' => 600,
 				'default' => 150,
 			],
+			'className'    => get_shared_definition( 'string_empty', 'attribute' ),
+			'excerpt_more' => get_shared_definition( 'boolean_false', 'attribute' ),
 			'mode'         => [
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 				'default' => '',
 			],
-			'show_avatars' => [
-				'type'    => 'bool',
-				'default' => true,
-			],
-			'show_session' => [
-				'type'    => 'bool',
-				'default' => false,
-			],
+			'show_avatars' => get_shared_definition( 'boolean_true', 'attribute' ),
+			'show_session' => get_shared_definition( 'boolean_false', 'attribute' ),
 			'sort'         => [
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
@@ -221,12 +214,15 @@ function get_attributes_schema() {
  */
 function get_options( $type = '' ) {
 	$options = array_merge(
-		Definitions\get_shared_definitions( [
-			'align_block',
-			'align_image',
-			'content',
-			'layout',
-		], 'option' ),
+		get_shared_definitions(
+			[
+				'align_block',
+				'align_image',
+				'content',
+				'layout',
+			],
+			'option'
+		),
 		[
 			'mode' => [
 				[
@@ -247,8 +243,8 @@ function get_options( $type = '' ) {
 				],
 			],
 			'sort' => array_merge(
-				Definitions\get_shared_definition( 'sort_title', 'option' ),
-				Definitions\get_shared_definition( 'sort_date', 'option' )
+				get_shared_definition( 'sort_title', 'option' ),
+				get_shared_definition( 'sort_date', 'option' )
 			),
 		]
 	);

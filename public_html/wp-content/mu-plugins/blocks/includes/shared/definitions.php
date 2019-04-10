@@ -175,6 +175,3 @@ function get_shared_definition( $key, $type ) {
 
 	return $result;
 }
-
-
-

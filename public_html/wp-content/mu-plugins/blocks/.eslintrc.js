@@ -78,6 +78,10 @@ module.exports = {
 		 */
 		'no-multi-spaces' : 'off',
 
+		//'no-unused-vars': ?
+			// want to allow them in function params b/c it's helpful to document what callbacks are passed, even if not currently needed
+			// otherwise could waste lotos of time doing something the wrong way or figuring out what the right way is, rather than it just being obvious
+
 		/*
 		 * Objects are harder to quickly scan when the formatting is inconsistent.
 		 */

@@ -1,0 +1,193 @@
+/*
+ * todo
+ *
+ * were there any css updates in the 4.diff that need to be synced here?
+ *
+ * need to test in ie11 and a few browsers/devices
+ *
+ * lots of wasted space in mobile view. maybe better way to lay out things inside? ask mel for feedback
+ */
+
+$color__grid-border: #e0e5e9;
+// need to get exact colors from mel, also for other colors
+
+@mixin breakpoint-grid-layout() {
+	@supports ( display: grid ) {
+		@media screen and ( min-width: 700px ) {
+			@content;
+		}
+	}
+
+	/* need to base breakpoints on the content area container rather than tha screen?
+	can have wide screen but narrow content area
+	that's the case in the editor itself
+
+	maybe use Gutenberg's mixins for breakpoints?
+	*/
+
+}
+
+.wp-block[data-type="wordcamp/schedule"] .editor-block-list__block-edit {
+	padding-left: 1em;
+	padding-right: 1em;
+
+	// todo something is creating horizontal scrolling
+
+	// todo at 1070px wide with G sidebar shown, there's horizontal scroll + grey background isn't covering about 20px on the right side
+		// todo at 900px wide wtih G sidebar shown, the sidebar overlaps the content, instead of content shriking. might be fixed by ^
+}
+
+.wordcamp-schedule-day {
+	background-color: #fbfbfc;
+
+	@include breakpoint-grid-layout {
+		display: grid;
+		grid-gap: 1px;
+	}
+}
+
+.wordcamp-schedule-date {
+	.editor-styles-wrapper & {
+		margin-bottom: 0;
+	}
+
+	&::before {
+		.editor-styles-wrapper & {
+			content: none;
+		}
+	}
+}
+
+.wordcamp-schedule-column-header {
+	display: none;
+	background-color: white;
+	font-weight: bold;
+	font-size: .75em;
+	text-align: center;
+
+	/* Keep the headers visible so the user always knows which column they're looking at. */
+	@include breakpoint-grid-layout {
+		display: block;
+		position: sticky;
+		top: 0; /* Remove the gap above in Firefox and maybe other browsers. */
+		z-index: 10;
+		grid-row: tracks;
+		margin: 0 -1px 0 -1px;	/* Overflow the grid-gap so that the `background-color` from `.wordcamp-schedule-day` doesn't show through and create pseudo-borders. */
+		padding: 10px 5px 5px;
+		background-color: rgba( 251, 251, 252, 0.92 );
+	}
+}
+
+.wordcamp-schedule-time-slot-header,
+.wordcamp-schedule-session {
+	padding: 14px;
+	font-size: 14px;
+	border: 1px solid $color__grid-border;
+	border-top: none;
+
+	@include breakpoint-grid-layout {
+		position: relative;
+		z-index: 5;
+
+		/*
+		 * Use box-shadow to simulate borders, because actual `border`s would stack to be double the width.
+		 * The other techniques won't work because we support use cases where there are empty spots in the grid.
+		 * 
+		 * This doesn't work in the edge case where there are empty grid cells that are located at the edges of the
+		 * grid. That's rare, though, and there isn't a good solution, so it isn't handled.
+		 *
+		 * https://stackoverflow.com/a/43686894/450127
+		 */
+		border: none;
+		box-shadow: 0 0 1px 1px $color__grid-border;
+		margin-bottom: 0;
+	}
+
+	&.wordcamp-schedule-session-type-regular {
+		padding: 4px 10px 12px 10px;
+	}
+}
+
+.wordcamp-schedule-time-slot-header {
+	text-align: center;
+	border-bottom: none;
+	background-color: $color__grid-border;
+
+	/* Vertically align the text inside this cell */
+		// todo mockup has them not vertically centered, but can't tell what kind of pattern they use. need to ask mel, but maybe suggest that this looks better than mockup
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+
+	.editor-styles-wrapper & {
+		font-weight: normal;
+		font-size: .65em;
+		margin: 2em 0 0 0; // todo this needs to be duplicated on the front-end too, though, but has to be prefixed by .editor-styles-wrapper to work in the editor,
+		// which will make the styles WET. probably other rules in this situation too. what's a good solution?
+
+		@include breakpoint-grid-layout {
+			margin-top: 0;
+		}
+	}
+
+	@include breakpoint-grid-layout {
+		grid-column: times;
+		background-color: transparent;
+	}
+}
+
+.wordcamp-schedule-session {
+	@include breakpoint-grid-layout {
+		margin: 0;
+	}
+}
+
+.wordcamp-schedule-session-title,
+.wordcamp-schedule-session-track,
+.wordcamp-schedule-session-speaker,
+.wordcamp-schedule-session-category {
+	display: block;
+	line-height: 2em;
+
+	a {
+		text-decoration: none;
+		// todo this conflicts w/ the mockup, but i think it looks better. run it by mel
+		// might change hover rules below too if change this
+	}
+}
+
+.wordcamp-schedule-session-title {
+	.editor-styles-wrapper & {
+		margin: 0;
+	}
+}
+
+.wordcamp-schedule-session-track {
+	@include breakpoint-grid-layout {
+		display: none; /* Once the column headers are visible, this is no longer needed. */
+	}
+}
+
+.wordcamp-schedule-session-speaker a {
+	.editor-styles-wrapper & {
+		color: #23282d;
+	}
+}
+
+.wordcamp-schedule-session-category {
+	font-style: italic;
+	color: #a8a8a8;
+}
+
+.wordcamp-schedule-session-title a:hover,
+.wordcamp-schedule-session-speaker a:hover {
+	.editor-styles-wrapper & {
+		text-decoration: underline; // todo see note above about mel's feedback. remove this if restore default underlines
+	}
+}
+
+.wordcamp-schedule-session-type-custom {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}

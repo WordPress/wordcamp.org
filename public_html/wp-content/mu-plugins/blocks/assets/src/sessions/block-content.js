@@ -144,6 +144,7 @@ class SessionsBlockContent extends Component {
 		const {
 			mode, item_ids, sort, show_speaker, show_images, image_align,
 			featured_image_width, content, excerpt_more, show_meta, show_category
+			// category should be plural b/c can be more than one
 		} = attributes;
 
 		const args = {};

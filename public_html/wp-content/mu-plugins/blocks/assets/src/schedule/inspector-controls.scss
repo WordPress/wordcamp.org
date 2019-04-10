@@ -1,0 +1,20 @@
+.wordcamp-schedule__show_categories {
+
+}
+
+.wordcamp-schedule__choose-specific-days,
+.wordcamp-schedule__choose-specific-tracks {
+	flex-direction: column;
+	align-items: start;
+}
+
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__show-categories        .components-base-control,
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__choose-specific-days   .components-base-control,
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__choose-specific-tracks .components-base-control {
+	margin-bottom: 0;
+
+	/* might be related to https://github.com/WordPress/wordcamp.org/issues/79 - should fix that first */
+
+	/* can this be nested above? need to keep the higher level selectors though */
+	/* is G violating the guidelines by using those higher level selectors instead of only the deep ones? */
+}

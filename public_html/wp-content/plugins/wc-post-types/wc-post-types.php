@@ -747,6 +747,8 @@ class WordCamp_Post_Types_Plugin {
 	 * Enqueue style and scripts needed for [schedule] shortcode.
 	 */
 	public function enqueue_schedule_shortcode_dependencies() {
+		// also call this for schedule block
+
 		wp_enqueue_style( 'dashicons' );
 
 		wp_enqueue_script(
@@ -783,6 +785,8 @@ class WordCamp_Post_Types_Plugin {
 	 */
 	public function fav_session_share_form() {
 		static $share_form_count = 0;
+
+		// also call this for schedule blcok
 
 		// Skip share form if it was already added to document.
 		if ( 0 !== $share_form_count ) {
@@ -1828,9 +1832,24 @@ class WordCamp_Post_Types_Plugin {
 		$session_hours    = ( $session_time ) ? date( 'g', $session_time )     : date( 'g' );
 		$session_minutes  = ( $session_time ) ? date( 'i', $session_time )     : '00';
 		$session_meridiem = ( $session_time ) ? date( 'a', $session_time )     : 'am';
+		$session_length_hours   = $post->session_length_hours   ?? 0;
+		$session_length_minutes = $post->session_length_minutes ?? 5;
 		$session_type     = get_post_meta( $post->ID, '_wcpt_session_type', true );
 		$session_slides   = get_post_meta( $post->ID, '_wcpt_session_slides', true );
 		$session_video    = get_post_meta( $post->ID, '_wcpt_session_video',  true );
+
+		// need to save the new meta fields
+
+		// also need to do something to retroactively fill in data?
+		// maybe if the field is empty, the api endpoint (but not the shortcode) sets to a default value of 5 minutes?
+			// but only for new sites, b/c it'd be lying about old sites
+			// maybe have the default be in the react component and front-end renderer instead of the api? would need the same default in the front-end renderer unless that's taken care of by something like get_session_posts()
+
+		// "Following some discussion on Slack, the current plan is to use a new required Length field with a sensible default. Changing the value will update the default value for future sessions."
+			// so, if no sessions have an end time, then the default value is ~50 minutes
+			// if there are other sessions, then the default value is the most frequently occuring value, or maybe just the value of the first session, or maybe the last. last would probably be better than first
+
+
 		?>
 
 		<?php wp_nonce_field( 'edit-session-info', 'wcpt-meta-session-info' ); ?>
@@ -1838,8 +1857,8 @@ class WordCamp_Post_Types_Plugin {
 		<p>
 			<label for="wcpt-session-date"><?php esc_html_e( 'Date:', 'wordcamporg' ); ?></label>
 			<input type="text" id="wcpt-session-date" data-date="<?php echo esc_attr( $session_date ); ?>" name="wcpt-session-date" value="<?php echo esc_attr( $session_date ); ?>" /><br />
-			<label><?php esc_html_e( 'Time:', 'wordcamporg' ); ?></label>
 
+			<label><?php esc_html_e( 'Start Time:', 'wordcamporg' ); ?></label>
 			<select name="wcpt-session-hour" aria-label="<?php esc_html_e( 'Session Start Hour', 'wordcamporg' ); ?>">
 				<?php for ( $i = 1; $i <= 12; $i++ ) : ?>
 					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_hours ); ?>>
@@ -1860,6 +1879,35 @@ class WordCamp_Post_Types_Plugin {
 				<option value="am" <?php selected( 'am', $session_meridiem ); ?>>am</option>
 				<option value="pm" <?php selected( 'pm', $session_meridiem ); ?>>pm</option>
 			</select>
+		</p>
+
+		<p>
+			<label for="wcpt-session-length-hours">
+				<?php esc_html_e( 'Length:', 'wordcamporg' ); ?>
+			</label>
+
+			<select id="wcpt-session-length-hours" name="wcpt-session-length-hours" aria-label="<?php esc_html_e( 'Session Length: Hours', 'wordcamporg' ); ?>">
+				<?php for ( $i = 0; $i <= 23; $i++ ) : ?>
+					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_length_hours ); ?>>
+						<?php echo esc_html( $i ); ?>
+					</option>
+				<?php endfor; ?>
+			</select>
+			<label for="wcpt-session-length-hours">
+				<?php
+				// translators: todo what do say here? or maybe should use something like esc_html( _x( 'hours', 'some description' ) ) instead?
+				esc_html_e( 'hours', 'wordcamporg' );
+				?>
+			</label>
+
+			<select name="wcpt-session-length-minutes" aria-label="<?php esc_html_e( 'Session Length: Minutes', 'wordcamporg' ); ?>">
+				<?php for ( $i = '00'; (int) $i <= 55; $i = sprintf( '%02d', (int) $i + 5 ) ) : ?>
+					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_length_minutes ); ?>>
+						<?php echo esc_html( $i ); ?>
+					</option>
+				<?php endfor; ?>
+			</select>
+			minutes <?php // todo add label and i18n like above once figure out correct way ?>
 		</p>
 
 		<p>

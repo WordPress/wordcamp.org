@@ -47,6 +47,8 @@ function get_schedule_tracks( $selected_tracks ) {
  * @return array Associative array of session ids by time and track.
  */
 function get_schedule_sessions( $schedule_date, $tracks_explicitly_specified, $tracks ) {
+	// maybe can reuse this for blocks? at least on front end?
+
 	$query_args = array(
 		'post_type'      => 'wcb_session',
 		'posts_per_page' => - 1,

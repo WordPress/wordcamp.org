@@ -17,38 +17,49 @@ function get_shared_definitions( $keys, $type ) {
 	switch ( $type ) {
 		case 'attribute':
 			$definitions = [
-				'align'        => [
+				// Generic attributes.
+				'boolean_false' => [
+					'type'    => 'bool',
+					'default' => false,
+				],
+				'boolean_true'  => [
+					'type'    => 'bool',
+					'default' => true,
+				],
+				'string_empty'  => [
+					'type'    => 'string',
+					'default' => '',
+				],
+				// Specific attributes.
+				'align_block'   => [
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'align_block', 'option' ), 'value' ),
 					'default' => '',
 				],
-				'className'    => [
+				'align_image'   => [
 					'type'    => 'string',
-					'default' => '',
+					'enum'    => wp_list_pluck( get_shared_definition( 'align_image', 'option' ), 'value' ),
+					'default' => 'none',
 				],
-				'content'      => [
+				'content'       => [
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'content', 'option' ), 'value' ),
 					'default' => 'full',
 				],
-				'excerpt_more' => [
-					'type'    => 'bool',
-					'default' => false,
-				],
-				'grid_columns' => [
+				'grid_columns'  => [
 					'type'    => 'integer',
 					'minimum' => 2,
 					'maximum' => 4,
 					'default' => 2,
 				],
-				'item_ids'     => [
+				'item_ids'      => [
 					'type'    => 'array',
 					'default' => [],
 					'items'   => [
 						'type' => 'integer',
 					],
 				],
-				'layout'       => [
+				'layout'        => [
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'layout', 'option' ), 'value' ),
 					'default' => 'list',

@@ -28,8 +28,8 @@ const MAX_POSTS = 100;
  * Supported entities with their args.
  */
 const API_ARGS = {
-	speakers: {
-		path: 'wp/v2/speakers',
+	entity: {
+		path: ( entityType ) => 'wp/v2/' + entityType,
 		query: {
 			orderby  : 'id',
 			order    : 'desc',
@@ -38,32 +38,17 @@ const API_ARGS = {
 			context  : 'view',
 		}
 	},
-	speakerTracks: {
-		path: 'wp/v2/session_track',
-		query: {
-			per_page: MAX_POSTS,
-			context: 'view',
-		}
-	},
-	speakerGroups: {
-		path: '/wp/v2/speaker_group',
-		query: {
-			orderby  : 'name',
-			order    : 'asc',
-			per_page : MAX_POSTS,
-		}
-	},
 };
 
 /**
  * Helper method for fetching WordCamp Custom Entities.
  *
- * @param state
- * @param postType
- * @param args
- * @param callback
+ * @param {Object} state
+ * @param {string} postType
+ * @param {string} path
+ * @param {Object} query
  */
-const apiFetchEntities = ( state, postType, args ) => {
+const apiFetchEntities = ( state, postType, path, query ) => {
 
 	// Bail if we already have these entities fetched.
 	if ( state.hasOwnProperty( postType ) && 0 !== state[ postType ].length ) {
@@ -79,7 +64,7 @@ const apiFetchEntities = ( state, postType, args ) => {
 
 	// TODO: Implement pagination.
 	const apiFetchResult = apiFetch( {
-		path: addQueryArgs( args.path, args.query )
+		path: addQueryArgs( path, query )
 	} );
 
 	apiFetchResult.then(
@@ -88,7 +73,7 @@ const apiFetchEntities = ( state, postType, args ) => {
 		}
 	).catch( //TODO: Implement retries on HTTP Transport errors.
 		( reason ) => {
-			console.log( "Unable to retrieve data from API.", reason );
+			console.log( postType, "Unable to retrieve data from API.", reason );
 		}
 	);
 
@@ -182,7 +167,8 @@ registerStore(
 					apiFetchEntities(
 						state,
 						action.postType,
-						API_ARGS[ action.postType ],
+						API_ARGS.entity.path( action.postType ),
+						API_ARGS.entity.query
 					);
 
 					break;

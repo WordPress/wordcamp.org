@@ -43,8 +43,8 @@ class SpeakersEdit extends Component {
 		super( props );
 
 		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakers' );
-		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakerTracks' );
-		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakerGroups' );
+		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'session_track' );
+		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speaker_group' );
 
 	}
 
@@ -95,9 +95,9 @@ const speakersSelect = ( select, props ) => {
 	return {
 		blockData,
 		speakerPosts    : getEntities( 'speakers', args ),
-		tracks          : getEntities( 'speakerTracks' ),
+		tracks          : getEntities( 'session_track' ),
 		allSpeakerPosts : getEntities( 'speakers' ),
-		allSpeakerTerms : getEntities( 'speakerGroups' ),
+		allSpeakerTerms : getEntities( 'speaker_group' ),
 	};
 };
 

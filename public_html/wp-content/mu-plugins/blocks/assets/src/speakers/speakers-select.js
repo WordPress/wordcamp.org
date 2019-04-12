@@ -42,26 +42,25 @@ class SpeakersSelect extends Component {
 		if ( allSpeakerPosts && allSpeakerPosts.length > 0 ) {
 			state.wcb_speaker = allSpeakerPosts.map( ( post ) => {
 				return {
-					label: post.title.rendered.trim() ||
-						__( '(Untitled)', 'wordcamporg' ),
-					value: post.id,
-					type: 'wcb_speaker',
-					avatar: post.avatar_urls['24'],
+					label  : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
+					value  : post.id,
+					type   : 'wcb_speaker',
+					avatar : post.avatar_urls[ '24' ],
 				};
-			});
+			} );
 			speakersLoaded = true;
 		}
 
 		if ( allSpeakerTerms && allSpeakerTerms.length > 0 ) {
-			state.wcb_speaker_group = allSpeakerTerms.map((term) => {
+			state.wcb_speaker_group = allSpeakerTerms.map( ( term ) => {
 				return {
-					label: term.name || __( '(Untitled)', 'wordcamporg' ),
-					value: term.id,
-					type: 'wcb_speaker_group',
-					count: term.count,
+					label : term.name || __( '(Untitled)', 'wordcamporg' ),
+					value : term.id,
+					type  : 'wcb_speaker_group',
+					count : term.count,
 				};
-			});
-			termsLoaded = true
+			} );
+			termsLoaded = true;
 		}
 
 		if ( speakersLoaded && termsLoaded ) {

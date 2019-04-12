@@ -1,5 +1,5 @@
 /**
- * Extenal dependencies
+ * External dependencies
  */
 import createSelector from 'rememo';
 
@@ -19,7 +19,7 @@ export const WC_BLOCKS_STORE = 'wc-blocks-store';
  * Initial state.
  */
 const DEFAULT_STATE = {
-	loadingEntities : [],
+	loadingEntities: [],
 };
 
 const MAX_POSTS = 100;
@@ -29,14 +29,14 @@ const MAX_POSTS = 100;
  */
 const API_ARGS = {
 	entity: {
-		path: ( entityType ) => 'wp/v2/' + entityType,
-		query: {
+		path  : ( entityType ) => 'wp/v2/' + entityType,
+		query : {
 			orderby  : 'id',
 			order    : 'desc',
 			per_page : MAX_POSTS,
 			_embed   : true,
 			context  : 'view',
-		}
+		},
 	},
 };
 
@@ -48,35 +48,33 @@ const API_ARGS = {
  * @param {string} path       REST API path to fetch entity records
  * @param {Object} query      Query params for the REST API request
  */
-const apiFetchEntities = ( state, entitytype, path, query ) => {
-
+const apiFetchEntities = ( state, entityType, path, query ) => {
 	// Bail if we already have these entities fetched.
-	if ( state.hasOwnProperty( entitytype ) && 0 !== state[ entitytype ].length ) {
+	if ( state.hasOwnProperty( entityType ) && 0 !== state[ entityType ].length ) {
 		return;
 	}
 
 	// Bail if already loading this entity
-	if ( -1 !== state.loadingEntities.indexOf( entitytype ) ) {
+	if ( -1 !== state.loadingEntities.indexOf( entityType ) ) {
 		return;
 	}
 
-	state.loadingEntities.push( entitytype );
+	state.loadingEntities.push( entityType );
 
 	// TODO: Implement pagination.
 	const apiFetchResult = apiFetch( {
-		path: addQueryArgs( path, query )
+		path: addQueryArgs( path, query ),
 	} );
 
 	apiFetchResult.then(
 		( customEntities ) => {
-			dispatch( WC_BLOCKS_STORE ).setEntities( entitytype, customEntities);
+			dispatch( WC_BLOCKS_STORE ).setEntities( entityType, customEntities );
 		}
 	).catch( //TODO: Implement retries on HTTP Transport errors.
 		( reason ) => {
-			console.log( entitytype, "Unable to retrieve data from API.", reason );
+			console.error( entityType, 'Unable to retrieve data from API.', reason );
 		}
 	);
-
 };
 
 /**
@@ -85,33 +83,34 @@ const apiFetchEntities = ( state, entitytype, path, query ) => {
  * @type {Object}
  */
 const actions = {
-
 	/**
 	 * Queues fetching from API for a post type.
 	 *
-	 * @param entitytype
-	 * @returns {{entitytype: *, type: string}}
+	 * @param {string} entityType
+	 * @returns {Object}
 	 */
-	fetchEntities( entitytype ) {
+	fetchEntities( entityType ) {
 		return {
-			type: 'FETCH_ENTITIES',
-			entitytype,
+			type       : 'FETCH_ENTITIES',
+			entityType : entityType,
 		};
 	},
 
 	/**
 	 * Set entities state
 	 *
-	 * @param entitytype
-	 * @param entities
+	 * @param {string} entityType
+	 * @param {Array}  entities
+	 *
+	 * @return {Object}
 	 */
-	setEntities( entitytype, entities ) {
+	setEntities( entityType, entities ) {
 		return {
-			type: 'SET_ENTITIES',
-			entitytype,
-			entities,
-		}
-	}
+			type       : 'SET_ENTITIES',
+			entityType : entityType,
+			entities   : entities,
+		};
+	},
 };
 
 /**
@@ -129,7 +128,7 @@ const selectors = {
 	 * @param {Object} args       Additional filter arguments.
 	 */
 	getEntities: createSelector(
-		( state, entityType, args={} ) => {
+		( state, entityType, args = {} ) => {
 			let results = state[ entityType ];
 
 			if ( ! state.hasOwnProperty( entityType ) ) {
@@ -137,20 +136,20 @@ const selectors = {
 			}
 
 			if ( Array.isArray( args.entityIds ) ) {
-				results = results.filter( item => -1 !== args.entityIds.indexOf( item.id ) );
+				results = results.filter( ( item ) => -1 !== args.entityIds.indexOf( item.id ) );
 			}
 
-			if ( 'function' === typeof( args.filterEntities ) ) {
+			if ( 'function' === typeof args.filterEntities ) {
 				results = results.filter( args.filterEntities );
 			}
 
-			if ( 'function' === typeof( args.orderBy ) ) {
+			if ( 'function' === typeof args.orderBy ) {
 				results = args.orderBy( results );
 			}
 
 			return results;
 		},
-		// Return state if entitytype is yet initialized to prevent unnecessary selector executions.
+		// Return state if entityType is yet initialized to prevent unnecessary selector executions.
 		( state, entityType ) => state[ entityType ] || state
 	),
 };
@@ -166,16 +165,14 @@ registerStore(
 		 *
 		 * @returns {Object}
 		 */
-		reducer( state=DEFAULT_STATE, action ) {
-
+		reducer( state = DEFAULT_STATE, action ) {
 			switch ( action.type ) {
-
 				case 'FETCH_ENTITIES':
 
 					apiFetchEntities(
 						state,
-						action.entitytype,
-						API_ARGS.entity.path( action.entitytype ),
+						action.entityType,
+						API_ARGS.entity.path( action.entityType ),
 						API_ARGS.entity.query
 					);
 
@@ -185,13 +182,12 @@ registerStore(
 
 					// Changing state reference so that withSelect works.
 					state = { ...state };
-					state[ action.entitytype ] = action.entities;
+					state[ action.entityType ] = action.entities;
 
 					// Not really needed, but lets do this for correctness.
-					const loadingEntities = state.loadingEntities.filter( item => action.entitytype !== item );
+					state.loadingEntities = state.loadingEntities.filter( ( item ) => action.entityType !== item );
 
 					break;
-
 			}
 			return state;
 		},

@@ -21,21 +21,6 @@ import { WC_BLOCKS_STORE } from '../blocks-store';
 
 const blockData = window.WordCampBlocks.speakers || {};
 
-const MAX_POSTS = 100;
-
-const ALL_POSTS_QUERY = {
-	orderby  : 'title',
-	order    : 'asc',
-	per_page : MAX_POSTS,
-	_embed   : true,
-};
-
-const ALL_TERMS_QUERY = {
-	orderby  : 'name',
-	order    : 'asc',
-	per_page : MAX_POSTS,
-};
-
 class SpeakersEdit extends Component {
 	constructor( props ) {
 		super( props );
@@ -43,7 +28,6 @@ class SpeakersEdit extends Component {
 		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakers' );
 		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'session_track' );
 		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speaker_group' );
-
 	}
 
 	render() {
@@ -83,7 +67,7 @@ const speakersSelect = ( select, props ) => {
 				args.entityIds = item_ids;
 				break;
 			case 'wcb_speaker_group':
-				args.filterEntities = item => intersection( item.speaker_group, item_ids ).length > 0;
+				args.filterEntities = ( item ) => intersection( item.speaker_group, item_ids ).length > 0;
 				break;
 		}
 	}
@@ -91,7 +75,7 @@ const speakersSelect = ( select, props ) => {
 	const { getEntities } = select( WC_BLOCKS_STORE );
 
 	return {
-		blockData,
+		blockData       : blockData,
 		speakerPosts    : getEntities( 'speakers', args ),
 		tracks          : getEntities( 'session_track' ),
 		allSpeakerPosts : getEntities( 'speakers' ),

@@ -6,10 +6,8 @@ import { orderBy, intersection, split } from 'lodash';
 /**
  * WordPress dependencies
  */
-const apiFetch = wp.apiFetch;
 const { withSelect } = wp.data;
 const { Component, Fragment } = wp.element;
-const { addQueryArgs } = wp.url;
 const { dispatch } = wp.data;
 
 /**

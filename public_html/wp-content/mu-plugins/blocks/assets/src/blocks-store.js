@@ -25,7 +25,7 @@ const DEFAULT_STATE = {
 const MAX_POSTS = 100;
 
 /**
- * Supported entities with their args.
+ * Generic query for supported data type.
  */
 const API_ARGS = {
 	entity: {
@@ -43,24 +43,24 @@ const API_ARGS = {
 /**
  * Helper method for fetching WordCamp Custom Entities.
  *
- * @param {Object} state
- * @param {string} postType
- * @param {string} path
- * @param {Object} query
+ * @param {Object} state      Current store state
+ * @param {string} entityType Name of the entity. Egs post, speaker etc
+ * @param {string} path       REST API path to fetch entity records
+ * @param {Object} query      Query params for the REST API request
  */
-const apiFetchEntities = ( state, postType, path, query ) => {
+const apiFetchEntities = ( state, entitytype, path, query ) => {
 
 	// Bail if we already have these entities fetched.
-	if ( state.hasOwnProperty( postType ) && 0 !== state[ postType ].length ) {
+	if ( state.hasOwnProperty( entitytype ) && 0 !== state[ entitytype ].length ) {
 		return;
 	}
 
 	// Bail if already loading this entity
-	if ( -1 !== state.loadingEntities.indexOf( postType ) ) {
+	if ( -1 !== state.loadingEntities.indexOf( entitytype ) ) {
 		return;
 	}
 
-	state.loadingEntities.push( postType );
+	state.loadingEntities.push( entitytype );
 
 	// TODO: Implement pagination.
 	const apiFetchResult = apiFetch( {
@@ -69,11 +69,11 @@ const apiFetchEntities = ( state, postType, path, query ) => {
 
 	apiFetchResult.then(
 		( customEntities ) => {
-			dispatch( WC_BLOCKS_STORE ).setEntities( postType, customEntities);
+			dispatch( WC_BLOCKS_STORE ).setEntities( entitytype, customEntities);
 		}
 	).catch( //TODO: Implement retries on HTTP Transport errors.
 		( reason ) => {
-			console.log( postType, "Unable to retrieve data from API.", reason );
+			console.log( entitytype, "Unable to retrieve data from API.", reason );
 		}
 	);
 
@@ -82,33 +82,33 @@ const apiFetchEntities = ( state, postType, path, query ) => {
 /**
  * Define actions which can be dispatched by this store.
  *
- * @type {{apiFetch(*): *}}
+ * @type {Object}
  */
 const actions = {
 
 	/**
 	 * Queues fetching from API for a post type.
 	 *
-	 * @param postType
-	 * @returns {{postType: *, type: string}}
+	 * @param entitytype
+	 * @returns {{entitytype: *, type: string}}
 	 */
-	fetchEntities( postType ) {
+	fetchEntities( entitytype ) {
 		return {
 			type: 'FETCH_ENTITIES',
-			postType,
+			entitytype,
 		};
 	},
 
 	/**
 	 * Set entities state
 	 *
-	 * @param postType
+	 * @param entitytype
 	 * @param entities
 	 */
-	setEntities( postType, entities ) {
+	setEntities( entitytype, entities ) {
 		return {
 			type: 'SET_ENTITIES',
-			postType,
+			entitytype,
 			entities,
 		}
 	}
@@ -122,17 +122,17 @@ const actions = {
 const selectors = {
 
 	/**
-	 * Returns post type from current state.
+	 * Returns post type from current state. Caches [state, entityType] for quick resolution.
 	 *
-	 * @param state
-	 * @param postType
-	 * @param args
+	 * @param {Object} state      Current store state
+	 * @param {string} entityType Name of the entity to get
+	 * @param {Object} args       Additional filter arguments.
 	 */
 	getEntities: createSelector(
-		( state, postType, args={} ) => {
-			let results = state[ postType ];
+		( state, entityType, args={} ) => {
+			let results = state[ entityType ];
 
-			if ( ! state.hasOwnProperty( postType ) ) {
+			if ( ! state.hasOwnProperty( entityType ) ) {
 				return;
 			}
 
@@ -150,14 +150,22 @@ const selectors = {
 
 			return results;
 		},
-		// Return state if postType is yet initialized to prevent unnecessary selector executions.
-		( state, postType ) => state[ postType ] || state
+		// Return state if entitytype is yet initialized to prevent unnecessary selector executions.
+		( state, entityType ) => state[ entityType ] || state
 	),
 };
 
 registerStore(
 	WC_BLOCKS_STORE,
 	{
+		/**
+		 * Reducer for this store.
+		 *
+		 * @param {Object} state
+		 * @param {Object} action
+		 *
+		 * @returns {Object}
+		 */
 		reducer( state=DEFAULT_STATE, action ) {
 
 			switch ( action.type ) {
@@ -166,8 +174,8 @@ registerStore(
 
 					apiFetchEntities(
 						state,
-						action.postType,
-						API_ARGS.entity.path( action.postType ),
+						action.entitytype,
+						API_ARGS.entity.path( action.entitytype ),
 						API_ARGS.entity.query
 					);
 
@@ -177,10 +185,10 @@ registerStore(
 
 					// Changing state reference so that withSelect works.
 					state = { ...state };
-					state[ action.postType ] = action.entities;
+					state[ action.entitytype ] = action.entities;
 
 					// Not really needed, but lets do this for correctness.
-					const loadingEntities = state.loadingEntities.filter( item => action.postType !== item );
+					const loadingEntities = state.loadingEntities.filter( item => action.entitytype !== item );
 
 					break;
 

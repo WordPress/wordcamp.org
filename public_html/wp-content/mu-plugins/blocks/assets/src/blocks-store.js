@@ -7,8 +7,8 @@ import createSelector from 'rememo';
  * WordPress dependencies
  */
 const { registerStore, dispatch } = wp.data;
-const { apiFetch } = wp;
-const { addQueryArgs } = wp.url;
+const { apiFetch }                = wp;
+const { addQueryArgs }            = wp.url;
 
 /**
  * Define store name.

@@ -132,6 +132,8 @@ const selectors = {
 			let results = state[ entityType ];
 
 			if ( ! state.hasOwnProperty( entityType ) ) {
+				// Queue apiFetch for this entity.
+				dispatch( WC_BLOCKS_STORE ).fetchEntities( entityType );
 				return;
 			}
 

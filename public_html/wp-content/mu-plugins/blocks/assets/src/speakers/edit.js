@@ -22,13 +22,6 @@ import { WC_BLOCKS_STORE } from '../blocks-store';
 const blockData = window.WordCampBlocks.speakers || {};
 
 class SpeakersEdit extends Component {
-	constructor( props ) {
-		super( props );
-
-		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speakers' );
-		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'session_track' );
-		dispatch( WC_BLOCKS_STORE ).fetchEntities( 'speaker_group' );
-	}
 
 	render() {
 		const { mode } = this.props.attributes;

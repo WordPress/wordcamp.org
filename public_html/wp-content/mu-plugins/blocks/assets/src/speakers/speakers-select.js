@@ -42,8 +42,8 @@ class SpeakersSelect extends Component {
 		if ( allSpeakerPosts && allSpeakerPosts.length > 0 ) {
 			state.wcb_speaker = allSpeakerPosts.map( ( post ) => {
 				return {
-					label: decodeEntities(post.title.rendered.trim()) ||
-						__('(Untitled)', 'wordcamporg'),
+					label: post.title.rendered.trim() ||
+						__( '(Untitled)', 'wordcamporg' ),
 					value: post.id,
 					type: 'wcb_speaker',
 					avatar: post.avatar_urls['24'],
@@ -55,8 +55,7 @@ class SpeakersSelect extends Component {
 		if ( allSpeakerTerms && allSpeakerTerms.length > 0 ) {
 			state.wcb_speaker_group = allSpeakerTerms.map((term) => {
 				return {
-					label: decodeEntities(term.name) ||
-						__('(Untitled)', 'wordcamporg'),
+					label: term.name || __( '(Untitled)', 'wordcamporg' ),
 					value: term.id,
 					type: 'wcb_speaker_group',
 					count: term.count,

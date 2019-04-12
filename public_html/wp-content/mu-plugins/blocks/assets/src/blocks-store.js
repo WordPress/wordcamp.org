@@ -1,6 +1,7 @@
 /**
- * Implements wc-blocks-store.
+ * Extenal dependencies
  */
+import createSelector from 'rememo';
 
 /**
  * WordPress dependencies
@@ -18,7 +19,7 @@ export const WC_BLOCKS_STORE = 'wc-blocks-store';
  * Initial state.
  */
 const DEFAULT_STATE = {
-	loadingEntities : []
+	loadingEntities : [],
 };
 
 const MAX_POSTS = 100;
@@ -62,7 +63,7 @@ const API_ARGS = {
  * @param args
  * @param callback
  */
-const apiFetchEntities = ( state, postType, args, callback ) => {
+const apiFetchEntities = ( state, postType, args ) => {
 
 	// Bail if we already have these entities fetched.
 	if ( state.hasOwnProperty( postType ) && 0 !== state[ postType ].length ) {
@@ -74,6 +75,8 @@ const apiFetchEntities = ( state, postType, args, callback ) => {
 		return;
 	}
 
+	state.loadingEntities.push( postType );
+
 	// TODO: Implement pagination.
 	const apiFetchResult = apiFetch( {
 		path: addQueryArgs( args.path, args.query )
@@ -81,15 +84,14 @@ const apiFetchEntities = ( state, postType, args, callback ) => {
 
 	apiFetchResult.then(
 		( customEntities ) => {
-			if ( 'function' === typeof( callback ) ) {
-				callback( customEntities );
-			}
+			dispatch( WC_BLOCKS_STORE ).setEntities( postType, customEntities);
 		}
 	).catch( //TODO: Implement retries on HTTP Transport errors.
 		( reason ) => {
 			console.log( "Unable to retrieve data from API.", reason );
 		}
 	);
+
 };
 
 /**
@@ -141,27 +143,31 @@ const selectors = {
 	 * @param postType
 	 * @param args
 	 */
-	getEntities( state, postType, args={} ) {
-		let results = state[ postType ];
+	getEntities: createSelector(
+		( state, postType, args={} ) => {
+			let results = state[ postType ];
 
-		if ( ! state.hasOwnProperty( postType ) ) {
-			return;
-		}
+			if ( ! state.hasOwnProperty( postType ) ) {
+				return;
+			}
 
-		if ( Array.isArray( args.entityIds ) ) {
-			results = results.filter( item => -1 !== args.entityIds.indexOf( item.id ) );
-		}
+			if ( Array.isArray( args.entityIds ) ) {
+				results = results.filter( item => -1 !== args.entityIds.indexOf( item.id ) );
+			}
 
-		if ( 'function' === typeof( args.filterEntities ) ) {
-			results = results.filter( args.filterEntities );
-		}
+			if ( 'function' === typeof( args.filterEntities ) ) {
+				results = results.filter( args.filterEntities );
+			}
 
-		if ( 'function' === typeof( args.orderBy ) ) {
-			results = args.orderBy( results );
-		}
+			if ( 'function' === typeof( args.orderBy ) ) {
+				results = args.orderBy( results );
+			}
 
-		return results;
-	},
+			return results;
+		},
+		// Return state if postType is yet initialized to prevent unnecessary selector executions.
+		( state, postType ) => state[ postType ] || state
+	),
 };
 
 registerStore(
@@ -176,24 +182,19 @@ registerStore(
 					apiFetchEntities(
 						state,
 						action.postType,
-						API_ARGS[ action.postType],
-						// Dispatch action to set state after apiFetch promise is resolved.
-						( entities ) => {
-							dispatch( WC_BLOCKS_STORE ).setEntities( action.postType, entities);
-						}
+						API_ARGS[ action.postType ],
 					);
-
-					if ( -1 === state.loadingEntities.indexOf( action.postType ) ) {
-						state.loadingEntities.push( action.postType );
-					}
 
 					break;
 
 				case 'SET_ENTITIES':
+
+					// Changing state reference so that withSelect works.
+					state = { ...state };
 					state[ action.postType ] = action.entities;
 
 					// Not really needed, but lets do this for correctness.
-					state.loadingEntities = state.loadingEntities.filter( item => action.postType !== item );
+					const loadingEntities = state.loadingEntities.filter( item => action.postType !== item );
 
 					break;
 

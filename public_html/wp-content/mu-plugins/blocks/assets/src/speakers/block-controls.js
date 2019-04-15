@@ -19,17 +19,17 @@ import { LABEL }                                                        from './
 
 class SpeakersBlockControls extends BlockControls {
 	render() {
-		const { icon, attributes, setAttributes, speakerPosts } = this.props;
+		const { icon, attributes, setAttributes, allSpeakerPosts } = this.props;
 		const { mode } = attributes;
 
-		const hasPosts = Array.isArray( speakerPosts ) && speakerPosts.length;
+		const hasPosts = ( allSpeakerPosts || [] ).length > 0;
 
 		if ( mode && ! hasPosts ) {
 			return (
 				<PlaceholderNoContent
 					icon={ icon }
 					label={ LABEL }
-					loading={ ! Array.isArray( speakerPosts ) }
+					loading={ ! Array.isArray( allSpeakerPosts ) }
 				/>
 			);
 		}

@@ -20,6 +20,7 @@ import { ItemTitle, ItemHTMLContent, ItemPermalink } from '../shared/block-conte
 import { tokenSplit, arrayTokenReplace } from '../shared/i18n';
 import GridContentLayout from '../shared/grid-layout/block-content';
 import './block-content.scss';
+import { filterEntities } from '../blocks-store';
 
 function SpeakerSessions( { speaker, tracks } ) {
 	const sessions = get( speaker, '_embedded.sessions', [] );
@@ -85,11 +86,27 @@ function SpeakerSessions( { speaker, tracks } ) {
 
 class SpeakersBlockContent extends Component {
 	render() {
-		const { attributes, speakerPosts, tracks } = this.props;
+		const { attributes, tracks, allSpeakerPosts } = this.props;
 		const {
 			show_avatars, avatar_size, avatar_align,
-			content, show_session,
+			content, excerpt_more, show_session, sort,
+			mode, item_ids
 		} = attributes;
+
+		const args = {
+			order: sort,
+		};
+
+		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
+			args.filter  = [
+				{
+					fieldName: mode === 'wcb_speaker' ? 'id' : 'speaker_group',
+					fieldValue: item_ids,
+				}
+			];
+		}
+
+		const speakerPosts = filterEntities( allSpeakerPosts, args );
 
 		return (
 			<GridContentLayout

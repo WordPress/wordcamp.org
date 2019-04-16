@@ -42,7 +42,7 @@ class SpeakersEdit extends Component {
 	}
 }
 
-const speakersSelect = ( select, props ) => {
+const speakersSelect = ( select ) => {
 
 	const { getEntities } = select( WC_BLOCKS_STORE );
 

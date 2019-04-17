@@ -10,70 +10,29 @@ import { ICON }                 from './index';
  * WordPress dependencies
  */
 const { Component, Fragment } = wp.element;
-const apiFetch                = wp.apiFetch;
-const { addQueryArgs }        = wp.url;
-
-const MAX_PAGE = 100;
+const { withSelect }          = wp.data;
+import { WC_BLOCKS_STORE } from '../blocks-store';
 
 class SponsorsEdit extends Component {
-	/**
-	 * Constructor for SponsorsEdit block.
-	 *
-	 * @param {Array} props
-	 */
-	constructor( props ) {
-		super( props );
-
-		this.fetchSponsors();
-	}
-
-	fetchSponsors() {
-		const sponsorQuery = {
-			orderby  : 'title',
-			order    : 'asc',
-			per_page : MAX_PAGE,
-			_embed   : true,
-		};
-
-		const sponsorLevelQuery = {
-			orderby  : 'id',
-			order    : 'asc',
-			per_page : MAX_PAGE,
-			_embed   : true,
-		};
-
-		this.state = {
-			sponsorPosts  : apiFetch( { path: addQueryArgs( '/wp/v2/sponsors', sponsorQuery ) } ),
-			sponsorLevels : apiFetch( { path: addQueryArgs( '/wp/v2/sponsor_level', sponsorLevelQuery ) } ),
-			siteSettings  : apiFetch( { path: addQueryArgs( '/wp/v2/settings', {} ) } ),
-		};
-	}
-
 	/**
 	 * Renders SponsorEdit component.
 	 *
 	 * @return {Element}
 	 */
 	render() {
-		const { sponsorPosts, sponsorLevels, siteSettings } = this.state;
-		const { attributes }                                = this.props;
-		const { mode }                                      = attributes;
+		const { attributes } = this.props;
+		const { mode } = attributes;
 
 		return (
 			<Fragment>
 				{
 					<SponsorBlockControls
 						icon={ ICON }
-						sponsorPosts={ sponsorPosts }
-						sponsorLevels={ sponsorLevels }
-						siteSettings={ siteSettings }
 						{ ...this.props }
 					/>
 				}
 				<Fragment>
 					<SponsorInspectorControls
-						sponsorPosts={ sponsorPosts }
-						sponsorLevels={ sponsorLevels }
 						{ ...this.props }
 					/>
 
@@ -88,4 +47,15 @@ class SponsorsEdit extends Component {
 	}
 }
 
-export const edit = SponsorsEdit;
+const sponsorSelect = ( select ) => {
+
+	const { getEntities, getSiteSettings } = select( WC_BLOCKS_STORE );
+
+	return {
+		sponsorPosts  : getEntities( 'postType', 'wcb_sponsor' ),
+		sponsorLevels : getEntities( 'taxonomy', 'wcb_sponsor_level' ),
+		siteSettings  : getSiteSettings(),
+	}
+};
+
+export const edit = withSelect( sponsorSelect )( SponsorsEdit );

@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { get, difference } from 'lodash';
+import {get, difference, intersection} from 'lodash';
 import classnames          from 'classnames';
 
 /**
@@ -76,42 +76,23 @@ function SponsorDetail( { sponsorPost, attributes } ) {
 class SponsorBlockContent extends Component {
 	constructor( props ) {
 		super( props );
-
 		this.state = {
 			selectedPosts : [],
-			sortBy        : 'name_asc',
 		};
 	}
 
-	/**
-	 * Call back for when featured image URL is changed for a post.
-	 * We are storing the URL object as JSON stringified value because I was
-	 * not able to get object type to work properly. Maybe its not supported in
-	 * Gutenberg yet.
-	 *
-	 * @param {number} sponsorId
-	 * @param {string} imageURL
-	 */
-	setFeaturedImageURL( sponsorId, imageURL ) {
-		const sponsor_image_urls        = this.sponsorImageUrl || {};
-		sponsor_image_urls[ sponsorId ] = imageURL;
-		this.sponsorImageUrl            = sponsor_image_urls;
+	static getDerivedStateFromProps( nextProps, state ) {
+		// Sort the sponsor posts. Since this could potentially be expensive, lets do it in getDerivedStateFromProps hook and set state with result if anything is changed.
+		const {
+			selectedPosts    : newSelectedPosts,
+			attributes       : newAttributes,
+			sponsorTermOrder : newSponsorTermOrder
+		} = nextProps;
 
-		const { setAttributes }         = this.props;
-		const sponsor_image_urls_latest = this.sponsorImageUrl;
-
-		setAttributes( {
-			sponsor_image_urls: encodeURIComponent( JSON.stringify( sponsor_image_urls_latest ) ),
-		} );
-	}
-
-	componentWillReceiveProps( nextProps ) {
-		// Sort the sponsor posts. Since this could potentially be expensive, lets do it in componentWillReceiveProps hook and set state with result if anything is changed.
-		const { selectedPosts: newSelectedPosts, attributes: newAttributes, sponsorTermOrder: newSponsorTermOrder } = nextProps;
 		const { sort_by: newSortBy } = newAttributes;
 		const newSelectedPostIds = newSelectedPosts.map( ( post ) => post.id ).sort();
 
-		const { selectedPosts, sortBy } = this.state;
+		const { selectedPosts, sortBy } = state;
 		const selectedPostsIds = selectedPosts.map( ( post ) => post.id ).sort();
 
 		if ( sortBy === newSortBy && newSelectedPosts.length === selectedPosts.length && difference( selectedPostsIds, newSelectedPostIds ).length === 0 ) {
@@ -150,7 +131,7 @@ class SponsorBlockContent extends Component {
 				break;
 		}
 
-		this.setState( {
+		return( {
 			selectedPosts : sortedPosts,
 			sortBy        : newSortBy,
 		} );
@@ -162,9 +143,8 @@ class SponsorBlockContent extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes } = this.props;
 		const { selectedPosts } = this.state;
-
+		const { attributes }    = this.props;
 		return (
 			<GridContentLayout
 				className="wordcamp-sponsors-block"

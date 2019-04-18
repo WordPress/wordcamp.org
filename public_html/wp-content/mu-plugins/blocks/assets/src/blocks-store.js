@@ -12,7 +12,7 @@ const apiFetch                            = wp.apiFetch;
 /**
  * Define store name.
  */
-export const WC_BLOCKS_STORE = 'wc-blocks-store';
+export const WC_BLOCKS_STORE = 'wordcamp';
 
 const MAX_POSTS = -1 ; // Its supported now.
 

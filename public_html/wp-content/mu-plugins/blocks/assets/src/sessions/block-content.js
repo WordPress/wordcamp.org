@@ -140,7 +140,7 @@ class SessionsBlockContent extends Component {
 	}
 
 	render() {
-		const { attributes, allSessionPosts, allSessionTracks, allSessionCategories } = this.props;
+		const { attributes, allSessionPosts } = this.props;
 		const {
 			mode, item_ids, sort, show_speaker, show_images, image_align,
 			featured_image_width, content, excerpt_more, show_meta, show_category

@@ -19,21 +19,20 @@ import { LABEL }                                                        from './
 
 class SessionsBlockControls extends BlockControls {
 	render() {
-		const { icon, attributes, setAttributes, sessionPosts } = this.props;
+		const { icon, attributes, setAttributes, allSessionPosts, allSessionTracks, allSessionCategories } = this.props;
 		const { mode } = attributes;
 
-		const hasPosts = Array.isArray( sessionPosts ) && sessionPosts.length;
+		const hasPosts = Array.isArray( allSessionPosts ) && Array.isArray( allSessionTracks ) && Array.isArray( allSessionCategories );
 
 		if ( mode && ! hasPosts ) {
 			return (
 				<PlaceholderNoContent
 					icon={ icon }
 					label={ LABEL }
-					loading={ ! Array.isArray( sessionPosts ) }
+					loading={ ! hasPosts }
 				/>
 			);
 		}
-
 		let output;
 
 		switch ( mode ) {

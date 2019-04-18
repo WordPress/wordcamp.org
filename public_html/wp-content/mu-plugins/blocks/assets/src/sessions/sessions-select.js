@@ -27,51 +27,55 @@ class SessionsSelect extends Component {
 		};
 
 		this.buildSelectOptions = this.buildSelectOptions.bind( this );
-		this.fetchSelectOptions( props );
 	}
 
-	fetchSelectOptions( props ) {
+	static getDerivedStateFromProps( props, state ) {
 		const { allSessionPosts, allSessionTracks, allSessionCategories } = props;
-		const promises = [];
 
-		promises.push( allSessionPosts.then(
-			( fetchedPosts ) => {
-				const posts = fetchedPosts.map( ( post ) => {
-					const image = get( post, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' );
+		if ( false === state.loading ) {
+			return;
+		}
 
-					return {
-						label : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
-						value : post.id,
-						type  : 'wcb_session',
-						image : image,
-					};
-				} );
+		let sessionsLoaded = false;
+		let tracksLoaded = false;
 
-				this.setState( { wcb_session: posts } );
-			}
-		).catch() );
+		if ( allSessionPosts && Array.isArray( allSessionPosts ) ) {
+			state.wcb_session = allSessionPosts.map( ( post ) => {
+				const image = get( post, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' );
 
-		[ allSessionTracks, allSessionCategories ].forEach( ( promise ) => {
-			promises.push( promise.then(
-				( fetchedTerms ) => {
-					const terms = fetchedTerms.map( ( term ) => {
-						return {
-							label : term.name.trim() || __( '(Untitled)', 'wordcamporg' ),
-							value : term.id,
-							type  : term.taxonomy,
-							count : term.count || 0,
-						};
-					} );
+				return {
+					label : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
+					value : post.id,
+					type  : 'wcb_session',
+					image : image,
+				};
+			} );
+			sessionsLoaded = true;
+		}
 
-					const [ firstTerm ] = terms;
-					this.setState( { [ firstTerm.type ]: terms } );
-				}
-			).catch() );
-		} );
+		// Adding sessionsLoaded check here because core store does not
+		// recognize that wcb_track taxonomy exists until sessions are loaded.
+		// TODO: Figure out if its a GutenBug and report it if that's the case.
+		if ( sessionsLoaded && allSessionTracks && Array.isArray( allSessionTracks ) ) {
+			const terms = allSessionTracks.map( ( term ) => {
+				return {
+					label: term.name.trim() || __( '(Untitled)', 'wordcamporg' ),
+					value: term.id,
+					type: term.taxonomy,
+					count: term.count || 0,
+				};
+			} );
 
-		Promise.all( promises ).then( () => {
-			this.setState( { loading: false } );
-		} );
+			const [ firstTerm ] = terms;
+			state[ firstTerm.type ] = terms;
+			tracksLoaded = true;
+		}
+
+		if ( tracksLoaded && sessionsLoaded ) {
+			state.loading = false;
+		}
+
+		return state;
 	}
 
 	buildSelectOptions( mode ) {

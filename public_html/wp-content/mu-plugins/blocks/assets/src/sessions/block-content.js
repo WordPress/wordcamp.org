@@ -17,6 +17,7 @@ import {ItemTitle, ItemHTMLContent, ItemPermalink} from '../shared/block-content
 import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../shared/i18n';
 import GridContentLayout from '../shared/grid-layout/block-content';
 import FeaturedImage from '../shared/featured-image';
+import { filterEntities } from '../blocks-store';
 
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
@@ -25,6 +26,10 @@ function SessionSpeakers( { session } ) {
 		const { link = '' } = speaker;
 		let {  title = {} } = speaker;
 
+		if ( speaker.hasOwnProperty( 'code' ) ) {
+			// This speaker was deleted?
+			return null;
+		}
 		title = title.rendered.trim() || __( 'Unnamed', 'wordcamporg' );
 
 		if ( ! link ) {
@@ -135,8 +140,45 @@ class SessionsBlockContent extends Component {
 	}
 
 	render() {
-		const { attributes, sessionPosts } = this.props;
-		const { show_speaker, show_images, image_align, featured_image_width, content, show_meta, show_category } = attributes;
+		const { attributes, allSessionPosts, allSessionTracks, allSessionCategories } = this.props;
+		const {
+			mode, item_ids, sort, show_speaker, show_images, image_align,
+			featured_image_width, content, excerpt_more, show_meta, show_category
+		} = attributes;
+
+		const args = {};
+
+		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
+			let fieldName;
+			switch ( mode ) {
+				case 'wcb_session':
+					fieldName = 'id';
+					break;
+				case 'wcb_track':
+					fieldName = 'session_track';
+					break;
+				case 'wcb_session_category':
+					fieldName = 'session_category';
+					break;
+			}
+			args.filter = [
+				{
+					fieldName: fieldName,
+					fieldValue: item_ids,
+				},
+			]
+		}
+
+		if ( 'session_time' !== sort ) {
+			args.order = sort;
+		}
+
+		const sessionPosts = filterEntities( allSessionPosts, args );
+		if ( Array.isArray( sessionPosts ) && 'session_time' === sort ) {
+			sessionPosts.sort( ( a, b ) => {
+				return Number( a.meta._wcpt_session_time ) - Number( b.meta._wcpt_session_time );
+			} );
+		}
 
 		return (
 			<GridContentLayout

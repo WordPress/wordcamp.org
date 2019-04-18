@@ -21,19 +21,6 @@ import { ICON }                    from './index';
 import { WC_BLOCKS_STORE } from '../blocks-store';
 
 const blockData = window.WordCampBlocks.organizers || {};
-const MAX_POSTS = 100;
-
-const ALL_POSTS_QUERY = {
-	orderby  : 'title',
-	order    : 'asc',
-	per_page : MAX_POSTS,
-};
-
-const ALL_TERMS_QUERY = {
-	orderby  : 'name',
-	order    : 'asc',
-	per_page : MAX_POSTS,
-};
 
 class OrganizersEdit extends Component {
 	render() {

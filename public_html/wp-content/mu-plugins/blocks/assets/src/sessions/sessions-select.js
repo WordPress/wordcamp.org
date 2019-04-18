@@ -38,6 +38,7 @@ class SessionsSelect extends Component {
 
 		let sessionsLoaded = false;
 		let tracksLoaded = false;
+		let categoryLoaded = false;
 
 		if ( allSessionPosts && Array.isArray( allSessionPosts ) ) {
 			state.wcb_session = allSessionPosts.map( ( post ) => {
@@ -71,7 +72,10 @@ class SessionsSelect extends Component {
 			tracksLoaded = true;
 		}
 
-		if ( tracksLoaded && sessionsLoaded ) {
+		if ( sessionsLoaded && allSessionCategories && Array.isArray( allSessionCategories ) ) {
+			categoryLoaded = true;
+		}
+		if ( tracksLoaded && sessionsLoaded && categoryLoaded ) {
 			state.loading = false;
 		}
 

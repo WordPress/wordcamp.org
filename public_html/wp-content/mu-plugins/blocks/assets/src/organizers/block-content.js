@@ -15,12 +15,39 @@ const { __ }        = wp.i18n;
 import { AvatarImage }                from '../shared/avatar';
 import {ItemTitle, ItemHTMLContent, ItemPermalink} from '../shared/block-content';
 import GridContentLayout              from '../shared/grid-layout/block-content';
+import { filterEntities } from '../blocks-store';
 
 class OrganizersBlockContent extends Component {
 	render() {
-		const { attributes, organizerPosts }                                     = this.props;
-		const { show_avatars, avatar_size, avatar_align, content } = attributes;
+		const { attributes, allOrganizerPosts } = this.props;
+		const {
+			show_avatars, avatar_size, avatar_align, content, excerpt_more, mode,
+			item_ids, sort
+		} = attributes;
 
+		const args = {};
+
+		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
+			let fieldName;
+			switch ( mode ) {
+				case 'wcb_organizer':
+					fieldName = 'id';
+					break;
+				case 'wcb_organizer_team':
+					fieldName = 'organizer_team';
+					break;
+			}
+			args.filter = [
+				{
+					fieldName: fieldName,
+					fieldValue: item_ids,
+				},
+			]
+		}
+
+		args.order = sort;
+
+		const organizerPosts = filterEntities( allOrganizerPosts, args );
 		return (
 			<GridContentLayout
 				className="wordcamp-organizers-block"

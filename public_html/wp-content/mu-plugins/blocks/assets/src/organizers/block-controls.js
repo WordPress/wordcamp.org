@@ -19,17 +19,17 @@ import { LABEL }                                                        from './
 
 class OrganizersBlockControls extends BlockControls {
 	render() {
-		const { icon, attributes, setAttributes, organizerPosts } = this.props;
-		const { mode }                                            = attributes;
+		const { icon, attributes, setAttributes, allOrganizerPosts, allOrganizerTerms } = this.props;
+		const { mode } = attributes;
 
-		const hasPosts = Array.isArray( organizerPosts ) && organizerPosts.length;
+		const hasPosts = Array.isArray( allOrganizerPosts ) &&  Array.isArray( allOrganizerTerms );
 
 		if ( mode && ! hasPosts ) {
 			return (
 				<PlaceholderNoContent
 					icon={ icon }
 					label={ LABEL }
-					loading={ ! Array.isArray( organizerPosts ) }
+					loading={ ! hasPosts }
 				/>
 			);
 		}

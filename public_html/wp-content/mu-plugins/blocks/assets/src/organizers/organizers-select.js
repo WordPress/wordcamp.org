@@ -28,45 +28,47 @@ class OrganizersSelect extends Component {
 		};
 
 		this.buildSelectOptions = this.buildSelectOptions.bind( this );
-		this.fetchSelectOptions( props );
 	}
 
-	fetchSelectOptions( props ) {
+	static getDerivedStateFromProps( props, state ) {
 		const { allOrganizerPosts, allOrganizerTerms } = props;
 
-		const parsedPosts = allOrganizerPosts.then(
-			( fetchedPosts ) => {
-				const posts = fetchedPosts.map( ( post ) => {
-					return {
-						label  : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
-						value  : post.id,
-						type   : 'wcb_organizer',
-						avatar : post.avatar_urls[ '24' ],
-					};
-				} );
+		if ( false === state.loading ) {
+			return;
+		}
 
-				this.setState( { wcb_organizer: posts } );
-			}
-		);
+		let organizerLoaded = false;
+		let organizerTermsLoaded = false;
 
-		const parsedTerms = allOrganizerTerms.then(
-			( fetchedTerms ) => {
-				const terms = fetchedTerms.map( ( term ) => {
-					return {
-						label : term.name.trim() || __( '(Untitled)', 'wordcamporg' ),
-						value : term.id,
-						type  : 'wcb_organizer_team',
-						count : term.count,
-					};
-				} );
+		if ( allOrganizerPosts && Array.isArray( allOrganizerPosts ) ) {
+			state.wcb_organizer = allOrganizerPosts.map( ( post ) => {
+				return {
+					label  : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
+					value  : post.id,
+					type   : 'wcb_organizer',
+					avatar : post.avatar_urls[ '24' ],
+				};
+			} );
+			organizerLoaded = true;
+		}
 
-				this.setState( { wcb_organizer_team: terms } );
-			}
-		);
+		if ( organizerLoaded && allOrganizerTerms && Array.isArray( allOrganizerTerms ) ) {
+			state.wcb_organizer_team = allOrganizerTerms.map( ( term ) => {
+				return {
+					label : term.name.trim() || __( '(Untitled)', 'wordcamporg' ),
+					value : term.id,
+					type  : 'wcb_organizer_team',
+					count : term.count,
+				};
+			} );
+			organizerTermsLoaded = true;
+		}
 
-		Promise.all( [ parsedPosts, parsedTerms ] ).then( () => {
-			this.setState( { loading: false } );
-		} );
+		if ( organizerLoaded && organizerTermsLoaded ) {
+			state.loading = false;
+		}
+
+		return state;
 	}
 
 	buildSelectOptions( mode ) {

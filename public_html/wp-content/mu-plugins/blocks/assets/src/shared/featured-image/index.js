@@ -2,12 +2,14 @@
  * External dependencies
  */
 import classnames from 'classnames';
+const { isValidElement } = React;
 
 /**
  * WordPress dependencies.
  */
-const { Disabled } = wp.components;
+const { Dashicon, Disabled } = wp.components;
 const { Component } = wp.element;
+const { __ } = wp.i18n;
 const { isURL } = wp.url;
 
 /**
@@ -20,11 +22,15 @@ export default class FeaturedImage extends Component {
 	 * @param {number} props.width          Width in pixels for image.
 	 * @param {string} props.className      Class name for image element
 	 * @param {string} props.alt            Alt text for image
+	 * @param {string} props.imageLink      URL for wrapping the image in an anchor tag
+	 * @param {string} props.fallback       An element to use if no image is available
 	 */
 	constructor( props ) {
 		super( props );
 
 		this.state = {};
+
+		this.renderFallback = this.renderFallback.bind( this );
 	}
 
 	/**
@@ -66,13 +72,17 @@ export default class FeaturedImage extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { className, alt, width = 150, imageLink } = this.props;
-		const fullImage = this.getFullImage();
+		const { className, alt, width, imageLink } = this.props;
+		const { source_url: src } = this.getFullImage();
+
+		if ( ! src ) {
+			return this.renderFallback();
+		}
 
 		let image = (
 			<img
-				className={ classnames( 'wordcamp-featured-image', className ) }
-				src={ fullImage.source_url }
+				className="wordcamp-featured-image"
+				src={ src }
 				alt={ alt }
 				width={ width + 'px' }
 			/>
@@ -96,4 +106,68 @@ export default class FeaturedImage extends Component {
 
 		return image;
 	}
+
+	/**
+	 * Render a fallback element when no featured image is available.
+	 *
+	 * @return {Element}
+	 */
+	renderFallback() {
+		const { className, width, imageLink, fallbackIcon, fallbackElement } = this.props;
+
+		if ( isValidElement( fallbackElement ) ) {
+			return fallbackElement;
+		}
+
+		let output = '';
+
+		if ( fallbackIcon ) {
+			output = (
+				<FeaturedImageFallback
+					className={ className }
+					icon={ fallbackIcon }
+					width={ width }
+					link={ imageLink }
+				/>
+			);
+		}
+
+		return output;
+	}
+}
+
+function FeaturedImageFallback( { className, icon, width, link } ) {
+	const containerStyle = {
+		maxWidth: width,
+	};
+	let fallback;
+
+	fallback = (
+		<Dashicon
+			className="wordcamp-featured-image-fallback-icon"
+			icon={ icon }
+			size={ Number( width ) * 0.65 }
+		/>
+	);
+
+	if ( link ) {
+		fallback = (
+			<Disabled>
+				<a href={ link } className={ classnames( 'wordcamp-featured-image-link', 'wordcamp-featured-image-fallback-link' ) }>
+					{ fallback }
+				</a>
+			</Disabled>
+		);
+	}
+
+	return (
+		<div
+			className={ classnames( 'wordcamp-featured-image-fallback-container', className ) }
+			style={ containerStyle }
+		>
+			<div className="wordcamp-featured-image-fallback-container-inner">
+				{ fallback }
+			</div>
+		</div>
+	);
 }

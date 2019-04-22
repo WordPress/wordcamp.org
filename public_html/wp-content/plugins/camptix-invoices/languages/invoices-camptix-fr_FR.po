@@ -1,0 +1,294 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: CampTix Invoices\n"
+"POT-Creation-Date: 2018-11-29 11:38+0100\n"
+"PO-Revision-Date: 2018-11-29 11:42+0100\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr_FR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.11\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-KeywordsList: __;_e;esc_html__;_x\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Poedit-SearchPath-0: .\n"
+
+#: camptix-invoices.php:42 camptix-invoices.php:44 camptix-invoices.php:45
+#: camptix-invoices.php:47
+msgid "Invoices"
+msgstr "Factures"
+
+#: camptix-invoices.php:46 camptix-invoices.php:48
+msgid "Invoice"
+msgstr "Facture"
+
+#: camptix-invoices.php:49
+msgid "Invoice Archives"
+msgstr "Archives des factures"
+
+#: camptix-invoices.php:50
+msgid "Invoice Attributes"
+msgstr "Attributs de la facture"
+
+#: camptix-invoices.php:51
+msgid "Add New Invoice"
+msgstr "Ajouter une facture"
+
+#: camptix-invoices.php:52
+msgid "Add New"
+msgstr "Ajouter"
+
+#: camptix-invoices.php:53
+msgid "New Invoice"
+msgstr "Noubelle facture"
+
+#: camptix-invoices.php:54
+msgid "Edit Invoice"
+msgstr "Editer la facture"
+
+#: camptix-invoices.php:55
+msgid "Update Invoice"
+msgstr "Mettre à jour la facture"
+
+#: camptix-invoices.php:56
+msgid "View Invoice"
+msgstr "Voir la facture"
+
+#: camptix-invoices.php:57
+msgid "View Invoices"
+msgstr "Voir les factures"
+
+#: camptix-invoices.php:58
+msgid "Search Invoices"
+msgstr "Rechercher une facture"
+
+#: camptix-invoices.php:81
+msgid "Print invoice"
+msgstr "Imprimer la facture"
+
+#: camptix-invoices.php:82
+msgid "Invoice number"
+msgstr "Numéro de facture"
+
+#: camptix-invoices.php:134 camptix-invoices.php:222
+msgid "Order details"
+msgstr "Détails de la commande"
+
+#: camptix-invoices.php:146 camptix-invoices.php:234 camptix-invoices.php:449
+msgid "Title"
+msgstr "Titre"
+
+#: camptix-invoices.php:147 camptix-invoices.php:235 camptix-invoices.php:450
+msgid "Unit price"
+msgstr "Prix unitaire"
+
+#: camptix-invoices.php:148 camptix-invoices.php:236 camptix-invoices.php:451
+msgid "Quantity"
+msgstr "Quantité"
+
+#: camptix-invoices.php:196 camptix-invoices.php:266
+msgid "Total amount"
+msgstr "Montant total"
+
+#: camptix-invoices.php:198 camptix-invoices.php:268
+msgid "Customer"
+msgstr "Client"
+
+#: camptix-invoices.php:200 camptix-invoices.php:270
+msgid "Contact email"
+msgstr "Email de contact"
+
+#: camptix-invoices.php:202 camptix-invoices.php:272
+msgid "Customer Address"
+msgstr "Adresse du client"
+
+#: camptix-invoices.php:207 camptix-invoices.php:277 camptix-invoices.php:379
+#: includes/class-camptix-addon-invoices.php:66
+#: includes/class-camptix-addon-invoices.php:423
+msgid "VAT number"
+msgstr "Numéro de TVA"
+
+#: camptix-invoices.php:347
+msgid "Published invoices cannot be edited."
+msgstr "Il n’est pas possible de modifier une facture déjà publiée."
+
+#: camptix-invoices.php:369
+msgid "I need an invoice"
+msgstr "J’ai besoin d’une facture"
+
+#: camptix-invoices.php:370
+msgid "Email for the invoice to be sent to"
+msgstr "Email pour recevoir la facture"
+
+#: camptix-invoices.php:372
+msgid "Name or organisation that the invoice should be made out to"
+msgstr "Nom de facturation"
+
+#: camptix-invoices.php:374
+msgid "Street address"
+msgstr "Adresse"
+
+#: camptix-invoices.php:400
+msgid "You do not have access to this invoice"
+msgstr "Vous ne pouvez pas accéder à cette facture"
+
+#: camptix-invoices.php:426
+msgid "Organizer:"
+msgstr "Organisateur :"
+
+#: camptix-invoices.php:452
+msgid "Total"
+msgstr "Total"
+
+#. translators: invoice number
+#: camptix-invoices.php:466
+#, php-format
+msgid "Invoice #%s"
+msgstr "Facture #%s"
+
+#: camptix-invoices.php:486
+msgid "Total amount:"
+msgstr "Montant total :"
+
+#: camptix-invoices.php:498
+msgid "invoice-"
+msgstr "facture-"
+
+#: includes/class-camptix-addon-invoices.php:43
+msgid "Invoicing"
+msgstr "Facturation"
+
+#: includes/class-camptix-addon-invoices.php:58
+msgid "Invoices settings"
+msgstr "Réglages des factures"
+
+#: includes/class-camptix-addon-invoices.php:61
+msgid "Yearly reset"
+msgstr "Réinitialisation annuelle"
+
+#. translators: %1$s is a date.
+#: includes/class-camptix-addon-invoices.php:63
+#, php-format
+msgid ""
+"Invoice numbers are prefixed with the year, and will be reset on the 1st of "
+"January (e.g. %1$s-125)"
+msgstr ""
+"Les numéros de facture sont préfixés par l’année, et seront réinitialisés le "
+"premier janvier. (ex: %1$s-125)"
+
+#. translators: %1$s is a date.
+#: includes/class-camptix-addon-invoices.php:68
+msgid "Add a \"VAT Number\" field to the invoice request form"
+msgstr ""
+"Ajouter un champs \"Numéro de TVA\" au formulaire de demande de facture"
+
+#: includes/class-camptix-addon-invoices.php:71
+msgid "Next invoice"
+msgstr "Facture suivante"
+
+#: includes/class-camptix-addon-invoices.php:77
+msgid "Logo"
+msgstr "Logo"
+
+#: includes/class-camptix-addon-invoices.php:82
+msgid "Company address"
+msgstr "Adresse de l’organisme"
+
+#: includes/class-camptix-addon-invoices.php:83
+msgid "Terms and Conditions"
+msgstr "CGV"
+
+#: includes/class-camptix-addon-invoices.php:84
+msgid "Note below invoice total"
+msgstr "Note en dessous du total"
+
+#: includes/class-camptix-addon-invoices.php:93
+msgid "The next invoice's number will be"
+msgstr "La prochaine facture portera le numéro"
+
+#: includes/class-camptix-addon-invoices.php:110
+msgid "Pick a logo to upload"
+msgstr "Sélectionner un logo a télécharger"
+
+#: includes/class-camptix-addon-invoices.php:111
+msgid "Pick this logo"
+msgstr "Choisir ce logo"
+
+#. translators: 1: invoice number, 2: transaction id, 3. date.
+#: includes/class-camptix-addon-invoices.php:244
+#, php-format
+msgid "Invoice #%1$s for order #%2$s on %3$s"
+msgstr "Facture n°%1$s de la commande %2$s du %3$s"
+
+#. translators: The name of the event
+#: includes/class-camptix-addon-invoices.php:281
+#, php-format
+msgid "Your invoice - %s"
+msgstr "Votre facture – %s"
+
+#: includes/class-camptix-addon-invoices.php:288
+msgid "Hello,"
+msgstr "Bonjour,"
+
+#. translators: event name.
+#: includes/class-camptix-addon-invoices.php:290
+#, php-format
+msgid ""
+"As requested during your purchase, please find attached an invoice for your "
+"tickets to \"%s \"."
+msgstr ""
+"Comme demandé lors de l’achat, vous trouverez en pièce jointe de cette email "
+"la facture de vos billets pour l‘événement « %s »."
+
+#. translators: email.
+#: includes/class-camptix-addon-invoices.php:292
+#, php-format
+msgid "Please let us know if we can be of any further assistance at %s."
+msgstr ""
+"En cas de réclamation, vous pouvez contacter notre équipe à l’adresse %s"
+
+#: includes/class-camptix-addon-invoices.php:293
+msgid "Kind regards"
+msgstr "Nous vous souhaitons une excellente journée !"
+
+#. translators: event name.
+#: includes/class-camptix-addon-invoices.php:296
+#, php-format
+msgid "The %s team"
+msgstr "L'équipe de %s"
+
+#: includes/class-camptix-addon-invoices.php:386
+msgid "This attendee requested an invoice."
+msgstr "Le participant a demandé une facture."
+
+#: includes/class-camptix-addon-invoices.php:403
+msgid "As you have requested an invoice, please fill in the required fields."
+msgstr ""
+"Vous avez demandé une facture, il faut donc compléter les champs requis."
+
+#: includes/class-camptix-addon-invoices.php:416
+#: includes/class-camptix-addon-invoices.php:427
+msgid "Requested an invoice"
+msgstr "A demandé une facture"
+
+#: includes/class-camptix-addon-invoices.php:416
+msgid "Yes"
+msgstr "Oui"
+
+#: includes/class-camptix-addon-invoices.php:417
+msgid "Invoice recipient"
+msgstr "Destinataire de la facture"
+
+#: includes/class-camptix-addon-invoices.php:418
+msgid "Invoice to be sent to"
+msgstr "Facture à envoyer à"
+
+#: includes/class-camptix-addon-invoices.php:419
+msgid "Customer address"
+msgstr "Adresse du client"
+
+#: includes/class-camptix-addon-invoices.php:427
+msgid "No"
+msgstr "Non"

@@ -1,0 +1,364 @@
+# Copyright (C) 2019 Willy Bahuaud, Simon Janin
+# This file is distributed under the same license as the Camptix Invoices plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Camptix Invoices 1.0.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/camptix-invoices\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2019-01-14T14:38:13+00:00\n"
+"PO-Revision-Date: 2019-01-14T14:38:13+00:00\n"
+"X-Generator: WP-CLI 2.0.1\n"
+"X-Domain: invoices-camptix\n"
+
+#. Plugin Name of the plugin
+msgid "Camptix Invoices"
+msgstr ""
+
+#. Description of the plugin
+msgid "Allow Camptix user to send invoices when an attendee buys a ticket"
+msgstr ""
+
+#. Author of the plugin
+msgid "Willy Bahuaud, Simon Janin"
+msgstr ""
+
+#. Author URI of the plugin
+msgid "https://2018.wptech.io"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:43
+msgid "Invoicing"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:58
+msgid "Invoices settings"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:62
+msgid "Activate invoice requests"
+msgstr ""
+
+#. translators: %1$s is a date.
+#: includes/class-camptix-addon-invoices.php:64
+msgid "Allow ticket buyers to ask for an invoice when purchasing their tickets."
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:68
+msgid "Yearly reset"
+msgstr ""
+
+#. translators: %1$s is a date.
+#: includes/class-camptix-addon-invoices.php:70
+msgid "Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:74
+msgid "Date format"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:81
+#: includes/class-camptix-addon-invoices.php:502
+#: camptix-invoices.php:210
+#: camptix-invoices.php:285
+#: camptix-invoices.php:395
+msgid "VAT number"
+msgstr ""
+
+#. translators: %1$s is a date.
+#: includes/class-camptix-addon-invoices.php:83
+msgid "Add a \"VAT Number\" field to the invoice request form"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:87
+msgid "Next invoice"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:95
+msgid "Logo"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:101
+msgid "Company address"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:102
+msgid "Terms and Conditions"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:103
+msgid "Note below invoice total"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:119
+msgid "https://codex.wordpress.org/Formatting_Date_and_Time"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:120
+msgid "Documentation on date and time formatting"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:132
+msgid "The next invoice's number will be"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:151
+msgid "Pick a logo to upload"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:152
+msgid "Pick this logo"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:166
+msgid "Pick a logo"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:168
+msgid "Remove logo"
+msgstr ""
+
+#. translators: 1: invoice number, 2: email, 3: transaction id, 4. date.
+#: includes/class-camptix-addon-invoices.php:296
+msgid "Invoice #%1$s for %2$s (order #%3$s) on %4$s"
+msgstr ""
+
+#. translators: 1: invoice number, 2: email, 3. date.
+#: includes/class-camptix-addon-invoices.php:305
+msgid "Invoice #%1$s for %2$s on %3$s"
+msgstr ""
+
+#. translators: The name of the event
+#: includes/class-camptix-addon-invoices.php:349
+msgid "Your invoice - %s"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:358
+msgid "Hello,"
+msgstr ""
+
+#. translators: event name.
+#: includes/class-camptix-addon-invoices.php:360
+msgid "As requested during your purchase, please find attached an invoice for your tickets to \"%s\"."
+msgstr ""
+
+#. translators: email.
+#: includes/class-camptix-addon-invoices.php:362
+msgid "Please let us know if we can be of any further assistance at %s."
+msgstr ""
+
+#. translators: email.
+#: includes/class-camptix-addon-invoices.php:363
+msgid "Kind regards"
+msgstr ""
+
+#. translators: event name.
+#: includes/class-camptix-addon-invoices.php:366
+msgid "The %s team"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:465
+msgid "This attendee requested an invoice."
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:482
+msgid "As you have requested an invoice, please fill in the required fields."
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:495
+#: includes/class-camptix-addon-invoices.php:505
+msgid "Requested an invoice"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:495
+msgid "Yes"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:496
+msgid "Invoice recipient"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:497
+msgid "Invoice to be sent to"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:498
+msgid "Customer address"
+msgstr ""
+
+#: includes/class-camptix-addon-invoices.php:505
+msgid "No"
+msgstr ""
+
+#: camptix-invoices.php:43
+#: camptix-invoices.php:45
+#: camptix-invoices.php:47
+msgid "Invoices"
+msgstr ""
+
+#: camptix-invoices.php:46
+msgctxt "Post Type Singular Name"
+msgid "Invoice"
+msgstr ""
+
+#: camptix-invoices.php:48
+msgid "Invoice"
+msgstr ""
+
+#: camptix-invoices.php:49
+msgid "Invoice Archives"
+msgstr ""
+
+#: camptix-invoices.php:50
+msgid "Invoice Attributes"
+msgstr ""
+
+#: camptix-invoices.php:51
+msgid "Add New Invoice"
+msgstr ""
+
+#: camptix-invoices.php:52
+msgid "Add New"
+msgstr ""
+
+#: camptix-invoices.php:53
+msgid "New Invoice"
+msgstr ""
+
+#: camptix-invoices.php:54
+msgid "Edit Invoice"
+msgstr ""
+
+#: camptix-invoices.php:55
+msgid "Update Invoice"
+msgstr ""
+
+#: camptix-invoices.php:56
+msgid "View Invoice"
+msgstr ""
+
+#: camptix-invoices.php:57
+msgid "View Invoices"
+msgstr ""
+
+#: camptix-invoices.php:58
+msgid "Search Invoices"
+msgstr ""
+
+#: camptix-invoices.php:83
+msgid "Print invoice"
+msgstr ""
+
+#: camptix-invoices.php:84
+msgid "Invoice number"
+msgstr ""
+
+#: camptix-invoices.php:136
+#: camptix-invoices.php:225
+msgid "Order details"
+msgstr ""
+
+#: camptix-invoices.php:149
+#: camptix-invoices.php:238
+#: camptix-invoices.php:466
+msgid "Title"
+msgstr ""
+
+#: camptix-invoices.php:150
+#: camptix-invoices.php:239
+msgid "Unit price"
+msgstr ""
+
+#: camptix-invoices.php:151
+#: camptix-invoices.php:240
+#: camptix-invoices.php:467
+msgid "Quantity"
+msgstr ""
+
+#: camptix-invoices.php:199
+#: camptix-invoices.php:272
+msgid "Total amount"
+msgstr ""
+
+#: camptix-invoices.php:201
+#: camptix-invoices.php:274
+msgid "Customer"
+msgstr ""
+
+#: camptix-invoices.php:203
+#: camptix-invoices.php:276
+msgid "Contact email"
+msgstr ""
+
+#: camptix-invoices.php:205
+#: camptix-invoices.php:278
+msgid "Customer Address"
+msgstr ""
+
+#: camptix-invoices.php:280
+msgid "Transaction ID"
+msgstr ""
+
+#: camptix-invoices.php:355
+msgid "Published invoices cannot be edited."
+msgstr ""
+
+#: camptix-invoices.php:385
+msgid "I need an invoice"
+msgstr ""
+
+#: camptix-invoices.php:386
+msgid "Email for the invoice to be sent to"
+msgstr ""
+
+#: camptix-invoices.php:388
+msgid "Name or organisation that the invoice should be made out to"
+msgstr ""
+
+#: camptix-invoices.php:390
+msgid "Street address"
+msgstr ""
+
+#: camptix-invoices.php:416
+msgid "You do not have access to this invoice"
+msgstr ""
+
+#: camptix-invoices.php:442
+msgid "From:"
+msgstr ""
+
+#: camptix-invoices.php:449
+msgid "VAT no:"
+msgstr ""
+
+#: camptix-invoices.php:452
+msgid "To:"
+msgstr ""
+
+#: camptix-invoices.php:468
+msgid "Unit Price"
+msgstr ""
+
+#: camptix-invoices.php:469
+msgid "Total Price"
+msgstr ""
+
+#. translators: invoice number
+#: camptix-invoices.php:483
+msgid "Invoice #%s"
+msgstr ""
+
+#: camptix-invoices.php:504
+msgid "VAT amount:"
+msgstr ""
+
+#: camptix-invoices.php:505
+msgid "Total amount:"
+msgstr ""
+
+#: camptix-invoices.php:518
+msgid "invoice-"
+msgstr ""

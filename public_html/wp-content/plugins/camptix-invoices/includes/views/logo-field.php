@@ -17,12 +17,12 @@ defined( 'WPINC' ) || die();
 		?>
 	</div>
 
-	<input data-set type="button" class="button button-secondary" value="<?php echo esc_attr__( 'Pick a logo', 'invoices-camptix' ); ?>" />
+	<input data-set type="button" class="button button-secondary" value="<?php echo esc_attr__( 'Pick a logo', 'wordcamporg' ); ?>" />
 	<input
 		data-unset
 		type="button"
 		class="button button-secondary"
-		value="<?php echo esc_attr__( 'Remove logo', 'invoices-camptix' ); ?>"
+		value="<?php echo esc_attr__( 'Remove logo', 'wordcamporg' ); ?>"
 		<?php
 		if ( empty( $value ) ) {
 			echo 'style="display:none;"';
@@ -30,5 +30,5 @@ defined( 'WPINC' ) || die();
 		?>
 	/>
 	<input type="hidden" name=camptix_options[<?php echo esc_attr( $id ); ?>] data-field="image_attachment" value="<?php echo esc_attr( $value ); ?>">
-	<p class="description"><?php echo esc_html__( 'Expected image size: 250px width, 200px height', 'invoices-camptix' ); ?></p>
+	<p class="description"><?php echo esc_html__( 'Expected image size: 250px width, 200px height', 'wordcamporg' ); ?></p>
 </div>

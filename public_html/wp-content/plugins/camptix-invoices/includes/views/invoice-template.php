@@ -129,30 +129,30 @@ defined('WPINC') || die();
 	</div>
 	<div class="camptix-inovice-header">
 		<div class="camptix-invoice-from-box text-left">
-			<strong><?php esc_html_e( 'From', 'invoices-camptix' ); ?>:</strong>
+			<strong><?php esc_html_e( 'From', 'wordcamporg' ); ?>:</strong>
 			<p class="text-left">
 				<?php echo nl2br( esc_html( $camptix_opts['invoice-company'] ) ); ?>
 			</p>
 		</div>
 		<div class="camptix-invoice-to-box text-right">
-			<strong><?php esc_html_e('To', 'invoices-camptix'); ?>:</strong>
+			<strong><?php esc_html_e('To', 'wordcamporg'); ?>:</strong>
 			<p class="text-right">
 				<?php echo esc_html( $invoice_metas['name'] ); ?><br/>
 				<?php echo esc_html( $invoice_metas['address'] ); ?><br/>
 			</p>
 			<?php if ( ! empty( $invoice_metas['vat-number'] ) ) { ?>
-				<strong><?php esc_html_e('VAT no', 'invoices-camptix'); ?>:</strong>
+				<strong><?php esc_html_e('VAT no', 'wordcamporg'); ?>:</strong>
 				<?php echo esc_html( $invoice_metas['vat-number'] ); ?>
 			<?php } ?>
 		</div>
 	</div>
 	<div class="camptix-invoice-data text-right">
 		<p class="text-right">
-			<strong><?php esc_html_e( 'Invoice no', 'invoices-camptix' ); ?>:</strong>
+			<strong><?php esc_html_e( 'Invoice no', 'wordcamporg' ); ?>:</strong>
 				<?php echo esc_html( $invoice_number ); ?>
 		</p>
 		<p class="text-right">
-			<strong><?php esc_html_e( 'Invoice Date', 'invoices-camptix' ); ?>:</strong>
+			<strong><?php esc_html_e( 'Invoice Date', 'wordcamporg' ); ?>:</strong>
 				<?php echo esc_html( $invoice_date ); ?>
 		</p>
 	</div>
@@ -166,9 +166,9 @@ defined('WPINC') || die();
 			</colgroup>
 			<tr>
 				<th class="text-left"><?php echo esc_html( $camptix_opts['event_name'] ); ?></th>
-				<th class="text-center"><?php esc_html_e( 'Qty', 'invoices-camptix' ); ?></th>
-				<th class="text-right"><?php esc_html_e( 'Unit Price', 'invoices-camptix' ); ?></th>
-				<th class="text-right"><?php esc_html_e( 'Total Price', 'invoices-camptix'); ?></th>
+				<th class="text-center"><?php esc_html_e( 'Qty', 'wordcamporg' ); ?></th>
+				<th class="text-right"><?php esc_html_e( 'Unit Price', 'wordcamporg' ); ?></th>
+				<th class="text-right"><?php esc_html_e( 'Total Price', 'wordcamporg'); ?></th>
 			</tr>
 				<?php foreach ( $invoice_order['items'] as $item ) : ?>
 					<tr>
@@ -184,7 +184,7 @@ defined('WPINC') || die();
 					</tr>
 				<?php endforeach ?>
 			<tr>
-				<td class="text-right"><?php esc_html_e('VAT', 'invoices-camptix'); ?></td>
+				<td class="text-right"><?php esc_html_e('VAT', 'wordcamporg'); ?></td>
 				<td></td>
 				<td></td>
 				<td class="text-right">
@@ -192,7 +192,7 @@ defined('WPINC') || die();
 				</td>
 			</tr>
 			<tr>
-				<td class="text-right"><?php esc_html_e( 'TOTAL', 'invoices-camptix' ); ?></td>
+				<td class="text-right"><?php esc_html_e( 'TOTAL', 'wordcamporg' ); ?></td>
 				<td></td>
 				<td></td>
 				<td class="text-right">
@@ -203,7 +203,7 @@ defined('WPINC') || die();
 	</div>
 	<div class="camptix-invoice-payment-status">
 		<p>
-			<?php esc_html_e( 'Paid in full.', 'invoices-camptix' ); ?>
+			<?php esc_html_e( 'Paid in full.', 'wordcamporg' ); ?>
 		</p>
 	</div>
 	<div class="camptix-invoice-note">

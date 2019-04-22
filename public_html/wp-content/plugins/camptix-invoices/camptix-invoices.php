@@ -29,14 +29,6 @@ function ctx_load_docs_pdf_generator() {
 add_action( 'init', 'ctx_load_docs_pdf_generator' );
 
 /**
- * Load textdomain
- */
-function ctx_invoice_load_textdomain() {
-	load_plugin_textdomain( 'invoices-camptix', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-}
-add_action( 'init', 'ctx_invoice_load_textdomain' );
-
-/**
  * Load invoice addon.
  */
 function load_camptix_invoices() {
@@ -53,22 +45,22 @@ function register_tix_invoice() {
 	register_post_type(
 		'tix_invoice',
 		array(
-			'label'        => __( 'Invoices', 'invoices-camptix' ),
+			'label'        => __( 'Invoices', 'wordcamporg' ),
 			'labels'       => array(
-				'name'           => __( 'Invoices', 'invoices-camptix' ),
-				'singular_name'  => _x( 'Invoice', 'Post Type Singular Name', 'invoices-camptix' ),
-				'menu_name'      => __( 'Invoices', 'invoices-camptix' ),
-				'name_admin_bar' => __( 'Invoice', 'invoices-camptix' ),
-				'archives'       => __( 'Invoice Archives', 'invoices-camptix' ),
-				'attributes'     => __( 'Invoice Attributes', 'invoices-camptix' ),
-				'add_new_item'   => __( 'Add New Invoice', 'invoices-camptix' ),
-				'add_new'        => __( 'Add New', 'invoices-camptix' ),
-				'new_item'       => __( 'New Invoice', 'invoices-camptix' ),
-				'edit_item'      => __( 'Edit Invoice', 'invoices-camptix' ),
-				'update_item'    => __( 'Update Invoice', 'invoices-camptix' ),
-				'view_item'      => __( 'View Invoice', 'invoices-camptix' ),
-				'view_items'     => __( 'View Invoices', 'invoices-camptix' ),
-				'search_items'   => __( 'Search Invoices', 'invoices-camptix' ),
+				'name'           => __( 'Invoices', 'wordcamporg' ),
+				'singular_name'  => _x( 'Invoice', 'Post Type Singular Name', 'wordcamporg' ),
+				'menu_name'      => __( 'Invoices', 'wordcamporg' ),
+				'name_admin_bar' => __( 'Invoice', 'wordcamporg' ),
+				'archives'       => __( 'Invoice Archives', 'wordcamporg' ),
+				'attributes'     => __( 'Invoice Attributes', 'wordcamporg' ),
+				'add_new_item'   => __( 'Add New Invoice', 'wordcamporg' ),
+				'add_new'        => __( 'Add New', 'wordcamporg' ),
+				'new_item'       => __( 'New Invoice', 'wordcamporg' ),
+				'edit_item'      => __( 'Edit Invoice', 'wordcamporg' ),
+				'update_item'    => __( 'Update Invoice', 'wordcamporg' ),
+				'view_item'      => __( 'View Invoice', 'wordcamporg' ),
+				'view_items'     => __( 'View Invoices', 'wordcamporg' ),
+				'search_items'   => __( 'Search Invoices', 'wordcamporg' ),
 			),
 			'supports'     => array( 'title' ),
 			'public'       => false,
@@ -79,21 +71,21 @@ function register_tix_invoice() {
 
 	register_post_status( 'refunded',
 		array(
-			'label'                     => _x( 'Refunded', 'post', 'invoices-camptix' ),
+			'label'                     => _x( 'Refunded', 'post', 'wordcamporg' ),
 			'public'                    => true,
 			'show_in_admin_all_list'    => false,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Refunded <span class="count">(%s)</span>', 'Refunded <span class="count">(%s)</span>', 'invoices-camptix' ),
+			'label_count'               => _n_noop( 'Refunded <span class="count">(%s)</span>', 'Refunded <span class="count">(%s)</span>', 'wordcamporg' ),
 		)
 	);
 
 	register_post_status( 'cancelled',
 		array(
-			'label'                     => _x( 'Cancelled', 'post', 'invoices-camptix' ),
+			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
 			'public'                    => true,
 			'show_in_admin_all_list'    => false,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'invoices-camptix' ),
+			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
 		)
 	);
 }
@@ -105,16 +97,16 @@ function ctx_set_invoice_updated_messages( $messages ) {
 
 	$messages['tix_invoice'] = array(
 		0  => '', // Unused. Messages start at index 1.
-		1  => __( 'Invoice updated.', 'invoices-camptix' ),
-		2  => __( 'Custom field updated.', 'invoices-camptix' ),
-		3  => __( 'Custom field deleted.', 'invoices-camptix' ),
-		4  => __( 'Invoice updated.', 'invoices-camptix' ),
-		5  => __( 'Invoice restored.', 'invoices-camptix' ),
-		6  => __( 'Invoice saved.', 'invoices-camptix' ),
-		7  => __( 'Invoice saved.', 'invoices-camptix' ),
-		8  => __( 'Invoice submitted.', 'invoices-camptix' ),
-		9  => __( 'Invoice saved.', 'invoices-camptix' ),
-		10 => __( 'Invoice draft updated.', 'invoices-camptix' ),
+		1  => __( 'Invoice updated.', 'wordcamporg' ),
+		2  => __( 'Custom field updated.', 'wordcamporg' ),
+		3  => __( 'Custom field deleted.', 'wordcamporg' ),
+		4  => __( 'Invoice updated.', 'wordcamporg' ),
+		5  => __( 'Invoice restored.', 'wordcamporg' ),
+		6  => __( 'Invoice saved.', 'wordcamporg' ),
+		7  => __( 'Invoice saved.', 'wordcamporg' ),
+		8  => __( 'Invoice submitted.', 'wordcamporg' ),
+		9  => __( 'Invoice saved.', 'wordcamporg' ),
+		10 => __( 'Invoice draft updated.', 'wordcamporg' ),
 	);
 	return $messages;
 }
@@ -129,10 +121,10 @@ function ctx_append_post_status_list() {
 	$refunded_selected  = '';
 	$cancelled_selected = '';
 	$status             = '';
-	$refunded           = __( 'refunded', 'invoices-camptix' );
-	$cancelled          = __( 'cancelled', 'invoices-camptix' );
-	$refunded_status    = _x( 'Refunded', 'post', 'invoices-camptix' );
-	$cancelled_status   = _x( 'Cancelled', 'post', 'invoices-camptix' );
+	$refunded           = __( 'refunded', 'wordcamporg' );
+	$cancelled          = __( 'cancelled', 'wordcamporg' );
+	$refunded_status    = _x( 'Refunded', 'post', 'wordcamporg' );
+	$cancelled_status   = _x( 'Cancelled', 'post', 'wordcamporg' );
 
 	if ( 'tix_invoice' === $post->post_type ) {
 
@@ -171,13 +163,13 @@ function ctx_display_custom_statuses( $states ) {
 
 	if ( 'refunded' !== $arg ) {
 		if ( 'refunded' === $post->post_status ) {
-			return array( _x( 'Refunded', 'post', 'invoices-camptix' ) );
+			return array( _x( 'Refunded', 'post', 'wordcamporg' ) );
 		}
 	}
 
 	if ( 'cancelled' !== $arg ) {
 		if ( 'cancelled' === $post->post_status ) {
-			return array( _x( 'Cancelled', 'post', 'invoices-camptix' ) );
+			return array( _x( 'Cancelled', 'post', 'wordcamporg' ) );
 		}
 	}
 
@@ -193,8 +185,8 @@ function ctx_append_post_status_bulk_edit() {
 	?>
 	<script>
 		jQuery( document ).ready( function($) {
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'refunded', 'invoices-camptix' ) ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'invoices-camptix' ); ?></option>" );
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'cancelled', 'invoices-camptix' ) ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'invoices-camptix' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'refunded', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'cancelled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'wordcamporg' ); ?></option>" );
 		});
 	</script>
 	<?php
@@ -236,7 +228,7 @@ function ctx_register_invoice_metabox( $post ) {
 	if ( in_array( $post->post_status, $non_editable_statuses, true ) ) {
 		add_meta_box(
 			'ctx_invoice_metabox',
-			esc_html( 'Info', 'invoices-camptix' ),
+			esc_html__( 'Info', 'wordcamporg' ),
 			'ctx_invoice_metabox_sent',
 			'tix_invoice',
 			'normal',
@@ -245,7 +237,7 @@ function ctx_register_invoice_metabox( $post ) {
 	} else {
 		add_meta_box(
 			'ctx_invoice_metabox',
-			esc_html( 'Info', 'invoices-camptix' ),
+			esc_html__( 'Info', 'wordcamporg' ),
 			'ctx_invoice_metabox_editable',
 			'tix_invoice',
 			'normal',
@@ -509,14 +501,14 @@ function ctx_get_invoice( $invoice_id ) {
 	$upload_dir       = wp_upload_dir();
 
 	if ( empty( $upload_dir['basedir'] ) ) {
-		wp_die( esc_html__( 'Base upload directory is empty.', 'invoices-camptix' ) );
+		wp_die( esc_html__( 'Base upload directory is empty.', 'wordcamporg' ) );
 	}
 
 	$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
 	$path             = $invoices_dirname . '/' . $invoice_document;
 
 	if ( ! file_exists( $path ) ) {
-		wp_die( esc_html__( 'Invoice document does not exist.', 'invoices-camptix' ) );
+		wp_die( esc_html__( 'Invoice document does not exist.', 'wordcamporg' ) );
 	}
 
 	return $path;
@@ -585,19 +577,19 @@ function ctx_invoice_data_exporter( $email_address, $page ) {
 
 			switch ( $key ) {
 				case 'email':
-					$label = __( 'Email', 'invoices-camptix' );
+					$label = __( 'Email', 'wordcamporg' );
 					break;
 
 				case 'name':
-					$label = __( 'Name', 'invoices-camptix' );
+					$label = __( 'Name', 'wordcamporg' );
 					break;
 
 				case 'address':
-					$label = __( 'Address', 'invoices-camptix' );
+					$label = __( 'Address', 'wordcamporg' );
 					break;
 
 				case 'vat-number':
-					$label = __( 'VAT Number', 'invoices-camptix' );
+					$label = __( 'VAT Number', 'wordcamporg' );
 					break;
 
 				default:
@@ -614,7 +606,7 @@ function ctx_invoice_data_exporter( $email_address, $page ) {
 
 		if ( ! empty( $invoice_number ) ) {
 			$invoice_data_to_export[] = array(
-				'name'  => __( 'Invoice Number', 'invoices-camptix' ),
+				'name'  => __( 'Invoice Number', 'wordcamporg' ),
 				'value' => $invoice_number,
 			);
 		}
@@ -622,7 +614,7 @@ function ctx_invoice_data_exporter( $email_address, $page ) {
 		if ( ! empty( $invoice_data_to_export ) ) {
 			$data_to_export[] = array(
 				'group_id'    => 'camptix-invoice',
-				'group_label' => __( 'CampTix Invoice Data', 'invoices-camptix' ),
+				'group_label' => __( 'CampTix Invoice Data', 'wordcamporg' ),
 				'item_id'     => "camptix-invoice-{$post->ID}",
 				'data'        => $invoice_data_to_export,
 			);

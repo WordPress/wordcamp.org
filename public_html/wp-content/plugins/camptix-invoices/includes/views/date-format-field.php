@@ -12,7 +12,7 @@ defined( 'WPINC' ) || die();
 <p class="description">
 	<?php echo esc_html( $description ); ?>
 	<br />
-	<a href="<?php esc_attr__( 'https://codex.wordpress.org/Formatting_Date_and_Time', 'invoices-camptix' ); ?>">
-		<?php echo esc_html__( 'Documentation on date and time formatting', 'invoices-camptix' ); ?>
+	<a href="<?php esc_attr__( 'https://codex.wordpress.org/Formatting_Date_and_Time', 'wordcamporg' ); ?>">
+		<?php echo esc_html__( 'Documentation on date and time formatting', 'wordcamporg' ); ?>
 	</a>
 </p>

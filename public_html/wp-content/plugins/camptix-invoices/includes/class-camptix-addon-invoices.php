@@ -42,7 +42,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	 * @param array $sections Sections of the Camptix settings.
 	 */
 	public static function invoice_settings_tab( $sections ) {
-		$sections['invoice'] = __( 'Invoicing', 'invoices-camptix' );
+		$sections['invoice'] = __( 'Invoicing', 'wordcamporg' );
 		return $sections;
 	}
 
@@ -57,30 +57,30 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 
 		$opt = get_option( 'camptix_options' );
-		add_settings_section( 'invoice', __( 'Invoices settings', 'invoices-camptix' ), '__return_false', 'camptix_options' );
+		add_settings_section( 'invoice', __( 'Invoices settings', 'wordcamporg' ), '__return_false', 'camptix_options' );
 		global $camptix;
 
 		$camptix->add_settings_field_helper(
 			'invoice-active',
-			__( 'Activate invoice requests', 'invoices-camptix' ),
+			__( 'Activate invoice requests', 'wordcamporg' ),
 			'field_yesno',
 			'invoice',
 			// translators: %1$s is a date.
-			sprintf( __( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'invoices-camptix' ), date( 'Y' ) )
+			sprintf( __( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'wordcamporg' ), date( 'Y' ) )
 		);
 
 		$camptix->add_settings_field_helper(
 			'invoice-new-year-reset',
-			__( 'Yearly reset', 'invoices-camptix' ),
+			__( 'Yearly reset', 'wordcamporg' ),
 			'field_yesno',
 			'invoice',
 			// translators: %1$s is a date.
-			sprintf( __( 'Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)', 'invoices-camptix' ), date( 'Y' ) )
+			sprintf( __( 'Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)', 'wordcamporg' ), date( 'Y' ) )
 		);
 
 		add_settings_field(
 			'invoice-date-format',
-			__( 'Date format', 'invoices-camptix' ),
+			__( 'Date format', 'wordcamporg' ),
 			array( __CLASS__, 'date_format_callback' ),
 			'camptix_options',
 			'invoice',
@@ -92,16 +92,16 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		$camptix->add_settings_field_helper(
 			'invoice-vat-number',
-			__( 'VAT number', 'invoices-camptix' ),
+			__( 'VAT number', 'wordcamporg' ),
 			'field_yesno',
 			'invoice',
 			// translators: %1$s is a date.
-			sprintf( __( 'Add a "VAT Number" field to the invoice request form', 'invoices-camptix' ), date( 'Y' ) )
+			sprintf( __( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' ), date( 'Y' ) )
 		);
 
 		add_settings_field(
 			'invoice-logo',
-			__( 'Logo', 'invoices-camptix' ),
+			__( 'Logo', 'wordcamporg' ),
 			array( __CLASS__, 'type_file_callback' ),
 			'camptix_options',
 			'invoice',
@@ -111,9 +111,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			)
 		);
 
-		$camptix->add_settings_field_helper( 'invoice-company', __( 'Company address', 'invoices-camptix' ), 'field_textarea', 'invoice' );
-		$camptix->add_settings_field_helper( 'invoice-tac', __( 'Terms and Conditions', 'invoices-camptix' ), 'field_textarea', 'invoice' );
-		$camptix->add_settings_field_helper( 'invoice-thankyou', __( 'Note below invoice total', 'invoices-camptix' ), 'field_textarea', 'invoice' );
+		$camptix->add_settings_field_helper( 'invoice-company', __( 'Company address', 'wordcamporg' ), 'field_textarea', 'invoice' );
+		$camptix->add_settings_field_helper( 'invoice-tac', __( 'Terms and Conditions', 'wordcamporg' ), 'field_textarea', 'invoice' );
+		$camptix->add_settings_field_helper( 'invoice-thankyou', __( 'Note below invoice total', 'wordcamporg' ), 'field_textarea', 'invoice' );
 	}
 
 	/**
@@ -127,7 +127,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$value       = $args['value'];
 		$description = sprintf(
 			// translators: %s is a date.
-			__( 'Date format to use on the invoice, as a PHP Date formatting string (default \'d F Y\' formats dates as %s)', 'invoices-camptix' ),
+			__( 'Date format to use on the invoice, as a PHP Date formatting string (default \'d F Y\' formats dates as %s)', 'wordcamporg' ),
 			date( 'd F Y' )
 		);
 
@@ -146,8 +146,8 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			'admin-camptix-invoices',
 			'camptixInvoiceBackVars',
 			array(
-				'selectText'  => __( 'Pick a logo to upload', 'invoices-camptix' ),
-				'selectImage' => __( 'Pick this logo', 'invoices-camptix' ),
+				'selectText'  => __( 'Pick a logo to upload', 'wordcamporg' ),
+				'selectImage' => __( 'Pick this logo', 'wordcamporg' ),
 			)
 		);
 
@@ -283,7 +283,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		if ( $txn_id ) {
 			$invoice_title = sprintf(
 				// translators: 1: invoice number, 2: email, 3: transaction id, 4. date.
-				__( 'Invoice #%1$s for %2$s (order #%3$s) on %4$s', 'invoices-camptix' ),
+				__( 'Invoice #%1$s for %2$s (order #%3$s) on %4$s', 'wordcamporg' ),
 				$number,
 				$attendee_email,
 				$txn_id,
@@ -292,7 +292,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		} else {
 			$invoice_title = sprintf(
 				// translators: 1: invoice number, 2: email, 3. date.
-				__( 'Invoice #%1$s for %2$s on %3$s', 'invoices-camptix' ),
+				__( 'Invoice #%1$s for %2$s on %3$s', 'wordcamporg' ),
 				$number,
 				$attendee_email,
 				get_the_time( 'd/m/Y', $attendee )
@@ -342,7 +342,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$opt         = get_option( 'camptix_options' );
 
 		/* translators: The name of the event */
-		$subject = apply_filters( 'camptix_invoices_mail_subject', sprintf( __( 'Your Invoice to %s', 'invoices-camptix' ), $opt['event_name'] ), $opt['event_name'] );
+		$subject = apply_filters( 'camptix_invoices_mail_subject', sprintf( __( 'Your Invoice to %s', 'wordcamporg' ), $opt['event_name'] ), $opt['event_name'] );
 		$from    = apply_filters( 'camptix_invoices_mail_from', get_option( 'admin_email' ) );
 		$headers = apply_filters(
 			'camptix_invoices_mail_headers',
@@ -352,15 +352,15 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			)
 		);
 		$message = array(
-			__( 'Hello,', 'invoices-camptix' ),
+			__( 'Hello,', 'wordcamporg' ),
 			// translators: event name.
-			sprintf( __( 'As requested during your purchase, please find attached an invoice for your tickets to "%s".', 'invoices-camptix' ), sanitize_text_field( $opt['event_name'] ) ),
+			sprintf( __( 'As requested during your purchase, please find attached an invoice for your tickets to "%s".', 'wordcamporg' ), sanitize_text_field( $opt['event_name'] ) ),
 			// translators: email.
-			sprintf( __( 'Please let us know if we can be of any further assistance at %s.', 'invoices-camptix' ), $from ),
-			__( 'Kind regards', 'invoices-camptix' ),
+			sprintf( __( 'Please let us know if we can be of any further assistance at %s.', 'wordcamporg' ), $from ),
+			__( 'Kind regards', 'wordcamporg' ),
 			'',
 			// translators: event name.
-			sprintf( __( 'The %s team', 'invoices-camptix' ), sanitize_text_field( $opt['event_name'] ) ),
+			sprintf( __( 'The %s team', 'wordcamporg' ), sanitize_text_field( $opt['event_name'] ) ),
 		);
 		$message = implode( PHP_EOL, $message );
 		$message = '<p>' . nl2br( $message ) . '</p>';
@@ -393,7 +393,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$invoice_content = ob_get_clean();
 
 		if ( ! class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
-			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'invoices-camptix' ) );
+			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
 		}
 
 		$filename = get_post_meta( $invoice_id, 'invoice_document', true );
@@ -507,13 +507,8 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$opt = get_option( 'camptix_options' );
 		if ( ! empty( $opt['invoice-active'] ) ) {
 
-			wp_register_script( 'invoices-camptix', CTX_INV_ADMIN_URL . '/js/camptix-invoices.js', array( 'jquery' ), CTX_INV_VER, true );
-			wp_enqueue_script( 'invoices-camptix' );
-			wp_localize_script(
-				'invoices-camptix',
-				'camptixInvoicesVars',
-				array( 'invoiceDetailsForm' => get_rest_url( null, 'camptix-invoices/v1/invoice-form' ) )
-			);
+			wp_register_script( 'camptix-invoices', CTX_INV_ADMIN_URL . '/js/camptix-invoices.js', array( 'jquery' ), CTX_INV_VER, true );
+			wp_enqueue_script( 'camptix-invoices' );
 
 		}//end if
 
@@ -599,7 +594,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		if ( ! empty( $attendee->invoice ) ) {
 			update_post_meta( $post_id, 'invoice_metas', $attendee->invoice );
 			global $camptix;
-			$camptix->log( __( 'This attendee requested an invoice.', 'invoices-camptix' ), $post_id, $attendee->invoice );
+			$camptix->log( __( 'This attendee requested an invoice.', 'wordcamporg' ), $post_id, $attendee->invoice );
 		}//end if
 	}
 
@@ -616,7 +611,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$rp->setAccessible( true );
 		$error_flags = $rp->getValue( $camptix );
 		if ( ! empty( $error_flags['nope'] ) ) {
-			$camptix->error( __( 'As you have requested an invoice, please fill in the required fields.', 'invoices-camptix' ) );
+			$camptix->error( __( 'As you have requested an invoice, please fill in the required fields.', 'wordcamporg' ) );
 		}//end if
 	}
 
@@ -629,17 +624,17 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	public static function add_invoice_meta_on_attendee_metabox( $rows, $post ) {
 		$invoice_meta = get_post_meta( $post->ID, 'invoice_metas', true );
 		if ( ! empty( $invoice_meta ) ) {
-			$rows[] = array( __( 'Requested an invoice', 'invoices-camptix' ), __( 'Yes', 'invoices-camptix' ) );
-			$rows[] = array( __( 'Invoice recipient', 'invoices-camptix' ), $invoice_meta['name'] );
-			$rows[] = array( __( 'Invoice to be sent to', 'invoices-camptix' ), $invoice_meta['email'] );
-			$rows[] = array( __( 'Customer address', 'invoices-camptix' ), $invoice_meta['address'] );
+			$rows[] = array( __( 'Requested an invoice', 'wordcamporg' ), __( 'Yes', 'wordcamporg' ) );
+			$rows[] = array( __( 'Invoice recipient', 'wordcamporg' ), $invoice_meta['name'] );
+			$rows[] = array( __( 'Invoice to be sent to', 'wordcamporg' ), $invoice_meta['email'] );
+			$rows[] = array( __( 'Customer address', 'wordcamporg' ), $invoice_meta['address'] );
 
 			$opt = get_option( 'camptix_options' );
 			if ( ! empty( $opt['invoice-vat-number'] ) ) {
-				$rows[] = array( __( 'VAT number', 'invoices-camptix' ), $invoice_meta['vat-number'] );
+				$rows[] = array( __( 'VAT number', 'wordcamporg' ), $invoice_meta['vat-number'] );
 			}//end if
 		} else {
-			$rows[] = array( __( 'Requested an invoice', 'invoices-camptix' ), __( 'No', 'invoices-camptix' ) );
+			$rows[] = array( __( 'Requested an invoice', 'wordcamporg' ), __( 'No', 'wordcamporg' ) );
 		}//end if
 		return $rows;
 	}

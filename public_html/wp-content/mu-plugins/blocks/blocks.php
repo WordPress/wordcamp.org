@@ -53,7 +53,7 @@ function register_assets() {
 	wp_register_style(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'assets/blocks.min.css',
-		[ 'dashicons' ],
+		[],
 		filemtime( PLUGIN_DIR . 'assets/blocks.min.css' )
 	);
 

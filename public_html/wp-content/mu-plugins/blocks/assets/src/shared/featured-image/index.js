@@ -6,7 +6,7 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies.
  */
-const { Dashicon, Disabled } = wp.components;
+const { Disabled } = wp.components;
 const { Component } = wp.element;
 const { isURL } = wp.url;
 

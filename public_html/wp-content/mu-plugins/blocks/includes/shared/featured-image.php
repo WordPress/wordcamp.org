@@ -1,18 +1,21 @@
 <?php
 
 namespace WordCamp\Blocks\Shared\Components;
+defined( 'WPINC' ) || die();
+
+use WP_Post;
 
 /**
  * Provides render backend for FeaturedImage component.
  *
- * @param array    $class_names        Additional classes to add inside <img> tag.
- * @param \WP_Post $post               Current post object. This will be used to calculate srcset attribute.
- * @param int      $width              Width of the image.
- * @param string   $image_link         URL link. If provided, image will be linked to this URL.
+ * @param WP_Post  $post        Current post object. This will be used to calculate srcset attribute.
+ * @param int      $width       Width of the image.
+ * @param array    $class_names Additional classes to add inside <img> tag.
+ * @param string   $image_link  URL link. If provided, image will be linked to this URL.
  *
  * @return string Output markup for featured image.
  */
-function render_featured_image( $class_names, $post, $width, $image_link = '' ) {
+function render_featured_image( $post, $width, $class_names = [], $image_link = '' ) {
 	$attachment_id = get_post_thumbnail_id( $post->ID );
 	$image_data    = wp_get_attachment_metadata( $attachment_id );
 
@@ -20,11 +23,15 @@ function render_featured_image( $class_names, $post, $width, $image_link = '' ) 
 		return '';
 	}
 
-	$aspect_ratio      = $image_data['height'] / $image_data['width'];
-	$height            = $aspect_ratio * $width;
-	$size              = array( $width, $height );
-	$class_names       = implode( ' ', $class_names );
-	$container_classes = "wordcamp-image-container wordcamp-featured-image-container $class_names";
+	$aspect_ratio = $image_data['height'] / $image_data['width'];
+	$height       = $aspect_ratio * $width;
+	$size         = array( $width, $height );
+
+	$container_classes = array_merge(
+		[ 'wordcamp-image-container', 'wordcamp-featured-image-container' ],
+		$class_names
+	);
+	$container_classes = implode( ' ', $container_classes );
 
 	$image = render_featured_image_element( $post, $size );
 

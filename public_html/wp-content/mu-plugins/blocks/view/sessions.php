@@ -53,8 +53,7 @@ setup_postdata( $session );
 				array( 'wordcamp-session-image-container', 'align-' . esc_attr( $attributes['image_align'] ) ),
 				$session,
 				$attributes['featured_image_width'],
-				get_permalink( $session ),
-				'list-view'
+				get_permalink( $session )
 			) );
 		?>
 	<?php endif; ?>

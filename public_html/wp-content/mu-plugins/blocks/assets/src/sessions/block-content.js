@@ -17,7 +17,6 @@ import {ItemTitle, ItemHTMLContent, ItemPermalink} from '../shared/block-content
 import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../shared/i18n';
 import GridContentLayout from '../shared/grid-layout/block-content';
 import FeaturedImage from '../shared/featured-image';
-import { ICON } from './index';
 
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
@@ -172,7 +171,6 @@ class SessionsBlockContent extends Component {
 								alt={ post.title.rendered.trim() }
 								width={ Number( featured_image_width ) }
 								imageLink={ post.link }
-								fallbackIcon={ ICON }
 							/>
 						}
 

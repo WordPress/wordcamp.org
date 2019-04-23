@@ -23,14 +23,11 @@ export default class FeaturedImage extends Component {
 	 * @param {string} props.className      Class name for image element
 	 * @param {string} props.alt            Alt text for image
 	 * @param {string} props.imageLink      URL for wrapping the image in an anchor tag
-	 * @param {string} props.fallback       An element to use if no image is available
 	 */
 	constructor( props ) {
 		super( props );
 
 		this.state = {};
-
-		this.renderFallback = this.renderFallback.bind( this );
 	}
 
 	/**
@@ -76,7 +73,7 @@ export default class FeaturedImage extends Component {
 		const { source_url: src } = this.getFullImage();
 
 		if ( ! src ) {
-			return this.renderFallback();
+			return '';
 		}
 
 		let image = (
@@ -106,68 +103,4 @@ export default class FeaturedImage extends Component {
 
 		return image;
 	}
-
-	/**
-	 * Render a fallback element when no featured image is available.
-	 *
-	 * @return {Element}
-	 */
-	renderFallback() {
-		const { className, width, imageLink, fallbackIcon, fallbackElement } = this.props;
-
-		if ( isValidElement( fallbackElement ) ) {
-			return fallbackElement;
-		}
-
-		let output = '';
-
-		if ( fallbackIcon ) {
-			output = (
-				<FeaturedImageFallback
-					className={ className }
-					icon={ fallbackIcon }
-					width={ width }
-					link={ imageLink }
-				/>
-			);
-		}
-
-		return output;
-	}
-}
-
-function FeaturedImageFallback( { className, icon, width, link } ) {
-	const containerStyle = {
-		maxWidth: width,
-	};
-	let fallback;
-
-	fallback = (
-		<Dashicon
-			className="wordcamp-featured-image-fallback-icon"
-			icon={ icon }
-			size={ Number( width ) * 0.65 }
-		/>
-	);
-
-	if ( link ) {
-		fallback = (
-			<Disabled>
-				<a href={ link } className={ classnames( 'wordcamp-featured-image-link', 'wordcamp-featured-image-fallback-link' ) }>
-					{ fallback }
-				</a>
-			</Disabled>
-		);
-	}
-
-	return (
-		<div
-			className={ classnames( 'wordcamp-featured-image-fallback-container', className ) }
-			style={ containerStyle }
-		>
-			<div className="wordcamp-featured-image-fallback-container-inner">
-				{ fallback }
-			</div>
-		</div>
-	);
 }

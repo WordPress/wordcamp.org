@@ -12,13 +12,12 @@ namespace WordCamp\Blocks\Shared\Components;
  *
  * @return string Output markup for featured image.
  */
-function render_featured_image( $class_names, $post, $width, $image_link = '', $fallback_icon = '' ) {
+function render_featured_image( $class_names, $post, $width, $image_link = '' ) {
 	$attachment_id = get_post_thumbnail_id( $post->ID );
 	$image_data    = wp_get_attachment_metadata( $attachment_id );
-	$size          = 'post-thumbnail';
 
-	if ( ! isset( $image_data['width'], $image_data['height'] ) && $fallback_icon ) {
-		return render_featured_image_fallback( $fallback_icon, $width, $image_link, $class_names );
+	if ( ! isset( $image_data['width'], $image_data['height'] ) ) {
+		return '';
 	}
 
 	$aspect_ratio      = $image_data['height'] / $image_data['width'];
@@ -64,38 +63,4 @@ function render_featured_image_element( $post, $size ) {
 	}
 
 	return get_the_post_thumbnail( $post, $size, $attr );
-}
-
-
-function render_featured_image_fallback( $icon, $width, $link = '', $class_names = [] ) {
-	$class_names[]     = 'wordcamp-featured-image-fallback-container';
-	$container_classes = implode( ' ', $class_names );
-
-	$style = sprintf(
-		'max-width: %dpx;',
-		$width
-	);
-
-	$content = sprintf(
-		'<span class="dashicons dashicons-%s" style="font-size: %dpx" aria-hidden="true">&nbsp;</span>',
-		esc_attr( $icon ),
-		$width * 0.65
-	);
-
-	ob_start();
-	?>
-		<div class="<?php echo esc_attr( $container_classes ); ?>" style="<?php echo esc_attr( $style ); ?>">
-			<div class="wordcamp-featured-image-fallback-container-inner">
-				<?php if ( $link ) : ?>
-					<a href="<?php echo esc_url( $link ); ?>" class="wordcamp-featured-image-link wordcamp-featured-image-fallback-link">
-						<?php echo wp_kses_post( $content ); ?>
-					</a>
-				<?php else : ?>
-					<?php echo wp_kses_post( $content ); ?>
-				<?php endif; ?>
-			</div>
-		</div>
-	<?php
-
-	return ob_get_clean();
 }

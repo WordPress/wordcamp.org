@@ -2,43 +2,4 @@ img.wordcamp-featured-image {
 	height: auto;
 	max-width: 100%;
 	max-height: 100%;
-
-}
-
-$gray: #f3f3f4;
-
-// Maintain aspect ratio with dynamic width.
-// https://stackoverflow.com/a/6615994/402766
-.wordcamp-featured-image-fallback-container {
-	display: inline-block;
-	position: relative;
-	width: 100%;
-
-	&:after {
-		content: '';
-		display: block;
-		margin-top: 100%;
-	}
-}
-.wordcamp-featured-image-fallback-container-inner {
-	position: absolute;
-	top: 0;
-	bottom: 0;
-	left: 0;
-	right: 0;
-
-	display: flex;
-	justify-content: center;
-	align-items: center;
-
-	border: 0.5em solid $gray;
-	color: $gray;
-
-	.dashicon {
-		display: block;
-	}
-}
-
-.wordcamp-featured-image-fallback-link {
-	color: $gray;
 }

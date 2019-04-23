@@ -2,14 +2,12 @@
  * External dependencies
  */
 import classnames from 'classnames';
-const { isValidElement } = React;
 
 /**
  * WordPress dependencies.
  */
 const { Dashicon, Disabled } = wp.components;
 const { Component } = wp.element;
-const { __ } = wp.i18n;
 const { isURL } = wp.url;
 
 /**

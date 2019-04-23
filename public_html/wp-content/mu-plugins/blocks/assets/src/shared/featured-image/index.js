@@ -81,7 +81,7 @@ export default class FeaturedImage extends Component {
 				className="wordcamp-featured-image"
 				src={ src }
 				alt={ alt }
-				width={ width + 'px' }
+				width={ width }
 			/>
 		);
 

@@ -124,35 +124,37 @@ const selectors = {
 
 };
 
-registerStore(
-	WC_BLOCKS_STORE,
-	{
-		selectors,
-		actions,
-		reducer( state = DEFAULT_STATE, action ) {
-
-			switch ( action.type ) {
-				case 'FETCH_SETTINGS':
-					if ( state.loadingSettings ) {
-						break;
-					}
-
-					apiFetch( { path: '/wp/v2/settings' } ).then(
-						( fetchedSettings ) => {
-							dispatch( WC_BLOCKS_STORE ).setSiteSettings( fetchedSettings );
-						}
-					);
-
-					state.loadingSettings = true;
-					break;
-
-				case 'SET_SETTINGS':
-					state.siteSettings = action.settings;
-					state.loadingSettings = false;
-					break;
+/**
+ * Decide how to change the store's state based on the given action.
+ *
+ * @param {Object} state
+ * @param {Object} action
+ *
+ * @return {{state}}
+ */
+const reducer = ( state = DEFAULT_STATE, action ) => {
+	switch ( action.type ) {
+		case 'FETCH_SETTINGS':
+			if ( state.loadingSettings ) {
+				break;
 			}
 
-			return state;
-		},
+			apiFetch( { path: '/wp/v2/settings' } ).then(
+				( fetchedSettings ) => {
+					dispatch( WC_BLOCKS_STORE ).setSiteSettings( fetchedSettings );
+				}
+			);
+
+			state.loadingSettings = true;
+			break;
+
+		case 'SET_SETTINGS':
+			state.siteSettings = action.settings;
+			state.loadingSettings = false;
+			break;
 	}
-);
+
+	return state;
+};
+
+registerStore( WC_BLOCKS_STORE, { selectors, actions, reducer } );

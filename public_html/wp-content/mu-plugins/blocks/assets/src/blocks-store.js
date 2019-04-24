@@ -14,8 +14,6 @@ const apiFetch                            = wp.apiFetch;
  */
 export const WC_BLOCKS_STORE = 'wordcamp';
 
-const MAX_POSTS = -1 ; // Its supported now.
-
 const DEFAULT_STATE = {};
 
 /**
@@ -113,7 +111,7 @@ const selectors = {
 	 * @param {string} entityName Type of the entity to fetch
 	 */
 	getEntities( state, entityType, entityName ) {
-		return select( 'core' ).getEntityRecords( entityType, entityName, { _embed: true, per_page: MAX_POSTS } );
+		return select( 'core' ).getEntityRecords( entityType, entityName, { _embed: true, per_page: -1 } );
 	},
 
 	getSiteSettings( state ) {

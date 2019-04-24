@@ -75,7 +75,7 @@ export default class FeaturedImage extends Component {
 
 		if ( width && height ) {
 			const aspectRatio = Number( height ) / Number( width );
-			newHeight = aspectRatio * newWidth;
+			newHeight = Number.parseFloat( aspectRatio * newWidth ).toFixed( 1 );
 		}
 
 		return newHeight;
@@ -99,7 +99,7 @@ export default class FeaturedImage extends Component {
 
 		let output = (
 			<img
-				className="wordcamp-featured-image"
+				className={ classnames( 'wordcamp-featured-image', 'wp-post-image' ) }
 				src={ src }
 				alt={ alt }
 				width={ width }

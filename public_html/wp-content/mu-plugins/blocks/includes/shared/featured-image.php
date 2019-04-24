@@ -24,7 +24,7 @@ function render_featured_image( $post, $width, $class_names = [], $image_link = 
 	}
 
 	$aspect_ratio = $image_data['height'] / $image_data['width'];
-	$height       = $aspect_ratio * $width;
+	$height       = round( $aspect_ratio * $width, 1 );
 	$size         = array( $width, $height );
 
 	$container_classes = array_merge(
@@ -64,10 +64,6 @@ function render_featured_image_element( $post, $size ) {
 	$attr = [
 		'class' => 'wordcamp-featured-image',
 	];
-
-	if ( is_array( $size ) ) {
-		$attr = array_merge( $attr, $size );
-	}
 
 	return get_the_post_thumbnail( $post, $size, $attr );
 }

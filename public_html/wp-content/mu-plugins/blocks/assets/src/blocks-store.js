@@ -17,12 +17,20 @@ export const WC_BLOCKS_STORE = 'wordcamp';
 const DEFAULT_STATE = {};
 
 /**
- * Helper method to apply filters. Can be moved to a seperate file.
- * Don't use the output for this in a prop because it could cause perf issues,
- * since ref of returned object will always be different.
+ * Filter or sort an array of entities retrieved from the store.
  *
- * @param { Array }  entities List of entities to filter against
- * @param { Object } args     Arguments for filter function
+ * Note: Don't use the output for this in a prop because it could cause performance issues
+ * since the reference of the returned object will always be different.
+ * See https://reactjs.org/docs/optimizing-performance.html#avoid-reconciliation
+ *
+ * @param {Array}  entities List of entities to filter or sort.
+ * @param {Object} args     Arguments for the filter. {
+ *     @type {Array}  filter Array of objects, each of which as a fieldName and fieldValue property.
+ *     @type {string} order  One string with two values, separated by `_`. The first value is the field to sort by.
+ *                           The second value is the direction of the sort, either `asc` or `desc`.
+ * }
+ *
+ * @return {Array} The filtered entities.
  */
 export const filterEntities = ( entities, args ) => {
 	if ( ! Array.isArray( entities ) ) {

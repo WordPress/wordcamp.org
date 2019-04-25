@@ -33,17 +33,19 @@ const DEFAULT_STATE = {};
  * @return {Array} The filtered entities.
  */
 export const filterEntities = ( entities, args ) => {
-	if ( ! Array.isArray( entities ) ) {
+	const { isArray } = Array;
+
+	if ( ! isArray( entities ) ) {
 		return entities;
 	}
 
 	let result = [ ...entities ];
 
-	if ( args.hasOwnProperty( 'filter' ) && Array.isArray( args.filter ) ) {
+	if ( args.hasOwnProperty( 'filter' ) && isArray( args.filter ) ) {
 		args.filter.forEach( ( filterParams ) => {
 			let { fieldName, fieldValue } = filterParams;
 
-			if ( ! Array.isArray( fieldValue ) ) {
+			if ( ! isArray( fieldValue ) ) {
 				fieldValue = [ fieldValue ];
 			}
 
@@ -52,7 +54,7 @@ export const filterEntities = ( entities, args ) => {
 					return false;
 				}
 
-				let compareValue = Array.isArray( entity[ fieldName ] ) ? entity[ fieldName ] : [ entity[ fieldName ] ];
+				let compareValue = isArray( entity[ fieldName ] ) ? entity[ fieldName ] : [ entity[ fieldName ] ];
 
 				return intersection( fieldValue, compareValue ).length > 0;
 			} );

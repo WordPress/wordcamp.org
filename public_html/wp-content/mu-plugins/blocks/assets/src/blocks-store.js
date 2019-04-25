@@ -101,17 +101,27 @@ const actions = {
  * @type {{getPosts(*, *)}}
  */
 const selectors = {
-
 	/**
-	 * Returns post type from current state. Caches [state, entityType] for
+	 * Get query results from the Core data store.
+	 *
+	 * Returns data from current state. Caches [state, entityType] for
 	 * quick resolution.
 	 *
 	 * @param {Object} state      Current store state
 	 * @param {string} entityType Type of the entity to fetch
 	 * @param {string} entityName Type of the entity to fetch
+	 * @param {Object} queryArgs  Optional. Additional arguments for the fetch query.
+	 *
+	 * @return {Array} The results of the query.
 	 */
-	getEntities( state, entityType, entityName ) {
-		return select( 'core' ).getEntityRecords( entityType, entityName, { _embed: true, per_page: -1 } );
+	getEntities( state, entityType, entityName, queryArgs = {} ) {
+		const defaultArgs = {
+			per_page: -1, // The data store has middleware that converts this to paginated requests of 100 items each.
+		};
+
+		const mergedArgs = { ...defaultArgs, ...queryArgs };
+
+		return select( 'core' ).getEntityRecords( entityType, entityName, mergedArgs );
 	},
 
 	getSiteSettings( state ) {
@@ -121,7 +131,6 @@ const selectors = {
 		}
 		return state.siteSettings;
 	}
-
 };
 
 /**

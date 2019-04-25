@@ -52,7 +52,7 @@ const sponsorSelect = ( select ) => {
 	const { getEntities, getSiteSettings } = select( WC_BLOCKS_STORE );
 
 	return {
-		sponsorPosts  : getEntities( 'postType', 'wcb_sponsor' ),
+		sponsorPosts  : getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
 		sponsorLevels : getEntities( 'taxonomy', 'wcb_sponsor_level' ),
 		siteSettings  : getSiteSettings(),
 	}

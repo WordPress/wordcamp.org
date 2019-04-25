@@ -50,7 +50,7 @@ const sessionsSelect = ( select, props ) => {
 
 	return {
 		blockData,
-		allSessionPosts: getEntities( 'postType', 'wcb_session' ),
+		allSessionPosts: getEntities( 'postType', 'wcb_session', { _embed: true } ),
 		allSessionTracks: getEntities( 'taxonomy', 'wcb_track' ),
 		allSessionCategories: getEntities( 'taxonomy', 'wcb_session_category' ),
 	};

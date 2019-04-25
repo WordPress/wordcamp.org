@@ -49,7 +49,7 @@ const organizerSelect = ( select ) => {
 
 	return {
 		blockData         : blockData,
-		allOrganizerPosts : getEntities( 'postType', 'wcb_organizer' ),
+		allOrganizerPosts : getEntities( 'postType', 'wcb_organizer', { _embed: true } ),
 		allOrganizerTerms : getEntities( 'taxonomy', 'wcb_organizer_team' ),
 	};
 };

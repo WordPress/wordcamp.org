@@ -49,7 +49,7 @@ const speakersSelect = ( select ) => {
 	return {
 		blockData       : blockData,
 		tracks          : getEntities( 'taxonomy', 'wcb_track' ),
-		allSpeakerPosts : getEntities( 'postType', 'wcb_speaker' ),
+		allSpeakerPosts : getEntities( 'postType', 'wcb_speaker', { _embed: true } ),
 		allSpeakerTerms : getEntities( 'taxonomy', 'wcb_speaker_group' ),
 	};
 };

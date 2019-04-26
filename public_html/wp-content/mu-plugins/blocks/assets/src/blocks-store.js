@@ -26,7 +26,7 @@ const DEFAULT_STATE = {};
  * @param {Array}  entities List of entities to filter or sort.
  * @param {Object} args     Arguments for the filter. {
  *     @type {Array}  filter Array of objects, each of which as a fieldName and fieldValue property.
- *     @type {string} order  One string with two values, separated by `_`. The first value is the field to sort by.
+ *     @type {string} sort   One string with two values, separated by `_`. The first value is the field to sort by.
  *                           The second value is the direction of the sort, either `asc` or `desc`.
  * }
  *
@@ -61,8 +61,8 @@ export const filterEntities = ( entities, args ) => {
 		} );
 	}
 
-	if ( args.hasOwnProperty( 'order' ) ) {
-		let [ orderby, order ] = split( args.order, '_', 2 );
+	if ( args.hasOwnProperty( 'sort' ) ) {
+		let [ orderby, order ] = split( args.sort, '_', 2 );
 		// TODO: Figure out a way to move this out of data store.
 		if ( 'title' === orderby && result[ 0 ].title.hasOwnProperty( 'rendered') ) {
 			orderby = 'title.rendered';

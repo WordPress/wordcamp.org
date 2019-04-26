@@ -170,7 +170,7 @@ class SessionsBlockContent extends Component {
 		}
 
 		if ( 'session_time' !== sort ) {
-			args.order = sort;
+			args.sort = sort;
 		}
 
 		const sessionPosts = filterEntities( allSessionPosts, args );

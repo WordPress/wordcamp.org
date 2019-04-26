@@ -94,7 +94,7 @@ class SpeakersBlockContent extends Component {
 		} = attributes;
 
 		const args = {
-			order: sort,
+			sort: sort,
 		};
 
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {

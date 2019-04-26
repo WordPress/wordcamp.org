@@ -45,7 +45,7 @@ class OrganizersBlockContent extends Component {
 			]
 		}
 
-		args.order = sort;
+		args.sort = sort;
 
 		const organizerPosts = filterEntities( allOrganizerPosts, args );
 		return (

@@ -12,19 +12,20 @@ export const name  = 'wordcamp/schedule';
 export const LABEL = __( 'Schedule', 'wordcamporg' );
 export const ICON  = 'schedule';
 
+const supports = {
+	'align': [ 'wide', 'full' ],
+};
+
 export const settings = {
 	title       : __( 'Schedule', 'wordcamporg' ),
 	description : __( "Display your WordCamp's awesome schedule.", 'wordcamporg' ),
 	icon        : ICON,
 	category    : 'wordcamp',
+	supports    : supports,
 	edit        : edit,
 	save        : () => null,
 
 	// todo keywordsto other blocks as well, in master and commit now
-
-	supports : {
-		align: [ 'wide', 'full' ],
-	},
 
 	/*
 	 * Make the block full-width _only_ in the editor.

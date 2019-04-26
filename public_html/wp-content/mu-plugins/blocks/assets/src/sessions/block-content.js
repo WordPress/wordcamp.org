@@ -143,7 +143,7 @@ class SessionsBlockContent extends Component {
 		const { attributes, allSessionPosts } = this.props;
 		const {
 			mode, item_ids, sort, show_speaker, show_images, image_align,
-			featured_image_width, content, excerpt_more, show_meta, show_category
+			featured_image_width, content, show_meta, show_category
 			// category should be plural b/c can be more than one
 		} = attributes;
 

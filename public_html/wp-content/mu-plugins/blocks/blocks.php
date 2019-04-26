@@ -69,6 +69,7 @@ function register_assets() {
 			'wp-components',
 			'wp-compose',
 			'wp-data',
+			'wp-date',
 			'wp-editor',
 			'wp-element',
 			'wp-html-entities',

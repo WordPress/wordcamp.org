@@ -35,9 +35,9 @@ const DEFAULT_OPTIONS = {
 
 class ScheduleInspectorControls extends Component {
 	render() {
-		const { attributes, setAttributes, blockData }                                 = this.props;
-		const { show_avatars, avatar_size, avatar_align, content, excerpt_more, sort } = attributes;
-		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS }                   = blockData;
+		//const { attributes, setAttributes, blockData }                                 = this.props;
+		//const { show_avatars, avatar_size, avatar_align, content, excerpt_more, sort } = attributes;
+		//const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS }                   = blockData;
 
 		// mockup for category not consistent, see
 		// https://github.com/WordPress/wordcamp.org/issues/62

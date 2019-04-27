@@ -10,7 +10,8 @@
 	},
 	"dependencies": {
 		"classnames": "2.2.6",
-		"react-select": "2.4.2"
+		"react-select": "2.4.2",
+		"rememo": "3.0.0"
 	},
 	"devDependencies": {
 		"@babel/core": "7.1.2",

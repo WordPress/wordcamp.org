@@ -76,16 +76,11 @@ class ItemSelect extends Component {
 	}
 
 	render() {
-		const {
-			instanceId, className, label, help, submitLabel,
-			buildSelectOptions, onChange,
-			selectProps,
-		} = this.props;
+		const { instanceId, className, label, help, submitLabel, onChange, selectProps } = this.props;
 		const value = this.state.selectedOptions || this.props.value;
 		const id = `wordcamp-item-select-control-${ instanceId }`;
 
 		const mergedSelectProps = {
-			options          : buildSelectOptions(),
 			isMulti          : true,
 			isOptionDisabled : this.isOptionDisabled,
 			...selectProps,

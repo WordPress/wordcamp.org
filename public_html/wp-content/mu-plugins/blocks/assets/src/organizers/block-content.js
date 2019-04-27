@@ -7,28 +7,31 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Component } = wp.element;
-const { __ }        = wp.i18n;
 
 /**
  * Internal dependencies
  */
 import { AvatarImage }                from '../shared/avatar';
-import {ItemTitle, ItemHTMLContent, ItemPermalink} from '../shared/block-content';
+import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
 import GridContentLayout              from '../shared/grid-layout/block-content';
-import { filterEntities } from '../blocks-store';
+import { filterEntities }             from '../blocks-store';
 
 class OrganizersBlockContent extends Component {
-	render() {
+	constructor( props ) {
+		super( props );
+
+		this.getFilteredPosts = this.getFilteredPosts.bind( this );
+	}
+
+	getFilteredPosts() {
 		const { attributes, allOrganizerPosts } = this.props;
-		const {
-			show_avatars, avatar_size, avatar_align, content, excerpt_more, mode,
-			item_ids, sort
-		} = attributes;
+		const { mode, item_ids, sort } = attributes;
 
 		const args = {};
 
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			let fieldName;
+
 			switch ( mode ) {
 				case 'wcb_organizer':
 					fieldName = 'id';
@@ -37,17 +40,26 @@ class OrganizersBlockContent extends Component {
 					fieldName = 'organizer_team';
 					break;
 			}
+
 			args.filter = [
 				{
 					fieldName: fieldName,
 					fieldValue: item_ids,
 				},
-			]
+			];
 		}
 
 		args.sort = sort;
 
-		const organizerPosts = filterEntities( allOrganizerPosts, args );
+		return filterEntities( allOrganizerPosts, args );
+	}
+
+	render() {
+		const { attributes } = this.props;
+		const { show_avatars, avatar_size, avatar_align, content } = attributes;
+
+		const organizerPosts = this.getFilteredPosts();
+
 		return (
 			<GridContentLayout
 				className="wordcamp-organizers-block"
@@ -82,7 +94,7 @@ class OrganizersBlockContent extends Component {
 								content={  'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
 						}
-					</div>,
+					</div>
 				) }
 			</GridContentLayout>
 		);

@@ -22,7 +22,7 @@ class OrganizersBlockControls extends BlockControls {
 		const { icon, attributes, setAttributes, allOrganizerPosts, allOrganizerTerms } = this.props;
 		const { mode } = attributes;
 
-		const hasPosts = Array.isArray( allOrganizerPosts ) &&  Array.isArray( allOrganizerTerms );
+		const hasPosts = Array.isArray( allOrganizerPosts ) && Array.isArray( allOrganizerTerms );
 
 		if ( mode && ! hasPosts ) {
 			return (

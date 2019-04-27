@@ -35,9 +35,9 @@ const DEFAULT_OPTIONS = {
 
 class OrganizerInspectorControls extends Component {
 	render() {
-		const { attributes, setAttributes, blockData }                                 = this.props;
+		const { attributes, setAttributes, blockData }                   = this.props;
 		const { show_avatars, avatar_size, avatar_align, content, sort } = attributes;
-		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS }                   = blockData;
+		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS }     = blockData;
 
 		return (
 			<InspectorControls>

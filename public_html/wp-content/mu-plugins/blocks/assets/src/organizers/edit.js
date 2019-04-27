@@ -1,12 +1,6 @@
 /**
- * External dependencies
- */
-import { isUndefined, pickBy, split } from 'lodash';
-
-/**
  * WordPress dependencies
  */
-const apiFetch                = wp.apiFetch;
 const { withSelect }          = wp.data;
 const { Component, Fragment } = wp.element;
 const { addQueryArgs }        = wp.url;
@@ -18,7 +12,7 @@ import OrganizersBlockControls     from './block-controls';
 import OrganizersInspectorControls from './inspector-controls';
 import OrganizersToolbar           from './toolbar';
 import { ICON }                    from './index';
-import { WC_BLOCKS_STORE } from '../blocks-store';
+import { WC_BLOCKS_STORE }         from '../blocks-store';
 
 const blockData = window.WordCampBlocks.organizers || {};
 

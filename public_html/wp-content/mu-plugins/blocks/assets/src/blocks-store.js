@@ -23,6 +23,8 @@ const DEFAULT_STATE = {};
  * since the reference of the returned object will always be different.
  * See https://reactjs.org/docs/optimizing-performance.html#avoid-reconciliation
  *
+ * TODO: Can this be memoized?
+ *
  * @param {Array}  entities List of entities to filter or sort.
  * @param {Object} args     Arguments for the filter. {
  *     @type {Array}  filter Array of objects, each of which as a fieldName and fieldValue property.

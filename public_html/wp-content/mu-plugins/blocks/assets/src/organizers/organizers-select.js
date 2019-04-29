@@ -57,7 +57,7 @@ const parseOrganizerTerms = ( terms ) => {
  * so memoize them.
  */
 const buildSelectOptions = createSelector(
-	( props ) => { console.log('built');
+	( props ) => {
 		const { allOrganizerPosts, allOrganizerTerms } = props;
 
 		const optionTypes = [ 'wcb_organizer', 'wcb_organizer_team' ];

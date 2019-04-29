@@ -64,7 +64,7 @@ export const filterEntities = ( entities, args ) => {
 	if ( args.hasOwnProperty( 'sort' ) ) {
 		let [ orderby, order ] = split( args.sort, '_', 2 );
 		// TODO: Figure out a way to move this out of data store.
-		if ( 'title' === orderby && result[ 0 ].title.hasOwnProperty( 'rendered') ) {
+		if ( 'title' === orderby && result[ 0 ].title.hasOwnProperty( 'rendered' ) ) {
 			orderby = 'title.rendered';
 		}
 		result = orderBy( result, [ orderby ], [ order ] );
@@ -77,7 +77,6 @@ export const filterEntities = ( entities, args ) => {
  * Defines actions provided by this store.
  */
 const actions = {
-
 	/**
 	 * Queues api fetch for settings.
 	 *
@@ -85,7 +84,7 @@ const actions = {
 	 */
 	fetchSiteSettings() {
 		return {
-			type : 'FETCH_SETTINGS',
+			type: 'FETCH_SETTINGS',
 		};
 	},
 
@@ -102,7 +101,6 @@ const actions = {
 			settings : settings,
 		};
 	},
-
 };
 
 /**
@@ -134,13 +132,22 @@ const selectors = {
 		return select( 'core' ).getEntityRecords( entityType, entityName, mergedArgs );
 	},
 
+	/**
+	 * Get a site's settings via the REST API.
+	 *
+	 * @param {Object} state
+	 *
+	 * @return {Object.settings|null}
+	 */
 	getSiteSettings( state ) {
 		if ( ! state.hasOwnProperty( 'siteSettings' ) ) {
 			dispatch( WC_BLOCKS_STORE ).fetchSiteSettings();
+
 			return null;
 		}
+
 		return state.siteSettings;
-	}
+	},
 };
 
 /**

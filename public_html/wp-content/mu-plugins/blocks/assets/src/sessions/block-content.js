@@ -23,13 +23,14 @@ function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
 
 	speakerData = speakerData.map( ( speaker ) => {
-		const { link = '' } = speaker;
-		let {  title = {} } = speaker;
-
 		if ( speaker.hasOwnProperty( 'code' ) ) {
-			// This speaker was deleted?
+			// The wporg username given for this speaker returned an error.
 			return null;
 		}
+
+		const { link }     = speaker;
+		let { title = {} } = speaker;
+
 		title = title.rendered.trim() || __( 'Unnamed', 'wordcamporg' );
 
 		if ( ! link ) {
@@ -37,10 +38,7 @@ function SessionSpeakers( { session } ) {
 		}
 
 		return (
-			<a
-				key={ link }
-				href={ link }
-			>
+			<a key={ link } href={ link }>
 				{ title }
 			</a>
 		);

@@ -11,10 +11,10 @@ const { Component } = wp.element;
 /**
  * Internal dependencies
  */
-import { AvatarImage }                from '../shared/avatar';
-import { ItemTitle, ItemHTMLContent } from '../shared/block-content';
-import GridContentLayout              from '../shared/grid-layout/block-content';
-import { filterEntities }             from '../blocks-store';
+import { AvatarImage }                                from '../shared/avatar';
+import { BlockNoContent, ItemTitle, ItemHTMLContent } from '../shared/block-content';
+import GridContentLayout                              from '../shared/grid-layout/block-content';
+import { filterEntities }                             from '../blocks-store';
 
 class OrganizersBlockContent extends Component {
 	constructor( props ) {
@@ -59,6 +59,14 @@ class OrganizersBlockContent extends Component {
 		const { show_avatars, avatar_size, avatar_align, content } = attributes;
 
 		const organizerPosts = this.getFilteredPosts();
+		const isLoading      = ! Array.isArray( organizerPosts );
+		const hasPosts       = ! isLoading && organizerPosts.length > 0;
+
+		if ( isLoading || ! hasPosts ) {
+			return (
+				<BlockNoContent loading={ isLoading } />
+			);
+		}
 
 		return (
 			<GridContentLayout

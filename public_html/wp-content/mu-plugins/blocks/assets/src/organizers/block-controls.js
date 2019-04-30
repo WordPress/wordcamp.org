@@ -12,27 +12,15 @@ const { __ }                  = wp.i18n;
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from '../shared/block-controls';
-import OrganizersBlockContent                                           from './block-content';
-import OrganizersSelect                                                 from './organizers-select';
-import { LABEL }                                                        from './index';
+import { BlockControls, PlaceholderSpecificMode } from '../shared/block-controls';
+import OrganizersBlockContent                     from './block-content';
+import OrganizersSelect                           from './organizers-select';
+import { LABEL }                                  from './index';
 
 class OrganizersBlockControls extends BlockControls {
 	render() {
-		const { icon, attributes, setAttributes, allOrganizerPosts, allOrganizerTerms } = this.props;
+		const { icon, attributes, setAttributes } = this.props;
 		const { mode } = attributes;
-
-		const hasPosts = Array.isArray( allOrganizerPosts ) && Array.isArray( allOrganizerTerms );
-
-		if ( mode && ! hasPosts ) {
-			return (
-				<PlaceholderNoContent
-					icon={ icon }
-					label={ LABEL }
-					loading={ ! hasPosts }
-				/>
-			);
-		}
 
 		let output;
 

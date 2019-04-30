@@ -13,11 +13,11 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import {ItemTitle, ItemHTMLContent, ItemPermalink} from '../shared/block-content';
+import { ItemTitle, ItemHTMLContent, ItemPermalink }           from '../shared/block-content';
 import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../shared/i18n';
-import GridContentLayout from '../shared/grid-layout/block-content';
-import FeaturedImage from '../shared/featured-image';
-import { filterEntities } from '../blocks-store';
+import GridContentLayout                                       from '../shared/grid-layout/block-content';
+import FeaturedImage                                           from '../shared/featured-image';
+import { filterEntities }                                      from '../blocks-store';
 
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
@@ -141,7 +141,7 @@ class SessionsBlockContent extends Component {
 		const { attributes, allSessionPosts } = this.props;
 		const {
 			mode, item_ids, sort, show_speaker, show_images, image_align,
-			featured_image_width, content, excerpt_more, show_meta, show_category
+			featured_image_width, content, show_meta, show_category
 		} = attributes;
 
 		const args = {};

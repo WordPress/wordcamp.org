@@ -65,10 +65,12 @@ export const filterEntities = ( entities, args ) => {
 
 	if ( args.hasOwnProperty( 'sort' ) ) {
 		let [ orderby, order ] = split( args.sort, '_', 2 );
+
 		// TODO: Figure out a way to move this out of data store.
-		if ( 'title' === orderby && result[ 0 ].title.hasOwnProperty( 'rendered' ) ) {
+		if ( 'title' === orderby && result.length && result[ 0 ].title.hasOwnProperty( 'rendered' ) ) {
 			orderby = 'title.rendered';
 		}
+
 		result = orderBy( result, [ orderby ], [ order ] );
 	}
 

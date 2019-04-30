@@ -6,7 +6,7 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-const { Disabled } = wp.components;
+const { Disabled, Spinner } = wp.components;
 const { Fragment, RawHTML } = wp.element;
 const { __ } = wp.i18n;
 
@@ -14,6 +14,17 @@ const { __ } = wp.i18n;
  * Internal dependencies
  */
 import './style.scss';
+
+export function BlockNoContent( { loading } ) {
+	return (
+		<div className="wordcamp-block-content-none">
+			{ loading ?
+				<Spinner/> :
+				__( 'No content found.', 'wordcamporg' )
+			}
+		</div>
+	);
+}
 
 export function ItemTitle( { headingLevel, className, title, link } ) {
 	const validLevels = [ 1, 2, 3, 4, 5, 6 ];

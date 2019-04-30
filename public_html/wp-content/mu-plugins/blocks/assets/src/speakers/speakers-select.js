@@ -1,132 +1,94 @@
 /**
  * External dependencies
  */
-import { get, includes } from 'lodash';
+import { every, flatMap, includes } from 'lodash';
 
 /**
  * WordPress dependencies
  */
-const { Dashicon } = wp.components;
+const { Dashicon }  = wp.components;
 const { Component } = wp.element;
-const { __ } = wp.i18n;
+const { __ }        = wp.i18n;
 
 /**
  * Internal dependencies
  */
-import { AvatarImage } from '../shared/avatar';
-import ItemSelect from '../shared/item-select';
+import ItemSelect, { buildOptions, Option } from '../shared/item-select';
 
 class SpeakersSelect extends Component {
 	constructor( props ) {
 		super( props );
 
-		this.state = {
-			wcb_speaker       : [],
-			wcb_speaker_group : [],
-			loading           : true,
-		};
-
-		this.buildSelectOptions = this.buildSelectOptions.bind( this );
+		this.buildSelectOptions    = this.buildSelectOptions.bind( this );
+		this.getCurrentSelectValue = this.getCurrentSelectValue.bind( this );
+		this.isLoading             = this.isLoading.bind( this );
 	}
 
-	static getDerivedStateFromProps( props, state ) {
-		const { allSpeakerPosts, allSpeakerTerms } = props;
+	buildSelectOptions() {
+		const { entities } = this.props;
+		const { wcb_speaker, wcb_speaker_group } = entities;
 
-		if ( false === state.loading ) {
-			return;
-		}
+		const optionGroups = [
+			{
+				entityType : 'post',
+				type       : 'wcb_speaker',
+				label      : __( 'Speakers', 'wordcamporg' ),
+				items      : wcb_speaker,
+			},
+			{
+				entityType : 'term',
+				type       : 'wcb_speaker_group',
+				label      : __( 'Groups', 'wordcamporg' ),
+				items      : wcb_speaker_group,
+			},
+		];
 
-		let speakersLoaded = false;
-		let termsLoaded = false;
-
-		if ( allSpeakerPosts && allSpeakerPosts.length > 0 ) {
-			state.wcb_speaker = allSpeakerPosts.map( ( post ) => {
-				return {
-					label  : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
-					value  : post.id,
-					type   : 'wcb_speaker',
-					avatar : post.avatar_urls[ '24' ],
-				};
-			} );
-			speakersLoaded = true;
-		}
-
-		if ( allSpeakerTerms && allSpeakerTerms.length > 0 ) {
-			state.wcb_speaker_group = allSpeakerTerms.map( ( term ) => {
-				return {
-					label : term.name || __( '(Untitled)', 'wordcamporg' ),
-					value : term.id,
-					type  : 'wcb_speaker_group',
-					count : term.count,
-				};
-			} );
-			termsLoaded = true;
-		}
-
-		if ( speakersLoaded && termsLoaded ) {
-			state.loading = false;
-		}
-
-		return state;
+		return buildOptions( optionGroups );
 	}
 
-	buildSelectOptions( mode ) {
-		const { getOwnPropertyDescriptors } = Object;
-		const options = [];
-
-		const labels = {
-			wcb_speaker       : __( 'Speakers', 'wordcamporg' ),
-			wcb_speaker_group : __( 'Groups', 'wordcamporg' ),
-		};
-
-		for ( const type in getOwnPropertyDescriptors( this.state ) ) {
-			if ( ( ! mode || type === mode ) && this.state[ type ].length ) {
-				options.push( {
-					label   : labels[ type ],
-					options : this.state[ type ],
-				} );
-			}
-		}
-
-		return options;
-	}
-
-	render() {
-		const { label, icon, attributes, setAttributes } = this.props;
+	getCurrentSelectValue() {
+		const { attributes } = this.props;
 		const { mode, item_ids } = attributes;
-		const options = this.buildSelectOptions( mode );
+
+		const options = flatMap( this.buildSelectOptions(), ( group ) => {
+			return group.options;
+		} );
 
 		let value = [];
 
 		if ( mode && item_ids.length ) {
-			const modeOptions = get( options, '[0].options', [] );
-
-			value = modeOptions.filter( ( option ) => {
-				return includes( item_ids, option.value );
+			value = options.filter( ( option ) => {
+				return mode === option.type && includes( item_ids, option.value );
 			} );
 		}
+
+		return value;
+	}
+
+	isLoading() {
+		const { entities } = this.props;
+
+		return ! every( entities, ( value ) => {
+			return Array.isArray( value );
+		} );
+	}
+
+	render() {
+		const { label, icon, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
 				className="wordcamp-speakers-select"
 				label={ label }
-				value={ value }
-				buildSelectOptions={ this.buildSelectOptions }
+				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
-				mode={ mode }
 				selectProps={ {
-					isLoading        : this.state.loading,
-					formatGroupLabel : ( groupData ) => {
+					options           : this.buildSelectOptions(),
+					isLoading         : this.isLoading(),
+					formatOptionLabel : ( optionData ) => {
 						return (
-							<span className="wordcamp-item-select-option-group-label">
-								{ groupData.label }
-							</span>
-						);
-					},
-					formatOptionLabel: ( optionData ) => {
-						return (
-							<SpeakersOption
-								icon={ icon }
+							<Option
+								icon={ 'wcb_speaker_group' === optionData.type ? icon : null }
 								{ ...optionData }
 							/>
 						);
@@ -135,55 +97,6 @@ class SpeakersSelect extends Component {
 			/>
 		);
 	}
-}
-
-function SpeakersOption( { type, icon, label = '', avatar = '', count = 0 } ) {
-	let image, content;
-
-	switch ( type ) {
-		case 'wcb_speaker' :
-			image = (
-				<AvatarImage
-					className="wordcamp-item-select-option-avatar"
-					name={ label }
-					size={ 24 }
-					url={ avatar }
-				/>
-			);
-			content = (
-				<span className="wordcamp-item-select-option-label">
-					{ label }
-				</span>
-			);
-			break;
-
-		case 'wcb_speaker_group' :
-			image = (
-				<div className="wordcamp-item-select-option-icon-container">
-					<Dashicon
-						className="wordcamp-item-select-option-icon"
-						icon={ icon }
-						size={ 16 }
-					/>
-				</div>
-			);
-			content = (
-				<span className="wordcamp-item-select-option-label">
-					{ label }
-					<span className="wordcamp-item-select-option-label-term-count">
-						{ count }
-					</span>
-				</span>
-			);
-			break;
-	}
-
-	return (
-		<div className="wordcamp-item-select-option">
-			{ image }
-			{ content }
-		</div>
-	);
 }
 
 export default SpeakersSelect;

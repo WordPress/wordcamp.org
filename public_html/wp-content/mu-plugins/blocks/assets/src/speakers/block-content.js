@@ -15,12 +15,13 @@ const { escapeAttribute } = wp.escapeHtml;
 /**
  * Internal dependencies
  */
-import { AvatarImage } from '../shared/avatar';
-import { ItemTitle, ItemHTMLContent, ItemPermalink } from '../shared/block-content';
-import { tokenSplit, arrayTokenReplace } from '../shared/i18n';
-import GridContentLayout from '../shared/grid-layout/block-content';
+import { AvatarImage }                                               from '../shared/avatar';
+import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../shared/block-content';
+import { tokenSplit, arrayTokenReplace }                             from '../shared/i18n';
+import GridContentLayout                                             from '../shared/grid-layout/block-content';
+import { filterEntities }                                            from '../blocks-store';
+
 import './block-content.scss';
-import { filterEntities } from '../blocks-store';
 
 function SpeakerSessions( { speaker, tracks } ) {
 	const sessions = get( speaker, '_embedded.sessions', [] );
@@ -85,17 +86,18 @@ function SpeakerSessions( { speaker, tracks } ) {
 }
 
 class SpeakersBlockContent extends Component {
-	render() {
-		const { attributes, tracks, allSpeakerPosts } = this.props;
-		const {
-			show_avatars, avatar_size, avatar_align,
-			content, excerpt_more, show_session, sort,
-			mode, item_ids
-		} = attributes;
+	constructor( props ) {
+		super( props );
 
-		const args = {
-			sort: sort,
-		};
+		this.getFilteredPosts = this.getFilteredPosts.bind( this );
+	}
+
+	getFilteredPosts() {
+		const { attributes, entities } = this.props;
+		const { wcb_speaker: posts } = entities;
+		const { mode, item_ids, sort } = attributes;
+
+		const args = {};
 
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			args.filter  = [
@@ -106,14 +108,32 @@ class SpeakersBlockContent extends Component {
 			];
 		}
 
-		const speakerPosts = filterEntities( allSpeakerPosts, args );
+		args.sort = sort;
+
+		return filterEntities( posts, args );
+	}
+
+	render() {
+		const { attributes, entities } = this.props;
+		const { wcb_track: tracks } = entities;
+		const { show_avatars, avatar_size, avatar_align, content, show_session } = attributes;
+
+		const posts     = this.getFilteredPosts();
+		const isLoading = ! Array.isArray( posts );
+		const hasPosts  = ! isLoading && posts.length > 0;
+
+		if ( isLoading || ! hasPosts ) {
+			return (
+				<BlockNoContent loading={ isLoading } />
+			);
+		}
 
 		return (
 			<GridContentLayout
 				className="wordcamp-speakers-block"
 				{ ...this.props }
 			>
-				{ speakerPosts.map( ( post ) =>
+				{ posts.map( ( post ) =>
 					<div
 						key={ post.slug }
 						className={ classnames(

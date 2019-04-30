@@ -7,32 +7,20 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Button, Placeholder } = wp.components;
-const { __ } = wp.i18n;
+const { __ }                  = wp.i18n;
 
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from '../shared/block-controls';
-import SpeakersBlockContent from './block-content';
-import SpeakersSelect from './speakers-select';
-import { LABEL }                                                        from './index';
+import { BlockControls, PlaceholderSpecificMode } from '../shared/block-controls';
+import SpeakersBlockContent                       from './block-content';
+import SpeakersSelect                             from './speakers-select';
+import { LABEL }                                  from './index';
 
 class SpeakersBlockControls extends BlockControls {
 	render() {
-		const { icon, attributes, setAttributes, allSpeakerPosts } = this.props;
+		const { icon, attributes, setAttributes } = this.props;
 		const { mode } = attributes;
-
-		const hasPosts = ( allSpeakerPosts || [] ).length > 0;
-
-		if ( mode && ! hasPosts ) {
-			return (
-				<PlaceholderNoContent
-					icon={ icon }
-					label={ LABEL }
-					loading={ ! Array.isArray( allSpeakerPosts ) }
-				/>
-			);
-		}
 
 		let output;
 

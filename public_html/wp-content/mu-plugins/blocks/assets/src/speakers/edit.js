@@ -1,9 +1,4 @@
 /**
- * External dependencies
- */
-import { orderBy, intersection, split } from 'lodash';
-
-/**
  * WordPress dependencies
  */
 const { withSelect } = wp.data;
@@ -21,7 +16,6 @@ import { WC_BLOCKS_STORE }       from '../blocks-store';
 const blockData = window.WordCampBlocks.speakers || {};
 
 class SpeakersEdit extends Component {
-
 	render() {
 		const { mode } = this.props.attributes;
 
@@ -43,14 +37,17 @@ class SpeakersEdit extends Component {
 }
 
 const speakersSelect = ( select ) => {
-
 	const { getEntities } = select( WC_BLOCKS_STORE );
 
+	const entities = {
+		wcb_speaker       : getEntities( 'postType', 'wcb_speaker', { _embed: true } ),
+		wcb_speaker_group : getEntities( 'taxonomy', 'wcb_speaker_group' ),
+		wcb_track         : getEntities( 'taxonomy', 'wcb_track' ),
+	};
+
 	return {
-		blockData       : blockData,
-		tracks          : getEntities( 'taxonomy', 'wcb_track' ),
-		allSpeakerPosts : getEntities( 'postType', 'wcb_speaker', { _embed: true } ),
-		allSpeakerTerms : getEntities( 'taxonomy', 'wcb_speaker_group' ),
+		blockData : blockData,
+		entities  : entities,
 	};
 };
 

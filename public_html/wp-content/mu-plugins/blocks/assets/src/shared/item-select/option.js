@@ -1,6 +1,7 @@
 /**
  * External dependencies
  */
+import { get }        from 'lodash';
 import createSelector from 'rememo';
 
 /**
@@ -17,18 +18,22 @@ import { filterEntities } from '../../blocks-store';
 
 const buildOptionGroup = ( entityType, type, label, items ) => {
 	items = items.map( ( item ) => {
+		let parsedItem;
+
 		switch ( entityType ) {
 			case 'post':
-				item = {
+				parsedItem = {
 					label  : item.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
 					value  : item.id,
 					type   : type,
-					avatar : item.avatar_urls[ '24' ],
 				};
+
+				parsedItem.avatar = get( item, 'avatar_urls[\'24\']', '' );
+				parsedItem.image  = get( item, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' );
 				break;
 
 			case 'term':
-				item = {
+				parsedItem = {
 					label : item.name || __( '(Untitled)', 'wordcamporg' ),
 					value : item.id,
 					type  : type,
@@ -37,7 +42,7 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 				break;
 		}
 
-		return item;
+		return parsedItem;
 	} );
 
 	return {

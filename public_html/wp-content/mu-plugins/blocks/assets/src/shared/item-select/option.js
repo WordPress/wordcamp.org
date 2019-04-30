@@ -112,7 +112,7 @@ export function Option( { avatar, icon, label, count } ) {
 	const content = (
 		<span className="wordcamp-item-select-option-label">
 			{ label }
-			{ count &&
+			{ 'undefined' !== typeof count &&
 				<span className="wordcamp-item-select-option-label-count">
 					{ count }
 				</span>

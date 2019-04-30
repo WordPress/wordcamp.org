@@ -41,10 +41,14 @@ class OrganizersEdit extends Component {
 const organizerSelect = ( select ) => {
 	const { getEntities } = select( WC_BLOCKS_STORE );
 
+	const entities = {
+		wcb_organizer      : getEntities( 'postType', 'wcb_organizer', { _embed: true } ),
+		wcb_organizer_team : getEntities( 'taxonomy', 'wcb_organizer_team' ),
+	};
+
 	return {
-		blockData         : blockData,
-		allOrganizerPosts : getEntities( 'postType', 'wcb_organizer', { _embed: true } ),
-		allOrganizerTerms : getEntities( 'taxonomy', 'wcb_organizer_team' ),
+		blockData : blockData,
+		entities  : entities,
 	};
 };
 

@@ -24,26 +24,16 @@ class OrganizersBlockContent extends Component {
 	}
 
 	getFilteredPosts() {
-		const { attributes, allOrganizerPosts } = this.props;
+		const { attributes, entities } = this.props;
+		const { wcb_organizer: posts } = entities;
 		const { mode, item_ids, sort } = attributes;
 
 		const args = {};
 
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
-			let fieldName;
-
-			switch ( mode ) {
-				case 'wcb_organizer':
-					fieldName = 'id';
-					break;
-				case 'wcb_organizer_team':
-					fieldName = 'organizer_team';
-					break;
-			}
-
 			args.filter = [
 				{
-					fieldName: fieldName,
+					fieldName: mode === 'wcb_organizer' ? 'id' : 'organizer_team',
 					fieldValue: item_ids,
 				},
 			];
@@ -51,16 +41,16 @@ class OrganizersBlockContent extends Component {
 
 		args.sort = sort;
 
-		return filterEntities( allOrganizerPosts, args );
+		return filterEntities( posts, args );
 	}
 
 	render() {
 		const { attributes } = this.props;
 		const { show_avatars, avatar_size, avatar_align, content } = attributes;
 
-		const organizerPosts = this.getFilteredPosts();
-		const isLoading      = ! Array.isArray( organizerPosts );
-		const hasPosts       = ! isLoading && organizerPosts.length > 0;
+		const posts     = this.getFilteredPosts();
+		const isLoading = ! Array.isArray( posts );
+		const hasPosts  = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
 			return (
@@ -73,7 +63,7 @@ class OrganizersBlockContent extends Component {
 				className="wordcamp-organizers-block"
 				{ ...this.props }
 			>
-				{ organizerPosts.map( ( post ) => /* Note that organizer posts are not 'public', so there are no permalinks. */
+				{ posts.map( ( post ) => /* Note that organizer posts are not 'public', so there are no permalinks. */
 					<div
 						key={ post.slug }
 						className={ classnames(

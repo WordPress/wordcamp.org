@@ -12,27 +12,16 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderNoContent, PlaceholderSpecificMode } from '../shared/block-controls';
-import SessionsBlockContent from './block-content';
-import SessionsSelect from './sessions-select';
-import { LABEL }                                                        from './index';
+import { BlockControls, PlaceholderSpecificMode } from '../shared/block-controls';
+import SessionsBlockContent                       from './block-content';
+import SessionsSelect                             from './sessions-select';
+import { LABEL }                                  from './index';
 
 class SessionsBlockControls extends BlockControls {
 	render() {
-		const { icon, attributes, setAttributes, allSessionPosts, allSessionTracks, allSessionCategories } = this.props;
+		const { icon, attributes, setAttributes } = this.props;
 		const { mode } = attributes;
 
-		const hasPosts = Array.isArray( allSessionPosts ) && Array.isArray( allSessionTracks ) && Array.isArray( allSessionCategories );
-
-		if ( mode && ! hasPosts ) {
-			return (
-				<PlaceholderNoContent
-					icon={ icon }
-					label={ LABEL }
-					loading={ ! hasPosts }
-				/>
-			);
-		}
 		let output;
 
 		switch ( mode ) {

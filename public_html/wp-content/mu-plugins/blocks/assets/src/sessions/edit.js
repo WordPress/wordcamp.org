@@ -1,12 +1,6 @@
 /**
- * External dependencies
- */
-import { isUndefined, pickBy, split } from 'lodash';
-
-/**
  * WordPress dependencies
  */
-const apiFetch = wp.apiFetch;
 const { withSelect } = wp.data;
 const { Component, Fragment } = wp.element;
 const { addQueryArgs } = wp.url;
@@ -31,28 +25,30 @@ class SessionsEdit extends Component {
 				<SessionsBlockControls
 					icon={ ICON }
 					{ ...this.props }
-					{ ...this.state }
 				/>
 				{ mode &&
-				<Fragment>
-					<SessionsInspectorControls { ...this.props } />
-					<GridToolbar { ...this.props } />
-				</Fragment>
+					<Fragment>
+						<SessionsInspectorControls { ...this.props } />
+						<GridToolbar { ...this.props } />
+					</Fragment>
 				}
 			</Fragment>
 		);
 	}
 }
 
-const sessionsSelect = ( select, props ) => {
-
+const sessionsSelect = ( select ) => {
 	const { getEntities } = select( WC_BLOCKS_STORE );
+
+	const entities = {
+		wcb_session          : getEntities( 'postType', 'wcb_session', { _embed: true } ),
+		wcb_track            : getEntities( 'taxonomy', 'wcb_track' ),
+		wcb_session_category : getEntities( 'taxonomy', 'wcb_session_category' ),
+	};
 
 	return {
 		blockData,
-		allSessionPosts: getEntities( 'postType', 'wcb_session', { _embed: true } ),
-		allSessionTracks: getEntities( 'taxonomy', 'wcb_track' ),
-		allSessionCategories: getEntities( 'taxonomy', 'wcb_session_category' ),
+		entities,
 	};
 };
 

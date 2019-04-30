@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { get, includes } from 'lodash';
+import { every, flatMap, includes } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -13,133 +13,88 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import ItemSelect from '../shared/item-select';
+import ItemSelect, { buildOptions, Option } from '../shared/item-select';
 
 class SessionsSelect extends Component {
 	constructor( props ) {
 		super( props );
 
-		this.state = {
-			wcb_session          : [],
-			wcb_track            : [],
-			wcb_session_category : [],
-			loading              : true,
-		};
-
-		this.buildSelectOptions = this.buildSelectOptions.bind( this );
+		this.buildSelectOptions    = this.buildSelectOptions.bind( this );
+		this.getCurrentSelectValue = this.getCurrentSelectValue.bind( this );
+		this.isLoading             = this.isLoading.bind( this );
 	}
 
-	static getDerivedStateFromProps( props, state ) {
-		const { allSessionPosts, allSessionTracks, allSessionCategories } = props;
+	buildSelectOptions() {
+		const { entities } = this.props;
+		const { wcb_session, wcb_track, wcb_session_category } = entities;
 
-		if ( false === state.loading ) {
-			return;
-		}
+		const optionGroups = [
+			{
+				entityType : 'post',
+				type       : 'wcb_session',
+				label      : __( 'Sessions', 'wordcamporg' ),
+				items      : wcb_session,
+			},
+			{
+				entityType : 'term',
+				type       : 'wcb_track',
+				label      : __( 'Tracks', 'wordcamporg' ),
+				items      : wcb_track,
+			},
+			{
+				entityType : 'term',
+				type       : 'wcb_session_category',
+				label      : __( 'Session Categories', 'wordcamporg' ),
+				items      : wcb_session_category,
+			},
+		];
 
-		let sessionsLoaded = false;
-		let tracksLoaded = false;
-		let categoryLoaded = false;
-
-		if ( allSessionPosts && Array.isArray( allSessionPosts ) ) {
-			state.wcb_session = allSessionPosts.map( ( post ) => {
-				const image = get( post, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' );
-
-				return {
-					label : post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
-					value : post.id,
-					type  : 'wcb_session',
-					image : image,
-				};
-			} );
-			sessionsLoaded = true;
-		}
-
-		// Adding sessionsLoaded check here because core store does not
-		// recognize that wcb_track taxonomy exists until sessions are loaded.
-		// TODO: Figure out if its a GutenBug and report it if that's the case.
-		if ( sessionsLoaded && allSessionTracks && Array.isArray( allSessionTracks ) ) {
-			const terms = allSessionTracks.map( ( term ) => {
-				return {
-					label: term.name.trim() || __( '(Untitled)', 'wordcamporg' ),
-					value: term.id,
-					type: term.taxonomy,
-					count: term.count || 0,
-				};
-			} );
-
-			const [ firstTerm ] = terms;
-			state[ firstTerm.type ] = terms;
-			tracksLoaded = true;
-		}
-
-		if ( sessionsLoaded && allSessionCategories && Array.isArray( allSessionCategories ) ) {
-			categoryLoaded = true;
-		}
-		if ( tracksLoaded && sessionsLoaded && categoryLoaded ) {
-			state.loading = false;
-		}
-
-		return state;
+		return buildOptions( optionGroups );
 	}
 
-	buildSelectOptions( mode ) {
-		const { getOwnPropertyDescriptors } = Object;
-		const options = [];
-
-		const labels = {
-			wcb_session          : __( 'Sessions', 'wordcamporg' ),
-			wcb_track            : __( 'Tracks', 'wordcamporg' ),
-			wcb_session_category : __( 'Session Categories', 'wordcamporg' ),
-		};
-
-		for ( const type in getOwnPropertyDescriptors( this.state ) ) {
-			if ( ( ! mode || type === mode ) && this.state[ type ].length ) {
-				options.push( {
-					label   : labels[ type ],
-					options : this.state[ type ],
-				} );
-			}
-		}
-
-		return options;
-	}
-
-	render() {
-		const { icon, label, attributes, setAttributes } = this.props;
+	getCurrentSelectValue() {
+		const { attributes } = this.props;
 		const { mode, item_ids } = attributes;
-		const options = this.buildSelectOptions( mode );
+
+		const options = flatMap( this.buildSelectOptions(), ( group ) => {
+			return group.options;
+		} );
 
 		let value = [];
 
 		if ( mode && item_ids.length ) {
-			const modeOptions = get( options, '[0].options', [] );
-
-			value = modeOptions.filter( ( option ) => {
-				return includes( item_ids, option.value );
+			value = options.filter( ( option ) => {
+				return mode === option.type && includes( item_ids, option.value );
 			} );
 		}
+
+		return value;
+	}
+
+	isLoading() {
+		const { entities } = this.props;
+
+		return ! every( entities, ( value ) => {
+			return Array.isArray( value );
+		} );
+	}
+
+	render() {
+		const { icon, label, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
 				className="wordcamp-sessions-select"
 				label={ label }
-				value={ value }
-				buildSelectOptions={ this.buildSelectOptions }
+				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
-				mode={ mode }
 				selectProps={ {
-					isLoading        : this.state.loading,
-					formatGroupLabel : ( groupData ) => {
+					options           : this.buildSelectOptions(),
+					isLoading         : this.isLoading(),
+					formatOptionLabel : ( optionData ) => {
 						return (
-							<span className="wordcamp-item-select-option-group-label">
-								{ groupData.label }
-							</span>
-						);
-					},
-					formatOptionLabel: ( optionData ) => {
-						return (
-							<SessionsOption
-								icon={ icon }
+							<Option
+								icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
 								{ ...optionData }
 							/>
 						);
@@ -148,69 +103,6 @@ class SessionsSelect extends Component {
 			/>
 		);
 	}
-}
-
-function SessionsOption( { type, icon, label = '', image = '', count = 0 } ) {
-	let optImage, optContent;
-
-	switch ( type ) {
-		case 'wcb_session' :
-			if ( image ) {
-				optImage = (
-					<img
-						className="wordcamp-item-select-option-image"
-						src={ image }
-						alt={ label }
-						width={ 24 }
-						height={ 24 }
-					/>
-				);
-			} else {
-				optImage = (
-					<div className="wordcamp-item-select-option-icon-container">
-						<Dashicon
-							className="wordcamp-item-select-option-icon"
-							icon={ icon }
-							size={ 16 }
-						/>
-					</div>
-				);
-			}
-			optContent = (
-				<span className="wordcamp-item-select-option-label">
-					{ label }
-				</span>
-			);
-			break;
-
-		case 'wcb_track' :
-		case 'wcb_session_category' :
-			optImage = (
-				<div className="wordcamp-item-select-option-icon-container">
-					<Dashicon
-						className="wordcamp-item-select-option-icon"
-						icon={ icon }
-						size={ 16 }
-					/>
-				</div>
-			);
-			optContent = (
-				<span className="wordcamp-item-select-option-label">
-					{ label }
-					<span className="wordcamp-item-select-option-label-term-count">
-						{ count }
-					</span>
-				</span>
-			);
-			break;
-	}
-
-	return (
-		<div className="wordcamp-item-select-option">
-			{ optImage }
-			{ optContent }
-		</div>
-	);
 }
 
 export default SessionsSelect;

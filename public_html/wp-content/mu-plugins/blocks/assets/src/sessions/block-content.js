@@ -13,11 +13,11 @@ const { __ } = wp.i18n;
 /**
  * Internal dependencies
  */
-import { ItemTitle, ItemHTMLContent, ItemPermalink }           from '../shared/block-content';
-import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../shared/i18n';
-import GridContentLayout                                       from '../shared/grid-layout/block-content';
-import FeaturedImage                                           from '../shared/featured-image';
-import { filterEntities }                                      from '../blocks-store';
+import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../shared/block-content';
+import { tokenSplit, arrayTokenReplace, intersperse, listify }       from '../shared/i18n';
+import GridContentLayout                                             from '../shared/grid-layout/block-content';
+import FeaturedImage                                                 from '../shared/featured-image';
+import { filterEntities }                                            from '../blocks-store';
 
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
@@ -133,21 +133,26 @@ function SessionCategory( { session } ) {
 }
 
 class SessionsBlockContent extends Component {
-	hasSpeaker( session ) {
+	constructor( props ) {
+		super( props );
+
+		this.getFilteredPosts = this.getFilteredPosts.bind( this );
+	}
+
+	static hasSpeaker( session ) {
 		return get( session, '_embedded.speakers', [] ).length > 0;
 	}
 
-	render() {
-		const { attributes, allSessionPosts } = this.props;
-		const {
-			mode, item_ids, sort, show_speaker, show_images, image_align,
-			featured_image_width, content, show_meta, show_category
-		} = attributes;
+	getFilteredPosts() {
+		const { attributes, entities } = this.props;
+		const { wcb_session: posts } = entities;
+		const { mode, item_ids, sort } = attributes;
 
 		const args = {};
 
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			let fieldName;
+
 			switch ( mode ) {
 				case 'wcb_session':
 					fieldName = 'id';
@@ -159,23 +164,42 @@ class SessionsBlockContent extends Component {
 					fieldName = 'session_category';
 					break;
 			}
-			args.filter = [
+
+			args.filter  = [
 				{
 					fieldName: fieldName,
 					fieldValue: item_ids,
-				},
-			]
+				}
+			];
 		}
 
 		if ( 'session_time' !== sort ) {
 			args.sort = sort;
 		}
 
-		const sessionPosts = filterEntities( allSessionPosts, args );
-		if ( Array.isArray( sessionPosts ) && 'session_time' === sort ) {
-			sessionPosts.sort( ( a, b ) => {
+		let filtered = filterEntities( posts, args );
+
+		if ( Array.isArray( filtered ) && 'session_time' === sort ) {
+			filtered = filtered.sort( ( a, b ) => {
 				return Number( a.meta._wcpt_session_time ) - Number( b.meta._wcpt_session_time );
 			} );
+		}
+
+		return filtered;
+	}
+
+	render() {
+		const { attributes } = this.props;
+		const { show_speaker, show_images, image_align, featured_image_width, content, show_meta, show_category } = attributes;
+
+		const posts     = this.getFilteredPosts();
+		const isLoading = ! Array.isArray( posts );
+		const hasPosts  = ! isLoading && posts.length > 0;
+
+		if ( isLoading || ! hasPosts ) {
+			return (
+				<BlockNoContent loading={ isLoading } />
+			);
 		}
 
 		return (
@@ -183,7 +207,7 @@ class SessionsBlockContent extends Component {
 				className="wordcamp-sessions-block"
 				{ ...this.props }
 			>
-				{ sessionPosts.map( ( post ) =>
+				{ posts.map( ( post ) =>
 					<div
 						key={ post.slug }
 						className={ classnames(
@@ -200,7 +224,7 @@ class SessionsBlockContent extends Component {
 							link={ post.link }
 						/>
 
-						{ show_speaker && this.hasSpeaker( post ) &&
+						{ show_speaker && this.constructor.hasSpeaker( post ) &&
 							<SessionSpeakers session={ post } />
 						}
 

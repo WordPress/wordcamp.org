@@ -22,42 +22,37 @@ class SponsorsEdit extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes } = this.props;
-		const { mode } = attributes;
+		const { mode } = this.props.attributes;
 
 		return (
 			<Fragment>
-				{
-					<SponsorBlockControls
-						icon={ ICON }
-						{ ...this.props }
-					/>
+				<SponsorBlockControls
+					icon={ ICON }
+					{ ...this.props }
+				/>
+				{ mode &&
+					<Fragment>
+						<SponsorInspectorControls { ...this.props } />
+						<GridToolbar { ...this.props } />
+					</Fragment>
 				}
-				<Fragment>
-					<SponsorInspectorControls
-						{ ...this.props }
-					/>
-
-					{ mode &&
-						<GridToolbar
-							{ ...this.props }
-						/>
-					}
-				</Fragment>
 			</Fragment>
 		);
 	}
 }
 
 const sponsorSelect = ( select ) => {
-
 	const { getEntities, getSiteSettings } = select( WC_BLOCKS_STORE );
+
+	const entities = {
+		wcb_sponsor       : getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
+		wcb_sponsor_level : getEntities( 'taxonomy', 'wcb_sponsor_level' ),
+	};
 
 	return {
 		blockData,
-		sponsorPosts  : getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
-		sponsorLevels : getEntities( 'taxonomy', 'wcb_sponsor_level' ),
-		siteSettings  : getSiteSettings(),
+		entities,
+		siteSettings : getSiteSettings(),
 	}
 };
 

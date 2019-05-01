@@ -19,7 +19,7 @@ import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../sh
 import { filterEntities }                                            from '../blocks-store';
 
 /**
- * Component for rendering the block content within the editing UI.
+ * Component for displaying the block content.
  */
 class SponsorsBlockContent extends Component {
 	/**

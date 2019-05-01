@@ -22,7 +22,7 @@ import { LABEL }                                  from './index';
  */
 class SponsorsBlockControls extends BlockControls {
 	/**
-	 * Render the block UI.
+	 * Render the internal block UI.
 	 *
 	 * @return {Element}
 	 */

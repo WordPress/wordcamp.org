@@ -19,11 +19,11 @@ const DEFAULT_OPTIONS = {
 };
 
 /**
- * Class for defining Inspector control in sponsor block.
+ * Component for block controls that appear in the Inspector Panel.
  */
 class SponsorsInspectorControls extends Component {
 	/**
-	 * Renders inspector controls.
+	 * Render the controls.
 	 *
 	 * @return {Element}
 	 */

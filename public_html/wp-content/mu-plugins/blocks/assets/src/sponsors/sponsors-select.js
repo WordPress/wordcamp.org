@@ -98,7 +98,7 @@ class SponsorsSelect extends Component {
 	/**
 	 * Render an ItemSelect component with block-specific settings.
 	 *
-	 * @return {ItemSelect}
+	 * @return {Element}
 	 */
 	render() {
 		const { label, icon, setAttributes } = this.props;

@@ -131,7 +131,7 @@ module.exports = {
 		 */
 		'id-length' : [ 'error', {
 			'min'        : 3,
-			'exceptions' : [ '__', '_n', 'a', 'b' ]
+			'exceptions' : [ '__', '_n', 'id', 'a', 'b' ]
 		} ]
 	},
 };

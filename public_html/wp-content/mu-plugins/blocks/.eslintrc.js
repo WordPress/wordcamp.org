@@ -26,6 +26,19 @@ module.exports = {
 
 	rules : {
 		/*
+		 * The rationale behind this rule is that sometimes a variable is defined by a costly operation, but then
+		 * the variable is never used, so that operation was wasted. That's a valid point, but in practice that
+		 * doesn't happen very often, so the benefit is not significant.
+		 *
+		 * The benefits of grouping variable assignments at the start of a function outweigh the costs, since it
+		 * almost always makes the function easier to quickly grok.
+		 *
+		 * In the uncommon case where a significant performance penalty would be introduced, the developer is
+		 * still free to choose to define the variable after the early returns.
+		 */
+		'@wordpress/no-unused-vars-before-return' : [ 'off' ],
+		
+		/*
 		 * Instead of turning this off altogether, we should safelist the parameters that are coming in from
 		 * the REST API. However, the `allow` config for this rule is only available in eslint 5+. Currently
 		 * the @wordpress/scripts package uses eslint 4.x, but the next version will bump it up to 5.
@@ -45,6 +58,15 @@ module.exports = {
 		 * ],
 		 */
 		'camelcase' : 'off',
+
+		/*
+		 * Short variable names are almost always obscure and non-descriptive, but they should be meaningful,
+		 * obvious, and self-documenting.
+		 */
+		'id-length' : [ 'error', {
+			'min'        : 3,
+			'exceptions' : [ '__', '_n', '_x', 'id', 'a', 'b' ]
+		} ]
 
 		/*
 		 * Align object parameters on their assignment operator (:), just like assignment statements are
@@ -111,27 +133,5 @@ module.exports = {
 			'requireReturnDescription' : false,
 			'requireReturn'            : false,
 		} ],
-
-		/*
-		 * The rationale behind this rule is that sometimes a variable is defined by a costly operation, but then
-		 * the variable is never used, so that operation was wasted. That's a valid point, but in practice that
-		 * doesn't happen very often, so the benefit is not significant.
-		 *
-		 * The benefits of grouping variable assignments at the start of a function outweigh the costs, since it
-		 * almost always makes the function easier to quickly grok.
-		 *
-		 * In the uncommon case where a significant performance penalty would be introduced, the developer is
-		 * still free to choose to define the variable after the early returns.
-		 */
-		'@wordpress/no-unused-vars-before-return' : [ 'off' ],
-
-		/*
-		 * Short variable names are almost always obscure and non-descriptive, but they should be meaningful,
-		 * obvious, and self-documenting.
-		 */
-		'id-length' : [ 'error', {
-			'min'        : 3,
-			'exceptions' : [ '__', '_n', '_x', 'id', 'a', 'b' ]
-		} ]
 	},
 };

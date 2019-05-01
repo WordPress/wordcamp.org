@@ -37,7 +37,7 @@ module.exports = {
 		 * still free to choose to define the variable after the early returns.
 		 */
 		'@wordpress/no-unused-vars-before-return' : [ 'off' ],
-		
+
 		/*
 		 * Instead of turning this off altogether, we should safelist the parameters that are coming in from
 		 * the REST API. However, the `allow` config for this rule is only available in eslint 5+. Currently
@@ -66,7 +66,7 @@ module.exports = {
 		'id-length' : [ 'error', {
 			'min'        : 3,
 			'exceptions' : [ '__', '_n', '_x', 'id', 'a', 'b' ]
-		} ]
+		} ],
 
 		/*
 		 * Align object parameters on their assignment operator (:), just like assignment statements are
@@ -104,6 +104,24 @@ module.exports = {
 		 * Objects are harder to quickly scan when the formatting is inconsistent.
 		 */
 		'object-shorthand' : [ 'error', 'consistent-as-needed' ],
+
+		/**
+		 * Only prefer const over let when destructuring if all variables in the declaration are never reassigned.
+		 *
+		 * With the default setting of this rule, to prefer const when any of the destructured variables are never
+		 * reassigned, we end up with situations where we have to destructure the same entity twice, which seems
+		 * inefficient. E.g. if in the below example 'a' gets reassigned but 'b' doesn't:
+		 *
+		 * let { a, b } = var;
+		 *
+		 * Seems better than having to do:
+		 *
+		 * let { a } = var;
+		 * const { b } = var;
+		 */
+		'prefer-const': [ 'error', {
+			'destructuring': 'all',
+		} ],
 
 		/*
 		 * A short description often makes a function easier to understand, and also provides a nice visual

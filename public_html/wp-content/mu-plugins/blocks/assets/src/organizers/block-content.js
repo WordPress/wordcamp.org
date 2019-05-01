@@ -16,13 +16,26 @@ import { BlockNoContent, ItemTitle, ItemHTMLContent } from '../shared/block-cont
 import GridContentLayout                              from '../shared/grid-layout/block-content';
 import { filterEntities }                             from '../blocks-store';
 
+/**
+ * Component for displaying the block content.
+ */
 class OrganizersBlockContent extends Component {
+	/**
+	 * Run additional operations during component initialization.
+	 *
+	 * @param {Object} props
+	 */
 	constructor( props ) {
 		super( props );
 
 		this.getFilteredPosts = this.getFilteredPosts.bind( this );
 	}
 
+	/**
+	 * Filter and sort the content that will be rendered.
+	 *
+	 * @returns {Array}
+	 */
 	getFilteredPosts() {
 		const { attributes, entities } = this.props;
 		const { wcb_organizer: posts } = entities;
@@ -33,8 +46,8 @@ class OrganizersBlockContent extends Component {
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			args.filter = [
 				{
-					fieldName: mode === 'wcb_organizer' ? 'id' : 'organizer_team',
-					fieldValue: item_ids,
+					fieldName  : mode === 'wcb_organizer' ? 'id' : 'organizer_team',
+					fieldValue : item_ids,
 				},
 			];
 		}
@@ -44,6 +57,11 @@ class OrganizersBlockContent extends Component {
 		return filterEntities( posts, args );
 	}
 
+	/**
+	 * Render the block content.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { attributes } = this.props;
 		const { show_avatars, avatar_size, avatar_align, content } = attributes;

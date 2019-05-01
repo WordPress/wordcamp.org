@@ -33,7 +33,15 @@ const DEFAULT_OPTIONS = {
 	sort    : {},
 };
 
+/**
+ * Component for block controls that appear in the Inspector Panel.
+ */
 class OrganizerInspectorControls extends Component {
+	/**
+	 * Render the controls.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { attributes, setAttributes, blockData }                   = this.props;
 		const { show_avatars, avatar_size, avatar_align, content, sort } = attributes;

@@ -3,7 +3,6 @@
  */
 const { withSelect }          = wp.data;
 const { Component, Fragment } = wp.element;
-const { addQueryArgs }        = wp.url;
 
 /**
  * Internal dependencies
@@ -16,7 +15,15 @@ import { WC_BLOCKS_STORE }         from '../blocks-store';
 
 const blockData = window.WordCampBlocks.organizers || {};
 
+/**
+ * Top-level component for the editing UI for the block.
+ */
 class OrganizersEdit extends Component {
+	/**
+	 * Render the block's editing UI.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { mode } = this.props.attributes;
 
@@ -47,8 +54,8 @@ const organizerSelect = ( select ) => {
 	};
 
 	return {
-		blockData : blockData,
-		entities  : entities,
+		blockData,
+		entities,
 	};
 };
 

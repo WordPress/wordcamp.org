@@ -178,7 +178,7 @@ class SpeakersBlockContent extends Component {
 								linkText={ __( 'Visit speaker page', 'wordcamporg' ) }
 							/>
 						}
-					</div>,
+					</div>
 				) }
 			</GridContentLayout>
 		);

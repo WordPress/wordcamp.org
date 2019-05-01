@@ -1,155 +1,98 @@
 /**
  * External dependencies.
  */
-import { includes } from 'lodash';
+import { every, flatMap, includes } from 'lodash';
 
 /**
  * WordPress dependencies
  */
-const { Component }       = wp.element;
-const { __ } = wp.i18n;
+const { Component } = wp.element;
+const { __ }        = wp.i18n;
 
-
-import ItemSelect from '../shared/item-select';
-
-function SponsorOption( option ) {
-	let sponsorOption;
-
-	if ( 'post' === option.type ) {
-		sponsorOption = SponsorPostOption( option );
-	} else {
-		sponsorOption = SponsorLevelOption( option );
-	}
-
-	return sponsorOption;
-}
-
-function SponsorPostOption( sponsor ) {
-	return (
-		<span>
-			{ sponsor.label }
-		</span>
-	);
-}
-
-function SponsorLevelOption( sponsorLevel ) {
-	return (
-		<span className="wordcamp-item-select-option-label">
-			{ sponsorLevel.label }
-			<span className="wordcamp-item-select-option-label-term-count">
-				{ sponsorLevel.count }
-			</span>
-		</span>
-	);
-}
-
+/**
+ * Internal dependencies
+ */
+import ItemSelect, { buildOptions, Option } from '../shared/item-select';
 
 class SponsorsSelect extends Component {
-	/**
-	 * Sets `mode`, `term_ids` and `post_ids` attribute when `Apply` button is
-	 * clicked. Pass `onChange` prop to override.
-	 *
-	 * @param {Array} selectedOptions Array of values, type of selected options
-	 */
-	onChange( selectedOptions = {} ) {
-		const { setAttributes } = this.props;
-		const newValue          = selectedOptions.item_ids;
-		const chosen            = selectedOptions.mode;
+	constructor( props ) {
+		super( props );
 
-		if ( newValue && chosen ) {
-			switch ( chosen ) {
-				case 'post' :
-					setAttributes( {
-						mode     : 'specific_posts',
-						post_ids : newValue,
-					} );
-					break;
-
-				case 'term' :
-					setAttributes( {
-						mode     : 'specific_terms',
-						term_ids : newValue,
-					} );
-					break;
-			}
-		} else {
-			setAttributes( {
-				mode     : '',
-				post_ids : [],
-				term_ids : [],
-			} );
-		}
+		this.buildSelectOptions    = this.buildSelectOptions.bind( this );
+		this.getCurrentSelectValue = this.getCurrentSelectValue.bind( this );
+		this.isLoading             = this.isLoading.bind( this );
 	}
 
-	/**
-	 * Generate options array to be passed to select2.
-	 *
-	 * @return {Array}
-	 */
 	buildSelectOptions() {
-		const { posts, terms } = this.props;
-		const options = [];
+		const { entities } = this.props;
+		const { wcb_sponsor, wcb_sponsor_level } = entities;
 
-		options.push( {
-			label   : __( 'Sponsor Levels', 'wordcamporg' ),
-			options : terms,
+		const optionGroups = [
+			{
+				entityType : 'post',
+				type       : 'wcb_sponsor',
+				label      : __( 'Sponsors', 'wordcamporg' ),
+				items      : wcb_sponsor,
+			},
+			{
+				entityType : 'term',
+				type       : 'wcb_sponsor_level',
+				label      : __( 'Sponsors Levels', 'wordcamporg' ),
+				items      : wcb_sponsor_level,
+			},
+		];
+
+		return buildOptions( optionGroups );
+	}
+
+	getCurrentSelectValue() {
+		const { attributes } = this.props;
+		const { mode, item_ids } = attributes;
+
+		const options = flatMap( this.buildSelectOptions(), ( group ) => {
+			return group.options;
 		} );
 
-		options.push( {
-			label   : __( 'Sponsors', 'wordcamporg' ),
-			options : posts,
-		} );
+		let value = [];
 
-		return options;
+		if ( mode && item_ids.length ) {
+			value = options.filter( ( option ) => {
+				return mode === option.type && includes( item_ids, option.value );
+			} );
+		}
+
+		return value;
+	}
+
+	isLoading() {
+		const { entities } = this.props;
+
+		return ! every( entities, ( value ) => {
+			return Array.isArray( value );
+		} );
 	}
 
 	render() {
-		const { posts, terms, attributes } = this.props;
-		const { mode, term_ids, post_ids } = attributes;
-
-		let selectedOptions = [];
-
-		switch ( mode ) {
-			case 'all' :
-				break;
-			case 'specific_posts' :
-				selectedOptions = posts.filter( ( post ) => {
-					return includes( post_ids, post.value );
-				} );
-				break;
-			case 'specific_terms' :
-				selectedOptions = terms.filter( ( term ) => {
-					return includes( term_ids, term.value );
-				} );
-				break;
-			default:
-				break;
-		}
+		const { label, icon, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
-				buildSelectOptions={
-					() => {
-						return this.buildSelectOptions();
-					}
-				}
-				onChange={
-					( newOptions ) => {
-						return this.onChange( newOptions );
-					}
-				}
-				selectProps={
-					{
-						formatOptionLabel: ( optionData ) => {
-							return (
-								<SponsorOption { ...optionData } />
-							);
-						},
-						isLoading : false,
-					}
-				}
-				label={ __( 'Or, choose specific sponsors or levels', 'wordcamporg' ) }
-				value={ selectedOptions }
+				className="wordcamp-sponsors-select"
+				label={ label }
+				value={ this.getCurrentSelectValue() }
+				onChange={ ( changed ) => setAttributes( changed ) }
+				selectProps={ {
+					options           : this.buildSelectOptions(),
+					isLoading         : this.isLoading(),
+					formatOptionLabel : ( optionData ) => {
+						return (
+							<Option
+								icon={ 'wcb_sponsor_level' === optionData.type ? icon : null }
+								{ ...optionData }
+							/>
+						);
+					},
+				} }
 			/>
 		);
 	}

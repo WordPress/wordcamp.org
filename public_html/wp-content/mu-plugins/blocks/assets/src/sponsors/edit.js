@@ -7,10 +7,10 @@ const { withSelect }          = wp.data;
 /**
  * Internal dependencies
  */
-import SponsorInspectorControls from './inspector-controls';
-import SponsorBlockControls     from './block-controls';
-import GridToolbar              from '../shared/grid-layout/toolbar';
-import { ICON }                 from './index';
+import SponsorsInspectorControls from './inspector-controls';
+import SponsorsBlockControls     from './block-controls';
+import GridToolbar               from '../shared/grid-layout/toolbar';
+import { ICON }                  from './index';
 import { WC_BLOCKS_STORE } from '../blocks-store';
 
 const blockData = window.WordCampBlocks.sponsors || {};
@@ -26,13 +26,13 @@ class SponsorsEdit extends Component {
 
 		return (
 			<Fragment>
-				<SponsorBlockControls
+				<SponsorsBlockControls
 					icon={ ICON }
 					{ ...this.props }
 				/>
 				{ mode &&
 					<Fragment>
-						<SponsorInspectorControls { ...this.props } />
+						<SponsorsInspectorControls { ...this.props } />
 						<GridToolbar { ...this.props } />
 					</Fragment>
 				}

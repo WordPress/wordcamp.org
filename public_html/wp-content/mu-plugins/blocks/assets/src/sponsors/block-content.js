@@ -21,7 +21,7 @@ import { filterEntities }                                            from "../bl
 /**
  * Component for rendering Sponsors post inside editor.
  */
-class SponsorBlockContent extends Component {
+class SponsorsBlockContent extends Component {
 	constructor( props ) {
 		super( props );
 
@@ -119,4 +119,4 @@ class SponsorBlockContent extends Component {
 	}
 }
 
-export default SponsorBlockContent;
+export default SponsorsBlockContent;

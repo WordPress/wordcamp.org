@@ -1,165 +1,93 @@
 /**
  * External dependencies
  */
-import { get, includes, intersection } from 'lodash';
+import classnames from "classnames";
 
 /**
  * WordPress dependencies
  */
-const { __ } = wp.i18n;
+const { Button, Placeholder } = wp.components;
+const { __ }                  = wp.i18n;
 
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderNoContent } from '../shared/block-controls';
-import SponsorBlockContent from './block-content';
-import { LABEL } from './index';
-import SponsorsSelect from './sponsor-select';
-
-const { Button, Placeholder } = wp.components;
+import { BlockControls, PlaceholderSpecificMode } from '../shared/block-controls';
+import SponsorsBlockContent                       from './block-content';
+import SponsorsSelect                             from './sponsor-select';
+import { LABEL }                                  from './index';
 
 /**
  * Implements sponsor block controls.
  */
-class SponsorBlockControls extends BlockControls {
-	constructor( props ) {
-		super( props );
-		this.state = {};
-	}
-
-	static getDerivedStateFromProps( nextProps, state ) {
-		const { sponsorPosts, sponsorLevels, siteSettings } = nextProps;
-
-		if ( ! state.hasOwnProperty( 'sponsorPosts' ) && Array.isArray( sponsorPosts ) ) {
-			state.posts = sponsorPosts.map(
-				( post ) => {
-					const label = post.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' );
-
-					return {
-						label             : label,
-						value             : post.id,
-						type              : 'post',
-						featuredImageData : get( post, '_embedded.wp:featuredmedia[0].media_details', '' ),
-					};
-				}
-			);
-			state.sponsorPosts = sponsorPosts;
-		}
-
-		// Adding check for sponsorPosts here because looks like sponsorLevels
-		// be emtpy array till `sponsorPosts` is initialized.
-		if ( state.sponsorPosts && ! state.hasOwnProperty( 'terms' ) && null !== sponsorLevels ) {
-			state.terms = sponsorLevels.map( ( term ) => {
-				return {
-					label : term.name.trim() || __( '(Untitled)', 'wordcamporg' ),
-					value : term.id,
-					type  : 'term',
-					count : term.count,
-				};
-			} );
-		}
-
-		if ( ! state.hasOwnProperty( 'sponsorTermOrder' ) && siteSettings ) {
-			state.sponsorTermOrder = siteSettings.wcb_sponsor_level_order;
-		}
-
-		if ( state.posts && state.terms && state.sponsorTermOrder ) {
-			state.loading = false;
-		}
-		return state;
-	}
-
+class SponsorsBlockControls extends BlockControls {
 	/**
 	 * Renders Sponsor Block Control view
 	 *
 	 * @return {Element}
 	 */
 	render() {
-		const {
-			icon, attributes, setAttributes,
-		} = this.props;
-		const { post_ids, term_ids, mode } = attributes;
-		const { sponsorPosts, sponsorTermOrder } = this.state;
+		const { icon, attributes, setAttributes } = this.props;
+		const { mode } = attributes;
 
-		const hasPosts      = Array.isArray( sponsorPosts ) && sponsorPosts.length;
+		let output;
 
-		// Check if posts are still loading.
-		if ( ! hasPosts ) {
-			return (
-				<PlaceholderNoContent
-					label={ LABEL }
-					loading={ () => {
-						return mode
-					} }
-				/>
-			);
-		}
+		switch ( mode ) {
+			case 'all' :
+				output = (
+					<SponsorsBlockContent { ...this.props } />
+				);
+				break;
 
-		const selectedPosts = [];
-
-		for ( const post of sponsorPosts ) {
-			if ( ! post.hasOwnProperty( 'id' ) ) {
-				continue;
-			}
-
-			switch ( mode ) {
-				case 'all':
-					selectedPosts.push( post );
-					break;
-
-				case 'specific_posts':
-					if ( -1 !== post_ids.indexOf( post.id ) ) {
-						selectedPosts.push( post );
-					}
-					break;
-
-				case 'specific_terms':
-					if ( intersection( term_ids, post.sponsor_level || [] ).length ) {
-						selectedPosts.push( post );
-					}
-					break;
-
-				default:
-					break;
-			}
-		}
-
-		return (
-			<div>
-				<SponsorBlockContent
-					sponsorTermOrder={ sponsorTermOrder }
-					selectedPosts={ selectedPosts }
-					{ ...this.props }
-				/>
-
-				{ 'all' !== mode &&
-					<Placeholder
+			case 'wcb_sponsor' :
+			case 'wcb_sponsor_level' :
+				output = (
+					<PlaceholderSpecificMode
+						label={ this.getModeLabel( mode ) }
 						icon={ icon }
-						label={ __( 'Sponsors', 'wordcamporg' ) }
+						content={
+							<SponsorsBlockContent { ...this.props } />
+						}
+						placeholderChildren={
+							<SponsorsSelect { ...this.props } />
+						}
+					/>
+				);
+				break;
+
+			default :
+				output = (
+					<Placeholder
+						className={ classnames( 'wordcamp-block-edit-placeholder', 'wordcamp-block-edit-placeholder-no-mode' ) }
+						icon={ icon }
+						label={ LABEL }
 					>
-						<div className="" >
+						<div className="wordcamp-block-edit-mode-option">
 							<Button
 								isDefault
 								isLarge
-								onClick={
-									() => {
-										setAttributes( { mode: 'all' } );
-									}
-								}
+								onClick={ () => {
+									setAttributes( { mode: 'all' } );
+								} }
 							>
-								{ __( 'List all sponsors', 'wordcamporg' ) }
+								{ this.getModeLabel( 'all' ) }
 							</Button>
 						</div>
-						<SponsorsSelect
-							icon={ icon }
-							{ ...this.props }
-							{ ...this.state }
-						/>
+
+						<div className="wordcamp-block-edit-mode-option">
+							<SponsorsSelect
+								icon={ icon }
+								label={ __( 'Choose specific sponsors or levels', 'wordcamporg' ) }
+								{ ...this.props }
+							/>
+						</div>
 					</Placeholder>
-				}
-			</div>
-		);
+				);
+				break;
+		}
+
+		return output;
 	}
 }
 
-export default SponsorBlockControls;
+export default SponsorsBlockControls;

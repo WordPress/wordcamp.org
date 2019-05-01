@@ -12,19 +12,6 @@ const { __ }                                                = wp.i18n;
 import GridInspectorControl           from '../shared/grid-layout/inspector-control';
 import FeaturedImageInspectorControls from '../shared/featured-image/inspector-control';
 
-const DEFAULT_SCHEMA = {
-	grid_columns: {
-		default : 2,
-		minimum : 2,
-		maximum : 4,
-	},
-	image_size: {
-		default : 150,
-		minimum : 25,
-		maximum : 600,
-	},
-};
-
 const DEFAULT_OPTIONS = {
 	align_image : {},
 	content     : {},
@@ -34,7 +21,7 @@ const DEFAULT_OPTIONS = {
 /**
  * Class for defining Inspector control in sponsor block.
  */
-class SponsorInspectorControls extends Component {
+class SponsorsInspectorControls extends Component {
 	/**
 	 * Renders inspector controls.
 	 *
@@ -43,7 +30,7 @@ class SponsorInspectorControls extends Component {
 	render() {
 		const { attributes, setAttributes, blockData } = this.props;
 		const { show_name, show_logo, sort, content } = attributes;
-		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = blockData;
+		const { options = DEFAULT_OPTIONS } = blockData;
 
 		return (
 			<InspectorControls>
@@ -63,7 +50,6 @@ class SponsorInspectorControls extends Component {
 							onChange={ ( value ) => setAttributes( { show_name: value } ) }
 						/>
 					</PanelRow>
-
 					<PanelRow>
 						<ToggleControl
 							label={ __( 'Logo', 'wordcamporg' ) }
@@ -72,7 +58,6 @@ class SponsorInspectorControls extends Component {
 							onChange={ ( value ) => setAttributes( { show_logo: value } ) }
 						/>
 					</PanelRow>
-
 					<PanelRow>
 						<SelectControl
 							label={ __( 'Description', 'wordcamporg' ) }
@@ -82,13 +67,12 @@ class SponsorInspectorControls extends Component {
 							onChange={ ( value ) => setAttributes( { content: value } ) }
 						/>
 					</PanelRow>
-
 					<PanelRow>
 						<SelectControl
 							label={ __( 'Sort by', 'wordcamporg' ) }
 							options={ options.sort }
 							value={ sort }
-							onChange={ ( value ) => setAttributes( { sort_by: value } ) }
+							onChange={ ( value ) => setAttributes( { sort: value } ) }
 						/>
 					</PanelRow>
 				</PanelBody>
@@ -104,4 +88,4 @@ class SponsorInspectorControls extends Component {
 	}
 }
 
-export default SponsorInspectorControls;
+export default SponsorsInspectorControls;

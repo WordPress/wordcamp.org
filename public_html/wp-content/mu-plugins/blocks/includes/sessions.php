@@ -111,6 +111,7 @@ function get_attributes_schema() {
 			'attribute'
 		),
 		[
+			'align'                => get_shared_definition( 'align_block', 'attribute' ),
 			'className'            => get_shared_definition( 'string_empty', 'attribute' ),
 			'featured_image_width' => array(
 				'type'    => 'integer',

@@ -23,9 +23,9 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 		switch ( entityType ) {
 			case 'post':
 				parsedItem = {
-					label  : item.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
-					value  : item.id,
-					type   : type,
+					label : item.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
+					value : item.id,
+					type  : type,
 				};
 
 				parsedItem.avatar = get( item, 'avatar_urls[\'24\']', '' );
@@ -51,6 +51,11 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 	};
 };
 
+/**
+ * A memoized function that parses structured data into a format used as an option set by ItemSelect.
+ *
+ * @return {Array}
+ */
 export const buildOptions = createSelector(
 	( groups ) => {
 		const options = [];
@@ -90,6 +95,21 @@ export const buildOptions = createSelector(
 	}
 );
 
+/**
+ * Component for a single option in an ItemSelect dropdown.
+ *
+ * Not all of the props need or should have a value. An option representing a speaker will have
+ * an avatar prop, but not an icon or a count (of terms).
+ *
+ * @param {Object} props {
+ *     @type {string} avatar
+ *     @type {string} icon
+ *     @type {string} label
+ *     @type {number} count
+ * }
+ *
+ * @return {Element}
+ */
 export function Option( { avatar, icon, label, count } ) {
 	let image;
 

@@ -17,7 +17,15 @@ const { __ } = wp.i18n;
  */
 import './style.scss';
 
+/**
+ * Component for selecting one or more related entities to be used as content in a block.
+ */
 class ItemSelect extends Component {
+	/**
+	 * Run additional operations during component initialization.
+	 *
+	 * @param {Object} props
+	 */
 	constructor( props ) {
 		super( props );
 
@@ -28,6 +36,14 @@ class ItemSelect extends Component {
 		this.getNewAttributes = this.getNewAttributes.bind( this );
 	}
 
+	/**
+	 * Determine if an option should be selectable based on what else is already selected.
+	 *
+	 * @param {Object} option
+	 * @param {Array}  selected
+	 *
+	 * @return {boolean}
+	 */
 	static isOptionDisabled( option, selected ) {
 		let chosen;
 
@@ -38,6 +54,13 @@ class ItemSelect extends Component {
 		return chosen && chosen !== option.type;
 	}
 
+	/**
+	 * Render the label of an option group.
+	 *
+	 * @param {Object} groupData
+	 *
+	 * @returns {Element}
+	 */
 	static formatGroupLabel( groupData ) {
 		return (
 			<span className="wordcamp-item-select-option-group-label">
@@ -46,6 +69,11 @@ class ItemSelect extends Component {
 		);
 	}
 
+	/**
+	 * Convert a selection of options into values for a block's attributes.
+	 *
+	 * @return {Object}
+	 */
 	getNewAttributes() {
 		const { selectedOptions } = this.state;
 		let attributes = {};
@@ -73,6 +101,11 @@ class ItemSelect extends Component {
 		return attributes;
 	}
 
+	/**
+	 * Render the select dropdown and related UI.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { instanceId, className, label, help, submitLabel, onChange, selectProps } = this.props;
 		const value = this.state.selectedOptions || this.props.value;

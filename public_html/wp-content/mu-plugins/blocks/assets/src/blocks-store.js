@@ -56,7 +56,7 @@ export const filterEntities = ( entities, args ) => {
 					return false;
 				}
 
-				let compareValue = isArray( entity[ fieldName ] ) ? entity[ fieldName ] : [ entity[ fieldName ] ];
+				const compareValue = isArray( entity[ fieldName ] ) ? entity[ fieldName ] : [ entity[ fieldName ] ];
 
 				return intersection( fieldValue, compareValue ).length > 0;
 			} );

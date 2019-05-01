@@ -1,14 +1,14 @@
 /**
  * External dependencies
  */
-import { get } from 'lodash';
+import { get }    from 'lodash';
 import classnames from 'classnames';
 
 /**
  * WordPress dependencies
  */
 const { Component } = wp.element;
-const { __ } = wp.i18n;
+const { __ }        = wp.i18n;
 
 /**
  * Internal dependencies
@@ -19,6 +19,13 @@ import GridContentLayout                                             from '../sh
 import FeaturedImage                                                 from '../shared/featured-image';
 import { filterEntities }                                            from '../blocks-store';
 
+/**
+ * Component for the section of each session post that displays information about the session's speakers.
+ *
+ * @param {Object} session
+ *
+ * @return {Element}
+ */
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
 
@@ -57,6 +64,13 @@ function SessionSpeakers( { session } ) {
 	);
 }
 
+/**
+ * Component for the section of each session post that displays metadata including date, time, and location (track).
+ *
+ * @param {Object} session
+ *
+ * @return {Element}
+ */
 function SessionMeta( { session } ) {
 	let metaContent;
 	const terms = get( session, '_embedded[\'wp:term\']', [] ).flat();
@@ -100,6 +114,13 @@ function SessionMeta( { session } ) {
 	);
 }
 
+/**
+ * Component for the section of each session post that displays a session's assigned categories.
+ *
+ * @param {Object} session
+ *
+ * @return {Element}
+ */
 function SessionCategory( { session } ) {
 	let categoryContent;
 	const terms = get( session, '_embedded[\'wp:term\']', [] ).flat();
@@ -132,17 +153,37 @@ function SessionCategory( { session } ) {
 	);
 }
 
+/**
+ * Component for displaying the block content.
+ */
 class SessionsBlockContent extends Component {
+	/**
+	 * Run additional operations during component initialization.
+	 *
+	 * @param {Object} props
+	 */
 	constructor( props ) {
 		super( props );
 
 		this.getFilteredPosts = this.getFilteredPosts.bind( this );
 	}
 
+	/**
+	 * Determine if a session has related speaker data.
+	 *
+	 * @param {Object} session
+	 *
+	 * @return {boolean}
+	 */
 	static hasSpeaker( session ) {
 		return get( session, '_embedded.speakers', [] ).length > 0;
 	}
 
+	/**
+	 * Filter and sort the content that will be rendered.
+	 *
+	 * @returns {Array}
+	 */
 	getFilteredPosts() {
 		const { attributes, entities } = this.props;
 		const { wcb_session: posts } = entities;
@@ -167,9 +208,9 @@ class SessionsBlockContent extends Component {
 
 			args.filter  = [
 				{
-					fieldName: fieldName,
-					fieldValue: item_ids,
-				}
+					fieldName  : fieldName,
+					fieldValue : item_ids,
+				},
 			];
 		}
 
@@ -188,6 +229,11 @@ class SessionsBlockContent extends Component {
 		return filtered;
 	}
 
+	/**
+	 * Render the block content.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { attributes } = this.props;
 		const { show_speaker, show_images, image_align, featured_image_width, content, show_meta, show_category } = attributes;

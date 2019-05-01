@@ -7,7 +7,7 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Button, Placeholder } = wp.components;
-const { __ } = wp.i18n;
+const { __ }                  = wp.i18n;
 
 /**
  * Internal dependencies
@@ -17,7 +17,15 @@ import SessionsBlockContent                       from './block-content';
 import SessionsSelect                             from './sessions-select';
 import { LABEL }                                  from './index';
 
+/**
+ * Component for displaying a UI within the block.
+ */
 class SessionsBlockControls extends BlockControls {
+	/**
+	 * Render the internal block UI.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { icon, attributes, setAttributes } = this.props;
 		const { mode } = attributes;

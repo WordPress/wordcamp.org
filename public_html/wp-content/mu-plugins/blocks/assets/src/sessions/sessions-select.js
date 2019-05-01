@@ -6,16 +6,23 @@ import { every, flatMap, includes } from 'lodash';
 /**
  * WordPress dependencies
  */
-const { Dashicon } = wp.components;
 const { Component } = wp.element;
-const { __ } = wp.i18n;
+const { __ }        = wp.i18n;
 
 /**
  * Internal dependencies
  */
 import ItemSelect, { buildOptions, Option } from '../shared/item-select';
 
+/**
+ * Component for selecting posts/terms for populating the block content.
+ */
 class SessionsSelect extends Component {
+	/**
+	 * Run additional operations during component initialization.
+	 *
+	 * @param {Object} props
+	 */
 	constructor( props ) {
 		super( props );
 
@@ -24,6 +31,11 @@ class SessionsSelect extends Component {
 		this.isLoading             = this.isLoading.bind( this );
 	}
 
+	/**
+	 * Build or retrieve the options that will populate the Select dropdown.
+	 *
+	 * @return {Array}
+	 */
 	buildSelectOptions() {
 		const { entities } = this.props;
 		const { wcb_session, wcb_track, wcb_session_category } = entities;
@@ -52,6 +64,11 @@ class SessionsSelect extends Component {
 		return buildOptions( optionGroups );
 	}
 
+	/**
+	 * Determine the currently selected options in the Select dropdown based on block attributes.
+	 *
+	 * @return {Array}
+	 */
 	getCurrentSelectValue() {
 		const { attributes } = this.props;
 		const { mode, item_ids } = attributes;
@@ -71,6 +88,11 @@ class SessionsSelect extends Component {
 		return value;
 	}
 
+	/**
+	 * Check if all of the entity groups have finished loading.
+	 *
+	 * @return {boolean}
+	 */
 	isLoading() {
 		const { entities } = this.props;
 
@@ -79,6 +101,11 @@ class SessionsSelect extends Component {
 		} );
 	}
 
+	/**
+	 * Render an ItemSelect component with block-specific settings.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { icon, label, setAttributes } = this.props;
 

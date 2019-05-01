@@ -1,22 +1,29 @@
 /**
  * WordPress dependencies
  */
-const { withSelect } = wp.data;
+const { withSelect }          = wp.data;
 const { Component, Fragment } = wp.element;
-const { addQueryArgs } = wp.url;
 
 /**
  * Internal dependencies
  */
-import SessionsBlockControls from './block-controls';
+import SessionsBlockControls     from './block-controls';
 import SessionsInspectorControls from './inspector-controls';
-import GridToolbar from '../shared/grid-layout/toolbar';
+import GridToolbar               from '../shared/grid-layout/toolbar';
 import { ICON }                  from './index';
-import { WC_BLOCKS_STORE } from '../blocks-store';
+import { WC_BLOCKS_STORE }       from '../blocks-store';
 
 const blockData = window.WordCampBlocks.sessions || {};
 
+/**
+ * Top-level component for the editing UI for the block.
+ */
 class SessionsEdit extends Component {
+	/**
+	 * Render the block's editing UI.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { mode } = this.props.attributes;
 

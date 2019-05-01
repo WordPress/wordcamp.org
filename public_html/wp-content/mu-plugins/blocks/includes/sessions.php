@@ -216,6 +216,10 @@ function get_options( $type = '' ) {
  * @return array
  */
 function get_session_posts( array $attributes ) {
+	if ( empty( $attributes['mode'] ) ) {
+		return [];
+	}
+
 	$post_args = [
 		'post_type'      => 'wcb_session',
 		'post_status'    => 'publish',

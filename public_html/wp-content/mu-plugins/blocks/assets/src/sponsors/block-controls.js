@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import classnames from "classnames";
+import classnames from 'classnames';
 
 /**
  * WordPress dependencies
@@ -18,11 +18,11 @@ import SponsorsSelect                             from './sponsors-select';
 import { LABEL }                                  from './index';
 
 /**
- * Implements sponsor block controls.
+ * Component for displaying a UI within the block.
  */
 class SponsorsBlockControls extends BlockControls {
 	/**
-	 * Renders Sponsor Block Control view
+	 * Render the block UI.
 	 *
 	 * @return {Element}
 	 */

@@ -15,9 +15,12 @@ import { WC_BLOCKS_STORE } from '../blocks-store';
 
 const blockData = window.WordCampBlocks.sponsors || {};
 
+/**
+ * Top-level component for the editing UI for the block.
+ */
 class SponsorsEdit extends Component {
 	/**
-	 * Renders SponsorEdit component.
+	 * Render the block's editing UI.
 	 *
 	 * @return {Element}
 	 */
@@ -50,10 +53,10 @@ const sponsorSelect = ( select ) => {
 	};
 
 	return {
-		blockData,
-		entities,
+		blockData    : blockData,
+		entities     : entities,
 		siteSettings : getSiteSettings(),
-	}
+	};
 };
 
 export const edit = withSelect( sponsorSelect )( SponsorsEdit );

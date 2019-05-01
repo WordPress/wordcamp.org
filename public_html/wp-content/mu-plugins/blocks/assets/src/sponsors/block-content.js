@@ -16,18 +16,28 @@ const { __ }              = wp.i18n;
 import FeaturedImage                                                 from '../shared/featured-image';
 import GridContentLayout                                             from '../shared/grid-layout/block-content';
 import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../shared/block-content';
-import { filterEntities }                                            from "../blocks-store";
+import { filterEntities }                                            from '../blocks-store';
 
 /**
- * Component for rendering Sponsors post inside editor.
+ * Component for rendering the block content within the editing UI.
  */
 class SponsorsBlockContent extends Component {
+	/**
+	 * Run additional operations during component initialization.
+	 *
+	 * @param {Object} props
+	 */
 	constructor( props ) {
 		super( props );
 
 		this.getFilteredPosts = this.getFilteredPosts.bind( this );
 	}
 
+	/**
+	 * Filter and sort the content that will be rendered.
+	 *
+	 * @returns {Array}
+	 */
 	getFilteredPosts() {
 		const { attributes, entities } = this.props;
 		const { wcb_sponsor: posts } = entities;
@@ -38,9 +48,9 @@ class SponsorsBlockContent extends Component {
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			args.filter  = [
 				{
-					fieldName: mode === 'wcb_sponsor' ? 'id' : 'wcb_sponsor_level',
-					fieldValue: item_ids,
-				}
+					fieldName  : mode === 'wcb_sponsor' ? 'id' : 'wcb_sponsor_level',
+					fieldValue : item_ids,
+				},
 			];
 		}
 
@@ -50,7 +60,7 @@ class SponsorsBlockContent extends Component {
 	}
 
 	/**
-	 * Renders Sponsor Block content inside editor.
+	 * Render the block content.
 	 *
 	 * @return {Element}
 	 */

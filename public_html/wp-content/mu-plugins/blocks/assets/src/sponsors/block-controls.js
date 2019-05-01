@@ -14,7 +14,7 @@ const { __ }                  = wp.i18n;
  */
 import { BlockControls, PlaceholderSpecificMode } from '../shared/block-controls';
 import SponsorsBlockContent                       from './block-content';
-import SponsorsSelect                             from './sponsor-select';
+import SponsorsSelect                             from './sponsors-select';
 import { LABEL }                                  from './index';
 
 /**

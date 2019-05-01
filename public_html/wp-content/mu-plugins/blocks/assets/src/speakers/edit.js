@@ -15,7 +15,15 @@ import { WC_BLOCKS_STORE }       from '../blocks-store';
 
 const blockData = window.WordCampBlocks.speakers || {};
 
+/**
+ * Top-level component for the editing UI for the block.
+ */
 class SpeakersEdit extends Component {
+	/**
+	 * Render the block's editing UI.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { mode } = this.props.attributes;
 
@@ -46,8 +54,8 @@ const speakersSelect = ( select ) => {
 	};
 
 	return {
-		blockData : blockData,
-		entities  : entities,
+		blockData,
+		entities,
 	};
 };
 

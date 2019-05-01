@@ -17,7 +17,15 @@ import SpeakersBlockContent                       from './block-content';
 import SpeakersSelect                             from './speakers-select';
 import { LABEL }                                  from './index';
 
+/**
+ * Component for displaying a UI within the block.
+ */
 class SpeakersBlockControls extends BlockControls {
+	/**
+	 * Render the internal block UI.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { icon, attributes, setAttributes } = this.props;
 		const { mode } = attributes;

@@ -1,16 +1,16 @@
 /**
  * External dependencies
  */
-import { get } from 'lodash';
+import { get }    from 'lodash';
 import classnames from 'classnames';
 
 /**
  * WordPress dependencies
  */
-const { Disabled } = wp.components;
+const { Disabled }            = wp.components;
 const { Component, Fragment } = wp.element;
-const { __, _n } = wp.i18n;
-const { escapeAttribute } = wp.escapeHtml;
+const { __, _n }              = wp.i18n;
+const { escapeAttribute }     = wp.escapeHtml;
 
 /**
  * Internal dependencies
@@ -23,6 +23,16 @@ import { filterEntities }                                            from '../bl
 
 import './block-content.scss';
 
+/**
+ * Component for the section of each speaker post that displays information about relevant sessions.
+ *
+ * @param {Object} props {
+ *     @type {Object} speaker
+ *     @type {Array}  tracks
+ * }
+ *
+ * @return {Element}
+ */
 function SpeakerSessions( { speaker, tracks } ) {
 	const sessions = get( speaker, '_embedded.sessions', [] );
 
@@ -85,13 +95,26 @@ function SpeakerSessions( { speaker, tracks } ) {
 	return output;
 }
 
+/**
+ * Component for displaying the block content.
+ */
 class SpeakersBlockContent extends Component {
+	/**
+	 * Run additional operations during component initialization.
+	 *
+	 * @param {Object} props
+	 */
 	constructor( props ) {
 		super( props );
 
 		this.getFilteredPosts = this.getFilteredPosts.bind( this );
 	}
 
+	/**
+	 * Filter and sort the content that will be rendered.
+	 *
+	 * @returns {Array}
+	 */
 	getFilteredPosts() {
 		const { attributes, entities } = this.props;
 		const { wcb_speaker: posts } = entities;
@@ -102,9 +125,9 @@ class SpeakersBlockContent extends Component {
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			args.filter  = [
 				{
-					fieldName: mode === 'wcb_speaker' ? 'id' : 'speaker_group',
-					fieldValue: item_ids,
-				}
+					fieldName  : mode === 'wcb_speaker' ? 'id' : 'speaker_group',
+					fieldValue : item_ids,
+				},
 			];
 		}
 
@@ -113,6 +136,11 @@ class SpeakersBlockContent extends Component {
 		return filterEntities( posts, args );
 	}
 
+	/**
+	 * Render the block content.
+	 *
+	 * @return {Element}
+	 */
 	render() {
 		const { attributes, entities } = this.props;
 		const { wcb_track: tracks } = entities;

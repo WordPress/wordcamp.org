@@ -1,17 +1,19 @@
 /**
+ * WordPress dependencies
+ */
+const { Component, Fragment } = wp.element;
+const { withSelect }          = wp.data;
+
+/**
  * Internal dependencies
  */
 import SponsorInspectorControls from './inspector-controls';
 import SponsorBlockControls     from './block-controls';
 import GridToolbar              from '../shared/grid-layout/toolbar';
 import { ICON }                 from './index';
-
-/**
- * WordPress dependencies
- */
-const { Component, Fragment } = wp.element;
-const { withSelect }          = wp.data;
 import { WC_BLOCKS_STORE } from '../blocks-store';
+
+const blockData = window.WordCampBlocks.sponsors || {};
 
 class SponsorsEdit extends Component {
 	/**
@@ -52,6 +54,7 @@ const sponsorSelect = ( select ) => {
 	const { getEntities, getSiteSettings } = select( WC_BLOCKS_STORE );
 
 	return {
+		blockData,
 		sponsorPosts  : getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
 		sponsorLevels : getEntities( 'taxonomy', 'wcb_sponsor_level' ),
 		siteSettings  : getSiteSettings(),

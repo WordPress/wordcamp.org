@@ -86,10 +86,7 @@ class SponsorsBlockContent extends Component {
 				{ posts.map( ( post ) =>
 					<div
 						key={ post.slug }
-						className={ classnames(
-							'wordcamp-sponsor',
-							'wordcamp-sponsor-' + post.slug,
-						) }
+						className={ classnames( 'wordcamp-sponsor', 'wordcamp-sponsor-' + post.slug ) }
 					>
 						{ show_name &&
 							<ItemTitle
@@ -120,6 +117,7 @@ class SponsorsBlockContent extends Component {
 							<ItemPermalink
 								link={ post.link }
 								linkText={ __( 'Visit sponsor page', 'wordcamporg' ) }
+								className="wordcamp-sponsor-permalink"
 							/>
 						}
 					</div>

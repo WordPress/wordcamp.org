@@ -4,20 +4,18 @@
 	clear: both;
 }
 
-.wordcamp-block-post-list {
-	li {
-		list-style: none;
-	}
+.wordcamp-post-list {
+	list-style: none;
 
-	li.wordcamp-grid-layout-item {
+	.wordcamp-post-list-item {
 		margin: 0 0 1em 0;
-	}
 
-	&.layout-list > li {
-		margin-bottom: 1em;
+		.layout-list & {
+			margin-bottom: 1em;
 
-		&:last-child {
-			margin-bottom: 0;
+			&:last-child {
+				margin-bottom: 0;
+			}
 		}
 	}
 
@@ -33,7 +31,7 @@
 			min-height: 0;
 			min-width: 0;
 
-			& .wordcamp-block-post-list-item {
+			& .wordcamp-post-list-item {
 				overflow: hidden;
 				min-width: 0;
 			}

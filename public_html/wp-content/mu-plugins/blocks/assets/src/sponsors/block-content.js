@@ -13,9 +13,9 @@ const { __ }              = wp.i18n;
 /**
  * Internal dependencies
  */
-import FeaturedImage                                                 from '../shared/featured-image';
-import GridContentLayout                                             from '../shared/grid-layout/block-content';
 import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../shared/block-content';
+import FeaturedImage                                                 from '../shared/featured-image';
+import PostList                                                      from '../shared/post-list';
 import { filterEntities }                                            from '../blocks-store';
 
 /**
@@ -79,9 +79,9 @@ class SponsorsBlockContent extends Component {
 		}
 
 		return (
-			<GridContentLayout
-				className="wordcamp-sponsors-block"
+			<PostList
 				{ ...this.props }
+				className="wordcamp-sponsors-block"
 			>
 				{ posts.map( ( post ) =>
 					<div
@@ -124,7 +124,7 @@ class SponsorsBlockContent extends Component {
 						}
 					</div>
 				) }
-			</GridContentLayout>
+			</PostList>
 		);
 	}
 }

@@ -43,7 +43,7 @@ export function GridColumnsControl( {
  *
  * Should be used with rest of the components in this folder. Will use and set attributes `layout` and `grid_columns`.
  */
-class GridInspectorPanel extends Component {
+export class GridInspectorPanel extends Component {
 	/**
 	 * Render the control.
 	 *
@@ -72,5 +72,3 @@ class GridInspectorPanel extends Component {
 		);
 	}
 }
-
-export default GridInspectorPanel;

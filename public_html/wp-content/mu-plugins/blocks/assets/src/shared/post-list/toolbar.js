@@ -15,7 +15,7 @@ const { BlockControls } = wp.editor;
  *
  * @return {Element}
  */
-function LayoutToolbar( {
+export function LayoutToolbar( {
 	layout,
 	options,
 	setAttributes,
@@ -40,5 +40,3 @@ function LayoutToolbar( {
 		</BlockControls>
 	);
 }
-
-export default LayoutToolbar;

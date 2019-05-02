@@ -5,7 +5,12 @@
 }
 
 .wordcamp-post-list {
-	list-style: none;
+	// The double-ampersand will output the same class name twice in a row,
+	// which defeats an overzealous ul rule in Core's editor-blocks.css.
+	// https://css-tricks.com/the-sass-ampersand/#article-header-id-11
+	&#{&} {
+		list-style: none;
+	}
 
 	.wordcamp-post-list-item {
 		margin: 0 0 1em 0;

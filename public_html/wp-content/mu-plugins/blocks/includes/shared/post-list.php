@@ -1,7 +1,8 @@
 <?php
-
 namespace WordCamp\Blocks\Shared\Components;
 defined( 'WPINC' ) || die();
+
+use function WordCamp\Blocks\Shared\Content\{ render_class_string };
 
 /**
  * Render the containing HTML structures of a post list.
@@ -35,7 +36,7 @@ function render_post_list( array $rendered_items, $layout = 'list', $columns = 1
 		$container_classes[] = 'grid-columns-' . absint( $columns );
 	}
 
-	$container_classes = implode( ' ', array_unique( $container_classes ) );
+	$container_classes = render_class_string( $container_classes );
 
 	ob_start();
 	?>

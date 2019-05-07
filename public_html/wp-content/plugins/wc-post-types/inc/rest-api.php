@@ -189,6 +189,7 @@ add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args'
  * @return array
  */
 function add_meta_collection_params( $query_params, $post_type ) {
+	// Avoid exposing potentially sensitive data.
 	$public_meta_fields = array_filter( get_registered_meta_keys( 'post', $post_type->name ), function( $registered ) {
 		return $registered['show_in_rest'];
 	} );

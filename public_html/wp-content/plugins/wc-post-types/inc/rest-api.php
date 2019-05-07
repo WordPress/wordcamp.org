@@ -21,44 +21,19 @@ require_once( 'favorite-schedule-shortcode.php' );
  * @return void
  */
 function expose_public_post_meta() {
-	$public_meta_fields = [
-		'wcb_session' => [
-			'_wcpt_session_time' => array(
-				'type'   => 'integer',
-				'single' => true,
-			),
-
-			'_wcpt_session_type' => array(
-				'single' => true,
-			),
-
-			'_wcpt_session_slides' => array(
-				'single' => true,
-			),
-
-			'_wcpt_session_video' => array(
-				'single' => true,
-			),
-		],
-		'wcb_sponsor' => [
-			'_wcpt_sponsor_website' => array(
-				'single' => true,
-			),
-		],
+	$meta_defaults = [
+		'show_in_rest' => true,
+		'single'       => true,
 	];
 
-	foreach ( $public_meta_fields as $post_type => $fields ) {
-		foreach ( $fields as $field_key => $field_args ) {
-			$args = array_merge(
-				$field_args,
-				[
-					'show_in_rest' => true,
-				]
-			);
+	// Session.
+	register_post_meta( 'wcb_session', '_wcpt_session_time', wp_parse_args( [ 'type' => 'integer' ], $meta_defaults ) );
+	register_post_meta( 'wcb_session', '_wcpt_session_type', $meta_defaults );
+	register_post_meta( 'wcb_session', '_wcpt_session_slides', $meta_defaults );
+	register_post_meta( 'wcb_session', '_wcpt_session_video', $meta_defaults );
 
-			register_post_meta( $post_type, $field_key, $args );
-		}
-	}
+	// Sponsor.
+	register_post_meta( 'wcb_sponsor', '_wcpt_sponsor_website', $meta_defaults );
 }
 
 add_action( 'init', __NAMESPACE__ . '\expose_public_post_meta' );

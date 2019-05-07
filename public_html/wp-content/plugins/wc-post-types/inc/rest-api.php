@@ -6,51 +6,59 @@
  */
 
 namespace WordCamp\Post_Types\REST_API;
-use WP_Rest_Server;
+use WP_Rest_Server, WP_Post_Type;
 
 defined( 'WPINC' ) || die();
 
 require_once( 'favorite-schedule-shortcode.php' );
 
 /**
- * Add non-sensitive meta fields to the speaker/session REST API endpoints
+ * Add non-sensitive meta fields to WordCamp post type REST API endpoints.
  *
  * If we ever want to register meta for purposes other than exposing it in the API, then this function will
  * probably need to be re-thought and re-factored.
  *
- * @uses wcorg_register_meta_only_on_endpoint()
- *
  * @return void
  */
 function expose_public_post_meta() {
-	$public_session_fields = array(
-		'_wcpt_session_time' => array(
-			'type'   => 'integer',
-			'single' => true,
-		),
+	$public_meta_fields = [
+		'wcb_session' => [
+			'_wcpt_session_time' => array(
+				'type'   => 'integer',
+				'single' => true,
+			),
 
-		'_wcpt_session_type' => array(
-			'single' => true,
-		),
+			'_wcpt_session_type' => array(
+				'single' => true,
+			),
 
-		'_wcpt_session_slides' => array(
-			'single' => true,
-		),
+			'_wcpt_session_slides' => array(
+				'single' => true,
+			),
 
-		'_wcpt_session_video' => array(
-			'single' => true,
-		),
-	);
+			'_wcpt_session_video' => array(
+				'single' => true,
+			),
+		],
+		'wcb_sponsor' => [
+			'_wcpt_sponsor_website' => array(
+				'single' => true,
+			),
+		],
+	];
 
-	wcorg_register_meta_only_on_endpoint( 'post', $public_session_fields, '/wp-json/wp/v2/sessions/' );
+	foreach ( $public_meta_fields as $post_type => $fields ) {
+		foreach ( $fields as $field_key => $field_args ) {
+			$args = array_merge(
+				$field_args,
+				[
+					'show_in_rest' => true,
+				]
+			);
 
-	$public_sponsor_fields = array(
-		'_wcpt_sponsor_website' => array(
-			'single' => true,
-		),
-	);
-
-	wcorg_register_meta_only_on_endpoint( 'post', $public_sponsor_fields, '/wp-json/wp/v2/sponsors/' );
+			register_post_meta( $post_type, $field_key, $args );
+		}
+	}
 }
 
 add_action( 'init', __NAMESPACE__ . '\expose_public_post_meta' );

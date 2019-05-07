@@ -50,7 +50,7 @@ const sessionsSelect = ( select ) => {
 	const sessionArgs = {
 		_embed     : true,
 		meta_key   : '_wcpt_session_type',
-		meta_value : 'session',
+		meta_value : 'session', // Regular sessions only, no breaks/lunch/etc sessions.
 	};
 
 	const entities = {

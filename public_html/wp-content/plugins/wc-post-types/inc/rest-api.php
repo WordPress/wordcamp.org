@@ -155,7 +155,59 @@ function register_additional_rest_fields() {
 		]
 	);
 }
+
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
+
+/**
+ * Validate simple meta query parameters in an API request and add them to the args passed to WP_Query.
+ *
+ * @param array $args    The prepared args for the WP_Query object.
+ * @param array $request The args from the REST API request.
+ *
+ * @return array
+ */
+function prepare_meta_query_args( $args, $request ) {
+	if ( isset( $request['meta_key'], $request['meta_value'] ) ) {
+		$args['meta_key']   = $request['meta_key'];
+		$args['meta_value'] = $request['meta_value'];
+	}
+
+	return $args;
+}
+
+add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args', 10, 2 );
+
+/**
+ * Add meta field schemas to Sessions collection parameters.
+ *
+ * This enables and validates simple meta query parameters for the Sessions endpoint. Specific meta keys are
+ * safelisted by filtering for ones that have `show_in_rest` set to `true`.
+ *
+ * @param array        $query_params
+ * @param WP_Post_Type $post_type
+ *
+ * @return array
+ */
+function add_meta_collection_params( $query_params, $post_type ) {
+	$public_meta_fields = array_filter( get_registered_meta_keys( 'post', $post_type->name ), function( $registered ) {
+		return $registered['show_in_rest'];
+	} );
+
+	$query_params['meta_key'] = [
+		'description' => __( 'Limit result set to posts with a value set for a specific meta key. Use in conjunction with the meta_value parameter.', 'wordcamporg' ),
+		'type'        => 'string',
+		'enum'        => array_keys( $public_meta_fields ),
+	];
+
+	$query_params['meta_value'] = [
+		'description' => __( 'Limit result set to posts with a specific meta value. Use in conjunction with the meta_key parameter.', 'wordcamporg' ),
+		'type'        => 'string',
+	];
+
+	return $query_params;
+}
+
+add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_meta_collection_params', 10, 2 );
 
 /**
  * Get the URLs for an avatar based on an email address or username.

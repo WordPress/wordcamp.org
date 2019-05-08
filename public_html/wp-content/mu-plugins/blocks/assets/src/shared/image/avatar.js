@@ -11,11 +11,6 @@ const { __, sprintf } = wp.i18n;
 const { addQueryArgs, isURL } = wp.url;
 
 /**
- * Internal dependencies
- */
-import './style.scss';
-
-/**
  * Component for an avatar image, optionally including a link.
  *
  * This tries to mirror the markup output by WP's get_avatar function, with the addition
@@ -73,5 +68,3 @@ export function AvatarImage( {
 
 	return image;
 }
-
-export * from './inspector-controls';

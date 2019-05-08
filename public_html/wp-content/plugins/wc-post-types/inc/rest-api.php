@@ -142,9 +142,9 @@ add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' 
  * @return array
  */
 function prepare_meta_query_args( $args, $request ) {
-	if ( isset( $request['meta_key'], $request['meta_value'] ) ) {
-		$args['meta_key']   = $request['meta_key'];
-		$args['meta_value'] = $request['meta_value'];
+	if ( isset( $request['wc_meta_key'], $request['wc_meta_value'] ) ) {
+		$args['meta_key']   = $request['wc_meta_key'];
+		$args['meta_value'] = $request['wc_meta_value'];
 	}
 
 	return $args;
@@ -158,6 +158,12 @@ add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args'
  * This enables and validates simple meta query parameters for the Sessions endpoint. Specific meta keys are
  * safelisted by filtering for ones that have `show_in_rest` set to `true`.
  *
+ * TODO: This is necessary because as of version 5.2, WP does not support meta queries on the posts endpoint.
+ *       See https://core.trac.wordpress.org/ticket/47194
+ *
+ * The parameters registered here are prefixed with `wc_` because we don't want to have a collision with a
+ * future implementation in Core, if there ever is one.
+ *
  * @param array        $query_params
  * @param WP_Post_Type $post_type
  *
@@ -165,18 +171,16 @@ add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args'
  */
 function add_meta_collection_params( $query_params, $post_type ) {
 	// Avoid exposing potentially sensitive data.
-	$public_meta_fields = array_filter( get_registered_meta_keys( 'post', $post_type->name ), function( $registered ) {
-		return $registered['show_in_rest'];
-	} );
+	$public_meta_fields = wp_list_filter( get_registered_meta_keys( 'post', $post_type->name ), [ 'show_in_rest' => true ] );
 
-	$query_params['meta_key'] = [
-		'description' => __( 'Limit result set to posts with a value set for a specific meta key. Use in conjunction with the meta_value parameter.', 'wordcamporg' ),
+	$query_params['wc_meta_key'] = [
+		'description' => __( 'Limit result set to posts with a value set for a specific meta key. Use in conjunction with the wc_meta_value parameter.', 'wordcamporg' ),
 		'type'        => 'string',
 		'enum'        => array_keys( $public_meta_fields ),
 	];
 
-	$query_params['meta_value'] = [
-		'description' => __( 'Limit result set to posts with a specific meta value. Use in conjunction with the meta_key parameter.', 'wordcamporg' ),
+	$query_params['wc_meta_value'] = [
+		'description' => __( 'Limit result set to posts with a specific meta value. Use in conjunction with the wc_meta_key parameter.', 'wordcamporg' ),
 		'type'        => 'string',
 	];
 

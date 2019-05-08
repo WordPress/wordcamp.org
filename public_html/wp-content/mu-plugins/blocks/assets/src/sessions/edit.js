@@ -54,9 +54,9 @@ const sessionsSelect = ( select ) => {
 	const { getEntities } = select( WC_BLOCKS_STORE );
 
 	const sessionArgs = {
-		_embed     : true,
-		meta_key   : '_wcpt_session_type',
-		meta_value : 'session', // Regular sessions only, no breaks/lunch/etc sessions.
+		_embed        : true,
+		wc_meta_key   : '_wcpt_session_type',
+		wc_meta_value : 'session', // Regular sessions only, no breaks/lunch/etc sessions.
 	};
 
 	const entities = {

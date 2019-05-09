@@ -55,31 +55,31 @@ class SponsorsInspectorControls extends Component {
 					title={ __( 'Content Settings', 'wordcamporg' ) }
 					initialOpen={ true }
 				>
-					<PanelRow>
-						<ToggleControl
-							label={ __( 'Name', 'wordcamporg' ) }
-							help={ __( 'Show or hide sponsor name', 'wordcamporg' ) }
-							checked={ show_name }
-							onChange={ ( value ) => setAttributes( { show_name: value } ) }
-						/>
-					</PanelRow>
-					<PanelRow>
-						<SelectControl
-							label={ __( 'Description', 'wordcamporg' ) }
-							value={ content }
-							options={ options.content }
-							help={ __( 'Length of sponsor description', 'wordcamporg' ) }
-							onChange={ ( value ) => setAttributes( { content: value } ) }
-						/>
-					</PanelRow>
-					<PanelRow>
-						<SelectControl
-							label={ __( 'Sort by', 'wordcamporg' ) }
-							options={ options.sort }
-							value={ sort }
-							onChange={ ( value ) => setAttributes( { sort: value } ) }
-						/>
-					</PanelRow>
+					<ToggleControl
+						label={ __( 'Name', 'wordcamporg' ) }
+						help={ __( 'Show or hide sponsor name', 'wordcamporg' ) }
+						checked={ show_name }
+						onChange={ ( value ) => setAttributes( { show_name: value } ) }
+					/>
+					<SelectControl
+						label={ __( 'Description', 'wordcamporg' ) }
+						value={ content }
+						options={ options.content }
+						help={ __( 'Length of sponsor description', 'wordcamporg' ) }
+						onChange={ ( value ) => setAttributes( { content: value } ) }
+					/>
+				</PanelBody>
+
+				<PanelBody
+					title={ __( 'Sorting', 'wordcamporg' ) }
+					initialOpen={ false }
+				>
+					<SelectControl
+						label={ __( 'Sort by', 'wordcamporg' ) }
+						value={ sort }
+						options={ options.sort }
+						onChange={ ( value ) => setAttributes( { sort: value } ) }
+					/>
 				</PanelBody>
 			</InspectorControls>
 		);

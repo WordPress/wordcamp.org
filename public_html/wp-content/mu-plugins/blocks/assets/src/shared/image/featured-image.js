@@ -7,16 +7,17 @@ import { sortBy } from 'lodash';
 /**
  * WordPress dependencies.
  */
-const { Disabled } = wp.components;
+const { Disabled }  = wp.components;
 const { Component } = wp.element;
-const { isURL } = wp.url;
+const { __, _x }    = wp.i18n;
+const { isURL }     = wp.url;
 
 /**
  * Internal dependencies
  */
 import './featured-image.scss';
 
-// Avatar-specific presets for the ImageSizeControl component.
+// Featured Image-specific presets for the ImageSizeControl component.
 export const featuredImageSizePresets = [
 	{
 		name      : __( 'Small', 'wordcamporg' ),

@@ -7,9 +7,9 @@ import { debounce } from 'lodash';
 /**
  * WordPress dependencies
  */
-const { Component, Fragment } = wp.element;
-const { BaseControl, Button, ButtonGroup, RangeControl, Toolbar } = wp.components;
-const { __ } = wp.i18n;
+const { BaseControl, Button, ButtonGroup, PanelBody, PanelRow, RangeControl, ToggleControl, Toolbar } = wp.components;
+const { Component, Fragment }                                                                         = wp.element;
+const { __ }                                                                                          = wp.i18n;
 
 /**
  * Internal dependencies
@@ -19,22 +19,20 @@ import './inspector-controls.scss';
 /**
  * Component for a UI control for image size.
  *
- * This control assumes the image only has one size dimension. For avatars, this is because the images are always
- * square. For featured images, this is because the width is adjustable, while the height is automatically calculated
- * to maintain the correct aspect ratio.
+ * This control assumes the image only has one adjustable size dimension. For avatars, this is because the images are
+ * always square. For featured images, this is because the width is adjustable, while the height is automatically
+ * calculated to maintain the correct aspect ratio.
  *
  * @param {Object} props {
  *     @type {string}   className
  *     @type {string}   label
  *     @type {string}   help
  *     @type {number}   value
- *     @type {Array}    presetSizes
+ *     @type {Array}    sizePresets
  *     @type {Function} onChange
  *     @type {number}   initialPosition
  *     @type {Object}   rangeProps
  * }
- *
- * @return {Element}
  */
 export class ImageSizeControl extends Component {
 	/**
@@ -73,7 +71,7 @@ export class ImageSizeControl extends Component {
 			className,
 			label,
 			help,
-			presetSizes = [],
+			sizePresets = [],
 			initialPosition,
 			rangeProps,
 		} = this.props;
@@ -86,9 +84,9 @@ export class ImageSizeControl extends Component {
 				help={ help }
 			>
 				<div className="wordcamp-image-size-preset-buttons">
-					{ presetSizes.length > 0 &&
+					{ sizePresets.length > 0 &&
 						<ButtonGroup aria-label={ label }>
-							{ presetSizes.map( ( preset ) => {
+							{ sizePresets.map( ( preset ) => {
 								const { name, shortName, size, slug } = preset;
 								const isCurrent = value === size;
 
@@ -181,10 +179,22 @@ export function ImageAlignmentControl( {
 }
 
 /**
- * Component to add an Inspector panel
+ * Component to add an Inspector panel with image-related controls.
  *
- * Should be used with rest of the components in this folder. Will use and set attributes `show_images`,
- * `image_size`, and `image_align`.
+ * @param {Object} props {
+ *     @type {string}   title
+ *     @type {boolean}  initialOpen
+ *     @type {string}   className
+ *     @type {boolean}  show
+ *     @type {Function} onChangeShow
+ *     @type {number}   size
+ *     @type {Function} onChangeSize
+ *     @type {Object}   sizeSchema
+ *     @type {Array}    sizePresets
+ *     @type {string}   align
+ *     @type {Function} onChangeAlign
+ *     @type {Array}    alignOptions
+ * }
  */
 export class ImageInspectorPanel extends Component {
 	/**
@@ -194,44 +204,53 @@ export class ImageInspectorPanel extends Component {
 	 */
 	render() {
 		const {
-			title,
+			title = __( 'Image Settings', 'wordcamporg' ),
 			initialOpen = true,
-			show_images,
-			image_size,
-			image_align,
-			imageSizeSchema = {},
+			className,
+			show,
+			onChangeShow,
+			size,
+			onChangeSize,
+			sizeSchema,
+			sizePresets = [],
+			align,
+			onChangeAlign,
 			alignOptions = [],
-			setAttributes,
 		} = this.props;
 
 		return (
 			<PanelBody
-				title={ title || __( 'Image Settings', 'wordcamporg' ) }
+				title={ title }
 				initialOpen={ initialOpen }
+				className={ classnames( 'wordcamp-image-inspector-panel', className ) }
 			>
 				<ToggleControl
 					label={ __( 'Show images', 'wordcamporg' ) }
-					checked={ show_images }
-					onChange={ ( value ) => setAttributes( { show_images: value } ) }
+					checked={ show }
+					onChange={ onChangeShow }
 				/>
-				{ show_images &&
+				{ show &&
 					<Fragment>
 						<ImageSizeControl
 							label={ __( 'Size', 'wordcamporg' ) }
-							value={ Number( image_size ) }
-							initialPosition={ Number( imageSizeSchema.default ) }
-							onChange={ ( value ) => setAttributes( { image_size: value } ) }
+							value={ Number( size ) }
+							initialPosition={ Number( sizeSchema.default ) }
+							sizePresets={ sizePresets }
+							onChange={ onChangeSize }
 							rangeProps={ {
-								min : Number( imageSizeSchema.minimum ),
-								max : Number( imageSizeSchema.maximum ),
+								min : Number( sizeSchema.minimum ),
+								max : Number( sizeSchema.maximum ),
 							} }
 						/>
-						<ImageAlignmentControl
-							label={ __( 'Alignment', 'wordcamporg' ) }
-							value={ image_align }
-							onChange={ ( value ) => setAttributes( { image_align: value } ) }
-							alignOptions={ alignOptions }
-						/>
+						{ /* The PanelRow wrapper prevents the toolbar from expanding to full width. */ }
+						<PanelRow>
+							<ImageAlignmentControl
+								label={ __( 'Alignment', 'wordcamporg' ) }
+								value={ align }
+								onChange={ onChangeAlign }
+								alignOptions={ alignOptions }
+							/>
+						</PanelRow>
 					</Fragment>
 				}
 			</PanelBody>

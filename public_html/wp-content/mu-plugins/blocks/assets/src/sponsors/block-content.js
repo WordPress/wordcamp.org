@@ -48,7 +48,7 @@ class SponsorsBlockContent extends Component {
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			args.filter  = [
 				{
-					fieldName  : mode === 'wcb_sponsor' ? 'id' : 'wcb_sponsor_level',
+					fieldName  : mode === 'wcb_sponsor' ? 'id' : 'sponsor_level',
 					fieldValue : item_ids,
 				},
 			];

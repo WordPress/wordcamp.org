@@ -17,7 +17,24 @@ const { __ } = wp.i18n;
 import './inspector-controls.scss';
 
 /**
+ * Component for a UI control for image size.
  *
+ * This control assumes the image only has one size dimension. For avatars, this is because the images are always
+ * square. For featured images, this is because the width is adjustable, while the height is automatically calculated
+ * to maintain the correct aspect ratio.
+ *
+ * @param {Object} props {
+ *     @type {string}   className
+ *     @type {string}   label
+ *     @type {string}   help
+ *     @type {number}   value
+ *     @type {Array}    presetSizes
+ *     @type {Function} onChange
+ *     @type {number}   initialPosition
+ *     @type {Object}   rangeProps
+ * }
+ *
+ * @return {Element}
  */
 export class ImageSizeControl extends Component {
 	/**
@@ -30,7 +47,7 @@ export class ImageSizeControl extends Component {
 
 		this.state = {
 			value    : props.value,
-			onChange : debounce( props.onChange, 10 ), // higher values lead to a noticeable degradation in visual feedback.
+			onChange : debounce( props.onChange, 10 ), // Higher values lead to a noticeable degradation in visual feedback.
 		};
 
 		this.onChange = this.onChange.bind( this );
@@ -52,8 +69,15 @@ export class ImageSizeControl extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { className, label, help, presets = [], initialPosition, rangeProps } = this.props;
-		const { value }                                               = this.state;
+		const {
+			className,
+			label,
+			help,
+			presetSizes = [],
+			initialPosition,
+			rangeProps,
+		} = this.props;
+		const { value } = this.state;
 
 		return (
 			<BaseControl
@@ -62,9 +86,9 @@ export class ImageSizeControl extends Component {
 				help={ help }
 			>
 				<div className="wordcamp-image-size-preset-buttons">
-					{ presets.length > 0 &&
+					{ presetSizes.length > 0 &&
 						<ButtonGroup aria-label={ label }>
-							{ presets.map( ( preset ) => {
+							{ presetSizes.map( ( preset ) => {
 								const { name, shortName, size, slug } = preset;
 								const isCurrent = value === size;
 
@@ -162,16 +186,23 @@ export function ImageAlignmentControl( {
  * Should be used with rest of the components in this folder. Will use and set attributes `show_images`,
  * `image_size`, and `image_align`.
  */
-export default class ImageInspectorPanel extends Component {
+export class ImageInspectorPanel extends Component {
 	/**
 	 * Render the control.
 	 *
 	 * @return {Element}
 	 */
 	render() {
-		const { title, initialOpen = true, attributes, setAttributes, blockData } = this.props;
-		const { show_images, image_size, image_align } = attributes;
-		const { schema, options } = blockData;
+		const {
+			title,
+			initialOpen = true,
+			show_images,
+			image_size,
+			image_align,
+			imageSizeSchema = {},
+			alignOptions = [],
+			setAttributes,
+		} = this.props;
 
 		return (
 			<PanelBody
@@ -188,18 +219,18 @@ export default class ImageInspectorPanel extends Component {
 						<ImageSizeControl
 							label={ __( 'Size', 'wordcamporg' ) }
 							value={ Number( image_size ) }
-							initialPosition={ Number( schema.image_size.default ) }
+							initialPosition={ Number( imageSizeSchema.default ) }
 							onChange={ ( value ) => setAttributes( { image_size: value } ) }
 							rangeProps={ {
-								min : Number( schema.image_size.minimum ),
-								max : Number( schema.image_size.maximum ),
+								min : Number( imageSizeSchema.minimum ),
+								max : Number( imageSizeSchema.maximum ),
 							} }
 						/>
 						<ImageAlignmentControl
 							label={ __( 'Alignment', 'wordcamporg' ) }
 							value={ image_align }
 							onChange={ ( value ) => setAttributes( { image_align: value } ) }
-							alignOptions={ options.align_image }
+							alignOptions={ alignOptions }
 						/>
 					</Fragment>
 				}

@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 const { PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
-const { InspectorControls }                                 = wp.editor;
+const { InspectorControls: Inspector }                      = wp.editor;
 const { Component }                                         = wp.element;
 const { __ }                                                = wp.i18n;
 
@@ -35,7 +35,7 @@ const DEFAULT_OPTIONS = {
 /**
  * Component for block controls that appear in the Inspector Panel.
  */
-class OrganizerInspectorControls extends Component {
+export class InspectorControls extends Component {
 	/**
 	 * Render the controls.
 	 *
@@ -47,7 +47,7 @@ class OrganizerInspectorControls extends Component {
 		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS }     = blockData;
 
 		return (
-			<InspectorControls>
+			<Inspector>
 				<GridInspectorPanel
 					{ ...this.props }
 				/>
@@ -86,9 +86,7 @@ class OrganizerInspectorControls extends Component {
 						/>
 					</PanelRow>
 				</PanelBody>
-			</InspectorControls>
+			</Inspector>
 		);
 	}
 }
-
-export default OrganizerInspectorControls;

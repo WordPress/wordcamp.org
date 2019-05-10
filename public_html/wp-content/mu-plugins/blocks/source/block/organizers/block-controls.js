@@ -15,14 +15,14 @@ const { __ }                  = wp.i18n;
  */
 import { PlaceholderSpecificMode } from '../../component/block-controls';
 import { getOptionLabel }          from '../../component/item-select';
-import OrganizersBlockContent      from './block-content';
-import OrganizersSelect            from './organizers-select';
+import { BlockContent }            from './block-content';
+import { Select }                  from './select';
 import { LABEL }                   from './index';
 
 /**
  * Component for displaying a UI within the block.
  */
-class OrganizersBlockControls extends Component {
+export class BlockControls extends Component {
 	/**
 	 * Render the internal block UI.
 	 *
@@ -38,7 +38,7 @@ class OrganizersBlockControls extends Component {
 		switch ( mode ) {
 			case 'all' :
 				output = (
-					<OrganizersBlockContent { ...this.props } />
+					<BlockContent { ...this.props } />
 				);
 				break;
 
@@ -49,10 +49,10 @@ class OrganizersBlockControls extends Component {
 						label={ getOptionLabel( mode, options.mode ) }
 						icon={ icon }
 						content={
-							<OrganizersBlockContent { ...this.props } />
+							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							<OrganizersSelect { ...this.props } />
+							<Select { ...this.props } />
 						}
 					/>
 				);
@@ -78,7 +78,7 @@ class OrganizersBlockControls extends Component {
 						</div>
 
 						<div className="wordcamp-block-edit-mode-option">
-							<OrganizersSelect
+							<Select
 								label={ __( 'Choose specific organizers or teams', 'wordcamporg' ) }
 								{ ...this.props }
 							/>
@@ -91,5 +91,3 @@ class OrganizersBlockControls extends Component {
 		return output;
 	}
 }
-
-export default OrganizersBlockControls;

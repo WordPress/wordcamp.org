@@ -19,7 +19,7 @@ import { filterEntities }                             from '../../data';
 /**
  * Component for displaying the block content.
  */
-class OrganizersBlockContent extends Component {
+export class BlockContent extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -113,5 +113,3 @@ class OrganizersBlockContent extends Component {
 		);
 	}
 }
-
-export default OrganizersBlockContent;

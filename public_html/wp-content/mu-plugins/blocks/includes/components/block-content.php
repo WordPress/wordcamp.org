@@ -1,6 +1,8 @@
 <?php
 namespace WordCamp\Blocks\Components;
 
+use function WordCamp\Blocks\Utilities\{ render_class_string };
+
 defined( 'WPINC' ) || die();
 
 /**

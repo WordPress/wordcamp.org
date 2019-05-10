@@ -1,8 +1,8 @@
 /**
  * WordPress dependencies
  */
+const { InspectorControls: CoreInspectorControlsContainer } = wp.blockEditor;
 const { PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
-const { InspectorControls: Inspector }                      = wp.editor;
 const { Component }                                         = wp.element;
 const { __ }                                                = wp.i18n;
 
@@ -47,7 +47,7 @@ export class InspectorControls extends Component {
 		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS }     = blockData;
 
 		return (
-			<Inspector>
+			<CoreInspectorControlsContainer>
 				<GridInspectorPanel
 					{ ...this.props }
 				/>
@@ -86,7 +86,7 @@ export class InspectorControls extends Component {
 						/>
 					</PanelRow>
 				</PanelBody>
-			</Inspector>
+			</CoreInspectorControlsContainer>
 		);
 	}
 }

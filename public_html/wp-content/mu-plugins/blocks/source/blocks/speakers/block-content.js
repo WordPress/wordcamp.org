@@ -15,9 +15,9 @@ const { escapeAttribute }     = wp.escapeHtml;
 /**
  * Internal dependencies
  */
-import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../../component/block-content';
-import { AvatarImage }                                               from '../../component/image';
-import { PostList }                                                  from '../../component/post-list';
+import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
+import { AvatarImage }                                               from '../../components/image';
+import { PostList }                                                  from '../../components/post-list';
 import { filterEntities }                                            from '../../data';
 import { tokenSplit, arrayTokenReplace }                             from '../../i18n';
 

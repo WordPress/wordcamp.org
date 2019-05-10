@@ -7,7 +7,7 @@ const { Component, Fragment } = wp.element;
 /**
  * Internal dependencies
  */
-import { LayoutToolbar }     from '../../component/post-list';
+import { LayoutToolbar }     from '../../components/post-list';
 import { WC_BLOCKS_STORE }   from '../../data';
 import { BlockControls }     from './block-controls';
 import { InspectorControls } from './inspector-controls';

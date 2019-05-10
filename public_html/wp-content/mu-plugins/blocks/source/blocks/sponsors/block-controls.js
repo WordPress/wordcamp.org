@@ -13,8 +13,8 @@ const { __ }                  = wp.i18n;
 /**
  * Internal dependencies
  */
-import { PlaceholderSpecificMode } from '../../component/block-controls';
-import { getOptionLabel }          from '../../component/item-select';
+import { PlaceholderSpecificMode } from '../../components/block-controls';
+import { getOptionLabel }          from '../../components/item-select';
 import { BlockContent }            from './block-content';
 import { Select }                  from './select';
 import { LABEL }                   from './index';
@@ -42,8 +42,8 @@ export class BlockControls extends Component {
 				);
 				break;
 
-			case 'wcb_organizer' :
-			case 'wcb_organizer_team' :
+			case 'wcb_sponsor' :
+			case 'wcb_sponsor_level' :
 				output = (
 					<PlaceholderSpecificMode
 						label={ getOptionLabel( mode, options.mode ) }
@@ -79,7 +79,8 @@ export class BlockControls extends Component {
 
 						<div className="wordcamp-block-edit-mode-option">
 							<Select
-								label={ __( 'Choose specific organizers or teams', 'wordcamporg' ) }
+								icon={ icon }
+								label={ __( 'Choose specific sponsors or levels', 'wordcamporg' ) }
 								{ ...this.props }
 							/>
 						</div>

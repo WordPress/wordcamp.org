@@ -13,8 +13,8 @@ const { __ }                  = wp.i18n;
 /**
  * Internal dependencies
  */
-import { PlaceholderSpecificMode } from '../../component/block-controls';
-import { getOptionLabel }          from '../../component/item-select';
+import { PlaceholderSpecificMode } from '../../components/block-controls';
+import { getOptionLabel }          from '../../components/item-select';
 import { BlockContent }            from './block-content';
 import { Select }                  from './select';
 import { LABEL }                   from './index';

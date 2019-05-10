@@ -12,7 +12,7 @@ const { __ }        = wp.i18n;
 /**
  * Internal dependencies
  */
-import { buildOptions, ItemSelect, Option } from '../../component/item-select';
+import { buildOptions, ItemSelect, Option } from '../../components/item-select';
 
 /**
  * Component for selecting posts/terms for populating the block content.
@@ -38,20 +38,26 @@ export class Select extends Component {
 	 */
 	buildSelectOptions() {
 		const { entities } = this.props;
-		const { wcb_speaker, wcb_speaker_group } = entities;
+		const { wcb_session, wcb_track, wcb_session_category } = entities;
 
 		const optionGroups = [
 			{
 				entityType : 'post',
-				type       : 'wcb_speaker',
-				label      : __( 'Speakers', 'wordcamporg' ),
-				items      : wcb_speaker,
+				type       : 'wcb_session',
+				label      : __( 'Sessions', 'wordcamporg' ),
+				items      : wcb_session,
 			},
 			{
 				entityType : 'term',
-				type       : 'wcb_speaker_group',
-				label      : __( 'Groups', 'wordcamporg' ),
-				items      : wcb_speaker_group,
+				type       : 'wcb_track',
+				label      : __( 'Tracks', 'wordcamporg' ),
+				items      : wcb_track,
+			},
+			{
+				entityType : 'term',
+				type       : 'wcb_session_category',
+				label      : __( 'Session Categories', 'wordcamporg' ),
+				items      : wcb_session_category,
 			},
 		];
 
@@ -101,11 +107,11 @@ export class Select extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { label, icon, setAttributes } = this.props;
+		const { icon, label, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
-				className="wordcamp-speakers-select"
+				className="wordcamp-sessions-select"
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
@@ -115,7 +121,7 @@ export class Select extends Component {
 					formatOptionLabel : ( optionData ) => {
 						return (
 							<Option
-								icon={ 'wcb_speaker_group' === optionData.type ? icon : null }
+								icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
 								{ ...optionData }
 							/>
 						);

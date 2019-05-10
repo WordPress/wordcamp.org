@@ -11,9 +11,9 @@ const { Component } = wp.element;
 /**
  * Internal dependencies
  */
-import { AvatarImage }                                from '../../component/image';
-import { BlockNoContent, ItemTitle, ItemHTMLContent } from '../../component/block-content';
-import { PostList }                                   from '../../component/post-list';
+import { AvatarImage }                                from '../../components/image';
+import { BlockNoContent, ItemTitle, ItemHTMLContent } from '../../components/block-content';
+import { PostList }                                   from '../../components/post-list';
 import { filterEntities }                             from '../../data';
 
 /**

@@ -13,9 +13,9 @@ const { __ }        = wp.i18n;
 /**
  * Internal dependencies
  */
-import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../../component/block-content';
-import { FeaturedImage }                                             from '../../component/image';
-import { PostList }                                                  from '../../component/post-list';
+import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
+import { FeaturedImage }                                             from '../../components/image';
+import { PostList }                                                  from '../../components/post-list';
 import { filterEntities }                                            from '../../data';
 
 /**

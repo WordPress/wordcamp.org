@@ -7,18 +7,18 @@ const { Component, Fragment } = wp.element;
 /**
  * Internal dependencies
  */
-import { LayoutToolbar }     from '../../component/post-list';
+import { LayoutToolbar }     from '../../components/post-list';
 import { WC_BLOCKS_STORE }   from '../../data';
 import { BlockControls }     from './block-controls';
 import { InspectorControls } from './inspector-controls';
 import { ICON }              from './index';
 
-const blockData = window.WordCampBlocks.sponsors || {};
+const blockData = window.WordCampBlocks.speakers || {};
 
 /**
  * Top-level component for the editing UI for the block.
  */
-class SponsorsEdit extends Component {
+class SpeakersEdit extends Component {
 	/**
 	 * Render the block's editing UI.
 	 *
@@ -50,19 +50,19 @@ class SponsorsEdit extends Component {
 	}
 }
 
-const sponsorSelect = ( select ) => {
-	const { getEntities, getSiteSettings } = select( WC_BLOCKS_STORE );
+const speakersSelect = ( select ) => {
+	const { getEntities } = select( WC_BLOCKS_STORE );
 
 	const entities = {
-		wcb_sponsor       : getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
-		wcb_sponsor_level : getEntities( 'taxonomy', 'wcb_sponsor_level' ),
+		wcb_speaker       : getEntities( 'postType', 'wcb_speaker', { _embed: true } ),
+		wcb_speaker_group : getEntities( 'taxonomy', 'wcb_speaker_group' ),
+		wcb_track         : getEntities( 'taxonomy', 'wcb_track' ),
 	};
 
 	return {
-		blockData    : blockData,
-		entities     : entities,
-		siteSettings : getSiteSettings(),
+		blockData,
+		entities,
 	};
 };
 
-export const Edit = withSelect( sponsorSelect )( SponsorsEdit );
+export const Edit = withSelect( speakersSelect )( SpeakersEdit );

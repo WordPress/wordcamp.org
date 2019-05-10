@@ -9,8 +9,8 @@ const { __ }                                                = wp.i18n;
 /**
  * Internal dependencies
  */
-import { avatarSizePresets, ImageInspectorPanel } from '../../component/image';
-import { GridInspectorPanel }                     from '../../component/post-list';
+import { avatarSizePresets, ImageInspectorPanel } from '../../components/image';
+import { GridInspectorPanel }                     from '../../components/post-list';
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {

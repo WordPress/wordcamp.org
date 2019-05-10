@@ -9,8 +9,8 @@ const { __ }                                                = wp.i18n;
 /**
  * Internal dependencies
  */
-import { featuredImageSizePresets, ImageInspectorPanel } from '../../component/image';
-import { GridInspectorPanel }                            from '../../component/post-list';
+import { featuredImageSizePresets, ImageInspectorPanel } from '../../components/image';
+import { GridInspectorPanel }                            from '../../components/post-list';
 
 /**
  * Component for block controls that appear in the Inspector Panel.

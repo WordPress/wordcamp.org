@@ -12,7 +12,7 @@ const { __ }        = wp.i18n;
 /**
  * Internal dependencies
  */
-import { buildOptions, ItemSelect, Option } from '../../component/item-select';
+import { buildOptions, ItemSelect, Option } from '../../components/item-select';
 
 /**
  * Component for selecting posts/terms for populating the block content.

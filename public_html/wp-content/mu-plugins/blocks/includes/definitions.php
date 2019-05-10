@@ -1,5 +1,6 @@
 <?php
-namespace WordCamp\Blocks\Shared\Definitions;
+namespace WordCamp\Blocks\Definitions;
+
 defined( 'WPINC' ) || die();
 
 /**

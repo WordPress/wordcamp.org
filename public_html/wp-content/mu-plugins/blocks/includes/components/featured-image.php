@@ -1,9 +1,9 @@
 <?php
-
-namespace WordCamp\Blocks\Shared\Components;
-defined( 'WPINC' ) || die();
+namespace WordCamp\Blocks\Components;
 
 use WP_Post;
+
+defined( 'WPINC' ) || die();
 
 /**
  * Provides render backend for FeaturedImage component.

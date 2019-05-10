@@ -1,10 +1,11 @@
 <?php
 namespace WordCamp\Blocks\Sponsors;
-defined( 'WPINC' ) || die();
 
 use WP_Post;
-use function WordCamp\Blocks\Shared\Content\{ get_all_the_content, render_item_title, render_item_content, render_item_permalink };
-use function WordCamp\Blocks\Shared\Components\{ render_featured_image };
+use function WordCamp\Blocks\Components\{ render_featured_image, render_item_title, render_item_content, render_item_permalink };
+use function WordCamp\Blocks\Utilities\{ get_all_the_content };
+
+defined( 'WPINC' ) || die();
 
 /** @var array   $attributes */
 /** @var WP_Post $sponsor */

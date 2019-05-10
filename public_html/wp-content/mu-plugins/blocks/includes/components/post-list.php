@@ -1,8 +1,9 @@
 <?php
-namespace WordCamp\Blocks\Shared\Components;
-defined( 'WPINC' ) || die();
+namespace WordCamp\Blocks\Components;
 
-use function WordCamp\Blocks\Shared\Content\{ render_class_string };
+use function WordCamp\Blocks\Utilities\{ render_class_string };
+
+defined( 'WPINC' ) || die();
 
 /**
  * Render the containing HTML structures of a post list.

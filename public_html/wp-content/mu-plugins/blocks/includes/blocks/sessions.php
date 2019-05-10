@@ -1,9 +1,9 @@
 <?php
-
 namespace WordCamp\Blocks\Sessions;
+
 use WordCamp\Blocks;
-use function WordCamp\Blocks\Shared\Components\{ render_post_list };
-use function WordCamp\Blocks\Shared\Definitions\{ get_shared_definitions, get_shared_definition };
+use function WordCamp\Blocks\Components\{ render_post_list };
+use function WordCamp\Blocks\Definitions\{ get_shared_definitions, get_shared_definition };
 
 defined( 'WPINC' ) || die();
 
@@ -48,7 +48,7 @@ function render( $attributes ) {
 
 	foreach ( $sessions as $session ) {
 		ob_start();
-		require Blocks\PLUGIN_DIR . 'view/session.php';
+		require Blocks\PLUGIN_DIR . 'views/session.php';
 		$rendered_session_posts[] = ob_get_clean();
 	}
 

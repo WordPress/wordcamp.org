@@ -1,9 +1,9 @@
 <?php
-
 namespace WordCamp\Blocks\Sessions;
+
 use WP_Post;
-use function WordCamp\Blocks\Shared\Content\{ get_all_the_content, array_to_human_readable_list, render_item_title, render_item_content, render_item_permalink };
-use function WordCamp\Blocks\Shared\Components\{ render_featured_image };
+use function WordCamp\Blocks\Components\{ render_featured_image, render_item_title, render_item_content, render_item_permalink };
+use function WordCamp\Blocks\Utilities\{ get_all_the_content, array_to_human_readable_list };
 
 defined( 'WPINC' ) || die();
 

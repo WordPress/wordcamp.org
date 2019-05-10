@@ -1,5 +1,6 @@
 <?php
 namespace WordCamp\Blocks;
+
 defined( 'WPINC' ) || die();
 
 define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
@@ -10,19 +11,28 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
  *
  * @return void
  */
-function load() {
-	require_once PLUGIN_DIR . 'includes/shared/content.php';
-	require_once PLUGIN_DIR . 'includes/shared/definitions.php';
-	require_once PLUGIN_DIR . 'includes/shared/featured-image.php';
-	require_once PLUGIN_DIR . 'includes/shared/post-list.php';
+function load_includes() {
+	$includes_dir = PLUGIN_DIR . 'includes/';
 
-	require_once PLUGIN_DIR . 'includes/organizers.php';
-	require_once PLUGIN_DIR . 'includes/sessions.php';
-	require_once PLUGIN_DIR . 'includes/speakers.php';
-	require_once PLUGIN_DIR . 'includes/sponsors.php';
+	require_once $includes_dir . 'definitions.php';
+
+	// Utilities.
+	require_once $includes_dir . 'utilities/content.php';
+
+	// Components.
+	require_once $includes_dir . 'components/block-content.php';
+	require_once $includes_dir . 'components/featured-image.php';
+	require_once $includes_dir . 'components/post-list.php';
+
+	// Blocks.
+	require_once $includes_dir . 'blocks/organizers.php';
+	require_once $includes_dir . 'blocks/sessions.php';
+	require_once $includes_dir . 'blocks/speakers.php';
+	require_once $includes_dir . 'blocks/sponsors.php';
 
 }
-add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
+
+add_action( 'plugins_loaded', __NAMESPACE__ . '\load_includes' );
 
 /**
  * Add block categories for custom blocks.

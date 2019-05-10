@@ -17,7 +17,7 @@ import { buildOptions, ItemSelect, Option } from '../../component/item-select';
 /**
  * Component for selecting posts/terms for populating the block content.
  */
-class SpeakersSelect extends Component {
+export class Select extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -125,5 +125,3 @@ class SpeakersSelect extends Component {
 		);
 	}
 }
-
-export default SpeakersSelect;

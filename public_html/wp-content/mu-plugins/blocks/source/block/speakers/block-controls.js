@@ -15,14 +15,14 @@ const { __ }                  = wp.i18n;
  */
 import { PlaceholderSpecificMode } from '../../component/block-controls';
 import { getOptionLabel }          from '../../component/item-select';
-import SpeakersBlockContent        from './block-content';
-import SpeakersSelect              from './speakers-select';
+import { BlockContent }            from './block-content';
+import { Select }                  from './select';
 import { LABEL }                   from './index';
 
 /**
  * Component for displaying a UI within the block.
  */
-class SpeakersBlockControls extends Component {
+export class BlockControls extends Component {
 	/**
 	 * Render the internal block UI.
 	 *
@@ -38,7 +38,7 @@ class SpeakersBlockControls extends Component {
 		switch ( mode ) {
 			case 'all' :
 				output = (
-					<SpeakersBlockContent { ...this.props } />
+					<BlockContent { ...this.props } />
 				);
 				break;
 
@@ -49,10 +49,10 @@ class SpeakersBlockControls extends Component {
 						label={ getOptionLabel( mode, options.mode ) }
 						icon={ icon }
 						content={
-							<SpeakersBlockContent { ...this.props } />
+							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							<SpeakersSelect { ...this.props } />
+							<Select { ...this.props } />
 						}
 					/>
 				);
@@ -78,7 +78,7 @@ class SpeakersBlockControls extends Component {
 						</div>
 
 						<div className="wordcamp-block-edit-mode-option">
-							<SpeakersSelect
+							<Select
 								icon={ icon }
 								label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
 								{ ...this.props }
@@ -92,5 +92,3 @@ class SpeakersBlockControls extends Component {
 		return output;
 	}
 }
-
-export default SpeakersBlockControls;

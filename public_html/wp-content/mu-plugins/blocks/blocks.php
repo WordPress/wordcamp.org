@@ -52,14 +52,14 @@ add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories' );
 function register_assets() {
 	wp_register_style(
 		'wordcamp-blocks',
-		PLUGIN_URL . 'assets/blocks.min.css',
+		PLUGIN_URL . 'build/blocks.min.css',
 		[],
-		filemtime( PLUGIN_DIR . 'assets/blocks.min.css' )
+		filemtime( PLUGIN_DIR . 'build/blocks.min.css' )
 	);
 
 	wp_register_script(
 		'wordcamp-blocks',
-		PLUGIN_URL . 'assets/blocks.min.js',
+		PLUGIN_URL . 'build/blocks.min.js',
 		array(
 			'lodash',
 			'wp-api-fetch',
@@ -73,7 +73,7 @@ function register_assets() {
 			'wp-i18n',
 			'wp-url',
 		),
-		filemtime( PLUGIN_DIR . 'assets/blocks.min.js' ),
+		filemtime( PLUGIN_DIR . 'build/blocks.min.js' ),
 		false
 	);
 

@@ -16,7 +16,7 @@ const { __ }                  = wp.i18n;
 import { PlaceholderSpecificMode } from '../../components/block-controls';
 import { getOptionLabel }          from '../../components/item-select';
 import { BlockContent }            from './block-content';
-import { Select }                  from './select';
+import { ContentSelect }           from './content-select';
 import { LABEL }                   from './index';
 
 /**
@@ -53,7 +53,7 @@ export class BlockControls extends Component {
 							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							<Select { ...this.props } />
+							<ContentSelect { ...this.props } />
 						}
 					/>
 				);
@@ -79,7 +79,7 @@ export class BlockControls extends Component {
 						</div>
 
 						<div className="wordcamp-block-edit-mode-option">
-							<Select
+							<ContentSelect
 								icon={ icon }
 								label={ __( 'Choose specific sessions, tracks, or categories', 'wordcamporg' ) }
 								{ ...this.props }

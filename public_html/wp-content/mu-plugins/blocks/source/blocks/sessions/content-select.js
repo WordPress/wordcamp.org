@@ -17,7 +17,7 @@ import { buildOptions, ItemSelect, Option } from '../../components/item-select';
 /**
  * Component for selecting posts/terms for populating the block content.
  */
-export class Select extends Component {
+export class ContentSelect extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -38,20 +38,26 @@ export class Select extends Component {
 	 */
 	buildSelectOptions() {
 		const { entities } = this.props;
-		const { wcb_organizer, wcb_organizer_team } = entities;
+		const { wcb_session, wcb_track, wcb_session_category } = entities;
 
 		const optionGroups = [
 			{
 				entityType : 'post',
-				type       : 'wcb_organizer',
-				label      : __( 'Organizers', 'wordcamporg' ),
-				items      : wcb_organizer,
+				type       : 'wcb_session',
+				label      : __( 'Sessions', 'wordcamporg' ),
+				items      : wcb_session,
 			},
 			{
 				entityType : 'term',
-				type       : 'wcb_organizer_team',
-				label      : __( 'Teams', 'wordcamporg' ),
-				items      : wcb_organizer_team,
+				type       : 'wcb_track',
+				label      : __( 'Tracks', 'wordcamporg' ),
+				items      : wcb_track,
+			},
+			{
+				entityType : 'term',
+				type       : 'wcb_session_category',
+				label      : __( 'Session Categories', 'wordcamporg' ),
+				items      : wcb_session_category,
 			},
 		];
 
@@ -101,11 +107,11 @@ export class Select extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { label, setAttributes } = this.props;
+		const { icon, label, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
-				className="wordcamp-organizers-select"
+				className="wordcamp-sessions-select"
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
@@ -114,7 +120,10 @@ export class Select extends Component {
 					isLoading         : this.isLoading(),
 					formatOptionLabel : ( optionData ) => {
 						return (
-							<Option { ...optionData } />
+							<Option
+								icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
+								{ ...optionData }
+							/>
 						);
 					},
 				} }

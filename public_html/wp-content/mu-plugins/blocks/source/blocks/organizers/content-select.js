@@ -17,7 +17,7 @@ import { buildOptions, ItemSelect, Option } from '../../components/item-select';
 /**
  * Component for selecting posts/terms for populating the block content.
  */
-export class Select extends Component {
+export class ContentSelect extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -38,20 +38,20 @@ export class Select extends Component {
 	 */
 	buildSelectOptions() {
 		const { entities } = this.props;
-		const { wcb_speaker, wcb_speaker_group } = entities;
+		const { wcb_organizer, wcb_organizer_team } = entities;
 
 		const optionGroups = [
 			{
 				entityType : 'post',
-				type       : 'wcb_speaker',
-				label      : __( 'Speakers', 'wordcamporg' ),
-				items      : wcb_speaker,
+				type       : 'wcb_organizer',
+				label      : __( 'Organizers', 'wordcamporg' ),
+				items      : wcb_organizer,
 			},
 			{
 				entityType : 'term',
-				type       : 'wcb_speaker_group',
-				label      : __( 'Groups', 'wordcamporg' ),
-				items      : wcb_speaker_group,
+				type       : 'wcb_organizer_team',
+				label      : __( 'Teams', 'wordcamporg' ),
+				items      : wcb_organizer_team,
 			},
 		];
 
@@ -101,11 +101,11 @@ export class Select extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { label, icon, setAttributes } = this.props;
+		const { label, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
-				className="wordcamp-speakers-select"
+				className="wordcamp-organizers-select"
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
@@ -114,10 +114,7 @@ export class Select extends Component {
 					isLoading         : this.isLoading(),
 					formatOptionLabel : ( optionData ) => {
 						return (
-							<Option
-								icon={ 'wcb_speaker_group' === optionData.type ? icon : null }
-								{ ...optionData }
-							/>
+							<Option { ...optionData } />
 						);
 					},
 				} }

@@ -7,28 +7,31 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Button, Placeholder } = wp.components;
+const { Component }           = wp.element;
 const { __ }                  = wp.i18n;
 
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderSpecificMode } from '../../component/block-controls';
-import SessionsBlockContent                       from './block-content';
-import SessionsSelect                             from './sessions-select';
-import { LABEL }                                  from './index';
+import { PlaceholderSpecificMode } from '../../component/block-controls';
+import { getOptionLabel }          from '../../component/item-select';
+import SessionsBlockContent        from './block-content';
+import SessionsSelect              from './sessions-select';
+import { LABEL }                   from './index';
 
 /**
  * Component for displaying a UI within the block.
  */
-class SessionsBlockControls extends BlockControls {
+class SessionsBlockControls extends Component {
 	/**
 	 * Render the internal block UI.
 	 *
 	 * @return {Element}
 	 */
 	render() {
-		const { icon, attributes, setAttributes } = this.props;
+		const { icon, attributes, setAttributes, blockData } = this.props;
 		const { mode } = attributes;
+		const { options } = blockData;
 
 		let output;
 
@@ -44,7 +47,7 @@ class SessionsBlockControls extends BlockControls {
 			case 'wcb_session_category' :
 				output = (
 					<PlaceholderSpecificMode
-						label={ this.getModeLabel( mode ) }
+						label={ getOptionLabel( mode, options.mode ) }
 						icon={ icon }
 						content={
 							<SessionsBlockContent { ...this.props } />
@@ -71,7 +74,7 @@ class SessionsBlockControls extends BlockControls {
 									setAttributes( { mode: 'all' } );
 								} }
 							>
-								{ this.getModeLabel( 'all' ) }
+								{ getOptionLabel( 'all', options.mode ) }
 							</Button>
 						</div>
 

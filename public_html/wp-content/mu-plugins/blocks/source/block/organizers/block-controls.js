@@ -7,28 +7,31 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 const { Button, Placeholder } = wp.components;
+const { Component }           = wp.element;
 const { __ }                  = wp.i18n;
 
 /**
  * Internal dependencies
  */
-import { BlockControls, PlaceholderSpecificMode } from '../../component/block-controls';
-import OrganizersBlockContent                     from './block-content';
-import OrganizersSelect                           from './organizers-select';
-import { LABEL }                                  from './index';
+import { PlaceholderSpecificMode } from '../../component/block-controls';
+import { getOptionLabel }          from '../../component/item-select';
+import OrganizersBlockContent      from './block-content';
+import OrganizersSelect            from './organizers-select';
+import { LABEL }                   from './index';
 
 /**
  * Component for displaying a UI within the block.
  */
-class OrganizersBlockControls extends BlockControls {
+class OrganizersBlockControls extends Component {
 	/**
 	 * Render the internal block UI.
 	 *
 	 * @return {Element}
 	 */
 	render() {
-		const { icon, attributes, setAttributes } = this.props;
+		const { icon, attributes, setAttributes, blockData } = this.props;
 		const { mode } = attributes;
+		const { options } = blockData;
 
 		let output;
 
@@ -43,7 +46,7 @@ class OrganizersBlockControls extends BlockControls {
 			case 'wcb_organizer_team' :
 				output = (
 					<PlaceholderSpecificMode
-						label={ this.getModeLabel( mode ) }
+						label={ getOptionLabel( mode, options.mode ) }
 						icon={ icon }
 						content={
 							<OrganizersBlockContent { ...this.props } />
@@ -70,7 +73,7 @@ class OrganizersBlockControls extends BlockControls {
 									setAttributes( { mode: 'all' } );
 								} }
 							>
-								{ this.getModeLabel( 'all' ) }
+								{ getOptionLabel( 'all', options.mode ) }
 							</Button>
 						</div>
 

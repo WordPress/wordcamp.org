@@ -96,6 +96,28 @@ export const buildOptions = createSelector(
 );
 
 /**
+ * Find the label for an option with a specific value.
+ *
+ * @param {string} value
+ * @param {Array}  options
+ *
+ * @return {string}
+ */
+export function getOptionLabel( value, options ) {
+	let label = '';
+
+	const selectedOption = options.find( ( option ) => {
+		return value === option.value;
+	} );
+
+	if ( selectedOption.hasOwnProperty( 'label' ) ) {
+		label = selectedOption.label;
+	}
+
+	return label;
+}
+
+/**
  * Component for a single option in an ItemSelect dropdown.
  *
  * Not all of the props need or should have a value. An option representing a speaker will have

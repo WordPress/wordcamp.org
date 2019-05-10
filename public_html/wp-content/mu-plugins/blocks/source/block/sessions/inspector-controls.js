@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 const { PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
-const { InspectorControls }                                 = wp.editor;
+const { InspectorControls: Inspector }                      = wp.editor;
 const { Component }                                         = wp.element;
 const { __ }                                                = wp.i18n;
 
@@ -15,7 +15,7 @@ import { GridInspectorPanel }                            from '../../component/p
 /**
  * Component for block controls that appear in the Inspector Panel.
  */
-class SessionsInspectorControls extends Component {
+export class InspectorControls extends Component {
 	/**
 	 * Render the controls.
 	 *
@@ -27,7 +27,7 @@ class SessionsInspectorControls extends Component {
 		const { schema, options } = blockData;
 
 		return (
-			<InspectorControls>
+			<Inspector>
 				<GridInspectorPanel
 					{ ...this.props }
 				/>
@@ -90,9 +90,7 @@ class SessionsInspectorControls extends Component {
 						/>
 					</PanelRow>
 				</PanelBody>
-			</InspectorControls>
+			</Inspector>
 		);
 	}
 }
-
-export default SessionsInspectorControls;

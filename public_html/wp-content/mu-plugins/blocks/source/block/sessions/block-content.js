@@ -156,7 +156,7 @@ function SessionCategory( { session } ) {
 /**
  * Component for displaying the block content.
  */
-class SessionsBlockContent extends Component {
+export class BlockContent extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -309,5 +309,3 @@ class SessionsBlockContent extends Component {
 		);
 	}
 }
-
-export default SessionsBlockContent;

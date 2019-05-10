@@ -15,14 +15,14 @@ const { __ }                  = wp.i18n;
  */
 import { PlaceholderSpecificMode } from '../../component/block-controls';
 import { getOptionLabel }          from '../../component/item-select';
-import SessionsBlockContent        from './block-content';
-import SessionsSelect              from './sessions-select';
+import { BlockContent }            from './block-content';
+import { Select }                  from './select';
 import { LABEL }                   from './index';
 
 /**
  * Component for displaying a UI within the block.
  */
-class SessionsBlockControls extends Component {
+export class BlockControls extends Component {
 	/**
 	 * Render the internal block UI.
 	 *
@@ -38,7 +38,7 @@ class SessionsBlockControls extends Component {
 		switch ( mode ) {
 			case 'all' :
 				output = (
-					<SessionsBlockContent { ...this.props } />
+					<BlockContent { ...this.props } />
 				);
 				break;
 
@@ -50,10 +50,10 @@ class SessionsBlockControls extends Component {
 						label={ getOptionLabel( mode, options.mode ) }
 						icon={ icon }
 						content={
-							<SessionsBlockContent { ...this.props } />
+							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							<SessionsSelect { ...this.props } />
+							<Select { ...this.props } />
 						}
 					/>
 				);
@@ -79,7 +79,7 @@ class SessionsBlockControls extends Component {
 						</div>
 
 						<div className="wordcamp-block-edit-mode-option">
-							<SessionsSelect
+							<Select
 								icon={ icon }
 								label={ __( 'Choose specific sessions, tracks, or categories', 'wordcamporg' ) }
 								{ ...this.props }
@@ -93,5 +93,3 @@ class SessionsBlockControls extends Component {
 		return output;
 	}
 }
-
-export default SessionsBlockControls;

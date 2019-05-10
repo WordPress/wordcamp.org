@@ -21,7 +21,7 @@ import { filterEntities }                                            from '../..
 /**
  * Component for displaying the block content.
  */
-class SponsorsBlockContent extends Component {
+export class BlockContent extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -126,5 +126,3 @@ class SponsorsBlockContent extends Component {
 		);
 	}
 }
-
-export default SponsorsBlockContent;

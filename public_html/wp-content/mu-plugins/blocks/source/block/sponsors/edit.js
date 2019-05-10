@@ -7,11 +7,11 @@ const { Component, Fragment } = wp.element;
 /**
  * Internal dependencies
  */
-import { LayoutToolbar }         from '../../component/post-list';
-import { WC_BLOCKS_STORE }       from '../../data';
-import SponsorsBlockControls     from './block-controls';
-import SponsorsInspectorControls from './inspector-controls';
-import { ICON }                  from './index';
+import { LayoutToolbar }     from '../../component/post-list';
+import { WC_BLOCKS_STORE }   from '../../data';
+import { BlockControls }     from './block-controls';
+import { InspectorControls } from './inspector-controls';
+import { ICON }              from './index';
 
 const blockData = window.WordCampBlocks.sponsors || {};
 
@@ -31,13 +31,13 @@ class SponsorsEdit extends Component {
 
 		return (
 			<Fragment>
-				<SponsorsBlockControls
+				<BlockControls
 					icon={ ICON }
 					{ ...this.props }
 				/>
 				{ mode &&
 					<Fragment>
-						<SponsorsInspectorControls { ...this.props } />
+						<InspectorControls { ...this.props } />
 						<LayoutToolbar
 							layout={ layout }
 							options={ layoutOptions }

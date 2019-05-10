@@ -15,14 +15,14 @@ const { __ }                  = wp.i18n;
  */
 import { PlaceholderSpecificMode } from '../../component/block-controls';
 import { getOptionLabel }          from '../../component/item-select';
-import SponsorsBlockContent        from './block-content';
-import SponsorsSelect              from './sponsors-select';
+import { BlockContent }            from './block-content';
+import { Select }                  from './select';
 import { LABEL }                   from './index';
 
 /**
  * Component for displaying a UI within the block.
  */
-class SponsorsBlockControls extends Component {
+export class BlockControls extends Component {
 	/**
 	 * Render the internal block UI.
 	 *
@@ -38,7 +38,7 @@ class SponsorsBlockControls extends Component {
 		switch ( mode ) {
 			case 'all' :
 				output = (
-					<SponsorsBlockContent { ...this.props } />
+					<BlockContent { ...this.props } />
 				);
 				break;
 
@@ -49,10 +49,10 @@ class SponsorsBlockControls extends Component {
 						label={ getOptionLabel( mode, options.mode ) }
 						icon={ icon }
 						content={
-							<SponsorsBlockContent { ...this.props } />
+							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							<SponsorsSelect { ...this.props } />
+							<Select { ...this.props } />
 						}
 					/>
 				);
@@ -78,7 +78,7 @@ class SponsorsBlockControls extends Component {
 						</div>
 
 						<div className="wordcamp-block-edit-mode-option">
-							<SponsorsSelect
+							<Select
 								icon={ icon }
 								label={ __( 'Choose specific sponsors or levels', 'wordcamporg' ) }
 								{ ...this.props }
@@ -92,5 +92,3 @@ class SponsorsBlockControls extends Component {
 		return output;
 	}
 }
-
-export default SponsorsBlockControls;

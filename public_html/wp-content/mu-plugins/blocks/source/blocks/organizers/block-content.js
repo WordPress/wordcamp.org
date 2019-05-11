@@ -15,6 +15,7 @@ import { AvatarImage }                                from '../../components/ima
 import { BlockNoContent, ItemTitle, ItemHTMLContent } from '../../components/block-content';
 import { PostList }                                   from '../../components/post-list';
 import { filterEntities }                             from '../../data';
+import { BlockContext }                               from './block-context';
 
 /**
  * Component for displaying the block content.
@@ -37,7 +38,7 @@ export class BlockContent extends Component {
 	 * @returns {Array}
 	 */
 	getFilteredPosts() {
-		const { attributes, entities } = this.props;
+		const { attributes, entities } = this.context;
 		const { wcb_organizer: posts } = entities;
 		const { mode, item_ids, sort } = attributes;
 
@@ -63,7 +64,7 @@ export class BlockContent extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes } = this.props;
+		const { attributes } = this.context;
 		const { show_avatars, avatar_size, avatar_align, content } = attributes;
 
 		const posts     = this.getFilteredPosts();
@@ -78,7 +79,7 @@ export class BlockContent extends Component {
 
 		return (
 			<PostList
-				{ ...this.props }
+				attributes={ attributes }
 				className="wordcamp-organizers-block"
 			>
 				{ posts.map( ( post ) => /* Note that organizer posts are not 'public', so there are no permalinks. */
@@ -113,3 +114,5 @@ export class BlockContent extends Component {
 		);
 	}
 }
+
+BlockContent.contextType = BlockContext;

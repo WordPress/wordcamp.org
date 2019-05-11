@@ -13,6 +13,7 @@ const { __ }        = wp.i18n;
  * Internal dependencies
  */
 import { buildOptions, ItemSelect, Option } from '../../components/item-select';
+import { BlockContext }                     from './block-context';
 
 /**
  * Component for selecting posts/terms for populating the block content.
@@ -37,7 +38,7 @@ export class ContentSelect extends Component {
 	 * @return {Array}
 	 */
 	buildSelectOptions() {
-		const { entities } = this.props;
+		const { entities } = this.context;
 		const { wcb_organizer, wcb_organizer_team } = entities;
 
 		const optionGroups = [
@@ -64,7 +65,7 @@ export class ContentSelect extends Component {
 	 * @return {Array}
 	 */
 	getCurrentSelectValue() {
-		const { attributes } = this.props;
+		const { attributes } = this.context;
 		const { mode, item_ids } = attributes;
 
 		const options = flatMap( this.buildSelectOptions(), ( group ) => {
@@ -88,7 +89,7 @@ export class ContentSelect extends Component {
 	 * @return {boolean}
 	 */
 	isLoading() {
-		const { entities } = this.props;
+		const { entities } = this.context;
 
 		return ! every( entities, ( value ) => {
 			return Array.isArray( value );
@@ -101,7 +102,8 @@ export class ContentSelect extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { label, setAttributes } = this.props;
+		const { setAttributes } = this.context;
+		const { label } = this.props;
 
 		return (
 			<ItemSelect
@@ -122,3 +124,5 @@ export class ContentSelect extends Component {
 		);
 	}
 }
+
+ContentSelect.contextType = BlockContext;

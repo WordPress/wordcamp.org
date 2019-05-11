@@ -16,6 +16,7 @@ const { __ }                  = wp.i18n;
 import { PlaceholderSpecificMode } from '../../components/block-controls';
 import { getOptionLabel }          from '../../components/item-select';
 import { BlockContent }            from './block-content';
+import { BlockContext }            from './block-context';
 import { ContentSelect }           from './content-select';
 import { LABEL }                   from './index';
 
@@ -29,16 +30,17 @@ export class BlockControls extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { icon, attributes, setAttributes, blockData } = this.props;
+		const { icon } = this.props;
+		const { attributes, definitions, setAttributes } = this.context;
 		const { mode } = attributes;
-		const { options } = blockData;
+		const { options } = definitions;
 
 		let output;
 
 		switch ( mode ) {
 			case 'all' :
 				output = (
-					<BlockContent { ...this.props } />
+					<BlockContent />
 				);
 				break;
 
@@ -49,10 +51,10 @@ export class BlockControls extends Component {
 						label={ getOptionLabel( mode, options.mode ) }
 						icon={ icon }
 						content={
-							<BlockContent { ...this.props } />
+							<BlockContent />
 						}
 						placeholderChildren={
-							<ContentSelect { ...this.props } />
+							<ContentSelect />
 						}
 					/>
 				);
@@ -80,7 +82,6 @@ export class BlockControls extends Component {
 						<div className="wordcamp-block-edit-mode-option">
 							<ContentSelect
 								label={ __( 'Choose specific organizers or teams', 'wordcamporg' ) }
-								{ ...this.props }
 							/>
 						</div>
 					</Placeholder>
@@ -91,3 +92,5 @@ export class BlockControls extends Component {
 		return output;
 	}
 }
+
+BlockControls.contextType = BlockContext;

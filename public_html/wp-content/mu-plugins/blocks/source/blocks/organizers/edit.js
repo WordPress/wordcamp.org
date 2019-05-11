@@ -9,44 +9,59 @@ const { Component, Fragment } = wp.element;
  */
 import { LayoutToolbar }     from '../../components/post-list';
 import { WC_BLOCKS_STORE }   from '../../data';
+import { BlockContext }      from './block-context';
 import { BlockControls }     from './block-controls';
 import { InspectorControls } from './inspector-controls';
 import { ICON }              from './index';
 
-const blockData = window.WordCampBlocks.organizers || {};
+const definitions = window.WordCampBlocks.organizers || {};
 
 /**
  * Top-level component for the editing UI for the block.
  */
 class OrganizersEdit extends Component {
+
+	constructor( props ) {
+		super( props );
+
+		this.getContextValue = this.getContextValue.bind( this );
+	}
+
+
+	getContextValue() {
+		const { attributes, entities, setAttributes } = this.props;
+
+		return { attributes, definitions, entities, setAttributes };
+	}
+
 	/**
 	 * Render the block's editing UI.
 	 *
 	 * @return {Element}
 	 */
 	render() {
+		const { Provider }                   = BlockContext;
 		const { attributes, setAttributes }  = this.props;
 		const { mode, layout }               = attributes;
-		const { layout: layoutOptions = {} } = blockData.options;
+		const { layout: layoutOptions = {} } = definitions.options;
 
 		return (
-			<Fragment>
-				<BlockControls
-					icon={ ICON }
-					{ ...this.props }
-				/>
+			<Provider value={ this.getContextValue() }>
+				<Fragment>
+					<BlockControls icon={ ICON } />
 
-				{ '' !== mode &&
-					<Fragment>
-						<InspectorControls { ...this.props } />
-						<LayoutToolbar
-							layout={ layout }
-							options={ layoutOptions }
-							setAttributes={ setAttributes }
-						/>
-					</Fragment>
-				}
-			</Fragment>
+					{ '' !== mode &&
+						<Fragment>
+							<InspectorControls { ...this.props } />
+							<LayoutToolbar
+								layout={ layout }
+								options={ layoutOptions }
+								setAttributes={ setAttributes }
+							/>
+						</Fragment>
+					}
+				</Fragment>
+			</Provider>
 		);
 	}
 }
@@ -60,7 +75,7 @@ const organizerSelect = ( select ) => {
 	};
 
 	return {
-		blockData,
+		blockData : definitions,
 		entities,
 	};
 };

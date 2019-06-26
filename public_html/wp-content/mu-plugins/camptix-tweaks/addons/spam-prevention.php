@@ -24,7 +24,8 @@ class Spam_Prevention extends CampTix_Addon {
 	 */
 	public function camptix_init() {
 		$this->attendee_info = new Form_Spam_Prevention( [
-			'prefix' => 'camptix-fsp-attendee-info-',
+			'prefix'            => 'camptix-fsp-attendee-info-',
+			'individual_styles' => true,
 		] );
 
 		// Attendee info form, before checkout.

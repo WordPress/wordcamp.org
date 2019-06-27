@@ -1,6 +1,6 @@
 <?php
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 wcorg_include_individual_mu_plugins();
 wcorg_include_mu_plugin_folders();
@@ -51,7 +51,7 @@ function wcorg_include_mu_plugin_folders() {
 	}
 }
 
-/*
+/**
  * Enable the day-of-event and PWA features on alpha test sites.
  *
  * If something goes seriously wrong during WCEU2019, the following should disable the features and restore
@@ -88,9 +88,9 @@ function enable_pwa_alpha_test() {
 		1026, // 2019.europe
 	);
 
-    $is_remote_sandbox = defined( 'WPORG_SANDBOXED' ) && WPORG_SANDBOXED;
-    $is_local_sandbox  = 'development' === WORDCAMP_ENVIRONMENT && ! $is_remote_sandbox;
-    $is_test_site      = in_array( get_current_blog_id(), $pwa_test_sites, true );
+	$is_remote_sandbox = defined( 'WPORG_SANDBOXED' ) && WPORG_SANDBOXED;
+	$is_local_sandbox  = 'development' === WORDCAMP_ENVIRONMENT && ! $is_remote_sandbox;
+	$is_test_site      = in_array( get_current_blog_id(), $pwa_test_sites, true );
 
 	if ( $is_local_sandbox || $is_test_site ) {
 		require_once( __DIR__ . '/service-worker-caching.php' );

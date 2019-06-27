@@ -1,33 +1,62 @@
+#
+# Docker
+#
 .docker/data/
 .docker/database
 .docker/wordcamp*.pem
 
+#
+# Misc
+#
+wp-cli.yml
+public_html/.well-known/
+public_html/mu/
+public_html/wp-content/blogs.dir/
+public_html/wp-content/cache/
+public_html/wp-content/languages/
 public_html/wp-content/mu-plugins/blocks/build
+public_html/wp-content/mu-plugins/includes/slack/
 
+#
+# Plugins
+#
 public_html/wp-content/plugins/akismet
 public_html/wp-content/plugins/bbpress
 public_html/wp-content/plugins/buddypress
 public_html/wp-content/plugins/campt-indian-payment-gateway
 public_html/wp-content/plugins/camptix
+public_html/wp-content/plugins/camptix-bd-payments/
 public_html/wp-content/plugins/camptix-kdcpay-gateway
 public_html/wp-content/plugins/camptix-mercadopago
 public_html/wp-content/plugins/camptix-network-tools
 public_html/wp-content/plugins/camptix-pagseguro
 public_html/wp-content/plugins/camptix-payfast-gateway
+public_html/wp-content/plugins/camptix-paynow/
+public_html/wp-content/plugins/camptix-paystack/
 public_html/wp-content/plugins/camptix-trustcard
 public_html/wp-content/plugins/camptix-trustpay
 public_html/wp-content/plugins/classic-editor
 public_html/wp-content/plugins/custom-content-width
 public_html/wp-content/plugins/email-post-changes
+public_html/wp-content/plugins/edit-flow/
+public_html/wp-content/plugins/gutenberg/
+public_html/wp-content/plugins/hyperdb/
+public_html/wp-content/plugins/json-rest-api/
 public_html/wp-content/plugins/jetpack
 public_html/wp-content/plugins/liveblog
 public_html/wp-content/plugins/polldaddy
+public_html/wp-content/plugins/public-post-preview/
+public_html/wp-content/plugins/pwa/
 public_html/wp-content/plugins/supportflow
 public_html/wp-content/plugins/tagregator
 public_html/wp-content/plugins/wordpress-importer
 public_html/wp-content/plugins/wp-multibyte-patch
 public_html/wp-content/plugins/wp-super-cache
+public_html/wp-content/plugins/wporg-profiles-wp-activity-notifier/
 
+#
+# Themes
+#
 public_html/wp-content/themes/p2
 public_html/wp-content/themes/twentyten
 public_html/wp-content/themes/twentyeleven

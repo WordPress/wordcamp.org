@@ -578,7 +578,7 @@ function get_task_data() {
 			'cat'     => array( 'committee' ),
 			'link'    => array(
 				'text' => __( 'Debrief', 'wordcamporg' ),
-				'url'  => 'http://wordcampcentral.polldaddy.com/s/wordcamp-debrief',
+				'url'  => 'https://wordcampcentral.survey.fm/wordcamp-debrief',
 			),
 		),
 	);

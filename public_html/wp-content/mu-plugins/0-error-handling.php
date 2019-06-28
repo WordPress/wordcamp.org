@@ -70,10 +70,12 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		WP_PLUGIN_DIR . '/hyperdb/db.php:1230' => 'mysqli_query(): MySQL server has gone away',
 
 		// These are trivial mistakes in 3rd party code. They indicate poor quality, but don't warrant action.
+		ABSPATH . 'wp-cron.php:111'                       => 'Invalid argument supplied for foreach()',
 		ABSPATH . 'wp-includes/class-wp-post.php:342'     => 'Undefined property: WP_Post::$filter',
 		ABSPATH . 'wp-includes/class-wp-query.php:3918'   => "Trying to get property 'ID' of non-object",
 		ABSPATH . 'wp-includes/class-wp-query.php:3920'   => "Trying to get property 'post_title' of non-object",
 		ABSPATH . 'wp-includes/class-wp-query.php:3922'   => "Trying to get property 'post_name' of non-object",
+		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php:6764' => 'Undefined variable: url',
 		ABSPATH . 'wp-includes/comment-template.php:1221' => "Trying to get property 'comment_status' of non-object",
 		ABSPATH . 'wp-includes/link-template.php:675'     => "Trying to get property 'post_type' of non-object",
 		ABSPATH . 'wp-includes/post-template.php:309'     => "Trying to get property 'post_content' of non-object",
@@ -83,6 +85,7 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php:337'     => 'Undefined variable: txn',
 		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php:118'         => 'Undefined index: id',
 		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php:119'         => 'Undefined index: id',
+		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php:670' => 'Undefined index: HTTP_REFERER',
 		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php:151' => "Trying to get property 'post_type' of non-object",
 		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php:137' => 'Undefined offset:',
 	];

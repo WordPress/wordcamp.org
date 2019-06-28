@@ -570,6 +570,8 @@ function load_custom_addons() {
 	require_once( __DIR__ . '/addons/code-of-conduct.php' );
 	// Privacy field
 	require_once( __DIR__ . '/addons/privacy.php' );
+	// Spam prevention
+	require_once( __DIR__ . '/addons/spam-prevention.php' );
 
 	// Payment options
 	if ( in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true )

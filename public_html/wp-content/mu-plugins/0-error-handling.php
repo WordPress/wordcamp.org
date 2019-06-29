@@ -116,12 +116,15 @@ function get_ignorelist() {
 
 		// These are trivial mistakes in 3rd party code. They indicate poor quality, but don't warrant action.
 		ABSPATH . 'wp-cron.php'                            => 'Invalid argument supplied for foreach()',
-		ABSPATH . 'wp-includes/class-wp-post.php'          => 'Undefined property: WP_Post::$filter',
+		ABSPATH . 'wp-includes/class-wp-query.php'         => "trim() expects parameter 1 to be string, array given",
 		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'ID' of non-object",
 		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_title' of non-object",
 		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_name' of non-object",
+		ABSPATH . 'wp-includes/class-wp-post.php'          => 'Undefined property: WP_Post::$filter',
 		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php' => 'Undefined variable: url',
+		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'comment_ID' of non-object",
 		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'comment_status' of non-object",
+		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'user_id' of non-object",
 		ABSPATH . 'wp-includes/link-template.php'          => "Trying to get property 'post_type' of non-object",
 		ABSPATH . 'wp-includes/post-template.php'          => "Trying to get property 'post_content' of non-object",
 		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined index: description',

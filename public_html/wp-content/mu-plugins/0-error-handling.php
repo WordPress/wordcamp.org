@@ -54,44 +54,7 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
-	/*
-	 * Ignore warnings/notices that aren't actionable.
-	 *
-	 * Always use constants in the keys here to avoid path disclosure.
-	 *
-	 * Some constants here will require a trailing slash, and some won't. Avoid adding an extra slash if one
-	 * already exists in the constant itself, because double-slashes will prevent the string from matching.
-	 *
-	 * The line number is omitted from the filename key because it can change when edits are made to other parts of
-	 * the file, which would cause the warning/notice to start appearing again.
-	 */
-	$error_ignorelist = [
-		// See https://core.trac.wordpress.org/ticket/29204.
-		ABSPATH . 'wp-includes/SimplePie/Registry.php' => 'Non-static method WP_Feed_Cache::create() should not be called statically',
-
-		// This is normal.
-		WP_PLUGIN_DIR . '/hyperdb/db.php' => 'mysqli_query(): MySQL server has gone away',
-
-		// These are trivial mistakes in 3rd party code. They indicate poor quality, but don't warrant action.
-		ABSPATH . 'wp-cron.php'                            => 'Invalid argument supplied for foreach()',
-		ABSPATH . 'wp-includes/class-wp-post.php'          => 'Undefined property: WP_Post::$filter',
-		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'ID' of non-object",
-		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_title' of non-object",
-		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_name' of non-object",
-		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php' => 'Undefined variable: url',
-		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'comment_status' of non-object",
-		ABSPATH . 'wp-includes/link-template.php'          => "Trying to get property 'post_type' of non-object",
-		ABSPATH . 'wp-includes/post-template.php'          => "Trying to get property 'post_content' of non-object",
-		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined index: description',
-		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined property: stdClass::$error',
-
-		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'          => 'Undefined variable: txn',
-		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'              => 'Undefined index: id',
-		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'              => 'Undefined index: id',
-		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php' => 'Undefined index: HTTP_REFERER',
-		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php'      => "Trying to get property 'post_type' of non-object",
-		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php'      => 'Undefined offset:',
-	];
+	$error_ignorelist = get_ignorelist();
 
 	if ( isset( $error_ignorelist[ $file ] ) && false !== strpos( $err_msg, $error_ignorelist[ $file ] ) ) {
 		return false;
@@ -128,6 +91,49 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 	}
 
 	return false;
+}
+
+/*
+ * List of warnings/notices to ignore because they aren't actionable.
+ *
+ * Always use constants in the keys here to avoid path disclosure.
+ *
+ * Some constants here will require a trailing slash, and some won't. Avoid adding an extra slash if one
+ * already exists in the constant itself, because double-slashes will prevent the string from matching.
+ *
+ * The line number is omitted from the filename key because it can change when edits are made to other parts of
+ * the file, which would cause the warning/notice to start appearing again.
+ *
+ * @return array
+ */
+function get_ignorelist() {
+	return [
+		// See https://core.trac.wordpress.org/ticket/29204.
+		ABSPATH . 'wp-includes/SimplePie/Registry.php' => 'Non-static method WP_Feed_Cache::create() should not be called statically',
+
+		// This is normal.
+		WP_PLUGIN_DIR . '/hyperdb/db.php' => 'mysqli_query(): MySQL server has gone away',
+
+		// These are trivial mistakes in 3rd party code. They indicate poor quality, but don't warrant action.
+		ABSPATH . 'wp-cron.php'                            => 'Invalid argument supplied for foreach()',
+		ABSPATH . 'wp-includes/class-wp-post.php'          => 'Undefined property: WP_Post::$filter',
+		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'ID' of non-object",
+		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_title' of non-object",
+		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_name' of non-object",
+		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php' => 'Undefined variable: url',
+		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'comment_status' of non-object",
+		ABSPATH . 'wp-includes/link-template.php'          => "Trying to get property 'post_type' of non-object",
+		ABSPATH . 'wp-includes/post-template.php'          => "Trying to get property 'post_content' of non-object",
+		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined index: description',
+		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined property: stdClass::$error',
+
+		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'          => 'Undefined variable: txn',
+		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'              => 'Undefined index: id',
+		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'              => 'Undefined index: id',
+		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php' => 'Undefined index: HTTP_REFERER',
+		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php'      => "Trying to get property 'post_type' of non-object",
+		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php'      => 'Undefined offset:',
+	];
 }
 
 /**

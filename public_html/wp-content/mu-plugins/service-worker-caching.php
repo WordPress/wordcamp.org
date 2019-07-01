@@ -111,19 +111,6 @@ function register_caching_routes() {
 		);
 	}
 
-	wp_register_service_worker_caching_route(
-		'/wp-(content|includes)/.*\.(?:png|gif|jpg|jpeg|svg|webp|css|js)(\?.*)?$',
-		[
-			'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
-			'cacheName' => 'assets',
-			'plugins'   => [
-				'expiration' => [
-					'maxEntries'    => 60,
-					'maxAgeSeconds' => DAY_IN_SECONDS,
-				],
-			],
-		]
-	);
 
 	wp_register_service_worker_caching_route(
 		'/wp-json/.*',

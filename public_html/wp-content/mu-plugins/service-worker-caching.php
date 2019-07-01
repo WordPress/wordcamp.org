@@ -60,10 +60,11 @@ function register_caching_routes() {
 	/*
 	 * todo
 	 *
-	 * pre-cache important pages like Location. what others? how to detect programatically?
-	 *      could match `location` slug, and also add a `service-worker-precache` postmeta field to post stubs that we create on new sites
-	 *      maybe pwa feature plugin already supports something like that? if not, maybe propose it
-	 *      offline and day-of-event templates could show warnings to logged-in admins if the key is missing b/c they didn't use the default page
+	 * pre-cache important pages like home page, Location. what others?
+	 *      how to detect location programatically?
+	 *          could match `location` slug, and also add a `service-worker-precache` postmeta field to post stubs that we create on new sites
+	 *          maybe pwa feature plugin already supports something like that? if not, maybe propose it
+	 *          offline and day-of-event templates could show warnings to logged-in admins if the key is missing b/c they didn't use the default page
 	 * Is the wp-content/includes caching route even working? Didn't cache assets for offline template.
 	 *      How can you tell if it's working, compared to regular browser caching?
 	 *      devtools Network panel should say "From service worker" for size?
@@ -82,6 +83,7 @@ function register_caching_routes() {
 	 * All of this needs to be tested to verify that it's working as intended.
 	 *      What's the best way to do that? Document it here if it's not obvious.
 	 * need to explicitly remove older revisions of custom-css (and other assets?) from the cache when they change?
+	 * would it be better to use stale-while-revalidate, so they get automatically updated? would that waste bandwidth or have other problems?
 	 */
 
 	$custom_css_url_parts = wp_parse_url( wcorg_get_custom_css_url() );
@@ -139,12 +141,14 @@ function register_caching_routes() {
 }
 
 /**
- * Set the navigation preload strategy for the front end service worker.
- * todo is ^ the best explanation of what's going on here?
+ * Set the caching strategy for front-end navigation requests.
  */
 function set_navigation_caching_strategy() {
 	/*
-	 * todo
+	 * todo can remove all this callback once https://github.com/xwp/pwa-wp/pull/178 is released to w.org repo
+	 *  	or can remove now b/c it was never needed?
+	 *
+	 * todo if it remains:
 	 *
 	 * All of this needs to be understood deeper in order to know if it's the right way to achieve the goals
 	 * of this project, and what the unintended side-effects may be.
@@ -155,17 +159,21 @@ function set_navigation_caching_strategy() {
 	 * But then why is it enabled by default? Maybe the `pwa` plugin is using it?
 	 *
 	 * We need to clearly document what's going on here, and _why_.
-	 *
-	 * Are the chosen caching strategies and parameters appropriate in this context?
-	 *
-	 * Are there side-effects beyond the day-of template? If so, how should they be addressed?
-	 *
-	 * All of this needs to be tested to verify that it's working as intended.
-	 *      What's the best way to do that? Document it here if it's not obvious.
 	 */
-
 	add_filter( 'wp_service_worker_navigation_preload', '__return_false' );
 
+	/*
+	 * Cache pages that the user visits, so that if they return to them while offline, they'll still be available.
+	 * If they're online, though, fetch the latest version since it could have changed since they last visited.
+	 *
+	 * todo
+	 * Would stale-while-revalidate be better? Seems like would still get offline access,
+	 *      but would also load instantly while online and revisiting a page, rather than re-downloading it.
+	 * Would it automatically update when stale, or would we need to configure etags, etc?
+	 * would it waste bandwidth by making lots of requests to check if page has updated?
+	 * any other side-effects to consider?
+	 *
+	 */
 	add_filter(
 		'wp_service_worker_navigation_caching_strategy',
 		function() {
@@ -173,6 +181,7 @@ function set_navigation_caching_strategy() {
 		}
 	);
 
+	// todo may no longer be needed after https://github.com/xwp/pwa-wp/issues/176 is resolved
 	add_filter(
 		'wp_service_worker_navigation_caching_strategy_args',
 		function( $args ) {

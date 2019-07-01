@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @package WordCamp\Reports
  */
@@ -14,6 +15,7 @@ use DateTime;
 /** @var string $statuses */
 
 $gender_legend = '<span class="description small"><span class="total">Total</span> / F / M / ?</span>';
+
 ?>
 
 <?php if ( count( $data['wordcamps'] ) ) : ?>
@@ -42,7 +44,7 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>Unique</td>
 		</tr>
 		<tr>
-			<td>Attendees</td>
+			<td>Registered Attendees</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['attendee'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['attendee'] ); ?></td>
 		</tr>
@@ -80,7 +82,7 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 				<td>Unknown</td>
 			</tr>
 			<tr>
-				<td>Attendees</td>
+				<td>Registered Attendees</td>
 				<td class="number"><?php echo number_format_i18n( $data['totals']['attendee'] ); ?></td>
 				<td class="number"><?php echo number_format_i18n( $data['genders']['attendee']['female'] ); ?></td>
 				<td class="number"><?php echo number_format_i18n( $data['genders']['attendee']['male'] ); ?></td>
@@ -110,17 +112,19 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>WordCamp</td>
 			<td>Date</td>
 			<td>Status</td>
-			<td>Attendees<?php if ( ! empty( $data['genders'] ) ) : ?><br /><?php echo $gender_legend ?><?php endif; ?></td>
+			<td>Registered Attendees<?php if ( ! empty( $data['genders'] ) ) : ?><br /><?php echo $gender_legend ?><?php endif; ?></td>
 			<td>Organizers<?php if ( ! empty( $data['genders'] ) ) : ?><br /><?php echo $gender_legend ?><?php endif; ?></td>
 			<td>Sessions</td>
 			<td>Speakers<?php if ( ! empty( $data['genders'] ) ) : ?><br /><?php echo $gender_legend ?><?php endif; ?></td>
 			<td>Sponsors</td>
 		</tr>
+
 		<?php foreach ( $data['wordcamps'] as $event ) : ?>
 			<tr>
 				<td><a href="<?php echo esc_attr( $event['info']['URL'] ); ?>"><?php echo esc_html( $event['info']['Name'] ); ?></a></td>
 				<td><?php echo esc_html( $event['info']['Start Date (YYYY-mm-dd)'] ); ?></td>
 				<td><?php echo esc_html( $event['info']['Status'] ); ?></td>
+
 				<td class="number">
 					<span class="total"><?php echo number_format_i18n( $event['totals']['attendee'] ); ?></span>
 					<?php if ( ! empty( $data['genders'] ) ) : ?>
@@ -129,6 +133,7 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 						/ <?php echo number_format_i18n( $event['genders']['attendee']['unknown'] ); ?>
 					<?php endif; ?>
 				</td>
+
 				<td class="number">
 					<span class="total"><?php echo number_format_i18n( $event['totals']['organizer'] ); ?></span>
 					<?php if ( ! empty( $data['genders'] ) ) : ?>
@@ -137,9 +142,11 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 						/ <?php echo number_format_i18n( $event['genders']['organizer']['unknown'] ); ?>
 					<?php endif; ?>
 				</td>
+
 				<td class="number total">
 					<?php echo number_format_i18n( $event['totals']['session'] ); ?>
 				</td>
+
 				<td class="number">
 					<span class="total"><?php echo number_format_i18n( $event['totals']['speaker'] ); ?></span>
 					<?php if ( ! empty( $data['genders'] ) ) : ?>
@@ -148,13 +155,16 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 						/ <?php echo number_format_i18n( $event['genders']['speaker']['unknown'] ); ?>
 					<?php endif; ?>
 				</td>
+
 				<td class="number total">
 					<?php echo number_format_i18n( $event['totals']['sponsor'] ); ?>
 				</td>
 			</tr>
 		<?php endforeach; ?>
 	</table>
+
 <?php else : ?>
+
 	<p>
 		No data
 		<?php if ( $start_date->format( 'Y-m-d' ) === $end_date->format( 'Y-m-d' ) ) : ?>
@@ -163,4 +173,5 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			between <?php echo esc_html( $start_date->format( 'M jS, Y' ) ); ?> and <?php echo esc_html( $end_date->format( 'M jS, Y' ) ); ?>
 		<?php endif; ?>
 	</p>
+
 <?php endif; ?>

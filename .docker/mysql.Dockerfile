@@ -4,7 +4,7 @@ FROM mysql:5.7
 ENV MYSQL_ROOT_PASSWORD=mysql
 ENV MYSQL_DATABASE=wordcamp_dev
 
-ADD wordcamp_dev.sql /docker-entrypoint-initdb.d/data.sql
+ADD data/wordcamp_dev.sql /docker-entrypoint-initdb.d/data.sql
 
 RUN apt-get install nano -y
 

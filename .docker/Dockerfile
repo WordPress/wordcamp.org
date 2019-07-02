@@ -66,15 +66,15 @@ WORKDIR /usr/src/public_html
 
 # Install and configure nginx
 RUN apt-get install nginx -y
-COPY nginx.conf /etc/nginx/sites-enabled/wordcamp.conf
-COPY php-fpm.conf /usr/local/etc/php-fpm.d/zz-www.conf
+COPY config/nginx.conf /etc/nginx/sites-enabled/wordcamp.conf
+COPY config/php-fpm.conf /usr/local/etc/php-fpm.d/zz-www.conf
 
 # Install SSL certificate
 COPY wordcamp.test.pem     /etc/ssl/certs/wordcamp.test.pem
 COPY wordcamp.test.key.pem /etc/ssl/private/wordcamp.test.key.pem
 
 # Add script to install plugin and themes
-ADD install-plugin-theme.sh /usr/src/public_html/install-plugin-theme.sh
+ADD bin/install-plugin-theme.sh /usr/src/public_html/install-plugin-theme.sh
 
 # Install `wkhtmltopdf` for WordCamp Docs, CampTix Invoices, etc. See https://stackoverflow.com/a/38336153/1845153
 RUN curl -L https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz > wkhtmltox.tar.xz

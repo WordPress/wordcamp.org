@@ -1,0 +1,66 @@
+#!/usr/bin/php
+<?php
+
+function get_custom_message() {
+	$previous_components = get_previous_components();
+
+	$custom_message = "
+		Component: Summarize _what_ changed, and _why_ (but not _how_). Limit to 70 characters.
+
+		Longer description with more details, like historical context for the changes, links to external discussions, etc. 
+
+		Do not include additional information about the new code here; that should be documented with the code itself. The commit message should focus on additional information for _why_ the change was needed. 
+
+		Props person, another.
+		Fixes #30000. See #20202, #105.
+		#
+		# See https://make.wordpress.org/core/handbook/best-practices/commit-messages/ for more detailed guidelines.
+	";
+
+	if ( $previous_components ) {
+		$custom_message .= "#
+			# Previously used components for the staged files:
+			# * " . implode( "\n# * ", $previous_components ) ."
+		";
+	}
+
+	$custom_message .= "#
+		# - - - -
+		#
+	";
+
+	return str_replace( "\t", '', trim( $custom_message ) );
+}
+
+function get_previous_components() {
+	$components   = array();
+	$staged_files = explode( "\n", shell_exec( '/usr/bin/git diff --name-only --cached --relative' ) );
+
+	foreach ( $staged_files as $file ) {
+		$short_description = shell_exec( "/usr/bin/git log --format='%s' --max-count=5 $file" );
+		$component_marker  = strpos( $short_description, ': ' );
+
+		if ( false !== $component_marker ) {
+			$components[] = substr( $short_description, 0, $component_marker );
+		}
+	}
+
+	return array_unique( $components );
+}
+
+/**
+ * Provide a default commit message for convenience and consistency.
+ *
+ * This prevents us from having to look up the details of the format, encourages conformance with the format, and
+ * helps standardize component prefixes.
+ *
+ * @param string $commit_message_file
+ */
+function main( $commit_message_file ) {
+	$default_message = file_get_contents( $commit_message_file );
+	$custom_message  = get_custom_message();
+
+	file_put_contents( $commit_message_file, $custom_message . $default_message );
+}
+
+main( $argv[1] );

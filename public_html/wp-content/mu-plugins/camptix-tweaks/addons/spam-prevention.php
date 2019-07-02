@@ -31,6 +31,7 @@ class Spam_Prevention extends CampTix_Addon {
 		// Attendee info form, before checkout.
 		add_action( 'camptix_form_attendee_after_registration_information', [ $this->attendee_info, 'render_form_fields' ] );
 		add_action( 'camptix_checkout_start', [ $this, 'validate_form' ] );
+		add_action( 'camptix_payment_result', [ $this, 'maybe_reset_throttle' ], 10, 2 );
 
 		// General.
 		add_action( 'camptix_form_attendee_info_errors', [ $this, 'validation_error' ] );
@@ -51,6 +52,35 @@ class Spam_Prevention extends CampTix_Addon {
 
 		if ( ! $pass ) {
 			$camptix->error_flag( 'form_spam_prevention' );
+		}
+	}
+
+	/**
+	 * Check the result of the checkout form and reset the throttle score if successful.
+	 *
+	 * This allows for multiple successful ticket transactions from a single IP address without
+	 * hitting the throttle threshold. This is necessary for situations such as people purchasing
+	 * tickets at the registration table the day of the event.
+	 *
+	 * This assumes that a status of `completed` or `pending` is sufficient to consider a checkout
+	 * to be successful.
+	 *
+	 * @param string $payment_token Unused.
+	 * @param int    $result        The result code from the attempted transaction.
+	 *
+	 * @return void
+	 */
+	public function maybe_reset_throttle( $payment_token, $result ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$valid_results = [
+			$camptix::PAYMENT_STATUS_PENDING,
+			$camptix::PAYMENT_STATUS_COMPLETED,
+		];
+
+		if ( in_array( $result, $valid_results, true ) ) {
+			$this->attendee_info->reset_score_for_ip_address();
 		}
 	}
 

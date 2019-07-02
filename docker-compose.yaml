@@ -3,7 +3,7 @@ services:
     wordcamp.test:
         build:
             context: .docker
-            dockerfile: Dockerfile
+            dockerfile: Dockerfile.php-fpm
         volumes:
             - "./public_html/wp-content:/usr/src/public_html/wp-content"
             - ".docker/wp-config.php:/usr/src/public_html/wp-config.php"
@@ -28,8 +28,8 @@ services:
     wordcamp.db:
         build:
             context: .docker
-            dockerfile: mysql.Dockerfile
-            # todo rename ^ to Dockerfile.mysql and the other to Dockerfile.webhead or something, for clarity. maybe also rename `wordcamp.db` to something more correct.
+            dockerfile: Dockerfile.mysql
+            # todo maybe rename `wordcamp.db` to something more correct.
         volumes:
             - ".docker/database:/var/lib/mysql"
         ports:

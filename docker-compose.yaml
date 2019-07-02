@@ -5,7 +5,7 @@ services:
             context: .docker
             dockerfile: Dockerfile.php-fpm
         volumes:
-            - "./public_html/wp-content:/usr/src/public_html/wp-content"
+            - "./public_html:/usr/src/public_html"
             - ".docker/wp-config.php:/usr/src/public_html/wp-config.php"
             - ".docker/bin:/var/scripts"
             # todo should mount nginx.conf, php-form.conf, etc too? then could edit and re-run rather than having to copy and rebuild

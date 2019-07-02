@@ -7,7 +7,8 @@ services:
         volumes:
             - "./public_html/wp-content:/usr/src/public_html/wp-content"
             - ".docker/wp-config.php:/usr/src/public_html/wp-config.php"
-            # todo should mount nginx.conf, php-form.conf, install-plugin-theme.sh, etc too? then could edit and re-run rather than having to copy and rebuild
+            - ".docker/bin:/var/scripts"
+            # todo should mount nginx.conf, php-form.conf, etc too? then could edit and re-run rather than having to copy and rebuild
             # todo mount host ~/dotfiles into container /root, but can't b/c outside .docker folder?
         ports:
             - "80:80"
@@ -32,6 +33,7 @@ services:
             # todo maybe rename `wordcamp.db` to something more correct.
         volumes:
             - ".docker/database:/var/lib/mysql"
+            - ".docker/bin:/var/scripts"
         ports:
             # todo document that 3307 to avoid conflicts w/ host mysql server?
             - "3307:3306"

@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# See README.md for setup instructions.
-
 #
 # TODO
 #
@@ -26,12 +24,16 @@ function main {
 	phpcs
 	phpmd
 
-	echo "\nProceeding with push.\n"
+	# todo lint JS and CSS
+
+	printf "\n"
 }
 
 # Get the files that have changes between the local and remote HEADs.
 function get_changed_files {
-	changed_files=$( /usr/bin/git diff git-svn HEAD --name-only --relative )
+	changed_files=$( /usr/bin/git diff --name-only --cached --relative )
+
+	# todo ignore deletes
 }
 
 # Lint PHP files for syntax errors.
@@ -39,6 +41,10 @@ function php_lint {
 	local errors=false
 
 	for file in $changed_files; do
+		if [[ ${file: -4} != ".php" ]]; then
+			continue
+		fi
+
 		output=$( /usr/local/bin/php -l -d display_errors=1 $file )
 
 		if [ $? != 0 ]; then
@@ -62,6 +68,10 @@ function phpcs {
 	local errors=false
 
 	for file in $changed_files; do
+		if [[ ${file: -4} != ".php" ]]; then
+			continue
+		fi
+
 		output=$( /usr/local/bin/phpcs $file )
 
 		if [ $? != 0 ]; then
@@ -84,6 +94,10 @@ function phpmd {
 	local config=$( search_tree "phpmd.xml.dist" )
 
 	for file in $changed_files; do
+		if [[ ${file: -4} != ".php" ]]; then
+			continue
+		fi
+
 		output=$( /usr/local/bin/phpmd $file text $config )
 
 		if [ $? != 0 ]; then
@@ -122,6 +136,9 @@ function search_tree {
 
 # Prompt the user to abort or continue running the script.
 function prompt_to_continue {
+	# Assign STDIN to the keyboard, which isn't the default when hooks are executed.
+	exec < /dev/tty
+
 	printf "\nDo you want to proceed despite the errors above? [y/N] "
 	read PROCEED
 

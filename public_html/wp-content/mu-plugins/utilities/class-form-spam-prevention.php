@@ -277,6 +277,21 @@ class Form_Spam_Prevention {
 	}
 
 	/**
+	 * Remove the throttle score for a given IP address.
+	 *
+	 * @param string $ip_address An IP address.
+	 *
+	 * @return bool True if the score was successfully removed. Otherwise false.
+	 */
+	public function reset_score_for_ip_address( $ip_address = '' ) {
+		if ( ! $ip_address ) {
+			$ip_address = $this->get_ip_address();
+		}
+
+		return delete_transient( $this->generate_score_key( $ip_address ) );
+	}
+
+	/**
 	 * Checks the current throttle score for a given IP address.
 	 *
 	 * @param string $ip_address An IP address.

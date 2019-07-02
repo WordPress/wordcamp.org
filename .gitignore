@@ -5,17 +5,25 @@
 .docker/database
 .docker/wordcamp*.pem
 
+
 #
 # Misc
 #
 wp-cli.yml
+script-backups/
 public_html/.well-known/
 public_html/mu/
+public_html/bin/
+public_html/wp-config.php
+
 public_html/wp-content/blogs.dir/
 public_html/wp-content/cache/
 public_html/wp-content/languages/
 public_html/wp-content/mu-plugins/blocks/build
 public_html/wp-content/mu-plugins/includes/slack/
+public_html/wp-content/mu-plugins-private/
+public_html/wp-content/themes-private/
+
 
 #
 # Plugins
@@ -53,6 +61,7 @@ public_html/wp-content/plugins/wordpress-importer
 public_html/wp-content/plugins/wp-multibyte-patch
 public_html/wp-content/plugins/wp-super-cache
 public_html/wp-content/plugins/wporg-profiles-wp-activity-notifier/
+
 
 #
 # Themes

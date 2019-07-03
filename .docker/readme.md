@@ -8,6 +8,8 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     ```bash
     git clone git@github.com:WordPress/wordcamp.org.git wordcamp.test
     cd wordcamp.test
+	rm -rf .git/hooks
+	ln -s .githooks .git/hooks
     ```
 
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.

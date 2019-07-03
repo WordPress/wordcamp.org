@@ -1,6 +1,8 @@
 #!/usr/bin/php
 <?php
 
+# todo need to abort or something if using `git ci -m 'foo'`?
+
 function get_custom_message() {
 	$previous_components = get_previous_components();
 

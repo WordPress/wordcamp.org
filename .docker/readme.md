@@ -14,6 +14,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.
 	```bash
+	cd .docker
 	brew install mkcert
 	brew install nss
 	mkcert -install

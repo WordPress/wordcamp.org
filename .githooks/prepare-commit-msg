@@ -1,8 +1,6 @@
 #!/usr/bin/php
 <?php
 
-# todo need to abort or something if using `git ci -m 'foo'`?
-
 function get_custom_message() {
 	$previous_components = get_previous_components();
 
@@ -57,12 +55,20 @@ function get_previous_components() {
  * helps standardize component prefixes.
  *
  * @param string $commit_message_file
+ * @param string $message_source
  */
-function main( $commit_message_file ) {
+function main( $commit_message_file, $message_source ) {
+	// Message was provided via `git ci -m`.
+	if ( $message_source ) {
+		// todo don't do this during rebase
+		echo "Warning: Using provided commit message, please make sure it conforms to WordCamp.org guidelines.\n\n";
+		return;
+	}
+
 	$default_message = file_get_contents( $commit_message_file );
 	$custom_message  = get_custom_message();
 
 	file_put_contents( $commit_message_file, $custom_message . $default_message );
 }
 
-main( $argv[1] );
+main( $argv[1], $argv[2] ?? null );

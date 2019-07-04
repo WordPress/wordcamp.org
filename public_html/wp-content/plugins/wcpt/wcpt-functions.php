@@ -1,47 +1,48 @@
 <?php
 
 /**
- * Add our custom head action to wp_head
+ * Add our custom head action to wp_head.
  */
-function wcpt_head () {
+function wcpt_head() {
 	do_action( 'wcpt_head' );
 }
 add_action( 'wp_head', 'wcpt_head' );
 
 /**
- * Add our custom head action to wp_head
+ * Add our custom footer action to wp_footer.
  */
-function wcpt_footer () {
+function wcpt_footer() {
 	do_action( 'wcpt_footer' );
 }
 add_action( 'wp_footer', 'wcpt_footer' );
 
 /**
- * Make sure user can perform special tasks
+ * Make sure user can perform special tasks.
  *
  * @return bool
  */
-function wcpt_has_access () {
-	if ( is_super_admin () )
+function wcpt_has_access() {
+	if ( is_super_admin() ) {
 		$has_access = true;
-	else
+	} else {
 		$has_access = false;
+	}
 
 	return apply_filters( 'wcpt_has_access', $has_access );
 }
 
 /**
- * Specific method of formatting numeric values
+ * Specific method of formatting numeric values.
  *
- * @param string $number   Number to format
- * @param string $decimals optional Display decimals
+ * @param string $number   Number to format.
+ * @param string $decimals optional Display decimals.
  *
  * @return string Formatted string
  */
 function wcpt_number_format( $number, $decimals = false ) {
-	// If empty, set $number to '0'
-	if ( empty( $number ) || !is_numeric( $number ) )
+	if ( empty( $number ) || ! is_numeric( $number ) ) {
 		$number = '0';
+	}
 
 	return apply_filters( 'wcpt_number_format', number_format( $number, $decimals ), $number, $decimals );
 }
@@ -96,14 +97,14 @@ function wcpt_get_log_entries( $event_id ) {
 }
 
 /**
- * Add displayable data to raw entries
+ * Add displayable data to raw entries.
  *
- * @param array $raw_entries
+ * @param array  $raw_entries
  * @param string $entry_type Type of entry
  *
  * @return array
  */
-function process_raw_entries ( $raw_entries, $entry_type ) {
+function process_raw_entries( $raw_entries, $entry_type ) {
 	$entries = array();
 	foreach ( $raw_entries as $entry ) {
 		$user = get_user_by( 'id', $entry['user_id'] );
@@ -111,7 +112,7 @@ function process_raw_entries ( $raw_entries, $entry_type ) {
 		if ( $user ) {
 			$entry['user_display_name'] = $user->display_name;
 		} else {
-			// Assume that the action was performed during a cron job
+			// Assume that the action was performed during a cron job.
 			$entry['user_display_name'] = 'WordCamp Bot';
 		}
 
@@ -124,7 +125,7 @@ function process_raw_entries ( $raw_entries, $entry_type ) {
 }
 
 /**
- * Sort the log entries in reverse-chronological order
+ * Sort the log entries in reverse-chronological order.
  *
  * @param array $a
  * @param array $b
@@ -132,7 +133,7 @@ function process_raw_entries ( $raw_entries, $entry_type ) {
  * @return int
  */
 function wcpt_sort_log_entries( $a, $b ) {
-	// If a status change and a note occur at the same time, show the change before the note
+	// If a status change and a note occur at the same time, show the change before the note.
 	if ( $a['timestamp'] == $b['timestamp'] ) {
 		return ( 'status_change' == $a['type'] ) ? 1 : -1;
 	}

@@ -30,6 +30,7 @@ $wp_cache_mod_rewrite          = 0;
 $wp_cache_front_page_checks    = 0;
 $wp_supercache_304             = 0;
 $wp_cache_slash_check          = 1;
+$wpsc_fix_164                  = 1;
 
 $cache_compression   = 0;
 $cache_enabled       = true;

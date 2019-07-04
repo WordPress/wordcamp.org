@@ -6,6 +6,7 @@ ENV MYSQL_DATABASE=wordcamp_dev
 
 ADD wordcamp_dev.sql /docker-entrypoint-initdb.d/data.sql
 
+RUN apt-get update
 RUN apt-get install nano -y
 
 EXPOSE 3306

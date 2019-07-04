@@ -34,14 +34,20 @@ function get_custom_message() {
 
 function get_previous_components() {
 	$components   = array();
-	$staged_files = explode( "\n", shell_exec( '/usr/bin/git diff --name-only --cached --relative' ) );
+	$staged_files = explode( "\n", trim( shell_exec( '/usr/bin/git diff --name-only --cached --relative' ) ) );
 
 	foreach ( $staged_files as $file ) {
-		$short_description = shell_exec( "/usr/bin/git log --format='%s' --max-count=5 $file" );
-		$component_marker  = strpos( $short_description, ': ' );
+		$short_descriptions = explode(
+			PHP_EOL,
+			trim( shell_exec( "/usr/bin/git log --format='%s' --max-count=5 $file" ) )
+		);
 
-		if ( false !== $component_marker ) {
-			$components[] = substr( $short_description, 0, $component_marker );
+		foreach ( $short_descriptions as $description ) {
+			$component_marker = strpos( $description, ': ' );
+
+			if ( false !== $component_marker ) {
+				$components[] = substr( $description, 0, $component_marker );
+			}
 		}
 	}
 

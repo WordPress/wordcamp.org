@@ -1,26 +1,13 @@
 FROM php:7.2-fpm
 
-# Install the PHP extensions we need.
-# Copied from https://github.com/docker-library/wordpress/blob/master/php7.2/fpm/Dockerfile
-RUN set -ex; \
-	\
-	savedAptMark="$(apt-mark showmanual)"; \
-	\
-	apt-get update; \
-	apt-get install -y --no-install-recommends \
-		libjpeg-dev \
-		libpng-dev \
-	; \
-	\
-	docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr; \
-	docker-php-ext-install gd mysqli opcache zip;
-
-# Install other packages.
+# Install additional packages.
 RUN apt-get update \
     && apt-get install -y \
         build-essential \
         git \
         less \
+        libjpeg-dev \
+        libpng-dev \
         libsqlite3-dev \
         libxext6 \
         nano \
@@ -29,26 +16,19 @@ RUN apt-get update \
         ssmtp \
         vim
 
-# Reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies.
-# Copied from https://github.com/docker-library/wordpress/blob/master/php7.2/fpm/Dockerfile
-RUN apt-mark auto '.*' > /dev/null; \
-	apt-mark manual $savedAptMark; \
-	ldd "$(php -r 'echo ini_get("extension_dir");')"/*.so \
-		| awk '/=>/ { print $3 }' \
-		| sort -u \
-		| xargs -r dpkg-query -S \
-		| cut -d: -f1 \
-		| sort -u \
-		| xargs -rt apt-mark manual; \
-	\
-	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-	rm -rf /var/lib/apt/lists/*
+# Install additional PHP extensions.
+RUN docker-php-ext-install -j "$(nproc)" \
+    gd \
+    mysqli \
+    opcache \
+    zip
+RUN docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr
 
-# Configure PHP
+# Add PHP configurations.
 COPY config/opcache-recommended.ini /usr/local/etc/php/conf.d/opcache-recommended.ini
 COPY config/error-logging.ini /usr/local/etc/php/conf.d/error-logging.ini
 
-# Install SSL certificate
+# Install SSL certificate.
 COPY wordcamp.test.pem     /etc/ssl/certs/wordcamp.test.pem
 COPY wordcamp.test.key.pem /etc/ssl/private/wordcamp.test.key.pem
 
@@ -58,12 +38,12 @@ RUN tar xvf wkhtmltox.tar.xz
 RUN mv wkhtmltox/bin/wkhtmlto* /usr/bin/
 RUN rm -rf wkhtmltox*
 
-# Install WP-CLI
+# Install WP-CLI.
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
 RUN chmod +x wp-cli.phar
 RUN mv wp-cli.phar /usr/local/bin/wp
 
-# Install MailCatcher
+# Install MailCatcher.
 RUN gem install mailcatcher --no-ri --no-rdoc
 RUN sed -i -e "s|;sendmail_path =|sendmail_path = /usr/sbin/ssmtp -t |" /usr/local/etc/php/php.ini-development
 RUN sed -i -e "s/smtp_port = 25/smtp_port = 1025/" /usr/local/etc/php/php.ini-development
@@ -71,5 +51,7 @@ RUN chown root:mail /etc/ssmtp/ssmtp.conf
 RUN sed -i -e "s/#FromLineOverride=YES/FromLineOverride=YES/" /etc/ssmtp/ssmtp.conf
 RUN sed -i -e "s/mailhub=mail/mailhub=127.0.0.1:1025/" /etc/ssmtp/ssmtp.conf
 RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
+
+# todo Maybe install phpMyAdmin?
 
 CMD bash /var/scripts/start.sh

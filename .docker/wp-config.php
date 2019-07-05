@@ -9,8 +9,10 @@ define( 'DB_NAME',     'wordcamp_dev' );
 define( 'DB_USER',     'root'         );
 define( 'DB_PASSWORD', 'mysql'        );
 define( 'DB_HOST',     'wordcamp.db'  );
-define( 'DB_CHARSET',  'utf8'         );
-define( 'DB_COLLATE',  ''             );
+
+// Force utf8mb4 since HyperDB won't admit it supports it.
+define( 'DB_CHARSET', 'utf8mb4' );
+define( 'DB_COLLATE', 'utf8mb4_general_ci' );
 
 define( 'CUSTOM_USER_TABLE',      'wc_users'    );
 define( 'CUSTOM_USER_META_TABLE', 'wc_usermeta' );
@@ -39,7 +41,7 @@ define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
 
 
 /*
- * Logging
+ * Logging/Debugging
  */
 define( 'WP_DEBUG',         true );
 define( 'WP_DEBUG_LOG',     true );
@@ -47,6 +49,7 @@ define( 'WP_DEBUG_DISPLAY', true );
 define( 'SAVEQUERIES',      true );
 define( 'DIEONDBERROR',     false );
 define( 'SCRIPT_DEBUG',     false ); // Temporarily disabled because of https://github.com/WordPress/gutenberg/issues/7897 / https://github.com/WordPress/gutenberg/issues/11360
+define( 'JETPACK_DEV_DEBUG', true );
 
 
 /*
@@ -147,6 +150,8 @@ define( 'WORDCAMP_OXR_API_KEY',   '' );
 define( 'WP_CACHE',       true );
 define( 'WPCACHEHOME',    WP_CONTENT_DIR . '/plugins/wp-super-cache/' );
 define( 'SUBMITDISABLED', false ); // Work around https://github.com/Automattic/wp-super-cache/issues/213.
+define( 'WP_CACHE_PAGE_SECRET',    '' );
+define( 'WP_CACHE_DEBUG_USERNAME', '' );
 
 
 /*

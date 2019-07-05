@@ -1,13 +1,29 @@
-### WordCamp.org
+# WordCamp.org
 
-This repository mirrors https://meta.svn.wordpress.org/sites/trunk/wordcamp.org/ and can be used to contribute using Git instead of SVN.
+[WordCamp.org](https://central.wordcamp.org) is a platform for managing WordCamp conferences and WordPress meetup events. It provides a website for every WordCamp, with tools for creating public-facing content and managing event logistics.
 
-#### Setup 
+The platform also includes tools for program volunteers and administrators to manage logistics for the program itself.
+
+
+## Setup
 
 There are two primary ways to setup this repo for local development.
 
 1. [Using VVV for installing as WordCamp.org as a part of WordPress.org meta network.](https://github.com/WordPress/meta-environment/blob/master/docs/install.md)
 
 1. [Using Docker for a standalone WordCamp.org installation.](.docker/readme.md)
-        
-To contribute, you can send [pull requests on GitHub](https://github.com/WordPress/wordcamp.org/), or add [patches on Meta Trac](https://make.wordpress.org/meta/handbook/about/get-involved/learn-how-to-contribute-code/#share-your-new-code).
+
+
+## Support
+
+If you have a question about using your site, or contributing to the platform, please email [support@wordcamp.org](mailto:support@wordcamp.org) or join the `#meta-wordcamp` channel in [the official WordPress Slack workspace](https://make.wordpress.org/chat/).
+
+
+## Security
+
+Please report security vulnerabilities via [our HackerOne bounty program](https://hackerone.com/wordpress).
+
+
+## License
+
+All code is licensed under the [GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) or later, unless otherwise stated.

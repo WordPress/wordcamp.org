@@ -7,6 +7,7 @@ namespace WordCamp\Trusted_Deputy_Capabilities;
  *
  * They should be able to:
  *  - Perform administrator-level functions on all sites
+ *    - Except for things that require specific subroles, see `wcorg-subroles.php`
  *  - Create new sites
  *  - Connect Jetpack to WordPress.com for all sites
  *  - Use the Payments dashboard

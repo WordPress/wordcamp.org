@@ -1,7 +1,6 @@
 #
 # Docker
 #
-.docker/data/
 .docker/database
 .docker/wordcamp*.pem
 
@@ -23,6 +22,7 @@ public_html/wp-content/mu-plugins/blocks/build
 public_html/wp-content/mu-plugins/includes/slack/
 public_html/wp-content/mu-plugins-private/
 public_html/wp-content/themes-private/
+public_html/wp-content/debug.log
 
 
 #

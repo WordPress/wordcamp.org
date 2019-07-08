@@ -25,6 +25,14 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 	_Note: When adding a new domain to your local environment, make sure you add it to the example above, and commit the change, so that others can just copy/paste the command, rather than re-doing the work of generating the full list. Add `*.{city}.wordcamp.test` rather than specific years like `2019.{city}.wordcamp.test`. Third-level domains like `central.wordcamp.test` are already covered by the `*.wordcamp.test`, and should not be added to the list._
 
+1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
+    ```bash
+    cd public_html
+    git clone https://core.git.wordpress.org mu
+    cd mu
+    git checkout 5.2
+    ```
+
 1. Build and boot the Docker environment.
     ```bash
     docker-compose up --build -d

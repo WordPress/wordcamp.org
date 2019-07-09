@@ -397,6 +397,7 @@ jQuery(document).ready(function($){
 		events: {
 			'fastClick .dashicons-menu': 'menu',
 			'fastClick .submenu .search': 'searchView',
+			'fastClick header h1': 'searchView',
 			'fastClick .submenu .sort': 'sortView',
 			'fastClick .submenu .refresh': 'refresh',
 			'fastClick .submenu .filter': 'filterView'

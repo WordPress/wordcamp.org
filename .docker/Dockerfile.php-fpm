@@ -10,6 +10,7 @@ RUN apt-get update \
         libpng-dev \
         libsqlite3-dev \
         libxext6 \
+        mysql-client \
         nano \
         nginx \
         ruby-dev \

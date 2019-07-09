@@ -258,8 +258,12 @@ class CampTix_Attendance extends CampTix_Addon {
 			";
 
 			$clauses['where'] .= $wpdb->prepare( "
-				AND ( tix_first_name.meta_value LIKE '%%%s%%' OR tix_last_name.meta_value LIKE '%%%s%%' )
-			", $search, $search );
+				AND (
+					tix_first_name.meta_value LIKE '%%%s%%' OR
+					tix_last_name.meta_value LIKE '%%%s%%' OR
+					CONCAT( tix_first_name.meta_value, ' ', tix_last_name.meta_value ) LIKE '%%%s%%'
+				)
+			", $search, $search, $search );
 
 			return $clauses;
 		} );

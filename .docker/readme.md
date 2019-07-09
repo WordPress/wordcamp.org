@@ -28,7 +28,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
     ```bash
     cd public_html
-    git clone https://core.git.wordpress.org mu
+    git clone git://core.git.wordpress.org/ mu
     cd mu
     git checkout 5.2
     ```

@@ -70,7 +70,7 @@ class Genderize_Client extends API_Client {
 			);
 		}
 
-		if ( true === $this->options->reset_cache ) {
+		if ( true === $this->options['reset_cache'] ) {
 			delete_option( self::CACHE_KEY );
 		}
 	}

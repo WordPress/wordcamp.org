@@ -1,6 +1,7 @@
 #
 # Docker
 #
+.docker/data/*.bkp
 .docker/database
 .docker/wordcamp*.pem
 

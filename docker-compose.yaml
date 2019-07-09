@@ -6,9 +6,10 @@ services:
             dockerfile: Dockerfile.php-fpm
         volumes:
             - "./public_html:/usr/src/public_html"
+            - ".docker/bin:/var/scripts"
+            - ".docker/data:/usr/src/data"
             - ".docker/wp-config.php:/usr/src/public_html/wp-config.php"
             - ".docker/wp-cli.yml:/usr/src/public_html/wp-cli.yml"
-            - ".docker/bin:/var/scripts"
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"
             # todo mount host ~/dotfiles into container /root, but can't b/c outside .docker folder?

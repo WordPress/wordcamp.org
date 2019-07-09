@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 const { InspectorControls: CoreInspectorControlsContainer } = wp.blockEditor;
-const { PanelBody, PanelRow, SelectControl }                = wp.components;
+const { PanelBody, SelectControl }                          = wp.components;
 const { Component }                                         = wp.element;
 const { __ }                                                = wp.i18n;
 
@@ -66,25 +66,21 @@ export class InspectorControls extends Component {
 				/>
 
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ false }>
-					<PanelRow>
-						<SelectControl
-							label={ __( 'Biography Length', 'wordcamporg' ) }
-							value={ content }
-							options={ options.content }
-							onChange={ ( value ) => setAttributes( { content: value } ) }
-						/>
-					</PanelRow>
+					<SelectControl
+						label={ __( 'Biography Length', 'wordcamporg' ) }
+						value={ content }
+						options={ options.content }
+						onChange={ ( value ) => setAttributes( { content: value } ) }
+					/>
 				</PanelBody>
 
 				<PanelBody title={ __( 'Sorting & Filtering', 'wordcamporg' ) } initialOpen={ false }>
-					<PanelRow>
-						<SelectControl
-							label={ __( 'Sort by', 'wordcamporg' ) }
-							value={ sort }
-							options={ options.sort }
-							onChange={ ( value ) => setAttributes( { sort: value } ) }
-						/>
-					</PanelRow>
+					<SelectControl
+						label={ __( 'Sort by', 'wordcamporg' ) }
+						value={ sort }
+						options={ options.sort }
+						onChange={ ( value ) => setAttributes( { sort: value } ) }
+					/>
 				</PanelBody>
 			</CoreInspectorControlsContainer>
 		);

@@ -161,6 +161,8 @@ From there you can run the script using `bash /var/scripts/database.sh [subcomma
 
 ### Updating the database provision file
 
+_WARNING_: Never export data directly from the production database, because it contains sensitive information. Instead, manually recreate the useful data locally with fake email addresses, etc.
+
 If the dev database needs to be updated to better reflect the state of production (e.g. a new version of the WP Core database, new network-activated plugins), or you've added data to your dev database that you think should be included for everyone (e.g. a new site with useful test cases), you can use the `clean-export` subcommand to update the file that is committed to version control. Before you do, please do these preflight checks:
 
 * Make sure WP is running the latest branch, and the database schema has been updated.

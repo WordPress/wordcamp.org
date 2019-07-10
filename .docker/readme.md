@@ -58,7 +58,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
     Example hosts file entry:
     ```bash
-    127.0.0.1 central.wordcamp.test plan.wordcamp.test 2014.content.wordcamp.test 2014.misc.wordcamp.test 2016.misc.wordcamp.test 2014.atlanta.wordcamp.test 2013.sf.wordcamp.test 2014.seattle.wordcamp.test 2014.columbus.wordcamp.test 2014.toronto.wordcamp.test 2014.sf.wordcamp.test buddycamp.test 2015.brighton.buddycamp.test 2015-experienced.seattle.wordcamp.test 2015-beginner.seattle.wordcamp.test 2015.us.wordcamp.test 2015.rhodeisland.wordcamp.test new-site.wordcamp.test 2014.new-site.wordcamp.test 2019.seattle.wordcamp.test
+    127.0.0.1 wordcamp.test central.wordcamp.test 2014.seattle.wordcamp.test 2020.shinynew.wordcamp.test buddycamp.test 2015.brighton.buddycamp.test
     ```
 
 1. The installation doesn't have any 3rd-party plugins or themes yet, you must add them like so:
@@ -140,16 +140,16 @@ Note: All of these commands are meant to be executed from project directory.
     `wordcamp.db` is the name of docker service which is running MySQL server.
 
 
-Once the Docker instance has started, you can visit [2014.content.wordcamp.org](2014.content.wordcamp.org) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
+Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
 
 
 ## Working with the database provision file
 
 The **.docker/bin** directory gets mounted as a volume within the PHP container, and it contains a script, **database.sh**, with several useful commands. To run these commands, first open a shell inside the docker container:
 
-    ```bash
-    docker-compose exec wordcamp.test bash
-    ```
+```bash
+docker-compose exec wordcamp.test bash
+```
 
 From there you can run the script using `bash /var/scripts/database.sh [subcommand]`. The most useful subcommands are:
 

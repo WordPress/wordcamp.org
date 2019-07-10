@@ -166,6 +166,6 @@ _WARNING_: Never export data directly from the production database, because it c
 If the dev database needs to be updated to better reflect the state of production (e.g. a new version of the WP Core database, new network-activated plugins), or you've added data to your dev database that you think should be included for everyone (e.g. a new site with useful test cases), you can use the `clean-export` subcommand to update the file that is committed to version control. Before you do, please do these preflight checks:
 
 * Make sure WP is running the latest branch, and the database schema has been updated.
-* Review each line of the diff to make sure there isn't anything sensitive in the database. Scrub anything that is.
+* Review each line of the diff to make sure there isn't anything sensitive in the database. Scrub anything that is. There are some suggested strategies for reviewing database file diffs [here](https://github.com/WordPress/meta-environment/wiki/Reviewing-PRs-with-database-changes).
 
 Then you can run `bash /var/scripts/database.sh clean-export`. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.

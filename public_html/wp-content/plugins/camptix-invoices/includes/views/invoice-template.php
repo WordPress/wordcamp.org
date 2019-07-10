@@ -139,7 +139,7 @@ defined('WPINC') || die();
 			<strong><?php esc_html_e('To', 'wordcamporg'); ?>:</strong>
 			<p class="text-right">
 				<?php echo esc_html( $invoice_metas['name'] ); ?><br/>
-				<?php echo esc_html( $invoice_metas['address'] ); ?><br/>
+				<?php echo nl2br( esc_html( $invoice_metas['address'] ) ); ?><br/>
 			</p>
 			<?php if ( ! empty( $invoice_metas['vat-number'] ) ) { ?>
 				<strong><?php esc_html_e('VAT no', 'wordcamporg'); ?>:</strong>

@@ -11,7 +11,6 @@ DATA_FILENAME="wordcamp_dev.sql"
 function main() {
     local cmd="$1"
 
-    local orig_dir="$PWD"
     cd /usr/src/public_html
 
     case "$cmd" in
@@ -42,7 +41,7 @@ function main() {
 
     echo
 
-    cd $orig_dir
+    cd -
 }
 
 # Clean unnecessary data from the database.

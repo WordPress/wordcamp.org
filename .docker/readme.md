@@ -18,12 +18,12 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	brew install mkcert
 	brew install nss
 	mkcert -install
-	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem    wordcamp.test *.wordcamp.test *.content.wordcamp.test *.new-site.wordcamp.test *.misc.wordcamp.test *.atlanta.wordcamp.test *.sf.wordcamp.test *.seattle.wordcamp.test *.columbus.wordcamp.test *.toronto.wordcamp.test *.us.wordcamp.test *.rhodeisland.wordcamp.test buddycamp.test *.buddycamp.test *.brighton.buddycamp.test
+	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem    wordcamp.test *.wordcamp.test *.seattle.wordcamp.test *.shinynew.wordcamp.test buddycamp.test *.buddycamp.test *.brighton.buddycamp.test
 	```
 
 	_Note: That list of domains is generated with `docker-compose exec wordcamp.test wp site list --field=url`, but that command won't be available until after you've built the environment in the next steps._
 
-	_Note: When adding a new domain to your local environment, make sure you add it to the example above, and commit the change, so that others can just copy/paste the command, rather than re-doing the work of generating the full list. Add `*.{city}.wordcamp.test` rather than specific years like `2019.{city}.wordcamp.test`. Third-level domains like `central.wordcamp.test` are already covered by the `*.wordcamp.test`, and should not be added to the list._
+	_Note: When updating the database provision file with a new site (see more on this below), make sure you add it to the example above, and commit the change, so that others can just copy/paste the command, rather than re-doing the work of generating the full list. Add `*.{city}.wordcamp.test` rather than specific years like `2019.{city}.wordcamp.test`. Third-level domains like `central.wordcamp.test` are already covered by the `*.wordcamp.test`, and should not be added to the list._
 
 1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
     ```bash
@@ -58,7 +58,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
     Example hosts file entry:
     ```bash
-    127.0.0.1 central.wordcamp.test plan.wordcamp.test 2014.content.wordcamp.test 2014.misc.wordcamp.test 2016.misc.wordcamp.test 2014.atlanta.wordcamp.test 2013.sf.wordcamp.test 2014.seattle.wordcamp.test 2014.columbus.wordcamp.test 2014.toronto.wordcamp.test 2014.sf.wordcamp.test buddycamp.test 2015.brighton.buddycamp.test 2015-experienced.seattle.wordcamp.test 2015-beginner.seattle.wordcamp.test 2015.us.wordcamp.test 2015.rhodeisland.wordcamp.test new-site.wordcamp.test 2014.new-site.wordcamp.test 2019.seattle.wordcamp.test
+    127.0.0.1 wordcamp.test central.wordcamp.test 2014.seattle.wordcamp.test 2020.shinynew.wordcamp.test buddycamp.test 2015.brighton.buddycamp.test
     ```
 
 1. The installation doesn't have any 3rd-party plugins or themes yet, you must add them like so:
@@ -140,18 +140,32 @@ Note: All of these commands are meant to be executed from project directory.
     `wordcamp.db` is the name of docker service which is running MySQL server.
 
 
-Once the Docker instance has started, you can visit [2014.content.wordcamp.org](2014.content.wordcamp.org) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
+Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
 
 
-## Updating the sample database
+## Working with the database provision file
 
-1. Make sure WP is running the latest branch, and the database schema has been updated.
-1. Make sure there isn't anything sensitive in the database. Scrub anything that is.
-1. Update the sample file:
+The **.docker/bin** directory gets mounted as a volume within the PHP container, and it contains a script, **database.sh**, with several useful commands. To run these commands, first open a shell inside the docker container:
 
-	```bash
-	docker-compose exec wordcamp.db bash
-	mysqldump wordcamp_dev -u root -pmysql > /var/lib/mysql/wordcamp_dev.sql
-	exit
-	mv .docker/database/wordcamp_dev.sql .docker/wordcamp_dev.sql
-	```
+```bash
+docker-compose exec wordcamp.test bash
+```
+
+From there you can run the script using `bash /var/scripts/database.sh [subcommand]`. The most useful subcommands are:
+
+* `backup-current`: Back up the current state of the database to a file in the **.docker/data** directory.
+* `restore <file>`: Import a specified file to the database after deleting the current state.
+* `reset`: Delete the current state of the database and then re-import the provision file.
+* `clean-export`: Clean up the current state of the database and then export it to the provision file. See more on this below.
+* `help`: See the full list of subcommands available.
+
+### Updating the database provision file
+
+_WARNING_: Never export data directly from the production database, because it contains sensitive information. Instead, manually recreate the useful data locally with fake email addresses, etc.
+
+If the dev database needs to be updated to better reflect the state of production (e.g. a new version of the WP Core database, new network-activated plugins), or you've added data to your dev database that you think should be included for everyone (e.g. a new site with useful test cases), you can use the `clean-export` subcommand to update the file that is committed to version control. Before you do, please do these preflight checks:
+
+* Make sure WP is running the latest branch, and the database schema has been updated.
+* Review each line of the diff to make sure there isn't anything sensitive in the database. Scrub anything that is. There are some suggested strategies for reviewing database file diffs [here](https://github.com/WordPress/meta-environment/wiki/Reviewing-PRs-with-database-changes).
+
+Then you can run `bash /var/scripts/database.sh clean-export`. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.

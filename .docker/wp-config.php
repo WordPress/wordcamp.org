@@ -34,7 +34,7 @@ define( 'SUBDOMAIN_INSTALL',    true );
 define( 'DOMAIN_CURRENT_SITE',  $wcorg_domain_current_site );
 define( 'PATH_CURRENT_SITE',    '/' );
 define( 'SITE_ID_CURRENT_SITE',  1 );
-define( 'BLOG_ID_CURRENT_SITE',  2 ); // central.wordcamp.test
+define( 'BLOG_ID_CURRENT_SITE',  5 ); // central.wordcamp.test
 define( 'NOBLOGREDIRECT',       'https://central.wordcamp.test' );
 define( 'SUNRISE',               true );
 define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );

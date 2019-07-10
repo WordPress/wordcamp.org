@@ -61,10 +61,16 @@ function clean() {
 
         echo -n "Cleaning $blog_url... "
 
-        echo -n "revisions... "
+        echo -n "post revisions... "
         local revision_ids=$( ${blog_cmd} post list --post_type='revision' --format=ids )
         if [ ! -z "$revision_ids" ]; then
             $blog_cmd post delete $revision_ids --force --quiet
+        fi
+
+        echo -n "trashed posts... "
+        local post_ids=$( ${blog_cmd} post list --post_type='any' --post_status='trash' --format=ids )
+        if [ ! -z "$post_ids" ]; then
+            $blog_cmd post delete $post_ids --force --quiet
         fi
 
         echo -n "transients... "

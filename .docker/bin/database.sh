@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Bail if this doesn't look like a local dev environment. This isn't intended as a security feature so much as
+# a reminder that these database commands shouldn't be run on production data.
+if [ ! $IS_LOCAL_DEV -eq 1 ]; then
+    echo
+    echo "The functions in database.sh are only intended to be run in a local development"
+    echo "environment using test data. This doesn't look like a development environment."
+    echo
+
+    exit 1
+fi
+
 WP="wp --allow-root"
 DATA_PATH="/usr/src/data"
 DATA_FILENAME="wordcamp_dev.sql"

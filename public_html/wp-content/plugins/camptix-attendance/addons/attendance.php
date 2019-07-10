@@ -159,7 +159,7 @@ class CampTix_Attendance extends CampTix_Addon {
 			'tickets' => array(),
 		) );
 
-		$filters['search'] = ! empty( $_REQUEST['camptix_search'] ) ? $_REQUEST['camptix_search'] : '';
+		$filters['search'] = ! empty( $_REQUEST['camptix_search'] ) ? trim( $_REQUEST['camptix_search'] ) : '';
 
 		// Filter by attendance.
 		if ( in_array( $filters['attendance'], array( 'attending', 'not-attending' ) ) )

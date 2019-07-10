@@ -166,4 +166,4 @@ If the dev database needs to be updated to better reflect the state of productio
 * Make sure WP is running the latest branch, and the database schema has been updated.
 * Make sure there isn't anything sensitive in the database. Scrub anything that is.
 
-Then you can run `bash /var/scripts/database.sh clean-export`. It will automatically strip all post revisions and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.
+Then you can run `bash /var/scripts/database.sh clean-export`. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.

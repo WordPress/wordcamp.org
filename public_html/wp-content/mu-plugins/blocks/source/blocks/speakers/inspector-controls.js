@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 const { InspectorControls: CoreInspectorControlsContainer } = wp.blockEditor;
-const { PanelBody, PanelRow, SelectControl, ToggleControl } = wp.components;
+const { PanelBody, SelectControl, ToggleControl }           = wp.components;
 const { Component }                                         = wp.element;
 const { __ }                                                = wp.i18n;
 
@@ -65,33 +65,27 @@ export class InspectorControls extends Component {
 				/>
 
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ false }>
-					<PanelRow>
-						<SelectControl
-							label={ __( 'Biography Length', 'wordcamporg' ) }
-							value={ content }
-							options={ options.content }
-							onChange={ ( value ) => setAttributes( { content: value } ) }
-						/>
-					</PanelRow>
-					<PanelRow>
-						<ToggleControl
-							label={ __( 'Session Information', 'wordcamporg' ) }
-							help={ __( "Show speaker's session name, time, and track", 'wordcamporg' ) }
-							checked={ show_session }
-							onChange={ ( value ) => setAttributes( { show_session: value } ) }
-						/>
-					</PanelRow>
+					<SelectControl
+						label={ __( 'Biography Length', 'wordcamporg' ) }
+						value={ content }
+						options={ options.content }
+						onChange={ ( value ) => setAttributes( { content: value } ) }
+					/>
+					<ToggleControl
+						label={ __( 'Session Information', 'wordcamporg' ) }
+						help={ __( "Show speaker's session name, time, and track", 'wordcamporg' ) }
+						checked={ show_session }
+						onChange={ ( value ) => setAttributes( { show_session: value } ) }
+					/>
 				</PanelBody>
 
 				<PanelBody title={ __( 'Sorting & Filtering', 'wordcamporg' ) } initialOpen={ false }>
-					<PanelRow>
-						<SelectControl
-							label={ __( 'Sort by', 'wordcamporg' ) }
-							value={ sort }
-							options={ options.sort }
-							onChange={ ( value ) => setAttributes( { sort: value } ) }
-						/>
-					</PanelRow>
+					<SelectControl
+						label={ __( 'Sort by', 'wordcamporg' ) }
+						value={ sort }
+						options={ options.sort }
+						onChange={ ( value ) => setAttributes( { sort: value } ) }
+					/>
 				</PanelBody>
 			</CoreInspectorControlsContainer>
 		);

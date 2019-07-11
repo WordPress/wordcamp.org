@@ -7,9 +7,18 @@ import { debounce } from 'lodash';
 /**
  * WordPress dependencies
  */
-const { BaseControl, Button, ButtonGroup, PanelBody, PanelRow, RangeControl, ToggleControl, Toolbar } = wp.components;
-const { Component, Fragment }                                                                         = wp.element;
-const { __ }                                                                                          = wp.i18n;
+const {
+	BaseControl,
+	Button,
+	ButtonGroup,
+	PanelBody,
+	PanelRow,
+	RangeControl,
+	ToggleControl,
+	Toolbar,
+}                             = wp.components;
+const { Component, Fragment } = wp.element;
+const { __ }                  = wp.i18n;
 
 /**
  * Internal dependencies

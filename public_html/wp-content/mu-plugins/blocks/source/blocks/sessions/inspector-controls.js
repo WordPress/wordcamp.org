@@ -23,7 +23,16 @@ export class InspectorControls extends Component {
 	 */
 	render() {
 		const { attributes, setAttributes, blockData } = this.props;
-		const { show_images, featured_image_width, image_align, show_speaker, content, show_meta, show_category, sort } = attributes;
+		const {
+			show_images,
+			featured_image_width,
+			image_align,
+			show_speaker,
+			content,
+			show_meta,
+			show_category,
+			sort,
+		} = attributes;
 		const { schema, options } = blockData;
 
 		return (

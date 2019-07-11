@@ -55,8 +55,9 @@ export const featuredImageSizePresets = [
 export class FeaturedImage extends Component {
 	/**
 	 * @param {Object} props
-	 * @param {Array}  props.imageData Meta data about the featured image, including available sizes and the image's
-	 *                                 alt text. This is the `_embedded.wp:featuredMedia[0]` object in a REST response.
+	 * @param {Array}  props.imageData Meta data about the featured image, including available sizes and the
+	 *                                 image's alt text. This is the `_embedded.wp:featuredMedia[0]` object in a
+	 *                                 REST response.
 	 * @param {number} props.width     Width in pixels for the image.
 	 * @param {string} props.className Additional class names for the image element
 	 * @param {string} props.imageLink URL for wrapping the image in an anchor tag

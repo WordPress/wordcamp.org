@@ -41,7 +41,8 @@ export function GridColumnsControl( {
 /**
  * Component to add an Inspector panel
  *
- * Should be used with rest of the components in this folder. Will use and set attributes `layout` and `grid_columns`.
+ * Should be used with rest of the components in this folder. Will use and set attributes `layout` and
+ * `grid_columns`.
  */
 export class GridInspectorPanel extends Component {
 	/**

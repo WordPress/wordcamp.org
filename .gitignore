@@ -11,6 +11,7 @@
 #
 wp-cli.yml
 script-backups/
+node_modules/
 public_html/.well-known/
 public_html/mu/
 public_html/bin/

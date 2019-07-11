@@ -81,6 +81,20 @@ module.exports = {
 		} ],
 
 		/*
+		 * Force a line-length of 115 characters.
+		 *
+		 * We ignore URLs, trailing comments, strings, and template literals to prevent awkward fragmenting of
+		 * meaningful content.
+		 */
+		'max-len': [ 'error', {
+			'code'                   : 115,
+			'ignoreUrls'             : true,
+			'ignoreTrailingComments' : true,
+			'ignoreStrings'          : true,
+			'ignoreTemplateLiterals' : true,
+		} ],
+
+		/*
 		 * Allow multiple spaces in a row.
 		 *
 		 * Ideally this should be on, because we don't want to allow things like `const foo  == bar;`, but the rule

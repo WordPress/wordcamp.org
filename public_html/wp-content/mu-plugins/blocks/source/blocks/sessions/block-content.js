@@ -65,7 +65,7 @@ function SessionSpeakers( { session } ) {
 }
 
 /**
- * Component for the section of each session post that displays metadata including date, time, and location (track).
+ * Component for the section of each session post displaying metadata including date, time, and location (track).
  *
  * @param {Object} session
  *
@@ -236,7 +236,15 @@ export class BlockContent extends Component {
 	 */
 	render() {
 		const { attributes } = this.props;
-		const { show_speaker, show_images, image_align, featured_image_width, content, show_meta, show_category } = attributes;
+		const {
+			show_speaker,
+			show_images,
+			image_align,
+			featured_image_width,
+			content,
+			show_meta,
+			show_category,
+		} = attributes;
 
 		const posts     = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );

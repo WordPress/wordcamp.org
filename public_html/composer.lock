@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bd58cde9bf2e67ed7c470ee7bbccc7ad",
+    "content-hash": "d63df714be4b3dfdc8577dfc871c3e35",
     "packages": [
         {
             "name": "guzzlehttp/guzzle",
@@ -978,6 +978,186 @@
             },
             "type": "wordpress-plugin",
             "homepage": "https://wordpress.org/plugins/wp-super-cache/"
+        },
+        {
+            "name": "wpackagist-theme/p2",
+            "version": "1.5.8",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/p2/",
+                "reference": "1.5.8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/p2.1.5.8.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/p2/"
+        },
+        {
+            "name": "wpackagist-theme/twentyeleven",
+            "version": "3.3",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentyeleven/",
+                "reference": "3.3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentyeleven.3.3.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentyeleven/"
+        },
+        {
+            "name": "wpackagist-theme/twentyfifteen",
+            "version": "2.5",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentyfifteen/",
+                "reference": "2.5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentyfifteen.2.5.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentyfifteen/"
+        },
+        {
+            "name": "wpackagist-theme/twentyfourteen",
+            "version": "2.7",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentyfourteen/",
+                "reference": "2.7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentyfourteen.2.7.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentyfourteen/"
+        },
+        {
+            "name": "wpackagist-theme/twentynineteen",
+            "version": "1.4",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentynineteen/",
+                "reference": "1.4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentynineteen.1.4.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentynineteen/"
+        },
+        {
+            "name": "wpackagist-theme/twentyseventeen",
+            "version": "2.2",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentyseventeen/",
+                "reference": "2.2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentyseventeen.2.2.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentyseventeen/"
+        },
+        {
+            "name": "wpackagist-theme/twentysixteen",
+            "version": "2.0",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentysixteen/",
+                "reference": "2.0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentysixteen.2.0.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentysixteen/"
+        },
+        {
+            "name": "wpackagist-theme/twentyten",
+            "version": "2.9",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentyten/",
+                "reference": "2.9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentyten.2.9.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentyten/"
+        },
+        {
+            "name": "wpackagist-theme/twentythirteen",
+            "version": "2.9",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentythirteen/",
+                "reference": "2.9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentythirteen.2.9.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentythirteen/"
+        },
+        {
+            "name": "wpackagist-theme/twentytwelve",
+            "version": "3.0",
+            "source": {
+                "type": "svn",
+                "url": "https://themes.svn.wordpress.org/twentytwelve/",
+                "reference": "3.0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://downloads.wordpress.org/theme/twentytwelve.3.0.zip"
+            },
+            "require": {
+                "composer/installers": "~1.0"
+            },
+            "type": "wordpress-theme",
+            "homepage": "https://wordpress.org/themes/twentytwelve/"
         }
     ],
     "aliases": [],

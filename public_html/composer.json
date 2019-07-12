@@ -114,6 +114,16 @@
 		"wpackagist-plugin/tagregator": "dev-trunk",
 		"wpackagist-plugin/wordpress-importer": "0.6.4",
 		"wpackagist-plugin/wp-super-cache": "1.6.8",
-		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1"
+		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
+		"wpackagist-theme/p2": "1.5.8",
+		"wpackagist-theme/twentyten": "2.9",
+		"wpackagist-theme/twentyeleven": "3.3",
+		"wpackagist-theme/twentytwelve": "3.0",
+		"wpackagist-theme/twentythirteen": "2.9",
+		"wpackagist-theme/twentyfourteen": "2.7",
+		"wpackagist-theme/twentyfifteen": "2.5",
+		"wpackagist-theme/twentysixteen": "2.0",
+		"wpackagist-theme/twentyseventeen": "2.2",
+		"wpackagist-theme/twentynineteen": "1.4"
 	}
 }

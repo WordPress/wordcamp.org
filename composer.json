@@ -10,7 +10,13 @@
 		"platform": {
 			"php": "7.2"
 		},
-		"vendor-dir": "wp-content/mu-plugins/vendor"
+		"vendor-dir": "public_html/wp-content/mu-plugins/vendor"
+	},
+	"extra": {
+		"installer-paths": {
+			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
+		}
 	},
 	"repositories": [
 		{

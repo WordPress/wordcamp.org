@@ -1,67 +1,38 @@
 const path = require( 'path' );
-const webpack = require( 'webpack' );
 const MiniCssExtractPlugin = require( 'mini-css-extract-plugin' );
+const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const SOURCE_MAPS = process.env.SOURCE_MAPS ? true : false;
+module.exports = {
+	...defaultConfig,
 
-const externals = {
-	react       : 'React',
-	'react-dom' : 'ReactDOM',
-	lodash      : 'lodash',
-};
-
-const webpackConfig = {
-	// Must be 'none', 'production', or 'development'.
-	mode: NODE_ENV === 'production' ? 'production' : 'development',
-
-	optimization: {
-		minimize: true,
-	},
-
-	// Disabled by default because they make the re-build process take longer.
-	devtool: SOURCE_MAPS ? 'cheap-module-eval-source-map' : 'none',
-
+	// We use a custom entry point since our source directory is not `src`.
 	entry: {
 		blocks: path.resolve( __dirname, 'source/blocks.js' ),
 	},
 
+	// Override the default filename to keep `min` in the name.
 	output: {
-		filename : '[name].min.js',
-		path     : path.resolve( __dirname, 'build' ),
+		...defaultConfig.output,
+		filename: '[name].min.js',
 	},
 
+	// We need to extend the module.rules & plugins to add the scss build process.
 	module: {
+		...defaultConfig.module,
 		rules: [
-			{
-				test    : /\.jsx?$/,
-				use     : 'babel-loader',
-				exclude : [ /node_modules/ ],
-			},
-
+			...defaultConfig.module.rules,
 			{
 				test    : /\.(sc|sa|c)ss$/,
 				exclude : [ /node_modules/ ],
-				use     : [
-					MiniCssExtractPlugin.loader,
-					'css-loader',
-					'sass-loader',
-				],
+				use     : [ MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader' ],
 			},
 		],
 	},
 
 	plugins: [
+		...defaultConfig.plugins,
 		new MiniCssExtractPlugin( {
 			filename: '[name].min.css',
 		} ),
-
-		new webpack.DefinePlugin( {
-			'process.env.NODE_ENV': JSON.stringify( NODE_ENV ),
-		} ),
 	],
-
-	externals: externals,
 };
-
-module.exports = webpackConfig;

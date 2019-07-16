@@ -1,9 +1,16 @@
 {
 	"name": "wordcamp-blocks",
-	"description": "Blocks for WordCamp.org",
 	"version": "1.0.0",
+	"description": "Blocks for WordCamp.org",
+	"author": "WordCamp Team",
 	"license": "GPL-2.0-or-later",
 	"private": true,
+	"keywords": [],
+	"homepage": "https://github.com/WordPress/wordcamp.org/tree/production/public_html/wp-content/mu-plugins/blocks",
+	"repository": "git+https://github.com/WordPress/wordcamp.org.git",
+	"bugs": {
+		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Blocks%22"
+	},
 	"engines": {
 		"node": ">=8.0.0",
 		"npm": ">=6.0.0"
@@ -16,15 +23,8 @@
 	"devDependencies": {
 		"@babel/core": "7.1.2",
 		"@babel/runtime-corejs2": "7.1.2",
-		"@wordpress/babel-plugin-import-jsx-pragma": "1.1.2",
-		"@wordpress/babel-preset-default": "3.0.1",
-		"@wordpress/browserslist-config": "2.2.2",
-		"@wordpress/compose": "2.1.0",
-		"@wordpress/element": "2.1.4",
-		"@wordpress/eslint-plugin": "2.1.0",
-		"@wordpress/i18n": "3.0.1",
-		"@wordpress/npm-package-json-lint-config": "1.1.6",
-		"@wordpress/scripts": "^3.2.1",
+		"@wordpress/eslint-plugin": "^2.3.0",
+		"@wordpress/scripts": "^3.3.0",
 		"acorn": "6.0.4",
 		"babel-loader": "8.0.4",
 		"cross-env": "5.2.0",
@@ -43,10 +43,10 @@
 		"*.min.js"
 	],
 	"scripts": {
-		"start": "cross-env BABEL_ENV=development NODE_ENV=development webpack --watch",
-		"debug": "cross-env BABEL_ENV=development NODE_ENV=development SOURCE_MAPS=1 webpack --watch",
-		"build": "cross-env BABEL_ENV=production NODE_ENV=production webpack",
+		"start": "wp-scripts start",
+		"build": "wp-scripts build",
 		"lint:js": "wp-scripts lint-js .",
-		"lint:css": "wp-scripts lint-style '**/*.scss'"
+		"lint:css": "wp-scripts lint-style '**/*.scss'",
+		"lint:pkg-json": "wp-scripts lint-pkg-json"
 	}
 }

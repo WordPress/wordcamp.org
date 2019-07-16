@@ -24,6 +24,12 @@ function wcorg_include_individual_mu_plugins() {
 		require_once( __DIR__ . '/blocks/blocks.php' );
 	}
 
+	if ( is_readable( __DIR__ . '/vendor/autoload.php' ) ) {
+		require_once __DIR__ . '/vendor/autoload.php';
+	} else {
+		wp_die( 'Required files are missing. Please run <code>composer install</code> and try again.' );
+	}
+
 	if ( is_file( $shortcodes ) ) {
 		require_once( $shortcodes );
 	}

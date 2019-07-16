@@ -33,6 +33,11 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     git checkout 5.2
     ```
 
+1. Install the 3rd-party plugins, themes, and additional packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change to the root directory of the project where the **composer.json** file is located.
+	```bash
+	composer install
+	```
+
 1. Build and boot the Docker environment.
     ```bash
     docker-compose up --build -d
@@ -60,14 +65,6 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     ```bash
     127.0.0.1 wordcamp.test central.wordcamp.test 2014.seattle.wordcamp.test 2020.shinynew.wordcamp.test buddycamp.test 2015.brighton.buddycamp.test
     ```
-
-1. The installation doesn't have any 3rd-party plugins or themes yet, you must add them like so:
-
-	```bash
-	docker-compose exec wordcamp.test sh install-plugin-theme.sh
-	```
-
-    This could take some time depending on your internet connection.
 
 1. `/wp-admin` pages for these sites should now be accessible. Use `admin` as username and `password` as password to login. Front end pages will not be accessible until you complete the remaining steps.
 

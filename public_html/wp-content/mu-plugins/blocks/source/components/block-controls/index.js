@@ -23,22 +23,16 @@ import { Fragment }    from '@wordpress/element';
  * @return {Element}
  */
 export function PlaceholderSpecificMode( { className, label, icon, content, placeholderChildren } ) {
-	const classes = [
-		'wordcamp-block__edit-placeholder',
-		'has-specific-mode',
-		className,
-	];
+	const classes = [ 'wordcamp-block__edit-placeholder', 'has-specific-mode', className ];
 
 	return (
 		<Fragment>
 			{ content }
-			<Placeholder
-				className={ classnames( classes ) }
-				label={ label }
-				icon={ icon }
-			>
-				{ placeholderChildren }
-			</Placeholder>
+			{ placeholderChildren && (
+				<Placeholder className={ classnames( classes ) } label={ label } icon={ icon }>
+					{ placeholderChildren }
+				</Placeholder>
+			) }
 		</Fragment>
 	);
 }

@@ -29,7 +29,7 @@ export class BlockControls extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { icon, attributes, setAttributes, blockData } = this.props;
+		const { attributes, blockData, icon, isSelected, setAttributes } = this.props;
 		const { mode } = attributes;
 		const { options } = blockData;
 
@@ -52,7 +52,7 @@ export class BlockControls extends Component {
 							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							<ContentSelect { ...this.props } />
+							isSelected && <ContentSelect { ...this.props } />
 						}
 					/>
 				);

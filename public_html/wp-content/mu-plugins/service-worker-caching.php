@@ -30,6 +30,7 @@ add_action( 'wp_front_service_worker',    __NAMESPACE__ . '\set_navigation_cachi
 
 // what's the point of adding to home screen? doesn't seem like it has anything extra cached for offline use
 	// maybe if can detect when it's installed, we should pre-cache more things, for faster loading and more offline accessibility?
+	// also persist storage - https://github.com/xwp/pwa-wp/issues/193
 
 // maybe avoid loading images on slow connections
 	// related https://github.com/xwp/pwa-wp/issues/110, probably better to contribute to that (or new issue in that repo), than build custom. would be good feature for core
@@ -61,6 +62,7 @@ function register_caching_routes() {
 	 * todo
 	 *
 	 * pre-cache important pages like home page, Location. what others?
+	 *      maybe schedule too, but it's already in the offline template, so don't want to waste bandwidth installing. same for location?
 	 *      how to detect location programatically?
 	 *          could match `location` slug, and also add a `service-worker-precache` postmeta field to post stubs that we create on new sites
 	 *          maybe pwa feature plugin already supports something like that? if not, maybe propose it

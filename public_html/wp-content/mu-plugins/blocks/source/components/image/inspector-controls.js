@@ -7,7 +7,7 @@ import { debounce } from 'lodash';
 /**
  * WordPress dependencies
  */
-const {
+import {
 	BaseControl,
 	Button,
 	ButtonGroup,
@@ -16,9 +16,9 @@ const {
 	RangeControl,
 	ToggleControl,
 	Toolbar,
-}                             = wp.components;
-const { Component, Fragment } = wp.element;
-const { __ }                  = wp.i18n;
+}                              from '@wordpress/components';
+import { Component, Fragment } from '@wordpress/element';
+import { __ }                  from '@wordpress/i18n';
 
 /**
  * Internal dependencies

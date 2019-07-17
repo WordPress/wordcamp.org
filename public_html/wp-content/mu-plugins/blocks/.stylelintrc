@@ -1,5 +1,5 @@
 {
-	"extends" : "stylelint-config-wordpress",
+	"extends" : "stylelint-config-wordpress/scss",
 	"rules"   : {
 		"max-line-length": 115,
 

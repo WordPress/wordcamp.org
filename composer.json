@@ -1,4 +1,13 @@
 {
+	"#10": "",
+	"#11": "This file is only intended for use in local environments, it should _NEVER_ be run on remote sandboxes",
+	"#12": "or on production, because we cannot trust/verify the package contents are what they should be.",
+	"#13": "An attacker could inject malware at wpackgist.org and achieve arbitrary remote code execution.",
+	"#14": "See https://github.com/outlandishideas/wpackagist/issues/169",
+	"#15": "See https://github.com/WordPress/wordcamp.org/pull/152#discussion_r303567529",
+	"#16": "",
+
+
 	"name": "wordcamp/wordcamp.org",
 	"description": "",
 	"homepage": "https://wordcamp.org",
@@ -6,18 +15,21 @@
 	"support": {
 		"issues": "https://github.com/WordPress/wordcamp.org/issues"
 	},
+
 	"config": {
 		"platform": {
 			"php": "7.2"
 		},
 		"vendor-dir": "public_html/wp-content/mu-plugins/vendor"
 	},
+
 	"extra": {
 		"installer-paths": {
 			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
 			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
 		}
 	},
+
 	"repositories": [
 		{
 			"type": "composer",
@@ -89,9 +101,15 @@
 			]
 		}
 	],
+
 	"require": {
 		"league/oauth2-client": "2.4.1"
 	},
+
+	"#20": "",
+	"#21": "These are only used in local environments. Production and remote sandboxes use `svn:external`s instead.",
+	"#22": "_WARNING_: Do _not_ install these on a remote sandbox or production, see the comment at the start of this file.",
+	"#23": "",
 	"require-dev": {
 		"wpackagist-plugin/akismet": "4.1.2",
 		"wordpress-plugin/bbpress": "2.6.*",

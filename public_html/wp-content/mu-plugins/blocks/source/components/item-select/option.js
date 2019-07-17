@@ -7,8 +7,8 @@ import createSelector from 'rememo';
 /**
  * WordPress dependencies
  */
-const { Dashicon } = wp.components;
-const { __ }       = wp.i18n;
+import { Dashicon } from '@wordpress/components';
+import { __ }       from '@wordpress/i18n';
 
 /**
  * Internal dependencies

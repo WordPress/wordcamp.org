@@ -5,12 +5,12 @@ import classnames from 'classnames';
 import { sortBy } from 'lodash';
 
 /**
- * WordPress dependencies.
+ * WordPress dependencies
  */
-const { Disabled }  = wp.components;
-const { Component } = wp.element;
-const { __, _x }    = wp.i18n;
-const { isURL }     = wp.url;
+import { Disabled }  from '@wordpress/components';
+import { Component } from '@wordpress/element';
+import { __, _x }    from '@wordpress/i18n';
+import { isURL }     from '@wordpress/url';
 
 /**
  * Internal dependencies

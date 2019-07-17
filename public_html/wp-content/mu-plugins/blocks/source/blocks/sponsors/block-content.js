@@ -7,8 +7,8 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-const { Component } = wp.element;
-const { __ }        = wp.i18n;
+import { Component } from '@wordpress/element';
+import { __ }        from '@wordpress/i18n';
 
 /**
  * Internal dependencies

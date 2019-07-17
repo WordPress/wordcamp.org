@@ -6,8 +6,8 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-const { Placeholder } = wp.components;
-const { Fragment }    = wp.element;
+import { Placeholder } from '@wordpress/components';
+import { Fragment }    from '@wordpress/element';
 
 /**
  * Component for block controls when the block has a specific mode selected.

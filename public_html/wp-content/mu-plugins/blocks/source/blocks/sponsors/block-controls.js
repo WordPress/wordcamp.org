@@ -6,9 +6,9 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-const { Button, Placeholder } = wp.components;
-const { Component }           = wp.element;
-const { __ }                  = wp.i18n;
+import { Button, Placeholder } from '@wordpress/components';
+import { Component }           from '@wordpress/element';
+import { __ }                  from '@wordpress/i18n';
 
 /**
  * Internal dependencies

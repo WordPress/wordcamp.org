@@ -7,10 +7,10 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-const { Disabled }            = wp.components;
-const { Component, Fragment } = wp.element;
-const { __, _n }              = wp.i18n;
-const { escapeAttribute }     = wp.escapeHtml;
+import { Disabled }            from '@wordpress/components';
+import { Component, Fragment } from '@wordpress/element';
+import { __, _n }              from '@wordpress/i18n';
+import { escapeAttribute }     from '@wordpress/escape-html';
 
 /**
  * Internal dependencies

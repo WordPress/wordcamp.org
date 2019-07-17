@@ -7,9 +7,9 @@ import Select     from 'react-select';
 /**
  * WordPress dependencies
  */
-const { BaseControl, Button } = wp.components;
-const { Component }           = wp.element;
-const { __ }                  = wp.i18n;
+import { BaseControl, Button } from '@wordpress/components';
+import { Component }           from '@wordpress/element';
+import { __ }                  from '@wordpress/i18n';
 
 /**
  * Internal dependencies

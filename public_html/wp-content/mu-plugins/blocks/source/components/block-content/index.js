@@ -96,7 +96,7 @@ export function ItemTitle( { headingLevel, className, title, link } ) {
  *
  * @return {Element}
  */
-export function ItemHTMLContent( { className, content, link, linkText } ) {
+export function DangerousItemHTMLContent( { className, content, link, linkText } ) {
 	const classes = [
 		'wordcamp-block__post-content',
 		className,

@@ -12,7 +12,7 @@ const { Component } = wp.element;
  * Internal dependencies
  */
 import { AvatarImage }                                from '../../components/image';
-import { BlockNoContent, ItemTitle, ItemHTMLContent } from '../../components/block-content';
+import { BlockNoContent, ItemTitle, DangerousItemHTMLContent } from '../../components/block-content';
 import { PostList }                                   from '../../components/post-list';
 import { filterEntities }                             from '../../data';
 
@@ -102,7 +102,7 @@ export class BlockContent extends Component {
 						}
 
 						{ ( 'none' !== content ) &&
-							<ItemHTMLContent
+							<DangerousItemHTMLContent
 								className={ classnames( 'wordcamp-organizers__content', 'is-' + content ) }
 								content={  'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>

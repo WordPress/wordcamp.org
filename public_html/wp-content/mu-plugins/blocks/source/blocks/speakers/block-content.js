@@ -15,7 +15,7 @@ const { escapeAttribute }     = wp.escapeHtml;
 /**
  * Internal dependencies
  */
-import { ItemTitle, ItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
+import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
 import { AvatarImage }                                               from '../../components/image';
 import { PostList }                                                  from '../../components/post-list';
 import { filterEntities }                                            from '../../data';
@@ -187,7 +187,7 @@ export class BlockContent extends Component {
 						}
 
 						{ ( 'none' !== content ) &&
-							<ItemHTMLContent
+							<DangerousItemHTMLContent
 								className={ classnames( 'wordcamp-speakers__content', 'is-' + content ) }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>

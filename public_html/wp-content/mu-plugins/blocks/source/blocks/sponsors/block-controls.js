@@ -46,13 +46,13 @@ export class BlockControls extends Component {
 			case 'wcb_sponsor_level' :
 				output = (
 					<PlaceholderSpecificMode
-						label={ getOptionLabel( mode, options.mode ) }
-						icon={ icon }
 						content={
 							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							isSelected && <ContentSelect { ...this.props } />
+							isSelected && (
+								<ContentSelect label={ getOptionLabel( mode, options.mode ) } { ...this.props } />
+							)
 						}
 					/>
 				);

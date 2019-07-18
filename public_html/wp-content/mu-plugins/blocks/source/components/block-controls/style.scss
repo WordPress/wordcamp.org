@@ -1,0 +1,15 @@
+.wordcamp-block__edit-appender {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 1em;
+	min-height: 100px;
+	width: 100%;
+	background: #f7f7f7;
+	text-align: center;
+
+	.wordcamp-item-select {
+		max-width: 400px;
+	}
+}

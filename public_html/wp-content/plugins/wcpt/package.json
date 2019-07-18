@@ -22,11 +22,10 @@
 		"webpack-dev-server": "^3.1.10"
 	},
 	"devDependencies": {
-		"nsp": "^3.2.1",
 		"system-bell-webpack-plugin": "1.x"
 	},
 	"scripts": {
-		"build": "NODE_ENV=production webpack && echo \"\" && nsp check",
+		"build": "NODE_ENV=production webpack",
 		"dev": "webpack --watch"
 	}
 }

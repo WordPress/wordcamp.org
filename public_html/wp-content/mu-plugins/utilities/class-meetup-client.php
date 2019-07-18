@@ -1,16 +1,14 @@
 <?php
-
 namespace WordCamp\Utilities;
+
 use WP_Error;
 
 defined( 'WPINC' ) || die();
 
 /**
  * Class Meetup_Client
- *
- * TODO Refactor this to use the API_Client base class.
  */
-class Meetup_Client {
+class Meetup_Client extends API_Client {
 	/**
 	 * @var string The base URL for the API endpoints.
 	 */
@@ -27,15 +25,29 @@ class Meetup_Client {
 	protected $debug_mode;
 
 	/**
-	 * @var WP_Error|null Container for errors.
-	 */
-	public $error = null;
-
-	/**
 	 * Meetup_Client constructor.
 	 */
 	public function __construct() {
-		$this->error = new WP_Error();
+		parent::__construct( array(
+			/*
+			 * Response codes that should break the request loop.
+			 *
+			 * See https://www.meetup.com/meetup_api/docs/#errors.
+			 *
+			 * `200` (ok) is not in the list, because it needs to be handled conditionally.
+			 *  See API_Client::tenacious_remote_request.
+			 *
+			 * `400` (bad request) is not in the list, even though it seems like it _should_ indicate an unrecoverable
+			 * error. In practice we've observed that it's common for a seemingly valid request to be rejected with
+			 * a `400` response, but then get a `200` response if that exact same request is retried.
+			 */
+			'breaking_response_codes' => array(
+				401, // Unauthorized (invalid key).
+				429, // Too many requests (rate-limited).
+				404, // Unable to find group
+			),
+			'throttle_callback'       => array( $this, 'maybe_throttle' ),
+		) );
 
 		if ( defined( 'MEETUP_API_KEY' ) ) {
 			$this->api_key = MEETUP_API_KEY;
@@ -151,98 +163,6 @@ class Meetup_Client {
 	}
 
 	/**
-	 * Wrapper for `wp_remote_get` to retry requests that fail temporarily for various reasons.
-	 *
-	 * One common example of a reason a request would fail, but later succeed, is when the first request times out.
-	 *
-	 * Based on `wcorg_redundant_remote_get`.
-	 *
-	 * @param string $url
-	 * @param array  $args
-	 *
-	 * @return array|WP_Error
-	 */
-	protected function tenacious_remote_get( $url, $args = array() ) {
-		$attempt_count = 0;
-		$max_attempts  = 3;
-
-		/*
-		 * Response codes that should break the loop.
-		 *
-		 * See https://www.meetup.com/meetup_api/docs/#errors.
-		 *
-		 * `200` (ok) is not in the list, because it needs to be handled conditionally. See below.
-		 *
-		 * `400` (bad request) is not in the list, even though it seems like it _should_ indicate an unrecoverable
-		 * error. In practice we've observed that it's common for a seemingly valid request to be rejected with
-		 * a `400` response, but then get a `200` response if that exact same request is retried.
-		 */
-		$breaking_codes = array(
-			401, // Unauthorized (invalid key).
-			429, // Too many requests (rate-limited).
-			404, // Unable to find group
-		);
-
-		// The default of 5 seconds often results in frequent timeouts.
-		if ( empty( $args['timeout'] ) ) {
-			$args['timeout'] = 15;
-		}
-
-		while ( $attempt_count < $max_attempts ) {
-			$response      = wp_remote_get( $url, $args );
-			$response_code = wp_remote_retrieve_response_code( $response );
-
-			$this->maybe_throttle( wp_remote_retrieve_headers( $response ) );
-
-			/*
-			 * Sometimes their API inexplicably returns a success code with an empty body, but will return a valid
-			 * response if the exact request is retried.
-			 */
-			if ( 200 === $response_code && ! empty( wp_remote_retrieve_body( $response ) ) ) {
-				break;
-			}
-
-			if ( in_array( $response_code, $breaking_codes, true ) ) {
-				break;
-			}
-
-			$attempt_count++;
-
-			/**
-			 * Action: Fires when tenacious_remote_get fails a request attempt.
-			 *
-			 * Note that the request parameter includes the request URL that contains a query string for the API key.
-			 * This should be redacted before outputting anywhere public.
-			 *
-			 * @param array $response
-			 * @param array $request
-			 * @param int   $attempt_count
-			 * @param int   $max_attempts
-			 */
-			do_action( 'meetup_client_tenacious_remote_get_attempt', $response, compact( 'url', 'args' ), $attempt_count, $max_attempts );
-
-			if ( $attempt_count < $max_attempts ) {
-				$retry_after = wp_remote_retrieve_header( $response, 'retry-after' ) ?: 5;
-				$wait        = min( $retry_after * $attempt_count, 30 );
-
-				if ( 'cli' === php_sapi_name() ) {
-					echo "\nRequest failed $attempt_count times. Pausing for $wait seconds before retrying.";
-				}
-
-				sleep( $wait );
-			}
-		}
-
-		if ( $attempt_count === $max_attempts && 'cli' === php_sapi_name() ) {
-			if ( 200 !== $response_code || is_wp_error( $response ) ) {
-				echo "\nRequest failed $attempt_count times. Giving up.";
-			}
-		}
-
-		return $response;
-	}
-
-	/**
 	 * Sign a request URL with our API key.
 	 *
 	 * @param string $request_url
@@ -298,13 +218,15 @@ class Meetup_Client {
 	 *
 	 * @param array $headers
 	 */
-	protected function maybe_throttle( $headers ) {
+	protected function maybe_throttle( $response ) {
+		$headers = wp_remote_retrieve_headers( $response );
+
 		if ( ! isset( $headers['x-ratelimit-remaining'], $headers['x-ratelimit-reset'] ) ) {
 			return;
 		}
 
 		$remaining = absint( $headers['x-ratelimit-remaining'] );
-		$period    = absint( $headers['x-ratelimit-reset'    ] );
+		$period    = absint( $headers['x-ratelimit-reset'] );
 
 		// Pause more frequently than we need to, and for longer, just to be safe.
 		if ( $remaining > 2 ) {
@@ -315,9 +237,7 @@ class Meetup_Client {
 			$period = 2;
 		}
 
-		if ( 'cli' === php_sapi_name() ) {
-			echo "\nPausing for $period seconds to avoid rate-limiting.";
-		}
+		$this->cli_message( "\nPausing for $period seconds to avoid rate-limiting." );
 
 		sleep( $period );
 	}
@@ -329,18 +249,8 @@ class Meetup_Client {
 	 *
 	 * @return void
 	 */
-	protected function handle_error_response( $response ) {
-		if ( is_wp_error( $response ) ) {
-			$codes = $response->get_error_codes();
-
-			foreach ( $codes as $code ) {
-				$messages = $response->get_error_messages( $code );
-
-				foreach ( $messages as $message ) {
-					$this->error->add( $code, $message );
-				}
-			}
-
+	public function handle_error_response( $response ) {
+		if ( parent::handle_error_response( $response ) ) {
 			return;
 		}
 
@@ -420,11 +330,11 @@ class Meetup_Client {
 	 * Retrieve data about the group. Calls https://www.meetup.com/meetup_api/docs/:urlname/#get
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
-	 * @param array $args Optional. Additional request parameters.
+	 * @param array  $args       Optional. Additional request parameters.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function get_group_details ( $group_slug, $args = array() ) {
+	public function get_group_details( $group_slug, $args = array() ) {
 		$request_url = $this->api_base . "$group_slug";
 
 		if ( ! empty( $args ) ) {
@@ -438,11 +348,11 @@ class Meetup_Client {
 	 * Retrieve group members. Calls https://www.meetup.com/meetup_api/docs/:urlname/members/#list
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
-	 * @param array $args Optional. Additional request parameters.
+	 * @param array  $args       Optional. Additional request parameters.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function get_group_members ( $group_slug, $args = array() ) {
+	public function get_group_members( $group_slug, $args = array() ) {
 		$request_url = $this->api_base . "$group_slug/members";
 
 		if ( ! empty( $args ) ) {

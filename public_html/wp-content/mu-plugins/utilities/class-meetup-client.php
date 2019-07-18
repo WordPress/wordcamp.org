@@ -22,12 +22,18 @@ class Meetup_Client extends API_Client {
 	/**
 	 * @var bool If true, the client will fetch fewer results, for faster debugging.
 	 */
-	protected $debug_mode;
+	protected $debug = false;
 
 	/**
 	 * Meetup_Client constructor.
+	 *
+	 * @param array $settings {
+	 *     Optional. Settings for the client.
+	 *
+	 *     @type bool $debug If true, the client will fetch fewer results, for faster debugging.
+	 * }
 	 */
-	public function __construct() {
+	public function __construct( array $settings = [] ) {
 		parent::__construct( array(
 			/*
 			 * Response codes that should break the request loop.
@@ -49,6 +55,13 @@ class Meetup_Client extends API_Client {
 			'throttle_callback'       => array( $this, 'maybe_throttle' ),
 		) );
 
+		$settings = wp_parse_args(
+			$settings,
+			array(
+				'debug' => false,
+			)
+		);
+
 		if ( defined( 'MEETUP_API_KEY' ) ) {
 			$this->api_key = MEETUP_API_KEY;
 		} else {
@@ -58,7 +71,11 @@ class Meetup_Client extends API_Client {
 			);
 		}
 
-		$this->debug_mode = apply_filters( 'wcmc_debug_mode', false );
+		$this->debug = $settings['debug'];
+
+		if ( $this->debug ) {
+			$this->cli_message( "Meetup Client debug is ON. Results will be truncated." );
+		}
 	}
 
 	/**
@@ -109,7 +126,7 @@ class Meetup_Client extends API_Client {
 				break;
 			}
 
-			if ( $this->debug_mode ) {
+			if ( $this->debug ) {
 				break;
 			}
 		}

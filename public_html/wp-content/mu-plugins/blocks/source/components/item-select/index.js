@@ -131,7 +131,7 @@ export class ItemSelect extends Component {
 						value={ value }
 						aria-label={ label }
 						onChange={ ( selectedOptions ) => {
-							this.setState( { selectedOptions } );
+							this.setState( { selectedOptions: selectedOptions || [] } );
 						} }
 						{ ...mergedSelectProps }
 					/>

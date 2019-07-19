@@ -52,7 +52,7 @@ class Meetup_Client extends API_Client {
 				429, // Too many requests (rate-limited).
 				404, // Unable to find group
 			),
-			'throttle_callback'       => array( $this, 'maybe_throttle' ),
+			'throttle_callback'       => array( __CLASS__, 'throttle' ),
 		) );
 
 		$settings = wp_parse_args(
@@ -235,7 +235,7 @@ class Meetup_Client extends API_Client {
 	 *
 	 * @param array $headers
 	 */
-	protected function maybe_throttle( $response ) {
+	protected static function throttle( $response ) {
 		$headers = wp_remote_retrieve_headers( $response );
 
 		if ( ! isset( $headers['x-ratelimit-remaining'], $headers['x-ratelimit-reset'] ) ) {

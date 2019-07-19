@@ -1,9 +1,9 @@
 <?php
-
 namespace WordCamp\Utilities;
-defined( 'WPINC' ) || die();
 
 use WP_Error;
+
+defined( 'WPINC' ) || die();
 
 /**
  * Class API_Client

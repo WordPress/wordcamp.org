@@ -15,9 +15,9 @@ class Meetup_Client extends API_Client {
 	protected $api_base = 'https://api.meetup.com/';
 
 	/**
-	 * @var string The API key.
+	 * @var Meetup_OAuth2_Client|null
 	 */
-	protected $api_key = '';
+	protected $oauth_client = null;
 
 	/**
 	 * @var bool If true, the client will fetch fewer results, for faster debugging.
@@ -62,16 +62,8 @@ class Meetup_Client extends API_Client {
 			)
 		);
 
-		if ( defined( 'MEETUP_API_KEY' ) ) {
-			$this->api_key = MEETUP_API_KEY;
-		} else {
-			$this->error->add(
-				'api_key_undefined',
-				'The Meetup.com API Key is undefined.'
-			);
-		}
-
-		$this->debug = $settings['debug'];
+		$this->oauth_client = new Meetup_OAuth2_Client;
+		$this->debug        = $settings['debug'];
 
 		if ( $this->debug ) {
 			self::cli_message( "Meetup Client debug is ON. Results will be truncated." );
@@ -96,9 +88,7 @@ class Meetup_Client extends API_Client {
 		), $request_url );
 
 		while ( $request_url ) {
-			$request_url = $this->sign_request_url( $request_url );
-
-			$response = $this->tenacious_remote_get( $request_url );
+			$response = $this->tenacious_remote_get( $request_url, $this->get_request_args() );
 
 			if ( 200 === wp_remote_retrieve_response_code( $response ) ) {
 				$body = json_decode( wp_remote_retrieve_body( $response ), true );
@@ -153,9 +143,7 @@ class Meetup_Client extends API_Client {
 			'page' => 1,
 		), $request_url );
 
-		$request_url = $this->sign_request_url( $request_url );
-
-		$response = $this->tenacious_remote_get( $request_url );
+		$response = $this->tenacious_remote_get( $request_url, $this->get_request_args() );
 
 		if ( 200 === wp_remote_retrieve_response_code( $response ) ) {
 			$count_header = wp_remote_retrieve_header( $response, 'X-Total-Count' );
@@ -191,6 +179,21 @@ class Meetup_Client extends API_Client {
 			'sign' => true,
 			'key'  => $this->api_key,
 		), $request_url );
+	}
+
+	/**
+	 * Generate headers to use in a request.
+	 *
+	 * @return array
+	 */
+	protected function get_request_args() {
+		$oauth_token = $this->oauth_client->get_oauth_token();
+
+		return array(
+			'headers' => array(
+				'Authorization' => "Bearer $oauth_token",
+			),
+		);
 	}
 
 	/**

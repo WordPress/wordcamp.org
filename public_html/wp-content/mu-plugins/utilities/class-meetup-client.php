@@ -262,6 +262,9 @@ class Meetup_Client extends API_Client {
 	/**
 	 * Extract error information from an API response and add it to our error handler.
 	 *
+	 * Make sure you don't include the full $response in the error as data, as that could expose sensitive information
+	 * from the request payload.
+	 *
 	 * @param array|WP_Error $response
 	 *
 	 * @return void
@@ -276,17 +279,26 @@ class Meetup_Client extends API_Client {
 
 		if ( isset( $data['errors'] ) ) {
 			foreach ( $data['errors'] as $error ) {
-				$this->error->add( $error['code'], $error['message'] );
+				$this->error->add(
+					$error['code'],
+					$error['message']
+				);
 			}
 		} elseif ( isset( $data['code'] ) && isset( $data['details'] ) ) {
-			$this->error->add( $data['code'], $data['details'] );
+			$this->error->add(
+				$data['code'],
+				$data['details']
+			);
 		} elseif ( $response_code ) {
 			$this->error->add(
 				'http_response_code',
 				sprintf( 'HTTP Status: %d', absint( $response_code ) )
 			);
 		} else {
-			$this->error->add( 'unknown_error', 'There was an unknown error.' );
+			$this->error->add(
+				'unknown_error',
+				'There was an unknown error.'
+			);
 		}
 	}
 

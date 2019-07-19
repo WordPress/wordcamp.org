@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-const { __ } = wp.i18n;
+import { __ } from '@wordpress/i18n';
 
 /**
  * Split a string into an array with sprintf-style tokens as the delimiter.

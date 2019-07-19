@@ -6,9 +6,9 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-const { Disabled }            = wp.components;
-const { __, _x, sprintf }     = wp.i18n;
-const { addQueryArgs, isURL } = wp.url;
+import { Disabled }            from '@wordpress/components';
+import { __, _x, sprintf }     from '@wordpress/i18n';
+import { addQueryArgs, isURL } from '@wordpress/url';
 
 // Avatar-specific presets for the ImageSizeControl component.
 export const avatarSizePresets = [

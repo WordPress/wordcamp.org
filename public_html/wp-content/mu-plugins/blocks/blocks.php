@@ -62,6 +62,9 @@ add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories' );
  * @return void
  */
 function register_assets() {
+	$deps_path    = __DIR__ . '/build/blocks.min.deps.json';
+	$dependencies = file_exists( $deps_path ) ? json_decode( file_get_contents( $deps_path ) ) : array();
+
 	wp_register_style(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'build/blocks.min.css',
@@ -72,19 +75,7 @@ function register_assets() {
 	wp_register_script(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'build/blocks.min.js',
-		array(
-			'lodash',
-			'wp-api-fetch',
-			'wp-blocks',
-			'wp-components',
-			'wp-compose',
-			'wp-data',
-			'wp-editor',
-			'wp-element',
-			'wp-html-entities',
-			'wp-i18n',
-			'wp-url',
-		),
+		$dependencies,
 		filemtime( PLUGIN_DIR . 'build/blocks.min.js' ),
 		false
 	);

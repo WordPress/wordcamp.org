@@ -1,8 +1,8 @@
 /**
  * WordPress dependencies
  */
-const { Toolbar }       = wp.components;
-const { BlockControls } = wp.editor;
+import { Toolbar }       from '@wordpress/components';
+import { BlockControls } from '@wordpress/editor';
 
 /**
  * Component for a toolbar UI to the top of a post list block to change the layout.

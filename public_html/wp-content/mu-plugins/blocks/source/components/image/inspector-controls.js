@@ -7,7 +7,7 @@ import { debounce } from 'lodash';
 /**
  * WordPress dependencies
  */
-const {
+import {
 	BaseControl,
 	Button,
 	ButtonGroup,
@@ -16,9 +16,9 @@ const {
 	RangeControl,
 	ToggleControl,
 	Toolbar,
-}                             = wp.components;
-const { Component, Fragment } = wp.element;
-const { __ }                  = wp.i18n;
+}                              from '@wordpress/components';
+import { Component, Fragment } from '@wordpress/element';
+import { __ }                  from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -88,13 +88,10 @@ export class ImageSizeControl extends Component {
 		const { value } = this.state;
 
 		return (
-			<BaseControl
-				className={ classnames( 'wordcamp-image__size', className ) }
-				label={ label }
-				help={ help }
-			>
+			<BaseControl className={ classnames( 'wordcamp-image__size', className ) } help={ help }>
+				<span className="wordcamp-image__size-label">{ label }</span>
 				<div className="wordcamp-image__size-preset-buttons">
-					{ sizePresets.length > 0 &&
+					{ sizePresets.length > 0 && (
 						<ButtonGroup aria-label={ label }>
 							{ sizePresets.map( ( preset ) => {
 								const { name, shortName, size, slug } = preset;
@@ -114,7 +111,7 @@ export class ImageSizeControl extends Component {
 								);
 							} ) }
 						</ButtonGroup>
-					}
+					) }
 
 					<Button
 						className="wordcamp-image__size-button-reset"
@@ -164,11 +161,8 @@ export function ImageAlignmentControl( {
 	alignOptions,
 } ) {
 	return (
-		<BaseControl
-			className={ classnames( 'wordcamp-image__alignment', className ) }
-			label={ label }
-			help={ help }
-		>
+		<BaseControl className={ classnames( 'wordcamp-image__alignment', className ) } help={ help }>
+			<span className="wordcamp-image__alignment-label">{ label }</span>
 			<Toolbar
 				controls={ alignOptions.map( ( alignment ) => {
 					const isActive = value === alignment.value;
@@ -234,12 +228,8 @@ export class ImageInspectorPanel extends Component {
 				initialOpen={ initialOpen }
 				className={ classnames( 'wordcamp-image__inspector-panel', className ) }
 			>
-				<ToggleControl
-					label={ __( 'Show images', 'wordcamporg' ) }
-					checked={ show }
-					onChange={ onChangeShow }
-				/>
-				{ show &&
+				<ToggleControl label={ __( 'Show images', 'wordcamporg' ) } checked={ show } onChange={ onChangeShow } />
+				{ show && (
 					<Fragment>
 						<ImageSizeControl
 							label={ __( 'Size', 'wordcamporg' ) }
@@ -262,7 +252,7 @@ export class ImageInspectorPanel extends Component {
 							/>
 						</PanelRow>
 					</Fragment>
-				}
+				) }
 			</PanelBody>
 		);
 	}

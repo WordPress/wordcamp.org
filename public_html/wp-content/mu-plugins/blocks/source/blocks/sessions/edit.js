@@ -1,8 +1,8 @@
 /**
  * WordPress dependencies
  */
-const { withSelect }          = wp.data;
-const { Component, Fragment } = wp.element;
+import { withSelect }          from '@wordpress/data';
+import { Component, Fragment } from '@wordpress/element';
 
 /**
  * Internal dependencies

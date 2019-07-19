@@ -6,9 +6,9 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-const { Disabled, Spinner } = wp.components;
-const { Fragment, RawHTML } = wp.element;
-const { __ }                = wp.i18n;
+import { Disabled, Spinner } from '@wordpress/components';
+import { Fragment, RawHTML } from '@wordpress/element';
+import { __ }                from '@wordpress/i18n';
 
 /**
  * Internal dependencies

@@ -1,10 +1,10 @@
 /**
  * WordPress dependencies
  */
-const { InspectorControls: CoreInspectorControlsContainer } = wp.blockEditor;
-const { PanelBody, SelectControl }                          = wp.components;
-const { Component }                                         = wp.element;
-const { __ }                                                = wp.i18n;
+import { InspectorControls as CoreInspectorControlsContainer } from '@wordpress/block-editor';
+import { PanelBody, SelectControl }                            from '@wordpress/components';
+import { Component }                                           from '@wordpress/element';
+import { __ }                                                  from '@wordpress/i18n';
 
 /**
  * Internal dependencies

@@ -74,7 +74,7 @@ class Meetup_Client extends API_Client {
 		$this->debug = $settings['debug'];
 
 		if ( $this->debug ) {
-			$this->cli_message( "Meetup Client debug is ON. Results will be truncated." );
+			self::cli_message( "Meetup Client debug is ON. Results will be truncated." );
 		}
 	}
 
@@ -254,7 +254,7 @@ class Meetup_Client extends API_Client {
 			$period = 2;
 		}
 
-		$this->cli_message( "\nPausing for $period seconds to avoid rate-limiting." );
+		self::cli_message( "\nPausing for $period seconds to avoid rate-limiting." );
 
 		sleep( $period );
 	}

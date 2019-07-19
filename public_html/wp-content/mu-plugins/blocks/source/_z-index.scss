@@ -3,12 +3,25 @@
  * conflicting with.
 */
 
-.wordcamp__edit-placeholder .components-placeholder__fieldset {
+.wordcamp__edit-placeholder .components-placeholder__fieldset,
+.wordcamp-block__edit-appender .wordcamp-item-select {
 
 	/*
-	 * By default the fieldset has a `z-index` of `1`, and `.editor-block-list__insertion-point` has a value of
-	 * `6`, so the `Add Block` button will stack on top of things like an expanded `ItemSelect` list. This
-	 * corrects that.
+	 * By default the fieldset has a `z-index` of `1`, and `.block-editor-block-contextual-toolbar` has a value of
+	 * `21`. On smaller screens (<600px), this appears at the bottom of the block. When expanded, the ItemSelect
+	 * list drops below this, and the default z-index stacks the toolbar over the dropdown. Bumping the z-index
+	 * of the dropdown wrapper to `22` corrects that
 	 */
-	z-index: 7;
+	z-index: 22;
+
+	.wp-block.is-selected &,
+	.wp-block.is-typing & {
+
+		/*
+		 * If the block is placed before another WordCamp block, it's possible that the `ItemSelect` dropdown
+		 * extends over into the next block area. When two items have the same z-index (22), the later-in-dom
+		 * element "wins", so we bump this to 23 to avoid the conflict.
+		 */
+		z-index: 23;
+	}
 }

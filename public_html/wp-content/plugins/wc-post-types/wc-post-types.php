@@ -2590,7 +2590,8 @@ class WordCamp_Post_Types_Plugin {
 					$output[] = sprintf( '<a href="%s">%s</a>', esc_url( get_edit_post_link( $speaker->ID ) ), esc_html( apply_filters( 'the_title', $speaker->post_title ) ) );
 				}
 
-				echo( esc_html( implode( ', ', $output ) ) );
+				// Output is escaped when the string is built, so we can ignore the PHPCS error.
+				echo implode( ', ', $output ); // phpcs:ignore WordPress.XSS.EscapeOutput.OutputNotEscaped
 
 				break;
 

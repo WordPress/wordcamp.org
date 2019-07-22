@@ -553,22 +553,25 @@ function wcorg_network_updates_notifier() {
 
 	if ( ! empty( $update_plugins->response ) || ! empty( $update_themes->response ) ) {
 		?>
+
 		<div class="notice notice-error">
 			<?php if ( ! empty( $update_plugins->response ) ) : ?>
 				<p>The following plugins have updates available:</p>
+
 				<ul class="ul-disc">
 					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_plugins->response, 'slug' ) ) ); ?></li>
 				</ul>
 			<?php endif; ?>
+
 			<?php if ( ! empty( $update_themes->response ) ) : ?>
 				<p>The following themes have updates available:</p>
+
 				<ul class="ul-disc">
 					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_themes->response, 'slug' ) ) ); ?></li>
 				</ul>
 			<?php endif; ?>
-
-			<p>Please let a WordCamp.org developer know about this message.</p>
 		</div>
+
 		<?php
 	}
 }

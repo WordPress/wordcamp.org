@@ -15,7 +15,7 @@ import { __ } from '@wordpress/i18n';
  * @return {Element}
  */
 function ItemPermalink( { className, link, linkText } ) {
-	const classes = [ 'wordcamp-block__post-permalink', className ];
+	const classes = [ 'wordcamp-block__item-permalink', className ];
 
 	return (
 		<p className={ classnames( classes ) }>

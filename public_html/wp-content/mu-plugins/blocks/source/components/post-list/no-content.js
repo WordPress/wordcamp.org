@@ -16,7 +16,7 @@ import { Spinner } from '@wordpress/components';
  */
 function BlockNoContent( { loading } ) {
 	return (
-		<div className="wordcamp-block__posts has-no-content">
+		<div className="wordcamp-post-list has-no-content">
 			{ loading ?
 				<Spinner /> :
 				__( 'No content found.', 'wordcamporg' )

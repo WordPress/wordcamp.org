@@ -24,7 +24,7 @@ import ItemPermalink from './item-permalink';
  * @return {Element}
  */
 function DangerousItemHTMLContent( { className, content, link, linkText } ) {
-	const classes = [ 'wordcamp-block__post-content', className ];
+	const classes = [ 'wordcamp-block__item-content', className ];
 
 	return (
 		<div className={ classnames( classes ) }>

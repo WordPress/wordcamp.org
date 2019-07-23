@@ -24,7 +24,7 @@ function ItemTitle( { headingLevel, className, title, link } ) {
 		Tag = 'h' + headingLevel;
 	}
 
-	const classes = [ 'wordcamp-block__post-title', className ];
+	const classes = [ 'wordcamp-block__item-title', className ];
 
 	const content = title || __( '(Untitled)', 'wordcamporg' );
 

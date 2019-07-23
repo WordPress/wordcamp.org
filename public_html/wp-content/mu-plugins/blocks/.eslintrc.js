@@ -123,6 +123,25 @@ module.exports = {
 		} ],
 
 		/*
+		 * Sort imports alphabetically, at least inside multiple-member imports. Ignores declaration sorting since
+		 * this interfers with the External/WordPress/Internal groupings. For example, it will flag the following
+		 * as incorrect:
+		 *
+		 *   import { c, a, b } from 'foo';
+		 *
+		 * Running `eslint --fix` will update this to
+		 *
+		 *   import { a, b, c } from 'foo';
+		 *
+		 */
+		'sort-imports': [
+			'error',
+			{
+				ignoreDeclarationSort: true,
+			},
+		],
+
+		/*
 		 * Descriptions are often obvious from the variable and function names, so always requiring them would be
 		 * inconvenient. The developer should add one whenever it's not obvious, though.
 		 *

@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import PropTypes from 'prop-types';
+
+/**
  * WordPress dependencies
  */
 import { RangeControl } from '@wordpress/components';
@@ -10,15 +15,9 @@ import { __ }           from '@wordpress/i18n';
  * For use within a block, consider GridInspectorPanel instead unless you want to include this control
  * in a panel with other unrelated controls.
  *
- * @param {Object} props {
- *     @type {number}   grid_columns
- *     @type {Object}   schema
- *     @type {Function} setAttributes
- * }
- *
  * @return {Element}
  */
-export default function GridColumnsControl( {
+function GridColumnsControl( {
 	grid_columns,
 	schema,
 	setAttributes,
@@ -36,3 +35,15 @@ export default function GridColumnsControl( {
 		/>
 	);
 }
+
+GridColumnsControl.propTypes = {
+	grid_columns : PropTypes.number.isRequired,
+	schema       : PropTypes.shape( {
+		default : PropTypes.number,
+		maximum : PropTypes.number,
+		minimum : PropTypes.number,
+	} ).isRequired,
+	setAttributes: PropTypes.func.isRequired,
+};
+
+export default GridColumnsControl;

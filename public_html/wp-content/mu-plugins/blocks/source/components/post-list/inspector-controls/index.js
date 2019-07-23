@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import PropTypes from 'prop-types';
+
+/**
  * WordPress dependencies
  */
 import { PanelBody }           from '@wordpress/components';
@@ -16,7 +21,7 @@ import GridColumnsControl from './grid-columns-control';
  * Should be used with rest of the components in this folder. Will use and set attributes `layout` and
  * `grid_columns`.
  */
-export class GridInspectorPanel extends Component {
+class GridInspectorPanel extends Component {
 	/**
 	 * Render the control.
 	 *
@@ -45,3 +50,16 @@ export class GridInspectorPanel extends Component {
 		);
 	}
 }
+
+GridInspectorPanel.propTypes = {
+	attributes: PropTypes.shape( {
+		layout       : PropTypes.string,
+		grid_columns : PropTypes.number,
+	} ).isRequired,
+	setAttributes : PropTypes.func.isRequired,
+	blockData     : PropTypes.shape( {
+		schema: PropTypes.object,
+	} ).isRequired,
+};
+
+export default GridInspectorPanel;

@@ -19,7 +19,7 @@ function ItemPermalink( { className, link, linkText } ) {
 
 	return (
 		<p className={ classnames( classes ) }>
-			<a href={ link }>
+			<a href={ link } target="_blank" rel="noopener noreferrer">
 				{ linkText || __( 'Read more', 'wordcamporg' ) }
 			</a>
 		</p>

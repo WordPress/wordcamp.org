@@ -7,9 +7,7 @@ import PropTypes from 'prop-types';
 /**
  * WordPress dependencies
  */
-import { __ }       from '@wordpress/i18n';
-import { Disabled } from '@wordpress/components';
-import { Fragment } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Component for an entity title, optionally linked.
@@ -30,19 +28,13 @@ function ItemTitle( { headingLevel, className, title, link } ) {
 
 	return (
 		<Tag className={ classnames( classes ) }>
-			{ link &&
-				<Disabled>
-					<a href={ link }>
-						{ content }
-					</a>
-				</Disabled>
-			}
-
-			{ ! link &&
-				<Fragment>
+			{ link ? (
+				<a href={ link } target="_blank" rel="noopener noreferrer">
 					{ content }
-				</Fragment>
-			}
+				</a>
+			) : (
+				content
+			) }
 		</Tag>
 	);
 }

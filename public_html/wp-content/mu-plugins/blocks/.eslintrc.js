@@ -1,16 +1,6 @@
 /*
  * @todo
  *
- * equals in assignment should be aligned          - needs a plugin: https://github.com/eslint/eslint/issues/11025
- * `from` in `import` statements should be aligned - needs a plugin: https://github.com/eslint/eslint/issues/11025
- *
- * indent things like
- * { mode &&
- * <GridToolbar
- * 	{ ...this.props }
- * />
- * }
- *
  * should use hasOwnProperty or Object.getOwnPropertyDescriptors(). the latter usually makes code more readable, but sometimes the former first better
  * assignment and control structures/returns/etc should be separate by a blank line for readability.
  *      same for div and other block-level html elements
@@ -69,18 +59,6 @@ module.exports = {
 		} ],
 
 		/*
-		 * Align object parameters on their assignment operator (:), just like assignment statements are
-		 * aligned on `=`.
-		 */
-		'key-spacing' : [ 'error', {
-			'align' : {
-				'beforeColon' : true,
-				'afterColon'  : true,
-				'on'          : 'colon',
-			},
-		} ],
-
-		/*
 		 * Force a line-length of 115 characters.
 		 *
 		 * We ignore URLs, trailing comments, strings, and template literals to prevent awkward fragmenting of
@@ -93,26 +71,6 @@ module.exports = {
 			'ignoreStrings'          : true,
 			'ignoreTemplateLiterals' : true,
 		} ],
-
-		/*
-		 * Allow multiple spaces in a row.
-		 *
-		 * Ideally this should be on, because we don't want to allow things like `const foo  == bar;`, but the rule
-		 * currently isn't flexible enough to allow all the exceptions we need. Specifically, there are times where
-		 * readability is vastly improved by aligning attributes in consecutive lines.
-		 *
-		 * Alternate configuration if we ever want to re-enable this:
-		 *
-		 * 'no-multi-spaces': [ 'error', {
-		 *      // Use the `type` value from the parser demo to find these properties: https://eslint.org/parser/.
-		 *	    exceptions: {
-		 *		    VariableDeclarator : true,
-		 *		    ImportDeclaration  : true,
-		 *		    JSXAttribute       : true,
-		 *	    },
-		 * } ],
-		 */
-		'no-multi-spaces' : 'off',
 
 		/*
 		 * Objects are harder to quickly scan when the formatting is inconsistent.

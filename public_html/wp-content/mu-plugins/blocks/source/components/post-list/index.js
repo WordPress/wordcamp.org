@@ -61,5 +61,6 @@ export class PostList extends Component {
 /**
  * Additional component exports
  */
+export { default as BlockNoContent } from './no-content';
 export { default as GridInspectorPanel } from './inspector-controls';
 export { default as LayoutToolbar } from './toolbar';

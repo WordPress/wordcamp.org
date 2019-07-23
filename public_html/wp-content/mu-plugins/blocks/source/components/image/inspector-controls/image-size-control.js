@@ -3,6 +3,7 @@
  */
 import classnames   from 'classnames';
 import { debounce } from 'lodash';
+import PropTypes from 'prop-types';
 
 /**
  * WordPress dependencies
@@ -18,19 +19,8 @@ import { __ }                                             from '@wordpress/i18n'
  * avatars, this is because the images are always square. For featured images,
  * this is because the width is adjustable, while the height is automatically
  * calculated to maintain the correct aspect ratio.
- *
- * @param {Object} props {
- *     @type {string}   className
- *     @type {string}   label
- *     @type {string}   help
- *     @type {number}   value
- *     @type {Array}    sizePresets
- *     @type {Function} onChange
- *     @type {number}   initialPosition
- *     @type {Object}   rangeProps
- * }
  */
-export default class ImageSizeControl extends Component {
+class ImageSizeControl extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -123,3 +113,26 @@ export default class ImageSizeControl extends Component {
 		);
 	}
 }
+
+ImageSizeControl.propTypes = {
+	className   : PropTypes.string,
+	label       : PropTypes.string,
+	help        : PropTypes.string,
+	value       : PropTypes.number,
+	sizePresets : PropTypes.arrayOf(
+		PropTypes.shape( {
+			name      : PropTypes.string,
+			shortName : PropTypes.string,
+			size      : PropTypes.number,
+			slug      : PropTypes.string,
+		} )
+	).isRequired,
+	onChange        : PropTypes.func.isRequired,
+	initialPosition : PropTypes.number,
+	rangeProps      : PropTypes.shape( {
+		max : PropTypes.number,
+		min : PropTypes.number,
+	} ),
+};
+
+export default ImageSizeControl;

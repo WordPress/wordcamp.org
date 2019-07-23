@@ -2,6 +2,7 @@
  * External dependencies
  */
 import classnames from 'classnames';
+import PropTypes from 'prop-types';
 
 /**
  * WordPress dependencies
@@ -11,18 +12,9 @@ import { BaseControl, Toolbar } from '@wordpress/components';
 /**
  * Component for a UI control for image alignment.
  *
- * @param {Object} props {
- *     @type {string}   className
- *     @type {string}   label
- *     @type {string}   help
- *     @type {string}   value
- *     @type {Function} onChange
- *     @type {Array}    alignOptions
- * }
- *
  * @return {Element}
  */
-export default function ImageAlignmentControl( {
+function ImageAlignmentControl( {
 	className,
 	label,
 	help,
@@ -51,3 +43,19 @@ export default function ImageAlignmentControl( {
 		</BaseControl>
 	);
 }
+
+ImageAlignmentControl.propTypes = {
+	className    : PropTypes.string,
+	label        : PropTypes.string,
+	help         : PropTypes.string,
+	value        : PropTypes.string.isRequired,
+	onChange     : PropTypes.func.isRequired,
+	alignOptions : PropTypes.arrayOf(
+		PropTypes.shape( {
+			label : PropTypes.string,
+			value : PropTypes.string,
+		} )
+	).isRequired,
+};
+
+export default ImageAlignmentControl;

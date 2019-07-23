@@ -1,7 +1,6 @@
 /**
  * External dependencies
  */
-import classnames from 'classnames';
 import PropTypes from 'prop-types';
 
 /**
@@ -15,7 +14,6 @@ import { BaseControl, Toolbar } from '@wordpress/components';
  * @return {Element}
  */
 function ImageAlignmentControl( {
-	className,
 	label,
 	help,
 	value,
@@ -23,7 +21,7 @@ function ImageAlignmentControl( {
 	alignOptions,
 } ) {
 	return (
-		<BaseControl className={ classnames( 'wordcamp-image__alignment', className ) } help={ help }>
+		<BaseControl className="wordcamp-image__alignment" help={ help }>
 			<span className="wordcamp-image__alignment-label">{ label }</span>
 			<Toolbar
 				controls={ alignOptions.map( ( alignment ) => {
@@ -45,7 +43,6 @@ function ImageAlignmentControl( {
 }
 
 ImageAlignmentControl.propTypes = {
-	className    : PropTypes.string,
 	label        : PropTypes.string,
 	help         : PropTypes.string,
 	value        : PropTypes.string.isRequired,

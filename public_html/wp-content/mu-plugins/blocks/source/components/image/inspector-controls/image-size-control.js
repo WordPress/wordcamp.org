@@ -1,9 +1,8 @@
 /**
  * External dependencies
  */
-import classnames   from 'classnames';
 import { debounce } from 'lodash';
-import PropTypes from 'prop-types';
+import PropTypes    from 'prop-types';
 
 /**
  * WordPress dependencies
@@ -54,7 +53,6 @@ class ImageSizeControl extends Component {
 	 */
 	render() {
 		const {
-			className,
 			label,
 			help,
 			sizePresets = [],
@@ -64,7 +62,7 @@ class ImageSizeControl extends Component {
 		const { value } = this.state;
 
 		return (
-			<BaseControl className={ classnames( 'wordcamp-image__size', className ) } help={ help }>
+			<BaseControl className="wordcamp-image__size" help={ help }>
 				<span className="wordcamp-image__size-label">{ label }</span>
 				<div className="wordcamp-image__size-preset-buttons">
 					{ sizePresets.length > 0 && (
@@ -115,7 +113,6 @@ class ImageSizeControl extends Component {
 }
 
 ImageSizeControl.propTypes = {
-	className   : PropTypes.string,
 	label       : PropTypes.string,
 	help        : PropTypes.string,
 	value       : PropTypes.number,

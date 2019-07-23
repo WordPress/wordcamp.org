@@ -21,19 +21,11 @@
 		"rememo": "3.0.0"
 	},
 	"devDependencies": {
-		"@babel/core": "7.1.2",
-		"@babel/runtime-corejs2": "7.1.2",
-		"@wordpress/eslint-plugin": "^2.3.0",
 		"@wordpress/scripts": "^3.3.0",
-		"acorn": "6.0.4",
-		"babel-loader": "8.0.4",
-		"cross-env": "5.2.0",
 		"css-loader": "1.0.1",
-		"lodash": "4.17.11",
 		"mini-css-extract-plugin": "0.4.4",
 		"node-sass": "4.11.0",
 		"sass-loader": "7.1.0",
-		"webpack": "4.23.1",
 		"webpack-cli": "3.1.1"
 	},
 	"browserslist": [

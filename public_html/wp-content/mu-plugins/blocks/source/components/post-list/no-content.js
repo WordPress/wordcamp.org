@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import PropTypes from 'prop-types';
+
+/**
  * WordPress dependencies
  */
 import { __ }      from '@wordpress/i18n';
@@ -7,13 +12,9 @@ import { Spinner } from '@wordpress/components';
 /**
  * Component for indicating why there is no content.
  *
- * @param {Object} props {
- *     @type {boolean} loading
- * }
- *
  * @return {Element}
  */
-export default function BlockNoContent( { loading } ) {
+function BlockNoContent( { loading } ) {
 	return (
 		<div className="wordcamp-block__posts has-no-content">
 			{ loading ?
@@ -23,3 +24,9 @@ export default function BlockNoContent( { loading } ) {
 		</div>
 	);
 }
+
+BlockNoContent.propTypes = {
+	loading: PropTypes.bool,
+};
+
+export default BlockNoContent;

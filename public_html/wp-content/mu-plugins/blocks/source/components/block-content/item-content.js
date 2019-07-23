@@ -2,6 +2,7 @@
  * External dependencies
  */
 import classnames from 'classnames';
+import PropTypes from 'prop-types';
 
 /**
  * WordPress dependencies
@@ -20,32 +21,26 @@ import ItemPermalink from './item-permalink';
  * DO NOT use this to output untrusted content. Note that this takes a blob of arbitrary HTML as input,
  * and uses RawHTML (which uses dangerouslySetHTML) to render it in the node tree.
  *
- * @param {Object} props {
- *     @type {string} className
- *     @type {string} content
- *     @type {string} link
- *     @type {string} linkText
- * }
- *
  * @return {Element}
  */
-export default function DangerousItemHTMLContent( { className, content, link, linkText } ) {
-	const classes = [
-		'wordcamp-block__post-content',
-		className,
-	];
+function DangerousItemHTMLContent( { className, content, link, linkText } ) {
+	const classes = [ 'wordcamp-block__post-content', className ];
 
 	return (
 		<div className={ classnames( classes ) }>
 			<Disabled>
 				<RawHTML children={ content } />
-				{ link &&
-					<ItemPermalink
-						link={ link }
-						linkText={ linkText }
-					/>
-				}
+				{ link && <ItemPermalink link={ link } linkText={ linkText } /> }
 			</Disabled>
 		</div>
 	);
 }
+
+DangerousItemHTMLContent.propTypes = {
+	className : PropTypes.string,
+	content   : PropTypes.string,
+	link      : PropTypes.string,
+	linkText  : PropTypes.string,
+};
+
+export default DangerousItemHTMLContent;

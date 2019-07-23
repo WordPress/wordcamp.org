@@ -2,6 +2,7 @@
  * External dependencies
  */
 import classnames from 'classnames';
+import PropTypes from 'prop-types';
 
 /**
  * WordPress dependencies
@@ -13,16 +14,9 @@ import { Fragment } from '@wordpress/element';
 /**
  * Component for an entity title, optionally linked.
  *
- * @param {Object} props {
- *     @type {number} headingLevel
- *     @type {string} className
- *     @type {string} title
- *     @type {string} link
- * }
- *
  * @return {Element}
  */
-export default function ItemTitle( { headingLevel, className, title, link } ) {
+function ItemTitle( { headingLevel, className, title, link } ) {
 	const validLevels = [ 1, 2, 3, 4, 5, 6 ];
 	let Tag = 'h3';
 
@@ -30,10 +24,7 @@ export default function ItemTitle( { headingLevel, className, title, link } ) {
 		Tag = 'h' + headingLevel;
 	}
 
-	const classes = [
-		'wordcamp-block__post-title',
-		className,
-	];
+	const classes = [ 'wordcamp-block__post-title', className ];
 
 	const content = title || __( '(Untitled)', 'wordcamporg' );
 
@@ -55,3 +46,12 @@ export default function ItemTitle( { headingLevel, className, title, link } ) {
 		</Tag>
 	);
 }
+
+ItemTitle.propTypes = {
+	headingLevel : PropTypes.number,
+	className    : PropTypes.string,
+	title        : PropTypes.string,
+	link         : PropTypes.string,
+};
+
+export default ItemTitle;

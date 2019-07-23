@@ -1,111 +1,28 @@
 /**
  * External dependencies
  */
-import { get }    from 'lodash';
 import classnames from 'classnames';
+import { get }    from 'lodash';
 
 /**
  * WordPress dependencies
  */
-import { Component } from '@wordpress/element';
 import { __ }        from '@wordpress/i18n';
+import { Component } from '@wordpress/element';
 
 /**
  * Internal dependencies
  */
-import { ItemTitle, DangerousItemHTMLContent, ItemPermalink }  from '../../components/block-content';
-import { FeaturedImage }                                       from '../../components/image';
-import { BlockNoContent, PostList }                            from '../../components/post-list';
-import { filterEntities }                                      from '../../data';
-import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../../i18n';
-
-/**
- * Component for the section of each session post that displays information about the session's speakers.
- *
- * @param {Object} session
- *
- * @return {Element}
- */
-function SessionSpeakers( { session } ) {
-	let speakerData = get( session, '_embedded.speakers', [] );
-
-	if ( speakerData.length === 0 ) {
-		return null;
-	}
-
-	speakerData = speakerData.map( ( speaker ) => {
-		if ( speaker.hasOwnProperty( 'code' ) ) {
-			// The wporg username given for this speaker returned an error.
-			return null;
-		}
-
-		const { link }     = speaker;
-		let { title = {} } = speaker;
-
-		title = title.rendered.trim() || __( 'Unnamed', 'wordcamporg' );
-
-		if ( ! link ) {
-			return title;
-		}
-
-		return (
-			<a key={ link } href={ link } target="_blank" rel="noopener noreferrer">
-				{ title }
-			</a>
-		);
-	} );
-
-	const speakers = arrayTokenReplace(
-		/* translators: %s is a list of names. */
-		tokenSplit( __( 'Presented by %s', 'wordcamporg' ) ),
-		[ listify( speakerData ) ]
-	);
-
-	return (
-		<p className="wordcamp-sessions__speakers">
-			{ speakers }
-		</p>
-	);
-}
-
-/**
- * Component for the section of each session post that displays a session's assigned categories.
- *
- * @param {Object} session
- *
- * @return {Element}
- */
-function SessionCategory( { session } ) {
-	let categoryContent;
-	const terms = get( session, '_embedded[\'wp:term\']', [] ).flat();
-
-	if ( session.session_category.length ) {
-		/* translators: used between list items, there is a space after the comma */
-		const separator = __( ', ', 'wordcamporg' );
-		const categories = terms
-			.filter( ( term ) => {
-				return 'wcb_session_category' === term.taxonomy;
-			} )
-			.map( ( term ) => {
-				return (
-					<span
-						key={ term.slug }
-						className={ classnames( 'wordcamp-sessions__category', `slug-${ term.slug }` ) }
-					>
-						{ term.name.trim() }
-					</span>
-				);
-			} );
-
-		categoryContent = intersperse( categories, separator );
-	}
-
-	return (
-		<div className="wordcamp-sessions__categories">
-			{ categoryContent }
-		</div>
-	);
-}
+import { BlockNoContent, PostList } from '../../components/post-list';
+import {
+	DangerousItemHTMLContent,
+	ItemPermalink,
+	ItemTitle,
+}                                   from '../../components/block-content';
+import { FeaturedImage }            from '../../components/image';
+import { filterEntities }           from '../../data';
+import SessionCategory              from './content/session-category';
+import SessionSpeakers              from './content/session-speakers';
 
 /**
  * Component for displaying the block content.

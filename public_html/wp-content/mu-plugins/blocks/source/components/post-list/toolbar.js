@@ -15,7 +15,7 @@ import { BlockControls } from '@wordpress/editor';
  *
  * @return {Element}
  */
-export function LayoutToolbar( {
+function LayoutToolbar( {
 	layout,
 	options,
 	setAttributes,
@@ -40,3 +40,4 @@ export function LayoutToolbar( {
 		</BlockControls>
 	);
 }
+export default LayoutToolbar;

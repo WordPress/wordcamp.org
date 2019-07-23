@@ -17,8 +17,6 @@ import { tokenSplit, arrayTokenReplace, listify } from '../../../i18n';
 /**
  * Component for the section of each session post that displays information about the session's speakers.
  *
- * @param {Object} session
- *
  * @return {Element}
  */
 function SessionSpeakers( { session } ) {

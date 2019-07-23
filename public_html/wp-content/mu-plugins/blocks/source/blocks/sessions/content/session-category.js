@@ -18,8 +18,6 @@ import { intersperse } from '../../../i18n';
 /**
  * Component for the section of each session post that displays a session's assigned categories.
  *
- * @param {Object} session
- *
  * @return {Element}
  */
 function SessionCategory( { session } ) {

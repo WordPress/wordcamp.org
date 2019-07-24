@@ -17,6 +17,17 @@ import { __ }                  from '@wordpress/i18n';
 import './style.scss';
 
 /**
+ * Style object passed to ReactSelect component.
+ * See https://react-select.com/styles
+ */
+const customStyles = {
+	indicatorSeparator: ( provided ) => ( {
+		...provided,
+		display: 'none',
+	} ),
+};
+
+/**
  * Component for selecting one or more related entities to be used as content in a block.
  */
 export class ItemSelect extends Component {
@@ -133,6 +144,7 @@ export class ItemSelect extends Component {
 						onChange={ ( selectedOptions ) => {
 							this.setState( { selectedOptions: selectedOptions || [] } );
 						} }
+						styles={ customStyles }
 						{ ...mergedSelectProps }
 					/>
 					<Button

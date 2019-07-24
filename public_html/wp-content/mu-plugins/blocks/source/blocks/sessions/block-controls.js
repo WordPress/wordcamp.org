@@ -29,7 +29,7 @@ export class BlockControls extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { icon, attributes, setAttributes, blockData } = this.props;
+		const { attributes, blockData, icon, isSelected, setAttributes } = this.props;
 		const { mode } = attributes;
 		const { options } = blockData;
 
@@ -47,13 +47,13 @@ export class BlockControls extends Component {
 			case 'wcb_session_category' :
 				output = (
 					<PlaceholderSpecificMode
-						label={ getOptionLabel( mode, options.mode ) }
-						icon={ icon }
 						content={
 							<BlockContent { ...this.props } />
 						}
 						placeholderChildren={
-							<ContentSelect { ...this.props } />
+							isSelected && (
+								<ContentSelect label={ getOptionLabel( mode, options.mode ) } { ...this.props } />
+							)
 						}
 					/>
 				);

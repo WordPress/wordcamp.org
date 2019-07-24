@@ -144,6 +144,7 @@ export class ItemSelect extends Component {
 						onChange={ ( selectedOptions ) => {
 							this.setState( { selectedOptions: selectedOptions || [] } );
 						} }
+						isClearable={ false }
 						styles={ customStyles }
 						{ ...mergedSelectProps }
 					/>

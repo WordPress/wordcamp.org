@@ -19,12 +19,21 @@ import { AvatarImage } from '../image';
  *     @type {string} icon
  *     @type {string} label
  *     @type {number} count
+ *     @type {string} context - `menu` or `value` for whether it's in the menu dropdown or the selected token.
  * }
  *
  * @return {Element}
  */
-export function Option( { avatar, icon, label, count } ) {
+export function Option( { avatar, icon, label, count, context } ) {
 	let image;
+
+	if ( 'value' === context ) {
+		return (
+			<div className="wordcamp-item-select__token">
+				{ label }
+			</div>
+		);
+	}
 
 	if ( avatar ) {
 		image = (
@@ -47,21 +56,17 @@ export function Option( { avatar, icon, label, count } ) {
 		);
 	}
 
-	const content = (
-		<span className="wordcamp-item-select__option-label">
-			{ label }
-			{ 'undefined' !== typeof count &&
-				<span className="wordcamp-item-select__option-label-count">
-					{ count }
-				</span>
-			}
-		</span>
-	);
-
 	return (
 		<div className="wordcamp-item-select__option">
 			{ image }
-			{ content }
+			<span className="wordcamp-item-select__option-label">
+				{ label }
+				{ 'undefined' !== typeof count && (
+					<span className="wordcamp-item-select__option-label-count">
+						{ count }
+					</span>
+				) }
+			</span>
 		</div>
 	);
 }

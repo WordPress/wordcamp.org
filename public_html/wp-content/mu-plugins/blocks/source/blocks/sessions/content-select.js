@@ -118,14 +118,14 @@ export class ContentSelect extends Component {
 				selectProps={ {
 					options           : this.buildSelectOptions(),
 					isLoading         : this.isLoading(),
-					formatOptionLabel : ( optionData ) => {
-						return (
-							<Option
-								icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
-								{ ...optionData }
-							/>
-						);
-					},
+					formatOptionLabel : ( optionData, { context } ) => (
+						<Option
+							icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
+							label={ optionData.label }
+							count={ optionData.count }
+							context={ context }
+						/>
+					),
 				} }
 			/>
 		);

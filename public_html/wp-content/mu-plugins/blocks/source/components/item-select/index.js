@@ -165,4 +165,5 @@ export class ItemSelect extends Component {
 /**
  * Additional component exports
  */
-export * from './option';
+export { buildOptions, getOptionLabel } from './utils';
+export { Option } from './option';

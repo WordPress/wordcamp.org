@@ -21,6 +21,7 @@
 		"rememo": "3.0.0"
 	},
 	"devDependencies": {
+		"@wordpress/eslint-plugin": "^2.3.0",
 		"@wordpress/scripts": "^3.3.0",
 		"css-loader": "1.0.1",
 		"mini-css-extract-plugin": "0.4.4",

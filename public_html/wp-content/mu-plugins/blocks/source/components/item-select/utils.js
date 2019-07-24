@@ -27,7 +27,7 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 				};
 
 				parsedItem.avatar = get( item, 'avatar_urls[\'24\']', '' );
-				parsedItem.image  = get( item, '_embedded[\'wp:featuredmedia\'].media_details.sizes.thumbnail.source_url', '' );
+				parsedItem.image  = get( item, '_embedded[\'wp:featuredmedia\'][0].media_details.sizes.thumbnail.source_url', '' );
 				break;
 
 			case 'term':

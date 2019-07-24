@@ -1731,7 +1731,7 @@ class WordCamp_Post_Types_Plugin {
 		$speakers_names   = array();
 		$speakers_objects = get_posts( array(
 			'post_type'      => 'wcb_speaker',
-			'post_status'    => 'publish',
+			'post_status'    => 'any',
 			'posts_per_page' => -1,
 		) );
 

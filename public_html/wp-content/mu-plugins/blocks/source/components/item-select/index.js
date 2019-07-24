@@ -25,6 +25,40 @@ const customStyles = {
 		...provided,
 		display: 'none',
 	} ),
+	multiValue: ( provided ) => ( {
+		...provided,
+		backgroundColor : '#e2e4e7',
+		borderRadius    : '12px',
+	} ),
+	multiValueLabel: ( provided ) => ( {
+		...provided,
+		padding     : '6px 4px',
+		paddingLeft : '12px', // We need to specifically override `provided.paddingLeft`.
+		fontSize    : '0.9em',
+		lineHeight  : 1,
+	} ),
+	multiValueRemove: ( provided, { isFocused } ) => ( {
+		...provided,
+		backgroundColor : isFocused ? '#fff' : '#e2e4e7',
+		boxShadow       : isFocused ? 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff' : null,
+		borderRadius    : '0 12px 12px 0',
+
+		svg: {
+			color        : isFocused ? '#fff' : '#e2e4e7',
+			background   : isFocused ? '#191e23' : '#555d66',
+			borderRadius : '10px',
+		},
+
+		':hover': {
+			backgroundColor : '#fff',
+			boxShadow       : 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff',
+
+			svg: {
+				color      : '#fff',
+				background : '#191e23',
+			},
+		},
+	} ),
 };
 
 /**

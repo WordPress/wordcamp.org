@@ -58,4 +58,10 @@
 
 .wordcamp-item-select {
 	width: 100%;
+
+	.wordcamp-item-select__button.components-button {
+		padding-top: 4px;
+		padding-bottom: 4px;
+		height: auto;
+	}
 }

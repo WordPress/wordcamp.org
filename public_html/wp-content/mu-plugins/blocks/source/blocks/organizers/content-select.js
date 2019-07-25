@@ -112,11 +112,14 @@ export class ContentSelect extends Component {
 				selectProps={ {
 					options           : this.buildSelectOptions(),
 					isLoading         : this.isLoading(),
-					formatOptionLabel : ( optionData ) => {
-						return (
-							<Option { ...optionData } />
-						);
-					},
+					formatOptionLabel : ( optionData, { context } ) => (
+						<Option
+							context={ context }
+							avatar={ optionData.avatar }
+							label={ optionData.label }
+							count={ optionData.count }
+						/>
+					),
 				} }
 			/>
 		);

@@ -17,6 +17,51 @@ import { __ }                  from '@wordpress/i18n';
 import './style.scss';
 
 /**
+ * Style object passed to ReactSelect component.
+ * See https://react-select.com/styles
+ */
+const customStyles = {
+	indicatorSeparator: ( provided ) => ( {
+		...provided,
+		display: 'none',
+	} ),
+	multiValue: ( provided ) => ( {
+		...provided,
+		backgroundColor : '#e2e4e7',
+		borderRadius    : '12px',
+	} ),
+	multiValueLabel: ( provided ) => ( {
+		...provided,
+		padding     : '6px 4px',
+		paddingLeft : '12px', // We need to specifically override `provided.paddingLeft`.
+		fontSize    : '0.9em',
+		lineHeight  : 1,
+	} ),
+	multiValueRemove: ( provided, { isFocused } ) => ( {
+		...provided,
+		backgroundColor : isFocused ? '#fff' : '#e2e4e7',
+		boxShadow       : isFocused ? 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff' : null,
+		borderRadius    : '0 12px 12px 0',
+
+		svg: {
+			color        : isFocused ? '#fff' : '#e2e4e7',
+			background   : isFocused ? '#191e23' : '#555d66',
+			borderRadius : '10px',
+		},
+
+		':hover': {
+			backgroundColor : '#fff',
+			boxShadow       : 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff',
+
+			svg: {
+				color      : '#fff',
+				background : '#191e23',
+			},
+		},
+	} ),
+};
+
+/**
  * Component for selecting one or more related entities to be used as content in a block.
  */
 export class ItemSelect extends Component {
@@ -133,6 +178,8 @@ export class ItemSelect extends Component {
 						onChange={ ( selectedOptions ) => {
 							this.setState( { selectedOptions: selectedOptions || [] } );
 						} }
+						isClearable={ false }
+						styles={ customStyles }
 						{ ...mergedSelectProps }
 					/>
 					<Button
@@ -152,4 +199,5 @@ export class ItemSelect extends Component {
 /**
  * Additional component exports
  */
-export * from './option';
+export { buildOptions, getOptionLabel } from './utils';
+export { Option } from './option';

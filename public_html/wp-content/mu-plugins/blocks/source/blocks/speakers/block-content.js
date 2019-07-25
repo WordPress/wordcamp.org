@@ -10,7 +10,6 @@ import classnames from 'classnames';
 import { Disabled }            from '@wordpress/components';
 import { Component, Fragment } from '@wordpress/element';
 import { __, _n }              from '@wordpress/i18n';
-import { escapeAttribute }     from '@wordpress/escape-html';
 
 /**
  * Internal dependencies
@@ -40,7 +39,7 @@ function SpeakerSessions( { speaker, tracks } ) {
 
 	if ( sessions.length ) {
 		output = (
-			<div className={ classnames( 'wordcamp-item-meta', 'wordcamp-speaker-sessions' ) }>
+			<div className="wordcamp-speakers__sessions">
 				<h4 className="wordcamp-speakers__sessions-heading">
 					{ _n( 'Session', 'Sessions', sessions.length, 'wordcamporg' ) }
 				</h4>
@@ -48,7 +47,7 @@ function SpeakerSessions( { speaker, tracks } ) {
 				<ul className="wordcamp-speakers__sessions-list">
 					{ sessions.map( ( session ) =>
 						<li
-							key={ escapeAttribute( session.slug ) }
+							key={ session.id }
 							className="wordcamp-speakers__sessions-list-item"
 						>
 							<Disabled>
@@ -204,6 +203,7 @@ export class BlockContent extends Component {
 							<ItemPermalink
 								link={ post.link }
 								linkText={ __( 'Visit speaker page', 'wordcamporg' ) }
+								className="wordcamp-speakers__permalink"
 							/>
 						}
 					</div>

@@ -13,7 +13,7 @@ defined( 'WPINC' ) || die();
 setup_postdata( $sponsor ); // This is necessary for generating an excerpt from content if the excerpt field is empty.
 ?>
 
-<div class="wordcamp-sponsors__post slug-<?php echo esc_attr( $sponsor->post_name ); ?>">
+<div class="wordcamp-sponsor wordcamp-sponsors__post slug-<?php echo esc_attr( $sponsor->post_name ); ?>">
 	<?php if ( true === $attributes['show_name'] ) : ?>
 		<?php echo wp_kses_post(
 			render_item_title(
@@ -42,7 +42,7 @@ setup_postdata( $sponsor ); // This is necessary for generating an excerpt from 
 				'excerpt' === $attributes['content']
 					? apply_filters( 'the_excerpt', get_the_excerpt( $sponsor ) )
 					: get_all_the_content( $sponsor ),
-				[ 'wordcamp-sponsors__content has-content-' . $attributes['content'] ]
+				[ 'wordcamp-sponsors__content', 'is-' . $attributes['content'] ]
 			)
 		); ?>
 	<?php endif; ?>

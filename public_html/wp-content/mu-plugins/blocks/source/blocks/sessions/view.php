@@ -14,7 +14,7 @@ defined( 'WPINC' ) || die();
 setup_postdata( $session );
 ?>
 
-<div class="wordcamp-sessions__post slug-<?php echo sanitize_html_class( $session->post_name ); ?>">
+<div class="wordcamp-session wordcamp-sessions__post slug-<?php echo sanitize_html_class( $session->post_name ); ?>">
 	<?php echo wp_kses_post(
 		render_item_title(
 			get_the_title( $session ),
@@ -37,7 +37,7 @@ setup_postdata( $session );
 		);
 		?>
 
-		<div class="wordcamp__item-meta wordcamp-sessions__speakers">
+		<div class="wordcamp-sessions__speakers">
 			<?php
 			printf(
 				/* translators: %s is a list of names. */
@@ -65,13 +65,13 @@ setup_postdata( $session );
 				'excerpt' === $attributes['content']
 					? apply_filters( 'the_excerpt', get_the_excerpt( $session ) )
 					: get_all_the_content( $session ),
-				[ 'wordcamp-sessions__content-' . 'is-' . $attributes['content'] ]
+				[ 'wordcamp-sessions__content', 'is-' . $attributes['content'] ]
 			)
 		); ?>
 	<?php endif; ?>
 
 	<?php if ( $attributes['show_meta'] || $attributes['show_category'] ) : ?>
-		<div class="wordcamp__item-meta wordcamp-sessions__details">
+		<div class="wordcamp-sessions__details">
 			<?php if ( $attributes['show_meta'] ) : ?>
 				<?php $tracks = get_the_terms( $session, 'wcb_track' ); ?>
 

@@ -58,7 +58,7 @@ function SessionSpeakers( { session } ) {
 	);
 
 	return (
-		<div className="wordcamp__post-meta wordcamp-sessions__speakers">
+		<div className="wordcamp-sessions__speakers">
 			{ speakers }
 		</div>
 	);
@@ -293,16 +293,16 @@ export class BlockContent extends Component {
 							/>
 						}
 
-						{ ( show_meta || show_category ) &&
-						<div className="wordcamp__post-meta wordcamp-sessions__details">
-							{ show_meta &&
-								<SessionMeta session={ post } />
-							}
-							{ show_category &&
-								<SessionCategory session={ post } />
-							}
-						</div>
-						}
+						{ ( show_meta || show_category ) && (
+							<div className="wordcamp-sessions__details">
+								{ show_meta &&
+									<SessionMeta session={ post } />
+								}
+								{ show_category &&
+									<SessionCategory session={ post } />
+								}
+							</div>
+						) }
 
 						{ ( 'full' === content ) &&
 							<ItemPermalink

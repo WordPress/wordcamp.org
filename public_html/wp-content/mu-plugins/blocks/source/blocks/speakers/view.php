@@ -14,7 +14,7 @@ defined( 'WPINC' ) || die();
 setup_postdata( $speaker ); // This is necessary for generating an excerpt from content if the excerpt field is empty.
 ?>
 
-<div class="wordcamp-speakers__post slug-<?php echo esc_attr( $speaker->post_name ); ?>">
+<div class="wordcamp-speaker wordcamp-speakers__post slug-<?php echo esc_attr( $speaker->post_name ); ?>">
 	<?php echo wp_kses_post(
 		render_item_title(
 			get_the_title( $speaker ),
@@ -25,7 +25,7 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 	); ?>
 
 	<?php if ( true === $attributes['show_avatars'] ) : ?>
-		<div class="wordcamp-image-container wordcamp-avatar-container align-<?php echo esc_attr( $attributes['avatar_align'] ); ?>">
+		<div class="wordcamp-image__avatar-container align-<?php echo esc_attr( $attributes['avatar_align'] ); ?>">
 			<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>" class="wordcamp-image__avatar-link">
 				<?php echo get_avatar(
 					$speaker->_wcb_speaker_email,
@@ -44,13 +44,13 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 				'excerpt' === $attributes['content']
 					? apply_filters( 'the_excerpt', get_the_excerpt( $speaker ) )
 					: get_all_the_content( $speaker ),
-				[ 'wordcamp-speakers__content is-' . $attributes['content'] ]
+				[ 'wordcamp-speakers__content', 'is-' . $attributes['content'] ]
 			)
 		); ?>
 	<?php endif; ?>
 
 	<?php if ( true === $attributes['show_session'] && ! empty( $sessions[ $speaker->ID ] ) ) : ?>
-		<div class="wordcamp-item-meta wordcamp-speaker-sessions">
+		<div class="wordcamp-speakers__sessions">
 			<h4 class="wordcamp-speakers__sessions-heading">
 				<?php echo esc_html( _n( 'Session', 'Sessions', count( $sessions[ $speaker->ID ] ), 'wordcamporg' ) ); ?>
 			</h4>
@@ -97,7 +97,7 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 			render_item_permalink(
 				get_permalink( $speaker ),
 				__( 'Visit speaker page', 'wordcamporg' ),
-				[ 'wordcamp-speaker-permalink' ]
+				[ 'wordcamp-speakers__permalink' ]
 			)
 		); ?>
 	<?php endif; ?>

@@ -26,7 +26,7 @@ setup_postdata( $organizer ); // This is necessary for generating an excerpt fro
 	); ?>
 
 	<?php if ( true === $attributes['show_avatars'] ) : ?>
-		<div class="wordcamp-image-container wordcamp-avatar-container align-<?php echo esc_attr( $attributes['avatar_align'] ); ?>">
+		<div class="wordcamp-image__avatar-container align-<?php echo esc_attr( $attributes['avatar_align'] ); ?>">
 			<?php echo get_avatar(
 				$organizer->_wcpt_user_id,
 				$attributes['avatar_size'],

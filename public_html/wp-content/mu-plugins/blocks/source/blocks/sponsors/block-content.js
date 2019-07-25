@@ -101,14 +101,18 @@ export class BlockContent extends Component {
 							<FeaturedImage
 								imageData={ get( post, '_embedded.wp:featuredmedia[0]', {} ) }
 								width={ featured_image_width }
-								className={ classnames( 'wordcamp-sponsors__featured-image', 'wordcamp-sponsors__logo', 'align-' + image_align ) }
+								className={ classnames( [
+									'wordcamp-sponsors__featured-image',
+									'wordcamp-sponsors__logo',
+									`align-${ image_align }`,
+								] ) }
 								imageLink={ post.link }
 							/>
 						}
 
 						{ ( 'none' !== content ) &&
 							<DangerousItemHTMLContent
-								className={ classnames( 'wordcamp-sponsors__content', 'has-content-' + content ) }
+								className={ `wordcamp-sponsors__content is-${ content }` }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
 						}

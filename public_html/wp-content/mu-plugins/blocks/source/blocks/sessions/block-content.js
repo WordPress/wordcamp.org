@@ -58,9 +58,9 @@ function SessionSpeakers( { session } ) {
 	);
 
 	return (
-		<div className="wordcamp-sessions__speakers">
+		<p className="wordcamp-sessions__speakers">
 			{ speakers }
-		</div>
+		</p>
 	);
 }
 

@@ -29,6 +29,10 @@ import { tokenSplit, arrayTokenReplace, intersperse, listify }       from '../..
 function SessionSpeakers( { session } ) {
 	let speakerData = get( session, '_embedded.speakers', [] );
 
+	if ( speakerData.length === 0 ) {
+		return null;
+	}
+
 	speakerData = speakerData.map( ( speaker ) => {
 		if ( speaker.hasOwnProperty( 'code' ) ) {
 			// The wporg username given for this speaker returned an error.
@@ -169,17 +173,6 @@ export class BlockContent extends Component {
 	}
 
 	/**
-	 * Determine if a session has related speaker data.
-	 *
-	 * @param {Object} session
-	 *
-	 * @return {boolean}
-	 */
-	static hasSpeaker( session ) {
-		return get( session, '_embedded.speakers', [] ).length > 0;
-	}
-
-	/**
 	 * Filter and sort the content that will be rendered.
 	 *
 	 * @returns {Array}
@@ -273,9 +266,7 @@ export class BlockContent extends Component {
 							link={ post.link }
 						/>
 
-						{ show_speaker && this.constructor.hasSpeaker( post ) &&
-							<SessionSpeakers session={ post } />
-						}
+						{ show_speaker && <SessionSpeakers session={ post } /> }
 
 						{ show_images &&
 							<FeaturedImage

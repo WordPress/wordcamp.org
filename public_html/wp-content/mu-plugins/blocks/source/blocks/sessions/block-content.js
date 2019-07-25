@@ -45,7 +45,7 @@ function SessionSpeakers( { session } ) {
 		}
 
 		return (
-			<a key={ link } href={ link }>
+			<a key={ link } href={ link } target="_blank" rel="noopener noreferrer">
 				{ title }
 			</a>
 		);

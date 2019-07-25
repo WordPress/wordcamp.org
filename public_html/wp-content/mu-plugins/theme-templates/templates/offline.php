@@ -56,6 +56,8 @@ get_header();
 		<p>
 			<?php _e( "In the mean time, hopefully this information is useful:", 'wordcamporg' );
 			// todo that string needs a lot of work
+			// probably try to get it to be a single sentance merged with the one above, b/c otherwise the user might not see it if it's below the fold,
+			// and they might not realize that the schedule etc is available below
 			?>
 		</p>
 

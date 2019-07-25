@@ -98,6 +98,10 @@ export class MainController extends Component {
 
 
 		// todo document that requests every 60 seconds will be mitigated by service worker caching, otherwise could be scaling issue
+			// actually, probably better to have day-of-event.php register a caching route specifically for this endpoint, so that
+			// the dependencies are clear and explicit. that may make some of service-worker-caching.php redundant for this request, but that's
+			// ok b/c better to make the code self-documenting. add an inline comment w/ that route registration though, noting that it complements
+			// things done in service-worker-caching.php
 		this.updateIntervalId = window.setInterval( () => {
 			this.updateLists();
 		}, 60 * 1000 );

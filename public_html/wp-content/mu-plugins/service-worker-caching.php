@@ -134,24 +134,6 @@ function register_caching_routes() {
  */
 function set_navigation_caching_strategy() {
 	/*
-	 * todo can remove all this callback once https://github.com/xwp/pwa-wp/pull/178 is released to w.org repo
-	 *  	or can remove now b/c it was never needed?
-	 *
-	 * todo if it remains:
-	 *
-	 * All of this needs to be understood deeper in order to know if it's the right way to achieve the goals
-	 * of this project, and what the unintended side-effects may be.
-	 *
-	 * See https://developers.google.com/web/updates/2017/02/navigation-preload
-	 *
-	 * Should navigation preloading really be disabled? Maybe it's good to disable it since we're not using it?
-	 * But then why is it enabled by default? Maybe the `pwa` plugin is using it?
-	 *
-	 * We need to clearly document what's going on here, and _why_.
-	 */
-	add_filter( 'wp_service_worker_navigation_preload', '__return_false' );
-
-	/*
 	 * Cache pages that the user visits, so that if they return to them while offline, they'll still be available.
 	 * If they're online, though, fetch the latest version since it could have changed since they last visited.
 	 *

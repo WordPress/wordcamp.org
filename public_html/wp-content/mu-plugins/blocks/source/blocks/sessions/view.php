@@ -37,7 +37,7 @@ setup_postdata( $session );
 		);
 		?>
 
-		<div class="wordcamp-sessions__speakers">
+		<p class="wordcamp-sessions__speakers">
 			<?php
 			printf(
 				/* translators: %s is a list of names. */
@@ -45,7 +45,7 @@ setup_postdata( $session );
 				wp_kses_post( array_to_human_readable_list( $speaker_linked_names ) )
 			);
 			?>
-		</div>
+		</p>
 	<?php endif; ?>
 
 	<?php if ( true === $attributes['show_images'] ) : ?>

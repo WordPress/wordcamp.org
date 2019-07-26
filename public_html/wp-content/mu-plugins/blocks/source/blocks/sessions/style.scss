@@ -1,4 +1,17 @@
+.editor-styles-wrapper,
+.entry-content {
+	.wordcamp-sessions__title {
+		margin-bottom: 8px;
+	}
 
-.wordcamp-sessions__details {
-	margin: 0 0 1.5em;
+	.wordcamp-sessions__speakers,
+	.wordcamp-sessions__details {
+		margin: 0 0 1.5em;
+		font-size: 0.875em;
+		font-style: italic;
+	}
+
+	.wordcamp-sessions__categories {
+		color: #6C7781;
+	}
 }

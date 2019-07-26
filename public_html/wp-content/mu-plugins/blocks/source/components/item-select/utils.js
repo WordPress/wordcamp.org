@@ -12,7 +12,8 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { filterEntities } from '../../data';
+import { filterEntities }    from '../../data';
+import { getSessionDetails } from '../../blocks/sessions/utils';
 
 const buildOptionGroup = ( entityType, type, label, items ) => {
 	items = items.map( ( item ) => {
@@ -28,6 +29,11 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 
 				parsedItem.avatar = get( item, 'avatar_urls[\'24\']', '' );
 				parsedItem.image  = get( item, '_embedded[\'wp:featuredmedia\'][0].media_details.sizes.thumbnail.source_url', '' );
+
+				if ( 'wcb_session' === item.type ) {
+					parsedItem.details = getSessionDetails( item );
+				}
+
 				break;
 
 			case 'term':

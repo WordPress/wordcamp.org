@@ -40,7 +40,7 @@ export function Option( { avatar, icon, label, count, context } ) {
 			<AvatarImage
 				className="wordcamp-item-select__option-avatar"
 				name={ label }
-				size={ 24 }
+				size={ 50 }
 				url={ avatar }
 			/>
 		);

@@ -59,6 +59,11 @@ const customStyles = {
 			},
 		},
 	} ),
+	option: ( provided, { isDisabled } ) => ( {
+		...provided,
+		color   : 'inherit',
+		opacity : isDisabled ? 0.7 : 1,
+	} ),
 };
 
 /**

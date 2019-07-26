@@ -18,8 +18,6 @@ import { PostList }                                                  from '../..
 import { filterEntities }                                            from '../../data';
 import { tokenSplit, arrayTokenReplace }                             from '../../i18n';
 
-import './block-content.scss';
-
 /**
  * Component for the section of each speaker post that displays information about relevant sessions.
  *

@@ -18,6 +18,7 @@ import { FeaturedImage }                                             from '../..
 import { PostList }                                                  from '../../components/post-list';
 import { filterEntities }                                            from '../../data';
 import { tokenSplit, arrayTokenReplace, intersperse, listify }       from '../../i18n';
+import { getSessionDetails }                                         from './utils';
 
 /**
  * Component for the section of each session post that displays information about the session's speakers.
@@ -65,56 +66,6 @@ function SessionSpeakers( { session } ) {
 		<p className="wordcamp-sessions__speakers">
 			{ speakers }
 		</p>
-	);
-}
-
-/**
- * Component for the section of each session post displaying metadata including date, time, and location (track).
- *
- * @param {Object} session
- *
- * @return {Element}
- */
-function SessionMeta( { session } ) {
-	let metaContent;
-	const terms = get( session, '_embedded[\'wp:term\']', [] ).flat();
-
-	if ( session.session_track.length ) {
-		const [ firstTrack ] = terms.filter( ( term ) => {
-			return 'wcb_track' === term.taxonomy;
-		} );
-
-		metaContent = arrayTokenReplace(
-			/* translators: 1: A date; 2: A time; 3: A location; */
-			tokenSplit( __( '%1$s at %2$s in %3$s', 'wordcamporg' ) ),
-			[
-				session.session_date_time.date,
-				session.session_date_time.time,
-				(
-					<span
-						key={ firstTrack.id }
-						className={ classnames( 'wordcamp-sessions__track', `slug-${ firstTrack.slug.trim() }` ) }
-					>
-						{ firstTrack.name.trim() }
-					</span>
-				),
-			]
-		);
-	} else {
-		metaContent = arrayTokenReplace(
-			/* translators: 1: A date; 2: A time; */
-			tokenSplit( __( '%1$s at %2$s', 'wordcamporg' ) ),
-			[
-				session.session_date_time.date,
-				session.session_date_time.time,
-			]
-		);
-	}
-
-	return (
-		<div className="wordcamp-sessions__time-location">
-			{ metaContent }
-		</div>
 	);
 }
 
@@ -286,9 +237,11 @@ export class BlockContent extends Component {
 
 						{ ( show_meta || show_category ) && (
 							<div className="wordcamp-sessions__details">
-								{ show_meta &&
-									<SessionMeta session={ post } />
-								}
+								{ show_meta && (
+									<div className="wordcamp-sessions__time-location">
+										{ getSessionDetails( post ) }
+									</div>
+								) }
 								{ show_category &&
 									<SessionCategory session={ post } />
 								}

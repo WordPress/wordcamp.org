@@ -38,12 +38,13 @@
 .wordcamp-item-select__option-avatar {
 	flex: 0 0 50px;
 	height: 50px;
+	margin-right: 10px;
 }
 
 .wordcamp-item-select__option-icon-container {
 	flex: 0 0 24px;
 	height: 24px;
-	margin-right: 0.5em;
+	margin-right: 10px;
 	background-color: #f3f3f4;
 }
 
@@ -51,6 +52,7 @@
 	margin: 0;
 	white-space: normal;
 }
+
 
 .wordcamp-item-select__option-label-count {
 	font-size: 0.6em;

@@ -21,6 +21,8 @@ const entityLists = {
 
 // this wont work when 'coming soon' mode is on, b/c front-end rest api is disabled then?
 	// what's a good way to handle that?
+	// same problem w/ jetpack site registration, so solution for that is relevant here
+	// does this really need to work while coming soon mode is enabled, though?
 
 // todo also unfinished comments on https://github.com/wceu/wordcamp-pwa-page/pull/11
 

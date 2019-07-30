@@ -13,7 +13,7 @@ class WordCamp_Coming_Soon_Page {
 		add_action( 'wp_head',                    array( $this, 'render_dynamic_styles'           )        );
 		add_filter( 'template_include',           array( $this, 'override_theme_template'         )        );
 		add_action( 'template_redirect',          array( $this, 'disable_jetpacks_open_graph'     )        );
-		add_filter( 'rest_authentication_errors', array( $this, 'disable_rest_endpoints'          )        );
+		add_filter( 'rest_request_before_callbacks', array( $this, 'disable_rest_endpoints'       ), 99, 3 );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );
@@ -124,9 +124,25 @@ class WordCamp_Coming_Soon_Page {
 
 	/**
 	 * Disable the REST API for unauthenticated requests when the Coming Soon page is active.
+	 *
+	 * @param WP_HTTP_Response|WP_Error $response
+	 * @param array                     $handler
+	 * @param WP_REST_Request           $request
+	 *
+	 * @return WP_HTTP_Response|WP_Error
 	 */
-	public function disable_rest_endpoints( $access ) {
-		if ( $this->override_theme_template ) {
+	public function disable_rest_endpoints( $response, $handler, $request ) {
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+
+		$safelisted_namespaces = array( '/jetpack/v' );
+
+		$safelisted = array_filter( $safelisted_namespaces, function( $namespace ) use ( $request ) {
+			return false !== strpos( $request->get_route(), $namespace );
+		} );
+
+		if ( $this->override_theme_template && ! $safelisted ) {
 			return new WP_Error(
 				'rest_cannot_access',
 				__( 'The REST API is not available while the site is in Coming Soon mode.', 'wordcamporg' ),
@@ -134,7 +150,7 @@ class WordCamp_Coming_Soon_Page {
 			);
 		}
 
-		return $access;
+		return $response;
 	}
 
 	/**

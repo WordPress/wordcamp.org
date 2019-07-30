@@ -101,7 +101,7 @@ export class ContentSelect extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { label, setAttributes } = this.props;
+		const { label, icon, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
@@ -115,6 +115,7 @@ export class ContentSelect extends Component {
 					formatOptionLabel : ( optionData, { context } ) => (
 						<Option
 							context={ context }
+							icon={ 'wcb_organizer_team' === optionData.type ? icon : null }
 							avatar={ optionData.avatar }
 							label={ optionData.label }
 							count={ optionData.count }

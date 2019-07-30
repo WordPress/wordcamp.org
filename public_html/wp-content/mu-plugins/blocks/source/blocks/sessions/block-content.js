@@ -13,11 +13,11 @@ import { __ }        from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
-import { FeaturedImage }                                             from '../../components/image';
-import { PostList }                                                  from '../../components/post-list';
-import { filterEntities }                                            from '../../data';
-import { tokenSplit, arrayTokenReplace, intersperse, listify }       from '../../i18n';
+import { ItemTitle, DangerousItemHTMLContent, ItemPermalink }  from '../../components/block-content';
+import { FeaturedImage }                                       from '../../components/image';
+import { BlockNoContent, PostList }                            from '../../components/post-list';
+import { filterEntities }                                      from '../../data';
+import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../../i18n';
 
 /**
  * Component for the section of each session post that displays information about the session's speakers.

@@ -13,10 +13,10 @@ import { __ }        from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
-import { FeaturedImage }                                             from '../../components/image';
-import { PostList }                                                  from '../../components/post-list';
-import { filterEntities }                                            from '../../data';
+import { ItemTitle, DangerousItemHTMLContent, ItemPermalink } from '../../components/block-content';
+import { FeaturedImage }                                      from '../../components/image';
+import { BlockNoContent, PostList }                           from '../../components/post-list';
+import { filterEntities }                                     from '../../data';
 
 /**
  * Component for displaying the block content.

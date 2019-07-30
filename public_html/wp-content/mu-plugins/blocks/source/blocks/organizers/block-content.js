@@ -11,10 +11,10 @@ import { Component } from '@wordpress/element';
 /**
  * Internal dependencies
  */
-import { AvatarImage }                                from '../../components/image';
-import { BlockNoContent, ItemTitle, DangerousItemHTMLContent } from '../../components/block-content';
-import { PostList }                                   from '../../components/post-list';
-import { filterEntities }                             from '../../data';
+import { AvatarImage }                         from '../../components/image';
+import { ItemTitle, DangerousItemHTMLContent } from '../../components/block-content';
+import { BlockNoContent, PostList }            from '../../components/post-list';
+import { filterEntities }                      from '../../data';
 
 /**
  * Component for displaying the block content.

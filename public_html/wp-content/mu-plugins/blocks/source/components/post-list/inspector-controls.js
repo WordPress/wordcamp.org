@@ -7,9 +7,9 @@ import PropTypes from 'prop-types';
 /**
  * WordPress dependencies
  */
-import { RangeControl, PanelBody } from '@wordpress/components';
-import { Fragment }     from '@wordpress/element';
 import { __ }                      from '@wordpress/i18n';
+import { Fragment }                from '@wordpress/element';
+import { PanelBody, RangeControl } from '@wordpress/components';
 
 /**
  * Component to add an Inspector panel

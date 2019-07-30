@@ -18,7 +18,6 @@ import { FeaturedImage }                                             from '../..
 import { PostList }                                                  from '../../components/post-list';
 import { filterEntities }                                            from '../../data';
 import { tokenSplit, arrayTokenReplace, intersperse, listify }       from '../../i18n';
-import { getSessionDetails }                                         from './utils';
 
 /**
  * Component for the section of each session post that displays information about the session's speakers.
@@ -239,7 +238,7 @@ export class BlockContent extends Component {
 							<div className="wordcamp-sessions__details">
 								{ show_meta && (
 									<div className="wordcamp-sessions__time-location">
-										{ getSessionDetails( post ) }
+										{ post.details }
 									</div>
 								) }
 								{ show_category &&

@@ -3,6 +3,7 @@
 if ( ! defined('WPCACHEHOME') )
 	define( 'WPCACHEHOME', WP_PLUGIN_DIR . '/wp-super-cache/' );
 
+$wpsc_version                  = 169;
 $wp_cache_debug_username       = WP_CACHE_DEBUG_USERNAME;
 $cached_direct_pages           = array();
 $wp_cache_rest_prefix          = 'wp-json';

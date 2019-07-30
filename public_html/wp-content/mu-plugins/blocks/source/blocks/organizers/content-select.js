@@ -7,7 +7,7 @@ import { every, flatMap, includes } from 'lodash';
  * WordPress dependencies
  */
 import { Component } from '@wordpress/element';
-import { __ }        from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -26,9 +26,9 @@ export class ContentSelect extends Component {
 	constructor( props ) {
 		super( props );
 
-		this.buildSelectOptions    = this.buildSelectOptions.bind( this );
+		this.buildSelectOptions = this.buildSelectOptions.bind( this );
 		this.getCurrentSelectValue = this.getCurrentSelectValue.bind( this );
-		this.isLoading             = this.isLoading.bind( this );
+		this.isLoading = this.isLoading.bind( this );
 	}
 
 	/**
@@ -42,16 +42,16 @@ export class ContentSelect extends Component {
 
 		const optionGroups = [
 			{
-				entityType : 'post',
-				type       : 'wcb_organizer',
-				label      : __( 'Organizers', 'wordcamporg' ),
-				items      : wcb_organizer,
+				entityType: 'post',
+				type: 'wcb_organizer',
+				label: __( 'Organizers', 'wordcamporg' ),
+				items: wcb_organizer,
 			},
 			{
-				entityType : 'term',
-				type       : 'wcb_organizer_team',
-				label      : __( 'Teams', 'wordcamporg' ),
-				items      : wcb_organizer_team,
+				entityType: 'term',
+				type: 'wcb_organizer_team',
+				label: __( 'Teams', 'wordcamporg' ),
+				items: wcb_organizer_team,
 			},
 		];
 
@@ -110,9 +110,9 @@ export class ContentSelect extends Component {
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
 				selectProps={ {
-					options           : this.buildSelectOptions(),
-					isLoading         : this.isLoading(),
-					formatOptionLabel : ( optionData, { context } ) => (
+					options: this.buildSelectOptions(),
+					isLoading: this.isLoading(),
+					formatOptionLabel: ( optionData, { context } ) => (
 						<Option
 							context={ context }
 							icon={ 'wcb_organizer_team' === optionData.type ? icon : null }

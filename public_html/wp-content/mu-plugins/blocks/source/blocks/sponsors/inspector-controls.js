@@ -2,20 +2,20 @@
  * WordPress dependencies
  */
 import { InspectorControls as CoreInspectorControlsContainer } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl }             from '@wordpress/components';
-import { Component }                                           from '@wordpress/element';
-import { __ }                                                  from '@wordpress/i18n';
+import { PanelBody, ToggleControl, SelectControl } from '@wordpress/components';
+import { Component } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
 import { featuredImageSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel }                            from '../../components/post-list';
+import { GridInspectorPanel } from '../../components/post-list';
 
 const DEFAULT_OPTIONS = {
-	align_image : {},
-	content     : {},
-	sort        : {},
+	align_image: {},
+	content: {},
+	sort: {},
 };
 
 /**

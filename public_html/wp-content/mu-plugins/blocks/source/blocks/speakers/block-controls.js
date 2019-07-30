@@ -7,17 +7,17 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 import { Button, Placeholder } from '@wordpress/components';
-import { Component }           from '@wordpress/element';
-import { __ }                  from '@wordpress/i18n';
+import { Component } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
 import { PlaceholderSpecificMode } from '../../components/block-controls';
-import { getOptionLabel }          from '../../components/item-select';
-import { BlockContent }            from './block-content';
-import { ContentSelect }           from './content-select';
-import { LABEL }                   from './index';
+import { getOptionLabel } from '../../components/item-select';
+import { BlockContent } from './block-content';
+import { ContentSelect } from './content-select';
+import { LABEL } from './index';
 
 /**
  * Component for displaying a UI within the block.

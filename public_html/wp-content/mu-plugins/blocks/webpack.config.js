@@ -27,9 +27,9 @@ module.exports = {
 		rules: [
 			...defaultConfig.module.rules,
 			{
-				test    : /\.(sc|sa|c)ss$/,
-				exclude : [ /node_modules/ ],
-				use     : [ MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader' ],
+				test: /\.(sc|sa|c)ss$/,
+				exclude: [ /node_modules/ ],
+				use: [ MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader' ],
 			},
 		],
 	},

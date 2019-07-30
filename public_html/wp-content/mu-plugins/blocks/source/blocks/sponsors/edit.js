@@ -1,17 +1,17 @@
 /**
  * WordPress dependencies
  */
-import { withSelect }          from '@wordpress/data';
+import { withSelect } from '@wordpress/data';
 import { Component, Fragment } from '@wordpress/element';
 
 /**
  * Internal dependencies
  */
-import { LayoutToolbar }     from '../../components/post-list';
-import { WC_BLOCKS_STORE }   from '../../data';
-import { BlockControls }     from './block-controls';
+import { LayoutToolbar } from '../../components/post-list';
+import { WC_BLOCKS_STORE } from '../../data';
+import { BlockControls } from './block-controls';
 import { InspectorControls } from './inspector-controls';
-import { ICON }              from './index';
+import { ICON } from './index';
 
 const blockData = window.WordCampBlocks.sponsors || {};
 
@@ -25,8 +25,8 @@ class SponsorsEdit extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes, setAttributes }  = this.props;
-		const { mode, layout }               = attributes;
+		const { attributes, setAttributes } = this.props;
+		const { mode, layout } = attributes;
 		const { layout: layoutOptions = {} } = blockData.options;
 
 		return (
@@ -54,14 +54,14 @@ const sponsorSelect = ( select ) => {
 	const { getEntities, getSiteSettings } = select( WC_BLOCKS_STORE );
 
 	const entities = {
-		wcb_sponsor       : getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
-		wcb_sponsor_level : getEntities( 'taxonomy', 'wcb_sponsor_level' ),
+		wcb_sponsor: getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
+		wcb_sponsor_level: getEntities( 'taxonomy', 'wcb_sponsor_level' ),
 	};
 
 	return {
-		blockData    : blockData,
-		entities     : entities,
-		siteSettings : getSiteSettings(),
+		blockData: blockData,
+		entities: entities,
+		siteSettings: getSiteSettings(),
 	};
 };
 

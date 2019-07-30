@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { Toolbar }       from '@wordpress/components';
+import { Toolbar } from '@wordpress/components';
 import { BlockControls } from '@wordpress/editor';
 
 /**
@@ -21,14 +21,14 @@ export function LayoutToolbar( {
 	setAttributes,
 } ) {
 	const controls = options.map( ( option ) => {
-		const icon     = `${ option.value }-view`;
+		const icon = `${ option.value }-view`;
 		const isActive = layout === option.value;
 
 		return {
-			icon     : icon,
-			title    : option.label,
-			isActive : isActive,
-			onClick  : () => {
+			icon: icon,
+			title: option.label,
+			isActive: isActive,
+			onClick: () => {
 				setAttributes( { layout: option.value } );
 			},
 		};

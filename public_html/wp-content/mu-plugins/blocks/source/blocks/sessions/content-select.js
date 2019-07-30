@@ -7,7 +7,7 @@ import { every, flatMap, includes } from 'lodash';
  * WordPress dependencies
  */
 import { Component } from '@wordpress/element';
-import { __ }        from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -26,9 +26,9 @@ export class ContentSelect extends Component {
 	constructor( props ) {
 		super( props );
 
-		this.buildSelectOptions    = this.buildSelectOptions.bind( this );
+		this.buildSelectOptions = this.buildSelectOptions.bind( this );
 		this.getCurrentSelectValue = this.getCurrentSelectValue.bind( this );
-		this.isLoading             = this.isLoading.bind( this );
+		this.isLoading = this.isLoading.bind( this );
 	}
 
 	/**
@@ -42,22 +42,22 @@ export class ContentSelect extends Component {
 
 		const optionGroups = [
 			{
-				entityType : 'post',
-				type       : 'wcb_session',
-				label      : __( 'Sessions', 'wordcamporg' ),
-				items      : wcb_session,
+				entityType: 'post',
+				type: 'wcb_session',
+				label: __( 'Sessions', 'wordcamporg' ),
+				items: wcb_session,
 			},
 			{
-				entityType : 'term',
-				type       : 'wcb_track',
-				label      : __( 'Tracks', 'wordcamporg' ),
-				items      : wcb_track,
+				entityType: 'term',
+				type: 'wcb_track',
+				label: __( 'Tracks', 'wordcamporg' ),
+				items: wcb_track,
 			},
 			{
-				entityType : 'term',
-				type       : 'wcb_session_category',
-				label      : __( 'Session Categories', 'wordcamporg' ),
-				items      : wcb_session_category,
+				entityType: 'term',
+				type: 'wcb_session_category',
+				label: __( 'Session Categories', 'wordcamporg' ),
+				items: wcb_session_category,
 			},
 		];
 
@@ -116,9 +116,9 @@ export class ContentSelect extends Component {
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
 				selectProps={ {
-					options           : this.buildSelectOptions(),
-					isLoading         : this.isLoading(),
-					formatOptionLabel : ( optionData, { context } ) => (
+					options: this.buildSelectOptions(),
+					isLoading: this.isLoading(),
+					formatOptionLabel: ( optionData, { context } ) => (
 						<Option
 							icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
 							label={ optionData.label }

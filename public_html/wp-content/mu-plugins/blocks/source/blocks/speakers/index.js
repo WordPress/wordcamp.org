@@ -9,20 +9,20 @@ import { __ } from '@wordpress/i18n';
 import './style.scss';
 import { Edit } from './edit.js';
 
-export const NAME  = 'wordcamp/speakers';
+export const NAME = 'wordcamp/speakers';
 export const LABEL = __( 'Speakers', 'wordcamporg' );
-export const ICON  = 'megaphone';
+export const ICON = 'megaphone';
 
 const supports = {
 	align: [ 'wide', 'full' ],
 };
 
 export const SETTINGS = {
-	title       : __( 'Speakers', 'wordcamporg' ),
-	description : __( 'Add a list of speakers.', 'wordcamporg' ),
-	icon        : ICON,
-	category    : 'wordcamp',
-	supports    : supports,
-	edit        : Edit,
-	save        : () => null,
+	title: __( 'Speakers', 'wordcamporg' ),
+	description: __( 'Add a list of speakers.', 'wordcamporg' ),
+	icon: ICON,
+	category: 'wordcamp',
+	supports: supports,
+	edit: Edit,
+	save: () => null,
 };

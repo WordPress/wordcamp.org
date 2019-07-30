@@ -1,23 +1,23 @@
 /**
  * External dependencies
  */
-import { get }    from 'lodash';
+import { get } from 'lodash';
 import classnames from 'classnames';
 
 /**
  * WordPress dependencies
  */
 import { Component } from '@wordpress/element';
-import { __ }        from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
 import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
-import { FeaturedImage }                                             from '../../components/image';
-import { PostList }                                                  from '../../components/post-list';
-import { filterEntities }                                            from '../../data';
-import { tokenSplit, arrayTokenReplace, intersperse, listify }       from '../../i18n';
+import { FeaturedImage } from '../../components/image';
+import { PostList } from '../../components/post-list';
+import { filterEntities } from '../../data';
+import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../../i18n';
 
 /**
  * Component for the section of each session post that displays information about the session's speakers.
@@ -39,7 +39,7 @@ function SessionSpeakers( { session } ) {
 			return null;
 		}
 
-		const { link }     = speaker;
+		const { link } = speaker;
 		let { title = {} } = speaker;
 
 		title = title.rendered.trim() || __( 'Unnamed', 'wordcamporg' );
@@ -149,10 +149,10 @@ export class BlockContent extends Component {
 					break;
 			}
 
-			args.filter  = [
+			args.filter = [
 				{
-					fieldName  : fieldName,
-					fieldValue : item_ids,
+					fieldName: fieldName,
+					fieldValue: item_ids,
 				},
 			];
 		}
@@ -189,9 +189,9 @@ export class BlockContent extends Component {
 			show_category,
 		} = attributes;
 
-		const posts     = this.getFilteredPosts();
+		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
-		const hasPosts  = ! isLoading && posts.length > 0;
+		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
 			return (

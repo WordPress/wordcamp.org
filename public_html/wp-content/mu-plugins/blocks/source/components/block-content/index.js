@@ -8,7 +8,7 @@ import classnames from 'classnames';
  */
 import { Disabled, Spinner } from '@wordpress/components';
 import { Fragment, RawHTML } from '@wordpress/element';
-import { __ }                from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies

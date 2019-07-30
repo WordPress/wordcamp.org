@@ -1,22 +1,22 @@
 /**
  * External dependencies
  */
-import { get }    from 'lodash';
+import { get } from 'lodash';
 import classnames from 'classnames';
 
 /**
  * WordPress dependencies
  */
 import { Component } from '@wordpress/element';
-import { __ }        from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
 import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
-import { FeaturedImage }                                             from '../../components/image';
-import { PostList }                                                  from '../../components/post-list';
-import { filterEntities }                                            from '../../data';
+import { FeaturedImage } from '../../components/image';
+import { PostList } from '../../components/post-list';
+import { filterEntities } from '../../data';
 
 /**
  * Component for displaying the block content.
@@ -46,10 +46,10 @@ export class BlockContent extends Component {
 		const args = {};
 
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
-			args.filter  = [
+			args.filter = [
 				{
-					fieldName  : mode === 'wcb_sponsor' ? 'id' : 'sponsor_level',
-					fieldValue : item_ids,
+					fieldName: mode === 'wcb_sponsor' ? 'id' : 'sponsor_level',
+					fieldValue: item_ids,
 				},
 			];
 		}
@@ -68,9 +68,9 @@ export class BlockContent extends Component {
 		const { attributes } = this.props;
 		const { show_name, show_logo, featured_image_width, image_align, content } = attributes;
 
-		const posts     = this.getFilteredPosts();
+		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
-		const hasPosts  = ! isLoading && posts.length > 0;
+		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
 			return (

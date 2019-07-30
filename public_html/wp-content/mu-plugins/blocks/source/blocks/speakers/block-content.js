@@ -6,17 +6,17 @@ import { get } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { __, _n }    from '@wordpress/i18n';
+import { __, _n } from '@wordpress/i18n';
 import { Component } from '@wordpress/element';
 
 /**
  * Internal dependencies
  */
 import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
-import { AvatarImage }                                               from '../../components/image';
-import { PostList }                                                  from '../../components/post-list';
-import { filterEntities }                                            from '../../data';
-import { tokenSplit, arrayTokenReplace }                             from '../../i18n';
+import { AvatarImage } from '../../components/image';
+import { PostList } from '../../components/post-list';
+import { filterEntities } from '../../data';
+import { tokenSplit, arrayTokenReplace } from '../../i18n';
 
 /**
  * Component for the section of each speaker post that displays information about relevant sessions.
@@ -114,10 +114,10 @@ export class BlockContent extends Component {
 		const args = {};
 
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
-			args.filter  = [
+			args.filter = [
 				{
-					fieldName  : mode === 'wcb_speaker' ? 'id' : 'speaker_group',
-					fieldValue : item_ids,
+					fieldName: mode === 'wcb_speaker' ? 'id' : 'speaker_group',
+					fieldValue: item_ids,
 				},
 			];
 		}
@@ -137,9 +137,9 @@ export class BlockContent extends Component {
 		const { wcb_track: tracks } = entities;
 		const { show_avatars, avatar_size, avatar_align, content, show_session } = attributes;
 
-		const posts     = this.getFilteredPosts();
+		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
-		const hasPosts  = ! isLoading && posts.length > 0;
+		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
 			return (

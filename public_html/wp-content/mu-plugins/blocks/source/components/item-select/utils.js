@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { get }        from 'lodash';
+import { get } from 'lodash';
 import createSelector from 'rememo';
 
 /**
@@ -12,7 +12,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { filterEntities }    from '../../data';
+import { filterEntities } from '../../data';
 
 const buildOptionGroup = ( entityType, type, label, items ) => {
 	items = items.map( ( item ) => {
@@ -21,23 +21,23 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 		switch ( entityType ) {
 			case 'post':
 				parsedItem = {
-					label   : item.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
-					value   : item.id,
-					type    : type,
-					details : item.details,
+					label: item.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
+					value: item.id,
+					type: type,
+					details: item.details,
 				};
 
 				parsedItem.avatar = get( item, 'avatar_urls[\'24\']', '' );
-				parsedItem.image  = get( item, '_embedded[\'wp:featuredmedia\'][0].media_details.sizes.thumbnail.source_url', '' );
+				parsedItem.image = get( item, '_embedded[\'wp:featuredmedia\'][0].media_details.sizes.thumbnail.source_url', '' );
 
 				break;
 
 			case 'term':
 				parsedItem = {
-					label : item.name || __( '(Untitled)', 'wordcamporg' ),
-					value : item.id,
-					type  : type,
-					count : item.count,
+					label: item.name || __( '(Untitled)', 'wordcamporg' ),
+					value: item.id,
+					type: type,
+					count: item.count,
 				};
 				break;
 		}
@@ -46,8 +46,8 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 	} );
 
 	return {
-		label   : label,
-		options : items,
+		label: label,
+		options: items,
 	};
 };
 

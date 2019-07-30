@@ -20,11 +20,12 @@ import { AvatarImage } from '../image';
  *     @type {string} label
  *     @type {number} count
  *     @type {string} context - `menu` or `value` for whether it's in the menu dropdown or the selected token.
+ *     @type {node}   details
  * }
  *
  * @return {Element}
  */
-export function Option( { avatar, icon, label, count, context } ) {
+export function Option( { avatar, context, count, details, icon, label } ) {
 	let image;
 
 	if ( 'value' === context ) {
@@ -64,6 +65,11 @@ export function Option( { avatar, icon, label, count, context } ) {
 				{ 'undefined' !== typeof count && (
 					<span className="wordcamp-item-select__option-label-count">
 						{ count }
+					</span>
+				) }
+				{ 'undefined' !== typeof details && (
+					<span className="wordcamp-item-select__option-label-details">
+						{ details }
 					</span>
 				) }
 			</span>

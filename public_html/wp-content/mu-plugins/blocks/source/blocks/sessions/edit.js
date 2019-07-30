@@ -12,6 +12,7 @@ import { WC_BLOCKS_STORE }   from '../../data';
 import { BlockControls }     from './block-controls';
 import { InspectorControls } from './inspector-controls';
 import { ICON }              from './index';
+import { getSessionDetails } from './utils';
 
 const blockData = window.WordCampBlocks.sessions || {};
 
@@ -60,10 +61,15 @@ const sessionsSelect = ( select ) => {
 	};
 
 	const entities = {
-		wcb_session          : getEntities( 'postType', 'wcb_session', sessionArgs ),
+		wcb_session          : null,
 		wcb_track            : getEntities( 'taxonomy', 'wcb_track' ),
 		wcb_session_category : getEntities( 'taxonomy', 'wcb_session_category' ),
 	};
+
+	const sessions = getEntities( 'postType', 'wcb_session', sessionArgs );
+	if ( sessions ) {
+		entities.wcb_session = sessions.map( ( item ) => ( { ...item, details: getSessionDetails( item ) } ) );
+	}
 
 	return {
 		blockData,

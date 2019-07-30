@@ -122,6 +122,7 @@ export class ContentSelect extends Component {
 						<Option
 							icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
 							label={ optionData.label }
+							details={ optionData.details }
 							count={ optionData.count }
 							context={ context }
 						/>

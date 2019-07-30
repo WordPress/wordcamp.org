@@ -12,8 +12,8 @@ import { Component } from '@wordpress/element';
  * Internal dependencies
  */
 import { AvatarImage } from '../../components/image';
-import { BlockNoContent, ItemTitle, DangerousItemHTMLContent } from '../../components/block-content';
-import { PostList } from '../../components/post-list';
+import { ItemTitle, DangerousItemHTMLContent } from '../../components/block-content';
+import { BlockNoContent, PostList } from '../../components/post-list';
 import { filterEntities } from '../../data';
 
 /**
@@ -71,44 +71,37 @@ export class BlockContent extends Component {
 		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
-			return (
-				<BlockNoContent loading={ isLoading } />
-			);
+			return <BlockNoContent loading={ isLoading } />;
 		}
 
+		/* Note that organizer posts are not 'public', so there are no permalinks. */
 		return (
-			<PostList
-				{ ...this.props }
-				className="wordcamp-organizers"
-			>
-				{ posts.map( ( post ) => /* Note that organizer posts are not 'public', so there are no permalinks. */
-					<div
-						key={ post.slug }
-						className={ classnames( 'wordcamp-organizers__post', `slug-${ post.slug.trim() }` ) }
-					>
+			<PostList { ...this.props } className="wordcamp-organizers">
+				{ posts.map( ( post ) => (
+					<div key={ post.slug } className={ classnames( 'wordcamp-organizers__post', `slug-${ post.slug.trim() }` ) }>
 						<ItemTitle
 							className="wordcamp-organizers__title"
 							headingLevel={ 3 }
 							title={ post.title.rendered.trim() }
 						/>
 
-						{ show_avatars &&
+						{ show_avatars && (
 							<AvatarImage
 								className={ classnames( 'align-' + avatar_align ) }
 								name={ post.title.rendered.trim() || '' }
 								size={ avatar_size }
 								url={ post.avatar_urls[ '24' ] }
 							/>
-						}
+						) }
 
-						{ ( 'none' !== content ) &&
+						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ classnames( 'wordcamp-organizers__content', 'is-' + content ) }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
-						}
+						) }
 					</div>
-				) }
+				) ) }
 			</PostList>
 		);
 	}

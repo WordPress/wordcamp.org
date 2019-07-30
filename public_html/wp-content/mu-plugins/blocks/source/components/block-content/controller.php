@@ -25,7 +25,7 @@ function render_item_title( $title, $link = '', $heading_level = 3, array $class
 	$tag = 'h' . $heading_level;
 
 	$classes = render_class_string( array_merge(
-		[ 'wordcamp-block__post-title' ],
+		[ 'wordcamp-block__item-title' ],
 		$classes
 	) );
 
@@ -55,7 +55,7 @@ function render_item_title( $title, $link = '', $heading_level = 3, array $class
  */
 function render_item_content( $content, array $classes = [] ) {
 	$classes = render_class_string( array_merge(
-		[ 'wordcamp-block__post-content' ],
+		[ 'wordcamp-block__item-content' ],
 		$classes
 	) );
 
@@ -84,7 +84,7 @@ function render_item_permalink( $link, $label = '', array $classes = [] ) {
 	}
 
 	$classes = render_class_string( array_merge(
-		[ 'wordcamp-block__post-permalink' ],
+		[ 'wordcamp-block__item-permalink' ],
 		$classes
 	) );
 

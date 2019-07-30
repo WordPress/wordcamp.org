@@ -13,9 +13,9 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
+import { ItemTitle, DangerousItemHTMLContent, ItemPermalink } from '../../components/block-content';
 import { FeaturedImage } from '../../components/image';
-import { PostList } from '../../components/post-list';
+import { BlockNoContent, PostList } from '../../components/post-list';
 import { filterEntities } from '../../data';
 
 /**
@@ -73,31 +73,23 @@ export class BlockContent extends Component {
 		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
-			return (
-				<BlockNoContent loading={ isLoading } />
-			);
+			return <BlockNoContent loading={ isLoading } />;
 		}
 
 		return (
-			<PostList
-				{ ...this.props }
-				className="wordcamp-sponsors"
-			>
-				{ posts.map( ( post ) =>
-					<div
-						key={ post.slug }
-						className={ classnames( 'wordcamp-sponsors__post', `slug-${ post.slug }` ) }
-					>
-						{ show_name &&
+			<PostList { ...this.props } className="wordcamp-sponsors">
+				{ posts.map( ( post ) => (
+					<div key={ post.slug } className={ classnames( 'wordcamp-sponsors__post', `slug-${ post.slug }` ) }>
+						{ show_name && (
 							<ItemTitle
 								className="wordcamp-sponsors__title"
 								headingLevel={ 3 }
 								title={ post.title.rendered.trim() }
 								link={ post.link }
 							/>
-						}
+						) }
 
-						{ show_logo &&
+						{ show_logo && (
 							<FeaturedImage
 								imageData={ get( post, '_embedded.wp:featuredmedia[0]', {} ) }
 								width={ featured_image_width }
@@ -108,24 +100,24 @@ export class BlockContent extends Component {
 								] ) }
 								imageLink={ post.link }
 							/>
-						}
+						) }
 
-						{ ( 'none' !== content ) &&
+						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ `wordcamp-sponsors__content is-${ content }` }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
-						}
+						) }
 
-						{ ( 'full' === content ) &&
+						{ 'full' === content && (
 							<ItemPermalink
 								link={ post.link }
 								linkText={ __( 'Visit sponsor page', 'wordcamporg' ) }
 								className="wordcamp-sponsors__permalink"
 							/>
-						}
+						) }
 					</div>
-				) }
+				) ) }
 			</PostList>
 		);
 	}

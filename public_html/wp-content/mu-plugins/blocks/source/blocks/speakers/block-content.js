@@ -12,9 +12,9 @@ import { Component } from '@wordpress/element';
 /**
  * Internal dependencies
  */
-import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
+import { ItemTitle, DangerousItemHTMLContent, ItemPermalink } from '../../components/block-content';
 import { AvatarImage } from '../../components/image';
-import { PostList } from '../../components/post-list';
+import { BlockNoContent, PostList } from '../../components/post-list';
 import { filterEntities } from '../../data';
 import { tokenSplit, arrayTokenReplace } from '../../i18n';
 
@@ -42,11 +42,8 @@ function SpeakerSessions( { speaker, tracks } ) {
 			</h4>
 
 			<ul className="wordcamp-speakers__sessions-list">
-				{ sessions.map( ( session ) =>
-					<li
-						key={ session.id }
-						className="wordcamp-speakers__sessions-list-item"
-					>
+				{ sessions.map( ( session ) => (
+					<li key={ session.id } className="wordcamp-speakers__sessions-list-item">
 						<a
 							className="wordcamp-speakers__session-link"
 							href={ session.link }
@@ -56,31 +53,30 @@ function SpeakerSessions( { speaker, tracks } ) {
 							{ session.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ) }
 						</a>
 						<span className="wordcamp-speakers__session-info">
-							{ ( session.session_track.length && Array.isArray( tracks ) ) ?
+							{ session.session_track.length && Array.isArray( tracks ) ?
 								arrayTokenReplace(
 									/* translators: 1: A date; 2: A time; 3: A location; */
 									tokenSplit( __( '%1$s at %2$s in %3$s', 'wordcamporg' ) ),
 									[
 										session.session_date_time.date,
 										session.session_date_time.time,
-										get( tracks.find( ( value ) => {
-											const [ firstTrackId ] = session.session_track;
-											return parseInt( value.id ) === firstTrackId;
-										} ), 'name' ),
+										get(
+											tracks.find( ( value ) => {
+												const [ firstTrackId ] = session.session_track;
+												return parseInt( value.id ) === firstTrackId;
+											} ),
+											'name'
+										),
 									]
 								) :
 								arrayTokenReplace(
 									/* translators: 1: A date; 2: A time; */
-									tokenSplit( __( '%1$s at %2$s', 'wordcamporg' ), ),
-									[
-										session.session_date_time.date,
-										session.session_date_time.time,
-									]
-								)
-							}
+									tokenSplit( __( '%1$s at %2$s', 'wordcamporg' ) ),
+									[ session.session_date_time.date, session.session_date_time.time ]
+								) }
 						</span>
 					</li>
-				) }
+				) ) }
 			</ul>
 		</div>
 	);
@@ -142,21 +138,13 @@ export class BlockContent extends Component {
 		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
-			return (
-				<BlockNoContent loading={ isLoading } />
-			);
+			return <BlockNoContent loading={ isLoading } />;
 		}
 
 		return (
-			<PostList
-				attributes={ attributes }
-				className="wordcamp-speakers"
-			>
-				{ posts.map( ( post ) =>
-					<div
-						key={ post.slug }
-						className={ `wordcamp-speakers__post slug-${ post.slug }` }
-					>
+			<PostList attributes={ attributes } className="wordcamp-speakers">
+				{ posts.map( ( post ) => (
+					<div key={ post.slug } className={ `wordcamp-speakers__post slug-${ post.slug }` }>
 						<ItemTitle
 							className="wordcamp-speakers__title"
 							headingLevel={ 3 }
@@ -164,7 +152,7 @@ export class BlockContent extends Component {
 							link={ post.link }
 						/>
 
-						{ show_avatars &&
+						{ show_avatars && (
 							<AvatarImage
 								className={ `align-${ avatar_align }` }
 								name={ post.title.rendered.trim() || '' }
@@ -172,31 +160,26 @@ export class BlockContent extends Component {
 								url={ post.avatar_urls[ '24' ] }
 								imageLink={ post.link }
 							/>
-						}
+						) }
 
-						{ ( 'none' !== content ) &&
+						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ `wordcamp-speakers__content is-${ content }` }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
-						}
+						) }
 
-						{ true === show_session &&
-							<SpeakerSessions
-								speaker={ post }
-								tracks={ tracks }
-							/>
-						}
+						{ true === show_session && <SpeakerSessions speaker={ post } tracks={ tracks } /> }
 
-						{ ( 'full' === content ) &&
+						{ 'full' === content && (
 							<ItemPermalink
 								link={ post.link }
 								linkText={ __( 'Visit speaker page', 'wordcamporg' ) }
 								className="wordcamp-speakers__permalink"
 							/>
-						}
+						) }
 					</div>
-				) }
+				) ) }
 			</PostList>
 		);
 	}

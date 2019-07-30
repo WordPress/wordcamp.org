@@ -13,9 +13,9 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { ItemTitle, DangerousItemHTMLContent, ItemPermalink, BlockNoContent } from '../../components/block-content';
+import { ItemTitle, DangerousItemHTMLContent, ItemPermalink } from '../../components/block-content';
 import { FeaturedImage } from '../../components/image';
-import { PostList } from '../../components/post-list';
+import { BlockNoContent, PostList } from '../../components/post-list';
 import { filterEntities } from '../../data';
 import { tokenSplit, arrayTokenReplace, intersperse, listify } from '../../i18n';
 
@@ -61,11 +61,7 @@ function SessionSpeakers( { session } ) {
 		[ listify( speakerData ) ]
 	);
 
-	return (
-		<p className="wordcamp-sessions__speakers">
-			{ speakers }
-		</p>
-	);
+	return <p className="wordcamp-sessions__speakers">{ speakers }</p>;
 }
 
 /**
@@ -77,7 +73,7 @@ function SessionSpeakers( { session } ) {
  */
 function SessionCategory( { session } ) {
 	let categoryContent;
-	const terms = get( session, '_embedded[\'wp:term\']', [] ).flat();
+	const terms = get( session, "_embedded['wp:term']", [] ).flat();
 
 	if ( session.session_category.length ) {
 		/* translators: used between list items, there is a space after the comma */
@@ -88,10 +84,7 @@ function SessionCategory( { session } ) {
 			} )
 			.map( ( term ) => {
 				return (
-					<span
-						key={ term.slug }
-						className={ classnames( 'wordcamp-sessions__category', `slug-${ term.slug }` ) }
-					>
+					<span key={ term.slug } className={ classnames( 'wordcamp-sessions__category', `slug-${ term.slug }` ) }>
 						{ term.name.trim() }
 					</span>
 				);
@@ -100,11 +93,7 @@ function SessionCategory( { session } ) {
 		categoryContent = intersperse( categories, separator );
 	}
 
-	return (
-		<div className="wordcamp-sessions__categories">
-			{ categoryContent }
-		</div>
-	);
+	return <div className="wordcamp-sessions__categories">{ categoryContent }</div>;
 }
 
 /**
@@ -194,21 +183,13 @@ export class BlockContent extends Component {
 		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
-			return (
-				<BlockNoContent loading={ isLoading } />
-			);
+			return <BlockNoContent loading={ isLoading } />;
 		}
 
 		return (
-			<PostList
-				{ ...this.props }
-				className="wordcamp-sessions"
-			>
-				{ posts.map( ( post ) =>
-					<div
-						key={ post.slug }
-						className={ classnames( 'wordcamp-sessions__post', `slug-${ post.slug }` ) }
-					>
+			<PostList { ...this.props } className="wordcamp-sessions">
+				{ posts.map( ( post ) => (
+					<div key={ post.slug } className={ classnames( 'wordcamp-sessions__post', `slug-${ post.slug }` ) }>
 						<ItemTitle
 							className="wordcamp-sessions__title"
 							headingLevel={ 3 }
@@ -218,44 +199,38 @@ export class BlockContent extends Component {
 
 						{ show_speaker && <SessionSpeakers session={ post } /> }
 
-						{ show_images &&
+						{ show_images && (
 							<FeaturedImage
 								imageData={ get( post, '_embedded.wp:featuredmedia[0]', {} ) }
 								width={ Number( featured_image_width ) }
 								className={ classnames( 'wordcamp-sessions__featured-image', 'align-' + image_align ) }
 								imageLink={ post.link }
 							/>
-						}
+						) }
 
-						{ 'none' !== content &&
+						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ classnames( 'wordcamp-sessions__content', 'is-' + content ) }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
-						}
+						) }
 
 						{ ( show_meta || show_category ) && (
 							<div className="wordcamp-sessions__details">
-								{ show_meta && (
-									<div className="wordcamp-sessions__time-location">
-										{ post.details }
-									</div>
-								) }
-								{ show_category &&
-									<SessionCategory session={ post } />
-								}
+								{ show_meta && <div className="wordcamp-sessions__time-location">{ post.details }</div> }
+								{ show_category && <SessionCategory session={ post } /> }
 							</div>
 						) }
 
-						{ ( 'full' === content ) &&
+						{ 'full' === content && (
 							<ItemPermalink
 								link={ post.link }
 								linkText={ __( 'Visit session page', 'wordcamporg' ) }
 								className="wordcamp-sessions__permalink"
 							/>
-						}
+						) }
 					</div>
-				) }
+				) ) }
 			</PostList>
 		);
 	}

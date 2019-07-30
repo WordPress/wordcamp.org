@@ -1,0 +1,19 @@
+.editor-styles-wrapper,
+.entry-content {
+	.wordcamp-speakers__sessions-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.wordcamp-speakers__sessions-heading {
+		margin-bottom: 8px;
+		font-size: 1.125em;
+	}
+
+	.wordcamp-speakers__session-info {
+		display: block;
+		font-size: 0.875em;
+		font-style: italic;
+	}
+}

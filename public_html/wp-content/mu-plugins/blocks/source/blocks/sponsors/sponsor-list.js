@@ -21,7 +21,7 @@ import { filterEntities } from '../../data';
 /**
  * Component for displaying the block content.
  */
-export class BlockContent extends Component {
+class SponsorList extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -77,7 +77,7 @@ export class BlockContent extends Component {
 		}
 
 		return (
-			<PostList { ...this.props } className="wordcamp-sponsors">
+			<PostList attributes={ attributes } className="wordcamp-sponsors">
 				{ posts.map( ( post ) => (
 					<div key={ post.slug } className={ classnames( 'wordcamp-sponsors__post', `slug-${ post.slug }` ) }>
 						{ show_name && (
@@ -122,3 +122,5 @@ export class BlockContent extends Component {
 		);
 	}
 }
+
+export default SponsorList;

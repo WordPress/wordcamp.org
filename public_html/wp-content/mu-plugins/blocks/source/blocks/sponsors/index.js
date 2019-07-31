@@ -6,7 +6,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { Edit } from './edit.js';
+import Edit from './edit.js';
 
 export const NAME = 'wordcamp/sponsors';
 export const LABEL = __( 'Sponsors', 'wordcamporg' );

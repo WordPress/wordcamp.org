@@ -267,7 +267,7 @@ class Meetup_OAuth2_Client extends API_Client {
 	 * @return string
 	 */
 	public function get_oauth_token() {
-		if ( $this->oauth_token ) {
+		if ( $this->oauth_token && ! $this->is_expired_token( $this->oauth_token ) ) {
 			return $this->oauth_token['oauth_token'];
 		}
 

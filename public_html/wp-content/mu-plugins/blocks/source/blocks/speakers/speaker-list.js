@@ -85,7 +85,7 @@ function SpeakerSessions( { speaker, tracks } ) {
 /**
  * Component for displaying the block content.
  */
-export class BlockContent extends Component {
+class SpeakerList extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -184,3 +184,5 @@ export class BlockContent extends Component {
 		);
 	}
 }
+
+export default SpeakerList;

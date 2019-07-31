@@ -9,8 +9,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { avatarSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel } from '../../components/post-list';
+import { GridInspectorPanel, ImageInspectorPanel, avatarSizePresets } from '../../components';
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {

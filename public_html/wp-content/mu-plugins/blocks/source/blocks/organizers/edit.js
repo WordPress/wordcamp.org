@@ -9,13 +9,11 @@ import { withSelect } from '@wordpress/data';
 /**
  * Internal dependencies
  */
-import { getOptionLabel } from '../../components/item-select';
+import { EditAppender, LayoutToolbar, getOptionLabel } from '../../components';
 import { ICON, LABEL } from './index';
 import InspectorControls from './inspector-controls';
-import { LayoutToolbar } from '../../components/post-list';
 import OrganizerList from './organizer-list';
 import OrganizerSelect from './organizer-select';
-import { PlaceholderSpecificMode } from '../../components/block-controls';
 import { WC_BLOCKS_STORE } from '../../data';
 
 const blockData = window.WordCampBlocks.organizers || {};
@@ -46,11 +44,11 @@ class Edit extends Component {
 			case 'wcb_organizer' :
 			case 'wcb_organizer_team' :
 				output = (
-					<PlaceholderSpecificMode
+					<EditAppender
 						content={
 							<OrganizerList attributes={ attributes } entities={ entities } />
 						}
-						placeholderChildren={
+						appender={
 							isSelected && (
 								<OrganizerSelect
 									label={ getOptionLabel( mode, options.mode ) }

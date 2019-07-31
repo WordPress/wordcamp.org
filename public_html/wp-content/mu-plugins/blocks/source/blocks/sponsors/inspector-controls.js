@@ -2,15 +2,14 @@
  * WordPress dependencies
  */
 import { InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, ToggleControl, SelectControl } from '@wordpress/components';
+import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
-import { featuredImageSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel } from '../../components/post-list';
+import { GridInspectorPanel, ImageInspectorPanel, featuredImageSizePresets } from '../../components';
 
 const DEFAULT_OPTIONS = {
 	align_image: {},

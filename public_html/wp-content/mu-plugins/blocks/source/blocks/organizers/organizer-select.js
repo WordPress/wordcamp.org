@@ -12,7 +12,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { buildOptions, ItemSelect, Option } from '../../components/item-select';
+import { ItemSelect, Option, buildOptions } from '../../components';
 
 /**
  * Component for selecting posts/terms for populating the block content.

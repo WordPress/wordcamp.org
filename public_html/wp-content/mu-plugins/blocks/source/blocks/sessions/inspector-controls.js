@@ -9,8 +9,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { featuredImageSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel } from '../../components/post-list';
+import { GridInspectorPanel, ImageInspectorPanel, featuredImageSizePresets } from '../../components';
 
 /**
  * Component for block controls that appear in the Inspector Panel.

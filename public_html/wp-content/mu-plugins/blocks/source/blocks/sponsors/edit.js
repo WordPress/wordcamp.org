@@ -9,11 +9,9 @@ import { withSelect } from '@wordpress/data';
 /**
  * Internal dependencies
  */
-import { getOptionLabel } from '../../components/item-select';
+import { EditAppender, LayoutToolbar, getOptionLabel } from '../../components';
 import { ICON, LABEL } from './index';
 import InspectorControls from './inspector-controls';
-import { LayoutToolbar } from '../../components/post-list';
-import { PlaceholderSpecificMode } from '../../components/block-controls';
 import SponsorList from './sponsor-list';
 import SponsorSelect from './sponsor-select';
 import { WC_BLOCKS_STORE } from '../../data';
@@ -46,11 +44,11 @@ class Edit extends Component {
 			case 'wcb_sponsor' :
 			case 'wcb_sponsor_level' :
 				output = (
-					<PlaceholderSpecificMode
+					<EditAppender
 						content={
 							<SponsorList attributes={ attributes } entities={ entities } />
 						}
-						placeholderChildren={
+						appender={
 							isSelected && (
 								<SponsorSelect
 									label={ getOptionLabel( mode, options.mode ) }

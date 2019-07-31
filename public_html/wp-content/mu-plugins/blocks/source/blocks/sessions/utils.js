@@ -11,7 +11,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { tokenSplit, arrayTokenReplace } from '../../i18n';
+import { arrayTokenReplace, tokenSplit } from '../../i18n';
 
 /**
  * Fetch the details for a session as a human-readable string, in array-parts from `arrayTokenReplace`. This can be

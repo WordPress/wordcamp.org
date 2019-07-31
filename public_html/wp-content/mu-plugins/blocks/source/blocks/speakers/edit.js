@@ -9,11 +9,9 @@ import { withSelect } from '@wordpress/data';
 /**
  * Internal dependencies
  */
-import { getOptionLabel } from '../../components/item-select';
+import { EditAppender, LayoutToolbar, getOptionLabel } from '../../components';
 import { ICON, LABEL } from './index';
 import InspectorControls from './inspector-controls';
-import { LayoutToolbar } from '../../components/post-list';
-import { PlaceholderSpecificMode } from '../../components/block-controls';
 import SpeakerList from './speaker-list';
 import SpeakerSelect from './speaker-select';
 import { WC_BLOCKS_STORE } from '../../data';
@@ -46,11 +44,11 @@ class Edit extends Component {
 			case 'wcb_speaker' :
 			case 'wcb_speaker_group' :
 				output = (
-					<PlaceholderSpecificMode
+					<EditAppender
 						content={
 							<SpeakerList attributes={ attributes } entities={ entities } />
 						}
-						placeholderChildren={
+						appender={
 							isSelected && (
 								<SpeakerSelect
 									label={ getOptionLabel( mode, options.mode ) }

@@ -7,7 +7,7 @@ import { intersection, orderBy, split } from 'lodash';
  * WordPress dependencies
  */
 import apiFetch from '@wordpress/api-fetch';
-import { registerStore, select, dispatch } from '@wordpress/data';
+import { dispatch, registerStore, select } from '@wordpress/data';
 
 /**
  * Define store name.

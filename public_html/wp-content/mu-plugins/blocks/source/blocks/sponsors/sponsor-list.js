@@ -13,9 +13,14 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { ItemTitle, DangerousItemHTMLContent, ItemPermalink } from '../../components/block-content';
-import { FeaturedImage } from '../../components/image';
-import { BlockNoContent, PostList } from '../../components/post-list';
+import {
+	BlockNoContent,
+	DangerousItemHTMLContent,
+	FeaturedImage,
+	ItemPermalink,
+	ItemTitle,
+	PostList,
+} from '../../components';
 import { filterEntities } from '../../data';
 
 /**

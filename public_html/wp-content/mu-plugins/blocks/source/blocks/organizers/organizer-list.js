@@ -6,9 +6,13 @@ import { Component } from '@wordpress/element';
 /**
  * Internal dependencies
  */
-import { AvatarImage } from '../../components/image';
-import { ItemTitle, DangerousItemHTMLContent } from '../../components/block-content';
-import { BlockNoContent, PostList } from '../../components/post-list';
+import {
+	AvatarImage,
+	BlockNoContent,
+	DangerousItemHTMLContent,
+	ItemTitle,
+	PostList,
+} from '../../components';
 import { filterEntities } from '../../data';
 
 /**

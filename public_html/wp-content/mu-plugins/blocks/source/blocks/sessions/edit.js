@@ -9,12 +9,10 @@ import { withSelect } from '@wordpress/data';
 /**
  * Internal dependencies
  */
-import { getOptionLabel } from '../../components/item-select';
+import { EditAppender, LayoutToolbar, getOptionLabel } from '../../components';
 import { getSessionDetails } from './utils';
 import { ICON, LABEL } from './index';
 import InspectorControls from './inspector-controls';
-import { LayoutToolbar } from '../../components/post-list';
-import { PlaceholderSpecificMode } from '../../components/block-controls';
 import SessionList from './session-list';
 import SessionSelect from './session-select';
 import { WC_BLOCKS_STORE } from '../../data';
@@ -48,11 +46,11 @@ class Edit extends Component {
 			case 'wcb_track' :
 			case 'wcb_session_category' :
 				output = (
-					<PlaceholderSpecificMode
+					<EditAppender
 						content={
 							<SessionList attributes={ attributes } entities={ entities } />
 						}
-						placeholderChildren={
+						appender={
 							isSelected && (
 								<SessionSelect
 									label={ getOptionLabel( mode, options.mode ) }

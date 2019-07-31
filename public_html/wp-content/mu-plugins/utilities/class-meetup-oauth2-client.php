@@ -62,11 +62,6 @@ class Meetup_OAuth2_Client extends API_Client {
 	/**
 	 * @var string
 	 */
-	const SITE_OPTION_KEY_ACCESS = 'meetup_access_token';
-
-	/**
-	 * @var string
-	 */
 	const SITE_OPTION_KEY_OAUTH = 'meetup_oauth_token';
 
 	/**
@@ -82,18 +77,11 @@ class Meetup_OAuth2_Client extends API_Client {
 			/**
 			 * Response codes that should break the request loop.
 			 *
-			 * Meetup's Oauth2 documentation doesn't provide a schema for error codes, so for the time being, we're
-			 * using the same ones as for the Meetup Client itself.
-			 * See https://www.meetup.com/meetup_api/docs/#errors.
-			 *
 			 * `200` (ok) is not in the list, because it needs to be handled conditionally.
 			 *  See API_Client::tenacious_remote_request.
-			 *
-			 * `400` (bad request) is not in the list, even though it seems like it _should_ indicate an unrecoverable
-			 * error. In practice we've observed that it's common for a seemingly valid request to be rejected with
-			 * a `400` response, but then get a `200` response if that exact same request is retried.
 			 */
 			'breaking_response_codes' => array(
+				400, // Bad request.
 				401, // Unauthorized (invalid key).
 				429, // Too many requests (rate-limited).
 				404, // Unable to find group
@@ -125,16 +113,15 @@ class Meetup_OAuth2_Client extends API_Client {
 	 *
 	 * @see https://www.meetup.com/meetup_api/auth/#oauth2servercredentials-auth
 	 *
-	 * @return string
+	 * @return array
 	 */
 	protected function request_authorization_code() {
-		$authorization_code = '';
+		$authorization_code = array();
 
 		$request = array(
 			'client_id'     => self::CONSUMER_KEY,
 			'redirect_uri'  => self::REDIRECT_URI,
 			'response_type' => 'anonymous_code',
-			'scope'         => 'ageless',
 		);
 
 		$args = array(
@@ -148,7 +135,7 @@ class Meetup_OAuth2_Client extends API_Client {
 			$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 			if ( ! empty( $body['code'] ) ) {
-				$authorization_code = $body['code'];
+				$authorization_code = $body;
 			} else {
 				$this->error->add(
 					'unexpected_oauth_authorization_code_response',
@@ -163,61 +150,100 @@ class Meetup_OAuth2_Client extends API_Client {
 	}
 
 	/**
-	 * Step 2 in "Server Flow with User Credentials".
+	 * Request one of various types of tokens from the Meetup OAuth API.
 	 *
+	 * Setting $type to 'server_token' is for Step 2 in "Server Flow with User Credentials". This gets the "server
+	 * access token" which is then used to request the "oauth access token".
 	 * @see https://www.meetup.com/meetup_api/auth/#oauth2servercredentials-access
 	 *
-	 * Also the step for refreshing an expired access token.
+	 * Setting $type to 'oauth_token' is for Step 3 in "Server Flow with User Credentials". Technically in the
+	 * documentation, this token is also called an "access token", but here we're calling it the "oauth access token" to
+	 * differentiate it from the "server access token". Also, why are two separate access tokens necessary??
+	 * @see https://www.meetup.com/meetup_api/auth/#oauth2servercredentials-accesspro
 	 *
+	 * Setting $type to 'refresh_token' will request a new server access token for Step 2. This is for when the oauth
+	 * token from Step 3 is expired. The refreshed server token can then be used to obtain a new Step 3
+	 * oauth token. This skips the authorization code request (Step 1), but seems largely superfluous since a second
+	 * oauth token request must still be made with the new server token. Also, the refresh_token string used to refresh
+	 * the server token needs to come from the oauth token array, **not the server token array**. This is not what the
+	 * documentation implies. Why is this so terrible??
 	 * @see https://www.meetup.com/meetup_api/auth/#oauth2server-refresh
 	 *
-	 * Note that this does not store the access token. See get_access_token().
+	 * Check the `get_oauth_token` method to see how these token request flows work.
 	 *
-	 * @param string $type The type of grant. Either 'anonymous_code' or 'refresh_token'.
-	 * @param string $code The code/token used with the grant.
+	 * @param string $type The type of token request. 'server_token', 'refresh_token', or 'oauth_token'.
+	 * @param array  $args The pieces of data required to make the given type of request.
 	 *
-	 * @return array A successfully retrieved token will be an associative array with several keys.
+	 * @return array|mixed|object
 	 */
-	protected function request_access_token( $type, $code ) {
-		$access_token = array();
+	protected function request_token( $type, array $args = array() ) {
+		$token = array();
 
-		$request = array(
-			'client_id'     => self::CONSUMER_KEY,
-			'client_secret' => self::CONSUMER_SECRET,
-			'redirect_uri'  => self::REDIRECT_URI,
-			'grant_type'    => $type,
-		);
+		$request_url     = '';
+		$request_headers = $this->get_headers();
+		$request_body    = array();
 
-		// Add the code to the request payload using the correct parameter for the grant type.
 		switch( $type ) {
-			case 'anonymous_code': // Request a new access token.
-				$request['code'] = $code;
+			case 'server_token': // Request a new server access token.
+				$args = wp_parse_args( $args, array(
+					'code' => '',
+				) );
+
+				$request_url  = self::URL_ACCESS_TOKEN;
+				$request_body = array(
+					'client_id'     => self::CONSUMER_KEY,
+					'client_secret' => self::CONSUMER_SECRET,
+					'redirect_uri'  => self::REDIRECT_URI,
+					'code'          => $args['code'],
+					'grant_type'    => 'anonymous_code',
+				);
 				break;
-			case 'refresh_token': // Refresh an expired access token.
-			default:
-				$request[ $type ] = $code;
+			case 'refresh_token': // Refresh a server access token.
+				$args = wp_parse_args( $args, array(
+					'refresh_token' => '',
+				) );
+
+				$request_url  = self::URL_ACCESS_TOKEN;
+				$request_body = array(
+					'client_id'     => self::CONSUMER_KEY,
+					'client_secret' => self::CONSUMER_SECRET,
+					'refresh_token' => $args['refresh_token'],
+					'grant_type'    => 'refresh_token',
+				);
+				break;
+			case 'oauth_token': // Request a new oauth token.
+				$args = wp_parse_args( $args, array(
+					'access_token' => '',
+				) );
+
+				$request_url     = self::URL_OAUTH_TOKEN;
+				$request_headers = $this->get_headers( $args['access_token'] );
+				$request_body    = array(
+					'email'    => self::EMAIL,
+					'password' => self::PASSWORD,
+				);
 				break;
 		}
 
-		$args = array(
-			'headers' => $this->get_headers(),
-			'body'    => $request,
+		$request_args = array(
+			'headers' => $request_headers,
+			'body'    => $request_body,
 		);
 
-		$response = $this->tenacious_remote_post( self::URL_ACCESS_TOKEN, $args );
+		$response = $this->tenacious_remote_post( $request_url, $request_args );
 
 		if ( 200 === wp_remote_retrieve_response_code( $response ) ) {
 			$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-			if ( $this->is_valid_token( $body, 'access' ) ) {
-				$access_token = $body;
+			if ( $this->is_valid_token( $body, $type ) ) {
+				$token = $body;
 
-				$access_token['timestamp'] = time();
+				$token['timestamp'] = time();
 			} else {
 				$this->error->add(
 					// Don't include the entire response in the error data, because it might include sensitive
 					// data from the request payload.
-					'unexpected_oauth_access_token_response',
+					'unexpected_oauth_token_response',
 					'The Meetup OAuth API response did not provide the expected data.'
 				);
 			}
@@ -225,115 +251,16 @@ class Meetup_OAuth2_Client extends API_Client {
 			$this->handle_error_response( $response );
 		}
 
-		return $access_token;
+		return $token;
 	}
 
 	/**
-	 * Get the current access token, either from the database or from a request.
-	 *
-	 * This stores a successfully retrieved token array to the database for repeated use, until it expires.
-	 *
-	 * @todo So far, I haven't been able to get this type of token to work again after it is used once to retrieve an
-	 *       oauth token in Step 3. The documentation makes it sound like this token should be good for up to two
-	 *       weeks (if the 'ageless' scope is set) so I'm not sure what's going wrong. In the mean time, the caching
-	 *       for this token is commented out. A new token will always be retrieved.
-	 *
-	 * @return string
-	 */
-	protected function get_access_token() {
-		$access_token  = '';
-		$needs_caching = false;
-
-		//$token = get_site_option( self::SITE_OPTION_KEY_ACCESS, array() );
-		$token = array();
-
-		if ( ! $this->is_valid_token( $token, 'access' ) ) {
-			$token         = $this->request_access_token( 'anonymous_code', $this->request_authorization_code() );
-			$needs_caching = true;
-		} elseif ( $this->is_valid_token( $token, 'access' ) && $this->is_expired_token( $token ) ) {
-			$token         = $this->request_access_token( 'refresh_token', $token['refresh_token'] );
-			$needs_caching = true;
-		}
-
-		if ( $this->is_valid_token( $token, 'access' ) ) {
-			$access_token = $token['access_token'];
-
-			if ( $needs_caching ) {
-				//update_site_option( self::SITE_OPTION_KEY_ACCESS, $token );
-			}
-		}
-
-		return $access_token;
-	}
-
-	/**
-	 * Step 3 in "Server Flow with User Credentials".
-	 *
-	 * Technically in the documentation, this token is also called an "access token", but here we're calling it the
-	 * "oauth token" to differentiate it from the other access token. Also, why are two separate access tokens
-	 * necessary??
-	 *
-	 * @see https://www.meetup.com/meetup_api/auth/#oauth2servercredentials-accesspro
-	 *
-	 * Note that this does not store the oauth token. See get_oauth_token().
-	 *
-	 * @return array A successfully retrieved token will be an associative array with several keys.
-	 */
-	protected function request_oauth_token() {
-		$oauth_token = array();
-
-		$access_token = $this->get_access_token();
-
-		if ( $access_token ) {
-			$request = array(
-				'email'    => self::EMAIL,
-				'password' => self::PASSWORD,
-				'scope'    => 'ageless',
-			);
-
-			$args = array(
-				'headers' => $this->get_headers( $access_token ),
-				'body'    => $request,
-			);
-
-			// @todo There aren't separate request "types" here because there's no documentation for refreshing the
-			//       oauth token, even though the token object it sends includes a `refresh_token` string.
-
-			$response = $this->tenacious_remote_post( self::URL_OAUTH_TOKEN, $args );
-
-			if ( 200 === wp_remote_retrieve_response_code( $response ) ) {
-				$body = json_decode( wp_remote_retrieve_body( $response ), true );
-
-				if ( $this->is_valid_token( $body, 'oauth' ) ) {
-					$oauth_token = $body;
-
-					$oauth_token['timestamp'] = time();
-				} else {
-					$this->error->add(
-						// Don't include the entire response in the error data, because it might include sensitive
-						// data from the request payload.
-						'unexpected_oauth_token_response',
-						'The Meetup OAuth API response did not provide the expected data.'
-					);
-				}
-			} else {
-				$this->handle_error_response( $response );
-			}
-		} else {
-			$this->error->add(
-				'no_access_token',
-				'Could not retrieve a valid Meetup OAuth access token.'
-			);
-		}
-
-		return $oauth_token;
-	}
-
-	/**
-	 * Get the token needed to make requests to the Meetup API.
+	 * Get the oauth access token needed to make requests to the Meetup API.
 	 *
 	 * This encompasses all three of the steps in the "Server Flow with User Credentials" flow, so it's the only
 	 * method that should be called directly.
+	 *
+	 * @see https://www.meetup.com/meetup_api/auth/#oauth2servercredentials
 	 *
 	 * This stores a successfully retrieved token array to the database for repeated use, until it expires.
 	 *
@@ -349,12 +276,18 @@ class Meetup_OAuth2_Client extends API_Client {
 
 		$token = get_site_option( self::SITE_OPTION_KEY_OAUTH, array() );
 
-		if ( ! $this->is_valid_token( $token, 'oauth' ) || $this->is_expired_token( $token ) ) {
-			$token         = $this->request_oauth_token();
+		if ( ! $this->is_valid_token( $token, 'oauth_token' ) ) {
+			$authorization = $this->request_authorization_code(); // Step 1.
+			$server_token  = $this->request_token( 'server_token', $authorization ); // Step 2.
+			$token         = $this->request_token( 'oauth_token', $server_token ); // Step 3.
+			$needs_caching = true;
+		} elseif ( $this->is_valid_token( $token, 'oauth_token' ) && $this->is_expired_token( $token ) ) {
+			$server_token  = $this->request_token( 'refresh_token', $token ); // Alternate for Steps 1 & 2.
+			$token         = $this->request_token( 'oauth_token', $server_token ); // Step 3.
 			$needs_caching = true;
 		}
 
-		if ( $this->is_valid_token( $token, 'oauth' ) ) {
+		if ( $this->is_valid_token( $token, 'oauth_token' ) ) {
 			$this->oauth_token = $token;
 
 			if ( $needs_caching ) {
@@ -368,7 +301,7 @@ class Meetup_OAuth2_Client extends API_Client {
 	}
 
 	/**
-	 * Check if a token array has all the required keys.
+	 * Check if a token array has the required keys.
 	 *
 	 * @param array  $token The token array to check.
 	 * @param string $type  The type of token. Either 'access' or 'oauth'.
@@ -376,21 +309,20 @@ class Meetup_OAuth2_Client extends API_Client {
 	 * @return bool
 	 */
 	protected function is_valid_token( $token, $type ) {
-		$valid_types = array( 'access', 'oauth' );
+		$valid_types = array( 'server_token', 'refresh_token', 'oauth_token' );
 
 		if ( ! is_array( $token ) || ! in_array( $type, $valid_types, true ) ) {
 			return false;
 		}
 
 		switch ( $type ) {
-			case 'access':
+			case 'server_token':
+			case 'refresh_token':
 				$required_properties = array(
-					'access_token'  => '',
-					'refresh_token' => '',
-					'expires_in'    => '',
+					'access_token' => '',
 				);
 				break;
-			case 'oauth':
+			case 'oauth_token':
 			default:
 				$required_properties = array(
 					'oauth_token'   => '',

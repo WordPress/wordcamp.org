@@ -14,11 +14,7 @@ import { BlockControls } from '@wordpress/editor';
  *
  * @return {Element}
  */
-function LayoutToolbar( {
-	layout,
-	options,
-	setAttributes,
-} ) {
+function LayoutToolbar( { layout, options, setAttributes } ) {
 	const controls = options.map( ( option ) => {
 		const icon = `${ option.value }-view`;
 		const isActive = layout === option.value;
@@ -41,11 +37,11 @@ function LayoutToolbar( {
 }
 
 LayoutToolbar.propTypes = {
-	layout  : PropTypes.string.isRequired,
-	options : PropTypes.arrayOf(
+	layout: PropTypes.string.isRequired,
+	options: PropTypes.arrayOf(
 		PropTypes.shape( {
-			label : PropTypes.string,
-			value : PropTypes.string,
+			label: PropTypes.string,
+			value: PropTypes.string,
 		} )
 	).isRequired,
 	setAttributes: PropTypes.func.isRequired,

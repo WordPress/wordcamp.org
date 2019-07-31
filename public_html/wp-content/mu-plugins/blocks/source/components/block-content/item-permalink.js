@@ -27,9 +27,9 @@ function ItemPermalink( { className, link, linkText } ) {
 }
 
 ItemPermalink.propTypes = {
-	className : PropTypes.string,
-	link      : PropTypes.string,
-	linkText  : PropTypes.string,
+	className: PropTypes.string,
+	link: PropTypes.string,
+	linkText: PropTypes.string,
 };
 
 export default ItemPermalink;

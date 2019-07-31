@@ -40,10 +40,10 @@ function ItemTitle( { headingLevel, className, title, link } ) {
 }
 
 ItemTitle.propTypes = {
-	headingLevel : PropTypes.number,
-	className    : PropTypes.string,
-	title        : PropTypes.string,
-	link         : PropTypes.string,
+	headingLevel: PropTypes.number,
+	className: PropTypes.string,
+	title: PropTypes.string,
+	link: PropTypes.string,
 };
 
 export default ItemTitle;

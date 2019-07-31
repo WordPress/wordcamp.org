@@ -37,10 +37,10 @@ function DangerousItemHTMLContent( { className, content, link, linkText } ) {
 }
 
 DangerousItemHTMLContent.propTypes = {
-	className : PropTypes.string,
-	content   : PropTypes.string,
-	link      : PropTypes.string,
-	linkText  : PropTypes.string,
+	className: PropTypes.string,
+	content: PropTypes.string,
+	link: PropTypes.string,
+	linkText: PropTypes.string,
 };
 
 export default DangerousItemHTMLContent;

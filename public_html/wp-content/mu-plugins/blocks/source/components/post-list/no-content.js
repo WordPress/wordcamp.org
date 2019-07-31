@@ -6,7 +6,7 @@ import PropTypes from 'prop-types';
 /**
  * WordPress dependencies
  */
-import { __ }      from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 import { Spinner } from '@wordpress/components';
 
 /**
@@ -17,10 +17,7 @@ import { Spinner } from '@wordpress/components';
 function BlockNoContent( { loading } ) {
 	return (
 		<div className="wordcamp-post-list has-no-content">
-			{ loading ?
-				<Spinner /> :
-				__( 'No content found.', 'wordcamporg' )
-			}
+			{ loading ? <Spinner /> : __( 'No content found.', 'wordcamporg' ) }
 		</div>
 	);
 }

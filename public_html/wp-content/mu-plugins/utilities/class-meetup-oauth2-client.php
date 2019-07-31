@@ -281,7 +281,7 @@ class Meetup_OAuth2_Client extends API_Client {
 			$server_token  = $this->request_token( 'server_token', $authorization ); // Step 2.
 			$token         = $this->request_token( 'oauth_token', $server_token ); // Step 3.
 			$needs_caching = true;
-		} elseif ( $this->is_valid_token( $token, 'oauth_token' ) && $this->is_expired_token( $token ) ) {
+		} elseif ( $this->is_expired_token( $token ) ) {
 			$server_token  = $this->request_token( 'refresh_token', $token ); // Alternate for Steps 1 & 2.
 			$token         = $this->request_token( 'oauth_token', $server_token ); // Step 3.
 			$needs_caching = true;

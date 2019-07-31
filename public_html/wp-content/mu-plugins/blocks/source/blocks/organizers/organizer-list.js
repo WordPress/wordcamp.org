@@ -1,9 +1,4 @@
 /**
- * External dependencies
- */
-import classnames from 'classnames';
-
-/**
  * WordPress dependencies
  */
 import { Component } from '@wordpress/element';
@@ -19,7 +14,7 @@ import { filterEntities } from '../../data';
 /**
  * Component for displaying the block content.
  */
-export class BlockContent extends Component {
+class OrganizerList extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -78,7 +73,7 @@ export class BlockContent extends Component {
 		return (
 			<PostList attributes={ attributes } className="wordcamp-organizers">
 				{ posts.map( ( post ) => (
-					<div key={ post.slug } className={ classnames( 'wordcamp-organizers__post', `slug-${ post.slug.trim() }` ) }>
+					<div key={ post.slug } className={ `wordcamp-organizers__post slug-${ post.slug.trim() }` }>
 						<ItemTitle
 							className="wordcamp-organizers__title"
 							headingLevel={ 3 }
@@ -87,7 +82,7 @@ export class BlockContent extends Component {
 
 						{ show_avatars && (
 							<AvatarImage
-								className={ classnames( 'align-' + avatar_align ) }
+								className={ `align-${ avatar_align }` }
 								name={ post.title.rendered.trim() || '' }
 								size={ avatar_size }
 								url={ post.avatar_urls[ '24' ] }
@@ -96,7 +91,7 @@ export class BlockContent extends Component {
 
 						{ 'none' !== content && (
 							<DangerousItemHTMLContent
-								className={ classnames( 'wordcamp-organizers__content', 'is-' + content ) }
+								className={ `wordcamp-organizers__content is-${ content }` }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
 						) }
@@ -106,3 +101,5 @@ export class BlockContent extends Component {
 		);
 	}
 }
+
+export default OrganizerList;

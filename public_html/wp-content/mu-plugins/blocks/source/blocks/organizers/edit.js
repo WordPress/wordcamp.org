@@ -9,12 +9,12 @@ import { withSelect } from '@wordpress/data';
 /**
  * Internal dependencies
  */
-import { BlockContent } from './block-content';
-import { ContentSelect } from './content-select';
 import { getOptionLabel } from '../../components/item-select';
 import { ICON, LABEL } from './index';
-import { InspectorControls } from './inspector-controls';
+import InspectorControls from './inspector-controls';
 import { LayoutToolbar } from '../../components/post-list';
+import OrganizerList from './organizer-list';
+import OrganizerSelect from './organizer-select';
 import { PlaceholderSpecificMode } from '../../components/block-controls';
 import { WC_BLOCKS_STORE } from '../../data';
 
@@ -39,7 +39,7 @@ class OrganizersEdit extends Component {
 		switch ( mode ) {
 			case 'all' :
 				output = (
-					<BlockContent attributes={ attributes } entities={ entities } />
+					<OrganizerList attributes={ attributes } entities={ entities } />
 				);
 				break;
 
@@ -48,11 +48,11 @@ class OrganizersEdit extends Component {
 				output = (
 					<PlaceholderSpecificMode
 						content={
-							<BlockContent attributes={ attributes } entities={ entities } />
+							<OrganizerList attributes={ attributes } entities={ entities } />
 						}
 						placeholderChildren={
 							isSelected && (
-								<ContentSelect
+								<OrganizerSelect
 									label={ getOptionLabel( mode, options.mode ) }
 									attributes={ attributes }
 									entities={ entities }
@@ -85,7 +85,7 @@ class OrganizersEdit extends Component {
 						</div>
 
 						<div className="wordcamp__edit-mode-option">
-							<ContentSelect
+							<OrganizerSelect
 								label={ __( 'Choose specific organizers or teams', 'wordcamporg' ) }
 								attributes={ attributes }
 								entities={ entities }

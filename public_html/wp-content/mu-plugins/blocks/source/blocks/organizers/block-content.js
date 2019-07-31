@@ -11,10 +11,10 @@ import { Component } from '@wordpress/element';
 /**
  * Internal dependencies
  */
-import { AvatarImage }                                from '../../components/image';
+import { AvatarImage } from '../../components/image';
 import { BlockNoContent, ItemTitle, DangerousItemHTMLContent } from '../../components/block-content';
-import { PostList }                                   from '../../components/post-list';
-import { filterEntities }                             from '../../data';
+import { PostList } from '../../components/post-list';
+import { filterEntities } from '../../data';
 
 /**
  * Component for displaying the block content.
@@ -46,8 +46,8 @@ export class BlockContent extends Component {
 		if ( Array.isArray( item_ids ) && item_ids.length > 0 ) {
 			args.filter = [
 				{
-					fieldName  : mode === 'wcb_organizer' ? 'id' : 'organizer_team',
-					fieldValue : item_ids,
+					fieldName: mode === 'wcb_organizer' ? 'id' : 'organizer_team',
+					fieldValue: item_ids,
 				},
 			];
 		}
@@ -66,9 +66,9 @@ export class BlockContent extends Component {
 		const { attributes } = this.props;
 		const { show_avatars, avatar_size, avatar_align, content } = attributes;
 
-		const posts     = this.getFilteredPosts();
+		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
-		const hasPosts  = ! isLoading && posts.length > 0;
+		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
 			return (
@@ -104,7 +104,7 @@ export class BlockContent extends Component {
 						{ ( 'none' !== content ) &&
 							<DangerousItemHTMLContent
 								className={ classnames( 'wordcamp-organizers__content', 'is-' + content ) }
-								content={  'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
+								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
 						}
 					</div>

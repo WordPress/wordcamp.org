@@ -2,34 +2,34 @@
  * WordPress dependencies
  */
 import { InspectorControls as CoreInspectorControlsContainer } from '@wordpress/block-editor';
-import { PanelBody, SelectControl }                            from '@wordpress/components';
-import { Component }                                           from '@wordpress/element';
-import { __ }                                                  from '@wordpress/i18n';
+import { PanelBody, SelectControl } from '@wordpress/components';
+import { Component } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
 import { avatarSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel }                     from '../../components/post-list';
+import { GridInspectorPanel } from '../../components/post-list';
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {
-		default : 2,
-		minimum : 2,
-		maximum : 4,
+		default: 2,
+		minimum: 2,
+		maximum: 4,
 	},
 
 	avatar_size: {
-		default : 150,
-		minimum : 25,
-		maximum : 600,
+		default: 150,
+		minimum: 25,
+		maximum: 600,
 	},
 };
 
 const DEFAULT_OPTIONS = {
-	align   : {},
-	content : {},
-	sort    : {},
+	align: {},
+	content: {},
+	sort: {},
 };
 
 /**
@@ -42,9 +42,9 @@ export class InspectorControls extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes, setAttributes, blockData }                   = this.props;
+		const { attributes, setAttributes, blockData } = this.props;
 		const { show_avatars, avatar_size, avatar_align, content, sort } = attributes;
-		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS }     = blockData;
+		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = blockData;
 
 		return (
 			<CoreInspectorControlsContainer>

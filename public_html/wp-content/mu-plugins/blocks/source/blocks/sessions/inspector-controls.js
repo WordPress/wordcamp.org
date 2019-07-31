@@ -2,15 +2,15 @@
  * WordPress dependencies
  */
 import { InspectorControls as CoreInspectorControlsContainer } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, ToggleControl }             from '@wordpress/components';
-import { Component }                                           from '@wordpress/element';
-import { __ }                                                  from '@wordpress/i18n';
+import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import { Component } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
 import { featuredImageSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel }                            from '../../components/post-list';
+import { GridInspectorPanel } from '../../components/post-list';
 
 /**
  * Component for block controls that appear in the Inspector Panel.
@@ -57,7 +57,7 @@ export class InspectorControls extends Component {
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ true }>
 					<SelectControl
 						label={ __( 'Description', 'wordcamporg' ) }
-						value={ content || 'full'  }
+						value={ content || 'full' }
 						options={ options.content }
 						onChange={ ( value ) => setAttributes( { content: value } ) }
 					/>
@@ -76,7 +76,7 @@ export class InspectorControls extends Component {
 					<ToggleControl
 						label={ __( 'Speakers', 'wordcamporg' ) }
 						help={ __( 'Show session speakers.', 'wordcamporg' ) }
-						checked={ show_speaker  === undefined ? false : show_speaker }
+						checked={ show_speaker === undefined ? false : show_speaker }
 						onChange={ ( value ) => setAttributes( { show_speaker: value } ) }
 					/>
 				</PanelBody>

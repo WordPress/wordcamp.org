@@ -1,17 +1,17 @@
 /**
  * WordPress dependencies
  */
-import { withSelect }          from '@wordpress/data';
+import { withSelect } from '@wordpress/data';
 import { Component, Fragment } from '@wordpress/element';
 
 /**
  * Internal dependencies
  */
-import { LayoutToolbar }     from '../../components/post-list';
-import { WC_BLOCKS_STORE }   from '../../data';
-import { BlockControls }     from './block-controls';
+import { LayoutToolbar } from '../../components/post-list';
+import { WC_BLOCKS_STORE } from '../../data';
+import { BlockControls } from './block-controls';
 import { InspectorControls } from './inspector-controls';
-import { ICON }              from './index';
+import { ICON } from './index';
 import { getSessionDetails } from './utils';
 
 const blockData = window.WordCampBlocks.sessions || {};
@@ -26,8 +26,8 @@ class SessionsEdit extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes, setAttributes }  = this.props;
-		const { mode, layout }               = attributes;
+		const { attributes, setAttributes } = this.props;
+		const { mode, layout } = attributes;
 		const { layout: layoutOptions = {} } = blockData.options;
 
 		return (
@@ -55,15 +55,15 @@ const sessionsSelect = ( select ) => {
 	const { getEntities } = select( WC_BLOCKS_STORE );
 
 	const sessionArgs = {
-		_embed        : true,
-		wc_meta_key   : '_wcpt_session_type',
-		wc_meta_value : 'session', // Regular sessions only, no breaks/lunch/etc sessions.
+		_embed: true,
+		wc_meta_key: '_wcpt_session_type',
+		wc_meta_value: 'session', // Regular sessions only, no breaks/lunch/etc sessions.
 	};
 
 	const entities = {
-		wcb_session          : null,
-		wcb_track            : getEntities( 'taxonomy', 'wcb_track' ),
-		wcb_session_category : getEntities( 'taxonomy', 'wcb_session_category' ),
+		wcb_session: null,
+		wcb_track: getEntities( 'taxonomy', 'wcb_track' ),
+		wcb_session_category: getEntities( 'taxonomy', 'wcb_session_category' ),
 	};
 
 	const sessions = getEntities( 'postType', 'wcb_session', sessionArgs );

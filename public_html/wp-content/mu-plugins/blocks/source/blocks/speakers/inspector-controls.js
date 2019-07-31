@@ -2,33 +2,33 @@
  * WordPress dependencies
  */
 import { InspectorControls as CoreInspectorControlsContainer } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, ToggleControl }             from '@wordpress/components';
-import { Component }                                           from '@wordpress/element';
-import { __ }                                                  from '@wordpress/i18n';
+import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import { Component } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
  */
 import { avatarSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel }                     from '../../components/post-list';
+import { GridInspectorPanel } from '../../components/post-list';
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {
-		default : 2,
-		minimum : 2,
-		maximum : 4,
+		default: 2,
+		minimum: 2,
+		maximum: 4,
 	},
 	avatar_size: {
-		default : 150,
-		minimum : 25,
-		maximum : 600,
+		default: 150,
+		minimum: 25,
+		maximum: 600,
 	},
 };
 
 const DEFAULT_OPTIONS = {
-	align_image : {},
-	content     : {},
-	sort        : {},
+	align_image: {},
+	content: {},
+	sort: {},
 };
 
 /**

@@ -6,7 +6,7 @@ import { intersection, orderBy, split } from 'lodash';
 /**
  * WordPress dependencies
  */
-import apiFetch                            from '@wordpress/api-fetch';
+import apiFetch from '@wordpress/api-fetch';
 import { registerStore, select, dispatch } from '@wordpress/data';
 
 /**
@@ -103,8 +103,8 @@ const actions = {
 	 */
 	setSiteSettings( settings ) {
 		return {
-			type     : 'SET_SETTINGS',
-			settings : settings,
+			type: 'SET_SETTINGS',
+			settings: settings,
 		};
 	},
 };

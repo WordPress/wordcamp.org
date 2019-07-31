@@ -6,35 +6,35 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-import { Disabled }            from '@wordpress/components';
-import { __, _x, sprintf }     from '@wordpress/i18n';
+import { Disabled } from '@wordpress/components';
+import { __, _x, sprintf } from '@wordpress/i18n';
 import { addQueryArgs, isURL } from '@wordpress/url';
 
 // Avatar-specific presets for the ImageSizeControl component.
 export const avatarSizePresets = [
 	{
-		name      : __( 'Small', 'wordcamporg' ),
-		shortName : _x( 'S', 'size small', 'wordcamporg' ),
-		size      : 90,
-		slug      : 'small',
+		name: __( 'Small', 'wordcamporg' ),
+		shortName: _x( 'S', 'size small', 'wordcamporg' ),
+		size: 90,
+		slug: 'small',
 	},
 	{
-		name      : __( 'Regular', 'wordcamporg' ),
-		shortName : _x( 'M', 'size medium', 'wordcamporg' ),
-		size      : 150,
-		slug      : 'regular',
+		name: __( 'Regular', 'wordcamporg' ),
+		shortName: _x( 'M', 'size medium', 'wordcamporg' ),
+		size: 150,
+		slug: 'regular',
 	},
 	{
-		name      : __( 'Large', 'wordcamporg' ),
-		shortName : _x( 'L', 'size large', 'wordcamporg' ),
-		size      : 300,
-		slug      : 'large',
+		name: __( 'Large', 'wordcamporg' ),
+		shortName: _x( 'L', 'size large', 'wordcamporg' ),
+		size: 300,
+		slug: 'large',
 	},
 	{
-		name      : __( 'Larger', 'wordcamporg' ),
-		shortName : _x( 'XL', 'size extra large', 'wordcamporg' ),
-		size      : 500,
-		slug      : 'larger',
+		name: __( 'Larger', 'wordcamporg' ),
+		shortName: _x( 'XL', 'size extra large', 'wordcamporg' ),
+		size: 500,
+		slug: 'larger',
 	},
 ];
 

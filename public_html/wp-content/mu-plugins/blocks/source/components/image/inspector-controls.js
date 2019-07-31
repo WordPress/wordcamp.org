@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import classnames   from 'classnames';
+import classnames from 'classnames';
 import { debounce } from 'lodash';
 
 /**
@@ -16,9 +16,9 @@ import {
 	RangeControl,
 	ToggleControl,
 	Toolbar,
-}                              from '@wordpress/components';
+} from '@wordpress/components';
 import { Component, Fragment } from '@wordpress/element';
-import { __ }                  from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -54,8 +54,8 @@ export class ImageSizeControl extends Component {
 		super( props );
 
 		this.state = {
-			value    : props.value,
-			onChange : debounce( props.onChange, 10 ), // Higher values lead to a noticeable degradation in visual feedback.
+			value: props.value,
+			onChange: debounce( props.onChange, 10 ), // Higher values lead to a noticeable degradation in visual feedback.
 		};
 
 		this.onChange = this.onChange.bind( this );
@@ -169,10 +169,10 @@ export function ImageAlignmentControl( {
 					const iconSlug = `align-${ alignment.value }`;
 
 					return {
-						title    : alignment.label,
-						icon     : iconSlug,
-						isActive : isActive,
-						onClick  : () => {
+						title: alignment.label,
+						icon: iconSlug,
+						isActive: isActive,
+						onClick: () => {
 							onChange( alignment.value );
 						},
 					};
@@ -238,8 +238,8 @@ export class ImageInspectorPanel extends Component {
 							sizePresets={ sizePresets }
 							onChange={ onChangeSize }
 							rangeProps={ {
-								min : Number( sizeSchema.minimum ),
-								max : Number( sizeSchema.maximum ),
+								min: Number( sizeSchema.minimum ),
+								max: Number( sizeSchema.maximum ),
 							} }
 						/>
 						{ /* The PanelRow wrapper prevents the toolbar from expanding to full width. */ }

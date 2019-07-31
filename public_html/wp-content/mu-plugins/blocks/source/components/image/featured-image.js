@@ -7,10 +7,10 @@ import { sortBy } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { Disabled }  from '@wordpress/components';
+import { Disabled } from '@wordpress/components';
 import { Component } from '@wordpress/element';
-import { __, _x }    from '@wordpress/i18n';
-import { isURL }     from '@wordpress/url';
+import { __, _x } from '@wordpress/i18n';
+import { isURL } from '@wordpress/url';
 
 /**
  * Internal dependencies
@@ -20,28 +20,28 @@ import './featured-image.scss';
 // Featured Image-specific presets for the ImageSizeControl component.
 export const featuredImageSizePresets = [
 	{
-		name      : __( 'Small', 'wordcamporg' ),
-		shortName : _x( 'S', 'size small', 'wordcamporg' ),
-		size      : 150,
-		slug      : 'small',
+		name: __( 'Small', 'wordcamporg' ),
+		shortName: _x( 'S', 'size small', 'wordcamporg' ),
+		size: 150,
+		slug: 'small',
 	},
 	{
-		name      : __( 'Regular', 'wordcamporg' ),
-		shortName : _x( 'M', 'size medium', 'wordcamporg' ),
-		size      : 300,
-		slug      : 'regular',
+		name: __( 'Regular', 'wordcamporg' ),
+		shortName: _x( 'M', 'size medium', 'wordcamporg' ),
+		size: 300,
+		slug: 'regular',
 	},
 	{
-		name      : __( 'Large', 'wordcamporg' ),
-		shortName : _x( 'L', 'size large', 'wordcamporg' ),
-		size      : 600,
-		slug      : 'large',
+		name: __( 'Large', 'wordcamporg' ),
+		shortName: _x( 'L', 'size large', 'wordcamporg' ),
+		size: 600,
+		slug: 'large',
 	},
 	{
-		name      : __( 'Larger', 'wordcamporg' ),
-		shortName : _x( 'XL', 'size extra large', 'wordcamporg' ),
-		size      : 1024,
-		slug      : 'larger',
+		name: __( 'Larger', 'wordcamporg' ),
+		shortName: _x( 'XL', 'size extra large', 'wordcamporg' ),
+		size: 1024,
+		slug: 'larger',
 	},
 ];
 
@@ -70,8 +70,8 @@ export class FeaturedImage extends Component {
 		const image = this.constructor.getWidestImage( media_details );
 
 		this.state = {
-			image : image,
-			alt   : alt_text,
+			image: image,
+			alt: alt_text,
 		};
 	}
 

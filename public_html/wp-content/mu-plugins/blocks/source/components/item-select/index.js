@@ -2,14 +2,14 @@
  * External dependencies
  */
 import classnames from 'classnames';
-import Select     from 'react-select';
+import Select from 'react-select';
 
 /**
  * WordPress dependencies
  */
 import { BaseControl, Button } from '@wordpress/components';
-import { Component }           from '@wordpress/element';
-import { __ }                  from '@wordpress/i18n';
+import { Component } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -27,42 +27,42 @@ const customStyles = {
 	} ),
 	multiValue: ( provided ) => ( {
 		...provided,
-		backgroundColor : '#e2e4e7',
-		borderRadius    : '12px',
+		backgroundColor: '#e2e4e7',
+		borderRadius: '12px',
 	} ),
 	multiValueLabel: ( provided ) => ( {
 		...provided,
-		padding     : '6px 4px',
-		paddingLeft : '12px', // We need to specifically override `provided.paddingLeft`.
-		fontSize    : '0.9em',
-		lineHeight  : 1,
+		padding: '6px 4px',
+		paddingLeft: '12px', // We need to specifically override `provided.paddingLeft`.
+		fontSize: '0.9em',
+		lineHeight: 1,
 	} ),
 	multiValueRemove: ( provided, { isFocused } ) => ( {
 		...provided,
-		backgroundColor : isFocused ? '#fff' : '#e2e4e7',
-		boxShadow       : isFocused ? 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff' : null,
-		borderRadius    : '0 12px 12px 0',
+		backgroundColor: isFocused ? '#fff' : '#e2e4e7',
+		boxShadow: isFocused ? 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff' : null,
+		borderRadius: '0 12px 12px 0',
 
 		svg: {
-			color        : isFocused ? '#fff' : '#e2e4e7',
-			background   : isFocused ? '#191e23' : '#555d66',
-			borderRadius : '10px',
+			color: isFocused ? '#fff' : '#e2e4e7',
+			background: isFocused ? '#191e23' : '#555d66',
+			borderRadius: '10px',
 		},
 
 		':hover': {
-			backgroundColor : '#fff',
-			boxShadow       : 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff',
+			backgroundColor: '#fff',
+			boxShadow: 'inset 0 0 0 1px #6c7781, inset 0 0 0 2px #fff',
 
 			svg: {
-				color      : '#fff',
-				background : '#191e23',
+				color: '#fff',
+				background: '#191e23',
 			},
 		},
 	} ),
 	option: ( provided, { isDisabled } ) => ( {
 		...provided,
-		color   : 'inherit',
-		opacity : isDisabled ? 0.7 : 1,
+		color: 'inherit',
+		opacity: isDisabled ? 0.7 : 1,
 	} ),
 };
 
@@ -137,13 +137,13 @@ export class ItemSelect extends Component {
 			const chosen = selectedOptions[ 0 ].type;
 
 			attributes = {
-				mode     : chosen,
-				item_ids : newValue,
+				mode: chosen,
+				item_ids: newValue,
 			};
 		} else {
 			attributes = {
-				mode     : '',
-				item_ids : [],
+				mode: '',
+				item_ids: [],
 			};
 		}
 
@@ -161,9 +161,9 @@ export class ItemSelect extends Component {
 		const id = `wordcamp-item-select-control-${ instanceId }`;
 
 		const mergedSelectProps = {
-			isMulti          : true,
-			isOptionDisabled : this.constructor.isOptionDisabled,
-			formatGroupLabel : this.constructor.formatGroupLabel,
+			isMulti: true,
+			isOptionDisabled: this.constructor.isOptionDisabled,
+			formatGroupLabel: this.constructor.formatGroupLabel,
 			...selectProps,
 		};
 

@@ -2,8 +2,8 @@
  * WordPress dependencies
  */
 import { PanelBody, RangeControl } from '@wordpress/components';
-import { Component, Fragment }     from '@wordpress/element';
-import { __ }                      from '@wordpress/i18n';
+import { Component, Fragment } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 
 /**
  * Component for a range control that adjusts the number of columns in a post list grid.

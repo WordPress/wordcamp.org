@@ -188,10 +188,12 @@ class Meetup_OAuth2_Client extends API_Client {
 			'grant_type'    => $type,
 		);
 
+		// Add the code to the request payload using the correct parameter for the grant type.
 		switch( $type ) {
-			case 'anonymous_code':
+			case 'anonymous_code': // Request a new access token.
 				$request['code'] = $code;
 				break;
+			case 'refresh_token': // Refresh an expired access token.
 			default:
 				$request[ $type ] = $code;
 				break;

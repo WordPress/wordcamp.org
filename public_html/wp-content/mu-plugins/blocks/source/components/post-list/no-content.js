@@ -14,7 +14,7 @@ import { Spinner } from '@wordpress/components';
  *
  * @return {Element}
  */
-function BlockNoContent( { loading } ) {
+function NoContent( { loading } ) {
 	return (
 		<div className="wordcamp-post-list has-no-content">
 			{ loading ? <Spinner /> : __( 'No content found.', 'wordcamporg' ) }
@@ -22,8 +22,8 @@ function BlockNoContent( { loading } ) {
 	);
 }
 
-BlockNoContent.propTypes = {
+NoContent.propTypes = {
 	loading: PropTypes.bool,
 };
 
-export default BlockNoContent;
+export default NoContent;

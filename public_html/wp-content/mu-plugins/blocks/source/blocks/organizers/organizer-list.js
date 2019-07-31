@@ -8,9 +8,9 @@ import { Component } from '@wordpress/element';
  */
 import {
 	AvatarImage,
-	BlockNoContent,
 	DangerousItemHTMLContent,
 	ItemTitle,
+	NoContent,
 	PostList,
 } from '../../components';
 import { filterEntities } from '../../data';
@@ -70,7 +70,7 @@ class OrganizerList extends Component {
 		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
-			return <BlockNoContent loading={ isLoading } />;
+			return <NoContent loading={ isLoading } />;
 		}
 
 		/* Note that organizer posts are not 'public', so there are no permalinks. */

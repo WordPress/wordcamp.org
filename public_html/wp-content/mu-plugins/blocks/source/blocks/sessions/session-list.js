@@ -13,11 +13,11 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import {
-	BlockNoContent,
 	DangerousItemHTMLContent,
 	FeaturedImage,
 	ItemPermalink,
 	ItemTitle,
+	NoContent,
 	PostList,
 } from '../../components';
 import { filterEntities } from '../../data';
@@ -187,7 +187,7 @@ class SessionList extends Component {
 		const hasPosts = ! isLoading && posts.length > 0;
 
 		if ( isLoading || ! hasPosts ) {
-			return <BlockNoContent loading={ isLoading } />;
+			return <NoContent loading={ isLoading } />;
 		}
 
 		return (

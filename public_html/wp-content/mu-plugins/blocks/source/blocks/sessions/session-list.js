@@ -2,7 +2,6 @@
  * External dependencies
  */
 import { get } from 'lodash';
-import classnames from 'classnames';
 
 /**
  * WordPress dependencies
@@ -84,7 +83,7 @@ function SessionCategory( { session } ) {
 			} )
 			.map( ( term ) => {
 				return (
-					<span key={ term.slug } className={ classnames( 'wordcamp-sessions__category', `slug-${ term.slug }` ) }>
+					<span key={ term.slug } className={ `wordcamp-sessions__category slug-${ term.slug }` }>
 						{ term.name.trim() }
 					</span>
 				);
@@ -99,7 +98,7 @@ function SessionCategory( { session } ) {
 /**
  * Component for displaying the block content.
  */
-export class BlockContent extends Component {
+class SessionList extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -187,9 +186,9 @@ export class BlockContent extends Component {
 		}
 
 		return (
-			<PostList { ...this.props } className="wordcamp-sessions">
+			<PostList attributes={ attributes } className="wordcamp-sessions">
 				{ posts.map( ( post ) => (
-					<div key={ post.slug } className={ classnames( 'wordcamp-sessions__post', `slug-${ post.slug }` ) }>
+					<div key={ post.slug } className={ `wordcamp-sessions__post slug-${ post.slug }` }>
 						<ItemTitle
 							className="wordcamp-sessions__title"
 							headingLevel={ 3 }
@@ -203,14 +202,14 @@ export class BlockContent extends Component {
 							<FeaturedImage
 								imageData={ get( post, '_embedded.wp:featuredmedia[0]', {} ) }
 								width={ Number( featured_image_width ) }
-								className={ classnames( 'wordcamp-sessions__featured-image', 'align-' + image_align ) }
+								className={ `wordcamp-sessions__featured-image align-${ image_align }` }
 								imageLink={ post.link }
 							/>
 						) }
 
 						{ 'none' !== content && (
 							<DangerousItemHTMLContent
-								className={ classnames( 'wordcamp-sessions__content', 'is-' + content ) }
+								className={ `wordcamp-sessions__content is-${ content }` }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
 							/>
 						) }
@@ -235,3 +234,5 @@ export class BlockContent extends Component {
 		);
 	}
 }
+
+export default SessionList;

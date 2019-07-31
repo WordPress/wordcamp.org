@@ -17,7 +17,7 @@ import { buildOptions, ItemSelect, Option } from '../../components/item-select';
 /**
  * Component for selecting posts/terms for populating the block content.
  */
-export class ContentSelect extends Component {
+class SessionSelect extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -132,3 +132,5 @@ export class ContentSelect extends Component {
 		);
 	}
 }
+
+export default SessionSelect;

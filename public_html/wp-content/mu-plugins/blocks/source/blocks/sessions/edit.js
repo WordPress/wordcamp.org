@@ -1,25 +1,108 @@
 /**
  * WordPress dependencies
  */
-import { withSelect } from '@wordpress/data';
+import { __ } from '@wordpress/i18n';
+import { Button, Placeholder } from '@wordpress/components';
 import { Component, Fragment } from '@wordpress/element';
+import { withSelect } from '@wordpress/data';
 
 /**
  * Internal dependencies
  */
-import { LayoutToolbar } from '../../components/post-list';
-import { WC_BLOCKS_STORE } from '../../data';
-import { BlockControls } from './block-controls';
-import { InspectorControls } from './inspector-controls';
-import { ICON } from './index';
+import { getOptionLabel } from '../../components/item-select';
 import { getSessionDetails } from './utils';
+import { ICON, LABEL } from './index';
+import InspectorControls from './inspector-controls';
+import { LayoutToolbar } from '../../components/post-list';
+import { PlaceholderSpecificMode } from '../../components/block-controls';
+import SessionList from './session-list';
+import SessionSelect from './session-select';
+import { WC_BLOCKS_STORE } from '../../data';
 
 const blockData = window.WordCampBlocks.sessions || {};
 
 /**
  * Top-level component for the editing UI for the block.
  */
-class SessionsEdit extends Component {
+class Edit extends Component {
+	/**
+	 * Render the internal block UI.
+	 *
+	 * @return {Element}
+	 */
+	renderContent() {
+		const { attributes, entities, isSelected, setAttributes } = this.props;
+		const { mode } = attributes;
+		const { options } = blockData;
+
+		let output;
+
+		switch ( mode ) {
+			case 'all' :
+				output = (
+					<SessionList attributes={ attributes } entities={ entities } />
+				);
+				break;
+
+			case 'wcb_session' :
+			case 'wcb_track' :
+			case 'wcb_session_category' :
+				output = (
+					<PlaceholderSpecificMode
+						content={
+							<SessionList attributes={ attributes } entities={ entities } />
+						}
+						placeholderChildren={
+							isSelected && (
+								<SessionSelect
+									label={ getOptionLabel( mode, options.mode ) }
+									attributes={ attributes }
+									entities={ entities }
+									icon={ ICON }
+									setAttributes={ setAttributes }
+								/>
+							)
+						}
+					/>
+				);
+				break;
+
+			default :
+				output = (
+					<Placeholder
+						className="wordcamp__edit-placeholder has-no-mode"
+						icon={ ICON }
+						label={ LABEL }
+					>
+						<div className="wordcamp__edit-mode-option">
+							<Button
+								isDefault
+								isLarge
+								onClick={ () => {
+									setAttributes( { mode: 'all' } );
+								} }
+							>
+								{ getOptionLabel( 'all', options.mode ) }
+							</Button>
+						</div>
+
+						<div className="wordcamp__edit-mode-option">
+							<SessionSelect
+								label={ __( 'Choose specific sessions, tracks, or categories', 'wordcamporg' ) }
+								attributes={ attributes }
+								entities={ entities }
+								icon={ ICON }
+								setAttributes={ setAttributes }
+							/>
+						</div>
+					</Placeholder>
+				);
+				break;
+		}
+
+		return output;
+	}
+
 	/**
 	 * Render the block's editing UI.
 	 *
@@ -32,20 +115,21 @@ class SessionsEdit extends Component {
 
 		return (
 			<Fragment>
-				<BlockControls
-					icon={ ICON }
-					{ ...this.props }
-				/>
-				{ mode &&
+				{ this.renderContent() }
+				{ mode && (
 					<Fragment>
-						<InspectorControls { ...this.props } />
+						<InspectorControls
+							attributes={ attributes }
+							blockData={ blockData }
+							setAttributes={ setAttributes }
+						/>
 						<LayoutToolbar
 							layout={ layout }
 							options={ layoutOptions }
 							setAttributes={ setAttributes }
 						/>
 					</Fragment>
-				}
+				) }
 			</Fragment>
 		);
 	}
@@ -72,9 +156,8 @@ const sessionsSelect = ( select ) => {
 	}
 
 	return {
-		blockData,
 		entities,
 	};
 };
 
-export const Edit = withSelect( sessionsSelect )( SessionsEdit );
+export default withSelect( sessionsSelect )( Edit );

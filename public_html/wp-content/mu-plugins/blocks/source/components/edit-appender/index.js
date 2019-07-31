@@ -17,26 +17,26 @@ import './style.scss';
  * Component for block controls when the block has a specific mode selected.
  *
  * @param {Object} props {
+ *     @type {node}   appender
  *     @type {string} className
- *     @type {string} label
- *     @type {string} icon
  *     @type {node}   content
- *     @type {node}   placeholderChildren
  * }
  *
  * @return {Element}
  */
-export function PlaceholderSpecificMode( { className, content, placeholderChildren } ) {
+function EditAppender( { className, content, appender } ) {
 	const classes = [ 'wordcamp-block__edit-appender', 'has-specific-mode', className ];
 
 	return (
 		<Fragment>
 			{ content }
-			{ placeholderChildren && (
+			{ appender && (
 				<div className={ classnames( classes ) }>
-					{ placeholderChildren }
+					{ appender }
 				</div>
 			) }
 		</Fragment>
 	);
 }
+
+export default EditAppender;

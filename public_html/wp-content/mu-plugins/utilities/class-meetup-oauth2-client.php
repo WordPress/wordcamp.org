@@ -370,12 +370,15 @@ class Meetup_OAuth2_Client extends API_Client {
 	/**
 	 * Check if a token array has all the required keys.
 	 *
-	 * @param array $token
+	 * @param array  $token The token array to check.
+	 * @param string $type  The type of token. Either 'access' or 'oauth'.
 	 *
 	 * @return bool
 	 */
 	protected function is_valid_token( $token, $type ) {
-		if ( ! is_array( $token ) ) {
+		$valid_types = array( 'access', 'oauth' );
+
+		if ( ! is_array( $token ) || ! in_array( $type, $valid_types, true ) ) {
 			return false;
 		}
 
@@ -388,6 +391,7 @@ class Meetup_OAuth2_Client extends API_Client {
 				);
 				break;
 			case 'oauth':
+			default:
 				$required_properties = array(
 					'oauth_token'   => '',
 					'refresh_token' => '',

@@ -49,7 +49,9 @@ export class InspectorControls extends Component {
 		return (
 			<CoreInspectorControlsContainer>
 				<GridInspectorPanel
-					{ ...this.props }
+					attributes={ attributes }
+					blockData={ blockData }
+					setAttributes={ setAttributes }
 				/>
 
 				<ImageInspectorPanel

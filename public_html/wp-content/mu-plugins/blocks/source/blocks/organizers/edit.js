@@ -1,17 +1,22 @@
 /**
  * WordPress dependencies
  */
-import { withSelect } from '@wordpress/data';
+import { __ } from '@wordpress/i18n';
+import { Button, Placeholder } from '@wordpress/components';
 import { Component, Fragment } from '@wordpress/element';
+import { withSelect } from '@wordpress/data';
 
 /**
  * Internal dependencies
  */
-import { LayoutToolbar } from '../../components/post-list';
-import { WC_BLOCKS_STORE } from '../../data';
-import { BlockControls } from './block-controls';
+import { BlockContent } from './block-content';
+import { ContentSelect } from './content-select';
+import { getOptionLabel } from '../../components/item-select';
+import { ICON, LABEL } from './index';
 import { InspectorControls } from './inspector-controls';
-import { ICON } from './index';
+import { LayoutToolbar } from '../../components/post-list';
+import { PlaceholderSpecificMode } from '../../components/block-controls';
+import { WC_BLOCKS_STORE } from '../../data';
 
 const blockData = window.WordCampBlocks.organizers || {};
 
@@ -19,6 +24,83 @@ const blockData = window.WordCampBlocks.organizers || {};
  * Top-level component for the editing UI for the block.
  */
 class OrganizersEdit extends Component {
+	/**
+	 * Render the internal block UI.
+	 *
+	 * @return {Element}
+	 */
+	renderContent() {
+		const { attributes, entities, isSelected, setAttributes } = this.props;
+		const { mode } = attributes;
+		const { options } = blockData;
+
+		let output;
+
+		switch ( mode ) {
+			case 'all' :
+				output = (
+					<BlockContent attributes={ attributes } entities={ entities } />
+				);
+				break;
+
+			case 'wcb_organizer' :
+			case 'wcb_organizer_team' :
+				output = (
+					<PlaceholderSpecificMode
+						content={
+							<BlockContent attributes={ attributes } entities={ entities } />
+						}
+						placeholderChildren={
+							isSelected && (
+								<ContentSelect
+									label={ getOptionLabel( mode, options.mode ) }
+									attributes={ attributes }
+									entities={ entities }
+									icon={ ICON }
+									setAttributes={ setAttributes }
+								/>
+							)
+						}
+					/>
+				);
+				break;
+
+			default :
+				output = (
+					<Placeholder
+						className="wordcamp__edit-placeholder has-no-mode"
+						icon={ ICON }
+						label={ LABEL }
+					>
+						<div className="wordcamp__edit-mode-option">
+							<Button
+								isDefault
+								isLarge
+								onClick={ () => {
+									setAttributes( { mode: 'all' } );
+								} }
+							>
+								{ getOptionLabel( 'all', options.mode ) }
+							</Button>
+						</div>
+
+						<div className="wordcamp__edit-mode-option">
+							<ContentSelect
+								label={ __( 'Choose specific organizers or teams', 'wordcamporg' ) }
+								attributes={ attributes }
+								entities={ entities }
+								icon={ ICON }
+								setAttributes={ this.props.setAttributes }
+							/>
+						</div>
+					</Placeholder>
+				);
+				break;
+		}
+
+		return output;
+	}
+
 	/**
 	 * Render the block's editing UI.
 	 *
@@ -31,14 +113,15 @@ class OrganizersEdit extends Component {
 
 		return (
 			<Fragment>
-				<BlockControls
-					icon={ ICON }
-					{ ...this.props }
-				/>
+				{ this.renderContent() }
 
 				{ '' !== mode &&
 					<Fragment>
-						<InspectorControls { ...this.props } />
+						<InspectorControls
+							attributes={ attributes }
+							blockData={ blockData }
+							setAttributes={ setAttributes }
+						/>
 						<LayoutToolbar
 							layout={ layout }
 							options={ layoutOptions }
@@ -60,7 +143,6 @@ const organizerSelect = ( select ) => {
 	};
 
 	return {
-		blockData,
 		entities,
 	};
 };

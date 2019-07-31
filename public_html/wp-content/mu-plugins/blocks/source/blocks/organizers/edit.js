@@ -23,7 +23,7 @@ const blockData = window.WordCampBlocks.organizers || {};
 /**
  * Top-level component for the editing UI for the block.
  */
-class OrganizersEdit extends Component {
+class Edit extends Component {
 	/**
 	 * Render the internal block UI.
 	 *
@@ -147,4 +147,4 @@ const organizerSelect = ( select ) => {
 	};
 };
 
-export const Edit = withSelect( organizerSelect )( OrganizersEdit );
+export default withSelect( organizerSelect )( Edit );

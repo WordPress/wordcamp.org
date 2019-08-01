@@ -136,6 +136,15 @@ class WordCamp_Coming_Soon_Page {
 			return $response;
 		}
 
+		/*
+		 * Jetpack endpoints are whitelisted because some of them are needed to connect sites to WordPress.com
+		 * while Coming Soon is still enabled.
+		 *
+		 * @todo This works, but there are some additional, unknown steps needed to allow connecting to WPCOM
+		 * via the REST API. This is being left here because it will be needed when/if Jetpack removes XMLRPC
+		 * support and uses the REST API exclusively for registration. If that happens, we'll need to figure
+		 * out what extra steps are needed.
+		 */
 		$safelisted_namespaces = array( '/jetpack/v' );
 
 		$safelisted = array_filter( $safelisted_namespaces, function( $namespace ) use ( $request ) {

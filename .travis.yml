@@ -8,14 +8,14 @@ php:
   - 7.2
 
 before_script:
-  # For debugging builds.
+  # Print system info for debugging.
   - node --version
   - npm --version
   - timedatectl
 
 jobs:
   include:
-    # To keep things clean, we set up separate jobs for travis per project.
+    # To keep things clean, we set up separate jobs for Travis per project.
     - name: "Blocks"
       install:
         - nvm install && nvm use
@@ -37,7 +37,7 @@ jobs:
       install:
         - composer install
       script:
-        # Create an empty php file, which will be passed to the linter along with all the changed files.
+        # Create an empty PHP file, which will be passed to the linter along with all the changed files.
         # Otherwise, the linter will get no args, and attempt to lint the entire repo.
         - touch $TRAVIS_BUILD_DIR/tmp.php
         # Exporting list of changed files in CHANGED_FILES variable

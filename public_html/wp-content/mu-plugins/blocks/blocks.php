@@ -22,7 +22,7 @@ function load_includes() {
 	require_once $includes_dir . 'content.php';
 
 	// Components.
-	require_once $components_dir . 'block-content/controller.php';
+	require_once $components_dir . 'item/controller.php';
 	require_once $components_dir . 'image/controller.php';
 	require_once $components_dir . 'post-list/controller.php';
 

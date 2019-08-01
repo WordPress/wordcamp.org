@@ -25,7 +25,7 @@ import './style.scss';
  * @return {Element}
  */
 function EditAppender( { className, content, appender } ) {
-	const classes = [ 'wordcamp-block__edit-appender', 'has-specific-mode', className ];
+	const classes = [ 'wordcamp-edit-appender', 'has-specific-mode', className ];
 
 	return (
 		<Fragment>

@@ -20,7 +20,8 @@ setup_postdata( $sponsor ); // This is necessary for generating an excerpt from 
 				get_the_title( $sponsor ),
 				get_permalink( $sponsor ),
 				3,
-				[ 'wordcamp-sponsors__title' ]
+				[ 'wordcamp-sponsors__title' ],
+				$attributes['headingAlign']
 			)
 		); ?>
 	<?php endif; ?>

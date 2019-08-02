@@ -21,7 +21,8 @@ setup_postdata( $organizer ); // This is necessary for generating an excerpt fro
 			get_the_title( $organizer ),
 			'',
 			3,
-			[ 'wordcamp-organizers__title' ]
+			[ 'wordcamp-organizers__title' ],
+			$attributes['headingAlign']
 		)
 	); ?>
 

@@ -12,10 +12,11 @@ defined( 'WPINC' ) || die();
  * @param string $link
  * @param int    $heading_level
  * @param array  $classes
+ * @param string $align
  *
  * @return false|string
  */
-function render_item_title( $title, $link = '', $heading_level = 3, array $classes = [] ) {
+function render_item_title( $title, $link = '', $heading_level = 3, array $classes = [], $align = 'none' ) {
 	$valid_heading_levels = [ 1, 2, 3, 4, 5, 6 ];
 
 	if ( ! in_array( $heading_level, $valid_heading_levels, true ) ) {
@@ -29,9 +30,15 @@ function render_item_title( $title, $link = '', $heading_level = 3, array $class
 		$classes
 	) );
 
+	$style = '';
+
+	if ( in_array( $align, [ 'left', 'center', 'right' ], true ) ) {
+		$style = "text-align:$align;";
+	}
+
 	ob_start();
 	?>
-	<<?php echo esc_html( $tag ); ?> class="<?php echo esc_attr( $classes ); ?>">
+	<<?php echo esc_html( $tag ); ?> class="<?php echo esc_attr( $classes ); ?>" style="<?php echo esc_attr( $style ); ?>">
 	<?php if ( $link ) : ?>
 		<a href="<?php echo esc_url( $link ); ?>">
 	<?php endif; ?>

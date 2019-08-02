@@ -1,8 +1,8 @@
 /**
  * WordPress dependencies
  */
-import { InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import { AlignmentToolbar, InspectorControls } from '@wordpress/block-editor';
+import { BaseControl, PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
@@ -21,18 +21,19 @@ export default class extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes, setAttributes, blockData } = this.props;
+		const { attributes, blockData, setAttributes } = this.props;
 		const {
-			show_images,
-			featured_image_width,
-			image_align,
-			show_speaker,
 			content,
-			show_meta,
+			featured_image_width,
+			headingAlign,
+			image_align,
 			show_category,
+			show_images,
+			show_meta,
+			show_speaker,
 			sort,
 		} = attributes;
-		const { schema, options } = blockData;
+		const { options, schema } = blockData;
 
 		return (
 			<InspectorControls>
@@ -56,6 +57,19 @@ export default class extends Component {
 				/>
 
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ true }>
+					<BaseControl>
+						<span className="components-base-control__label">
+							{ __( 'Session name alignment', 'wordcamporg' ) }
+						</span>
+						<AlignmentToolbar
+							isCollapsed={ false }
+							value={ headingAlign }
+							onChange={ ( nextAlign ) => {
+								setAttributes( { headingAlign: nextAlign } );
+							} }
+						/>
+					</BaseControl>
+
 					<SelectControl
 						label={ __( 'Description', 'wordcamporg' ) }
 						value={ content || 'full' }

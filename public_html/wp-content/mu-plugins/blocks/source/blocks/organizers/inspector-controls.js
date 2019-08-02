@@ -1,8 +1,8 @@
 /**
  * WordPress dependencies
  */
-import { InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, SelectControl } from '@wordpress/components';
+import { AlignmentToolbar, InspectorControls } from '@wordpress/block-editor';
+import { BaseControl, PanelBody, SelectControl } from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
@@ -41,9 +41,9 @@ export default class extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes, setAttributes, blockData } = this.props;
-		const { show_avatars, avatar_size, avatar_align, content, sort } = attributes;
-		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = blockData;
+		const { attributes, blockData, setAttributes } = this.props;
+		const { avatar_align, avatar_size, content, headingAlign, show_avatars, sort } = attributes;
+		const { options = DEFAULT_OPTIONS, schema = DEFAULT_SCHEMA } = blockData;
 
 		return (
 			<InspectorControls>
@@ -67,6 +67,19 @@ export default class extends Component {
 				/>
 
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ false }>
+					<BaseControl>
+						<span className="components-base-control__label">
+							{ __( 'Organizer name alignment', 'wordcamporg' ) }
+						</span>
+						<AlignmentToolbar
+							isCollapsed={ false }
+							value={ headingAlign }
+							onChange={ ( nextAlign ) => {
+								setAttributes( { headingAlign: nextAlign } );
+							} }
+						/>
+					</BaseControl>
+
 					<SelectControl
 						label={ __( 'Biography Length', 'wordcamporg' ) }
 						value={ content }

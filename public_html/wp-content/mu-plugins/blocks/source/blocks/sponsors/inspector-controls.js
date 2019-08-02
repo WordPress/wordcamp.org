@@ -61,25 +61,28 @@ export default class extends Component {
 				/>
 
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ true }>
-					<BaseControl>
-						<span className="components-base-control__label">
-							{ __( 'Sponsor name alignment', 'wordcamporg' ) }
-						</span>
-						<AlignmentToolbar
-							isCollapsed={ false }
-							value={ headingAlign }
-							onChange={ ( nextAlign ) => {
-								setAttributes( { headingAlign: nextAlign } );
-							} }
-						/>
-					</BaseControl>
-
 					<ToggleControl
 						label={ __( 'Name', 'wordcamporg' ) }
 						help={ __( 'Show or hide sponsor name', 'wordcamporg' ) }
 						checked={ show_name }
 						onChange={ ( value ) => setAttributes( { show_name: value } ) }
 					/>
+
+					{ show_name && (
+						<BaseControl>
+							<span className="components-base-control__label">
+								{ __( 'Sponsor name alignment', 'wordcamporg' ) }
+							</span>
+							<AlignmentToolbar
+								isCollapsed={ false }
+								value={ headingAlign }
+								onChange={ ( nextAlign ) => {
+									setAttributes( { headingAlign: nextAlign } );
+								} }
+							/>
+						</BaseControl>
+					) }
+
 					<SelectControl
 						label={ __( 'Description', 'wordcamporg' ) }
 						value={ content }

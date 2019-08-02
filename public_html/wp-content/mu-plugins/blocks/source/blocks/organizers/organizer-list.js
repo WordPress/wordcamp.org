@@ -63,7 +63,7 @@ class OrganizerList extends Component {
 	 */
 	render() {
 		const { attributes } = this.props;
-		const { show_avatars, avatar_size, avatar_align, content } = attributes;
+		const { avatar_size, avatar_align, content, headingAlign, show_avatars } = attributes;
 
 		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
@@ -80,6 +80,7 @@ class OrganizerList extends Component {
 					<div key={ post.slug } className={ `wordcamp-organizers__post slug-${ post.slug.trim() }` }>
 						<ItemTitle
 							className="wordcamp-organizers__title"
+							align={ headingAlign }
 							headingLevel={ 3 }
 							title={ post.title.rendered.trim() }
 						/>

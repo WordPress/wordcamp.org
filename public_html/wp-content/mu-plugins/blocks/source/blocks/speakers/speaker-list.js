@@ -136,7 +136,7 @@ class SpeakerList extends Component {
 	render() {
 		const { attributes, entities } = this.props;
 		const { wcb_track: tracks } = entities;
-		const { show_avatars, avatar_size, avatar_align, content, show_session } = attributes;
+		const { avatar_align, avatar_size, content, headingAlign, show_avatars, show_session } = attributes;
 
 		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
@@ -152,6 +152,7 @@ class SpeakerList extends Component {
 					<div key={ post.slug } className={ `wordcamp-speakers__post slug-${ post.slug }` }>
 						<ItemTitle
 							className="wordcamp-speakers__title"
+							align={ headingAlign }
 							headingLevel={ 3 }
 							title={ post.title.rendered.trim() }
 							link={ post.link }

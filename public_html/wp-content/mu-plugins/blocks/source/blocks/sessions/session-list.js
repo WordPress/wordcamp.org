@@ -173,13 +173,14 @@ class SessionList extends Component {
 	render() {
 		const { attributes } = this.props;
 		const {
-			show_speaker,
-			show_images,
-			image_align,
-			featured_image_width,
 			content,
-			show_meta,
+			featured_image_width,
+			headingAlign,
+			image_align,
 			show_category,
+			show_images,
+			show_meta,
+			show_speaker,
 		} = attributes;
 
 		const posts = this.getFilteredPosts();
@@ -196,6 +197,7 @@ class SessionList extends Component {
 					<div key={ post.slug } className={ `wordcamp-sessions__post slug-${ post.slug }` }>
 						<ItemTitle
 							className="wordcamp-sessions__title"
+							align={ headingAlign }
 							headingLevel={ 3 }
 							title={ post.title.rendered.trim() }
 							link={ post.link }

@@ -12,12 +12,12 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { buildOptions, ItemSelect, Option } from '../../components/item-select';
+import { ItemSelect, Option, buildOptions } from '../../components';
 
 /**
  * Component for selecting posts/terms for populating the block content.
  */
-export class ContentSelect extends Component {
+class SpeakerSelect extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -38,26 +38,20 @@ export class ContentSelect extends Component {
 	 */
 	buildSelectOptions() {
 		const { entities } = this.props;
-		const { wcb_session, wcb_track, wcb_session_category } = entities;
+		const { wcb_speaker, wcb_speaker_group } = entities;
 
 		const optionGroups = [
 			{
 				entityType: 'post',
-				type: 'wcb_session',
-				label: __( 'Sessions', 'wordcamporg' ),
-				items: wcb_session,
+				type: 'wcb_speaker',
+				label: __( 'Speakers', 'wordcamporg' ),
+				items: wcb_speaker,
 			},
 			{
 				entityType: 'term',
-				type: 'wcb_track',
-				label: __( 'Tracks', 'wordcamporg' ),
-				items: wcb_track,
-			},
-			{
-				entityType: 'term',
-				type: 'wcb_session_category',
-				label: __( 'Session Categories', 'wordcamporg' ),
-				items: wcb_session_category,
+				type: 'wcb_speaker_group',
+				label: __( 'Groups', 'wordcamporg' ),
+				items: wcb_speaker_group,
 			},
 		];
 
@@ -107,11 +101,11 @@ export class ContentSelect extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { icon, label, setAttributes } = this.props;
+		const { label, icon, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
-				className="wordcamp-sessions__select"
+				className="wordcamp-speakers__select"
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
@@ -120,11 +114,11 @@ export class ContentSelect extends Component {
 					isLoading: this.isLoading(),
 					formatOptionLabel: ( optionData, { context } ) => (
 						<Option
-							icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
-							label={ optionData.label }
-							details={ optionData.details }
-							count={ optionData.count }
 							context={ context }
+							icon={ 'wcb_speaker_group' === optionData.type ? icon : null }
+							label={ optionData.label }
+							avatar={ optionData.avatar }
+							count={ optionData.count }
 						/>
 					),
 				} }
@@ -132,3 +126,5 @@ export class ContentSelect extends Component {
 		);
 	}
 }
+
+export default SpeakerSelect;

@@ -12,12 +12,12 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { buildOptions, ItemSelect, Option } from '../../components/item-select';
+import { ItemSelect, Option, buildOptions } from '../../components';
 
 /**
  * Component for selecting posts/terms for populating the block content.
  */
-export class ContentSelect extends Component {
+class SponsorSelect extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -38,20 +38,20 @@ export class ContentSelect extends Component {
 	 */
 	buildSelectOptions() {
 		const { entities } = this.props;
-		const { wcb_organizer, wcb_organizer_team } = entities;
+		const { wcb_sponsor, wcb_sponsor_level } = entities;
 
 		const optionGroups = [
 			{
 				entityType: 'post',
-				type: 'wcb_organizer',
-				label: __( 'Organizers', 'wordcamporg' ),
-				items: wcb_organizer,
+				type: 'wcb_sponsor',
+				label: __( 'Sponsors', 'wordcamporg' ),
+				items: wcb_sponsor,
 			},
 			{
 				entityType: 'term',
-				type: 'wcb_organizer_team',
-				label: __( 'Teams', 'wordcamporg' ),
-				items: wcb_organizer_team,
+				type: 'wcb_sponsor_level',
+				label: __( 'Sponsors Levels', 'wordcamporg' ),
+				items: wcb_sponsor_level,
 			},
 		];
 
@@ -105,7 +105,7 @@ export class ContentSelect extends Component {
 
 		return (
 			<ItemSelect
-				className="wordcamp-organizers__select"
+				className="wordcamp-sponsors__select"
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
@@ -115,8 +115,7 @@ export class ContentSelect extends Component {
 					formatOptionLabel: ( optionData, { context } ) => (
 						<Option
 							context={ context }
-							icon={ 'wcb_organizer_team' === optionData.type ? icon : null }
-							avatar={ optionData.avatar }
+							icon={ 'wcb_sponsor_level' === optionData.type ? icon : null }
 							label={ optionData.label }
 							count={ optionData.count }
 						/>
@@ -126,3 +125,5 @@ export class ContentSelect extends Component {
 		);
 	}
 }
+
+export default SponsorSelect;

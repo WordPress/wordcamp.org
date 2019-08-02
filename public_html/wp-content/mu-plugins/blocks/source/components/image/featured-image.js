@@ -7,7 +7,6 @@ import { sortBy } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { Disabled } from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __, _x } from '@wordpress/i18n';
 import { isURL } from '@wordpress/url';
@@ -144,11 +143,14 @@ export class FeaturedImage extends Component {
 
 		if ( isURL( imageLink ) ) {
 			output = (
-				<Disabled>
-					<a href={ imageLink } className={ classnames( 'wordcamp-image__featured-image-link' ) }>
-						{ output }
-					</a>
-				</Disabled>
+				<a
+					href={ imageLink }
+					className="wordcamp-image__featured-image-link"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					{ output }
+				</a>
 			);
 		}
 

@@ -1,24 +1,104 @@
 /**
  * WordPress dependencies
  */
-import { withSelect } from '@wordpress/data';
+import { __ } from '@wordpress/i18n';
+import { Button, Placeholder } from '@wordpress/components';
 import { Component, Fragment } from '@wordpress/element';
+import { withSelect } from '@wordpress/data';
 
 /**
  * Internal dependencies
  */
-import { LayoutToolbar } from '../../components/post-list';
+import { EditAppender, LayoutToolbar, getOptionLabel } from '../../components';
+import { ICON, LABEL } from './index';
+import InspectorControls from './inspector-controls';
+import SpeakerList from './speaker-list';
+import SpeakerSelect from './speaker-select';
 import { WC_BLOCKS_STORE } from '../../data';
-import { BlockControls } from './block-controls';
-import { InspectorControls } from './inspector-controls';
-import { ICON } from './index';
 
 const blockData = window.WordCampBlocks.speakers || {};
 
 /**
  * Top-level component for the editing UI for the block.
  */
-class SpeakersEdit extends Component {
+class Edit extends Component {
+	/**
+	 * Render the internal block UI.
+	 *
+	 * @return {Element}
+	 */
+	renderContent() {
+		const { attributes, entities, isSelected, setAttributes } = this.props;
+		const { mode } = attributes;
+		const { options } = blockData;
+
+		let output;
+
+		switch ( mode ) {
+			case 'all' :
+				output = (
+					<SpeakerList attributes={ attributes } entities={ entities } />
+				);
+				break;
+
+			case 'wcb_speaker' :
+			case 'wcb_speaker_group' :
+				output = (
+					<EditAppender
+						content={
+							<SpeakerList attributes={ attributes } entities={ entities } />
+						}
+						appender={
+							isSelected && (
+								<SpeakerSelect
+									label={ getOptionLabel( mode, options.mode ) }
+									attributes={ attributes }
+									entities={ entities }
+									icon={ ICON }
+									setAttributes={ setAttributes }
+								/>
+							)
+						}
+					/>
+				);
+				break;
+
+			default :
+				output = (
+					<Placeholder
+						className="wordcamp__edit-placeholder has-no-mode"
+						icon={ ICON }
+						label={ LABEL }
+					>
+						<div className="wordcamp__edit-mode-option">
+							<Button
+								isDefault
+								isLarge
+								onClick={ () => {
+									setAttributes( { mode: 'all' } );
+								} }
+							>
+								{ getOptionLabel( 'all', options.mode ) }
+							</Button>
+						</div>
+
+						<div className="wordcamp__edit-mode-option">
+							<SpeakerSelect
+								label={ __( 'Choose specific speakers or groups', 'wordcamporg' ) }
+								attributes={ attributes }
+								entities={ entities }
+								icon={ ICON }
+								setAttributes={ setAttributes }
+							/>
+						</div>
+					</Placeholder>
+				);
+				break;
+		}
+
+		return output;
+	}
+
 	/**
 	 * Render the block's editing UI.
 	 *
@@ -31,13 +111,14 @@ class SpeakersEdit extends Component {
 
 		return (
 			<Fragment>
-				<BlockControls
-					icon={ ICON }
-					{ ...this.props }
-				/>
+				{ this.renderContent() }
 				{ mode &&
 					<Fragment>
-						<InspectorControls { ...this.props } />
+						<InspectorControls
+							attributes={ attributes }
+							blockData={ blockData }
+							setAttributes={ setAttributes }
+						/>
 						<LayoutToolbar
 							layout={ layout }
 							options={ layoutOptions }
@@ -60,9 +141,8 @@ const speakersSelect = ( select ) => {
 	};
 
 	return {
-		blockData,
 		entities,
 	};
 };
 
-export const Edit = withSelect( speakersSelect )( SpeakersEdit );
+export default withSelect( speakersSelect )( Edit );

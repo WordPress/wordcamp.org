@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { InspectorControls as CoreInspectorControlsContainer } from '@wordpress/block-editor';
+import { InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, SelectControl } from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
@@ -9,8 +9,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { avatarSizePresets, ImageInspectorPanel } from '../../components/image';
-import { GridInspectorPanel } from '../../components/post-list';
+import { GridInspectorPanel, ImageInspectorPanel, avatarSizePresets } from '../../components';
 
 const DEFAULT_SCHEMA = {
 	grid_columns: {
@@ -35,7 +34,7 @@ const DEFAULT_OPTIONS = {
 /**
  * Component for block controls that appear in the Inspector Panel.
  */
-export class InspectorControls extends Component {
+export default class extends Component {
 	/**
 	 * Render the controls.
 	 *
@@ -47,9 +46,11 @@ export class InspectorControls extends Component {
 		const { schema = DEFAULT_SCHEMA, options = DEFAULT_OPTIONS } = blockData;
 
 		return (
-			<CoreInspectorControlsContainer>
+			<InspectorControls>
 				<GridInspectorPanel
-					{ ...this.props }
+					attributes={ attributes }
+					blockData={ blockData }
+					setAttributes={ setAttributes }
 				/>
 
 				<ImageInspectorPanel
@@ -82,7 +83,7 @@ export class InspectorControls extends Component {
 						onChange={ ( value ) => setAttributes( { sort: value } ) }
 					/>
 				</PanelBody>
-			</CoreInspectorControlsContainer>
+			</InspectorControls>
 		);
 	}
 }

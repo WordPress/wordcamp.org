@@ -6,7 +6,6 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-import { Disabled } from '@wordpress/components';
 import { __, _x, sprintf } from '@wordpress/i18n';
 import { addQueryArgs, isURL } from '@wordpress/url';
 
@@ -54,13 +53,7 @@ export const avatarSizePresets = [
  *
  * @return {Element}
  */
-export function AvatarImage( {
-	className,
-	name,
-	size,
-	url,
-	imageLink,
-} ) {
+export function AvatarImage( { className, name, size, url, imageLink } ) {
 	const getSizedURL = ( avatar_url, avatar_size ) => {
 		// 's' is the name of the parameter used by Gravatar.
 		// eslint-disable-next-line id-length
@@ -80,11 +73,14 @@ export function AvatarImage( {
 
 	if ( isURL( imageLink ) ) {
 		image = (
-			<Disabled>
-				<a href={ imageLink } className={ classnames( 'wordcamp-image__avatar-link' ) }>
-					{ image }
-				</a>
-			</Disabled>
+			<a
+				href={ imageLink }
+				className="wordcamp-image__avatar-link"
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				{ image }
+			</a>
 		);
 	}
 

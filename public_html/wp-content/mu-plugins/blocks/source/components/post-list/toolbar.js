@@ -1,4 +1,9 @@
 /**
+ * External dependencies
+ */
+import PropTypes from 'prop-types';
+
+/**
  * WordPress dependencies
  */
 import { Toolbar } from '@wordpress/components';
@@ -7,19 +12,9 @@ import { BlockControls } from '@wordpress/editor';
 /**
  * Component for a toolbar UI to the top of a post list block to change the layout.
  *
- * @param {Object} props {
- *     @type {string}   layout
- *     @type {Array}    options
- *     @type {Function} setAttributes
- * }
- *
  * @return {Element}
  */
-export function LayoutToolbar( {
-	layout,
-	options,
-	setAttributes,
-} ) {
+function LayoutToolbar( { layout, options, setAttributes } ) {
 	const controls = options.map( ( option ) => {
 		const icon = `${ option.value }-view`;
 		const isActive = layout === option.value;
@@ -40,3 +35,16 @@ export function LayoutToolbar( {
 		</BlockControls>
 	);
 }
+
+LayoutToolbar.propTypes = {
+	layout: PropTypes.string.isRequired,
+	options: PropTypes.arrayOf(
+		PropTypes.shape( {
+			label: PropTypes.string,
+			value: PropTypes.string,
+		} )
+	).isRequired,
+	setAttributes: PropTypes.func.isRequired,
+};
+
+export default LayoutToolbar;

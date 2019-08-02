@@ -7,7 +7,7 @@ import { __ } from '@wordpress/i18n';
  * Internal dependencies
  */
 import './style.scss';
-import { Edit } from './edit.js';
+import Edit from './edit.js';
 
 export const NAME = 'wordcamp/speakers';
 export const LABEL = __( 'Speakers', 'wordcamporg' );

@@ -95,6 +95,16 @@ module.exports = {
 			'destructuring': 'all',
 		} ],
 
+		/**
+		 * Disallow creating more than one component per file.
+		 *
+		 * Having one component per file makes components easier to test and easier to document. `ignoreStateless`
+		 * allows us to still keep simple stateless components, but these should be used sparingly.
+		 */
+		'react/no-multi-comp': [ 'error', {
+			ignoreStateless: true
+		} ],
+
 		/*
 		 * A short description often makes a function easier to understand, and also provides a nice visual
 		 * delineation between functions.

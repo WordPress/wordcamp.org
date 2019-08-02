@@ -12,12 +12,12 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { buildOptions, ItemSelect, Option } from '../../components/item-select';
+import { ItemSelect, Option, buildOptions } from '../../components';
 
 /**
  * Component for selecting posts/terms for populating the block content.
  */
-export class ContentSelect extends Component {
+class OrganizerSelect extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -38,20 +38,20 @@ export class ContentSelect extends Component {
 	 */
 	buildSelectOptions() {
 		const { entities } = this.props;
-		const { wcb_sponsor, wcb_sponsor_level } = entities;
+		const { wcb_organizer, wcb_organizer_team } = entities;
 
 		const optionGroups = [
 			{
 				entityType: 'post',
-				type: 'wcb_sponsor',
-				label: __( 'Sponsors', 'wordcamporg' ),
-				items: wcb_sponsor,
+				type: 'wcb_organizer',
+				label: __( 'Organizers', 'wordcamporg' ),
+				items: wcb_organizer,
 			},
 			{
 				entityType: 'term',
-				type: 'wcb_sponsor_level',
-				label: __( 'Sponsors Levels', 'wordcamporg' ),
-				items: wcb_sponsor_level,
+				type: 'wcb_organizer_team',
+				label: __( 'Teams', 'wordcamporg' ),
+				items: wcb_organizer_team,
 			},
 		];
 
@@ -105,7 +105,7 @@ export class ContentSelect extends Component {
 
 		return (
 			<ItemSelect
-				className="wordcamp-sponsors__select"
+				className="wordcamp-organizers__select"
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
@@ -115,7 +115,8 @@ export class ContentSelect extends Component {
 					formatOptionLabel: ( optionData, { context } ) => (
 						<Option
 							context={ context }
-							icon={ 'wcb_sponsor_level' === optionData.type ? icon : null }
+							icon={ 'wcb_organizer_team' === optionData.type ? icon : null }
+							avatar={ optionData.avatar }
 							label={ optionData.label }
 							count={ optionData.count }
 						/>
@@ -125,3 +126,5 @@ export class ContentSelect extends Component {
 		);
 	}
 }
+
+export default OrganizerSelect;

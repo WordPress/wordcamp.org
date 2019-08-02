@@ -18,7 +18,7 @@ import './style.scss';
  *
  * Should be used with rest of the components in this folder. Uses attributes `layout` and `columns`.
  */
-export class PostList extends Component {
+class PostList extends Component {
 	/**
 	 * Render the content.
 	 *
@@ -58,8 +58,4 @@ export class PostList extends Component {
 	}
 }
 
-/**
- * Additional component exports
- */
-export * from './inspector-controls';
-export * from './toolbar';
+export default PostList;

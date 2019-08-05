@@ -150,7 +150,9 @@ class SessionList extends Component {
 			];
 		}
 
-		if ( 'session_time' !== sort ) {
+		if ( 'session_time' === sort ) {
+			args.sort = 'title_asc';
+		} else {
 			args.sort = sort;
 		}
 

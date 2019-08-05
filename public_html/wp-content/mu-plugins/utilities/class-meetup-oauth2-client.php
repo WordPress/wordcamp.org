@@ -16,6 +16,15 @@ defined( 'WPINC' ) || die();
  *       properties instead of constants. That way the client could be reused elsewhere in the Dotorg ecosystem with
  *       different credentials, instead of being tightly coupled to WordCamp.
  *
+ * Important: This class is used in multiple locations in the WordPress/WordCamp ecosystem. Because of complexities
+ * around SVN externals and the reliability of GitHub's SVN bridge during deploys, it was decided to maintain multiple
+ * copies of this file rather than have SVN externals pointing to one canonical source.
+ *
+ * If you make changes to this file, make sure they are propagated to the other locations:
+ *
+ * - wordcamp: wp-content/mu-plugins/utilities
+ * - wporg: wp-content/plugins/official-wordpress-events/meetup
+ *
  * @package WordCamp\Utilities
  */
 class Meetup_OAuth2_Client extends API_Client {

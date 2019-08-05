@@ -7,6 +7,16 @@ defined( 'WPINC' ) || die();
 
 /**
  * Class Meetup_Client
+ *
+ * Important: This class and its dependency classes are used in multiple locations in the WordPress/WordCamp
+ * ecosystem. Because of complexities around SVN externals and the reliability of GitHub's SVN bridge during deploys,
+ * it was decided to maintain multiple copies of these files rather than have SVN externals pointing to one canonical
+ * source.
+ *
+ * If you make changes to this file, make sure they are propagated to the other locations:
+ *
+ * - wordcamp: wp-content/mu-plugins/utilities
+ * - wporg: wp-content/plugins/official-wordpress-events/meetup
  */
 class Meetup_Client extends API_Client {
 	/**

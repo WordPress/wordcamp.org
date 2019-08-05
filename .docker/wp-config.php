@@ -139,6 +139,11 @@ define( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY', '' );
 define( 'MEETUP_API_KEY',      '' );
 define( 'MEETUP_API_BASE_URL', 'https://api.meetup.com/' );
 define( 'MEETUP_MEMBER_ID',     72560962                 );
+define( 'MEETUP_OAUTH_CONSUMER_KEY', '' );
+define( 'MEETUP_OAUTH_CONSUMER_SECRET', '' );
+define( 'MEETUP_OAUTH_CONSUMER_REDIRECT_URI', '' );
+define( 'MEETUP_USER_EMAIL', '' );
+define( 'MEETUP_USER_PASSWORD', '' );
 
 define( 'WORDCAMP_FIXER_API_KEY', '' );
 define( 'WORDCAMP_OXR_API_KEY',   '' );

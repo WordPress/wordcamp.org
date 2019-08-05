@@ -24,7 +24,7 @@ function render_post_list( array $rendered_items, $layout = 'list', $columns = 1
 		[
 			'wordcamp-block',
 			'wordcamp-post-list',
-			'has-layout-' . sanitize_html_class( $layout )
+			'has-layout-' . sanitize_html_class( $layout ),
 		],
 		$container_classes
 	);

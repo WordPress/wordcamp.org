@@ -8,10 +8,10 @@ defined( 'WPINC' ) || die();
 /**
  * Provides render backend for FeaturedImage component.
  *
- * @param WP_Post  $post        Current post object. This will be used to calculate srcset attribute.
- * @param int      $width       Width of the image.
- * @param array    $class_names Additional classes to add inside <img> tag.
- * @param string   $image_link  URL link. If provided, image will be linked to this URL.
+ * @param WP_Post $post        Current post object. This will be used to calculate srcset attribute.
+ * @param int     $width       Width of the image.
+ * @param array   $class_names Additional classes to add inside <img> tag.
+ * @param string  $image_link  URL link. If provided, image will be linked to this URL.
  *
  * @return string Output markup for featured image.
  */
@@ -56,7 +56,6 @@ function render_featured_image( $post, $width, $class_names = [], $image_link = 
  *
  * @param \WP_Post     $post
  * @param string|array $size
- * @param string       $class_names
  *
  * @return string
  */

@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * WordPress dependencies
  */
 import { Toolbar } from '@wordpress/components';
-import { BlockControls } from '@wordpress/editor';
+import { BlockControls } from '@wordpress/block-editor';
 
 /**
  * Component for a toolbar UI to the top of a post list block to change the layout.

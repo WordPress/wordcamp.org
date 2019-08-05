@@ -93,6 +93,8 @@
 		"league/oauth2-client": "2.4.1"
 	},
 	"require-dev": {
+		"dealerdirect/phpcodesniffer-composer-installer": "^0.5.0",
+		"wp-coding-standards/wpcs": "2.*",
 		"wpackagist-plugin/akismet": "4.1.2",
 		"wordpress-plugin/bbpress": "2.6.*",
 		"wpackagist-plugin/camptix": "dev-trunk",
@@ -131,5 +133,13 @@
 		"wpackagist-theme/twentysixteen": "2.0",
 		"wpackagist-theme/twentyseventeen": "2.2",
 		"wpackagist-theme/twentynineteen": "1.4"
+	},
+	"scripts": {
+		"phpcs": [
+			"phpcs --extensions=php -s -p"
+		],
+		"phpcbf": [
+			"phpcbf -p"
+		]
 	}
 }

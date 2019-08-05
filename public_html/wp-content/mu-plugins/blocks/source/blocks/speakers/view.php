@@ -91,16 +91,6 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 			</ul>
 		</div>
 	<?php endif; ?>
-
-	<?php if ( 'full' === $attributes['content'] ) : ?>
-		<?php echo wp_kses_post(
-			render_item_permalink(
-				get_permalink( $speaker ),
-				__( 'Visit speaker page', 'wordcamporg' ),
-				[ 'wordcamp-speakers__permalink' ]
-			)
-		); ?>
-	<?php endif; ?>
 </div>
 
 <?php

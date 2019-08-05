@@ -15,7 +15,6 @@ import { Component } from '@wordpress/element';
 import {
 	AvatarImage,
 	DangerousItemHTMLContent,
-	ItemPermalink,
 	ItemTitle,
 	NoContent,
 	PostList,
@@ -175,14 +174,6 @@ class SpeakerList extends Component {
 						) }
 
 						{ true === show_session && <SpeakerSessions speaker={ post } tracks={ tracks } /> }
-
-						{ 'full' === content && (
-							<ItemPermalink
-								link={ post.link }
-								linkText={ __( 'Visit speaker page', 'wordcamporg' ) }
-								className="wordcamp-speakers__permalink"
-							/>
-						) }
 					</div>
 				) ) }
 			</PostList>

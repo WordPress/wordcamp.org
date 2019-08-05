@@ -8,7 +8,6 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 import { Component } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
 
 /**
  * Internal dependencies
@@ -16,7 +15,6 @@ import { __ } from '@wordpress/i18n';
 import {
 	DangerousItemHTMLContent,
 	FeaturedImage,
-	ItemPermalink,
 	ItemTitle,
 	NoContent,
 	PostList,
@@ -111,14 +109,6 @@ class SponsorList extends Component {
 							<DangerousItemHTMLContent
 								className={ `wordcamp-sponsors__content is-${ content }` }
 								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
-							/>
-						) }
-
-						{ 'full' === content && (
-							<ItemPermalink
-								link={ post.link }
-								linkText={ __( 'Visit sponsor page', 'wordcamporg' ) }
-								className="wordcamp-sponsors__permalink"
 							/>
 						) }
 					</div>

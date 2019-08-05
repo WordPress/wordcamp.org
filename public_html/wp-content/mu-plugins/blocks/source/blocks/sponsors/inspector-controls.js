@@ -58,7 +58,9 @@ export default class extends Component {
 				>
 					<ToggleControl
 						label={ __( 'Name', 'wordcamporg' ) }
-						help={ __( 'Show or hide sponsor name', 'wordcamporg' ) }
+						help={ show_name ?
+							__( 'Sponsor name is visible.', 'wordcamporg' ) :
+							__( 'Sponsor name is hidden.', 'wordcamporg' ) }
 						checked={ show_name }
 						onChange={ ( value ) => setAttributes( { show_name: value } ) }
 					/>
@@ -66,7 +68,7 @@ export default class extends Component {
 						label={ __( 'Description', 'wordcamporg' ) }
 						value={ content }
 						options={ options.content }
-						help={ __( 'Length of sponsor description', 'wordcamporg' ) }
+						help={ __( 'Length of sponsor description.', 'wordcamporg' ) }
 						onChange={ ( value ) => setAttributes( { content: value } ) }
 					/>
 				</PanelBody>

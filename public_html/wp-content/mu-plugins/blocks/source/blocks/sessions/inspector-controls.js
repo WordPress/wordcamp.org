@@ -64,19 +64,25 @@ export default class extends Component {
 					/>
 					<ToggleControl
 						label={ __( 'Details', 'wordcamporg' ) }
-						help={ __( 'Show date, time, and track.', 'wordcamporg' ) }
+						help={ show_meta ?
+							__( 'Date, time, and track are visible.', 'wordcamporg' ) :
+							__( 'Date, time, and track are hidden.', 'wordcamporg' ) }
 						checked={ show_meta === undefined ? false : show_meta }
 						onChange={ ( value ) => setAttributes( { show_meta: value } ) }
 					/>
 					<ToggleControl
 						label={ __( 'Categories', 'wordcamporg' ) }
-						help={ __( 'Show session categories.', 'wordcamporg' ) }
+						help={ show_category ?
+							__( 'Session categories are visible.', 'wordcamporg' ) :
+							__( 'Session categories are hidden.', 'wordcamporg' ) }
 						checked={ show_category === undefined ? false : show_category }
 						onChange={ ( value ) => setAttributes( { show_category: value } ) }
 					/>
 					<ToggleControl
 						label={ __( 'Speakers', 'wordcamporg' ) }
-						help={ __( 'Show session speakers.', 'wordcamporg' ) }
+						help={ show_speaker ?
+							__( 'Session speakers are visible.', 'wordcamporg' ) :
+							__( 'Session speakers are hidden.', 'wordcamporg' ) }
 						checked={ show_speaker === undefined ? false : show_speaker }
 						onChange={ ( value ) => setAttributes( { show_speaker: value } ) }
 					/>

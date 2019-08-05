@@ -63,7 +63,14 @@ class ImageInspectorPanel extends Component {
 				initialOpen={ initialOpen }
 				className={ classnames( 'wordcamp-image__inspector-panel', className ) }
 			>
-				<ToggleControl label={ __( 'Show images', 'wordcamporg' ) } checked={ show } onChange={ onChangeShow } />
+				<ToggleControl
+					label={ __( 'Show images', 'wordcamporg' ) }
+					help={ show ?
+						__( 'Images are visible.', 'wordcamporg' ) :
+						__( 'Images are hidden.', 'wordcamporg' ) }
+					checked={ show }
+					onChange={ onChangeShow }
+				/>
 				{ show && (
 					<Fragment>
 						<ImageSizeControl

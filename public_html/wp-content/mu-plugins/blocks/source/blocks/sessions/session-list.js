@@ -150,9 +150,7 @@ class SessionList extends Component {
 			];
 		}
 
-		if ( 'session_time' === sort ) {
-			args.sort = 'title_asc';
-		} else {
+		if ( 'session_time' !== sort ) {
 			args.sort = sort;
 		}
 
@@ -160,6 +158,11 @@ class SessionList extends Component {
 
 		if ( Array.isArray( filtered ) && 'session_time' === sort ) {
 			filtered = filtered.sort( ( a, b ) => {
+				if ( Number( a.meta._wcpt_session_time ) === Number( b.meta._wcpt_session_time ) ) {
+					const title = get( a, 'title.rendered', '' );
+					return title.localeCompare( b.title.rendered );
+				}
+
 				return Number( a.meta._wcpt_session_time ) - Number( b.meta._wcpt_session_time );
 			} );
 		}

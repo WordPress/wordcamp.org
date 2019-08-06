@@ -142,7 +142,7 @@ function get_attributes_schema() {
 			'avatar_align' => get_shared_definition( 'align_image', 'attribute' ),
 			'avatar_size'  => get_shared_definition( 'image_size_avatar', 'attribute' ),
 			'className'    => get_shared_definition( 'string_empty', 'attribute' ),
-			'headingAlign' => get_shared_definition( 'align_image', 'attribute' ),
+			'headingAlign' => get_shared_definition( 'align_content', 'attribute' ),
 			'mode'         => [
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),

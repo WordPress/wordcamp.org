@@ -46,16 +46,6 @@ setup_postdata( $sponsor ); // This is necessary for generating an excerpt from 
 			)
 		); ?>
 	<?php endif; ?>
-
-	<?php if ( 'full' === $attributes['content'] ) : ?>
-		<?php echo wp_kses_post(
-			render_item_permalink(
-				get_permalink( $sponsor ),
-				__( 'Visit sponsor page', 'wordcamporg' ),
-				[ 'wordcamp-sponsors__permalink' ]
-			)
-		); ?>
-	<?php endif; ?>
 </div>
 
 <?php

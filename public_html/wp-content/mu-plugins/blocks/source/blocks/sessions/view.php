@@ -122,16 +122,6 @@ setup_postdata( $session );
 			<?php endif; ?>
 		</div>
 	<?php endif; ?>
-
-	<?php if ( 'full' === $attributes['content'] ) : ?>
-		<?php echo wp_kses_post(
-			render_item_permalink(
-				get_permalink( $session ),
-				__( 'Visit session page', 'wordcamporg' ),
-				[ 'wordcamp-sessions__permalink' ]
-			)
-		); ?>
-	<?php endif; ?>
 </div>
 
 <?php

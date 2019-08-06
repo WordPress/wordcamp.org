@@ -15,7 +15,6 @@ import { __ } from '@wordpress/i18n';
 import {
 	DangerousItemHTMLContent,
 	FeaturedImage,
-	ItemPermalink,
 	ItemTitle,
 	NoContent,
 	PostList,
@@ -224,14 +223,6 @@ class SessionList extends Component {
 								{ show_meta && <div className="wordcamp-sessions__time-location">{ post.details }</div> }
 								{ show_category && <SessionCategory session={ post } /> }
 							</div>
-						) }
-
-						{ 'full' === content && (
-							<ItemPermalink
-								link={ post.link }
-								linkText={ __( 'Visit session page', 'wordcamporg' ) }
-								className="wordcamp-sessions__permalink"
-							/>
 						) }
 					</div>
 				) ) }

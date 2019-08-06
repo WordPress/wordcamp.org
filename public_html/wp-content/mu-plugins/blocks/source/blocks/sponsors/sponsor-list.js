@@ -69,7 +69,7 @@ class SponsorList extends Component {
 	 */
 	render() {
 		const { attributes } = this.props;
-		const { show_name, show_logo, featured_image_width, image_align, content } = attributes;
+		const { content, featured_image_width, headingAlign, image_align, show_logo, show_name } = attributes;
 
 		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
@@ -86,6 +86,7 @@ class SponsorList extends Component {
 						{ show_name && (
 							<ItemTitle
 								className="wordcamp-sponsors__title"
+								align={ headingAlign }
 								headingLevel={ 3 }
 								title={ post.title.rendered.trim() }
 								link={ post.link }

@@ -7,7 +7,6 @@ use function WordCamp\Blocks\Definitions\{ get_shared_definitions, get_shared_de
 
 defined( 'WPINC' ) || die();
 
-
 /**
  * Register block types and enqueue scripts.
  *
@@ -25,6 +24,7 @@ function init() {
 		]
 	);
 }
+
 add_action( 'init', __NAMESPACE__ . '\init' );
 
 /**
@@ -74,6 +74,7 @@ function add_script_data( array $data ) {
 
 	return $data;
 }
+
 add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
 
 /**
@@ -141,6 +142,7 @@ function get_attributes_schema() {
 			'avatar_align' => get_shared_definition( 'align_image', 'attribute' ),
 			'avatar_size'  => get_shared_definition( 'image_size_avatar', 'attribute' ),
 			'className'    => get_shared_definition( 'string_empty', 'attribute' ),
+			'headingAlign' => get_shared_definition( 'align_content', 'attribute' ),
 			'mode'         => [
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),

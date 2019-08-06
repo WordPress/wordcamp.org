@@ -1,8 +1,8 @@
 /**
  * WordPress dependencies
  */
-import { InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import { AlignmentToolbar, InspectorControls } from '@wordpress/block-editor';
+import { BaseControl, PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
 import { Component } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
@@ -27,9 +27,17 @@ export default class extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { attributes, setAttributes, blockData } = this.props;
-		const { show_logo, featured_image_width, image_align, show_name, content, sort } = attributes;
-		const { schema, options = DEFAULT_OPTIONS } = blockData;
+		const { attributes, blockData, setAttributes } = this.props;
+		const {
+			content,
+			featured_image_width,
+			headingAlign,
+			image_align,
+			show_logo,
+			show_name,
+			sort,
+		} = attributes;
+		const { options = DEFAULT_OPTIONS, schema } = blockData;
 
 		return (
 			<InspectorControls>
@@ -52,10 +60,7 @@ export default class extends Component {
 					alignOptions={ options.align_image }
 				/>
 
-				<PanelBody
-					title={ __( 'Content Settings', 'wordcamporg' ) }
-					initialOpen={ true }
-				>
+				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ true }>
 					<ToggleControl
 						label={ __( 'Name', 'wordcamporg' ) }
 						help={ show_name ?
@@ -64,6 +69,22 @@ export default class extends Component {
 						checked={ show_name }
 						onChange={ ( value ) => setAttributes( { show_name: value } ) }
 					/>
+
+					{ show_name && (
+						<BaseControl>
+							<span className="components-base-control__label">
+								{ __( 'Sponsor name alignment', 'wordcamporg' ) }
+							</span>
+							<AlignmentToolbar
+								isCollapsed={ false }
+								value={ headingAlign }
+								onChange={ ( nextAlign ) => {
+									setAttributes( { headingAlign: nextAlign } );
+								} }
+							/>
+						</BaseControl>
+					) }
+
 					<SelectControl
 						label={ __( 'Description', 'wordcamporg' ) }
 						value={ content }

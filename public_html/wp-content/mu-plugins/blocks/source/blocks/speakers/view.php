@@ -20,7 +20,8 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 			get_the_title( $speaker ),
 			get_permalink( $speaker ),
 			3,
-			[ 'wordcamp-speakers__title' ]
+			[ 'wordcamp-speakers__title' ],
+			$attributes['headingAlign']
 		)
 	); ?>
 

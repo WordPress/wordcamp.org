@@ -102,6 +102,7 @@ function get_attributes_schema() {
 			'align'                => get_shared_definition( 'align_block', 'attribute' ),
 			'className'            => get_shared_definition( 'string_empty', 'attribute' ),
 			'featured_image_width' => get_shared_definition( 'image_size', 'attribute' ),
+			'headingAlign'         => get_shared_definition( 'align_content', 'attribute' ),
 			'image_align'          => get_shared_definition( 'align_image', 'attribute' ),
 			'mode'                 => [
 				'type'    => 'string',

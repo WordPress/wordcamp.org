@@ -37,6 +37,11 @@ function get_shared_definitions( $keys, $type ) {
 					'enum'    => wp_list_pluck( get_shared_definition( 'align_block', 'option' ), 'value' ),
 					'default' => '',
 				],
+				'align_content'     => [
+					'type'    => 'string',
+					'enum'    => wp_list_pluck( get_shared_definition( 'align_content', 'option' ), 'value' ),
+					'default' => '',
+				],
 				'align_image'       => [
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'align_image', 'option' ), 'value' ),
@@ -82,7 +87,7 @@ function get_shared_definitions( $keys, $type ) {
 
 		case 'option':
 			$definitions = [
-				'align_block' => [
+				'align_block'   => [
 					[
 						'label' => _x( 'Wide', 'alignment option', 'wordcamporg' ),
 						'value' => 'wide',
@@ -92,7 +97,21 @@ function get_shared_definitions( $keys, $type ) {
 						'value' => 'full',
 					],
 				],
-				'align_image' => [
+				'align_content' => [
+					[
+						'label' => _x( 'Left', 'alignment option', 'wordcamporg' ),
+						'value' => 'left',
+					],
+					[
+						'label' => _x( 'Center', 'alignment option', 'wordcamporg' ),
+						'value' => 'center',
+					],
+					[
+						'label' => _x( 'Right', 'alignment option', 'wordcamporg' ),
+						'value' => 'right',
+					],
+				],
+				'align_image'   => [
 					[
 						'label' => _x( 'None', 'alignment option', 'wordcamporg' ),
 						'value' => 'none',
@@ -110,7 +129,7 @@ function get_shared_definitions( $keys, $type ) {
 						'value' => 'right',
 					],
 				],
-				'content'     => [
+				'content'       => [
 					[
 						'label' => _x( 'Full', 'content option', 'wordcamporg' ),
 						'value' => 'full',
@@ -124,7 +143,7 @@ function get_shared_definitions( $keys, $type ) {
 						'value' => 'none',
 					],
 				],
-				'layout'      => [
+				'layout'        => [
 					[
 						'label' => _x( 'List', 'content option', 'wordcamporg' ),
 						'value' => 'list',
@@ -134,7 +153,7 @@ function get_shared_definitions( $keys, $type ) {
 						'value' => 'grid',
 					],
 				],
-				'sort_title'  => [
+				'sort_title'    => [
 					[
 						'label' => _x( 'A → Z', 'sort option', 'wordcamporg' ),
 						'value' => 'title_asc',
@@ -144,7 +163,7 @@ function get_shared_definitions( $keys, $type ) {
 						'value' => 'title_desc',
 					],
 				],
-				'sort_date'   => [
+				'sort_date'     => [
 					[
 						'label' => _x( 'Newest to Oldest', 'sort option', 'wordcamporg' ),
 						'value' => 'date_desc',

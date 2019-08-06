@@ -14,7 +14,7 @@ import { __ } from '@wordpress/i18n';
  *
  * @return {Element}
  */
-function ItemTitle( { headingLevel, className, title, link } ) {
+function ItemTitle( { align, className, headingLevel, link, title } ) {
 	const validLevels = [ 1, 2, 3, 4, 5, 6 ];
 	let Tag = 'h3';
 
@@ -23,11 +23,15 @@ function ItemTitle( { headingLevel, className, title, link } ) {
 	}
 
 	const classes = [ 'wordcamp-block__item-title', className ];
-
 	const content = title || __( '(Untitled)', 'wordcamporg' );
 
+	const style = {};
+	if ( align ) {
+		style.textAlign = align;
+	}
+
 	return (
-		<Tag className={ classnames( classes ) }>
+		<Tag className={ classnames( classes ) } style={ style }>
 			{ link ? (
 				<a href={ link } target="_blank" rel="noopener noreferrer">
 					{ content }

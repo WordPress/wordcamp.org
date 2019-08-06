@@ -20,7 +20,8 @@ setup_postdata( $session );
 			get_the_title( $session ),
 			get_permalink( $session ),
 			3,
-			[ 'wordcamp-sessions__title' ]
+			[ 'wordcamp-sessions__title' ],
+			$attributes['headingAlign']
 		)
 	); ?>
 

@@ -178,20 +178,6 @@ class Meetup_Client extends API_Client {
 	}
 
 	/**
-	 * Sign a request URL with our API key.
-	 *
-	 * @param string $request_url
-	 *
-	 * @return string
-	 */
-	protected function sign_request_url( $request_url ) {
-		return add_query_arg( array(
-			'sign' => true,
-			'key'  => $this->api_key,
-		), $request_url );
-	}
-
-	/**
 	 * Generate headers to use in a request.
 	 *
 	 * @return array

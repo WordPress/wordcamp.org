@@ -19,6 +19,11 @@ There are two primary ways to setup this repo for local development.
 If you have a question about using your site, or contributing to the platform, please email [support@wordcamp.org](mailto:support@wordcamp.org) or join the `#meta-wordcamp` channel in [the official WordPress Slack workspace](https://make.wordpress.org/chat/).
 
 
+### Bugs & Feature Requests
+
+We encourage community members and organizers to [open issues for bugs & feature requests.](https://github.com/WordPress/wordcamp.org/issues/new/choose) We go through and prioritize issues at least once a month. We also have a monthly meeting where we discuss current tickets, patches, and PRs. This usually happens on the third Thursday of the month, you can watch for announcements on the [make.wordpress.org/meta blog.](https://make.wordpress.org/meta/)
+
+
 ## Security
 
 Please report security vulnerabilities via [our HackerOne bounty program](https://hackerone.com/wordpress).

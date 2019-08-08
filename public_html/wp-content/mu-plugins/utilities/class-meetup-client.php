@@ -187,6 +187,7 @@ class Meetup_Client extends API_Client {
 
 		return array(
 			'headers' => array(
+				'Accept'        => 'application/json',
 				'Authorization' => "Bearer $oauth_token",
 			),
 		);

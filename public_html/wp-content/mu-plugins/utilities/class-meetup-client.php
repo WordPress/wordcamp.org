@@ -234,6 +234,8 @@ class Meetup_Client extends API_Client {
 	 * Check the rate limit status in an API response and delay further execution if necessary.
 	 *
 	 * @param array $headers
+	 *
+	 * @return void
 	 */
 	protected static function throttle( $response ) {
 		$headers = wp_remote_retrieve_headers( $response );
@@ -245,11 +247,17 @@ class Meetup_Client extends API_Client {
 		$remaining = absint( $headers['x-ratelimit-remaining'] );
 		$period    = absint( $headers['x-ratelimit-reset'] );
 
-		// Pause more frequently than we need to, and for longer, just to be safe.
-		if ( $remaining > 2 ) {
+		/**
+		 * Don't throttle if we have sufficient requests remaining.
+		 *
+		 * We don't let this number get to 0, though, because there are scenarios where multiple processes are using
+		 * the API at the same time, and there's no way for them to be aware of each other.
+		 */
+		if ( $remaining > 3 ) {
 			return;
 		}
 
+		// Pause for longer than we need to, just to be safe.
 		if ( $period < 2 ) {
 			$period = 2;
 		}

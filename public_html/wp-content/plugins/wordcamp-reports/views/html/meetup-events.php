@@ -57,6 +57,10 @@ defined( 'WPINC' ) || die();
 
 	<table class="striped widefat but-not-too-wide">
 		<tr>
+			<td>Total groups as of <?php echo esc_html( $end_date->format( 'M jS, Y' ) ); ?></td>
+			<td class="number"><?php echo number_format_i18n( $data['total_groups'] ); ?></td>
+		</tr>
+		<tr>
 			<td>Groups with at least one event during the date range</td>
 			<td class="number"><?php echo number_format_i18n( $data['groups_with_events'] ); ?></td>
 		</tr>

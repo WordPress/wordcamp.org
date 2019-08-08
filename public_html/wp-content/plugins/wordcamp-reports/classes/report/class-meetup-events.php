@@ -9,7 +9,7 @@ namespace WordCamp\Reports\Report;
 defined( 'WPINC' ) || die();
 
 use Exception;
-use DateTime, DateInterval;
+use DateTime, DateTimeInterface, DateInterval;
 use WP_Error;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\validate_date_range;
@@ -50,6 +50,15 @@ class Meetup_Events extends Base {
 	 */
 	public static $methodology = '
 		Retrieve data about events in the Chapter program from the Meetup.com API.
+		
+		<strong>Note that this requires one or more requests to the API for every group in the Chapter program, so running this report may literally take 5-10 minutes.</strong>
+		
+		Known issues:
+		
+		<ul>
+			<li>This will not include events for groups that were in the chapter program within the given date range, but no longer are.</li>
+			<li>This will include a group\'s events within the date range that occurred before the group joined the chapter program.</li>
+		</ul>
 	';
 
 	/**
@@ -82,10 +91,11 @@ class Meetup_Events extends Base {
 	 */
 	protected $public_data_fields = [
 		'id'           => '',
-		'event_url'    => '',
+		'link'         => '',
 		'name'         => '',
 		'description'  => '',
 		'time'         => 0,
+		'status'       => '',
 		'group'        => '',
 		'city'         => '',
 		'l10n_country' => '',
@@ -158,40 +168,47 @@ class Meetup_Events extends Base {
 		}
 
 		$meetup = new Meetup_Client();
-		$groups = $meetup->get_groups();
+
+		$groups = $meetup->get_groups( array(
+			// Don't include groups that joined the chapter program later than the date range.
+			'pro_join_date_max' => $this->range->end->getTimestamp() * 1000,
+		) );
 
 		if ( is_wp_error( $groups ) ) {
 			$this->error->add( $groups->get_error_code(), $groups->get_error_message() );
 			return array();
 		}
 
-		$group_ids = wp_list_pluck( $groups, 'id' );
-		$groups    = array_combine( $group_ids, $groups );
+		$group_slugs = wp_list_pluck( $groups, 'urlname' );
+		$groups      = array_combine( $group_slugs, $groups );
 
-		$events = $meetup->get_events( $group_ids, array(
+		/**
+		 * @todo This should probably be converted into a foreach loop that runs the `get_group_events` method
+		 *       separately for each group. That way we can modify the start/end date parameters individually for
+		 *       the case where the group had events before it joined the chapter program and some number of those
+		 *       are included within the report date range. (See Known Issues in the report methodology).
+		 */
+		$events = $meetup->get_events( $group_slugs, array(
 			'status' => 'upcoming,past',
-			'time'   => sprintf(
-				'%d,%d',
-				$this->range->start->getTimestamp() * 1000,
-				$this->range->end->getTimestamp() * 1000
-			),
+			'no_earlier_than' => $this->get_timezoneless_iso8601_format( $this->range->start ),
+			'no_later_than'   => $this->get_timezoneless_iso8601_format( $this->range->end ),
 		) );
 
 		$data = [];
 
-		$relevant_keys = array_fill_keys( [ 'id', 'event_url', 'name', 'description', 'time', 'group', 'city', 'l10n_country', 'latitude', 'longitude' ], '' );
+		$relevant_keys = $this->public_data_fields;
 
 		foreach ( $events as $event ) {
-			$group_id = $event['group']['id'];
-			$event    = wp_parse_args( $event, $relevant_keys );
+			$group_slug = $event['group']['urlname'];
+			$event      = wp_parse_args( $event, $relevant_keys );
 
 			$event['description']  = isset( $event['description'] ) ? trim( $event['description'] ) : '';
 			$event['time']         = absint( $event['time'] ) / 1000; // Convert to seconds.
-			$event['group']        = isset( $event['group']['name'] ) ? $event['group']['name'] : $groups[ $group_id ]['name'];
-			$event['city']         = isset( $event['venue']['city'] ) ? $event['venue']['city'] : $groups[ $group_id ]['city'];
-			$event['l10n_country'] = isset( $event['venue']['localized_country_name'] ) ? $event['venue']['localized_country_name'] : $groups[ $group_id ]['country'];
-			$event['latitude']     = ! empty( $event['venue']['lat'] ) ? $event['venue']['lat'] : $groups[ $group_id ]['lat'];
-			$event['longitude']    = ! empty( $event['venue']['lon'] ) ? $event['venue']['lon'] : $groups[ $group_id ]['lon'];
+			$event['group']        = isset( $event['group']['name'] ) ? $event['group']['name'] : $groups[ $group_slug ]['name'];
+			$event['city']         = isset( $event['venue']['city'] ) ? $event['venue']['city'] : $groups[ $group_slug ]['city'];
+			$event['l10n_country'] = isset( $event['venue']['localized_country_name'] ) ? $event['venue']['localized_country_name'] : $groups[ $group_slug ]['country'];
+			$event['latitude']     = ! empty( $event['venue']['lat'] ) ? $event['venue']['lat'] : $groups[ $group_slug ]['lat'];
+			$event['longitude']    = ! empty( $event['venue']['lon'] ) ? $event['venue']['lon'] : $groups[ $group_slug ]['lon'];
 
 			$data[] = array_intersect_key( $event, $relevant_keys );
 		}
@@ -310,11 +327,29 @@ class Meetup_Events extends Base {
 		$compiled_data['groups_with_events'] = count( $compiled_data['total_events_by_group'] );
 
 		$meetup       = new Meetup_Client();
-		$total_groups = absint( $meetup->get_result_count( 'pro/wordpress/groups' ) );
+		$compiled_data['total_groups'] = absint( $meetup->get_result_count( 'pro/wordpress/groups', array(
+			// Don't include groups that joined the chapter program later than the date range.
+			'pro_join_date_max' => $this->range->end->getTimestamp() * 1000,
+		) ) );
 
-		$compiled_data['groups_with_no_events'] = $total_groups - $compiled_data['groups_with_events'];
+		$compiled_data['groups_with_no_events'] = $compiled_data['total_groups'] - $compiled_data['groups_with_events'];
 
 		return $compiled_data;
+	}
+
+	/**
+	 * Format a date into a valid ISO 8601 string, and then strip off the timezone.
+	 *
+	 * This is the required format for Meetup's v3 events endpoint.
+	 *
+	 * @param DateTimeInterface $date
+	 *
+	 * @return bool|string
+	 */
+	protected function get_timezoneless_iso8601_format( DateTimeInterface $date ) {
+		$real_iso8601 = $date->format( 'c' );
+
+		return substr( $real_iso8601, 0, strpos( $real_iso8601, '+' ) );
 	}
 
 	/**
@@ -486,7 +521,7 @@ class Meetup_Events extends Base {
 		$filename[] = $report->range->start->format( 'Y-m-d' );
 		$filename[] = $report->range->end->format( 'Y-m-d' );
 
-		$headers = [ 'Event ID', 'Event URL', 'Event Name', 'Description', 'Date', 'Group Name', 'City', 'Country (localized)', 'Latitude', 'Longitude' ];
+		$headers = [ 'Event ID', 'Event URL', 'Event Name', 'Description', 'Date', 'Event Status', 'Group Name', 'City', 'Country (localized)', 'Latitude', 'Longitude' ];
 
 		$data = $report->get_data();
 

@@ -371,15 +371,16 @@ class Meetup_Client extends API_Client {
 	}
 
 	/**
-	 * Retrieve data about the group. Calls https://www.meetup.com/meetup_api/docs/:urlname/#get
+	 * Retrieve details about a group.
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
 	 * @param array  $args       Optional. Additional request parameters.
+	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/#get
 	 *
 	 * @return array|WP_Error
 	 */
 	public function get_group_details( $group_slug, $args = array() ) {
-		$request_url = $this->api_base . "$group_slug";
+		$request_url = $this->api_base . sanitize_key( $group_slug );
 
 		if ( ! empty( $args ) ) {
 			$request_url = add_query_arg( $args, $request_url );
@@ -389,15 +390,16 @@ class Meetup_Client extends API_Client {
 	}
 
 	/**
-	 * Retrieve group members. Calls https://www.meetup.com/meetup_api/docs/:urlname/members/#list
+	 * Retrieve details about group members.
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
 	 * @param array  $args       Optional. Additional request parameters.
+	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/members/#list
 	 *
 	 * @return array|WP_Error
 	 */
 	public function get_group_members( $group_slug, $args = array() ) {
-		$request_url = $this->api_base . "$group_slug/members";
+		$request_url = $this->api_base . sanitize_key( $group_slug ) . '/members';
 
 		if ( ! empty( $args ) ) {
 			$request_url = add_query_arg( $args, $request_url );
@@ -411,12 +413,12 @@ class Meetup_Client extends API_Client {
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
 	 * @param array  $args       Optional. Additional request parameters.
-	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/events/.
+	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/events/#list
 	 *
 	 * @return array|WP_Error
 	 */
 	public function get_group_events( $group_slug, array $args = array() ) {
-		$request_url = $this->api_base . "$group_slug/events";
+		$request_url = $this->api_base . sanitize_key( $group_slug ) . '/events';
 
 		if ( ! empty( $args ) ) {
 			$request_url = add_query_arg( $args, $request_url );

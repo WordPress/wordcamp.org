@@ -176,6 +176,8 @@ class Meetup_Events extends Base {
 		$groups = $meetup->get_groups( array(
 			// Don't include groups that joined the chapter program later than the date range.
 			'pro_join_date_max' => $this->range->end->getTimestamp() * 1000,
+			// Don't include groups whose last event was before the start of the date range.
+			'last_event_min'    => $this->range->start->getTimestamp() * 1000,
 		) );
 
 		if ( is_wp_error( $groups ) ) {

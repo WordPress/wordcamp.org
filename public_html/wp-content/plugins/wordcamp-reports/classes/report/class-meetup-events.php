@@ -167,6 +167,10 @@ class Meetup_Events extends Base {
 			return $data;
 		}
 
+		// @todo Maybe find a way to run this without having to hack the ini.
+		ini_set( 'memory_limit', '900M' );
+		ini_set( 'max_execution_time', 500 );
+
 		$meetup = new Meetup_Client();
 
 		$groups = $meetup->get_groups( array(

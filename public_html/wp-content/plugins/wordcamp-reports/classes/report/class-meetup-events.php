@@ -465,6 +465,7 @@ class Meetup_Events extends Base {
 		) {
 			$options = array(
 				'earliest_start' => new DateTime( '2015-01-01' ), // Chapter program started in 2015.
+				'max_interval'   => new DateInterval( 'P1Y' ),
 				'search_query'   => $search_query,
 				'search_fields'  => self::get_search_fields(),
 			);
@@ -513,6 +514,7 @@ class Meetup_Events extends Base {
 
 		$options = array(
 			'earliest_start' => new DateTime( '2015-01-01' ), // Chapter program started in 2015.
+			'max_interval'   => new DateInterval( 'P1Y' ),
 			'search_query'   => $search_query,
 			'search_fields'  => self::get_search_fields(),
 		);
@@ -608,6 +610,7 @@ class Meetup_Events extends Base {
 
 			$options = array(
 				'earliest_start' => new DateTime( '2015-01-01' ), // Chapter program started in 2015.
+				'max_interval'   => new DateInterval( 'P1Y' ),
 			);
 
 			$report = new self( $range->start, $range->end, $options );

@@ -178,20 +178,6 @@ class Meetup_Client extends API_Client {
 	}
 
 	/**
-	 * Sign a request URL with our API key.
-	 *
-	 * @param string $request_url
-	 *
-	 * @return string
-	 */
-	protected function sign_request_url( $request_url ) {
-		return add_query_arg( array(
-			'sign' => true,
-			'key'  => $this->api_key,
-		), $request_url );
-	}
-
-	/**
 	 * Generate headers to use in a request.
 	 *
 	 * @return array
@@ -201,6 +187,7 @@ class Meetup_Client extends API_Client {
 
 		return array(
 			'headers' => array(
+				'Accept'        => 'application/json',
 				'Authorization' => "Bearer $oauth_token",
 			),
 		);
@@ -247,6 +234,8 @@ class Meetup_Client extends API_Client {
 	 * Check the rate limit status in an API response and delay further execution if necessary.
 	 *
 	 * @param array $headers
+	 *
+	 * @return void
 	 */
 	protected static function throttle( $response ) {
 		$headers = wp_remote_retrieve_headers( $response );
@@ -258,11 +247,17 @@ class Meetup_Client extends API_Client {
 		$remaining = absint( $headers['x-ratelimit-remaining'] );
 		$period    = absint( $headers['x-ratelimit-reset'] );
 
-		// Pause more frequently than we need to, and for longer, just to be safe.
-		if ( $remaining > 2 ) {
+		/**
+		 * Don't throttle if we have sufficient requests remaining.
+		 *
+		 * We don't let this number get to 0, though, because there are scenarios where multiple processes are using
+		 * the API at the same time, and there's no way for them to be aware of each other.
+		 */
+		if ( $remaining > 3 ) {
 			return;
 		}
 
+		// Pause for longer than we need to, just to be safe.
 		if ( $period < 2 ) {
 			$period = 2;
 		}
@@ -336,48 +331,56 @@ class Meetup_Client extends API_Client {
 	/**
 	 * Retrieve data about events associated with a set of groups.
 	 *
-	 * This automatically breaks up requests into chunks of 50 groups to avoid overloading the API.
+	 * Because of the way that the Meetup API v3 endpoints are structured, we unfortunately have to make one request
+	 * (or more, if there's pagination) for each group that we want events for. When there are hundreds of groups, and
+	 * we are throttling to make sure we don't get rate-limited, this process can literally take several minutes.
 	 *
-	 * @param array $group_ids The IDs of the groups to get events for.
-	 * @param array $args      Optional. Additional request parameters.
-	 *                         See https://www.meetup.com/meetup_api/docs/2/events/.
+	 * So, when building the array for the $group_slugs parameter, it's important to filter out groups that you know
+	 * will not provide relevant results. For example, if you want all events during a date range in the past, you can
+	 * filter out groups that didn't join the chapter program until after your date range.
+	 *
+	 * Note that when using date/time related parameters in the $args array, unlike other endpoints and fields in the
+	 * Meetup API which use an epoch timestamp in milliseconds, this one requires a date/time string formatted in
+	 * ISO 8601, without the timezone part. Because consistency is overrated.
+	 *
+	 * @param array $group_slugs The URL slugs of each group to retrieve events for. Also known as `urlname`.
+	 * @param array $args        Optional. Additional request parameters.
+	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/events/#list
 	 *
 	 * @return array|WP_Error
 	 */
-	public function get_events( array $group_ids, array $args = array() ) {
-		$url_base     = $this->api_base . '2/events';
-		$group_chunks = array_chunk( $group_ids, 50, true ); // Meetup API sometimes throws an error with chunk size larger than 50.
-		$events       = array();
+	public function get_events( array $group_slugs, array $args = array() ) {
+		$events = array();
 
-		foreach ( $group_chunks as $chunk ) {
-			$query_args = array_merge( array(
-				'group_id' => implode( ',', $chunk ),
-			), $args );
+		if ( $this->debug ) {
+			$chunked     = array_chunk( $group_slugs, 10 );
+			$group_slugs = $chunked[0];
+		}
 
-			$request_url = add_query_arg( $query_args, $url_base );
+		foreach ( $group_slugs as $group_slug ) {
+			$response = $this->get_group_events( $group_slug, $args );
 
-			$data = $this->send_paginated_request( $request_url );
-
-			if ( is_wp_error( $data ) ) {
-				return $data;
+			if ( is_wp_error( $response ) ) {
+				return $response;
 			}
 
-			$events = array_merge( $events, $data );
+			$events = array_merge( $events, $response );
 		}
 
 		return $events;
 	}
 
 	/**
-	 * Retrieve data about the group. Calls https://www.meetup.com/meetup_api/docs/:urlname/#get
+	 * Retrieve details about a group.
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
 	 * @param array  $args       Optional. Additional request parameters.
+	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/#get
 	 *
 	 * @return array|WP_Error
 	 */
 	public function get_group_details( $group_slug, $args = array() ) {
-		$request_url = $this->api_base . "$group_slug";
+		$request_url = $this->api_base . sanitize_key( $group_slug );
 
 		if ( ! empty( $args ) ) {
 			$request_url = add_query_arg( $args, $request_url );
@@ -387,15 +390,16 @@ class Meetup_Client extends API_Client {
 	}
 
 	/**
-	 * Retrieve group members. Calls https://www.meetup.com/meetup_api/docs/:urlname/members/#list
+	 * Retrieve details about group members.
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
 	 * @param array  $args       Optional. Additional request parameters.
+	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/members/#list
 	 *
 	 * @return array|WP_Error
 	 */
 	public function get_group_members( $group_slug, $args = array() ) {
-		$request_url = $this->api_base . "$group_slug/members";
+		$request_url = $this->api_base . sanitize_key( $group_slug ) . '/members';
 
 		if ( ! empty( $args ) ) {
 			$request_url = add_query_arg( $args, $request_url );
@@ -409,12 +413,12 @@ class Meetup_Client extends API_Client {
 	 *
 	 * @param string $group_slug The slug/urlname of a group.
 	 * @param array  $args       Optional. Additional request parameters.
-	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/events/.
+	 *                           See https://www.meetup.com/meetup_api/docs/:urlname/events/#list
 	 *
 	 * @return array|WP_Error
 	 */
 	public function get_group_events( $group_slug, array $args = array() ) {
-		$request_url = $this->api_base . "$group_slug/events";
+		$request_url = $this->api_base . sanitize_key( $group_slug ) . '/events';
 
 		if ( ! empty( $args ) ) {
 			$request_url = add_query_arg( $args, $request_url );

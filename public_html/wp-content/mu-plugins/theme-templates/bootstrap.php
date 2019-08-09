@@ -14,7 +14,6 @@ add_filter( 'template_include',                __NAMESPACE__ . '\set_page_templa
 add_filter( 'template_include',                __NAMESPACE__ . '\inject_offline_template', 20 );  // After others because being offline transcends other templates.
 add_action( 'wp_enqueue_scripts',              __NAMESPACe__ . '\enqueue_template_assets' );
 add_filter( 'wp_offline_error_precache_entry', __NAMESPACE__ . '\add_offline_template_cachebuster' );
-add_action( 'wp_front_service_worker',         __NAMESPACE__ . '\precache_offline_template_assets' );
 
 /**
  * Add new templates to the Page Template dropdown in the editor.
@@ -150,59 +149,4 @@ function add_offline_template_cachebuster( $entry ) {
 	}
 
 	return $entry;
-}
-
-/**
- * Precache the current theme's stylesheet
- *
- * @param WP_Service_Worker_Scripts $scripts
- */
-function precache_offline_template_assets( WP_Service_Worker_Scripts $scripts ) {
-	$asset = get_custom_css_precache_details();
-
-	// todo precache header image too (if one is set).
-
-	/*
-	 * If we don't have a URL, that's probably because the custom CSS is empty or short enough to be printed
-	 * inline instead of enqueued. In that case, the offline template will have it printed from the `wp_head()`
-	 * call anyway.
-	 */
-	if ( ! $asset ) {
-		return;
-	}
-
-	$scripts->precaching_routes()->register(
-		$asset['url'],
-		array( 'revision' => $asset['revision'] )
-	);
-}
-
-/**
- * Get the URL and revision for the custom CSS stylesheet.
- *
- * @return array|bool
- */
-function get_custom_css_precache_details() {
-	$url = wcorg_get_custom_css_url();
-
-	wp_parse_str(
-		wp_parse_url( $url, PHP_URL_QUERY ),
-		$url_query_params
-	);
-
-	if ( ! $url || ! isset( $url_query_params['custom-css'] ) ) {
-		return false;
-	}
-
-	return array(
-		'url'      => $url,
-
-		/*
-		 * This could probably be anything, since `$url` actually contains a cachebuster, but a unique revision
-		 * is set just for completeness.
-		 *
-		 * Jetpack stores the cachebuster in the `custom-css` query parameter.
-		 */
-		'revision' => $url_query_params['custom-css'],
-	);
 }

@@ -21,6 +21,9 @@
 		"rememo": "3.0.0"
 	},
 	"devDependencies": {
+		"@wordpress/babel-preset-default": "4.4.0",
+		"@wordpress/components": "8.1.0",
+		"@wordpress/element": "2.6.0",
 		"@wordpress/eslint-plugin": "^2.3.0",
 		"@wordpress/scripts": "^3.3.0",
 		"css-loader": "1.0.1",
@@ -41,6 +44,7 @@
 		"build": "wp-scripts build",
 		"lint:js": "wp-scripts lint-js .",
 		"lint:css": "wp-scripts lint-style '**/*.scss'",
-		"lint:pkg-json": "wp-scripts lint-pkg-json"
+		"lint:pkg-json": "wp-scripts lint-pkg-json",
+		"test": "wp-scripts test-unit-js"
 	}
 }

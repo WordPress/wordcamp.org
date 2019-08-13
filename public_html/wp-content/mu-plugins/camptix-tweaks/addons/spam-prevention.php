@@ -24,6 +24,8 @@ class Spam_Prevention extends CampTix_Addon {
 	 */
 	public function camptix_init() {
 		$this->attendee_info = new Form_Spam_Prevention( [
+			'score_threshold'   => 10,
+			'throttle_duration' => 60 * 15, // 15 minutes.
 			'prefix'            => 'camptix-fsp-attendee-info-',
 			'individual_styles' => true,
 		] );

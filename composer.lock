@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5041174494243e848d57fdf1356ba4d2",
+    "content-hash": "c81e5740f1fd7e7c224a9dba91af0afb",
     "packages": [
         {
             "name": "guzzlehttp/guzzle",
@@ -399,16 +399,16 @@
     "packages-dev": [
         {
             "name": "composer/installers",
-            "version": "v1.6.0",
+            "version": "v1.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/composer/installers.git",
-                "reference": "cfcca6b1b60bc4974324efb5783c13dca6932b5b"
+                "reference": "141b272484481432cda342727a427dc1e206bfa0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/composer/installers/zipball/cfcca6b1b60bc4974324efb5783c13dca6932b5b",
-                "reference": "cfcca6b1b60bc4974324efb5783c13dca6932b5b",
+                "url": "https://api.github.com/repos/composer/installers/zipball/141b272484481432cda342727a427dc1e206bfa0",
+                "reference": "141b272484481432cda342727a427dc1e206bfa0",
                 "shasum": ""
             },
             "require": {
@@ -464,6 +464,7 @@
                 "RadPHP",
                 "SMF",
                 "Thelia",
+                "Whmcs",
                 "WolfCMS",
                 "agl",
                 "aimeos",
@@ -486,6 +487,7 @@
                 "installer",
                 "itop",
                 "joomla",
+                "known",
                 "kohana",
                 "laravel",
                 "lavalite",
@@ -515,7 +517,7 @@
                 "zend",
                 "zikula"
             ],
-            "time": "2018-08-27T06:10:37+00:00"
+            "time": "2019-08-12T15:00:31+00:00"
         },
         {
             "name": "dealerdirect/phpcodesniffer-composer-installer",
@@ -557,9 +559,9 @@
             "authors": [
                 {
                     "name": "Franck Nijhof",
+                    "role": "Developer / IT Manager",
                     "email": "franck.nijhof@dealerdirect.com",
-                    "homepage": "http://www.frenck.nl",
-                    "role": "Developer / IT Manager"
+                    "homepage": "http://www.frenck.nl"
                 }
             ],
             "description": "PHP_CodeSniffer Standards Composer Installer Plugin",
@@ -960,15 +962,15 @@
         },
         {
             "name": "wpackagist-plugin/gutenberg",
-            "version": "6.0.0",
+            "version": "6.2.0",
             "source": {
                 "type": "svn",
                 "url": "https://plugins.svn.wordpress.org/gutenberg/",
-                "reference": "tags/6.0.0"
+                "reference": "tags/6.2.0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://downloads.wordpress.org/plugin/gutenberg.6.0.0.zip"
+                "url": "https://downloads.wordpress.org/plugin/gutenberg.6.2.0.zip"
             },
             "require": {
                 "composer/installers": "~1.0"
@@ -997,15 +999,15 @@
         },
         {
             "name": "wpackagist-plugin/jetpack",
-            "version": "7.5.1",
+            "version": "7.6",
             "source": {
                 "type": "svn",
                 "url": "https://plugins.svn.wordpress.org/jetpack/",
-                "reference": "tags/7.5.1"
+                "reference": "tags/7.6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://downloads.wordpress.org/plugin/jetpack.7.5.1.zip"
+                "url": "https://downloads.wordpress.org/plugin/jetpack.7.6.zip"
             },
             "require": {
                 "composer/installers": "~1.0"
@@ -1033,15 +1035,15 @@
         },
         {
             "name": "wpackagist-plugin/public-post-preview",
-            "version": "2.8.0",
+            "version": "2.9.0",
             "source": {
                 "type": "svn",
                 "url": "https://plugins.svn.wordpress.org/public-post-preview/",
-                "reference": "tags/2.8.0"
+                "reference": "tags/2.9.0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://downloads.wordpress.org/plugin/public-post-preview.2.8.0.zip"
+                "url": "https://downloads.wordpress.org/plugin/public-post-preview.2.9.0.zip"
             },
             "require": {
                 "composer/installers": "~1.0"
@@ -1051,15 +1053,15 @@
         },
         {
             "name": "wpackagist-plugin/pwa",
-            "version": "0.2.0",
+            "version": "0.3.0",
             "source": {
                 "type": "svn",
                 "url": "https://plugins.svn.wordpress.org/pwa/",
-                "reference": "tags/0.2.0"
+                "reference": "tags/0.3.0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://downloads.wordpress.org/plugin/pwa.0.2.0.zip"
+                "url": "https://downloads.wordpress.org/plugin/pwa.0.3.0.zip"
             },
             "require": {
                 "composer/installers": "~1.0"
@@ -1125,15 +1127,15 @@
         },
         {
             "name": "wpackagist-plugin/wp-super-cache",
-            "version": "1.6.8",
+            "version": "1.6.9",
             "source": {
                 "type": "svn",
                 "url": "https://plugins.svn.wordpress.org/wp-super-cache/",
-                "reference": "tags/1.6.8"
+                "reference": "tags/1.6.9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://downloads.wordpress.org/plugin/wp-super-cache.1.6.8.zip"
+                "url": "https://downloads.wordpress.org/plugin/wp-super-cache.1.6.9.zip"
             },
             "require": {
                 "composer/installers": "~1.0"

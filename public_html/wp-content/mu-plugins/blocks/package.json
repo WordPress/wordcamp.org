@@ -21,11 +21,10 @@
 		"rememo": "3.0.0"
 	},
 	"devDependencies": {
-		"@wordpress/babel-preset-default": "4.4.0",
 		"@wordpress/components": "8.1.0",
 		"@wordpress/element": "2.6.0",
 		"@wordpress/eslint-plugin": "^2.3.0",
-		"@wordpress/scripts": "^3.3.0",
+		"@wordpress/scripts": "3.4.0",
 		"css-loader": "1.0.1",
 		"mini-css-extract-plugin": "0.4.4",
 		"node-sass": "4.11.0",

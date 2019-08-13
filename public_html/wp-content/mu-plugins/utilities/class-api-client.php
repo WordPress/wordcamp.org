@@ -190,11 +190,22 @@ class API_Client {
 	 * This is just a stub. Extending classes should define their own method that handles the error codes and
 	 * messages specific to the API they are dealing with.
 	 *
-	 * @param array|WP_Error $response
+	 * @param array|WP_Error $response     The response or error generated from the request.
+	 * @param string         $request_url  Optional.
+	 * @param array          $request_args Optional.
 	 *
 	 * @return bool True if the error was handled.
 	 */
-	public function handle_error_response( $response ) {
+	public function handle_error_response( $response, $request_url = '', $request_args = array() ) {
+		/**
+		 * Action: Fires when a remote response is suspected to be an error.
+		 *
+		 * @param array|WP_Error $response
+		 * @param string         $request_url
+		 * @param array          $request_args
+		 */
+		do_action( 'api_client_handle_error_response', $response, $request_url, $request_args );
+
 		if ( is_wp_error( $response ) ) {
 			$codes = $response->get_error_codes();
 

@@ -21,20 +21,6 @@ defined( 'WPINC' ) || die();
  */
 class Form_Spam_Prevention {
 	/**
-	 * The score at which an IP address will get throttled.
-	 *
-	 * @var int
-	 */
-	const SCORE_THRESHOLD = 4;
-
-	/**
-	 * The number of seconds that a throttle will last.
-	 *
-	 * @var int
-	 */
-	const THROTTLE_DURATION = HOUR_IN_SECONDS;
-
-	/**
 	 * Configuration options for the class instance.
 	 *
 	 * @var array
@@ -47,6 +33,8 @@ class Form_Spam_Prevention {
 	 * @param array $config {
 	 *     Optional. Modify the default configuration values.
 	 *
+	 *     @type int    $score_threshold   The score at which an IP address will get throttled.
+	 *     @type int    $throttle_duration The number of seconds that a throttle will last.
 	 *     @type string $prefix            The prefix to use for form input name and id attributes.
 	 *     @type string $honeypot_name     The name/id attribute of the honeypot field (without the prefix).
 	 *     @type string $timestamp_name    The name/id attribute of the timestamp field (without the prefix).
@@ -56,6 +44,8 @@ class Form_Spam_Prevention {
 	 */
 	public function __construct( array $config = [] ) {
 		$defaults = [
+			'score_threshold'   => 4,
+			'throttle_duration' => HOUR_IN_SECONDS,
 			'prefix'            => 'fsp-',
 			'honeypot_name'     => 'tos-required',
 			'timestamp_name'    => 'dob-required',
@@ -112,7 +102,7 @@ class Form_Spam_Prevention {
 
 		$score = $this->add_score_to_ip_address( $tests );
 
-		$pass = ! in_array( 'fail', $tests ) && $score < self::SCORE_THRESHOLD;
+		$pass = ! in_array( 'fail', $tests ) && $score < $this->config['score_threshold'];
 
 		/**
 		 * Action: Fires after the spam prevention fields are validated.
@@ -271,7 +261,7 @@ class Form_Spam_Prevention {
 			}
 		}
 
-		set_transient( $this->generate_score_key( $ip_address ), $score, self::THROTTLE_DURATION );
+		set_transient( $this->generate_score_key( $ip_address ), $score, $this->config['throttle_duration'] );
 
 		return $score;
 	}
@@ -305,7 +295,7 @@ class Form_Spam_Prevention {
 
 		$score = $this->get_score_for_ip_address( $ip_address );
 
-		return $score >= self::SCORE_THRESHOLD;
+		return $score >= $this->config['score_threshold'];
 	}
 
 	/**

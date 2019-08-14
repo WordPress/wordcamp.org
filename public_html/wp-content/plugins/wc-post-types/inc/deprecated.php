@@ -2,7 +2,8 @@
 /**
  * Deprecated functionality.
  *
- * This is still loaded on all WordCamp sites, but shouldn't be relied upon and is considered unsupported.
+ * This is still loaded on all WordCamp sites, but is considered unsupported. Instead of using shortcodes to
+ * display content, the corresponding blocks should be used.
  */
 
 class WordCamp_Post_Types_Plugin_Deprecated {

@@ -654,9 +654,9 @@ class WordCamp_Post_Types_Plugin {
 	/**
 	 * Returns an anchor permalink for a Speaker or Session
 	 *
-	 * Any page with the [speakers | sessions] shortcode will contain IDs that can be used as anchors.
+	 * Any page with the Speakers or Sessions block will contain IDs that can be used as anchors.
 	 *
-	 * If the current page contains the corresponding shortcode, we'll assume the user wants to link there.
+	 * If the current page contains the corresponding block, we'll assume the user wants to link there.
 	 * Otherwise, we'll attempt to find another page that contains the shortcode.
 	 *
 	 * @param int $target_id The speaker/session's post ID.
@@ -673,12 +673,12 @@ class WordCamp_Post_Types_Plugin {
 
 		switch ( $anchor_target->post_type ) {
 			case 'wcb_speaker':
-				$permalink = has_shortcode( $post->post_content, 'speakers' ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
+				$permalink = has_block( 'wordcamp/speakers', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
 				$anchor_id = $anchor_target->post_name;
 				break;
 
 			case 'wcb_session':
-				$permalink = has_shortcode( $post->post_content, 'sessions' ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
+				$permalink = has_block( 'wordcamp/sessions', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
 				$anchor_id = $anchor_target->ID;
 				break;
 
@@ -703,8 +703,8 @@ class WordCamp_Post_Types_Plugin {
 	/**
 	 * Returns the page permalink for speakers, sessions or organizers
 	 *
-	 * Fetches for a post or page with the [speakers | sessions | organizers] shortcode and
-	 * returns the permalink of whichever comes first.
+	 * Fetches for a post or page with the Speakers, Sessions, or Organizers block and returns the permalink of
+	 * whichever comes first.
 	 *
 	 * @param string $type
 	 *
@@ -728,7 +728,7 @@ class WordCamp_Post_Types_Plugin {
 		$wcpt_post = get_posts( array(
 			'post_type'      => array( 'post', 'page' ),
 			'post_status'    => 'publish',
-			's'              => '[' . $type,
+			's'              => '<!-- wp:wordcamp/' . $type,
 			'posts_per_page' => 1,
 		) );
 

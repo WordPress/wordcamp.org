@@ -673,12 +673,20 @@ class WordCamp_Post_Types_Plugin {
 
 		switch ( $anchor_target->post_type ) {
 			case 'wcb_speaker':
-				$permalink = has_block( 'wordcamp/speakers', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
+				if ( ! wcorg_skip_feature( 'content_blocks' ) ) {
+					$permalink = has_block( 'wordcamp/speakers', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
+				} else {
+					$permalink = has_shortcode( $post->post_content, 'speakers' ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
+				}
 				$anchor_id = $anchor_target->post_name;
 				break;
 
 			case 'wcb_session':
-				$permalink = has_block( 'wordcamp/sessions', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
+				if ( ! wcorg_skip_feature( 'content_blocks' ) ) {
+					$permalink = has_block( 'wordcamp/sessions', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
+				} else {
+					$permalink = has_shortcode( $post->post_content, 'sessions' ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
+				}
 				$anchor_id = $anchor_target->ID;
 				break;
 
@@ -728,7 +736,7 @@ class WordCamp_Post_Types_Plugin {
 		$wcpt_post = get_posts( array(
 			'post_type'      => array( 'post', 'page' ),
 			'post_status'    => 'publish',
-			's'              => '<!-- wp:wordcamp/' . $type,
+			's'              => wcorg_skip_feature( 'content_blocks' ) ? "[{$type}" : "<!-- wp:wordcamp/{$type}",
 			'posts_per_page' => 1,
 		) );
 

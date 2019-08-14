@@ -104,19 +104,24 @@ function enable_pwa_alpha_test() {
 	 * `pwa` plugin, browsers will still be making requests to the API. This will short-circuit those, so that
 	 * the server isn't overloaded.
 	 */
-	add_action( 'rest_pre_dispatch', function( $result, $server, $request ) {
-		$overloaded_sites = array(
-			//1026, // 2019.europe
-		);
-
-		if ( in_array( get_current_blog_id(), $overloaded_sites, true ) ) {
-			$result = new WP_Error(
-				'api_temporarily_disabled',
-				'The REST API has been temporarily disabled on this site because of unexpected stability problems',
-				array( 'status' => 503 )
+	add_action(
+		'rest_pre_dispatch',
+		function( $result, $server, $request ) {
+			$overloaded_sites = array(
+				//1026, // 2019.europe
 			);
-		}
 
-		return $result;
-	}, 10, 3 );
+			if ( in_array( get_current_blog_id(), $overloaded_sites, true ) ) {
+				$result = new WP_Error(
+					'api_temporarily_disabled',
+					'The REST API has been temporarily disabled on this site because of unexpected stability problems',
+					array( 'status' => 503 )
+				);
+			}
+
+			return $result;
+		},
+		10,
+		3
+	);
 }

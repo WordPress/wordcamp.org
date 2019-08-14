@@ -765,9 +765,7 @@ function process_import_request() {
 					$entry['status'] = strtolower( $line[7] );
 					$entry['amount'] = round( floatval( $line[13] ), 2 );
 					$entry['currency'] = strtoupper( $line[14] );
-
-					$date = date_create_from_format( 'm/d/y', $line[21] );
-					$entry['date'] = strtotime( $date->format( 'Y-m-d 00:00:00' ) );
+					$entry['date'] = _get_disambiguated_timestamp( $line[21] );
 				}
 				break;
 			case 'ach':
@@ -777,9 +775,7 @@ function process_import_request() {
 					$entry['status'] = strtolower( $line[7] );
 					$entry['amount'] = round( floatval( $line[13] ), 2 );
 					$entry['currency'] = strtoupper( $line[14] );
-
-					$date = date_create_from_format( 'm/d/y', $line[21] );
-					$entry['date'] = strtotime( $date->format( 'Y-m-d 00:00:00' ) );
+					$entry['date'] = _get_disambiguated_timestamp( $line[21] );
 				}
 				break;
 			default:
@@ -807,6 +803,40 @@ function process_import_request() {
 	fclose( $handle );
 
 	WCB_Import_Results::$data = $results;
+}
+
+/**
+ * Convert an ambiguously formatted date string into a Unix timestamp.
+ *
+ * Some date strings, like 08/10/2019, can't be run directly through strtotime because it's unclear if the day
+ * or the month comes first. So this (currently) assumes the date string has month first and converts it into
+ * an unambiguous format before converting to a Unix timestamp.
+ *
+ * This also takes into account that sometimes the year will be two digits and sometimes it will be four.
+ *
+ * @param string $date A date string.
+ *
+ * @return int|null
+ */
+function _get_disambiguated_timestamp( $date ) {
+	$date_formats = array(
+		'm/d/y', // Original JPM format.
+		'm/d/Y', // Newer JPM format.
+	);
+
+	$datetime  = null;
+	$timestamp = null;
+
+	foreach ( $date_formats as $format ) {
+		$datetime = date_create_from_format( $format, $date );
+
+		if ( $datetime instanceof \DateTimeInterface ) {
+			$timestamp = strtotime( $datetime->format( 'Y-m-d 00:00:00' ) );
+			break;
+		}
+	}
+
+	return $timestamp;
 }
 
 /**

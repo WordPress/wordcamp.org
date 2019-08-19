@@ -14,9 +14,7 @@
 <p><?php _e( 'Blurb thanking sponsors', 'wordcamporg' ); ?></p>
 <!-- /wp:paragraph -->
 
-<!-- wp:shortcode -->
-[sponsors]
-<!-- /wp:shortcode -->
+<!-- wp:wordcamp/sponsors {"mode":"all"} /-->
 
 <!-- wp:heading -->
 <h2><?php _e( 'Interested in sponsoring WordCamp this year?', 'wordcamporg' ) ?></h2>

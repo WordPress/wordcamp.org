@@ -724,7 +724,7 @@ class WordCamp_Post_Types_Plugin {
 	 * @return false | string
 	 */
 	public function get_wcpt_permalink( $type ) {
-		if ( ! in_array( $type, array( 'speakers', 'sessions', 'organizers' ) ) ) {
+		if ( ! in_array( $type, array( 'speakers', 'sessions', 'organizers' ), true ) ) {
 			return false;
 		}
 
@@ -739,8 +739,10 @@ class WordCamp_Post_Types_Plugin {
 		$this->wcpt_permalinks[ $type ] = false;
 
 		$wcpt_post = get_posts( array(
-			'post_type'      => array( 'post', 'page' ),
+			'post_type'      => array( 'page' ),
 			'post_status'    => 'publish',
+			'orderby'        => 'date',
+			'order'          => 'asc',
 			's'              => wcorg_skip_feature( 'content_blocks' ) ? "[{$type}" : "<!-- wp:wordcamp/{$type}",
 			'posts_per_page' => 1,
 		) );

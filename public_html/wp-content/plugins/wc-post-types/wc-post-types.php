@@ -652,12 +652,14 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
-	 * Returns an anchor permalink for a Speaker or Session
+	 * Returns an anchor permalink for a Speaker or Session.
 	 *
-	 * Any page with the Speakers or Sessions block will contain IDs that can be used as anchors.
+	 * Any page with the Speakers or Sessions block will contain IDs that can be used as anchors. If the current
+	 * page contains the corresponding block, we'll assume the user wants to link there. Otherwise, we'll attempt
+	 * to find another page that contains the block.
 	 *
-	 * If the current page contains the corresponding block, we'll assume the user wants to link there.
-	 * Otherwise, we'll attempt to find another page that contains the shortcode.
+	 * Note: if `content_blocks` skip feature flag is set, this site still uses the shortcodes, and we search for
+	 * shortcode content instead.
 	 *
 	 * @param int $target_id The speaker/session's post ID.
 	 *
@@ -709,10 +711,13 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
-	 * Returns the page permalink for speakers, sessions or organizers
+	 * Returns the page permalink for speakers, sessions, or organizers.
 	 *
-	 * Fetches for a post or page with the Speakers, Sessions, or Organizers block and returns the permalink of
-	 * whichever comes first.
+	 * Fetches for a page with the Speakers, Sessions, or Organizers block and returns the permalink of the oldest
+	 * page on the site (which should be the generated site content).
+	 *
+	 * Note: if `content_blocks` skip feature flag is set, this site still uses the shortcodes, and we search for
+	 * shortcode content instead.
 	 *
 	 * @param string $type
 	 *

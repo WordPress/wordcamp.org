@@ -669,26 +669,26 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$anchor_target = get_post( $target_id );
 
-		if ( 'publish' != $anchor_target->post_status ) {
+		if ( 'publish' !== $anchor_target->post_status ) {
 			return '';
 		}
 
 		switch ( $anchor_target->post_type ) {
 			case 'wcb_speaker':
-				if ( ! wcorg_skip_feature( 'content_blocks' ) ) {
-					$permalink = has_block( 'wordcamp/speakers', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
-				} else {
-					$permalink = has_shortcode( $post->post_content, 'speakers' ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
-				}
+				$current_post_has_target = wcorg_skip_feature( 'content_blocks' ) ?
+					has_shortcode( $post->post_content, 'speakers' ) :
+					has_block( 'wordcamp/speakers', $post->post_content );
+
+				$permalink = $current_post_has_target ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'speakers' );
 				$anchor_id = $anchor_target->post_name;
 				break;
 
 			case 'wcb_session':
-				if ( ! wcorg_skip_feature( 'content_blocks' ) ) {
-					$permalink = has_block( 'wordcamp/sessions', $post->post_content ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
-				} else {
-					$permalink = has_shortcode( $post->post_content, 'sessions' ) ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
-				}
+				$current_post_has_target = wcorg_skip_feature( 'content_blocks' ) ?
+					has_shortcode( $post->post_content, 'sessions' ) :
+					has_block( 'wordcamp/sessions', $post->post_content );
+
+				$permalink = $current_post_has_target ? get_permalink( $post->id ) : $this->get_wcpt_permalink( 'sessions' );
 				$anchor_id = $anchor_target->ID;
 				break;
 

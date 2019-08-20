@@ -132,18 +132,10 @@ class WordCamp_Post_Types_Plugin {
 	 * Renders the Order Sponsor Levels admin page.
 	 */
 	public function render_order_sponsor_levels() {
-		if ( ! isset( $_REQUEST['updated'] ) ) {
-			$_REQUEST['updated'] = false;
-		}
-
 		$levels = $this->get_sponsor_levels();
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Order Sponsor Levels', 'wordcamporg' ); ?></h1>
-
-			<?php if ( false !== $_REQUEST['updated'] ) : ?>
-				<div class="updated fade"><p><strong><?php esc_html_e( 'Options saved', 'wordcamporg' ); ?></strong></p></div>
-			<?php endif; ?>
 
 			<form method="post" action="options.php">
 				<?php settings_fields( 'wcb_sponsor_options' ); ?>

@@ -427,7 +427,9 @@ class WordCamp_Post_Types_Plugin {
 
 				// Favourite session star-icon.
 				$content  = '<div class="wcb-session-favourite-icon">';
-				$content .= '<a class="fav-session-button"><span class="dashicons dashicons-star-filled"></span></a></div>';
+				$content .= '<a href="#" role="button" class="fav-session-button" aria-pressed="false"><span class="screen-reader-text">';
+				$content .= sprintf( esc_html__( 'Favorite session: %s', 'wordcamporg' ), $session_title );
+				$content .= '</span><span class="dashicons dashicons-star-filled"></span></a></div>';
 				$content .= '<div class="wcb-session-cell-content">';
 
 				// Determine the session title.

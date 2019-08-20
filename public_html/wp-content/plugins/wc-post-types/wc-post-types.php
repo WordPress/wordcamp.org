@@ -288,7 +288,7 @@ class WordCamp_Post_Types_Plugin {
 	 * Enqueue scripts.
 	 */
 	public function wp_enqueue_scripts() {
-		wp_enqueue_style( 'wcb_shortcodes', plugins_url( 'css/shortcodes.css', __FILE__ ), array(), 2 );
+		wp_enqueue_style( 'wcb_shortcodes', plugins_url( 'css/shortcodes.css', __FILE__ ), array(), 3 );
 	}
 
 	/**

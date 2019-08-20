@@ -1,10 +1,6 @@
 /*
  * [schedule]
  */
-.wcb-favourite-session {
-	background: #e0f8ff;
-}
-
 .wcpt-schedule td {
 	vertical-align: top;
 	position: relative;
@@ -42,30 +38,27 @@
 	margin-right: 0px;
 }
 
-.wcpt-schedule .dashicons:after {
-	display: block;
-	font-size: 9px;
-	color: #999;
-	text-align: right;
-}
-
-
 div.wcb-session-favourite-icon a.fav-session-button {
-	color: #e8e8e8;
+	color: #aaa;
 	text-decoration: none;
 	border-bottom: none;
+	box-shadow: none;
 }
 
-
 div.wcb-session-favourite-icon a.fav-session-button:hover,
-#content a.fav-session-button:hover {
-	color: #fff689;
+div.wcb-session-favourite-icon a.fav-session-button:focus,
+#content a.fav-session-button:hover,
+#content a.fav-session-button:focus {
+	color: #ffb900;
 	text-decoration: none;
 }
 
+.wcb-favourite-session {
+	background: #e0f8ff;
+}
 
 td.wcb-favourite-session a.fav-session-button {
-	color: #fff689;
+	color: #ffb900;
 }
 
 .fav-session-email-wait-spinner {

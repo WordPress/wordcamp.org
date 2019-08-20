@@ -164,9 +164,11 @@ function preprocess_schedule_attributes( $attr ) {
 		array(
 			'date'         => null,
 			'tracks'       => 'all',
-			'speaker_link' => 'anchor',    // anchor|wporg|permalink|none
-			'session_link' => 'permalink', // permalink|anchor|none
-		), $attr
+			// Default to anchor links only if we're not using blocks on this site.
+			'speaker_link' => wcorg_skip_feature( 'content_blocks' ) ? 'anchor' : 'permalink',
+			'session_link' => 'permalink',
+		),
+		$attr
 	);
 
 	foreach ( array( 'tracks', 'speaker_link', 'session_link' ) as $key_for_case_sensitive_value ) {
@@ -179,6 +181,12 @@ function preprocess_schedule_attributes( $attr ) {
 
 	if ( ! in_array( $attr['session_link'], array( 'permalink', 'anchor', 'none' ), true ) ) {
 		$attr['session_link'] = 'permalink';
+	}
+
+	// Sites without the `content_blocks` skip flag use blocks, so we need to prevent these from using `anchor`.
+	if ( ! wcorg_skip_feature( 'content_blocks' ) ) {
+		$attr['speaker_link'] = 'anchor' !== $attr['speaker_link'] ? $attr['speaker_link'] : 'permalink';
+		$attr['session_link'] = 'anchor' !== $attr['session_link'] ? $attr['session_link'] : 'permalink';
 	}
 
 	return $attr;

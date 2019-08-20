@@ -132,7 +132,7 @@ class Edit extends Component {
 }
 
 const sponsorSelect = ( select ) => {
-	const { getEntities, getSiteSettings } = select( WC_BLOCKS_STORE );
+	const { getEntities } = select( WC_BLOCKS_STORE );
 
 	const entities = {
 		wcb_sponsor: getEntities( 'postType', 'wcb_sponsor', { _embed: true } ),
@@ -140,8 +140,7 @@ const sponsorSelect = ( select ) => {
 	};
 
 	return {
-		entities: entities,
-		siteSettings: getSiteSettings(),
+		entities,
 	};
 };
 

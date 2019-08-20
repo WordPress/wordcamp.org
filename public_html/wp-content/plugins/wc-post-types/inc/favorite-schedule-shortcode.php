@@ -391,7 +391,8 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 		return new WP_REST_Response(
 			array(
 				'message' => esc_html__( 'Email functionality disabled.', 'wordcamporg' ),
-			), 200
+			),
+			200
 		);
 	}
 
@@ -425,7 +426,8 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 		return new WP_REST_Response(
 			array(
 				'message' => esc_html__( 'Email sent successfully to ', 'wordcamporg' ) . " $email_address.",
-			), 200
+			),
+			200
 		);
 	}
 

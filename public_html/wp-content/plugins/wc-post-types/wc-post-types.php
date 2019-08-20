@@ -4,10 +4,10 @@
  * Plugin Description: Sessions, Speakers, Sponsors and much more.
  */
 
-require( 'inc/back-compat.php' );
-require_once( 'inc/favorite-schedule-shortcode.php' );
-require_once( 'inc/privacy.php' );
-require_once( 'inc/deprecated.php' );
+require 'inc/back-compat.php';
+require_once 'inc/favorite-schedule-shortcode.php';
+require_once 'inc/privacy.php';
+require_once 'inc/deprecated.php';
 
 class WordCamp_Post_Types_Plugin {
 	protected $wcpt_permalinks;
@@ -77,9 +77,9 @@ class WordCamp_Post_Types_Plugin {
 				'wcb_sponsor_level_order',
 				array(
 					'sanitize_callback' => array( $this, 'validate_sponsor_options' ),
-					'show_in_rest' => array(
+					'show_in_rest'      => array(
 						'schema' => array(
-							'type' => 'array',
+							'type'  => 'array',
 							'items' => array(
 								'type' => 'integer',
 							),
@@ -101,7 +101,7 @@ class WordCamp_Post_Types_Plugin {
 	 * Runs during init, because rest_api_init is too late.
 	 */
 	public function rest_init() {
-		require_once( 'inc/rest-api.php' );
+		require_once 'inc/rest-api.php';
 	}
 
 	/**
@@ -124,7 +124,7 @@ class WordCamp_Post_Types_Plugin {
 	 * Enqueues scripts and styles for the render_order_sponsors_level admin page.
 	 */
 	public function enqueue_order_sponsor_levels_scripts() {
-		wp_enqueue_script( 'wcb-sponsor-order', plugins_url( '/js/order-sponsor-levels.js', __FILE__ ), array( 'jquery-ui-sortable' ), '20110212' );
+		wp_enqueue_script( 'wcb-sponsor-order', plugins_url( '/js/order-sponsor-levels.js', __FILE__ ), array( 'jquery-ui-sortable' ), '20110212', true );
 		wp_enqueue_style( 'wcb-sponsor-order', plugins_url( '/css/order-sponsor-levels.css', __FILE__ ), array(), '20110212' );
 	}
 
@@ -246,7 +246,7 @@ class WordCamp_Post_Types_Plugin {
 			'wcb-spon',
 			'wcbSponsors',
 			array(
-				'l10n' => array(
+				'l10n'  => array(
 					'modalTitle' => __( 'Sponsor Agreement', 'wordcamporg' ),
 				),
 				'modal' => array(
@@ -364,7 +364,7 @@ class WordCamp_Post_Types_Plugin {
 		foreach ( $sessions as $time => $entry ) {
 
 			$skip_next = 0;
-			$colspan = 0;
+			$colspan   = 0;
 
 			$columns_html = '';
 			foreach ( $columns as $key => $term_id ) {
@@ -434,7 +434,7 @@ class WordCamp_Post_Types_Plugin {
 				$classes[] = 'wcb-session-' . $session->post_name;
 
 				// Favourite session star-icon.
-				$content = '<div class="wcb-session-favourite-icon">';
+				$content  = '<div class="wcb-session-favourite-icon">';
 				$content .= '<a class="fav-session-button"><span class="dashicons dashicons-star-filled"></span></a></div>';
 				$content .= '<div class="wcb-session-cell-content">';
 
@@ -535,8 +535,8 @@ class WordCamp_Post_Types_Plugin {
 			array(
 				'root' => esc_url_raw( rest_url() ),
 				'i18n' => array(
-					'reqTimeOut' => esc_html__( 'Sorry, the email request timed out.', 'wordcamporg' ),
-					'otherError' => esc_html__( 'Sorry, the email request failed.',    'wordcamporg' ),
+					'reqTimeOut'           => esc_html__( 'Sorry, the email request timed out.', 'wordcamporg' ),
+					'otherError'           => esc_html__( 'Sorry, the email request failed.',    'wordcamporg' ),
 					'overwriteFavSessions' => esc_html__( 'You already have some sessions saved. Would you like to overwrite those with the shared sessions that you are viewing?', 'wordcamporg' ),
 					'buttonDisabledAlert'  => esc_html__( 'Interaction with favorite sessions disabled in share sessions view. Please click on schedule menu link to pick sessions.', 'wordcamporg' ),
 					'buttonDisabledNote'   => esc_html__( 'Button disabled.', 'wordcamporg' ),
@@ -1332,7 +1332,7 @@ class WordCamp_Post_Types_Plugin {
 
 		wp_nonce_field( 'edit-sponsor-info', 'wcpt-meta-sponsor-info' );
 
-		require_once( __DIR__ . '/views/sponsors/metabox-sponsor-info.php' );
+		require_once __DIR__ . '/views/sponsors/metabox-sponsor-info.php';
 	}
 
 	/**
@@ -1368,7 +1368,7 @@ class WordCamp_Post_Types_Plugin {
 			restore_current_blog();
 		}
 
-		require_once( __DIR__ . '/views/sponsors/metabox-sponsor-agreement.php' );
+		require_once __DIR__ . '/views/sponsors/metabox-sponsor-agreement.php';
 	}
 
 	/**
@@ -1384,7 +1384,7 @@ class WordCamp_Post_Types_Plugin {
 			'post_status'    => 'any',
 			'posts_per_page' => - 1,
 
-			'meta_query' => array(
+			'meta_query'     => array(
 				array(
 					'key'   => '_wcbsi_sponsor_id',
 					'value' => $sponsor->ID,
@@ -1400,7 +1400,7 @@ class WordCamp_Post_Types_Plugin {
 			admin_url( 'post-new.php' )
 		);
 
-		require_once( __DIR__ . '/views/sponsors/metabox-invoice-sponsor.php' );
+		require_once __DIR__ . '/views/sponsors/metabox-invoice-sponsor.php';
 	}
 
 	/**
@@ -1488,7 +1488,7 @@ class WordCamp_Post_Types_Plugin {
 			update_post_meta( $post_id, '_wcpt_session_slides', esc_url_raw( $_POST['wcpt-session-slides'] ) );
 
 			// Update session video link.
-			if ( 'wordpress.tv' == str_replace( 'www.', '', strtolower( parse_url( $_POST['wcpt-session-video'], PHP_URL_HOST ) ) ) ) {
+			if ( 'wordpress.tv' == str_replace( 'www.', '', strtolower( wp_parse_url( $_POST['wcpt-session-video'], PHP_URL_HOST ) ) ) ) {
 				update_post_meta( $post_id, '_wcpt_session_video', esc_url_raw( $_POST['wcpt-session-video'] ) );
 			}
 		}
@@ -1584,7 +1584,7 @@ class WordCamp_Post_Types_Plugin {
 				$values['state'] = $this->get_sponsor_info_state_default_value();
 			}
 
-			$values['website']    = esc_url_raw( filter_input( INPUT_POST, '_wcpt_sponsor_website' ) );
+			$values['website'] = esc_url_raw( filter_input( INPUT_POST, '_wcpt_sponsor_website' ) );
 			// TODO: maybe only allows links to home page, depending on outcome of http://make.wordpress.org/community/2013/12/31/irs-rules-for-corporate-sponsorship-of-wordcamp/ .
 			$values['first_name'] = ucfirst( $values['first_name'] );
 			$values['last_name']  = ucfirst( $values['last_name'] );
@@ -1668,7 +1668,7 @@ class WordCamp_Post_Types_Plugin {
 			'wcb_session',
 			array(
 				'labels'          => $labels,
-				'rewrite' => array(
+				'rewrite'         => array(
 					'slug'       => 'session',
 					'with_front' => false,
 				),
@@ -1708,7 +1708,7 @@ class WordCamp_Post_Types_Plugin {
 			'wcb_sponsor',
 			array(
 				'labels'          => $labels,
-				'rewrite' => array(
+				'rewrite'         => array(
 					'slug'       => 'sponsor',
 					'with_front' => false,
 				),
@@ -1748,7 +1748,7 @@ class WordCamp_Post_Types_Plugin {
 			'wcb_organizer',
 			array(
 				'labels'          => $labels,
-				'rewrite' => array(
+				'rewrite'         => array(
 					'slug'       => 'organizer',
 					'with_front' => false,
 				),
@@ -1951,7 +1951,7 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'manage_wcb_session_posts_columns':
 				$columns = array_slice( $columns, 0, 2, true ) + array( 'wcb_session_speakers' => __( 'Speakers', 'wordcamporg' ) ) + array_slice( $columns, 2, null, true );
-				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time'     => __( 'Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
 				break;
 			default:
 		}
@@ -2064,7 +2064,7 @@ class WordCamp_Post_Types_Plugin {
 	 * Register some widgets.
 	 */
 	public function register_widgets() {
-		require_once( 'inc/widgets.php' );
+		require_once 'inc/widgets.php';
 
 		register_widget( 'WCB_Widget_Sponsors'    );
 		register_widget( 'WCPT_Widget_Speakers'   );

@@ -425,12 +425,7 @@ class WordCamp_Post_Types_Plugin {
 				$classes[] = 'wcpt-session-type-' . $session_type;
 				$classes[] = 'wcb-session-' . $session->post_name;
 
-				// Favourite session star-icon.
-				$content  = '<div class="wcb-session-favourite-icon">';
-				$content .= '<a href="#" role="button" class="fav-session-button" aria-pressed="false"><span class="screen-reader-text">';
-				$content .= sprintf( esc_html__( 'Favorite session: %s', 'wordcamporg' ), $session_title );
-				$content .= '</span><span class="dashicons dashicons-star-filled"></span></a></div>';
-				$content .= '<div class="wcb-session-cell-content">';
+				$content = '<div class="wcb-session-cell-content">';
 
 				// Determine the session title.
 				if ( 'permalink' == $attr['session_link'] && 'session' == $session_type ) {
@@ -472,6 +467,14 @@ class WordCamp_Post_Types_Plugin {
 
 				// End of cell-content.
 				$content .= '</div>';
+
+				// Favourite session star-icon.
+				if ( 'session' == $session_type ) {
+					$content .= '<div class="wcb-session-favourite-icon">';
+					$content .= '<a href="#" role="button" class="fav-session-button" aria-pressed="false"><span class="screen-reader-text">';
+					$content .= sprintf( esc_html__( 'Favorite session: %s', 'wordcamporg' ), $session_title );
+					$content .= '</span><span class="dashicons dashicons-star-filled"></span></a></div>';
+				}
 
 				$columns_clone = $columns;
 

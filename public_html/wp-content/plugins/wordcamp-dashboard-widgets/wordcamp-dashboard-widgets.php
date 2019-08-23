@@ -232,6 +232,20 @@ class WordCamp_Dashboard_Widgets {
 		</p>
 
 		<ul class="ul-disc">
+			<?php if ( current_user_can( 'edit_posts' ) ) : ?>
+				<li>
+				<?php
+					printf(
+						wp_kses(
+							__( 'Show off your content with <a href="%s">new, customizable WordCamp blocks.</a>', 'wordcamporg' ),
+							array( 'a' => array( 'href' => true ) )
+						),
+						'https://make.wordpress.org/community/2019/08/19/wordcamp-blocks-are-live/'
+					);
+				?>
+				</li>
+			<?php endif; ?>
+
 			<?php if ( current_user_can( 'switch_themes' ) ) : ?>
 				<li>
 					<a href="https://make.wordpress.org/community/2017/04/18/introducing-a-new-mentor-tool-the-planning-checklist/">

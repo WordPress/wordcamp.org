@@ -1,13 +1,13 @@
 <?php
-
 namespace WordCamp\Jetpack_Tweaks;
+
+use Exception;
 use WordCamp\RemoteCSS;
 use WordCamp\Logger;
-use Exception;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
-add_filter( 'update_custom_css_data',     __NAMESPACE__ . '\sanitize_custom_css', 15       );	// After Jetpack_Custom_CSS_Enhancements::update_custom_css_data()
+add_filter( 'update_custom_css_data',     __NAMESPACE__ . '\sanitize_custom_css', 15       ); // After Jetpack_Custom_CSS_Enhancements::update_custom_css_data().
 add_action( 'csstidy_optimize_postparse', __NAMESPACE__ . '\sanitize_csstidy_parsed_rules' );
 add_action( 'admin_notices',              __NAMESPACE__ . '\notify_import_rules_stripped'  );
 add_action( 'csstidy_optimize_subvalue',  __NAMESPACE__ . '\sanitize_csstidy_subvalues'    );
@@ -33,7 +33,7 @@ function sanitize_custom_css( $post ) {
 		 * There's no way to gracefully abort the process and show an error message, so just die.
 		 */
 		Logger\log( 'custom_css_sanitization_failed', compact( 'post', 'exception' ) );
-		wp_die( $exception->getMessage() );
+		wp_die( wp_kses_data( $exception->getMessage() ) );
 	}
 
 	return $post;
@@ -63,8 +63,8 @@ function sanitize_csstidy_parsed_rules( $safecss ) {
 /**
  * Notify the user that @import rules were stripped from their CSS
  *
- * todo Since WP 4.7 / Jetpack 4.2.2, we also need a way to show this warning in Customizer > Additional CSS. It
- * 		still needs to work in Remote CSS, though.
+ * @todo Since WP 4.7 / Jetpack 4.2.2, we also need a way to show this warning in Customizer > Additional CSS. It
+ *       still needs to work in Remote CSS, though.
  */
 function notify_import_rules_stripped() {
 	global $current_screen;
@@ -85,14 +85,20 @@ function notify_import_rules_stripped() {
 	<div class="notice notice-warning">
 		<p>
 			<?php printf(
-				// translators: 1: '@import', 2: Fonts tool URL
-				__(
-					'WARNING: %1$s rules were stripped for security reasons. Please use <a href="%2$s">the Fonts tool</a> to add web fonts, and merge other stylesheets directly into your custom CSS.',
-					'wordcamporg'
+				// translators: 1: '@import', 2: Fonts tool URL.
+				wp_kses(
+					__(
+						'WARNING: %1$s rules were stripped for security reasons. Please use <a href="%2$s">the Fonts tool</a> to add web fonts, and merge other stylesheets directly into your custom CSS.',
+						'wordcamporg'
+					),
+					array(
+						'a'    => array( 'href' => true ),
+						'code' => true,
+					)
 				),
 				'<code>@import</code>',
-				admin_url( 'themes.php?page=wc-fonts-options' )
-            ); ?>
+				esc_url( admin_url( 'themes.php?page=wc-fonts-options' ) )
+			); ?>
 		</p>
 	</div>
 
@@ -107,7 +113,7 @@ function notify_import_rules_stripped() {
 function sanitize_csstidy_subvalues( $safecss ) {
 	$safecss->sub_value = trim( $safecss->sub_value );
 
-	// Send any urls through our filter
+	// Send any urls through our filter.
 	if ( preg_match( '!^\s*(?P<url_expression>url\s*(?P<opening_paren>\(|\\0028)(?P<parenthetical_content>.*)(?P<closing_paren>\)|\\0029))(.*)$!Dis', $safecss->sub_value, $matches ) ) {
 		$safecss->sub_value = sanitize_urls_in_css_properties( $matches['parenthetical_content'], $safecss->property );
 
@@ -118,7 +124,7 @@ function sanitize_csstidy_subvalues( $safecss ) {
 		}
 	}
 
-	// Strip any expressions
+	// Strip any expressions.
 	if ( preg_match( '!^\\s*expression!Dis', $safecss->sub_value ) ) {
 		$safecss->sub_value = '';
 	}
@@ -148,12 +154,12 @@ function sanitize_urls_in_css_properties( $url, $property ) {
 		'shape-outside',
 	);
 	$allowed_protocols  = array( 'http', 'https' );
-	// todo maybe add permanent warning note that `data` shouldn't be allowed, see #1616:comment:4
+	// todo maybe add permanent warning note that `data` shouldn't be allowed, see #1616:comment:4.
 
-	// Clean up the string
+	// Clean up the string.
 	$url = trim( $url, "' \" \r \n" );
 
-	// Check against whitelist for properties allowed to have URL values
+	// Check against whitelist for properties allowed to have URL values.
 	if ( ! in_array( trim( $property ), $allowed_properties, true ) ) {
 		// trim() is because multiple properties with the same name are stored with
 		// additional trailing whitespace so they don't overwrite each other in the hash.

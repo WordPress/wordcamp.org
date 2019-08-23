@@ -8,7 +8,8 @@
  */
 
 class WordCamp_Dashboard_Widgets {
-	protected $need_central_about_info, $needed_pages;
+	protected $need_central_about_info;
+	protected $needed_pages;
 
 	/**
 	 * Constructor
@@ -58,7 +59,8 @@ class WordCamp_Dashboard_Widgets {
 	protected function check_central_about_info() {
 		$transient_key = 'wcorg_need_central_info';
 
-		if ( $need_info = get_transient( $transient_key ) ) {
+		$need_info = get_transient( $transient_key );
+		if ( $need_info ) {
 			return 'yes' == $need_info;
 		}
 
@@ -140,6 +142,7 @@ class WordCamp_Dashboard_Widgets {
 	 * Make our custom dashboard widgets more visible
 	 */
 	protected function prioritize_wordcamp_widgets() {
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Need to edit global to control priority.
 		global $wp_meta_boxes;
 
 		// Move WordCamp Reminders to the top of the primary column.
@@ -162,6 +165,7 @@ class WordCamp_Dashboard_Widgets {
 
 			unset( $wp_meta_boxes['dashboard']['normal']['core']['new_wordcamporg_tools'] );
 		}
+		// phpcs:enable
 	}
 
 	/**

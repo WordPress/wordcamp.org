@@ -11,6 +11,7 @@ add_filter( 'update_custom_css_data',     __NAMESPACE__ . '\sanitize_custom_css'
 add_action( 'csstidy_optimize_postparse', __NAMESPACE__ . '\sanitize_csstidy_parsed_rules' );
 add_action( 'admin_notices',              __NAMESPACE__ . '\notify_import_rules_stripped'  );
 add_action( 'csstidy_optimize_subvalue',  __NAMESPACE__ . '\sanitize_csstidy_subvalues'    );
+add_action( 'safecss_parse_pre',          __NAMESPACE__ . '\update_csstidy_safelist', 0    );
 
 /**
  * Sanitize CSS saved through the Core/Jetpack editor inside the Customizer
@@ -132,9 +133,22 @@ function sanitize_csstidy_subvalues( $safecss ) {
  * @return string
  */
 function sanitize_urls_in_css_properties( $url, $property ) {
-	$allowed_properties = array( 'background', 'background-image', 'border-image', 'border-image-source', 'content', 'cursor', 'list-style', 'list-style-image' );
+	$allowed_properties = array(
+		'background',
+		'background-image',
+		'border-image',
+		'border-image-source',
+		'clip-path',
+		'content',
+		'cursor',
+		'list-style',
+		'list-style-image',
+		'mask',
+		'mask-image',
+		'shape-outside',
+	);
 	$allowed_protocols  = array( 'http', 'https' );
-	// todo maybe add permenant warning note that `data` shouldn't be allowed, see #1616:comment:4
+	// todo maybe add permanent warning note that `data` shouldn't be allowed, see #1616:comment:4
 
 	// Clean up the string
 	$url = trim( $url, "' \" \r \n" );
@@ -153,4 +167,47 @@ function sanitize_urls_in_css_properties( $url, $property ) {
 	}
 
 	return "url('" . str_replace( "'", "\\'", $url ) . "')";
+}
+
+/**
+ * Additional CSS properties that the CSS sanitizer should recognize as valid.
+ *
+ * @return array
+ */
+function get_custom_css_properties_safelist() {
+	return array(
+		'background-blend-mode',
+		'clip-path',
+		'isolation',
+		'mask',
+		'mask-clip',
+		'mask-composite',
+		'mask-image',
+		'mask-mode',
+		'mask-origin',
+		'mask-position',
+		'mask-repeat',
+		'mask-size',
+		'mix-blend-mode',
+		'shape-image-threshold',
+		'shape-margin',
+		'shape-outside',
+	);
+}
+
+/**
+ * Add the custom safelisted properties to CSSTidy's config.
+ *
+ * Hooked to `safecss_parse_pre` to try and ensure that the `csstidy` global exists before trying to modify it.
+ *
+ * @return void
+ */
+function update_csstidy_safelist() {
+	$properties = get_custom_css_properties_safelist();
+
+	$properties_for_csstidy = array_fill_keys( $properties, 'CSS3.0' );
+
+	if ( ! empty( $GLOBALS['csstidy']['all_properties'] ) ) {
+		$GLOBALS['csstidy']['all_properties'] = array_merge( $GLOBALS['csstidy']['all_properties'], $properties_for_csstidy );
+	}
 }

@@ -164,7 +164,7 @@ function preprocess_schedule_attributes( $attr ) {
 		array(
 			'date'         => null,
 			'tracks'       => 'all',
-			// Default to anchor links only if we're not using blocks on this site.
+			// Sites without the `content_blocks` skip flag use blocks, these do not support anchor links.
 			'speaker_link' => wcorg_skip_feature( 'content_blocks' ) ? 'anchor' : 'permalink',
 			'session_link' => 'permalink',
 		),
@@ -183,7 +183,7 @@ function preprocess_schedule_attributes( $attr ) {
 		$attr['session_link'] = 'permalink';
 	}
 
-	// Sites without the `content_blocks` skip flag use blocks, so we need to prevent these from using `anchor`.
+	// See above re: `content_blocks`.
 	if ( ! wcorg_skip_feature( 'content_blocks' ) ) {
 		$attr['speaker_link'] = 'anchor' !== $attr['speaker_link'] ? $attr['speaker_link'] : 'permalink';
 		$attr['session_link'] = 'anchor' !== $attr['session_link'] ? $attr['session_link'] : 'permalink';

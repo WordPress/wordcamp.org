@@ -164,9 +164,11 @@ function preprocess_schedule_attributes( $attr ) {
 		array(
 			'date'         => null,
 			'tracks'       => 'all',
-			'speaker_link' => 'anchor',    // anchor|wporg|permalink|none
-			'session_link' => 'permalink', // permalink|anchor|none
-		), $attr
+			// Sites without the `content_blocks` skip flag use blocks, these do not support anchor links.
+			'speaker_link' => wcorg_skip_feature( 'content_blocks' ) ? 'anchor' : 'permalink',
+			'session_link' => 'permalink',
+		),
+		$attr
 	);
 
 	foreach ( array( 'tracks', 'speaker_link', 'session_link' ) as $key_for_case_sensitive_value ) {
@@ -179,6 +181,12 @@ function preprocess_schedule_attributes( $attr ) {
 
 	if ( ! in_array( $attr['session_link'], array( 'permalink', 'anchor', 'none' ), true ) ) {
 		$attr['session_link'] = 'permalink';
+	}
+
+	// See above re: `content_blocks`.
+	if ( ! wcorg_skip_feature( 'content_blocks' ) ) {
+		$attr['speaker_link'] = 'anchor' !== $attr['speaker_link'] ? $attr['speaker_link'] : 'permalink';
+		$attr['session_link'] = 'anchor' !== $attr['session_link'] ? $attr['session_link'] : 'permalink';
 	}
 
 	return $attr;
@@ -383,7 +391,8 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 		return new WP_REST_Response(
 			array(
 				'message' => esc_html__( 'Email functionality disabled.', 'wordcamporg' ),
-			), 200
+			),
+			200
 		);
 	}
 
@@ -417,7 +426,8 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 		return new WP_REST_Response(
 			array(
 				'message' => esc_html__( 'Email sent successfully to ', 'wordcamporg' ) . " $email_address.",
-			), 200
+			),
+			200
 		);
 	}
 

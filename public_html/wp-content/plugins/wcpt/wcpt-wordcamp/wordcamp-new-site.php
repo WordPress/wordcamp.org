@@ -601,6 +601,16 @@ class WordCamp_New_Site {
 				'status'  => 'publish',
 				'type'    => 'page',
 			),
+
+			array(
+				'title'   => __( 'Offline', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'offline' ),
+				'status'  => 'publish',
+				'type'    => 'page',
+				'meta'    => array(
+					'wc_page_offline' => 'yes',
+				),
+			),
 		);
 
 		return $pages;

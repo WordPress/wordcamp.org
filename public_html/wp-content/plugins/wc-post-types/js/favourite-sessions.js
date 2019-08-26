@@ -85,6 +85,13 @@ jQuery( document ).ready( function ( $ ) {
 
 		for ( var i = 0; i < tdElements.length; i ++ ) {
 			tdElements[ i ].classList.toggle( 'wcb-favourite-session' );
+
+			var button = tdElements[ i ].querySelector( '.fav-session-button' );
+			if ( button ) {
+				// The button should be "unpressed" if it's currently pressed.
+				var shouldUnpress = $( button ).attr( 'aria-pressed' ) !== 'false';
+				$( button ).attr( 'aria-pressed', shouldUnpress ? 'false' : 'true' );
+			}
 		}
 	}
 
@@ -241,8 +248,24 @@ jQuery( document ).ready( function ( $ ) {
 		} else {
 			alert( favSessionsPhpObject.i18n.buttonDisabledAlert );
 		}
+	} );
+	
+	$( '.fav-session-button' ).keydown( function ( event ) {
+		// Space (32) and enter (13) trigger the favoriting, anything else can be passed through.
+		if ( event.keyCode !== 32 && event.keyCode !== 13 ) {
+			return;
+		}
 
-		return false;
+		event.preventDefault();
+
+		if ( FavSessions.primarySource == FavSessions.useLocalStorage ) {
+			var elem      = $( this ),
+			    sessionId = elem.parent().parent().data( 'session-id' );
+
+			switchSessionFavourite( sessionId );
+		} else {
+			alert( favSessionsPhpObject.i18n.buttonDisabledAlert );
+		}
 	} );
 
 	$( '#fav-sessions-form' ).on( 'submit', function ( event ) {

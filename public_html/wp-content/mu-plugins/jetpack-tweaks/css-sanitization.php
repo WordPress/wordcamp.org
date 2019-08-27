@@ -166,13 +166,13 @@ function sanitize_urls_in_css_properties( $url, $property ) {
 		return '';
 	}
 
-	$url = wp_kses_bad_protocol_once( $url, $allowed_protocols );
+	$good_protocol_url = wp_kses_bad_protocol( $url, $allowed_protocols );
 
-	if ( empty( $url ) ) {
+	if ( empty( $good_protocol_url ) || strtolower( $good_protocol_url ) !== strtolower( $url ) ) {
 		return '';
 	}
 
-	return "url('" . str_replace( "'", "\\'", $url ) . "')";
+	return "url('" . addcslashes( $good_protocol_url, '\'\\' ) . "')";
 }
 
 /**

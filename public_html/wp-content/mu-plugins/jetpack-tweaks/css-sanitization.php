@@ -211,6 +211,10 @@ function get_custom_css_properties_safelist() {
 function update_csstidy_safelist() {
 	$properties = get_custom_css_properties_safelist();
 
+	/**
+	 * CSSTidy uses a config variable for CSS spec version to determine which properties are valid. This tells csstidy
+	 * that the properties we're adding are part of the CSS3.0 spec, even though they actually aren't yet.
+	 */
 	$properties_for_csstidy = array_fill_keys( $properties, 'CSS3.0' );
 
 	if ( ! empty( $GLOBALS['csstidy']['all_properties'] ) ) {

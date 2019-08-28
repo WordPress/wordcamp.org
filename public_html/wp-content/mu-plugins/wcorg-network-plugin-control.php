@@ -76,6 +76,7 @@ function _get_network_plugin_state_list( $state ) {
 			'wcpt/wcpt-loader.php',
 			'wordcamp-wiki/bootstrap.php',
 			'wordcamp-qbo/wordcamp-qbo.php',
+			'wp-cldr/wp-cldr.php',
 		),
 	);
 

@@ -265,18 +265,6 @@ class WordCamp_Dashboard_Widgets {
 					<?php esc_html_e( 'Create personalized attendee badges.', 'wordcamporg' ); ?>
 				</a>
 			</li>
-
-			<li>
-				<?php
-					printf(
-						wp_kses(
-							__( '<a href="%s">Edit CSS in your local environment</a> and manage it in a GitHub repository.', 'wordcamporg' ),
-							array( 'a' => array( 'href' => true ) )
-						),
-						'https://make.wordpress.org/community/2015/11/24/remote-css-plugin-launched-on-wordcamp-org/'
-					);
-				?>
-			</li>
 		</ul>
 
 		<?php

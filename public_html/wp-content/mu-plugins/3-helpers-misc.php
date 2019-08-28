@@ -55,7 +55,7 @@ function wcorg_get_user_by_canonical_names( $name ) {
 }
 
 /**
- * Get ISO-3166 country names and codes
+ * Get CLDR country names and codes
  *
  * @todo move the real functionality from get_valid_countries_iso3166() to here, then have the Budgets plugin,
  * QBO, etc call this.
@@ -63,9 +63,20 @@ function wcorg_get_user_by_canonical_names( $name ) {
  * @return array
  */
 function wcorg_get_countries() {
-	require_once( WP_PLUGIN_DIR . '/wordcamp-payments/includes/wordcamp-budgets.php' );
+	require_once( WP_PLUGIN_DIR . '/wp-cldr/class-wp-cldr.php' );
 
-	return WordCamp_Budgets::get_valid_countries_iso3166();
+	$cldr        = new WP_CLDR();
+	$territories = $cldr->get_territories_contained( '001' ); // "World".
+	$countries   = array();
+
+	foreach ( $territories as $code ) {
+		$countries[ $code ] = array(
+			'alpha2' => $code,
+			'name'   => $cldr->get_territory_name( $code ),
+		);
+	}
+
+	return $countries;
 }
 
 /**

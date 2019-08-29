@@ -12,6 +12,9 @@ require_once 'inc/deprecated.php';
 class WordCamp_Post_Types_Plugin {
 	protected $wcpt_permalinks;
 
+	const DEFAULT_LENGTH_HOURS   = '00';
+	const DEFAULT_LENGTH_MINUTES = '50';
+
 	/**
 	 * Fired when plugin file is loaded.
 	 */
@@ -1243,9 +1246,12 @@ class WordCamp_Post_Types_Plugin {
 		$session_hours    = ( $session_time ) ? date( 'g', $session_time )     : date( 'g' );
 		$session_minutes  = ( $session_time ) ? date( 'i', $session_time )     : '00';
 		$session_meridiem = ( $session_time ) ? date( 'a', $session_time )     : 'am';
+		$session_length_hours   = $post->_wcpt_session_length_hours   ?? self::DEFAULT_LENGTH_HOURS;
+		$session_length_minutes = $post->_wcpt_session_length_minutes ?? self::DEFAULT_LENGTH_MINUTES;
 		$session_type     = get_post_meta( $post->ID, '_wcpt_session_type', true );
 		$session_slides   = get_post_meta( $post->ID, '_wcpt_session_slides', true );
 		$session_video    = get_post_meta( $post->ID, '_wcpt_session_video',  true );
+
 		?>
 
 		<?php wp_nonce_field( 'edit-session-info', 'wcpt-meta-session-info' ); ?>
@@ -1253,8 +1259,8 @@ class WordCamp_Post_Types_Plugin {
 		<p>
 			<label for="wcpt-session-date"><?php esc_html_e( 'Date:', 'wordcamporg' ); ?></label>
 			<input type="text" id="wcpt-session-date" data-date="<?php echo esc_attr( $session_date ); ?>" name="wcpt-session-date" value="<?php echo esc_attr( $session_date ); ?>" /><br />
-			<label><?php esc_html_e( 'Time:', 'wordcamporg' ); ?></label>
 
+			<label><?php esc_html_e( 'Start Time:', 'wordcamporg' ); ?></label>
 			<select name="wcpt-session-hour" aria-label="<?php esc_html_e( 'Session Start Hour', 'wordcamporg' ); ?>">
 				<?php for ( $i = 1; $i <= 12; $i++ ) : ?>
 					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_hours ); ?>>
@@ -1275,6 +1281,36 @@ class WordCamp_Post_Types_Plugin {
 				<option value="am" <?php selected( 'am', $session_meridiem ); ?>>am</option>
 				<option value="pm" <?php selected( 'pm', $session_meridiem ); ?>>pm</option>
 			</select>
+		</p>
+
+		<p>
+			<label for="wcpt-session-length-hours">
+				<?php esc_html_e( 'Length:', 'wordcamporg' ); ?>
+			</label>
+
+			<select id="wcpt-session-length-hours" name="wcpt-session-length-hours" aria-label="<?php esc_html_e( 'Session Length: Hours', 'wordcamporg' ); ?>">
+				<?php for ( $i = 0; $i <= 23; $i++ ) : ?>
+					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_length_hours ); ?>>
+						<?php echo esc_html( $i ); ?>
+					</option>
+				<?php endfor; ?>
+			</select>
+			<label for="wcpt-session-length-hours">
+				<?php
+				esc_html_e( 'hours', 'wordcamporg' );
+				?>
+			</label>
+
+			<select id="wcpt-session-length-minutes" name="wcpt-session-length-minutes" aria-label="<?php esc_html_e( 'Session Length: Minutes', 'wordcamporg' ); ?>">
+				<?php for ( $i = '00'; (int) $i <= 55; $i = sprintf( '%02d', (int) $i + 5 ) ) : ?>
+					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_length_minutes ); ?>>
+						<?php echo esc_html( $i ); ?>
+					</option>
+				<?php endfor; ?>
+			</select>
+			<label for="wcpt-session-length-minutes">
+				<?php esc_html_e( 'minutes', 'wordcamporg' ); ?>
+			</label>
 		</p>
 
 		<p>
@@ -1472,6 +1508,9 @@ class WordCamp_Post_Types_Plugin {
 				'am' == $_POST['wcpt-session-meridiem'] ? 'am' : 'pm'
 			) );
 			update_post_meta( $post_id, '_wcpt_session_time', $session_time );
+
+			update_post_meta( $post_id, '_wcpt_session_length_hours',   absint( $_POST['wcpt-session-length-hours']   ) );
+			update_post_meta( $post_id, '_wcpt_session_length_minutes', absint( $_POST['wcpt-session-length-minutes'] ) );
 
 			// Update session type.
 			$session_type = sanitize_text_field( $_POST['wcpt-session-type'] );

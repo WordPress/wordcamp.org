@@ -95,6 +95,8 @@ Note: All of these commands are meant to be executed from project directory.
     ```bash
     docker-compose stop
     ```
+   
+   Note that using `docker-compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
 
 1. To open a shell inside the web container, use:
     ```bash

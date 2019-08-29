@@ -31,7 +31,7 @@ describe( 'ItemTitle', () => {
 	} );
 
 	test( 'should render a heading tag with a link.', () => {
-		const component = renderer.create( <ItemTitle title="Example Title" link="https://wordpress.com" /> );
+		const component = renderer.create( <ItemTitle title="Example Title" link="https://wordpress.org" /> );
 		expect( component.toJSON() ).toMatchSnapshot();
 	} );
 
@@ -42,7 +42,7 @@ describe( 'ItemTitle', () => {
 				headingLevel={ 1 }
 				className="my-test-heading"
 				align="right"
-				link="https://wordpress.com"
+				link="https://wordpress.org"
 			/>
 		);
 		expect( component.toJSON() ).toMatchSnapshot();

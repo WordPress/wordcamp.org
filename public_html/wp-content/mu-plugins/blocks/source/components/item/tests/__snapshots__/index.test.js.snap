@@ -28,7 +28,7 @@ exports[`ItemTitle should render a heading tag with a link, custom class name, h
   }
 >
   <a
-    href="https://wordpress.com"
+    href="https://wordpress.org"
     rel="noopener noreferrer"
     target="_blank"
   >
@@ -43,7 +43,7 @@ exports[`ItemTitle should render a heading tag with a link. 1`] = `
   style={Object {}}
 >
   <a
-    href="https://wordpress.com"
+    href="https://wordpress.org"
     rel="noopener noreferrer"
     target="_blank"
   >

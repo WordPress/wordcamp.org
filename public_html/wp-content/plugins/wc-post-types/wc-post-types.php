@@ -1829,11 +1829,20 @@ class WordCamp_Post_Types_Plugin {
 				'labels'       => $labels,
 				'rewrite'      => array( 'slug' => 'track' ),
 				'query_var'    => 'track',
-				'hierarchical' => true,
 				'public'       => true,
 				'show_ui'      => true,
 				'show_in_rest' => true,
 				'rest_base'    => 'session_track',
+
+				/*
+				 * There isn't a common or compelling use case for hierarchical tracks, and they're difficult to
+				 * display in the Schedule block.
+				 *
+				 * todo er, maybe don't want to do it this way. setting to false means the UI used is like for tags
+				 * where you have to type it out, but we want the UI where you get checkboxes. so maybe instead, set it to be
+				 * hieararchicail, but then flatten it programatically so that any sub-tracks get treated as f they were just the parent
+				 */
+				'hierarchical' => wcorg_skip_feature( 'flat_session_tracks' ) ? true : false,
 			)
 		);
 

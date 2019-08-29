@@ -1,0 +1,293 @@
+/*
+ * todo
+ *
+ * 4+ tracks overflows G's content area, 3+ probably does on smaller screens.
+ *		not sure how to fix that, ask mel et al if any ideas
+ *
+ * were there any css updates in the 4.diff that need to be synced here?
+ *
+ * need to test in ie11 and a few browsers/devices
+ *
+ * adjust sidebar spacing per https://make.wordpress.org/community/2018/10/26/wordcamp-block-schedule/#comment-27083
+ *
+ * if two sessions are assigned to same time & track, then they'll overlap. is there an elegant way to handle that,
+ *	like making them positioned relative to each other, so that they're both in the cell but not overlapping?
+ */
+
+
+/*
+ * ScheduleGrid
+ */
+
+$color__grid-border: #e0e5e9;
+// need to get exact colors from mel, also for other colors
+
+@mixin breakpoint-grid-layout() {
+	@supports ( display: grid ) {
+		@media screen and ( min-width: 700px ) {
+			@content;
+		}
+	}
+
+	/* need to base breakpoints on the content area container rather than tha screen?
+	can have wide screen but narrow content area
+	that's the case in the editor itself
+
+	maybe use Gutenberg's mixins for breakpoints?
+	*/
+
+}
+
+.wp-block[data-type="wordcamp/schedule"] .editor-block-list__block-edit {
+	padding-left: 1em;
+	padding-right: 1em;
+
+	// todo something is creating horizontal scrolling
+
+	// todo at 1070px wide with G sidebar shown, there's horizontal scroll + grey background isn't covering about 20px on the right side
+		// todo at 900px wide wtih G sidebar shown, the sidebar overlaps the content, instead of content shriking. might be fixed by ^
+}
+
+.wordcamp-schedule__day {
+	background-color: #fbfbfc;
+
+	@include breakpoint-grid-layout {
+		display: grid;
+		grid-gap: 1px;
+	}
+}
+
+.wordcamp-schedule__date {
+	.editor-styles-wrapper & {
+		margin-bottom: 0;
+	}
+
+	&::before {
+		.editor-styles-wrapper & {
+			content: none;
+		}
+	}
+}
+
+.wordcamp-schedule__column-header {
+	display: none;
+	background-color: #fff;
+	font-weight: 700;
+	font-size: 0.75em;
+	text-align: center;
+
+	/* Keep the headers visible so the user always knows which column they're looking at. */
+	@include breakpoint-grid-layout {
+		display: block;
+		position: sticky;
+		top: 0; /* Remove the gap above in Firefox and maybe other browsers. */
+		z-index: 10;
+		grid-row: tracks;
+		margin: 0 -1px 0 -1px;	/* Overflow the grid-gap so that the `background-color` from `.wordcamp-schedule-day` doesn't show through and create pseudo-borders. */
+		padding: 10px 5px 5px;
+		background-color: rgba( 251, 251, 252, 0.92 );	/* Same as $color__grid-border, but with opacity */
+			/* todo maybe need to switch back to ::after and then use z-index? see https://make.wordpress.org/community/2018/10/26/wordcamp-block-schedule/#comment-26821 */
+	}
+}
+
+
+/*
+ * Sessions (plural)
+ */
+
+.wordcamp-schedule__time-slot-header,
+.wordcamp-schedule__session {
+	padding: 14px;
+	font-size: 14px;
+	border: 1px solid $color__grid-border;
+		/* todo need to remove border when cell spans rows, otherwise it looks liek the content is overflowing
+		 may need to do that here or somewhere else
+		 */
+	border-top: none;
+
+	@include breakpoint-grid-layout {
+		position: relative;
+		z-index: 5;
+
+		/*
+		 * Use box-shadow to simulate borders, because actual `border`s would stack to be double the width.
+		 * The other techniques won't work because we support use cases where there are empty spots in the grid.
+		 *
+		 * This doesn't work in the edge case where there are empty grid cells that are located at the edges of the
+		 * grid. That's rare, though, and there isn't a good solution, so it isn't handled.
+		 *
+		 * https://stackoverflow.com/a/43686894/450127
+		 */
+		border: none;
+		box-shadow: 0 0 1px 1px $color__grid-border;
+		margin-bottom: 0;
+	}
+
+	&.wordcamp-schedule__session-type-regular {
+		padding: 4px 10px 12px 10px;
+	}
+}
+
+.wordcamp-schedule__time-slot-header {
+	text-align: center;
+	border-bottom: none;
+	background-color: $color__grid-border;
+
+	/* Vertically align the text inside this cell */
+		// todo mockup has them not vertically centered, but can't tell what kind of pattern they use. need to ask mel, but maybe suggest that this looks better than mockup
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+
+	.editor-styles-wrapper & {
+		font-weight: 400;
+		margin: 2em 0 0 0; // todo this needs to be duplicated on the front-end too, though, but has to be prefixed by .editor-styles-wrapper to work in the editor,
+		// which will make the styles WET. probably other rules in this situation too. what's a good solution?
+
+		@include breakpoint-grid-layout {
+			margin-top: 0;
+		}
+	}
+
+	&.is-end-time {
+		/* End times are only useful on the Grid schedule. */
+		display: none;
+
+		@include breakpoint-grid-layout {
+			display: flex;
+		}
+	}
+
+	@include breakpoint-grid-layout {
+		grid-column: times;
+		background-color: transparent;
+	}
+}
+
+
+/*
+ * Session (singular)
+ */
+
+.editor-styles-wrapper ul.wordcamp-schedule__session-tracks,
+.editor-styles-wrapper ul.wordcamp-schedule__session-category,
+.editor-styles-wrapper ul.wordcamp-schedule__session-speakers {
+	list-style-type: none;
+
+	li {
+		display: inline;
+
+		&::after {
+			content: ", ";
+		}
+
+		&:last-child::after {
+			content: "";
+		}
+	}
+}
+
+.notice-spans-non-contiguous-tracks {
+	display: none;
+
+	@include breakpoint-grid-layout {
+		display: block;
+	}
+}
+
+.wordcamp-schedule__session {
+	@include breakpoint-grid-layout {
+		margin: 0;
+
+		&.is-spanning-tracks {
+			text-align: center;
+		}
+	}
+}
+
+.wordcamp-schedule__session-title,
+.wordcamp-schedule__session-tracks,
+.wordcamp-schedule__session-speakers,
+.wordcamp-schedule__session-category {
+	display: block;
+	line-height: 1.6;
+
+	a {
+		text-decoration: none;
+		// todo this conflicts w/ the mockup, but i think it looks better. run it by mel
+		// might change hover rules below too if change this
+	}
+}
+
+.wordcamp-schedule__session-title {
+	font-size: 1.1em;
+
+	.editor-styles-wrapper & {
+		margin: 0;
+	}
+}
+
+.wordcamp-schedule__session-tracks {
+	@include breakpoint-grid-layout {
+		display: none; /* Once the column headers are visible, this is no longer needed. */
+	}
+}
+
+.wordcamp-schedule__session-speakers a {
+	.editor-styles-wrapper & {
+		color: #23282d;
+	}
+}
+
+.wordcamp-schedule__session-category {
+	font-style: italic;
+	color: #a8a8a8;
+}
+
+.wordcamp-schedule__session-title a:hover,
+.wordcamp-schedule__session-speakers a:hover {
+	.editor-styles-wrapper & {
+		text-decoration: underline; // todo see note above about mel's feedback. remove this if restore default underlines
+	}
+}
+
+.wordcamp-schedule__session-type-custom {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+
+/*
+ * InspectorControls
+ */
+
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__control-container .components-base-control,
+.wordcamp-schedule__control-container .components-toggle-control .components-base-control__field,
+.wordcamp-schedule__control-container .components-base-control .components-base-control__field {
+	margin-bottom: 0;
+}
+
+.wordcamp-schedule__control-container {
+	margin-top: 24px;
+}
+
+.wordcamp-schedule__choose-specific-days,
+.wordcamp-schedule__choose-specific-tracks {
+	flex-direction: column;
+	align-items: start;
+}
+
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__show-categories        .components-base-control,
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__choose-specific-days   .components-base-control,
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__choose-specific-tracks .components-base-control {
+	margin-bottom: 0;
+
+	/*
+	might be related to https://github.com/WordPress/wordcamp.org/issues/79 - should fix that first
+
+	can this be nested above? need to keep the higher level selectors though
+
+	is G violating the guidelines by using those higher level selectors instead of only the deep ones?
+	*/
+}

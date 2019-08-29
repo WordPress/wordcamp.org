@@ -10,6 +10,10 @@ import './_z-index.scss'; // Have z-index values, similar to https://github.com/
 import './styles.scss'; // Common styles for WordCamp Blocks.
 import { BLOCKS } from './blocks/'; // Trailing slash required to differentiate the folder from the file.
 
+/*
+ * When a block isn't enabled on the current site, it won't be registered by it's `controller.php`.
+ * See also `blocks.php`.
+ */
 const enabledBlocks = BLOCKS.filter( ( block ) =>
 	window.WordCampBlocks.hasOwnProperty( block.NAME.replace( 'wordcamp/', '' ) )
 );

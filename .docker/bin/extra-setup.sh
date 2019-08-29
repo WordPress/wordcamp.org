@@ -21,8 +21,6 @@ function install_composer() {
 }
 
 function do_extra_setup() {
-  echo "Running additional setup... "
-
   PKG_PATH="/usr/src"
 
   if [ ! -f $PKG_PATH/composer.json ]; then
@@ -33,10 +31,12 @@ function do_extra_setup() {
   cd $PKG_PATH
 
   if [ ! -f $PKG_PATH/composer.phar ]; then
+    echo "Installing a composer executable... "
     install_composer
   fi
 
   if [ ! -f $PKG_PATH/composer.lock ]; then
+    echo "Installing additional plugins and themes... "
     php composer.phar install
   fi
 }

@@ -38,7 +38,5 @@ function do_extra_setup() {
 
   if [ ! -f $PKG_PATH/composer.lock ]; then
     php composer.phar install
-  else
-    php composer.phar update
   fi
 }

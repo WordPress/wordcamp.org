@@ -12,127 +12,12 @@
 		},
 		"vendor-dir": "public_html/wp-content/mu-plugins/vendor"
 	},
-	"extra": {
-		"installer-paths": {
-			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
-			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
-		}
-	},
-	"repositories": [
-		{
-			"type": "composer",
-			"url": "https://wpackagist.org/"
-		},
-		{
-			"type": "package",
-			"package": [
-				{
-					"name": "wordpress-plugin/bbpress",
-					"type": "wordpress-plugin",
-					"version": "2.6",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/bbpress/",
-						"reference": "branches/2.6/"
-					}
-				},
-				{
-					"name": "wordpress-plugin/camptix-bd-payments",
-					"type": "wordpress-plugin",
-					"version": "1.2",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/bd-payments-camptix/",
-						"reference": "tags/1.2/"
-					}
-				},
-				{
-					"name": "wordpress-plugin/camptix-paystack",
-					"type": "wordpress-plugin",
-					"version": "1.0.0",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/tbz-camptix-paystack/",
-						"reference": "tags/1.0.0/"
-					}
-				},
-				{
-					"name": "wordpress-plugin/camptix-paynow",
-					"type": "wordpress-plugin",
-					"version": "1.0.4",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/gateway-camptix-paynow-payment/",
-						"reference": "tags/1.0.4/"
-					}
-				},
-				{
-					"name": "wordpress-plugin/json-rest-api",
-					"type": "wordpress-plugin",
-					"version": "1.2.5",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/json-rest-api/",
-						"reference": "tags/1.2.5/"
-					}
-				},
-				{
-					"name": "wordpress-meta/wporg-profiles-wp-activity-notifier",
-					"type": "wordpress-plugin",
-					"version": "1.1",
-					"source": {
-						"type": "svn",
-						"url": "https://meta.svn.wordpress.org/sites/trunk/wordpress.org/public_html/wp-content/plugins/",
-						"reference": "wporg-profiles-wp-activity-notifier/"
-					}
-				}
-			]
-		}
-	],
 	"require": {
 		"league/oauth2-client": "2.4.1"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^0.5.0",
-		"wp-coding-standards/wpcs": "2.*",
-		"wpackagist-plugin/akismet": "4.1.2",
-		"wordpress-plugin/bbpress": "2.6.*",
-		"wpackagist-plugin/camptix": "dev-trunk",
-		"wpackagist-plugin/campt-indian-payment-gateway": "1.8",
-		"wordpress-plugin/camptix-bd-payments": "1.2",
-		"wpackagist-plugin/camptix-mercadopago": "1.0.6",
-		"wpackagist-plugin/camptix-pagseguro": "1.5.5",
-		"wpackagist-plugin/camptix-payfast-gateway": "1.0.0",
-		"wpackagist-plugin/camptix-trustcard": "1.0.4",
-		"wpackagist-plugin/camptix-trustpay": "1.0.5",
-		"wordpress-plugin/camptix-paystack": "1.0.0",
-		"wordpress-plugin/camptix-paynow": "1.0.4",
-		"wpackagist-plugin/classic-editor": "dev-trunk",
-		"wpackagist-plugin/custom-content-width": "1.0.1",
-		"wpackagist-plugin/edit-flow": "0.9",
-		"wpackagist-plugin/email-post-changes": "dev-trunk",
-		"wpackagist-plugin/gutenberg": "6.2.0",
-		"wpackagist-plugin/hyperdb": "dev-trunk",
-		"wpackagist-plugin/jetpack": "7.6.0",
-		"wordpress-plugin/json-rest-api": "1.2.5",
-		"wpackagist-plugin/liveblog": "1.9.4",
-		"wpackagist-plugin/public-post-preview": "2.9.0",
-		"wpackagist-plugin/pwa": "0.3.0",
-		"wpackagist-plugin/supportflow": "dev-trunk",
-		"wpackagist-plugin/tagregator": "dev-trunk",
-		"wpackagist-plugin/wordpress-importer": "0.6.4",
-		"wpackagist-plugin/wp-super-cache": "1.6.9",
-		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
-		"wpackagist-theme/p2": "1.5.8",
-		"wpackagist-theme/twentyten": "2.9",
-		"wpackagist-theme/twentyeleven": "3.3",
-		"wpackagist-theme/twentytwelve": "3.0",
-		"wpackagist-theme/twentythirteen": "2.9",
-		"wpackagist-theme/twentyfourteen": "2.7",
-		"wpackagist-theme/twentyfifteen": "2.5",
-		"wpackagist-theme/twentysixteen": "2.0",
-		"wpackagist-theme/twentyseventeen": "2.2",
-		"wpackagist-theme/twentynineteen": "1.4"
+		"wp-coding-standards/wpcs": "2.*"
 	},
 	"scripts": {
 		"phpcs": [

@@ -52,6 +52,7 @@
 	"scripts": {
 		"start": "wp-scripts start blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",
 		"build": "wp-scripts build blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",
+		"lint:js:comment": "echo 'Usage: `npm run lint:js source/blocks/schedule -- --fix`. The path has to be from the root `mu-plugins/blocks` folder.' ",
 		"lint:js": "wp-scripts lint-js",
 		"lint:css": "wp-scripts lint-style '**/*.scss'",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",

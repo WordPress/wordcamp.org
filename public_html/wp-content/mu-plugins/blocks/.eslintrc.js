@@ -1,10 +1,17 @@
 /*
- * @todo
+ * @todo discuss these potential changes
  *
- * should use hasOwnProperty or Object.getOwnPropertyDescriptors(). the latter usually makes code more readable, but sometimes the former first better
+ * `arrow-parens` - skipping them when only have 1 arg remove unnecessary clutter, which helps readability
+ * `no-multiple-empty-lines` - somestimes 2 lines useful to separate sections of code, like `import`s at top of file from `export` of components
+ * `require-jsdoc` - not for `render` and lifecycle methods b/c it's obvious what they are
+ *
  * assignment and control structures/returns/etc should be separate by a blank line for readability.
  *      same for div and other block-level html elements
+ *
+ * should use hasOwnProperty or Object.getOwnPropertyDescriptors(). the latter usually makes code more readable, but sometimes the former first better
+ *
  * disable `no-console` b/c valid use case. if can make exception for `log` function without disabling, then do that. don't want console used for temporary debugging, but there are valid cases where you want to provide the user some insight into what went wrong
+ *
  */
 
 module.exports = {

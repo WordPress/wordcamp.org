@@ -33,7 +33,9 @@
 		"mini-css-extract-plugin": "0.4.4",
 		"node-sass": "4.11.0",
 		"prop-types": "15.7.2",
+		"react-autosize-textarea": "^7.0.0",
 		"sass-loader": "7.1.0",
+		"traverse": "^0.6.6",
 		"webpack-cli": "3.1.1"
 	},
 	"browserslist": [
@@ -48,6 +50,7 @@
 		"lint:js": "wp-scripts lint-js",
 		"lint:css": "wp-scripts lint-style '**/*.scss'",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
-		"test": "wp-scripts test-unit-js"
+		"test": "wp-scripts test-unit-js",
+		"test:watch": "wp-scripts test-unit-js --watch"
 	}
 }

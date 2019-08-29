@@ -1,0 +1,3404 @@
+[
+	{
+		"id"                      : 123509,
+		"date"                    : "2019-08-21T12:02:04",
+		"date_gmt"                : "2019-08-21T19:02:04",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/?post_type=wcb_session&#038;p=123509",
+			"raw"      : "https://2016.misc.wordcamp.test/?post_type=wcb_session&#038;p=123509"
+		},
+		"modified"                : "2019-08-21T12:07:43",
+		"modified_gmt"            : "2019-08-21T19:07:43",
+		"password"                : "",
+		"slug"                    : "session-15-gap-between-start-and-end-of-session-14",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/session-15-gap-between-start-and-end-of-session-14/",
+		"title"                   : {
+			"raw"      : "Session 15 - gap between start and end of session 14",
+			"rendered" : "Session 15 &#8211; gap between start and end of session 14"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 1,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 0,
+			"_wcpt_session_length_minutes" : 15,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			38
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-15-gap-between-start-and-end-of-session-14",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "2:30 pm"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/1"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 1,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123510,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509/revisions/123510"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123509"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123509"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123509"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123509"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 1,
+					"name"        : "Ian Dunn",
+					"url"         : "",
+					"description" : "seattle bio",
+					"link"        : "https://2016.misc.wordcamp.test/author/iandunn/",
+					"slug"        : "iandunn",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/78b488ad0a136dd47d7baed4833e07a1?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/78b488ad0a136dd47d7baed4833e07a1?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/78b488ad0a136dd47d7baed4833e07a1?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/1"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T21:30:00.000Z",
+			"endTime"   : "2019-08-21T21:45:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 38,
+					"link"     : "https://2016.misc.wordcamp.test/track/bar/",
+					"name"     : "Bar",
+					"slug"     : "bar",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/38"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=38"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123505,
+		"date"                    : "2019-08-21T11:51:25",
+		"date_gmt"                : "2019-08-21T18:51:25",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/?post_type=wcb_session&#038;p=123505",
+			"raw"      : "https://2016.misc.wordcamp.test/?post_type=wcb_session&#038;p=123505"
+		},
+		"modified"                : "2019-08-21T12:07:36",
+		"modified_gmt"            : "2019-08-21T19:07:36",
+		"password"                : "",
+		"slug"                    : "session-14-span-non-contiguous-tracks",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/session-14-span-non-contiguous-tracks/",
+		"title"                   : {
+			"raw"      : "Session 14 - span non-contiguous tracks",
+			"rendered" : "Session 14 &#8211; span non-contiguous tracks"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 1,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 0,
+			"_wcpt_session_length_minutes" : 15,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			38,
+			46
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-14-span-non-contiguous-tracks",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "2:00 pm"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/1"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 1,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123506,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505/revisions/123506"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123505"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123505"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123505"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123505"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 1,
+					"name"        : "Ian Dunn",
+					"url"         : "",
+					"description" : "seattle bio",
+					"link"        : "https://2016.misc.wordcamp.test/author/iandunn/",
+					"slug"        : "iandunn",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/78b488ad0a136dd47d7baed4833e07a1?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/78b488ad0a136dd47d7baed4833e07a1?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/78b488ad0a136dd47d7baed4833e07a1?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/1"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T21:00:00.000Z",
+			"endTime"   : "2019-08-21T21:15:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 38,
+					"link"     : "https://2016.misc.wordcamp.test/track/bar/",
+					"name"     : "Bar",
+					"slug"     : "bar",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/38"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=38"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				},
+				{
+					"id"       : 46,
+					"link"     : "https://2016.misc.wordcamp.test/track/foo/",
+					"name"     : "Foo",
+					"slug"     : "foo",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/46"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=46"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123483,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-29/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-29/"
+		},
+		"modified"                : "2019-08-21T12:15:33",
+		"modified_gmt"            : "2019-08-21T19:15:33",
+		"password"                : "",
+		"slug"                    : "post-29",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-29/",
+		"title"                   : {
+			"raw"      : "Session 13",
+			"rendered" : "Session 13"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 1,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			46,
+			747
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-13",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "11:30 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123516,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483/revisions/123516"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123483"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123483"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123483"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123483"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T18:30:00.000Z",
+			"endTime"   : "2019-08-21T19:30:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 46,
+					"link"     : "https://2016.misc.wordcamp.test/track/foo/",
+					"name"     : "Foo",
+					"slug"     : "foo",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/46"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=46"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				},
+				{
+					"id"       : 747,
+					"link"     : "https://2016.misc.wordcamp.test/track/quix/",
+					"name"     : "Quix",
+					"slug"     : "quix",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/747"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=747"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123482,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-28/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-28/"
+		},
+		"modified"                : "2019-08-21T12:15:07",
+		"modified_gmt"            : "2019-08-21T19:15:07",
+		"password"                : "",
+		"slug"                    : "post-28",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-28/",
+		"title"                   : {
+			"raw"      : "Session 12",
+			"rendered" : "Session 12"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 1,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			38
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-12",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "11:30 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123515,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482/revisions/123515"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123482"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123482"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123482"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123482"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T18:30:00.000Z",
+			"endTime"   : "2019-08-21T19:30:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 38,
+					"link"     : "https://2016.misc.wordcamp.test/track/bar/",
+					"name"     : "Bar",
+					"slug"     : "bar",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/38"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=38"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123481,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-27/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-27/"
+		},
+		"modified"                : "2019-08-21T12:09:09",
+		"modified_gmt"            : "2019-08-21T19:09:09",
+		"password"                : "",
+		"slug"                    : "post-27",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-27/",
+		"title"                   : {
+			"raw"      : "Session 11",
+			"rendered" : "Session 11"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 0,
+			"_wcpt_session_length_minutes" : 30,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			46
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-11",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "11:00 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123514,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481/revisions/123514"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123481"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123481"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123481"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123481"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T18:00:00.000Z",
+			"endTime"   : "2019-08-21T18:30:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 46,
+					"link"     : "https://2016.misc.wordcamp.test/track/foo/",
+					"name"     : "Foo",
+					"slug"     : "foo",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/46"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=46"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123480,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-26/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-26/"
+		},
+		"modified"                : "2019-08-21T12:08:54",
+		"modified_gmt"            : "2019-08-21T19:08:54",
+		"password"                : "",
+		"slug"                    : "post-26",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-26/",
+		"title"                   : {
+			"raw"      : "Session 10",
+			"rendered" : "Session 10"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 0,
+			"_wcpt_session_length_minutes" : 30,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			747
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-10",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "10:30 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123513,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480/revisions/123513"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123480"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123480"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123480"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123480"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T17:30:00.000Z",
+			"endTime"   : "2019-08-21T18:00:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 747,
+					"link"     : "https://2016.misc.wordcamp.test/track/quix/",
+					"name"     : "Quix",
+					"slug"     : "quix",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/747"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=747"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123479,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-25/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-25/"
+		},
+		"modified"                : "2019-08-21T12:07:17",
+		"modified_gmt"            : "2019-08-21T19:07:17",
+		"password"                : "",
+		"slug"                    : "post-25",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-25/",
+		"title"                   : {
+			"raw"      : "Session 9",
+			"rendered" : "Session 9"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 2,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			748
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-9",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "10:30 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123512,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479/revisions/123512"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123479"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123479"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123479"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123479"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T17:30:00.000Z",
+			"endTime"   : "2019-08-21T19:30:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 748,
+					"link"     : "https://2016.misc.wordcamp.test/track/bax/",
+					"name"     : "Bax",
+					"slug"     : "bax",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/748"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=748"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123478,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-24/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-24/"
+		},
+		"modified"                : "2019-08-21T12:06:50",
+		"modified_gmt"            : "2019-08-21T19:06:50",
+		"password"                : "",
+		"slug"                    : "post-24",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-24/",
+		"title"                   : {
+			"raw"      : "Session 8",
+			"rendered" : "Session 8"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 1,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			38
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-8",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "10:30 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123511,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478/revisions/123511"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123478"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123478"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123478"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123478"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T17:30:00.000Z",
+			"endTime"   : "2019-08-21T18:30:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 38,
+					"link"     : "https://2016.misc.wordcamp.test/track/bar/",
+					"name"     : "Bar",
+					"slug"     : "bar",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/38"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=38"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123477,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-23/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-23/"
+		},
+		"modified"                : "2019-08-21T12:00:48",
+		"modified_gmt"            : "2019-08-21T19:00:48",
+		"password"                : "",
+		"slug"                    : "post-23",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-23/",
+		"title"                   : {
+			"raw"      : "Session 7",
+			"rendered" : "Session 7"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 0,
+			"_wcpt_session_length_minutes" : 30,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			38,
+			748,
+			46,
+			747
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-7",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "10:00 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123507,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477/revisions/123507"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123477"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123477"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123477"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123477"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T17:00:00.000Z",
+			"endTime"   : "2019-08-21T17:30:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 38,
+					"link"     : "https://2016.misc.wordcamp.test/track/bar/",
+					"name"     : "Bar",
+					"slug"     : "bar",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/38"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=38"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				},
+				{
+					"id"       : 748,
+					"link"     : "https://2016.misc.wordcamp.test/track/bax/",
+					"name"     : "Bax",
+					"slug"     : "bax",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/748"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=748"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				},
+				{
+					"id"       : 46,
+					"link"     : "https://2016.misc.wordcamp.test/track/foo/",
+					"name"     : "Foo",
+					"slug"     : "foo",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/46"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=46"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				},
+				{
+					"id"       : 747,
+					"link"     : "https://2016.misc.wordcamp.test/track/quix/",
+					"name"     : "Quix",
+					"slug"     : "quix",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/747"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=747"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123476,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-22/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-22/"
+		},
+		"modified"                : "2019-08-21T11:49:29",
+		"modified_gmt"            : "2019-08-21T18:49:29",
+		"password"                : "",
+		"slug"                    : "post-22",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-22/",
+		"title"                   : {
+			"raw"      : "Session 6 - span multiple contiguous tracks",
+			"rendered" : "Session 6 &#8211; span multiple contiguous tracks"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 1,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			38,
+			748
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-6-span-multiple-contiguous-tracks",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "9:00 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 4,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123503,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476/revisions/123503"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123476"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123476"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123476"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123476"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T16:00:00.000Z",
+			"endTime"   : "2019-08-21T17:00:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 38,
+					"link"     : "https://2016.misc.wordcamp.test/track/bar/",
+					"name"     : "Bar",
+					"slug"     : "bar",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/38"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=38"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				},
+				{
+					"id"       : 748,
+					"link"     : "https://2016.misc.wordcamp.test/track/bax/",
+					"name"     : "Bax",
+					"slug"     : "bax",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/748"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=748"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123475,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-21/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-21/"
+		},
+		"modified"                : "2019-08-21T12:01:01",
+		"modified_gmt"            : "2019-08-21T19:01:01",
+		"password"                : "",
+		"slug"                    : "post-21",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-21/",
+		"title"                   : {
+			"raw"      : "Session 5",
+			"rendered" : "Session 5"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 1,
+			"_wcpt_session_length_minutes" : 30,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			46
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-5",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "8:30 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 4,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123508,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475/revisions/123508"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123475"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123475"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123475"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123475"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T15:30:00.000Z",
+			"endTime"   : "2019-08-21T17:00:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 46,
+					"link"     : "https://2016.misc.wordcamp.test/track/foo/",
+					"name"     : "Foo",
+					"slug"     : "foo",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/46"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=46"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123474,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-20/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-20/"
+		},
+		"modified"                : "2019-08-21T07:51:44",
+		"modified_gmt"            : "2019-08-21T14:51:44",
+		"password"                : "",
+		"slug"                    : "post-20",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-20/",
+		"title"                   : {
+			"raw"      : "Session 4",
+			"rendered" : "Session 4"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 2,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			747
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-4",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "8:00 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123490,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474/revisions/123490"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123474"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123474"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123474"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123474"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T15:00:00.000Z",
+			"endTime"   : "2019-08-21T17:00:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 747,
+					"link"     : "https://2016.misc.wordcamp.test/track/quix/",
+					"name"     : "Quix",
+					"slug"     : "quix",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/747"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=747"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123473,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-19/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-19/"
+		},
+		"modified"                : "2019-08-21T07:51:25",
+		"modified_gmt"            : "2019-08-21T14:51:25",
+		"password"                : "",
+		"slug"                    : "post-19",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-19/",
+		"title"                   : {
+			"raw"      : "Session 3",
+			"rendered" : "Session 3"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 0,
+			"_wcpt_session_length_minutes" : 30,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			46
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-3",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "8:00 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 1,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123488,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473/revisions/123488"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123473"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123473"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123473"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123473"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T15:00:00.000Z",
+			"endTime"   : "2019-08-21T15:30:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 46,
+					"link"     : "https://2016.misc.wordcamp.test/track/foo/",
+					"name"     : "Foo",
+					"slug"     : "foo",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/46"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=46"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123472,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-18/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-18/"
+		},
+		"modified"                : "2019-08-21T07:51:04",
+		"modified_gmt"            : "2019-08-21T14:51:04",
+		"password"                : "",
+		"slug"                    : "post-18",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-18/",
+		"title"                   : {
+			"raw"      : "Session 2",
+			"rendered" : "Session 2"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 1,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			748
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-2",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "8:00 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123487,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472/revisions/123487"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123472"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123472"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123472"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123472"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T15:00:00.000Z",
+			"endTime"   : "2019-08-21T16:00:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 748,
+					"link"     : "https://2016.misc.wordcamp.test/track/bax/",
+					"name"     : "Bax",
+					"slug"     : "bax",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/748"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=748"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	},
+	{
+		"id"                      : 123471,
+		"date"                    : "2019-08-21T07:48:14",
+		"date_gmt"                : "2019-08-21T07:48:14",
+		"guid"                    : {
+			"rendered" : "https://2016.misc.wordcamp.test/session/post-17/",
+			"raw"      : "https://2016.misc.wordcamp.test/session/post-17/"
+		},
+		"modified"                : "2019-08-21T07:50:03",
+		"modified_gmt"            : "2019-08-21T14:50:03",
+		"password"                : "",
+		"slug"                    : "post-17",
+		"status"                  : "publish",
+		"type"                    : "wcb_session",
+		"link"                    : "https://2016.misc.wordcamp.test/session/post-17/",
+		"title"                   : {
+			"raw"      : "Session 1",
+			"rendered" : "Session 1"
+		},
+		"content"                 : {
+			"raw"           : "",
+			"rendered"      : "",
+			"protected"     : false,
+			"block_version" : 0
+		},
+		"excerpt"                 : {
+			"raw"       : "",
+			"rendered"  : "",
+			"protected" : false
+		},
+		"author"                  : 6,
+		"featured_media"          : 0,
+		"template"                : "",
+		"meta"                    : {
+			"_wcpt_session_length_hours"   : 1,
+			"_wcpt_session_length_minutes" : 0,
+			"_wcpt_session_type"           : "session",
+			"_wcpt_session_slides"         : "",
+			"_wcpt_session_video"          : ""
+		},
+		"session_track"           : [
+			38
+		],
+		"session_category"        : [ ],
+		"permalink_template"      : "https://2016.misc.wordcamp.test/session/%pagename%/",
+		"generated_slug"          : "session-1",
+		"jetpack_sharing_enabled" : true,
+		"session_date_time"       : {
+			"date" : "August 21, 2019",
+			"time" : "8:00 am"
+		},
+		"_links"                  : {
+			"self"                              : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471"
+				}
+			],
+			"collection"                        : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions"
+				}
+			],
+			"about"                             : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/types/wcb_session"
+				}
+			],
+			"author"                            : [
+				{
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+				}
+			],
+			"version-history"                   : [
+				{
+					"count" : 2,
+					"href"  : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471/revisions"
+				}
+			],
+			"predecessor-version"               : [
+				{
+					"id"   : 123485,
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471/revisions/123485"
+				}
+			],
+			"wp:attachment"                     : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/media?parent=123471"
+				}
+			],
+			"wp:term"                           : [
+				{
+					"taxonomy"   : "wcb_track",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track?post=123471"
+				},
+				{
+					"taxonomy"   : "wcb_session_category",
+					"embeddable" : true,
+					"href"       : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_category?post=123471"
+				}
+			],
+			"wp:action-publish"                 : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471"
+				}
+			],
+			"wp:action-assign-author"           : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471"
+				}
+			],
+			"wp:action-create-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471"
+				}
+			],
+			"wp:action-assign-session_track"    : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471"
+				}
+			],
+			"wp:action-create-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471"
+				}
+			],
+			"wp:action-assign-session_category" : [
+				{
+					"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions/123471"
+				}
+			],
+			"curies"                            : [
+				{
+					"name"      : "wp",
+					"href"      : "https://api.w.org/{rel}",
+					"templated" : true
+				}
+			]
+		},
+		"_embedded"               : {
+			"author" : [
+				{
+					"id"          : 6,
+					"name"        : "foobar",
+					"url"         : "",
+					"description" : "",
+					"link"        : "https://2016.misc.wordcamp.test/author/foobar/",
+					"slug"        : "foobar",
+					"avatar_urls" : {
+						"24" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=24&d=mm&r=g",
+						"48" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=48&d=mm&r=g",
+						"96" : "https://secure.gravatar.com/avatar/b48def645758b95537d4424c84d1a9ff?s=96&d=mm&r=g"
+					},
+					"_links"      : {
+						"self"       : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users/6"
+							}
+						],
+						"collection" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/users"
+							}
+						]
+					}
+				}
+			]
+		},
+		"derived"                 : {
+			"startTime" : "2019-08-21T15:00:00.000Z",
+			"endTime"   : "2019-08-21T16:00:00.000Z",
+			"tracks"    : [
+				{
+					"id"       : 38,
+					"link"     : "https://2016.misc.wordcamp.test/track/bar/",
+					"name"     : "Bar",
+					"slug"     : "bar",
+					"taxonomy" : "wcb_track",
+					"_links"   : {
+						"self"         : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track/38"
+							}
+						],
+						"collection"   : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/session_track"
+							}
+						],
+						"about"        : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/taxonomies/wcb_track"
+							}
+						],
+						"wp:post_type" : [
+							{
+								"href" : "https://2016.misc.wordcamp.test/wp-json/wp/v2/sessions?session_track=38"
+							}
+						],
+						"curies"       : [
+							{
+								"name"      : "wp",
+								"href"      : "https://api.w.org/{rel}",
+								"templated" : true
+							}
+						]
+					}
+				}
+			]
+		}
+	}
+]

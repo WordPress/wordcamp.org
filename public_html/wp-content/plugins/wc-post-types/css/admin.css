@@ -40,3 +40,11 @@
 			display: table-caption;
 			font-weight: bold;
 		}
+
+#wcpt-session-duration-container input[type="number"] {
+	width: 55px;
+}
+
+#wcpt-session-duration-container label {
+	margin-right: 5px;
+}

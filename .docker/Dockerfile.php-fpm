@@ -47,6 +47,12 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 RUN chmod +x wp-cli.phar
 RUN mv wp-cli.phar /usr/local/bin/wp
 
+# Set up msmtp (used for MailCatcher).
+# The config file needs the right owner/permissions before msmtp can use it.
+COPY config/msmtprc /etc/msmtprc
+RUN chown www-data /etc/msmtprc
+RUN chmod 600 /etc/msmtprc
+
 # Install MailCatcher.
 RUN gem install mailcatcher --no-ri --no-rdoc
 RUN sed -i -e "s|;sendmail_path =|sendmail_path = /usr/bin/msmtp -C /etc/msmtprc -t |" /usr/local/etc/php/php.ini-development

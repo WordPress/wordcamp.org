@@ -13,7 +13,6 @@ services:
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"
             - ".docker/config/composer.json:/usr/src/composer.json"
-            - ".docker/config/msmtprc:/etc/msmtprc"
             # todo mount host ~/dotfiles into container /root, but can't b/c outside .docker folder?
         ports:
             - "80:80"

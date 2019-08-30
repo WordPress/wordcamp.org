@@ -76,6 +76,21 @@ function wcorg_get_countries() {
 		);
 	}
 
+	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.
+	// See https://www.php.net/manual/en/function.iconv.php#74101
+	$orig_locale = setlocale( LC_CTYPE, 0 );
+	setlocale( LC_CTYPE, 'en_US.UTF-8' );
+
+	// Sort the country names based on ASCII transliteration without actually changing any strings.
+	usort( $countries, function( $a, $b ) {
+		return strcasecmp(
+			iconv( mb_detect_encoding( $a['name'] ), 'ascii//TRANSLIT', $a['name'] ),
+			iconv( mb_detect_encoding( $b['name'] ), 'ascii//TRANSLIT', $b['name'] )
+		);
+	} );
+
+	setlocale( LC_CTYPE, $orig_locale );
+
 	return $countries;
 }
 

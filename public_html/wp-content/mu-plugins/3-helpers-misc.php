@@ -62,20 +62,39 @@ function wcorg_get_user_by_canonical_names( $name ) {
  * @todo move the real functionality from get_valid_countries_iso3166() to here, then have the Budgets plugin,
  * QBO, etc call this.
  *
+ * @param array $args
+ *
  * @return array
  */
-function wcorg_get_countries() {
+function wcorg_get_countries( array $args = array() ) {
+	$defaults = array(
+		'include_alpha3' => false,
+	);
+
+	$args = wp_parse_args( $args, $defaults );
+
 	require_once WP_PLUGIN_DIR . '/wp-cldr/class-wp-cldr.php';
 
 	$cldr        = new WP_CLDR();
 	$territories = $cldr->get_territories_contained( '001' ); // "World".
 	$countries   = array();
 
+	if ( true === $args['include_alpha3'] ) {
+		$data_blob     = WP_CLDR::get_cldr_json_file( 'supplemental', 'codeMappings' );
+		$code_mappings = $data_blob['supplemental']['codeMappings'];
+	}
+
 	foreach ( $territories as $code ) {
 		$countries[ $code ] = array(
 			'alpha2' => $code,
 			'name'   => $cldr->get_territory_name( $code ),
 		);
+
+		if ( true === $args['include_alpha3'] ) {
+			$countries[ $code ]['alpha3'] = ( ! empty( $code_mappings[ $code ]['_alpha3'] ) )
+				? $code_mappings[ $code ]['_alpha3']
+				: '';
+		}
 	}
 
 	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.

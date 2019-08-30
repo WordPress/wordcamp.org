@@ -400,7 +400,7 @@ class WCP_Payment_Request {
 	 */
 	protected function render_country_input( $post, $label, $name, $required = true ) {
 		$selected = $this->get_field_value( $name, $post );
-		$options = WordCamp_Budgets::get_valid_countries_iso3166();
+		$options = wcorg_get_countries();
 
 		require( dirname( __DIR__ ) . '/views/payment-request/input-country.php' );
 	}
@@ -1130,7 +1130,7 @@ Thanks for helping us with these details!",
 
 			$payable_to = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_payable_to', true ) );
 			$payable_to = html_entity_decode( $payable_to ); // J&amp;J to J&J
-			$countries = WordCamp_Budgets::get_valid_countries_iso3166();
+			$countries = wcorg_get_countries( array( 'include_alpha3' => true ) );
 			$vendor_country_code = get_post_meta( $post->ID, '_camppayments_vendor_country_iso3166', true );
 			if ( ! empty( $countries[ $vendor_country_code ] ) ) {
 				$vendor_country_code = $countries[ $vendor_country_code ]['alpha3'];

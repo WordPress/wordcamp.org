@@ -1061,7 +1061,7 @@ function _generate_payment_report_jpm_checks( $args ) {
 
 		$payable_to = \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_payable_to', true ) );
 		$payable_to = html_entity_decode( $payable_to ); // J&amp;J to J&J
-		$countries = \WordCamp_Budgets::get_valid_countries_iso3166();
+		$countries  = wcorg_get_countries( array( 'include_alpha3' => true ) );
 
 		$vendor_country_code = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_country', true ) );
 		if ( ! empty( $countries[ $vendor_country_code ] ) ) {

@@ -2199,19 +2199,20 @@ class WordCamp_Budgets {
 	}
 
 	/**
-	 * Get a country name from an alpha-2 or alpha-3 code
+	 * Get a country name from the alpha2 or alpha3 code.
 	 *
 	 * @param string $country_code
 	 *
 	 * @return string
 	 */
 	public static function get_country_name( $country_code ) {
-		$countries = self::get_valid_countries_iso3166();
+		$countries = wcorg_get_countries();
 		$name      = '';
 
 		foreach ( $countries as $country ) {
 			if ( $country_code === $country['alpha2'] || $country_code === $country['alpha3'] ) {
 				$name = $country['name'];
+				break;
 			}
 		}
 
@@ -2306,7 +2307,7 @@ class WordCamp_Budgets {
 				case 'interm_bank_country_iso3166':
 				case 'beneficiary_country_iso3166':
 				case 'check_country':
-					if ( array_key_exists( $unsafe_value, self::get_valid_countries_iso3166() ) ) {
+					if ( array_key_exists( $unsafe_value, wcorg_get_countries() ) ) {
 						$safe_value = $unsafe_value;
 					}
 					break;

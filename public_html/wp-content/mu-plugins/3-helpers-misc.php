@@ -1,6 +1,6 @@
 <?php
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 use function WordCamp\Logger\log;
 
 /*
@@ -47,8 +47,10 @@ function wcorg_skip_feature( $flag ) {
  * @return false|WP_User
  */
 function wcorg_get_user_by_canonical_names( $name ) {
-	if ( ! $user = get_user_by( 'login', $name ) ) {    // user_login
-		$user = get_user_by( 'slug', $name );           // user_nicename
+	$user = get_user_by( 'login', $name ); // user_login.
+
+	if ( ! $user ) {
+		$user = get_user_by( 'slug', $name ); // user_nicename.
 	}
 
 	return $user;
@@ -63,7 +65,7 @@ function wcorg_get_user_by_canonical_names( $name ) {
  * @return array
  */
 function wcorg_get_countries() {
-	require_once( WP_PLUGIN_DIR . '/wp-cldr/class-wp-cldr.php' );
+	require_once WP_PLUGIN_DIR . '/wp-cldr/class-wp-cldr.php';
 
 	$cldr        = new WP_CLDR();
 	$territories = $cldr->get_territories_contained( '001' ); // "World".
@@ -77,17 +79,20 @@ function wcorg_get_countries() {
 	}
 
 	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.
-	// See https://www.php.net/manual/en/function.iconv.php#74101
+	// See https://www.php.net/manual/en/function.iconv.php#74101.
 	$orig_locale = setlocale( LC_CTYPE, 0 );
 	setlocale( LC_CTYPE, 'en_US.UTF-8' );
 
 	// Sort the country names based on ASCII transliteration without actually changing any strings.
-	usort( $countries, function( $a, $b ) {
-		return strcasecmp(
-			iconv( mb_detect_encoding( $a['name'] ), 'ascii//TRANSLIT', $a['name'] ),
-			iconv( mb_detect_encoding( $b['name'] ), 'ascii//TRANSLIT', $b['name'] )
-		);
-	} );
+	usort(
+		$countries,
+		function( $a, $b ) {
+			return strcasecmp(
+				iconv( mb_detect_encoding( $a['name'] ), 'ascii//TRANSLIT', $a['name'] ),
+				iconv( mb_detect_encoding( $b['name'] ), 'ascii//TRANSLIT', $b['name'] )
+			);
+		}
+	);
 
 	setlocale( LC_CTYPE, $orig_locale );
 
@@ -145,12 +150,12 @@ function wcorg_required_indicator() {
 	?>
 
 	<span class="wcorg-required" aria-hidden="true">
-		<?php // translators: The symbol to indicate the form field is required ?>
-		<?php _e( '*', 'wordcamporg' ); ?>
+		<?php // translators: The symbol to indicate the form field is required. ?>
+		<?php esc_html_e( '*', 'wordcamporg' ); ?>
 	</span>
 
 	<span class="screen-reader-text">
-		<?php _e( 'required field', 'wordcamporg' ); ?>
+		<?php esc_html_e( 'required field', 'wordcamporg' ); ?>
 	</span>
 
 	<?php
@@ -170,7 +175,7 @@ function wcorg_get_custom_css_url() {
 	 * This has side-effects because `add_hooks()` is called immediately, but it doesn't seem problematic because
 	 * it gets loaded on every front/back-end page anyway.
 	 */
-	require_once( WP_PLUGIN_DIR . '/jetpack/modules/custom-css/custom-css-4.7.php' );
+	require_once WP_PLUGIN_DIR . '/jetpack/modules/custom-css/custom-css-4.7.php';
 
 	ob_start();
 	Jetpack_Custom_CSS_Enhancements::wp_custom_css_cb();

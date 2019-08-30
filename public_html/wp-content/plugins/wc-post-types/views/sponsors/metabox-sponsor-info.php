@@ -1,3 +1,20 @@
+<?php
+/** @var string $company_name */
+/** @var string $website */
+/** @var string $first_name */
+/** @var string $last_name */
+/** @var string $email_address */
+/** @var string $phone_number */
+/** @var string $twitter_handle */
+/** @var string $vat_number */
+/** @var string $street_address1 */
+/** @var string $street_address2 */
+/** @var string $city */
+/** @var string $state */
+/** @var string $zip_code */
+/** @var string $country */
+/** @var array $available_countries */
+?>
 <ul class="wcpt-form">
 	<li class="wcpt-form-header">
 		<?php _e( 'Contact Information', 'wordcamporg' ); ?>
@@ -149,17 +166,24 @@
 			<?php _e( 'Country:', 'wordcamporg' ); ?>
 		</label>
 
-		<?php // todo add selected attribute to select and change first option value to empty string ?>
 		<select id="_wcpt_sponsor_country" name="_wcpt_sponsor_country">
-			<option value="null" <?php selected( $country, 'null' ); ?>>
+			<option value="" <?php selected( $country, '' ); ?>>
 				<?php _e( '-- Select a Country --', 'wordcamporg' ); ?>
 			</option>
 
-			<?php foreach ( $available_countries as $available_country ) : ?>
-				<option value="<?php echo esc_attr( $available_country ); ?>" <?php selected( $available_country, $country ); ?>>
-					<?php echo esc_html( $available_country ); ?>
-				</option>
-			<?php endforeach; ?>
+			<?php if ( wcorg_skip_feature( 'cldr-countries' ) ) : ?>
+				<?php foreach ( $available_countries as $available_country ) : ?>
+					<option value="<?php echo esc_attr( $available_country ); ?>" <?php selected( $available_country, $country ); ?>>
+						<?php echo esc_html( $available_country ); ?>
+					</option>
+				<?php endforeach; ?>
+			<?php else : ?>
+				<?php foreach ( $available_countries as $country_code => $country_data ) : ?>
+					<option value="<?php echo esc_attr( $country_code ); ?>" <?php selected( $country_code, $country ); ?>>
+						<?php echo esc_html( $country_data['name'] ); ?>
+					</option>
+				<?php endforeach; ?>
+			<?php endif; ?>
 		</select>
 
 		<?php wcorg_required_indicator(); ?>

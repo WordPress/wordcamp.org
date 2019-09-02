@@ -1,0 +1,131 @@
+{
+	"name": "wordcamp/wordcamp.org-plugins-themes",
+	"description": "A supplemental composer file for installing WordCamp's 3rd party plugins and themes in the development environment.",
+	"homepage": "https://wordcamp.org",
+	"license": "GPL-2.0-or-later",
+	"support": {
+		"issues": "https://github.com/WordPress/wordcamp.org/issues"
+	},
+	"config": {
+		"platform": {
+			"php": "7.2"
+		}
+	},
+	"extra": {
+		"installer-paths": {
+			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
+		}
+	},
+	"repositories": [
+		{
+			"type": "composer",
+			"url": "https://wpackagist.org/"
+		},
+		{
+			"type": "package",
+			"package": [
+				{
+					"name": "wordpress-plugin/bbpress",
+					"type": "wordpress-plugin",
+					"version": "2.6",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/bbpress/",
+						"reference": "branches/2.6/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/camptix-bd-payments",
+					"type": "wordpress-plugin",
+					"version": "1.2",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/bd-payments-camptix/",
+						"reference": "tags/1.2/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/camptix-paystack",
+					"type": "wordpress-plugin",
+					"version": "1.0.0",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/tbz-camptix-paystack/",
+						"reference": "tags/1.0.0/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/camptix-paynow",
+					"type": "wordpress-plugin",
+					"version": "1.0.4",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/gateway-camptix-paynow-payment/",
+						"reference": "tags/1.0.4/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/json-rest-api",
+					"type": "wordpress-plugin",
+					"version": "1.2.5",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/json-rest-api/",
+						"reference": "tags/1.2.5/"
+					}
+				},
+				{
+					"name": "wordpress-meta/wporg-profiles-wp-activity-notifier",
+					"type": "wordpress-plugin",
+					"version": "1.1",
+					"source": {
+						"type": "svn",
+						"url": "https://meta.svn.wordpress.org/sites/trunk/wordpress.org/public_html/wp-content/plugins/",
+						"reference": "wporg-profiles-wp-activity-notifier/"
+					}
+				}
+			]
+		}
+	],
+	"require-dev": {
+		"wpackagist-plugin/akismet": "*",
+		"wordpress-plugin/bbpress": "2.6.*",
+		"wpackagist-plugin/camptix": "dev-trunk",
+		"wpackagist-plugin/campt-indian-payment-gateway": "*",
+		"wordpress-plugin/camptix-bd-payments": "1.2",
+		"wpackagist-plugin/camptix-mercadopago": "*",
+		"wpackagist-plugin/camptix-pagseguro": "*",
+		"wpackagist-plugin/camptix-payfast-gateway": "*",
+		"wpackagist-plugin/camptix-trustcard": "*",
+		"wpackagist-plugin/camptix-trustpay": "*",
+		"wordpress-plugin/camptix-paystack": "1.0.0",
+		"wordpress-plugin/camptix-paynow": "1.0.4",
+		"wpackagist-plugin/classic-editor": "dev-trunk",
+		"wpackagist-plugin/custom-content-width": "*",
+		"wpackagist-plugin/edit-flow": "*",
+		"wpackagist-plugin/email-post-changes": "dev-trunk",
+		"wpackagist-plugin/gutenberg": "*",
+		"wpackagist-plugin/hyperdb": "dev-trunk",
+		"wpackagist-plugin/jetpack": "*",
+		"wordpress-plugin/json-rest-api": "1.2.5",
+		"wpackagist-plugin/liveblog": "*",
+		"wpackagist-plugin/public-post-preview": "*",
+		"wpackagist-plugin/pwa": "*",
+		"wpackagist-plugin/supportflow": "dev-trunk",
+		"wpackagist-plugin/tagregator": "dev-trunk",
+		"wpackagist-plugin/wordpress-importer": "*",
+		"wpackagist-plugin/wp-super-cache": "*",
+		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
+		"wpackagist-theme/p2": "*",
+		"wpackagist-theme/twentyten": "*",
+		"wpackagist-theme/twentyeleven": "*",
+		"wpackagist-theme/twentytwelve": "*",
+		"wpackagist-theme/twentythirteen": "*",
+		"wpackagist-theme/twentyfourteen": "*",
+		"wpackagist-theme/twentyfifteen": "*",
+		"wpackagist-theme/twentysixteen": "*",
+		"wpackagist-theme/twentyseventeen": "*",
+		"wpackagist-theme/twentynineteen": "*"
+	}
+}

@@ -10,12 +10,15 @@ RUN apt-get update \
         libpng-dev \
         libsqlite3-dev \
         libxext6 \
-        mysql-client \
+        mariadb-client \
+        msmtp \
+        msmtp-mta \
         nano \
         nginx \
         ruby-dev \
-        ssmtp \
-        vim
+        subversion \
+        vim \
+        wget
 
 # Install additional PHP extensions.
 RUN docker-php-ext-install -j "$(nproc)" \
@@ -44,15 +47,20 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 RUN chmod +x wp-cli.phar
 RUN mv wp-cli.phar /usr/local/bin/wp
 
+# Set up msmtp (used for MailCatcher).
+# The config file needs the right owner/permissions before msmtp can use it.
+COPY config/msmtprc /etc/msmtprc
+RUN chown www-data /etc/msmtprc
+RUN chmod 600 /etc/msmtprc
+
 # Install MailCatcher.
 RUN gem install mailcatcher --no-ri --no-rdoc
-RUN sed -i -e "s|;sendmail_path =|sendmail_path = /usr/sbin/ssmtp -t |" /usr/local/etc/php/php.ini-development
+RUN sed -i -e "s|;sendmail_path =|sendmail_path = /usr/bin/msmtp -C /etc/msmtprc -t |" /usr/local/etc/php/php.ini-development
 RUN sed -i -e "s/smtp_port = 25/smtp_port = 1025/" /usr/local/etc/php/php.ini-development
-RUN chown root:mail /etc/ssmtp/ssmtp.conf
-RUN sed -i -e "s/#FromLineOverride=YES/FromLineOverride=YES/" /etc/ssmtp/ssmtp.conf
-RUN sed -i -e "s/mailhub=mail/mailhub=127.0.0.1:1025/" /etc/ssmtp/ssmtp.conf
-RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
 
 # todo Maybe install phpMyAdmin?
 
-CMD bash /var/scripts/start.sh
+# Initialize customized php.ini file.
+RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini
+
+ENTRYPOINT ["bash", "/var/scripts/entrypoint.sh"]

@@ -1,6 +1,6 @@
 ## Initial Setup
 
-Follow these steps to setup a local WordCamp.org environment using [Docker](https://www.docker.com/).
+Follow these steps to setup a local WordCamp.org environment using [Docker](https://www.docker.com/). _Assume all command blocks start in the root directory (wordcamp.test) of the project._
 
 1. Make sure you have Docker installed and running on your system.
 
@@ -8,8 +8,6 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     ```bash
     git clone git@github.com:WordPress/wordcamp.org.git wordcamp.test
     cd wordcamp.test
-	rm -rf .git/hooks
-	ln -s .githooks .git/hooks
     ```
 
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.
@@ -33,21 +31,28 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     git checkout 5.2
     ```
 
-1. Install the 3rd-party plugins, themes, and additional packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change to the root directory of the project where the **composer.json** file is located.
+1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
 	```bash
 	composer install
 	```
 
 1. Build and boot the Docker environment.
     ```bash
-    docker-compose up --build -d
+    docker-compose up --build
 	```
 
-    It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see these messages:
+    This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
 
-     ```bash
-    Creating wordcamporg_wordcamp.db_1   ... done
-    Creating wordcamporg_wordcamp.test_1 ... done
+    ```bash
+    wordcamp.test_1  | Startup complete.
+    ```
+   
+    In this case the Docker environment will be running in the foreground. To stop the environment, use `CTRL + c`.
+    
+    On subsequent uses, you can start the already-built environment up in the background, thus allowing other commands to be issued while the environment is still running:
+    
+    ```bash
+    docker-compose up -d
     ```
 
 	_Note: This will create `.docker/database` directory which will contain MySQL files to persist data across docker restarts._
@@ -72,7 +77,13 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. By default, docker will start with data defined in `.docker/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/wordcamp_dev.sql` file and run `docker-compose up --build -d` again.
 
-1. Note that if you want to work on WordCamp blocks, [you would have to install all the node dependencies](../public_html/wp-content/mu-plugins/blocks/readme.md). This can be done either inside, or even from outside the Docker.
+1. Note that if you want to work on WordCamp blocks, [you must install the node dependencies first](../public_html/wp-content/mu-plugins/blocks/readme.md). This can be done either inside or outside the Docker.
+
+1. Optional: Install Git hooks to automate code inspections during pre-commit:
+    ```bash
+    rm -rf .git/hooks
+    ln -s .githooks .git/hooks
+    ```
 
 
 ## Useful Docker Commands:
@@ -84,25 +95,21 @@ Note: All of these commands are meant to be executed from project directory.
     docker-compose up -d
     ```
 
-    here `-d` flags directs docker to run in background.
+    The `-d` flag directs Docker to run in background.
 
-    todo why does it do so much stuff when booting? shouldn't reprovision stuff, just boot. provision should be seprate process like vvv, otherwise slow
-
-1. To stop the running docker containers, use the command like so:
-
+1. To stop the running the Docker containers, use:
     ```bash
     docker-compose stop
     ```
+   
+   Note that using `docker-compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
 
 1. To open a shell inside the web container, use:
-
     ```bash
     docker-compose exec wordcamp.test bash
     ```
 
-    here
-    `wordcamp.test` is the name of docker service running `nginx` and `php`
-    `bash` is the name of command that we want to execute. This particular command will give us shell access inside the docker.
+    `wordcamp.test` is the name of docker service running `nginx` and `php`. `bash` is the name of command that we want to execute. This particular command will give us shell access inside the Docker.
 
     Similarly, for the MySQL container, you can use:
 
@@ -110,31 +117,28 @@ Note: All of these commands are meant to be executed from project directory.
     docker-compose exec wordcamp.db bash
     ```
 
-    here
-    `wordcamp.db` is the name of docker service running MySQL server
+    `wordcamp.db` is the name of docker service running MySQL server.
 
 1. To view `nginx` and `php-logs` use:
     ```bash
     docker-compose logs -f --tail=100 wordcamp.test
     ```
 
-    here
+    The `-f` flag is used for consistently following the logs. Omit this to only dump the logs in terminal.
 
-    `-f` flag is used for consistently following the logs. Omit this to only dump the logs in terminal.
+    The `--tail=100` flag is used to view only last `100` lines of log. Omit this if you'd like to see the entire log since docker started.
 
-    `--tail=100` flag is used to view only last `100` lines of log. Omit this if you'd like to see the entire log since docker started.
+    `wordcamp.test` is the name of the Docker service which is running `nginx` and `php`
 
-    `wordcamp.test` is the name of the docker service which is running `nginx` and `php`
-
-    Similarly, to view MySQL server logs (note: this does not show MySQL queries made by application, these are just server logs), use:
+    Similarly, to view MySQL server logs, use:
 
     ```bash
     docker-compose logs -f --tail=100 wordcamp.db
     ```
 
-    here
+    Note that this does not show MySQL queries made by application, these are just server logs.
 
-    `wordcamp.db` is the name of docker service which is running MySQL server.
+    `wordcamp.db` is the name of Docker service which is running MySQL server.
 
 
 Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
@@ -142,7 +146,7 @@ Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test]
 
 ## Working with the database provision file
 
-The **.docker/bin** directory gets mounted as a volume within the PHP container, and it contains a script, **database.sh**, with several useful commands. To run these commands, first open a shell inside the docker container:
+The **.docker/bin** directory gets mounted as a volume within the PHP container, and it contains a script, **database.sh**, with several useful commands. To run these commands, first open a shell inside the Docker container:
 
 ```bash
 docker-compose exec wordcamp.test bash
@@ -158,7 +162,7 @@ From there you can run the script using `bash /var/scripts/database.sh [subcomma
 
 ### Updating the database provision file
 
-_WARNING_: Never export data directly from the production database, because it contains sensitive information. Instead, manually recreate the useful data locally with fake email addresses, etc.
+**WARNING:** Never export data directly from the production database, because it contains sensitive information. Instead, manually recreate the useful data locally with fake email addresses, etc.
 
 If the dev database needs to be updated to better reflect the state of production (e.g. a new version of the WP Core database, new network-activated plugins), or you've added data to your dev database that you think should be included for everyone (e.g. a new site with useful test cases), you can use the `clean-export` subcommand to update the file that is committed to version control. Before you do, please do these preflight checks:
 

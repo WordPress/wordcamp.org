@@ -1,6 +1,6 @@
 ## Initial Setup
 
-Follow these steps to setup a local WordCamp.org environment using [Docker](https://www.docker.com/).
+Follow these steps to setup a local WordCamp.org environment using [Docker](https://www.docker.com/). _Assume all command blocks start in the root directory (wordcamp.test) of the project._
 
 1. Make sure you have Docker installed and running on your system.
 
@@ -31,9 +31,8 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     git checkout 5.2
     ```
 
-1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change to the root directory of the project where the **composer.json** file is located. 
+1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
 	```bash
-    cd ../../
 	composer install
 	```
 
@@ -79,6 +78,12 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 1. By default, docker will start with data defined in `.docker/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/wordcamp_dev.sql` file and run `docker-compose up --build -d` again.
 
 1. Note that if you want to work on WordCamp blocks, [you must install the node dependencies first](../public_html/wp-content/mu-plugins/blocks/readme.md). This can be done either inside or outside the Docker.
+
+1. Optional: Install Git hooks to automate code inspections during pre-commit:
+    ```bash
+    rm -rf .git/hooks
+    ln -s .githooks .git/hooks
+    ```
 
 
 ## Useful Docker Commands:

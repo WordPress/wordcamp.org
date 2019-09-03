@@ -36,7 +36,8 @@ class WordCamp_Fonts_Plugin {
 			return;
 		}
 
-		printf( '<script type="text/javascript" src="https://use.typekit.com/%s.js"></script>' . "\n", $this->options['typekit-id'] );
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
+		printf( '<script type="text/javascript" src="https://use.typekit.com/%s.js"></script>' . "\n", esc_attr( $this->options['typekit-id'] ) );
 		printf( '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' );
 	}
 
@@ -48,6 +49,7 @@ class WordCamp_Fonts_Plugin {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		printf( '<style>%s</style>', $this->options['google-web-fonts'] );
 	}
 
@@ -78,9 +80,29 @@ class WordCamp_Fonts_Plugin {
 		register_setting( 'wc-fonts-options', 'wc-fonts-options', array( $this, 'validate_options' ) );
 		add_settings_section( 'general', '', '__return_null', 'wc-fonts-options' );
 
-		add_settings_field( 'typekit-id', 'Typekit ID', array( $this, 'field_typekit_id' ), 'wc-fonts-options', 'general' );
-		add_settings_field( 'google-web-fonts', 'Google Web Fonts', array( $this, 'field_google_web_fonts' ), 'wc-fonts-options', 'general' );
-		add_settings_field( 'font-awesome-url', 'Font Awesome',     array( $this, 'field_font_awesome_url' ), 'wc-fonts-options', 'general' );
+		add_settings_field(
+			'typekit-id',
+			__( 'Typekit ID', 'wordcamporg' ),
+			array( $this, 'field_typekit_id' ),
+			'wc-fonts-options',
+			'general'
+		);
+
+		add_settings_field(
+			'google-web-fonts',
+			__( 'Google Web Fonts', 'wordcamporg' ),
+			array( $this, 'field_google_web_fonts' ),
+			'wc-fonts-options',
+			'general'
+		);
+
+		add_settings_field(
+			'font-awesome-url',
+			__( 'Font Awesome', 'wordcamporg' ),
+			array( $this, 'field_font_awesome_url' ),
+			'wc-fonts-options',
+			'general'
+		);
 
 		add_settings_field(
 			'dashicons',

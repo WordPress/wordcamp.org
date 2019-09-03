@@ -57,11 +57,14 @@ class WordCamp_Fonts_Plugin {
 	 * Provides the <head> output for Font Awesome
 	 */
 	public function wp_head_font_awesome() {
-		if ( empty( $this->options['font-awesome-url'] ) ) {
-			return;
+		if ( $this->options['font-awesome-url'] ) {
+			printf( "<style>@import url( '%s' );</style>", esc_url( $this->options['font-awesome-url'] ) );
 		}
 
-		printf( "<style>@import url( '%s' );</style>", esc_url( $this->options['font-awesome-url'] ) );
+		if ( $this->options['font-awesome-kit'] ) {
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
+			printf( '<script src="https://kit.fontawesome.com/%s.js"></script>', esc_attr( $this->options['font-awesome-kit'] ) );
+		}
 	}
 
 	/**
@@ -100,6 +103,14 @@ class WordCamp_Fonts_Plugin {
 			'font-awesome-url',
 			__( 'Font Awesome', 'wordcamporg' ),
 			array( $this, 'field_font_awesome_url' ),
+			'wc-fonts-options',
+			'general'
+		);
+
+		add_settings_field(
+			'font-awesome-kit',
+			__( 'Font Awesome Kit', 'wordcamporg' ),
+			array( $this, 'field_font_awesome_kit' ),
 			'wc-fonts-options',
 			'general'
 		);
@@ -200,6 +211,21 @@ class WordCamp_Fonts_Plugin {
 	}
 
 	/**
+	 * Settings API field for the Font Awesome kit ID
+	 */
+	public function field_font_awesome_kit() {
+		$value = isset( $this->options['font-awesome-kit'] ) ? $this->options['font-awesome-kit'] : '';
+		?>
+
+		<input type="text" name="wc-fonts-options[font-awesome-kit]" value="<?php echo esc_attr( $value ); ?>" class="regular-text code" />
+		<p class="description">
+			<?php esc_html_e( 'Enter your Font Awesome Kit ID only. Do not add any URLs or JavaScript.', 'wordcamporg' ); ?>
+		</p>
+
+		<?php
+	}
+
+	/**
 	 * Settings API field for the Dashicons checkbox
 	 */
 	public function field_dashicons() {
@@ -265,13 +291,18 @@ class WordCamp_Fonts_Plugin {
 			$url = wp_parse_url( $input['font-awesome-url'] );
 
 			if ( isset( $url['host'] ) && isset( $url['path'] ) ) {
-				$valid_hostname  = 'maxcdn.bootstrapcdn.com' === $url['host'];
+				$valid_hostname  = in_array( $url['host'], [ 'maxcdn.bootstrapcdn.com', 'stackpath.bootstrapcdn.com' ] );
 				$valid_extension = '.css' === substr( $url['path'], strlen( $url['path'] ) - 4, 4 );
 
 				if ( $valid_hostname && $valid_extension ) {
 					$output['font-awesome-url'] = esc_url_raw( 'https://' . $url['host'] . $url['path'] );
 				}
 			}
+		}
+
+		// Font Awesome Kit.
+		if ( isset( $input['font-awesome-kit'] ) ) {
+			$output['font-awesome-kit'] = preg_replace( '/[^0-9a-zA-Z]+/', '', $input['font-awesome-kit'] );
 		}
 
 		// Dashicons.

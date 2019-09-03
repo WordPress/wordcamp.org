@@ -2206,14 +2206,30 @@ class WordCamp_Budgets {
 	 * @return string
 	 */
 	public static function get_country_name( $country_code ) {
-		$countries = wcorg_get_countries();
+		$countries = array();
 		$name      = '';
 
-		foreach ( $countries as $country ) {
-			if ( $country_code === $country['alpha2'] || $country_code === $country['alpha3'] ) {
-				$name = $country['name'];
+		switch ( strlen( $country_code ) ) {
+			case 2:
+				$countries = wp_list_pluck(
+					wcorg_get_countries(),
+					'name',
+					'alpha2'
+				);
 				break;
-			}
+			case 3:
+				$countries = wp_list_pluck(
+					wcorg_get_countries( array( 'include_alpha3' => true ) ),
+					'name',
+					'alpha3'
+				);
+				break;
+			default:
+				break;
+		}
+
+		if ( ! empty( $countries[ $country_code ] ) ) {
+			$name = $countries[ $country_code ];
 		}
 
 		return $name;

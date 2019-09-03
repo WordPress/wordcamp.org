@@ -8,7 +8,8 @@
  */
 
 class WordCamp_Dashboard_Widgets {
-	protected $need_central_about_info, $needed_pages;
+	protected $need_central_about_info;
+	protected $needed_pages;
 
 	/**
 	 * Constructor
@@ -58,7 +59,8 @@ class WordCamp_Dashboard_Widgets {
 	protected function check_central_about_info() {
 		$transient_key = 'wcorg_need_central_info';
 
-		if ( $need_info = get_transient( $transient_key ) ) {
+		$need_info = get_transient( $transient_key );
+		if ( $need_info ) {
 			return 'yes' == $need_info;
 		}
 
@@ -140,6 +142,7 @@ class WordCamp_Dashboard_Widgets {
 	 * Make our custom dashboard widgets more visible
 	 */
 	protected function prioritize_wordcamp_widgets() {
+		// phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- Need to edit global to control priority.
 		global $wp_meta_boxes;
 
 		// Move WordCamp Reminders to the top of the primary column.
@@ -162,6 +165,7 @@ class WordCamp_Dashboard_Widgets {
 
 			unset( $wp_meta_boxes['dashboard']['normal']['core']['new_wordcamporg_tools'] );
 		}
+		// phpcs:enable
 	}
 
 	/**
@@ -228,6 +232,20 @@ class WordCamp_Dashboard_Widgets {
 		</p>
 
 		<ul class="ul-disc">
+			<?php if ( current_user_can( 'edit_posts' ) ) : ?>
+				<li>
+				<?php
+					printf(
+						wp_kses(
+							__( 'Show off your content with <a href="%s">new, customizable WordCamp blocks.</a>', 'wordcamporg' ),
+							array( 'a' => array( 'href' => true ) )
+						),
+						'https://make.wordpress.org/community/2019/08/19/wordcamp-blocks-are-live/'
+					);
+				?>
+				</li>
+			<?php endif; ?>
+
 			<?php if ( current_user_can( 'switch_themes' ) ) : ?>
 				<li>
 					<a href="https://make.wordpress.org/community/2017/04/18/introducing-a-new-mentor-tool-the-planning-checklist/">
@@ -246,18 +264,6 @@ class WordCamp_Dashboard_Widgets {
 				<a href="https://make.wordpress.org/community/2016/04/26/new-tool-for-creating-personalized-wordcamp-badges/">
 					<?php esc_html_e( 'Create personalized attendee badges.', 'wordcamporg' ); ?>
 				</a>
-			</li>
-
-			<li>
-				<?php
-					printf(
-						wp_kses(
-							__( '<a href="%s">Edit CSS in your local environment</a> and manage it in a GitHub repository.', 'wordcamporg' ),
-							array( 'a' => array( 'href' => true ) )
-						),
-						'https://make.wordpress.org/community/2015/11/24/remote-css-plugin-launched-on-wordcamp-org/'
-					);
-				?>
 			</li>
 		</ul>
 

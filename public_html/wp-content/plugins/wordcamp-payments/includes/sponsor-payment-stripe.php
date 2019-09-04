@@ -199,15 +199,23 @@ function _handle_post_data( &$data ) {
 				return;
 			}
 
+			try {
+				$decimal_amount = Stripe_Client::get_fractional_unit_amount( $currency, $amount );
+			} catch ( Exception $e ) {
+				$data['errors'][] = $e->getMessage();
+				return;
+			}
+
 			// Next step is to collect the card details via Stripe.
 			$data['step']    = STEP_PAYMENT_DETAILS;
 			$data['payment'] = array(
-				'payment_type' => $payment_type,
-				'wordcamp_id'  => $wordcamp_id,
-				'invoice_id'   => $invoice_id,
-				'description'  => $description,
-				'currency'     => $currency,
-				'amount'       => $amount,
+				'payment_type'   => $payment_type,
+				'wordcamp_id'    => $wordcamp_id,
+				'invoice_id'     => $invoice_id,
+				'description'    => $description,
+				'currency'       => $currency,
+				'amount'         => $amount,
+				'decimal_amount' => $decimal_amount,
 			);
 
 			// Passed through to the charge step.

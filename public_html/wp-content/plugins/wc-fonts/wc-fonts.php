@@ -204,7 +204,7 @@ class WordCamp_Fonts_Plugin {
 
 		<input type="text" name="wc-fonts-options[font-awesome-url]" value="<?php echo esc_url( $value ); ?>" class="large-text code" />
 		<p class="description">
-			<?php esc_html_e( 'Enter the BootstrapCDN URL for the version you want.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'For Font Awesome 4.7 and below. Enter the BootstrapCDN URL for the version you want.', 'wordcamporg' ); ?>
 		</p>
 
 		<?php
@@ -219,7 +219,7 @@ class WordCamp_Fonts_Plugin {
 
 		<input type="text" name="wc-fonts-options[font-awesome-kit]" value="<?php echo esc_attr( $value ); ?>" class="regular-text code" />
 		<p class="description">
-			<?php esc_html_e( 'Enter your Font Awesome Kit ID only. Do not add any URLs or JavaScript.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'For Font Awesome 5+. Enter your Font Awesome Kit ID only. Do not add any URLs or JavaScript.', 'wordcamporg' ); ?>
 		</p>
 
 		<?php

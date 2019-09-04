@@ -162,7 +162,7 @@ class Stripe_Client {
 	 * Stripe wants amounts in the fractional unit (e.g., pennies), not the base unit (e.g., dollars).  The data
 	 * here comes from https://stripe.com/docs/currencies.
 	 *
-	 * Note: This uses different data than `get_fractional_unit_multiplier` above, these have different data
+	 * @todo This uses different data than `get_fractional_unit_multiplier` above, these have different data
 	 * sources. These should be reconciled in the future.
 	 *
 	 * @param string $order_currency

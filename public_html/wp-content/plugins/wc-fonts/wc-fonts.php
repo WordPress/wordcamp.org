@@ -36,8 +36,8 @@ class WordCamp_Fonts_Plugin {
 			return;
 		}
 
-		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
-		printf( '<script type="text/javascript" src="https://use.typekit.com/%s.js"></script>' . "\n", esc_attr( $this->options['typekit-id'] ) );
+		// phpcs:ignore -- Allow hardcoded script, and allow `sanitize_key` as an escaping function.
+		printf( '<script type="text/javascript" src="https://use.typekit.com/%s.js"></script>' . "\n", sanitize_key( $this->options['typekit-id'] ) );
 		printf( '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' );
 	}
 
@@ -57,13 +57,13 @@ class WordCamp_Fonts_Plugin {
 	 * Provides the <head> output for Font Awesome
 	 */
 	public function wp_head_font_awesome() {
-		if ( $this->options['font-awesome-url'] ) {
+		if ( ! empty( $this->options['font-awesome-url'] ) ) {
 			printf( "<style>@import url( '%s' );</style>", esc_url( $this->options['font-awesome-url'] ) );
 		}
 
-		if ( $this->options['font-awesome-kit'] ) {
-			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
-			printf( '<script src="https://kit.fontawesome.com/%s.js"></script>', esc_attr( $this->options['font-awesome-kit'] ) );
+		if ( ! empty( $this->options['font-awesome-kit'] ) ) {
+			// phpcs:ignore -- Allow hardcoded script, and allow `sanitize_key` as an escaping function.
+			printf( '<script src="https://kit.fontawesome.com/%s.js"></script>', sanitize_key( $this->options['font-awesome-kit'] ) );
 		}
 	}
 

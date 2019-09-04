@@ -155,4 +155,56 @@ class Stripe_Client {
 
 		return $match;
 	}
+
+	/**
+	 * Convert an amount in the currency's base unit to its equivalent fractional unit.
+	 *
+	 * Stripe wants amounts in the fractional unit (e.g., pennies), not the base unit (e.g., dollars).  The data
+	 * here comes from https://stripe.com/docs/currencies.
+	 *
+	 * Note: This uses different data than `get_fractional_unit_multiplier` above, these have different data
+	 * sources. These should be reconciled in the future.
+	 *
+	 * @param string $order_currency
+	 * @param int    $base_unit_amount
+	 *
+	 * @return int
+	 * @throws Exception
+	 */
+	public static function get_fractional_unit_amount( $order_currency, $base_unit_amount ) {
+		$fractional_amount = null;
+
+		$currency_multipliers = array(
+			// Zero-decimal currencies.
+			1   => array(
+				'BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG', 'RWF', 'UGX', 'VND', 'VUV', 'XAF',
+				'XOF', 'XPF',
+			),
+			100 => array(
+				'AED', 'AFN', 'ALL', 'AMD', 'ANG', 'AOA', 'ARS', 'AUD', 'AWG', 'AZN', 'BAM', 'BBD', 'BDT', 'BGN',
+				'BMD', 'BND', 'BOB', 'BRL', 'BSD', 'BWP', 'BZD', 'CAD', 'CDF', 'CHF', 'CNY', 'COP',
+				'CRC', 'CVE', 'CZK', 'DKK', 'DOP', 'DZD', 'EGP', 'ETB', 'EUR', 'FJD', 'FKP',
+				'GBP', 'GEL', 'GIP', 'GMD', 'GTQ', 'GYD', 'HKD', 'HNL', 'HRK', 'HTG', 'HUF', 'IDR',
+				'ILS', 'INR', 'ISK', 'JMD', 'KES', 'KGS', 'KHR', 'KYD', 'KZT',
+				'LAK', 'LBP', 'LKR', 'LRD', 'LSL', 'MAD', 'MDL', 'MKD', 'MMK', 'MNT', 'MOP', 'MRO', 'MUR', 'MVR', 'MWK',
+				'MXN', 'MYR', 'MZN', 'NAD', 'NGN', 'NIO', 'NOK', 'NPR', 'NZD', 'PAB', 'PEN', 'PGK', 'PHP', 'PKR',
+				'PLN', 'QAR', 'RON', 'RSD', 'RUB', 'SAR', 'SBD', 'SCR', 'SEK', 'SGD', 'SHP', 'SLL',
+				'SOS', 'SRD', 'STD', 'SZL', 'THB', 'TJS', 'TOP', 'TRY', 'TTD', 'TWD',
+				'TZS', 'UAH', 'USD', 'UYU', 'UZS', 'WST', 'XCD', 'YER', 'ZAR', 'ZMW',
+			),
+		);
+
+		foreach ( $currency_multipliers as $multiplier => $currencies ) {
+			if ( in_array( $order_currency, $currencies, true ) ) {
+				$fractional_amount = floatval( $base_unit_amount ) * $multiplier;
+				break;
+			}
+		}
+
+		if ( is_null( $fractional_amount ) ) {
+			throw new Exception( "Unknown currency multiplier for $order_currency." );
+		}
+
+		return intval( $fractional_amount );
+	}
 }

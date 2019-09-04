@@ -57,10 +57,7 @@ function wcorg_get_user_by_canonical_names( $name ) {
 }
 
 /**
- * Get CLDR country names and codes
- *
- * @todo move the real functionality from get_valid_countries_iso3166() to here, then have the Budgets plugin,
- * QBO, etc call this.
+ * Get CLDR country names and codes.
  *
  * @param array $args
  *

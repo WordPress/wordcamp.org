@@ -343,6 +343,10 @@ class WordCamp_Budgets {
 					}
 					break;
 
+				/**
+				 * Country names now come from CLDR instead of directly from ISO-3166. These meta key
+				 * names are therefore legacy, but still technically accurate, and not worth changing.
+				 */
 				case 'vendor_country_iso3166':
 				case 'bank_country_iso3166':
 				case 'interm_bank_country_iso3166':

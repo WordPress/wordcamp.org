@@ -36,7 +36,8 @@ class WordCamp_Fonts_Plugin {
 			return;
 		}
 
-		printf( '<script type="text/javascript" src="https://use.typekit.com/%s.js"></script>' . "\n", $this->options['typekit-id'] );
+		// phpcs:ignore -- Allow hardcoded script, and allow `sanitize_key` as an escaping function.
+		printf( '<script type="text/javascript" src="https://use.typekit.com/%s.js"></script>' . "\n", sanitize_key( $this->options['typekit-id'] ) );
 		printf( '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' );
 	}
 
@@ -48,6 +49,7 @@ class WordCamp_Fonts_Plugin {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		printf( '<style>%s</style>', $this->options['google-web-fonts'] );
 	}
 
@@ -55,11 +57,14 @@ class WordCamp_Fonts_Plugin {
 	 * Provides the <head> output for Font Awesome
 	 */
 	public function wp_head_font_awesome() {
-		if ( empty( $this->options['font-awesome-url'] ) ) {
-			return;
+		if ( ! empty( $this->options['font-awesome-url'] ) ) {
+			printf( "<style>@import url( '%s' );</style>", esc_url( $this->options['font-awesome-url'] ) );
 		}
 
-		printf( "<style>@import url( '%s' );</style>", esc_url( $this->options['font-awesome-url'] ) );
+		if ( ! empty( $this->options['font-awesome-kit'] ) ) {
+			// phpcs:ignore -- Allow hardcoded script, and allow `sanitize_key` as an escaping function.
+			printf( '<script src="https://kit.fontawesome.com/%s.js"></script>', sanitize_key( $this->options['font-awesome-kit'] ) );
+		}
 	}
 
 	/**
@@ -78,9 +83,37 @@ class WordCamp_Fonts_Plugin {
 		register_setting( 'wc-fonts-options', 'wc-fonts-options', array( $this, 'validate_options' ) );
 		add_settings_section( 'general', '', '__return_null', 'wc-fonts-options' );
 
-		add_settings_field( 'typekit-id', 'Typekit ID', array( $this, 'field_typekit_id' ), 'wc-fonts-options', 'general' );
-		add_settings_field( 'google-web-fonts', 'Google Web Fonts', array( $this, 'field_google_web_fonts' ), 'wc-fonts-options', 'general' );
-		add_settings_field( 'font-awesome-url', 'Font Awesome',     array( $this, 'field_font_awesome_url' ), 'wc-fonts-options', 'general' );
+		add_settings_field(
+			'typekit-id',
+			__( 'Typekit ID', 'wordcamporg' ),
+			array( $this, 'field_typekit_id' ),
+			'wc-fonts-options',
+			'general'
+		);
+
+		add_settings_field(
+			'google-web-fonts',
+			__( 'Google Web Fonts', 'wordcamporg' ),
+			array( $this, 'field_google_web_fonts' ),
+			'wc-fonts-options',
+			'general'
+		);
+
+		add_settings_field(
+			'font-awesome-url',
+			__( 'Font Awesome', 'wordcamporg' ),
+			array( $this, 'field_font_awesome_url' ),
+			'wc-fonts-options',
+			'general'
+		);
+
+		add_settings_field(
+			'font-awesome-kit',
+			__( 'Font Awesome Kit', 'wordcamporg' ),
+			array( $this, 'field_font_awesome_kit' ),
+			'wc-fonts-options',
+			'general'
+		);
 
 		add_settings_field(
 			'dashicons',
@@ -171,7 +204,22 @@ class WordCamp_Fonts_Plugin {
 
 		<input type="text" name="wc-fonts-options[font-awesome-url]" value="<?php echo esc_url( $value ); ?>" class="large-text code" />
 		<p class="description">
-			<?php esc_html_e( 'Enter the BootstrapCDN URL for the version you want.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'For Font Awesome 4.7 and below. Enter the BootstrapCDN URL for the version you want.', 'wordcamporg' ); ?>
+		</p>
+
+		<?php
+	}
+
+	/**
+	 * Settings API field for the Font Awesome kit ID
+	 */
+	public function field_font_awesome_kit() {
+		$value = isset( $this->options['font-awesome-kit'] ) ? $this->options['font-awesome-kit'] : '';
+		?>
+
+		<input type="text" name="wc-fonts-options[font-awesome-kit]" value="<?php echo esc_attr( $value ); ?>" class="regular-text code" />
+		<p class="description">
+			<?php esc_html_e( 'For Font Awesome 5+. Enter your Font Awesome Kit ID only. Do not add any URLs or JavaScript.', 'wordcamporg' ); ?>
 		</p>
 
 		<?php
@@ -243,13 +291,18 @@ class WordCamp_Fonts_Plugin {
 			$url = wp_parse_url( $input['font-awesome-url'] );
 
 			if ( isset( $url['host'] ) && isset( $url['path'] ) ) {
-				$valid_hostname  = 'maxcdn.bootstrapcdn.com' === $url['host'];
+				$valid_hostname  = in_array( $url['host'], [ 'maxcdn.bootstrapcdn.com', 'stackpath.bootstrapcdn.com' ] );
 				$valid_extension = '.css' === substr( $url['path'], strlen( $url['path'] ) - 4, 4 );
 
 				if ( $valid_hostname && $valid_extension ) {
 					$output['font-awesome-url'] = esc_url_raw( 'https://' . $url['host'] . $url['path'] );
 				}
 			}
+		}
+
+		// Font Awesome Kit.
+		if ( isset( $input['font-awesome-kit'] ) ) {
+			$output['font-awesome-kit'] = preg_replace( '/[^0-9a-zA-Z]+/', '', $input['font-awesome-kit'] );
 		}
 
 		// Dashicons.

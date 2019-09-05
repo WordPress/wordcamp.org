@@ -128,7 +128,7 @@ get_header();
 
 				<script src="https://checkout.stripe.com/checkout.js" class="stripe-button"
 					data-key="<?php echo esc_attr( $data['keys']['publishable'] ); ?>"
-					data-amount="<?php echo esc_attr( round( $data['payment']['amount'], 2 ) * 100 ); ?>" <?php // @todo: Handle currencies with multipliers other than 100. ?>
+					data-amount="<?php echo esc_attr( $data['payment']['decimal_amount'] ); ?>"
 					data-currency="<?php echo esc_attr( $data['payment']['currency'] ); ?>"
 					data-name="WordPress Community Support, PBC"
 					data-description="<?php esc_attr_e( 'Event Sponsorship Payment', 'wordcamporg' ); ?>"

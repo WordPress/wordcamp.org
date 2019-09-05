@@ -224,43 +224,6 @@ class WordCamp_Budgets {
 	}
 
 	/**
-	 * Get a country name from the alpha2 or alpha3 code.
-	 *
-	 * @param string $country_code
-	 *
-	 * @return string
-	 */
-	public static function get_country_name( $country_code ) {
-		$countries = array();
-		$name      = '';
-
-		switch ( strlen( $country_code ) ) {
-			case 2:
-				$countries = wp_list_pluck(
-					wcorg_get_countries(),
-					'name',
-					'alpha2'
-				);
-				break;
-			case 3:
-				$countries = wp_list_pluck(
-					wcorg_get_countries( array( 'include_alpha3' => true ) ),
-					'name',
-					'alpha3'
-				);
-				break;
-			default:
-				break;
-		}
-
-		if ( ! empty( $countries[ $country_code ] ) ) {
-			$name = $countries[ $country_code ];
-		}
-
-		return $name;
-	}
-
-	/**
 	 * Get a list of valid payment methods
 	 *
 	 * @param $post_type

@@ -116,6 +116,43 @@ function wcorg_get_countries( array $args = array() ) {
 }
 
 /**
+ * Get a country name from the alpha2 or alpha3 code.
+ *
+ * @param string $country_code An alpha2 or alpha3 code.
+ *
+ * @return mixed|string
+ */
+function wcorg_get_country_name_from_code( $country_code ) {
+	$countries = array();
+	$name      = '';
+
+	switch ( strlen( $country_code ) ) {
+		case 2:
+			$countries = wp_list_pluck(
+				wcorg_get_countries(),
+				'name',
+				'alpha2'
+			);
+			break;
+		case 3:
+			$countries = wp_list_pluck(
+				wcorg_get_countries( array( 'include_alpha3' => true ) ),
+				'name',
+				'alpha3'
+			);
+			break;
+		default:
+			break;
+	}
+
+	if ( ! empty( $countries[ $country_code ] ) ) {
+		$name = $countries[ $country_code ];
+	}
+
+	return $name;
+}
+
+/**
  * Make a remote HTTP request, and retry if it fails
  *
  * Sometimes the HTTP request times out, or there's a temporary server-side error, etc. Some use cases require a

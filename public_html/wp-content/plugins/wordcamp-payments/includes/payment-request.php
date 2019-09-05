@@ -1034,7 +1034,7 @@ Thanks for helping us with these details!",
 				$category = '';
 			}
 
-			$country_name = WordCamp_Budgets::get_country_name(
+			$country_name = wcorg_get_country_name_from_code(
 				get_post_meta( $post->ID, '_camppayments_vendor_country_iso3166', true )
 			);
 

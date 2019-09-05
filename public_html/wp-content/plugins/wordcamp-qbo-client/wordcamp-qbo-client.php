@@ -322,6 +322,10 @@ class WordCamp_QBO_Client {
 		$sponsor_meta      = get_post_custom( $invoice_meta['_wcbsi_sponsor_id'][0] );
 		$sponsorship_level = self::get_sponsorship_level( $invoice_meta['_wcbsi_sponsor_id'][0] );
 
+		// The country might be the full name or a country code. We want the full name here.
+		$sponsor_country = $sponsor_meta['_wcpt_sponsor_country'][0];
+		$sponsor_country = ( wcorg_get_country_name_from_code( $sponsor_country ) ) ?: $sponsor_country;
+
 		$payload = array(
 			'wordcamp_name'     => sanitize_text_field( get_wordcamp_name()                        ),
 			'sponsorship_level' => sanitize_text_field( $sponsorship_level                         ),
@@ -346,7 +350,7 @@ class WordCamp_QBO_Client {
 				'city'     => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_city'           ][0] ),
 				'state'    => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_state'          ][0] ),
 				'zip-code' => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_zip_code'       ][0] ),
-				'country'  => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_country'        ][0] ),
+				'country'  => sanitize_text_field( $sponsor_country ),
 			)
 		);
 

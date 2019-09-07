@@ -1,4 +1,3 @@
-const path = require( 'path' );
 const MiniCssExtractPlugin = require( 'mini-css-extract-plugin' );
 const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 
@@ -6,11 +5,6 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 
 module.exports = {
 	...defaultConfig,
-
-	// We use a custom entry point since our source directory is not `src`.
-	entry: {
-		blocks: path.resolve( __dirname, 'source/blocks.js' ),
-	},
 
 	// Override the default filename to keep `min` in the name.
 	output: {
@@ -21,7 +15,8 @@ module.exports = {
 	// Bring in sourcemaps for non-production builds.
 	devtool: 'production' === NODE_ENV ? 'none' : 'cheap-module-eval-source-map',
 
-	// We need to extend the module.rules & plugins to add the scss build process.
+	// We need to extend the module.rules & plugins to add the SCSS build process.
+	// @todo remove this when https://github.com/WordPress/gutenberg/issues/14801 is resolved.
 	module: {
 		...defaultConfig.module,
 		rules: [

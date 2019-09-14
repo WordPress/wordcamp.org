@@ -201,7 +201,7 @@ function add_offline_template_cachebuster( $entry ) {
 	$page = get_offline_content();
 
 	if ( $entry && isset( $entry['revision'] ) ) {
-		$entry['revision'] .= ';' . md5( $page['content'] );
+		$entry['revision'] .= ';' . filemtime( __DIR__ . '/templates/offline.php' ) . md5( $page['content'] );
 	}
 
 	return $entry;

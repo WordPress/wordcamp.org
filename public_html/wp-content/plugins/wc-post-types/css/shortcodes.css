@@ -7,7 +7,7 @@
 }
 
 /* Make space for the favorite icon, which is absolutely positioned. */
-.wcpt-schedule td.wcpt-session-type-session:before {
+.wcpt-session-type-session .wcb-session-cell-content:before {
 	content: '';
 	width: 35px;
 	height: 2em;
@@ -272,6 +272,14 @@ td.wcb-favourite-session a.fav-session-button {
 
 	.global-session .wcpt-session-type-session:before {
 		display: none;
+	}
+
+	.wcpt-schedule div.wcb-session-favourite-icon {
+		top: calc( 1.5em + 20px );
+	}
+
+	.wcpt-schedule .global-session div.wcb-session-favourite-icon {
+		top: 20px;
 	}
 
 	.wcpt-session-title {

@@ -56,14 +56,13 @@
 .tix-alternate-payment-option {
     float: left;
     clear: both;
-    padding-left: 15px;
-    padding-top: 15px;
 }
 
 #tix .tix-submit .tix-alternate-payment-option label {
     color: #191e23;
     font-size: 16px;
     padding-left: 15px;
+    display: inline-block;
 }
 
 #tix input[name=tix_payment_method]:required {

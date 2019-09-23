@@ -1,6 +1,6 @@
 <?php
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 use function WordCamp\Logger\log;
 
 /*
@@ -47,25 +47,109 @@ function wcorg_skip_feature( $flag ) {
  * @return false|WP_User
  */
 function wcorg_get_user_by_canonical_names( $name ) {
-	if ( ! $user = get_user_by( 'login', $name ) ) {    // user_login
-		$user = get_user_by( 'slug', $name );           // user_nicename
+	$user = get_user_by( 'login', $name ); // user_login.
+
+	if ( ! $user ) {
+		$user = get_user_by( 'slug', $name ); // user_nicename.
 	}
 
 	return $user;
 }
 
 /**
- * Get ISO-3166 country names and codes
+ * Get CLDR country names and codes.
  *
- * @todo move the real functionality from get_valid_countries_iso3166() to here, then have the Budgets plugin,
- * QBO, etc call this.
+ * @param array $args
  *
  * @return array
  */
-function wcorg_get_countries() {
-	require_once( WP_PLUGIN_DIR . '/wordcamp-payments/includes/wordcamp-budgets.php' );
+function wcorg_get_countries( array $args = array() ) {
+	$defaults = array(
+		'include_alpha3' => false,
+	);
 
-	return WordCamp_Budgets::get_valid_countries_iso3166();
+	$args = wp_parse_args( $args, $defaults );
+
+	require_once WP_PLUGIN_DIR . '/wp-cldr/class-wp-cldr.php';
+
+	$cldr        = new WP_CLDR();
+	$territories = $cldr->get_territories_contained( '001' ); // "World".
+	$countries   = array();
+
+	if ( true === $args['include_alpha3'] ) {
+		$data_blob     = WP_CLDR::get_cldr_json_file( 'supplemental', 'codeMappings' );
+		$code_mappings = $data_blob['supplemental']['codeMappings'];
+	}
+
+	foreach ( $territories as $code ) {
+		$countries[ $code ] = array(
+			'alpha2' => $code,
+			'name'   => $cldr->get_territory_name( $code ),
+		);
+
+		if ( true === $args['include_alpha3'] ) {
+			$countries[ $code ]['alpha3'] = ( ! empty( $code_mappings[ $code ]['_alpha3'] ) )
+				? $code_mappings[ $code ]['_alpha3']
+				: '';
+		}
+	}
+
+	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.
+	// See https://www.php.net/manual/en/function.iconv.php#74101.
+	$orig_locale = setlocale( LC_CTYPE, 0 );
+	setlocale( LC_CTYPE, 'en_US.UTF-8' );
+
+	// Sort the country names based on ASCII transliteration without actually changing any strings.
+	usort(
+		$countries,
+		function( $a, $b ) {
+			return strcasecmp(
+				iconv( mb_detect_encoding( $a['name'] ), 'ascii//TRANSLIT', $a['name'] ),
+				iconv( mb_detect_encoding( $b['name'] ), 'ascii//TRANSLIT', $b['name'] )
+			);
+		}
+	);
+
+	setlocale( LC_CTYPE, $orig_locale );
+
+	return $countries;
+}
+
+/**
+ * Get a country name from the alpha2 or alpha3 code.
+ *
+ * @param string $country_code An alpha2 or alpha3 code.
+ *
+ * @return mixed|string
+ */
+function wcorg_get_country_name_from_code( $country_code ) {
+	$countries = array();
+	$name      = '';
+
+	switch ( strlen( $country_code ) ) {
+		case 2:
+			$countries = wp_list_pluck(
+				wcorg_get_countries(),
+				'name',
+				'alpha2'
+			);
+			break;
+		case 3:
+			$countries = wp_list_pluck(
+				wcorg_get_countries( array( 'include_alpha3' => true ) ),
+				'name',
+				'alpha3'
+			);
+			break;
+		default:
+			break;
+	}
+
+	if ( ! empty( $countries[ $country_code ] ) ) {
+		$name = $countries[ $country_code ];
+	}
+
+	return $name;
 }
 
 /**
@@ -119,12 +203,12 @@ function wcorg_required_indicator() {
 	?>
 
 	<span class="wcorg-required" aria-hidden="true">
-		<?php // translators: The symbol to indicate the form field is required ?>
-		<?php _e( '*', 'wordcamporg' ); ?>
+		<?php // translators: The symbol to indicate the form field is required. ?>
+		<?php esc_html_e( '*', 'wordcamporg' ); ?>
 	</span>
 
 	<span class="screen-reader-text">
-		<?php _e( 'required field', 'wordcamporg' ); ?>
+		<?php esc_html_e( 'required field', 'wordcamporg' ); ?>
 	</span>
 
 	<?php
@@ -144,7 +228,7 @@ function wcorg_get_custom_css_url() {
 	 * This has side-effects because `add_hooks()` is called immediately, but it doesn't seem problematic because
 	 * it gets loaded on every front/back-end page anyway.
 	 */
-	require_once( WP_PLUGIN_DIR . '/jetpack/modules/custom-css/custom-css-4.7.php' );
+	require_once WP_PLUGIN_DIR . '/jetpack/modules/custom-css/custom-css-4.7.php';
 
 	ob_start();
 	Jetpack_Custom_CSS_Enhancements::wp_custom_css_cb();

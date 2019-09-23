@@ -115,6 +115,7 @@
 		"wpackagist-plugin/supportflow": "dev-trunk",
 		"wpackagist-plugin/tagregator": "dev-trunk",
 		"wpackagist-plugin/wordpress-importer": "*",
+		"wpackagist-plugin/wp-cldr": "*",
 		"wpackagist-plugin/wp-super-cache": "*",
 		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
 		"wpackagist-theme/p2": "*",

@@ -147,7 +147,6 @@ function get_offline_page() {
 		'order'          => 'asc',
 		'meta_key'       => 'wc_page_offline',
 		'meta_value'     => 'yes',
-		'hierarchical'   => 0,
 	) );
 	if ( count( $found_pages ) ) {
 		return $found_pages[0];
@@ -170,7 +169,7 @@ function get_offline_content() {
 	$page = get_offline_page();
 	if ( $page ) {
 		return array(
-			'title'   => $page->post_title,
+			'title'   => apply_filters( 'the_title', $page->post_title, $page->ID ),
 			'content' => BlockUtilities\get_all_the_content( $page ),
 		);
 	}

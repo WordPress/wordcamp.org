@@ -24,7 +24,7 @@ $offline_page = get_offline_content();
 		<section class="error-offline">
 			<header class="page-header">
 				<h1 class="page-title">
-					<?php echo esc_html( $offline_page['title'] ); ?>
+					<?php echo wp_kses_post( $offline_page['title'] ); ?>
 				</h1>
 			</header>
 

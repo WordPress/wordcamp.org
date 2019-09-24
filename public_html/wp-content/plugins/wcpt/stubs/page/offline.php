@@ -19,5 +19,5 @@
 <!-- /wp:heading -->
 
 <!-- wp:shortcode -->
-[schedule date="YYYY-MM-DD" tracks="example-track,another-example-track,yet-another-example-track"]
+[schedule]
 <!-- /wp:shortcode -->

@@ -100,7 +100,7 @@ function wcorg_get_countries( array $args = array() ) {
 	setlocale( LC_CTYPE, 'en_US.UTF-8' );
 
 	// Sort the country names based on ASCII transliteration without actually changing any strings.
-	usort(
+	uasort(
 		$countries,
 		function( $a, $b ) {
 			return strcasecmp(

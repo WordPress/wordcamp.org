@@ -147,6 +147,7 @@ function wcorg_get_domain_redirects() {
 		'2018.pune.wordcamp.org'            => '2019.pune.wordcamp.org',
 		'2018.dc.wordcamp.org'              => '2019.dc.wordcamp.org',
 		'2019.sevilla.wordcamp.org'         => '2019-developers.sevilla.wordcamp.org',
+		'2019.telaviv.wordcamp.org'         => '2020.telaviv.wordcamp.org',
 
 		// Misc redirects.
 		'wordcampsf.org'                    => 'sf.wordcamp.org',

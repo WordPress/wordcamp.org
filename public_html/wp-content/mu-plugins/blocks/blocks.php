@@ -100,25 +100,3 @@ function register_assets() {
 }
 
 add_action( 'init', __NAMESPACE__ . '\register_assets', 9 );
-
-/**
- * Update kses filter.
- *
- * Allow `noscript`: this is used by Jetpack's lazy-loading before we output the content, and by default is
- * stripped by the `wp_kses_post` function, causing duplicate images.
- *
- * @param array $tags
- * @return array
- */
-function allow_noscript_blocks( $tags, $context ) {
-	global $post;
-
-	// Only allow noscript through if we're showing a post with blocks.
-	if ( 'post' === $context && isset( $post, $post->post_content ) && has_blocks( $post->post_content ) ) {
-		$tags['noscript'] = array();
-	}
-
-	return $tags;
-}
-
-add_action( 'wp_kses_allowed_html', __NAMESPACE__ . '\allow_noscript_blocks', 10, 2 );

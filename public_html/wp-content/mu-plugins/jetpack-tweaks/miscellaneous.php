@@ -3,7 +3,7 @@
 namespace WordCamp\Jetpack_Tweaks;
 defined( 'WPINC' ) || die();
 
-// Allow Photon to fetch images that are served via HTTPS
+// Allow Photon to fetch images that are served via HTTPS.
 add_filter( 'jetpack_photon_reject_https',    '__return_false' );
 
 /**
@@ -54,6 +54,27 @@ add_filter( 'contact_form_subject', __NAMESPACE__ . '\grunion_unique_subject' );
  * @return int
  */
 function lower_brute_protect_api_timeout( $timeout ) {
-	return 8; // seconds
+	return 8; // seconds.
 }
 add_filter( 'jetpack_protect_connect_timeout', __NAMESPACE__ . '\lower_brute_protect_api_timeout' );
+
+/**
+ * Update kses filter.
+ *
+ * Allow `noscript`: this is used by Jetpack's lazy-loading before we output the content, and by default is
+ * stripped by the `wp_kses_post` function, causing duplicate images.
+ *
+ * @param array $tags
+ * @return array
+ */
+function allow_noscript_blocks( $tags, $context ) {
+	global $post;
+
+	// Only allow noscript through if we're showing a post with blocks.
+	if ( 'post' === $context && isset( $post, $post->post_content ) && has_blocks( $post->post_content ) ) {
+		$tags['noscript'] = array();
+	}
+
+	return $tags;
+}
+add_action( 'wp_kses_allowed_html', __NAMESPACE__ . '\allow_noscript_blocks', 10, 2 );

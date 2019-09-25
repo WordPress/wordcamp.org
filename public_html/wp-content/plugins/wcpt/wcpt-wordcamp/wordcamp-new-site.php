@@ -187,7 +187,7 @@ class WordCamp_New_Site {
 		) );
 
 		if ( is_int( $this->new_site_id ) ) {
-			// This is used in other plugins to map the `wordcamp` post to it's corresponding site.
+			// `_site_id` is used in other plugins to map the `wordcamp` post to it's corresponding site.
 			update_post_meta( $wordcamp_id, '_site_id', $this->new_site_id );
 			do_action( 'wcor_wordcamp_site_created', $wordcamp_id );
 

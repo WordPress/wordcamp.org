@@ -91,7 +91,6 @@
 	"require-dev": {
 		"wpackagist-plugin/akismet": "*",
 		"wordpress-plugin/bbpress": "2.6.*",
-		"wpackagist-plugin/camptix": "dev-trunk",
 		"wpackagist-plugin/campt-indian-payment-gateway": "*",
 		"wordpress-plugin/camptix-bd-payments": "1.2",
 		"wpackagist-plugin/camptix-mercadopago": "*",

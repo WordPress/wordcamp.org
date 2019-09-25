@@ -604,7 +604,7 @@ class WordCamp_New_Site {
 
 			array(
 				'title'   => __( 'Offline', 'wordcamporg' ),
-				'content' => $this->get_stub_content( 'page', 'offline' ),
+				'content' => $this->get_stub_content( 'page', 'offline', $wordcamp ),
 				'status'  => 'publish',
 				'type'    => 'page',
 				'meta'    => array(
@@ -665,12 +665,13 @@ class WordCamp_New_Site {
 	/**
 	 * Load the content for a stub from an include file.
 	 *
-	 * @param string $post_type
-	 * @param string $stub_name
+	 * @param string  $post_type
+	 * @param string  $stub_name
+	 * @param WP_Post $wordcamp
 	 *
 	 * @return string
 	 */
-	protected function get_stub_content( $post_type, $stub_name ) {
+	protected function get_stub_content( $post_type, $stub_name, $wordcamp = false ) {
 		$content   = '';
 		$stub_file = WCPT_DIR . "stubs/$post_type/$stub_name.php";
 

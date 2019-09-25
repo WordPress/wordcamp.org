@@ -273,7 +273,7 @@ function _handle_post_data( &$data ) {
 			}
 
 			$body = array(
-				'amount'      => round( $payment_data['amount'], 0 ) * 100, // TODO handle zero-decimal currencies and currencies with multipliers other than 100.
+				'amount'      => $payment_data['decimal_amount'],
 				'currency'    => $payment_data['currency'],
 				'source'      => $stripe_token,
 				'description' => $description,

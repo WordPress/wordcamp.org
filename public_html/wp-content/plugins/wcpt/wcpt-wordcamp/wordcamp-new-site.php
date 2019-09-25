@@ -1,7 +1,6 @@
 <?php
 
-// Nonces are verified in Event_Admin::metabox_save (if applicable), we don't need to re-verify.
-// phpcs:disable WordPress.Security.NonceVerification.Missing
+// PHPCS note: Nonces are verified in Event_Admin::metabox_save (if applicable), we don't need to re-verify.
 
 use \WordCamp\Logger;
 
@@ -89,16 +88,19 @@ class WordCamp_New_Site {
 
 		$field_name = wcpt_key_to_str( $key, 'wcpt_' );
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( 'URL' !== $key || 'wc-url' !== $field_type || ! isset( $_POST[ $field_name ] ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( empty( $_POST[ $field_name ] ) ) {
 			delete_post_meta( $wordcamp_id, 'URL' );
 			delete_post_meta( $wordcamp_id, '_site_id' );
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		$url = strtolower( substr( $_POST[ $field_name ], 0, 4 ) ) == 'http' ? $_POST[ $field_name ] : 'http://' . $_POST[ $field_name ];
 		$url = set_url_scheme( esc_url_raw( $url ), 'https' );
 		$url = filter_var( $url, FILTER_VALIDATE_URL );
@@ -159,6 +161,7 @@ class WordCamp_New_Site {
 		}
 
 		$url = get_post_meta( $wordcamp_id, 'URL', true );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( ! isset( $_POST[ wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ) ] ) || empty( $url ) ) {
 			Logger\log( 'return_no_request_or_url', compact( 'wordcamp_id', 'url' ) );
 			return;
@@ -229,6 +232,7 @@ class WordCamp_New_Site {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( empty( $_POST[ wcpt_key_to_str( 'push-mes-sponsors', 'wcpt_' ) ] ) ) {
 			return;
 		}

@@ -252,3 +252,58 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 	return ob_get_clean();
 }
+
+/**
+ * Display a human-friendly date range for a given WordCamp.
+ *
+ * @param WP_Post $wordcamp
+ *
+ * @return string
+ */
+function get_wordcamp_date_range( $wordcamp ) {
+	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+		return;
+	}
+
+	// Switch to central.wordcamp.org to get post meta.
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
+	$start = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
+	$end   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
+	restore_current_blog();
+
+	// Assume a single-day event if there is no end date.
+	if ( ! $end ) {
+		return date( 'F j, Y', $start );
+	}
+
+	$range_str = esc_html__( '%1$s to %2$s', 'wordcamporg' );
+
+	if ( date( 'Y', $start ) !== date( 'Y', $end ) ) {
+		return sprintf( $range_str, date( 'F j, Y', $start ), date( 'F j, Y', $end ) );
+	} else if ( date( 'm', $start ) !== date( 'm', $end ) ) {
+		return sprintf( $range_str, date( 'F j', $start ), date( 'F j, Y', $end ) );
+	} else {
+		return sprintf( $range_str, date( 'F j', $start ), date( 'j, Y', $end ) );
+	}
+}
+
+/**
+ * Display a human-friendly date range for a given WordCamp.
+ *
+ * @param WP_Post $wordcamp
+ *
+ * @return string
+ */
+function get_wordcamp_location( $wordcamp ) {
+	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+		return;
+	}
+
+	// Switch to central.wordcamp.org to get post meta.
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
+	$venue   = get_post_meta( $wordcamp->ID, 'Venue Name', true );
+	$address = get_post_meta( $wordcamp->ID, 'Physical Address', true );
+	restore_current_blog();
+
+	return $venue . "\n" . $address;
+}

@@ -6,13 +6,14 @@
 <p><?php esc_html_e( "This page couldn't be loaded because you appear to be offline. Please try again once you have a network connection.", 'wordcamporg' ); ?></p>
 <!-- /wp:paragraph -->
 
-<!-- wp:paragraph -->
-<p><?php esc_html_e( 'In the mean time, hopefully this information is useful:', 'wordcamporg' ); ?></p>
-<!-- /wp:paragraph -->
-
 <!-- wp:heading -->
-<h2><?php esc_html_e( 'Location', 'wordcamporg' ); ?></h2>
+<h2><?php esc_html_e( 'Location & Date', 'wordcamporg' ); ?></h2>
 <!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><?php echo esc_html( get_wordcamp_date_range( $wordcamp ) ); ?><br>
+<?php echo nl2br( esc_html( get_wordcamp_location( $wordcamp ) ) ); ?></p>
+<!-- /wp:paragraph -->
 
 <!-- wp:heading -->
 <h2><?php esc_html_e( 'Schedule', 'wordcamporg' ); ?></h2>

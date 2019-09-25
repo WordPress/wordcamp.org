@@ -615,6 +615,16 @@ class WordCamp_New_Site {
 					'wc_page_offline' => 'yes',
 				),
 			),
+
+			array(
+				'title'   => __( 'Day Of Event', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'day-of-event', $wordcamp ),
+				'status'  => 'publish',
+				'type'    => 'page',
+				'meta'    => array(
+					'_wp_page_template' => 'day-of-event', // Set the page template.
+				),
+			),
 		);
 
 		return $pages;

@@ -16,31 +16,22 @@
 namespace WordCamp\Theme_Templates;
 
 get_header();
+
+$offline_page = get_offline_content();
 ?>
 
-	<main>
-		<h1>
-			<?php echo esc_html( _x( 'Offline', 'Page Title', 'wordcamporg' ) ); ?>
-		</h1>
+	<main id="main" class="site-main">
+		<section class="error-offline">
+			<header class="page-header">
+				<h1 class="page-title">
+					<?php echo wp_kses_post( $offline_page['title'] ); ?>
+				</h1>
+			</header>
 
-		<p>
-			<?php esc_html_e( "This page couldn't be loaded because you appear to be offline. Please try again once you have a network connection.", 'wordcamporg' ); ?>
-		</p>
-
-		<p>
-			<?php esc_html_e( 'In the mean time, hopefully this information is useful:', 'wordcamporg' ); ?>
-		</p>
-
-		<?php
-			require_once dirname( __DIR__ ) . '/parts/dates.php';
-			require_once dirname( __DIR__ ) . '/parts/location.php';
-		?>
-
-		<h3>
-			<?php esc_html_e( 'Schedule' ); ?>
-		</h3>
-
-		<?php echo do_shortcode( '[schedule]' ); ?>
+			<div class="page-content">
+				<?php echo wp_kses_post( $offline_page['content'] ); ?>
+			</div>
+		</section>
 	</main>
 
 <?php

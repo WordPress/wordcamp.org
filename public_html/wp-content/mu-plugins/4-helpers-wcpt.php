@@ -1,6 +1,6 @@
 <?php
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 /*
  * Helper functions related to the `wordcamp` post type.
@@ -15,13 +15,16 @@ defined( 'WPINC' ) or die();
  * @return array
  */
 function get_wordcamps( $args = array() ) {
-	$args = wp_parse_args( $args, array(
-		'post_type'   => WCPT_POST_TYPE_ID,
-		'post_status' => 'any',
-		'orderby'     => 'ID',
-		'numberposts' => -1,
-		'perm'        => 'readable',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'any',
+			'orderby'     => 'ID',
+			'numberposts' => -1,
+			'perm'        => 'readable',
+		)
+	);
 
 	$wordcamps = get_posts( $args );
 
@@ -47,7 +50,8 @@ function get_wordcamp_post() {
 	$current_site_id  = get_current_blog_id();
 	$current_site_url = site_url();
 
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+	// Switch to central.wordcamp.org to get posts.
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
 
 	$wordcamp = get_posts( array(
 		'post_type'   => 'wordcamp',
@@ -88,13 +92,16 @@ function get_wordcamp_post() {
  * @return mixed An integer if successful, or boolean false if failed
  */
 function get_wordcamp_site_id( $wordcamp_post ) {
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+	// Switch to central.wordcamp.org to get post meta.
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
 
-	if ( ! $site_id = get_post_meta( $wordcamp_post->ID, '_site_id', true ) ) {
+	$site_id = get_post_meta( $wordcamp_post->ID, '_site_id', true );
+	if ( ! $site_id ) {
 		$url = parse_url( get_post_meta( $wordcamp_post->ID, 'URL', true ) );
 
 		if ( isset( $url['host'] ) && isset( $url['path'] ) ) {
-			if ( $site = get_site_by_path( $url['host'], $url['path'] ) ) {
+			$site = get_site_by_path( $url['host'], $url['path'] );
+			if ( $site ) {
 				$site_id = $site->blog_id;
 			}
 		}
@@ -121,7 +128,8 @@ function get_wordcamp_name( $site_id = 0 ) {
 
 	switch_to_blog( $site_id );
 
-	if ( $wordcamp = get_wordcamp_post() ) {
+	$wordcamp = get_wordcamp_post();
+	if ( $wordcamp ) {
 		if ( ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
 			$name = $wordcamp->post_title . ' ' . date( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] );
 		}
@@ -143,7 +151,7 @@ function get_wordcamp_name( $site_id = 0 ) {
  * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead
  *
  * @param string $url
- * @param string $part 'city', 'city-domain' (without the year, e.g. seattle.wordcamp.org), 'year'
+ * @param string $part 'city', 'city-domain' (without the year, e.g. seattle.wordcamp.org), 'year'.
  *
  * @return false|string|int False on errors; an integer for years; a string for city and city-domain
  */
@@ -151,7 +159,7 @@ function wcorg_get_url_part( $url, $part ) {
 	$url_parts = explode( '.', parse_url( $url, PHP_URL_HOST ) );
 	$result    = false;
 
-	// Make sure it matches the typical year.city.wordcamp.org structure
+	// Make sure it matches the typical year.city.wordcamp.org structure.
 	if ( 4 !== count( $url_parts ) ) {
 		return $result;
 	}
@@ -187,14 +195,14 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
 	$start = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 	$end   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
 
-	// Assume 1 day duration if there is no end date
+	// Assume 1 day duration if there is no end date.
 	if ( ! $end ) {
 		return 1;
 	}
 
 	$duration_raw = $end - $start;
 
-	// Add one second and round up to ensure the end date counts as a day as well
+	// Add one second and round up to ensure the end date counts as a day as well.
 	$duration_days = ceil( ( $duration_raw + 1 ) / DAY_IN_SECONDS );
 
 	return absint( $duration_days );
@@ -222,7 +230,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 	?>
 
 	<select name="<?php echo esc_attr( $name ); ?>" class="select2">
-		<option value=""><?php _e( 'Select a WordCamp', 'wordcamporg' ); ?></option>
+		<option value=""><?php esc_html_e( 'Select a WordCamp', 'wordcamporg' ); ?></option>
 		<option value=""></option>
 
 		<?php foreach ( $wordcamps as $wordcamp ) : ?>
@@ -251,4 +259,59 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 	<?php
 
 	return ob_get_clean();
+}
+
+/**
+ * Display a human-friendly date range for a given WordCamp.
+ *
+ * @param WP_Post $wordcamp
+ *
+ * @return string
+ */
+function get_wordcamp_date_range( $wordcamp ) {
+	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+		return;
+	}
+
+	// Switch to central.wordcamp.org to get post meta.
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
+	$start = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
+	$end   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
+	restore_current_blog();
+
+	// Assume a single-day event if there is no end date.
+	if ( ! $end ) {
+		return date( 'F j, Y', $start );
+	}
+
+	$range_str = esc_html__( '%1$s to %2$s', 'wordcamporg' );
+
+	if ( date( 'Y', $start ) !== date( 'Y', $end ) ) {
+		return sprintf( $range_str, date( 'F j, Y', $start ), date( 'F j, Y', $end ) );
+	} else if ( date( 'm', $start ) !== date( 'm', $end ) ) {
+		return sprintf( $range_str, date( 'F j', $start ), date( 'F j, Y', $end ) );
+	} else {
+		return sprintf( $range_str, date( 'F j', $start ), date( 'j, Y', $end ) );
+	}
+}
+
+/**
+ * Display a human-friendly date range for a given WordCamp.
+ *
+ * @param WP_Post $wordcamp
+ *
+ * @return string
+ */
+function get_wordcamp_location( $wordcamp ) {
+	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+		return;
+	}
+
+	// Switch to central.wordcamp.org to get post meta.
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
+	$venue   = get_post_meta( $wordcamp->ID, 'Venue Name', true );
+	$address = get_post_meta( $wordcamp->ID, 'Physical Address', true );
+	restore_current_blog();
+
+	return $venue . "\n" . $address;
 }

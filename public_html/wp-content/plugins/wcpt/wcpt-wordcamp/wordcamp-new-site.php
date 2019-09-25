@@ -1,11 +1,13 @@
 <?php
 
+// PHPCS note: Nonces are verified in Event_Admin::metabox_save (if applicable), we don't need to re-verify.
+
 use \WordCamp\Logger;
 
 class WordCamp_New_Site {
 	protected $new_site_id;
 
-	/*
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -22,9 +24,9 @@ class WordCamp_New_Site {
 	 *
 	 * @action wcpt_metabox_value
 	 *
-	 * @param $key
-	 * @param $field_type
-	 * @param $object_name
+	 * @param string $key
+	 * @param string $field_type
+	 * @param string $object_name
 	 */
 	public function render_site_url_field( $key, $field_type, $object_name ) {
 		global $post_id;
@@ -41,11 +43,19 @@ class WordCamp_New_Site {
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
 				<?php $url = parse_url( trailingslashit( get_post_meta( $post_id, $key, true ) ) ); ?>
 				<?php if ( isset( $url['host'], $url['path'] ) && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
-					<?php $blog_details = get_blog_details( array( 'domain' => $url['host'], 'path' => $url['path'] ), true ); ?>
+					<?php
+						$blog_details = get_blog_details(
+							array(
+								'domain' => $url['host'],
+								'path'   => $url['path'],
+							),
+							true
+						);
+					?>
 
-					<a target="_blank" href="<?php echo add_query_arg( 's', $blog_details->blog_id, network_admin_url( 'sites.php' ) ); ?>">Edit</a> |
-					<a target="_blank" href="<?php echo $blog_details->siteurl; ?>/wp-admin/">Dashboard</a> |
-					<a target="_blank" href="<?php echo $blog_details->siteurl; ?>">Visit</a>
+					<a target="_blank" href="<?php echo esc_url( add_query_arg( 's', $blog_details->blog_id, network_admin_url( 'sites.php' ) ) ); ?>">Edit</a> |
+					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
+					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
 
 				<?php else : ?>
 					<?php $checkbox_id = wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ); ?>
@@ -55,9 +65,9 @@ class WordCamp_New_Site {
 						Create site in network
 					</label>
 
-					<span class="description">(e.g., https://<?php echo date( 'Y' ); ?>.city.wordcamp.org)</span>
-				<?php endif; // domain_exists ?>
-			<?php endif; // current_user_can ?>
+					<span class="description">(e.g., https://<?php echo esc_attr( date( 'Y' ) ); ?>.city.wordcamp.org)</span>
+				<?php endif; // Domain exists. ?>
+			<?php endif; // User can manage sites. ?>
 		<?php endif;
 	}
 
@@ -71,23 +81,26 @@ class WordCamp_New_Site {
 	public function save_site_url_field( $key, $field_type, $wordcamp_id ) {
 		global $switched;
 
-		// No updating if the blog has been switched
+		// No updating if the blog has been switched.
 		if ( $switched || 1 !== did_action( 'wcpt_metabox_save' ) ) {
 			return;
 		}
 
 		$field_name = wcpt_key_to_str( $key, 'wcpt_' );
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( 'URL' !== $key || 'wc-url' !== $field_type || ! isset( $_POST[ $field_name ] ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( empty( $_POST[ $field_name ] ) ) {
 			delete_post_meta( $wordcamp_id, 'URL' );
 			delete_post_meta( $wordcamp_id, '_site_id' );
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		$url = strtolower( substr( $_POST[ $field_name ], 0, 4 ) ) == 'http' ? $_POST[ $field_name ] : 'http://' . $_POST[ $field_name ];
 		$url = set_url_scheme( esc_url_raw( $url ), 'https' );
 		$url = filter_var( $url, FILTER_VALIDATE_URL );
@@ -140,7 +153,7 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		// The sponsor region is required so we can import the relevant sponsors and levels
+		// The sponsor region is required so we can import the relevant sponsors and levels.
 		$sponsor_region = get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true );
 		if ( ! $sponsor_region ) {
 			Logger\log( 'return_no_region', compact( 'wordcamp_id', 'sponsor_region' ) );
@@ -148,6 +161,7 @@ class WordCamp_New_Site {
 		}
 
 		$url = get_post_meta( $wordcamp_id, 'URL', true );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( ! isset( $_POST[ wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ) ] ) || empty( $url ) ) {
 			Logger\log( 'return_no_request_or_url', compact( 'wordcamp_id', 'url' ) );
 			return;
@@ -159,9 +173,9 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		$path              = isset( $url_components['path'] ) ? $url_components['path'] : '';
-		$wordcamp_meta     = get_post_custom( $wordcamp_id );
-		$lead_organizer    = $this->get_user_or_current_user( $wordcamp_meta['WordPress.org Username'][0] );
+		$path           = isset( $url_components['path'] ) ? $url_components['path'] : '';
+		$wordcamp_meta  = get_post_custom( $wordcamp_id );
+		$lead_organizer = $this->get_user_or_current_user( $wordcamp_meta['WordPress.org Username'][0] );
 
 		$blog_name = apply_filters( 'the_title', $wordcamp->post_title );
 		if ( ! empty( $wordcamp->{'Start Date (YYYY-mm-dd)'} ) ) {
@@ -176,14 +190,19 @@ class WordCamp_New_Site {
 		) );
 
 		if ( is_int( $this->new_site_id ) ) {
-			update_post_meta( $wordcamp_id, '_site_id', $this->new_site_id );    // this is used in other plugins to map the `wordcamp` post to it's corresponding site
+			// `_site_id` is used in other plugins to map the `wordcamp` post to it's corresponding site.
+			update_post_meta( $wordcamp_id, '_site_id', $this->new_site_id );
 			do_action( 'wcor_wordcamp_site_created', $wordcamp_id );
 
-			add_post_meta( $wordcamp_id, '_note', array(
-				'timestamp' => time(),
-				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( 'Created site at <a href="%s">%s</a>', $url, $url ),
-			) );
+			add_post_meta(
+				$wordcamp_id,
+				'_note',
+				array(
+					'timestamp' => time(),
+					'user_id'   => get_current_user_id(),
+					'message'   => sprintf( 'Created site at <a href="%s">%s</a>', $url, $url ),
+				)
+			);
 
 			$this->configure_new_site( $wordcamp_id, $wordcamp );
 
@@ -208,11 +227,12 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		// The sponsor region is required so we can import the relevant sponsors and levels
+		// The sponsor region is required so we can import the relevant sponsors and levels.
 		if ( ! get_post_meta( $wordcamp_id, 'Multi-Event Sponsor Region', true ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( empty( $_POST[ wcpt_key_to_str( 'push-mes-sponsors', 'wcpt_' ) ] ) ) {
 			return;
 		}
@@ -269,7 +289,7 @@ class WordCamp_New_Site {
 					update_post_meta( $post_id, $key, $value );
 				}
 
-				// Set featured image
+				// Set featured image.
 				if ( ! empty( $sponsor['featured_image'] ) ) {
 					$results = media_sideload_image( $sponsor['featured_image'], $post_id );
 
@@ -394,10 +414,10 @@ class WordCamp_New_Site {
 	 */
 	protected function set_default_options( $wordcamp, $meta ) {
 		/** @var $WCCSP_Settings WCCSP_Settings */
-		global $WCCSP_Settings;
+		global $WCCSP_Settings; // phpcs:ignore WordPress.NamingConventions
 
 		$admin_email                     = is_email( $meta['E-mail Address'][0] ) ? $meta['E-mail Address'][0] : get_site_option( 'admin_email' );
-		$coming_soon_settings            = $WCCSP_Settings->get_settings();
+		$coming_soon_settings            = $WCCSP_Settings->get_settings(); // phpcs:ignore WordPress.NamingConventions
 		$coming_soon_settings['enabled'] = 'on';
 
 		update_option( 'admin_email',                  $admin_email );
@@ -424,7 +444,7 @@ class WordCamp_New_Site {
 		$assigned_sponsor_data = $this->get_assigned_sponsor_data( $wordcamp->ID );
 		$this->create_sponsorship_levels( $assigned_sponsor_data['assigned_sponsors'] );
 
-		// Get stub content
+		// Get stub content.
 		$stubs = array_merge(
 			$this->get_stub_posts( $wordcamp, $meta ),
 			$this->get_stub_pages( $wordcamp, $meta ),
@@ -432,29 +452,32 @@ class WordCamp_New_Site {
 			$this->get_stub_me_sponsor_thank_yous( $assigned_sponsor_data['assigned_sponsors'] )
 		);
 
-		// Create actual posts from stubs
+		// Create actual posts from stubs.
 		foreach ( $stubs as $page ) {
-			$page_id = wp_insert_post( array(
-				'post_type'    => $page['type'],
-				'post_status'  => $page['status'],
-				'post_author'  => $lead_organizer->ID,
-				'post_title'   => $page['title'],
-				'post_content' => $page['content']
-			), true );
+			$page_id = wp_insert_post(
+				array(
+					'post_type'    => $page['type'],
+					'post_status'  => $page['status'],
+					'post_author'  => $lead_organizer->ID,
+					'post_title'   => $page['title'],
+					'post_content' => $page['content'],
+				),
+				true
+			);
 
 			if ( is_wp_error( $page_id ) ) {
 				Logger\log( 'insert_post_failed', compact( 'page_id', 'page' ) );
 				continue;
 			}
 
-			// Save post meta
+			// Save post meta.
 			if ( ! empty( $page['meta'] ) ) {
 				foreach ( $page['meta'] as $key => $value ) {
 					update_post_meta( $page_id, $key, $value );
 				}
 			}
 
-			// Set featured image
+			// Set featured image.
 			if ( isset( $page['featured_image'] ) ) {
 				$results = media_sideload_image( $page['featured_image'], $page_id );
 
@@ -464,7 +487,7 @@ class WordCamp_New_Site {
 					$attachment_id = get_posts( array(
 						'posts_per_page' => 1,
 						'post_type'      => 'attachment',
-						'post_parent'    => $page_id
+						'post_parent'    => $page_id,
 					) );
 
 					if ( isset( $attachment_id[0]->ID ) ) {
@@ -473,7 +496,7 @@ class WordCamp_New_Site {
 				}
 			}
 
-			// Assign sponsorship level
+			// Assign sponsorship level.
 			if ( 'wcb_sponsor' == $page['type'] && isset( $page['term'] ) ) {
 				wp_set_object_terms( $page_id, $page['term'], 'wcb_sponsor_level', true );
 			}
@@ -582,6 +605,16 @@ class WordCamp_New_Site {
 				'status'  => 'publish',
 				'type'    => 'page',
 			),
+
+			array(
+				'title'   => __( 'Offline', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'offline', $wordcamp ),
+				'status'  => 'publish',
+				'type'    => 'page',
+				'meta'    => array(
+					'wc_page_offline' => 'yes',
+				),
+			),
 		);
 
 		return $pages;
@@ -598,7 +631,7 @@ class WordCamp_New_Site {
 	protected function get_stub_posts( $wordcamp, $meta ) {
 		$posts = array(
 			array(
-				// translators: %s: site title
+				// translators: %s: site title.
 				'title'   => sprintf( __( 'Welcome to %s', 'wordcamporg' ), get_option( 'blogname' ) ),
 				'content' => $this->get_stub_content( 'post', 'welcome' ),
 				'status'  => 'publish',
@@ -636,12 +669,13 @@ class WordCamp_New_Site {
 	/**
 	 * Load the content for a stub from an include file.
 	 *
-	 * @param string $post_type
-	 * @param string $stub_name
+	 * @param string  $post_type
+	 * @param string  $stub_name
+	 * @param WP_Post $wordcamp
 	 *
 	 * @return string
 	 */
-	protected function get_stub_content( $post_type, $stub_name ) {
+	protected function get_stub_content( $post_type, $stub_name, $wordcamp = false ) {
 		$content   = '';
 		$stub_file = WCPT_DIR . "stubs/$post_type/$stub_name.php";
 
@@ -667,7 +701,7 @@ class WordCamp_New_Site {
 				$sponsorship_level->post_title,
 				'wcb_sponsor_level',
 				array(
-					'slug' => $sponsorship_level->post_name
+					'slug' => $sponsorship_level->post_name,
 				)
 			);
 		}
@@ -713,13 +747,13 @@ class WordCamp_New_Site {
 		$sponsor_meta    = array( '_mes_id' => $assigned_sponsor->ID );
 		$meta_field_keys = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',
-			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country'
+			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
 
 		foreach ( $meta_field_keys as $key ) {
-			$sponsor_meta["_wcpt_sponsor_$key"] = get_post_meta( $assigned_sponsor->ID, "mes_$key", true );
+			$sponsor_meta[ "_wcpt_sponsor_$key" ] = get_post_meta( $assigned_sponsor->ID, "mes_$key", true );
 		}
 
 		restore_current_blog();
@@ -739,18 +773,20 @@ class WordCamp_New_Site {
 		global $multi_event_sponsors;
 		$data = array();
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
 
 		$data['featured_images']   = array();
 		$data['assigned_sponsors'] = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );
 
 		foreach ( $data['assigned_sponsors'] as $sponsorship_level_id => $sponsors ) {
 			foreach ( $sponsors as $sponsor ) {
-				if ( ! $attachment_id = get_post_thumbnail_id( $sponsor->ID ) ) {
+				$attachment_id = get_post_thumbnail_id( $sponsor->ID );
+				if ( ! $attachment_id ) {
 					continue;
 				}
 
-				if ( ! $attachment = wp_get_attachment_image_src( $attachment_id, 'full' ) ) {
+				$attachment = wp_get_attachment_image_src( $attachment_id, 'full' );
+				if ( ! $attachment ) {
 					continue;
 				}
 
@@ -782,7 +818,7 @@ class WordCamp_New_Site {
 			$sponsorship_level = $sponsorship_level_id[0]->sponsorship_level;
 
 			$pages[] = array(
-				// translators: %s: sponsorship level
+				// translators: %s: sponsorship level.
 				'title'   => sprintf( __( 'Thank you to our %s sponsors', 'wordcamporg' ), $sponsorship_level->post_title ),
 				'content' => sprintf(
 					'%s %s',

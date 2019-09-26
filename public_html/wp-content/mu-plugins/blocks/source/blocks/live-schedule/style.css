@@ -38,64 +38,37 @@
 	}
 }
 
-#day-of-event .components-spinner {
-	float: none;
-}
-
-
-/*
- * LiveSchedule
- */
-.day-of-event-schedule {
-	background-color: #fbfbfc;
-	border: 1px solid #e0e5e9;
-	margin-bottom: 2em;
-}
-
-.day-of-event-schedule h3 {
-	border-top: 1px solid #e0e5e9;
-	border-bottom: 1px solid #e0e5e9;
-	padding: 0.75rem;
-}
-
-.full-schedule {
-	width: 100%;
-	display: block;
-	border-top: 1px solid #e0e5e9;
+.wordcamp-live-schedule.is-fetching {
 	text-align: center;
-	padding: 0.75rem;
+}
+
+.wordcamp-live-schedule .components-spinner {
+	float: none;
 }
 
 
 /*
  * Session
  */
-.wordcamp-schedule-session {
+
+.wordcamp-live-schedule__session {
 	display: flex;	/* todo should be grid like the Schedule block */
 	border-bottom: 1px solid #e0e5e9;
 }
 
-.wordcamp-schedule-session:last-child {
+.wordcamp-live-schedule__session:last-child {
 	border-bottom: none;
 }
 
-.wordcamp-schedule-session-track {
+.wordcamp-live-schedule__session-track {
 	width: 20%;
 	border-right: 1px solid #e0e5e9;
 }
 
-.wordcamp-schedule-session-details {
+.wordcamp-live-schedule__session-details {
 	width: 80%;
 }
 
-.wordcamp-schedule-session-details span {
+.wordcamp-live-schedule__session-details span {
 	display: block;
-}
-
-
-/*
- * Post
- */
-.wordcamp-latest-post {
-	margin-bottom: 1rem;
 }

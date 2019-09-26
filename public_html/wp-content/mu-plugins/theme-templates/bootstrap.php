@@ -125,7 +125,7 @@ function enqueue_template_assets() {
  * @return string
  */
 function inject_offline_template( $template_path ) {
-	if ( is_offline() || is_500() ) {
+	if ( function_exists( 'is_offline' ) && ( \is_offline() || \is_500() ) ) {
 		$template_path = __DIR__ . '/templates/offline.php';
 	}
 

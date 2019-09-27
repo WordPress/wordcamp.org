@@ -2,7 +2,7 @@
 /**
  * WordPress dependencies
  */
-import { __, _x } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 import { Fragment } from '@wordpress/element';
 
 /**
@@ -10,23 +10,7 @@ import { Fragment } from '@wordpress/element';
  */
 import Session from './session';
 
-function renderSession( sessions, key ) {
-	return sessions.map( ( trackPair, index ) => {
-		const session = trackPair[ key ];
-		const track = trackPair.track;
-		const sessionKey = `${ session ? session.id : index }-${ track.id }`;
-
-		return (
-			<Session
-				key={ sessionKey }
-				session={ session }
-				track={ track }
-			/>
-		);
-	} );
-}
-
-export default function( { isFetching, sessions } ) {
+export default function( { attributes, isFetching, sessions } ) {
 	// A session track is "running" if there is a talk either now or next.
 	const runningSessions = sessions.filter( ( session ) => ( !! session.now || !! session.next ) );
 
@@ -38,15 +22,44 @@ export default function( { isFetching, sessions } ) {
 		return <span className="components-spinner" />;
 	}
 
+	const { level = 2 } = attributes;
+	const Heading = `h${ level }`;
+
 	return (
 		<Fragment>
-			<h2 className="wordcamp-live-schedule__title">{ _x( 'On Now', 'title', 'wordcamporg' ) }</h2>
+			<Heading className="wordcamp-live-schedule__title">{ attributes.now }</Heading>
 
-			{ renderSession( runningSessions, 'now' ) }
+			{ sessions.map( ( trackPair, index ) => {
+				const session = trackPair.now;
+				const track = trackPair.track;
+				const sessionKey = `${ session ? session.id : index }-${ track.id }`;
 
-			<h2 className="wordcamp-live-schedule__title">{ _x( 'Up Next', 'title', 'wordcamporg' ) }</h2>
+				return (
+					<Session
+						key={ sessionKey }
+						headingLevel={ parseInt( level ) + 1 }
+						session={ session }
+						track={ track }
+					/>
+				);
+			} ) }
 
-			{ renderSession( runningSessions, 'next' ) }
+			<Heading className="wordcamp-live-schedule__title">{ attributes.next }</Heading>
+
+			{ sessions.map( ( trackPair, index ) => {
+				const session = trackPair.next;
+				const track = trackPair.track;
+				const sessionKey = `${ session ? session.id : index }-${ track.id }`;
+
+				return (
+					<Session
+						key={ sessionKey }
+						headingLevel={ parseInt( level ) + 1 }
+						session={ session }
+						track={ track }
+					/>
+				);
+			} ) }
 
 		</Fragment>
 	);

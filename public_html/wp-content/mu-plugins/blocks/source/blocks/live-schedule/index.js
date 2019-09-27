@@ -23,6 +23,20 @@ registerBlockType( 'wordcamp/live-schedule', {
 	supports: {
 		align: [ 'wide', 'full' ],
 	},
+	attributes: {
+		now: {
+			type: 'string',
+			default: __( 'On Now', 'wordcamporg' ),
+		},
+		next: {
+			type: 'string',
+			default: __( 'Next Up', 'wordcamporg' ),
+		},
+		level: {
+			type: 'number',
+			default: 2,
+		},
+	},
 	edit: ( { attributes, setAttributes } ) => (
 		<Fragment>
 			<Placeholder icon={ icon } label={ title } />
@@ -50,5 +64,11 @@ registerBlockType( 'wordcamp/live-schedule', {
 			</InspectorControls>
 		</Fragment>
 	),
-	save: () => <div id="day-of-event" />,
+	save: ( { attributes } ) => (
+		<div
+			data-now={ attributes.now }
+			data-next={ attributes.next }
+			data-level={ attributes.level }
+		/>
+	),
 } );

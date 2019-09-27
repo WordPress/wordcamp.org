@@ -13,11 +13,13 @@ import { stripTagsAndEncodeText } from '@wordpress/sanitize';
  *
  * @returns {Component}
  */
-export default function( { session, track } ) {
+export default function( { headingLevel = 3, session, track } ) {
 	if ( ! session ) {
 		return null;
 	}
+	const Heading = `h${ headingLevel }`;
 
+	// Pull details out of the session object.
 	const { link, terms = {} } = session;
 	const title = get( session, 'title.rendered', '' );
 	const type = get( session, 'meta._wcpt_session_type', '' );
@@ -28,17 +30,17 @@ export default function( { session, track } ) {
 	const validSpeakers = speakers.filter( ( speaker ) => !! speaker.id );
 
 	return (
-		<div className={ `wordcamp-live-schedule__session session-${ type }` }>
+		<div className={ `wordcamp-live-schedule__session type-${ type }` }>
 			<span className={ `wordcamp-live-schedule__session-track track-${ track.slug }` }>{ track.name }</span>
 
 			<div className="wordcamp-live-schedule__session-details">
-				<h4 className="wordcamp-live-schedule__session-title">
+				<Heading className="wordcamp-live-schedule__session-title">
 					{ !! link ? (
 						<a href={ link }>{ stripTagsAndEncodeText( title ) }</a>
 					) : (
 						stripTagsAndEncodeText( title )
 					) }
-				</h4>
+				</Heading>
 
 				<span className="wordcamp-live-schedule__session-time">{ time }</span>
 

@@ -40,7 +40,7 @@ class Block extends Component {
 	}
 
 	render() {
-		const { config } = this.props;
+		const { config, attributes } = this.props;
 		const { sessions, isFetching } = this.state;
 
 		let classes = 'wordcamp-live-schedule';
@@ -54,6 +54,7 @@ class Block extends Component {
 					config={ config }
 					sessions={ sessions }
 					isFetching={ isFetching }
+					attributes={ attributes }
 				/>
 				<p className="wp-block-button aligncenter">
 					<a

@@ -272,10 +272,12 @@ class Genderize_Client extends API_Client {
 	 * Handle API responses containing errors.
 	 *
 	 * @param array|WP_Error $response
+	 * @param string         $request_url  Optional.
+	 * @param array          $request_args Optional.
 	 *
 	 * @return void
 	 */
-	public function handle_error_response( $response ) {
+	public function handle_error_response( $response, $request_url = '', $request_args = array() ) {
 		if ( parent::handle_error_response( $response ) ) {
 			return;
 		}

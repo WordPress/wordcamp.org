@@ -52,23 +52,35 @@
  */
 
 .wordcamp-live-schedule__session {
-	display: flex;	/* todo should be grid like the Schedule block */
-	border-bottom: 1px solid #e0e5e9;
-}
-
-.wordcamp-live-schedule__session:last-child {
-	border-bottom: none;
+	display: flex;
+	margin-bottom: 1em;
 }
 
 .wordcamp-live-schedule__session-track {
 	width: 20%;
-	border-right: 1px solid #e0e5e9;
 }
 
 .wordcamp-live-schedule__session-details {
+	margin-left: 1em;
 	width: 80%;
 }
 
 .wordcamp-live-schedule__session-details span {
 	display: block;
+}
+
+.wordcamp-live-schedule__session-speaker a {
+	margin-right: 4px;
+}
+
+.wordcamp-live-schedule__session-speaker a::after {
+	content: ",";
+}
+
+.wordcamp-live-schedule__session-speaker a:last-of-type {
+	margin-right: 0;
+}
+
+.wordcamp-live-schedule__session-speaker a:last-of-type::after {
+	content: "";
 }

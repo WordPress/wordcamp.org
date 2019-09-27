@@ -1,21 +1,10 @@
 /**
- * WordPress dependencies
- */
-import { render } from '@wordpress/element';
-
-/**
  * Internal dependencies
  */
 import './style.css';
 import LiveSchedule from './block.js';
+import renderFrontend from '../../utils/render-frontend';
 
-const containers = document.querySelectorAll(
-	'.wp-block-wordcamp-live-schedule'
-);
-
-if ( containers.length ) {
-	Array.prototype.forEach.call( containers, ( element ) => {
-		render( <LiveSchedule config={ window.blockLiveSchedule } />, element );
-	} );
-}
-
+renderFrontend( '.wp-block-wordcamp-live-schedule', LiveSchedule, () => ( {
+	config: window.blockLiveSchedule,
+} ) );

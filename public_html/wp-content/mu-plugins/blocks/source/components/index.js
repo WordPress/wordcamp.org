@@ -4,6 +4,7 @@
 // Controls components
 export { default as EditAppender } from './edit-appender';
 export { default as GridInspectorPanel } from './grid-inspector-panel';
+export { default as HeadingToolbar } from './heading-toolbar';
 
 // Item selector components
 export { buildOptions, getOptionLabel, ItemSelect, Option } from './item-select';

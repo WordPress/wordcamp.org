@@ -10,9 +10,6 @@ import './_z-index.scss'; // Have z-index values, similar to https://github.com/
 import './styles.scss'; // Common styles for WordCamp Blocks.
 import { BLOCKS } from './blocks/'; // Trailing slash required to differentiate the folder from the file.
 
-// This file registers the block itself, no need to import anything.
-import './blocks/live-schedule';
-
 const enabledBlocks = BLOCKS.filter( ( block ) =>
 	window.WordCampBlocks.hasOwnProperty( block.NAME.replace( 'wordcamp/', '' ) )
 );

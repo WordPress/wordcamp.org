@@ -5,17 +5,18 @@ import { __ } from '@wordpress/i18n';
 import { Fragment } from '@wordpress/element';
 import { InspectorControls } from '@wordpress/block-editor';
 import { PanelBody, Placeholder, TextControl } from '@wordpress/components';
-import { registerBlockType } from '@wordpress/blocks';
 
 /**
  * Internal dependencies
  */
 import { HeadingToolbar } from '../../components';
 
-export const title = __( 'Live Schedule', 'wordcamporg' );
-export const icon = 'excerpt-view';
+const title = __( 'Live Schedule', 'wordcamporg' );
+const icon = 'excerpt-view';
 
-registerBlockType( 'wordcamp/live-schedule', {
+export const NAME = 'wordcamp/live-schedule';
+
+export const SETTINGS = {
 	title: title,
 	description: __( 'Display a live schedule interface.', 'wordcamporg' ),
 	icon: icon,
@@ -71,4 +72,4 @@ registerBlockType( 'wordcamp/live-schedule', {
 			data-level={ attributes.level }
 		/>
 	),
-} );
+};

@@ -45,7 +45,7 @@ export function fetchFromAPI() {
 
 export function getSessions( { sessions, tracks } ) {
 	const tzOffset = __experimentalGetSettings().timezone.offset * ( 60 * 60 * 1000 );
-	const nowUTC = window.blockLiveSchedule.nowOverride || Date.now();
+	const nowUTC = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 	const nowLocal = new Date( nowUTC );
 
 	return tracks.map( ( track ) => {

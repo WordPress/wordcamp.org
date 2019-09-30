@@ -84,12 +84,12 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 function set_navigation_caching_strategy() {
 	/*
 	 * Cache pages that the user visits, so that if they return to them while offline, they'll still be available.
-	 * If they're online, though, fetch the latest version since it could have changed since they last visited.
+	 * While showing them the cached value, also run a network request to get the latest content.
 	 */
 	add_filter(
 		'wp_service_worker_navigation_caching_strategy',
 		function() {
-			return WP_Service_Worker_Caching_Routes::STRATEGY_NETWORK_FIRST;
+			return WP_Service_Worker_Caching_Routes::STRATEGY_STALE_WHILE_REVALIDATE;
 		}
 	);
 

@@ -23,19 +23,25 @@ class Block extends Component {
 			sessions: [],
 			isFetching: true,
 		};
-		this.update = this.update.bind( this );
-		this.interval = setInterval( this.update, 60 * 1000 ); // 60 seconds in ms.
+		this.fetchApi = this.fetchApi.bind( this );
+		this.apiInterval = setInterval( this.fetchApi, 5 * 60 * 1000 ); // 5 minutes in ms.
+
+		this.renderInterval = setInterval( () => {
+			// `forceUpdate` is a React internal that triggers a render cycle.
+			this.forceUpdate();
+		}, 60 * 1000 ); // 1 minutes in ms.
 	}
 
 	componentDidMount() {
-		this.update();
+		this.fetchApi();
 	}
 
 	componentWillUnmount() {
-		clearInterval( this.interval );
+		clearInterval( this.apiInterval );
+		clearInterval( this.renderInterval );
 	}
 
-	update() {
+	fetchApi() {
 		getDataFromAPI().then( ( sessions ) => this.setState( { sessions: sessions, isFetching: false } ) );
 	}
 

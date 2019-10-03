@@ -40,6 +40,10 @@ defined( 'WPINC' ) or die();
 						<?php _e( 'Paid', 'wordcamporg' ); ?>
 					<?php endif; ?>
 				</span>
+
+				<?php if ( current_user_can( 'manage_network' ) && ! empty( $post->_wcbsi_qbo_invoice_id ) ) : ?>
+					(<a href="https://qbo.intuit.com/app/invoice?txnId=<?php echo esc_attr( $post->_wcbsi_qbo_invoice_id ); ?>">View QBO Invoice</a>)
+				<?php endif; ?>
 			</div> <!-- .misc-pub-section -->
 
 			<div class="clear"></div>

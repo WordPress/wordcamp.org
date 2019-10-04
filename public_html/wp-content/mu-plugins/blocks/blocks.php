@@ -15,6 +15,7 @@ function load_includes() {
 	$includes_dir   = PLUGIN_DIR . 'includes/';
 	$blocks_dir     = PLUGIN_DIR . 'source/blocks/';
 	$components_dir = PLUGIN_DIR . 'source/components/';
+	$hooks_dir      = PLUGIN_DIR . 'source/hooks/';
 
 	require_once $includes_dir . 'definitions.php';
 
@@ -37,6 +38,9 @@ function load_includes() {
 		|| in_array( get_current_blog_id(), [ 928 ], true ) // 2017.testing
 	) {
 		require_once $blocks_dir . 'live-schedule/controller.php';
+
+		// Hooks.
+		require_once $hooks_dir . 'latest-posts/controller.php';
 	}
 
 }

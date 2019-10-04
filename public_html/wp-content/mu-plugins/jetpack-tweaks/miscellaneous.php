@@ -1,6 +1,8 @@
 <?php
 
 namespace WordCamp\Jetpack_Tweaks;
+use WP_Service_Worker_Caching_Routes, WP_Service_Worker_Scripts;
+
 defined( 'WPINC' ) || die();
 
 // Allow Photon to fetch images that are served via HTTPS.
@@ -78,3 +80,57 @@ function allow_noscript_blocks( $tags, $context ) {
 	return $tags;
 }
 add_action( 'wp_kses_allowed_html', __NAMESPACE__ . '\allow_noscript_blocks', 10, 2 );
+
+/**
+ * Register caching routes for Jetpack with the frontend service worker.
+ *
+ * Jetpack uses wp.com domains for loading assets, which need to be cached regexes that match from the start of
+ * the URL. This prevents unintentional caching of 3rd-party scripts by broad regexes.
+ *
+ * @param WP_Service_Worker_Scripts $scripts
+ */
+function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
+	/*
+	 * Set up jetpack cache strategy to pull from the cache first, with no network request if the resource is
+	 * found, and save up to 50 cached entries for 1 day.
+	 */
+	$asset_cache_strategy_args = array(
+		'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
+		'cacheName' => 'wc-jetpack',
+		'plugins'   => [
+			'expiration' => [
+				'maxEntries'    => 50,
+				'maxAgeSeconds' => DAY_IN_SECONDS,
+			],
+		],
+	);
+
+	/*
+	 * Cache Jetpack core assets.
+	 * It's possible that some Jetpack assets are loaded from wp.com servers. Anything off a `s0.`, `s1.`, or
+	 * `s2.wp.com` domain should be locally cached.
+	 */
+	$scripts->caching_routes()->register(
+		'https?://s[0-2]{1}.wp.com/.*\.(png|gif|jpg|jpeg)(\?.*)?$',
+		$asset_cache_strategy_args
+	);
+
+	/*
+	 * Cache assets from "Site Accelerator".
+	 * Jetpack can use the wp.com CDN for CSS and JS. This uses the `c0.wp.com` domain.
+	 */
+	$scripts->caching_routes()->register(
+		'https?://c0.wp.com/.*\.(css|js)(\?.*)?$',
+		$asset_cache_strategy_args
+	);
+
+	/*
+	 * Cache files from Photon.
+	 * Images loaded by Photon use wp.com servers, and are loaded from `i0.`, `i1.`, or `i2.wp.com`.
+	 */
+	$scripts->caching_routes()->register(
+		'https?://i[0-2]{1}.wp.com/.*/files/.*\.(png|gif|jpg|jpeg)(\?.*)?$',
+		$asset_cache_strategy_args
+	);
+}
+add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes' );

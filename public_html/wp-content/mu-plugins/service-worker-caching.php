@@ -32,7 +32,15 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	 * Cache scripts, styles, images, etc from core, themes, and plugins.
 	 */
 	$scripts->caching_routes()->register(
-		'/wp-(content|includes)/.*\.(?:png|gif|jpg|jpeg|svg|webp|css|js)(\?.*)?$',
+		'/wp-(content|includes)/.*\.(png|gif|jpg|jpeg|svg|webp|css|js)(\?.*)?$',
+		$asset_cache_strategy_args
+	);
+
+	/*
+	 * Cache uploaded files.
+	 */
+	$scripts->caching_routes()->register(
+		'/files/.*\.(png|gif|jpg|jpeg)(\?.*)?$',
 		$asset_cache_strategy_args
 	);
 

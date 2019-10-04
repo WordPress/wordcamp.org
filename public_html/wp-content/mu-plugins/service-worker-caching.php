@@ -5,6 +5,7 @@ use WP_Service_Worker_Caching_Routes, WP_Service_Worker_Scripts;
 
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes' );
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\set_navigation_caching_strategy' );
+add_filter( 'wccs_safelisted_namespaces', __NAMESPACE__ . '\safelist_manifest_api' );
 
 /**
  * Register caching routes with the frontend service worker.
@@ -104,3 +105,16 @@ function set_navigation_caching_strategy() {
 		}
 	);
 };
+
+/**
+ * Safelist the manifest for access through the Coming Soon API block.
+ *
+ * We disallow access to the API while a site is in Coming Soon mode, but we can safelist the manifest.
+ *
+ * @param Array $safelisted_namespaces A list of string matches for allowed endpoints.
+ * @return Array The safelist, with our manifest added.
+ */
+function safelist_manifest_api( $safelisted_namespaces ) {
+	$safelisted_namespaces[] = 'web-app-manifest';
+	return $safelisted_namespaces;
+}

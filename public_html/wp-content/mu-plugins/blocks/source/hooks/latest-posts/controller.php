@@ -81,7 +81,9 @@ function render( $block_content, $block ) {
 	}
 
 	$enabled = isset( $block['attrs']['liveUpdateEnabled'] ) && $block['attrs']['liveUpdateEnabled'];
-	if ( $enabled ) {
+	// Order by date, desc is the default, so these properties are not set.
+	$order_date_desc = ! isset( $block['attrs']['orderBy'] ) && ! isset( $block['attrs']['order'] );
+	if ( $enabled && $order_date_desc ) {
 		$block_content = str_replace(
 			'wp-block-latest-posts ',
 			'wp-block-latest-posts has-live-update ',

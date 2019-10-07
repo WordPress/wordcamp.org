@@ -13,10 +13,17 @@ const withLiveReloadOption = createHigherOrderComponent( ( BlockEdit ) => {
 			return <BlockEdit { ...props } />;
 		}
 
-		const liveUpdateEnabled = props.attributes.liveUpdateEnabled;
+		const {
+			liveUpdateEnabled,
+			order,
+			orderBy,
+		} = props.attributes;
 		const help = liveUpdateEnabled ?
 			__( 'The block will automatically reload every minute to fetch new posts.', 'wordcamporg' ) :
 			__( 'The block will not update content until the page is reloaded.', 'wordcamporg' );
+
+		const orderDateDesc = 'desc' === order && 'date' === orderBy;
+		const orderWarning = __( 'Live update only works with "Order by: Newest to Oldest".', 'wordcamporg' );
 
 		return (
 			<Fragment>
@@ -26,6 +33,9 @@ const withLiveReloadOption = createHigherOrderComponent( ( BlockEdit ) => {
 						title="Front-end Display"
 						initialOpen={ true }
 					>
+						{ ! orderDateDesc && (
+							<p>{ orderWarning }</p>
+						) }
 						<ToggleControl
 							label={ liveUpdateEnabled ?
 								__( 'Live update on', 'wordcamporg' ) :

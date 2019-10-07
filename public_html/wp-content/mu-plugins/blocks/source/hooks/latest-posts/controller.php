@@ -52,6 +52,23 @@ function init() {
 add_action( 'init', __NAMESPACE__ . '\init', 12 );
 
 /**
+ * Allow all users to read the "Latest Posts" renderer endpoint.
+ *
+ * @param WP_HTTP_Response|WP_Error $response Result to send to the client. Usually a WP_REST_Response or WP_Error.
+ * @param array                     $handler  Route handler used for the request.
+ * @param WP_REST_Request           $request  Request used to generate the response.
+ * @return WP_REST_Response Response returned by the callback.
+ */
+function safelist_block_renderer( $response, $handler, $request ) {
+	// Only apply to the latest posts block.
+	if ( '/wp/v2/block-renderer/core/latest-posts' === $request->get_route() ) {
+		return call_user_func( $handler['callback'], $request );
+	}
+	return $response;
+}
+add_filter( 'rest_request_after_callbacks', __NAMESPACE__ . '\safelist_block_renderer', 10, 3 );
+
+/**
  * Filter the content of the latest posts block.
  *
  * @param string $block_content The block content about to be appended.

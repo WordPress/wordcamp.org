@@ -106,23 +106,6 @@ module.exports = {
 		} ],
 
 		/*
-		 * A short description often makes a function easier to understand, and also provides a nice visual
-		 * delineation between functions.
-		 *
-		 * Given that closures should be short and contextually relevant, requiring documentation for them would
-		 * likely hurt readability more than it would help clarity.
-		 */
-		'require-jsdoc': [ 'error', {
-			'require': {
-				'FunctionDeclaration'     : true,
-				'MethodDefinition'        : true,
-				'ClassDeclaration'        : true,
-				'ArrowFunctionExpression' : false,
-				'FunctionExpression'      : true
-			}
-		} ],
-
-		/*
 		 * Sort imports alphabetically, at least inside multiple-member imports. Ignores declaration sorting since
 		 * this interfers with the External/WordPress/Internal groupings. For example, it will flag the following
 		 * as incorrect:

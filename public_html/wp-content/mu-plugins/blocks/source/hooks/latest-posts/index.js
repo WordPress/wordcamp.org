@@ -15,7 +15,7 @@ const withLiveReloadOption = createHigherOrderComponent( ( BlockEdit ) => {
 
 		const liveUpdateEnabled = props.attributes.liveUpdateEnabled;
 		const help = liveUpdateEnabled ?
-			__( '[some descriptive help text.]', 'wordcamporg' ) :
+			__( 'The block will automatically reload every minute to fetch new posts.', 'wordcamporg' ) :
 			__( 'The block will not update content until the page is reloaded.', 'wordcamporg' );
 
 		return (

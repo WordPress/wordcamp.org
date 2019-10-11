@@ -4,13 +4,15 @@
 import { __ } from '@wordpress/i18n';
 import { Fragment } from '@wordpress/element';
 import { InspectorControls } from '@wordpress/block-editor';
-import { PanelBody, Placeholder, TextControl } from '@wordpress/components';
+import { PanelBody, TextControl } from '@wordpress/components';
 
 /**
  * Internal dependencies
  */
 import './style.scss';
 import { HeadingToolbar } from '../../components';
+import LiveSchedule from './components/schedule';
+import mockSessions from './data/mock';
 
 const title = __( 'Live Schedule', 'wordcamporg' );
 const icon = 'excerpt-view';
@@ -41,7 +43,12 @@ export const SETTINGS = {
 	},
 	edit: ( { attributes, setAttributes } ) => (
 		<Fragment>
-			<Placeholder icon={ icon } label={ title } />
+			<LiveSchedule
+				config={ window.WordCampBlocks[ 'live-schedule' ] }
+				sessions={ mockSessions }
+				isFetching={ false }
+				attributes={ attributes }
+			/>
 			<InspectorControls>
 				<PanelBody title={ __( 'Headings', 'wordcamporg' ) }>
 					<TextControl

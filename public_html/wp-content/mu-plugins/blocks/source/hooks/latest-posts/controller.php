@@ -35,19 +35,21 @@ function init() {
 	wp_set_script_translations( 'wordcamp-live-posts', 'wordcamporg' );
 
 	$block_type = \WP_Block_Type_Registry::get_instance()->get_registered( 'core/latest-posts' );
-	unregister_block_type( $block_type->name );
-	$block_type->attributes = array_merge(
-		$block_type->attributes,
-		array(
-			'liveUpdateEnabled' => array(
-				'type'    => 'boolean',
-				'default' => false,
-			),
-		)
-	);
-	$block_type->script = 'wordcamp-live-posts';
+	if ( $block_type ) {
+		unregister_block_type( $block_type->name );
+		$block_type->attributes = array_merge(
+			$block_type->attributes,
+			array(
+				'liveUpdateEnabled' => array(
+					'type'    => 'boolean',
+					'default' => false,
+				),
+			)
+		);
+		$block_type->script = 'wordcamp-live-posts';
 
-	register_block_type( $block_type );
+		register_block_type( $block_type );
+	}
 }
 add_action( 'init', __NAMESPACE__ . '\init', 12 );
 

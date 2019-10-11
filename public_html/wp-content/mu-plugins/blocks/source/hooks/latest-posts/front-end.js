@@ -18,7 +18,7 @@ class LivePosts extends Component {
 				// `forceUpdate` is a React internal that triggers a render cycle.
 				this.forceUpdate();
 			},
-			60 * 1000 // 1 minutes in ms.
+			5 * 60 * 1000 // 5 minutes in milliseconds.
 		);
 	}
 

@@ -31,14 +31,15 @@ const withLiveReloadOption = createHigherOrderComponent( ( BlockEdit ) => {
 						initialOpen={ true }
 					>
 						<p>{ __( "This feature helps your attendees keep up-to-date with your WordCamp's latest news. When active, new posts will be loaded as they're published without your attendees needing to refresh the page.", 'wordcamporg' ) }</p>
-						{ ! orderDateDesc && (
+						{ orderDateDesc ? (
+							<ToggleControl
+								label={ __( 'Live update posts', 'wordcamporg' ) }
+								checked={ liveUpdateEnabled }
+								onChange={ ( value ) => props.setAttributes( { liveUpdateEnabled: value } ) }
+							/>
+						) : (
 							<p>{ orderWarning }</p>
 						) }
-						<ToggleControl
-							label={ __( 'Live update posts', 'wordcamporg' ) }
-							checked={ liveUpdateEnabled }
-							onChange={ ( value ) => props.setAttributes( { liveUpdateEnabled: value } ) }
-						/>
 					</PanelBody>
 				</InspectorControls>
 			</Fragment>

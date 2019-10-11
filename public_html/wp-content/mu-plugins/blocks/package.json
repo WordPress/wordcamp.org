@@ -39,8 +39,8 @@
 		"*.min.js"
 	],
 	"scripts": {
-		"start": "wp-scripts start source/blocks.js",
-		"build": "wp-scripts build source/blocks.js",
+		"start": "wp-scripts start blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js",
+		"build": "wp-scripts build blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js",
 		"lint:js": "wp-scripts lint-js",
 		"lint:css": "wp-scripts lint-style '**/*.scss'",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",

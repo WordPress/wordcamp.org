@@ -32,6 +32,13 @@ function load_includes() {
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
 
+	if (
+		( defined( 'WORDCAMP_ENVIRONMENT' ) && 'production' !== WORDCAMP_ENVIRONMENT )
+		|| in_array( get_current_blog_id(), [ 928 ], true ) // 2017.testing
+	) {
+		require_once $blocks_dir . 'live-schedule/controller.php';
+	}
+
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_includes' );

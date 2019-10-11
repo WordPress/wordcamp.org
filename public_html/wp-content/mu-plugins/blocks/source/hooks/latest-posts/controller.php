@@ -51,7 +51,7 @@ function init() {
 		register_block_type( $block_type );
 	}
 }
-add_action( 'init', __NAMESPACE__ . '\init', 12 );
+add_action( 'init', __NAMESPACE__ . '\init', 21 ); // 21 to be after block registration in Gutenberg plugin.
 
 /**
  * Allow all users to read the "Latest Posts" renderer endpoint.

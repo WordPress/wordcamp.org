@@ -1,0 +1,46 @@
+/*
+ * Session
+ */
+
+.wordcamp-live-schedule__session {
+	display: flex;
+	margin-bottom: 1em;
+}
+
+.wordcamp-live-schedule__session-track {
+	width: 20%;
+}
+
+.wordcamp-live-schedule__session-details {
+	margin-left: 1em;
+	width: 80%;
+
+	.wordcamp-live-schedule__session-title {
+		margin-top: 0;
+
+		// Override the editor style.
+		.editor-styles-wrapper & {
+			margin-top: 0;
+		}
+	}
+
+	span {
+		display: block;
+	}
+}
+
+.wordcamp-live-schedule__session-speaker a {
+	margin-right: 4px;
+
+	&::after {
+		content: ",";
+	}
+
+	&:last-of-type {
+		margin-right: 0;
+	}
+
+	&:last-of-type::after {
+		content: "";
+	}
+}

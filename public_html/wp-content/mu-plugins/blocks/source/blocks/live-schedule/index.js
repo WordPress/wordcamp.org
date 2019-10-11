@@ -9,6 +9,7 @@ import { PanelBody, Placeholder, TextControl } from '@wordpress/components';
 /**
  * Internal dependencies
  */
+import './style.scss';
 import { HeadingToolbar } from '../../components';
 
 const title = __( 'Live Schedule', 'wordcamporg' );

@@ -4,11 +4,30 @@ namespace WordCamp\Blocks\Hooks\Latest_Posts;
 defined( 'WPINC' ) || die();
 
 /**
+ * Check editor versions.
+ *
+ * To show live content, we need the `wp.serverSideRender` component available, which arrived in Gutenberg 5.9 or
+ * WordPress 5.3.
+ *
+ * @return boolean
+ */
+function check_version_support() {
+	return (
+		version_compare( $GLOBALS['wp_version'], '5.3-alpha', '>' ) ||
+		defined( 'GUTENBERG_VERSION' ) && version_compare( GUTENBERG_VERSION, '5.9.0', '>' )
+	);
+}
+
+/**
  * Register block types and enqueue scripts.
  *
  * @return void
  */
 function init() {
+	if ( ! check_version_support() ) {
+		return;
+	}
+
 	$deps_path    = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-posts.min.deps.json';
 	$dependencies = file_exists( $deps_path ) ? json_decode( file_get_contents( $deps_path ) ) : array();
 
@@ -82,21 +101,29 @@ function render( $block_content, $block ) {
 		return $block_content;
 	}
 
+	if ( ! check_version_support() ) {
+		return $block_content;
+	}
+
 	$enabled = isset( $block['attrs']['liveUpdateEnabled'] ) && $block['attrs']['liveUpdateEnabled'];
 	// Order by date, desc is the default, so these properties are not set.
 	$order_date_desc = ! isset( $block['attrs']['orderBy'] ) && ! isset( $block['attrs']['order'] );
 	if ( $enabled && $order_date_desc ) {
 		$block_content = str_replace(
 			'wp-block-latest-posts ',
-			'wp-block-latest-posts has-live-update ',
+			'wp-block-latest-posts has-live-update is-loading ',
 			$block_content
 		);
 
+		// Inject our attributes onto the container element, switch container element to div.
 		$block_content = str_replace(
 			'ul class=',
-			sprintf( 'ul data-attributes="%s" class=', rawurlencode( wp_json_encode( $block['attrs'] ) ) ),
+			sprintf( 'div data-attributes="%s" class=', rawurlencode( wp_json_encode( $block['attrs'] ) ) ),
 			$block_content
 		);
+
+		// Replace the final closing ul with a closing div, since we changed this above.
+		$block_content = preg_replace( '/<\/ul>$/', '</div>', $block_content );
 	}
 
 	return $block_content;
@@ -112,7 +139,9 @@ add_filter( 'render_block', __NAMESPACE__ . '\render', 10, 2 );
  * @return array
  */
 function add_script_data( array $data ) {
-	$data['latest-posts'] = [];
+	if ( check_version_support() ) {
+		$data['latest-posts'] = [];
+	}
 
 	return $data;
 }

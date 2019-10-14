@@ -53,7 +53,7 @@ function set_page_template_locations( $template_path ) {
 
 	switch ( $post->_wp_page_template ) {
 		case 'day-of-event':
-			$template_path = __DIR__ . '/templates/day-of-event/day-of-event.php';
+			$template_path = __DIR__ . '/templates/day-of-event.php';
 			break;
 	}
 

@@ -33,9 +33,14 @@ function load_includes() {
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
 
+	$blocks_test_sites = array(
+		928,  // 2017.testing
+		1190, // 2019.dublin
+	);
+
 	if (
 		( defined( 'WORDCAMP_ENVIRONMENT' ) && 'production' !== WORDCAMP_ENVIRONMENT )
-		|| in_array( get_current_blog_id(), [ 928 ], true ) // 2017.testing
+		|| in_array( get_current_blog_id(), $blocks_test_sites, true )
 	) {
 		require_once $blocks_dir . 'live-schedule/controller.php';
 

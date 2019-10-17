@@ -100,9 +100,29 @@ class WordCamp_Budget_Tool {
         $budget['updated'] = time();
         $budget['updated_by'] = $user->ID;
 
+		self::rotate_backups();
         update_option( 'wcb_budget', $budget, 'no' );
         return;
     }
+
+	/**
+	 * Rotate the backup of budgets to make room for a new one.
+	 *
+	 * _This must be called before a new budget is written to the `wcb_budget` option._
+	 *
+	 * There've been a few reports of budgets being lost while saving, but so far we haven't been able to
+	 * reproduce the bug. The budget is critical information, and time-consuming to re-enter, so having a backup
+	 * gives us a safety net until we can find and fix the bug, and protects against future bugs and user error as
+	 * well.
+	 *
+	 * 3 backups are kept, because the organizer might make several changes before they realized they lost
+	 * something, or in an attempt to recover it.
+	 */
+	private static function rotate_backups() {
+		update_option( 'wcb_budget_backup_3', get_option( 'wcb_budget_backup_2' ), false );
+		update_option( 'wcb_budget_backup_2', get_option( 'wcb_budget_backup_1' ), false );
+		update_option( 'wcb_budget_backup_1', get_option( 'wcb_budget'          ), false );
+	}
 
 	public static function enqueue_scripts() {
 		$screen = get_current_screen();

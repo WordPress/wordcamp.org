@@ -1089,7 +1089,7 @@ class WordCamp_Post_Types_Plugin {
 		$wporg_user     = get_user_by( 'id', $user_id );
 
 		if ( $wporg_user ) {
-			$wporg_username = $wporg_user->user_nicename;
+			$wporg_username = $wporg_user->user_login;
 		}
 		?>
 
@@ -1119,7 +1119,7 @@ class WordCamp_Post_Types_Plugin {
 		$wporg_user     = get_user_by( 'id', $user_id );
 
 		if ( $wporg_user ) {
-			$wporg_username = $wporg_user->user_nicename;
+			$wporg_username = $wporg_user->user_login;
 		}
 		?>
 
@@ -1985,7 +1985,7 @@ class WordCamp_Post_Types_Plugin {
 				$wporg_user = get_user_by( 'id', $user_id );
 
 				if ( $wporg_user ) {
-					echo esc_html( $wporg_user->user_nicename );
+					echo esc_html( $wporg_user->user_login );
 				}
 
 				break;

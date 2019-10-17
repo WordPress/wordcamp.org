@@ -585,4 +585,20 @@ window.wcb = window.wcb || { models: {}, input: [] };
 
 		return true;
 	} );
+
+	$document.on( 'click', '#wcb-budget-cancel', function() {
+		if ( ! confirm( 'Are you sure? You will lose any changes since the last save.' ) ) {
+			return false;
+		}
+
+		return true;
+	} );
+
+	$document.on( 'click', '#wcb-budget-reset', function() {
+		if ( ! confirm( 'Are you sure? You will lose all changes since the budget was approved.' ) ) {
+			return false;
+		}
+
+		return true;
+	} );
 }( jQuery ) );

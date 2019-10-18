@@ -23,12 +23,14 @@ const CSS_VERSION          = 2;
  *
  * This function is called after template_redirect when the content is about to get loaded.
  * It is invoked from the template-sponsorship-payment.php page template in the central theme.
+ *
+ * @return string
  */
 function render() {
 	$keys = _get_keys();
 
 	if ( empty( $keys['publishable'] ) || empty( $keys['secret'] ) || empty( $keys['hmac_key'] ) ) {
-		return;
+		wp_die( 'Invalid keys' );
 	}
 
 	require_once( __DIR__ . '/wordcamp-budgets.php' );

@@ -87,6 +87,7 @@ function enable_pwa_alpha_test() {
 		928,  // 2017.testing
 		1026, // 2019.europe
 		1190, // 2019.dublin
+		1028, // 2019.us
 	);
 
 	$is_remote_sandbox = defined( 'WPORG_SANDBOXED' ) && WPORG_SANDBOXED;

@@ -36,6 +36,7 @@ function load_includes() {
 	$blocks_test_sites = array(
 		928,  // 2017.testing
 		1190, // 2019.dublin
+		1028, // 2019.us
 	);
 
 	if (

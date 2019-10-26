@@ -16,9 +16,6 @@
 			restrict export to camps from the past 12 months, since this map is of "active" events
 			need name, url, and coordinate fields
 		take into libreoffice and use "text to columns" feature to split coordinates into latitude and longitude columns, save that as CSV
-		you'll also need to trim the `'` character from the begining of cells that contain negative latitudes.
-			that's added to the csv for security reasons, but will mess up the KML if it's not removed
-			doing a search/replace for `<coordinates>'` and `,'-` is a good way to get rid of it.
 		upload CSV to http://convertcsv.com/csv-to-kml.htm, convert to KML
 			use url as description
 			make sure you get latitude and longitude in the right order. KML wants longitude first, then latitude.
@@ -35,6 +32,10 @@
 
 
 		#### finish
+		trim the `'` character from the beginning of latitudes and longitudes
+			it's added to the csv for security reasons, but will mess up the KML if it's not removed
+			doing a search/replace for `<coordinates>'` and `,'-` is a good way to get rid of it.
+		Also add `<styleUrl>#icon-1899-0288D1</styleUrl>` to each of the placemarks, via search/replace
 		commit and deploy the files to production, you won't be able to see any changes until this happens
 			this is because google accesses the KML from their end and won't see changes on your sandbox
 

@@ -47,6 +47,7 @@
 			<Placemark>
 				<name>WordCamp Johannesburg</name>
 				<description>2018-10-25</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.064951,-26.03594,0</coordinates>
 				</Point>
@@ -54,6 +55,7 @@
 			<Placemark>
 				<name>WordCamp Brisbane</name>
 				<description>2018-10-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>153.028415,-27.477357,0</coordinates>
 				</Point>
@@ -61,6 +63,7 @@
 			<Placemark>
 				<name>WordCamp Bucharest</name>
 				<description>2018-10-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>26.1103096,44.4228704,0</coordinates>
 				</Point>
@@ -68,6 +71,7 @@
 			<Placemark>
 				<name>WordCamp Kigali</name>
 				<description>2018-10-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>30.069553,-1.958394,0</coordinates>
 				</Point>
@@ -75,6 +79,7 @@
 			<Placemark>
 				<name>WordCamp Manchester</name>
 				<description>2018-10-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.2422536,53.4715073,0</coordinates>
 				</Point>
@@ -82,6 +87,7 @@
 			<Placemark>
 				<name>WordCamp Philadelphia, PA, USA</name>
 				<description>2018-10-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.208133,39.9465441,0</coordinates>
 				</Point>
@@ -89,6 +95,7 @@
 			<Placemark>
 				<name>WordCamp Utrecht</name>
 				<description>2018-10-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.1133135,52.0890859,0</coordinates>
 				</Point>
@@ -96,6 +103,7 @@
 			<Placemark>
 				<name>WordCamp Cape Town</name>
 				<description>2018-11-01</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.4606343,-33.9333726,0</coordinates>
 				</Point>
@@ -103,6 +111,7 @@
 			<Placemark>
 				<name>WordCamp Kochi</name>
 				<description>2018-11-03</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>76.32312,9.993267,0</coordinates>
 				</Point>
@@ -110,6 +119,7 @@
 			<Placemark>
 				<name>WordCamp Portland, Maine</name>
 				<description>2018-11-03</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-70.2777677,43.6621143,0</coordinates>
 				</Point>
@@ -117,6 +127,7 @@
 			<Placemark>
 				<name>WordCamp Portland, Oregon, USA</name>
 				<description>2018-11-03</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.6701497,45.4501756,0</coordinates>
 				</Point>
@@ -124,6 +135,7 @@
 			<Placemark>
 				<name>WordCamp Riverside, CA</name>
 				<description>2018-11-03</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.3698185,33.9737594,0</coordinates>
 				</Point>
@@ -131,6 +143,7 @@
 			<Placemark>
 				<name>WordCamp Bogotá</name>
 				<description>2018-11-09</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.0729554,4.5900813,0</coordinates>
 				</Point>
@@ -138,6 +151,7 @@
 			<Placemark>
 				<name>WordCamp Orlando</name>
 				<description>2018-11-09</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.4408312,28.4300909,0</coordinates>
 				</Point>
@@ -145,6 +159,7 @@
 			<Placemark>
 				<name>WordCamp Dallas/Fort Worth, Texas USA</name>
 				<description>2018-11-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.3707672,32.7490694,0</coordinates>
 				</Point>
@@ -152,6 +167,7 @@
 			<Placemark>
 				<name>WordCamp Islamabad</name>
 				<description>2018-11-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.0314153,33.7164178,0</coordinates>
 				</Point>
@@ -159,6 +175,7 @@
 			<Placemark>
 				<name>WordCamp Puebla/México</name>
 				<description>2018-11-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-98.1950405,19.0404746,0</coordinates>
 				</Point>
@@ -166,6 +183,7 @@
 			<Placemark>
 				<name>WordCamp Seattle</name>
 				<description>2018-11-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.3315194,47.6116558,0</coordinates>
 				</Point>
@@ -173,6 +191,7 @@
 			<Placemark>
 				<name>WordCamp Granada, Granada, Spain</name>
 				<description>2018-11-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.5986824,37.1653968,0</coordinates>
 				</Point>
@@ -180,6 +199,7 @@
 			<Placemark>
 				<name>WordCamp Milano</name>
 				<description>2018-11-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.2131057,45.5184464,0</coordinates>
 				</Point>
@@ -187,6 +207,7 @@
 			<Placemark>
 				<name>WordCamp Edinburgh 2018</name>
 				<description>2018-11-17</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.2017023,55.9471549,0</coordinates>
 				</Point>
@@ -194,6 +215,7 @@
 			<Placemark>
 				<name>WordCamp Kuala Lumpur</name>
 				<description>2018-11-17</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>101.7084723,3.1439649,0</coordinates>
 				</Point>
@@ -201,6 +223,7 @@
 			<Placemark>
 				<name>WordCamp Harare</name>
 				<description>2018-11-23</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>31.071131,-17.782614,0</coordinates>
 				</Point>
@@ -208,6 +231,7 @@
 			<Placemark>
 				<name>WordCamp Kampala</name>
 				<description>2018-11-23</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>32.5825197,0.3475964,0</coordinates>
 				</Point>
@@ -215,6 +239,7 @@
 			<Placemark>
 				<name>WordCamp Nairobi</name>
 				<description>2018-11-23</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>36.8219462,-1.2920659,0</coordinates>
 				</Point>
@@ -222,6 +247,7 @@
 			<Placemark>
 				<name>WordCamp Montevideo, Uruguay</name>
 				<description>2018-11-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-56.1361532,-34.9044736,0</coordinates>
 				</Point>
@@ -229,6 +255,7 @@
 			<Placemark>
 				<name>WordCamp Pokhara</name>
 				<description>2018-11-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>83.9731033,28.1947589,0</coordinates>
 				</Point>
@@ -236,6 +263,7 @@
 			<Placemark>
 				<name>WordCamp Sofia</name>
 				<description>2018-11-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>23.374717,42.627762,0</coordinates>
 				</Point>
@@ -243,6 +271,7 @@
 			<Placemark>
 				<name>WordCamp Ahmedabad</name>
 				<description>2018-12-01</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>72.5017738,23.0350352,0</coordinates>
 				</Point>
@@ -250,6 +279,7 @@
 			<Placemark>
 				<name>WordCamp Toronto</name>
 				<description>2018-12-01</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.4149108,43.7672153,0</coordinates>
 				</Point>
@@ -257,6 +287,7 @@
 			<Placemark>
 				<name>WordCamp Lille</name>
 				<description>2018-12-07</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.060205,50.6374729,0</coordinates>
 				</Point>
@@ -264,6 +295,7 @@
 			<Placemark>
 				<name>WordCamp US</name>
 				<description>2018-12-07</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.7783976,36.1564945,0</coordinates>
 				</Point>
@@ -271,6 +303,7 @@
 			<Placemark>
 				<name>WordCamp Thessaloniki</name>
 				<description>2018-12-15</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>22.9549479,40.5997591,0</coordinates>
 				</Point>
@@ -278,6 +311,7 @@
 			<Placemark>
 				<name>WordCamp Biratnagar</name>
 				<description>2018-12-22</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>87.2755533,26.4851564,0</coordinates>
 				</Point>
@@ -285,6 +319,7 @@
 			<Placemark>
 				<name>WordCamp Zaragoza</name>
 				<description>2019-01-26</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.9071888,41.6601006,0</coordinates>
 				</Point>
@@ -292,6 +327,7 @@
 			<Placemark>
 				<name>WordCamp Las Palmas de Gran Canaria</name>
 				<description>2019-02-08</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-15.4300625,28.1408125,0</coordinates>
 				</Point>
@@ -299,6 +335,7 @@
 			<Placemark>
 				<name>WordCamp Phoenix, AZ</name>
 				<description>2019-02-15</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-112.0712688,33.4493304,0</coordinates>
 				</Point>
@@ -306,6 +343,7 @@
 			<Placemark>
 				<name>WordCamp Bangkok</name>
 				<description>2019-02-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>100.4472774,13.7165066,0</coordinates>
 				</Point>
@@ -313,6 +351,7 @@
 			<Placemark>
 				<name>WordCamp Jakarta</name>
 				<description>2019-02-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>106.886067,-6.140548,0</coordinates>
 				</Point>
@@ -320,6 +359,7 @@
 			<Placemark>
 				<name>WordCamp Pune</name>
 				<description>2019-02-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.8066679,18.5408513,0</coordinates>
 				</Point>
@@ -327,6 +367,7 @@
 			<Placemark>
 				<name>WordCamp Prague</name>
 				<description>2019-02-23</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>14.4416108,50.0833425,0</coordinates>
 				</Point>
@@ -334,6 +375,7 @@
 			<Placemark>
 				<name>WordCamp Dayton, OH, USA</name>
 				<description>2019-03-01</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.1877711,39.7606136,0</coordinates>
 				</Point>
@@ -341,6 +383,7 @@
 			<Placemark>
 				<name>WordCamp Cebu</name>
 				<description>2019-03-02</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>123.9200261,10.3127638,0</coordinates>
 				</Point>
@@ -348,6 +391,7 @@
 			<Placemark>
 				<name>WordCamp Kolkata</name>
 				<description>2019-03-03</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>88.4761115,22.5806455,0</coordinates>
 				</Point>
@@ -355,6 +399,7 @@
 			<Placemark>
 				<name>WordCamp Nordic</name>
 				<description>2019-03-07</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.9473888,60.1785424,0</coordinates>
 				</Point>
@@ -362,6 +407,7 @@
 			<Placemark>
 				<name>WordCamp Greenville, SC</name>
 				<description>2019-03-09</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.3994005,34.8511367,0</coordinates>
 				</Point>
@@ -369,6 +415,7 @@
 			<Placemark>
 				<name>WordCamp Kota Kinabalu</name>
 				<description>2019-03-09</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>116.1293837,6.0348903,0</coordinates>
 				</Point>
@@ -376,6 +423,7 @@
 			<Placemark>
 				<name>WordCamp Miami</name>
 				<description>2019-03-15</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-80.3820014,25.7567674,0</coordinates>
 				</Point>
@@ -383,6 +431,7 @@
 			<Placemark>
 				<name>WordCamp Kathmandu</name>
 				<description>2019-03-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>85.3149142,27.6949964,0</coordinates>
 				</Point>
@@ -390,6 +439,7 @@
 			<Placemark>
 				<name>WordCamp Bordeaux</name>
 				<description>2019-03-23</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.5704348,44.849651,0</coordinates>
 				</Point>
@@ -397,6 +447,7 @@
 			<Placemark>
 				<name>WordCamp Osnabrück</name>
 				<description>2019-03-23</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.0416,52.27151,0</coordinates>
 				</Point>
@@ -404,6 +455,7 @@
 			<Placemark>
 				<name>WordCamp Entebbe</name>
 				<description>2019-03-30</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>32.5068636,0.0950043,0</coordinates>
 				</Point>
@@ -411,6 +463,7 @@
 			<Placemark>
 				<name>WordCamp Entebbe</name>
 				<description>2019-03-30</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>32.5068636,0.0950043,0</coordinates>
 				</Point>
@@ -418,6 +471,7 @@
 			<Placemark>
 				<name>WordCamp Santa Clarita</name>
 				<description>2019-04-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.5696528,34.4042541,0</coordinates>
 				</Point>
@@ -425,6 +479,7 @@
 			<Placemark>
 				<name>WordCamp Torino</name>
 				<description>2019-04-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.6688509,45.0501866,0</coordinates>
 				</Point>
@@ -432,6 +487,7 @@
 			<Placemark>
 				<name>WordCamp London</name>
 				<description>2019-04-06</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.1107146,51.5516174,0</coordinates>
 				</Point>
@@ -439,6 +495,7 @@
 			<Placemark>
 				<name>WordCamp Madrid</name>
 				<description>2019-04-06</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.6962689,40.3476253,0</coordinates>
 				</Point>
@@ -446,6 +503,7 @@
 			<Placemark>
 				<name>WordCamp Raleigh, North Carolina, USA</name>
 				<description>2019-04-06</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.674002,35.7719356,0</coordinates>
 				</Point>
@@ -453,6 +511,7 @@
 			<Placemark>
 				<name>WordCamp Rotterdam</name>
 				<description>2019-04-12</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.5009084,51.9198541,0</coordinates>
 				</Point>
@@ -460,6 +519,7 @@
 			<Placemark>
 				<name>WordCamp Floripa 2019</name>
 				<description>2019-04-13</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-48.5465798,-27.6038362,0</coordinates>
 				</Point>
@@ -467,6 +527,7 @@
 			<Placemark>
 				<name>WordCamp Haneda</name>
 				<description>2019-04-20</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>139.7240894,35.5588767,0</coordinates>
 				</Point>
@@ -474,6 +535,7 @@
 			<Placemark>
 				<name>WordCamp Paris</name>
 				<description>2019-04-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.3095744,48.8835818,0</coordinates>
 				</Point>
@@ -481,6 +543,7 @@
 			<Placemark>
 				<name>WordCamp Bilbao</name>
 				<description>2019-04-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.9462033,43.266328,0</coordinates>
 				</Point>
@@ -488,6 +551,7 @@
 			<Placemark>
 				<name>WordCamp Buffalo, New York, USA</name>
 				<description>2019-04-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.8782016,42.9321701,0</coordinates>
 				</Point>
@@ -495,6 +559,7 @@
 			<Placemark>
 				<name>WordCamp Lancaster, PA, USA</name>
 				<description>2019-04-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.2825383,40.0544895,0</coordinates>
 				</Point>
@@ -502,6 +567,7 @@
 			<Placemark>
 				<name>WordCamp Orange County, CA</name>
 				<description>2019-04-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.8540539,33.6404437,0</coordinates>
 				</Point>
@@ -509,6 +575,7 @@
 			<Placemark>
 				<name>WordCamp Vienna 2019</name>
 				<description>2019-04-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>16.3532407,48.2172156,0</coordinates>
 				</Point>
@@ -516,6 +583,7 @@
 			<Placemark>
 				<name>WordCamp Atlanta, GA</name>
 				<description>2019-05-03</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.3845972,33.7552402,0</coordinates>
 				</Point>
@@ -523,6 +591,7 @@
 			<Placemark>
 				<name>WordCamp Porto Alegre</name>
 				<description>2019-05-04</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-51.2264783,-30.0352245,0</coordinates>
 				</Point>
@@ -530,6 +599,7 @@
 			<Placemark>
 				<name>WordCamp Calgary</name>
 				<description>2019-05-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-114.04403,51.044625,0</coordinates>
 				</Point>
@@ -537,6 +607,7 @@
 			<Placemark>
 				<name>WordCamp Lagos</name>
 				<description>2019-05-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.37684,6.5514308,0</coordinates>
 				</Point>
@@ -544,6 +615,7 @@
 			<Placemark>
 				<name>WordCamp Košice</name>
 				<description>2019-05-11</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.2443364,48.7316221,0</coordinates>
 				</Point>
@@ -551,6 +623,7 @@
 			<Placemark>
 				<name>WordCamp Plovdiv</name>
 				<description>2019-05-11</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.7489102,42.1450175,0</coordinates>
 				</Point>
@@ -558,6 +631,7 @@
 			<Placemark>
 				<name>WordCamp Bari</name>
 				<description>2019-05-17</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>16.8599685,41.1254847,0</coordinates>
 				</Point>
@@ -565,6 +639,7 @@
 			<Placemark>
 				<name>WordCamp Bristol</name>
 				<description>2019-05-17</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.6029792,51.4584172,0</coordinates>
 				</Point>
@@ -572,6 +647,7 @@
 			<Placemark>
 				<name>WordCamp Athens</name>
 				<description>2019-05-18</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>23.7486594,37.9764538,0</coordinates>
 				</Point>
@@ -579,6 +655,7 @@
 			<Placemark>
 				<name>WordCamp Detroit</name>
 				<description>2019-05-18</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.0605515,42.3387883,0</coordinates>
 				</Point>
@@ -586,6 +663,7 @@
 			<Placemark>
 				<name>WordCamp Lisboa, Portugal</name>
 				<description>2019-05-18</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-9.1580301,38.7465123,0</coordinates>
 				</Point>
@@ -593,6 +671,7 @@
 			<Placemark>
 				<name>WordCamp Nis</name>
 				<description>2019-05-18</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.8921939,43.3314121,0</coordinates>
 				</Point>
@@ -600,6 +679,7 @@
 			<Placemark>
 				<name>WordCamp Managua</name>
 				<description>2019-05-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.2563537,12.1155513,0</coordinates>
 				</Point>
@@ -607,6 +687,7 @@
 			<Placemark>
 				<name>WordCamp Irun</name>
 				<description>2019-05-31</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.7807761,43.3391455,0</coordinates>
 				</Point>
@@ -614,6 +695,7 @@
 			<Placemark>
 				<name>WordCamp Hamilton</name>
 				<description>2019-06-01</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.900641,43.2568062,0</coordinates>
 				</Point>
@@ -621,6 +703,7 @@
 			<Placemark>
 				<name>WordCamp Montclair, NJ USA</name>
 				<description>2019-06-01</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.2189414,40.8112585,0</coordinates>
 				</Point>
@@ -628,6 +711,7 @@
 			<Placemark>
 				<name>WordCamp Asheville, NC</name>
 				<description>2019-06-07</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.5646457,35.6160939,0</coordinates>
 				</Point>
@@ -635,6 +719,7 @@
 			<Placemark>
 				<name>WordCamp Kent, OH, USA</name>
 				<description>2019-06-15</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.3561189,41.1521348,0</coordinates>
 				</Point>
@@ -642,6 +727,7 @@
 			<Placemark>
 				<name>WordCamp Porto Alegre 2019</name>
 				<description>2019-06-15</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-51.2264783,-30.0352245,0</coordinates>
 				</Point>
@@ -649,6 +735,7 @@
 			<Placemark>
 				<name>WordCamp Europe</name>
 				<description>2019-06-21</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.4587819,52.473107,0</coordinates>
 				</Point>
@@ -656,6 +743,7 @@
 			<Placemark>
 				<name>WordCamp Kansas City, MO USA</name>
 				<description>2019-06-28</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-94.7306238,38.9237863,0</coordinates>
 				</Point>
@@ -663,6 +751,7 @@
 			<Placemark>
 				<name>WordCamp Jacksonville</name>
 				<description>2019-06-29</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.6027782,30.2590341,0</coordinates>
 				</Point>
@@ -670,6 +759,7 @@
 			<Placemark>
 				<name>WordCamp Davao, Philippines</name>
 				<description>2019-07-06</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>125.5687478,7.0587241,0</coordinates>
 				</Point>
@@ -677,6 +767,7 @@
 			<Placemark>
 				<name>WordCamp Grand Rapids, MI</name>
 				<description>2019-07-13</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-85.6792428,42.9617166,0</coordinates>
 				</Point>
@@ -684,6 +775,7 @@
 			<Placemark>
 				<name>WordCamp Ottawa, Ontario, Canada</name>
 				<description>2019-07-13</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.6962631,45.3823628,0</coordinates>
 				</Point>
@@ -691,6 +783,7 @@
 			<Placemark>
 				<name>WordCamp Boston</name>
 				<description>2019-07-20</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-71.108951,42.3509178,0</coordinates>
 				</Point>
@@ -698,6 +791,7 @@
 			<Placemark>
 				<name>WordCamp Denver</name>
 				<description>2019-07-27</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-104.9655876,39.6844915,0</coordinates>
 				</Point>
@@ -705,6 +799,7 @@
 			<Placemark>
 				<name>WordCamp for Publishers: Columbus</name>
 				<description>2019-08-07</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.001137,39.9507444,0</coordinates>
 				</Point>
@@ -712,6 +807,7 @@
 			<Placemark>
 				<name>WordCamp Birmingham, AL, USA</name>
 				<description>2019-08-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.7902524,33.4803919,0</coordinates>
 				</Point>
@@ -719,6 +815,7 @@
 			<Placemark>
 				<name>WordCamp Montreal</name>
 				<description>2019-08-10</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.5790443,45.4952779,0</coordinates>
 				</Point>
@@ -726,6 +823,7 @@
 			<Placemark>
 				<name>WordCamp Nagpur, Maharashtra, India</name>
 				<description>2019-08-11</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>79.0046264,21.1333775,0</coordinates>
 				</Point>
@@ -733,6 +831,7 @@
 			<Placemark>
 				<name>WordCamp Brighton</name>
 				<description>2019-08-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.1398574,50.8324223,0</coordinates>
 				</Point>
@@ -740,6 +839,7 @@
 			<Placemark>
 				<name>WordCamp Singapore</name>
 				<description>2019-08-16</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>103.8526513,1.2822004,0</coordinates>
 				</Point>
@@ -747,6 +847,7 @@
 			<Placemark>
 				<name>WordCamp Lehigh Valley</name>
 				<description>2019-08-17</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.3717513,40.6125014,0</coordinates>
 				</Point>
@@ -754,6 +855,7 @@
 			<Placemark>
 				<name>WordCamp Minneapolis, MN</name>
 				<description>2019-08-22</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-93.2278984,44.9752022,0</coordinates>
 				</Point>
@@ -761,6 +863,7 @@
 			<Placemark>
 				<name>WordCamp Orlando</name>
 				<description>2019-08-23</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.4408312,28.4300909,0</coordinates>
 				</Point>
@@ -768,6 +871,7 @@
 			<Placemark>
 				<name>WordCamp Ann Arbor, Michigan</name>
 				<description>2019-08-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.7382583,42.2808083,0</coordinates>
 				</Point>
@@ -775,6 +879,7 @@
 			<Placemark>
 				<name>WordCamp Brisbane</name>
 				<description>2019-08-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>153.0284154,-27.4773565,0</coordinates>
 				</Point>
@@ -782,6 +887,7 @@
 			<Placemark>
 				<name>WordCamp Iloilo</name>
 				<description>2019-08-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>122.5458439,10.7151767,0</coordinates>
 				</Point>
@@ -789,6 +895,7 @@
 			<Placemark>
 				<name>WordCamp Karachi</name>
 				<description>2019-08-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>67.1142205,24.9311658,0</coordinates>
 				</Point>
@@ -796,6 +903,7 @@
 			<Placemark>
 				<name>WordCamp Omaha 2019</name>
 				<description>2019-08-24</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-96.01524,41.2442498,0</coordinates>
 				</Point>
@@ -803,6 +911,7 @@
 			<Placemark>
 				<name>WordCamp México City México</name>
 				<description>2019-08-31</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-99.1706509,19.4192125,0</coordinates>
 				</Point>
@@ -814,6 +923,7 @@
 			<Placemark>
 				<name>WordCamp Las Vegas, NV</name>
 				<description>2019-09-07</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-115.1469038,36.1721156,0</coordinates>
 				</Point>
@@ -821,6 +931,7 @@
 			<Placemark>
 				<name>WordCamp San José/ Costa Rica</name>
 				<description>2019-09-07</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.043475,9.932826,0</coordinates>
 				</Point>
@@ -828,6 +939,7 @@
 			<Placemark>
 				<name>WordCamp Zürich</name>
 				<description>2019-09-13</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.5158385,47.3901863,0</coordinates>
 				</Point>
@@ -835,6 +947,7 @@
 			<Placemark>
 				<name>WordCamp New York City 2019</name>
 				<description>2019-09-14</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.9830892,40.7579963,0</coordinates>
 				</Point>
@@ -842,6 +955,7 @@
 			<Placemark>
 				<name>WordCamp Retreat Sinemorets</name>
 				<description>2019-09-14</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>27.9764858,42.0619178,0</coordinates>
 				</Point>
@@ -849,6 +963,7 @@
 			<Placemark>
 				<name>WordCamp Catania</name>
 				<description>2019-09-20</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>15.1027304,37.5100621,0</coordinates>
 				</Point>
@@ -856,6 +971,7 @@
 			<Placemark>
 				<name>WordCamp Nijmegen</name>
 				<description>2019-09-20</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.8522385,51.8412685,0</coordinates>
 				</Point>
@@ -863,6 +979,7 @@
 			<Placemark>
 				<name>WordCamp Pontevedra, Galicia, Spain</name>
 				<description>2019-09-20</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.6379763,42.4400787,0</coordinates>
 				</Point>
@@ -870,6 +987,7 @@
 			<Placemark>
 				<name>WordCamp Ilé-Ifè</name>
 				<description>2019-09-21</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.5285613,7.516518,0</coordinates>
 				</Point>
@@ -877,6 +995,7 @@
 			<Placemark>
 				<name>WordCamp Sacramento, California</name>
 				<description>2019-09-21</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-121.2726955,38.7747927,0</coordinates>
 				</Point>
@@ -884,6 +1003,7 @@
 			<Placemark>
 				<name>WordCamp Cape Town</name>
 				<description>2019-09-26</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.4833947,-33.892231,0</coordinates>
 				</Point>
@@ -891,6 +1011,7 @@
 			<Placemark>
 				<name>WordCamp Dhaka</name>
 				<description>2019-09-28</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>90.4271883,23.8272158,0</coordinates>
 				</Point>
@@ -898,6 +1019,7 @@
 			<Placemark>
 				<name>WordCamp Saint Petersburg, Russia</name>
 				<description>2019-09-28</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>30.3138816,59.9654282,0</coordinates>
 				</Point>
@@ -905,6 +1027,7 @@
 			<Placemark>
 				<name>WordCamp Vancouver, BC, Canada</name>
 				<description>2019-09-28</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-123.1203895,49.2829261,0</coordinates>
 				</Point>
@@ -912,6 +1035,7 @@
 			<Placemark>
 				<name>WordCamp Johannesburg</name>
 				<description>2019-10-03</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.064951,-26.03594,0</coordinates>
 				</Point>
@@ -919,6 +1043,7 @@
 			<Placemark>
 				<name>WordCamp Jackson, Michigan</name>
 				<description>2019-10-04</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.4071714,42.2470555,0</coordinates>
 				</Point>
@@ -926,6 +1051,7 @@
 			<Placemark>
 				<name>WordCamp Sevilla</name>
 				<description>2019-10-04</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.9912288,37.3705646,0</coordinates>
 				</Point>
@@ -933,6 +1059,7 @@
 			<Placemark>
 				<name>WordCamp Long Beach, California, United States</name>
 				<description>2019-10-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.1143892,33.7873979,0</coordinates>
 				</Point>
@@ -940,6 +1067,7 @@
 			<Placemark>
 				<name>WordCamp Philadelphia</name>
 				<description>2019-10-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.1636616,39.9552145,0</coordinates>
 				</Point>
@@ -947,6 +1075,7 @@
 			<Placemark>
 				<name>WordCamp Port Macquarie</name>
 				<description>2019-10-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>152.8764055,-31.4578251,0</coordinates>
 				</Point>
@@ -954,6 +1083,7 @@
 			<Placemark>
 				<name>WordCamp Rochester, NY USA</name>
 				<description>2019-10-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-77.511753,43.1159106,0</coordinates>
 				</Point>
@@ -961,6 +1091,7 @@
 			<Placemark>
 				<name>WordCamp São Paulo</name>
 				<description>2019-10-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-46.6380978,-23.5642229,0</coordinates>
 				</Point>
@@ -968,6 +1099,7 @@
 			<Placemark>
 				<name>WordCamp Skopje</name>
 				<description>2019-10-05</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.4097959,42.0048366,0</coordinates>
 				</Point>
@@ -975,6 +1107,7 @@
 			<Placemark>
 				<name>WordCamp Bratislava</name>
 				<description>2019-10-11</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>17.0718966,48.1537086,0</coordinates>
 				</Point>
@@ -982,6 +1115,7 @@
 			<Placemark>
 				<name>WordCamp Verona</name>
 				<description>2019-10-11</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.9719308,45.4399785,0</coordinates>
 				</Point>
@@ -989,6 +1123,7 @@
 			<Placemark>
 				<name>WordCamp Hong Kong</name>
 				<description>2019-10-12</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>114.1668334,22.2483373,0</coordinates>
 				</Point>
@@ -996,6 +1131,7 @@
 			<Placemark>
 				<name>WordCamp Salt Lake City, Utah, United States of America</name>
 				<description>2019-10-12</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-111.8887643,40.7658553,0</coordinates>
 				</Point>
@@ -1003,6 +1139,7 @@
 			<Placemark>
 				<name>WordCamp Thessaloniki</name>
 				<description>2019-10-12</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>22.9598117,40.6009663,0</coordinates>
 				</Point>
@@ -1010,6 +1147,7 @@
 			<Placemark>
 				<name>WordCamp Vadodara</name>
 				<description>2019-10-12</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.1919074,22.2935993,0</coordinates>
 				</Point>
@@ -1017,6 +1155,7 @@
 			<Placemark>
 				<name>WordCamp Dublin</name>
 				<description>2019-10-18</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.2563686,53.3860938,0</coordinates>
 				</Point>
@@ -1024,6 +1163,7 @@
 			<Placemark>
 				<name>WordCamp Valencia, Spain</name>
 				<description>2019-10-18</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.393696,39.475888,0</coordinates>
 				</Point>
@@ -1031,6 +1171,7 @@
 			<Placemark>
 				<name>WordCamp Dallas/Ft. Worth, Texas, USA</name>
 				<description>2019-10-19</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.3707672,32.7490694,0</coordinates>
 				</Point>
@@ -1038,6 +1179,7 @@
 			<Placemark>
 				<name>WordCamp Dublin</name>
 				<description>2019-10-19</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.2563686,53.3860938,0</coordinates>
 				</Point>
@@ -1045,6 +1187,7 @@
 			<Placemark>
 				<name>WordCamp Niagara</name>
 				<description>2019-10-19</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.1652038,43.1520711,0</coordinates>
 				</Point>
@@ -1052,6 +1195,7 @@
 			<Placemark>
 				<name>WordCamp Panama City, Panama</name>
 				<description>2019-10-19</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.5315427,9.023824,0</coordinates>
 				</Point>
@@ -1059,6 +1203,7 @@
 			<Placemark>
 				<name>WordCamp Niigata</name>
 				<description>2019-10-22</description>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>138.8513499,37.4465187,0</coordinates>
 				</Point>

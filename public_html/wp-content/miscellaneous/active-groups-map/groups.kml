@@ -1216,4686 +1216,5467 @@
 			<name>Meetups</name>
 			<Placemark>
 				<name>Tallinn WordPress meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.739999771118,59.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Yamagata WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>140.33000183105,38.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Hsinchu WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>120.98000335693,24.819999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Salerno WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>14.779999732971,40.680000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bolzano WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.35000038147,46.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Sofia Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>23.309999465942,42.689998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Changhua WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>120.51999664307,24.079999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Baghdad WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>44.439998626709,33.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tegucigalpa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.220001220703,14.079999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Egbema-Ndoni WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.5999999046326,4.8200001716614,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Spokane WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.43000030518,47.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Edmonton WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-113.44000244141,53.599998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gulfport WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-89.089996337891,30.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Red Wing WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-92.550003051758,44.560001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Ottawa WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.680000305176,45.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Campo Grande</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-54.630001068115,-20.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kochi WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>133.53999328613,33.560001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Istanbul</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.959999084473,41.009998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Regensburg/Oberpfalz WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.109999656677,49.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lekki WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.5899999141693,6.4699997901917,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Yenagoa WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.25,4.9299998283386,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Jessore WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>89.209999084473,23.170000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Algeciras WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.4499998092651,36.130001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Vilnius (LT)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>25.270000457764,54.700000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Jena</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.579999923706,50.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Saint-Jean-de-Luz WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.6599999666214,43.400001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Donostia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.9800000190735,43.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Racine WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.809997558594,42.689998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Illescas</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.8599998950958,40.139999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>San Diego WordPress Meetup (formerly Advanced WordPress)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.16999816895,32.720001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lakeland WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.940002441406,28.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Attock WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>72.360000610352,33.779998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tromsø WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.940000534058,69.660003662109,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Toledo WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.0300002098083,39.860000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Arrecife WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-13.550000190735,28.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Penang WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>100.33000183105,5.4200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Terrassa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2,41.569999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ángeles WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>120.55000305176,15.14999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Rangpur Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>89.25,25.739999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Alamogordo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-105.94999694824,32.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Yola WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.460000038147,9.2299995422363,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wordpress Meetup Herning</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.9700002670288,56.130001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Vitória Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-40.310001373291,-20.309999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Windhoek WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>17.090000152588,-22.559999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Griñon</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.8599998950958,40.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Luanda WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.239999771118,-8.8199996948242,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Úbeda WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.3800001144409,38.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Meetup de WordPress Balneário Camboriú</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-48.630001068115,-26.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Lugo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-7.5599999427795,43.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Akita WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>140.11000061035,39.709999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Szeged WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>20.159999847412,46.259998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>São Bento do Sul WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-49.419998168945,-26.219999313354,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lubbock WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-101.84999847412,33.580001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Gouda</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.6999998092651,52.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Buffalo WordPress Users</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.879997253418,42.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Aba Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.3499999046326,5.0999999046326,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Warri WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.75,5.5100002288818,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lublin WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>22.569999694824,51.240001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Marina Alta</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>0.10999999940395,38.849998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Thimphu</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>89.699996948242,27.479999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ehime WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>132.77000427246,33.840000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Punto Fijo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-70.209999084473,11.720000267029,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Uttaradit WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>100.09999847412,17.629999160767,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kinshasa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>15.319999694824,-4.3099999427795,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kanagawa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>139.4700012207,35.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kumamoto WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>130.71000671387,32.799999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Neuchâtel</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.9200000762939,47.009998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>West Orlando WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.589996337891,28.530000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Meetup WordPress Tudela</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.6100000143051,42.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Pereira</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.680000305176,4.8099999427795,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Coventry Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.5,52.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Daytona WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.040000915527,29.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Salamanca WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.6700000762939,40.970001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Brandon WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.290000915527,27.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Brunete WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.8900001049042,40.360000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fribourg WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.1399998664856,46.810001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Zagreb WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>15.970000267029,45.799999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Northland WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>173.9700012207,-35.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cotonou Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.4400000572205,6.3600001335144,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Palakkad WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>76.650001525879,10.779999732971,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Sophia Antipolis WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.9899997711182,43.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Multan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>71.449996948242,30.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Torrelodones WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.9400000572205,40.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Heredia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.120002746582,10,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gujranwala WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>74.180000305176,32.159999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Xanthi WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.879999160767,41.139999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Abbottabad</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.199996948242,34.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Evansville WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.569999694824,37.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Joinville WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-48.840000152588,-26.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Semarang WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>110.41999816895,-6.9699997901917,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Taoyuan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>121.30999755859,25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Barishal WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>90.370002746582,22.700000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Santa María da Feira WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.5500001907349,40.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Terceira WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-27.219999313354,38.659999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Szczecin WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>14.529999732971,53.430000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bacolod</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>122.9700012207,10.630000114441,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Westchester Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.76000213623,41.029998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Logroño</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.4400000572205,42.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Chiba WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>140.11000061035,35.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fredrikstad WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.939999580383,59.240001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>West Georgia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.699996948242,33.740001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dundee WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3,56.470001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rabat WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.8299999237061,34.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Queenstown WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>168.63999938965,-45.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bozeman and Big Sky WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-111.05999755859,45.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Varanasi WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>83.01000213623,25.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Puntarenas WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.839996337891,9.9799995422363,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gunma WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>139.05999755859,36.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cartago WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.930000305176,9.8699998855591,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Lyon Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.8299999237061,45.759998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Guanacaste WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-85.589996337891,10.260000228882,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup San Carlos</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.440002441406,10.329999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress South Bend Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.25,41.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cairo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>31.25,30.059999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fukushima WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>140.38000488281,37.409999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Novara</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.6199998855591,45.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Veraval WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>70.339996337891,20.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordUp Kraków</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>19.959999084473,50.060001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Pavia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.1599998474121,45.189998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Torrelavega WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.0599999427795,43.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Imperia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.0299997329712,43.889999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>West Jordan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-111.98000335693,40.650001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Entebbe WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>32.459999084473,0.059999998658895,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Pachuca WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-98.76000213623,20.120000839233,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Odense</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.380000114441,55.400001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Nottingham</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.1499999761581,52.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Carlsbad WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.30999755859,33.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Treviso WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.930000305176,45.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Exeter</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.539999961853,50.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Morris County NJ WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.480003356934,40.889999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Dresden</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.739999771118,51.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Ciudad de Panamá</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.529998779297,8.9700002670288,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Perú &#39;- Arequipa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-71.529998779297,-16.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Shimane WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>132.75,35.360000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Okayama WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>133.91999816895,34.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kagoshima WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>130.55999755859,31.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Perú &#39;- Trujillo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.029998779297,-8.1099996566772,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Maracaibo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-71.660003662109,10.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Surakarta WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>110.81999969482,-7.5700001716614,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Tampa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.51000213623,27.889999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Humenné WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.909999847412,48.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rae Bareli WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>81.230003356934,26.229999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Owerri WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.0199999809265,5.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Kassel</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.4799995422363,51.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Casablanca WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-7.5799999237061,33.529998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fargo-Moorhead WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-96.800003051758,46.889999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Newnan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.819999694824,33.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Athens GA WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.360000610352,33.970001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Manzini WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>31.379999160767,-26.489999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Abeokuta WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.3499999046326,7.1599998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rochdale WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.1600000858307,53.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bandung WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>107.59999847412,-6.9099998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kisumu WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>34.75,-0.090000003576279,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Compostela</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.539999961853,42.880001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Butwal WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>83.449996948242,27.709999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Nakuru WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>36.069999694824,-0.28000000119209,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress ICT</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.339996337891,37.689998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Moscow</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>37.619998931885,55.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wordpress Jeddah</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>39.169998168945,21.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Jerusalem WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>35.220001220703,31.780000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Montevideo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-56.169998168945,-34.869998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Aichi WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>136.91000366211,35.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Toyama WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>137.2200012207,36.700000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kagawa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>134.03999328613,34.340000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Mie WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>136.50999450684,34.720001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Huntsville WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.569999694824,34.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Shizuoka WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>138.69000244141,35.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kansai WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>135.5,34.680000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Valencia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-67.980003356934,10.229999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Huelva WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.9400000572205,37.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wordpress Kota Kinabalu</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>116.06999969482,5.9699997901917,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Castelló</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.050000000745058,39.970001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Sønderborg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.8000001907349,54.919998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Querétaro</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-100.40000152588,20.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Sapporo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>141.33999633789,43.060001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fukui WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>136.2200012207,36.080001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Saitama WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>139.64999389648,35.869998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dharamshala WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>76.279998779297,32.240001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>San Salvador WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-89.190002441406,13.689999580383,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Niigata WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>139.03999328613,37.919998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gifu WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>136.75999450684,35.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Shinshu WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>137.9700012207,36.240001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fukuoka WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>130.41000366211,33.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Philadelphia WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.01000213623,40.119998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Uyo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.8499999046326,5.0100002288818,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Stellenbosch WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.860000610352,-33.919998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Birgunj</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>84.870002746582,27.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bhilwara WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>74.629997253418,25.35000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>San Marcos WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.949996948242,29.879999160767,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bharatpur WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>84.440002441406,27.670000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Damascus WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>36.319999694824,33.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Firenze</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.25,43.770000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Teramo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.699999809265,42.659999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tehran WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>51.430000305176,35.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Napoli</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>14.25,40.840000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kennesaw WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.580001831055,34.029998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Roanoke WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.940002441406,37.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Peachtree Corners WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.23999786377,33.970001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Raleigh-Durham RTP WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.639999389648,35.889999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Meetup WordPress Floripa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-48.540000915527,-27.60000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lawton WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-98.400001525879,34.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Taichung WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>120.68000030518,24.14999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lugano WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.9399995803833,46.009998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lansing WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.550003051758,42.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Corvallis WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-123.26999664307,44.599998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Alcobendas WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.6400001049042,40.540000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Stockholm</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.069999694824,59.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Terni</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.64999961853,42.560001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Talavera WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.8299999237061,39.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kalisz WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.10000038147,51.770000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Pensacola WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.220001220703,30.420000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Panama City Beach WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-85.800003051758,30.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Comunidade WordPress Juiz de Fora</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-43.360000610352,-21.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Petaluma</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.66000366211,38.240001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Quito</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.5,-0.18999999761581,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Vigo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.710000038147,42.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Fremont</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-96.48999786377,41.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Georgetown Texas WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.660003662109,30.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Udine WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.229999542236,46.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Gramenet</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.2200000286102,41.470001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Vadodara WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.180000305176,22.309999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Katsina WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.5999999046326,13,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Krasnogorsk</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>37.330001831055,55.830001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bhandara WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>79.650001525879,21.180000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dar es Salaam WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>39.279998779297,-6.8200001716614,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Paris</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.3399999141693,48.860000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Mansoura WordPress User Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>31.379999160767,31.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Trondheim WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.39999961853,63.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kigali WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>30.059999465942,-1.9400000572205,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Twente</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.8899998664856,52.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Biratnagar WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>87.279998779297,26.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bacoor WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>120.94000244141,14.460000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kano WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.5200004577637,12,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Awka WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.4000000953674,7.2699999809265,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tiradentes WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-44.189998626709,-21.120000839233,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Buffalo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-106.70999908447,44.340000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Santa Cruz WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.05999755859,36.990001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Mannheim</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.4700002670288,49.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Gwinnett</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.959999084473,33.939998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Baton Rouge WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-91.190002441406,30.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Durango WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-107.83000183105,37.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Beira WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>34.840000152588,-19.829999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Dortmund</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.4800000190735,51.509998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Springfield WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.849998474121,39.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Praia a Mare WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>15.779999732971,39.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bulawayo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.579999923706,-20.170000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress User Group Long Island</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.480003356934,40.779998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Machala WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.959999084473,-3.2599999904633,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Plovdiv WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.75,42.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Aalborg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.9300003051758,57.029998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Caracas</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-66.930000305176,10.539999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cebu WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>123.90000152588,10.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Boone County WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.470001220703,40.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cowichan Valley WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-123.62000274658,48.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Portsmouth WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.0900000333786,50.810001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wilmington WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-77.940002441406,34.229999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fort Collins WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-105.04000091553,40.529998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gainesville WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.819999694824,34.290000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Oakhurst WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-119.63999938965,37.340000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Aspen WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-106.83000183105,39.189998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ankara WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>32.849998474121,39.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup de León</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.889999389648,12.430000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Santa Clarita Valley</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.43000030518,34.490001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>New Castle County WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.51000213623,39.819999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Northampton WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-72.680000305176,42.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Thessaloníki WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>22.940000534058,40.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Hobart</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>147.28999328613,-42.849998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Brattleboro WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-72.690002441406,42.840000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Douala WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.710000038147,4.0599999427795,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Chiang Mai WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>98.980003356934,18.799999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Oviedo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.8299999237061,43.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cupertino WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.04000091553,37.310001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Camrose WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-112.83000183105,53.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Arnhem</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.9099998474121,51.990001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Puri WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>85.830001831055,19.809999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Zwolle</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.0900001525879,52.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Xàtiva</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.52999997138977,39,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Leiden WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.4899997711182,52.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Islamabad &#39;- Rawalpindi</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.040000915527,33.599998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Utrecht</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.1100001335144,52.099998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Port Elizabeth WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>25.590000152588,-33.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Neustadt</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.1300001144409,49.360000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Molins de Rei</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.0099999904633,41.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ajmer WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>74.639999389648,26.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Vršac #WPVŠ</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.299999237061,45.130001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Košice WordPress Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.260000228882,48.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Rostock</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.10000038147,54.090000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Fulda</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.6899995803833,50.549999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Saint-Petersburg WordPress Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>30.319999694824,59.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress São Carlos</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-47.889999389648,-22.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Saltillo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-101,25.420000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Whitstable WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>1.0199999809265,51.360000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ilorin WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.5300002098083,8.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>León WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.5700001716614,42.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wrocław WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>17.030000686646,51.110000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Linton WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.169998168945,39.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress SJC</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-45.880001068115,-23.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Monthey WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.9299998283386,46.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lausanne WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.6199998855591,46.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Annapolis WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.51000213623,39,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Topeka WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-95.680000305176,39.060001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Aachen WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.0900001525879,50.770000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Heerhugowaard</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.8499999046326,52.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Montpellier</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.8699998855591,43.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kolkata WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>88.360000610352,22.569999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Meetup de WordPress en Caceres (Extremadura)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.3800001144409,39.470001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Monrovia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-10.800000190735,6.3099999427795,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bauchi WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.8400001525879,10.310000419617,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cambridge Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>0.12999999523163,52.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Oslo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.75,59.909999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Puebla</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-98.220001220703,19.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bhubaneswar WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>85.839996337891,20.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Colorado Springs WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-104.81999969482,38.830001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Peshawar WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>71.540000915527,34.009998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Jerez WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.1300001144409,36.680000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kingston WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.48999786377,44.259998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ijebu WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.9200000762939,6.8099999427795,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Podgorica</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>19.280000686646,42.470001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Eindhoven</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.4699997901917,51.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Viborg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.4099998474121,56.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cochabamba WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-66.169998168945,-17.379999160767,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordUp Warszawa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.020000457764,52.259998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Toronto WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.379997253418,43.659999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Arezzo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.859999656677,43.470001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cali WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.51000213623,3.4200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dehradun WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>78.050003051758,30.340000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Athens WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.099998474121,39.310001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Spartanburg South Carolina WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.860000610352,34.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Blumenau WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-49.090000152588,-26.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Baden</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.3100004196167,47.479999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Jaipur</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>75.800003051758,26.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Chapel Hill</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.040000915527,35.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Calabar WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.3100004196167,4.960000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bhaktapur WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>85.430000305176,27.670000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Pokhara WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>83.98999786377,28.219999313354,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress PortHarcourt Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7,4.7800002098083,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>St. Gallen WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.3599996566772,47.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gdynia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.530000686646,54.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wesley Chapel WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.300003051758,28.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cairns WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>145.75,-16.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Pamplona</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.6499999761581,42.819999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wordpress Meetup Monterrey</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-100.31999969482,25.670000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Boulder WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-105.30999755859,40.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Aljarafe Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.0700001716614,37.340000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kerrville WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-99.150001525879,30.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rutland WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-72.970001220703,43.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cheltenham WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.0899999141693,51.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tahiti WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-149.55999755859,-17.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Saint Lucia Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-60.979999542236,14.029999732971,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Isle of Man WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.5500001907349,54.240001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Sion WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.3499999046326,46.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Trivandrum WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>76.949996948242,8.5100002288818,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Vicenza</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.539999961853,45.549999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Avezzano</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.430000305176,42.029998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Zurich</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.539999961853,47.380001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Chattogram WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>91.809997558594,22.329999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Abuja WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.1700000762939,9.1800003051758,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bentonville WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-94.209999084473,36.380001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Denton WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.139999389648,33.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>New Port Richey WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.730003356934,28.239999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Tunbridge Wells Meetup &#39;- WPTW</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>0.25999999046326,51.130001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Campinas</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-47.080001831055,-22.909999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Nepal</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>85.309997558594,27.709999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Peterborough WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.330001831055,44.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Puyallup WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.30999755859,47.189998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Palermo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.359999656677,38.119998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Girona WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.8099999427795,41.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bend WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-121.29000091553,44.099998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Johnson City WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.360000610352,36.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Tours</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>0.68999999761581,47.380001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress St. Petersburg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.639999389648,27.770000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kozhikode WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>75.779998779297,11.260000228882,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Koblenz</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.5999999046326,50.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Seinäjoki WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>22.840000152588,62.790000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ieper WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.8800001144409,50.849998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cartagena</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.98000001907349,37.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lucknow Wordpress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>80.949996948242,26.85000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Kyiv</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>30.520000457764,50.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WPOX</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.2400000095367,51.740001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Baguio WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>120.56999969482,16.430000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Constanta WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.629999160767,44.180000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tokyo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>139.77000427246,35.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordBench</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>130.41000366211,33.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Murcia</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.1299999952316,37.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Beirut WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>35.5,33.880001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Ourense</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-7.8699998855591,42.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Lleida</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>0.62999999523163,41.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Amurrio WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3,43.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Coeur d&#39;Alene WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-116.7799987793,47.689998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Monterey</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-121.84999847412,36.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Móstoles WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.8800001144409,40.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Taipei WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>121.44999694824,25.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Yogyakarta WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>110.37000274658,-7.7800002098083,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Irun WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.7999999523163,43.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kampala WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>32.580001831055,0.31999999284744,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Agra WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>78.01000213623,27.190000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Buenos Aires</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-58.369998931885,-34.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Mombasa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>39.659999847412,-4.039999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Grunn</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.5700001716614,53.229999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Conyers WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.01000213623,33.709999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Woodstock WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.459999084473,34.119998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Tarragona</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>1.2400000095367,41.119998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Meetup WordPress Melun</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.6500000953674,48.540000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Nijmegen</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.8499999046326,51.840000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Auckland WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>174.75999450684,-36.849998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>St Albans WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.34000000357628,51.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dhaka WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>90.389999389648,23.700000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Bonn #wpbn</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.0999999046326,50.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Sliema WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>14.5,35.919998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Iloilo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>122.55000305176,10.689999580383,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Jackson WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-90.180000305176,32.290000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Meetup Paderborn</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.7399997711182,51.720001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Adelaide</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>138.60000610352,-34.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bay Area Foothills Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-121.88999938965,37.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cardiff WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.1700000762939,51.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Chandigarh (Tri-City)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>76.779998779297,30.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Almería (WPAlmeria)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.4300000667572,36.830001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Madison WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-89.379997253418,43.080001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Montclair Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.220001220703,40.810001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Calgary WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-114.09999847412,51.029998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The San Jose WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-121.91999816895,37.259998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Surabaya WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>112.73999786377,-7.2399997711182,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Alcázar de San Juan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.210000038147,39.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Enthusiasts in Kolhapur</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>74.220001220703,16.700000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Omaha</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-96,41.290000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>St. John&#39;s WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-52.700000762939,47.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Melbourne User Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>144.96000671387,-37.810001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP_Hooked</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.10999999940395,51.509998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Sydney</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>151.21000671387,-33.869998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kitchener WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-80.430000305176,43.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Frederick</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-77.339996337891,39.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Granada WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.5899999141693,37.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Whittier WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.98999786377,33.939998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bellingham WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.48999786377,48.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Grenoble WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.7199997901917,45.189998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Réthimnon</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.469999313354,35.360000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress East Rand</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.040000915527,-26.190000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kanpur WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>80.330001831055,26.469999313354,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Reading WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.940002441406,40.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Glendive WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-104.7200012207,47.110000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Valladolid WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.7399997711182,41.650001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cancun</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-92.480003356934,16.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Catania</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>15.090000152588,37.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Sheffield</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.4800000190735,53.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Denver WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-105.01000213623,39.770000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bekasi WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>106.9700012207,-6.2199997901917,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Coimbatore WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>76.959999084473,11.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Barranquilla</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.819999694824,11,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Lisboa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-9.1400003433228,38.720001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Padova WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.880000114441,45.409999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Varna WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>27.89999961853,43.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Havering</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>0.18000000715256,51.580001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Geelong</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>144.32000732422,-38.139999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Port Macquarie</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>152.91000366211,-31.440000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Skopje WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.469999313354,42,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Gold Coast</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>153.44000244141,-28.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Indianapolis Networking (WIN) Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.110000610352,39.869998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bedfordshire WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.43999999761581,51.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Niagara WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.220001220703,43.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Niš</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>21.89999961853,43.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Brindisi</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>17.940000534058,40.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Pretoria</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.219999313354,-25.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Hong Kong WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>114.13999938965,22.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Pontevedra WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.6599998474121,42.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Alcalá de Henares WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.3699998855591,40.479999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Baixada Rio</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-43.470001220703,-22.739999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Communauté WordPress Montréal / Montreal WordPress Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.5,45.650001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Davao WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>125.62999725342,7.1100001335144,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Zaragoza</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.88999998569489,41.650001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Nha Trang WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>109.19000244141,12.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Rio de Janeiro</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-43.200000762939,-22.909999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bangkok</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>100.5,13.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Brisbane</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>153.02000427246,-27.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Biella</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.0600004196167,45.560001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Las Palmas de Gran Canaria</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-15.430000305176,28.10000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Ragusa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>14.729999542236,36.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cluj-Napoca WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>23.590000152588,46.779998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ipswich WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>152.75999450684,-27.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Reno WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-119.90000152588,39.479999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>SSI WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-123.51999664307,48.860000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Triad WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.980003356934,36.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The East Bay WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.26999664307,37.810001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Myrtle Beach WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.800003051758,33.759998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Saigon WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>106.69000244141,10.779999732971,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Hasselt Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.3400001525879,50.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>OC WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.01000213623,33.680000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Brno Meetups</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>16.610000610352,49.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Little Rock WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-92.279998779297,34.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Ancona</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.5,43.630001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dubai WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>55.330001831055,25.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Andria</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>16.290000915527,41.229999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Piacenza WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.6999998092651,45.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kaunas WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>23.909999847412,54.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Leeds</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.5499999523163,53.790000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Münster / Osnabrück</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.0500001907349,52.279998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Düsseldorf WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.789999961853,51.240001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Durham WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.940002441406,43.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Nagpur WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>79.080001831055,21.159999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Oulu WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>25.469999313354,65.019996643066,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ghent WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.7200000286102,51.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Il Meetup WordPress di Roma</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.479999542236,41.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Columbia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.029998779297,34,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Meetup Novi Sad</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>19.85000038147,45.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Luxembourg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.1199998855591,49.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ife WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.5700001716614,7.5500001907349,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Québec</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-71.209999084473,46.810001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Köln</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.9699997901917,50.950000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>South Central Coast WordPress Adventure Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-119.70999908447,34.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rivas WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.5199999809265,40.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Gijón</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.6700000762939,43.529998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Trinidad &amp; Tobago WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-61.509998321533,10.659999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Juba WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>31.60000038147,4.8499999046326,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Medellín</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.589996337891,6.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Blackburn WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.4900000095367,53.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPressⓌ Aix-en-Provence</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.4400000572205,43.529998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Norwich</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>1.289999961853,52.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Tuluá</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.209999084473,4.0900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Guayaquil</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.900001525879,-2.210000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Meetup WordPress Santa Cruz de Tenerife</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-16.25,28.469999313354,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Glasgow WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.25,55.860000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Harare WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>31.049999237061,-17.819999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Boise WordPress Meetups</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-116.31999969482,43.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Drôme-Ardèche – Valence WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.8899998664856,44.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bali WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>115.26000213623,-8.5200004577637,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Málaga</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.4200000762939,36.720001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rajkot WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>70.790000915527,22.309999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Saarland</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.8800001144409,49.540000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Nürnberg WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.050000190735,49.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WPinLille</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.0699999332428,50.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Eifel</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.6599998474121,50.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WPMeetup Würzburg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.9399995803833,49.799999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Parma</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.329999923706,44.799999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Maidstone WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>0.50999999046326,51.279998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Verona WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11,45.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Northwestern NJ WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.930000305176,40.650001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Guadalajara</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-103.34999847412,20.670000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bogotá WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.089996337891,4.6300001144409,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bari</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>16.870000839233,41.130001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Nairobi</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>36.819999694824,-1.289999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Rosario</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-60.669998168945,-32.950000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ahmedabad WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>72.580001831055,23.030000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Heraklion WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>25.129999160767,35.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Genova</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.9499998092651,44.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Leeward WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-158.08999633789,21.329999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kochi WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>76.220001220703,10.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Appleton WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-88.410003662109,44.279998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Vancouver WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-123.15000152588,49.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Buea WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.2299995422363,4.1599998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kumasi WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.6299999952316,6.6900000572205,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kailua-Kona WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-155.97999572754,19.659999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Manila WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>120.9700012207,14.619999885559,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Nuuk WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-51.729999542236,64.180000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Palm Beach</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-80.059997558594,26.709999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Sylhet WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>91.870002746582,24.89999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Granollers</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.2799999713898,41.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Santiago WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-70.639999389648,-33.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Vestfold WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.420000076294,59.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kuala Lumpur WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>101.70999908447,3.1600000858307,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Leipzig</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.39999961853,51.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bordeaux</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.5799999833107,44.840000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Oldham WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.1199998855591,53.549999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Stuttgart</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.1899995803833,48.790000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Meetup Frankfurt #wpFRA</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.6800003051758,50.119998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Udaipur WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.690002441406,24.579999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rockford WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-89.129997253418,42.299999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Fortaleza Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-38.590000152588,-3.7799999713898,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Rennes</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.6799999475479,48.110000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress São Paulo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-46.630001068115,-23.530000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kingston WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.800003051758,17.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Freiburg im Breisgau WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.8499999046326,47.990001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Antigua WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-90.73999786377,14.560000419617,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Aurora WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-104.79000091553,39.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Janesville Area WordPress Users</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-89.050003051758,42.689998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Aarhus</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.210000038147,56.159999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Copenhagen</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.569999694824,55.680000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Minneapolis &#39;- St. Paul WordPress User Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-93.23999786377,45.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Ibadan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.9300000667572,7.3800001144409,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Managua WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.269996643066,12.14999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Muskoka WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.309997558594,45.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Toulouse</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>1.4500000476837,43.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Serbia</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>20.5,44.830001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Hartford, CT</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-72.730003356934,41.689998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup San Cristobal, Venezuela</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-72.230003356934,7.7600002288818,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Fryslân</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.789999961853,53.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>San José, Costa Rica WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.080001831055,9.9300003051758,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Yaoundé WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.520000457764,3.8699998855591,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Nashik WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.779998779297,20.010000228882,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Marseille WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>5.3699998855591,43.310001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress London Canada</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.209999084473,43.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Turku WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>22.25,60.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bremen WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.8100004196167,53.080001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Karachi Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>67.01000213623,24.860000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Reggio Emilia WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.630000114441,44.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Antelope Valley WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.13999938965,34.689998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Auburn WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-85.470001220703,32.599998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Meetup WordPress de Braga</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.4300003051758,41.549999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Collado Villalba</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4,40.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Majadahonda</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.8699998855591,40.470001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Latvia</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.129999160767,56.970001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Chiclana</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.1500000953674,36.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Sorocaba Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-47.470001220703,-23.489999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Goa</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.809997558594,15.5,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Rochester WordPress Users Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-77.5,43.130001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bristol WordPress People</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.5899999141693,51.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Naperville</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-88.169998168945,41.790000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Peoria</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-89.610000610352,40.700000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Madrid</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.710000038147,40.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Chicago WordPress Community Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.699996948242,41.970001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The College Station WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-96.309997558594,30.60000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Northeast Ohio WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.669998168945,41.490001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Poitou</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.46999999880791,46.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Southcoast WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-70.940002441406,41.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Jordan</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>35.950000762939,31.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Jyväskylä WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>25.75,62.259998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Haarlem WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.6199998855591,52.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Alicante</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.47999998927116,38.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Torino</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.6700000762939,45.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Valencia</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.38999998569489,39.479999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>München WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.579999923706,48.139999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Sevilla</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.9800000190735,37.400001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetups Lahore</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>74.349998474121,31.559999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bratislava WordPress Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>17.129999160767,48.159999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>South Okanagan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-119.55000305176,49.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>North Fulton WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.26000213623,34.099998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Arnprior WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.360000610352,45.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bhopal</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>77.400001525879,23.239999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Durban WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>30.989999771118,-29.870000839233,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Colombo WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>79.849998474121,6.9299998283386,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Amsterdam</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.8899998664856,52.369998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Olympia WordPress Meetup (OlyWP)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.87000274658,46.990001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Cesena</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>12.239999771118,44.139999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Beckley WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.190002441406,37.790000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cambodia WordPress Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>104.91999816895,11.569999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Perú &#39;- Cusco</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-71.98999786377,-13.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Lecce</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.170000076294,40.349998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bakersfield WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-119.01000213623,35.380001068115,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Larissa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>22.420000076294,39.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bengaluru WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>77.559997558594,12.970000267029,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Delhi NCR Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>77.209999084473,28.670000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Halifax</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-63.569999694824,44.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Macon WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.629997253418,32.830001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Helsinki</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>24.940000534058,60.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Paraíba</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-34.860000610352,-7.1199998855591,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bournemouth</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.8799999952316,50.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Athens WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>23.729999542236,37.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Southern Utah WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-113.58999633789,37.080001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Accra WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.20000000298023,5.5599999427795,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Sialkot WordPress Club</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>74.550003051758,32.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Brescia</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.25,45.549999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Bologna</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>11.340000152588,44.490001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Aveiro WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.6599998474121,40.650001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Jo&#39;burg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.040000915527,-26.190000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>South Jersey WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-74.910003662109,39.889999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Karlsruhe</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.3999996185303,49,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Fayetteville Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-94.139999389648,36.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Perú &#39;- Lima</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-77.050003051758,-12.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Toledo</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.529998779297,41.650001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Córdoba</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-64.190002441406,-31.39999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cape Town</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>18.459999084473,-33.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Singapore</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>103.84999847412,1.2999999523163,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gauteng WordPress Network</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>28.129999160767,-26,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>NY Southern Tier WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-78.089996337891,42.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Downstate</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-88.25,40.110000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Mexico</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-99.139999389648,19.430000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Mallorca</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.6500000953674,39.569999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>North Fork Valley WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-107.75,38.819999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cantabria</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.8099999427795,43.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bilbao</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.9300000667572,43.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Marbella</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-4.8899998664856,36.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Shropshire WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-2.75,52.709999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Pune WordPress Knowledge Exchange</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>73.839996337891,18.530000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Guatemala WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-90.550003051758,14.630000114441,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Bucharest WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>26.10000038147,44.439998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tampere WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>23.760000228882,61.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>South Sound WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.62000274658,47.290000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cincinnati WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.5,39.110000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lehigh Valley WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.410003662109,40.619998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress DSM</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-93.620002746582,41.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Porto WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-8.6199998855591,41.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Pittsburgh</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.980003356934,40.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Hamilton Ontario WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.870002746582,43.259998321533,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Comunidade WordPress Curitiba</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-49.290000915527,-25.420000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Pullman / Moscow WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.19000244141,46.770000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Sunshine Coast</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>153.07000732422,-26.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress South Texas</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-98.23999786377,26.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Charleston</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-79.949996948242,32.799999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Edinburgh</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-3.2200000286102,55.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Burlington WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.230003356934,44.490001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Bern</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.4400000572205,46.950000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Waco WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.180000305176,31.540000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Surat WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>72.819999694824,21.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>New Orleans WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-90.120002746582,29.950000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Chattanooga / Cleveland Area WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-85.309997558594,35.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Central KY WordPress Bloggers and Geeks</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.529998779297,38,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tallahassee WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.26000213623,30.430000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Southern Illinois WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-89.220001220703,37.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Okanagan WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-119.2799987793,50.290000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress In Nice</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>7.2699999809265,43.700000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Cádiz WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.289999961853,36.529998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP Belfast</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-5.9299998283386,54.599998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Jakarta WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>106.83000183105,-6.1799998283386,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Hannover WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.7299995422363,52.400001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Lagos WordPress Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>3.4700000286102,6.4499998092651,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Mumbai WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>72.819999694824,18.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Ljubljana</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>14.510000228882,46.060001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Wordpress Tunisia</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10.640000343323,35.840000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Hamburg WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>10,53.549999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Potsdam</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.069999694824,52.400001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Berlin</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>13.380000114441,52.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Antwerp</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.4200000762939,51.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Central Wisconsin WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-90.190002441406,44.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup 010</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>4.4800000190735,51.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tucson WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-110.9700012207,32.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Barcelona</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>2.1700000762939,41.400001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress for web site builders and bloggers</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-92.5,44.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordUp Brighton</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-0.14000000059605,50.830001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Heidelberg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>8.6899995803833,49.419998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fresno WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-119.76000213623,36.830001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tuscaloosa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.559997558594,33.189998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress North East</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-1.6100000143051,54.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Tulsa WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-95.980003356934,36.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Belo Horizonte WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-43.939998626709,-19.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Milano</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>9.1899995803833,45.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Jacksonville (WPJax)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.48999786377,30.190000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Wellington</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>174.7799987793,-41.279998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Birmingham WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.809997558594,33.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fort Walton Beach WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.610000610352,30.409999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Greater Portland, Maine WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-70.360000610352,43.680000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Vienna (Developers, Agencies, Freelancers)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>16.370000839233,48.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Northeast PA WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-75.639999389648,41.409999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>West Valley WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.59999847412,34.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dayton WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.120002746582,39.669998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Inland Empire WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-117.37000274658,33.990001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetups Genève (Geneva)</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>6.1399998664856,46.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Gainesville WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.300003051758,29.64999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Asheville Area WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.559997558594,35.590000152588,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Lancaster</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.349998474121,40.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Jackson WP Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.379997253418,42.25,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Savannah/Tybee WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.110000610352,32.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Hanoi WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>105.83999633789,21.030000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WP518 &#39;- Upstate New York WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.769996643066,43.080001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WPGR &#39;- Grand Rapids WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-85.660003662109,42.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress RI Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-71.410003662109,41.819999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Midcities User Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.139999389648,32.860000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Orlando</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.370002746582,28.540000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Pasadena</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.13999938965,34.150001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Fort Worth WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.379997253418,32.740001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Perth</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>115.83999633789,-31.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Las Vegas WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-115.12000274658,36.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Maui WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-156.47999572754,20.879999160767,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Winnipeg</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.120002746582,49.919998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Columbus WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.900001525879,39.970001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Knoxville</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-83.889999389648,36.029998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Montana WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-114.04000091553,46.860000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Dublin WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-6.25,53.330001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Marietta (Metro Atlanta) WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.529998779297,33.939998626709,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Stamford Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.540000915527,41.049999237061,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Hampton Roads</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.25,36.950000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Albuquerque WordPress User Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-106.65000152588,35.080001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Seacoast NH WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-70.779998779297,43.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Portland WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.63999938965,45.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Nashville</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-86.790000915527,36.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Houston WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-95.360000610352,29.760000228882,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Seattle WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-122.40000152588,47.580001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The Baltimore WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-76.580001831055,39.310001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Memphis</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-90.029998779297,35.169998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Greater Milwaukee Area WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-87.919998168945,43.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>The St. Louis WordPress Community</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-90.379997253418,38.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Greenville South Carolina WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-82.400001525879,34.900001525879,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress KC</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-94.589996337891,39.060001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Sacramento WordPress Meetup</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-121.51000213623,38.580001831055,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress DC</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-77.019996643066,38.909999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>New Hampshire WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-71.470001220703,42.990001678467,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Meetup Southwest Florida</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-81.870002746582,26.629999160767,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>OKC WordPress Users Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.519996643066,35.470001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Greater Charlotte Area WordPress Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-80.860000610352,35.209999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Los Angeles WordPress</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-118.40000152588,33.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>South Florida WordPress Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-80.23999786377,25.780000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Atlanta WordPress Users Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-84.330001831055,33.770000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Austin</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-97.73999786377,30.270000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress NYC Meetup Group</name>
+				<styleUrl>#icon-1899-0288D1</styleUrl>
 				<Point>
 					<coordinates>-73.98999786377,40.740001678467,0</coordinates>
 				</Point>

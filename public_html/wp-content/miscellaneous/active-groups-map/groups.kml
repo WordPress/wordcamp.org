@@ -48,14 +48,14 @@
 				<name>WordCamp Johannesburg</name>
 				<description>2018-10-25</description>
 				<Point>
-					<coordinates>28.064951,'-26.03594,0</coordinates>
+					<coordinates>28.064951,-26.03594,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordCamp Brisbane</name>
 				<description>2018-10-27</description>
 				<Point>
-					<coordinates>153.028415,'-27.477357,0</coordinates>
+					<coordinates>153.028415,-27.477357,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -69,7 +69,7 @@
 				<name>WordCamp Kigali</name>
 				<description>2018-10-27</description>
 				<Point>
-					<coordinates>30.069553,'-1.958394,0</coordinates>
+					<coordinates>30.069553,-1.958394,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -97,7 +97,7 @@
 				<name>WordCamp Cape Town</name>
 				<description>2018-11-01</description>
 				<Point>
-					<coordinates>18.4606343,'-33.9333726,0</coordinates>
+					<coordinates>18.4606343,-33.9333726,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -202,7 +202,7 @@
 				<name>WordCamp Harare</name>
 				<description>2018-11-23</description>
 				<Point>
-					<coordinates>31.071131,'-17.782614,0</coordinates>
+					<coordinates>31.071131,-17.782614,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -216,14 +216,14 @@
 				<name>WordCamp Nairobi</name>
 				<description>2018-11-23</description>
 				<Point>
-					<coordinates>36.8219462,'-1.2920659,0</coordinates>
+					<coordinates>36.8219462,-1.2920659,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordCamp Montevideo, Uruguay</name>
 				<description>2018-11-24</description>
 				<Point>
-					<coordinates>-56.1361532,'-34.9044736,0</coordinates>
+					<coordinates>-56.1361532,-34.9044736,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -314,7 +314,7 @@
 				<name>WordCamp Jakarta</name>
 				<description>2019-02-16</description>
 				<Point>
-					<coordinates>106.886067,'-6.140548,0</coordinates>
+					<coordinates>106.886067,-6.140548,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -461,7 +461,7 @@
 				<name>WordCamp Floripa 2019</name>
 				<description>2019-04-13</description>
 				<Point>
-					<coordinates>-48.5465798,'-27.6038362,0</coordinates>
+					<coordinates>-48.5465798,-27.6038362,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -524,7 +524,7 @@
 				<name>WordCamp Porto Alegre</name>
 				<description>2019-05-04</description>
 				<Point>
-					<coordinates>-51.2264783,'-30.0352245,0</coordinates>
+					<coordinates>-51.2264783,-30.0352245,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -643,7 +643,7 @@
 				<name>WordCamp Porto Alegre 2019</name>
 				<description>2019-06-15</description>
 				<Point>
-					<coordinates>-51.2264783,'-30.0352245,0</coordinates>
+					<coordinates>-51.2264783,-30.0352245,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -776,7 +776,7 @@
 				<name>WordCamp Brisbane</name>
 				<description>2019-08-24</description>
 				<Point>
-					<coordinates>153.0284154,'-27.4773565,0</coordinates>
+					<coordinates>153.0284154,-27.4773565,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -885,7 +885,7 @@
 				<name>WordCamp Cape Town</name>
 				<description>2019-09-26</description>
 				<Point>
-					<coordinates>18.4833947,'-33.892231,0</coordinates>
+					<coordinates>18.4833947,-33.892231,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -913,7 +913,7 @@
 				<name>WordCamp Johannesburg</name>
 				<description>2019-10-03</description>
 				<Point>
-					<coordinates>28.064951,'-26.03594,0</coordinates>
+					<coordinates>28.064951,-26.03594,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -948,7 +948,7 @@
 				<name>WordCamp Port Macquarie</name>
 				<description>2019-10-05</description>
 				<Point>
-					<coordinates>152.8764055,'-31.4578251,0</coordinates>
+					<coordinates>152.8764055,-31.4578251,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -962,7 +962,7 @@
 				<name>WordCamp São Paulo</name>
 				<description>2019-10-05</description>
 				<Point>
-					<coordinates>-46.6380978,'-23.5642229,0</coordinates>
+					<coordinates>-46.6380978,-23.5642229,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1162,7 +1162,7 @@
 			<Placemark>
 				<name>WordPress Campo Grande</name>
 				<Point>
-					<coordinates>-54.630001068115,'-20.450000762939,0</coordinates>
+					<coordinates>-54.630001068115,-20.450000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1324,13 +1324,13 @@
 			<Placemark>
 				<name>WordPress Vitória Meetup</name>
 				<Point>
-					<coordinates>-40.310001373291,'-20.309999465942,0</coordinates>
+					<coordinates>-40.310001373291,-20.309999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Windhoek WordPress Meetup</name>
 				<Point>
-					<coordinates>17.090000152588,'-22.559999465942,0</coordinates>
+					<coordinates>17.090000152588,-22.559999465942,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1342,7 +1342,7 @@
 			<Placemark>
 				<name>Luanda WordPress Meetup Group</name>
 				<Point>
-					<coordinates>13.239999771118,'-8.8199996948242,0</coordinates>
+					<coordinates>13.239999771118,-8.8199996948242,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1354,7 +1354,7 @@
 			<Placemark>
 				<name>Meetup de WordPress Balneário Camboriú</name>
 				<Point>
-					<coordinates>-48.630001068115,'-26.979999542236,0</coordinates>
+					<coordinates>-48.630001068115,-26.979999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1378,7 +1378,7 @@
 			<Placemark>
 				<name>São Bento do Sul WordPress Meetup</name>
 				<Point>
-					<coordinates>-49.419998168945,'-26.219999313354,0</coordinates>
+					<coordinates>-49.419998168945,-26.219999313354,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1450,7 +1450,7 @@
 			<Placemark>
 				<name>Kinshasa WordPress Meetup</name>
 				<Point>
-					<coordinates>15.319999694824,'-4.3099999427795,0</coordinates>
+					<coordinates>15.319999694824,-4.3099999427795,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1534,7 +1534,7 @@
 			<Placemark>
 				<name>Northland WordPress Meetup</name>
 				<Point>
-					<coordinates>173.9700012207,'-35.220001220703,0</coordinates>
+					<coordinates>173.9700012207,-35.220001220703,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1600,13 +1600,13 @@
 			<Placemark>
 				<name>Joinville WordPress Meetup</name>
 				<Point>
-					<coordinates>-48.840000152588,'-26.319999694824,0</coordinates>
+					<coordinates>-48.840000152588,-26.319999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Semarang WordPress Meetup</name>
 				<Point>
-					<coordinates>110.41999816895,'-6.9699997901917,0</coordinates>
+					<coordinates>110.41999816895,-6.9699997901917,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1690,7 +1690,7 @@
 			<Placemark>
 				<name>Queenstown WordPress Meetup</name>
 				<Point>
-					<coordinates>168.63999938965,'-45.040000915527,0</coordinates>
+					<coordinates>168.63999938965,-45.040000915527,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1864,7 +1864,7 @@
 			<Placemark>
 				<name>WordPress Perú &#39;- Arequipa</name>
 				<Point>
-					<coordinates>-71.529998779297,'-16.389999389648,0</coordinates>
+					<coordinates>-71.529998779297,-16.389999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1888,7 +1888,7 @@
 			<Placemark>
 				<name>WordPress Perú &#39;- Trujillo</name>
 				<Point>
-					<coordinates>-79.029998779297,'-8.1099996566772,0</coordinates>
+					<coordinates>-79.029998779297,-8.1099996566772,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1900,7 +1900,7 @@
 			<Placemark>
 				<name>Surakarta WordPress Meetup</name>
 				<Point>
-					<coordinates>110.81999969482,'-7.5700001716614,0</coordinates>
+					<coordinates>110.81999969482,-7.5700001716614,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1960,7 +1960,7 @@
 			<Placemark>
 				<name>Manzini WordPress Meetup</name>
 				<Point>
-					<coordinates>31.379999160767,'-26.489999771118,0</coordinates>
+					<coordinates>31.379999160767,-26.489999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -1978,13 +1978,13 @@
 			<Placemark>
 				<name>Bandung WordPress Meetup</name>
 				<Point>
-					<coordinates>107.59999847412,'-6.9099998474121,0</coordinates>
+					<coordinates>107.59999847412,-6.9099998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>Kisumu WordPress Meetup</name>
 				<Point>
-					<coordinates>34.75,'-0.090000003576279,0</coordinates>
+					<coordinates>34.75,-0.090000003576279,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2002,7 +2002,7 @@
 			<Placemark>
 				<name>Nakuru WordPress Meetup</name>
 				<Point>
-					<coordinates>36.069999694824,'-0.28000000119209,0</coordinates>
+					<coordinates>36.069999694824,-0.28000000119209,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2032,7 +2032,7 @@
 			<Placemark>
 				<name>Montevideo WordPress Meetup</name>
 				<Point>
-					<coordinates>-56.169998168945,'-34.869998931885,0</coordinates>
+					<coordinates>-56.169998168945,-34.869998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2182,7 +2182,7 @@
 			<Placemark>
 				<name>Stellenbosch WordPress Meetup</name>
 				<Point>
-					<coordinates>18.860000610352,'-33.919998168945,0</coordinates>
+					<coordinates>18.860000610352,-33.919998168945,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2266,7 +2266,7 @@
 			<Placemark>
 				<name>Meetup WordPress Floripa</name>
 				<Point>
-					<coordinates>-48.540000915527,'-27.60000038147,0</coordinates>
+					<coordinates>-48.540000915527,-27.60000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2344,7 +2344,7 @@
 			<Placemark>
 				<name>Comunidade WordPress Juiz de Fora</name>
 				<Point>
-					<coordinates>-43.360000610352,'-21.75,0</coordinates>
+					<coordinates>-43.360000610352,-21.75,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2356,7 +2356,7 @@
 			<Placemark>
 				<name>WordPress Quito</name>
 				<Point>
-					<coordinates>-78.5,'-0.18999999761581,0</coordinates>
+					<coordinates>-78.5,-0.18999999761581,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2416,7 +2416,7 @@
 			<Placemark>
 				<name>Dar es Salaam WordPress Meetup</name>
 				<Point>
-					<coordinates>39.279998779297,'-6.8200001716614,0</coordinates>
+					<coordinates>39.279998779297,-6.8200001716614,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2440,7 +2440,7 @@
 			<Placemark>
 				<name>Kigali WordPress Meetup</name>
 				<Point>
-					<coordinates>30.059999465942,'-1.9400000572205,0</coordinates>
+					<coordinates>30.059999465942,-1.9400000572205,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2476,7 +2476,7 @@
 			<Placemark>
 				<name>Tiradentes WordPress Meetup</name>
 				<Point>
-					<coordinates>-44.189998626709,'-21.120000839233,0</coordinates>
+					<coordinates>-44.189998626709,-21.120000839233,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2518,7 +2518,7 @@
 			<Placemark>
 				<name>Beira WordPress Meetup</name>
 				<Point>
-					<coordinates>34.840000152588,'-19.829999923706,0</coordinates>
+					<coordinates>34.840000152588,-19.829999923706,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2542,7 +2542,7 @@
 			<Placemark>
 				<name>Bulawayo WordPress Meetup</name>
 				<Point>
-					<coordinates>28.579999923706,'-20.170000076294,0</coordinates>
+					<coordinates>28.579999923706,-20.170000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2554,7 +2554,7 @@
 			<Placemark>
 				<name>Machala WordPress Meetup</name>
 				<Point>
-					<coordinates>-79.959999084473,'-3.2599999904633,0</coordinates>
+					<coordinates>-79.959999084473,-3.2599999904633,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2668,7 +2668,7 @@
 			<Placemark>
 				<name>WordPress Hobart</name>
 				<Point>
-					<coordinates>147.28999328613,'-42.849998474121,0</coordinates>
+					<coordinates>147.28999328613,-42.849998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2752,7 +2752,7 @@
 			<Placemark>
 				<name>Port Elizabeth WordPress Meetup</name>
 				<Point>
-					<coordinates>25.590000152588,'-33.959999084473,0</coordinates>
+					<coordinates>25.590000152588,-33.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2806,7 +2806,7 @@
 			<Placemark>
 				<name>WordPress São Carlos</name>
 				<Point>
-					<coordinates>-47.889999389648,'-22.020000457764,0</coordinates>
+					<coordinates>-47.889999389648,-22.020000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2848,7 +2848,7 @@
 			<Placemark>
 				<name>WordPress SJC</name>
 				<Point>
-					<coordinates>-45.880001068115,'-23.200000762939,0</coordinates>
+					<coordinates>-45.880001068115,-23.200000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -2992,7 +2992,7 @@
 			<Placemark>
 				<name>Cochabamba WordPress Meetup</name>
 				<Point>
-					<coordinates>-66.169998168945,'-17.379999160767,0</coordinates>
+					<coordinates>-66.169998168945,-17.379999160767,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3040,7 +3040,7 @@
 			<Placemark>
 				<name>Blumenau WordPress Meetup</name>
 				<Point>
-					<coordinates>-49.090000152588,'-26.920000076294,0</coordinates>
+					<coordinates>-49.090000152588,-26.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3106,7 +3106,7 @@
 			<Placemark>
 				<name>Cairns WordPress Meetup</name>
 				<Point>
-					<coordinates>145.75,'-16.920000076294,0</coordinates>
+					<coordinates>145.75,-16.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3154,7 +3154,7 @@
 			<Placemark>
 				<name>Tahiti WordPress Meetup</name>
 				<Point>
-					<coordinates>-149.55999755859,'-17.520000457764,0</coordinates>
+					<coordinates>-149.55999755859,-17.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3238,7 +3238,7 @@
 			<Placemark>
 				<name>WordPress Campinas</name>
 				<Point>
-					<coordinates>-47.080001831055,'-22.909999847412,0</coordinates>
+					<coordinates>-47.080001831055,-22.909999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3424,7 +3424,7 @@
 			<Placemark>
 				<name>Yogyakarta WordPress Meetup</name>
 				<Point>
-					<coordinates>110.37000274658,'-7.7800002098083,0</coordinates>
+					<coordinates>110.37000274658,-7.7800002098083,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3448,13 +3448,13 @@
 			<Placemark>
 				<name>WordPress Buenos Aires</name>
 				<Point>
-					<coordinates>-58.369998931885,'-34.610000610352,0</coordinates>
+					<coordinates>-58.369998931885,-34.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Mombasa</name>
 				<Point>
-					<coordinates>39.659999847412,'-4.039999961853,0</coordinates>
+					<coordinates>39.659999847412,-4.039999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3496,7 +3496,7 @@
 			<Placemark>
 				<name>Auckland WordPress</name>
 				<Point>
-					<coordinates>174.75999450684,'-36.849998474121,0</coordinates>
+					<coordinates>174.75999450684,-36.849998474121,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3544,7 +3544,7 @@
 			<Placemark>
 				<name>WordPress Adelaide</name>
 				<Point>
-					<coordinates>138.60000610352,'-34.930000305176,0</coordinates>
+					<coordinates>138.60000610352,-34.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3598,7 +3598,7 @@
 			<Placemark>
 				<name>Surabaya WordPress Meetup</name>
 				<Point>
-					<coordinates>112.73999786377,'-7.2399997711182,0</coordinates>
+					<coordinates>112.73999786377,-7.2399997711182,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3628,7 +3628,7 @@
 			<Placemark>
 				<name>WordPress Melbourne User Group</name>
 				<Point>
-					<coordinates>144.96000671387,'-37.810001373291,0</coordinates>
+					<coordinates>144.96000671387,-37.810001373291,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3640,7 +3640,7 @@
 			<Placemark>
 				<name>WordPress Sydney</name>
 				<Point>
-					<coordinates>151.21000671387,'-33.869998931885,0</coordinates>
+					<coordinates>151.21000671387,-33.869998931885,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3688,7 +3688,7 @@
 			<Placemark>
 				<name>WordPress East Rand</name>
 				<Point>
-					<coordinates>28.040000915527,'-26.190000534058,0</coordinates>
+					<coordinates>28.040000915527,-26.190000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3742,7 +3742,7 @@
 			<Placemark>
 				<name>Bekasi WordPress Meetup</name>
 				<Point>
-					<coordinates>106.9700012207,'-6.2199997901917,0</coordinates>
+					<coordinates>106.9700012207,-6.2199997901917,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3784,13 +3784,13 @@
 			<Placemark>
 				<name>WordPress Geelong</name>
 				<Point>
-					<coordinates>144.32000732422,'-38.139999389648,0</coordinates>
+					<coordinates>144.32000732422,-38.139999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Port Macquarie</name>
 				<Point>
-					<coordinates>152.91000366211,'-31.440000534058,0</coordinates>
+					<coordinates>152.91000366211,-31.440000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3802,7 +3802,7 @@
 			<Placemark>
 				<name>WordPress Gold Coast</name>
 				<Point>
-					<coordinates>153.44000244141,'-28.069999694824,0</coordinates>
+					<coordinates>153.44000244141,-28.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3838,7 +3838,7 @@
 			<Placemark>
 				<name>WordPress Pretoria</name>
 				<Point>
-					<coordinates>28.219999313354,'-25.729999542236,0</coordinates>
+					<coordinates>28.219999313354,-25.729999542236,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3862,7 +3862,7 @@
 			<Placemark>
 				<name>WordPress Baixada Rio</name>
 				<Point>
-					<coordinates>-43.470001220703,'-22.739999771118,0</coordinates>
+					<coordinates>-43.470001220703,-22.739999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3892,7 +3892,7 @@
 			<Placemark>
 				<name>WordPress Meetup Rio de Janeiro</name>
 				<Point>
-					<coordinates>-43.200000762939,'-22.909999847412,0</coordinates>
+					<coordinates>-43.200000762939,-22.909999847412,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3904,7 +3904,7 @@
 			<Placemark>
 				<name>WordPress Brisbane</name>
 				<Point>
-					<coordinates>153.02000427246,'-27.459999084473,0</coordinates>
+					<coordinates>153.02000427246,-27.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -3934,7 +3934,7 @@
 			<Placemark>
 				<name>Ipswich WordPress Meetup</name>
 				<Point>
-					<coordinates>152.75999450684,'-27.610000610352,0</coordinates>
+					<coordinates>152.75999450684,-27.610000610352,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4174,7 +4174,7 @@
 			<Placemark>
 				<name>WordPress Meetup Guayaquil</name>
 				<Point>
-					<coordinates>-79.900001525879,'-2.210000038147,0</coordinates>
+					<coordinates>-79.900001525879,-2.210000038147,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4192,7 +4192,7 @@
 			<Placemark>
 				<name>Harare WordPress Meetup</name>
 				<Point>
-					<coordinates>31.049999237061,'-17.819999694824,0</coordinates>
+					<coordinates>31.049999237061,-17.819999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4210,7 +4210,7 @@
 			<Placemark>
 				<name>Bali WordPress Meetup</name>
 				<Point>
-					<coordinates>115.26000213623,'-8.5200004577637,0</coordinates>
+					<coordinates>115.26000213623,-8.5200004577637,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4300,13 +4300,13 @@
 			<Placemark>
 				<name>WordPress Nairobi</name>
 				<Point>
-					<coordinates>36.819999694824,'-1.289999961853,0</coordinates>
+					<coordinates>36.819999694824,-1.289999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Rosario</name>
 				<Point>
-					<coordinates>-60.669998168945,'-32.950000762939,0</coordinates>
+					<coordinates>-60.669998168945,-32.950000762939,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4402,7 +4402,7 @@
 			<Placemark>
 				<name>Santiago WordPress Meetup</name>
 				<Point>
-					<coordinates>-70.639999389648,'-33.459999084473,0</coordinates>
+					<coordinates>-70.639999389648,-33.459999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4462,7 +4462,7 @@
 			<Placemark>
 				<name>WordPress Fortaleza Meetup</name>
 				<Point>
-					<coordinates>-38.590000152588,'-3.7799999713898,0</coordinates>
+					<coordinates>-38.590000152588,-3.7799999713898,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4474,7 +4474,7 @@
 			<Placemark>
 				<name>WordPress São Paulo</name>
 				<Point>
-					<coordinates>-46.630001068115,'-23.530000686646,0</coordinates>
+					<coordinates>-46.630001068115,-23.530000686646,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4672,7 +4672,7 @@
 			<Placemark>
 				<name>WordPress Sorocaba Meetup Group</name>
 				<Point>
-					<coordinates>-47.470001220703,'-23.489999771118,0</coordinates>
+					<coordinates>-47.470001220703,-23.489999771118,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4828,7 +4828,7 @@
 			<Placemark>
 				<name>Durban WordPress Meetup</name>
 				<Point>
-					<coordinates>30.989999771118,'-29.870000839233,0</coordinates>
+					<coordinates>30.989999771118,-29.870000839233,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4870,7 +4870,7 @@
 			<Placemark>
 				<name>WordPress Perú &#39;- Cusco</name>
 				<Point>
-					<coordinates>-71.98999786377,'-13.520000457764,0</coordinates>
+					<coordinates>-71.98999786377,-13.520000457764,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4924,7 +4924,7 @@
 			<Placemark>
 				<name>WordPress Paraíba</name>
 				<Point>
-					<coordinates>-34.860000610352,'-7.1199998855591,0</coordinates>
+					<coordinates>-34.860000610352,-7.1199998855591,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -4978,7 +4978,7 @@
 			<Placemark>
 				<name>WordPress Jo&#39;burg</name>
 				<Point>
-					<coordinates>28.040000915527,'-26.190000534058,0</coordinates>
+					<coordinates>28.040000915527,-26.190000534058,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5002,7 +5002,7 @@
 			<Placemark>
 				<name>WordPress Perú &#39;- Lima</name>
 				<Point>
-					<coordinates>-77.050003051758,'-12.069999694824,0</coordinates>
+					<coordinates>-77.050003051758,-12.069999694824,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5014,13 +5014,13 @@
 			<Placemark>
 				<name>WordPress Córdoba</name>
 				<Point>
-					<coordinates>-64.190002441406,'-31.39999961853,0</coordinates>
+					<coordinates>-64.190002441406,-31.39999961853,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
 				<name>WordPress Cape Town</name>
 				<Point>
-					<coordinates>18.459999084473,'-33.930000305176,0</coordinates>
+					<coordinates>18.459999084473,-33.930000305176,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5032,7 +5032,7 @@
 			<Placemark>
 				<name>Gauteng WordPress Network</name>
 				<Point>
-					<coordinates>28.129999160767,'-26,0</coordinates>
+					<coordinates>28.129999160767,-26,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5158,7 +5158,7 @@
 			<Placemark>
 				<name>Comunidade WordPress Curitiba</name>
 				<Point>
-					<coordinates>-49.290000915527,'-25.420000076294,0</coordinates>
+					<coordinates>-49.290000915527,-25.420000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5170,7 +5170,7 @@
 			<Placemark>
 				<name>WordPress Sunshine Coast</name>
 				<Point>
-					<coordinates>153.07000732422,'-26.639999389648,0</coordinates>
+					<coordinates>153.07000732422,-26.639999389648,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5272,7 +5272,7 @@
 			<Placemark>
 				<name>Jakarta WordPress Meetup</name>
 				<Point>
-					<coordinates>106.83000183105,'-6.1799998283386,0</coordinates>
+					<coordinates>106.83000183105,-6.1799998283386,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5398,7 +5398,7 @@
 			<Placemark>
 				<name>Belo Horizonte WordPress Group</name>
 				<Point>
-					<coordinates>-43.939998626709,'-19.920000076294,0</coordinates>
+					<coordinates>-43.939998626709,-19.920000076294,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5416,7 +5416,7 @@
 			<Placemark>
 				<name>WordPress Wellington</name>
 				<Point>
-					<coordinates>174.7799987793,'-41.279998779297,0</coordinates>
+					<coordinates>174.7799987793,-41.279998779297,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>
@@ -5554,7 +5554,7 @@
 			<Placemark>
 				<name>WordPress Perth</name>
 				<Point>
-					<coordinates>115.83999633789,'-31.959999084473,0</coordinates>
+					<coordinates>115.83999633789,-31.959999084473,0</coordinates>
 				</Point>
 			</Placemark>
 			<Placemark>

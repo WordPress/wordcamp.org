@@ -14,12 +14,13 @@
 		most wordcamps have to have a meetup first, but regional camps can be in cities that don't have a meetup, and camps, so still need to include camps in addition to meetups.
 		export wordcamps to csv from https://central.wordcamp.org/wp-admin/index.php?page=wordcamp-reports&report=wordcamp-details
 			restrict export to camps from the past 12 months, since this map is of "active" events
-			need name, start date, and coordinate fields
+			need name, url, and coordinate fields
 		take into libreoffice and use "text to columns" feature to split coordinates into latitude and longitude columns, save that as CSV
 		you'll also need to trim the `'` character from the begining of cells that contain negative latitudes.
 			that's added to the csv for security reasons, but will mess up the KML if it's not removed
-			doing a search/replace for `<coordinates>'` is a good way to get rid of it.
+			doing a search/replace for `<coordinates>'` and `,'-` is a good way to get rid of it.
 		upload CSV to http://convertcsv.com/csv-to-kml.htm, convert to KML
+			use url as description
 			make sure you get latitude and longitude in the right order. KML wants longitude first, then latitude.
 		edit groups.kml and delete all the existing <placemark> entries under the `WordCamp` <folder>
 		then paste the new <Placemark> entries into that folder
@@ -29,7 +30,7 @@
 		#### meetups
 		export meetsup to csv from https://central.wordcamp.org/wp-admin/index.php?page=wordcamp-reports&report=meetup-groups
 			select the past 12 months
-		remove columns except name, latitude, longitude
+		remove columns except name, url, latitude, longitude
 		repeat wordpress process to add to convert to KML and add to groups.kml
 
 
@@ -41,6 +42,8 @@
 	### potential process improvements if use this again in future
 		could have a script that generates the exact KML we want, instead of bothering with the manual conversion
 	 	don't need to combine them, can have multiple kmllayers, so just setup one file for each layer. it's fine to have one script for wordcamps and another for meetups
+		make urls in descriptions links
+		maybe setup <extendeddata> like older versions -- https://github.com/WordPress/wordcamp.org/blob/f99f6100aa6f7b7612e442dd74efd5171fa2f777/public_html/wp-content/miscellaneous/active-groups-map/groups.kml ?
 
 	### misc
 		potentially interesting to use this to see which areas don't have a meetup within driving distance, and focus some efforts there, to make sure everyone in the world has access to a meetup

@@ -21,7 +21,9 @@ function install_composer() {
 }
 
 function do_extra_setup() {
-  PKG_PATH="/usr/src"
+  if [ -z ${PKG_PATH+x} ]; then
+    PKG_PATH="/usr/src"
+  fi
 
   if [ ! -f $PKG_PATH/composer.json ]; then
     echo 'ERROR: composer.json file not found'

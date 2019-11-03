@@ -1132,6 +1132,8 @@ function wcpt_metabox( $meta_keys ) {
 		'Telephone'                       => 'Required for shipping.',
 		'Mailing Address'                 => 'Shipping address.',
 		'Physical Address'                => 'Please include the city, state/province and country.', // So it can be geocoded correctly for the map.
+		'Twitter'                         => 'Should begin with @. Ex. @wordpress',
+		'WordCamp Hashtag'                => 'Should begin with #. Ex. #wcus',
 		'Global Sponsorship Grant Amount' => 'No commas, thousands separators or currency symbols. Ex. 1234.56',
 		'Global Sponsorship Grant'        => 'Deprecated.',
 	);

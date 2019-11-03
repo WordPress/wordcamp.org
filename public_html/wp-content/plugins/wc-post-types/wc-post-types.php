@@ -1239,6 +1239,23 @@ class WordCamp_Post_Types_Plugin {
 	public function metabox_session_info() {
 		$post             = get_post();
 		$session_time     = absint( get_post_meta( $post->ID, '_wcpt_session_time', true ) );
+		if( !$session_time ) {
+			$most_recent_session_args = array(
+				'post_type'     => 'wcb_session',
+				'orderby'       => 'modified',
+				'post_status'   => array( 'draft', 'published' ),
+				'numberposts'   => '1',
+			);
+			
+			$most_recent_sessions = get_posts( $most_recent_session_args );
+			if( !empty( $most_recent_sessions ) ) {
+				$session_time = absint( get_post_meta( $most_recent_sessions[0]->ID, '_wcpt_session_time', true ) );
+			}
+		}
+		if( !$session_time ) {
+			$wordcamp_start_date = get_wordcamp_post()->meta["Start Date (YYYY-mm-dd)"][0];
+			$session_time = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
+		}
 		$session_date     = ( $session_time ) ? date( 'Y-m-d', $session_time ) : date( 'Y-m-d' );
 		$session_hours    = ( $session_time ) ? date( 'g', $session_time )     : date( 'g' );
 		$session_minutes  = ( $session_time ) ? date( 'i', $session_time )     : '00';

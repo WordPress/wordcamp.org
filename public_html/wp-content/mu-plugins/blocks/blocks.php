@@ -79,8 +79,17 @@ add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories' );
  * @return void
  */
 function register_assets() {
-	$deps_path    = __DIR__ . '/build/blocks.min.deps.json';
-	$dependencies = file_exists( $deps_path ) ? json_decode( file_get_contents( $deps_path ) ) : array();
+	$path        = PLUGIN_DIR . 'build/blocks.min.js';
+	$deps_path   = PLUGIN_DIR . 'build/blocks.min.asset.json';
+	$script_info = file_exists( $deps_path )
+		? require( $deps_path )
+		: array(
+			'dependencies' => array(),
+			'version' => filemtime( $path ),
+		);
+
+	// Special case, because this isn't a wp package.
+	$script_info['dependencies'][] = 'wp-sanitize';
 
 	wp_register_style(
 		'wordcamp-blocks',
@@ -92,8 +101,8 @@ function register_assets() {
 	wp_register_script(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'build/blocks.min.js',
-		$dependencies,
-		filemtime( PLUGIN_DIR . 'build/blocks.min.js' ),
+		$script_info['dependencies'],
+		$script_info['version'],
 		false
 	);
 

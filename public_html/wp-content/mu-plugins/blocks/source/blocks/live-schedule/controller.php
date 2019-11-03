@@ -7,14 +7,23 @@ defined( 'WPINC' ) || die();
  * Register Live Schedule block and enqueue assets.
  */
 function init() {
-	$deps_path    = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.deps.json';
-	$dependencies = file_exists( $deps_path ) ? json_decode( file_get_contents( $deps_path ) ) : array();
+	$path        = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.js';
+	$deps_path   = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.asset.php';
+	$script_info = file_exists( $deps_path )
+		? require( $deps_path )
+		: array(
+			'dependencies' => array(),
+			'version' => filemtime( $path ),
+		);
+
+	// Special case, because this isn't a wp package.
+	$script_info['dependencies'][] = 'wp-sanitize';
 
 	wp_register_script(
 		'wordcamp-live-schedule',
 		\WordCamp\Blocks\PLUGIN_URL . 'build/live-schedule.min.js',
-		$dependencies,
-		filemtime( \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.js' ),
+		$script_info['dependencies'],
+		$script_info['version'],
 		true
 	);
 

@@ -7,13 +7,8 @@ import { get } from 'lodash';
  * WordPress dependencies
  */
 import { decodeEntities } from '@wordpress/html-entities';
-import { stripTags } from '@wordpress/sanitize';
+const { stripTags } = wp.sanitize;
 
-/**
- * Component
- *
- * @returns {Component}
- */
 export default function( { headingLevel = 3, session, track } ) {
 	if ( ! session ) {
 		return null;

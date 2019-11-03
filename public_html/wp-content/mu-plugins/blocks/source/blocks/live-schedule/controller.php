@@ -16,6 +16,9 @@ function init() {
 			'version' => filemtime( $path ),
 		);
 
+	// Special case, because this isn't a wp package.
+	$script_info['dependencies'][] = 'wp-sanitize';
+
 	wp_register_script(
 		'wordcamp-live-schedule',
 		\WordCamp\Blocks\PLUGIN_URL . 'build/live-schedule.min.js',

@@ -88,6 +88,9 @@ function register_assets() {
 			'version' => filemtime( $path ),
 		);
 
+	// Special case, because this isn't a wp package.
+	$script_info['dependencies'][] = 'wp-sanitize';
+
 	wp_register_style(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'build/blocks.min.css',

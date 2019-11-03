@@ -12,6 +12,11 @@ span.swag-needed-icon {
     width: 100%;
 }
 
+body.wp-admin.post-type-wordcamp .postbox textarea,
+body.wp-admin.post-type-wp_meetup .postbox textarea {
+    resize: both;
+}
+
 #post-body input[type=text] {
     width: 50%;
 }

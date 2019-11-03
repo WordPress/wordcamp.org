@@ -134,3 +134,18 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	);
 }
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes' );
+
+/**
+ * Disable Jetpack's email notifications for following a WordCamp if not already set.
+ *
+ * Jetpack defaults to send an email about each subscriber to each WordCamp to the owner
+ * of the Jetpack connection.  No need to receive these emails.
+ *
+ */
+function disable_jetpack_blog_follow_emails() {
+	$social_notifications_subscribe = get_option( 'social_notifications_subscribe' );
+	if ( false === $social_notifications_subscribe ) {
+		update_option( 'social_notifications_subscribe', 'off' );
+	}
+}
+add_filter( 'admin_init', __NAMESPACE__ . '\disable_jetpack_blog_follow_emails' );

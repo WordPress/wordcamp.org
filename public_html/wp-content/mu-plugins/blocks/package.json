@@ -17,20 +17,20 @@
 	},
 	"dependencies": {
 		"classnames": "2.2.6",
-		"react-select": "3.0.4",
+		"react-select": "3.0.8",
 		"rememo": "3.0.0"
 	},
 	"devDependencies": {
-		"@wordpress/components": "8.1.0",
-		"@wordpress/element": "2.6.0",
-		"@wordpress/eslint-plugin": "^2.3.0",
-		"@wordpress/scripts": "3.4.0",
-		"css-loader": "1.0.1",
-		"mini-css-extract-plugin": "0.4.4",
-		"node-sass": "4.11.0",
+		"@wordpress/components": "8.3.2",
+		"@wordpress/element": "2.8.2",
+		"@wordpress/eslint-plugin": "3.1.0",
+		"@wordpress/scripts": "5.1.0",
+		"css-loader": "3.2.0",
+		"mini-css-extract-plugin": "0.8.0",
+		"node-sass": "4.13.0",
 		"prop-types": "15.7.2",
-		"sass-loader": "7.1.0",
-		"webpack-cli": "3.1.1"
+		"sass-loader": "8.0.0",
+		"webpack-cli": "3.3.10"
 	},
 	"browserslist": [
 		"extends @wordpress/browserslist-config"

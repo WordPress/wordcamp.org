@@ -11,10 +11,6 @@
 	"bugs": {
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Blocks%22"
 	},
-	"engines": {
-		"node": ">=8.0.0",
-		"npm": ">=6.0.0"
-	},
 	"dependencies": {
 		"classnames": "2.2.6",
 		"react-select": "3.0.8",

@@ -1,0 +1,23 @@
+{
+	"name": "wordcamp.org",
+	"version": "1.0.0",
+	"description": "WordCamp.org Project",
+	"author": "WordCamp Team",
+	"license": "GPL-2.0-or-later",
+	"private": true,
+	"keywords": [],
+	"homepage": "https://github.com/WordPress/wordcamp.org/",
+	"repository": "git+https://github.com/WordPress/wordcamp.org.git",
+	"bugs": {
+		"url": "https://github.com/WordPress/wordcamp.org/issues/"
+	},
+	"workspaces": [
+		"public_html/wp-content/mu-plugins/blocks"
+	],
+	"browserslist": [
+		"extends @wordpress/browserslist-config"
+	],
+	"eslintIgnore": [
+		"*.min.js"
+	]
+}

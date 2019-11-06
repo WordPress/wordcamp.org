@@ -37,6 +37,7 @@ function load_includes() {
 		928,  // 2017.testing
 		1190, // 2019.dublin
 		1028, // 2019.us
+		1134, // 2019.stuttgart
 	);
 
 	if (

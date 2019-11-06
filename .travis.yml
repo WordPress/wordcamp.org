@@ -24,7 +24,7 @@ jobs:
         - cd public_html/wp-content/mu-plugins/blocks
         # Run eslint & stylelint over all JS/SCSS files
         # @todo Find a way to only run on changed files
-        - yarn lint:js --config=./.eslintrc.js
+        - yarn lint:js --config=./.eslintrc.js --quiet
         - yarn lint:css
         # Make sure the build completes.
         - yarn build

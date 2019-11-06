@@ -3,8 +3,9 @@
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<meta name="viewport" content="width=device-width">
-	<title><?php echo esc_html( get_bloginfo( 'name' ) ); ?></title>
-
+	<?php if ( ! get_theme_support( 'title-tag' ) ) : ?>
+		<title><?php echo esc_html( get_bloginfo( 'name' ) ); ?></title>
+	<?php endif; ?>
 	<?php extract( $GLOBALS['WordCamp_Coming_Soon_Page']->get_template_variables() ); ?>
 	<?php wp_head(); ?>
 </head>

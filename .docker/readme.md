@@ -36,6 +36,13 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	composer install
 	```
 
+1. Install 3rd-party JS packages and build the CSS & JS needed for some projects. You'll need [node](https://nodejs.org/) & [yarn](https://yarnpkg.com/). Optionally you can use [nvm](https://github.com/nvm-sh/nvm) to keep your node version up to date. Run the following to install and build each project (omit `nvm` command if you're not using it).
+    ```bash
+    nvm install && nvm use
+    yarn
+    yarn workspaces run build
+    ```
+
 1. Build and boot the Docker environment.
     ```bash
     docker-compose up --build
@@ -76,8 +83,6 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	If your browser warns you about the self-signed certificates, then the CA certificate is not properly installed. For Chrome, [manually add the CA cert to Keychain Access](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/). For Firefox, import it to `Preferences > Certificates > Advanced > Authorities`.
 
 1. By default, docker will start with data defined in `.docker/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/wordcamp_dev.sql` file and run `docker-compose up --build -d` again.
-
-1. Note that if you want to work on WordCamp blocks, [you must install the node dependencies first](../public_html/wp-content/mu-plugins/blocks/readme.md). This can be done either inside or outside the Docker.
 
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash

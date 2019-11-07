@@ -331,7 +331,13 @@ class WordCamp_Post_Types_Plugin {
 		$sessions                    = get_schedule_sessions( $attr['date'], $tracks_explicitly_specified, $tracks );
 		$columns                     = get_schedule_columns( $tracks, $sessions, $tracks_explicitly_specified );
 
-		$html  = '<table class="wcpt-schedule" border="0">';
+		$class_names = 'wcpt-schedule';
+		// Twenty Twenty has a very narrow content width, use wide width when displaying more than 2 tracks.
+		if ( 'twentytwenty' === get_stylesheet() && ( count( $tracks ) > 2 ) ) {
+			$class_names .= ' alignwide';
+		}
+
+		$html  = sprintf( '<table class="%s" border="0">', $class_names );
 		$html .= '<thead>';
 		$html .= '<tr>';
 

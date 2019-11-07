@@ -81,7 +81,7 @@ add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories' );
  */
 function register_assets() {
 	$path        = PLUGIN_DIR . 'build/blocks.min.js';
-	$deps_path   = PLUGIN_DIR . 'build/blocks.min.asset.json';
+	$deps_path   = PLUGIN_DIR . 'build/blocks.min.asset.php';
 	$script_info = file_exists( $deps_path )
 		? require( $deps_path )
 		: array(

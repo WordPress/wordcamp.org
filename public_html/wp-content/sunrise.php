@@ -73,7 +73,7 @@ function wcorg_canonical_years_redirect() {
 					break;
 
 				case 'us.wordcamp.org':
-					if ( time() <= strtotime( '2019-11-04' ) ) {
+					if ( time() <= strtotime( '2019-11-30' ) ) {
 						$like = '2019.us.wordcamp.org';
 					}
 					break;

@@ -257,7 +257,11 @@ class Sponsor_Invoices extends Date_Range {
 			FROM $table_name
 		" . $where;
 
-		$query   = $wpdb->prepare( $sql, $where_values );
+		if ( $where_values ) {
+			$query = $wpdb->prepare( $sql, $where_values );
+		} else {
+			$query = $sql;
+		}
 		$results = $wpdb->get_results( $query, ARRAY_A );
 
 		if ( ! empty( $results ) ) {

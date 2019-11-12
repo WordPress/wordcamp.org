@@ -585,7 +585,7 @@ class Sponsor_Invoices extends Date_Range {
 
 			$data = $report->get_data();
 
-			$exporter = new Reports\Export_CSV( array(
+			$exporter = new Utilities\Export_CSV( array(
 				'filename' => $filename,
 				'headers'  => $headers,
 				'data'     => $data,

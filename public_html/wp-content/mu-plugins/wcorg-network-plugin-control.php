@@ -37,6 +37,7 @@ function _get_network_plugin_state_list( $state ) {
 			'custom-content-width/custom-content-width.php',
 			'email-post-changes/email-post-changes.php',
 			'email-post-changes-specific-post/email-post-changes-specific-post.php',
+			'gutenberg/gutenberg.php',
 			'jetpack/jetpack.php',
 			'jquery-ui-css/jquery-ui-css.php',
 			'tagregator/bootstrap.php',

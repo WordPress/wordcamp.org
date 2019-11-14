@@ -108,6 +108,11 @@ define( 'WORDCAMP_QBO_CONSUMER_KEY',    '' );
 define( 'WORDCAMP_QBO_CONSUMER_SECRET', '' );
 define( 'WORDCAMP_QBO_HMAC_KEY',        '' );
 
+define( 'WORDCAMP_SANDBOX_QBO_CLIENT_ID',        '' );
+define( 'WORDCAMP_SANDBOX_QBO_CLIENT_SECRET',    '' );
+define( 'WORDCAMP_PRODUCTION_QBO_CLIENT_ID',     '' );
+define( 'WORDCAMP_PRODUCTION_QBO_CLIENT_SECRET', '' );
+
 define( 'REMOTE_CSS_GITHUB_ID',         '' );
 define( 'REMOTE_CSS_GITHUB_SECRET',     '' );
 

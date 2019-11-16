@@ -31,6 +31,43 @@ function get_oauth_option_key() {
 }
 
 /**
+ * Save the details of an OAuth token to the database.
+ *
+ * @param string $access
+ * @param string $refresh
+ * @param string $realm_id
+ *
+ * @return bool
+ */
+function save_oauth_token( $access, $refresh, $realm_id ) {
+	$token = array(
+		'accessTokenKey'  => $access,
+		'refreshTokenKey' => $refresh,
+		'QBORealmID'      => $realm_id,
+	);
+
+	return update_site_option( get_oauth_option_key(), $token );
+}
+
+/**
+ * Delete an OAuth token from the database.
+ *
+ * @return bool
+ */
+function delete_oauth_token() {
+	return delete_site_option( get_oauth_option_key() );
+}
+
+/**
+ * Get a stored OAuth token from the database.
+ *
+ * @return array
+ */
+function get_oauth_token() {
+	return get_site_option( get_oauth_option_key(), array() );
+}
+
+/**
  * Filter: Add client configuration details depending on the environment.
  *
  * @param array $config
@@ -50,7 +87,7 @@ function set_client_config( array $config ) {
 						'ClientSecret' => WORDCAMP_PRODUCTION_QBO_CLIENT_SECRET,
 						'baseUrl'      => 'Production',
 					),
-					get_site_option( get_oauth_option_key(), array() )
+					get_oauth_token()
 				);
 			}
 			break;
@@ -65,7 +102,7 @@ function set_client_config( array $config ) {
 						'ClientSecret' => WORDCAMP_SANDBOX_QBO_CLIENT_SECRET,
 						'baseUrl'      => 'Development',
 					),
-					get_site_option( get_oauth_option_key(), array() )
+					get_oauth_token()
 				);
 			}
 			break;

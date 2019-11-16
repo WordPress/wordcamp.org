@@ -3,6 +3,7 @@ namespace WordCamp\QuickBooks\Admin;
 
 use WordCamp\QuickBooks\Client;
 use const WordCamp\QuickBooks\{ OAUTH_CAP, PLUGIN_DIR, PLUGIN_PREFIX };
+use function WordCamp\Quickbooks\{ save_oauth_token, delete_oauth_token };
 
 defined( 'WPINC' ) || die();
 
@@ -31,17 +32,22 @@ function add_page() {
  * @return void
  */
 function render_page() {
-	$errors   = array();
-	$messages = array();
-
+	$errors = array();
 	$client = new Client();
+
+	maybe_request_token( $client );
+
+	if ( $client->has_valid_token() ) {
+		$cmd    = 'revoke';
+		$button = 'Disconnect';
+	} else {
+		$cmd    = 'authorize';
+		$button = 'Connect';
+	}
 
 	if ( $client->has_error() ) {
 		$errors = array_merge( $errors, $client->error->get_error_messages() );
 	}
-
-	$cmd    = 'authorize';
-	$button = 'Authorize';
 
 	require PLUGIN_DIR . '/views/admin.php';
 }
@@ -56,11 +62,68 @@ function handle_form_post() {
 		wp_die( 'You do not have permission to perform this action.' );
 	}
 
-	$cmd = filter_input( INPUT_POST, 'cmd' );
+	$client = new Client();
+	$cmd    = filter_input( INPUT_POST, 'cmd' );
 
 	switch ( $cmd ) {
 		case 'authorize':
+			$url = wp_sanitize_redirect( $client->get_authorize_url() );
 
-			break;
+			add_filter( 'allowed_redirect_hosts', __NAMESPACE__ . '\allow_intuit_domain_redirect', 10 , 2 );
+
+			wp_safe_redirect( $url );
+			exit();
+
+		case 'revoke':
+			$client->revoke_token();
+			delete_oauth_token();
+
+			$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );
+
+			wp_safe_redirect( $url );
+			exit();
 	}
+}
+
+/**
+ * Complete the OAuth connection process if the right data is available.
+ *
+ * Once a user has authorized a connection on the Intuit site, they are redirected back to our page, along with
+ * an authorization code and realm ID. If those two pieces of data are in the $_GET, and we don't already have a valid
+ * token, we need to send a request to get the token.
+ *
+ * @param Client $client
+ *
+ * @return void
+ */
+function maybe_request_token( Client &$client ) {
+	$authorization_code = filter_input( INPUT_GET, 'code' );
+	$realm_id           = filter_input( INPUT_GET, 'realmId' );
+
+	if ( ! $client->has_valid_token() && $authorization_code && $realm_id ) {
+		$token = $client->exchange_code_for_token( $authorization_code, $realm_id );
+
+		if ( is_array( $token ) ) {
+			save_oauth_token( ...$token );
+		}
+	}
+}
+
+/**
+ * Add an Intuit domain to the safe redirect list so we can go complete the OAuth process.
+ *
+ * This filter should only be added right before doing the redirect, so that the Intuit domain isn't always
+ * considered "safe".
+ *
+ * @param array  $allowed_domains
+ * @param string $domain
+ *
+ * @return array
+ */
+function allow_intuit_domain_redirect( $allowed_domains, $domain ) {
+	if ( preg_match( '#\.intuit\.com$#', $domain ) ) {
+		$allowed_domains[] = $domain;
+	}
+
+	return array_unique( $allowed_domains );
 }

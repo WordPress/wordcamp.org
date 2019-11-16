@@ -69,7 +69,7 @@ function handle_form_post() {
 		case 'authorize':
 			$url = wp_sanitize_redirect( $client->get_authorize_url() );
 
-			add_filter( 'allowed_redirect_hosts', __NAMESPACE__ . '\allow_intuit_domain_redirect', 10 , 2 );
+			add_filter( 'allowed_redirect_hosts', __NAMESPACE__ . '\allow_intuit_domain_redirect', 10, 2 );
 
 			wp_safe_redirect( $url );
 			exit();

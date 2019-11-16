@@ -42,7 +42,7 @@ defined( 'WPINC' ) || die();
 	<?php endif; ?>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<?php wp_nonce_field( $cmd, PLUGIN_PREFIX . '_oauth_' . $cmd ); // TODO ?>
+		<?php wp_nonce_field( $cmd, PLUGIN_PREFIX . '_oauth_' . $cmd ); ?>
 
 		<input type="hidden" name="action" value="<?php echo esc_attr( PLUGIN_PREFIX ); ?>-oauth" />
 		<input type="hidden" name="cmd" value="<?php echo esc_attr( $cmd ); ?>" />

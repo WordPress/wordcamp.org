@@ -65,14 +65,17 @@ class Client {
 		 *     @type string $QBORealmID      This array key should only be added when the value is available.
 		 * }
 		 */
-		$config = apply_filters( 'wordcamp_qbo_client_config', array(
-			'auth_mode'    => 'oauth2',
-			'ClientID'     => '',
-			'ClientSecret' => '',
-			'RedirectURI'  => self::OAUTH_REDIRECT_URI,
-			'scope'        => 'com.intuit.quickbooks.accounting',
-			'baseUrl'      => 'Development',
-		) );
+		$config = apply_filters(
+			'wordcamp_qbo_client_config',
+			array(
+				'auth_mode'    => 'oauth2',
+				'ClientID'     => '',
+				'ClientSecret' => '',
+				'RedirectURI'  => self::OAUTH_REDIRECT_URI,
+				'scope'        => 'com.intuit.quickbooks.accounting',
+				'baseUrl'      => 'Development',
+			)
+		);
 
 		try {
 			$this->data_service = DataService::Configure( $config );
@@ -165,7 +168,7 @@ class Client {
 		try {
 			$info = $this->data_service->getCompanyInfo();
 
-			return $info->CompanyName;
+			return $info->CompanyName; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		} catch ( SdkException $e ) {
 			return sprintf(
 				'<code>%s</code>',

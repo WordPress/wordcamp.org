@@ -8,6 +8,7 @@ defined( 'WPINC' ) || die();
 
 add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page' );
 add_action( 'admin_post_' . PLUGIN_PREFIX . '-oauth', __NAMESPACE__ . '\handle_form_post' );
+add_action( 'network_admin_notices', __NAMESPACE__ . '\maybe_show_disconnection_warning' );
 
 /**
  * Add a settings page.
@@ -115,4 +116,25 @@ function allow_intuit_domain_redirect( $allowed_domains, $domain ) {
 	}
 
 	return array_unique( $allowed_domains );
+}
+
+/**
+ * Network admins should know when QBO is not connected.
+ *
+ * @return void
+ */
+function maybe_show_disconnection_warning() {
+	$client = new Client();
+
+	if ( ! $client->has_valid_token() ) {
+		$client->error->add(
+			'disconnected',
+			sprintf(
+				'WordCamp is disconnected from QuickBooks. <a href="%s">Learn more.</a>',
+				esc_url( add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) ) )
+			)
+		);
+
+		require PLUGIN_DIR . '/views/admin-form-error.php';
+	}
 }

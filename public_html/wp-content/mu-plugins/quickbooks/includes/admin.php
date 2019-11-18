@@ -31,10 +31,7 @@ function add_page() {
  * @return void
  */
 function render_page() {
-	$errors = array();
 	$client = new Client();
-
-	$client->maybe_exchange_code_for_token();
 
 	if ( $client->has_valid_token() ) {
 		$cmd    = 'revoke';
@@ -42,10 +39,6 @@ function render_page() {
 	} else {
 		$cmd    = 'authorize';
 		$button = 'Connect';
-	}
-
-	if ( $client->has_error() ) {
-		$errors = array_merge( $errors, $client->error->get_error_messages() );
 	}
 
 	require PLUGIN_DIR . '/views/admin.php';
@@ -62,7 +55,11 @@ function handle_form_post() {
 	}
 
 	$client = new Client();
-	$cmd    = filter_input( INPUT_POST, 'cmd' );
+
+	$cmd = filter_input( INPUT_POST, 'cmd' );
+	if ( ! $cmd ) {
+		$cmd = filter_input( INPUT_GET, 'cmd' );
+	}
 
 	switch ( $cmd ) {
 		case 'authorize':
@@ -73,11 +70,25 @@ function handle_form_post() {
 			wp_safe_redirect( $url );
 			exit();
 
-		case 'revoke':
-			$revoke_result = $client->revoke_token();
+		case 'exchange':
+			$client->maybe_exchange_code_for_token();
 
-			if ( is_wp_error( $revoke_result ) ) {
-				wp_die( wp_kses_post( $revoke_result->get_error_message() ) );
+			if ( $client->has_error() ) {
+				require PLUGIN_DIR . '/views/admin-form-error.php';
+				break;
+			}
+
+			$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );
+
+			wp_safe_redirect( $url );
+			exit();
+
+		case 'revoke':
+			$client->revoke_token();
+
+			if ( $client->has_error() ) {
+				require PLUGIN_DIR . '/views/admin-form-error.php';
+				break;
 			}
 
 			$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );

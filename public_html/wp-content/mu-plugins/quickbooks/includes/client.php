@@ -23,7 +23,7 @@ class Client {
 	 *
 	 * This is hardcoded here since it has to be hardcoded in the QBO app.
 	 */
-	const OAUTH_REDIRECT_URI = 'https://wordcamp.org/wp-admin/network/settings.php?page=quickbooks';
+	const OAUTH_REDIRECT_URI = 'https://wordcamp.org/wp-admin/admin-post.php?action=wordcamp-qbo-oauth&cmd=exchange';
 
 	/**
 	 * @var WP_Error|null
@@ -50,36 +50,7 @@ class Client {
 			return;
 		}
 
-		/**
-		 * Filter: Add configuration values for the QBO V3 PHP SDK.
-		 *
-		 * @param array $config {
-		 *     See https://intuit.github.io/QuickBooks-V3-PHP-SDK/configuration.html
-		 *
-		 *     @type string $auth_mode
-		 *     @type string $ClientID
-		 *     @type string $ClientSecret
-		 *     @type string RedirectURI
-		 *     @type string $scope
-		 *     @type string $baseUrl
-		 *     @type string $accessTokenKey  This array key should only be added when the value is available.
-		 *     @type string $refreshTokenKey This array key should only be added when the value is available.
-		 *     @type string $QBORealmID      This array key should only be added when the value is available.
-		 * }
-		 */
-		$config = apply_filters(
-			'wordcamp_qbo_client_config',
-			array(
-				'auth_mode'    => 'oauth2',
-				'RedirectURI'  => self::OAUTH_REDIRECT_URI,
-				'scope'        => 'com.intuit.quickbooks.accounting',
-				'ClientID'     => '',
-				'ClientSecret' => '',
-				'baseUrl'      => 'Development',
-			)
-		);
-
-		$config = array_merge( $config, $this->get_oauth_token_data() );
+		$config = $this->get_client_config();
 
 		if ( empty( $config['ClientID'] ) || empty( $config['ClientSecret'] ) ) {
 			$this->error->add(
@@ -106,13 +77,11 @@ class Client {
 				 * See https://intuit.github.io/QuickBooks-V3-PHP-SDK/authorization.html#oauth-2-0-vs-1-0a-in-quickbooks-online
 				 */
 				$token = $this->data_service->getOAuth2LoginHelper()->refreshToken();
-				$this->save_oauth_token_data( $token );
+				self::save_oauth_token_data( $token );
 			} catch ( SdkException | ServiceException $exception ) {
 				$this->add_error_from_exception( $exception );
 
 				if ( $this->error->get_error_messages( 'invalid_grant' ) ) {
-					//$this->delete_oauth_token_data(); todo delete the bad data, or keep it so error remains surfaced?
-
 					$this->error->add(
 						'broken_oauth_connection',
 						'The connection to QuickBooks has failed. Please try reconnecting.',
@@ -120,9 +89,50 @@ class Client {
 					);
 
 					$this->error->remove( 'invalid_grant' );
+
+					// The bad token data needs to be removed or the SDK will throw an exception when trying to reconnect.
+					self::delete_oauth_token_data();
 				}
 			}
 		}
+	}
+
+	/**
+	 * Configuration parameters for the SDK's DataService class.
+	 *
+	 * @return array
+	 */
+	protected function get_client_config() {
+		/**
+		 * Filter: Add configuration values for the QBO V3 PHP SDK.
+		 *
+		 * @param array $config {
+		 *     See https://intuit.github.io/QuickBooks-V3-PHP-SDK/configuration.html
+		 *
+		 *     @type string $auth_mode
+		 *     @type string RedirectURI
+		 *     @type string $scope
+		 *     @type string $ClientID
+		 *     @type string $ClientSecret
+		 *     @type string $baseUrl
+		 *     @type string $accessTokenKey  This array key should only be added when the value is available.
+		 *     @type string $refreshTokenKey This array key should only be added when the value is available.
+		 *     @type string $QBORealmID      This array key should only be added when the value is available.
+		 * }
+		 */
+		$config = apply_filters(
+			'wordcamp_qbo_client_config',
+			array(
+				'auth_mode'    => 'oauth2',
+				'RedirectURI'  => self::OAUTH_REDIRECT_URI,
+				'scope'        => 'com.intuit.quickbooks.accounting',
+				'ClientID'     => '',
+				'ClientSecret' => '',
+				'baseUrl'      => 'Development',
+			)
+		);
+
+		return array_merge( $config, self::get_oauth_token_data() );
 	}
 
 	/**
@@ -133,7 +143,7 @@ class Client {
 	 *
 	 * @return string
 	 */
-	protected function generate_oauth_option_key() {
+	protected static function generate_oauth_option_key() {
 		$environment = ( defined( 'WORDCAMP_ENVIRONMENT' ) ) ? WORDCAMP_ENVIRONMENT : 'development';
 
 		return PLUGIN_PREFIX . '_oauth_' . $environment;
@@ -144,8 +154,8 @@ class Client {
 	 *
 	 * @return array
 	 */
-	public function get_oauth_token_data() {
-		$key = $this->generate_oauth_option_key();
+	protected static function get_oauth_token_data() {
+		$key = self::generate_oauth_option_key();
 
 		return get_site_option( $key, array() );
 	}
@@ -158,29 +168,27 @@ class Client {
 	 * @return bool
 	 * @throws SdkException
 	 */
-	public function save_oauth_token_data( OAuth2AccessToken $token ) {
-		try {
-			$data = array(
-				'accessTokenKey'  => $token->getAccessToken(),
-				'refreshTokenKey' => $token->getRefreshToken(),
-				'QBORealmID'      => $token->getRealmID(),
-			);
+	protected static function save_oauth_token_data( OAuth2AccessToken $token ) {
+		$data = array(
+			'accessTokenKey'  => $token->getAccessToken(),
+			'refreshTokenKey' => $token->getRefreshToken(),
+			'QBORealmID'      => $token->getRealmID(),
+		);
 
-			$key = $this->generate_oauth_option_key();
+		$key = self::generate_oauth_option_key();
 
-			return update_site_option( $key, $data );
-		} catch ( SdkException $exception ) {
-			throw $exception;
-		}
+		return update_site_option( $key, $data );
 	}
 
 	/**
 	 * Remove stored OAuth token data from the database.
 	 *
+	 * This is public and static in case the stored data needs to be deleted externally as a reset.
+	 *
 	 * @return bool
 	 */
-	public function delete_oauth_token_data() {
-		$key = $this->generate_oauth_option_key();
+	public static function delete_oauth_token_data() {
+		$key = self::generate_oauth_option_key();
 
 		return delete_site_option( $key );
 	}
@@ -276,7 +284,7 @@ class Client {
 
 				$this->data_service->updateOAuth2Token( $token );
 
-				$this->save_oauth_token_data( $token );
+				self::save_oauth_token_data( $token );
 			} catch ( SdkException | ServiceException $exception ) {
 				$this->add_error_from_exception( $exception );
 			}
@@ -286,7 +294,7 @@ class Client {
 	/**
 	 * Revoke the current valid token.
 	 *
-	 * @return bool|WP_Error
+	 * @return void
 	 */
 	public function revoke_token() {
 		try {
@@ -294,11 +302,9 @@ class Client {
 
 			$this->data_service->getOAuth2LoginHelper()->revokeToken( $token->getRefreshToken() );
 
-			return $this->delete_oauth_token_data();
+			self::delete_oauth_token_data();
 		} catch ( SdkException $exception ) {
 			$this->add_error_from_exception( $exception );
-
-			return $this->error;
 		}
 	}
 

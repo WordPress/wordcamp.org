@@ -109,6 +109,18 @@ class Client {
 				$this->save_oauth_token_data( $token );
 			} catch ( SdkException | ServiceException $exception ) {
 				$this->add_error_from_exception( $exception );
+
+				if ( $this->error->get_error_messages( 'invalid_grant' ) ) {
+					//$this->delete_oauth_token_data(); todo delete the bad data, or keep it so error remains surfaced?
+
+					$this->error->add(
+						'broken_oauth_connection',
+						'The connection to QuickBooks has failed. Please try reconnecting.',
+						$this->error->get_error_messages( 'invalid_grant' )
+					);
+
+					$this->error->remove( 'invalid_grant' );
+				}
 			}
 		}
 	}

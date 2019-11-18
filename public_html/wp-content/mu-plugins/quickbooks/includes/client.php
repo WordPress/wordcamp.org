@@ -93,7 +93,13 @@ class Client {
 		}
 	}
 
-
+	/**
+	 * Shortcut for importing an Exception into the client's WP_Error instance.
+	 *
+	 * @param Exception $exception
+	 *
+	 * @return void
+	 */
 	protected function add_error_from_exception( Exception $exception ) {
 		$this->error->add( $exception->getCode(), $exception->getMessage() );
 	}

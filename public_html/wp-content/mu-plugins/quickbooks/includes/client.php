@@ -1,6 +1,7 @@
 <?php
 namespace WordCamp\QuickBooks;
 
+use Exception;
 use QuickBooksOnline\API\DataService\DataService;
 use QuickBooksOnline\API\Exception\SdkException;
 use QuickBooksOnline\API\Exception\ServiceException;
@@ -79,17 +80,22 @@ class Client {
 
 		try {
 			$this->data_service = DataService::Configure( $config );
-		} catch ( SdkException $e ) {
-			$this->error->add( $e->getCode(), $e->getMessage() );
+		} catch ( SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
 		}
 
 		if ( isset( $config['refreshTokenKey'] ) ) {
 			try {
 				$this->data_service->getOAuth2LoginHelper()->refreshToken();
-			} catch ( ServiceException $e ) {
-				$this->error->add( $e->getCode(), $e->getMessage() );
+			} catch ( ServiceException $exception ) {
+				$this->add_error_from_exception( $exception );
 			}
 		}
+	}
+
+
+	protected function add_error_from_exception( Exception $exception ) {
+		$this->error->add( $exception->getCode(), $exception->getMessage() );
 	}
 
 	/**
@@ -152,8 +158,8 @@ class Client {
 				$token->getRefreshToken(),
 				$token->getRealmID(),
 			);
-		} catch ( SdkException | ServiceException $e ) {
-			$this->error->add( $e->getCode(), $e->getMessage() );
+		} catch ( SdkException | ServiceException $exception ) {
+			$this->add_error_from_exception( $exception );
 
 			return $this->error;
 		}
@@ -169,10 +175,10 @@ class Client {
 			$info = $this->data_service->getCompanyInfo();
 
 			return $info->CompanyName; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		} catch ( SdkException $e ) {
+		} catch ( SdkException $exception ) {
 			return sprintf(
 				'<code>%s</code>',
-				$e->getCode()
+				$exception->getCode()
 			);
 		}
 	}
@@ -188,16 +194,16 @@ class Client {
 			$expires = strtotime( $token->getRefreshTokenExpiresAt() );
 
 			return human_time_diff( time(), $expires );
-		} catch ( SdkException $e ) {
+		} catch ( SdkException $exception ) {
 			return sprintf(
 				'<code>%s</code>',
-				$e->getCode()
+				$exception->getCode()
 			);
 		}
 	}
 
 	/**
-	 * Revoke the current valid token. The OAuth connection will have to be re-established.
+	 * Revoke the current valid token.
 	 *
 	 * @return bool|WP_Error
 	 */
@@ -206,8 +212,8 @@ class Client {
 			$token = $this->data_service->getOAuth2LoginHelper()->getAccessToken();
 
 			return $this->data_service->getOAuth2LoginHelper()->revokeToken( $token->getRefreshToken() );
-		} catch ( SdkException $e ) {
-			$this->error->add( $e->getCode(), $e->getMessage() );
+		} catch ( SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
 
 			return $this->error;
 		}

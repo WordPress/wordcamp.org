@@ -78,6 +78,15 @@ class Client {
 			)
 		);
 
+		if ( empty( $config['ClientID'] ) || empty( $config['ClientSecret'] ) ) {
+			$this->error->add(
+				'missing_credentials',
+				'The required credentials for connecting to the QBO API are unavailable.'
+			);
+
+			return;
+		}
+
 		try {
 			$this->data_service = DataService::Configure( $config );
 		} catch ( SdkException $exception ) {

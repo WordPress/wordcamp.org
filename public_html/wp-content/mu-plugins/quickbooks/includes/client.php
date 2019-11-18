@@ -181,7 +181,21 @@ class Client {
 	 * @return void
 	 */
 	protected function add_error_from_exception( Exception $exception ) {
-		$this->error->add( $exception->getCode(), $exception->getMessage() );
+		$error_code    = $exception->getCode();
+		$error_message = $exception->getMessage();
+
+		if ( ! $error_code || is_numeric( $error_code ) ) {
+			// Try to parse a useful error code from the message. Sometimes there is raw JSON included.
+			if ( preg_match( '#Body: (\[[^\]]+\])#', $error_message, $matches ) ) {
+				$body = json_decode( $matches[1], true );
+
+				if ( isset( $body[0]['error'] ) ) {
+					$error_code = $body[0]['error'];
+				}
+			}
+		}
+
+		$this->error->add( $error_code, $error_message );
 	}
 
 	/**
@@ -190,7 +204,7 @@ class Client {
 	 * @return bool
 	 */
 	public function has_error() {
-		return ! empty( $this->error->get_error_messages() );
+		return ! empty( $this->error->has_errors() );
 	}
 
 	/**

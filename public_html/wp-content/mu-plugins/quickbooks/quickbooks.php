@@ -13,61 +13,6 @@ require_once PLUGIN_DIR . '/includes/admin.php';
 add_filter( 'wordcamp_qbo_client_config', __NAMESPACE__ . '\set_client_config' );
 
 /**
- * Helper to determine the current environment.
- *
- * @return string
- */
-function get_environment() {
-	return ( defined( 'WORDCAMP_ENVIRONMENT' ) ) ? WORDCAMP_ENVIRONMENT : 'development';
-}
-
-/**
- * The option key for storing/retrieving OAuth details.
- *
- * @return string
- */
-function get_oauth_option_key() {
-	return PLUGIN_PREFIX . '_oauth_' . get_environment();
-}
-
-/**
- * Save the details of an OAuth token to the database.
- *
- * @param string $access
- * @param string $refresh
- * @param string $realm_id
- *
- * @return bool
- */
-function save_oauth_token( $access, $refresh, $realm_id ) {
-	$token = array(
-		'accessTokenKey'  => $access,
-		'refreshTokenKey' => $refresh,
-		'QBORealmID'      => $realm_id,
-	);
-
-	return update_site_option( get_oauth_option_key(), $token );
-}
-
-/**
- * Delete an OAuth token from the database.
- *
- * @return bool
- */
-function delete_oauth_token() {
-	return delete_site_option( get_oauth_option_key() );
-}
-
-/**
- * Get a stored OAuth token from the database.
- *
- * @return array
- */
-function get_oauth_token() {
-	return get_site_option( get_oauth_option_key(), array() );
-}
-
-/**
  * Filter: Add client configuration details depending on the environment.
  *
  * @param array $config
@@ -75,7 +20,7 @@ function get_oauth_token() {
  * @return array
  */
 function set_client_config( array $config ) {
-	$environment = get_environment();
+	$environment = ( defined( 'WORDCAMP_ENVIRONMENT' ) ) ? WORDCAMP_ENVIRONMENT : 'development';
 
 	switch ( $environment ) {
 		case 'production':
@@ -86,8 +31,7 @@ function set_client_config( array $config ) {
 						'ClientID'     => WORDCAMP_PRODUCTION_QBO_CLIENT_ID,
 						'ClientSecret' => WORDCAMP_PRODUCTION_QBO_CLIENT_SECRET,
 						'baseUrl'      => 'Production',
-					),
-					get_oauth_token()
+					)
 				);
 			}
 			break;
@@ -101,8 +45,7 @@ function set_client_config( array $config ) {
 						'ClientID'     => WORDCAMP_SANDBOX_QBO_CLIENT_ID,
 						'ClientSecret' => WORDCAMP_SANDBOX_QBO_CLIENT_SECRET,
 						'baseUrl'      => 'Development',
-					),
-					get_oauth_token()
+					)
 				);
 			}
 			break;

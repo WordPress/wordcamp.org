@@ -3,7 +3,6 @@ namespace WordCamp\QuickBooks\Admin;
 
 use WordCamp\QuickBooks\Client;
 use const WordCamp\QuickBooks\{ OAUTH_CAP, PLUGIN_DIR, PLUGIN_PREFIX };
-use function WordCamp\Quickbooks\{ save_oauth_token, delete_oauth_token };
 
 defined( 'WPINC' ) || die();
 
@@ -35,7 +34,7 @@ function render_page() {
 	$errors = array();
 	$client = new Client();
 
-	maybe_request_token( $client );
+	$client->maybe_exchange_code_for_token();
 
 	if ( $client->has_valid_token() ) {
 		$cmd    = 'revoke';
@@ -75,37 +74,16 @@ function handle_form_post() {
 			exit();
 
 		case 'revoke':
-			$client->revoke_token();
-			delete_oauth_token();
+			$revoke_result = $client->revoke_token();
+
+			if ( is_wp_error( $revoke_result ) ) {
+				wp_die( wp_kses_post( $revoke_result->get_error_message() ) );
+			}
 
 			$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );
 
 			wp_safe_redirect( $url );
 			exit();
-	}
-}
-
-/**
- * Complete the OAuth connection process if the right data is available.
- *
- * Once a user has authorized a connection on the Intuit site, they are redirected back to our page, along with
- * an authorization code and realm ID. If those two pieces of data are in the $_GET, and we don't already have a valid
- * token, we need to send a request to get the token.
- *
- * @param Client $client
- *
- * @return void
- */
-function maybe_request_token( Client &$client ) {
-	$authorization_code = filter_input( INPUT_GET, 'code' );
-	$realm_id           = filter_input( INPUT_GET, 'realmId' );
-
-	if ( ! $client->has_valid_token() && $authorization_code && $realm_id ) {
-		$token = $client->exchange_code_for_token( $authorization_code, $realm_id );
-
-		if ( is_array( $token ) ) {
-			save_oauth_token( ...$token );
-		}
 	}
 }
 

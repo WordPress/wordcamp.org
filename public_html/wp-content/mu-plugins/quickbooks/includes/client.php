@@ -240,11 +240,11 @@ class Client {
 	 * Get the current token object.
 	 *
 	 * @return OAuth2AccessToken
-	 * @throws SdkException
+	 * @throws Exception|SdkException
 	 */
 	protected function get_current_token() {
 		if ( ! $this->has_sdk() ) {
-			throw new SdkException( "Can't get OAuth 2 Access Token Object. The SDK is not available." );
+			throw new Exception( "Can't get OAuth 2 Access Token Object. The SDK is not available." );
 		}
 
 		return $this->data_service->getOAuth2LoginHelper()->getAccessToken();
@@ -268,7 +268,7 @@ class Client {
 			$expire_timestamp = strtotime( $date_string );
 
 			return time() < $expire_timestamp;
-		} catch ( SdkException $exception ) {
+		} catch ( Exception | SdkException $exception ) {
 			return false;
 		}
 	}
@@ -372,7 +372,7 @@ class Client {
 			$expires = strtotime( $token->getRefreshTokenExpiresAt() );
 
 			return human_time_diff( time(), $expires );
-		} catch ( SdkException $exception ) {
+		} catch ( Exception | SdkException $exception ) {
 			return sprintf(
 				'<code>SdkException: %s</code>',
 				$exception->getCode()

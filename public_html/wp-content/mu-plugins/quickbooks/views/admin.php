@@ -8,7 +8,8 @@ defined( 'WPINC' ) || die();
 
 /** @var Client $client */
 /** @var string $cmd */
-/** @var string $button */
+/** @var string $button_label */
+/** @var array  $button_attributes */
 ?>
 
 <div class="wrap">
@@ -53,13 +54,11 @@ defined( 'WPINC' ) || die();
 
 		<?php
 		submit_button(
-			$button,
+			$button_label,
 			'primary',
 			'submit',
 			true,
-			array(
-				'id' => PLUGIN_PREFIX . '-submit-' . esc_attr( $cmd ),
-			)
+			$button_attributes
 		);
 		?>
 	</form>
@@ -68,7 +67,7 @@ defined( 'WPINC' ) || die();
 <script>
 	jQuery( function( $ ) {
 		$( '#wordcamp-qbo-submit-revoke' ).click( function( event ) {
-			if ( ! confirm( 'This will halt all functionality that interacts with QuickBooks Online. Are you sure you want to disconnect?' ) ) {
+			if ( ! confirm( "This will halt all functionality that interacts with QuickBooks Online.\n\nAre you sure you want to disconnect?" ) ) {
 				event.preventDefault();
 			}
 		} );

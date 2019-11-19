@@ -98,6 +98,15 @@ class Client {
 	}
 
 	/**
+	 * Does the client have access to the SDK?
+	 *
+	 * @return bool
+	 */
+	public function has_sdk() {
+		return $this->data_service instanceof DataService;
+	}
+
+	/**
 	 * Configuration parameters for the SDK's DataService class.
 	 *
 	 * @return array
@@ -234,6 +243,10 @@ class Client {
 	 * @throws SdkException
 	 */
 	protected function get_current_token() {
+		if ( ! $this->has_sdk() ) {
+			throw new SdkException( "Can't get OAuth 2 Access Token Object. The SDK is not available." );
+		}
+
 		return $this->data_service->getOAuth2LoginHelper()->getAccessToken();
 	}
 
@@ -243,6 +256,10 @@ class Client {
 	 * @return bool
 	 */
 	public function has_valid_token() {
+		if ( ! $this->has_sdk() ) {
+			return false;
+		}
+
 		// Test if the token works by attempting to retrieve token info not stored in the local database.
 		try {
 			// The `getAccessTokenExpiresAt` doc block says it returns a Date object, but it's actually a
@@ -262,6 +279,10 @@ class Client {
 	 * @return string
 	 */
 	public function get_authorize_url() {
+		if ( ! $this->has_sdk() ) {
+			return '';
+		}
+
 		return $this->data_service->getOAuth2LoginHelper()->getAuthorizationCodeURL();
 	}
 
@@ -278,7 +299,7 @@ class Client {
 		$authorization_code = filter_input( INPUT_GET, 'code' );
 		$realm_id           = filter_input( INPUT_GET, 'realmId' );
 
-		if ( ! $this->has_valid_token() && $authorization_code && $realm_id ) {
+		if ( $this->has_sdk() && ! $this->has_valid_token() && $authorization_code && $realm_id ) {
 			try {
 				$token = $this->data_service->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
 
@@ -297,6 +318,10 @@ class Client {
 	 * @return void
 	 */
 	public function revoke_token() {
+		if ( ! $this->has_sdk() ) {
+			return;
+		}
+
 		try {
 			$token = $this->data_service->getOAuth2LoginHelper()->getAccessToken();
 
@@ -314,6 +339,10 @@ class Client {
 	 * @return string
 	 */
 	public function get_company_name() {
+		if ( ! $this->has_sdk() ) {
+			return '';
+		}
+
 		try {
 			$info = $this->data_service->getCompanyInfo();
 
@@ -332,6 +361,10 @@ class Client {
 	 * @return string
 	 */
 	public function get_refresh_token_expiration() {
+		if ( ! $this->has_sdk() ) {
+			return '';
+		}
+
 		try {
 			// The `getRefreshTokenExpiresAt` doc block says it returns an integer, but it's actually a
 			// formatted date string.

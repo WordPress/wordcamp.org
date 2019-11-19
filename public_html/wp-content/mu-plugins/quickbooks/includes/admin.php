@@ -35,11 +35,18 @@ function render_page() {
 	$client = new Client();
 
 	if ( $client->has_valid_token() ) {
-		$cmd    = 'revoke';
-		$button = 'Disconnect';
+		$cmd          = 'revoke';
+		$button_label = 'Disconnect';
 	} else {
-		$cmd    = 'authorize';
-		$button = 'Connect';
+		$cmd          = 'authorize';
+		$button_label = 'Connect';
+	}
+
+	$button_attributes = array(
+		'id' => PLUGIN_PREFIX . '-submit-' . esc_attr( $cmd ),
+	);
+	if ( ! $client->has_sdk() ) {
+		$button_attributes['disabled'] = true;
 	}
 
 	require PLUGIN_DIR . '/views/admin.php';
@@ -134,7 +141,12 @@ function maybe_show_disconnection_warning() {
 				esc_url( add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) ) )
 			)
 		);
-
-		require PLUGIN_DIR . '/views/admin-form-error.php';
 	}
+
+	// Prevent duplicate dependency warnings. Also it doesn't need to be shown on every Network Admin screen.
+	if ( ! $client->has_sdk() ) {
+		$client->error->remove( 'missing_dependency' );
+	}
+
+	require PLUGIN_DIR . '/views/admin-form-error.php';
 }

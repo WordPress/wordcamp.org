@@ -4,14 +4,10 @@ about: If you have an idea to improve an existing WordCamp feature, please let u
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+Feature requests should be made on the Make Community P2, to ensure everyone can contribute to new ideas. Please follow this process for new features: https://make.wordpress.org/community/feature-requests-for-community-sites/
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+If you have a problem, go back and select the Bug Report option.
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+---------------
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+If you've already made your feature proposal on the p2, you can summarize it here and make sure to include a link.

@@ -64,6 +64,12 @@ function handle_form_post() {
 
 	$client = new Client();
 
+	if ( $client->has_error() ) {
+		require PLUGIN_DIR . '/views/admin-form-error.php';
+
+		return;
+	}
+
 	$cmd = filter_input( INPUT_POST, 'cmd' );
 	if ( ! $cmd ) {
 		$cmd = filter_input( INPUT_GET, 'cmd' );
@@ -79,6 +85,8 @@ function handle_form_post() {
 			exit();
 
 		case 'exchange':
+			// See \WordCamp\QuickBooks\Client::OAUTH_REDIRECT_URI.
+
 			$client->maybe_exchange_code_for_token();
 
 			if ( $client->has_error() ) {

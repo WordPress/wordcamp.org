@@ -17,6 +17,7 @@ function wcorg_include_individual_mu_plugins() {
 	require_once( __DIR__ . '/wp-cli-commands/bootstrap.php' );
 	require_once( __DIR__ . '/camptix-tweaks/camptix-tweaks.php' );
 	require_once( __DIR__ . '/blocks/blocks.php' );
+	require_once __DIR__ . '/quickbooks/quickbooks.php';
 
 	if ( is_readable( __DIR__ . '/vendor/autoload.php' ) ) {
 		require_once __DIR__ . '/vendor/autoload.php';

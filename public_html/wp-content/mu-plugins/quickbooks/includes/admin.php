@@ -142,6 +142,10 @@ function maybe_show_disconnection_warning() {
 	$client = new Client();
 
 	if ( ! $client->has_valid_token() ) {
+		// We don't need any other errors to appear on every Network screen, just this special disconnection one.
+		$client->error->errors     = array();
+		$client->error->error_data = array();
+
 		$client->error->add(
 			'disconnected',
 			sprintf(
@@ -149,12 +153,7 @@ function maybe_show_disconnection_warning() {
 				esc_url( add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) ) )
 			)
 		);
-	}
 
-	// Prevent duplicate dependency warnings. Also it doesn't need to be shown on every Network Admin screen.
-	if ( ! $client->has_sdk() ) {
-		$client->error->remove( 'missing_dependency' );
+		require PLUGIN_DIR . '/views/admin-form-error.php';
 	}
-
-	require PLUGIN_DIR . '/views/admin-form-error.php';
 }

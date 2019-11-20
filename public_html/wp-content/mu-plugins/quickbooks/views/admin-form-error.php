@@ -16,7 +16,9 @@ defined( 'WPINC' ) || die();
 					<summary>
 						<?php echo wp_kses_post( $client->error->get_error_message( $error_code ) ); ?>
 					</summary>
-					<?php echo esc_html( print_r( $client->error->get_error_data( $error_code ), true ) ); ?>
+					<pre>
+						<?php echo esc_html( print_r( $client->error->get_error_data( $error_code ), true ) ); ?>
+					</pre>
 				</details>
 			<?php else : ?>
 				<?php echo wp_kses_post( wpautop( $client->error->get_error_message( $error_code ) ) ); ?>

@@ -17,7 +17,7 @@ define( 'DB_COLLATE', 'utf8mb4_general_ci' );
 define( 'CUSTOM_USER_TABLE',      'wc_users'    );
 define( 'CUSTOM_USER_META_TABLE', 'wc_usermeta' );
 
-$table_prefix  = 'wc_';
+$table_prefix = 'wc_'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride
 
 /*
  * Multisite
@@ -28,13 +28,13 @@ if ( 'buddycamp.test' === $_SERVER['HTTP_HOST'] || '.buddycamp.test' === substr(
 	$wcorg_domain_current_site = 'wordcamp.test';
 }
 
-define( 'WP_ALLOW_MULTISITE',   true ); // Temporary workaround for https://github.com/Automattic/wp-super-cache/issues/97
+define( 'WP_ALLOW_MULTISITE',   true ); // Temporary workaround for https://github.com/Automattic/wp-super-cache/issues/97.
 define( 'MULTISITE',            true );
 define( 'SUBDOMAIN_INSTALL',    true );
 define( 'DOMAIN_CURRENT_SITE',  $wcorg_domain_current_site );
 define( 'PATH_CURRENT_SITE',    '/' );
 define( 'SITE_ID_CURRENT_SITE',  1 );
-define( 'BLOG_ID_CURRENT_SITE',  5 ); // central.wordcamp.test
+define( 'BLOG_ID_CURRENT_SITE',  5 ); // central.wordcamp.test.
 define( 'NOBLOGREDIRECT',       'https://central.wordcamp.test' );
 define( 'SUNRISE',               true );
 define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
@@ -48,7 +48,7 @@ define( 'WP_DEBUG_LOG',     true );
 define( 'WP_DEBUG_DISPLAY', true );
 define( 'SAVEQUERIES',      true );
 define( 'DIEONDBERROR',     false );
-define( 'SCRIPT_DEBUG',     false ); // Temporarily disabled because of https://github.com/WordPress/gutenberg/issues/7897 / https://github.com/WordPress/gutenberg/issues/11360
+define( 'SCRIPT_DEBUG',     false ); // Temporarily disabled because of https://github.com/WordPress/gutenberg/issues/7897 / https://github.com/WordPress/gutenberg/issues/11360.
 define( 'JETPACK_DEV_DEBUG', true );
 
 
@@ -89,7 +89,7 @@ define( 'EMAIL_DEVELOPER_NOTIFICATIONS', 'developers@example.test' );
 define( 'EMAIL_CENTRAL_SUPPORT',         'support@wordcamp.test' );
 
 $trusted_deputies = array(
-	3, // role-tester
+	3, // role-tester.
 );
 
 

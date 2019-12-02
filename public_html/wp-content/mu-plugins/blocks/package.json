@@ -34,6 +34,18 @@
 	"eslintIgnore": [
 		"*.min.js"
 	],
+	"babel": {
+		"presets": [
+			"@wordpress/babel-preset-default"
+		]
+	},
+	"jest": {
+		"preset": "@wordpress/jest-preset-default",
+		"rootDir": "../../../../",
+		"roots": [
+			"<rootDir>/public_html/wp-content/mu-plugins/blocks"
+		]
+	},
 	"scripts": {
 		"start": "wp-scripts start blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",
 		"build": "wp-scripts build blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",

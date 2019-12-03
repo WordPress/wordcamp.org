@@ -13,7 +13,8 @@ defined( 'WPINC' ) || die();
 /**
  * Class Client
  *
- * This acts as a wrapper around the QBO V3 PHP SDK, so it can catch exceptions and handle errors correctly.
+ * This acts as a wrapper around the QBO V3 PHP SDK, so it can catch exceptions and handle errors correctly. The goal
+ * is for all public methods to handle exceptions so that none are thrown outside of the client class.
  *
  * @package WordCamp\QuickBooks
  */
@@ -76,9 +77,9 @@ class Client {
 				 *
 				 * See https://intuit.github.io/QuickBooks-V3-PHP-SDK/authorization.html#oauth-2-0-vs-1-0a-in-quickbooks-online
 				 */
-				$token = $this->data_service->getOAuth2LoginHelper()->refreshToken();
+				$token = $this->data_service()->getOAuth2LoginHelper()->refreshToken();
 				self::save_oauth_token_data( $token );
-			} catch ( SdkException | ServiceException $exception ) {
+			} catch ( Exception | SdkException | ServiceException $exception ) {
 				$this->add_error_from_exception( $exception );
 
 				if ( $this->error->get_error_messages( 'invalid_grant' ) ) {
@@ -95,15 +96,6 @@ class Client {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Does the client have access to the SDK?
-	 *
-	 * @return bool
-	 */
-	public function has_sdk() {
-		return $this->data_service instanceof DataService;
 	}
 
 	/**
@@ -237,17 +229,40 @@ class Client {
 	}
 
 	/**
+	 * Getter for the data_service property. This insulates against fatals if the SDK is not available.
+	 *
+	 * @return DataService|null
+	 * @throws Exception
+	 */
+	protected function data_service() {
+		if ( ! $this->data_service instanceof DataService ) {
+			throw new Exception( "Can't get OAuth 2 Access Token Object. The SDK is not available." );
+		}
+
+		return $this->data_service;
+	}
+
+	/**
+	 * External check to see if the client has access to the SDK.
+	 *
+	 * @return bool
+	 */
+	public function has_sdk() {
+		try {
+			return $this->data_service() instanceof DataService;
+		} catch( Exception $exception ) {
+			return false;
+		}
+	}
+
+	/**
 	 * Get the current token object.
 	 *
 	 * @return OAuth2AccessToken
 	 * @throws Exception|SdkException
 	 */
 	protected function get_current_token() {
-		if ( ! $this->has_sdk() ) {
-			throw new Exception( "Can't get OAuth 2 Access Token Object. The SDK is not available." );
-		}
-
-		return $this->data_service->getOAuth2LoginHelper()->getAccessToken();
+		return $this->data_service()->getOAuth2LoginHelper()->getAccessToken();
 	}
 
 	/**
@@ -256,10 +271,6 @@ class Client {
 	 * @return bool
 	 */
 	public function has_valid_token() {
-		if ( ! $this->has_sdk() ) {
-			return false;
-		}
-
 		// Test if the token works by attempting to retrieve token info not stored in the local database.
 		try {
 			// The `getAccessTokenExpiresAt` doc block says it returns a Date object, but it's actually a
@@ -279,11 +290,13 @@ class Client {
 	 * @return string
 	 */
 	public function get_authorize_url() {
-		if ( ! $this->has_sdk() ) {
+		try {
+			return $this->data_service()->getOAuth2LoginHelper()->getAuthorizationCodeURL();
+		} catch( Exception $exception ) {
+			$this->add_error_from_exception( $exception );
+
 			return '';
 		}
-
-		return $this->data_service->getOAuth2LoginHelper()->getAuthorizationCodeURL();
 	}
 
 	/**
@@ -299,14 +312,14 @@ class Client {
 		$authorization_code = filter_input( INPUT_GET, 'code' );
 		$realm_id           = filter_input( INPUT_GET, 'realmId' );
 
-		if ( $this->has_sdk() && ! $this->has_valid_token() && $authorization_code && $realm_id ) {
+		if ( ! $this->has_valid_token() && $authorization_code && $realm_id ) {
 			try {
-				$token = $this->data_service->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
+				$token = $this->data_service()->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
 
-				$this->data_service->updateOAuth2Token( $token );
+				$this->data_service()->updateOAuth2Token( $token );
 
 				self::save_oauth_token_data( $token );
-			} catch ( SdkException | ServiceException $exception ) {
+			} catch ( Exception | SdkException | ServiceException $exception ) {
 				$this->add_error_from_exception( $exception );
 			}
 		}
@@ -318,18 +331,29 @@ class Client {
 	 * @return void
 	 */
 	public function revoke_token() {
-		if ( ! $this->has_sdk() ) {
-			return;
-		}
-
 		try {
-			$token = $this->data_service->getOAuth2LoginHelper()->getAccessToken();
+			$token = $this->data_service()->getOAuth2LoginHelper()->getAccessToken();
 
-			$this->data_service->getOAuth2LoginHelper()->revokeToken( $token->getRefreshToken() );
+			$this->data_service()->getOAuth2LoginHelper()->revokeToken( $token->getRefreshToken() );
 
 			self::delete_oauth_token_data();
-		} catch ( SdkException $exception ) {
+		} catch ( Exception | SdkException $exception ) {
 			$this->add_error_from_exception( $exception );
+		}
+	}
+
+	/**
+	 * The QuickBooks numerical ID of the company entity we're connected to.
+	 *
+	 * @return int
+	 */
+	public function get_realm_id() {
+		try {
+			return absint( $this->get_current_token()->getRealmID() );
+		} catch ( Exception | SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return 0;
 		}
 	}
 
@@ -339,19 +363,14 @@ class Client {
 	 * @return string
 	 */
 	public function get_company_name() {
-		if ( ! $this->has_sdk() ) {
-			return '';
-		}
-
 		try {
-			$info = $this->data_service->getCompanyInfo();
+			$info = $this->data_service()->getCompanyInfo();
 
 			return $info->CompanyName; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		} catch ( SdkException $exception ) {
-			return sprintf(
-				'<code>SdkException: %s</code>',
-				$exception->getCode()
-			);
+		} catch ( Exception | SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return '<code>Error</code>';
 		}
 	}
 
@@ -361,10 +380,6 @@ class Client {
 	 * @return string
 	 */
 	public function get_refresh_token_expiration() {
-		if ( ! $this->has_sdk() ) {
-			return '';
-		}
-
 		try {
 			// The `getRefreshTokenExpiresAt` doc block says it returns an integer, but it's actually a
 			// formatted date string.
@@ -373,10 +388,9 @@ class Client {
 
 			return human_time_diff( time(), $expires );
 		} catch ( Exception | SdkException $exception ) {
-			return sprintf(
-				'<code>SdkException: %s</code>',
-				$exception->getCode()
-			);
+			$this->add_error_from_exception( $exception );
+
+			return '<code>Error</code>';
 		}
 	}
 }

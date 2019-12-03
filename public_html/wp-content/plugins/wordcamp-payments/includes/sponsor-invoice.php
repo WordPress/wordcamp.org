@@ -72,9 +72,38 @@ function register_post_type() {
  */
 function get_custom_statuses() {
 	return array(
-		'wcbsi_submitted' => esc_html__( 'Submitted', 'wordcamporg' ),
-		'wcbsi_approved'  => esc_html__( 'Sent',      'wordcamporg' ),
-		'wcbsi_paid'      => esc_html__( 'Paid',      'wordcamporg' ),
+		'wcbsi_submitted'     => array(
+			'label'       => esc_html__( 'Submitted', 'wordcamporg' ),
+			'label_count' => _nx_noop(
+				'Submitted <span class="count">(%s)</span>',
+				'Submitted <span class="count">(%s)</span>',
+				'wordcamporg'
+			),
+		),
+		'wcbsi_approved'      => array(
+			'label'       => esc_html__( 'Sent', 'wordcamporg' ),
+			'label_count' => _nx_noop(
+				'Sent <span class="count">(%s)</span>',
+				'Sent <span class="count">(%s)</span>',
+				'wordcamporg'
+			),
+		),
+		'wcbsi_paid'          => array(
+			'label'       => esc_html__( 'Paid', 'wordcamporg' ),
+			'label_count' => _nx_noop(
+				'Paid <span class="count">(%s)</span>',
+				'Paid <span class="count">(%s)</span>',
+				'wordcamporg'
+			),
+		),
+		'wcbsi_uncollectible' => array(
+			'label'       => esc_html__( 'Uncollectible', 'wordcamporg' ),
+			'label_count' => _nx_noop(
+				'Uncollectible <span class="count">(%s)</span>',
+				'Uncollectible <span class="count">(%s)</span>',
+				'wordcamporg'
+			),
+		),
 	);
 }
 
@@ -82,37 +111,19 @@ function get_custom_statuses() {
  * Register our custom post statuses.
  */
 function register_post_statuses() {
-	// todo use get_custom_statuses() for DRYness, but need to handle label_count.
+	$custom_states = get_custom_statuses();
 
-	register_post_status(
-		'wcbsi_submitted',
-		array(
-			'label'              => esc_html_x( 'Submitted', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'wordcamporg' ),
-			'public'             => true,
-			'publicly_queryable' => false,
-		)
-	);
-
-	register_post_status(
-		'wcbsi_approved',
-		array(
-			'label'              => esc_html_x( 'Sent', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Sent <span class="count">(%s)</span>', 'Sent <span class="count">(%s)</span>', 'wordcamporg' ),
-			'public'             => true,
-			'publicly_queryable' => false,
-		)
-	);
-
-	register_post_status(
-		'wcbsi_paid',
-		array(
-			'label'              => esc_html_x( 'Paid', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'wordcamporg' ),
-			'public'             => true,
-			'publicly_queryable' => false,
-		)
-	);
+	foreach ( $custom_states as $slug => $status ) {
+		register_post_status(
+			$slug,
+			array(
+				'label'              => $status['label'],
+				'label_count'        => $status['label_count'],
+				'public'             => true,
+				'publicly_queryable' => false,
+			)
+		);
+	}
 }
 
 /**
@@ -339,9 +350,9 @@ function display_post_states( $states ) {
 
 	$custom_states = get_custom_statuses();
 
-	foreach ( $custom_states as $slug => $name ) {
+	foreach ( $custom_states as $slug => $status ) {
 		if ( $post->post_status === $slug && get_query_var( 'post_status' ) !== $slug ) {
-			$states[ $slug ] = $name;
+			$states[ $slug ] = $status['label'];
 		}
 	}
 

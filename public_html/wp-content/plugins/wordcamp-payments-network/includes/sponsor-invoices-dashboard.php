@@ -109,26 +109,26 @@ function get_submenu_page_sections() {
 	$sections        = array();
 	$current_section = get_current_section();
 
-	foreach ( $statuses as $status_slug => $status_name ) {
-		$status_slug = str_replace( 'wcbsi_', '', $status_slug );    // make the URL easier to read
+	foreach ( $statuses as $slug => $status ) {
+		$slug = str_replace( 'wcbsi_', '', $slug );    // make the URL easier to read.
 
 		$classes = 'nav-tab';
-		if ( $status_slug === $current_section ) {
+		if ( $slug === $current_section ) {
 			$classes .= ' nav-tab-active';
 		}
 
 		$href = add_query_arg(
 			array(
 				'page'    => 'sponsor-invoices-dashboard',
-				'section' => $status_slug,
+				'section' => $slug,
 			),
 			network_admin_url( 'admin.php' )
 		);
 
-		$sections[ $status_slug ] = array(
+		$sections[ $slug ] = array(
 			'classes' => $classes,
 			'href'    => $href,
-			'text'    => $status_name,
+			'text'    => $status['label'],
 		);
 	}
 

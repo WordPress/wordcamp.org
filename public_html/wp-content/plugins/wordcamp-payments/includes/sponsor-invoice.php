@@ -1,5 +1,4 @@
 <?php
-
 /*
  * Create Sponsor Invoice Post type
  */
@@ -8,31 +7,31 @@ namespace WordCamp\Budgets\Sponsor_Invoices;
 use WP_Post;
 use WordCamp_Loader;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 const POST_TYPE = 'wcb_sponsor_invoice';
 
-// Initialization
+// Initialization.
 add_action( 'init',                  __NAMESPACE__ . '\register_post_type'        );
 add_action( 'init',                  __NAMESPACE__ . '\register_post_statuses'    );
 add_action( 'add_meta_boxes',        __NAMESPACE__ . '\init_meta_boxes'           );
 add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets',        11 );
 
-// Admin UI
+// Admin UI.
 add_action( 'edit_form_top',                              __NAMESPACE__ . '\print_introduction_text'   );
 add_filter( 'display_post_states',                        __NAMESPACE__ . '\display_post_states'       );
 add_filter( 'manage_'. POST_TYPE .'_posts_columns',       __NAMESPACE__ . '\get_columns'               );
 add_action( 'manage_'. POST_TYPE .'_posts_custom_column', __NAMESPACE__ . '\render_columns',     10, 2 );
 
-// Saving posts
+// Saving posts.
 add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\set_invoice_status',  10, 2 );
 add_action( 'save_post',           __NAMESPACE__ . '\save_invoice',        10, 2 );
 add_filter( 'map_meta_cap',        __NAMESPACE__ . '\modify_capabilities', 10, 4 );
 
 /**
- * Register the custom post type
+ * Register the custom post type.
  *
- * @return object | \WP_Error
+ * @return object|\WP_Error
  */
 function register_post_type() {
 	$labels = array(
@@ -62,12 +61,12 @@ function register_post_type() {
 		'supports'          => array( 'title' ),
 		'has_archive'       => true,
 	);
-	
+
 	return \register_post_type( POST_TYPE, $args );
 }
 
 /**
- * Get the slugs and names for our custom post statuses
+ * Get the slugs and names for our custom post statuses.
  *
  * @return array
  */
@@ -80,10 +79,10 @@ function get_custom_statuses() {
 }
 
 /**
- * Register our custom post statuses
+ * Register our custom post statuses.
  */
 function register_post_statuses() {
-	// todo use get_custom_statuses() for DRYness, but need to handle label_count
+	// todo use get_custom_statuses() for DRYness, but need to handle label_count.
 
 	register_post_status(
 		'wcbsi_submitted',
@@ -117,10 +116,10 @@ function register_post_statuses() {
 }
 
 /**
- * Register meta boxes
+ * Register meta boxes.
  */
 function init_meta_boxes() {
-	// Replace Core's status box with a custom one
+	// Replace Core's status box with a custom one.
 	remove_meta_box( 'submitdiv', POST_TYPE, 'side' );
 
 	add_meta_box(
@@ -143,7 +142,7 @@ function init_meta_boxes() {
 }
 
 /**
- * Enqueue scripts and stylesheets
+ * Enqueue scripts and stylesheets.
  */
 function enqueue_assets() {
 	wp_register_script(
@@ -164,7 +163,7 @@ function enqueue_assets() {
 }
 
 /**
- * Prepare sponsor data for displaying in the UI
+ * Prepare sponsor data for displaying in the UI.
  *
  * @param int $sponsor_id If passed, will return only data for that sponsor. Otherwise returns all sponsors.
  *
@@ -174,14 +173,14 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 	$data = array();
 
 	$field_names = array(
-		'company_name',	'first_name', 'last_name', 'email_address', 'phone_number',
-		'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country'
+		'company_name', 'first_name', 'last_name', 'email_address', 'phone_number',
+		'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 	);
 
-	// These use dashes instead of underscores because the loop below converts to dashes
+	// These use dashes instead of underscores because the loop below converts to dashes.
 	$required_fields = array(
-		'company-name',	'first-name', 'last-name', 'email-address', 'phone-number',
-		'street-address1', 'city', 'state', 'zip-code', 'country'
+		'company-name', 'first-name', 'last-name', 'email-address', 'phone-number',
+		'street-address1', 'city', 'state', 'zip-code', 'country',
 	);
 
 	if ( is_numeric( $sponsor_id ) ) {
@@ -197,12 +196,12 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 	foreach ( $sponsors as $sponsor ) {
 		$meta_values = get_post_custom( $sponsor->ID );
 
-		$data[ $sponsor->ID ] = array( 'name' => $sponsor->post_title );
+		$data[ $sponsor->ID ]                                = array( 'name' => $sponsor->post_title );
 		$data[ $sponsor->ID ]['data_attributes']['edit-url'] = admin_url( sprintf( 'post.php?post=%s&action=edit', $sponsor->ID ) );
 
 		foreach ( $field_names as $name ) {
 			$meta_key = "_wcpt_sponsor_$name";
-			$data_key = str_replace( '_', '-', $name ); // for consistency with JavaScript conventions
+			$data_key = str_replace( '_', '-', $name ); // for consistency with JavaScript conventions.
 			$value    = '';
 
 			if ( isset( $meta_values[ $meta_key ][0] ) ) {
@@ -220,10 +219,10 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 }
 
 /**
- * Check if all of the required fields have values
+ * Check if all of the required fields have values.
  *
- * @param $submitted_values
- * @param $required_fields
+ * @param array $submitted_values
+ * @param array $required_fields
  *
  * @return bool
  */
@@ -243,13 +242,13 @@ function required_fields_complete( $submitted_values, $required_fields ) {
 }
 
 /**
- * Render the Status metabox
+ * Render the Status metabox.
  *
- * @param WP_Post $post The invoice post
+ * @param \WP_Post $post The invoice post.
  */
 function render_status_metabox( $post ) {
-	require_once( WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php' );
-	require_once( WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php' );
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php';
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
 
 	wp_nonce_field( 'status', 'status_nonce' );
 
@@ -275,17 +274,16 @@ function render_status_metabox( $post ) {
 	}
 
 	$allowed_submit_statuses         = WordCamp_Loader::get_after_contract_statuses();
-	$current_user_can_edit_request = in_array( $post->post_status, $allowed_edit_statuses, true );
+	$current_user_can_edit_request   = in_array( $post->post_status, $allowed_edit_statuses, true );
 	$current_user_can_submit_request = $wordcamp && in_array( $wordcamp->post_status, $allowed_submit_statuses, true );
 
-	require_once( dirname( __DIR__ ) . '/views/sponsor-invoice/metabox-status.php' );
+	require_once dirname( __DIR__ ) . '/views/sponsor-invoice/metabox-status.php';
 }
 
 /**
- * Render Sponsor Invoice Metabox
+ * Render Sponsor Invoice Metabox.
  *
  * @param \WP_Post $post
- *
  */
 function render_sponsor_invoice_metabox( $post ) {
 	wp_nonce_field( 'sponsor_invoice', 'sponsor_invoice_nonce' );
@@ -304,7 +302,7 @@ function render_sponsor_invoice_metabox( $post ) {
 		$selected_sponsor_id = absint( $_GET['sponsor_id'] );
 	}
 
-	require_once( dirname( __DIR__ ) . '/views/sponsor-invoice/metabox-general.php' );
+	require_once dirname( __DIR__ ) . '/views/sponsor-invoice/metabox-general.php';
 }
 
 /**
@@ -320,7 +318,7 @@ function print_introduction_text( $post ) {
 	?>
 
 	<p>
-		<?php _e(
+		<?php esc_html_e(
 			'Invoices typically arrive 1-2 business days after the invoice request has been reviewed and approved.',
 			'wordcamporg'
 		); ?>
@@ -330,7 +328,7 @@ function print_introduction_text( $post ) {
 }
 
 /**
- * Display the status of a post after its title on the Vendor Payments page
+ * Display the status of a post after its title on the Sponsor Invoices page.
  *
  * @param array $states
  *
@@ -342,7 +340,7 @@ function display_post_states( $states ) {
 	$custom_states = get_custom_statuses();
 
 	foreach ( $custom_states as $slug => $name ) {
-		if ( $slug == $post->post_status && $slug != get_query_var( 'post_status' ) ) {
+		if ( $post->post_status === $slug && get_query_var( 'post_status' ) !== $slug ) {
 			$states[ $slug ] = $name;
 		}
 	}
@@ -374,13 +372,17 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 	$invoice_fields_complete = required_fields_complete( $post_data_raw, $required_invoice_fields );
 
 	if ( ! $sponsor_fields_complete || ! $invoice_fields_complete ) {
-		// Set to draft if any required info isn't available
+		// Set to draft if any required info isn't available.
 		$post_data['post_status'] = 'draft';
 
-		// todo display message to user letting them know why this is happening
-		// todo this should run after save, b/c sanitization/validation could empty out some fields
+		// todo display message to user letting them know why this is happening.
+		// todo this should run after save, b/c sanitization/validation could empty out some fields.
 
-	} else if ( in_array( $post_data['post_status'], array( 'auto-draft', 'draft' ), true ) && isset( $_POST['send-invoice'] ) ) {
+	} elseif (
+		in_array( $post_data['post_status'], array( 'auto-draft', 'draft' ), true ) &&
+		// phpcs:ignore WordPress.Security.NonceVerification -- nonce protection is granted before this hook is called.
+		isset( $_POST['send-invoice'] )
+	) {
 		/*
 		 * Only set to submitted if the previous status was a draft, because a network admin can make changes
 		 * after it's been submitted, and we don't want to revert the post status in those cases.
@@ -393,7 +395,7 @@ function set_invoice_status( $post_data, $post_data_raw ) {
 }
 
 /**
- * Save the post's data
+ * Save the extra invoice information after the post is saved.
  *
  * @param int      $post_id
  * @param \WP_Post $post
@@ -403,21 +405,21 @@ function save_invoice( $post_id, $post ) {
 		return;
 	}
 
-	// Verify nonces
+	// Verify nonces.
 	$nonces = array( 'status_nonce', 'sponsor_invoice_nonce' );
 
 	foreach ( $nonces as $nonce ) {
 		check_admin_referer( str_replace( '_nonce', '', $nonce ), $nonce );
 	}
 
-	// Sanitize and save the field values
+	// Sanitize and save the field values.
 	$fields = array( 'sponsor_id', 'qbo_class_id', 'currency', 'description', 'amount' );
 
-	foreach( $fields as $field ) {
+	foreach ( $fields as $field ) {
 		$meta_key = "_wcbsi_$field";
-		$value = sanitize_text_field( wp_unslash( $_POST[ $meta_key ] ) );
+		$value    = sanitize_text_field( wp_unslash( $_POST[ $meta_key ] ) );
 
-		if ( 'amount' == $field ) {
+		if ( 'amount' === $field ) {
 			$value = \WordCamp_Budgets::validate_amount( $value );
 		}
 
@@ -437,7 +439,7 @@ function save_invoice( $post_id, $post ) {
 }
 
 /**
- * Define columns for the Vendor Payments screen.
+ * Define columns for the Sponsor Invoices screen.
  *
  * @param array $_columns
  * @return array
@@ -456,15 +458,15 @@ function get_columns( $_columns ) {
 }
 
 /**
- * Render custom columns on the Vendor Payments screen.
+ * Render custom columns on the Sponsor Invoices screen.
  *
  * @param string $column
- * @param int $post_id
+ * @param int    $post_id
  */
 function render_columns( $column, $post_id ) {
 	switch ( $column ) {
 		case 'sponsor_name':
-			// todo could reuse get_sponsor_name() from dashboard if made some minor modifications
+			// todo could reuse get_sponsor_name() from dashboard if made some minor modifications.
 
 			$sponsor = get_post( get_post_meta( $post_id, '_wcbsi_sponsor_id', true ) );
 			if ( is_a( $sponsor, 'WP_Post' ) ) {
@@ -484,26 +486,26 @@ function render_columns( $column, $post_id ) {
 }
 
 /**
- * Modify the default capabilities
+ * Modify the default capabilities.
  *
- * @param array  $required_capabilities The primitive capabilities that are required to perform the requested meta capability
- * @param string $requested_capability  The requested meta capability
+ * @param array  $required_capabilities The primitive capabilities that are required to perform the requested meta capability.
+ * @param string $requested_capability  The requested meta capability.
  * @param int    $user_id               The user ID.
  * @param array  $args                  Adds the context to the cap. Typically the object ID.
  */
 function modify_capabilities( $required_capabilities, $requested_capability, $user_id, $args ) {
-	// todo maybe centralize this, since almost identical to counterpart in payment-requests.php
+	// todo maybe centralize this, since almost identical to counterpart in payment-requests.php.
 	$post = \WordCamp_Budgets::get_map_meta_cap_post( $args );
 
-	if ( is_a( $post, 'WP_Post' ) && POST_TYPE == $post->post_type ) {
+	if ( is_a( $post, 'WP_Post' ) && POST_TYPE === $post->post_type ) {
 		/*
 		 * Only network admins can edit/delete requests once they've been submitted.
 		 *
 		 * The organizer can still open the request (in order to view the status and details), but won't be allowed to make any changes to it.
 		 */
 		if ( ! in_array( $post->post_status, array( 'auto-draft', 'draft' ), true ) ) {
-			if ( 'edit_post' == $requested_capability ) {
-				$is_saving_edit = isset( $_REQUEST['action'] ) && 'edit' != $_REQUEST['action'];  // 'edit' is opening the Edit Invoice screen, 'editpost' is when it's submitted
+			if ( 'edit_post' === $requested_capability ) {
+				$is_saving_edit = isset( $_REQUEST['action'] ) && 'edit' !== $_REQUEST['action'];  // 'edit' is opening the Edit Invoice screen, 'editpost' is when it's submitted
 				$is_bulk_edit   = isset( $_REQUEST['bulk_edit'] );
 
 				if ( $is_saving_edit || $is_bulk_edit ) {
@@ -511,7 +513,7 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 				}
 			}
 
-			if ( 'delete_post' == $requested_capability ) {
+			if ( 'delete_post' === $requested_capability ) {
 				$required_capabilities[] = 'manage_network';
 			}
 		}

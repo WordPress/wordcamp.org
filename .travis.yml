@@ -10,7 +10,7 @@ php:
 before_script:
   # Print system info for debugging.
   - node --version
-  - npm --version
+  - yarn --version
   - timedatectl
 
 jobs:
@@ -19,17 +19,15 @@ jobs:
     - name: "Blocks"
       install:
         - nvm install && nvm use
-        - npm install npm -g
-        # `npm ci` runs a "clean install"
-        - npm --prefix=$TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/blocks ci
+        - yarn
       script:
         - cd public_html/wp-content/mu-plugins/blocks
         # Run eslint & stylelint over all JS/SCSS files
         # @todo Find a way to only run on changed files
-        - npm run lint:js -- --config=./.eslintrc.js
-        - npm run lint:css
+        - yarn lint:js --config=./.eslintrc.js --quiet
+        - yarn lint:css
         # Make sure the build completes.
-        - npm run build
+        - yarn build
 
     - name: "PHP Code Standards"
       # Only run if we're on the "pull request build", otherwise CHANGED_FILES is empty.

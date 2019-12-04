@@ -78,6 +78,10 @@ function render_submenu_page() {
 		case 'paid':
 			$section_explanation = 'These invoices have been paid by the sponsor.';
 			break;
+
+		case 'uncollectible':
+			$section_explanation = 'These invoices have been marked as uncollectible. They were not paid, and we don\'t expect payment.';
+			break;
 	}
 
 	require_once( dirname( __DIR__ ) . '/views/sponsor-invoices/page-sponsor-invoices.php' );
@@ -89,7 +93,7 @@ function render_submenu_page() {
  * @return string
  */
 function get_current_section() {
-	$sections        = array( 'submitted', 'approved', 'paid' );
+	$sections        = array( 'submitted', 'approved', 'paid', 'uncollectible' );
 	$current_section = 'submitted';
 
 	if ( isset( $_GET['section'] ) && in_array( $_GET['section'], $sections, true ) ) {

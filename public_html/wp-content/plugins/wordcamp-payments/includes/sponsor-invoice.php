@@ -510,7 +510,7 @@ function render_columns( $column, $post_id ) {
  * @return array An array of row action links.
  */
 function add_row_action( $actions, $post ) {
-	if ( POST_TYPE !== $post->post_type || ! current_user_can( 'edit_post', $post->ID ) ) {
+	if ( POST_TYPE !== $post->post_type || ! current_user_can( 'manage_network', $post->ID ) ) {
 		return $actions;
 	}
 
@@ -558,7 +558,7 @@ function handle_status_action( $post_id ) {
 		return;
 	}
 
-	if ( ! current_user_can( 'edit_post', $post->ID ) ) {
+	if ( ! current_user_can( 'manage_network', $post->ID ) ) {
 		return;
 	}
 

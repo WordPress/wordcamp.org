@@ -40,6 +40,7 @@ class WordCamp_Central_Theme {
 		add_filter( 'excerpt_more', array( __CLASS__, 'excerpt_more' ), 11 );
 		add_filter( 'nav_menu_css_class', array( __CLASS__, 'nav_menu_css_class' ), 10, 3 );
 		add_filter( 'wp_nav_menu_items', array( __CLASS__, 'add_links_to_footer_menu' ), 10, 2 );
+		add_filter( 'document_title_parts', array( __CLASS__, 'add_year_to_title' ), 10 );
 
 		add_shortcode( 'wcc_map',         array( __CLASS__, 'shortcode_map'         ) );
 		add_shortcode( 'wcc_about_stats', array( __CLASS__, 'shortcode_about_stats' ) );
@@ -61,6 +62,9 @@ class WordCamp_Central_Theme {
 
 		// Can I haz editor style?
 		add_editor_style();
+		
+		// Let WordPress manage the document title.
+		add_theme_support( 'title-tag' );
 	}
 
 	/**
@@ -943,6 +947,20 @@ class WordCamp_Central_Theme {
 		wp_suspend_cache_addition( false );
 		arsort( $sizes );
 		return $sizes;
+	}
+
+	/**
+	 * Include the year in single WordCamp <title> tag.
+	 *
+	 * @param array $title The document title parts.
+	 * @return array
+	 */
+	public static function add_year_to_title( $title ) {
+		if ( defined( 'WCPT_POST_TYPE_ID' ) && is_singular( WCPT_POST_TYPE_ID ) ) {
+			$title['title'] .= ' ' . wcpt_get_wordcamp_start_date( get_the_ID(), 'Y' );
+		}
+
+		return $title;
 	}
 }
 

@@ -250,7 +250,7 @@ class Client {
 	public function has_sdk() {
 		try {
 			return $this->data_service() instanceof DataService;
-		} catch( Exception $exception ) {
+		} catch ( Exception $exception ) {
 			return false;
 		}
 	}
@@ -292,7 +292,7 @@ class Client {
 	public function get_authorize_url() {
 		try {
 			return $this->data_service()->getOAuth2LoginHelper()->getAuthorizationCodeURL();
-		} catch( Exception $exception ) {
+		} catch ( Exception $exception ) {
 			$this->add_error_from_exception( $exception );
 
 			return '';
@@ -392,5 +392,91 @@ class Client {
 
 			return '<code>Error</code>';
 		}
+	}
+
+	/**
+	 * Query resources in QBO. This is the "R" in CRUD.
+	 *
+	 * @see https://intuit.github.io/QuickBooks-V3-PHP-SDK/quickstart.html#query-resources
+	 * @see https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/invoice#query-an-invoice
+	 *
+	 * @param string $type   The type of resource to query.
+	 *                       Examples: 'Invoice', 'Payment'.
+	 * @param array  $fields Optional. The fields to include in the results. Default '*', which gets all fields.
+	 *                       Examples: 'Id', 'TxnDate', 'CurrencyRef', 'LinkedTxn', 'TotalAmt', 'Balance'.
+	 * @param array  $filter Optional. Conditional clauses for filtering the results. If there are multiple, they must
+	 *                       all be true, as the `OR` operation is not supported.
+	 *                       Examples: "TxnDate >= '2018-12-03'", "TxnDate <= '2019-12-03'". Values must be enclosed in
+	 *                       single quotes.
+	 * @param string $output Optional. The required return type. 'object' or 'array'. Default 'object'.
+	 *                       Note: The SDK's Query method always returns an array, but by default, that array contains
+	 *                       objects for each entity. Setting this parameter to 'array' does a recursive conversion of
+	 *                       every object to an associative array.
+	 *
+	 * @return array
+	 */
+	public function read( $type, array $fields = array( '*' ), array $filter = array(), $output = 'object' ) {
+		// Build query elements.
+		$select_count  = 'SELECT count(*)';
+		$select_fields = 'SELECT ' . implode( ', ', $fields );
+		$from          = 'FROM ' . $type;
+		$where         = '';
+
+		if ( ! empty( $filter ) ) {
+			$where = 'WHERE ' . implode( ' AND ', $filter ); // The `OR` operation is not supported.
+		}
+
+		// First send an initial request to get the total number of items available.
+		$count_query = "$select_count $from $where";
+
+		try {
+			$total_count = absint( $this->data_service()->Query( $count_query ) );
+		} catch ( Exception $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return array();
+		}
+
+		$results        = array();
+		$max_results    = 1000;
+		$pages          = ceil( $total_count / $max_results );
+		$page           = 1;
+		$start_position = 1;
+
+		while ( $page <= $pages ) {
+			$page_query = "$select_fields $from $where";
+
+			try {
+				$results = array_merge( $results, $this->data_service()->Query( $page_query, $start_position, $max_results ) );
+			} catch ( Exception $exception ) {
+				$this->add_error_from_exception( $exception );
+
+				return array();
+			}
+
+			$page++;
+			$start_position += $max_results;
+		}
+
+		if ( 'array' === $output ) {
+			$results = array_map( array( $this, 'object_to_array' ), $results );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Recursively convert an object into an associative array.
+	 *
+	 * @param object $object
+	 *
+	 * @return array
+	 */
+	protected static function object_to_array( $object ) {
+		if ( is_object( $object ) ) {
+			$object = get_object_vars( $object );
+		}
+
+		return ( is_array( $object ) ) ? array_map( __METHOD__, $object ) : $object;
 	}
 }

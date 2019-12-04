@@ -23,6 +23,11 @@ add_filter( 'display_post_states',                        __NAMESPACE__ . '\disp
 add_filter( 'manage_'. POST_TYPE .'_posts_columns',       __NAMESPACE__ . '\get_columns'               );
 add_action( 'manage_'. POST_TYPE .'_posts_custom_column', __NAMESPACE__ . '\render_columns',     10, 2 );
 
+// Add "Uncollectible" status & action to the list table actions.
+add_filter( 'post_row_actions',         __NAMESPACE__ . '\add_row_action', 10, 2 );
+add_action( 'post_action_wcbsi_update', __NAMESPACE__ . '\handle_status_action', 10, 3 );
+add_action( 'admin_notices',            __NAMESPACE__ . '\action_success_message' );
+
 // Saving posts.
 add_filter( 'wp_insert_post_data', __NAMESPACE__ . '\set_invoice_status',  10, 2 );
 add_action( 'save_post',           __NAMESPACE__ . '\save_invoice',        10, 2 );
@@ -494,6 +499,94 @@ function render_columns( $column, $post_id ) {
 			echo esc_html( get_post_meta( $post_id, '_wcbsi_amount', true ) );
 			break;
 	}
+}
+
+/**
+ * Inject the "Uncollectible" action into row actions.
+ *
+ * @param string[] $actions An array of row action links.
+ * @param WP_Post  $post    The post object.
+ *
+ * @return array An array of row action links.
+ */
+function add_row_action( $actions, $post ) {
+	if ( POST_TYPE !== $post->post_type || ! current_user_can( 'edit_post', $post->ID ) ) {
+		return $actions;
+	}
+
+	if ( 'wcbsi_uncollectible' === $post->post_status ) {
+		return $actions;
+	}
+
+	$post_type_object = get_post_type_object( $post->post_type );
+
+	$url = add_query_arg(
+		array(
+			'action' => 'wcbsi_update',
+			'status' => 'uncollectible',
+		),
+		admin_url( sprintf( $post_type_object->_edit_link, $post->ID ) )
+	);
+
+	$actions['wcbsi_uncollectible'] = sprintf(
+		'<a href="%1$s" aria-label="%2$s">%3$s</a>',
+		wp_nonce_url( $url, 'wcbsi_update-post_' . $post->ID ),
+		/* translators: %s: Post title. */
+		esc_attr( sprintf( __( 'Mark invoice &#8220;%s&#8221; uncollectible', 'wordcamporg' ), $post->post_title ) ),
+		__( 'Uncollectible', 'wordcamporg' )
+	);
+
+	return $actions;
+}
+
+/**
+ * Trigger the post status change when wcbsi_update actions are seen.
+ *
+ * @return void
+ */
+function handle_status_action( $post_id ) {
+	$action = sanitize_text_field( $_REQUEST['action'] ?? '' );
+	$status = sanitize_text_field( $_REQUEST['status'] ?? '' );
+	if ( 'wcbsi_update' !== $action ) {
+		return;
+	}
+
+	check_admin_referer( 'wcbsi_update-post_' . $post_id );
+
+	$post = get_post( $post_id );
+	if ( ! is_a( $post, 'WP_Post' ) || POST_TYPE !== $post->post_type ) {
+		return;
+	}
+
+	if ( ! current_user_can( 'edit_post', $post->ID ) ) {
+		return;
+	}
+
+	if ( 'uncollectible' === $status ) {
+		// Remove filters that intercept the `wp_update_post` process.
+		remove_filter( 'wp_insert_post_data', __NAMESPACE__ . '\set_invoice_status', 10 );
+		remove_filter( 'save_post', __NAMESPACE__ . '\save_invoice', 10 );
+		wp_update_post( array(
+			'ID'          => $post_id,
+			'post_status' => 'wcbsi_uncollectible',
+		) );
+		$sendback = wp_get_referer();
+		wp_safe_redirect( add_query_arg( 'wcbsi_updated', 1, $sendback ) );
+		exit();
+	}
+}
+
+/**
+ * Output success messages when an invoice is updated.
+ *
+ * @return void
+ */
+function action_success_message() {
+	if ( isset( $_GET['wcbsi_updated'] ) ) : ?>
+	<div id="message" class="updated notice-success notice is-dismissible">
+		<p><?php esc_html_e( 'Invoice marked uncollectible.', 'wordcamporg' ); ?></p>
+	</div>
+	<?php endif;
 }
 
 /**

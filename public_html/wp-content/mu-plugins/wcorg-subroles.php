@@ -11,6 +11,8 @@ defined( 'WPINC' ) || die();
 /**
  * Get any subroles assigned to a specific user.
  *
+ * @global array $wcorg_subroles
+ *
  * @param int $user_id The ID of the user to retrieve subroles for.
  *
  * @return array A list of subrole strings.
@@ -67,7 +69,7 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 
 	foreach ( $subroles as $subrole ) {
 		$newcaps = array();
-		
+
 		switch ( $subrole ) {
 			/**
 			 * Mentor Manager
@@ -75,7 +77,7 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 * - Access and use the WordCamp Mentors Dashboard screen on Central.
 			 * - Edit `wordcamp` posts on Central.
 			 */
-			case 'mentor_manager' :
+			case 'mentor_manager':
 				// These capabilities only apply on central.wordcamp.org.
 				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
 					$newcaps = array(
@@ -91,7 +93,7 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 *
 			 * - Edit `wordcamp` posts on Central.
 			 */
-			case 'wordcamp_wrangler' :
+			case 'wordcamp_wrangler':
 				// These capabilities only apply on central.wordcamp.org.
 				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
 					$newcaps = array(
@@ -125,27 +127,27 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 	$current_user  = get_user_by( 'id', $user_id );
 
 	switch ( $meta_cap ) {
-		case 'wordcamp_manage_mentors' :
-		case 'wordcamp_wrangle_wordcamps' :
+		case 'wordcamp_manage_mentors':
+		case 'wordcamp_wrangle_wordcamps':
 			$required_caps[] = $meta_cap;
 			break;
 
 		// Allow WordCamp Wranglers to edit WordCamp posts.
-		case 'edit_wordcamps' :
-		case 'edit_published_wordcamps' :
-		case 'edit_wordcamp' :
-		case 'edit_others_wordcamps' :
-		case 'edit_wp_meetups' :
-		case 'edit_published_wp_meetups' :
-		case 'edit_wp_meetup' :
-		case 'edit_others_wp_meetups' :
+		case 'edit_wordcamps':
+		case 'edit_published_wordcamps':
+		case 'edit_wordcamp':
+		case 'edit_others_wordcamps':
+		case 'edit_wp_meetups':
+		case 'edit_published_wp_meetups':
+		case 'edit_wp_meetup':
+		case 'edit_others_wp_meetups':
 			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
 				$required_caps[] = 'wordcamp_wrangle_wordcamps';
 			}
 			break;
 
-		// WP_Posts_List_Table checks the `edit_post` cap regardless of post type :/
-		case 'edit_post' :
+		// WP_Posts_List_Table checks the `edit_post` cap regardless of post type.
+		case 'edit_post':
 			if ( ! empty( $args ) ) {
 				$post_type = get_post_type( $args[0] );
 			} else {
@@ -158,9 +160,9 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 				}
 			}
 
-			if (  defined( 'WCPT_MEETUP_SLUG' ) && WCPT_MEETUP_SLUG === $post_type ) {
+			if ( defined( 'WCPT_MEETUP_SLUG' ) && WCPT_MEETUP_SLUG === $post_type ) {
 				// Use same permission for meetups as well as wordcamps.
-				// TODO: In future consider changing this to wrangle_events
+				// TODO: In future consider changing this to wrangle_events.
 				if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
 					$required_caps[] = 'wordcamp_wrangle_wordcamps';
 				}

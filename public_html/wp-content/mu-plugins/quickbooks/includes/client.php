@@ -343,6 +343,25 @@ class Client {
 	}
 
 	/**
+	 * Generate an authentication header to send with manual requests to the API.
+	 *
+	 * The header name should be 'Authorization'.
+	 *
+	 * @return string
+	 */
+	public function get_oauth_header() {
+		try {
+			$token = $this->get_current_token();
+
+			return "Bearer " . $token->getAccessToken();
+		} catch ( Exception | SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return '';
+		}
+	}
+
+	/**
 	 * The QuickBooks numerical ID of the company entity we're connected to.
 	 *
 	 * @return int

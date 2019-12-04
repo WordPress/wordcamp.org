@@ -722,6 +722,8 @@ class WordCamp_Central_Theme {
 		$end_day     = wcpt_get_wordcamp_end_date( $wordcamp_id, 'j' );
 		$end_month   = wcpt_get_wordcamp_end_date( $wordcamp_id, 'F' );
 
+		$one_day_event = wcpt_get_wordcamp_start_date( $wordcamp_id, 'Y-m-d' ) === wcpt_get_wordcamp_end_date( $wordcamp_id, 'Y-m-d' );
+
 		if ( $show_year ) {
 			$start_year = wcpt_get_wordcamp_start_date( $wordcamp_id, 'Y' );
 			$end_year   = wcpt_get_wordcamp_end_date( $wordcamp_id, 'Y' );
@@ -729,7 +731,7 @@ class WordCamp_Central_Theme {
 
 		echo esc_html( "$start_month $start_day" );
 
-		if ( $end_day ) {
+		if ( $end_day && ! $one_day_event ) {
 			if ( $show_year && $start_year !== $end_year ) {
 				echo esc_html( ", $start_year" );
 			}

@@ -78,6 +78,10 @@ function render_submenu_page() {
 		case 'paid':
 			$section_explanation = 'These invoices have been paid by the sponsor.';
 			break;
+
+		case 'uncollectible':
+			$section_explanation = 'These invoices have been marked as uncollectible. They were not paid, and we don\'t expect payment.';
+			break;
 	}
 
 	require_once( dirname( __DIR__ ) . '/views/sponsor-invoices/page-sponsor-invoices.php' );
@@ -89,7 +93,7 @@ function render_submenu_page() {
  * @return string
  */
 function get_current_section() {
-	$sections        = array( 'submitted', 'approved', 'paid' );
+	$sections        = array( 'submitted', 'approved', 'paid', 'uncollectible' );
 	$current_section = 'submitted';
 
 	if ( isset( $_GET['section'] ) && in_array( $_GET['section'], $sections, true ) ) {
@@ -109,26 +113,26 @@ function get_submenu_page_sections() {
 	$sections        = array();
 	$current_section = get_current_section();
 
-	foreach ( $statuses as $status_slug => $status_name ) {
-		$status_slug = str_replace( 'wcbsi_', '', $status_slug );    // make the URL easier to read
+	foreach ( $statuses as $slug => $status ) {
+		$slug = str_replace( 'wcbsi_', '', $slug );    // make the URL easier to read.
 
 		$classes = 'nav-tab';
-		if ( $status_slug === $current_section ) {
+		if ( $slug === $current_section ) {
 			$classes .= ' nav-tab-active';
 		}
 
 		$href = add_query_arg(
 			array(
 				'page'    => 'sponsor-invoices-dashboard',
-				'section' => $status_slug,
+				'section' => $slug,
 			),
 			network_admin_url( 'admin.php' )
 		);
 
-		$sections[ $status_slug ] = array(
+		$sections[ $slug ] = array(
 			'classes' => $classes,
 			'href'    => $href,
-			'text'    => $status_name,
+			'text'    => $status['label'],
 		);
 	}
 

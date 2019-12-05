@@ -75,13 +75,24 @@ function handle_form_post() {
 		$cmd = filter_input( INPUT_GET, 'cmd' );
 	}
 
+	$nonce = filter_input( INPUT_POST, PLUGIN_PREFIX . '_oauth_' . $cmd );
+
 	switch ( $cmd ) {
 		case 'authorize':
-			$url = wp_sanitize_redirect( $client->get_authorize_url() );
+			if ( wp_verify_nonce( $nonce, $cmd ) ) {
+				$url = wp_sanitize_redirect( $client->get_authorize_url() );
 
-			add_filter( 'allowed_redirect_hosts', __NAMESPACE__ . '\allow_intuit_domain_redirect', 10, 2 );
+				add_filter( 'allowed_redirect_hosts', __NAMESPACE__ . '\allow_intuit_domain_redirect', 10, 2 );
 
-			wp_safe_redirect( $url );
+				wp_safe_redirect( $url );
+			} else {
+				$client->error->add(
+					'invalid_nonce',
+					'Your request could not be validated.'
+				);
+
+				require PLUGIN_DIR . '/views/admin-form-error.php';
+			}
 			exit();
 
 		case 'exchange':
@@ -100,16 +111,25 @@ function handle_form_post() {
 			exit();
 
 		case 'revoke':
-			$client->revoke_token();
+			if ( wp_verify_nonce( $nonce, $cmd ) ) {
+				$client->revoke_token();
 
-			if ( $client->has_error() ) {
+				if ( $client->has_error() ) {
+					require PLUGIN_DIR . '/views/admin-form-error.php';
+					break;
+				}
+
+				$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );
+
+				wp_safe_redirect( $url );
+			} else {
+				$client->error->add(
+					'invalid_nonce',
+					'Your request could not be validated.'
+				);
+
 				require PLUGIN_DIR . '/views/admin-form-error.php';
-				break;
 			}
-
-			$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );
-
-			wp_safe_redirect( $url );
 			exit();
 	}
 }

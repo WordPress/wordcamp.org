@@ -353,7 +353,7 @@ class Client {
 		try {
 			$token = $this->get_current_token();
 
-			return "Bearer " . $token->getAccessToken();
+			return 'Bearer ' . $token->getAccessToken();
 		} catch ( Exception | SdkException $exception ) {
 			$this->add_error_from_exception( $exception );
 

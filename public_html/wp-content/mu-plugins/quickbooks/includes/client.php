@@ -64,7 +64,13 @@ class Client {
 
 		try {
 			$this->data_service = DataService::Configure( $config );
-		} catch ( SdkException $exception ) {
+
+			if ( 'Development' === $config['baseUrl'] && wp_mkdir_p( get_temp_dir() . 'quickbooks' ) ) {
+				$this->data_service()->setLogLocation( get_temp_dir() . 'quickbooks' );
+			} else {
+				$this->data_service()->disableLog();
+			}
+		} catch ( Exception | SdkException $exception ) {
 			$this->add_error_from_exception( $exception );
 		}
 

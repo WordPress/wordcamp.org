@@ -53,3 +53,18 @@ function set_client_config( array $config ) {
 
 	return $config;
 }
+
+/**
+ * Instantiate the client. Helps avoid creating multiple instances in one session.
+ *
+ * @return Client
+ */
+function get_client() {
+	static $client;
+
+	if ( ! $client instanceof Client ) {
+		$client = new Client();
+	}
+
+	return $client;
+}

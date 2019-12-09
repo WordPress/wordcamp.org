@@ -1,8 +1,8 @@
 <?php
 namespace WordCamp\QuickBooks\Admin;
 
-use WordCamp\QuickBooks\Client;
 use const WordCamp\QuickBooks\{ OAUTH_CAP, PLUGIN_DIR, PLUGIN_PREFIX };
+use function WordCamp\QuickBooks\{ get_client };
 
 defined( 'WPINC' ) || die();
 
@@ -32,7 +32,7 @@ function add_page() {
  * @return void
  */
 function render_page() {
-	$client = new Client();
+	$client = get_client();
 
 	if ( $client->has_valid_token() ) {
 		$cmd          = 'revoke';
@@ -62,7 +62,7 @@ function handle_form_post() {
 		wp_die( 'You do not have permission to perform this action.' );
 	}
 
-	$client = new Client();
+	$client = get_client();
 
 	if ( $client->has_error() ) {
 		require PLUGIN_DIR . '/views/admin-form-error.php';
@@ -159,7 +159,16 @@ function allow_intuit_domain_redirect( $allowed_domains, $domain ) {
  * @return void
  */
 function maybe_show_disconnection_warning() {
-	$client = new Client();
+	global $pagenow, $plugin_page;
+
+	if (
+		! current_user_can( OAUTH_CAP )
+		|| 'settings_page_quickbooks' === get_plugin_page_hook( $plugin_page, $pagenow )
+	) {
+		return;
+	}
+
+	$client = get_client();
 
 	if ( ! $client->has_valid_token() ) {
 		// We don't need any other errors to appear on every Network screen, just this special disconnection one.

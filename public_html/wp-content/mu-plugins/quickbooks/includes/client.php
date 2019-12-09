@@ -6,6 +6,7 @@ use QuickBooksOnline\API\DataService\DataService;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2AccessToken;
 use QuickBooksOnline\API\Exception\SdkException;
 use QuickBooksOnline\API\Exception\ServiceException;
+use function WordCamp\Logger\{ log };
 use WP_Error;
 
 defined( 'WPINC' ) || die();
@@ -89,6 +90,13 @@ class Client {
 				$this->add_error_from_exception( $exception );
 
 				if ( $this->error->get_error_messages( 'invalid_grant' ) ) {
+					// todo Remove logging if QBO connection stabilizes.
+					$log_data = array(
+						'sdk'    => ( $this->data_service instanceof DataService ) ? $this->data_service->getLastError() : null,
+						'client' => $this->error->get_error_messages(),
+					);
+					log( 'broken_oauth_connection', $log_data );
+
 					$this->error->add(
 						'broken_oauth_connection',
 						'The connection to QuickBooks has failed. Please try reconnecting.',

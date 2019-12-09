@@ -6,6 +6,7 @@ use QuickBooksOnline\API\DataService\DataService;
 use QuickBooksOnline\API\Core\OAuth\OAuth2\OAuth2AccessToken;
 use QuickBooksOnline\API\Exception\SdkException;
 use QuickBooksOnline\API\Exception\ServiceException;
+use function WordCamp\Logger\{ log };
 use WP_Error;
 
 defined( 'WPINC' ) || die();
@@ -13,7 +14,8 @@ defined( 'WPINC' ) || die();
 /**
  * Class Client
  *
- * This acts as a wrapper around the QBO V3 PHP SDK, so it can catch exceptions and handle errors correctly.
+ * This acts as a wrapper around the QBO V3 PHP SDK, so it can catch exceptions and handle errors correctly. The goal
+ * is for all public methods to handle exceptions so that none are thrown outside of the client class.
  *
  * @package WordCamp\QuickBooks
  */
@@ -63,7 +65,13 @@ class Client {
 
 		try {
 			$this->data_service = DataService::Configure( $config );
-		} catch ( SdkException $exception ) {
+
+			if ( 'Development' === $config['baseUrl'] && wp_mkdir_p( get_temp_dir() . 'quickbooks' ) ) {
+				$this->data_service()->setLogLocation( get_temp_dir() . 'quickbooks' );
+			} else {
+				$this->data_service()->disableLog();
+			}
+		} catch ( Exception | SdkException $exception ) {
 			$this->add_error_from_exception( $exception );
 		}
 
@@ -76,12 +84,19 @@ class Client {
 				 *
 				 * See https://intuit.github.io/QuickBooks-V3-PHP-SDK/authorization.html#oauth-2-0-vs-1-0a-in-quickbooks-online
 				 */
-				$token = $this->data_service->getOAuth2LoginHelper()->refreshToken();
+				$token = $this->data_service()->getOAuth2LoginHelper()->refreshToken();
 				self::save_oauth_token_data( $token );
-			} catch ( SdkException | ServiceException $exception ) {
+			} catch ( Exception | SdkException | ServiceException $exception ) {
 				$this->add_error_from_exception( $exception );
 
 				if ( $this->error->get_error_messages( 'invalid_grant' ) ) {
+					// todo Remove logging if QBO connection stabilizes.
+					$log_data = array(
+						'sdk'    => ( $this->data_service instanceof DataService ) ? $this->data_service->getLastError() : null,
+						'client' => $this->error->get_error_messages(),
+					);
+					log( 'broken_oauth_connection', $log_data );
+
 					$this->error->add(
 						'broken_oauth_connection',
 						'The connection to QuickBooks has failed. Please try reconnecting.',
@@ -95,15 +110,6 @@ class Client {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Does the client have access to the SDK?
-	 *
-	 * @return bool
-	 */
-	public function has_sdk() {
-		return $this->data_service instanceof DataService;
 	}
 
 	/**
@@ -237,17 +243,40 @@ class Client {
 	}
 
 	/**
+	 * Getter for the data_service property. This insulates against fatals if the SDK is not available.
+	 *
+	 * @return DataService|null
+	 * @throws Exception
+	 */
+	protected function data_service() {
+		if ( ! $this->data_service instanceof DataService ) {
+			throw new Exception( "Can't get OAuth 2 Access Token Object. The SDK is not available." );
+		}
+
+		return $this->data_service;
+	}
+
+	/**
+	 * External check to see if the client has access to the SDK.
+	 *
+	 * @return bool
+	 */
+	public function has_sdk() {
+		try {
+			return $this->data_service() instanceof DataService;
+		} catch ( Exception $exception ) {
+			return false;
+		}
+	}
+
+	/**
 	 * Get the current token object.
 	 *
 	 * @return OAuth2AccessToken
 	 * @throws Exception|SdkException
 	 */
 	protected function get_current_token() {
-		if ( ! $this->has_sdk() ) {
-			throw new Exception( "Can't get OAuth 2 Access Token Object. The SDK is not available." );
-		}
-
-		return $this->data_service->getOAuth2LoginHelper()->getAccessToken();
+		return $this->data_service()->getOAuth2LoginHelper()->getAccessToken();
 	}
 
 	/**
@@ -256,10 +285,6 @@ class Client {
 	 * @return bool
 	 */
 	public function has_valid_token() {
-		if ( ! $this->has_sdk() ) {
-			return false;
-		}
-
 		// Test if the token works by attempting to retrieve token info not stored in the local database.
 		try {
 			// The `getAccessTokenExpiresAt` doc block says it returns a Date object, but it's actually a
@@ -279,11 +304,13 @@ class Client {
 	 * @return string
 	 */
 	public function get_authorize_url() {
-		if ( ! $this->has_sdk() ) {
+		try {
+			return $this->data_service()->getOAuth2LoginHelper()->getAuthorizationCodeURL();
+		} catch ( Exception $exception ) {
+			$this->add_error_from_exception( $exception );
+
 			return '';
 		}
-
-		return $this->data_service->getOAuth2LoginHelper()->getAuthorizationCodeURL();
 	}
 
 	/**
@@ -299,14 +326,14 @@ class Client {
 		$authorization_code = filter_input( INPUT_GET, 'code' );
 		$realm_id           = filter_input( INPUT_GET, 'realmId' );
 
-		if ( $this->has_sdk() && ! $this->has_valid_token() && $authorization_code && $realm_id ) {
+		if ( ! $this->has_valid_token() && $authorization_code && $realm_id ) {
 			try {
-				$token = $this->data_service->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
+				$token = $this->data_service()->getOAuth2LoginHelper()->exchangeAuthorizationCodeForToken( $authorization_code, $realm_id );
 
-				$this->data_service->updateOAuth2Token( $token );
+				$this->data_service()->updateOAuth2Token( $token );
 
 				self::save_oauth_token_data( $token );
-			} catch ( SdkException | ServiceException $exception ) {
+			} catch ( Exception | SdkException | ServiceException $exception ) {
 				$this->add_error_from_exception( $exception );
 			}
 		}
@@ -318,18 +345,48 @@ class Client {
 	 * @return void
 	 */
 	public function revoke_token() {
-		if ( ! $this->has_sdk() ) {
-			return;
-		}
-
 		try {
-			$token = $this->data_service->getOAuth2LoginHelper()->getAccessToken();
+			$token = $this->data_service()->getOAuth2LoginHelper()->getAccessToken();
 
-			$this->data_service->getOAuth2LoginHelper()->revokeToken( $token->getRefreshToken() );
+			$this->data_service()->getOAuth2LoginHelper()->revokeToken( $token->getRefreshToken() );
 
 			self::delete_oauth_token_data();
-		} catch ( SdkException $exception ) {
+		} catch ( Exception | SdkException $exception ) {
 			$this->add_error_from_exception( $exception );
+		}
+	}
+
+	/**
+	 * Generate an authentication header to send with manual requests to the API.
+	 *
+	 * The header name should be 'Authorization'.
+	 *
+	 * @return string
+	 */
+	public function get_oauth_header() {
+		try {
+			$token = $this->get_current_token();
+
+			return 'Bearer ' . $token->getAccessToken();
+		} catch ( Exception | SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return '';
+		}
+	}
+
+	/**
+	 * The QuickBooks numerical ID of the company entity we're connected to.
+	 *
+	 * @return int
+	 */
+	public function get_realm_id() {
+		try {
+			return absint( $this->get_current_token()->getRealmID() );
+		} catch ( Exception | SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return 0;
 		}
 	}
 
@@ -339,19 +396,14 @@ class Client {
 	 * @return string
 	 */
 	public function get_company_name() {
-		if ( ! $this->has_sdk() ) {
-			return '';
-		}
-
 		try {
-			$info = $this->data_service->getCompanyInfo();
+			$info = $this->data_service()->getCompanyInfo();
 
 			return $info->CompanyName; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		} catch ( SdkException $exception ) {
-			return sprintf(
-				'<code>SdkException: %s</code>',
-				$exception->getCode()
-			);
+		} catch ( Exception | SdkException $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return '<code>Error</code>';
 		}
 	}
 
@@ -361,10 +413,6 @@ class Client {
 	 * @return string
 	 */
 	public function get_refresh_token_expiration() {
-		if ( ! $this->has_sdk() ) {
-			return '';
-		}
-
 		try {
 			// The `getRefreshTokenExpiresAt` doc block says it returns an integer, but it's actually a
 			// formatted date string.
@@ -373,10 +421,95 @@ class Client {
 
 			return human_time_diff( time(), $expires );
 		} catch ( Exception | SdkException $exception ) {
-			return sprintf(
-				'<code>SdkException: %s</code>',
-				$exception->getCode()
-			);
+			$this->add_error_from_exception( $exception );
+
+			return '<code>Error</code>';
 		}
+	}
+
+	/**
+	 * Query resources in QBO. This is the "R" in CRUD.
+	 *
+	 * @see https://intuit.github.io/QuickBooks-V3-PHP-SDK/quickstart.html#query-resources
+	 * @see https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/invoice#query-an-invoice
+	 *
+	 * @param string $type   The type of resource to query.
+	 *                       Examples: 'Invoice', 'Payment'.
+	 * @param array  $fields Optional. The fields to include in the results. Default '*', which gets all fields.
+	 *                       Examples: 'Id', 'TxnDate', 'CurrencyRef', 'LinkedTxn', 'TotalAmt', 'Balance'.
+	 * @param array  $filter Optional. Conditional clauses for filtering the results. If there are multiple, they must
+	 *                       all be true, as the `OR` operation is not supported.
+	 *                       Examples: "TxnDate >= '2018-12-03'", "TxnDate <= '2019-12-03'". Values must be enclosed in
+	 *                       single quotes.
+	 * @param string $output Optional. The required return type. 'object' or 'array'. Default 'object'.
+	 *                       Note: The SDK's Query method always returns an array, but by default, that array contains
+	 *                       objects for each entity. Setting this parameter to 'array' does a recursive conversion of
+	 *                       every object to an associative array.
+	 *
+	 * @return array
+	 */
+	public function read( $type, array $fields = array( '*' ), array $filter = array(), $output = 'object' ) {
+		// Build query elements.
+		$select_count  = 'SELECT count(*)';
+		$select_fields = 'SELECT ' . implode( ', ', $fields );
+		$from          = 'FROM ' . $type;
+		$where         = '';
+
+		if ( ! empty( $filter ) ) {
+			$where = 'WHERE ' . implode( ' AND ', $filter ); // The `OR` operation is not supported.
+		}
+
+		// First send an initial request to get the total number of items available.
+		$count_query = "$select_count $from $where";
+
+		try {
+			$total_count = absint( $this->data_service()->Query( $count_query ) );
+		} catch ( Exception $exception ) {
+			$this->add_error_from_exception( $exception );
+
+			return array();
+		}
+
+		$results        = array();
+		$max_results    = 1000;
+		$pages          = ceil( $total_count / $max_results );
+		$page           = 1;
+		$start_position = 1;
+
+		while ( $page <= $pages ) {
+			$page_query = "$select_fields $from $where";
+
+			try {
+				$results = array_merge( $results, $this->data_service()->Query( $page_query, $start_position, $max_results ) );
+			} catch ( Exception $exception ) {
+				$this->add_error_from_exception( $exception );
+
+				return array();
+			}
+
+			$page++;
+			$start_position += $max_results;
+		}
+
+		if ( 'array' === $output ) {
+			$results = array_map( array( $this, 'object_to_array' ), $results );
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Recursively convert an object into an associative array.
+	 *
+	 * @param object $object
+	 *
+	 * @return array
+	 */
+	protected static function object_to_array( $object ) {
+		if ( is_object( $object ) ) {
+			$object = get_object_vars( $object );
+		}
+
+		return ( is_array( $object ) ) ? array_map( __METHOD__, $object ) : $object;
 	}
 }

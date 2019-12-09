@@ -5,6 +5,7 @@
 
 // todo use wcorg_redundant_remote_get for all the calls in this file
 
+use WordCamp\Quickbooks;
 use WordCamp\Logger;
 
 class WordCamp_QBO {
@@ -77,11 +78,7 @@ class WordCamp_QBO {
 			'name'  => 'Checking-JPM',
 		) );
 
-		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
-		add_action( 'admin_init', array( __CLASS__, 'admin_init' ) );
 		add_filter( 'rest_api_init', array( __CLASS__, 'rest_api_init' ) );
-
-		self::maybe_oauth_request();
 	}
 
 	/**
@@ -120,8 +117,8 @@ class WordCamp_QBO {
 		}
 
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$amount = floatval( $request->get_param( 'amount' ) );
 		if ( ! $amount ) {
@@ -181,11 +178,14 @@ class WordCamp_QBO {
 		if ( $request->get_param('id') ) {
 			$payload['Id'] = absint( $request->get_param('id') );
 
-			$request_url = esc_url_raw( sprintf( '%s/v3/company/%d/purchase/%d',
-				self::$api_base_url, self::$options['auth']['realmId'], $payload['Id'] ) );
+			$request_url = esc_url_raw( sprintf(
+				'%s/v3/company/%d/purchase/%d',
+				self::$api_base_url,
+				rawurlencode( $realm_id ),
+				$payload['Id']
+			) );
 
-			$oauth_header = $oauth->get_oauth_header( 'GET', $request_url );
-			$response     = wp_remote_get( $request_url, array(
+			$response = wp_remote_get( $request_url, array(
 				'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 				'headers' => array(
 					'Authorization' => $oauth_header,
@@ -208,11 +208,13 @@ class WordCamp_QBO {
 		}
 
 		$payload     = json_encode( $payload );
-		$request_url = esc_url_raw( sprintf( '%s/v3/company/%d/purchase',
-			self::$api_base_url, self::$options['auth']['realmId'] ) );
+		$request_url = esc_url_raw( sprintf(
+			'%s/v3/company/%d/purchase',
+			self::$api_base_url,
+			rawurlencode( $realm_id )
+		) );
 
-		$oauth_header = $oauth->get_oauth_header( 'POST', $request_url, $payload );
-		$response     = wp_remote_post( $request_url, array(
+		$response = wp_remote_post( $request_url, array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 			'headers' => array(
 				'Authorization' => $oauth_header,
@@ -257,19 +259,21 @@ class WordCamp_QBO {
 		}
 
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$args = array(
 			'query'        => 'SELECT * FROM Class MAXRESULTS 1000',
 			'minorversion' => 4,
 		);
 
-		$request_url = esc_url_raw( sprintf( '%s/v3/company/%d/query',
-			self::$api_base_url, self::$options['auth']['realmId'] ) );
+		$request_url = esc_url_raw( sprintf(
+			'%s/v3/company/%d/query',
+			self::$api_base_url,
+			rawurlencode( $realm_id )
+		) );
 
-		$oauth_header = $oauth->get_oauth_header( 'GET', $request_url, $args );
-		$response     = wp_remote_get(
+		$response = wp_remote_get(
 			esc_url_raw( add_query_arg( $args, $request_url ) ),
 			array(
 				'timeout' => self::REMOTE_REQUEST_TIMEOUT,
@@ -454,8 +458,8 @@ class WordCamp_QBO {
 		}
 
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		// Note: This has a character limit when combined with $description; see $customer_memo
 		$payment_instructions = trim( str_replace( "\t", '', "
@@ -567,7 +571,7 @@ class WordCamp_QBO {
 		$request_url = sprintf(
 			'%s/v3/company/%d/invoice',
 			self::$api_base_url,
-			rawurlencode( self::$options['auth']['realmId'] )
+			rawurlencode( $realm_id )
 		);
 
 		$payload = wp_json_encode( $payload );
@@ -575,7 +579,7 @@ class WordCamp_QBO {
 		$args = array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 			'headers' => array(
-				'Authorization' => $oauth->get_oauth_header( 'POST', $request_url, $payload ),
+				'Authorization' => $oauth_header,
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
 			),
@@ -626,20 +630,20 @@ class WordCamp_QBO {
 	 */
 	protected static function build_qbo_send_invoice_request( $invoice_id ) {
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$request_url = sprintf(
 			'%s/v3/company/%d/invoice/%s/send',
 			self::$api_base_url,
-			rawurlencode( self::$options['auth']['realmId'] ),
+			rawurlencode( $realm_id ),
 			rawurlencode( absint( $invoice_id ) )
 		);
 
 		$args = array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 			'headers' => array(
-				'Authorization' => $oauth->get_oauth_header( 'POST', $request_url ),
+				'Authorization' => $oauth_header,
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/octet-stream',
 			),
@@ -713,20 +717,20 @@ class WordCamp_QBO {
 	 */
 	protected static function build_qbo_get_invoice_pdf_request( $invoice_id ) {
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$request_url = sprintf(
 			'%s/v3/company/%d/invoice/%d/pdf',
 			self::$api_base_url,
-			rawurlencode( self::$options['auth']['realmId'] ),
+			rawurlencode( $realm_id ),
 			rawurlencode( $invoice_id )
 		);
 
 		$args = array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 			'headers' => array(
-				'Authorization' => $oauth->get_oauth_header( 'GET', $request_url ),
+				'Authorization' => $oauth_header,
 				'Accept'        => 'application/pdf',
 				'Content-Type'  => 'application/pdf',
 			),
@@ -833,13 +837,13 @@ class WordCamp_QBO {
 		$customer_name = sanitize_text_field( $customer_name );
 
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$request_url = sprintf(
 			'%s/v3/company/%d/query',
 			self::$api_base_url,
-			rawurlencode( self::$options['auth']['realmId'] )
+			rawurlencode( $realm_id )
 		);
 
 		$request_url_query = array(
@@ -852,7 +856,7 @@ class WordCamp_QBO {
 		$args = array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 			'headers' => array(
-				'Authorization' => $oauth->get_oauth_header( 'GET', $request_url, $request_url_query ),
+				'Authorization' => $oauth_header,
 				'Accept'        => 'application/json',
 			),
 		);
@@ -935,8 +939,8 @@ class WordCamp_QBO {
 	 */
 	protected static function build_qbo_create_customer_request( $sponsor, $currency_code ) {
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$sponsor                  = array_map( 'sanitize_text_field', $sponsor );
 		$sponsor['email-address'] = is_email( $sponsor['email-address'] );
@@ -986,7 +990,7 @@ class WordCamp_QBO {
 		$request_url = sprintf(
 			'%s/v3/company/%d/customer',
 			self::$api_base_url,
-			rawurlencode( self::$options['auth']['realmId'] )
+			rawurlencode( $realm_id )
 		);
 
 		$payload = wp_json_encode( $payload );
@@ -994,7 +998,7 @@ class WordCamp_QBO {
 		$args = array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 			'headers' => array(
-				'Authorization' => $oauth->get_oauth_header( 'POST', $request_url, $payload ),
+				'Authorization' => $oauth_header,
 				'Accept'        => 'application/json',
 				'Content-Type'  => 'application/json',
 			),
@@ -1062,13 +1066,13 @@ class WordCamp_QBO {
 		global $wpdb;
 
 		self::load_options();
-		$oauth = self::_get_oauth();
-		$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$request_url = sprintf(
 			'%s/v3/company/%d/query',
 			self::$api_base_url,
-			rawurlencode( self::$options['auth']['realmId'] )
+			rawurlencode( $realm_id )
 		);
 
 		$sent_invoice_ids = array_map( 'absint', $sent_invoice_ids );    // Invoice IDs are initially cast as integers for validation, and then converted back to strings, because that's what QBO expects.
@@ -1093,7 +1097,7 @@ class WordCamp_QBO {
 		$args = array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
 			'headers' => array(
-				'Authorization' => $oauth->get_oauth_header( 'GET', $request_url, $request_url_query ),
+				'Authorization' => $oauth_header,
 				'Accept'        => 'application/json',
 			),
 		);
@@ -1136,215 +1140,18 @@ class WordCamp_QBO {
 	}
 
 	/**
-	 * Update self::$options.
-	 */
-	public static function update_options() {
-		self::load_options();
-		update_option( 'wordcamp-qbo', self::$options );
-	}
-
-	/**
-	 * Catch an OAuth authentication flow if it is one.
-	 */
-	public static function maybe_oauth_request() {
-		if ( empty( $_GET['wordcamp-qbo-oauth-request'] ) ) {
-			return;
-		}
-
-		if ( empty( $_GET['wordcamp-qbo-oauth-nonce'] ) || ! wp_verify_nonce( $_GET['wordcamp-qbo-oauth-nonce'], 'oauth-request' ) ) {
-			wp_die( 'Could not verify nonce.' );
-		}
-
-		self::load_options();
-		$oauth = self::_get_oauth();
-
-		if ( empty( $_GET['oauth_token'] ) ) {
-
-			// We don't have an access token yet.
-			$request_url  = 'https://oauth.intuit.com/oauth/v1/get_request_token';
-			$callback_url = esc_url_raw( add_query_arg( array(
-				'wordcamp-qbo-oauth-request' => 1,
-				'wordcamp-qbo-oauth-nonce'   => wp_create_nonce( 'oauth-request' ),
-			), admin_url() ) );
-
-			$request_token = $oauth->get_request_token( $request_url, $callback_url );
-			if ( is_wp_error( $request_token ) ) {
-				wp_die( $request_token->get_error_message() );
-			}
-
-			update_user_meta( get_current_user_id(), 'wordcamp-qbo-oauth', $request_token );
-
-			wp_redirect( esc_url_raw( add_query_arg( 'oauth_token', $request_token['oauth_token'],
-				'https://appcenter.intuit.com/Connect/Begin' ) ) );
-			die();
-
-		} else {
-
-			// We have a token.
-			$request_token = get_user_meta( get_current_user_id(), 'wordcamp-qbo-oauth', true );
-
-			if ( $request_token['oauth_token'] != $_GET['oauth_token'] ) {
-				wp_die( 'Could not verify OAuth token.' );
-			}
-
-			if ( empty( $_GET['oauth_verifier'] ) ) {
-				wp_die( 'Could not obtain OAuth verifier.' );
-			}
-
-			$oauth->set_token( $request_token['oauth_token'], $request_token['oauth_token_secret'] );
-			$request_url = 'https://oauth.intuit.com/oauth/v1/get_access_token';
-
-			$access_token = $oauth->get_access_token( $request_url, $_GET['oauth_verifier'] );
-
-			if ( is_wp_error( $access_token ) ) {
-				wp_die( 'Could not obtain an access token.' );
-			}
-
-			// We have an access token.
-			$data = array(
-				'oauth_token'        => $access_token['oauth_token'],
-				'oauth_token_secret' => $access_token['oauth_token_secret'],
-				'realmId'            => $_GET['realmId'],
-			);
-
-			self::$options['auth'] = $data;
-
-			$oauth->set_token( self::$options['auth']['oauth_token'], self::$options['auth']['oauth_token_secret'] );
-
-			$request_url = sprintf(
-				'%s/v3/company/%d/companyinfo/%d',
-				self::$api_base_url,
-				self::$options['auth']['realmId'],
-				self::$options['auth']['realmId']
-			);
-
-			$oauth_header = $oauth->get_oauth_header( 'GET', $request_url );
-			$response     = wp_remote_get( $request_url, array(
-				'timeout' => self::REMOTE_REQUEST_TIMEOUT,
-				'headers' => array(
-					'Authorization' => $oauth_header,
-					'Accept'        => 'application/json',
-				),
-			) );
-			Logger\log( 'remote_request', compact( 'response' ) );
-
-			if ( is_wp_error( $response ) ) {
-				wp_die( 'Could not obtain company information.' );
-			}
-
-			$body = json_decode( wp_remote_retrieve_body( $response ), true );
-			if ( empty( $body['CompanyInfo'] ) ) {
-				wp_die( 'Could not obtain company information.' );
-			}
-			$company_name = $body['CompanyInfo']['CompanyName'];
-
-			self::$options['auth']['name']      = $company_name;
-			self::$options['auth']['timestamp'] = time();
-			self::update_options();
-
-			// Flush some caches.
-			delete_transient( md5( 'wordcamp-qbo:classes' ) );
-
-			wp_die( sprintf( 'Your QBO account (%s) has been linked. You can now close this window.', esc_html( $company_name ) ) );
-		}
-	}
-
-	/**
-	 * Runs during admin_menu
-	 */
-	public static function admin_menu() {
-		$cap = is_multisite() ? 'manage_network' : 'manage_options';
-		add_submenu_page( 'options-general.php', 'WordCamp QBO', 'QuickBooks',
-			$cap, 'wordcamp-qbo', array( __CLASS__, 'render_settings' ) );
-	}
-
-	/**
-	 * Runs during admin_init.
-	 */
-	public static function admin_init() {
-		register_setting( 'wordcamp-qbo', 'wordcamp-qbo', array( __CLASS__, 'sanitize_options' ) );
-	}
-
-	/**
-	 * Runs whenever our options are updated, not necessarily
-	 * in an admin or POST context.
-	 */
-	public static function sanitize_options( $input ) {
-		self::load_options();
-		$output = self::$options;
-
-		return $output;
-	}
-
-	/**
-	 * Get an OAuth client object.
+	 * An instance of our client wrapper for the QBO V3 PHP SDK, which handles OAuth2 and REST requests.
 	 *
-	 * @return WordCamp_QBO_OAuth_Client object.
+	 * @return Quickbooks\Client
 	 */
-	private static function _get_oauth() {
-		static $oauth;
+	protected static function qbo_client() {
+		static $client;
 
-		if ( ! isset( $oauth ) ) {
-			require_once( plugin_dir_path( __FILE__ ) . 'class-wordcamp-qbo-oauth-client.php' );
-			$oauth = new WordCamp_QBO_OAuth_Client( self::$consumer_key, self::$consumer_secret );
+		if ( ! isset( $client ) ) {
+			$client = new Quickbooks\Client();
 		}
 
-		return $oauth;
-	}
-
-	/**
-	 * Render the plugin settings screen.
-	 */
-	public static function render_settings() {
-		self::load_options();
-		?>
-		<style>
-			.qbo-connect {
-				width: 195px;
-				height: 34px;
-				display: inline-block;
-				background: url(<?php echo esc_url( plugins_url( '/images/qbo-connect.png', __FILE__ ) ); ?>) 0 0 no-repeat;
-				background-size: 195px 34px;
-				text-indent: -4000px;
-			}
-		</style>
-
-		<div class="wrap wordcamp-qbo-settings">
-			<h2>QuickBooks Settings</h2>
-			<form method="post" action="options.php">
-				<?php settings_fields( 'wordcamp-qbo' ); ?>
-
-				<h2>Account</h2>
-
-				<?php if ( ! empty( self::$options['auth']['name'] ) ) : ?>
-					<?php $expires = (int) ( 180 - ( time() - self::$options['auth']['timestamp'] ) / DAY_IN_SECONDS ); ?>
-					<p>Connected to <?php echo esc_html( self::$options['auth']['name'] ); ?>.
-						<?php printf( _n( 'Expires in %d day.', 'Expires in %d days.', $expires ), $expires ); ?>
-						<br />Use the button below to connect to a QuickBooks account.</p>
-				<?php endif; ?>
-
-				<a href="#" class="qbo-connect">Connect to QuickBooks</a>
-				<?php wp_nonce_field( 'oauth-request', 'wordcamp-qbo-oauth-nonce' ); ?>
-
-				<?php /* submit_button(); */ ?>
-			</form>
-		</div>
-
-		<script>
-			(function($){
-				$('.qbo-connect').on('click', function(){
-					var $form = $('.wordcamp-qbo-settings'),
-						nonce = $form.find('input[name="wordcamp-qbo-oauth-nonce"]').val(),
-						url = '<?php echo esc_js( add_query_arg( 'wordcamp-qbo-oauth-request', 1, admin_url() ) ); ?>',
-						popup = null;
-
-					url += '&wordcamp-qbo-oauth-nonce=' + nonce;
-					popup = window.open(url, 'qbo-oauth', 'width=800, height=560');
-					return false;
-				});
-			}(jQuery));
-		</script>
-		<?php
+		return $client;
 	}
 }
 

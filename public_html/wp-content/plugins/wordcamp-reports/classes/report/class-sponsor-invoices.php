@@ -6,13 +6,17 @@
  */
 
 namespace WordCamp\Reports\Report;
-defined( 'WPINC' ) || die();
 
 use Exception;
 use WordCamp\Reports;
 use WordCamp\Utilities;
-use function WordCamp\Reports\Validation\{validate_wordcamp_id};
+use WordCamp\Quickbooks\Client;
+use function WordCamp\Reports\Validation\{ validate_wordcamp_id };
 use WordCamp\Budgets_Dashboard\Sponsor_Invoices as WCBD_Sponsor_Invoices;
+
+defined( 'WPINC' ) || die();
+
+// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- QBO API does not follow this rule.
 
 /**
  * Class Sponsor_Invoices
@@ -128,7 +132,7 @@ class Sponsor_Invoices extends Date_Range {
 
 				$this->wordcamp_id      = $valid->post_id;
 				$this->wordcamp_site_id = $valid->site_id;
-			} catch( Exception $e ) {
+			} catch ( Exception $e ) {
 				$this->error->add(
 					self::$slug . '-wordcamp-id-error',
 					$e->getMessage()
@@ -227,7 +231,7 @@ class Sponsor_Invoices extends Date_Range {
 	 *
 	 * @return array
 	 */
-	protected function get_indexed_invoices( array $ids = array() ) {
+	protected function get_indexed_invoices() {
 		/** @var \wpdb $wpdb */
 		global $wpdb;
 
@@ -238,13 +242,13 @@ class Sponsor_Invoices extends Date_Range {
 		$where        = '';
 
 		// Invoices that don't have a corresponding entity in QBO yet have a `qbo_invoice_id` value of 0.
-		$where_clause[]  = "qbo_invoice_id != 0";
+		$where_clause[] = 'qbo_invoice_id != 0';
 
 		if ( $this->wordcamp_site_id ) {
-			$where_clause[] = "blog_id = %d";
+			$where_clause[] = 'blog_id = %d';
 			$where_values[] = $this->wordcamp_site_id;
 		} else {
-			$excluded_ids = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
+			$excluded_ids   = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
 			$where_clause[] = "blog_id NOT IN ( $excluded_ids )";
 		}
 
@@ -283,38 +287,48 @@ class Sponsor_Invoices extends Date_Range {
 	 * @return array|\WP_Error An array of invoices or an error object.
 	 */
 	protected function get_qbo_invoices( array $indexed_invoices ) {
-		$qbo = new Utilities\QBO_Client();
+		$qbo = new Client();
 
-		$invoices = $qbo->get_transactions_by_date( 'Invoice', $this->start_date, $this->end_date );
+		$invoices = $qbo->read(
+			'Invoice',
+			array( 'Id', 'TxnDate', 'CurrencyRef', 'TotalAmt' ),
+			array(
+				sprintf( "TxnDate >= '%s'", $this->start_date->format( 'Y-m-d' ) ),
+				sprintf( "TxnDate <= '%s'", $this->end_date->format( 'Y-m-d' ) ),
+			)
+		);
 
-		if ( is_wp_error( $invoices ) ) {
-			return $invoices;
+		if ( $qbo->has_error() ) {
+			return $qbo->error;
 		}
 
 		$indexed_invoice_ids = array_keys( $indexed_invoices );
 
 		// Filter out invoices that aren't in the index, or aren't for the specified WordCamp.
-		$invoices = array_filter( $invoices, function( $invoice ) use ( $indexed_invoice_ids ) {
-			if ( in_array( absint( $invoice['Id'] ), $indexed_invoice_ids, true ) ) {
-				return true;
-			}
+		$invoices = array_filter(
+			$invoices,
+			function( $invoice ) use ( $indexed_invoice_ids ) {
+				if ( in_array( absint( $invoice->Id ), $indexed_invoice_ids, true ) ) {
+					return true;
+				}
 
-			return false;
-		} );
+				return false;
+			}
+		);
 
 		// Normalize data keys.
 		$normalized_invoices = array();
 
 		foreach ( $invoices as $invoice ) {
 			$normalized_invoices[] = array(
-				'date'          => $invoice['TxnDate'],
+				'date'          => $invoice->TxnDate,
 				'type'          => 'Invoice',
-				'invoice_id'    => $invoice['Id'],
-				'wordcamp_name' => $indexed_invoices[ $invoice['Id'] ]['wordcamp_name'],
-				'sponsor_name'  => $indexed_invoices[ $invoice['Id'] ]['sponsor_name'],
-				'invoice_title' => $indexed_invoices[ $invoice['Id'] ]['invoice_title'],
-				'currency'      => $invoice['CurrencyRef']['value'],
-				'amount'        => $invoice['TotalAmt'],
+				'invoice_id'    => $invoice->Id,
+				'wordcamp_name' => $indexed_invoices[ $invoice->Id ]['wordcamp_name'],
+				'sponsor_name'  => $indexed_invoices[ $invoice->Id ]['sponsor_name'],
+				'invoice_title' => $indexed_invoices[ $invoice->Id ]['invoice_title'],
+				'currency'      => ( isset( $invoice->CurrencyRef->value ) ) ? $invoice->CurrencyRef->value : $invoice->CurrencyRef,
+				'amount'        => $invoice->TotalAmt,
 			);
 		}
 
@@ -329,60 +343,79 @@ class Sponsor_Invoices extends Date_Range {
 	 * @return array|\WP_Error An array of payments or an error object.
 	 */
 	protected function get_qbo_payments( array $indexed_invoices ) {
-		$qbo = new Utilities\QBO_Client();
+		$qbo = new Client();
 
-		$payments = $qbo->get_transactions_by_date( 'Payment', $this->start_date, $this->end_date );
+		$payments = $qbo->read(
+			'Payment',
+			array( 'Id', 'TxnDate', 'CurrencyRef', 'Line', 'TotalAmt' ),
+			array(
+				sprintf( "TxnDate >= '%s'", $this->start_date->format( 'Y-m-d' ) ),
+				sprintf( "TxnDate <= '%s'", $this->end_date->format( 'Y-m-d' ) ),
+			)
+		);
 
-		if ( is_wp_error( $payments ) ) {
-			return $payments;
+		if ( $qbo->has_error() ) {
+			return $qbo->error;
 		}
 
 		$indexed_invoice_ids = array_keys( $indexed_invoices );
 
 		// Isolate the ID of the invoice each payment is for.
-		array_walk( $payments, function( &$payment ) use ( $indexed_invoice_ids ) {
-			$payment['invoice_id'] = 0;
+		array_walk(
+			$payments,
+			function( &$payment ) use ( $indexed_invoice_ids ) {
+				$payment->invoice_id = 0;
 
-			if ( isset( $payment['Line'] ) ) {
-				foreach ( $payment['Line'] as $line ) {
-					if ( ! isset( $line['LinkedTxn'] ) ) {
-						continue;
+				if ( isset( $payment->Line ) ) {
+					if ( ! is_array( $payment->Line ) ) {
+						$payment->Line = array( $payment->Line );
 					}
 
-					foreach ( $line['LinkedTxn'] as $txn ) {
-						if ( 'Invoice' === $txn['TxnType'] && in_array( absint( $txn['TxnId'] ), $indexed_invoice_ids, true ) ) {
-							$payment['invoice_id'] = absint( $txn['TxnId'] );
-							break 2;
+					foreach ( $payment->Line as $line ) {
+						if ( ! isset( $line->LinkedTxn ) ) {
+							continue;
+						}
+
+						if ( ! is_array( $line->LinkedTxn ) ) {
+							$line->LinkedTxn = array( $line->LinkedTxn );
+						}
+
+						foreach ( $line->LinkedTxn as $txn ) {
+							if ( 'Invoice' === $txn->TxnType && in_array( absint( $txn->TxnId ), $indexed_invoice_ids, true ) ) {
+								$payment->invoice_id = absint( $txn->TxnId );
+								break 2;
+							}
 						}
 					}
 				}
-
-				unset( $payment['Line'] );
 			}
-		} );
+		);
 
 		// Filter out payments that aren't for relevant invoices.
-		$payments = array_filter( $payments, function ( $payment ) {
-			if ( 0 !== $payment['invoice_id'] ) {
-				return true;
-			}
+		$payments = array_filter(
+			$payments,
+			function ( $payment ) {
+				if ( 0 !== $payment->invoice_id ) {
+					return true;
+				}
 
-			return false;
-		} );
+				return false;
+			}
+		);
 
 		// Normalize data keys.
 		$normalized_payments = array();
 
 		foreach ( $payments as $payment ) {
 			$normalized_payments[] = array(
-				'date'          => $payment['TxnDate'],
+				'date'          => $payment->TxnDate,
 				'type'          => 'Payment',
-				'invoice_id'    => $payment['invoice_id'],
-				'wordcamp_name' => $indexed_invoices[ $payment['invoice_id'] ]['wordcamp_name'],
-				'sponsor_name'  => $indexed_invoices[ $payment['invoice_id'] ]['sponsor_name'],
-				'invoice_title' => $indexed_invoices[ $payment['invoice_id'] ]['invoice_title'],
-				'currency'      => $payment['CurrencyRef']['value'],
-				'amount'        => $payment['TotalAmt'],
+				'invoice_id'    => $payment->invoice_id,
+				'wordcamp_name' => $indexed_invoices[ $payment->invoice_id ]['wordcamp_name'],
+				'sponsor_name'  => $indexed_invoices[ $payment->invoice_id ]['sponsor_name'],
+				'invoice_title' => $indexed_invoices[ $payment->invoice_id ]['invoice_title'],
+				'currency'      => ( isset( $payment->CurrencyRef->value ) ) ? $payment->CurrencyRef->value : $payment->CurrencyRef,
+				'amount'        => $payment->TotalAmt,
 			);
 		}
 
@@ -398,13 +431,16 @@ class Sponsor_Invoices extends Date_Range {
 	 * @return array
 	 */
 	protected function filter_transactions_by_type( array $transactions, $type ) {
-		return array_filter( $transactions, function( $transaction ) use ( $type ) {
-			if ( $type === $transaction['type'] ) {
-				return true;
-			}
+		return array_filter(
+			$transactions,
+			function( $transaction ) use ( $type ) {
+				if ( $type === $transaction['type'] ) {
+					return true;
+				}
 
-			return false;
-		} );
+				return false;
+			}
+		);
 	}
 
 	/**
@@ -453,9 +489,13 @@ class Sponsor_Invoices extends Date_Range {
 			}
 		}
 
-		$total_amount_converted = array_reduce( $converted_amounts, function( $carry, $item ) {
-			return $carry + floatval( $item );
-		}, 0 );
+		$total_amount_converted = array_reduce(
+			$converted_amounts,
+			function( $carry, $item ) {
+				return $carry + floatval( $item );
+			},
+			0
+		);
 
 		return array(
 			'total_count'            => $total_count,
@@ -521,8 +561,8 @@ class Sponsor_Invoices extends Date_Range {
 		$report = null;
 
 		if ( 'Show results' === $action
-		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+			&& wp_verify_nonce( $nonce, 'run-report' )
+			&& current_user_can( 'manage_network' )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2016-01-01' ), // No invoices in QBO before 2016.
@@ -600,7 +640,7 @@ class Sponsor_Invoices extends Date_Range {
 			}
 
 			$exporter->emit_file();
-		} // End if().
+		}
 	}
 
 	/**
@@ -634,16 +674,16 @@ class Sponsor_Invoices extends Date_Range {
 		$wordcamp_id = filter_input( INPUT_GET, 'wordcamp-id' );
 		$action      = filter_input( INPUT_GET, 'action' );
 
-		$years    = self::year_array( absint( date( 'Y' ) ), 2016 );
+		$years    = self::year_array( absint( gmdate( 'Y' ) ), 2016 );
 		$quarters = self::quarter_array();
 		$months   = self::month_array();
 
 		if ( ! $year ) {
-			$year = absint( date( 'Y' ) );
+			$year = absint( gmdate( 'Y' ) );
 		}
 
 		if ( ! $period ) {
-			$period = absint( date( 'm' ) );
+			$period = absint( gmdate( 'm' ) );
 		}
 
 		$report = null;

@@ -1,8 +1,8 @@
 <?php
 namespace WordCamp\QuickBooks\Admin;
 
-use WordCamp\QuickBooks\Client;
 use const WordCamp\QuickBooks\{ OAUTH_CAP, PLUGIN_DIR, PLUGIN_PREFIX };
+use function WordCamp\QuickBooks\{ get_client };
 
 defined( 'WPINC' ) || die();
 
@@ -32,7 +32,7 @@ function add_page() {
  * @return void
  */
 function render_page() {
-	$client = new Client();
+	$client = get_client();
 
 	if ( $client->has_valid_token() ) {
 		$cmd          = 'revoke';
@@ -62,7 +62,7 @@ function handle_form_post() {
 		wp_die( 'You do not have permission to perform this action.' );
 	}
 
-	$client = new Client();
+	$client = get_client();
 
 	if ( $client->has_error() ) {
 		require PLUGIN_DIR . '/views/admin-form-error.php';
@@ -75,13 +75,24 @@ function handle_form_post() {
 		$cmd = filter_input( INPUT_GET, 'cmd' );
 	}
 
+	$nonce = filter_input( INPUT_POST, PLUGIN_PREFIX . '_oauth_' . $cmd );
+
 	switch ( $cmd ) {
 		case 'authorize':
-			$url = wp_sanitize_redirect( $client->get_authorize_url() );
+			if ( wp_verify_nonce( $nonce, $cmd ) ) {
+				$url = wp_sanitize_redirect( $client->get_authorize_url() );
 
-			add_filter( 'allowed_redirect_hosts', __NAMESPACE__ . '\allow_intuit_domain_redirect', 10, 2 );
+				add_filter( 'allowed_redirect_hosts', __NAMESPACE__ . '\allow_intuit_domain_redirect', 10, 2 );
 
-			wp_safe_redirect( $url );
+				wp_safe_redirect( $url );
+			} else {
+				$client->error->add(
+					'invalid_nonce',
+					'Your request could not be validated.'
+				);
+
+				require PLUGIN_DIR . '/views/admin-form-error.php';
+			}
 			exit();
 
 		case 'exchange':
@@ -100,16 +111,25 @@ function handle_form_post() {
 			exit();
 
 		case 'revoke':
-			$client->revoke_token();
+			if ( wp_verify_nonce( $nonce, $cmd ) ) {
+				$client->revoke_token();
 
-			if ( $client->has_error() ) {
+				if ( $client->has_error() ) {
+					require PLUGIN_DIR . '/views/admin-form-error.php';
+					break;
+				}
+
+				$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );
+
+				wp_safe_redirect( $url );
+			} else {
+				$client->error->add(
+					'invalid_nonce',
+					'Your request could not be validated.'
+				);
+
 				require PLUGIN_DIR . '/views/admin-form-error.php';
-				break;
 			}
-
-			$url = add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) );
-
-			wp_safe_redirect( $url );
 			exit();
 	}
 }
@@ -139,7 +159,16 @@ function allow_intuit_domain_redirect( $allowed_domains, $domain ) {
  * @return void
  */
 function maybe_show_disconnection_warning() {
-	$client = new Client();
+	global $pagenow, $plugin_page;
+
+	if (
+		! current_user_can( OAUTH_CAP )
+		|| 'settings_page_quickbooks' === get_plugin_page_hook( $plugin_page, $pagenow )
+	) {
+		return;
+	}
+
+	$client = get_client();
 
 	if ( ! $client->has_valid_token() ) {
 		// We don't need any other errors to appear on every Network screen, just this special disconnection one.

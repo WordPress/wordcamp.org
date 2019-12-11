@@ -6,7 +6,9 @@
  */
 
 namespace WordPress_Community\Applications;
+
 use function WordPress_Community\Applications\Meetup\render_meetup_application_form;
+use WP_Error, WP_Post;
 
 require_once dirname( __DIR__ ) . '/wcpt-event/class-event-application.php';
 
@@ -20,7 +22,7 @@ class Meetup_Application extends Event_Application {
 	/**
 	 * Used to maintain state across functions. Set in create_post function.
 	 *
-	 * @var \WP_Post
+	 * @var WP_Post
 	 */
 	public $post;
 
@@ -123,7 +125,7 @@ class Meetup_Application extends Event_Application {
 	 *
 	 * @param array $unsafe_data
 	 *
-	 * @return array|\WP_Error
+	 * @return array|WP_Error
 	 */
 	public function validate_data( $unsafe_data ) {
 		$safe_data   = array();
@@ -150,7 +152,7 @@ class Meetup_Application extends Event_Application {
 
 		foreach ( $required_fields as $field ) {
 			if ( empty( $safe_data[ $field ] ) ) {
-				return new \WP_Error( 'required_fields', "Please click on your browser's Back button, and fill in all of the required fields." );
+				return new WP_Error( 'required_fields', "Please click on your browser's Back button, and fill in all of the required fields." );
 			}
 		}
 
@@ -190,12 +192,12 @@ class Meetup_Application extends Event_Application {
 	 *
 	 * @param array $data
 	 *
-	 * @return bool|\WP_Error
+	 * @return bool|WP_Error
 	 */
 	public function create_post( $data ) {
 		// Create the post.
 		$wordcamp_user_id = get_user_by( 'email', 'support@wordcamp.org' )->ID;
-		$statuses = self::get_post_statuses();
+		$statuses         = self::get_post_statuses();
 
 		$post = array(
 			'post_type'   => self::get_event_type(),
@@ -271,6 +273,8 @@ ADDRESS;
 		if ( isset( $this->post ) && isset( $this->post->ID ) ) {
 			return get_post_meta( $this->post->ID, 'q_email' );
 		}
+
+		return null;
 	}
 
 	/**
@@ -282,6 +286,8 @@ ADDRESS;
 		if ( isset( $this->post->ID ) ) {
 			return get_post_meta( $this->post->ID, 'Meetup Location', true );
 		}
+
+		return null;
 	}
 
 	/**

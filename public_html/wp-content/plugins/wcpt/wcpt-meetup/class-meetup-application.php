@@ -63,6 +63,7 @@ class Meetup_Application extends Event_Application {
 			'wcpt-mtp-nds-nw-ow' => _x( 'Needs to promote the co-organizer', 'Meetup status', 'wordcamporg' ),
 			'wcpt-mtp-chng-req'  => _x( 'Changes requested', 'Meetup status', 'wordcamporg' ),
 			'wcpt-mtp-rejected'  => _x( 'Declined', 'Meetup status', 'wordcamporg' ),
+			'wcpt-mtp-cancelled' => _x( 'Cancelled', 'Meetup status', 'wordcamporg' ),
 			'wcpt-mtp-active'    => _x( 'Active in the chapter', 'Meetup status', 'wordcamporg' ),
 			'wcpt-mtp-dormant'   => _x( 'Dormant', 'Meetup status', 'wordcamporg' ),
 			'wcpt-mtp-removed'   => _x( 'Removed from the chapter', 'Meetup status', 'wordcamporg' ),

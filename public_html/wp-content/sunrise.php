@@ -49,7 +49,13 @@ function wcorg_canonical_years_redirect() {
 	$current_blog = wp_cache_get( $cache_key, 'site-options' );
 
 	if ( ! $current_blog ) {
-		$current_blog = get_blog_details( array( 'domain' => $domain, 'path' => '/', ), false );
+		$current_blog = get_blog_details(
+			array(
+				'domain' => $domain,
+				'path'   => '/',
+			),
+			false
+		);
 
 		if ( $current_blog ) {
 			wp_cache_set( $cache_key, $current_blog, 'site-options' );
@@ -109,54 +115,55 @@ function wcorg_get_domain_redirects() {
 
 	return array(
 		// Central redirects.
-		'bg.wordcamp.org'                   => $central,
-		'denmark.wordcamp.org'              => $central,
-		'finland.wordcamp.org'              => $central,
-		'india.wordcamp.org'                => $central,
-		'utah.wordcamp.org'                 => $central,
+		'bg.wordcamp.org'                        => $central,
+		'denmark.wordcamp.org'                   => $central,
+		'finland.wordcamp.org'                   => $central,
+		'india.wordcamp.org'                     => $central,
+		'utah.wordcamp.org'                      => $central,
 
 		// Language redirects.
-		'ca.2014.mallorca.wordcamp.org'     => '2014-ca.mallorca.wordcamp.org',
-		'de.2014.mallorca.wordcamp.org'     => '2014-de.mallorca.wordcamp.org',
-		'es.2014.mallorca.wordcamp.org'     => '2014-es.mallorca.wordcamp.org',
-		'fr.2011.montreal.wordcamp.org'     => '2011-fr.montreal.wordcamp.org',
-		'fr.2012.montreal.wordcamp.org'     => '2012-fr.montreal.wordcamp.org',
-		'fr.2013.montreal.wordcamp.org'     => '2013-fr.montreal.wordcamp.org',
-		'fr.2014.montreal.wordcamp.org'     => '2014-fr.montreal.wordcamp.org',
-		'2014.fr.montreal.wordcamp.org'     => '2014-fr.montreal.wordcamp.org',
-		'fr.2013.ottawa.wordcamp.org'       => '2013-fr.ottawa.wordcamp.org',
+		'ca.2014.mallorca.wordcamp.org'          => '2014-ca.mallorca.wordcamp.org',
+		'de.2014.mallorca.wordcamp.org'          => '2014-de.mallorca.wordcamp.org',
+		'es.2014.mallorca.wordcamp.org'          => '2014-es.mallorca.wordcamp.org',
+		'fr.2011.montreal.wordcamp.org'          => '2011-fr.montreal.wordcamp.org',
+		'fr.2012.montreal.wordcamp.org'          => '2012-fr.montreal.wordcamp.org',
+		'fr.2013.montreal.wordcamp.org'          => '2013-fr.montreal.wordcamp.org',
+		'fr.2014.montreal.wordcamp.org'          => '2014-fr.montreal.wordcamp.org',
+		'2014.fr.montreal.wordcamp.org'          => '2014-fr.montreal.wordcamp.org',
+		'fr.2013.ottawa.wordcamp.org'            => '2013-fr.ottawa.wordcamp.org',
 
-		// Year redirects.
-		'2006.wordcamp.org'                 => '2006.sf.wordcamp.org',
-		'2007.wordcamp.org'                 => '2007.sf.wordcamp.org',
-		'2012.torontodev.wordcamp.org'      => '2012-dev.toronto.wordcamp.org',
-		'2013.windsor.wordcamp.org'         => '2013.lancaster.wordcamp.org',
-		'2014.lima.wordcamp.org'            => '2014.peru.wordcamp.org',
-		'2014.london.wordcamp.org'          => '2015.london.wordcamp.org',
-		'2016.pune.wordcamp.org'            => '2017.pune.wordcamp.org',
-		'2016.bristol.wordcamp.org'         => '2017.bristol.wordcamp.org',
-		'2017.cusco.wordcamp.org'           => '2018.cusco.wordcamp.org',
-		'2017.dayton.wordcamp.org'          => '2018.dayton.wordcamp.org',
-		'2017.niagara.wordcamp.org'         => '2018.niagara.wordcamp.org',
-		'2017.saintpetersburg.wordcamp.org' => '2018.saintpetersburg.wordcamp.org',
-		'2017.zilina.wordcamp.org'          => '2018.zilina.wordcamp.org',
-		'2018.wurzburg.wordcamp.org'        => '2018.wuerzburg.wordcamp.org',
-		'2019.lisbon.wordcamp.org'          => '2019.lisboa.wordcamp.org',
-		'2018.kolkata.wordcamp.org'         => '2019.kolkata.wordcamp.org',
-		'2018.montclair.wordcamp.org'       => '2019.montclair.wordcamp.org',
-		'2018.pune.wordcamp.org'            => '2019.pune.wordcamp.org',
-		'2018.dc.wordcamp.org'              => '2019.dc.wordcamp.org',
-		'2019.sevilla.wordcamp.org'         => '2019-developers.sevilla.wordcamp.org',
-		'2019.telaviv.wordcamp.org'         => '2020.telaviv.wordcamp.org',
+		// Year & name change redirects.
+		'2006.wordcamp.org'                      => '2006.sf.wordcamp.org',
+		'2007.wordcamp.org'                      => '2007.sf.wordcamp.org',
+		'2012.torontodev.wordcamp.org'           => '2012-dev.toronto.wordcamp.org',
+		'2013.windsor.wordcamp.org'              => '2013.lancaster.wordcamp.org',
+		'2014.lima.wordcamp.org'                 => '2014.peru.wordcamp.org',
+		'2014.london.wordcamp.org'               => '2015.london.wordcamp.org',
+		'2016.pune.wordcamp.org'                 => '2017.pune.wordcamp.org',
+		'2016.bristol.wordcamp.org'              => '2017.bristol.wordcamp.org',
+		'2017.cusco.wordcamp.org'                => '2018.cusco.wordcamp.org',
+		'2017.dayton.wordcamp.org'               => '2018.dayton.wordcamp.org',
+		'2017.niagara.wordcamp.org'              => '2018.niagara.wordcamp.org',
+		'2017.saintpetersburg.wordcamp.org'      => '2018.saintpetersburg.wordcamp.org',
+		'2017.zilina.wordcamp.org'               => '2018.zilina.wordcamp.org',
+		'2018.wurzburg.wordcamp.org'             => '2018.wuerzburg.wordcamp.org',
+		'2019.lisbon.wordcamp.org'               => '2019.lisboa.wordcamp.org',
+		'2018.kolkata.wordcamp.org'              => '2019.kolkata.wordcamp.org',
+		'2018.montclair.wordcamp.org'            => '2019.montclair.wordcamp.org',
+		'2018.pune.wordcamp.org'                 => '2019.pune.wordcamp.org',
+		'2018.dc.wordcamp.org'                   => '2019.dc.wordcamp.org',
+		'2019.sevilla.wordcamp.org'              => '2019-developers.sevilla.wordcamp.org',
+		'2019.telaviv.wordcamp.org'              => '2020.telaviv.wordcamp.org',
+		'2020-barcelona.publishers.wordcamp.org' => '2020.barcelona.wordcamp.org',
 
 		// Misc redirects.
-		'wordcampsf.org'                    => 'sf.wordcamp.org',
-		'wordcampsf.com'                    => 'sf.wordcamp.org',
+		'wordcampsf.org'                         => 'sf.wordcamp.org',
+		'wordcampsf.com'                         => 'sf.wordcamp.org',
 
 		// Temporary redirects.
-		'2018.philly.wordcamp.org'          => '2018.philadelphia.wordcamp.org', // TODO Eventually rename `philadelphia` sites to `philly` for consistency across years, then setup permanent redirects to `philly`.
-		'2019.philly.wordcamp.org'          => '2019.philadelphia.wordcamp.org',
-		'philly.wordcamp.org'               => '2019.philadelphia.wordcamp.org',
+		'2018.philly.wordcamp.org'               => '2018.philadelphia.wordcamp.org', // TODO Eventually rename `philadelphia` sites to `philly` for consistency across years, then setup permanent redirects to `philly`.
+		'2019.philly.wordcamp.org'               => '2019.philadelphia.wordcamp.org',
+		'philly.wordcamp.org'                    => '2019.philadelphia.wordcamp.org',
 	);
 }
 

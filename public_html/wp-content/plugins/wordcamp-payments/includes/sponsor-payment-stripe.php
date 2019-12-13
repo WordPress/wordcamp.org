@@ -231,6 +231,7 @@ function _handle_post_data( &$data ) {
 		// The card details have been entered and Stripe has submitted our form.
 		case STEP_PAYMENT_DETAILS:
 			$stripe_token           = filter_input( INPUT_POST, 'stripeToken' );
+			$stripe_email           = filter_input( INPUT_POST, 'stripeEmail' );
 			$payment_data_json      = filter_input( INPUT_POST, 'payment_data_json' );
 			$payment_data_signature = filter_input( INPUT_POST, 'payment_data_signature' );
 
@@ -275,11 +276,12 @@ function _handle_post_data( &$data ) {
 			}
 
 			$body = array(
-				'amount'      => $payment_data['decimal_amount'],
-				'currency'    => $payment_data['currency'],
-				'source'      => $stripe_token,
-				'description' => $description,
-				'metadata'    => $metadata,
+				'amount'        => $payment_data['decimal_amount'],
+				'currency'      => $payment_data['currency'],
+				'source'        => $stripe_token,
+				'description'   => $description,
+				'metadata'      => $metadata,
+				'receipt_email' => $stripe_email,
 			);
 
 			try {

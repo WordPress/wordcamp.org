@@ -44,7 +44,6 @@ add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\s
 add_filter( 'camptix_html_message',                          __NAMESPACE__ . '\render_html_emails',           10, 2 );
 add_action( 'camptix_tshirt_report_intro',                   __NAMESPACE__ . '\tshirt_report_intro_message',  10, 3 );
 add_filter( 'camptix_stripe_checkout_image_url',             __NAMESPACE__ . '\stripe_default_checkout_image_url'   );
-add_filter( 'camptix_edit_info_cell_content',                __NAMESPACE__ . '\fix_twentytwenty_edit_links'         );
 
 // Prefix for Form_Spam_Prevention class.
 define( 'WC_CAMPTIX_FSP_PREFIX', 'wc-camptix-fsp-prefix' );
@@ -1033,18 +1032,4 @@ function stripe_default_checkout_image_url( $url ) {
 	}
 
 	return $url;
-}
-
-/**
- * Add "do-not-scroll" class as a work-around for a bug with Twenty Twenty, where hash-links don't work.
- * See: https://core.trac.wordpress.org/ticket/48763
- *
- * @param string $link
- *
- * @return string
- */
-function fix_twentytwenty_edit_links( $link ) {
-	if ( 'twentytwenty' === get_template() ) {
-		return str_replace( '<a href=', '<a class="do-not-scroll" href=', $link );
-	}
 }

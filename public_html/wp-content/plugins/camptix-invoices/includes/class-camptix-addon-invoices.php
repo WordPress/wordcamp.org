@@ -112,7 +112,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		);
 
 		$camptix->add_settings_field_helper( 'invoice-company', __( 'Company address', 'wordcamporg' ), 'field_textarea', 'invoice' );
-		$camptix->add_settings_field_helper( 'invoice-tac', __( 'Terms and Conditions', 'wordcamporg' ), 'field_textarea', 'invoice' );
 		$camptix->add_settings_field_helper( 'invoice-thankyou', __( 'Note below invoice total', 'wordcamporg' ), 'field_textarea', 'invoice' );
 	}
 
@@ -181,9 +180,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 		if ( isset( $input['invoice-company'] ) ) {
 			$output['invoice-company'] = sanitize_textarea_field( $input['invoice-company'] );
-		}//end if
-		if ( isset( $input['invoice-tac'] ) ) {
-			$output['invoice-tac'] = sanitize_textarea_field( $input['invoice-tac'] );
 		}//end if
 		if ( isset( $input['invoice-thankyou'] ) ) {
 			$output['invoice-thankyou'] = sanitize_textarea_field( $input['invoice-thankyou'] );

@@ -24,7 +24,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 	 */
 	public function register_personal_data_exporters( $exporters ) {
 		$exporters['camptix-attendee'] = array(
-			'exporter_friendly_name' => __( 'CampTix Attendee Data', 'camptix' ),
+			'exporter_friendly_name' => __( 'CampTix Attendee Data', 'wordcamporg' ),
 			'callback'               => array( $this, 'attendee_personal_data_exporter' ),
 		);
 
@@ -54,7 +54,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 		 *                     value is the human-readable label for the data in the export file.
 		 */
 		$buyer_prop_to_export = apply_filters( 'camptix_privacy_buyer_props_to_export', array(
-			'tix_receipt_email' => __( 'Ticket Buyer E-mail Address', 'camptix' ),
+			'tix_receipt_email' => __( 'Ticket Buyer E-mail Address', 'wordcamporg' ),
 		) );
 
 		/**
@@ -64,11 +64,11 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 		 *                     value is the human-readable label for the data in the export file.
 		 */
 		$attendee_prop_to_export = apply_filters( 'camptix_privacy_attendee_props_to_export', array(
-			'tix_first_name'             => __( 'First Name', 'camptix' ),
-			'tix_last_name'              => __( 'Last Name', 'camptix' ),
-			'tix_email'                  => __( 'E-mail Address', 'camptix' ),
+			'tix_first_name'             => __( 'First Name', 'wordcamporg' ),
+			'tix_last_name'              => __( 'Last Name', 'wordcamporg' ),
+			'tix_email'                  => __( 'E-mail Address', 'wordcamporg' ),
 			'questions'                  => '',
-			'tix_private_form_submit_ip' => __( 'IP while viewing ticketed content', 'camptix' ),
+			'tix_private_form_submit_ip' => __( 'IP while viewing ticketed content', 'wordcamporg' ),
 		) );
 
 		$post_query = $this->get_attendee_posts( $email_address, $page );
@@ -150,7 +150,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 						case 'tix_private_form_submit_ip' :
 							$values = get_post_meta( $post->ID, $key );
 							/* translators: used between list items, there is a space after the comma */
-							$values = implode( __( ', ', 'camptix' ), $values );
+							$values = implode( __( ', ', 'wordcamporg' ), $values );
 
 							if ( ! empty( $values ) ) {
 								$export[] = array(
@@ -180,7 +180,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 			if ( ! empty( $attendee_data_to_export ) ) {
 				$data_to_export[] = array(
 					'group_id'    => 'camptix-attendee',
-					'group_label' => __( 'CampTix Attendee Data', 'camptix' ),
+					'group_label' => __( 'CampTix Attendee Data', 'wordcamporg' ),
 					'item_id'     => "camptix-attendee-{$post->ID}",
 					'data'        => $attendee_data_to_export,
 				);
@@ -204,7 +204,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 	 */
 	public function register_personal_data_erasers( $erasers ) {
 		$erasers['camptix-attendee'] = array(
-			'eraser_friendly_name' => __( 'CampTix Attendee Data', 'camptix' ),
+			'eraser_friendly_name' => __( 'CampTix Attendee Data', 'wordcamporg' ),
 			'callback'             => array( $this, 'attendee_personal_data_eraser' ),
 		);
 
@@ -272,7 +272,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 					$messages[] = esc_html( $anon_message );
 				} else {
 					/* translators: %d: Comment ID */
-					$messages[] = sprintf( __( 'Attendee %d contains personal data but could not be anonymized.', 'camptix' ), $post->ID );
+					$messages[] = sprintf( __( 'Attendee %d contains personal data but could not be anonymized.', 'wordcamporg' ), $post->ID );
 				}
 
 				$items_retained = true;
@@ -431,10 +431,10 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 	public function data_anonymizers( $anonymous, $type, $data ) {
 		switch ( $type ) {
 			case 'camptix_full_name' :
-				$anonymous = __( 'Anonymous', 'camptix' );
+				$anonymous = __( 'Anonymous', 'wordcamporg' );
 				break;
 			case 'camptix_first_name' :
-				$anonymous = __( 'Anonymous', 'camptix' );
+				$anonymous = __( 'Anonymous', 'wordcamporg' );
 				break;
 			case 'camptix_last_name' :
 				$anonymous = '';
@@ -464,62 +464,62 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 		$content = array();
 
 		$content[] = '<p class="privacy-policy-tutorial">' .
-		             __( 'This sample language includes the basics around what personal data your CampTix instance may be collecting, storing and sharing, as well as who may have access to that data. Depending on what settings are enabled and which additional plugins are used, the specific information used by your CampTix instance will vary. We recommend consulting with a lawyer when deciding what information to disclose on your privacy policy.', 'camptix' ) .
+		             __( 'This sample language includes the basics around what personal data your CampTix instance may be collecting, storing and sharing, as well as who may have access to that data. Depending on what settings are enabled and which additional plugins are used, the specific information used by your CampTix instance will vary. We recommend consulting with a lawyer when deciding what information to disclose on your privacy policy.', 'wordcamporg' ) .
 		             '</p>';
 
 		$content[] = '<h2>' .
-		             __( 'What personal data we collect and why we collect it', 'camptix' ) .
+		             __( 'What personal data we collect and why we collect it', 'wordcamporg' ) .
 		             '</h2>';
 
-		$content[] = __( 'When you register for one of our events, we’ll ask you to provide information including your name and email address. We may also ask for additional information necessary for a specific event, such as home address, phone number, meal preference, t-shirt size, agreement to the code of conduct, areas of interest, and/or interest in attending associate events. We may use this information to:', 'camptix' );
+		$content[] = __( 'When you register for one of our events, we’ll ask you to provide information including your name and email address. We may also ask for additional information necessary for a specific event, such as home address, phone number, meal preference, t-shirt size, agreement to the code of conduct, areas of interest, and/or interest in attending associate events. We may use this information to:', 'wordcamporg' );
 
 		$content[] = '<ul>' .
-		             '<li>' . __( 'Send you information about your ticket and the event', 'camptix' ) . '</li>' .
-		             '<li>' . __( 'Respond to your requests, including refunds and complaints', 'camptix' ) . '</li>' .
-		             '<li>' . __( 'Process your payments and prevent fraud', 'camptix' ) . '</li>' .
-		             '<li>' . __( 'Comply with any legal obligations we have, such as calculating taxes', 'camptix' ) . '</li>' .
-		             '<li>' . __( 'Send you updates about the ticketed event and other associated events, if you choose to receive them', 'camptix' ) . '</li>' .
+		             '<li>' . __( 'Send you information about your ticket and the event', 'wordcamporg' ) . '</li>' .
+		             '<li>' . __( 'Respond to your requests, including refunds and complaints', 'wordcamporg' ) . '</li>' .
+		             '<li>' . __( 'Process your payments and prevent fraud', 'wordcamporg' ) . '</li>' .
+		             '<li>' . __( 'Comply with any legal obligations we have, such as calculating taxes', 'wordcamporg' ) . '</li>' .
+		             '<li>' . __( 'Send you updates about the ticketed event and other associated events, if you choose to receive them', 'wordcamporg' ) . '</li>' .
 		             '</ul>';
 
 		$content[] = '<h3>' .
-		             __( 'Cookies', 'camptix' ) .
+		             __( 'Cookies', 'wordcamporg' ) .
 		             '</h3>';
 
-		$content[] = __( 'We use cookies to keep track of the number of unique visitors to the Tickets page, and for managing access to content on the site that is restricted to ticket holders.', 'camptix' );
+		$content[] = __( 'We use cookies to keep track of the number of unique visitors to the Tickets page, and for managing access to content on the site that is restricted to ticket holders.', 'wordcamporg' );
 
 		$content[] = '<h2>' .
-		             __( 'Who has access', 'camptix' ) .
+		             __( 'Who has access', 'wordcamporg' ) .
 		             '</h2>';
 
-		$content[] = __( 'Members of our team have access to the information you provide us. For example, all Event Organizers can access:', 'camptix' );
+		$content[] = __( 'Members of our team have access to the information you provide us. For example, all Event Organizers can access:', 'wordcamporg' );
 
 		$content[] = '<ul>' .
-		             '<li>' . __( 'Registration information such as which tickets were purchased and when they were purchased', 'camptix' ) . '</li>' .
-		             '<li>' . __( 'Attendee information like your name, email address, and other relevant event attendance details', 'camptix' ) . '</li>' .
+		             '<li>' . __( 'Registration information such as which tickets were purchased and when they were purchased', 'wordcamporg' ) . '</li>' .
+		             '<li>' . __( 'Attendee information like your name, email address, and other relevant event attendance details', 'wordcamporg' ) . '</li>' .
 		             '</ul>';
 
-		$content[] = __( 'Our team members have access to this information to help organize the event, process refunds and support you.', 'camptix' );
+		$content[] = __( 'Our team members have access to this information to help organize the event, process refunds and support you.', 'wordcamporg' );
 
 		$content[] = '<h2>' .
-		             __( 'What we share with others', 'camptix' ) .
+		             __( 'What we share with others', 'wordcamporg' ) .
 		             '</h2>';
 
 		$content[] = '<p class="privacy-policy-tutorial">' .
-		             __( 'In this section you should list who you’re sharing data with, and for what purpose. This could include, but may not be limited to, analytics, marketing, payment gateways, shipping providers, and third party embeds.', 'camptix' ) .
+		             __( 'In this section you should list who you’re sharing data with, and for what purpose. This could include, but may not be limited to, analytics, marketing, payment gateways, shipping providers, and third party embeds.', 'wordcamporg' ) .
 		             '</p>';
 
 		$content[] = '<h3>' .
-		             __( 'Payments', 'camptix' ) .
+		             __( 'Payments', 'wordcamporg' ) .
 		             '</h3>';
 
 		$content[] = '<p class="privacy-policy-tutorial">' .
-		             __( 'In this subsection you should list which third party payment processors you’re using to take payments on your store since these may handle customer data. We’ve included PayPal as an example, but you should remove this if you’re not using PayPal.', 'camptix' ) .
+		             __( 'In this subsection you should list which third party payment processors you’re using to take payments on your store since these may handle customer data. We’ve included PayPal as an example, but you should remove this if you’re not using PayPal.', 'wordcamporg' ) .
 		             '</p>';
 
-		$content[] = __( 'We accept payments through PayPal. When processing payments, some of your data will be passed to PayPal, including information required to process or support the payment, such as the purchase total and billing information.', 'camptix' );
+		$content[] = __( 'We accept payments through PayPal. When processing payments, some of your data will be passed to PayPal, including information required to process or support the payment, such as the purchase total and billing information.', 'wordcamporg' );
 
 		$content[] = sprintf(
-			wp_kses( __( 'Please see the <a href="%s">PayPal Privacy Policy</a> for more details.', 'camptix' ), array( 'a' => array( 'href' => true ) ) ),
+			wp_kses( __( 'Please see the <a href="%s">PayPal Privacy Policy</a> for more details.', 'wordcamporg' ), array( 'a' => array( 'href' => true ) ) ),
 			'https://www.paypal.com/us/webapps/mpp/ua/privacy-full'
 		);
 

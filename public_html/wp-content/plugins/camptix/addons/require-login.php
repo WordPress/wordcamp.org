@@ -100,7 +100,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		// Warn users that they will need to login to purchase a ticket
 		if ( ! is_user_logged_in() ) {
 			$camptix->notice( apply_filters( 'camptix_require_login_please_login_message', sprintf(
-				__( 'Please <a href="%s">log in</a> or <a href="%s">create an account</a> to purchase your tickets.', 'camptix' ),
+				__( 'Please <a href="%s">log in</a> or <a href="%s">create an account</a> to purchase your tickets.', 'wordcamporg' ),
 				wp_login_url( add_query_arg( $_REQUEST, $this->get_redirect_return_url() ) ),
 				wp_registration_url()
 			) ) );
@@ -109,10 +109,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 		// Inform a user registering multiple attendees that other attendees will enter their own info
 		if ( isset( $_REQUEST['tix_action'], $_REQUEST['tix_tickets_selected'] ) ) {
 			if ( 'attendee_info' == $_REQUEST['tix_action'] && $this->registering_multiple_attendees( $_REQUEST['tix_tickets_selected'] ) ) {
-				$notice = __( '<p>Please enter your own information for the first ticket, and then enter the names and e-mail addresses of other attendees in the subsequent ticket fields.</p>', 'camptix' );
+				$notice = __( '<p>Please enter your own information for the first ticket, and then enter the names and e-mail addresses of other attendees in the subsequent ticket fields.</p>', 'wordcamporg' );
 
 				if ( $this->tickets_have_questions( $_REQUEST['tix_tickets_selected'] ) ) {
-					$notice .= __( '<p>The other attendees will receive an e-mail asking them to confirm their registration and enter their additional information.</p>', 'camptix' );
+					$notice .= __( '<p>The other attendees will receive an e-mail asking them to confirm their registration and enter their additional information.</p>', 'wordcamporg' );
 				}
 
 				$camptix->notice( $notice );
@@ -124,9 +124,9 @@ class CampTix_Require_Login extends CampTix_Addon {
 			$tickets_selected = array( get_post_meta( $_REQUEST['tix_attendee_id'], 'tix_ticket_id', true ) => 1 );  // mimic $_REQUEST['tix_tickets_selected']
 
 			if ( $this->tickets_have_questions( $tickets_selected ) ) {
-				$notice = __( 'To complete your registration, please fill out the fields below, and then click on the Confirm Registration button.', 'camptix' );
+				$notice = __( 'To complete your registration, please fill out the fields below, and then click on the Confirm Registration button.', 'wordcamporg' );
 			} else {
-				$notice = __( 'To complete your registration, please verify that all of the information below is correct, and then click on the Confirm Registration button.', 'camptix' );
+				$notice = __( 'To complete your registration, please verify that all of the information below is correct, and then click on the Confirm Registration button.', 'wordcamporg' );
 			}
 
 			$camptix->notice( $notice );
@@ -331,7 +331,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return array
 	 */
 	public function get_attendee_report_extra_columns( $extra_columns ) {
-		$extra_columns['username'] = __( 'Username', 'camptix' );
+		$extra_columns['username'] = __( 'Username', 'wordcamporg' );
 
 		return $extra_columns;
 	}
@@ -344,24 +344,24 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return array
 	 */
 	public function get_attendee_metabox_rows( $rows, $post ) {
-		$rows[] = array( __( 'Username', 'camptix' ), esc_html( get_post_meta( $post->ID, 'tix_username', true ) ) );
+		$rows[] = array( __( 'Username', 'wordcamporg' ), esc_html( get_post_meta( $post->ID, 'tix_username', true ) ) );
 
 		return $rows;
 	}
 
 	public function register_custom_email_templates( $templates ) {
 		$templates['email_template_multiple_purchase_receipt_unconfirmed_attendees'] = array(
-			'title'           => __( 'Multiple Purchase (receipt with unconfirmed attendees)', 'camptix' ),
+			'title'           => __( 'Multiple Purchase (receipt with unconfirmed attendees)', 'wordcamporg' ),
 			'callback_method' => 'field_textarea',
 		);
 
 		$templates['email_template_multiple_purchase_unconfirmed_attendee'] = array(
-			'title'           => __( 'Multiple Purchase (to unconfirmed attendees)', 'camptix' ),
+			'title'           => __( 'Multiple Purchase (to unconfirmed attendees)', 'wordcamporg' ),
 			'callback_method' => 'field_textarea',
 		);
 
 		$templates['email_template_multiple_purchase_unknown_attendee'] = array(
-			'title'           => __( 'Multiple Purchase (for unknown attendees)', 'camptix' ),
+			'title'           => __( 'Multiple Purchase (for unknown attendees)', 'wordcamporg' ),
 			'callback_method' => 'field_textarea',
 		);
 
@@ -376,9 +376,9 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return array
 	 */
 	public function custom_email_template_default_values( $options ) {
-		$options['email_template_multiple_purchase_receipt_unconfirmed_attendees'] = __( "Hi there!\n\nYou have purchased the following tickets:\n\n[receipt]\n\nYou can view and edit your order at any time before the event, by visiting the following link:\n\n[ticket_url]\n\nThe other attendees that you purchased tickets for will need to confirm their registration by visiting a link that was sent to them by e-mail.\n\nLet us know if you have any questions!", 'camptix' );
-		$options['email_template_multiple_purchase_unconfirmed_attendee']          = __( "Hi there!\n\nA ticket to [event_name] has been purchased for you by [buyer_full_name].\n\nPlease visit the following page and fill in your information to complete your registration:\n\n[ticket_url]\n\nLet us know if you have any questions!", 'camptix' );
-		$options['email_template_multiple_purchase_unknown_attendee']              = __( "Hi there!\n\nThis e-mail is for the unknown attendee that you purchased a ticket for. When you decide who will be using the ticket, please forward the link below to them so that they can complete their registration.\n\n[ticket_url]\n\nLet us know if you have any questions!", 'camptix' );
+		$options['email_template_multiple_purchase_receipt_unconfirmed_attendees'] = __( "Hi there!\n\nYou have purchased the following tickets:\n\n[receipt]\n\nYou can view and edit your order at any time before the event, by visiting the following link:\n\n[ticket_url]\n\nThe other attendees that you purchased tickets for will need to confirm their registration by visiting a link that was sent to them by e-mail.\n\nLet us know if you have any questions!", 'wordcamporg' );
+		$options['email_template_multiple_purchase_unconfirmed_attendee']          = __( "Hi there!\n\nA ticket to [event_name] has been purchased for you by [buyer_full_name].\n\nPlease visit the following page and fill in your information to complete your registration:\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
+		$options['email_template_multiple_purchase_unknown_attendee']              = __( "Hi there!\n\nThis e-mail is for the unknown attendee that you purchased a ticket for. When you decide who will be using the ticket, please forward the link below to them so that they can complete their registration.\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
 
 		return $options;
 	}
@@ -462,7 +462,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 				) ); ?>
 
 				<label for="<?php echo esc_attr( $name ); ?>">
-					&nbsp;<?php _e( "I don't know who will use this ticket yet", 'camptix' ); ?>
+					&nbsp;<?php _e( "I don't know who will use this ticket yet", 'wordcamporg' ); ?>
 				</label>
 			</td>
 		</tr>
@@ -599,8 +599,8 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	protected function get_unknown_attendee_info() {
 		$info = array(
-			'first_name' => __( 'Unknown', 'camptix' ),
-			'last_name'  => __( 'Attendee', 'camptix' ),
+			'first_name' => __( 'Unknown', 'wordcamporg' ),
+			'last_name'  => __( 'Attendee', 'wordcamporg' ),
 			'email'      => self::UNKNOWN_ATTENDEE_EMAIL,
 		);
 
@@ -682,7 +682,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		global $camptix;
 
 		if ( isset( $errors['require_login_edit_attendee_duplicate_username'] ) ) {
-			$camptix->error( __( "You cannot edit the requested attendee's information because your user account has already been assigned to another ticket. Please ask the person using this ticket to sign in with their own account and fill out their information.", 'camptix' ) );
+			$camptix->error( __( "You cannot edit the requested attendee's information because your user account has already been assigned to another ticket. Please ask the person using this ticket to sign in with their own account and fill out their information.", 'wordcamporg' ) );
 		}
 	}
 
@@ -728,7 +728,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function rename_save_attendee_info_label( $label, $attendee, $ticket, $questions ) {
 		if ( self::UNCONFIRMED_USERNAME == get_post_meta( $attendee->ID, 'tix_username', true ) ) {
-			$label = __( 'Confirm Registration', 'camptix' );
+			$label = __( 'Confirm Registration', 'wordcamporg' );
 		}
 
 		return $label;

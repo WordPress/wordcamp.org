@@ -35,7 +35,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 
 		<p>
 			<input id="tix_attended_<?php esc_attr( $attendee->ID ); ?>" name="tix_attended" type="checkbox" <?php checked( get_post_meta( $attendee->ID, 'tix_attended', true ) ); ?> />
-			<label for="tix_attended_<?php esc_attr( $attendee->ID ); ?>"><?php _e( 'Attended the event', 'camptix' ); ?></label>
+			<label for="tix_attended_<?php esc_attr( $attendee->ID ); ?>"><?php _e( 'Attended the event', 'wordcamporg' ); ?></label>
 		</p>
 
 		<?php
@@ -70,7 +70,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 	 * @return array
 	 */
 	public function add_summary_field( $fields ) {
-		$fields['attendance'] = __( 'Attended the event', 'camptix' );
+		$fields['attendance'] = __( 'Attended the event', 'wordcamporg' );
 
 		return $fields;
 	}
@@ -86,7 +86,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 		global $camptix;
 
 		if ( get_post_meta( $attendee->ID, 'tix_attended', true ) ) {
-			$camptix->increment_summary( $summary, __( 'Attended', 'camptix' ) );
+			$camptix->increment_summary( $summary, __( 'Attended', 'wordcamporg' ) );
 		}
 	}
 
@@ -97,7 +97,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 	 * @return array
 	 */
 	public function add_extra_report_columns( $extra_columns ) {
-		$extra_columns['attended'] = __( 'Attended the event', 'camptix' );
+		$extra_columns['attended'] = __( 'Attended the event', 'wordcamporg' );
 
 		return $extra_columns;
 	}
@@ -120,7 +120,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 	 * @return array
 	 */
 	public function add_custom_columns( $columns ) {
-		$columns = array_merge( array( 'attended' => __( 'Attended', 'camptix' ) ), $columns );
+		$columns = array_merge( array( 'attended' => __( 'Attended', 'wordcamporg' ) ), $columns );
 
 		return $columns;
 	}
@@ -141,7 +141,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 				}
 
 				if ( get_post_meta( $attendee_id, 'tix_attended', true ) ) {
-					_e( 'Attended', 'camptix' );
+					_e( 'Attended', 'wordcamporg' );
 				} else {
 					?>
 
@@ -151,7 +151,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 						data-nonce="<?php echo esc_attr( wp_create_nonce( 'tix_mark_attended_' . $attendee_id ) ); ?>"
 						class="tix-mark-attended button">
 
-						<?php _e( 'Mark as attended', 'camptix' ); ?>
+						<?php _e( 'Mark as attended', 'wordcamporg' ); ?>
 					</a>
 
 					<?php
@@ -176,7 +176,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 		</script>
 
 		<script type="text/html" id="tmpl-tix-attendance-confirmed">
-			<?php _e( 'Attended', 'camptix' ); ?>
+			<?php _e( 'Attended', 'wordcamporg' ); ?>
 		</script>
 
 		<script type="text/html" id="tmpl-tix-mark-as-attended">
@@ -185,7 +185,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 				data-attendee-id="{{data.attendee_id}}"
 				data-nonce="{{data.nonce}}"
 				class="tix-mark-attended button">
-				<?php _e( 'Mark as attended', 'camptix' ); ?>
+				<?php _e( 'Mark as attended', 'wordcamporg' ); ?>
 			</a>
 		</script>
 

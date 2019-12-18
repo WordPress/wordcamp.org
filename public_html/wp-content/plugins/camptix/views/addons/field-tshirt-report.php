@@ -7,7 +7,7 @@ defined( 'WPINC' ) or die();
  */
 
 if ( empty ( $sizes_by_site ) ) {
-	esc_html_e( 'Unable to find any t-shirt size data.', 'camptix' );
+	esc_html_e( 'Unable to find any t-shirt size data.', 'wordcamporg' );
 
 	return;
 }
@@ -36,9 +36,9 @@ if ( empty ( $sizes_by_site ) ) {
 	<table>
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Size',       'camptix' ); ?></th>
-				<th><?php esc_html_e( 'Count',      'camptix' ); ?></th>
-				<th><?php esc_html_e( 'Percentage', 'camptix' ); ?></th>
+				<th><?php esc_html_e( 'Size',       'wordcamporg' ); ?></th>
+				<th><?php esc_html_e( 'Count',      'wordcamporg' ); ?></th>
+				<th><?php esc_html_e( 'Percentage', 'wordcamporg' ); ?></th>
 			</tr>
 		</thead>
 

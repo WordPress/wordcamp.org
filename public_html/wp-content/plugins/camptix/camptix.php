@@ -77,9 +77,6 @@ class CampTix_Plugin {
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'init', array( $this, 'schedule_events' ), 9 );
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
-
-		// Load a text domain
-		add_action( 'plugins_loaded', array( $this, 'load_textdomain' ) );
 	}
 
 	/**
@@ -187,13 +184,6 @@ class CampTix_Plugin {
 		// wp_clear_scheduled_hook( 'tix_scheduled_hourly' );
 		if ( ! wp_next_scheduled( 'tix_scheduled_daily' ) )
 			wp_schedule_event( time(), 'daily', 'tix_scheduled_daily' );
-	}
-
-	/**
-	 * Load Textdomain
-	 */
-	function load_textdomain() {
-		load_plugin_textdomain( 'wordcamporg', false, plugin_basename( dirname( __FILE__ ) ) . '/languages/' );
 	}
 
 	/**

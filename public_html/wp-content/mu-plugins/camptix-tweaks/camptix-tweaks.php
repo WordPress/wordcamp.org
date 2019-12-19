@@ -428,7 +428,7 @@ function add_attendees_page_to_primary_menu( $attendees_page ) {
 				'menu-item-object-id' => $attendees_page->ID,
 				'menu-item-object'    => $attendees_page->post_type,
 				'menu-item-type'      => 'post_type',
-				'menu-item-title'     => __( 'Attendees', 'camptix' ),
+				'menu-item-title'     => __( 'Attendees', 'wordcamporg' ),
 				'menu-item-status'    => 'publish',
 			);
 			wp_update_nav_menu_item( $menu_locations['primary'], 0, $attendees_menu_item );

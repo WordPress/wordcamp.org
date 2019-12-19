@@ -10,7 +10,14 @@ $camptix_options = $camptix->get_options();
 ?>
 <html>
 <head>
-	<title><?php printf( __( '%s Attendance', 'camptix' ), esc_html( $camptix_options['event_name'] ) ); ?></title>
+	<title>
+		<?php
+		printf(
+			esc_html__( '%s Attendance', 'wordcamporg' ),
+			esc_html( $camptix_options['event_name'] )
+		);
+		?>
+	</title>
 
 	<?php $wp_scripts->do_items( array( 'camptix-attendance-ui' ) ); ?>
 	<?php $wp_styles->do_items( array( 'camptix-attendance-ui' ) ); ?>

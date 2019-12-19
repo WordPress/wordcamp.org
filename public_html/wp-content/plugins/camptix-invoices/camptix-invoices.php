@@ -543,7 +543,7 @@ function ctx_get_invoice_url( $invoice_id ) {
  */
 function ctx_register_invoice_data_exporter( $exporters ) {
 	$exporters['camptix-invoice'] = array(
-		'exporter_friendly_name' => __( 'CampTix Invoice Data', 'camptix' ),
+		'exporter_friendly_name' => __( 'CampTix Invoice Data', 'wordcamporg' ),
 		'callback'               => 'ctx_invoice_data_exporter',
 	);
 

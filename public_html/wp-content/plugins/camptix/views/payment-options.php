@@ -28,9 +28,9 @@ function generate_payment_options( $payment_output, $total, $payment_methods, $s
 				</option>
 			<?php endforeach; ?>
 		</select>
-		<input type="submit" value="<?php esc_attr_e( 'Checkout &rarr;', 'camptix' ); ?>" />
+		<input type="submit" value="<?php esc_attr_e( 'Checkout &rarr;', 'wordcamporg' ); ?>" />
 	<?php else : ?>
-		<input type="submit" value="<?php esc_attr_e( 'Claim Tickets &rarr;', 'camptix' ); ?>" />
+		<input type="submit" value="<?php esc_attr_e( 'Claim Tickets &rarr;', 'wordcamporg' ); ?>" />
 	<?php endif; ?>
 	<br class="tix-clear" />
 	</p>

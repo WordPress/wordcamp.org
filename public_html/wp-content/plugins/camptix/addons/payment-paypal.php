@@ -59,19 +59,19 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	function payment_settings_fields() {
 		// Allow pre-defined accounts if any are defined by plugins.
 		if ( count( $this->get_predefined_accounts() ) > 0 ) {
-			$this->add_settings_field_helper( 'api_predef', __( 'Predefined Account', 'camptix' ), array( $this, 'field_api_predef'	) );
+			$this->add_settings_field_helper( 'api_predef', __( 'Predefined Account', 'wordcamporg' ), array( $this, 'field_api_predef'	) );
 		}
 
 		// Settings fields are not needed when a predefined account is chosen.
 		// These settings fields should *never* expose predefined credentials.
 		if ( ! $this->get_predefined_account() ) {
-			$this->add_settings_field_helper( 'api_username',  __( 'API Username',  'camptix' ), array( $this, 'field_text'  ) );
-			$this->add_settings_field_helper( 'api_password',  __( 'API Password',  'camptix' ), array( $this, 'field_text'  ) );
-			$this->add_settings_field_helper( 'api_signature', __( 'API Signature', 'camptix' ), array( $this, 'field_text'  ) );
-			$this->add_settings_field_helper( 'sandbox',       __( 'Sandbox Mode',  'camptix' ), array( $this, 'field_yesno' ),
+			$this->add_settings_field_helper( 'api_username',  __( 'API Username',  'wordcamporg' ), array( $this, 'field_text'  ) );
+			$this->add_settings_field_helper( 'api_password',  __( 'API Password',  'wordcamporg' ), array( $this, 'field_text'  ) );
+			$this->add_settings_field_helper( 'api_signature', __( 'API Signature', 'wordcamporg' ), array( $this, 'field_text'  ) );
+			$this->add_settings_field_helper( 'sandbox',       __( 'Sandbox Mode',  'wordcamporg' ), array( $this, 'field_yesno' ),
 				sprintf(
-					__( "The PayPal Sandbox is a way to test payments without using real accounts and transactions. If you'd like to use Sandbox Mode, you'll need to create a %s account and obtain the API credentials for your sandbox user.", 'camptix' ),
-					sprintf( '<a href="https://developer.paypal.com/">%s</a>', __( 'PayPal Developer', 'camptix' ) )
+					__( "The PayPal Sandbox is a way to test payments without using real accounts and transactions. If you'd like to use Sandbox Mode, you'll need to create a %s account and obtain the API credentials for your sandbox user.", 'wordcamporg' ),
+					sprintf( '<a href="https://developer.paypal.com/">%s</a>', __( 'PayPal Developer', 'wordcamporg' ) )
 				)
 			);
 		}
@@ -97,7 +97,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		?>
 
 		<select id="camptix-paypal-predef-select" name="<?php echo esc_attr( $args['name'] ); ?>">
-			<option value=""><?php _e( 'None', 'camptix' ); ?></option>
+			<option value=""><?php _e( 'None', 'wordcamporg' ); ?></option>
 
 			<?php foreach ( $accounts as $key => $account ) : ?>
 				<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $args['value'], $key ); ?>>
@@ -549,7 +549,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 
 			if ( (float) $checkout_details['PAYMENTREQUEST_0_AMT'] != $order['total'] ) {
 				$camptix->log( 'Dying because unexpected total', $order['attendee_id'], compact( 'checkout_details', 'order' ) );
-				wp_die( __( "Unexpected total!", 'camptix' ) );
+				wp_die( __( "Unexpected total!", 'wordcamporg' ) );
 			}
 
 			// One final check before charging the user.
@@ -624,7 +624,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			return false;
 
 		if ( ! in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
-			wp_die( __( 'The selected currency is not supported by this payment method.', 'camptix' ) );
+			wp_die( __( 'The selected currency is not supported by this payment method.', 'wordcamporg' ) );
 		}
 
 		$return_url = add_query_arg( array(
@@ -651,7 +651,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		));
 
 		// See https://developer.paypal.com/webapps/developer/docs/classic/api/merchant/SetExpressCheckout_API_Operation_NVP/
-		$locale_code = _x( 'default', 'PayPal locale code, leave default to guess', 'camptix' );
+		$locale_code = _x( 'default', 'PayPal locale code, leave default to guess', 'wordcamporg' );
 		if ( ! empty( $locale_code ) && 'default' != $locale_code ) {
 			$payload['LOCALECODE'] = $locale_code;
 		}
@@ -682,7 +682,11 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$error_message = isset( $response['L_LONGMESSAGE0'] ) ? $response['L_LONGMESSAGE0'] : '';
 
 			if ( ! empty( $error_message ) ) {
-				$camptix->error( sprintf( __( 'PayPal error: %s (%d)', 'camptix' ), $error_message, $error_code ) );
+				$camptix->error( sprintf(
+					__( 'PayPal error: %1$s (%2$d)', 'wordcamporg' ),
+					esc_html( $error_message ),
+					$error_code
+				) );
 			}
 
 			return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, array(
@@ -746,7 +750,11 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$error_message = isset( $result['refund_transaction_details']['L_LONGMESSAGE0'] ) ? $result['refund_transaction_details']['L_LONGMESSAGE0'] : '';
 
 			if ( ! empty( $error_message ) ) {
-				$camptix->error( sprintf( __( 'PayPal error: %s (%d)', 'camptix' ), $error_message, $error_code ) );
+				$camptix->error( sprintf(
+					__( 'PayPal error: %1$s (%2$d)', 'wordcamporg' ),
+					esc_html( $error_message ),
+					$error_code
+				) );
 			}
 		}
 
@@ -791,7 +799,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$response = array(
 				'ACK'            => 'Failure',
 				'L_ERRORCODE0'   => 0,
-				'L_LONGMESSAGE0' => __( 'Request did not complete successfully', 'camptix' ),	// don't reveal the raw error message to the user in case it contains sensitive network/server/application-layer data. It will be logged instead later on.
+				'L_LONGMESSAGE0' => __( 'Request did not complete successfully', 'wordcamporg' ),	// don't reveal the raw error message to the user in case it contains sensitive network/server/application-layer data. It will be logged instead later on.
 				'raw'            => $response,
 			);
 		} else {

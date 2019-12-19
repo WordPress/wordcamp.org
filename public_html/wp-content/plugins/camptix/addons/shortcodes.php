@@ -332,7 +332,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 									 */
 									if ( is_array( $answer ) ) {
 										/* translators: used between list items, there is a space after the comma */
-										$answer = implode( __( ', ', 'camptix' ), $answer );
+										$answer = implode( __( ', ', 'wordcamporg' ), $answer );
 									}
 
 									echo esc_html( $answer );
@@ -473,11 +473,11 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 			}
 
 			if ( empty( $email ) ) {
-				return $camptix->error( __( 'Please enter the e-mail address that was used to register for your ticket.', 'camptix' ) );
+				return $camptix->error( __( 'Please enter the e-mail address that was used to register for your ticket.', 'wordcamporg' ) );
 			}
 
 			if ( ! is_email( $email ) )
-				return $camptix->error( __( 'The e-mail address you have entered does not seem to be valid.', 'camptix' ) );
+				return $camptix->error( __( 'The e-mail address you have entered does not seem to be valid.', 'wordcamporg' ) );
 
 			$attendees = get_posts( array(
 				'posts_per_page' => 50, // sane enough?
@@ -509,7 +509,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					$this->log( sprintf( 'Viewing private content using %s', @$_SERVER['REMOTE_ADDR'] ), $attendee->ID, $_SERVER );
 				}
 			} else {
-				$this->log( __( 'The information you have entered is incorrect. Please try again.', 'camptix' ) );
+				$this->log( __( 'The information you have entered is incorrect. Please try again.', 'wordcamporg' ) );
 			}
 		}
 	}
@@ -527,7 +527,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		global $camptix;
 
 		if ( ! isset( $this->did_shortcode_private_template_redirect ) )
-			return __( 'An error has occurred.', 'camptix' );
+			return __( 'An error has occurred.', 'wordcamporg' );
 
 		// Lazy load the camptix js.
 		wp_enqueue_script( 'camptix' );
@@ -568,7 +568,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 				// Let's try and recreate the view token and see if it was generated for this user.
 				$expected_view_token = $this->generate_view_token_for_attendee( $attendee->ID );
 				if ( $expected_view_token != $view_token ) {
-					$camptix->error( __( 'Looks like you logged in from a different computer. Please log in again.', 'camptix' ) );
+					$camptix->error( __( 'Looks like you logged in from a different computer. Please log in again.', 'wordcamporg' ) );
 					$error = true;
 				}
 
@@ -590,24 +590,24 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					}
 
 					if ( ! $can_view_content && isset( $_POST['tix_private_shortcode_submit'] ) ) {
-						$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'camptix' ) );
+						$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
 					}
 				}
 
 			} else {
 				 if ( isset( $_POST['tix_private_shortcode_submit'] ) )
-					$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'camptix' ) );
+					$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
 			}
 		}
 
 		if ( $can_view_content && $attendee ) {
 			if ( isset( $_POST['tix_private_shortcode_submit'] ) )
-				$camptix->info( __( 'Success! Enjoy your content!', 'camptix' ) );
+				$camptix->info( __( 'Success! Enjoy your content!', 'wordcamporg' ) );
 
 			return $this->shortcode_private_display_content( $args, $content );
 		} else {
 			if ( ! isset( $_POST['tix_private_shortcode_submit'] ) && ! $error )
-				$camptix->notice( __( 'The content on this page is private. Please log in using the form below.', 'camptix' ) );
+				$camptix->notice( __( 'The content on this page is private. Please log in using the form below.', 'wordcamporg' ) );
 
 			return $this->shortcode_private_login_form( $args, $content );
 		}
@@ -636,15 +636,15 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 				<input type="hidden" name="tix_post_id" value="<?php the_ID(); ?>" />
 				<table class="tix-private-form">
 					<tr>
-						<th class="tix-left" colspan="2"><?php _e( 'Have a ticket? Sign in', 'camptix' ); ?></th>
+						<th class="tix-left" colspan="2"><?php _e( 'Have a ticket? Sign in', 'wordcamporg' ); ?></th>
 					</tr>
 					<tr>
-						<td class="tix-left"><?php _e( 'E-mail', 'camptix' ); ?></td>
+						<td class="tix-left"><?php _e( 'E-mail', 'wordcamporg' ); ?></td>
 						<td class="tix-right"><input name="tix_email" value="<?php echo esc_attr( $email ); ?>" type="text" /></td>
 					</tr>
 				</table>
 				<p class="tix-submit">
-					<input type="submit" value="<?php esc_attr_e( 'Login &rarr;', 'camptix' ); ?>">
+					<input type="submit" value="<?php esc_attr_e( 'Login &rarr;', 'wordcamporg' ); ?>">
 					<br class="tix-clear">
 				</p>
 			</form>

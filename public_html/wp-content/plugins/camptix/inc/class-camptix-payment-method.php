@@ -143,7 +143,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 */
 	function _camptix_settings_section_callback() {
 		echo '<p>' . $this->description . '</p>';
-		printf( '<p>' . __( 'Supported currencies: <code>%s</code>.', 'camptix' ) . '</p>', implode( '</code>, <code>', $this->supported_currencies ) );
+		printf( '<p>' . __( 'Supported currencies: <code>%s</code>.', 'wordcamporg' ) . '</p>', implode( '</code>, <code>', $this->supported_currencies ) );
 	}
 
 	/**
@@ -158,13 +158,13 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		if ( in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
 			$camptix->field_yesno( $args );
 		} else {
-			_e( 'Disabled', 'camptix' );
+			_e( 'Disabled', 'wordcamporg' );
 
 			?>
 
 			<p class="description">
 				<?php printf(
-					__( '%s is not supported by this payment method.', 'camptix' ),
+					__( '%s is not supported by this payment method.', 'wordcamporg' ),
 					'<code>' . esc_html( $this->camptix_options['currency'] ) . '</code>'
 				); ?>
 			</p>

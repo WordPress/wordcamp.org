@@ -109,14 +109,14 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		foreach ( $order['items'] as $item ) {
 			$item_summary[] = sprintf(
 				/* translators: 1: Name of ticket; 2: Quantity of ticket; */
-				__( '%1$s x %2$d', 'camptix' ),
+				__( '%1$s x %2$d', 'wordcamporg' ),
 				esc_js( $item['name'] ),
 				absint( $item['quantity'] )
 			);
 		}
 
 		/* translators: used between list items, there is a space after the comma */
-		$description = implode( __( ', ', 'camptix' ), $item_summary );
+		$description = implode( __( ', ', 'wordcamporg' ), $item_summary );
 
 		wp_enqueue_script(
 			'stripe-checkout',
@@ -214,19 +214,19 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	public function payment_settings_fields() {
 		// Allow pre-defined accounts if any are defined by plugins.
 		if ( count( $this->get_predefined_accounts() ) > 0 ) {
-			$this->add_settings_field_helper( 'api_predef', __( 'Predefined Account', 'camptix' ), array( $this, 'field_api_predef' ) );
+			$this->add_settings_field_helper( 'api_predef', __( 'Predefined Account', 'wordcamporg' ), array( $this, 'field_api_predef' ) );
 		}
 
 		// Settings fields are not needed when a predefined account is chosen.
 		// These settings fields should *never* expose predefined credentials.
 		if ( ! $this->get_predefined_account() ) {
-			$this->add_settings_field_helper( 'api_secret_key', __( 'Secret Key',      'camptix' ), array( $this, 'field_text' ) );
-			$this->add_settings_field_helper( 'api_public_key', __( 'Publishable Key', 'camptix' ), array( $this, 'field_text' ) );
-			$this->add_settings_field_helper( 'api_test_secret_key', __( 'Test Secret Key',      'camptix' ), array( $this, 'field_text' ) );
-			$this->add_settings_field_helper( 'api_test_public_key', __( 'Test Publishable Key', 'camptix' ), array( $this, 'field_text' ) );
-			$this->add_settings_field_helper( 'sandbox',       __( 'Sandbox Mode',  'camptix' ), array( $this, 'field_yesno' ),
+			$this->add_settings_field_helper( 'api_secret_key', __( 'Secret Key',      'wordcamporg' ), array( $this, 'field_text' ) );
+			$this->add_settings_field_helper( 'api_public_key', __( 'Publishable Key', 'wordcamporg' ), array( $this, 'field_text' ) );
+			$this->add_settings_field_helper( 'api_test_secret_key', __( 'Test Secret Key',      'wordcamporg' ), array( $this, 'field_text' ) );
+			$this->add_settings_field_helper( 'api_test_public_key', __( 'Test Publishable Key', 'wordcamporg' ), array( $this, 'field_text' ) );
+			$this->add_settings_field_helper( 'sandbox',       __( 'Sandbox Mode',  'wordcamporg' ), array( $this, 'field_yesno' ),
 				sprintf(
-					__( 'When Sandbox Mode is enabled, the Test keys will be used for transactions. <a href="%s">Read more</a> about testing transactions with Stripe.', 'camptix' ),
+					__( 'When Sandbox Mode is enabled, the Test keys will be used for transactions. <a href="%s">Read more</a> about testing transactions with Stripe.', 'wordcamporg' ),
 					'https://stripe.com/docs/testing'
 				)
 			);
@@ -253,7 +253,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		?>
 
 		<select id="camptix-stripe-predef-select" name="<?php echo esc_attr( $args['name'] ); ?>">
-			<option value=""><?php _e( 'None', 'camptix' ); ?></option>
+			<option value=""><?php _e( 'None', 'wordcamporg' ); ?></option>
 
 			<?php foreach ( $accounts as $key => $account ) : ?>
 				<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $args['value'], $key ); ?>>
@@ -396,7 +396,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		global $camptix;
 
 		if ( ! in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
-			wp_die( __( 'The selected currency is not supported by this payment method.', 'camptix' ) );
+			wp_die( __( 'The selected currency is not supported by this payment method.', 'wordcamporg' ) );
 		}
 
 		$order = $this->get_order( $payment_token );
@@ -472,7 +472,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 				$camptix->error(
 					sprintf(
-						__( 'Your payment has failed: %1$s (%2$s)', 'camptix' ),
+						__( 'Your payment has failed: %1$s (%2$s)', 'wordcamporg' ),
 						esc_html( $data['errors'][ $codes[0] ][0] ),
 						esc_html( $codes[0] )
 					)
@@ -488,14 +488,14 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 				$camptix->error(
 					sprintf(
-						__( 'Your payment has failed: %1$s (%2$s)', 'camptix' ),
+						__( 'Your payment has failed: %1$s (%2$s)', 'wordcamporg' ),
 						esc_html( $message ),
 						esc_html( $code )
 					)
 				);
 			} else {
 				$camptix->error(
-					__( 'Your payment has failed.', 'camptix' )
+					__( 'Your payment has failed.', 'wordcamporg' )
 				);
 			}
 
@@ -677,7 +677,7 @@ class CampTix_Stripe_API_Client {
 			return new WP_Error(
 				'camptix_stripe_invalid_request_type',
 				sprintf(
-					__( '%s is not a valid request type.', 'camptix' ),
+					__( '%s is not a valid request type.', 'wordcamporg' ),
 					esc_html( $type )
 				)
 			);
@@ -708,7 +708,7 @@ class CampTix_Stripe_API_Client {
 			if ( ! is_array( $response_body ) || ! isset( $response_body['error'] ) ) {
 				return new WP_Error(
 					'camptix_stripe_unexpected_response',
-					__( 'An unexpected error occurred.', 'camptix' ),
+					__( 'An unexpected error occurred.', 'wordcamporg' ),
 					$response
 				);
 			}
@@ -739,16 +739,20 @@ class CampTix_Stripe_API_Client {
 				} elseif ( isset( $error_content['code'] ) ) {
 					$reason = $error_content['code'];
 				} else {
-					$reason = __( 'Unspecified error', 'camptix' );
+					$reason = __( 'Unspecified error', 'wordcamporg' );
 				}
 
 				$message = sprintf(
-					__( 'Card error: %s', 'camptix' ),
+					__( 'Card error: %s', 'wordcamporg' ),
 					esc_html( $reason )
 				);
 				break;
 			default :
-				$message = sprintf( __( '%d error: %s', 'camptix' ), $error_code, esc_html( $error_content['type'] ) );
+				$message = sprintf(
+					__( '%1$d error: %2$s', 'wordcamporg' ),
+					$error_code,
+					esc_html( $error_content['type'] )
+				);
 				break;
 		}
 

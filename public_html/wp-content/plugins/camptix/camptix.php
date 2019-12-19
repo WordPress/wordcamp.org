@@ -1114,7 +1114,7 @@ class CampTix_Plugin {
 	function register_post_statuses() {
 		register_post_status( 'cancel', array(
 			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
-			'label_count'               => _nx_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
 			'public' => false,
 			'protected' => true,
 			'show_in_admin_all_list' => true,
@@ -1123,7 +1123,7 @@ class CampTix_Plugin {
 
 		register_post_status( 'failed', array(
 			'label'                     => _x( 'Failed', 'post', 'wordcamporg' ),
-			'label_count'               => _nx_noop( 'Failed <span class="count">(%s)</span>', 'Failed <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Failed <span class="count">(%s)</span>', 'Failed <span class="count">(%s)</span>', 'wordcamporg' ),
 			'public' => false,
 			'protected' => true,
 			'show_in_admin_all_list' => true,
@@ -1132,7 +1132,7 @@ class CampTix_Plugin {
 
 		register_post_status( 'timeout', array(
 			'label'                     => _x( 'Timeout', 'post', 'wordcamporg' ),
-			'label_count'               => _nx_noop( 'Timeout <span class="count">(%s)</span>', 'Timeout <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Timeout <span class="count">(%s)</span>', 'Timeout <span class="count">(%s)</span>', 'wordcamporg' ),
 			'public' => false,
 			'protected' => true,
 			'show_in_admin_all_list' => true,
@@ -1141,7 +1141,7 @@ class CampTix_Plugin {
 
 		register_post_status( 'refund', array(
 			'label'                     => _x( 'Refunded', 'post', 'wordcamporg' ),
-			'label_count'               => _nx_noop( 'Refunded <span class="count">(%s)</span>', 'Refunded <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Refunded <span class="count">(%s)</span>', 'Refunded <span class="count">(%s)</span>', 'wordcamporg' ),
 			'public' => false,
 			'protected' => true,
 			'show_in_admin_all_list' => true,

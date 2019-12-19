@@ -14,7 +14,7 @@ class CampTix_MailChimp_Addon extends CampTix_Addon {
 	}
 
 	public function setup_sections( $sections ) {
-		$sections['mailchimp'] = __( 'MailChimp', 'camptix' );
+		$sections['mailchimp'] = __( 'MailChimp', 'wordcamporg' );
 		return $sections;
 	}
 
@@ -24,14 +24,19 @@ class CampTix_MailChimp_Addon extends CampTix_Addon {
 		if ( 'mailchimp' != $section )
 			return;
 
-		add_settings_section( 'general', __( 'MailChimp Setup', 'camptix' ), array( $this, 'menu_setup_section_mailchimp' ), 'camptix_options' );
-		$camptix->add_settings_field_helper( 'mailchimp_api_key', __( 'MailChimp API Key', 'camptix' ), 'field_text' );
+		add_settings_section(
+			'general',
+			__( 'MailChimp Setup', 'wordcamporg' ),
+			array( $this, 'menu_setup_section_mailchimp' ),
+			'camptix_options'
+		);
+		$camptix->add_settings_field_helper( 'mailchimp_api_key', __( 'MailChimp API Key', 'wordcamporg' ), 'field_text' );
 
 		if ( ! empty( $this->options['mailchimp_api_key'] ) ) {
-			add_settings_field( 'mailchimp_list', __( 'List', 'camptix' ), array( $this, 'field_mailchimp_list' ), 'camptix_options', 'general' );
-			add_settings_field( 'mailchimp_sync_attendees', __( 'Sync Attendees', 'camptix' ), array( $this, 'field_mailchimp_sync_attendees' ), 'camptix_options', 'general' );
-			$camptix->add_settings_field_helper( 'mailchimp_override_email', __( 'Override E-mail', 'camptix' ), 'field_yesno', false,
-				__( "Enabling this option will prevent CampTix from sending any outgoing e-mails, including ticket receipts, payment results, etc.", 'camptix' )
+			add_settings_field( 'mailchimp_list', __( 'List', 'wordcamporg' ), array( $this, 'field_mailchimp_list' ), 'camptix_options', 'general' );
+			add_settings_field( 'mailchimp_sync_attendees', __( 'Sync Attendees', 'wordcamporg' ), array( $this, 'field_mailchimp_sync_attendees' ), 'camptix_options', 'general' );
+			$camptix->add_settings_field_helper( 'mailchimp_override_email', __( 'Override E-mail', 'wordcamporg' ), 'field_yesno', false,
+				__( "Enabling this option will prevent CampTix from sending any outgoing e-mails, including ticket receipts, payment results, etc.", 'wordcamporg' )
 			);
 		}
 	}
@@ -41,7 +46,7 @@ class CampTix_MailChimp_Addon extends CampTix_Addon {
 	 */
 	public function field_mailchimp_list() {
 		global $camptix;
-		
+
 		$lists = $this->api( 'lists/list' );
 		if ( ! $lists || empty( $lists->data ) ) {
 			$camptix->log( 'No lists available.', null, $lists, 'mailchimp' );
@@ -52,26 +57,26 @@ class CampTix_MailChimp_Addon extends CampTix_Addon {
 		$value = isset( $this->options['mailchimp_list'] ) ? $this->options['mailchimp_list'] : null;
 		?>
 		<select name="camptix_options[mailchimp_list]">
-		<option value=""><?php _e( 'None', 'camptix' ); ?></option>
+		<option value=""><?php _e( 'None', 'wordcamporg' ); ?></option>
 		<?php foreach ( $lists as $list ) : ?>
 			<option value="<?php echo esc_attr( $list->id ); ?>" <?php selected( $list->id, $value ); ?>><?php echo esc_html( $list->name ); ?></option>
 		<?php endforeach; ?>
 		</select>
 
-		<p class="description"><?php _e( 'This list will be used to sync attendee data.', 'camptix' ); ?></p>
+		<p class="description"><?php _e( 'This list will be used to sync attendee data.', 'wordcamporg' ); ?></p>
 		<?php
 	}
 
 	public function field_mailchimp_sync_attendees() {
 		?>
-		<?php submit_button( __( 'Sync Now', 'camptix' ), 'secondary', 'camptix_options[mailchimp_sync_attendees]', false ); ?>
-		<p class="description"><?php _e( 'This may take a while, depending on the number of tickets, questions and attendees. If you have changed any settings, please save changes before running a sync.', 'camptix' ); ?></p>
+		<?php submit_button( __( 'Sync Now', 'wordcamporg' ), 'secondary', 'camptix_options[mailchimp_sync_attendees]', false ); ?>
+		<p class="description"><?php _e( 'This may take a while, depending on the number of tickets, questions and attendees. If you have changed any settings, please save changes before running a sync.', 'wordcamporg' ); ?></p>
 		<?php
 	}
 
 	public function api( $method, $args = array(), $format = 'json' ) {
 		global $camptix;
-		
+
 		if ( empty( $this->options['mailchimp_api_key'] ) ) {
 			$camptix->log( 'Trying to make API call without key.', null, array( 'method' => $method, 'args' => $args, 'format' => $format ), 'mailchimp' );
 			return false;
@@ -93,7 +98,7 @@ class CampTix_MailChimp_Addon extends CampTix_Addon {
 			$camptix->log( 'Empty URL.', null, $url, 'mailchimp' );
 			return false;
 		}
-		
+
 		$request = wp_remote_post( $url, array( 'body' => json_encode( $args ) ) );
 		if ( 200 == wp_remote_retrieve_response_code( $request ) ) {
 			$camptix->log( "API call to $method succeeded.", null, array( 'method' => $method, 'args' => $args, 'format' => $format, 'url' => $url, 'request' => $request ), 'mailchimp' );
@@ -123,7 +128,7 @@ class CampTix_MailChimp_Addon extends CampTix_Addon {
 
 			$start_time = microtime( true );
 			$camptix->log( 'Starting sync.', null, null, 'mailchimp' );
-			
+
 			// This may take a while
 			set_time_limit( 600 );
 
@@ -483,7 +488,12 @@ class CampTix_MailChimp_Addon extends CampTix_Addon {
 			if ( $settings_errors ) {
 				$camptix->log( 'Found settings errors after syncing.', null, $settings_errors, 'mailchimp' );
 			} else {
-				add_settings_error( 'camptix-mailchimp', 'success', __( "Everything's been synced. You're good to go.", 'camptix' ), 'updated' );
+				add_settings_error(
+					'camptix-mailchimp',
+					'success',
+					__( "Everything's been synced. You're good to go.", 'wordcamporg' ),
+					'updated'
+				);
 			}
 
 			$camptix->log( sprintf( 'Sync completed in %f seconds.', microtime( true ) - $start_time ), null, null, 'mailchimp' );

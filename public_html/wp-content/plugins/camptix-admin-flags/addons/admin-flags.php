@@ -152,7 +152,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 	 * Add a new section to the Setup screen.
 	 */
 	public function setup_sections( $sections ) {
-		$sections['admin-flags'] = __( 'Admin Flags', 'camptix' );
+		$sections['admin-flags'] = __( 'Admin Flags', 'wordcamporg' );
 		return $sections;
 	}
 
@@ -166,8 +166,14 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			return;
 		}
 
-		add_settings_section( 'general', __( 'Admin Flags', 'camptix' ), array( $this, 'setup_controls_section' ), 'camptix_options' );
-		$camptix->add_settings_field_helper( 'camptix-admin-flags-data', __( 'Admin Flags Data', 'camptix' ), 'field_textarea' );
+		add_settings_section(
+			'general',
+			__( 'Admin Flags', 'wordcamporg' ),
+			array( $this, 'setup_controls_section' ),
+			'camptix_options'
+		);
+
+		$camptix->add_settings_field_helper( 'camptix-admin-flags-data', __( 'Admin Flags Data', 'wordcamporg' ), 'field_textarea' );
 	}
 
 	/**
@@ -219,7 +225,12 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		$output['camptix-admin-flags-data-parsed'] = $flags;
 
 		if ( $has_error ) {
-			add_settings_error( 'tix', 'error', __( 'Flags data has been saved, but one or more flags was invalid, so it has been stripped.', 'camptix' ), 'error' );
+			add_settings_error(
+				'tix',
+				'error',
+				__( 'Flags data has been saved, but one or more flags was invalid, so it has been stripped.', 'wordcamporg' ),
+				'error'
+			);
 		}
 
 		return $output;
@@ -276,7 +287,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 	 * @return array
 	 */
 	public function add_custom_columns( $columns ) {
-		$columns = array_merge( array( 'admin-flags' => __( 'Admin Flags', 'camptix' ) ), $columns );
+		$columns = array_merge( array( 'admin-flags' => __( 'Admin Flags', 'wordcamporg' ) ), $columns );
 
 		return $columns;
 	}
@@ -313,9 +324,9 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 							class="tix-toggle-flag">
 
 							<?php if ( $enabled ) : ?>
-								<?php esc_html_e( 'Disable', 'camptix' ); ?>
+								<?php esc_html_e( 'Disable', 'wordcamporg' ); ?>
 							<?php else : ?>
-								<?php esc_html_e( 'Enable', 'camptix' ); ?>
+								<?php esc_html_e( 'Enable', 'wordcamporg' ); ?>
 							<?php endif; ?>
 						</a>
 					</li>

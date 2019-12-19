@@ -27,6 +27,7 @@ class WordCamp_Post_Types_Plugin {
 
 		add_action( 'init', array( $this, 'register_post_types' ) );
 		add_action( 'init', array( $this, 'register_taxonomies' ) );
+		add_action( 'init', array( $this, 'register_post_meta' ) );
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'after_theme_setup', array( $this, 'add_image_sizes' ) );
 
@@ -1435,46 +1436,6 @@ class WordCamp_Post_Types_Plugin {
 			update_post_meta( $post_id, '_wcb_session_speakers', $speakers );
 		}
 
-		if ( isset( $_POST['wcpt-meta-session-info'] ) && wp_verify_nonce( $_POST['wcpt-meta-session-info'], 'edit-session-info' ) ) {
-			// Update session time.
-			$session_time = date_create(
-				sprintf(
-					'%s %d:%02d %s',
-					sanitize_text_field( $_POST['wcpt-session-date'] ),
-					absint( $_POST['wcpt-session-hour'] ),
-					absint( $_POST['wcpt-session-minutes'] ),
-					'am' === $_POST['wcpt-session-meridiem'] ? 'am' : 'pm'
-				),
-				wp_timezone()
-			);
-			if ( $session_time ) {
-				update_post_meta( $post_id, '_wcpt_session_time', $session_time->getTimestamp() );
-			}
-
-			$duration = absint(
-				( $_POST['wcpt-session-duration-hours']   * HOUR_IN_SECONDS ) +
-				( $_POST['wcpt-session-duration-minutes'] * MINUTE_IN_SECONDS )
-			);
-
-			update_post_meta( $post_id, '_wcpt_session_duration', $duration );
-
-			// Update session type.
-			$session_type = sanitize_text_field( $_POST['wcpt-session-type'] );
-			if ( ! in_array( $session_type, array( 'session', 'custom' ), true ) ) {
-				$session_type = 'session';
-			}
-
-			update_post_meta( $post_id, '_wcpt_session_type', $session_type );
-
-			// Update session slides link.
-			update_post_meta( $post_id, '_wcpt_session_slides', esc_url_raw( $_POST['wcpt-session-slides'] ) );
-
-			// Update session video link.
-			if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $_POST['wcpt-session-video'], PHP_URL_HOST ) ) ) ) {
-				update_post_meta( $post_id, '_wcpt_session_video', esc_url_raw( $_POST['wcpt-session-video'] ) );
-			}
-		}
-
 		// Allowed outside of $_POST. If anything updates a session, make sure.
 		// we parse the list of speakers and add the references to speakers.
 		$speakers_list = get_post_meta( $post_id, '_wcb_session_speakers', true );
@@ -1899,6 +1860,69 @@ class WordCamp_Post_Types_Plugin {
 				'rest_base'    => 'speaker_group',
 			)
 		);
+	}
+
+	/**
+	 * Registers post meta to our post types.
+	 */
+	public function register_post_meta() {
+			// Session.
+			register_post_meta(
+				'wcb_session',
+				'_wcpt_session_time',
+				array(
+					'show_in_rest' => array(
+						'prepare_callback' => function( $value, $request, $args ) {
+							if ( $request->get_param( 'wc_session_utc' ) ) {
+								$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $value ) );
+								return $datetime->getTimestamp();
+							}
+							return (int) $value;
+						},
+					),
+					'single'       => true,
+					'type'         => 'integer',
+				)
+			);
+			register_post_meta(
+				'wcb_session',
+				'_wcpt_session_duration',
+				array(
+					'type'         => 'integer',
+					'show_in_rest' => true,
+					'single'       => true,
+				)
+			);
+			register_post_meta(
+				'wcb_session',
+				'_wcpt_session_type',
+				array(
+					'show_in_rest' => true,
+					'single'       => true,
+				)
+			);
+			register_post_meta(
+				'wcb_session',
+				'_wcpt_session_slides',
+				array(
+					'show_in_rest' => true,
+					'single'       => true,
+				)
+			);
+			register_post_meta(
+				'wcb_session',
+				'_wcpt_session_video',
+				array(
+					'show_in_rest'      => true,
+					'single'            => true,
+					'sanitize_callback' => function( $value ) {
+						if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $value, PHP_URL_HOST ) ) ) ) {
+							return $value;
+						}
+						return '';
+					},
+				)
+			);
 	}
 
 	/**

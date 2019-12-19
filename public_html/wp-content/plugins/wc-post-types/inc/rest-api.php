@@ -26,32 +26,6 @@ function expose_public_post_meta() {
 		'single'       => true,
 	);
 
-	$default_integer = wp_parse_args( array( 'type' => 'integer' ), $meta_defaults );
-
-	// Session.
-	register_post_meta( 'wcb_session', '_wcpt_session_duration', $default_integer );
-	register_post_meta( 'wcb_session', '_wcpt_session_type', $meta_defaults );
-	register_post_meta( 'wcb_session', '_wcpt_session_slides', $meta_defaults );
-	register_post_meta( 'wcb_session', '_wcpt_session_video', $meta_defaults );
-
-	register_post_meta(
-		'wcb_session',
-		'_wcpt_session_time',
-		array(
-			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
-					if ( $request->get_param( 'wc_session_utc' ) ) {
-						$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $value ) );
-						return $datetime->getTimestamp();
-					}
-					return (int) $value;
-				},
-			),
-			'single'       => true,
-			'type'         => 'integer',
-		)
-	);
-
 	// Sponsor.
 	register_post_meta( 'wcb_sponsor', '_wcpt_sponsor_website', $meta_defaults );
 }

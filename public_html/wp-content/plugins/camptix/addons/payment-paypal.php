@@ -682,7 +682,11 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$error_message = isset( $response['L_LONGMESSAGE0'] ) ? $response['L_LONGMESSAGE0'] : '';
 
 			if ( ! empty( $error_message ) ) {
-				$camptix->error( sprintf( __( 'PayPal error: %s (%d)', 'wordcamporg' ), $error_message, $error_code ) );
+				$camptix->error( sprintf(
+					__( 'PayPal error: %1$s (%2$d)', 'wordcamporg' ),
+					esc_html( $error_message ),
+					$error_code
+				) );
 			}
 
 			return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, array(
@@ -746,7 +750,11 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$error_message = isset( $result['refund_transaction_details']['L_LONGMESSAGE0'] ) ? $result['refund_transaction_details']['L_LONGMESSAGE0'] : '';
 
 			if ( ! empty( $error_message ) ) {
-				$camptix->error( sprintf( __( 'PayPal error: %s (%d)', 'wordcamporg' ), $error_message, $error_code ) );
+				$camptix->error( sprintf(
+					__( 'PayPal error: %1$s (%2$d)', 'wordcamporg' ),
+					esc_html( $error_message ),
+					$error_code
+				) );
 			}
 		}
 

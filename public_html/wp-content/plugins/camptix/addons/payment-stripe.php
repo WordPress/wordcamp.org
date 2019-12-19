@@ -748,7 +748,11 @@ class CampTix_Stripe_API_Client {
 				);
 				break;
 			default :
-				$message = sprintf( __( '%d error: %s', 'wordcamporg' ), $error_code, esc_html( $error_content['type'] ) );
+				$message = sprintf(
+					__( '%1$d error: %2$s', 'wordcamporg' ),
+					$error_code,
+					esc_html( $error_content['type'] )
+				);
 				break;
 		}
 

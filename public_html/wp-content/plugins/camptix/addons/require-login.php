@@ -99,11 +99,14 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		// Warn users that they will need to login to purchase a ticket
 		if ( ! is_user_logged_in() ) {
-			$camptix->notice( apply_filters( 'camptix_require_login_please_login_message', sprintf(
-				__( 'Please <a href="%s">log in</a> or <a href="%s">create an account</a> to purchase your tickets.', 'wordcamporg' ),
-				wp_login_url( add_query_arg( $_REQUEST, $this->get_redirect_return_url() ) ),
-				wp_registration_url()
-			) ) );
+			$camptix->notice( apply_filters(
+				'camptix_require_login_please_login_message',
+				sprintf(
+					__( 'Please <a href="%1$s">log in</a> or <a href="%2$s">create an account</a> to purchase your tickets.', 'wordcamporg' ),
+					wp_login_url( add_query_arg( $_REQUEST, $this->get_redirect_return_url() ) ),
+					wp_registration_url()
+				)
+			) );
 		}
 
 		// Inform a user registering multiple attendees that other attendees will enter their own info
@@ -320,7 +323,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function get_attendee_search_meta( $attendee_search_meta ) {
 		$attendee_search_meta[] = 'tix_username';
-		
+
 		return $attendee_search_meta;
 	}
 
@@ -797,6 +800,6 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		return $parameters;
 	}
-} // CampTix_Require_Login 
+} // CampTix_Require_Login
 
 camptix_register_addon( 'CampTix_Require_Login' );

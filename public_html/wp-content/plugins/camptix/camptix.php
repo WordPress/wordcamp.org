@@ -3615,7 +3615,7 @@ class CampTix_Plugin {
 				'camptix',
 				'none',
 				sprintf(
-					__( 'CampTix has finished attempting to refund all transactions. The results were:<br /><br /> &bull;Succeeded: %s<br /> &bull;Failed: %s', 'wordcamporg' ),
+					__( 'CampTix has finished attempting to refund all transactions. The results were:<br /><br /> &bull;Succeeded: %1$d<br /> &bull;Failed: %2$d', 'wordcamporg' ),
 					$total_results['succeeded'],
 					$total_results['failed']
 				),
@@ -3694,7 +3694,15 @@ class CampTix_Plugin {
 		) );
 		$found_posts = $query->found_posts;
 		?>
-		<p><?php printf( __( 'A refund job is in progress, with %d attendees left in the queue. Next run in %d seconds.', 'wordcamporg' ), $found_posts, wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) - time() ); ?></p>
+		<p>
+			<?php
+			printf(
+				esc_html__( 'A refund job is in progress, with %1$d attendees left in the queue. Next run in %2$d seconds.', 'wordcamporg' ),
+				absint( $found_posts ),
+				absint( wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) - time() )
+			);
+			?>
+		</p>
 		<?php
 		// @todo sometimes the time returned is a negative value, then fixes next load
 		// @todo still says refund job in progress every with 0 attendees left. then clears next run. probably b/c last batch doesn't check to see if it's the last one
@@ -5348,7 +5356,13 @@ class CampTix_Plugin {
 											$discount_text = $discount_percent . '%';
 										}
 										?>
-										<?php printf( __( 'Coupon Applied: <strong>%s</strong>, %s discount', 'wordcamporg' ), esc_html( $this->coupon->post_title ), esc_html( $discount_text ) ); ?>
+										<?php
+										printf(
+											wp_kses_data( __( 'Coupon Applied: <strong>%1$s</strong>, %2$s discount', 'wordcamporg' ) ),
+											esc_html( $this->coupon->post_title ),
+											esc_html( $discount_text )
+										);
+										?>
 									<?php else : ?>
 										<a href="#" id="tix-coupon-link" class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_coupon_link_classes', array() ) ) ); ?>">
 											<?php _e( 'Click here to enter a coupon code', 'wordcamporg' ); ?>
@@ -5510,7 +5524,15 @@ class CampTix_Plugin {
 											$discount_text = $discount_percent . '%';
 										}
 									?>
-									<small><?php printf( __( 'Coupon Applied: <strong>%s</strong>, %s discount', 'wordcamporg' ), esc_html( $this->coupon->post_title ), esc_html( $discount_text ) ); ?></small>
+									<small>
+										<?php
+										printf(
+											wp_kses_data( __( 'Coupon Applied: <strong>%1$s</strong>, %2$s discount', 'wordcamporg' ) ),
+											esc_html( $this->coupon->post_title ),
+											esc_html( $discount_text )
+										);
+										?>
+									</small>
 								<?php endif; ?>
 							</td>
 							<td><strong><?php echo esc_html( $this->append_currency( $total ) ); ?></strong></td>

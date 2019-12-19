@@ -10,7 +10,7 @@ use WP_Rest_Server, WP_Post_Type;
 
 defined( 'WPINC' ) || die();
 
-require_once( 'favorite-schedule-shortcode.php' );
+require_once 'favorite-schedule-shortcode.php';
 
 /**
  * Add non-sensitive meta fields to WordCamp post type REST API endpoints.
@@ -97,14 +97,14 @@ function register_additional_rest_fields() {
 	register_rest_field(
 		'wcb_session',
 		'session_date_time',
-		[
+		array(
 			'get_callback' => function ( $object ) {
 				$object = (object) $object;
 				$raw    = absint( get_post_meta( $object->id, '_wcpt_session_time', true ) );
-				$return = [
+				$return = array(
 					'date' => '',
 					'time' => '',
-				];
+				);
 
 				if ( $raw ) {
 					$return['date'] = date_i18n( get_option( 'date_format' ), $raw );
@@ -113,21 +113,21 @@ function register_additional_rest_fields() {
 
 				return $return;
 			},
-			'schema'       => [
+			'schema'       => array(
 				'description' => __( 'Date and time of the session', 'wordcamporg' ),
 				'type'        => 'object',
 				'context'     => array( 'embed', 'view', 'edit' ),
 				'readonly'    => true,
-				'properties'  => [
-					'date' => [
-						'type'    => 'string',
-					],
-					'time' => [
-						'type'    => 'string',
-					],
-				],
-			],
-		]
+				'properties'  => array(
+					'date' => array(
+						'type' => 'string',
+					),
+					'time' => array(
+						'type' => 'string',
+					),
+				),
+			),
+		)
 	);
 }
 
@@ -171,18 +171,18 @@ add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args'
  */
 function add_meta_collection_params( $query_params, $post_type ) {
 	// Avoid exposing potentially sensitive data.
-	$public_meta_fields = wp_list_filter( get_registered_meta_keys( 'post', $post_type->name ), [ 'show_in_rest' => true ] );
+	$public_meta_fields = wp_list_filter( get_registered_meta_keys( 'post', $post_type->name ), array( 'show_in_rest' => true ) );
 
-	$query_params['wc_meta_key'] = [
+	$query_params['wc_meta_key'] = array(
 		'description' => __( 'Limit result set to posts with a value set for a specific meta key. Use in conjunction with the wc_meta_value parameter.', 'wordcamporg' ),
 		'type'        => 'string',
 		'enum'        => array_keys( $public_meta_fields ),
-	];
+	);
 
-	$query_params['wc_meta_value'] = [
+	$query_params['wc_meta_value'] = array(
 		'description' => __( 'Limit result set to posts with a specific meta value. Use in conjunction with the wc_meta_key parameter.', 'wordcamporg' ),
 		'type'        => 'string',
-	];
+	);
 
 	return $query_params;
 }
@@ -198,7 +198,7 @@ add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_meta_col
  */
 function get_avatar_urls_from_username_email( $post ) {
 	$post        = (object) $post;
-	$avatar_urls = [];
+	$avatar_urls = array();
 	$email       = get_post_meta( $post->id, '_wcb_speaker_email', true );
 	$user_id     = get_post_meta( $post->id, '_wcpt_user_id', true );
 
@@ -245,7 +245,7 @@ function register_fav_sessions_email() {
 					},
 				),
 
-				'session-list' => array(
+				'session-list'  => array(
 					'required'          => true,
 					'validate_callback' => function( $value, $request, $param ) {
 						$session_ids = explode( ',', $value );
@@ -285,7 +285,7 @@ function link_speaker_to_sessions( $response, $post ) {
 		'posts_per_page' => 100,
 		'fields'         => 'ids',
 
-		'meta_query' => array(
+		'meta_query'     => array(
 			array(
 				'key'   => '_wcpt_speaker_id',
 				'value' => $post->ID,
@@ -297,11 +297,11 @@ function link_speaker_to_sessions( $response, $post ) {
 		$response->add_link(
 			'sessions',
 			add_query_arg(
-				[
+				array(
 					// Ensure that taxonomy data gets included in the embed.
 					'_embed'  => true,
 					'context' => 'view',
-				],
+				),
 				get_rest_url( null, "/wp/v2/sessions/$session_id" )
 			),
 			array( 'embeddable' => true )

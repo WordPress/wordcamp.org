@@ -181,7 +181,7 @@ class Payment_Options extends CampTix_Addon {
 					echo ! $this->has_stripe_selected( $payment_methods, $selected_payment_method ) ? 'tix-tab-selected ' : '';
 				?>"
 			>
-				<?php esc_html_e( 'Other payment methods', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'All payment methods', 'wordcamporg' ); ?>
 			</button>
 			<?php
 		} else {

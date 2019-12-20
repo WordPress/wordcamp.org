@@ -50,6 +50,12 @@
 	color: #DD0000;
 }
 
+.tix-screen-reader-fieldset {
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+
 #tix {
 	padding-top: 20px;
 }

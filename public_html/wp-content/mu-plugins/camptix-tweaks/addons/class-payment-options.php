@@ -166,36 +166,31 @@ class Payment_Options extends CampTix_Addon {
 			return;
 		}
 
-		// Stripe is the preferred payment method when it is available.
-		$has_stripe_payments_tab = false;
-
 		if ( $this->is_stripe_available( $payment_methods ) ) {
-			$has_stripe_payments_tab = true;
 			$this->render_payment_option_as_tab(
 				$payment_methods,
 				'stripe',
 				$this->has_stripe_selected( $payment_methods, $selected_payment_method )
 			);
-		}
-		?>
-		<button
-			type="button"
-			aria-pressed="false"
-			class="tix_other_payment_options tix-payment-tab
+			?>
+			<button
+				type="button"
+				aria-pressed="false"
+				class="tix_other_payment_options tix-payment-tab
+				<?php
+					echo ! $this->has_stripe_selected( $payment_methods, $selected_payment_method ) ? 'tix-tab-selected ' : '';
+				?>"
+			>
+				<?php esc_html_e( 'Other payment methods', 'wordcamporg' ); ?>
+			</button>
 			<?php
-				echo ! $this->has_stripe_selected( $payment_methods, $selected_payment_method ) ? 'tix-tab-selected ' : '';
-				echo ! $this->is_stripe_available( $payment_methods ) ? 'tix-wide-tab ' : '';
-			?>"
-		>
-		<?php
-		if ( $has_stripe_payments_tab ) {
-			esc_html_e( 'Other payment methods', 'wordcamporg' );
 		} else {
-			esc_html_e( 'Payment methods', 'wordcamporg' );
+			?>
+			<div class="tix_other_payment_options tix-payment-tab tix-wide-tab tix-tab-selected">
+				<?php esc_html_e( 'Payment methods', 'wordcamporg' ); ?>
+			</div>
+			<?php
 		}
-		?>
-		</button>
-		<?php
 	}
 
 	/**

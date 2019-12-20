@@ -1,7 +1,3 @@
-#tix-preferred-payment-option {
-    display: none;
-}
-
 .tix-submit {
     display: block;
     float: right;
@@ -17,7 +13,6 @@
     line-height: 24px;
     border-bottom: 2px solid #0a0a0a;
     border-radius: 0;
-    cursor: pointer;
     padding: 10px;
 }
 

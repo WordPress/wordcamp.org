@@ -116,27 +116,38 @@ class Payment_Options extends CampTix_Addon {
 	 */
 	private function render_payment_option_as_tab( $payment_methods, $key, $selected ) {
 		$is_only_payment_option = $this->only_one_payment_method( $payment_methods );
-		?>
-		<input type="radio" name="tix_payment_method" id="tix-preferred-payment-option"
-			autocomplete="off"
-			value="<?php echo esc_html( $key ); ?>"
-			<?php checked( $selected || $is_only_payment_option ); ?>
-		/>
-		<button
-			type="button"
-			aria-pressed="true"
-			tabindex="0"
-			class="tix-payment-tab tix-preferred-payment-option
-			<?php
-				echo $is_only_payment_option ? 'tix-wide-tab' : ' ';
-				echo $selected || $is_only_payment_option ? ' tix-tab-selected' : '';
-			?>">
-			<?php
-				// translators: %s: Name of the available payment method.
-				printf( esc_html__( 'Pay with %s', 'wordcamporg' ), esc_html( $payment_methods[ $key ]['name'] ) );
-			?>
-		</button>
-		<?php
+		if ( $is_only_payment_option ) : ?>
+			<input
+				type="radio"
+				name="tix_payment_method"
+				value="<?php echo esc_html( $key ); ?>"
+				checked="checked"
+				style="display:none;"
+			/>
+			<div class="tix-payment-tab tix-wide-tab tix-tab-selected">
+				<?php
+					// translators: %s: Name of the available payment method.
+					printf( esc_html__( 'Pay with %s', 'wordcamporg' ), esc_html( $payment_methods[ $key ]['name'] ) );
+				?>
+			</div>
+		<?php else : ?>
+			<input type="radio" name="tix_payment_method" id="tix-preferred-payment-option"
+				style="display:none;"
+				autocomplete="off"
+				value="<?php echo esc_html( $key ); ?>"
+				<?php checked( $selected ); ?>
+			/>
+			<button
+				type="button"
+				aria-pressed="true"
+				tabindex="0"
+				class="tix-payment-tab tix-preferred-payment-option <?php echo $selected ? ' tix-tab-selected' : ''; ?>">
+				<?php
+					// translators: %s: Name of the available payment method.
+					printf( esc_html__( 'Pay with %s', 'wordcamporg' ), esc_html( $payment_methods[ $key ]['name'] ) );
+				?>
+			</button>
+		<?php endif;
 	}
 
 	/**

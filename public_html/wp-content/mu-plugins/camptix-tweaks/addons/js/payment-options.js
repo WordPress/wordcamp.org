@@ -3,7 +3,7 @@ jQuery( document ).ready( function initPaymentOptions( $ ) {
 	/**
 	 * Implements tab functionality in payment option selection
 	 */
-	$( '.tix-payment-tab' ).click( function( event ) {
+	$( '.tix-payment-tab:not(.tix-wide-tab)' ).click( function( event ) {
 		$( '.tix-payment-tab' ).removeClass( 'tix-tab-selected' );
 		$( '.tix-payment-tab[aria-pressed]' ).attr( 'aria-pressed', 'false' );
 		$( event.target ).addClass( 'tix-tab-selected' );

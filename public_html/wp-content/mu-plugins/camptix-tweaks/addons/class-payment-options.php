@@ -5,7 +5,7 @@
 
 namespace WordCamp\CampTix_Tweaks;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 use CampTix_Addon;
 
@@ -21,15 +21,15 @@ class Payment_Options extends CampTix_Addon {
 	/**
 	 * Initialize Payment_Options class
 	 */
-	function camptix_init() {
-		add_filter( 'tix_render_payment_options', array( $this, 'generate_payment_options'), 15, 4 );
+	public function camptix_init() {
+		add_filter( 'tix_render_payment_options', array( $this, 'generate_payment_options' ), 15, 4 );
 		$this->enqueue_scripts_and_styles();
 	}
 
 	/**
 	 * Enqueue styles and scripts needed for the addon to work
 	 */
-	function enqueue_scripts_and_styles() {
+	public function enqueue_scripts_and_styles() {
 		wp_register_script(
 			'payment_options',
 			plugins_url( 'js/payment-options.js', __FILE__ ),
@@ -51,13 +51,13 @@ class Payment_Options extends CampTix_Addon {
 	/**
 	 * We have stripe selected when there is no selected payment method, or when stripe is already selected
 	 *
-	 * @param array $payment_methods
+	 * @param array  $payment_methods
 	 * @param string $selected_payment_method
 	 *
 	 * @return bool
 	 */
-	private function has_stripe_selected( $payment_methods, $selected_payment_method ){
-		return array_key_exists( 'stripe', $payment_methods ) && ( ! isset( $selected_payment_method ) || $selected_payment_method === 'stripe' );
+	private function has_stripe_selected( $payment_methods, $selected_payment_method ) {
+		return array_key_exists( 'stripe', $payment_methods ) && ( ! isset( $selected_payment_method ) || 'stripe' === $selected_payment_method );
 	}
 
 	/**
@@ -68,24 +68,33 @@ class Payment_Options extends CampTix_Addon {
 	 * @param array  $payment_methods List of payment methods.
 	 * @param string $selected_payment_method Already selected payment method.
 	 */
-	function generate_payment_options( $payment_output, $total, $payment_methods, $selected_payment_method ) {
+	public function generate_payment_options( $payment_output, $total, $payment_methods, $selected_payment_method ) {
 		ob_start();
 		?>
 		<div class="tix-submit">
 			<?php if ( $total > 0 ) : ?>
-				<div class="tix-payment-method" role="tabs">
+				<div class="tix-payment-method">
 					<?php $this->render_tab_bar( $payment_methods, $selected_payment_method ); ?>
 				</div>
-				<div class="tix-payment-method-container
-				<?php
+				<div
+					class="tix-payment-method-container
+					<?php
 					if (
-							$this->only_one_payment_method( $payment_methods ) ||
-							$this->has_stripe_selected( $payment_methods, $selected_payment_method ) ) {
+						$this->only_one_payment_method( $payment_methods ) ||
+						$this->has_stripe_selected( $payment_methods, $selected_payment_method )
+					) {
 						echo 'tix-hidden ';
 					}
 					echo ! $this->is_stripe_available( $payment_methods ) ? 'tix-wide-tab' : '';
-				?>">
-					<?php $this->render_alternate_payment_options( $payment_methods, $selected_payment_method ); ?>
+					?>"
+					id="tix-payment-options-list"
+				>
+					<fieldset>
+						<legend class="screen-reader-text">
+							<?php esc_html_e( 'Payment methods', 'wordcamporg' ); ?>
+						</legend>
+						<?php $this->render_alternate_payment_options( $payment_methods, $selected_payment_method ); ?>
+					</fieldset>
 				</div>
 				<input class="tix-checkout-button" type="submit" value="<?php esc_attr_e( 'Checkout &rarr;', 'wordcamporg' ); ?>" />
 			<?php else : ?>
@@ -98,34 +107,47 @@ class Payment_Options extends CampTix_Addon {
 	}
 
 	/**
-	 * Render a payment option as a separate tab. Used for rendering stripe tab, or a payment method tab incase only 1
-	 * is available.
+	 * Render a payment option as a separate tab. Used for rendering stripe tab, or a payment method tab when
+	 * only 1 is available.
 	 *
 	 * @param array  $payment_methods
 	 * @param string $key
-	 * @param bool   $selected Whether this option is pre selected
+	 * @param bool   $selected Whether this option is pre selected.
 	 */
 	private function render_payment_option_as_tab( $payment_methods, $key, $selected ) {
 		$is_only_payment_option = $this->only_one_payment_method( $payment_methods );
-		?>
-		<input type="radio" role="tab" name="tix_payment_method" id="tix-preferred-payment-option"
-			   value="<?php echo esc_html( $key ); ?>"
-			   autocomplete="off"
-				<?php echo $selected || $is_only_payment_option ? 'checked' : ''; ?>
-		>
-		<label for="tix-preferred-payment-option"
-			   class="tix-payment-tab
-			   <?php
-				   echo $is_only_payment_option ? 'tix-wide-tab' : ' ';
-				   echo $selected || $is_only_payment_option ? ' tix-tab-selected' : '';
-			   ?>
-			">
-			<?php
-				//translators: %s: Name of the available payment method
-				printf( esc_html__( 'Pay with %s', 'wordcamporg' ), esc_html( $payment_methods[ $key ]['name'] ) );
-			?>
-		</label>
-		<?php
+		if ( $is_only_payment_option ) : ?>
+			<input
+				type="radio"
+				name="tix_payment_method"
+				value="<?php echo esc_html( $key ); ?>"
+				checked="checked"
+				style="display:none;"
+			/>
+			<div class="tix-payment-tab tix-wide-tab tix-tab-selected">
+				<?php
+					// translators: %s: Name of the available payment method.
+					printf( esc_html__( 'Pay with %s', 'wordcamporg' ), esc_html( $payment_methods[ $key ]['name'] ) );
+				?>
+			</div>
+		<?php else : ?>
+			<input type="radio" name="tix_payment_method" id="tix-preferred-payment-option"
+				style="display:none;"
+				autocomplete="off"
+				value="<?php echo esc_html( $key ); ?>"
+				<?php checked( $selected ); ?>
+			/>
+			<button
+				type="button"
+				aria-pressed="true"
+				tabindex="0"
+				class="tix-payment-tab tix-preferred-payment-option <?php echo $selected ? ' tix-tab-selected' : ''; ?>">
+				<?php
+					// translators: %s: Name of the available payment method.
+					printf( esc_html__( 'Pay with %s', 'wordcamporg' ), esc_html( $payment_methods[ $key ]['name'] ) );
+				?>
+			</button>
+		<?php endif;
 	}
 
 	/**
@@ -133,9 +155,9 @@ class Payment_Options extends CampTix_Addon {
 	 * input
 	 *
 	 * @param array  $payment_methods
-	 * @param string $selected_payment_method Pre selected payment method
+	 * @param string $selected_payment_method Pre selected payment method.
 	 */
-	function render_tab_bar( $payment_methods, $selected_payment_method ) {
+	public function render_tab_bar( $payment_methods, $selected_payment_method ) {
 
 		if ( $this->only_one_payment_method( $payment_methods ) ) {
 			// render payment option as a tab and bail.
@@ -144,35 +166,31 @@ class Payment_Options extends CampTix_Addon {
 			return;
 		}
 
-		// Stripe is the preferred payment method when it is available.
-		$has_stripe_payments_tab = false;
-
 		if ( $this->is_stripe_available( $payment_methods ) ) {
-			$has_stripe_payments_tab = true;
 			$this->render_payment_option_as_tab(
-					$payment_methods,
-					'stripe',
-					$this->has_stripe_selected( $payment_methods, $selected_payment_method )
+				$payment_methods,
+				'stripe',
+				$this->has_stripe_selected( $payment_methods, $selected_payment_method )
 			);
-		}
-		?>
-		<button
-				role="tab"
-				class="tix_other_payment_options tix-payment-tab
-					<?php
-						echo ! $this->has_stripe_selected( $payment_methods, $selected_payment_method ) ? 'tix-tab-selected ' : '';
-						echo ! $this->is_stripe_available( $payment_methods ) ? 'tix-wide-tab ' : '';
-					?>"
-				type="button">
-			<?php
-				if ( $has_stripe_payments_tab ) {
-					esc_html_e( 'Other payment methods', 'wordcamporg' );
-				} else {
-					esc_html_e( 'Payment methods', 'wordcamporg' );
-				}
 			?>
-		</button>
-		<?php
+			<button
+				type="button"
+				aria-pressed="false"
+				class="tix_other_payment_options tix-payment-tab
+				<?php
+					echo ! $this->has_stripe_selected( $payment_methods, $selected_payment_method ) ? 'tix-tab-selected ' : '';
+				?>"
+			>
+				<?php esc_html_e( 'All payment methods', 'wordcamporg' ); ?>
+			</button>
+			<?php
+		} else {
+			?>
+			<div class="tix_other_payment_options tix-payment-tab tix-wide-tab tix-tab-selected">
+				<?php esc_html_e( 'Payment methods', 'wordcamporg' ); ?>
+			</div>
+			<?php
+		}
 	}
 
 	/**
@@ -201,33 +219,29 @@ class Payment_Options extends CampTix_Addon {
 	 * Renders all other payment methods except stripe
 	 *
 	 * @param array  $payment_methods
-	 * @param string $selected_payment_method Pre selected payment method
+	 * @param string $selected_payment_method Pre selected payment method.
 	 */
-	function render_alternate_payment_options( $payment_methods, $selected_payment_method ) {
+	public function render_alternate_payment_options( $payment_methods, $selected_payment_method ) {
 		if ( $this->only_one_payment_method( $payment_methods ) ) {
 			// bail if only one payment option is available.
 			return;
 		}
 
-		// Pre-select first payment method if stripe is not available
+		// Pre-select first payment method if stripe is not available.
 		if ( ! $this->is_stripe_available( $payment_methods ) && ! isset( $selected_payment_method ) ) {
 			$selected_payment_method = array_keys( $payment_methods )[0];
 		}
 
-		foreach ( $payment_methods as $payment_method_key => $payment_method ) {
-			if ( 'stripe' === $payment_method_key ) {
-				continue;
-			}
-			?>
+		foreach ( $payment_methods as $payment_method_key => $payment_method ) : ?>
 
 			<div class="tix-alternate-payment-option">
 				<input type="radio" name="tix_payment_method"
-						id="tix-payment-method_<?php echo esc_attr( $payment_method_key ); ?>"
-						value="<?php echo esc_attr( $payment_method_key ); ?>"
-						autocomplete="off"
-						required
-						<?php echo $selected_payment_method === $payment_method_key ? 'checked' : ''; ?>
-				>
+					id="tix-payment-method_<?php echo esc_attr( $payment_method_key ); ?>"
+					value="<?php echo esc_attr( $payment_method_key ); ?>"
+					autocomplete="off"
+					required
+					<?php checked( $selected_payment_method === $payment_method_key ); ?>
+				/>
 
 				<label for="tix-payment-method_<?php echo esc_attr( $payment_method_key ); ?>">
 					<?php echo esc_html( $payment_method['name'] ); ?>
@@ -235,7 +249,7 @@ class Payment_Options extends CampTix_Addon {
 			</div>
 
 			<?php
-		}
+		endforeach;
 	}
 }
 

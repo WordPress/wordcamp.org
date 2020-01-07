@@ -32,24 +32,10 @@ function load_includes() {
 	require_once $blocks_dir . 'sessions/controller.php';
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
+	require_once $blocks_dir . 'live-schedule/controller.php';
 
-	$blocks_test_sites = array(
-		928,  // 2017.testing
-		1190, // 2019.dublin
-		1028, // 2019.us
-		1134, // 2019.stuttgart
-	);
-
-	if (
-		( defined( 'WORDCAMP_ENVIRONMENT' ) && 'production' !== WORDCAMP_ENVIRONMENT )
-		|| in_array( get_current_blog_id(), $blocks_test_sites, true )
-	) {
-		require_once $blocks_dir . 'live-schedule/controller.php';
-
-		// Hooks.
-		require_once $hooks_dir . 'latest-posts/controller.php';
-	}
-
+	// Hooks.
+	require_once $hooks_dir . 'latest-posts/controller.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_includes' );
@@ -95,7 +81,7 @@ function register_assets() {
 	wp_register_style(
 		'wordcamp-blocks',
 		PLUGIN_URL . 'build/blocks.min.css',
-		[],
+		array(),
 		filemtime( PLUGIN_DIR . 'build/blocks.min.css' )
 	);
 
@@ -112,7 +98,7 @@ function register_assets() {
 	 *
 	 * @param array $data Associative multidimensional array of data.
 	 */
-	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
+	$data = apply_filters( 'wordcamp_blocks_script_data', array() );
 
 	wp_add_inline_script(
 		'wordcamp-blocks',

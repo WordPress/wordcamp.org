@@ -478,6 +478,17 @@ abstract class Event_Admin {
 				continue;
 			}
 
+			$username_fields = array(
+				'Primary organizer WordPress.org username',
+				'Co-Organizers usernames (seperated by comma)',
+			);
+
+			if ( in_array( $key, $username_fields, true ) ) {
+				$usernames_array        = explode( ',', $values[ $key ] );
+				$standardized_usernames = $this->standardize_usernames( $usernames_array );
+				$values[ $key ]         = implode( ', ', $standardized_usernames );
+			}
+
 			switch ( $value ) {
 				case 'text':
 				case 'deputy_list':
@@ -523,6 +534,33 @@ abstract class Event_Admin {
 
 		$this->validate_and_add_note( $post_id );
 
+	}
+
+	/**
+	 * Convert `user_nicename` values to `user_login` for compatibility.
+	 *
+	 * `WordCamp_Participation_Notifier::update_meetup_organizers` expects this to be `user_login`, and adding
+	 * a `Meetup Organizer` badge will fail if it's `user_nicename`.
+	 *
+	 * @return array
+	 */
+	protected function standardize_usernames( array $raw_usernames ) {
+		$standard_usernames = array();
+
+		foreach ( $raw_usernames as $username ) {
+			$user = wcorg_get_user_by_canonical_names( $username );
+
+			if ( ! $user instanceof WP_User ) {
+				wp_die( sprintf(
+					'%s is not a valid username.',
+					esc_html( $username )
+				) );
+			}
+
+			$standard_usernames[] = $user->user_login;
+		}
+
+		return $standard_usernames;
 	}
 
 	/**

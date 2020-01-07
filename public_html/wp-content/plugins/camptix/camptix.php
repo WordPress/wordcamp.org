@@ -5358,7 +5358,10 @@ class CampTix_Plugin {
 										?>
 										<?php
 										printf(
-											wp_kses_data( __( 'Coupon Applied: <strong>%1$s</strong>, %2$s discount', 'wordcamporg' ) ),
+											wp_kses_data(
+												/* Translators: 1: Name of the coupon code; 2: Value of the discount. */
+												__( 'Coupon Applied: <strong>%1$s</strong>, %2$s discount', 'wordcamporg' )
+											),
 											esc_html( $this->coupon->post_title ),
 											esc_html( $discount_text )
 										);
@@ -5527,7 +5530,10 @@ class CampTix_Plugin {
 									<small>
 										<?php
 										printf(
-											wp_kses_data( __( 'Coupon Applied: <strong>%1$s</strong>, %2$s discount', 'wordcamporg' ) ),
+											wp_kses_data(
+												/* Translators: 1: Name of the coupon code; 2: Value of the discount. */
+												__( 'Coupon Applied: <strong>%1$s</strong>, %2$s discount', 'wordcamporg' )
+											),
 											esc_html( $this->coupon->post_title ),
 											esc_html( $discount_text )
 										);

@@ -484,7 +484,7 @@ abstract class Event_Admin {
 			);
 
 			if ( in_array( $key, $username_fields, true ) ) {
-				$usernames_array        = explode( ',', $values[ $key ] );
+				$usernames_array        = empty( $values[ $key ] ) ? array() : explode( ',', $values[ $key ] );
 				$standardized_usernames = $this->standardize_usernames( $usernames_array );
 				$values[ $key ]         = implode( ', ', $standardized_usernames );
 			}

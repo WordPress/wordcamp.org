@@ -65,7 +65,7 @@ class WordCamp_New_Site {
 						Create site in network
 					</label>
 
-					<span class="description">(e.g., https://<?php echo esc_attr( date( 'Y' ) ); ?>.city.wordcamp.org)</span>
+					<span class="description">(e.g., https://<?php echo esc_attr( wp_date( 'Y' ) ); ?>.city.wordcamp.org)</span>
 				<?php endif; // Domain exists. ?>
 			<?php endif; // User can manage sites. ?>
 		<?php endif;
@@ -179,7 +179,7 @@ class WordCamp_New_Site {
 
 		$blog_name = apply_filters( 'the_title', $wordcamp->post_title );
 		if ( ! empty( $wordcamp->{'Start Date (YYYY-mm-dd)'} ) ) {
-			$blog_name .= date( ' Y', $wordcamp->{'Start Date (YYYY-mm-dd)'} );
+			$blog_name .= wp_date( ' Y', $wordcamp->{'Start Date (YYYY-mm-dd)'} );
 		}
 
 		$this->new_site_id = wp_insert_site( array(
@@ -613,6 +613,16 @@ class WordCamp_New_Site {
 				'type'    => 'page',
 				'meta'    => array(
 					'wc_page_offline' => 'yes',
+				),
+			),
+
+			array(
+				'title'   => __( 'Day Of Event', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'day-of-event', $wordcamp ),
+				'status'  => 'draft',
+				'type'    => 'page',
+				'meta'    => array(
+					'_wp_page_template' => 'day-of-event', // Set the page template.
 				),
 			),
 		);

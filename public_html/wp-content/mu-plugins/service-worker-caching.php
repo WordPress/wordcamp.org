@@ -6,6 +6,7 @@ use WP_Service_Worker_Caching_Routes, WP_Service_Worker_Scripts;
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes' );
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\set_navigation_caching_strategy' );
 add_filter( 'wccs_safelisted_namespaces', __NAMESPACE__ . '\safelist_manifest_api' );
+add_action( 'wp_print_footer_scripts', __NAMESPACE__ . '\disable_app_install_prompt' );
 
 /**
  * Register caching routes with the frontend service worker.
@@ -125,4 +126,32 @@ function set_navigation_caching_strategy() {
 function safelist_manifest_api( $safelisted_namespaces ) {
 	$safelisted_namespaces[] = 'web-app-manifest';
 	return $safelisted_namespaces;
+}
+
+/**
+ * Conditionally inject JS to disable the "mini-infobar" popup, which advertises that the site can be "installed"
+ * by adding to your home screen. This should only display for the 2 weeks before & week after the start of the
+ * WordCamp (a full week after to catch any multiple-day events).
+ */
+function disable_app_install_prompt() {
+	if ( ! defined( 'PWA_PLUGIN_DIR' ) ) {
+		return;
+	}
+	$wordcamp   = get_wordcamp_post();
+	$start_date = $wordcamp->meta['Start Date (YYYY-mm-dd)'] ?? array( 0 );
+	$show_after = $start_date[0] - ( 2 * WEEK_IN_SECONDS );
+	$hide_after = $start_date[0] + ( 1 * WEEK_IN_SECONDS );
+	$now        = time();
+
+	// We are in the window to show the prompt, so short out to prevent removing it.
+	if ( ( $show_after < $now ) && ( $now < $hide_after ) ) {
+		return;
+	}
+	?>
+	<script type="text/javascript">
+	window.addEventListener( 'beforeinstallprompt', function( e ) {
+		e.preventDefault();
+	} );
+	</script>
+	<?php
 }

@@ -21,13 +21,14 @@ jobs:
         - nvm install && nvm use
         - yarn
       script:
-        - cd public_html/wp-content/mu-plugins/blocks
         # Run eslint & stylelint over all JS/SCSS files
         # @todo Find a way to only run on changed files
-        - yarn lint:js --config=./.eslintrc.js --quiet
-        - yarn lint:css
+        - yarn workspace wordcamp-blocks run lint:js --config=./.eslintrc.js --quiet
+        - yarn workspace wordcamp-blocks run lint:css
         # Make sure the build completes.
-        - yarn build
+        - yarn workspace wordcamp-blocks run build
+        # Run the unit tests.
+        - yarn workspace wordcamp-blocks run test
 
     - name: "PHP Code Standards"
       # Only run if we're on the "pull request build", otherwise CHANGED_FILES is empty.

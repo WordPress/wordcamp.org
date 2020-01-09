@@ -20,12 +20,12 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	$asset_cache_strategy_args = array(
 		'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
 		'cacheName' => 'assets',
-		'plugins'   => [
-			'expiration' => [
+		'plugins'   => array(
+			'expiration' => array(
 				'maxEntries'    => 100,
 				'maxAgeSeconds' => DAY_IN_SECONDS,
-			],
-		],
+			),
+		),
 	);
 
 	/*
@@ -74,16 +74,16 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	 */
 	$scripts->caching_routes()->register(
 		'/wp-json/.*',
-		[
+		array(
 			'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
 			'cacheName' => 'rest-api',
-			'plugins'   => [
-				'expiration' => [
+			'plugins'   => array(
+				'expiration' => array(
 					'maxEntries'    => 60,
 					'maxAgeSeconds' => 15 * MINUTE_IN_SECONDS,
-				],
-			],
-		]
+				),
+			),
+		)
 	);
 }
 

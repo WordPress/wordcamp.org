@@ -828,19 +828,8 @@ function process_import_request() {
 					$entry['post_id']  = $matches[2];
 					$entry['status']   = strtolower( $line[7] );
 					$entry['currency'] = strtoupper( $line[14] );
+					$entry['amount']   = _get_float_amount( $line[13] );
 					$entry['date']     = _get_disambiguated_timestamp( $line[21] );
-
-					/*
-					 * Remove commas from the amount string, to make it numeric.
-					 *
-					 * `floatval()` truncates commas and everything after them, turning "1,234.56" into (float) `1`.
-					 *
-					 * Some currencies use `,` as the _decimal_separator rather than the _thousands_ separator,
-					 * but JPM doesn't seem to respect that, and always exports amounts with `,` as the
-					 * _thousands_ separator.
-					 */
-					$numeric_entry_amount = str_replace( ',', '', $line[13] );
-					$entry['amount']      = round( floatval( $numeric_entry_amount ), 2 );
 				}
 				break;
 
@@ -849,7 +838,7 @@ function process_import_request() {
 					$entry['blog_id']  = $matches[1];
 					$entry['post_id']  = $matches[2];
 					$entry['status']   = strtolower( $line[7] );
-					$entry['amount']   = round( floatval( $line[13] ), 2 );
+					$entry['amount']   = _get_float_amount( $line[13] );
 					$entry['currency'] = strtoupper( $line[14] );
 					$entry['date']     = _get_disambiguated_timestamp( $line[21] );
 				}
@@ -914,6 +903,22 @@ function _get_disambiguated_timestamp( $date ) {
 	}
 
 	return $timestamp;
+}
+
+
+/**
+ * Convert JPM string amount into float.
+ *
+ * Some currencies use `,` as the _decimal_ separator rather than the _thousands_ separator, but JPM doesn't seem
+ * to respect that, and always exports amounts with `,` as the _thousands_ separator.
+ *
+ * @return string
+ */
+function _get_float_amount( string $stringy_amount ) {
+	// `floatval()` truncates commas and everything after them, turning "1,234.56" into (float) `1`.
+	$numeric_amount = str_replace( ',', '', $stringy_amount );
+
+	return round( floatval( $numeric_amount ), 2 );
 }
 
 /**

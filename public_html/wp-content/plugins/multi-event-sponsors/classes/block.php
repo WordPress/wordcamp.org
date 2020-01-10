@@ -58,9 +58,10 @@ function render( $attributes ) {
  */
 function get_sponsor_posts( array $attributes ) {
 	$post_args = array(
-		'post_type'   => MES_Sponsor::POST_TYPE_SLUG,
-		'post_status' => 'publish',
-		'orderby'     => 'RAND(' . wp_date( 'YmdH' ) . ')',
+		'post_type'      => MES_Sponsor::POST_TYPE_SLUG,
+		'post_status'    => 'publish',
+		'orderby'        => 'RAND(' . wp_date( 'YmdH' ) . ')',
+		'posts_per_page' => 99,
 	);
 
 	$all_sponsor_posts = get_posts( $post_args );

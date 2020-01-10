@@ -1212,9 +1212,6 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	flex-direction: column;
 	justify-content: center;*/
 }
-.wordcamp-mes-sponsors .wordcamp-mes-sponsor__logo.align-center {
-	text-align: center;
-}
 
 /* !WordCamp Sessions */
 

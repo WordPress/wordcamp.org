@@ -12,27 +12,31 @@ defined( 'WPINC' ) || die();
 get_header();
 ?>
 
-<main id="main" class="site-main">
-<?php while ( have_posts() ) :
-	the_post();
+<?php echo 'twentyseventeen' === get_template() ? '<div class="wrap">' : ''; ?> 
 
-	if ( locate_template( [ 'template-parts/content.php' ] ) ) :
+	<main id="main" class="site-main">
+	<?php while ( have_posts() ) :
+		the_post();
 
-		get_template_part( 'template-parts/content' );
+		if ( locate_template( array( 'template-parts/content.php' ) ) ) :
 
-	else : ?>
-		<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
-			<header class="entry-header">
-				<?php the_title( '<h1 class="entry-title">', '</h1>' ); ?>
-			</header>
+			get_template_part( 'template-parts/content' );
 
-			<div class="entry-content">
-				<?php the_content(); ?>
-			</div>
-		</article>
-	<?php endif; ?>
-<?php endwhile; ?>
-</main>
+		else : ?>
+			<article id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
+				<header class="entry-header">
+					<?php the_title( '<h1 class="entry-title">', '</h1>' ); ?>
+				</header>
+
+				<div class="entry-content">
+					<?php the_content(); ?>
+				</div>
+			</article>
+		<?php endif; ?>
+	<?php endwhile; ?>
+	</main>
+
+<?php echo 'twentyseventeen' === get_template() ? '</div>' : ''; ?> 
 
 <?php
 

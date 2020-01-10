@@ -20,6 +20,8 @@ get_header();
 $offline_page = get_offline_content();
 ?>
 
+<?php echo 'twentyseventeen' === get_template() ? '<div class="wrap">' : ''; ?> 
+
 	<main id="main" class="site-main">
 		<section class="error-offline">
 			<header class="page-header">
@@ -33,6 +35,8 @@ $offline_page = get_offline_content();
 			</div>
 		</section>
 	</main>
+
+<?php echo 'twentyseventeen' === get_template() ? '</div>' : ''; ?> 
 
 <?php
 

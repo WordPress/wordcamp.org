@@ -123,52 +123,6 @@ get_header(); ?>
 			<a href="<?php echo esc_attr( get_permalink( get_page_by_path( 'global-community-sponsors' ) ) ); ?>" class="more">More sponsors &rarr;</a>
 		</div>  <!-- .wc-global-sponsors -->
 
-		<!--<div class="wc-tweets last">
-			<h3><strong>Latest Tweets</strong></h3>
-
-			<div id="wc-tweets-spinner" class="spinner spinner-visible"></div>
-			<ul id="wc-tweets-container" class="transparent"></ul>
-
-			<p id="wc-tweets-error" class="hidden" hidden>
-				Tweets from <a href="https://twitter.com/wordcamp">@WordCamp</a> are currently unavailable.
-			</p>
-
-			<a href="https://twitter.com/wordcamp" class="more">Follow @WordCamp on Twitter &rarr;</a>
-
-			<script id="tmpl-wc-tweet" type="text/html">
-				<li>
-					<div class="wc-tweet-content">{{{tweet.text}}}</div>
-
-					<p class="wc-tweet-timestamp">
-						<a href="https://twitter.com/wordcamp/status/{{tweet.id_str}}">{{tweet.time_ago}}</a>
-					</p>
-
-					<ul class="wc-tweet-actions clearfix">
-						<li class="wc-tweet-action-reply">
-							<a href="https://twitter.com/intent/tweet?in_reply_to={{tweet.id_str}}">
-								<span class="wc-tweet-action-icon"></span>
-								Reply
-							</a>
-						</li>
-
-						<li class="wc-tweet-action-retweet">
-							<a href="https://twitter.com/intent/retweet?tweet_id={{tweet.id_str}}">
-								<span class="wc-tweet-action-icon"></span>
-								Retweet
-							</a>
-						</li>
-
-						<li class="wc-tweet-action-favorite">
-							<a href="https://twitter.com/intent/favorite?tweet_id={{tweet.id_str}}">
-								<span class="wc-tweet-action-icon"></span>
-								Favorite
-							</a>
-						</li>
-					</ul>
-				</li>
-			</script>
-		</div> .wc-tweets -->
-
 	</div> <!-- #wc-content-blocks -->
 
 <?php get_footer(); ?>

@@ -54,7 +54,7 @@ var WordCampCentral = ( function( $ ) {
 
 		try {
 			toggleNavigation();
-			populateLatestTweets();
+			//populateLatestTweets();
 		} catch ( exception ) {
 			log( exception );
 		}

@@ -5,6 +5,8 @@
  * The home page template.
  */
 
+use WordCamp\Multi_Event_Sponsors\Block as MES_Block;
+
 get_header(); ?>
 
 	<div id="wc-content-blocks" class="group">
@@ -105,7 +107,23 @@ get_header(); ?>
 			</a>
 		</div><!-- .wc-news -->
 
-		<div class="wc-tweets last">
+		<div class="wc-global-sponsors last">
+			<h3><strong>Some Of Our Sponsors</strong></h3>
+
+			<?php
+			echo wp_kses_post( MES_Block\render( array(
+				'number'      => 3,
+				'region_id'   => 'all',
+				'level_id'    => 3040794,
+				'image_align' => 'center',
+				'image_width' => 300,
+			) ) );
+			?>
+
+			<a href="<?php echo esc_attr( get_permalink( get_page_by_path( 'global-community-sponsors' ) ) ); ?>" class="more">More sponsors &rarr;</a>
+		</div>  <!-- .wc-global-sponsors -->
+
+		<!--<div class="wc-tweets last">
 			<h3><strong>Latest Tweets</strong></h3>
 
 			<div id="wc-tweets-spinner" class="spinner spinner-visible"></div>
@@ -149,7 +167,7 @@ get_header(); ?>
 					</ul>
 				</li>
 			</script>
-		</div>  <!-- .wc-tweets -->
+		</div> .wc-tweets -->
 
 	</div> <!-- #wc-content-blocks -->
 

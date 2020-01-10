@@ -1100,6 +1100,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	margin-bottom: 9px;
 }
 #wc-content-blocks .wc-news h3 { background-position: 0 -71px }
+#wc-content-blocks .wc-global-sponsors h3 { background-position: 0 -147px; }
 #wc-content-blocks .wc-tweets h3 {
 	background-position: 0 -658px;
 	padding-left: 40px;
@@ -1203,6 +1204,17 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	padding-bottom: 20px;
 }
 
+/* !Featured Sponsor */
+.wordcamp-mes-sponsors > li {
+	width: 100%;
+	/*min-height: 300px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;*/
+}
+.wordcamp-mes-sponsors .wordcamp-mes-sponsor__logo.align-center {
+	text-align: center;
+}
 
 /* !Latest Tweets */
 #wc-tweets-spinner {

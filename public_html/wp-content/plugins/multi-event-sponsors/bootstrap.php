@@ -11,12 +11,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Access denied.' );
 }
 
-require_once( __DIR__ . '/classes/multi-event-sponsors.php' );
-require_once( __DIR__ . '/classes/mes-region.php' );
-require_once( __DIR__ . '/classes/mes-sponsor.php' );
-require_once( __DIR__ . '/classes/mes-sponsorship-level.php' );
-require_once( __DIR__ . '/classes/mes-privacy.php' );
-require_once( __DIR__ . '/classes/block.php' );
+require_once __DIR__ . '/classes/multi-event-sponsors.php';
+require_once __DIR__ . '/classes/mes-region.php';
+require_once __DIR__ . '/classes/mes-sponsor.php';
+require_once __DIR__ . '/classes/mes-sponsorship-level.php';
+require_once __DIR__ . '/classes/mes-privacy.php';
+require_once __DIR__ . '/classes/block.php';
 
 $GLOBALS['multi_event_sponsors']  = new Multi_Event_Sponsors();
 $GLOBALS['mes_sponsor']           = new MES_Region();

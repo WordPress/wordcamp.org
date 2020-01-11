@@ -116,7 +116,7 @@ get_header(); ?>
 				'region_id'   => 'all',
 				'level_id'    => 3040794,
 				'image_align' => 'center',
-				'image_width' => 300,
+				'image_width' => 600,
 			) ) );
 			?>
 

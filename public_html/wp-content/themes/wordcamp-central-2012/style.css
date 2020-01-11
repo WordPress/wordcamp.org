@@ -1204,13 +1204,12 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	padding-bottom: 20px;
 }
 
-/* !Featured Sponsor */
+/* !Featured Sponsors */
 .wordcamp-mes-sponsors > li {
 	width: 100%;
-	/*min-height: 300px;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;*/
+}
+.wordcamp-mes-sponsors .wordcamp-image__featured-image {
+	height: auto;
 }
 
 /* !WordCamp Sessions */

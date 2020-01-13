@@ -14,3 +14,7 @@
 .wc-panel-session-info__duration label + input {
 	margin-left: 8px;
 }
+
+.wc-panel-session-speakers .components-form-token-field__help {
+	display: none;
+}

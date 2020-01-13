@@ -7,12 +7,13 @@ import { registerPlugin } from '@wordpress/plugins';
  * Internal dependencies
  */
 import SessionInfo from './info';
-// @todo bring in speakers.
+import SessionSpeakers from './speakers';
 
 registerPlugin( 'wordcamp-session-settings', {
 	render: () => (
 		<>
 			<SessionInfo />
+			<SessionSpeakers />
 		</>
 	),
 	icon: '',

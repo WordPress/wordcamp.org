@@ -17,10 +17,13 @@
 		"rememo": "3.0.0"
 	},
 	"devDependencies": {
+		"@wordpress/api-fetch": "3.8.0",
 		"@wordpress/components": "8.4.0",
+		"@wordpress/date": "3.7.0",
 		"@wordpress/element": "2.9.0",
 		"@wordpress/eslint-plugin": "3.2.0",
 		"@wordpress/scripts": "6.0.0",
+		"@wordpress/url": "2.9.0",
 		"css-loader": "3.2.1",
 		"mini-css-extract-plugin": "0.8.0",
 		"node-sass": "4.13.0",

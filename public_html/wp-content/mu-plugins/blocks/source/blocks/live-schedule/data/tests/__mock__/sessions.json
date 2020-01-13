@@ -1,0 +1,1292 @@
+[
+  {
+    "id": 36790,
+    "meta": {
+      "_wcpt_session_time": 1572681600
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "8:00 am"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "registration-3",
+    "title": {
+      "rendered": "Registration"
+    }
+  },
+  {
+    "id": 36788,
+    "meta": {
+      "_wcpt_session_time": 1572595200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "8:00 am"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "registration-2",
+    "title": {
+      "rendered": "Registration"
+    }
+  },
+  {
+    "id": 35597,
+    "meta": {
+      "_wcpt_session_time": 1572599700
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "9:15 am"
+    },
+    "session_track": [ 72 ],
+    "slug": "wordpress-an-operating-system-for-the-open-web",
+    "title": {
+      "rendered": "WordPress: An Operating System for the Open Web"
+    }
+  },
+  {
+    "id": 35573,
+    "meta": {
+      "_wcpt_session_time": 1572690600
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "10:30 am"
+    },
+    "session_track": [ 72 ],
+    "slug": "unlocking-six-figure-ecommerce-growth-with-automations",
+    "title": {
+      "rendered": "Unlocking six-figure eCommerce growth with automations"
+    }
+  },
+  {
+    "id": 35568,
+    "meta": {
+      "_wcpt_session_time": 1572694200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "11:30 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "defining-fast-the-hardest-problem-in-performance-engineering",
+    "title": {
+      "rendered": "Defining Fast: The Hardest Problem in Performance Engineering"
+    }
+  },
+  {
+    "id": 35564,
+    "meta": {
+      "_wcpt_session_time": 1572694200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "11:30 am"
+    },
+    "session_track": [ 72 ],
+    "slug": "design-systems-crafting-for-crafters",
+    "title": {
+      "rendered": "Design Systems: Crafting For Crafters"
+    }
+  },
+  {
+    "id": 34667,
+    "meta": {
+      "_wcpt_session_time": 1572687000
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:30 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "automated-updates-panel",
+    "title": {
+      "rendered": "WordPress Automated Updates: A Panel Discussion"
+    }
+  },
+  {
+    "id": 34662,
+    "meta": {
+      "_wcpt_session_time": 1572599700
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "9:15 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "behavior-driven-development-in-wordpress-with-behat",
+    "title": {
+      "rendered": "Behavior-Driven Development in WordPress with Behat"
+    }
+  },
+  {
+    "id": 34655,
+    "meta": {
+      "_wcpt_session_time": 1572690600
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "10:30 am"
+    },
+    "session_track": [ 71 ],
+    "slug": "just-enough-react-for-wordpress",
+    "title": {
+      "rendered": "Just Enough React for WordPress"
+    }
+  },
+  {
+    "id": 34170,
+    "meta": {
+      "_wcpt_session_time": 1572634800
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "7:00 pm"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "wordfest",
+    "title": {
+      "rendered": "WordFest at the City Museum"
+    }
+  },
+  {
+    "id": 31049,
+    "meta": {
+      "_wcpt_session_time": 1572685200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:00 am"
+    },
+    "session_track": [ 84 ],
+    "slug": "everyone-can-help-make-wordpress-better-how-to-contribute-to-wordpress",
+    "title": {
+      "rendered": "Everyone Can Help Make WordPress Better – How to Contribute to WordPress"
+    }
+  },
+  {
+    "id": 12880,
+    "meta": {
+      "_wcpt_session_time": 1572685200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:00 am"
+    },
+    "session_track": [ 55 ],
+    "slug": "the-gameshow",
+    "title": {
+      "rendered": "The Gameshow!"
+    }
+  },
+  {
+    "id": 12876,
+    "meta": {
+      "_wcpt_session_time": 1572685200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:00 am"
+    },
+    "session_track": [ 71, 72, 73 ],
+    "slug": "morning-office-yoga",
+    "title": {
+      "rendered": "Morning Office Yoga: Second Floor Atrium"
+    }
+  },
+  {
+    "id": 12765,
+    "meta": {
+      "_wcpt_session_time": 1572599700
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "9:15 am"
+    },
+    "session_track": [ 71 ],
+    "slug": "creating-an-environment-of-innovation",
+    "title": {
+      "rendered": "Creating an Environment of Innovation"
+    }
+  },
+  {
+    "id": 12727,
+    "meta": {
+      "_wcpt_session_time": 1572705000
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "2:30 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "take-back-your-web",
+    "title": {
+      "rendered": "Take Back Your Web"
+    }
+  },
+  {
+    "id": 12384,
+    "meta": {
+      "_wcpt_session_time": 1572694200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "11:30 am"
+    },
+    "session_track": [ 83 ],
+    "slug": "webwewant",
+    "title": {
+      "rendered": "WebWeWant"
+    }
+  },
+  {
+    "id": 12360,
+    "meta": {
+      "_wcpt_session_time": 1572615000
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "to-be-announced-3",
+    "title": {
+      "rendered": "Thinking remotely through games"
+    }
+  },
+  {
+    "id": 12338,
+    "meta": {
+      "_wcpt_session_time": 1572701400
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 71 ],
+    "slug": "sotw-setup",
+    "title": {
+      "rendered": "SOTW Setup"
+    }
+  },
+  {
+    "id": 12319,
+    "meta": {
+      "_wcpt_session_time": 1572787800
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 64 ],
+    "slug": "afternoon-session-2",
+    "title": {
+      "rendered": "Afternoon Session"
+    }
+  },
+  {
+    "id": 12314,
+    "meta": {
+      "_wcpt_session_time": 1572621300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "3:15 pm"
+    },
+    "session_track": [ 84 ],
+    "slug": "how-to-contribute-to-wordpress",
+    "title": {
+      "rendered": "Everyone Can Help Make WordPress Better &#8211; How to Contribute to WordPress"
+    }
+  },
+  {
+    "id": 12294,
+    "meta": {
+      "_wcpt_session_time": 1572710400
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "4:00 pm"
+    },
+    "session_track": [ 71 ],
+    "slug": "state-of-the-word",
+    "title": {
+      "rendered": "State of the Word"
+    }
+  },
+  {
+    "id": 12311,
+    "meta": {
+      "_wcpt_session_time": 1572775200
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 64 ],
+    "slug": "kids-camp",
+    "title": {
+      "rendered": "Morning Session"
+    }
+  },
+  {
+    "id": 12307,
+    "meta": {
+      "_wcpt_session_time": 1572798600
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "4:30 pm"
+    },
+    "session_track": [ 57 ],
+    "slug": "closing-remarks",
+    "title": {
+      "rendered": "Closing Remarks"
+    }
+  },
+  {
+    "id": 12304,
+    "meta": {
+      "_wcpt_session_time": 1572787800
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 57 ],
+    "slug": "afternoon-session",
+    "title": {
+      "rendered": "Afternoon Session"
+    }
+  },
+  {
+    "id": 12301,
+    "meta": {
+      "_wcpt_session_time": 1572784200
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "12:30 pm"
+    },
+    "session_track": [ 57, 64 ],
+    "slug": "lunch-2",
+    "title": {
+      "rendered": "Lunch"
+    }
+  },
+  {
+    "id": 12298,
+    "meta": {
+      "_wcpt_session_time": 1572775200
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 57 ],
+    "slug": "morning-session",
+    "title": {
+      "rendered": "Morning Session"
+    }
+  },
+  {
+    "id": 12296,
+    "meta": {
+      "_wcpt_session_time": 1572771600
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "9:00 am"
+    },
+    "session_track": [ 57, 64 ],
+    "slug": "registration",
+    "title": {
+      "rendered": "Registration"
+    }
+  },
+  {
+    "id": 12120,
+    "meta": {
+      "_wcpt_session_time": 1572616800
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "2:00 pm"
+    },
+    "session_track": [ 71 ],
+    "slug": "technical-seo-auditing-and-optimizations",
+    "title": {
+      "rendered": "Technical SEO Checklist: How to Optimize a WordPress Site for Search Engine Crawlers"
+    }
+  },
+  {
+    "id": 2570,
+    "meta": {
+      "_wcpt_session_time": 1572608700
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "11:45 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "the-content-framework-that-powers-stories-landing-pages-more",
+    "title": {
+      "rendered": "The Content Framework that Powers Stories, Landing Pages &#038; More"
+    }
+  },
+  {
+    "id": 2566,
+    "meta": {
+      "_wcpt_session_time": 1572607800
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "11:30 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "practical-project-management-tips",
+    "title": {
+      "rendered": "Practical Project Management Tips"
+    }
+  },
+  {
+    "id": 2562,
+    "meta": {
+      "_wcpt_session_time": 1572606000
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "11:00 am"
+    },
+    "session_track": [ 71 ],
+    "slug": "user-personas-as-an-inclusive-design-and-development-tool",
+    "title": {
+      "rendered": "User Personas as an Inclusive Design and Development Tool"
+    }
+  },
+  {
+    "id": 12112,
+    "meta": {
+      "_wcpt_session_time": 1572616800
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "2:00 pm"
+    },
+    "session_track": [ 72 ],
+    "slug": "privacy-how-to-survive-accpacalypse-2020",
+    "title": {
+      "rendered": "Privacy: How to Survive aCCPAcalypse 2020"
+    }
+  },
+  {
+    "id": 12110,
+    "meta": {
+      "_wcpt_session_time": 1572687000
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:30 am"
+    },
+    "session_track": [ 71 ],
+    "slug": "working-with-wordpress-and-external-apis",
+    "title": {
+      "rendered": "Working with WordPress and External APIs"
+    }
+  },
+  {
+    "id": 12108,
+    "meta": {
+      "_wcpt_session_time": 1572624900
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "4:15 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "using-wordpress-with-static-site-generators",
+    "title": {
+      "rendered": "Using WordPress With Static Site Generators"
+    }
+  },
+  {
+    "id": 12106,
+    "meta": {
+      "_wcpt_session_time": 1572616800
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "2:00 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "wrangling-multisite-tools-and-tricks-to-tame-your-network",
+    "title": {
+      "rendered": "Wrangling Multisite: Tools and Tricks to Tame Your Network"
+    }
+  },
+  {
+    "id": 2595,
+    "meta": {
+      "_wcpt_session_time": 1572617700
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "2:15 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "contributing-to-wordpress-with-a-rock-solid-talk",
+    "title": {
+      "rendered": "Contributing to WordPress with a Rock Solid Talk"
+    }
+  },
+  {
+    "id": 2585,
+    "meta": {
+      "_wcpt_session_time": 1572602400
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "contributing-to-core-no-coding-necessary",
+    "title": {
+      "rendered": "Contributing to Core, No Coding Necessary"
+    }
+  },
+  {
+    "id": 2575,
+    "meta": {
+      "_wcpt_session_time": 1572606000
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "11:00 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "the-power-of-css-cool-things-to-do-with-styles",
+    "title": {
+      "rendered": "The Power of CSS: Cool Things To Do With Styles"
+    }
+  },
+  {
+    "id": 12118,
+    "meta": {
+      "_wcpt_session_time": 1572606900
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "11:15 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "the-hierarchy-of-needs-for-high-performing-websites",
+    "title": {
+      "rendered": "The Hierarchy of Needs for High-Performing Websites"
+    }
+  },
+  {
+    "id": 12116,
+    "meta": {
+      "_wcpt_session_time": 1572618600
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "2:30 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "roi-of-ux-how-to-assign-money-value-to-your-designs",
+    "title": {
+      "rendered": "ROI of UX, How to Assign Money Value to Your Designs"
+    }
+  },
+  {
+    "id": 12114,
+    "meta": {
+      "_wcpt_session_time": 1572687000
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:30 am"
+    },
+    "session_track": [ 72 ],
+    "slug": "feeling-fried-a-wordpressers-guide-to-preventing-burnout",
+    "title": {
+      "rendered": "Feeling Fried? A WordPresser&#8217;s Guide to Preventing Burnout"
+    }
+  },
+  {
+    "id": 2591,
+    "meta": {
+      "_wcpt_session_time": 1572615900
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:45 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "securing-wordpress-in-the-age-of-0-day-vulnerabilities",
+    "title": {
+      "rendered": "Securing WordPress in the age of 0-Day Vulnerabilities"
+    }
+  },
+  {
+    "id": 12063,
+    "meta": {
+      "_wcpt_session_time": 1572624900
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "4:15 pm"
+    },
+    "session_track": [ 55 ],
+    "slug": "accepting-and-applying-to-speak-at-wordcamps",
+    "title": {
+      "rendered": "Accepting and Applying to Speak at WordCamps"
+    }
+  },
+  {
+    "id": 12061,
+    "meta": {
+      "_wcpt_session_time": 1572687000
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:30 am"
+    },
+    "session_track": [ 55 ],
+    "slug": "how-the-wordpress-community-can-embrace-next-generation-talk-panel",
+    "title": {
+      "rendered": "How the WordPress Community Can Embrace the Next Generation (Talk + Panel)"
+    }
+  },
+  {
+    "id": 12059,
+    "meta": {
+      "_wcpt_session_time": 1572690600
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "10:30 am"
+    },
+    "session_track": [ 55 ],
+    "slug": "how-to-organize-events-for-youths-workshop",
+    "title": {
+      "rendered": "How to Organize Events for Youths (Discussion)"
+    }
+  },
+  {
+    "id": 12055,
+    "meta": {
+      "_wcpt_session_time": 1572694200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "11:30 am"
+    },
+    "session_track": [ 55 ],
+    "slug": "unconference",
+    "title": {
+      "rendered": "Unconference!"
+    }
+  },
+  {
+    "id": 12053,
+    "meta": {
+      "_wcpt_session_time": 1572613200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 55 ],
+    "slug": "creating-a-welcome-and-diverse-space",
+    "title": {
+      "rendered": "Creating a Welcoming and Diverse Space"
+    }
+  },
+  {
+    "id": 12050,
+    "meta": {
+      "_wcpt_session_time": 1572621300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "3:15 pm"
+    },
+    "session_track": [ 55 ],
+    "slug": "running-a-successful-contributor-day",
+    "title": {
+      "rendered": "Running a Successful Contributor Day"
+    }
+  },
+  {
+    "id": 12001,
+    "meta": {
+      "_wcpt_session_time": 1572701400
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 55 ],
+    "slug": "organizing-a-wordcamp-while-staying-sane",
+    "title": {
+      "rendered": "Organizing a WordCamp While Staying Sane"
+    }
+  },
+  {
+    "id": 11997,
+    "meta": {
+      "_wcpt_session_time": 1572602400
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 55 ],
+    "slug": "grow-your-meetup",
+    "title": {
+      "rendered": "Grow Your Meetup!"
+    }
+  },
+  {
+    "id": 11938,
+    "meta": {
+      "_wcpt_session_time": 1572605100
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:45 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "level-up-your-technical-troubleshooting",
+    "title": {
+      "rendered": "Level Up Your Technical Troubleshooting"
+    }
+  },
+  {
+    "id": 11934,
+    "meta": {
+      "_wcpt_session_time": 1572613200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 71 ],
+    "slug": "a-tour-through-the-wordpress-database",
+    "title": {
+      "rendered": "A Tour Through the WordPress Database"
+    }
+  },
+  {
+    "id": 11932,
+    "meta": {
+      "_wcpt_session_time": 1572613200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "wordpress-with-friends-what-board-games-teach-us-about-creating-for-the-web",
+    "title": {
+      "rendered": "WordPress with Friends: What Board Games Teach Us about Creating for the Web"
+    }
+  },
+  {
+    "id": 2473,
+    "meta": {
+      "_wcpt_session_time": 1572614100
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:15 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "code-like-a-writer",
+    "title": {
+      "rendered": "Code Like a Writer"
+    }
+  },
+  {
+    "id": 11926,
+    "meta": {
+      "_wcpt_session_time": 1572619500
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "2:45 pm"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "afternoon-break-sponsored-by-cloudways",
+    "title": {
+      "rendered": "Afternoon Break Sponsored by Cloudways"
+    }
+  },
+  {
+    "id": 11838,
+    "meta": {
+      "_wcpt_session_time": 1572602400
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 72 ],
+    "slug": "how-to-perform-a-quality-ux-audit-on-a-budget",
+    "title": {
+      "rendered": "How to Perform a Quality UX Audit on a Budget"
+    }
+  },
+  {
+    "id": 11835,
+    "meta": {
+      "_wcpt_session_time": 1572624900
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "4:15 pm"
+    },
+    "session_track": [ 71 ],
+    "slug": "is-something-not-very-usable-or-accessible-change-it",
+    "title": {
+      "rendered": "Is Something Not Very Usable or Accessible? Change it!"
+    }
+  },
+  {
+    "id": 11833,
+    "meta": {
+      "_wcpt_session_time": 1572690600
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "10:30 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "responsible-tracking-learning-from-your-users-without-being-creepy",
+    "title": {
+      "rendered": "Responsible Tracking: Learning from Your Users Without Being Creepy"
+    }
+  },
+  {
+    "id": 11829,
+    "meta": {
+      "_wcpt_session_time": 1572701400
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "confidently-testing-wordpress",
+    "title": {
+      "rendered": "Confidently Testing WordPress"
+    }
+  },
+  {
+    "id": 11827,
+    "meta": {
+      "_wcpt_session_time": 1572621300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "3:15 pm"
+    },
+    "session_track": [ 71 ],
+    "slug": "the-hacking-mindset-how-beating-wordpress-hackers-taught-me-to-overcome-obstacles-innovate",
+    "title": {
+      "rendered": "The Hacking Mindset: How Beating WordPress Hackers Taught Me to Overcome Obstacles &#038; Innovate"
+    }
+  },
+  {
+    "id": 11825,
+    "meta": {
+      "_wcpt_session_time": 1572621300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "3:15 pm"
+    },
+    "session_track": [ 73 ],
+    "slug": "the-rest-api-and-authentication",
+    "title": {
+      "rendered": "The REST API and Authentication"
+    }
+  },
+  {
+    "id": 11823,
+    "meta": {
+      "_wcpt_session_time": 1572701400
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 72 ],
+    "slug": "how-to-disagree-on-the-internet",
+    "title": {
+      "rendered": "How to Disagree on the Internet"
+    }
+  },
+  {
+    "id": 11821,
+    "meta": {
+      "_wcpt_session_time": 1572602400
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 71 ],
+    "slug": "open-source-open-process-open-web",
+    "title": {
+      "rendered": "Open Source, Open Process, Open Web"
+    }
+  },
+  {
+    "id": 11753,
+    "meta": {
+      "_wcpt_session_time": 1572624900
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "4:15 pm"
+    },
+    "session_track": [ 72 ],
+    "slug": "how-to-leverage-your-online-presence-to-get-more-clients-and-better-job-offers",
+    "title": {
+      "rendered": "How to Leverage Your Online Presence to Get More Clients and Better Job Offers"
+    }
+  },
+  {
+    "id": 11710,
+    "meta": {
+      "_wcpt_session_time": 1572613200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 72 ],
+    "slug": "how-i-built-wpbingo-a-pwa-that-uses-vue-js-tailwind-css-and-the-wp-rest-api",
+    "title": {
+      "rendered": "How I Built WPBingo: a PWA That Uses Vue.js, Tailwind CSS, and the WP REST API"
+    }
+  },
+  {
+    "id": 11708,
+    "meta": {
+      "_wcpt_session_time": 1572621300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "3:15 pm"
+    },
+    "session_track": [ 72 ],
+    "slug": "disrupting-the-enterprise",
+    "title": {
+      "rendered": "Disrupting the Enterprise"
+    }
+  },
+  {
+    "id": 11706,
+    "meta": {
+      "_wcpt_session_time": 1572603300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:15 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "using-wordpress-to-do_action",
+    "title": {
+      "rendered": "Using WordPress to do_action"
+    }
+  },
+  {
+    "id": 11701,
+    "meta": {
+      "_wcpt_session_time": 1572606000
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "11:00 am"
+    },
+    "session_track": [ 72 ],
+    "slug": "a-mom-a-lesbian-and-an-entrepreneur-walk-into-a-wordcamp",
+    "title": {
+      "rendered": "A Mom, a Lesbian, and an Entrepreneur Walk into a WordCamp"
+    }
+  },
+  {
+    "id": 11699,
+    "meta": {
+      "_wcpt_session_time": 1572694200
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "11:30 am"
+    },
+    "session_track": [ 71 ],
+    "slug": "from-developer-to-manager-how-to-survive",
+    "title": {
+      "rendered": "From Developer to Manager &#8212; How to Survive"
+    }
+  },
+  {
+    "id": 11697,
+    "meta": {
+      "_wcpt_session_time": 1572705000
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "2:30 pm"
+    },
+    "session_track": [ 72 ],
+    "slug": "how-to-beat-technical-writers-block",
+    "title": {
+      "rendered": "How to Beat Technical Writer&#8217;s Block"
+    }
+  },
+  {
+    "id": 11596,
+    "meta": {
+      "_wcpt_session_time": 1572598800
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "9:00 am"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "opening-remarks",
+    "title": {
+      "rendered": "Opening Remarks (in Room 220)"
+    }
+  },
+  {
+    "id": 11593,
+    "meta": {
+      "_wcpt_session_time": 1572613200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 84 ],
+    "slug": "performing-a-live-a11y-audit",
+    "title": {
+      "rendered": "Making Your Website Work for Everyone: Accessibility and Inclusive Design"
+    }
+  },
+  {
+    "id": 11591,
+    "meta": {
+      "_wcpt_session_time": 1572701400
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 83 ],
+    "slug": "structuring-modern-wordpress-sites-for-scale",
+    "title": {
+      "rendered": "Structuring Modern WordPress Sites for Scale"
+    }
+  },
+  {
+    "id": 11589,
+    "meta": {
+      "_wcpt_session_time": 1572690600
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "10:30 am"
+    },
+    "session_track": [ 84 ],
+    "slug": "templates-plugins-blocks",
+    "title": {
+      "rendered": "Templates &#038; Plugins &#038; Blocks, Oh My! Designing the Theme that Thinks of Everything"
+    }
+  },
+  {
+    "id": 11587,
+    "meta": {
+      "_wcpt_session_time": 1572687000
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "9:30 am"
+    },
+    "session_track": [ 83 ],
+    "slug": "write-your-first-business-plan",
+    "title": {
+      "rendered": "How to Create Your First Business Plan"
+    }
+  },
+  {
+    "id": 11580,
+    "meta": {
+      "_wcpt_session_time": 1572792300
+    },
+    "session_date_time": {
+      "date": "November 3, 2019",
+      "time": "2:45 pm"
+    },
+    "session_track": [],
+    "slug": "afternoon-break-sunday",
+    "title": {
+      "rendered": "Afternoon Break &#8211; Sunday"
+    }
+  },
+  {
+    "id": 11578,
+    "meta": {
+      "_wcpt_session_time": 1572708600
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "3:30 pm"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "afternoon-break-saturday",
+    "title": {
+      "rendered": "Afternoon Break &#8211; Saturday"
+    }
+  },
+  {
+    "id": 11576,
+    "meta": {
+      "_wcpt_session_time": 1572619500
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "2:45 pm"
+    },
+    "session_track": [],
+    "slug": "afternoon-break-friday",
+    "title": {
+      "rendered": "Afternoon Break &#8211; Friday"
+    }
+  },
+  {
+    "id": 11571,
+    "meta": {
+      "_wcpt_session_time": 1572697800
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "12:30 pm"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "lunch-saturday",
+    "title": {
+      "rendered": "Lunch &#8211; Saturday"
+    }
+  },
+  {
+    "id": 11569,
+    "meta": {
+      "_wcpt_session_time": 1572609600
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "12:00 pm"
+    },
+    "session_track": [ 55, 71, 72, 73, 83, 84 ],
+    "slug": "lunch",
+    "title": {
+      "rendered": "Lunch &#8211; Friday"
+    }
+  },
+  {
+    "id": 11566,
+    "meta": {
+      "_wcpt_session_time": 1572701400
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "1:30 pm"
+    },
+    "session_track": [ 84 ],
+    "slug": "the-building-blocks-of-building-blocks",
+    "title": {
+      "rendered": "The Building Blocks of Building Blocks"
+    }
+  },
+  {
+    "id": 11563,
+    "meta": {
+      "_wcpt_session_time": 1572613200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 83 ],
+    "slug": "brand-messaging-101-how-to-clearly-communicate-your-value-and-get-clients-to-say-yes",
+    "title": {
+      "rendered": "Brand Messaging 101: How to Clearly Communicate Your Value and Get Clients to Say Yes"
+    }
+  },
+  {
+    "id": 11182,
+    "meta": {
+      "_wcpt_session_time": 1572602400
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 84 ],
+    "slug": "automating-your-qa-with-visual-regression-testing",
+    "title": {
+      "rendered": "Automating Your QA with Visual Regression Testing"
+    }
+  },
+  {
+    "id": 11275,
+    "meta": {
+      "_wcpt_session_time": 1572621300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "3:15 pm"
+    },
+    "session_track": [ 83 ],
+    "slug": "crafting-an-effective-bio-for-your-website-and-social-profiles",
+    "title": {
+      "rendered": "Crafting an Effective Bio for Your Website and Social Profiles"
+    }
+  },
+  {
+    "id": 11473,
+    "meta": {
+      "_wcpt_session_time": 1572602400
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 83 ],
+    "slug": "align-seo-efforts-with-your-target-market-and-todays-search-learn-how-to-perform-keyword-research-and-map-them-to-content",
+    "title": {
+      "rendered": "Align SEO Efforts with Your Target Market and Today’s Search: Learn How to Perform Keyword Research and Map Them to Content"
+    }
+  },
+  {
+    "id": 2467,
+    "meta": {
+      "_wcpt_session_time": 1572604200
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "10:30 am"
+    },
+    "session_track": [ 73 ],
+    "slug": "the-cost-of-contribution",
+    "title": {
+      "rendered": "The Cost of Contribution"
+    }
+  }
+]

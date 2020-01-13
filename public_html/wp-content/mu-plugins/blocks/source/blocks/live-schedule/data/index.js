@@ -37,7 +37,7 @@ function fetchFromAPI() {
  *
  * @return {Array} A list of objects, `{track, now, next}`.
  */
-function getSessions( { sessions, tracks } ) {
+export function getCurrentSessions( { sessions, tracks } ) {
 	const tzOffset = __experimentalGetSettings().timezone.offset * ( 60 * 60 * 1000 );
 	const nowUTC = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 	const nowLocal = new Date( nowUTC );
@@ -61,14 +61,14 @@ function getSessions( { sessions, tracks } ) {
 			next: sessionsInTrack[ indexOfNextSession ],
 			now: sessionsInTrack[ indexOfNextSession - 1 ],
 		};
-	} );
+	} ).filter( ( record ) => ( !! record.now || !! record.next ) );
 }
 
 /**
  * Async function to get session and tracks data from the REST API, formatted into currently running sessions
  * per track.
  *
- * @return {Promise}
+ * @return {Promise} The promise will resolve with a list of objects, `{track, now, next}`.
  */
 export async function getDataFromAPI() {
 	const data = await fetchFromAPI();
@@ -82,5 +82,5 @@ export async function getDataFromAPI() {
 
 	const tracks = data[ 1 ];
 
-	return getSessions( { sessions, tracks } );
+	return getCurrentSessions( { sessions, tracks } );
 }

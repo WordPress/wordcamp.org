@@ -1324,6 +1324,15 @@
     "@babel/runtime" "^7.4.4"
     "@wordpress/dom-ready" "^2.5.1"
 
+"@wordpress/api-fetch@3.8.0":
+  version "3.8.0"
+  resolved "https://registry.yarnpkg.com/@wordpress/api-fetch/-/api-fetch-3.8.0.tgz#69594d2e9a50b9611f1208c420b92e40e08d32cb"
+  integrity sha512-8dB7gToTCqYHLq4tc+jscwPOOEtaltkbIlGRi5rHkODP1XPHknA93fcN1/FAZhTIJsqlXfWXdrMWvQheRJK/lw==
+  dependencies:
+    "@babel/runtime" "^7.4.4"
+    "@wordpress/i18n" "^3.7.0"
+    "@wordpress/url" "^2.9.0"
+
 "@wordpress/babel-plugin-import-jsx-pragma@^2.3.0":
   version "2.3.0"
   resolved "https://registry.yarnpkg.com/@wordpress/babel-plugin-import-jsx-pragma/-/babel-plugin-import-jsx-pragma-2.3.0.tgz#330b736fa383437ce1abc442f6cf61cd46437ee9"
@@ -1408,6 +1417,15 @@
     lodash "^4.17.15"
     redux "^4.0.0"
     turbo-combine-reducers "^1.0.2"
+
+"@wordpress/date@3.7.0":
+  version "3.7.0"
+  resolved "https://registry.yarnpkg.com/@wordpress/date/-/date-3.7.0.tgz#ea3b3b626248d75e1cba69f24d9bd337b38182ae"
+  integrity sha512-UQ8E150xJqc3ykVqFNGvWmEpIsPJLifvoANTRg8ySuho59E8pNUZo1t5y68nBsTqpwcXuqfhA9JbvqusH1us8Q==
+  dependencies:
+    "@babel/runtime" "^7.4.4"
+    moment "^2.22.1"
+    moment-timezone "^0.5.16"
 
 "@wordpress/dependency-extraction-webpack-plugin@^2.1.0":
   version "2.1.0"
@@ -1606,6 +1624,14 @@
     webpack-bundle-analyzer "^3.3.2"
     webpack-cli "^3.1.2"
     webpack-livereload-plugin "^2.2.0"
+
+"@wordpress/url@2.9.0", "@wordpress/url@^2.9.0":
+  version "2.9.0"
+  resolved "https://registry.yarnpkg.com/@wordpress/url/-/url-2.9.0.tgz#302f3e8db59a0bec74b2cbade7a0d3527e89c934"
+  integrity sha512-ntrXO42/NElNHIrezoYPjWrXNyNYqyHzvvtBVSMLwwwMf7836t/C7GACuk56O3PwQEmSikMNStHQnNCwmyeaag==
+  dependencies:
+    "@babel/runtime" "^7.4.4"
+    qs "^6.5.2"
 
 "@xtuc/ieee754@^1.2.0":
   version "1.2.0"
@@ -6577,7 +6603,14 @@ mkpath@^0.1.0:
   resolved "https://registry.yarnpkg.com/mkpath/-/mkpath-0.1.0.tgz#7554a6f8d871834cc97b5462b122c4c124d6de91"
   integrity sha1-dVSm+Nhxg0zJe1RisSLEwSTW3pE=
 
-moment@>=1.6.0, moment@^2.22.1:
+moment-timezone@^0.5.16:
+  version "0.5.27"
+  resolved "https://registry.yarnpkg.com/moment-timezone/-/moment-timezone-0.5.27.tgz#73adec8139b6fe30452e78f210f27b1f346b8877"
+  integrity sha512-EIKQs7h5sAsjhPCqN6ggx6cEbs94GK050254TIJySD1bzoM5JTYDwAU1IoVOeTOL6Gm27kYJ51/uuvq1kIlrbw==
+  dependencies:
+    moment ">= 2.9.0"
+
+"moment@>= 2.9.0", moment@>=1.6.0, moment@^2.22.1:
   version "2.24.0"
   resolved "https://registry.yarnpkg.com/moment/-/moment-2.24.0.tgz#0d055d53f5052aa653c9f6eb68bb5d12bf5c2b5b"
   integrity sha512-bV7f+6l2QigeBBZSM/6yTNq4P2fNpSWj/0e7jQcy87A8e7o2nAfP/34/2ky5Vw4B9S446EtIhodAzkFCcR4dQg==
@@ -7787,7 +7820,7 @@ qs@6.7.0:
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.7.0.tgz#41dc1a015e3d581f1621776be31afb2876a9b1bc"
   integrity sha512-VCdBRNFTX1fyE7Nb6FYoURo/SPe62QCaAyzJvUjwRaIsc+NePBEniHlvxFmmX56+HZphIGtV0XeCirBtpDrTyQ==
 
-qs@^6.4.0:
+qs@^6.4.0, qs@^6.5.2:
   version "6.9.1"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.9.1.tgz#20082c65cb78223635ab1a9eaca8875a29bf8ec9"
   integrity sha512-Cxm7/SS/y/Z3MHWSxXb8lIFqgqBowP5JMlTUFyJN88y0SGQhVmZnqFK/PeuMX9LzUyWsqqhNxIyg0jlzq946yA==

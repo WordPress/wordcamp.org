@@ -45,7 +45,15 @@ const SessionSpeakers = ( { onChange, speakers, selected } ) => {
 export default compose( [
 	withSelect( ( select ) => {
 		const meta = select( 'core/editor' ).getEditedPostAttribute( 'meta' );
-		const speakers = select( 'core' ).getEntityRecords( 'postType', 'wcb_speaker', { per_page: -1, _embed: true } );
+		const speakers = select( 'core' ).getEntityRecords(
+			'postType',
+			'wcb_speaker',
+			{
+				status: 'any',
+				per_page: -1,
+				_embed: true,
+			}
+		);
 
 		return {
 			selected: meta._wcpt_speaker_id,

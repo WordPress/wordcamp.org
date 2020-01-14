@@ -630,6 +630,8 @@ function format_amount( $amount, $currency ) {
 				$formatted_amount .= sprintf( '<br />~&nbsp;%s&nbsp;USD', number_format( $usd_amount, 2 ) );
 			}
 		}
+	} else {
+		$formatted_amount = 'Error: The item does not have a currency.';
 	}
 
 	return $formatted_amount;

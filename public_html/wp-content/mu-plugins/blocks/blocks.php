@@ -32,10 +32,16 @@ function load_includes() {
 	require_once $blocks_dir . 'sessions/controller.php';
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
-	require_once $blocks_dir . 'live-schedule/controller.php';
 
-	// Hooks.
-	require_once $hooks_dir . 'latest-posts/controller.php';
+	// Disable live schedule & latest posts on central.wordcamp.org.
+	// @todo This is a temporary measure to avoid enqueuing duplicate babel-polyfill on the application tracker.
+	// If the build process is changed to use core-provided react/polyfills, this can be removed.
+	if ( 5 !== get_current_blog_id() ) {
+		require_once $blocks_dir . 'live-schedule/controller.php';
+
+		// Hooks.
+		require_once $hooks_dir . 'latest-posts/controller.php';
+	}
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_includes' );

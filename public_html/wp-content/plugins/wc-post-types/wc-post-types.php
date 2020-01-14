@@ -27,7 +27,6 @@ class WordCamp_Post_Types_Plugin {
 
 		add_action( 'init', array( $this, 'register_post_types' ) );
 		add_action( 'init', array( $this, 'register_taxonomies' ) );
-		add_action( 'init', array( $this, 'register_post_meta' ) );
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'after_theme_setup', array( $this, 'add_image_sizes' ) );
 

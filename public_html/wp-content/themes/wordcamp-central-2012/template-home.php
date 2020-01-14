@@ -108,7 +108,7 @@ get_header(); ?>
 		</div><!-- .wc-news -->
 
 		<div class="wc-global-sponsors last">
-			<h3><strong>Some Of Our Sponsors</strong></h3>
+			<h3><strong>Gold Global Sponsors</strong></h3>
 
 			<?php
 			echo wp_kses_post( MES_Block\render( array(

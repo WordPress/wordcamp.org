@@ -12,25 +12,97 @@ defined( 'WPINC' ) || die();
 
 require_once 'favorite-schedule-shortcode.php';
 
+add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
+add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
+
 /**
- * Add non-sensitive meta fields to WordCamp post type REST API endpoints.
- *
- * If we ever want to register meta for purposes other than exposing it in the API, then this function will
- * probably need to be re-thought and re-factored.
+ * Registers post meta to the Sponsor post type.
  *
  * @return void
  */
-function expose_public_post_meta() {
-	$meta_defaults = array(
-		'show_in_rest' => true,
-		'single'       => true,
+function register_sponsor_post_meta() {
+	register_post_meta(
+		'wcb_sponsor',
+		'_wcpt_sponsor_website',
+		array(
+			'show_in_rest' => true,
+			'single'       => true,
+		)
 	);
-
-	// Sponsor.
-	register_post_meta( 'wcb_sponsor', '_wcpt_sponsor_website', $meta_defaults );
 }
 
-add_action( 'init', __NAMESPACE__ . '\expose_public_post_meta' );
+/**
+ * Registers post meta to the Session post type.
+ *
+ * @return void
+ */
+function register_session_post_meta() {
+	register_post_meta(
+		'wcb_session',
+		'_wcpt_session_time',
+		array(
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					if ( $request->get_param( 'wc_session_utc' ) ) {
+						$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $value ) );
+						return $datetime->getTimestamp();
+					}
+					return (int) $value;
+				},
+			),
+			'single'       => true,
+			'type'         => 'integer',
+		)
+	);
+	register_post_meta(
+		'wcb_session',
+		'_wcpt_session_duration',
+		array(
+			'type'         => 'integer',
+			'show_in_rest' => true,
+			'single'       => true,
+		)
+	);
+	register_post_meta(
+		'wcb_session',
+		'_wcpt_session_type',
+		array(
+			'show_in_rest' => true,
+			'single'       => true,
+		)
+	);
+	register_post_meta(
+		'wcb_session',
+		'_wcpt_session_slides',
+		array(
+			'show_in_rest' => true,
+			'single'       => true,
+		)
+	);
+	register_post_meta(
+		'wcb_session',
+		'_wcpt_session_video',
+		array(
+			'show_in_rest'      => true,
+			'single'            => true,
+			'sanitize_callback' => function( $value ) {
+				if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $value, PHP_URL_HOST ) ) ) ) {
+					return $value;
+				}
+				return '';
+			},
+		)
+	);
+	register_post_meta(
+		'wcb_session',
+		'_wcpt_speaker_id',
+		array(
+			'type'         => 'integer',
+			'show_in_rest' => true,
+			'single'       => false,
+		)
+	);
+}
 
 /**
  * Additional fields to include in API responses for WordCamp post types.

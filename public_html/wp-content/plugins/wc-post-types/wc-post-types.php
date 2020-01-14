@@ -1719,69 +1719,6 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
-	 * Registers post meta to our post types.
-	 */
-	public function register_post_meta() {
-		// Session.
-		register_post_meta(
-			'wcb_session',
-			'_wcpt_session_time',
-			array(
-				'show_in_rest' => array(
-					'prepare_callback' => function( $value, $request, $args ) {
-						if ( $request->get_param( 'wc_session_utc' ) ) {
-							$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $value ) );
-							return $datetime->getTimestamp();
-						}
-						return (int) $value;
-					},
-				),
-				'single'       => true,
-				'type'         => 'integer',
-			)
-		);
-		register_post_meta(
-			'wcb_session',
-			'_wcpt_session_duration',
-			array(
-				'type'         => 'integer',
-				'show_in_rest' => true,
-				'single'       => true,
-			)
-		);
-		register_post_meta(
-			'wcb_session',
-			'_wcpt_session_type',
-			array(
-				'show_in_rest' => true,
-				'single'       => true,
-			)
-		);
-		register_post_meta(
-			'wcb_session',
-			'_wcpt_session_slides',
-			array(
-				'show_in_rest' => true,
-				'single'       => true,
-			)
-		);
-		register_post_meta(
-			'wcb_session',
-			'_wcpt_session_video',
-			array(
-				'show_in_rest'      => true,
-				'single'            => true,
-				'sanitize_callback' => function( $value ) {
-					if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $value, PHP_URL_HOST ) ) ) ) {
-						return $value;
-					}
-					return '';
-				},
-			)
-		);
-	}
-
-	/**
 	 * Filters our custom post types columns. Instead of creating a filter for each
 	 * post type, we applied the same callback function to the post types we want to
 	 * override.

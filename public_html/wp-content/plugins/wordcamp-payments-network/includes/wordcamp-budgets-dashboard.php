@@ -609,6 +609,20 @@ function enqueue_scripts( $hook ) {
 }
 
 /**
+ * Converted a formatted amount into a float.
+ *
+ * e.g., `'1,234.00'` -> `1234`
+ *
+ * @return float
+ */
+function formatted_amount_to_float( string $amount ) {
+	$float_amount = wp_unslash( $amount );
+	$float_amount = str_replace( ',', '', $float_amount );
+
+	return (float) $float_amount;
+}
+
+/**
  * Format an amount for display
  *
  * @param float  $amount

@@ -60,7 +60,9 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 		if ( ! empty( $_REQUEST['s'] ) ) {
 			$search = $wpdb->prepare(
 				"AND `keywords` LIKE '%%%s%%'",
-				$wpdb->esc_like( wp_unslash( $_REQUEST['s'] ) )
+				$wpdb->esc_like(
+					Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] )
+				)
 			);
 		}
 

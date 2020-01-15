@@ -77,7 +77,12 @@ class Payment_Requests_List_Table extends WP_List_Table {
 		}
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
-			$where .= $wpdb->prepare( ' AND `keywords` LIKE %s ', '%' . $wpdb->esc_like( wp_unslash( $_REQUEST['s'] ) ) . '%' );
+			$query = Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] );
+
+			$where .= $wpdb->prepare(
+				' AND `keywords` LIKE %s ',
+				'%' . $wpdb->esc_like( $query ). '%'
+			);
 		}
 
 		if ( ! empty( $_REQUEST['orderby'] ) && in_array( $_REQUEST['orderby'], array_values( $this->get_sortable_columns() ) ) ) {

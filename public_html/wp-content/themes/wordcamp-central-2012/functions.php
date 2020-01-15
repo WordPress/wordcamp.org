@@ -90,6 +90,15 @@ class WordCamp_Central_Theme {
 			'before_title'  => '<h3 class="widget-title">',
 			'after_title'   => '</h3>',
 		) );
+		register_sidebar( array(
+			'name'          => __( 'Sponsors Widget Area', 'twentyten' ),
+			'id'            => 'sponsors-widget-area',
+			'description'   => __( 'Widgets displayed in the Sponsors column on the homepage.', 'twentyten' ),
+			'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
+			'after_widget'  => '</li>',
+			'before_title'  => '<h4 class="widget-title">',
+			'after_title'   => '</h4>',
+		) );
 	}
 
 	/**

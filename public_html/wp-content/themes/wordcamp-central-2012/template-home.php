@@ -110,15 +110,9 @@ get_header(); ?>
 		<div class="wc-global-sponsors last">
 			<h3><strong>Gold Global Sponsors</strong></h3>
 
-			<?php
-			echo wp_kses_post( MES_Block\render( array(
-				'number'      => 3,
-				'region_id'   => 'all',
-				'level_id'    => 3040794,
-				'image_align' => 'center',
-				'image_width' => 600,
-			) ) );
-			?>
+			<ul>
+				<?php dynamic_sidebar( 'sponsors-widget-area' ); ?>
+			</ul>
 
 			<a href="<?php echo esc_attr( get_permalink( get_page_by_path( 'global-community-sponsors' ) ) ); ?>" class="more">More sponsors &rarr;</a>
 		</div>  <!-- .wc-global-sponsors -->

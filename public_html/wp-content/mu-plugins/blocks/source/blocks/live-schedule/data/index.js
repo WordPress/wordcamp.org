@@ -19,10 +19,25 @@ function fetchFromAPI() {
 	const sessionPath = addQueryArgs( `wp/v2/sessions`, {
 		per_page: -1,
 		status: 'publish',
+		_fields: [
+			'id',
+			'title',
+			'link',
+			'meta',
+			'session_track',
+			'session_date_time',
+			'session_cats_rendered',
+			'session_speakers',
+		],
 	} );
 	const trackPath = addQueryArgs( `wp/v2/session_track`, {
 		per_page: -1,
 		status: 'publish',
+		_fields: [
+			'id',
+			'slug',
+			'name',
+		],
 	} );
 
 	return Promise.all( [

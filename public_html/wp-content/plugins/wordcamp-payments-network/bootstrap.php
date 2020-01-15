@@ -11,6 +11,7 @@
 */
 
 namespace WordCamp\Budgets_Dashboard;
+use Payment_Requests_Dashboard;
 
 defined( 'WPINC' ) or die();
 
@@ -29,7 +30,7 @@ if ( is_admin() || defined( 'DOING_CRON' ) ) {
 	require_once( __DIR__ . '/includes/sponsor-invoices-dashboard.php' );
 	require_once( __DIR__ . '/includes/reimbursement-requests-dashboard.php' );
 
-	$GLOBALS['Payment_Requests_Dashboard'] = new \Payment_Requests_Dashboard();
+	$GLOBALS['Payment_Requests_Dashboard'] = new Payment_Requests_Dashboard();
 
 	add_action( 'plugins_loaded', array( $GLOBALS['Payment_Requests_Dashboard'], 'plugins_loaded' ) );
 }

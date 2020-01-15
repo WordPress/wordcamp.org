@@ -471,9 +471,9 @@ function _generate_payment_report_default( $args ) {
 	) );
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
-		return \WCP_Payment_Request::_generate_payment_report_default( $args );
+		return WCP_Payment_Request::_generate_payment_report_default( $args );
 	} elseif ( $args['post_type'] == 'wcb_reimbursement' ) {
-		return \WordCamp\Budgets\Reimbursement_Requests\_generate_payment_report_default( $args );
+		return Reimbursement_Requests\_generate_payment_report_default( $args );
 	}
 }
 
@@ -492,9 +492,9 @@ function _generate_payment_report_jpm_checks( $args ) {
 	) );
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
-		return \WCP_Payment_Request::_generate_payment_report_jpm_checks( $args );
+		return WCP_Payment_Request::_generate_payment_report_jpm_checks( $args );
 	} elseif ( $args['post_type'] == 'wcb_reimbursement' ) {
-		return \WordCamp\Budgets\Reimbursement_Requests\_generate_payment_report_jpm_checks( $args );
+		return Reimbursement_Requests\_generate_payment_report_jpm_checks( $args );
 	}
 }
 
@@ -513,9 +513,9 @@ function _generate_payment_report_jpm_ach( $args ) {
 	) );
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
-		return \WCP_Payment_Request::_generate_payment_report_jpm_ach( $args );
+		return WCP_Payment_Request::_generate_payment_report_jpm_ach( $args );
 	} elseif ( $args['post_type'] == 'wcb_reimbursement' ) {
-		return \WordCamp\Budgets\Reimbursement_Requests\_generate_payment_report_jpm_ach( $args );
+		return Reimbursement_Requests\_generate_payment_report_jpm_ach( $args );
 	}
 }
 
@@ -534,9 +534,9 @@ function _generate_payment_report_jpm_wires( $args ) {
 	) );
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
-		return \WCP_Payment_Request::_generate_payment_report_jpm_wires( $args );
+		return WCP_Payment_Request::_generate_payment_report_jpm_wires( $args );
 	} elseif ( $args['post_type'] == 'wcb_reimbursement' ) {
-		return \WordCamp\Budgets\Reimbursement_Requests\_generate_payment_report_jpm_wires( $args );
+		return Reimbursement_Requests\_generate_payment_report_jpm_wires( $args );
 	}
 }
 

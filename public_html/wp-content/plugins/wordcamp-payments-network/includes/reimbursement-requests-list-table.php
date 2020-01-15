@@ -1,9 +1,13 @@
 <?php
 
 namespace WordCamp\Budgets_Dashboard\Reimbursement_Requests;
+use WordCamp\Budgets_Dashboard;
+use WordCamp_Budgets;
+use WP_List_Table;
+
 defined( 'WPINC' ) or die();
 
-class Reimbursement_Requests_List_Table extends \WP_List_Table {
+class Reimbursement_Requests_List_Table extends WP_List_Table {
 
 	/**
 	 * Define the table columns that will be rendered
@@ -43,7 +47,7 @@ class Reimbursement_Requests_List_Table extends \WP_List_Table {
 			$this->get_columns(),
 			array(),
 			array(),
-			$this->get_primary_column_name()
+			$this->get_primary_column_name(),
 		);
 
 		$table_name = get_index_table_name();
@@ -114,14 +118,22 @@ class Reimbursement_Requests_List_Table extends \WP_List_Table {
 	 * Note: Runs in a switch_to_blog() context.
 	 *
 	 * @param object $index_row
-	 * 
+	 *
 	 * @return string
 	 */
 	protected function column_request_title( $post ) {
 		$blog_id = get_current_blog_id();
-		$title = get_the_title( $post );
-		$title = empty( $title ) ? '(no title)' : $title;
-		$edit_post_link = add_query_arg( array( 'post' => $post->ID, 'action' => 'edit' ), admin_url( 'post.php' ) );
+		$title   = get_the_title( $post );
+		$title   = empty( $title ) ? '(no title)' : $title;
+
+		$edit_post_link = add_query_arg(
+			array(
+				'post'   => $post->ID,
+				'action' => 'edit',
+			),
+			admin_url( 'post.php' )
+		);
+
 		$actions = array(
 			'view-all' => sprintf( '<a href="%s" target="_blank">View All</a>', esc_url( admin_url( 'edit.php?post_type=wcb_reimbursement' ) ) ),
 		);
@@ -152,6 +164,7 @@ class Reimbursement_Requests_List_Table extends \WP_List_Table {
 		<?php
 
 		$output = ob_get_clean();
+
 		return $output;
 	}
 
@@ -193,9 +206,9 @@ class Reimbursement_Requests_List_Table extends \WP_List_Table {
 	 * @return string
 	 */
 	public function column_categories( $request ) {
-		require_once( WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php' );
+		require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 
-		$categories        = \WordCamp_Budgets::get_payment_categories();
+		$categories          = WordCamp_Budgets::get_payment_categories();
 		$expenses            = get_post_meta( $request->ID, '_wcbrr_expenses', true );
 		$selected_categories = array();
 

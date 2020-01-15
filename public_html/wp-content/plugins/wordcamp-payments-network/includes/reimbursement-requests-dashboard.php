@@ -300,7 +300,8 @@ function get_search_keywords( $request ) {
 	}
 
 	if ( is_array( $expenses ) ) {
-		$keywords[] = get_amount( $request->ID );
+		// Avoid pedantic precision when json_encode()'d. See https://stackoverflow.com/questions/42981409/php7-1-json-encode-float-issue.
+		$keywords[] = round( get_amount( $request->ID ), 2 );
 
 		foreach ( $expenses as $expense ) {
 			if ( array_key_exists( $expense['_wcbrr_category'], $categories ) ) {
@@ -312,7 +313,7 @@ function get_search_keywords( $request ) {
 			}
 
 			if ( ! empty( $expense['_wcbrr_amount'] ) ) {
-				$keywords[] = $expense['_wcbrr_amount'];
+				$keywords[] = round( $expense['_wcbrr_amount'], 2 ); // See note above.
 			}
 		}
 	}

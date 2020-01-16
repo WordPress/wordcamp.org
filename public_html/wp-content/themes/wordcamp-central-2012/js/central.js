@@ -64,6 +64,7 @@ var WordCampCentral = ( function( $ ) {
 	 */
 	function documentReadyInit() {
 		try {
+			cycleLogos();
 			if ( options.hasOwnProperty( 'mapContainer' ) && options.hasOwnProperty( 'mapMarkers' ) ) {
 				loadMap( options.mapContainer, options.mapMarkers );
 			}
@@ -107,6 +108,18 @@ var WordCampCentral = ( function( $ ) {
 				container.className += ' toggled';
 			}
 		};
+	}
+
+	/**
+	 * Turn the sponsors widget list into a slideshow.
+	 */
+	function cycleLogos() {
+		var $container = $( '.sponsors-widget-list' );
+
+		$container.cycle( {
+			timeout: 5000,
+			speed: 500
+		} );
 	}
 
 	/**

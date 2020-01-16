@@ -1205,11 +1205,15 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 }
 
 /* !Featured Sponsors */
-.wordcamp-mes-sponsors > li {
-	width: 100%;
+.sponsors-widget-list .wp-caption {
+	background: transparent;
+	min-height: 320px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
 }
-.wordcamp-mes-sponsors .wordcamp-image__featured-image {
-	height: auto;
+.sponsors-widget-list .wp-caption img {
+	margin: 0 auto;
 }
 
 /* !WordCamp Sessions */

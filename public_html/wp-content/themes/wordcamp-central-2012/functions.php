@@ -905,3 +905,20 @@ class WordCamp_Central_Theme_Kill_Features {
 		return false;
 	}
 }
+
+/**
+ * Randomize the order of the widgets in the Sponsors widget area.
+ *
+ * @param array $sidebars_widgets
+ *
+ * @return array
+ */
+function wordcamp_central_randomize_sponsor_widget_order( $sidebars_widgets ) {
+	if ( isset( $sidebars_widgets['sponsors-widget-area'] ) ) {
+		shuffle( $sidebars_widgets['sponsors-widget-area'] );
+	}
+
+	return $sidebars_widgets;
+}
+
+add_filter( 'sidebars_widgets', 'wordcamp_central_randomize_sponsor_widget_order' );

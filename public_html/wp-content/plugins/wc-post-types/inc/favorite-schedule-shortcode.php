@@ -236,7 +236,7 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 			}
 
 			// Line format: Time of session | Session title [by Speaker] | Track name(s).
-			$sessions_text .= date( get_option( 'time_format' ), $timestamp );
+			$sessions_text .= wp_date( get_option( 'time_format' ), $timestamp );
 			$sessions_text .= ' | ';
 			$sessions_text .= $session_title;
 			if ( count( $speakers_names ) > 0 ) {
@@ -265,7 +265,7 @@ function get_sessions_dates( $sessions, $date_format ) {
 
 	$session_dates = array_map(
 		function( $timestamp ) use ( $date_format ) {
-			return date( $date_format, $timestamp );
+			return wp_date( $date_format, $timestamp );
 		},
 		$session_timestamps
 	);
@@ -341,7 +341,7 @@ function generate_email_body( $wordcamp_name, $fav_sessions_lookup ) {
 		$sessions_for_current_day = array_filter(
 			$sessions_reversed,
 			function( $date_ ) use ( $current_day, $date_format ) {
-				return date( $date_format, $date_ ) === $current_day;
+				return wp_date( $date_format, $date_ ) === $current_day;
 			},
 			ARRAY_FILTER_USE_KEY
 		);

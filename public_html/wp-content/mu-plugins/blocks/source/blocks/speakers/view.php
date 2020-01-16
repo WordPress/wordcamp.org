@@ -70,8 +70,8 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 									printf(
 										/* translators: 1: A date; 2: A time; 3: A location; */
 										esc_html__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
-										esc_html( date_i18n( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
-										esc_html( date_i18n( get_option( 'time_format' ), $session->_wcpt_session_time ) ),
+										esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
+										esc_html( wp_date( get_option( 'time_format' ), $session->_wcpt_session_time ) ),
 										esc_html( $tracks[0]->name )
 									);
 								?>
@@ -81,8 +81,8 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 									printf(
 										/* translators: 1: A date; 2: A time; */
 										esc_html__( '%1$s at %2$s', 'wordcamporg' ),
-										esc_html( date_i18n( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
-										esc_html( date_i18n( get_option( 'time_format' ), $session->_wcpt_session_time ) )
+										esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
+										esc_html( wp_date( get_option( 'time_format' ), $session->_wcpt_session_time ) )
 									);
 								?>
 							<?php endif; ?>

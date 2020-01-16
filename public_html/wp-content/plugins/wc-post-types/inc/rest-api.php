@@ -110,8 +110,8 @@ function register_additional_rest_fields() {
 				);
 
 				if ( $raw ) {
-					$return['date'] = date_i18n( get_option( 'date_format' ), $raw );
-					$return['time'] = date_i18n( get_option( 'time_format' ), $raw );
+					$return['date'] = wp_date( get_option( 'date_format' ), $raw );
+					$return['time'] = wp_date( get_option( 'time_format' ), $raw );
 				}
 
 				return $return;

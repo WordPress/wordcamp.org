@@ -110,7 +110,7 @@ get_header(); ?>
 		<div class="wc-global-sponsors last">
 			<h3><strong>Gold Global Sponsors</strong></h3>
 
-			<ul>
+			<ul class="widget-container sponsors-widget-list">
 				<?php dynamic_sidebar( 'sponsors-widget-area' ); ?>
 			</ul>
 

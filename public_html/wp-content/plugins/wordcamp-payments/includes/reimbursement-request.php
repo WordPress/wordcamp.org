@@ -1024,7 +1024,7 @@ function _generate_payment_report_jpm_checks( $args ) {
 
 	// Avoid at least *some* race conditions.
 	set_site_transient( '_wcb_jpm_checks_counter_lock', 1, 30 );
-	$start = absint( get_site_option( '_wcb_jpm_checks_counter', 0 ) );
+	$start = $args['starting_check_number'];
 
 	foreach ( $args['data'] as $entry ) {
 		switch_to_blog( $entry->blog_id );
@@ -1041,7 +1041,6 @@ function _generate_payment_report_jpm_checks( $args ) {
 			continue;
 		}
 
-		$count++;
 		$amount = 0;
 		$description = array();
 
@@ -1118,14 +1117,14 @@ function _generate_payment_report_jpm_checks( $args ) {
 		) ), ',', '|' );
 
 		restore_current_blog();
+		$count++;
 	}
 
 	// File Trailer
 	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILTRL', $count * 6 + 2 ) ), ',', '|' );
 
-	// Update counter and unlock
-	$start = absint( get_site_option( '_wcb_jpm_checks_counter', 0 ) );
-	update_site_option( '_wcb_jpm_checks_counter', $start + $count );
+	// Subtract 1 because counter stores the _last_ check number, not the _next_ check number.
+	update_site_option( '_wcb_jpm_checks_counter', $start + $count - 1 );
 	delete_site_transient( '_wcb_jpm_checks_counter_lock' );
 
 	fclose( $report );

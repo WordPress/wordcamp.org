@@ -51,3 +51,15 @@
 	display: block;
 	margin-left: 24px;
 }
+
+
+/*
+ * Export
+ */
+#wcb-export-check-number-row {
+	display: none;
+}
+
+#wcb-export-check-number {
+	width: 80px;
+}

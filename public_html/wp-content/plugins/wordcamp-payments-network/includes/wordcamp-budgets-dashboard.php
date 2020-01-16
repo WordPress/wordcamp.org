@@ -249,6 +249,7 @@ function render_import_tab() {
 function render_export_tab() {
 	$today      = date( 'Y-m-d' );
 	$last_month = date( 'Y-m-d', strtotime( 'now - 1 month' ) );
+	$starting_check = absint( get_site_option( '_wcb_jpm_checks_counter', 0 ) ) + 1;
 
 	?>
 
@@ -309,11 +310,52 @@ function render_export_tab() {
 			<tr>
 				<th>Format</th>
 				<td>
-					<select name="wcb-export-type">
+					<select id="wcb-export-type" name="wcb-export-type">
 						<?php foreach ( get_export_types() as $key => $export_type ) : ?>
 							<option value="<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $export_type['label'] ); ?></option>
 						<?php endforeach; ?>
 					</select>
+				</td>
+
+				<script>
+					/*
+					 * CSS hides it by default, but we need to `show()` when refreshing the page because
+					 * `change()` won't be triggered.
+					 */
+					jQuery( document ).ready( toggleCheckRow );
+					jQuery( '#wcb-export-type' ).change( toggleCheckRow );
+
+					/*
+					 * Show the Check Number row when the Quick Checks format is selected.
+					 */
+					function toggleCheckRow() {
+						var selectedFormat = jQuery( '#wcb-export-type' ).val();
+						var $checkRow = jQuery( '#wcb-export-check-number-row' );
+
+						if ( 'jpm_checks' === selectedFormat ) {
+							$checkRow.show();
+						} else {
+							$checkRow.hide();
+						}
+					}
+				</script>
+			</tr>
+
+			<tr id="wcb-export-check-number-row">
+				<th>Starting Check Number</th>
+				<td>
+					<input
+						id="wcb-export-check-number"
+						name="wcb-export-check-number"
+						type="number"
+						min="<?php echo absint( $starting_check ); ?>"
+						value="<?php echo absint( $starting_check ); ?>"
+						max="30000"
+					>
+
+					<p class="description">
+						Increase this if you get a <code>duplicate check</code> error when importing to JPM.
+					</p>
 				</td>
 			</tr>
 		</table>
@@ -375,13 +417,29 @@ function process_export_request() {
 		return;
 	}
 
-	$report = generate_payment_report( array(
+	$report_args = array(
 		'status'      => $status,
 		'start_date'  => $start_date,
 		'end_date'    => $end_date,
 		'export_type' => $export_type,
 		'post_type'   => $post_type,
-	) );
+	);
+
+	if ( 'jpm_checks' === $_POST['wcb-export-type'] ) {
+		$last_check_number = get_site_option( '_wcb_jpm_checks_counter', 0 );
+		$next_check_number = absint( $_POST['wcb-export-check-number'] ?? 0 );
+
+		if ( $next_check_number <= $last_check_number ) {
+			wp_die( sprintf(
+				'Error: The minimum check number is %s',
+				absint( $last_check_number ) + 1
+			) );
+		}
+
+		$report_args['starting_check_number'] = $next_check_number;
+	}
+
+	$report = generate_payment_report( $report_args );
 
 	if ( is_wp_error( $report ) ) {
 		add_settings_error( 'wcb-dashboard', $report->get_error_code(), $report->get_error_message() );

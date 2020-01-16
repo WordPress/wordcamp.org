@@ -5,8 +5,6 @@
  * The home page template.
  */
 
-use WordCamp\Multi_Event_Sponsors\Block as MES_Block;
-
 get_header(); ?>
 
 	<div id="wc-content-blocks" class="group">

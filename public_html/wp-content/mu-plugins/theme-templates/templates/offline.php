@@ -15,29 +15,68 @@
 
 namespace WordCamp\Theme_Templates;
 
-get_header();
-
 $offline_page = get_offline_content();
-?>
+$site_description = get_bloginfo( 'description' );
+?><!DOCTYPE html>
 
-<?php echo 'twentyseventeen' === get_template() ? '<div class="wrap">' : ''; ?> 
+<html class="no-js" <?php language_attributes(); ?>>
 
-	<main id="main" class="site-main">
-		<section class="error-offline">
-			<header class="page-header">
-				<h1 class="page-title">
-					<?php echo wp_kses_post( $offline_page['title'] ); ?>
-				</h1>
-			</header>
+<head>
 
-			<div class="page-content">
-				<?php echo wp_kses_post( $offline_page['content'] ); ?>
-			</div>
-		</section>
-	</main>
+	<meta charset="<?php bloginfo( 'charset' ); ?>">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" >
 
-<?php echo 'twentyseventeen' === get_template() ? '</div>' : ''; ?> 
+	<link rel="profile" href="https://gmpg.org/xfn/11">
 
-<?php
+	<?php wp_head(); ?>
+	<style>
+		.offline-container {
+			margin: 5vh auto;
+			padding: 2em;
+			max-width: 46em;
+		}
+		.theme-twentyfourteen .offline-container {
+			padding-top: 1px; /* Prevents margin collapse. */
+			background: white;
+		}
+		.theme-twentyfifteen:before { /* Remove the sidebar background– there is no sidebar. */
+			display: none;
+		}
+		.theme-twentyfifteen .offline-container,
+		.theme-twentysixteen .offline-container {
+			background: white;
+		}
+		.theme-twentytwenty section {
+			padding-top: 0;
+		}
+	</style>
 
-get_footer();
+</head>
+
+<body <?php body_class( array( 'theme-' . get_template(), 'page-offline' ) ); ?>>
+	<div class="offline-container">
+		<header>
+			<h1>
+				<?php echo esc_html( get_bloginfo( 'name' ) ); ?>
+			</h1>
+			<?php if ( $site_description ) : ?>
+				<p><?php echo esc_html( $site_description ); ?></p>
+			<?php endif; ?>
+		</header>
+		<main>
+			<section>
+				<header>
+					<h2>
+						<?php echo wp_kses_post( $offline_page['title'] ); ?>
+					</h2>
+				</header>
+
+				<div>
+					<?php echo wp_kses_post( $offline_page['content'] ); ?>
+				</div>
+			</section>
+		</main>
+	</div>
+	<?php wp_footer(); ?>
+</body>
+</html>

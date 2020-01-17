@@ -24,11 +24,7 @@ add_filter( 'wp_offline_error_precache_entry', __NAMESPACE__ . '\add_offline_tem
  */
 function inject_offline_template( $template_path ) {
 	if ( function_exists( 'is_offline' ) && ( \is_offline() || \is_500() ) ) {
-		if ( 'twentytwenty' === get_template() ) {
-			$template_path = __DIR__ . '/templates/offline-2020.php';
-		} else {
-			$template_path = __DIR__ . '/templates/offline.php';
-		}
+		$template_path = __DIR__ . '/templates/offline.php';
 	}
 
 	return $template_path;

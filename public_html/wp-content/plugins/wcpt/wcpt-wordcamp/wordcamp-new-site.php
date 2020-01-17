@@ -621,9 +621,6 @@ class WordCamp_New_Site {
 				'content' => $this->get_stub_content( 'page', 'day-of-event', $wordcamp ),
 				'status'  => 'draft',
 				'type'    => 'page',
-				'meta'    => array(
-					'_wp_page_template' => 'day-of-event', // Set the page template.
-				),
 			),
 		);
 

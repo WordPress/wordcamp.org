@@ -10,55 +10,8 @@ use WordCamp\Blocks\Utilities as BlockUtilities;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'theme_page_templates',            __NAMESPACE__ . '\register_page_templates' );
-add_filter( 'template_include',                __NAMESPACE__ . '\set_page_template_locations' );
 add_filter( 'template_include',                __NAMESPACE__ . '\inject_offline_template', 20 );  // After others because being offline transcends other templates.
 add_filter( 'wp_offline_error_precache_entry', __NAMESPACE__ . '\add_offline_template_cachebuster' );
-
-/**
- * Add new templates to the Page Template dropdown in the editor.
- *
- * @param array $templates
- *
- * @return array
- */
-function register_page_templates( $templates ) {
-	/*
-	 * Remove CampSite 2017's Day of template, since it's redundant, and having multiple templates in the menu
-	 * would be confusing.
-	 */
-	if ( isset( $templates['templates/page-day-of.php'] ) ) {
-		unset( $templates['templates/page-day-of.php'] );
-	}
-
-	$templates['day-of-event'] = __( 'Day of Event', 'wordcamporg' );
-
-	natsort( $templates );
-	return $templates;
-}
-
-/**
- * Tell WP where to load the templates from.
- *
- * @param string $template_path
- *
- * @return string
- */
-function set_page_template_locations( $template_path ) {
-	global $post;
-
-	if ( ! $post instanceof WP_Post ) {
-		return $template_path;
-	}
-
-	switch ( $post->_wp_page_template ) {
-		case 'day-of-event':
-			$template_path = __DIR__ . '/templates/day-of-event.php';
-			break;
-	}
-
-	return $template_path;
-}
 
 /**
  * Inject the offline template when the service worker pre-caches the response to offline requests.

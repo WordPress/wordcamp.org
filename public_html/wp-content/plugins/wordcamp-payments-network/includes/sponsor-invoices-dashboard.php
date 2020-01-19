@@ -371,6 +371,7 @@ function notify_organizer_status_changed( $site_id, $invoice_id, $new_status ) {
 	);
 
 	wp_mail( $to, $subject, $message, $headers, $attachments );
+	// here?
 
 	if ( $invoice_filename ) {
 		unlink( $invoice_filename );
@@ -494,6 +495,32 @@ function send_invoice_pending_reminder() {
 		// Don't forget to add a prepare() call here if you ever add user input.
 	);
 
+	// test running the cron job under different sites. root, english, spanish, etc
+
+
+
+	switch_to_blog( 11 ); //  misc is french
+	send_invoice_pending_reminder_mail( 123108, 'ian@iandunn.name' );
+	restore_current_blog();
+
+	switch_to_blog( 13 ); // atlanta english
+	send_invoice_pending_reminder_mail( 795921, 'ian@iandunn.name' );
+	restore_current_blog();
+
+	switch_to_blog( 11 ); //  misc is french
+	send_invoice_pending_reminder_mail( 123108, 'ian@iandunn.name' );
+	restore_current_blog();
+
+	switch_to_blog( 13 ); // atlanta english
+	send_invoice_pending_reminder_mail( 795921, 'ian@iandunn.name' );
+	restore_current_blog();
+
+	var_dump(
+		__( 'Organizers', 'wordcamporg' )
+	);
+
+	return;
+
 	foreach ( $sent_invoices as $invoice_data ) {
 		$blog_id    = $invoice_data->blog_id;
 		$invoice_id = $invoice_data->invoice_id;
@@ -577,6 +604,29 @@ function send_invoice_pending_reminder() {
 function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 	$invoice   = get_post( $invoice_id );
 	$edit_link = get_site_url() . "/wp-admin/post.php?post=$invoice_id&action=edit";
+	$author    = get_user_by( 'ID', $invoice->post_author );
+
+	// test
+		// start on intl site, switch to english    works
+		// start on english, switch to intl         work
+
+//	$locale = get_user_locale( $author->ID ); // this isn't going to work if the user defeaults to the site locale, b/c it's gonna pick the starting site's locale, not the current site
+//	$locale = get_option( 'WPLANG', 'en_US' ); // bypassing get_locale b/c global is stuck on starting site.
+		// maybe workaround that by using the locale filter. could put that in a custom `locale` action callback where you swithc_locale, load_textdomain, etc
+//	$locale = get_user_locale( $author->ID );
+//		// switch back to get_option is ^ doesn't work, turn off global override in misc file
+
+	// document why using the _site_ locale instead of _user_ locale
+	// should use the user locale though?
+
+
+
+//	$switched_locale = switch_to_locale( $locale );
+//	add_filter( 'locale', __NAMESPACE__ . '\set_current_site_locale' ); // this isn't needed for eng->span, but is for span->eng
+		// wait that doesn't even exist, so why was it working
+//	unload_textdomain( 'wordcamporg' );
+//	load_textdomain( 'wordcamporg', sprintf( '%s/languages/wordcamporg/wordcamporg-%s.mo', WP_CONTENT_DIR, $locale ) );  //  move to wcorg-misc
+
 
 	$reminder_body = str_replace(
 		"\t",
@@ -594,8 +644,53 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 			$invoice->post_title
 		)
 	);
+	/*
+	 *
+	 *
+	// bug here
 
-	$author = get_user_by( 'ID', $invoice->post_author );
+	https://core.trac.wordpress.org/ticket/26511
+
+	 * cron runs on other site?
+		make cron run on the target site?
+		or explicitly set locale of target site?
+
+	only started happening recently? 2 reports in a week, nothing before that
+		what could have changed? 5.3.x ?
+
+		check other crons for same problem?
+	 */
+
+	// maybe others too, just didn't get reported?
+
+//	$db_lang = get_option( 'WPLANG' );
+//	$get_locale = get_locale();
+
+	var_dump( compact(
+//		'db_lang',
+//		'get_locale',
+//		'locale',
+//		'switched_locale',
+		'reminder_body'
+	) );
+
+//	remove_filter( 'locale', __NAMESPACE__ . '\set_current_site_locale' ); // needs to be _before_ restore_locale() when switching french->spanish, but _after_ when switching from english->spanish
+
+//	if ( $switched_locale ) {
+//		restore_previous_locale();
+//	}
+
+//	unload_textdomain( 'wordcamporg' );
+//	load_textdomain( 'wordcamporg', sprintf( '%s/languages/wordcamporg/wordcamporg-%s.mo', WP_CONTENT_DIR, get_locale() ) );     //move towcorg-misc
+
+
+
+	return;
+
+
+	// can get locale of ^ user, so do that, right?
+		// test w/ user locale set to custom and w/ it set to site default
+
 	wp_mail(
 		array( $author->user_email ),
 		sprintf( __( "Pending invoice: %s" ,'wordcamporg' ), $invoice->post_title ),
@@ -607,6 +702,11 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 			sprintf( "CC: %s", $organizer_mail ), // CC to lead organizer in case post author is not active anymore.
 		)
 	);
+
+
+//	if ( $switched_locale ) {
+//		restore_previous_locale();
+//	}
 }
 
 /**
@@ -626,6 +726,7 @@ function send_invoice_defaulted_notification( $invoice_id ) {
 		<br>"
 	);
 
+	// here?
 	wp_mail(
 		array( "support@wordcamp.org" ),
 		"Sponsor Invoice pending for too long",
@@ -637,3 +738,6 @@ function send_invoice_defaulted_notification( $invoice_id ) {
 		)
 	);
 }
+
+
+// also check other custom files

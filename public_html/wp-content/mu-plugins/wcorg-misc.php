@@ -292,7 +292,53 @@ add_action( 'wp_ajax_nopriv_wcorg_flush_rewrite_rules_everywhere', 'wcorg_flush_
  */
 add_action( 'plugins_loaded', function() {
 	load_textdomain( 'wordcamporg', sprintf( '%s/languages/wordcamporg/wordcamporg-%s.mo', WP_CONTENT_DIR, get_user_locale() ) );
+	// replace w/ call to load_wordcamp_textdomain( get_user_locale() ) ?
 } );
+
+// send pr for this b/c not 100% confident this is good idea
+
+// explain
+function wcorg_load_wordcamp_textdomain( $new_locale ) {
+//	add_filter( 'locale', __NAMESPACE__ . '\set_current_site_locale' ); // this isn't needed for eng->span, but is for span->eng
+//	unload_textdomain( 'wordcamporg' );
+
+//	var_dump(
+//		$new_locale,
+//		get_option( 'WPLANG', 'en_US' )
+//);
+
+//	$new_locale = get_option( 'WPLANG', 'en_US' ); // can't be passed in from filter? or am i overriding default pass in?
+//print_r( $GLOBALS['l10n']['wordcamporg'] );
+	unload_textdomain( 'wordcamporg' );
+	load_textdomain( 'wordcamporg', sprintf( '%s/languages/wordcamporg/wordcamporg-%s.mo', WP_CONTENT_DIR, $new_locale ) );  //  move to wcorg-misc
+//print_r( $GLOBALS['l10n']['wordcamporg'] ); die();
+	return;
+//
+//	wp_die('wtf not being called?');
+//
+//	var_dump($new_locale);
+
+// maybe also have this update the global $locale so that get_locale() and get_user_locale will work properly?
+
+}
+add_action( 'switch_locale',           'wcorg_load_wordcamp_textdomain' );
+add_action( 'restore_previous_locale', 'wcorg_load_wordcamp_textdomain' );
+
+add_action( 'switch_blog', function() {
+	$locale          = get_option( 'WPLANG', 'en_US' ); // bypassing get_locale b/c global is stuck on starting site.
+	switch_to_locale( $locale );
+
+	// need to restore previous to avoid stacking?
+		// would need global
+
+	// this would be ideal, b/c then don't need to handle switching locales in every function that sends email under switch_to_blog, or does anything else
+	// test core functions that do call switch_locale manually - is that idempotent?
+
+	// there might be some unit tests from https://core.trac.wordpress.org/ticket/26511 that you could run
+
+} );
+
+
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {

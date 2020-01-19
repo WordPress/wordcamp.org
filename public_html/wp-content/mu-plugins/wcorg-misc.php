@@ -284,15 +284,79 @@ function wcorg_flush_rewrite_rules() {
 add_action( 'wp_ajax_wcorg_flush_rewrite_rules_everywhere',        'wcorg_flush_rewrite_rules' ); // This isn't used by the wp-cli command, but is useful for manual testing.
 add_action( 'wp_ajax_nopriv_wcorg_flush_rewrite_rules_everywhere', 'wcorg_flush_rewrite_rules' );
 
-/*
+/**
  * Load the `wordcamporg` text domain.
  *
  * `wordcamporg` is used by all the custom plugins and themes, so that translators only have to deal with a single
  * GlotPress project, and we only have to install/update a single mofile per locale.
+ *
+ * @todo We can probably revert this back to an older/simpler version that doesn't hook into `change_locale` once
+ * https://core.trac.wordpress.org/ticket/39210 is resolved.
+ *
+ * @param string|null Null when called on `plugins_loaded`; the new locale when called from `change_locale`.
  */
-add_action( 'plugins_loaded', function() {
-	load_textdomain( 'wordcamporg', sprintf( '%s/languages/wordcamporg/wordcamporg-%s.mo', WP_CONTENT_DIR, get_user_locale() ) );
-} );
+function wcorg_load_wordcamp_textdomain( $new_locale = null ) {
+	// Use the requested locale when switching/restoring, and the user's locale when initially loading the site.
+	if ( empty( $new_locale ) ) {
+		$new_locale = get_user_locale();
+	}
+
+	// Avoid merging strings partially-localized locales.
+	unload_textdomain( 'wordcamporg' );
+
+	load_textdomain(
+		'wordcamporg',
+		sprintf(
+			'%s/languages/wordcamporg/wordcamporg-%s.mo',
+			WP_CONTENT_DIR,
+			$new_locale
+		)
+	);
+}
+add_action( 'plugins_loaded', 'wcorg_load_wordcamp_textdomain' );
+add_action( 'change_locale',  'wcorg_load_wordcamp_textdomain' );
+
+/**
+ * Update the site's locale when switching between blogs.
+ *
+ * @todo This can be removed if https://core.trac.wordpress.org/ticket/49263 is resolved. Add `'locale' => true` to
+ *       `switch_to_blog()` calls for any custom cron jobs that send mail, like in `wordcamp-payments-network`.
+ */
+function wcorg_switch_to_blog_locale() {
+	$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
+	$caller    = $backtrace[4]['function'];
+
+	/*
+	 * `switch_to_blog` and `restore_current_blog` both call `switch_blog` instead of having individual actions, so
+	 * we have to detect which one is the current caller.
+	 *
+	 * @todo This can be cleaned up after upgrading to 5.4, because the `$context` param from
+	 * https://core.trac.wordpress.org/ticket/49265 will be available.
+	 */
+	switch ( $caller ) {
+		case 'switch_to_blog':
+			/*
+			 * Bypass `get_locale()` because it caches the original site's locale. This doesn't handle user
+			 * locales, but is good enough until #49263-core is resolved.
+			 */
+			$site_locale = get_option( 'WPLANG', 'en_US' );
+
+			// Sometimes sites have an empty string, `false`, etc saved in the db.
+			if ( empty( $site_locale ) ) {
+				$site_locale = 'en_US';
+			}
+
+			switch_to_locale( $site_locale );
+			break;
+
+		case 'restore_current_blog':
+			if ( is_locale_switched() ) {
+				restore_previous_locale();
+			}
+			break;
+	}
+}
+add_action( 'switch_blog', 'wcorg_switch_to_blog_locale' );
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {

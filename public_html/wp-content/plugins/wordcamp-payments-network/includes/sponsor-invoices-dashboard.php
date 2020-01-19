@@ -596,6 +596,7 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 	);
 
 	$author = get_user_by( 'ID', $invoice->post_author );
+
 	wp_mail(
 		array( $author->user_email ),
 		sprintf( __( "Pending invoice: %s" ,'wordcamporg' ), $invoice->post_title ),

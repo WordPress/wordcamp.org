@@ -21,7 +21,7 @@ describe( 'getCurrentSessions', () => {
 	} );
 
 	test( 'should return no sessions running at midnight, Jan 1st 2020', () => {
-		const time = Date.parse( '202-01-01T00:00:00.000Z' );
+		const time = Date.parse( '2020-01-01T00:00:00.000Z' );
 		window.WordCampBlocks[ 'live-schedule' ].nowOverride = time;
 		const results = getCurrentSessions( { sessions, tracks } );
 		expect( results ).toHaveLength( 0 );
@@ -88,5 +88,14 @@ describe( 'getCurrentSessions', () => {
 		results.forEach( ( { now } ) => {
 			expect( now.slug ).toEqual( 'wordfest' );
 		} );
+	} );
+
+	test( 'should return "Session B" coming up next, nothing on now, at 10:45am Nov 2nd', () => {
+		const time = Date.parse( '2019-11-02T10:45:00.000Z' );
+		window.WordCampBlocks[ 'live-schedule' ].nowOverride = time;
+		const results = getCurrentSessions( { sessions, tracks } );
+		expect( results ).toHaveLength( 1 );
+		expect( results[ 0 ].now ).toBeUndefined();
+		expect( results[ 0 ].next.slug ).toEqual( 'session-b' );
 	} );
 } );

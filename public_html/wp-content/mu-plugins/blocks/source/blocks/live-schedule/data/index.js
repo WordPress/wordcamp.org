@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { reverse, sortBy } from 'lodash';
+import { findLastIndex, reverse, sortBy } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -60,7 +60,7 @@ export function getCurrentSessions( { sessions, tracks } ) {
 		// intended to catch sessions that don't set a duration, but are shorter than the default.
 		const sessionsInTrack = reverse( sortBy(
 			sessions.filter( ( session ) => session.session_track.includes( track.id ) ),
-			( sessionInTrack ) => sessionInTrack.meta._wcpt_session_time
+			'meta._wcpt_session_time'
 		) );
 
 		const index = sessionsInTrack.findIndex( ( { meta } ) => {
@@ -71,17 +71,22 @@ export function getCurrentSessions( { sessions, tracks } ) {
 			// Start time before now, end time after now.
 			return ( startTimestamp < nowTimestamp ) && ( nowTimestamp < endTimestamp );
 		} );
+		let nextIndex = index - 1;
 
 		// `index` will be -1 if nothing found.
 		if ( index < 0 ) {
-			return {};
+			// If nothing is found for "now", see if anything is coming up next by looking for the earliest thing
+			// that's later than now.
+			nextIndex = findLastIndex( sessionsInTrack, ( { meta } ) => {
+				const startTimestamp = ( meta._wcpt_session_time * 1000 ) - tzOffset;
+				return ( startTimestamp > nowTimestamp );
+			} );
 		}
 
 		return {
 			track: track,
 			now: sessionsInTrack[ index ],
-			// since we revered the sorted array, the "next" session is actually behind the found index.
-			next: sessionsInTrack[ index - 1 ],
+			next: sessionsInTrack[ nextIndex ],
 		};
 	} ).filter( ( record ) => ( !! record.now || !! record.next ) );
 }

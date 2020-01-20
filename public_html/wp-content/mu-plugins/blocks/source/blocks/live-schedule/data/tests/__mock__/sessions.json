@@ -734,5 +734,37 @@
     "title": {
       "rendered": "The Cost of Contribution"
     }
+  },
+  {
+    "id": 1,
+    "meta": {
+      "_wcpt_session_time": 1572688800,
+      "_wcpt_session_duration": 1800
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 55 ],
+    "slug": "session-a",
+    "title": {
+      "rendered": "Session A"
+    }
+  },
+  {
+    "id": 2,
+    "meta": {
+      "_wcpt_session_time": 1572696000,
+      "_wcpt_session_duration": 1800
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "12:00 pm"
+    },
+    "session_track": [ 55 ],
+    "slug": "session-b",
+    "title": {
+      "rendered": "Session B"
+    }
   }
 ]

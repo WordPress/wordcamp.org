@@ -16,6 +16,7 @@ describe( 'getCurrentSessions', () => {
 		window.WordCampBlocks = {};
 		window.WordCampBlocks[ 'live-schedule' ] = {
 			nowOverride: false,
+			fallbackDuration: 3000,
 		};
 	} );
 

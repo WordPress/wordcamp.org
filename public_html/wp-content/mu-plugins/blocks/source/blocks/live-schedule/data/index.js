@@ -62,7 +62,7 @@ export function getCurrentSessions( { sessions, tracks } ) {
 		);
 
 		const index = sessionsInTrack.findIndex( ( session ) => {
-			const duration = session.meta._wcpt_session_duration * 1000;
+			const duration = ( session.meta._wcpt_session_duration || window.WordCampBlocks[ 'live-schedule' ].fallbackDuration ) * 1000;
 			const startTimestamp = ( session.meta._wcpt_session_time * 1000 ) - tzOffset;
 			const endTimestamp = startTimestamp + duration;
 

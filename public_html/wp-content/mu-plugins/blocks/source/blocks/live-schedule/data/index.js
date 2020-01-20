@@ -62,6 +62,18 @@ export function getCurrentSessions( { sessions, tracks } ) {
 			sessions.filter( ( session ) => session.session_track.includes( track.id ) ),
 			'meta._wcpt_session_time'
 		) );
+		if ( ! sessionsInTrack.length ) {
+			return {};
+		}
+
+		// Check if we're more than a day out from the earliest session (so that we don't show "up next" before
+		// the WordCamp starts).
+		const firstSession = sessionsInTrack[ sessionsInTrack.length - 1 ];
+		const firstSessionTimestamp = ( firstSession.meta._wcpt_session_time * 1000 ) - tzOffset;
+		const dayInMiliseconds = 24 * 60 * 60 * 1000;
+		if ( nowTimestamp < ( firstSessionTimestamp - dayInMiliseconds ) ) {
+			return {};
+		}
 
 		const index = sessionsInTrack.findIndex( ( { meta } ) => {
 			const duration = ( meta._wcpt_session_duration || window.WordCampBlocks[ 'live-schedule' ].fallbackDuration ) * 1000;

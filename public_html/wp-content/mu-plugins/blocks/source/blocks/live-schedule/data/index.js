@@ -55,13 +55,26 @@ export function getCurrentSessions( { sessions, tracks } ) {
 	const tzOffset = __experimentalGetSettings().timezone.offset * ( 60 * 60 * 1000 );
 	const nowTimestamp = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 
-	return tracks.map( ( track ) => {
-		// Reverse the sorted array so that the first found index is the one that starts closest to "now". This is
-		// intended to catch sessions that don't set a duration, but are shorter than the default.
-		const sessionsInTrack = reverse( sortBy(
-			sessions.filter( ( session ) => session.session_track.includes( track.id ) ),
-			'meta._wcpt_session_time'
-		) );
+	const trackListWithSessions = tracks.length ?
+		tracks.map( ( track ) => {
+			// Reverse the sorted array so that the first found index is the one that starts closest to "now".
+			// This is intended to catch sessions that don't set a duration, but are shorter than the default.
+			const sessionsInTrack = reverse( sortBy(
+				sessions.filter( ( session ) => session.session_track.includes( track.id ) ),
+				'meta._wcpt_session_time'
+			) );
+			return {
+				track: track,
+				sessions: sessionsInTrack,
+			};
+		} ) :
+		// Fall back to one track with all sessions, if no tracks are found.
+		[ {
+			track: {}, // @todo Needs slug, name.
+			sessions: reverse( sortBy( sessions, 'meta._wcpt_session_time' ) ),
+		} ];
+
+	return trackListWithSessions.map( ( { track, sessions: sessionsInTrack } ) => {
 		if ( ! sessionsInTrack.length ) {
 			return {};
 		}

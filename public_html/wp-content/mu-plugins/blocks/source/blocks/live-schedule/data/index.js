@@ -53,8 +53,7 @@ function fetchFromAPI() {
  */
 export function getCurrentSessions( { sessions, tracks } ) {
 	const tzOffset = __experimentalGetSettings().timezone.offset * ( 60 * 60 * 1000 );
-	const nowUTC = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
-	const nowLocal = new Date( nowUTC );
+	const nowTimestamp = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 
 	return tracks.map( ( track ) => {
 		const sessionsInTrack = sortBy(
@@ -62,18 +61,24 @@ export function getCurrentSessions( { sessions, tracks } ) {
 			( sessionInTrack ) => sessionInTrack.meta._wcpt_session_time
 		);
 
-		const indexOfNextSession = sessionsInTrack.findIndex( ( session ) => {
-			const sessionTimeUTC = ( session.meta._wcpt_session_time * 1000 ) - tzOffset;
-			const sessionTimeLocal = new Date( sessionTimeUTC );
+		const index = sessionsInTrack.findIndex( ( session ) => {
+			const duration = session.meta._wcpt_session_duration * 1000;
+			const startTimestamp = ( session.meta._wcpt_session_time * 1000 ) - tzOffset;
+			const endTimestamp = startTimestamp + duration;
 
-			// Return first session today where "now" is before the the start time.
-			return nowUTC < sessionTimeUTC && sessionTimeLocal.getDate() === nowLocal.getDate();
+			// Start time before now, end time after now.
+			return ( startTimestamp < nowTimestamp ) && ( nowTimestamp < endTimestamp );
 		} );
+
+		// `index` will be -1 if nothing found.
+		if ( index < 0 ) {
+			return {};
+		}
 
 		return {
 			track: track,
-			next: sessionsInTrack[ indexOfNextSession ],
-			now: sessionsInTrack[ indexOfNextSession - 1 ],
+			next: sessionsInTrack[ index + 1 ],
+			now: sessionsInTrack[ index ],
 		};
 	} ).filter( ( record ) => ( !! record.now || !! record.next ) );
 }

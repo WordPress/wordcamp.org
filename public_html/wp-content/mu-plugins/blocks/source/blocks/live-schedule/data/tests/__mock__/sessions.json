@@ -336,6 +336,22 @@
     }
   },
   {
+    "id": 12054,
+    "meta": {
+      "_wcpt_session_time": 1572613200,
+      "_wcpt_session_duration": 6300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 84 ],
+    "slug": "performing-a-live-a11y-audit",
+    "title": {
+      "rendered": "Making Your Website Work for Everyone: Accessibility and Inclusive Design"
+    }
+  },
+  {
     "id": 12050,
     "meta": {
       "_wcpt_session_time": 1572621300,

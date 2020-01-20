@@ -157,6 +157,13 @@ function render_meetup_application_form( $countries ) {
 			</div>
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
+				<label>
+					Anything else you want us to know while we're looking over your application?
+					<textarea name="q_anything_else" rows="5"></textarea>
+				</label>
+			</div>
+			<div class="PDF_questionDivide"></div>
+			<div class="PDF_question">
 				<div class="submit-button">
 					<?php submit_button( 'Submit Application', 'primary', 'submit-application', false ); ?>
 				</div>

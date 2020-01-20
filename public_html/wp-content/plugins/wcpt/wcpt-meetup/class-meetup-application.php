@@ -187,6 +187,7 @@ class Meetup_Application extends Event_Application {
 			'q_community_interest'	=> '',
 			'q_wporg_username'      => '',
 			'q_wp_slack_username'   => '',
+			'q_anything_else'				=> '',
 		);
 
 		return $values;

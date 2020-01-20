@@ -105,6 +105,14 @@ function render_meetup_application_form( $countries ) {
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label>
+					Could you introduce yourself and tell us more about your connection with WordPress?
+					<span class="required-indicator">(required)</span>
+					<textarea name="q_introduction" rows="5" required ></textarea>
+				</label>
+			</div>
+			<div class="PDF_questionDivide"></div>
+			<div class="PDF_question">
+				<label>
 					Your <a href="https://wordpress.org" target="_blank">WordPress.org</a> username
 					<span class="required-indicator">(required)</span>
 					<input type="text" name="q_wporg_username" required/>

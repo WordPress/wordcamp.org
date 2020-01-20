@@ -105,21 +105,6 @@ function render_meetup_application_form( $countries ) {
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label>
-					How would you describe yourself?
-					<span class="required-indicator">(required)</span>
-
-					<select name="q_describe_yourself" required>
-						<option value=""></option>
-						<option>WordPress professional</option>
-						<option>Current WordPress user or developer</option>
-						<option>New to WordPress</option>
-						<option>I don't use WordPress</option>
-					</select>
-				</label>
-			</div>
-			<div class="PDF_questionDivide"></div>
-			<div class="PDF_question">
-				<label>
 					Your <a href="https://wordpress.org" target="_blank">WordPress.org</a> username
 					<span class="required-indicator">(required)</span>
 					<input type="text" name="q_wporg_username" required/>
@@ -130,13 +115,6 @@ function render_meetup_application_form( $countries ) {
 				<label>
 					Your <a href="https://chat.wordpress.org" target="_blank">WordPress Slack</a> username
 					<input type="text" name="q_wp_slack_username"/>
-				</label>
-			</div>
-			<div class="PDF_questionDivide"></div>
-			<div class="PDF_question">
-				<label>
-					Anything you'd like to tell us about yourself, or what you hope to do with a meetup group?
-					<textarea name="q_additional_comments"></textarea>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>

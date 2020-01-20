@@ -138,7 +138,6 @@ class Meetup_Application extends Event_Application {
 			'q_country',
 			'q_mtp_loc',
 			'q_already_a_meetup',
-			'q_describe_yourself',
 			'q_wporg_username',
 		);
 
@@ -178,10 +177,8 @@ class Meetup_Application extends Event_Application {
 			'q_mtp_loc'             => '',
 			'q_already_a_meetup'    => '',
 			'q_existing_meetup_url' => '',
-			'q_describe_yourself'   => '',
 			'q_wporg_username'      => '',
 			'q_wp_slack_username'   => '',
-			'q_additional_comments' => '',
 		);
 
 		return $values;
@@ -228,11 +225,9 @@ ADDRESS;
 		add_post_meta( $post_id, 'Address', $organizer_address );
 		add_post_meta( $post_id, 'Already a meetup', $data['q_already_a_meetup'] );
 		add_post_meta( $post_id, 'Meetup URL', $data['q_existing_meetup_url'] );
-		add_post_meta( $post_id, 'Organizer description', $data['q_describe_yourself'] );
 		add_post_meta( $post_id, 'Primary organizer WordPress.org username', $data['q_wporg_username'] );
 		add_post_meta( $post_id, 'Slack', $data['q_wp_slack_username'] );
 		add_post_meta( $post_id, 'Date Applied', time() );
-		add_post_meta( $post_id, 'Extra Comments', $data['q_additional_comments'] );
 		add_post_meta( $post_id, 'Meetup Location', $data['q_mtp_loc'] );
 
 		$status_log_id = add_post_meta(

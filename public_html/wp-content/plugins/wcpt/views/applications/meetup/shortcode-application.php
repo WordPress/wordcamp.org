@@ -122,6 +122,14 @@ function render_meetup_application_form( $countries ) {
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label>
+					Why do you want to start a WordPress Meetup in your city? And what are your immediate plans?
+					<span class="required-indicator">(required)</span>
+					<textarea name="q_reasons_plans" rows="5" required ></textarea>
+				</label>
+			</div>
+			<div class="PDF_questionDivide"></div>
+			<div class="PDF_question">
+				<label>
 					Your <a href="https://wordpress.org" target="_blank">WordPress.org</a> username
 					<span class="required-indicator">(required)</span>
 					<input type="text" name="q_wporg_username" required/>

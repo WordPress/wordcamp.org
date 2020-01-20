@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { sortBy } from 'lodash';
+import { reverse, sortBy } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -56,14 +56,16 @@ export function getCurrentSessions( { sessions, tracks } ) {
 	const nowTimestamp = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 
 	return tracks.map( ( track ) => {
-		const sessionsInTrack = sortBy(
+		// Reverse the sorted array so that the first found index is the one that starts closest to "now". This is
+		// intended to catch sessions that don't set a duration, but are shorter than the default.
+		const sessionsInTrack = reverse( sortBy(
 			sessions.filter( ( session ) => session.session_track.includes( track.id ) ),
 			( sessionInTrack ) => sessionInTrack.meta._wcpt_session_time
-		);
+		) );
 
-		const index = sessionsInTrack.findIndex( ( session ) => {
-			const duration = ( session.meta._wcpt_session_duration || window.WordCampBlocks[ 'live-schedule' ].fallbackDuration ) * 1000;
-			const startTimestamp = ( session.meta._wcpt_session_time * 1000 ) - tzOffset;
+		const index = sessionsInTrack.findIndex( ( { meta } ) => {
+			const duration = ( meta._wcpt_session_duration || window.WordCampBlocks[ 'live-schedule' ].fallbackDuration ) * 1000;
+			const startTimestamp = ( meta._wcpt_session_time * 1000 ) - tzOffset;
 			const endTimestamp = startTimestamp + duration;
 
 			// Start time before now, end time after now.
@@ -77,8 +79,9 @@ export function getCurrentSessions( { sessions, tracks } ) {
 
 		return {
 			track: track,
-			next: sessionsInTrack[ index + 1 ],
 			now: sessionsInTrack[ index ],
+			// since we revered the sorted array, the "next" session is actually behind the found index.
+			next: sessionsInTrack[ index - 1 ],
 		};
 	} ).filter( ( record ) => ( !! record.now || !! record.next ) );
 }

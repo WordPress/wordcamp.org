@@ -1,0 +1,66 @@
+[
+  {
+    "id": 1,
+    "meta": {
+      "_wcpt_session_time": 1588237200,
+      "_wcpt_session_duration": 3600
+    },
+    "session_date_time": {
+      "date": "April 30, 2020",
+      "time": "9:00 am"
+    },
+    "session_track": [],
+    "slug": "registration",
+    "title": {
+      "rendered": "Registration"
+    }
+  },
+  {
+    "id": 1,
+    "meta": {
+      "_wcpt_session_time": 1588240800,
+      "_wcpt_session_duration": 2700
+    },
+    "session_date_time": {
+      "date": "April 30, 2020",
+      "time": "10:00 am"
+    },
+    "session_track": [],
+    "slug": "building-a-good-block",
+    "title": {
+      "rendered": "Building a Good Block"
+    }
+  },
+  {
+    "id": 2,
+    "meta": {
+      "_wcpt_session_time": 1588243500,
+      "_wcpt_session_duration": 2700
+    },
+    "session_date_time": {
+      "date": "April 30, 2020",
+      "time": "11:00 am"
+    },
+    "session_track": [],
+    "slug": "project-management-intro",
+    "title": {
+      "rendered": "Project Management Intro"
+    }
+  },
+  {
+    "id": 3,
+    "meta": {
+      "_wcpt_session_time": 1588248000,
+      "_wcpt_session_duration": 3600
+    },
+    "session_date_time": {
+      "date": "April 30, 2020",
+      "time": "12:00 pm"
+    },
+    "session_track": [],
+    "slug": "lunch",
+    "title": {
+      "rendered": "Lunch"
+    }
+  }
+]

@@ -20,7 +20,7 @@ setup_postdata( $sponsor ); // This is necessary for generating an excerpt from 
 				get_the_title( $sponsor ),
 				get_permalink( $sponsor ),
 				3,
-				[ 'wordcamp-sponsors__title' ],
+				array( 'wordcamp-sponsors__title' ),
 				$attributes['headingAlign']
 			)
 		); ?>
@@ -31,7 +31,7 @@ setup_postdata( $sponsor ); // This is necessary for generating an excerpt from 
 			render_featured_image(
 				$sponsor,
 				$attributes['featured_image_width'],
-				[ 'wordcamp-sponsors__featured-image', 'wordcamp-sponsors__logo', 'align-' . esc_attr( $attributes['image_align'] ) ],
+				array( 'wordcamp-sponsors__featured-image', 'wordcamp-sponsors__logo', 'align-' . esc_attr( $attributes['image_align'] ) ),
 				get_permalink( $sponsor )
 			)
 		); ?>
@@ -43,7 +43,7 @@ setup_postdata( $sponsor ); // This is necessary for generating an excerpt from 
 				'excerpt' === $attributes['content']
 					? apply_filters( 'the_excerpt', get_the_excerpt( $sponsor ) )
 					: get_all_the_content( $sponsor ),
-				[ 'wordcamp-sponsors__content', 'is-' . $attributes['content'] ]
+				array( 'wordcamp-sponsors__content', 'is-' . $attributes['content'] )
 			)
 		); ?>
 	<?php endif; ?>

@@ -17,167 +17,167 @@ defined( 'WPINC' ) || die();
 function get_shared_definitions( $keys, $type ) {
 	switch ( $type ) {
 		case 'attribute':
-			$definitions = [
+			$definitions = array(
 				// Generic attributes.
-				'boolean_false'     => [
+				'boolean_false'     => array(
 					'type'    => 'bool',
 					'default' => false,
-				],
-				'boolean_true'      => [
+				),
+				'boolean_true'      => array(
 					'type'    => 'bool',
 					'default' => true,
-				],
-				'string_empty'      => [
+				),
+				'string_empty'      => array(
 					'type'    => 'string',
 					'default' => '',
-				],
+				),
 				// Specific attributes.
-				'align_block'       => [
+				'align_block'       => array(
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'align_block', 'option' ), 'value' ),
 					'default' => '',
-				],
-				'align_content'     => [
+				),
+				'align_content'     => array(
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'align_content', 'option' ), 'value' ),
 					'default' => '',
-				],
-				'align_image'       => [
+				),
+				'align_image'       => array(
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'align_image', 'option' ), 'value' ),
 					'default' => 'none',
-				],
-				'content'           => [
+				),
+				'content'           => array(
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'content', 'option' ), 'value' ),
 					'default' => 'full',
-				],
-				'grid_columns'      => [
+				),
+				'grid_columns'      => array(
 					'type'    => 'integer',
 					'minimum' => 2,
 					'maximum' => 4,
 					'default' => 2,
-				],
-				'image_size'        => [
+				),
+				'image_size'        => array(
 					'type'    => 'integer',
 					'minimum' => 100,
 					'maximum' => 1024,
 					'default' => 150,
-				],
-				'image_size_avatar' => [
+				),
+				'image_size_avatar' => array(
 					'type'    => 'integer',
 					'minimum' => 25,
 					'maximum' => 600,
 					'default' => 150,
-				],
-				'item_ids'          => [
+				),
+				'item_ids'          => array(
 					'type'    => 'array',
-					'default' => [],
-					'items'   => [
+					'default' => array(),
+					'items'   => array(
 						'type' => 'integer',
-					],
-				],
-				'layout'            => [
+					),
+				),
+				'layout'            => array(
 					'type'    => 'string',
 					'enum'    => wp_list_pluck( get_shared_definition( 'layout', 'option' ), 'value' ),
 					'default' => 'list',
-				],
-			];
+				),
+			);
 			break;
 
 		case 'option':
-			$definitions = [
-				'align_block'   => [
-					[
+			$definitions = array(
+				'align_block'   => array(
+					array(
 						'label' => _x( 'Wide', 'alignment option', 'wordcamporg' ),
 						'value' => 'wide',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Full', 'alignment option', 'wordcamporg' ),
 						'value' => 'full',
-					],
-				],
-				'align_content' => [
-					[
+					),
+				),
+				'align_content' => array(
+					array(
 						'label' => _x( 'Left', 'alignment option', 'wordcamporg' ),
 						'value' => 'left',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Center', 'alignment option', 'wordcamporg' ),
 						'value' => 'center',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Right', 'alignment option', 'wordcamporg' ),
 						'value' => 'right',
-					],
-				],
-				'align_image'   => [
-					[
+					),
+				),
+				'align_image'   => array(
+					array(
 						'label' => _x( 'None', 'alignment option', 'wordcamporg' ),
 						'value' => 'none',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Left', 'alignment option', 'wordcamporg' ),
 						'value' => 'left',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Center', 'alignment option', 'wordcamporg' ),
 						'value' => 'center',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Right', 'alignment option', 'wordcamporg' ),
 						'value' => 'right',
-					],
-				],
-				'content'       => [
-					[
+					),
+				),
+				'content'       => array(
+					array(
 						'label' => _x( 'Full', 'content option', 'wordcamporg' ),
 						'value' => 'full',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Excerpt', 'content option', 'wordcamporg' ),
 						'value' => 'excerpt',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'None', 'content option', 'wordcamporg' ),
 						'value' => 'none',
-					],
-				],
-				'layout'        => [
-					[
+					),
+				),
+				'layout'        => array(
+					array(
 						'label' => _x( 'List', 'content option', 'wordcamporg' ),
 						'value' => 'list',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Grid', 'content option', 'wordcamporg' ),
 						'value' => 'grid',
-					],
-				],
-				'sort_title'    => [
-					[
+					),
+				),
+				'sort_title'    => array(
+					array(
 						'label' => _x( 'A → Z', 'sort option', 'wordcamporg' ),
 						'value' => 'title_asc',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Z → A', 'sort option', 'wordcamporg' ),
 						'value' => 'title_desc',
-					],
-				],
-				'sort_date'     => [
-					[
+					),
+				),
+				'sort_date'     => array(
+					array(
 						'label' => _x( 'Newest to Oldest', 'sort option', 'wordcamporg' ),
 						'value' => 'date_desc',
-					],
-					[
+					),
+					array(
 						'label' => _x( 'Oldest to Newest', 'sort option', 'wordcamporg' ),
 						'value' => 'date_asc',
-					],
-				],
-			];
+					),
+				),
+			);
 			break;
 
 		default:
-			$definitions = [];
+			$definitions = array();
 			break;
 	}
 
@@ -199,7 +199,7 @@ function get_shared_definitions( $keys, $type ) {
  *
  * @return array
  */
-function get_shared_definition( $key, $type, $props = [] ) {
+function get_shared_definition( $key, $type, $props = array() ) {
 	$result = get_shared_definitions( $key, $type );
 
 	if ( ! empty( $result ) ) {

@@ -20,7 +20,7 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 			get_the_title( $speaker ),
 			get_permalink( $speaker ),
 			3,
-			[ 'wordcamp-speakers__title' ],
+			array( 'wordcamp-speakers__title' ),
 			$attributes['headingAlign']
 		)
 	); ?>
@@ -33,7 +33,7 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 					$attributes['avatar_size'],
 					'',
 					sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $speaker ) ),
-					[ 'force_display' => true ]
+					array( 'force_display' => true )
 				); ?>
 			</a>
 		</div>
@@ -45,7 +45,7 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 				'excerpt' === $attributes['content']
 					? apply_filters( 'the_excerpt', get_the_excerpt( $speaker ) )
 					: get_all_the_content( $speaker ),
-				[ 'wordcamp-speakers__content', 'is-' . $attributes['content'] ]
+				array( 'wordcamp-speakers__content', 'is-' . $attributes['content'] )
 			)
 		); ?>
 	<?php endif; ?>

@@ -15,7 +15,7 @@ defined( 'WPINC' ) || die();
  *
  * @return string Output markup for featured image.
  */
-function render_featured_image( $post, $width, $class_names = [], $image_link = '' ) {
+function render_featured_image( $post, $width, $class_names = array(), $image_link = '' ) {
 	$attachment_id = get_post_thumbnail_id( $post->ID );
 	$image_data    = wp_get_attachment_metadata( $attachment_id );
 
@@ -28,7 +28,7 @@ function render_featured_image( $post, $width, $class_names = [], $image_link = 
 	$size         = array( $width, $height );
 
 	$container_classes = array_merge(
-		[ 'wordcamp-image__featured-image-container' ],
+		array( 'wordcamp-image__featured-image-container' ),
 		$class_names
 	);
 	$container_classes = implode( ' ', $container_classes );
@@ -60,9 +60,9 @@ function render_featured_image( $post, $width, $class_names = [], $image_link = 
  * @return string
  */
 function render_featured_image_element( $post, $size ) {
-	$attr = [
+	$attr = array(
 		'class' => 'wordcamp-image__featured-image',
-	];
+	);
 
 	return get_the_post_thumbnail( $post, $size, $attr );
 }

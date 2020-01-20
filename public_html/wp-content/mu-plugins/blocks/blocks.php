@@ -75,10 +75,10 @@ function register_assets() {
 	$path        = PLUGIN_DIR . 'build/blocks.min.js';
 	$deps_path   = PLUGIN_DIR . 'build/blocks.min.asset.php';
 	$script_info = file_exists( $deps_path )
-		? require( $deps_path )
+		? require $deps_path
 		: array(
 			'dependencies' => array(),
-			'version' => filemtime( $path ),
+			'version'      => filemtime( $path ),
 		);
 
 	// Special case, because this isn't a wp package.

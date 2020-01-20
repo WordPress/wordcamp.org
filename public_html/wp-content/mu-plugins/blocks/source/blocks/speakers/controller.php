@@ -15,13 +15,13 @@ defined( 'WPINC' ) || die();
 function init() {
 	register_block_type(
 		'wordcamp/speakers',
-		[
+		array(
 			'attributes'      => get_attributes_schema(),
 			'render_callback' => __NAMESPACE__ . '\render',
 			'editor_script'   => 'wordcamp-blocks',
 			'editor_style'    => 'wordcamp-blocks',
 			'style'           => 'wordcamp-blocks',
-		]
+		)
 	);
 }
 
@@ -39,12 +39,12 @@ function render( $attributes ) {
 	$attributes = wp_parse_args( $attributes, $defaults );
 	$speakers   = get_speaker_posts( $attributes );
 
-	$sessions = [];
+	$sessions = array();
 	if ( ! empty( $speakers ) && true === $attributes['show_session'] ) {
 		$sessions = get_speaker_sessions( wp_list_pluck( $speakers, 'ID' ) );
 	}
 
-	$rendered_speaker_posts = [];
+	$rendered_speaker_posts = array();
 
 	foreach ( $speakers as $speaker ) {
 		ob_start();
@@ -52,10 +52,10 @@ function render( $attributes ) {
 		$rendered_speaker_posts[] = ob_get_clean();
 	}
 
-	$container_classes = [
+	$container_classes = array(
 		'wordcamp-speakers',
 		sanitize_html_class( $attributes['className'] ),
-	];
+	);
 
 	if ( ! empty( $attributes['align'] ) ) {
 		$container_classes[] = 'align' . sanitize_html_class( $attributes['align'] );
@@ -72,10 +72,10 @@ function render( $attributes ) {
  * @return array
  */
 function add_script_data( array $data ) {
-	$data['speakers'] = [
+	$data['speakers'] = array(
 		'schema'  => get_attributes_schema(),
 		'options' => get_options(),
-	];
+	);
 
 	return $data;
 }
@@ -91,14 +91,14 @@ add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
  */
 function get_speaker_posts( array $attributes ) {
 	if ( empty( $attributes['mode'] ) ) {
-		return [];
+		return array();
 	}
 
-	$post_args = [
+	$post_args = array(
 		'post_type'      => 'wcb_speaker',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
-	];
+	);
 
 	$sort = explode( '_', $attributes['sort'] );
 
@@ -113,13 +113,13 @@ function get_speaker_posts( array $attributes ) {
 			break;
 
 		case 'wcb_speaker_group':
-			$post_args['tax_query'] = [
-				[
+			$post_args['tax_query'] = array(
+				array(
 					'taxonomy' => $attributes['mode'],
 					'field'    => 'id',
 					'terms'    => $attributes['item_ids'],
-				],
-			];
+				),
+			);
 			break;
 	}
 
@@ -134,15 +134,15 @@ function get_speaker_posts( array $attributes ) {
  * @return array
  */
 function get_speaker_sessions( array $speaker_ids ) {
-	$sessions_by_speaker = [];
+	$sessions_by_speaker = array();
 
-	$session_args = [
+	$session_args = array(
 		'post_type'      => 'wcb_session',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'meta_key'       => '_wcpt_session_time',
 		'orderby'        => 'meta_value_num',
-	];
+	);
 
 	$session_posts = get_posts( $session_args );
 
@@ -154,7 +154,7 @@ function get_speaker_sessions( array $speaker_ids ) {
 
 			if ( in_array( $speaker_id, $speaker_ids, true ) ) {
 				if ( ! isset( $sessions_by_speaker[ $speaker_id ] ) ) {
-					$sessions_by_speaker[ $speaker_id ] = [];
+					$sessions_by_speaker[ $speaker_id ] = array();
 				}
 
 				$sessions_by_speaker[ $speaker_id ][] = $session;
@@ -173,33 +173,33 @@ function get_speaker_sessions( array $speaker_ids ) {
 function get_attributes_schema() {
 	$schema = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'content',
 				'grid_columns',
 				'item_ids',
 				'layout',
-			],
+			),
 			'attribute'
 		),
-		[
+		array(
 			'align'        => get_shared_definition( 'align_block', 'attribute' ),
 			'avatar_align' => get_shared_definition( 'align_image', 'attribute' ),
 			'avatar_size'  => get_shared_definition( 'image_size_avatar', 'attribute' ),
 			'className'    => get_shared_definition( 'string_empty', 'attribute' ),
 			'headingAlign' => get_shared_definition( 'align_content', 'attribute' ),
-			'mode'         => [
+			'mode'         => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 				'default' => '',
-			],
+			),
 			'show_avatars' => get_shared_definition( 'boolean_true', 'attribute' ),
 			'show_session' => get_shared_definition( 'boolean_false', 'attribute' ),
-			'sort'         => [
+			'sort'         => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 				'default' => 'title_asc',
-			],
-		]
+			),
+		)
 	);
 
 	return $schema;
@@ -215,45 +215,45 @@ function get_attributes_schema() {
 function get_options( $type = '' ) {
 	$options = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'align_block',
 				'align_image',
 				'content',
 				'layout',
-			],
+			),
 			'option'
 		),
-		[
-			'mode' => [
-				[
+		array(
+			'mode' => array(
+				array(
 					'label' => '',
 					'value' => '',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'List all speakers', 'mode option', 'wordcamporg' ),
 					'value' => 'all',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose speakers', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_speaker',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose groups', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_speaker_group',
-				],
-			],
+				),
+			),
 			'sort' => array_merge(
 				get_shared_definition( 'sort_title', 'option' ),
 				get_shared_definition( 'sort_date', 'option' )
 			),
-		]
+		)
 	);
 
 	if ( $type ) {
 		if ( ! empty( $options[ $type ] ) ) {
 			return $options[ $type ];
 		} else {
-			return [];
+			return array();
 		}
 	}
 

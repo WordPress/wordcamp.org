@@ -13,13 +13,13 @@ defined( 'WPINC' ) || die();
 function init() {
 	register_block_type(
 		'wordcamp/sponsors',
-		[
+		array(
 			'attributes'      => get_attributes_schema(),
 			'render_callback' => __NAMESPACE__ . '\render',
 			'editor_script'   => 'wordcamp-blocks',
 			'editor_style'    => 'wordcamp-blocks',
 			'style'           => 'wordcamp-blocks',
-		]
+		)
 	);
 }
 
@@ -37,7 +37,7 @@ function render( $attributes ) {
 	$attributes = wp_parse_args( $attributes, $defaults );
 
 	$sponsors               = get_sponsor_posts( $attributes );
-	$rendered_sponsor_posts = [];
+	$rendered_sponsor_posts = array();
 
 	foreach ( $sponsors as $sponsor ) {
 		ob_start();
@@ -45,10 +45,10 @@ function render( $attributes ) {
 		$rendered_sponsor_posts[] = ob_get_clean();
 	}
 
-	$container_classes = [
+	$container_classes = array(
 		'wordcamp-sponsors',
 		sanitize_html_class( $attributes['className'] ),
-	];
+	);
 
 	if ( ! empty( $attributes['align'] ) ) {
 		$container_classes[] = 'align' . sanitize_html_class( $attributes['align'] );
@@ -65,10 +65,10 @@ function render( $attributes ) {
  * @return array
  */
 function add_script_data( array $data ) {
-	$data['sponsors'] = [
+	$data['sponsors'] = array(
 		'schema'  => get_attributes_schema(),
 		'options' => get_options(),
-	];
+	);
 
 	return $data;
 }
@@ -84,7 +84,7 @@ add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
  */
 function get_sponsor_posts( $attributes ) {
 	if ( empty( $attributes['mode'] ) ) {
-		return [];
+		return array();
 	}
 
 	$post_args = array(
@@ -106,13 +106,13 @@ function get_sponsor_posts( $attributes ) {
 			break;
 
 		case 'wcb_sponsor_level':
-			$post_args['tax_query'] = [
-				[
+			$post_args['tax_query'] = array(
+				array(
 					'taxonomy' => $attributes['mode'],
 					'field'    => 'id',
 					'terms'    => $attributes['item_ids'],
-				],
-			];
+				),
+			);
 			break;
 	}
 
@@ -127,33 +127,33 @@ function get_sponsor_posts( $attributes ) {
 function get_attributes_schema() {
 	$schema = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'content',
 				'grid_columns',
 				'item_ids',
 				'layout',
-			],
+			),
 			'attribute'
 		),
-		[
+		array(
 			'align'                => get_shared_definition( 'align_block', 'attribute' ),
 			'className'            => get_shared_definition( 'string_empty', 'attribute' ),
-			'featured_image_width' => get_shared_definition( 'image_size', 'attribute', [ 'default' => 600 ] ),
+			'featured_image_width' => get_shared_definition( 'image_size', 'attribute', array( 'default' => 600 ) ),
 			'headingAlign'         => get_shared_definition( 'align_content', 'attribute' ),
 			'image_align'          => get_shared_definition( 'align_image', 'attribute' ),
-			'mode'                 => [
+			'mode'                 => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 				'default' => '',
-			],
+			),
 			'show_logo'            => get_shared_definition( 'boolean_true', 'attribute' ),
 			'show_name'            => get_shared_definition( 'boolean_true', 'attribute' ),
-			'sort'                 => [
+			'sort'                 => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 				'default' => 'title_asc',
-			],
-		]
+			),
+		)
 	);
 
 	return $schema;
@@ -169,45 +169,45 @@ function get_attributes_schema() {
 function get_options( $type = '' ) {
 	$options = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'align_block',
 				'align_image',
 				'content',
 				'layout',
-			],
+			),
 			'option'
 		),
-		[
-			'mode' => [
-				[
+		array(
+			'mode' => array(
+				array(
 					'label' => '',
 					'value' => '',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'List all sponsors', 'mode option', 'wordcamporg' ),
 					'value' => 'all',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose sponsors', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_sponsor',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose sponsor level', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_sponsor_level',
-				],
-			],
+				),
+			),
 			'sort' => array_merge(
 				get_shared_definition( 'sort_title', 'option' ),
 				get_shared_definition( 'sort_date', 'option' )
 			),
-		]
+		)
 	);
 
 	if ( $type ) {
 		if ( ! empty( $options[ $type ] ) ) {
 			return $options[ $type ];
 		} else {
-			return [];
+			return array();
 		}
 	}
 

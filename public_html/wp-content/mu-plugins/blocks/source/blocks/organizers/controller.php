@@ -15,13 +15,13 @@ defined( 'WPINC' ) || die();
 function init() {
 	register_block_type(
 		'wordcamp/organizers',
-		[
+		array(
 			'attributes'      => get_attributes_schema(),
 			'render_callback' => __NAMESPACE__ . '\render',
 			'editor_script'   => 'wordcamp-blocks',
 			'editor_style'    => 'wordcamp-blocks',
 			'style'           => 'wordcamp-blocks',
-		]
+		)
 	);
 }
 
@@ -39,7 +39,7 @@ function render( $attributes ) {
 	$attributes = wp_parse_args( $attributes, $defaults );
 
 	$organizers               = get_organizer_posts( $attributes );
-	$rendered_organizer_posts = [];
+	$rendered_organizer_posts = array();
 
 	foreach ( $organizers as $organizer ) {
 		ob_start();
@@ -47,10 +47,10 @@ function render( $attributes ) {
 		$rendered_organizer_posts[] = ob_get_clean();
 	}
 
-	$container_classes = [
+	$container_classes = array(
 		'wordcamp-organizers',
 		sanitize_html_class( $attributes['className'] ),
-	];
+	);
 
 	if ( ! empty( $attributes['align'] ) ) {
 		$container_classes[] = 'align' . sanitize_html_class( $attributes['align'] );
@@ -67,10 +67,10 @@ function render( $attributes ) {
  * @return array
  */
 function add_script_data( array $data ) {
-	$data['organizers'] = [
+	$data['organizers'] = array(
 		'schema'  => get_attributes_schema(),
 		'options' => get_options(),
-	];
+	);
 
 	return $data;
 }
@@ -86,14 +86,14 @@ add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
  */
 function get_organizer_posts( array $attributes ) {
 	if ( empty( $attributes['mode'] ) ) {
-		return [];
+		return array();
 	}
 
-	$post_args = [
+	$post_args = array(
 		'post_type'      => 'wcb_organizer',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
-	];
+	);
 
 	$sort = explode( '_', $attributes['sort'] );
 
@@ -108,13 +108,13 @@ function get_organizer_posts( array $attributes ) {
 			break;
 
 		case 'wcb_organizer_team':
-			$post_args['tax_query'] = [
-				[
+			$post_args['tax_query'] = array(
+				array(
 					'taxonomy' => $attributes['mode'],
 					'field'    => 'id',
 					'terms'    => $attributes['item_ids'],
-				],
-			];
+				),
+			);
 			break;
 	}
 
@@ -129,32 +129,32 @@ function get_organizer_posts( array $attributes ) {
 function get_attributes_schema() {
 	$schema = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'content',
 				'grid_columns',
 				'item_ids',
 				'layout',
-			],
+			),
 			'attribute'
 		),
-		[
+		array(
 			'align'        => get_shared_definition( 'align_block', 'attribute' ),
 			'avatar_align' => get_shared_definition( 'align_image', 'attribute' ),
 			'avatar_size'  => get_shared_definition( 'image_size_avatar', 'attribute' ),
 			'className'    => get_shared_definition( 'string_empty', 'attribute' ),
 			'headingAlign' => get_shared_definition( 'align_content', 'attribute' ),
-			'mode'         => [
+			'mode'         => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 				'default' => '',
-			],
+			),
 			'show_avatars' => get_shared_definition( 'boolean_true', 'attribute' ),
-			'sort'         => [
+			'sort'         => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 				'default' => 'title_asc',
-			],
-		]
+			),
+		)
 	);
 
 	return $schema;
@@ -170,42 +170,42 @@ function get_attributes_schema() {
 function get_options( $type = '' ) {
 	$options = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'align_block',
 				'align_image',
 				'content',
 				'layout',
-			],
+			),
 			'option'
 		),
-		[
-			'mode' => [
-				[
+		array(
+			'mode' => array(
+				array(
 					'label' => '',
 					'value' => '',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'List all organizers', 'mode option', 'wordcamporg' ),
 					'value' => 'all',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose organizers', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_organizer',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose teams', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_organizer_team',
-				],
-			],
+				),
+			),
 			'sort' => array_merge(
 				get_shared_definition( 'sort_title', 'option' ),
 				get_shared_definition( 'sort_date', 'option' )
 			),
-		]
+		)
 	);
 
 	if ( $type ) {
-		return empty( $options[ $type ] ) ? [] : $options[ $type ];
+		return empty( $options[ $type ] ) ? array() : $options[ $type ];
 	}
 
 	return $options;

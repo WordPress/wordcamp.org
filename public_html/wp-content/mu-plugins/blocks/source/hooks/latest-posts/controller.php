@@ -31,10 +31,10 @@ function init() {
 	$path        = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-posts.min.js';
 	$deps_path   = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-posts.min.asset.php';
 	$script_info = file_exists( $deps_path )
-		? require( $deps_path )
+		? require $deps_path
 		: array(
 			'dependencies' => array(),
-			'version' => filemtime( $path ),
+			'version'      => filemtime( $path ),
 		);
 
 	wp_register_script(
@@ -46,7 +46,7 @@ function init() {
 	);
 
 	/** This filter is documented in mu-plugins/blocks/blocks.php */
-	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
+	$data = apply_filters( 'wordcamp_blocks_script_data', array() );
 
 	wp_add_inline_script(
 		'wordcamp-live-posts',
@@ -71,7 +71,7 @@ function init() {
 				),
 			)
 		);
-		$block_type->script = 'wordcamp-live-posts';
+		$block_type->script     = 'wordcamp-live-posts';
 
 		register_block_type( $block_type );
 	}
@@ -146,7 +146,7 @@ add_filter( 'render_block', __NAMESPACE__ . '\render', 10, 2 );
  */
 function add_script_data( array $data ) {
 	if ( check_version_support() ) {
-		$data['latest-posts'] = [];
+		$data['latest-posts'] = array();
 	}
 
 	return $data;

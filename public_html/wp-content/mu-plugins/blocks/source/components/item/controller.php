@@ -16,8 +16,8 @@ defined( 'WPINC' ) || die();
  *
  * @return false|string
  */
-function render_item_title( $title, $link = '', $heading_level = 3, array $classes = [], $align = 'none' ) {
-	$valid_heading_levels = [ 1, 2, 3, 4, 5, 6 ];
+function render_item_title( $title, $link = '', $heading_level = 3, array $classes = array(), $align = 'none' ) {
+	$valid_heading_levels = array( 1, 2, 3, 4, 5, 6 );
 
 	if ( ! in_array( $heading_level, $valid_heading_levels, true ) ) {
 		$heading_level = 3;
@@ -26,13 +26,13 @@ function render_item_title( $title, $link = '', $heading_level = 3, array $class
 	$tag = 'h' . $heading_level;
 
 	$classes = render_class_string( array_merge(
-		[ 'wordcamp-block__item-title' ],
+		array( 'wordcamp-block__item-title' ),
 		$classes
 	) );
 
 	$style = '';
 
-	if ( in_array( $align, [ 'left', 'center', 'right' ], true ) ) {
+	if ( in_array( $align, array( 'left', 'center', 'right' ), true ) ) {
 		$style = "text-align:$align;";
 	}
 
@@ -60,9 +60,9 @@ function render_item_title( $title, $link = '', $heading_level = 3, array $class
  *
  * @return false|string
  */
-function render_item_content( $content, array $classes = [] ) {
+function render_item_content( $content, array $classes = array() ) {
 	$classes = render_class_string( array_merge(
-		[ 'wordcamp-block__item-content' ],
+		array( 'wordcamp-block__item-content' ),
 		$classes
 	) );
 
@@ -85,13 +85,13 @@ function render_item_content( $content, array $classes = [] ) {
  *
  * @return false|string
  */
-function render_item_permalink( $link, $label = '', array $classes = [] ) {
+function render_item_permalink( $link, $label = '', array $classes = array() ) {
 	if ( ! $label ) {
 		$label = __( 'Read more', 'wordcamporg' );
 	}
 
 	$classes = render_class_string( array_merge(
-		[ 'wordcamp-block__item-permalink' ],
+		array( 'wordcamp-block__item-permalink' ),
 		$classes
 	) );
 

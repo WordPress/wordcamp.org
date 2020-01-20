@@ -20,7 +20,7 @@ setup_postdata( $session );
 			get_the_title( $session ),
 			get_permalink( $session ),
 			3,
-			[ 'wordcamp-sessions__title' ],
+			array( 'wordcamp-sessions__title' ),
 			$attributes['headingAlign']
 		)
 	); ?>
@@ -54,7 +54,7 @@ setup_postdata( $session );
 			render_featured_image(
 				$session,
 				$attributes['featured_image_width'],
-				[ 'wordcamp-sessions__featured-image', 'align-' . esc_attr( $attributes['image_align'] ) ],
+				array( 'wordcamp-sessions__featured-image', 'align-' . esc_attr( $attributes['image_align'] ) ),
 				get_permalink( $session )
 			)
 		); ?>
@@ -66,7 +66,7 @@ setup_postdata( $session );
 				'excerpt' === $attributes['content']
 					? apply_filters( 'the_excerpt', get_the_excerpt( $session ) )
 					: get_all_the_content( $session ),
-				[ 'wordcamp-sessions__content', 'is-' . $attributes['content'] ]
+				array( 'wordcamp-sessions__content', 'is-' . $attributes['content'] )
 			)
 		); ?>
 	<?php endif; ?>

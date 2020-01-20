@@ -15,17 +15,17 @@ defined( 'WPINC' ) || die();
  *
  * @return string Markup of output layout.
  */
-function render_post_list( array $rendered_items, $layout = 'list', $columns = 1, array $container_classes = [] ) {
+function render_post_list( array $rendered_items, $layout = 'list', $columns = 1, array $container_classes = array() ) {
 	if ( count( $rendered_items ) < 1 ) {
 		return '';
 	}
 
 	$container_classes = array_merge(
-		[
+		array(
 			'wordcamp-block',
 			'wordcamp-post-list',
 			'has-layout-' . sanitize_html_class( $layout ),
-		],
+		),
 		$container_classes
 	);
 

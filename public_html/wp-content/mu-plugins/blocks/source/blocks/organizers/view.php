@@ -21,7 +21,7 @@ setup_postdata( $organizer ); // This is necessary for generating an excerpt fro
 			get_the_title( $organizer ),
 			'',
 			3,
-			[ 'wordcamp-organizers__title' ],
+			array( 'wordcamp-organizers__title' ),
 			$attributes['headingAlign']
 		)
 	); ?>
@@ -33,7 +33,7 @@ setup_postdata( $organizer ); // This is necessary for generating an excerpt fro
 				$attributes['avatar_size'],
 				'',
 				sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $organizer ) ),
-				[ 'force_display' => true ]
+				array( 'force_display' => true )
 			); ?>
 		</div>
 	<?php endif; ?>
@@ -44,7 +44,7 @@ setup_postdata( $organizer ); // This is necessary for generating an excerpt fro
 				'excerpt' === $attributes['content']
 					? apply_filters( 'the_excerpt', get_the_excerpt( $organizer ) )
 					: get_all_the_content( $organizer ),
-				[ 'wordcamp-organizers__content', 'is-' . $attributes['content'] ]
+				array( 'wordcamp-organizers__content', 'is-' . $attributes['content'] )
 			)
 		); ?>
 	<?php endif; ?>

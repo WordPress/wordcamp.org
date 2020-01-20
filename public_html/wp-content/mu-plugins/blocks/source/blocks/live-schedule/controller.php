@@ -10,10 +10,10 @@ function init() {
 	$path        = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.js';
 	$deps_path   = \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.asset.php';
 	$script_info = file_exists( $deps_path )
-		? require( $deps_path )
+		? require $deps_path
 		: array(
 			'dependencies' => array(),
-			'version' => filemtime( $path ),
+			'version'      => filemtime( $path ),
 		);
 
 	// Special case, because this isn't a wp package.
@@ -28,7 +28,7 @@ function init() {
 	);
 
 	/** This filter is documented in mu-plugins/blocks/blocks.php */
-	$data = apply_filters( 'wordcamp_blocks_script_data', [] );
+	$data = apply_filters( 'wordcamp_blocks_script_data', array() );
 
 	wp_add_inline_script(
 		'wordcamp-live-schedule',
@@ -44,7 +44,7 @@ function init() {
 	wp_register_style(
 		'wordcamp-live-schedule',
 		\WordCamp\Blocks\PLUGIN_URL . 'build/live-schedule.min.css',
-		[],
+		array(),
 		filemtime( \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.css' )
 	);
 
@@ -68,9 +68,9 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  * @return array
  */
 function add_script_data( array $data ) {
-	$data['live-schedule'] = [
+	$data['live-schedule'] = array(
 		'scheduleUrl' => esc_url( site_url( __( 'schedule', 'wordcamporg' ) ) ),
-	];
+	);
 
 	return $data;
 }

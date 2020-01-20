@@ -15,13 +15,13 @@ defined( 'WPINC' ) || die();
 function init() {
 	register_block_type(
 		'wordcamp/sessions',
-		[
+		array(
 			'attributes'      => get_attributes_schema(),
 			'render_callback' => __NAMESPACE__ . '\render',
 			'editor_script'   => 'wordcamp-blocks',
 			'editor_style'    => 'wordcamp-blocks',
 			'style'           => 'wordcamp-blocks',
-		]
+		)
 	);
 }
 
@@ -39,12 +39,12 @@ function render( $attributes ) {
 	$attributes = wp_parse_args( $attributes, $defaults );
 	$sessions   = get_session_posts( $attributes );
 
-	$speakers = [];
+	$speakers = array();
 	if ( ! empty( $sessions ) && true === $attributes['show_speaker'] ) {
 		$speakers = get_session_speakers( wp_list_pluck( $sessions, 'ID' ) );
 	}
 
-	$rendered_session_posts = [];
+	$rendered_session_posts = array();
 
 	foreach ( $sessions as $session ) {
 		ob_start();
@@ -52,10 +52,10 @@ function render( $attributes ) {
 		$rendered_session_posts[] = ob_get_clean();
 	}
 
-	$container_classes = [
+	$container_classes = array(
 		'wordcamp-sessions',
 		sanitize_html_class( $attributes['className'] ),
-	];
+	);
 
 	if ( ! empty( $attributes['align'] ) ) {
 		$container_classes[] = 'align' . sanitize_html_class( $attributes['align'] );
@@ -72,10 +72,10 @@ function render( $attributes ) {
  * @return array
  */
 function add_script_data( array $data ) {
-	$data['sessions'] = [
+	$data['sessions'] = array(
 		'schema'  => get_attributes_schema(),
 		'options' => get_options(),
-	];
+	);
 
 	return $data;
 }
@@ -90,35 +90,35 @@ add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
 function get_attributes_schema() {
 	$schema = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'content',
 				'grid_columns',
 				'item_ids',
 				'layout',
-			],
+			),
 			'attribute'
 		),
-		[
+		array(
 			'align'                => get_shared_definition( 'align_block', 'attribute' ),
 			'className'            => get_shared_definition( 'string_empty', 'attribute' ),
 			'featured_image_width' => get_shared_definition( 'image_size', 'attribute' ),
 			'headingAlign'         => get_shared_definition( 'align_content', 'attribute' ),
 			'image_align'          => get_shared_definition( 'align_image', 'attribute' ),
-			'mode'                 => [
+			'mode'                 => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'mode' ), 'value' ),
 				'default' => '',
-			],
+			),
 			'show_category'        => get_shared_definition( 'boolean_false', 'attribute' ),
 			'show_images'          => get_shared_definition( 'boolean_true', 'attribute' ),
 			'show_meta'            => get_shared_definition( 'boolean_false', 'attribute' ),
 			'show_speaker'         => get_shared_definition( 'boolean_false', 'attribute' ),
-			'sort'                 => [
+			'sort'                 => array(
 				'type'    => 'string',
 				'enum'    => wp_list_pluck( get_options( 'sort' ), 'value' ),
 				'default' => 'session_time',
-			],
-		]
+			),
+		)
 	);
 
 	return $schema;
@@ -134,55 +134,55 @@ function get_attributes_schema() {
 function get_options( $type = '' ) {
 	$options = array_merge(
 		get_shared_definitions(
-			[
+			array(
 				'align_block',
 				'align_image',
 				'content',
 				'layout',
-			],
+			),
 			'option'
 		),
-		[
-			'mode' => [
-				[
+		array(
+			'mode' => array(
+				array(
 					'label' => '',
 					'value' => '',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'List all sessions', 'mode option', 'wordcamporg' ),
 					'value' => 'all',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose sessions', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_session',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose tracks', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_track',
-				],
-				[
+				),
+				array(
 					'label' => _x( 'Choose session categories', 'mode option', 'wordcamporg' ),
 					'value' => 'wcb_session_category',
-				],
-			],
+				),
+			),
 			'sort' => array_merge(
-				[
-					[
+				array(
+					array(
 						'label' => _x( 'Day and Time', 'sort option', 'wordcamporg' ),
 						'value' => 'session_time',
-					],
-				],
+					),
+				),
 				get_shared_definition( 'sort_title', 'option' ),
 				get_shared_definition( 'sort_date', 'option' )
 			),
-		]
+		)
 	);
 
 	if ( $type ) {
 		if ( ! empty( $options[ $type ] ) ) {
 			return $options[ $type ];
 		} else {
-			return [];
+			return array();
 		}
 	}
 
@@ -198,30 +198,30 @@ function get_options( $type = '' ) {
  */
 function get_session_posts( array $attributes ) {
 	if ( empty( $attributes['mode'] ) ) {
-		return [];
+		return array();
 	}
 
-	$post_args = [
+	$post_args = array(
 		'post_type'      => 'wcb_session',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
-		'meta_query'     => [
+		'meta_query'     => array(
 			'relation' => 'AND',
-			[
+			array(
 				'relation' => 'OR',
-				[
+				array(
 					'key'     => '_wcpt_session_type',
 					'value'   => 'session',
 					'compare' => '=',
-				],
-				[
+				),
+				array(
 					'key'     => '_wcpt_session_type',
 					'value'   => '',
 					'compare' => 'NOT EXISTS',
-				],
-			],
-		],
-	];
+				),
+			),
+		),
+	);
 
 	switch ( $attributes['sort'] ) {
 		case 'session_time':
@@ -250,13 +250,13 @@ function get_session_posts( array $attributes ) {
 
 		case 'wcb_track':
 		case 'wcb_session_category':
-			$post_args['tax_query'] = [
-				[
+			$post_args['tax_query'] = array(
+				array(
 					'taxonomy' => $attributes['mode'],
 					'field'    => 'id',
 					'terms'    => $attributes['item_ids'],
-				],
-			];
+				),
+			);
 			break;
 	}
 
@@ -271,14 +271,14 @@ function get_session_posts( array $attributes ) {
  * @return array
  */
 function get_session_speakers( array $session_ids ) {
-	$speakers_by_session = [];
+	$speakers_by_session = array();
 
-	$session_args = [
+	$session_args = array(
 		'post_type'      => 'wcb_session',
 		'post_status'    => 'publish',
 		'posts_per_page' => -1,
 		'post__in'       => $session_ids,
-	];
+	);
 
 	$session_posts = get_posts( $session_args );
 
@@ -286,14 +286,14 @@ function get_session_speakers( array $session_ids ) {
 		$speaker_ids = get_post_meta( $session->ID, '_wcpt_speaker_id', false );
 
 		if ( ! empty( $speaker_ids ) ) {
-			$speaker_args = [
+			$speaker_args = array(
 				'post_type'      => 'wcb_speaker',
 				'post_status'    => 'publish',
 				'posts_per_page' => -1,
 				'post__in'       => $speaker_ids,
 				'orderby'        => 'post__in',
 				'order'          => 'ASC',
-			];
+			);
 
 			$speakers_by_session[ $session->ID ] = get_posts( $speaker_args );
 		}

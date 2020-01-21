@@ -320,9 +320,11 @@ add_action( 'change_locale',  'wcorg_load_wordcamp_textdomain' );
 /**
  * Update the site's locale when switching between blogs.
  *
- * @todo This can be removed if https://core.trac.wordpress.org/ticket/49263 is resolved.
+ * @todo This can be removed if https://core.trac.wordpress.org/ticket/49263 is resolved. Add `'locale' => true` to
+ *       `switch_to_blog()` calls for any custom cron jobs that send mail, like in `wordcamp-payments-network`.
  */
 function wcorg_switch_to_blog_locale() {
+	// todo This can be cleaned up after upgrading to 5.4, b/c the $context param from https://core.trac.wordpress.org/ticket/49265 will be available.
 	$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
 	$caller    = $backtrace[4]['function'];
 
@@ -359,14 +361,25 @@ function wcorg_switch_to_blog_locale() {
 //			var_dump( get_locale() );
 //			switch_to_locale( $site_locale );
 //			var_dump( get_locale() );
+			// switch_to_locale( $user_locale ); // switch 2nd time b/c now the locale is properly set, so we can call user locale w/ fallback
 
-			add_filter( 'locale', 'wcorg_set_db_locale' ); // todo why causes infinite loop?
+
+			add_filter( 'locale',               'wcorg_set_db_locale' ); // todo why causes infinite loop? wp_die translates stuff?
 			$user_locale = get_user_locale(); // has to be called _after_ first switch
-			remove_filter( 'locale', 'wcorg_set_db_locale' );
-//wp_die('huh');
-//var_dump($user_locale);
-			switch_to_locale( $user_locale ); // switch 2nd time b/c now the locale is properly set, so we can call user locale w/ fallback
+			remove_filter( 'locale',               'wcorg_set_db_locale' );
+			// test that filtering locale doesn't create inifinite loop in other situations, like wp_die();
+			//var_dump( 'wtf', $user_locale );
 
+
+			//wp_die('huh');
+//			var_dump($user_locale, get_locale() );die('x');
+
+			add_filter( 'pre_determine_locale', 'wcorg_set_db_locale' ); // why is this needed? to avoid early return yes, but why does it think $current_locale is `as` in the first palce?
+			switch_to_locale( $user_locale );
+			remove_filter( 'pre_determine_locale', 'wcorg_set_db_locale' );
+
+
+			// test that setting user locale to site default works
 
 			// don't have to worry about popping twice, b/c it won't switch twice?
 			// er yes it will? test
@@ -404,19 +417,11 @@ add_action( 'switch_blog', 'wcorg_switch_to_blog_locale' );
 
 // epxlain
 function wcorg_set_db_locale( $locale ) {
-
-
 	$site_locale = get_option( 'WPLANG', 'en_US' );
-//return 'fr_FR';
+
 	if ( empty( $site_locale ) ) {
 		$site_locale = 'en_US'; // why is this necessary? should use fallback option above? i guess if it's saved as empty string or something
 	}
-
-//	var_dump(
-//		$locale,
-//		$site_locale
-//	);
-//	wp_die( 'y' );
 
 	return $site_locale;
 }

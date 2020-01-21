@@ -12,9 +12,6 @@
 }
 
 .wordcamp-live-schedule__session-details {
-	margin-left: 1em;
-	width: 80%;
-
 	.wordcamp-live-schedule__session-title {
 		margin-top: 0;
 
@@ -26,6 +23,11 @@
 
 	span {
 		display: block;
+	}
+
+	.wordcamp-live-schedule__session-track + & {
+		margin-left: 1em;
+		width: 80%;
 	}
 }
 

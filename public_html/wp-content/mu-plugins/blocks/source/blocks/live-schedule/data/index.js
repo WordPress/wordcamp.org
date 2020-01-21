@@ -70,7 +70,7 @@ export function getCurrentSessions( { sessions, tracks } ) {
 		} ) :
 		// Fall back to one track with all sessions, if no tracks are found.
 		[ {
-			track: {}, // @todo Needs slug, name.
+			track: {},
 			sessions: reverse( sortBy( sessions, 'meta._wcpt_session_time' ) ),
 		} ];
 

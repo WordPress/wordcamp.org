@@ -497,27 +497,38 @@ function send_invoice_pending_reminder() {
 
 	// test running the cron job under different sites. root, english, spanish, etc
 
-
+return;
+	var_dump( get_user_locale() );
+	_e( 'Organizers', 'wordcamporg' );
+	echo "\n---\n";
 
 	switch_to_blog( 11 ); //  misc is french
-	send_invoice_pending_reminder_mail( 123108, 'ian@iandunn.name' );
+	var_dump( get_user_locale() );
+	send_invoice_pending_reminder_mail( 120257, 'ian@iandunn.name' );
+	echo "\n---\n";
 	restore_current_blog();
 
 	switch_to_blog( 13 ); // atlanta english
-	send_invoice_pending_reminder_mail( 795921, 'ian@iandunn.name' );
+	var_dump( get_user_locale() );
+	send_invoice_pending_reminder_mail( 795915, 'ian@iandunn.name' );
+	echo "\n---\n";
 	restore_current_blog();
 
 	switch_to_blog( 11 ); //  misc is french
-	send_invoice_pending_reminder_mail( 123108, 'ian@iandunn.name' );
+	var_dump( get_user_locale() );
+	send_invoice_pending_reminder_mail( 120829, 'ian@iandunn.name' );
+	echo "\n---\n";
 	restore_current_blog();
 
 	switch_to_blog( 13 ); // atlanta english
-	send_invoice_pending_reminder_mail( 795921, 'ian@iandunn.name' );
+	var_dump( get_user_locale() );
+	send_invoice_pending_reminder_mail( 795915, 'ian@iandunn.name' );
+	echo "\n---\n";
 	restore_current_blog();
 
-	var_dump(
-		__( 'Organizers', 'wordcamporg' )
-	);
+	var_dump( get_user_locale() );
+	_e( 'Organizers', 'wordcamporg' );
+	echo "\n---\n";
 
 	return;
 
@@ -666,13 +677,15 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 //	$db_lang = get_option( 'WPLANG' );
 //	$get_locale = get_locale();
 
-	var_dump( compact(
-//		'db_lang',
-//		'get_locale',
-//		'locale',
-//		'switched_locale',
-		'reminder_body'
-	) );
+//	var_dump( compact(
+////		'db_lang',
+////		'get_locale',
+////		'locale',
+////		'switched_locale',
+//		'reminder_body'
+//	) );
+
+	echo str_replace( '<br>', '', $reminder_body );
 
 //	remove_filter( 'locale', __NAMESPACE__ . '\set_current_site_locale' ); // needs to be _before_ restore_locale() when switching french->spanish, but _after_ when switching from english->spanish
 

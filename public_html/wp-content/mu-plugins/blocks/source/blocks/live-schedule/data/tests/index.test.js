@@ -27,8 +27,6 @@ describe( 'getCurrentSessions', () => {
 		expect( results ).toHaveLength( 0 );
 	} );
 
-	// @todo Should return nothing upcoming, but doesn't.
-	/* eslint-disable jest/no-disabled-tests */
 	test( 'should return no sessions running at midnight, Jan 1st 2019', () => {
 		const time = Date.parse( '2019-01-01T00:00:00.000Z' );
 		window.WordCampBlocks[ 'live-schedule' ].nowOverride = time;

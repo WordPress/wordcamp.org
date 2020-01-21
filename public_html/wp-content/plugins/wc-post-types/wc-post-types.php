@@ -1521,14 +1521,19 @@ class WordCamp_Post_Types_Plugin {
 
 		if ( isset( $_POST['wcpt-meta-session-info'] ) && wp_verify_nonce( $_POST['wcpt-meta-session-info'], 'edit-session-info' ) ) {
 			// Update session time.
-			$session_time = strtotime( sprintf(
-				'%s %d:%02d %s',
-				sanitize_text_field( $_POST['wcpt-session-date'] ),
-				absint( $_POST['wcpt-session-hour'] ),
-				absint( $_POST['wcpt-session-minutes'] ),
-				'am' === $_POST['wcpt-session-meridiem'] ? 'am' : 'pm'
-			) );
-			update_post_meta( $post_id, '_wcpt_session_time', $session_time );
+			$session_time = date_create(
+				sprintf(
+					'%s %d:%02d %s',
+					sanitize_text_field( $_POST['wcpt-session-date'] ),
+					absint( $_POST['wcpt-session-hour'] ),
+					absint( $_POST['wcpt-session-minutes'] ),
+					'am' === $_POST['wcpt-session-meridiem'] ? 'am' : 'pm'
+				),
+				wp_timezone()
+			);
+			if ( $session_time ) {
+				update_post_meta( $post_id, '_wcpt_session_time', $session_time->getTimestamp() );
+			}
 
 			$duration = absint(
 				( $_POST['wcpt-session-duration-hours']   * HOUR_IN_SECONDS ) +

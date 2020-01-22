@@ -370,6 +370,12 @@ class CampTix_Plugin {
 		add_shortcode( 'last_name', array( $this, 'notify_shortcode_last_name' ) );
 		add_shortcode( 'email', array( $this, 'notify_shortcode_email' ) );
 		add_shortcode( 'ticket_url', array( $this, 'notify_shortcode_ticket_url' ) );
+		add_shortcode(
+			'attendee_id',
+			function() {
+				return $this->tmp( 'attendee_id' );
+			}
+		);
 	}
 
 	/**

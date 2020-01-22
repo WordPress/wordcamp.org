@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { flatten, get, keyBy, sortBy } from 'lodash';
+import { sortBy } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -19,11 +19,25 @@ function fetchFromAPI() {
 	const sessionPath = addQueryArgs( `wp/v2/sessions`, {
 		per_page: -1,
 		status: 'publish',
-		_embed: true,
+		_fields: [
+			'id',
+			'title',
+			'link',
+			'meta',
+			'session_track',
+			'session_date_time',
+			'session_cats_rendered',
+			'session_speakers',
+		],
 	} );
 	const trackPath = addQueryArgs( `wp/v2/session_track`, {
 		per_page: -1,
 		status: 'publish',
+		_fields: [
+			'id',
+			'slug',
+			'name',
+		],
 	} );
 
 	return Promise.all( [
@@ -71,16 +85,7 @@ export function getCurrentSessions( { sessions, tracks } ) {
  * @return {Promise} The promise will resolve with a list of objects, `{track, now, next}`.
  */
 export async function getDataFromAPI() {
-	const data = await fetchFromAPI();
-	const sessions = data[ 0 ].map( ( session ) => {
-		const terms = flatten( get( session, '_embedded[wp:term]', [] ) );
-		return {
-			...session,
-			terms: keyBy( terms, 'id' ),
-		};
-	} );
-
-	const tracks = data[ 1 ];
+	const [ sessions, tracks ] = await fetchFromAPI();
 
 	return getCurrentSessions( { sessions, tracks } );
 }

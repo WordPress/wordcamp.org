@@ -132,6 +132,68 @@ function register_additional_rest_fields() {
 			),
 		)
 	);
+
+	// Session speakers.
+	register_rest_field(
+		'wcb_session',
+		'session_speakers',
+		array(
+			'get_callback' => function( $post ) {
+				$speaker_ids = get_post_meta( $post['id'], '_wcpt_speaker_id', false );
+				$speakers = array();
+
+				foreach ( $speaker_ids as $speaker_id ) {
+					$speakers[] = array(
+						'id' => $speaker_id,
+						'name' => get_the_title( $speaker_id ),
+						'link' => get_permalink( $speaker_id ),
+					);
+				}
+
+				return $speakers;
+			},
+			'schema'       => array(
+				'description' => __( 'List of speakers for session.', 'wordcamporg' ),
+				'type'        => 'integer',
+				'context'     => array( 'embed', 'view', 'edit' ),
+				'readonly'    => true,
+				'items'       => array(
+					'type'        => 'object',
+					'properties'  => array(
+						'id'   => array(
+							'type' => 'integer',
+						),
+						'name' => array(
+							'type' => 'string',
+						),
+						'link' => array(
+							'type' => 'string',
+						),
+					),
+				),
+			),
+		)
+	);
+
+	// Session Categories.
+	register_rest_field(
+		'wcb_session',
+		'session_cats_rendered',
+		array(
+			'get_callback' => function( $post ) {
+				$terms = get_terms( 'wcb_session_category', array( 'object_ids' => $post['id'] ) );
+				if ( $terms ) {
+					return implode( ', ', wp_list_pluck( $terms, 'name' ) );
+				}
+			},
+			'schema'       => array(
+				'description' => __( 'Rendered category list.', 'wordcamporg' ),
+				'type'        => 'string',
+				'context'     => array( 'embed', 'view', 'edit' ),
+				'readonly'    => true,
+			),
+		)
+	);
 }
 
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
@@ -221,7 +283,6 @@ function get_avatar_urls_from_username_email( $post ) {
 
 	return $avatar_urls;
 }
-
 
 /**
  * Register route for sending schedule of favourite sessions via e-mail.

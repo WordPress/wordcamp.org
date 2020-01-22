@@ -16,13 +16,13 @@ export default function( { headingLevel = 3, session, track } ) {
 	const Heading = `h${ headingLevel }`;
 
 	// Pull details out of the session object.
-	const { link, terms = {} } = session;
 	const title = get( session, 'title.rendered', '' );
+	const link = get( session, 'link', '' );
+	const categories = get( session, 'session_cats_rendered', '' );
 	const type = get( session, 'meta._wcpt_session_type', '' );
-	const categories = session.session_category || [];
 	const time = get( session, 'session_date_time.time', '' );
 
-	const speakers = get( session, '_embedded.speakers', [] );
+	const speakers = get( session, 'session_speakers', [] );
 	const validSpeakers = speakers.filter( ( speaker ) => !! speaker.id );
 
 	const cleanTitle = decodeEntities( stripTags( title ) );
@@ -44,31 +44,16 @@ export default function( { headingLevel = 3, session, track } ) {
 
 				<span className="wordcamp-live-schedule__session-speaker">
 					{ !! validSpeakers.length &&
-						validSpeakers.map( ( speaker ) => {
-							const {
-								id,
-								title: { rendered: name },
-								link: speakerLink,
-							} = speaker;
-
-							return (
-								<a key={ id } href={ speakerLink }>
-									{ decodeEntities( stripTags( name ) ) }
-								</a>
-							);
-						} ) }
+						validSpeakers.map( ( { id, name, link: speakerLink } ) => (
+							<a key={ id } href={ speakerLink }>
+								{ decodeEntities( stripTags( name ) ) }
+							</a>
+						) ) }
 				</span>
 
-				{ categories.map( ( catId ) => {
-					const name = terms[ catId ].name;
-					const slug = terms[ catId ].slug;
-
-					return (
-						<span key={ catId } className={ `wordcamp-live-schedule__session-cat category-${ slug }` }>
-							{ name }
-						</span>
-					);
-				} ) }
+				<span className="wordcamp-live-schedule__session-cats">
+					{ categories }
+				</span>
 			</div>
 		</div>
 	);

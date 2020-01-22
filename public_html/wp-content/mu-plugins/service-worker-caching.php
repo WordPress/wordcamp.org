@@ -7,6 +7,8 @@ add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\set_navigation_caching_strategy' );
 add_filter( 'wccs_safelisted_namespaces', __NAMESPACE__ . '\safelist_manifest_api' );
 add_action( 'wp_print_footer_scripts', __NAMESPACE__ . '\disable_app_install_prompt' );
+add_action( 'wp_ajax_wp_service_worker', __NAMESPACE__ . '\prevent_editflow_script' );
+add_action( 'wp_ajax_nopriv_wp_service_worker', __NAMESPACE__ . '\prevent_editflow_script' );
 
 /**
  * Register caching routes with the frontend service worker.
@@ -154,4 +156,14 @@ function disable_app_install_prompt() {
 	} );
 	</script>
 	<?php
+}
+
+/**
+ * Prevent the edit-flow calendar script registration. It echos a script tag, which breaks the ajax-generated
+ * service-worker script.
+ */
+function prevent_editflow_script() {
+	if ( function_exists( 'EditFlow' ) ) {
+		remove_action( 'admin_enqueue_scripts', array( EditFlow()->calendar, 'enqueue_admin_scripts' ) );
+	}
 }

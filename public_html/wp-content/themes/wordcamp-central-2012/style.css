@@ -1200,8 +1200,12 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 }
 
 /* !Featured Sponsors */
+.sponsors-widget-list {
+	height: 320px;
+}
 .sponsors-widget-list .wp-caption {
 	background: transparent;
+	width: 100% !important;
 	min-height: 320px;
 	display: flex;
 	flex-direction: column;

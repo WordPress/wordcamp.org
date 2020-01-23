@@ -356,7 +356,11 @@ function wcorg_switch_to_blog_locale() {
 			break;
 	}
 }
-add_action( 'switch_blog', 'wcorg_switch_to_blog_locale' );
+
+// $GLOBALS['wp_locale_switcher'] isn't initialized before this.
+add_action( 'after_setup_theme', function() {
+	add_action( 'switch_blog', 'wcorg_switch_to_blog_locale' );
+} );
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {

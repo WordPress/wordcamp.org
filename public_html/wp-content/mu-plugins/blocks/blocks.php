@@ -12,6 +12,11 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
  * @return void
  */
 function load_includes() {
+	// Short-circuit: If there are no WordCamp post-types, these blocks don't have anything to display.
+	if ( ! class_exists( 'WordCamp_Post_Types_Plugin' ) ) {
+		return;
+	}
+
 	$includes_dir   = PLUGIN_DIR . 'includes/';
 	$blocks_dir     = PLUGIN_DIR . 'source/blocks/';
 	$components_dir = PLUGIN_DIR . 'source/components/';
@@ -32,16 +37,10 @@ function load_includes() {
 	require_once $blocks_dir . 'sessions/controller.php';
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
+	require_once $blocks_dir . 'live-schedule/controller.php';
 
-	// Disable live schedule & latest posts on central.wordcamp.org.
-	// @todo This is a temporary measure to avoid enqueuing duplicate babel-polyfill on the application tracker.
-	// If the build process is changed to use core-provided react/polyfills, this can be removed.
-	if ( 5 !== get_current_blog_id() ) {
-		require_once $blocks_dir . 'live-schedule/controller.php';
-
-		// Hooks.
-		require_once $hooks_dir . 'latest-posts/controller.php';
-	}
+	// Hooks.
+	require_once $hooks_dir . 'latest-posts/controller.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_includes' );

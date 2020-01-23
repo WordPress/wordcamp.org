@@ -1,5 +1,6 @@
 <?php
 namespace WordCamp\Blocks\Live_Schedule;
+use WordCamp_Post_Types_Plugin;
 
 defined( 'WPINC' ) || die();
 
@@ -70,6 +71,7 @@ add_action( 'init', __NAMESPACE__ . '\init' );
 function add_script_data( array $data ) {
 	$data['live-schedule'] = array(
 		'scheduleUrl' => esc_url( site_url( __( 'schedule', 'wordcamporg' ) ) ),
+		'fallbackDuration' => WordCamp_Post_Types_Plugin::SESSION_DEFAULT_DURATION,
 	);
 
 	return $data;

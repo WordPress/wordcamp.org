@@ -1,23 +1,9 @@
 [
   {
-    "id": 36790,
-    "meta": {
-      "_wcpt_session_time": 1572681600
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "8:00 am"
-    },
-    "session_track": [ 55, 71, 72, 73, 83, 84 ],
-    "slug": "registration-3",
-    "title": {
-      "rendered": "Registration"
-    }
-  },
-  {
     "id": 36788,
     "meta": {
-      "_wcpt_session_time": 1572595200
+      "_wcpt_session_time": 1572595200,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -32,7 +18,8 @@
   {
     "id": 35597,
     "meta": {
-      "_wcpt_session_time": 1572599700
+      "_wcpt_session_time": 1572599700,
+      "_wcpt_session_duration": 2700
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -45,69 +32,10 @@
     }
   },
   {
-    "id": 35573,
-    "meta": {
-      "_wcpt_session_time": 1572690600
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "10:30 am"
-    },
-    "session_track": [ 72 ],
-    "slug": "unlocking-six-figure-ecommerce-growth-with-automations",
-    "title": {
-      "rendered": "Unlocking six-figure eCommerce growth with automations"
-    }
-  },
-  {
-    "id": 35568,
-    "meta": {
-      "_wcpt_session_time": 1572694200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "11:30 am"
-    },
-    "session_track": [ 73 ],
-    "slug": "defining-fast-the-hardest-problem-in-performance-engineering",
-    "title": {
-      "rendered": "Defining Fast: The Hardest Problem in Performance Engineering"
-    }
-  },
-  {
-    "id": 35564,
-    "meta": {
-      "_wcpt_session_time": 1572694200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "11:30 am"
-    },
-    "session_track": [ 72 ],
-    "slug": "design-systems-crafting-for-crafters",
-    "title": {
-      "rendered": "Design Systems: Crafting For Crafters"
-    }
-  },
-  {
-    "id": 34667,
-    "meta": {
-      "_wcpt_session_time": 1572687000
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:30 am"
-    },
-    "session_track": [ 73 ],
-    "slug": "automated-updates-panel",
-    "title": {
-      "rendered": "WordPress Automated Updates: A Panel Discussion"
-    }
-  },
-  {
     "id": 34662,
     "meta": {
-      "_wcpt_session_time": 1572599700
+      "_wcpt_session_time": 1572599700,
+      "_wcpt_session_duration": 2700
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -120,24 +48,10 @@
     }
   },
   {
-    "id": 34655,
-    "meta": {
-      "_wcpt_session_time": 1572690600
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "10:30 am"
-    },
-    "session_track": [ 71 ],
-    "slug": "just-enough-react-for-wordpress",
-    "title": {
-      "rendered": "Just Enough React for WordPress"
-    }
-  },
-  {
     "id": 34170,
     "meta": {
-      "_wcpt_session_time": 1572634800
+      "_wcpt_session_time": 1572634800,
+      "_wcpt_session_duration": 10800
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -150,54 +64,10 @@
     }
   },
   {
-    "id": 31049,
-    "meta": {
-      "_wcpt_session_time": 1572685200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:00 am"
-    },
-    "session_track": [ 84 ],
-    "slug": "everyone-can-help-make-wordpress-better-how-to-contribute-to-wordpress",
-    "title": {
-      "rendered": "Everyone Can Help Make WordPress Better – How to Contribute to WordPress"
-    }
-  },
-  {
-    "id": 12880,
-    "meta": {
-      "_wcpt_session_time": 1572685200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:00 am"
-    },
-    "session_track": [ 55 ],
-    "slug": "the-gameshow",
-    "title": {
-      "rendered": "The Gameshow!"
-    }
-  },
-  {
-    "id": 12876,
-    "meta": {
-      "_wcpt_session_time": 1572685200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:00 am"
-    },
-    "session_track": [ 71, 72, 73 ],
-    "slug": "morning-office-yoga",
-    "title": {
-      "rendered": "Morning Office Yoga: Second Floor Atrium"
-    }
-  },
-  {
     "id": 12765,
     "meta": {
-      "_wcpt_session_time": 1572599700
+      "_wcpt_session_time": 1572599700,
+      "_wcpt_session_duration": 2700
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -210,39 +80,10 @@
     }
   },
   {
-    "id": 12727,
-    "meta": {
-      "_wcpt_session_time": 1572705000
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "2:30 pm"
-    },
-    "session_track": [ 73 ],
-    "slug": "take-back-your-web",
-    "title": {
-      "rendered": "Take Back Your Web"
-    }
-  },
-  {
-    "id": 12384,
-    "meta": {
-      "_wcpt_session_time": 1572694200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "11:30 am"
-    },
-    "session_track": [ 83 ],
-    "slug": "webwewant",
-    "title": {
-      "rendered": "WebWeWant"
-    }
-  },
-  {
     "id": 12360,
     "meta": {
-      "_wcpt_session_time": 1572615000
+      "_wcpt_session_time": 1572615000,
+      "_wcpt_session_duration": 1800
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -255,39 +96,10 @@
     }
   },
   {
-    "id": 12338,
-    "meta": {
-      "_wcpt_session_time": 1572701400
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 71 ],
-    "slug": "sotw-setup",
-    "title": {
-      "rendered": "SOTW Setup"
-    }
-  },
-  {
-    "id": 12319,
-    "meta": {
-      "_wcpt_session_time": 1572787800
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 64 ],
-    "slug": "afternoon-session-2",
-    "title": {
-      "rendered": "Afternoon Session"
-    }
-  },
-  {
     "id": 12314,
     "meta": {
-      "_wcpt_session_time": 1572621300
+      "_wcpt_session_time": 1572621300,
+      "_wcpt_session_duration": 7200
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -300,114 +112,10 @@
     }
   },
   {
-    "id": 12294,
-    "meta": {
-      "_wcpt_session_time": 1572710400
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "4:00 pm"
-    },
-    "session_track": [ 71 ],
-    "slug": "state-of-the-word",
-    "title": {
-      "rendered": "State of the Word"
-    }
-  },
-  {
-    "id": 12311,
-    "meta": {
-      "_wcpt_session_time": 1572775200
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "10:00 am"
-    },
-    "session_track": [ 64 ],
-    "slug": "kids-camp",
-    "title": {
-      "rendered": "Morning Session"
-    }
-  },
-  {
-    "id": 12307,
-    "meta": {
-      "_wcpt_session_time": 1572798600
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "4:30 pm"
-    },
-    "session_track": [ 57 ],
-    "slug": "closing-remarks",
-    "title": {
-      "rendered": "Closing Remarks"
-    }
-  },
-  {
-    "id": 12304,
-    "meta": {
-      "_wcpt_session_time": 1572787800
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 57 ],
-    "slug": "afternoon-session",
-    "title": {
-      "rendered": "Afternoon Session"
-    }
-  },
-  {
-    "id": 12301,
-    "meta": {
-      "_wcpt_session_time": 1572784200
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "12:30 pm"
-    },
-    "session_track": [ 57, 64 ],
-    "slug": "lunch-2",
-    "title": {
-      "rendered": "Lunch"
-    }
-  },
-  {
-    "id": 12298,
-    "meta": {
-      "_wcpt_session_time": 1572775200
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "10:00 am"
-    },
-    "session_track": [ 57 ],
-    "slug": "morning-session",
-    "title": {
-      "rendered": "Morning Session"
-    }
-  },
-  {
-    "id": 12296,
-    "meta": {
-      "_wcpt_session_time": 1572771600
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "9:00 am"
-    },
-    "session_track": [ 57, 64 ],
-    "slug": "registration",
-    "title": {
-      "rendered": "Registration"
-    }
-  },
-  {
     "id": 12120,
     "meta": {
-      "_wcpt_session_time": 1572616800
+      "_wcpt_session_time": 1572616800,
+      "_wcpt_session_duration": 2700
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -422,7 +130,8 @@
   {
     "id": 2570,
     "meta": {
-      "_wcpt_session_time": 1572608700
+      "_wcpt_session_time": 1572608700,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -437,7 +146,8 @@
   {
     "id": 2566,
     "meta": {
-      "_wcpt_session_time": 1572607800
+      "_wcpt_session_time": 1572607800,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -452,7 +162,8 @@
   {
     "id": 2562,
     "meta": {
-      "_wcpt_session_time": 1572606000
+      "_wcpt_session_time": 1572606000,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -467,7 +178,8 @@
   {
     "id": 12112,
     "meta": {
-      "_wcpt_session_time": 1572616800
+      "_wcpt_session_time": 1572616800,
+      "_wcpt_session_duration": 2700
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -480,24 +192,10 @@
     }
   },
   {
-    "id": 12110,
-    "meta": {
-      "_wcpt_session_time": 1572687000
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:30 am"
-    },
-    "session_track": [ 71 ],
-    "slug": "working-with-wordpress-and-external-apis",
-    "title": {
-      "rendered": "Working with WordPress and External APIs"
-    }
-  },
-  {
     "id": 12108,
     "meta": {
-      "_wcpt_session_time": 1572624900
+      "_wcpt_session_time": 1572624900,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -512,7 +210,8 @@
   {
     "id": 12106,
     "meta": {
-      "_wcpt_session_time": 1572616800
+      "_wcpt_session_time": 1572616800,
+      "_wcpt_session_duration": 1800
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -525,24 +224,10 @@
     }
   },
   {
-    "id": 2595,
-    "meta": {
-      "_wcpt_session_time": 1572617700
-    },
-    "session_date_time": {
-      "date": "November 1, 2019",
-      "time": "2:15 pm"
-    },
-    "session_track": [ 73 ],
-    "slug": "contributing-to-wordpress-with-a-rock-solid-talk",
-    "title": {
-      "rendered": "Contributing to WordPress with a Rock Solid Talk"
-    }
-  },
-  {
     "id": 2585,
     "meta": {
-      "_wcpt_session_time": 1572602400
+      "_wcpt_session_time": 1572602400,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -557,7 +242,8 @@
   {
     "id": 2575,
     "meta": {
-      "_wcpt_session_time": 1572606000
+      "_wcpt_session_time": 1572606000,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -572,7 +258,8 @@
   {
     "id": 12118,
     "meta": {
-      "_wcpt_session_time": 1572606900
+      "_wcpt_session_time": 1572606900,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -587,7 +274,8 @@
   {
     "id": 12116,
     "meta": {
-      "_wcpt_session_time": 1572618600
+      "_wcpt_session_time": 1572618600,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -600,24 +288,10 @@
     }
   },
   {
-    "id": 12114,
-    "meta": {
-      "_wcpt_session_time": 1572687000
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:30 am"
-    },
-    "session_track": [ 72 ],
-    "slug": "feeling-fried-a-wordpressers-guide-to-preventing-burnout",
-    "title": {
-      "rendered": "Feeling Fried? A WordPresser&#8217;s Guide to Preventing Burnout"
-    }
-  },
-  {
     "id": 2591,
     "meta": {
-      "_wcpt_session_time": 1572615900
+      "_wcpt_session_time": 1572615900,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -632,7 +306,8 @@
   {
     "id": 12063,
     "meta": {
-      "_wcpt_session_time": 1572624900
+      "_wcpt_session_time": 1572624900,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -645,54 +320,10 @@
     }
   },
   {
-    "id": 12061,
-    "meta": {
-      "_wcpt_session_time": 1572687000
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:30 am"
-    },
-    "session_track": [ 55 ],
-    "slug": "how-the-wordpress-community-can-embrace-next-generation-talk-panel",
-    "title": {
-      "rendered": "How the WordPress Community Can Embrace the Next Generation (Talk + Panel)"
-    }
-  },
-  {
-    "id": 12059,
-    "meta": {
-      "_wcpt_session_time": 1572690600
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "10:30 am"
-    },
-    "session_track": [ 55 ],
-    "slug": "how-to-organize-events-for-youths-workshop",
-    "title": {
-      "rendered": "How to Organize Events for Youths (Discussion)"
-    }
-  },
-  {
-    "id": 12055,
-    "meta": {
-      "_wcpt_session_time": 1572694200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "11:30 am"
-    },
-    "session_track": [ 55 ],
-    "slug": "unconference",
-    "title": {
-      "rendered": "Unconference!"
-    }
-  },
-  {
     "id": 12053,
     "meta": {
-      "_wcpt_session_time": 1572613200
+      "_wcpt_session_time": 1572613200,
+      "_wcpt_session_duration": 6300
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -705,9 +336,26 @@
     }
   },
   {
+    "id": 12054,
+    "meta": {
+      "_wcpt_session_time": 1572613200,
+      "_wcpt_session_duration": 6300
+    },
+    "session_date_time": {
+      "date": "November 1, 2019",
+      "time": "1:00 pm"
+    },
+    "session_track": [ 84 ],
+    "slug": "performing-a-live-a11y-audit",
+    "title": {
+      "rendered": "Making Your Website Work for Everyone: Accessibility and Inclusive Design"
+    }
+  },
+  {
     "id": 12050,
     "meta": {
-      "_wcpt_session_time": 1572621300
+      "_wcpt_session_time": 1572621300,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -720,24 +368,10 @@
     }
   },
   {
-    "id": 12001,
-    "meta": {
-      "_wcpt_session_time": 1572701400
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 55 ],
-    "slug": "organizing-a-wordcamp-while-staying-sane",
-    "title": {
-      "rendered": "Organizing a WordCamp While Staying Sane"
-    }
-  },
-  {
     "id": 11997,
     "meta": {
-      "_wcpt_session_time": 1572602400
+      "_wcpt_session_time": 1572602400,
+      "_wcpt_session_duration": 7200
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -752,7 +386,8 @@
   {
     "id": 11938,
     "meta": {
-      "_wcpt_session_time": 1572605100
+      "_wcpt_session_time": 1572605100,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -767,7 +402,8 @@
   {
     "id": 11934,
     "meta": {
-      "_wcpt_session_time": 1572613200
+      "_wcpt_session_time": 1572613200,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -782,7 +418,8 @@
   {
     "id": 11932,
     "meta": {
-      "_wcpt_session_time": 1572613200
+      "_wcpt_session_time": 1572613200,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -797,7 +434,8 @@
   {
     "id": 2473,
     "meta": {
-      "_wcpt_session_time": 1572614100
+      "_wcpt_session_time": 1572614100,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -812,7 +450,8 @@
   {
     "id": 11926,
     "meta": {
-      "_wcpt_session_time": 1572619500
+      "_wcpt_session_time": 1572619500,
+      "_wcpt_session_duration": 1800
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -827,7 +466,8 @@
   {
     "id": 11838,
     "meta": {
-      "_wcpt_session_time": 1572602400
+      "_wcpt_session_time": 1572602400,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -842,7 +482,8 @@
   {
     "id": 11835,
     "meta": {
-      "_wcpt_session_time": 1572624900
+      "_wcpt_session_time": 1572624900,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -855,39 +496,10 @@
     }
   },
   {
-    "id": 11833,
-    "meta": {
-      "_wcpt_session_time": 1572690600
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "10:30 am"
-    },
-    "session_track": [ 73 ],
-    "slug": "responsible-tracking-learning-from-your-users-without-being-creepy",
-    "title": {
-      "rendered": "Responsible Tracking: Learning from Your Users Without Being Creepy"
-    }
-  },
-  {
-    "id": 11829,
-    "meta": {
-      "_wcpt_session_time": 1572701400
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 73 ],
-    "slug": "confidently-testing-wordpress",
-    "title": {
-      "rendered": "Confidently Testing WordPress"
-    }
-  },
-  {
     "id": 11827,
     "meta": {
-      "_wcpt_session_time": 1572621300
+      "_wcpt_session_time": 1572621300,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -902,7 +514,8 @@
   {
     "id": 11825,
     "meta": {
-      "_wcpt_session_time": 1572621300
+      "_wcpt_session_time": 1572621300,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -915,24 +528,10 @@
     }
   },
   {
-    "id": 11823,
-    "meta": {
-      "_wcpt_session_time": 1572701400
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 72 ],
-    "slug": "how-to-disagree-on-the-internet",
-    "title": {
-      "rendered": "How to Disagree on the Internet"
-    }
-  },
-  {
     "id": 11821,
     "meta": {
-      "_wcpt_session_time": 1572602400
+      "_wcpt_session_time": 1572602400,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -947,7 +546,8 @@
   {
     "id": 11753,
     "meta": {
-      "_wcpt_session_time": 1572624900
+      "_wcpt_session_time": 1572624900,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -962,7 +562,8 @@
   {
     "id": 11710,
     "meta": {
-      "_wcpt_session_time": 1572613200
+      "_wcpt_session_time": 1572613200,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -977,7 +578,8 @@
   {
     "id": 11708,
     "meta": {
-      "_wcpt_session_time": 1572621300
+      "_wcpt_session_time": 1572621300,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -992,7 +594,8 @@
   {
     "id": 11706,
     "meta": {
-      "_wcpt_session_time": 1572603300
+      "_wcpt_session_time": 1572603300,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1007,7 +610,8 @@
   {
     "id": 11701,
     "meta": {
-      "_wcpt_session_time": 1572606000
+      "_wcpt_session_time": 1572606000,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1020,39 +624,10 @@
     }
   },
   {
-    "id": 11699,
-    "meta": {
-      "_wcpt_session_time": 1572694200
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "11:30 am"
-    },
-    "session_track": [ 71 ],
-    "slug": "from-developer-to-manager-how-to-survive",
-    "title": {
-      "rendered": "From Developer to Manager &#8212; How to Survive"
-    }
-  },
-  {
-    "id": 11697,
-    "meta": {
-      "_wcpt_session_time": 1572705000
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "2:30 pm"
-    },
-    "session_track": [ 72 ],
-    "slug": "how-to-beat-technical-writers-block",
-    "title": {
-      "rendered": "How to Beat Technical Writer&#8217;s Block"
-    }
-  },
-  {
     "id": 11596,
     "meta": {
-      "_wcpt_session_time": 1572598800
+      "_wcpt_session_time": 1572598800,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1065,129 +640,10 @@
     }
   },
   {
-    "id": 11593,
-    "meta": {
-      "_wcpt_session_time": 1572613200
-    },
-    "session_date_time": {
-      "date": "November 1, 2019",
-      "time": "1:00 pm"
-    },
-    "session_track": [ 84 ],
-    "slug": "performing-a-live-a11y-audit",
-    "title": {
-      "rendered": "Making Your Website Work for Everyone: Accessibility and Inclusive Design"
-    }
-  },
-  {
-    "id": 11591,
-    "meta": {
-      "_wcpt_session_time": 1572701400
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 83 ],
-    "slug": "structuring-modern-wordpress-sites-for-scale",
-    "title": {
-      "rendered": "Structuring Modern WordPress Sites for Scale"
-    }
-  },
-  {
-    "id": 11589,
-    "meta": {
-      "_wcpt_session_time": 1572690600
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "10:30 am"
-    },
-    "session_track": [ 84 ],
-    "slug": "templates-plugins-blocks",
-    "title": {
-      "rendered": "Templates &#038; Plugins &#038; Blocks, Oh My! Designing the Theme that Thinks of Everything"
-    }
-  },
-  {
-    "id": 11587,
-    "meta": {
-      "_wcpt_session_time": 1572687000
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "9:30 am"
-    },
-    "session_track": [ 83 ],
-    "slug": "write-your-first-business-plan",
-    "title": {
-      "rendered": "How to Create Your First Business Plan"
-    }
-  },
-  {
-    "id": 11580,
-    "meta": {
-      "_wcpt_session_time": 1572792300
-    },
-    "session_date_time": {
-      "date": "November 3, 2019",
-      "time": "2:45 pm"
-    },
-    "session_track": [],
-    "slug": "afternoon-break-sunday",
-    "title": {
-      "rendered": "Afternoon Break &#8211; Sunday"
-    }
-  },
-  {
-    "id": 11578,
-    "meta": {
-      "_wcpt_session_time": 1572708600
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "3:30 pm"
-    },
-    "session_track": [ 55, 71, 72, 73, 83, 84 ],
-    "slug": "afternoon-break-saturday",
-    "title": {
-      "rendered": "Afternoon Break &#8211; Saturday"
-    }
-  },
-  {
-    "id": 11576,
-    "meta": {
-      "_wcpt_session_time": 1572619500
-    },
-    "session_date_time": {
-      "date": "November 1, 2019",
-      "time": "2:45 pm"
-    },
-    "session_track": [],
-    "slug": "afternoon-break-friday",
-    "title": {
-      "rendered": "Afternoon Break &#8211; Friday"
-    }
-  },
-  {
-    "id": 11571,
-    "meta": {
-      "_wcpt_session_time": 1572697800
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "12:30 pm"
-    },
-    "session_track": [ 55, 71, 72, 73, 83, 84 ],
-    "slug": "lunch-saturday",
-    "title": {
-      "rendered": "Lunch &#8211; Saturday"
-    }
-  },
-  {
     "id": 11569,
     "meta": {
-      "_wcpt_session_time": 1572609600
+      "_wcpt_session_time": 1572609600,
+      "_wcpt_session_duration": 3600
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1200,24 +656,10 @@
     }
   },
   {
-    "id": 11566,
-    "meta": {
-      "_wcpt_session_time": 1572701400
-    },
-    "session_date_time": {
-      "date": "November 2, 2019",
-      "time": "1:30 pm"
-    },
-    "session_track": [ 84 ],
-    "slug": "the-building-blocks-of-building-blocks",
-    "title": {
-      "rendered": "The Building Blocks of Building Blocks"
-    }
-  },
-  {
     "id": 11563,
     "meta": {
-      "_wcpt_session_time": 1572613200
+      "_wcpt_session_time": 1572613200,
+      "_wcpt_session_duration": 6300
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1232,7 +674,8 @@
   {
     "id": 11182,
     "meta": {
-      "_wcpt_session_time": 1572602400
+      "_wcpt_session_time": 1572602400,
+      "_wcpt_session_duration": 7200
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1247,7 +690,8 @@
   {
     "id": 11275,
     "meta": {
-      "_wcpt_session_time": 1572621300
+      "_wcpt_session_time": 1572621300,
+      "_wcpt_session_duration": 7200
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1262,7 +706,8 @@
   {
     "id": 11473,
     "meta": {
-      "_wcpt_session_time": 1572602400
+      "_wcpt_session_time": 1572602400,
+      "_wcpt_session_duration": 7200
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1277,7 +722,8 @@
   {
     "id": 2467,
     "meta": {
-      "_wcpt_session_time": 1572604200
+      "_wcpt_session_time": 1572604200,
+      "_wcpt_session_duration": 900
     },
     "session_date_time": {
       "date": "November 1, 2019",
@@ -1287,6 +733,38 @@
     "slug": "the-cost-of-contribution",
     "title": {
       "rendered": "The Cost of Contribution"
+    }
+  },
+  {
+    "id": 1,
+    "meta": {
+      "_wcpt_session_time": 1572688800,
+      "_wcpt_session_duration": 1800
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "10:00 am"
+    },
+    "session_track": [ 55 ],
+    "slug": "session-a",
+    "title": {
+      "rendered": "Session A"
+    }
+  },
+  {
+    "id": 2,
+    "meta": {
+      "_wcpt_session_time": 1572696000,
+      "_wcpt_session_duration": 1800
+    },
+    "session_date_time": {
+      "date": "November 2, 2019",
+      "time": "12:00 pm"
+    },
+    "session_track": [ 55 ],
+    "slug": "session-b",
+    "title": {
+      "rendered": "Session B"
     }
   }
 ]

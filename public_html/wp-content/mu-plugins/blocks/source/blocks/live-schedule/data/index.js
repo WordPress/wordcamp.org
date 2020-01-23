@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { sortBy } from 'lodash';
+import { findLastIndex, reverse, sortBy } from 'lodash';
 
 /**
  * WordPress dependencies
@@ -53,27 +53,52 @@ function fetchFromAPI() {
  */
 export function getCurrentSessions( { sessions, tracks } ) {
 	const tzOffset = __experimentalGetSettings().timezone.offset * ( 60 * 60 * 1000 );
-	const nowUTC = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
-	const nowLocal = new Date( nowUTC );
+	const nowTimestamp = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 
 	return tracks.map( ( track ) => {
-		const sessionsInTrack = sortBy(
+		// Reverse the sorted array so that the first found index is the one that starts closest to "now". This is
+		// intended to catch sessions that don't set a duration, but are shorter than the default.
+		const sessionsInTrack = reverse( sortBy(
 			sessions.filter( ( session ) => session.session_track.includes( track.id ) ),
-			( sessionInTrack ) => sessionInTrack.meta._wcpt_session_time
-		);
+			'meta._wcpt_session_time'
+		) );
+		if ( ! sessionsInTrack.length ) {
+			return {};
+		}
 
-		const indexOfNextSession = sessionsInTrack.findIndex( ( session ) => {
-			const sessionTimeUTC = ( session.meta._wcpt_session_time * 1000 ) - tzOffset;
-			const sessionTimeLocal = new Date( sessionTimeUTC );
+		// Check if we're more than a day out from the earliest session (so that we don't show "up next" before
+		// the WordCamp starts).
+		const firstSession = sessionsInTrack[ sessionsInTrack.length - 1 ];
+		const firstSessionTimestamp = ( firstSession.meta._wcpt_session_time * 1000 ) - tzOffset;
+		const dayInMiliseconds = 24 * 60 * 60 * 1000;
+		if ( nowTimestamp < ( firstSessionTimestamp - dayInMiliseconds ) ) {
+			return {};
+		}
 
-			// Return first session today where "now" is before the the start time.
-			return nowUTC < sessionTimeUTC && sessionTimeLocal.getDate() === nowLocal.getDate();
+		const index = sessionsInTrack.findIndex( ( { meta } ) => {
+			const duration = ( meta._wcpt_session_duration || window.WordCampBlocks[ 'live-schedule' ].fallbackDuration ) * 1000;
+			const startTimestamp = ( meta._wcpt_session_time * 1000 ) - tzOffset;
+			const endTimestamp = startTimestamp + duration;
+
+			// Start time before now, end time after now.
+			return ( startTimestamp < nowTimestamp ) && ( nowTimestamp < endTimestamp );
 		} );
+		let nextIndex = index - 1;
+
+		// `index` will be -1 if nothing found.
+		if ( index < 0 ) {
+			// If nothing is found for "now", see if anything is coming up next by looking for the earliest thing
+			// that's later than now.
+			nextIndex = findLastIndex( sessionsInTrack, ( { meta } ) => {
+				const startTimestamp = ( meta._wcpt_session_time * 1000 ) - tzOffset;
+				return ( startTimestamp > nowTimestamp );
+			} );
+		}
 
 		return {
 			track: track,
-			next: sessionsInTrack[ indexOfNextSession ],
-			now: sessionsInTrack[ indexOfNextSession - 1 ],
+			now: sessionsInTrack[ index ],
+			next: sessionsInTrack[ nextIndex ],
 		};
 	} ).filter( ( record ) => ( !! record.now || !! record.next ) );
 }

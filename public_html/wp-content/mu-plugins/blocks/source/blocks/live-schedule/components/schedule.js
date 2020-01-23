@@ -24,9 +24,14 @@ export default function( { attributes, isFetching, sessions } ) {
 	const { level = 2 } = attributes;
 	const Heading = `h${ level }`;
 
+	const hasNow = !! sessions.filter( ( { now } ) => !! now ).length;
+	const hasNext = !! sessions.filter( ( { next } ) => !! next ).length;
+
 	return (
 		<Fragment>
-			<Heading className="wordcamp-live-schedule__title">{ attributes.now }</Heading>
+			{ hasNow && (
+				<Heading className="wordcamp-live-schedule__title">{ attributes.now }</Heading>
+			) }
 
 			{ sessions.map( ( trackPair, index ) => {
 				const session = trackPair.now;
@@ -43,7 +48,9 @@ export default function( { attributes, isFetching, sessions } ) {
 				);
 			} ) }
 
-			<Heading className="wordcamp-live-schedule__title">{ attributes.next }</Heading>
+			{ hasNext && (
+				<Heading className="wordcamp-live-schedule__title">{ attributes.next }</Heading>
+			) }
 
 			{ sessions.map( ( trackPair, index ) => {
 				const session = trackPair.next;

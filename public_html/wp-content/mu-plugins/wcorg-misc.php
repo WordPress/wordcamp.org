@@ -290,18 +290,19 @@ add_action( 'wp_ajax_nopriv_wcorg_flush_rewrite_rules_everywhere', 'wcorg_flush_
  * `wordcamporg` is used by all the custom plugins and themes, so that translators only have to deal with a single
  * GlotPress project, and we only have to install/update a single mofile per locale.
  *
- * This has to be re-set when switching locales because of https://core.trac.wordpress.org/ticket/39210.
+ * @todo We can probably revert this back to an older/simpler version that doesn't hook into `change_locale` once
+ * https://core.trac.wordpress.org/ticket/39210 is resolved.
  *
  * @param string|null Null when called on `plugins_loaded`; the new locale when called from `change_locale`.
  */
 function wcorg_load_wordcamp_textdomain( $new_locale = null ) {
-	// if switching/restoring then use requested one, otherwise fall back to user's locale
+	// Use the requested locale when switching/restoring, and the user's locale when initially loading the site.
 	if ( empty( $new_locale ) ) {
 		$new_locale = get_user_locale();
 	}
 
-	// should unload previous domain first, to avoid merging locales?
-		// if locale A has a localized string, but locale B doesn't, and switch to B, then A's localization would be output instead of falling back to english?
+	// Avoid merging strings partially-localized locales.
+	unload_textdomain( 'wordcamporg' );
 
 	load_textdomain(
 		'wordcamporg',
@@ -315,8 +316,6 @@ function wcorg_load_wordcamp_textdomain( $new_locale = null ) {
 add_action( 'plugins_loaded', 'wcorg_load_wordcamp_textdomain' );
 add_action( 'change_locale',  'wcorg_load_wordcamp_textdomain' );
 
-// todo leave a comment on 49263 w/ a link to this PR
-
 /**
  * Update the site's locale when switching between blogs.
  *
@@ -324,107 +323,40 @@ add_action( 'change_locale',  'wcorg_load_wordcamp_textdomain' );
  *       `switch_to_blog()` calls for any custom cron jobs that send mail, like in `wordcamp-payments-network`.
  */
 function wcorg_switch_to_blog_locale() {
-	// todo This can be cleaned up after upgrading to 5.4, b/c the $context param from https://core.trac.wordpress.org/ticket/49265 will be available.
 	$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
 	$caller    = $backtrace[4]['function'];
-
-	// this is expensive? doesn't seem to be noticable but  https://core.trac.wordpress.org/ticket/49263#comment:1
 
 	/*
 	 * `switch_to_blog` and `restore_current_blog` both call `switch_blog` instead of having individual actions, so
 	 * we have to detect which one is the current caller.
+	 *
+	 * @todo This can be cleaned up after upgrading to 5.4, because the `$context` param from
+	 * https://core.trac.wordpress.org/ticket/49265 will be available.
 	 */
 	switch ( $caller ) {
 		case 'switch_to_blog':
-			// explain that get_locale() -- called by get_user_locale() -- is stuck at the original. we want the user locale, but fallback to site locale. can't do that iwhtout touching global though
-//			$site_locale          = get_option( 'WPLANG', 'en_US' );
-//			if ( empty( $site_locale ) ) {
-//				$site_locale = 'en_US'; // why is this necessary?
-//			}
+			/*
+			 * Bypass `get_locale()` because it caches the original site's locale. This doesn't handle user
+			 * locales, but is good enough until #49263-core is resolved.
+			 */
+			$site_locale = get_option( 'WPLANG', 'en_US' );
 
-//			switch_to_locale( $site_locale ); // works but only for site locale, but want user locale to work too
+			// Sometimes sites have an empty string, `false`, etc saved in the db.
+			if ( empty( $site_locale ) ) {
+				$site_locale = 'en_US';
+			}
 
-
-
-			//////////////////////// trying to get user locale to work ////////////////////////
-//			var_dump( $site_locale, $new_locale , $GLOBALS['locale'], $GLOBALS['wp_locale'] );
-//			echo '<hr>';
-
-
-
-//			$GLOBALS['locale']    = $site_locale;
-//			$GLOBALS['wp_locale'] = $site_locale;
-				// doh, just use the filter here rather than trying to overwrite it
-//			$new_locale           = get_user_locale();
-//			$new_locale           = get_locale();
-
-//			var_dump( get_locale() );
-//			switch_to_locale( $site_locale );
-//			var_dump( get_locale() );
-			// switch_to_locale( $user_locale ); // switch 2nd time b/c now the locale is properly set, so we can call user locale w/ fallback
-
-
-			add_filter( 'locale',               'wcorg_set_db_locale' ); // todo why causes infinite loop? wp_die translates stuff?
-			$user_locale = get_user_locale(); // has to be called _after_ first switch
-			remove_filter( 'locale',               'wcorg_set_db_locale' );
-			// test that filtering locale doesn't create inifinite loop in other situations, like wp_die();
-			//var_dump( 'wtf', $user_locale );
-
-
-			//wp_die('huh');
-//			var_dump($user_locale, get_locale() );die('x');
-
-			add_filter( 'pre_determine_locale', 'wcorg_set_db_locale' ); // why is this needed? to avoid early return yes, but why does it think $current_locale is `as` in the first palce?
-			switch_to_locale( $user_locale );
-			remove_filter( 'pre_determine_locale', 'wcorg_set_db_locale' );
-
-
-			// test that setting user locale to site default works
-
-			// don't have to worry about popping twice, b/c it won't switch twice?
-			// er yes it will? test
-
-
-			// maybe just do it twice? but will ret early
-			// what about change(), then switch?
-				// cant, change is private
-				// could do load_trans() to mimic it, though? that'd be ugly, but maybe best can do here?
-
-			// user's locale isn't going to change, so can rely on that to be constant. does that help in some way?
-
-// other approach would be to hook into `locale` filter like https://core.trac.wordpress.org/ticket/49263#comment:1 suggests
-	// could do that here, or could also do it in the email code
-
-
-//			var_dump( $site_locale, $new_locale , $GLOBALS['locale'], $GLOBALS['wp_locale'] );
-//			wp_die();
+			switch_to_locale( $site_locale );
 			break;
 
 		case 'restore_current_blog':
-			restore_previous_locale();
+			if ( is_locale_switched() ) {
+				restore_previous_locale();
+			}
 			break;
-
-		// need a default case?
 	}
-
-
-	// this would be ideal, b/c then don't need to handle switching locales in every function that sends email under switch_to_blog, or does anything else
-	// test core functions that do call switch_locale manually - is that idempotent?
-
-	// there might be some unit tests from https://core.trac.wordpress.org/ticket/26511 that you could run
 }
 add_action( 'switch_blog', 'wcorg_switch_to_blog_locale' );
-
-// epxlain
-function wcorg_set_db_locale( $locale ) {
-	$site_locale = get_option( 'WPLANG', 'en_US' );
-
-	if ( empty( $site_locale ) ) {
-		$site_locale = 'en_US'; // why is this necessary? should use fallback option above? i guess if it's saved as empty string or something
-	}
-
-	return $site_locale;
-}
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {

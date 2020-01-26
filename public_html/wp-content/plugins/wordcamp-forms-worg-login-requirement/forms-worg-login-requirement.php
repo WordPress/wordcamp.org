@@ -26,9 +26,9 @@ function get_require_settings() {
 }
 
 function maybe_require_login() {
-  // if ( is_user_logged_in() ) {
-  //   return false;
-  // }
+  if ( is_user_logged_in() ) {
+    return false;
+  }
 
   $require = false;
   $require_settings = get_require_settings();

@@ -16,6 +16,7 @@ add_filter( 'the_content', __NAMESPACE__ . '\force_login_to_use_form', 15 );
 
 function get_require_settings() {
   return array(
+    // Meetup organizer application
     '3070672' => array(
       'start'   => '<form id="meetup-application"',
       'end'     => '</form>',
@@ -42,11 +43,10 @@ function maybe_require_login() {
 
   // Return settings for this spesific require case
   if ( isset( $require_settings[ $require ] ) ) {
-    return apply_filters( 'forms_worg_login_required', $require_settings[ $require ], $require );
+    $require = $require_settings[ $require ];
   }
 
-  // No setting for this require case, return no require adisory
-  return false;
+  return apply_filters( 'forms_worg_login_required', $require );
 }
 
 /**

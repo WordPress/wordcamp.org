@@ -55,9 +55,3 @@
 body.page-slug-meetup-organizer-application .wcfd-disabled-form {
   width: 690px;
 }
-
-@media screen and ( min-width: 470px ) {
-  .wcfd-disabled-form #wcorg-login-message {
-    margin: 4em;
-  }
-}

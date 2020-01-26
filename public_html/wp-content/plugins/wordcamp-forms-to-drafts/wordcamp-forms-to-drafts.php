@@ -22,80 +22,26 @@ class WordCamp_Forms_To_Drafts {
 	 * Constructor
 	 */
 	public function __construct() {
-		add_action( 'wp_print_styles',          array( $this, 'print_front_end_styles'      )        );
-		add_filter( 'the_content',              array( $this, 'force_login_to_use_form'     ),  9    );
-		add_action( 'template_redirect',        array( $this, 'populate_form_based_on_user' ),  9    );
-		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_sponsors'           ), 10, 3 );
-		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_speakers'           ), 10, 3 );
+		add_filter( 'forms_worg_login_required',	array( $this, 'forms_worg_login_required'		), 10, 2 );
+		add_action( 'template_redirect',        	array( $this, 'populate_form_based_on_user' ),  9    );
+		add_action( 'grunion_pre_message_sent',		array( $this, 'call_for_sponsors'           ), 10, 3 );
+		add_action( 'grunion_pre_message_sent',		array( $this, 'call_for_speakers'           ), 10, 3 );
 	}
 
-	/**
-	 * Print CSS for the front-end
-	 */
-	public function print_front_end_styles() {
-		if ( ! $this->form_requires_login( $this->get_current_form_id() ) ) {
-			return;
-		}
-
-		?>
-
-		<style>
-			<?php require_once( __DIR__ . '/front-end.css' ); ?>
-		</style>
-
-		<?php
-	}
-
-	/**
-	 * Force user to login to use certain forms.
-	 *
-	 * @param string $content
-	 *
-	 * @return string
-	 */
-	public function force_login_to_use_form( $content ) {
-		$form_id              = $this->get_current_form_id();
-		$please_login_message = '';
-
-		if ( ! $this->form_requires_login( $form_id ) ) {
-			return $content;
-		}
-
-		switch ( $form_id ) {
-			case 'call-for-speakers':
-				$please_login_message = sprintf(
-					__( 'Before submitting your speaker proposal, please <a href="%s">log in to WordCamp.org</a> using your Word<em><strong>Press</strong></em>.org account*.', 'wordcamporg' ),
-					wp_login_url( get_permalink() )
-				);
-				break;
-		}
-
-		return $this->inject_disabled_form_elements( $content, $please_login_message );
-	}
-
-	/**
-	 * Inject the HTML elements that are used to disable a form until the user logs in
-	 *
-	 * @param string $content
-	 * @param string $please_login_message
-	 *
-	 * @return string
-	 */
-	protected function inject_disabled_form_elements( $content, $please_login_message ) {
-		$please_login_message = str_replace(
-			__( 'Please use your <strong>WordPress.org</strong>* account to log in.', 'wordcamporg' ),
-			$please_login_message,
-			wcorg_login_message( '', get_permalink() )
+	public function forms_worg_login_required( $require ) {
+		$forms_that_require_login = array(
+			'call-for-speakers'	=> array(
+	      'start'   => '<form',
+	      'end'     => '</form>',
+	      'message' => sprintf( __( 'Before submitting your speaker submission, please <a href="%s">log in to WordCamp.org</a> using your <strong>WordPress.org</strong>* account.', 'wordcamporg' ), wp_login_url( get_permalink() ) ),
+	    ),
 		);
 
-		// Prevent wpautop() from converting tabs into empty paragraphs in #wcorg-login-message.
-		$please_login_message = trim( str_replace( "\t", '', $please_login_message ) );
+		if ( array_key_exists( $this->get_current_form_id(), $forms_that_require_login ) ) {
+			return $forms_that_require_login[ $this->get_current_form_id() ];
+		}
 
-		$form_wrapper = '<div class="wcfd-disabled-form">' . $please_login_message . '<div class="wcfd-overlay"></div> [contact-form';
-		$content      = str_replace( '[contact-form',   $form_wrapper,           $content );
-		$content      = str_replace( '[/contact-form]', '[/contact-form]</div>', $content );
-
-		return $content;
+		return $require;
 	}
 
 	/**
@@ -112,19 +58,6 @@ class WordCamp_Forms_To_Drafts {
 		}
 
 		return $form_id;
-	}
-
-	/**
-	 * Determine if the current form requires a login to use it
-	 *
-	 * @param string $form_id
-	 *
-	 * @return bool
-	 */
-	protected function form_requires_login( $form_id ) {
-		$forms_that_require_login = array( 'call-for-speakers' );
-
-		return in_array( $form_id, $forms_that_require_login, true ) && ! is_user_logged_in();
 	}
 
 	/**

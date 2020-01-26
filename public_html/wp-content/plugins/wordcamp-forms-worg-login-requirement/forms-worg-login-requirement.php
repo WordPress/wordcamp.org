@@ -26,27 +26,12 @@ function get_require_settings() {
 }
 
 function maybe_require_login() {
+  // Always false if user is already logged in
   if ( is_user_logged_in() ) {
     return false;
   }
 
-  $require = false;
-  $require_settings = get_require_settings();
-
-  // Check central.wordcamp.org pages
-  if ( is_main_site() ) {
-    // Meetup organizer application
-    if ( 3070672 === get_the_id() ) {
-      $require = '3070672';
-    }
-  }
-
-  // Return settings for this spesific require case
-  if ( isset( $require_settings[ $require ] ) ) {
-    $require = $require_settings[ $require ];
-  }
-
-  return apply_filters( 'forms_worg_login_required', $require );
+  return apply_filters( 'forms_worg_login_required', false );
 }
 
 /**

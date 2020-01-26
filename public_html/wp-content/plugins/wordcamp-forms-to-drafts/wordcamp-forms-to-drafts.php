@@ -22,7 +22,7 @@ class WordCamp_Forms_To_Drafts {
 	 * Constructor
 	 */
 	public function __construct() {
-		add_filter( 'forms_worg_login_required',	array( $this, 'forms_worg_login_required'		), 10, 2 );
+		add_filter( 'forms_worg_login_required',	array( $this, 'forms_worg_login_required'		), 10		 );
 		add_action( 'template_redirect',        	array( $this, 'populate_form_based_on_user' ),  9    );
 		add_action( 'grunion_pre_message_sent',		array( $this, 'call_for_sponsors'           ), 10, 3 );
 		add_action( 'grunion_pre_message_sent',		array( $this, 'call_for_speakers'           ), 10, 3 );

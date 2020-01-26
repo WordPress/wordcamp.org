@@ -30,6 +30,29 @@ class Meetup_Application extends Event_Application {
 
 	const POST_TYPE = 'wp_meetup';
 
+	public function __construct() {
+		add_filter( 'forms_worg_login_required',	array( $this, 'forms_worg_login_required'		), 10 );
+	}
+
+	/**
+	 * Maybe require login before showing the application form
+	 */
+	public function forms_worg_login_required( $required ) {
+		// Check only central.wordcamp.org pages
+	  if ( is_main_site() ) {
+	    // Meetup organizer application
+	    if ( 3070672 === get_the_id() ) {
+	      return array(
+		      'start'   => '<form id="meetup-application"',
+		      'end'     => '</form>',
+		      'message' => sprintf( __( 'Before submitting your Meetup Organizer Application, please <a href="%s">log in to WordCamp.org</a> using your <strong>WordPress.org</strong>* account.', 'wordcamporg' ), wp_login_url( get_permalink() ) ),
+		    );
+	    }
+	  }
+
+	  return $required;
+	}
+
 	/**
 	 * User facing string of event type.
 	 *

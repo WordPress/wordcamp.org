@@ -9,17 +9,28 @@ defined( 'WPINC' ) || die();
  * @param array $countries
  */
 function render_meetup_application_form( $countries ) {
+	$prefilled = array(
+		'email'	=> '',
+		'name'	=> '',
+		'worg'	=> '',
+	);
 
-	?>
+	if ( is_user_logged_in() ) {
+		$current_user = wp_get_current_user();
+
+		$prefilled['email'] = $current_user->user_email;
+		$prefilled['name'] = $current_user->display_name;
+		$prefilled['worg'] = $current_user->user_login;
+	} ?>
 
 	<form id="meetup-application" method="post">
 		<div class="PDF_pageInner">
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label>
-					Please enter your full Name.
+					Please enter your full name.
 					<span class="required-indicator">(required)</span>
-					<input type="text" name="q_name" required/>
+					<input type="text" name="q_name" value="<?php echo esc_attr( $prefilled['name'] ) ?>" required/>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>
@@ -27,18 +38,18 @@ function render_meetup_application_form( $countries ) {
 				<label>
 					Please enter your email address.
 					<span class="required-indicator">(required)</span>
-					<input type="email" name="q_email" required/>
+					<input type="email" name="q_email" value="<?php echo esc_attr( $prefilled['email'] ) ?>" required/>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label> Please enter your mailing address (at least your city/state or city/country). </label>
 				<label>
-					Address Line 1
+					Address line 1
 					<input type="text" name="q_address_line_1">
 				</label>
 				<label>
-					Address Line 2
+					Address line 2
 					<input type="text" name="q_address_line_2">
 				</label>
 				<label>
@@ -145,7 +156,7 @@ function render_meetup_application_form( $countries ) {
 				<label>
 					Your <a href="https://wordpress.org" target="_blank">WordPress.org</a> username
 					<span class="required-indicator">(required)</span>
-					<input type="text" name="q_wporg_username" required/>
+					<input type="text" name="q_wporg_username" value="<?php echo esc_attr( $prefilled['worg'] ) ?>" required/>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>

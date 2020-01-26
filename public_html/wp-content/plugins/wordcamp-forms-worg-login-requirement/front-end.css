@@ -1,0 +1,63 @@
+.wcfd-disabled-form {
+  position: relative;
+}
+
+  .wcfd-disabled-form #wcorg-login-message {
+    position: absolute;
+    z-index: 10;
+    margin: 2.4em;
+    padding: 1.8em;
+    background-color: #c62828;
+    border-radius: .25em;
+    margin-bottom: 2em;
+  }
+
+    .wcfd-disabled-form #wcorg-login-message p {
+      color: white !important /* !important to prevent theme from unintentionally overriding */;
+      font-size: 16px !important /* !important to prevent theme from unintentionally overriding */;
+    }
+
+      .wcfd-disabled-form #wcorg-login-message p:first-child {
+        font-size: 19px !important /* !important to prevent theme from unintentionally overriding */;
+      }
+
+      .wcfd-disabled-form #wcorg-login-message p:last-child {
+        margin-bottom: 0;
+      }
+
+      .wcfd-disabled-form #wcorg-login-message a {
+        color: white !important /* !important to prevent theme from unintentionally overriding */;
+        text-decoration: underline double white !important /* !important to prevent theme from unintentionally overriding */;
+        font-weight: normal;
+      }
+
+      .wcfd-disabled-form #wcorg-login-message a:hover,
+      .wcfd-disabled-form #wcorg-login-message a:focus,
+      .wcfd-disabled-form #wcorg-login-message a:active {
+        color: black !important /* !important to prevent theme from unintentionally overriding */;
+        text-decoration-color: white !important /* !important to prevent theme from unintentionally overriding */;
+        background: white !important;
+      }
+
+  .wcfd-overlay {
+    position: absolute;
+    z-index: 5;
+    width: 100%;
+    height: 100%;
+    background-color: black;
+    opacity: .5;
+  }
+
+  .wcfd-disabled-form div[id^="contact-form-"] {
+    padding: 1.8em;
+  }
+
+body.page-slug-meetup-organizer-application .wcfd-disabled-form {
+  width: 690px;
+}
+
+@media screen and ( min-width: 470px ) {
+  .wcfd-disabled-form #wcorg-login-message {
+    margin: 4em;
+  }
+}

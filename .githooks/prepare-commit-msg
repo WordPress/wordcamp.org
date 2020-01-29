@@ -5,7 +5,7 @@ function get_custom_message() {
 	$previous_components = get_previous_components();
 
 	$custom_message = "
-		Component: Summarize _what_ changed, and _why_ (but not _how_). Limit to 70 characters.
+		Component: Summarize _what_ changed, and _why_ (but not _how_). Limit to 70 characters (or 63 if you're going to let GitHub add the PR number).
 
 		Longer description with more details, like historical context for the changes, links to external discussions, etc. 
 

@@ -270,8 +270,8 @@ ADDRESS;
 	 * @return null|string
 	 */
 	public function get_organizer_email() {
-		if ( isset( $this->post ) && isset( $this->post->ID ) ) {
-			return get_post_meta( $this->post->ID, 'q_email' );
+		if ( isset( $this->post->ID ) ) {
+			return get_post_meta( $this->post->ID, 'Email' );
 		}
 
 		return null;

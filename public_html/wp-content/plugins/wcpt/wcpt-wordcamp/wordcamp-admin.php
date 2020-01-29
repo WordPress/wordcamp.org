@@ -527,42 +527,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Responsible for showing additional profile options and settings
-		 *
-		 * @todo Everything
-		 */
-		public function user_profile_update( $user_id ) {
-			if ( ! wcpt_has_access() ) {
-				return false;
-			}
-		}
-
-		/**
-		 * Responsible for saving additional profile options and settings
-		 *
-		 * @todo Everything
-		 */
-		public function user_profile_wordcamp( $profileuser ) {
-			if ( ! wcpt_has_access() ) {
-				return false;
-			}
-			?>
-
-		<h3><?php esc_html_e( 'WordCamps', 'wordcamporg' ); ?></h3>
-
-		<table class="form-table">
-			<tr valign="top">
-				<th scope="row"><?php esc_html_e( 'WordCamps', 'wordcamporg' ); ?></th>
-
-				<td>
-				</td>
-			</tr>
-		</table>
-
-			<?php
-		}
-
-		/**
 		 * Manage the column headers
 		 *
 		 * @param array $columns

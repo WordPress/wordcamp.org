@@ -17,14 +17,6 @@ class WCPT_Admin {
 		// Attach the WordCamp Post Type admin init action to the WordPress admin init action.
 		add_action( 'admin_init',               array( $this, 'init' ) );
 
-		// User profile edit/display actions.
-		add_action( 'edit_user_profile',        array( $this, 'user_profile_wordcamp' ) );
-		add_action( 'show_user_profile',        array( $this, 'user_profile_wordcamp' ) );
-
-		// User profile save actions.
-		add_action( 'personal_options_update',  array( $this, 'user_profile_update' ) );
-		add_action( 'edit_user_profile_update', array( $this, 'user_profile_update' ) );
-
 		// Add some general styling to the admin area.
 		add_action( 'admin_head',               array( $this, 'admin_head' ) );
 
@@ -67,52 +59,6 @@ class WCPT_Admin {
 		</style>
 
 		<?php
-	}
-
-	/**
-	 * Responsible for showing additional profile options and settings.
-	 *
-	 * @todo Everything
-	 */
-	public function user_profile_update( $user_id ) {
-		if ( ! wcpt_has_access() ) {
-			return false;
-		}
-
-		// Add extra actions to WordCamp Post Type profile update.
-		do_action( 'wcpt_user_profile_update' );
-	}
-
-	/**
-	 * Responsible for saving additional profile options and settings.
-	 *
-	 * @todo Everything
-	 */
-	public function user_profile_wordcamp( $profileuser ) {
-		if ( ! wcpt_has_access() ) {
-			return false;
-		}
-
-		?>
-
-		<h3>
-			<?php esc_html_e( 'WordCamps', 'wordcamporg' ); ?>
-		</h3>
-
-		<table class="form-table">
-			<tr valign="top">
-				<th scope="row">
-					<?php esc_html_e( 'WordCamps', 'wordcamporg' ); ?>
-				</th>
-
-				<td></td>
-			</tr>
-		</table>
-
-		<?php
-
-		// Add extra actions to WordCamp Post Type profile update.
-		do_action( 'wcpt_user_profile_wordcamps' );
 	}
 
 	/**

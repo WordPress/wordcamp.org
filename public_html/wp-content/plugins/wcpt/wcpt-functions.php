@@ -1,37 +1,6 @@
 <?php
 
 /**
- * Add our custom head action to wp_head.
- */
-function wcpt_head() {
-	do_action( 'wcpt_head' );
-}
-add_action( 'wp_head', 'wcpt_head' );
-
-/**
- * Add our custom footer action to wp_footer.
- */
-function wcpt_footer() {
-	do_action( 'wcpt_footer' );
-}
-add_action( 'wp_footer', 'wcpt_footer' );
-
-/**
- * Make sure user can perform special tasks.
- *
- * @return bool
- */
-function wcpt_has_access() {
-	if ( is_super_admin() ) {
-		$has_access = true;
-	} else {
-		$has_access = false;
-	}
-
-	return apply_filters( 'wcpt_has_access', $has_access );
-}
-
-/**
  * Specific method of formatting numeric values.
  *
  * @param string $number   Number to format.

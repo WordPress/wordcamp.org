@@ -1269,8 +1269,8 @@ class WordCamp_Post_Types_Plugin {
 			$session_time        = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
 		}
 
-		$session_date     = ( $session_time ) ? wp_date( 'Y-m-d', $session_time ) : date( 'Y-m-d' );
-		$session_hours    = ( $session_time ) ? wp_date( 'g', $session_time )     : date( 'g' );
+		$session_date     = ( $session_time ) ? wp_date( 'Y-m-d', $session_time ) : wp_date( 'Y-m-d' );
+		$session_hours    = ( $session_time ) ? wp_date( 'g', $session_time )     : wp_date( 'g' );
 		$session_minutes  = ( $session_time ) ? wp_date( 'i', $session_time )     : '00';
 		$session_meridiem = ( $session_time ) ? wp_date( 'a', $session_time )     : 'am';
 

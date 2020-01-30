@@ -18,19 +18,14 @@ function manually_load_plugin() {
 	 */
 	define( 'WP_ADMIN',          true );
 	define( 'JETPACK_DEV_DEBUG', true );
-	define( 'JETPACK__PLUGIN_DIR', dirname( dirname( __DIR__ ) ) . '/jetpack/' );
-	define( 'JETPACK__PLUGIN_FILE', JETPACK__PLUGIN_DIR . '/jetpack.php' );
 
-	$jetpack_plugin_data = get_plugin_data( JETPACK__PLUGIN_FILE, false );
-
-	define( 'JETPACK__VERSION', $jetpack_plugin_data['Version'] );
-
-	require_once( dirname( __DIR__ )  . '/bootstrap.php' );
-	require_once( JETPACK__PLUGIN_DIR . '/class.jetpack.php' );
-	require_once( JETPACK__PLUGIN_DIR . '/class.jetpack-constants.php' );
-	require_once( JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php' );
+	// Initialize Jetpack.
+	require_once( dirname( dirname( __DIR__ ) ) . '/jetpack/jetpack.php' );
 
 	// Some of the sanitization lives here because it runs for both Custom CSS and Remote CSS.
 	require_once( dirname( dirname( dirname( __DIR__ ) ) ) . '/mu-plugins/jetpack-tweaks/css-sanitization.php' );
+
+	// Initialize the remote CSS plugin.
+	require_once( dirname( __DIR__ )  . '/bootstrap.php' );
 }
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

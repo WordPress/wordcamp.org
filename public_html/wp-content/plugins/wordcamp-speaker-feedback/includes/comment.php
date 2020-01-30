@@ -11,9 +11,9 @@ const COMMENT_TYPE = 'speaker-feedback';
 /**
  * Add a new feedback submission.
  *
- * @param int           $post_id
- * @param array|WP_User $feedback_author
- * @param array         $feedback_meta
+ * @param int       $post_id         The ID of the post to attach the feedback to.
+ * @param array|int $feedback_author Either an array containing 'name' and 'email' values, or a user ID.
+ * @param array     $feedback_meta   An associative array of key => value pairs.
  *
  * @return false|int
  */
@@ -44,8 +44,8 @@ function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
  * The only parts of a feedback submission that we'd perhaps want to update after submission are the feedback rating
  * and questions that are stored in comment meta.
  *
- * @param int   $comment_id
- * @param array $feedback_meta
+ * @param int   $comment_id    The ID of the comment to update.
+ * @param array $feedback_meta An associative array of key => value pairs.
  *
  * @return int
  */
@@ -62,9 +62,9 @@ function update_feedback( $comment_id, array $feedback_meta ) {
 /**
  * Retrieve a list of feedback submissions.
  *
- * @param array $status
- * @param array $post__in
- * @param array $meta_query
+ * @param array $status     An array of statuses to include in the results.
+ * @param array $post__in   An array of post IDs whose feedback comments should be included.
+ * @param array $meta_query A valid `WP_Meta_Query` array.
  *
  * @return array A collection of WP_Comment objects.
  */

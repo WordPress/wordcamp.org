@@ -17,4 +17,11 @@ defined( 'WPINC' ) || die();
 define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
 define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
 
+add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 
+/**
+ * Include the rest of the plugin.
+ */
+function load() {
+	require_once PLUGIN_DIR . 'includes/comment.php';
+}

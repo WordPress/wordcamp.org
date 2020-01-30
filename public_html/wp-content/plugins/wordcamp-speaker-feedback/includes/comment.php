@@ -70,8 +70,10 @@ function update_feedback( $comment_id, array $feedback_meta ) {
  */
 function get_feedback( array $status = array( 'hold', 'approve' ), array $post__in = array(), array $meta_query = array() ) {
 	$args = array(
-		'status' => $status,
-		'type'   => COMMENT_TYPE,
+		'status'  => $status,
+		'type'    => COMMENT_TYPE,
+		'orderby' => 'comment_date',
+		'order'   => 'asc',
 	);
 
 	if ( ! empty( $post__in ) ) {

@@ -2,8 +2,6 @@
 
 namespace WordCamp\SpeakerFeedback\Comment;
 
-use WP_User;
-
 defined( 'WPINC' ) || die();
 
 const COMMENT_TYPE = 'speaker-feedback';

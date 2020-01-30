@@ -91,3 +91,14 @@ function get_feedback( array $status = array( 'hold', 'approve' ), array $post__
 
 	return $feedback;
 }
+
+/**
+ * Trash a feedback submission.
+ *
+ * @param int $comment_id The ID of the comment to delete.
+ *
+ * @return bool
+ */
+function delete_feedback( $comment_id ) {
+	return wp_delete_comment( $comment_id );
+}

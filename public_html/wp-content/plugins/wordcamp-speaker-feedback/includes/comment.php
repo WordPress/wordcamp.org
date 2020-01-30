@@ -25,8 +25,8 @@ function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
 		'comment_meta'     => $feedback_meta,
 	);
 
-	if ( $feedback_author instanceof WP_User ) {
-		$args['user_id'] = $feedback_author->ID;
+	if ( is_int( $feedback_author ) ) {
+		$args['user_id'] = $feedback_author;
 	} elseif ( isset( $feedback_author['name'], $feedback_author['email'] ) ) {
 		$args['comment_author']       = $feedback_author['name'];
 		$args['comment_author_email'] = $feedback_author['email'];

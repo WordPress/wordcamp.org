@@ -23,5 +23,6 @@ add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
  * Include the rest of the plugin.
  */
 function load() {
+	require_once PLUGIN_DIR . 'includes/class-feedback.php';
 	require_once PLUGIN_DIR . 'includes/comment.php';
 }

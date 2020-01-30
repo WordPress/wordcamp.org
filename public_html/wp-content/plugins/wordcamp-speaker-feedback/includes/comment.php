@@ -2,6 +2,9 @@
 
 namespace WordCamp\SpeakerFeedback\Comment;
 
+use WP_Comment;
+use WordCamp\SpeakerFeedback\Feedback;
+
 defined( 'WPINC' ) || die();
 
 const COMMENT_TYPE = 'speaker-feedback';
@@ -82,12 +85,17 @@ function get_feedback( array $status = array( 'hold', 'approve' ), array $post__
 		$args['meta_query'] = $meta_query;
 	}
 
-	$feedback = get_comments( $args );
+	$comments = get_comments( $args );
 
 	// This makes loading meta values for comments much faster.
-	wp_queue_comments_for_comment_meta_lazyload( $feedback );
+	wp_queue_comments_for_comment_meta_lazyload( $comments );
 
-	return $feedback;
+	return array_map(
+		function( WP_Comment $comment ) {
+			return new Feedback( $comment );
+		},
+		$comments
+	);
 }
 
 /**

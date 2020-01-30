@@ -4,8 +4,10 @@
 # Declare project language and PHP versions to test against.
 # @link http://about.travis-ci.org/docs/user/languages/php/
 language: php
-php:
-  - 7.2
+php: 7.2
+env: WP_VERSION=latest WP_MULTISITE=1
+services:
+  - mysql
 
 before_script:
   # Print system info for debugging.
@@ -29,6 +31,13 @@ jobs:
         - yarn workspace wordcamp-blocks run build
         # Run the unit tests.
         - yarn workspace wordcamp-blocks run test
+
+    - name: "PHP Unit Tests"
+      install:
+        - bash .docker/bin/install-wp-tests.sh wcorg_test root '' localhost $WP_VERSION
+        - composer install
+      script:
+        - composer run-script test -- -c phpunit.xml.dist
 
     - name: "PHP Code Standards"
       # Only run if we're on the "pull request build", otherwise CHANGED_FILES is empty.

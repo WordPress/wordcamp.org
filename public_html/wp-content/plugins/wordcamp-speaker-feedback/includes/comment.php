@@ -55,6 +55,7 @@ function update_feedback( $comment_id, array $feedback_meta ) {
 		'comment_meta' => $feedback_meta,
 	);
 
+	// This will always return `0` because the comment itself does not get updated, only comment meta.
 	return wp_update_comment( $args );
 }
 

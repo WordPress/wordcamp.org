@@ -109,3 +109,30 @@ a {
 .roundcorners {
 	border-image-source: url(https://2019.philadelphia.wordcamp.org/files/2019/02/corners.gif);
 }
+
+/*
+ * CSS3 Properties
+ */
+.clip-path-allowed {
+	clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+	clip-path: url(resources.svg#c1);
+}
+
+.clip-path-not-allowed {
+	clip-path: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50"/></svg>');
+}
+
+.mask-allowed {
+	mask: unset;
+	mask: url(masks.svg#star) 0 0/50px 50px;
+}
+
+.mask-image-allowed {
+	mask-image: none;
+	mask-image: linear-gradient(rgba(0, 0, 0, 1.0), transparent);
+}
+
+.shape-outside-allowed {
+	shape-outside: inherit;
+	shape-outside: path('M0.5,1 C0.5,1,0,0.7,0,0.3 A0.25,0.25,1,1,1,0.5,0.3 A0.25,0.25,1,1,1,1,0.3 C1,0.7,0.5,1,0.5,1 Z');
+}

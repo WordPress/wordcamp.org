@@ -7,7 +7,7 @@ use WordCamp\SpeakerFeedback\Feedback;
 
 defined( 'WPINC' ) || die();
 
-const COMMENT_TYPE = 'speaker-feedback';
+const COMMENT_TYPE = 'wordcamp-speaker-feedback';
 
 /**
  * Add a new feedback submission.

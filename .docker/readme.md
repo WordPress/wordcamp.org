@@ -149,6 +149,54 @@ Note: All of these commands are meant to be executed from project directory.
 Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
 
 
+## Testing with PHPUnit
+
+We have separate containers for PHPUnit, a web server & database, to keep the tests isolated. To run the unit tests, follow these steps:
+
+1. Start up the container:
+    ```bash
+    docker-compose -f docker-compose.phpunit.yml up
+    ```
+
+    Watch for the following output, to ensure that the server and database are finished starting up.
+    ```
+    phpunit_wp_1  | […] NOTICE: ready to handle connections
+    …
+    phpunit_db_1  | […] [Note] mysqld: ready for connections.
+    ```
+
+2. The first time you run this, you'll need to install the tests (future runs can skip this step). First, open a shell inside the web container:
+    ```bash
+    docker-compose -f docker-compose.phpunit.yml exec phpunit_wp bash
+    ```
+
+    Then run the install script. It will download WordPress & the unit test framework (this skips installing a database, since that is set up as part of the docker process).
+    ```bash
+    /var/scripts/install-wp-tests.sh wordpress_test root '' phpunit_db latest true
+    ```
+
+    Sometimes the download will time out. If that happens, you can delete `/tmp/wp` from the container, and re-run the install script. The test files will be added to the `.docker/test_suite` folder, which is ignored by git.
+
+3. Now you can run `phpunit`. From the project folder on your machine:
+    ```bash
+    docker-compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
+    ```
+
+    If you're still in the shell from the previous step, you can run `phpunit` directly.
+    ```bash
+    phpunit
+    ```
+
+    Either way, you'll see "Installing...", and then the tests will run.
+
+4. The "useful commands" from the previous section will work here too— you just need to use `docker-compose -f docker-compose.phpunit.yml` to specify this configuration. 
+
+    For example, to suspend the container, use:
+    ```bash
+    docker-compose -f docker-compose.phpunit.yml stop
+    ```
+
+
 ## Working with the database provision file
 
 The **.docker/bin** directory gets mounted as a volume within the PHP container, and it contains a script, **database.sh**, with several useful commands. To run these commands, first open a shell inside the Docker container:

@@ -28,8 +28,6 @@ public_html/wp-content/themes-private/
 public_html/wp-content/debug.log
 
 .docker/test_suite
-public_html/wp-content/phpunit-bootstrap.php
-public_html/wp-content/phpunit.xml.dist
 
 
 #

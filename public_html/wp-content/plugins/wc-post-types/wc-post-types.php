@@ -9,6 +9,8 @@ require_once 'inc/favorite-schedule-shortcode.php';
 require_once 'inc/privacy.php';
 require_once 'inc/deprecated.php';
 
+define( 'EP_SESSIONS', 8192 );
+
 class WordCamp_Post_Types_Plugin {
 	protected $wcpt_permalinks;
 
@@ -1732,6 +1734,7 @@ class WordCamp_Post_Types_Plugin {
 				'rewrite'         => array(
 					'slug'       => 'session',
 					'with_front' => false,
+					'ep_mask'    => EP_SESSIONS,
 				),
 				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'thumbnail', 'custom-fields' ),
 				'menu_position'   => 21,

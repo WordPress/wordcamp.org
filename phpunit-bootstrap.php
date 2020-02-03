@@ -5,15 +5,19 @@ define( 'WP_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/plugins' );
 $core_tests_directory = getenv( 'WP_TESTS_DIR' );
 
 if ( ! $core_tests_directory ) {
-	echo "\nPlease set the WP_TESTS_DIR environment variable to the folder where WordPress' PHPUnit tests live --";
-	echo "\ne.g., export WP_TESTS_DIR=/srv/www/wordpress-develop/tests/phpunit\n";
+	$core_tests_directory = rtrim( sys_get_temp_dir(), '/\\' ) . '/wp/wordpress-tests-lib';
+	// Necessary for the CampTix tests.
+	putenv( "WP_TESTS_DIR=$core_tests_directory" );
+}
+
+if ( ! $core_tests_directory ) {
+	echo "Could not find $core_tests_directory/includes/functions.php, have you run bin/install-wp-tests.sh ?" . PHP_EOL; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 	return;
 }
 
+// Give access to tests_add_filter() function.
 require_once( $core_tests_directory . '/includes/functions.php' );
-require_once( dirname( dirname( $core_tests_directory ) ) . '/build/wp-admin/includes/plugin.php' );
-
 
 /*
  * Load individual plugin bootstrappers

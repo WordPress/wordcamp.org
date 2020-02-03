@@ -27,6 +27,8 @@ public_html/wp-content/mu-plugins-private/
 public_html/wp-content/themes-private/
 public_html/wp-content/debug.log
 
+.docker/test_suite
+
 
 #
 # Plugins

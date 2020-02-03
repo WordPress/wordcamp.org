@@ -1,0 +1,26 @@
+FROM php:7.2-fpm
+
+# Run some Debian packages installation.
+ENV PACKAGES="curl git mariadb-client subversion wget zlib1g-dev"
+RUN apt-get update && \
+    apt-get install -yq --no-install-recommends $PACKAGES && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install additional PHP extensions.
+RUN docker-php-ext-install -j "$(nproc)" mysqli zip
+
+# Goto temporary directory.
+WORKDIR /tmp
+
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+    && php composer-setup.php --install-dir=/usr/local/bin --filename=composer \
+    && php -r "unlink('composer-setup.php');"
+
+# Run composer and phpunit installation.
+RUN composer require "phpunit/phpunit:^7" --prefer-source --no-interaction && \
+    ln -s /tmp/vendor/bin/phpunit /usr/local/bin/phpunit
+
+# Set up the application directory.
+VOLUME ["/app"]
+WORKDIR /app

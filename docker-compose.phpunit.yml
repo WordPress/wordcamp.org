@@ -1,0 +1,25 @@
+version: "3.2"
+
+services:
+  phpunit_wp:
+    build:
+      context: .docker
+      dockerfile: Dockerfile.phpunit
+    volumes:
+      - "./public_html/wp-content:/app/public_html/wp-content"
+      - "./phpunit.xml.dist:/app/phpunit.xml.dist"
+      - "./phpunit-bootstrap.php:/app/phpunit-bootstrap.php"
+      - "./.docker/bin:/var/scripts"
+      - "./.docker/test_suite:/tmp/wp"
+    stdin_open: true
+    depends_on:
+      - "phpunit_db"
+  phpunit_db:
+    image: "mariadb:10.2"
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: "wordpress_test"
+      MYSQL_ROOT_PASSWORD: ""
+
+volumes:
+  testsuite: {}

@@ -7,6 +7,7 @@ import { getCurrentSessions } from '../';
  * Mock data from API
  */
 import sessions from './__mock__/sessions';
+import sessionsWithoutTracks from './__mock__/sessions-no-tracks';
 import tracks from './__mock__/session_track';
 
 // Note: Mocked session times are in UTC, on Nov 1st, 2019.
@@ -104,5 +105,14 @@ describe( 'getCurrentSessions', () => {
 		expect( results ).toHaveLength( 1 );
 		expect( results[ 0 ].now ).toBeUndefined();
 		expect( results[ 0 ].next.slug ).toEqual( 'session-b' );
+	} );
+
+	test( 'should return sessions even with no set tracks, at 10:30am April 30th', () => {
+		const time = Date.parse( '2020-04-30T10:30:00.000Z' );
+		window.WordCampBlocks[ 'live-schedule' ].nowOverride = time;
+		const results = getCurrentSessions( { sessions: sessionsWithoutTracks, tracks: [] } );
+		expect( results ).toHaveLength( 1 );
+		expect( results[ 0 ].now.slug ).toEqual( 'building-a-good-block' );
+		expect( results[ 0 ].next.slug ).toEqual( 'project-management-intro' );
 	} );
 } );

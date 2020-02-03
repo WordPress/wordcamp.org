@@ -29,7 +29,9 @@ export default function( { headingLevel = 3, session, track } ) {
 
 	return (
 		<div className={ `wordcamp-live-schedule__session type-${ type }` }>
-			<span className={ `wordcamp-live-schedule__session-track track-${ track.slug }` }>{ track.name }</span>
+			{ !! track.slug && (
+				<span className={ `wordcamp-live-schedule__session-track track-${ track.slug }` }>{ track.name }</span>
+			) }
 
 			<div className="wordcamp-live-schedule__session-details">
 				<Heading className="wordcamp-live-schedule__session-title">

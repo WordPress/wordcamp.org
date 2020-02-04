@@ -6,6 +6,9 @@
  */
 
 namespace WordCamp\SubRoles;
+
+use WP_User;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -53,10 +56,10 @@ function is_proxied() {
 /**
  * Add capabilities to a user depending on their subroles.
  *
- * @param array    $allcaps The original list of caps for the given user.
- * @param array    $caps    Unused.
- * @param array    $args    Unused.
- * @param \WP_User $user    The user object.
+ * @param array   $allcaps The original list of caps for the given user.
+ * @param array   $caps    Unused.
+ * @param array   $args    Unused.
+ * @param WP_User $user    The user object.
  *
  * @return array The modified list of caps for the given user.
  */
@@ -178,3 +181,31 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 }
 
 add_filter( 'map_meta_cap', __NAMESPACE__ . '\map_subrole_caps', 10, 4 );
+
+/**
+ * Remove capabilities that are "additional" i.e. stored in user meta.
+ *
+ * Additional capabilities should only be granted via `map_meta_cap`, not via values stored in the user meta table.
+ *
+ * See `additional_capabilities_display` filter.
+ *
+ * @param bool[]   $allcaps
+ * @param string[] $caps
+ * @param array    $args
+ * @param WP_User  $user
+ *
+ * @return bool[]
+ */
+function omit_usermeta_caps( $allcaps, $caps, $args, $user ) {
+	if ( $user instanceof WP_User && count( $user->caps ) > count( $user->roles ) ) {
+		$extraneous_caps = array_diff_key( array_keys( $user->caps ), $user->roles );
+
+		foreach ( $extraneous_caps as $cap ) {
+			unset( $allcaps[ $cap ] );
+		}
+	}
+
+	return $allcaps;
+}
+
+add_filter( 'user_has_cap', __NAMESPACE__ . '\omit_usermeta_caps', 10, 4 );

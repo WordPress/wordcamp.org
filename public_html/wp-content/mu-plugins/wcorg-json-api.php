@@ -14,9 +14,9 @@
 
 add_filter( 'json_endpoints',              'wcorg_json_whitelist_endpoints',             999    );
 add_filter( 'json_prepare_post',           'wcorg_json_expose_whitelisted_meta_data',    997, 3 );
-add_filter( 'json_prepare_post',           'wcorg_json_expose_additional_post_data',     998, 3 );   // after `wcorg_json_expose_whitelisted_meta_data()`, because anything added before that method gets wiped out
-add_filter( 'json_prepare_post',           'wcorg_json_embed_related_posts',             999, 3 );   // after `wcorg_json_expose_additional_post_data()`
-add_action( 'wp_json_server_before_serve', 'wcorg_json_avoid_nested_callback_conflicts', 11     );    // after the default endpoints are added in `json_api_default_filters()`
+add_filter( 'json_prepare_post',           'wcorg_json_expose_additional_post_data',     998, 3 ); // after `wcorg_json_expose_whitelisted_meta_data()`, because anything added before that method gets wiped out.
+add_filter( 'json_prepare_post',           'wcorg_json_embed_related_posts',             999, 3 ); // after `wcorg_json_expose_additional_post_data()`.
+add_action( 'wp_json_server_before_serve', 'wcorg_json_avoid_nested_callback_conflicts', 11     ); // after the default endpoints are added in `json_api_default_filters()`.
 
 add_filter( 'json_prepare_post',        'deprecate_v1_endpoints' );
 add_filter( 'json_prepare_page',        'deprecate_v1_endpoints' );
@@ -50,46 +50,46 @@ function wcorg_json_whitelist_endpoints( $endpoints ) {
 	global $wp_json_server, $wp_json_posts, $wp_json_taxonomies;
 
 	$whitelisted_endpoints = array(
-		'/' => array( array( $wp_json_server, 'get_index' ),  WP_JSON_Server::READABLE ),
+		'/'                                        => array( array( $wp_json_server, 'get_index' ), WP_JSON_Server::READABLE ),
 
-		// Posts
-		'/posts' => array(
-			array( array( $wp_json_posts, 'get_posts' ),      WP_JSON_Server::READABLE ),
+		// Posts.
+		'/posts'                                   => array(
+			array( array( $wp_json_posts, 'get_posts' ), WP_JSON_Server::READABLE ),
 		),
-		'/posts/(?P<id>\d+)' => array(
-			array( array( $wp_json_posts, 'get_post' ),       WP_JSON_Server::READABLE ),
+		'/posts/(?P<id>\d+)'                       => array(
+			array( array( $wp_json_posts, 'get_post' ), WP_JSON_Server::READABLE ),
 		),
-		'/posts/types' => array(
+		'/posts/types'                             => array(
 			array( array( $wp_json_posts, 'get_post_types' ), WP_JSON_Server::READABLE ),
 		),
-		'/posts/types/(?P<type>\w+)' => array(
-			array( array( $wp_json_posts, 'get_post_type' ),  WP_JSON_Server::READABLE ),
+		'/posts/types/(?P<type>\w+)'               => array(
+			array( array( $wp_json_posts, 'get_post_type' ), WP_JSON_Server::READABLE ),
 		),
 
-		// Taxonomies
+		// Taxonomies.
 		'/posts/types/(?P<type>[\w-]+)/taxonomies' => array(
 			array( array( $wp_json_taxonomies, 'get_taxonomies_for_type' ), WP_JSON_Server::READABLE | WP_JSON_Server::HIDDEN_ENDPOINT ),
 		),
 		'/posts/types/(?P<type>[\w-]+)/taxonomies/(?P<taxonomy>[\w-]+)' => array(
-			array( array( $wp_json_taxonomies, 'get_taxonomy' ),            WP_JSON_Server::READABLE | WP_JSON_Server::HIDDEN_ENDPOINT ),
+			array( array( $wp_json_taxonomies, 'get_taxonomy' ), WP_JSON_Server::READABLE | WP_JSON_Server::HIDDEN_ENDPOINT ),
 		),
 		'/posts/types/(?P<type>[\w-]+)/taxonomies/(?P<taxonomy>[\w-]+)/terms' => array(
-			array( array( $wp_json_taxonomies, 'get_terms' ),               WP_JSON_Server::READABLE | WP_JSON_Server::HIDDEN_ENDPOINT ),
+			array( array( $wp_json_taxonomies, 'get_terms' ), WP_JSON_Server::READABLE | WP_JSON_Server::HIDDEN_ENDPOINT ),
 		),
 		'/posts/types/(?P<type>[\w-]+)/taxonomies/(?P<taxonomy>[\w-]+)/terms/(?P<term>[\w-]+)' => array(
-			array( array( $wp_json_taxonomies, 'get_term' ),                WP_JSON_Server::READABLE | WP_JSON_Server::HIDDEN_ENDPOINT ),
+			array( array( $wp_json_taxonomies, 'get_term' ), WP_JSON_Server::READABLE | WP_JSON_Server::HIDDEN_ENDPOINT ),
 		),
-		'/taxonomies' => array(
-			array( array( $wp_json_taxonomies, 'get_taxonomies' ),          WP_JSON_Server::READABLE ),
+		'/taxonomies'                              => array(
+			array( array( $wp_json_taxonomies, 'get_taxonomies' ), WP_JSON_Server::READABLE ),
 		),
-		'/taxonomies/(?P<taxonomy>[\w-]+)' => array(
-			array( array( $wp_json_taxonomies, 'get_taxonomy_object' ),     WP_JSON_Server::READABLE ),
+		'/taxonomies/(?P<taxonomy>[\w-]+)'         => array(
+			array( array( $wp_json_taxonomies, 'get_taxonomy_object' ), WP_JSON_Server::READABLE ),
 		),
-		'/taxonomies/(?P<taxonomy>[\w-]+)/terms' => array(
-			array( array( $wp_json_taxonomies, 'get_taxonomy_terms' ),      WP_JSON_Server::READABLE ),
+		'/taxonomies/(?P<taxonomy>[\w-]+)/terms'   => array(
+			array( array( $wp_json_taxonomies, 'get_taxonomy_terms' ), WP_JSON_Server::READABLE ),
 		),
 		'/taxonomies/(?P<taxonomy>[\w-]+)/terms/(?P<term>[\w-]+)' => array(
-			array( array( $wp_json_taxonomies, 'get_taxonomy_term' ),       WP_JSON_Server::READABLE ),
+			array( array( $wp_json_taxonomies, 'get_taxonomy_term' ), WP_JSON_Server::READABLE ),
 		),
 	);
 
@@ -109,7 +109,7 @@ function wcorg_json_whitelist_endpoints( $endpoints ) {
  */
 function wcorg_json_expose_whitelisted_meta_data( $prepared_post, $raw_post, $context ) {
 	$whitelisted_post_meta = array(
-		'wordcamp' => array(
+		'wordcamp'    => array(
 			'Start Date (YYYY-mm-dd)', 'End Date (YYYY-mm-dd)', 'Location', 'URL', 'Twitter', 'WordCamp Hashtag',
 			'Number of Anticipated Attendees', 'Organizer Name', 'WordPress.org Username', 'Venue Name',
 			'Physical Address', 'Maximum Capacity', 'Available Rooms', 'Website URL', 'Exhibition Space Available',
@@ -134,13 +134,13 @@ function wcorg_json_expose_whitelisted_meta_data( $prepared_post, $raw_post, $co
 	}
 
 	$post_meta_endpoint = new WP_JSON_Meta_Posts( $GLOBALS['wp_json_server'] );
-	add_filter( 'json_check_post_edit_permission',    '__return_true'  );   // The API only exposes post meta to authenticated users, but we want to expose whitelisted items to everyone
-	add_filter( 'is_protected_meta',                  '__return_false' );   // We want to include whitelisted items, even if they're marked as protected
+	add_filter( 'json_check_post_edit_permission',    '__return_true'  ); // The API only exposes post meta to authenticated users, but we want to expose whitelisted items to everyone.
+	add_filter( 'is_protected_meta',                  '__return_false' ); // We want to include whitelisted items, even if they're marked as protected.
 	$post_meta = $post_meta_endpoint->get_all_meta( $raw_post['ID'] );
 	remove_filter( 'is_protected_meta',               '__return_false' );
 	remove_filter( 'json_check_post_edit_permission', '__return_true'  );
 
-	foreach( $post_meta as $meta_item ) {
+	foreach ( $post_meta as $meta_item ) {
 		if ( in_array( $meta_item['key'], $whitelisted_post_meta[ $prepared_post['type'] ] ) ) {
 			$prepared_post['post_meta'][] = $meta_item;
 		}
@@ -163,11 +163,11 @@ function wcorg_json_expose_whitelisted_meta_data( $prepared_post, $raw_post, $co
  * @return array
  */
 function wcorg_json_expose_additional_post_data( $prepared_post, $raw_post, $context ) {
-	if ( is_wp_error( $prepared_post ) || empty ( $prepared_post['type'] ) ) {
+	if ( is_wp_error( $prepared_post ) || empty( $prepared_post['type'] ) ) {
 		return $prepared_post;
 	}
 
-	switch( $prepared_post['type'] ) {
+	switch ( $prepared_post['type'] ) {
 		case 'wcb_speaker':
 			$prepared_post['avatar'] = wcorg_json_get_speaker_avatar( $prepared_post['ID'] );
 			break;
@@ -184,11 +184,13 @@ function wcorg_json_expose_additional_post_data( $prepared_post, $raw_post, $con
  * @return string
  */
 function wcorg_json_get_speaker_avatar( $speaker_post_id ) {
-	$avatar = '';
+	$avatar          = '';
+	$speaker_email   = get_post_meta( $speaker_post_id, '_wcb_speaker_email', true );
+	$speaker_user_id = get_post_meta( $speaker_post_id, '_wcpt_user_id', true );
 
-	if ( $speaker_email = get_post_meta( $speaker_post_id, '_wcb_speaker_email', true ) ) {
+	if ( $speaker_email ) {
 		$avatar = json_get_avatar_url( $speaker_email );
-	} elseif ( $speaker_user_id = get_post_meta( $speaker_post_id, '_wcpt_user_id', true ) ) {
+	} elseif ( $speaker_user_id ) {
 		$avatar = json_get_avatar_url( $speaker_user_id );
 	}
 
@@ -212,14 +214,14 @@ function wcorg_json_embed_related_posts( $prepared_post, $raw_post, $context ) {
 	/** @var $wp_json_posts WP_JSON_Posts */
 	global $wp_json_posts;
 
-	if ( is_wp_error( $prepared_post ) || empty ( $prepared_post['type'] ) ) {
+	if ( is_wp_error( $prepared_post ) || empty( $prepared_post['type'] ) ) {
 		return $prepared_post;
 	}
 
-	// Unhook this callback before making any other WP_JSON_Posts::get_posts() calls, to avoid infinite recursion
+	// Unhook this callback before making any other WP_JSON_Posts::get_posts() calls, to avoid infinite recursion.
 	remove_filter( 'json_prepare_post', 'wcorg_json_embed_related_posts', 999 );
 
-	switch( $prepared_post['type'] ) {
+	switch ( $prepared_post['type'] ) {
 		case 'wcb_speaker':
 			$prepared_post['sessions'] = wcorg_json_get_speaker_sessions( $prepared_post['ID'] );
 			break;
@@ -227,7 +229,7 @@ function wcorg_json_embed_related_posts( $prepared_post, $raw_post, $context ) {
 		case 'wcb_session':
 			$speaker_id               = get_post_meta( $prepared_post['ID'], '_wcpt_speaker_id', true );
 			$speaker                  = $wp_json_posts->get_post( $speaker_id );
-			$prepared_post['speaker'] = is_a( $speaker, 'WP_JSON_Response' ) ? $speaker : null; // todo Add multiple speakers when upgrade to v2 of the API bug, see #1020-meta
+			$prepared_post['speaker'] = is_a( $speaker, 'WP_JSON_Response' ) ? $speaker : null;
 			break;
 	}
 
@@ -255,7 +257,8 @@ function wcorg_json_get_speaker_sessions( $speaker_post_id ) {
 	 *
 	 * This can be removed when https://github.com/WP-API/WP-API/issues/479 is resolved.
 	 */
-	if ( ! $session_ids = get_transient( $transient_key ) ) {
+	$session_ids = get_transient( $transient_key );
+	if ( ! $session_ids ) {
 		$session_ids = get_posts( array(
 			'posts_per_page' => -1,
 			'post_type'      => 'wcb_session',
@@ -334,12 +337,12 @@ function wcorg_json_avoid_nested_callback_conflicts() {
 function wcorg_json_v2_compat( $request ) {
 	$rest_prefix = rest_get_url_prefix();
 
-	// Skip non-API requests
-	if ( 0 !== strpos( $_SERVER[ 'REQUEST_URI' ], "/$rest_prefix" ) ) {
+	// Skip non-API requests.
+	if ( 0 !== strpos( $_SERVER['REQUEST_URI'], "/$rest_prefix" ) ) {
 		return;
 	}
 
-	// Determine if it's a v2 request
+	// Determine if it's a v2 request.
 	$is_route_v2 = false;
 
 	if ( rest_get_url_prefix() === trim( $_SERVER['REQUEST_URI'], '/' ) ) {
@@ -355,12 +358,12 @@ function wcorg_json_v2_compat( $request ) {
 		}
 	}
 
-	// Skip API v1 requests
+	// Skip API v1 requests.
 	if ( ! $is_route_v2 ) {
 		return;
 	}
 
-	// Route v2 requests to Core handler
+	// Route v2 requests to Core handler.
 	if ( isset( $request->query_vars['json_route'] ) ) {
 		$request->query_vars['rest_route'] = $request->query_vars['json_route'];
 		unset( $request->query_vars['json_route'] );
@@ -370,12 +373,15 @@ function wcorg_json_v2_compat( $request ) {
 	return;
 }
 
+/**
+ * Allow users to read new post statuses.
+ */
 function wcorg_json_check_post_read_permission( $permission, $post ) {
 	if ( $permission || ! defined( 'WCPT_POST_TYPE_ID' ) ) {
 		return $permission;
 	}
 
-	if ( $post['post_type'] != WCPT_POST_TYPE_ID ) {
+	if ( WCPT_POST_TYPE_ID != $post['post_type'] ) {
 		return $permission;
 	}
 
@@ -386,13 +392,14 @@ function wcorg_json_check_post_read_permission( $permission, $post ) {
  * Query the public post statuses when querying WordCamps via the JSON API.
  */
 function wcorg_json_pre_get_posts( $query ) {
-	if ( ! defined( 'JSON_REQUEST' ) || ! JSON_REQUEST )
+	if ( ! defined( 'JSON_REQUEST' ) || ! JSON_REQUEST ) {
 		return;
+	}
 
-	$post_types = $query->get( 'post_type' );
+	$post_types    = $query->get( 'post_type' );
 	$post_statuses = $query->get( 'post_status' );
 
-	if ( $post_types == 'wordcamp' || in_array( 'wordcamp', (array) $post_types ) ) {
+	if ( 'wordcamp' == $post_types || in_array( 'wordcamp', (array) $post_types ) ) {
 		if ( empty( $post_statuses ) ) {
 			$query->set( 'post_status', WordCamp_Loader::get_public_post_statuses() );
 		}

@@ -12,6 +12,8 @@
 
 namespace WordCamp\SpeakerFeedback;
 
+use WordCamp\SpeakerFeedback\{ REST_Feedback_Controller };
+
 defined( 'WPINC' ) || die();
 
 define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
@@ -26,6 +28,7 @@ if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_
 
 	add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 	add_action( 'init', __NAMESPACE__ . '\add_page_endpoint' );
+	add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_routes', 100 );
 
 	// Check if the page exists, and add it if not.
 	add_action( 'init', __NAMESPACE__ . '\add_feedback_page' );
@@ -33,9 +36,12 @@ if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_
 
 /**
  * Include the rest of the plugin.
+ *
+ * @return void
  */
 function load() {
 	require_once PLUGIN_DIR . 'includes/class-feedback.php';
+	require_once PLUGIN_DIR . 'includes/class-rest-feedback-controller.php';
 	require_once PLUGIN_DIR . 'includes/comment.php';
 	require_once PLUGIN_DIR . 'includes/form.php';
 	require_once PLUGIN_DIR . 'includes/page.php';
@@ -129,4 +135,14 @@ function get_assets_path() {
  */
 function get_assets_url() {
 	return plugin_dir_url( __FILE__ ) . 'assets/';
+}
+
+/**
+ * Initialize REST API endpoints.
+ *
+ * @return void
+ */
+function register_rest_routes() {
+	$controller = new REST_Feedback_Controller();
+	$controller->register_routes();
 }

@@ -1,6 +1,7 @@
 <?php
 
 define( 'WP_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/plugins' );
+define( 'WP_MU_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/mu-plugins' );
 
 $core_tests_directory = getenv( 'WP_TESTS_DIR' );
 
@@ -32,6 +33,7 @@ require_once( $core_tests_directory . '/includes/functions.php' );
  */
 require_once( WP_PLUGIN_DIR . '/wordcamp-organizer-reminders/tests/bootstrap.php' );
 require_once( WP_PLUGIN_DIR . '/wordcamp-remote-css/tests/bootstrap.php' );
+require_once WP_MU_PLUGIN_DIR . '/tests/bootstrap.php';
 
 /*
  * This has to be the last plugin bootstrapper, because it includes the Core test bootstrapper, which would

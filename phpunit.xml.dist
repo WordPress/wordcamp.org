@@ -11,6 +11,12 @@
 	</php>
 
 	<testsuites>
+		<testsuite name="WordCamp MU Plugins">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/mu-plugins/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="CampTix">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/camptix/tests/

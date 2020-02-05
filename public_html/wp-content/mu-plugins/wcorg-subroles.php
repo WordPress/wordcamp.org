@@ -189,10 +189,11 @@ add_filter( 'map_meta_cap', __NAMESPACE__ . '\map_subrole_caps', 10, 4 );
  *
  * See `additional_capabilities_display` filter.
  *
- * @param bool[]   $allcaps
- * @param string[] $caps
- * @param array    $args
- * @param WP_User  $user
+ * @param bool[]   $allcaps Array of key/value pairs where keys represent a capability name and boolean values
+ *                          represent whether the user has that capability.
+ * @param string[] $caps    Unused. Required primitive capabilities for the requested capability.
+ * @param array    $args    Unused. Arguments that accompany the requested capability check.
+ * @param WP_User  $user    The user object.
  *
  * @return bool[]
  */

@@ -183,7 +183,7 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 add_filter( 'map_meta_cap', __NAMESPACE__ . '\map_subrole_caps', 10, 4 );
 
 /**
- * Remove capabilities that are "additional" i.e. stored in user meta.
+ * Ignore capabilities that are "additional" i.e. stored in user meta.
  *
  * Additional capabilities should only be granted via `map_meta_cap`, not via values stored in the user meta table.
  *

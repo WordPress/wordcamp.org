@@ -15,17 +15,22 @@ $session_args = array(
 $sessions = new \WP_Query( $session_args );
 
 if ( $sessions->have_posts() ) : ?>
-<form>
-	<select name="sft_session">
-		<?php while ( $sessions->have_posts() ) {
-			$sessions->the_post();
-			printf(
-				'<option value="%s">%s</option>',
-				esc_attr( get_the_ID() ),
-				wp_kses_post( get_the_title() )
-			);
-		} ?>
-	</select>
-	<input type="submit" value="<?php esc_attr_e( 'Give Feedback', 'wordcamporg' ); ?>" />
+<form id="sft-navigation" class="speaker-feedback">
+	<label for="sft-session"><?php esc_html_e( 'Select a session to leave feedback', 'wordcamporg' ); ?></label>
+	<div class="speaker-feedback__wrapper">
+		<div class="speaker-feedback__field">
+			<select name="sft_session" id="sft-session">
+				<?php while ( $sessions->have_posts() ) {
+					$sessions->the_post();
+					printf(
+						'<option value="%s">%s</option>',
+						esc_attr( get_the_ID() ),
+						wp_kses_post( get_the_title() )
+					);
+				} ?>
+			</select>
+		</div>
+		<input type="submit" value="<?php esc_attr_e( 'Give Feedback', 'wordcamporg' ); ?>" />
+	</div>
 </form>
 <?php endif;

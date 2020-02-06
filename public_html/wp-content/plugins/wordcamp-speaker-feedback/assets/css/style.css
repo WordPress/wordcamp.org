@@ -1,0 +1,19 @@
+.speaker-feedback__wrapper {
+	display: flex;
+}
+
+.speaker-feedback__field {
+	margin-bottom: 0;
+	padding-right: 1em;
+	flex: auto;
+	display: flex;
+	align-items: stretch;
+}
+
+.speaker-feedback__field select {
+	width: 100%;
+}
+
+.speaker-feedback__wrapper input[type="submit"] {
+	flex: initial;
+}

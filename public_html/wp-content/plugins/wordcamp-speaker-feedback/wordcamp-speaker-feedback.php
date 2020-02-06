@@ -78,3 +78,12 @@ function get_includes_path() {
 function get_views_path() {
 	return plugin_dir_path( __FILE__ ) . 'views/';
 }
+
+/**
+ * Shortcut to the assets URL.
+ *
+ * @return string
+ */
+function get_assets_url() {
+	return plugin_dir_url( __FILE__ ) . 'assets/';
+}

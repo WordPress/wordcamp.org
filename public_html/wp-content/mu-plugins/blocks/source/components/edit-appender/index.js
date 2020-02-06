@@ -16,10 +16,10 @@ import './style.scss';
 /**
  * Component for block controls when the block has a specific mode selected.
  *
- * @param {Object} props {
- *     @type {node}   appender
+ * @param {Object} props
+ *     @type {Node}   appender
  *     @type {string} className
- *     @type {node}   content
+ *     @type {Node}   content
  * }
  *
  * @return {Element}

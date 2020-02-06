@@ -13,7 +13,7 @@ import LiveSchedule from './components/schedule';
 /**
  * Display the live schedule.
  *
- * @returns {Component}
+ * @return {Component}
  */
 class Block extends Component {
 	constructor( props ) {

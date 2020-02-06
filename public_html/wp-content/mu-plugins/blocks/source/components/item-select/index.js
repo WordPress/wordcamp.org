@@ -108,7 +108,7 @@ export class ItemSelect extends Component {
 	 *
 	 * @param {Object} groupData
 	 *
-	 * @returns {Element}
+	 * @return {Element}
 	 */
 	static formatGroupLabel( groupData ) {
 		return (

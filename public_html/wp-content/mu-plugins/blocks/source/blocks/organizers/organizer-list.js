@@ -33,7 +33,7 @@ class OrganizerList extends Component {
 	/**
 	 * Filter and sort the content that will be rendered.
 	 *
-	 * @returns {Array}
+	 * @return {Array}
 	 */
 	getFilteredPosts() {
 		const { attributes, entities } = this.props;

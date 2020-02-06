@@ -130,10 +130,6 @@ module.exports = {
 		 *
 		 * @todo `@param` tags should align the variable name and description, just like in PHP.
 		 */
-		'valid-jsdoc' : [ 'error', {
-			'requireParamDescription'  : false,
-			'requireReturnDescription' : false,
-			'requireReturn'            : false,
-		} ],
+		'jsdoc/require-returns-description': 'off',
 	},
 };

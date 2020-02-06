@@ -20,7 +20,7 @@ import { AvatarImage } from '../image';
  *     @type {string} label
  *     @type {number} count
  *     @type {string} context - `menu` or `value` for whether it's in the menu dropdown or the selected token.
- *     @type {node}   details
+ *     @type {Node}   details
  * }
  *
  * @return {Element}

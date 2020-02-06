@@ -98,7 +98,7 @@ const actions = {
 	 * Set the site settings object in this store.
 	 *
 	 * @param { Object } settings
-
+	 *
 	 * @return { Object }
 	 */
 	setSiteSettings( settings ) {
@@ -111,8 +111,6 @@ const actions = {
 
 /**
  * Defines selectors provided by this store.
- *
- * @type {{getPosts(*, *)}}
  */
 const selectors = {
 	/**

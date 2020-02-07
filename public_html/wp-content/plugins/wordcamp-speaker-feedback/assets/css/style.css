@@ -1,8 +1,8 @@
-.speaker-feedback__wrapper {
+.speaker-feedback-navigation .speaker-feedback__wrapper {
 	display: flex;
 }
 
-.speaker-feedback__field {
+.speaker-feedback-navigation .speaker-feedback__field {
 	margin-bottom: 0;
 	padding-right: 1em;
 	flex: auto;

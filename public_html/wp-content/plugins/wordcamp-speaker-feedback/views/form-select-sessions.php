@@ -15,7 +15,7 @@ $session_args = array(
 $sessions = new \WP_Query( $session_args );
 
 if ( $sessions->have_posts() ) : ?>
-<form id="sft-navigation" class="speaker-feedback">
+<form id="sft-navigation" class="speaker-feedback-navigation">
 	<label for="sft-session"><?php esc_html_e( 'Select a session to leave feedback', 'wordcamporg' ); ?></label>
 	<div class="speaker-feedback__wrapper">
 		<div class="speaker-feedback__field">

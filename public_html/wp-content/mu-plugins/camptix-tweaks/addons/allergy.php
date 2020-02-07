@@ -82,19 +82,21 @@ class Allergy_Field extends CampTix_Addon {
 		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
 			<td class="tix-required tix-left">
 				<?php echo esc_html( $this->question ); ?>
-				<span class="tix-required-star">*</span>
+				<span aria-hidden class="tix-required-star">*</span>
 			</td>
 
 			<td class="tix-right">
-				<label>
-					<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="yes" <?php checked( 'yes', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['yes'] ); ?>
-				</label>
-				<br />
-				<label>
-					<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="no" <?php checked( 'no', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['no'] ); ?>
-				</label>
+				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( $this->question ); ?>">
+					<label>
+						<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="yes" <?php checked( 'yes', $current_data[ self::SLUG ] ); ?> required />
+						<?php echo esc_html( $this->options['yes'] ); ?>
+					</label>
+					<br />
+					<label>
+						<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="no" <?php checked( 'no', $current_data[ self::SLUG ] ); ?> required />
+						<?php echo esc_html( $this->options['no'] ); ?>
+					</label>
+				</fieldset>
 			</td>
 		</tr>
 

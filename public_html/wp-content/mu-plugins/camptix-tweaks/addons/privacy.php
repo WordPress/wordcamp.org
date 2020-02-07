@@ -38,6 +38,7 @@ class Privacy_Field extends CampTix_Addon {
 				esc_url( get_privacy_policy_url() )
 			);
 		}
+		$this->a11y_label = __( 'Do you want to be listed on the public Attendees page?', 'wordcamporg' );
 
 		$this->options = array(
 			'yes' => _x( 'Yes', 'ticket registration option', 'wordcamporg' ),
@@ -78,15 +79,17 @@ class Privacy_Field extends CampTix_Addon {
 			</td>
 
 			<td class="tix-right">
-				<label>
-					<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="yes" <?php checked( 'yes', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['yes'] ); ?>
-				</label>
-				<br />
-				<label>
-					<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="no" <?php checked( 'no', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['no'] ); ?>
-				</label>
+				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( $this->a11y_label ); ?>">
+					<label>
+						<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="yes" <?php checked( 'yes', $current_data[ self::SLUG ] ); ?> required />
+						<?php echo esc_html( $this->options['yes'] ); ?>
+					</label>
+					<br />
+					<label>
+						<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="no" <?php checked( 'no', $current_data[ self::SLUG ] ); ?> required />
+						<?php echo esc_html( $this->options['no'] ); ?>
+					</label>
+				</fieldset>
 			</td>
 		</tr>
 

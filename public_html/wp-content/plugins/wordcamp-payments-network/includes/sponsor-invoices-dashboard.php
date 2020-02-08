@@ -1,7 +1,9 @@
 <?php
 
 namespace WordCamp\Budgets_Dashboard\Sponsor_Invoices;
+
 use \WordCamp\Logger;
+use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
 defined( 'WPINC' ) or die();
 
@@ -481,24 +483,22 @@ function schedule_sent_invoice_reminder() {
 
 /**
  * Send reminder to organizer about the unpaid invoice.
+ *
+ * This runs as a cron job on every site, so it only needs to look for invoices that are from the current site.
+ * (Previously it pulled all pending invoices from the index table, which caused weird issues like the email about
+ * an invoice in Chicago coming from a WordCamp site in Germany.)
+ *
+ * @return void
  */
 function send_invoice_pending_reminder() {
-	global $wpdb;
+	$sent_invoices = get_posts( array(
+		'post_type'      => POST_TYPE,
+		'post_status'    => 'wcbsi_approved',
+		'posts_per_page' => 99,
+	) );
 
-	$table_name    = get_index_table_name();
-	$sent_invoices = $wpdb->get_results( "
-		SELECT blog_id, invoice_id
-		FROM $table_name
-		WHERE status = 'wcbsi_approved'
-		LIMIT 1000"
-		// Don't forget to add a prepare() call here if you ever add user input.
-	);
-
-	foreach ( $sent_invoices as $invoice_data ) {
-		$blog_id    = $invoice_data->blog_id;
-		$invoice_id = $invoice_data->invoice_id;
-
-		switch_to_blog( $blog_id );
+	foreach ( $sent_invoices as $invoice ) {
+		$invoice_id = $invoice->ID;
 
 		$invoice_sent_at = get_post_meta( $invoice_id, 'Sent at', true );
 
@@ -506,7 +506,6 @@ function send_invoice_pending_reminder() {
 			// Backfill for older invoices.
 			update_post_meta( $invoice_id, 'Sent at', time() );
 			update_post_meta( $invoice_id, 'Backfilled Sent at', true );
-			restore_current_blog();
 			continue;
 		}
 
@@ -520,12 +519,10 @@ function send_invoice_pending_reminder() {
 
 		if ( empty( $wordcamp_post ) || ! $wordcamp_lead_email ) {
 			// Maybe this is a central.wordcamp.org test sponsor invoice.
-			restore_current_blog();
 			continue;
 		}
 
-		if ( ! empty ( $invoice_defaulted ) ) {
-			restore_current_blog();
+		if ( ! empty( $invoice_defaulted ) ) {
 			continue;
 		}
 
@@ -544,14 +541,12 @@ function send_invoice_pending_reminder() {
 		if ( $reminder_step > count( $reminder_schedule ) || ( $wordcamp_start_date && time() > ( (int) $wordcamp_start_date + 2 * MONTH_IN_SECONDS ) ) ) {
 			send_invoice_defaulted_notification( $invoice_id );
 			update_post_meta( $invoice_id, 'invoice_defaulted', true );
-			restore_current_blog();
 			continue;
 		}
 
 		$next_reminder_in = $last_step_time + $reminder_schedule[ $reminder_step ] * DAY_IN_SECONDS;
 
 		if ( time() < (int) $next_reminder_in ) {
-			restore_current_blog();
 			continue;
 		}
 
@@ -563,8 +558,6 @@ function send_invoice_pending_reminder() {
 		send_invoice_pending_reminder_mail( $invoice_id, $wordcamp_lead_email );
 
 		update_post_meta( $invoice_id, 'last_reminder_details', $current_reminder_details );
-
-		restore_current_blog();
 	}
 }
 

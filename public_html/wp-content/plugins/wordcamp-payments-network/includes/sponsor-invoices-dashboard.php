@@ -598,7 +598,8 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 			'From: WordCamp Central <support@wordcamp.org>',
 			'Content-Type: text/html; charset=UTF-8',
 			'Sender: wordpress@' . strtolower( $_SERVER['SERVER_NAME'] ),
-			sprintf( "CC: %s", $organizer_mail ), // CC to lead organizer in case post author is not active anymore.
+			sprintf( 'CC: %s', $organizer_mail ), // CC to lead organizer in case post author is not active anymore.
+			'BCC: ' . EMAIL_DEVELOPER_NOTIFICATIONS, // Temporary, to test that these notifications are working.
 		)
 	);
 }
@@ -628,6 +629,7 @@ function send_invoice_defaulted_notification( $invoice_id ) {
 			'From: WordCamp Central <support@wordcamp.org>',
 			'Content-Type: text/html; charset=UTF-8',
 			'Sender: wordpress@' . strtolower( $_SERVER['SERVER_NAME'] ),
+			'BCC: ' . EMAIL_DEVELOPER_NOTIFICATIONS, // Temporary, to test that these notifications are working.
 		)
 	);
 }

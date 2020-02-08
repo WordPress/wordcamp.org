@@ -12,33 +12,42 @@ const LATEST_DATABASE_VERSION = 3;
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );
 	add_action( 'save_post',                      __NAMESPACE__ . '\update_index_row',              10, 2 );
-
 } elseif ( defined( 'DOING_CRON' ) ) {
-	add_action( 'wcbdsi_check_for_paid_invoices', __NAMESPACE__ . '\check_for_paid_invoices'       );
-	add_action( 'save_post',                      __NAMESPACE__ . '\update_index_row',       10, 2 );
-	add_action( 'plugins_loaded',                 __NAMESPACE__ . '\schedule_sent_invoice_reminder' );
-
+	add_action( 'save_post', __NAMESPACE__ . '\update_index_row', 10, 2 );
 } elseif ( is_network_admin() ) {
-	add_action( 'plugins_loaded',        __NAMESPACE__ . '\schedule_cron_events'  );
-	add_action( 'network_admin_menu',    __NAMESPACE__ . '\register_submenu_page' );
-	add_action( 'init',                  __NAMESPACE__ . '\upgrade_database'      );
+	add_action( 'network_admin_menu', __NAMESPACE__ . '\register_submenu_page' );
+	add_action( 'init',               __NAMESPACE__ . '\upgrade_database'      );
 } elseif ( is_admin() ) {
-	add_action( 'save_post',    __NAMESPACE__ . '\update_index_row', 11, 2 );   // See note in callback about priority
+	add_action( 'save_post',    __NAMESPACE__ . '\update_index_row', 11, 2 );   // See note in callback about priority.
 	add_action( 'trashed_post', __NAMESPACE__ . '\delete_index_row'        );
 	add_action( 'delete_post',  __NAMESPACE__ . '\delete_index_row'        );
 }
 
-add_action( 'send_invoice_pending_reminder', __NAMESPACE__ . '\send_invoice_pending_reminder' );
+add_action( 'plugins_loaded',                 __NAMESPACE__ . '\schedule_cron_events'  );
+add_action( 'wcbdsi_check_for_paid_invoices', __NAMESPACE__ . '\check_for_paid_invoices'       );
+add_action( 'send_invoice_pending_reminder',  __NAMESPACE__ . '\send_invoice_pending_reminder' );
 
 /**
- * Schedule cron job when plugin is activated
+ * Schedule cron jobs.
+ *
+ * @return void
  */
 function schedule_cron_events() {
-	if ( wp_next_scheduled( 'wcbdsi_check_for_paid_invoices' ) ) {
-		return;
+	if ( ! wp_next_scheduled( 'wcbdsi_check_for_paid_invoices' ) ) {
+		wp_schedule_event(
+			time(),
+			'hourly',
+			'wcbdsi_check_for_paid_invoices'
+		);
 	}
 
-	wp_schedule_event( current_time( 'timestamp' ), 'hourly', 'wcbdsi_check_for_paid_invoices' );
+	if ( ! wp_next_scheduled( 'send_invoice_pending_reminder' ) ) {
+		wp_schedule_event(
+			time(),
+			'daily',
+			'send_invoice_pending_reminder'
+		);
+	}
 }
 
 /**
@@ -468,17 +477,6 @@ function delete_index_row( $invoice_id ) {
 			'invoice_id' => $invoice_id,
 		)
 	);
-}
-
-/**
- * Schedule cron to send reminder mails to organizers for unpaid invoices.
- */
-function schedule_sent_invoice_reminder() {
-	if ( wp_next_scheduled( 'send_invoice_pending_reminder' ) ) {
-		return;
-	}
-
-	wp_schedule_event( time(), 'daily', 'send_invoice_pending_reminder' );
 }
 
 /**

@@ -576,11 +576,11 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 		'',
 		sprintf(
 			__(
-				"Howdy organizers,
+				'Howdy organizers,
 				<br>
-				It looks like the invoice <a href='%s'>%s</a> is still unpaid. If you still expect the sponsor to pay this invoice, please contact them to find out when we should expect payment. If this invoice needs to be cancelled, please email support@wordcamp.org.
+				It looks like the invoice <a href="%1$s">%2$s</a> is still unpaid. If you still expect the sponsor to pay this invoice, please contact them to find out when we should expect payment. If this invoice needs to be cancelled, please email support@wordcamp.org.
 				<br>
-				Thanks for all your hard work on WordCamp.",
+				Thanks for all your hard work on WordCamp.',
 				'wordcamporg'
 			),
 			$edit_link,
@@ -592,7 +592,7 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 
 	wp_mail(
 		array( $author->user_email ),
-		sprintf( __( "Pending invoice: %s" ,'wordcamporg' ), $invoice->post_title ),
+		sprintf( __( 'Pending invoice: %s', 'wordcamporg' ), $invoice->post_title ),
 		$reminder_body,
 		array(
 			'From: WordCamp Central <support@wordcamp.org>',
@@ -622,8 +622,8 @@ function send_invoice_defaulted_notification( $invoice_id ) {
 	);
 
 	wp_mail(
-		array( "support@wordcamp.org" ),
-		"Sponsor Invoice pending for too long",
+		array( 'support@wordcamp.org' ),
+		'Sponsor Invoice pending for too long',
 		$notification_body,
 		array(
 			'From: WordCamp Central <support@wordcamp.org>',

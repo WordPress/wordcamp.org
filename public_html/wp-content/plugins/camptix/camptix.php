@@ -5313,12 +5313,12 @@ class CampTix_Plugin {
 				<table class="tix_tickets_table">
 					<thead>
 						<tr>
-							<th class="tix-column-description"><?php _e( 'Description', 'wordcamporg' ); ?></th>
-							<th class="tix-column-price"><?php _e( 'Price', 'wordcamporg' ); ?></th>
+							<th scope="col" class="tix-column-description"><?php _e( 'Description', 'wordcamporg' ); ?></th>
+							<th scope="col" class="tix-column-price"><?php _e( 'Price', 'wordcamporg' ); ?></th>
 							<?php if ( apply_filters( 'camptix_show_remaining_tickets', true ) ) : ?>
-								<th class="tix-column-remaining"><?php _e( 'Remaining', 'wordcamporg' ); ?></th>
+								<th scope="col" class="tix-column-remaining"><?php _e( 'Remaining', 'wordcamporg' ); ?></th>
 							<?php endif; ?>
-							<th class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_quantity_row_classes', array( 'tix-column-quantity' ) ) ) ); ?>">
+							<th scope="col" class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_quantity_row_classes', array( 'tix-column-quantity' ) ) ) ); ?>">
 								<?php _e( 'Quantity', 'wordcamporg' ); ?>
 							</th>
 						</tr>
@@ -5347,16 +5347,18 @@ class CampTix_Plugin {
 							}
 							?>
 							<tr class="tix-ticket-<?php echo absint( $ticket->ID ); ?>">
-								<td class="tix-column-description">
-									<strong class="tix-ticket-title"><?php echo wp_kses_post( $ticket->post_title ); ?></strong>
+								<th class="tix-column-description" scope="row">
+									<label for="tix-qty-<?php echo absint( $ticket->ID ); ?>" class="tix-ticket-title">
+										<?php echo wp_kses_post( $ticket->post_title ); ?>
+									</label>
 									<?php if ( $ticket->post_excerpt ) : ?>
 										<br /><span class="tix-ticket-excerpt"><?php echo wp_kses_post( $ticket->post_excerpt ); ?></span>
 									<?php endif; ?>
 									<?php if ( $ticket->tix_coupon_applied ) : ?>
 										<br /><small class="tix-discount"><?php echo esc_html( $ticket->tix_discounted_text ); ?></small>
 									<?php endif; ?>
-								</td>
-								<td class="tix-column-price" style="vertical-align: middle;">
+								</th>
+								<td class="tix-column-price">
 									<?php if ( $price > 0 ) : ?>
 										<?php echo esc_html( $this->append_currency( $price ) ); ?>
 									<?php else : ?>
@@ -5364,10 +5366,12 @@ class CampTix_Plugin {
 									<?php endif; ?>
 								</td>
 								<?php if ( apply_filters( 'camptix_show_remaining_tickets', true ) ) : ?>
-									<td class="tix-column-remaining" style="vertical-align: middle;"><?php echo esc_html( apply_filters( 'camptix_form_start_tix_remaining', $ticket->tix_remaining, $ticket ) ); ?></td>
+									<td class="tix-column-remaining">
+										<?php echo esc_html( apply_filters( 'camptix_form_start_tix_remaining', $ticket->tix_remaining, $ticket ) ); ?>
+									</td>
 								<?php endif; ?>
-								<td class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_quantity_row_classes', array( 'tix-column-quantity' ) ) ) ); ?>" style="vertical-align: middle;">
-									<select name="tix_tickets_selected[<?php echo esc_attr( $ticket->ID ); ?>]">
+								<td class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_quantity_row_classes', array( 'tix-column-quantity' ) ) ) ); ?>">
+									<select id="tix-qty-<?php echo absint( $ticket->ID ); ?>" name="tix_tickets_selected[<?php echo esc_attr( $ticket->ID ); ?>]">
 										<?php foreach ( range( 0, $max ) as $value ) : ?>
 											<option <?php selected( $selected, $value ); ?> value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $value ); ?></option>
 										<?php endforeach; ?>
@@ -5404,7 +5408,13 @@ class CampTix_Plugin {
 											<?php _e( 'Click here to enter a coupon code', 'wordcamporg' ); ?>
 										</a>
 										<div id="tix-coupon-container" style="display: none;">
-											<input type="text" id="tix-coupon-input" name="tix_coupon" value="" />
+											<input
+												type="text"
+												id="tix-coupon-input"
+												name="tix_coupon"
+												value=""
+												aria-label="<?php esc_attr_e( 'Coupon Code', 'wordcamporg' ); ?>"
+											/>
 											<input type="submit" name="tix_coupon_submit" value="<?php esc_attr_e( 'Apply Coupon', 'wordcamporg' ); ?>" />
 										</div>
 										<script>
@@ -5425,7 +5435,12 @@ class CampTix_Plugin {
 				</table>
 
 				<p>
-					<input type="submit" value="<?php esc_attr_e( 'Register &rarr;', 'wordcamporg' ); ?>" style="float: right; cursor: pointer;" class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_register_button_classes', array() ) ) ); ?>" />
+					<input
+						type="submit"
+						value="<?php esc_attr_e( 'Register &rarr;', 'wordcamporg' ); ?>"
+						style="float: right; cursor: pointer;"
+						class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_register_button_classes', array() ) ) ); ?>"
+					/>
 					<br class="tix-clear" />
 				</p>
 				</form>

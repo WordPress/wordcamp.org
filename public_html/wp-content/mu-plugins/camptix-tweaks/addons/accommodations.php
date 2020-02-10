@@ -84,7 +84,7 @@ class Accommodations_Field extends CampTix_Addon {
 		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
 			<td class="tix-required tix-left">
 				<?php echo esc_html( $this->question ); ?>
-				<span aria-hidden class="tix-required-star">*</span>
+				<span aria-hidden="true" class="tix-required-star">*</span>
 			</td>
 
 			<td class="tix-right">

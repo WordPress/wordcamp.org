@@ -5620,7 +5620,7 @@ class CampTix_Plugin {
 									<td class="tix-required tix-left">
 										<label for="<?php echo esc_attr( $this->get_field_id( "tix_attendee_info[$i][first_name]" ) ); ?>">
 											<?php _e( 'First Name', 'wordcamporg' ); ?>
-											<span aria-hidden class="tix-required-star">*</span>
+											<span aria-hidden="true" class="tix-required-star">*</span>
 										</label>
 									</td>
 									<?php $value = isset( $this->form_data['tix_attendee_info'][$i]['first_name'] ) ? $this->form_data['tix_attendee_info'][$i]['first_name'] : apply_filters( 'camptix_attendee_info_default_value', '', 'first_name', $this->form_data, $ticket, $i ); ?>
@@ -5641,7 +5641,7 @@ class CampTix_Plugin {
 									<td class="tix-required tix-left">
 										<label for="<?php echo esc_attr( $this->get_field_id( "tix_attendee_info[$i][last_name]" ) ); ?>">
 											<?php _e( 'Last Name', 'wordcamporg' ); ?>
-											<span aria-hidden class="tix-required-star">*</span>
+											<span aria-hidden="true" class="tix-required-star">*</span>
 										</label>
 									</td>
 									<?php $value = isset( $this->form_data['tix_attendee_info'][$i]['last_name'] ) ? $this->form_data['tix_attendee_info'][$i]['last_name'] : apply_filters( 'camptix_attendee_info_default_value', '', 'last_name', $this->form_data, $ticket, $i ); ?>
@@ -5665,7 +5665,7 @@ class CampTix_Plugin {
 									<td class="tix-required tix-left">
 										<label for="<?php echo esc_attr( $this->get_field_id( "tix_attendee_info[$i][email]" ) ); ?>">
 											<?php _e( 'E-mail', 'wordcamporg' ); ?>
-											<span aria-hidden class="tix-required-star">*</span>
+											<span aria-hidden="true" class="tix-required-star">*</span>
 										</label>
 									</td>
 									<?php $value = isset( $this->form_data['tix_attendee_info'][$i]['email'] ) ? $this->form_data['tix_attendee_info'][$i]['email'] : apply_filters( 'camptix_attendee_info_default_value', '', 'email', $this->form_data, $ticket, $i ); ?>
@@ -5711,7 +5711,7 @@ class CampTix_Plugin {
 											<td class="<?php if ( $required ) echo 'tix-required'; ?> tix-left">
 												<label for="<?php echo in_array( $type, array( 'radio', 'checkbox' ) ) ? '' : $this->get_field_id( $name ); ?>">
 													<?php echo make_clickable( esc_html( apply_filters( 'the_title', $question->post_title ) ) ); ?>
-													<?php if ( $required ) echo ' <span aria-hidden class="tix-required-star">*</span>'; ?>
+													<?php if ( $required ) echo ' <span aria-hidden="true" class="tix-required-star">*</span>'; ?>
 												</label>
 											</td>
 											<td class="tix-right">

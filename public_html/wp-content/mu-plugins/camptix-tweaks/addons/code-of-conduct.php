@@ -61,7 +61,7 @@ class Code_Of_Conduct_Field extends CampTix_Addon {
 		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
 			<td class="tix-required tix-left">
 				<?php echo wp_kses_post( $question ); ?>
-				<span aria-hidden class="tix-required-star">*</span>
+				<span aria-hidden="true" class="tix-required-star">*</span>
 			</td>
 
 			<td class="tix-right">

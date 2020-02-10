@@ -29,10 +29,15 @@ class CampTix_Addon_Country_Field extends CampTix_Addon {
 	 * Render the Country `select` field on the front-end.
 	 */
 	function question_field_country( $name, $user_value, $question, $required = false ) {
+		global $camptix;
 		$countries = wp_list_pluck( wcorg_get_countries(), 'name' );
 		?>
 
-		<select name="<?php echo esc_attr( $name ); ?>" <?php if ( $required ) echo 'required'; ?>>
+		<select
+			id="<?php echo esc_attr( $camptix->get_field_id( $name ) ); ?>"
+			name="<?php echo esc_attr( $name ); ?>"
+			<?php if ( $required ) echo 'required'; ?>
+		>
 			<?php foreach ( $countries as $country ) : ?>
 				<option value="<?php echo esc_attr( $country ); ?>" <?php selected( $country, $user_value ); ?>>
 					<?php echo esc_html( $country ); ?>

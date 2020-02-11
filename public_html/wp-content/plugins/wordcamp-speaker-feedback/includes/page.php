@@ -1,6 +1,7 @@
 <?php
 
 namespace WordCamp\SpeakerFeedback\Page;
+use const WordCamp\SpeakerFeedback\OPTION_KEY;
 
 add_filter( 'pre_trash_post', __NAMESPACE__ . '\prevent_deletion', 10, 2 );
 add_filter( 'pre_delete_post', __NAMESPACE__ . '\prevent_deletion', 10, 3 );
@@ -18,7 +19,7 @@ function prevent_deletion( $check, $post, $force_delete = false ) {
 		return $check;
 	}
 
-	$feedback_page = (int) get_option( 'feedback_page' );
+	$feedback_page = (int) get_option( OPTION_KEY );
 	if ( $feedback_page === $post->ID ) {
 		return false;
 	}
@@ -35,10 +36,10 @@ function prevent_deletion( $check, $post, $force_delete = false ) {
  * @return array The filtered list of post display states.
  */
 function add_label_to_page( $post_states, $post ) {
-	$feedback_page = (int) get_option( 'feedback_page' );
+	$feedback_page = (int) get_option( OPTION_KEY );
 
 	if ( $feedback_page === $post->ID ) {
-		$post_states['sft-page'] = _x( 'Speaker Feedback', 'wordcamporg' );
+		$post_states['sft-page'] = __( 'Speaker Feedback', 'wordcamporg' );
 	}
 
 	return $post_states;

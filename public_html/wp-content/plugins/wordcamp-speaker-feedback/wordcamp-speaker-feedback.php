@@ -16,6 +16,7 @@ defined( 'WPINC' ) || die();
 
 define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
 define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
+define( __NAMESPACE__ . '\OPTION_KEY', 'sft_feedback_page' );
 
 register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
@@ -50,7 +51,7 @@ function add_feedback_page() {
 		'post_type'   => 'page',
 	) );
 	if ( $page_id > 0 ) {
-		update_option( 'feedback_page', $page_id );
+		update_option( OPTION_KEY, $page_id );
 	}
 }
 
@@ -58,7 +59,7 @@ function add_feedback_page() {
  * Remove the feedback page.
  */
 function deactivate() {
-	$page_id = get_option( 'feedback_page' );
+	$page_id = get_option( OPTION_KEY );
 	wp_delete_post( $page_id, true );
 }
 

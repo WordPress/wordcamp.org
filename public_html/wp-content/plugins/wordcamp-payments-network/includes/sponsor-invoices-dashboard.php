@@ -323,6 +323,10 @@ function mark_invoices_as_paid( $sent_invoices, $paid_invoices ) {
  * @return void
  */
 function update_invoice_status( $invoice_id, $new_status ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
+
 	// Disable the functions that run during a normal save, because they'd interfere with this.
 	remove_filter( 'wp_insert_post_data', 'WordCamp\Budgets\Sponsor_Invoices\set_invoice_status', 10 );
 	remove_action( 'save_post',           'WordCamp\Budgets\Sponsor_Invoices\save_invoice',       10 );
@@ -345,12 +349,19 @@ function update_invoice_status( $invoice_id, $new_status ) {
  * @return void
  */
 function notify_organizer_status_changed( $invoice_id, $new_status ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
+
 	$invoice            = get_post( $invoice_id );
 	$to                 = WordCamp_Budgets::get_requester_formatted_email( $invoice->post_author );
 	$subject            = "Invoice for {$invoice->post_title} $new_status";
 	$sponsor_name       = get_sponsor_name( $invoice_id );
 	$invoice_url        = admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) );
-	$headers            = array( 'Reply-To: support@wordcamp.org' );
+	$headers            = array(
+		'Reply-To: support@wordcamp.org',
+		'BCC: ' . EMAIL_DEVELOPER_NOTIFICATIONS, // Temporary, to test that these notifications are working.
+	);
 	$attachments        = array();
 	$attachment_message = '';
 	$invoice_filename   = false;
@@ -428,7 +439,7 @@ function get_sponsor_name( $invoice_id ) {
 function update_index_row( $invoice_id, $invoice ) {
 	global $wpdb;
 
-	if ( \WordCamp\Budgets\Sponsor_Invoices\POST_TYPE !== $invoice->post_type ) {
+	if ( POST_TYPE !== $invoice->post_type ) {
 		return;
 	}
 
@@ -571,6 +582,10 @@ function send_invoice_pending_reminder() {
  * @param string $organizer_mail
  */
 function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
+
 	$invoice   = get_post( $invoice_id );
 	$edit_link = get_site_url() . "/wp-admin/post.php?post=$invoice_id&action=edit";
 
@@ -613,6 +628,10 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
  * @param int $invoice_id
  */
 function send_invoice_defaulted_notification( $invoice_id ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
+
 	$edit_link = get_site_url() . "/wp-admin/post.php?post=$invoice_id&action=edit";
 
 	$notification_body = str_replace(

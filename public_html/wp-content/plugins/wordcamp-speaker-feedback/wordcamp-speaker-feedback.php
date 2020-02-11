@@ -22,6 +22,9 @@ register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 
+// Check if the page exists, and add it if not.
+add_action( 'init', __NAMESPACE__ . '\add_feedback_page' );
+
 /**
  * Include the rest of the plugin.
  */
@@ -43,13 +46,26 @@ function activate() {
  * Create the Feedback page, save ID into an option.
  */
 function add_feedback_page() {
+	$page_id = get_option( OPTION_KEY );
+	if ( $page_id ) {
+		return;
+	}
+
+	$organizer_note = '<!-- wp:paragraph {"textColor":"white","customBackgroundColor":"#94240b"} -->';
+	$organizer_note .= '<p style="background-color:#94240b" class="has-text-color has-background has-white-color">';
+	$organizer_note .= __( 'This page is a placeholder for the Speaker Feedback form. The content here will not be shown on the site.', 'wordcamporg' );
+	$organizer_note .= '</p>';
+	$organizer_note .= '<!-- /wp:paragraph -->';
+
 	$page_id = wp_insert_post( array(
-		'post_title'  => __( 'Leave Feedback', 'wordcamporg' ),
+		'post_title'   => __( 'Leave Feedback', 'wordcamporg' ),
 		/* translators: Page slug for the feedback page. */
-		'post_name'   => __( 'feedback', 'wordcamporg' ),
-		'post_status' => 'publish',
-		'post_type'   => 'page',
+		'post_name'    => __( 'feedback', 'wordcamporg' ),
+		'post_content' => $organizer_note,
+		'post_status'  => 'publish',
+		'post_type'    => 'page',
 	) );
+
 	if ( $page_id > 0 ) {
 		update_option( OPTION_KEY, $page_id );
 	}

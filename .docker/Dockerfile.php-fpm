@@ -55,10 +55,13 @@ RUN chmod 600 /etc/msmtprc
 
 # Install MailCatcher.
 RUN gem install mailcatcher --no-ri --no-rdoc
-RUN sed -i -e "s|;sendmail_path =|sendmail_path = /usr/bin/msmtp -C /etc/msmtprc -t |" /usr/local/etc/php/php.ini-development
-RUN sed -i -e "s/smtp_port = 25/smtp_port = 1025/" /usr/local/etc/php/php.ini-development
 
 # todo Maybe install phpMyAdmin?
+
+# Tweak the php.ini file
+RUN sed -i -e "s|;sendmail_path =|sendmail_path = /usr/bin/msmtp -C /etc/msmtprc -t |" /usr/local/etc/php/php.ini-development
+RUN sed -i -e "s/smtp_port = 25/smtp_port = 1025/" /usr/local/etc/php/php.ini-development
+RUN sed -i -e "s/memory_limit = 128/memory_limit = 256/" /usr/local/etc/php/php.ini-development
 
 # Initialize customized php.ini file.
 RUN cp /usr/local/etc/php/php.ini-development /usr/local/etc/php/php.ini

@@ -20,14 +20,14 @@ if ( $sessions->have_posts() ) : ?>
 	<div class="speaker-feedback__wrapper">
 		<div class="speaker-feedback__field">
 			<select name="sft_session" id="sft-session">
-				<?php while ( $sessions->have_posts() ) {
+				<?php while ( $sessions->have_posts() ) :
 					$sessions->the_post();
 					printf(
 						'<option value="%s">%s</option>',
 						esc_attr( get_the_ID() ),
 						wp_kses_post( get_the_title() )
 					);
-				} ?>
+				endwhile; ?>
 			</select>
 		</div>
 		<input type="submit" value="<?php esc_attr_e( 'Give Feedback', 'wordcamporg' ); ?>" />

@@ -19,13 +19,17 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
 define( __NAMESPACE__ . '\OPTION_KEY', 'sft_feedback_page' );
 define( __NAMESPACE__ . '\QUERY_VAR', 'sft_feedback' );
 
-register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
-register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
-add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
-add_action( 'init', __NAMESPACE__ . '\add_page_endpoint' );
+// Only add actions to sites without the skip flag.
+if ( ! wcorg_skip_feature('speaker_feedback' ) ) {
+	register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
+	register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
-// Check if the page exists, and add it if not.
-add_action( 'init', __NAMESPACE__ . '\add_feedback_page' );
+	add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
+	add_action( 'init', __NAMESPACE__ . '\add_page_endpoint' );
+
+	// Check if the page exists, and add it if not.
+	add_action( 'init', __NAMESPACE__ . '\add_feedback_page' );
+}
 
 /**
  * Include the rest of the plugin.

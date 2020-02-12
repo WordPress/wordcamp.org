@@ -1210,6 +1210,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
+	hyphens: manual;
 }
 .sponsors-widget-list .wp-caption img {
 	margin: 0 auto;

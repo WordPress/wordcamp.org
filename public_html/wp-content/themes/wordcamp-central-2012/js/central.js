@@ -54,7 +54,6 @@ var WordCampCentral = ( function( $ ) {
 
 		try {
 			toggleNavigation();
-			populateLatestTweets();
 		} catch ( exception ) {
 			log( exception );
 		}
@@ -65,6 +64,7 @@ var WordCampCentral = ( function( $ ) {
 	 */
 	function documentReadyInit() {
 		try {
+			cycleLogos();
 			if ( options.hasOwnProperty( 'mapContainer' ) && options.hasOwnProperty( 'mapMarkers' ) ) {
 				loadMap( options.mapContainer, options.mapMarkers );
 			}
@@ -111,45 +111,15 @@ var WordCampCentral = ( function( $ ) {
 	}
 
 	/**
-	 * Fetch the latest tweets and inject them into the DOM
+	 * Turn the sponsors widget list into a slideshow.
 	 */
-	function populateLatestTweets() {
-		var tweetsContainer = $( '#wc-tweets-container' );
+	function cycleLogos() {
+		var $container = $( '.sponsors-widget-list' );
 
-		if ( ! tweetsContainer.length ) {
-			return;
-		}
-
-		$.getJSON(
-			options.ajaxURL,
-			{ action: 'get_latest_wordcamp_tweets' },
-			function( response ) {
-				var index, tweets,
-					spinner         = $( '#wc-tweets-spinner' ),
-					error           = $( '#wc-tweets-error' ),
-					tweetTemplate   = _.template( $( '#tmpl-wc-tweet' ).html(), null, templateOptions );
-
-				// Check for success
-				if ( response.hasOwnProperty( 'data' ) && response.data.hasOwnProperty( 'tweets' ) && response.data.tweets instanceof Array ) {
-					tweets = response.data.tweets;
-				} else {
-					spinner.addClass(  'hidden' );
-					error.removeClass( 'hidden' );
-					error.removeAttr(  'hidden' );
-					return;
-				}
-
-				// Populate and reveal the container
-				for ( index in tweets ) {
-					if ( tweets.hasOwnProperty( index ) ) {
-						tweetsContainer.append( tweetTemplate( { 'tweet': tweets[ index ] } ) );
-					}
-				}
-
-				spinner.addClass( 'hidden' );
-				tweetsContainer.removeClass( 'transparent' );
-			}
-		);
+		$container.cycle( {
+			timeout: 5000,
+			speed: 500
+		} );
 	}
 
 	/**

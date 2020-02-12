@@ -34,8 +34,6 @@ class WordCamp_Central_Theme {
 		add_action( 'pre_get_posts', array( __CLASS__, 'pre_get_posts' ) );
 		add_action( 'init', array( __CLASS__, 'process_forms' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_scripts' ) );
-		add_action( 'wp_ajax_get_latest_wordcamp_tweets', array( __CLASS__, 'get_latest_tweets' ) );
-		add_action( 'wp_ajax_nopriv_get_latest_wordcamp_tweets', array( __CLASS__, 'get_latest_tweets' ) );
 
 		add_filter( 'excerpt_more', array( __CLASS__, 'excerpt_more' ), 11 );
 		add_filter( 'nav_menu_css_class', array( __CLASS__, 'nav_menu_css_class' ), 10, 3 );
@@ -62,7 +60,7 @@ class WordCamp_Central_Theme {
 
 		// Can I haz editor style?
 		add_editor_style();
-		
+
 		// Let WordPress manage the document title.
 		add_theme_support( 'title-tag' );
 	}
@@ -91,6 +89,15 @@ class WordCamp_Central_Theme {
 			'after_widget'  => '</li>',
 			'before_title'  => '<h3 class="widget-title">',
 			'after_title'   => '</h3>',
+		) );
+		register_sidebar( array(
+			'name'          => __( 'Sponsors Widget Area', 'twentyten' ),
+			'id'            => 'sponsors-widget-area',
+			'description'   => __( 'Widgets displayed in the Sponsors column on the homepage, one-by-one, as a slideshow.', 'twentyten' ),
+			'before_widget' => '<li id="%1$s" class="widget-container %2$s">',
+			'after_widget'  => '</li>',
+			'before_title'  => '<h4 class="widget-title">',
+			'after_title'   => '</h4>',
 		) );
 	}
 
@@ -509,103 +516,6 @@ class WordCamp_Central_Theme {
 	}
 
 	/**
-	 * Fetch the latest tweets from the @WordCamp account.
-	 *
-	 * This is an AJAX callback returning JSON-formatted data.
-	 *
-	 * We're manually expiring/refreshing the transient to ensure that we only ever update it when we have a
-	 * valid response from the API. If there is a problem retrieving new data from the API, then we want to
-	 * continue displaying the valid cached data until we can successfully retrieve new data. The data is still
-	 * stored in a transient instead of an option, though, so that it can be cached in memory.
-	 *
-	 * Under certain unlikely conditions, this could cause an API rate limit violation. If the data is expired
-	 * and we can connect to the API at the network level, but then the request fails at the application level
-	 * (invalid credentials, etc), then we'll be hitting the API every time this function is called. If that
-	 * does ever happen, it could be fixed by setting the timestamp of the last attempt in a transient and only
-	 * issuing another attempt if ~2 minutes have passed.
-	 */
-	public static function get_latest_tweets() {
-		$transient_key = 'wcc_latest_tweets';
-		$tweets        = get_transient( $transient_key );
-		$expired       = $tweets['last_update'] < strtotime( 'now - 15 minutes' );
-
-		if ( ! $tweets || $expired ) {
-			$response = wp_remote_get(
-				'https://api.twitter.com/1.1/statuses/user_timeline.json?count=6&trim_user=true&exclude_replies=true&include_rts=false&screen_name=wordcamp',
-				array(
-					'headers' => array( 'Authorization' => 'Bearer ' . TWITTER_BEARER_TOKEN_WORDCAMP_CENTRAL ),
-				)
-			);
-
-			if ( ! is_wp_error( $response ) ) {
-				$tweets['tweets'] = json_decode( wp_remote_retrieve_body( $response ) );
-
-				/*
-				 * Remove all but the first 3 tweets
-				 *
-				 * The Twitter API includes retweets in the `count` parameter, even if include_rts=false is passed,
-				 * so we have to request more tweets than we actually want and then cut it down here.
-				 */
-				if ( is_array( $tweets['tweets'] ) ) {
-					$tweets['tweets']      = array_slice( $tweets['tweets'], 0, 3 );
-					$tweets['tweets']      = self::sanitize_format_tweets( $tweets['tweets'] );
-					$tweets['last_update'] = time();
-
-					set_transient( $transient_key, $tweets );
-				}
-			}
-		}
-
-		wp_send_json_success( $tweets );
-	}
-
-	/**
-	 * Sanitize and format the tweet objects
-	 *
-	 * Whitelist the fields to cut down on how much data we're storing/transmitting, but also to force
-	 * future devs to manually enable/sanitize any new fields that are used, which avoids the risk of
-	 * accidentally using an unsafe value.
-	 *
-	 * @param array $tweets
-	 *
-	 * @return array
-	 */
-	protected static function sanitize_format_tweets( $tweets ) {
-		$whitelisted_fields = array(
-			'id_str'     => '',
-			'text'       => '',
-			'created_at' => '',
-		);
-
-		foreach ( $tweets as & $tweet ) {
-			$tweet           = (object) shortcode_atts( $whitelisted_fields, $tweet );
-			$tweet->id_str   = sanitize_text_field( $tweet->id_str );
-			$tweet->text     = wp_kses( $tweet->text, wp_kses_allowed_html( 'data' ), array( 'http', 'https', 'mailto' ) );
-			$tweet->text     = make_clickable( $tweet->text );
-			$tweet->text     = self::link_hashtags_and_usernames( $tweet->text );
-			$tweet->time_ago = human_time_diff( strtotime( $tweet->created_at ) );
-		}
-
-		return $tweets;
-	}
-
-	/**
-	 * Convert usernames and hashtags to links
-	 *
-	 * Based on Tagregator's TGGRSourceTwitter::link_hashtags_and_usernames().
-	 *
-	 * @param string $text
-	 *
-	 * @return string
-	 */
-	protected static function link_hashtags_and_usernames( $content ) {
-		$content = preg_replace( '/@(\w+)/',       '<a href="https://twitter.com/\\1"          class="wc-tweets-username">@\\1</a>', $content );
-		$content = preg_replace( '/(?<!&)#(\w+)/', '<a href="https://twitter.com/search?q=\\1" class="wc-tweets-tag"     >#\\1</a>', $content );
-
-		return $content;
-	}
-
-	/**
 	 * Override `twentyten_comment()` in the parent theme.
 	 *
 	 * @param WP_Comment $comment
@@ -995,3 +905,20 @@ class WordCamp_Central_Theme_Kill_Features {
 		return false;
 	}
 }
+
+/**
+ * Randomize the order of the widgets in the Sponsors widget area.
+ *
+ * @param array $sidebars_widgets
+ *
+ * @return array
+ */
+function wordcamp_central_randomize_sponsor_widget_order( $sidebars_widgets ) {
+	if ( isset( $sidebars_widgets['sponsors-widget-area'] ) ) {
+		shuffle( $sidebars_widgets['sponsors-widget-area'] );
+	}
+
+	return $sidebars_widgets;
+}
+
+add_filter( 'sidebars_widgets', 'wordcamp_central_randomize_sponsor_widget_order' );

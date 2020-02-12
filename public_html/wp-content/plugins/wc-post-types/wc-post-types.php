@@ -9,6 +9,11 @@ require_once 'inc/favorite-schedule-shortcode.php';
 require_once 'inc/privacy.php';
 require_once 'inc/deprecated.php';
 
+// Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2
+// greater than the core-defined ep_masks, but could potentially conflict with another plugin.
+// See https://developer.wordpress.org/reference/functions/add_rewrite_endpoint/.
+define( 'EP_SESSIONS', 16384 );
+
 class WordCamp_Post_Types_Plugin {
 	protected $wcpt_permalinks;
 
@@ -1732,6 +1737,7 @@ class WordCamp_Post_Types_Plugin {
 				'rewrite'         => array(
 					'slug'       => 'session',
 					'with_front' => false,
+					'ep_mask'    => EP_SESSIONS,
 				),
 				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'thumbnail', 'custom-fields' ),
 				'menu_position'   => 21,

@@ -8,7 +8,7 @@ use WordCamp_QBO_Client;
 use WordCamp_Budgets;
 use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 const LATEST_DATABASE_VERSION = 3;
 
@@ -443,7 +443,7 @@ function update_index_row( $invoice_id, $invoice ) {
 		return;
 	}
 
-	// Drafts, etc aren't displayed in the list table, so there's no reason to index them
+	// Drafts, etc aren't displayed in the list table, so there's no reason to index them.
 	$ignored_statuses = array( 'auto-draft', 'draft', 'trash' );
 
 	if ( in_array( $invoice->post_status, $ignored_statuses, true ) ) {
@@ -462,7 +462,7 @@ function update_index_row( $invoice_id, $invoice ) {
 		'sponsor_name'   => substr( get_sponsor_name( $invoice_id ), 0, 75 ),
 		'description'    => get_post_meta( $invoice_id, '_wcbsi_description', true ),
 		'currency'       => get_post_meta( $invoice_id, '_wcbsi_currency',    true ),
-		'due_date'       => 0,  // todo remove this field from index
+		'due_date'       => 0,  // todo remove this field from index.
 		'amount'         => get_post_meta( $invoice_id, '_wcbsi_amount',      true ),
 	);
 

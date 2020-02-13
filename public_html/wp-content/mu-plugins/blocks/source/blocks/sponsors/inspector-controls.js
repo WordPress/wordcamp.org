@@ -63,9 +63,9 @@ export default class extends Component {
 				<PanelBody title={ __( 'Content Settings', 'wordcamporg' ) } initialOpen={ true }>
 					<ToggleControl
 						label={ __( 'Name', 'wordcamporg' ) }
-						help={ show_name ?
-							__( 'Sponsor name is visible.', 'wordcamporg' ) :
-							__( 'Sponsor name is hidden.', 'wordcamporg' ) }
+						help={ show_name
+							? __( 'Sponsor name is visible.', 'wordcamporg' )
+							: __( 'Sponsor name is hidden.', 'wordcamporg' ) }
 						checked={ show_name }
 						onChange={ ( value ) => setAttributes( { show_name: value } ) }
 					/>

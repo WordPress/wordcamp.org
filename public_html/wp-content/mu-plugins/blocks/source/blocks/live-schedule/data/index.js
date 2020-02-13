@@ -53,8 +53,8 @@ function fetchFromAPI() {
 export function getCurrentSessions( { sessions, tracks } ) {
 	const nowTimestamp = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 
-	const trackListWithSessions = tracks.length ?
-		tracks.map( ( track ) => {
+	const trackListWithSessions = tracks.length
+		? tracks.map( ( track ) => {
 			// Reverse the sorted array so that the first found index is the one that starts closest to "now".
 			// This is intended to catch sessions that don't set a duration, but are shorter than the default.
 			const sessionsInTrack = reverse( sortBy(
@@ -65,9 +65,9 @@ export function getCurrentSessions( { sessions, tracks } ) {
 				track: track,
 				sessions: sessionsInTrack,
 			};
-		} ) :
+		} )
 		// Fall back to one track with all sessions, if no tracks are found.
-		[ {
+		: [ {
 			track: {},
 			sessions: reverse( sortBy( sessions, 'meta._wcpt_session_time' ) ),
 		} ];

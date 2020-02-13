@@ -65,9 +65,9 @@ class ImageInspectorPanel extends Component {
 			>
 				<ToggleControl
 					label={ __( 'Show images', 'wordcamporg' ) }
-					help={ show ?
-						__( 'Images are visible.', 'wordcamporg' ) :
-						__( 'Images are hidden.', 'wordcamporg' ) }
+					help={ show
+						? __( 'Images are visible.', 'wordcamporg' )
+						: __( 'Images are hidden.', 'wordcamporg' ) }
 					checked={ show }
 					onChange={ onChangeShow }
 				/>

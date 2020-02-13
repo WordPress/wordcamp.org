@@ -1201,12 +1201,12 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 /* !Featured Sponsors */
 .sponsors-widget-list {
-	height: 320px;
+	height: 340px;
 }
 .sponsors-widget-list .wp-caption {
 	background: transparent;
 	width: 100% !important;
-	min-height: 320px;
+	min-height: 340px;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;

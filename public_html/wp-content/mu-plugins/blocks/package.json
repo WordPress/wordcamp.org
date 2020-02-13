@@ -53,6 +53,7 @@
 		"start": "wp-scripts start blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",
 		"build": "wp-scripts build blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",
 		"lint:js": "wp-scripts lint-js",
+		"format:js": "wp-scripts format-js",
 		"lint:css": "wp-scripts lint-style '**/*.scss'",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"test": "wp-scripts test-unit-js"

@@ -74,7 +74,7 @@ class Edit extends Component {
 					>
 						<div className="wordcamp__edit-mode-option">
 							<Button
-								isDefault
+								isSecondary
 								isLarge
 								onClick={ () => {
 									setAttributes( { mode: 'all' } );

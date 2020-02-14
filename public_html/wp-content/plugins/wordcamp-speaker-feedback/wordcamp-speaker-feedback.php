@@ -19,8 +19,8 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
 define( __NAMESPACE__ . '\OPTION_KEY', 'sft_feedback_page' );
 define( __NAMESPACE__ . '\QUERY_VAR', 'sft_feedback' );
 
-// Only add actions to sites without the skip flag.
-if ( ! wcorg_skip_feature('speaker_feedback' ) ) {
+// Only add actions to sites without the skip flag, and only if WC Post Types exist.
+if ( ! wcorg_skip_feature('speaker_feedback' ) && class_exists( 'WordCamp_Post_Types_Plugin' ) ) {
 	register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
 	register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 

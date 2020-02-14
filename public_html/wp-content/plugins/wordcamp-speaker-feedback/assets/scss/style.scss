@@ -1,3 +1,5 @@
+@import "_variables";
+
 /**
  * Basic form styles.
  */
@@ -29,5 +31,63 @@
 
 	input[type="submit"] {
 		flex: initial;
+	}
+}
+
+/**
+ * Star Rating input.
+ */
+
+.speaker-feedback__field-rating {
+	display: inline-block;
+	position: relative;
+	margin: 0;
+	padding: 0;
+	border: none;
+
+	&:focus-within {
+		outline: 1px dotted #666;
+	}
+
+	svg {
+		width: 50px;
+		height: 50px;
+		fill: currentColor;
+	}
+
+	input {
+		position: absolute;
+		margin-right: -100%;
+		opacity: 0;
+	}
+
+	label {
+		display: block;
+		float: left;
+		padding-right: 10px;
+		color: $star-selected;
+		cursor: pointer;
+	}
+
+	input:checked ~ label {
+		color: $star-default;
+	}
+
+	input:checked + label {
+		color: $star-selected;
+	}
+
+	:hover input + label {
+		color: $star-selected;
+	}
+
+	input:hover ~ label,
+	input:focus ~ label {
+		color: $star-default;
+	}
+
+	input:hover + label,
+	input:focus + label {
+		color: $star-selected;
 	}
 }

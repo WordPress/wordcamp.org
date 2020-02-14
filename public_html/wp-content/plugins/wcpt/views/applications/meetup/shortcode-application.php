@@ -113,6 +113,15 @@ function render_meetup_application_form( $countries ) {
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label>
+					Where we can find you online?
+					<span class="required-indicator">(required)</span>
+					<span class="label-description">Please add links to your websites, blogs and social media accounts.</span>
+					<textarea name="q_socialmedia" rows="5" required ></textarea>
+				</label>
+			</div>
+			<div class="PDF_questionDivide"></div>
+			<div class="PDF_question">
+				<label>
 					Your <a href="https://wordpress.org" target="_blank">WordPress.org</a> username
 					<span class="required-indicator">(required)</span>
 					<input type="text" name="q_wporg_username" required/>

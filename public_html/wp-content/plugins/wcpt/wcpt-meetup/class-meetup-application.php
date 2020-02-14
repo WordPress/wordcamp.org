@@ -181,7 +181,7 @@ class Meetup_Application extends Event_Application {
 			'q_mtp_loc'             => '',
 			'q_already_a_meetup'    => '',
 			'q_existing_meetup_url' => '',
-			'q_introduction',				=> '',
+			'q_introduction'				=> '',
 			'q_socialmedia'					=> '',
 			'q_reasons_plans'				=> '',
 			'q_community_interest'	=> '',

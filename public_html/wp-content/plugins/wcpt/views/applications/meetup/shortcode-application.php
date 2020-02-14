@@ -105,15 +105,38 @@ function render_meetup_application_form( $countries ) {
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label>
-					How would you describe yourself?
+					Could you introduce yourself and tell us more about your connection with WordPress?
 					<span class="required-indicator">(required)</span>
-
-					<select name="q_describe_yourself" required>
+					<textarea name="q_introduction" rows="5" required ></textarea>
+				</label>
+			</div>
+			<div class="PDF_questionDivide"></div>
+			<div class="PDF_question">
+				<label>
+					Where we can find you online?
+					<span class="required-indicator">(required)</span>
+					<span class="label-description">Please add links to your websites, blogs and social media accounts.</span>
+					<textarea name="q_socialmedia" rows="5" required ></textarea>
+				</label>
+			</div>
+			<div class="PDF_questionDivide"></div>
+			<div class="PDF_question">
+				<label>
+					Why do you want to start a WordPress Meetup in your city? And what are your immediate plans?
+					<span class="required-indicator">(required)</span>
+					<textarea name="q_reasons_plans" rows="5" required ></textarea>
+				</label>
+			</div>
+			<div class="PDF_questionDivide"></div>
+			<div class="PDF_question">
+				<label>
+					Have you talked with people in your community to check the level of interest?
+					<span class="required-indicator">(required)</span>
+					<select name="q_community_interest" required>
 						<option value=""></option>
-						<option>WordPress professional</option>
-						<option>Current WordPress user or developer</option>
-						<option>New to WordPress</option>
-						<option>I don't use WordPress</option>
+						<option>Nope, I have not</option>
+						<option>Yes, people are interested</option>
+						<option>I'm not sure about the level of interest</option>
 					</select>
 				</label>
 			</div>
@@ -135,8 +158,8 @@ function render_meetup_application_form( $countries ) {
 			<div class="PDF_questionDivide"></div>
 			<div class="PDF_question">
 				<label>
-					Anything you'd like to tell us about yourself, or what you hope to do with a meetup group?
-					<textarea name="q_additional_comments"></textarea>
+					Anything else you want us to know while we're looking over your application?
+					<textarea name="q_anything_else" rows="5"></textarea>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>

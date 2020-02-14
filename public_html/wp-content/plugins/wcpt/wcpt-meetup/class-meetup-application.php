@@ -141,6 +141,7 @@ class Meetup_Application extends Event_Application {
 			'q_introduction',
 			'q_socialmedia',
 			'q_reasons_plans',
+			'q_community_interest',
 			'q_wporg_username',
 		);
 
@@ -183,6 +184,7 @@ class Meetup_Application extends Event_Application {
 			'q_introduction',				=> '',
 			'q_socialmedia'					=> '',
 			'q_reasons_plans'				=> '',
+			'q_community_interest'	=> '',
 			'q_wporg_username'      => '',
 			'q_wp_slack_username'   => '',
 		);

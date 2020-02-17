@@ -3,6 +3,25 @@
 namespace WordCamp\PWA\Caching;
 use WP_Service_Worker_Caching_Routes, WP_Service_Worker_Scripts;
 
+/**
+ * Disable the caching by default in testing environments.
+ *
+ * The caching makes it less intuitive and less convenient to test unrelated changes, which is what what we'll be
+ * doing 99% of the time in local environment. For the 1% of the time where we want to test SW caching, the filter
+ * can be used to enable it.
+ */
+$coming_soon_settings = get_option( 'wccsp_settings' );
+$coming_soon_enabled  = $coming_soon_settings['enabled'] ?? 'off';
+
+$caching_enabled = apply_filters(
+	'wordcamp_service_worker_caching_enabled',
+	'production' === WORDCAMP_ENVIRONMENT && 'off' === $coming_soon_enabled
+);
+
+if ( ! $caching_enabled ) {
+	return;
+}
+
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes' );
 add_action( 'wp_front_service_worker', __NAMESPACE__ . '\set_navigation_caching_strategy' );
 add_filter( 'wccs_safelisted_namespaces', __NAMESPACE__ . '\safelist_manifest_api' );

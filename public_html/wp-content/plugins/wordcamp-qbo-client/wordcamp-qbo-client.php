@@ -307,7 +307,7 @@ class WordCamp_QBO_Client {
 			} elseif ( isset( $body->message ) ) {
 				$sent = $body->message;
 			} else {
-				$sent = 'Unknown error.';
+				$sent = print_r( array( $body ), true );
 			}
 		}
 

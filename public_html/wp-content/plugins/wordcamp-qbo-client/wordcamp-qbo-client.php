@@ -250,7 +250,12 @@ class WordCamp_QBO_Client {
 				'Authorization' => self::_get_auth_header( 'post', $request_url, $body ),
 			),
 		);
-		$response     = wp_remote_post( $request_url, $request_args );
+
+		if ( 'local' === get_wordcamp_environment() ) {
+			$request_args['sslverify'] = false;
+		}
+
+		$response = wp_remote_post( $request_url, $request_args );
 
 		Logger\log( 'remote_request', compact( 'request_url', 'request_args', 'response' ) );
 
@@ -375,6 +380,10 @@ class WordCamp_QBO_Client {
 			),
 		);
 
+		if ( 'local' === get_wordcamp_environment() ) {
+			$args['sslverify'] = false;
+		}
+
 		return array(
 			'url'  => $request_url,
 			'args' => $args,
@@ -449,7 +458,11 @@ class WordCamp_QBO_Client {
 			),
 		);
 
-		$request_url = add_query_arg( $params, $request_url );  // has to be done after get_auth_header() is called so that the base url and params can be passed separately
+		if ( 'local' === get_wordcamp_environment() ) {
+			$args['sslverify'] = false;
+		}
+
+		$request_url = add_query_arg( $params, $request_url );  // has to be done after get_auth_header() is called so that the base url and params can be passed separately.
 
 		return array(
 			'url'  => $request_url,
@@ -507,7 +520,11 @@ class WordCamp_QBO_Client {
 			),
 		);
 
-		$request_url = add_query_arg( $params, $request_url );  // has to be done after get_auth_header() is called so that the base url and params can be passed separately
+		if ( 'local' === get_wordcamp_environment() ) {
+			$args['sslverify'] = false;
+		}
+
+		$request_url = add_query_arg( $params, $request_url );  // has to be done after get_auth_header() is called so that the base url and params can be passed separately.
 
 		return array(
 			'url'  => $request_url,

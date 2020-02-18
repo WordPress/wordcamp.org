@@ -114,6 +114,15 @@ function get_views_path() {
 }
 
 /**
+ * Shortcut to the assets directory.
+ *
+ * @return string
+ */
+function get_assets_path() {
+	return plugin_dir_path( __FILE__ ) . 'assets/';
+}
+
+/**
  * Shortcut to the assets URL.
  *
  * @return string

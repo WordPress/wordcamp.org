@@ -68,7 +68,6 @@ class ImageSizeControl extends Component {
 								return (
 									<Button
 										key={ slug }
-										isLarge
 										isPrimary={ isCurrent }
 										aria-label={ name }
 										aria-pressed={ isCurrent }
@@ -83,8 +82,6 @@ class ImageSizeControl extends Component {
 
 					<Button
 						className="wordcamp-image__size-button-reset"
-						isLarge
-						isDefault
 						onClick={ () => this.onChange( Number( initialPosition ) ) }
 					>
 						{ __( 'Reset', 'wordcamporg' ) }

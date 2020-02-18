@@ -30,6 +30,8 @@ add_filter( 'json_prepare_taxonomy',    'deprecate_v1_endpoints' );
 add_filter( 'json_prepare_term',        'deprecate_v1_endpoints' );
 add_filter( 'json_prepare_user',        'deprecate_v1_endpoints' );
 
+add_filter( 'json_prepare_meta', 'wcorg_json_filter_session_time_value' );
+
 // Allow some routes to skip the JSON REST API v1 plugin.
 add_action( 'parse_request', 'wcorg_json_v2_compat', 9 );
 
@@ -147,6 +149,25 @@ function wcorg_json_expose_whitelisted_meta_data( $prepared_post, $raw_post, $co
 	}
 
 	return $prepared_post;
+}
+
+/**
+ * Reset the session time value to the "faux-UTC" value, for backwards-compatibility.
+ *
+ * See https://github.com/WordPress/wordcamp.org/issues/226, https://github.com/WordPress/wordcamp.org/pull/348
+ *
+ * @param array $meta_array Meta values for the current object.
+ * @return array Updated meta values.
+ */
+function wcorg_json_filter_session_time_value( $meta_array ) {
+	foreach ( $meta_array as $i => $meta ) {
+		if ( '_wcpt_session_time' === $meta['key'] ) {
+			// Create a DateTime object using the session date, but fake the timezone to UTC (`Z`).
+			$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $meta['value'] ) );
+			$meta_array[ $i ]['value'] = $datetime->getTimestamp();
+		}
+	}
+	return $meta_array;
 }
 
 /**

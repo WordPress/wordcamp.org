@@ -514,8 +514,8 @@ class WordCamp_Post_Types_Plugin {
 			$global_session      = count( $columns ) === $colspan ? ' global-session' : '';
 			$global_session_slug = $global_session ? ' ' . sanitize_html_class( sanitize_title_with_dashes( $session->post_title ) ) : '';
 
-			$html .= sprintf( '<tr class="%s">', sanitize_html_class( 'wcpt-time-' . date( $time_format, $time ) ) . $global_session . $global_session_slug );
-			$html .= sprintf( '<td class="wcpt-time">%s</td>', str_replace( ' ', '&nbsp;', esc_html( date( $time_format, $time ) ) ) );
+			$html .= sprintf( '<tr class="%s">', sanitize_html_class( 'wcpt-time-' . wp_date( $time_format, $time ) ) . $global_session . $global_session_slug );
+			$html .= sprintf( '<td class="wcpt-time">%s</td>', str_replace( ' ', '&nbsp;', esc_html( wp_date( $time_format, $time ) ) ) );
 			$html .= $columns_html;
 			$html .= '</tr>';
 		}
@@ -1274,10 +1274,10 @@ class WordCamp_Post_Types_Plugin {
 			$session_time        = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
 		}
 
-		$session_date     = ( $session_time ) ? date( 'Y-m-d', $session_time ) : date( 'Y-m-d' );
-		$session_hours    = ( $session_time ) ? date( 'g', $session_time )     : date( 'g' );
-		$session_minutes  = ( $session_time ) ? date( 'i', $session_time )     : '00';
-		$session_meridiem = ( $session_time ) ? date( 'a', $session_time )     : 'am';
+		$session_date     = ( $session_time ) ? wp_date( 'Y-m-d', $session_time ) : wp_date( 'Y-m-d' );
+		$session_hours    = ( $session_time ) ? wp_date( 'g', $session_time )     : wp_date( 'g' );
+		$session_minutes  = ( $session_time ) ? wp_date( 'i', $session_time )     : '00';
+		$session_meridiem = ( $session_time ) ? wp_date( 'a', $session_time )     : 'am';
 
 		$session_duration         = $post->_wcpt_session_duration ?? self::SESSION_DEFAULT_DURATION;
 		$session_duration_hours   = floor( $session_duration / HOUR_IN_SECONDS );
@@ -1526,14 +1526,19 @@ class WordCamp_Post_Types_Plugin {
 
 		if ( isset( $_POST['wcpt-meta-session-info'] ) && wp_verify_nonce( $_POST['wcpt-meta-session-info'], 'edit-session-info' ) ) {
 			// Update session time.
-			$session_time = strtotime( sprintf(
-				'%s %d:%02d %s',
-				sanitize_text_field( $_POST['wcpt-session-date'] ),
-				absint( $_POST['wcpt-session-hour'] ),
-				absint( $_POST['wcpt-session-minutes'] ),
-				'am' === $_POST['wcpt-session-meridiem'] ? 'am' : 'pm'
-			) );
-			update_post_meta( $post_id, '_wcpt_session_time', $session_time );
+			$session_time = date_create(
+				sprintf(
+					'%s %d:%02d %s',
+					sanitize_text_field( $_POST['wcpt-session-date'] ),
+					absint( $_POST['wcpt-session-hour'] ),
+					absint( $_POST['wcpt-session-minutes'] ),
+					'am' === $_POST['wcpt-session-meridiem'] ? 'am' : 'pm'
+				),
+				wp_timezone()
+			);
+			if ( $session_time ) {
+				update_post_meta( $post_id, '_wcpt_session_time', $session_time->getTimestamp() );
+			}
 
 			$duration = absint(
 				( $_POST['wcpt-session-duration-hours']   * HOUR_IN_SECONDS ) +
@@ -2082,7 +2087,7 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'wcb_session_time':
 				$session_time = absint( get_post_meta( get_the_ID(), '_wcpt_session_time', true ) );
-				$session_time = ( $session_time ) ? date( get_option( 'time_format' ), $session_time ) : '&mdash;';
+				$session_time = ( $session_time ) ? wp_date( get_option( 'time_format' ), $session_time ) : '&mdash;';
 				echo esc_html( $session_time );
 				break;
 

@@ -29,11 +29,28 @@ function expose_public_post_meta() {
 	$default_integer = wp_parse_args( array( 'type' => 'integer' ), $meta_defaults );
 
 	// Session.
-	register_post_meta( 'wcb_session', '_wcpt_session_time',     $default_integer );
 	register_post_meta( 'wcb_session', '_wcpt_session_duration', $default_integer );
 	register_post_meta( 'wcb_session', '_wcpt_session_type', $meta_defaults );
 	register_post_meta( 'wcb_session', '_wcpt_session_slides', $meta_defaults );
 	register_post_meta( 'wcb_session', '_wcpt_session_video', $meta_defaults );
+
+	register_post_meta(
+		'wcb_session',
+		'_wcpt_session_time',
+		array(
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					if ( $request->get_param( 'wc_session_utc' ) ) {
+						$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $value ) );
+						return $datetime->getTimestamp();
+					}
+					return (int) $value;
+				},
+			),
+			'single'       => true,
+			'type'         => 'integer',
+		)
+	);
 
 	// Sponsor.
 	register_post_meta( 'wcb_sponsor', '_wcpt_sponsor_website', $meta_defaults );
@@ -110,8 +127,8 @@ function register_additional_rest_fields() {
 				);
 
 				if ( $raw ) {
-					$return['date'] = date_i18n( get_option( 'date_format' ), $raw );
-					$return['time'] = date_i18n( get_option( 'time_format' ), $raw );
+					$return['date'] = wp_date( get_option( 'date_format' ), $raw );
+					$return['time'] = wp_date( get_option( 'time_format' ), $raw );
 				}
 
 				return $return;
@@ -247,6 +264,13 @@ function add_meta_collection_params( $query_params, $post_type ) {
 	$query_params['wc_meta_value'] = array(
 		'description' => __( 'Limit result set to posts with a specific meta value. Use in conjunction with the wc_meta_key parameter.', 'wordcamporg' ),
 		'type'        => 'string',
+	);
+
+	// Add a parameter for the faux-UTC time.
+	$query_params['wc_session_utc'] = array(
+		'description' => __( 'Toggle the legacy timestamp.', 'wordcamporg' ),
+		'type'        => 'boolean',
+		'default'     => false,
 	);
 
 	return $query_params;

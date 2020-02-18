@@ -6,7 +6,6 @@ import { findLastIndex, reverse, sortBy } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { __experimentalGetSettings } from '@wordpress/date';
 import { addQueryArgs } from '@wordpress/url';
 import apiFetch from '@wordpress/api-fetch';
 
@@ -52,7 +51,6 @@ function fetchFromAPI() {
  * @return {Array} A list of objects, `{track, now, next}`.
  */
 export function getCurrentSessions( { sessions, tracks } ) {
-	const tzOffset = __experimentalGetSettings().timezone.offset * ( 60 * 60 * 1000 );
 	const nowTimestamp = window.WordCampBlocks[ 'live-schedule' ].nowOverride || Date.now();
 
 	const trackListWithSessions = tracks.length ?
@@ -82,7 +80,7 @@ export function getCurrentSessions( { sessions, tracks } ) {
 		// Check if we're more than a day out from the earliest session (so that we don't show "up next" before
 		// the WordCamp starts).
 		const firstSession = sessionsInTrack[ sessionsInTrack.length - 1 ];
-		const firstSessionTimestamp = ( firstSession.meta._wcpt_session_time * 1000 ) - tzOffset;
+		const firstSessionTimestamp = firstSession.meta._wcpt_session_time * 1000;
 		const dayInMiliseconds = 24 * 60 * 60 * 1000;
 		if ( nowTimestamp < ( firstSessionTimestamp - dayInMiliseconds ) ) {
 			return {};
@@ -90,7 +88,7 @@ export function getCurrentSessions( { sessions, tracks } ) {
 
 		const index = sessionsInTrack.findIndex( ( { meta } ) => {
 			const duration = ( meta._wcpt_session_duration || window.WordCampBlocks[ 'live-schedule' ].fallbackDuration ) * 1000;
-			const startTimestamp = ( meta._wcpt_session_time * 1000 ) - tzOffset;
+			const startTimestamp = meta._wcpt_session_time * 1000;
 			const endTimestamp = startTimestamp + duration;
 
 			// Start time before now, end time after now.
@@ -103,7 +101,7 @@ export function getCurrentSessions( { sessions, tracks } ) {
 			// If nothing is found for "now", see if anything is coming up next by looking for the earliest thing
 			// that's later than now.
 			nextIndex = findLastIndex( sessionsInTrack, ( { meta } ) => {
-				const startTimestamp = ( meta._wcpt_session_time * 1000 ) - tzOffset;
+				const startTimestamp = meta._wcpt_session_time * 1000;
 				return ( startTimestamp > nowTimestamp );
 			} );
 		}

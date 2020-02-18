@@ -20,7 +20,7 @@ public_html/wp-config.php
 public_html/wp-content/blogs.dir/
 public_html/wp-content/cache/
 public_html/wp-content/languages/
-public_html/wp-content/mu-plugins/blocks/build
+public_html/wp-content/**/build/
 public_html/wp-content/mu-plugins/includes/slack/
 public_html/wp-content/mu-plugins/vendor/
 public_html/wp-content/mu-plugins-private/
@@ -62,7 +62,6 @@ public_html/wp-content/plugins/public-post-preview/
 public_html/wp-content/plugins/pwa/
 public_html/wp-content/plugins/supportflow
 public_html/wp-content/plugins/tagregator
-public_html/wp-content/plugins/wcpt/javascript/tracker/build/
 public_html/wp-content/plugins/wordpress-importer
 public_html/wp-content/plugins/wp-cldr
 public_html/wp-content/plugins/wp-multibyte-patch

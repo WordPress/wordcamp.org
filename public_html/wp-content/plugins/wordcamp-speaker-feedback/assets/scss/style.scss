@@ -1,0 +1,33 @@
+/**
+ * Basic form styles.
+ */
+
+.speaker-feedback__field {
+	margin-bottom: 2em;
+
+	select {
+		width: 100%;
+	}
+}
+
+/**
+ * Session navigation page.
+ */
+
+.speaker-feedback-navigation {
+	.speaker-feedback__wrapper {
+		display: flex;
+	}
+
+	.speaker-feedback__field {
+		margin-bottom: 0;
+		padding-right: 1em;
+		flex: auto;
+		display: flex;
+		align-items: stretch;
+	}
+
+	input[type="submit"] {
+		flex: initial;
+	}
+}

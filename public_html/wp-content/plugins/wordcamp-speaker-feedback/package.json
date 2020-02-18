@@ -1,0 +1,41 @@
+{
+	"name": "wordcamp-speaker-feedback",
+	"version": "1.0.0",
+	"description": "Speaker Feedback for WordCamp.org",
+	"author": "WordCamp Team",
+	"license": "GPL-2.0-or-later",
+	"private": true,
+	"keywords": [],
+	"homepage": "https://github.com/WordPress/wordcamp.org/tree/production/public_html/wp-content/plugins/wordcamp-speaker-feedback",
+	"repository": "git+https://github.com/WordPress/wordcamp.org.git",
+	"bugs": {
+		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Speaker+Feedback%22"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "7.1.0",
+		"node-sass": "4.13.1"
+	},
+	"browserslist": [
+		"extends @wordpress/browserslist-config"
+	],
+	"eslintIgnore": [
+		"*.min.js"
+	],
+	"stylelint": {
+		"extends" : "stylelint-config-wordpress/scss",
+		"rules"   : {
+			"max-line-length": 115,
+
+			"rule-empty-line-before" : [ "always-multi-line", {
+				"except" : [ "first-nested", "after-single-line-comment" ]
+			} ]
+		}
+	},
+	"scripts": {
+		"start": "node-sass -wr assets/scss -o assets/build --source-map-embed",
+		"build": "node-sass assets/scss -o assets/build --output-style=compressed",
+		"lint:js": "wp-scripts lint-js assets/js/*.js",
+		"format:js": "wp-scripts format-js assets/js/*.js",
+		"lint:css": "wp-scripts lint-style 'assets/scss/*.scss'"
+	}
+}

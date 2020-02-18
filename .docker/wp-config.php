@@ -1,6 +1,6 @@
 <?php
 
-define( 'WORDCAMP_ENVIRONMENT', 'development' );
+define( 'WORDCAMP_ENVIRONMENT', 'local' );
 
 /*
  * Database

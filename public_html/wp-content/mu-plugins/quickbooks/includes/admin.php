@@ -96,7 +96,7 @@ function handle_form_post() {
 			exit();
 
 		case 'exchange':
-			// See \WordCamp\QuickBooks\Client::OAUTH_REDIRECT_URI.
+			// See \WordCamp\QuickBooks\Client::oauth_redirect_uri.
 
 			$client->maybe_exchange_code_for_token();
 

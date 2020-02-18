@@ -32,8 +32,8 @@
 		}
 	},
 	"scripts": {
-		"start": "node-sass -wr assets/scss -o assets/css --source-map-embed",
-		"build": "node-sass assets/scss -o assets/css --output-style=compressed",
+		"start": "node-sass -wr assets/scss -o assets/build --source-map-embed",
+		"build": "node-sass assets/scss -o assets/build --output-style=compressed",
 		"lint:js": "wp-scripts lint-js assets/js/*.js",
 		"format:js": "wp-scripts format-js assets/js/*.js",
 		"lint:css": "wp-scripts lint-style 'assets/scss/*.scss'"

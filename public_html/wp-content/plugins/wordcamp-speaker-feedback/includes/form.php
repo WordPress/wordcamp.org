@@ -39,9 +39,9 @@ function enqueue_assets() {
 	if ( has_feedback_form() || is_page( get_option( OPTION_KEY ) ) ) {
 		wp_enqueue_style(
 			'speaker-feedback',
-			get_assets_url() . 'css/style.css',
+			get_assets_url() . 'build/style.css',
 			array(),
-			filemtime( dirname( __DIR__ ) . '/assets/css/style.css' )
+			filemtime( dirname( __DIR__ ) . '/assets/build/style.css' )
 		);
 
 		wp_enqueue_script(

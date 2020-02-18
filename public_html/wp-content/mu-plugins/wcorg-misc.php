@@ -4,6 +4,22 @@
  * Miscellaneous snippets that don't warrant their own file
  */
 
+/**
+ * Get the current environment.
+ *
+ * Defaults to 'development' if the `WORDCAMP_ENVIRONMENT` constant isn't set or is empty.
+ *
+ * @return string
+ */
+function get_wordcamp_environment() {
+	$environment = 'development';
+
+	if ( defined( 'WORDCAMP_ENVIRONMENT' ) && WORDCAMP_ENVIRONMENT ) {
+		$environment = WORDCAMP_ENVIRONMENT;
+	}
+
+	return $environment;
+}
 
 /*
  * Prevents 'index.php' from being prepended to permalink options.

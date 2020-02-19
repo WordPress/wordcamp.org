@@ -75,7 +75,7 @@ class Privacy_Field extends CampTix_Addon {
 		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
 			<td class="tix-left">
 				<?php echo wp_kses_post( $this->question ); ?>
-				<span class="tix-required-star">*</span>
+				<span aria-hidden="true" class="tix-required-star">*</span>
 			</td>
 
 			<td class="tix-right">

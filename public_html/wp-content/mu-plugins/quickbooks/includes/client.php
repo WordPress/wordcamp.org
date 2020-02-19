@@ -23,9 +23,9 @@ class Client {
 	/**
 	 * The URI that QBO will redirect to after an OAuth user authorization.
 	 *
-	 * This is hardcoded here since it has to be hardcoded in the QBO app.
+	 * @var string
 	 */
-	const OAUTH_REDIRECT_URI = 'https://wordcamp.org/wp-admin/admin-post.php?action=wordcamp-qbo-oauth&cmd=exchange';
+	protected $oauth_redirect_uri;
 
 	/**
 	 * @var WP_Error|null
@@ -41,6 +41,14 @@ class Client {
 	 * Client constructor.
 	 */
 	public function __construct() {
+		/**
+		 * This value must match one of the Redirect URI values saved in the app.
+		 */
+		$this->oauth_redirect_uri = sprintf(
+			'https://wordcamp.%s/wp-admin/admin-post.php?action=wordcamp-qbo-oauth&cmd=exchange',
+			( 'local' === get_wordcamp_environment() ) ? 'test' : 'org'
+		);
+
 		$this->error = new WP_Error();
 
 		if ( ! class_exists( '\QuickBooksOnline\API\DataService\DataService' ) ) {
@@ -139,7 +147,7 @@ class Client {
 			'wordcamp_qbo_client_config',
 			array(
 				'auth_mode'    => 'oauth2',
-				'RedirectURI'  => self::OAUTH_REDIRECT_URI,
+				'RedirectURI'  => $this->oauth_redirect_uri,
 				'scope'        => 'com.intuit.quickbooks.accounting',
 				'ClientID'     => '',
 				'ClientSecret' => '',

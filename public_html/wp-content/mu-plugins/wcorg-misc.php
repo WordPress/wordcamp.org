@@ -4,7 +4,6 @@
  * Miscellaneous snippets that don't warrant their own file
  */
 
-
 /*
  * Prevents 'index.php' from being prepended to permalink options.
  *
@@ -396,7 +395,10 @@ add_filter( 'wordcamp_qbo_client_options', function( $options ) {
 	}
 
 	$options['hmac_key'] = WORDCAMP_QBO_HMAC_KEY;
-	$options['api_base'] = 'https://central.wordcamp.org/wp-json/wordcamp-qbo/v1';
+	$options['api_base'] = sprintf(
+		'https://central.wordcamp.%s/wp-json/wordcamp-qbo/v1',
+		( 'local' === get_wordcamp_environment() ) ? 'test' : 'org'
+	);
 
 	return $options;
 });

@@ -1,6 +1,19 @@
 <?php
+/**
+ * WordCamp.org configuration file.
+ */
 
-define( 'WORDCAMP_ENVIRONMENT', 'development' );
+/**
+ * The environment in which the WordCamp codebase is currently running.
+ *
+ * There are a few different values that this might contain that have implications in the code:
+ *
+ * - `production`:  Used on the production server. Should not be used anywhere else.
+ * - `development`: The catchall value for non-production environments. Currently used on wporg sandboxes.
+ * - `local`:       The value used for local development environments, where the domain is wordcamp.test and some
+ *                  functionality that relies on remote connections may not be available.
+ */
+define( 'WORDCAMP_ENVIRONMENT', 'local' );
 
 /*
  * Database
@@ -103,13 +116,14 @@ define( 'TWITTER_CONSUMER_KEY_WORDCAMP_CENTRAL',    '' );
 define( 'TWITTER_CONSUMER_SECRET_WORDCAMP_CENTRAL', '' );
 define( 'TWITTER_BEARER_TOKEN_WORDCAMP_CENTRAL',    '' );
 
-define( 'WORDCAMP_QBO_APP_TOKEN',       '' );
-define( 'WORDCAMP_QBO_CONSUMER_KEY',    '' );
-define( 'WORDCAMP_QBO_CONSUMER_SECRET', '' );
-define( 'WORDCAMP_QBO_HMAC_KEY',        '' );
+// These can't be empty, but no real values are needed here for local development.
+define( 'WORDCAMP_QBO_APP_TOKEN',       'localtoken' );
+define( 'WORDCAMP_QBO_CONSUMER_KEY',    'localkey' );
+define( 'WORDCAMP_QBO_CONSUMER_SECRET', 'localsecret' );
+define( 'WORDCAMP_QBO_HMAC_KEY',        'localhmac' );
 
-define( 'WORDCAMP_SANDBOX_QBO_CLIENT_ID',        '' );
-define( 'WORDCAMP_SANDBOX_QBO_CLIENT_SECRET',    '' );
+define( 'WORDCAMP_SANDBOX_QBO_CLIENT_ID',        "(Optional) your app's development client ID key goes here" );
+define( 'WORDCAMP_SANDBOX_QBO_CLIENT_SECRET',    "(Optional) your app's development client secret key goes here" );
 define( 'WORDCAMP_PRODUCTION_QBO_CLIENT_ID',     '' );
 define( 'WORDCAMP_PRODUCTION_QBO_CLIENT_SECRET', '' );
 

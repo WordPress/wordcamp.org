@@ -7,6 +7,26 @@ use function WordCamp\Logger\log;
  * Miscellaneous helper functions.
  */
 
+/**
+ * Get the current environment.
+ *
+ * Defaults to 'development' if the `WORDCAMP_ENVIRONMENT` constant isn't set or is empty. Other values may
+ * have specific implications in the code.
+ *
+ * See the definition of the `WORDCAMP_ENVIRONMENT` constant in the wp-config.php file for more info on the
+ * possible values.
+ *
+ * @return string
+ */
+function get_wordcamp_environment() {
+	$environment = 'development';
+
+	if ( defined( 'WORDCAMP_ENVIRONMENT' ) && WORDCAMP_ENVIRONMENT ) {
+		$environment = WORDCAMP_ENVIRONMENT;
+	}
+
+	return $environment;
+}
 
 /**
  * Determine if a specific feature should be skipped on the current site

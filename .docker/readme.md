@@ -91,6 +91,11 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     ```
 
 
+## Local Environment Customizations
+
+You may have a need to change a configuration or behavior in the local environment without modifying files that are tracked by version control. For this, you can add a file to the **mu-plugins** directory called **sandbox-functionality.php**. This file is ignored by git, so changes made to it will not affect the state of the working directory.
+
+
 ## Useful Docker Commands:
 
 Note: All of these commands are meant to be executed from project directory.

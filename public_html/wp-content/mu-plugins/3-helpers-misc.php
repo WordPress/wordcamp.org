@@ -13,6 +13,9 @@ use function WordCamp\Logger\log;
  * Defaults to 'development' if the `WORDCAMP_ENVIRONMENT` constant isn't set or is empty. Other values may
  * have specific implications in the code.
  *
+ * See the definition of the `WORDCAMP_ENVIRONMENT` constant in the wp-config.php file for more info on the
+ * possible values.
+ *
  * @return string
  */
 function get_wordcamp_environment() {

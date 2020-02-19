@@ -1,5 +1,18 @@
 <?php
+/**
+ * WordCamp.org configuration file.
+ */
 
+/**
+ * The environment in which the WordCamp codebase is currently running.
+ *
+ * There are a few different values that this might contain that have implications in the code:
+ *
+ * - `production`:  Used on the production server. Should not be used anywhere else.
+ * - `development`: The catchall value for non-production environments. Currently used on wporg sandboxes.
+ * - `local`:       The value used for local development environments, where the domain is wordcamp.test and some
+ *                  functionality that relies on remote connections may not be available.
+ */
 define( 'WORDCAMP_ENVIRONMENT', 'local' );
 
 /*

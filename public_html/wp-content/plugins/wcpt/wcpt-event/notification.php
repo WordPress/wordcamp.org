@@ -4,7 +4,7 @@
  */
 
 // Local environments don't have the credentials to send to Slack.
-if ( 'development' === WORDCAMP_ENVIRONMENT && ( ! defined( 'WPORG_SANDBOXED' ) || ! WPORG_SANDBOXED ) ) {
+if ( 'local' === get_wordcamp_environment() ) {
 	return;
 }
 

@@ -6048,19 +6048,55 @@ class CampTix_Plugin {
 							</th>
 						</tr>
 						<tr>
-							<td class="tix-required tix-left"><?php _e( 'First Name', 'wordcamporg' ); ?> <span class="tix-required-star">*</span></td>
-							<td class="tix-right"><input name="tix_ticket_info[first_name]" type="text" value="<?php echo esc_attr( $ticket_info['first_name'] ); ?>" /></td>
+							<td class="tix-required tix-left">
+								<label for="tix_ticket_info-first_name">
+									<?php _e( 'First Name', 'wordcamporg' ); ?>
+									<span aria-hidden="true" class="tix-required-star">*</span>
+								</label>
+							</td>
+							<td class="tix-right">
+								<input
+									id="tix_ticket_info-first_name"
+									name="tix_ticket_info[first_name]"
+									type="text"
+									value="<?php echo esc_attr( $ticket_info['first_name'] ); ?>"
+								/>
+							</td>
 						</tr>
 						<tr>
-							<td class="tix-required tix-left"><?php _e( 'Last Name', 'wordcamporg' ); ?> <span class="tix-required-star">*</span></td>
-							<td class="tix-right"><input name="tix_ticket_info[last_name]" type="text" value="<?php echo esc_attr( $ticket_info['last_name'] ); ?>" /></td>
+							<td class="tix-required tix-left">
+								<label for="tix_ticket_info-last_name">
+									<?php _e( 'Last Name', 'wordcamporg' ); ?>
+									<span aria-hidden="true" class="tix-required-star">*</span>
+								</label>
+							</td>
+							<td class="tix-right">
+								<input
+									id="tix_ticket_info-last_name"
+									name="tix_ticket_info[last_name]"
+									type="text"
+									value="<?php echo esc_attr( $ticket_info['last_name'] ); ?>"
+								/>
+							</td>
 						</tr>
 
 						<?php do_action( 'camptix_form_edit_attendee_additional_info', $attendee ); ?>
 
 						<tr>
-							<td class="tix-required tix-left"><?php _e( 'E-mail', 'wordcamporg' ); ?> <span class="tix-required-star">*</span></td>
-							<td class="tix-right"><input name="tix_ticket_info[email]" type="text" value="<?php echo esc_attr( $ticket_info['email'] ); ?>" /></td>
+							<td class="tix-required tix-left">
+								<label for="tix_ticket_info-email">
+									<?php _e( 'E-mail', 'wordcamporg' ); ?>
+									<span aria-hidden="true" class="tix-required-star">*</span>
+								</label>
+							</td>
+							<td class="tix-right">
+								<input
+									id="tix_ticket_info-email"
+									name="tix_ticket_info[email]"
+									type="text"
+									value="<?php echo esc_attr( $ticket_info['email'] ); ?>"
+								/>
+							</td>
 						</tr>
 
 						<?php do_action( 'camptix_form_edit_attendee_before_questions', $ticket_info ); ?>
@@ -6078,8 +6114,11 @@ class CampTix_Plugin {
 
 								<tr class="<?php echo esc_attr( $class_name ); ?>">
 									<td class="<?php if ( $required ) echo 'tix-required'; ?> tix-left">
-										<?php echo esc_html( apply_filters( 'the_title', $question->post_title ) ); ?>
-										<?php if ( $required ) echo ' <span class="tix-required-star">*</span>'; ?></td>
+										<label for="<?php echo in_array( $type, array( 'radio', 'checkbox' ) ) ? '' : $this->get_field_id( $name ); ?>">
+											<?php echo esc_html( apply_filters( 'the_title', $question->post_title ) ); ?>
+											<?php if ( $required ) echo ' <span aria-hidden="true" class="tix-required-star">*</span>'; ?>
+										</label>
+									</td>
 									<td class="tix-right">
 										<?php do_action( "camptix_question_field_{$type}", $name, $value, $question ); ?>
 									</td>

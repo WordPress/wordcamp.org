@@ -34,7 +34,6 @@ class WordCamp_Post_Types_Plugin {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_print_styles', array( $this, 'admin_css' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
-		add_action( 'admin_print_footer_scripts', array( $this, 'admin_print_scripts' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ) );
 
 		add_action( 'save_post', array( $this, 'save_post_speaker' ), 10, 2 );
@@ -274,36 +273,42 @@ class WordCamp_Post_Types_Plugin {
 		// Enqueues scripts and styles for session admin page.
 		if ( 'wcb_session' == $post_type ) {
 			wp_enqueue_script( 'wcb-session-meta' );
+
+			$session_time = false;
+			$most_recent_sessions = get_posts( array(
+				'post_type'   => 'wcb_session',
+				'orderby'     => 'modified',
+				'post_status' => array( 'draft', 'pending', 'publish' ),
+				'numberposts' => '1',
+			) );
+
+			if ( ! empty( $most_recent_sessions ) ) {
+				$session_time = absint( $most_recent_sessions[0]->_wcpt_session_time );
+			}
+
+			if ( ! $session_time ) {
+				$wordcamp_start_date = get_wordcamp_post()->meta['Start Date (YYYY-mm-dd)'][0];
+				$session_time = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
+			}
+
+			$settings = array(
+				'duration' => self::SESSION_DEFAULT_DURATION,
+				'time' => $session_time,
+			);
+			wp_add_inline_script(
+				'wcb-session-meta',
+				sprintf(
+					'var WCPT_Session_Defaults = JSON.parse( decodeURIComponent( \'%s\' ) );',
+					rawurlencode( wp_json_encode( $settings ) )
+				),
+				'before'
+			);
 		}
 
 		// Enqueues scripts and styles for sponsors admin page.
 		if ( 'wcb_sponsor' === $post_type ) {
 			wp_enqueue_script( 'wcb-spon' );
 		}
-	}
-
-	/**
-	 * Print our JavaScript
-	 */
-	public function admin_print_scripts() {
-		global $post_type;
-
-		// DatePicker for Session posts.
-		if ( 'wcb_session' === $post_type ) :
-			?>
-
-			<script type="text/javascript">
-				jQuery( document ).ready( function( $ ) {
-					$( '#wcpt-session-date' ).datepicker( {
-						dateFormat:  'yy-mm-dd',
-						changeMonth: true,
-						changeYear:  true
-					} );
-				} );
-			</script>
-
-			<?php
-		endif;
 	}
 
 	/**

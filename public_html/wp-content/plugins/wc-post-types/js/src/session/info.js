@@ -74,11 +74,12 @@ function SessionSettings( {
 export default compose( [
 	withSelect( ( select ) => {
 		const meta = select( 'core/editor' ).getEditedPostAttribute( 'meta' );
-		const start = getDate( meta._wcpt_session_time * 1000 );
+		const time = meta._wcpt_session_time || WCPT_Session_Defaults.time;
+		const start = getDate( time * 1000 );
 
 		return {
 			start: start,
-			duration: meta._wcpt_session_duration || 0,
+			duration: meta._wcpt_session_duration || WCPT_Session_Defaults.duration,
 			type: meta._wcpt_session_type || '',
 			slides: meta._wcpt_session_slides || '',
 			video: meta._wcpt_session_video || '',

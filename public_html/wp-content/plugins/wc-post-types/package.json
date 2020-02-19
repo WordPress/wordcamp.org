@@ -22,7 +22,10 @@
 		"lint:pkg-json": "wp-scripts lint-pkg-json"
 	},
 	"eslintConfig": {
-		"extends" : "plugin:@wordpress/eslint-plugin/recommended-with-formatting",
+		"extends": "plugin:@wordpress/eslint-plugin/recommended-with-formatting",
+		"globals": {
+			"WCPT_Session_Defaults": "true"
+		},
 		"rules": {
 			"object-shorthand": [ "error", "consistent-as-needed" ]
 		}

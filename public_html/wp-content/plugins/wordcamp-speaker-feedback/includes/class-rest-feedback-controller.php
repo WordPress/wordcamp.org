@@ -101,12 +101,11 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			return $allowed;
 		}
 
-		//$meta = validate_feedback_meta( $request['meta'] ?? array() );
-		$meta = array();
+		$meta = validate_feedback_meta( $request['meta'] ?? array() );
 
-		//if ( is_wp_error( $meta ) ) {
-		//	return $meta;
-		//}
+		if ( is_wp_error( $meta ) ) {
+			return $meta;
+		}
 
 		$comment_id = add_feedback( $prepared_feedback['comment_post_ID'], $feedback_author, $meta );
 

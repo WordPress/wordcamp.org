@@ -43,6 +43,7 @@ function load() {
 	require_once PLUGIN_DIR . 'includes/class-feedback.php';
 	require_once PLUGIN_DIR . 'includes/class-rest-feedback-controller.php';
 	require_once PLUGIN_DIR . 'includes/comment.php';
+	require_once PLUGIN_DIR . 'includes/comment-meta.php';
 	require_once PLUGIN_DIR . 'includes/form.php';
 	require_once PLUGIN_DIR . 'includes/page.php';
 }

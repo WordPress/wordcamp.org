@@ -14,21 +14,17 @@ const LATEST_DATABASE_VERSION = 3;
 
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );
-	add_action( 'save_post',                      __NAMESPACE__ . '\update_index_row',              10, 2 );
-} elseif ( defined( 'DOING_CRON' ) ) {
-	add_action( 'save_post', __NAMESPACE__ . '\update_index_row', 10, 2 );
 } elseif ( is_network_admin() ) {
 	add_action( 'network_admin_menu', __NAMESPACE__ . '\register_submenu_page' );
 	add_action( 'init',               __NAMESPACE__ . '\upgrade_database'      );
-} elseif ( is_admin() ) {
-	add_action( 'save_post',    __NAMESPACE__ . '\update_index_row', 11, 2 );   // See note in callback about priority.
-	add_action( 'trashed_post', __NAMESPACE__ . '\delete_index_row'        );
-	add_action( 'delete_post',  __NAMESPACE__ . '\delete_index_row'        );
 }
 
 add_action( 'plugins_loaded',                 __NAMESPACE__ . '\schedule_cron_events'  );
 add_action( 'wcbdsi_check_for_paid_invoices', __NAMESPACE__ . '\check_for_paid_invoices'       );
 add_action( 'send_invoice_pending_reminder',  __NAMESPACE__ . '\send_invoice_pending_reminder' );
+add_action( 'save_post',                      __NAMESPACE__ . '\update_index_row', 11, 2 ); // See note in callback about priority.
+add_action( 'trashed_post',                   __NAMESPACE__ . '\delete_index_row'        );
+add_action( 'delete_post',                    __NAMESPACE__ . '\delete_index_row'        );
 
 /**
  * Schedule cron jobs.

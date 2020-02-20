@@ -280,7 +280,7 @@ function check_for_paid_invoices() {
 	) );
 
 	// Batch requests in order to avoid request size limits imposed by QuickBooks, nginx, etc.
-	$qbo_invoice_ids = wp_list_pluck( $sent_invoices, 'qbo_invoice_id' );
+	$qbo_invoice_ids = wp_list_pluck( $sent_invoices, '_wcbsi_qbo_invoice_id' );
 	$qbo_invoice_ids = array_chunk( $qbo_invoice_ids, 20 );
 
 	$paid_invoices = array();
@@ -307,7 +307,7 @@ function check_for_paid_invoices() {
  */
 function mark_invoices_as_paid( $sent_invoices, $paid_invoices ) {
 	foreach ( $sent_invoices as $invoice ) {
-		if ( in_array( (int) $invoice->qbo_invoice_id, $paid_invoices, true ) ) {
+		if ( in_array( (int) $invoice->_wcbsi_qbo_invoice_id, $paid_invoices, true ) ) {
 			update_invoice_status( $invoice->ID, 'paid' );
 			notify_organizer_status_changed( $invoice->ID, 'paid' );
 		}

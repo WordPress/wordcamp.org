@@ -1,0 +1,12 @@
+{
+	"name": "camptix/attendee-content",
+	"icon": "welcome-view-site",
+	"category": "widgets",
+	"attributes": {},
+	"supports": {
+		"customClassName": false,
+		"className": false,
+		"html": false,
+		"multiple": false
+	}
+}

@@ -15,8 +15,8 @@
 		"@wordpress/scripts": "8.0.1"
 	},
 	"scripts": {
-		"start": "wp-scripts start blocks/src/index.js --output-path='./blocks/build'",
-		"build": "wp-scripts build blocks/src/index.js --output-path='./blocks/build'",
+		"start": "wp-scripts start attendee-content='./blocks/src/attendee-content/index.js' --output-path='./blocks/build'",
+		"build": "wp-scripts build attendee-content='./blocks/src/attendee-content/index.js' --output-path='./blocks/build'",
 		"lint:js": "wp-scripts lint-js blocks/src",
 		"format:js": "wp-scripts format-js",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"

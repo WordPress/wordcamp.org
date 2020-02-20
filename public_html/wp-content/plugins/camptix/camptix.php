@@ -67,6 +67,10 @@ class CampTix_Plugin {
 		require( dirname( __FILE__ ) . '/inc/class-camptix-addon.php' );
 		require( dirname( __FILE__ ) . '/inc/class-camptix-payment-method.php' );
 
+		if ( true ) { // Test env flag.
+			require( dirname( __FILE__ ) . '/blocks/blocks.php' );
+		}
+
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			require_once( dirname( __FILE__ ) . '/inc/class-wp-cli-commands.php' );
 		}

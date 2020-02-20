@@ -496,7 +496,7 @@ function delete_index_row( $invoice_id ) {
  *
  * This runs as a cron job on every site, so it only needs to look for invoices that are from the current site.
  * (Previously it pulled all pending invoices from the index table, which caused weird issues like the email about
- * an invoice in Chicago coming from a WordCamp site in Germany.)
+ * an invoice in Chicago coming from a WordCamp site in Germany, translated in `de_DE`.)
  *
  * @return void
  */

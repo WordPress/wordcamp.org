@@ -116,10 +116,12 @@ var WordCampCentral = ( function( $ ) {
 	function cycleLogos() {
 		var $container = $( '.sponsors-widget-list' );
 
-		$container.cycle( {
-			timeout: 5000,
-			speed: 500
-		} );
+		if ( $container.length ) {
+			$container.cycle( {
+				timeout: 5000,
+				speed: 500
+			} );
+		}
 	}
 
 	/**

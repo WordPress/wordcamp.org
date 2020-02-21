@@ -1,42 +1,52 @@
 <?php
 
 namespace WordCamp\Budgets_Dashboard\Sponsor_Invoices;
-use \WordCamp\Logger;
 
-defined( 'WPINC' ) or die();
+use WP_Post;
+use WordCamp\Logger;
+use WordCamp_QBO_Client;
+use WordCamp_Budgets;
+use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
+
+defined( 'WPINC' ) || die();
 
 const LATEST_DATABASE_VERSION = 3;
 
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );
-	add_action( 'save_post',                      __NAMESPACE__ . '\update_index_row',              10, 2 );
-
-} elseif ( defined( 'DOING_CRON' ) ) {
-	add_action( 'wcbdsi_check_for_paid_invoices', __NAMESPACE__ . '\check_for_paid_invoices'       );
-	add_action( 'save_post',                      __NAMESPACE__ . '\update_index_row',       10, 2 );
-	add_action( 'plugins_loaded',                 __NAMESPACE__ . '\schedule_sent_invoice_reminder' );
-
 } elseif ( is_network_admin() ) {
-	add_action( 'plugins_loaded',        __NAMESPACE__ . '\schedule_cron_events'  );
-	add_action( 'network_admin_menu',    __NAMESPACE__ . '\register_submenu_page' );
-	add_action( 'init',                  __NAMESPACE__ . '\upgrade_database'      );
-} elseif ( is_admin() ) {
-	add_action( 'save_post',    __NAMESPACE__ . '\update_index_row', 11, 2 );   // See note in callback about priority
-	add_action( 'trashed_post', __NAMESPACE__ . '\delete_index_row'        );
-	add_action( 'delete_post',  __NAMESPACE__ . '\delete_index_row'        );
+	add_action( 'network_admin_menu', __NAMESPACE__ . '\register_submenu_page' );
+	add_action( 'init',               __NAMESPACE__ . '\upgrade_database'      );
 }
 
-add_action( 'send_invoice_pending_reminder', __NAMESPACE__ . '\send_invoice_pending_reminder' );
+add_action( 'plugins_loaded',                 __NAMESPACE__ . '\schedule_cron_events'  );
+add_action( 'wcbdsi_check_for_paid_invoices', __NAMESPACE__ . '\check_for_paid_invoices'       );
+add_action( 'send_invoice_pending_reminder',  __NAMESPACE__ . '\send_invoice_pending_reminder' );
+add_action( 'save_post',                      __NAMESPACE__ . '\update_index_row', 11, 2 ); // See note in callback about priority.
+add_action( 'trashed_post',                   __NAMESPACE__ . '\delete_index_row'        );
+add_action( 'delete_post',                    __NAMESPACE__ . '\delete_index_row'        );
 
 /**
- * Schedule cron job when plugin is activated
+ * Schedule cron jobs.
+ *
+ * @return void
  */
 function schedule_cron_events() {
-	if ( wp_next_scheduled( 'wcbdsi_check_for_paid_invoices' ) ) {
-		return;
+	if ( ! wp_next_scheduled( 'wcbdsi_check_for_paid_invoices' ) ) {
+		wp_schedule_event(
+			time(),
+			'hourly',
+			'wcbdsi_check_for_paid_invoices'
+		);
 	}
 
-	wp_schedule_event( current_time( 'timestamp' ), 'hourly', 'wcbdsi_check_for_paid_invoices' );
+	if ( ! wp_next_scheduled( 'send_invoice_pending_reminder' ) ) {
+		wp_schedule_event(
+			time(),
+			'daily',
+			'send_invoice_pending_reminder'
+		);
+	}
 }
 
 /**
@@ -203,7 +213,11 @@ function get_index_table_name() {
 }
 
 /**
- * Handle an AJAX request to approve an invoice
+ * Handle an AJAX request to approve an invoice.
+ *
+ * This is executed from the network admin, so still needs to switch to blog in order to process the invoice.
+ *
+ * @return void
  */
 function handle_approve_invoice_request() {
 	$required_parameters = array( 'action', 'nonce', 'site_id', 'invoice_id' );
@@ -223,13 +237,13 @@ function handle_approve_invoice_request() {
 
 	switch_to_blog( $site_id );
 
-	$quickbooks_result = \WordCamp_QBO_Client::send_invoice_to_quickbooks( $invoice_id );
+	$quickbooks_result = WordCamp_QBO_Client::send_invoice_to_quickbooks( $invoice_id );
 	Logger\log( 'send_invoice', compact( 'invoice_id', 'quickbooks_result' ) );
 
 	if ( is_int( $quickbooks_result ) ) {
 		update_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id', absint( $quickbooks_result ) );
-		update_invoice_status(           $site_id, $invoice_id, 'approved' );
-		notify_organizer_status_changed( $site_id, $invoice_id, 'approved' );
+		update_invoice_status( $invoice_id, 'approved' );
+		notify_organizer_status_changed( $invoice_id, 'approved' );
 
 		$result = array( 'success' => 'The invoice has been approved and e-mailed to the sponsor.' );
 	} else {
@@ -249,47 +263,49 @@ function handle_approve_invoice_request() {
  * Send a request to QuickBooks to check if any sent invoices have been paid
  *
  * If any have been, update the status of the local copy, and notify the organizer who sent the invoice.
+ *
+ * This runs as a cron job on every site, so it only needs to look for invoices that are from the current site.
+ *
+ * @return void
  */
 function check_for_paid_invoices() {
-	global $wpdb;
+	$sent_invoices = get_posts( array(
+		'post_type'      => POST_TYPE,
+		'post_status'    => 'wcbsi_approved',
+		'posts_per_page' => 99,
+	) );
 
-	$table_name = get_index_table_name();
-	$paid_invoices = array();
-
-	$sent_invoices = $wpdb->get_results( "
-		SELECT blog_id, invoice_id, qbo_invoice_id
-		FROM $table_name
-		WHERE status = 'wcbsi_approved'
-		LIMIT 1000
-	" );
-
-	// Batch requests in order to avoid request size limits imposed by QuickBooks, nginx, etc
-	$qbo_invoice_ids = wp_list_pluck( $sent_invoices, 'qbo_invoice_id' );
+	// Batch requests in order to avoid request size limits imposed by QuickBooks, nginx, etc.
+	$qbo_invoice_ids = wp_list_pluck( $sent_invoices, '_wcbsi_qbo_invoice_id' );
 	$qbo_invoice_ids = array_chunk( $qbo_invoice_ids, 20 );
 
-	foreach( $qbo_invoice_ids as $batch ) {
+	$paid_invoices = array();
+
+	foreach ( $qbo_invoice_ids as $batch ) {
 		$paid_invoices = array_merge(
 			$paid_invoices,
-			\WordCamp_QBO_Client::get_paid_invoices( $batch )
+			WordCamp_QBO_Client::get_paid_invoices( $batch )
 		);
 
-		usleep( 300000 );   // Avoid hitting the API too frequently
+		usleep( 300000 ); // Avoid hitting the API too frequently.
 	}
 
-	mark_invoices_as_paid( $sent_invoices, $paid_invoices );
+	if ( ! empty( $paid_invoices ) ) {
+		mark_invoices_as_paid( $sent_invoices, $paid_invoices );
+	}
 }
 
 /**
  * Mark WordCamp.org invoices as paid when they've been paid in QuickBooks
  *
- * @param array $sent_invoices
- * @param array $paid_invoices
+ * @param WP_Post[] $sent_invoices
+ * @param array     $paid_invoices
  */
 function mark_invoices_as_paid( $sent_invoices, $paid_invoices ) {
 	foreach ( $sent_invoices as $invoice ) {
-		if ( in_array( (int) $invoice->qbo_invoice_id, $paid_invoices, true ) ) {
-			update_invoice_status(           $invoice->blog_id, $invoice->invoice_id, 'paid' );
-			notify_organizer_status_changed( $invoice->blog_id, $invoice->invoice_id, 'paid' );
+		if ( in_array( (int) $invoice->_wcbsi_qbo_invoice_id, $paid_invoices, true ) ) {
+			update_invoice_status( $invoice->ID, 'paid' );
+			notify_organizer_status_changed( $invoice->ID, 'paid' );
 		}
 	}
 }
@@ -297,14 +313,17 @@ function mark_invoices_as_paid( $sent_invoices, $paid_invoices ) {
 /**
  * Update the status of an invoice
  *
- * @param int    $site_id
  * @param int    $invoice_id
  * @param string $new_status
+ *
+ * @return void
  */
-function update_invoice_status( $site_id, $invoice_id, $new_status ) {
-	switch_to_blog( $site_id );
+function update_invoice_status( $invoice_id, $new_status ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
 
-	// Disable the functions that run during a normal save, because they'd interfere with this
+	// Disable the functions that run during a normal save, because they'd interfere with this.
 	remove_filter( 'wp_insert_post_data', 'WordCamp\Budgets\Sponsor_Invoices\set_invoice_status', 10 );
 	remove_action( 'save_post',           'WordCamp\Budgets\Sponsor_Invoices\save_invoice',       10 );
 
@@ -315,26 +334,30 @@ function update_invoice_status( $site_id, $invoice_id, $new_status ) {
 		),
 		true
 	);
-
-	restore_current_blog();
 }
 
 /**
  * Notify the organizer when the status of their invoice changes
  *
- * @param int    $site_id
  * @param int    $invoice_id
  * @param string $new_status
+ *
+ * @return void
  */
-function notify_organizer_status_changed( $site_id, $invoice_id, $new_status ) {
-	switch_to_blog( $site_id );
+function notify_organizer_status_changed( $invoice_id, $new_status ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
 
 	$invoice            = get_post( $invoice_id );
-	$to                 = \WordCamp_Budgets::get_requester_formatted_email( $invoice->post_author );
+	$to                 = WordCamp_Budgets::get_requester_formatted_email( $invoice->post_author );
 	$subject            = "Invoice for {$invoice->post_title} $new_status";
 	$sponsor_name       = get_sponsor_name( $invoice_id );
 	$invoice_url        = admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) );
-	$headers            = array( 'Reply-To: support@wordcamp.org' );
+	$headers            = array(
+		'Reply-To: support@wordcamp.org',
+		'BCC: ' . EMAIL_DEVELOPER_NOTIFICATIONS, // Temporary, to test that these notifications are working.
+	);
 	$attachments        = array();
 	$attachment_message = '';
 	$invoice_filename   = false;
@@ -344,7 +367,7 @@ function notify_organizer_status_changed( $site_id, $invoice_id, $new_status ) {
 		$sponsor_email    = get_post_meta( $sponsor_id, '_wcpt_sponsor_email_address', true );
 		$qbo_invoice_id   = get_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id',       true );
 		$status_message   = "has been sent to $sponsor_name via $sponsor_email. You will receive another notification when they have paid the invoice.";
-		$invoice_filename = \WordCamp_QBO_Client::get_invoice_filename( $qbo_invoice_id );
+		$invoice_filename = WordCamp_QBO_Client::get_invoice_filename( $qbo_invoice_id );
 
 		Logger\log( 'get_invoice_filename', compact( 'qbo_invoice_id', 'invoice_filename' ) );
 
@@ -355,11 +378,13 @@ function notify_organizer_status_changed( $site_id, $invoice_id, $new_status ) {
 	} elseif ( 'paid' === $new_status ) {
 		$status_message = "has been paid by $sponsor_name. Go ahead and publish them to your website!";
 	} else {
-		restore_current_blog();
 		return;
 	}
 
-	$message = str_replace( "\t", '', "
+	$message = str_replace(
+		"\t",
+		'',
+		"
 		The invoice for `{$invoice->post_title}` $status_message
 
 		You can view the invoice and its status any time at:
@@ -375,8 +400,6 @@ function notify_organizer_status_changed( $site_id, $invoice_id, $new_status ) {
 	if ( $invoice_filename ) {
 		unlink( $invoice_filename );
 	}
-
-	restore_current_blog();
 }
 
 /**
@@ -412,11 +435,11 @@ function get_sponsor_name( $invoice_id ) {
 function update_index_row( $invoice_id, $invoice ) {
 	global $wpdb;
 
-	if ( \WordCamp\Budgets\Sponsor_Invoices\POST_TYPE !== $invoice->post_type ) {
+	if ( POST_TYPE !== $invoice->post_type ) {
 		return;
 	}
 
-	// Drafts, etc aren't displayed in the list table, so there's no reason to index them
+	// Drafts, etc aren't displayed in the list table, so there's no reason to index them.
 	$ignored_statuses = array( 'auto-draft', 'draft', 'trash' );
 
 	if ( in_array( $invoice->post_status, $ignored_statuses, true ) ) {
@@ -435,7 +458,7 @@ function update_index_row( $invoice_id, $invoice ) {
 		'sponsor_name'   => substr( get_sponsor_name( $invoice_id ), 0, 75 ),
 		'description'    => get_post_meta( $invoice_id, '_wcbsi_description', true ),
 		'currency'       => get_post_meta( $invoice_id, '_wcbsi_currency',    true ),
-		'due_date'       => 0,  // todo remove this field from index
+		'due_date'       => 0,  // todo remove this field from index.
 		'amount'         => get_post_meta( $invoice_id, '_wcbsi_amount',      true ),
 	);
 
@@ -469,36 +492,23 @@ function delete_index_row( $invoice_id ) {
 }
 
 /**
- * Schedule cron to send reminder mails to organizers for unpaid invoices.
- */
-function schedule_sent_invoice_reminder() {
-	if ( wp_next_scheduled( 'send_invoice_pending_reminder' ) ) {
-		return;
-	}
-
-	wp_schedule_event( time(), 'daily', 'send_invoice_pending_reminder' );
-}
-
-/**
  * Send reminder to organizer about the unpaid invoice.
+ *
+ * This runs as a cron job on every site, so it only needs to look for invoices that are from the current site.
+ * (Previously it pulled all pending invoices from the index table, which caused weird issues like the email about
+ * an invoice in Chicago coming from a WordCamp site in Germany, translated in `de_DE`.)
+ *
+ * @return void
  */
 function send_invoice_pending_reminder() {
-	global $wpdb;
+	$sent_invoices = get_posts( array(
+		'post_type'      => POST_TYPE,
+		'post_status'    => 'wcbsi_approved',
+		'posts_per_page' => 99,
+	) );
 
-	$table_name    = get_index_table_name();
-	$sent_invoices = $wpdb->get_results( "
-		SELECT blog_id, invoice_id
-		FROM $table_name
-		WHERE status = 'wcbsi_approved'
-		LIMIT 1000"
-		// Don't forget to add a prepare() call here if you ever add user input.
-	);
-
-	foreach ( $sent_invoices as $invoice_data ) {
-		$blog_id    = $invoice_data->blog_id;
-		$invoice_id = $invoice_data->invoice_id;
-
-		switch_to_blog( $blog_id );
+	foreach ( $sent_invoices as $invoice ) {
+		$invoice_id = $invoice->ID;
 
 		$invoice_sent_at = get_post_meta( $invoice_id, 'Sent at', true );
 
@@ -506,7 +516,6 @@ function send_invoice_pending_reminder() {
 			// Backfill for older invoices.
 			update_post_meta( $invoice_id, 'Sent at', time() );
 			update_post_meta( $invoice_id, 'Backfilled Sent at', true );
-			restore_current_blog();
 			continue;
 		}
 
@@ -520,12 +529,10 @@ function send_invoice_pending_reminder() {
 
 		if ( empty( $wordcamp_post ) || ! $wordcamp_lead_email ) {
 			// Maybe this is a central.wordcamp.org test sponsor invoice.
-			restore_current_blog();
 			continue;
 		}
 
-		if ( ! empty ( $invoice_defaulted ) ) {
-			restore_current_blog();
+		if ( ! empty( $invoice_defaulted ) ) {
 			continue;
 		}
 
@@ -544,14 +551,12 @@ function send_invoice_pending_reminder() {
 		if ( $reminder_step > count( $reminder_schedule ) || ( $wordcamp_start_date && time() > ( (int) $wordcamp_start_date + 2 * MONTH_IN_SECONDS ) ) ) {
 			send_invoice_defaulted_notification( $invoice_id );
 			update_post_meta( $invoice_id, 'invoice_defaulted', true );
-			restore_current_blog();
 			continue;
 		}
 
 		$next_reminder_in = $last_step_time + $reminder_schedule[ $reminder_step ] * DAY_IN_SECONDS;
 
 		if ( time() < (int) $next_reminder_in ) {
-			restore_current_blog();
 			continue;
 		}
 
@@ -563,8 +568,6 @@ function send_invoice_pending_reminder() {
 		send_invoice_pending_reminder_mail( $invoice_id, $wordcamp_lead_email );
 
 		update_post_meta( $invoice_id, 'last_reminder_details', $current_reminder_details );
-
-		restore_current_blog();
 	}
 }
 
@@ -575,6 +578,10 @@ function send_invoice_pending_reminder() {
  * @param string $organizer_mail
  */
 function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
+
 	$invoice   = get_post( $invoice_id );
 	$edit_link = get_site_url() . "/wp-admin/post.php?post=$invoice_id&action=edit";
 
@@ -583,11 +590,11 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 		'',
 		sprintf(
 			__(
-				"Howdy organizers,
+				'Howdy organizers,
 				<br>
-				It looks like the invoice <a href='%s'>%s</a> is still unpaid. If you still expect the sponsor to pay this invoice, please contact them to find out when we should expect payment. If this invoice needs to be cancelled, please email support@wordcamp.org.
+				It looks like the invoice <a href="%1$s">%2$s</a> is still unpaid. If you still expect the sponsor to pay this invoice, please contact them to find out when we should expect payment. If this invoice needs to be cancelled, please email support@wordcamp.org.
 				<br>
-				Thanks for all your hard work on WordCamp.",
+				Thanks for all your hard work on WordCamp.',
 				'wordcamporg'
 			),
 			$edit_link,
@@ -599,13 +606,14 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 
 	wp_mail(
 		array( $author->user_email ),
-		sprintf( __( "Pending invoice: %s" ,'wordcamporg' ), $invoice->post_title ),
+		sprintf( __( 'Pending invoice: %s', 'wordcamporg' ), $invoice->post_title ),
 		$reminder_body,
 		array(
 			'From: WordCamp Central <support@wordcamp.org>',
 			'Content-Type: text/html; charset=UTF-8',
 			'Sender: wordpress@' . strtolower( $_SERVER['SERVER_NAME'] ),
-			sprintf( "CC: %s", $organizer_mail ), // CC to lead organizer in case post author is not active anymore.
+			sprintf( 'CC: %s', $organizer_mail ), // CC to lead organizer in case post author is not active anymore.
+			'BCC: ' . EMAIL_DEVELOPER_NOTIFICATIONS, // Temporary, to test that these notifications are working.
 		)
 	);
 }
@@ -616,6 +624,10 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
  * @param int $invoice_id
  */
 function send_invoice_defaulted_notification( $invoice_id ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
+
 	$edit_link = get_site_url() . "/wp-admin/post.php?post=$invoice_id&action=edit";
 
 	$notification_body = str_replace(
@@ -628,13 +640,14 @@ function send_invoice_defaulted_notification( $invoice_id ) {
 	);
 
 	wp_mail(
-		array( "support@wordcamp.org" ),
-		"Sponsor Invoice pending for too long",
+		array( 'support@wordcamp.org' ),
+		'Sponsor Invoice pending for too long',
 		$notification_body,
 		array(
 			'From: WordCamp Central <support@wordcamp.org>',
 			'Content-Type: text/html; charset=UTF-8',
 			'Sender: wordpress@' . strtolower( $_SERVER['SERVER_NAME'] ),
+			'BCC: ' . EMAIL_DEVELOPER_NOTIFICATIONS, // Temporary, to test that these notifications are working.
 		)
 	);
 }

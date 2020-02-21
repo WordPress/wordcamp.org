@@ -87,9 +87,9 @@ export default class extends Component {
 					/>
 					<ToggleControl
 						label={ __( 'Session Information', 'wordcamporg' ) }
-						help={ show_session ?
-							__( "Speaker's session name, time, and track are visible.", 'wordcamporg' ) :
-							__( "Speaker's session name, time, and track are hidden.", 'wordcamporg' ) }
+						help={ show_session
+							? __( "Speaker's session name, time, and track are visible.", 'wordcamporg' )
+							: __( "Speaker's session name, time, and track are hidden.", 'wordcamporg' ) }
 						checked={ show_session }
 						onChange={ ( value ) => setAttributes( { show_session: value } ) }
 					/>

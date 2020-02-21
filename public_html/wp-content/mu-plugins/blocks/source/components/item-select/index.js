@@ -189,8 +189,7 @@ export class ItemSelect extends Component {
 					/>
 					<Button
 						className="wordcamp-item-select__button"
-						isLarge
-						isDefault
+						isSecondary
 						onClick={ () => onChange( this.getNewAttributes() ) }
 					>
 						{ submitLabel || __( 'Select', 'wordcamporg' ) }

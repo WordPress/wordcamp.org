@@ -1,0 +1,17 @@
+#!/usr/bin/php
+<?php
+
+// alternate workflow idea
+// break off into separate branch to merge
+
+// there's no real pre-push hook, so need to alias `git push` to run this file if $(pwd) contains `wordcamp.test`
+
+
+// when pushing to production branch, automatically run this
+
+// also be able to run it manually when another branch is ready for review
+
+// reuse pre-commit stuff somehow?
+	// maybe call that file w/ $CHANGED_FILES supplied via cli argument
+// but add prettier & eslint
+

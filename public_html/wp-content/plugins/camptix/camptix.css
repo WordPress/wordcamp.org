@@ -161,6 +161,14 @@ body.admin-bar #tix {
 	vertical-align: middle;
 }
 
+.tix-tickets-list .tix-column-description {
+	font-weight: normal;
+}
+
+.tix-tickets-list .tix-ticket-title {
+	font-weight: bold;
+}
+
 .tix-submit {
 	text-align: right;
 }

@@ -5310,7 +5310,7 @@ class CampTix_Plugin {
 					<input type="hidden" name="tix_reservation_token" value="<?php echo esc_attr( $this->reservation['token'] ); ?>" />
 				<?php endif; ?>
 
-				<table class="tix_tickets_table">
+				<table class="tix_tickets_table tix-tickets-list">
 					<thead>
 						<tr>
 							<th scope="col" class="tix-column-description"><?php _e( 'Description', 'wordcamporg' ); ?></th>

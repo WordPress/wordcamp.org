@@ -5532,10 +5532,10 @@ class CampTix_Plugin {
 				<table class="tix_tickets_table tix-order-summary">
 					<thead>
 						<tr>
-							<th class="tix-column-description"><?php _e( 'Description', 'wordcamporg' ); ?></th>
-							<th class="tix-column-per-ticket"><?php _e( 'Per Ticket', 'wordcamporg' ); ?></th>
-							<th class="tix-column-quantity"><?php _e( 'Quantity', 'wordcamporg' ); ?></th>
-							<th class="tix-column-price"><?php _e( 'Price', 'wordcamporg' ); ?></th>
+							<th scope="col" class="tix-column-description"><?php _e( 'Description', 'wordcamporg' ); ?></th>
+							<th scope="col" class="tix-column-per-ticket"><?php _e( 'Per Ticket', 'wordcamporg' ); ?></th>
+							<th scope="col" class="tix-column-quantity"><?php _e( 'Quantity', 'wordcamporg' ); ?></th>
+							<th scope="col" class="tix-column-price"><?php _e( 'Price', 'wordcamporg' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>

@@ -4,12 +4,16 @@ namespace WordCamp\SpeakerFeedback;
 
 use WP_Error, WP_REST_Request, WP_REST_Response, WP_REST_Server;
 use WP_REST_Comments_Controller;
-use function WordCamp\SpeakerFeedback\Comment\{ add_feedback };
+use function WordCamp\SpeakerFeedback\Comment\add_feedback;
 use function WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta;
 
 defined( 'WPINC' ) || die();
 
-
+/**
+ * Class REST_Feedback_Controller
+ *
+ * @package WordCamp\SpeakerFeedback
+ */
 class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 	/**
 	 * REST_Feedback_Controller constructor.

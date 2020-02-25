@@ -7,7 +7,7 @@ use WordCamp\SpeakerFeedback\Feedback;
 
 defined( 'WPINC' ) || die();
 
-const COMMENT_TYPE = 'wordcamp-speaker-feedback';
+const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this must be <= 20 characters.
 
 /**
  * Add a new feedback submission.

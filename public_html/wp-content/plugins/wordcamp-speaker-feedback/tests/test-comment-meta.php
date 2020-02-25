@@ -65,6 +65,19 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
 	 */
+	public function test_validate_feedback_meta_not_numeric() {
+		$invalid_meta           = $this->valid_meta;
+		$invalid_meta['rating'] = 'spork';
+
+		$result = validate_feedback_meta( $invalid_meta );
+
+		$this->assertTrue( is_wp_error( $result ) );
+		$this->assertEquals( 'feedback_meta_not_numeric', $result->get_error_code() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
+	 */
 	public function test_validate_feedback_meta_too_long() {
 		$too_long_answer = array_fill( 0, META_MAX_LENGTH + 1, 'a' );
 		$too_long_answer = implode( '', $too_long_answer );

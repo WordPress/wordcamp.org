@@ -141,14 +141,31 @@ function validate_feedback_meta( $meta ) {
 	if ( ! empty( $missing_fields ) ) {
 		return new WP_Error(
 			'feedback_missing_meta',
-			__( 'Please fill in all required fields.', 'wordcamporg' )
+			__( 'Please fill in all required fields.', 'wordcamporg' ),
+			array(
+				'missing_fields' => array_keys( $missing_fields ),
+			)
 		);
+	}
+
+	$integer_fields = array_keys( wp_list_pluck( $fields, 'type' ), 'integer', true );
+
+	foreach ( $integer_fields as $key ) {
+		if ( isset( $meta[ $key ] ) && ! is_numeric( $meta[ $key ] ) ) {
+			return new WP_Error(
+				'feedback_meta_not_numeric',
+				__( 'Feedback submission contains invalid data.', 'wordcamporg' ),
+				array(
+					'meta_key' => $key,
+				)
+			);
+		}
 	}
 
 	$string_fields = array_keys( wp_list_pluck( $fields, 'type' ), 'string', true );
 
 	foreach ( $string_fields as $key ) {
-		if ( mb_strlen( $meta[ $key ] ) > META_MAX_LENGTH ) {
+		if ( isset( $meta[ $key ] ) && mb_strlen( $meta[ $key ] ) > META_MAX_LENGTH ) {
 			return new WP_Error(
 				'feedback_meta_too_long',
 				__( 'Feedback submission is too long.', 'wordcamporg' ),

@@ -354,10 +354,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 	$subject            = "Invoice for {$invoice->post_title} $new_status";
 	$sponsor_name       = get_sponsor_name( $invoice_id );
 	$invoice_url        = admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) );
-	$headers            = array(
-		'Reply-To: support@wordcamp.org',
-		'BCC: ' . EMAIL_DEVELOPER_NOTIFICATIONS, // Temporary, to test that these notifications are working.
-	);
+	$headers            = array( 'Reply-To: support@wordcamp.org' );
 	$attachments        = array();
 	$attachment_message = '';
 	$invoice_filename   = false;

@@ -58,7 +58,7 @@ function get_feedback_comment( $comment ) {
  * @param array|int $feedback_author Either an array containing 'name' and 'email' values, or a user ID.
  * @param array     $feedback_meta   An associative array of key => value pairs.
  *
- * @return false|int
+ * @return int|bool Comment ID on success. `false` on failure.
  */
 function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
 	$args = array(
@@ -87,10 +87,10 @@ function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
  * The only parts of a feedback submission that we'd perhaps want to update after submission are the feedback rating
  * and questions that are stored in comment meta.
  *
- * @param int   $comment_id    The ID of the comment to update.
- * @param array $feedback_meta An associative array of key => value pairs.
+ * @param string|int $comment_id    The ID of the comment to update.
+ * @param array      $feedback_meta An associative array of key => value pairs.
  *
- * @return int
+ * @return int This will always return `0` because the comment itself does not get updated, only comment meta.
  */
 function update_feedback( $comment_id, array $feedback_meta ) {
 	$args = array(
@@ -98,7 +98,6 @@ function update_feedback( $comment_id, array $feedback_meta ) {
 		'comment_meta' => $feedback_meta,
 	);
 
-	// This will always return `0` because the comment itself does not get updated, only comment meta.
 	return wp_update_comment( $args );
 }
 
@@ -140,7 +139,7 @@ function get_feedback( array $status = array( 'hold', 'approve' ), array $post__
 /**
  * Trash a feedback submission.
  *
- * @param int $comment_id The ID of the comment to delete.
+ * @param string|int $comment_id The ID of the comment to delete.
  *
  * @return bool
  */

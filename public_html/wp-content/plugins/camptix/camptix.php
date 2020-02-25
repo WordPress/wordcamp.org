@@ -5589,7 +5589,10 @@ class CampTix_Plugin {
 									</small>
 								<?php endif; ?>
 							</td>
-							<td><strong><?php echo esc_html( $this->append_currency( $total ) ); ?></strong></td>
+							<td>
+								<span class="screen-reader-text"><?php esc_html_e( 'Total:', 'wordcamporg' ); ?></span>
+								<strong><?php echo esc_html( $this->append_currency( $total ) ); ?></strong>
+							</td>
 						</tr>
 					</tbody>
 				</table>

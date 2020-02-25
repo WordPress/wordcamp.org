@@ -10,6 +10,48 @@ defined( 'WPINC' ) || die();
 const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this must be <= 20 characters.
 
 /**
+ * Check if a comment is a feedback comment.
+ *
+ * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
+ *
+ * @return bool
+ */
+function is_feedback( $comment ) {
+	if ( is_string( $comment ) || is_int( $comment ) ) {
+		$comment = get_comment( $comment );
+	}
+
+	if ( $comment instanceof Feedback ) {
+		return true;
+	} elseif ( COMMENT_TYPE === $comment->comment_type ) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Get a single feedback comment as a Feedback object.
+ *
+ * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
+ *
+ * @return Feedback|null A Feedback object, or null if the input is not a feedback comment.
+ */
+function get_feedback_comment( $comment ) {
+	if ( $comment instanceof Feedback ) {
+		return $comment;
+	}
+
+	$comment = get_comment( $comment );
+
+	if ( ! is_feedback( $comment ) ) {
+		return null;
+	}
+
+	return new Feedback( $comment );
+}
+
+/**
  * Add a new feedback submission.
  *
  * @param int       $post_id         The ID of the post to attach the feedback to.

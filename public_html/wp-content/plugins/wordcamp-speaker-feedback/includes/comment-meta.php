@@ -124,8 +124,11 @@ function get_feedback_meta_field_schema( $key = '' ) {
  * @return array|WP_Error
  */
 function validate_feedback_meta( $meta ) {
-	$fields = get_feedback_meta_field_schema();
+	if ( ! isset( $meta['version'] ) ) {
+		$meta['version'] = META_VERSION;
+	}
 
+	$fields          = get_feedback_meta_field_schema();
 	$required_fields = array_filter(
 		wp_list_pluck( $fields, 'required' ),
 		function( $is_required ) {
@@ -152,8 +155,6 @@ function validate_feedback_meta( $meta ) {
 			);
 		}
 	}
-
-	$meta['version'] = META_VERSION;
 
 	return $meta;
 }

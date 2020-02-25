@@ -132,12 +132,9 @@ function get_feedback( array $status = array( 'hold', 'approve' ), array $post__
 	// This makes loading meta values for comments much faster.
 	wp_queue_comments_for_comment_meta_lazyload( $comments );
 
-	return array_map(
-		function( WP_Comment $comment ) {
-			return new Feedback( $comment );
-		},
-		$comments
-	);
+	$comments = array_map( __NAMESPACE__ . '\get_feedback_comment', $comments );
+
+	return $comments;
 }
 
 /**

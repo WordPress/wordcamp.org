@@ -148,10 +148,13 @@ function validate_feedback_meta( $meta ) {
 	$string_fields = array_keys( wp_list_pluck( $fields, 'type' ), 'string', true );
 
 	foreach ( $string_fields as $key ) {
-		if ( mb_strlen( $meta[ $key ], '8bit' ) > META_MAX_LENGTH ) {
+		if ( mb_strlen( $meta[ $key ] ) > META_MAX_LENGTH ) {
 			return new WP_Error(
 				'feedback_meta_too_long',
-				__( 'Feedback submission is too long.', 'wordcamporg' )
+				__( 'Feedback submission is too long.', 'wordcamporg' ),
+				array(
+					'meta_key' => $key,
+				)
 			);
 		}
 	}

@@ -56,11 +56,16 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 * Reset after each test.
 	 */
 	public function tearDown() {
+		parent::tearDown();
+
 		global $wpdb;
 
-		// This ensures that only comments created during a given test exist in the database during the test.
+		$ids = $wpdb->get_col( "SELECT comment_ID FROM {$wpdb->prefix}comments" );
+
+		// This ensures that only comments created during a given test exist in the database and cache during the test.
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}comments" );
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}commentmeta" );
+		clean_comment_cache( $ids );
 	}
 
 	/**

@@ -111,7 +111,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
 		$this->assertEquals( 'Success!', $response->get_data() );
-		$this->assertEquals( 1, count( get_feedback() ) );
+		$this->assertCount( 1, get_feedback() );
 	}
 
 	/**
@@ -132,7 +132,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
 		$this->assertEquals( 'Success!', $response->get_data() );
-		$this->assertEquals( 1, count( get_feedback() ) );
+		$this->assertCount( 1, get_feedback() );
 	}
 
 	/**
@@ -148,8 +148,65 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$response = self::$controller->create_item( $this->request );
 
-		$this->assertTrue( is_wp_error( $response ) );
-		$this->assertEquals( 'rest_comment_author_data_required', $response->get_error_code() );
-		$this->assertEquals( 0, count( get_feedback() ) );
+		$this->assertWPError( $response );
+		$this->assertEquals( 'rest_feedback_author_data_required', $response->get_error_code() );
+		$this->assertCount( 0, get_feedback() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item_permissions_check()
+	 */
+	public function test_create_item_permissions_check_is_valid() {
+		$params = array(
+			'post'   => self::$session_post->ID,
+			'author' => self::$user->ID,
+			'meta'   => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item_permissions_check( $this->request );
+
+		$this->assertTrue( $response );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item_permissions_check()
+	 */
+	public function test_create_item_permissions_check_no_post() {
+		$params = array(
+			'post'   => 9999999999,
+			'author' => self::$user->ID,
+			'meta'   => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item_permissions_check( $this->request );
+
+		$this->assertWPError( $response );
+		$this->assertEquals( 'rest_feedback_invalid_post_id', $response->get_error_code() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item_permissions_check()
+	 */
+	public function test_create_item_permissions_check_not_published() {
+		$post = self::factory()->post->create_and_get( array(
+			'post_status' => 'draft',
+		) );
+
+		$params = array(
+			'post'   => $post->ID,
+			'author' => self::$user->ID,
+			'meta'   => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item_permissions_check( $this->request );
+
+		$this->assertWPError( $response );
+		$this->assertEquals( 'rest_feedback_post_unavailable', $response->get_error_code() );
 	}
 }

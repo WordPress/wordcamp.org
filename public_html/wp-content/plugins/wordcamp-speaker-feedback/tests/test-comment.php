@@ -199,8 +199,8 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 		$all_comments = get_comments();
 		$feedback     = get_feedback();
 
-		$this->assertEquals( 6, count( $all_comments ) );
-		$this->assertEquals( 3, count( $feedback ) );
+		$this->assertCount( 6, $all_comments );
+		$this->assertCount( 3, $feedback );
 	}
 
 	/**

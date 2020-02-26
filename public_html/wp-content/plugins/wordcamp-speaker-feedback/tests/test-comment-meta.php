@@ -50,8 +50,8 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 
 		$result = validate_feedback_meta( $invalid_meta );
 
-		$this->assertTrue( is_wp_error( $result ) );
-		$this->assertEquals( 'feedback_missing_meta', $result->get_error_code() );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'feedback_meta_missing_field', $result->get_error_code() );
 	}
 
 	/**
@@ -63,7 +63,7 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 
 		$result = validate_feedback_meta( $invalid_meta );
 
-		$this->assertTrue( is_wp_error( $result ) );
+		$this->assertWPError( $result );
 		$this->assertEquals( 'feedback_meta_not_numeric', $result->get_error_code() );
 	}
 
@@ -79,8 +79,8 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 
 		$result = validate_feedback_meta( $invalid_meta );
 
-		$this->assertTrue( is_wp_error( $result ) );
-		$this->assertEquals( 'feedback_meta_too_long', $result->get_error_code() );
+		$this->assertWPError( $result );
+		$this->assertEquals( 'feedback_meta_string_too_long', $result->get_error_code() );
 	}
 
 	/**

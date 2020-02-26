@@ -2,7 +2,7 @@
 
 namespace WordCamp\SpeakerFeedback\Tests;
 
-use WP_UnitTestCase;
+use WP_UnitTestCase, WP_UnitTest_Factory;
 use WP_Post, WP_User;
 use WP_REST_Request, WP_REST_Response;
 use WordCamp\SpeakerFeedback\REST_Feedback_Controller;
@@ -19,22 +19,22 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	/**
 	 * @var REST_Feedback_Controller
 	 */
-	protected $controller;
+	protected static $controller;
 
 	/**
 	 * @var WP_Post
 	 */
-	protected $session_post;
+	protected static $session_post;
 
 	/**
 	 * @var WP_User
 	 */
-	protected $user;
+	protected static $user;
 
 	/**
 	 * @var array
 	 */
-	protected $valid_meta;
+	protected static $valid_meta;
 
 	/**
 	 * @var WP_REST_Request
@@ -42,31 +42,29 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	protected $request;
 
 	/**
-	 * Test_SpeakerFeedback_REST_Feedback_Controller constructor.
+	 * Set up shared fixtures for these tests.
 	 *
-	 * @param null   $name
-	 * @param array  $data
-	 * @param string $data_name
+	 * @param WP_UnitTest_Factory $factory
 	 */
-	public function __construct( $name = null, array $data = array(), $data_name = '' ) {
-		parent::__construct( $name, $data, $data_name );
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::$controller = new REST_Feedback_Controller();
 
-		$this->controller = new REST_Feedback_Controller();
-
-		$this->session_post = self::factory()->post->create_and_get( array(
+		self::$session_post = $factory->post->create_and_get( array(
 			'post_type' => 'wcb_session',
 		) );
 
-		$this->user = self::factory()->user->create_and_get();
+		self::$user = $factory->user->create_and_get( array(
+			'role' => 'subscriber',
+		) );
 
-		$this->valid_meta = array(
+		self::$valid_meta = array(
 			'rating' => 1,
 			'q1'     => 'asdf 1',
 			'q2'     => 'asdf 2',
 			'q3'     => 'asdf 3',
 		);
 
-		tests_add_filter( 'rest_api_init', array( $this->controller, 'register_routes' ) );
+		tests_add_filter( 'rest_api_init', array( self::$controller, 'register_routes' ) );
 	}
 
 	/**
@@ -82,8 +80,6 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 * Reset after each test.
 	 */
 	public function tearDown() {
-		parent::tearDown();
-
 		global $wpdb;
 
 		$ids = $wpdb->get_col( "SELECT comment_ID FROM {$wpdb->prefix}comments" );
@@ -92,6 +88,10 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}comments" );
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}commentmeta" );
 		clean_comment_cache( $ids );
+
+		$this->request = null;
+
+		parent::tearDown();
 	}
 
 	/**
@@ -99,14 +99,14 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 */
 	public function test_create_item_user_id() {
 		$params = array(
-			'post'   => $this->session_post->ID,
-			'author' => $this->user->ID,
-			'meta'   => $this->valid_meta,
+			'post'   => self::$session_post->ID,
+			'author' => self::$user->ID,
+			'meta'   => self::$valid_meta,
 		);
 
 		$this->request->set_body_params( $params );
 
-		$response = $this->controller->create_item( $this->request );
+		$response = self::$controller->create_item( $this->request );
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
@@ -119,15 +119,15 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 */
 	public function test_create_item_user_array() {
 		$params = array(
-			'post'         => $this->session_post->ID,
+			'post'         => self::$session_post->ID,
 			'author_name'  => 'Foo',
 			'author_email' => 'bar@example.org',
-			'meta'         => $this->valid_meta,
+			'meta'         => self::$valid_meta,
 		);
 
 		$this->request->set_body_params( $params );
 
-		$response = $this->controller->create_item( $this->request );
+		$response = self::$controller->create_item( $this->request );
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
@@ -140,13 +140,13 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 */
 	public function test_create_item_no_user() {
 		$params = array(
-			'post' => $this->session_post->ID,
-			'meta' => $this->valid_meta,
+			'post' => self::$session_post->ID,
+			'meta' => self::$valid_meta,
 		);
 
 		$this->request->set_body_params( $params );
 
-		$response = $this->controller->create_item( $this->request );
+		$response = self::$controller->create_item( $this->request );
 
 		$this->assertTrue( is_wp_error( $response ) );
 		$this->assertEquals( 'rest_comment_author_data_required', $response->get_error_code() );

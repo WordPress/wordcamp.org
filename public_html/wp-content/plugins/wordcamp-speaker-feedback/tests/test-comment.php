@@ -3,7 +3,7 @@
 namespace WordCamp\SpeakerFeedback\Tests;
 
 use WP_Post, WP_User;
-use WP_UnitTestCase;
+use WP_UnitTestCase, WP_UnitTest_Factory;
 use WordCamp\SpeakerFeedback\Feedback;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\Comment\{
@@ -26,38 +26,32 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	/**
 	 * @var WP_Post
 	 */
-	protected $session_post;
+	protected static $session_post;
 
 	/**
 	 * @var WP_User
 	 */
-	protected $user;
+	protected static $user;
 
 	/**
-	 * Test_SpeakerFeedback_Comment constructor.
+	 * Set up shared fixtures for these tests.
 	 *
-	 * Setup the only needs to happen once, rather than before each test.
-	 *
-	 * @param null   $name
-	 * @param array  $data
-	 * @param string $data_name
+	 * @param WP_UnitTest_Factory $factory
 	 */
-	public function __construct( $name = null, array $data = array(), $data_name = '' ) {
-		parent::__construct( $name, $data, $data_name );
-
-		$this->session_post = self::factory()->post->create_and_get( array(
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::$session_post = $factory->post->create_and_get( array(
 			'post_type' => 'wcb_session',
 		) );
 
-		$this->user = self::factory()->user->create_and_get();
+		self::$user = $factory->user->create_and_get( array(
+			'role' => 'subscriber',
+		) );
 	}
 
 	/**
 	 * Reset after each test.
 	 */
 	public function tearDown() {
-		parent::tearDown();
-
 		global $wpdb;
 
 		$ids = $wpdb->get_col( "SELECT comment_ID FROM {$wpdb->prefix}comments" );
@@ -66,6 +60,8 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}comments" );
 		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}commentmeta" );
 		clean_comment_cache( $ids );
+
+		parent::tearDown();
 	}
 
 	/**
@@ -119,8 +115,8 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 */
 	public function test_add_feedback_user_id() {
 		$comment_id = add_feedback(
-			$this->session_post->ID,
-			$this->user->ID,
+			self::$session_post->ID,
+			self::$user->ID,
 			array()
 		);
 
@@ -137,7 +133,7 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 */
 	public function test_add_feedback_user_array() {
 		$comment_id = add_feedback(
-			$this->session_post->ID,
+			self::$session_post->ID,
 			array(
 				'name'  => 'Foo',
 				'email' => 'bar@example.org',
@@ -155,7 +151,7 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 */
 	public function test_add_feedback_no_user() {
 		$comment_id = add_feedback(
-			$this->session_post->ID,
+			self::$session_post->ID,
 			array(),
 			array()
 		);
@@ -168,8 +164,8 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 */
 	public function test_update_feedback() {
 		$comment_id = add_feedback(
-			$this->session_post->ID,
-			$this->user->ID,
+			self::$session_post->ID,
+			self::$user->ID,
 			array(
 				'rating' => 1,
 			)
@@ -212,8 +208,8 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 */
 	public function test_delete_feedback() {
 		$comment_id = add_feedback(
-			$this->session_post->ID,
-			$this->user->ID,
+			self::$session_post->ID,
+			self::$user->ID,
 			array()
 		);
 

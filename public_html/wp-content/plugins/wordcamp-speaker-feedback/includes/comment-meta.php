@@ -140,7 +140,7 @@ function validate_feedback_meta( $meta ) {
 
 	if ( ! empty( $missing_fields ) ) {
 		return new WP_Error(
-			'feedback_missing_meta',
+			'feedback_meta_missing_field',
 			__( 'Please fill in all required fields.', 'wordcamporg' ),
 			array(
 				'missing_fields' => array_keys( $missing_fields ),
@@ -167,7 +167,7 @@ function validate_feedback_meta( $meta ) {
 	foreach ( $string_fields as $key ) {
 		if ( isset( $meta[ $key ] ) && mb_strlen( $meta[ $key ] ) > META_MAX_LENGTH ) {
 			return new WP_Error(
-				'feedback_meta_too_long',
+				'feedback_meta_string_too_long',
 				__( 'Feedback submission is too long.', 'wordcamporg' ),
 				array(
 					'meta_key' => $key,

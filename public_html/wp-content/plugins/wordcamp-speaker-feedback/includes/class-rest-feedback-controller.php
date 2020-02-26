@@ -4,6 +4,7 @@ namespace WordCamp\SpeakerFeedback;
 
 use WP_Error, WP_REST_Request, WP_REST_Response, WP_REST_Server;
 use WP_REST_Comments_Controller;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\Comment\add_feedback;
 use function WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta;
 
@@ -61,31 +62,70 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			return new WP_Error( 'rest_comment_exists', __( 'Cannot create existing feedback.', 'wordcamporg' ), array( 'status' => 400 ) );
 		}
 
+		// We don't want these values set via request parameters.
+		$request['content'] = '';
+		$request['date']    = wp_date( 'c' );
+		$request['parent']  = 0;
+
 		$prepared_feedback = $this->prepare_item_for_database( $request );
 		if ( is_wp_error( $prepared_feedback ) ) {
 			return $prepared_feedback;
 		}
 
+		// These values need to be present for `wp_allow_comment`.
+		$prepared_feedback = wp_parse_args(
+			$prepared_feedback,
+			array(
+				'comment_author'       => '',
+				'comment_author_email' => '',
+				'comment_author_url'   => '',
+				'comment_author_IP'    => '',
+				'comment_agent'        => '',
+				'comment_type'         => COMMENT_TYPE, // We set this later, but it still needs to be here.
+			)
+		);
+
 		if ( ! isset( $prepared_feedback['comment_post_ID'] ) ) {
-			return new WP_Error( 'rest_comment_no_post', __( 'Feedback must be associated with a specific post.', 'wordcamporg' ), array( 'status' => 400 ) );
+			return new WP_Error(
+				'rest_comment_no_post',
+				__( 'Feedback must be associated with a specific post.', 'wordcamporg' ),
+				array(
+					'status' => 400,
+				)
+			);
 		}
 
 		$feedback_author = null;
 		if ( ! empty( $prepared_feedback['user_id'] ) ) {
 			$feedback_author = absint( $prepared_feedback['user_id'] );
-		} elseif ( ! empty( $prepared_feedback['comment_author'] ) && ! empty( $prepared_feedback['comment_author_email'] ) ) {
+		} elseif (
+			! empty( $prepared_feedback['comment_author'] )
+			&& ! empty( $prepared_feedback['comment_author_email'] )
+		) {
 			$feedback_author = array(
 				'name'  => $prepared_feedback['comment_author'],
 				'email' => $prepared_feedback['comment_author_email'],
 			);
 		} else {
-			return new WP_Error( 'rest_comment_author_data_required', __( 'Submitting feedback requires valid author name and email values.', 'wordcamporg' ), array( 'status' => 400 ) );
+			return new WP_Error(
+				'rest_comment_author_data_required',
+				__( 'Submitting feedback requires valid author name and email values.', 'wordcamporg' ),
+				array(
+					'status' => 400,
+				)
+			);
 		}
 
 		$check_comment_lengths = wp_check_comment_data_max_lengths( $prepared_feedback );
 		if ( is_wp_error( $check_comment_lengths ) ) {
 			$error_code = $check_comment_lengths->get_error_code();
-			return new WP_Error( $error_code, __( 'Comment field exceeds maximum length allowed.' ), array( 'status' => 400 ) );
+			return new WP_Error(
+				$error_code,
+				__( 'Comment field exceeds maximum length allowed.' ),
+				array(
+					'status' => 400,
+				)
+			);
 		}
 
 		$allowed = wp_allow_comment( $prepared_feedback, true );
@@ -114,7 +154,13 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		$comment_id = add_feedback( $prepared_feedback['comment_post_ID'], $feedback_author, $meta );
 
 		if ( false === $comment_id ) {
-			return new WP_Error( 'feedback_creation_failed', 'Feedback submission failed.', array( 'status' => 400 ) );
+			return new WP_Error(
+				'feedback_creation_failed',
+				'Feedback submission failed.',
+				array(
+					'status' => 400,
+				)
+			);
 		}
 
 		$response = __( 'Success!', 'wordcamporg' );
@@ -134,16 +180,34 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 	 */
 	public function create_item_permissions_check( $request ) {
 		if ( empty( $request['post'] ) ) {
-			return new WP_Error( 'rest_comment_invalid_post_id', __( 'Sorry, you are not allowed to create this comment without a post.' ), array( 'status' => 403 ) );
+			return new WP_Error(
+				'rest_comment_invalid_post_id',
+				__( 'Sorry, you are not allowed to create this comment without a post.' ),
+				array(
+					'status' => 403,
+				)
+			);
 		}
 
 		$post = get_post( (int) $request['post'] );
 		if ( ! $post ) {
-			return new WP_Error( 'rest_comment_invalid_post_id', __( 'Sorry, you are not allowed to create this comment without a post.' ), array( 'status' => 403 ) );
+			return new WP_Error(
+				'rest_comment_invalid_post_id',
+				__( 'Sorry, you are not allowed to create this comment without a post.' ),
+				array(
+					'status' => 403,
+				)
+			);
 		}
 
 		if ( 'publish' !== $post->post_status ) {
-			return new WP_Error( 'rest_comment_draft_post', __( 'Sorry, you are not allowed to create a comment on this post.' ), array( 'status' => 403 ) );
+			return new WP_Error(
+				'rest_comment_draft_post',
+				__( 'Sorry, you are not allowed to create a comment on this post.' ),
+				array(
+					'status' => 403,
+				)
+			);
 		}
 
 		// TODO nonce check, other permissions?

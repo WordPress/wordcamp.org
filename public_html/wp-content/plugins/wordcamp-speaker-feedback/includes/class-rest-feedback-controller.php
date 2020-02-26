@@ -59,7 +59,13 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 	 */
 	public function create_item( $request ) {
 		if ( ! empty( $request['id'] ) ) {
-			return new WP_Error( 'rest_comment_exists', __( 'Cannot create existing feedback.', 'wordcamporg' ), array( 'status' => 400 ) );
+			return new WP_Error(
+				'rest_feedback_exists',
+				__( 'Cannot create existing feedback.', 'wordcamporg' ),
+				array(
+					'status' => 400,
+				)
+			);
 		}
 
 		// We don't want these values set via request parameters.
@@ -87,7 +93,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 
 		if ( ! isset( $prepared_feedback['comment_post_ID'] ) ) {
 			return new WP_Error(
-				'rest_comment_no_post',
+				'rest_feedback_no_post',
 				__( 'Feedback must be associated with a specific post.', 'wordcamporg' ),
 				array(
 					'status' => 400,
@@ -108,7 +114,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		} else {
 			return new WP_Error(
-				'rest_comment_author_data_required',
+				'rest_feedback_author_data_required',
 				__( 'Submitting feedback requires valid author name and email values.', 'wordcamporg' ),
 				array(
 					'status' => 400,
@@ -116,6 +122,8 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		}
 
+		// We're not using the comment content field, but this also checks the length of other fields.
+		// The length of meta fields is checked separately. See `validate_feedback_meta()`.
 		$check_comment_lengths = wp_check_comment_data_max_lengths( $prepared_feedback );
 		if ( is_wp_error( $check_comment_lengths ) ) {
 			$error_code = $check_comment_lengths->get_error_code();
@@ -128,8 +136,9 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		}
 
+		// We're not using this to set the status of the feedback comment, since it's always set to `hold`. However,
+		// this also checks for duplicates, flooding, and blacklisting.
 		$allowed = wp_allow_comment( $prepared_feedback, true );
-
 		if ( is_wp_error( $allowed ) ) {
 			$error_code    = $allowed->get_error_code();
 			$error_message = $allowed->get_error_message();
@@ -146,7 +155,6 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		}
 
 		$meta = validate_feedback_meta( $request['meta'] ?? array() );
-
 		if ( is_wp_error( $meta ) ) {
 			return $meta;
 		}
@@ -155,7 +163,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 
 		if ( false === $comment_id ) {
 			return new WP_Error(
-				'feedback_creation_failed',
+				'rest_feedback_creation_failed',
 				'Feedback submission failed.',
 				array(
 					'status' => 400,
@@ -172,7 +180,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 	}
 
 	/**
-	 * Checks if a given request has access to create a comment.
+	 * Checks if a given request has access to create a feedback comment.
 	 *
 	 * @param WP_REST_Request $request Full details about the request.
 	 *
@@ -181,7 +189,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 	public function create_item_permissions_check( $request ) {
 		if ( empty( $request['post'] ) ) {
 			return new WP_Error(
-				'rest_comment_invalid_post_id',
+				'rest_feedback_invalid_post_id',
 				__( 'Sorry, you are not allowed to create this comment without a post.' ),
 				array(
 					'status' => 403,
@@ -192,7 +200,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		$post = get_post( (int) $request['post'] );
 		if ( ! $post ) {
 			return new WP_Error(
-				'rest_comment_invalid_post_id',
+				'rest_feedback_invalid_post_id',
 				__( 'Sorry, you are not allowed to create this comment without a post.' ),
 				array(
 					'status' => 403,
@@ -202,7 +210,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 
 		if ( 'publish' !== $post->post_status ) {
 			return new WP_Error(
-				'rest_comment_draft_post',
+				'rest_feedback_post_unavailable',
 				__( 'Sorry, you are not allowed to create a comment on this post.' ),
 				array(
 					'status' => 403,
@@ -210,7 +218,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		}
 
-		// TODO nonce check, other permissions?
+		// TODO is post "open" for feedback? Should we do a nonce check, or other permissions?
 
 		return true;
 	}

@@ -52,6 +52,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		self::$session_post = $factory->post->create_and_get( array(
 			'post_type' => 'wcb_session',
 		) );
+		add_post_type_support( 'wcb_session', 'wordcamp-speaker-feedback' );
 
 		self::$user = $factory->user->create_and_get( array(
 			'role' => 'subscriber',
@@ -191,8 +192,29 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item_permissions_check()
 	 */
+	public function test_create_item_permissions_check_not_supported() {
+		$post = self::factory()->post->create_and_get();
+
+		$params = array(
+			'post'   => $post->ID,
+			'author' => self::$user->ID,
+			'meta'   => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->create_item_permissions_check( $this->request );
+
+		$this->assertWPError( $response );
+		$this->assertEquals( 'rest_feedback_post_not_supported', $response->get_error_code() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::create_item_permissions_check()
+	 */
 	public function test_create_item_permissions_check_not_published() {
 		$post = self::factory()->post->create_and_get( array(
+			'post_type'   => 'wcb_session',
 			'post_status' => 'draft',
 		) );
 

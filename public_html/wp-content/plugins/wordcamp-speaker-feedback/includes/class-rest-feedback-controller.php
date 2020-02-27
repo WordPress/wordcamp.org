@@ -208,6 +208,16 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		}
 
+		if ( ! post_type_supports( get_post_type( $post ), 'wordcamp-speaker-feedback' ) ) {
+			return new WP_Error(
+				'rest_feedback_post_not_supported',
+				__( 'Sorry, this post type does not support feedback.', 'wordcamporg' ),
+				array(
+					'status' => 403,
+				)
+			);
+		}
+
 		if ( 'publish' !== $post->post_status ) {
 			return new WP_Error(
 				'rest_feedback_post_unavailable',

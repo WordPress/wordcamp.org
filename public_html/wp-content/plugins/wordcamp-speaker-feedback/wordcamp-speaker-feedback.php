@@ -29,7 +29,7 @@ if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_
 	register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
 	add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
-	add_action( 'init', __NAMESPACE__ . '\add_support' );
+	add_action( 'init', __NAMESPACE__ . '\add_support', 99 );
 	add_action( 'init', __NAMESPACE__ . '\add_page_endpoint' );
 	add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_routes', 100 );
 

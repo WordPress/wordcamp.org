@@ -21,12 +21,15 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
 define( __NAMESPACE__ . '\OPTION_KEY', 'sft_feedback_page' );
 define( __NAMESPACE__ . '\QUERY_VAR', 'sft_feedback' );
 
+const SUPPORTED_POST_TYPES = array( 'wcb_session' );
+
 // Only add actions to sites without the skip flag, and only if WC Post Types exist.
 if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_Types_Plugin' ) ) {
 	register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
 	register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
 	add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
+	add_action( 'init', __NAMESPACE__ . '\add_support' );
 	add_action( 'init', __NAMESPACE__ . '\add_page_endpoint' );
 	add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_routes', 100 );
 
@@ -55,6 +58,20 @@ function activate() {
 	add_feedback_page();
 	add_page_endpoint();
 	flush_rewrite_rules();
+}
+
+/**
+ * Add post type support for supported post types. Only for the types that are supported though.
+ *
+ * This makes it easy to check if a particular post type can have feedback comments using Core functionality, rather
+ * than having to import a namespaced constant or function.
+ *
+ * @return void
+ */
+function add_support() {
+	foreach ( SUPPORTED_POST_TYPES as $post_type ) {
+		add_post_type_support( $post_type, 'wordcamp-speaker-feedback' );
+	}
 }
 
 /**

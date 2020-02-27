@@ -129,7 +129,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			$error_code = $check_comment_lengths->get_error_code();
 			return new WP_Error(
 				$error_code,
-				__( 'Comment field exceeds maximum length allowed.' ),
+				__( 'Comment field exceeds maximum length allowed.', 'wordcamporg' ),
 				array(
 					'status' => 400,
 				)
@@ -164,7 +164,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		if ( false === $comment_id ) {
 			return new WP_Error(
 				'rest_feedback_creation_failed',
-				'Feedback submission failed.',
+				__( 'Feedback submission failed.', 'wordcamporg' ),
 				array(
 					'status' => 400,
 				)
@@ -190,7 +190,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		if ( empty( $request['post'] ) ) {
 			return new WP_Error(
 				'rest_feedback_invalid_post_id',
-				__( 'Sorry, you are not allowed to create this comment without a post.' ),
+				__( 'Sorry, you are not allowed to create this comment without a post.', 'wordcamporg' ),
 				array(
 					'status' => 403,
 				)
@@ -201,7 +201,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		if ( ! $post ) {
 			return new WP_Error(
 				'rest_feedback_invalid_post_id',
-				__( 'Sorry, you are not allowed to create this comment without a post.' ),
+				__( 'Sorry, you are not allowed to create this comment without a post.', 'wordcamporg' ),
 				array(
 					'status' => 403,
 				)
@@ -211,7 +211,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		if ( 'publish' !== $post->post_status ) {
 			return new WP_Error(
 				'rest_feedback_post_unavailable',
-				__( 'Sorry, you are not allowed to create a comment on this post.' ),
+				__( 'Sorry, you are not allowed to create a comment on this post.', 'wordcamporg' ),
 				array(
 					'status' => 403,
 				)

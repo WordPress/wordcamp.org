@@ -12,12 +12,20 @@ import { Spinner } from '@wordpress/components';
 /**
  * Component for indicating why there is no content.
  *
+ * @param {Array}   props
+ * @param {boolean} props.loading
+ * @param {string}  props.message Override the default message.
+ *
  * @return {Element}
  */
-function NoContent( { loading } ) {
+function NoContent( { loading, message } ) {
+	if ( ! message ) {
+		message = __( 'No content found.', 'wordcamporg' );
+	}
+
 	return (
 		<div className="wordcamp-post-list has-no-content">
-			{ loading ? <Spinner /> : __( 'No content found.', 'wordcamporg' ) }
+			{ loading ? <Spinner /> : message }
 		</div>
 	);
 }

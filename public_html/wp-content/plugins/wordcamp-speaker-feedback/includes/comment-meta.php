@@ -79,6 +79,11 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			'show_in_rest'      => false,
 			'default'           => 0,
 			'required'          => true,
+			'attributes'        => array(
+				'min'  => 1,
+				'max'  => 5,
+				'step' => 1,
+			),
 		),
 		'q1'      => array(
 			'description'       => 'The answer to the first feedback question.',
@@ -88,6 +93,9 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			'show_in_rest'      => false,
 			'default'           => '',
 			'required'          => false,
+			'attributes'        => array(
+				'maxlength' => 5000,
+			),
 		),
 		'q2'      => array(
 			'description'       => 'The answer to the second feedback question.',
@@ -97,6 +105,9 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			'show_in_rest'      => false,
 			'default'           => '',
 			'required'          => false,
+			'attributes'        => array(
+				'maxlength' => 5000,
+			),
 		),
 		'q3'      => array(
 			'description'       => 'The answer to the third feedback question.',
@@ -106,6 +117,9 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			'show_in_rest'      => false,
 			'default'           => '',
 			'required'          => false,
+			'attributes'        => array(
+				'maxlength' => 5000,
+			),
 		),
 	);
 
@@ -148,35 +162,109 @@ function validate_feedback_meta( $meta ) {
 		);
 	}
 
-	$integer_fields = array_keys( wp_list_pluck( $fields, 'type' ), 'integer', true );
+	$invalid_fields = array();
 
-	foreach ( $integer_fields as $key ) {
-		if ( isset( $meta[ $key ] ) && ! is_numeric( $meta[ $key ] ) ) {
-			return new WP_Error(
-				'feedback_meta_not_numeric',
-				__( 'Feedback submission contains invalid data.', 'wordcamporg' ),
-				array(
-					'meta_key' => $key,
-				)
-			);
+	foreach ( $meta as $key => $value ) {
+		if ( ! isset( $fields[ $key ] ) ) {
+			// Discard unknown meta keys.
+			unset( $meta[ $key ] );
+			continue;
+		}
+
+		$type = $fields[ $key ]['type'];
+
+		if ( is_callable( __NAMESPACE__ . "\\validate_meta_$type" ) ) {
+			$validation = call_user_func( __NAMESPACE__ . "\\validate_meta_$type", $key, $value );
+		}
+
+		if ( is_wp_error( $validation ) ) {
+			$invalid_fields = array_merge( $invalid_fields, $validation->get_error_data() );
 		}
 	}
 
-	$string_fields = array_keys( wp_list_pluck( $fields, 'type' ), 'string', true );
-
-	foreach ( $string_fields as $key ) {
-		if ( isset( $meta[ $key ] ) && mb_strlen( $meta[ $key ] ) > META_MAX_LENGTH ) {
-			return new WP_Error(
-				'feedback_meta_string_too_long',
-				__( 'Feedback submission is too long.', 'wordcamporg' ),
-				array(
-					'meta_key' => $key,
-				)
-			);
-		}
+	if ( ! empty( $invalid_fields ) ) {
+		return new WP_Error(
+			'feedback_meta_invalid_data',
+			__( 'One or more fields has invalid data.', 'wordcamporg' ),
+			$invalid_fields
+		);
 	}
 
 	return $meta;
+}
+
+/**
+ * Validate the submitted value of an integer field.
+ *
+ * This function is not intended to be called directly. See `validate_feedback_meta()`.
+ *
+ * @param string $key
+ * @param mixed  $value
+ *
+ * @return bool|WP_Error
+ */
+function validate_meta_integer( $key, $value ) {
+	$schema        = get_feedback_meta_field_schema( $key );
+	$error_code    = 'feedback_meta_invalid_data';
+	$error_message = '';
+
+	if ( ! is_numeric( $value ) ) {
+		$error_message = __( 'This value must be a number.', 'wordcamporg' );
+	}
+
+	$value = absint( $value );
+
+	if ( isset( $schema['attributes']['min'] ) && $value < $schema['attributes']['min'] ) {
+		$error_message = __( 'This value is too low.', 'wordcamporg' );
+	}
+
+	if ( isset( $schema['attributes']['max'] ) && $value > $schema['attributes']['max'] ) {
+		$error_message = __( 'This value is too high.', 'wordcamporg' );
+	}
+
+	if ( $error_message ) {
+		return new WP_Error(
+			$error_code,
+			$error_message,
+			array(
+				$key => $error_message,
+			)
+		);
+	}
+
+	return true;
+}
+
+/**
+ * Validate the submitted value of a string field.
+ *
+ * This function is not intended to be called directly. See `validate_feedback_meta()`.
+ *
+ * @param string $key
+ * @param mixed  $value
+ *
+ * @return bool|WP_Error
+ */
+function validate_meta_string( $key, $value ) {
+	$schema        = get_feedback_meta_field_schema( $key );
+	$error_code    = 'feedback_meta_invalid_data';
+	$error_message = '';
+
+	if ( isset( $schema['attributes']['maxlength'] ) && mb_strlen( $value ) > $schema['attributes']['maxlength'] ) {
+		$error_message = __( 'This answer is too long.', 'wordcamporg' );
+	}
+
+	if ( $error_message ) {
+		return new WP_Error(
+			$error_code,
+			$error_message,
+			array(
+				$key => $error_message,
+			)
+		);
+	}
+
+	return true;
 }
 
 /**

@@ -44,6 +44,18 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
 	 */
+	public function test_validate_feedback_meta_all_valid_strip_unknown() {
+		$valid_meta_extra        = self::$valid_meta;
+		$valid_meta_extra['foo'] = 'bar';
+
+		$result = validate_feedback_meta( $valid_meta_extra );
+
+		$this->assertEqualSetsWithIndex( self::$valid_meta, $result );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
+	 */
 	public function test_validate_feedback_meta_missing_key() {
 		$invalid_meta = self::$valid_meta;
 		unset( $invalid_meta['rating'] );
@@ -64,7 +76,33 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 		$result = validate_feedback_meta( $invalid_meta );
 
 		$this->assertWPError( $result );
-		$this->assertEquals( 'feedback_meta_not_numeric', $result->get_error_code() );
+		$this->assertArrayHasKey( 'rating', $result->get_error_data() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
+	 */
+	public function test_validate_feedback_meta_too_low() {
+		$invalid_meta           = self::$valid_meta;
+		$invalid_meta['rating'] = 0;
+
+		$result = validate_feedback_meta( $invalid_meta );
+
+		$this->assertWPError( $result );
+		$this->assertArrayHasKey( 'rating', $result->get_error_data() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
+	 */
+	public function test_validate_feedback_meta_too_high() {
+		$invalid_meta           = self::$valid_meta;
+		$invalid_meta['rating'] = 256;
+
+		$result = validate_feedback_meta( $invalid_meta );
+
+		$this->assertWPError( $result );
+		$this->assertArrayHasKey( 'rating', $result->get_error_data() );
 	}
 
 	/**
@@ -80,7 +118,7 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 		$result = validate_feedback_meta( $invalid_meta );
 
 		$this->assertWPError( $result );
-		$this->assertEquals( 'feedback_meta_string_too_long', $result->get_error_code() );
+		$this->assertArrayHasKey( 'q1', $result->get_error_data() );
 	}
 
 	/**
@@ -96,5 +134,21 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 		$result = validate_feedback_meta( $alternate_valid_meta );
 
 		$this->assertEqualSetsWithIndex( $alternate_valid_meta, $result );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
+	 */
+	public function test_validate_feedback_meta_multiple_invalid_fields() {
+		$invalid_meta            = self::$valid_meta;
+		$invalid_meta['version'] = 't-rex';
+		$invalid_meta['rating']  = 512;
+
+		$result = validate_feedback_meta( $invalid_meta );
+
+		$this->assertWPError( $result );
+		$this->assertCount( 2, $result->get_error_data() );
+		$this->assertArrayHasKey( 'version', $result->get_error_data() );
+		$this->assertArrayHasKey( 'rating', $result->get_error_data() );
 	}
 }

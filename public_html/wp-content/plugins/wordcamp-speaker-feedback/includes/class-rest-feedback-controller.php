@@ -171,10 +171,10 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		}
 
-		$response = __( 'Success!', 'wordcamporg' );
+		$response = array(); // At this point we have no reason to return details about the new feedback comment.
 		$response = rest_ensure_response( $response );
 
-		$response->set_status( 201 );
+		$response->set_status( 201 ); // This is a sufficient signal that the request was successful.
 
 		return $response;
 	}

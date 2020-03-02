@@ -91,7 +91,7 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			'sanitize_callback' => 'sanitize_text_field',
 			'show_in_rest'      => false,
 			'default'           => '',
-			'required'          => false,
+			'required'          => true,
 			'attributes'        => array(
 				'maxlength' => 5000,
 			),

@@ -111,7 +111,6 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
-		$this->assertEquals( 'Success!', $response->get_data() );
 		$this->assertCount( 1, get_feedback() );
 	}
 
@@ -132,7 +131,6 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
-		$this->assertEquals( 'Success!', $response->get_data() );
 		$this->assertCount( 1, get_feedback() );
 	}
 

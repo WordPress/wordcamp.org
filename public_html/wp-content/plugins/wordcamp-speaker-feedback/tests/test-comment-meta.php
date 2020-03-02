@@ -3,8 +3,8 @@
 namespace WordCamp\SpeakerFeedback\Tests;
 
 use WP_UnitTestCase;
-use const WordCamp\SpeakerFeedback\CommentMeta\{ META_MAX_LENGTH, META_VERSION };
-use function WordCamp\SpeakerFeedback\CommentMeta\{ validate_feedback_meta };
+use const WordCamp\SpeakerFeedback\CommentMeta\{ META_VERSION };
+use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_meta_field_schema, validate_feedback_meta };
 
 defined( 'WPINC' ) || die();
 
@@ -109,7 +109,9 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
 	 */
 	public function test_validate_feedback_meta_too_long() {
-		$too_long_answer = array_fill( 0, META_MAX_LENGTH + 1, 'a' );
+		$schema = get_feedback_meta_field_schema( 'q1' );
+
+		$too_long_answer = array_fill( 0, $schema['attributes']['maxlength'] + 1, 'a' );
 		$too_long_answer = implode( '', $too_long_answer );
 
 		$invalid_meta       = self::$valid_meta;
@@ -125,7 +127,9 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
 	 */
 	public function test_validate_feedback_meta_multibyte_not_too_long() {
-		$almost_long_answer = array_fill( 0, META_MAX_LENGTH, '💩' );
+		$schema = get_feedback_meta_field_schema( 'q1' );
+
+		$almost_long_answer = array_fill( 0, $schema['attributes']['maxlength'], '💩' );
 		$almost_long_answer = implode( '', $almost_long_answer );
 
 		$alternate_valid_meta       = self::$valid_meta;

@@ -7,8 +7,7 @@ use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
-const META_VERSION    = 1;
-const META_MAX_LENGTH = 5000;
+const META_VERSION = 1;
 
 add_filter( 'get_object_subtype_comment', __NAMESPACE__ . '\add_comment_subtype', 10, 2 );
 add_action( 'init',                       __NAMESPACE__ . '\register_meta_fields' );

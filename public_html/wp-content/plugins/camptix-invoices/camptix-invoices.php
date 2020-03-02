@@ -180,6 +180,10 @@ add_filter( 'display_post_states', 'ctx_display_custom_statuses' );
  * Adding custom post status to Bulk and Quick Edit boxes: Status dropdown
  */
 function ctx_append_post_status_bulk_edit() {
+	$screen = get_current_screen();
+	if ( $screen && 'tix_invoice' !== $screen->post_type ) {
+		return;
+	}
 
 	?>
 	<script>

@@ -2069,7 +2069,7 @@ class WordCamp_Post_Types_Plugin {
 				if ( ! empty( $speakers_ids ) ) {
 					$speakers = get_posts( array(
 						'post_type'      => 'wcb_speaker',
-						'post_status'    => 'any',
+						'post_status'    => array( 'publish', 'draft' ),
 						'posts_per_page' => -1,
 						'post__in'       => $speakers_ids,
 					) );

@@ -46,29 +46,31 @@ class Code_Of_Conduct_Field extends CampTix_Addon {
 
 		$current_data[ self::SLUG ] = wp_validate_boolean( $current_data[ self::SLUG ] );
 
+		$coc_url = $this->maybe_get_coc_url();
+		$question = __( 'Do you agree to follow the event Code of Conduct?', 'wordcamporg' );
+		if ( $coc_url ) {
+			$question = sprintf(
+				/* translators: %s placeholder is a URL */
+				__( 'Do you agree to follow the event <a href="%s" target="_blank">Code of Conduct</a>?', 'wordcamporg' ),
+				esc_url( $coc_url )
+			);
+		}
+
 		?>
 
 		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
 			<td class="tix-required tix-left">
-				<?php
-				if ( $coc_url = $this->maybe_get_coc_url() ) :
-					printf(
-						/* translators: %s placeholder is a URL */
-						wp_kses_post( __( 'Do you agree to follow the event <a href="%s" target="_blank">Code of Conduct</a>?', 'wordcamporg' ) ),
-						esc_url( $coc_url )
-					);
-				else :
-					esc_html_e( 'Do you agree to follow the event Code of Conduct?', 'wordcamporg' );
-				endif;
-				?>
-				<span class="tix-required-star">*</span>
+				<?php echo wp_kses_post( $question ); ?>
+				<span aria-hidden="true" class="tix-required-star">*</span>
 			</td>
 
 			<td class="tix-right">
-				<label>
-					<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="checkbox" <?php checked( $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html_x( 'Yes', 'ticket registration option', 'wordcamporg' ); ?>
-				</label>
+				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( strip_tags( $question ) ); ?>">
+					<label>
+						<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="checkbox" <?php checked( $current_data[ self::SLUG ] ); ?> required />
+						<?php echo esc_html_x( 'Yes', 'ticket registration option', 'wordcamporg' ); ?>
+					</label>
+				</fieldset>
 			</td>
 		</tr>
 

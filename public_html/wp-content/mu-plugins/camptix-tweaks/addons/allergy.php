@@ -65,6 +65,51 @@ class Allergy_Field extends CampTix_Addon {
 	}
 
 	/**
+	 * Render the field, used on both Registration and when editing an existing ticket.
+	 *
+	 * @param string $name
+	 * @param string $value
+	 */
+	public function render_field( $name, $value ) {
+		?>
+
+		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
+			<td class="tix-required tix-left">
+				<?php echo esc_html( $this->question ); ?>
+				<span aria-hidden="true" class="tix-required-star">*</span>
+			</td>
+
+			<td class="tix-right">
+				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( $this->question ); ?>">
+					<label>
+						<input
+							name="<?php echo esc_attr( $name ); ?>"
+							type="radio"
+							value="yes"
+							<?php checked( 'yes', $value ); ?>
+							required
+						/>
+						<?php echo esc_html( $this->options['yes'] ); ?>
+					</label>
+					<br />
+					<label>
+						<input
+							name="<?php echo esc_attr( $name ); ?>"
+							type="radio"
+							value="no"
+							<?php checked( 'no', $value ); ?>
+							required
+						/>
+						<?php echo esc_html( $this->options['no'] ); ?>
+					</label>
+				</fieldset>
+			</td>
+		</tr>
+
+		<?php
+	}
+
+	/**
 	 * Render the new field for the registration form during checkout.
 	 *
 	 * @param array $form_data
@@ -77,28 +122,10 @@ class Allergy_Field extends CampTix_Addon {
 			self::SLUG => '',
 		) );
 
-		?>
-
-		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
-			<td class="tix-required tix-left">
-				<?php echo esc_html( $this->question ); ?>
-				<span class="tix-required-star">*</span>
-			</td>
-
-			<td class="tix-right">
-				<label>
-					<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="yes" <?php checked( 'yes', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['yes'] ); ?>
-				</label>
-				<br />
-				<label>
-					<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="no" <?php checked( 'no', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['no'] ); ?>
-				</label>
-			</td>
-		</tr>
-
-		<?php
+		$this->render_field(
+			sprintf( 'tix_attendee_info[%d][%s]', $i, self::SLUG ),
+			$current_data[ self::SLUG ]
+		);
 	}
 
 	/**
@@ -201,28 +228,10 @@ class Allergy_Field extends CampTix_Addon {
 			self::SLUG => 'no',
 		) );
 
-		?>
-
-		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
-			<td class="tix-required tix-left">
-				<?php echo esc_html( $this->question ); ?>
-				<span class="tix-required-star">*</span>
-			</td>
-
-			<td class="tix-right">
-				<label>
-					<input name="tix_ticket_info[<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="yes" <?php checked( 'yes', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['yes'] ); ?>
-				</label>
-				<br />
-				<label>
-					<input name="tix_ticket_info[<?php echo esc_attr( self::SLUG ); ?>]" type="radio" value="no" <?php checked( 'no', $current_data[ self::SLUG ] ); ?> required />
-					<?php echo esc_html( $this->options['no'] ); ?>
-				</label>
-			</td>
-		</tr>
-
-		<?php
+		$this->render_field(
+			sprintf( 'tix_ticket_info[%s]', self::SLUG ),
+			$current_data[ self::SLUG ]
+		);
 	}
 
 	/**

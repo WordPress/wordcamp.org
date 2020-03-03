@@ -27,8 +27,15 @@ class CampTix_Addon_URL_Field extends CampTix_Addon {
 	 * A url input for a question.
 	 */
 	function question_field_url( $name, $value, $question, $required = false ) {
+		global $camptix;
 		?>
-		<input name="<?php echo esc_attr( $name ); ?>" type="url" value="<?php echo esc_attr( $value ); ?>" <?php if ( $required ) echo 'required'; ?> />
+		<input
+			id="<?php echo esc_attr( $camptix->get_field_id( $name ) ); ?>"
+			name="<?php echo esc_attr( $name ); ?>"
+			type="url"
+			value="<?php echo esc_attr( $value ); ?>"
+			<?php if ( $required ) echo 'required'; ?>
+		/>
 		<?php
 	}
 

@@ -28,9 +28,14 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 	}
 
 	function question_field_tshirt( $name, $value, $question, $required = false ) {
+		global $camptix;
 		$values = get_post_meta( $question->ID, 'tix_values', true );
 		?>
-		<select name="<?php echo esc_attr( $name ); ?>" <?php if ( $required ) echo 'required'; ?>>
+		<select
+			id="<?php echo esc_attr( $camptix->get_field_id( $name ) ); ?>"
+			name="<?php echo esc_attr( $name ); ?>"
+			<?php if ( $required ) echo 'required'; ?>
+		>
 			<?php foreach ( (array) $values as $question_value ) : ?>
 				<option <?php selected( $question_value, $value ); ?> value="<?php echo esc_attr( $question_value ); ?>"><?php echo esc_html( $question_value ); ?></option>
 			<?php endforeach; ?>

@@ -50,6 +50,12 @@
 	color: #DD0000;
 }
 
+.tix-screen-reader-fieldset {
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+
 #tix {
 	padding-top: 20px;
 }
@@ -153,6 +159,14 @@ body.admin-bar #tix {
 .tix-order-summary td.tix-column-quantity,
 .tix-order-summary td.tix-column-price {
 	vertical-align: middle;
+}
+
+.tix-tickets-list .tix-column-description {
+	font-weight: normal;
+}
+
+.tix-tickets-list .tix-ticket-title {
+	font-weight: bold;
 }
 
 .tix-submit {

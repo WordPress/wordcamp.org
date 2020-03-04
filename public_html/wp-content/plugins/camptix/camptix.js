@@ -268,7 +268,11 @@ var CampTixStripe = new function() {
 	self.form = false;
 
 	self.init = function() {
-		self.form = jQuery( '#tix form' );
+		self.form = jQuery( '#tix_checkout_form' );
+		if ( ! self.form.length ) {
+			return;
+		}
+
 		self.form.on( 'submit', CampTixStripe.form_handler );
 
 		// On a failed attendee data request, we'll have the previous stripe token

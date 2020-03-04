@@ -5513,7 +5513,7 @@ class CampTix_Plugin {
 		?>
 		<div id="tix" class="tix-has-dynamic-receipts">
 			<?php do_action( 'camptix_notices' ); ?>
-			<form action="<?php echo esc_url( add_query_arg( 'tix_action', 'checkout' ), $this->get_tickets_url() ); ?>#tix" method="POST">
+			<form id="tix_checkout_form" action="<?php echo esc_url( add_query_arg( 'tix_action', 'checkout' ), $this->get_tickets_url() ); ?>#tix" method="POST">
 
 				<?php if ( $this->coupon ) : ?>
 					<input type="hidden" name="tix_coupon" value="<?php echo esc_attr( $this->coupon->post_title ); ?>" />

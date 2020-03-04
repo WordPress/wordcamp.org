@@ -12,15 +12,13 @@
 
 namespace WordCamp\SpeakerFeedback;
 
-use WordCamp\SpeakerFeedback\{ REST_Feedback_Controller };
-
 defined( 'WPINC' ) || die();
 
-define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
-define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
-define( __NAMESPACE__ . '\OPTION_KEY', 'sft_feedback_page' );
-define( __NAMESPACE__ . '\QUERY_VAR', 'sft_feedback' );
+define( __NAMESPACE__ . '\PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( __NAMESPACE__ . '\PLUGIN_URL', plugins_url( '/', __FILE__ ) );
 
+const OPTION_KEY           = 'sft_feedback_page';
+const QUERY_VAR            = 'sft_feedback';
 const SUPPORTED_POST_TYPES = array( 'wcb_session' );
 
 // Only add actions to sites without the skip flag, and only if WC Post Types exist.
@@ -43,21 +41,33 @@ if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_
  * @return void
  */
 function load() {
-	require_once PLUGIN_DIR . 'includes/class-feedback.php';
-	require_once PLUGIN_DIR . 'includes/class-rest-feedback-controller.php';
-	require_once PLUGIN_DIR . 'includes/comment.php';
-	require_once PLUGIN_DIR . 'includes/comment-meta.php';
-	require_once PLUGIN_DIR . 'includes/form.php';
-	require_once PLUGIN_DIR . 'includes/page.php';
+	require_once get_includes_path() . 'class-feedback.php';
+	require_once get_includes_path() . 'class-rest-feedback-controller.php';
+	require_once get_includes_path() . 'comment.php';
+	require_once get_includes_path() . 'comment-meta.php';
+	require_once get_includes_path() . 'form.php';
+	require_once get_includes_path() . 'page.php';
 }
 
 /**
  * Create main Feedback page.
+ *
+ * @return void
  */
 function activate() {
 	add_feedback_page();
 	add_page_endpoint();
 	flush_rewrite_rules();
+}
+
+/**
+ * Remove the feedback page.
+ *
+ * @return void
+ */
+function deactivate() {
+	$page_id = get_option( OPTION_KEY );
+	wp_delete_post( $page_id, true );
 }
 
 /**
@@ -76,6 +86,8 @@ function add_support() {
 
 /**
  * Create the Feedback page, save ID into an option.
+ *
+ * @return void
  */
 function add_feedback_page() {
 	$page_id = get_option( OPTION_KEY );
@@ -83,7 +95,7 @@ function add_feedback_page() {
 		return;
 	}
 
-	$organizer_note = '<!-- wp:paragraph {"textColor":"white","customBackgroundColor":"#94240b"} -->';
+	$organizer_note  = '<!-- wp:paragraph {"textColor":"white","customBackgroundColor":"#94240b"} -->';
 	$organizer_note .= '<p style="background-color:#94240b" class="has-text-color has-background has-white-color">';
 	$organizer_note .= __( 'This page is a placeholder for the Speaker Feedback form. The content here will not be shown on the site.', 'wordcamporg' );
 	$organizer_note .= '</p>';
@@ -105,6 +117,8 @@ function add_feedback_page() {
 
 /**
  * Register a rewrite endpoint for the API.
+ *
+ * @return void
  */
 function add_page_endpoint() {
 	// Uses EP_SESSIONS mask to only add this endpoint to the session.
@@ -112,11 +126,13 @@ function add_page_endpoint() {
 }
 
 /**
- * Remove the feedback page.
+ * Initialize REST API endpoints.
+ *
+ * @return void
  */
-function deactivate() {
-	$page_id = get_option( OPTION_KEY );
-	wp_delete_post( $page_id, true );
+function register_rest_routes() {
+	$controller = new REST_Feedback_Controller();
+	$controller->register_routes();
 }
 
 /**
@@ -153,14 +169,4 @@ function get_assets_path() {
  */
 function get_assets_url() {
 	return plugin_dir_url( __FILE__ ) . 'assets/';
-}
-
-/**
- * Initialize REST API endpoints.
- *
- * @return void
- */
-function register_rest_routes() {
-	$controller = new REST_Feedback_Controller();
-	$controller->register_routes();
 }

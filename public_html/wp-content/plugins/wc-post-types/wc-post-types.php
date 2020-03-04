@@ -2069,6 +2069,7 @@ class WordCamp_Post_Types_Plugin {
 				if ( ! empty( $speakers_ids ) ) {
 					$speakers = get_posts( array(
 						'post_type'      => 'wcb_speaker',
+						'post_status'    => array( 'publish', 'draft' ),
 						'posts_per_page' => -1,
 						'post__in'       => $speakers_ids,
 					) );
@@ -2077,7 +2078,13 @@ class WordCamp_Post_Types_Plugin {
 				$output = array();
 
 				foreach ( $speakers as $speaker ) {
-					$output[] = sprintf( '<a href="%s">%s</a>', esc_url( get_edit_post_link( $speaker->ID ) ), esc_html( apply_filters( 'the_title', $speaker->post_title ) ) );
+					$is_draft = ( 'draft' === $speaker->post_status ) ? __( ' (draft)', 'wordcamporg' ) : '';
+					$output[] = sprintf(
+						'<a href="%1$s">%2$s%3$s</a>',
+						esc_url( get_edit_post_link( $speaker->ID ) ),
+						esc_html( apply_filters( 'the_title', $speaker->post_title ) ),
+						$is_draft
+					);
 				}
 
 				// Output is escaped when the string is built, so we can ignore the PHPCS error.

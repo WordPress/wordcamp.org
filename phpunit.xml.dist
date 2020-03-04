@@ -34,5 +34,11 @@
 				./public_html/wp-content/plugins/wordcamp-remote-css/tests/
 			</directory>
 		</testsuite>
+
+		<testsuite name="WordCamp Speaker Feedback">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-speaker-feedback/tests/
+			</directory>
+		</testsuite>
 	</testsuites>
 </phpunit>

@@ -7,7 +7,49 @@ use WordCamp\SpeakerFeedback\Feedback;
 
 defined( 'WPINC' ) || die();
 
-const COMMENT_TYPE = 'wordcamp-speaker-feedback';
+const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this must be <= 20 characters.
+
+/**
+ * Check if a comment is a feedback comment.
+ *
+ * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
+ *
+ * @return bool
+ */
+function is_feedback( $comment ) {
+	if ( is_string( $comment ) || is_int( $comment ) ) {
+		$comment = get_comment( $comment );
+	}
+
+	if ( $comment instanceof Feedback ) {
+		return true;
+	} elseif ( COMMENT_TYPE === $comment->comment_type ) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Get a single feedback comment as a Feedback object.
+ *
+ * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
+ *
+ * @return Feedback|null A Feedback object, or null if the input is not a feedback comment.
+ */
+function get_feedback_comment( $comment ) {
+	if ( $comment instanceof Feedback ) {
+		return $comment;
+	}
+
+	$comment = get_comment( $comment );
+
+	if ( ! is_feedback( $comment ) ) {
+		return null;
+	}
+
+	return new Feedback( $comment );
+}
 
 /**
  * Add a new feedback submission.
@@ -16,7 +58,7 @@ const COMMENT_TYPE = 'wordcamp-speaker-feedback';
  * @param array|int $feedback_author Either an array containing 'name' and 'email' values, or a user ID.
  * @param array     $feedback_meta   An associative array of key => value pairs.
  *
- * @return false|int
+ * @return int|bool Comment ID on success. `false` on failure.
  */
 function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
 	$args = array(
@@ -45,10 +87,10 @@ function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
  * The only parts of a feedback submission that we'd perhaps want to update after submission are the feedback rating
  * and questions that are stored in comment meta.
  *
- * @param int   $comment_id    The ID of the comment to update.
- * @param array $feedback_meta An associative array of key => value pairs.
+ * @param string|int $comment_id    The ID of the comment to update.
+ * @param array      $feedback_meta An associative array of key => value pairs.
  *
- * @return int
+ * @return int This will always return `0` because the comment itself does not get updated, only comment meta.
  */
 function update_feedback( $comment_id, array $feedback_meta ) {
 	$args = array(
@@ -56,7 +98,6 @@ function update_feedback( $comment_id, array $feedback_meta ) {
 		'comment_meta' => $feedback_meta,
 	);
 
-	// This will always return `0` because the comment itself does not get updated, only comment meta.
 	return wp_update_comment( $args );
 }
 
@@ -90,18 +131,15 @@ function get_feedback( array $status = array( 'hold', 'approve' ), array $post__
 	// This makes loading meta values for comments much faster.
 	wp_queue_comments_for_comment_meta_lazyload( $comments );
 
-	return array_map(
-		function( WP_Comment $comment ) {
-			return new Feedback( $comment );
-		},
-		$comments
-	);
+	$comments = array_map( __NAMESPACE__ . '\get_feedback_comment', $comments );
+
+	return $comments;
 }
 
 /**
  * Trash a feedback submission.
  *
- * @param int $comment_id The ID of the comment to delete.
+ * @param string|int $comment_id The ID of the comment to delete.
  *
  * @return bool
  */

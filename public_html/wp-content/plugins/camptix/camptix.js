@@ -289,6 +289,11 @@ var CampTixStripe = new function() {
 			return;
 		}
 
+		// Check if Stripe checkout is available (stripe's js is not added to free orders, etc).
+		if ( typeof StripeCheckout === 'undefined') {
+			return;
+		}
+
 		// If the form already has a Stripe token, bail.
 		var tokenised = self.form.find('input[name="tix_stripe_token"]');
 		if ( tokenised.length ) {

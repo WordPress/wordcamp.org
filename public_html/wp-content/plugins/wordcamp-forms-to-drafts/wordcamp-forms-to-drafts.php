@@ -89,7 +89,7 @@ class WordCamp_Forms_To_Drafts {
 		);
 
 		$form_wrapper = sprintf(
-			'<div class="wcfd-disabled-form">%s<div class="wcfd-overlay"></div>',
+			'<div class="wcfd-disabled-form">%s<div class="wcfd-overlay"></div><div inert>',
 			// Prevent wpautop() from converting tabs into empty paragraphs in #wcorg-login-message.
 			trim( str_replace( "\t", '', $please_login_message ) )
 		);
@@ -99,7 +99,7 @@ class WordCamp_Forms_To_Drafts {
 		}
 
 		foreach ( array( '[/contact-form]', '<!-- /wp:jetpack/contact-form -->' ) as $end ) {
-			$content = str_replace( $end, $end . '</div>', $content );
+			$content = str_replace( $end, $end . '</div></div>', $content );
 		}
 
 		return $content;

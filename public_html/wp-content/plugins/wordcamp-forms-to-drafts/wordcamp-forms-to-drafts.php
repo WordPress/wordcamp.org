@@ -23,6 +23,7 @@ class WordCamp_Forms_To_Drafts {
 	 */
 	public function __construct() {
 		add_action( 'wp_print_styles',          array( $this, 'print_front_end_styles'      )        );
+		add_action( 'wp_enqueue_scripts',       array( $this, 'enqueue_inert_script'        )        );
 		add_filter( 'the_content',              array( $this, 'force_login_to_use_form'     ),  8    );
 		add_action( 'template_redirect',        array( $this, 'populate_form_based_on_user' ),  9    );
 		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_sponsors'           ), 10, 3 );
@@ -44,6 +45,25 @@ class WordCamp_Forms_To_Drafts {
 		</style>
 
 		<?php
+	}
+
+	/**
+	 * Add the `inert` polyfill to disabled form pages.
+	 */
+	public function enqueue_inert_script() {
+		if ( ! $this->form_requires_login( $this->get_current_form_id() ) ) {
+			return;
+		}
+		$deps_path = __DIR__ . '/build/inert.asset.php';
+		$script_info = require $deps_path;
+
+		wp_enqueue_script(
+			'wicg-inert',
+			plugins_url( 'build/inert.js', __FILE__ ),
+			$script_info['dependencies'],
+			$script_info['version'],
+			true
+		);
 	}
 
 	/**

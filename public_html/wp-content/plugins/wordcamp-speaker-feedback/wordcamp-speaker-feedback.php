@@ -43,6 +43,7 @@ if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_
 function load() {
 	require_once get_includes_path() . 'class-feedback.php';
 	require_once get_includes_path() . 'class-rest-feedback-controller.php';
+	require_once get_includes_path() . 'capabilities.php';
 	require_once get_includes_path() . 'comment.php';
 	require_once get_includes_path() . 'comment-meta.php';
 	require_once get_includes_path() . 'form.php';

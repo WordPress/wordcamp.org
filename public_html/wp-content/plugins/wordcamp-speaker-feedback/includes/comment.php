@@ -17,13 +17,13 @@ const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this mus
  * @return bool
  */
 function is_feedback( $comment ) {
-	if ( is_string( $comment ) || is_int( $comment ) ) {
-		$comment = get_comment( $comment );
-	}
-
 	if ( $comment instanceof Feedback ) {
 		return true;
-	} elseif ( COMMENT_TYPE === $comment->comment_type ) {
+	}
+
+	$comment = get_comment( $comment );
+
+	if ( $comment && COMMENT_TYPE === $comment->comment_type ) {
 		return true;
 	}
 

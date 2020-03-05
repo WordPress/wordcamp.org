@@ -33,7 +33,7 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 			}
 
 			// Current user is a speaker for the session receiving feedback comments.
-			$session_speakers = get_post_meta( $feedback->comment_post_ID, '_wcpt_speaker_id' );
+			$session_speakers = array_map( 'absint', (array) get_post_meta( $feedback->comment_post_ID, '_wcpt_speaker_id' ) );
 			if ( in_array( $user_id, $session_speakers, true ) ) {
 				$required_caps[] = 'read';
 
@@ -45,7 +45,7 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 			}
 
 			// Current user has a role on the site that allows them to edit content.
-			$required_caps[] = map_meta_cap( 'edit_comment', $user_id, $feedback->comment_ID );
+			$required_caps = map_meta_cap( 'edit_comment', $user_id, $feedback->comment_ID );
 			break;
 
 		case 'edit_' . COMMENT_TYPE:
@@ -57,7 +57,7 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 			}
 
 			// Current user has a role on the site that allows them to edit content.
-			$required_caps[] = map_meta_cap( 'edit_comment', $user_id, $feedback->comment_ID );
+			$required_caps = map_meta_cap( 'edit_comment', $user_id, $feedback->comment_ID );
 			break;
 	}
 

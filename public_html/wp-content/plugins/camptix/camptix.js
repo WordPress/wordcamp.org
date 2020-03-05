@@ -336,6 +336,8 @@ var CampTixStripe = new function() {
 	self.stripe_token_callback = function( token ) {
 		self.add_stripe_token_hidden_fields( token.id, token.receipt_email || token.email );
 
+		// Prevent calling form_handler multiple times.
+		self.form.off( 'submit', CampTixStripe.form_handler );
 		self.form.submit();
 	};
 

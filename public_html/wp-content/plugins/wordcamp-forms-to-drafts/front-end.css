@@ -7,7 +7,7 @@
 		z-index: 10;
 		margin: 2.4em;
 		padding: 1.8em;
-		background-color: #DC3232;
+		background-color: #c62828;
 		border-radius: .25em;
 		margin-bottom: 2em;
 	}
@@ -16,13 +16,22 @@
 			color: white !important /* !important to prevent theme from unintentionally overriding */;
 		}
 
+			.wcfd-disabled-form #wcorg-login-message p:first-child {
+				margin-top: 0;
+			}
+
 			.wcfd-disabled-form #wcorg-login-message p:last-child {
 				margin-bottom: 0;
 			}
 
 			.wcfd-disabled-form #wcorg-login-message a {
-				color: black !important /* !important to prevent theme from unintentionally overriding */;
-				font-weight: bold;
+				color: white;
+			}
+
+			.wcfd-disabled-form #wcorg-login-message a:hover,
+			.wcfd-disabled-form #wcorg-login-message a:focus,
+			.wcfd-disabled-form #wcorg-login-message a:active {
+				color: white;
 			}
 
 	.wcfd-overlay {

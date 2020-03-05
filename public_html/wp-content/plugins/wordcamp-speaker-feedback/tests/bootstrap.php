@@ -14,6 +14,9 @@ if ( 'cli' !== php_sapi_name() ) {
 function manually_load_plugin() {
 	require_once WP_MU_PLUGIN_DIR . '/3-helpers-misc.php';
 
+	// Needed for registering post types.
+	require_once WP_PLUGIN_DIR . '/wc-post-types/wc-post-types.php';
+
 	// Initialize the plugin.
 	require_once dirname( __DIR__ )  . '/wordcamp-speaker-feedback.php';
 

@@ -268,7 +268,11 @@ var CampTixStripe = new function() {
 	self.form = false;
 
 	self.init = function() {
-		self.form = jQuery( '#tix form' );
+		self.form = jQuery( '#tix_checkout_form' );
+		if ( ! self.form.length ) {
+			return;
+		}
+
 		self.form.on( 'submit', CampTixStripe.form_handler );
 
 		// On a failed attendee data request, we'll have the previous stripe token
@@ -282,6 +286,11 @@ var CampTixStripe = new function() {
 		var method = CampTixUtilities.getSelectedPaymentOption();
 
 		if ( 'stripe' !== method ) {
+			return;
+		}
+
+		// Check if Stripe checkout is available (stripe's js is not added to free orders, etc).
+		if ( typeof StripeCheckout === 'undefined') {
 			return;
 		}
 
@@ -327,6 +336,8 @@ var CampTixStripe = new function() {
 	self.stripe_token_callback = function( token ) {
 		self.add_stripe_token_hidden_fields( token.id, token.receipt_email || token.email );
 
+		// Prevent calling form_handler multiple times.
+		self.form.off( 'submit', CampTixStripe.form_handler );
 		self.form.submit();
 	};
 

@@ -49,6 +49,7 @@
 			"<rootDir>/public_html/wp-content/mu-plugins/blocks"
 		]
 	},
+	"scripts:comment": "See ./readme.md for parameter documentaton, usage examples, etc",
 	"scripts": {
 		"start": "wp-scripts start blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",
 		"build": "wp-scripts build blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js",

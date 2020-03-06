@@ -7,6 +7,21 @@
 2. Run `yarn build` to generate the built files.
 3. Run `yarn start`  while developing to continuously watch the files, this will automatically re-build the files when the source changes.
 
+
+## Scripts
+
+Check `package.json` for the scripts that are available around builds, testing, linting, etc.
+
+General notes:
+
+* When passing a path as an argument, it generally needs to start from the `mu-plugins/blocks` folder,
+	* e.g. `yarn workspace wordcamp-blocks lint:js source/blocks/speakers`
+	* Alternatively, `npm run lint:js source/blocks/speakers`
+* Arguments for `npm run` can be passed as you'd expect, but arguments for the proxied command (e.g., `eslint`) need to be separated by a `--`. That isn't needed for `yarn`, though.
+	* e.g., `npm run lint:js -- --fix`, `npm run test -- -h`.
+	* e.g., `yarn workspace wordcamp-blocks lint:js --fix`
+
+
 ## Testing
 
 We use Jest for testing, run `yarn test`. With Jest, you can create snapshot tests for components.

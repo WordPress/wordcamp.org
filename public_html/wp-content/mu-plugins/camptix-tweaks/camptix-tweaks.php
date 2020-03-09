@@ -576,6 +576,11 @@ function load_custom_addons() {
 	// Spam prevention
 	require_once( __DIR__ . '/addons/spam-prevention.php' );
 
+	// Ticket types
+	if ( 'production' !== get_wordcamp_environment() ) {
+		require_once( __DIR__ . '/addons/ticket-types/ticket-types.php' );
+	}
+
 	// Payment options.
 	if (
 		in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true ) &&

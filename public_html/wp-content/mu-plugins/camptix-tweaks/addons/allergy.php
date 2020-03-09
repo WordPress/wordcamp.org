@@ -1,7 +1,7 @@
 <?php
 
 namespace WordCamp\CampTix_Tweaks;
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 use CampTix_Plugin, CampTix_Addon;
 use WP_Post;
@@ -116,11 +116,11 @@ class Allergy_Field extends CampTix_Addon {
 	 * @param int   $i
 	 */
 	public function render_registration_field( $form_data, $i ) {
-		$current_data = ( isset( $form_data['tix_attendee_info'][ $i ] ) ) ?: array();
+		$current_data = ( isset( $form_data['tix_attendee_info'][ $i ] ) )
+			? $form_data['tix_attendee_info'][ $i ]
+			: array();
 
-		$current_data = wp_parse_args( $current_data, array(
-			self::SLUG => '',
-		) );
+		$current_data = wp_parse_args( $current_data, array( self::SLUG => '' ) );
 
 		$this->render_field(
 			sprintf( 'tix_attendee_info[%d][%s]', $i, self::SLUG ),
@@ -224,9 +224,7 @@ class Allergy_Field extends CampTix_Addon {
 	 * @param array $ticket_info
 	 */
 	public function render_ticket_info_field( $ticket_info ) {
-		$current_data = wp_parse_args( $ticket_info, array(
-			self::SLUG => 'no',
-		) );
+		$current_data = wp_parse_args( $ticket_info, array( self::SLUG => 'no' ) );
 
 		$this->render_field(
 			sprintf( 'tix_ticket_info[%s]', self::SLUG ),
@@ -243,7 +241,7 @@ class Allergy_Field extends CampTix_Addon {
 	 * @return mixed
 	 */
 	public function add_metabox_row( $rows, $post ) {
-		$value = get_post_meta( $post->ID, 'tix_' . self::SLUG, true ) ?: '';
+		$value = get_post_meta( $post->ID, 'tix_' . self::SLUG, true );
 		if ( $value && isset( $this->options[ $value ] ) ) {
 			$value = $this->options[ $value ];
 		}
@@ -251,13 +249,16 @@ class Allergy_Field extends CampTix_Addon {
 
 		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
 
-		$ticket_row = array_filter( $rows, function( $row ) {
-			if ( 'Ticket' === $row[0] ) {
-				return true;
-			}
+		$ticket_row = array_filter(
+			$rows,
+			function( $row ) {
+				if ( 'Ticket' === $row[0] ) {
+					return true;
+				}
 
-			return false;
-		} );
+				return false;
+			}
+		);
 
 		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
 
@@ -299,7 +300,7 @@ class Allergy_Field extends CampTix_Addon {
 		global $phpmailer;
 		if ( $phpmailer instanceof PHPMailer ) {
 			// Clear out any lingering content from a previously sent message.
-			$phpmailer = new PHPMailer( true );
+			$phpmailer = new PHPMailer( true ); // phpcs:disable WordPress.WP.GlobalVariablesOverride
 		}
 
 		$current_wordcamp = get_wordcamp_post();
@@ -353,10 +354,13 @@ class Allergy_Field extends CampTix_Addon {
 		 *
 		 * @param array $details Contains information about the WordCamp and the attendee.
 		 */
-		do_action( 'camptix_tweaks_allergy_notification', array(
-			'wordcamp' => $current_wordcamp,
-			'attendee' => $attendee,
-		) );
+		do_action(
+			'camptix_tweaks_allergy_notification',
+			array(
+				'wordcamp' => $current_wordcamp,
+				'attendee' => $attendee,
+			)
+		);
 
 		update_post_meta( $attendee->ID, '_tix_notify_' . self::SLUG, true );
 	}

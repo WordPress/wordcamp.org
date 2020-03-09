@@ -5,7 +5,7 @@ use CampTix_Plugin;
 use WP_Post;
 use WordCamp\Utilities\Form_Spam_Prevention;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 // Tickets
 add_action( 'camptix_admin_notices',                         __NAMESPACE__ . '\show_sandbox_mode_warning'           );
@@ -141,8 +141,8 @@ function is_sandboxed() {
 function paypal_credentials( $credentials ) {
 	// Sandbox account
 	$credentials = array(
-		"wordcamp-sandbox" => array(
-			'label'         => "WordCamp Sandbox",
+		'wordcamp-sandbox' => array(
+			'label'         => 'WordCamp Sandbox',
 			'sandbox'       => true,
 			'api_username'  => defined( 'WC_SANDBOX_PAYPAL_NVP_USERNAME'  ) ? WC_SANDBOX_PAYPAL_NVP_USERNAME  : '',
 			'api_password'  => defined( 'WC_SANDBOX_PAYPAL_NVP_PASSWORD'  ) ? WC_SANDBOX_PAYPAL_NVP_PASSWORD  : '',
@@ -205,7 +205,7 @@ function stripe_credentials( $credentials ) {
 	return $credentials;
 }
 
-/*
+/**
  * Show empty tickets
  *
  * This provides a way for individual WordCamps to decide if they want to show sold-out tickets in the [tickets]
@@ -308,8 +308,8 @@ function add_form_start_error_messages( $errors ) {
 /**
  * Perform various actions when ticket sales are opened
  *
- * @param string $new_status
- * @param string $old_status
+ * @param string   $new_status
+ * @param string   $old_status
  * @param \WP_Post $tickets_page
  */
 function ticket_sales_opened( $new_status, $old_status, $tickets_page ) {
@@ -380,7 +380,7 @@ function track_payment_results( $payment_token, $result, $data ) {
  * @param \WP_Post $attendees_page
  */
 function assign_no_sidebar_template( $attendees_page ) {
-	switch( get_template() ) {
+	switch ( get_template() ) {
 		case 'twentyten':
 			$page_template = 'onecolumn-page.php';
 			break;
@@ -436,7 +436,7 @@ function add_attendees_page_to_primary_menu( $attendees_page ) {
 	}
 }
 
-/*
+/**
  * Determines the name ordering scheme on a per-blog basis
  */
 function set_name_order( $order ) {
@@ -462,7 +462,7 @@ function set_name_order( $order ) {
 	} else {
 		$current_city = wcorg_get_url_part( site_url(), 'city' );
 
-		if ( $current_city !== false && array_key_exists( $current_city, $alternate_orders ) ) {
+		if ( false !== $current_city && array_key_exists( $current_city, $alternate_orders ) ) {
 			$order = $alternate_orders[ $current_city ];
 		}
 	}
@@ -538,11 +538,14 @@ function load_addons( $addons ) {
 	/** @var $camptix \CampTix_Plugin */
 	global $camptix;
 
-	$require_login_sites = apply_filters( 'camptix_extras_require_login_site_ids', array(
-		206,    // testing.wordcamp.org
-		364,    // 2014.sf.wordcamp.org
-		447,    // belohorizonte.wordcamp.org/2015
-	) );
+	$require_login_sites = apply_filters(
+		'camptix_extras_require_login_site_ids',
+		array(
+			206, // testing.wordcamp.org
+			364, // 2014.sf.wordcamp.org
+			447, // belohorizonte.wordcamp.org/2015
+		)
+	);
 
 	if ( in_array( get_current_blog_id(), $require_login_sites, true ) ) {
 		/*
@@ -573,9 +576,10 @@ function load_custom_addons() {
 	// Spam prevention
 	require_once( __DIR__ . '/addons/spam-prevention.php' );
 
-	// Payment options
-	if ( in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true )
-	     && ! wcorg_skip_feature( 'camptix_payment_options' )
+	// Payment options.
+	if (
+		in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true ) &&
+		! wcorg_skip_feature( 'camptix_payment_options' )
 	) {
 		require_once( __DIR__ . '/addons/class-payment-options.php' );
 	}
@@ -731,10 +735,13 @@ function get_donation_string() {
  * @return array
  */
 function get_global_sponsors( $args = array() ) {
-	$args = wp_parse_args( $args, array(
-		'region_id' => '',
-		'level_id'  => '',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'region_id' => '',
+			'level_id'  => '',
+		)
+	);
 
 	$sponsors = array();
 
@@ -792,11 +799,11 @@ function get_sponsorship_region_description_from_id( $region_id ) {
 
 	if ( $region_id ) {
 		// Make the two standard options translatable.
-		switch( $region_id ) {
-			case 558366 : // Eastern
+		switch ( $region_id ) {
+			case 558366: // Eastern
 				$region_description = __( 'Europe, Africa, and Asia Pacific', 'wordcamporg' );
 				break;
-			case 558365 : // Western
+			case 558365: // Western
 				$region_description = __( 'North, Central, and South America', 'wordcamporg' );
 				break;
 		}
@@ -856,6 +863,7 @@ function render_html_emails( $html_message, $phpmailer ) {
 
 	ob_start();
 	require( __DIR__ . '/views/html-mail-header.php' );
+	// phpcs:ignore -- Output is santized & `Body` is the valid parameter name.
 	echo \CampTix_Plugin::sanitize_format_html_message( $phpmailer->Body );
 	require( __DIR__ . '/views/html-mail-footer.php' );
 	$html_message = ob_get_clean();
@@ -882,7 +890,7 @@ function tshirt_report_intro_message( $message, $site_id, $sizes ) {
 
 	if ( ! empty( $wordcamp->meta['Number of Anticipated Attendees'][0] ) ) {
 		$message = sprintf(
-			"<p>This camp is expecting %d attendees.</p>",
+			'<p>This camp is expecting %d attendees.</p>',
 			$wordcamp->meta['Number of Anticipated Attendees'][0]
 		);
 	}
@@ -901,7 +909,7 @@ function tshirt_report_intro_message( $message, $site_id, $sizes ) {
  */
 function modify_shortcode_contents( $shortcode_contents, $tix_action ) {
 	switch ( $tix_action ) {
-		case 'access_tickets' : // Screen after purchase is complete.
+		case 'access_tickets': // Screen after purchase is complete.
 			$content_end = '</div><!-- #tix -->';
 
 			$current_wordcamp = get_wordcamp_post();
@@ -933,7 +941,7 @@ function modify_shortcode_contents( $shortcode_contents, $tix_action ) {
 function show_throttle_notice() {
 	global $camptix;
 
-	$fsp = new Form_Spam_Prevention( [ 'prefix' => WC_CAMPTIX_FSP_PREFIX ] );
+	$fsp = new Form_Spam_Prevention( array( 'prefix' => WC_CAMPTIX_FSP_PREFIX ) );
 
 	if ( $fsp->is_ip_address_throttled() ) {
 		$camptix->error( __( 'You are purchasing tickets too fast. Your IP address has been throttled for an hour since last ticket purchase.', 'wordcamporg' ) );
@@ -953,12 +961,12 @@ function show_throttle_notice() {
 function check_ip_throttling() {
 	global $camptix;
 
-	$fsp = new Form_Spam_Prevention( [ 'prefix' => WC_CAMPTIX_FSP_PREFIX ] );
+	$fsp = new Form_Spam_Prevention( array( 'prefix' => WC_CAMPTIX_FSP_PREFIX ) );
 
 	if ( $fsp->is_ip_address_throttled() ) {
 		$camptix->error_flag( 'ip_address_throttled' );
 	} else {
-		$fsp->add_score_to_ip_address( [ 0.1 ] );
+		$fsp->add_score_to_ip_address( array( 0.1 ) );
 	}
 }
 
@@ -1012,6 +1020,7 @@ function admin_notice_attendee_privacy() {
 		printf(
 			'<div class="%1$s">%2$s</div>',
 			esc_attr( $notice_classes ),
+			// phpcs:ignore -- sanitized above.
 			wpautop( $message )
 		);
 	}

@@ -23,7 +23,8 @@ class WordCamp_Forms_To_Drafts {
 	 */
 	public function __construct() {
 		add_action( 'wp_print_styles',          array( $this, 'print_front_end_styles'      )        );
-		add_filter( 'the_content',              array( $this, 'force_login_to_use_form'     ),  9    );
+		add_action( 'wp_enqueue_scripts',       array( $this, 'enqueue_inert_script'        )        );
+		add_filter( 'the_content',              array( $this, 'force_login_to_use_form'     ),  8    );
 		add_action( 'template_redirect',        array( $this, 'populate_form_based_on_user' ),  9    );
 		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_sponsors'           ), 10, 3 );
 		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_speakers'           ), 10, 3 );
@@ -44,6 +45,25 @@ class WordCamp_Forms_To_Drafts {
 		</style>
 
 		<?php
+	}
+
+	/**
+	 * Add the `inert` polyfill to disabled form pages.
+	 */
+	public function enqueue_inert_script() {
+		if ( ! $this->form_requires_login( $this->get_current_form_id() ) ) {
+			return;
+		}
+		$deps_path = __DIR__ . '/build/inert.asset.php';
+		$script_info = require $deps_path;
+
+		wp_enqueue_script(
+			'wicg-inert',
+			plugins_url( 'build/inert.js', __FILE__ ),
+			$script_info['dependencies'],
+			$script_info['version'],
+			true
+		);
 	}
 
 	/**
@@ -88,12 +108,19 @@ class WordCamp_Forms_To_Drafts {
 			wcorg_login_message( '', get_permalink() )
 		);
 
-		// Prevent wpautop() from converting tabs into empty paragraphs in #wcorg-login-message.
-		$please_login_message = trim( str_replace( "\t", '', $please_login_message ) );
+		$form_wrapper = sprintf(
+			'<div class="wcfd-disabled-form">%s<div class="wcfd-overlay"></div><div inert>',
+			// Prevent wpautop() from converting tabs into empty paragraphs in #wcorg-login-message.
+			trim( str_replace( "\t", '', $please_login_message ) )
+		);
 
-		$form_wrapper = '<div class="wcfd-disabled-form">' . $please_login_message . '<div class="wcfd-overlay"></div> [contact-form';
-		$content      = str_replace( '[contact-form',   $form_wrapper,           $content );
-		$content      = str_replace( '[/contact-form]', '[/contact-form]</div>', $content );
+		foreach ( array( '[contact-form', '<!-- wp:jetpack/contact-form' ) as $start ) {
+			$content = str_replace( $start, $form_wrapper . $start, $content );
+		}
+
+		foreach ( array( '[/contact-form]', '<!-- /wp:jetpack/contact-form -->' ) as $end ) {
+			$content = str_replace( $end, $end . '</div></div>', $content );
+		}
 
 		return $content;
 	}

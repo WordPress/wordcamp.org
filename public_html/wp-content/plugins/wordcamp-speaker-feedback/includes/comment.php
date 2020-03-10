@@ -104,13 +104,14 @@ function update_feedback( $comment_id, array $feedback_meta ) {
 /**
  * Retrieve a list of feedback submissions.
  *
- * @param array $status     An array of statuses to include in the results.
- * @param array $post__in   An array of post IDs whose feedback comments should be included.
- * @param array $meta_query A valid `WP_Meta_Query` array.
+ * @param array $post__in   Optional. An array of post IDs whose feedback comments should be included. An empty array
+ *                          will include all posts. Default empty.
+ * @param array $status     Optional. An array of statuses to include in the results.
+ * @param array $meta_query Optional. A valid `WP_Meta_Query` array.
  *
  * @return array A collection of WP_Comment objects.
  */
-function get_feedback( array $status = array( 'hold', 'approve' ), array $post__in = array(), array $meta_query = array() ) {
+function get_feedback( array $post__in = array(), array $status = array( 'hold', 'approve' ), array $meta_query = array() ) {
 	$args = array(
 		'status'  => $status,
 		'type'    => COMMENT_TYPE,

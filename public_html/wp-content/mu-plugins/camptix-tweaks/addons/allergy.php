@@ -69,18 +69,24 @@ class Allergy_Field extends CampTix_Addon {
 	 *
 	 * @param string $name
 	 * @param string $value
+	 * @param int    $ticket_id
 	 */
-	public function render_field( $name, $value ) {
+	public function render_field( $name, $value, $ticket_id ) {
+		if ( apply_filters( 'camptix_allergy_should_skip', false ) ) {
+			return;
+		}
+
+		$question = apply_filters( 'camptix_allergy_question_text', $this->question, $ticket_id );
 		?>
 
 		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
 			<td class="tix-required tix-left">
-				<?php echo esc_html( $this->question ); ?>
+				<?php echo esc_html( $question ); ?>
 				<span aria-hidden="true" class="tix-required-star">*</span>
 			</td>
 
 			<td class="tix-right">
-				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( $this->question ); ?>">
+				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( $question ); ?>">
 					<label>
 						<input
 							name="<?php echo esc_attr( $name ); ?>"
@@ -124,7 +130,8 @@ class Allergy_Field extends CampTix_Addon {
 
 		$this->render_field(
 			sprintf( 'tix_attendee_info[%d][%s]', $i, self::SLUG ),
-			$current_data[ self::SLUG ]
+			$current_data[ self::SLUG ],
+			$current_data['ticket_id']
 		);
 	}
 
@@ -211,7 +218,7 @@ class Allergy_Field extends CampTix_Addon {
 	 * @return bool|int
 	 */
 	public function validate_save_ticket_info_field( $data, $attendee ) {
-		$value = ( 'yes' === $data[ self::SLUG ] ) ? 'yes' : 'no';
+		$value = ( isset( $data[ self::SLUG ] ) && 'yes' === $data[ self::SLUG ] ) ? 'yes' : 'no';
 
 		$this->maybe_send_notification_email( $value, $attendee );
 
@@ -228,7 +235,8 @@ class Allergy_Field extends CampTix_Addon {
 
 		$this->render_field(
 			sprintf( 'tix_ticket_info[%s]', self::SLUG ),
-			$current_data[ self::SLUG ]
+			$current_data[ self::SLUG ],
+			$current_data['ticket_id']
 		);
 	}
 
@@ -245,7 +253,8 @@ class Allergy_Field extends CampTix_Addon {
 		if ( $value && isset( $this->options[ $value ] ) ) {
 			$value = $this->options[ $value ];
 		}
-		$new_row = array( $this->question, esc_html( $value ) );
+		$question = apply_filters( 'camptix_allergy_question_text', $this->question, $post->tix_ticket_id );
+		$new_row = array( $question, esc_html( $value ) );
 
 		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
 

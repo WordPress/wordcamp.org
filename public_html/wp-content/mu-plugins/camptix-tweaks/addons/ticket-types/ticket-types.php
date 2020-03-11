@@ -27,6 +27,9 @@ function camptix_init() {
 
 	add_action( 'camptix_add_meta_boxes', __NAMESPACE__ . '\add_types_meta_box' );
 	add_action( 'save_post', __NAMESPACE__ . '\save_post' );
+
+	add_filter( 'manage_edit-tix_ticket_columns', __NAMESPACE__ . '\manage_columns_filter', 9 );
+	add_action( 'manage_tix_ticket_posts_custom_column', __NAMESPACE__ . '\manage_columns_output', 10, 2 );
 }
 
 /**
@@ -152,5 +155,28 @@ function save_post( $post_id ) {
 
 	if ( isset( $_POST['tix_type'] ) ) {
 		update_post_meta( $post_id, META_KEY, $_POST['tix_type'] );
+	}
+}
+
+/**
+ * Manage columns filter for ticket post type.
+ *
+ * @param array $columns
+ */
+function manage_columns_filter( $columns ) {
+	$columns[ META_KEY ] = __( 'Type', 'wordcamporg' );
+	return $columns;
+}
+
+/**
+ * Manage columns action for ticket post type.
+ *
+ * @param string $column
+ * @param int    $post_id
+ */
+function manage_columns_output( $column, $post_id ) {
+	if ( META_KEY === $column ) {
+		$selected = get_type( $post_id );
+		echo esc_html( $selected['name'] );
 	}
 }

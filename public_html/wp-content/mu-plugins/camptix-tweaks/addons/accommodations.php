@@ -40,7 +40,7 @@ class Accommodations_Field extends CampTix_Addon {
 
 		// Registration field
 		add_action( 'camptix_attendee_form_after_questions', array( $this, 'render_registration_field' ), 12, 2 );
-		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ) );
+		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ), 11 );
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'populate_attendee_object' ), 10, 2 );
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
 		add_action( 'camptix_ticket_emailed', array( $this, 'after_email_receipt' ) );
@@ -148,6 +148,11 @@ class Accommodations_Field extends CampTix_Addon {
 		/* @var CampTix_Plugin $camptix */
 		global $camptix;
 
+		$skip_question = apply_filters( 'camptix_accommodations_should_skip', false );
+		if ( $skip_question ) {
+			return $data;
+		}
+
 		if ( ! isset( $data[ self::SLUG ] ) || empty( $data[ self::SLUG ] ) ) {
 			$camptix->error_flags['required_fields'] = true;
 		} else {
@@ -166,7 +171,7 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @return WP_Post
 	 */
 	public function populate_attendee_object( $attendee, $data ) {
-		$attendee->{ self::SLUG } = $data[ self::SLUG ];
+		$attendee->{ self::SLUG } = isset( $data[ self::SLUG ] ) ? $data[ self::SLUG ] : 'no';
 
 		return $attendee;
 	}

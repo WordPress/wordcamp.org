@@ -9,8 +9,10 @@ const SLUG = 'remote';
 add_filter( 'camptix_ticket_types', __NAMESPACE__ . '\add_type' );
 add_filter( 'camptix_metabox_questions_default_fields_list', __NAMESPACE__ . '\modify_default_fields_list' );
 add_filter( 'camptix_accommodations_question_text', __NAMESPACE__ . '\accommodations_question_text', 10, 2 );
-add_filter( 'camptix_attendee_form_after_questions', __NAMESPACE__ . '\set_allergy_filter', 10, 2 );
-add_filter( 'camptix_form_edit_attendee_after_questions', __NAMESPACE__ . '\set_allergy_filter', 10 );
+
+add_action( 'camptix_attendee_form_after_questions', __NAMESPACE__ . '\set_allergy_filter', 10, 2 );
+add_action( 'camptix_form_edit_attendee_after_questions', __NAMESPACE__ . '\set_allergy_filter', 10 );
+add_filter( 'camptix_checkout_attendee_info', __NAMESPACE__ . '\set_allergy_filter', 10 );
 
 /**
  * Add this type to the available ticket types.
@@ -50,10 +52,13 @@ function accommodations_question_text( $question, $ticket_id ) {
 }
 
 /**
- * Set a boolean filter on the "Allergy" question, to skip the question if it's remote.
+ * Set a boolean filter on the "Allergy" question, to skip the question if it's remote. This will also skip the
+ * validation step when creating an attendee record.
  *
  * @param array    $form_data
  * @param int|null $i
+ * @return array The form data, used by `camptix_checkout_attendee_info` hook. Should be unchanged, only used
+ *               to set the skip filter.
  */
 function set_allergy_filter( $form_data, $i = null ) {
 	if ( ! is_null( $i ) ) {
@@ -61,7 +66,7 @@ function set_allergy_filter( $form_data, $i = null ) {
 	}
 
 	if ( ! isset( $form_data['ticket_id'] ) ) {
-		return;
+		return $form_data;
 	}
 
 	if ( SLUG === get_type_slug( $form_data['ticket_id'] ) ) {
@@ -71,5 +76,7 @@ function set_allergy_filter( $form_data, $i = null ) {
 		remove_filter( 'camptix_allergy_should_skip', '__return_true' );
 		add_filter( 'camptix_allergy_should_skip', '__return_false' );
 	}
+
+	return $form_data;
 }
 

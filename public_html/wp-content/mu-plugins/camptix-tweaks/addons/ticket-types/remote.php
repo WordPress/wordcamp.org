@@ -21,6 +21,7 @@ function add_type( $types ) {
 	$types[] = array(
 		'slug' => SLUG,
 		'name' => __( 'Remote/Livestream', 'wordcamporg' ),
+		'description' => __( 'Remote attendee, ex: watching on livestream, from home.', 'wordcamporg' ),
 	);
 	return $types;
 }

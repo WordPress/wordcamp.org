@@ -44,6 +44,7 @@ function get_types() {
 			array(
 				'slug' => 'default',
 				'name' => __( 'Default', 'wordcamporg' ),
+				'description' => __( 'Default, in-person attendee.', 'wordcamporg' ),
 			),
 		)
 	);
@@ -98,12 +99,17 @@ function metabox_ticket_type() {
 	global $camptix;
 	$purchased = $camptix->get_purchased_tickets_count( get_the_ID() );
 	$selected = get_type_slug( get_the_ID() );
+	$types = get_types();
 	?>
 	<p>
-		<?php esc_attr_e( '[Some explanation of what the types are…] The type of ticket will determine how we set up the required questions.', 'wordcamporg' ); ?>
+		<?php esc_html_e( 'The type of ticket will determine how we set up the required questions. This cannot be changed once someone buys a ticket.', 'wordcamporg' ); ?>
 	</p>
 	<p>
-		<?php esc_attr_e( 'This cannot be changed once someone buys a ticket.', 'wordcamporg' ); ?>
+		<ul>
+		<?php foreach ( $types as $type ) : ?>
+			<li><strong><?php echo esc_html( $type['name'] ); ?>:</strong> <?php echo esc_html( $type['description'] ); ?></li>
+		<?php endforeach; ?>
+		</ul>
 	</p>
 	<p>
 		<label for="<?php echo esc_attr( META_KEY ); ?>"><?php esc_attr_e( 'Type:', 'wordcamporg' ); ?></label>
@@ -112,7 +118,7 @@ function metabox_ticket_type() {
 			name="<?php echo esc_attr( META_KEY ); ?>"
 			<?php echo ( $purchased <= 0 ) ? '' : 'disabled="disabled"'; ?>
 		>
-			<?php foreach ( get_types() as $type ) : ?>
+			<?php foreach ( $types as $type ) : ?>
 				<option value="<?php echo esc_attr( $type['slug'] ); ?>" <?php selected( $selected, $type['slug'] ); ?>>
 					<?php echo esc_html( $type['name'] ); ?>
 				</option>
@@ -122,7 +128,7 @@ function metabox_ticket_type() {
 
 	<?php if ( $purchased > 0 ) : ?>
 	<p>
-		<?php esc_attr_e( 'You can not change the type because one or more tickets have already been purchased.', 'wordcamporg' ); ?>
+		<?php esc_html_e( 'You can not change the type because one or more tickets have already been purchased.', 'wordcamporg' ); ?>
 	</p>
 	<?php endif; ?>
 

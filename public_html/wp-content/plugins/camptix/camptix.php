@@ -5606,6 +5606,7 @@ class CampTix_Plugin {
 						<?php
 							$ticket = $this->tickets[$ticket_id];
 							$questions = $this->get_sorted_questions( $ticket->ID );
+							$this->form_data['tix_attendee_info'][ $i ]['ticket_id'] = intval( $ticket->ID );
 						?>
 						<input type="hidden" name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][ticket_id]" value="<?php echo intval( $ticket->ID ); ?>" />
 						<table class="tix_tickets_table tix-attendee-form">
@@ -6036,6 +6037,9 @@ class CampTix_Plugin {
 			$ticket_info = $new_ticket_info;
 			$answers     = $new_answers;
 		}
+
+		// Add ticket ID to the ticket info array.
+		$ticket_info['ticket_id'] = $ticket_id;
 		?>
 		<div id="tix">
 			<?php do_action( 'camptix_notices' ); ?>

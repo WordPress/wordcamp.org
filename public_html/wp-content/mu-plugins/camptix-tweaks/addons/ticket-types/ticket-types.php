@@ -53,7 +53,7 @@ function get_types() {
  * Match the given value to an existing type slug, return the slug, or "default" if not a match.
  */
 function get_slug_from_value( $value ) {
-	$match = wp_list_pluck( wp_list_filter( s(), array( 'slug' => $value ) ), 'slug' );
+	$match = wp_list_pluck( wp_list_filter( get_types(), array( 'slug' => $value ) ), 'slug' );
 	if ( count( $match ) > 0 ) {
 		return current( $match );
 	}

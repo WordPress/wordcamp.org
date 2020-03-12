@@ -91,3 +91,28 @@
 		color: $star-selected;
 	}
 }
+
+/**
+ * Star Rating.
+ */
+
+.speaker-feedback__meta-rating {
+	display: inline-block;
+	position: relative;
+	margin: 0;
+	padding: 0;
+
+	svg {
+		width: 20px;
+		height: 20px;
+		fill: currentColor;
+	}
+
+	span.star__full {
+		color: $star-selected;
+	}
+
+	span.star__empty {
+		color: $star-default;
+	}
+}

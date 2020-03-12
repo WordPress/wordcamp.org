@@ -3,12 +3,11 @@
 namespace WordCamp\SpeakerFeedback\Capabilities;
 
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
-use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
+use function WordCamp\SpeakerFeedback\Comment\{ get_feedback_comment };
 
 defined( 'WPINC' ) || die();
 
 add_filter( 'map_meta_cap', __NAMESPACE__ . '\map_meta_caps', 10, 4 );
-add_filter( 'rest_comment_query', __NAMESPACE__ . '\exclude_feedback_from_rest_requests', 99 );
 
 /**
  * Determine capabilities needed for various feedback operations.
@@ -26,6 +25,7 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 
 	switch ( $current_cap ) {
 		case 'read_' . COMMENT_TYPE:
+			// Context is a comment ID or object.
 			$feedback = get_feedback_comment( $context );
 			if ( is_null( $feedback ) ) {
 				$required_caps[] = 'do_not_allow';
@@ -44,20 +44,37 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 				break;
 			}
 
-			// Current user has a role on the site that allows them to edit content.
+			// Current user has a role on the site that allows them to edit the feedback comment.
 			$required_caps = map_meta_cap( 'edit_comment', $user_id, $feedback->comment_ID );
 			break;
 
-		case 'edit_' . COMMENT_TYPE:
-		case 'moderate_' . COMMENT_TYPE:
-			$feedback = get_feedback_comment( $context );
-			if ( is_null( $feedback ) ) {
+		case 'read_post_' . COMMENT_TYPE:
+			// Context is a post ID or object.
+			$post = get_post( $context );
+			if ( is_null( $post ) ) {
 				$required_caps[] = 'do_not_allow';
 				break;
 			}
 
-			// Current user has a role on the site that allows them to edit content.
-			$required_caps = map_meta_cap( 'edit_comment', $user_id, $feedback->comment_ID );
+			$post_type = get_post_type( $post );
+			if ( ! post_type_supports( $post_type, 'wordcamp-speaker-feedback' ) ) {
+				$required_caps[] = 'do_not_allow';
+				break;
+			}
+
+			// Current user is a speaker for the session receiving feedback comments.
+			$session_speakers = array_map( 'absint', (array) get_post_meta( $post->ID, '_wcpt_speaker_id' ) );
+			if ( in_array( $user_id, $session_speakers, true ) ) {
+				$required_caps[] = 'read';
+				break;
+			}
+
+			// Current user has a role on the site that allows them to edit the post.
+			$required_caps = map_meta_cap( 'edit_post', $user_id, $post->ID );
+			break;
+
+		case 'moderate_' . COMMENT_TYPE:
+			$required_caps[] = 'edit_others_posts';
 			break;
 	}
 
@@ -66,21 +83,4 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 	}
 
 	return $user_caps;
-}
-
-/**
- * Requests to the Core comment endpoint should not return feedback comments.
- *
- * @param array $args
- *
- * @return array
- */
-function exclude_feedback_from_rest_requests( $args ) {
-	if ( ! isset( $args['type__not_in'] ) ) {
-		$args['type__not_in'] = array();
-	}
-
-	$args['type__not_in'][] = COMMENT_TYPE;
-
-	return $args;
 }

@@ -15,8 +15,8 @@ defined( 'WPINC' ) || die();
 
 use WordCamp\Reports\Report;
 
-define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
-define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
+define( __NAMESPACE__ . '\PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( __NAMESPACE__ . '\PLUGIN_URL', plugins_url( '/', __FILE__ ) );
 
 /**
  * Get the path for the includes directory.
@@ -71,7 +71,7 @@ function get_assets_url() {
 function load_includes() {
 	foreach ( glob( get_includes_dir_path() . '*.php' ) as $filename ) {
 		if ( is_readable( $filename ) ) {
-			include_once ( $filename );
+			include_once $filename;
 		}
 	}
 }
@@ -104,10 +104,10 @@ spl_autoload_register( function( $class ) {
 
 	// Convert the relative class name to a relative path.
 	$relative_path_parts = explode( '\\', $relative_class );
-	$filename = 'class-' . array_pop( $relative_path_parts );
-	$relative_path = implode( '/', $relative_path_parts ) . "/$filename.php";
-	$relative_path = strtolower( $relative_path );
-	$relative_path = str_replace( '_', '-', $relative_path );
+	$filename            = 'class-' . array_pop( $relative_path_parts );
+	$relative_path       = implode( '/', $relative_path_parts ) . "/$filename.php";
+	$relative_path       = strtolower( $relative_path );
+	$relative_path       = str_replace( '_', '-', $relative_path );
 
 	$file = $base_dir . $relative_path;
 
@@ -141,26 +141,32 @@ function get_report_classes() {
 	);
 }
 
-
+/**
+ * Define groupings and labels for reports.
+ *
+ * @param array $classes
+ *
+ * @return array
+ */
 function get_report_groups( $classes = array() ) {
-	$groups = [
-		'finance'  => [
+	$groups = array(
+		'finance'  => array(
 			'label'   => 'Finances',
-			'classes' => [],
-		],
-		'wordcamp'  => [
+			'classes' => array(),
+		),
+		'wordcamp' => array(
 			'label'   => 'WordCamps',
-			'classes' => [],
-		],
-		'meetup'  => [
+			'classes' => array(),
+		),
+		'meetup'   => array(
 			'label'   => 'Meetups',
-			'classes' => [],
-		],
-		'misc'  => [
+			'classes' => array(),
+		),
+		'misc'     => array(
 			'label'   => 'Miscellaneous',
-			'classes' => [],
-		],
-	];
+			'classes' => array(),
+		),
+	);
 
 	if ( empty( $classes ) ) {
 		$classes = get_report_classes();
@@ -185,7 +191,7 @@ function get_report_groups( $classes = array() ) {
  * @return void
  */
 function add_reports_page() {
-	\add_submenu_page(
+	add_submenu_page(
 		'index.php',
 		__( 'Reports', 'wordcamporg' ),
 		__( 'Reports', 'wordcamporg' ),
@@ -207,13 +213,16 @@ function render_page() {
 	$report       = filter_input( INPUT_GET, 'report', FILTER_SANITIZE_STRING );
 	$report_class = get_report_class_by_slug( $report );
 
-	$reports_with_admin = array_filter( get_report_classes(), function( $class ) {
-		if ( ! method_exists( $class, 'render_admin_page' ) ) {
-			return false;
-		}
+	$reports_with_admin = array_filter(
+		get_report_classes(),
+		function( $class ) {
+			if ( ! method_exists( $class, 'render_admin_page' ) ) {
+				return false;
+			}
 
-		return true;
-	} );
+			return true;
+		}
+	);
 
 	if ( $report_class && in_array( $report_class, $reports_with_admin, true ) ) {
 		$report_class::render_admin_page();
@@ -261,9 +270,12 @@ add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_admin_assets' );
 function get_report_class_by_slug( $report_slug ) {
 	$report_classes = get_report_classes();
 
-	$report_slugs = array_map( function( $class ) {
-		return $class::$slug;
-	}, $report_classes );
+	$report_slugs = array_map(
+		function( $class ) {
+			return $class::$slug;
+		},
+		$report_classes
+	);
 
 	$reports = array_combine( $report_slugs, $report_classes );
 
@@ -320,10 +332,14 @@ function register_rest_endpoints() {
 
 	foreach ( $report_classes as $class ) {
 		if ( property_exists( $class, 'rest_base' ) && method_exists( $class, 'rest_callback' ) ) {
-			register_rest_route( $namespace, '/' . $class::$rest_base, array(
-				'methods'  => array( 'GET' ),
-				'callback' => array( $class, 'rest_callback' ),
-			) );
+			register_rest_route(
+				$namespace,
+				'/' . $class::$rest_base,
+				array(
+					'methods'  => array( 'GET' ),
+					'callback' => array( $class, 'rest_callback' ),
+				)
+			);
 		}
 	}
 }

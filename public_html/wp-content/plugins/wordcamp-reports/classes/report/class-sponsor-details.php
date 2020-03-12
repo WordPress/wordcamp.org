@@ -207,7 +207,7 @@ class Sponsor_Details extends Base {
 		$orig_locale = setlocale( LC_CTYPE, 0 );
 		setlocale( LC_CTYPE, 'en_US.UTF-8' );
 
-		// Sort the country names based on ASCII transliteration without actually changing any strings.
+		// Sort the sponsor names based on ASCII transliteration without actually changing any strings.
 		uasort(
 			$data,
 			function( $a, $b ) {

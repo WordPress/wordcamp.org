@@ -7,13 +7,9 @@ namespace WordCamp\Reports\Report;
 
 use Exception;
 use DateTime;
-use WP_Post, WP_Query, WP_Error, wpdb;
 use WordCamp\Utilities\Export_CSV;
-use function WordCamp\Reports\{ get_views_dir_path };
-use WordCamp\Reports\Utility\Date_Range;
+use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\validate_wordcamp_id;
-use WordCamp_Admin, WordCamp_Loader;
-use WordCamp\Budgets_Dashboard\Sponsor_Invoices as WCBD_Sponsor_Invoices;
 
 defined( 'WPINC' ) || die();
 

@@ -41,7 +41,7 @@ function get_types() {
 	return apply_filters(
 		'camptix_ticket_types',
 		array(
-			array(
+			'default' => array(
 				'slug' => 'default',
 				'name' => __( 'Default', 'wordcamporg' ),
 				'description' => __( 'Default, in-person attendee.', 'wordcamporg' ),
@@ -54,9 +54,9 @@ function get_types() {
  * Match the given value to an existing type slug, return the slug, or "default" if not a match.
  */
 function get_slug_from_value( $value ) {
-	$match = wp_list_pluck( wp_list_filter( get_types(), array( 'slug' => $value ) ), 'slug' );
-	if ( count( $match ) > 0 ) {
-		return current( $match );
+	$types = get_types();
+	if ( isset( $types[ $value ] ) ) {
+		return $value;
 	}
 	return 'default';
 }
@@ -67,12 +67,17 @@ function get_slug_from_value( $value ) {
  * @return array
  */
 function get_type( $ticket_id ) {
+	$types = get_types();
 	$type = get_post_meta( $ticket_id, META_KEY, true );
 	if ( ! $type ) {
 		$type = 'default';
 	}
-	$match = wp_list_filter( get_types(), array( 'slug' => $type ) );
-	return current( $match );
+
+	if ( isset( $types[ $type ] ) ) {
+		return $types[ $type ];
+	}
+
+	return $types[ 'default' ];
 }
 
 /**

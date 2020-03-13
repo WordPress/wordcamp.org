@@ -18,7 +18,7 @@ add_filter( 'camptix_checkout_attendee_info', __NAMESPACE__ . '\set_allergy_filt
  * Add this type to the available ticket types.
  */
 function add_type( $types ) {
-	$types[] = array(
+	$types[ SLUG ] = array(
 		'slug' => SLUG,
 		'name' => __( 'Remote/Livestream', 'wordcamporg' ),
 		'description' => __( 'Remote attendee, ex: watching on livestream, from home.', 'wordcamporg' ),

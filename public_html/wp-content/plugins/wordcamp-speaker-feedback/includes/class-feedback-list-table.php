@@ -9,7 +9,11 @@ use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
 
 defined( 'WPINC' ) || die();
 
-
+/**
+ * Class Feedback_List_Table.
+ *
+ * Display feedback comments in the WP Admin.
+ */
 class Feedback_List_Table extends WP_Comments_List_Table {
 	/**
 	 * Other controls above/below the list table besides bulk actions.

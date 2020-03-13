@@ -3921,6 +3921,23 @@ class CampTix_Plugin {
 								<?php _e( 'Unknown status', 'wordcamporg' ); ?>
 							<?php endif; ?>
 						</span>
+						<a href="#post_status" class="edit-post-status hide-if-no-js" role="button" style="display: inline;">
+							<span aria-hidden="true"><?php esc_html_e( 'Edit', 'wordcamporg' ); ?></span>
+							<span class="screen-reader-text"><?php esc_html_e( 'Edit status', 'wordcamporg' ); ?></span>
+						</a>
+						<div id="post-status-select" class="hide-if-js" style="display: none;">
+							<input type="hidden" name="hidden_post_status" id="hidden_post_status" value="<?php echo esc_attr( $post->post_status ); ?>">
+							<label for="post_status" class="screen-reader-text"><?php esc_html_e( 'Set status', 'wordcamporg' ); ?></label>
+							<select name="post_status" id="post_status">
+								<option<?php selected( $post->post_status, 'publish' ); ?> value='publish'><?php _e( 'Published', 'wordcamporg' ); ?></option>
+								<option<?php selected( $post->post_status, 'draft' ); ?> value='draft'><?php _e( 'Draft', 'wordcamporg' ); ?></option>
+								<option<?php selected( $post->post_status, 'refund' ); ?> value='refund'><?php _e( 'Refunded', 'wordcamporg' ); ?></option>
+								<option<?php selected( $post->post_status, 'cancel' ); ?> value='cancel'><?php _e( 'Cancelled', 'wordcamporg' ); ?></option>
+								<option<?php selected( $post->post_status, 'failed' ); ?> value='failed'><?php _e( 'Failed', 'wordcamporg' ); ?></option>
+							</select>
+							<a href="#post_status" class="save-post-status hide-if-no-js button"><?php esc_html_e( 'OK', 'wordcamporg' ); ?></a>
+							<a href="#post_status" class="cancel-post-status hide-if-no-js button-cancel"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
+						</div>
 					</div>
 
 					<?php

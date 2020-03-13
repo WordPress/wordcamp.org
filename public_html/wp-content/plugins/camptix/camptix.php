@@ -164,6 +164,9 @@ class CampTix_Plugin {
 
 		// Change updated messages
 		add_filter( 'post_updated_messages', array( $this, 'ticket_updated_messages' ) );
+		
+		// Add post statuses to bulk & quick edit.
+		add_action( 'admin_footer-edit.php', array( $this, 'append_post_status_bulk_edit' ) );
 
 		do_action( 'camptix_init' );
 	}
@@ -3997,6 +4000,25 @@ class CampTix_Plugin {
 				<div class="clear"></div>
 			</div>
 		</div><!-- #submitpost -->
+		<?php
+	}
+
+	/**
+	 * Adding custom post status to status dropdown in Bulk and Quick Edit.
+	 */
+	function append_post_status_bulk_edit() {
+		$screen = get_current_screen();
+		if ( $screen && 'edit-tix_attendee' !== $screen->id ) {
+			return;
+		}
+
+		?>
+		<script>
+			jQuery( document ).ready( function($) {
+				$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'refund' ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
+				$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'cancel' ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'wordcamporg' ); ?></option>" );
+			});
+		</script>
 		<?php
 	}
 

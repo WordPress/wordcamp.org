@@ -56,8 +56,8 @@ function accommodations_question_text( $question, $ticket_id ) {
  * Set a boolean filter on the "Allergy" question, to skip the question if it's remote. This will also skip the
  * validation step when creating an attendee record.
  *
- * @param array    $form_data
- * @param int|null $i
+ * @param array    $form_data All data about the current form, including all tickets data.
+ * @param int|null $i         Index for the current ticket.
  * @return array The form data, used by `camptix_checkout_attendee_info` hook. Should be unchanged, only used
  *               to set the skip filter.
  */

@@ -93,7 +93,35 @@
 }
 
 /**
- * Star Rating.
+ * Feedback list table.
+ */
+
+#comments-form {
+	.fixed {
+		.column-name {
+			width: 15%;
+		}
+		.column-rating {
+			width: 140px;
+		}
+	}
+}
+
+/**
+ * Question/answer display.
+ */
+
+.widefat td {
+	p.speaker-feedback__question {
+		font-weight: bold;
+	}
+	p.speaker-feedback__answer {
+		margin-bottom: 2em;
+	}
+}
+
+/**
+ * Rating display.
  */
 
 .speaker-feedback__meta-rating {

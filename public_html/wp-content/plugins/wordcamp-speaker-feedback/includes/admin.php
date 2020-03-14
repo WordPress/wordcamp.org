@@ -120,9 +120,8 @@ function feedback_bubble( $post_id ) {
 					array(
 						'p'              => $post_id,
 						'comment_status' => 'approved',
-						'comment_type'   => COMMENT_TYPE,
 					),
-					admin_url( 'edit-comments.php' )
+					get_subpage_url( get_post_type( $post_id ) )
 				)
 			),
 			esc_html( $counted_feedback_label['approve'] ),
@@ -144,9 +143,8 @@ function feedback_bubble( $post_id ) {
 					array(
 						'p'              => $post_id,
 						'comment_status' => 'moderated',
-						'comment_type'   => COMMENT_TYPE,
 					),
-					admin_url( 'edit-comments.php' )
+					get_subpage_url( get_post_type( $post_id ) )
 				)
 			),
 			esc_html( $counted_feedback_label['hold'] ),
@@ -193,20 +191,37 @@ function add_subpages() {
 }
 
 /**
+ * Generate a full URL for a feedback list table page.
+ *
+ * @param string $post_type
+ *
+ * @return string
+ */
+function get_subpage_url( $post_type ) {
+	if ( ! in_array( $post_type, SUPPORTED_POST_TYPES, true ) ) {
+		return '';
+	}
+
+	return add_query_arg(
+		array(
+			'post_type' => $post_type,
+			'page'      => COMMENT_TYPE,
+		),
+		esc_url( admin_url( 'edit.php' ) )
+	);
+}
+
+/**
  * Render the admin page for displaying a feedback comments list table.
  *
  * @return void
  */
 function render_subpage() {
-	global $title;
-
 	$post_id        = filter_input( INPUT_GET, 'p', FILTER_VALIDATE_INT );
 	$search         = wp_unslash( filter_input( INPUT_GET, 's' ) );
 	$paged          = filter_input( INPUT_GET, 'paged', FILTER_VALIDATE_INT );
 	$comment_status = wp_unslash( filter_input( INPUT_GET, 'comment_status' ) );
-
-	$list_table = get_feedback_list_table();
-	$screen_id  = get_current_screen()->id;
+	$list_table     = get_feedback_list_table();
 
 	wp_enqueue_style(
 		'speaker-feedback',
@@ -217,13 +232,9 @@ function render_subpage() {
 	wp_enqueue_script( 'admin-comments' );
 	enqueue_comment_hotkeys_js();
 
-	add_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
-	add_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
-
+	toggle_list_table_filters();
 	require_once get_views_path() . 'edit-feedback.php';
-
-	remove_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
-	remove_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
+	toggle_list_table_filters();
 }
 
 /**
@@ -239,7 +250,41 @@ function get_feedback_list_table() {
 }
 
 /**
- * Ensure the list table query for feedback comments always has the correct comment type specified.
+ * Add or remove a bunch of filters to customize our list table.
+ *
+ * @return string The current state of the filters. 'on' or 'off'.
+ */
+function toggle_list_table_filters() {
+	static $current_state = 'off';
+
+	$screen_id = get_current_screen()->id;
+
+	switch ( $current_state ) {
+		case 'off':
+			add_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
+			add_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
+			add_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
+
+			$current_state = 'on';
+			break;
+
+		case 'on':
+			remove_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
+			remove_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
+			remove_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
+
+			$current_state = 'off';
+			break;
+	}
+
+	return $current_state;
+}
+
+/**
+ * Tweak the args for the comment query in the list table.
+ *
+ * - Ensure the list table query for feedback comments always has the correct comment type specified.
+ * - Enable ordering by the `rating` meta value.
  *
  * @param array $args
  *
@@ -248,19 +293,59 @@ function get_feedback_list_table() {
 function filter_list_table_query_args( $args ) {
 	$args['type'] = COMMENT_TYPE;
 
+	if ( 'rating' === $args['orderby'] ) {
+		$args['orderby']  = 'meta_value_num';
+		$args['meta_key'] = 'rating';
+	}
+
 	return $args;
 }
 
 /**
  * Modify the list of available views for the feedback comments list table.
  *
+ * - Remove unnecessary views.
+ * - Replace the default view URLs with ones that link back to our feedback list table page.
+ *
  * @param array $views
  *
  * @return mixed
  */
 function filter_list_table_views( $views ) {
+	global $typenow;
+
 	// Feedback from an admin of the event site would probably be rare, so this one is unnecessary.
 	unset( $views['mine'] );
 
+	foreach ( $views as $status => $view ) {
+		// Note that the HTML here is wrapping href attributes with single quotes.
+		preg_match( '#href=\'([^\']+)\'#', $view, $orig_url );
+		$parsed_url = wp_parse_url( $orig_url[1] );
+		wp_parse_str( $parsed_url['query'], $query_args );
+
+		$new_url = add_query_arg( $query_args, get_subpage_url( $typenow ) );
+
+		$views[ $status ] = str_replace(
+			$orig_url[1],
+			$new_url,
+			$view
+		);
+	}
+
 	return $views;
+}
+
+/**
+ * Modify the list of available row actions for each feedback comment.
+ *
+ * - Remove irrelevant actions.
+ *
+ * @param array $actions
+ *
+ * @return mixed
+ */
+function filter_list_table_row_actions( $actions ) {
+	unset( $actions['reply'], $actions['quickedit'], $actions['edit'] );
+
+	return $actions;
 }

@@ -5,7 +5,9 @@ namespace WordCamp\SpeakerFeedback;
 use WP_Comment, WP_User;
 use WP_Comments_List_Table;
 use function WordCamp\SpeakerFeedback\get_assets_path;
+use function WordCamp\SpeakerFeedback\Admin\feedback_bubble;
 use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
+use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
 
 defined( 'WPINC' ) || die();
 
@@ -41,7 +43,7 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 			$columns['cb'] = '<input type="checkbox" />';
 		}
 
-		$columns['name']     = _x( 'Name', 'column name', 'wordcamporg' );
+		$columns['name']     = _x( 'Submitted by', 'column name', 'wordcamporg' );
 		$columns['feedback'] = _x( 'Feedback', 'column name', 'wordcamporg' );
 		$columns['rating']   = _x( 'Rating', 'column name', 'wordcamporg' );
 
@@ -63,6 +65,7 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	protected function get_sortable_columns() {
 		return array(
 			'name'     => 'comment_author',
+			'rating'   => array( 'rating', true ), // Second array item `true` means sort will descend first.
 			'response' => 'comment_post_ID',
 			'date'     => 'comment_date',
 		);
@@ -111,11 +114,32 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 		}
 	}
 
-
+	/**
+	 * Render the Feedback column.
+	 *
+	 * @param WP_Comment $comment
+	 *
+	 * @return void
+	 */
 	public function column_feedback( $comment ) {
-		$feedback = get_feedback_comment( $comment );
+		$feedback  = get_feedback_comment( $comment );
+		$questions = get_feedback_questions( $feedback->version );
 
-		echo 'asdf';
+		foreach ( $questions as $key => $question ) {
+			if ( 'rating' === $key ) {
+				continue;
+			}
+
+			$answer = $feedback->$key;
+
+			if ( $answer ) {
+				printf(
+					'<p class="speaker-feedback__question">%s</p><p class="speaker-feedback__answer">%s</p>',
+					wp_kses_data( $question ),
+					wp_kses_data( $answer )
+				);
+			}
+		}
 	}
 
 	/**
@@ -151,6 +175,41 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 				$star_output ++;
 			endwhile; ?>
 		</span>
+		<?php
+	}
+
+	/**
+	 * Render the In Response To column.
+	 *
+	 * @param WP_Comment $comment
+	 *
+	 * @return void
+	 */
+	public function column_response( $comment ) {
+		$feedback = get_feedback_comment( $comment );
+
+		$post = get_post( $feedback->comment_post_ID );
+
+		if ( ! $post ) {
+			return;
+		}
+
+		if ( current_user_can( 'edit_post', $post->ID ) ) {
+			$post_link  = "<a href='" . get_edit_post_link( $post->ID ) . "' class='comments-edit-item-link'>";
+			$post_link .= esc_html( get_the_title( $post->ID ) ) . '</a>';
+		} else {
+			$post_link = esc_html( get_the_title( $post->ID ) );
+		}
+		?>
+		<div class="response-links">
+			<?php echo wp_kses_post( $post_link ); ?>
+			<a href="<?php the_permalink( $post->ID ); ?>" class="comments-view-item-link">
+				<?php echo wp_kses_post( get_post_type_object( $post->post_type )->labels->view_item ); ?>
+			</a>
+			<span class="post-com-count-wrapper post-com-count-<?php echo esc_attr( $post->ID ); ?>">
+				<?php feedback_bubble( $post->ID ); ?>
+			</span>
+		</div>
 		<?php
 	}
 }

@@ -11,6 +11,8 @@ defined( 'WPINC' ) || die();
 <form id="sft-feedback" class="speaker-feedback">
 	<h3><?php esc_html_e( 'Rate this talk', 'wordcamporg' ); ?></h3>
 
+	<div id="speaker-feedback-notice" aria-live="polite" aria-relevant="additions text" aria-atomic="true"></div>
+
 	<div class="speaker-feedback__field">
 		<fieldset class="speaker-feedback__field-rating" aria-label="<?php esc_attr_e( 'Rate this talk', 'wordcamporg' ); ?>">
 			<input

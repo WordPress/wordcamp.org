@@ -23,11 +23,25 @@
 			},
 		};
 
+		var messageContainer = document.getElementById( 'speaker-feedback-notice' );
+		// Reset the notice before submission.
+		messageContainer.setAttribute( 'class', '' );
+		messageContainer.innerText = '';
+
 		wp.apiFetch( {
 			path: '/wordcamp-speaker-feedback/v1/feedback',
 			method: 'POST',
 			data: data,
-		} );
+		} )
+			.then( function() {
+				messageContainer.setAttribute( 'class', 'speaker-feedback__notice is-success' );
+				messageContainer.innerText = 'Feedback submitted.';
+				event.target.replaceWith( messageContainer );
+			} )
+			.catch( function( error ) {
+				messageContainer.setAttribute( 'class', 'speaker-feedback__notice is-error' );
+				messageContainer.innerText = error.message;
+			} );
 	}
 
 	var navForm = document.getElementById( 'sft-navigation' );

@@ -93,7 +93,30 @@
 }
 
 /**
- * Feedback list table.
+ * Post-submission Notices.
+ */
+
+.speaker-feedback__notice {
+	display: flex;
+	margin: 5px 15px 1em;
+	padding: 8px 12px;
+	background-color: $blue-medium-100;
+	border-left: 4px solid $blue-medium-500;
+	align-items: center;
+
+	&.is-success {
+		border-left-color: $alert-green;
+		background-color: lighten($alert-green, 45%);
+	}
+
+	&.is-error {
+		border-left-color: $alert-red;
+		background-color: lighten($alert-red, 35%);
+	}
+}
+
+/**
+ * WP Dashboard: Feedback list table.
  */
 
 .column-name {
@@ -117,7 +140,7 @@
 }
 
 /**
- * Question/answer display.
+ * WP Dashboard: Question/answer display.
  */
 
 .widefat td {
@@ -131,7 +154,7 @@
 }
 
 /**
- * Rating display.
+ * WP Dashboard: Rating display.
  */
 
 .speaker-feedback__meta-rating {

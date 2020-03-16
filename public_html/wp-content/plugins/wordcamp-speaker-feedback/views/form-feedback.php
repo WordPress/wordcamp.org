@@ -69,5 +69,7 @@ defined( 'WPINC' ) || die();
 		<textarea id="sft-question-3" name="sft-question-3"></textarea>
 	</div>
 
+	<input type="hidden" name="sft-author" value="<?php echo intval( get_current_user_id() ); ?>" />
+	<input type="hidden" name="sft-post" value="<?php echo intval( get_the_ID() ); ?>" />
 	<input type="submit" value="<?php esc_attr_e( 'Send Feedback', 'wordcamporg' ); ?>" />
 </form>

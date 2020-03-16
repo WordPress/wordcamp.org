@@ -13,10 +13,14 @@
 		event.preventDefault();
 		var rawData = new FormData( event.target );
 		var data = {
-			rating: rawData.get( 'sft-rating' ),
-			q1: rawData.get( 'sft-question-1' ),
-			q2: rawData.get( 'sft-question-2' ),
-			q3: rawData.get( 'sft-question-3' ),
+			post: rawData.get( 'sft-post' ),
+			author: rawData.get( 'sft-author' ),
+			meta: {
+				rating: rawData.get( 'sft-rating' ),
+				q1: rawData.get( 'sft-question-1' ),
+				q2: rawData.get( 'sft-question-2' ),
+				q3: rawData.get( 'sft-question-3' ),
+			},
 		};
 
 		wp.apiFetch( {

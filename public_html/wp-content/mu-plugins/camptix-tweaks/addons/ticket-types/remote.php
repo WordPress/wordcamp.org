@@ -20,8 +20,8 @@ add_filter( 'camptix_checkout_attendee_info', __NAMESPACE__ . '\set_allergy_filt
 function add_type( $types ) {
 	$types[ SLUG ] = array(
 		'slug' => SLUG,
-		'name' => __( 'Remote/Livestream', 'wordcamporg' ),
-		'description' => __( 'Remote attendee, ex: watching on livestream, from home.', 'wordcamporg' ),
+		'name' => __( 'Livestream', 'wordcamporg' ),
+		'description' => __( 'Attendee watching livestream from home.', 'wordcamporg' ),
 	);
 	return $types;
 }

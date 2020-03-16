@@ -3932,11 +3932,17 @@ class CampTix_Plugin {
 							<input type="hidden" name="hidden_post_status" id="hidden_post_status" value="<?php echo esc_attr( $post->post_status ); ?>">
 							<label for="post_status" class="screen-reader-text"><?php esc_html_e( 'Set status', 'wordcamporg' ); ?></label>
 							<select name="post_status" id="post_status">
-								<option<?php selected( $post->post_status, 'publish' ); ?> value='publish'><?php _e( 'Published', 'wordcamporg' ); ?></option>
-								<option<?php selected( $post->post_status, 'draft' ); ?> value='draft'><?php _e( 'Draft', 'wordcamporg' ); ?></option>
-								<option<?php selected( $post->post_status, 'refund' ); ?> value='refund'><?php _e( 'Refunded', 'wordcamporg' ); ?></option>
-								<option<?php selected( $post->post_status, 'cancel' ); ?> value='cancel'><?php _e( 'Cancelled', 'wordcamporg' ); ?></option>
-								<option<?php selected( $post->post_status, 'failed' ); ?> value='failed'><?php _e( 'Failed', 'wordcamporg' ); ?></option>
+								<?php if ( ! in_array( $post_status_object->name, array( 'publish', 'refund', 'cancel' ) ) ) : ?>
+									<option
+										<?php selected( $post->post_status, $post_status_object->name ); ?>
+										value="<?php echo esc_attr( $post_status_object->name ); ?>"
+									>
+										<?php echo esc_html( $post_status_object->label ); ?>
+									</option>
+								<?php endif; ?>
+								<option <?php selected( $post->post_status, 'publish' ); ?> value="publish"><?php _e( 'Published', 'wordcamporg' ); ?></option>
+								<option <?php selected( $post->post_status, 'refund' ); ?> value="refund"><?php _e( 'Refunded', 'wordcamporg' ); ?></option>
+								<option <?php selected( $post->post_status, 'cancel' ); ?> value="cancel"><?php _e( 'Cancelled', 'wordcamporg' ); ?></option>
 							</select>
 							<a href="#post_status" class="save-post-status hide-if-no-js button"><?php esc_html_e( 'OK', 'wordcamporg' ); ?></a>
 							<a href="#post_status" class="cancel-post-status hide-if-no-js button-cancel"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
@@ -4011,12 +4017,21 @@ class CampTix_Plugin {
 		if ( $screen && 'edit-tix_attendee' !== $screen->id ) {
 			return;
 		}
+		$statuses = array(
+			'publish' => _x( 'Published', 'post', 'wordcamporg' ),
+			'refund'  => _x( 'Refunded', 'post', 'wordcamporg' ),
+			'cancel'  => _x( 'Cancelled', 'post', 'wordcamporg' ),
+		);
 
 		?>
 		<script>
 			jQuery( document ).ready( function($) {
-				$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'refund' ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
-				$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( 'cancel' ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'wordcamporg' ); ?></option>" );
+				$( '.inline-edit-status select' ).empty();
+				<?php foreach ( $statuses as $slug => $label ) : ?>
+					$( '.inline-edit-status select' ).append( "<?php printf(
+						'<option value=\"%s\">%s</option>', esc_attr( $slug ), esc_html( $label )
+					); ?>" );
+				<?php endforeach; ?>
 			});
 		</script>
 		<?php

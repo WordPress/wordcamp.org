@@ -47,7 +47,7 @@ function modify_default_fields_list( $default_fields ) {
  */
 function accommodations_question_text( $question, $ticket_id ) {
 	if ( SLUG === get_type_slug( $ticket_id ) ) {
-		return __( 'Do you have any accessibility needs, such as a sign language interpreter, to participate in WordCamp?', 'wordcamporg' );
+		return __( 'Do you have any accessibility needs, such as a sign language interpreter or live captioning, to participate in WordCamp?', 'wordcamporg' );
 	}
 	return $question;
 }

@@ -25,7 +25,7 @@ add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\m
 // Attendees
 add_filter( 'camptix_name_order',                            __NAMESPACE__ . '\set_name_order'                      );
 add_action( 'camptix_form_edit_attendee_custom_error_flags', __NAMESPACE__ . '\disable_attendee_edits'              );
-add_action( 'transition_post_status',                        __NAMESPACE__ . '\log_publish_to_cancel',        10, 3 );
+add_action( 'publish_to_cancel',                             __NAMESPACE__ . '\log_publish_to_cancel',        10, 3 );
 add_filter( 'camptix_privacy_erase_attendee',                __NAMESPACE__ . '\retain_attendee_data',         10, 2 );
 add_action( 'admin_notices',                                 __NAMESPACE__ . '\admin_notice_attendee_privacy'       );
 add_filter( 'wp_privacy_personal_data_erasers',              __NAMESPACE__ . '\modify_erasers',                  99 );
@@ -497,19 +497,18 @@ function disable_attendee_edits( $attendee ) {
 /**
  * Log when published attendees are cancelled.
  *
- * @param string  $to
- * @param string  $from
  * @param WP_Post $post
  */
-function log_publish_to_cancel( $to, $from, $post ) {
+function log_publish_to_cancel( $post ) {
 	/** @var $camptix CampTix_Plugin */
 	global $camptix;
 
-	if ( 'tix_attendee' !== $post->post_type || $to === $from ) {
+	if ( 'tix_attendee' !== $post->post_type ) {
 		return;
 	}
 
-	if ( 'publish' === $from && 'cancel' === $to ) {
+	// Not a manual change, should be logged.
+	if ( 0 === wp_get_current_user_id() ) {
 		$camptix->log( 'Publish to cancel transition, possible bug.', $post->ID );
 	}
 }

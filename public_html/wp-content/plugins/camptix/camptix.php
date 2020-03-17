@@ -3924,6 +3924,7 @@ class CampTix_Plugin {
 								<?php _e( 'Unknown status', 'wordcamporg' ); ?>
 							<?php endif; ?>
 						</span>
+						<?php if ( current_user_can( 'manage_sites' ) ) : ?>
 						<a href="#post_status" class="edit-post-status hide-if-no-js" role="button" style="display: inline;">
 							<span aria-hidden="true"><?php esc_html_e( 'Edit', 'wordcamporg' ); ?></span>
 							<span class="screen-reader-text"><?php esc_html_e( 'Edit status', 'wordcamporg' ); ?></span>
@@ -3947,6 +3948,7 @@ class CampTix_Plugin {
 							<a href="#post_status" class="save-post-status hide-if-no-js button"><?php esc_html_e( 'OK', 'wordcamporg' ); ?></a>
 							<a href="#post_status" class="cancel-post-status hide-if-no-js button-cancel"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
 						</div>
+						<?php endif; ?>
 					</div>
 
 					<?php
@@ -4026,12 +4028,16 @@ class CampTix_Plugin {
 		?>
 		<script>
 			jQuery( document ).ready( function($) {
-				$( '.inline-edit-status select' ).empty();
-				<?php foreach ( $statuses as $slug => $label ) : ?>
-					$( '.inline-edit-status select' ).append( "<?php printf(
-						'<option value=\"%s\">%s</option>', esc_attr( $slug ), esc_html( $label )
-					); ?>" );
-				<?php endforeach; ?>
+				<?php if ( ! current_user_can( 'manage_sites' ) ) : ?>
+					$( '.inline-edit-status' ).remove();
+				<?php else: ?>
+					$( '.inline-edit-status select' ).empty();
+					<?php foreach ( $statuses as $slug => $label ) : ?>
+						$( '.inline-edit-status select' ).append( "<?php printf(
+							'<option value=\"%s\">%s</option>', esc_attr( $slug ), esc_html( $label )
+						); ?>" );
+					<?php endforeach; ?>
+				<?php endif; ?>
 			});
 		</script>
 		<?php

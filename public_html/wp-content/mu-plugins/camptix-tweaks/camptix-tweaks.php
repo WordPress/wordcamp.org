@@ -577,9 +577,7 @@ function load_custom_addons() {
 	require_once( __DIR__ . '/addons/spam-prevention.php' );
 
 	// Ticket types
-	if ( 'production' !== get_wordcamp_environment() ) {
-		require_once( __DIR__ . '/addons/ticket-types/ticket-types.php' );
-	}
+	require_once( __DIR__ . '/addons/ticket-types/ticket-types.php' );
 
 	// Payment options.
 	if (

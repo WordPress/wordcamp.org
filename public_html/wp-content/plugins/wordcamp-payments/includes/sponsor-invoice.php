@@ -109,6 +109,14 @@ function get_custom_statuses() {
 				'wordcamporg'
 			),
 		),
+		'wcbsi_refunded'      => array(
+			'label'       => esc_html__( 'Refunded', 'wordcamporg' ),
+			'label_count' => _nx_noop(
+				'Refunded <span class="count">(%s)</span>',
+				'Refunded <span class="count">(%s)</span>',
+				'wordcamporg'
+			),
+		),
 	);
 }
 

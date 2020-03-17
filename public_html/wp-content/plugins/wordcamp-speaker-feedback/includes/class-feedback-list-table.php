@@ -8,6 +8,7 @@ use function WordCamp\SpeakerFeedback\get_assets_path;
 use function WordCamp\SpeakerFeedback\Admin\feedback_bubble;
 use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -17,6 +18,22 @@ defined( 'WPINC' ) || die();
  * Display feedback comments in the WP Admin.
  */
 class Feedback_List_Table extends WP_Comments_List_Table {
+	/**
+	 * Get the screen option for items per page.
+	 *
+	 * @param string $comment_status Unused.
+	 *
+	 * @return int
+	 */
+	public function get_per_page( $comment_status = 'all' ) {
+		/** @global string $page_hook */
+		global $page_hook;
+
+		$option = str_replace( '-', '_', $page_hook ) . '_per_page';
+
+		return $this->get_items_per_page( $option );
+	}
+
 	/**
 	 * Other controls above/below the list table besides bulk actions.
 	 *
@@ -79,6 +96,22 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	 */
 	protected function get_default_primary_column_name() {
 		return 'feedback';
+	}
+
+	/**
+	 * Render the bulk edit checkbox.
+	 *
+	 * @param WP_Comment $comment
+	 *
+	 * @return void
+	 */
+	public function column_cb( $comment ) {
+		if ( current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
+			?>
+			<label class="screen-reader-text" for="cb-select-<?php echo esc_attr( $comment->comment_ID ); ?>"><?php esc_html_e( 'Select feedback', 'wordcamporg' ); ?></label>
+			<input id="cb-select-<?php echo esc_attr( $comment->comment_ID ); ?>" type="checkbox" name="bulk_edit[]" value="<?php echo esc_attr( $comment->comment_ID ); ?>" />
+			<?php
+		}
 	}
 
 	/**

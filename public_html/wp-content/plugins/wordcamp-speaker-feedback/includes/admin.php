@@ -6,7 +6,8 @@ use WordCamp\SpeakerFeedback\Feedback_List_Table;
 use const WordCamp\SpeakerFeedback\SUPPORTED_POST_TYPES;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\{ get_assets_path, get_includes_path, get_views_path, get_assets_url };
-use function WordCamp\SpeakerFeedback\Comment\get_feedback;
+use function WordCamp\SpeakerFeedback\Comment\{ get_feedback, get_feedback_comment, delete_feedback, is_feedback };
+use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_questions };
 
 defined( 'WPINC' ) || die();
 
@@ -16,6 +17,7 @@ foreach ( SUPPORTED_POST_TYPES as $supported_post_type ) {
 }
 
 add_action( 'admin_menu', __NAMESPACE__ . '\add_subpages' );
+add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
 
 /**
  * Add a Speaker Feedback column for post list tables that support speaker feedback.
@@ -185,6 +187,9 @@ function add_subpages() {
 				// This is a hack to ensure that the list table columns are registered properly. It has to happen
 				// before the subpage's render function is called.
 				get_feedback_list_table();
+
+				// This also has to be called before the render function fires.
+				add_screen_option( 'per_page' );
 			}
 		);
 	}
@@ -212,16 +217,62 @@ function get_subpage_url( $post_type ) {
 }
 
 /**
+ * Ensure screen options for our custom subpages are saved.
+ *
+ * @param bool   $keep
+ * @param string $option
+ * @param int    $value
+ *
+ * @return int
+ */
+function set_screen_options( $keep, $option, $value ) {
+	$valid_option_keys = array();
+
+	foreach ( SUPPORTED_POST_TYPES as $post_type ) {
+		$page_hook = $post_type . '_page_' . COMMENT_TYPE;
+		$page_hook = str_replace( '-', '_', $page_hook );
+
+		$valid_option_keys[] = $page_hook . '_per_page';
+	}
+
+	if ( in_array( $option, $valid_option_keys, true ) ) {
+		return absint( $value );
+	}
+
+	return $keep;
+}
+
+/**
  * Render the admin page for displaying a feedback comments list table.
  *
  * @return void
  */
 function render_subpage() {
+	if ( ! current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
+		wp_die(
+			'<h1>' . esc_html__( 'You need a higher level of permission.', 'wordcamporg' ) . '</h1>' .
+			'<p>' . esc_html__( 'Sorry, you are not allowed to edit feedback comments.', 'wordcamporg' ) . '</p>',
+			403
+		);
+	}
+
 	$post_id        = filter_input( INPUT_GET, 'p', FILTER_VALIDATE_INT );
 	$search         = wp_unslash( filter_input( INPUT_GET, 's' ) );
 	$paged          = filter_input( INPUT_GET, 'paged', FILTER_VALIDATE_INT );
 	$comment_status = wp_unslash( filter_input( INPUT_GET, 'comment_status' ) );
 	$list_table     = get_feedback_list_table();
+	$messages       = array();
+
+	$action = wp_unslash( filter_input( INPUT_GET, 'action' ) );
+	$nonce  = wp_unslash( filter_input( INPUT_GET, 'bulk_edit_nonce' ) );
+
+	if ( ! $action || '-1' === $action ) {
+		$action = wp_unslash( filter_input( INPUT_GET, 'action2' ) );
+	}
+
+	if ( $action && '-1' !== $action ) {
+		$messages = handle_bulk_edit_actions( $action, $nonce );
+	}
 
 	wp_enqueue_style(
 		'speaker-feedback',
@@ -247,6 +298,100 @@ function get_feedback_list_table() {
 	require_once get_includes_path() . 'class-feedback-list-table.php';
 
 	return new Feedback_List_Table();
+}
+
+/**
+ * Process list table form submissions for bulk actions.
+ *
+ * @param string $action
+ * @param string $nonce
+ *
+ * @return array An multidimensional associated array of message strings for different types of notices.
+ */
+function handle_bulk_edit_actions( $action, $nonce ) {
+	$nonce_is_valid = wp_verify_nonce( $nonce, 'bulk_edit_' . COMMENT_TYPE );
+	$valid_actions  = array( 'approve', 'unapprove', 'spam', 'unspam', 'trash', 'untrash', 'delete' );
+	$items          = filter_input( INPUT_GET, 'bulk_edit', FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY );
+	$edited         = 0;
+	$not_edited     = 0;
+	$messages       = array(
+		'error' => array(),
+		'info'  => array(),
+	);
+
+	if ( false === $nonce_is_valid || ! in_array( $action, $valid_actions, true ) ) {
+		$messages['error'][] = __( 'Invalid form submission.', 'wordcamporg' );
+	}
+
+	if ( empty( $items ) ) {
+		$messages['error'][] = __( 'No feedback was selected for bulk editing.', 'wordcamporg' );
+	}
+
+	if ( empty( $messages['error'] ) ) {
+		foreach ( $items as $feedback_id ) {
+			$feedback = get_feedback_comment( $feedback_id );
+
+			if ( is_feedback( $feedback ) ) {
+				switch ( $action ) {
+					case 'approve':
+						$result = wp_set_comment_status( $feedback->comment_ID, 'approve' );
+						break;
+					case 'unapprove':
+						$result = wp_set_comment_status( $feedback->comment_ID, 'hold' );
+						break;
+					case 'spam':
+						$result = wp_spam_comment( $feedback->comment_ID );
+						break;
+					case 'unspam':
+						$result = wp_unspam_comment( $feedback->comment_ID );
+						break;
+					case 'trash':
+						$result = delete_feedback( $feedback->comment_ID );
+						break;
+					case 'untrash':
+						$result = wp_untrash_comment( $feedback->comment_ID );
+						break;
+					case 'delete':
+						$result = delete_feedback( $feedback->comment_ID, true );
+						break;
+				}
+
+				if ( true === $result ) {
+					$edited ++;
+				} else {
+					$not_edited ++;
+				}
+			} else {
+				$not_edited ++;
+			}
+		}
+	}
+
+	if ( $edited ) {
+		$messages['info'][] = sprintf(
+			_n(
+				'%s feedback comment was successfully edited.',
+				'%s feedback comments were successfully edited.',
+				absint( $edited ),
+				'wordcamporg'
+			),
+			number_format_i18n( $edited )
+		);
+	}
+
+	if ( $not_edited ) {
+		$messages['error'][] = sprintf(
+			_n(
+				'%s feedback comment could not be edited.',
+				'%s feedback comments could not be edited.',
+				absint( $not_edited ),
+				'wordcamporg'
+			),
+			number_format_i18n( $not_edited )
+		);
+	}
+
+	return $messages;
 }
 
 /**
@@ -284,6 +429,7 @@ function toggle_list_table_filters() {
  * Tweak the args for the comment query in the list table.
  *
  * - Ensure the list table query for feedback comments always has the correct comment type specified.
+ * - Search the feedback meta values instead of comment content.
  * - Enable ordering by the `rating` meta value.
  *
  * @param array $args
@@ -292,6 +438,29 @@ function toggle_list_table_filters() {
  */
 function filter_list_table_query_args( $args ) {
 	$args['type'] = COMMENT_TYPE;
+
+	if ( $args['search'] ) {
+		$meta_query = array(
+			'relation' => 'OR',
+		);
+
+		foreach ( array_keys( get_feedback_questions() ) as $key ) {
+			$meta_query[] = array(
+				'key'     => $key,
+				'value'   => $args['search'],
+				'compare' => 'LIKE',
+			);
+		}
+
+		if ( ! isset( $args['meta_query'] ) ) {
+			$args['meta_query'] = array();
+		}
+
+		$args['meta_query'][] = $meta_query;
+
+		// This needs to be removed, otherwise no results are returned since comment content fields are empty.
+		unset( $args['search'] );
+	}
 
 	if ( 'rating' === $args['orderby'] ) {
 		$args['orderby']  = 'meta_value_num';
@@ -312,6 +481,7 @@ function filter_list_table_query_args( $args ) {
  * @return mixed
  */
 function filter_list_table_views( $views ) {
+	/** @global string $typenow */
 	global $typenow;
 
 	// Feedback from an admin of the event site would probably be rare, so this one is unnecessary.
@@ -319,7 +489,7 @@ function filter_list_table_views( $views ) {
 
 	foreach ( $views as $status => $view ) {
 		// Note that the HTML here is wrapping href attributes with single quotes.
-		preg_match( '#href=\'([^\']+)\'#', $view, $orig_url );
+		preg_match( '#href=[\'"]+([^\'"]+)[\'"]+#', $view, $orig_url );
 		$parsed_url = wp_parse_url( $orig_url[1] );
 		wp_parse_str( $parsed_url['query'], $query_args );
 
@@ -338,6 +508,7 @@ function filter_list_table_views( $views ) {
 /**
  * Modify the list of available row actions for each feedback comment.
  *
+ * - Check permissions.
  * - Remove irrelevant actions.
  *
  * @param array $actions
@@ -345,6 +516,10 @@ function filter_list_table_views( $views ) {
  * @return mixed
  */
 function filter_list_table_row_actions( $actions ) {
+	if ( ! current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
+		return array();
+	}
+
 	unset( $actions['reply'], $actions['quickedit'], $actions['edit'] );
 
 	return $actions;

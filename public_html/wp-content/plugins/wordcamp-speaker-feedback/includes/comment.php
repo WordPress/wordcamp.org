@@ -140,10 +140,11 @@ function get_feedback( array $post__in = array(), array $status = array( 'hold',
 /**
  * Trash a feedback submission.
  *
- * @param string|int $comment_id The ID of the comment to delete.
+ * @param string|int $comment_id   The ID of the comment to delete.
+ * @param bool       $force_delete Whether to bypass trash and force deletion. Default is false.
  *
  * @return bool
  */
-function delete_feedback( $comment_id ) {
-	return wp_delete_comment( $comment_id );
+function delete_feedback( $comment_id, $force_delete = false ) {
+	return wp_delete_comment( $comment_id, $force_delete );
 }

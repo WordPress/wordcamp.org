@@ -3,6 +3,7 @@
 namespace WordCamp\SpeakerFeedback\View;
 
 use WordCamp\SpeakerFeedback\Feedback_List_Table;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -11,8 +12,10 @@ defined( 'WPINC' ) || die();
 /** @var int $paged */
 /** @var string $comment_status */
 /** @var Feedback_List_Table $list_table */
+/** @var array $messages */
 
-$pagenum = $list_table->get_pagenum();
+/** @global string $typenow */
+global $typenow;
 
 $list_table->prepare_items();
 
@@ -50,9 +53,19 @@ $list_table->prepare_items();
 
 	<hr class="wp-header-end">
 
+	<?php foreach ( $messages as $notice_type => $notices ) : ?>
+		<?php foreach ( $notices as $notice ) : ?>
+			<div class="is-dismissible notice notice-<?php echo esc_attr( $notice_type ); ?>">
+				<?php echo wp_kses_post( wpautop( $notice ) ); ?>
+			</div>
+		<?php endforeach; ?>
+	<?php endforeach; ?>
+
 	<?php $list_table->views(); ?>
 
 	<form id="comments-form" method="get">
+		<input type="hidden" name="post_type" value="<?php echo esc_attr( $typenow ); ?>" />
+		<input type="hidden" name="page" value="<?php echo esc_attr( COMMENT_TYPE ); ?>" />
 
 		<?php $list_table->search_box( __( 'Search Feedback', 'wordcamporg' ), 'comment' ); ?>
 
@@ -60,7 +73,7 @@ $list_table->prepare_items();
 			<input type="hidden" name="p" value="<?php echo esc_attr( $post_id ); ?>" />
 		<?php endif; ?>
 		<input type="hidden" name="comment_status" value="<?php echo esc_attr( $comment_status ); ?>" />
-		<input type="hidden" name="pagegen_timestamp" value="<?php echo esc_attr( current_time( 'mysql', 1 ) ); ?>" />
+		<?php wp_nonce_field( 'bulk_edit_' . COMMENT_TYPE, 'bulk_edit_nonce' ); ?>
 
 		<input type="hidden" name="_total" value="<?php echo esc_attr( $list_table->get_pagination_arg( 'total_items' ) ); ?>" />
 		<input type="hidden" name="_per_page" value="<?php echo esc_attr( $list_table->get_pagination_arg( 'per_page' ) ); ?>" />

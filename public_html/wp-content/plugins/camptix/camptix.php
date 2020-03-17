@@ -130,6 +130,9 @@ class CampTix_Plugin {
 		add_action( 'save_post', array( $this, 'save_attendee_post' ) );
 		add_action( 'save_post', array( $this, 'save_coupon_post' ) );
 
+		// Log attendee status changes.
+		add_action( 'transition_post_status', array( $this, 'log_attendee_status_change' ), 10, 3 );
+
 		// Handle query extras for attendees, tickets, etc.
 		add_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
 
@@ -5022,6 +5025,28 @@ class CampTix_Plugin {
 		}
 
 		$this->log( 'Saved coupon post with form data.', $post_id, $_POST );
+	}
+
+	/**
+	 * Log status changes in Attendees.
+	 */
+	function log_attendee_status_change( $new_status, $old_status, $post ) {
+		if ( $old_status === $new_status || 'tix_attendee' !== $post->post_type ) {
+			return;
+		}
+
+		$current_user = wp_get_current_user();
+		if ( 0 !== $current_user->ID ) {
+			$this->log(
+				sprintf(
+					'Attendee manually changed from %1$s to %2$s by %3$s.',
+					$old_status,
+					$new_status,
+					$current_user->user_login
+				),
+				$post->ID
+			);
+		}
 	}
 
 	/**

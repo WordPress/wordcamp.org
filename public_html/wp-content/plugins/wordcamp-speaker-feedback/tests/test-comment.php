@@ -185,7 +185,11 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The assertions here assume that a filter has been applied to the comment query
+	 * to exclude feedback comments unless they are specifically requested.
+	 *
 	 * @covers \WordCamp\SpeakerFeedback\Comment\get_feedback()
+	 * @covers \WordCamp\SpeakerFeedback\Query\pre_get_comments()
 	 */
 	public function test_get_feedback_exclude_other_comments() {
 		self::factory()->comment->create_many( 3 );
@@ -196,10 +200,10 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 			)
 		);
 
-		$all_comments = get_comments();
-		$feedback     = get_feedback();
+		$standard_comments = get_comments();
+		$feedback          = get_feedback();
 
-		$this->assertCount( 6, $all_comments );
+		$this->assertCount( 3, $standard_comments );
 		$this->assertCount( 3, $feedback );
 	}
 

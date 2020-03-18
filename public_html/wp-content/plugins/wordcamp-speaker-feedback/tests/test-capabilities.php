@@ -57,6 +57,7 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 		) );
 
 		add_post_meta( self::$session_posts['session-1']->ID, '_wcpt_speaker_id', absint( self::$users['speaker']->ID ) );
+		add_post_meta( self::$session_posts['session-2']->ID, '_wcpt_speaker_id', absint( self::$users['editor']->ID ) );
 
 		self::$feedback_comments = array();
 
@@ -70,10 +71,10 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 			'comment_post_ID'  => self::$session_posts['session-1']->ID,
 			'comment_approved' => 0,
 		) );
-		self::$feedback_comments['session-2-approve'] = self::factory()->comment->create_and_get( array(
+		self::$feedback_comments['session-2-hold']    = self::factory()->comment->create_and_get( array(
 			'comment_type'     => COMMENT_TYPE,
 			'comment_post_ID'  => self::$session_posts['session-2']->ID,
-			'comment_approved' => 1,
+			'comment_approved' => 0,
 		) );
 	}
 
@@ -119,17 +120,56 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 		$this->assertFalse( user_can(
 			self::$users['speaker'],
 			'read_' . COMMENT_TYPE,
-			self::$feedback_comments['session-2-approve']
+			self::$feedback_comments['session-2-hold']
 		) );
 		$this->assertFalse( user_can(
 			self::$users['non-speaker'],
 			'read_' . COMMENT_TYPE,
-			self::$feedback_comments['session-2-approve']
+			self::$feedback_comments['session-2-hold']
 		) );
 		$this->assertTrue( user_can(
 			self::$users['editor'],
 			'read_' . COMMENT_TYPE,
-			self::$feedback_comments['session-2-approve']
+			self::$feedback_comments['session-2-hold']
+		) );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\Comment\map_meta_caps()
+	 */
+	public function test_cap_read_post() {
+		// Session 1.
+		$this->assertTrue( user_can(
+			self::$users['speaker'],
+			'read_post_' . COMMENT_TYPE,
+			self::$session_posts['session-1']
+		) );
+		$this->assertFalse( user_can(
+			self::$users['non-speaker'],
+			'read_post_' . COMMENT_TYPE,
+			self::$session_posts['session-1']
+		) );
+		$this->assertTrue( user_can(
+			self::$users['editor'],
+			'read_post_' . COMMENT_TYPE,
+			self::$session_posts['session-1']
+		) );
+
+		// Session 2.
+		$this->assertFalse( user_can(
+			self::$users['speaker'],
+			'read_post_' . COMMENT_TYPE,
+			self::$session_posts['session-2']
+		) );
+		$this->assertFalse( user_can(
+			self::$users['non-speaker'],
+			'read_post_' . COMMENT_TYPE,
+			self::$session_posts['session-2']
+		) );
+		$this->assertTrue( user_can(
+			self::$users['editor'],
+			'read_post_' . COMMENT_TYPE,
+			self::$session_posts['session-2']
 		) );
 	}
 
@@ -137,55 +177,17 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\Comment\map_meta_caps()
 	 */
 	public function test_cap_moderate() {
-		// Session 1 approved feedback comment.
 		$this->assertFalse( user_can(
 			self::$users['speaker'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-1-approve']
+			'moderate_' . COMMENT_TYPE
 		) );
 		$this->assertFalse( user_can(
 			self::$users['non-speaker'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-1-approve']
+			'moderate_' . COMMENT_TYPE
 		) );
 		$this->assertTrue( user_can(
 			self::$users['editor'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-1-approve']
-		) );
-
-		// Session 1 unapproved feedback comment.
-		$this->assertFalse( user_can(
-			self::$users['speaker'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-1-hold']
-		) );
-		$this->assertFalse( user_can(
-			self::$users['non-speaker'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-1-hold']
-		) );
-		$this->assertTrue( user_can(
-			self::$users['editor'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-1-hold']
-		) );
-
-		// Session 2 approved feedback comment.
-		$this->assertFalse( user_can(
-			self::$users['speaker'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-2-approve']
-		) );
-		$this->assertFalse( user_can(
-			self::$users['non-speaker'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-2-approve']
-		) );
-		$this->assertTrue( user_can(
-			self::$users['editor'],
-			'moderate_' . COMMENT_TYPE,
-			self::$feedback_comments['session-2-approve']
+			'moderate_' . COMMENT_TYPE
 		) );
 	}
 }

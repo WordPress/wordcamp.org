@@ -538,6 +538,43 @@ window.camptix = window.camptix || { models: {}, views: {}, collections: {} };
 			return false;
 		});
 
+		// Edit post status on attendees.
+		if ( $( '#tix_attendee_submitdiv' ).length ) {
+			var $postStatusSelect = $('#post-status-select');
+			function updateText() {
+				// Update "Status:" to currently selected status.
+				$('#post-status-display').text(
+					// Remove any potential tags from post status text.
+					wp.sanitize.stripTagsAndEncodeText( $('option:selected', $postStatusSelect).text() )
+				);
+			}
+
+			// Post Status edit click.
+			$postStatusSelect.siblings('a.edit-post-status').click( function( event ) {
+				if ( $postStatusSelect.is( ':hidden' ) ) {
+					$postStatusSelect.slideDown( 'fast', function() {
+						$postStatusSelect.find('select').focus();
+					} );
+					$(this).hide();
+				}
+				event.preventDefault();
+			});
+
+			// Save the Post Status changes and hide the options.
+			$postStatusSelect.find('.save-post-status').click( function( event ) {
+				$postStatusSelect.slideUp( 'fast' ).siblings( 'a.edit-post-status' ).show().focus();
+				updateText();
+				event.preventDefault();
+			});
+
+			// Cancel Post Status editing and hide the options.
+			$postStatusSelect.find('.cancel-post-status').click( function( event ) {
+				$postStatusSelect.slideUp( 'fast' ).siblings( 'a.edit-post-status' ).show().focus();
+				$('#post_status').val( $('#hidden_post_status').val() );
+				updateText();
+				event.preventDefault();
+			});
+		}
 
 		/*
 		 * Track Attendance addon

@@ -130,6 +130,9 @@ class CampTix_Plugin {
 		add_action( 'save_post', array( $this, 'save_attendee_post' ) );
 		add_action( 'save_post', array( $this, 'save_coupon_post' ) );
 
+		// Log attendee status changes.
+		add_action( 'transition_post_status', array( $this, 'log_attendee_status_change' ), 10, 3 );
+
 		// Handle query extras for attendees, tickets, etc.
 		add_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
 
@@ -164,6 +167,9 @@ class CampTix_Plugin {
 
 		// Change updated messages
 		add_filter( 'post_updated_messages', array( $this, 'ticket_updated_messages' ) );
+		
+		// Add post statuses to bulk & quick edit.
+		add_action( 'admin_footer-edit.php', array( $this, 'append_post_status_bulk_edit' ) );
 
 		do_action( 'camptix_init' );
 	}
@@ -3921,6 +3927,31 @@ class CampTix_Plugin {
 								<?php _e( 'Unknown status', 'wordcamporg' ); ?>
 							<?php endif; ?>
 						</span>
+						<?php if ( current_user_can( 'manage_sites' ) ) : ?>
+						<a href="#post_status" class="edit-post-status hide-if-no-js" role="button" style="display: inline;">
+							<span aria-hidden="true"><?php esc_html_e( 'Edit', 'wordcamporg' ); ?></span>
+							<span class="screen-reader-text"><?php esc_html_e( 'Edit status', 'wordcamporg' ); ?></span>
+						</a>
+						<div id="post-status-select" class="hide-if-js" style="display: none;">
+							<input type="hidden" name="hidden_post_status" id="hidden_post_status" value="<?php echo esc_attr( $post->post_status ); ?>">
+							<label for="post_status" class="screen-reader-text"><?php esc_html_e( 'Set status', 'wordcamporg' ); ?></label>
+							<select name="post_status" id="post_status">
+								<?php if ( ! in_array( $post_status_object->name, array( 'publish', 'refund', 'cancel' ) ) ) : ?>
+									<option
+										<?php selected( $post->post_status, $post_status_object->name ); ?>
+										value="<?php echo esc_attr( $post_status_object->name ); ?>"
+									>
+										<?php echo esc_html( $post_status_object->label ); ?>
+									</option>
+								<?php endif; ?>
+								<option <?php selected( $post->post_status, 'publish' ); ?> value="publish"><?php _e( 'Published', 'wordcamporg' ); ?></option>
+								<option <?php selected( $post->post_status, 'refund' ); ?> value="refund"><?php _e( 'Refunded', 'wordcamporg' ); ?></option>
+								<option <?php selected( $post->post_status, 'cancel' ); ?> value="cancel"><?php _e( 'Cancelled', 'wordcamporg' ); ?></option>
+							</select>
+							<a href="#post_status" class="save-post-status hide-if-no-js button"><?php esc_html_e( 'OK', 'wordcamporg' ); ?></a>
+							<a href="#post_status" class="cancel-post-status hide-if-no-js button-cancel"><?php esc_html_e( 'Cancel', 'wordcamporg' ); ?></a>
+						</div>
+						<?php endif; ?>
 					</div>
 
 					<?php
@@ -3980,6 +4011,38 @@ class CampTix_Plugin {
 				<div class="clear"></div>
 			</div>
 		</div><!-- #submitpost -->
+		<?php
+	}
+
+	/**
+	 * Adding custom post status to status dropdown in Bulk and Quick Edit.
+	 */
+	function append_post_status_bulk_edit() {
+		$screen = get_current_screen();
+		if ( $screen && 'edit-tix_attendee' !== $screen->id ) {
+			return;
+		}
+		$statuses = array(
+			'publish' => _x( 'Published', 'post', 'wordcamporg' ),
+			'refund'  => _x( 'Refunded', 'post', 'wordcamporg' ),
+			'cancel'  => _x( 'Cancelled', 'post', 'wordcamporg' ),
+		);
+
+		?>
+		<script>
+			jQuery( document ).ready( function($) {
+				<?php if ( ! current_user_can( 'manage_sites' ) ) : ?>
+					$( '.inline-edit-status' ).remove();
+				<?php else: ?>
+					$( '.inline-edit-status select' ).empty();
+					<?php foreach ( $statuses as $slug => $label ) : ?>
+						$( '.inline-edit-status select' ).append( "<?php printf(
+							'<option value=\"%s\">%s</option>', esc_attr( $slug ), esc_html( $label )
+						); ?>" );
+					<?php endforeach; ?>
+				<?php endif; ?>
+			});
+		</script>
 		<?php
 	}
 
@@ -4962,6 +5025,28 @@ class CampTix_Plugin {
 		}
 
 		$this->log( 'Saved coupon post with form data.', $post_id, $_POST );
+	}
+
+	/**
+	 * Log status changes in Attendees.
+	 */
+	function log_attendee_status_change( $new_status, $old_status, $post ) {
+		if ( $old_status === $new_status || 'tix_attendee' !== $post->post_type ) {
+			return;
+		}
+
+		$current_user = wp_get_current_user();
+		if ( 0 !== $current_user->ID ) {
+			$this->log(
+				sprintf(
+					'Attendee manually changed from %1$s to %2$s by %3$s.',
+					$old_status,
+					$new_status,
+					$current_user->user_login
+				),
+				$post->ID
+			);
+		}
 	}
 
 	/**

@@ -71,15 +71,17 @@
 		Prevent blank lines at start of function/class
 	-->
 
-
-	<arg name="extensions" value="php" />
-
 	<!-- Show sniff codes in all reports -->
-	<arg value="ps"    />
+	<arg value="ps" />
 	<arg name="colors" />
+
+	<!-- Exclude 3rd-party files -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
 
 	<!-- Scan all (php) files in the current folder and subfolders -->
 	<file>.</file>
+	<arg name="extensions" value="php" />
 
 	<rule ref="WordPress-Core">
 		<!-- I don't see anything wrong with this :) -->

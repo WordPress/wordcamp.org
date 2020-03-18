@@ -19,14 +19,16 @@
 		"wp-coding-standards/wpcs": "2.*",
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"phpunit/phpunit": "^7",
+		"sirbrillig/phpcs-changed": "^2.2",
 		"spatie/phpunit-watcher": "^1.12"
 	},
 	"scripts": {
 		"format": "phpcbf -p",
-		"lint": "phpcs --extensions=php -s -p",
+		"lint": "phpcs",
 		"test": "phpunit",
+		"phpcs-changed": "phpcs-changed",
 		"_comment": "Below script names left in for back-compat",
-		"phpcs": "phpcs --extensions=php -s -p",
+		"phpcs": "phpcs",
 		"phpcbf": "phpcbf -p"
 	}
 }

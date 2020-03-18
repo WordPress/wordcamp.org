@@ -14,7 +14,6 @@
 		var rawData = new FormData( event.target );
 		var data = {
 			post: rawData.get( 'sft-post' ),
-			author: rawData.get( 'sft-author' ),
 			meta: {
 				rating: rawData.get( 'sft-rating' ),
 				q1: rawData.get( 'sft-question-1' ),
@@ -22,6 +21,14 @@
 				q3: rawData.get( 'sft-question-3' ),
 			},
 		};
+
+		var author = rawData.get( 'sft-author' );
+		if ( '0' !== author ) {
+			data.author = author;
+		} else {
+			data.author_name = rawData.get( 'sft-author-name' );
+			data.author_email = rawData.get( 'sft-author-email' );
+		}
 
 		var messageContainer = document.getElementById( 'speaker-feedback-notice' );
 		// Reset the notice before submission.

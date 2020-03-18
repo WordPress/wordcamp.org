@@ -12,6 +12,30 @@
 	}
 }
 
+.speaker-feedback__field-inline {
+	display: flex;
+	margin-bottom: 1em;
+	align-items: center;
+
+	label {
+		flex: 0 5rem;
+	}
+
+	input {
+		flex: 1;
+	}
+
+	@media (max-width: 480px) {
+		display: block;
+
+		label,
+		input {
+			display: block;
+			width: 100%;
+		}
+	}
+}
+
 /**
  * Session navigation page.
  */
@@ -47,6 +71,10 @@
 
 	&:focus-within {
 		outline: 1px dotted #666;
+	}
+
+	legend {
+		font-weight: 700;
 	}
 
 	svg {
@@ -103,6 +131,10 @@
 	background-color: $blue-medium-100;
 	border-left: 4px solid $blue-medium-500;
 	align-items: center;
+
+	p {
+		margin: 0;
+	}
 
 	&.is-success {
 		border-left-color: $alert-green;

@@ -445,6 +445,8 @@ function toggle_list_table_filters() {
 			add_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
 			add_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
 			add_filter( 'wp_count_comments', __NAMESPACE__ . '\filter_list_table_view_counts', 99, 2 );
+			add_filter( 'get_avatar_comment_types', __NAMESPACE__ . '\filter_list_table_enable_comment_avatar' );
+			add_filter( 'comment_author', __NAMESPACE__ . '\filter_list_table_add_comment_avatar', 10, 2 );
 
 			$current_state = 'on';
 			break;
@@ -454,6 +456,8 @@ function toggle_list_table_filters() {
 			remove_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
 			remove_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
 			remove_filter( 'wp_count_comments', __NAMESPACE__ . '\filter_list_table_view_counts', 99 );
+			remove_filter( 'get_avatar_comment_types', __NAMESPACE__ . '\filter_list_table_enable_comment_avatar' );
+			remove_filter( 'comment_author', __NAMESPACE__ . '\filter_list_table_add_comment_avatar', 10 );
 
 			$current_state = 'off';
 			break;
@@ -583,4 +587,35 @@ function filter_list_table_view_counts( $count, $post_id ) {
 	wp_cache_set( $cache_key, $feedback_count, 'counts' );
 
 	return $feedback_count;
+}
+
+/**
+ * Add feedback comment types to the list of types allowed to show an avatar.
+ *
+ * @param array $types
+ *
+ * @return array
+ */
+function filter_list_table_enable_comment_avatar( $types ) {
+	$types[] = COMMENT_TYPE;
+
+	return $types;
+}
+
+/**
+ * Show the feedback submitter's avatar along with their name.
+ *
+ * This replaces the WP_Comments_List_Table::floated_admin_avatar method, which was firing twice
+ * because it was getting hooked during class instantiation.
+ *
+ * @param string $name
+ * @param int    $comment_id
+ *
+ * @return string
+ */
+function filter_list_table_add_comment_avatar( $name, $comment_id ) {
+	$comment = get_comment( $comment_id );
+	$avatar  = get_avatar( $comment, 32, 'mystery' );
+
+	return "$avatar $name";
 }

@@ -19,6 +19,19 @@ defined( 'WPINC' ) || die();
  */
 class Feedback_List_Table extends WP_Comments_List_Table {
 	/**
+	 * Feedback_List_Table constructor.
+	 *
+	 * @param array $args
+	 */
+	public function __construct( $args = array() ) {
+		parent::__construct( $args );
+
+		// This is an ugly hack to prevent the avatar from rendering twice, from both the parent and child class.
+		// See \WordCamp\SpeakerFeedback\Admin\filter_list_table_add_comment_avatar().
+		remove_filter( 'comment_author', array( $this, 'floated_admin_avatar' ), 10 );
+	}
+
+	/**
 	 * Get the screen option for items per page.
 	 *
 	 * @param string $comment_status Unused.
@@ -124,13 +137,11 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	public function column_name( $comment ) {
 		$feedback = get_feedback_comment( $comment );
 
-		$name = get_comment_author( $feedback->comment_ID );
-		$user = ( $feedback->user_id ) ? new WP_User( $feedback->user_id ) : null;
+		echo '<strong>';
+		comment_author( $comment );
+		echo '</strong>';
 
-		printf(
-			'<strong>%s</strong>',
-			esc_html( $name )
-		);
+		$user = ( $feedback->user_id ) ? new WP_User( $feedback->user_id ) : null;
 
 		if ( $user ) {
 			printf(

@@ -37,8 +37,9 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 			if ( in_array( $user_id, $session_speakers, true ) ) {
 				$required_caps[] = 'read';
 
-				// The speaker can only read approved comments.
-				if ( ! in_array( $feedback->comment_approved, array( 1, '1', 'approve' ), true ) ) {
+				// The speaker can only read approved comments, unless they already can edit them.
+				$can_edit = user_can( $user_id, 'edit_comment', $feedback->comment_ID );
+				if ( ! $can_edit && ! in_array( $feedback->comment_approved, array( 1, '1', 'approve' ), true ) ) {
 					$required_caps[] = 'do_not_allow';
 				}
 				break;

@@ -510,7 +510,7 @@ function render_columns( $column, $post_id ) {
 }
 
 /**
- * Inject the "Uncollectible" action into row actions.
+ * Add status management links into row actions.
  *
  * @param string[] $actions An array of row action links.
  * @param WP_Post  $post    The post object.
@@ -518,46 +518,47 @@ function render_columns( $column, $post_id ) {
  * @return array An array of row action links.
  */
 function add_row_action( $actions, $post ) {
-	if ( POST_TYPE !== $post->post_type || ! current_user_can( 'manage_network', $post->ID ) ) {
+	if ( POST_TYPE !== $post->post_type || ! current_user_can( 'manage_network' ) ) {
 		return $actions;
 	}
 
 	$post_type_object = get_post_type_object( $post->post_type );
 
-	if ( 'wcbsi_uncollectible' !== $post->post_status ) {
-		$url = add_query_arg(
-			array(
-				'action' => 'wcbsi_update',
-				'status' => 'uncollectible',
-			),
-			admin_url( sprintf( $post_type_object->_edit_link, $post->ID ) )
-		);
+	/*
+	 * A list of current status, new status pairs. If the current status is matched, the show a link to transform
+	 * this invoice into the new status.
+	 */
+	$status_map = array(
+		// Pairs in ( current, new ) format.
+		array( 'wcbsi_paid', 'wcbsi_refunded' ),
+		array( 'wcbsi_refunded', 'wcbsi_paid' ),
+		array( 'wcbsi_approved', 'wcbsi_uncollectible' ),
+		array( 'wcbsi_uncollectible', 'wcbsi_approved' ),
+	);
 
-		$actions['wcbsi_uncollectible'] = sprintf(
-			'<a href="%1$s" aria-label="%2$s">%3$s</a>',
-			wp_nonce_url( $url, 'wcbsi_update-post_' . $post->ID ),
-			/* translators: %s: Post title. */
-			esc_attr( sprintf( __( 'Mark invoice &#8220;%s&#8221; uncollectible', 'wordcamporg' ), $post->post_title ) ),
-			__( 'Uncollectible', 'wordcamporg' )
-		);
-	}
+	foreach ( $status_map as $index => list( $current_status, $new_status ) ) {
+		if ( $current_status === $post->post_status ) {
+			$url = add_query_arg(
+				array(
+					'action' => 'wcbsi_update',
+					'status' => str_replace( 'wcbsi_', '', $new_status ),
+				),
+				admin_url( sprintf( $post_type_object->_edit_link, $post->ID ) )
+			);
 
-	if ( 'wcbsi_paid' === $post->post_status ) {
-		$url = add_query_arg(
-			array(
-				'action' => 'wcbsi_update',
-				'status' => 'refunded',
-			),
-			admin_url( sprintf( $post_type_object->_edit_link, $post->ID ) )
-		);
-
-		$actions['wcbsi_refunded'] = sprintf(
-			'<a href="%1$s" aria-label="%2$s">%3$s</a>',
-			wp_nonce_url( $url, 'wcbsi_update-post_' . $post->ID ),
-			/* translators: %s: Post title. */
-			esc_attr( sprintf( __( 'Mark invoice &#8220;%s&#8221; refunded', 'wordcamporg' ), $post->post_title ) ),
-			__( 'Refunded', 'wordcamporg' )
-		);
+			$status = get_post_status_object( $new_status );
+			$actions[ 'new-status-' . $index ] = sprintf(
+				'<a href="%1$s" aria-label="%2$s">%3$s</a>',
+				wp_nonce_url( $url, 'wcbsi_update-post_' . $post->ID ),
+				esc_attr( sprintf(
+					/* translators: %1$s: Post title, %2$s: New status label. */
+					__( 'Mark invoice &#8220;%1$s&#8221; %2$s', 'wordcamporg' ),
+					$post->post_title,
+					$status->label
+				) ),
+				$status->label
+			);
+		}
 	}
 
 	return $actions;
@@ -582,11 +583,13 @@ function handle_status_action( $post_id ) {
 		return;
 	}
 
-	if ( ! current_user_can( 'manage_network', $post->ID ) ) {
+	if ( ! current_user_can( 'manage_network' ) ) {
 		return;
 	}
 
-	if ( in_array( $status, array( 'uncollectible', 'refunded' ) ) ) {
+	// The `$index` here is used for the status message below in `action_success_message`.
+	$index = array_search( $status, array( 'uncollectible', 'refunded', 'paid', 'approved' ) );
+	if ( false !== $index ) {
 		// Remove filters that intercept the `wp_update_post` process.
 		remove_filter( 'wp_insert_post_data', __NAMESPACE__ . '\set_invoice_status', 10 );
 		remove_filter( 'save_post', __NAMESPACE__ . '\save_invoice', 10 );
@@ -595,8 +598,7 @@ function handle_status_action( $post_id ) {
 			'post_status' => 'wcbsi_' . $status,
 		) );
 		$sendback = wp_get_referer();
-		$code = ( 'uncollectible' === $status ) ? 1 : 2;
-		wp_safe_redirect( add_query_arg( 'wcbsi_updated', $code, $sendback ) );
+		wp_safe_redirect( add_query_arg( 'wcbsi_updated', $index, $sendback ) );
 		exit();
 	}
 }
@@ -609,11 +611,24 @@ function handle_status_action( $post_id ) {
 function action_success_message() {
 	if ( isset( $_GET['wcbsi_updated'] ) ) : ?>
 	<div id="message" class="updated notice-success notice is-dismissible">
-		<?php if ( '1' === $_GET['wcbsi_updated'] ) : ?>
-			<p><?php esc_html_e( 'Invoice marked uncollectible.', 'wordcamporg' ); ?></p>
-		<?php elseif ( '2' === $_GET['wcbsi_updated'] ) : ?>
-			<p><?php esc_html_e( 'Invoice marked refunded.', 'wordcamporg' ); ?></p>
-		<?php endif; ?>
+		<p>
+			<?php
+			switch ( $_GET['wcbsi_updated'] ) {
+				case '0':
+					esc_html_e( 'Invoice marked uncollectible.', 'wordcamporg' );
+					break;
+				case '1':
+					esc_html_e( 'Invoice marked refunded.', 'wordcamporg' );
+					break;
+				case '2':
+					esc_html_e( 'Invoice marked paid.', 'wordcamporg' );
+					break;
+				case '3':
+					esc_html_e( 'Invoice marked sent.', 'wordcamporg' );
+					break;
+			}
+			?>
+		</p>
 	</div>
 	<?php endif;
 }

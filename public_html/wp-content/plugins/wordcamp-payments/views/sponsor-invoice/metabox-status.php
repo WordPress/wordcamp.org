@@ -40,6 +40,8 @@ defined( 'WPINC' ) or die();
 						<?php _e( 'Paid', 'wordcamporg' ); ?>
 					<?php elseif ( 'wcbsi_uncollectible' == $post->post_status ) : ?>
 						<?php _e( 'Uncollectible', 'wordcamporg' ); ?>
+					<?php elseif ( 'wcbsi_refunded' == $post->post_status ) : ?>
+						<?php _e( 'Refunded', 'wordcamporg' ); ?>
 					<?php endif; ?>
 				</span>
 

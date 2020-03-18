@@ -12,8 +12,8 @@ use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_questions };
 defined( 'WPINC' ) || die();
 
 foreach ( SUPPORTED_POST_TYPES as $supported_post_type ) {
-	add_filter( "manage_{$supported_post_type}_posts_columns", __NAMESPACE__ . '\add_post_listtable_columns' );
-	add_action( "manage_{$supported_post_type}_posts_custom_column", __NAMESPACE__ . '\render_post_listtable_columns', 10, 2 );
+	add_filter( "manage_{$supported_post_type}_posts_columns", __NAMESPACE__ . '\add_post_list_table_columns' );
+	add_action( "manage_{$supported_post_type}_posts_custom_column", __NAMESPACE__ . '\render_post_list_table_columns', 10, 2 );
 }
 
 add_action( 'admin_menu', __NAMESPACE__ . '\add_subpages' );
@@ -27,7 +27,7 @@ add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2
  *
  * @return array
  */
-function add_post_listtable_columns( $columns ) {
+function add_post_list_table_columns( $columns ) {
 	$columns = array_slice( $columns, 0, -1, true )
 		+ array( 'count_' . COMMENT_TYPE => __( 'Speaker Feedback', 'wordcamporg' ) )
 		+ array_slice( $columns, -1, 1, true );
@@ -43,7 +43,7 @@ function add_post_listtable_columns( $columns ) {
  *
  * @return void
  */
-function render_post_listtable_columns( $column_name, $post_id ) {
+function render_post_list_table_columns( $column_name, $post_id ) {
 	global $wp_list_table;
 
 	switch ( $column_name ) {

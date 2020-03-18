@@ -10,6 +10,79 @@ defined( 'WPINC' ) || die();
 const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this must be <= 20 characters.
 
 /**
+ * Count feedback comments, grouped by status.
+ *
+ * Based on Core's `get_comment_count()`.
+ *
+ * @param int $post_id
+ *
+ * @return array
+ */
+function count_feedback( $post_id = 0 ) {
+	global $wpdb;
+
+	$post_id = (int) $post_id;
+
+	$where = array(
+		$wpdb->prepare( 'comment_type = %s', COMMENT_TYPE ),
+	);
+
+	if ( $post_id > 0 ) {
+		$where[] = $wpdb->prepare( 'comment_post_ID = %d', $post_id );
+	}
+
+	$where = implode( ' AND ', $where );
+
+	$sql = "
+		SELECT comment_approved, COUNT( * ) AS total
+		FROM {$wpdb->comments}
+		WHERE {$where}
+		GROUP BY comment_approved
+	";
+
+	$totals = $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared above.
+
+	$feedback_count = array(
+		'approved'       => 0,
+		'moderated'      => 0, // Originally this was `awaiting_moderation` but it doesn't appear that it is used.
+		'spam'           => 0,
+		'trash'          => 0,
+		'post-trashed'   => 0,
+		'total_comments' => 0,
+		'all'            => 0,
+	);
+
+	foreach ( $totals as $row ) {
+		switch ( $row['comment_approved'] ) {
+			case 'trash':
+				$feedback_count['trash'] = $row['total'];
+				break;
+			case 'post-trashed':
+				$feedback_count['post-trashed'] = $row['total'];
+				break;
+			case 'spam':
+				$feedback_count['spam']            = $row['total'];
+				$feedback_count['total_comments'] += $row['total'];
+				break;
+			case '1':
+				$feedback_count['approved']        = $row['total'];
+				$feedback_count['total_comments'] += $row['total'];
+				$feedback_count['all']            += $row['total'];
+				break;
+			case '0':
+				$feedback_count['moderated']       = $row['total'];
+				$feedback_count['total_comments'] += $row['total'];
+				$feedback_count['all']            += $row['total'];
+				break;
+			default:
+				break;
+		}
+	}
+
+	return $feedback_count;
+}
+
+/**
  * Check if a comment is a feedback comment.
  *
  * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.

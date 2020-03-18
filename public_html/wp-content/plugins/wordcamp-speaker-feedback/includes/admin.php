@@ -6,7 +6,7 @@ use WordCamp\SpeakerFeedback\Feedback_List_Table;
 use const WordCamp\SpeakerFeedback\SUPPORTED_POST_TYPES;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\{ get_assets_path, get_includes_path, get_views_path, get_assets_url };
-use function WordCamp\SpeakerFeedback\Comment\{ get_feedback, get_feedback_comment, delete_feedback, is_feedback };
+use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment, delete_feedback, is_feedback };
 use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_questions };
 
 defined( 'WPINC' ) || die();
@@ -18,6 +18,7 @@ foreach ( SUPPORTED_POST_TYPES as $supported_post_type ) {
 
 add_action( 'admin_menu', __NAMESPACE__ . '\add_subpages' );
 add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
+add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2 );
 
 /**
  * Add a Speaker Feedback column for post list tables that support speaker feedback.
@@ -243,6 +244,40 @@ function set_screen_options( $keep, $option, $value ) {
 }
 
 /**
+ * Filter to remove feedback comments from the standard comment counts.
+ *
+ * @param array $count
+ * @param int   $post_id
+ *
+ * @return object
+ */
+function adjust_comment_counts( $count, $post_id ) {
+	$cache_key = "sft-modified-comments-{$post_id}";
+
+	$cached_count = wp_cache_get( $cache_key, 'counts' );
+
+	if ( false !== $cached_count ) {
+		return $cached_count;
+	}
+
+	$original_count              = get_comment_count( $post_id );
+	$original_count['moderated'] = $original_count['awaiting_moderation'];
+	unset( $original_count['awaiting_moderation'] );
+
+	$feedback_count = count_feedback( $post_id );
+	$adjusted_count = array();
+
+	foreach ( $original_count as $status => $value ) {
+		$adjusted_count[ $status ] = absint( $value ) - absint( $feedback_count[ $status ] );
+	}
+
+	$adjusted_count = (object) $adjusted_count;
+	wp_cache_set( $cache_key, $adjusted_count, 'counts' );
+
+	return $adjusted_count;
+}
+
+/**
  * Render the admin page for displaying a feedback comments list table.
  *
  * @return void
@@ -409,6 +444,7 @@ function toggle_list_table_filters() {
 			add_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
 			add_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
 			add_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
+			add_filter( 'wp_count_comments', __NAMESPACE__ . '\filter_list_table_view_counts', 99, 2 );
 
 			$current_state = 'on';
 			break;
@@ -417,6 +453,7 @@ function toggle_list_table_filters() {
 			remove_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
 			remove_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
 			remove_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
+			remove_filter( 'wp_count_comments', __NAMESPACE__ . '\filter_list_table_view_counts', 99 );
 
 			$current_state = 'off';
 			break;
@@ -523,4 +560,27 @@ function filter_list_table_row_actions( $actions ) {
 	unset( $actions['reply'], $actions['quickedit'], $actions['edit'] );
 
 	return $actions;
+}
+
+/**
+ * Filter the comment counts to show only feedback and not other comment types.
+ *
+ * @param object $count
+ * @param int    $post_id
+ *
+ * @return bool|mixed|object
+ */
+function filter_list_table_view_counts( $count, $post_id ) {
+	$cache_key = "sft-feedback-{$post_id}";
+
+	$cached_count = wp_cache_get( $cache_key, 'counts' );
+
+	if ( false !== $cached_count ) {
+		return $cached_count;
+	}
+
+	$feedback_count = (object) count_feedback( $post_id );
+	wp_cache_set( $cache_key, $feedback_count, 'counts' );
+
+	return $feedback_count;
 }

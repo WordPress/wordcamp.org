@@ -10,6 +10,79 @@ defined( 'WPINC' ) || die();
 const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this must be <= 20 characters.
 
 /**
+ * Count feedback comments, grouped by status.
+ *
+ * Based on Core's `get_comment_count()`.
+ *
+ * @param int $post_id
+ *
+ * @return array
+ */
+function count_feedback( $post_id = 0 ) {
+	global $wpdb;
+
+	$post_id = (int) $post_id;
+
+	$where = array(
+		$wpdb->prepare( 'comment_type = %s', COMMENT_TYPE ),
+	);
+
+	if ( $post_id > 0 ) {
+		$where[] = $wpdb->prepare( 'comment_post_ID = %d', $post_id );
+	}
+
+	$where = implode( ' AND ', $where );
+
+	$sql = "
+		SELECT comment_approved, COUNT( * ) AS total
+		FROM {$wpdb->comments}
+		WHERE {$where}
+		GROUP BY comment_approved
+	";
+
+	$totals = $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- SQL is prepared above.
+
+	$feedback_count = array(
+		'approved'       => 0,
+		'moderated'      => 0, // Originally this was `awaiting_moderation` but it doesn't appear that it is used.
+		'spam'           => 0,
+		'trash'          => 0,
+		'post-trashed'   => 0,
+		'total_comments' => 0,
+		'all'            => 0,
+	);
+
+	foreach ( $totals as $row ) {
+		switch ( $row['comment_approved'] ) {
+			case 'trash':
+				$feedback_count['trash'] = $row['total'];
+				break;
+			case 'post-trashed':
+				$feedback_count['post-trashed'] = $row['total'];
+				break;
+			case 'spam':
+				$feedback_count['spam']            = $row['total'];
+				$feedback_count['total_comments'] += $row['total'];
+				break;
+			case '1':
+				$feedback_count['approved']        = $row['total'];
+				$feedback_count['total_comments'] += $row['total'];
+				$feedback_count['all']            += $row['total'];
+				break;
+			case '0':
+				$feedback_count['moderated']       = $row['total'];
+				$feedback_count['total_comments'] += $row['total'];
+				$feedback_count['all']            += $row['total'];
+				break;
+			default:
+				break;
+		}
+	}
+
+	return $feedback_count;
+}
+
+/**
  * Check if a comment is a feedback comment.
  *
  * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
@@ -17,13 +90,13 @@ const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this mus
  * @return bool
  */
 function is_feedback( $comment ) {
-	if ( is_string( $comment ) || is_int( $comment ) ) {
-		$comment = get_comment( $comment );
-	}
-
 	if ( $comment instanceof Feedback ) {
 		return true;
-	} elseif ( COMMENT_TYPE === $comment->comment_type ) {
+	}
+
+	$comment = get_comment( $comment );
+
+	if ( $comment && COMMENT_TYPE === $comment->comment_type ) {
 		return true;
 	}
 
@@ -104,13 +177,14 @@ function update_feedback( $comment_id, array $feedback_meta ) {
 /**
  * Retrieve a list of feedback submissions.
  *
- * @param array $status     An array of statuses to include in the results.
- * @param array $post__in   An array of post IDs whose feedback comments should be included.
- * @param array $meta_query A valid `WP_Meta_Query` array.
+ * @param array $post__in   Optional. An array of post IDs whose feedback comments should be included. An empty array
+ *                          will include all posts. Default empty.
+ * @param array $status     Optional. An array of statuses to include in the results.
+ * @param array $meta_query Optional. A valid `WP_Meta_Query` array.
  *
  * @return array A collection of WP_Comment objects.
  */
-function get_feedback( array $status = array( 'hold', 'approve' ), array $post__in = array(), array $meta_query = array() ) {
+function get_feedback( array $post__in = array(), array $status = array( 'hold', 'approve' ), array $meta_query = array() ) {
 	$args = array(
 		'status'  => $status,
 		'type'    => COMMENT_TYPE,
@@ -139,10 +213,11 @@ function get_feedback( array $status = array( 'hold', 'approve' ), array $post__
 /**
  * Trash a feedback submission.
  *
- * @param string|int $comment_id The ID of the comment to delete.
+ * @param string|int $comment_id   The ID of the comment to delete.
+ * @param bool       $force_delete Whether to bypass trash and force deletion. Default is false.
  *
  * @return bool
  */
-function delete_feedback( $comment_id ) {
-	return wp_delete_comment( $comment_id );
+function delete_feedback( $comment_id, $force_delete = false ) {
+	return wp_delete_comment( $comment_id, $force_delete );
 }

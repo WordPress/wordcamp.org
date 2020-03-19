@@ -275,20 +275,27 @@ function validate_meta_string( $key, $value ) {
  */
 function get_feedback_questions( $version = META_VERSION ) {
 	/**
-	 * Versioned questions. The array key for each set of questions is the version number.
+	 * Versioned questions. Each case in the switch is an integer version of the set of questions. The case integer
+	 * that contains the latest set of questions should match the integer assigned to the `META_VERSION` constant.
 	 *
-	 * If the questions below need to be modified, a new complete set should be added as an additional item in the
-	 * array, with a new version key. The `META_VERSION` constant in this file then needs to be updated to match the
-	 * latest key in the array.
+	 * If the questions below need to be modified, a new complete set should be added as a new case. The `META_VERSION`
+	 * constant in this file then needs to be updated to match the latest case number.
 	 */
-	$questions = array(
-		1 => array(
-			'rating' => __( 'Rate this talk', 'wordcamporg' ),
-			'q1'     => __( "What's one good thing you'd keep in this presentation?", 'wordcamporg' ),
-			'q2'     => __( "What's one thing you'd tweak to improve the presentation?", 'wordcamporg' ),
-			'q3'     => __( "What's one unhelpful thing you'd delete from the presentation?", 'wordcamporg' ),
-		),
-	);
+	switch ( $version ) {
+		case 1:
+			$questions = array(
+				'rating' => __( 'Rate this talk', 'wordcamporg' ),
+				'q1'     => __( "What's one good thing you'd keep in this presentation?", 'wordcamporg' ),
+				'q2'     => __( "What's one thing you'd tweak to improve the presentation?", 'wordcamporg' ),
+				'q3'     => __( "What's one unhelpful thing you'd delete from the presentation?", 'wordcamporg' ),
+			);
+			break;
 
-	return $questions[ $version ] ?? array();
+		default:
+			// Default to the latest version.
+			$questions = get_feedback_questions( META_VERSION );
+			break;
+	}
+
+	return $questions;
 }

@@ -91,3 +91,66 @@
 		color: $star-selected;
 	}
 }
+
+/**
+ * Feedback list table.
+ */
+
+.column-name {
+	img {
+		float: left;
+		margin-right: 10px;
+		margin-top: 1px;
+	}
+}
+
+#comments-form {
+	.fixed {
+		.column-name {
+			width: 15%;
+		}
+
+		.column-rating {
+			width: 140px;
+		}
+	}
+}
+
+/**
+ * Question/answer display.
+ */
+
+.widefat td {
+	p.speaker-feedback__question {
+		font-weight: 700;
+	}
+
+	p.speaker-feedback__answer {
+		margin-bottom: 2em;
+	}
+}
+
+/**
+ * Rating display.
+ */
+
+.speaker-feedback__meta-rating {
+	display: inline-block;
+	position: relative;
+	margin: 0;
+	padding: 0;
+
+	svg {
+		width: 20px;
+		height: 20px;
+		fill: currentColor;
+	}
+
+	span.star__full {
+		color: $star-selected;
+	}
+
+	span.star__empty {
+		color: $star-default;
+	}
+}

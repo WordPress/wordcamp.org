@@ -19,6 +19,7 @@ foreach ( SUPPORTED_POST_TYPES as $supported_post_type ) {
 add_action( 'admin_menu', __NAMESPACE__ . '\add_subpages' );
 add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
 add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2 );
+add_filter( 'pre_wp_update_comment_count_now', __NAMESPACE__ . '\adjust_post_comment_count', 10, 3 );
 
 /**
  * Add a Speaker Feedback column for post list tables that support speaker feedback.
@@ -275,6 +276,23 @@ function adjust_comment_counts( $count, $post_id ) {
 	wp_cache_set( $cache_key, $adjusted_count, 'counts' );
 
 	return $adjusted_count;
+}
+
+/**
+ * Modify the count of approved comments that gets stored in the wp_posts table.
+ *
+ * Feedback comments should not be counted for this.
+ *
+ * @param int|null $new
+ * @param int      $old
+ * @param int      $post_id
+ *
+ * @return mixed
+ */
+function adjust_post_comment_count( $new, $old, $post_id ) {
+	$counts = adjust_comment_counts( array(), $post_id );
+
+	return $counts->approved;
 }
 
 /**

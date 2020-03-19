@@ -141,7 +141,8 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 		comment_author( $comment );
 		echo '</strong>';
 
-		$user = ( $feedback->user_id ) ? new WP_User( $feedback->user_id ) : null;
+		$user  = ( $feedback->user_id ) ? new WP_User( $feedback->user_id ) : null;
+		$email = get_comment_author_email( $feedback->comment_ID );
 
 		if ( $user ) {
 			printf(
@@ -154,6 +155,12 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 					'@%s',
 					esc_html( $user->user_login )
 				)
+			);
+		} elseif ( $email ) {
+			printf(
+				'<br /><a href="%1$s">%2$s</a><br />',
+				esc_url( 'mailto:' . $email ),
+				esc_html( $email )
 			);
 		}
 	}

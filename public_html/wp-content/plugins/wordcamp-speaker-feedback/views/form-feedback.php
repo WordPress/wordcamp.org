@@ -41,7 +41,7 @@ defined( 'WPINC' ) || die();
 			$user = wp_get_current_user();
 			echo wp_kses_post( sprintf(
 				__( 'You are leaving feedback as %s.', 'wordcamporg' ),
-				$user->display_name
+				'<strong>' . $user->display_name . '</strong>'
 			) ); ?></p>
 		</div>
 	<?php endif; ?>

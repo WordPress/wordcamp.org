@@ -48,6 +48,9 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 		// Camps that are scheduled and then cancelled should still be available (though not included by default).
 		$public_statuses[] = 'wcpt-cancelled';
 
+		// Allow "pre-planning" camps to be fetched (workaround for unscheduled but not cancelled camps).
+		$public_statuses[] = 'wcpt-pre-planning';
+
 		foreach ( $statuses as $status ) {
 			if ( in_array( $status, $public_statuses ) ) {
 				continue;

@@ -687,9 +687,16 @@ abstract class Event_Admin {
 				<?php if ( 'checkbox' == $value ) : ?>
 
 					<p>
-						<strong><?php echo esc_html( $key ); ?></strong>:
-						<input type="checkbox" name="<?php echo esc_attr( $object_name ); ?>"
-							   id="<?php echo esc_attr( $object_name ); ?>" <?php checked( get_post_meta( $post_id, $key, true ) ); ?><?php echo esc_attr( $readonly ); ?> />
+						<label>
+							<strong><?php echo esc_html( $key ); ?></strong>:
+							<input
+								type="checkbox"
+								name="<?php echo esc_attr( $object_name ); ?>"
+								id="<?php echo esc_attr( $object_name ); ?>"
+								<?php checked( get_post_meta( $post_id, $key, true ) ); ?>
+								<?php echo esc_attr( $readonly ); ?>
+							/>
+						</label>
 					</p>
 
 				<?php else : ?>

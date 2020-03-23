@@ -144,6 +144,22 @@ abstract class Event_Admin {
 	abstract public function column_headers( $columns );
 
 	/**
+	 * Get a list of streaming services.
+	 *
+	 * The individual event types can override this if different event types need different streaming accounts,
+	 * but these are the default accounts available.
+	 *
+	 * @return array
+	 */
+	public static function get_streaming_services() {
+		return array(
+			'crowdcast-wc-1' => 'Crowdcast WordCamp 1',
+			'crowdcast-wc-2' => 'Crowdcast WordCamp 2',
+			'other' => 'Other',
+		);
+	}
+
+	/**
 	 * Add status metabox
 	 */
 	public function add_status_metabox() {
@@ -523,6 +539,15 @@ abstract class Event_Admin {
 					update_post_meta( $post_id, $key, $new_value );
 					break;
 
+				case 'select-streaming':
+					$allowed_values = array_keys( self::get_streaming_services() );
+					if ( in_array( $values[ $key ], $allowed_values ) ) {
+						update_post_meta( $post_id, $key, $values[ $key ] );
+					} else {
+						delete_post_meta( $post_id, $key );
+					}
+					break;
+
 				default:
 					do_action( 'wcpt_metabox_save', $key, $value, $post_id );
 					break;
@@ -797,6 +822,26 @@ abstract class Event_Admin {
 										'show_option_none' => 'None',
 									)
 								);
+								break;
+							case 'select-streaming':
+								$selected = get_post_meta( $post_id, $key, true );
+								$options = self::get_streaming_services();
+								?>
+
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								>
+									<option value="">None, not streaming</option>
+									<?php foreach ( $options as $val => $label ) : ?>
+										<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $selected, $val ); ?>>
+											<?php echo esc_html( $label ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+
+								<?php
 								break;
 							default:
 								do_action( 'wcpt_metabox_value', $key, $value, $object_name );

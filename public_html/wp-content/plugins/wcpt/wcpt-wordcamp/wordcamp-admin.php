@@ -342,6 +342,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'venue':
 					$retval = array(
+						'Virtual event only'         => 'checkbox',
+						'Streaming account to use'   => 'select-streaming',
 						'Venue Name'                 => 'text',
 						'Physical Address'           => 'textarea',
 						'Maximum Capacity'           => 'text',
@@ -440,6 +442,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Mentor Name'                      => 'text',
 						'Mentor E-mail Address'            => 'text',
 
+						'Virtual event only'               => 'checkbox',
+						'Streaming account to use'         => 'select-streaming',
 						'Venue Name'                       => 'text',
 						'Physical Address'                 => 'textarea',
 						'Maximum Capacity'                 => 'text',

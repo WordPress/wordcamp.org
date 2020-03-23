@@ -706,9 +706,15 @@ abstract class Event_Admin {
 		foreach ( $meta_keys as $key => $value ) :
 			$object_name = wcpt_key_to_str( $key, 'wcpt_' );
 			$readonly    = in_array( $key, $protected_fields ) ? ' readonly="readonly"' : '';
+			$classes = array(
+				'inside',
+				'wcpt-field',
+				'field__' . $object_name,
+				'field__type-' . $value,
+			);
 			?>
 
-			<div class="inside">
+			<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
 				<?php if ( 'checkbox' == $value ) : ?>
 
 					<p>
@@ -727,16 +733,13 @@ abstract class Event_Admin {
 				<?php else : ?>
 
 					<p>
-						<strong><?php echo esc_html( $key ); ?></strong>
+						<label for="<?php echo esc_attr( $object_name ); ?>"><?php echo esc_html( $key ); ?></label>
 						<?php if ( in_array( $key, $required_fields, true ) ) : ?>
 							<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 						<?php endif; ?>
 					</p>
 
 					<p>
-						<label class="screen-reader-text"
-							   for="<?php echo esc_attr( $object_name ); ?>"><?php echo esc_html( $key ); ?></label>
-
 						<?php
 						switch ( $value ) :
 							case 'text':

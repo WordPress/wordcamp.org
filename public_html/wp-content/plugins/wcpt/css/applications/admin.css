@@ -2,6 +2,10 @@ span.swag-needed-icon {
     color: goldenrod;
 }
 
+.wcpt-field label {
+    font-weight: 600;
+}
+
 #post-body textarea {
     width: 50%;
     height: 150px;
@@ -12,8 +16,8 @@ span.swag-needed-icon {
     width: 100%;
 }
 
-#post-body [id^="wcpt_"] input[type="checkbox"],
-#post-body [id^="wcpt_"] input[type="radio"] {
+#post-body .wcpt-field input[type="checkbox"],
+#post-body .wcpt-field input[type="radio"] {
     margin: 0 0 0 5px;
 }
 

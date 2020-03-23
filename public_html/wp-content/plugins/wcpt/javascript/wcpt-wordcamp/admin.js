@@ -34,7 +34,7 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 			self.initializeMentorPicker( $mentorUserName );
 		}
 
-		$virtualEventCheckbox.change( self.togglePhysicalAddrRequire );
+		$virtualEventCheckbox.change( self.togglePhysicalVenueFields );
 		$virtualEventCheckbox.trigger( 'change' );
 	};
 
@@ -43,12 +43,16 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	 *
 	 * @param {object} event
 	 */
-	self.togglePhysicalAddrRequire = function( event ) {
-		var $label = $( '#wcpt_physical_address' ).closest( '.inside' ).find( '.description' );
+	self.togglePhysicalVenueFields = function( event ) {
+		var $container = $( event.target ).closest( '.inside' ).parent();
+		var $items = $container
+			.find( '.inside' )
+			.not( '.field__wcpt_virtual_event_only,.field__wcpt_streaming_account_to_use' );
+		console.log( $items );
 		if ( $( event.target ).is( ':checked' ) ) {
-			$label.hide();
+			$items.hide();
 		} else {
-			$label.show();
+			$items.show();
 		}
 	}
 

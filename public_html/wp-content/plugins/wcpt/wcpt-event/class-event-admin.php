@@ -730,7 +730,7 @@ abstract class Event_Admin {
 								// Quick filter on dates.
 								$date = get_post_meta( $post_id, $key, true );
 								if ( $date ) {
-									$date = date( 'Y-m-d', $date );
+									$date = gmdate( 'Y-m-d', $date );
 								}
 
 								?>

@@ -726,7 +726,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$message = sprintf(
 				"<%s|WordCamp $city> has been scheduled for a start date of %s. :tada: :community: :wordpress:\n\n%s",
 				$wordcamp_url,
-				date( 'F j, Y', $start_date ),
+				gmdate( 'F j, Y', $start_date ),
 				$wordcamp_url
 			);
 

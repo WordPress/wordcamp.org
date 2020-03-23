@@ -12,7 +12,8 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		var createSiteCheckbox = $( '#wcpt_create-site-in-network' ),
 			$mentorUserName = $( '#wcpt_mentor_wordpress_org_user_name' ),
 			hasContributor = $( '#wcpt_contributor_day' ),
-			$virtualEventCheckbox = $( '#wcpt_virtual_event_only' );
+			$virtualEventCheckbox = $( '#wcpt_virtual_event_only' ),
+			$streamingSelection = $( '.field__type-select-streaming' );
 
 		// Sponsor region
 		createSiteCheckbox.change( self.toggleSponsorRegionRequired );
@@ -36,6 +37,15 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 
 		$virtualEventCheckbox.change( self.togglePhysicalVenueFields );
 		$virtualEventCheckbox.trigger( 'change' );
+		
+		$streamingSelection.find( 'select' ).change( function( event ) {
+			if ( 'other' === $( event.target ).val() ) {
+				$streamingSelection.find( 'input' ).show();
+			} else {
+				$streamingSelection.find( 'input' ).val( '' ).hide();
+			}
+		} );
+		$streamingSelection.find( 'select' ).trigger( 'change' );
 	};
 
 	/**

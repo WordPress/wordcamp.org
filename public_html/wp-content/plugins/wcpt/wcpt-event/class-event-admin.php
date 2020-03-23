@@ -756,7 +756,7 @@ abstract class Event_Admin {
 							case 'text':
 								?>
 
-								<input type="text" size="36" name="<?php echo esc_attr( $object_name ); ?>"
+								<input type="text" name="<?php echo esc_attr( $object_name ); ?>"
 									   id="<?php echo esc_attr( $object_name ); ?>"
 									   value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"<?php echo esc_attr( $readonly ); ?> />
 
@@ -765,10 +765,15 @@ abstract class Event_Admin {
 							case 'number':
 								?>
 
-								<input type="number" size="16" name="<?php echo esc_attr( $object_name ); ?>"
-									   id="<?php echo esc_attr( $object_name ); ?>"
-									   value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
-									   step="any" min="0"<?php echo esc_attr( $readonly ); ?> />
+								<input
+									type="number"
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
+									step="any"
+									min="0"
+									<?php echo esc_attr( $readonly ); ?>
+								/>
 
 								<?php
 								break;
@@ -781,17 +786,25 @@ abstract class Event_Admin {
 
 								?>
 
-								<input type="text" size="36" class="date-field" name="<?php echo esc_attr( $object_name ); ?>"
-									   id="<?php echo esc_attr( $object_name ); ?>"
-									   value="<?php echo esc_attr( $date ); ?>"<?php echo esc_attr( $readonly ); ?> />
+								<input
+									type="text"
+									class="date-field"
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									value="<?php echo esc_attr( $date ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								/>
 
 								<?php
 								break;
 							case 'textarea':
 								?>
 
-								<textarea rows="4" cols="23" name="<?php echo esc_attr( $object_name ); ?>"
-										  id="<?php echo esc_attr( $object_name ); ?>"<?php echo esc_attr( $readonly ); ?>><?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?></textarea>
+								<textarea
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								><?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?></textarea>
 
 								<?php
 								break;
@@ -803,17 +816,26 @@ abstract class Event_Admin {
 								if ( $readonly ) :
 									$value = get_post_meta( $post_id, $key, true );
 									?>
-								<select name="<?php echo esc_attr( $object_name ); ?>"
-										id="<?php echo esc_attr( $object_name ); ?>"<?php echo esc_attr( $readonly ); ?>>
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								>
 									<option value="<?php echo esc_attr( $value ); ?>" selected>
 										<?php echo ( $value ) ? esc_html( $currencies[ $value ] . ' (' . $value . ')' ) : ''; ?>
 									</option>
 								</select>
 							<?php else : ?>
-								<select name="<?php echo esc_attr( $object_name ); ?>"
-										id="<?php echo esc_attr( $object_name ); ?>" class="select-currency">
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									class="select-currency"
+								>
 									<?php foreach ( $currencies as $symbol => $name ) : ?>
-										<option value="<?php echo esc_attr( $symbol ); ?>"<?php selected( $symbol, get_post_meta( $post_id, $key, true ) ); ?>>
+										<option
+											value="<?php echo esc_attr( $symbol ); ?>"
+											<?php selected( $symbol, get_post_meta( $post_id, $key, true ) ); ?>
+										>
 											<?php echo ( $symbol ) ? esc_html( $name . ' (' . $symbol . ')' ) : ''; ?>
 										</option>
 									<?php endforeach; ?>

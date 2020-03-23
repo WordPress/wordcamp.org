@@ -11,7 +11,8 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	self.initialize = function() {
 		var createSiteCheckbox = $( '#wcpt_create-site-in-network' ),
 			$mentorUserName = $( '#wcpt_mentor_wordpress_org_user_name' ),
-			hasContributor = $( '#wcpt_contributor_day' );
+			hasContributor = $( '#wcpt_contributor_day' ),
+			$virtualEventCheckbox = $( '#wcpt_virtual_event_only' );
 
 		// Sponsor region
 		createSiteCheckbox.change( self.toggleSponsorRegionRequired );
@@ -32,7 +33,24 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		if ( $mentorUserName.length && ! $mentorUserName.is( '[readonly]' ) ) {
 			self.initializeMentorPicker( $mentorUserName );
 		}
+
+		$virtualEventCheckbox.change( self.togglePhysicalAddrRequire );
+		$virtualEventCheckbox.trigger( 'change' );
 	};
+
+	/**
+	 * Toggle the "required" label on the physical address field.
+	 *
+	 * @param {object} event
+	 */
+	self.togglePhysicalAddrRequire = function( event ) {
+		var $label = $( '#wcpt_physical_address' ).closest( '.inside' ).find( '.description' );
+		if ( $( event.target ).is( ':checked' ) ) {
+			$label.hide();
+		} else {
+			$label.show();
+		}
+	}
 
 	/**
 	 * Toggle whether the Sponsor Region field is required or not.
@@ -51,11 +69,11 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		}
 	};
 
-    /**
+	/**
 	 * Insert a Mentor picker after the Mentor username field.
 	 *
-     * @param $el jQuery object for the Mentor username field.
-     */
+	 * @param $el jQuery object for the Mentor username field.
+	 */
 	self.initializeMentorPicker = function( $el ) {
 		if ( 'undefined' === typeof window.wordCampPostType.Mentors.data ) {
 			return;
@@ -118,11 +136,11 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 
 	};
 
-    /**
+	/**
 	 * Update the Mentor fields with the data for the mentor chosen in the picker.
 	 *
-     * @param $option jQuery object for the selected option element.
-     */
+	 * @param $option jQuery object for the selected option element.
+	 */
 	self.updateMentor = function( $option ) {
 		var l10n            = window.wordCampPostType.Mentors.l10n,
 			$mentorUserName = $( '#wcpt_mentor_wordpress_org_user_name' ),
@@ -131,9 +149,9 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 
 		// Confirm before changing Mentor field contents
 		if ( $option.val() && confirm( l10n.confirm ) ) {
-            $mentorUserName.val( $option.val() );
-            $mentorName.val( $option.data('name') );
-            $mentorEmail.val( $option.data('email') );
+			$mentorUserName.val( $option.val() );
+			$mentorName.val( $option.data('name') );
+			$mentorEmail.val( $option.data('email') );
 		}
 	};
 

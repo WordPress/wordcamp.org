@@ -383,7 +383,7 @@ abstract class Event_Admin {
 			'wcpt-admin',
 			WCPT_URL . 'javascript/wcpt-wordcamp/admin.js',
 			array( 'jquery', 'jquery-ui-datepicker' ),
-			WCPT_VERSION,
+			filemtime( plugin_dir_path( dirname( __FILE__ ) ) . '/javascript/wcpt-wordcamp/admin.js' ),
 			true
 		);
 

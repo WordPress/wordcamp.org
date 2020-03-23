@@ -541,10 +541,21 @@ abstract class Event_Admin {
 
 				case 'select-streaming':
 					$allowed_values = array_keys( self::get_streaming_services() );
+					$key_other = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
 					if ( in_array( $values[ $key ], $allowed_values ) ) {
 						update_post_meta( $post_id, $key, $values[ $key ] );
+
+						if ( ! empty( $_POST[ $key_other ] ) ) {
+							update_post_meta(
+								$post_id,
+								$key_other,
+								sanitize_text_field( $_POST[ $key_other ] )
+							);
+						}
 					} else {
-						delete_post_meta( $post_id, $key );
+						// The value isn't in the allowed values (anymore?) so we should save it as "other".
+						update_post_meta( $post_id, $key, 'other' );
+						update_post_meta( $post_id, $key_other, $values[ $key ] );
 					}
 					break;
 
@@ -843,6 +854,17 @@ abstract class Event_Admin {
 										</option>
 									<?php endforeach; ?>
 								</select>
+
+								<label class="screen-reader-text" for="<?php echo esc_attr( $object_name ); ?>-other">
+									Other streaming account:
+								</label>
+								<input
+									type="text"
+									placeholder="Other streaming service"
+									id="<?php echo esc_attr( $object_name ); ?>-other"
+									name="<?php echo esc_attr( $object_name ); ?>-other"
+									value="<?php echo esc_attr( get_post_meta( $post_id, $object_name . '-other', true ) ); ?>"
+								/>
 
 								<?php
 								break;

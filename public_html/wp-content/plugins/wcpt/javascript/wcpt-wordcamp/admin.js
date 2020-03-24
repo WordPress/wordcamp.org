@@ -58,7 +58,6 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		var $items = $container
 			.find( '.inside' )
 			.not( '.field__wcpt_virtual_event_only,.field__wcpt_streaming_account_to_use' );
-		console.log( $items );
 		if ( $( event.target ).is( ':checked' ) ) {
 			$items.hide();
 		} else {

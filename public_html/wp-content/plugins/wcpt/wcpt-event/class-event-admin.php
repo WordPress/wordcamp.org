@@ -417,7 +417,7 @@ abstract class Event_Admin {
 			'wcpt-admin',
 			plugins_url( 'css/applications/admin.css', __DIR__ ),
 			array(),
-			WCPT_VERSION
+			filemtime( plugin_dir_path( dirname( __FILE__ ) ) . '/css/applications/admin.css' )
 		);
 
 		wp_enqueue_style( 'jquery-ui' );

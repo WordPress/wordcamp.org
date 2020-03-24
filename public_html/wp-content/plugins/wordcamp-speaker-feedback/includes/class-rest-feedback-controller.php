@@ -7,6 +7,7 @@ use WP_REST_Comments_Controller;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\Comment\add_feedback;
 use function WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta;
+use function WordCamp\SpeakerFeedback\Spam\spam_check;
 
 defined( 'WPINC' ) || die();
 
@@ -159,7 +160,15 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			return $meta;
 		}
 
-		$comment_id = add_feedback( $prepared_feedback['comment_post_ID'], $feedback_author, $meta );
+		$spam_check = spam_check( $prepared_feedback, $meta );
+		if ( 'discard' === $spam_check ) {
+			return new WP_Error(
+				'rest_feedback_spam_discarded',
+				__( 'Feedback submission has been discarded as spam.', 'wordcamporg' )
+			);
+		}
+
+		$comment_id = add_feedback( $prepared_feedback['comment_post_ID'], $feedback_author, $meta, 'spam' === $spam_check );
 
 		if ( false === $comment_id ) {
 			return new WP_Error(

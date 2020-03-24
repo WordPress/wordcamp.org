@@ -130,16 +130,21 @@ function get_feedback_comment( $comment ) {
  * @param int       $post_id         The ID of the post to attach the feedback to.
  * @param array|int $feedback_author Either an array containing 'name' and 'email' values, or a user ID.
  * @param array     $feedback_meta   An associative array of key => value pairs.
+ * @param bool      $is_spam         True if the comment is suspected to be spam.
  *
  * @return int|bool Comment ID on success. `false` on failure.
  */
-function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
+function add_feedback( $post_id, $feedback_author, array $feedback_meta, $is_spam = false ) {
 	$args = array(
 		'comment_approved' => 0, // "hold".
 		'comment_post_ID'  => $post_id,
 		'comment_type'     => COMMENT_TYPE,
 		'comment_meta'     => $feedback_meta,
 	);
+
+	if ( true === $is_spam ) {
+		$args['comment_approved'] = 'spam';
+	}
 
 	if ( is_int( $feedback_author ) ) {
 		$args['user_id'] = $feedback_author;

@@ -16,10 +16,7 @@
 		"@wordpress/scripts": "8.0.1"
 	},
 	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js",
-		"globals": {
-			"WCPT_Session_Defaults": "true"
-		}
+		"extends": "../../../../.eslintrc.js"
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"stylelint": {

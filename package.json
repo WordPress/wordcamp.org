@@ -15,6 +15,7 @@
 		"public_html/wp-content/mu-plugins/blocks",
 		"public_html/wp-content/mu-plugins/virtual-embeds",
 		"public_html/wp-content/plugins/wc-post-types",
+		"public_html/wp-content/plugins/wcpt",
 		"public_html/wp-content/plugins/wordcamp-forms-to-drafts",
 		"public_html/wp-content/plugins/wordcamp-speaker-feedback"
 	],

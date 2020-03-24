@@ -1,17 +1,17 @@
 let filters = {
-	'searchQuery' : '',
-	'sortOrder'   : 'asc',
+	searchQuery: '',
+	sortOrder: 'asc',
 };
 
 module.exports = {
 	/**
 	 * Apply all filters to the given rows
 	 *
-	 * @param {object} options
+	 * @param {Object} options
 	 *
-	 * @returns {array}
+	 * @return {Array}
 	 */
-	getFilteredRows : function( options ) {
+	getFilteredRows( options ) {
 		if ( ! options.sortField ) {
 			return [];
 		}
@@ -28,30 +28,38 @@ module.exports = {
 	/**
 	 * Filter the given rows by the current search query
 	 *
-	 * @param {array}  rows
+	 * @param {Array}  rows
 	 * @param {string} searchQuery
 	 *
-	 * @returns {array}
+	 * @return {Array}
 	 */
-	_searchRows : function(rows, searchQuery ) {
+	_searchRows( rows, searchQuery ) {
 		const hits = [];
 
 		if ( '' === searchQuery ) {
 			return rows;
 		}
 
-		rows.forEach( function( row ) {
-			for ( let field in row ) {
-				if ( ! row.hasOwnProperty( field ) ) {
-					continue;
-				}
+		rows.forEach(
+			function( row ) {
+				for ( const field in row ) {
+					if ( ! row.hasOwnProperty( field ) ) {
+						continue;
+					}
 
-				if ( -1 !== row[ field ].toString().toLowerCase().indexOf( searchQuery.toLowerCase() ) ) {
-					hits.push( row );
-					break;
+					if (
+						-1 !==
+						row[ field ]
+							.toString()
+							.toLowerCase()
+							.indexOf( searchQuery.toLowerCase() )
+					) {
+						hits.push( row );
+						break;
+					}
 				}
-			}
-		}.bind( this ) );
+			}.bind( this )
+		);
 
 		return hits;
 	},
@@ -59,12 +67,12 @@ module.exports = {
 	/**
 	 * Callback for Array.prototype.sort() that sorts alphabetically by a field
 	 *
-	 * @param {object} a
-	 * @param {object} b
+	 * @param {Object} a
+	 * @param {Object} b
 	 *
-	 * @returns {number}
+	 * @return {number}
 	 */
-	_sortRows : function( a, b ) {
+	_sortRows( a, b ) {
 		a = a[ filters.sortField ].toString().toLowerCase();
 		b = b[ filters.sortField ].toString().toLowerCase();
 

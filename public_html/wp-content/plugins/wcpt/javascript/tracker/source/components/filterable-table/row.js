@@ -37,9 +37,7 @@ export default class extends Component {
 
 			if ( this.props.row[ columnName + 'Url' ] ) {
 				cellContent = (
-					<a href={ this.props.row[ columnName + 'Url' ] }>
-						{ this.props.row[ columnName ] }
-					</a>
+					<a href={ this.props.row[ columnName + 'Url' ] }>{ this.props.row[ columnName ] }</a>
 				);
 			} else if ( this.props.customRender[ columnName ] ) {
 				cellContent = this.props.customRender[ columnName ](

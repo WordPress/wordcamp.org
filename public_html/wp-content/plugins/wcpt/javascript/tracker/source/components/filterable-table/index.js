@@ -75,10 +75,7 @@ export default class extends Component {
 
 		return (
 			<div>
-				<SearchField
-					searchQuery={ this.state.searchQuery }
-					handleSearchEvent={ this.handleSearchEvent }
-				/>
+				<SearchField searchQuery={ this.state.searchQuery } handleSearchEvent={ this.handleSearchEvent } />
 
 				<Table
 					columns={ this.props.columns }

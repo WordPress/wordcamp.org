@@ -15,7 +15,7 @@
 	"eslintConfig": {
 		"extends": "../../../../.eslintrc.js",
 		"globals": {
-			"WCPT_Session_Defaults": "true"
+			"wpcApplicationTracker": "true"
 		}
 	},
 	"prettier": "../../../../.prettierrc.js",

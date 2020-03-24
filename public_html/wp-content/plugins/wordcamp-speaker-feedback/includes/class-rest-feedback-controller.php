@@ -164,7 +164,10 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		if ( 'discard' === $spam_check ) {
 			return new WP_Error(
 				'rest_feedback_spam_discarded',
-				__( 'Feedback submission has been discarded as spam.', 'wordcamporg' )
+				__( 'Feedback submission has been discarded as spam.', 'wordcamporg' ),
+				array(
+					'status' => 403,
+				)
 			);
 		}
 

@@ -11,11 +11,16 @@ export default class extends React.Component {
 		searchQuery: '',
 	};
 
+	constructor( props ) {
+		super( props );
+		this.searchQueryInput = React.createRef();
+	}
+
 	/**
 	 * Event handler that is called when the user types into the Search field
 	 */
 	handleSearchEvent = () => {
-		this.props.handleSearchEvent( this.refs.searchQueryInput.value );
+		this.props.handleSearchEvent( this.searchQueryInput.current.value );
 	};
 
 	render() {
@@ -26,7 +31,7 @@ export default class extends React.Component {
 						type="text"
 						placeholder="Search..."
 						value={ this.props.searchQuery }
-						ref="searchQueryInput"
+						ref={ this.searchQueryInput }
 						onChange={ this.handleSearchEvent }
 					/>
 				</p>

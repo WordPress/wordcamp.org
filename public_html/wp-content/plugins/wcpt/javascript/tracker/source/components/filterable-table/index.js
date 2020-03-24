@@ -1,12 +1,23 @@
+/**
+ * External dependencies
+ */
 import PropTypes from 'prop-types';
-import React from 'react';
+
+/**
+ * WordPress dependencies
+ */
+import { Component } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
 import SearchField from '../search-field/search-field';
 import Table from './table';
 import TableStore from '../../stores/table-store';
 
 require( './style.scss' );
 
-export default class extends React.Component {
+export default class extends Component {
 	static propTypes = {
 		initialSortField: PropTypes.string.isRequired,
 		columns: PropTypes.object,

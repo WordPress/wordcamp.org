@@ -1,8 +1,19 @@
+/**
+ * External dependencies
+ */
 import PropTypes from 'prop-types';
-import React from 'react';
+
+/**
+ * WordPress dependencies
+ */
+import { Component } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
 import TableHeaderCell from './header-cell';
 
-export default class extends React.Component {
+export default class extends Component {
 	static propTypes = {
 		columns: PropTypes.object,
 		sortField: PropTypes.string.isRequired,
@@ -18,14 +29,14 @@ export default class extends React.Component {
 	render() {
 		const columns = [];
 
-		for ( const i in this.props.columns ) {
-			if ( this.props.columns.hasOwnProperty( i ) ) {
+		for ( const column in this.props.columns ) {
+			if ( this.props.columns.hasOwnProperty( column ) ) {
 				columns.push(
 					<TableHeaderCell
-						key={ i }
-						fieldName={ this.props.columns[ i ] }
-						fieldSlug={ i }
-						isSortedColumn={ i === this.props.sortField }
+						key={ column }
+						fieldName={ this.props.columns[ column ] }
+						fieldSlug={ column }
+						isSortedColumn={ column === this.props.sortField }
 						sortOrder={ this.props.sortOrder }
 						handleSortEvent={ this.props.handleSortEvent }
 					/>

@@ -1,8 +1,19 @@
+/**
+ * External dependencies
+ */
 import PropTypes from 'prop-types';
-import React from 'react';
+
+/**
+ * WordPress dependencies
+ */
+import { Component } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
 import SortingIndicator from '../sorting-indicator/sorting-indicator';
 
-export default class extends React.Component {
+export default class extends Component {
 	static propTypes = {
 		isSortedColumn: PropTypes.bool,
 		sortOrder: PropTypes.oneOf( [ 'asc', 'desc' ] ),
@@ -32,10 +43,7 @@ export default class extends React.Component {
 	};
 
 	render() {
-		const onClick = this.props.handleSortEvent.bind(
-			null,
-			this.props.fieldSlug
-		);
+		const onClick = this.props.handleSortEvent.bind( null, this.props.fieldSlug );
 
 		return (
 			<th className={ this.getClassNames() }>
@@ -43,11 +51,7 @@ export default class extends React.Component {
 					{ this.props.fieldName }
 				</button>
 
-				{ this.props.isSortedColumn ? (
-					<SortingIndicator sortOrder={ this.props.sortOrder } />
-				) : (
-					''
-				) }
+				{ this.props.isSortedColumn ? <SortingIndicator sortOrder={ this.props.sortOrder } /> : '' }
 			</th>
 		);
 	}

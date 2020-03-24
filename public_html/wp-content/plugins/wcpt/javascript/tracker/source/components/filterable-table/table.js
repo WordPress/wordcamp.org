@@ -1,9 +1,20 @@
+/**
+ * External dependencies
+ */
 import PropTypes from 'prop-types';
-import React from 'react';
+
+/**
+ * WordPress dependencies
+ */
+import { Component } from '@wordpress/element';
+
+/**
+ * Internal dependencies
+ */
 import TableHeader from './header';
 import TableRow from './row';
 
-export default class extends React.Component {
+export default class extends Component {
 	static propTypes = {
 		columns: PropTypes.object,
 		rows: PropTypes.array,

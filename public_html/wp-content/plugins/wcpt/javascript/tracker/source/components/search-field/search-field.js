@@ -1,7 +1,14 @@
+/**
+ * External dependencies
+ */
 import PropTypes from 'prop-types';
-import React from 'react';
 
-export default class extends React.Component {
+/**
+ * WordPress dependencies
+ */
+import { Component, createRef } from '@wordpress/element';
+
+export default class extends Component {
 	static propTypes = {
 		searchQuery: PropTypes.string,
 		handleSearchEvent: PropTypes.func.isRequired,
@@ -13,7 +20,7 @@ export default class extends React.Component {
 
 	constructor( props ) {
 		super( props );
-		this.searchQueryInput = React.createRef();
+		this.searchQueryInput = createRef();
 	}
 
 	/**

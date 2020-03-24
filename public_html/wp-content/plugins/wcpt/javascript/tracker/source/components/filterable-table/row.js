@@ -1,7 +1,14 @@
+/**
+ * External dependencies
+ */
 import PropTypes from 'prop-types';
-import React from 'react';
 
-export default class extends React.Component {
+/**
+ * WordPress dependencies
+ */
+import { Component } from '@wordpress/element';
+
+export default class extends Component {
 	static propTypes = {
 		columns: PropTypes.object,
 		row: PropTypes.object,

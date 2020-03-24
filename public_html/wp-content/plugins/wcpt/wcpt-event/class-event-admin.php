@@ -144,6 +144,22 @@ abstract class Event_Admin {
 	abstract public function column_headers( $columns );
 
 	/**
+	 * Get a list of streaming services.
+	 *
+	 * The individual event types can override this if different event types need different streaming accounts,
+	 * but these are the default accounts available.
+	 *
+	 * @return array
+	 */
+	public static function get_streaming_services() {
+		return array(
+			'crowdcast-wc-1' => 'Crowdcast WordCamp 1',
+			'crowdcast-wc-2' => 'Crowdcast WordCamp 2',
+			'other' => 'Other',
+		);
+	}
+
+	/**
 	 * Add status metabox
 	 */
 	public function add_status_metabox() {
@@ -367,7 +383,7 @@ abstract class Event_Admin {
 			'wcpt-admin',
 			WCPT_URL . 'javascript/wcpt-wordcamp/admin.js',
 			array( 'jquery', 'jquery-ui-datepicker' ),
-			WCPT_VERSION,
+			filemtime( plugin_dir_path( dirname( __FILE__ ) ) . '/javascript/wcpt-wordcamp/admin.js' ),
 			true
 		);
 
@@ -401,7 +417,7 @@ abstract class Event_Admin {
 			'wcpt-admin',
 			plugins_url( 'css/applications/admin.css', __DIR__ ),
 			array(),
-			WCPT_VERSION
+			filemtime( plugin_dir_path( dirname( __FILE__ ) ) . '/css/applications/admin.css' )
 		);
 
 		wp_enqueue_style( 'jquery-ui' );
@@ -521,6 +537,26 @@ abstract class Event_Admin {
 					$new_value  = ( array_key_exists( $values[ $key ], $currencies ) ) ? $values[ $key ] : '';
 
 					update_post_meta( $post_id, $key, $new_value );
+					break;
+
+				case 'select-streaming':
+					$allowed_values = array_keys( self::get_streaming_services() );
+					$key_other = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
+					if ( in_array( $values[ $key ], $allowed_values ) ) {
+						update_post_meta( $post_id, $key, $values[ $key ] );
+
+						if ( ! empty( $_POST[ $key_other ] ) ) {
+							update_post_meta(
+								$post_id,
+								$key_other,
+								sanitize_text_field( $_POST[ $key_other ] )
+							);
+						}
+					} else {
+						// The value isn't in the allowed values (anymore?) so we should save it as "other".
+						update_post_meta( $post_id, $key, 'other' );
+						update_post_meta( $post_id, $key_other, $values[ $key ] );
+					}
 					break;
 
 				default:
@@ -681,36 +717,46 @@ abstract class Event_Admin {
 		foreach ( $meta_keys as $key => $value ) :
 			$object_name = wcpt_key_to_str( $key, 'wcpt_' );
 			$readonly    = in_array( $key, $protected_fields ) ? ' readonly="readonly"' : '';
+			$classes = array(
+				'inside',
+				'wcpt-field',
+				'field__' . $object_name,
+				'field__type-' . $value,
+			);
 			?>
 
-			<div class="inside">
+			<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
 				<?php if ( 'checkbox' == $value ) : ?>
 
 					<p>
-						<strong><?php echo esc_html( $key ); ?></strong>:
-						<input type="checkbox" name="<?php echo esc_attr( $object_name ); ?>"
-							   id="<?php echo esc_attr( $object_name ); ?>" <?php checked( get_post_meta( $post_id, $key, true ) ); ?><?php echo esc_attr( $readonly ); ?> />
+						<label>
+							<strong><?php echo esc_html( $key ); ?></strong>:
+							<input
+								type="checkbox"
+								name="<?php echo esc_attr( $object_name ); ?>"
+								id="<?php echo esc_attr( $object_name ); ?>"
+								<?php checked( get_post_meta( $post_id, $key, true ) ); ?>
+								<?php echo esc_attr( $readonly ); ?>
+							/>
+						</label>
 					</p>
 
 				<?php else : ?>
 
 					<p>
-						<strong><?php echo esc_html( $key ); ?></strong>
+						<label for="<?php echo esc_attr( $object_name ); ?>"><?php echo esc_html( $key ); ?></label>
 						<?php if ( in_array( $key, $required_fields, true ) ) : ?>
 							<span class="description"><?php esc_html_e( '(required)', 'wordcamporg' ); ?></span>
 						<?php endif; ?>
 					</p>
 
 					<p>
-						<label class="screen-reader-text"
-							   for="<?php echo esc_attr( $object_name ); ?>"><?php echo esc_html( $key ); ?></label>
-
 						<?php
 						switch ( $value ) :
 							case 'text':
 								?>
 
-								<input type="text" size="36" name="<?php echo esc_attr( $object_name ); ?>"
+								<input type="text" name="<?php echo esc_attr( $object_name ); ?>"
 									   id="<?php echo esc_attr( $object_name ); ?>"
 									   value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"<?php echo esc_attr( $readonly ); ?> />
 
@@ -719,10 +765,15 @@ abstract class Event_Admin {
 							case 'number':
 								?>
 
-								<input type="number" size="16" name="<?php echo esc_attr( $object_name ); ?>"
-									   id="<?php echo esc_attr( $object_name ); ?>"
-									   value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
-									   step="any" min="0"<?php echo esc_attr( $readonly ); ?> />
+								<input
+									type="number"
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
+									step="any"
+									min="0"
+									<?php echo esc_attr( $readonly ); ?>
+								/>
 
 								<?php
 								break;
@@ -730,22 +781,30 @@ abstract class Event_Admin {
 								// Quick filter on dates.
 								$date = get_post_meta( $post_id, $key, true );
 								if ( $date ) {
-									$date = date( 'Y-m-d', $date );
+									$date = gmdate( 'Y-m-d', $date );
 								}
 
 								?>
 
-								<input type="text" size="36" class="date-field" name="<?php echo esc_attr( $object_name ); ?>"
-									   id="<?php echo esc_attr( $object_name ); ?>"
-									   value="<?php echo esc_attr( $date ); ?>"<?php echo esc_attr( $readonly ); ?> />
+								<input
+									type="text"
+									class="date-field"
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									value="<?php echo esc_attr( $date ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								/>
 
 								<?php
 								break;
 							case 'textarea':
 								?>
 
-								<textarea rows="4" cols="23" name="<?php echo esc_attr( $object_name ); ?>"
-										  id="<?php echo esc_attr( $object_name ); ?>"<?php echo esc_attr( $readonly ); ?>><?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?></textarea>
+								<textarea
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								><?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?></textarea>
 
 								<?php
 								break;
@@ -757,17 +816,26 @@ abstract class Event_Admin {
 								if ( $readonly ) :
 									$value = get_post_meta( $post_id, $key, true );
 									?>
-								<select name="<?php echo esc_attr( $object_name ); ?>"
-										id="<?php echo esc_attr( $object_name ); ?>"<?php echo esc_attr( $readonly ); ?>>
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								>
 									<option value="<?php echo esc_attr( $value ); ?>" selected>
 										<?php echo ( $value ) ? esc_html( $currencies[ $value ] . ' (' . $value . ')' ) : ''; ?>
 									</option>
 								</select>
 							<?php else : ?>
-								<select name="<?php echo esc_attr( $object_name ); ?>"
-										id="<?php echo esc_attr( $object_name ); ?>" class="select-currency">
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									class="select-currency"
+								>
 									<?php foreach ( $currencies as $symbol => $name ) : ?>
-										<option value="<?php echo esc_attr( $symbol ); ?>"<?php selected( $symbol, get_post_meta( $post_id, $key, true ) ); ?>>
+										<option
+											value="<?php echo esc_attr( $symbol ); ?>"
+											<?php selected( $symbol, get_post_meta( $post_id, $key, true ) ); ?>
+										>
 											<?php echo ( $symbol ) ? esc_html( $name . ' (' . $symbol . ')' ) : ''; ?>
 										</option>
 									<?php endforeach; ?>
@@ -790,6 +858,37 @@ abstract class Event_Admin {
 										'show_option_none' => 'None',
 									)
 								);
+								break;
+							case 'select-streaming':
+								$selected = get_post_meta( $post_id, $key, true );
+								$options = self::get_streaming_services();
+								?>
+
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									<?php echo esc_attr( $readonly ); ?>
+								>
+									<option value="">None, not streaming</option>
+									<?php foreach ( $options as $val => $label ) : ?>
+										<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $selected, $val ); ?>>
+											<?php echo esc_html( $label ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+
+								<label class="screen-reader-text" for="<?php echo esc_attr( $object_name ); ?>-other">
+									Other streaming account:
+								</label>
+								<input
+									type="text"
+									placeholder="Other streaming service"
+									id="<?php echo esc_attr( $object_name ); ?>-other"
+									name="<?php echo esc_attr( $object_name ); ?>-other"
+									value="<?php echo esc_attr( get_post_meta( $post_id, $object_name . '-other', true ) ); ?>"
+								/>
+
+								<?php
 								break;
 							default:
 								do_action( 'wcpt_metabox_value', $key, $value, $object_name );

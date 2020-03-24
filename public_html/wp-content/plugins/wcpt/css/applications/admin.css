@@ -2,14 +2,20 @@ span.swag-needed-icon {
     color: goldenrod;
 }
 
+.wcpt-field label {
+    font-weight: 600;
+}
+
 #post-body textarea {
     width: 50%;
+    min-width: 20rem;
     height: 150px;
 }
 
 #post-body #wcpt_notes textarea {
     resize: both;
     width: 100%;
+    min-width: 0;
 }
 
 body.wp-admin.post-type-wordcamp .postbox textarea,
@@ -17,8 +23,18 @@ body.wp-admin.post-type-wp_meetup .postbox textarea {
     resize: both;
 }
 
-#post-body input[type=text] {
+#post-body .wcpt-field input[type="checkbox"],
+#post-body .wcpt-field input[type="radio"] {
+    margin: 0 0 0 5px;
+}
+
+#post-body .wcpt-field input[type=text] {
     width: 50%;
+    min-width: 20rem;
+}
+
+#post-body .field__type-select-streaming input[type=text] {
+    width: 18rem;
 }
 
 .postbox-container .select2-container {

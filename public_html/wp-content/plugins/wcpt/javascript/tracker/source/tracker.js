@@ -1,8 +1,12 @@
-import 'babel-polyfill';
+/**
+ * WordPress dependencies
+ */
+import { render } from '@wordpress/element';
 
-import React           from 'react';
-import ReactDOM        from 'react-dom';
-import FilterableTable from './components/filterable-table/filterable-table.jsx';
+/**
+ * Internal dependencies
+ */
+import FilterableTable from './components/filterable-table';
 
 require( './style.scss' );
 
@@ -14,7 +18,7 @@ const renderHumanizedTime = ( row ) => {
 };
 
 
-ReactDOM.render(
+render(
 	<FilterableTable
 		initialSortField = { wpcApplicationTracker.initialSortField }
 		columns          = { wpcApplicationTracker.displayColumns }

@@ -1,5 +1,5 @@
 import React, { PropTypes } from 'react';
-import SortingIndicator     from '../sorting-indicator/sorting-indicator.jsx';
+import SortingIndicator     from '../sorting-indicator/sorting-indicator';
 
 export default React.createClass( {
 	propTypes : {

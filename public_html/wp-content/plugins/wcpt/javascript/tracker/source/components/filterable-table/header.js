@@ -1,5 +1,5 @@
 import React, { PropTypes } from 'react';
-import TableHeaderCell      from './header-cell.jsx';
+import TableHeaderCell      from './header-cell';
 
 export default React.createClass( {
 	propTypes : {

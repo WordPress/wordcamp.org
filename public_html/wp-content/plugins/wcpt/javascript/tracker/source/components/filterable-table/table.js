@@ -1,6 +1,6 @@
 import React, { PropTypes } from 'react';
-import TableHeader          from './header.jsx';
-import TableRow             from './row.jsx';
+import TableHeader          from './header';
+import TableRow             from './row';
 
 export default React.createClass( {
 	propTypes : {

@@ -1,7 +1,7 @@
 import React, { PropTypes } from 'react';
-import SearchField          from '../search-field/search-field.jsx';
-import Table                from './table.jsx';
-import TableStore           from '../../stores/table-store.js';
+import SearchField          from '../search-field/search-field';
+import Table                from './table';
+import TableStore           from '../../stores/table-store';
 
 require( './style.scss' );
 

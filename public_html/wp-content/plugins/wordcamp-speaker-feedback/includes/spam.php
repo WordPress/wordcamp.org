@@ -5,6 +5,7 @@ namespace WordCamp\SpeakerFeedback\Spam;
 use WP_Error;
 use Grunion_Contact_Form_Plugin;
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_meta_field_schema;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -84,7 +85,12 @@ function is_akismet_spam( array $comment_data ) {
 
 	$grunion = Grunion_Contact_Form_Plugin::init();
 
-	$prepared_data = $grunion->prepare_for_akismet( $comment_data );
+	$prepared_data                 = $grunion->prepare_for_akismet( $comment_data );
+	$prepared_data['comment_type'] = COMMENT_TYPE;
+
+	if ( 'production' !== get_wordcamp_environment() ) {
+		$prepared_data['is_test'] = true;
+	}
 
 	return $grunion->is_spam_akismet( false, $prepared_data );
 }
@@ -100,7 +106,7 @@ function is_akismet_spam( array $comment_data ) {
  * @return string
  */
 function get_consolidated_meta_string( array $meta ) {
-	$schema = array_keys( get_feedback_meta_field_schema() );
+	$schema = get_feedback_meta_field_schema();
 	$string = '';
 
 	foreach ( $schema as $key => $props ) {

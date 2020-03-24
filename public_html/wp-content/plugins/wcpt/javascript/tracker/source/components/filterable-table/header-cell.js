@@ -1,29 +1,27 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import SortingIndicator     from '../sorting-indicator/sorting-indicator';
+import SortingIndicator from '../sorting-indicator/sorting-indicator';
 
-export default React.createClass( {
-	propTypes : {
-		isSortedColumn  : PropTypes.bool,
-		sortOrder       : PropTypes.oneOf( [ 'asc', 'desc' ] ),
-		fieldSlug       : PropTypes.string.isRequired,
-		fieldName       : PropTypes.string.isRequired,
-		handleSortEvent : PropTypes.func.isRequired,
-	},
+export default class extends React.Component {
+	static propTypes = {
+		isSortedColumn: PropTypes.bool,
+		sortOrder: PropTypes.oneOf( [ 'asc', 'desc' ] ),
+		fieldSlug: PropTypes.string.isRequired,
+		fieldName: PropTypes.string.isRequired,
+		handleSortEvent: PropTypes.func.isRequired,
+	};
 
-	getDefaultProps : function() {
-		return {
-			isSortedColumn : false,
-			sortOrder      : 'asc',
-		};
-	},
+	static defaultProps = {
+		isSortedColumn: false,
+		sortOrder: 'asc',
+	};
 
 	/**
 	 * Get the CSS classes for the `th` element
 	 *
-	 * @returns {string}
+	 * @return {string}
 	 */
-	getClassNames : function() {
+	getClassNames = () => {
 		let sortClasses = '';
 
 		if ( this.props.isSortedColumn ) {
@@ -31,10 +29,13 @@ export default React.createClass( {
 		}
 
 		return this.props.fieldSlug + sortClasses;
-	},
+	};
 
-	render : function() {
-		const onClick = this.props.handleSortEvent.bind( null, this.props.fieldSlug );
+	render() {
+		const onClick = this.props.handleSortEvent.bind(
+			null,
+			this.props.fieldSlug
+		);
 
 		return (
 			<th className={ this.getClassNames() }>
@@ -42,8 +43,12 @@ export default React.createClass( {
 					{ this.props.fieldName }
 				</button>
 
-				{ this.props.isSortedColumn ? <SortingIndicator sortOrder={ this.props.sortOrder } /> : '' }
+				{ this.props.isSortedColumn ? (
+					<SortingIndicator sortOrder={ this.props.sortOrder } />
+				) : (
+					''
+				) }
 			</th>
 		);
 	}
-} );
+}

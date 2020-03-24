@@ -1,35 +1,33 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import TableHeaderCell      from './header-cell';
+import TableHeaderCell from './header-cell';
 
-export default React.createClass( {
-	propTypes : {
-		columns         : PropTypes.object,
-		sortField       : PropTypes.string.isRequired,
-		sortOrder       : PropTypes.oneOf( [ 'asc', 'desc' ] ),
-		handleSortEvent : PropTypes.func.isRequired,
-	},
+export default class extends React.Component {
+	static propTypes = {
+		columns: PropTypes.object,
+		sortField: PropTypes.string.isRequired,
+		sortOrder: PropTypes.oneOf( [ 'asc', 'desc' ] ),
+		handleSortEvent: PropTypes.func.isRequired,
+	};
 
-	getDefaultProps : function() {
-		return {
-			columns   : {},
-			sortOrder : 'asc',
-		};
-	},
+	static defaultProps = {
+		columns: {},
+		sortOrder: 'asc',
+	};
 
-	render : function() {
+	render() {
 		const columns = [];
 
-		for ( let i in this.props.columns ) {
+		for ( const i in this.props.columns ) {
 			if ( this.props.columns.hasOwnProperty( i ) ) {
 				columns.push(
 					<TableHeaderCell
-						key             = { i }
-						fieldName       = { this.props.columns[ i ] }
-						fieldSlug       = { i }
-						isSortedColumn  = { i === this.props.sortField }
-						sortOrder       = { this.props.sortOrder }
-						handleSortEvent = { this.props.handleSortEvent }
+						key={ i }
+						fieldName={ this.props.columns[ i ] }
+						fieldSlug={ i }
+						isSortedColumn={ i === this.props.sortField }
+						sortOrder={ this.props.sortOrder }
+						handleSortEvent={ this.props.handleSortEvent }
 					/>
 				);
 			}
@@ -37,10 +35,8 @@ export default React.createClass( {
 
 		return (
 			<thead>
-				<tr>
-					{ columns }
-				</tr>
+				<tr>{ columns }</tr>
 			</thead>
 		);
 	}
-} );
+}

@@ -6,7 +6,7 @@ use WP_Error, WP_REST_Request, WP_REST_Response, WP_REST_Server;
 use WP_REST_Comments_Controller;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\Comment\add_feedback;
-use function WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta;
+use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_meta_field_schema, validate_feedback_meta };
 use function WordCamp\SpeakerFeedback\Spam\spam_check;
 
 defined( 'WPINC' ) || die();
@@ -74,27 +74,18 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		$request['date']    = wp_date( 'c' );
 		$request['parent']  = 0;
 
+		add_filter( 'rest_preprocess_comment', array( $this, 'preprocess_comment' ), 10, 2 );
+
 		$prepared_feedback = $this->prepare_item_for_database( $request );
 		if ( is_wp_error( $prepared_feedback ) ) {
 			return $prepared_feedback;
 		}
 
-		// These values need to be present for `wp_allow_comment`.
-		$prepared_feedback = wp_parse_args(
-			$prepared_feedback,
-			array(
-				'comment_author'       => '',
-				'comment_author_email' => '',
-				'comment_author_url'   => '',
-				'comment_author_IP'    => '',
-				'comment_agent'        => '',
-				'comment_type'         => COMMENT_TYPE, // We set this later, but it still needs to be here.
-			)
-		);
+		remove_filter( 'rest_preprocess_comment', array( $this, 'preprocess_comment' ), 10 );
 
 		if ( ! isset( $prepared_feedback['comment_post_ID'] ) ) {
 			return new WP_Error(
-				'rest_feedback_no_post',
+				'rest_feedback_post_id_required',
 				__( 'Feedback must be associated with a specific post.', 'wordcamporg' ),
 				array(
 					'status' => 400,
@@ -102,40 +93,55 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		}
 
-		$feedback_author = null;
-		if ( ! empty( $prepared_feedback['user_id'] ) ) {
-			$feedback_author = absint( $prepared_feedback['user_id'] );
-		} elseif (
-			! empty( $prepared_feedback['comment_author'] )
-			&& ! empty( $prepared_feedback['comment_author_email'] )
-		) {
-			$feedback_author = array(
-				'name'  => $prepared_feedback['comment_author'],
-				'email' => $prepared_feedback['comment_author_email'],
-			);
-		} else {
+		if ( ! isset( $prepared_feedback['comment_author'], $prepared_feedback['comment_author_email'] ) ) {
 			return new WP_Error(
 				'rest_feedback_author_data_required',
-				__( 'Submitting feedback requires valid author name and email values.', 'wordcamporg' ),
+				__( 'Feedback must have a valid author name and email.', 'wordcamporg' ),
 				array(
 					'status' => 400,
 				)
 			);
 		}
 
-		// We're not using the comment content field, but this also checks the length of other fields.
-		// The length of meta fields is checked separately. See `validate_feedback_meta()`.
-		$check_comment_lengths = wp_check_comment_data_max_lengths( $prepared_feedback );
-		if ( is_wp_error( $check_comment_lengths ) ) {
-			$error_code = $check_comment_lengths->get_error_code();
+		if ( ! isset( $prepared_feedback['comment_meta'] ) ) {
 			return new WP_Error(
-				$error_code,
-				__( 'Comment field exceeds maximum length allowed.', 'wordcamporg' ),
+				'rest_feedback_meta_data_required',
+				__( 'Feedback must include data from the feedback form.', 'wordcamporg' ),
 				array(
 					'status' => 400,
 				)
 			);
 		}
+
+		$spam_check = spam_check( $prepared_feedback );
+		if ( 'discard' === $spam_check ) {
+			return new WP_Error(
+				'rest_feedback_spam_discarded',
+				__( 'Feedback submission has been discarded as spam.', 'wordcamporg' ),
+				array(
+					'status' => 403,
+				)
+			);
+		}
+
+		if ( 'spam' === $spam_check ) {
+			$prepared_feedback['comment_approved'] = 'spam';
+		}
+
+		// We're not using the comment content field, but this also checks the length of other fields.
+		// The length of meta fields is checked separately. See `validate_feedback_meta()`.
+		$check_comment_lengths = wp_check_comment_data_max_lengths( $prepared_feedback );
+		if ( is_wp_error( $check_comment_lengths ) ) {
+			return new WP_Error(
+				$check_comment_lengths->get_error_code(),
+				__( 'Feedback field exceeds maximum length allowed.', 'wordcamporg' ),
+				array(
+					'status' => 400,
+				)
+			);
+		}
+
+		add_filter( 'duplicate_comment_id', array( $this, 'duplicate_check' ), 10, 2 );
 
 		// We're not using this to set the status of the feedback comment, since it's always set to `hold`. However,
 		// this also checks for duplicates, flooding, and blacklisting.
@@ -155,23 +161,9 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			return $allowed;
 		}
 
-		$meta = validate_feedback_meta( $request['meta'] ?? array() );
-		if ( is_wp_error( $meta ) ) {
-			return $meta;
-		}
+		remove_filter( 'duplicate_comment_id', array( $this, 'duplicate_check' ), 10 );
 
-		$spam_check = spam_check( $prepared_feedback, $meta );
-		if ( 'discard' === $spam_check ) {
-			return new WP_Error(
-				'rest_feedback_spam_discarded',
-				__( 'Feedback submission has been discarded as spam.', 'wordcamporg' ),
-				array(
-					'status' => 403,
-				)
-			);
-		}
-
-		$comment_id = add_feedback( $prepared_feedback['comment_post_ID'], $feedback_author, $meta, 'spam' === $spam_check );
+		$comment_id = add_feedback( $prepared_feedback );
 
 		if ( false === $comment_id ) {
 			return new WP_Error(
@@ -243,5 +235,87 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		// TODO is post "open" for feedback? Should we do a nonce check, or other permissions?
 
 		return true;
+	}
+
+	/**
+	 * Additional preparing of feedback data before processing and saving it.
+	 *
+	 * @param array $prepared_feedback
+	 * @param array $request
+	 *
+	 * @return array
+	 */
+	public function preprocess_comment( $prepared_feedback, $request ) {
+		if ( isset( $request['meta'] ) ) {
+			$validated_meta = validate_feedback_meta( $request['meta'] );
+
+			if ( is_wp_error( $validated_meta ) ) {
+				return $validated_meta;
+			}
+
+			$prepared_feedback['comment_meta'] = $validated_meta;
+		}
+
+		// These indexes might be missing, but need to be present for `wp_allow_comment`.
+		$prepared_feedback = wp_parse_args(
+			$prepared_feedback,
+			array(
+				'comment_author_url' => '',
+				'comment_agent'      => '',
+				'comment_type'       => COMMENT_TYPE, // We set this later, but it still needs to be here.
+			)
+		);
+
+		return $prepared_feedback;
+	}
+
+	/**
+	 * Incorporate meta values into the duplicate check.
+	 *
+	 * Note that this assumes the meta data in `$comment_data` has already been validated by `validate_feedback_meta`.
+	 *
+	 * @param string|int|null $duplicate_id Unused.
+	 * @param array           $comment_data The current comment data that might be a duplication.
+	 *
+	 * @return bool
+	 */
+	public function duplicate_check( $duplicate_id, $comment_data ) {
+		$args = array(
+			'number'     => 1,
+			'type'       => COMMENT_TYPE,
+			'status'     => array( 'approve', 'hold', 'spam' ),
+			'post_id'    => $comment_data['comment_post_ID'],
+			'meta_query' => array( 'relation' => 'AND' ),
+		);
+
+		if ( isset( $comment_data['user_id'] ) ) {
+			$args['user_id'] = $comment_data['user_id'];
+		} else {
+			$args['author_email'] = $comment_data['comment_author_email'];
+		}
+
+		$schema = get_feedback_meta_field_schema();
+
+		foreach ( $comment_data['comment_meta'] as $key => $value ) {
+			$args['meta_query'][] = array(
+				'key'   => $key,
+				'value' => $value,
+				// This might need to change if we introduce a meta field with a type other than string or integer.
+				'type'  => ( 'string' === $schema[ $key ]['type'] ) ? 'CHAR' : 'NUMERIC',
+			);
+
+			unset( $schema[ $key ] );
+		}
+
+		foreach ( array_keys( $schema ) as $missing_key ) {
+			$args['meta_query'][] = array(
+				'key'     => $missing_key,
+				'compare' => 'NOT EXISTS',
+			);
+		}
+
+		$duplicates = get_comments( $args );
+
+		return ! empty( $duplicates );
 	}
 }

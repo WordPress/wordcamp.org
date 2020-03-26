@@ -51,8 +51,8 @@ function is_blacklisted( array $comment_data ) {
 		'comment_author_email' => '',
 		'comment_author_url'   => '',
 		'comment_content'      => '',
-		'user_ip'              => $_SERVER['REMOTE_ADDR'],
-		'user_agent'           => $_SERVER['HTTP_USER_AGENT'],
+		'user_ip'              => $_SERVER['REMOTE_ADDR'] ?? '',
+		'user_agent'           => $_SERVER['HTTP_USER_AGENT'] ?? '',
 	);
 	$comment_data = wp_parse_args( $comment_data, $defaults );
 

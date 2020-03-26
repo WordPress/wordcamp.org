@@ -3,6 +3,7 @@
 namespace WordCamp\SpeakerFeedback\Spam;
 
 use WP_Error;
+use Akismet;
 use Grunion_Contact_Form_Plugin;
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_meta_field_schema;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
@@ -13,12 +14,11 @@ defined( 'WPINC' ) || die();
  * Check a feedback comment against WP's blacklist and Akismet.
  *
  * @param array $comment_data
- * @param array $comment_meta
  *
  * @return string One of three values: 'spam', 'not spam', or 'discard' (for really egregious spam).
  */
-function spam_check( array $comment_data, array $comment_meta = array() ) {
-	$meta = $comment_data['comment_meta'] ?? $comment_meta;
+function spam_check( array $comment_data ) {
+	$meta = $comment_data['comment_meta'] ?? array();
 
 	// Inject feedback meta strings as the comment content for the purposes of checking for spam.
 	$comment_data['comment_content'] = get_consolidated_meta_string( $meta );
@@ -92,7 +92,18 @@ function is_akismet_spam( array $comment_data ) {
 		$prepared_data['is_test'] = true;
 	}
 
-	return $grunion->is_spam_akismet( false, $prepared_data );
+	$result = $grunion->is_spam_akismet( false, $prepared_data );
+
+	$prepared_data['comment_as_submitted'] = $prepared_data;
+
+	if ( is_bool( $result ) ) {
+		$prepared_data['akismet_result'] = ( $result ) ? 'true' : 'false'; // Akismet expects a string value here.
+	}
+
+	// This allows Akismet to store some additional meta data about the comment.
+	Akismet::set_last_comment( $prepared_data );
+
+	return $result;
 }
 
 /**

@@ -45,18 +45,18 @@ class Edit extends Component {
 			case 'wcb_sponsor_level' :
 				output = (
 					<EditAppender
-						content={
-							<SponsorList attributes={ attributes } entities={ entities } />
-						}
+						content={ <SponsorList attributes={ attributes } entities={ entities } /> }
 						appender={
 							isSelected && (
-								<SponsorSelect
-									label={ getOptionLabel( mode, options.mode ) }
-									attributes={ attributes }
-									entities={ entities }
-									icon={ ICON }
-									setAttributes={ setAttributes }
-								/>
+								<Placeholder className="wordcamp__edit-placeholder" icon={ ICON } label={ LABEL }>
+									<SponsorSelect
+										label={ getOptionLabel( mode, options.mode ) }
+										attributes={ attributes }
+										entities={ entities }
+										icon={ ICON }
+										setAttributes={ setAttributes }
+									/>
+								</Placeholder>
 							)
 						}
 					/>

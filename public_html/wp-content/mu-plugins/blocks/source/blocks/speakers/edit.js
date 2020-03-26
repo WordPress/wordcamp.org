@@ -45,18 +45,18 @@ class Edit extends Component {
 			case 'wcb_speaker_group' :
 				output = (
 					<EditAppender
-						content={
-							<SpeakerList attributes={ attributes } entities={ entities } />
-						}
+						content={ <SpeakerList attributes={ attributes } entities={ entities } /> }
 						appender={
 							isSelected && (
-								<SpeakerSelect
-									label={ getOptionLabel( mode, options.mode ) }
-									attributes={ attributes }
-									entities={ entities }
-									icon={ ICON }
-									setAttributes={ setAttributes }
-								/>
+								<Placeholder className="wordcamp__edit-placeholder" icon={ ICON } label={ LABEL }>
+									<SpeakerSelect
+										label={ getOptionLabel( mode, options.mode ) }
+										attributes={ attributes }
+										entities={ entities }
+										icon={ ICON }
+										setAttributes={ setAttributes }
+									/>
+								</Placeholder>
 							)
 						}
 					/>

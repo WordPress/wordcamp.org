@@ -47,18 +47,18 @@ class Edit extends Component {
 			case 'wcb_session_category' :
 				output = (
 					<EditAppender
-						content={
-							<SessionList attributes={ attributes } entities={ entities } />
-						}
+						content={ <SessionList attributes={ attributes } entities={ entities } /> }
 						appender={
 							isSelected && (
-								<SessionSelect
-									label={ getOptionLabel( mode, options.mode ) }
-									attributes={ attributes }
-									entities={ entities }
-									icon={ ICON }
-									setAttributes={ setAttributes }
-								/>
+								<Placeholder className="wordcamp__edit-placeholder" icon={ ICON } label={ LABEL }>
+									<SessionSelect
+										label={ getOptionLabel( mode, options.mode ) }
+										attributes={ attributes }
+										entities={ entities }
+										icon={ ICON }
+										setAttributes={ setAttributes }
+									/>
+								</Placeholder>
 							)
 						}
 					/>

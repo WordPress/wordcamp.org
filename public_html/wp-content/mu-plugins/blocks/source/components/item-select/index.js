@@ -174,27 +174,25 @@ export class ItemSelect extends Component {
 				label={ label }
 				help={ help }
 			>
-				<div className="wordcamp-item-select__inner">
-					<Select
-						id={ id }
-						className="wordcamp-item-select__select"
-						value={ value }
-						aria-label={ label }
-						onChange={ ( selectedOptions ) => {
-							this.setState( { selectedOptions: selectedOptions || [] } );
-						} }
-						isClearable={ false }
-						styles={ customStyles }
-						{ ...mergedSelectProps }
-					/>
-					<Button
-						className="wordcamp-item-select__button"
-						isSecondary
-						onClick={ () => onChange( this.getNewAttributes() ) }
-					>
-						{ submitLabel || __( 'Select', 'wordcamporg' ) }
-					</Button>
-				</div>
+				<Select
+					id={ id }
+					className="wordcamp-item-select__select"
+					value={ value }
+					aria-label={ label }
+					onChange={ ( selectedOptions ) => {
+						this.setState( { selectedOptions: selectedOptions || [] } );
+					} }
+					isClearable={ false }
+					styles={ customStyles }
+					{ ...mergedSelectProps }
+				/>
+				<Button
+					className="wordcamp-item-select__button"
+					isSecondary
+					onClick={ () => onChange( this.getNewAttributes() ) }
+				>
+					{ submitLabel || __( 'Select', 'wordcamporg' ) }
+				</Button>
 			</BaseControl>
 		);
 	}

@@ -32,6 +32,11 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	protected static $user;
 
 	/**
+	 * @var WP_User
+	 */
+	protected static $admin;
+
+	/**
 	 * @var array
 	 */
 	protected static $valid_meta;
@@ -58,6 +63,10 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 			'role' => 'subscriber',
 		) );
 
+		self::$admin = $factory->user->create_and_get( array(
+			'role' => 'administrator',
+		) );
+
 		self::$valid_meta = array(
 			'rating' => 1,
 			'q1'     => 'asdf 1',
@@ -75,6 +84,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		parent::setUp();
 
 		$this->request = new WP_REST_Request( 'POST', '/wordcamp-speaker-feedback/v1/feedback' );
+
+		wp_set_current_user( self::$user->ID );
 	}
 
 	/**
@@ -150,6 +161,99 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		$this->assertWPError( $response );
 		$this->assertEquals( 'rest_feedback_author_data_required', $response->get_error_code() );
 		$this->assertCount( 0, get_feedback() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::duplicate_check()
+	 */
+	public function test_create_item_duplicate() {
+		// Ensure multiple comments doesn't trigger a "comment flood". Admins get a pass.
+		wp_set_current_user( self::$admin->ID );
+
+		$params = array(
+			'post'   => self::$session_post->ID,
+			'author' => self::$user->ID,
+			'meta'   => self::$valid_meta,
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response1 = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response1 instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response1->get_status() );
+		$this->assertCount( 1, get_feedback() );
+
+		$response2 = self::$controller->create_item( $this->request );
+
+		$this->assertWPError( $response2 );
+		$this->assertEquals( 'comment_duplicate', $response2->get_error_code() );
+		$this->assertCount( 1, get_feedback() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::duplicate_check()
+	 */
+	public function test_create_item_not_duplicate() {
+		// Ensure multiple comments doesn't trigger a "comment flood". Admins get a pass.
+		wp_set_current_user( self::$admin->ID );
+
+		$params = array(
+			'post'   => self::$session_post->ID,
+			'author' => self::$user->ID,
+			'meta'   => array(
+				'rating' => 1,
+				'q1'     => 'asdf 1',
+				'q2'     => 'asdf 2',
+				'q3'     => 'asdf 3',
+			),
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response1 = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response1 instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response1->get_status() );
+		$this->assertCount( 1, get_feedback() );
+
+		$params = array(
+			'post'   => self::$session_post->ID,
+			'author' => self::$user->ID,
+			'meta'   => array(
+				'rating' => 2, // Different value.
+				'q1'     => 'asdf 1',
+				'q2'     => 'asdf 2',
+				'q3'     => 'asdf 3',
+			),
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response2 = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response2 instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response2->get_status() );
+		$this->assertCount( 2, get_feedback() );
+
+		$params = array(
+			'post'   => self::$session_post->ID,
+			'author' => self::$user->ID,
+			'meta'   => array(
+				'rating' => 1,
+				'q1'     => 'asdf 1',
+				'q2'     => 'asdf 2',
+				// Missing value.
+			),
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response3 = self::$controller->create_item( $this->request );
+
+		$this->assertTrue( $response3 instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response3->get_status() );
+		$this->assertCount( 3, get_feedback() );
 	}
 
 	/**

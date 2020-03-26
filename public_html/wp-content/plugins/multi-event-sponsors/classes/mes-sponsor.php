@@ -115,12 +115,13 @@ class MES_Sponsor {
 				break;
 
 			case 'mes_contact_information':
-				$company_name  = get_post_meta( $post->ID, 'mes_company_name',  true );
-				$website       = get_post_meta( $post->ID, 'mes_website',       true );
-				$first_name    = get_post_meta( $post->ID, 'mes_first_name',    true );
-				$last_name     = get_post_meta( $post->ID, 'mes_last_name',     true );
-				$email_address = get_post_meta( $post->ID, 'mes_email_address', true );
-				$phone_number  = get_post_meta( $post->ID, 'mes_phone_number',  true );
+				$company_name   = get_post_meta( $post->ID, 'mes_company_name',   true );
+				$website        = get_post_meta( $post->ID, 'mes_website',        true );
+				$first_name     = get_post_meta( $post->ID, 'mes_first_name',     true );
+				$last_name      = get_post_meta( $post->ID, 'mes_last_name',      true );
+				$email_address  = get_post_meta( $post->ID, 'mes_email_address',  true );
+				$phone_number   = get_post_meta( $post->ID, 'mes_phone_number',   true );
+				$twitter_handle = get_post_meta( $post->ID, 'mes_twitter_handle', true );
 
 				$street_address1 = get_post_meta( $post->ID, 'mes_street_address1', true );
 				$street_address2 = get_post_meta( $post->ID, 'mes_street_address2', true );
@@ -224,7 +225,7 @@ class MES_Sponsor {
 		}
 
 		$text_fields = array(
-			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',
+			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number', 'twitter_handle',
 			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country'
 		);
 

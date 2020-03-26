@@ -70,6 +70,14 @@
 				<?php wcorg_required_indicator(); ?>
 			</td>
 		</tr>
+
+		<tr>
+			<th><label for="mes_twitter_handle"><?php esc_html_e( 'Twitter Handle:', 'wordcamporg' ); ?></label></th>
+
+			<td>
+				<input id="mes_twitter_handle" name="mes_twitter_handle" type="text" value="<?php echo esc_attr( $twitter_handle ); ?>" class="regular-text" />
+			</td>
+		</tr>
 	</tbody>
 </table>
 

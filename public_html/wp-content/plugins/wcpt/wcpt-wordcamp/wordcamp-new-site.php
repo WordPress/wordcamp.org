@@ -754,7 +754,7 @@ class WordCamp_New_Site {
 		$sponsor_meta    = array( '_mes_id' => $assigned_sponsor->ID );
 		$meta_field_keys = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',
-			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
+			'twitter_handle', 'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
 		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.

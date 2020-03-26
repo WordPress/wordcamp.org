@@ -13,6 +13,7 @@
 	},
 	"workspaces": [
 		"public_html/wp-content/mu-plugins/blocks",
+		"public_html/wp-content/mu-plugins/virtual-embeds",
 		"public_html/wp-content/plugins/wordcamp-forms-to-drafts",
 		"public_html/wp-content/plugins/wordcamp-speaker-feedback"
 	],

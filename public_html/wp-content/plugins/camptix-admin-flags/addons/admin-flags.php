@@ -476,7 +476,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 				data-command="{{data.command}}"
 				class="tix-toggle-flag">
 
-				{{data.command}}    <?php // todo use i18n var. ?>
+				{{data.command_label}}
 			</a>
 		</script>
 
@@ -532,7 +532,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			// Bulk toggling of flags
 			( function( $ ) {
 				$( '#posts-filter' ).on( 'click', 'a.tix-toggle-flag', function( event ) {
-					var itemTemplate,
+					var itemTemplate, commandLabel,
 						item       = $( this ).parent(),
 						attendeeID = $( this ).data( 'attendee-id' ),
 						key        = $( this ).data( 'key' ),
@@ -562,18 +562,21 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 							if ( response.hasOwnProperty( 'success' ) && true === response.success ) {
 								if ( 'enable' == command ) {
 									command = 'disable';
+									commandLabel = <?php echo wp_json_encode( __( 'Disable', 'wordcamporg' ) ); ?>;
 								} else if ( 'disable' == command ) {
 									command = 'enable';
+									commandLabel = <?php echo wp_json_encode( __( 'Enable', 'wordcamporg' ) ); ?>;
 								}
 							}
 
 							itemTemplate = _.template( $( '#tmpl-tix-admin-flag-toggle' ).html(), null, camptix.template_options );
 							item.html( itemTemplate( {
 								attendee_id: attendeeID,
-								key:         key,
-								command:     command,
-								label:       label,
-								nonce:       nonce
+								key:           key,
+								command:       command,
+								command_label: commandLabel,
+								label:         label,
+								nonce:         nonce
 							} ) );
 						}
 					);

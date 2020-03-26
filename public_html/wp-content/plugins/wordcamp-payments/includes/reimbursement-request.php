@@ -257,7 +257,12 @@ function enqueue_assets() {
  * @return bool
  */
 function user_can_edit_request( $post ) {
-	$editable_status = in_array( $post->post_status, array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
+	$editable_status = false;
+
+	if ( $post instanceof WP_Post ) {
+		$editable_status = in_array( $post->post_status, array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
+	}
+
 	return current_user_can( 'manage_network' ) || $editable_status;
 }
 

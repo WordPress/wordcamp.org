@@ -136,5 +136,5 @@ function get_consolidated_meta_string( array $meta ) {
 		}
 	}
 
-	return $string;
+	return trim( $string );
 }

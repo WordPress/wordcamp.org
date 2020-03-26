@@ -113,12 +113,15 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\Comment\add_feedback()
 	 */
-	public function test_add_feedback_user_id() {
-		$comment_id = add_feedback(
-			self::$session_post->ID,
-			self::$user->ID,
-			array()
+	public function test_add_feedback() {
+		$comment_data = array(
+			'comment_post_ID'      => self::$session_post->ID,
+			'comment_author'       => 'Huck Finn',
+			'comment_author_email' => 'huck.finn@example.org',
+			'comment_meta'         => array(),
 		);
+
+		$comment_id = add_feedback( $comment_data );
 
 		$comment = get_comment( $comment_id );
 
@@ -131,30 +134,14 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\Comment\add_feedback()
 	 */
-	public function test_add_feedback_user_array() {
-		$comment_id = add_feedback(
-			self::$session_post->ID,
-			array(
-				'name'  => 'Foo',
-				'email' => 'bar@example.org',
-			),
-			array()
+	public function test_add_feedback_missing_meta() {
+		$comment_data = array(
+			'comment_post_ID'      => self::$session_post->ID,
+			'comment_author'       => 'Huck Finn',
+			'comment_author_email' => 'huck.finn@example.org',
 		);
 
-		$comment = get_comment( $comment_id );
-
-		$this->assertTrue( is_feedback( $comment ) );
-	}
-
-	/**
-	 * @covers \WordCamp\SpeakerFeedback\Comment\add_feedback()
-	 */
-	public function test_add_feedback_no_user() {
-		$comment_id = add_feedback(
-			self::$session_post->ID,
-			array(),
-			array()
-		);
+		$comment_id = add_feedback( $comment_data );
 
 		$this->assertFalse( $comment_id );
 	}
@@ -163,13 +150,16 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\Comment\update_feedback()
 	 */
 	public function test_update_feedback() {
-		$comment_id = add_feedback(
-			self::$session_post->ID,
-			self::$user->ID,
-			array(
+		$comment_data = array(
+			'comment_post_ID'      => self::$session_post->ID,
+			'comment_author'       => 'Huck Finn',
+			'comment_author_email' => 'huck.finn@example.org',
+			'comment_meta'         => array(
 				'rating' => 1,
-			)
+			),
 		);
+
+		$comment_id = add_feedback( $comment_data );
 
 		$feedback = get_feedback_comment( $comment_id );
 
@@ -211,11 +201,14 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\Comment\delete_feedback()
 	 */
 	public function test_delete_feedback() {
-		$comment_id = add_feedback(
-			self::$session_post->ID,
-			self::$user->ID,
-			array()
+		$comment_data = array(
+			'comment_post_ID'      => self::$session_post->ID,
+			'comment_author'       => 'Huck Finn',
+			'comment_author_email' => 'huck.finn@example.org',
+			'comment_meta'         => array(),
 		);
+
+		$comment_id = add_feedback( $comment_data );
 
 		$deleted = delete_feedback( $comment_id );
 

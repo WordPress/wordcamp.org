@@ -1,0 +1,28 @@
+{
+	"name": "virtual-embeds",
+	"version": "1.0.0",
+	"description": "Embeds for virtual events on WordCamp.org",
+	"author": "WordCamp Team",
+	"license": "GPL-2.0-or-later",
+	"private": true,
+	"keywords": [],
+	"homepage": "https://github.com/WordPress/wordcamp.org/tree/production/public_html/wp-content/mu-plugins/virtual-embeds",
+	"repository": "git+https://github.com/WordPress/wordcamp.org.git",
+	"devDependencies": {
+		"@wordpress/eslint-plugin": "4.0.0",
+		"@wordpress/scripts": "7.1.0"
+	},
+	"eslintConfig": {
+		"extends": "plugin:@wordpress/eslint-plugin/recommended-with-formatting",
+		"rules": {
+			"object-shorthand": [ "error", "consistent-as-needed" ]
+		}
+	},
+	"scripts": {
+		"start": "wp-scripts start",
+		"build": "wp-scripts build",
+		"lint:js": "wp-scripts lint-js",
+		"format:js": "wp-scripts format-js",
+		"lint:pkg-json": "wp-scripts lint-pkg-json"
+	}
+}

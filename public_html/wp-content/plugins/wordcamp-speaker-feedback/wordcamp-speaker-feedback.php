@@ -49,6 +49,7 @@ function load() {
 	require_once get_includes_path() . 'form.php';
 	require_once get_includes_path() . 'page.php';
 	require_once get_includes_path() . 'query.php';
+	require_once get_includes_path() . 'spam.php';
 
 	require_once get_includes_path() . 'admin.php';
 }

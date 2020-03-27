@@ -127,31 +127,31 @@ function get_feedback_comment( $comment ) {
 /**
  * Add a new feedback submission.
  *
- * @param int       $post_id         The ID of the post to attach the feedback to.
- * @param array|int $feedback_author Either an array containing 'name' and 'email' values, or a user ID.
- * @param array     $feedback_meta   An associative array of key => value pairs.
+ * @param array $comment_data
  *
  * @return int|bool Comment ID on success. `false` on failure.
  */
-function add_feedback( $post_id, $feedback_author, array $feedback_meta ) {
-	$args = array(
-		'comment_approved' => 0, // "hold".
-		'comment_post_ID'  => $post_id,
-		'comment_type'     => COMMENT_TYPE,
-		'comment_meta'     => $feedback_meta,
+function add_feedback( array $comment_data ) {
+	$required_keys = array(
+		'comment_author',
+		'comment_author_email',
+		'comment_post_ID',
+		'comment_meta',
 	);
 
-	if ( is_int( $feedback_author ) ) {
-		$args['user_id'] = $feedback_author;
-	} elseif ( isset( $feedback_author['name'], $feedback_author['email'] ) ) {
-		$args['comment_author']       = $feedback_author['name'];
-		$args['comment_author_email'] = $feedback_author['email'];
-	} else {
-		// No author, bail.
+	$missing_keys = array_diff_key( array_fill_keys( $required_keys, '' ), $comment_data );
+
+	if ( ! empty( $missing_keys ) ) {
 		return false;
 	}
 
-	return wp_insert_comment( $args );
+	$comment_data['comment_type'] = COMMENT_TYPE;
+
+	if ( ! isset( $comment_data['comment_approved'] ) ) {
+		$comment_data['comment_approved'] = 0; // "hold".
+	}
+
+	return wp_insert_comment( $comment_data );
 }
 
 /**

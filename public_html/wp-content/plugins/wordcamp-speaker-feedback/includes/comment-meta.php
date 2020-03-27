@@ -55,6 +55,10 @@ function register_meta_fields() {
 /**
  * Define the properties of the feedback meta fields.
  *
+ * Note that if another `type` of field is added besides string or integer, the
+ * WordCamp\SpeakerFeedback\REST_Feedback_Controller::duplicate_check() method will
+ * need to be updated.
+ *
  * @param string $key Optional. A specific key to get the schema for.
  *
  * @return array

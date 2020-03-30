@@ -505,6 +505,11 @@ abstract class Event_Admin {
 				$values[ $key ]         = implode( ', ', $standardized_usernames );
 			}
 
+			// Set Physical Address to "Online" when an event is online-only.
+			if ( ( 'Physical Address' === $key ) && isset( $_POST['wcpt_virtual_event_only'] ) && ( 'on' === $_POST['wcpt_virtual_event_only'] ) ) {
+				$values[ $key ] = 'Online';
+			}
+
 			switch ( $value ) {
 				case 'text':
 				case 'deputy_list':

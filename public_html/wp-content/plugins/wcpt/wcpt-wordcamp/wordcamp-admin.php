@@ -166,7 +166,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// If there is no venue, shortcut out of the request.
 			if ( empty( $new_address ) || 'Online' === $new_address ) {
 				$geocode_reply = $this->parse_geocode_response( array() );
-				foreach ( array_keys( $geocode_reply ) as $keys ) {
+				foreach ( array_keys( $geocode_reply ) as $key ) {
 					delete_post_meta( $post_id, $key );
 				}
 				return;

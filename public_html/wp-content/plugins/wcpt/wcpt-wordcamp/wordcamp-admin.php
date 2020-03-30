@@ -164,11 +164,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$new_address = $_POST[ wcpt_key_to_str( 'Physical Address', 'wcpt_' ) ];
 
 			// If there is no venue, shortcut out of the request.
-			if ( empty( $new_address ) || 'Online' === $new_address ) {
-				$geocode_reply = $this->parse_geocode_response( array() );
-				foreach ( array_keys( $geocode_reply ) as $keys ) {
-					delete_post_meta( $post_id, $key );
-				}
+			if ( empty( $new_address ) ) {
 				return;
 			}
 
@@ -951,7 +947,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Show this error permanently, not just after updating.
-			if ( ! empty( $post->{'Physical Address'} ) && ( 'Online' !== $post->{'Physical Address'} ) && empty( get_post_meta( $post->ID, '_venue_coordinates', true ) ) ) {
+			if ( ! empty( $post->{'Physical Address'} ) && empty( get_post_meta( $post->ID, '_venue_coordinates', true ) ) ) {
 				$_REQUEST['wcpt_messages'] = empty( $_REQUEST['wcpt_messages'] ) ? '4' : $_REQUEST['wcpt_messages'] . ',4';
 			}
 

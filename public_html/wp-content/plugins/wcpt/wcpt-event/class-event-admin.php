@@ -552,10 +552,14 @@ abstract class Event_Admin {
 								sanitize_text_field( $_POST[ $key_other ] )
 							);
 						}
-					} else {
+					} elseif ( ! empty( $values[ $key ] ) ) {
 						// The value isn't in the allowed values (anymore?) so we should save it as "other".
 						update_post_meta( $post_id, $key, 'other' );
 						update_post_meta( $post_id, $key_other, $values[ $key ] );
+					} else {
+						// The value is empty, any existing value should be removed.
+						delete_post_meta( $post_id, $key );
+						delete_post_meta( $post_id, $key_other );
 					}
 					break;
 

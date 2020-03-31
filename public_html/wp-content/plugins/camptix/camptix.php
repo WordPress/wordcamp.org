@@ -5322,28 +5322,37 @@ class CampTix_Plugin {
 		$available_tickets = 0;
 		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
 
-		foreach ( $this->tickets as $ticket )
-			if ( $this->is_ticket_valid_for_purchase( $ticket->ID ) )
+		foreach ( $this->tickets as $ticket ) {
+			if ( $this->is_ticket_valid_for_purchase( $ticket->ID ) ) {
 				$available_tickets++;
+			}
+		}
 
-		if ( isset( $this->error_flags['invalid_coupon'] ) )
+		if ( isset( $this->error_flags['invalid_coupon'] ) ) {
 			$this->error( __( 'Sorry, but the coupon you have entered seems to be invalid or expired.', 'wordcamporg' ) );
+		}
 
-		if ( isset( $this->error_flags['invalid_reservation'] ) )
+		if ( isset( $this->error_flags['invalid_reservation'] ) ) {
 			$this->error( __( 'Sorry, but the reservation you are trying to use seems to be invalid or expired.', 'wordcamporg' ) );
+		}
 
-		if ( ! $available_tickets )
+		if ( ! $available_tickets ) {
 			$this->notice( __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' ) );
+		}
 
-		if ( $available_tickets && isset( $this->reservation ) && $this->reservation )
+		if ( $available_tickets && isset( $this->reservation ) && $this->reservation ) {
 			$this->info( __( 'You are using a reservation, cool!', 'wordcamporg' ) );
+		}
 
-		if ( ! isset( $_POST['tix_coupon_submit'], $_POST['tix_coupon'] ) || empty( $_POST['tix_coupon'] ) )
-			if ( isset( $this->error_flags['no_tickets_selected'] ) && isset( $_GET['tix_action'] ) && 'attendee_info' == $_GET['tix_action'] )
+		if ( ! isset( $_POST['tix_coupon_submit'], $_POST['tix_coupon'] ) || empty( $_POST['tix_coupon'] ) ) {
+			if ( isset( $this->error_flags['no_tickets_selected'] ) && isset( $_GET['tix_action'] ) && 'attendee_info' == $_GET['tix_action'] ) {
 				$this->error( __( 'Please select at least one ticket.', 'wordcamporg' ) );
+			}
+		}
 
-		if ( isset( $_GET['tix_action'] ) && 'checkout' == $_GET['tix_action'] && isset( $this->error_flags['no_tickets_selected'] ) )
+		if ( isset( $_GET['tix_action'] ) && 'checkout' == $_GET['tix_action'] && isset( $this->error_flags['no_tickets_selected'] ) ) {
 			$this->error( __( 'It looks like somebody took that last ticket before you, sorry! You try a different ticket.', 'wordcamporg' ) );
+		}
 
 		if ( isset( $this->error_flags['no_payment_methods'] ) ) {
 			$this->notice( __( 'Payment methods have not been configured yet. Please try again later.', 'wordcamporg' ) );
@@ -5357,29 +5366,37 @@ class CampTix_Plugin {
 			$this->error( __( 'An error has occurred and your payment has failed. Please try again later.', 'wordcamporg' ) );
 		}
 
-		if ( isset( $redirected_error_flags['tickets_excess'] ) )
+		if ( isset( $redirected_error_flags['tickets_excess'] ) ) {
 			$this->error( __( 'It looks like somebody grabbed those tickets before you could complete the purchase. You have not been charged, please try again.', 'wordcamporg' ) );
+		}
 
-		if ( isset( $redirected_error_flags['coupon_excess'] ) )
+		if ( isset( $redirected_error_flags['coupon_excess'] ) ) {
 			$this->error( __( 'It looks like somebody has used the coupon before you could complete your purchase. You have not been charged, please try again.', 'wordcamporg' ) );
+		}
 
-		if ( isset( $redirected_error_flags['invalid_coupon'] ) )
+		if ( isset( $redirected_error_flags['invalid_coupon'] ) ) {
 			$this->error( __( 'It looks like the coupon you are trying to use has expired before you could complete your purchase. You have not been charged, please try again.', 'wordcamporg' ) );
+		}
 
-		if ( isset( $redirected_error_flags['invalid_access_token'] ) )
+		if ( isset( $redirected_error_flags['invalid_access_token'] ) ) {
 			$this->error( __( 'Your access token does not seem to be valid.', 'wordcamporg' ) );
+		}
 
-		if ( isset( $redirected_error_flags['payment_cancelled'] ) )
+		if ( isset( $redirected_error_flags['payment_cancelled'] ) ) {
 			$this->error( __( 'Your payment has been cancelled. Feel free to try again!', 'wordcamporg' ) );
+		}
 
-		if ( isset( $redirected_error_flags['invalid_edit_token'] ) )
+		if ( isset( $redirected_error_flags['invalid_edit_token'] ) ) {
 			$this->error( __( 'The edit link you are trying to use is either invalid or has expired.', 'wordcamporg' ) );
+		}
 
-		if ( isset( $redirected_error_flags['cannot_refund'] ) )
+		if ( isset( $redirected_error_flags['cannot_refund'] ) ) {
 			$this->error( __( 'Your refund request can not be processed. Please try again later or contact support.', 'wordcamporg' ) );
+		}
 
-		if ( isset( $redirected_error_flags['invalid_reservation'] ) )
+		if ( isset( $redirected_error_flags['invalid_reservation'] ) ) {
 			$this->error( __( 'Sorry, but the reservation you are trying to use has been cancelled or has expired.', 'wordcamporg' ) );
+		}
 
 		do_action( 'camptix_form_start_errors', $redirected_error_flags );
 

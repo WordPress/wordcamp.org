@@ -405,7 +405,7 @@ class WordCamp_Loader extends Event_Loader {
 			array(
 				'get_callback' => function( $object, $field_name ) {
 					// Short out if the event is not scheduled.
-					if ( $object['status'] !== 'wcpt-scheduled' ) {
+					if ( 'wcpt-scheduled' !== $object['status'] ) {
 						return 0;
 					}
 					$site_id = get_post_meta( $object['id'], '_site_id', true );

@@ -6,6 +6,7 @@ use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url };
 use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
+use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
 
 defined( 'WPINC' ) || die();
 
@@ -37,8 +38,7 @@ function has_feedback_form() {
 function render( $content ) {
 	global $post;
 
-	$feedback_window = WEEK_IN_SECONDS * 2;
-	$now             = date_create( time(), wp_timezone() );
+	$now = date_create( time(), wp_timezone() );
 
 	if ( has_feedback_form() ) {
 		$accepts_feedback = post_accepts_feedback( $post->ID );
@@ -62,7 +62,7 @@ function render( $content ) {
 		if ( $now->getTimestamp() < absint( $start_date ) ) {
 			$message = __( 'Feedback forms are not available until the event has started.', 'wordcamporg' );
 			$file    = 'form-not-available.php';
-		} elseif ( $now->getTimestamp() > absint( $end_date ) + $feedback_window ) {
+		} elseif ( $now->getTimestamp() > absint( $end_date ) + ACCEPT_INTERVAL_IN_SECONDS ) {
 			$message = __( 'Feedback forms are closed for this event.', 'wordcamporg' );
 			$file    = 'form-not-available.php';
 		} else {

@@ -6,6 +6,8 @@ use WP_Error;
 
 defined( 'WPINC' ) || die();
 
+define( __NAMESPACE__ . '\ACCEPT_INTERVAL_IN_SECONDS', WEEK_IN_SECONDS * 2 );
+
 /**
  * Check to see if feedback comments can be added to a post.
  *
@@ -14,9 +16,8 @@ defined( 'WPINC' ) || die();
  * @return bool|WP_Error
  */
 function post_accepts_feedback( $post_id ) {
-	$post            = get_post( $post_id );
-	$now             = date_create( 'now', wp_timezone() );
-	$feedback_window = WEEK_IN_SECONDS * 2;
+	$post = get_post( $post_id );
+	$now  = date_create( 'now', wp_timezone() );
 
 	if ( ! $post ) {
 		return new WP_Error(
@@ -54,7 +55,7 @@ function post_accepts_feedback( $post_id ) {
 		);
 	}
 
-	if ( $now->getTimestamp() > absint( $post->_wcpt_session_time ) + $feedback_window ) {
+	if ( $now->getTimestamp() > absint( $post->_wcpt_session_time ) + ACCEPT_INTERVAL_IN_SECONDS ) {
 		return new WP_Error(
 			'speaker_feedback_session_too_late',
 			__( 'This session is no longer accepting feedback.', 'wordcamporg' )

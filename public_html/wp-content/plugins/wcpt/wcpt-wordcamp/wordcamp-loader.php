@@ -398,6 +398,33 @@ class WordCamp_Loader extends Event_Loader {
 				)
 			);
 		}
+
+		register_rest_field(
+			'wordcamp',
+			'session_start_time',
+			array(
+				'get_callback' => function( $object, $field_name ) {
+					$site_id = get_post_meta( $object['id'], '_site_id', true );
+					switch_to_blog( $site_id );
+					$sessions = get_posts( array(
+						'post_type'      => 'wcb_session',
+						'posts_per_page' => 1,
+						'meta_key'       => '_wcpt_session_time',
+						'orderby'        => 'meta_value_num',
+						'order'          => 'asc',
+					) );
+					if ( count( $sessions ) < 1 ) {
+						restore_current_blog();
+						return 0;
+					}
+					$session = $sessions[0];
+					$value = absint( get_post_meta( $session->ID, '_wcpt_session_time', true ) );
+
+					restore_current_blog();
+					return $value;
+				},
+			)
+		);
 	}
 
 	/**

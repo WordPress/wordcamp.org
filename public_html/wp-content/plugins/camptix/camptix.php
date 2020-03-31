@@ -5346,12 +5346,16 @@ class CampTix_Plugin {
 
 		if ( ! isset( $_POST['tix_coupon_submit'], $_POST['tix_coupon'] ) || empty( $_POST['tix_coupon'] ) ) {
 			if ( isset( $this->error_flags['no_tickets_selected'] ) && isset( $_GET['tix_action'] ) && 'attendee_info' == $_GET['tix_action'] ) {
-				$this->error( __( 'Please select at least one ticket.', 'wordcamporg' ) );
+				if ( isset( $_POST['tix_tickets_selected'] ) && array_sum( $_POST['tix_tickets_selected'] ) ) {
+					$this->error( __( "It looks like somebody bought the last ticket(s) before you could complete your purchase. If you'd like to try to buy a different ticket, please try again.", 'wordcamporg' ) );
+				} else {
+					$this->error( __( 'Please select at least one ticket.', 'wordcamporg' ) );
+				}
 			}
 		}
 
 		if ( isset( $_GET['tix_action'] ) && 'checkout' == $_GET['tix_action'] && isset( $this->error_flags['no_tickets_selected'] ) ) {
-			$this->error( __( 'It looks like somebody took that last ticket before you, sorry! You try a different ticket.', 'wordcamporg' ) );
+			$this->error( __( "It looks like somebody bought the last ticket(s) before you could complete your purchase. You have not been charged. If you'd like to try to buy a different ticket, please try again.", 'wordcamporg' ) );
 		}
 
 		if ( isset( $this->error_flags['no_payment_methods'] ) ) {

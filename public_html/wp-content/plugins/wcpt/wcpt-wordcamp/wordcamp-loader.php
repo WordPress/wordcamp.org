@@ -403,6 +403,10 @@ class WordCamp_Loader extends Event_Loader {
 			'wordcamp',
 			'session_start_time',
 			array(
+				'schema'       => array(
+					'type'        => 'string',
+					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin.', 'wordcamporg' ),
+				),
 				'get_callback' => function( $object, $field_name ) {
 					// Short out if the event is not scheduled.
 					if ( 'wcpt-scheduled' !== $object['status'] ) {

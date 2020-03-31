@@ -7,6 +7,7 @@ use WP_REST_Comments_Controller;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\Comment\add_feedback;
 use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_meta_field_schema, validate_feedback_meta };
+use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use function WordCamp\SpeakerFeedback\Spam\spam_check;
 
 defined( 'WPINC' ) || die();
@@ -201,38 +202,13 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			);
 		}
 
-		$post = get_post( (int) $request['post'] );
-		if ( ! $post ) {
-			return new WP_Error(
-				'rest_feedback_invalid_post_id',
-				__( 'Sorry, you are not allowed to create this comment without a post.', 'wordcamporg' ),
-				array(
-					'status' => 403,
-				)
-			);
+		$accepts_feedback = post_accepts_feedback( (int) $request['post'] );
+
+		if ( is_wp_error( $accepts_feedback ) ) {
+			return $accepts_feedback;
 		}
 
-		if ( ! post_type_supports( get_post_type( $post ), 'wordcamp-speaker-feedback' ) ) {
-			return new WP_Error(
-				'rest_feedback_post_not_supported',
-				__( 'Sorry, this post type does not support feedback.', 'wordcamporg' ),
-				array(
-					'status' => 403,
-				)
-			);
-		}
-
-		if ( 'publish' !== $post->post_status ) {
-			return new WP_Error(
-				'rest_feedback_post_unavailable',
-				__( 'Sorry, you are not allowed to create a comment on this post.', 'wordcamporg' ),
-				array(
-					'status' => 403,
-				)
-			);
-		}
-
-		// TODO is post "open" for feedback? Should we do a nonce check, or other permissions?
+		// TODO Should we do a nonce check, or other permissions?
 
 		return true;
 	}

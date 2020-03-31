@@ -8,7 +8,7 @@ use function WordCamp\SpeakerFeedback\Spam\get_consolidated_meta_string;
 defined( 'WPINC' ) || die();
 
 /**
- * Class Test_SpeakerFeedback_CommentMeta
+ * Class Test_SpeakerFeedback_Spam
  *
  * @group wordcamp-speaker-feedback
  */

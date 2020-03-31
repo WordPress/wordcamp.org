@@ -927,6 +927,10 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	text-align: right
 }
 
+.wc-hero-mailinglist-container form {
+	position: relative;
+}
+
 .wc-hero-mailinglist p,
 .wc-hero-mailinglist h3 {
 	color: #fff;
@@ -1017,7 +1021,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	box-shadow: 0px 1px 1px rgba(0,0,0,0.5);
 	-webkit-box-shadow: 0px 1px 1px rgba(0,0,0,0.5);
 
-	margin: 0 0 0 -8px;
+	right: 0;
 	position: absolute
 }
 
@@ -3513,5 +3517,22 @@ h3#comments-title {
 	/* Remove the slider from smallest sizes. */
 	#wc-hero-panel .wc-hero-image {
 		display: none;
+	}
+
+	.wc-hero-mailinglist-container {
+		width: 100%;
+		box-sizing: border-box;
+		padding: 0 0.5em;
+	}
+
+	.wc-hero-mailinglist h3 {
+		float: none;
+		text-align: center;
+		margin-bottom: 0.8em;
+	}
+
+	.wc-hero-mailinglist .wc-hero-mailinglist-email {
+		width: 100%;
+		box-sizing: border-box;
 	}
 }

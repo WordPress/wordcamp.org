@@ -404,6 +404,10 @@ class WordCamp_Loader extends Event_Loader {
 			'session_start_time',
 			array(
 				'get_callback' => function( $object, $field_name ) {
+					// Short out if the event is not scheduled.
+					if ( $object['status'] !== 'wcpt-scheduled' ) {
+						return 0;
+					}
 					$site_id = get_post_meta( $object['id'], '_site_id', true );
 					switch_to_blog( $site_id );
 					$sessions = get_posts( array(

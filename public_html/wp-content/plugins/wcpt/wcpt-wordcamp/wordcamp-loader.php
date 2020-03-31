@@ -364,6 +364,7 @@ class WordCamp_Loader extends Event_Loader {
 			'Number of Anticipated Attendees',
 			'Organizer Name',
 			'WordPress.org Username',
+			'Virtual event only',
 			'Venue Name',
 			'Physical Address',
 			'Maximum Capacity',
@@ -397,6 +398,41 @@ class WordCamp_Loader extends Event_Loader {
 				)
 			);
 		}
+
+		register_rest_field(
+			'wordcamp',
+			'session_start_time',
+			array(
+				'schema'       => array(
+					'type'        => 'string',
+					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin.', 'wordcamporg' ),
+				),
+				'get_callback' => function( $object, $field_name ) {
+					// Short out if the event is not scheduled.
+					if ( 'wcpt-scheduled' !== $object['status'] ) {
+						return 0;
+					}
+					$site_id = get_post_meta( $object['id'], '_site_id', true );
+					switch_to_blog( $site_id );
+					$sessions = get_posts( array(
+						'post_type'      => 'wcb_session',
+						'posts_per_page' => 1,
+						'meta_key'       => '_wcpt_session_time',
+						'orderby'        => 'meta_value_num',
+						'order'          => 'asc',
+					) );
+					if ( count( $sessions ) < 1 ) {
+						restore_current_blog();
+						return 0;
+					}
+					$session = $sessions[0];
+					$value = absint( get_post_meta( $session->ID, '_wcpt_session_time', true ) );
+
+					restore_current_blog();
+					return $value;
+				},
+			)
+		);
 	}
 
 	/**

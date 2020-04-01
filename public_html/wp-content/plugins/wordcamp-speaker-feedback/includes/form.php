@@ -55,9 +55,23 @@ function render( $content ) {
 
 		$content = $content . ob_get_clean(); // Append form to the normal content.
 	} elseif ( is_page( get_option( OPTION_KEY ) ) ) {
-		$wordcamp   = get_wordcamp_post();
-		$start_date = $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ?? $now->getTimestamp() + YEAR_IN_SECONDS;
-		$end_date   = $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? $start_date + DAY_IN_SECONDS;
+		$wordcamp = get_wordcamp_post();
+
+		if ( isset( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
+			$date_string = gmdate( 'Y-m-d', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] );
+			$start_date  = date_create( $date_string, wp_timezone() )->getTimestamp();
+		} else {
+			// No start date set, the event probably hasn't been scheduled yet. Use a far future date for now.
+			$start_date = $now->getTimestamp() + YEAR_IN_SECONDS;
+		}
+
+		if ( isset( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ) ) {
+			$date_string = gmdate( 'Y-m-d', $wordcamp->meta['End Date (YYYY-mm-dd)'][0] );
+			$end_date    = date_create( $date_string, wp_timezone() )->getTimestamp();
+		} else {
+			// No end date set, assume it's 24 hours later.
+			$end_date = $start_date + DAY_IN_SECONDS;
+		}
 
 		if ( $now->getTimestamp() < absint( $start_date ) ) {
 			$message = __( 'Feedback forms are not available until the event has started.', 'wordcamporg' );

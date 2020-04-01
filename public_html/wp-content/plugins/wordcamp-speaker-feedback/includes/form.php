@@ -38,7 +38,7 @@ function has_feedback_form() {
 function render( $content ) {
 	global $post;
 
-	$now = date_create( time(), wp_timezone() );
+	$now = date_create( 'now', wp_timezone() );
 
 	if ( has_feedback_form() ) {
 		$accepts_feedback = post_accepts_feedback( $post->ID );

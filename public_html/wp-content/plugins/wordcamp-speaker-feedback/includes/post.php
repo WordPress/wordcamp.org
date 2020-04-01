@@ -36,7 +36,7 @@ function post_accepts_feedback( $post_id ) {
 	if ( 'publish' !== get_post_status( $post ) ) {
 		return new WP_Error(
 			'speaker_feedback_post_unavailable',
-			__( 'This post does is not available for feedback.', 'wordcamporg' )
+			__( 'This post is not available for feedback.', 'wordcamporg' )
 		);
 	}
 

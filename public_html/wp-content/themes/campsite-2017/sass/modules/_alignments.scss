@@ -14,3 +14,16 @@
 	clear: both;
 	@include center-block;
 }
+
+// https://css-tricks.com/full-width-containers-limited-width-parents/
+@supports (width: 100vw) {
+	.alignfull {
+		width: 100vw;
+		max-width: 100vw;
+		position: relative;
+		left: 50%;
+		right: 50%;
+		margin-left: -50vw;
+		margin-right: -50vw;
+	}
+}

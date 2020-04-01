@@ -281,7 +281,12 @@ function enqueue_scripts() {
 		'quote' => get_svg( array( 'icon' => 'quote-right' ) ),
 	);
 
-	wp_enqueue_style( 'campsite-2017-style', get_stylesheet_uri() );
+	wp_enqueue_style(
+		'campsite-2017-style',
+		get_stylesheet_uri(),
+		array(),
+		filemtime( __DIR__ . '/style.css' )
+	);
 
 	wp_enqueue_script(
 		'campsite-2017-skip-link-focus-fix',

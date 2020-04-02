@@ -50,7 +50,7 @@ defined( 'WPINC' ) || die();
 
 	<div class="speaker-feedback__field">
 		<fieldset class="speaker-feedback__field-rating">
-			<legend><?php esc_html_e( 'Rate this talk', 'wordcamporg' ); ?></legend>
+			<legend><?php echo esc_html( $rating_question ); ?></legend>
 			<input
 				type="radio"
 				name="sft-rating"
@@ -86,26 +86,18 @@ defined( 'WPINC' ) || die();
 		</fieldset>
 	</div>
 
+	<?php foreach ( $text_questions as list( $key, $question ) ) : ?>
 	<div class="speaker-feedback__field">
-		<label for="sft-question-1">
-			<?php esc_html_e( 'What’s one good thing you’d keep in this presentation?', 'wordcamporg' ); ?>
+		<label for="sft-<?php echo esc_attr( $key ); ?>">
+			<?php echo esc_html( $question ); ?>
 		</label>
-		<textarea id="sft-question-1" name="sft-question-1" required></textarea>
+		<textarea
+			id="sft-<?php echo esc_attr( $key ); ?>"
+			name="sft-<?php echo esc_attr( $key ); ?>"
+			<?php echo ( 'q1' === $key ) ? 'required' : ''; ?>
+		></textarea>
 	</div>
-
-	<div class="speaker-feedback__field">
-		<label for="sft-question-2">
-			<?php esc_html_e( 'What’s one thing you’d tweak to improve the presentation?', 'wordcamporg' ); ?>
-		</label>
-		<textarea id="sft-question-2" name="sft-question-2"></textarea>
-	</div>
-
-	<div class="speaker-feedback__field">
-		<label for="sft-question-3">
-			<?php esc_html_e( 'What’s one unhelpful thing you’d delete from the presentation?', 'wordcamporg' ); ?>
-		</label>
-		<textarea id="sft-question-3" name="sft-question-3"></textarea>
-	</div>
+	<?php endforeach; ?>
 
 	<input type="hidden" name="sft-author" value="<?php echo intval( get_current_user_id() ); ?>" />
 	<input type="hidden" name="sft-post" value="<?php echo intval( get_the_ID() ); ?>" />

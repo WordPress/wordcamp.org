@@ -42,7 +42,7 @@
 		} )
 			.then( function() {
 				messageContainer.setAttribute( 'class', 'speaker-feedback__notice is-success' );
-				messageContainer.innerText = 'Feedback submitted.';
+				messageContainer.innerText = SpeakerFeedbackData.messages.submitSuccess;
 				event.target.replaceWith( messageContainer );
 			} )
 			.catch( function( error ) {

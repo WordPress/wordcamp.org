@@ -28,7 +28,8 @@
 		"globals": {
 			"window": true,
 			"document": true,
-			"wp": "readonly"
+			"wp": "readonly",
+			"SpeakerFeedbackData": "readonly"
 		},
 		"env": {
 			"browser": true

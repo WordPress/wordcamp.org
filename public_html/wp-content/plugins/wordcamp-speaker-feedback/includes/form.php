@@ -122,5 +122,20 @@ function enqueue_assets() {
 			filemtime( dirname( __DIR__ ) . '/assets/js/script.js' ),
 			true
 		);
+
+		$data = array(
+			'messages'  => array(
+				'submitSuccess' => __( 'Feedback submitted.', 'wordcamporg' ),
+			),
+		);
+
+		wp_add_inline_script(
+			'speaker-feedback',
+			sprintf(
+				'var SpeakerFeedbackData = JSON.parse( decodeURIComponent( \'%s\' ) );',
+				rawurlencode( wp_json_encode( $data ) )
+			),
+			'before'
+		);
 	}
 }

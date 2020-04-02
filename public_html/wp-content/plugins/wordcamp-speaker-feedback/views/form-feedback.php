@@ -49,7 +49,7 @@ defined( 'WPINC' ) || die();
 	<div id="speaker-feedback-notice" aria-live="polite" aria-relevant="additions text" aria-atomic="true"></div>
 
 	<div class="speaker-feedback__field">
-		<fieldset class="speaker-feedback__field-rating">
+		<fieldset class="speaker-feedback__field-rating" id="sft-rating">
 			<legend><?php echo esc_html( $rating_question ); ?></legend>
 			<input
 				type="radio"

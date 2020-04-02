@@ -118,7 +118,7 @@ function enqueue_assets() {
 		wp_enqueue_script(
 			'speaker-feedback',
 			get_assets_url() . 'js/script.js',
-			array( 'wp-api-fetch' ),
+			array( 'wp-api-fetch', 'jquery' ),
 			filemtime( dirname( __DIR__ ) . '/assets/js/script.js' ),
 			true
 		);

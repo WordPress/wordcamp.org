@@ -29,6 +29,7 @@
 			"window": true,
 			"document": true,
 			"wp": "readonly",
+			"jQuery": "readonly",
 			"SpeakerFeedbackData": "readonly"
 		},
 		"env": {

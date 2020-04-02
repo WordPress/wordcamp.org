@@ -1,7 +1,7 @@
 /**
  * Handle any frontend activity for the Speaker Feedback forms.
  */
-( function() {
+( function( $ ) {
 	function onFormNavigate( event ) {
 		event.preventDefault();
 		var value = event.target[ 0 ].value;
@@ -11,29 +11,34 @@
 
 	function onFormSubmit( event ) {
 		event.preventDefault();
-		var rawData = new FormData( event.target );
+		var form = event.target;
+		var rawData = $( form ).serializeArray().reduce( function( acc, item ) {
+			acc[item.name] = item.value;
+			return acc;
+		}, {} );
 		var data = {
-			post: rawData.get( 'sft-post' ),
+			post: rawData['sft-post'],
 			meta: {
-				rating: rawData.get( 'sft-rating' ),
-				q1: rawData.get( 'sft-question-1' ),
-				q2: rawData.get( 'sft-question-2' ),
-				q3: rawData.get( 'sft-question-3' ),
+				rating: rawData['sft-rating'],
+				q1: rawData['sft-q1'],
+				q2: rawData['sft-q2'],
+				q3: rawData['sft-q3'],
 			},
 		};
 
-		var author = rawData.get( 'sft-author' );
+		var author = rawData['sft-author'];
 		if ( '0' !== author ) {
 			data.author = author;
 		} else {
-			data.author_name = rawData.get( 'sft-author-name' );
-			data.author_email = rawData.get( 'sft-author-email' );
+			data.author_name = rawData['sft-author-name'];
+			data.author_email = rawData['sft-author-email'];
 		}
 
-		var messageContainer = document.getElementById( 'speaker-feedback-notice' );
-		// Reset the notice before submission.
-		messageContainer.setAttribute( 'class', '' );
-		messageContainer.innerText = '';
+		var $messageContainer = $( document.getElementById( 'speaker-feedback-notice' ) );
+		// Reset the notices before submission.
+		$messageContainer.removeClass( 'speaker-feedback__notice is-error' );
+		$messageContainer.html( '' );
+		$( form ).find( '.speaker-feedback__notice.is-error' ).remove();
 
 		wp.apiFetch( {
 			path: '/wordcamp-speaker-feedback/v1/feedback',
@@ -41,13 +46,29 @@
 			data: data,
 		} )
 			.then( function() {
-				messageContainer.setAttribute( 'class', 'speaker-feedback__notice is-success' );
-				messageContainer.innerText = SpeakerFeedbackData.messages.submitSuccess;
-				event.target.replaceWith( messageContainer );
+				$messageContainer.addClass( 'speaker-feedback__notice is-success' );
+				$messageContainer.append( $( '<p>' ).text( SpeakerFeedbackData.messages.submitSuccess ) );
+				$( form ).replaceWith( $messageContainer );
 			} )
 			.catch( function( error ) {
-				messageContainer.setAttribute( 'class', 'speaker-feedback__notice is-error' );
-				messageContainer.innerText = error.message;
+				$messageContainer.addClass( 'speaker-feedback__notice is-error' );
+				$messageContainer.append( $( '<p>' ).text( error.message ) );
+				if ( error.data ) {
+					$.each( error.data, function( key, value ) {
+						var field = document.getElementById( 'sft-' + key );
+						if ( field.parentElement ) {
+							// Create item.
+							var item = document.createElement( 'p' );
+							item.setAttribute( 'class', 'speaker-feedback__notice is-error' );
+							item.id = 'sft-' + key + '-help';
+							item.innerText = value;
+
+							// Attach item.
+							field.parentElement.insertBefore( item, null );
+							field.setAttribute( 'aria-describedby', item.id );
+						}
+					} );
+				}
 			} );
 	}
 
@@ -60,4 +81,4 @@
 	if ( feedbackForm ) {
 		feedbackForm.addEventListener( 'submit', onFormSubmit, true );
 	}
-} )();
+}( jQuery ) );

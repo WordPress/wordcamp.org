@@ -155,9 +155,7 @@ add_action( 'admin_footer-post.php', 'ctx_append_post_status_list' );
 /**
  * Show custom statuses on invoices index.
  */
-function ctx_display_custom_statuses( $states ) {
-
-	global $post;
+function ctx_display_custom_statuses( $states, $post ) {
 	$arg = get_query_var( 'post_status' );
 
 	if ( 'refunded' !== $arg ) {
@@ -174,7 +172,7 @@ function ctx_display_custom_statuses( $states ) {
 
 	return $states;
 }
-add_filter( 'display_post_states', 'ctx_display_custom_statuses' );
+add_filter( 'display_post_states', 'ctx_display_custom_statuses', 10, 2 );
 
 /**
  * Adding custom post status to Bulk and Quick Edit boxes: Status dropdown

@@ -550,8 +550,9 @@ class WCP_Payment_Request {
 	function display_post_states( $states ) {
 		global $post;
 
-		if ( $post->post_type != self::POST_TYPE )
+		if ( ! $post instanceof WP_Post || $post->post_type != self::POST_TYPE ) {
 			return $states;
+		}
 
 		// Back-compat
 		// Warning/@todo: See note in render_status_metabox()

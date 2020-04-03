@@ -361,6 +361,10 @@ function print_introduction_text( $post ) {
 function display_post_states( $states ) {
 	global $post;
 
+	if ( ! $post instanceof WP_Post ) {
+		return $states;
+	}
+
 	$custom_states = get_custom_statuses();
 
 	foreach ( $custom_states as $slug => $status ) {

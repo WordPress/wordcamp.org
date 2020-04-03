@@ -2121,7 +2121,7 @@ class WordCamp_Post_Types_Plugin {
 	public function display_post_states( $states ) {
 		$post = get_post();
 
-		if ( 'wcb_session' !== $post->post_type ) {
+		if ( ! $post instanceof WP_Post || 'wcb_session' !== $post->post_type ) {
 			return $states;
 		}
 

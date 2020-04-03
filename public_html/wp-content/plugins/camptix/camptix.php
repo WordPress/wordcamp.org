@@ -1167,6 +1167,10 @@ class CampTix_Plugin {
 	function display_post_states( $states ) {
 		global $post;
 
+		if ( ! $post instanceof WP_Post ) {
+			return $states;
+		}
+
 		if ( $post->post_status == 'timeout' && get_query_var( 'post_status' ) != 'timeout' )
 			$states['timeout'] = __( 'Timeout', 'wordcamporg' );
 

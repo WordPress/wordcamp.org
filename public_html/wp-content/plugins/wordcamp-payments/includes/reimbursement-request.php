@@ -401,10 +401,12 @@ function render_expenses_metabox( $post ) {
 function display_post_states( $states ) {
 	global $post;
 
-	if ( $post->post_type != POST_TYPE )
+	if ( ! $post instanceof WP_Post || $post->post_type != POST_TYPE ) {
 		return $states;
+	}
 
 	$status = get_post_status_object( $post->post_status );
+
 	if ( get_query_var( 'post_status' ) != $post->post_status ) {
 		$states[ $status->name ] = $status->label;
 	}

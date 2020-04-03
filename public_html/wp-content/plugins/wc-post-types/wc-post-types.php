@@ -36,10 +36,12 @@ class WordCamp_Post_Types_Plugin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ) );
 
-		add_action( 'save_post', array( $this, 'save_post_speaker' ), 10, 2 );
 		add_action( 'save_post', array( $this, 'save_post_session' ), 10, 2 );
 		add_action( 'save_post', array( $this, 'save_post_organizer' ), 10, 2);
 		add_action( 'save_post', array( $this, 'save_post_sponsor' ), 10, 2);
+
+		add_filter( 'updated_post_meta', array( $this, 'update_wcorg_user_id' ), 10, 4 );
+		add_filter( 'added_post_meta', array( $this, 'update_wcorg_user_id' ), 10, 4 );
 
 		add_filter( 'manage_wcb_speaker_posts_columns', array( $this, 'manage_post_types_columns' ) );
 		add_filter( 'manage_wcb_session_posts_columns', array( $this, 'manage_post_types_columns' ) );
@@ -254,6 +256,7 @@ class WordCamp_Post_Types_Plugin {
 		);
 
 		$this->register_script( 'wcb-session-meta', 'build/sessions.js' );
+		$this->register_script( 'wcb-speaker-meta', 'build/speakers.js' );
 
 		// Enqueues scripts and styles for session admin page.
 		if ( 'wcb_session' == $post_type ) {
@@ -293,6 +296,11 @@ class WordCamp_Post_Types_Plugin {
 		// Enqueues scripts and styles for sponsors admin page.
 		if ( 'wcb_sponsor' === $post_type ) {
 			wp_enqueue_script( 'wcb-spon' );
+		}
+
+		// Enqueues scripts and styles for sponsors admin page.
+		if ( 'wcb_speaker' === $post_type ) {
+			wp_enqueue_script( 'wcb-speaker-meta' );
 		}
 	}
 
@@ -1010,42 +1018,10 @@ class WordCamp_Post_Types_Plugin {
 	 * Fired during add_meta_boxes, adds extra meta boxes to our custom post types.
 	 */
 	public function add_meta_boxes() {
-		add_meta_box( 'speaker-info',      __( 'Speaker Info',      'wordcamporg'  ), array( $this, 'metabox_speaker_info'      ), 'wcb_speaker',   'side'   );
 		add_meta_box( 'organizer-info',    __( 'Organizer Info',    'wordcamporg'  ), array( $this, 'metabox_organizer_info'    ), 'wcb_organizer', 'side'   );
 		add_meta_box( 'sponsor-info',      __( 'Sponsor Info',      'wordcamporg'  ), array( $this, 'metabox_sponsor_info'      ), 'wcb_sponsor',   'normal' );
 		add_meta_box( 'sponsor-agreement', __( 'Sponsor Agreement', 'wordcamporg'  ), array( $this, 'metabox_sponsor_agreement' ), 'wcb_sponsor',   'side'   );
 		add_meta_box( 'invoice-sponsor',   __( 'Invoice Sponsor',   'wordcamporg'  ), array( $this, 'metabox_invoice_sponsor'   ), 'wcb_sponsor',   'side'   );
-	}
-
-	/**
-	 * Used by the Speakers post type
-	 */
-	public function metabox_speaker_info() {
-		global $post;
-		$email = get_post_meta( $post->ID, '_wcb_speaker_email', true );
-
-		$wporg_username = '';
-		$user_id        = get_post_meta( $post->ID, '_wcpt_user_id', true );
-		$wporg_user     = get_user_by( 'id', $user_id );
-
-		if ( $wporg_user ) {
-			$wporg_username = $wporg_user->user_login;
-		}
-		?>
-
-		<?php wp_nonce_field( 'edit-speaker-info', 'wcpt-meta-speaker-info' ); ?>
-
-		<p>
-			<label for="wcpt-gravatar-email"><?php esc_html_e( 'Gravatar Email:', 'wordcamporg' ); ?></label>
-			<input type="text" class="widefat" id="wcpt-gravatar-email" name="wcpt-gravatar-email" value="<?php echo esc_attr( $email ); ?>" />
-		</p>
-
-		<p>
-			<label for="wcpt-wporg-username"><?php esc_html_e( 'WordPress.org Username:', 'wordcamporg' ); ?></label>
-			<input type="text" class="widefat" id="wcpt-wporg-username" name="wcpt-wporg-username" value="<?php echo esc_attr( $wporg_username ); ?>" />
-		</p>
-
-		<?php
 	}
 
 	/**
@@ -1179,33 +1155,6 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
-	 * Fired when a post is saved, makes sure additional metadata is also updated.
-	 */
-	public function save_post_speaker( $post_id, $post ) {
-		if ( wp_is_post_revision( $post_id ) || 'wcb_speaker' !== $post->post_type || ! current_user_can( 'edit_post', $post_id ) ) {
-			return;
-		}
-
-		if ( isset( $_POST['wcpt-meta-speaker-info'] ) && wp_verify_nonce( $_POST['wcpt-meta-speaker-info'], 'edit-speaker-info' ) ) {
-			$email          = sanitize_text_field( $_POST['wcpt-gravatar-email'] );
-			$wporg_username = sanitize_text_field( $_POST['wcpt-wporg-username'] );
-			$wporg_user     = wcorg_get_user_by_canonical_names( $wporg_username );
-
-			if ( empty( $email ) ) {
-				delete_post_meta( $post_id, '_wcb_speaker_email' );
-			} elseif ( $email && is_email( $email ) ) {
-				update_post_meta( $post_id, '_wcb_speaker_email', $email );
-			}
-
-			if ( ! $wporg_user ) {
-				delete_post_meta( $post_id, '_wcpt_user_id' );
-			} else {
-				update_post_meta( $post_id, '_wcpt_user_id', $wporg_user->ID );
-			}
-		}
-	}
-
-	/**
 	 * When an Organizer post is saved, update some meta data.
 	 */
 	public function save_post_organizer( $post_id, $post ) {
@@ -1302,6 +1251,25 @@ class WordCamp_Post_Types_Plugin {
 				} else {
 					update_post_meta( $post_id, $meta_key, $value );
 				}
+			}
+		}
+	}
+
+	/**
+	 * Save the speaker's wp.org user ID when the username is updated.
+	 *
+	 * @param int    $meta_id   The meta ID after successful update.
+	 * @param int    $object_id ID of the object metadata is for.
+	 * @param string $meta_key  Metadata key.
+	 * @param mixed  $value     Metadata value.
+	 */
+	public function update_wcorg_user_id( $meta_id, $object_id, $meta_key, $value ) {
+		if ( '_wcpt_user_name' === $meta_key ) {
+			$wporg_user = wcorg_get_user_by_canonical_names( $value );
+			if ( $wporg_user instanceof WP_User ) {
+				update_post_meta( $object_id, '_wcpt_user_id', absint( $wporg_user->ID ) );
+			} else {
+				delete_post_meta( $object_id, '_wcpt_user_id' );
 			}
 		}
 	}

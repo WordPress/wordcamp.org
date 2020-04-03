@@ -283,7 +283,8 @@ function get_feedback_questions( $version = META_VERSION ) {
 	 * that contains the latest set of questions should match the integer assigned to the `META_VERSION` constant.
 	 *
 	 * If the questions below need to be modified, a new complete set should be added as a new case. The `META_VERSION`
-	 * constant in this file then needs to be updated to match the latest case number.
+	 * constant in this file then needs to be updated to match the latest case number. The submission form and JS
+	 * process will also need to be updated & tested.
 	 */
 	switch ( $version ) {
 		case 1:

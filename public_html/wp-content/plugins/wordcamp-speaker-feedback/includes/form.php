@@ -4,6 +4,7 @@ namespace WordCamp\SpeakerFeedback\Form;
 
 use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url };
+use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
 use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
@@ -43,15 +44,25 @@ function render( $content ) {
 	if ( has_feedback_form() ) {
 		$accepts_feedback = post_accepts_feedback( $post->ID );
 
+		ob_start();
+
 		if ( is_wp_error( $accepts_feedback ) ) {
 			$message = $accepts_feedback->get_error_message();
-			$file    = 'form-not-available.php';
-		} else {
-			$file = 'form-feedback.php';
+			require get_views_path() . 'form-not-available.php';
+			return $content . ob_get_clean(); // Append the error message, return early.
 		}
 
-		ob_start();
-		require get_views_path() . $file;
+		$questions       = get_feedback_questions();
+		$rating_question = $questions['rating'];
+		$text_questions  = array_filter( array_map(
+			function( $key, $question ) {
+				return ( 'q' === $key[0] ) ? array( $key, $question ) : false;
+			},
+			array_keys( $questions ),
+			$questions
+		) );
+
+		require get_views_path() . 'form-feedback.php';
 
 		$content = $content . ob_get_clean(); // Append form to the normal content.
 	} elseif ( is_page( get_option( OPTION_KEY ) ) ) {
@@ -107,9 +118,24 @@ function enqueue_assets() {
 		wp_enqueue_script(
 			'speaker-feedback',
 			get_assets_url() . 'js/script.js',
-			array(),
+			array( 'wp-api-fetch', 'jquery' ),
 			filemtime( dirname( __DIR__ ) . '/assets/js/script.js' ),
 			true
+		);
+
+		$data = array(
+			'messages' => array(
+				'submitSuccess' => __( 'Feedback submitted.', 'wordcamporg' ),
+			),
+		);
+
+		wp_add_inline_script(
+			'speaker-feedback',
+			sprintf(
+				'var SpeakerFeedbackData = JSON.parse( decodeURIComponent( \'%s\' ) );',
+				rawurlencode( wp_json_encode( $data ) )
+			),
+			'before'
 		);
 	}
 }

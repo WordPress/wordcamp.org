@@ -5,7 +5,7 @@ namespace WordCamp\SpeakerFeedback;
 use WP_Error, WP_REST_Request, WP_REST_Response, WP_REST_Server;
 use WP_REST_Comments_Controller;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
-use function WordCamp\SpeakerFeedback\Comment\add_feedback;
+use function WordCamp\SpeakerFeedback\Comment\{ add_feedback, is_feedback, update_feedback };
 use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_meta_field_schema, validate_feedback_meta };
 use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use function WordCamp\SpeakerFeedback\Spam\spam_check;
@@ -48,6 +48,25 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 				),
 			)
 		);
+
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/(?P<id>[\d]+)',
+			array(
+				'args' => array(
+					'id' => array(
+						'description' => __( 'Unique identifier for the object.' ),
+						'type'        => 'integer',
+					),
+				),
+				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( $this, 'update_item' ),
+					'permission_callback' => array( $this, 'update_item_permissions_check' ),
+					'args'                => $this->get_endpoint_args_for_item_schema( WP_REST_Server::EDITABLE ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -75,14 +94,10 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 		$request['date']    = wp_date( 'c' );
 		$request['parent']  = 0;
 
-		add_filter( 'rest_preprocess_comment', array( $this, 'preprocess_comment' ), 10, 2 );
-
-		$prepared_feedback = $this->prepare_item_for_database( $request );
+		$prepared_feedback = $this->prepare_item_for_creation( $request );
 		if ( is_wp_error( $prepared_feedback ) ) {
 			return $prepared_feedback;
 		}
-
-		remove_filter( 'rest_preprocess_comment', array( $this, 'preprocess_comment' ), 10 );
 
 		if ( ! isset( $prepared_feedback['comment_post_ID'] ) ) {
 			return new WP_Error(
@@ -214,16 +229,17 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 	}
 
 	/**
-	 * Additional preparing of feedback data before processing and saving it.
+	 * Prepares a single feedback comment to be inserted into the database.
 	 *
-	 * @param array $prepared_feedback
-	 * @param array $request
+	 * @param WP_REST_Request $request
 	 *
-	 * @return array
+	 * @return array|WP_Error Prepared feedback comment, otherwise WP_Error object.
 	 */
-	public function preprocess_comment( $prepared_feedback, $request ) {
+	protected function prepare_item_for_creation( $request ) {
+		$prepared_feedback = parent::prepare_item_for_database( $request );
+
 		if ( isset( $request['meta'] ) ) {
-			$validated_meta = validate_feedback_meta( $request['meta'] );
+			$validated_meta = validate_feedback_meta( $request['meta'], 'create' );
 
 			if ( is_wp_error( $validated_meta ) ) {
 				return $validated_meta;
@@ -241,6 +257,100 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 				'comment_type'       => COMMENT_TYPE, // We set this later, but it still needs to be here.
 			)
 		);
+
+		return $prepared_feedback;
+	}
+
+	/**
+	 * Updates a feedback comment.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_Error|WP_REST_Response Response object on success, or error object on failure.
+	 */
+	public function update_item( $request ) {
+		$prepared_feedback = $this->prepare_item_for_update( $request );
+		if ( is_wp_error( $prepared_feedback ) ) {
+			return $prepared_feedback;
+		}
+
+		if ( ! isset( $prepared_feedback['comment_meta'] ) ) {
+			return new WP_Error(
+				'rest_feedback_meta_data_required',
+				__( 'Feedback must include data from the feedback form.', 'wordcamporg' ),
+				array(
+					'status' => 400,
+				)
+			);
+		}
+
+		update_feedback( $prepared_feedback['id'], $prepared_feedback['comment_meta'] );
+
+		$response = array(); // At this point we have no reason to return details about the updated feedback comment.
+		$response = rest_ensure_response( $response );
+
+		$response->set_status( 201 ); // This is a sufficient signal that the request was successful.
+
+		return $response;
+	}
+
+	/**
+	 * Checks if a given REST request has access to update a comment.
+	 *
+	 * @param WP_REST_Request $request Full details about the request.
+	 *
+	 * @return WP_Error|bool True if the request has access to update the item, error object otherwise.
+	 */
+	public function update_item_permissions_check( $request ) {
+		$comment = $this->get_comment( $request['id'] );
+		if ( is_wp_error( $comment ) ) {
+			return $comment;
+		}
+
+		if ( ! is_feedback( $comment ) ) {
+			return new WP_Error(
+				'rest_feedback_not_feedback',
+				__( 'This endpoint can only be used to update feedback comments.', 'wordcamporg' )
+			);
+		}
+
+		if ( ! current_user_can( 'read_post_' . COMMENT_TYPE, $comment->comment_post_ID ) ) {
+			return new WP_Error(
+				'rest_feedback_no_permission',
+				__( 'Sorry, you are not allowed to update this comment.', 'wordcamporg' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Prepares a single feedback comment to be updated in the database.
+	 *
+	 * @param WP_REST_Request $request
+	 *
+	 * @return array|WP_Error Prepared feedback comment, otherwise WP_Error object.
+	 */
+	protected function prepare_item_for_update( $request ) {
+		$prepared_feedback = array();
+
+		$comment = $this->get_comment( $request['id'] );
+		if ( is_wp_error( $comment ) ) {
+			return $comment;
+		}
+
+		$prepared_feedback['id'] = $comment->comment_ID;
+
+		if ( isset( $request['meta'] ) ) {
+			$validated_meta = validate_feedback_meta( $request['meta'], 'update' );
+
+			if ( is_wp_error( $validated_meta ) ) {
+				return $validated_meta;
+			}
+
+			$prepared_feedback['comment_meta'] = $validated_meta;
+		}
 
 		return $prepared_feedback;
 	}
@@ -270,7 +380,7 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			$args['author_email'] = $comment_data['comment_author_email'];
 		}
 
-		$schema = get_feedback_meta_field_schema();
+		$schema = get_feedback_meta_field_schema( 'create' );
 
 		foreach ( $comment_data['comment_meta'] as $key => $value ) {
 			$args['meta_query'][] = array(

@@ -59,22 +59,28 @@ function register_meta_fields() {
  * WordCamp\SpeakerFeedback\REST_Feedback_Controller::duplicate_check() method will
  * need to be updated.
  *
- * @param string $key Optional. A specific key to get the schema for.
+ * @param string $context Optional. The context in which the field schema is being used.
+ *                        'all', 'create', or 'update'. Defaults to 'all'.
+ *                        Note that this does not map to the context values used in
+ *                        the REST API.
+ * @param string $key     Optional. A specific key to get the schema for.
  *
  * @return array
  */
-function get_feedback_meta_field_schema( $key = '' ) {
+function get_feedback_meta_field_schema( $context = 'all', $key = '' ) {
 	$schema = array(
 		'version' => array(
+			'sft_context'       => array( 'create' ),
 			'description'       => 'The version of the feedback questions.',
 			'type'              => 'integer',
 			'single'            => true,
 			'sanitize_callback' => 'absint',
 			'show_in_rest'      => false,
 			'default'           => META_VERSION,
-			'required'          => true,
+			'required'          => false,
 		),
 		'rating'  => array(
+			'sft_context'       => array( 'create' ),
 			'description'       => 'The rating. A number between 1 and 5.',
 			'type'              => 'integer',
 			'single'            => true,
@@ -89,6 +95,7 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			),
 		),
 		'q1'      => array(
+			'sft_context'       => array( 'create' ),
 			'description'       => 'The answer to the first feedback question.',
 			'type'              => 'string',
 			'single'            => true,
@@ -101,6 +108,7 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			),
 		),
 		'q2'      => array(
+			'sft_context'       => array( 'create' ),
 			'description'       => 'The answer to the second feedback question.',
 			'type'              => 'string',
 			'single'            => true,
@@ -113,6 +121,7 @@ function get_feedback_meta_field_schema( $key = '' ) {
 			),
 		),
 		'q3'      => array(
+			'sft_context'       => array( 'create' ),
 			'description'       => 'The answer to the third feedback question.',
 			'type'              => 'string',
 			'single'            => true,
@@ -124,7 +133,28 @@ function get_feedback_meta_field_schema( $key = '' ) {
 				'maxlength' => 5000,
 			),
 		),
+		'helpful' => array(
+			'sft_context'       => array( 'update' ),
+			'description'       => 'The speaker found this feedback helpful.',
+			'type'              => 'boolean',
+			'single'            => true,
+			'sanitize_callback' => 'wp_validate_boolean',
+			'show_in_rest'      => false,
+			'default'           => false,
+			'required'          => false,
+		),
 	);
+
+	if ( 'all' !== $context ) {
+		$schema = array_filter(
+			$schema,
+			function( $field ) use ( $context ) {
+				$field_context = $field['sft_context'] ?? array();
+
+				return in_array( $context, $field_context, true );
+			}
+		);
+	}
 
 	if ( $key ) {
 		return $schema[ $key ] ?? array();
@@ -136,16 +166,15 @@ function get_feedback_meta_field_schema( $key = '' ) {
 /**
  * Check that an array of meta values has all required keys and contains valid data.
  *
- * @param array $meta
+ * @param array  $meta    Associative array of meta values to validate.
+ * @param string $context Optional. The context in which the field schema is being used.
+ *                        See get_feedback_meta_field_schema() for possible values.
+ *                        Default is 'create'.
  *
  * @return array|WP_Error
  */
-function validate_feedback_meta( $meta ) {
-	if ( ! isset( $meta['version'] ) ) {
-		$meta['version'] = META_VERSION;
-	}
-
-	$fields          = get_feedback_meta_field_schema();
+function validate_feedback_meta( $meta, $context = 'all' ) {
+	$fields          = get_feedback_meta_field_schema( $context );
 	$required_fields = array_filter(
 		wp_list_pluck( $fields, 'required' ),
 		function( $is_required ) {
@@ -176,9 +205,7 @@ function validate_feedback_meta( $meta ) {
 
 		$type = $fields[ $key ]['type'];
 
-		if ( is_callable( __NAMESPACE__ . "\\validate_meta_$type" ) ) {
-			$validation = call_user_func( __NAMESPACE__ . "\\validate_meta_$type", $key, $value );
-		}
+		$validation = call_user_func( __NAMESPACE__ . "\\validate_meta_$type", $key, $value );
 
 		if ( is_wp_error( $validation ) ) {
 			$invalid_fields = array_merge( $invalid_fields, $validation->get_error_data() );
@@ -193,7 +220,39 @@ function validate_feedback_meta( $meta ) {
 		);
 	}
 
+	if ( isset( $fields['version'] ) ) {
+		$meta['version'] = $fields['version']['default'];
+	}
+
 	return $meta;
+}
+
+/**
+ * Validate the submitted value of a boolean field.
+ *
+ * This function is not intended to be called directly. See `validate_feedback_meta()`.
+ *
+ * @param string $key
+ * @param mixed  $value
+ *
+ * @return bool|WP_Error
+ */
+function validate_meta_boolean( $key, $value ) {
+	$result = filter_var( $value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+
+	if ( is_null( $result ) ) {
+		$error_message = __( 'This value must be true or false.', 'wordcamporg' );
+
+		return new WP_Error(
+			'feedback_meta_invalid_data',
+			$error_message,
+			array(
+				$key => $error_message,
+			)
+		);
+	}
+
+	return true;
 }
 
 /**
@@ -207,7 +266,7 @@ function validate_feedback_meta( $meta ) {
  * @return bool|WP_Error
  */
 function validate_meta_integer( $key, $value ) {
-	$schema        = get_feedback_meta_field_schema( $key );
+	$schema        = get_feedback_meta_field_schema( 'all', $key );
 	$error_code    = 'feedback_meta_invalid_data';
 	$error_message = '';
 
@@ -249,7 +308,7 @@ function validate_meta_integer( $key, $value ) {
  * @return bool|WP_Error
  */
 function validate_meta_string( $key, $value ) {
-	$schema        = get_feedback_meta_field_schema( $key );
+	$schema        = get_feedback_meta_field_schema( 'all', $key );
 	$error_code    = 'feedback_meta_invalid_data';
 	$error_message = '';
 

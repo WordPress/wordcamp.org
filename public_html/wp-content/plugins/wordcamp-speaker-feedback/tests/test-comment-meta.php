@@ -109,7 +109,7 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
 	 */
 	public function test_validate_feedback_meta_too_long() {
-		$schema = get_feedback_meta_field_schema( 'q1' );
+		$schema = get_feedback_meta_field_schema( 'all', 'q1' );
 
 		$too_long_answer = array_fill( 0, $schema['attributes']['maxlength'] + 1, 'a' );
 		$too_long_answer = implode( '', $too_long_answer );
@@ -127,7 +127,7 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
 	 */
 	public function test_validate_feedback_meta_multibyte_not_too_long() {
-		$schema = get_feedback_meta_field_schema( 'q1' );
+		$schema = get_feedback_meta_field_schema( 'all', 'q1' );
 
 		$almost_long_answer = array_fill( 0, $schema['attributes']['maxlength'], '💩' );
 		$almost_long_answer = implode( '', $almost_long_answer );

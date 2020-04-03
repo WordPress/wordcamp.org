@@ -28,7 +28,7 @@ add_action( 'transition_post_status', __NAMESPACE__ . '\transition_post_status',
 
 // Miscellaneous
 add_filter( 'map_meta_cap',        __NAMESPACE__ . '\modify_capabilities', 10, 4 );
-add_filter( 'display_post_states', __NAMESPACE__ . '\display_post_states'        );
+add_filter( 'display_post_states', __NAMESPACE__ . '\display_post_states', 10, 2 );
 
 /**
  * Register the custom post type
@@ -394,14 +394,13 @@ function render_expenses_metabox( $post ) {
  *
  * @todo centralize this, since it's the same in other modules
  *
- * @param array $states
+ * @param array   $states
+ * @param WP_Post $post
  *
  * @return array
  */
-function display_post_states( $states ) {
-	global $post;
-
-	if ( ! $post instanceof WP_Post || $post->post_type != POST_TYPE ) {
+function display_post_states( $states, $post ) {
+	if ( $post->post_type != POST_TYPE ) {
 		return $states;
 	}
 

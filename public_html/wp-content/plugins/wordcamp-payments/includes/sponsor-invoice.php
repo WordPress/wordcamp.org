@@ -18,10 +18,10 @@ add_action( 'add_meta_boxes',        __NAMESPACE__ . '\init_meta_boxes'         
 add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets',        11 );
 
 // Admin UI.
-add_action( 'edit_form_top',                              __NAMESPACE__ . '\print_introduction_text'   );
-add_filter( 'display_post_states',                        __NAMESPACE__ . '\display_post_states'       );
-add_filter( 'manage_'. POST_TYPE .'_posts_columns',       __NAMESPACE__ . '\get_columns'               );
-add_action( 'manage_'. POST_TYPE .'_posts_custom_column', __NAMESPACE__ . '\render_columns',     10, 2 );
+add_action( 'edit_form_top',                              __NAMESPACE__ . '\print_introduction_text'    );
+add_filter( 'display_post_states',                        __NAMESPACE__ . '\display_post_states', 10, 2 );
+add_filter( 'manage_'. POST_TYPE .'_posts_columns',       __NAMESPACE__ . '\get_columns'                );
+add_action( 'manage_'. POST_TYPE .'_posts_custom_column', __NAMESPACE__ . '\render_columns',      10, 2 );
 
 // Add "Uncollectible" status & action to the list table actions.
 add_filter( 'post_row_actions',         __NAMESPACE__ . '\add_row_action', 10, 2 );
@@ -354,17 +354,12 @@ function print_introduction_text( $post ) {
 /**
  * Display the status of a post after its title on the Sponsor Invoices page.
  *
- * @param array $states
+ * @param array   $states
+ * @param WP_Post $post
  *
  * @return array
  */
-function display_post_states( $states ) {
-	global $post;
-
-	if ( ! $post instanceof WP_Post ) {
-		return $states;
-	}
-
+function display_post_states( $states, $post ) {
 	$custom_states = get_custom_statuses();
 
 	foreach ( $custom_states as $slug => $status ) {

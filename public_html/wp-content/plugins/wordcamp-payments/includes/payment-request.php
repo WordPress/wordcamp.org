@@ -21,7 +21,7 @@ class WCP_Payment_Request {
 		add_action( 'admin_enqueue_scripts',  array( $this, 'enqueue_assets' ), 11 );
 
 		// Miscellaneous
-		add_filter( 'display_post_states',    array( $this, 'display_post_states' ) );
+		add_filter( 'display_post_states',    array( $this, 'display_post_states' ), 10, 2 );
 
 		// Saving posts
 		add_filter( 'wp_insert_post_data',    array( $this, 'wp_insert_post_data' ), 10, 2 );
@@ -543,14 +543,13 @@ class WCP_Payment_Request {
 	/**
 	 * Display the status of a post after its title on the Vendor Payments page
 	 *
-	 * @param array $states
+	 * @param array   $states
+	 * @param WP_Post $post
 	 *
 	 * @return array
 	 */
-	function display_post_states( $states ) {
-		global $post;
-
-		if ( ! $post instanceof WP_Post || $post->post_type != self::POST_TYPE ) {
+	function display_post_states( $states, $post ) {
+		if ( $post->post_type != self::POST_TYPE ) {
 			return $states;
 		}
 

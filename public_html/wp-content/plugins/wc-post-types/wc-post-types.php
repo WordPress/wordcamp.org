@@ -47,7 +47,7 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'manage_wcb_sponsor_posts_columns', array( $this, 'manage_post_types_columns' ) );
 		add_filter( 'manage_wcb_organizer_posts_columns', array( $this, 'manage_post_types_columns' ) );
 		add_filter( 'manage_edit-wcb_session_sortable_columns', array( $this, 'manage_sortable_columns' ) );
-		add_filter( 'display_post_states', array( $this, 'display_post_states' ) );
+		add_filter( 'display_post_states', array( $this, 'display_post_states' ), 10, 2 );
 
 		add_action( 'manage_posts_custom_column', array( $this, 'manage_post_types_columns_output' ), 10, 2 );
 
@@ -2118,10 +2118,8 @@ class WordCamp_Post_Types_Plugin {
 	/**
 	 * Display an additional post label if needed.
 	 */
-	public function display_post_states( $states ) {
-		$post = get_post();
-
-		if ( ! $post instanceof WP_Post || 'wcb_session' !== $post->post_type ) {
+	public function display_post_states( $states, $post ) {
+		if ( 'wcb_session' !== $post->post_type ) {
 			return $states;
 		}
 

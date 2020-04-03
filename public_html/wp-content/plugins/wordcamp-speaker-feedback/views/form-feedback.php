@@ -1,13 +1,16 @@
 <?php
 
 namespace WordCamp\SpeakerFeedback\View;
+
 use function WordCamp\SpeakerFeedback\get_assets_path;
+
+defined( 'WPINC' ) || die();
 
 ?>
 <hr />
 <form id="sft-feedback" class="speaker-feedback">
 	<h3><?php esc_html_e( 'Rate this talk', 'wordcamporg' ); ?></h3>
-	
+
 	<div class="speaker-feedback__field">
 		<fieldset class="speaker-feedback__field-rating" aria-label="<?php esc_attr_e( 'Rate this talk', 'wordcamporg' ); ?>">
 			<input
@@ -44,7 +47,7 @@ use function WordCamp\SpeakerFeedback\get_assets_path;
 			</label>
 		</fieldset>
 	</div>
-	
+
 	<div class="speaker-feedback__field">
 		<label for="sft-question-1">
 			<?php esc_html_e( 'What’s one good thing you’d keep in this presentation?', 'wordcamporg' ); ?>

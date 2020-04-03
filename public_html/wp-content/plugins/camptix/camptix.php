@@ -1161,16 +1161,10 @@ class CampTix_Plugin {
 			'show_in_admin_status_list' => true,
 		) );
 
-		add_filter( 'display_post_states', array( $this, 'display_post_states' ) );
+		add_filter( 'display_post_states', array( $this, 'display_post_states' ), 10, 2 );
 	}
 
-	function display_post_states( $states ) {
-		global $post;
-
-		if ( ! $post instanceof WP_Post ) {
-			return $states;
-		}
-
+	function display_post_states( $states, $post ) {
 		if ( $post->post_status == 'timeout' && get_query_var( 'post_status' ) != 'timeout' )
 			$states['timeout'] = __( 'Timeout', 'wordcamporg' );
 

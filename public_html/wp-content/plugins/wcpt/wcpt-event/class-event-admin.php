@@ -48,7 +48,7 @@ abstract class Event_Admin {
 			)
 		);
 		// Forum column headers.
-		add_filter( 'display_post_states', array( $this, 'display_post_states' ) );
+		add_filter( 'display_post_states', array( $this, 'display_post_states' ), 10, 2 );
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'common_admin_scripts' ) );
 
@@ -430,13 +430,12 @@ abstract class Event_Admin {
 	/**
 	 * Display the status of a WordCamp post
 	 *
-	 * @param array $states List of post states.
+	 * @param array   $states List of post states.
+	 * @param WP_Post $post   Current post.
 	 *
 	 * @return array
 	 */
-	public function display_post_states( $states ) {
-		global $post;
-
+	public function display_post_states( $states, $post ) {
 		if ( $post->post_type !== $this->get_event_type() ) {
 			return $states;
 		}

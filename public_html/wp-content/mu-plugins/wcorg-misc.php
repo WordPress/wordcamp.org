@@ -639,7 +639,7 @@ function wcorg_network_updates_notifier() {
 				<p>The following themes have updates available:</p>
 
 				<ul class="ul-disc">
-					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_themes->response, 'slug' ) ) ); ?></li>
+					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_themes->response, 'theme' ) ) ); ?></li>
 				</ul>
 			<?php endif; ?>
 		</div>

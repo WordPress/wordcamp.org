@@ -124,7 +124,7 @@ function enqueue_assets() {
 		);
 
 		$data = array(
-			'messages'  => array(
+			'messages' => array(
 				'submitSuccess' => __( 'Feedback submitted.', 'wordcamporg' ),
 			),
 		);

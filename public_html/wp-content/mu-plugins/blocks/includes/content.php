@@ -31,6 +31,25 @@ function get_all_the_content( $post ) {
 }
 
 /**
+ * Get a trimmed excerpt from a post.
+ *
+ * @param int|WP_Post $post           Post ID or post object.
+ * @param int         $excerpt_length Number of words in excerpt.
+ *
+ * @return string The escaped post excerpt.
+ */
+function get_trimmed_content( $post, $excerpt_length = 55 ) {
+	$post = get_post( $post );
+
+	$post_excerpt = $post->post_excerpt;
+	if ( ! ( $post_excerpt ) ) {
+		$post_excerpt = $post->post_content;
+	}
+
+	return esc_html( wp_trim_words( $post_excerpt, $excerpt_length, ' &hellip; ' ) );
+}
+
+/**
  * Convert an array of strings into one string that is a punctuated, human-readable list.
  *
  * @param array $array

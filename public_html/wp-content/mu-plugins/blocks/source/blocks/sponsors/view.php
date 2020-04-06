@@ -3,7 +3,7 @@ namespace WordCamp\Blocks\Sponsors;
 
 use WP_Post;
 use function WordCamp\Blocks\Components\{ render_featured_image, render_item_title, render_item_content, render_item_permalink };
-use function WordCamp\Blocks\Utilities\{ get_all_the_content };
+use function WordCamp\Blocks\Utilities\{ get_all_the_content, get_trimmed_content };
 
 defined( 'WPINC' ) || die();
 
@@ -27,24 +27,20 @@ setup_postdata( $sponsor ); // This is necessary for generating an excerpt from 
 	<?php endif; ?>
 
 	<?php if ( true === $attributes['show_logo'] ) : ?>
-		<?php echo wp_kses_post(
-			render_featured_image(
-				$sponsor,
-				$attributes['featured_image_width'],
-				array( 'wordcamp-sponsors__featured-image', 'wordcamp-sponsors__logo', 'align-' . esc_attr( $attributes['image_align'] ) ),
-				get_permalink( $sponsor )
-			)
+		<?php echo render_featured_image( // phpcs:ignore -- User input escaped in function.
+			$sponsor,
+			$attributes['featured_image_width'],
+			array( 'wordcamp-sponsors__featured-image', 'wordcamp-sponsors__logo', 'align-' . esc_attr( $attributes['image_align'] ) ),
+			get_permalink( $sponsor )
 		); ?>
 	<?php endif; ?>
 
 	<?php if ( 'none' !== $attributes['content'] ) : ?>
-		<?php echo wp_kses_post(
-			render_item_content(
-				'excerpt' === $attributes['content']
-					? apply_filters( 'the_excerpt', get_the_excerpt( $sponsor ) )
-					: get_all_the_content( $sponsor ),
-				array( 'wordcamp-sponsors__content', 'is-' . $attributes['content'] )
-			)
+		<?php echo render_item_content( // phpcs:ignore -- escaped in get_* functions.
+			'excerpt' === $attributes['content']
+				? get_trimmed_content( $sponsor )
+				: get_all_the_content( $sponsor ),
+			array( 'wordcamp-sponsors__content', 'is-' . $attributes['content'] )
 		); ?>
 	<?php endif; ?>
 </div>

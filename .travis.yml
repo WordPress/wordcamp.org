@@ -42,22 +42,12 @@ jobs:
         - composer run-script test -- -c phpunit.xml.dist
 
     - name: "PHP Code Standards"
-      # Only run if we're on the "pull request build", otherwise CHANGED_FILES is empty.
+      # Only run if we're on the "pull request build", otherwise the diffs are empty.
       if: branch = production
       install:
         - composer install
       script:
-        # Create an empty PHP file, which will be passed to the linter along with all the changed files.
-        # Otherwise, the linter will get no args, and attempt to lint the entire repo.
-        - touch $TRAVIS_BUILD_DIR/tmp.php
-        # Exporting list of changed files in CHANGED_FILES variable
-        # diff: Get the changed files
-        #   --name-only: Get only name of changed files
-        #   --diff-filter=AM: Get only (A)dded or (M)odified files. We do not care about deleted files for coding standard test.
-        #   $TRAVIS_BRANCH: Base branch we want to merge. Usually this will be master
-        #   $TRAVIS_BRANCH...HEAD: List of commits not present in $TRAVIS_BRANCH, but present in HEAD
-        # tr '\n' ' ': Convert from list of filenames seperated by `\n` to list of filenames seperated by ' '
-        - export CHANGED_FILES=$(git diff --name-only --diff-filter=AM $TRAVIS_BRANCH...HEAD | tr '\n' ' ')
-        # Run phpcs installed via composer, only run over changed files.
-        # tmp.php: So that phpcs do not assume that it has to scan all files in case no php files are changed.
-        - composer run-script phpcs $TRAVIS_BUILD_DIR/tmp.php $(echo $CHANGED_FILES) -- -n
+        # Report on phpcs violations that are introduced in the current branch.
+        # Runs `phpcs` as normal on new files, and `phpcs-changed` on modified files. `phpcs-changed` will only
+        # report on changed lines in each modified file.
+        - php .github/bin/phpcs-branch.php 

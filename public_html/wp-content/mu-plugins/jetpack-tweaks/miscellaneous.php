@@ -76,12 +76,12 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	$asset_cache_strategy_args = array(
 		'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
 		'cacheName' => 'wc-jetpack',
-		'plugins'   => [
-			'expiration' => [
+		'plugins'   => array(
+			'expiration' => array(
 				'maxEntries'    => 50,
 				'maxAgeSeconds' => DAY_IN_SECONDS,
-			],
-		],
+			),
+		),
 	);
 
 	/*
@@ -119,7 +119,6 @@ add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes
  *
  * Jetpack defaults to send an email about each subscriber to each WordCamp to the owner
  * of the Jetpack connection.  No need to receive these emails.
- *
  */
 function disable_jetpack_blog_follow_emails() {
 	$social_notifications_subscribe = get_option( 'social_notifications_subscribe' );

@@ -16,9 +16,9 @@ function run_phpcs( $file, $bin_dir ) {
 	echo implode( "\n", $output );
 }
 
-function run_phpcs_changed( $file, $git, $bin_dir ) {
+function run_phpcs_changed( $file, $git, $base_branch, $bin_dir ) {
 	$name = basename( $file );
-	exec( "$git diff production HEAD $file > $name.diff" );
+	exec( "$git diff $base_branch HEAD $file > $name.diff" );
 	exec( "$git show HEAD:$file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -nq > $name.orig.phpcs" );
 	exec( "cat $file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -nq > $name.phpcs" );
 	
@@ -31,14 +31,15 @@ function run_phpcs_changed( $file, $git, $bin_dir ) {
 }
 
 function main() {
-	$git_dir = dirname( dirname( __DIR__ ) );
-	$bin_dir = dirname( dirname( __DIR__ ) ) . '/public_html/wp-content/mu-plugins/vendor/bin';
-	$git     = "git -C $git_dir";
+	$base_branch = getenv( 'TRAVIS_BRANCH' );
+	$git_dir     = dirname( dirname( __DIR__ ) );
+	$bin_dir     = dirname( dirname( __DIR__ ) ) . '/public_html/wp-content/mu-plugins/vendor/bin';
+	$git         = "git -C $git_dir";
 
 	try {
 		echo "\nScanning changed files...\n";
 
-		$affected_files = shell_exec( "$git diff production...HEAD --name-status --diff-filter=AM 2>&1 | grep .php$" );
+		$affected_files = shell_exec( "$git diff $base_branch...HEAD --name-status --diff-filter=AM 2>&1 | grep .php$" );
 		$affected_files = explode( "\n", trim( $affected_files ) );
 
 		foreach ( $affected_files as $record ) {
@@ -46,7 +47,7 @@ function main() {
 
 			switch ( $change ) {
 				case 'M':
-					run_phpcs_changed( $file, $git, $bin_dir );
+					run_phpcs_changed( $file, $git, $base_branch, $bin_dir );
 					break;
 
 				case 'A':

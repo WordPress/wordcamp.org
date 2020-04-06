@@ -21,7 +21,7 @@ defined( 'WPINC' ) || die();
 function get_all_the_content( $post ) {
 	$post = get_post( $post );
 
-	$content = $post->post_content;
+	$content = wp_kses_post( $post->post_content );
 
 	/** This filter is documented in wp-includes/post-template.php */
 	$content = apply_filters( 'the_content', $content );

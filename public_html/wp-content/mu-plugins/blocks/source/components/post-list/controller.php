@@ -39,16 +39,11 @@ function render_post_list( array $rendered_items, $layout = 'list', $columns = 1
 
 	$container_classes = render_class_string( $container_classes );
 
-	ob_start();
-	?>
-		<ul class="<?php echo esc_attr( $container_classes ); ?>">
-			<?php foreach ( $rendered_items as $item ) : ?>
-				<li class="wordcamp-post-list__post wordcamp-clearfix">
-					<?php echo wp_kses_post( $item ); ?>
-				</li>
-			<?php endforeach; ?>
-		</ul>
-	<?php
+	$output = '<ul class="' . esc_attr( $container_classes ) . '">';
+	foreach ( $rendered_items as $item ) {
+		$output .= '<li class="wordcamp-post-list__post wordcamp-clearfix">' . $item . '</li>';
+	}
+	$output .= '</ul>';
 
-	return ob_get_clean();
+	return $output;
 }

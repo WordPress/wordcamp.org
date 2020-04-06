@@ -35,20 +35,19 @@ function render_featured_image( $post, $width, $class_names = array(), $image_li
 
 	$image = render_featured_image_element( $post, $size );
 
-	ob_start();
-	?>
-		<div class="<?php echo esc_attr( $container_classes ); ?>">
-			<?php if ( '' !== $image_link ) { ?>
-				<a href="<?php echo esc_html( $image_link ); ?>" class="wordcamp-image__featured-image-link">
-					<?php echo wp_kses_post( $image ); ?>
-				</a>
-			<?php } else { ?>
-				<?php echo wp_kses_post( $image ); ?>
-			<?php } ?>
-		</div>
-	<?php
+	$output = '<div class="' . esc_attr( $container_classes ) . '">';
+	if ( '' !== $image_link ) {
+		$output .= sprintf(
+			'<a href="%1$s" class="wordcamp-image__featured-image-link">%2$s</a>',
+			esc_attr( $image_link ),
+			$image
+		);
+	} else {
+		$output .= $image;
+	}
+	$output .= '</div>';
 
-	return ob_get_clean();
+	return $output;
 }
 
 /**

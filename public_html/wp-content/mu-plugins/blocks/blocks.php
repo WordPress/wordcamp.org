@@ -13,7 +13,7 @@ define( __NAMESPACE__ . '\PLUGIN_URL', \plugins_url( '/', __FILE__ ) );
  */
 function load_includes() {
 	// Short-circuit: If there are no WordCamp post-types, these blocks don't have anything to display.
-	if ( ! class_exists( 'WordCamp_Post_Types_Plugin' ) ) {
+	if ( ! class_exists( 'WordCamp_Post_Types_Plugin')) {
 		return;
 	}
 

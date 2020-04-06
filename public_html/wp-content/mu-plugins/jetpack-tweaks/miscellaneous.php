@@ -61,27 +61,6 @@ function lower_brute_protect_api_timeout( $timeout ) {
 add_filter( 'jetpack_protect_connect_timeout', __NAMESPACE__ . '\lower_brute_protect_api_timeout' );
 
 /**
- * Update kses filter.
- *
- * Allow `noscript`: this is used by Jetpack's lazy-loading before we output the content, and by default is
- * stripped by the `wp_kses_post` function, causing duplicate images.
- *
- * @param array $tags
- * @return array
- */
-function allow_noscript_blocks( $tags, $context ) {
-	global $post;
-
-	// Only allow noscript through if we're showing a post with blocks.
-	if ( 'post' === $context && isset( $post, $post->post_content ) && has_blocks( $post->post_content ) ) {
-		$tags['noscript'] = array();
-	}
-
-	return $tags;
-}
-add_action( 'wp_kses_allowed_html', __NAMESPACE__ . '\allow_noscript_blocks', 10, 2 );
-
-/**
  * Register caching routes for Jetpack with the frontend service worker.
  *
  * Jetpack uses wp.com domains for loading assets, which need to be cached regexes that match from the start of
@@ -97,12 +76,12 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	$asset_cache_strategy_args = array(
 		'strategy'  => WP_Service_Worker_Caching_Routes::STRATEGY_CACHE_FIRST,
 		'cacheName' => 'wc-jetpack',
-		'plugins'   => [
-			'expiration' => [
+		'plugins'   => array(
+			'expiration' => array(
 				'maxEntries'    => 50,
 				'maxAgeSeconds' => DAY_IN_SECONDS,
-			],
-		],
+			),
+		),
 	);
 
 	/*
@@ -140,7 +119,6 @@ add_action( 'wp_front_service_worker', __NAMESPACE__ . '\register_caching_routes
  *
  * Jetpack defaults to send an email about each subscriber to each WordCamp to the owner
  * of the Jetpack connection.  No need to receive these emails.
- *
  */
 function disable_jetpack_blog_follow_emails() {
 	$social_notifications_subscribe = get_option( 'social_notifications_subscribe' );

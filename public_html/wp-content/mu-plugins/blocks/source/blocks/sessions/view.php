@@ -3,7 +3,7 @@ namespace WordCamp\Blocks\Sessions;
 
 use WP_Post;
 use function WordCamp\Blocks\Components\{ render_featured_image, render_item_title, render_item_content, render_item_permalink };
-use function WordCamp\Blocks\Utilities\{ get_all_the_content, array_to_human_readable_list };
+use function WordCamp\Blocks\Utilities\{ array_to_human_readable_list, get_all_the_content, get_trimmed_content };
 
 defined( 'WPINC' ) || die();
 
@@ -30,8 +30,8 @@ setup_postdata( $session );
 			function( $speaker ) {
 				return sprintf(
 					'<a href="%s">%s</a>',
-					get_permalink( $speaker ),
-					get_the_title( $speaker )
+					esc_url( get_permalink( $speaker ) ),
+					esc_html( get_the_title( $speaker ) )
 				);
 			},
 			$speakers[ $session->ID ]
@@ -42,32 +42,28 @@ setup_postdata( $session );
 			<?php
 			printf(
 				/* translators: %s is a list of names. */
-				wp_kses_post( __( 'Presented by %s', 'wordcamporg' ) ),
-				wp_kses_post( array_to_human_readable_list( $speaker_linked_names ) )
+				esc_html__( 'Presented by %s', 'wordcamporg' ),
+				array_to_human_readable_list( $speaker_linked_names ) // phpcs:ignore -- Escaped above.
 			);
 			?>
 		</p>
 	<?php endif; ?>
 
 	<?php if ( true === $attributes['show_images'] ) : ?>
-		<?php echo wp_kses_post(
-			render_featured_image(
-				$session,
-				$attributes['featured_image_width'],
-				array( 'wordcamp-sessions__featured-image', 'align-' . esc_attr( $attributes['image_align'] ) ),
-				get_permalink( $session )
-			)
+		<?php echo render_featured_image( // phpcs:ignore -- User input escaped in function.
+			$session,
+			$attributes['featured_image_width'],
+			array( 'wordcamp-sessions__featured-image', 'align-' . esc_attr( $attributes['image_align'] ) ),
+			get_permalink( $session )
 		); ?>
 	<?php endif; ?>
 
 	<?php if ( 'none' !== $attributes['content'] ) : ?>
-		<?php echo wp_kses_post(
-			render_item_content(
-				'excerpt' === $attributes['content']
-					? apply_filters( 'the_excerpt', get_the_excerpt( $session ) )
-					: get_all_the_content( $session ),
-				array( 'wordcamp-sessions__content', 'is-' . $attributes['content'] )
-			)
+		<?php echo render_item_content( // phpcs:ignore -- escaped in get_* functions.
+			'excerpt' === $attributes['content']
+				? get_trimmed_content( $session )
+				: get_all_the_content( $session ),
+			array( 'wordcamp-sessions__content', 'is-' . $attributes['content'] )
 		); ?>
 	<?php endif; ?>
 
@@ -117,7 +113,7 @@ setup_postdata( $session );
 				<div class="wordcamp-sessions__categories">
 					<?php
 					/* translators: used between list items, there is a space after the comma */
-					echo wp_kses_post( implode( __( ', ', 'wordcamporg' ), $categories ) );
+					echo implode( esc_html__( ', ', 'wordcamporg' ), $categories ); // phpcs:ignore -- Escaped above.
 					?>
 				</div>
 			<?php endif; ?>

@@ -3,7 +3,7 @@ namespace WordCamp\Blocks\Organizers;
 
 use WP_Post;
 use function WordCamp\Blocks\Components\{ render_item_title, render_item_content };
-use function WordCamp\Blocks\Utilities\{ get_all_the_content };
+use function WordCamp\Blocks\Utilities\{ get_all_the_content, get_trimmed_content };
 
 defined( 'WPINC' ) || die();
 
@@ -39,13 +39,11 @@ setup_postdata( $organizer ); // This is necessary for generating an excerpt fro
 	<?php endif; ?>
 
 	<?php if ( 'none' !== $attributes['content'] ) : ?>
-		<?php echo wp_kses_post(
-			render_item_content(
-				'excerpt' === $attributes['content']
-					? apply_filters( 'the_excerpt', get_the_excerpt( $organizer ) )
-					: get_all_the_content( $organizer ),
-				array( 'wordcamp-organizers__content', 'is-' . $attributes['content'] )
-			)
+		<?php echo render_item_content( // phpcs:ignore -- escaped in get_* functions.
+			'excerpt' === $attributes['content']
+				? get_trimmed_content( $organizer )
+				: get_all_the_content( $organizer ),
+			array( 'wordcamp-organizers__content', 'is-' . $attributes['content'] )
 		); ?>
 	<?php endif; ?>
 </div>

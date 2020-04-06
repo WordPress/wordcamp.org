@@ -36,20 +36,22 @@ function render_item_title( $title, $link = '', $heading_level = 3, array $class
 		$style = "text-align:$align;";
 	}
 
-	ob_start();
-	?>
-	<<?php echo esc_html( $tag ); ?> class="<?php echo esc_attr( $classes ); ?>" style="<?php echo esc_attr( $style ); ?>">
-	<?php if ( $link ) : ?>
-		<a href="<?php echo esc_url( $link ); ?>">
-	<?php endif; ?>
-	<?php echo wp_kses_post( $title ); ?>
-	<?php if ( $link ) : ?>
-		</a>
-	<?php endif; ?>
-	</<?php echo esc_html( $tag ); ?>>
-	<?php
+	$output = sprintf(
+		'<%1$s class="%2$s" style="%3$s">',
+		esc_html( $tag ),
+		esc_attr( $classes ),
+		esc_attr( $style )
+	);
+	if ( $link ) {
+		$output .= '<a href="' . esc_url( $link ) . '">';
+	}
+	$output .= $title;
+	if ( $link ) {
+		$output .= '</a>';
+	}
+	$output .= '</' . esc_html( $tag ) . '>';
 
-	return ob_get_clean();
+	return $output;
 }
 
 /**
@@ -66,14 +68,11 @@ function render_item_content( $content, array $classes = array() ) {
 		$classes
 	) );
 
-	ob_start();
-	?>
-	<div class="<?php echo esc_attr( $classes ); ?>">
-		<?php echo wp_kses_post( wpautop( $content ) ); ?>
-	</div>
-	<?php
-
-	return ob_get_clean();
+	return sprintf(
+		'<div class="%1$s">%2$s</div>',
+		esc_attr( $classes ),
+		wpautop( $content )
+	);
 }
 
 /**
@@ -95,14 +94,10 @@ function render_item_permalink( $link, $label = '', array $classes = array() ) {
 		$classes
 	) );
 
-	ob_start();
-	?>
-	<p class="<?php echo esc_attr( $classes ); ?>">
-		<a href="<?php echo esc_url( $link ); ?>">
-			<?php echo esc_html( $label ); ?>
-		</a>
-	</p>
-	<?php
-
-	return ob_get_clean();
+	return sprintf(
+		'<p class="%1$s"><a href="%2$s>%3$s</a></p>',
+		esc_attr( $classes ),
+		esc_url( $link ),
+		esc_html( $label )
+	);
 }

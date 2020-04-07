@@ -5,7 +5,7 @@ namespace WordCamp\Gutenberg_Tweaks;
 defined( 'WPINC' ) || die();
 
 add_filter( 'classic_editor_network_default_settings', __NAMESPACE__ . '\classic_editor_default_settings' );
-
+add_filter( 'classic_editor_enabled_editors_for_post_type', __NAMESPACE__ . '\disable_editors_by_post_type', 10, 2 );
 
 /**
  * Configure the default settings for the Classic Editor
@@ -18,20 +18,43 @@ function classic_editor_default_settings( $defaults ) {
 }
 
 /**
- * Disable block editor for WordCamp post types, since its not fully compatible yet.
- * In block editor flow, when an organizer who do not have permission to change status, but are author of the post, tries to edit a WordCamp post, "Publish" button gets replaced with "Submit for Review" button.
- * Since we do not support review flow for WordCamp Post Type, this has unintended consequences which includes post status being set to "Needs Vetting", there by accidentally changing WordCamp Status.
+ * Remove editor options (classic or Gutenberg) in post types that don't support them.
  *
- * @param string $status
+ * @param array  $editors
  * @param string $post_type
  *
- * @return bool
+ * @return array
  */
-function disable_block_editor_for_wordcamp( $use_block_editor, $post_type ) {
-	if ( ! defined( 'WCPT_POST_TYPE_ID' ) ) {
-		return $use_block_editor;
-	}
-	return $use_block_editor && WCPT_POST_TYPE_ID !== $post_type;
-}
+function disable_editors_by_post_type( $editors, $post_type ) {
+	/*
+	 * These post-types should only be edited in Gutenberg.
+	 * @todo Uncomment these as the metaboxes are converted into gutenberg-native panels.
+	 */
+	$gutenberg_only = array(
+		// 'wcb_session',
+		// 'wcb_speaker',
+		// 'wcb_sponsor',
+		// 'wcb_organizer',
+	);
 
-add_filter( 'use_block_editor_for_post_type', __NAMESPACE__ . '\disable_block_editor_for_wordcamp', 10, 2 );
+	/*
+	 * These have custom interfaces/interactions that haven't been ported to Gutenberg yet.
+	 */
+	$classic_only = array();
+
+	if ( defined( 'WCPT_POST_TYPE_ID' ) ) {
+		$classic_only[] = WCPT_POST_TYPE_ID;
+	}
+
+	// Currently not necessary to set on these post types, they don't support gutenberg. This is either because
+	// they don't support the `editor`, or they have `public`/`show_in_rest` set to false:
+	// WCPT_MEETUP_SLUG, \MES_Sponsor::POST_TYPE_SLUG, Payment CPTs, CampTix CPTs.
+
+	if ( in_array( $post_type, $gutenberg_only ) ) {
+		$editors['classic_editor'] = false;
+	}
+	if ( in_array( $post_type, $classic_only ) ) {
+		$editors['block_editor'] = false;
+	}
+	return $editors;
+}

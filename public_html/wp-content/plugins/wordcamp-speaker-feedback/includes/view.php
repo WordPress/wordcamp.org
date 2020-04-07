@@ -8,6 +8,7 @@ use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
 use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
 
 defined( 'WPINC' ) || die();
@@ -42,7 +43,13 @@ function render( $content ) {
 
 	$now = date_create( 'now', wp_timezone() );
 
-	if ( has_feedback_form() ) {
+	if ( current_user_can( 'read_post_' . COMMENT_TYPE, $post->ID ) ) {
+		ob_start();
+
+		require get_views_path() . 'view-feedback.php';
+
+		$content = $content . ob_get_clean(); // Append feedback to the normal content.
+	} elseif ( has_feedback_form() ) {
 		$accepts_feedback = post_accepts_feedback( $post->ID );
 
 		ob_start();

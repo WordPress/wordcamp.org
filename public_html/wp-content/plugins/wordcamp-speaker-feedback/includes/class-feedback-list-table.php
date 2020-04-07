@@ -7,7 +7,7 @@ use WP_Comments_List_Table;
 use function WordCamp\SpeakerFeedback\get_assets_path;
 use function WordCamp\SpeakerFeedback\Admin\feedback_bubble;
 use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
-use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
+use function WordCamp\SpeakerFeedback\View\{ render_feedback_comment, render_feedback_rating };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
@@ -173,24 +173,7 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	 * @return void
 	 */
 	public function column_feedback( $comment ) {
-		$feedback  = get_feedback_comment( $comment );
-		$questions = get_feedback_questions( $feedback->version );
-
-		foreach ( $questions as $key => $question ) {
-			if ( 'rating' === $key ) {
-				continue;
-			}
-
-			$answer = $feedback->$key;
-
-			if ( $answer ) {
-				printf(
-					'<p class="speaker-feedback__question">%s</p><p class="speaker-feedback__answer">%s</p>',
-					wp_kses_data( $question ),
-					wp_kses_data( $answer )
-				);
-			}
-		}
+		render_feedback_comment( $comment );
 	}
 
 	/**
@@ -201,32 +184,7 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	 * @return void
 	 */
 	public function column_rating( $comment ) {
-		$feedback = get_feedback_comment( $comment );
-
-		$rating      = $feedback->rating;
-		$max_stars   = 5;
-		$star_output = 0;
-		?>
-		<span class="screen-reader-text">
-			<?php
-			printf(
-				esc_html__( '%d stars', 'wordcamporg' ),
-				absint( $rating )
-			);
-			?>
-		</span>
-		<span class="speaker-feedback__meta-rating">
-			<?php while ( $star_output < $max_stars ) :
-				$class = ( $star_output < $rating ) ? 'star__full' : 'star__empty';
-				?>
-				<span class="star <?php echo esc_attr( $class ); ?>">
-					<?php require get_assets_path() . 'svg/star.svg'; ?>
-				</span>
-				<?php
-				$star_output ++;
-			endwhile; ?>
-		</span>
-		<?php
+		render_feedback_rating( $comment );
 	}
 
 	/**

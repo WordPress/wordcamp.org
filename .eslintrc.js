@@ -1,10 +1,97 @@
 /*
- * @todo
+ * @todo discuss these potential changes
  *
- * should use hasOwnProperty or Object.getOwnPropertyDescriptors(). the latter usually makes code more readable, but sometimes the former first better
+ * `arrow-parens` `as-needed` - skipping them when only have 1 arg remove unnecessary clutter, which helps readability.
+ *      e.g., `const w = x.filter( ( y ) => z.includes( y.id ) );` should be `const w = x.filter( y => z.includes( y.id ) );`
+ * `no-unused-vars` `after-used` - `forEach( ( [ , sessions ] )` looks odd, and you don't know what that first arg actually is, in case you want to use it in the future.
+ *      see getOverlappingSessionIds()
+ * `no-multiple-empty-lines` - somestimes 2 lines useful to separate sections of code, like `import`s at top of file from `export` of components
+ * `require-jsdoc` - not for `render` and lifecycle methods b/c it's obvious what they are
+ *
  * assignment and control structures/returns/etc should be separate by a blank line for readability.
  *      same for div and other block-level html elements
+ *
+ * should use hasOwnProperty or Object.getOwnPropertyDescriptors(). the latter usually makes code more readable, but sometimes the former first better
+ *
  * disable `no-console` b/c valid use case. if can make exception for `log` function without disabling, then do that. don't want console used for temporary debugging, but there are valid cases where you want to provide the user some insight into what went wrong
+ *
+ * padded-blocks - often useful for readability.
+ * may need to use `padding-line-between-statements` to fix
+ * e.g.,
+
+if ( chooseSpecificTracks && chosenTrackIds.length ) {
+	displayedTracksIds = chosenTrackIds;
+
+} else {
+	// Gather all of the tracks from the given sessions.
+	const uniqueTrackIds = new Set();
+
+	for ( const session of sessions ) {
+		for ( const track of session.derived.assignedTracks ) {
+			uniqueTrackIds.add( track.id );
+		}
+	}
+
+	displayedTracksIds = Array.from( uniqueTrackIds );
+}
+
+ *
+ * still having trouble reading things like the 6 assignments at the start of Session().
+ *      maybe a solution that'd work for everyone would be to align the `=` and `:` operators _IF_ the white space created wouldn't be more than X characters?
+ *      if it is larger, then can add an empty line in-between
+ *      doing that in core IIRC
+ *      e.g.,
+
+ 	const { id, slug, title } = session;
+	const { assignedCategories, assignedTracks, startTime, endTime } = session.derived;
+	const displayedTrackIds = displayedTracks.map( track => track.id );
+	const displayedAssignedTracks = assignedTracks.filter( track => displayedTrackIds.includes( track.id ) );
+	const speakers = session.session_speakers || [];
+	const editUrl = `/wp-admin/post.php?post=${ id }&action=edit`;
+
+    ...becomes
+
+    const { id, slug, title } = session;
+	const { assignedCategories, assignedTracks, startTime, endTime } = session.derived;
+
+	const displayedTrackIds       = displayedTracks.map( track => track.id );
+	const displayedAssignedTracks = assignedTracks.filter( track => displayedTrackIds.includes( track.id ) );
+	const speakers                = session.session_speakers || [];
+	const editUrl                 = `/wp-admin/post.php?post=${ id }&action=edit`;
+
+	...or maybe
+
+	const { id, slug, title } = session;
+	const { assignedCategories, assignedTracks, startTime, endTime } = session.derived;
+
+	const displayedTrackIds       = displayedTracks.map( track => track.id );
+	const displayedAssignedTracks = assignedTracks.filter( track => displayedTrackIds.includes( track.id ) );
+
+	const speakers = session.session_speakers || [];
+	const editUrl  = `/wp-admin/post.php?post=${ id }&action=edit`;
+
+
+	another example that's hard to read:
+
+	export const SETTINGS = {
+		title: __( 'Schedule', 'wordcamporg' ),
+		description: __( "Display your WordCamp's awesome schedule.", 'wordcamporg' ),
+		icon: ICON,
+		category: 'wordcamp',
+		supports: supports,
+		attributes: attributes,
+		edit: Edit,
+		save: () => null,
+	};
+ *
+ * add eslint-plugin-react-hooks plugin? or propose it be added to default wpscripts config?
+ *
+ * indent: ignoreComments -- i often use indenting in temporary comments to signify logic e.g.,
+
+ // todo if x then do y
+       // but otherwise then do z
+
+ ... but eslint complains about it. not a huge deal since those typically get manually removed before merge, but still annoying to workflow
  */
 
 module.exports = {

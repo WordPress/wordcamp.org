@@ -14,6 +14,7 @@ namespace WordCamp\Bin\PHPCS_Changed;
 function run_phpcs( $file, $bin_dir ) {
 	exec( "$bin_dir/phpcs $file -q", $output, $exec_exit_status );
 	echo implode( "\n", $output );
+	return $exec_exit_status;
 }
 
 function run_phpcs_changed( $file, $git, $base_branch, $bin_dir ) {
@@ -28,6 +29,7 @@ function run_phpcs_changed( $file, $git, $base_branch, $bin_dir ) {
 	echo "\n";
 
 	exec( "rm $name.diff $name.orig.phpcs $name.phpcs" );
+	return $exec_exit_status;
 }
 
 function main() {
@@ -38,6 +40,7 @@ function main() {
 
 	try {
 		echo "\nScanning changed files...\n";
+		$status = 0;
 
 		$affected_files = shell_exec( "$git diff $base_branch...HEAD --name-status --diff-filter=AM 2>&1 | grep .php$" );
 		$affected_files = explode( "\n", trim( $affected_files ) );
@@ -47,15 +50,17 @@ function main() {
 
 			switch ( $change ) {
 				case 'M':
-					run_phpcs_changed( $file, $git, $base_branch, $bin_dir );
+					$cmd_status = run_phpcs_changed( $file, $git, $base_branch, $bin_dir );
 					break;
 
 				case 'A':
-					run_phpcs( $file, $bin_dir );
+					$cmd_status = run_phpcs( $file, $bin_dir );
 					break;
 			}
+
+			// If any cmd exits with 1, we want to exit with 1.
+			$status |= $cmd_status;
 		}
-		$status = 0;
 
 	} catch ( Exception $exception ) {
 		echo "\nAborting because of error: {$exception->getMessage()} \n";

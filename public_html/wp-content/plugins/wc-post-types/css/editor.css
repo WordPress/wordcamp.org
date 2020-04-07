@@ -7,8 +7,18 @@
 	width: 100%;
 }
 
+.wc-panel-session-info__duration-wrapper {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
 .wc-panel-session-info__duration label {
 	margin-left: 4px;
+}
+
+.wc-panel-session-info__duration input {
+	max-width: 3rem;
 }
 
 .wc-panel-session-info__duration label + input {

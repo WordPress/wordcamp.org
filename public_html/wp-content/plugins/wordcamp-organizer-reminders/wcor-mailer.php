@@ -1,6 +1,7 @@
 <?php
 
 use function WordCamp\Logger\log;
+use function WordCamp\SpeakerFeedback\Admin\get_subpage_url;
 
 /**
  * Sends e-mails at time-based intervals and on triggers
@@ -241,6 +242,10 @@ class WCOR_Mailer {
 			'[multi_event_sponsor_info]',
 		);
 
+		if ( is_callable( 'get_subpage_url' ) ) {
+			$search[] = '[session_feedback_list_url]';
+		}
+
 		$replace = array(
 			// The WordCamp
 			$wordcamp->post_title,
@@ -303,6 +308,10 @@ class WCOR_Mailer {
 			// Miscellaneous
 			$this->get_mes_info( $wordcamp->ID ),
 		);
+
+		if ( is_callable( 'get_subpage_url' ) ) {
+			$replace[] = get_subpage_url( 'wcb_session' );
+		}
 
 		return str_replace( $search, $replace, $content );
 	}

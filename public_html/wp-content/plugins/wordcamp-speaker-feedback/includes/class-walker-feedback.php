@@ -67,7 +67,7 @@ class Walker_Feedback extends Walker_Comment {
 		$comment_id = $comment->comment_ID;
 
 		?>
-		<div <?php comment_class( '', $comment ); ?>>
+		<div <?php comment_class( 'speaker-feedback__comment', $comment ); ?>>
 			<article id="speaker-feedback-<?php echo absint( $comment_id ); ?>" class="speaker-feedback__comment-body comment-body">
 				<header class="speaker-feedback__comment-meta comment-meta">
 					<div class="speaker-feedback__comment-author comment-author vcard">
@@ -95,7 +95,7 @@ class Walker_Feedback extends Walker_Comment {
 					<?php render_feedback_comment( $comment ); ?>
 				</div><!-- .comment-content -->
 
-				<footer class="speaker-feedback__comment-meta comment-meta">
+				<footer class="speaker-feedback__helpful">
 					<form>
 						<span id="sft-helpful-<?php echo absint( $comment_id ); ?>">
 							<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>

@@ -4,7 +4,7 @@ namespace WordCamp\SpeakerFeedback\View;
 
 use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
-use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
+use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
 use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
@@ -45,6 +45,25 @@ function render( $content ) {
 
 	if ( current_user_can( 'read_post_' . COMMENT_TYPE, $post->ID ) ) {
 		ob_start();
+
+		$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ) );
+		$avg_rating = 0;
+
+		if ( count( $feedback ) ) {
+			$sum_rating = array_reduce(
+				$feedback,
+				function( $carry, $item ) {
+					$carry += absint( $item->rating );
+					return $carry;
+				},
+				0
+			);
+			$avg_rating = round( $sum_rating / count( $feedback ) );
+		}
+
+		$feedback_count = count_feedback( $post->ID );
+		$approved       = absint( $feedback_count['approved'] );
+		$moderated      = absint( $feedback_count['moderated'] );
 
 		require get_views_path() . 'view-feedback.php';
 

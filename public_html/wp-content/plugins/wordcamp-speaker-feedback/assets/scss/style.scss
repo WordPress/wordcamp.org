@@ -147,6 +147,91 @@
 	}
 }
 
+/**
+ * Speaker view: Session overview.
+ */
+
+.speaker-feedback__overview {
+	margin-bottom: 4rem;
+
+	strong {
+		margin-right: 5px;
+	}
+}
+
+/**
+ * Speaker view: Feedback filters.
+ */
+
+.speaker-feedback__filters {
+	display: flex;
+	align-items: center;
+	margin-bottom: 4rem;
+
+	.speaker-feedback__filter-sort {
+		display: flex;
+		align-items: center;
+		margin-right: 1em;
+
+		label {
+			margin-bottom: 0;
+		}
+
+		select {
+			margin-left: 0.5em;
+		}
+	}
+
+	@media (max-width: 600px) {
+		display: block;
+
+		.speaker-feedback__filter-sort {
+			margin-bottom: 1em;
+		}
+	}
+}
+
+/**
+ * Speaker view: Feedback in list.
+ */
+
+.speaker-feedback__comment {
+	margin-bottom: 4rem;
+}
+
+.speaker-feedback__comment-content {
+	margin-top: 1em;
+}
+
+/**
+ * Speaker view: "Is this helpful" form.
+ */
+
+.speaker-feedback__helpful {
+	padding: 1rem 1.5rem;
+	background: #ddd;
+	border-radius: 5px;
+	max-width: 460px;
+
+	form {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	button {
+		display: inline-block;
+		font-size: 1.2em;
+		letter-spacing: 0;
+		line-height: 1.25;
+		margin: 0 0 0 1em;
+		padding: 0.4em 0.8em;
+		text-align: center;
+		text-decoration: none;
+		text-transform: none;
+		word-wrap: normal;
+	}
+}
 
 /**
  * Question/answer display.

@@ -4,7 +4,7 @@ namespace WordCamp\SpeakerFeedback\Tests;
 
 use WP_UnitTestCase, WP_UnitTest_Factory;
 use WP_Post;
-use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
+use function WordCamp\SpeakerFeedback\Post\{ post_accepts_feedback, get_session_speaker_user_ids };
 
 defined( 'WPINC' ) || die();
 
@@ -27,6 +27,22 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 	public static function wpSetUpBeforeClass( $factory ) {
 		add_post_type_support( 'wcb_session', 'wordcamp-speaker-feedback' );
 
+		self::$posts['speaker-with-id'] = $factory->post->create_and_get( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'publish',
+			'meta_input'  => array(
+				'_wcpt_user_id' => 1,
+			),
+		) );
+
+		self::$posts['speaker-invalid-id'] = $factory->post->create_and_get( array(
+			'post_type'   => 'wcb_speaker',
+			'post_status' => 'publish',
+			'meta_input'  => array(
+				'_wcpt_user_id' => 'potato',
+			),
+		) );
+
 		self::$posts['yes'] = $factory->post->create_and_get( array(
 			'post_type'   => 'wcb_session',
 			'post_status' => 'publish',
@@ -35,6 +51,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 				'_wcpt_session_time' => strtotime( '- 1 day' ),
 			),
 		) );
+		add_post_meta( self::$posts['yes']->ID, '_wcpt_speaker_id', self::$posts['speaker-with-id']->ID );
 
 		self::$posts['no-support'] = $factory->post->create_and_get( array(
 			'post_type'   => 'wcb_sponsor',
@@ -63,6 +80,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 				'_wcpt_session_time' => strtotime( '+ 1 day' ),
 			),
 		) );
+		add_post_meta( self::$posts['no-too-soon']->ID, '_wcpt_speaker_id', self::$posts['speaker-invalid-id']->ID );
 
 		self::$posts['no-too-late'] = $factory->post->create_and_get( array(
 			'post_type'   => 'wcb_session',
@@ -150,5 +168,23 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'speaker_feedback_session_too_late', $result->get_error_code() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\Post\test_get_session_speaker_user_ids()
+	 */
+	public function test_get_session_speaker_user_ids() {
+		$user_ids = get_session_speaker_user_ids( self::$posts['yes']->ID );
+
+		$this->assertCount( 1, $user_ids );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\Post\test_get_session_speaker_user_ids()
+	 */
+	public function test_get_session_speaker_user_ids_invalid() {
+		$user_ids = get_session_speaker_user_ids( self::$posts['no-too-soon']->ID );
+
+		$this->assertCount( 0, $user_ids );
 	}
 }

@@ -15,19 +15,19 @@ defined( 'WPINC' ) || die();
  */
 class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 	/**
-	 * @var WP_User
+	 * @var WP_User[]
 	 */
-	protected static $users;
+	protected static $users = array();
 
 	/**
-	 * @var WP_Post
+	 * @var WP_Post[]
 	 */
-	protected static $session_posts;
+	protected static $posts = array();
 
 	/**
-	 * @var WP_Comment
+	 * @var WP_Comment[]
 	 */
-	protected static $feedback_comments;
+	protected static $feedback_comments = array();
 
 	/**
 	 * Set up shared fixtures for these tests.
@@ -35,8 +35,6 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 	 * @param WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
-		self::$users = array();
-
 		self::$users['speaker']     = $factory->user->create_and_get( array(
 			'role' => 'subscriber',
 		) );
@@ -47,35 +45,59 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 			'role' => 'editor',
 		) );
 
-		self::$session_posts = array();
-
-		self::$session_posts['session-1'] = $factory->post->create_and_get( array(
+		self::$posts['speaker-1'] = $factory->post->create_and_get( array(
+			'post_type'  => 'wcb_speaker',
+			'meta_input' => array(
+				'_wcpt_user_id' => self::$users['speaker']->ID,
+			),
+		) );
+		self::$posts['speaker-2'] = $factory->post->create_and_get( array(
+			'post_type'  => 'wcb_speaker',
+			'meta_input' => array(
+				'_wcpt_user_id' => self::$users['editor']->ID,
+			),
+		) );
+		self::$posts['session-1'] = $factory->post->create_and_get( array(
 			'post_type' => 'wcb_session',
 		) );
-		self::$session_posts['session-2'] = $factory->post->create_and_get( array(
+		add_post_meta( self::$posts['session-1']->ID, '_wcpt_speaker_id', self::$posts['speaker-1']->ID );
+		self::$posts['session-2'] = $factory->post->create_and_get( array(
 			'post_type' => 'wcb_session',
 		) );
-
-		add_post_meta( self::$session_posts['session-1']->ID, '_wcpt_speaker_id', absint( self::$users['speaker']->ID ) );
-		add_post_meta( self::$session_posts['session-2']->ID, '_wcpt_speaker_id', absint( self::$users['editor']->ID ) );
-
-		self::$feedback_comments = array();
+		add_post_meta( self::$posts['session-2']->ID, '_wcpt_speaker_id', self::$posts['speaker-2']->ID );
 
 		self::$feedback_comments['session-1-approve'] = self::factory()->comment->create_and_get( array(
 			'comment_type'     => COMMENT_TYPE,
-			'comment_post_ID'  => self::$session_posts['session-1']->ID,
+			'comment_post_ID'  => self::$posts['session-1']->ID,
 			'comment_approved' => 1,
 		) );
 		self::$feedback_comments['session-1-hold']    = self::factory()->comment->create_and_get( array(
 			'comment_type'     => COMMENT_TYPE,
-			'comment_post_ID'  => self::$session_posts['session-1']->ID,
+			'comment_post_ID'  => self::$posts['session-1']->ID,
 			'comment_approved' => 0,
 		) );
 		self::$feedback_comments['session-2-hold']    = self::factory()->comment->create_and_get( array(
 			'comment_type'     => COMMENT_TYPE,
-			'comment_post_ID'  => self::$session_posts['session-2']->ID,
+			'comment_post_ID'  => self::$posts['session-2']->ID,
 			'comment_approved' => 0,
 		) );
+	}
+
+	/**
+	 * Remove fixtures.
+	 */
+	public static function wpTearDownAfterClass() {
+		foreach ( self::$posts as $post ) {
+			wp_delete_post( $post->ID, true );
+		}
+
+		foreach ( self::$users as $user ) {
+			wp_delete_user( $user->ID );
+		}
+
+		foreach ( self::$feedback_comments as $comment ) {
+			wp_delete_comment( $comment, true );
+		}
 	}
 
 	/**
@@ -142,34 +164,34 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 		$this->assertTrue( user_can(
 			self::$users['speaker'],
 			'read_post_' . COMMENT_TYPE,
-			self::$session_posts['session-1']
+			self::$posts['session-1']
 		) );
 		$this->assertFalse( user_can(
 			self::$users['non-speaker'],
 			'read_post_' . COMMENT_TYPE,
-			self::$session_posts['session-1']
+			self::$posts['session-1']
 		) );
 		$this->assertTrue( user_can(
 			self::$users['editor'],
 			'read_post_' . COMMENT_TYPE,
-			self::$session_posts['session-1']
+			self::$posts['session-1']
 		) );
 
 		// Session 2.
 		$this->assertFalse( user_can(
 			self::$users['speaker'],
 			'read_post_' . COMMENT_TYPE,
-			self::$session_posts['session-2']
+			self::$posts['session-2']
 		) );
 		$this->assertFalse( user_can(
 			self::$users['non-speaker'],
 			'read_post_' . COMMENT_TYPE,
-			self::$session_posts['session-2']
+			self::$posts['session-2']
 		) );
 		$this->assertTrue( user_can(
 			self::$users['editor'],
 			'read_post_' . COMMENT_TYPE,
-			self::$session_posts['session-2']
+			self::$posts['session-2']
 		) );
 	}
 

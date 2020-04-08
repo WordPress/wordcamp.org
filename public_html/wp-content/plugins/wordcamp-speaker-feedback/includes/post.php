@@ -64,3 +64,25 @@ function post_accepts_feedback( $post_id ) {
 
 	return true;
 }
+
+/**
+ * Get a list of user IDs of the speakers for a given session.
+ *
+ * @param int $session_id
+ *
+ * @return array
+ */
+function get_session_speaker_user_ids( $session_id ) {
+	$user_ids         = array();
+	$speaker_post_ids = get_post_meta( $session_id, '_wcpt_speaker_id' );
+
+	foreach ( $speaker_post_ids as $post_id ) {
+		$user_id = absint( get_post_meta( $post_id, '_wcpt_user_id', true ) );
+
+		if ( $user_id ) {
+			$user_ids[] = $user_id;
+		}
+	}
+
+	return $user_ids;
+}

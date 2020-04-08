@@ -147,46 +147,18 @@
 	}
 }
 
+
 /**
- * WP Dashboard: Feedback list table.
+ * Question/answer display.
  */
 
-.column-name {
-	img {
-		float: left;
-		margin-right: 10px;
-		margin-top: 1px;
-	}
-}
-
-#comments-form {
-	.fixed {
-		.column-name {
-			width: 15%;
-		}
-
-		.column-rating {
-			width: 140px;
-		}
-	}
+.speaker-feedback__question {
+	margin-bottom: 0.5em;
+	font-weight: 700;
 }
 
 /**
- * WP Dashboard: Question/answer display.
- */
-
-.widefat td {
-	p.speaker-feedback__question {
-		font-weight: 700;
-	}
-
-	p.speaker-feedback__answer {
-		margin-bottom: 2em;
-	}
-}
-
-/**
- * WP Dashboard: Rating display.
+ * Rating display.
  */
 
 .speaker-feedback__meta-rating {
@@ -201,11 +173,45 @@
 		fill: currentColor;
 	}
 
-	span.star__full {
+	.star {
+		display: inline-block;
+	}
+
+	.star__full {
 		color: $star-selected;
 	}
 
-	span.star__empty {
+	.star__empty {
 		color: $star-default;
+	}
+}
+
+/**
+ * WP Dashboard: Feedback list table.
+ */
+
+.column-name {
+	img {
+		float: left;
+		margin-right: 10px;
+		margin-top: 1px;
+	}
+}
+
+.column-feedback {
+	.speaker-feedback__answer {
+		margin-bottom: 2em;
+	}
+}
+
+#comments-form {
+	.fixed {
+		.column-name {
+			width: 15%;
+		}
+
+		.column-rating {
+			width: 140px;
+		}
 	}
 }

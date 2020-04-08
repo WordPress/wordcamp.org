@@ -3,7 +3,7 @@
 namespace WordCamp\SpeakerFeedback\Tests;
 
 use WP_UnitTestCase, WP_UnitTest_Factory;
-use WP_Post, WP_User;
+use WP_Comment, WP_Post, WP_User;
 use WP_REST_Request, WP_REST_Response;
 use WordCamp\SpeakerFeedback\REST_Feedback_Controller;
 use function WordCamp\SpeakerFeedback\Comment\{ get_feedback, get_feedback_comment };
@@ -33,6 +33,11 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	protected static $users = array();
 
 	/**
+	 * @var WP_Comment[]
+	 */
+	protected static $feedback_comments = array();
+
+	/**
 	 * @var array
 	 */
 	protected static $valid_meta;
@@ -56,8 +61,19 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 			'role' => 'subscriber',
 		) );
 
+		self::$users['speaker'] = $factory->user->create_and_get( array(
+			'role' => 'subscriber',
+		) );
+
 		self::$users['admin'] = $factory->user->create_and_get( array(
 			'role' => 'administrator',
+		) );
+
+		self::$posts['speaker'] = $factory->post->create_and_get( array(
+			'post_type'  => 'wcb_session',
+			'meta_input' => array(
+				'_wcpt_user_id' => self::$users['speaker']->ID,
+			),
 		) );
 
 		self::$posts['valid-session'] = $factory->post->create_and_get( array(
@@ -76,7 +92,18 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 			),
 		) );
 		// It doesn't work to add this value via `meta_input` for some reason.
-		add_post_meta( self::$posts['valid-session-with-speaker']->ID, '_wcpt_speaker_id', self::$users['subscriber']->ID );
+		add_post_meta( self::$posts['valid-session-with-speaker']->ID, '_wcpt_speaker_id', self::$posts['speaker']->ID );
+
+		self::$feedback_comments['feedback-approved'] = self::factory()->comment->create_and_get( array(
+			'comment_type'     => COMMENT_TYPE,
+			'comment_post_ID'  => self::$posts['valid-session-with-speaker']->ID,
+			'comment_approved' => 1,
+		) );
+
+		self::$feedback_comments['not-feedback'] = self::factory()->comment->create_and_get( array(
+			'comment_post_ID'  => self::$posts['valid-session-with-speaker']->ID,
+			'comment_approved' => 1,
+		) );
 
 		self::$valid_meta = array(
 			'rating' => 1,
@@ -99,6 +126,10 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		foreach ( self::$users as $user ) {
 			wp_delete_user( $user->ID );
 		}
+
+		foreach ( self::$feedback_comments as $comment ) {
+			wp_delete_comment( $comment, true );
+		}
 	}
 
 	/**
@@ -116,14 +147,10 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 * Reset after each test.
 	 */
 	public function tearDown() {
-		global $wpdb;
-
-		$ids = $wpdb->get_col( "SELECT comment_ID FROM {$wpdb->prefix}comments" );
-
-		// This ensures that only comments created during a given test exist in the database and cache during the test.
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}comments" );
-		$wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}commentmeta" );
-		clean_comment_cache( $ids );
+		$created_feedback = get_feedback( array( self::$posts['valid-session']->ID ) );
+		foreach ( $created_feedback as $feedback ) {
+			wp_delete_comment( $feedback->comment_ID, true );
+		}
 
 		$this->request = null;
 
@@ -146,7 +173,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
-		$this->assertCount( 1, get_feedback() );
+		$this->assertCount( 1, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 	}
 
 	/**
@@ -166,7 +193,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
-		$this->assertCount( 1, get_feedback() );
+		$this->assertCount( 1, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 	}
 
 	/**
@@ -184,7 +211,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertWPError( $response );
 		$this->assertEquals( 'rest_feedback_author_data_required', $response->get_error_code() );
-		$this->assertCount( 0, get_feedback() );
+		$this->assertCount( 0, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 	}
 
 	/**
@@ -202,7 +229,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertWPError( $response );
 		$this->assertEquals( 'rest_feedback_meta_data_required', $response->get_error_code() );
-		$this->assertCount( 0, get_feedback() );
+		$this->assertCount( 0, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 	}
 
 	/**
@@ -224,13 +251,13 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response1 instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response1->get_status() );
-		$this->assertCount( 1, get_feedback() );
+		$this->assertCount( 1, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 
 		$response2 = self::$controller->create_item( $this->request );
 
 		$this->assertWPError( $response2 );
 		$this->assertEquals( 'comment_duplicate', $response2->get_error_code() );
-		$this->assertCount( 1, get_feedback() );
+		$this->assertCount( 1, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 	}
 
 	/**
@@ -257,7 +284,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response1 instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response1->get_status() );
-		$this->assertCount( 1, get_feedback() );
+		$this->assertCount( 1, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 
 		$params['meta']['rating'] = 2; // Different value.
 
@@ -267,7 +294,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response2 instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response2->get_status() );
-		$this->assertCount( 2, get_feedback() );
+		$this->assertCount( 2, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 
 		unset( $params['meta']['q3'] ); // Missing value.
 
@@ -277,7 +304,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response3 instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response3->get_status() );
-		$this->assertCount( 3, get_feedback() );
+		$this->assertCount( 3, get_feedback( array( self::$posts['valid-session']->ID ) ) );
 	}
 
 	/**
@@ -334,13 +361,9 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::update_item()
 	 */
-	public function test_update_item_is_valid() {
-		$comment = $this->factory->comment->create_and_get( array(
-			'comment_type' => COMMENT_TYPE,
-		) );
-
+	public function test_update_item_set_helpful() {
 		$params = array(
-			'id'   => $comment->comment_ID,
+			'id'   => self::$feedback_comments['feedback-approved']->comment_ID,
 			'meta' => array(
 				'helpful' => true,
 			),
@@ -352,7 +375,27 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertTrue( $response instanceof WP_REST_Response );
 		$this->assertEquals( 201, $response->get_status() );
-		$this->assertTrue( (bool) get_feedback_comment( $comment )->helpful );
+		$this->assertTrue( (bool) get_feedback_comment( self::$feedback_comments['feedback-approved'] )->helpful );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::update_item()
+	 */
+	public function test_update_item_unset_helpful() {
+		$params = array(
+			'id'   => self::$feedback_comments['feedback-approved']->comment_ID,
+			'meta' => array(
+				'helpful' => false,
+			),
+		);
+
+		$this->request->set_body_params( $params );
+
+		$response = self::$controller->update_item( $this->request );
+
+		$this->assertTrue( $response instanceof WP_REST_Response );
+		$this->assertEquals( 201, $response->get_status() );
+		$this->assertFalse( (bool) get_feedback_comment( self::$feedback_comments['feedback-approved'] )->helpful );
 	}
 
 	/**
@@ -376,12 +419,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::update_item()
 	 */
 	public function test_update_item_no_meta() {
-		$comment = $this->factory->comment->create_and_get( array(
-			'comment_type' => COMMENT_TYPE,
-		) );
-
 		$params = array(
-			'id' => $comment->comment_ID,
+			'id' => self::$feedback_comments['feedback-approved']->comment_ID,
 		);
 
 		$this->request->set_body_params( $params );
@@ -395,14 +434,11 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::update_item_permissions_check()
 	 */
-	public function test_update_item_permissions_check_is_valid() {
-		$comment = $this->factory->comment->create_and_get( array(
-			'comment_type'    => COMMENT_TYPE,
-			'comment_post_ID' => self::$posts['valid-session-with-speaker']->ID,
-		) );
+	public function test_update_item_permissions_check() {
+		wp_set_current_user( self::$users['speaker']->ID );
 
 		$params = array(
-			'id'   => $comment->comment_ID,
+			'id'   => self::$feedback_comments['feedback-approved']->comment_ID,
 			'meta' => array(
 				'helpful' => true,
 			),
@@ -410,9 +446,16 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->request->set_body_params( $params );
 
-		$response = self::$controller->update_item_permissions_check( $this->request );
+		$response1 = self::$controller->update_item_permissions_check( $this->request );
 
-		$this->assertTrue( $response );
+		$this->assertTrue( $response1 );
+
+		wp_set_current_user( self::$users['subscriber']->ID );
+
+		$response2 = self::$controller->update_item_permissions_check( $this->request );
+
+		$this->assertWPError( $response2 );
+		$this->assertEquals( 'rest_feedback_no_permission', $response2->get_error_code() );
 	}
 
 	/**
@@ -421,12 +464,8 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	public function test_update_item_permissions_check_not_feedback() {
 		wp_set_current_user( self::$users['admin']->ID );
 
-		$comment = $this->factory->comment->create_and_get( array(
-			'comment_post_ID' => self::$posts['valid-session']->ID,
-		) );
-
 		$params = array(
-			'id'   => $comment->comment_ID,
+			'id'   => self::$feedback_comments['not-feedback']->comment_ID,
 			'meta' => array(
 				'helpful' => true,
 			),
@@ -438,29 +477,5 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 
 		$this->assertWPError( $response );
 		$this->assertEquals( 'rest_feedback_not_feedback', $response->get_error_code() );
-	}
-
-	/**
-	 * @covers \WordCamp\SpeakerFeedback\REST_Feedback_Controller::update_item_permissions_check()
-	 */
-	public function test_update_item_permissions_check_not_speaker() {
-		$comment = $this->factory->comment->create_and_get( array(
-			'comment_type'    => COMMENT_TYPE,
-			'comment_post_ID' => self::$posts['valid-session']->ID,
-		) );
-
-		$params = array(
-			'id'   => $comment->comment_ID,
-			'meta' => array(
-				'helpful' => true,
-			),
-		);
-
-		$this->request->set_body_params( $params );
-
-		$response = self::$controller->update_item_permissions_check( $this->request );
-
-		$this->assertWPError( $response );
-		$this->assertEquals( 'rest_feedback_no_permission', $response->get_error_code() );
 	}
 }

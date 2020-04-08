@@ -69,6 +69,31 @@ class Test_SpeakerFeedback_CommentMeta extends WP_UnitTestCase {
 	/**
 	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
 	 */
+	public function test_validate_feedback_meta_booleanish() {
+		$alternate_valid_meta            = self::$valid_meta;
+		$alternate_valid_meta['helpful'] = 'true';
+
+		$result = validate_feedback_meta( $alternate_valid_meta );
+
+		$this->assertEqualSetsWithIndex( $alternate_valid_meta, $result );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
+	 */
+	public function test_validate_feedback_meta_not_boolean() {
+		$invalid_meta            = self::$valid_meta;
+		$invalid_meta['helpful'] = 'spork';
+
+		$result = validate_feedback_meta( $invalid_meta );
+
+		$this->assertWPError( $result );
+		$this->assertArrayHasKey( 'helpful', $result->get_error_data() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\CommentMeta\validate_feedback_meta()
+	 */
 	public function test_validate_feedback_meta_not_numeric() {
 		$invalid_meta           = self::$valid_meta;
 		$invalid_meta['rating'] = 'spork';

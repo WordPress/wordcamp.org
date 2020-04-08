@@ -2,8 +2,9 @@
 
 namespace WordCamp\SpeakerFeedback\Capabilities;
 
+use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
+use function WordCamp\SpeakerFeedback\Post\get_session_speaker_user_ids;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
-use function WordCamp\SpeakerFeedback\Comment\{ get_feedback_comment };
 
 defined( 'WPINC' ) || die();
 
@@ -33,7 +34,7 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 			}
 
 			// Current user is a speaker for the session receiving feedback comments.
-			$session_speakers = array_map( 'absint', (array) get_post_meta( $feedback->comment_post_ID, '_wcpt_speaker_id' ) );
+			$session_speakers = get_session_speaker_user_ids( $feedback->comment_post_ID );
 			if ( in_array( $user_id, $session_speakers, true ) ) {
 				$required_caps[] = 'read';
 
@@ -64,7 +65,7 @@ function map_meta_caps( $user_caps, $current_cap, $user_id, $args = array() ) {
 			}
 
 			// Current user is a speaker for the session receiving feedback comments.
-			$session_speakers = array_map( 'absint', (array) get_post_meta( $post->ID, '_wcpt_speaker_id' ) );
+			$session_speakers = get_session_speaker_user_ids( $post->ID );
 			if ( in_array( $user_id, $session_speakers, true ) ) {
 				$required_caps[] = 'read';
 				break;

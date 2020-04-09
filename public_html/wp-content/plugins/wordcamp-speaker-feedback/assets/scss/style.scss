@@ -211,13 +211,10 @@
 	padding: 1rem 1.5rem;
 	background: #ddd;
 	border-radius: 5px;
-	max-width: 460px;
-
-	form {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
+	max-width: 30em;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 
 	button {
 		display: inline-block;
@@ -230,6 +227,14 @@
 		text-decoration: none;
 		text-transform: none;
 		word-wrap: normal;
+
+		&[aria-pressed="true"]::before {
+			content: "✓ ";
+		}
+
+		&[aria-pressed="false"]::before {
+			content: "";
+		}
 	}
 }
 

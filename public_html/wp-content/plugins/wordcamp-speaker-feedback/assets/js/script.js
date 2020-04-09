@@ -72,6 +72,23 @@
 			} );
 	}
 
+	function onHelpfulClick( event ) {
+		event.preventDefault();
+		var button = event.target;
+		var isHelpful = 'true' === button.getAttribute( 'aria-pressed' );
+
+		wp.apiFetch( {
+			path: '/wordcamp-speaker-feedback/v1/feedback/' + button.dataset.commentId,
+			method: 'POST',
+			data: {
+				meta: { helpful: isHelpful ? 'false' : 'true' },
+			},
+		} )
+			.then( function() {
+				button.setAttribute( 'aria-pressed', isHelpful ? 'false' : 'true' );
+			} );
+	}
+
 	var navForm = document.getElementById( 'sft-navigation' );
 	if ( navForm ) {
 		navForm.addEventListener( 'submit', onFormNavigate, true );
@@ -80,6 +97,13 @@
 	var feedbackForm = document.getElementById( 'sft-feedback' );
 	if ( feedbackForm ) {
 		feedbackForm.addEventListener( 'submit', onFormSubmit, true );
+	}
+
+	var helpfulButtons = document.querySelectorAll( '.speaker-feedback__helpful button' );
+	if ( helpfulButtons.length ) {
+		helpfulButtons.forEach( function( el ) {
+			el.addEventListener( 'click', onHelpfulClick, true );
+		} );
 	}
 
 	// Submit the form if any value changes.

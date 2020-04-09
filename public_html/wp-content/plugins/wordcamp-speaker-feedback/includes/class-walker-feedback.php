@@ -96,18 +96,17 @@ class Walker_Feedback extends Walker_Comment {
 				</div><!-- .comment-content -->
 
 				<footer class="speaker-feedback__helpful">
-					<form>
-						<span id="sft-helpful-<?php echo absint( $comment_id ); ?>">
-							<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
-						</span>
-						<button
-							type="submit"
-							aria-pressed="<?php echo ( $comment->helpful ) ? 'true' : 'false'; ?>"
-							aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
-						>
-							<?php esc_html_e( 'Yes' ); ?>
-						</button>
-					</form>
+					<span id="sft-helpful-<?php echo absint( $comment_id ); ?>">
+						<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
+					</span>
+					<button
+						type="button"
+						data-comment-id="<?php echo absint( $comment_id ); ?>"
+						aria-pressed="<?php echo ( $comment->helpful ) ? 'true' : 'false'; ?>"
+						aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
+					>
+						<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
+					</button>
 				</footer>
 			</article><!-- .comment-body -->
 		<?php

@@ -39,7 +39,7 @@ jobs:
         # We need Jetpack installed
         - svn export https://plugins.svn.wordpress.org/jetpack/trunk public_html/wp-content/plugins/jetpack
       script:
-        - composer run-script test -- -c phpunit.xml.dist
+        - ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist
 
     - name: "PHP Code Standards"
       # Only run if we're on the "pull request build", otherwise the diffs are empty.

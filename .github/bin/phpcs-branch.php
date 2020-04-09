@@ -47,6 +47,7 @@ function main() {
 
 		foreach ( $affected_files as $record ) {
 			list( $change, $file ) = explode( "\t", trim( $record ) );
+			$cmd_status = 0;
 
 			switch ( $change ) {
 				case 'M':

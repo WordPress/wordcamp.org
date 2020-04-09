@@ -19,11 +19,8 @@
 		"root": "Setting this to true is necessary to avoid merging WordCamp.org configs with any that exist in parent folders in the developer's environment. See https://github.com/eslint/eslint/commit/c99e9b621fe46b8535cf59fe489977dd36cb2a39."
 	},
 	"eslintConfig": {
-		"extends": "plugin:@wordpress/eslint-plugin/recommended-with-formatting",
-		"root": true,
-		"rules": {
-			"object-shorthand": [ "error", "consistent-as-needed" ]
-		}
+		"extends": "../blocks/.eslintrc.js",
+		"root": true
 	},
 	"scripts": {
 		"start": "wp-scripts start",

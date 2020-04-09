@@ -27,12 +27,9 @@
 	},
 	"eslintConfig": {
 		"root": true,
-		"extends": "plugin:@wordpress/eslint-plugin/recommended",
+		"extends": "../../mu-plugins/blocks/.eslintrc.js",
 		"globals": {
 			"WCPT_Session_Defaults": "true"
-		},
-		"rules": {
-			"object-shorthand": [ "error", "consistent-as-needed" ]
 		}
 	}
 }

@@ -8,12 +8,19 @@
 	"keywords": [],
 	"homepage": "https://github.com/WordPress/wordcamp.org/tree/production/public_html/wp-content/mu-plugins/virtual-embeds",
 	"repository": "git+https://github.com/WordPress/wordcamp.org.git",
+	"bugs": {
+		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Blocks%22"
+	},
 	"devDependencies": {
 		"@wordpress/eslint-plugin": "4.0.0",
 		"@wordpress/scripts": "7.1.0"
 	},
+	"eslintConfig:comment": {
+		"root": "Setting this to true is necessary to avoid merging WordCamp.org configs with any that exist in parent folders in the developer's environment. See https://github.com/eslint/eslint/commit/c99e9b621fe46b8535cf59fe489977dd36cb2a39."
+	},
 	"eslintConfig": {
 		"extends": "plugin:@wordpress/eslint-plugin/recommended-with-formatting",
+		"root": true,
 		"rules": {
 			"object-shorthand": [ "error", "consistent-as-needed" ]
 		}

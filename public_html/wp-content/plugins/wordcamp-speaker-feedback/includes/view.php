@@ -1,6 +1,6 @@
 <?php
 
-namespace WordCamp\SpeakerFeedback\Form;
+namespace WordCamp\SpeakerFeedback\View;
 
 use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url };

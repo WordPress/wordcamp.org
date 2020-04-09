@@ -5,7 +5,7 @@
 # @link http://about.travis-ci.org/docs/user/languages/php/
 language: php
 php: 7.2
-env: WP_VERSION=latest WP_MULTISITE=1
+env: WP_VERSION=latest WP_MULTISITE=1 COMPOSER_BIN_DIR=$TRAVIS_BUILD_DIR/public_html/wp-content/mu-plugins/vendor/bin
 services:
   - mysql
 

@@ -26,6 +26,9 @@ if ( '' === $approved_string || '' === $moderated_string ) {
 	$count_string = sprintf( __( '%1$s, %2$s', 'wordcamporg' ), $approved_string, $moderated_string );
 }
 
+$show_helpful = isset( $_GET['helpful'] ) && 'yes' === $_GET['helpful'];
+$show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
+
 ?>
 <hr />
 <div class="speaker-feedback">
@@ -39,24 +42,37 @@ if ( '' === $approved_string || '' === $moderated_string ) {
 			<p><?php echo esc_html( $count_string ); ?></p>
 		</div>
 
-		<div class="speaker-feedback__filters">
+		<form action="" method="get" class="speaker-feedback__filters">
 			<div class="speaker-feedback__filter-sort">
 				<label for="sft-filter-sort">
 					<?php esc_html_e( 'Sort by', 'wordcamporg' ); ?>
 				</label>
-				<select id="sft-filter-sort">
-					<option><?php esc_html_e( 'Oldest first', 'wordcamporg' ); ?></option>
-					<option><?php esc_html_e( 'Newest first', 'wordcamporg' ); ?></option>
-					<option><?php esc_html_e( 'Highest rated first', 'wordcamporg' ); ?></option>
+				<select id="sft-filter-sort" name="forder">
+					<option <?php selected( $show_order, 'oldest' ); ?> value="oldest">
+						<?php esc_html_e( 'Oldest first', 'wordcamporg' ); ?>
+					</option>
+					<option <?php selected( $show_order, 'newest' ); ?> value="newest">
+						<?php esc_html_e( 'Newest first', 'wordcamporg' ); ?>
+					</option>
+					<option <?php selected( $show_order, 'highest' ); ?> value="highest">
+						<?php esc_html_e( 'Highest rated first', 'wordcamporg' ); ?>
+					</option>
 				</select>
 			</div>
 			<div class="speaker-feedback__filter-helpful">
 				<label>
-					<input type="checkbox" />
+					<input
+						name="helpful"
+						type="checkbox"
+						value="yes"
+						id="sft-filter-helpful"
+						<?php checked( $show_helpful ); ?>
+					/>
 					<?php esc_html_e( 'Only show comments marked as helpful', 'wordcamporg' ); ?>
 				</label>
 			</div>
-		</div>
+			<input type="submit" class="screen-reader-text" value="Filter" />
+		</form>
 
 		<div class="speaker-feedback__list comment-list">
 			<?php

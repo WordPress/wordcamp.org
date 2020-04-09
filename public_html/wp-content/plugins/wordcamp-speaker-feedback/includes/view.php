@@ -47,7 +47,8 @@ function render( $content ) {
 		if ( current_user_can( 'read_post_' . COMMENT_TYPE, $post->ID ) ) {
 			ob_start();
 
-			$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ) );
+			$query_args = parse_feedback_args();
+			$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ), $query_args );
 			$avg_rating = 0;
 
 			if ( count( $feedback ) ) {
@@ -128,6 +129,45 @@ function render( $content ) {
 	}
 
 	return $content;
+}
+
+/**
+ * Parse the GET args to the feedback list into WP_Comment_Query-friendly format.
+ *
+ * @return array Sorting & filtering args in WP_Comment_Query format.
+ */
+function parse_feedback_args() {
+	$args = array();
+
+	if ( isset( $_GET['forder'] ) ) {
+		switch ( $_GET['forder'] ) {
+			case 'newest':
+				$args['orderby'] = 'comment_date';
+				$args['order']   = 'desc';
+				break;
+			case 'highest':
+				$args['orderby'] = 'meta_value_num';
+				$args['meta_key'] = 'rating';
+				$args['order'] = 'desc';
+				break;
+			case 'oldest':
+			default:
+				$args['orderby'] = 'comment_date';
+				$args['order']   = 'asc';
+				break;
+		}
+	}
+
+	if ( isset( $_GET['helpful'] ) && 'yes' === $_GET['helpful'] ) {
+		$args['meta_query'] = array(
+			array(
+				'key'     => 'helpful',
+				'value'   => '1',
+			),
+		);
+	}
+
+	return $args;
 }
 
 /**

@@ -81,4 +81,9 @@
 	if ( feedbackForm ) {
 		feedbackForm.addEventListener( 'submit', onFormSubmit, true );
 	}
+
+	// Submit the form if any value changes.
+	$( '#sft-filter-sort, #sft-filter-helpful' ).change( function( event ) {
+		$( event.target ).closest( 'form' ).submit();
+	} );
 }( jQuery ) );

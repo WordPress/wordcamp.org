@@ -180,24 +180,25 @@ function update_feedback( $comment_id, array $feedback_meta ) {
  * @param array $post__in   Optional. An array of post IDs whose feedback comments should be included. An empty array
  *                          will include all posts. Default empty.
  * @param array $status     Optional. An array of statuses to include in the results.
- * @param array $meta_query Optional. A valid `WP_Meta_Query` array.
+ * @param array $args       Optional. Additional args to be passed to get_comments.
  *
  * @return array A collection of WP_Comment objects.
  */
-function get_feedback( array $post__in = array(), array $status = array( 'hold', 'approve' ), array $meta_query = array() ) {
-	$args = array(
-		'status'  => $status,
-		'type'    => COMMENT_TYPE,
-		'orderby' => 'comment_date',
-		'order'   => 'asc',
+function get_feedback( array $post__in = array(), array $status = array( 'hold', 'approve' ), array $args = array() ) {
+	$args = wp_parse_args(
+		$args,
+		array(
+			'orderby' => 'comment_date',
+			'order'   => 'asc',
+		)
 	);
+
+	// Set up these fixed args.
+	$args['status'] = $status;
+	$args['type']   = COMMENT_TYPE;
 
 	if ( ! empty( $post__in ) ) {
 		$args['post__in'] = $post__in;
-	}
-
-	if ( ! empty( $meta_query ) ) {
-		$args['meta_query'] = $meta_query;
 	}
 
 	$comments = get_comments( $args );

@@ -274,10 +274,10 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 			return $prepared_feedback;
 		}
 
-		if ( ! isset( $prepared_feedback['comment_meta'] ) ) {
+		if ( ! isset( $prepared_feedback['comment_meta'] ) || empty( $prepared_feedback['comment_meta'] ) ) {
 			return new WP_Error(
 				'rest_feedback_meta_data_required',
-				__( 'Feedback must include data from the feedback form.', 'wordcamporg' ),
+				__( 'No valid data was submitted for update.', 'wordcamporg' ),
 				array(
 					'status' => 400,
 				)

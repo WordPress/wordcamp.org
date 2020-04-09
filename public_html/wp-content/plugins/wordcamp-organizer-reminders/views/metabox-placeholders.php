@@ -1,4 +1,8 @@
-<?php defined( 'WPINC' ) || die(); ?>
+<?php
+use function WordCamp\SpeakerFeedback\Admin\get_subpage_url;
+
+defined( 'WPINC' ) || die();
+?>
 
 <h4>Available Placeholders:</h4>
 
@@ -73,4 +77,5 @@
 
 <ul class="ul-disc">
 	<li>[multi_event_sponsor_info]</li>
+	<li>[session_feedback_list_url]</li>
 </ul>

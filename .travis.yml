@@ -39,6 +39,8 @@ jobs:
         # We need Jetpack installed
         - svn export https://plugins.svn.wordpress.org/jetpack/trunk public_html/wp-content/plugins/jetpack
       script:
+        - which phpunit
+        - phpunit --version
         - composer run-script test -- -c phpunit.xml.dist
 
     - name: "PHP Code Standards"

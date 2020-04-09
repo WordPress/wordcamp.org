@@ -138,6 +138,8 @@ class WordCamp_Status extends Base_Status {
 				);
 			}
 		}
+
+		$asdf='asdf' ;
 	}
 
 	/**

@@ -40,6 +40,7 @@ jobs:
         - svn export https://plugins.svn.wordpress.org/jetpack/trunk public_html/wp-content/plugins/jetpack
       script:
         - composer run-script test-version
+        - composer run-script test-which
         - composer run-script test -- -c phpunit.xml.dist
 
     - name: "PHP Code Standards"

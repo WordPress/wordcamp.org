@@ -1,8 +1,4 @@
-<?php
-use function WordCamp\SpeakerFeedback\Admin\get_subpage_url;
-
-defined( 'WPINC' ) || die();
-?>
+<?php defined( 'WPINC' ) || die(); ?>
 
 <h4>Available Placeholders:</h4>
 

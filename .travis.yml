@@ -35,7 +35,7 @@ jobs:
     - name: "PHP Unit Tests"
       install:
         - bash .docker/bin/install-wp-tests.sh wcorg_test root '' localhost $WP_VERSION
-        - composer install
+        - composer install --ignore-platform-reqs
         # We need Jetpack installed
         - svn export https://plugins.svn.wordpress.org/jetpack/trunk public_html/wp-content/plugins/jetpack
       script:

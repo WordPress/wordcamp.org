@@ -8,8 +8,9 @@ import { registerBlockType } from '@wordpress/blocks';
  */
 import * as crowdcast from './crowdcast';
 import * as streamtext from './streamtext';
+import * as youtubeLiveChat from './youtube-live-chat';
 
-[ crowdcast, streamtext ].forEach( ( block ) => {
+[ crowdcast, streamtext, youtubeLiveChat ].forEach( ( block ) => {
 	const { name, settings } = block;
 	registerBlockType( name, settings );
 } );

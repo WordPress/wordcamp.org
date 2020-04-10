@@ -32,7 +32,7 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 ?>
 <hr />
 <div class="speaker-feedback">
-	<h3><?php esc_html_e( 'Session Feedback', 'wordcamporg' ); ?></h3>
+	<h2><?php esc_html_e( 'Session Feedback', 'wordcamporg' ); ?></h2>
 
 	<?php if ( $approved >= 1 ) : ?>
 		<div class="speaker-feedback__overview">

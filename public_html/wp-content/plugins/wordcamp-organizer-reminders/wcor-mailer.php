@@ -239,6 +239,7 @@ class WCOR_Mailer {
 
 			// Miscellaneous
 			'[multi_event_sponsor_info]',
+			'[session_feedback_list_url]',
 		);
 
 		$replace = array(
@@ -302,6 +303,7 @@ class WCOR_Mailer {
 
 			// Miscellaneous
 			$this->get_mes_info( $wordcamp->ID ),
+			$this->get_feedback_list_table_url( $wordcamp ),
 		);
 
 		return str_replace( $search, $replace, $content );
@@ -348,6 +350,37 @@ class WCOR_Mailer {
 		}
 
 		return trim( str_replace( "\t", '', ob_get_clean() ) );
+	}
+
+	/**
+	 * Get the URL for the Feedback list table screen on a particular WordCamp site.
+	 *
+	 * @param WP_Post $wordcamp The WordCamp post.
+	 *
+	 * @return string
+	 */
+	protected function get_feedback_list_table_url( $wordcamp ) {
+		$url     = '';
+		$site_id = get_wordcamp_site_id( $wordcamp );
+
+		switch_to_blog( $site_id );
+
+		// This is just used to detect whether the Speaker Feedback Tool is active on the site.
+		$page_id = get_option( 'sft_feedback_page', 0 );
+
+		if ( $page_id ) {
+			$url = add_query_arg(
+				array(
+					'post_type' => 'wcb_session',
+					'page'      => 'wc-speaker-feedback',
+				),
+				esc_url( admin_url( 'edit.php' ) )
+			);
+		}
+
+		restore_current_blog();
+
+		return $url;
 	}
 
 	/**

@@ -23,9 +23,9 @@ export const settings = {
 			default: '',
 		},
 	},
-	edit: ( { attributes, setAttributes } ) => (
+	edit: ( { attributes, setAttributes, className } ) => (
 		<EditPlaceholder
-			className="wc-block__crowdcast-embed"
+			className={ className }
 			icon="format-video"
 			label={ __( 'CrowdCast Event', 'wordcamporg' ) }
 			instructions={ __( 'Enter the channel name to embed a stream on your site.', 'wordcamporg' ) }

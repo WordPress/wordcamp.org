@@ -23,9 +23,9 @@ export const settings = {
 			default: '',
 		},
 	},
-	edit: ( { attributes, setAttributes } ) => (
+	edit: ( { attributes, setAttributes, className } ) => (
 		<EditPlaceholder
-			className="wc-block__streamtext-embed"
+			className={ className }
 			icon="text"
 			label={ __( 'StreamText Event', 'wordcamporg' ) }
 			instructions={ __( 'Enter the event name to embed the captions on your site.', 'wordcamporg' ) }

@@ -6,7 +6,7 @@ use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
 use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
-use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
+use function WordCamp\SpeakerFeedback\Post\{ get_session_speaker_user_ids, post_accepts_feedback };
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
@@ -44,7 +44,8 @@ function render( $content ) {
 	$now = date_create( 'now', wp_timezone() );
 
 	if ( has_feedback_form() ) {
-		if ( current_user_can( 'read_post_' . COMMENT_TYPE, $post->ID ) ) {
+		$session_speakers = get_session_speaker_user_ids( $post->ID );
+		if ( in_array( get_current_user_id(), $session_speakers, true ) ) {
 			ob_start();
 
 			$query_args = parse_feedback_args();

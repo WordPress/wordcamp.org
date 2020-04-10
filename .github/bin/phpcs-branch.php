@@ -20,9 +20,9 @@ function run_phpcs( $file, $bin_dir ) {
 function run_phpcs_changed( $file, $git, $base_branch, $bin_dir ) {
 	$name = basename( $file );
 	exec( "$git diff $base_branch HEAD $file > $name.diff" );
-	exec( "$git show HEAD:$file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -nq > $name.orig.phpcs" );
+	exec( "$git show $base_branch:$file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -nq > $name.orig.phpcs" );
 	exec( "cat $file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -nq > $name.phpcs" );
-	
+
 	$cmd = "$bin_dir/phpcs-changed --diff $name.diff --phpcs-orig $name.orig.phpcs --phpcs-new $name.phpcs";
 	exec( $cmd, $output, $exec_exit_status );
 	echo implode( "\n", $output );

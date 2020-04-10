@@ -152,7 +152,7 @@
  */
 
 .speaker-feedback__overview {
-	margin-bottom: 4rem;
+	margin-bottom: 2rem;
 
 	strong {
 		margin-right: 5px;
@@ -164,22 +164,33 @@
  */
 
 .speaker-feedback__filters {
-	display: flex;
+	display: -ms-grid;
+	display: grid;
+	-ms-grid-columns: auto 1fr;
+	grid-template-columns: auto 1fr;
 	align-items: center;
 	margin-bottom: 4rem;
 
 	.speaker-feedback__filter-sort {
 		display: flex;
+		-ms-grid-column: 1;
+		grid-column: 1;
 		align-items: center;
 		margin-right: 1em;
 
 		label { // stylelint-disable-line no-descending-specificity
 			margin-bottom: 0;
+			min-width: 4em;
 		}
 
 		select {
 			margin-left: 0.5em;
 		}
+	}
+
+	.speaker-feedback__filter-helpful {
+		-ms-grid-column: 2;
+		grid-column: 2;
 	}
 
 	@media (max-width: 600px) {
@@ -208,6 +219,7 @@
  */
 
 .speaker-feedback__helpful {
+	margin-top: 1em;
 	padding: 1rem 1.5rem;
 	background: #ddd;
 	border-radius: 5px;

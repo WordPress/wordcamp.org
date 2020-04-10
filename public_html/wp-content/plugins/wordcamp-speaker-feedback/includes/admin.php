@@ -20,6 +20,7 @@ add_action( 'admin_menu', __NAMESPACE__ . '\add_subpages' );
 add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
 add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2 );
 add_filter( 'pre_wp_update_comment_count_now', __NAMESPACE__ . '\adjust_post_comment_count', 10, 3 );
+add_filter( 'comment_notification_recipients', __NAMESPACE__ . '\remove_email_recipients', 10, 2 );
 
 /**
  * Add a Speaker Feedback column for post list tables that support speaker feedback.
@@ -636,4 +637,23 @@ function filter_list_table_add_comment_avatar( $name, $comment_id ) {
 	$avatar  = get_avatar( $comment, 32, 'mystery' );
 
 	return "$avatar $name";
+}
+
+/**
+ * Remove the session author from getting session comment notifications.
+ *
+ * The speaker is set as the session author, but should not get notifications from WordPress about feedback. By
+ * default, this is the only email notifications are sent to, so we can remove all recipients to bypass sending
+ * the notification email.
+ *
+ * @param string[] $emails     An array of email addresses to receive a comment notification.
+ * @param int      $comment_id The comment ID.
+ *
+ * @return array
+ */
+function remove_email_recipients( $emails, $comment_id ) {
+	if ( is_feedback( $comment_id ) ) {
+		return array();
+	}
+	return $emails;
 }

@@ -3,11 +3,11 @@
 namespace WordCamp\SpeakerFeedback\Admin;
 
 use WordCamp\SpeakerFeedback\Feedback_List_Table;
-use const WordCamp\SpeakerFeedback\SUPPORTED_POST_TYPES;
-use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\{ get_assets_path, get_includes_path, get_views_path, get_assets_url };
 use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment, delete_feedback, is_feedback };
-use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_questions };
+use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_questions, count_helpful_feedback };
+use const WordCamp\SpeakerFeedback\SUPPORTED_POST_TYPES;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -499,6 +499,21 @@ function toggle_list_table_filters() {
 function filter_list_table_query_args( $args ) {
 	$args['type'] = COMMENT_TYPE;
 
+	$helpful = filter_input( INPUT_GET, 'helpful' );
+	if ( $helpful ) {
+		$meta_query = array(
+			'key'   => 'helpful',
+			'value' => 1,
+			'type'  => 'NUMERIC',
+		);
+
+		if ( ! isset( $args['meta_query'] ) ) {
+			$args['meta_query'] = array();
+		}
+
+		$args['meta_query'][] = $meta_query;
+	}
+
 	if ( $args['search'] ) {
 		$meta_query = array(
 			'relation' => 'OR',
@@ -536,13 +551,15 @@ function filter_list_table_query_args( $args ) {
  * - Remove unnecessary views.
  * - Replace the default view URLs with ones that link back to our feedback list table page.
  *
+ * @global int    $post_id
+ * @global string $typenow
+ *
  * @param array $views
  *
  * @return mixed
  */
 function filter_list_table_views( $views ) {
-	/** @global string $typenow */
-	global $typenow;
+	global $post_id, $typenow;
 
 	// Feedback from an admin of the event site would probably be rare, so this one is unnecessary.
 	unset( $views['mine'] );
@@ -561,6 +578,29 @@ function filter_list_table_views( $views ) {
 			$view
 		);
 	}
+
+	$link_base = get_subpage_url( $typenow );
+	if ( $post_id ) {
+		$link_base = add_query_arg( 'p', $post_id, $link_base );
+	}
+
+	$helpful                 = filter_input( INPUT_GET, 'helpful' );
+	$current_link_attributes = ' class="current" aria-current="page"';
+	$helpful_count           = ( $post_id ) ? count_helpful_feedback( $post_id ) : count_helpful_feedback();
+
+	$views['helpful'] = sprintf(
+		'<a href="%1$s"%2$s>%3$s</a>',
+		add_query_arg( 'helpful', 1, $link_base ),
+		( $helpful ) ? $current_link_attributes : '',
+		sprintf(
+			// translators: %s is the number of helpful comments.
+			_x( 'Helpful <span class="count">(%s)</span>', 'wordcamporg' ),
+			sprintf(
+				'<span class="helpful-count">%s</span>',
+				number_format_i18n( $helpful_count )
+			)
+		)
+	);
 
 	return $views;
 }

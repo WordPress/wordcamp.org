@@ -3,6 +3,7 @@
 namespace WordCamp\SpeakerFeedback\CommentMeta;
 
 use WP_Error;
+use function WordCamp\SpeakerFeedback\Comment\get_feedback;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
@@ -362,4 +363,38 @@ function get_feedback_questions( $version = META_VERSION ) {
 	}
 
 	return $questions;
+}
+
+/**
+ * Count feedback comments marked as helpful for a specific post or overall.
+ *
+ * @param int $post_id
+ *
+ * @return int
+ */
+function count_helpful_feedback( $post_id = 0 ) {
+	$post__in = array();
+	if ( $post_id ) {
+		$post__in[] = absint( $post_id );
+	}
+
+	$meta_query = array(
+		array(
+			'key'   => 'helpful',
+			'value' => 1,
+			'type'  => 'NUMERIC',
+		),
+	);
+
+	$feedbacks = get_feedback( $post__in, array( 'hold', 'approve' ), $meta_query );
+
+	$helpful_count = 0;
+
+	foreach ( $feedbacks as $feedback ) {
+		if ( $feedback->helpful ) {
+			$helpful_count ++;
+		}
+	}
+
+	return $helpful_count;
 }

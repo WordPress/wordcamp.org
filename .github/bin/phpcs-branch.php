@@ -12,7 +12,7 @@
 namespace WordCamp\Bin\PHPCS_Changed;
 
 function run_phpcs( $file, $bin_dir ) {
-	exec( "$bin_dir/phpcs $file -q", $output, $exec_exit_status );
+	exec( "$bin_dir/phpcs $file -nq", $output, $exec_exit_status );
 	echo implode( "\n", $output );
 	return $exec_exit_status;
 }

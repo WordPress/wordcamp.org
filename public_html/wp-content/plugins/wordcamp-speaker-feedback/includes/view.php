@@ -1,9 +1,10 @@
 <?php
 
-namespace WordCamp\SpeakerFeedback\Form;
+namespace WordCamp\SpeakerFeedback\View;
 
 use WP_Post, WP_Query;
-use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url };
+use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
+use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
 use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
@@ -101,6 +102,94 @@ function render( $content ) {
 	}
 
 	return $content;
+}
+
+/**
+ * Render a single feedback comment to a human-readable HTML string.
+ *
+ * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
+ * @param bool                           $echo    Whether to echo the output or return it. Default true.
+ *
+ * @return string The feedback in a question-answer HTML display (or empty string).
+ */
+function render_feedback_comment( $comment, $echo = true ) {
+	$feedback  = get_feedback_comment( $comment );
+	$questions = get_feedback_questions( $feedback->version );
+	$output    = '';
+
+	foreach ( $questions as $key => $question ) {
+		if ( 'rating' === $key ) {
+			continue;
+		}
+
+		$answer = $feedback->$key;
+
+		if ( $answer ) {
+			$output .= sprintf(
+				'<p class="speaker-feedback__question">%s</p><p class="speaker-feedback__answer">%s</p>',
+				wp_kses_data( $question ),
+				wp_kses_data( $answer )
+			);
+		}
+	}
+
+	if ( ! $echo ) {
+		return $output;
+	}
+
+	echo $output; // phpcs:ignore -- sanitized above.
+}
+
+/**
+ * Render the star rating for a given feedback comment.
+ *
+ * @param WP_Comment|Feedback|string|int $comment A comment/feedback object or a comment ID.
+ * @param bool                           $echo    Whether to echo the output or return it. Default true.
+ *
+ * @return string The feedback rating stars in HTML.
+ */
+function render_feedback_rating( $comment, $echo = true ) {
+	$feedback = get_feedback_comment( $comment );
+	$output   = render_rating_stars( $feedback->rating );
+
+	if ( ! $echo ) {
+		return $output;
+	}
+
+	echo $output; // phpcs:ignore -- sanitized in `render_rating_stars`.
+}
+
+/**
+ * Render a rating of X out of Y stars. Used by `render_feedback_rating`.
+ *
+ * @param int $rating    The selected rating value (stars below this will be "filled").
+ * @param int $max_stars The total rating value (will render this many stars).
+ *
+ * @return string The feedback rating stars in HTML.
+ */
+function render_rating_stars( $rating, $max_stars = 5 ) {
+	$star_output = 0;
+	$label = sprintf(
+		_n( '%d star', '%d stars', $rating, 'wordcamporg' ),
+		absint( $rating )
+	);
+
+	ob_start();
+	?>
+	<span role="img" aria-label="<?php echo esc_attr( $label ); ?>" class="speaker-feedback__meta-rating">
+		<?php while ( $star_output < $max_stars ) :
+			$class = ( $star_output < $rating ) ? 'star__full' : 'star__empty';
+			?>
+			<span class="star <?php echo esc_attr( $class ); ?>">
+				<?php require get_assets_path() . 'svg/star.svg'; ?>
+			</span>
+			<?php
+			$star_output++;
+		endwhile; ?>
+	</span>
+	<?php
+
+	return ob_get_clean();
 }
 
 /**

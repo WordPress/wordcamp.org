@@ -46,11 +46,11 @@ function load() {
 	require_once get_includes_path() . 'capabilities.php';
 	require_once get_includes_path() . 'comment.php';
 	require_once get_includes_path() . 'comment-meta.php';
-	require_once get_includes_path() . 'form.php';
 	require_once get_includes_path() . 'page.php';
 	require_once get_includes_path() . 'post.php';
 	require_once get_includes_path() . 'query.php';
 	require_once get_includes_path() . 'spam.php';
+	require_once get_includes_path() . 'view.php';
 
 	require_once get_includes_path() . 'admin.php';
 }

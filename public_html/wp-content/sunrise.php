@@ -73,8 +73,8 @@ function wcorg_canonical_years_redirect() {
 			// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
 			switch ( $domain ) {
 				case 'europe.wordcamp.org':
-					if ( time() <= strtotime( '2019-06-23' ) ) {
-						$like = '2019.europe.wordcamp.org';
+					if ( time() <= strtotime( '2020-06-07' ) ) {
+						$like = '2020.europe.wordcamp.org';
 					}
 					break;
 

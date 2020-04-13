@@ -148,45 +148,119 @@
 }
 
 /**
- * WP Dashboard: Feedback list table.
+ * Speaker view: Session overview.
  */
 
-.column-name {
-	img {
-		float: left;
-		margin-right: 10px;
-		margin-top: 1px;
+.speaker-feedback__overview {
+	margin-bottom: 2rem;
+
+	strong {
+		margin-right: 5px;
 	}
 }
 
-#comments-form {
-	.fixed {
-		.column-name {
-			width: 15%;
+/**
+ * Speaker view: Feedback filters.
+ */
+
+.speaker-feedback__filters {
+	display: -ms-grid;
+	display: grid;
+	-ms-grid-columns: auto 1fr;
+	grid-template-columns: auto 1fr;
+	align-items: center;
+	margin-bottom: 4rem;
+
+	.speaker-feedback__filter-sort {
+		display: flex;
+		-ms-grid-column: 1;
+		grid-column: 1;
+		align-items: center;
+		margin-right: 1em;
+
+		label { // stylelint-disable-line no-descending-specificity
+			margin-bottom: 0;
+			min-width: 4em;
 		}
 
-		.column-rating {
-			width: 140px;
+		select {
+			margin-left: 0.5em;
+		}
+	}
+
+	.speaker-feedback__filter-helpful {
+		-ms-grid-column: 2;
+		grid-column: 2;
+	}
+
+	@media (max-width: 600px) {
+		display: block;
+
+		.speaker-feedback__filter-sort {
+			margin-bottom: 1em;
 		}
 	}
 }
 
 /**
- * WP Dashboard: Question/answer display.
+ * Speaker view: Feedback in list.
  */
 
-.widefat td {
-	p.speaker-feedback__question {
-		font-weight: 700;
-	}
+.speaker-feedback__comment {
+	margin-bottom: 4rem;
+}
 
-	p.speaker-feedback__answer {
-		margin-bottom: 2em;
+.speaker-feedback__comment-content {
+	margin-top: 1em;
+}
+
+/**
+ * Speaker view: "Is this helpful" form.
+ */
+
+.speaker-feedback__helpful {
+	margin-top: 1em;
+	padding: 1rem 1.5rem;
+	background: #ddd;
+	border-radius: 5px;
+	max-width: 30em;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+
+	button {
+		display: inline-block;
+		font-size: 1.2em;
+		letter-spacing: 0;
+		line-height: 1.25;
+		margin: 0 0 0 1em;
+		padding: 0.4em 0.8em;
+		text-align: center;
+		text-decoration: none;
+		text-transform: none;
+		word-wrap: normal;
+
+		&[aria-pressed="true"]::before {
+			content: "✓ ";
+		}
+
+		&[aria-pressed="false"]::before {
+			content: "";
+		}
 	}
 }
 
 /**
- * WP Dashboard: Rating display.
+ * Question/answer display.
+ */
+
+.speaker-feedback__question {
+	margin-bottom: 0.5em;
+	font-weight: 700;
+}
+
+/**
+ * Rating display.
  */
 
 .speaker-feedback__meta-rating {
@@ -201,11 +275,45 @@
 		fill: currentColor;
 	}
 
-	span.star__full {
+	.star {
+		display: inline-block;
+	}
+
+	.star__full {
 		color: $star-selected;
 	}
 
-	span.star__empty {
+	.star__empty {
 		color: $star-default;
+	}
+}
+
+/**
+ * WP Dashboard: Feedback list table.
+ */
+
+.column-name {
+	img {
+		float: left;
+		margin-right: 10px;
+		margin-top: 1px;
+	}
+}
+
+.column-feedback {
+	.speaker-feedback__answer {
+		margin-bottom: 2em;
+	}
+}
+
+#comments-form {
+	.fixed {
+		.column-name {
+			width: 15%;
+		}
+
+		.column-rating {
+			width: 140px;
+		}
 	}
 }

@@ -4,10 +4,11 @@ namespace WordCamp\SpeakerFeedback\View;
 
 use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
-use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
+use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
-use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
+use function WordCamp\SpeakerFeedback\Post\{ get_session_speaker_user_ids, post_accepts_feedback };
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
 
 defined( 'WPINC' ) || die();
@@ -43,27 +44,54 @@ function render( $content ) {
 	$now = date_create( 'now', wp_timezone() );
 
 	if ( has_feedback_form() ) {
-		$accepts_feedback = post_accepts_feedback( $post->ID );
+		$session_speakers = get_session_speaker_user_ids( $post->ID );
+		if ( in_array( get_current_user_id(), $session_speakers, true ) ) {
+			ob_start();
 
-		ob_start();
+			$query_args = parse_feedback_args();
+			$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ), $query_args );
+			$avg_rating = 0;
 
-		if ( is_wp_error( $accepts_feedback ) ) {
-			$message = $accepts_feedback->get_error_message();
-			require get_views_path() . 'form-not-available.php';
-			return $content . ob_get_clean(); // Append the error message, return early.
+			if ( count( $feedback ) ) {
+				$sum_rating = array_reduce(
+					$feedback,
+					function( $carry, $item ) {
+						$carry += absint( $item->rating );
+						return $carry;
+					},
+					0
+				);
+				$avg_rating = round( $sum_rating / count( $feedback ) );
+			}
+
+			$feedback_count = count_feedback( $post->ID );
+			$approved       = absint( $feedback_count['approved'] );
+			$moderated      = absint( $feedback_count['moderated'] );
+
+			require get_views_path() . 'view-feedback.php';
+		} else {
+			$accepts_feedback = post_accepts_feedback( $post->ID );
+
+			ob_start();
+
+			if ( is_wp_error( $accepts_feedback ) ) {
+				$message = $accepts_feedback->get_error_message();
+				require get_views_path() . 'form-not-available.php';
+				return $content . ob_get_clean(); // Append the error message, return early.
+			}
+
+			$questions       = get_feedback_questions();
+			$rating_question = $questions['rating'];
+			$text_questions  = array_filter( array_map(
+				function( $key, $question ) {
+					return ( 'q' === $key[0] ) ? array( $key, $question ) : false;
+				},
+				array_keys( $questions ),
+				$questions
+			) );
+
+			require get_views_path() . 'form-feedback.php';
 		}
-
-		$questions       = get_feedback_questions();
-		$rating_question = $questions['rating'];
-		$text_questions  = array_filter( array_map(
-			function( $key, $question ) {
-				return ( 'q' === $key[0] ) ? array( $key, $question ) : false;
-			},
-			array_keys( $questions ),
-			$questions
-		) );
-
-		require get_views_path() . 'form-feedback.php';
 
 		$content = $content . ob_get_clean(); // Append form to the normal content.
 	} elseif ( is_page( get_option( OPTION_KEY ) ) ) {
@@ -102,6 +130,45 @@ function render( $content ) {
 	}
 
 	return $content;
+}
+
+/**
+ * Parse the GET args to the feedback list into WP_Comment_Query-friendly format.
+ *
+ * @return array Sorting & filtering args in WP_Comment_Query format.
+ */
+function parse_feedback_args() {
+	$args = array();
+
+	if ( isset( $_GET['forder'] ) ) {
+		switch ( $_GET['forder'] ) {
+			case 'newest':
+				$args['orderby'] = 'comment_date';
+				$args['order']   = 'desc';
+				break;
+			case 'highest':
+				$args['orderby'] = 'meta_value_num';
+				$args['meta_key'] = 'rating';
+				$args['order'] = 'desc';
+				break;
+			case 'oldest':
+			default:
+				$args['orderby'] = 'comment_date';
+				$args['order']   = 'asc';
+				break;
+		}
+	}
+
+	if ( isset( $_GET['helpful'] ) && 'yes' === $_GET['helpful'] ) {
+		$args['meta_query'] = array(
+			array(
+				'key'     => 'helpful',
+				'value'   => '1',
+			),
+		);
+	}
+
+	return $args;
 }
 
 /**

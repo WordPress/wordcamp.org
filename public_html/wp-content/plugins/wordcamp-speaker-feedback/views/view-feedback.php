@@ -68,7 +68,7 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 						id="sft-filter-helpful"
 						<?php checked( $show_helpful ); ?>
 					/>
-					<?php esc_html_e( 'Only show comments marked as helpful', 'wordcamporg' ); ?>
+					<?php esc_html_e( 'Only show feedback marked as helpful', 'wordcamporg' ); ?>
 				</label>
 			</div>
 			<input type="submit" class="screen-reader-text" value="Filter" />

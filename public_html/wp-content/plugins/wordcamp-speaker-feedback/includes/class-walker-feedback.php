@@ -98,15 +98,24 @@ class Walker_Feedback extends Walker_Comment {
 
 				<footer class="speaker-feedback__helpful">
 					<span id="sft-helpful-<?php echo absint( $comment_id ); ?>">
-						<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
+						<?php if ( $comment->helpful ) : ?>
+							<?php esc_html_e( 'This feedback was marked helpful.', 'wordcamporg' ); ?>
+						<?php else : ?>
+							<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
+						<?php endif; ?>
 					</span>
 					<button
 						type="button"
 						data-comment-id="<?php echo absint( $comment_id ); ?>"
-						aria-pressed="<?php echo ( $comment->helpful ) ? 'true' : 'false'; ?>"
+						class="<?php echo ( $comment->helpful ) ? 'is-helpful' : ''; ?>"
 						aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
 					>
-						<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
+						<span class="speaker-feedback__helpful-msg-neutral">
+							<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
+						</span>
+						<span class="speaker-feedback__helpful-msg-helpful">
+							<?php esc_html_e( 'Remove', 'wordcamporg' ); ?>
+						</span>
 					</button>
 				</footer>
 			</article><!-- .comment-body -->

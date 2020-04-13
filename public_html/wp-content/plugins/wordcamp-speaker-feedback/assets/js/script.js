@@ -74,8 +74,8 @@
 
 	function onHelpfulClick( event ) {
 		event.preventDefault();
-		var button = event.target;
-		var isHelpful = 'true' === button.getAttribute( 'aria-pressed' );
+		var button = $( event.target ).closest( 'button' ).get( 0 );
+		var isHelpful = 'is-helpful' === button.className;
 
 		wp.apiFetch( {
 			path: '/wordcamp-speaker-feedback/v1/feedback/' + button.dataset.commentId,
@@ -85,7 +85,16 @@
 			},
 		} )
 			.then( function() {
-				button.setAttribute( 'aria-pressed', isHelpful ? 'false' : 'true' );
+				$( button ).toggleClass( 'is-helpful' );
+				var $label = $( '#' + button.getAttribute( 'aria-describedby' ) );
+				if ( isHelpful ) {
+					// Previous state was helpful, has been un-marked, label should flip back to "mark as helpful".
+					wp.a11y.speak( SpeakerFeedbackData.messages.unmarkedHelpful, 'polite' );
+					$label.text( SpeakerFeedbackData.messages.markHelpful );
+				} else {
+					wp.a11y.speak( SpeakerFeedbackData.messages.markedHelpful, 'polite' );
+					$label.text( SpeakerFeedbackData.messages.unmarkHelpful );
+				}
 			} );
 	}
 

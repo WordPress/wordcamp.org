@@ -240,12 +240,22 @@
 		text-transform: none;
 		word-wrap: normal;
 
-		&[aria-pressed="true"]::before {
-			content: "✓ ";
+		.speaker-feedback__helpful-msg-helpful {
+			display: none;
 		}
 
-		&[aria-pressed="false"]::before {
-			content: "";
+		.speaker-feedback__helpful-msg-neutral {
+			display: inline;
+		}
+
+		&.is-helpful {
+			.speaker-feedback__helpful-msg-helpful {
+				display: inline;
+			}
+
+			.speaker-feedback__helpful-msg-neutral {
+				display: none;
+			}
 		}
 	}
 }

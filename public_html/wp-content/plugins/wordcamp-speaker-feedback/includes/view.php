@@ -274,14 +274,18 @@ function enqueue_assets() {
 		wp_enqueue_script(
 			'speaker-feedback',
 			get_assets_url() . 'js/script.js',
-			array( 'wp-api-fetch', 'jquery' ),
+			array( 'wp-api-fetch', 'jquery', 'wp-a11y' ),
 			filemtime( dirname( __DIR__ ) . '/assets/js/script.js' ),
 			true
 		);
 
 		$data = array(
 			'messages' => array(
-				'submitSuccess' => __( 'Feedback submitted.', 'wordcamporg' ),
+				'submitSuccess'   => __( 'Feedback submitted.', 'wordcamporg' ),
+				'markedHelpful'   => __( 'Feedback marked as helpful.', 'wordcamporg' ),
+				'unmarkedHelpful' => __( 'Feedback unmarked as helpful.', 'wordcamporg' ),
+				'markHelpful'     => __( 'Was this feedback helpful?', 'wordcamporg' ),
+				'unmarkHelpful'   => __( 'This feedback was marked helpful.', 'wordcamporg' ),
 			),
 		);
 

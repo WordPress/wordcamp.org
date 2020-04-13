@@ -65,6 +65,7 @@ class Walker_Feedback extends Walker_Comment {
 	protected function render_feedback( $comment, $depth, $args ) {
 		$commenter = wp_get_current_commenter();
 		$comment_id = $comment->comment_ID;
+		$comment_author = $comment->comment_author_email;
 
 		?>
 		<div <?php comment_class( 'speaker-feedback__comment', $comment ); ?>>
@@ -73,7 +74,7 @@ class Walker_Feedback extends Walker_Comment {
 					<div class="speaker-feedback__comment-author comment-author vcard">
 						<?php
 						if ( 0 != $args['avatar_size'] ) {
-							echo get_avatar( $comment_id, $args['avatar_size'] );
+							echo get_avatar( $comment_author, $args['avatar_size'] );
 						}
 						?>
 						<?php printf( '<b class="fn">%s</b>', get_comment_author_link( $comment_id ) ); ?>

@@ -1,3 +1,4 @@
+/* eslint-disable */
 /* global jQuery, Backbone, wp, wcbSponsors */
 
 ( function( $ ) {

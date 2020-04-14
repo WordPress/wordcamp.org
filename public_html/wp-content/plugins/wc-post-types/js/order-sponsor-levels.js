@@ -1,3 +1,4 @@
-jQuery( function($){
-	$('.sponsor-order').sortable();
-});
+/* global jQuery */
+jQuery( function( $ ) {
+	$( '.sponsor-order' ).sortable();
+} );

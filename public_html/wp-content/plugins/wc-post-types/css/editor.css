@@ -1,0 +1,30 @@
+
+.wordcamp-panel-session-info .components-base-control:first-of-type {
+	margin-bottom: 16px;
+}
+
+.wordcamp-panel-session-info .components-dropdown {
+	width: 100%;
+}
+
+.wordcamp-panel-session-info__duration-wrapper {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.wordcamp-panel-session-info__duration label {
+	margin-left: 4px;
+}
+
+.wordcamp-panel-session-info__duration input {
+	max-width: 3rem;
+}
+
+.wordcamp-panel-session-info__duration label + input {
+	margin-left: 8px;
+}
+
+.wordcamp-panel-session-speakers .components-form-token-field__help {
+	display: none;
+}

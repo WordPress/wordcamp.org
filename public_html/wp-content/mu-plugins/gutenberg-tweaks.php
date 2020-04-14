@@ -31,7 +31,7 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 	 * @todo Uncomment these as the metaboxes are converted into gutenberg-native panels.
 	 */
 	$gutenberg_only = array(
-		// 'wcb_session',
+		'wcb_session',
 		// 'wcb_speaker',
 		// 'wcb_sponsor',
 		// 'wcb_organizer',

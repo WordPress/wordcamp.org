@@ -34,7 +34,6 @@ class WordCamp_Post_Types_Plugin {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'admin_print_styles', array( $this, 'admin_css' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
-		add_action( 'admin_print_footer_scripts', array( $this, 'admin_print_scripts' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ) );
 
 		add_action( 'save_post', array( $this, 'save_post_speaker' ), 10, 2 );
@@ -254,41 +253,62 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
+		$path        = __DIR__ . '/build/sessions.js';
+		$deps_path   = __DIR__ . '/build/sessions.asset.php';
+		$script_info = file_exists( $deps_path )
+			? require( $deps_path )
+			: array(
+				'dependencies' => array(),
+				'version' => filemtime( $path ),
+			);
+
+		wp_register_script(
+			'wcb-session-meta',
+			plugins_url( 'build/sessions.js', __FILE__ ),
+			$script_info['dependencies'],
+			$script_info['version'],
+			true
+		);
+
 		// Enqueues scripts and styles for session admin page.
-		if ( 'wcb_session' === $post_type ) {
-			wp_enqueue_script( 'jquery-ui-datepicker' );
-			wp_enqueue_style( 'jquery-ui' );
-			wp_enqueue_style( 'wp-datepicker-skins' );
+		if ( 'wcb_session' == $post_type ) {
+			wp_enqueue_script( 'wcb-session-meta' );
+
+			$session_time = false;
+			$most_recent_sessions = get_posts( array(
+				'post_type'   => 'wcb_session',
+				'orderby'     => 'modified',
+				'post_status' => array( 'draft', 'pending', 'publish' ),
+				'numberposts' => '1',
+			) );
+
+			if ( ! empty( $most_recent_sessions ) ) {
+				$session_time = absint( $most_recent_sessions[0]->_wcpt_session_time );
+			}
+
+			if ( ! $session_time ) {
+				$wordcamp_start_date = get_wordcamp_post()->meta['Start Date (YYYY-mm-dd)'][0];
+				$session_time = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
+			}
+
+			$settings = array(
+				'duration' => self::SESSION_DEFAULT_DURATION,
+				'time' => $session_time,
+			);
+			wp_add_inline_script(
+				'wcb-session-meta',
+				sprintf(
+					'var WCPT_Session_Defaults = JSON.parse( decodeURIComponent( \'%s\' ) );',
+					rawurlencode( wp_json_encode( $settings ) )
+				),
+				'before'
+			);
 		}
 
 		// Enqueues scripts and styles for sponsors admin page.
 		if ( 'wcb_sponsor' === $post_type ) {
 			wp_enqueue_script( 'wcb-spon' );
 		}
-	}
-
-	/**
-	 * Print our JavaScript
-	 */
-	public function admin_print_scripts() {
-		global $post_type;
-
-		// DatePicker for Session posts.
-		if ( 'wcb_session' === $post_type ) :
-			?>
-
-			<script type="text/javascript">
-				jQuery( document ).ready( function( $ ) {
-					$( '#wcpt-session-date' ).datepicker( {
-						dateFormat:  'yy-mm-dd',
-						changeMonth: true,
-						changeYear:  true
-					} );
-				} );
-			</script>
-
-			<?php
-		endif;
 	}
 
 	/**
@@ -314,9 +334,16 @@ class WordCamp_Post_Types_Plugin {
 			case 'edit-wcb_sponsor':
 			case 'edit-wcb_session':
 			case 'wcb_sponsor':
-			case 'wcb_session':
 			case 'dashboard':
 				wp_enqueue_style( 'wcpt-admin', plugins_url( '/css/admin.css', __FILE__ ), array(), 2 );
+				break;
+			case 'wcb_session':
+				wp_enqueue_style(
+					'wcpt-editor',
+					plugins_url( '/css/editor.css', __FILE__ ),
+					array(),
+					filemtime( __DIR__ . '/css/editor.css' )
+				);
 				break;
 			default:
 		}
@@ -1084,8 +1111,6 @@ class WordCamp_Post_Types_Plugin {
 	public function add_meta_boxes() {
 		add_meta_box( 'speaker-info',      __( 'Speaker Info',      'wordcamporg'  ), array( $this, 'metabox_speaker_info'      ), 'wcb_speaker',   'side'   );
 		add_meta_box( 'organizer-info',    __( 'Organizer Info',    'wordcamporg'  ), array( $this, 'metabox_organizer_info'    ), 'wcb_organizer', 'side'   );
-		add_meta_box( 'speakers-list',     __( 'Speakers',          'wordcamporg'  ), array( $this, 'metabox_speakers_list'     ), 'wcb_session',   'side'   );
-		add_meta_box( 'session-info',      __( 'Session Info',      'wordcamporg'  ), array( $this, 'metabox_session_info'      ), 'wcb_session',   'normal' );
 		add_meta_box( 'sponsor-info',      __( 'Sponsor Info',      'wordcamporg'  ), array( $this, 'metabox_sponsor_info'      ), 'wcb_sponsor',   'normal' );
 		add_meta_box( 'sponsor-agreement', __( 'Sponsor Agreement', 'wordcamporg'  ), array( $this, 'metabox_sponsor_agreement' ), 'wcb_sponsor',   'side'   );
 		add_meta_box( 'invoice-sponsor',   __( 'Invoice Sponsor',   'wordcamporg'  ), array( $this, 'metabox_invoice_sponsor'   ), 'wcb_sponsor',   'side'   );
@@ -1142,216 +1167,6 @@ class WordCamp_Post_Types_Plugin {
 		<p>
 			<label for="wcpt-wporg-username"><?php esc_html_e( 'WordPress.org Username:', 'wordcamporg' ); ?></label>
 			<input type="text" class="widefat" id="wcpt-wporg-username" name="wcpt-wporg-username" value="<?php echo esc_attr( $wporg_username ); ?>" />
-		</p>
-
-		<?php
-	}
-
-	/**
-	 * Used by the Sessions post type, renders a text box for speakers input.
-	 */
-	public function metabox_speakers_list() {
-		global $post;
-
-		$speakers = get_post_meta( $post->ID, '_wcb_session_speakers', true );
-
-		wp_enqueue_script( 'jquery-ui-autocomplete' );
-
-		$speakers_names   = array();
-		$speakers_objects = get_posts( array(
-			'post_type'      => 'wcb_speaker',
-			'post_status'    => 'any',
-			'posts_per_page' => -1,
-		) );
-
-		// We'll use these in js.
-		foreach ( $speakers_objects as $speaker_object ) {
-			$speakers_names[] = $speaker_object->post_title;
-		}
-
-		$speakers_names_first = array_pop( $speakers_names );
-
-		?>
-
-		<?php wp_nonce_field( 'edit-speakers-list', 'wcpt-meta-speakers-list-nonce' ); ?>
-
-		<!--<input type="text" class="text" id="wcpt-speakers-list" name="wcpt-speakers-list" value="<?php echo esc_attr( $speakers ); ?>" />-->
-		<textarea class="large-text" placeholder="Start typing a name" id="wcpt-speakers-list" name="wcpt-speakers-list"><?php
-			echo esc_textarea( $speakers );
-		?></textarea>
-
-		<p class="description">
-			<?php esc_html_e( 'A speaker entry must exist first. Separate multiple speakers with commas.', 'wordcamporg' ); ?>
-		</p>
-
-		<script>
-			jQuery( document ).ready( function ( $ ) {
-				var availableSpeakers = [
-					<?php
-
-					foreach ( $speakers_names as $name ) {
-						printf( "'%s', ", esc_js( $name ) );
-					}
-
-					printf( "'%s'", esc_js( $speakers_names_first ) ); // avoid the trailing comma.
-
-					?>
-				];
-
-				function split( val ) {
-					return val.split( /,\s*/ );
-				}
-
-				function extractLast( term ) {
-					return split( term ).pop();
-				}
-
-				$( '#wcpt-speakers-list' ).bind( 'keydown', function ( event ) {
-					if ( event.keyCode == $.ui.keyCode.TAB &&
-						$( this ).data( 'autocomplete' ).menu.active ) {
-						event.preventDefault();
-					}
-				} ).autocomplete( {
-					minLength: 0,
-
-					source: function ( request, response ) {
-						response( $.ui.autocomplete.filter(
-							availableSpeakers, extractLast( request.term ) ) );
-					},
-
-					focus: function () {
-						return false;
-					},
-
-					select: function ( event, ui ) {
-						var terms = split( this.value );
-						terms.pop();
-						terms.push( ui.item.value );
-						terms.push( '' );
-						this.value = terms.join( ', ' );
-						$( this ).focus();
-						return false;
-					},
-
-					open: function () {
-						$( this ).addClass( 'open' );
-					},
-
-					close: function () {
-						$( this ).removeClass( 'open' );
-					}
-				} );
-			} );
-		</script>
-
-		<?php
-	}
-
-	/**
-	 * Renders session info metabox.
-	 */
-	public function metabox_session_info() {
-		$post         = get_post();
-		$session_time = absint( get_post_meta( $post->ID, '_wcpt_session_time', true ) );
-
-		if ( ! $session_time ) {
-			$most_recent_session_args = array(
-				'post_type'   => 'wcb_session',
-				'orderby'     => 'modified',
-				'post_status' => array( 'draft', 'pending', 'published' ),
-				'numberposts' => '1',
-			);
-
-			$most_recent_sessions = get_posts( $most_recent_session_args );
-
-			if ( ! empty( $most_recent_sessions ) ) {
-				$session_time = absint( get_post_meta( $most_recent_sessions[0]->ID, '_wcpt_session_time', true ) );
-			}
-		}
-
-		if ( ! $session_time ) {
-			$wordcamp_start_date = get_wordcamp_post()->meta['Start Date (YYYY-mm-dd)'][0];
-			$session_time        = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
-		}
-
-		$session_date     = ( $session_time ) ? wp_date( 'Y-m-d', $session_time ) : wp_date( 'Y-m-d' );
-		$session_hours    = ( $session_time ) ? wp_date( 'g', $session_time )     : wp_date( 'g' );
-		$session_minutes  = ( $session_time ) ? wp_date( 'i', $session_time )     : '00';
-		$session_meridiem = ( $session_time ) ? wp_date( 'a', $session_time )     : 'am';
-
-		$session_duration         = $post->_wcpt_session_duration ?? self::SESSION_DEFAULT_DURATION;
-		$session_duration_hours   = floor( $session_duration / HOUR_IN_SECONDS );
-		$session_duration_minutes = floor( ( $session_duration / MINUTE_IN_SECONDS ) % MINUTE_IN_SECONDS );
-
-		$session_type     = get_post_meta( $post->ID, '_wcpt_session_type',   true );
-		$session_slides   = get_post_meta( $post->ID, '_wcpt_session_slides', true );
-		$session_video    = get_post_meta( $post->ID, '_wcpt_session_video',  true );
-
-		?>
-
-		<?php wp_nonce_field( 'edit-session-info', 'wcpt-meta-session-info' ); ?>
-
-		<p>
-			<label for="wcpt-session-date"><?php esc_html_e( 'Date:', 'wordcamporg' ); ?></label>
-			<input type="text" id="wcpt-session-date" data-date="<?php echo esc_attr( $session_date ); ?>" name="wcpt-session-date" value="<?php echo esc_attr( $session_date ); ?>" /><br />
-
-			<label><?php esc_html_e( 'Start Time:', 'wordcamporg' ); ?></label>
-			<select name="wcpt-session-hour" aria-label="<?php esc_html_e( 'Session Start Hour', 'wordcamporg' ); ?>">
-				<?php for ( $i = 1; $i <= 12; $i++ ) : ?>
-					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_hours ); ?>>
-						<?php echo esc_html( $i ); ?>
-					</option>
-				<?php endfor; ?>
-			</select> :
-
-			<select name="wcpt-session-minutes" aria-label="<?php esc_html_e( 'Session Start Minutes', 'wordcamporg' ); ?>">
-				<?php for ( $i = '00'; (int) $i <= 55; $i = sprintf( '%02d', (int) $i + 5 ) ) : ?>
-					<option value="<?php echo esc_attr( $i ); ?>" <?php selected( $i, $session_minutes ); ?>>
-						<?php echo esc_html( $i ); ?>
-					</option>
-				<?php endfor; ?>
-			</select>
-
-			<select name="wcpt-session-meridiem" aria-label="<?php esc_html_e( 'Session Meridiem', 'wordcamporg' ); ?>">
-				<option value="am" <?php selected( 'am', $session_meridiem ); ?>>am</option>
-				<option value="pm" <?php selected( 'pm', $session_meridiem ); ?>>pm</option>
-			</select>
-		</p>
-
-		<p>
-			<fieldset id="wcpt-session-duration-container">
-				<legend>
-					<?php esc_html_e( 'Duration:', 'wordcamporg' ); ?>
-				</legend>
-
-				<input id="wcpt-session-duration-hours" name="wcpt-session-duration-hours" type="number" min="0" max="23" value="<?php echo absint( $session_duration_hours ); ?>">
-				<label for="wcpt-session-duration-hours">
-					<?php esc_html_e( 'hours,', 'wordcamporg' ); ?>
-				</label>
-
-				<input id="wcpt-session-duration-minutes" name="wcpt-session-duration-minutes" type="number" min="0" max="59" value="<?php echo absint( $session_duration_minutes ); ?>">
-				<label for="wcpt-session-duration-minutes">
-					<?php esc_html_e( 'minutes', 'wordcamporg' ); ?>
-				</label>
-			</fieldset>
-		</p>
-
-		<p>
-			<label for="wcpt-session-type"><?php esc_html_e( 'Type:', 'wordcamporg' ); ?></label>
-			<select id="wcpt-session-type" name="wcpt-session-type">
-				<option value="session" <?php selected( $session_type, 'session' ); ?>><?php esc_html_e( 'Regular Session', 'wordcamporg' ); ?></option>
-				<option value="custom" <?php selected( $session_type, 'custom' ); ?>><?php esc_html_e( 'Break, Lunch, etc.', 'wordcamporg' ); ?></option>
-			</select>
-		</p>
-
-		<p>
-			<label for="wcpt-session-slides"><?php esc_html_e( 'Slides URL:', 'wordcamporg' ); ?></label>
-			<input type="text" class="widefat" id="wcpt-session-slides" name="wcpt-session-slides" value="<?php echo esc_url( $session_slides ); ?>" />
-		</p>
-
-		<p>
-			<label for="wcpt-session-video"><?php esc_html_e( 'WordPress.TV URL:', 'wordcamporg' ); ?></label>
-			<input type="text" class="widefat" id="wcpt-session-video" name="wcpt-session-video" value="<?php echo esc_url( $session_video ); ?>" />
 		</p>
 
 		<?php
@@ -1510,101 +1325,18 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
-	 * Fired when a post is saved, updates additional sessions metadada.
+	 * Fires after a session post is saved.
+	 *
+	 * Set the speaker as the author of the session post, so the single view doesn't confuse users who see
+	 * "posted by [organizer name]".
 	 */
 	public function save_post_session( $post_id, $post ) {
 		if ( wp_is_post_revision( $post_id ) || 'wcb_session' !== $post->post_type ) {
 			return;
 		}
 
-		if ( isset( $_POST['wcpt-meta-speakers-list-nonce'] ) && wp_verify_nonce( $_POST['wcpt-meta-speakers-list-nonce'], 'edit-speakers-list' ) && current_user_can( 'edit_post', $post_id ) ) {
+		$speaker_ids = get_post_meta( $post_id, '_wcpt_speaker_id' );
 
-			// Update the text box as is for backwards compatibility.
-			$speakers = sanitize_text_field( $_POST['wcpt-speakers-list'] );
-			update_post_meta( $post_id, '_wcb_session_speakers', $speakers );
-		}
-
-		if ( isset( $_POST['wcpt-meta-session-info'] ) && wp_verify_nonce( $_POST['wcpt-meta-session-info'], 'edit-session-info' ) ) {
-			// Update session time.
-			$session_time = date_create(
-				sprintf(
-					'%s %d:%02d %s',
-					sanitize_text_field( $_POST['wcpt-session-date'] ),
-					absint( $_POST['wcpt-session-hour'] ),
-					absint( $_POST['wcpt-session-minutes'] ),
-					'am' === $_POST['wcpt-session-meridiem'] ? 'am' : 'pm'
-				),
-				wp_timezone()
-			);
-			if ( $session_time ) {
-				update_post_meta( $post_id, '_wcpt_session_time', $session_time->getTimestamp() );
-			}
-
-			$duration = absint(
-				( $_POST['wcpt-session-duration-hours']   * HOUR_IN_SECONDS ) +
-				( $_POST['wcpt-session-duration-minutes'] * MINUTE_IN_SECONDS )
-			);
-
-			update_post_meta( $post_id, '_wcpt_session_duration', $duration );
-
-			// Update session type.
-			$session_type = sanitize_text_field( $_POST['wcpt-session-type'] );
-			if ( ! in_array( $session_type, array( 'session', 'custom' ), true ) ) {
-				$session_type = 'session';
-			}
-
-			update_post_meta( $post_id, '_wcpt_session_type', $session_type );
-
-			// Update session slides link.
-			update_post_meta( $post_id, '_wcpt_session_slides', esc_url_raw( $_POST['wcpt-session-slides'] ) );
-
-			// Update session video link.
-			if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $_POST['wcpt-session-video'], PHP_URL_HOST ) ) ) ) {
-				update_post_meta( $post_id, '_wcpt_session_video', esc_url_raw( $_POST['wcpt-session-video'] ) );
-			}
-		}
-
-		// Allowed outside of $_POST. If anything updates a session, make sure.
-		// we parse the list of speakers and add the references to speakers.
-		$speakers_list = get_post_meta( $post_id, '_wcb_session_speakers', true );
-		$speakers_list = explode( ',', $speakers_list );
-
-		if ( ! is_array( $speakers_list ) ) {
-			$speakers_list = array();
-		}
-
-		$speaker_ids = array();
-		$speakers    = array_unique( array_map( 'trim', $speakers_list ) );
-
-		foreach ( $speakers as $speaker_name ) {
-			if ( empty( $speaker_name ) ) {
-				continue;
-			}
-
-			/*
-			 * Look for speakers by their names.
-			 *
-			 * @todo - This is very fragile, it fails if the speaker name has a tab character instead of a space
-			 * separating the first from last name, or an extra space at the end, etc. Those situations often arise
-			 * from copy/pasting the speaker data from spreadsheets. Moving to automated speaker submissions and
-			 * tighter integration with WordPress.org usernames should avoid this, but if not we should do something
-			 * here to make it more forgiving.
-			 */
-			$speaker = get_page_by_title( $speaker_name, OBJECT, 'wcb_speaker' );
-			if ( $speaker ) {
-				$speaker_ids[] = $speaker->ID;
-			}
-		}
-
-		// Add speaker IDs to post meta.
-		$speaker_ids = array_unique( $speaker_ids );
-		delete_post_meta( $post_id, '_wcpt_speaker_id' );
-		foreach ( $speaker_ids as $speaker_id ) {
-			add_post_meta( $post_id, '_wcpt_speaker_id', $speaker_id );
-		}
-
-		// Set the speaker as the author of the session post, so the single.
-		// view doesn't confuse users who see "posted by [organizer name]".
 		foreach ( $speaker_ids as $speaker_post ) {
 			$wporg_user_id = get_post_meta( $speaker_post, '_wcpt_user_id', true );
 			$user          = get_user_by( 'id', $wporg_user_id );

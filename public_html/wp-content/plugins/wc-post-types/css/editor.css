@@ -1,30 +1,30 @@
 
-.wc-panel-session-info .components-base-control:first-of-type {
+.wordcamp-panel-session-info .components-base-control:first-of-type {
 	margin-bottom: 16px;
 }
 
-.wc-panel-session-info .components-dropdown {
+.wordcamp-panel-session-info .components-dropdown {
 	width: 100%;
 }
 
-.wc-panel-session-info__duration-wrapper {
+.wordcamp-panel-session-info__duration-wrapper {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 }
 
-.wc-panel-session-info__duration label {
+.wordcamp-panel-session-info__duration label {
 	margin-left: 4px;
 }
 
-.wc-panel-session-info__duration input {
+.wordcamp-panel-session-info__duration input {
 	max-width: 3rem;
 }
 
-.wc-panel-session-info__duration label + input {
+.wordcamp-panel-session-info__duration label + input {
 	margin-left: 8px;
 }
 
-.wc-panel-session-speakers .components-form-token-field__help {
+.wordcamp-panel-session-speakers .components-form-token-field__help {
 	display: none;
 }

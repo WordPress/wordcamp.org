@@ -14,10 +14,10 @@ function SessionDuration( { instanceId, onChange, value } ) {
 	}
 
 	return (
-		<fieldset className="components-base-control wc-panel-session-info__duration">
+		<fieldset className="components-base-control wordcamp-panel-session-info__duration">
 			<legend className="components-base-control__label">{ __( 'Session Length', 'wordcamporg' ) }</legend>
 
-			<div className="wc-panel-session-info__duration-wrapper">
+			<div className="wordcamp-panel-session-info__duration-wrapper">
 				<input
 					type="number"
 					id={ `session-duration-hrs-${ instanceId }` }

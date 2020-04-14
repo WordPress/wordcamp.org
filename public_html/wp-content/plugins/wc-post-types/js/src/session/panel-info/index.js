@@ -29,7 +29,7 @@ function SessionSettings( {
 	return (
 		<PluginDocumentSettingPanel
 			name="wordcamp/session-info"
-			className="wc-panel-session-info"
+			className="wordcamp-panel-session-info"
 			title={ __( 'Session Info', 'wordcamporg' ) }
 		>
 			<BaseControl>

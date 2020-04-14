@@ -15,7 +15,7 @@ const SessionSpeakers = ( { onChange, speakers, selected } ) => {
 	return (
 		<PluginDocumentSettingPanel
 			name="wordcamp/session-speakers"
-			className="wc-panel-session-speakers"
+			className="wordcamp-panel-session-speakers"
 			title={ __( 'Speakers', 'wordcamporg' ) }
 		>
 			<FormTokenField

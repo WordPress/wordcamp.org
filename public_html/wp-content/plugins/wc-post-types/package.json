@@ -18,11 +18,12 @@
 	"scripts": {
 		"start": "wp-scripts start sessions=./js/src/session/index.js",
 		"build": "wp-scripts build sessions=./js/src/session/index.js",
+		"format:js": "wp-scripts format-js js/src",
 		"lint:js": "wp-scripts lint-js js/src",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"
 	},
 	"eslintConfig": {
-		"extends": "plugin:@wordpress/eslint-plugin/recommended-with-formatting",
+		"extends": "plugin:@wordpress/eslint-plugin/recommended",
 		"globals": {
 			"WCPT_Session_Defaults": "true"
 		},

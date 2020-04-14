@@ -9,7 +9,7 @@ function SessionDuration( { instanceId, onChange, value } ) {
 	const minutes = Math.floor( ( value / 60 ) % 60 );
 
 	function updateDuration( newHours, newMins ) {
-		const duration = ( newHours * 3600 ) + ( newMins * 60 );
+		const duration = newHours * 3600 + newMins * 60;
 		onChange( duration );
 	}
 

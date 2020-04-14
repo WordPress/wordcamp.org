@@ -33,13 +33,8 @@ function SessionSettings( {
 			title={ __( 'Session Info', 'wordcamporg' ) }
 		>
 			<BaseControl>
-				<BaseControl.VisualLabel>
-					{ __( 'Day & Time', 'wordcamporg' ) }
-				</BaseControl.VisualLabel>
-				<SessionDate
-					date={ start }
-					onChange={ onChangeStartTime }
-				/>
+				<BaseControl.VisualLabel>{ __( 'Day & Time', 'wordcamporg' ) }</BaseControl.VisualLabel>
+				<SessionDate date={ start } onChange={ onChangeStartTime } />
 			</BaseControl>
 
 			<SessionDuration value={ duration } onChange={ onChangeDuration } />

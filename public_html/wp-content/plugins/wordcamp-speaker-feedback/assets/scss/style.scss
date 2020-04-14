@@ -200,6 +200,14 @@
 			margin-bottom: 1em;
 		}
 	}
+
+	.inappropriate {
+		th {
+			&.check-column {
+				border-left: 4px solid #ffb900;
+			}
+		}
+	}
 }
 
 /**

@@ -67,8 +67,14 @@ function register_session_post_meta() {
 		'wcb_session',
 		'_wcpt_session_type',
 		array(
-			'show_in_rest' => true,
-			'single'       => true,
+			'show_in_rest'      => true,
+			'single'            => true,
+			'sanitize_callback' => function( $value ) {
+				if ( 'custom' === $value ) {
+					return $value;
+				}
+				return 'session';
+			},
 		)
 	);
 	register_post_meta(

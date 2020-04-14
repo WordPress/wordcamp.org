@@ -4,7 +4,10 @@ namespace WordCamp\SpeakerFeedback\Admin;
 
 use WordCamp\SpeakerFeedback\Feedback_List_Table;
 use function WordCamp\SpeakerFeedback\{ get_assets_path, get_includes_path, get_views_path, get_assets_url };
-use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment, delete_feedback, is_feedback };
+use function WordCamp\SpeakerFeedback\Comment\{
+	count_feedback, get_feedback, get_feedback_comment, delete_feedback,
+	is_feedback, mark_feedback_inappropriate, unmark_feedback_inappropriate,
+};
 use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_questions, count_helpful_feedback };
 use const WordCamp\SpeakerFeedback\SUPPORTED_POST_TYPES;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
@@ -364,7 +367,10 @@ function get_feedback_list_table() {
  */
 function handle_bulk_edit_actions( $action, $nonce ) {
 	$nonce_is_valid = wp_verify_nonce( $nonce, 'bulk_edit_' . COMMENT_TYPE );
-	$valid_actions  = array( 'approve', 'unapprove', 'spam', 'unspam', 'trash', 'untrash', 'delete' );
+	$valid_actions  = array(
+		'approve', 'unapprove', 'mark-inappropriate', 'unmark-inappropriate',
+		'spam', 'unspam', 'trash', 'untrash', 'delete',
+	);
 	$items          = filter_input( INPUT_GET, 'bulk_edit', FILTER_VALIDATE_INT, FILTER_REQUIRE_ARRAY );
 	$edited         = 0;
 	$not_edited     = 0;
@@ -392,6 +398,12 @@ function handle_bulk_edit_actions( $action, $nonce ) {
 						break;
 					case 'unapprove':
 						$result = wp_set_comment_status( $feedback->comment_ID, 'hold' );
+						break;
+					case 'mark-inappropriate':
+						$result = mark_feedback_inappropriate( $feedback->comment_ID );
+						break;
+					case 'unmark-inappropriate':
+						$result = unmark_feedback_inappropriate( $feedback->comment_ID );
 						break;
 					case 'spam':
 						$result = wp_spam_comment( $feedback->comment_ID );
@@ -462,10 +474,11 @@ function toggle_list_table_filters() {
 		case 'off':
 			add_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
 			add_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
-			add_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
+			add_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions', 10, 2 );
 			add_filter( 'wp_count_comments', __NAMESPACE__ . '\filter_list_table_view_counts', 99, 2 );
 			add_filter( 'get_avatar_comment_types', __NAMESPACE__ . '\filter_list_table_enable_comment_avatar' );
 			add_filter( 'comment_author', __NAMESPACE__ . '\filter_list_table_add_comment_avatar', 10, 2 );
+			add_filter( 'comment_class', __NAMESPACE__ . '\filter_list_table_modify_comment_classes', 10, 3 );
 
 			$current_state = 'on';
 			break;
@@ -473,10 +486,11 @@ function toggle_list_table_filters() {
 		case 'on':
 			remove_filter( 'comments_list_table_query_args', __NAMESPACE__ . '\filter_list_table_query_args' );
 			remove_filter( "views_{$screen_id}", __NAMESPACE__ . '\filter_list_table_views' );
-			remove_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions' );
+			remove_filter( 'comment_row_actions', __NAMESPACE__ . '\filter_list_table_row_actions', 10 );
 			remove_filter( 'wp_count_comments', __NAMESPACE__ . '\filter_list_table_view_counts', 99 );
 			remove_filter( 'get_avatar_comment_types', __NAMESPACE__ . '\filter_list_table_enable_comment_avatar' );
 			remove_filter( 'comment_author', __NAMESPACE__ . '\filter_list_table_add_comment_avatar', 10 );
+			remove_filter( 'comment_class', __NAMESPACE__ . '\filter_list_table_modify_comment_classes', 10 );
 
 			$current_state = 'off';
 			break;
@@ -492,11 +506,21 @@ function toggle_list_table_filters() {
  * - Search the feedback meta values instead of comment content.
  * - Enable ordering by the `rating` meta value.
  *
+ * @global string $comment_status
+ *
  * @param array $args
  *
  * @return array
  */
 function filter_list_table_query_args( $args ) {
+	global $comment_status;
+
+	$requested_status = filter_input( INPUT_GET, 'comment_status' );
+	if ( 'inappropriate' === $requested_status ) {
+		$comment_status = 'inappropriate'; // phpcs:ignore -- The parent class overrides statuses it doesn't recognize.
+		$args['status'] = 'inappropriate';
+	}
+
 	$args['type'] = COMMENT_TYPE;
 
 	$helpful = filter_input( INPUT_GET, 'helpful' );
@@ -550,6 +574,7 @@ function filter_list_table_query_args( $args ) {
  *
  * - Remove unnecessary views.
  * - Replace the default view URLs with ones that link back to our feedback list table page.
+ * - Add views for feedback marked as inappropriate and as helpful.
  *
  * @global int    $post_id
  * @global string $typenow
@@ -584,9 +609,10 @@ function filter_list_table_views( $views ) {
 		$link_base = add_query_arg( 'p', $post_id, $link_base );
 	}
 
-	$helpful                 = filter_input( INPUT_GET, 'helpful' );
 	$current_link_attributes = ' class="current" aria-current="page"';
-	$helpful_count           = ( $post_id ) ? count_helpful_feedback( $post_id ) : count_helpful_feedback();
+
+	$helpful       = filter_input( INPUT_GET, 'helpful' );
+	$helpful_count = ( $post_id ) ? count_helpful_feedback( $post_id ) : count_helpful_feedback();
 
 	$views['helpful'] = sprintf(
 		'<a href="%1$s"%2$s>%3$s</a>',
@@ -602,6 +628,32 @@ function filter_list_table_views( $views ) {
 		)
 	);
 
+	$status          = filter_input( INPUT_GET, 'comment_status' );
+	$feedback_counts = ( $post_id ) ? count_feedback( $post_id ) : count_feedback();
+	$feedback_counts = (object) $feedback_counts;
+
+	$view_inappropriate = array(
+		'inappropriate' => sprintf(
+			'<a href="%1$s"%2$s>%3$s</a>',
+			add_query_arg( 'comment_status', 'inappropriate', $link_base ),
+			( 'inappropriate' === $status ) ? $current_link_attributes : '',
+			sprintf(
+				// translators: %s is the number of inappropriate comments.
+				_x( 'Inappropriate <span class="count">(%s)</span>', 'wordcamporg' ),
+				sprintf(
+					'<span class="inappropriate-count">%s</span>',
+					number_format_i18n( $feedback_counts->inappropriate )
+				)
+			)
+		),
+	);
+
+	$key_indexes = array_keys( $views );
+	$after       = array_slice( $views, array_search( 'spam', $key_indexes, true ), null, true );
+	$before      = array_slice( $views, 0, count( $views ) - count( $after ), true );
+
+	$views = $before + $view_inappropriate + $after;
+
 	return $views;
 }
 
@@ -613,7 +665,7 @@ function filter_list_table_views( $views ) {
  *
  * @param array $actions
  *
- * @return mixed
+ * @return array
  */
 function filter_list_table_row_actions( $actions ) {
 	if ( ! current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
@@ -677,6 +729,29 @@ function filter_list_table_add_comment_avatar( $name, $comment_id ) {
 	$avatar  = get_avatar( $comment, 32, 'mystery' );
 
 	return "$avatar $name";
+}
+
+/**
+ * Modify the HTML classes that are added to a comment.
+ *
+ * The `wp_get_comment_status()` function strips out statuses it doesn't recognize, so we have to re-add them.
+ *
+ * @global string $comment_status
+ *
+ * @param array  $classes
+ * @param string $class
+ * @param int    $comment_id
+ *
+ * @return array
+ */
+function filter_list_table_modify_comment_classes( $classes, $class, $comment_id ) {
+	$feedback = get_feedback_comment( $comment_id );
+
+	if ( $feedback && 'inappropriate' === $feedback->comment_approved ) {
+		$classes[] = 'inappropriate';
+	}
+
+	return $classes;
 }
 
 /**

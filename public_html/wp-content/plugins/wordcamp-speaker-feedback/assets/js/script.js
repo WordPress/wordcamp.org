@@ -73,27 +73,24 @@
 	}
 
 	function onHelpfulClick( event ) {
-		event.preventDefault();
-		var button = $( event.target ).closest( 'button' ).get( 0 );
-		var isHelpful = 'is-helpful' === button.className;
+		var $container = $( event.target ).closest( 'footer' );
+		var input = $container.find( 'input[type="checkbox"]' ).get( 0 );
+		var isHelpful = !! input.checked;
 
 		wp.apiFetch( {
-			path: '/wordcamp-speaker-feedback/v1/feedback/' + button.dataset.commentId,
+			path: '/wordcamp-speaker-feedback/v1/feedback/' + input.dataset.commentId,
 			method: 'POST',
 			data: {
 				meta: { helpful: isHelpful ? 'false' : 'true' },
 			},
 		} )
 			.then( function() {
-				$( button ).toggleClass( 'is-helpful' );
-				var $label = $( '#' + button.getAttribute( 'aria-describedby' ) );
+				$container.toggleClass( 'is-helpful' );
 				if ( isHelpful ) {
 					// Previous state was helpful, has been un-marked, label should flip back to "mark as helpful".
-					wp.a11y.speak( SpeakerFeedbackData.messages.unmarkedHelpful, 'polite' );
-					$label.text( SpeakerFeedbackData.messages.markHelpful );
-				} else {
 					wp.a11y.speak( SpeakerFeedbackData.messages.markedHelpful, 'polite' );
-					$label.text( SpeakerFeedbackData.messages.unmarkHelpful );
+				} else {
+					wp.a11y.speak( SpeakerFeedbackData.messages.unmarkedHelpful, 'polite' );
 				}
 			} );
 	}
@@ -108,7 +105,7 @@
 		feedbackForm.addEventListener( 'submit', onFormSubmit, true );
 	}
 
-	var helpfulButtons = document.querySelectorAll( '.speaker-feedback__helpful button' );
+	var helpfulButtons = document.querySelectorAll( '.speaker-feedback__helpful input' );
 	if ( helpfulButtons.length ) {
 		helpfulButtons.forEach( function( el ) {
 			el.addEventListener( 'click', onHelpfulClick, true );

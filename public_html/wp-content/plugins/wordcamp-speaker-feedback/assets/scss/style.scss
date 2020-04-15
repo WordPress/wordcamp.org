@@ -221,42 +221,19 @@
 .speaker-feedback__helpful {
 	margin-top: 1em;
 	padding: 1rem 1.5rem;
-	background: #ddd;
+	background: #d5d5d5;
 	border-radius: 5px;
 	max-width: 30em;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 
-	button {
-		display: inline-block;
-		font-size: 1.2em;
-		letter-spacing: 0;
-		line-height: 1.25;
-		margin: 0 0 0 1em;
-		padding: 0.4em 0.8em;
-		text-align: center;
-		text-decoration: none;
-		text-transform: none;
-		word-wrap: normal;
+	&.is-helpful {
+		border: 2px solid currentColor;
+	}
 
-		.speaker-feedback__helpful-msg-helpful {
-			display: none;
-		}
-
-		.speaker-feedback__helpful-msg-neutral {
-			display: inline;
-		}
-
-		&.is-helpful {
-			.speaker-feedback__helpful-msg-helpful {
-				display: inline;
-			}
-
-			.speaker-feedback__helpful-msg-neutral {
-				display: none;
-			}
-		}
+	label { // stylelint-disable-line no-descending-specificity
+		font-size: 1em;
 	}
 }
 

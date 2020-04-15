@@ -96,26 +96,18 @@ class Walker_Feedback extends Walker_Comment {
 					<?php render_feedback_comment( $comment ); ?>
 				</div><!-- .comment-content -->
 
-				<footer class="speaker-feedback__helpful">
+				<footer class="speaker-feedback__helpful <?php echo ( $comment->helpful ) ? 'is-helpful' : ''; ?>">
 					<span id="sft-helpful-<?php echo absint( $comment_id ); ?>">
-						<?php if ( $comment->helpful ) : ?>
-							<?php esc_html_e( 'This feedback was marked helpful.', 'wordcamporg' ); ?>
-						<?php else : ?>
-							<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
-						<?php endif; ?>
+						<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
 					</span>
-					<button
-						type="button"
-						data-comment-id="<?php echo absint( $comment_id ); ?>"
-						class="<?php echo ( $comment->helpful ) ? 'is-helpful' : ''; ?>"
-						aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
-					>
-						<span class="speaker-feedback__helpful-msg-neutral">
-							<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
-						</span>
-						<span class="speaker-feedback__helpful-msg-helpful">
-							<?php esc_html_e( 'Remove', 'wordcamporg' ); ?>
-						</span>
+					<label>
+						<input
+							type="checkbox"
+							data-comment-id="<?php echo absint( $comment_id ); ?>"
+							aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
+							<?php checked( $comment->helpful ); ?>
+						/>
+						<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
 					</button>
 				</footer>
 			</article><!-- .comment-body -->

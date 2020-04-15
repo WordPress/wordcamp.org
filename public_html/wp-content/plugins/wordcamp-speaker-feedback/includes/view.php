@@ -284,8 +284,6 @@ function enqueue_assets() {
 				'submitSuccess'   => __( 'Feedback submitted.', 'wordcamporg' ),
 				'markedHelpful'   => __( 'Feedback marked as helpful.', 'wordcamporg' ),
 				'unmarkedHelpful' => __( 'Feedback unmarked as helpful.', 'wordcamporg' ),
-				'markHelpful'     => __( 'Was this feedback helpful?', 'wordcamporg' ),
-				'unmarkHelpful'   => __( 'This feedback was marked helpful.', 'wordcamporg' ),
 			),
 		);
 

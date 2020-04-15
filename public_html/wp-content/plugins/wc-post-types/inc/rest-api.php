@@ -14,6 +14,7 @@ require_once 'favorite-schedule-shortcode.php';
 
 add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
+add_action( 'is_protected_meta', __NAMESPACE__ . '\unprotect_wcpt_meta', 10, 2 );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -108,6 +109,19 @@ function register_session_post_meta() {
 			'single'       => false,
 		)
 	);
+}
+
+/**
+ * Flip our CPT meta out of "protected", so that users can edit the meta values.
+ *
+ * @param bool   $protected Whether the key is considered protected.
+ * @param string $meta_key  Metadata key.
+ */
+function unprotect_wcpt_meta( $protected, $meta_key ) {
+	if ( '_wcpt_' === substr( $meta_key, 0, 6 ) ) {
+		return false;
+	}
+	return $protected;
 }
 
 /**

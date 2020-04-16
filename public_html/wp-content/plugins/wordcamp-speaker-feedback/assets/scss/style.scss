@@ -200,20 +200,6 @@
 			margin-bottom: 1em;
 		}
 	}
-
-	.inappropriate {
-		th {
-			&.check-column {
-				border-left: 4px solid #ffb900;
-			}
-		}
-
-		.row-actions {
-			.unapprove {
-				display: none;
-			}
-		}
-	}
 }
 
 /**
@@ -328,6 +314,20 @@
 
 		.column-rating {
 			width: 140px;
+		}
+	}
+
+	.inappropriate {
+		th {
+			&.check-column {
+				border-left: 4px solid #ffb900;
+			}
+		}
+
+		.row-actions {
+			.unapprove {
+				display: none;
+			}
 		}
 	}
 }

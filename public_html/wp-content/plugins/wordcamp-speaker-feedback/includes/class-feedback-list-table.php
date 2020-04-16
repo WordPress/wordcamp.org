@@ -61,11 +61,11 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 		$slice_index = array_search( 'spam', $key_indexes, true );
 		$new_actions = array();
 
-		if ( in_array( $comment_status, array( 'all', 'moderated' ) ) ) {
+		if ( in_array( $comment_status, array( 'all', 'approved', 'moderated' ) ) ) {
 			$new_actions['mark-inappropriate'] = __( 'Mark as Inappropriate', 'wordcamporg' );
 		}
 
-		if ( in_array( $comment_status, array( 'all', 'inappropriate' ) ) ) {
+		if ( in_array( $comment_status, array( 'inappropriate' ) ) ) {
 			$new_actions['unmark-inappropriate'] = __( 'Unmark as Inappropriate', 'wordcamporg' );
 
 			if ( false === $slice_index ) {

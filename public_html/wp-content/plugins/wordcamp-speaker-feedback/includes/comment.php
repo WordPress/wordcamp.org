@@ -78,7 +78,6 @@ function count_feedback( $post_id = 0 ) {
 			case 'inappropriate':
 				$feedback_count['inappropriate']   = $row['total'];
 				$feedback_count['total_comments'] += $row['total'];
-				$feedback_count['all']            += $row['total'];
 				break;
 			default:
 				break;

@@ -14,11 +14,16 @@
 		"@wordpress/scripts": "7.1.0",
 		"wicg-inert": "3.0.2"
 	},
-	"browserslist": [
-		"extends @wordpress/browserslist-config"
-	],
+	"eslintConfig": {
+		"extends": "../../../../.eslintrc.js"
+	},
+	"stylelint": {
+		"extends": "../../../../.stylelintrc"
+	},
 	"scripts": {
 		"start": "wp-scripts start src/inert.js",
-		"build": "wp-scripts build src/inert.js"
+		"build": "wp-scripts build src/inert.js",
+		"lint:js": "wp-scripts lint-js",
+		"lint:css": "wp-scripts lint-style"
 	}
 }

@@ -21,6 +21,7 @@
 	],
 	"eslintConfig": {
 		"extends": "plugin:@wordpress/eslint-plugin/es5",
+		"root": true,
 		"rules": {
 			"vars-on-top": "off",
 			"wrap-iife": "off"
@@ -40,19 +41,7 @@
 		"*.min.js"
 	],
 	"stylelint": {
-		"extends": "stylelint-config-wordpress/scss",
-		"rules": {
-			"max-line-length": 115,
-			"rule-empty-line-before": [
-				"always-multi-line",
-				{
-					"except": [
-						"first-nested",
-						"after-single-line-comment"
-					]
-				}
-			]
-		}
+		"extends": "../../../../.stylelintrc"
 	},
 	"scripts": {
 		"start": "node-sass -wr assets/scss -o assets/build --source-map-embed",

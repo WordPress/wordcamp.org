@@ -1,6 +1,7 @@
 /*
  * Common
  */
+
 .wp-block-wordcamp-crowdcast-embed .components-base-control,
 .wp-block-wordcamp-streamtext-embed .components-base-control,
 .wp-block-wordcamp-youtube-live-chat-embed .components-base-control {
@@ -17,7 +18,9 @@
 /*
  * YouTube Live Chat
  */
+
 .wp-block-wordcamp-youtube-live-chat-embed iframe {
+
 	/* The maximums are to make sure the user can still scroll around the iframe. */
 	width: 100%;
 	max-width: 90vw;
@@ -30,8 +33,10 @@
  * These need to be applied to the overlay too. Otherwise part of the underlying block could be exposed, leading
  * to the problems described in `EmbedDeselectedOverlay`.
  */
+
 .wp-block-wordcamp-youtube-live-chat-embed iframe,
 .wp-block[data-type="wordcamp/youtube-live-chat-embed"] .deselected-iframe-overlay {
+
 	/* The minimums are to prevent `iframe` content from being hidden. */
 	min-width: 305px;
 	min-height: 355px;

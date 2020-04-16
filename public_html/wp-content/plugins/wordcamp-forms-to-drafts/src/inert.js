@@ -1,1 +1,1 @@
-import "wicg-inert";
+import 'wicg-inert';

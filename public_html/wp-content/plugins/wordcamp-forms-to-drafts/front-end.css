@@ -2,50 +2,50 @@
 	position: relative;
 }
 
-	.wcfd-disabled-form #wcorg-login-message {
-		position: absolute;
-		z-index: 10;
-		margin: 2.4em;
-		padding: 1.8em;
-		background-color: #c62828;
-		border-radius: .25em;
-		margin-bottom: 2em;
-	}
+.wcfd-disabled-form #wcorg-login-message {
+	position: absolute;
+	z-index: 10;
+	margin: 2.4em;
+	padding: 1.8em;
+	background-color: #c62828;
+	border-radius: 0.25em;
+	margin-bottom: 2em;
+}
 
-		.wcfd-disabled-form #wcorg-login-message p {
-			color: white !important /* !important to prevent theme from unintentionally overriding */;
-		}
+.wcfd-disabled-form #wcorg-login-message p {
+	color: #fff !important /* !important to prevent theme from unintentionally overriding */;
+}
 
-			.wcfd-disabled-form #wcorg-login-message p:first-child {
-				margin-top: 0;
-			}
+.wcfd-disabled-form #wcorg-login-message p:first-child {
+	margin-top: 0;
+}
 
-			.wcfd-disabled-form #wcorg-login-message p:last-child {
-				margin-bottom: 0;
-			}
+.wcfd-disabled-form #wcorg-login-message p:last-child {
+	margin-bottom: 0;
+}
 
-			.wcfd-disabled-form #wcorg-login-message a {
-				color: white;
-			}
+.wcfd-disabled-form #wcorg-login-message a {
+	color: #fff;
+}
 
-			.wcfd-disabled-form #wcorg-login-message a:hover,
-			.wcfd-disabled-form #wcorg-login-message a:focus,
-			.wcfd-disabled-form #wcorg-login-message a:active {
-				color: white;
-			}
+.wcfd-disabled-form #wcorg-login-message a:hover,
+.wcfd-disabled-form #wcorg-login-message a:focus,
+.wcfd-disabled-form #wcorg-login-message a:active {
+	color: #fff;
+}
 
-	.wcfd-overlay {
-		position: absolute;
-		z-index: 5;
-		width: 100%;
-		height: 100%;
-		background-color: black;
-		opacity: .5;
-	}
+.wcfd-overlay {
+	position: absolute;
+	z-index: 5;
+	width: 100%;
+	height: 100%;
+	background-color: #000;
+	opacity: 0.5;
+}
 
-	.wcfd-disabled-form div[id^="contact-form-"] {
-		padding: 1.8em;
-	}
+.wcfd-disabled-form div[id^="contact-form-"] {
+	padding: 1.8em;
+}
 
 @media screen and ( min-width: 470px ) {
 	.wcfd-disabled-form #wcorg-login-message {

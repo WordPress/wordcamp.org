@@ -378,15 +378,17 @@ function count_helpful_feedback( $post_id = 0 ) {
 		$post__in[] = absint( $post_id );
 	}
 
-	$meta_query = array(
-		array(
-			'key'   => 'helpful',
-			'value' => 1,
-			'type'  => 'NUMERIC',
+	$args = array(
+		'meta_query' => array(
+			array(
+				'key'   => 'helpful',
+				'value' => 1,
+				'type'  => 'NUMERIC',
+			),
 		),
 	);
 
-	$feedbacks = get_feedback( $post__in, array( 'hold', 'approve' ), $meta_query );
+	$feedbacks = get_feedback( $post__in, array( 'hold', 'approve' ), $args );
 
 	$helpful_count = 0;
 

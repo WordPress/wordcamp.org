@@ -18,18 +18,17 @@ before_script:
 jobs:
   include:
     # To keep things clean, we set up separate jobs for Travis per project.
-    - name: "Blocks"
+    - name: "yarn scripts"
       install:
         - nvm install && nvm use
         - yarn
       script:
         # Run eslint & stylelint over all JS/SCSS files
-        # @todo Find a way to only run on changed files
-        - yarn workspace wordcamp-blocks run lint:js --config=./.eslintrc.js --quiet
-        - yarn workspace wordcamp-blocks run lint:css
-        # Make sure the build completes.
-        - yarn workspace wordcamp-blocks run build
-        # Run the unit tests.
+        - yarn workspaces run lint:js
+        - yarn workspaces run lint:css
+        # Make sure every build completes.
+        - yarn workspaces run build
+        # Run the Blocks unit tests. If/when other workspaces get tests, those would be added here.
         - yarn workspace wordcamp-blocks run test
 
     - name: "PHP Unit Tests"

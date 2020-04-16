@@ -31,16 +31,13 @@
 		"sass-loader": "8.0.2",
 		"webpack-cli": "3.3.11"
 	},
-	"browserslist": [
-		"extends @wordpress/browserslist-config"
-	],
-	"eslintIgnore": [
-		"*.min.js"
-	],
 	"babel": {
 		"presets": [
 			"@wordpress/babel-preset-default"
 		]
+	},
+	"eslintConfig": {
+		"extends": "../../../../.eslintrc.js"
 	},
 	"jest": {
 		"preset": "@wordpress/jest-preset-default",
@@ -48,6 +45,10 @@
 		"roots": [
 			"<rootDir>/public_html/wp-content/mu-plugins/blocks"
 		]
+	},
+	"prettier": "../../../../.prettierrc.js",
+	"stylelint": {
+		"extends": "../../../../.stylelintrc"
 	},
 	"scripts:comment": "See ./readme.md for parameter documentaton, usage examples, etc",
 	"scripts": {

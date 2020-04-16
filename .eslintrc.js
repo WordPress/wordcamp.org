@@ -8,13 +8,22 @@
  */
 
 module.exports = {
-	extends : 'plugin:@wordpress/eslint-plugin/recommended-with-formatting',
+	extends: 'plugin:@wordpress/eslint-plugin/recommended-with-formatting',
 
-	globals : {
-		wp : true,
+	/**
+	 * Setting this to true is necessary to avoid merging WordCamp.org configs with any that exist in parent
+	 * folders in the developer's environment.
+	 * See https://github.com/eslint/eslint/commit/c99e9b621fe46b8535cf59fe489977dd36cb2a39.
+	 */
+	root: true,
+
+	globals: {
+		wp: true,
 	},
 
-	rules : {
+	ignorePatterns: [ '*.min.js' ],
+
+	rules: {
 		/*
 		 * The rationale behind this rule is that sometimes a variable is defined by a costly operation, but then
 		 * the variable is never used, so that operation was wasted. That's a valid point, but in practice that
@@ -26,7 +35,7 @@ module.exports = {
 		 * In the uncommon case where a significant performance penalty would be introduced, the developer is
 		 * still free to choose to define the variable after the early returns.
 		 */
-		'@wordpress/no-unused-vars-before-return' : [ 'off' ],
+		'@wordpress/no-unused-vars-before-return': [ 'off' ],
 
 		/*
 		 * Instead of turning this off altogether, we should safelist the parameters that are coming in from
@@ -47,16 +56,19 @@ module.exports = {
 		 *     },
 		 * ],
 		 */
-		'camelcase' : 'off',
+		camelcase: 'off',
 
 		/*
 		 * Short variable names are almost always obscure and non-descriptive, but they should be meaningful,
 		 * obvious, and self-documenting.
 		 */
-		'id-length' : [ 'error', {
-			'min'        : 3,
-			'exceptions' : [ '__', '_n', '_x', 'id', 'a', 'b' ]
-		} ],
+		'id-length': [
+			'error',
+			{
+				min: 3,
+				exceptions: [ '__', '_n', '_x', 'id', 'a', 'b' ],
+			},
+		],
 
 		/*
 		 * Force a line-length of 115 characters.
@@ -64,18 +76,21 @@ module.exports = {
 		 * We ignore URLs, trailing comments, strings, and template literals to prevent awkward fragmenting of
 		 * meaningful content.
 		 */
-		'max-len': [ 'error', {
-			'code'                   : 115,
-			'ignoreUrls'             : true,
-			'ignoreTrailingComments' : true,
-			'ignoreStrings'          : true,
-			'ignoreTemplateLiterals' : true,
-		} ],
+		'max-len': [
+			'error',
+			{
+				code: 115,
+				ignoreUrls: true,
+				ignoreTrailingComments: true,
+				ignoreStrings: true,
+				ignoreTemplateLiterals: true,
+			},
+		],
 
 		/*
 		 * Objects are harder to quickly scan when the formatting is inconsistent.
 		 */
-		'object-shorthand' : [ 'error', 'consistent-as-needed' ],
+		'object-shorthand': [ 'error', 'consistent-as-needed' ],
 
 		/**
 		 * Only prefer const over let when destructuring if all variables in the declaration are never reassigned.
@@ -91,9 +106,12 @@ module.exports = {
 		 * let { a } = var;
 		 * const { b } = var;
 		 */
-		'prefer-const': [ 'error', {
-			'destructuring': 'all',
-		} ],
+		'prefer-const': [
+			'error',
+			{
+				destructuring: 'all',
+			},
+		],
 
 		/**
 		 * Disallow creating more than one component per file.
@@ -101,9 +119,12 @@ module.exports = {
 		 * Having one component per file makes components easier to test and easier to document. `ignoreStateless`
 		 * allows us to still keep simple stateless components, but these should be used sparingly.
 		 */
-		'react/no-multi-comp': [ 'error', {
-			ignoreStateless: true
-		} ],
+		'react/no-multi-comp': [
+			'error',
+			{
+				ignoreStateless: true,
+			},
+		],
 
 		/*
 		 * Sort imports alphabetically, at least inside multiple-member imports. Ignores declaration sorting since

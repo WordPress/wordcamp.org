@@ -135,15 +135,16 @@ function notify_speakers_approved_feedback() {
  */
 function speaker_notifications_are_enabled() {
 	$now       = date_create( 'now', wp_timezone() );
-	$stop_date = get_option( 'sft_speaker_notification_stop_date', false );
+	$stop_time = get_option( 'sft_speaker_notification_stop_time', false );
 
-	if ( false !== $stop_date && $now->getTimestamp() > $stop_date ) {
+	if ( false !== $stop_time && $now->getTimestamp() > $stop_time ) {
 		return false;
 	}
 
-	$first_session_time = get_transient( 'sft_first_session_time' );
+	// Session times can change, so this is a transient.
+	$start_time = get_transient( 'sft_speaker_notification_start_time' );
 
-	if ( ! $first_session_time ) {
+	if ( ! $start_time ) {
 		$earliest_session = get_posts( array(
 			'post_type'      => 'wcb_session',
 			'post_status'    => 'publish',
@@ -154,21 +155,20 @@ function speaker_notifications_are_enabled() {
 		) );
 
 		if ( ! empty( $earliest_session ) ) {
-			$first_session_time = absint( $earliest_session[0]->_wcpt_session_time );
+			$start_time = absint( $earliest_session[0]->_wcpt_session_time );
 		}
 
-		if ( ! $first_session_time ) {
+		if ( ! $start_time ) {
 			return false;
 		}
 
-		// Session times can change, so this is a transient.
-		set_transient( 'sft_first_session_time', $first_session_time, DAY_IN_SECONDS );
+		set_transient( 'sft_speaker_notification_start_time', $start_time, DAY_IN_SECONDS );
 
-		$stop_date = strtotime( '+ 3 months', $first_session_time );
-		update_option( 'sft_speaker_notification_stop_date', $stop_date, false );
+		$stop_time = strtotime( '+ 3 months', $start_time );
+		update_option( 'sft_speaker_notification_stop_time', $stop_time, false );
 	}
 
-	return $now->getTimestamp() > $first_session_time;
+	return $now->getTimestamp() > $start_time;
 }
 
 /**

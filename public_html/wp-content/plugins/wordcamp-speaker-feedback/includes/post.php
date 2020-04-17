@@ -86,3 +86,20 @@ function get_session_speaker_user_ids( $session_id ) {
 
 	return $user_ids;
 }
+
+/**
+ * Generate a link to the front end feedback UI for a particular session.
+ *
+ * @param int $post_id
+ *
+ * @return string
+ */
+function get_session_feedback_url( $post_id ) {
+	$url = '';
+
+	if ( post_type_supports( get_post_type( $post_id ), 'wordcamp-speaker-feedback' ) ) {
+		$url = trailingslashit( get_permalink( $post_id ) ) . 'feedback/';
+	}
+
+	return $url;
+}

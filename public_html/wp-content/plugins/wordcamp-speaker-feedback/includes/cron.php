@@ -3,7 +3,7 @@
 namespace WordCamp\SpeakerFeedback\Cron;
 
 use function WordCamp\SpeakerFeedback\Comment\{ get_feedback, update_feedback };
-use function WordCamp\SpeakerFeedback\Post\get_session_speaker_user_ids;
+use function WordCamp\SpeakerFeedback\Post\{ get_session_speaker_user_ids, get_session_feedback_url };
 
 defined( 'WPINC' ) || die();
 
@@ -68,7 +68,7 @@ function notify_speakers_approved_feedback() {
 				'feedback_ids' => $associated_feedbacks,
 				'title'        => get_the_title( $session_id ),
 				'count'        => count( $associated_feedbacks ),
-				'link'         => trailingslashit( get_permalink( $session_id ) ) . 'feedback/',
+				'link'         => get_session_feedback_url( $session_id ),
 			);
 		}
 

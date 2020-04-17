@@ -2,10 +2,15 @@
 
 namespace WordCamp\SpeakerFeedback\View;
 
+use WP_Post;
 use function WordCamp\SpeakerFeedback\get_assets_path;
+use function WordCamp\SpeakerFeedback\Post\get_session_feedback_url;
 
 defined( 'WPINC' ) || die();
 
+/** @var WP_Post $post */
+/** @var string $rating_question */
+/** @var array $text_questions */
 ?>
 <hr />
 <form id="sft-feedback" class="speaker-feedback">
@@ -17,7 +22,7 @@ defined( 'WPINC' ) || die();
 		<div class="speaker-feedback__notice">
 			<p><?php echo wp_kses_post( sprintf(
 				__( '<a href="%s">Log in to your WordPress.org account,</a> or add your name & email to leave feedback.', 'wordcamporg' ),
-				wp_login_url( get_permalink() . 'feedback' )
+				wp_login_url( get_session_feedback_url( $post->ID ) )
 			) ); ?></p>
 		</div>
 

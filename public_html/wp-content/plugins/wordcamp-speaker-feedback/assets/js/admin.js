@@ -1,5 +1,5 @@
 /**
- * Remove the `dimAfter` callback for feedback replies. This function is called after a comment is unapproved or
+ * Update the `dimAfter` callback for feedback replies. This function is called after a comment is unapproved or
  * approved. In the comments table, it triggers the HTML updates in the admin menu & admin bar (among others).
  * We can override this by passing in our own function, which only handles the top view + count links.
  *

@@ -20,6 +20,7 @@ foreach ( SUPPORTED_POST_TYPES as $supported_post_type ) {
 }
 
 add_action( 'admin_menu', __NAMESPACE__ . '\add_subpages' );
+add_filter( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
 add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2 );
 add_filter( 'pre_wp_update_comment_count_now', __NAMESPACE__ . '\adjust_post_comment_count', 10, 3 );
@@ -220,6 +221,23 @@ function get_subpage_url( $post_type ) {
 		),
 		esc_url( admin_url( 'edit.php' ) )
 	);
+}
+
+/**
+ * Add assets to the form page.
+ *
+ * @param string $hook_suffix The current admin page.
+ */
+function enqueue_assets( $hook_suffix ) {
+	if ( 'wcb_session_page_wc-speaker-feedback' === $hook_suffix ) {
+		wp_enqueue_script(
+			'speaker-feedback-admin',
+			get_assets_url() . 'js/admin.js',
+			array( 'admin-comments', 'jquery' ),
+			filemtime( dirname( __DIR__ ) . '/assets/js/admin.js' ),
+			true
+		);
+	}
 }
 
 /**

@@ -44,6 +44,7 @@ function load() {
 	require_once get_includes_path() . 'class-feedback.php';
 	require_once get_includes_path() . 'class-rest-feedback-controller.php';
 	require_once get_includes_path() . 'class-walker-feedback.php';
+	require_once get_includes_path() . 'cron.php';
 	require_once get_includes_path() . 'capabilities.php';
 	require_once get_includes_path() . 'comment.php';
 	require_once get_includes_path() . 'comment-meta.php';

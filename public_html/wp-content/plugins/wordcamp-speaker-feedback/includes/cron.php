@@ -35,7 +35,11 @@ function notify_speakers_approved_feedback() {
 	$wordcamp_name = get_wordcamp_name( get_current_blog_id() );
 
 	$feedbacks       = get_unnotified_feedback();
-	$post_ids        = wp_list_pluck( $feedbacks, 'comment_post_ID', 'comment_ID' );
+	$post_ids        = array_combine(
+		// Using the 'index_key' parameter doesn't work here, maybe because the values are numeric?
+		wp_list_pluck( $feedbacks, 'comment_ID' ),
+		wp_list_pluck( $feedbacks, 'comment_post_ID' )
+	);
 	$unique_post_ids = array_unique( array_values( $post_ids ) );
 
 	$speaker_session_ids = array_reduce(

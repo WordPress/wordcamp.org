@@ -72,6 +72,9 @@ function notify_speakers_approved_feedback() {
 			);
 		}
 
+		$speaker_locale = get_user_locale( $speaker );
+		switch_to_locale( $speaker_locale );
+
 		$subject = sprintf(
 			// translators: 1. Number of feedback submissions. 2. WordCamp name.
 			esc_html( _n(
@@ -94,7 +97,7 @@ function notify_speakers_approved_feedback() {
 			$message .= sprintf(
 				// translators: 1. Number of new submissions. 2. Session title.
 				esc_html__( '%1$s new submissions on %2$s', 'wordcamporg' ),
-				$info['count'],
+				number_format_i18n( $info['count'] ),
 				$info['title']
 			);
 			$message .= "\n";
@@ -109,6 +112,8 @@ function notify_speakers_approved_feedback() {
 		);
 
 		$result = wp_mail( $speaker->user_email, $subject, $message );
+
+		restore_current_locale();
 
 		if ( $result ) {
 			foreach ( $feedback_info['feedback_ids'] as $feedback_id ) {

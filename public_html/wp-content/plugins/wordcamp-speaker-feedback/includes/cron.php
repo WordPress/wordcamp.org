@@ -68,7 +68,7 @@ function notify_speakers_approved_feedback() {
 				'feedback_ids' => $associated_feedbacks,
 				'title'        => get_the_title( $session_id ),
 				'count'        => count( $associated_feedbacks ),
-				'link'         => trailingslashit( get_permalink( $session_id ) ) . 'feedback',
+				'link'         => trailingslashit( get_permalink( $session_id ) ) . 'feedback/',
 			);
 		}
 
@@ -107,7 +107,7 @@ function notify_speakers_approved_feedback() {
 
 		$message .= sprintf(
 			// translators: %s is the name of the WordCamp.
-			esc_html__( "Sincerely,\nthe %s organizing team", 'wordcamporg' ),
+			esc_html__( "Sincerely,\nThe %s organizing team", 'wordcamporg' ),
 			esc_html( $wordcamp_name )
 		);
 
@@ -116,7 +116,7 @@ function notify_speakers_approved_feedback() {
 		restore_current_locale();
 
 		if ( $result ) {
-			foreach ( $feedback_info['feedback_ids'] as $feedback_id ) {
+			foreach ( $info['feedback_ids'] as $feedback_id ) {
 				update_feedback(
 					$feedback_id,
 					array(

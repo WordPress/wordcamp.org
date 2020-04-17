@@ -100,7 +100,12 @@ function notify_speakers_approved_feedback() {
 		foreach ( $feedback_info as $info ) {
 			$message .= sprintf(
 				// translators: 1. Number of new submissions. 2. Session title.
-				esc_html__( '%1$s new submissions on %2$s', 'wordcamporg' ),
+				esc_html( _n(
+					'%1$s new submission on %2$s',
+					'%1$s new submissions on %2$s',
+					$info['count'],
+					'wordcamporg'
+				) ),
 				number_format_i18n( $info['count'] ),
 				$info['title']
 			);

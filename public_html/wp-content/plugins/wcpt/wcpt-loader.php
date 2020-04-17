@@ -57,6 +57,7 @@ if ( ! class_exists( 'WCPT_Loader' ) ) :
 				require_once( WCPT_DIR . 'wcpt-admin.php' );
 				require_once( WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php' );
 				require_once( WCPT_DIR . 'wcpt-wordcamp/privacy.php' );
+				require_once( WCPT_DIR . 'wcpt-meetup/attendance-surveys.php' );
 				require_once( WCPT_DIR . 'mentors/dashboard.php' );
 			}
 		}

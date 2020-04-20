@@ -20,14 +20,5 @@
 	],
 	"browserslist": [
 		"extends @wordpress/browserslist-config"
-	],
-	"eslintConfig:comment": {
-		"root": "Setting this to true is necessary to avoid merging WordCamp.org configs with any that exist in parent folders in the developer's environment. See https://github.com/eslint/eslint/commit/c99e9b621fe46b8535cf59fe489977dd36cb2a39."
-	},
-	"eslintConfig": {
-		"root": true
-	},
-	"eslintIgnore": [
-		"*.min.js"
 	]
 }

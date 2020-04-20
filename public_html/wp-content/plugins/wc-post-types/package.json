@@ -15,24 +15,22 @@
 		"@wordpress/eslint-plugin": "4.0.0",
 		"@wordpress/scripts": "7.1.0"
 	},
+	"eslintConfig": {
+		"extends": "../../../../.eslintrc.js",
+		"globals": {
+			"WCPT_Session_Defaults": "true"
+		}
+	},
+	"prettier": "../../../../.prettierrc.js",
+	"stylelint": {
+		"extends": "../../../../.stylelintrc"
+	},
 	"scripts": {
 		"start": "wp-scripts start sessions=./js/src/session/index.js",
 		"build": "wp-scripts build sessions=./js/src/session/index.js",
 		"format:js": "wp-scripts format-js js/src",
 		"lint:js": "wp-scripts lint-js js/src",
+		"lint:css": "wp-scripts lint-style css/editor.css",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"
-	},
-	"eslintConfig:comment": {
-		"root": "Setting this to true is necessary to avoid merging WordCamp.org configs with any that exist in parent folders in the developer's environment. See https://github.com/eslint/eslint/commit/c99e9b621fe46b8535cf59fe489977dd36cb2a39."
-	},
-	"eslintConfig": {
-		"root": true,
-		"extends": "plugin:@wordpress/eslint-plugin/recommended",
-		"globals": {
-			"WCPT_Session_Defaults": "true"
-		},
-		"rules": {
-			"object-shorthand": [ "error", "consistent-as-needed" ]
-		}
 	}
 }

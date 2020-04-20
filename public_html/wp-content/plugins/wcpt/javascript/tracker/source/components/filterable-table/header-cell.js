@@ -13,26 +13,13 @@ import { Component } from '@wordpress/element';
  */
 import SortingIndicator from '../sorting-indicator/sorting-indicator';
 
-export default class extends Component {
-	static propTypes = {
-		isSortedColumn: PropTypes.bool,
-		sortOrder: PropTypes.oneOf( [ 'asc', 'desc' ] ),
-		fieldSlug: PropTypes.string.isRequired,
-		fieldName: PropTypes.string.isRequired,
-		handleSortEvent: PropTypes.func.isRequired,
-	};
-
-	static defaultProps = {
-		isSortedColumn: false,
-		sortOrder: 'asc',
-	};
-
+class TableHeaderCell extends Component {
 	/**
 	 * Get the CSS classes for the `th` element
 	 *
 	 * @return {string}
 	 */
-	getClassNames = () => {
+	getClassNames() {
 		let sortClasses = '';
 
 		if ( this.props.isSortedColumn ) {
@@ -40,7 +27,7 @@ export default class extends Component {
 		}
 
 		return this.props.fieldSlug + sortClasses;
-	};
+	}
 
 	render() {
 		const onClick = this.props.handleSortEvent.bind( null, this.props.fieldSlug );
@@ -56,3 +43,18 @@ export default class extends Component {
 		);
 	}
 }
+
+TableHeaderCell.propTypes = {
+	isSortedColumn: PropTypes.bool,
+	sortOrder: PropTypes.oneOf( [ 'asc', 'desc' ] ),
+	fieldSlug: PropTypes.string.isRequired,
+	fieldName: PropTypes.string.isRequired,
+	handleSortEvent: PropTypes.func.isRequired,
+};
+
+TableHeaderCell.defaultProps = {
+	isSortedColumn: false,
+	sortOrder: 'asc',
+};
+
+export default TableHeaderCell;

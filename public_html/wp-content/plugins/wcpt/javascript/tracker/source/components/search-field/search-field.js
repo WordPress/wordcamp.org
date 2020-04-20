@@ -8,27 +8,19 @@ import PropTypes from 'prop-types';
  */
 import { Component, createRef } from '@wordpress/element';
 
-export default class extends Component {
-	static propTypes = {
-		searchQuery: PropTypes.string,
-		handleSearchEvent: PropTypes.func.isRequired,
-	};
-
-	static defaultProps = {
-		searchQuery: '',
-	};
-
+class SearchField extends Component {
 	constructor( props ) {
 		super( props );
 		this.searchQueryInput = createRef();
+		this.handleSearchEvent = this.handleSearchEvent.bind( this );
 	}
 
 	/**
 	 * Event handler that is called when the user types into the Search field
 	 */
-	handleSearchEvent = () => {
+	handleSearchEvent() {
 		this.props.handleSearchEvent( this.searchQueryInput.current.value );
-	};
+	}
 
 	render() {
 		return (
@@ -46,3 +38,14 @@ export default class extends Component {
 		);
 	}
 }
+
+SearchField.propTypes = {
+	searchQuery: PropTypes.string,
+	handleSearchEvent: PropTypes.func.isRequired,
+};
+
+SearchField.defaultProps = {
+	searchQuery: '',
+};
+
+export default SearchField;

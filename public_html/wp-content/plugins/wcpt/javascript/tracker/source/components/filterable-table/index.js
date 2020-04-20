@@ -17,40 +17,35 @@ import TableStore from '../../stores/table-store';
 
 require( './style.scss' );
 
-export default class extends Component {
-	static propTypes = {
-		initialSortField: PropTypes.string.isRequired,
-		columns: PropTypes.object,
-		customRender: PropTypes.object,
-	};
-
-	static defaultProps = {
-		columns: {},
-	};
-
-	state = {
-		searchQuery: '',
-		sortField: this.props.initialSortField,
-		sortOrder: 'asc',
-	};
+class FilterableTable extends Component {
+	constructor( props ) {
+		super( props );
+		this.state = {
+			searchQuery: '',
+			sortField: this.props.initialSortField,
+			sortOrder: 'asc',
+		};
+		this.handleSearchEvent = this.handleSearchEvent.bind( this );
+		this.handleSortEvent = this.handleSortEvent.bind( this );
+	}
 
 	/**
 	 * Event handler that updates state in response to input to the Search field
 	 *
 	 * @param {string} searchQuery
 	 */
-	handleSearchEvent = ( searchQuery ) => {
+	handleSearchEvent( searchQuery ) {
 		this.setState( {
 			searchQuery,
 		} );
-	};
+	}
 
 	/**
 	 * Event handler that updates state when the user interacts with sorting fields
 	 *
 	 * @param {string} newSortField
 	 */
-	handleSortEvent = ( newSortField ) => {
+	handleSortEvent( newSortField ) {
 		const previousSortField = this.state.sortField;
 		let newSortOrder = this.state.sortOrder;
 
@@ -64,7 +59,7 @@ export default class extends Component {
 			sortField: newSortField,
 			sortOrder: newSortOrder,
 		} );
-	};
+	}
 
 	render() {
 		const tableRows = TableStore.getFilteredRows( {
@@ -89,3 +84,15 @@ export default class extends Component {
 		);
 	}
 }
+
+FilterableTable.propTypes = {
+	initialSortField: PropTypes.string.isRequired,
+	columns: PropTypes.object,
+	customRender: PropTypes.object,
+};
+
+FilterableTable.defaultProps = {
+	columns: {},
+};
+
+export default FilterableTable;

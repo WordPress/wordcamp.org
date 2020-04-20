@@ -34,7 +34,11 @@ class TableHeaderCell extends Component {
 
 		return (
 			<th className={ this.getClassNames() }>
-				<button onClick={ onClick } value={ this.props.fieldSlug }>
+				<button
+					onClick={ onClick }
+					value={ this.props.fieldSlug }
+					aria-pressed={ this.props.isSortedColumn }
+				>
 					{ this.props.fieldName }
 				</button>
 

@@ -131,7 +131,7 @@ function get_ignorelist() {
 		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined property: stdClass::$error',
 
 		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'          => 'Undefined variable: txn',
-		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'              => 'Undefined index: id',
+		WP_PLUGIN_DIR . '/jetpack/class.jetpack-gutenberg.php'                   => 'Undefined index: query',
 		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'              => 'Undefined index: id',
 		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php' => 'Undefined index: HTTP_REFERER',
 		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php'      => "Trying to get property 'post_type' of non-object",

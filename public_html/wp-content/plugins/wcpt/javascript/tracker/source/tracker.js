@@ -14,7 +14,7 @@ require( './style.scss' );
  * Custom render function for lastUpdatedColumn. Will display X time ago instead of unix timestamp. Use
  * `humanizedTime` field sent from server.
  *
- * @param row
+ * @param {Object} row
  */
 const renderHumanizedTime = ( row ) => {
 	return row.humanizedTime;

@@ -77,11 +77,11 @@ module.exports = {
 		b = b[ filters.sortField ].toString().toLowerCase();
 
 		if ( a > b ) {
-			return 'asc' == filters.sortOrder ? 1 : -1;
+			return 'asc' === filters.sortOrder ? 1 : -1;
 		}
 
 		if ( a < b ) {
-			return 'asc' == filters.sortOrder ? -1 : 1;
+			return 'asc' === filters.sortOrder ? -1 : 1;
 		}
 
 		return 0;

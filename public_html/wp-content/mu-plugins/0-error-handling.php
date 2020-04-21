@@ -33,7 +33,7 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
-	$accepted_error_types = [
+	$accepted_error_types = array(
 		E_ERROR,
 		E_CORE_ERROR,
 		E_COMPILE_ERROR,
@@ -48,7 +48,7 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		E_STRICT,
 		E_DEPRECATED,
 		E_USER_DEPRECATED,
-	];
+	);
 
 	if ( ! in_array( $err_no, $accepted_error_types ) ) {
 		return false;
@@ -56,8 +56,17 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 
 	$error_ignorelist = get_ignorelist();
 
-	if ( isset( $error_ignorelist[ $file ] ) && false !== strpos( $err_msg, $error_ignorelist[ $file ] ) ) {
-		return false;
+	if ( isset( $error_ignorelist[ $file ] ) ) {
+		$matches = array_filter(
+			$error_ignorelist[ $file ],
+			function( $pattern ) use ( $err_msg ) {
+				return false !== strpos( $err_msg, $pattern );
+			}
+		);
+
+		if ( ! empty( $matches ) ) {
+			return false;
+		}
 	}
 
 	$err_key      = substr( base64_encode("$file-$line-$err_no" ), -254 ); // Max file length for ubuntu is 255.
@@ -93,7 +102,7 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 	return false;
 }
 
-/*
+/**
  * List of warnings/notices to ignore because they aren't actionable.
  *
  * Always use constants in the keys here to avoid path disclosure.
@@ -104,39 +113,69 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
  * The line number is omitted from the filename key because it can change when edits are made to other parts of
  * the file, which would cause the warning/notice to start appearing again.
  *
- * @return array
+ * @return array Associative array. Key is filename, value is array of error message patterns to match.
  */
 function get_ignorelist() {
-	return [
+	return array(
 		// See https://core.trac.wordpress.org/ticket/29204.
-		ABSPATH . 'wp-includes/SimplePie/Registry.php' => 'Non-static method WP_Feed_Cache::create() should not be called statically',
+		ABSPATH . 'wp-includes/SimplePie/Registry.php' => array(
+			'Non-static method WP_Feed_Cache::create() should not be called statically',
+		),
 
 		// This is normal.
-		WP_PLUGIN_DIR . '/hyperdb/db.php' => 'mysqli_query(): MySQL server has gone away',
+		WP_PLUGIN_DIR . '/hyperdb/db.php' => array(
+			'mysqli_query(): MySQL server has gone away',
+		),
 
 		// These are trivial mistakes in 3rd party code. They indicate poor quality, but don't warrant action.
-		ABSPATH . 'wp-cron.php'                            => 'Invalid argument supplied for foreach()',
-		ABSPATH . 'wp-includes/class-wp-query.php'         => "trim() expects parameter 1 to be string, array given",
-		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'ID' of non-object",
-		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_title' of non-object",
-		ABSPATH . 'wp-includes/class-wp-query.php'         => "Trying to get property 'post_name' of non-object",
-		ABSPATH . 'wp-includes/class-wp-post.php'          => 'Undefined property: WP_Post::$filter',
-		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php' => 'Undefined variable: url',
-		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'comment_ID' of non-object",
-		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'comment_status' of non-object",
-		ABSPATH . 'wp-includes/comment-template.php'       => "Trying to get property 'user_id' of non-object",
-		ABSPATH . 'wp-includes/link-template.php'          => "Trying to get property 'post_type' of non-object",
-		ABSPATH . 'wp-includes/post-template.php'          => "Trying to get property 'post_content' of non-object",
-		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined index: description',
-		ABSPATH . 'wp-includes/rss.php'                    => 'Undefined property: stdClass::$error',
+		ABSPATH . 'wp-cron.php'                            => array(
+			'Invalid argument supplied for foreach()',
+		),
+		ABSPATH . 'wp-includes/class-wp-query.php'         => array(
+			'trim() expects parameter 1 to be string, array given',
+			"Trying to get property 'ID' of non-object",
+			"Trying to get property 'post_title' of non-object",
+			"Trying to get property 'post_name' of non-object",
+		),
+		ABSPATH . 'wp-includes/class-wp-post.php'          => array(
+			'Undefined property: WP_Post::$filter',
+		),
+		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php' => array(
+			'Undefined variable: url',
+		),
+		ABSPATH . 'wp-includes/comment-template.php'       => array(
+			"Trying to get property 'comment_ID' of non-object",
+			"Trying to get property 'comment_status' of non-object",
+			"Trying to get property 'user_id' of non-object",
+		),
+		ABSPATH . 'wp-includes/link-template.php'          => array(
+			"Trying to get property 'post_type' of non-object",
+		),
+		ABSPATH . 'wp-includes/post-template.php'          => array(
+			"Trying to get property 'post_content' of non-object",
+		),
+		ABSPATH . 'wp-includes/rss.php'                    => array(
+			'Undefined index: description',
+			'Undefined property: stdClass::$error',
+		),
 
-		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'          => 'Undefined variable: txn',
-		WP_PLUGIN_DIR . '/jetpack/class.jetpack-gutenberg.php'                   => 'Undefined index: query',
-		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'              => 'Undefined index: id',
-		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php' => 'Undefined index: HTTP_REFERER',
-		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php'      => "Trying to get property 'post_type' of non-object",
-		WP_PLUGIN_DIR . '/jetpack/sync/class.jetpack-sync-module-posts.php'      => 'Undefined offset:',
-	];
+		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'                       => array(
+			'Undefined variable: txn',
+		),
+		WP_PLUGIN_DIR . '/jetpack/class.jetpack-gutenberg.php'                                => array(
+			'Undefined index: query',
+		),
+		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'                           => array(
+			'Undefined index: id',
+		),
+		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php'              => array(
+			'Undefined index: HTTP_REFERER',
+		),
+		WP_PLUGIN_DIR . '/jetpack/vendor/automattic/jetpack-sync/src/modules/class-posts.php' => array(
+			"Trying to get property 'post_type' of non-object",
+			'Undefined offset:',
+		),
+	);
 }
 
 /**

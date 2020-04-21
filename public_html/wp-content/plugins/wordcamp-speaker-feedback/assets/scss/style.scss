@@ -233,7 +233,14 @@
 	}
 
 	label { // stylelint-disable-line no-descending-specificity
+		margin-bottom: 0;
 		font-size: 1em;
+		display: flex;
+		align-items: center;
+
+		input {
+			margin-right: 6px;
+		}
 	}
 }
 

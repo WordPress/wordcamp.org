@@ -61,7 +61,7 @@ export const SETTINGS = {
 						value={ attributes.next }
 						onChange={ ( value ) => setAttributes( { next: value } ) }
 					/>
-					<p>{ __( 'Level' ) }</p>
+					<p>{ __( 'Level', 'wordcamporg' ) }</p>
 					<HeadingToolbar
 						isCollapsed={ false }
 						minLevel={ 1 }

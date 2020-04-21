@@ -25,6 +25,11 @@ module.exports = {
 
 	rules: {
 		/*
+		 * Set up our text domain.
+		 */
+		'@wordpress/i18n-text-domain': [ 'error', { allowedTextDomain: [ 'wordcamporg' ] } ],
+
+		/*
 		 * The rationale behind this rule is that sometimes a variable is defined by a costly operation, but then
 		 * the variable is never used, so that operation was wasted. That's a valid point, but in practice that
 		 * doesn't happen very often, so the benefit is not significant.

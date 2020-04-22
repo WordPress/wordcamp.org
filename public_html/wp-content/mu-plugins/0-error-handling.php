@@ -154,6 +154,9 @@ function get_ignorelist() {
 		ABSPATH . 'wp-includes/post-template.php'          => array(
 			"Trying to get property 'post_content' of non-object",
 		),
+		ABSPATH . 'wp-includes/rest-api.php' => array(
+			'Undefined index: items',
+		),
 		ABSPATH . 'wp-includes/rss.php'                    => array(
 			'Undefined index: description',
 			'Undefined property: stdClass::$error',

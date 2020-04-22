@@ -705,8 +705,11 @@ class WordCamp_Post_Types_Plugin {
 	 */
 	public function get_wcpt_anchor_permalink( $target_id ) {
 		global $post;
-		$anchor_target = get_post( $target_id );
+		if ( ! $post ) {
+			return '';
+		}
 
+		$anchor_target = get_post( $target_id );
 		if ( 'publish' !== $anchor_target->post_status ) {
 			return '';
 		}

@@ -326,6 +326,11 @@ class Sponsorship_Grants extends Date_Range {
 	 * @return void
 	 */
 	public function render_html() {
+		if ( ! empty( $this->error->get_error_messages() ) ) {
+			$this->render_error_html();
+			return;
+		}
+
 		$now = new \DateTime();
 
 		$start_date    = $this->start_date;
@@ -335,11 +340,7 @@ class Sponsorship_Grants extends Date_Range {
 		$data          = $this->get_data();
 		$compiled_data = $this->compile_report_data( $data );
 
-		if ( ! empty( $this->error->get_error_messages() ) ) {
-			$this->render_error_html();
-		} else {
-			include Reports\get_views_dir_path() . 'html/sponsorship-grants.php';
-		}
+		include Reports\get_views_dir_path() . 'html/sponsorship-grants.php';
 	}
 
 	/**

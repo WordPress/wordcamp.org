@@ -433,15 +433,16 @@ class Meetup_Events extends Base {
 	 * @return void
 	 */
 	public function render_html() {
+		if ( ! empty( $this->error->get_error_messages() ) ) {
+			$this->render_error_html();
+			return;
+		}
+
 		$data       = $this->compile_report_data( $this->get_data() );
 		$start_date = $this->range->start;
 		$end_date   = $this->range->end;
 
-		if ( ! empty( $this->error->get_error_messages() ) ) {
-			$this->render_error_html();
-		} else {
-			include get_views_dir_path() . 'html/meetup-events.php';
-		}
+		include get_views_dir_path() . 'html/meetup-events.php';
 	}
 
 	/**

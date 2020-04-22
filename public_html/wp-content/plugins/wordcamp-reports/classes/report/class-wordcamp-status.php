@@ -372,6 +372,11 @@ class WordCamp_Status extends Base_Status {
 	 * @return void
 	 */
 	public function render_html() {
+		if ( ! empty( $this->error->get_error_messages() ) ) {
+			$this->render_error_html();
+			return;
+		}
+
 		$data       = $this->compile_report_data( $this->get_data() );
 		$start_date = $this->range->start;
 		$end_date   = $this->range->end;
@@ -381,11 +386,7 @@ class WordCamp_Status extends Base_Status {
 		$inactive_camps = $data['inactive_camps'];
 		$statuses       = WordCamp_Loader::get_post_statuses();
 
-		if ( ! empty( $this->error->get_error_messages() ) ) {
-			$this->render_error_html();
-		} else {
-			include get_views_dir_path() . 'html/wordcamp-status.php';
-		}
+		include get_views_dir_path() . 'html/wordcamp-status.php';
 	}
 
 	/**

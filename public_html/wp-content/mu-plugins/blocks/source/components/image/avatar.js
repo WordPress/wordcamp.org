@@ -60,12 +60,15 @@ export function AvatarImage( { className, name, size, url, imageLink } ) {
 		return addQueryArgs( avatar_url, { s: avatar_size } );
 	};
 
+	/* translators: %s is the person's name. */
+	const alt = name ? sprintf( __( 'Avatar of %s', 'wordcamporg' ), name ) : '';
+
 	let image = (
 		<img
 			className={ classnames( 'avatar', 'avatar-' + size, 'photo' ) }
 			src={ getSizedURL( url, size ) }
 			srcSet={ getSizedURL( url, size * 2 ) + ' 2x' }
-			alt={ name ? sprintf( __( 'Avatar of %s', 'wordcamporg' ), name ) : '' }
+			alt={ alt }
 			width={ size }
 			height={ size }
 		/>

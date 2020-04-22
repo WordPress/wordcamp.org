@@ -7,9 +7,10 @@ import Select from 'react-select';
 /**
  * WordPress dependencies
  */
+import { __ } from '@wordpress/i18n';
 import { BaseControl, Button } from '@wordpress/components';
 import { Component } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { withInstanceId } from '@wordpress/compose';
 
 /**
  * Internal dependencies
@@ -69,7 +70,7 @@ const customStyles = {
 /**
  * Component for selecting one or more related entities to be used as content in a block.
  */
-export class ItemSelect extends Component {
+class ItemSelectBase extends Component {
 	/**
 	 * Run additional operations during component initialization.
 	 *
@@ -197,6 +198,8 @@ export class ItemSelect extends Component {
 		);
 	}
 }
+
+export const ItemSelect = withInstanceId( ItemSelectBase );
 
 /**
  * Additional component exports

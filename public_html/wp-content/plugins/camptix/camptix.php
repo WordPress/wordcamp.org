@@ -5334,6 +5334,10 @@ class CampTix_Plugin {
 			$this->error( __( 'Sorry, but the reservation you are trying to use seems to be invalid or expired.', 'wordcamporg' ) );
 		}
 
+		if ( isset( $this->error_flags['attendee_info_missing'] ) ) {
+			$this->error( __( "It doesn't look like your form submitted any attendee information. Please try again.", 'wordcamporg' ) );
+		}
+
 		if ( ! $available_tickets ) {
 			$this->notice( __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' ) );
 		}
@@ -6861,6 +6865,11 @@ class CampTix_Plugin {
 			$payment_method = $_POST['tix_payment_method'];
 		elseif ( ! empty( $this->order['total'] ) && $this->order['total'] > 0 ) {
 			$this->error_flags['invalid_payment_method'] = true;
+		}
+
+		if ( empty( $_POST['tix_attendee_info'] ) ) {
+			$this->error_flags['attendee_info_missing'] = true;
+			return $this->form_start();
 		}
 
 		do_action( 'camptix_checkout_start', $_POST['tix_attendee_info'], $this->order );

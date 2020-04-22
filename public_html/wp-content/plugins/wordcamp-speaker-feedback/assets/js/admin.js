@@ -15,11 +15,10 @@ jQuery( document ).ready( function( $ ) {
 
 	// We can assume window.theList exists because we're after `edit-comments.js`
 	// And if we know that wpList is an object, we can assume the structure of it is stable.
-	if ( window.theList[0] && 'object' === typeof window.theList[0].wpList ) {
-		window.theList[0].wpList.settings.dimAfter = function() {
+	if ( window.theList[ 0 ] && 'object' === typeof window.theList[ 0 ].wpList ) {
+		window.theList[ 0 ].wpList.settings.dimAfter = function() {
 			// Reload the page, but only the top view + count links.
 			$container.load( location.href + ' .subsubsub' );
 		};
 	}
 } );
-

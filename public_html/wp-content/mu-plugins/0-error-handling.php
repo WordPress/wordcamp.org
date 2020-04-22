@@ -165,6 +165,9 @@ function get_ignorelist() {
 		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'                       => array(
 			'Undefined variable: txn',
 		),
+		WP_PLUGIN_DIR . '/gutenberg/build/block-library/blocks/latest-posts.php' => array(
+			'array_column() expects parameter 1 to be array, string given',
+		),
 		WP_PLUGIN_DIR . '/jetpack/class.jetpack-gutenberg.php'                                => array(
 			'Undefined index: query',
 		),

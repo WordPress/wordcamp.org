@@ -1,76 +1,41 @@
-require( 'es6-promise' ).polyfill();
-require( 'babel-polyfill' );
+const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
+const MiniCssExtractPlugin = require( 'mini-css-extract-plugin' );
+const path = require( 'path' );
 
-var NODE_ENV          = process.env.NODE_ENV || 'development';
-var path              = require( 'path' );
-var webpack           = require( 'webpack' );
-var ExtractTextPlugin = require( 'extract-text-webpack-plugin' );
-var SystemBellPlugin  = require( 'system-bell-webpack-plugin' );
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
-var webpackConfig = {
-	entry : [
-		'babel-polyfill',
-		'./javascript/tracker/source/tracker.jsx'
-	],
+module.exports = {
+	...defaultConfig,
 
-	output : {
-		path     : path.join( __dirname, 'javascript/tracker/build' ),
-		filename : 'applications.min.js' // renamed from 'tracker', which was getting flagged by ad blockers
+	entry: {
+		// 'tracker' is flagged by ad blockers, use different name.
+		applications: './javascript/tracker/source/tracker.js',
 	},
 
-	module : {
-		loaders : [
+	output: {
+		path: path.join( __dirname, 'javascript/tracker/build' ),
+		filename: '[name].min.js',
+	},
+
+	// Bring in sourcemaps for non-production builds.
+	devtool: 'production' === NODE_ENV ? 'none' : 'cheap-module-eval-source-map',
+
+	module: {
+		...defaultConfig.module,
+		rules: [
+			...defaultConfig.module.rules,
 			{
-				test    : /\.jsx?$/,
-				exclude : /node_modules/,
-				loader  : 'babel',
-				query   : {
-					cacheDirectory : true,
-					presets        : [ 'es2015', 'react', 'stage-2' ]
-				}
+				test: /\.(sc|sa|c)ss$/,
+				exclude: [ /node_modules/ ],
+				use: [ MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader' ],
 			},
-
-			{
-				test    : /\.scss$/,
-				exclude : /node_modules/,
-				loader  : ExtractTextPlugin.extract( 'style-loader', 'css!sass' )
-			}
-		]
+		],
 	},
 
-	resolve : {
-		extensions : [ '', '.js', '.jsx' ]
-	},
-
-	node : {
-		fs      : "empty",
-		process : true
-	},
-
-	plugins : [
-		new webpack.DefinePlugin( {
-			'process.env' : {
-				NODE_ENV : JSON.stringify( NODE_ENV )
-			}
+	plugins: [
+		...defaultConfig.plugins,
+		new MiniCssExtractPlugin( {
+			filename: '[name].min.css',
 		} ),
-
-		new ExtractTextPlugin( 'applications.min.css' ), // renamed from 'tracker', which was getting flagged by ad blockers
-		new SystemBellPlugin()
 	],
-
-	watchOptions : {
-		poll : true // required to work in a VM, see https://github.com/webpack/webpack/issues/425#issuecomment-53214820
-	}
 };
-
-if ( NODE_ENV === 'production' ) {
-	webpackConfig.plugins.push( new webpack.optimize.UglifyJsPlugin( {
-		compress : {
-			warnings : false
-		}
-	} ) );
-
-	webpackConfig.devtool = '#source-map';
-}
-
-module.exports = webpackConfig;

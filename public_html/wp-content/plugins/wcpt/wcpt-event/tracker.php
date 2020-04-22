@@ -3,7 +3,7 @@
 namespace WordPress_Community\Applications\Tracker;
 
 use \WordCamp_Loader;
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 const SHORTCODE_SLUG = 'application-tracker';
 
@@ -12,9 +12,9 @@ add_shortcode( SHORTCODE_SLUG, __NAMESPACE__ . '\render_status_shortcode' );
 /**
  * Render the [application-tracker] shortcode.
  */
-function render_status_shortcode( $atts = [] ) {
+function render_status_shortcode( $atts = array() ) {
 	$application_type = 'wordcamp';
-	if ( isset ( $atts['type'] ) ) {
+	if ( isset( $atts['type'] ) ) {
 		$application_type = $atts['type'];
 	}
 	enqueue_scripts( $application_type );
@@ -76,7 +76,7 @@ function get_active_events( $application_type ) {
 			'posts_per_page' => 1000,
 			'order'          => 'ASC',
 			'orderby'        => 'post_title',
-			'post__in'       => array_keys ( $event_posts ),
+			'post__in'       => array_keys( $event_posts ),
 		)
 	);
 
@@ -136,37 +136,43 @@ function get_display_columns( $application_type ) {
 /**
  * Enqueue scripts and styles.
  * Based on the event type passed, we will localize different data for Meetup and WordCamp events.
- * 
+ *
  * @param string $application_type Application type for the tracker table. Could be either `wordcamp` or `meetup`.
  */
 function enqueue_scripts( $application_type ) {
+	$script_info = require WP_PLUGIN_DIR . '/wcpt/javascript/tracker/build/applications.min.asset.php';
+
 	wp_register_script(
 		'wpc-application-tracker',
-		plugins_url( 'javascript/tracker/build/applications.min.js', dirname( __FILE__ ) ), // this file was renamed from 'tracker', which was getting flagged by ad blockers
-		array(),
-		filemtime( WP_PLUGIN_DIR . '/wcpt/javascript/tracker/build/applications.min.js' ),
+		plugins_url( 'javascript/tracker/build/applications.min.js', dirname( __FILE__ ) ),
+		$script_info['dependencies'],
+		$script_info['version'],
 		true
 	);
 
 	wp_register_style(
 		'wpc-application-tracker',
-		plugins_url( 'javascript/tracker/build/applications.min.css', dirname( __FILE__ ) ), // this file was renamed from 'tracker', which was getting flagged by ad blockers
+		plugins_url( 'javascript/tracker/build/applications.min.css', dirname( __FILE__ ) ),
 		array( 'dashicons', 'list-tables' ),
-		filemtime( WP_PLUGIN_DIR . '/wcpt/javascript/tracker/build/applications.min.css' )
+		$script_info['version']
 	);
 
 	wp_enqueue_script( 'wpc-application-tracker' );
-
 	wp_enqueue_style( 'wpc-application-tracker' );
 
-	wp_localize_script(
+	$data = array(
+		'applications'     => get_active_events( $application_type ),
+		'displayColumns'   => get_display_columns( $application_type ),
+		'initialSortField' => 'city',
+	);
+
+	wp_add_inline_script(
 		'wpc-application-tracker',
-		'wpcApplicationTracker',
-		array(
-			'applications'     => get_active_events( $application_type ),
-			'displayColumns'   => get_display_columns( $application_type ),
-			'initialSortField' => 'city',
-		)
+		sprintf(
+			'var wpcApplicationTracker = JSON.parse( decodeURIComponent( \'%s\' ) );',
+			rawurlencode( wp_json_encode( $data ) )
+		),
+		'before'
 	);
 }
 

@@ -2,7 +2,7 @@
 
 namespace WordCamp\SpeakerFeedback\Comment;
 
-use WP_Comment;
+use WP_Comment, WP_Error;
 use WordCamp\SpeakerFeedback\Feedback;
 
 defined( 'WPINC' ) || die();
@@ -45,6 +45,7 @@ function count_feedback( $post_id = 0 ) {
 	$feedback_count = array(
 		'approved'       => 0,
 		'moderated'      => 0, // Originally this was `awaiting_moderation` but it doesn't appear that it is used.
+		'inappropriate'  => 0, // This one is custom.
 		'spam'           => 0,
 		'trash'          => 0,
 		'post-trashed'   => 0,
@@ -73,6 +74,10 @@ function count_feedback( $post_id = 0 ) {
 				$feedback_count['moderated']       = $row['total'];
 				$feedback_count['total_comments'] += $row['total'];
 				$feedback_count['all']            += $row['total'];
+				break;
+			case 'inappropriate':
+				$feedback_count['inappropriate']   = $row['total'];
+				$feedback_count['total_comments'] += $row['total'];
 				break;
 			default:
 				break;
@@ -221,4 +226,45 @@ function get_feedback( array $post__in = array(), array $status = array( 'hold',
  */
 function delete_feedback( $comment_id, $force_delete = false ) {
 	return wp_delete_comment( $comment_id, $force_delete );
+}
+
+/**
+ * Mark a feedback comment as inappropriate.
+ *
+ * @param int|WP_Comment $comment_id Comment ID or WP_Comment object.
+ *
+ * @return bool
+ */
+function mark_feedback_inappropriate( $comment_id ) {
+	$comment = get_comment( $comment_id );
+	if ( ! $comment || ! is_feedback( $comment ) ) {
+		return false;
+	}
+
+	$result = wp_update_comment( array(
+		'comment_ID'       => $comment->comment_ID,
+		'comment_approved' => 'inappropriate',
+	) );
+
+	return wp_validate_boolean( $result );
+}
+
+/**
+ * Change a feedback comment status from inappropriate back to hold.
+ *
+ * @param int|WP_Comment $comment_id Comment ID or WP_Comment object.
+ *
+ * @return bool|WP_Error
+ */
+function unmark_feedback_inappropriate( $comment_id ) {
+	$comment = get_comment( $comment_id );
+	if ( ! $comment || ! is_feedback( $comment ) ) {
+		return false;
+	}
+
+	if ( 'inappropriate' !== $comment->comment_approved ) {
+		return false;
+	}
+
+	return wp_set_comment_status( $comment->comment_ID, 'hold' );
 }

@@ -48,6 +48,43 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	}
 
 	/**
+	 * Add more bulk actions.
+	 *
+	 * @return array
+	 */
+	protected function get_bulk_actions() {
+		$bulk_actions = parent::get_bulk_actions();
+
+		global $comment_status;
+
+		$key_indexes = array_keys( $bulk_actions );
+		$slice_index = array_search( 'spam', $key_indexes, true );
+		$new_actions = array();
+
+		if ( in_array( $comment_status, array( 'all', 'approved', 'moderated' ) ) ) {
+			$new_actions['mark-inappropriate'] = __( 'Mark as Inappropriate', 'wordcamporg' );
+		}
+
+		if ( in_array( $comment_status, array( 'inappropriate' ) ) ) {
+			$new_actions['unmark-inappropriate'] = __( 'Unmark as Inappropriate', 'wordcamporg' );
+
+			if ( false === $slice_index ) {
+				$slice_index = 0;
+				$new_actions['spam'] = _x( 'Mark as Spam', 'comment' );
+			}
+		}
+
+		if ( false !== $slice_index && ! empty( $new_actions ) ) {
+			$after  = array_slice( $bulk_actions, $slice_index, null, true );
+			$before = array_slice( $bulk_actions, 0, count( $bulk_actions ) - count( $after ), true );
+
+			$bulk_actions = $before + $new_actions + $after;
+		}
+
+		return $bulk_actions;
+	}
+
+	/**
 	 * Other controls above/below the list table besides bulk actions.
 	 *
 	 * @param string $which

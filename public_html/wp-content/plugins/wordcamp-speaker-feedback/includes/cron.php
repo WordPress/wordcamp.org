@@ -60,11 +60,15 @@ function notify_speakers_approved_feedback() {
 	);
 
 	foreach ( $speaker_session_ids as $user_id => $session_ids ) {
-		$speaker       = get_user_by( 'id', $user_id );
+		$speaker = get_user_by( 'id', $user_id );
+		// Todo: Implement a UI for toggling this user meta value.
+		if ( true === $speaker->sft_speaker_notifications_opt_out ) {
+			continue;
+		}
+
 		$feedback_info = array(
 			'total_new' => 0,
 		);
-
 		foreach ( $session_ids as $session_id ) {
 			$associated_feedbacks = array_keys( $post_ids, $session_id );
 			$feedback_info['total_new'] += count( $associated_feedbacks );

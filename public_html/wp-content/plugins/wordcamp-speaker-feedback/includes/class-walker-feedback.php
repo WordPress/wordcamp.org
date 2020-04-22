@@ -96,16 +96,17 @@ class Walker_Feedback extends Walker_Comment {
 					<?php render_feedback_comment( $comment ); ?>
 				</div><!-- .comment-content -->
 
-				<footer class="speaker-feedback__helpful">
+				<footer class="speaker-feedback__helpful <?php echo ( $comment->helpful ) ? 'is-helpful' : ''; ?>">
 					<span id="sft-helpful-<?php echo absint( $comment_id ); ?>">
 						<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
 					</span>
-					<button
-						type="button"
-						data-comment-id="<?php echo absint( $comment_id ); ?>"
-						aria-pressed="<?php echo ( $comment->helpful ) ? 'true' : 'false'; ?>"
-						aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
-					>
+					<label>
+						<input
+							type="checkbox"
+							data-comment-id="<?php echo absint( $comment_id ); ?>"
+							aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
+							<?php checked( $comment->helpful ); ?>
+						/>
 						<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
 					</button>
 				</footer>

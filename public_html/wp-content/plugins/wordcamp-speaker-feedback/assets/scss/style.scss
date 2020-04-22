@@ -221,31 +221,25 @@
 .speaker-feedback__helpful {
 	margin-top: 1em;
 	padding: 1rem 1.5rem;
-	background: #ddd;
+	background: #d5d5d5;
 	border-radius: 5px;
 	max-width: 30em;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 
-	button {
-		display: inline-block;
-		font-size: 1.2em;
-		letter-spacing: 0;
-		line-height: 1.25;
-		margin: 0 0 0 1em;
-		padding: 0.4em 0.8em;
-		text-align: center;
-		text-decoration: none;
-		text-transform: none;
-		word-wrap: normal;
+	&.is-helpful {
+		border: 2px solid currentColor;
+	}
 
-		&[aria-pressed="true"]::before {
-			content: "✓ ";
-		}
+	label { // stylelint-disable-line no-descending-specificity
+		margin-bottom: 0;
+		font-size: 1em;
+		display: flex;
+		align-items: center;
 
-		&[aria-pressed="false"]::before {
-			content: "";
+		input {
+			margin-right: 6px;
 		}
 	}
 }

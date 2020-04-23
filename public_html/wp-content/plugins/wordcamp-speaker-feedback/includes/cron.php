@@ -76,7 +76,7 @@ function notify_speakers_approved_feedback() {
 				'feedback_ids' => $associated_feedbacks,
 				'title'        => get_the_title( $session_id ),
 				'count'        => count( $associated_feedbacks ),
-				'link'         => get_session_feedback_url( $session_id ),
+				'link'         => wp_login_url( get_session_feedback_url( $session_id ) ),
 			);
 		}
 

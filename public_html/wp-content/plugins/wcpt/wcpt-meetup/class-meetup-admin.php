@@ -490,15 +490,9 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @return null|bool Will be null if notification was not enabled, or false if notifcation was attempted but failed. true if notification was successful
 		 */
 		public function notify_application_status_in_slack( $new_status, $old_status, WP_Post $meetup ) {
-
-			$notification_enabled = apply_filters( 'meetup_application_notification_enabled', true );
-
-			if ( ! $notification_enabled ) {
-				return null;
-			}
-
 			if ( 'wcpt-mtp-active' === $new_status && 'wcpt-mtp-active' !== $old_status ) {
 				return $this->notify_new_meetup_group_in_slack( $meetup );
+
 			} elseif ( 'wcpt-mtp-rejected' === $new_status && 'wcpt-mtp-rejected' !== $old_status ) {
 				$location = get_post_meta( $meetup->ID, 'Meetup Location', true );
 				return $this->schedule_decline_notification( $meetup, $this->get_event_label(), $location );

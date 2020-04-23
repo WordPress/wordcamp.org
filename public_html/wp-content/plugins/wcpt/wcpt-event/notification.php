@@ -3,11 +3,6 @@
  * Provides helper methods for sending slack notifications in response to status changes in application.
  */
 
-// Local environments don't have the credentials to send to Slack.
-if ( 'local' === get_wordcamp_environment() ) {
-	return;
-}
-
 if ( defined( 'WPORG_SANDBOXED' ) && WPORG_SANDBOXED ) {
 	// If this is sandbox and then send notification of owner of sandbox (as long as sandbox username and slack username matches).
 	if ( defined( 'SANDBOX_SLACK_USERNAME' ) ) {
@@ -31,6 +26,12 @@ if ( defined( 'WPORG_SANDBOXED' ) && WPORG_SANDBOXED ) {
  * @return bool|string
  */
 function wcpt_slack_notify( $channel, $attachment ) {
+	$notification_enabled = apply_filters( 'wcpt_slack_notifications_enabled', 'local' !== WORDCAMP_ENVIRONMENT );
+
+	if ( ! $notification_enabled ) {
+		return false;
+	}
+
 	$slack_client = trailingslashit( WP_CONTENT_DIR ) . 'mu-plugins/includes/slack/send.php';
 	if ( is_readable( $slack_client ) ) {
 		require_once $slack_client;

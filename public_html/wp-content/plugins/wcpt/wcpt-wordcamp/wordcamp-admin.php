@@ -703,15 +703,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @return null|bool
 		 */
 		public function notify_application_status_in_slack( $new_status, $old_status, WP_Post $wordcamp ) {
-
-			$notification_enabled = apply_filters( 'wordcamp_application_notification_enabled', true );
-
-			if ( ! $notification_enabled ) {
-				return null;
-			}
-
 			if ( 'wcpt-scheduled' === $new_status && 'wcpt-scheduled' !== $old_status ) {
 				return $this->notify_new_wordcamp_in_slack( $wordcamp );
+
 			} elseif ( 'wcpt-rejected' === $new_status && 'wcpt-rejected' !== $old_status ) {
 				$location = get_post_meta( $wordcamp->ID, 'Location', true );
 				return $this->schedule_decline_notification( $wordcamp, 'WordCamp', $location );

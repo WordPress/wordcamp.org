@@ -244,7 +244,6 @@ abstract class Event_Application {
 	 * Notify in community slack channel that we've received an application.
 	 */
 	public function notify_new_application_in_slack() {
-
 		// Not translating because this will be sent to community events slack channel.
 		$message = sprintf( 'A %s application for %s has been received.', $this->get_event_label(), $this->get_event_location() );
 

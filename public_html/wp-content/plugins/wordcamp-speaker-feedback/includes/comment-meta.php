@@ -144,7 +144,7 @@ function get_feedback_meta_field_schema( $context = 'all', $key = '' ) {
 			'required'          => false,
 		),
 		'speaker_notified' => array(
-			'sft_context'       => array( 'update' ),
+			'sft_context'       => array( 'internal' ),
 			'description'       => 'The speaker has been notified about this feedback.',
 			'type'              => 'boolean',
 			'single'            => true,

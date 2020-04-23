@@ -483,6 +483,7 @@ abstract class Event_Admin {
 
 		$meta_keys = $this->meta_keys();
 		$orig_meta_values = get_post_meta( $post_id );
+		$is_virtual_event = WordCamp_admin::is_virtual_event( $post_id );
 
 		foreach ( $meta_keys as $key => $value ) {
 			$post_value     = wcpt_key_to_str( $key, 'wcpt_' );
@@ -504,9 +505,12 @@ abstract class Event_Admin {
 				$values[ $key ]         = implode( ', ', $standardized_usernames );
 			}
 
-			// Set Physical Address to "Online" when an event is online-only.
-			if ( ( 'Physical Address' === $key ) && isset( $_POST['wcpt_virtual_event_only'] ) && ( 'on' === $_POST['wcpt_virtual_event_only'] ) ) {
-				$values[ $key ] = 'Online';
+			// Clear out user-facing location when switching event types, to avoid confusion & inaccurate data.
+			if ( 'Physical Address' === $key && $is_virtual_event ) {
+				$values[ $key ] = '';
+
+			} elseif ( 'Host region' === $key && ! $is_virtual_event ) {
+				$values[ $key ] = '';
 			}
 
 			switch ( $value ) {
@@ -731,6 +735,7 @@ abstract class Event_Admin {
 				'field__' . $object_name,
 				'field__type-' . $value,
 			);
+
 			?>
 
 			<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">

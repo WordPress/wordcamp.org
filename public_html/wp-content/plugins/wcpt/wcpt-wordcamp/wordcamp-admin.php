@@ -148,7 +148,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Update venue address co-ords if changed
+		 * Update venue or host region geolocation data if address has changed.
 		 *
 		 * These are used for the maps on Central, stats, etc.
 		 *
@@ -161,19 +161,25 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
-			$new_address = $_POST[ wcpt_key_to_str( 'Physical Address', 'wcpt_' ) ];
+			$address_key = self::get_address_key( $post_id );
+			$new_address = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ];
 
-			// If there is no venue, shortcut out of the request.
-			if ( empty( $new_address ) || 'Online' === $new_address ) {
-				$geocode_reply = $this->parse_geocode_response( array() );
-				foreach ( array_keys( $geocode_reply ) as $key ) {
-					delete_post_meta( $post_id, $key );
-				}
+			// No need to geocode if it hasn't changed.
+			if ( ! empty( $original_meta_values[ $address_key ][0] ) && $new_address === $original_meta_values[ $address_key ][0] ) {
 				return;
 			}
 
-			// If the venue address was changed, update its coordinates.
-			if ( ! empty( $original_meta_values['Physical Address'][0] ) && $new_address === $original_meta_values['Physical Address'][0] ) {
+			/*
+			 * Clear out old values in case the event type switched. It's simpler to clear them for the current type too, since they'll get re-added next.
+			 *
+			 * They're deleted even if the geocoding request failed, because the old ones won't match the new address value. The user will be shown an error
+			 * if the geocoding didn't work, so they'll know they need to try again.
+			 */
+			foreach ( self::get_venue_address_meta_keys() as $key ) {
+				delete_post_meta( $post_id, $key );
+			}
+
+			if ( empty( $new_address ) ) {
 				return;
 			}
 
@@ -196,22 +202,42 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$response = wcorg_redundant_remote_get( $request_url );
 			$body     = json_decode( wp_remote_retrieve_body( $response ) );
 
-			// Don't delete the existing (and probably good) values if the request failed.
-			if ( is_wp_error( $response ) || empty( $body->results[0]->address_components ) ) {
+			if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) || 'OK' !== $body->status ) {
 				Logger\log( 'geocoding_failure', compact( 'request_url', 'response' ) );
-				return;
 			}
 
 			$meta_values = $this->parse_geocode_response( $response );
+			$key_prefix  = self::get_address_key_prefix( $post_id );
 
 			foreach ( $meta_values as $key => $value ) {
-				if ( is_null( $value ) ) {
-					delete_post_meta( $post_id, $key );
-				} else {
+				$key = $key_prefix . $key;
+
+				if ( ! is_null( $value ) ) {
 					update_post_meta( $post_id, $key, $value );
 				}
 			}
+		}
 
+		/**
+		 * Get the name of the field that stores the address.
+		 *
+		 * @param int $post_id
+		 *
+		 * @return string
+		 */
+		public static function get_address_key( $post_id ) {
+			return self::is_virtual_event( $post_id ) ? 'Host region' : 'Physical Address';
+		}
+
+		/**
+		 * Get the prefix used with geocoded address parts.
+		 *
+		 * @param int $post_id
+		 *
+		 * @return string
+		 */
+		public static function get_address_key_prefix( $post_id ) {
+			return self::is_virtual_event( $post_id ) ? '_host_' : '_venue_';
 		}
 
 		/**
@@ -238,7 +264,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				foreach ( $body->address_components as $component ) {
 					foreach ( $component->types as $type ) {
 						switch ( $type ) {
-
 							case 'locality':
 							case 'administrative_area_level_1':
 							case 'postal_code':
@@ -256,12 +281,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			$values = array(
-				'_venue_coordinates'  => isset( $coordinates ) ? $coordinates : null,
-				'_venue_city'         => isset( $locality ) ? $locality : null,
-				'_venue_state'        => isset( $administrative_area_level_1 ) ? $administrative_area_level_1 : null,
-				'_venue_country_code' => isset( $country_code ) ? $country_code : null,
-				'_venue_country_name' => isset( $country_name ) ? $country_name : null,
-				'_venue_zip'          => isset( $postal_code ) ? $postal_code : null,
+				'coordinates'  => $coordinates  ?? null,
+				'city'         => $locality     ?? null,
+				'state'        => $administrative_area_level_1 ?? null,
+				'country_code' => $country_code ?? null,
+				'country_name' => $country_name ?? null,
+				'zip'          => $postal_code  ?? null,
 			);
 
 			return $values;
@@ -352,8 +377,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'venue':
 					$retval = array(
+						// Online
 						'Virtual event only'         => 'checkbox',
 						'Streaming account to use'   => 'select-streaming',
+						'Host region'                 => 'textarea',
+
+						// In-person
 						'Venue Name'                 => 'text',
 						'Physical Address'           => 'textarea',
 						'Maximum Capacity'           => 'text',
@@ -454,6 +483,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 						'Virtual event only'               => 'checkbox',
 						'Streaming account to use'         => 'select-streaming',
+						'Host region'                      => 'textarea',
 						'Venue Name'                       => 'text',
 						'Physical Address'                 => 'textarea',
 						'Maximum Capacity'                 => 'text',
@@ -492,6 +522,13 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'_venue_country_code',
 				'_venue_country_name',
 				'_venue_zip',
+
+				'_host_coordinates',
+				'_host_city',
+				'_host_state',
+				'_host_country_code',
+				'_host_country_name',
+				'_host_zip',
 			);
 		}
 
@@ -799,8 +836,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// The ID of the last site that was created before this rule went into effect, so that we don't apply the rule retroactively.
 			$min_site_id = apply_filters( 'wcpt_require_complete_meta_min_site_id', '2416297' );
 
-			$required_needs_site_fields = $this->get_required_fields( 'needs-site' );
-			$required_scheduled_fields  = $this->get_required_fields( 'scheduled' );
+			$required_needs_site_fields = $this->get_required_fields( 'needs-site', $post_data_raw['ID'] );
+			$required_scheduled_fields  = $this->get_required_fields( 'scheduled', $post_data_raw['ID'] );
 
 			// Check pending posts.
 			if ( 'wcpt-needs-site' == $post_data['post_status'] && absint( $post_data_raw['ID'] ) > $min_site_id ) {
@@ -841,7 +878,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 *
 		 * @return array
 		 */
-		public static function get_required_fields( $status ) {
+		public static function get_required_fields( $status, $post_id ) {
 			$needs_site = array( 'E-mail Address' );
 
 			$scheduled = array(
@@ -863,10 +900,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'Sponsor Wrangler E-mail Address',
 				'Budget Wrangler Name',
 				'Budget Wrangler E-mail Address',
-
-				// Venue.
-				'Physical Address', // used to build stats.
 			);
+
+			// Required because the Events Widget needs a physical address in order to show events.
+			$scheduled[] = self::get_address_key( $post_id );
 
 			switch ( $status ) {
 				case 'needs-site':
@@ -884,6 +921,39 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			return $required_fields;
+		}
+
+		/**
+		 * Determine if this WordCamp is virtual or in-person.
+		 *
+		 * @param $post_id
+		 *
+		 * @return bool
+		 */
+		public static function is_virtual_event( $post_id ) {
+			$is_virtual_event = false;
+			$submitting_form  = isset( $_POST['action'] ) && 'editpost' === $_POST['action'];
+
+			/*
+			 * Using the database value when the form is being submitted could result in the wrong value being
+			 * returned; e.g., when changing from in-person to online.
+			 */
+			if ( $submitting_form ) {
+				$form_value = $_POST[ wcpt_key_to_str( 'Virtual event only', 'wcpt_' ) ] ?? false;
+
+				if ( 'on' === $form_value ) {
+					$is_virtual_event = true;
+				}
+
+			} else {
+				$database_value = get_post_meta( $post_id, 'Virtual event only', true );
+
+				if ( '1' === $database_value ) {
+					$is_virtual_event = true;
+				}
+			}
+
+			return $is_virtual_event;
 		}
 
 		/**
@@ -925,7 +995,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @return bool
 		 */
 		public static function is_protected_field( $field_name ) {
-
 			$protected_fields = self::get_protected_fields();
 
 			return in_array( $field_name, $protected_fields );
@@ -935,7 +1004,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * Return admin notices for messages that were passed in the URL.
 		 */
 		public function get_admin_notices() {
-
 			global $post;
 
 			$screen = get_current_screen();
@@ -945,7 +1013,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Show this error permanently, not just after updating.
-			if ( ! empty( $post->{'Physical Address'} ) && ( 'Online' !== $post->{'Physical Address'} ) && empty( get_post_meta( $post->ID, '_venue_coordinates', true ) ) ) {
+			$address = get_post_meta( $post->ID, self::get_address_key( $post->ID ), true );
+
+			if ( $address && ! self::have_geocoded_location( $post->ID ) ) {
 				$_REQUEST['wcpt_messages'] = empty( $_REQUEST['wcpt_messages'] ) ? '4' : $_REQUEST['wcpt_messages'] . ',4';
 			}
 
@@ -954,7 +1024,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					'type'   => 'error',
 					'notice' => sprintf(
 						__( 'This WordCamp cannot be moved to Needs Site until all of its required metadata is filled in: %s.', 'wordcamporg' ),
-						implode( ', ', $this->get_required_fields( 'needs-site' ) )
+						implode( ', ', $this->get_required_fields( 'needs-site', $post->ID ) )
 					),
 				),
 
@@ -962,16 +1032,35 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					'type'   => 'error',
 					'notice' => sprintf(
 						__( 'This WordCamp cannot be added to the schedule until all of its required metadata is filled in: %s.', 'wordcamporg' ),
-						implode( ', ', $this->get_required_fields( 'scheduled' ) )
+						implode( ', ', $this->get_required_fields( 'scheduled', $post->ID ) )
 					),
 				),
 
 				4 => array(
 					'type'   => 'error',
-					'notice' => __( 'The physical address could not be geocoded, which prevents the camp from showing up in the Events Widget. Please tweak the address so that Google can parse it.', 'wordcamporg' ),
+					// translators: %s is the name of a form field, either 'Physical Address', or 'Host region'.
+					'notice' => sprintf(
+						__( 'The %s could not be geocoded, which prevents the camp from showing up in the Events Widget. Please tweak the address so that Google Maps can parse it.', 'wordcamporg' ),
+						self::get_address_key( $post->ID )
+					),
 				),
 			);
 
+		}
+
+		/**
+		 * Check if the post has geolocation data.
+		 *
+		 * @param $post_id
+		 *
+		 * @return bool
+		 */
+		public static function have_geocoded_location( $post_id ) {
+			$address_value = get_post_meta( $post_id, self::get_address_key( $post_id ), true );
+			$coordinates   = get_post_meta( $post_id, self::get_address_key_prefix( $post_id ) . 'coordinates', true );
+
+			// Some bits like `city` are expected to be missing sometimes, but we should always have `lat/long`.
+			return ! empty( $address_value ) && ! empty( $coordinates['latitude'] );
 		}
 
 		/**
@@ -1058,33 +1147,33 @@ endif; // class_exists check.
 /**
  * Functions for displaying specific meta boxes
  */
-function wcpt_wordcamp_metabox() {
+function wcpt_wordcamp_metabox( $post, $metabox ) {
 	$meta_keys = $GLOBALS['wordcamp_admin']->meta_keys( 'wordcamp' );
-	wcpt_metabox( $meta_keys );
+	wcpt_metabox( $meta_keys, $metabox['id'] );
 }
 
 /**
  * Displays organizer metabox
  */
-function wcpt_organizer_metabox() {
+function wcpt_organizer_metabox( $post, $metabox ) {
 	$meta_keys = $GLOBALS['wordcamp_admin']->meta_keys( 'organizer' );
-	wcpt_metabox( $meta_keys );
+	wcpt_metabox( $meta_keys, $metabox['id'] );
 }
 
 /**
  * Displays venue metabox
  */
-function wcpt_venue_metabox() {
+function wcpt_venue_metabox( $post, $metabox ) {
 	$meta_keys = $GLOBALS['wordcamp_admin']->meta_keys( 'venue' );
-	wcpt_metabox( $meta_keys );
+	wcpt_metabox( $meta_keys, $metabox['id'] );
 }
 
 /**
  * Displays contributor metabox
  */
-function wcpt_contributor_metabox() {
+function wcpt_contributor_metabox( $post, $metabox ) {
 	$meta_keys = $GLOBALS['wordcamp_admin']->meta_keys( 'contributor' );
-	wcpt_metabox( $meta_keys );
+	wcpt_metabox( $meta_keys, $metabox['id'] );
 }
 
 /**
@@ -1094,22 +1183,45 @@ function wcpt_contributor_metabox() {
  * @subpackage Template Tags
  * @since WordCamp Post Type (0.1)
  */
-function wcpt_metabox( $meta_keys ) {
+function wcpt_metabox( $meta_keys, $metabox ) {
 	global $post_id;
 
-	$required_fields = WordCamp_Admin::get_required_fields( 'any' );
+	$required_fields = WordCamp_Admin::get_required_fields( 'any', $post_id );
 
 	// @todo When you refactor meta_keys() to support changing labels -- see note in meta_keys() -- also make it support these notes.
 	$messages = array(
 		'Telephone'                       => 'Required for shipping.',
 		'Mailing Address'                 => 'Shipping address.',
-		'Physical Address'                => 'Please include the city, state/province and country.', // So it can be geocoded correctly for the map.
 		'Twitter'                         => 'Should begin with @. Ex. @wordpress',
 		'WordCamp Hashtag'                => 'Should begin with #. Ex. #wcus',
 		'Global Sponsorship Grant Amount' => 'No commas, thousands separators or currency symbols. Ex. 1234.56',
 		'Global Sponsorship Grant'        => 'Deprecated.',
 	);
 
-	Event_Admin::display_meta_boxes( $required_fields, $meta_keys, $messages, $post_id, WordCamp_Admin::get_protected_fields() );
+	if ( 'wcpt_venue_info' === $metabox ) {
+		$address_instructions = "Please include the city, state/province and country.";
 
+		if ( WordCamp_Admin::have_geocoded_location( $post_id ) ) {
+			$key_prefix = WordCamp_Admin::get_address_key_prefix( $post_id );
+			$city       = get_post_meta( $post_id, $key_prefix . 'city',         true );
+			$state      = get_post_meta( $post_id, $key_prefix . 'state',        true );
+			$country    = get_post_meta( $post_id, $key_prefix . 'country_name', true );
+
+			$address_instructions = sprintf(
+				'%s Geocoded as: %s%s%s.',
+				$address_instructions,
+				esc_html( $city    ? $city  . ', ' : '' ),
+				esc_html( $state   ? $state . ', ' : '' ),
+				esc_html( $country ? $country      : '' )
+			);
+
+		} else {
+			$address_instructions = "Error: could not geocode. $address_instructions";
+		}
+
+		$messages['Physical Address'] = $address_instructions;
+		$messages['Host region']      = $address_instructions;
+	}
+
+	Event_Admin::display_meta_boxes( $required_fields, $meta_keys, $messages, $post_id, WordCamp_Admin::get_protected_fields() );
 }

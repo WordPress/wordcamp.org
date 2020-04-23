@@ -365,6 +365,7 @@ class WordCamp_Loader extends Event_Loader {
 			'Organizer Name',
 			'WordPress.org Username',
 			'Virtual event only',
+			'Host region',
 			'Venue Name',
 			'Physical Address',
 			'Maximum Capacity',

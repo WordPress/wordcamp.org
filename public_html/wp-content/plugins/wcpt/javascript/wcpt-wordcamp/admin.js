@@ -58,12 +58,16 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		var $items = $container
 			.find( '.inside' )
 			.not( '.field__wcpt_virtual_event_only,.field__wcpt_streaming_account_to_use' );
+		var $hostRegion = $( '.field__wcpt_host_region' );
+
 		if ( $( event.target ).is( ':checked' ) ) {
 			$items.hide();
+			$hostRegion.show();
 		} else {
 			$items.show();
+			$hostRegion.hide();
 		}
-	}
+	};
 
 	/**
 	 * Toggle whether the Sponsor Region field is required or not.

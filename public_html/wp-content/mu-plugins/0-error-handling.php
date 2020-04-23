@@ -174,6 +174,9 @@ function get_ignorelist() {
 		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'                           => array(
 			'Undefined index: id',
 		),
+		WP_PLUGIN_DIR . '/jetpack/modules/comments/comments.php' => array(
+			"Trying to get property 'secret' of non-object",
+		),
 		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php'              => array(
 			'Undefined index: HTTP_REFERER',
 		),

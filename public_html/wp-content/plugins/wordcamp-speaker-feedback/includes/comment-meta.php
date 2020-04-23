@@ -144,6 +144,16 @@ function get_feedback_meta_field_schema( $context = 'all', $key = '' ) {
 			'default'           => false,
 			'required'          => false,
 		),
+		'speaker_notified' => array(
+			'sft_context'       => array( 'internal' ),
+			'description'       => 'The speaker has been notified about this feedback.',
+			'type'              => 'boolean',
+			'single'            => true,
+			'sanitize_callback' => 'wp_validate_boolean',
+			'show_in_rest'      => false,
+			'default'           => false,
+			'required'          => false,
+		),
 	);
 
 	if ( 'all' !== $context ) {

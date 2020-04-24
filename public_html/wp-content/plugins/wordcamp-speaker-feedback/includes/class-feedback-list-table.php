@@ -5,8 +5,8 @@ namespace WordCamp\SpeakerFeedback;
 use WP_Comment, WP_User;
 use WP_Comments_List_Table;
 use function WordCamp\SpeakerFeedback\get_assets_path;
-use function WordCamp\SpeakerFeedback\Admin\feedback_bubble;
 use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
+use function WordCamp\SpeakerFeedback\Post\get_session_feedback_url;
 use function WordCamp\SpeakerFeedback\View\{ render_feedback_comment, render_feedback_rating };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
@@ -249,12 +249,9 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 		?>
 		<div class="response-links">
 			<?php echo wp_kses_post( $post_link ); ?>
-			<a href="<?php the_permalink( $post->ID ); ?>" class="comments-view-item-link">
-				<?php echo wp_kses_post( get_post_type_object( $post->post_type )->labels->view_item ); ?>
+			<a href="<?php echo esc_url( get_session_feedback_url( $post->ID ) ); ?>" class="comments-view-item-link">
+				<?php esc_html_e( 'View Feedback', 'wordcamporg' ); ?>
 			</a>
-			<span class="post-com-count-wrapper post-com-count-<?php echo esc_attr( $post->ID ); ?>">
-				<?php feedback_bubble( $post->ID ); ?>
-			</span>
 		</div>
 		<?php
 	}

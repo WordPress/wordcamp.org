@@ -40,16 +40,10 @@ add_filter( 'close_comments_for_post_types', 'wcorg_close_comments_for_post_type
  * that they receive SSL certificates, because our Let's Encrypt script only installs
  * certificates for public sites.
  *
- * @param string $value
- *
  * @return string
  */
-function wcorg_enforce_public_blog_option( $value ) {
-	$private_sites = array(
-		206,     // testing.wordcamp.org.
-	);
-
-	if ( in_array( get_current_blog_id(), $private_sites, true ) ) {
+function wcorg_enforce_public_blog_option() {
+	if ( is_wordcamp_test_site() ) {
 		$value = '0';
 	} else {
 		$value = '1';
@@ -57,6 +51,7 @@ function wcorg_enforce_public_blog_option( $value ) {
 
 	return $value;
 }
+add_filter( 'pre_option_blog_public', 'wcorg_enforce_public_blog_option' );
 add_filter( 'pre_update_option_blog_public', 'wcorg_enforce_public_blog_option' );
 
 /**

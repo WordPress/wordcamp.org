@@ -29,6 +29,49 @@ function get_wordcamp_environment() {
 }
 
 /**
+ * Check if a WordCamp site is for testing.
+ *
+ * Currently the `wordcamp_test_site` blogmeta key needs to be set manually via wp-cli.
+ *
+ * @param int|null $blog_id Optional. The blog ID to check. Defaults to current blog ID.
+ *
+ * @return bool
+ */
+function is_wordcamp_test_site( $blog_id = null ) {
+	if ( is_null( $blog_id ) ) {
+		$blog_id = get_current_blog_id();
+	}
+
+	return wp_validate_boolean( get_site_meta( $blog_id, 'wordcamp_test_site', true ) );
+}
+
+/**
+ * Get a list of IDs for sites that have a specific blogmeta key, and optionally a specific value.
+ *
+ * @param string $key
+ * @param mixed  $value
+ *
+ * @return int[] An array of blog ID integers.
+ */
+function get_wordcamp_blog_ids_from_meta( $key, $value = null ) {
+	global $wpdb;
+
+	$where_subs   = array( $key );
+	$where_string = 'WHERE meta_key = %s';
+	if ( ! is_null( $value ) ) {
+		$where_subs[]  = $value;
+		$where_string .= ' AND meta_value = %s';
+	}
+
+	$blog_ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT blog_id FROM $wpdb->blogmeta $where_string", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$where_subs
+	) );
+
+	return array_map( 'absint', $blog_ids );
+}
+
+/**
  * Determine if a specific feature should be skipped on the current site
  *
  * Warning: Pay careful attention to how things are named, since setting a flag here is typically done when you

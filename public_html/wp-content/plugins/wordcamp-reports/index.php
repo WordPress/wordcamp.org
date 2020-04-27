@@ -370,8 +370,5 @@ add_action( 'plugins_loaded', __NAMESPACE__ . '\register_file_exports' );
  * @return array
  */
 function get_excluded_site_ids() {
-	return array(
-		206, // 2016.testing
-		928, // 2017.testing
-	);
+	return get_wordcamp_blog_ids_from_meta( 'wordcamp_test_site', 1 );
 }

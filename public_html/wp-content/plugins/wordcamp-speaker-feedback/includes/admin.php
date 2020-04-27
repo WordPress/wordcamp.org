@@ -25,6 +25,7 @@ add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
 add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2 );
 add_filter( 'pre_wp_update_comment_count_now', __NAMESPACE__ . '\adjust_post_comment_count', 10, 3 );
 add_filter( 'comment_notification_recipients', __NAMESPACE__ . '\remove_email_recipients', 10, 2 );
+add_filter( 'comment_row_actions', __NAMESPACE__ . '\feedback_extra_actions', 10, 2 );
 
 /**
  * Add a Speaker Feedback column for post list tables that support speaker feedback.
@@ -476,6 +477,59 @@ function handle_bulk_edit_actions( $action, $nonce ) {
 	}
 
 	return $messages;
+}
+
+/**
+ * Add extra actions to the list of links displayed for each comment.
+ *
+ * @param array      $actions An array of comment actions.
+ * @param WP_Comment $comment Comment data object.
+ *
+ * @return array
+ */
+function feedback_extra_actions( $actions, $comment ) {
+	$comment_id = $comment->comment_ID;
+	$feedback = get_feedback_comment( $comment );
+	if ( is_null( $feedback ) ) {
+		return $actions;
+	}
+
+	$unapprove_url = add_query_arg(
+		array(
+			'c' => $comment_id,
+			'action' => 'unapprovecomment',
+			'_wpnonce' => wp_create_nonce( "approve-comment_$comment_id" ),
+		),
+		admin_url( 'comment.php' )
+	);
+
+	// Use bulk edit URL with single comment to avoid writing (another) custom action handler.
+	$inappropriate_url = add_query_arg(
+		array(
+			'bulk_edit[]' => $comment_id,
+			'action' => 'mark-inappropriate',
+			'bulk_edit_nonce' => wp_create_nonce( 'bulk_edit_' . COMMENT_TYPE ),
+		),
+		get_subpage_url( get_post_type( $comment->comment_post_ID ) )
+	);
+
+	if ( 'inappropriate' === $comment->comment_approved ) {
+		$actions['unapprove'] = sprintf(
+			'<a href="%1$s" class="vim-u aria-button-if-js" aria-label="%2$s">%3$s</a>',
+			esc_url( $unapprove_url ),
+			esc_attr__( 'Move this comment to pending', 'wordcamporg' ),
+			__( 'Pending', 'wordcamporg' )
+		);
+	} else {
+		$actions['mark-inappropriate'] = sprintf(
+			'<a href="%1$s" class="vim-a vim-destructive aria-button-if-js" aria-label="%2$s">%3$s</a>',
+			esc_url( $inappropriate_url ),
+			esc_attr__( 'Mark as Inappropriate', 'wordcamporg' ),
+			__( 'Inappropriate', 'wordcamporg' )
+		);
+	}
+
+	return $actions;
 }
 
 /**

@@ -6,7 +6,10 @@ use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
 use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
-use function WordCamp\SpeakerFeedback\Post\{ get_session_speaker_user_ids, post_accepts_feedback };
+use function WordCamp\SpeakerFeedback\Post\{
+	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
+	get_session_speaker_user_ids, post_accepts_feedback
+};
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
@@ -95,28 +98,32 @@ function render( $content ) {
 
 		$content = $content . ob_get_clean(); // Append form to the normal content.
 	} elseif ( is_page( get_option( OPTION_KEY ) ) ) {
-		$wordcamp = get_wordcamp_post();
+		$wordcamp            = get_wordcamp_post();
+		$valid_wcpt_statuses = array( 'wcpt-scheduled', 'wcpt-closed' );
+		$start_time          = get_earliest_session_timestamp();
+		$end_time            = get_latest_session_ending_timestamp();
 
-		if ( isset( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
-			$date_string = gmdate( 'Y-m-d', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] );
-			$start_date  = date_create( $date_string, wp_timezone() )->getTimestamp();
-		} else {
-			// No start date set, the event probably hasn't been scheduled yet. Use a far future date for now.
-			$start_date = $now->getTimestamp() + YEAR_IN_SECONDS;
+		if ( ! $start_time ) {
+			// No valid start time, the event probably hasn't been scheduled yet. Use a far future date for now.
+			$start_time = $now->getTimestamp() + YEAR_IN_SECONDS;
 		}
 
-		if ( isset( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ) ) {
-			$date_string = gmdate( 'Y-m-d', $wordcamp->meta['End Date (YYYY-mm-dd)'][0] );
-			$end_date    = date_create( $date_string, wp_timezone() )->getTimestamp();
-		} else {
-			// No end date set, assume it's 24 hours later.
-			$end_date = $start_date + DAY_IN_SECONDS;
+		if ( ! $end_time ) {
+			// No valid end time, assume it's 24 hours later.
+			$end_time = $start_time + DAY_IN_SECONDS;
 		}
 
-		if ( $now->getTimestamp() < absint( $start_date ) ) {
+		if (
+			// The event either needs to be on the schedule, already occurred, or a test site.
+			( ! $wordcamp || ! in_array( $wordcamp->post_status, $valid_wcpt_statuses, true ) )
+			&& ! is_wordcamp_test_site()
+		) {
+			$message = __( 'Feedback forms are not available for this site.', 'wordcamporg' );
+			$file    = 'form-not-available.php';
+		} elseif ( $now->getTimestamp() < $start_time ) {
 			$message = __( 'Feedback forms are not available until the event has started.', 'wordcamporg' );
 			$file    = 'form-not-available.php';
-		} elseif ( $now->getTimestamp() > absint( $end_date ) + ACCEPT_INTERVAL_IN_SECONDS ) {
+		} elseif ( $now->getTimestamp() > $end_time + ACCEPT_INTERVAL_IN_SECONDS ) {
 			$message = __( 'Feedback forms are closed for this event.', 'wordcamporg' );
 			$file    = 'form-not-available.php';
 		} else {

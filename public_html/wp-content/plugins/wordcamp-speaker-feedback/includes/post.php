@@ -41,12 +41,41 @@ function post_accepts_feedback( $post_id ) {
 		);
 	}
 
-	// These assume the post type is `wcb_session`.
-	if ( 'session' !== $post->_wcpt_session_type ) {
-		return new WP_Error(
-			'speaker_feedback_invalid_session_type',
-			__( 'This type of session does not accept feedback.', 'wordcamporg' )
-		);
+	if ( 'wcb_session' === get_post_type( $post ) ) {
+		$session_type     = $post->_wcpt_session_type;
+		$session_time     = absint( $post->_wcpt_session_time );
+		$session_duration = absint( $post->_wcpt_session_duration );
+		if ( ! $session_duration ) {
+			$session_duration = WordCamp_Post_Types_Plugin::SESSION_DEFAULT_DURATION;
+		}
+
+		if ( 'session' !== $session_type ) {
+			return new WP_Error(
+				'speaker_feedback_invalid_session_type',
+				__( 'This type of session does not accept feedback.', 'wordcamporg' )
+			);
+		}
+
+		if ( ! $session_time ) {
+			return new WP_Error(
+				'speaker_feedback_invalid_session_time',
+				__( 'This session cannot accept feedback without a start time.', 'wordcamporg' )
+			);
+		}
+
+		if ( $now->getTimestamp() < $session_time ) {
+			return new WP_Error(
+				'speaker_feedback_session_too_soon',
+				__( 'This session will not accept feedback until it has started.', 'wordcamporg' )
+			);
+		}
+
+		if ( $now->getTimestamp() > $session_time + $session_duration + ACCEPT_INTERVAL_IN_SECONDS ) {
+			return new WP_Error(
+				'speaker_feedback_session_too_late',
+				__( 'This session is no longer accepting feedback.', 'wordcamporg' )
+			);
+		}
 	}
 
 	return true;

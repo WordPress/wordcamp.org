@@ -48,7 +48,14 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 		// Camps that are scheduled and then cancelled should still be available (though not included by default).
 		$public_statuses[] = 'wcpt-cancelled';
 
-		// Allow "pre-planning" camps to be fetched (workaround for unscheduled but not cancelled camps).
+		/*
+		 * @todo This was originally added so that the Official Events plugin could update the status of postponed
+		 * camps, but it only covered the pre-planning status. There are other statuses that could be used during
+		 * postponement, so https://meta.trac.wordpress.org/changeset/9786/ was added to cover all the use cases.
+		 * Now that this is in the API, though, it shouldn't be removed, because that could break back-compat with
+		 * other possible clients. It can be removed in a future version, though, since there's no longer a known
+		 * need for it.
+		 */
 		$public_statuses[] = 'wcpt-pre-planning';
 
 		foreach ( $statuses as $status ) {

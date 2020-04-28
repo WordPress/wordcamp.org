@@ -503,8 +503,7 @@ function feedback_extra_actions( $actions, $comment ) {
 			'action' => 'unmark-inappropriate',
 			'_wpnonce' => wp_create_nonce( "inappropriate-comment_{ $comment_id }" ),
 			'bulk_edit_nonce' => wp_create_nonce( 'bulk_edit_' . COMMENT_TYPE ),
-		),
-		get_subpage_url( get_post_type( $comment->comment_post_ID ) )
+		)
 	);
 
 	$inappropriate_url = add_query_arg(
@@ -513,8 +512,7 @@ function feedback_extra_actions( $actions, $comment ) {
 			'action' => 'mark-inappropriate',
 			'_wpnonce' => wp_create_nonce( "inappropriate-comment_{ $comment_id }" ),
 			'bulk_edit_nonce' => wp_create_nonce( 'bulk_edit_' . COMMENT_TYPE ),
-		),
-		get_subpage_url( get_post_type( $comment->comment_post_ID ) )
+		)
 	);
 
 	if ( 'inappropriate' === $comment->comment_approved ) {

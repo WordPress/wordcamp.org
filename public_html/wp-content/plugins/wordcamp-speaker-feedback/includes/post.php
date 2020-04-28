@@ -3,6 +3,7 @@
 namespace WordCamp\SpeakerFeedback\Post;
 
 use WP_Error;
+use WordCamp_Post_Types_Plugin;
 
 defined( 'WPINC' ) || die();
 
@@ -40,29 +41,93 @@ function post_accepts_feedback( $post_id ) {
 		);
 	}
 
-	// These assume the post type is `wcb_session`.
-	if ( 'session' !== $post->_wcpt_session_type ) {
-		return new WP_Error(
-			'speaker_feedback_invalid_session_type',
-			__( 'This type of session does not accept feedback.', 'wordcamporg' )
-		);
-	}
+	if ( 'wcb_session' === get_post_type( $post ) ) {
+		$session_type     = $post->_wcpt_session_type;
+		$session_time     = absint( $post->_wcpt_session_time );
+		$session_duration = absint( $post->_wcpt_session_duration );
+		if ( ! $session_duration ) {
+			$session_duration = WordCamp_Post_Types_Plugin::SESSION_DEFAULT_DURATION;
+		}
 
-	if ( $now->getTimestamp() < absint( $post->_wcpt_session_time ) ) {
-		return new WP_Error(
-			'speaker_feedback_session_too_soon',
-			__( 'This session will not accept feedback until it has started.', 'wordcamporg' )
-		);
-	}
+		if ( 'session' !== $session_type ) {
+			return new WP_Error(
+				'speaker_feedback_invalid_session_type',
+				__( 'This type of session does not accept feedback.', 'wordcamporg' )
+			);
+		}
 
-	if ( $now->getTimestamp() > absint( $post->_wcpt_session_time ) + ACCEPT_INTERVAL_IN_SECONDS ) {
-		return new WP_Error(
-			'speaker_feedback_session_too_late',
-			__( 'This session is no longer accepting feedback.', 'wordcamporg' )
-		);
+		if ( ! $session_time ) {
+			return new WP_Error(
+				'speaker_feedback_invalid_session_time',
+				__( 'This session cannot accept feedback without a start time.', 'wordcamporg' )
+			);
+		}
+
+		if ( $now->getTimestamp() < $session_time ) {
+			return new WP_Error(
+				'speaker_feedback_session_too_soon',
+				__( 'This session will not accept feedback until it has started.', 'wordcamporg' )
+			);
+		}
+
+		if ( $now->getTimestamp() > $session_time + $session_duration + ACCEPT_INTERVAL_IN_SECONDS ) {
+			return new WP_Error(
+				'speaker_feedback_session_too_late',
+				__( 'This session is no longer accepting feedback.', 'wordcamporg' )
+			);
+		}
 	}
 
 	return true;
+}
+
+/**
+ * Find the timestamp of the earliest published session.
+ *
+ * @return bool|int An integer timestamp, or false if no valid sessions are found.
+ */
+function get_earliest_session_timestamp() {
+	$earliest_session = get_posts( array(
+		'post_type'      => 'wcb_session',
+		'post_status'    => 'publish',
+		'meta_key'       => '_wcpt_session_time',
+		'orderby'        => 'meta_value_num',
+		'order'          => 'ASC',
+		'posts_per_page' => 1,
+	) );
+
+	if ( empty( $earliest_session ) ) {
+		return false;
+	}
+
+	return absint( $earliest_session[0]->_wcpt_session_time );
+}
+
+/**
+ * Find the timestamp of the end of the latest published session.
+ *
+ * @return bool|int An integer timestamp, or false if no valid sessions are found.
+ */
+function get_latest_session_ending_timestamp() {
+	$latest_session = get_posts( array(
+		'post_type'      => 'wcb_session',
+		'post_status'    => 'publish',
+		'meta_key'       => '_wcpt_session_time',
+		'orderby'        => 'meta_value_num',
+		'order'          => 'DESC',
+		'posts_per_page' => 1,
+	) );
+
+	if ( empty( $latest_session ) ) {
+		return false;
+	}
+
+	$duration = $latest_session[0]->_wcpt_session_duration;
+	if ( ! $duration ) {
+		$duration = WordCamp_Post_Types_Plugin::SESSION_DEFAULT_DURATION;
+	}
+
+	return absint( $latest_session[0]->_wcpt_session_time ) + absint( $duration );
 }
 
 /**

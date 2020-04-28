@@ -4,7 +4,11 @@ namespace WordCamp\SpeakerFeedback\Tests;
 
 use WP_UnitTestCase, WP_UnitTest_Factory;
 use WP_Post;
-use function WordCamp\SpeakerFeedback\Post\{ post_accepts_feedback, get_session_speaker_user_ids };
+use WordCamp_Post_Types_Plugin;
+use function WordCamp\SpeakerFeedback\Post\{
+	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
+	post_accepts_feedback, get_session_speaker_user_ids
+};
 
 defined( 'WPINC' ) || die();
 
@@ -20,12 +24,19 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 	protected static $posts = array();
 
 	/**
+	 * @var int
+	 */
+	protected static $now;
+
+	/**
 	 * Set up fixtures.
 	 *
 	 * @param WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		add_post_type_support( 'wcb_session', 'wordcamp-speaker-feedback' );
+
+		self::$now = time();
 
 		self::$posts['speaker-with-id'] = $factory->post->create_and_get( array(
 			'post_type'   => 'wcb_speaker',
@@ -48,7 +59,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 			'post_status' => 'publish',
 			'meta_input'  => array(
 				'_wcpt_session_type' => 'session',
-				'_wcpt_session_time' => strtotime( '- 1 day' ),
+				'_wcpt_session_time' => strtotime( '- 1 day', self::$now ),
 			),
 		) );
 		add_post_meta( self::$posts['yes']->ID, '_wcpt_speaker_id', self::$posts['speaker-with-id']->ID );
@@ -68,7 +79,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 			'post_status' => 'publish',
 			'meta_input'  => array(
 				'_wcpt_session_type' => 'custom',
-				'_wcpt_session_time' => strtotime( '- 1 day' ),
+				'_wcpt_session_time' => strtotime( '- 1 day', self::$now ),
 			),
 		) );
 
@@ -77,7 +88,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 			'post_status' => 'publish',
 			'meta_input'  => array(
 				'_wcpt_session_type' => 'session',
-				'_wcpt_session_time' => strtotime( '+ 1 day' ),
+				'_wcpt_session_time' => strtotime( '+ 1 day', self::$now ),
 			),
 		) );
 		add_post_meta( self::$posts['no-too-soon']->ID, '_wcpt_speaker_id', self::$posts['speaker-invalid-id']->ID );
@@ -87,7 +98,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 			'post_status' => 'publish',
 			'meta_input'  => array(
 				'_wcpt_session_type' => 'session',
-				'_wcpt_session_time' => strtotime( '- 15 days' ),
+				'_wcpt_session_time' => strtotime( '- 15 days', self::$now ),
 			),
 		) );
 	}
@@ -168,6 +179,38 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertEquals( 'speaker_feedback_session_too_late', $result->get_error_code() );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\Post\get_earliest_session_timestamp()
+	 */
+	public function test_get_earliest_session_timestamp() {
+		$result   = get_earliest_session_timestamp();
+		$expected = strtotime( '- 15 days', self::$now );
+
+		$this->assertEquals( $expected, $result );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\Post\get_latest_session_ending_timestamp()
+	 */
+	public function test_get_latest_session_ending_timestamp_default_duration() {
+		$result   = get_latest_session_ending_timestamp();
+		$expected = strtotime( '+ 1 day', self::$now ) + WordCamp_Post_Types_Plugin::SESSION_DEFAULT_DURATION;
+
+		$this->assertEquals( $expected, $result );
+	}
+
+	/**
+	 * @covers \WordCamp\SpeakerFeedback\Post\get_latest_session_ending_timestamp()
+	 */
+	public function test_get_latest_session_ending_timestamp_custom_duration() {
+		update_post_meta( self::$posts['no-too-soon']->ID, '_wcpt_session_duration', 1234 );
+
+		$result   = get_latest_session_ending_timestamp();
+		$expected = strtotime( '+ 1 day', self::$now ) + 1234;
+
+		$this->assertEquals( $expected, $result );
 	}
 
 	/**

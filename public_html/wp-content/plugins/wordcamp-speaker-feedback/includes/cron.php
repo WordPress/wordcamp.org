@@ -3,7 +3,10 @@
 namespace WordCamp\SpeakerFeedback\Cron;
 
 use function WordCamp\SpeakerFeedback\Comment\{ get_feedback, update_feedback };
-use function WordCamp\SpeakerFeedback\Post\{ get_session_speaker_user_ids, get_session_feedback_url };
+use function WordCamp\SpeakerFeedback\Post\{
+	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
+	get_session_speaker_user_ids, get_session_feedback_url
+};
 
 defined( 'WPINC' ) || die();
 
@@ -158,18 +161,7 @@ function speaker_notifications_are_enabled() {
 	$start_time = get_transient( 'sft_speaker_notification_start_time' );
 
 	if ( ! $start_time ) {
-		$earliest_session = get_posts( array(
-			'post_type'      => 'wcb_session',
-			'post_status'    => 'publish',
-			'meta_key'       => '_wcpt_session_time',
-			'orderby'        => 'meta_value_num',
-			'order'          => 'ASC',
-			'posts_per_page' => 1,
-		) );
-
-		if ( ! empty( $earliest_session ) ) {
-			$start_time = absint( $earliest_session[0]->_wcpt_session_time );
-		}
+		$start_time = get_earliest_session_timestamp();
 
 		if ( ! $start_time ) {
 			return false;
@@ -177,7 +169,7 @@ function speaker_notifications_are_enabled() {
 
 		set_transient( 'sft_speaker_notification_start_time', $start_time, DAY_IN_SECONDS );
 
-		$stop_time = strtotime( '+ 3 months', $start_time );
+		$stop_time = strtotime( '+ 3 months', get_latest_session_ending_timestamp() );
 		update_option( 'sft_speaker_notification_stop_time', $stop_time, false );
 	}
 

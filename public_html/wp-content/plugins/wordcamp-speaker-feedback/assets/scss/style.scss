@@ -317,11 +317,14 @@
 				border-left: 4px solid #ffb900;
 			}
 		}
+	}
+}
 
-		.row-actions {
-			.unapprove {
-				display: none;
-			}
-		}
+.row-actions span.inappropriate a {
+	color: #a00;
+
+	&:hover {
+		color: #dc3232;
+		border: none;
 	}
 }

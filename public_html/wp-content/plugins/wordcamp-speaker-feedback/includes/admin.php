@@ -25,6 +25,10 @@ add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
 add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2 );
 add_filter( 'pre_wp_update_comment_count_now', __NAMESPACE__ . '\adjust_post_comment_count', 10, 3 );
 add_filter( 'comment_notification_recipients', __NAMESPACE__ . '\remove_email_recipients', 10, 2 );
+add_filter( 'comment_row_actions', __NAMESPACE__ . '\feedback_extra_actions', 10, 2 );
+
+// Priority 0 to run before the core `wp_ajax_dim_comment`, which exits after running.
+add_action( 'wp_ajax_dim-comment', __NAMESPACE__ . '\wp_ajax_mark_inappropriate', 0 );
 
 /**
  * Add a Speaker Feedback column for post list tables that support speaker feedback.
@@ -476,6 +480,101 @@ function handle_bulk_edit_actions( $action, $nonce ) {
 	}
 
 	return $messages;
+}
+
+/**
+ * Add extra actions to the list of links displayed for each comment.
+ *
+ * @param array      $actions An array of comment actions.
+ * @param WP_Comment $comment Comment data object.
+ *
+ * @return array
+ */
+function feedback_extra_actions( $actions, $comment ) {
+	$comment_id = $comment->comment_ID;
+	$feedback = get_feedback_comment( $comment );
+	if ( is_null( $feedback ) ) {
+		return $actions;
+	}
+
+	$unapprove_url = add_query_arg(
+		array(
+			'bulk_edit[]' => $comment_id,
+			'action' => 'unmark-inappropriate',
+			'_wpnonce' => wp_create_nonce( "inappropriate-comment_{ $comment_id }" ),
+			'bulk_edit_nonce' => wp_create_nonce( 'bulk_edit_' . COMMENT_TYPE ),
+		)
+	);
+
+	$inappropriate_url = add_query_arg(
+		array(
+			'bulk_edit[]' => $comment_id,
+			'action' => 'mark-inappropriate',
+			'_wpnonce' => wp_create_nonce( "inappropriate-comment_{ $comment_id }" ),
+			'bulk_edit_nonce' => wp_create_nonce( 'bulk_edit_' . COMMENT_TYPE ),
+		)
+	);
+
+	if ( 'inappropriate' === $comment->comment_approved ) {
+		$actions['unapprove'] = sprintf(
+			'<a href="%1$s" data-wp-lists="%2$s" class="vim-u aria-button-if-js" aria-label="%3$s">%4$s</a>',
+			esc_url( $unapprove_url ),
+			// This is meta information for wpList, to trigger an action when clicked. Most of it can be ignored,
+			// the relevant part is the last: query params to pass to admin-ajax.php. See wp_ajax_mark_inappropriate
+			// for how these are used.
+			// See https://core.trac.wordpress.org/browser/trunk/src/js/_enqueues/lib/lists.js?rev=46800#L217.
+			"delete:the-comment-list:comment-{$comment_id}:e7e7d3:action=dim-comment&amp;new=uninappropriate",
+			esc_attr__( 'Move this comment to pending', 'wordcamporg' ),
+			__( 'Move to Pending', 'wordcamporg' )
+		);
+	} else {
+		$action_inappropriate = array(
+			'inappropriate' => sprintf(
+				'<a href="%1$s" data-wp-lists="%2$s" class="vim-a vim-destructive aria-button-if-js" aria-label="%3$s">%4$s</a>',
+				esc_url( $inappropriate_url ),
+				"delete:the-comment-list:comment-{$comment_id}:e7e7d3:action=dim-comment&amp;new=inappropriate",
+				esc_attr__( 'Mark as Inappropriate', 'wordcamporg' ),
+				__( 'Inappropriate', 'wordcamporg' )
+			),
+		);
+
+		$key_indexes = array_keys( $actions );
+		$after       = array_slice( $actions, array_search( 'spam', $key_indexes, true ), null, true );
+		$before      = array_slice( $actions, 0, count( $actions ) - count( $after ), true );
+
+		$actions = $before + $action_inappropriate + $after;
+	}
+
+	return $actions;
+}
+
+/**
+ * Intercept dim_comment ajax handler if the intended status is 'inappropriate'.
+ */
+function wp_ajax_mark_inappropriate() {
+	if ( isset( $_POST['new'] ) && in_array( $_POST['new'], array( 'inappropriate', 'uninappropriate' ) ) ) {
+		$id = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
+		$feedback = get_feedback_comment( $id );
+
+		if ( ! $feedback ) {
+			wp_die( time() ); // phpcs:ignore
+		}
+
+		check_ajax_referer( "inappropriate-comment_{ $id }" );
+
+		if ( 'inappropriate' === $_POST['new'] ) {
+			$r = mark_feedback_inappropriate( $feedback->comment_ID );
+		} else {
+			$r = unmark_feedback_inappropriate( $feedback->comment_ID );
+		}
+
+		if ( $r ) {
+			// Decide if we need to send back '1' or a more complicated response including page links and comment counts.
+			_wp_ajax_delete_comment_response( $feedback->comment_ID );
+		}
+
+		wp_die( 0 );
+	}
 }
 
 /**

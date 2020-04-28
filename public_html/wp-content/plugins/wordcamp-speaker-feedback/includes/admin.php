@@ -528,13 +528,21 @@ function feedback_extra_actions( $actions, $comment ) {
 			__( 'Move to Pending', 'wordcamporg' )
 		);
 	} else {
-		$actions['inappropriate'] = sprintf(
-			'<a href="%1$s" data-wp-lists="%2$s" class="vim-a vim-destructive aria-button-if-js" aria-label="%3$s">%4$s</a>',
-			esc_url( $inappropriate_url ),
-			"delete:the-comment-list:comment-{$comment_id}:e7e7d3:action=dim-comment&amp;new=inappropriate",
-			esc_attr__( 'Mark as Inappropriate', 'wordcamporg' ),
-			__( 'Inappropriate', 'wordcamporg' )
+		$action_inappropriate = array(
+			'inappropriate' => sprintf(
+				'<a href="%1$s" data-wp-lists="%2$s" class="vim-a vim-destructive aria-button-if-js" aria-label="%3$s">%4$s</a>',
+				esc_url( $inappropriate_url ),
+				"delete:the-comment-list:comment-{$comment_id}:e7e7d3:action=dim-comment&amp;new=inappropriate",
+				esc_attr__( 'Mark as Inappropriate', 'wordcamporg' ),
+				__( 'Inappropriate', 'wordcamporg' )
+			),
 		);
+
+		$key_indexes = array_keys( $actions );
+		$after       = array_slice( $actions, array_search( 'spam', $key_indexes, true ), null, true );
+		$before      = array_slice( $actions, 0, count( $actions ) - count( $after ), true );
+
+		$actions = $before + $action_inappropriate + $after;
 	}
 
 	return $actions;

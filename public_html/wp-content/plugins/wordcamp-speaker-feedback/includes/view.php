@@ -8,7 +8,7 @@ use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, ge
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
 use function WordCamp\SpeakerFeedback\Post\{
 	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
-	get_session_speaker_user_ids, post_accepts_feedback
+	get_session_speaker_user_ids, post_accepts_feedback, get_session_feedback_url
 };
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
@@ -97,6 +97,15 @@ function render( $content ) {
 		}
 
 		$content = $content . ob_get_clean(); // Append form to the normal content.
+	} elseif ( is_single() && true === post_accepts_feedback( $post->ID ) ) {
+		$html = sprintf(
+			wp_kses_post(
+				__( 'Did you attend this session? <a href="%s" class="sft-feedback-link">Leave feedback.</a>', 'wordcamporg' )
+			),
+			get_session_feedback_url( $post->ID )
+		);
+
+		$content = $content . wpautop( $html );
 	} elseif ( is_page( get_option( OPTION_KEY ) ) ) {
 		$wordcamp            = get_wordcamp_post();
 		$valid_wcpt_statuses = array( 'wcpt-scheduled', 'wcpt-closed' );

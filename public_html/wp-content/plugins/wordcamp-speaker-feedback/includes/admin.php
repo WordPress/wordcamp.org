@@ -525,7 +525,7 @@ function feedback_extra_actions( $actions, $comment ) {
 			// See https://core.trac.wordpress.org/browser/trunk/src/js/_enqueues/lib/lists.js?rev=46800#L217.
 			"delete:the-comment-list:comment-{$comment_id}:e7e7d3:action=dim-comment&amp;new=uninappropriate",
 			esc_attr__( 'Move this comment to pending', 'wordcamporg' ),
-			__( 'Pending', 'wordcamporg' )
+			__( 'Move to Pending', 'wordcamporg' )
 		);
 	} else {
 		$actions['inappropriate'] = sprintf(

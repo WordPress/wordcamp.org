@@ -300,8 +300,18 @@
 	}
 }
 
-#comments-form {
-	.fixed {
+.wp-list-table.fixed {
+	.is-expanded .column-name,
+	.is-expanded .column-rating {
+		display: none !important; // Needs important to override expanded !important.
+	}
+
+	.column-feedback .comment-meta {
+		display: none;
+		margin-bottom: 0.6em;
+	}
+
+	@media screen and (min-width: 783px) {
 		.column-name {
 			width: 15%;
 		}
@@ -311,11 +321,23 @@
 		}
 	}
 
-	.inappropriate {
-		th {
-			&.check-column {
-				border-left: 4px solid #ffb900;
+	@media screen and (max-width: 782px) {
+		.column-name,
+		.column-rating {
+			display: none;
+		}
+
+		.column-feedback .comment-meta {
+			display: block;
+
+			.speaker-feedback__meta-rating {
+				display: block;
+				margin: 0.5em 0 1em;
 			}
+		}
+
+		tr.is-expanded td:last-child {
+			padding-bottom: 1.5rem !important; // Needs important to override a long selector.
 		}
 	}
 }
@@ -326,5 +348,19 @@
 	&:hover {
 		color: #dc3232;
 		border: none;
+	}
+}
+
+.inappropriate {
+	th {
+		&.check-column {
+			border-left: 4px solid #ffb900;
+		}
+	}
+
+	.row-actions {
+		.unapprove {
+			display: none;
+		}
 	}
 }

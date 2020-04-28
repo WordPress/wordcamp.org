@@ -301,11 +301,12 @@
 }
 
 .wp-list-table.fixed {
-	.is-expanded .column-name {
+	.is-expanded .column-name,
+	.is-expanded .column-rating {
 		display: none !important; // Needs important to override expanded !important.
 	}
 
-	.column-feedback .comment-author {
+	.column-feedback .comment-meta {
 		display: none;
 		margin-bottom: 0.6em;
 	}
@@ -321,12 +322,18 @@
 	}
 
 	@media screen and (max-width: 782px) {
-		.column-name {
+		.column-name,
+		.column-rating {
 			display: none;
 		}
 
-		.column-feedback .comment-author {
+		.column-feedback .comment-meta {
 			display: block;
+
+			.speaker-feedback__meta-rating {
+				display: block;
+				margin: 0.5em 0 1em;
+			}
 		}
 
 		tr.is-expanded td:last-child {

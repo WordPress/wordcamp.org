@@ -497,11 +497,12 @@ abstract class Event_Admin {
 			$username_fields = array(
 				'Primary organizer WordPress.org username',
 				'Co-Organizers usernames (seperated by comma)',
+				'WordPress.org Username',
 			);
 
 			if ( in_array( $key, $username_fields, true ) ) {
 				$usernames_array        = empty( $values[ $key ] ) ? array() : explode( ',', $values[ $key ] );
-				$standardized_usernames = $this->standardize_usernames( $usernames_array );
+				$standardized_usernames = self::standardize_usernames( $usernames_array );
 				$values[ $key ]         = implode( ', ', $standardized_usernames );
 			}
 
@@ -592,17 +593,23 @@ abstract class Event_Admin {
 	 *
 	 * @return array
 	 */
-	protected function standardize_usernames( array $raw_usernames ) {
+	public static function standardize_usernames( array $raw_usernames, $failure_mode = 'die' ) {
 		$standard_usernames = array();
 
 		foreach ( $raw_usernames as $username ) {
 			$user = wcorg_get_user_by_canonical_names( $username );
 
 			if ( ! $user instanceof WP_User ) {
-				wp_die( sprintf(
-					'%s is not a valid username.',
+				$error_message = sprintf(
+					'%s is not a valid WordPress.org username.',
 					esc_html( $username )
-				) );
+				);
+
+				if ( 'die' === $failure_mode ) {
+					wp_die( $error_message );
+				} else {
+					return new WP_Error( 'invalid_username', $error_message . " Please click on your browser's back button and enter a valid one." );
+				}
 			}
 
 			$standard_usernames[] = $user->user_login;

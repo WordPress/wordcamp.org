@@ -8,6 +8,7 @@
 namespace WordPress_Community\Applications;
 
 use function WordPress_Community\Applications\Meetup\render_meetup_application_form;
+use Event_Admin;
 use WP_Error, WP_Post;
 
 require_once dirname( __DIR__ ) . '/wcpt-event/class-event-application.php';
@@ -157,6 +158,14 @@ class Meetup_Application extends Event_Application {
 			if ( empty( $safe_data[ $field ] ) ) {
 				return new WP_Error( 'required_fields', "Please click on your browser's Back button, and fill in all of the required fields." );
 			}
+		}
+
+		$sanitized_usernames = Event_Admin::standardize_usernames( array( $safe_data['q_wporg_username'] ), 'error' );
+
+		if ( is_wp_error( $sanitized_usernames ) ) {
+			return $sanitized_usernames;
+		} else {
+			$safe_data['q_wporg_username'] = $sanitized_usernames[0];
 		}
 
 		return $safe_data;

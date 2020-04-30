@@ -5,7 +5,7 @@ namespace WordCamp\SpeakerFeedback\View;
 use WP_Post, WP_Query;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
 use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
-use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_questions;
+use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_meta_field_schema, get_feedback_questions };
 use function WordCamp\SpeakerFeedback\Post\{
 	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
 	get_session_speaker_user_ids, post_accepts_feedback, get_session_feedback_url
@@ -84,6 +84,7 @@ function render( $content ) {
 			}
 
 			$questions       = get_feedback_questions();
+			$schema          = get_feedback_meta_field_schema();
 			$rating_question = $questions['rating'];
 			$text_questions  = array_filter( array_map(
 				function( $key, $question ) {

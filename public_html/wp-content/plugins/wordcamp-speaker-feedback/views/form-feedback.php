@@ -9,8 +9,9 @@ use function WordCamp\SpeakerFeedback\Post\get_session_feedback_url;
 defined( 'WPINC' ) || die();
 
 /** @var WP_Post $post */
-/** @var string $rating_question */
-/** @var array $text_questions */
+/** @var array   $schema */
+/** @var string  $rating_question */
+/** @var array   $text_questions */
 ?>
 <hr />
 <form id="sft-feedback" class="speaker-feedback">
@@ -29,6 +30,7 @@ defined( 'WPINC' ) || die();
 		<div class="speaker-feedback__field-inline">
 			<label for="sft-author-name">
 				<?php esc_html_e( 'Name', 'wordcamporg' ); ?>
+				<span class="is-required" aria-hidden="true">*</span>
 			</label>
 			<input type="text" id="sft-author-name" name="sft-author-name" required />
 		</div>
@@ -36,6 +38,7 @@ defined( 'WPINC' ) || die();
 		<div class="speaker-feedback__field-inline">
 			<label for="sft-author-email">
 				<?php esc_html_e( 'Email', 'wordcamporg' ); ?>
+				<span class="is-required" aria-hidden="true">*</span>
 			</label>
 			<input type="email" id="sft-author-email" name="sft-author-email" required />
 		</div>
@@ -55,7 +58,12 @@ defined( 'WPINC' ) || die();
 
 	<div class="speaker-feedback__field">
 		<fieldset class="speaker-feedback__field-rating" id="sft-rating">
-			<legend><?php echo esc_html( $rating_question ); ?></legend>
+			<legend>
+				<?php echo esc_html( $rating_question ); ?>
+				<?php if ( $schema['rating']['required'] ) : ?>
+					<span class="is-required" aria-hidden="true">*</span>
+				<?php endif; ?>
+			</legend>
 			<input
 				type="radio"
 				name="sft-rating"
@@ -95,11 +103,14 @@ defined( 'WPINC' ) || die();
 	<div class="speaker-feedback__field">
 		<label for="sft-<?php echo esc_attr( $key ); ?>">
 			<?php echo esc_html( $question ); ?>
+			<?php if ( $schema[ $key ]['required'] ) : ?>
+				<span class="is-required" aria-hidden="true">*</span>
+			<?php endif; ?>
 		</label>
 		<textarea
 			id="sft-<?php echo esc_attr( $key ); ?>"
 			name="sft-<?php echo esc_attr( $key ); ?>"
-			<?php echo ( 'q1' === $key ) ? 'required' : ''; ?>
+			<?php echo $schema[ $key ]['required'] ? 'required' : ''; ?>
 		></textarea>
 	</div>
 	<?php endforeach; ?>

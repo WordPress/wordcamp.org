@@ -72,6 +72,17 @@
 			} );
 	}
 
+	function characterCounter( event ) {
+		var len = event.target.value.length;
+		var maxLen = Number( event.target.dataset.maxlength );
+		if ( len > maxLen ) {
+			$( event.target ).addClass( 'has-error' );
+		} else {
+			$( event.target ).removeClass( 'has-error' );
+		}
+		$( event.target ).siblings( '.speaker-feedback__field-help' ).text( len + '/' + maxLen );
+	}
+
 	function onHelpfulClick( event ) {
 		var $container = $( event.target ).closest( 'footer' );
 		var input = $container.find( 'input[type="checkbox"]' ).get( 0 );
@@ -103,6 +114,7 @@
 	var feedbackForm = document.getElementById( 'sft-feedback' );
 	if ( feedbackForm ) {
 		feedbackForm.addEventListener( 'submit', onFormSubmit, true );
+		$( feedbackForm ).on( 'keyup', 'textarea[data-maxlength]', lodash.debounce( characterCounter, 250 ) );
 	}
 
 	var helpfulButtons = document.querySelectorAll( '.speaker-feedback__helpful input' );

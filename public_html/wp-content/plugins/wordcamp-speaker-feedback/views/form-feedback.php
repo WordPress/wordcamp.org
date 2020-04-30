@@ -99,7 +99,12 @@ defined( 'WPINC' ) || die();
 		</fieldset>
 	</div>
 
-	<?php foreach ( $text_questions as list( $key, $question ) ) : ?>
+	<?php foreach ( $text_questions as list( $key, $question ) ) :
+		$maxlength_attr = '';
+		if ( isset( $schema[ $key ]['attributes']['maxlength'] ) ) {
+			$maxlength_attr = sprintf( 'data-maxlength="%d"', $schema[ $key ]['attributes']['maxlength'] );
+		}
+		?>
 	<div class="speaker-feedback__field">
 		<label for="sft-<?php echo esc_attr( $key ); ?>">
 			<?php echo esc_html( $question ); ?>
@@ -110,8 +115,14 @@ defined( 'WPINC' ) || die();
 		<textarea
 			id="sft-<?php echo esc_attr( $key ); ?>"
 			name="sft-<?php echo esc_attr( $key ); ?>"
+			<?php echo $maxlength_attr; // phpcs:ignore ?>
 			<?php echo $schema[ $key ]['required'] ? 'required' : ''; ?>
 		></textarea>
+		<?php if ( $maxlength_attr ) : ?>
+			<div class="speaker-feedback__field-help">
+				0/<?php echo absint( $schema[ $key ]['attributes']['maxlength'] ); ?>
+			</div>
+		<?php endif; ?>
 	</div>
 	<?php endforeach; ?>
 

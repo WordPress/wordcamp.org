@@ -15,6 +15,19 @@
 	select {
 		width: 100%;
 	}
+
+	.has-error {
+		border: 2px solid $alert-red;
+
+		&:focus {
+			outline-color: $alert-red;
+		}
+	}
+
+	.speaker-feedback__field-help {
+		font-size: 0.8em;
+		text-align: right;
+	}
 }
 
 .speaker-feedback__field-inline {

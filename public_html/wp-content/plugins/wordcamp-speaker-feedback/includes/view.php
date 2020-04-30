@@ -11,7 +11,6 @@ use function WordCamp\SpeakerFeedback\Post\{
 	get_session_speaker_user_ids, post_accepts_feedback, get_session_feedback_url
 };
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
-use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
 
 defined( 'WPINC' ) || die();

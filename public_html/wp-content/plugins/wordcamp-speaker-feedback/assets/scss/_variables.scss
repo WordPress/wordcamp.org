@@ -1,7 +1,3 @@
-// Colors.
-$star-default: #ccc;
-$star-selected: #f3940d;
-
 // Alert colors.
 $alert-yellow: #f0b849;
 $alert-red: #d94f4f;
@@ -9,3 +5,25 @@ $alert-green: #4ab866;
 
 $blue-medium-500: #00a0d2;
 $blue-medium-100: #e5f5fa;
+
+$light-gray-200: #f3f4f5;
+$light-gray-700: #ccd0d4;
+$light-gray-900: #a2aab2;
+
+$dark-gray-300: #6c7781;
+$dark-gray-500: #555d66;
+$dark-gray-600: #40464d;
+$dark-gray-900: #191e23;
+
+// Star colors
+$star-default: $light-gray-700;
+$star-selected: #f3940d;
+
+// Hide content visually only, leave visible to screen reader users
+@mixin visually-hidden() {
+	clip: rect(1px, 1px, 1px, 1px);
+	position: absolute !important;
+	height: 1px;
+	width: 1px;
+	overflow: hidden;
+}

@@ -71,7 +71,7 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 					<?php esc_html_e( 'Only show feedback marked as helpful', 'wordcamporg' ); ?>
 				</label>
 			</div>
-			<input type="submit" class="screen-reader-text" value="Filter" />
+			<input type="submit" value="Filter" />
 		</form>
 
 		<div class="speaker-feedback__list comment-list">

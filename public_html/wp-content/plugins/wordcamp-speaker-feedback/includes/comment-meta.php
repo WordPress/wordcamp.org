@@ -290,14 +290,14 @@ function validate_meta_integer( $key, $value ) {
 	if ( isset( $schema['attributes']['min'] ) && $value < $schema['attributes']['min'] ) {
 		$error_message = sprintf(
 			__( 'This value needs to be greater than %s.', 'wordcamporg' ),
-			$schema['attributes']['min']
+			$schema['attributes']['min'] - 1
 		);
 	}
 
 	if ( isset( $schema['attributes']['max'] ) && $value > $schema['attributes']['max'] ) {
 		$error_message = sprintf(
 			__( 'This value needs to be less than %s.', 'wordcamporg' ),
-			$schema['attributes']['max']
+			$schema['attributes']['max'] + 1
 		);
 	}
 

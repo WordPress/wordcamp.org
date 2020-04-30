@@ -2,10 +2,16 @@
 
 namespace WordCamp\SpeakerFeedback\View;
 
+use WordCamp\SpeakerFeedback\Feedback;
 use WordCamp\SpeakerFeedback\Walker_Feedback;
 use function WordCamp\SpeakerFeedback\View\render_rating_stars;
 
 defined( 'WPINC' ) || die();
+
+/** @var Feedback[] $feedback */
+/** @var int $avg_rating */
+/** @var int $approved */
+/** @var int $moderated */
 
 $approved_string = '';
 $moderated_string = '';

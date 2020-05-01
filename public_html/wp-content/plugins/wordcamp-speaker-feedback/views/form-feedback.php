@@ -100,9 +100,12 @@ defined( 'WPINC' ) || die();
 	</div>
 
 	<?php foreach ( $text_questions as list( $key, $question ) ) :
+		$maxlength = 0;
 		$maxlength_attr = '';
 		if ( isset( $schema[ $key ]['attributes']['maxlength'] ) ) {
-			$maxlength_attr = sprintf( 'data-maxlength="%d"', $schema[ $key ]['attributes']['maxlength'] );
+			$maxlength = $schema[ $key ]['attributes']['maxlength'];
+			// Uses `data-maxlength` instead of `maxlength` to prevent browsers from truncating length.
+			$maxlength_attr = sprintf( 'data-maxlength="%d"', $maxlength );
 		}
 		?>
 	<div class="speaker-feedback__field">
@@ -115,12 +118,19 @@ defined( 'WPINC' ) || die();
 		<textarea
 			id="sft-<?php echo esc_attr( $key ); ?>"
 			name="sft-<?php echo esc_attr( $key ); ?>"
+			aria-describedby="sft-<?php echo esc_attr( $key ); ?>-extra"
 			<?php echo $maxlength_attr; // phpcs:ignore ?>
 			<?php echo $schema[ $key ]['required'] ? 'required' : ''; ?>
 		></textarea>
 		<?php if ( $maxlength_attr ) : ?>
+			<span class="screen-reader-text" id="sft-<?php echo esc_attr( $key ); ?>-extra">
+				<?php echo esc_html( sprintf(
+					_n( 'Max %s character.', 'Max %s characters.', $maxlength, 'wordcamporg' ),
+					number_format_i18n( $maxlength )
+				) ); ?>
+			</span>
 			<div class="speaker-feedback__field-help">
-				0/<?php echo absint( $schema[ $key ]['attributes']['maxlength'] ); ?>
+				0/<?php echo absint( $maxlength ); ?>
 			</div>
 		<?php endif; ?>
 	</div>

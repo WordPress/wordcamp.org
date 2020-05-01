@@ -337,7 +337,7 @@ function validate_meta_string( $key, $value ) {
 				$schema['attributes']['maxlength'],
 				'wordcamporg'
 			),
-			$schema['attributes']['maxlength']
+			number_format_i18n( $schema['attributes']['maxlength'] )
 		);
 	}
 

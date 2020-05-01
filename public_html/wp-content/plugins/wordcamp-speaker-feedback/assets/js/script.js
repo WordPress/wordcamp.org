@@ -73,7 +73,14 @@
 	}
 
 	function characterCounter( event ) {
-		var len = event.target.value.length;
+		// Some characters (like 🖖) are represented by a pair of code points, which JS counts as 2 separate
+		// characters. In PHP, we use `mb_strlen`, which correctly counts this as 1 character. For the same result
+		// in JS, we need to replace the 2-character sequence with a single character, then we can use `.length`
+		// to get the correct character count.
+		// Note: This counts combined characters (ex: 🧑🏽, ñ) separately, which matches `mb_strlen`'s behavior.
+		// @see https://mathiasbynens.be/notes/javascript-unicode#accounting-for-astral-symbols
+		var regexAstralSymbols = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+		var len = event.target.value.replace( regexAstralSymbols, '_' ).length;
 		var maxLen = Number( event.target.dataset.maxlength );
 		if ( len > maxLen ) {
 			$( event.target ).addClass( 'has-error' );

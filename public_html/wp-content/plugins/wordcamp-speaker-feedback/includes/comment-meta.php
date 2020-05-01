@@ -341,28 +341,27 @@ function validate_meta_string( $key, $value ) {
 }
 
 /**
+ * Get the feedback form questions, translated.
  *
+ * Versioned questions. Each case in the switch is an integer version of the set of questions. The case integer
+ * that contains the latest set of questions should match the integer assigned to the `META_VERSION` constant.
+ *
+ * If the questions below need to be modified, a new complete set should be added as a new case. The `META_VERSION`
+ * constant in this file then needs to be updated to match the latest case number. The submission form and JS
+ * process will also need to be updated & tested.
  *
  * @param int $version
  *
  * @return array
  */
 function get_feedback_questions( $version = META_VERSION ) {
-	/**
-	 * Versioned questions. Each case in the switch is an integer version of the set of questions. The case integer
-	 * that contains the latest set of questions should match the integer assigned to the `META_VERSION` constant.
-	 *
-	 * If the questions below need to be modified, a new complete set should be added as a new case. The `META_VERSION`
-	 * constant in this file then needs to be updated to match the latest case number. The submission form and JS
-	 * process will also need to be updated & tested.
-	 */
 	switch ( $version ) {
 		case 1:
 			$questions = array(
-				'rating' => __( 'Rate this talk', 'wordcamporg' ),
-				'q1'     => __( "What's one good thing you'd keep in this presentation?", 'wordcamporg' ),
-				'q2'     => __( "What's one thing you'd tweak to improve the presentation?", 'wordcamporg' ),
-				'q3'     => __( "What's one unhelpful thing you'd delete from the presentation?", 'wordcamporg' ),
+				'rating' => __( 'Rate this session', 'wordcamporg' ),
+				'q1'     => __( 'What was great in this session?', 'wordcamporg' ),
+				'q2'     => __( 'What could have improved this session?', 'wordcamporg' ),
+				'q3'     => __( 'Do you have any additional feedback?', 'wordcamporg' ),
 			);
 			break;
 

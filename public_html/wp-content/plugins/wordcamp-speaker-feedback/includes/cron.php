@@ -73,11 +73,13 @@ function notify_speakers_approved_feedback() {
 			'total_new' => 0,
 		);
 		foreach ( $session_ids as $session_id ) {
+			$session = get_post( $session_id );
 			$associated_feedbacks = array_keys( $post_ids, $session_id );
 			$feedback_info['total_new'] += count( $associated_feedbacks );
 			$feedback_info[] = array(
 				'feedback_ids' => $associated_feedbacks,
-				'title'        => get_the_title( $session_id ),
+				// We don't want most of the filters for the_title running here, e.g. converting characters into HTML entities.
+				'title'        => trim( strip_tags( $session->post_title ) ),
 				'count'        => count( $associated_feedbacks ),
 				'link'         => wp_login_url( get_session_feedback_url( $session_id ) ),
 			);
@@ -114,7 +116,7 @@ function notify_speakers_approved_feedback() {
 					'wordcamporg'
 				) ),
 				number_format_i18n( $info['count'] ),
-				$info['title']
+				esc_html( $info['title'] )
 			);
 			$message .= "\n";
 			$message .= esc_url_raw( $info['link'] );

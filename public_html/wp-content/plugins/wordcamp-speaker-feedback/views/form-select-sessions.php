@@ -34,3 +34,4 @@ if ( $sessions->have_posts() ) : ?>
 	</div>
 </form>
 <?php endif;
+wp_reset_postdata();

@@ -114,8 +114,10 @@ function render_feedback_view() {
 	ob_start();
 
 	// Show the form to everyone except the speaker.
-	$session_speakers = get_session_speaker_user_ids( $post->ID );
-	if ( ! in_array( get_current_user_id(), $session_speakers, true ) ) {
+	$session_speakers   = get_session_speaker_user_ids( $post->ID );
+	$is_session_speaker = in_array( get_current_user_id(), $session_speakers, true );
+
+	if ( ! $is_session_speaker ) {
 		$accepts_feedback = post_accepts_feedback( $post->ID );
 
 		if ( is_wp_error( $accepts_feedback ) ) {
@@ -139,7 +141,7 @@ function render_feedback_view() {
 	}
 
 	// Only show the approved feedback to the speaker and organizers.
-	if ( current_user_can( 'read_post_' . COMMENT_TYPE ) ) {
+	if ( current_user_can( 'read_post_' . COMMENT_TYPE, $post ) ) {
 		$query_args = parse_feedback_args();
 		$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ), $query_args );
 		$avg_rating = get_feedback_average_rating( $feedback );

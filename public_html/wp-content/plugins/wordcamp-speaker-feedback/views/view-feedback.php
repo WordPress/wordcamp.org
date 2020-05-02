@@ -8,6 +8,7 @@ use function WordCamp\SpeakerFeedback\View\render_rating_stars;
 
 defined( 'WPINC' ) || die();
 
+/** @var bool $is_session_speaker */
 /** @var Feedback[] $feedback */
 /** @var int $avg_rating */
 /** @var int $approved */
@@ -79,6 +80,12 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 			</div>
 			<input type="submit" class="screen-reader-text" value="Filter" />
 		</form>
+
+		<?php if ( ! $is_session_speaker ) : ?>
+			<p class="speaker-feedback__notice">
+				<?php esc_html_e( 'Only feedback recipients can mark submissions as helpful.', 'wordcamporg' ); ?>
+			</p>
+		<?php endif; ?>
 
 		<div class="speaker-feedback__list comment-list">
 			<?php

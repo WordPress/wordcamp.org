@@ -288,11 +288,17 @@ function validate_meta_integer( $key, $value ) {
 	$value = absint( $value );
 
 	if ( isset( $schema['attributes']['min'] ) && $value < $schema['attributes']['min'] ) {
-		$error_message = __( 'This value is too low.', 'wordcamporg' );
+		$error_message = sprintf(
+			__( 'This value needs to be greater than %s.', 'wordcamporg' ),
+			$schema['attributes']['min'] - 1
+		);
 	}
 
 	if ( isset( $schema['attributes']['max'] ) && $value > $schema['attributes']['max'] ) {
-		$error_message = __( 'This value is too high.', 'wordcamporg' );
+		$error_message = sprintf(
+			__( 'This value needs to be less than %s.', 'wordcamporg' ),
+			$schema['attributes']['max'] + 1
+		);
 	}
 
 	if ( $error_message ) {
@@ -324,7 +330,15 @@ function validate_meta_string( $key, $value ) {
 	$error_message = '';
 
 	if ( isset( $schema['attributes']['maxlength'] ) && mb_strlen( $value ) > $schema['attributes']['maxlength'] ) {
-		$error_message = __( 'This answer is too long.', 'wordcamporg' );
+		$error_message = sprintf(
+			_n(
+				'This answer is too long, it should be less than %s character.',
+				'This answer is too long, it should be less than %s characters.',
+				$schema['attributes']['maxlength'],
+				'wordcamporg'
+			),
+			number_format_i18n( $schema['attributes']['maxlength'] )
+		);
 	}
 
 	if ( $error_message ) {

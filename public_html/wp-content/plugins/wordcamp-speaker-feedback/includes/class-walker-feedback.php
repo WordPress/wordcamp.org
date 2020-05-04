@@ -2,7 +2,8 @@
 
 namespace WordCamp\SpeakerFeedback;
 
-use Walker_Comment;
+use WP_Comment, Walker_Comment;
+use function WordCamp\SpeakerFeedback\Post\get_session_speaker_user_ids;
 use function WordCamp\SpeakerFeedback\View\{ render_feedback_comment, render_feedback_rating };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
@@ -66,7 +67,7 @@ class Walker_Feedback extends Walker_Comment {
 		$commenter = wp_get_current_commenter();
 		$comment_id = $comment->comment_ID;
 		$comment_author = $comment->comment_author_email;
-
+		$session_speakers = get_session_speaker_user_ids( $comment->comment_post_ID );
 		?>
 		<div <?php comment_class( 'speaker-feedback__comment', $comment ); ?>>
 			<article id="speaker-feedback-<?php echo absint( $comment_id ); ?>" class="speaker-feedback__comment-body comment-body">
@@ -101,14 +102,16 @@ class Walker_Feedback extends Walker_Comment {
 						<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
 					</span>
 					<label>
-						<input
-							type="checkbox"
-							data-comment-id="<?php echo absint( $comment_id ); ?>"
-							aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
-							<?php checked( $comment->helpful ); ?>
-						/>
+						<?php if ( in_array( get_current_user_id(), $session_speakers, true ) ) : ?>
+							<input
+								type="checkbox"
+								data-comment-id="<?php echo absint( $comment_id ); ?>"
+								aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
+								<?php checked( $comment->helpful ); ?>
+							/>
+						<?php endif; ?>
 						<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
-					</button>
+					</label>
 				</footer>
 			</article><!-- .comment-body -->
 		<?php

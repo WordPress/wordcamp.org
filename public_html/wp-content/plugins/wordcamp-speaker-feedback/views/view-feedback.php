@@ -2,10 +2,17 @@
 
 namespace WordCamp\SpeakerFeedback\View;
 
+use WordCamp\SpeakerFeedback\Feedback;
 use WordCamp\SpeakerFeedback\Walker_Feedback;
 use function WordCamp\SpeakerFeedback\View\render_rating_stars;
 
 defined( 'WPINC' ) || die();
+
+/** @var bool $is_session_speaker */
+/** @var Feedback[] $feedback */
+/** @var int $avg_rating */
+/** @var int $approved */
+/** @var int $moderated */
 
 $approved_string = '';
 $moderated_string = '';
@@ -73,6 +80,12 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 			</div>
 			<input type="submit" value="Filter" />
 		</form>
+
+		<?php if ( ! $is_session_speaker ) : ?>
+			<p class="speaker-feedback__notice">
+				<?php esc_html_e( 'Only feedback recipients can mark submissions as helpful.', 'wordcamporg' ); ?>
+			</p>
+		<?php endif; ?>
 
 		<div class="speaker-feedback__list comment-list">
 			<?php

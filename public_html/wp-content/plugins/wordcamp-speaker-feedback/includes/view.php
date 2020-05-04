@@ -57,7 +57,7 @@ function render( $content ) {
 			wp_kses_post(
 				__( 'Did you attend this session? <a href="%s" class="sft-feedback-link">Leave feedback.</a>', 'wordcamporg' )
 			),
-			get_session_feedback_url( $post->ID )
+			get_session_feedback_url( $post->ID ) . '#sft-feedback'
 		);
 
 		$content = $content . wpautop( $html );

@@ -72,9 +72,29 @@
 		align-items: stretch;
 	}
 
+	.select2-selection {
+		height: 100%;
+
+		.select2-selection__rendered,
+		.select2-selection__arrow {
+			height: 100%;
+			display: flex;
+			justify-content: center;
+			flex-direction: column;
+		}
+
+		.select2-selection__arrow {
+			top: -4px;
+		}
+	}
+
 	input[type="submit"] {
 		flex: initial;
 	}
+}
+
+.select2-results__option {
+	margin: 0;
 }
 
 /**

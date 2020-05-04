@@ -115,6 +115,7 @@
 
 	var navForm = document.getElementById( 'sft-navigation' );
 	if ( navForm ) {
+		$( navForm.querySelectorAll( 'select' ) ).select2();
 		navForm.addEventListener( 'submit', onFormNavigate, true );
 	}
 

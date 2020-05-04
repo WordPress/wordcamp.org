@@ -92,8 +92,13 @@
 
 	function onHelpfulClick( event ) {
 		var $container = $( event.target ).closest( 'footer' );
+		if ( $container.hasClass( 'is-inflight' ) ) {
+			return;
+		}
+		$container.addClass( 'is-inflight' );
+
 		var input = $container.find( 'input[type="checkbox"]' ).get( 0 );
-		var isHelpful = !! input.checked;
+		var isHelpful = $container.hasClass( 'is-helpful' );
 
 		wp.apiFetch( {
 			path: '/wordcamp-speaker-feedback/v1/feedback/' + input.dataset.commentId,
@@ -103,6 +108,7 @@
 			},
 		} )
 			.then( function() {
+				$container.removeClass( 'is-inflight' );
 				$container.toggleClass( 'is-helpful' );
 				if ( isHelpful ) {
 					// Previous state was helpful, has been un-marked, label should flip back to "mark as helpful".

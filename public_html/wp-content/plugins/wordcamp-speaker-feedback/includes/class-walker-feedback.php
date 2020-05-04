@@ -64,10 +64,12 @@ class Walker_Feedback extends Walker_Comment {
 	 * @param array      $args    An array of arguments.
 	 */
 	protected function render_feedback( $comment, $depth, $args ) {
-		$commenter = wp_get_current_commenter();
-		$comment_id = $comment->comment_ID;
-		$comment_author = $comment->comment_author_email;
+		$commenter        = wp_get_current_commenter();
+		$comment_id       = $comment->comment_ID;
+		$comment_author   = $comment->comment_author_email;
 		$session_speakers = get_session_speaker_user_ids( $comment->comment_post_ID );
+		$is_helpful       = wp_validate_boolean( $comment->helpful );
+
 		?>
 		<div <?php comment_class( 'speaker-feedback__comment', $comment ); ?>>
 			<article id="speaker-feedback-<?php echo absint( $comment_id ); ?>" class="speaker-feedback__comment-body comment-body">
@@ -97,7 +99,7 @@ class Walker_Feedback extends Walker_Comment {
 					<?php render_feedback_comment( $comment ); ?>
 				</div><!-- .comment-content -->
 
-				<footer class="speaker-feedback__helpful <?php echo ( $comment->helpful ) ? 'is-helpful' : ''; ?>">
+				<footer class="speaker-feedback__helpful <?php echo ( $is_helpful ) ? 'is-helpful' : ''; ?>">
 					<span id="sft-helpful-<?php echo absint( $comment_id ); ?>">
 						<?php esc_html_e( 'Was this feedback helpful?', 'wordcamporg' ); ?>
 					</span>
@@ -107,7 +109,7 @@ class Walker_Feedback extends Walker_Comment {
 								type="checkbox"
 								data-comment-id="<?php echo absint( $comment_id ); ?>"
 								aria-describedby="sft-helpful-<?php echo absint( $comment_id ); ?>"
-								<?php checked( $comment->helpful ); ?>
+								<?php checked( $is_helpful ); ?>
 							/>
 						<?php endif; ?>
 						<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>

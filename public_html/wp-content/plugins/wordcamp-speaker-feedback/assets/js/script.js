@@ -48,6 +48,9 @@
 			.then( function() {
 				$messageContainer.addClass( 'speaker-feedback__notice is-success' );
 				$messageContainer.append( $( '<p>' ).text( SpeakerFeedbackData.messages.submitSuccess ) );
+				$messageContainer.attr( 'tabIndex', -1 );
+				$messageContainer.focus();
+				form.scrollIntoView();
 				$( form ).replaceWith( $messageContainer );
 			} )
 			.catch( function( error ) {
@@ -69,6 +72,9 @@
 						}
 					} );
 				}
+				$messageContainer.attr( 'tabIndex', -1 );
+				$messageContainer.focus();
+				form.scrollIntoView();
 			} );
 	}
 

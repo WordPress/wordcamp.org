@@ -313,6 +313,10 @@
 			background: #fff;
 		}
 	}
+
+	&.is-inflight label {
+		cursor: wait;
+	}
 	// stylelint-enable
 }
 

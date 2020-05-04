@@ -477,17 +477,17 @@ function wcorg_register_scripts() {
 	 */
 	wp_register_script(
 		'select2',
-		plugins_url( '/includes/select2/js/select2.min.js', __FILE__ ),
+		plugins_url( '/includes/select2/js/selectWoo.min.js', __FILE__ ),
 		array( 'jquery' ),
-		'4.0.5',
+		'1.0.6',
 		true
 	);
 
 	wp_register_style(
 		'select2',
-		plugins_url( '/includes/select2/css/select2.min.css', __FILE__ ),
+		plugins_url( '/includes/select2/css/selectWoo.min.css', __FILE__ ),
 		array(),
-		'4.0.5'
+		'1.0.6'
 	);
 }
 add_action( 'wp_enqueue_scripts',    'wcorg_register_scripts' );

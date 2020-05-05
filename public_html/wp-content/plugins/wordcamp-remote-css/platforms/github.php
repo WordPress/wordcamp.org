@@ -1,7 +1,9 @@
 <?php
 
-namespace WordCamp\RemoteCSS;
+namespace WordCamp\RemoteCSS\Github;
 use WP_Error;
+
+const GITHUB_API_HOSTNAME = 'api.github.com';
 
 defined( 'WPINC' ) || die();
 

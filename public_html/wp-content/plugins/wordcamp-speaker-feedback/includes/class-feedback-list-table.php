@@ -172,6 +172,7 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	 * @return void
 	 */
 	public function column_name( $comment ) {
+		global $comment_status;
 		$feedback = get_feedback_comment( $comment );
 
 		echo '<strong>';
@@ -200,6 +201,10 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 				esc_html( $email )
 			);
 		}
+
+		if ( 'all' === $comment_status ) {
+			printf( '<p><em>%s</em></p>', esc_html( wp_get_comment_status( $feedback->comment_ID ) ) );
+		}
 	}
 
 	/**
@@ -212,7 +217,7 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	public function column_feedback( $comment ) {
 		// This is only displayed on smaller screens.
 		echo '<div class="comment-meta">';
-		$this->column_author( $comment );
+		$this->column_name( $comment );
 		$this->column_rating( $comment );
 		echo '</div>';
 

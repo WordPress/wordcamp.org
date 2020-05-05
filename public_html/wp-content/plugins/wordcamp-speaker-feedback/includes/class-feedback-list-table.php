@@ -217,7 +217,7 @@ class Feedback_List_Table extends WP_Comments_List_Table {
 	public function column_feedback( $comment ) {
 		// This is only displayed on smaller screens.
 		echo '<div class="comment-meta">';
-		$this->column_author( $comment );
+		$this->column_name( $comment );
 		$this->column_rating( $comment );
 		echo '</div>';
 

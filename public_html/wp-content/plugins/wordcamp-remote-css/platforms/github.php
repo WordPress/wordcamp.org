@@ -3,7 +3,7 @@
 namespace WordCamp\RemoteCSS\Github;
 use WP_Error;
 
-const GITHUB_API_HOSTNAME = 'api.github.com';
+const API_HOSTNAME = 'api.github.com';
 
 defined( 'WPINC' ) || die();
 
@@ -25,7 +25,7 @@ add_filter( 'wcrcss_unsafe_remote_css',        __NAMESPACE__ . '\decode_api_resp
  * @return array
  */
 function whitelist_trusted_hostnames( $hostnames ) {
-	return array_merge( $hostnames, array( 'github.com', 'raw.githubusercontent.com', GITHUB_API_HOSTNAME ) );
+	return array_merge( $hostnames, array( 'github.com', 'raw.githubusercontent.com', API_HOSTNAME ) );
 }
 
 /**
@@ -58,7 +58,7 @@ function convert_to_api_urls( $remote_css_url ) {
 	if ( $owner && $repository && $file_path ) {
 		$remote_css_url = sprintf(
 			'https://%s/repos/%s/%s/contents/%s',
-			GITHUB_API_HOSTNAME,
+			API_HOSTNAME,
 			$owner,
 			$repository,
 			$file_path
@@ -129,7 +129,7 @@ function should_authenticate_url( $request_url_parts, $request_args ) {
 		return false;
 	}
 
-	if ( GITHUB_API_HOSTNAME !== $request_url_parts['host'] || 'GET' !== $request_args['method'] ) {
+	if ( API_HOSTNAME !== $request_url_parts['host'] || 'GET' !== $request_args['method'] ) {
 		$authenticate = false;
 	}
 
@@ -153,7 +153,7 @@ function should_authenticate_url( $request_url_parts, $request_args ) {
  * @return string
  */
 function decode_api_response( $response_body, $remote_css_url ) {
-	if ( false !== strpos( $remote_css_url, GITHUB_API_HOSTNAME ) ) {
+	if ( false !== strpos( $remote_css_url, API_HOSTNAME ) ) {
 		$response_body = json_decode( $response_body );
 		$response_body = base64_decode( $response_body->content );
 	}

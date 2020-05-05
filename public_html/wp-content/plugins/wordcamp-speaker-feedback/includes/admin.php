@@ -224,8 +224,8 @@ function add_feedback_bubble( $screen ) {
 		return;
 	}
 
-	$pending_count = get_feedback( array(), array( 'hold' ), array( 'count' => true ) );
-	if ( $pending_count <= 0 ) {
+	$counts = count_feedback();
+	if ( $counts['moderated'] <= 0 ) {
 		return;
 	}
 
@@ -240,8 +240,8 @@ function add_feedback_bubble( $screen ) {
 			if ( $menu_slug === $menu_item[2] ) {
 				$bubble = sprintf(
 					" <span class='sft-feedback-unread count-%d awaiting-mod'><span class='sft-feedback-unread-count'>%s</span></span>",
-					$pending_count,
-					number_format_i18n( $pending_count )
+					$counts['moderated'],
+					number_format_i18n( $counts['moderated'] )
 				);
 
 				if ( $is_section ) {

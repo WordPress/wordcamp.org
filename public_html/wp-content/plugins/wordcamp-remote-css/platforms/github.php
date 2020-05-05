@@ -1,6 +1,7 @@
 <?php
 
 namespace WordCamp\RemoteCSS\Github;
+use const WordCamp\RemoteCSS\USER_AGENT;
 use WP_Error;
 
 const API_HOSTNAME = 'api.github.com';
@@ -94,16 +95,10 @@ function authenticate_requests( $preempt, $request_args, $request_url ) {
 		$request_query_params = array();
 	}
 
-	$has_authentication_params = isset( $request_query_params['client_id'], $request_query_params['client_secret'] );
+	$has_authentication_params = isset( $request_args['headers']['Authorization'] );
 
 	if ( ! $has_authentication_params ) {
-		$request_url = add_query_arg(
-			array(
-				'client_id'     => REMOTE_CSS_GITHUB_ID,
-				'client_secret' => REMOTE_CSS_GITHUB_SECRET,
-			),
-			$request_url
-		);
+		$request_args['headers']['Authorization'] = get_authorization_header();
 
 		$preempt = wp_remote_get( $request_url, $request_args );
 	}
@@ -159,4 +154,92 @@ function decode_api_response( $response_body, $remote_css_url ) {
 	}
 
 	return $response_body;
+}
+
+/**
+ * Fetch an Authorization token for an authenticated Github API request.
+ */
+function get_authorization_header() {
+	$token = get_app_install_token();
+	// Upon failure, just return an empty header, as GitHub will accept that at the lower rate limit temporarily.
+	return $token ? 'BEARER ' . $token : '';
+}
+
+/**
+ * Fetch an App Authorization token for accessing Github Resources.
+ */
+function get_app_install_token() {
+	$token = get_site_transient( __NAMESPACE__ . 'app_install_token' );
+	if ( $token ) {
+		return $token;
+	}
+
+	$installs = wp_remote_get(
+		'https://' . API_HOSTNAME . '/app/installations',
+		[
+			'user-agent' => USER_AGENT,
+			'headers'    => [
+				'Accept'        => 'application/vnd.github.machine-man-preview+json',
+				'Authorization' => 'BEARER ' . get_jwt_app_token(),
+			]
+		]
+	);
+
+	$installs = is_wp_error( $installs ) ? false : json_decode( wp_remote_retrieve_body( $installs ) );
+
+	if ( ! $installs || empty( $installs[0]->access_tokens_url ) ) {
+		return false;
+	}
+
+	$access_token = wp_remote_post(
+		$installs[0]->access_tokens_url,
+		[
+			'user-agent' => USER_AGENT,
+			'headers'    => [
+				'Accept'        => 'application/vnd.github.machine-man-preview+json',
+				'Authorization' => 'BEARER ' . get_jwt_app_token(),
+			]
+		]
+	);
+
+	$access_token = is_wp_error( $access_token ) ? false : json_decode( wp_remote_retrieve_body( $access_token ) );
+	if ( ! $access_token || empty( $access_token->token ) ) {
+		return false;
+	}
+
+	$token     = $access_token->token;
+	$token_exp = strtotime( $access_token->expires_at );
+
+	// Cache the token for 1 minute less than what it's valid for.
+	set_site_transient( __NAMESPACE__ . 'app_install_token', $token, $token_exp - time() - MINUTE_IN_SECONDS );
+
+	return $token;
+}
+
+/**
+ * Generate a JWT Authorization token for the Github /app API endpoints.
+ */
+function get_jwt_app_token() {
+	$token = get_site_transient( __NAMESPACE__ . 'app_token' );
+	if ( $token ) {
+		return $token;
+	}
+
+	include_once dirname( __DIR__ ) . '/libraries/adhocore-php-jwt/ValidatesJWT.php';
+	include_once dirname( __DIR__ ) . '/libraries/adhocore-php-jwt/JWTException.php';
+	include_once dirname( __DIR__ ) . '/libraries/adhocore-php-jwt/JWT.php';
+
+	$key = openssl_pkey_get_private( base64_decode( REMOTE_CSS_GITHUB_APP_PRIV_KEY ) );
+	$jwt = new \Ahc\Jwt\JWT( $key, 'RS256' );
+
+	$token = $jwt->encode([
+		'iat' => time(),
+		'exp' => time() + 10 * MINUTE_IN_SECONDS,
+		'iss' => REMOTE_CSS_GITHUB_APP_ID,
+	]);
+
+	// Cache it for 9 mins (It's valid for 10min)
+	set_site_transient( __NAMESPACE__ . 'app_token', $token, 9 * MINUTE_IN_SECONDS );
+
+	return $token;
 }

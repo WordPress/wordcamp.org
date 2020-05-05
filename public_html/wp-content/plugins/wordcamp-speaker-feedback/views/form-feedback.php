@@ -54,7 +54,7 @@ defined( 'WPINC' ) || die();
 		</div>
 	<?php endif; ?>
 
-	<div id="speaker-feedback-notice" aria-live="polite" aria-relevant="additions text" aria-atomic="true"></div>
+	<div id="speaker-feedback-notice"></div>
 
 	<div class="speaker-feedback__field">
 		<fieldset class="speaker-feedback__field-rating" id="sft-rating">

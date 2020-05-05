@@ -187,7 +187,7 @@ function update_feedback( $comment_id, array $feedback_meta ) {
  * @param array $status     Optional. An array of statuses to include in the results.
  * @param array $args       Optional. Additional args to be passed to get_comments.
  *
- * @return array A collection of WP_Comment objects.
+ * @return array|int A collection of WP_Comment objects, or the count of comments (if $args[`count`]).
  */
 function get_feedback( array $post__in = array(), array $status = array( 'hold', 'approve' ), array $args = array() ) {
 	$args = wp_parse_args(
@@ -207,6 +207,10 @@ function get_feedback( array $post__in = array(), array $status = array( 'hold',
 	}
 
 	$comments = get_comments( $args );
+
+	if ( isset( $args['count'] ) && $args['count'] ) {
+		return $comments;
+	}
 
 	// This makes loading meta values for comments much faster.
 	wp_queue_comments_for_comment_meta_lazyload( $comments );

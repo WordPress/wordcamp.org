@@ -16,6 +16,8 @@ jQuery( document ).ready( function( $ ) {
 	function loadTopCounts() {
 		// Reload the page, but only the top view + count links.
 		$container.load( location.href + ' .subsubsub' );
+		// Reload the admin menu comment bubble.
+		$( '#adminmenu .sft-feedback-unread' ).load( location.href + ' #adminmenu .sft-feedback-unread-count' );
 	}
 
 	// We can assume window.theList exists because we're after `edit-comments.js`

@@ -20,6 +20,7 @@ foreach ( SUPPORTED_POST_TYPES as $supported_post_type ) {
 }
 
 add_action( 'admin_menu', __NAMESPACE__ . '\add_subpages' );
+add_action( 'current_screen', __NAMESPACE__ . '\add_feedback_bubble' );
 add_filter( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_filter( 'set-screen-option', __NAMESPACE__ . '\set_screen_options', 10, 3 );
 add_filter( 'wp_count_comments', __NAMESPACE__ . '\adjust_comment_counts', 10, 2 );
@@ -203,6 +204,54 @@ function add_subpages() {
 				add_screen_option( 'per_page' );
 			}
 		);
+	}
+}
+
+/**
+ * Display the count of unapproved speaker feedback comments, injected into the admin menu.
+ *
+ * Run on current_screen so we can conditionally add this to the top-level CPT item, or the Feedback item in
+ * the submenu.
+ *
+ * @param WP_Screen $screen Current WP_Screen object.
+ */
+function add_feedback_bubble( $screen ) {
+	global $menu, $submenu;
+	if ( ! isset( $menu ) || empty( $menu ) ) {
+		return;
+	}
+	if ( ! current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
+		return;
+	}
+
+	$pending_count = get_feedback( array(), array( 'hold' ), array( 'count' => true ) );
+	if ( $pending_count <= 0 ) {
+		return;
+	}
+
+	foreach ( SUPPORTED_POST_TYPES as $supported_post_type ) {
+		// Attach the bubble to the top-level item when we're not in that section, but Feedback once we are.
+		$is_section   = $supported_post_type === $screen->post_type;
+		$section_slug = add_query_arg( array( 'post_type' => $supported_post_type ), 'edit.php' );
+		$search_menu  = $is_section && isset( $submenu[ $section_slug ] ) ? $submenu[ $section_slug ] : $menu;
+		$menu_slug    = $is_section ? 'wc-speaker-feedback' : $section_slug;
+
+		foreach ( $search_menu as $index => $menu_item ) {
+			if ( $menu_slug === $menu_item[2] ) {
+				$bubble = sprintf(
+					" <span class='sft-feedback-unread count-%d awaiting-mod'><span class='sft-feedback-unread-count'>%s</span></span>",
+					$pending_count,
+					number_format_i18n( $pending_count )
+				);
+
+				if ( $is_section ) {
+					$submenu[ $section_slug ][ $index ][0] .= $bubble; // phpcs:ignore
+				} else {
+					$menu[ $index ][0] .= $bubble; // phpcs:ignore
+				}
+				break;
+			}
+		}
 	}
 }
 

@@ -174,13 +174,18 @@ function get_app_install_token() {
 		return $token;
 	}
 
+	$jwt_token = get_jwt_app_token();
+	if ( ! $jwt_token ) {
+		return false;
+	}
+
 	$installs = wp_remote_get(
 		'https://' . API_HOSTNAME . '/app/installations',
 		[
 			'user-agent' => USER_AGENT,
 			'headers'    => [
 				'Accept'        => 'application/vnd.github.machine-man-preview+json',
-				'Authorization' => 'BEARER ' . get_jwt_app_token(),
+				'Authorization' => 'BEARER ' . $jwt_token,
 			]
 		]
 	);
@@ -197,7 +202,7 @@ function get_app_install_token() {
 			'user-agent' => USER_AGENT,
 			'headers'    => [
 				'Accept'        => 'application/vnd.github.machine-man-preview+json',
-				'Authorization' => 'BEARER ' . get_jwt_app_token(),
+				'Authorization' => 'BEARER ' . $jwt_token,
 			]
 		]
 	);
@@ -223,6 +228,11 @@ function get_jwt_app_token() {
 	$token = get_site_transient( __NAMESPACE__ . 'app_token' );
 	if ( $token ) {
 		return $token;
+	}
+
+	// Verify the configuration variables are available.
+	if ( ! defined( 'REMOTE_CSS_GITHUB_APP_ID' ) || ! defined( 'REMOTE_CSS_GITHUB_APP_PRIV_KEY' ) ) {
+		return false;
 	}
 
 	$key = openssl_pkey_get_private( base64_decode( REMOTE_CSS_GITHUB_APP_PRIV_KEY ) );

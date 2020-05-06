@@ -27,6 +27,15 @@ class WordCamp_Lets_Encrypt_Helper {
 				'callback' => array( __CLASS__, 'rest_callback_domains' ),
 			)
 		);
+
+		register_rest_route(
+			'wordcamp-letsencrypt/v1',
+			'/domains-dehydrated',
+			array(
+				'methods'  => 'GET',
+				'callback' => array( __CLASS__, 'rest_callback_domains_dehydrated' ),
+			)
+		);
 	}
 
 	/**
@@ -73,14 +82,6 @@ class WordCamp_Lets_Encrypt_Helper {
 		if ( is_callable( 'wcorg_get_domain_redirects' ) ) {
 			$back_compat_domains = wcorg_get_domain_redirects();
 
-			/*
-			 * Temporary remove domains whose DNS hasn't been migrated to ORD, because it causes the LE
-			 * renewal script to abort early.
-			 *
-			 * @todo remove this once DNS is updated.
-			 */
-			unset( $back_compat_domains['wordcampsf.com'] );
-
 			$domains = array_merge( $domains, array_keys( $back_compat_domains ) );
 		}
 
@@ -88,6 +89,66 @@ class WordCamp_Lets_Encrypt_Helper {
 		$domains = apply_filters( 'wordcamp_letsencrypt_domains', $domains );
 
 		return array_values( $domains );
+	}
+
+	/**
+	 * REST: domains-dehydrated
+	 *
+	 * Return a dehydrated domains.txt file of all domains that need SSL certs, in a format suitable for dehydrated.
+	 *
+	 * @param WP_REST_Request $request
+	 *
+	 * @return WP_Error|void 
+	 */
+	public static function rest_callback_domains_dehydrated( $request ) {
+		$domains = self::rest_callback_domains( $request );
+		if ( is_wp_error( $domains ) ) {
+			return $domains;
+		}
+
+		// Sort domains by shortest first, sort all same-length domains by natcase.
+		usort( $domains, function( $a, $b ) {
+			$a_len = strlen( $a );
+			$b_len = strlen( $b );
+
+			if ( $a_len === $b_len ) {
+				return strnatcasecmp( $a, $b );
+			}
+			return $a_len - $b_len;
+		} );
+
+		// Group all the subdomains together with their "parent" (xyz.campevent.tld)
+		$result = [];
+		foreach ( $domains as $domain ) {
+			$dots = substr_count( $domain, '.' );
+			if ( $dots <= 2 ) {
+				// Special cases
+				if ( 'central.wordcamp.org' === $domain ) {
+					$result['wordcamp.org'][] = $domain;
+				} elseif ( in_array( $domain, [ '2006.wordcamp.org', '2007.wordcamporg', 'wordcampsf.org', 'wordcampsf.com' ] ) ) {
+					$result['sf.wordcamp.org'][] = $domain;
+					$result['sf.wordcamp.org'][] = "www.{$domain}";
+				} elseif ( ! isset( $result[ $domain ] ) ) {
+					// Main domain
+					$result[ $domain ] = [];
+				}
+			} else {
+				// Strip anything before xyz.campevent.tld
+				$main_domain = implode( '.', array_slice( explode( '.', $domain ), -3 ) );
+				$result[ $main_domain ][] = $domain;
+			}
+		}
+
+		// flatten and output in a dehydrated format.
+		header( 'Content-type: text/plain' );
+
+		// Primary Domain \s certAltNames
+		// narnia.wordcamp.org www.narnia.wordcamp.org 2020.narnia.wordcamp.org
+		foreach ( $result as $domain => $subdomains ) {
+			$altnames = implode( ' ', $subdomains );
+			echo rtrim( "$domain www.{$domain} $altnames" ) . "\n";
+		}
+		exit;
 	}
 }
 

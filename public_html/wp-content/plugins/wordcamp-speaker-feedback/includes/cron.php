@@ -10,6 +10,8 @@ use function WordCamp\SpeakerFeedback\Post\{
 
 defined( 'WPINC' ) || die();
 
+const SPEAKER_OPT_OUT_KEY = 'sft_notifications_speaker_opt_out';
+
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
 add_action( 'sft_notify_speakers_approved_feedback', __NAMESPACE__ . '\notify_speakers_approved_feedback' );
 
@@ -65,7 +67,7 @@ function notify_speakers_approved_feedback() {
 	foreach ( $speaker_session_ids as $user_id => $session_ids ) {
 		$speaker = get_user_by( 'id', $user_id );
 		// Todo: Implement a UI for toggling this user meta value.
-		if ( true === wp_validate_boolean( $speaker->sft_speaker_notifications_opt_out ) ) {
+		if ( true === wp_validate_boolean( $speaker->{SPEAKER_OPT_OUT_KEY} ) ) {
 			continue;
 		}
 

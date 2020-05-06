@@ -225,10 +225,6 @@ function get_jwt_app_token() {
 		return $token;
 	}
 
-	include_once dirname( __DIR__ ) . '/libraries/adhocore-php-jwt/ValidatesJWT.php';
-	include_once dirname( __DIR__ ) . '/libraries/adhocore-php-jwt/JWTException.php';
-	include_once dirname( __DIR__ ) . '/libraries/adhocore-php-jwt/JWT.php';
-
 	$key = openssl_pkey_get_private( base64_decode( REMOTE_CSS_GITHUB_APP_PRIV_KEY ) );
 	$jwt = new \Ahc\Jwt\JWT( $key, 'RS256' );
 

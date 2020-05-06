@@ -50,9 +50,10 @@ function render( $content ) {
 	}
 
 	$now = date_create( 'now', wp_timezone() );
+	$form_content = '';
 
 	if ( has_feedback_form() ) {
-		$content = $content . render_feedback_view(); // Append form to the normal content.
+		$form_content = render_feedback_view();
 	} elseif ( is_single() && true === post_accepts_feedback( $post->ID ) ) {
 		$html = sprintf(
 			wp_kses_post(
@@ -61,7 +62,7 @@ function render( $content ) {
 			get_session_feedback_url( $post->ID ) . '#sft-feedback'
 		);
 
-		$content = $content . wpautop( $html );
+		$form_content = wpautop( $html );
 	} elseif ( is_page( get_option( OPTION_KEY ) ) ) {
 		$wordcamp            = get_wordcamp_post();
 		$valid_wcpt_statuses = array( 'wcpt-scheduled', 'wcpt-closed' );
@@ -98,10 +99,10 @@ function render( $content ) {
 		ob_start();
 		require get_views_path() . $file;
 
-		$content = ob_get_clean(); // Replace the content.
+		$form_content = ob_get_clean();
 	}
 
-	return $content;
+	return $content . $form_content;
 }
 
 /**

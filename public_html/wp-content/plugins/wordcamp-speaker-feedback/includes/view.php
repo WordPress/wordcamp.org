@@ -13,6 +13,7 @@ use function WordCamp\SpeakerFeedback\Post\{
 };
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
+use const WordCamp\SpeakerFeedback\Cron\SPEAKER_OPT_OUT_KEY;
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
 
 defined( 'WPINC' ) || die();
@@ -152,6 +153,8 @@ function render_feedback_view() {
 		$approved       = absint( $feedback_count['approved'] );
 		$moderated      = absint( $feedback_count['moderated'] );
 
+		$notifications_opt_out = get_user_meta( get_current_user_id(), SPEAKER_OPT_OUT_KEY, true );
+
 		require get_views_path() . 'view-feedback.php';
 	}
 
@@ -268,9 +271,13 @@ function enqueue_assets() {
 
 		$data = array(
 			'messages' => array(
-				'submitSuccess'   => __( 'Feedback submitted.', 'wordcamporg' ),
-				'markedHelpful'   => __( 'Feedback marked as helpful.', 'wordcamporg' ),
-				'unmarkedHelpful' => __( 'Feedback unmarked as helpful.', 'wordcamporg' ),
+				'submitSuccess'         => __( 'Feedback submitted.', 'wordcamporg' ),
+				'markedHelpful'         => __( 'Feedback marked as helpful.', 'wordcamporg' ),
+				'unmarkedHelpful'       => __( 'Feedback unmarked as helpful.', 'wordcamporg' ),
+				'notificationsEnabled'  => __( 'Feedback notifications are enabled.', 'wordcamporg' ),
+				'notificationsDisabled' => __( 'Feedback notifications are disabled.', 'wordcamporg' ),
+				'enableNotifications'   => __( 'Enable', 'wordcamporg' ),
+				'disableNotifications'  => __( 'Disable', 'wordcamporg' ),
 			),
 		);
 

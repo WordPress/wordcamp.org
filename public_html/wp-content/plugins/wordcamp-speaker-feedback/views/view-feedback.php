@@ -2,13 +2,16 @@
 
 namespace WordCamp\SpeakerFeedback\View;
 
+use WP_User;
 use WordCamp\SpeakerFeedback\Feedback;
 use WordCamp\SpeakerFeedback\Walker_Feedback;
 use function WordCamp\SpeakerFeedback\View\render_rating_stars;
 
 defined( 'WPINC' ) || die();
 
+/** @var int[] $session_speakers */
 /** @var bool $is_session_speaker */
+/** @var bool $notifications_opt_out */
 /** @var Feedback[] $feedback */
 /** @var int $avg_rating */
 /** @var int $approved */
@@ -40,6 +43,38 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 <hr />
 <div class="speaker-feedback">
 	<h2><?php esc_html_e( 'Session Feedback', 'wordcamporg' ); ?></h2>
+
+	<?php if ( ! $is_session_speaker ) : ?>
+		<p class="speaker-feedback__notice">
+			<?php esc_html_e( 'Only feedback recipients can toggle notifications and mark submissions as helpful.', 'wordcamporg' ); ?>
+		</p>
+	<?php endif; ?>
+
+	<div class="speaker-feedback__notifications <?php echo ( $notifications_opt_out ) ? 'is-disabled' : ''; ?>">
+		<span class="sft-notifications-label-text">
+			<?php if ( $notifications_opt_out ) : ?>
+				<?php esc_html_e( 'Feedback notifications are disabled.', 'wordcamporg' ); ?>
+			<?php else : ?>
+				<?php esc_html_e( 'Feedback notifications are enabled.', 'wordcamporg' ); ?>
+			<?php endif; ?>
+		</span>
+		<label>
+			<?php if ( in_array( get_current_user_id(), $session_speakers, true ) ) : ?>
+				<input
+					type="checkbox"
+					data-user-id="<?php echo absint( get_current_user_id() ); ?>"
+					<?php checked( $notifications_opt_out ); ?>
+				/>
+			<?php endif; ?>
+			<span class="sft-notifications-toggle-text">
+				<?php if ( $notifications_opt_out ) : ?>
+					<?php esc_html_e( 'Enable', 'wordcamporg' ); ?>
+				<?php else : ?>
+					<?php esc_html_e( 'Disable', 'wordcamporg' ); ?>
+				<?php endif; ?>
+			</span>
+		</label>
+	</div>
 
 	<?php if ( $approved >= 1 ) : ?>
 		<div class="speaker-feedback__overview">
@@ -81,19 +116,13 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 			<input type="submit" value="Filter" />
 		</form>
 
-		<?php if ( ! $is_session_speaker ) : ?>
-			<p class="speaker-feedback__notice">
-				<?php esc_html_e( 'Only feedback recipients can mark submissions as helpful.', 'wordcamporg' ); ?>
-			</p>
-		<?php endif; ?>
-
 		<div class="speaker-feedback__list comment-list">
 			<?php
 			wp_list_comments(
 				array(
 					// Note: `Walker_Feedback` does not support the callback or format args.
 					'walker' => new Walker_Feedback(),
-					'style' => 'div',
+					'style'  => 'div',
 				),
 				$feedback
 			);

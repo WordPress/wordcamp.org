@@ -1527,6 +1527,17 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	color: #545454;
 	text-transform: uppercase;
 	font-size: 12px;
+	margin-right: 5px;
+}
+
+.wc-online-event {
+	display: inline-block;
+	text-transform: uppercase;
+	font-size: 11px;
+	padding: 0 5px;
+	background: #0c617c;
+	color: #fff;
+	line-height: 18px;
 }
 
 .wc-schedule #content .wc-schedule-list .wc-date {
@@ -1622,9 +1633,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 .page-template-template-past-wordcamps-php .wc-schedule-list .wc-country {
 	line-height: 14px;
-
-	display: block;
-	margin: 8px 0 3px 0;
+	margin: 6px 0 3px 0;
 }
 
 .page-template-template-past-wordcamps-php .wc-schedule .wc-schedule-more {
@@ -1639,9 +1648,10 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 .page-template-template-past-wordcamps-php .wc-schedule #content h2.wc-title,
 .page-template-template-past-wordcamps-php #content .wc-country,
+.page-template-template-past-wordcamps-php #content .wc-online-event,
 .page-template-template-past-wordcamps-php #content .wc-date {
 	margin-left: 145px;
-	display: block;
+	display: inline-block;
 }
 
 .page-template-template-past-wordcamps-php .wc-schedule .wc-schedule-list img,

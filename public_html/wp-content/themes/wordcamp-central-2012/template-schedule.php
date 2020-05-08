@@ -58,6 +58,9 @@ get_header(); ?>
 
 										<h2 class="wc-title"><?php wcpt_wordcamp_title(); ?></h2>
 										<span class="wc-country"><?php wcpt_wordcamp_location( $post->ID ); ?></span>
+										<?php if ( $post->{'Virtual event only'} ) : ?>
+											<span class="wc-online-event">Online Event</span>
+										<?php endif; ?>
 
 										<span class="wc-date">
 											<?php WordCamp_Central_Theme::the_wordcamp_date( $post->ID, true ); ?>

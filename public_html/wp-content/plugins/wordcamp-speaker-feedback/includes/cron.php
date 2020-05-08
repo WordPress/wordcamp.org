@@ -66,7 +66,6 @@ function notify_speakers_approved_feedback() {
 
 	foreach ( $speaker_session_ids as $user_id => $session_ids ) {
 		$speaker = get_user_by( 'id', $user_id );
-		// Todo: Implement a UI for toggling this user meta value.
 		if ( true === wp_validate_boolean( $speaker->{SPEAKER_OPT_OUT_KEY} ) ) {
 			continue;
 		}

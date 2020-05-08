@@ -153,8 +153,6 @@ function render_feedback_view() {
 		$approved       = absint( $feedback_count['approved'] );
 		$moderated      = absint( $feedback_count['moderated'] );
 
-		$notifications_opt_out = get_user_meta( get_current_user_id(), SPEAKER_OPT_OUT_KEY, true );
-
 		require get_views_path() . 'view-feedback.php';
 	}
 

@@ -6,12 +6,12 @@ use WP_User;
 use WordCamp\SpeakerFeedback\Feedback;
 use WordCamp\SpeakerFeedback\Walker_Feedback;
 use function WordCamp\SpeakerFeedback\View\render_rating_stars;
+use const WordCamp\SpeakerFeedback\Cron\SPEAKER_OPT_OUT_KEY;
 
 defined( 'WPINC' ) || die();
 
 /** @var int[] $session_speakers */
 /** @var bool $is_session_speaker */
-/** @var bool $notifications_opt_out */
 /** @var Feedback[] $feedback */
 /** @var int $avg_rating */
 /** @var int $approved */
@@ -46,35 +46,48 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 
 	<?php if ( ! $is_session_speaker ) : ?>
 		<p class="speaker-feedback__notice">
-			<?php esc_html_e( 'Only feedback recipients can toggle notifications and mark submissions as helpful.', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Only feedback recipients can mark submissions as helpful.', 'wordcamporg' ); ?>
 		</p>
 	<?php endif; ?>
 
-	<div class="speaker-feedback__notifications <?php echo ( $notifications_opt_out ) ? 'is-disabled' : ''; ?>">
-		<span class="sft-notifications-label-text">
-			<?php if ( $notifications_opt_out ) : ?>
-				<?php esc_html_e( 'Feedback notifications are disabled.', 'wordcamporg' ); ?>
-			<?php else : ?>
-				<?php esc_html_e( 'Feedback notifications are enabled.', 'wordcamporg' ); ?>
-			<?php endif; ?>
-		</span>
-		<label>
-			<?php if ( in_array( get_current_user_id(), $session_speakers, true ) ) : ?>
+	<?php foreach ( $session_speakers as $session_speaker ) :
+		if ( $is_session_speaker && get_current_user_id() !== $session_speaker ) {
+			continue;
+		}
+		$user = new WP_User( $session_speaker );
+		$notifications_opt_out = get_user_meta( $user->ID, SPEAKER_OPT_OUT_KEY, true );
+		?>
+		<div class="speaker-feedback__notifications <?php echo ( $notifications_opt_out ) ? 'is-disabled' : ''; ?>">
+			<span>
+				<?php if ( ! $is_session_speaker ) : ?>
+					<span class="sft-notifications-speaker-name">
+						<?php echo esc_html( $user->user_login ); ?>
+					</span>
+				<?php endif; ?>
+				<span class="sft-notifications-label-text">
+					<?php if ( $notifications_opt_out ) : ?>
+						<?php esc_html_e( 'Feedback notifications are disabled.', 'wordcamporg' ); ?>
+					<?php else : ?>
+						<?php esc_html_e( 'Feedback notifications are enabled.', 'wordcamporg' ); ?>
+					<?php endif; ?>
+				</span>
+			</span>
+			<label>
 				<input
 					type="checkbox"
-					data-user-id="<?php echo absint( get_current_user_id() ); ?>"
+					data-user-id="<?php echo absint( $user->ID ); ?>"
 					<?php checked( $notifications_opt_out ); ?>
 				/>
-			<?php endif; ?>
-			<span class="sft-notifications-toggle-text">
-				<?php if ( $notifications_opt_out ) : ?>
-					<?php esc_html_e( 'Enable', 'wordcamporg' ); ?>
-				<?php else : ?>
-					<?php esc_html_e( 'Disable', 'wordcamporg' ); ?>
-				<?php endif; ?>
-			</span>
-		</label>
-	</div>
+				<span class="sft-notifications-toggle-text">
+					<?php if ( $notifications_opt_out ) : ?>
+						<?php esc_html_e( 'Enable', 'wordcamporg' ); ?>
+					<?php else : ?>
+						<?php esc_html_e( 'Disable', 'wordcamporg' ); ?>
+					<?php endif; ?>
+				</span>
+			</label>
+		</div>
+	<?php endforeach; ?>
 
 	<?php if ( $approved >= 1 ) : ?>
 		<div class="speaker-feedback__overview">

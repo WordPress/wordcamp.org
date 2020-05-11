@@ -105,7 +105,7 @@ function add_feedback_page() {
 
 	$organizer_note  = '<!-- wp:paragraph {"textColor":"white","customBackgroundColor":"#94240b"} -->';
 	$organizer_note .= '<p style="background-color:#94240b" class="has-text-color has-background has-white-color">';
-	$organizer_note .= __( 'Organizer Note: This page is used to display the session list for Speaker Feedback form. It will be added after the content you enter here. You can remove this note.', 'wordcamporg' );
+	$organizer_note .= __( 'Organizer Note: This page is used to display the session list for the Speaker Feedback form. It will be added after the content you enter here. You can remove this note.', 'wordcamporg' );
 	$organizer_note .= '</p>';
 	$organizer_note .= '<!-- /wp:paragraph -->';
 

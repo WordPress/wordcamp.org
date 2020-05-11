@@ -19,7 +19,6 @@ defined( 'WPINC' ) || die();
 
 add_filter( 'the_content', __NAMESPACE__ . '\render' );
 add_filter( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
-add_filter( 'jetpack_open_graph_tags', __NAMESPACE__ . '\inject_page_description' );
 
 /**
  * Check if the current page should include the feedback form.
@@ -347,17 +346,4 @@ function get_feedback_average_rating( array $feedback ) {
 	);
 
 	return intval( round( $sum_rating / $count ) );
-}
-
-/**
- * Filter the og:description for the main feedback page.
- *
- * @param array $tags Array of Open Graph Meta tags.
- * @return array
- */
-function inject_page_description( $tags ) {
-	if ( is_page( get_option( OPTION_KEY ) ) ) {
-		$tags['og:description'] = __( 'You can show your appreciation and contribute back to the community by leaving constructive feedback. This not only helps speakers know what worked in their presentation and what didn’t, but it helps organizers get a sense of how successful the event was as a whole.', 'wordcamporg' );
-	}
-	return $tags;
 }

@@ -105,7 +105,19 @@ function add_feedback_page() {
 
 	$organizer_note  = '<!-- wp:paragraph {"textColor":"white","customBackgroundColor":"#94240b"} -->';
 	$organizer_note .= '<p style="background-color:#94240b" class="has-text-color has-background has-white-color">';
-	$organizer_note .= __( 'This page is a placeholder for the Speaker Feedback form. The content here will not be shown on the site.', 'wordcamporg' );
+	$organizer_note .= __( 'Organizer Note: This page is used to display the session list for the Speaker Feedback form. It will be added after the content you enter here. You can remove this note.', 'wordcamporg' );
+	$organizer_note .= '</p>';
+	$organizer_note .= '<!-- /wp:paragraph -->';
+
+	$organizer_note .= '<!-- wp:paragraph -->';
+	$organizer_note .= '<p>';
+	$organizer_note .= __( 'You can show your appreciation and contribute back to the community by leaving constructive feedback. This not only helps speakers know what worked in their presentation and what didn’t, but it helps organizers get a sense of how successful the event was as a whole.', 'wordcamporg' );
+	$organizer_note .= '</p>';
+	$organizer_note .= '<!-- /wp:paragraph -->';
+
+	$organizer_note .= '<!-- wp:paragraph -->';
+	$organizer_note .= '<p>';
+	$organizer_note .= __( 'The feedback you give will only be shown to speakers and organizers.', 'wordcamporg' );
 	$organizer_note .= '</p>';
 	$organizer_note .= '<!-- /wp:paragraph -->';
 

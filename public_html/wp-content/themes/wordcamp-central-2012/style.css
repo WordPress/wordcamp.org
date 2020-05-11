@@ -1511,6 +1511,10 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	border-top: 1px #ececec solid;
 }
 
+.wc-schedule .wc-schedule-list li:nth-of-type(odd) {
+	clear: left;
+}
+
 .wc-schedule #content .wc-schedule-list h2.wc-title {
 	display: inline;
 	color: #028db9;

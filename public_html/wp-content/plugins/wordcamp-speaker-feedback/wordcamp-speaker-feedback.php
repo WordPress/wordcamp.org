@@ -117,7 +117,7 @@ function add_feedback_page() {
 
 	$organizer_note .= '<!-- wp:paragraph -->';
 	$organizer_note .= '<p>';
-	$organizer_note .= __( 'The feedback you give will only be shown to speakers & organizers.', 'wordcamporg' );
+	$organizer_note .= __( 'The feedback you give will only be shown to speakers and organizers.', 'wordcamporg' );
 	$organizer_note .= '</p>';
 	$organizer_note .= '<!-- /wp:paragraph -->';
 

@@ -153,6 +153,33 @@ function get_session_speaker_user_ids( $session_id ) {
 }
 
 /**
+ * Get a list of speaker names for a given session.
+ *
+ * @param int $session_id
+ *
+ * @return array
+ */
+function get_session_speaker_names( $session_id ) {
+	$speakers         = array();
+	$speaker_post_ids = get_post_meta( $session_id, '_wcpt_speaker_id' );
+
+	if ( ! empty( $speaker_post_ids ) ) {
+		$speakers = get_posts( array(
+			'post_type'      => 'wcb_speaker',
+			'posts_per_page' => - 1,
+			'post__in'       => $speaker_post_ids,
+		) );
+	}
+
+	$names = array();
+	foreach ( $speakers as $speaker ) {
+		$names[] = apply_filters( 'the_title', $speaker->post_title );
+	}
+
+	return $names;
+}
+
+/**
  * Generate a link to the front end feedback UI for a particular session.
  *
  * @param int $post_id

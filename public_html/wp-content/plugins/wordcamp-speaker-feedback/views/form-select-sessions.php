@@ -1,6 +1,7 @@
 <?php
 
 namespace WordCamp\SpeakerFeedback\View;
+use function WordCamp\SpeakerFeedback\Post\get_session_speaker_names;
 
 $session_args = array(
 	'post_type'      => 'wcb_session',
@@ -27,10 +28,18 @@ if ( $sessions->have_posts() ) : ?>
 			<select name="sft_session" id="sft-session">
 				<?php while ( $sessions->have_posts() ) :
 					$sessions->the_post();
+					$session_title = get_the_title();
+					$session_time  = absint( get_post_meta( get_the_ID(), '_wcpt_session_time', true ) );
+					$option_text   = sprintf( '%1$s: %2$s', wp_date( 'M d, g:ia', $session_time ), $session_title );
+
+					$speakers = get_session_speaker_names( get_the_ID() );
+					if ( ! empty( $speakers ) ) {
+						$option_text .= ' — ' . implode( ', ', $speakers );
+					}
 					printf(
 						'<option value="%s">%s</option>',
 						esc_attr( get_the_ID() ),
-						wp_kses_post( get_the_title() )
+						wp_kses_post( $option_text )
 					);
 				endwhile; ?>
 			</select>

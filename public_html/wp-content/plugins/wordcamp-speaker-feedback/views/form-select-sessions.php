@@ -5,11 +5,16 @@ namespace WordCamp\SpeakerFeedback\View;
 $session_args = array(
 	'post_type'      => 'wcb_session',
 	'posts_per_page' => -1,
-	'orderby'        => 'title',
+	'orderby'        => 'meta_value_num',
 	'order'          => 'asc',
+	'meta_key'       => '_wcpt_session_time',
 	// get only sessions, no breaks.
-	'meta_key'       => '_wcpt_session_type',
-	'meta_value'     => 'session',
+	'meta_query'     => array(
+		array(
+			'key'   => '_wcpt_session_type',
+			'value' => 'session',
+		),
+	),
 );
 
 $sessions = new \WP_Query( $session_args );

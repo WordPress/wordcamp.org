@@ -4,6 +4,7 @@ namespace WordCamp\SpeakerFeedback;
 
 use WP_Error, WP_REST_Request, WP_REST_Response, WP_REST_Server, WP_User;
 use WP_REST_Controller;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use const WordCamp\SpeakerFeedback\Cron\SPEAKER_OPT_OUT_KEY;
 
 defined( 'WPINC' ) || die();
@@ -134,7 +135,9 @@ class REST_Notifications_Controller extends WP_REST_Controller {
 			);
 		}
 
-		if ( ! current_user_can( 'edit_user', $user->ID ) ) {
+		// On multisite, only super admins can edit users. Single site admins should be able to modify notifications
+		// for speakers, so we also check our custom feedback moderation capability here.
+		if ( ! current_user_can( 'edit_user', $user->ID ) && ! current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
 			return new WP_Error(
 				'rest_feedback_cannot_edit_user',
 				__( 'Sorry, you are not allowed to edit this user.', 'wordcamporg' ),

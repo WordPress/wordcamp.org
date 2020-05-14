@@ -30,11 +30,26 @@ if ( $sessions->have_posts() ) : ?>
 					$sessions->the_post();
 					$session_title = get_the_title();
 					$session_time  = absint( get_post_meta( get_the_ID(), '_wcpt_session_time', true ) );
-					$option_text   = sprintf( '%1$s: %2$s', wp_date( 'M d, g:ia', $session_time ), $session_title );
+					/* translators: Abbreviated date & time used in session dropdown. */
+					$session_date  = wp_date( __( 'M d, g:ia', 'wordcamporg' ), $session_time );
 
 					$speakers = get_session_speaker_names( get_the_ID() );
 					if ( ! empty( $speakers ) ) {
-						$option_text .= ' — ' . implode( ', ', $speakers );
+						$option_text = sprintf(
+							/* translators: %1$s: Date & time of the session. %2$s: Session title. %3$s: Speaker names. */
+							__( '%1$s: %2$s - %3$s', 'wordcamporg' ),
+							$session_date,
+							$session_title,
+							/* translators: used between list items, there is a space after the comma */
+							implode( __( ', ', 'wordcamporg' ), $speakers )
+						);
+					} else {
+						$option_text = sprintf(
+							/* translators: %1$s: Date & time of the session. %2$s: Session title. */
+							__( '%1$s: %2$s', 'wordcamporg' ),
+							$session_date,
+							$session_title
+						);
 					}
 					printf(
 						'<option value="%s">%s</option>',

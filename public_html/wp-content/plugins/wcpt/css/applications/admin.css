@@ -1,65 +1,65 @@
 span.swag-needed-icon {
-    color: goldenrod;
+	color: goldenrod;
 }
 
 .wcpt-field label {
-    font-weight: 600;
+	font-weight: 600;
 }
 
 #post-body textarea {
-    width: 50%;
-    min-width: 20rem;
-    height: 150px;
+	width: 50%;
+	min-width: 20rem;
+	height: 150px;
 }
 
 #post-body #wcpt_notes textarea {
-    resize: both;
-    width: 100%;
-    min-width: 0;
+	resize: both;
+	width: 100%;
+	min-width: 0;
 }
 
 body.wp-admin.post-type-wordcamp .postbox textarea,
 body.wp-admin.post-type-wp_meetup .postbox textarea {
-    resize: both;
+	resize: both;
 }
 
 #post-body .wcpt-field input[type="checkbox"],
 #post-body .wcpt-field input[type="radio"] {
-    margin: 0 0 0 5px;
+	margin: 0 0 0 5px;
 }
 
 #post-body .wcpt-field input[type=text] {
-    width: 50%;
-    min-width: 20rem;
+	width: 50%;
+	min-width: 20rem;
 }
 
 #post-body .field__type-select-streaming input[type=text] {
-    width: 18rem;
+	width: 18rem;
 }
 
 .postbox-container .select2-container {
-    min-width: 25%;
+	min-width: 25%;
 }
 
 #wcpt_log .widefat th p:first-of-type {
-		margin-top: 0;
+	margin-top: 0;
 }
 
 #wcpt_log .widefat th p:last-of-type {
-		margin-bottom: 0;
+	margin-bottom: 0;
 }
 
 #wcpt_log .widefat td p,
 #wcpt_log .widefat th p {
-		color: #777;
+	color: #777;
 }
 
 #wcpt_log .widefat tr.note td,
 #wcpt_log .widefat tr.note th {
-		vertical-align:top;
+	vertical-align:top;
 }
 
 #wcpt_log .widefat tr.note td p,
 #wcpt_log .widefat tr.note th p {
-		color: #222;
+	color: #222;
 }

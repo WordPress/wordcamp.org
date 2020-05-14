@@ -155,6 +155,7 @@ function wcorg_get_domain_redirects() {
 		'2019.sevilla.wordcamp.org'              => '2019-developers.sevilla.wordcamp.org',
 		'2019.telaviv.wordcamp.org'              => '2020.telaviv.wordcamp.org',
 		'2020-barcelona.publishers.wordcamp.org' => '2020.barcelona.wordcamp.org',
+		'2020.losangeles.wordcamp.org'           => '2020.la.wordcamp.org',
 		'2020.bucharest.wordcamp.org'            => '2021.bucharest.wordcamp.org',
 
 		// Misc redirects.

@@ -44,11 +44,28 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 <div class="speaker-feedback">
 	<h2><?php esc_html_e( 'Session Feedback', 'wordcamporg' ); ?></h2>
 
-	<?php if ( ! $is_session_speaker ) : ?>
-		<p class="speaker-feedback__notice">
-			<?php esc_html_e( 'Only feedback recipients can mark submissions as helpful.', 'wordcamporg' ); ?>
-		</p>
-	<?php endif; ?>
+	<p class="speaker-feedback__notice">
+		<?php if ( $is_session_speaker ) : ?>
+			<?php
+			esc_html_e( '
+				Email notifications are sent up to once per day when new feedback submissions have been approved.
+				Disabling this will turn off feedback notifications on all WordCamp sites.
+				',
+				'wordcamporg'
+			);
+			?>
+		<?php else : ?>
+			<?php
+			esc_html_e( '
+				Email notifications to speakers are sent up to once per day when new feedback submissions have been
+				approved. Disabling these emails for a speaker will turn off feedback notifications for them on all
+				WordCamp sites.
+				',
+				'wordcamporg'
+			);
+			?>
+		<?php endif; ?>
+	</p>
 
 	<?php foreach ( $session_speakers as $session_speaker ) :
 		if ( $is_session_speaker && get_current_user_id() !== $session_speaker ) {
@@ -128,6 +145,12 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 			</div>
 			<input type="submit" value="Filter" />
 		</form>
+
+		<?php if ( ! $is_session_speaker ) : ?>
+			<p class="speaker-feedback__notice">
+				<?php esc_html_e( 'Only feedback recipients can mark submissions as helpful.', 'wordcamporg' ); ?>
+			</p>
+		<?php endif; ?>
 
 		<div class="speaker-feedback__list comment-list">
 			<?php

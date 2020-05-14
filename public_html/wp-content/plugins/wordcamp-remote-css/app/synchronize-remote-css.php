@@ -36,7 +36,7 @@ function fetch_unsafe_remote_css( $remote_css_url ) {
 	$response = wp_remote_get(
 		$remote_css_url,
 		array(
-			'user-agent'         => 'WordCamp.org Remote CSS',  // GitHub's API explicitly requests this, and it could be beneficial for other platforms too.
+			'user-agent'         => USER_AGENT,
 			'reject_unsafe_urls' => true,
 		)
 	);

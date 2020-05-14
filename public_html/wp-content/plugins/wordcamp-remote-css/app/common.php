@@ -15,7 +15,7 @@ const SYNCHRONIZE_ACTION    = 'wcrcss_synchronize';
 const WEBHOOK_RATE_LIMIT    = 30; // seconds.
 const OPTION_REMOTE_CSS_URL = 'wcrcss_remote_css_url';
 const CSS_HANDLE            = 'wordcamp_remote_css';
-const GITHUB_API_HOSTNAME   = 'api.github.com';
+const USER_AGENT            = 'WordCamp.org Remote CSS'; // GitHub's API explicitly requests this, and it could be beneficial for other platforms too.
 
 add_action( 'init',               __NAMESPACE__ . '\register_post_types'  );
 add_action( 'customize_register', __NAMESPACE__ . '\add_discovery_notice' );

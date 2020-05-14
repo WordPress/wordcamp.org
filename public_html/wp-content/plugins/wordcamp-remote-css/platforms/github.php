@@ -181,13 +181,13 @@ function get_app_install_token() {
 
 	$installs = wp_remote_get(
 		'https://' . API_HOSTNAME . '/app/installations',
-		[
+		array(
 			'user-agent' => USER_AGENT,
-			'headers'    => [
+			'headers'    => array(
 				'Accept'        => 'application/vnd.github.machine-man-preview+json',
 				'Authorization' => 'BEARER ' . $jwt_token,
-			]
-		]
+			),
+		)
 	);
 
 	$installs = is_wp_error( $installs ) ? false : json_decode( wp_remote_retrieve_body( $installs ) );
@@ -198,13 +198,13 @@ function get_app_install_token() {
 
 	$access_token = wp_remote_post(
 		$installs[0]->access_tokens_url,
-		[
+		array(
 			'user-agent' => USER_AGENT,
-			'headers'    => [
+			'headers'    => array(
 				'Accept'        => 'application/vnd.github.machine-man-preview+json',
 				'Authorization' => 'BEARER ' . $jwt_token,
-			]
-		]
+			),
+		)
 	);
 
 	$access_token = is_wp_error( $access_token ) ? false : json_decode( wp_remote_retrieve_body( $access_token ) );
@@ -238,13 +238,13 @@ function get_jwt_app_token() {
 	$key = openssl_pkey_get_private( base64_decode( REMOTE_CSS_GITHUB_APP_PRIV_KEY ) );
 	$jwt = new \Ahc\Jwt\JWT( $key, 'RS256' );
 
-	$token = $jwt->encode([
+	$token = $jwt->encode( array(
 		'iat' => time(),
 		'exp' => time() + 10 * MINUTE_IN_SECONDS,
 		'iss' => REMOTE_CSS_GITHUB_APP_ID,
-	]);
+	) );
 
-	// Cache it for 9 mins (It's valid for 10min)
+	// Cache it for 9 mins (It's valid for 10min).
 	set_site_transient( __NAMESPACE__ . 'app_token', $token, 9 * MINUTE_IN_SECONDS );
 
 	return $token;

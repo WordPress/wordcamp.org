@@ -75,7 +75,7 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 		$notifications_opt_out = get_user_meta( $user->ID, SPEAKER_OPT_OUT_KEY, true );
 		?>
 		<div class="speaker-feedback__notifications <?php echo ( $notifications_opt_out ) ? 'is-disabled' : ''; ?>">
-			<span>
+			<span id="sft-notifications-description">
 				<?php if ( ! $is_session_speaker ) : ?>
 					<span class="speaker-feedback__notifications-speaker-name">
 						<?php echo esc_html( $user->user_login ); ?>
@@ -92,6 +92,7 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 			<label>
 				<input
 					type="checkbox"
+					aria-describedby="sft-notifications-description"
 					data-user-id="<?php echo absint( $user->ID ); ?>"
 					<?php checked( $notifications_opt_out ); ?>
 				/>

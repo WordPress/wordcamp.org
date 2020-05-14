@@ -44,7 +44,17 @@ function auto_connect_new_sites( $new_value, $old_value ) {
  */
 function schedule_connect_new_site( $new_site ) {
 	wp_schedule_single_event(
-		time() + 12 * HOUR_IN_SECONDS + 600, // After the the SSL certificate has been installed
+		/*
+		 * Jetpack can't be connected until the domain's SSL certificate is installed.
+		 *
+		 * The daemon that polls our `domains-dehydrated` endpoint for new domains runs every 10 seconds.
+		 * When it detects a new domain, it calls Dehydrated, which needs a little bit of time to order,
+		 * verify, and install the new certificate, and then gracefully reload nginx config.
+		 *
+		 * The UX benefits of connecting quickly drops off sharply after ~3 seconds, so we might as
+		 * well wait a bit longer, in order to improve reliability.
+		 */
+		time() + MINUTE_IN_SECONDS,
 		'wcorg_connect_new_site_email',
 		array( $new_site->blog_id, get_current_user_id() )
 	);
@@ -59,7 +69,6 @@ function schedule_connect_new_site( $new_site ) {
  * @param int $user_id The user ID who created the new site.
  */
 function wcorg_connect_new_site_email( $blog_id, $user_id ) {
-
 	$original_blog_id = get_current_blog_id();
 
 	switch_to_blog( $blog_id );

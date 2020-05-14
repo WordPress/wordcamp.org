@@ -114,8 +114,8 @@
 			},
 		} )
 			.then( function() {
-				var $labelText = $container.find( '.sft-notifications-label-text' ),
-					$toggleText = $container.find( '.sft-notifications-toggle-text' );
+				var $labelText = $container.find( '.speaker-feedback__notifications-label-text' ),
+					$toggleText = $container.find( '.speaker-feedback__notifications-toggle-text' );
 
 				$container.removeClass( 'is-inflight' );
 				$container.toggleClass( 'is-disabled' );

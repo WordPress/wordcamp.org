@@ -77,11 +77,11 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 		<div class="speaker-feedback__notifications <?php echo ( $notifications_opt_out ) ? 'is-disabled' : ''; ?>">
 			<span>
 				<?php if ( ! $is_session_speaker ) : ?>
-					<span class="sft-notifications-speaker-name">
+					<span class="speaker-feedback__notifications-speaker-name">
 						<?php echo esc_html( $user->user_login ); ?>
 					</span>
 				<?php endif; ?>
-				<span class="sft-notifications-label-text">
+				<span class="speaker-feedback__notifications-label-text">
 					<?php if ( $notifications_opt_out ) : ?>
 						<?php esc_html_e( 'Feedback notifications are disabled.', 'wordcamporg' ); ?>
 					<?php else : ?>
@@ -95,7 +95,7 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 					data-user-id="<?php echo absint( $user->ID ); ?>"
 					<?php checked( $notifications_opt_out ); ?>
 				/>
-				<span class="sft-notifications-toggle-text">
+				<span class="speaker-feedback__notifications-toggle-text">
 					<?php if ( $notifications_opt_out ) : ?>
 						<?php esc_html_e( 'Enable', 'wordcamporg' ); ?>
 					<?php else : ?>

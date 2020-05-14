@@ -43,6 +43,7 @@ if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_
 function load() {
 	require_once get_includes_path() . 'class-feedback.php';
 	require_once get_includes_path() . 'class-rest-feedback-controller.php';
+	require_once get_includes_path() . 'class-rest-notifications-controller.php';
 	require_once get_includes_path() . 'class-walker-feedback.php';
 	require_once get_includes_path() . 'cron.php';
 	require_once get_includes_path() . 'capabilities.php';
@@ -139,8 +140,11 @@ function add_page_endpoint() {
  * @return void
  */
 function register_rest_routes() {
-	$controller = new REST_Feedback_Controller();
-	$controller->register_routes();
+	$feedback_controller = new REST_Feedback_Controller();
+	$feedback_controller->register_routes();
+
+	$notifications_controller = new REST_Notifications_Controller();
+	$notifications_controller->register_routes();
 }
 
 /**

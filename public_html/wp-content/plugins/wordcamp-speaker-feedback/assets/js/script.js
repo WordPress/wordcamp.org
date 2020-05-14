@@ -107,7 +107,7 @@
 		var isDisabled = $container.hasClass( 'is-disabled' );
 
 		wp.apiFetch( {
-			path: '/wordcamp-speaker-feedback/v1/feedback/notifications/' + input.dataset.userId,
+			path: '/wordcamp-speaker-feedback/v1/notifications/' + input.dataset.userId,
 			method: 'POST',
 			data: {
 				speaker_opt_out: isDisabled ? 'false' : 'true',

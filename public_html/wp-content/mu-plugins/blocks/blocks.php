@@ -1,4 +1,5 @@
 <?php
+
 namespace WordCamp\Blocks;
 
 defined( 'WPINC' ) || die();
@@ -22,9 +23,8 @@ function load_includes() {
 	$components_dir = PLUGIN_DIR . 'source/components/';
 	$hooks_dir      = PLUGIN_DIR . 'source/hooks/';
 
-	require_once $includes_dir . 'definitions.php';
-
 	// Utilities.
+	require_once $includes_dir . 'definitions.php';
 	require_once $includes_dir . 'content.php';
 
 	// Components.
@@ -38,6 +38,19 @@ function load_includes() {
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
 	require_once $blocks_dir . 'live-schedule/controller.php';
+
+	$beta_block_test_sites = array(
+		928, // 2017.testing
+	);
+
+	$load_beta_blocks =
+		'local'       === WORDCAMP_ENVIRONMENT ||
+		'development' === WORDCAMP_ENVIRONMENT ||
+		in_array( get_current_blog_id(), $beta_block_test_sites, true );
+
+	if ( $load_beta_blocks ) {
+		require_once $blocks_dir . 'schedule/controller.php';
+	}
 
 	// Hooks.
 	require_once $hooks_dir . 'latest-posts/controller.php';

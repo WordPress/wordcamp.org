@@ -12,6 +12,10 @@ import { BLOCKS } from './blocks/'; // Trailing slash required to differentiate 
 // This attaches to the hook itself.
 import './hooks/latest-posts';
 
+/*
+ * When a block isn't enabled on the current site, it won't be registered by it's `controller.php`.
+ * See also `blocks.php`.
+ */
 const enabledBlocks = BLOCKS.filter( ( block ) =>
 	window.WordCampBlocks.hasOwnProperty( block.NAME.replace( 'wordcamp/', '' ) )
 );

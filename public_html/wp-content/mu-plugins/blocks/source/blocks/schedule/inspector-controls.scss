@@ -1,0 +1,26 @@
+.wordcamp-schedule__control-container {
+	margin-top: 24px;
+}
+
+.edit-post-settings-sidebar__panel-block .components-panel__body .wordcamp-schedule__control-container {
+	.components-base-control,
+	.components-toggle-control .components-base-control__field,
+	.components-base-control .components-base-control__field {
+		margin-bottom: 0;
+	}
+}
+
+.wordcamp-schedule__choose-specific-days,
+.wordcamp-schedule__choose-specific-tracks {
+	flex-direction: column;
+	align-items: start;
+}
+
+// todo need to target to only the schedule block controls -- https://github.com/WordPress/gutenberg/issues/22198
+.block-editor-block-styles__item-preview {
+	align-items: flex-start;
+	max-height: 200px;
+
+	// todo the preview shifts a little when toggling `chooseSpecificTracks`, it shouldn't move at all.
+	// works fine for days, and toggling individual tracks.
+}

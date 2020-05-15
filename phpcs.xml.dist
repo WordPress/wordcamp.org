@@ -129,6 +129,9 @@
 			</properties>
 		</rule>
 
+		<!-- @todo This is temporary until the above version works. -->
+		<exclude name="WordPress.Arrays.MultipleStatementAlignment.DoubleArrowNotAligned" />
+
 		<!-- Warn about mis-aligned array items, but don't automatically "fix" them, because arrays in function calls get extra lines added.
 		     See https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards/issues/1305 -->
 		<exclude phpcbf-only="true" name="PEAR.Functions.FunctionCallSignature" />

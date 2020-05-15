@@ -94,6 +94,9 @@
 		<!-- It's often obvious what the placeholder is, so whether or not to include a comment is a judgement call. -->
 		<exclude name="WordPress.WP.I18n.MissingTranslatorsComment" />
 
+		<!-- Workaround for https://github.com/WordPress/WordPress-Coding-Standards/issues/1244 -->
+		<exclude name="WordPress.WP.DeprecatedFunctions.get_settingsFound" />
+
 		<!-- I know it's a language construct, but it just looks better using the function call syntax. -->
 		<exclude name="PEAR.Files.IncludingFile.BracketsNotRequired" />
 

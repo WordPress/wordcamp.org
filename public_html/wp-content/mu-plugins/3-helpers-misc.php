@@ -307,3 +307,23 @@ function wcorg_get_custom_css_url() {
 
 	return $element instanceof DOMElement ? $element->getAttribute( 'href' ) : false;
 }
+
+/**
+ * JSON-encode data for use in HTML attributes.
+ *
+ * This is similar to just doing the common practice of `<foo bar="<?php echo wp_json_encode( $quix ); ?>">`, but
+ * it handles some rare i18n edge cases where characters would get displayed incorrectly. It's the same idea as
+ * using `rawurlencode( wp_json_encode( $attributes )` with `<script>` tags, but tailored for HTML attributes.
+ *
+ * @param mixed $raw_value
+ *
+ * @return string
+ */
+function wcorg_json_encode_attr_i18n( $raw_value ) {
+	return _wp_specialchars(
+		wp_json_encode( $raw_value ),
+		ENT_QUOTES,
+		'UTF-8',
+		true
+	);
+}

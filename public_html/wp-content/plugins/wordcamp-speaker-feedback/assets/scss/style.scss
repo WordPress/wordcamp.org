@@ -259,11 +259,12 @@
 }
 
 /**
- * Speaker view: "Is this helpful" form.
+ * Speaker view: "Is this helpful" form and notification opt-out form.
  */
 
+.speaker-feedback__notifications,
 .speaker-feedback__helpful {
-	margin-top: 1em;
+	margin-bottom: 1em;
 	padding: 1rem 1.5rem;
 	color: $dark-gray-900;
 	background: $light-gray-200;
@@ -297,6 +298,11 @@
 		}
 	}
 
+	.speaker-feedback__notifications-speaker-name {
+		display: block;
+		font-weight: 700;
+	}
+
 	&.is-helpful label {
 		color: #fff;
 		border: 1px solid #31843f;
@@ -318,6 +324,11 @@
 		cursor: wait;
 	}
 	// stylelint-enable
+}
+
+.speaker-feedback__helpful {
+	margin-top: 1em;
+	margin-bottom: 0;
 }
 
 /**

@@ -12,7 +12,7 @@ use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 defined( 'WPINC' ) || die();
 
 /**
- * Class Test_SpeakerFeedback_Comment
+ * Class Test_SpeakerFeedback_REST_Feedback_Controller
  *
  * @group wordcamp-speaker-feedback
  */
@@ -70,7 +70,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 		) );
 
 		self::$posts['speaker'] = $factory->post->create_and_get( array(
-			'post_type'  => 'wcb_session',
+			'post_type'  => 'wcb_speaker',
 			'meta_input' => array(
 				'_wcpt_user_id' => self::$users['speaker']->ID,
 			),

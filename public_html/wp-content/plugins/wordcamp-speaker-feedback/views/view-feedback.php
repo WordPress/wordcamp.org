@@ -2,12 +2,15 @@
 
 namespace WordCamp\SpeakerFeedback\View;
 
+use WP_User;
 use WordCamp\SpeakerFeedback\Feedback;
 use WordCamp\SpeakerFeedback\Walker_Feedback;
 use function WordCamp\SpeakerFeedback\View\render_rating_stars;
+use const WordCamp\SpeakerFeedback\Cron\SPEAKER_OPT_OUT_KEY;
 
 defined( 'WPINC' ) || die();
 
+/** @var int[] $session_speakers */
 /** @var bool $is_session_speaker */
 /** @var Feedback[] $feedback */
 /** @var int $avg_rating */
@@ -40,6 +43,69 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 <hr />
 <div class="speaker-feedback">
 	<h2><?php esc_html_e( 'Session Feedback', 'wordcamporg' ); ?></h2>
+
+	<p class="speaker-feedback__notice">
+		<?php if ( $is_session_speaker ) : ?>
+			<?php
+			esc_html_e( '
+				Email notifications are sent up to once per day when new feedback submissions have been approved.
+				Disabling this will turn off feedback notifications on all WordCamp sites.
+				',
+				'wordcamporg'
+			);
+			?>
+		<?php else : ?>
+			<?php
+			esc_html_e( '
+				Email notifications to speakers are sent up to once per day when new feedback submissions have been
+				approved. Disabling these emails for a speaker will turn off feedback notifications for them on all
+				WordCamp sites.
+				',
+				'wordcamporg'
+			);
+			?>
+		<?php endif; ?>
+	</p>
+
+	<?php foreach ( $session_speakers as $session_speaker ) :
+		if ( $is_session_speaker && get_current_user_id() !== $session_speaker ) {
+			continue;
+		}
+		$user = new WP_User( $session_speaker );
+		$notifications_opt_out = get_user_meta( $user->ID, SPEAKER_OPT_OUT_KEY, true );
+		?>
+		<div class="speaker-feedback__notifications <?php echo ( $notifications_opt_out ) ? 'is-disabled' : ''; ?>">
+			<span id="sft-notifications-description-<?php echo esc_attr( absint( $user->ID ) ); ?>">
+				<?php if ( ! $is_session_speaker ) : ?>
+					<span class="speaker-feedback__notifications-speaker-name">
+						<?php echo esc_html( $user->user_login ); ?>
+					</span>
+				<?php endif; ?>
+				<span class="speaker-feedback__notifications-label-text">
+					<?php if ( $notifications_opt_out ) : ?>
+						<?php esc_html_e( 'Feedback notifications are disabled.', 'wordcamporg' ); ?>
+					<?php else : ?>
+						<?php esc_html_e( 'Feedback notifications are enabled.', 'wordcamporg' ); ?>
+					<?php endif; ?>
+				</span>
+			</span>
+			<label>
+				<input
+					type="checkbox"
+					aria-describedby="sft-notifications-description-<?php echo esc_attr( absint( $user->ID ) ); ?>"
+					data-user-id="<?php echo absint( $user->ID ); ?>"
+					<?php checked( $notifications_opt_out ); ?>
+				/>
+				<span class="speaker-feedback__notifications-toggle-text">
+					<?php if ( $notifications_opt_out ) : ?>
+						<?php esc_html_e( 'Enable', 'wordcamporg' ); ?>
+					<?php else : ?>
+						<?php esc_html_e( 'Disable', 'wordcamporg' ); ?>
+					<?php endif; ?>
+				</span>
+			</label>
+		</div>
+	<?php endforeach; ?>
 
 	<?php if ( $approved >= 1 ) : ?>
 		<div class="speaker-feedback__overview">
@@ -93,7 +159,7 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 				array(
 					// Note: `Walker_Feedback` does not support the callback or format args.
 					'walker' => new Walker_Feedback(),
-					'style' => 'div',
+					'style'  => 'div',
 				),
 				$feedback
 			);

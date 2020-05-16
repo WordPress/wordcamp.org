@@ -96,6 +96,42 @@
 		$( event.target ).siblings( '.speaker-feedback__field-help' ).text( len + '/' + maxLen );
 	}
 
+	function onNotificationClick( event ) {
+		var $container = $( event.target ).closest( 'div' );
+		if ( $container.hasClass( 'is-inflight' ) ) {
+			return;
+		}
+		$container.addClass( 'is-inflight' );
+
+		var input = $container.find( 'input[type="checkbox"]' ).get( 0 );
+		var isDisabled = $container.hasClass( 'is-disabled' );
+
+		wp.apiFetch( {
+			path: '/wordcamp-speaker-feedback/v1/notifications/' + input.dataset.userId,
+			method: 'POST',
+			data: {
+				speaker_opt_out: isDisabled ? 'false' : 'true',
+			},
+		} )
+			.then( function() {
+				var $labelText = $container.find( '.speaker-feedback__notifications-label-text' ),
+					$toggleText = $container.find( '.speaker-feedback__notifications-toggle-text' );
+
+				$container.removeClass( 'is-inflight' );
+				$container.toggleClass( 'is-disabled' );
+				if ( isDisabled ) {
+					// Previous state was disabled, has been enabled.
+					$labelText.text( SpeakerFeedbackData.messages.notificationsEnabled );
+					$toggleText.text( SpeakerFeedbackData.messages.disableNotifications );
+					wp.a11y.speak( SpeakerFeedbackData.messages.notificationsEnabled, 'polite' );
+				} else {
+					$labelText.text( SpeakerFeedbackData.messages.notificationsDisabled );
+					$toggleText.text( SpeakerFeedbackData.messages.enableNotifications );
+					wp.a11y.speak( SpeakerFeedbackData.messages.notificationsDisabled, 'polite' );
+				}
+			} );
+	}
+
 	function onHelpfulClick( event ) {
 		var $container = $( event.target ).closest( 'footer' );
 		if ( $container.hasClass( 'is-inflight' ) ) {
@@ -135,6 +171,13 @@
 	if ( feedbackForm ) {
 		feedbackForm.addEventListener( 'submit', onFormSubmit, true );
 		$( feedbackForm ).on( 'keyup', 'textarea[data-maxlength]', lodash.debounce( characterCounter, 250 ) );
+	}
+
+	var notificationButtons = document.querySelectorAll( '.speaker-feedback__notifications input' );
+	if ( notificationButtons.length ) {
+		notificationButtons.forEach( function( el ) {
+			el.addEventListener( 'click', onNotificationClick, true );
+		} );
 	}
 
 	var helpfulButtons = document.querySelectorAll( '.speaker-feedback__helpful input' );

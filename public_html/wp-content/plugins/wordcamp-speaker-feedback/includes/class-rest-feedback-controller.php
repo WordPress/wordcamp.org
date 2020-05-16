@@ -4,11 +4,11 @@ namespace WordCamp\SpeakerFeedback;
 
 use WP_Error, WP_REST_Request, WP_REST_Response, WP_REST_Server;
 use WP_REST_Comments_Controller;
-use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 use function WordCamp\SpeakerFeedback\Comment\{ add_feedback, is_feedback, update_feedback };
 use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_meta_field_schema, validate_feedback_meta };
 use function WordCamp\SpeakerFeedback\Post\post_accepts_feedback;
 use function WordCamp\SpeakerFeedback\Spam\spam_check;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -30,8 +30,6 @@ class REST_Feedback_Controller extends WP_REST_Comments_Controller {
 
 	/**
 	 * Registers the routes for the objects of the controller.
-	 *
-	 * Currently, the only route needed for feedback is `create`.
 	 *
 	 * @return void
 	 */

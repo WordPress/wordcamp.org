@@ -33,7 +33,7 @@ function schedule_jobs() {
  * @return void
  */
 function notify_speakers_approved_feedback() {
-	if ( ! speaker_notifications_are_enabled() ) {
+	if ( ! feedback_notifications_are_enabled() ) {
 		return;
 	}
 
@@ -152,16 +152,16 @@ function notify_speakers_approved_feedback() {
  *
  * @return bool
  */
-function speaker_notifications_are_enabled() {
+function feedback_notifications_are_enabled() {
 	$now       = date_create( 'now', wp_timezone() );
-	$stop_time = get_option( 'sft_speaker_notification_stop_time', false );
+	$stop_time = get_option( 'sft_notification_stop_time', false );
 
 	if ( false !== $stop_time && $now->getTimestamp() > $stop_time ) {
 		return false;
 	}
 
 	// Session times can change, so this is a transient.
-	$start_time = get_transient( 'sft_speaker_notification_start_time' );
+	$start_time = get_transient( 'sft_notification_start_time' );
 
 	if ( ! $start_time ) {
 		$start_time = get_earliest_session_timestamp();
@@ -170,10 +170,10 @@ function speaker_notifications_are_enabled() {
 			return false;
 		}
 
-		set_transient( 'sft_speaker_notification_start_time', $start_time, DAY_IN_SECONDS );
+		set_transient( 'sft_notification_start_time', $start_time, DAY_IN_SECONDS );
 
 		$stop_time = strtotime( '+ 3 months', get_latest_session_ending_timestamp() );
-		update_option( 'sft_speaker_notification_stop_time', $stop_time, false );
+		update_option( 'sft_notification_stop_time', $stop_time, false );
 	}
 
 	return $now->getTimestamp() > $start_time;

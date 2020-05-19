@@ -59,7 +59,7 @@ function notify_organizers_unapproved_feedback() {
 	}
 
 	$subject = sprintf(
-	// translators: 1. Number of feedback submissions. 2. WordCamp name.
+		// translators: 1. Number of feedback submissions. 2. WordCamp name.
 		esc_html( _n(
 			'There is %1$s speaker feedback submission awaiting moderation on %2$s',
 			'There are %1$s speaker feedback submissions awaiting moderation on %2$s',
@@ -71,29 +71,46 @@ function notify_organizers_unapproved_feedback() {
 	);
 
 	$message  = esc_html__(
-		'Feedback is most effective when it is timely. The speakers from your event won\'t see
-		this feedback until it has been approved. You can manage feedback submissions here:',
+		"Feedback is most effective when it is timely. The speakers from your event won't see this feedback until it has been approved. You can manage feedback submissions here:",
 		'wordcamporg'
 	);
 	$message .= "\n\n";
 	$message .= get_subpage_url( 'wcb_session' );
 	$message .= "\n\n";
+	// translators: This is the preface to a bulleted list of items.
 	$message .= esc_html__( 'Currently there are:' );
 	$message .= "\n\n";
 
 	$message .= sprintf(
-	// translators: The * is a list item bullet point.
-		esc_html__( '* %1$s unapproved feedback submissions.', 'wordcamporg' ),
+		// translators: The * is a list item bullet point.
+		esc_html( _n(
+			'* %1$s unapproved feedback submission.',
+			'* %1$s unapproved feedback submissions.',
+			$feedback_counts['moderated'],
+			'wordcamporg'
+		) ),
 		number_format_i18n( $feedback_counts['moderated'] )
 	);
+	$message .= "\n";
 	$message .= sprintf(
-	// translators: The * is a list item bullet point.
-		esc_html__( '* %1$s feedback submissions that have already been approved.', 'wordcamporg' ),
+		// translators: The * is a list item bullet point.
+		esc_html( _n(
+			'* %1$s feedback submission that has already been approved.',
+			'* %1$s feedback submissions that have already been approved.',
+			$feedback_counts['approved'],
+			'wordcamporg'
+		) ),
 		number_format_i18n( $feedback_counts['approved'] )
 	);
+	$message .= "\n";
 	$message .= sprintf(
-	// translators: The * is a list item bullet point.
-		esc_html__( '* %1$s feedback submissions that have been marked as spam.', 'wordcamporg' ),
+		// translators: The * is a list item bullet point.
+		esc_html( _n(
+			'* %1$s feedback submission that has been marked as spam.',
+			'* %1$s feedback submissions that have been marked as spam.',
+			$feedback_counts['spam'],
+			'wordcamporg'
+		) ),
 		number_format_i18n( $feedback_counts['spam'] )
 	);
 

@@ -70,12 +70,11 @@ function notify_organizers_unapproved_feedback() {
 		esc_html( $wordcamp_name )
 	);
 
-	$message  = esc_html__(
-		"Feedback is most effective when it is timely. The speakers from your event won't see this feedback until it has been approved. You can manage feedback submissions here:",
-		'wordcamporg'
+	$message  = sprintf(
+		// translators: %s is the name of a WordCamp.
+		esc_html__( 'Hi %s organizers,' ),
+		esc_html( $wordcamp_name )
 	);
-	$message .= "\n\n";
-	$message .= get_subpage_url( 'wcb_session' );
 	$message .= "\n\n";
 	// translators: This is the preface to a bulleted list of items.
 	$message .= esc_html__( 'Currently there are:' );
@@ -113,6 +112,13 @@ function notify_organizers_unapproved_feedback() {
 		) ),
 		number_format_i18n( $feedback_counts['spam'] )
 	);
+	$message .= "\n\n";
+	$message .= esc_html__(
+		"Feedback is most effective when it is timely. The speakers from your event won't see this feedback until it has been approved. You can manage feedback submissions here:",
+		'wordcamporg'
+	);
+	$message .= "\n\n";
+	$message .= get_subpage_url( 'wcb_session' );
 
 	wp_mail( $to, $subject, $message );
 }

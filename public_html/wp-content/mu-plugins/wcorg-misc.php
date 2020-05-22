@@ -316,19 +316,10 @@ add_action( 'change_locale',  'wcorg_load_wordcamp_textdomain' );
  * @todo This can be removed if https://core.trac.wordpress.org/ticket/49263 is resolved. Add `'locale' => true` to
  *       `switch_to_blog()` calls for any custom cron jobs that send mail, like in `wordcamp-payments-network`.
  */
-function wcorg_switch_to_blog_locale() {
-	$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 5 );
-	$caller    = $backtrace[4]['function'];
+function wcorg_switch_to_blog_locale( $new_blog_id, $prev_blog_id, $context ) {
 
-	/*
-	 * `switch_to_blog` and `restore_current_blog` both call `switch_blog` instead of having individual actions, so
-	 * we have to detect which one is the current caller.
-	 *
-	 * @todo This can be cleaned up after upgrading to 5.4, because the `$context` param from
-	 * https://core.trac.wordpress.org/ticket/49265 will be available.
-	 */
-	switch ( $caller ) {
-		case 'switch_to_blog':
+	switch ( $context ) {
+		case 'switch':
 			/*
 			 * Bypass `get_locale()` because it caches the original site's locale. This doesn't handle user
 			 * locales, but is good enough until #49263-core is resolved.
@@ -343,7 +334,7 @@ function wcorg_switch_to_blog_locale() {
 			switch_to_locale( $site_locale );
 			break;
 
-		case 'restore_current_blog':
+		case 'restore':
 			if ( is_locale_switched() ) {
 				restore_previous_locale();
 			}
@@ -353,7 +344,7 @@ function wcorg_switch_to_blog_locale() {
 
 // $GLOBALS['wp_locale_switcher'] isn't initialized before this.
 add_action( 'after_setup_theme', function() {
-	add_action( 'switch_blog', 'wcorg_switch_to_blog_locale' );
+	add_action( 'switch_blog', 'wcorg_switch_to_blog_locale', 10, 3 );
 } );
 
 // WordCamp.org QBO Integration.

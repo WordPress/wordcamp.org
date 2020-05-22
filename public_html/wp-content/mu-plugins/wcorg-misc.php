@@ -317,6 +317,17 @@ add_action( 'change_locale',  'wcorg_load_wordcamp_textdomain' );
  *       `switch_to_blog()` calls for any custom cron jobs that send mail, like in `wordcamp-payments-network`.
  */
 function wcorg_switch_to_blog_locale( $new_blog_id, $prev_blog_id, $context ) {
+	/*
+	 * Return early when creating a new site, to avoid an infinite loop.
+	 *
+	 * The database tables don't exist yet, so the `get_option()` call below would trigger a `wp_die()` from WPDB,
+	 * which would call `get_language_attributes()`, which also calls `get_option()`, then repeat.
+	 *
+	 * @todo This can be removed when https://core.trac.wordpress.org/ticket/50228 is fixed.
+	 */
+	if ( did_action( 'wp_initialize_site' ) ) {
+		return;
+	}
 
 	switch ( $context ) {
 		case 'switch':

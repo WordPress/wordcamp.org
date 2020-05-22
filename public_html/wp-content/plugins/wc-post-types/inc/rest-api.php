@@ -226,8 +226,11 @@ function register_additional_rest_fields() {
 				$speakers = array();
 
 				foreach ( $speaker_ids as $speaker_id ) {
+					$speaker = get_post( $speaker_id );
+
 					$speakers[] = array(
 						'id' => $speaker_id,
+						'slug' => $speaker->post_name,
 						'name' => get_the_title( $speaker_id ),
 						'link' => get_permalink( $speaker_id ),
 					);

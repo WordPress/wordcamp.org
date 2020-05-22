@@ -1,0 +1,65 @@
+.wordcamp-schedule__time-slot-header,
+.editor-styles-wrapper h3.wordcamp-schedule__time-slot-header,
+.wordcamp-schedule__session {
+	padding: 14px;
+	font-size: 14px;
+	border: 1px solid $color__grid-border;
+	border-top: none;
+
+	@include breakpoint-grid-layout {
+		position: relative;
+		z-index: 5;
+
+		/*
+		 * Use box-shadow to simulate borders, because actual `border`s would stack to be double the width.
+		 * The other techniques won't work because we support use cases where there are empty spots in the grid.
+		 *
+		 * This doesn't work in the edge case where there are empty grid cells that are located at the edges of the
+		 * grid. That's rare, though, and there isn't a good solution, so it isn't handled.
+		 *
+		 * https://stackoverflow.com/a/43686894/450127
+		 */
+		border: none;
+		box-shadow: 0 0 1px 1px $color__grid-border;
+		margin-bottom: 0;
+	}
+
+	&.wordcamp-schedule__session-type-regular {
+		padding: 4px 10px 12px 10px;
+	}
+}
+
+.wordcamp-schedule__time-slot-header {
+	min-width: 100px;
+	text-align: center;
+	border-bottom: none;
+	background-color: $color__grid-border;
+
+	/* Vertically align the text inside this cell */
+	display: flex;
+	justify-content: center;
+	flex-direction: column;
+
+	&.is-empty {
+		display: none; /* Empty time slots are only useful on the grid layout. */
+
+		@include breakpoint-grid-layout {
+			display: flex;
+		}
+	}
+
+	@include breakpoint-grid-layout {
+		grid-column: times;
+		background-color: transparent;
+	}
+}
+
+.wordcamp-schedule__time-slot-header,
+.editor-styles-wrapper .wordcamp-schedule__time-slot-header {
+	font-weight: 400;
+	margin: 2em 0 0 0;
+
+	@include breakpoint-grid-layout {
+		margin-top: 0;
+	}
+}

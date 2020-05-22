@@ -2,7 +2,8 @@
 
 namespace WordCamp\SpeakerFeedback\Cron;
 
-use function WordCamp\SpeakerFeedback\Comment\{ get_feedback, update_feedback };
+use function WordCamp\SpeakerFeedback\Admin\get_subpage_url;
+use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, update_feedback };
 use function WordCamp\SpeakerFeedback\Post\{
 	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
 	get_session_speaker_user_ids, get_session_feedback_url
@@ -13,6 +14,7 @@ defined( 'WPINC' ) || die();
 const SPEAKER_OPT_OUT_KEY = 'sft_notifications_speaker_opt_out';
 
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
+add_action( 'sft_notify_organizers_unapproved_feedback', __NAMESPACE__ . '\notify_organizers_unapproved_feedback' );
 add_action( 'sft_notify_speakers_approved_feedback', __NAMESPACE__ . '\notify_speakers_approved_feedback' );
 
 /**
@@ -21,10 +23,104 @@ add_action( 'sft_notify_speakers_approved_feedback', __NAMESPACE__ . '\notify_sp
  * @return void
  */
 function schedule_jobs() {
+	if ( ! wp_next_scheduled( 'sft_notify_organizers_unapproved_feedback' ) ) {
+		$next_time = strtotime( 'Next day 5pm ' . wp_timezone_string() );
+		wp_schedule_single_event( $next_time, 'sft_notify_organizers_unapproved_feedback' );
+	}
+
 	if ( ! wp_next_scheduled( 'sft_notify_speakers_approved_feedback' ) ) {
 		$next_time = strtotime( 'Next day 6pm ' . wp_timezone_string() );
 		wp_schedule_single_event( $next_time, 'sft_notify_speakers_approved_feedback' );
 	}
+}
+
+/**
+ * Notify organizers via email when there are unapproved feedback submissions to attend to.
+ *
+ * @return void
+ */
+function notify_organizers_unapproved_feedback() {
+	if ( ! feedback_notifications_are_enabled() ) {
+		return;
+	}
+
+	$wordcamp_name = get_wordcamp_name( get_current_blog_id() );
+	$wordcamp_post = get_wordcamp_post();
+
+	$feedback_counts = count_feedback();
+
+	if ( $feedback_counts['moderated'] < 1 ) {
+		return;
+	}
+
+	$to = $wordcamp_post->meta['E-mail Address'][0]; // The main city@wordcamp.org address.
+	if ( ! $to ) {
+		$to = $wordcamp_post->meta['Email Address'][0]; // The lead organizer's email address. Yep, not a typo.
+	}
+
+	$subject = sprintf(
+		// translators: 1. Number of feedback submissions. 2. WordCamp name.
+		esc_html( _n(
+			'There is %1$s speaker feedback submission awaiting moderation on %2$s',
+			'There are %1$s speaker feedback submissions awaiting moderation on %2$s',
+			$feedback_counts['moderated'],
+			'wordcamporg'
+		) ),
+		number_format_i18n( $feedback_counts['moderated'] ),
+		esc_html( $wordcamp_name )
+	);
+
+	$message  = sprintf(
+		// translators: %s is the name of a WordCamp.
+		esc_html__( 'Hi %s organizers,' ),
+		esc_html( $wordcamp_name )
+	);
+	$message .= "\n\n";
+	// translators: This is the preface to a bulleted list of items.
+	$message .= esc_html__( 'Currently there are:' );
+	$message .= "\n\n";
+
+	$message .= sprintf(
+		// translators: The * is a list item bullet point.
+		esc_html( _n(
+			'* %1$s unapproved feedback submission.',
+			'* %1$s unapproved feedback submissions.',
+			$feedback_counts['moderated'],
+			'wordcamporg'
+		) ),
+		number_format_i18n( $feedback_counts['moderated'] )
+	);
+	$message .= "\n";
+	$message .= sprintf(
+		// translators: The * is a list item bullet point.
+		esc_html( _n(
+			'* %1$s feedback submission that has already been approved.',
+			'* %1$s feedback submissions that have already been approved.',
+			$feedback_counts['approved'],
+			'wordcamporg'
+		) ),
+		number_format_i18n( $feedback_counts['approved'] )
+	);
+	$message .= "\n";
+	$message .= sprintf(
+		// translators: The * is a list item bullet point.
+		esc_html( _n(
+			'* %1$s feedback submission that has been marked as spam.',
+			'* %1$s feedback submissions that have been marked as spam.',
+			$feedback_counts['spam'],
+			'wordcamporg'
+		) ),
+		number_format_i18n( $feedback_counts['spam'] )
+	);
+	$message .= "\n\n";
+	$message .= esc_html__(
+		"Feedback is most effective when it is timely. The speakers from your event won't see this feedback until it has been approved. You can manage feedback submissions here:",
+		'wordcamporg'
+	);
+	$message .= "\n\n";
+	$message .= get_subpage_url( 'wcb_session' );
+
+	wp_mail( $to, $subject, $message );
 }
 
 /**
@@ -33,7 +129,7 @@ function schedule_jobs() {
  * @return void
  */
 function notify_speakers_approved_feedback() {
-	if ( ! speaker_notifications_are_enabled() ) {
+	if ( ! feedback_notifications_are_enabled() ) {
 		return;
 	}
 
@@ -152,16 +248,16 @@ function notify_speakers_approved_feedback() {
  *
  * @return bool
  */
-function speaker_notifications_are_enabled() {
+function feedback_notifications_are_enabled() {
 	$now       = date_create( 'now', wp_timezone() );
-	$stop_time = get_option( 'sft_speaker_notification_stop_time', false );
+	$stop_time = get_option( 'sft_notification_stop_time', false );
 
 	if ( false !== $stop_time && $now->getTimestamp() > $stop_time ) {
 		return false;
 	}
 
 	// Session times can change, so this is a transient.
-	$start_time = get_transient( 'sft_speaker_notification_start_time' );
+	$start_time = get_transient( 'sft_notification_start_time' );
 
 	if ( ! $start_time ) {
 		$start_time = get_earliest_session_timestamp();
@@ -170,10 +266,10 @@ function speaker_notifications_are_enabled() {
 			return false;
 		}
 
-		set_transient( 'sft_speaker_notification_start_time', $start_time, DAY_IN_SECONDS );
+		set_transient( 'sft_notification_start_time', $start_time, DAY_IN_SECONDS );
 
 		$stop_time = strtotime( '+ 3 months', get_latest_session_ending_timestamp() );
-		update_option( 'sft_speaker_notification_stop_time', $stop_time, false );
+		update_option( 'sft_notification_stop_time', $stop_time, false );
 	}
 
 	return $now->getTimestamp() > $start_time;

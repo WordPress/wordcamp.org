@@ -1,3 +1,10 @@
+/*
+ * Note: This is deprecated now that `createInterpolateElement()` is available, see
+ * https://github.com/WordPress/gutenberg/issues/9846 and https://github.com/WordPress/gutenberg/pull/20699.
+ *
+ * Use that function in new code instead of these. This will eventually be removed.
+ */
+
 /**
  * WordPress dependencies
  */

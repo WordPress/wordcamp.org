@@ -1,0 +1,108 @@
+%overlapping-session {
+	border: 2px solid #cb423b;
+}
+
+.wordcamp-schedule__session {
+
+	@include breakpoint-grid-layout {
+		margin: 0;
+
+		&.is-overlapping-another-session {
+
+			/* Make more room around the link, since the overlap can make it difficult to click on. */
+			padding-bottom: 125px;
+		}
+
+		&.is-spanning-some-tracks {
+			text-align: center;
+		}
+	}
+}
+
+body.block-editor-page {
+	.wordcamp-schedule__session.is-overlapping-another-session {
+
+		@extend %overlapping-session;
+	}
+
+	.wordcamp-schedule:not(.is-style-single-column-layout) {
+		.wordcamp-schedule__session.is-overlapping-another-session {
+
+			@extend %overlapping-session;
+		}
+	}
+}
+
+.wordcamp-schedule__session-title,
+.editor-styles-wrapper .wp-block .wordcamp-schedule h4, /* Override TwentyTwenty */
+.editor-styles-wrapper .wordcamp-schedule__session-title {
+	font-size: 1.1em;
+	margin: 0;
+}
+
+.editor-styles-wrapper .wordcamp-schedule__session-speakers a {
+	color: #23282d;
+}
+
+// Avoid false positives; see https://github.com/stylelint/stylelint/issues/3135.
+// stylelint-disable no-descending-specificity
+.wordcamp-schedule__session-title,
+.editor-styles-wrapper h4.wordcamp-schedule__session-title, /* Override TwentySixteen. */
+.wordcamp-schedule__session-tracks,
+.wordcamp-schedule__session-speakers,
+.wordcamp-schedule__session-category {
+	display: block;
+	line-height: 1.6;
+
+	a {
+		text-decoration: none;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+
+	/* stylelint-enable no-descending-specificity */
+}
+
+dl.wordcamp-schedule__session-speakers,
+dl.wordcamp-schedule__session-tracks,
+dl.wordcamp-schedule__session-category,
+.editor-styles-wrapper dl.wordcamp-schedule__session-speakers,
+.editor-styles-wrapper dl.wordcamp-schedule__session-tracks,
+.editor-styles-wrapper dl.wordcamp-schedule__session-category {
+	dd {
+		display: inline;
+		margin-left: 0;
+		margin-right: 0; /* Overwrite TwentyNineteen. */
+
+		&::after {
+			content: ", ";
+		}
+
+		&:last-child::after {
+			content: "";
+		}
+	}
+}
+
+.wordcamp-schedule__session-tracks {
+
+	@include breakpoint-grid-layout {
+		display: none; /* Once the column headers are visible, this is no longer needed. */
+	}
+}
+
+.wordcamp-schedule__session-category {
+	font-style: italic;
+	color: #707070;
+}
+
+.editor-styles-wrapper .wordcamp-schedule__session p.notice {
+	font-size: 1.2em; /* Override TwentyNineteen. */
+	padding: 1px 12px; /* Override TwentySeventeen. */
+}
+
+.overlaps-another-track {
+	margin-top: 10px;
+}

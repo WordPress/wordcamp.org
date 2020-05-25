@@ -83,6 +83,11 @@
 			flex-direction: column;
 		}
 
+		.select2-selection__rendered {
+			margin-right: 20px;
+			padding-right: 0;
+		}
+
 		.select2-selection__arrow {
 			top: -4px;
 		}

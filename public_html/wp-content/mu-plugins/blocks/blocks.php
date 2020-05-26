@@ -40,7 +40,9 @@ function load_includes() {
 	require_once $blocks_dir . 'live-schedule/controller.php';
 
 	$beta_block_test_sites = array(
+		112, // 2011.tokyo
 		928, // 2017.testing
+		1170, // 2019.tokyo
 	);
 
 	$load_beta_blocks =

@@ -1,227 +1,6 @@
 /*
  * [schedule]
  */
-.wcpt-schedule td {
-	vertical-align: top;
-	position: relative;
-}
-
-/* Make space for the favorite icon, which is absolutely positioned. */
-.wcpt-session-type-session .wcb-session-cell-content:before {
-	content: '';
-	width: 35px;
-	height: 2em;
-	float: right;
-}
-
-.wcpt-schedule div.wcb-session-favourite-icon {
-	position: absolute;
-	top: 10px;
-	right: 10px;
-	width: 35px;
-	text-align: center;
-}
-
-.wcpt-schedule .dashicons {
-	position: relative;
-	box-sizing: content-box;
-	width: 25px;
-	height: 25px;
-	overflow: hidden;
-	white-space: nowrap;
-	font-size: 16px;
-	line-height: 1;
-	cursor: pointer;
-}
-
-.wcpt-schedule .dashicons:before {
-	margin-right: 0px;
-}
-
-div.wcb-session-favourite-icon a.fav-session-button {
-	color: #aaa;
-	text-decoration: none;
-	border-bottom: none;
-	box-shadow: none;
-}
-
-div.wcb-session-favourite-icon a.fav-session-button:hover,
-div.wcb-session-favourite-icon a.fav-session-button:focus,
-#content a.fav-session-button:hover,
-#content a.fav-session-button:focus {
-	color: #ffb900;
-	text-decoration: none;
-}
-
-.wcb-favourite-session {
-	background: #e0f8ff;
-}
-
-td.wcb-favourite-session a.fav-session-button {
-	color: #ffb900;
-}
-
-.fav-session-email-wait-spinner {
-	display: none;
-	border: 2px solid #f3f3f3;
-	border-radius: 50%;
-	border-top: 2px solid #777;
-	width: 16px;
-	height: 16px;
-	margin: 10px auto;
-	-webkit-animation: spin 2s linear infinite;
-	animation: spin 2s linear infinite;
-}
-
-@-webkit-keyframes spin {
-	0% { -webkit-transform: rotate( 0deg ); }
-	100% { -webkit-transform: rotate( 360deg ); }
-}
-
-@keyframes spin {
-	0% { transform: rotate( 0deg ); }
-	100% { transform: rotate( 360deg ); }
-}
-
-
-/*
- * CSS slide for email form for favourite sessions
- */
-.fav-session-email-form-hide {
-	overflow: hidden;
-	max-height: 0;
-	padding-top: 0;
-	padding-bottom: 0;
-	margin-top: 0;
-	margin-bottom: 0;
-	-moz-transition-duration: 0.5s;
-	-webkit-transition-duration: 0.5s;
-	-o-transition-duration: 0.5s;
-	transition-duration: 0.5s;
-	-moz-transition-timing-function: cubic-bezier( 0, 1, 0.5, 1 );
-	-webkit-transition-timing-function: cubic-bezier( 0, 1, 0.5, 1 );
-	-o-transition-timing-function: cubic-bezier( 0, 1, 0.5, 1 );
-	transition-timing-function: cubic-bezier( 0, 1, 0.5, 1 );
-}
-
-.fav-session-email-form-show {
-	-moz-transition-duration: 0.5s;
-	-webkit-transition-duration: 0.5s;
-	-o-transition-duration: 0.5s;
-	transition-duration: 0.5s;
-	-moz-transition-timing-function: ease-in;
-	-webkit-transition-timing-function: ease-in;
-	-o-transition-timing-function: ease-in;
-	transition-timing-function: ease-in;
-	max-height: 1000px;
-	overflow: hidden;
-}
-
-.show-email-form {
-	display: none;
-	position: fixed;
-	bottom: 20px;
-	right: 100px;
-	padding: 5px 8px 1px 7px;
-	border: 1px solid #a1a1a1;
-	background: #dddddd;
-	border-radius: 6px;
-	color: #a1a1a1;
-	z-index: 9999;
-}
-
-.email-form {
-	position: fixed;
-	bottom: 50px;
-	right: 100px;
-	width: 350px;
-	background: #dcdcdc;
-	font-size: 12px;
-	z-index: 9999;
-	border-radius: 6px;
-}
-
-/* Style the tabs */
-.fav-session-share-tab {
-	overflow: hidden;
-	border: 1px solid #ccc;
-	background-color: #f1f1f1;
-	display: table;
-	table-layout: fixed;
-	width: 100%;
-}
-
-/* Style the buttons inside the tabs */
-.fav-session-share-tab div {
-	background-color: inherit;
-	text-align: center;
-	display: table-cell;
-	border: none;
-	outline: none;
-	cursor: pointer;
-	padding: 12px 16px;
-	transition: 0.3s;
-	font-size: 14px;
-}
-
-/* Change background color of buttons on hover */
-.fav-session-share-tab div:hover {
-	background-color: #ddd;
-}
-
-/* Create an active/current tablink class */
-.fav-session-share-tab div.active {
-	background-color: #ccc;
-}
-
-/* Style the tab content */
-.fav-session-share-tabcontent {
-	display: none;
-	padding: 12px 14px;
-	border: 1px solid #ccc;
-	border-top: none;
-	min-height: 145px;
-	background-color: #ccc;
-}
-
-#fav-session-email-form {
-	margin: 10px;
-}
-
-#fav-sessions-email-address {
-	width: 100%;
-	margin-bottom: 5px;
-	padding: 1px 5px;
-}
-
-.fav-session-email-result {
-	display: none;
-	margin: 10px;
-}
-
-.fav-sessions-form {
-	display: none;
-}
-
-.show-email-form,
-.entry-content a.show-email-form {
-	color: #a1a1a1;
-	text-decoration: none;
-}
-
-.show-email-form:hover,
-.entry-content a.show-email-form:hover,
-#content a.show-email-form:hover {
-	color: #555;
-	text-decoration: none;
-}
-
-.show-email-form .dashicons-star-filled {
-	font-size: 14px;
-	padding-top: 2px;
-	width: 14px;
-}
-
 @media screen and ( max-width: 700px ) {
 	.wcpt-schedule {
 		border: none;
@@ -274,14 +53,6 @@ td.wcb-favourite-session a.fav-session-button {
 		display: none;
 	}
 
-	.wcpt-schedule div.wcb-session-favourite-icon {
-		top: calc( 1.5em + 20px );
-	}
-
-	.wcpt-schedule .global-session div.wcb-session-favourite-icon {
-		top: 20px;
-	}
-
 	.wcpt-session-title {
 		display: block;
 		padding: 10px;
@@ -301,25 +72,8 @@ td.wcb-favourite-session a.fav-session-button {
 	span.wcpt-session-speakers a {
 		color: #21759b;
 	}
-
-	.show-email-form,
-	.email-form {
-		right: 20px;
-	}
-
 }
 
-@media print {
-	.wcb-session-favourite-icon,
-	.show-email-form,
-	.email-form {
-		display: none !important;
-	}
-
-	.wcpt-schedule td.wcb-favourite-session div {
-		opacity: 1 !important;
-	}
-}
 
 /*
  * [sessions]
@@ -334,6 +88,7 @@ td.wcb-favourite-session a.fav-session-button {
 	#speaker-session-names li {
 		list-style-type: none;
 	}
+
 
 /*
  * [sessions]
@@ -354,6 +109,7 @@ td.wcb-favourite-session a.fav-session-button {
 .wcorg-session-links li:last-child::after {
 	content: '';
 }
+
 
 /*
  * [sponsors]

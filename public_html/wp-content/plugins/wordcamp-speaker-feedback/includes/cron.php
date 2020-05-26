@@ -200,7 +200,14 @@ function notify_speakers_approved_feedback() {
 
 		$message  = sprintf( esc_html__( 'Hi %s,', 'wordcamporg' ), $speaker->display_name );
 		$message .= "\n\n";
-		$message .= esc_html__( 'You have new feedback submissions to read on the following sessions:', 'wordcamporg' );
+		$message .= sprintf(
+			esc_html( _n(
+				'Follow the link below and log in using your WordPress.org account to read your feedback:',
+				'Follow the links below and log in using your WordPress.org account to read your feedback:',
+				count( $feedback_info ),
+				'wordcamporg'
+			) )
+		);
 		$message .= "\n\n";
 
 		foreach ( $feedback_info as $info ) {

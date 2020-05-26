@@ -13,7 +13,7 @@ jQuery( document ).ready( function ( $ ) {
 		return urlParams;
 	}
 
-	var FavSessions = {
+	var FavSessionsStore = {
 		favSessKey: 'favourite_sessions',
 		useLocalStorage: 'local_storage',
 		useUrlSessions:  'URL',
@@ -39,7 +39,7 @@ jQuery( document ).ready( function ( $ ) {
 
 			var favSessions = this.get();
 
-			if ( favSessions.hasOwnProperty( sessionId ) ) {
+			if ( FavSessionsStore.hasOwnProperty( sessionId ) ) {
 				delete favSessions[ sessionId ];
 			} else {
 				favSessions[ sessionId ] = true;
@@ -77,7 +77,7 @@ jQuery( document ).ready( function ( $ ) {
 	};
 
 	// Use local storage for session source for fetching & target for saving by default.
-	FavSessions.primarySource = FavSessions.useLocalStorage;
+	FavSessionsStore.primarySource = FavSessionsStore.useLocalStorage;
 
 	function switchCellAppearance( sessionId ) {
 		// (Un)highlight schedule table cell in case a session is (un)marked as favourite.
@@ -97,7 +97,7 @@ jQuery( document ).ready( function ( $ ) {
 	}
 
 	function switchEmailFavButton() {
-		var favSessions = FavSessions.get();
+		var favSessions = FavSessionsStore.get();
 
 		// Display share form only if there are any selected sessions.
 		if ( Object.keys( favSessions ).length > 0 ) {
@@ -111,7 +111,7 @@ jQuery( document ).ready( function ( $ ) {
 	}
 
 	function updateShareLink() {
-		var favSessionIds   = FavSessions.getSessionsForLink(),
+		var favSessionIds   = FavSessionsStore.getSessionsForLink(),
 		    urlParams       = getUrlParams(),
 		    baseURL         = window.location.href,
 		    paramsPosition  = baseURL.indexOf( '?' ),
@@ -135,14 +135,14 @@ jQuery( document ).ready( function ( $ ) {
 	}
 
 	function switchSessionFavourite( sessionId ) {
-		FavSessions.toggleSession( sessionId );
+		FavSessionsStore.toggleSession( sessionId );
 		switchCellAppearance( sessionId );
 		switchEmailFavButton();
 		updateShareLink();
 	}
 
 	function initFavouriteSessions() {
-		var favSessions = FavSessions.get();
+		var favSessions = FavSessionsStore.get();
 
 		if ( favSessions === {} ) {
 			return;
@@ -161,14 +161,14 @@ jQuery( document ).ready( function ( $ ) {
 			var overwrite = confirm( favSessionsPhpObject.i18n.overwriteFavSessions );
 
 			if ( true === overwrite ) {
-				FavSessions.primarySource = FavSessions.useLocalStorage;
-				favSessions               = FavSessions.updateBasedOnLink( currentUrl );
+				FavSessionsStore.primarySource = FavSessionsStore.useLocalStorage;
+				favSessions               = FavSessionsStore.updateBasedOnLink( currentUrl );
 
 				$( '.fav-session-button' ).attr( 'title', '' );
 				$( '.fav-session-button' ).fadeTo( 0, 1 );
 			} else {
-				FavSessions.primarySource = FavSessions.useUrlSessions;
-				favSessions               = FavSessions.get();
+				FavSessionsStore.primarySource = FavSessionsStore.useUrlSessions;
+				favSessions               = FavSessionsStore.get();
 
 				/*
 				 * Deactivate interaction with favourite session buttons,
@@ -241,7 +241,7 @@ jQuery( document ).ready( function ( $ ) {
 	$( '.fav-session-button' ).click( function ( event ) {
 		event.preventDefault();
 
-		if ( FavSessions.primarySource == FavSessions.useLocalStorage ) {
+		if ( FavSessionsStore.primarySource == FavSessionsStore.useLocalStorage ) {
 			var elem      = $( this ),
 			    sessionId = elem.parent().parent().data( 'session-id' );
 
@@ -259,7 +259,7 @@ jQuery( document ).ready( function ( $ ) {
 
 		event.preventDefault();
 
-		if ( FavSessions.primarySource == FavSessions.useLocalStorage ) {
+		if ( FavSessionsStore.primarySource == FavSessionsStore.useLocalStorage ) {
 			var elem      = $( this ),
 			    sessionId = elem.parent().parent().data( 'session-id' );
 
@@ -272,7 +272,7 @@ jQuery( document ).ready( function ( $ ) {
 	$( '#fav-sessions-form' ).on( 'submit', function ( event ) {
 		event.preventDefault();
 		hideFormShowSpinner();
-		var favSessions = FavSessions.get();
+		var favSessions = FavSessionsStore.get();
 		favSessions = Object.keys( favSessions ).toString();
 
 		// Get email from the input.

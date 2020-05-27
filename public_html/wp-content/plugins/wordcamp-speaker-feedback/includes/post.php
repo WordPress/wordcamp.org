@@ -4,6 +4,7 @@ namespace WordCamp\SpeakerFeedback\Post;
 
 use WP_Error;
 use WordCamp_Post_Types_Plugin;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -32,6 +33,11 @@ function post_accepts_feedback( $post_id ) {
 			'speaker_feedback_post_not_supported',
 			__( 'This post does not support feedback.', 'wordcamporg' )
 		);
+	}
+
+	// Organizers need to be able to test and style feedback forms.
+	if ( current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
+		return true;
 	}
 
 	if ( 'publish' !== get_post_status( $post ) ) {

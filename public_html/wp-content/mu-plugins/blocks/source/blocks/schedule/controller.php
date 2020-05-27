@@ -300,6 +300,9 @@ function render( $attributes ) {
 	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
 	$attributes = wp_parse_args( $attributes, $defaults );
 
+	require_once WP_PLUGIN_DIR . '/wc-post-types/wc-post-types.php';
+	require_once WP_PLUGIN_DIR . '/wc-post-types/inc/rest-api.php';
+
 	/*
 	 * Only enqueue these on pages where the block is present.
 	 *
@@ -309,12 +312,14 @@ function render( $attributes ) {
 	 * This checks `is_admin()` because `render_callback()` is unexpectedly executed in the editor, maybe because
 	 * of https://github.com/WordPress/gutenberg/issues/18394.
 	 *
-	 * @todo remove this when #5445 is resolved, but make sure that doesn't cause it to start being enqueued in
-	 * the editor.
+	 * @todo remove most of this when #5445 is resolved, but make sure that doesn't cause it to start being
+	 * enqueued in the editor. The Favorite Sessions assets will still need to be enqueued manually, though.
 	 */
 	if ( ! is_admin() ) {
 		wp_enqueue_script( 'wordcamp-schedule-front-end' );
 		wp_enqueue_style( 'wordcamp-schedule-front-end' );
+
+		enqueue_favorite_sessions_dependencies();
 	}
 
 	ob_start();

@@ -1,9 +1,19 @@
-/*
- * [schedule]
- */
-.wcpt-schedule td {
+/* This supports both the Schedule block, and the old shortcode. */
+
+.wcpt-schedule td,
+.wordcamp-schedule__session {
 	vertical-align: top;
 	position: relative;
+}
+
+h4.wordcamp-schedule__session-title {
+	/*
+	 * Flexbox wasn't available this feature was added to the shortcode, but the block can use it now. This is a
+	 * better way of putting the title and icon on the same line, because absolute positioning creates a lot of
+	 * side-effects that are difficult to counter-act consistently across themes.
+	 */
+	display: flex;
+	justify-content: space-between;
 }
 
 /* Make space for the favorite icon, which is absolutely positioned. */
@@ -22,7 +32,20 @@
 	text-align: center;
 }
 
-.wcpt-schedule .dashicons {
+.wordcamp-schedule__session .wcb-session-favourite-icon {
+	padding-top: 2px; /* Account for line height on the title, so that they're both aligned vertically. */
+	padding-left: 10px;
+}
+
+/*
+ * Match the `padding-top` of `.wordcamp-schedule__session`, so that the title and icon are aligned horizontally.
+ */
+.wordcamp-schedule__session .wcb-session-favourite-icon {
+	top: 17px;
+}
+
+.wcpt-schedule .dashicons,
+.wordcamp-schedule__session .dashicons {
 	position: relative;
 	box-sizing: content-box;
 	width: 25px;
@@ -34,7 +57,8 @@
 	cursor: pointer;
 }
 
-.wcpt-schedule .dashicons:before {
+.wcpt-schedule .dashicons:before,
+.wordcamp-schedule__session .dashicons:before {
 	margin-right: 0px;
 }
 
@@ -45,6 +69,10 @@ div.wcb-session-favourite-icon a.fav-session-button {
 	box-shadow: none;
 }
 
+.fav-session-button svg.dashicons-star-filled {
+	fill: #aaa;
+}
+
 div.wcb-session-favourite-icon a.fav-session-button:hover,
 div.wcb-session-favourite-icon a.fav-session-button:focus,
 #content a.fav-session-button:hover,
@@ -53,12 +81,21 @@ div.wcb-session-favourite-icon a.fav-session-button:focus,
 	text-decoration: none;
 }
 
+.fav-session-button:hover svg.dashicons-star-filled,
+.fav-session-button:focus svg.dashicons-star-filled {
+	fill: #ffb900;
+}
+
 .wcb-favourite-session {
 	background: #e0f8ff;
 }
 
 td.wcb-favourite-session a.fav-session-button {
 	color: #ffb900;
+}
+
+.wcb-favourite-session svg.dashicons-star-filled {
+	fill: #ffb900;
 }
 
 .fav-session-email-wait-spinner {
@@ -224,10 +261,12 @@ td.wcb-favourite-session a.fav-session-button {
 }
 
 @media screen and ( max-width: 700px ) {
+	/* Intentionally only doing this for shortcode. Block doesn't need it. */
 	.wcpt-schedule div.wcb-session-favourite-icon {
 		top: calc(1.5em + 20px);
 	}
 
+	/* Intentionally only doing this for shortcode. Block doesn't need it. */
 	.wcpt-schedule .global-session div.wcb-session-favourite-icon {
 		top: 20px;
 	}
@@ -247,5 +286,13 @@ td.wcb-favourite-session a.fav-session-button {
 
 	.wcpt-schedule td.wcb-favourite-session div {
 		opacity: 1 !important;
+	}
+
+	.wordcamp-schedule__session {
+		display: none;
+	}
+
+	.wordcamp-schedule__session.wcb-favourite-session {
+		display: block;
 	}
 }

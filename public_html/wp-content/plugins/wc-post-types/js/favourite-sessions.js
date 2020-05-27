@@ -1,4 +1,7 @@
 /* eslint-disable */
+
+/* This supports both the Schedule block, and shortcode. */
+
 jQuery( document ).ready( function ( $ ) {
 	var favSessionsUrlSlug = 'fav-sessions=';
 
@@ -39,7 +42,7 @@ jQuery( document ).ready( function ( $ ) {
 
 			var favSessions = this.get();
 
-			if ( FavSessionsStore.hasOwnProperty( sessionId ) ) {
+			if ( favSessions.hasOwnProperty( sessionId ) ) {
 				delete favSessions[ sessionId ];
 			} else {
 				favSessions[ sessionId ] = true;
@@ -134,8 +137,10 @@ jQuery( document ).ready( function ( $ ) {
 		$( '#fav-sessions-link' ).prop( 'href', favSessionsLink );
 	}
 
+	// Toggle a session between being favorited and not.
 	function switchSessionFavourite( sessionId ) {
 		FavSessionsStore.toggleSession( sessionId );
+
 		switchCellAppearance( sessionId );
 		switchEmailFavButton();
 		updateShareLink();
@@ -238,36 +243,38 @@ jQuery( document ).ready( function ( $ ) {
 		return false;
 	} );
 
-	$( '.fav-session-button' ).click( function ( event ) {
+	$( '.fav-session-button' ).click( handleSwitchEvent );
+	$( '.fav-session-button' ).keydown( handleSwitchEvent );
+
+	// Toggle a session being favorited.
+	function handleSwitchEvent( event ) {
 		event.preventDefault();
 
-		if ( FavSessionsStore.primarySource == FavSessionsStore.useLocalStorage ) {
-			var elem      = $( this ),
-			    sessionId = elem.parent().parent().data( 'session-id' );
-
-			switchSessionFavourite( sessionId );
-		} else {
-			alert( favSessionsPhpObject.i18n.buttonDisabledAlert );
+		if ( 'keydown' === event.type ) {
+			// Space (32) and enter (13) trigger the favoriting, anything else can be passed through.
+			if ( event.keyCode !== 32 && event.keyCode !== 13 ) {
+				return;
+			}
 		}
-	} );
-	
-	$( '.fav-session-button' ).keydown( function ( event ) {
-		// Space (32) and enter (13) trigger the favoriting, anything else can be passed through.
-		if ( event.keyCode !== 32 && event.keyCode !== 13 ) {
+
+		if ( FavSessionsStore.primarySource !== FavSessionsStore.useLocalStorage ) {
+			alert( favSessionsPhpObject.i18n.buttonDisabledAlert );
 			return;
 		}
 
-		event.preventDefault();
+		var elem = $( this ),
+			sessionContainer = elem.parents( '.wordcamp-schedule__session' ); // The block.
 
-		if ( FavSessionsStore.primarySource == FavSessionsStore.useLocalStorage ) {
-			var elem      = $( this ),
-			    sessionId = elem.parent().parent().data( 'session-id' );
-
-			switchSessionFavourite( sessionId );
-		} else {
-			alert( favSessionsPhpObject.i18n.buttonDisabledAlert );
+		if ( 0 === sessionContainer.length ) {
+			sessionContainer = elem.parents( 'td' ); // The shortcode.
 		}
-	} );
+
+		sessionId = parseInt( sessionContainer.data( 'session-id' ) );
+
+		if ( sessionId ) {
+			switchSessionFavourite( sessionId );
+		}
+	}
 
 	$( '#fav-sessions-form' ).on( 'submit', function ( event ) {
 		event.preventDefault();

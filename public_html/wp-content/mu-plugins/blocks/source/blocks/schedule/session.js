@@ -8,9 +8,10 @@ import { isEqual } from 'lodash';
  * WordPress dependencies
  */
 import { dateI18n } from '@wordpress/date';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import { createInterpolateElement, useContext } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
+import { Dashicon } from '@wordpress/components';
 
 const { stripTags } = wp.sanitize;
 
@@ -34,7 +35,7 @@ import { implicitTrack } from './data';
 export function Session( { session, displayedTracks, showCategories, overlapsAnother } ) {
 	const { renderEnvironment, settings } = useContext( ScheduleGridContext );
 	const { time_format: timeFormat } = settings;
-	const { id, slug, title, link: permalink } = session;
+	const { id, slug, title, link: permalink, meta: { _wcpt_session_type: type } } = session;
 	const { assignedCategories, assignedTracks, startTime, endTime } = session.derived;
 	const displayedTrackIds = displayedTracks.map( ( track ) => track.id );
 
@@ -57,7 +58,7 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 	const classes = classnames(
 		'wordcamp-schedule__session',
 		'has-slug-' + slug,
-		'is-type-' + session.meta._wcpt_session_type,
+		'is-type-' + type,
 
 		{ 'is-spanning-some-tracks': displayedAssignedTracks.length > 1 },
 		{ 'is-spanning-all-tracks': displayedAssignedTracks.length === displayedTracks.length },
@@ -95,6 +96,7 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 	return (
 		<div
 			id={ 'wordcamp-schedule__session-' + id }
+			data-session-id={ id }
 			className={ classes }
 			style={ { gridColumn, gridRow } }
 		>
@@ -102,6 +104,11 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 				<a href={ titleLinkUrl } target={ titleLinkTarget } rel="noopener noreferrer">
 					{ decodeEntities( stripTags( title.rendered ) ) }
 				</a>
+
+				{ 'front-end' === renderEnvironment && 'session' === type &&
+					// There isn't much of a point to show this in the editor, and it'd add clutter/confusion.
+					renderFavoriteButton( title.rendered )
+				}
 			</h4>
 
 			<p>
@@ -275,5 +282,32 @@ function renderWarnings( spansNonContiguousTracks ) {
 				</p>
 			) }
 		</>
+	);
+}
+
+/**
+ * Render the button to mark a session as a favorite.
+ *
+ * The bulk of the code for that feature lives in `wc-post-types/js/favourite-sessions.js`. It simultaneously supports the old
+ * shortcode and this block.
+ *
+ * @param {string} title
+ *
+ * @return {Element}
+ */
+function renderFavoriteButton( title ) {
+	return (
+		<div className="wcb-session-favourite-icon">
+			<a href="#" role="button" className="fav-session-button" aria-pressed="false">
+				<span className="screen-reader-text">
+					{ sprintf(
+						__( 'Favorite session: %s', 'wordcamporg' ),
+						decodeEntities( stripTags( title ) )
+					) }
+				</span>
+
+				<Dashicon icon="star-filled" size={ 16 } />
+			</a>
+		</div>
 	);
 }

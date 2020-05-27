@@ -20,3 +20,7 @@ defined( 'WPINC' ) || die();
 >
 	<?php esc_html_e( 'Loading...', 'wordcamporg' ); ?>
 </div>
+
+<?php
+// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- todo add to custom escaping functions.
+echo fav_session_share_form();

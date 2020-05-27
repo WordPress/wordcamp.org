@@ -181,6 +181,10 @@ td.wcb-favourite-session a.fav-session-button {
 	background-color: #ccc;
 }
 
+#fav-session-tab-link {
+	word-break: break-all;
+}
+
 #fav-session-email-form {
 	margin: 10px;
 }

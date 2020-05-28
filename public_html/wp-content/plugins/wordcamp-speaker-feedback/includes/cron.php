@@ -120,7 +120,9 @@ function notify_organizers_unapproved_feedback() {
 	$message .= "\n\n";
 	$message .= get_subpage_url( 'wcb_session' );
 
+	add_filter( 'wp_mail_from_name', __NAMESPACE__ . '\filter_notification_from_name' );
 	wp_mail( $to, $subject, $message );
+	remove_filter( 'wp_mail_from_name', __NAMESPACE__ . '\filter_notification_from_name' );
 }
 
 /**
@@ -226,7 +228,9 @@ function notify_speakers_approved_feedback() {
 			esc_html( $wordcamp_name )
 		);
 
+		add_filter( 'wp_mail_from_name', __NAMESPACE__ . '\filter_notification_from_name' );
 		$result = wp_mail( $speaker->user_email, $subject, $message );
+		remove_filter( 'wp_mail_from_name', __NAMESPACE__ . '\filter_notification_from_name' );
 
 		restore_current_locale();
 
@@ -291,4 +295,19 @@ function get_unnotified_feedback() {
 	);
 
 	return get_feedback( array(), array( 'approve' ), $args );
+}
+
+/**
+ * Replace the default sender name with the name of the WordCamp.
+ *
+ * @param string $name
+ *
+ * @return string
+ */
+function filter_notification_from_name( $name ) {
+	if ( 'WordPress' === $name ) {
+		$name = get_wordcamp_name( get_current_blog_id() );
+	}
+
+	return $name;
 }

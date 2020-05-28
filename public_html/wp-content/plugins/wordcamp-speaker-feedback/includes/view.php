@@ -3,7 +3,6 @@
 namespace WordCamp\SpeakerFeedback\View;
 
 use WP_Comment, WP_Error, WP_Post, WP_Query;
-use WordCamp_Loader;
 use WordCamp\SpeakerFeedback\Feedback;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
 use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
@@ -40,7 +39,7 @@ function has_feedback_form() {
  */
 function event_accepts_feedback() {
 	$wordcamp            = get_wordcamp_post();
-	$valid_wcpt_statuses = WordCamp_Loader::get_public_post_statuses();
+	$valid_wcpt_statuses = array( 'wcpt-scheduled', 'wcpt-closed' ); // Avoid having to load the WordCamp_Loader class.
 	$now                 = date_create( 'now', wp_timezone() );
 	$start_time          = get_earliest_session_timestamp();
 	$end_time            = get_latest_session_ending_timestamp();

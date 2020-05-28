@@ -43,6 +43,7 @@ function load_includes() {
 		112, // 2011.tokyo
 		928, // 2017.testing
 		1170, // 2019.tokyo
+		1226, // 2020.birmingham
 	);
 
 	$load_beta_blocks =

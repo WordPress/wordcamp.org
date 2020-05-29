@@ -2015,7 +2015,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 #content .logos {
 	float: right;
-	width: 711px;
+	width: auto;
 }
 
 #content .logos ul {

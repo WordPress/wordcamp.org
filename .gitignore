@@ -9,6 +9,7 @@
 #
 # Misc
 #
+google*.html
 wp-cli.yml
 script-backups/
 node_modules/

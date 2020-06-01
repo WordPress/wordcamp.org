@@ -116,9 +116,11 @@ jQuery( document ).ready( function ( $ ) {
 	function updateShareLink() {
 		var favSessionIds   = FavSessionsStore.getSessionsForLink(),
 		    urlParams       = getUrlParams(),
-		    baseURL         = window.location.href,
-		    paramsPosition  = baseURL.indexOf( '?' ),
 		    urlSlugPosition = favSessionsUrlSlug.slice( 0, favSessionsUrlSlug.length - 1 );
+
+		// The hash needs to be at the end in order to form a proper URL. If it's not, `getUrlParams()` won't work.
+		var baseURL = window.location.href.replace( window.location.hash, '' );
+		var paramsPosition  = baseURL.indexOf( '?' );
 
 		if ( -1 !== paramsPosition ) {
 			baseURL = baseURL.slice( 0, paramsPosition );
@@ -131,7 +133,7 @@ jQuery( document ).ready( function ( $ ) {
 			delete urlParams[ urlSlugPosition ];
 		}
 
-		var favSessionsLink = baseURL + '?' + $.param( urlParams );
+		var favSessionsLink = baseURL + '?' + $.param( urlParams ) + window.location.hash;
 
 		$( '#fav-sessions-link' ).text( favSessionsLink );
 		$( '#fav-sessions-link' ).prop( 'href', favSessionsLink );

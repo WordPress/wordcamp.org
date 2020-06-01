@@ -300,7 +300,7 @@ function render( $attributes ) {
 	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
 	$attributes = wp_parse_args( $attributes, $defaults );
 
-	require_once WP_PLUGIN_DIR . '/wc-post-types/wc-post-types.php';
+	require_once WP_PLUGIN_DIR . '/wc-post-types/inc/favorite-schedule-shortcode.php';
 	require_once WP_PLUGIN_DIR . '/wc-post-types/inc/rest-api.php';
 
 	/*

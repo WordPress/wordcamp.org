@@ -1,5 +1,6 @@
+/* stylelint-disable no-descending-specificity */
 span.swag-needed-icon {
-	color: goldenrod;
+	color: #daa520;
 }
 
 .wcpt-field label {
@@ -28,12 +29,12 @@ body.wp-admin.post-type-wp_meetup .postbox textarea {
 	margin: 0 0 0 5px;
 }
 
-#post-body .wcpt-field input[type=text] {
+#post-body .wcpt-field input[type="text"] {
 	width: 50%;
 	min-width: 20rem;
 }
 
-#post-body .field__type-select-streaming input[type=text] {
+#post-body .field__type-select-streaming input[type="text"] {
 	width: 18rem;
 }
 
@@ -56,7 +57,7 @@ body.wp-admin.post-type-wp_meetup .postbox textarea {
 
 #wcpt_log .widefat tr.note td,
 #wcpt_log .widefat tr.note th {
-	vertical-align:top;
+	vertical-align: top;
 }
 
 #wcpt_log .widefat tr.note td p,

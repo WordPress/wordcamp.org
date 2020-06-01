@@ -118,8 +118,15 @@ jQuery( document ).ready( function ( $ ) {
 		    urlParams       = getUrlParams(),
 		    urlSlugPosition = favSessionsUrlSlug.slice( 0, favSessionsUrlSlug.length - 1 );
 
-		// The hash needs to be at the end in order to form a proper URL. If it's not, `getUrlParams()` won't work.
-		var baseURL = window.location.href.replace( window.location.hash, '' );
+		/*
+		 * The hash needs to be at the end in order to form a proper URL. If it's not, `getUrlParams()` won't
+		 * work.
+		 *
+		 * The second `replace()` covers cases where the URLs like `https://2020.narnia.wordcamp.org/schedule/#`,
+		 * because browsers don't include that scenario in `window.location.hash`.
+		 */
+		var baseURL = window.location.href.replace( window.location.hash, '' ).replace( '#', '' );
+
 		var paramsPosition  = baseURL.indexOf( '?' );
 
 		if ( -1 !== paramsPosition ) {

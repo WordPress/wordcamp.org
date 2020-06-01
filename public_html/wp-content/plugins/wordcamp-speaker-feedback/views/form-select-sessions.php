@@ -2,6 +2,7 @@
 
 namespace WordCamp\SpeakerFeedback\View;
 use function WordCamp\SpeakerFeedback\Post\get_session_speaker_names;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 $session_args = array(
 	'post_type'      => 'wcb_session',
@@ -21,6 +22,17 @@ $session_args = array(
 $sessions = new \WP_Query( $session_args );
 
 if ( $sessions->have_posts() ) : ?>
+
+	<?php if ( current_user_can( 'moderate_' . COMMENT_TYPE ) ) : ?>
+		<div class="speaker-feedback__notice">
+			<p>
+				<?php
+				esc_html_e( 'Organizers: This form is always visible to you for testing and styling purposes, but it is not visible to site visitors until the event starts.', 'wordcamporg' );
+				?>
+			</p>
+		</div>
+	<?php endif; ?>
+
 <form id="sft-navigation" class="speaker-feedback-navigation">
 	<label for="sft-session"><?php esc_html_e( 'Select a session to leave feedback', 'wordcamporg' ); ?></label>
 	<div class="speaker-feedback__wrapper">

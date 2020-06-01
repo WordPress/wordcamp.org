@@ -5,6 +5,7 @@ namespace WordCamp\SpeakerFeedback\View;
 use WP_Post;
 use function WordCamp\SpeakerFeedback\get_assets_path;
 use function WordCamp\SpeakerFeedback\Post\get_session_feedback_url;
+use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
 
@@ -14,6 +15,17 @@ defined( 'WPINC' ) || die();
 /** @var array   $text_questions */
 ?>
 <hr />
+
+<?php if ( current_user_can( 'moderate_' . COMMENT_TYPE ) ) : ?>
+	<div class="speaker-feedback__notice">
+		<p>
+			<?php
+			esc_html_e( 'Organizers: This form is always visible to you for testing and styling purposes, but it is not visible to site visitors until the event starts.', 'wordcamporg' );
+			?>
+		</p>
+	</div>
+<?php endif; ?>
+
 <form id="sft-feedback" class="speaker-feedback">
 
 	<h3><?php esc_html_e( 'Leave Feedback', 'wordcamporg' ); ?></h3>

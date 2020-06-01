@@ -2,7 +2,7 @@
 
 namespace WordCamp\SpeakerFeedback\View;
 
-use WP_Comment, WP_Post, WP_Query;
+use WP_Comment, WP_Error, WP_Post, WP_Query;
 use WordCamp\SpeakerFeedback\Feedback;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
 use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
@@ -13,7 +13,6 @@ use function WordCamp\SpeakerFeedback\Post\{
 };
 use const WordCamp\SpeakerFeedback\{ OPTION_KEY, QUERY_VAR };
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
-use const WordCamp\SpeakerFeedback\Cron\SPEAKER_OPT_OUT_KEY;
 use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
 
 defined( 'WPINC' ) || die();
@@ -31,6 +30,58 @@ add_filter( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 function has_feedback_form() {
 	global $wp_query;
 	return false !== $wp_query->get( QUERY_VAR, false );
+}
+
+/**
+ * Check to see if feedback is open for this event site.
+ *
+ * @return bool|WP_Error
+ */
+function event_accepts_feedback() {
+	$wordcamp            = get_wordcamp_post();
+	$valid_wcpt_statuses = array( 'wcpt-scheduled', 'wcpt-closed' ); // Avoid having to load the WordCamp_Loader class.
+	$now                 = date_create( 'now', wp_timezone() );
+	$start_time          = get_earliest_session_timestamp();
+	$end_time            = get_latest_session_ending_timestamp();
+
+	if ( ! $start_time ) {
+		// No valid start time, the schedule probably hasn't been published yet.
+		// Assume a far future date for now.
+		$start_time = $now->getTimestamp() + YEAR_IN_SECONDS;
+	}
+
+	if ( ! $end_time ) {
+		// No valid end time, assume it's 24 hours after the start time.
+		$end_time = $start_time + DAY_IN_SECONDS;
+	}
+
+	// Organizers need to be able to test and style feedback forms.
+	if ( current_user_can( 'moderate_' . COMMENT_TYPE ) ) {
+		return true;
+	}
+
+	if ( ! $wordcamp || ! in_array( $wordcamp->post_status, $valid_wcpt_statuses, true ) ) {
+		return new WP_Error(
+			'speaker_feedback_event_feedback_unavailable',
+			__( 'Feedback forms are not available for this site.', 'wordcamporg' )
+		);
+	}
+
+	if ( $now->getTimestamp() < $start_time ) {
+		return new WP_Error(
+			'speaker_feedback_event_too_soon',
+			__( 'Feedback forms are not available until the event has started.', 'wordcamporg' )
+		);
+	}
+
+	if ( $now->getTimestamp() > $end_time + ACCEPT_INTERVAL_IN_SECONDS ) {
+		return new WP_Error(
+			'speaker_feedback_event_too_late',
+			__( 'Feedback forms are closed for this event.', 'wordcamporg' )
+		);
+	}
+
+	return true;
 }
 
 /**
@@ -64,33 +115,10 @@ function render( $content ) {
 
 		$form_content = wpautop( $html );
 	} elseif ( is_page( get_option( OPTION_KEY ) ) ) {
-		$wordcamp            = get_wordcamp_post();
-		$valid_wcpt_statuses = array( 'wcpt-scheduled', 'wcpt-closed' );
-		$start_time          = get_earliest_session_timestamp();
-		$end_time            = get_latest_session_ending_timestamp();
+		$accepts_feedback = event_accepts_feedback();
 
-		if ( ! $start_time ) {
-			// No valid start time, the event probably hasn't been scheduled yet. Use a far future date for now.
-			$start_time = $now->getTimestamp() + YEAR_IN_SECONDS;
-		}
-
-		if ( ! $end_time ) {
-			// No valid end time, assume it's 24 hours later.
-			$end_time = $start_time + DAY_IN_SECONDS;
-		}
-
-		if (
-			// The event either needs to be on the schedule, already occurred, or a test site.
-			( ! $wordcamp || ! in_array( $wordcamp->post_status, $valid_wcpt_statuses, true ) )
-			&& ! is_wordcamp_test_site()
-		) {
-			$message = __( 'Feedback forms are not available for this site.', 'wordcamporg' );
-			$file    = 'form-not-available.php';
-		} elseif ( $now->getTimestamp() < $start_time ) {
-			$message = __( 'Feedback forms are not available until the event has started.', 'wordcamporg' );
-			$file    = 'form-not-available.php';
-		} elseif ( $now->getTimestamp() > $end_time + ACCEPT_INTERVAL_IN_SECONDS ) {
-			$message = __( 'Feedback forms are closed for this event.', 'wordcamporg' );
+		if ( is_wp_error( $accepts_feedback ) ) {
+			$message = $accepts_feedback->get_error_message();
 			$file    = 'form-not-available.php';
 		} else {
 			$file = 'form-select-sessions.php';

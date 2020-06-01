@@ -26,8 +26,8 @@
 		"extends": "../../../../.stylelintrc"
 	},
 	"scripts": {
-		"start": "wp-scripts start sessions=./js/src/session/index.js speakers=./js/src/speaker/index.js",
-		"build": "wp-scripts build sessions=./js/src/session/index.js speakers=./js/src/speaker/index.js",
+		"start": "wp-scripts start sessions=./js/src/session/index.js speakers=./js/src/speaker/index.js organizers=./js/src/organizer/index.js",
+		"build": "wp-scripts build sessions=./js/src/session/index.js speakers=./js/src/speaker/index.js organizers=./js/src/organizer/index.js",
 		"format:js": "wp-scripts format-js js/src",
 		"lint:js": "wp-scripts lint-js js/src",
 		"lint:css": "wp-scripts lint-style css/editor.css",

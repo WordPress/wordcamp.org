@@ -15,6 +15,7 @@ require_once 'favorite-schedule-shortcode.php';
 add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_speaker_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
+add_action( 'init', __NAMESPACE__ . '\register_organizer_post_meta' );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -156,6 +157,42 @@ function register_session_post_meta() {
 			'type'          => 'integer',
 			'show_in_rest'  => true,
 			'single'        => false,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+}
+
+/**
+ * Registers post meta to the Organizer post type.
+ *
+ * @return void
+ */
+function register_organizer_post_meta() {
+	register_post_meta(
+		'wcb_organizer',
+		'_wcpt_user_id',
+		array(
+			'type'         => 'integer',
+			// This is not set directly, but is set as a result of `_wcpt_user_name`.
+			'show_in_rest' => false,
+			'single'       => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+	register_post_meta(
+		'wcb_organizer',
+		'_wcpt_user_name',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest'      => true,
+			'sanitize_callback' => function( $value ) {
+				$wporg_user = wcorg_get_user_by_canonical_names( $value );
+				if ( ! $wporg_user ) {
+					return '';
+				}
+				return $wporg_user->user_login;
+			},
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);

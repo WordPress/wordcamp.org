@@ -3,13 +3,13 @@
  */
 import { __ } from '@wordpress/i18n';
 import { getDate, gmdate } from '@wordpress/date';
-import { BaseControl, SelectControl, TextControl } from '@wordpress/components';
+import { SelectControl, TextControl } from '@wordpress/components';
 import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
 
 /**
  * Internal dependencies
  */
-import SessionDate from './date';
+import DateControl from '../../components/date-control';
 import SessionDuration from './duration';
 import usePostMeta from '../../components/hooks/use-post-meta';
 
@@ -28,16 +28,14 @@ export default function SessionSettings() {
 			className="wordcamp-panel-session-info"
 			title={ __( 'Session Info', 'wordcamporg' ) }
 		>
-			<BaseControl>
-				<BaseControl.VisualLabel>{ __( 'Day & Time', 'wordcamporg' ) }</BaseControl.VisualLabel>
-				<SessionDate
-					date={ start }
-					onChange={ ( dateValue ) => {
-						const value = gmdate( 'U', dateValue );
-						setStartTime( value );
-					} }
-				/>
-			</BaseControl>
+			<DateControl
+				label={ __( 'Day & Time', 'wordcamporg' ) }
+				date={ start }
+				onChange={ ( dateValue ) => {
+					const value = gmdate( 'U', dateValue );
+					setStartTime( value );
+				} }
+			/>
 
 			<SessionDuration value={ duration } onChange={ setDuration } />
 

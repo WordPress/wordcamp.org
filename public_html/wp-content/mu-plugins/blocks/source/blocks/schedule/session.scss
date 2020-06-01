@@ -44,8 +44,6 @@ body.block-editor-page {
 	color: #23282d;
 }
 
-// Avoid false positives; see https://github.com/stylelint/stylelint/issues/3135.
-// stylelint-disable no-descending-specificity
 .wordcamp-schedule__session-title,
 .editor-styles-wrapper h4.wordcamp-schedule__session-title, /* Override TwentySixteen. */
 .wordcamp-schedule__session-tracks,
@@ -61,8 +59,6 @@ body.block-editor-page {
 			text-decoration: underline;
 		}
 	}
-
-	/* stylelint-enable no-descending-specificity */
 }
 
 dl.wordcamp-schedule__session-speakers,

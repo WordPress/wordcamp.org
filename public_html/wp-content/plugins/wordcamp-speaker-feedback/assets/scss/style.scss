@@ -222,7 +222,7 @@
 		align-items: center;
 		margin-right: 1em;
 
-		label { // stylelint-disable-line no-descending-specificity
+		label {
 			margin-bottom: 0;
 			min-width: 4em;
 		}
@@ -279,7 +279,6 @@
 	justify-content: space-between;
 	align-items: center;
 
-	// stylelint-disable no-descending-specificity
 	label {
 		position: relative;
 		margin-bottom: 0;
@@ -328,7 +327,6 @@
 	&.is-inflight label {
 		cursor: wait;
 	}
-	// stylelint-enable
 }
 
 .speaker-feedback__helpful {

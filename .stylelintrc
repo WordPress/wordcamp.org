@@ -2,7 +2,7 @@
 	"extends" : "stylelint-config-wordpress/scss",
 	"rules"   : {
 		"max-line-length": 115,
-
+		"no-descending-specificity": null,
 		"rule-empty-line-before" : [ "always-multi-line", {
 			"except" : [ "first-nested", "after-single-line-comment" ]
 		} ]

@@ -257,14 +257,14 @@ jQuery( document ).ready( function ( $ ) {
 
 	// Toggle a session being favorited.
 	function handleSwitchEvent( event ) {
-		event.preventDefault();
-
 		if ( 'keydown' === event.type ) {
 			// Space (32) and enter (13) trigger the favoriting, anything else can be passed through.
 			if ( event.keyCode !== 32 && event.keyCode !== 13 ) {
 				return;
 			}
 		}
+
+		event.preventDefault();
 
 		if ( FavSessionsStore.primarySource !== FavSessionsStore.useLocalStorage ) {
 			alert( favSessionsPhpObject.i18n.buttonDisabledAlert );

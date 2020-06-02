@@ -8,8 +8,6 @@ namespace WordCamp\Git_Hooks\Pre_Push;
  * and PHP is a much better scripting language.
  */
 
-// todo test running in non-root path
-
 $color_red   = "\033[31m";
 $color_reset = "\033[m";
 
@@ -40,10 +38,8 @@ function main() {
 		'wordcamp-speaker-feedback' => 'plugins/wordcamp-speaker-feedback',
 	);
 
-	#todo must must be run in root folder if keeping --relative arg
-	$changed_files = shell_exec( '/usr/bin/git diff origin/production --name-only --relative' );
-
-	$errors = js_css_lint( $workspaces, $changed_files );
+	$changed_files = shell_exec( '/usr/bin/git diff origin/production --name-only' );
+	$errors        = js_css_lint( $workspaces, $changed_files );
 
 	if ( $errors ) {
 		echo "\n\n{$color_red}Please fix the errors above, or intentionally bypass this with `git push --no-verify`.{$color_reset}\n\n";

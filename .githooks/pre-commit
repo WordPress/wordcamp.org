@@ -3,6 +3,8 @@
 #
 # TODO
 #
+# deprecated this, and migrate the functionality to the PHP `pre-push` script.
+#
 # - Restrict changed files to only PHP for `php -l` and PHPMD, then PHP and CSS for PHPCS.
 # - This all assumes that the state is clean. If a changed file is dirty, `php -l`, etc will be run against the
 #   dirty file on disk, not the contents of that file at `HEAD`. We could maybe stash unstaged changes, run this
@@ -23,10 +25,6 @@ function main {
 	php_lint
 	phpcs
 	phpmd
-
-	# todo lint JS and CSS
-
-	printf "\n"
 }
 
 # Get the files that have changes between the local and remote HEADs.

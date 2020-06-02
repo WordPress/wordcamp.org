@@ -1,7 +1,15 @@
 #!/bin/sh
 
+# NOTE: This is deprecated. All new functionality should be added to the PHP `pre-push` script, and
+# eventually the Bash functionality should be migrated as well.
+
+
 #
 # TODO
+#
+# - only run phpcs on _changed_ lines. otherwise this is not usable.
+# see .github/bin
+# phpmd probably has to look at whole file
 #
 # - Restrict changed files to only PHP for `php -l` and PHPMD, then PHP and CSS for PHPCS.
 # - This all assumes that the state is clean. If a changed file is dirty, `php -l`, etc will be run against the
@@ -23,10 +31,6 @@ function main {
 	php_lint
 	phpcs
 	phpmd
-
-	# todo lint JS and CSS
-
-	printf "\n"
 }
 
 # Get the files that have changes between the local and remote HEADs.

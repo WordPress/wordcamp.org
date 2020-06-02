@@ -288,8 +288,8 @@ function renderWarnings( spansNonContiguousTracks ) {
 /**
  * Render the button to mark a session as a favorite.
  *
- * The bulk of the code for that feature lives in `wc-post-types/js/favourite-sessions.js`. It simultaneously supports the old
- * shortcode and this block.
+ * The bulk of the code for that feature lives in `wc-post-types/js/favourite-sessions.js`. It simultaneously
+ * supports the old shortcode and this block.
  *
  * @param {string} title
  *
@@ -298,9 +298,12 @@ function renderWarnings( spansNonContiguousTracks ) {
 function renderFavoriteButton( title ) {
 	return (
 		<div className="wcb-session-favourite-icon">
+			{ /* Known issue: https://meta.trac.wordpress.org/ticket/4247 */ }
+			{ /* eslint-disable jsx-a11y/anchor-is-valid */ }
 			<a href="#" role="button" className="fav-session-button" aria-pressed="false">
 				<span className="screen-reader-text">
 					{ sprintf(
+						// translators: Title of the session that will be favorites when clicking the button.
 						__( 'Favorite session: %s', 'wordcamporg' ),
 						decodeEntities( stripTags( title ) )
 					) }

@@ -1,17 +1,90 @@
 #!/usr/bin/php
 <?php
 
-// alternate workflow idea
-// break off into separate branch to merge
+namespace WordCamp\Git_Hooks\Pre_Push;
 
-// there's no real pre-push hook, so need to alias `git push` to run this file if $(pwd) contains `wordcamp.test`
+/*
+ * The functionality from `pre-commit` should probably be moved here, because `pre-push` is a better workflow,
+ * and PHP is a much better scripting language.
+ */
+
+// todo test running in non-root path
+
+$color_red   = "\033[31m";
+$color_reset = "\033[m";
+
+main();
 
 
-// when pushing to production branch, automatically run this
+function main() {
+	global $color_red, $color_reset;
 
-// also be able to run it manually when another branch is ready for review
+	$current_branch = trim( shell_exec( "/usr/bin/git rev-parse --abbrev-ref HEAD 2>&1" ) );
 
-// reuse pre-commit stuff somehow?
-	// maybe call that file w/ $CHANGED_FILES supplied via cli argument
-// but add prettier & eslint
+	/*
+	 * Only run this hook on finished commits that are ready for production. It should be skipped during
+	 * the development process, in order to keep a frictionless workflow.
+	 */
+	if ( 'git-pre-push-lint' !== $current_branch ) {
+		// todo change to 'production' when done testing
 
+		echo "\n ret early b/c not default branch";
+		exit( 0 );
+	}
+
+	/*
+	 * Other workspaces can be added once they pass the linters on the `production` branch, or this has the
+	 * ability to run on only changed lines.
+	 */
+	$workspaces = array(
+		'wordcamp-blocks'           => 'mu-plugins/blocks',
+		'virtual-embeds'            => 'mu-plugins/virtual-embeds',
+		'wordcamp-speaker-feedback' => 'plugins/wordcamp-speaker-feedback',
+	);
+
+	#todo must must be run in root folder if keeping --relative arg
+	$changed_files = shell_exec( '/usr/bin/git diff origin/production --name-only --relative' );
+
+	$errors = js_css_lint( $workspaces, $changed_files );
+
+	if ( $errors ) {
+		echo "\n{$color_red}Please fix the errors above, or intentionally bypass this with `git push --no-verify`.{$color_reset}\n\n";
+	}
+
+	exit( (int) $errors );
+}
+
+/**
+ * Lint JavaScript and CSS files.
+ *
+ * @param array $workspaces
+ * @param array $changed_files
+ *
+ * @return bool
+ */
+function js_css_lint( $workspaces, $changed_files ) {
+	$errors = false;
+
+	foreach ( $workspaces as $name => $path ) {
+		if ( false !== strpos( $changed_files, $path ) ) {
+			echo "\nLinting $name workspace... \n\n";
+
+			exec( 'yarn workspace ' . $name . ' lint:js 2>&1', $yarn_output, $exec_exit_status );
+
+			if ( $exec_exit_status ) {
+				$errors = true;
+				echo implode( "\n", $yarn_output );
+			}
+
+			echo "\n\n";
+
+			exec( 'yarn workspace ' . $name . ' lint:css 2>&1', $yarn_output, $exec_exit_status );
+
+			if ( $exec_exit_status ) {
+				echo implode( "\n", $yarn_output );
+			}
+		}
+	}
+
+	return $errors;
+}

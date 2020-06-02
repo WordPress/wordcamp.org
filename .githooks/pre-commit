@@ -1,15 +1,9 @@
 #!/bin/sh
 
-# NOTE: This is deprecated. All new functionality should be added to the PHP `pre-push` script, and
-# eventually the Bash functionality should be migrated as well.
-
-
 #
 # TODO
 #
-# - only run phpcs on _changed_ lines. otherwise this is not usable.
-# see .github/bin
-# phpmd probably has to look at whole file
+# deprecated this, and migrate the functionality to the PHP `pre-push` script.
 #
 # - Restrict changed files to only PHP for `php -l` and PHPMD, then PHP and CSS for PHPCS.
 # - This all assumes that the state is clean. If a changed file is dirty, `php -l`, etc will be run against the

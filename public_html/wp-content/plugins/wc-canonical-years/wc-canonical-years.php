@@ -22,9 +22,6 @@ class WordCamp_Canonical_Years_Plugin {
 		if ( isset( $_SERVER['REQUEST_URI'] ) && '/' === $_SERVER['REQUEST_URI'] ) {
 			add_action( 'wp_head', array( $this, 'wp_head' ), 9 );
 		}
-
-		// WordPress will print rel=conanical for singular posts by default, we don't want that.
-		remove_action( 'wp_head', 'rel_canonical' );
 	}
 
 	/**

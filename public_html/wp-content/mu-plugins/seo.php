@@ -3,6 +3,7 @@
 namespace WordCamp\SEO;
 defined( 'WPINC' ) || die();
 
+// Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );
 
 
@@ -57,6 +58,10 @@ function canonical_link_past_home_pages_to_current_year() {
 	) );
 
 	if ( $latest_domain !== $current_domain && $latest_domain ) {
+		// Remove default canonical link, to avoid duplicates.
+		// @todo: This will need to be updated if rel_canonical_link() is ever merged to Core.
+		remove_action( 'wp_head', 'WordPressdotorg\SEO\Canonical\rel_canonical_link' );
+
 		printf(
 			'<link rel="canonical" href="%s" />' . "\n",
 			esc_url( set_url_scheme( trailingslashit( $latest_domain ) ) )

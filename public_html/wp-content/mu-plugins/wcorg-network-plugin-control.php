@@ -50,7 +50,6 @@ function _get_network_plugin_state_list( $state ) {
 			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
 			'wordcamp-remote-css/bootstrap.php',
 			'wordcamp-site-cloner/wordcamp-site-cloner.php',
-			'wc-canonical-years/wc-canonical-years.php',
 			'wc-fonts/wc-fonts.php',
 			'wc-post-types/wc-post-types.php',
 			'wordcamp-qbo-client/wordcamp-qbo-client.php',

@@ -1,13 +1,41 @@
 <?php
 
+namespace WordCamp\Sunrise;
+defined( 'WPINC' ) or die();
+
 /**
  * Redirects from city.wordcamp.org/year to year.city.wordcamp.org
  */
-function wcorg_unsubdomactories_redirects() {
-	$redirect_cities = array( 'russia', 'sf', 'london', 'seattle', 'austin', 'tokyo', 'portland', 'europe', 'philly', 'sofia', 'miami', 'montreal', 'newyork', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne', 'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine', 'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla', 'finland', 'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh', 'baltimore', 'sydney', 'providence', 'nyc', 'dfw', 'dayton', 'copenhagen', 'denmark', 'lisboa', 'kansai', 'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis', 'atlanta', 'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague', 'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai', 'belohorizonte', 'lancasterpa', 'switzerland', 'romania', 'columbus', 'saratoga', 'fayetteville', 'bournemouth', 'hanoi', 'saopaulo', 'cologne', 'louisville', 'mallorca', 'annarbor', 'manchester', 'laspenitas', 'israel', 'ventura', 'vancouver', 'peru', 'auckland', 'norrkoping', 'netherlands', 'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee', 'lima', 'brighton', 'asheville', 'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'lancaster', 'kenya', 'malaga', 'lithuania', 'detroit', 'kobe', 'reno', 'indonesia', 'transylvania', 'mexico', 'nicaragua', 'gdansk', 'bologna', 'milano', 'catania', 'modena', 'stockholm', 'pune', 'jerusalem', 'philippines', 'newzealand', 'cuttack', 'ponce', 'jabalpur', 'singapore', 'poznan', 'richmond', 'goldcoast', 'caguas', 'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy', 'rhodeisland', 'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta', 'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'torino', 'bilbao', 'peoria', 'sunshinecoast', 'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'cincinnati', 'okc' );
+function unsubdomactories_redirects() {
+	$redirect_cities = array(
+		'russia', 'sf', 'london', 'austin', 'tokyo', 'portland', 'europe', 'philly', 'sofia', 'miami',
+		'montreal', 'newyork', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
+		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
+		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla', 'finland',
+		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
+		'baltimore', 'sydney', 'providence', 'nyc', 'dfw', 'dayton', 'copenhagen', 'denmark', 'lisboa', 'kansai',
+		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
+		'atlanta', 'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
+		'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
+		'belohorizonte', 'lancasterpa', 'switzerland', 'romania', 'columbus', 'saratoga', 'fayetteville',
+		'bournemouth', 'hanoi', 'saopaulo', 'cologne', 'louisville', 'mallorca', 'annarbor', 'manchester',
+		'laspenitas', 'israel', 'ventura', 'vancouver', 'peru', 'auckland', 'norrkoping', 'netherlands',
+		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee', 'lima',
+		'brighton', 'asheville', 'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'lancaster', 'kenya',
+		'malaga', 'lithuania', 'detroit', 'kobe', 'reno', 'indonesia', 'transylvania', 'mexico', 'nicaragua',
+		'gdansk', 'bologna', 'milano', 'catania', 'modena', 'stockholm', 'pune', 'jerusalem', 'philippines',
+		'newzealand', 'cuttack', 'ponce', 'jabalpur', 'singapore', 'poznan', 'richmond', 'goldcoast', 'caguas',
+		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy', 'rhodeisland',
+		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
+		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'torino', 'bilbao', 'peoria',
+		'sunshinecoast', 'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'cincinnati', 'okc',
+	);
 
 	$domain = $_SERVER['HTTP_HOST'];
-	if ( ! preg_match( '#^([a-z0-9-]+)\.wordcamp\.org$#i', $domain, $matches ) ) {
+	$tld    = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
+
+	// Return if already on a 4th-level domain (e.g., 2020.narnia.wordcamp.org)
+	if ( ! preg_match( "#^([a-z0-9-]+)\.wordcamp\.$tld$#i", $domain, $matches ) ) {
 		return;
 	}
 
@@ -16,15 +44,18 @@ function wcorg_unsubdomactories_redirects() {
 		return;
 	}
 
+	// If can't pick a year out of the path, return.
+	// Extra alpha characters are included, for sites like `seattle.wordcamp.org/2015-beginners`.
 	$path = $_SERVER['REQUEST_URI'];
 	if ( ! preg_match( '#^/(\d{4}[a-z0-9-]*)#i', $path, $matches ) ) {
 		return;
 	}
 
 	$year        = strtolower( $matches[1] );
-	$path        = preg_replace( '#' . preg_quote( $year ) . '#', '', $path, 1 );
+	$pattern     = '#' . preg_quote( $year, '#' ) . '#';
+	$path        = preg_replace( $pattern, '', $path, 1 );
 	$path        = str_replace( '//', '/', $path );
-	$redirect_to = sprintf( 'https://%s.%s.wordcamp.org%s', $year, $city, $path );
+	$redirect_to = sprintf( "https://%s.%s.wordcamp.$tld%s", $year, $city, $path );
 
 	header( 'Location: ' . $redirect_to, true, 301 );
 	die();
@@ -36,7 +67,7 @@ function wcorg_unsubdomactories_redirects() {
  * If site does not exist in the network, will look for the latest xxxx.city.wordpress.org and redirect.
  * Allows URLs such as sf.wordcamp.org always link to the latest (or most recent) WordCamp.
  */
-function wcorg_canonical_years_redirect() {
+function canonical_years_redirect() {
 	global $wpdb;
 
 	$domain    = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
@@ -110,7 +141,7 @@ function wcorg_canonical_years_redirect() {
  *
  * @return array
  */
-function wcorg_get_domain_redirects() {
+function get_domain_redirects() {
 	$central = 'central.wordcamp.org';
 
 	return array(
@@ -174,13 +205,9 @@ function wcorg_get_domain_redirects() {
  *
  * General non-pattern redirects in the network.
  */
-function wcorg_site_redirects() {
-	if ( php_sapi_name() === 'cli' ) {
-		return;
-	}
-
+function site_redirects() {
 	$domain           = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
-	$domain_redirects = wcorg_get_domain_redirects();
+	$domain_redirects = get_domain_redirects();
 	$redirect         = false;
 
 	if ( in_array( $domain, array( 'wordcamp.org', 'wordcamp.test', 'buddycamp.org', 'buddycamp.test' ), true )
@@ -208,9 +235,9 @@ function wcorg_site_redirects() {
 }
 
 if ( php_sapi_name() !== 'cli' ) {
-	wcorg_site_redirects();
-	wcorg_unsubdomactories_redirects();
-	wcorg_canonical_years_redirect();
+	site_redirects();
+	unsubdomactories_redirects();
+	canonical_years_redirect();
 }
 
 /*

@@ -1,5 +1,7 @@
 <?php
 
+use function WordCamp\Sunrise\get_domain_redirects;
+
 /**
  * A helper plugin for our integration with Let's Encrypt.
  */
@@ -62,8 +64,8 @@ class WordCamp_Lets_Encrypt_Helper {
 		}
 
 		// Back-compat domains.
-		if ( is_callable( 'wcorg_get_domain_redirects' ) ) {
-			$back_compat_domains = wcorg_get_domain_redirects();
+		if ( is_callable( 'get_domain_redirects' ) ) {
+			$back_compat_domains = get_domain_redirects();
 
 			$domains = array_merge( $domains, array_keys( $back_compat_domains ) );
 		}

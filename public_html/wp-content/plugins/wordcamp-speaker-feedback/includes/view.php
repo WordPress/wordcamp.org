@@ -5,7 +5,7 @@ namespace WordCamp\SpeakerFeedback\View;
 use WP_Comment, WP_Error, WP_Post, WP_Query;
 use WordCamp\SpeakerFeedback\Feedback;
 use function WordCamp\SpeakerFeedback\{ get_views_path, get_assets_url, get_assets_path };
-use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, get_feedback_comment };
+use function WordCamp\SpeakerFeedback\Comment\{ maybe_get_cached_feedback_count, get_feedback, get_feedback_comment };
 use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_meta_field_schema, get_feedback_questions };
 use function WordCamp\SpeakerFeedback\Post\{
 	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
@@ -176,7 +176,7 @@ function render_feedback_view() {
 		$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ), $query_args );
 		$avg_rating = get_feedback_average_rating( $feedback );
 
-		$feedback_count = count_feedback( $post->ID );
+		$feedback_count = (array) maybe_get_cached_feedback_count( $post->ID );
 		$approved       = absint( $feedback_count['approved'] );
 		$moderated      = absint( $feedback_count['moderated'] );
 

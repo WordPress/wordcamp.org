@@ -5,7 +5,7 @@ namespace WordCamp\SpeakerFeedback\Admin;
 use WordCamp\SpeakerFeedback\Feedback_List_Table;
 use function WordCamp\SpeakerFeedback\{ get_assets_path, get_includes_path, get_views_path, get_assets_url };
 use function WordCamp\SpeakerFeedback\Comment\{
-	count_feedback, get_feedback, get_feedback_comment, delete_feedback,
+	count_feedback, maybe_get_cached_feedback_count, get_feedback, get_feedback_comment, delete_feedback,
 	is_feedback, mark_feedback_inappropriate, unmark_feedback_inappropriate,
 };
 use function WordCamp\SpeakerFeedback\CommentMeta\{ get_feedback_questions, count_helpful_feedback };
@@ -224,7 +224,7 @@ function add_feedback_bubble( $screen ) {
 		return;
 	}
 
-	$counts = count_feedback();
+	$counts = (array) maybe_get_cached_feedback_count();
 	if ( $counts['moderated'] <= 0 ) {
 		return;
 	}
@@ -340,7 +340,7 @@ function adjust_comment_counts( $count, $post_id ) {
 	$original_count['moderated'] = $original_count['awaiting_moderation'];
 	unset( $original_count['awaiting_moderation'] );
 
-	$feedback_count = count_feedback( $post_id );
+	$feedback_count = (array) maybe_get_cached_feedback_count( $post_id );
 	$adjusted_count = array();
 
 	foreach ( $original_count as $status => $value ) {
@@ -795,8 +795,7 @@ function filter_list_table_views( $views ) {
 	);
 
 	$status          = filter_input( INPUT_GET, 'comment_status' );
-	$feedback_counts = ( $post_id ) ? count_feedback( $post_id ) : count_feedback();
-	$feedback_counts = (object) $feedback_counts;
+	$feedback_counts = ( $post_id ) ? maybe_get_cached_feedback_count( $post_id ) : maybe_get_cached_feedback_count();
 
 	$view_inappropriate = array(
 		'inappropriate' => sprintf(
@@ -852,18 +851,7 @@ function filter_list_table_row_actions( $actions ) {
  * @return bool|mixed|object
  */
 function filter_list_table_view_counts( $count, $post_id ) {
-	$cache_key = "sft-feedback-{$post_id}";
-
-	$cached_count = wp_cache_get( $cache_key, 'counts' );
-
-	if ( false !== $cached_count ) {
-		return $cached_count;
-	}
-
-	$feedback_count = (object) count_feedback( $post_id );
-	wp_cache_set( $cache_key, $feedback_count, 'counts' );
-
-	return $feedback_count;
+	return maybe_get_cached_feedback_count( $post_id );
 }
 
 /**

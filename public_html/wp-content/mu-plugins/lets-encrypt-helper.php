@@ -81,7 +81,7 @@ class WordCamp_Lets_Encrypt_Helper {
 	 *
 	 * @param WP_REST_Request $request
 	 *
-	 * @return WP_Error|void 
+	 * @return WP_Error|void
 	 */
 	public static function rest_callback_domains_dehydrated( $request ) {
 		if ( WORDCAMP_LE_HELPER_API_KEY !== $request->get_param( 'api_key' ) ) {
@@ -98,27 +98,32 @@ class WordCamp_Lets_Encrypt_Helper {
 			if ( $a_len === $b_len ) {
 				return strnatcasecmp( $a, $b );
 			}
+
 			return $a_len - $b_len;
 		} );
 
 		// Group all the subdomains together with their "parent" (xyz.campevent.tld)
-		$result = [];
+		$result = array();
 		foreach ( $domains as $domain ) {
 			$dots = substr_count( $domain, '.' );
+
 			if ( $dots <= 2 ) {
 				// Special cases
 				if ( 'central.wordcamp.org' === $domain ) {
 					$result['wordcamp.org'][] = $domain;
+
 				} elseif ( in_array( $domain, [ '2006.wordcamp.org', '2007.wordcamporg', 'wordcampsf.org', 'wordcampsf.com' ] ) ) {
 					$result['sf.wordcamp.org'][] = $domain;
 					$result['sf.wordcamp.org'][] = "www.{$domain}";
+
 				} elseif ( ! isset( $result[ $domain ] ) ) {
 					// Main domain
-					$result[ $domain ] = [];
+					$result[ $domain ] = array();
 				}
+
 			} else {
 				// Strip anything before xyz.campevent.tld
-				$main_domain = implode( '.', array_slice( explode( '.', $domain ), -3 ) );
+				$main_domain              = implode( '.', array_slice( explode( '.', $domain ), - 3 ) );
 				$result[ $main_domain ][] = $domain;
 			}
 		}
@@ -130,8 +135,10 @@ class WordCamp_Lets_Encrypt_Helper {
 		// narnia.wordcamp.org www.narnia.wordcamp.org 2020.narnia.wordcamp.org
 		foreach ( $result as $domain => $subdomains ) {
 			$altnames = implode( ' ', $subdomains );
+
 			echo rtrim( "$domain www.{$domain} $altnames" ) . "\n";
 		}
+
 		exit;
 	}
 }

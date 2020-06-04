@@ -19,7 +19,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test *.seattle.wordcamp.test *.shinynew.wordcamp.test buddycamp.test *.buddycamp.test *.brighton.buddycamp.test
 	```
 	
-	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`
+	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
 
 	_Note: That list of domains is generated with `docker-compose exec wordcamp.test wp site list --field=url`, but that command won't be available until after you've built the environment in the next steps._
 
@@ -30,7 +30,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     cd public_html
     git clone git://core.git.wordpress.org/ mu
     cd mu
-    git checkout 5.2
+    git checkout 5.4
     ```
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)

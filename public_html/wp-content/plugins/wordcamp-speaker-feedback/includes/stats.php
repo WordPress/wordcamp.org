@@ -93,6 +93,7 @@ function generate_stats( $data ) {
 		'total_feedback_pending',
 		'total_feedback_spam',
 		'total_sessions',
+		'total_sessions_with_feedback_approved',
 		'total_speakers',
 		'total_speakers_viewed_feedback',
 		'total_tickets',
@@ -109,6 +110,7 @@ function generate_stats( $data ) {
 		'percent_feedback_approved_helpful',
 		'percent_feedback_inappropriate',
 		'percent_feedback_spam',
+		'percent_sessions_with_feedback_approved',
 		'percent_speakers_viewed_feedback',
 
 		'most_feedback_by_author',
@@ -256,6 +258,23 @@ function calculate_total_sessions( array $data ) {
 	}
 
 	return count( $data['session_posts'] );
+}
+
+/**
+ * Calculate the total number of published session posts.
+ *
+ * @param array $data
+ *
+ * @return int|WP_Error
+ */
+function calculate_total_sessions_with_feedback_approved( array $data ) {
+	if ( ! isset( $data['feedback_approved'] ) ) {
+		return new WP_Error();
+	}
+
+	$sessions_with_feedback = get_feedback_session_counts( $data['feedback_approved'] );
+
+	return count( $sessions_with_feedback );
 }
 
 /**
@@ -499,6 +518,22 @@ function calculate_percent_feedback_spam( array $data, array $stats ) {
 }
 
 /**
+ * Calculate the percentage of sessions that have approved feedback.
+ *
+ * @param array $data  Unused.
+ * @param array $stats
+ *
+ * @return float|WP_Error
+ */
+function calculate_percent_sessions_with_feedback_approved( array $data, array $stats ) {
+	if ( ! isset( $stats['total_sessions'], $stats['total_sessions_with_feedback_approved'] ) ) {
+		return new WP_Error();
+	}
+
+	return round( 100 * $stats['total_sessions_with_feedback_approved'] / $stats['total_sessions'], 1 );
+}
+
+/**
  * Calculate the percentage of speakers who viewed their feedback.
  *
  * @param array $data  Unused.
@@ -606,21 +641,8 @@ function calculate_most_feedback_approved_for_session( array $data ) {
 
 	$all_reviewed_feedback = array_merge( $data['feedback_approved'], $data['feedback_inappropriate'] );
 
-	$session_counts = array_reduce(
-		$all_reviewed_feedback,
-		function( $carry, $item ) {
-			$post_id = (string) $item->comment_post_ID; // Convert to string to retain array keys.
-			if ( ! isset( $carry[ $post_id ] ) ) {
-				$carry[ $post_id ] = 0;
-			}
-			$carry[ $post_id ] ++;
+	$session_counts = get_feedback_session_counts( $all_reviewed_feedback );
 
-			return $carry;
-		},
-		array()
-	);
-
-	arsort( $session_counts );
 	reset( $session_counts );
 	$highest_count = current( $session_counts );
 
@@ -646,6 +668,36 @@ function get_feedback_author_counts( $feedback ) {
 				$carry[ $author_email ] = 0;
 			}
 			$carry[ $author_email ] ++;
+
+			return $carry;
+		},
+		array()
+	);
+
+	arsort( $counts );
+
+	return $counts;
+}
+
+/**
+ * List the number of feedback comments for each session, by post ID, sorted high to low.
+ *
+ * Note that the post IDs are cast as strings in the array keys so that PHP will treat the array
+ * as associative instead of numeric.
+ *
+ * @param Feedback[] $feedback
+ *
+ * @return array
+ */
+function get_feedback_session_counts( $feedback ) {
+	$counts = array_reduce(
+		$feedback,
+		function( $carry, $item ) {
+			$post_id = (string) $item->comment_post_ID; // Convert to string to retain array keys.
+			if ( ! isset( $carry[ $post_id ] ) ) {
+				$carry[ $post_id ] = 0;
+			}
+			$carry[ $post_id ] ++;
 
 			return $carry;
 		},

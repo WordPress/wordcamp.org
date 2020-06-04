@@ -7,6 +7,7 @@ use WordCamp\SpeakerFeedback\Feedback;
 use function WordCamp\SpeakerFeedback\Comment\{ maybe_get_cached_feedback_count, get_feedback };
 use function WordCamp\SpeakerFeedback\View\{ event_accepts_feedback, get_feedback_average_rating };
 use const WordCamp\SpeakerFeedback\Spam\DELETED_SPAM_KEY;
+use const WordCamp\SpeakerFeedback\View\SPEAKER_VIEWED_KEY;
 
 defined( 'WPINC' ) || die();
 
@@ -93,6 +94,7 @@ function generate_stats( $data ) {
 		'total_feedback_spam',
 		'total_sessions',
 		'total_speakers',
+		'total_speakers_viewed_feedback',
 		'total_tickets',
 		'total_tickets_attended',
 		'total_unique_feedback_authors',
@@ -107,6 +109,7 @@ function generate_stats( $data ) {
 		'percent_feedback_approved_helpful',
 		'percent_feedback_inappropriate',
 		'percent_feedback_spam',
+		'percent_speakers_viewed_feedback',
 
 		'most_feedback_by_author',
 		'most_feedback_helpful_by_author',
@@ -268,6 +271,24 @@ function calculate_total_speakers( array $data ) {
 	}
 
 	return count( $data['speaker_posts'] );
+}
+
+/**
+ * Calculate the total number of speakers who viewed their feedback.
+ *
+ * @param array $data
+ *
+ * @return int|WP_Error
+ */
+function calculate_total_speakers_viewed_feedback( array $data ) {
+	if ( ! isset( $data['speaker_posts'] ) ) {
+		return new WP_Error();
+	}
+
+	$viewership = wp_list_pluck( $data['attendee_posts'], SPEAKER_VIEWED_KEY );
+	$viewed     = array_filter( $viewership );
+
+	return count( $viewed );
 }
 
 /**
@@ -475,6 +496,22 @@ function calculate_percent_feedback_spam( array $data, array $stats ) {
 	}
 
 	return round( 100 * $stats['total_feedback_spam'] / $stats['total_feedback'], 1 );
+}
+
+/**
+ * Calculate the percentage of speakers who viewed their feedback.
+ *
+ * @param array $data  Unused.
+ * @param array $stats
+ *
+ * @return float|WP_Error
+ */
+function calculate_percent_speakers_viewed_feedback( array $data, array $stats ) {
+	if ( ! isset( $stats['total_speakers'], $stats['total_speakers_viewed_feedback'] ) ) {
+		return new WP_Error();
+	}
+
+	return round( 100 * $stats['total_speakers_viewed_feedback'] / $stats['total_speakers'], 1 );
 }
 
 /**

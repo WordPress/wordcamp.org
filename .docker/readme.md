@@ -16,8 +16,10 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	brew install mkcert
 	brew install nss
 	mkcert -install
-	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem    wordcamp.test *.wordcamp.test *.seattle.wordcamp.test *.shinynew.wordcamp.test buddycamp.test *.buddycamp.test *.brighton.buddycamp.test
+	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test *.seattle.wordcamp.test *.shinynew.wordcamp.test buddycamp.test *.buddycamp.test *.brighton.buddycamp.test
 	```
+	
+	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`
 
 	_Note: That list of domains is generated with `docker-compose exec wordcamp.test wp site list --field=url`, but that command won't be available until after you've built the environment in the next steps._
 

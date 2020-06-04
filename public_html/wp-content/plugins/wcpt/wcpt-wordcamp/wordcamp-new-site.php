@@ -415,6 +415,7 @@ class WordCamp_New_Site {
 	protected function set_default_options( $wordcamp, $meta ) {
 		/** @var $WCCSP_Settings WCCSP_Settings */
 		global $WCCSP_Settings; // phpcs:ignore WordPress.NamingConventions
+		global $wp_rewrite;
 
 		$admin_email                     = is_email( $meta['E-mail Address'][0] ) ? $meta['E-mail Address'][0] : get_site_option( 'admin_email' );
 		$coming_soon_settings            = $WCCSP_Settings->get_settings(); // phpcs:ignore WordPress.NamingConventions
@@ -425,6 +426,10 @@ class WordCamp_New_Site {
 		update_option( 'close_comments_for_old_posts', 1 );
 		update_option( 'close_comments_days_old',      30 );
 		update_option( 'wccsp_settings',               $coming_soon_settings );
+
+		// Avoids URLs like `narnia.wordcamp.org/2020/2010/06/04/foo`. See `redirect_date_permalinks_to_post_slug()`.
+		$wp_rewrite->set_permalink_structure( '/%postname%/' );
+		delete_option( 'rewrite_rules' ); // Delete because can't be flushed during `switch_to_blog()`.
 
 		// Make sure the new blog is https.
 		update_option( 'siteurl', set_url_scheme( get_option( 'siteurl' ), 'https' ) );

@@ -62,6 +62,29 @@ function unsubdomactories_redirects() {
 }
 
 /**
+ * Redirects from /year/month/day/slug/ to /slug/ for new URL formats.
+ *
+ * See https://make.wordpress.org/community/2014/12/18/while-working-on-the-new-url-structure-project/.
+ */
+function redirect_date_permalinks_to_post_slug() {
+	if ( ! is_404() ) {
+		return;
+	}
+
+	if ( get_option( 'permalink_structure' ) !== '/%postname%/' ) {
+		return;
+	}
+
+	if ( ! preg_match( '#^/[0-9]{4}(?:-[^/]+)?/(?:[0-9]{4}/[0-9]{2}|[0-9]{2}|[0-9]{4})/[0-9]{2}/(.+)$#', $_SERVER['REQUEST_URI'], $matches ) ) {
+		return;
+	}
+
+	wp_safe_redirect( esc_url_raw( set_url_scheme( home_url( $matches[1] ) ) ) );
+	die();
+}
+add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
+
+/**
  * WordCamp.org Canonical Redirects
  *
  * If site does not exist in the network, will look for the latest xxxx.city.wordpress.org and redirect.

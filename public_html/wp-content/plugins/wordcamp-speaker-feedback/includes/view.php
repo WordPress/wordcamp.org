@@ -17,8 +17,11 @@ use const WordCamp\SpeakerFeedback\Post\ACCEPT_INTERVAL_IN_SECONDS;
 
 defined( 'WPINC' ) || die();
 
+const SPEAKER_VIEWED_KEY = 'sft-speaker-viewed-feedback';
+
 add_filter( 'the_content', __NAMESPACE__ . '\render' );
 add_filter( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
+add_action( 'sft_speaker_viewed_feedback', __NAMESPACE__ . '\mark_speaker_as_viewed', 10, 2 );
 
 /**
  * Check if the current page should include the feedback form.
@@ -172,6 +175,16 @@ function render_feedback_view() {
 
 	// Only show the approved feedback to the speaker and organizers.
 	if ( current_user_can( 'read_post_' . COMMENT_TYPE, $post ) ) {
+		if ( $is_session_speaker ) {
+			/**
+			 * Action: Speaker has viewed their feedback for a session.
+			 *
+			 * @param int $session_id The session that has feedback that is being viewed.
+			 * @param int $user_id    The user ID of the speaker viewing the feedback.
+			 */
+			do_action( 'sft_speaker_viewed_feedback', $post->ID, get_current_user_id() );
+		}
+
 		$query_args = parse_feedback_args();
 		$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ), $query_args );
 		$avg_rating = get_feedback_average_rating( $feedback );
@@ -379,4 +392,23 @@ function get_feedback_average_rating( array $feedback ) {
 	);
 
 	return intval( round( $sum_rating / $count ) );
+}
+
+/**
+ * Add a post meta value when a speaker views their feedback.
+ *
+ * @param int $session_id
+ * @param int $user_id
+ *
+ * @return void
+ */
+function mark_speaker_as_viewed( $session_id, $user_id ) {
+	$speaker_post_ids = get_post_meta( $session_id, '_wcpt_speaker_id' );
+
+	foreach ( $speaker_post_ids as $speaker_post_id ) {
+		if ( intval( get_post_meta( $speaker_post_id, '_wcpt_user_id', true ) ) === $user_id ) {
+			update_post_meta( $speaker_post_id, SPEAKER_VIEWED_KEY, true );
+			break;
+		}
+	}
 }

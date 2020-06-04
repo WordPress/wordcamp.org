@@ -21,15 +21,6 @@ class WordCamp_Lets_Encrypt_Helper {
 	public static function rest_api_init() {
 		register_rest_route(
 			'wordcamp-letsencrypt/v1',
-			'/domains',
-			array(
-				'methods'  => 'GET',
-				'callback' => array( __CLASS__, 'rest_callback_domains' ),
-			)
-		);
-
-		register_rest_route(
-			'wordcamp-letsencrypt/v1',
 			'/domains-dehydrated',
 			array(
 				'methods'  => 'GET',
@@ -39,20 +30,12 @@ class WordCamp_Lets_Encrypt_Helper {
 	}
 
 	/**
-	 * REST: /domains
-	 *
 	 * Return an array of all domains that need SSL certs.
 	 *
-	 * @param WP_REST_Request $request
-	 *
-	 * @return array|WP_Error
+	 * @return array
 	 */
-	public static function rest_callback_domains( $request ) {
+	public static function get_domains() {
 		global $wpdb;
-
-		if ( WORDCAMP_LE_HELPER_API_KEY !== $request->get_param( 'api_key' ) ) {
-			return new WP_Error( 'error', 'Invalid or empty key.', array( 'status' => 403 ) );
-		}
 
 		$domains = array();
 		$blogs   = $wpdb->get_results( "
@@ -101,10 +84,11 @@ class WordCamp_Lets_Encrypt_Helper {
 	 * @return WP_Error|void 
 	 */
 	public static function rest_callback_domains_dehydrated( $request ) {
-		$domains = self::rest_callback_domains( $request );
-		if ( is_wp_error( $domains ) ) {
-			return $domains;
+		if ( WORDCAMP_LE_HELPER_API_KEY !== $request->get_param( 'api_key' ) ) {
+			return new WP_Error( 'error', 'Invalid or empty key.', array( 'status' => 403 ) );
 		}
+
+		$domains = self::get_domains();
 
 		// Sort domains by shortest first, sort all same-length domains by natcase.
 		usort( $domains, function( $a, $b ) {

@@ -14,7 +14,6 @@ require_once 'favorite-schedule-shortcode.php';
 
 add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
-add_action( 'is_protected_meta', __NAMESPACE__ . '\unprotect_wcpt_meta', 10, 2 );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -26,8 +25,9 @@ function register_sponsor_post_meta() {
 		'wcb_sponsor',
 		'_wcpt_sponsor_website',
 		array(
-			'show_in_rest' => true,
-			'single'       => true,
+			'show_in_rest'  => true,
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 }
@@ -53,15 +53,17 @@ function register_session_post_meta() {
 			),
 			'single'       => true,
 			'type'         => 'integer',
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 	register_post_meta(
 		'wcb_session',
 		'_wcpt_session_duration',
 		array(
-			'type'         => 'integer',
-			'show_in_rest' => true,
-			'single'       => true,
+			'type'          => 'integer',
+			'show_in_rest'  => true,
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 	register_post_meta(
@@ -70,6 +72,7 @@ function register_session_post_meta() {
 		array(
 			'show_in_rest'      => true,
 			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 			'sanitize_callback' => function( $value ) {
 				if ( 'custom' === $value ) {
 					return $value;
@@ -82,8 +85,9 @@ function register_session_post_meta() {
 		'wcb_session',
 		'_wcpt_session_slides',
 		array(
-			'show_in_rest' => true,
-			'single'       => true,
+			'show_in_rest'  => true,
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 	register_post_meta(
@@ -92,6 +96,7 @@ function register_session_post_meta() {
 		array(
 			'show_in_rest'      => true,
 			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 			'sanitize_callback' => function( $value ) {
 				if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $value, PHP_URL_HOST ) ) ) ) {
 					return $value;
@@ -104,24 +109,26 @@ function register_session_post_meta() {
 		'wcb_session',
 		'_wcpt_speaker_id',
 		array(
-			'type'         => 'integer',
-			'show_in_rest' => true,
-			'single'       => false,
+			'type'          => 'integer',
+			'show_in_rest'  => true,
+			'single'        => false,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 }
 
 /**
- * Flip our CPT meta out of "protected", so that users can edit the meta values.
+ * Check if the current user can edit the meta values.
  *
- * @param bool   $protected Whether the key is considered protected.
- * @param string $meta_key  Metadata key.
+ * @param bool   $allowed   Whether the user can add the object meta. Default false.
+ * @param string $meta_key  The meta key.
+ * @param int    $object_id Object ID.
  */
-function unprotect_wcpt_meta( $protected, $meta_key ) {
+function meta_auth_callback( $allowed, $meta_key, $object_id ) {
 	if ( '_wcpt_' === substr( $meta_key, 0, 6 ) ) {
-		return false;
+		return current_user_can( 'edit_post', $object_id );
 	}
-	return $protected;
+	return $allowed;
 }
 
 /**

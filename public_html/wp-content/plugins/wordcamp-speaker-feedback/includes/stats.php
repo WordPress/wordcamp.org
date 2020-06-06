@@ -19,9 +19,16 @@ defined( 'WPINC' ) || die();
  * @return bool
  */
 function should_generate_stats() {
-	$event_check = event_accepts_feedback();
+	if ( ! is_plugin_active( 'wordcamp-speaker-feedback/wordcamp-speaker-feedback.php' ) ) {
+		return false;
+	}
 
+	$event_check = event_accepts_feedback();
 	if ( is_wp_error( $event_check ) && 'speaker_feedback_event_too_late' !== $event_check->get_error_code() ) {
+		return false;
+	}
+
+	if ( maybe_get_cached_feedback_count()->total_comments < 1 ) {
 		return false;
 	}
 
@@ -71,21 +78,14 @@ function gather_data() {
 }
 
 /**
- * Generate stats based on the given data.
+ * List the stat keys.
  *
- * To add a new stat, add a key for it in the array, and then create a corresponding `calculate_{$key_name}` function.
+ * Each of these should have a corresponding `calculate_{$stat_key}` function.
  *
- * The stats are handled within a `while` loop so that we don't have to manage a specific order that they must be
- * calculated in, since some stats depend on the values of other stats.
- *
- * @param array $data
- *
- * @return array
+ * @return string[]
  */
-function generate_stats( $data ) {
-	$stats = array();
-
-	$stat_keys = array(
+function stat_keys() {
+	return array(
 		'total_feedback',
 		'total_feedback_approved',
 		'total_feedback_helpful',
@@ -118,6 +118,23 @@ function generate_stats( $data ) {
 		'most_feedback_inappropriate_by_author',
 		'most_feedback_approved_for_session',
 	);
+}
+
+/**
+ * Generate stats based on the given data.
+ *
+ * To add a new stat, add a key for it in the array, and then create a corresponding `calculate_{$key_name}` function.
+ *
+ * The stats are handled within a `while` loop so that we don't have to manage a specific order that they must be
+ * calculated in, since some stats depend on the values of other stats.
+ *
+ * @param array $data
+ *
+ * @return array
+ */
+function generate_stats( $data ) {
+	$stat_keys = stat_keys();
+	$stats     = array_fill_keys( $stat_keys, '' );
 
 	while ( ! empty( $stat_keys ) ) {
 		$previous_stat_keys = $stat_keys;
@@ -135,6 +152,7 @@ function generate_stats( $data ) {
 			unset( $stat_keys[ $index ] );
 		}
 
+		$stats['error'] = '';
 		if ( $stat_keys === $previous_stat_keys ) {
 			// Bail, no more stats can be calculated at this point.
 			$stats['error'] = array(
@@ -373,13 +391,8 @@ function calculate_total_unique_feedback_authors( array $data ) {
  * @return float|WP_Error
  */
 function calculate_average_feedback_approved_per_ticket( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback_approved'], $stats['total_tickets'] ) ) {
+	if ( ! isset( $stats['total_feedback_approved'], $stats['total_tickets'] ) || $stats['total_tickets'] < 1 ) {
 		return new WP_Error();
-	}
-
-	if ( $stats['total_tickets'] < 1 ) {
-		// Avoid dividing by 0.
-		return floatval( 0 );
 	}
 
 	return round( $stats['total_feedback_approved'] / $stats['total_tickets'], 1 );
@@ -394,13 +407,11 @@ function calculate_average_feedback_approved_per_ticket( array $data, array $sta
  * @return float|WP_Error
  */
 function calculate_average_feedback_approved_per_ticket_attended( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback_approved'], $stats['total_tickets_attended'] ) ) {
+	if (
+		! isset( $stats['total_feedback_approved'], $stats['total_tickets_attended'] )
+		|| $stats['total_tickets_attended'] < 1
+	) {
 		return new WP_Error();
-	}
-
-	if ( $stats['total_tickets_attended'] < 1 ) {
-		// Avoid dividing by 0.
-		return floatval( 0 );
 	}
 
 	return round( $stats['total_feedback_approved'] / $stats['total_tickets_attended'], 1 );
@@ -415,7 +426,10 @@ function calculate_average_feedback_approved_per_ticket_attended( array $data, a
  * @return float|WP_Error
  */
 function calculate_average_feedback_approved_per_session( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback_approved'], $stats['total_sessions'] ) ) {
+	if (
+		! isset( $stats['total_feedback_approved'], $stats['total_sessions'] )
+		|| $stats['total_sessions'] < 1
+	) {
 		return new WP_Error();
 	}
 
@@ -446,7 +460,10 @@ function calculate_average_feedback_approved_rating( array $data ) {
  * @return float|WP_Error
  */
 function calculate_average_feedback_helpful_per_session( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback_helpful'], $stats['total_sessions'] ) ) {
+	if (
+		! isset( $stats['total_feedback_helpful'], $stats['total_sessions'] )
+		|| $stats['total_sessions'] < 1
+	) {
 		return new WP_Error();
 	}
 
@@ -462,7 +479,10 @@ function calculate_average_feedback_helpful_per_session( array $data, array $sta
  * @return float|WP_Error
  */
 function calculate_percent_feedback_approved( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback'], $stats['total_feedback_approved'] ) ) {
+	if (
+		! isset( $stats['total_feedback'], $stats['total_feedback_approved'] )
+		|| $stats['total_feedback'] < 1
+	) {
 		return new WP_Error();
 	}
 
@@ -478,7 +498,10 @@ function calculate_percent_feedback_approved( array $data, array $stats ) {
  * @return float|WP_Error
  */
 function calculate_percent_feedback_approved_helpful( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback_approved'], $stats['total_feedback_helpful'] ) ) {
+	if (
+		! isset( $stats['total_feedback_approved'], $stats['total_feedback_helpful'] )
+		|| $stats['total_feedback_approved'] < 1
+	) {
 		return new WP_Error();
 	}
 
@@ -494,7 +517,10 @@ function calculate_percent_feedback_approved_helpful( array $data, array $stats 
  * @return float|WP_Error
  */
 function calculate_percent_feedback_inappropriate( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback'], $stats['total_feedback_inappropriate'] ) ) {
+	if (
+		! isset( $stats['total_feedback'], $stats['total_feedback_inappropriate'] )
+		|| $stats['total_feedback'] < 1
+	) {
 		return new WP_Error();
 	}
 
@@ -510,7 +536,10 @@ function calculate_percent_feedback_inappropriate( array $data, array $stats ) {
  * @return float|WP_Error
  */
 function calculate_percent_feedback_spam( array $data, array $stats ) {
-	if ( ! isset( $stats['total_feedback'], $stats['total_feedback_spam'] ) ) {
+	if (
+		! isset( $stats['total_feedback'], $stats['total_feedback_spam'] )
+		|| $stats['total_feedback'] < 1
+	) {
 		return new WP_Error();
 	}
 
@@ -526,7 +555,10 @@ function calculate_percent_feedback_spam( array $data, array $stats ) {
  * @return float|WP_Error
  */
 function calculate_percent_sessions_with_feedback_approved( array $data, array $stats ) {
-	if ( ! isset( $stats['total_sessions'], $stats['total_sessions_with_feedback_approved'] ) ) {
+	if (
+		! isset( $stats['total_sessions'], $stats['total_sessions_with_feedback_approved'] )
+		|| $stats['total_sessions'] < 1
+	) {
 		return new WP_Error();
 	}
 
@@ -542,7 +574,10 @@ function calculate_percent_sessions_with_feedback_approved( array $data, array $
  * @return float|WP_Error
  */
 function calculate_percent_speakers_viewed_feedback( array $data, array $stats ) {
-	if ( ! isset( $stats['total_speakers'], $stats['total_speakers_viewed_feedback'] ) ) {
+	if (
+		! isset( $stats['total_speakers'], $stats['total_speakers_viewed_feedback'] )
+		|| $stats['total_speakers'] < 1
+	) {
 		return new WP_Error();
 	}
 

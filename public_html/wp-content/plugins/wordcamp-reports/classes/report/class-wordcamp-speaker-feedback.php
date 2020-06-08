@@ -33,7 +33,7 @@ class WordCamp_Speaker_Feedback extends Base {
 	 *
 	 * @var string
 	 */
-	public static $description = 'Statistics from the Speaker Feedback Tool.';
+	public static $description = 'Export a CSV file of statistics from the Speaker Feedback Tool.';
 
 	/**
 	 * Report methodology.
@@ -42,8 +42,46 @@ class WordCamp_Speaker_Feedback extends Base {
 	 */
 	public static $methodology = "
 		<ol>
-			<li>TBD</li>
+			<li>Generate stats for each WordCamp whose start date is within the date range, if the WordCamp has any speaker feedback.</li>
+			<li>Compile the data into a CSV file.</li>
 		</ol>
+		<p>Most of the stat headings in the spreadsheet are self-explanatory, but here's a glossary for some that maybe aren't:</p>
+		<table class=\"widefat striped\">
+			<tbody>
+				<tr>
+					<td><code>total_unique_feedback_authors</code></td>
+					<td>The number of unique individuals who submitted feedback, based on their email address.</td>
+				</tr>
+				<tr>
+					<td><code>average_feedback_approved_per_ticket</code></td>
+					<td>The number of feedback submissions per ticket issued for the event. This number is rounded to one decimal place, so for an event with a high number of tickets, this might show up as zero.</td>
+				</tr>
+				<tr>
+					<td><code>average_feedback_approved_per_ticket_attended</code></td>
+					<td>Same as <code>average_feedback_approved_per_ticket</code>, but only for tickets that were marked as attended.</td>
+				</tr>
+				<tr>
+					<td><code>percent_feedback_approved_helpful</code></td>
+					<td>Notable that this is a percentage of <em>approved</em> feedback, not <em>total</em> feedback.</td>
+				</tr>
+				<tr>
+					<td><code>percent_speakers_viewed_feedback</code></td>
+					<td>The percentage of event speakers who have viewed their feedback at least once.</td>
+				</tr>
+				<tr>
+					<td><code>most_feedback_by_author</code></td>
+					<td>The individual(s) with the most total feedback submissions, and the count of those submissions. This may list multiple individuals if there are more than one with the same highest count of submissions.</td>
+				</tr>
+				<tr>
+					<td><code>most_feedback_approved_for_session</code></td>
+					<td>The session(s) with the most approved feedback. This may list multiple session IDs if there are more than one with the same highest count of submissions.</td>
+				</tr>
+				<tr>
+					<td><code>error</code></td>
+					<td>If some stat columns are empty, this field might explain why.</td>
+				</tr>
+			</tbody>
+		</table>
 	";
 
 	/**

@@ -260,24 +260,6 @@ function wcorg_content_slugs_to_body_tag( $body_classes ) {
 add_filter( 'body_class', 'wcorg_content_slugs_to_body_tag' );
 
 /**
- * Flush the rewrite rules on the current site.
- *
- * See WordCamp_CLI_Rewrite_Rules::flush() for an explanation.
- *
- * Requires authentication because flush_rewrite_rules() is expensive and could be used as a DoS vector.
- */
-function wcorg_flush_rewrite_rules() {
-	if ( isset( $_GET['nonce'] ) && wp_verify_nonce( $_GET['nonce'], 'flush-rewrite-rules-everywhere-' . get_current_blog_id() ) ) {
-		flush_rewrite_rules();
-		wp_send_json_success( 'Rewrite rules have been flushed.' );
-	} else {
-		wp_send_json_error( 'You are not authorized to flush the rewrite rules.' );
-	}
-}
-add_action( 'wp_ajax_wcorg_flush_rewrite_rules_everywhere',        'wcorg_flush_rewrite_rules' ); // This isn't used by the wp-cli command, but is useful for manual testing.
-add_action( 'wp_ajax_nopriv_wcorg_flush_rewrite_rules_everywhere', 'wcorg_flush_rewrite_rules' );
-
-/**
  * Load the `wordcamporg` text domain.
  *
  * `wordcamporg` is used by all the custom plugins and themes, so that translators only have to deal with a single

@@ -42,6 +42,8 @@ function load_includes() {
 	$beta_block_test_sites = array(
 		112, // 2011.tokyo
 		928, // 2017.testing
+		1028, // 2019.us
+		1099, // 2019.boston
 		1170, // 2019.tokyo
 		1226, // 2020.birmingham
 	);

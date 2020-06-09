@@ -4,6 +4,15 @@ namespace WordCamp\Sunrise;
 defined( 'WPINC' ) or die();
 
 /**
+ * Get the TLD for the current environment.
+ *
+ * @return string
+ */
+function get_top_level_domain() {
+	return 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
+}
+
+/**
  * Redirects from city.wordcamp.org/year to year.city.wordcamp.org
  */
 function unsubdomactories_redirects() {
@@ -232,19 +241,23 @@ function site_redirects() {
 	$domain           = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
 	$domain_redirects = get_domain_redirects();
 	$redirect         = false;
+	$tld              = get_top_level_domain();
 
-	if ( in_array( $domain, array( 'wordcamp.org', 'wordcamp.test', 'buddycamp.org', 'buddycamp.test' ), true )
+	// If it's a front end request to the root site, redirect to Central.
+	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
+	if ( in_array( $domain, array( "wordcamp.$tld", "buddycamp.$tld" ), true )
 		 && ! is_network_admin()
 		 && ! is_admin()
 		 && ! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $_SERVER['REQUEST_URI'] )
 	) {
 		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $_SERVER['REQUEST_URI'] );
+
 	} elseif ( isset( $domain_redirects[ $domain ] ) ) {
 		$new_url = $domain_redirects[ $domain ];
 
 		// Central has a different content structure than other WordCamp sites, so don't include the request URI
 		// if that's where we're going.
-		if ( 'central.wordcamp.org' !== $new_url ) {
+		if ( "central.wordcamp.$tld" !== $new_url ) {
 			$new_url .= $_SERVER['REQUEST_URI'];
 		}
 

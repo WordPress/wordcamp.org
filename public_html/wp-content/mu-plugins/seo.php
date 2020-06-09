@@ -1,6 +1,8 @@
 <?php
 
 namespace WordCamp\SEO;
+use function WordCamp\Sunrise\get_top_level_domain;
+
 defined( 'WPINC' ) || die();
 
 // Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
@@ -22,10 +24,11 @@ function canonical_link_past_home_pages_to_current_year() {
 	}
 
 	$matches = array();
+	$tld     = get_top_level_domain();
 
 	// Match `year.city.wordcamp.org` pattern.
 	// @todo add support for city.wordcamp.org/year-variant (e.g., seattle.wordcamp.org/2015-beginners/).
-	if ( ! preg_match( '/^([0-9]{4})+\.((.+)\.wordcamp\.(lo|dev|test|org))$/i', $_SERVER['HTTP_HOST'], $matches ) ) {
+	if ( ! preg_match( "/^([0-9]{4})+\.((.+)\.wordcamp\.$tld)$/i", $_SERVER['HTTP_HOST'], $matches ) ) {
 		return;
 	}
 

@@ -445,7 +445,7 @@ function GridColumnHeaders( { displayedTracks } ) {
 			 * visual aid for sighted users.
 			 */ }
 			<span
-				className="wordcamp-schedule__column-header"
+				className="wordcamp-schedule__column-header is-column-time"
 				aria-hidden="true"
 				style={ { gridColumn: 'times' } }
 			>
@@ -455,7 +455,7 @@ function GridColumnHeaders( { displayedTracks } ) {
 			{ displayedTracks.map( ( track ) => (
 				<span
 					key={ track.id }
-					className="wordcamp-schedule__column-header"
+					className={ `wordcamp-schedule__column-header is-column-track-${ track.slug }` }
 					aria-hidden="true" // See note above about aria-hidden.
 					style={ { gridColumn: `wordcamp-schedule-track-${ track.id }` } }
 				>

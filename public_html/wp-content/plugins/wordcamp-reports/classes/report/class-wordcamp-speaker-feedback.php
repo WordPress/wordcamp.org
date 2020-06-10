@@ -340,29 +340,31 @@ class WordCamp_Speaker_Feedback extends Base {
 
 			$report = new self( $start_date, $end_date, $wordcamp_id, $options );
 
-			$filename = array( $report::$name );
-			if ( $report->wordcamp_site_id ) {
-				$filename[] = get_wordcamp_name( $report->wordcamp_site_id );
-			}
-			$filename[] = $report->range->start->format( 'Y-m-d' );
-			$filename[] = $report->range->end->format( 'Y-m-d' );
+			if ( empty( $report->error->get_error_messages() ) ) {
+				$filename = array( $report::$name );
+				if ( $report->wordcamp_site_id ) {
+					$filename[] = get_wordcamp_name( $report->wordcamp_site_id );
+				}
+				$filename[] = $report->range->start->format( 'Y-m-d' );
+				$filename[] = $report->range->end->format( 'Y-m-d' );
 
-			$data = $report->get_data();
+				$data = $report->get_data();
 
-			array_walk(
-				$data,
-				function( &$row ) {
-					foreach ( $row as $key => $value ) {
-						if ( 'start_date' === $key ) {
-							$row[ $key ] = wp_date( 'Y-m-d', $value );
-						}
+				array_walk(
+					$data,
+					function ( &$row ) {
+						foreach ( $row as $key => $value ) {
+							if ( 'start_date' === $key ) {
+								$row[ $key ] = wp_date( 'Y-m-d', $value );
+							}
 
-						if ( is_array( $value ) ) {
-							$row[ $key ] = print_r( $value, true );
+							if ( is_array( $value ) ) {
+								$row[ $key ] = print_r( $value, true );
+							}
 						}
 					}
-				}
-			);
+				);
+			}
 
 			$headers = array_merge(
 				array(

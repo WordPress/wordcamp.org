@@ -35,11 +35,11 @@ use WordCamp\Reports\Report;
 			<tbody>
 			<tr>
 				<th scope="row"><label for="start-date">Start Date</label></th>
-				<td><input type="date" id="start-date" name="start-date" value="<?php echo esc_attr( $start_date ); ?>" /></td>
+				<td><input type="date" id="start-date" name="start-date" value="<?php echo esc_attr( $start_date ); ?>" required /></td>
 			</tr>
 			<tr>
 				<th scope="row"><label for="end-date">End Date</label></th>
-				<td><input type="date" id="end-date" name="end-date" value="<?php echo esc_attr( $end_date ); ?>" /></td>
+				<td><input type="date" id="end-date" name="end-date" value="<?php echo esc_attr( $end_date ); ?>" required /></td>
 			</tr>
 			<tr>
 				<th scope="row"><label for="wordcamp-id">WordCamp (optional)</label></th>

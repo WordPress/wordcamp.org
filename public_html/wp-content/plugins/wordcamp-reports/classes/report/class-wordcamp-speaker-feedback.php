@@ -288,7 +288,7 @@ class WordCamp_Speaker_Feedback extends Base {
 		}
 
 		if ( $this->wordcamp_id ) {
-			$post_args['post__in'] = $this->wordcamp_id;
+			$post_args['post__in'] = array( $this->wordcamp_id );
 		}
 
 		return get_posts( $post_args );

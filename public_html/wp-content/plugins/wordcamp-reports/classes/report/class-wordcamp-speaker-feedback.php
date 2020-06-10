@@ -359,7 +359,16 @@ class WordCamp_Speaker_Feedback extends Base {
 							}
 
 							if ( is_array( $value ) ) {
-								$row[ $key ] = print_r( $value, true );
+								$string_value = '';
+								foreach ( $value as $subkey => $subvalue ) {
+									$subvalue = array_map( 'esc_html', (array) $subvalue );
+									$string_value .= sprintf(
+										'%1$s: %2$s; ',
+										esc_html( $subkey ),
+										implode( ', ', $subvalue )
+									);
+								}
+								$row[ $key ] = $string_value;
 							}
 						}
 					}

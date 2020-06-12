@@ -105,54 +105,11 @@ add_filter( 'login_message', 'wcorg_login_message' );
  * @return string
  */
 function wcorg_get_wporg_forums_url( $locale, $path = 'root' ) {
-	switch ( $locale ) {
-		case 'bg_BG':
-		case 'bs_BA':
-		case 'ca':
-		case 'es_AR':
-		case 'es_CL':
-		case 'es_CO':
-		case 'es_MX':
-		case 'es_PE':
-		case 'es_PR':
-		case 'es_ES':
-		case 'es_VE':
-		case 'fi':
-		case 'he_IL':
-		case 'hr':
-		case 'id_ID':
-		case 'ja':
-		case 'mk_MK':
-		case 'pl_PL':
-		case 'pt_PT':
-		case 'ru_RU':
-		case 'sr_RS':
-		case 'th':
-		case 'ug_CN':
-			$url = sprintf( 'http://%s.forums.wordpress.org/', substr( $locale, 0, 2 ) );
-			break;
+	$url = 'https://login.wordpress.org';
 
-		case 'pt_BR':
-			$url = 'http://br.forums.wordpress.org/';
-			break;
-
-		case 'my_MM':
-			$url = 'http://mya.forums.wordpress.org/';
-			break;
-
-		case 'en_US':
-		default:
-			$url = 'https://wordpress.org/';
-			break;
+	if ( 'register' === $path ) {
+		$url .= '/register';
 	}
 
-	if ( 'register' == $path ) {
-		if ( 'https://wordpress.org/' == $url ) {
-			$url .= 'support/register.php';
-		} else {
-			$url .= 'register.php';
-		}
-	}
-
-	return $url;
+	$url = add_query_arg( 'locale', $locale, $url );
 }

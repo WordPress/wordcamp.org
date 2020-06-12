@@ -22,6 +22,10 @@ function wcorg_login_css() {
 				margin-bottom: 1em;
 			}
 
+			div.message p span.wcorg-login-message {
+				display: none;
+			}
+
 			#not-your-personal-site {
 				font-style: italic;
 			}
@@ -49,6 +53,7 @@ function wcorg_login_css() {
  */
 function wcorg_login_message( $message, $redirect_to = false ) {
 	$locale           = get_locale();
+	$login_url 				= wcorg_get_wporg_login_url( $locale );
 	$registration_url = wcorg_get_wporg_login_url( $locale, 'register' );
 
 	if ( ! $redirect_to && ! empty( $_REQUEST['redirect_to'] ) ) {
@@ -58,6 +63,8 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 	if ( $redirect_to && wp_validate_redirect( $redirect_to ) != $redirect_to ) {
 		$redirect_to = false;
 	}
+
+	$wporg_login_url 	= add_query_arg( 'redirect_to', $redirect_to, $login_url );
 
 	/*
 	 * $redirect_to gets urlencode()'d once by wp_login_url() and then all of $login_url gets encoded directly,
@@ -77,6 +84,12 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 		<p><?php echo __( 'Please use your <strong>WordPress.org</strong>* account to log in.', 'wordcamporg' ); ?></p> <?php // todo make this a constant and use it in wordcamp-forms-to-drafts and camptix-extras, since any changes to it will break them unless they're also updated ?>
 
 		<p>
+			<span class="wporg-login-link">
+				<?php printf(
+					__( 'Do the log in at <a href="%s">WordPress.org</a> website. After succesfull log in you will be redirected back.', 'wordcamporg' ),
+					esc_url( $wporg_login_url )
+				); ?>
+			</span>
 			<?php printf(
 				__( 'If you don\'t have an account, <a href="%s">please create one</a>.', 'wordcamporg' ),
 				esc_url( $registration_url )
@@ -84,7 +97,7 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 		</p>
 
 		<p id="not-your-personal-site">
-			<?php printf( __( '* This is your account for <a href="%s">the official WordPress.org website</a>, rather than your personal WordPress site.', 'wordcamporg' ), wcorg_get_wporg_login_url( $locale ) ); ?>
+			<?php printf( __( '* This is your account for <a href="%s">the official WordPress.org website</a>, rather than your personal WordPress site.', 'wordcamporg' ), $wporg_login_url ); ?>
 		</p>
 	</div>
 

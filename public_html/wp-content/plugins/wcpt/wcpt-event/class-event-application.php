@@ -100,6 +100,9 @@ abstract class Event_Application {
 		if ( $this->is_rate_limited() ) {
 			$message        = __( 'You have submitted too many applications recently. Please wait and try again in a few hours.', 'wordcamporg' );
 			$notice_classes = 'notice-error';
+		} elseif ( ! is_user_logged_in() ) {
+			$message        = __( 'You must be logged in with your WordPress.org account to submit the application.', 'wordcamporg' );
+			$notice_classes = 'notice-error';
 		} elseif ( is_wp_error( $application_data ) ) {
 			$message        = $application_data->get_error_message();
 			$notice_classes = 'notice-error';

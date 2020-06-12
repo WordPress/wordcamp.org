@@ -109,6 +109,8 @@ function wcorg_get_wporg_login_url( $locale, $path = 'root' ) {
 	}
 
 	$url = add_query_arg( 'locale', $locale, $url );
+
+	return $url;
 }
 
 function wcorg_get_wporg_forums_url( $locale, $path = 'root' ) {

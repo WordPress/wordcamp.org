@@ -74,7 +74,15 @@ abstract class Event_Application {
 				$wporg_username = $current_user->user_login;
 			}
 
+			if ( ! is_user_logged_in() ) {
+				echo '<div class="wcfd-disabled-form">' . wcorg_login_message( '', get_permalink() ) . '<div class="wcfd-overlay"></div><div inert>';
+			}
+
 			$this->render_application_form( $countries, $wporg_username );
+
+			if ( ! is_user_logged_in() ) {
+				echo '</div></div>';
+			}
 		}
 
 		return ob_get_clean();

@@ -9,6 +9,8 @@ use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 defined( 'WPINC' ) || die();
 
 define( __NAMESPACE__ . '\ACCEPT_INTERVAL_IN_SECONDS', WEEK_IN_SECONDS * 2 );
+// Defined here so that wc-post-types is not a dependency for this file.
+define( __NAMESPACE__ . '\SESSION_DEFAULT_DURATION', 50 * MINUTE_IN_SECONDS );
 
 /**
  * Check to see if feedback comments can be added to a post.
@@ -52,7 +54,7 @@ function post_accepts_feedback( $post_id ) {
 		$session_time     = absint( $post->_wcpt_session_time );
 		$session_duration = absint( $post->_wcpt_session_duration );
 		if ( ! $session_duration ) {
-			$session_duration = WordCamp_Post_Types_Plugin::SESSION_DEFAULT_DURATION;
+			$session_duration = SESSION_DEFAULT_DURATION;
 		}
 
 		if ( 'session' !== $session_type ) {
@@ -130,7 +132,7 @@ function get_latest_session_ending_timestamp() {
 
 	$duration = $latest_session[0]->_wcpt_session_duration;
 	if ( ! $duration ) {
-		$duration = WordCamp_Post_Types_Plugin::SESSION_DEFAULT_DURATION;
+		$duration = SESSION_DEFAULT_DURATION;
 	}
 
 	return absint( $latest_session[0]->_wcpt_session_time ) + absint( $duration );

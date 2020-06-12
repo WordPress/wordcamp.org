@@ -53,6 +53,7 @@ function load() {
 	require_once get_includes_path() . 'post.php';
 	require_once get_includes_path() . 'query.php';
 	require_once get_includes_path() . 'spam.php';
+	require_once get_includes_path() . 'stats.php';
 	require_once get_includes_path() . 'view.php';
 
 	require_once get_includes_path() . 'admin.php';

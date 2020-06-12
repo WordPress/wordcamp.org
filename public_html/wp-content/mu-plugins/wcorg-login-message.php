@@ -49,7 +49,7 @@ function wcorg_login_css() {
  */
 function wcorg_login_message( $message, $redirect_to = false ) {
 	$locale           = get_locale();
-	$registration_url = wcorg_get_wporg_forums_url( $locale, 'register' );
+	$registration_url = wcorg_get_wporg_login_url( $locale, 'register' );
 
 	if ( ! $redirect_to && ! empty( $_REQUEST['redirect_to'] ) ) {
 		$redirect_to = $_REQUEST['redirect_to'];
@@ -84,7 +84,7 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 		</p>
 
 		<p id="not-your-personal-site">
-			<?php printf( __( '* This is your account for <a href="%s">the official WordPress.org website</a>, rather than your personal WordPress site.', 'wordcamporg' ), wcorg_get_wporg_forums_url( $locale ) ); ?>
+			<?php printf( __( '* This is your account for <a href="%s">the official WordPress.org website</a>, rather than your personal WordPress site.', 'wordcamporg' ), wcorg_get_wporg_login_url( $locale ) ); ?>
 		</p>
 	</div>
 
@@ -95,16 +95,13 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 add_filter( 'login_message', 'wcorg_login_message' );
 
 /**
- * Determine the correct WordPress.org forums URL for the given locale
+ * Build correct WordPress.org "SSO" login page URL.
  *
- * @todo Add more sites as they're created
- *
- * @param string $locale
- * @param string $path 'root' | 'register'
- *
+ * @param  string $locale
+ * @param  string $path   'root' | 'register'
  * @return string
  */
-function wcorg_get_wporg_forums_url( $locale, $path = 'root' ) {
+function wcorg_get_wporg_login_url( $locale, $path = 'root' ) {
 	$url = 'https://login.wordpress.org';
 
 	if ( 'register' === $path ) {
@@ -112,4 +109,9 @@ function wcorg_get_wporg_forums_url( $locale, $path = 'root' ) {
 	}
 
 	$url = add_query_arg( 'locale', $locale, $url );
+}
+
+function wcorg_get_wporg_forums_url( $locale, $path = 'root' ) {
+	_deprecated_function( __FUNCTION__, '', 'wcorg_get_wporg_login_url' );
+	return wcorg_get_wporg_login_url( $locale, $path );
 }

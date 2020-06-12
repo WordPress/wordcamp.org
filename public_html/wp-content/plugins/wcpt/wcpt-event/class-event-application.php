@@ -71,14 +71,18 @@ abstract class Event_Application {
 			$wporg_username = '';
 			if ( is_user_logged_in() ) {
 				$current_user = wp_get_current_user();
-				$wporg_username = $current_user->user_login;
+				$prefilled_fields = array(
+					'wporg_name'			=> $current_user->display_name,
+					'wporg_username'	=> $current_user->user_login,
+					'wporg_email'			=> $current_user->user_email,
+				);
 			}
 
 			if ( ! is_user_logged_in() ) {
 				echo '<div class="wcfd-disabled-form">' . wcorg_login_message( '', get_permalink() ) . '<div class="wcfd-overlay"></div><div inert>';
 			}
 
-			$this->render_application_form( $countries, $wporg_username );
+			$this->render_application_form( $countries, $prefilled_fields );
 
 			if ( ! is_user_logged_in() ) {
 				echo '</div></div>';
@@ -95,7 +99,7 @@ abstract class Event_Application {
 	 *
 	 * @return null
 	 */
-	abstract public function render_application_form( $countries, $wporg_username );
+	abstract public function render_application_form( $countries, $prefilled_fields );
 
 	/**
 	 * Submit application details. Calls `create_post` to actually create the event.

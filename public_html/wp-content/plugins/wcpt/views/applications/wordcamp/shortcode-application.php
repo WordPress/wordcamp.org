@@ -10,7 +10,7 @@ defined( 'WPINC' ) || die();
  *
  * @param array $countries
  */
-function render_wordcamp_application_form( $countries, $wporg_username ) {
+function render_wordcamp_application_form( $countries, $prefilled_fields ) {
 	?>
 
 	<form id="wordcamp-application" method="post">
@@ -71,7 +71,7 @@ function render_wordcamp_application_form( $countries, $wporg_username ) {
 						<div class="PDF_QT1400">
 							<label for="q_1079059_email">(e.g. john@example.com)</label>
 							<br/>
-							<input type="email" maxlength="100" name="q_1079059_email" id="q_1079059_email" value=""
+							<input type="email" maxlength="100" name="q_1079059_email" id="q_1079059_email" value="<?php echo esc_attr( $prefilled_fields['wporg_email'] ); ?>"
 								   class="survey-email required" autocomplete="off" required/>
 						</div>
 					</div>
@@ -96,7 +96,7 @@ function render_wordcamp_application_form( $countries, $wporg_username ) {
 
 						<div class="PDF_QT100">
 							<input maxlength="500" name="q_4236565_wporg_username" class="large required"
-								   type="text" title="What is your wordpress.org username?" value="<?php echo esc_attr( $wporg_username ); ?>" required/>
+								   type="text" title="What is your wordpress.org username?" value="<?php echo esc_attr( $prefilled_fields['wporg_username'] ); ?>" required/>
 						</div>
 					</div>
 				</div>

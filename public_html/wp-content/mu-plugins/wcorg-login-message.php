@@ -88,7 +88,7 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 				<?php printf(
 					__( 'Do the log in at <a href="%s">WordPress.org</a> website. After succesfull log in you will be redirected back.', 'wordcamporg' ),
 					esc_url( $wporg_login_url )
-				); ?>
+				); // show the link itself on elsewhere than wp-login.php (form prompts) for better user experience, in wp-login.php hidden by styles ?>
 			</span>
 			<?php printf(
 				__( 'If you don\'t have an account, <a href="%s">please create one</a>.', 'wordcamporg' ),

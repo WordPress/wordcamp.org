@@ -67,7 +67,14 @@ abstract class Event_Application {
 			$this->submit_application( $_POST );
 		} else {
 			$countries = wcorg_get_countries();
-			$this->render_application_form( $countries );
+
+			$wporg_username = '';
+			if ( is_user_logged_in() ) {
+				$current_user = wp_get_current_user();
+				$wporg_username = $current_user->user_login;
+			}
+
+			$this->render_application_form( $countries, $wporg_username );
 		}
 
 		return ob_get_clean();
@@ -80,7 +87,7 @@ abstract class Event_Application {
 	 *
 	 * @return null
 	 */
-	abstract public function render_application_form( $countries );
+	abstract public function render_application_form( $countries, $wporg_username );
 
 	/**
 	 * Submit application details. Calls `create_post` to actually create the event.

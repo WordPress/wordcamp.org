@@ -57,8 +57,8 @@ class WordCamp_Application extends Event_Application {
 	 *
 	 * @return null|void
 	 */
-	public function render_application_form( $countries ) {
-		render_wordcamp_application_form( $countries );
+	public function render_application_form( $countries, $wporg_username ) {
+		render_wordcamp_application_form( $countries, $wporg_username );
 	}
 
 	/**

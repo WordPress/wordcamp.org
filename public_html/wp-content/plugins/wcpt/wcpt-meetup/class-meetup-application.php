@@ -116,9 +116,9 @@ class Meetup_Application extends Event_Application {
 	 *
 	 * @return null|void
 	 */
-	public function render_application_form( $countries ) {
+	public function render_application_form( $countries, $wporg_username ) {
 		require_once dirname( __DIR__ ) . '/views/applications/meetup/shortcode-application.php';
-		render_meetup_application_form( $countries );
+		render_meetup_application_form( $countries, $wporg_username );
 	}
 
 	/**

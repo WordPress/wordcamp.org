@@ -10,7 +10,7 @@ defined( 'WPINC' ) || die();
  *
  * @param array $countries
  */
-function render_wordcamp_application_form( $countries ) {
+function render_wordcamp_application_form( $countries, $wporg_username ) {
 	?>
 
 	<form id="wordcamp-application" method="post">
@@ -95,8 +95,8 @@ function render_wordcamp_application_form( $countries ) {
 						</div>
 
 						<div class="PDF_QT100">
-							<input value="" maxlength="500" name="q_4236565_wporg_username" class="large required"
-								   type="text" title="What is your wordpress.org username?" required/>
+							<input maxlength="500" name="q_4236565_wporg_username" class="large required"
+								   type="text" title="What is your wordpress.org username?" value="<?php echo esc_attr( $wporg_username ); ?>" required/>
 						</div>
 					</div>
 				</div>

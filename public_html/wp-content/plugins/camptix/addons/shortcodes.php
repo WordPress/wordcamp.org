@@ -12,7 +12,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	/**
 	 * Runs during camptix_init, @see CampTix_Addon
 	 */
-	function camptix_init() {
+	public function camptix_init() {
 		global $camptix;
 
 		add_action( 'save_post', array( $this, 'save_post' ) );
@@ -23,7 +23,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		add_shortcode( 'camptix_stats', array( $this, 'shortcode_stats' ) );
 		add_shortcode( 'camptix_private', array( $this, 'shortcode_private' ) );
 
-		// Pre-cache attendees list markup
+		// Pre-cache attendees list markup.
 		if ( ! wp_next_scheduled( 'camptix_cache_all_attendees_shortcodes' ) ) {
 			$camptix_options = $camptix->get_options();
 			$interval        = ( $camptix_options['archived'] ) ? 'daily' : 'hourly';
@@ -33,14 +33,14 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	}
 
 	/**
-	 * @param $message
-	 * @param int $post_id
-	 * @param null $data
+	 * @param string $message
+	 * @param int    $post_id
+	 * @param null   $data
 	 * @param string $module
 	 *
 	 * @return mixed
 	 */
-	function log( $message, $post_id = 0, $data = null, $module = 'shortcode' ) {
+	public function log( $message, $post_id = 0, $data = null, $module = 'shortcode' ) {
 		global $camptix;
 		return $camptix->log( $message, $post_id, $data, $module );
 	}
@@ -48,30 +48,33 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	/**
 	 * Runs when a post is saved.
 	 */
-	function save_post( $post_id ) {
+	public function save_post( $post_id ) {
 		// Only real attendee posts.
-		if ( wp_is_post_revision( $post_id ) || 'tix_attendee' != get_post_type( $post_id ) )
+		if ( wp_is_post_revision( $post_id ) || 'tix_attendee' != get_post_type( $post_id ) ) {
 			return;
+		}
 
 		// Only non-draft attendees.
 		$post = get_post( $post_id );
-		if ( $post->post_status == 'draft' )
+		if ( 'draft' === $post->post_status ) {
 			return;
+		}
 
-		// Signal to update the last modified time ( see $this->shutdown )
+		// Signal to update the last modified time ( see $this->shutdown ).
 		$this->update_last_modified = true;
 	}
 
 	/**
 	 * Runs during shutdown, right before php stops execution.
 	 */
-	function shutdown() {
+	public function shutdown() {
 		global $camptix;
 
-		if ( ! isset( $this->update_last_modified ) || ! $this->update_last_modified )
+		if ( ! isset( $this->update_last_modified ) || ! $this->update_last_modified ) {
 			return;
+		}
 
-		// Bump the last modified time if we've been told to ( see $this->save_post )
+		// Bump the last modified time if we've been told to ( see $this->save_post ).
 		$camptix->update_stats( 'last_modified', time() );
 	}
 
@@ -80,7 +83,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * the [camptix_attendees] shortcode.
 	 */
 	public function cache_all_attendees_shortcodes() {
-		// Get posts containing the `camptix_attendees` shortcode
+		// Get posts containing the `camptix_attendees` shortcode.
 		$params = array(
 			'post_type'              => 'page',
 			'post_status'            => 'publish',
@@ -117,10 +120,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * Callback for the [camptix_attendees] shortcode.
 	 */
 	public function shortcode_attendees( $attr ) {
-		// Required scripts
-		wp_enqueue_script( 'wp-util' ); // For wp.template()
+		// Required scripts.
+		wp_enqueue_script( 'wp-util' ); // For wp.template().
 		if ( wp_script_is( 'jquery.spin', 'registered' ) ) {
-			wp_enqueue_script( 'jquery.spin' ); // Enqueue Jetpack's spinner script if available
+			wp_enqueue_script( 'jquery.spin' ); // Enqueue Jetpack's spinner script if available.
 		}
 		wp_enqueue_script( 'camptix' );
 
@@ -138,7 +141,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * Generate the key for a particular configuration to use when
 	 * setting or retrieving a cached value.
 	 *
-	 * @param array $attr Sanitized shortcode attributes
+	 * @param array $attr Sanitized shortcode attributes.
 	 *
 	 * @return string     The cache key
 	 */
@@ -152,8 +155,8 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * This checks for a cached version first. If none is found, it generates
 	 * the content and caches it before returning.
 	 *
-	 * @param array $attr Sanitized shortcode attributes
-	 * @param bool $force_refresh True to generate the content even if cached value is found.
+	 * @param array $attr Sanitized shortcode attributes.
+	 * @param bool  $force_refresh True to generate the content even if cached value is found.
 	 *
 	 * @return string                 Rendered shortcode content
 	 */
@@ -177,9 +180,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		$last_modified = $camptix->get_stats( 'last_modified' );
 
 		// Return the cached value if nothing has changed since it was generated
-		// Since key changed, backcompat with non-array cache values is no longer necessary
-		if ( ! $force_refresh && false !== ( $cached = get_transient( $cache_key ) ) ) {
-			// Allow outdated cached content on non-cronjob requests to avoid long page loads for visitors
+		// Since key changed, backcompat with non-array cache values is no longer necessary.
+		$cached = get_transient( $cache_key );
+		if ( ! $force_refresh && false !== $cached ) {
+			// Allow outdated cached content on non-cronjob requests to avoid long page loads for visitors.
 			if ( $cached['time'] > $last_modified || ! defined( 'DOING_CRON' ) || ! DOING_CRON ) {
 				return $cached['content'];
 			}
@@ -202,7 +206,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	/**
 	 * Normalize, sanitize, and validate attribute values for the [camptix_attendees] shortcode.
 	 *
-	 * @param array $attr Raw attributes
+	 * @param array $attr Raw attributes.
 	 *
 	 * @return array      Sanitized attributes
 	 */
@@ -242,7 +246,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	/**
 	 * Render the HTML markup for an instance of [camptix_attendees].
 	 *
-	 * @param array $attr Sanitized shortcode attributes
+	 * @param array $attr Sanitized shortcode attributes.
 	 *
 	 * @return string     HTML
 	 */
@@ -256,7 +260,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					'key'     => 'tix_ticket_id',
 					'compare' => 'IN',
 					'value'   => $attr['tickets'],
-				)
+				),
 			);
 		}
 
@@ -267,25 +271,29 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 
 		ob_start();
 		?>
-        <div id="tix-attendees">
-            <ul class="tix-attendee-list tix-columns-<?php echo absint( $attr['columns'] ); ?>">
+		<div id="tix-attendees">
+			<ul class="tix-attendee-list tix-columns-<?php echo absint( $attr['columns'] ); ?>">
 				<?php
 				while ( true && $printed < $attr['posts_per_page'] ) {
 					$paged ++;
 
-					$attendee_args = apply_filters( 'camptix_attendees_shortcode_query_args', array_merge(
-						array(
-							'post_type'      => 'tix_attendee',
-							'posts_per_page' => 200,
-							'post_status'    => array( 'publish', 'pending' ),
-							'paged'          => $paged,
-							'order'          => $attr['order'],
-							'orderby'        => $attr['orderby'],
-							'fields'         => 'ids', // ! no post objects
-							'cache_results'  => false,
+					$attendee_args = apply_filters(
+						'camptix_attendees_shortcode_query_args',
+						array_merge(
+							array(
+								'post_type'      => 'tix_attendee',
+								'posts_per_page' => 200,
+								'post_status'    => array( 'publish', 'pending' ),
+								'paged'          => $paged,
+								'order'          => $attr['order'],
+								'orderby'        => $attr['orderby'],
+								'fields'         => 'ids', // ! no post objects
+								'cache_results'  => false,
+							),
+							$query_args
 						),
-						$query_args
-					), $attr );
+						$attr
+					);
 					$attendees = get_posts( $attendee_args );
 
 					if ( ! is_array( $attendees ) || count( $attendees ) < 1 ) {
@@ -303,7 +311,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 
 						// Skip attendees marked as private.
 						$privacy = get_post_meta( $attendee_id, 'tix_privacy', true );
-						if ( $privacy == 'private' ) {
+						if ( 'private' === $privacy ) {
 							$printed ++;
 							continue;
 						}
@@ -313,16 +321,22 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 						$first = get_post_meta( $attendee_id, 'tix_first_name', true );
 						$last  = get_post_meta( $attendee_id, 'tix_last_name', true );
 
-						// Avatar placeholder
-						echo $this->get_avatar_placeholder( get_post_meta( $attendee_id, 'tix_email', true ) );
+						// Avatar placeholder.
+						echo $this->get_avatar_placeholder( get_post_meta( $attendee_id, 'tix_email', true ) ); // phpcs:ignore
 						?>
 
-                        <div class="tix-field tix-attendee-name">
-							<?php echo $camptix->format_name_string( '<span class="tix-first">%first%</span> <span class="tix-last">%last%</span>', esc_html( $first ), esc_html( $last ) ); ?>
-                        </div>
+						<div class="tix-field tix-attendee-name">
+							<?php
+								echo $camptix->format_name_string( // phpcs:ignore
+									'<span class="tix-first">%first%</span> <span class="tix-last">%last%</span>',
+									esc_html( $first ),
+									esc_html( $last )
+								);
+							?>
+						</div>
 
 						<?php foreach ( $questions as $question ) :
-							if ( ! empty ( $attendee_answers[ $question->ID ] ) ) : ?>
+							if ( ! empty( $attendee_answers[ $question->ID ] ) ) : ?>
 								<div class="tix-field tix-<?php echo esc_attr( $question->post_name ); ?>">
 									<?php
 									$answer = $attendee_answers[ $question->ID ];
@@ -344,8 +358,8 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 						<?php
 						/**
 						 * Action: Fires at the end of each item in the [camptix_attendees] list.
-                         *
-                         * @param WP_Post $attendee_id The post object for the attendee
+						 *
+						 * @param WP_Post $attendee_id The post object for the attendee
 						 */
 						do_action( 'camptix_attendees_shortcode_item', $attendee_id );
 
@@ -354,13 +368,13 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 						$printed ++;
 					} // foreach
 
-					$camptix->filter_post_meta = false; // cleanup
+					$camptix->filter_post_meta = false; // cleanup.
 				} // while true
 				?>
-            </ul>
-        </div>
-        <br class="tix-clear"/>
-	<?php
+			</ul>
+		</div>
+		<br class="tix-clear"/>
+		<?php
 		wp_reset_postdata();
 
 		return ob_get_clean();
@@ -399,17 +413,17 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 */
 	public function avatar_js_template() {
 		?>
-        <script type="text/html" id="tmpl-tix-attendee-avatar">
-            <img
-                    alt="{{ data.alt }}"
-                    src="{{ data.url }}"
-                    srcset="{{ data.url2x }} 2x"
-                    class="avatar avatar-{{ data.size }} photo"
-                    height="{{ data.size }}"
-                    width="{{ data.size }}"
-            >
-        </script>
-	<?php
+		<script type="text/html" id="tmpl-tix-attendee-avatar">
+			<img
+					alt="{{ data.alt }}"
+					src="{{ data.url }}"
+					srcset="{{ data.url2x }} 2x"
+					class="avatar avatar-{{ data.size }} photo"
+					height="{{ data.size }}"
+					width="{{ data.size }}"
+			>
+		</script>
+		<?php
 	}
 
 	/**
@@ -443,13 +457,15 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	}
 
 	/**
-	 * Callback for the [camptix_attendees] shortcode.
+	 * Callback for the [camptix_stats] shortcode.
 	 */
-	function shortcode_stats( $atts ) {
+	public function shortcode_stats( $atts ) {
 		global $camptix;
 
 		return isset( $atts['stat'] ) ? $camptix->get_stats( $atts['stat'] ) : '';
 	}
+
+	// phpcs:disable WordPress.Security.NonceVerification.Missing
 
 	/**
 	 * Executes during template_redirect, watches for the private
@@ -457,18 +473,18 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 *
 	 * @see shortcode_private
 	 */
-	function shortcode_private_template_redirect() {
+	public function shortcode_private_template_redirect() {
 		global $camptix;
 
 		// Indicates this function did run, nothing more.
 		$this->did_shortcode_private_template_redirect = 1;
 
 		if ( isset( $_POST['tix_private_shortcode_submit'] ) ) {
-			$email      = isset( $_POST['tix_email'] )      ? trim( stripslashes( $_POST['tix_email'] ) )      : '';
+			$email = isset( $_POST['tix_email'] ) ? trim( stripslashes( $_POST['tix_email'] ) ) : '';
 
 			// Remove cookies if a previous one was set.
 			if ( isset( $_COOKIE['tix_view_token'] ) ) {
-				setcookie( 'tix_view_token', '', time() - 60*60, COOKIEPATH, COOKIE_DOMAIN, false );
+				setcookie( 'tix_view_token', '', time() - 60 * 60, COOKIEPATH, COOKIE_DOMAIN, false );
 				unset( $_COOKIE['tix_view_token'] );
 			}
 
@@ -476,11 +492,12 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 				return $camptix->error( __( 'Please enter the e-mail address that was used to register for your ticket.', 'wordcamporg' ) );
 			}
 
-			if ( ! is_email( $email ) )
+			if ( ! is_email( $email ) ) {
 				return $camptix->error( __( 'The e-mail address you have entered does not seem to be valid.', 'wordcamporg' ) );
+			}
 
 			$attendees = get_posts( array(
-				'posts_per_page' => 50, // sane enough?
+				'posts_per_page' => 50, // Get all tickets associated with this email, which can be more than 1.
 				'post_type' => 'tix_attendee',
 				'post_status' => 'publish',
 				'meta_query' => array(
@@ -495,13 +512,15 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 				$attendee = $attendees[0];
 
 				$view_token = $this->generate_view_token_for_attendee( $attendee->ID );
-				setcookie( 'tix_view_token', $view_token, time() + 60*60*48, COOKIEPATH, COOKIE_DOMAIN, false );
+				setcookie( 'tix_view_token', $view_token, time() + 60 * 60 * 48, COOKIEPATH, COOKIE_DOMAIN, false );
 				$_COOKIE['tix_view_token'] = $view_token;
 
 				foreach ( $attendees as $attendee ) {
 					update_post_meta( $attendee->ID, 'tix_view_token', $view_token );
 					$count = get_post_meta( $attendee->ID, 'tix_private_form_submit_count', true );
-					if ( ! $count ) $count = 0;
+					if ( ! $count ) {
+						$count = 0;
+					}
 					$count++;
 					update_post_meta( $attendee->ID, 'tix_private_form_submit_count', $count );
 					add_post_meta( $attendee->ID, 'tix_private_form_submit_entry', $_SERVER );
@@ -523,41 +542,50 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * @see shortcode_private_login_form
 	 * @see shortcode_private_display_content
 	 */
-	function shortcode_private( $atts, $content ) {
+	public function shortcode_private( $atts, $content ) {
 		global $camptix;
 
-		if ( ! isset( $this->did_shortcode_private_template_redirect ) )
+		if ( ! isset( $this->did_shortcode_private_template_redirect ) ) {
 			return __( 'An error has occurred.', 'wordcamporg' );
+		}
 
 		// Lazy load the camptix js.
 		wp_enqueue_script( 'camptix' );
 
 		// Don't cache this page.
-		if ( ! defined( 'DONOTCACHEPAGE' ) )
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
 			define( 'DONOTCACHEPAGE', true );
+		}
 
-		$args = shortcode_atts( array(
-			'ticket_ids' => null,
-			'logged_out_message' => '',
-		), $atts );
+		$args = shortcode_atts(
+			array(
+				'ticket_ids'               => null,
+				'logged_out_message'       => '',
+				'logged_out_message_after' => '',
+			),
+			$atts
+		);
 
 		$can_view_content = false;
-		$error = false;
+		$error            = false;
 
 		// If we have a view token cookie, we cas use that to search for attendees.
 		if ( isset( $_COOKIE['tix_view_token'] ) && ! empty( $_COOKIE['tix_view_token'] ) ) {
-			$view_token = $_COOKIE['tix_view_token'];
-			$attendees_params = apply_filters( 'camptix_private_attendees_parameters', array(
-				'posts_per_page' => 50, // sane?
-				'post_type' => 'tix_attendee',
-				'post_status' => 'publish',
-				'meta_query' => array(
-					array(
-						'key' => 'tix_view_token',
-						'value' => $view_token,
+			$view_token       = $_COOKIE['tix_view_token'];
+			$attendees_params = apply_filters(
+				'camptix_private_attendees_parameters',
+				array(
+					'posts_per_page' => 50,
+					'post_type' => 'tix_attendee',
+					'post_status' => 'publish',
+					'meta_query' => array(
+						array(
+							'key' => 'tix_view_token',
+							'value' => $view_token,
+						),
 					),
-				),
-			) );
+				)
+			);
 			$attendees = get_posts( $attendees_params );
 
 			// Having attendees is one piece of the puzzle.
@@ -567,17 +595,18 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 
 				// Let's try and recreate the view token and see if it was generated for this user.
 				$expected_view_token = $this->generate_view_token_for_attendee( $attendee->ID );
-				if ( $expected_view_token != $view_token ) {
+				if ( $expected_view_token !== $view_token ) {
 					$camptix->error( __( 'Looks like you logged in from a different computer. Please log in again.', 'wordcamporg' ) );
 					$error = true;
 				}
 
-				/** @todo: maybe cleanup the nested ifs **/
+				/** @todo: maybe cleanup the nested ifs */
 				if ( ! $error ) {
-					if ( $args['ticket_ids'] )
+					if ( $args['ticket_ids'] ) {
 						$args['ticket_ids'] = array_map( 'intval', explode( ',', $args['ticket_ids'] ) );
-					else
+					} else {
 						$can_view_content = true;
+					}
 
 					// If at least one ticket is found, break.
 					if ( $args['ticket_ids'] ) {
@@ -593,10 +622,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 						$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
 					}
 				}
-
 			} else {
-				 if ( isset( $_POST['tix_private_shortcode_submit'] ) )
+				if ( isset( $_POST['tix_private_shortcode_submit'] ) ) {
 					$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
+				}
 			}
 		}
 
@@ -616,7 +645,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	/**
 	 * [camptix_private] shortcode, displays the login form.
 	 */
-	function shortcode_private_login_form( $atts, $content ) {
+	public function shortcode_private_login_form( $atts, $content ) {
 		$email = isset( $_POST['tix_email'] ) ? $_POST['tix_email'] : '';
 		ob_start();
 
@@ -624,11 +653,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		// attribute needs to enclose the value in single instead of double quotes. TinyMCE enforces
 		// double quotes on HTML attributes, which will break the shortcode if it also uses double quotes.
 		if ( ! empty( $atts['logged_out_message'] ) ) {
-			echo wpautop( $atts['logged_out_message'] );
+			echo wp_kses_post( wpautop( $atts['logged_out_message'] ) );
 		}
 
 		?>
-
 		<div id="tix">
 			<?php do_action( 'camptix_notices' ); ?>
 			<form method="POST" action="#tix">
@@ -636,10 +664,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 				<input type="hidden" name="tix_post_id" value="<?php the_ID(); ?>" />
 				<table class="tix-private-form">
 					<tr>
-						<th class="tix-left" colspan="2"><?php _e( 'Have a ticket? Sign in', 'wordcamporg' ); ?></th>
+						<th class="tix-left" colspan="2"><?php esc_html_e( 'Have a ticket? Sign in', 'wordcamporg' ); ?></th>
 					</tr>
 					<tr>
-						<td class="tix-left"><?php _e( 'E-mail', 'wordcamporg' ); ?></td>
+						<td class="tix-left"><?php esc_html_e( 'E-mail', 'wordcamporg' ); ?></td>
 						<td class="tix-right"><input name="tix_email" value="<?php echo esc_attr( $email ); ?>" type="text" /></td>
 					</tr>
 				</table>
@@ -652,11 +680,11 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		<?php
 
 		if ( isset( $atts['logged_out_message_after'] ) ) {
-			// support calling a callback function, for situations where advanced HTML, scripting, etc is desired
-			if ( $atts['logged_out_message_after'] == 'callback' ) {
+			// Call a callback function, for situations where advanced HTML, scripting, etc is desired.
+			if ( 'callback' === $atts['logged_out_message_after'] ) {
 				do_action( 'camptix_logged_out_message_after' );
 			} else {
-				echo wpautop( $atts['logged_out_message_after'] );
+				echo wp_kses_post( wpautop( $atts['logged_out_message_after'] ) );
 			}
 		}
 
@@ -669,7 +697,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * [camptix_private] shortcode, this part displays the actual content in a #tix div
 	 * with notices.
 	 */
-	function shortcode_private_display_content( $atts, $content ) {
+	public function shortcode_private_display_content( $atts, $content ) {
 		ob_start();
 		echo '<div id="tix">';
 		do_action( 'camptix_notices' );
@@ -682,9 +710,14 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		return $content;
 	}
 
-	function generate_view_token_for_attendee( $attendee_id ) {
+	/**
+	 * Generate a unique view token for this attendee email, using the current IP address.
+	 *
+	 * @param int $attendee_id
+	 */
+	public function generate_view_token_for_attendee( $attendee_id ) {
 		$email = get_post_meta( $attendee_id, 'tix_email', true );
-		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '';
+		$ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '';
 
 		$view_token = md5( 'tix-view-token-' . strtolower( $email . $ip ) );
 		return $view_token;

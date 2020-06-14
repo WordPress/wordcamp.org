@@ -528,7 +528,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					$this->log( sprintf( 'Viewing private content using %s', @$_SERVER['REMOTE_ADDR'] ), $attendee->ID, $_SERVER );
 				}
 			} else {
-				$this->log( __( 'The information you have entered is incorrect. Please try again.', 'wordcamporg' ) );
+				$camptix->error( __( 'No tickets were found for this email. Please try again.', 'wordcamporg' ) );
 			}
 		}
 	}
@@ -567,7 +567,6 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		);
 
 		$can_view_content = false;
-		$error            = false;
 
 		// If we have a view token cookie, we cas use that to search for attendees.
 		if ( isset( $_COOKIE['tix_view_token'] ) && ! empty( $_COOKIE['tix_view_token'] ) ) {
@@ -597,30 +596,27 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 				$expected_view_token = $this->generate_view_token_for_attendee( $attendee->ID );
 				if ( $expected_view_token !== $view_token ) {
 					$camptix->error( __( 'Looks like you logged in from a different computer. Please log in again.', 'wordcamporg' ) );
-					$error = true;
+					return $this->shortcode_private_login_form( $args, $content );
 				}
 
-				/** @todo: maybe cleanup the nested ifs */
-				if ( ! $error ) {
-					if ( $args['ticket_ids'] ) {
-						$args['ticket_ids'] = array_map( 'intval', explode( ',', $args['ticket_ids'] ) );
-					} else {
-						$can_view_content = true;
-					}
+				if ( $args['ticket_ids'] ) {
+					$args['ticket_ids'] = array_map( 'intval', explode( ',', $args['ticket_ids'] ) );
+				} else {
+					$can_view_content = true;
+				}
 
-					// If at least one ticket is found, break.
-					if ( $args['ticket_ids'] ) {
-						foreach ( $attendees as $attendee ) {
-							if ( in_array( get_post_meta( $attendee->ID, 'tix_ticket_id', true ), $args['ticket_ids'] ) ) {
-								$can_view_content = true;
-								break;
-							}
+				// If at least one ticket is found, break.
+				if ( $args['ticket_ids'] ) {
+					foreach ( $attendees as $attendee ) {
+						if ( in_array( get_post_meta( $attendee->ID, 'tix_ticket_id', true ), $args['ticket_ids'] ) ) {
+							$can_view_content = true;
+							break;
 						}
 					}
+				}
 
-					if ( ! $can_view_content && isset( $_POST['tix_private_shortcode_submit'] ) ) {
-						$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
-					}
+				if ( ! $can_view_content && isset( $_POST['tix_private_shortcode_submit'] ) ) {
+					$camptix->error( __( 'Sorry, but your ticket does not allow you to view this content.', 'wordcamporg' ) );
 				}
 			} else {
 				if ( isset( $_POST['tix_private_shortcode_submit'] ) ) {
@@ -630,14 +626,8 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		}
 
 		if ( $can_view_content && $attendee ) {
-			if ( isset( $_POST['tix_private_shortcode_submit'] ) )
-				$camptix->info( __( 'Success! Enjoy your content!', 'wordcamporg' ) );
-
 			return $this->shortcode_private_display_content( $args, $content );
 		} else {
-			if ( ! isset( $_POST['tix_private_shortcode_submit'] ) && ! $error )
-				$camptix->notice( __( 'The content on this page is private. Please log in using the form below.', 'wordcamporg' ) );
-
 			return $this->shortcode_private_login_form( $args, $content );
 		}
 	}

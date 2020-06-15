@@ -133,8 +133,7 @@ add_filter( 'admin_init', __NAMESPACE__ . '\disable_jetpack_blog_follow_emails' 
  *
  * Jetpack deletes normally spam submissions after 15 days. Sometimes there are false positivies and
  * organisers do miss important messages because those get deleted before team manually checks spam folder.
- * Keep the spam submissions until month has passed from the start of WordCamp, just in case of some
- * @return [type] [description]
+ * Keep the spam submissions until month has passed from the start of WordCamp, just in case of some.
  */
 function disable_jetpack_spam_delete() {
 	$wordcamp = get_wordcamp_post();

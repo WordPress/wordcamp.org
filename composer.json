@@ -29,6 +29,7 @@
 		"format": "phpcbf -p",
 		"lint": "phpcs",
 		"test": "phpunit",
+		"test:watch": "phpunit-watcher watch < /dev/tty",
 		"phpcs-changed": "phpcs-changed",
 		"_comment": "Below script names left in for back-compat",
 		"phpcs": "phpcs",

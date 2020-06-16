@@ -203,6 +203,18 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
     docker-compose -f docker-compose.phpunit.yml stop
     ```
 
+5. You can run `test:watch` to automatically watch files for changes, and re-run the tests:
+
+	```
+	composer run test:watch
+	```
+
+	You can pass extra PHPUnit commands after the `--`. For example:
+
+	```
+	composer run test:watch -- --filter=<partial name of test>
+	```
+
 
 ## Working with the database provision file
 

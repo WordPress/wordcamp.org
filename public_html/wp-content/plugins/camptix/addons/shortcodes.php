@@ -526,6 +526,11 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					add_post_meta( $attendee->ID, 'tix_private_form_submit_entry', $_SERVER );
 					add_post_meta( $attendee->ID, 'tix_private_form_submit_ip', @$_SERVER['REMOTE_ADDR'] );
 					$this->log( sprintf( 'Viewing private content using %s', @$_SERVER['REMOTE_ADDR'] ), $attendee->ID, $_SERVER );
+
+					// Mark attendee as attended.
+					if ( ! get_post_meta( $attendee->ID, 'tix_attended', true ) ) {
+						update_post_meta( $attendee->ID, 'tix_attended', true );
+					}
 				}
 			} else {
 				$camptix->error( __( 'No tickets were found for this email. Please try again.', 'wordcamporg' ) );

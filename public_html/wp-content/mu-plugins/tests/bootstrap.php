@@ -13,6 +13,7 @@ function manually_load_plugins() {
 	// Needed for checking subrole capabilities. The ID is 1 because there's only one site in the test instance.
 	define( 'BLOG_ID_CURRENT_SITE', 1 );
 
+	require_once dirname( __DIR__ ) . '/wcorg-json-api.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
 }
 

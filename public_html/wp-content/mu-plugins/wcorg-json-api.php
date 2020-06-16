@@ -1,6 +1,6 @@
 <?php
 /*
- * Customizations to the JSON REST API
+ * Customizations to the v1 JSON REST API.
  *
  * WARNING: It's very important to make sure that only data intended to be public is disclosed by the API. This
  * is particularly important when it comes to areas where we're customizing the output, like post meta.
@@ -357,22 +357,24 @@ function wcorg_json_avoid_nested_callback_conflicts() {
  */
 function wcorg_json_v2_compat( $request ) {
 	$rest_prefix = rest_get_url_prefix();
+	$site_path   = get_blog_details( null, false )->path;
+	$route       = $request->query_vars['json_route'] ?? false;
 
 	// Skip non-API requests.
-	if ( 0 !== strpos( $_SERVER['REQUEST_URI'], "/$rest_prefix" ) ) {
+	if ( ! $route ) {
 		return;
 	}
 
-	// Determine if it's a v2 request.
 	$is_route_v2 = false;
 
-	if ( rest_get_url_prefix() === trim( $_SERVER['REQUEST_URI'], '/' ) ) {
+	// The root route should go to v2 because v1 is deprecated.
+	if ( '/' === $route ) {
 		$is_route_v2 = true;
 	}
 
 	if ( ! $is_route_v2 ) {
 		foreach ( rest_get_server()->get_namespaces() as $namespace ) {
-			if ( 0 === strpos( $_SERVER['REQUEST_URI'], "/$rest_prefix/$namespace" ) ) {
+			if ( 0 === strpos( $_SERVER['REQUEST_URI'], $site_path . "$rest_prefix/$namespace" ) ) {
 				$is_route_v2 = true;
 				break;
 			}

@@ -18,6 +18,7 @@
 		"start": "wp-scripts start attendee-content='./blocks/src/attendee-content/index.js' --output-path='./blocks/build'",
 		"build": "wp-scripts build attendee-content='./blocks/src/attendee-content/index.js' --output-path='./blocks/build'",
 		"lint:js": "wp-scripts lint-js blocks/src",
+		"lint:css": "echo \"No CSS linting in this repo.\" && exit 0",
 		"format:js": "wp-scripts format-js",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"
 	},

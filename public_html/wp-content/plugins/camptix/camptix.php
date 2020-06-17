@@ -67,7 +67,7 @@ class CampTix_Plugin {
 		require( dirname( __FILE__ ) . '/inc/class-camptix-addon.php' );
 		require( dirname( __FILE__ ) . '/inc/class-camptix-payment-method.php' );
 
-		if ( true ) { // Test env flag.
+		if ( is_wordcamp_beta( 'camptix_blocks' ) ) {
 			require( dirname( __FILE__ ) . '/blocks/blocks.php' );
 		}
 

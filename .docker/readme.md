@@ -215,6 +215,14 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 	composer run test:watch -- --filter=<partial name of test>
 	```
 
+	Most of the time, though, you'll probably want to run `test:watch:fast`, which avoids re-installing WP before every run:
+
+	```
+	composer run test:watch:fast
+	```
+
+	It's much faster, but the downside is that this can sometimes cause valid tests to fail, or vice-versa. If you suspect that a test that's failing _should_ pass, try manually running it again by pressing `<Enter>` in the interactive prompt. If that doesn't work, run a regular `test` test in a separate terminal, then press `<Enter>` at the watch prompt to re-run the tests. For details see [#43432-core](https://core.trac.wordpress.org/ticket/43432), especially [comment:3](https://core.trac.wordpress.org/ticket/43432#comment:3).
+
 
 ## Working with the database provision file
 

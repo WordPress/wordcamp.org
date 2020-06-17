@@ -127,3 +127,40 @@ function disable_jetpack_blog_follow_emails() {
 	}
 }
 add_filter( 'admin_init', __NAMESPACE__ . '\disable_jetpack_blog_follow_emails' );
+
+/**
+ * Disable Jetpack's automatic spam deletion if the WordCamp is in future or has ended less than month ago.
+ *
+ * Jetpack deletes normally spam submissions after 15 days. Sometimes there are false positivies and
+ * organisers do miss important messages because those get deleted before team manually checks spam folder.
+ * Keep the spam submissions until month has passed from the start of WordCamp, just in case of something
+ * is needed from submissions after WordCamp has ended.
+ */
+function disable_jetpack_spam_delete() {
+	$wordcamp = get_wordcamp_post();
+	$wc_start = $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ?? '';
+
+	/**
+	 * Bail if WordCamp start date has not been set.
+	 * Allow spam deletion in order to keep database clean.
+	 */
+	if ( empty( $wc_start ) ) {
+		return;
+	}
+
+	/**
+	 * Bail if month has passed after WordCamp started.
+	 * Allow spam deletion.
+	 */
+	if ( absint( $wc_start ) < strtotime( '-30 days' ) ) {
+		return;
+	}
+
+	/**
+	 * Remove spam deletion actions.
+	 * One for the actual submit and second for Akismet metadata attached to each submission.
+	 */
+	remove_action( 'grunion_scheduled_delete', 'grunion_delete_old_spam' );
+	remove_action( 'wp_scheduled_delete', array( \Grunion_Contact_Form_Plugin::init(), 'daily_akismet_meta_cleanup' ) );
+}
+add_action( 'init', __NAMESPACE__ . '\disable_jetpack_spam_delete' );

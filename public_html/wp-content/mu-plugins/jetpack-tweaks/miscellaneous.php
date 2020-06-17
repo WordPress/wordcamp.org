@@ -138,7 +138,7 @@ add_filter( 'admin_init', __NAMESPACE__ . '\disable_jetpack_blog_follow_emails' 
  */
 function disable_jetpack_spam_delete() {
 	$wordcamp = get_wordcamp_post();
-	$wc_start = $wordcamp->meta['Start Date (YYYY-mm-dd)'][0];
+	$wc_start = $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ?? '';
 
 	/**
 	 * Bail if WordCamp start date has not been set.

@@ -46,6 +46,30 @@ function is_wordcamp_test_site( $blog_id = null ) {
 }
 
 /**
+ * Check if a WordCamp site is participating in a beta test of a feature. All development environments are
+ * considered beta testers.
+ *
+ * Currently `wordcamp_beta_` blogmeta keys need to be set manually via wp-cli:
+ *    wp site meta set [site ID] wordcamp_beta_{$beta} true
+ *
+ * @param string   $beta The slug ID of the beta feature.
+ * @param int|null $blog_id Optional. The blog ID to check. Defaults to current blog ID.
+ *
+ * @return bool
+ */
+function is_wordcamp_beta( $beta, $blog_id = null ) {
+	if ( 'production' !== get_wordcamp_environment() ) {
+		return true;
+	}
+
+	if ( is_null( $blog_id ) ) {
+		$blog_id = get_current_blog_id();
+	}
+
+	return wp_validate_boolean( get_site_meta( $blog_id, 'wordcamp_beta_' . $beta, true ) );
+}
+
+/**
  * Get a list of IDs for sites that have a specific blogmeta key, and optionally a specific value.
  *
  * @param string $key

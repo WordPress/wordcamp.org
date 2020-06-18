@@ -161,6 +161,8 @@ function disable_jetpack_spam_delete() {
 	 * One for the actual submit and second for Akismet metadata attached to each submission.
 	 */
 	remove_action( 'grunion_scheduled_delete', 'grunion_delete_old_spam' );
-	remove_action( 'wp_scheduled_delete', array( \Grunion_Contact_Form_Plugin::init(), 'daily_akismet_meta_cleanup' ) );
+	if ( class_exists( '\Grunion_Contact_Form_Plugin', false ) ) {
+		remove_action( 'wp_scheduled_delete', array( \Grunion_Contact_Form_Plugin::init(), 'daily_akismet_meta_cleanup' ) );
+	}
 }
 add_action( 'init', __NAMESPACE__ . '\disable_jetpack_spam_delete' );

@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 
 namespace WordCamp\Git_Hooks\Pre_Push;
@@ -43,6 +43,7 @@ function main() {
 	$changed_files = shell_exec( '/usr/bin/git diff origin/production --name-only' );
 
 	try {
+		php_test( $changed_files );
 		js_css_lint( $workspaces, $changed_files );
 
 	} catch( Exception $exception ) {
@@ -54,6 +55,27 @@ function main() {
 
 	echo "\n\n{$color_green}All pre-push tests passed.{$color_reset}\n\n";
 	exit( 0 );
+}
+
+/**
+ * Run the PHP test suites.
+ *
+ * @param string $changed_files
+ *
+ * @throws Exception if tests fail.
+ */
+function php_test( $changed_files ) {
+	if ( false === strpos( $changed_files, '.php' ) ) {
+		return;
+	}
+
+	echo "\nRunning PHP tests... ";
+
+	exec( 'composer run test 2>&1', $test_output, $exec_exit_status );
+
+	if ( 0 !== $exec_exit_status ) {
+		throw new Exception( implode( "\n", $test_output ) );
+	}
 }
 
 /**

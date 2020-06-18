@@ -31,6 +31,7 @@
 		"test": "phpunit",
 		"test:watch": "phpunit-watcher watch < /dev/tty",
 		"test:watch:fast": "WP_TESTS_SKIP_INSTALL=1 composer run test:watch",
+		"test:db:reset": "/usr/bin/env php .docker/bin/reset-tests-database.php",
 		"phpcs-changed": "phpcs-changed",
 		"_comment": "Below script names left in for back-compat",
 		"phpcs": "phpcs",

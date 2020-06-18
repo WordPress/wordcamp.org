@@ -221,8 +221,15 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 	composer run test:watch:fast
 	```
 
-	It's much faster, but the downside is that this can sometimes cause valid tests to fail, or vice-versa. If you suspect that a test that's failing _should_ pass, try manually running it again by pressing `<Enter>` in the interactive prompt. If that doesn't work, run a regular `test` test in a separate terminal, then press `<Enter>` at the watch prompt to re-run the tests. For details see [#43432-core](https://core.trac.wordpress.org/ticket/43432), especially [comment:3](https://core.trac.wordpress.org/ticket/43432#comment:3).
+	It can shave several seconds off of each test run, but has two major downsides that you need to be aware of:
 
+	1. Tests that depend on a fresh database will sometimes fail even though they should pass. If you suspect that you're seeing a false-positive or -negative, you can try manually running it again by pressing `<Enter>` in the interactive prompt. If that doesn't work, run the standard `composer run test` command in a separate terminal to re-install the database, and then press `<Enter>` at the interactive prompt in order to re-run the tests. For details see [#43432-core](https://core.trac.wordpress.org/ticket/43432), especially [comment:3](https://core.trac.wordpress.org/ticket/43432#comment:3).
+
+	2. Sometimes it the database will be left in a broken state, and you'll get `One or more database tables are unavailable` errors. To fix those, run:
+
+		```
+		composer run test:db:reset
+		```
 
 ## Working with the database provision file
 

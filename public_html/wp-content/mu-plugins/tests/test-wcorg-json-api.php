@@ -94,6 +94,14 @@ class Test_WordCamp_JSON_API_V1 extends WP_UnitTestCase {
 
 		// The first param can't reference self::$slash_year_site_id directly, since data providers are executed before `setUp()`.
 		$unslashed_cases = array(
+			'tmp' => array(
+				'slash_year_site_id',
+				'hello',
+				'v2',
+				null,
+			),
+
+
 			'slash-year non-api requests are not routed to api' => array(
 				'slash_year_site_id',
 				'https://vancouver.wordcamp.test/2020/hello',

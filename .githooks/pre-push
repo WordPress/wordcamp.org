@@ -26,7 +26,8 @@ function main() {
 	 * Only run this hook on finished commits that are ready for production. It should be skipped during
 	 * the development process, in order to keep a frictionless workflow.
 	 */
-	if ( 'production' !== $current_branch ) {
+	if ( 'pre-push-tests' !== $current_branch ) {
+		// todo ^x
 		exit( 0 );
 	}
 

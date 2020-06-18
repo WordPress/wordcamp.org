@@ -89,14 +89,21 @@ function get_wordcamp_blog_ids_from_meta( $key, $value = null ) {
  *
  * See WordCamp_CLI_Miscellaneous::set_skip_feature_flag() for how to set the flags.
  *
+ * Updated June 2020 to use the blog meta table for storing flags instead of a site's options table.
+ *
  * @param string $flag
+ * @param int    $blog_id
  *
  * @return bool
  */
-function wcorg_skip_feature( $flag ) {
-	$flags = get_option( 'wordcamp_skip_features', array() );
+function wcorg_skip_feature( $flag, $blog_id = null ) {
+	if ( is_null( $blog_id ) ) {
+		$blog_id = get_current_blog_id();
+	}
 
-	return isset( $flags[ $flag ] );
+	$flags = get_site_meta( $blog_id, 'wordcamp_skip_feature' );
+
+	return in_array( $flag, $flags, true );
 }
 
 /**

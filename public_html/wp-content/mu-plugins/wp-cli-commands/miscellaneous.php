@@ -1,6 +1,9 @@
 <?php
 
-defined( 'WP_CLI' ) or die();
+use cli\progress\Bar;
+use cli\Table;
+
+defined( 'WP_CLI' ) || die();
 
 /**
  * WordCamp.org: Miscellaneous commands.
@@ -37,44 +40,42 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 	public function set_skip_feature_flag( $args, $assoc_args ) {
 		$flag_name   = $args[0];
 		$max_site_id = empty( $args[1] ) ? false : absint( $args[1] );
-		$dry_run     = isset( $assoc_args[ 'dry-run' ] );
-		$sites       = get_sites( array( 'number' => 0 ) );
-		$notify      = new \cli\progress\Bar( 'Applying flag', count( $sites ) );
-		$results     = array();
+		$dry_run     = isset( $assoc_args['dry-run'] );
+
+		$site_args = array( 'number' => 0 );
+		if ( $max_site_id ) {
+			$site_args['site__in'] = range( 1, $max_site_id );
+		}
+		$sites = get_sites( $site_args );
+
+		$notify  = new Bar( 'Applying flag', count( $sites ) );
+		$results = array();
 
 		WP_CLI::line();
 
 		foreach ( $sites as $site ) {
-			switch_to_blog( $site->blog_id );
-
-			$site_domain = parse_url( get_option( 'siteurl' ) );
+			$site_domain = parse_url( $site->siteurl );
 			$site_domain = sprintf( '%s%s', $site_domain['host'], $site_domain['path'] );
+			$skip_flags  = get_site_meta( $site->blog_id, 'wordcamp_skip_feature' );
 
-			// Skip sites that are above the requested maximum site ID
-			if ( $max_site_id && $site->blog_id > $max_site_id ) {
-				$results[] = array( $site->blog_id, $site_domain, 'skipped' );
-				restore_current_blog();
+			if ( in_array( $flag_name, $skip_flags, true ) ) {
+				$results[] = array( $site->blog_id, $site_domain, 'skipped -- already exists' );
 				continue;
 			}
 
-			// Apply the flag to the requested sites
-			$flags = get_option( 'wordcamp_skip_features', array() );
-			$flags[ $flag_name ] = true;
-
 			if ( ! $dry_run ) {
-				update_option( 'wordcamp_skip_features', $flags );
+				add_site_meta( $site->blog_id, 'wordcamp_skip_feature', $flag_name );
 			}
 
 			$results[] = array( $site->blog_id, $site_domain, 'applied' );
 
-			restore_current_blog();
 			$notify->tick();
 		}
 
 		$notify->finish();
 
 		WP_CLI::line();
-		$table = new \cli\Table();
+		$table = new Table();
 		$table->setHeaders( array( 'ID', 'Site', 'Action' ) );
 		$table->setRows( $results );
 		$table->display();
@@ -87,7 +88,7 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 		) );
 
 		if ( $dry_run ) {
-			WP_CLI::warning( 'This was only a dry-run.' );
+			WP_CLI::warning( 'This was only a dry-run. No flags were actually applied.' );
 		}
 	}
 
@@ -126,9 +127,9 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 	 * @throws \WP_CLI\ExitException
 	 */
 	public function skip_feature_flag( $args ) {
-		$command   = ( $args[0] ) ?: '';
-		$flag_name = ( $args[1] ) ?: '';
-		$blog_id   = ( $args[2] ) ? absint( $args[2] ) : 0;
+		$command   = $args[0] ?? '';
+		$flag_name = $args[1] ?? '';
+		$blog_id   = ( isset( $args[2] ) ) ? absint( $args[2] ) : 0;
 
 		WP_CLI::line();
 
@@ -142,51 +143,70 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 			WP_CLI::error( 'Invalid flag name.' );
 		}
 
-		if ( ! $blog_id ) {
+		$site = get_site( $blog_id );
+		if ( ! $site ) {
 			WP_CLI::error( 'Invalid blog ID.' );
 		}
 
-		switch_to_blog( $blog_id );
-
-		$flags = get_option( 'wordcamp_skip_features', array() );
+		$flags       = get_site_meta( $site->blog_id, 'wordcamp_skip_feature' );
+		$site_domain = parse_url( $site->siteurl );
+		$site_domain = sprintf( '%s%s', $site_domain['host'], $site_domain['path'] );
 
 		switch ( $command ) {
 			case 'get':
-				if ( array_key_exists( $flag_name, $flags ) && true === $flags[ $flag_name ] ) {
+				if ( in_array( $flag_name, $flags, true ) ) {
 					$message = sprintf(
-						'The %s flag is SET on blog %d.',
+						'The %s flag is SET on %s (%d).',
 						$flag_name,
-						$blog_id
+						$site_domain,
+						$site->blog_id
 					);
 				} else {
 					$message = sprintf(
-						'The %s flag is NOT SET on blog %d.',
+						'The %s flag is NOT SET on %s (%d).',
 						$flag_name,
-						$blog_id
+						$site_domain,
+						$site->blog_id
 					);
 				}
 				break;
 			case 'set':
-				$flags[ $flag_name ] = true;
-				update_option( 'wordcamp_skip_features', $flags );
-				$message = sprintf(
-					'The %s flag was successfully SET for blog %d.',
-					$flag_name,
-					$blog_id
-				);
+				if ( in_array( $flag_name, $flags, true ) ) {
+					$message = sprintf(
+						'The %s flag is already SET on %s (%d).',
+						$flag_name,
+						$site_domain,
+						$site->blog_id
+					);
+				} else {
+					add_site_meta( $site->blog_id, 'wordcamp_skip_feature', $flag_name );
+					$message = sprintf(
+						'The %s flag was successfully SET for %s (%d).',
+						$flag_name,
+						$site_domain,
+						$site->blog_id
+					);
+				}
 				break;
 			case 'unset':
-				unset( $flags[ $flag_name ] );
-				update_option( 'wordcamp_skip_features', $flags );
-				$message = sprintf(
-					'The %s flag was successfully UNSET for blog %d.',
-					$flag_name,
-					$blog_id
-				);
+				if ( in_array( $flag_name, $flags, true ) ) {
+					delete_site_meta( $site->blog_id, 'wordcamp_skip_feature', $flag_name );
+					$message = sprintf(
+						'The %s flag was successfully UNSET for %s (%d).',
+						$flag_name,
+						$site_domain,
+						$site->blog_id
+					);
+				} else {
+					$message = sprintf(
+						'The %s flag is already NOT SET on %s (%d).',
+						$flag_name,
+						$site_domain,
+						$site->blog_id
+					);
+				}
 				break;
 		}
-
-		restore_current_blog();
 
 		WP_CLI::line( $message );
 	}

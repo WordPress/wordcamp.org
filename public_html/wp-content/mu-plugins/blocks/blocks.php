@@ -34,28 +34,11 @@ function load_includes() {
 
 	// Blocks.
 	require_once $blocks_dir . 'organizers/controller.php';
+	require_once $blocks_dir . 'schedule/controller.php';
 	require_once $blocks_dir . 'sessions/controller.php';
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
 	require_once $blocks_dir . 'live-schedule/controller.php';
-
-	$beta_block_test_sites = array(
-		112, // 2011.tokyo
-		928, // 2017.testing
-		1028, // 2019.us
-		1099, // 2019.boston
-		1170, // 2019.tokyo
-		1226, // 2020.birmingham
-	);
-
-	$load_beta_blocks =
-		'local'       === WORDCAMP_ENVIRONMENT ||
-		'development' === WORDCAMP_ENVIRONMENT ||
-		in_array( get_current_blog_id(), $beta_block_test_sites, true );
-
-	if ( $load_beta_blocks ) {
-		require_once $blocks_dir . 'schedule/controller.php';
-	}
 
 	// Hooks.
 	require_once $hooks_dir . 'latest-posts/controller.php';

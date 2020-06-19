@@ -63,8 +63,8 @@ class WordCamp_Lets_Encrypt_Helper {
 			}
 		}
 
-		// Back-compat domains.
-		if ( is_callable( 'get_domain_redirects' ) ) {
+		// Back-compat domains. Note: is_callable() requires the full path, it doesn't follow namespace imports.
+		if ( is_callable( 'WordCamp\Sunrise\get_domain_redirects' ) ) {
 			$back_compat_domains = get_domain_redirects();
 
 			$domains = array_merge( $domains, array_keys( $back_compat_domains ) );

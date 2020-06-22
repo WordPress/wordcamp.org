@@ -214,7 +214,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	public function payment_settings_fields() {
 		// Allow pre-defined accounts if any are defined by plugins.
 		if ( count( $this->get_predefined_accounts() ) > 0 ) {
-			$this->add_settings_field_helper( 'api_predef', __( 'Custom Account', 'wordcamporg' ), array( $this, 'field_api_predef' ) );
+			$this->add_settings_field_helper( 'api_predef', __( 'Account', 'wordcamporg' ), array( $this, 'field_api_predef' ) );
 		}
 
 		// Settings fields are not needed when a predefined account is chosen.
@@ -253,7 +253,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		?>
 
 		<select id="camptix-stripe-predef-select" name="<?php echo esc_attr( $args['name'] ); ?>">
-			<option value=""><?php _e( 'None', 'wordcamporg' ); ?></option>
+			<option value=""><?php _e( 'Custom', 'wordcamporg' ); ?></option>
 
 			<?php foreach ( $accounts as $key => $account ) : ?>
 				<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $args['value'], $key ); ?>>

@@ -16,7 +16,7 @@ use WP_UnitTestCase, WP_UnitTest_Factory;
 
 use function WordCamp\Sunrise\{
 	get_canonical_year_url, guess_requested_domain_path,
-	site_redirects, unsubdomactories_redirects
+	get_city_slash_year_url, site_redirects, unsubdomactories_redirects,
 };
 
 defined( 'WPINC' ) || die();
@@ -88,6 +88,117 @@ class Test_Sunrise extends WP_UnitTestCase {
 
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", self::$network_id ) );
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->site}     WHERE id      = %d", self::$network_id ) );
+	}
+
+	/**
+	 * @covers ::get_city_slash_year_url
+	 *
+	 * @dataProvider data_get_city_slash_year_url
+	 */
+	public function test_get_city_slash_year_url( $domain, $request_uri, $expected ) {
+		$actual = get_city_slash_year_url( $domain, $request_uri );
+
+		$this->assertEquals( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_city_slash_year_url().
+	 *
+	 * @return array
+	 */
+	public function data_get_city_slash_year_url() {
+		return array(
+			/*
+			 * Should not redirect.
+			 */
+			'root site homepage should not redirect' => array(
+				'wordcamp.test',
+				'/',
+				false,
+			),
+
+			'root site subpage should not redirect' => array(
+				'wordcamp.test',
+				'/schedule/',
+				false,
+			),
+
+			'central homepage should not redirect' => array(
+				'central.wordcamp.test',
+				'/',
+				false,
+			),
+
+			'central subpage should not redirect' => array(
+				'central.wordcamp.test',
+				'/schedule/',
+				false,
+			),
+
+			'city missing from `$redirect_cities` should not redirect' => array(
+				'2018.narnia.wordcamp.test',
+				'/',
+				false,
+			),
+
+			'already a city/year format homepage should not redirect' => array(
+				'vancouver.wordcamp.test',
+				'/2020/',
+				false,
+			),
+
+			'already a city/year format subpage should not redirect' => array(
+				'vancouver.wordcamp.test',
+				'/2020/schedule/',
+				false,
+			),
+
+			'already a city/year format year archive should not redirect' => array(
+				'vancouver.wordcamp.test',
+				'/2020/2020/',
+				false,
+			),
+
+
+			/*
+			 * Should redirect.
+			 */
+			'city.year homepage should redirect' => array(
+				'2020.testing.wordcamp.test',
+				'/',
+				'https://testing.wordcamp.test/2020/',
+			),
+
+			'city.year subpage should redirect' => array(
+				'2020.testing.wordcamp.test',
+				'/schedule/',
+				'https://testing.wordcamp.test/2020/schedule/',
+			),
+
+			'city.year year archive should redirect' => array(
+				'2020.testing.wordcamp.test',
+				'/2020/',
+				'https://testing.wordcamp.test/2020/2020/',
+			),
+
+			'city.year extra ID homepage should redirect' => array(
+				'2019-designers.testing.wordcamp.test',
+				'/',
+				'https://testing.wordcamp.test/2019-designers/',
+			),
+
+			'city.year extra ID subpage should redirect' => array(
+				'2019-designers.testing.wordcamp.test',
+				'/schedule/',
+				'https://testing.wordcamp.test/2019-designers/schedule/',
+			),
+
+			'city.year extra ID year archive should redirect' => array(
+				'2019-designers.testing.wordcamp.test',
+				'/2019/',
+				'https://testing.wordcamp.test/2019-designers/2019/',
+			),
+		);
 	}
 
 	/**

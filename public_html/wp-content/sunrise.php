@@ -3,8 +3,25 @@
 namespace WordCamp\Sunrise;
 defined( 'WPINC' ) or die();
 
+
 /*
- * Matches `narnia.wordcamp.org/2020-foo/`, with or with additional `REQUEST_URI` params.
+ * Matches `2020-foo.narnia.wordcamp.org/`, with or without additional `REQUEST_URI` params.
+ */
+const PATTERN_YEAR_DOT_CITY_DOMAIN_PATH = '
+	@ ^
+	( \d{4} [\w-]* )           # Capture the year, plus any optional extra identifier.
+	\.
+	( \w+ )                    # Capture the city.
+	\.
+	( wordcamp | buddycamp )   # Capture the second-level domain.
+	\.
+	( org | test )             # Capture the top level domain.
+	/
+	@ix
+';
+
+/*
+ * Matches `narnia.wordcamp.org/2020-foo/`, with or without additional `REQUEST_URI` params.
  */
 const PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH = '
 	@ ^
@@ -17,6 +34,7 @@ const PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH = '
 	@ix
 ';
 
+
 /**
  * Get the TLD for the current environment.
  *
@@ -27,8 +45,35 @@ function get_top_level_domain() {
 }
 
 /**
- * Redirects from city.wordcamp.org/year to year.city.wordcamp.org
+ * Redirects from `year.city.wordcamp.org` to `city.wordcamp.org/year`.
+ *
+ * See https://make.wordpress.org/community/2020/03/03/proposal-for-wordcamp-sites-seo-fixes/
+ *
+ * @param string $domain
+ * @param string $request_uri
+ *
+ * @return string
  */
+function get_city_slash_year_url( $domain, $request_uri ) {
+	$tld = get_top_level_domain();
+
+	$redirect_cities = array(
+		'testing',
+	);
+
+	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
+		return false;
+	}
+
+	$year = $matches[1];
+	$city = strtolower( $matches[2] );
+
+	if ( ! in_array( $city, $redirect_cities ) ) {
+		return false;
+	}
+
+	return sprintf( "https://%s.wordcamp.%s/%s%s", $city, $tld, $year, $request_uri );
+}
 
 /**
  * Redirects from city.wordcamp.org/year to year.city.wordcamp.org.
@@ -273,6 +318,9 @@ function get_domain_redirects() {
  * @todo Split this into two functions because these aren't related to each other.
  *
  * @param string $domain
+ * @param string $request_uri
+ *
+ * @return string
  */
 function site_redirects( $domain, $request_uri ) {
 	$tld              = get_top_level_domain();
@@ -338,6 +386,10 @@ function main() {
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
 
 	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
+
+	if ( ! $redirect ) {
+		$redirect = get_city_slash_year_url( $domain, $_SERVER['REQUEST_URI'] );
+	}
 
 	if ( ! $redirect ) {
 		$redirect = unsubdomactories_redirects( $domain, $_SERVER['REQUEST_URI'] );

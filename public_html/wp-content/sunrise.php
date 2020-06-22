@@ -29,7 +29,19 @@ function get_top_level_domain() {
 /**
  * Redirects from city.wordcamp.org/year to year.city.wordcamp.org
  */
-function unsubdomactories_redirects() {
+
+/**
+ * Redirects from city.wordcamp.org/year to year.city.wordcamp.org.
+ *
+ * This reverses the 2014 migration, so that sites use the year.city format again. Now that we've redoing the
+ * migration, cities will be moved out of `$redirect_cities` until none remain.
+ *
+ * @param string $domain
+ * @param string $request_uri
+ *
+ * @return string|false
+ */
+function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
 		'russia', 'sf', 'london', 'austin', 'tokyo', 'portland', 'europe', 'philly', 'sofia', 'miami',
 		'montreal', 'newyork', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
@@ -54,34 +66,31 @@ function unsubdomactories_redirects() {
 		'sunshinecoast', 'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'cincinnati', 'okc',
 	);
 
-	$domain = $_SERVER['HTTP_HOST'];
-	$tld    = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
+	$tld = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
 
 	// Return if already on a 4th-level domain (e.g., 2020.narnia.wordcamp.org)
 	if ( ! preg_match( "#^([a-z0-9-]+)\.wordcamp\.$tld$#i", $domain, $matches ) ) {
-		return;
+		return false;
 	}
 
 	$city = strtolower( $matches[1] );
 	if ( ! in_array( $city, $redirect_cities, true ) ) {
-		return;
+		return false;
 	}
 
 	// If can't pick a year out of the path, return.
 	// Extra alpha characters are included, for sites like `seattle.wordcamp.org/2015-beginners`.
-	$path = $_SERVER['REQUEST_URI'];
-	if ( ! preg_match( '#^/(\d{4}[a-z0-9-]*)#i', $path, $matches ) ) {
-		return;
+	if ( ! preg_match( '#^/(\d{4}[a-z0-9-]*)#i', $request_uri, $matches ) ) {
+		return false;
 	}
 
 	$year        = strtolower( $matches[1] );
 	$pattern     = '#' . preg_quote( $year, '#' ) . '#';
-	$path        = preg_replace( $pattern, '', $path, 1 );
+	$path        = preg_replace( $pattern, '', $request_uri, 1 );
 	$path        = str_replace( '//', '/', $path );
 	$redirect_to = sprintf( "https://%s.%s.wordcamp.$tld%s", $year, $city, $path );
 
-	header( 'Location: ' . $redirect_to, true, 301 );
-	die();
+	return $redirect_to;
 }
 
 /**
@@ -320,9 +329,12 @@ function main() {
 
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
 
-	unsubdomactories_redirects();
 	canonical_years_redirect();
 	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
+
+	if ( ! $redirect ) {
+		$redirect = unsubdomactories_redirects( $domain, $_SERVER['REQUEST_URI'] );
+	}
 
 	if ( ! $redirect ) {
 		return;

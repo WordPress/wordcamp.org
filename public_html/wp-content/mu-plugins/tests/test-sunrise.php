@@ -15,7 +15,7 @@ namespace WordCamp\Sunrise\Tests;
 use WP_UnitTestCase, WP_UnitTest_Factory;
 
 use function WordCamp\Sunrise\{
-	guess_requested_domain_path, site_redirects
+	guess_requested_domain_path, site_redirects, unsubdomactories_redirects
 };
 
 defined( 'WPINC' ) || die();
@@ -114,6 +114,62 @@ class Test_Sunrise extends WP_UnitTestCase {
 					'path'   => '/2020/',
 				),
 			) ),
+		);
+	}
+
+	/**
+	 * @covers ::unsubdomactories_redirects
+	 *
+	 * @dataProvider data_unsubdomactories_redirects
+	 */
+	public function test_unsubdomactories_redirects( $domain, $request_uri, $expected ) {
+		$actual = unsubdomactories_redirects( $domain, $request_uri );
+
+		$this->assertEquals( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_unsubdomactories_redirects().
+	 *
+	 * @return array
+	 */
+	public function data_unsubdomactories_redirects() {
+		return array(
+			'request without year should not redirect' => array(
+				'central.wordcamp.test',
+				'/',
+				false,
+			),
+
+			'city missing from `$redirect_cities` should not redirect' => array(
+				'fortaleza.wordcamp.test',
+				'/2016/',
+				false,
+			),
+
+			'year.city homepage request should not redirect' => array(
+				'2020.vancouver.wordcamp.test',
+				'/',
+				false,
+			),
+
+			'year.city subpage request should not redirect' => array(
+				'2020.vancouver.wordcamp.test',
+				'/schedule/',
+				false,
+			),
+
+			'city/year homepage request should redirect' => array(
+				'vancouver.wordcamp.test',
+				'/2020/',
+				'https://2020.vancouver.wordcamp.test/'
+			),
+
+			'city/year subpage request should redirect' => array(
+				'vancouver.wordcamp.test',
+				'/2020/schedule/',
+				'https://2020.vancouver.wordcamp.test/schedule/'
+			),
 		);
 	}
 

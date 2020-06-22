@@ -91,7 +91,6 @@ function redirect_date_permalinks_to_post_slug() {
 	wp_safe_redirect( esc_url_raw( set_url_scheme( home_url( $matches[1] ) ) ) );
 	die();
 }
-add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
 
 /**
  * WordCamp.org Canonical Redirects
@@ -275,10 +274,21 @@ function site_redirects() {
 	}
 }
 
-if ( php_sapi_name() !== 'cli' ) {
+/**
+ * Preempt `ms_load_current_site_and_network()` in order to set the correct site.
+ */
+function main() {
+	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
+
 	site_redirects();
 	unsubdomactories_redirects();
 	canonical_years_redirect();
+}
+
+
+// Redirecting would interfere with bin scripts, unit tests, etc.
+if ( php_sapi_name() !== 'cli' ) {
+	main();
 }
 
 /*

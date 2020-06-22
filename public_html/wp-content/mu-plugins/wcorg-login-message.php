@@ -22,7 +22,7 @@ function wcorg_login_css() {
 				margin-bottom: 1em;
 			}
 
-			div.message p span.wcorg-login-message {
+			div.message p span.wporg-login-link {
 				display: none;
 			}
 

@@ -71,6 +71,7 @@
 	opacity: 0.5;
 }
 
+/* stylelint-disable-next-line selector-class-pattern */
 .wcfd-disabled-form .PDF_pageInner {
 	width: auto;
 }

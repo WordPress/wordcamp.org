@@ -1,7 +1,7 @@
 <?php
 
 if ( ! defined('WPCACHEHOME') )
-  define( 'WPCACHEHOME', WP_PLUGIN_DIR . '/wp-super-cache/' );
+	define( 'WPCACHEHOME', WP_PLUGIN_DIR . '/wp-super-cache/' );
 
 $wpsc_version                  = 169;
 $wp_cache_debug_username       = WP_CACHE_DEBUG_USERNAME;
@@ -48,12 +48,12 @@ $ossdlcdn            = 0;
 $cache_acceptable_files    = array( 'wp-comments-popup.php', 'wp-links-opml.php', 'wp-locations.php' );
 $cache_rejected_uri        = array( 'wp-.*\\.php', 'index\\.php' );
 $cache_rejected_user_agent = array(
-  0 => 'bot',
-  1 => 'ia_archive',
-  2 => 'slurp',
-  3 => 'crawl',
-  4 => 'spider',
-  5 => 'Yandex'
+	0 => 'bot',
+	1 => 'ia_archive',
+	2 => 'slurp',
+	3 => 'crawl',
+	4 => 'spider',
+	5 => 'Yandex'
 );
 
 $cache_rebuild_files = 1;
@@ -67,7 +67,7 @@ $wp_cache_mutex_disabled = 1;
 $sem_id = 691930456;
 
 if ( '/' != substr( $cache_path, -1 ) ) {
-  $cache_path .= '/';
+	$cache_path .= '/';
 }
 
 $wp_cache_mobile           = 0;
@@ -111,3 +111,4 @@ $wp_cache_clear_on_post_edit = 1;
 $wp_cache_hello_world        = 0;
 $wp_cache_mobile_enabled     = 1;
 $wp_cache_cron_check         = 1;
+

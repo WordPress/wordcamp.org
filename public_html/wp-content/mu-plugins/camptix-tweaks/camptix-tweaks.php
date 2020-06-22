@@ -252,11 +252,7 @@ function override_please_login_message( $message ) {
 		wp_login_url( get_redirect_return_url() )
 	);
 
-	$message = str_replace(
-		__( 'Please use your <strong>WordPress.org</strong>* account to log in.', 'wordcamporg' ),
-		$please_login_message,
-		wcorg_login_message( '', get_redirect_return_url() )
-	);
+	$message = wcorg_login_message( $please_login_message, get_redirect_return_url() );
 
 	return $message;
 }

@@ -15,7 +15,8 @@ namespace WordCamp\Sunrise\Tests;
 use WP_UnitTestCase, WP_UnitTest_Factory;
 
 use function WordCamp\Sunrise\{
-	guess_requested_domain_path, site_redirects, unsubdomactories_redirects
+	get_canonical_year_url, guess_requested_domain_path,
+	site_redirects, unsubdomactories_redirects
 };
 
 defined( 'WPINC' ) || die();
@@ -24,6 +25,71 @@ defined( 'WPINC' ) || die();
  * @group sunrise
  */
 class Test_Sunrise extends WP_UnitTestCase {
+	protected static $network_id;
+	protected static $year_dot_2018_site_id;
+	protected static $year_dot_2019_site_id;
+	protected static $slash_year_2016_site_id;
+	protected static $slash_year_2018_dev_site_id;
+	protected static $slash_year_2020_site_id;
+
+	/**
+	 * Create sites we'll need for the tests.
+	 *
+	 * @param WP_UnitTest_Factory $factory
+	 */
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::$network_id = $factory->network->create( array(
+			'domain' => 'wordcamp.test',
+			'path'   => '/',
+		) );
+
+		self::$year_dot_2018_site_id = $factory->blog->create( array(
+			'domain'     => '2018.seattle.wordcamp.test',
+			'path'       => '/',
+			'network_id' => self::$network_id,
+		) );
+
+		self::$year_dot_2019_site_id = $factory->blog->create( array(
+			'domain'     => '2019.seattle.wordcamp.test',
+			'path'       => '/',
+			'network_id' => self::$network_id,
+		) );
+
+		self::$slash_year_2016_site_id = $factory->blog->create( array(
+			'domain'     => 'vancouver.wordcamp.test',
+			'path'       => '/2016/',
+			'network_id' => self::$network_id,
+		) );
+
+		self::$slash_year_2018_dev_site_id = $factory->blog->create( array(
+			'domain'     => 'vancouver.wordcamp.test',
+			'path'       => '/2018-developers/',
+			'network_id' => self::$network_id,
+		) );
+
+		self::$slash_year_2020_site_id = $factory->blog->create( array(
+			'domain'     => 'vancouver.wordcamp.test',
+			'path'       => '/2020/',
+			'network_id' => self::$network_id,
+		) );
+	}
+
+	/**
+	 * Revert the persistent changes from `wpSetUpBeforeClass()` that won't be automatically cleaned up.
+	 */
+	public static function wpTearDownAfterClass() {
+		global $wpdb;
+
+		wp_delete_site( self::$year_dot_2018_site_id );
+		wp_delete_site( self::$year_dot_2019_site_id );
+		wp_delete_site( self::$slash_year_2016_site_id );
+		wp_delete_site( self::$slash_year_2018_dev_site_id );
+		wp_delete_site( self::$slash_year_2020_site_id );
+
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", self::$network_id ) );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->site}     WHERE id      = %d", self::$network_id ) );
+	}
+
 	/**
 	 * @covers ::guess_requested_domain_path
 	 *
@@ -169,6 +235,62 @@ class Test_Sunrise extends WP_UnitTestCase {
 				'vancouver.wordcamp.test',
 				'/2020/schedule/',
 				'https://2020.vancouver.wordcamp.test/schedule/'
+			),
+		);
+	}
+
+	/**
+	 * @covers ::get_canonical_year_url
+	 *
+	 * @dataProvider data_get_canonical_year_url
+	 */
+	public function test_get_canonical_year_url( $domain, $path, $expected ) {
+		$actual = get_canonical_year_url( $domain, $path );
+
+		$this->assertEquals( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_canonical_year_url().
+	 *
+	 * @return array
+	 */
+	public function data_get_canonical_year_url() {
+		return array(
+			'dont redirect root site' => array(
+				'wordcamp.test',
+				'/',
+				false
+			),
+
+			'dont redirect non-existent site' => array(
+				'narnia.wordcamp.test',
+				'/',
+				false
+			),
+
+			'dont redirect year.city sites' => array(
+				'2018.seattle.wordcamp.test',
+				'/',
+				false
+			),
+
+			'dont redirect city/year sites' => array(
+				'vancouver.wordcamp.test',
+				'/2020/',
+				false
+			),
+
+			'redirect year.city root to latest camp' => array(
+				'seattle.wordcamp.test',
+				'/',
+				'https://2019.seattle.wordcamp.test/'
+			),
+
+			'redirect city/year root to latest camp' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'https://vancouver.wordcamp.test/2020/'
 			),
 		);
 	}

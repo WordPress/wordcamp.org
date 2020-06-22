@@ -116,15 +116,20 @@ function redirect_date_permalinks_to_post_slug() {
 }
 
 /**
- * WordCamp.org Canonical Redirects
+ * Get the URL of the newest site for a given city.
  *
- * If site does not exist in the network, will look for the latest xxxx.city.wordpress.org and redirect.
- * Allows URLs such as sf.wordcamp.org always link to the latest (or most recent) WordCamp.
+ * e.g., seattle.wordcamp.org -> seattle.wordcamp.org/2020
+ *
+ * Redirecting the city root to this URL makes it easier for attendees to find the correct site.
+ *
+ * @param string $domain
+ * @param string $path
+ *
+ * @return string|false
  */
-function canonical_years_redirect() {
+function get_canonical_year_url( $domain, $path ) {
 	global $wpdb;
 
-	$domain    = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
 	$cache_key = 'current_blog_' . $domain;
 
 	/**
@@ -133,59 +138,62 @@ function canonical_years_redirect() {
 	 */
 	$current_blog = wp_cache_get( $cache_key, 'site-options' );
 
-	if ( ! $current_blog ) {
-		$current_blog = get_blog_details(
-			array(
-				'domain' => $domain,
-				'path'   => '/',
-			),
-			false
-		);
-
-		if ( $current_blog ) {
-			wp_cache_set( $cache_key, $current_blog, 'site-options' );
-		} else {
-			// Return early if not a third- or fourth-level domain, e.g., city.wordcamp.org, year.city.wordcamp.org.
-			$domain_parts = explode( '.', $domain );
-
-			if ( 2 >= count( $domain_parts ) ) {
-				return;
-			}
-
-			// Default clause for retrieving the most recent year for a city.
-			$like = "%.{$domain}";
-
-			// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
-			switch ( $domain ) {
-				case 'europe.wordcamp.org':
-					if ( time() <= strtotime( '2020-06-07' ) ) {
-						$like = '2020.europe.wordcamp.org';
-					}
-					break;
-
-				case 'us.wordcamp.org':
-					if ( time() <= strtotime( '2019-11-30' ) ) {
-						$like = '2019.us.wordcamp.org';
-					}
-					break;
-			}
-
-			// Search for year.city.wordcamp.org.
-			$latest = $wpdb->get_row( $wpdb->prepare( "
-				SELECT `domain`, `path`
-				FROM $wpdb->blogs
-				WHERE domain LIKE %s
-				ORDER BY domain DESC
-				LIMIT 1;",
-				$like
-			) );
-
-			if ( $latest ) {
-				header( 'Location: https://' . $latest->domain . $latest->path, true, 301 );
-				die();
-			}
-		}
+	if ( $current_blog ) {
+		return false;
 	}
+
+	$current_blog = get_blog_details(
+		array(
+			'domain' => $domain,
+			'path'   => $path
+		),
+		false
+	);
+
+	if ( $current_blog ) {
+		wp_cache_set( $cache_key, $current_blog, 'site-options' );
+
+		return false;
+	}
+
+	// Return early if not a third- or fourth-level domain, e.g., city.wordcamp.org, year.city.wordcamp.org.
+	$domain_parts = explode( '.', $domain );
+
+	if ( 2 >= count( $domain_parts ) ) {
+		return false;
+	}
+
+	// Default clause for retrieving the most recent year for a city.
+	$like = "%.{$domain}";
+
+	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
+	switch ( $domain ) {
+		case 'europe.wordcamp.org':
+			if ( time() <= strtotime( '2020-06-07' ) ) {
+				$like = '2020.europe.wordcamp.org';
+			}
+			break;
+
+		case 'us.wordcamp.org':
+			if ( time() <= strtotime( '2019-11-30' ) ) {
+				$like = '2019.us.wordcamp.org';
+			}
+			break;
+	}
+
+	$latest = $wpdb->get_row( $wpdb->prepare( "
+		SELECT `domain`, `path`
+		FROM $wpdb->blogs
+		WHERE
+			domain = %s OR -- Match city/year format.
+			domain LIKE %s -- Match year.city format.
+		ORDER BY path DESC, domain DESC
+		LIMIT 1;",
+		$domain,
+		$like
+	) );
+
+	return $latest ? 'https://' . $latest->domain . $latest->path : false;
 }
 
 /**
@@ -329,11 +337,14 @@ function main() {
 
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
 
-	canonical_years_redirect();
 	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
 
 	if ( ! $redirect ) {
 		$redirect = unsubdomactories_redirects( $domain, $_SERVER['REQUEST_URI'] );
+	}
+
+	if ( ! $redirect ) {
+		$redirect = get_canonical_year_url( $domain, $path );
 	}
 
 	if ( ! $redirect ) {

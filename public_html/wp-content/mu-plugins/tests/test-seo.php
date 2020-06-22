@@ -76,7 +76,7 @@ class Test_WordCamp_SEO extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers ::test_get_latest_domain
+	 * @covers ::get_latest_home_url
 	 *
 	 * @dataProvider data_get_latest_home_url
 	 */

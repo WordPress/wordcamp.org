@@ -3,6 +3,20 @@
 namespace WordCamp\Sunrise;
 defined( 'WPINC' ) or die();
 
+/*
+ * Matches `narnia.wordcamp.org/2020-foo/`, with or with additional `REQUEST_URI` params.
+ */
+const PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH = '
+	@ ^
+	( [\w-]+ )                 # Capture the city.
+	\.
+	( wordcamp | buddycamp )   # Capture the second-level domain.
+	\.
+	( org | test )             # Capture the top-level domain.
+	( \/ \d{4} [ \w- ]* \/ )   # Capture the site path (the year, plus any optional extra identifier).
+	@ix
+';
+
 /**
  * Get the TLD for the current environment.
  *
@@ -237,24 +251,25 @@ function get_domain_redirects() {
 }
 
 /**
- * WordCamp.org Redirects
+ * Get redirect URLs for root site requests and for hardcoded redirects.
  *
- * General non-pattern redirects in the network.
+ * @todo Split this into two functions because these aren't related to each other.
+ *
+ * @param string $domain
  */
-function site_redirects() {
-	$domain           = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
+function site_redirects( $domain, $request_uri ) {
+	$tld              = get_top_level_domain();
 	$domain_redirects = get_domain_redirects();
 	$redirect         = false;
-	$tld              = get_top_level_domain();
 
 	// If it's a front end request to the root site, redirect to Central.
 	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
 	if ( in_array( $domain, array( "wordcamp.$tld", "buddycamp.$tld" ), true )
 		 && ! is_network_admin()
 		 && ! is_admin()
-		 && ! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $_SERVER['REQUEST_URI'] )
+		 && ! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $request_uri )
 	) {
-		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $_SERVER['REQUEST_URI'] );
+		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $request_uri );
 
 	} elseif ( isset( $domain_redirects[ $domain ] ) ) {
 		$new_url = $domain_redirects[ $domain ];
@@ -262,27 +277,59 @@ function site_redirects() {
 		// Central has a different content structure than other WordCamp sites, so don't include the request URI
 		// if that's where we're going.
 		if ( "central.wordcamp.$tld" !== $new_url ) {
-			$new_url .= $_SERVER['REQUEST_URI'];
+			$new_url .= $request_uri;
 		}
 
 		$redirect = "https://$new_url";
 	}
 
-	if ( $redirect ) {
-		header( 'Location: ' . $redirect );
-		die();
-	}
+	return $redirect;
+}
+
+/**
+ * Parse the `$wpdb->blogs` `domain` and `path` out of the requested URL.
+ *
+ * This is only an educated guess, and cannot work in all cases (e.g., `central.wordcamp.org/2020` (year archive
+ * page). It should only be used in situations where WP functions/globals aren't available yet, and should be
+ * verified in whatever context you use it, e.g., with a database query. That's not done here because it wouldn't
+ * be performant, and this is good enough to short-circuit the need for that in most situations.
+ *
+ * @return array
+ */
+function guess_requested_domain_path() {
+	$is_slash_year_site = preg_match(
+		PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH,
+		$_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'],
+		$matches
+	);
+
+	$domain = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
+	$path   = $is_slash_year_site ? $matches[4] : '/';
+
+	return compact( 'domain', 'path' );
 }
 
 /**
  * Preempt `ms_load_current_site_and_network()` in order to set the correct site.
  */
 function main() {
+	list(
+		'domain' => $domain,
+		'path'   => $path
+	) = guess_requested_domain_path();
+
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
 
-	site_redirects();
 	unsubdomactories_redirects();
 	canonical_years_redirect();
+	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
+
+	if ( ! $redirect ) {
+		return;
+	}
+
+	header( 'Location: ' . $redirect, true, 301 );
+	die();
 }
 
 

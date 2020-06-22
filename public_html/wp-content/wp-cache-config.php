@@ -111,4 +111,3 @@ $wp_cache_clear_on_post_edit = 1;
 $wp_cache_hello_world        = 0;
 $wp_cache_mobile_enabled     = 1;
 $wp_cache_cron_check         = 1;
-

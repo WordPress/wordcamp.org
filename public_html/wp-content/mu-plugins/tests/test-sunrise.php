@@ -15,7 +15,7 @@ namespace WordCamp\Sunrise\Tests;
 use WP_UnitTestCase, WP_UnitTest_Factory;
 
 use function WordCamp\Sunrise\{
-	get_canonical_year_url, guess_requested_domain_path,
+	get_canonical_year_url, get_post_slug_url_without_duplicate_dates, guess_requested_domain_path,
 	get_city_slash_year_url, site_redirects, unsubdomactories_redirects,
 };
 
@@ -346,6 +346,98 @@ class Test_Sunrise extends WP_UnitTestCase {
 				'vancouver.wordcamp.test',
 				'/2020/schedule/',
 				'https://2020.vancouver.wordcamp.test/schedule/'
+			),
+		);
+	}
+
+	/**
+	 * @covers ::get_post_slug_url_without_duplicate_dates
+	 *
+	 * @dataProvider data_get_post_slug_url_without_duplicate_dates
+	 */
+	public function test_get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structure, $domain, $path, $request_uri, $expected ) {
+		$actual = get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structure, $domain, $path, $request_uri );
+
+		$this->assertEquals( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_post_slug_url_without_duplicate_dates().
+	 *
+	 * @return array
+	 */
+	public function data_get_post_slug_url_without_duplicate_dates() {
+		return array(
+			'redirect matching requests with only year' => array(
+				true,
+				'/%postname%/',
+				'vancouver.wordcamp.test',
+				'/2020/',
+				'/2020/2019/save-the-date-for-wordcamp-vancouver-2020/',
+				'https://vancouver.wordcamp.test/2020/save-the-date-for-wordcamp-vancouver-2020/',
+			),
+
+			'redirect matching requests with year and month' => array(
+				true,
+				'/%postname%/',
+				'vancouver.wordcamp.test',
+				'/2018-developers/',
+				'/2018-developers/2019/12/save-the-date-for-wordcamp-vancouver-2020/',
+				'https://vancouver.wordcamp.test/2018-developers/save-the-date-for-wordcamp-vancouver-2020/',
+			),
+
+			'redirect matching requests with year, month, and day' => array(
+				true,
+				'/%postname%/',
+				'vancouver.wordcamp.test',
+				'/2020/',
+				'/2020/2019/12/23/save-the-date-for-wordcamp-vancouver-2020/',
+				'https://vancouver.wordcamp.test/2020/save-the-date-for-wordcamp-vancouver-2020/',
+			),
+
+			"only redirect if there's a duplicate date" => array(
+				true,
+				'/%postname%/',
+				'vancouver.wordcamp.test',
+				'/2020/',
+				'/2020/206/save-the-date-for-wordcamp-vancouver-2020/', // `206` could be a tag slug, etc.
+				false,
+			),
+
+			"don't create an infinite redirect loop" => array(
+				true,
+				'/%postname%/',
+				'vancouver.wordcamp.test',
+				'/2020/',
+				'/2020/save-the-date-for-wordcamp-vancouver-2020/',
+				false,
+			),
+
+			"don't redirect non-404 requests" => array(
+				false,
+				'/%postname%/',
+				'vancouver.wordcamp.test',
+				'/2020/',
+				'/2020/2019/save-the-date-for-wordcamp-vancouver-2020/',
+				false,
+			),
+
+			"don't redirect if the site uses a data permastruct" => array(
+				true,
+				'/%year%/%monthnum%/%day%/%postname%/',
+				'vancouver.wordcamp.test',
+				'/2020/',
+				'/2020/2019/save-the-date-for-wordcamp-vancouver-2020/',
+				false,
+			),
+
+			"don't redirect city.year sites" => array(
+				true,
+				'/%postname%/',
+				'2020.vancouver.wordcamp.test',
+				'/',
+				'/2020/2019/save-the-date-for-wordcamp-vancouver-2020/',
+				false,
 			),
 		);
 	}

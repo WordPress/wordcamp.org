@@ -30,8 +30,27 @@ const PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH = '
 	( wordcamp | buddycamp )   # Capture the second-level domain.
 	\.
 	( org | test )             # Capture the top-level domain.
-	( \/ \d{4} [ \w- ]* \/ )   # Capture the site path (the year, plus any optional extra identifier).
+	( / \d{4} [\w-]* / )       # Capture the site path (the year, plus any optional extra identifier).
 	@ix
+';
+
+/*
+ * Matches a request URI like `/2020/2019/save-the-date-for-wordcamp-vancouver-2020/`.
+ */
+const PATTERN_CITY_SLASH_YEAR_REQUEST_URI_WITH_DUPLICATE_DATE = '
+	@ ^
+	( / \d{4} [\w-]* / )   # Capture the site path (the year, plus any optional extra identifier).
+
+	(                      # Capture the `/%year%/%monthnum%/%day%/` permastruct tags.
+		[0-9]{4} /         # The year is required.
+
+		(?:                # The month and day are optional.
+			[0-9]{2} /
+		){0,2}
+	)
+
+	(.+)                   # Capture the slug.
+	$ @ix
 ';
 
 
@@ -139,25 +158,71 @@ function unsubdomactories_redirects( $domain, $request_uri ) {
 }
 
 /**
- * Redirects from /year/month/day/slug/ to /slug/ for new URL formats.
+ * Redirect `/year-foo/%year%/%monthnum%/%day%/%postname%/` permalinks to `/%postname%/`.
+ *
+ * `year-foo` is the _site_ slug, while `%year%` is part of the _post_ slug. This makes sure that URLs on old sites
+ * won't have two years in them after the migration, which would look confusing.
  *
  * See https://make.wordpress.org/community/2014/12/18/while-working-on-the-new-url-structure-project/.
+ *
+ * Be aware that this does create a situation where posts and pages can have conflicting slugs, see
+ * https://core.trac.wordpress.org/ticket/13459.
  */
-function redirect_date_permalinks_to_post_slug() {
-	if ( ! is_404() ) {
+function redirect_duplicate_year_permalinks_to_post_slug() {
+	$current_blog_details = get_blog_details( null, false );
+
+	$redirect_url = get_post_slug_url_without_duplicate_dates(
+		is_404(),
+		get_option( 'permalink_structure' ),
+		$current_blog_details->domain,
+		$current_blog_details->path,
+		$_SERVER['REQUEST_URI']
+	);
+
+	if ( ! $redirect_url ) {
 		return;
 	}
 
-	if ( get_option( 'permalink_structure' ) !== '/%postname%/' ) {
-		return;
-	}
-
-	if ( ! preg_match( '#^/[0-9]{4}(?:-[^/]+)?/(?:[0-9]{4}/[0-9]{2}|[0-9]{2}|[0-9]{4})/[0-9]{2}/(.+)$#', $_SERVER['REQUEST_URI'], $matches ) ) {
-		return;
-	}
-
-	wp_safe_redirect( esc_url_raw( set_url_scheme( home_url( $matches[1] ) ) ) );
+	wp_safe_redirect( esc_url_raw( $redirect_url ), 301 );
 	die();
+}
+
+/**
+ * Build the redirect URL for a duplicate-date URL.
+ *
+ * See `redirect_duplicate_year_permalinks_to_post_slug()`.
+ *
+ * @param bool   $is_404
+ * @param string $permalink_structure
+ * @param string $domain
+ * @param string $path
+ * @param string $request_uri
+ *
+ * @return bool|string
+ */
+function get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structure, $domain, $path, $request_uri ) {
+	if ( ! $is_404 ) {
+		return false;
+	}
+
+	if ( '/%postname%/' !== $permalink_structure ) {
+		return false;
+	}
+
+	if ( ! preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path ) ) {
+		return false;
+	}
+
+	if ( ! preg_match( PATTERN_CITY_SLASH_YEAR_REQUEST_URI_WITH_DUPLICATE_DATE, $request_uri, $matches ) ) {
+		return false;
+	}
+
+	return sprintf(
+		'https://%s%s%s',
+		$domain,
+		$path,
+		$matches[3]
+	);
 }
 
 /**
@@ -383,7 +448,7 @@ function main() {
 		'path'   => $path
 	) = guess_requested_domain_path();
 
-	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_date_permalinks_to_post_slug' );
+	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_duplicate_year_permalinks_to_post_slug' );
 
 	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
 

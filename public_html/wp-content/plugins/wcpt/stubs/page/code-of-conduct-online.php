@@ -51,7 +51,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:list -->
-<ul><li>Be considerate, respectful, and collaborative.</li><li>Refrain from demeaning, discriminatory or harassing behavior and speech.</li><li>Be mindful of your surroundings and of your fellow participants. Alert conference organizers if you notice a dangerous situation or someone in distress.</li><li>Participate in an authentic and active way. In doing so, you help to create <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and make it your own.</li></ul>
+<ul><li>Be considerate, respectful, and collaborative.</li><li>Refrain from demeaning, discriminatory or harassing behavior and speech.</li><li>Be mindful of your fellow participants. Alert conference organizers if you notice a dangerous situation or someone in distress.</li><li>Participate in an authentic and active way. In doing so, you help to create <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and make it your own.</li></ul>
 <!-- /wp:list -->
 
 <!-- wp:heading {"level":3} -->
@@ -59,11 +59,11 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>Unacceptable behaviors include: intimidating, harassing, abusive, discriminatory, derogatory or demeaning conduct by any attendees of <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and related events. All <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues may be shared with members of the public; please be respectful to all patrons of these locations.</p>
+<p>Unacceptable behaviors include: intimidating, harassing, abusive, discriminatory, derogatory or demeaning conduct by any attendees of <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and related events. All <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> platforms may be shared with members of the public; please be respectful to all patrons of these tools.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p>Harassment includes: offensive verbal comments related to gender, sexual orientation, race, religion, disability; inappropriate use of nudity and/or sexual images in public spaces (including presentation slides); deliberate intimidation, stalking or following; harassing photography or recording; sustained disruption of talks or other events; inappropriate physical contact, and unwelcome sexual attention.</p>
+<p>Harassment includes: offensive verbal comments related to gender, sexual orientation, race, religion, disability; inappropriate use of nudity and/or sexual images and links in public spaces (including presentation slides and virtual event text chat); deliberate intimidation, stalking or following; harassing photography or recording; sustained disruption of talks or other events; inappropriate contact, and unwelcome sexual attention.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
@@ -71,7 +71,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>Unacceptable behavior will not be tolerated whether by other attendees, organizers, venue staff, sponsors, or other patrons of <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues.</p>
+<p>Unacceptable behavior will not be tolerated whether by other attendees, organizers, sponsors, or other patrons of <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> platforms.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
@@ -91,7 +91,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
-<p>The <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> team will be available to help participants contact venue security or local law enforcement, to provide escorts, or to otherwise assist those experiencing unacceptable behavior to feel safe for the duration of the conference. <span style="color: red; text-decoration: underline;">Volunteers will be wearing XXXXXXXXXXXXXXXXXXXXXXXX.</span> Any volunteer can connect you with a conference organizer. You can also come to the special registration desk in the lobby and ask for the organizers.</p>
+<p>The <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> team will be available to help participants contact the platform moderators, or to otherwise assist those experiencing unacceptable behavior to feel safe for the duration of the conference. <span style="color: red; text-decoration: underline;">Volunteer’s screen name starts with “[V]”.</span> You can send a private message to them, and they will connect you with a conference organizer who has the control of the video conferencing software.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
@@ -99,7 +99,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>We expect all conference participants (sponsors, volunteers, speakers, attendees, and other guests) to abide by this code of conduct at all conference venues and conference-related social events.</p>
+<p>We expect all conference participants (sponsors, volunteers, speakers, attendees, and other guests) to abide by this code of conduct at all conference platforms and conference-related social events.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
@@ -107,7 +107,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p><span style="color: red; text-decoration: underline;">Contact info here! Make sure this includes a way to access the organizers during the event.</span></p>
+<p><span style="color: red; text-decoration: underline;">Contact info here! Make sure this includes a way to access the organizers during the event. Having a virtual event, add some type of contact information that anyone can reach you during the event (such as Make WordPress Slack account or email address with an instant notification).</span></p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->

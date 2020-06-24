@@ -71,7 +71,11 @@ function register_speaker_post_meta() {
 		'_wcb_speaker_email',
 		array(
 			'type'         => 'string',
-			'show_in_rest' => true,
+			'show_in_rest' => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
 			'single'       => true,
 		)
 	);

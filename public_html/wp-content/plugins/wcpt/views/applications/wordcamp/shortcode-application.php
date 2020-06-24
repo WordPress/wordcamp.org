@@ -1335,21 +1335,21 @@ function render_wordcamp_application_form( $countries ) {
 							<ul>
 								<li>
 									<input type="radio" name="q_in_person_online"
-									       value="It would be an in-person event" id="q_in_person_online_1" />
+										value="It would be an in-person event" id="q_in_person_online_1" />
 
 									<label for="q_in_person_online_1">
 										It would be an in-person event </label>
 								</li>
 								<li>
 									<input type="radio" name="q_in_person_online"
-									       value="It would be an online event" id="q_in_person_online_2" />
+										value="It would be an online event" id="q_in_person_online_2" />
 
 									<label for="q_in_person_online_2">
 										It would be an online event </label>
 								</li>
 								<li>
 									<input type="radio" name="q_in_person_online"
-									       value="It would be both in-person and streamed online" id="q_in_person_online_3" />
+										value="It would be both in-person and streamed online" id="q_in_person_online_3" />
 
 									<label for="q_in_person_online_3">
 										It would be both in-person and streamed online </label>

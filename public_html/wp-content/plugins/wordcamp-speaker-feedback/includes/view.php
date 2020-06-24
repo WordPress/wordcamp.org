@@ -187,7 +187,7 @@ function render_feedback_view() {
 
 		$query_args = parse_feedback_args();
 		$feedback   = get_feedback( array( get_the_ID() ), array( 'approve' ), $query_args );
-		$avg_rating = get_feedback_average_rating( $feedback );
+		$avg_rating = intval( get_feedback_average_rating( $feedback ) );
 
 		$feedback_count = (array) maybe_get_cached_feedback_count( $post->ID );
 		$approved       = absint( $feedback_count['approved'] );
@@ -372,11 +372,12 @@ function parse_feedback_args() {
 /**
  * Calculate the average rating of a group of feedbacks.
  *
- * @param Feedback[] $feedback
+ * @param Feedback[] $feedback  Array of feedback comment objects.
+ * @param int        $precision Optional. Number of decimal digits to round to. Default 0.
  *
- * @return int
+ * @return float
  */
-function get_feedback_average_rating( array $feedback ) {
+function get_feedback_average_rating( array $feedback, $precision = 0 ) {
 	$count = count( $feedback );
 	if ( 0 === $count ) {
 		return 0;
@@ -391,7 +392,7 @@ function get_feedback_average_rating( array $feedback ) {
 		0
 	);
 
-	return intval( round( $sum_rating / $count ) );
+	return round( $sum_rating / $count, $precision );
 }
 
 /**

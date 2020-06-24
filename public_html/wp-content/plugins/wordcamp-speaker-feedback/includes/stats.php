@@ -11,6 +11,8 @@ use const WordCamp\SpeakerFeedback\View\SPEAKER_VIEWED_KEY;
 
 defined( 'WPINC' ) || die();
 
+const CALCULATION_PRECISION = 2;
+
 /**
  * Should stats be generated for this event yet?
  *
@@ -395,7 +397,7 @@ function calculate_average_feedback_approved_per_ticket( array $data, array $sta
 		return new WP_Error();
 	}
 
-	return round( $stats['total_feedback_approved'] / $stats['total_tickets'], 1 );
+	return round( $stats['total_feedback_approved'] / $stats['total_tickets'], CALCULATION_PRECISION );
 }
 
 /**
@@ -414,7 +416,7 @@ function calculate_average_feedback_approved_per_ticket_attended( array $data, a
 		return new WP_Error();
 	}
 
-	return round( $stats['total_feedback_approved'] / $stats['total_tickets_attended'], 1 );
+	return round( $stats['total_feedback_approved'] / $stats['total_tickets_attended'], CALCULATION_PRECISION );
 }
 
 /**
@@ -433,7 +435,7 @@ function calculate_average_feedback_approved_per_session( array $data, array $st
 		return new WP_Error();
 	}
 
-	return round( $stats['total_feedback_approved'] / $stats['total_sessions'], 1 );
+	return round( $stats['total_feedback_approved'] / $stats['total_sessions'], CALCULATION_PRECISION );
 }
 
 /**
@@ -448,7 +450,7 @@ function calculate_average_feedback_approved_rating( array $data ) {
 		return new WP_Error();
 	}
 
-	return get_feedback_average_rating( $data['feedback_approved'] );
+	return get_feedback_average_rating( $data['feedback_approved'], CALCULATION_PRECISION );
 }
 
 /**
@@ -467,7 +469,7 @@ function calculate_average_feedback_helpful_per_session( array $data, array $sta
 		return new WP_Error();
 	}
 
-	return round( $stats['total_feedback_helpful'] / $stats['total_sessions'], 1 );
+	return round( $stats['total_feedback_helpful'] / $stats['total_sessions'], CALCULATION_PRECISION );
 }
 
 /**
@@ -486,7 +488,7 @@ function calculate_percent_feedback_approved( array $data, array $stats ) {
 		return new WP_Error();
 	}
 
-	return round( 100 * $stats['total_feedback_approved'] / $stats['total_feedback'], 1 );
+	return round( 100 * $stats['total_feedback_approved'] / $stats['total_feedback'], CALCULATION_PRECISION );
 }
 
 /**
@@ -505,7 +507,7 @@ function calculate_percent_feedback_approved_helpful( array $data, array $stats 
 		return new WP_Error();
 	}
 
-	return round( 100 * $stats['total_feedback_helpful'] / $stats['total_feedback_approved'], 1 );
+	return round( 100 * $stats['total_feedback_helpful'] / $stats['total_feedback_approved'], CALCULATION_PRECISION );
 }
 
 /**
@@ -524,7 +526,7 @@ function calculate_percent_feedback_inappropriate( array $data, array $stats ) {
 		return new WP_Error();
 	}
 
-	return round( 100 * $stats['total_feedback_inappropriate'] / $stats['total_feedback'], 1 );
+	return round( 100 * $stats['total_feedback_inappropriate'] / $stats['total_feedback'], CALCULATION_PRECISION );
 }
 
 /**
@@ -543,7 +545,7 @@ function calculate_percent_feedback_spam( array $data, array $stats ) {
 		return new WP_Error();
 	}
 
-	return round( 100 * $stats['total_feedback_spam'] / $stats['total_feedback'], 1 );
+	return round( 100 * $stats['total_feedback_spam'] / $stats['total_feedback'], CALCULATION_PRECISION );
 }
 
 /**
@@ -562,7 +564,7 @@ function calculate_percent_sessions_with_feedback_approved( array $data, array $
 		return new WP_Error();
 	}
 
-	return round( 100 * $stats['total_sessions_with_feedback_approved'] / $stats['total_sessions'], 1 );
+	return round( 100 * $stats['total_sessions_with_feedback_approved'] / $stats['total_sessions'], CALCULATION_PRECISION );
 }
 
 /**
@@ -581,7 +583,7 @@ function calculate_percent_speakers_viewed_feedback( array $data, array $stats )
 		return new WP_Error();
 	}
 
-	return round( 100 * $stats['total_speakers_viewed_feedback'] / $stats['total_speakers'], 1 );
+	return round( 100 * $stats['total_speakers_viewed_feedback'] / $stats['total_speakers'], CALCULATION_PRECISION );
 }
 
 /**

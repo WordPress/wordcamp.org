@@ -146,6 +146,7 @@ class WordCamp_Application extends Event_Application {
 			'q_1068220_interested_sponsors'              => '',
 			'q_1046009_good_presenters'                  => '',
 			'q_1046021_presenter_names'                  => '',
+			'q_in_person_online'                         => '',
 			'q_1068197_venue_connections'                => '',
 			'q_1068212_venues_considering'               => '',
 			'q_4236565_wporg_username'                   => '',
@@ -237,6 +238,10 @@ class WordCamp_Application extends Event_Application {
 				$data['q_1079060_country'] ? $countries[ $data['q_1079060_country'] ]['name'] : ''
 			)
 		);
+
+		if ( 'It would be an online event' === $data['q_in_person_online'] ) {
+			add_post_meta( $post_id, 'Virtual event only', true );
+		}
 
 		add_post_meta(
 			$post_id,

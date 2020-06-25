@@ -79,6 +79,7 @@ abstract class Event_Application {
 			}
 
 			if ( ! is_user_logged_in() ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				echo '<div class="wcfd-disabled-form">' . wcorg_login_message( '', get_permalink() ) . '<div class="wcfd-overlay"></div><div inert>';
 			}
 

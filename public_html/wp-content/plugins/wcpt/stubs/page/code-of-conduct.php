@@ -15,7 +15,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>Purpose</h3>
+<h3>1. Purpose</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -31,7 +31,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>Open Source Citizenship</h3>
+<h3>2. Open Source Citizenship</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -47,7 +47,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>Expected Behavior</h3>
+<h3>3. Expected Behavior</h3>
 <!-- /wp:heading -->
 
 <!-- wp:list -->
@@ -55,7 +55,7 @@
 <!-- /wp:list -->
 
 <!-- wp:heading {"level":3} -->
-<h3>Unacceptable Behavior</h3>
+<h3>4. Unacceptable Behavior</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -67,7 +67,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>Consequences Of Unacceptable Behavior</h3>
+<h3>5. Consequences Of Unacceptable Behavior</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -83,7 +83,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>What To Do If You Witness Or Are Subject To Unacceptable Behavior</h3>
+<h3>6. What To Do If You Witness Or Are Subject To Unacceptable Behavior</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -95,7 +95,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>Scope</h3>
+<h3>7. Scope</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -103,7 +103,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>Contact Information</h3>
+<h3>8. Contact Information</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -111,7 +111,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":3} -->
-<h3>License And Attribution</h3>
+<h3>9. License And Attribution</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->

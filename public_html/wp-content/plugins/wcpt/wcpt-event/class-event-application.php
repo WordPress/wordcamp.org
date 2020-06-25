@@ -72,9 +72,9 @@ abstract class Event_Application {
 			if ( is_user_logged_in() ) {
 				$current_user = wp_get_current_user();
 				$prefilled_fields = array(
-					'wporg_name'			=> $current_user->display_name,
-					'wporg_username'	=> $current_user->user_login,
-					'wporg_email'			=> $current_user->user_email,
+					'wporg_name'     => $current_user->display_name,
+					'wporg_username' => $current_user->user_login,
+					'wporg_email'    => $current_user->user_email,
 				);
 			}
 

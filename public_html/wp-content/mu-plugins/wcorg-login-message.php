@@ -6,6 +6,9 @@
 
 add_action( 'login_head',         'wcorg_login_css' );
 add_action( 'admin_print_styles', 'wcorg_login_css' );
+/**
+ * Render CSS on the login screen.
+ */
 function wcorg_login_css() {
 	?>
 
@@ -53,7 +56,7 @@ function wcorg_login_css() {
  */
 function wcorg_login_message( $message, $redirect_to = false ) {
 	$locale           = get_locale();
-	$login_url 				= wcorg_get_wporg_login_url( $locale );
+	$login_url        = wcorg_get_wporg_login_url( $locale );
 	$registration_url = wcorg_get_wporg_login_url( $locale, 'register' );
 
 	if ( ! $redirect_to && ! empty( $_REQUEST['redirect_to'] ) ) {
@@ -64,7 +67,7 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 		$redirect_to = false;
 	}
 
-	$wporg_login_url 	= add_query_arg( 'redirect_to', $redirect_to, $login_url );
+	$wporg_login_url = add_query_arg( 'redirect_to', $redirect_to, $login_url );
 
 	/*
 	 * $redirect_to gets urlencode()'d once by wp_login_url() and then all of $login_url gets encoded directly,
@@ -85,7 +88,7 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 	?>
 
 	<div id="wcorg-login-message" class="message">
-		<p><?php echo wp_kses( $message, wp_kses_allowed_html() ) ?></p>
+		<p><?php echo wp_kses_post( $message ); ?></p>
 
 		<p>
 			<span class="wporg-login-link">
@@ -94,14 +97,17 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 					esc_url( $wporg_login_url )
 				); // show the link itself on elsewhere than wp-login.php (form prompts) for better user experience, in wp-login.php hidden by styles ?>
 			</span>
-			<?php printf(
+			<?php echo wp_kses_post( sprintf(
 				__( 'If you don\'t have an account, <a href="%s">please create one</a>.', 'wordcamporg' ),
 				esc_url( $registration_url )
-			); ?>
+			) ); ?>
 		</p>
 
 		<p id="not-your-personal-site">
-			<?php printf( __( '* This is your account for <a href="%s">the official WordPress.org website</a>, rather than your personal WordPress site.', 'wordcamporg' ), $wporg_login_url ); ?>
+			<?php echo wp_kses_post( sprintf(
+				__( '* This is your account for <a href="%s">the official WordPress.org website</a>, rather than your personal WordPress site.', 'wordcamporg' ),
+				$wporg_login_url
+			) ); ?>
 		</p>
 	</div>
 
@@ -115,7 +121,7 @@ add_filter( 'login_message', 'wcorg_login_message' );
  * Build correct WordPress.org "SSO" login page URL.
  *
  * @param  string $locale
- * @param  string $path   'root' | 'register'
+ * @param  string $path   Path to display, can be "register" or "root" (default).
  * @return string
  */
 function wcorg_get_wporg_login_url( $locale, $path = 'root' ) {

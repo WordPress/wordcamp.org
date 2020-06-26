@@ -25,3 +25,59 @@
 	border-left-color: #dc3232;
 	color: #dc3232;
 }
+
+.wcfd-disabled-form {
+	position: relative;
+}
+
+.wcfd-disabled-form #wcorg-login-message {
+	position: absolute;
+	z-index: 10;
+	margin: 2.4em;
+	padding: 1.8em;
+	background-color: #c62828;
+	border-radius: 0.25em;
+	margin-bottom: 2em;
+}
+
+.wcfd-disabled-form #wcorg-login-message p {
+	color: #fff !important /* !important to prevent theme from unintentionally overriding */;
+}
+
+.wcfd-disabled-form #wcorg-login-message p:first-child {
+	margin-top: 0;
+}
+
+.wcfd-disabled-form #wcorg-login-message p:last-child {
+	margin-bottom: 0;
+}
+
+.wcfd-disabled-form #wcorg-login-message a {
+	color: #fff;
+}
+
+.wcfd-disabled-form #wcorg-login-message a:hover,
+.wcfd-disabled-form #wcorg-login-message a:focus,
+.wcfd-disabled-form #wcorg-login-message a:active {
+	color: #fff;
+}
+
+.wcfd-overlay {
+	position: absolute;
+	z-index: 5;
+	width: 100%;
+	height: 100%;
+	background-color: #000;
+	opacity: 0.5;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.wcfd-disabled-form .PDF_pageInner {
+	width: auto;
+}
+
+@media screen and ( min-width: 470px ) {
+	.wcfd-disabled-form #wcorg-login-message {
+		margin: 4em;
+	}
+}

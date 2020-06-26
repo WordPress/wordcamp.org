@@ -78,23 +78,18 @@ class WordCamp_Lets_Encrypt_Helper {
 	}
 
 	/**
-	 * REST: domains-dehydrated
+	 * Group domains with their parent domain.
 	 *
-	 * Return a dehydrated domains.txt file of all domains that need SSL certs, in a format suitable for dehydrated.
+	 * @param array $domains
 	 *
-	 * @param WP_REST_Request $request
-	 *
-	 * @return WP_Error|void
+	 * @return array
 	 */
-	public static function rest_callback_domains_dehydrated( $request ) {
-		if ( WORDCAMP_LE_HELPER_API_KEY !== $request->get_param( 'api_key' ) ) {
-			return new WP_Error( 'error', 'Invalid or empty key.', array( 'status' => 403 ) );
-		}
-
-		$tld     = get_top_level_domain();
-		$domains = self::get_domains();
+	public static function group_domains( $domains ) {
+		$tld    = get_top_level_domain();
+		$result = array();
 
 		// Sort domains by shortest first, sort all same-length domains by natcase.
+		// Later on, this will allow us to create the parent array before adding the children to it.
 		usort( $domains, function( $a, $b ) {
 			$a_len = strlen( $a );
 			$b_len = strlen( $b );
@@ -107,7 +102,6 @@ class WordCamp_Lets_Encrypt_Helper {
 		} );
 
 		// Group all the subdomains together with their "parent" (xyz.campevent.tld)
-		$result = array();
 		foreach ( $domains as $domain ) {
 			$dots = substr_count( $domain, '.' );
 
@@ -132,12 +126,34 @@ class WordCamp_Lets_Encrypt_Helper {
 			}
 		}
 
+		return $result;
+	}
+
+	/**
+	 * REST: domains-dehydrated
+	 *
+	 * Return a dehydrated domains.txt file of all domains that need SSL certs, in a format suitable for the
+	 * dehydrated client.
+	 *
+	 * @see https://github.com/dehydrated-io/dehydrated/blob/master/docs/domains_txt.md
+	 *
+	 * @param WP_REST_Request $request
+	 *
+	 * @return WP_Error|void
+	 */
+	public static function rest_callback_domains_dehydrated( $request ) {
+		if ( WORDCAMP_LE_HELPER_API_KEY !== $request->get_param( 'api_key' ) ) {
+			return new WP_Error( 'error', 'Invalid or empty key.', array( 'status' => 403 ) );
+		}
+
+		$domains = self::group_domains( self::get_domains() );
+
 		// flatten and output in a dehydrated format.
 		header( 'Content-type: text/plain' );
 
 		// Primary Domain \s certAltNames
 		// narnia.wordcamp.org www.narnia.wordcamp.org 2020.narnia.wordcamp.org
-		foreach ( $result as $domain => $subdomains ) {
+		foreach ( $domains as $domain => $subdomains ) {
 			$altnames = implode( ' ', $subdomains );
 
 			echo rtrim( "$domain www.{$domain} $altnames" ) . "\n";

@@ -18,8 +18,9 @@ function manually_load_plugins() {
 
 	require_once dirname( dirname( __DIR__ ) ) . '/sunrise.php';
 
-	require_once dirname( __DIR__ ) . '/wcorg-json-api.php';
+	require_once dirname( __DIR__ ) . '/lets-encrypt-helper.php';
 	require_once dirname( __DIR__ ) . '/seo.php';
+	require_once dirname( __DIR__ ) . '/wcorg-json-api.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
 }
 

@@ -135,8 +135,3 @@ function wcorg_get_wporg_login_url( $locale, $path = 'root' ) {
 
 	return $url;
 }
-
-function wcorg_get_wporg_forums_url( $locale, $path = 'root' ) {
-	_deprecated_function( __FUNCTION__, '', 'wcorg_get_wporg_login_url' );
-	return wcorg_get_wporg_login_url( $locale, $path );
-}

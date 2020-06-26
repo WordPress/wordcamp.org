@@ -1,51 +1,29 @@
 <?php
 
 namespace WordCamp\JSON_API_V1\Tests;
-use WP_UnitTestCase, WP_UnitTest_Factory;
+use WP_UnitTest_Factory;
+use WordCamp\Tests\Database_TestCase;
 
 defined( 'WPINC' ) || die();
 
 /**
  * @group wordcamp-mu-plugins
  */
-class Test_WordCamp_JSON_API_V1 extends WP_UnitTestCase {
-	static $network_id, $year_dot_site_id, $slash_year_site_id;
-
+class Test_WordCamp_JSON_API_V1 extends Database_TestCase {
 	/**
 	 * Create sites we'll need for the tests.
 	 *
 	 * @param WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
-		self::$network_id = $factory->network->create( array(
-			'domain' => 'wordcamp.test',
-			'path'   => '/',
-		) );
-
-		self::$year_dot_site_id = $factory->blog->create( array(
-			'domain'     => '2020.seattle.wordcamp.test',
-			'path'       => '/',
-			'network_id' => self::$network_id,
-		) );
-
-		self::$slash_year_site_id = $factory->blog->create( array(
-			'domain'     => 'vancouver.wordcamp.test',
-			'path'       => '/2020/',
-			'network_id' => self::$network_id,
-		) );
+		parent::wpSetUpBeforeClass( $factory );
 	}
 
 	/**
 	 * Revert the persistent changes from `wpSetUpBeforeClass()` that won't be automatically cleaned up.
 	 */
 	public static function wpTearDownAfterClass() {
-		global $wpdb;
-
-		wp_delete_site( self::$year_dot_site_id );
-		wp_delete_site( self::$slash_year_site_id );
-
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", self::$network_id ) );
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->site}     WHERE id      = %d", self::$network_id ) );
+		parent::wpTearDownAfterClass();
 	}
 
 	/**
@@ -95,56 +73,56 @@ class Test_WordCamp_JSON_API_V1 extends WP_UnitTestCase {
 		// The first param can't reference self::$slash_year_site_id directly, since data providers are executed before `setUp()`.
 		$unslashed_cases = array(
 			'slash-year non-api requests are not routed to api' => array(
-				'slash_year_site_id',
+				'slash_year_2020_site_id',
 				'https://vancouver.wordcamp.test/2020/hello',
 				'not-api',
 				null,
 			),
 
 			'dot year non-api requests are not routed to api' => array(
-				'year_dot_site_id',
+				'year_dot_2019_site_id',
 				'https://2020.seattle.wordcamp.test',
 				'not-api',
 				null,
 			),
 
 			'slash-year api root goes to v2' => array(
-				'slash_year_site_id',
+				'slash_year_2020_site_id',
 				'https://vancouver.wordcamp.test/2020/wp-json',
 				'v2',
 				'/',
 			),
 
 			'dot-year api root goes to v2' => array(
-				'year_dot_site_id',
+				'year_dot_2019_site_id',
 				'https://2020.seattle.wordcamp.test/wp-json',
 				'v2',
 				'/',
 			),
 
 			'slash-year v2 posts endpoint goes to v2' => array(
-				'slash_year_site_id',
+				'slash_year_2020_site_id',
 				'https://vancouver.wordcamp.test/2020/wp-json/wp/v2/posts/1',
 				'v2',
 				'/wp/v2/posts/17',
 			),
 
 			'dot-year v2 posts endpoint goes to v2' => array(
-				'year_dot_site_id',
+				'year_dot_2019_site_id',
 				'https://2020.seattle.wordcamp.test/wp-json/wp/v2/posts/1',
 				'v2',
 				'/wp/v2/posts/17',
 			),
 
 			'slash-year v1 posts endpoint goes to v1' => array(
-				'slash_year_site_id',
+				'slash_year_2020_site_id',
 				'https://vancouver.wordcamp.test/2020/wp-json/posts/1',
 				'v1',
 				'/posts/1',
 			),
 
 			'dot-year v1 posts endpoint goes to v1' => array(
-				'year_dot_site_id',
+				'year_dot_2019_site_id',
 				'https://2020.seattle.wordcamp.test/wp-json/posts/1',
 				'v1',
 				'/posts/1',
@@ -154,8 +132,6 @@ class Test_WordCamp_JSON_API_V1 extends WP_UnitTestCase {
 		// Make sure each case is also tested with a trailing slash, because the results can be different.
 		foreach( $unslashed_cases as $case ) {
 			$case[1] = trailingslashit( $case[1] );
-
-			// should this affect json_route or rest_route too?
 
 			$slashed_cases[] = $case;
 		}

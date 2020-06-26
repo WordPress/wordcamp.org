@@ -44,3 +44,10 @@ require_once WP_MU_PLUGIN_DIR . '/tests/bootstrap.php';
 require_once( WP_PLUGIN_DIR . '/camptix/tests/bootstrap.php' );
 
 require_once( $core_tests_directory . '/includes/bootstrap.php' );
+
+/*
+ * Include any custom TestCase classes or other PHPUnit utilities.
+ *
+ * This has to be done after Core's bootstrapper finished, so that PHPUnit classes will be available.
+ */
+require_once( __DIR__ . '/phpunit-database-testcase.php' );

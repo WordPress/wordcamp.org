@@ -11,7 +11,7 @@ const PATTERN_YEAR_DOT_CITY_DOMAIN_PATH = '
 	@ ^
 	( \d{4} [\w-]* )           # Capture the year, plus any optional extra identifier.
 	\.
-	( \w+ )                    # Capture the city.
+	( [\w-]+ )                 # Capture the city.
 	\.
 	( wordcamp | buddycamp )   # Capture the second-level domain.
 	\.

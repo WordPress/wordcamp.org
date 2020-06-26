@@ -16,24 +16,44 @@ add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_curre
  * instead of `seattle.wordcamp.org/2019`, even if `/2019` has a higher historic rank.
  */
 function canonical_link_past_home_pages_to_current_year() {
+	global $current_blog;
+
+	// We don't want to penalize historical content, we just want to boost the new site.
+	if ( ! is_front_page() ) {
+		return;
+	}
+
+	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
+
+	// Nothing to do. `wporg-seo` will still print the standard canonical link.
+	if ( ! $latest_domain || $latest_domain === $current_blog->domain ) {
+		return;
+	}
+
+	// Remove default canonical link, to avoid duplicates.
+	// @todo: This will need to be updated if rel_canonical_link() is ever merged to Core.
+	remove_action( 'wp_head', 'WordPressdotorg\SEO\Canonical\rel_canonical_link' );
+
+	printf(
+		'<link rel="canonical" href="%s" />' . "\n",
+		esc_url( $latest_domain )
+	);
+}
+
+/**
+ * Get the home URL of the most recent camp in a given city.
+ *
+ * @param string $current_domain
+ * @param string $current_path
+ *
+ * @return bool|string
+ */
+function get_latest_home_url( $current_domain, $current_path ) {
 	global $wpdb;
 
-	// Only on the home page.
-	if ( ! isset( $_SERVER['REQUEST_URI'] ) || '/' !== $_SERVER['REQUEST_URI'] ) {
-		return;
-	}
-
-	$matches = array();
-	$tld     = get_top_level_domain();
-
-	// Match `year.city.wordcamp.org` pattern.
-	// @todo add support for city.wordcamp.org/year-variant (e.g., seattle.wordcamp.org/2015-beginners/).
-	if ( ! preg_match( "/^([0-9]{4})+\.((.+)\.wordcamp\.$tld)$/i", $_SERVER['HTTP_HOST'], $matches ) ) {
-		return;
-	}
-
+	$tld      = get_top_level_domain();
 	$wordcamp = get_wordcamp_post();
-	$end_date = $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? false;
+	$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
 
 	/*
 	 * In rare cases, the site for next year's camp will be created before this year's camp is over. When that
@@ -43,31 +63,43 @@ function canonical_link_past_home_pages_to_current_year() {
 	 * to warrant the extra complexity.
 	 */
 	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
-		return;
+		return false;
 	}
 
-	$current_domain = $matches[0];
-	$city_domain    = $matches[2];
+	if ( '/' === $current_path ) { // The year.city.wordcamp.org format.
+		// Remove the year prefix.
+		$city_domain = substr(
+			$current_domain,
+			strpos( $current_domain, '.' ) + 1
+		);
 
-	$latest_domain = $wpdb->get_var( $wpdb->prepare( "
-		SELECT domain
-		FROM $wpdb->blogs
-		WHERE
-			domain LIKE %s AND
-			SUBSTR( domain, 1, 4 ) REGEXP '^-?[0-9]+$' -- exclude secondary language domains like fr.2013.ottawa.wordcamp.org
-		ORDER BY domain
-		DESC LIMIT 1;",
-		"%.{$city_domain}"
-	) );
+		$query = $wpdb->prepare( "
+			SELECT `domain`, `path`
+			FROM `$wpdb->blogs`
+			WHERE
+				`domain` LIKE %s AND
+				SUBSTR( domain, 1, 4 ) REGEXP '^-?[0-9]+$' -- exclude secondary language domains like 2013-fr.ottawa.wordcamp.org
+			ORDER BY `domain` DESC
+			LIMIT 1",
+			'%.' . $city_domain
+		);
 
-	if ( $latest_domain !== $current_domain && $latest_domain ) {
-		// Remove default canonical link, to avoid duplicates.
-		// @todo: This will need to be updated if rel_canonical_link() is ever merged to Core.
-		remove_action( 'wp_head', 'WordPressdotorg\SEO\Canonical\rel_canonical_link' );
-
-		printf(
-			'<link rel="canonical" href="%s" />' . "\n",
-			esc_url( set_url_scheme( trailingslashit( $latest_domain ) ) )
+	} else { // The city.wordcamp.org/year format.
+		$query = $wpdb->prepare( "
+			SELECT `domain`, `path`
+			FROM `$wpdb->blogs`
+			WHERE `domain` = %s
+			ORDER BY `domain`, `path` DESC
+			LIMIT 1",
+			$current_domain
 		);
 	}
+
+	$latest_site = $wpdb->get_results( $query ); // phpcs:ignore -- Prepared above.
+
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . $latest_site[0]->path ) );
 }

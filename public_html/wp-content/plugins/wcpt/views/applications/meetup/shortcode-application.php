@@ -8,7 +8,7 @@ defined( 'WPINC' ) || die();
  *
  * @param array $countries
  */
-function render_meetup_application_form( $countries ) {
+function render_meetup_application_form( $countries, $prefilled_fields ) {
 
 	?>
 
@@ -19,7 +19,7 @@ function render_meetup_application_form( $countries ) {
 				<label>
 					Please enter your full Name.
 					<span class="required-indicator">(required)</span>
-					<input type="text" name="q_name" required/>
+					<input type="text" name="q_name" value="<?php echo esc_attr( $prefilled_fields['wporg_name'] ); ?>" required/>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>
@@ -27,7 +27,7 @@ function render_meetup_application_form( $countries ) {
 				<label>
 					Please enter your email address.
 					<span class="required-indicator">(required)</span>
-					<input type="email" name="q_email" required/>
+					<input type="email" name="q_email" value="<?php echo esc_attr( $prefilled_fields['wporg_email'] ); ?>" required/>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>
@@ -145,7 +145,7 @@ function render_meetup_application_form( $countries ) {
 				<label>
 					Your <a href="https://wordpress.org" target="_blank">WordPress.org</a> username
 					<span class="required-indicator">(required)</span>
-					<input type="text" name="q_wporg_username" required/>
+					<input type="text" name="q_wporg_username" value="<?php echo esc_attr( $prefilled_fields['wporg_username'] ); ?>" required/>
 				</label>
 			</div>
 			<div class="PDF_questionDivide"></div>

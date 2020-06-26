@@ -1,0 +1,26 @@
+# Note that all values have to be set, we can't selectively override defaults.
+# See https://github.com/spatie/phpunit-watcher/pull/115
+
+watch:
+  directories:
+    - ./public_html/wp-content/mu-plugins/
+    - ./public_html/wp-content/plugins/camptix/
+    - ./public_html/wp-content/plugins/wordcamp-organizer-reminders/
+    - ./public_html/wp-content/plugins/wordcamp-remote-css/
+    - ./public_html/wp-content/plugins/wordcamp-speaker-feedback/
+
+  exclude:
+   - vendor
+
+  ignoreDotFiles: true
+  ignoreVCS: true
+  ignoreVCSIgnored: false
+
+  fileMask: '*.php'
+
+notifications:
+  passingTests: false
+  failingTests: false
+
+phpunit:
+  binaryPath: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit

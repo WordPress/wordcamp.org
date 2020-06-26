@@ -4,6 +4,7 @@ namespace WordCamp\Jetpack_Tweaks\Privacy;
 
 use WordCamp\Logger;
 use WP_Widget_Factory;
+use Jetpack_EU_Cookie_Law_Widget;
 
 defined( 'WPINC' ) || die();
 
@@ -40,10 +41,16 @@ function render_cookie_banner() {
 	/** @var WP_Widget_Factory $wp_widget_factory */
 	global $wp_widget_factory;
 
+	/** @var Jetpack_EU_Cookie_Law_Widget $cookie_law_widget */
 	$cookie_law_widget = $wp_widget_factory->widgets['Jetpack_EU_Cookie_Law_Widget'];
 
 	if ( ! is_callable( array( $cookie_law_widget, 'enqueue_frontend_scripts' ) ) ) {
 		Logger\log( 'cookie_law_widget_missing' );
+		return;
+	}
+
+	// Allow disabling in testing environments, to avoid negative user experience.
+	if ( apply_filters( 'jetpack_disable_eu_cookie_law_widget', false ) ) {
 		return;
 	}
 

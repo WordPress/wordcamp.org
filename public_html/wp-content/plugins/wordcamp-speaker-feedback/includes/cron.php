@@ -3,7 +3,7 @@
 namespace WordCamp\SpeakerFeedback\Cron;
 
 use function WordCamp\SpeakerFeedback\Admin\get_subpage_url;
-use function WordCamp\SpeakerFeedback\Comment\{ count_feedback, get_feedback, update_feedback };
+use function WordCamp\SpeakerFeedback\Comment\{ maybe_get_cached_feedback_count, get_feedback, update_feedback };
 use function WordCamp\SpeakerFeedback\Post\{
 	get_earliest_session_timestamp, get_latest_session_ending_timestamp,
 	get_session_speaker_user_ids, get_session_feedback_url
@@ -47,7 +47,7 @@ function notify_organizers_unapproved_feedback() {
 	$wordcamp_name = get_wordcamp_name( get_current_blog_id() );
 	$wordcamp_post = get_wordcamp_post();
 
-	$feedback_counts = count_feedback();
+	$feedback_counts = (array) maybe_get_cached_feedback_count();
 
 	if ( $feedback_counts['moderated'] < 1 ) {
 		return;

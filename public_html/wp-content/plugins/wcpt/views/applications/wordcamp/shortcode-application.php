@@ -10,7 +10,7 @@ defined( 'WPINC' ) || die();
  *
  * @param array $countries
  */
-function render_wordcamp_application_form( $countries ) {
+function render_wordcamp_application_form( $countries, $prefilled_fields ) {
 	?>
 
 	<form id="wordcamp-application" method="post">
@@ -71,7 +71,7 @@ function render_wordcamp_application_form( $countries ) {
 						<div class="PDF_QT1400">
 							<label for="q_1079059_email">(e.g. john@example.com)</label>
 							<br/>
-							<input type="email" maxlength="100" name="q_1079059_email" id="q_1079059_email" value=""
+							<input type="email" maxlength="100" name="q_1079059_email" id="q_1079059_email" value="<?php echo esc_attr( $prefilled_fields['wporg_email'] ); ?>"
 								   class="survey-email required" autocomplete="off" required/>
 						</div>
 					</div>
@@ -95,8 +95,8 @@ function render_wordcamp_application_form( $countries ) {
 						</div>
 
 						<div class="PDF_QT100">
-							<input value="" maxlength="500" name="q_4236565_wporg_username" class="large required"
-								   type="text" title="What is your wordpress.org username?" required/>
+							<input maxlength="500" name="q_4236565_wporg_username" class="large required"
+								   type="text" title="What is your wordpress.org username?" value="<?php echo esc_attr( $prefilled_fields['wporg_username'] ); ?>" required/>
 						</div>
 					</div>
 				</div>
@@ -1320,6 +1320,46 @@ function render_wordcamp_application_form( $countries ) {
 				</div>
 
 				<div class="PDF_questionDivide" id="pd-divider-29"></div>
+
+				<div class="PDF_question" id="pd-question-35">
+					<div class="qNumber">
+						Q.35
+					</div>
+
+					<div class="qContent">
+						<div class="qText">
+							Would this WordCamp be an in-person event or streamed online?
+						</div>
+
+						<div class="PDF_QT400">
+							<ul>
+								<li>
+									<input type="radio" name="q_in_person_online"
+										value="It would be an in-person event" id="q_in_person_online_1" />
+
+									<label for="q_in_person_online_1">
+										It would be an in-person event </label>
+								</li>
+								<li>
+									<input type="radio" name="q_in_person_online"
+										value="It would be an online event" id="q_in_person_online_2" />
+
+									<label for="q_in_person_online_2">
+										It would be an online event </label>
+								</li>
+								<li>
+									<input type="radio" name="q_in_person_online"
+										value="It would be both in-person and streamed online" id="q_in_person_online_3" />
+
+									<label for="q_in_person_online_3">
+										It would be both in-person and streamed online </label>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_questionDivide" id="pd-divider-35"></div>
 
 				<div class="PDF_question" id="pd-question-30">
 					<div class="qNumber">

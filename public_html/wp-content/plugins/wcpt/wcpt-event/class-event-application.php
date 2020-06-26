@@ -67,7 +67,27 @@ abstract class Event_Application {
 			$this->submit_application( $_POST );
 		} else {
 			$countries = wcorg_get_countries();
-			$this->render_application_form( $countries );
+
+			$wporg_username = '';
+			if ( is_user_logged_in() ) {
+				$current_user = wp_get_current_user();
+				$prefilled_fields = array(
+					'wporg_name'     => $current_user->display_name,
+					'wporg_username' => $current_user->user_login,
+					'wporg_email'    => $current_user->user_email,
+				);
+			}
+
+			if ( ! is_user_logged_in() ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo '<div class="wcfd-disabled-form">' . wcorg_login_message( '', get_permalink() ) . '<div class="wcfd-overlay"></div><div inert>';
+			}
+
+			$this->render_application_form( $countries, $prefilled_fields );
+
+			if ( ! is_user_logged_in() ) {
+				echo '</div></div>';
+			}
 		}
 
 		return ob_get_clean();
@@ -80,7 +100,7 @@ abstract class Event_Application {
 	 *
 	 * @return null
 	 */
-	abstract public function render_application_form( $countries );
+	abstract public function render_application_form( $countries, $prefilled_fields );
 
 	/**
 	 * Submit application details. Calls `create_post` to actually create the event.
@@ -92,6 +112,9 @@ abstract class Event_Application {
 
 		if ( $this->is_rate_limited() ) {
 			$message        = __( 'You have submitted too many applications recently. Please wait and try again in a few hours.', 'wordcamporg' );
+			$notice_classes = 'notice-error';
+		} elseif ( ! is_user_logged_in() ) {
+			$message        = __( 'You must be logged in with your WordPress.org account to submit the application.', 'wordcamporg' );
 			$notice_classes = 'notice-error';
 		} elseif ( is_wp_error( $application_data ) ) {
 			$message        = $application_data->get_error_message();

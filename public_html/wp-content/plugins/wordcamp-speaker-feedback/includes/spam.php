@@ -5,10 +5,15 @@ namespace WordCamp\SpeakerFeedback\Spam;
 use WP_Error;
 use Akismet;
 use Grunion_Contact_Form_Plugin;
+use function WordCamp\SpeakerFeedback\Comment\get_feedback_comment;
 use function WordCamp\SpeakerFeedback\CommentMeta\get_feedback_meta_field_schema;
 use const WordCamp\SpeakerFeedback\Comment\COMMENT_TYPE;
 
 defined( 'WPINC' ) || die();
+
+const DELETED_SPAM_KEY = 'sft-count-deleted-spam';
+
+add_action( 'delete_comment', __NAMESPACE__ . '\track_deleted_feedback_spam' );
 
 /**
  * Check a feedback comment against WP's blacklist and Akismet.
@@ -137,4 +142,21 @@ function get_consolidated_meta_string( array $meta ) {
 	}
 
 	return trim( $string );
+}
+
+/**
+ * Increment the counter of spammy feedback comments that have been deleted.
+ *
+ * @param int|string $comment_id
+ *
+ * @return void
+ */
+function track_deleted_feedback_spam( $comment_id ) {
+	$feedback = get_feedback_comment( $comment_id );
+
+	if ( $feedback && 'spam' === $feedback->comment_approved ) {
+		$count = absint( get_option( DELETED_SPAM_KEY, 0 ) );
+		$count ++;
+		update_option( DELETED_SPAM_KEY, $count, false );
+	}
 }

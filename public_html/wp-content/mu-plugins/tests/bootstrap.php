@@ -10,9 +10,16 @@ if ( 'cli' !== php_sapi_name() ) {
  * Load the plugins that we'll need to be active for the tests
  */
 function manually_load_plugins() {
+	define( 'WORDCAMP_ENVIRONMENT', 'local' );
+	define( 'NOBLOGREDIRECT',       'https://central.wordcamp.test' );
+
 	// Needed for checking subrole capabilities. The ID is 1 because there's only one site in the test instance.
 	define( 'BLOG_ID_CURRENT_SITE', 1 );
 
+	require_once dirname( dirname( __DIR__ ) ) . '/sunrise.php';
+
+	require_once dirname( __DIR__ ) . '/wcorg-json-api.php';
+	require_once dirname( __DIR__ ) . '/seo.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
 }
 

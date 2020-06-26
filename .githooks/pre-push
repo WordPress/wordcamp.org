@@ -1,13 +1,16 @@
-#!/usr/bin/php
+#!/usr/bin/env php
 <?php
 
 namespace WordCamp\Git_Hooks\Pre_Push;
+use Exception;
+
 
 /*
  * The functionality from `pre-commit` should probably be moved here, because `pre-push` is a better workflow,
  * and PHP is a much better scripting language.
  */
 
+$color_green = "\033[32m";
 $color_red   = "\033[31m";
 $color_reset = "\033[m";
 
@@ -15,7 +18,7 @@ main();
 
 
 function main() {
-	global $color_red, $color_reset;
+	global $color_green, $color_red, $color_reset;
 
 	$current_branch = trim( shell_exec( "/usr/bin/git rev-parse --abbrev-ref HEAD 2>&1" ) );
 
@@ -38,15 +41,41 @@ function main() {
 	);
 
 	$changed_files = shell_exec( '/usr/bin/git diff origin/production --name-only' );
-	$errors        = js_css_lint( $workspaces, $changed_files );
 
-	if ( $errors ) {
-		echo "\n\n{$color_red}Please fix the errors above, or intentionally bypass this with `git push --no-verify`.{$color_reset}\n\n";
-	} else {
-		echo "\nSuccess.\n\n";
+	try {
+		php_test( $changed_files );
+		js_css_lint( $workspaces, $changed_files );
+
+	} catch( Exception $exception ) {
+		echo "\n\n" . $exception->getMessage() . "\n\n";
+		echo "{$color_red}Please fix the errors above, or intentionally bypass this with `git push --no-verify`.{$color_reset} \n\n";
+
+		exit( 1 );
 	}
 
-	exit( (int) $errors );
+	echo "\n\n{$color_green}All pre-push tests passed.{$color_reset}\n\n";
+	exit( 0 );
+}
+
+/**
+ * Run the PHP test suites.
+ *
+ * @param string $changed_files
+ *
+ * @throws Exception if tests fail.
+ */
+function php_test( $changed_files ) {
+	if ( false === strpos( $changed_files, '.php' ) ) {
+		return;
+	}
+
+	echo "\nRunning PHP tests... ";
+
+	exec( 'composer run test 2>&1', $test_output, $exec_exit_status );
+
+	if ( 0 !== $exec_exit_status ) {
+		throw new Exception( implode( "\n", $test_output ) );
+	}
 }
 
 /**
@@ -55,11 +84,9 @@ function main() {
  * @param array  $workspaces
  * @param string $changed_files
  *
- * @return bool
+ * @throws Exception if tests fail.
  */
 function js_css_lint( $workspaces, $changed_files ) {
-	$errors = false;
-
 	foreach ( $workspaces as $name => $path ) {
 		if ( false !== strpos( $changed_files, $path ) ) {
 			echo "\nLinting $name workspace... ";
@@ -67,17 +94,14 @@ function js_css_lint( $workspaces, $changed_files ) {
 			exec( 'yarn --silent workspace ' . $name . ' lint:js 2>&1', $lint_js_output, $exec_exit_status );
 
 			if ( $exec_exit_status ) {
-				$errors = true;
-				echo "\n\n" . implode( "\n", $lint_js_output );
+				throw new Exception( implode( "\n", $lint_js_output ) );
 			}
 
 			exec( 'yarn --silent workspace ' . $name . ' lint:css 2>&1', $lint_css_output, $exec_exit_status );
 
 			if ( $exec_exit_status ) {
-				echo "\n\n" . implode( "\n", $lint_css_output );
+				throw new Exception( implode( "\n", $lint_css_output ) );
 			}
 		}
 	}
-
-	return $errors;
 }

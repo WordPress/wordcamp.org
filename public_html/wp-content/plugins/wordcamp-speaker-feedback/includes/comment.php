@@ -9,6 +9,8 @@ defined( 'WPINC' ) || die();
 
 const COMMENT_TYPE = 'wc-speaker-feedback'; // Per the database schema, this must be <= 20 characters.
 
+add_action( 'transition_comment_status', __NAMESPACE__ . '\invalidate_cached_feedback_count', 10, 3 );
+
 /**
  * Count feedback comments, grouped by status.
  *
@@ -85,6 +87,44 @@ function count_feedback( $post_id = 0 ) {
 	}
 
 	return $feedback_count;
+}
+
+/**
+ * Look for a cached feedback count before querying the database.
+ *
+ * @param int $post_id
+ *
+ * @return object
+ */
+function maybe_get_cached_feedback_count( $post_id = 0 ) {
+	$cache_key = "sft-feedback-{$post_id}";
+
+	$cached_count = wp_cache_get( $cache_key, 'counts' );
+
+	if ( false !== $cached_count ) {
+		return $cached_count;
+	}
+
+	$feedback_count = (object) count_feedback( $post_id );
+	wp_cache_set( $cache_key, $feedback_count, 'counts' );
+
+	return $feedback_count;
+}
+
+/**
+ * Clear the cached counts of feedbacks when a comment status changes.
+ *
+ * @param int|string $new_status Unused. The new comment status.
+ * @param int|string $old_status Unused. The old comment status.
+ * @param WP_Comment $comment    Comment object.
+ *
+ * @return void
+ */
+function invalidate_cached_feedback_count( $new_status, $old_status, $comment ) {
+	if ( is_feedback( $comment ) ) {
+		wp_cache_delete( 'sft-feedback-0' );
+		wp_cache_delete( "sft-feedback-{$comment->comment_post_ID}" );
+	}
 }
 
 /**

@@ -46,6 +46,30 @@ function is_wordcamp_test_site( $blog_id = null ) {
 }
 
 /**
+ * Check if a WordCamp site is participating in a beta test of a feature. All development environments are
+ * considered beta testers.
+ *
+ * Currently `wordcamp_beta_` blogmeta keys need to be set manually via wp-cli:
+ *    wp site meta set [site ID] wordcamp_beta_{$beta} true
+ *
+ * @param string   $beta The slug ID of the beta feature.
+ * @param int|null $blog_id Optional. The blog ID to check. Defaults to current blog ID.
+ *
+ * @return bool
+ */
+function is_wordcamp_beta( $beta, $blog_id = null ) {
+	if ( 'production' !== get_wordcamp_environment() ) {
+		return true;
+	}
+
+	if ( is_null( $blog_id ) ) {
+		$blog_id = get_current_blog_id();
+	}
+
+	return wp_validate_boolean( get_site_meta( $blog_id, 'wordcamp_beta_' . $beta, true ) );
+}
+
+/**
  * Get a list of IDs for sites that have a specific blogmeta key, and optionally a specific value.
  *
  * @param string $key
@@ -89,14 +113,21 @@ function get_wordcamp_blog_ids_from_meta( $key, $value = null ) {
  *
  * See WordCamp_CLI_Miscellaneous::set_skip_feature_flag() for how to set the flags.
  *
+ * Updated June 2020 to use the blog meta table for storing flags instead of a site's options table.
+ *
  * @param string $flag
+ * @param int    $blog_id
  *
  * @return bool
  */
-function wcorg_skip_feature( $flag ) {
-	$flags = get_option( 'wordcamp_skip_features', array() );
+function wcorg_skip_feature( $flag, $blog_id = null ) {
+	if ( is_null( $blog_id ) ) {
+		$blog_id = get_current_blog_id();
+	}
 
-	return isset( $flags[ $flag ] );
+	$flags = get_site_meta( $blog_id, 'wordcamp_skip_feature' );
+
+	return in_array( $flag, $flags, true );
 }
 
 /**

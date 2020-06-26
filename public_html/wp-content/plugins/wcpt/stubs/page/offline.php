@@ -19,6 +19,4 @@
 <h2>Schedule</h2>
 <!-- /wp:heading -->
 
-<!-- wp:shortcode -->
-[schedule]
-<!-- /wp:shortcode -->
+<!-- wp:wordcamp/schedule /-->

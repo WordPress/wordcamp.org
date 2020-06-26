@@ -1,6 +1,6 @@
 <?php
 
-use function WordCamp\Sunrise\get_domain_redirects;
+use function WordCamp\Sunrise\{ get_domain_redirects, get_top_level_domain };
 
 /**
  * A helper plugin for our integration with Let's Encrypt.
@@ -39,6 +39,7 @@ class WordCamp_Lets_Encrypt_Helper {
 	public static function get_domains() {
 		global $wpdb;
 
+		$tld     = get_top_level_domain();
 		$domains = array();
 		$blogs   = $wpdb->get_results( "
 			SELECT `domain`, `path`
@@ -51,15 +52,15 @@ class WordCamp_Lets_Encrypt_Helper {
 		);
 
 		foreach ( $blogs as $blog ) {
-			if ( preg_match( '#^[0-9]{4}(?:-[^\.])?\.([^\.]+)\.wordcamp\.org$#i', $blog['domain'], $matches ) ) {
-				$domains[] = sprintf( '%s.wordcamp.org', $matches[1] );
+			if ( preg_match( "#^[0-9]{4}(?:-[^\.])?\.([^\.]+)\.wordcamp\.$tld$#i", $blog['domain'], $matches ) ) {
+				$domains[] = sprintf( "%s.wordcamp.$tld", $matches[1] );
 			}
 
 			$domains[] = $blog['domain'];
 
 			// While transitioning from city.wordcamp.org/year-extra.
-			if ( preg_match( '#^([^\.]+)\.wordcamp.org/([0-9]{4}(?:-[^\.])?)/?$#i', $blog['domain'] . $blog['path'], $matches ) ) {
-				$domains[] = sprintf( '%s.%s.wordcamp.org', $matches[2], $matches[1] );
+			if ( preg_match( "#^([^\.]+)\.wordcamp.$tld/([0-9]{4}(?:-[^\.])?)/?$#i", $blog['domain'] . $blog['path'], $matches ) ) {
+				$domains[] = sprintf( "%s.%s.wordcamp.$tld", $matches[2], $matches[1] );
 			}
 		}
 
@@ -90,6 +91,7 @@ class WordCamp_Lets_Encrypt_Helper {
 			return new WP_Error( 'error', 'Invalid or empty key.', array( 'status' => 403 ) );
 		}
 
+		$tld     = get_top_level_domain();
 		$domains = self::get_domains();
 
 		// Sort domains by shortest first, sort all same-length domains by natcase.
@@ -111,12 +113,12 @@ class WordCamp_Lets_Encrypt_Helper {
 
 			if ( $dots <= 2 ) {
 				// Special cases
-				if ( 'central.wordcamp.org' === $domain ) {
-					$result['wordcamp.org'][] = $domain;
+				if ( "central.wordcamp.$tld" === $domain ) {
+					$result["wordcamp.$tld"][] = $domain;
 
-				} elseif ( in_array( $domain, [ '2006.wordcamp.org', '2007.wordcamporg', 'wordcampsf.org', 'wordcampsf.com' ] ) ) {
-					$result['sf.wordcamp.org'][] = $domain;
-					$result['sf.wordcamp.org'][] = "www.{$domain}";
+				} elseif ( in_array( $domain, [ "2006.wordcamp.$tld", "2007.wordcamp.$tld", 'wordcampsf.org', 'wordcampsf.com'] ) ) {
+					$result["sf.wordcamp.$tld"][] = $domain;
+					$result["sf.wordcamp.$tld"][] = "www.{$domain}";
 
 				} elseif ( ! isset( $result[ $domain ] ) ) {
 					// Main domain

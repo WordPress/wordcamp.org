@@ -25,10 +25,6 @@ function wcorg_login_css() {
 				margin-bottom: 1em;
 			}
 
-			div.message p span.wporg-login-link {
-				display: none;
-			}
-
 			#not-your-personal-site {
 				font-style: italic;
 			}
@@ -91,12 +87,6 @@ function wcorg_login_message( $message, $redirect_to = false ) {
 		<p><?php echo wp_kses_post( $message ); ?></p>
 
 		<p>
-			<span class="wporg-login-link">
-				<?php printf(
-					__( 'Do the log in at <a href="%s">WordPress.org</a> website. After succesfull log in you will be redirected back.', 'wordcamporg' ),
-					esc_url( $wporg_login_url )
-				); // show the link itself on elsewhere than wp-login.php (form prompts) for better user experience, in wp-login.php hidden by styles ?>
-			</span>
 			<?php echo wp_kses_post( sprintf(
 				__( 'If you don\'t have an account, <a href="%s">please create one</a>.', 'wordcamporg' ),
 				esc_url( $registration_url )

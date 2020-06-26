@@ -10,7 +10,8 @@ defined( 'WPINC' ) || die();
 /**
  * Class Test_Omit_UserMeta_Caps
  *
- * @group wordcamp-mu-plugins
+ * @group mu-plugins
+ * @group subroles
  *
  * @package WordCamp\Tests
  */

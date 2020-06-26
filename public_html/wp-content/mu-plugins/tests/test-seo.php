@@ -9,7 +9,8 @@ use function WordCamp\SEO\get_latest_home_url;
 defined( 'WPINC' ) || die();
 
 /**
- * @group wordcamp-mu-plugins
+ * @group mu-plugins
+ * @group seo
  */
 class Test_WordCamp_SEO extends Database_TestCase {
 	/**

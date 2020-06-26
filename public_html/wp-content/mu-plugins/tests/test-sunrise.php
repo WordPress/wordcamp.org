@@ -23,6 +23,7 @@ use function WordCamp\Sunrise\{
 defined( 'WPINC' ) || die();
 
 /**
+ * @group mu-plugins
  * @group sunrise
  */
 class Test_Sunrise extends Database_TestCase {

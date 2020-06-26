@@ -7,7 +7,8 @@ use WordCamp\Tests\Database_TestCase;
 defined( 'WPINC' ) || die();
 
 /**
- * @group wordcamp-mu-plugins
+ * @group mu-plugins
+ * @group rest-api
  */
 class Test_WordCamp_JSON_API_V1 extends Database_TestCase {
 	/**

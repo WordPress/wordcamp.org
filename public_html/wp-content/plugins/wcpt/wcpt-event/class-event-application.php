@@ -79,8 +79,15 @@ abstract class Event_Application {
 			}
 
 			if ( ! is_user_logged_in() ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				echo '<div class="wcfd-disabled-form">' . wcorg_login_message( '', get_permalink() ) . '<div class="wcfd-overlay"></div><div inert>';
+				$please_login_message = sprintf(
+					__( 'Before submitting your application, please <a href="%s">log in to WordCamp.org</a> using your Word<em><strong>Press</strong></em>.org account*.', 'wordcamporg' ),
+					wp_login_url( get_permalink() )
+				);
+				printf(
+					'<div class="wcfd-disabled-form">%s<div class="wcfd-overlay"></div><div inert>',
+					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					wcorg_login_message( $please_login_message, get_permalink() )
+				);
 			}
 
 			$this->render_application_form( $countries, $prefilled_fields );

@@ -214,8 +214,8 @@ abstract class Event_Admin {
 			__( 'Add Private Note', 'wordcamporg' ),
 			'wcpt_add_note_metabox',
 			$this->get_event_type(),
-			'side',
-			'low'
+			'advanced',
+			'high'
 		);
 	}
 

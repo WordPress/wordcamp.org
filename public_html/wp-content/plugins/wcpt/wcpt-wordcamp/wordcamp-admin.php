@@ -67,8 +67,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				__( 'WordCamp Information', 'wordcamporg' ),
 				'wcpt_wordcamp_metabox',
 				WCPT_POST_TYPE_ID,
-				'advanced',
-				'high'
+				'advanced'
 			);
 
 			add_meta_box(
@@ -76,8 +75,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				__( 'Organizing Team', 'wordcamporg' ),
 				'wcpt_organizer_metabox',
 				WCPT_POST_TYPE_ID,
-				'advanced',
-				'high'
+				'advanced'
 			);
 
 			add_meta_box(
@@ -85,8 +83,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				__( 'Venue Information', 'wordcamporg' ),
 				'wcpt_venue_metabox',
 				WCPT_POST_TYPE_ID,
-				'advanced',
-				'high'
+				'advanced'
 			);
 
 			add_meta_box(

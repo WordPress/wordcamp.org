@@ -654,7 +654,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			$application_keys = array(
 				'Date Applied'                               => 'date',
-				'Already a meetup'                           => 'text',
 				'Date of Last Contact'                       => 'date',
 				'Who contacted (Wordpress.org username)'     => 'text',
 				'Vetted Date'                                => 'date',

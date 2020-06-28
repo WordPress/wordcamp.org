@@ -22,6 +22,7 @@ jQuery( document ).ready( function( $ ) {
 				wcb.attachedFilesView = new wcb.AttachedFilesView( { el: $( '#wcbrr_general_information' ) } );
 				wcb.setupSelect2( '#wcbrr_general_information select' );
 				wcb.setupSelect2( '#wcbrr-expenses-container select' );
+				wcb.setupSelect2( '#wcbrr_payment_information select' );
 			} catch ( exception ) {
 				wcb.log( exception );
 			}

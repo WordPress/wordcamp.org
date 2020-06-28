@@ -9,7 +9,7 @@
 		<textarea
 			id="<?php echo esc_attr( $name ); ?>"
 			name="<?php echo esc_attr( $name ); ?>"
-			class="large-text"
+			class="regular-text"
 		    <?php __checked_selected_helper( $required, true, true, 'required' ); ?>
 		><?php
 			echo esc_html( $text );

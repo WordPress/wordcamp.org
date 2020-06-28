@@ -300,6 +300,7 @@ jQuery( document ).ready( function( $ ) {
 			this.collection.updateTotal();
 
 			wcb.setupDatePicker( '#wcbrr-expenses-container' );
+			wcb.setupSelect2( '#wcbrr_expenses select' );
 		}
 	} );
 

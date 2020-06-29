@@ -267,6 +267,13 @@ class Privacy_Field extends CampTix_Addon {
 			$key = str_replace( '_transient_', '', $transient );
 			delete_transient( $key );
 		}
+
+		// Clear WP Super Cache.
+		if ( is_callable( 'wp_cache_clean_cache' ) && is_callable( 'wp_cache_regenerate_cache_file_stats' ) ) {
+			global $file_prefix;
+			wp_cache_clean_cache( $file_prefix, true );
+			wp_cache_regenerate_cache_file_stats();
+		}
 	}
 
 	/**

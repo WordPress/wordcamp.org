@@ -1,7 +1,3 @@
-<?php
-/** @var WordCamp_New_Site $this */
-
-?>
 <!-- wp:paragraph {"customBackgroundColor":"#eeeeee"} -->
 <p style="background-color:#eeeeee" class="has-background"><em>Organizers note:</em> Below is a boilerplate code of conduct that you can customize; another great example is the Ada Initiative <a href="http://geekfeminism.wikia.com/wiki/Conference_anti-harassment/Policy">anti-harassment policy.</a></p>
 <!-- /wp:paragraph -->

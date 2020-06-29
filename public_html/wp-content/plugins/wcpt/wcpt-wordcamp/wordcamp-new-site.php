@@ -605,13 +605,6 @@ class WordCamp_New_Site {
 			),
 
 			array(
-				'title'   => __( 'Code of Conduct', 'wordcamporg' ),
-				'content' => $this->get_stub_content( 'page', 'code-of-conduct' ),
-				'status'  => 'publish',
-				'type'    => 'page',
-			),
-
-			array(
 				'title'   => __( 'Offline', 'wordcamporg' ),
 				'content' => $this->get_stub_content( 'page', 'offline', $wordcamp ),
 				'status'  => 'publish',
@@ -628,6 +621,22 @@ class WordCamp_New_Site {
 				'type'    => 'page',
 			),
 		);
+
+		if ( isset( $meta['Virtual event only'][0] ) && $meta['Virtual event only'][0] ) {
+			$pages[] = array(
+				'title'   => __( 'Code of Conduct', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'code-of-conduct-online' ),
+				'status'  => 'publish',
+				'type'    => 'page',
+			);
+		} else {
+			$pages[] = array(
+				'title'   => __( 'Code of Conduct', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'code-of-conduct' ),
+				'status'  => 'publish',
+				'type'    => 'page',
+			);
+		}
 
 		return $pages;
 	}
@@ -847,115 +856,5 @@ class WordCamp_New_Site {
 		}
 
 		return $pages;
-	}
-
-	/**
-	 * Get the default code of conduct
-	 *
-	 * @return string
-	 */
-	protected function get_code_of_conduct() {
-		ob_start();
-		?>
-
-		<ol>
-			<li>
-				<h3>Purpose</h3>
-
-				<p>
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> believes our community should be truly open for everyone. As such, we are committed to providing a friendly, safe and welcoming environment for all, regardless of gender, sexual orientation, disability, ethnicity, religion, preferred operating system, programming language, or text editor.
-				</p>
-
-				<p>This code of conduct outlines our expectations for participant behavior as well as the consequences for unacceptable behavior.</p>
-
-				<p>We invite all sponsors, volunteers, speakers, attendees, and other participants to help us realize a safe and positive conference experience for everyone.</p>
-			</li>
-
-			<li>
-				<h3>Open Source Citizenship</h3>
-
-				<p>A supplemental goal of this code of conduct is to increase open source citizenship by encouraging participants to recognize and strengthen the relationships between what we do and the community at large.</p>
-
-				<p>In service of this goal,
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> organizers will be taking nominations for exemplary citizens throughout the event and will recognize select participants after the conference on the website.
-				</p>
-
-				<p>If you see someone who is making an extra effort to ensure our community is welcoming, friendly, and encourages all participants to contribute to the fullest extent, we want to know.
-					<span style="color: red; text-decoration: underline;">You can nominate someone at the Registration table or online at URL HERE.</span>
-				</p>
-			</li>
-
-			<li>
-				<h3>Expected Behavior</h3>
-
-				<ul>
-					<li>Be considerate, respectful, and collaborative.</li>
-					<li>Refrain from demeaning, discriminatory or harassing behavior and speech.</li>
-					<li>Be mindful of your surroundings and of your fellow participants. Alert conference organizers if you notice a dangerous situation or someone in distress.</li>
-					<li>Participate in an authentic and active way. In doing so, you help to create
-						<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and make it your own.
-					</li>
-				</ul>
-			</li>
-
-			<li>
-				<h3>Unacceptable Behavior</h3>
-
-				<p>Unacceptable behaviors include: intimidating, harassing, abusive, discriminatory, derogatory or demeaning conduct by any attendees of
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and related events. All
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues may be shared with members of the public; please be respectful to all patrons of these locations.
-				</p>
-
-				<p>Harassment includes: offensive verbal comments related to gender, sexual orientation, race, religion, disability; inappropriate use of nudity and/or sexual images in public spaces (including presentation slides); deliberate intimidation, stalking or following; harassing photography or recording; sustained disruption of talks or other events; inappropriate physical contact, and unwelcome sexual attention.</p>
-			</li>
-
-			<li>
-				<h3>Consequences Of Unacceptable Behavior</h3>
-
-				<p>Unacceptable behavior will not be tolerated whether by other attendees, organizers, venue staff, sponsors, or other patrons of
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues.</p>
-
-				<p>Anyone asked to stop unacceptable behavior is expected to comply immediately.</p>
-
-				<p>If a participant engages in unacceptable behavior, the conference organizers may take any action they deem appropriate, up to and including expulsion from the conference without warning or refund.</p>
-			</li>
-
-			<li>
-				<h3>What To Do If You Witness Or Are Subject To Unacceptable Behavior</h3>
-
-				<p>If you are subject to unacceptable behavior, notice that someone else is being subject to unacceptable behavior, or have any other concerns, please notify a conference organizer as soon as possible.</p>
-
-				<p>The
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> team will be available to help participants contact venue security or local law enforcement, to provide escorts, or to otherwise assist those experiencing unacceptable behavior to feel safe for the duration of the conference.
-					<span style="color: red; text-decoration: underline;">Volunteers will be wearing XXXXXXXXXXXXXXXXXXXXXXXX.</span> Any volunteer can connect you with a conference organizer. You can also come to the special registration desk in the lobby and ask for the organizers.
-				</p>
-			</li>
-
-			<li>
-				<h3>Scope</h3>
-
-				<p>We expect all conference participants (sponsors, volunteers, speakers, attendees, and other guests) to abide by this code of conduct at all conference venues and conference-related social events.</p>
-			</li>
-
-			<li>
-				<h3>Contact Information</h3>
-
-				<p>
-					<span style="color: red; text-decoration: underline;">Contact info here! Make sure this includes a way to access the organizers during the event.</span>
-				</p>
-			</li>
-
-			<li>
-				<h3>License And Attribution</h3>
-
-				<p>This Code of Conduct is a direct swipe from the awesome work of Open Source Bridge, but with our event information substituted. The original is available at
-					<a href="http://opensourcebridge.org/about/code-of-conduct/">http://opensourcebridge.org/about/code-of-conduct/</a> and is released under a
-					<a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons Attribution-ShareAlike</a> license.
-				</p>
-			</li>
-		</ol>
-
-		<?php
-		return ob_get_clean();
 	}
 } // WordCamp_New_Site

@@ -45,16 +45,21 @@ class Privacy_Field extends CampTix_Addon {
 			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
 		);
 
-		// Registration field
+		// Registration field.
 		add_action( 'camptix_attendee_form_after_questions', array( $this, 'render_registration_field' ), 10, 2 );
 		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ) );
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'populate_attendee_object' ), 10, 2 );
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
 
-		// Edit info field
+		// Edit info field.
 		add_filter( 'camptix_form_edit_attendee_ticket_info', array( $this, 'populate_ticket_info_array' ), 10, 2 );
 		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'validate_save_ticket_info_field' ), 10, 2 );
 		add_action( 'camptix_form_edit_attendee_after_questions', array( $this, 'render_ticket_info_field' ), 10 );
+
+		// Delete cached attendees lists when an attendee privacy setting changes.
+		add_action( 'added_post_meta', array( $this, 'invalidate_attendees_cache' ), 10, 3 );
+		add_action( 'updated_post_meta', array( $this, 'invalidate_attendees_cache' ), 10, 3 );
+		add_action( 'deleted_post_meta', array( $this, 'invalidate_attendees_cache' ), 10, 3 );
 	}
 
 	/**
@@ -227,6 +232,48 @@ class Privacy_Field extends CampTix_Addon {
 			sprintf( 'tix_ticket_info[%s]', self::SLUG ),
 			$current_data[ self::SLUG ]
 		);
+	}
+
+	/**
+	 * Clear all of the cached instances of the camptix_attendees shortcode content when attendee privacy changes.
+	 *
+	 * The shortcode content is cached based on the attributes of the shortcode instance, so there can be multiple
+	 * cache entries. Thus the need to retrieve a list of all the cache keys first.
+	 *
+	 * Note: This won't work anymore if/when WordCamp switches to an external object cache, since the data wouldn't
+	 * be stored in the options table anymore. If that happens, hopefully there will be a way to pattern match the keys
+	 * in that cache.
+	 *
+	 * @param int    $meta_id  Unused.
+	 * @param int    $post_id  Unused.
+	 * @param string $meta_key The key of the current post meta value being changed.
+	 *
+	 * @return void
+	 */
+	public function invalidate_attendees_cache( $meta_id, $post_id, $meta_key ) {
+		if ( 'tix_' . self::SLUG !== $meta_key ) {
+			return;
+		}
+
+		global $wpdb;
+
+		$cache_entries = $wpdb->get_col( "
+			SELECT option_name
+			FROM $wpdb->options
+			WHERE option_name LIKE '_transient_camptix-attendees-%'
+		" );
+
+		foreach ( $cache_entries as $transient ) {
+			$key = str_replace( '_transient_', '', $transient );
+			delete_transient( $key );
+		}
+
+		// Clear WP Super Cache.
+		if ( is_callable( 'wp_cache_clean_cache' ) && is_callable( 'wp_cache_regenerate_cache_file_stats' ) ) {
+			global $file_prefix;
+			wp_cache_clean_cache( $file_prefix, true );
+			wp_cache_regenerate_cache_file_stats();
+		}
 	}
 
 	/**

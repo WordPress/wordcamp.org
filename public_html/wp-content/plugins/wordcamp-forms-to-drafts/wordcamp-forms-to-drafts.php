@@ -102,11 +102,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return string
 	 */
 	protected function inject_disabled_form_elements( $content, $please_login_message ) {
-		$please_login_message = str_replace(
-			__( 'Please use your <strong>WordPress.org</strong>* account to log in.', 'wordcamporg' ),
-			$please_login_message,
-			wcorg_login_message( '', get_permalink() )
-		);
+		$please_login_message = wcorg_login_message( $please_login_message, get_permalink() );
 
 		$form_wrapper = sprintf(
 			'<div class="wcfd-disabled-form">%s<div class="wcfd-overlay"></div><div inert>',

@@ -528,7 +528,8 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					$this->log( sprintf( 'Viewing private content using %s', @$_SERVER['REMOTE_ADDR'] ), $attendee->ID, $_SERVER );
 
 					// Mark attendee as attended.
-					if ( ! get_post_meta( $attendee->ID, 'tix_attended', true ) ) {
+					$mark_attended = isset( $_POST['tix_mark_attended'] ) && rest_sanitize_boolean( $_POST['tix_mark_attended'] );
+					if ( $mark_attended && ! get_post_meta( $attendee->ID, 'tix_attended', true ) ) {
 						update_post_meta( $attendee->ID, 'tix_attended', true );
 					}
 				}
@@ -564,6 +565,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 
 		$args = shortcode_atts(
 			array(
+				'mark_attended'            => true,
 				'ticket_ids'               => null,
 				'logged_out_message'       => '',
 				'logged_out_message_after' => '',
@@ -657,6 +659,11 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 			<form method="POST" action="#tix">
 				<input type="hidden" name="tix_private_shortcode_submit" value="1" />
 				<input type="hidden" name="tix_post_id" value="<?php the_ID(); ?>" />
+				<input
+					type="hidden"
+					name="tix_mark_attended"
+					value="<?php echo $atts['mark_attended'] ? 'true' : 'false'; ?>"
+				/>
 				<table class="tix-private-form">
 					<tr>
 						<th class="tix-left" colspan="2"><?php esc_html_e( 'Have a ticket? Sign in', 'wordcamporg' ); ?></th>

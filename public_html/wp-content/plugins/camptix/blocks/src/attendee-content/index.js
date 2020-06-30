@@ -9,6 +9,7 @@ import { registerBlockType } from '@wordpress/blocks';
  * Internal dependencies
  */
 import metadata from './block.json';
+import Edit from './edit.js';
 
 const { name, ...settings } = metadata;
 
@@ -17,20 +18,6 @@ registerBlockType( name, {
 	title: __( 'Attendee Content', 'wordcamporg' ),
 	description: __( 'This content is only shown once the viewer enters a valid attendee email.', 'wordcamporg' ),
 	keywords: [ __( 'private content', 'wordcamporg' ), __( 'restricted content', 'wordcamporg' ) ],
-	edit: () => (
-		<>
-			<div style={ { background: 'rgba(0,0,0,0.1)' } }>
-				<p>
-					<em>{ __( 'The content below is only shown to registered attendees.', 'wordcamporg' ) }</em>
-				</p>
-			</div>
-			<InnerBlocks />
-			<div style={ { background: 'rgba(0,0,0,0.1)' } }>
-				<p>
-					<em>{ __( 'End of attendee content.', 'wordcamporg' ) }</em>
-				</p>
-			</div>
-		</>
-	),
+	edit: Edit,
 	save: () => <InnerBlocks.Content />,
 } );

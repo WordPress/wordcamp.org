@@ -2,7 +2,12 @@
 	"name": "camptix/attendee-content",
 	"icon": "welcome-view-site",
 	"category": "widgets",
-	"attributes": {},
+	"attributes": {
+		"markAttended": {
+			"type": "boolean",
+			"default": true
+		}
+	},
 	"supports": {
 		"customClassName": false,
 		"className": false,

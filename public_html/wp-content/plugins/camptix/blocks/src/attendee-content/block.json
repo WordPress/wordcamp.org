@@ -8,5 +8,6 @@
 		"className": false,
 		"html": false,
 		"multiple": false
-	}
+	},
+	"editorScript": "file://../../build/attendee-content.js"
 }

@@ -1,6 +1,7 @@
 <?php
 
 use function WordCamp\Sunrise\{ get_domain_redirects, get_top_level_domain };
+use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH };
 
 /**
  * A helper plugin for our integration with Let's Encrypt.
@@ -52,15 +53,19 @@ class WordCamp_Lets_Encrypt_Helper {
 		);
 
 		foreach ( $blogs as $blog ) {
-			if ( preg_match( "#^[0-9]{4}(?:-[^\.])?\.([^\.]+)\.wordcamp\.$tld$#i", $blog['domain'], $matches ) ) {
-				$domains[] = sprintf( "%s.wordcamp.$tld", $matches[1] );
+			if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $blog['domain'] . $blog['path'], $matches ) ) {
+				$domains[] = sprintf( "%s.%s.$tld", $matches[2], $matches[3] );
 			}
 
 			$domains[] = $blog['domain'];
 
-			// While transitioning from city.wordcamp.org/year-extra.
-			if ( preg_match( "#^([^\.]+)\.wordcamp.$tld/([0-9]{4}(?:-[^\.])?)/?$#i", $blog['domain'] . $blog['path'], $matches ) ) {
-				$domains[] = sprintf( "%s.%s.wordcamp.$tld", $matches[2], $matches[1] );
+			if ( preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $blog['domain'] . $blog['path'], $matches ) ) {
+				$domains[] = sprintf(
+					"%s.%s.%s.$tld",
+					trim( $matches[4], '/' ),
+					$matches[1],
+					$matches[2]
+				);
 			}
 		}
 

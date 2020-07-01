@@ -88,7 +88,7 @@ class WordCamp_Lets_Encrypt_Helper {
 		$tld    = get_top_level_domain();
 		$result = array();
 
-		// Sort domains by shortest first, sort all same-length domains by natcase.
+		// Sort domains by shortest first, sort all same-length domains by natural case.
 		// Later on, this will allow us to create the parent array before adding the children to it.
 		usort( $domains, function( $a, $b ) {
 			$a_len = strlen( $a );

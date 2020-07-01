@@ -72,15 +72,28 @@ class Test_Lets_Encrypt extends Database_TestCase {
 	public function test_group_domains() {
 		$actual = WordCamp_Lets_Encrypt_Helper::group_domains( self::$expected_domains );
 
+		// Reverting to a flat array makes comparing them easier.
 		$flat_actual = array_merge(
 			array_keys( $actual ),
 			...array_values( $actual )
 		);
 
-		// All of the expected domains exists, no extra ones were added.
-		$this->assertSame(
-			sort( self::$expected_domains ),
-			sort( $flat_actual )
+		// All of the expected domains are present.
+		$all_domains_found = true;
+
+		foreach( self::$expected_domains as $domain ) {
+			if ( ! in_array( $domain, $flat_actual ) ) {
+				$all_domains_found = false;
+				break;
+			}
+		}
+
+		$this->assertTrue( $all_domains_found );
+
+		// `group_domains()` should add `city.wordcamp.org` domains for the hardcoded redirects, so it'll have a higher count.
+		$this->assertGreaterThan(
+			count( self::$expected_domains ),
+			count( $flat_actual )
 		);
 
 		$this->assertArrayHasKey( 'seattle.wordcamp.test', $actual );
@@ -101,6 +114,7 @@ class Test_Lets_Encrypt extends Database_TestCase {
 			array(
 				'2016.vancouver.wordcamp.test',
 				'2020.vancouver.wordcamp.test',
+				'2018-developers.vancouver.wordcamp.test',
 			),
 			$actual['vancouver.wordcamp.test']
 		);

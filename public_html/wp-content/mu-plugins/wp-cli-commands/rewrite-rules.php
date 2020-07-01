@@ -2,6 +2,8 @@
 
 defined( 'WP_CLI' ) or die();
 
+use function WP_CLI\Utils\make_progress_bar;
+
 /**
  * WordCamp.org: Manage rewrite rules.
  */
@@ -20,6 +22,8 @@ class WordCamp_CLI_Rewrite_Rules extends WP_CLI_Command {
 
 		WP_CLI::line();
 
+		$notify = make_progress_bar( 'Flushing sites...', count( $sites ) );
+
 		foreach ( $sites as $site ) {
 			/*
 			 * We can't call `flush_rewrite_rules()` inside a `switch_to_blog()` loop, because plugins, etc
@@ -30,7 +34,11 @@ class WordCamp_CLI_Rewrite_Rules extends WP_CLI_Command {
 			switch_to_blog( $site->id );
 			delete_option( 'rewrite_rules' );
 			restore_current_blog();
+
+			$notify->tick();
 		}
+
+		$notify->finish();
 
 		WP_CLI::success( 'Done.' );
 	}

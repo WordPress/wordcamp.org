@@ -110,7 +110,10 @@ function activate_on_network() {
 function activate_on_current_site() {
 	add_feedback_page();
 	add_page_endpoint();
-	flush_rewrite_rules();
+
+	// Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
+	// The rules will automatically get recreated on the next request to the site.
+	delete_option( 'rewrite_rules' );
 }
 
 /**

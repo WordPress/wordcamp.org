@@ -26,27 +26,28 @@ class Test_Lets_Encrypt extends Database_TestCase {
 
 		$hardcoded_redirects = array_keys( get_domain_redirects() );
 
-		self::$expected_domains = array_merge(
-			array(
-				'example.org', // The default site in WP's test suite.
-				'central.wordcamp.test',
+		// Test sites created by `parent::wpSetUpBeforeClass()`.
+		$database_sites = array(
+			'example.org', // The default site in WP's test suite.
+			'central.wordcamp.test',
 
-				// It should contain a city root site entry for the year.city domains that exist in the db.
-				'seattle.wordcamp.test',
+			// It should contain a city root site entry for the year.city domains that exist in the db.
+			'seattle.wordcamp.test',
 
-				// It should contain an entry for each year.city domain that exist in the database.
-				'2018.seattle.wordcamp.test',
-				'2019.seattle.wordcamp.test',
+			// It should contain an entry for each year.city domain that exist in the database.
+			'2018.seattle.wordcamp.test',
+			'2019.seattle.wordcamp.test',
 
-				// It should contain a single entry representing all city/year domains that exist in the database.
-				'vancouver.wordcamp.test',
+			// It should contain a single entry representing all city/year domains that exist in the database.
+			'vancouver.wordcamp.test',
 
-				// It should contain legacy entries for all city/year domains that exist in the database.
-				'2016.vancouver.wordcamp.test',
-				'2020.vancouver.wordcamp.test',
-			),
-			$hardcoded_redirects
+			// It should contain legacy entries for all city/year domains that existed before the migration.
+			'2016.vancouver.wordcamp.test',
+			'2018-developers.vancouver.wordcamp.test',
+			'2020.vancouver.wordcamp.test',
 		);
+
+		self::$expected_domains = array_merge( $database_sites, $hardcoded_redirects );
 	}
 
 	/**

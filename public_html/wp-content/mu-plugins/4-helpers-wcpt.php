@@ -1,5 +1,7 @@
 <?php
 
+use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_YEAR_DOT_CITY_DOMAIN_PATH };
+
 defined( 'WPINC' ) || die();
 
 /*
@@ -150,31 +152,69 @@ function get_wordcamp_name( $site_id = 0 ) {
  *
  * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead
  *
- * @param string $url
- * @param string $part 'city', 'city-domain' (without the year, e.g. seattle.wordcamp.org), 'year'.
+ * @param string $site_url The root URL for the site, without any query string. It can include the site path
+ *                         -- e.g., `https://narnia.wordcamp.org/2020` -- but should not include a post slug,
+ *                         etc.
+ * @param string $part     'city', 'year', or 'city-domain' (city and domain without the year, e.g.
+ *                         seattle.wordcamp.org).
  *
- * @return false|string|int False on errors; an integer for years; a string for city and city-domain
+ * @return false|string|int False on errors; an integer for years; a string for `city` and `city-domain`.
  */
-function wcorg_get_url_part( $url, $part ) {
-	$url_parts = explode( '.', parse_url( $url, PHP_URL_HOST ) );
+function wcorg_get_url_part( $site_url, $part ) {
 	$result    = false;
+	$site_url  = trailingslashit( $site_url );
+	$url_parts = wp_parse_url( $site_url );
 
-	// Make sure it matches the typical year.city.wordcamp.org structure.
-	if ( 4 !== count( $url_parts ) ) {
-		return $result;
-	}
+	$is_year_dot_city_url = preg_match(
+		PATTERN_YEAR_DOT_CITY_DOMAIN_PATH,
+		$url_parts['host'] . $url_parts['path'],
+		$year_dot_city_matches
+	);
+
+	$is_city_slash_url = preg_match(
+		PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH,
+		$url_parts['host'] . $url_parts['path'],
+		$city_slash_year_matches
+	);
 
 	switch ( $part ) {
 		case 'city':
-			$result = $url_parts[1];
+			if ( $is_year_dot_city_url ) {
+				$result = $year_dot_city_matches[2];
+			} else if ( $is_city_slash_url ) {
+				$result = $city_slash_year_matches[1];
+			}
+
 			break;
 
 		case 'city-domain':
-			$result = ltrim( strstr( $url, '.' ), '.' );
+			if ( $is_year_dot_city_url ) {
+				$result = sprintf(
+					'%s.%s.%s',
+					$year_dot_city_matches[2],
+					$year_dot_city_matches[3],
+					$year_dot_city_matches[4]
+				);
+
+			} else if ( $is_city_slash_url ) {
+				$result = sprintf(
+					'%s.%s.%s',
+					$city_slash_year_matches[1],
+					$city_slash_year_matches[2],
+					$city_slash_year_matches[3]
+				);
+			}
+
 			break;
 
 		case 'year':
-			$result = absint( $url_parts[0] );
+			if ( $is_year_dot_city_url ) {
+				$result = absint( $year_dot_city_matches[1] );
+			} else if ( $is_city_slash_url ) {
+				$result = absint( trim( $city_slash_year_matches[4], '/' ) );
+			}
+
+
 			break;
 	}
 

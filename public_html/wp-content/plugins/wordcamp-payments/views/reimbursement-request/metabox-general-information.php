@@ -38,7 +38,7 @@ defined( 'WPINC' ) or die();
 				<?php _e( 'Currency:', 'wordcamporg' ) ?>
 			</label>
 
-			<select id="_wcbrr_currency" name="_wcbrr_currency">
+			<select id="_wcbrr_currency" name="_wcbrr_currency" class="regular-text">
 				<option value="">
 					<?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
 				</option>
@@ -61,7 +61,7 @@ defined( 'WPINC' ) or die();
 				<?php _e( 'Reason for Reimbursement:', 'wordcamporg' ); ?>
 			</label>
 
-			<select id="_wcbrr_reason" name="_wcbrr_reason">
+			<select id="_wcbrr_reason" name="_wcbrr_reason" class="regular-text">
 				<option value="">
 					<?php _e( '-- Select a Reason --', 'wordcamporg' ); ?>
 				</option>

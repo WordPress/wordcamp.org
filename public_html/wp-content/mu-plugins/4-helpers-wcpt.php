@@ -40,17 +40,10 @@ function get_wordcamps( $args = array() ) {
 /**
  * Retrieves the `wordcamp` post and postmeta associated with the current site.
  *
- * `Site ID` is the most reliable way to associate a site with it's corresponding `wordcamp` post,
- * but wasn't historically assigned when new sites are created. For older sites, we fallback to
- * using the `URL` to associate them. That will only work if the site's site_url() exactly
- * matches the `wordcamp` post's `URL` meta field, though. It could also fail if we ever migrate
- * to a different URL structure.
- *
  * @return false|WP_Post
  */
 function get_wordcamp_post() {
 	$current_site_id  = get_current_blog_id();
-	$current_site_url = site_url();
 
 	// Switch to central.wordcamp.org to get posts.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
@@ -58,20 +51,8 @@ function get_wordcamp_post() {
 	$wordcamp = get_posts( array(
 		'post_type'   => 'wordcamp',
 		'post_status' => 'any',
-
-		'meta_query' => array(
-			'relation' => 'OR',
-
-			array(
-				'key'   => '_site_id',
-				'value' => $current_site_id,
-			),
-
-			array(
-				'key'   => 'URL',
-				'value' => $current_site_url,
-			),
-		),
+		'meta_key'    => '_site_id',
+		'meta_value'  => $current_site_id,
 	) );
 
 	if ( isset( $wordcamp[0]->ID ) ) {

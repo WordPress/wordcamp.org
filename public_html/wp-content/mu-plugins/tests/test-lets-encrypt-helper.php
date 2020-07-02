@@ -48,6 +48,8 @@ class Test_Lets_Encrypt extends Database_TestCase {
 		);
 
 		self::$expected_domains = array_merge( $database_sites, $hardcoded_redirects );
+
+		sort( self::$expected_domains );
 	}
 
 	/**
@@ -62,6 +64,8 @@ class Test_Lets_Encrypt extends Database_TestCase {
 	 */
 	public function test_get_domains() {
 		$actual = WordCamp_Lets_Encrypt_Helper::get_domains();
+
+		sort( $actual );
 
 		$this->assertSame( self::$expected_domains, $actual );
 	}

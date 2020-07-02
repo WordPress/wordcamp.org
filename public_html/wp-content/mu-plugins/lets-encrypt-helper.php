@@ -3,6 +3,7 @@
 use function WordCamp\Sunrise\{ get_domain_redirects, get_top_level_domain };
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH };
 
+
 /**
  * A helper plugin for our integration with Let's Encrypt.
  */
@@ -53,18 +54,31 @@ class WordCamp_Lets_Encrypt_Helper {
 		);
 
 		foreach ( $blogs as $blog ) {
+			$domains[] = $blog['domain'];
+
+			/*
+			 * `year.city.wordcamp.org` sites should have a corresponding `city.wordcamp.test` domain.
+			 * `group_domains()` expects this to exist, so that it can group "child" domains under it.
+			 *
+			 * This also provides a backup for the `*.wordcamp.org` wildcard certificate.
+			 */
 			if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $blog['domain'] . $blog['path'], $matches ) ) {
 				$domains[] = sprintf( "%s.%s.$tld", $matches[2], $matches[3] );
 			}
 
-			$domains[] = $blog['domain'];
-
-			if ( preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $blog['domain'] . $blog['path'], $matches ) ) {
+			/*
+			 * Sites that were originally created with year.city.wordcamp.org URLs still need certificates for
+			 * those domains, so that redirects will work.
+			 *
+			 * Sites that were created after that also need the certificates for the corresponding `year.city`
+			 * domain, because attendees may expect it to exist out of habit. They should be gracefully
+			 * redirected rather than getting an SSL error.
+			 */
+			if ( preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $blog['domain'] . $blog['path'] ) ) {
 				$domains[] = sprintf(
-					"%s.%s.%s.$tld",
-					trim( $matches[4], '/' ),
-					$matches[1],
-					$matches[2]
+					'%s.%s',
+					trim( $blog['path'], '/' ),
+					$blog['domain']
 				);
 			}
 		}

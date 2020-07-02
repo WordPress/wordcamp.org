@@ -66,6 +66,9 @@ function get_top_level_domain() {
 /**
  * Redirects from `year.city.wordcamp.org` to `city.wordcamp.org/year`.
  *
+ * This is needed so that old external links will redirect to the current URL structure. New cities don't need to
+ * be added to this list, only the ones that were migrated from the old structure to the new structure in July 2020.
+ *
  * See https://make.wordpress.org/community/2020/03/03/proposal-for-wordcamp-sites-seo-fixes/
  *
  * @param string $domain

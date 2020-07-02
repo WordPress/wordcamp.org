@@ -53,7 +53,7 @@ class WordCamp_New_Site {
 						);
 					?>
 
-					<a target="_blank" href="<?php echo esc_url( add_query_arg( 's', $blog_details->blog_id, network_admin_url( 'sites.php' ) ) ); ?>">Edit</a> |
+					<a target="_blank" href="<?php echo esc_url( add_query_arg( 'id', $blog_details->blog_id, network_admin_url( 'site-info.php' ) ) ); ?>">Edit</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
 

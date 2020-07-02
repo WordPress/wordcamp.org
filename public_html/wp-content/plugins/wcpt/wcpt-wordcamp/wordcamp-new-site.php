@@ -42,6 +42,7 @@ class WordCamp_New_Site {
 				name="<?php echo esc_attr( $object_name ); ?>"
 				id="<?php echo esc_attr( $object_name ); ?>"
 				value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
+				placeholder="https://city.wordcamp.org/<?php echo esc_attr( wp_date( 'Y' ) ); ?>/"
 			/>
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
@@ -71,8 +72,6 @@ class WordCamp_New_Site {
 						<input id="<?php echo esc_attr( $checkbox_id ); ?>" type="checkbox" name="<?php echo esc_attr( $checkbox_id ); ?>" />
 						Create site in network
 					</label>
-
-					<span class="description">(e.g., https://<?php echo esc_attr( wp_date( 'Y' ) ); ?>.city.wordcamp.org)</span>
 				<?php endif; // Domain exists. ?>
 
 				<?php if ( $valid_url && ! self::url_matches_expected_format( $url['host'], $url['path'], $post_id ) ) : ?>

@@ -42,8 +42,10 @@ function get_wordcamps( $args = array() ) {
  *
  * @return false|WP_Post
  */
-function get_wordcamp_post() {
-	$current_site_id  = get_current_blog_id();
+function get_wordcamp_post( $site_id = null ) {
+	if ( ! $site_id ) {
+		$site_id = get_current_blog_id();
+	}
 
 	// Switch to central.wordcamp.org to get posts.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
@@ -52,7 +54,7 @@ function get_wordcamp_post() {
 		'post_type'   => 'wordcamp',
 		'post_status' => 'any',
 		'meta_key'    => '_site_id',
-		'meta_value'  => $current_site_id,
+		'meta_value'  => $site_id,
 	) );
 
 	if ( isset( $wordcamp[0]->ID ) ) {

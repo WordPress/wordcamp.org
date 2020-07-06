@@ -237,6 +237,10 @@ class Test_Sunrise extends Database_TestCase {
 					'/2020/',
 					'/2020/schedule/',
 					'/2020/2020/', // Year archive.
+					'/2020',
+					'/2020?s=foo',
+					'/2020?s=foo&bar=1',
+					'/2020?s=foo&bar=1#quix',
 				),
 
 				'expected' => array(

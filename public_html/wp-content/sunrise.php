@@ -430,16 +430,18 @@ function site_redirects( $domain, $request_uri ) {
  * @return array
  */
 function guess_requested_domain_path() {
+	$request_path = trailingslashit( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) );
+
 	$is_slash_year_site = preg_match(
 		PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH,
-		$_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'],
+		$_SERVER['HTTP_HOST'] . $request_path,
 		$matches
 	);
 
 	$domain = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
-	$path   = $is_slash_year_site ? $matches[4] : '/';
+	$site_path = $is_slash_year_site ? $matches[4] : '/';
 
-	return compact( 'domain', 'path' );
+	return array( 'domain' => $domain, 'path' => $site_path );
 }
 
 /**

@@ -18,7 +18,7 @@ class Test_User_Interface extends \WP_UnitTestCase {
 		$original_url  = 'https://api.github.com/repos/WordPressSeattle/seattle.wordcamp.org-2015/contents/style.css';
 		$validated_url = validate_remote_css_url( $original_url );
 
-		$this->assertEquals( $original_url, $validated_url );
+		$this->assertSame( $original_url, $validated_url );
 	}
 
 	/**

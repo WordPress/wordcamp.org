@@ -54,6 +54,6 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 			"'-漢字はユニコ ;'=æ",
 		);
 
-		$this->assertEquals( $expected_output, CampTix_Plugin::esc_csv( $test_input ) );
+		$this->assertSame( $expected_output, CampTix_Plugin::esc_csv( $test_input ) );
 	}
 }

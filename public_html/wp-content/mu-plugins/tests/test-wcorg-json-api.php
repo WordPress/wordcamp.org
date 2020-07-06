@@ -57,11 +57,11 @@ class Test_WordCamp_JSON_API_V1 extends Database_TestCase {
 				break;
 
 			case 'v2':
-				$this->assertEquals( $route, $wp->query_vars['rest_route'] );
+				$this->assertSame( $route, $wp->query_vars['rest_route'] );
 				break;
 
 			case 'v1':
-				$this->assertEquals( $route, $wp->query_vars['json_route'] );
+				$this->assertSame( $route, $wp->query_vars['json_route'] );
 				break;
 		}
 

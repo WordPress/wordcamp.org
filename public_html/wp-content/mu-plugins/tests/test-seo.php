@@ -37,7 +37,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	public function test_get_latest_home_url( $current_domain, $current_path, $expected ) {
 		$actual = get_latest_home_url( $current_domain, $current_path );
 
-		$this->assertEquals( $expected, $actual );
+		$this->assertSame( $expected, $actual );
 	}
 
 	/**

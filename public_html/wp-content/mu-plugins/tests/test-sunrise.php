@@ -51,7 +51,7 @@ class Test_Sunrise extends Database_TestCase {
 	public function test_get_city_slash_year_url( $domain, $request_uri, $expected ) {
 		$actual = get_city_slash_year_url( $domain, $request_uri );
 
-		$this->assertEquals( $expected, $actual );
+		$this->assertSame( $expected, $actual );
 	}
 
 	/**
@@ -173,7 +173,7 @@ class Test_Sunrise extends Database_TestCase {
 
 			$actual = guess_requested_domain_path();
 
-			$this->assertEquals( $expected, $actual );
+			$this->assertSame( $expected, $actual );
 		}
 	}
 
@@ -259,7 +259,7 @@ class Test_Sunrise extends Database_TestCase {
 	public function test_unsubdomactories_redirects( $domain, $request_uri, $expected ) {
 		$actual = unsubdomactories_redirects( $domain, $request_uri );
 
-		$this->assertEquals( $expected, $actual );
+		$this->assertSame( $expected, $actual );
 	}
 
 	/**
@@ -315,7 +315,7 @@ class Test_Sunrise extends Database_TestCase {
 	public function test_get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structure, $domain, $path, $request_uri, $expected ) {
 		$actual = get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structure, $domain, $path, $request_uri );
 
-		$this->assertEquals( $expected, $actual );
+		$this->assertSame( $expected, $actual );
 	}
 
 	/**
@@ -407,7 +407,7 @@ class Test_Sunrise extends Database_TestCase {
 	public function test_get_canonical_year_url( $domain, $path, $expected ) {
 		$actual = get_canonical_year_url( $domain, $path );
 
-		$this->assertEquals( $expected, $actual );
+		$this->assertSame( $expected, $actual );
 	}
 
 	/**
@@ -464,7 +464,7 @@ class Test_Sunrise extends Database_TestCase {
 	public function test_site_redirects( $domain, $path, $expected ) {
 		$actual = site_redirects( $domain, $path );
 
-		$this->assertEquals( $expected, $actual );
+		$this->assertSame( $expected, $actual );
 	}
 
 	/**

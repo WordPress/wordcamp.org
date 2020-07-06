@@ -29,6 +29,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Post Type">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wcpt/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Remote CSS">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-remote-css/tests/

@@ -32,6 +32,7 @@ require_once( $core_tests_directory . '/includes/functions.php' );
  * not clear if that would properly isolate them from each other, and allow multiple independent contexts, though.
  */
 require_once( WP_PLUGIN_DIR . '/wordcamp-organizer-reminders/tests/bootstrap.php' );
+require_once WP_PLUGIN_DIR . '/wcpt/tests/bootstrap.php';
 require_once( WP_PLUGIN_DIR . '/wordcamp-remote-css/tests/bootstrap.php' );
 require_once WP_PLUGIN_DIR . '/wordcamp-speaker-feedback/tests/bootstrap.php';
 require_once WP_MU_PLUGIN_DIR . '/tests/bootstrap.php';

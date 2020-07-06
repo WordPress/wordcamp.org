@@ -4,6 +4,10 @@
 
 use \WordCamp\Logger;
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
+use const WordCamp\Sunrise\PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH;
+
 class WordCamp_New_Site {
 	protected $new_site_id;
 
@@ -41,8 +45,11 @@ class WordCamp_New_Site {
 			/>
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
-				<?php $url = parse_url( trailingslashit( get_post_meta( $post_id, $key, true ) ) ); ?>
-				<?php if ( isset( $url['host'], $url['path'] ) && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
+				<?php $url = trailingslashit( get_post_meta( $post_id, $key, true ) ); ?>
+				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );  ?>
+				<?php $valid_url = isset( $url['host'], $url['path'] ); ?>
+
+				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
 					<?php
 						$blog_details = get_blog_details(
 							array(
@@ -67,6 +74,14 @@ class WordCamp_New_Site {
 
 					<span class="description">(e.g., https://<?php echo esc_attr( wp_date( 'Y' ) ); ?>.city.wordcamp.org)</span>
 				<?php endif; // Domain exists. ?>
+
+				<?php if ( $valid_url && ! self::url_matches_expected_format( $url['host'], $url['path'], $post_id ) ) : ?>
+					<br /><br />
+
+					<span class="notice notice-large notice-warning">
+						Warning: This URL doesn't match the expected <code>city.wordcamp.org/year</code> format.
+					</span>
+				<?php endif; ?>
 			<?php endif; // User can manage sites. ?>
 		<?php endif;
 	}
@@ -109,17 +124,51 @@ class WordCamp_New_Site {
 			return;
 		}
 
+		$url        = trailingslashit( $url );
+		$parsed_url = wp_parse_url( $url );
+
+		if ( ! self::url_matches_expected_format( $parsed_url['host'], $parsed_url['path'], $wordcamp_id ) ) {
+			wp_die( 'The URL does not match the expected <code>city.wordcamp.org/year/</code> format. Please press the back button and update it.' );
+		}
+
 		update_post_meta( $wordcamp_id, $key, esc_url( $url ) );
 
 		// If this site exists make sure we update the _site_id mapping.
-		$path             = parse_url( $url, PHP_URL_PATH ) ? parse_url( $url, PHP_URL_PATH ) : '/';
-		$existing_site_id = domain_exists( parse_url( $url, PHP_URL_HOST ), $path, 1 );
+		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], 1 );
 
 		if ( $existing_site_id ) {
 			update_post_meta( $wordcamp_id, '_site_id', absint( $existing_site_id ) );
 		} else {
 			delete_post_meta( $wordcamp_id, '_site_id' );
 		}
+	}
+
+	/**
+	 * Check if the given URL matches the expected format.
+	 *
+	 * @param string $domain
+	 * @param string $path
+	 * @param int    $wordcamp_id
+	 *
+	 * @return bool
+	 */
+	public static function url_matches_expected_format( $domain, $path, $wordcamp_id ) {
+		if ( 'production' === WORDCAMP_ENVIRONMENT ) {
+			return true; // todo remove after URL migration complete.
+		}
+
+		$tld                            = get_top_level_domain();
+		$last_permitted_external_domain = 2341;
+		$external_domain_exceptions     = array( 169459 );
+		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld @ix", $domain );
+		$can_have_external_domain       = $wordcamp_id <= $last_permitted_external_domain || in_array( $wordcamp_id, $external_domain_exceptions );
+
+		if ( $is_external_domain && $can_have_external_domain ) {
+			// Many old camps had external websites.
+			return true;
+		}
+
+		return 1 === preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path );
 	}
 
 	/**

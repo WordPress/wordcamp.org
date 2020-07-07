@@ -52,6 +52,17 @@ class CampTix_Network_Dashboard {
 			$camptix->log( 'Updating next batch of revenue reports.' );
 
 			foreach ( $current_batch as $blog_id ) {
+				$blog_exists = get_site( $blog_id );
+
+				/*
+				 * It's possible for a site to be deleted in between the time when its ID is added to
+				 * `$camptix_nt_revenue_report_blog_ids` and it gets processed by this function. If that happens,
+				 * this will produce a bunch of errors from failed queries, etc.
+				 */
+				if ( ! $blog_exists ) {
+					continue;
+				}
+
 				switch_to_blog( $blog_id );
 
 				if ( in_array( 'camptix/camptix.php', get_option( 'active_plugins', array() ) ) ) {

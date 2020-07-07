@@ -80,7 +80,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
-		'seattle', 'testing', 'varna',
+		'cincinnati', 'dayton', 'finland', 'seattle', 'sunshinecoast', 'testing', 'varna',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
@@ -113,9 +113,9 @@ function unsubdomactories_redirects( $domain, $request_uri ) {
 		'russia', 'sf', 'london', 'austin', 'tokyo', 'portland', 'europe', 'philly', 'sofia', 'miami',
 		'montreal', 'newyork', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
 		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
-		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla', 'finland',
+		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla',
 		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
-		'baltimore', 'sydney', 'providence', 'nyc', 'dfw', 'dayton', 'copenhagen', 'denmark', 'lisboa', 'kansai',
+		'baltimore', 'sydney', 'providence', 'nyc', 'dfw', 'copenhagen', 'denmark', 'lisboa', 'kansai',
 		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
 		'atlanta', 'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
 		'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
@@ -130,7 +130,7 @@ function unsubdomactories_redirects( $domain, $request_uri ) {
 		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy', 'rhodeisland',
 		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
 		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'torino', 'bilbao', 'peoria',
-		'sunshinecoast', 'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'cincinnati', 'okc',
+		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'okc',
 	);
 
 	$tld = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';

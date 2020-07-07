@@ -80,7 +80,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
-		'testing', 'varna',
+		'seattle', 'testing', 'varna',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {

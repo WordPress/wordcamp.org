@@ -38,7 +38,14 @@ class CampTix_Network_Dashboard {
 		if ( method_exists( $camptix, 'generate_revenue_report_data' ) ) {
 			$remaining_blogs = get_site_option( 'camptix_nt_revenue_report_blog_ids', array() );
 			if ( empty( $remaining_blogs ) ) {
-				$remaining_blogs = $wpdb->get_col( $wpdb->prepare( "SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d LIMIT 1000;", $wpdb->siteid ) );
+				$remaining_blogs = $wpdb->get_col( $wpdb->prepare( "
+					SELECT blog_id
+					FROM `{$wpdb->blogs}`
+					WHERE site_id = %d
+					ORDER BY blog_id DESC -- Prioritize newer sites if the limit is reached
+					LIMIT 3000;",
+					$wpdb->siteid
+				) );
 			}
 
 			$current_batch = array_splice( $remaining_blogs, 0, apply_filters( 'camptix_nt_revenue_report_batch_size', 30 ) );
@@ -99,7 +106,15 @@ class CampTix_Network_Dashboard {
 			$wpdb->query( "DELETE FROM `{$wpdb->posts}` WHERE ID IN ( $events_ids );" );
 		}
 
-		$blogs = $wpdb->get_col( $wpdb->prepare( "SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d LIMIT 1000;", $wpdb->siteid ) );
+		$blogs = $wpdb->get_col( $wpdb->prepare( "
+			SELECT blog_id
+			FROM `{$wpdb->blogs}`
+			WHERE site_id = %d
+			ORDER BY blog_id DESC -- Prioritize newer sites if the limit is reached
+			LIMIT 3000;",
+			$wpdb->siteid
+		) );
+
 		foreach ( $blogs as $bid ) {
 			switch_to_blog( $bid );
 

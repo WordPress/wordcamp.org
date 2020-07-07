@@ -324,7 +324,6 @@ function get_domain_redirects() {
 		// Central redirects.
 		"bg.wordcamp.$tld"                        => $central,
 		"denmark.wordcamp.$tld"                   => $central,
-		"finland.wordcamp.$tld"                   => $central,
 		"india.wordcamp.$tld"                     => $central,
 		"utah.wordcamp.$tld"                      => $central,
 

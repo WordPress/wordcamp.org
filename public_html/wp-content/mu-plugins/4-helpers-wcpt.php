@@ -293,13 +293,13 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
  */
 function get_wordcamp_date_range( $wordcamp ) {
 	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
-		return;
+		return '';
 	}
 
 	// Switch to central.wordcamp.org to get post meta.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
-	$start = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
-	$end   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
+	$start = (int) get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
+	$end   = (int) get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
 	restore_current_blog();
 
 	// Assume a single-day event if there is no end date.

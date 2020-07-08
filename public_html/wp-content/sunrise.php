@@ -244,6 +244,7 @@ function get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structur
 function get_canonical_year_url( $domain, $path ) {
 	global $wpdb;
 
+	$tld       = get_top_level_domain();
 	$cache_key = 'current_blog_' . $domain;
 
 	/**
@@ -282,15 +283,15 @@ function get_canonical_year_url( $domain, $path ) {
 
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
 	switch ( $domain ) {
-		case 'europe.wordcamp.org':
+		case "europe.wordcamp.$tld":
 			if ( time() <= strtotime( '2020-06-07' ) ) {
-				$like = '2020.europe.wordcamp.org';
+				return "https://europe.wordcamp.$tld/2020/";
 			}
 			break;
 
-		case 'us.wordcamp.org':
+		case "us.wordcamp.$tld":
 			if ( time() <= strtotime( '2019-11-30' ) ) {
-				$like = '2019.us.wordcamp.org';
+				return "https://2019.us.wordcamp.$tld/";
 			}
 			break;
 	}

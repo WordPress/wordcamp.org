@@ -80,7 +80,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
-		'athens',
+		'athens', 'atlanta', 'brighton', 'europe', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
 	);
 
@@ -111,24 +111,24 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'russia', 'sf', 'london', 'austin', 'tokyo', 'portland', 'europe', 'philly', 'sofia', 'miami',
+		'russia',  'london', 'austin', 'tokyo', 'portland', 'philly', 'sofia', 'miami',
 		'montreal', 'newyork', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
 		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
 		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla',
 		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
 		'baltimore', 'sydney', 'providence', 'nyc', 'dfw', 'copenhagen', 'lisboa', 'kansai',
 		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
-		'atlanta', 'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
+		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
 		'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
 		'belohorizonte', 'lancasterpa', 'switzerland', 'romania', 'columbus', 'saratoga', 'fayetteville',
 		'bournemouth', 'hanoi', 'saopaulo', 'cologne', 'louisville', 'mallorca', 'annarbor', 'manchester',
 		'laspenitas', 'israel', 'ventura', 'vancouver', 'peru', 'auckland', 'norrkoping', 'netherlands',
 		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee', 'lima',
-		'brighton', 'asheville', 'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'lancaster', 'kenya',
+		'asheville', 'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'lancaster', 'kenya',
 		'malaga', 'lithuania', 'detroit', 'kobe', 'reno', 'indonesia', 'transylvania', 'mexico', 'nicaragua',
 		'gdansk', 'bologna', 'milano', 'catania', 'modena', 'stockholm', 'pune', 'jerusalem', 'philippines',
 		'newzealand', 'cuttack', 'ponce', 'jabalpur', 'singapore', 'poznan', 'richmond', 'goldcoast', 'caguas',
-		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy', 'rhodeisland',
+		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy',
 		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
 		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'torino', 'bilbao', 'peoria',
 		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'okc',
@@ -339,8 +339,8 @@ function get_domain_redirects() {
 		"fr.2013.ottawa.wordcamp.$tld"            => "2013-fr.ottawa.wordcamp.$tld",
 
 		// Year & name change redirects.
-		"2006.wordcamp.$tld"                      => "2006.sf.wordcamp.$tld",
-		"2007.wordcamp.$tld"                      => "2007.sf.wordcamp.$tld",
+		"2006.wordcamp.$tld"                      => "sf.wordcamp.$tld/2006",
+		"2007.wordcamp.$tld"                      => "sf.wordcamp.$tld/2007",
 		"2012.torontodev.wordcamp.$tld"           => "2012-dev.toronto.wordcamp.$tld",
 		"2013.windsor.wordcamp.$tld"              => "2013.lancaster.wordcamp.$tld",
 		"2014.lima.wordcamp.$tld"                 => "2014.peru.wordcamp.$tld",

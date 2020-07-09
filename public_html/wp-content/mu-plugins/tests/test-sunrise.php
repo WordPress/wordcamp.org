@@ -44,6 +44,167 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
+	 * @covers ::guess_requested_domain_path
+	 *
+	 * @dataProvider data_guess_requested_domain_path
+	 */
+	public function test_guess_requested_domain_path( $site ) {
+		list(
+			'domain'     => $domain,
+			'test-paths' => $test_paths,
+			'expected'   => $expected,
+		) = $site;
+
+		$_SERVER['HTTP_HOST'] = $domain;
+
+		foreach ( $test_paths as $path ) {
+			$_SERVER['REQUEST_URI'] = $path;
+
+			$actual = guess_requested_domain_path();
+
+			$this->assertSame( $expected, $actual );
+		}
+	}
+
+	/**
+	 * Test cases for test_guess_requested_domain_path().
+	 *
+	 * @return array
+	 */
+	public function data_guess_requested_domain_path() {
+		return array(
+			'root site' => array( array(
+				'domain' => 'wordcamp.test',
+
+				'test-paths' => array(
+					'/',
+					'/schedule/',
+					'/2020/', // Year archive.
+				),
+
+				'expected' => array(
+					'domain' => 'wordcamp.test',
+					'path'   => '/',
+				),
+			) ),
+
+			'central' => array( array(
+				'domain' => 'central.wordcamp.test',
+
+				'test-paths' => array(
+					'/',
+					'/schedule/',
+
+					// This function isn't expected to distinguish the `/2020/` path as a year archive. See its phpdoc.
+				),
+
+				'expected' => array(
+					'domain' => 'central.wordcamp.test',
+					'path'   => '/',
+				),
+			) ),
+
+			'year.city site' => array( array(
+				'domain' => '2020.seattle.wordcamp.test',
+
+				'test-paths' => array(
+					'/',
+					'/schedule/',
+					'/2020/', // Year archive.
+				),
+
+				'expected' => array(
+					'domain' => '2020.seattle.wordcamp.test',
+					'path'   => '/',
+				),
+			) ),
+
+			'city/year site' => array( array(
+				'domain' => 'vancouver.wordcamp.test',
+
+				'test-paths' => array(
+					'/2020/',
+					'/2020/schedule/',
+					'/2020/2020/', // Year archive.
+					'/2020',
+					'/2020?s=foo',
+					'/2020?s=foo&bar=1',
+					'/2020?s=foo&bar=1#quix',
+				),
+
+				'expected' => array(
+					'domain' => 'vancouver.wordcamp.test',
+					'path'   => '/2020/',
+				),
+			) ),
+		);
+	}
+
+	/**
+	 * @covers ::site_redirects
+	 * @covers ::get_domain_redirects
+	 *
+	 * @dataProvider data_site_redirects
+	 */
+	public function test_site_redirects( $domain, $path, $expected ) {
+		$actual = site_redirects( $domain, $path );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_site_redirects().
+	 *
+	 * @return array
+	 */
+	public function data_site_redirects() {
+		return array(
+			/*
+			 * There aren't any cases to test that front-end requests to the root site redirect to Central,
+			 * because it's difficult to mock `is_admin()` being `false` in that context.
+			 * `set_current_screen( 'front' )` works for some cases, but not all. `$this->>go_to()` doesn't seem
+			 * to help either.
+			 */
+
+			'root site cron requests are not redirected to Central' => array(
+				'wordcamp.test',
+				'/wp-cron.php',
+				false,
+			),
+
+			'root site rest requests are not redirected to Central' => array(
+				'wordcamp.test',
+				'/wp-json',
+				false,
+			),
+
+			'domain redirect to central removes request uri' => array(
+				'bg.wordcamp.test',
+				'/schedule/',
+				'https://central.wordcamp.test',
+			),
+
+			'domain redirect elsewhere includes request uri' => array(
+				'fr.2014.montreal.wordcamp.test',
+				'/schedule/',
+				'https://2014-fr.montreal.wordcamp.test/schedule/',
+			),
+
+			'external domain redirects to central' => array(
+				'wordcampsf.org',
+				'/schedule/',
+				'https://sf.wordcamp.test/schedule/',
+			),
+
+			'unknown domain should not redirect' => array(
+				'narnia.wordcamp.test',
+				'/',
+				false,
+			),
+		);
+	}
+
+	/**
 	 * @covers ::get_city_slash_year_url
 	 *
 	 * @dataProvider data_get_city_slash_year_url
@@ -155,103 +316,6 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::guess_requested_domain_path
-	 *
-	 * @dataProvider data_guess_requested_domain_path
-	 */
-	public function test_guess_requested_domain_path( $site ) {
-		list(
-			'domain'     => $domain,
-			'test-paths' => $test_paths,
-			'expected'   => $expected,
-		) = $site;
-
-		$_SERVER['HTTP_HOST'] = $domain;
-
-		foreach ( $test_paths as $path ) {
-			$_SERVER['REQUEST_URI'] = $path;
-
-			$actual = guess_requested_domain_path();
-
-			$this->assertSame( $expected, $actual );
-		}
-	}
-
-	/**
-	 * Test cases for test_guess_requested_domain_path().
-	 *
-	 * @return array
-	 */
-	public function data_guess_requested_domain_path() {
-		return array(
-			'root site' => array( array(
-				'domain' => 'wordcamp.test',
-
-				'test-paths' => array(
-					'/',
-					'/schedule/',
-					'/2020/', // Year archive.
-				),
-
-				'expected' => array(
-					'domain' => 'wordcamp.test',
-					'path'   => '/',
-				),
-			) ),
-
-			'central' => array( array(
-				'domain' => 'central.wordcamp.test',
-
-				'test-paths' => array(
-					'/',
-					'/schedule/',
-
-					// This function isn't expected to distinguish the `/2020/` path as a year archive. See its phpdoc.
-				),
-
-				'expected' => array(
-					'domain' => 'central.wordcamp.test',
-					'path'   => '/',
-				),
-			) ),
-
-			'year.city site' => array( array(
-				'domain' => '2020.seattle.wordcamp.test',
-
-				'test-paths' => array(
-					'/',
-					'/schedule/',
-					'/2020/', // Year archive.
-				),
-
-				'expected' => array(
-					'domain' => '2020.seattle.wordcamp.test',
-					'path'   => '/',
-				),
-			) ),
-
-			'city/year site' => array( array(
-				'domain' => 'vancouver.wordcamp.test',
-
-				'test-paths' => array(
-					'/2020/',
-					'/2020/schedule/',
-					'/2020/2020/', // Year archive.
-					'/2020',
-					'/2020?s=foo',
-					'/2020?s=foo&bar=1',
-					'/2020?s=foo&bar=1#quix',
-				),
-
-				'expected' => array(
-					'domain' => 'vancouver.wordcamp.test',
-					'path'   => '/2020/',
-				),
-			) ),
-		);
-	}
-
-	/**
 	 * @covers ::unsubdomactories_redirects
 	 *
 	 * @dataProvider data_unsubdomactories_redirects
@@ -296,13 +360,69 @@ class Test_Sunrise extends Database_TestCase {
 			'city/year homepage request should redirect' => array(
 				'vancouver.wordcamp.test',
 				'/2020/',
-				'https://2020.vancouver.wordcamp.test/'
+				'https://2020.vancouver.wordcamp.test/',
 			),
 
 			'city/year subpage request should redirect' => array(
 				'vancouver.wordcamp.test',
 				'/2020/schedule/',
-				'https://2020.vancouver.wordcamp.test/schedule/'
+				'https://2020.vancouver.wordcamp.test/schedule/',
+			),
+		);
+	}
+
+	/**
+	 * @covers ::get_canonical_year_url
+	 *
+	 * @dataProvider data_get_canonical_year_url
+	 */
+	public function test_get_canonical_year_url( $domain, $path, $expected ) {
+		$actual = get_canonical_year_url( $domain, $path );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_canonical_year_url().
+	 *
+	 * @return array
+	 */
+	public function data_get_canonical_year_url() {
+		return array(
+			'dont redirect root site' => array(
+				'wordcamp.test',
+				'/',
+				false,
+			),
+
+			'dont redirect non-existent site' => array(
+				'narnia.wordcamp.test',
+				'/',
+				false,
+			),
+
+			'dont redirect year.city sites' => array(
+				'2018.seattle.wordcamp.test',
+				'/',
+				false,
+			),
+
+			'dont redirect city/year sites' => array(
+				'vancouver.wordcamp.test',
+				'/2020/',
+				false,
+			),
+
+			'redirect year.city root to latest camp' => array(
+				'seattle.wordcamp.test',
+				'/',
+				'https://2019.seattle.wordcamp.test/',
+			),
+
+			'redirect city/year root to latest camp' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'https://vancouver.wordcamp.test/2020/',
 			),
 		);
 	}
@@ -394,126 +514,6 @@ class Test_Sunrise extends Database_TestCase {
 				'2020.vancouver.wordcamp.test',
 				'/',
 				'/2020/2019/save-the-date-for-wordcamp-vancouver-2020/',
-				false,
-			),
-		);
-	}
-
-	/**
-	 * @covers ::get_canonical_year_url
-	 *
-	 * @dataProvider data_get_canonical_year_url
-	 */
-	public function test_get_canonical_year_url( $domain, $path, $expected ) {
-		$actual = get_canonical_year_url( $domain, $path );
-
-		$this->assertSame( $expected, $actual );
-	}
-
-	/**
-	 * Test cases for test_get_canonical_year_url().
-	 *
-	 * @return array
-	 */
-	public function data_get_canonical_year_url() {
-		return array(
-			'dont redirect root site' => array(
-				'wordcamp.test',
-				'/',
-				false
-			),
-
-			'dont redirect non-existent site' => array(
-				'narnia.wordcamp.test',
-				'/',
-				false
-			),
-
-			'dont redirect year.city sites' => array(
-				'2018.seattle.wordcamp.test',
-				'/',
-				false
-			),
-
-			'dont redirect city/year sites' => array(
-				'vancouver.wordcamp.test',
-				'/2020/',
-				false
-			),
-
-			'redirect year.city root to latest camp' => array(
-				'seattle.wordcamp.test',
-				'/',
-				'https://2019.seattle.wordcamp.test/'
-			),
-
-			'redirect city/year root to latest camp' => array(
-				'vancouver.wordcamp.test',
-				'/',
-				'https://vancouver.wordcamp.test/2020/'
-			),
-		);
-	}
-
-	/**
-	 * @covers ::site_redirects
-	 * @covers ::get_domain_redirects
-	 *
-	 * @dataProvider data_site_redirects
-	 */
-	public function test_site_redirects( $domain, $path, $expected ) {
-		$actual = site_redirects( $domain, $path );
-
-		$this->assertSame( $expected, $actual );
-	}
-
-	/**
-	 * Test cases for test_site_redirects().
-	 *
-	 * @return array
-	 */
-	public function data_site_redirects() {
-		return array(
-			/*
-			 * There aren't any cases to test that front-end requests to the root site redirect to Central,
-			 * because it's difficult to mock `is_admin()` being `false` in that context.
-			 * `set_current_screen( 'front' )` works for some cases, but not all. `$this->>go_to()` doesn't seem
-			 * to help either.
-			 */
-
-			'root site cron requests are not redirected to Central' => array(
-				'wordcamp.test',
-				'/wp-cron.php',
-				false,
-			),
-
-			'root site rest requests are not redirected to Central' => array(
-				'wordcamp.test',
-				'/wp-json',
-				false,
-			),
-
-			'domain redirect to central removes request uri' => array(
-				'bg.wordcamp.test',
-				'/schedule/',
-				'https://central.wordcamp.test',
-			),
-
-			'domain redirect elsewhere includes request uri' => array(
-				'fr.2014.montreal.wordcamp.test',
-				'/schedule/',
-				'https://2014-fr.montreal.wordcamp.test/schedule/',
-			),
-
-			'external domain redirects to central' => array(
-				'wordcampsf.org',
-				'/schedule/',
-				'https://sf.wordcamp.test/schedule/',
-			),
-
-			'unknown domain should not redirect' => array(
-				'narnia.wordcamp.test',
-				'/',
 				false,
 			),
 		);

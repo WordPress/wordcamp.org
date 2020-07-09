@@ -1,7 +1,7 @@
 <?php
 
 namespace WordCamp\Sunrise;
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 
 /*
@@ -54,6 +54,55 @@ const PATTERN_CITY_SLASH_YEAR_REQUEST_URI_WITH_DUPLICATE_DATE = '
 ';
 
 
+/*
+ * Allow legacy CLI scripts in local dev environments to override the server hostname.
+ *
+ * This makes it possible to run bin scripts in local environments that use different domain names (e.g., wordcamp.dev)
+ * without having to swap the config values back and and forth.
+ */
+if ( 'cli' === php_sapi_name() && defined( 'CLI_HOSTNAME_OVERRIDE' ) ) {
+	$_SERVER['HTTP_HOST'] = str_replace( 'wordcamp.org', CLI_HOSTNAME_OVERRIDE, $_SERVER['HTTP_HOST'] );
+}
+
+// Redirecting would interfere with bin scripts, unit tests, etc.
+if ( php_sapi_name() !== 'cli' ) {
+	main();
+}
+
+
+/**
+ * Preempt `ms_load_current_site_and_network()` in order to set the correct site.
+ */
+function main() {
+	list(
+		'domain' => $domain,
+		'path'   => $path
+	) = guess_requested_domain_path();
+
+	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_duplicate_year_permalinks_to_post_slug' );
+
+	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
+
+	if ( ! $redirect ) {
+		$redirect = get_city_slash_year_url( $domain, $_SERVER['REQUEST_URI'] );
+	}
+
+	if ( ! $redirect ) {
+		$redirect = unsubdomactories_redirects( $domain, $_SERVER['REQUEST_URI'] );
+	}
+
+	if ( ! $redirect ) {
+		$redirect = get_canonical_year_url( $domain, $path );
+	}
+
+	if ( ! $redirect ) {
+		return;
+	}
+
+	header( 'Location: ' . $redirect, true, 301 );
+	die();
+}
+
 /**
  * Get the TLD for the current environment.
  *
@@ -61,6 +110,141 @@ const PATTERN_CITY_SLASH_YEAR_REQUEST_URI_WITH_DUPLICATE_DATE = '
  */
 function get_top_level_domain() {
 	return 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
+}
+
+/**
+ * Parse the `$wpdb->blogs` `domain` and `path` out of the requested URL.
+ *
+ * This is only an educated guess, and cannot work in all cases (e.g., `central.wordcamp.org/2020` (year archive
+ * page). It should only be used in situations where WP functions/globals aren't available yet, and should be
+ * verified in whatever context you use it, e.g., with a database query. That's not done here because it wouldn't
+ * be performant, and this is good enough to short-circuit the need for that in most situations.
+ *
+ * @return array
+ */
+function guess_requested_domain_path() {
+	$request_path = trailingslashit( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) );
+
+	$is_slash_year_site = preg_match(
+		PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH,
+		$_SERVER['HTTP_HOST'] . $request_path,
+		$matches
+	);
+
+	$domain    = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
+	$site_path = $is_slash_year_site ? $matches[4] : '/';
+
+	return array(
+		'domain' => $domain,
+		'path'   => $site_path,
+	);
+}
+
+/**
+ * Get redirect URLs for root site requests and for hardcoded redirects.
+ *
+ * @todo Split this into two functions because these aren't related to each other.
+ *
+ * @param string $domain
+ * @param string $request_uri
+ *
+ * @return string
+ */
+function site_redirects( $domain, $request_uri ) {
+	$tld              = get_top_level_domain();
+	$domain_redirects = get_domain_redirects();
+	$redirect         = false;
+
+	// If it's a front end request to the root site, redirect to Central.
+	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
+	if ( in_array( $domain, array( "wordcamp.$tld", "buddycamp.$tld" ), true )
+		 && ! is_network_admin()
+		 && ! is_admin()
+		 && ! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $request_uri )
+	) {
+		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $request_uri );
+
+	} elseif ( isset( $domain_redirects[ $domain ] ) ) {
+		$new_url = $domain_redirects[ $domain ];
+
+		// Central has a different content structure than other WordCamp sites, so don't include the request URI
+		// if that's where we're going.
+		if ( "central.wordcamp.$tld" !== $new_url ) {
+			$new_url .= $request_uri;
+		}
+
+		$redirect = "https://$new_url";
+	}
+
+	return $redirect;
+}
+
+/**
+ * Centralized place to define domain-based redirects.
+ *
+ * Used by sunrise.php and WordCamp_Lets_Encrypt_Helper::rest_callback_domains.
+ *
+ * @return array
+ */
+function get_domain_redirects() {
+	$tld     = get_top_level_domain();
+	$central = "central.wordcamp.$tld";
+
+	return array(
+		// Central redirects.
+		"bg.wordcamp.$tld"   => $central,
+		"utah.wordcamp.$tld" => $central,
+
+		// Language redirects.
+		"ca.2014.mallorca.wordcamp.$tld" => "2014-ca.mallorca.wordcamp.$tld",
+		"de.2014.mallorca.wordcamp.$tld" => "2014-de.mallorca.wordcamp.$tld",
+		"es.2014.mallorca.wordcamp.$tld" => "2014-es.mallorca.wordcamp.$tld",
+		"fr.2011.montreal.wordcamp.$tld" => "2011-fr.montreal.wordcamp.$tld",
+		"fr.2012.montreal.wordcamp.$tld" => "2012-fr.montreal.wordcamp.$tld",
+		"fr.2013.montreal.wordcamp.$tld" => "2013-fr.montreal.wordcamp.$tld",
+		"fr.2014.montreal.wordcamp.$tld" => "2014-fr.montreal.wordcamp.$tld",
+		"2014.fr.montreal.wordcamp.$tld" => "2014-fr.montreal.wordcamp.$tld",
+		"fr.2013.ottawa.wordcamp.$tld"   => "2013-fr.ottawa.wordcamp.$tld",
+
+		// Year & name change redirects.
+		"2006.wordcamp.$tld"                      => "sf.wordcamp.$tld/2006",
+		"2007.wordcamp.$tld"                      => "sf.wordcamp.$tld/2007",
+		"2012.torontodev.wordcamp.$tld"           => "2012-dev.toronto.wordcamp.$tld",
+		"2013.windsor.wordcamp.$tld"              => "2013.lancaster.wordcamp.$tld",
+		"2014.lima.wordcamp.$tld"                 => "2014.peru.wordcamp.$tld",
+		"2014.london.wordcamp.$tld"               => "2015.london.wordcamp.$tld",
+		"2016.pune.wordcamp.$tld"                 => "2017.pune.wordcamp.$tld",
+		"2016.bristol.wordcamp.$tld"              => "2017.bristol.wordcamp.$tld",
+		"2017.cusco.wordcamp.$tld"                => "2018.cusco.wordcamp.$tld",
+		"2017.dayton.wordcamp.$tld"               => "2018.dayton.wordcamp.$tld",
+		"2017.niagara.wordcamp.$tld"              => "2018.niagara.wordcamp.$tld",
+		"2017.saintpetersburg.wordcamp.$tld"      => "2018.saintpetersburg.wordcamp.$tld",
+		"2017.zilina.wordcamp.$tld"               => "2018.zilina.wordcamp.$tld",
+		"2018.wurzburg.wordcamp.$tld"             => "2018.wuerzburg.wordcamp.$tld",
+		"2019.lisbon.wordcamp.$tld"               => "2019.lisboa.wordcamp.$tld",
+		"2018.kolkata.wordcamp.$tld"              => "2019.kolkata.wordcamp.$tld",
+		"2018.montclair.wordcamp.$tld"            => "2019.montclair.wordcamp.$tld",
+		"2018.pune.wordcamp.$tld"                 => "2019.pune.wordcamp.$tld",
+		"2018.dc.wordcamp.$tld"                   => "2019.dc.wordcamp.$tld",
+		"2019.sevilla.wordcamp.$tld"              => "2019-developers.sevilla.wordcamp.$tld",
+		"2019.telaviv.wordcamp.$tld"              => "2020.telaviv.wordcamp.$tld",
+		"2020-barcelona.publishers.wordcamp.$tld" => "2020.barcelona.wordcamp.$tld",
+		"2020.losangeles.wordcamp.$tld"           => "2020.la.wordcamp.$tld",
+		"2020.bucharest.wordcamp.$tld"            => "2021.bucharest.wordcamp.$tld",
+
+		/*
+		 * External domains.
+		 *
+		 * Unlike the others, these should keep the actual TLD in the array key, because they don't exist in the database.
+		 */
+		'wordcampsf.org' => "sf.wordcamp.$tld",
+		'wordcampsf.com' => "sf.wordcamp.$tld",
+
+		// Temporary redirects.
+		"2018.philly.wordcamp.$tld" => "2018.philadelphia.wordcamp.$tld", // TODO Eventually rename `philadelphia` sites to `philly` for consistency across years, then setup permanent redirects to `philly`.
+		"2019.philly.wordcamp.$tld" => "2019.philadelphia.wordcamp.$tld",
+		"philly.wordcamp.$tld"      => "2019.philadelphia.wordcamp.$tld",
+	);
 }
 
 /**
@@ -95,7 +279,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		return false;
 	}
 
-	return sprintf( "https://%s.wordcamp.%s/%s%s", $city, $tld, $year, $request_uri );
+	return sprintf( 'https://%s.wordcamp.%s/%s%s', $city, $tld, $year, $request_uri );
 }
 
 /**
@@ -111,7 +295,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'russia',  'london', 'austin', 'tokyo', 'portland', 'philly', 'sofia', 'miami',
+		'russia', 'london', 'austin', 'tokyo', 'portland', 'philly', 'sofia', 'miami',
 		'montreal', 'newyork', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
 		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
 		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla',
@@ -136,7 +320,7 @@ function unsubdomactories_redirects( $domain, $request_uri ) {
 
 	$tld = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
 
-	// Return if already on a 4th-level domain (e.g., 2020.narnia.wordcamp.org)
+	// Return if already on a 4th-level domain (e.g., 2020.narnia.wordcamp.org).
 	if ( ! preg_match( "#^([a-z0-9-]+)\.wordcamp\.$tld$#i", $domain, $matches ) ) {
 		return false;
 	}
@@ -159,6 +343,88 @@ function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_to = sprintf( "https://%s.%s.wordcamp.$tld%s", $year, $city, $path );
 
 	return $redirect_to;
+}
+
+/**
+ * Get the URL of the newest site for a given city.
+ *
+ * For example, `seattle.wordcamp.org` -> `seattle.wordcamp.org/2020`.
+ *
+ * Redirecting the city root to this URL makes it easier for attendees to find the correct site.
+ *
+ * @param string $domain
+ * @param string $path
+ *
+ * @return string|false
+ */
+function get_canonical_year_url( $domain, $path ) {
+	global $wpdb;
+
+	$tld       = get_top_level_domain();
+	$cache_key = 'current_blog_' . $domain;
+
+	/**
+	 * Read blog details from the cache key and set one for the current
+	 * domain if exists to prevent lookups by core later.
+	 */
+	$current_blog = wp_cache_get( $cache_key, 'site-options' );
+
+	if ( $current_blog ) {
+		return false;
+	}
+
+	$current_blog = get_blog_details(
+		array(
+			'domain' => $domain,
+			'path'   => $path,
+		),
+		false
+	);
+
+	if ( $current_blog ) {
+		wp_cache_set( $cache_key, $current_blog, 'site-options' );
+
+		return false;
+	}
+
+	// Return early if not a third- or fourth-level domain, e.g., city.wordcamp.org, year.city.wordcamp.org.
+	$domain_parts = explode( '.', $domain );
+
+	if ( 2 >= count( $domain_parts ) ) {
+		return false;
+	}
+
+	// Default clause for retrieving the most recent year for a city.
+	$like = "%.{$domain}";
+
+	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
+	switch ( $domain ) {
+		case "europe.wordcamp.$tld":
+			if ( time() <= strtotime( '2020-06-07' ) ) {
+				return "https://europe.wordcamp.$tld/2020/";
+			}
+			break;
+
+		case "us.wordcamp.$tld":
+			if ( time() <= strtotime( '2019-11-30' ) ) {
+				return "https://2019.us.wordcamp.$tld/";
+			}
+			break;
+	}
+
+	$latest = $wpdb->get_row( $wpdb->prepare( "
+		SELECT `domain`, `path`
+		FROM $wpdb->blogs
+		WHERE
+			domain = %s OR -- Match city/year format.
+			domain LIKE %s -- Match year.city format.
+		ORDER BY path DESC, domain DESC
+		LIMIT 1;",
+		$domain,
+		$like
+	) );
+
+	return $latest ? 'https://' . $latest->domain . $latest->path : false;
 }
 
 /**
@@ -227,267 +493,4 @@ function get_post_slug_url_without_duplicate_dates( $is_404, $permalink_structur
 		$path,
 		$matches[3]
 	);
-}
-
-/**
- * Get the URL of the newest site for a given city.
- *
- * e.g., seattle.wordcamp.org -> seattle.wordcamp.org/2020
- *
- * Redirecting the city root to this URL makes it easier for attendees to find the correct site.
- *
- * @param string $domain
- * @param string $path
- *
- * @return string|false
- */
-function get_canonical_year_url( $domain, $path ) {
-	global $wpdb;
-
-	$tld       = get_top_level_domain();
-	$cache_key = 'current_blog_' . $domain;
-
-	/**
-	 * Read blog details from the cache key and set one for the current
-	 * domain if exists to prevent lookups by core later.
-	 */
-	$current_blog = wp_cache_get( $cache_key, 'site-options' );
-
-	if ( $current_blog ) {
-		return false;
-	}
-
-	$current_blog = get_blog_details(
-		array(
-			'domain' => $domain,
-			'path'   => $path
-		),
-		false
-	);
-
-	if ( $current_blog ) {
-		wp_cache_set( $cache_key, $current_blog, 'site-options' );
-
-		return false;
-	}
-
-	// Return early if not a third- or fourth-level domain, e.g., city.wordcamp.org, year.city.wordcamp.org.
-	$domain_parts = explode( '.', $domain );
-
-	if ( 2 >= count( $domain_parts ) ) {
-		return false;
-	}
-
-	// Default clause for retrieving the most recent year for a city.
-	$like = "%.{$domain}";
-
-	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
-	switch ( $domain ) {
-		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2020-06-07' ) ) {
-				return "https://europe.wordcamp.$tld/2020/";
-			}
-			break;
-
-		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2019-11-30' ) ) {
-				return "https://2019.us.wordcamp.$tld/";
-			}
-			break;
-	}
-
-	$latest = $wpdb->get_row( $wpdb->prepare( "
-		SELECT `domain`, `path`
-		FROM $wpdb->blogs
-		WHERE
-			domain = %s OR -- Match city/year format.
-			domain LIKE %s -- Match year.city format.
-		ORDER BY path DESC, domain DESC
-		LIMIT 1;",
-		$domain,
-		$like
-	) );
-
-	return $latest ? 'https://' . $latest->domain . $latest->path : false;
-}
-
-/**
- * Centralized place to define domain-based redirects.
- *
- * Used by sunrise.php and WordCamp_Lets_Encrypt_Helper::rest_callback_domains.
- *
- * @return array
- */
-function get_domain_redirects() {
-	$tld     = get_top_level_domain();
-	$central = "central.wordcamp.$tld";
-
-	return array(
-		// Central redirects.
-		"bg.wordcamp.$tld"                        => $central,
-		"utah.wordcamp.$tld"                      => $central,
-
-		// Language redirects.
-		"ca.2014.mallorca.wordcamp.$tld"          => "2014-ca.mallorca.wordcamp.$tld",
-		"de.2014.mallorca.wordcamp.$tld"          => "2014-de.mallorca.wordcamp.$tld",
-		"es.2014.mallorca.wordcamp.$tld"          => "2014-es.mallorca.wordcamp.$tld",
-		"fr.2011.montreal.wordcamp.$tld"          => "2011-fr.montreal.wordcamp.$tld",
-		"fr.2012.montreal.wordcamp.$tld"          => "2012-fr.montreal.wordcamp.$tld",
-		"fr.2013.montreal.wordcamp.$tld"          => "2013-fr.montreal.wordcamp.$tld",
-		"fr.2014.montreal.wordcamp.$tld"          => "2014-fr.montreal.wordcamp.$tld",
-		"2014.fr.montreal.wordcamp.$tld"          => "2014-fr.montreal.wordcamp.$tld",
-		"fr.2013.ottawa.wordcamp.$tld"            => "2013-fr.ottawa.wordcamp.$tld",
-
-		// Year & name change redirects.
-		"2006.wordcamp.$tld"                      => "sf.wordcamp.$tld/2006",
-		"2007.wordcamp.$tld"                      => "sf.wordcamp.$tld/2007",
-		"2012.torontodev.wordcamp.$tld"           => "2012-dev.toronto.wordcamp.$tld",
-		"2013.windsor.wordcamp.$tld"              => "2013.lancaster.wordcamp.$tld",
-		"2014.lima.wordcamp.$tld"                 => "2014.peru.wordcamp.$tld",
-		"2014.london.wordcamp.$tld"               => "2015.london.wordcamp.$tld",
-		"2016.pune.wordcamp.$tld"                 => "2017.pune.wordcamp.$tld",
-		"2016.bristol.wordcamp.$tld"              => "2017.bristol.wordcamp.$tld",
-		"2017.cusco.wordcamp.$tld"                => "2018.cusco.wordcamp.$tld",
-		"2017.dayton.wordcamp.$tld"               => "2018.dayton.wordcamp.$tld",
-		"2017.niagara.wordcamp.$tld"              => "2018.niagara.wordcamp.$tld",
-		"2017.saintpetersburg.wordcamp.$tld"      => "2018.saintpetersburg.wordcamp.$tld",
-		"2017.zilina.wordcamp.$tld"               => "2018.zilina.wordcamp.$tld",
-		"2018.wurzburg.wordcamp.$tld"             => "2018.wuerzburg.wordcamp.$tld",
-		"2019.lisbon.wordcamp.$tld"               => "2019.lisboa.wordcamp.$tld",
-		"2018.kolkata.wordcamp.$tld"              => "2019.kolkata.wordcamp.$tld",
-		"2018.montclair.wordcamp.$tld"            => "2019.montclair.wordcamp.$tld",
-		"2018.pune.wordcamp.$tld"                 => "2019.pune.wordcamp.$tld",
-		"2018.dc.wordcamp.$tld"                   => "2019.dc.wordcamp.$tld",
-		"2019.sevilla.wordcamp.$tld"              => "2019-developers.sevilla.wordcamp.$tld",
-		"2019.telaviv.wordcamp.$tld"              => "2020.telaviv.wordcamp.$tld",
-		"2020-barcelona.publishers.wordcamp.$tld" => "2020.barcelona.wordcamp.$tld",
-		"2020.losangeles.wordcamp.$tld"           => "2020.la.wordcamp.$tld",
-		"2020.bucharest.wordcamp.$tld"            => "2021.bucharest.wordcamp.$tld",
-
-		/*
-		 * External domains.
-		 *
-		 * Unlike the others, these should keep the actual TLD in the array key, because they don't exist in the database.
-		 */
-		"wordcampsf.org"                          => "sf.wordcamp.$tld",
-		"wordcampsf.com"                          => "sf.wordcamp.$tld",
-
-		// Temporary redirects.
-		"2018.philly.wordcamp.$tld"               => "2018.philadelphia.wordcamp.$tld", // TODO Eventually rename `philadelphia` sites to `philly` for consistency across years, then setup permanent redirects to `philly`.
-		"2019.philly.wordcamp.$tld"               => "2019.philadelphia.wordcamp.$tld",
-		"philly.wordcamp.$tld"                    => "2019.philadelphia.wordcamp.$tld",
-	);
-}
-
-/**
- * Get redirect URLs for root site requests and for hardcoded redirects.
- *
- * @todo Split this into two functions because these aren't related to each other.
- *
- * @param string $domain
- * @param string $request_uri
- *
- * @return string
- */
-function site_redirects( $domain, $request_uri ) {
-	$tld              = get_top_level_domain();
-	$domain_redirects = get_domain_redirects();
-	$redirect         = false;
-
-	// If it's a front end request to the root site, redirect to Central.
-	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
-	if ( in_array( $domain, array( "wordcamp.$tld", "buddycamp.$tld" ), true )
-		 && ! is_network_admin()
-		 && ! is_admin()
-		 && ! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $request_uri )
-	) {
-		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $request_uri );
-
-	} elseif ( isset( $domain_redirects[ $domain ] ) ) {
-		$new_url = $domain_redirects[ $domain ];
-
-		// Central has a different content structure than other WordCamp sites, so don't include the request URI
-		// if that's where we're going.
-		if ( "central.wordcamp.$tld" !== $new_url ) {
-			$new_url .= $request_uri;
-		}
-
-		$redirect = "https://$new_url";
-	}
-
-	return $redirect;
-}
-
-/**
- * Parse the `$wpdb->blogs` `domain` and `path` out of the requested URL.
- *
- * This is only an educated guess, and cannot work in all cases (e.g., `central.wordcamp.org/2020` (year archive
- * page). It should only be used in situations where WP functions/globals aren't available yet, and should be
- * verified in whatever context you use it, e.g., with a database query. That's not done here because it wouldn't
- * be performant, and this is good enough to short-circuit the need for that in most situations.
- *
- * @return array
- */
-function guess_requested_domain_path() {
-	$request_path = trailingslashit( parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH ) );
-
-	$is_slash_year_site = preg_match(
-		PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH,
-		$_SERVER['HTTP_HOST'] . $request_path,
-		$matches
-	);
-
-	$domain = filter_var( $_SERVER['HTTP_HOST'], FILTER_VALIDATE_DOMAIN );
-	$site_path = $is_slash_year_site ? $matches[4] : '/';
-
-	return array( 'domain' => $domain, 'path' => $site_path );
-}
-
-/**
- * Preempt `ms_load_current_site_and_network()` in order to set the correct site.
- */
-function main() {
-	list(
-		'domain' => $domain,
-		'path'   => $path
-	) = guess_requested_domain_path();
-
-	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_duplicate_year_permalinks_to_post_slug' );
-
-	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
-
-	if ( ! $redirect ) {
-		$redirect = get_city_slash_year_url( $domain, $_SERVER['REQUEST_URI'] );
-	}
-
-	if ( ! $redirect ) {
-		$redirect = unsubdomactories_redirects( $domain, $_SERVER['REQUEST_URI'] );
-	}
-
-	if ( ! $redirect ) {
-		$redirect = get_canonical_year_url( $domain, $path );
-	}
-
-	if ( ! $redirect ) {
-		return;
-	}
-
-	header( 'Location: ' . $redirect, true, 301 );
-	die();
-}
-
-
-// Redirecting would interfere with bin scripts, unit tests, etc.
-if ( php_sapi_name() !== 'cli' ) {
-	main();
-}
-
-/*
- * Allow CLI scripts in local dev environments to override the server hostname.
- *
- * This makes it possible to run bin scripts in local environments that use different domain names (e.g., wordcamp.dev)
- * without having to swap the config values back and and forth.
- */
-if ( 'cli' === php_sapi_name() && defined( 'CLI_HOSTNAME_OVERRIDE' ) ) {
-	$_SERVER['HTTP_HOST'] = str_replace( 'wordcamp.org', CLI_HOSTNAME_OVERRIDE, $_SERVER['HTTP_HOST'] );
 }

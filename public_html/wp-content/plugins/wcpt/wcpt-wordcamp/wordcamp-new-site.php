@@ -710,6 +710,7 @@ class WordCamp_New_Site {
 
 			array(
 				'title'   => __( 'Call for Sponsors', 'wordcamporg' ),
+				// Update the slug in `sponsors.php` if the slug below ever changes.
 				'content' => $this->get_stub_content( 'post', 'call-for-sponsors' ),
 				'status'  => 'draft',
 				'type'    => 'post',

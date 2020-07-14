@@ -3,6 +3,8 @@
 namespace WordCamp\Sunrise;
 defined( 'WPINC' ) || die();
 
+// phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url -- It's not available this early.
+
 
 /*
  * Matches `2020-foo.narnia.wordcamp.org/`, with or without additional `REQUEST_URI` params.
@@ -64,6 +66,19 @@ if ( 'cli' === php_sapi_name() && defined( 'CLI_HOSTNAME_OVERRIDE' ) ) {
 	$_SERVER['HTTP_HOST'] = str_replace( 'wordcamp.org', CLI_HOSTNAME_OVERRIDE, $_SERVER['HTTP_HOST'] );
 }
 
+/*
+ * This must be enabled for `get_corrected_root_relative_url()` to work for images. If we ever want to disable it,
+ * we'll need to come up with another solution for that, (e.g., nginx rewrite rules).
+ *
+ * This needs to be applied outside of `main()` so that it takes effect in CLI environments, for consistency.
+ */
+add_filter(
+	'pre_site_option_ms_files_rewriting',
+	function() {
+		return '1';
+	}
+);
+
 // Redirecting would interfere with bin scripts, unit tests, etc.
 if ( php_sapi_name() !== 'cli' ) {
 	main();
@@ -81,7 +96,8 @@ function main() {
 
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_duplicate_year_permalinks_to_post_slug' );
 
-	$redirect = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
+	$status_code = 301;
+	$redirect    = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
 
 	if ( ! $redirect ) {
 		$redirect = get_city_slash_year_url( $domain, $_SERVER['REQUEST_URI'] );
@@ -91,6 +107,24 @@ function main() {
 		$redirect = unsubdomactories_redirects( $domain, $_SERVER['REQUEST_URI'] );
 	}
 
+	/*
+	 * This has to run before `get_canonical_year_url()`, because that function will redirect these requests to
+	 * the latest site instead of the intended one, and would strip out the request URI.
+	 */
+	if ( ! $redirect ) {
+		$redirect = get_corrected_root_relative_url( $domain, $path, $_SERVER['REQUEST_URI'], $_SERVER['HTTP_REFERER'] ?? '' );
+
+		if ( $redirect ) {
+			/*
+			 * This isn't a permanent redirect, because the value changes based on the referrer. `europe.wordcamp.org/2019` and
+			 * `europe.wordcamp.org/2020` might both have `/tickets` links that would both resolve to
+			 * `europe.wordcamp.org/tickets`, but the request will be routed to a different site each time, based on the referrer.
+			 */
+			$status_code = 302;
+		}
+	}
+
+	// Do this one last, because it sometimes executes a database query.
 	if ( ! $redirect ) {
 		$redirect = get_canonical_year_url( $domain, $path );
 	}
@@ -99,7 +133,7 @@ function main() {
 		return;
 	}
 
-	header( 'Location: ' . $redirect, true, 301 );
+	header( 'Location: ' . $redirect, true, $status_code );
 	die();
 }
 
@@ -148,7 +182,7 @@ function guess_requested_domain_path() {
  * @param string $domain
  * @param string $request_uri
  *
- * @return string
+ * @return string|false
  */
 function site_redirects( $domain, $request_uri ) {
 	$tld              = get_top_level_domain();
@@ -267,7 +301,7 @@ function get_domain_redirects() {
  * @param string $domain
  * @param string $request_uri
  *
- * @return string
+ * @return string|false
  */
 function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
@@ -353,6 +387,104 @@ function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_to = sprintf( "https://%s.%s.wordcamp.$tld%s", $year, $city, $path );
 
 	return $redirect_to;
+}
+
+/**
+ * Get the intended URL of root-relative links created before the 2020 URL migration.
+ *
+ * With the old `{year}.{city}.wordcamp.org` URL format, organizers could create links like `/tickets` inside
+ * posts, menu items, widgets, custom CSS, etc. Those would correctly resolve to
+ * `{year}.{city}.wordcamp.org/tickets`, because the site was a _subdomain_ of their `{city}.wordcamp.org` domain.
+ * Now that those sites have been migrated to _subdirectories_,  those root-relative links resolve to
+ * `{city}.wordcamp.org/tickets`, which doesn't exist. We need to redirect those requests to
+ * `{city}.wordcamp.org/{year}/tickets`.
+ *
+ * Changing the actual content in the database is complex and error-prone, so it's easier to catch the requests
+ * here and redirect them. The HTTP referer gives us the information we need to know which site to redirect to.
+ *
+ * Note that this won't work for requests for CSS and JS files, since they don't pass through WP. There shouldn't
+ * be any instances of that, though, because those links should all be generated programatically. This _does_ work
+ * images, because Nginx routes those requests through `ms-files`. This will stop working for images if we ever
+ * disable `ms_files_rewriting`.
+ *
+ * This doesn't handle the edge case of a site like `europe.wordcamp.org/2020` linking to `europe.wordcamp.org`
+ * and intending that to redirect to the latest/canonical year. That's should be rare, though.
+ *
+ * For an end-to-end test, run:
+ * `curl --silent --location --head 'https://vancouver.wordcamp.test/schedule/' -H 'Referer: https://vancouver.wordcamp.test/2016/' |grep location`
+ * That should output: `https://vancouver.wordcamp.test/2016/schedule`.
+ *
+ * To see some examples of root-relative links in the database, run these commands:
+ *
+ * - Posts: `wp db search 'href="/' $( wp db tables '*_posts'    --all-tables --format=list ) --all-tables --table_column_once`
+ * - CSS:   `wp db search "url('/"  $( wp db tables '*_posts'    --all-tables --format=list ) --all-tables --table_column_once`
+ * - Menus: `wp db search '^/'      $( wp db tables '*_postmeta' --all-tables --format=list ) --all-tables --table_column_once --regex`
+ *
+ * Those contain some false-positives, and there are also additional cases in options, widgets, CPT postmeta, etc
+ * that won't be found by those queries. It should give you a good idea, though.
+ *
+ * @param string $domain
+ * @param string $path
+ * @param string $request_uri
+ * @param string $referer
+ *
+ * @return string|false
+ */
+function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer ) {
+	// Only requests to the root `{city}.wordcamp.org` sites are potentially broken.
+	if ( preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path ) ) {
+		return false;
+	}
+
+	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $path ) ) {
+		return false;
+	}
+
+	if ( '/' !== $path ) {
+		return false;
+	}
+
+	// Only requests from `{city}.wordcamp.org/{year}` sites are potentially broken.
+	$referer_parts = parse_url( $referer );
+
+	if ( ! isset( $referer_parts['host'], $referer_parts['path'] ) ) {
+		return false;
+	}
+
+	$modified_referer = $referer_parts['host'] . $referer_parts['path'];
+
+	/*
+	 * Root-relative links would only be to the same domain. If a different WordCamp site was linking to this one,
+	 * it would always contain the full host, path, etc.
+	 */
+	if ( $domain !== $referer_parts['host'] ) {
+		return false;
+	}
+
+	if ( ! preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $modified_referer, $referer_matches ) ) {
+		return false;
+	}
+
+	/*
+	 * The situation only affects sites that were created before the 2020 URL migration. This check isn't precise,
+	 * but it's close enough, and can be made more robust in the future if needed.
+	 */
+	$referer_site_path = $referer_matches[4];
+
+	if ( (int) filter_var( $referer_site_path, FILTER_SANITIZE_NUMBER_INT ) >= 2021 ) {
+		return false;
+	}
+
+	$is_file = false !== stripos( $request_uri, '/files/' ) && false !== stripos( basename( $request_uri ), '.' );
+
+	$corrected_url = sprintf(
+		'https://%s%s%s',
+		untrailingslashit( $referer_parts['host'] ),
+		untrailingslashit( $referer_site_path ),
+		$is_file ? $request_uri : trailingslashit( $request_uri )
+	);
+
+	return $corrected_url;
 }
 
 /**

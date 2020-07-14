@@ -17,7 +17,7 @@ use WordCamp\Tests\Database_TestCase;
 
 use function WordCamp\Sunrise\{
 	get_canonical_year_url, get_post_slug_url_without_duplicate_dates, guess_requested_domain_path,
-	get_city_slash_year_url, site_redirects, unsubdomactories_redirects,
+	get_corrected_root_relative_url, get_city_slash_year_url, site_redirects, unsubdomactories_redirects,
 };
 
 defined( 'WPINC' ) || die();
@@ -373,6 +373,137 @@ class Test_Sunrise extends Database_TestCase {
 				'vancouver.wordcamp.test',
 				'/2020/schedule/',
 				'https://2020.vancouver.wordcamp.test/schedule/',
+			),
+		);
+	}
+
+	/**
+	 * @covers ::get_corrected_root_relative_url
+	 *
+	 * @dataProvider data_get_corrected_root_relative_url
+	 */
+	public function test_get_corrected_root_relative_url( $domain, $path, $request_uri, $referer, $expected ) {
+		$actual = get_corrected_root_relative_url( $domain, $path, $request_uri, $referer );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_corrected_root_relative_url().
+	 *
+	 * @return array
+	 */
+	public function data_get_corrected_root_relative_url() {
+		return array(
+
+			/*
+			 * Negative cases.
+			 */
+			"root site isn't affected" => array(
+				'wordcamp.test',
+				'/',
+				'/schedule',
+				'https://vancouver.wordcamp.test/2016/',
+				false,
+			),
+
+			"3rd-level domains that aren't camp sites aren't affected - external referral" => array(
+				'central.wordcamp.test',
+				'/',
+				'/schedule',
+				'https://vancouver.wordcamp.test/2016/schedule/',
+				false,
+			),
+
+			"3rd-level domains that aren't camp sites aren't affected - self referral" => array(
+				'central.wordcamp.test',
+				'/',
+				'/schedule',
+				'https://central.wordcamp.test/about/',
+				false,
+			),
+
+			"year.city sites aren't impacted" => array(
+				'2018.seattle.wordcamp.test',
+				'/',
+				'/schedule',
+				'https://seattle.wordcamp.test/2018/',
+				false,
+			),
+
+			"city/year sites aren't impacted" => array(
+				'seattle.wordcamp.test',
+				'/2018/',
+				'/2018/schedule/',
+				'https://seattle.wordcamp.test/2018/',
+				false,
+			),
+
+			'no referrer' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'/tickets',
+				'',
+				false,
+			),
+
+			'3rd-party referrer' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'/tickets',
+				'https://example.org/foo.html',
+				false,
+			),
+
+			"sites after the 2020 URL migration aren't impacted" => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'/tickets/',
+				'https://vancouver.wordcamp.test/2021/',
+				false,
+			),
+
+			/*
+			 * Positive cases.
+			 */
+			'homepage referred from camp site' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'/',
+				'https://vancouver.wordcamp.test/2016/tickets/',
+				'https://vancouver.wordcamp.test/2016/',
+			),
+
+			'subpage referred from camp site' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'/tickets',
+				'https://vancouver.wordcamp.test/2016/',
+				'https://vancouver.wordcamp.test/2016/tickets/',
+			),
+
+			'referred from subpage on camp site' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'/tickets',
+				'https://vancouver.wordcamp.test/2016/news/',
+				'https://vancouver.wordcamp.test/2016/tickets/',
+			),
+
+			'referred from subpage on camp site with extra site identifier' => array(
+				'vancouver.wordcamp.test',
+				'/',
+				'/tickets',
+				'https://vancouver.wordcamp.test/2018-developers/news/',
+				'https://vancouver.wordcamp.test/2018-developers/tickets/',
+			),
+
+			'image referred from camp site' => array(
+				'london.wordcamp.test',
+				'/',
+				'/files/2015/03/wapuunk.png',
+				'https://london.wordcamp.test/2015/wapuunk-wallpapers-and-more/',
+				'https://london.wordcamp.test/2015/files/2015/03/wapuunk.png',
 			),
 		);
 	}

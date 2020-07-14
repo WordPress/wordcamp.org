@@ -228,9 +228,16 @@ function get_domain_redirects() {
 		"2018.dc.wordcamp.$tld"                   => "2019.dc.wordcamp.$tld",
 		"2019.sevilla.wordcamp.$tld"              => "2019-developers.sevilla.wordcamp.$tld",
 		"2019.telaviv.wordcamp.$tld"              => "2020.telaviv.wordcamp.$tld",
-		"2020-barcelona.publishers.wordcamp.$tld" => "2020.barcelona.wordcamp.$tld",
+		"2020-barcelona.publishers.wordcamp.$tld" => "barcelona.wordcamp.$tld/2020",
 		"2020.losangeles.wordcamp.$tld"           => "2020.la.wordcamp.$tld",
 		"2020.bucharest.wordcamp.$tld"            => "2021.bucharest.wordcamp.$tld",
+		"philly.wordcamp.$tld"                    => "philadelphia.wordcamp.$tld",
+		"2010.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2010",
+		"2011.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2011",
+		"2012.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2012",
+		"2014.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2014",
+		"2015.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2015",
+		"2017.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2017",
 
 		/*
 		 * External domains.
@@ -239,11 +246,6 @@ function get_domain_redirects() {
 		 */
 		'wordcampsf.org' => "sf.wordcamp.$tld",
 		'wordcampsf.com' => "sf.wordcamp.$tld",
-
-		// Temporary redirects.
-		"2018.philly.wordcamp.$tld" => "2018.philadelphia.wordcamp.$tld", // TODO Eventually rename `philadelphia` sites to `philly` for consistency across years, then setup permanent redirects to `philly`.
-		"2019.philly.wordcamp.$tld" => "2019.philadelphia.wordcamp.$tld",
-		"philly.wordcamp.$tld"      => "2019.philadelphia.wordcamp.$tld",
 	);
 }
 
@@ -264,7 +266,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
-		'geneve',
+		'barcelona', 'chicago', 'columbus', 'geneve', 'philly', 'philadelphia', 'publishers',
 		'athens', 'atlanta', 'austin', 'brighton', 'europe', 'nyc', 'newyork', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
 	);
@@ -296,16 +298,16 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'russia', 'london', 'tokyo', 'portland', 'philly', 'sofia', 'miami',
-		'montreal', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
+		'russia', 'london', 'tokyo', 'portland', 'sofia', 'miami',
+		'montreal', 'phoenix', 'slc', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
 		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
-		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla',
+		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'tampa', 'sevilla',
 		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
 		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'lisboa', 'kansai',
 		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
 		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
 		'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
-		'belohorizonte', 'lancasterpa', 'switzerland', 'romania', 'columbus', 'saratoga', 'fayetteville',
+		'belohorizonte', 'lancasterpa', 'switzerland', 'romania', 'saratoga', 'fayetteville',
 		'bournemouth', 'hanoi', 'saopaulo', 'cologne', 'louisville', 'mallorca', 'annarbor', 'manchester',
 		'laspenitas', 'israel', 'ventura', 'vancouver', 'peru', 'auckland', 'norrkoping', 'netherlands',
 		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee', 'lima',

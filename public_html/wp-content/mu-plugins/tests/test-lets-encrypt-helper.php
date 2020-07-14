@@ -113,7 +113,7 @@ class Test_Lets_Encrypt extends Database_TestCase {
 			$actual['seattle.wordcamp.test']
 		);
 
-		// Legacy domains for each city/year domain are added to the subarray.
+		// Legacy domains for each city/year site are added to the subarray.
 		$this->assertSame(
 			array(
 				'2016.vancouver.wordcamp.test',

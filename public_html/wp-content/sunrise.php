@@ -190,7 +190,7 @@ function get_domain_redirects() {
 	$tld     = get_top_level_domain();
 	$central = "central.wordcamp.$tld";
 
-	return array(
+	$redirects = array(
 		// Central redirects.
 		"bg.wordcamp.$tld"   => $central,
 		"utah.wordcamp.$tld" => $central,
@@ -247,6 +247,11 @@ function get_domain_redirects() {
 		'wordcampsf.org' => "sf.wordcamp.$tld",
 		'wordcampsf.com' => "sf.wordcamp.$tld",
 	);
+
+	// The array values are treated like a domain, and will be slashed by the caller.
+	array_walk( $redirects, 'untrailingslashit' );
+
+	return $redirects;
 }
 
 /**

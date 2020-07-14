@@ -264,7 +264,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
-		'athens', 'atlanta', 'brighton', 'europe', 'organizers', 'rhodeisland', 'sf',
+		'athens', 'atlanta', 'austin', 'brighton', 'europe', 'nyc', 'newyork', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
 	);
 
@@ -295,12 +295,12 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'russia', 'london', 'austin', 'tokyo', 'portland', 'philly', 'sofia', 'miami',
-		'montreal', 'newyork', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
+		'russia', 'london', 'tokyo', 'portland', 'philly', 'sofia', 'miami',
+		'montreal', 'phoenix', 'slc', 'chicago', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
 		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
 		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'barcelona', 'tampa', 'sevilla',
 		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
-		'baltimore', 'sydney', 'providence', 'nyc', 'dfw', 'copenhagen', 'lisboa', 'kansai',
+		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'lisboa', 'kansai',
 		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
 		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
 		'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',

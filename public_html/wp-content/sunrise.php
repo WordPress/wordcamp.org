@@ -264,6 +264,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
+		'geneve',
 		'athens', 'atlanta', 'austin', 'brighton', 'europe', 'nyc', 'newyork', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
 	);

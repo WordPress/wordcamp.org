@@ -476,7 +476,11 @@ class WordCamp_New_Site {
 		update_option( 'close_comments_days_old',      30 );
 		update_option( 'wccsp_settings',               $coming_soon_settings );
 
-		// Avoids URLs like `narnia.wordcamp.org/2020/2010/06/04/foo`. See `redirect_date_permalinks_to_post_slug()`.
+		/*
+		 * Avoids URLs like `narnia.wordcamp.org/2020/2010/06/04/foo`. See `redirect_date_permalinks_to_post_slug()`.
+		 *
+		 * If ths ever changes, the link in `stubs/page/sponsors.php may need to be updated.
+		 */
 		$wp_rewrite->set_permalink_structure( '/%postname%/' );
 		delete_option( 'rewrite_rules' ); // Delete because can't be flushed during `switch_to_blog()`.
 

@@ -16,7 +16,14 @@
 <h2>Interested in sponsoring WordCamp this year?</h2>
 <!-- /wp:heading -->
 
+<?php
+/*
+ * Update the slug in `get_stub_posts()` if the slug below ever changes.
+ *
+ * This can't use `get_permalink()`, because this file is executed in a `switch_to_blog()` context. `home_url()`
+ * works because we can assume the permastruct is just `%postname%`.
+ */
+?>
 <!-- wp:paragraph -->
-<?php // Update the slug in `get_stub_posts()` if the slug below ever changes. ?>
 <p>Check out our <a href="<?php echo home_url( '/call-for-sponsors/' ); ?>">Call for Sponsors</a> post for details on how you can help make this year's WordCamp the best it can be!</p>
 <!-- /wp:paragraph -->

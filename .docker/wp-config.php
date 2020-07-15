@@ -111,6 +111,8 @@ $trusted_deputies = array(
  */
 define( 'SLACK_ERROR_REPORT_URL',      '(Optional) you can configure slack and add your webhook url. Errors will be posted to this slack url' );
 define( 'WORDCAMP_LOGS_SLACK_CHANNEL', '(Optional) @your_slack_username' );
+define( 'WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL',   '(Optional) @your_slack_username' );
+define( 'WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL', '(Optional) @your_slack_username' );
 
 define( 'TWITTER_CONSUMER_KEY_WORDCAMP_CENTRAL',    '' );
 define( 'TWITTER_CONSUMER_SECRET_WORDCAMP_CENTRAL', '' );

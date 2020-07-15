@@ -168,22 +168,6 @@ function get_ignorelist() {
 		WP_PLUGIN_DIR . '/gutenberg/build/block-library/blocks/latest-posts.php' => array(
 			'array_column() expects parameter 1 to be array, string given',
 		),
-		WP_PLUGIN_DIR . '/jetpack/class.jetpack-gutenberg.php'                                => array(
-			'Undefined index: query',
-		),
-		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'                           => array(
-			'Undefined index: id',
-		),
-		WP_PLUGIN_DIR . '/jetpack/modules/comments/comments.php' => array(
-			"Trying to get property 'secret' of non-object",
-		),
-		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php'              => array(
-			'Undefined index: HTTP_REFERER',
-		),
-		WP_PLUGIN_DIR . '/jetpack/vendor/automattic/jetpack-sync/src/modules/class-posts.php' => array(
-			"Trying to get property 'post_type' of non-object",
-			'Undefined offset:',
-		),
 	);
 }
 
@@ -262,7 +246,7 @@ function update_error_record( $err_key, $data ) {
  */
 function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 ) {
 	if ( ! defined( 'WORDCAMP_ENVIRONMENT' )
-		|| ( 'production' !== WORDCAMP_ENVIRONMENT && ! defined( 'SANDBOX_SLACK_USERNAME' ) )
+		|| 'local' === WORDCAMP_ENVIRONMENT
 		|| ! is_readable( __DIR__ . '/includes/slack/send.php' )
 	) {
 		return;
@@ -277,6 +261,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$domain      = esc_url( get_site_url() );
 	$page_slug   = sanitize_text_field( untrailingslashit( $_SERVER['REQUEST_URI'] ) ) ?: '/';
 	$footer      = '';
+	$is_fatal_error = false;
 
 	if ( $occurrences > 0 ) {
 		$footer .= "Occurred *$occurrences time(s)* since last reported";
@@ -290,6 +275,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		case E_USER_ERROR:
 		default:
 			$color = '#ff0000'; // Red.
+			$is_fatal_error = true;
 			break;
 		case E_WARNING:
 		case E_CORE_WARNING:
@@ -342,8 +328,33 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$slack->add_attachment( $attachment );
 
 	if ( 'production' === WORDCAMP_ENVIRONMENT ) {
-		$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
+		$is_jetpack_error     = false !== stripos( $file, WP_PLUGIN_DIR . '/jetpack/' );
+		$is_gutenberg_error   = false !== stripos( $file, WP_PLUGIN_DIR . '/gutenberg/' );
+
+		// Send all Jetpack errors to the Jetpack team. Only send fatals to us.
+		if ( $is_jetpack_error ) {
+			$slack->send( WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL );
+
+			if ( $is_fatal_error ) {
+				$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
+			}
+
+		} elseif ( $is_gutenberg_error ) {
+			$slack->send( WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL);
+
+			if ( $is_fatal_error ) {
+				$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
+			}
+
+		} else {
+			$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
+		}
+
 	} else {
+		if ( 'development' === WORDCAMP_ENVIRONMENT && ! defined( 'SANDBOX_SLACK_USERNAME' ) ) {
+			define( 'SANDBOX_SLACK_USERNAME', '@' . strstr( gethostname(), '.', true ) );
+		}
+
 		$slack->send( SANDBOX_SLACK_USERNAME );
 	}
 }

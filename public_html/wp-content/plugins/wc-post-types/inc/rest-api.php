@@ -6,7 +6,7 @@
  */
 
 namespace WordCamp\Post_Types\REST_API;
-use WP_Rest_Server, WP_Post_Type;
+use WP_Rest_Server, WP_Post_Type, WP_Post;
 
 defined( 'WPINC' ) || die();
 
@@ -235,12 +235,15 @@ function register_additional_rest_fields() {
 				foreach ( $speaker_ids as $speaker_id ) {
 					$speaker = get_post( $speaker_id );
 
-					$speakers[] = array(
-						'id' => $speaker_id,
-						'slug' => $speaker->post_name,
-						'name' => get_the_title( $speaker_id ),
-						'link' => get_permalink( $speaker_id ),
-					);
+					// Make sure the speaker post hasn't been deleted.
+					if ( $speaker instanceof WP_Post ) {
+						$speakers[] = array(
+							'id'   => $speaker_id,
+							'slug' => $speaker->post_name,
+							'name' => get_the_title( $speaker_id ),
+							'link' => get_permalink( $speaker_id ),
+						);
+					}
 				}
 
 				return $speakers;

@@ -1,11 +1,15 @@
 <?php
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
 // No direct or CLI access.
-if ( ! defined( 'ABSPATH' ) || ! ABSPATH || ( defined( 'WP_CLI' ) && WP_CLI ) )
+if ( ! defined( 'ABSPATH' ) || 'cli' === php_sapi_name() ) {
 	return;
+}
 
 // Redirects for plan.wordcamp.org front-end only.
-if ( $_SERVER['HTTP_HOST'] != 'plan.wordcamp.org' || is_admin() || wp_doing_cron() ) {
+$tld = get_top_level_domain();
+if ( ( $_SERVER['HTTP_HOST'] ?? '' ) != "plan.wordcamp.$tld" || is_admin() || wp_doing_cron() ) {
 	return;
 }
 

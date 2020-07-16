@@ -583,7 +583,15 @@ function wcorg_network_updates_notifier() {
 				<p>The following plugins have updates available:</p>
 
 				<ul class="ul-disc">
-					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_plugins->response, 'slug' ) ) ); ?></li>
+					<?php foreach ( $update_plugins->response as $plugin ) : ?>
+						<li>
+							<?php printf(
+								'%s %s',
+								esc_html( $plugin->slug ),
+								esc_html( $plugin->new_version )
+							); ?>
+						</li>
+					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
 
@@ -591,7 +599,15 @@ function wcorg_network_updates_notifier() {
 				<p>The following themes have updates available:</p>
 
 				<ul class="ul-disc">
-					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_themes->response, 'theme' ) ) ); ?></li>
+					<?php foreach ( $update_themes->response as $theme ) : ?>
+						<li>
+							<?php printf(
+								'%s %s',
+								esc_html( $theme['theme'] ),
+								esc_html( $theme['new_version'] )
+							); ?>
+						</li>
+					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
 		</div>

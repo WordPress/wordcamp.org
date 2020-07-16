@@ -63,19 +63,12 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
-	$error_ignorelist = get_ignorelist();
+	$is_third_party = is_third_party_file( $file );
+	$is_fatal_error = is_fatal_error( $err_no );
 
-	if ( isset( $error_ignorelist[ $file ] ) ) {
-		$matches = array_filter(
-			$error_ignorelist[ $file ],
-			function( $pattern ) use ( $err_msg ) {
-				return false !== strpos( $err_msg, $pattern );
-			}
-		);
-
-		if ( ! empty( $matches ) ) {
-			return false;
-		}
+	// Non-fatals from third party code usually aren't actionable or important.
+	if ( $is_third_party && ! $is_fatal_error ) {
+		return false;
 	}
 
 	$err_key      = substr( base64_encode("$file-$line-$err_no" ), -254 ); // Max file length for ubuntu is 255.
@@ -112,72 +105,85 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 }
 
 /**
- * List of warnings/notices to ignore because they aren't actionable.
+ * Check if a file is custom code or from a third-party.
  *
- * Always use constants in the keys here to avoid path disclosure.
+ * @param string $file
  *
- * Some constants here will require a trailing slash, and some won't. Avoid adding an extra slash if one
- * already exists in the constant itself, because double-slashes will prevent the string from matching.
- *
- * The line number is omitted from the filename key because it can change when edits are made to other parts of
- * the file, which would cause the warning/notice to start appearing again.
- *
- * @return array Associative array. Key is filename, value is array of error message patterns to match.
+ * @return bool `true` if the file is from a third party.
  */
-function get_ignorelist() {
-	return array(
-		// See https://core.trac.wordpress.org/ticket/29204.
-		ABSPATH . 'wp-includes/SimplePie/Registry.php' => array(
-			'Non-static method WP_Feed_Cache::create() should not be called statically',
-		),
+function is_third_party_file( $file ) {
+	/*
+	 * Use constants in the keys here to avoid path disclosure.
+	 * `ABSPATH` already has a trailing slash, `WP_PLUGIN_DIR` and `WP_CONTENT_DIR` don't.
+	 */
+	$third_party_folders = array(
+		/*
+		 * For Core, this can only have subfolders. `ABSPATH` alone would match things like `themes/campsite-2017`.
+		 * Core's `wp-content` folder isn't included here, because we use a separate one instead on production, but
+		 * a standard `wordpress-develop` test environment doesn't.
+		 */
+		ABSPATH . 'wp-admin/',
+		WPINC,
 
-		// This is normal.
-		WP_PLUGIN_DIR . '/hyperdb/db.php' => array(
-			'mysqli_query(): MySQL server has gone away',
-		),
+		WP_PLUGIN_DIR . '/akismet/',
+		WP_PLUGIN_DIR . '/bbpress/',
+		WP_PLUGIN_DIR . '/campt-indian-payment-gateway/',
+		WP_PLUGIN_DIR . '/camptix-bd-payments/',
+		WP_PLUGIN_DIR . '/camptix-mercadopago/',
+		WP_PLUGIN_DIR . '/camptix-pagseguro/',
+		WP_PLUGIN_DIR . '/camptix-payfast-gateway/',
+		WP_PLUGIN_DIR . '/camptix-paynow/',
+		WP_PLUGIN_DIR . '/camptix-paystack/',
+		WP_PLUGIN_DIR . '/camptix-trustcard/',
+		WP_PLUGIN_DIR . '/camptix-trustpay/',
+		WP_PLUGIN_DIR . '/classic-editor/',
+		WP_PLUGIN_DIR . '/custom-content-width/',
+		WP_PLUGIN_DIR . '/edit-flow/',
+		WP_PLUGIN_DIR . '/email-post-changes/',
+		// Gutenberg isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
+		WP_PLUGIN_DIR . '/hyperdb/',
+		// Jetpack isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
+		WP_PLUGIN_DIR . '/json-rest-api/',
+		WP_PLUGIN_DIR . '/liveblog/',
+		WP_PLUGIN_DIR . '/public-post-preview/',
+		WP_PLUGIN_DIR . '/pwa/',
+		WP_PLUGIN_DIR . '/wordpress-importer/',
+		WP_PLUGIN_DIR . '/wp-cldr/',
+		WP_PLUGIN_DIR . '/wp-super-cache/',
 
-		// These are trivial mistakes in 3rd party code. They indicate poor quality, but don't warrant action.
-		ABSPATH . 'wp-cron.php'                            => array(
-			'Invalid argument supplied for foreach()',
-		),
-		ABSPATH . 'wp-includes/class-wp-query.php'         => array(
-			'trim() expects parameter 1 to be string, array given',
-			"Trying to get property 'ID' of non-object",
-			"Trying to get property 'post_title' of non-object",
-			"Trying to get property 'post_name' of non-object",
-		),
-		ABSPATH . 'wp-includes/class-wp-post.php'          => array(
-			'Undefined property: WP_Post::$filter',
-		),
-		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php' => array(
-			'Undefined variable: url',
-		),
-		ABSPATH . 'wp-includes/comment-template.php'       => array(
-			"Trying to get property 'comment_ID' of non-object",
-			"Trying to get property 'comment_status' of non-object",
-			"Trying to get property 'user_id' of non-object",
-		),
-		ABSPATH . 'wp-includes/link-template.php'          => array(
-			"Trying to get property 'post_type' of non-object",
-		),
-		ABSPATH . 'wp-includes/post-template.php'          => array(
-			"Trying to get property 'post_content' of non-object",
-		),
-		ABSPATH . 'wp-includes/rest-api.php' => array(
-			'Undefined index: items',
-		),
-		ABSPATH . 'wp-includes/rss.php'                    => array(
-			'Undefined index: description',
-			'Undefined property: stdClass::$error',
-		),
-
-		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'                       => array(
-			'Undefined variable: txn',
-		),
-		WP_PLUGIN_DIR . '/gutenberg/build/block-library/blocks/latest-posts.php' => array(
-			'array_column() expects parameter 1 to be array, string given',
-		),
+		WP_CONTENT_DIR . '/themes/p2/',
+		WP_CONTENT_DIR . '/themes/twenty', // Partial so that it matches all Core themes.
 	);
+
+	$matches = array_filter(
+		$third_party_folders,
+		function( $folder ) use ( $file ) {
+			return false !== stripos( $file, $folder );
+		}
+	);
+
+	/*
+	 * Match known Core root files, because `$third_party_folders` can't include them.
+	 *
+	 * On production, Core is installed in a subfolder, and root-level files _are_ custom, so we don't want to
+	 * ignore errors in them. In a standard `wordpress-develop` test environment, though, Core is installed at
+	 * the root of the `src/` folder.
+	 */
+	$filename           = basename( $file );
+	$is_at_install_root = ABSPATH === trailingslashit( dirname( $file ) );
+
+	if ( $is_at_install_root ) {
+		$is_known_core_root_file = $filename === 'xmlrpc.php' || 'wp-' === substr( $filename, 0, 3 );
+
+		// `index.php` could be Core's version, or our wrapper, so just accept either.
+		$is_custom_root_file = in_array( $filename, array( 'index.php', 'wp-config.php' ), true );
+
+		if ( $is_known_core_root_file && ! $is_custom_root_file ) {
+			$matches[] = $file;
+		}
+	}
+
+	return ! empty( $matches );
 }
 
 /**
@@ -192,11 +198,29 @@ function catch_fatal() {
 	$error = error_get_last();
 
 	// See https://secure.php.net/manual/en/function.set-error-handler.php.
-	$unhandled_error_types = [ E_ERROR, E_PARSE, E_CORE_ERROR, E_CORE_WARNING, E_COMPILE_ERROR, E_COMPILE_WARNING ];
-
-	if ( ! empty( $error ) && in_array( $error['type'], $unhandled_error_types, true ) ) {
+	if ( ! empty( $error ) && is_fatal_error( $error['type'] ) ) {
 		handle_error( $error['type'], $error['message'], $error['file'], $error['line'] );
 	}
+}
+
+/**
+ * Determine if we want to treat the given error as a fatal.
+ *
+ * @param int $error_type
+ *
+ * @return bool
+ */
+function is_fatal_error( $error_type ) {
+	$unhandled_error_types = array(
+		E_ERROR,
+		E_PARSE,
+		E_CORE_ERROR,
+		E_CORE_WARNING,
+		E_COMPILE_ERROR,
+		E_COMPILE_WARNING,
+	);
+
+	return in_array( $error_type, $unhandled_error_types, true );
 }
 
 /**
@@ -349,7 +373,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			}
 
 		} elseif ( $is_gutenberg_error ) {
-			$slack->send( WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL);
+			$slack->send( WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL );
 
 			if ( $is_fatal_error ) {
 				$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );

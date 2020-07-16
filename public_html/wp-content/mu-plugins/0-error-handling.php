@@ -7,8 +7,17 @@ use Dotorg\Slack\Send;
 
 const ERROR_RATE_LIMITING_DIR = '/tmp/error_limiting';
 
-set_error_handler( __NAMESPACE__ . '\handle_error' );
-register_shutdown_function( __NAMESPACE__ . '\catch_fatal' );
+// Setting an error handler would interfere with PHPUnit. Tests only need to test individual functions.
+if ( ! defined( 'WP_RUN_CORE_TESTS' ) || ! WP_RUN_CORE_TESTS ) {
+	set_error_handler( __NAMESPACE__ . '\handle_error' );
+	register_shutdown_function( __NAMESPACE__ . '\catch_fatal' );
+
+	if ( ! wp_next_scheduled( 'clear_error_rate_limiting_files' ) ) {
+		wp_schedule_event( time(), 'daily', 'clear_error_rate_limiting_files' );
+	}
+
+	add_action( 'clear_error_rate_limiting_files', __NAMESPACE__ . '\handle_clear_error_rate_limiting_files' );
+}
 
 /**
  * Error handler to track error frequency and conditionally send error messages to Slack.
@@ -399,9 +408,3 @@ function handle_clear_error_rate_limiting_files() {
 		}
 	}
 }
-
-if ( ! wp_next_scheduled( 'clear_error_rate_limiting_files' ) ) {
-	wp_schedule_event( time(), 'daily', 'clear_error_rate_limiting_files' );
-}
-
-add_action( 'clear_error_rate_limiting_files', __NAMESPACE__ . '\handle_clear_error_rate_limiting_files' );

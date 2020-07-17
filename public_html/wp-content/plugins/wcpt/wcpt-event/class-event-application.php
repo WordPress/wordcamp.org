@@ -68,7 +68,12 @@ abstract class Event_Application {
 		} else {
 			$countries = wcorg_get_countries();
 
-			$wporg_username = '';
+			$prefilled_fields = array(
+				'wporg_name'     => '',
+				'wporg_username' => '',
+				'wporg_email'    => '',
+			);				
+
 			if ( is_user_logged_in() ) {
 				$current_user = wp_get_current_user();
 				$prefilled_fields = array(

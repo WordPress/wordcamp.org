@@ -311,7 +311,6 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$domain      = esc_url( get_site_url() );
 	$page_slug   = sanitize_text_field( untrailingslashit( $_SERVER['REQUEST_URI'] ) ) ?: '/';
 	$footer      = '';
-	$is_fatal_error = false;
 
 	if ( $occurrences > 0 ) {
 		$footer .= "Occurred *$occurrences time(s)* since last reported";
@@ -325,7 +324,6 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		case E_USER_ERROR:
 		default:
 			$color = '#ff0000'; // Red.
-			$is_fatal_error = true;
 			break;
 		case E_WARNING:
 		case E_CORE_WARNING:
@@ -377,7 +375,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$slack = new Send( SLACK_ERROR_REPORT_URL );
 	$slack->add_attachment( $attachment );
 
-	$channels = get_destination_channels( $file, WORDCAMP_ENVIRONMENT, $is_fatal_error );
+	$channels = get_destination_channels( $file, WORDCAMP_ENVIRONMENT, is_fatal_error( $err_no ) );
 
 	foreach ( $channels as $channel ) {
 		$slack->send( $channel );

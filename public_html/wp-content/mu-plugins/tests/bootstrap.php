@@ -12,6 +12,10 @@ if ( 'cli' !== php_sapi_name() ) {
 function manually_load_plugins() {
 	define( 'WORDCAMP_ENVIRONMENT', 'local' );
 	define( 'NOBLOGREDIRECT',       'https://central.wordcamp.test' );
+	define( 'SANDBOX_SLACK_USERNAME',                'UABCD1234' );
+	define( 'WORDCAMP_LOGS_SLACK_CHANNEL',           '#logs' );
+	define( 'WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL', '#logs-gutenberg' );
+	define( 'WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL',   '#logs-jetpack' );
 
 	// Needed for checking subrole capabilities. The ID is 1 because there's only one site in the test instance.
 	define( 'BLOG_ID_CURRENT_SITE', 1 );

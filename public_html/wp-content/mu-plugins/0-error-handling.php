@@ -5,6 +5,21 @@ defined( 'WPINC' ) || die();
 use DirectoryIterator;
 use Dotorg\Slack\Send;
 
+/*
+ * Catch errors on production and pipe them into Slack, because that's the only way we have to see them.
+ *
+ * See https://make.wordpress.org/systems/2018/02/11/access-to-wordcamp-error-logs/.
+ *
+ * Note that this won't catch errors in drop-in plugins or Sunrise, because they load much earlier than this.
+ * Creating a `fatal-error-handler.php` file would let us override Core's fatal error handler, but we'd need
+ * to update all the code here to not use any Core constants/functions that load after drop-in plugins. We also
+ * want to handle non-fatals here.
+ */
+
+/*
+ * Intentionally not using `get_temp_dir()`, because that could potentially return `WP_CONTENT_DIR`. Storing
+ * error records there would result in path disclosure.
+ */
 const ERROR_RATE_LIMITING_DIR = '/tmp/error_limiting';
 
 // Setting an error handler would interfere with PHPUnit. Tests only need to test individual functions.
@@ -279,6 +294,7 @@ function update_error_record( $err_key, $data ) {
  * @return void
  */
 function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 ) {
+	// Local environments can just use `display_errors` etc, and shouldn't expose production's API token.
 	if ( ! defined( 'WORDCAMP_ENVIRONMENT' )
 		|| 'local' === WORDCAMP_ENVIRONMENT
 		|| ! is_readable( __DIR__ . '/includes/slack/send.php' )
@@ -361,36 +377,66 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$slack = new Send( SLACK_ERROR_REPORT_URL );
 	$slack->add_attachment( $attachment );
 
-	if ( 'production' === WORDCAMP_ENVIRONMENT ) {
-		$is_jetpack_error     = false !== stripos( $file, WP_PLUGIN_DIR . '/jetpack/' );
-		$is_gutenberg_error   = false !== stripos( $file, WP_PLUGIN_DIR . '/gutenberg/' );
+	$channels = get_destination_channels( $file, WORDCAMP_ENVIRONMENT, $is_fatal_error );
 
-		// Send all Jetpack errors to the Jetpack team. Only send fatals to us.
-		if ( $is_jetpack_error ) {
-			$slack->send( WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL );
-
-			if ( $is_fatal_error ) {
-				$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
-			}
-
-		} elseif ( $is_gutenberg_error ) {
-			$slack->send( WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL );
-
-			if ( $is_fatal_error ) {
-				$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
-			}
-
-		} else {
-			$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
-		}
-
-	} else {
-		if ( 'development' === WORDCAMP_ENVIRONMENT && ! defined( 'SANDBOX_SLACK_USERNAME' ) ) {
-			define( 'SANDBOX_SLACK_USERNAME', '@' . strstr( gethostname(), '.', true ) );
-		}
-
-		$slack->send( SANDBOX_SLACK_USERNAME );
+	foreach ( $channels as $channel ) {
+		$slack->send( $channel );
 	}
+}
+
+/**
+ * Determine which channels the error should be sent to.
+ *
+ * @param string $file
+ * @param string $environment
+ * @param bool   $is_fatal_error
+ *
+ * @return array
+ */
+function get_destination_channels( $file, $environment, $is_fatal_error ) {
+	$channels           = array();
+	$is_jetpack_error   = false !== stripos( $file, WP_PLUGIN_DIR . '/jetpack/' );
+	$is_gutenberg_error = false !== stripos( $file, WP_PLUGIN_DIR . '/gutenberg/' );
+
+	switch( $environment ) {
+		case 'production':
+			// Send all Jetpack & Gutenberg errors to those teams. Only send fatals to us.
+			if ( $is_jetpack_error ) {
+				$channels[] = WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL;
+
+				if ( $is_fatal_error ) {
+					$channels[] = WORDCAMP_LOGS_SLACK_CHANNEL;
+				}
+
+			} elseif ( $is_gutenberg_error ) {
+				$channels[] = WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL;
+
+				if ( $is_fatal_error ) {
+					$channels[] = WORDCAMP_LOGS_SLACK_CHANNEL;
+				}
+
+			} else {
+				$channels[] = WORDCAMP_LOGS_SLACK_CHANNEL;
+			}
+
+			break;
+
+		case 'development':
+			if ( ! $is_jetpack_error && ! $is_gutenberg_error ) {
+				if ( defined( 'SANDBOX_SLACK_USERNAME' ) ) {
+					$channels[] = SANDBOX_SLACK_USERNAME;
+				}
+			}
+
+			break;
+
+		case 'local':
+		default:
+			// Intentionally empty.
+		break;
+	};
+
+	return $channels;
 }
 
 /**

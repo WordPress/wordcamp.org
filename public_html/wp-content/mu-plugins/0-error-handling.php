@@ -85,8 +85,9 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		$data['error_count'] += 1;
 		$occurrences          = $data['error_count'];
 		$time_elapsed         = time() - $data['last_reported_at'];
+		$pause_interval       = $is_fatal_error ? 30 : 600;
 
-		if ( $time_elapsed > 600 ) {
+		if ( $time_elapsed > $pause_interval ) {
 			$data['last_reported_at'] = time();
 			$data['error_count']      = 0;
 			$send_message             = true;

@@ -14,7 +14,7 @@
  */
 if ( ! empty( $_REQUEST['redirect_to'] ) && 'http://' == substr( $_REQUEST['redirect_to'], 0, 7 ) ) {
 	// todo remove this now that all sites have certificates?
-	
+
 	add_filter( 'secure_signon_cookie',    '__return_false' );
 	add_filter( 'secure_auth_cookie',      '__return_false' );
 	add_filter( 'secure_logged_in_cookie', '__return_false' );

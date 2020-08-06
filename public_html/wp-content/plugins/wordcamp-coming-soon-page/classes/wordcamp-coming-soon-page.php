@@ -430,6 +430,10 @@ class WordCamp_Coming_Soon_Page {
 		<?php
 	}
 
+	/**
+	 * Get the message maybe shown in editor views.
+	 * NB! Block editor notices do not support HTML and all tags will be removed.
+	 */
 	public function get_notice_message() {
 		return sprintf(
 			__( '<a href="%s">Coming Soon mode</a> is enabled. <b>Published posts will be visible on RSS feed and WordPress.org profile feeds.</b> Site subscribers will not receive email notifications about published posts. Published posts will not be automatically cross-posted to social media accounts.', 'wordcamporg' ),
@@ -487,7 +491,7 @@ class WordCamp_Coming_Soon_Page {
 		( function( wp ) {
 			wp.data.dispatch( 'core/notices' ).createNotice(
 				'warning',
-				'<?php echo wp_strip_all_tags( $message ); ?>',
+				'<?php echo esc_html( wp_strip_all_tags( $message ) ); ?>',
 				{
 					isDismissible: false,
 				}

@@ -173,14 +173,14 @@ class WordCamp_Coming_Soon_Page {
 	 */
 	public function get_template_variables() {
 		$variables = array(
-			'image_url'								=> $this->get_image_url(),
-			'background_url'					=> $this->get_bg_image_url(),
-			'dates'										=> $this->get_dates(),
-			'active_modules'					=> Jetpack::$instance->get_active_modules(),
-			'contact_form_shortcode'	=> $this->get_contact_form_shortcode(),
-			'colors'									=> $this->get_colors(),
-			'introduction'						=> $this->get_introduction(),
-			'status'									=> $this->get_status(),
+			'image_url'              => $this->get_image_url(),
+			'background_url'         => $this->get_bg_image_url(),
+			'dates'                  => $this->get_dates(),
+			'active_modules'         => Jetpack::$instance->get_active_modules(),
+			'contact_form_shortcode' => $this->get_contact_form_shortcode(),
+			'colors'                 => $this->get_colors(),
+			'introduction'           => $this->get_introduction(),
+			'status'                 => $this->get_status(),
 		);
 
 		return $variables;

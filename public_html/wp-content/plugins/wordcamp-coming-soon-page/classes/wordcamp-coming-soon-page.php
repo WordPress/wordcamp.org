@@ -279,6 +279,10 @@ class WordCamp_Coming_Soon_Page {
 	 * @return string|false
 	 */
 	public function get_dates() {
+		if ( 'wcpt-cancelled' === $this->get_status() ) {
+			return esc_html__( 'Cancelled', 'wordcamporg' );
+		}
+
 		$dates         = false;
 		$wordcamp_post = get_wordcamp_post();
 

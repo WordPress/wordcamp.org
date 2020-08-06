@@ -32,6 +32,11 @@ public_html/wp-content/debug.log
 
 .docker/test_suite
 
+#
+# Dev tools
+#
+public_html/wp-content/plugins/query-monitor/
+
 
 #
 # Plugins

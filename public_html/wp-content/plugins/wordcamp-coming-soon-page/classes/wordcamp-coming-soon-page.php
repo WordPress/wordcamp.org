@@ -180,6 +180,7 @@ class WordCamp_Coming_Soon_Page {
 			'contact_form_shortcode' => $this->get_contact_form_shortcode(),
 			'colors'                 => $this->get_colors(),
 			'introduction'           => $this->get_introduction(),
+			'status'								 => $this->get_status(),
 		);
 
 		return $variables;
@@ -370,6 +371,21 @@ class WordCamp_Coming_Soon_Page {
 		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
 
 		return $settings['introduction'];
+	}
+
+	/**
+	 * Retrieve the WordCamp status.
+	 *
+	 * @return string
+	 */
+	public function get_status() {
+		$wordcamp_post = get_wordcamp_post();
+
+		if ( isset( $wordcamp_post->ID ) ) {
+			return $wordcamp_post->post_status;
+		}
+
+		return null;
 	}
 
 	/**

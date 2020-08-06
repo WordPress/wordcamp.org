@@ -92,7 +92,7 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
-		// TODO: Figure out an alternative here. 
+		// TODO: Figure out an alternative here.
 		//phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Not sure whats the alternative to this could be.
 		extract( $GLOBALS['WordCamp_Coming_Soon_Page']->get_template_variables() );
 
@@ -454,7 +454,7 @@ class WordCamp_Coming_Soon_Page {
 		if ( 'post' === trim( $screen->id ) ) {
 			$class   = 'notice notice-warning';
 			$message = sprintf(
-				__( '<a href="%s">Coming Soon mode</a> is enabled. Site subscribers will not receive email notifications about published posts. Published posts will not be automatically cross-posted to social media accounts.', 'wordcamporg' ),
+				__( '<a href="%s">Coming Soon mode</a> is enabled. <b>Published posts will be visible on RSS feed and WordPress.org profile feeds.</b> Site subscribers will not receive email notifications about published posts. Published posts will not be automatically cross-posted to social media accounts.', 'wordcamporg' ),
 				esc_url( $setting_url )
 			);
 

@@ -244,7 +244,7 @@ abstract class Event_Admin {
 	 */
 	public function original_application_metabox( $post ) {
 		$application_data = get_post_meta( $post->ID, '_application_data', true );
-		require_once WCPT_DIR . 'views/wordcamp/metabox-original-application.php';
+		require_once WCPT_DIR . 'views/common/metabox-original-application.php';
 	}
 
 	/**

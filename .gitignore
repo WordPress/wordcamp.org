@@ -32,6 +32,11 @@ public_html/wp-content/debug.log
 
 .docker/test_suite
 
+#
+# Dev tools
+#
+public_html/wp-content/plugins/query-monitor/
+
 
 #
 # Plugins
@@ -62,7 +67,6 @@ public_html/wp-content/plugins/liveblog
 public_html/wp-content/plugins/polldaddy
 public_html/wp-content/plugins/public-post-preview/
 public_html/wp-content/plugins/pwa/
-public_html/wp-content/plugins/query-monitor/
 public_html/wp-content/plugins/supportflow
 public_html/wp-content/plugins/tagregator
 public_html/wp-content/plugins/wordpress-importer

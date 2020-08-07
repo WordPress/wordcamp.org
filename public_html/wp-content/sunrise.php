@@ -259,7 +259,7 @@ function get_domain_redirects() {
 		"2018.kolkata.wordcamp.$tld"              => "kolkata.wordcamp.$tld/2019",
 		"2018.montclair.wordcamp.$tld"            => "montclair.wordcamp.$tld/2019",
 		"2018.pune.wordcamp.$tld"                 => "pune.wordcamp.$tld/2019",
-		"2018.dc.wordcamp.$tld"                   => "2019.dc.wordcamp.$tld",
+		"2018.dc.wordcamp.$tld"                   => "dc.wordcamp.$tld/2019",
 		"2019.sevilla.wordcamp.$tld"              => "sevilla.wordcamp.$tld/2019-developers",
 		"2019.telaviv.wordcamp.$tld"              => "telaviv.wordcamp.$tld/2020",
 		"2020-barcelona.publishers.wordcamp.$tld" => "barcelona.wordcamp.$tld/2020",
@@ -316,6 +316,8 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'portland', 'portlandme', 'miami', 'mallorca', 'montreal', 'ottawa', 'bristol', 'cusco', 'niagara',
 		'saintpetersburg','zilina','wuerzburg', 'kolkata', 'montclair', 'telaviv', 'bucharest',
 		'lancasterpa','lancaster', 'peru', 'pune', 'lisboa', 'sevilla',
+		'us', 'dc', 'phoenix', 'slc', 'boston', 'orlando', 'melbourne',
+		'oc', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'maine',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
@@ -345,8 +347,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'phoenix', 'slc', 'boston', 'orlando', 'dallas', 'melbourne',
-		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'maine',
+		'la',
 		'albuquerque', 'sacramento', 'calgary', 'porto', 'tampa',
 		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
 		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'kansai',
@@ -554,7 +555,7 @@ function get_canonical_year_url( $domain, $path ) {
 
 		case "us.wordcamp.$tld":
 			if ( time() <= strtotime( '2019-11-30' ) ) {
-				return "https://2019.us.wordcamp.$tld/";
+				return "https://us.wordcamp.$tld/2019";
 			}
 			break;
 	}

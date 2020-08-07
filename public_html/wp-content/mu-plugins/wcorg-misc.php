@@ -1,5 +1,7 @@
 <?php
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
 /*
  * Miscellaneous snippets that don't warrant their own file
  */
@@ -616,3 +618,36 @@ function wcorg_network_updates_notifier() {
 	}
 }
 add_action( 'network_admin_notices', 'wcorg_network_updates_notifier' );
+
+/**
+ * Add a 'WordCamp Post' link to the admin bar menu on camp sites.
+ *
+ * This provides an easy way to pull up the WCPT post that corresponds to the camp site you're currently on.
+ */
+function add_wcpt_cross_link( WP_Admin_Bar $wp_admin_bar ) {
+	if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+		return;
+	}
+
+	$wordcamp = get_wordcamp_post();
+
+	if ( ! $wordcamp ) {
+		return;
+	}
+
+	$wp_admin_bar->add_node(
+		array(
+			'parent' => 'site-name',
+			'id'     => 'wordcamp-post',
+			'title'  => __( 'WordCamp Post', 'wordcamporg' ),
+
+			'href' => sprintf(
+				'https://central.wordcamp.%s/wp-admin/post.php?post=%s&action=edit',
+				get_top_level_domain(),
+				$wordcamp->ID
+			),
+		)
+	);
+}
+// The Priority positions the link after the Dashboard link on the front end.
+add_action( 'admin_bar_menu', 'add_wcpt_cross_link', 35 );

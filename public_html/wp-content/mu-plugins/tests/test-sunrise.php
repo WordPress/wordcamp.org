@@ -184,12 +184,6 @@ class Test_Sunrise extends Database_TestCase {
 				'https://central.wordcamp.test',
 			),
 
-			'domain redirect to year.city site includes request uri' => array(
-				'fr.2014.montreal.wordcamp.test',
-				'/schedule/',
-				'https://2014-fr.montreal.wordcamp.test/schedule/',
-			),
-
 			'domain redirect to city/year site includes request uri' => array(
 				'2010.philly.wordcamp.test',
 				'/schedule/',

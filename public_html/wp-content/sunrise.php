@@ -243,7 +243,7 @@ function get_domain_redirects() {
 		// Year & name change redirects.
 		"2006.wordcamp.$tld"                      => "sf.wordcamp.$tld/2006",
 		"2007.wordcamp.$tld"                      => "sf.wordcamp.$tld/2007",
-		"2012.torontodev.wordcamp.$tld"           => "2012-dev.toronto.wordcamp.$tld",
+		"2012.torontodev.wordcamp.$tld"           => "toronto.wordcamp.$tld/2012-dev",
 		"2013.windsor.wordcamp.$tld"              => "2013.lancaster.wordcamp.$tld",
 		"2014.lima.wordcamp.$tld"                 => "2014.peru.wordcamp.$tld",
 		"2014.london.wordcamp.$tld"               => "2015.london.wordcamp.$tld",
@@ -310,6 +310,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'barcelona', 'chicago', 'columbus', 'geneve', 'philly', 'philadelphia', 'publishers',
 		'athens', 'atlanta', 'austin', 'brighton', 'europe', 'nyc', 'newyork', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
+		'denver', 'norway', 'russia', 'sofia', 'tokyo', 'toronto',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
@@ -339,15 +340,15 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'russia', 'london', 'tokyo', 'portland', 'sofia', 'miami',
-		'montreal', 'phoenix', 'slc', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
+		'london', 'portland', 'miami',
+		'montreal', 'phoenix', 'slc', 'boston', 'orlando', 'dallas', 'melbourne',
 		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
-		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'tampa', 'sevilla',
+		'albuquerque', 'sacramento', 'calgary', 'porto', 'tampa', 'sevilla',
 		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
 		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'lisboa', 'kansai',
 		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
 		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
-		'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
+		'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
 		'belohorizonte', 'lancasterpa', 'switzerland', 'romania', 'saratoga', 'fayetteville',
 		'bournemouth', 'hanoi', 'saopaulo', 'cologne', 'louisville', 'mallorca', 'annarbor', 'manchester',
 		'laspenitas', 'israel', 'ventura', 'vancouver', 'peru', 'auckland', 'norrkoping', 'netherlands',

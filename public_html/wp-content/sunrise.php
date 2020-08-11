@@ -325,6 +325,10 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'sanantonio', 'prague',
 		'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
 		'belohorizonte',  'switzerland', 'romania', 'saratoga', 'fayetteville',
+		'bournemouth', 'hanoi',  'cologne', 'louisville', 'annarbor', 'manchester',
+		'laspenitas', 'israel', 'ventura', 'vancouver', 'auckland', 'norrkoping', 'netherlands',
+		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee',
+		'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'kenya',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
@@ -354,10 +358,6 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'bournemouth', 'hanoi',  'cologne', 'louisville', 'annarbor', 'manchester',
-		'laspenitas', 'israel', 'ventura', 'vancouver', 'auckland', 'norrkoping', 'netherlands',
-		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee',
-		'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'kenya',
 		'malaga', 'lithuania', 'detroit', 'kobe', 'reno', 'indonesia', 'transylvania', 'nicaragua',
 		'gdansk', 'bologna', 'milano', 'catania', 'modena', 'stockholm', 'jerusalem', 'philippines',
 		'newzealand', 'cuttack', 'ponce', 'jabalpur', 'singapore', 'poznan', 'richmond', 'goldcoast', 'caguas',

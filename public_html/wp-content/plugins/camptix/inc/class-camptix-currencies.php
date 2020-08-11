@@ -54,7 +54,7 @@ class CampTix_Currency {
 			),
 			'AUD' => array(
 				'label'         => __( 'Australian Dollar', 'wordcamporg' ),
-				'locale'        => 'en_AU.UTF-8',
+				'locale'        => 'en_AU',
 				'decimal_point' => 2,
 			),
 			'AWG' => array(
@@ -109,7 +109,7 @@ class CampTix_Currency {
 			),
 			'BRL' => array(
 				'label'         => __( 'Brazilian Real', 'wordcamporg' ),
-				'locale'        => 'pt_BR.UTF-8',
+				'locale'        => 'pt_BR',
 				'decimal_point' => 2,
 			),
 			'BSD' => array(
@@ -129,7 +129,7 @@ class CampTix_Currency {
 			),
 			'CAD' => array(
 				'label'         => __( 'Canadian Dollar', 'wordcamporg' ),
-				'locale'        => 'en_CA.UTF-8',
+				'locale'        => 'en_CA',
 				'decimal_point' => 2,
 			),
 			'CDF' => array(
@@ -139,7 +139,7 @@ class CampTix_Currency {
 			),
 			'CHF' => array(
 				'label'         => __( 'Swiss Franc', 'wordcamporg' ),
-				'locale'        => 'fr_CH.UTF-8',
+				'locale'        => 'fr_CH',
 				'decimal_point' => 2,
 			),
 			'CLP' => array(
@@ -169,7 +169,7 @@ class CampTix_Currency {
 			),
 			'CZK' => array(
 				'label'         => __( 'Czech Koruna', 'wordcamporg' ),
-				'locale'        => 'hcs_CZ.UTF-8',
+				'locale'        => 'hcs_CZ',
 				'decimal_point' => 2,
 			),
 			'DJF' => array(
@@ -179,7 +179,7 @@ class CampTix_Currency {
 			),
 			'DKK' => array(
 				'label'         => __( 'Danish Krone', 'wordcamporg' ),
-				'locale'        => 'da_DK.UTF-8',
+				'locale'        => 'da_DK',
 				'decimal_point' => 2,
 			),
 			'DOP' => array(
@@ -219,7 +219,7 @@ class CampTix_Currency {
 			),
 			'GBP' => array(
 				'label'         => __( 'Pound Sterling', 'wordcamporg' ),
-				'locale'        => 'en_GB.UTF-8',
+				'locale'        => 'en_GB',
 				'decimal_point' => 2,
 			),
 			'GEL' => array(
@@ -254,7 +254,7 @@ class CampTix_Currency {
 			),
 			'HKD' => array(
 				'label'         => __( 'Hong Kong Dollar', 'wordcamporg' ),
-				'locale'        => 'zh_HK.UTF-8',
+				'locale'        => 'zh_HK',
 				'decimal_point' => 2,
 			),
 			'HNL' => array(
@@ -274,7 +274,7 @@ class CampTix_Currency {
 			),
 			'HUF' => array(
 				'label'         => __( 'Hungarian Forint', 'wordcamporg' ),
-				'locale'        => 'hu_HU.UTF-8',
+				'locale'        => 'hu_HU',
 				'decimal_point' => 2,
 			),
 			'IDR' => array(
@@ -284,7 +284,7 @@ class CampTix_Currency {
 			),
 			'ILS' => array(
 				'label'         => __( 'Israeli New Sheqel', 'wordcamporg' ),
-				'locale'        => 'he_IL.UTF-8',
+				'locale'        => 'he_IL',
 				'decimal_point' => 2,
 			),
 			'INR' => array(
@@ -304,7 +304,7 @@ class CampTix_Currency {
 			),
 			'JPY' => array(
 				'label'         => __( 'Japanese Yen', 'wordcamporg' ),
-				'locale'        => 'ja_JP.UTF-8',
+				'locale'        => 'ja_JP',
 				'decimal_point' => 0,
 			),
 			'KES' => array(
@@ -454,7 +454,7 @@ class CampTix_Currency {
 			),
 			'NOK' => array(
 				'label'         => __( 'Norwegian Krone', 'wordcamporg' ),
-				'locale'        => 'no_NO.UTF-8',
+				'locale'        => 'no_NO',
 				'decimal_point' => 2,
 			),
 			'NPR' => array(
@@ -464,7 +464,7 @@ class CampTix_Currency {
 			),
 			'NZD' => array(
 				'label'         => __( 'N.Z. Dollar', 'wordcamporg' ),
-				'locale'        => 'en_NZ.UTF-8',
+				'locale'        => 'en_NZ',
 				'decimal_point' => 2,
 			),
 			'PAB' => array(
@@ -494,7 +494,7 @@ class CampTix_Currency {
 			),
 			'PLN' => array(
 				'label'         => __( 'Polish Zloty', 'wordcamporg' ),
-				'locale'        => 'pl_PL.UTF-8',
+				'locale'        => 'pl_PL',
 				'decimal_point' => 2,
 			),
 			'PYG' => array(
@@ -544,7 +544,7 @@ class CampTix_Currency {
 			),
 			'SEK' => array(
 				'label'         => __( 'Swedish Krona', 'wordcamporg' ),
-				'locale'        => 'sv_SE.UTF-8',
+				'locale'        => 'sv_SE',
 				'decimal_point' => 2,
 			),
 			'SGD' => array(
@@ -594,7 +594,7 @@ class CampTix_Currency {
 			),
 			'TRY' => array(
 				'label'         => __( 'Turkish Lira', 'wordcamporg' ),
-				'locale'        => 'tr_TR.UTF-8',
+				'locale'        => 'tr_TR',
 				'decimal_point' => 2,
 			),
 			'TTD' => array(
@@ -604,7 +604,7 @@ class CampTix_Currency {
 			),
 			'TWD' => array(
 				'label'         => __( 'New Taiwan Dollar', 'wordcamporg' ),
-				'locale'        => 'zh_TW.UTF-8',
+				'locale'        => 'zh_TW',
 				'decimal_point' => 2,
 			),
 			'TZS' => array(
@@ -624,7 +624,7 @@ class CampTix_Currency {
 			),
 			'USD' => array(
 				'label'         => __( 'U.S. Dollar', 'wordcamporg' ),
-				'locale'        => 'en_US.UTF-8',
+				'locale'        => 'en_US',
 				'decimal_point' => 2,
 			),
 			'UYU' => array(

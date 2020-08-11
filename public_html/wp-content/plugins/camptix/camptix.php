@@ -1954,10 +1954,9 @@ class CampTix_Plugin {
 			$currency['decimal_point'] = 2;
 		}
 
-		// `money_format` is not available on Windows and some other systems.
-		if ( isset( $currency['locale'] ) && function_exists( 'money_format' ) ) {
-			setlocale( LC_MONETARY, $currency['locale'] );
-			$formatted_amount = money_format( "%.{$currency['decimal_point']}n", $amount );
+		if ( isset( $currency['locale'] ) ) {
+			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
+			$formatted_amount = $formatter->format( $amount );
 		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
 			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
 		} else {

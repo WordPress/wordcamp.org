@@ -482,8 +482,8 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$currency = $camptix_currencies[ $currency_key ];
 
 		if ( isset( $currency['locale'] ) === true ) {
-			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-			$formatted_amount = $formatter->format( $amount );
+			setlocale( LC_MONETARY, $currency['locale'] );
+			$formatted_amount = money_format( "%.{$currency['decimal_point']}n", $amount );
 		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
 			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
 		} else {

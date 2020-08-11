@@ -370,6 +370,8 @@ function unsubdomactories_redirects( $domain, $request_uri ) {
 		'la', 'rochester', 'ogijima', 'asheville',
 	);
 
+	$redirect_cities = apply_filters( 'unsubdomactories_redirect_cities', $redirect_cities );
+
 	$tld = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
 
 	// Return if already on a 4th-level domain (e.g., 2020.narnia.wordcamp.org).

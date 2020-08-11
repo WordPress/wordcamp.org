@@ -321,9 +321,22 @@ class Test_Sunrise extends Database_TestCase {
 	 * @dataProvider data_unsubdomactories_redirects
 	 */
 	public function test_unsubdomactories_redirects( $domain, $request_uri, $expected ) {
+		add_filter( 'unsubdomactories_redirect_cities', array( $this, 'add_old_url_cities' ) );
 		$actual = unsubdomactories_redirects( $domain, $request_uri );
+		remove_filter( 'unsubdomactories_redirect_cities', array( $this, 'add_old_url_cities' ) );
 
 		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Overwrite `$redirect_cities` with mock values.
+	 *
+	 * @param string[] $redirect_cities
+	 *
+	 * @return string[]
+	 */
+	public function add_old_url_cities( $redirect_cities ) {
+		return array( 'oldtown' );
 	}
 
 	/**
@@ -346,27 +359,27 @@ class Test_Sunrise extends Database_TestCase {
 			),
 
 			'year.city homepage request should not redirect' => array(
-				'2020.vancouver.wordcamp.test',
+				'2020.oldtown.wordcamp.test',
 				'/',
 				false,
 			),
 
 			'year.city subpage request should not redirect' => array(
-				'2020.vancouver.wordcamp.test',
+				'2020.oldtown.wordcamp.test',
 				'/schedule/',
 				false,
 			),
 
 			'city/year homepage request should redirect' => array(
-				'vancouver.wordcamp.test',
+				'oldtown.wordcamp.test',
 				'/2020/',
-				'https://2020.vancouver.wordcamp.test/',
+				'https://2020.oldtown.wordcamp.test/',
 			),
 
 			'city/year subpage request should redirect' => array(
-				'vancouver.wordcamp.test',
+				'oldtown.wordcamp.test',
 				'/2020/schedule/',
-				'https://2020.vancouver.wordcamp.test/schedule/',
+				'https://2020.oldtown.wordcamp.test/schedule/',
 			),
 		);
 	}

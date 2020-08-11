@@ -318,6 +318,9 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'lancasterpa','lancaster', 'peru', 'pune', 'lisboa', 'sevilla',
 		'us', 'dc', 'phoenix', 'slc', 'boston', 'orlando', 'melbourne',
 		'oc', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'maine',
+		'albuquerque', 'sacramento', 'calgary', 'porto', 'portoalegre', 'tampa',
+		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
+		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'kansai',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
@@ -347,25 +350,24 @@ function get_city_slash_year_url( $domain, $request_uri ) {
  */
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
-		'la',
-		'albuquerque', 'sacramento', 'calgary', 'porto', 'tampa',
-		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
-		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'kansai',
 		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
-		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
+		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'sanantonio', 'prague',
 		'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
 		'belohorizonte',  'switzerland', 'romania', 'saratoga', 'fayetteville',
 		'bournemouth', 'hanoi',  'cologne', 'louisville', 'annarbor', 'manchester',
 		'laspenitas', 'israel', 'ventura', 'vancouver', 'auckland', 'norrkoping', 'netherlands',
 		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee',
-		'asheville', 'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'kenya',
+		'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'kenya',
 		'malaga', 'lithuania', 'detroit', 'kobe', 'reno', 'indonesia', 'transylvania', 'nicaragua',
 		'gdansk', 'bologna', 'milano', 'catania', 'modena', 'stockholm', 'jerusalem', 'philippines',
 		'newzealand', 'cuttack', 'ponce', 'jabalpur', 'singapore', 'poznan', 'richmond', 'goldcoast', 'caguas',
 		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy',
 		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
 		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'bilbao',
-		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'okc',
+		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'okc',
+
+		// Wait until after the 2020 event.
+		'la', 'rochester', 'ogijima', 'asheville',
 	);
 
 	$tld = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';

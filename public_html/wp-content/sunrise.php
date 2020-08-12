@@ -290,7 +290,7 @@ function get_domain_redirects() {
  * Redirects from `year.city.wordcamp.org` to `city.wordcamp.org/year`.
  *
  * This is needed so that old external links will redirect to the current URL structure. New cities don't need to
- * be added to this list, only the ones that were migrated from the old structure to the new structure in July 2020.
+ * be added to this list, only the ones that existed before the 2020 migration.
  *
  * See https://make.wordpress.org/community/2020/03/03/proposal-for-wordcamp-sites-seo-fixes/
  *
@@ -303,6 +303,10 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
+		/*
+		 * These domains were created before the 2014 migration, and moved from `unsubdomactories_redirects()`
+		 * during the 2020 migration.
+		 */
 		'barcelona', 'chicago', 'columbus', 'geneve', 'philly', 'philadelphia', 'publishers',
 		'athens', 'atlanta', 'austin', 'brighton', 'europe', 'nyc', 'newyork', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
@@ -332,6 +336,31 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
 		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'bilbao',
 		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'okc', 'la', 'rochester', 'ogijima', 'asheville',
+
+
+		// These domains were created after the 2014 URL migration was reverted, but before the 2020 migration.
+		'rome',
+
+//		'ahmedabad', 'alicante', 'asia', 'bangkok', 'bari', 'belfast', 'bengaluru', 'bern',
+//		'bharatpur', 'bhopal', 'bhubaneswar', 'biratnagar', 'bogota', 'boise', 'bordeaux', 'brno', 'buea',
+//		'bulawayo', 'bulgaria', 'caceres', 'cadiz', 'cali', 'cancun', 'cardiff', 'cartagena', 'charlotte',
+//		'chiclana', 'colombo', 'davao', 'delhi', 'denpasar', 'dhaka', 'douala', 'dublin', 'dusseldorf',
+//		'entebbe', 'floripa', 'nice', 'niigata', 'nijmegen', 'nis', 'noordnederland', 'nordic',
+//		'geneva', 'glasgow', 'granada', 'guadalajara', 'guayaquil', 'halifax', 'haneda', 'harare', 'hongkong',
+//		'ileife', 'irun', 'islamabad',  'jackson', 'johannesburg', 'jyvaskyla', 'kampala', 'kanpur',
+//		'karachi', 'kathmandu', 'kent', 'kigali', 'kochi', 'kosice', 'kotakinabalu', 'kualalumpur', 'kyiv',
+//		'kyoto', 'lagos', 'laspalmas', 'laspalmasgc', 'lausanne', 'lille', 'littlerock', 'lodz',
+//		'longbeach', 'lublin', 'madison', 'madrid', 'managua', 'manila', 'mannheim', 'marbella', 'marseille',
+//		'medellin', 'mombasa', 'montevideo', 'moscow', 'myrtlebeach', 'nagpur', 'nairobi', 'nashik', 'newcastle',
+//		'oslo', 'osnabrueck', 'panamacity', 'perth', 'plovdiv', 'pontevedra', 'portharcourt', 'portmacquarie',
+//		'portugal', 'puebla', 'puntarenas', 'quito', 'retreat', 'riga', 'riverside', 'rockford',
+//		 'rotterdam', 'saigon', 'sancarlos', 'sanjose', 'santaclarita', 'santander', 'skopje', 'spain',
+//		'split', 'stuttgart', 'taipei', 'tampere', 'thessaloniki', 'tulsa', 'turku', 'ubud', 'udaipur', 'utrecht',
+//		'vadodara', 'valencia', 'valladolid', 'verona', 'virginiabeach', 'vrsac', 'waukesha', 'wilmington',
+//		'zagreb', 'zaragoza', 'zurich',
+
+		// Wait until event is over, then move to post-2014 list.
+//		'italia',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {

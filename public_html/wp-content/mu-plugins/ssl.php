@@ -4,25 +4,9 @@
  * Customizations related to HTTPS.
  */
 
-/*
- * Disable secure cookies on domains that don't support HTTPS
- *
- * r28609 (shipped in 4.0) changes the behavior of FORCE_SSL_LOGIN so that it is identical to FORCE_SSL_ADMIN.
- * This causes a redirect loop when logging in.
- *
- * See https://core.trac.wordpress.org/ticket/10267#comment:22 for details.
- */
-if ( ! empty( $_REQUEST['redirect_to'] ) && 'http://' == substr( $_REQUEST['redirect_to'], 0, 7 ) ) {
-	// todo remove this now that all sites have certificates?
-
-	add_filter( 'secure_signon_cookie',    '__return_false' );
-	add_filter( 'secure_auth_cookie',      '__return_false' );
-	add_filter( 'secure_logged_in_cookie', '__return_false' );
-}
-
 /**
  * WP Super Cache puts http and https requests in the same bucket which
- * generates mixed content warnings and generat breakage all around. The
+ * generates mixed content warnings and generate breakage all around. The
  * following makes sure only HTTPS requests are cached.
  *
  * This is currently superseded by wp-super-cache-plugins/http-https-redirect.php,

@@ -3,12 +3,12 @@
  */
 import { __ } from '@wordpress/i18n';
 import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
-import { TextControl } from '@wordpress/components';
 
 /**
  * Internal dependencies
  */
 import usePostMeta from '../components/hooks/use-post-meta';
+import UsernameControl from '../components/username-control';
 
 export default function OrganizerInfoPanel() {
 	const [ username, setUsername ] = usePostMeta( '_wcpt_user_name', '' );
@@ -19,7 +19,7 @@ export default function OrganizerInfoPanel() {
 			className="wc-panel-organizer-info"
 			title={ __( 'Organizer Info', 'wordcamporg' ) }
 		>
-			<TextControl
+			<UsernameControl
 				label={ __( 'WordPress.org Username', 'wordcamporg' ) }
 				value={ username }
 				onChange={ setUsername }

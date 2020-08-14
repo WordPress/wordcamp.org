@@ -9,6 +9,7 @@ import { TextControl } from '@wordpress/components';
  * Internal dependencies
  */
 import usePostMeta from '../components/hooks/use-post-meta';
+import UsernameControl from '../components/username-control';
 
 export default function SpeakerInfoPanel() {
 	const [ email, setEmail ] = usePostMeta( '_wcb_speaker_email', '' );
@@ -26,7 +27,7 @@ export default function SpeakerInfoPanel() {
 				value={ email }
 				onChange={ setEmail }
 			/>
-			<TextControl
+			<UsernameControl
 				label={ __( 'WordPress.org Username', 'wordcamporg' ) }
 				value={ username }
 				onChange={ setUsername }

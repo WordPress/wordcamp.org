@@ -358,6 +358,8 @@ class WordCamp_Post_Types_Plugin {
 				wp_enqueue_style( 'wcpt-admin', plugins_url( '/css/admin.css', __FILE__ ), array(), 2 );
 				break;
 			case 'wcb_session':
+			case 'wcb_organizer':
+			case 'wcb_speaker':
 				wp_enqueue_style(
 					'wcpt-editor',
 					plugins_url( '/css/editor.css', __FILE__ ),

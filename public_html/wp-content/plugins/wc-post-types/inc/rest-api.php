@@ -46,6 +46,7 @@ function register_speaker_post_meta() {
 		array(
 			'type'         => 'integer',
 			// This is not set directly, but is set as a result of `_wcpt_user_name`.
+			// See update_wcorg_user_id() in wc-post-types.php.
 			'show_in_rest' => false,
 			'single'       => true,
 		)
@@ -178,6 +179,7 @@ function register_organizer_post_meta() {
 		array(
 			'type'         => 'integer',
 			// This is not set directly, but is set as a result of `_wcpt_user_name`.
+			// See update_wcorg_user_id() in wc-post-types.php.
 			'show_in_rest' => false,
 			'single'       => true,
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',

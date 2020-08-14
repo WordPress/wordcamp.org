@@ -36,7 +36,22 @@
 	</table>
 
 	<?php foreach ( $meetups as $meetup ) : ?>
+	needs an if (meetup[latest_status])
 		<p><strong class="active-camp"><?php echo esc_html( $meetup['name'] ); ?></strong> &ndash; <?php echo esc_html( $statuses[ $meetup['latest_status'] ] ); ?></p>
+
+	1:53
+E_NOTICE
+Undefined index:
+Domain
+https://central.wordcamp.org
+Page
+/reports/meetup-application-status/?report-year=2020&period=all&status=any&action=Show+results
+File
+/home/wordcamp/public_html/wp-content/plugins/wordcamp-reports/views/html/meetup-status.php:39
+Stack Trace
+require('wp-blog-header.php'), require_once('wp-includes/template-loader.php'), include('/themes/wordcamp-central-2012/page.php'), the_content, apply_filters('the_content'), WP_Hook->apply_filters, do_shortcode, preg_replace_callback, do_shortcode_tag, WordCamp\Reports\Report\Meetup_Status::handle_shortcode, WordCamp\Reports\Report\Meetup_Status::render_public_page, include('/plugins/wordcamp-reports/views/public/meetup-status.php'), WordCamp\Reports\Report\Meetup_Status->render_html, include('/plugins/wordcamp-reports/views/html/meetup-status.php'), WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack
+
+
 		<ul class="status-log ul-disc">
 			<?php foreach ( $meetup['logs'] as $log ) : ?>
 				<li><?php

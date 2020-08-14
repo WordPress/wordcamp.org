@@ -23,6 +23,9 @@ class WCPT_Admin {
 		// Add separator to admin menu.
 		add_action( 'custom_menu_order',        array( $this, 'admin_custom_menu_order' ) );
 		add_action( 'menu_order',               array( $this, 'admin_menu_order'        ) );
+		add_filter( 'post_row_actions',			array( $this, 'add_post_row_actions' ), 10, 2 );
+
+		// todo add custom hover link to go to "event website"
 	}
 
 	/**
@@ -108,5 +111,11 @@ class WCPT_Admin {
 
 		// Return our custom order.
 		return $wcpt_menu_order;
+	}
+
+	public function add_post_row_actions( $actions, $post ) {
+		$actions['view-wordcamp-site'] = 'View WordCamp site';
+
+		return $actions;
 	}
 }

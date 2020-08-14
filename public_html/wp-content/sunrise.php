@@ -5,6 +5,63 @@ defined( 'WPINC' ) || die();
 
 // phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url -- It's not available this early.
 
+/*
+ * E_NOTICE
+Undefined index: Primary organizer WordPress.org username
+Domain
+https://central.wordcamp.org
+Page
+/wp-admin/post.php
+File
+x/wp-content/plugins/wcpt/wcpt-meetup/class-meetup-admin.php:442
+Stack Trace
+edit_post, wp_update_post, wp_insert_post, do_action('save_post_wp_meetup'), WP_Hook->do_action, WP_Hook->apply_filters, Event_Admin->metabox_save, do_action('wcpt_metabox_save_done'), WP_Hook->do_action, WP_Hook->apply_filters, Meetup_Admin->meetup_organizers_changed, WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack
+3:47
+E_NOTICE
+Undefined index: Co-Organizers usernames (seperated by comma)
+Domain
+https://central.wordcamp.org
+Page
+/wp-admin/post.php
+File
+x/wp-content/plugins/wcpt/wcpt-meetup/class-meetup-admin.php:443
+Stack Trace
+edit_post, wp_update_post, wp_insert_post, do_action('save_post_wp_meetup'), WP_Hook->do_action, WP_Hook->apply_filters, Event_Admin->metabox_save, do_action('wcpt_metabox_save_done'), WP_Hook->do_action, WP_Hook->apply_filters, Meetup_Admin->meetup_organizers_changed, WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack
+:wordpress:
+BotAPP  4:12 PM
+E_WARNING
+date() expects parameter 2 to be int, string given
+Domain
+https://detroit.wordcamp.org/2020
+Page
+/2020/wp-json/tagregator/v1/items?hashtags=wcxzy
+File
+x/wp-content/mu-plugins/wcorg-misc.php:190
+Stack Trace
+require('wp-blog-header.php'), wp, WP->main, WP->parse_request, do_action_ref_array('parse_request'), WP_Hook->do_action, WP_Hook->apply_filters, rest_api_loaded, WP_REST_Server->serve_request, WP_REST_Server->dispatch, TGGRShortcodeTagregator->rest_get_items, TGGRShortcodeTagregator->import_new_items, TGGRShortcodeTagregator->is_within_date_range, apply_filters('tggr_end_date'), WP_Hook->apply_filters, wcorg_set_per_camp_tagregator_end_date, date, WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack
+4:12
+E_NOTICE
+Trying to access array offset on value of type null
+Domain
+https://detroit.wordcamp.org/2020
+Page
+/2020/wp-json/tagregator/v1/items?hashtags=wcxzy
+File
+x/wp-content/plugins/tagregator/classes/tggr-source-twitter.php:161
+Stack Trace
+require('wp-blog-header.php'), wp, WP->main, WP->parse_request, do_action_ref_array('parse_request'), WP_Hook->do_action, WP_Hook->apply_filters, rest_api_loaded, WP_REST_Server->serve_request, WP_REST_Server->dispatch, TGGRShortcodeTagregator->rest_get_items, TGGRShortcodeTagregator->import_new_items, TGGRSourceTwitter->import_new_items, TGGRSourceTwitter::get_new_hashtagged_tweets, TGGRSourceTwitter::obtain_bearer_token, WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack
+4:12
+E_NOTICE
+Trying to access array offset on value of type null
+Domain
+https://detroit.wordcamp.org/2020
+Page
+/2020/wp-json/tagregator/v1/items?hashtags=wcxzy
+File
+x/wp-content/plugins/tagregator/classes/tggr-source-twitter.php:166
+Stack Trace
+require('wp-blog-header.php'), wp, WP->main, WP->parse_request, do_action_ref_array('parse_request'), WP_Hook->do_action, WP_Hook->apply_filters, rest_api_loaded, WP_REST_Server->serve_request, WP_REST_Server->dispatch, TGGRShortcodeTagregator->rest_get_items, TGGRShortcodeTagregator->import_new_items, TGGRSourceTwitter->import_new_items, TGGRSourceTwitter::get_new_hashtagged_tweets, TGGRSourceTwitter::obtain_bearer_token, WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack
+ */
 
 /*
  * Matches `2020-foo.narnia.wordcamp.org/`, with or without additional `REQUEST_URI` params.

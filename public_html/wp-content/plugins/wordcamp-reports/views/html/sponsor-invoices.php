@@ -106,6 +106,20 @@ $asterisk2 = false;
 				<td class="number">
 					<?php echo number_format_i18n( $payments['converted_amounts'][ $currency ] ); ?>
 					<?php if ( $invoices['amount_by_currency'][ $currency ] > 0 && $invoices['converted_amounts'][ $currency ] === 0 ) : $asterisk2 = true; ?>
+
+
+	/*
+	 * Undefined index: MXN
+Domain
+https://central.wordcamp.org
+Page
+/reports/sponsor-invoices-report/?report-year=2020&period=all&wordcamp-id=&action=Show+results
+File
+/home/wordcamp/public_html/wp-content/plugins/wordcamp-reports/views/html/sponsor-invoices.php:108
+Stack Trace
+require('wp-blog-header.php'), require_once('wp-includes/template-loader.php'), include('/themes/wordcamp-central-2012/page.php'), the_content, apply_filters('the_content'), WP_Hook->apply_filters, do_shortcode, preg_replace_callback, do_shortcode_tag, WordCamp\Reports\Report\Sponsor_Invoices::handle_shortcode, WordCamp\Reports\Report\Sponsor_Invoices::render_public_page, include('/plugins/wordcamp-reports/views/public/sponsor-invoices.php'), WordCamp\Reports\Report\Sponsor_Invoices->render_html, include('/plugins/wordcamp-reports/views/html/sponsor-invoices.php'), WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack
+
+	 */
 						**
 					<?php endif; ?>
 				</td>

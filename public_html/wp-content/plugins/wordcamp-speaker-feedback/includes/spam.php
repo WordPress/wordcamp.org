@@ -61,7 +61,7 @@ function is_blacklisted( array $comment_data ) {
 	);
 	$comment_data = wp_parse_args( $comment_data, $defaults );
 
-	$blacklisted = wp_blacklist_check(
+	$blacklisted = wp_check_comment_disallowed_list(
 		$comment_data['comment_author'],
 		$comment_data['comment_author_email'],
 		$comment_data['comment_author_url'],

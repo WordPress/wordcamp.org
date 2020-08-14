@@ -91,7 +91,7 @@ class WordCamp_QBO {
 			array(
 				'methods'             => 'GET, POST',
 				'callback'            => array( __CLASS__, 'rest_callback_expense' ),
-				'permission_callback' => array( __CLASS__, '_is_valid_request' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
 			)
 		);
 
@@ -101,7 +101,7 @@ class WordCamp_QBO {
 			array(
 				'methods'             => 'GET, POST',
 				'callback'            => array( __CLASS__, 'rest_callback_invoice' ),
-				'permission_callback' => array( __CLASS__, '_is_valid_request' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
 			)
 		);
 
@@ -111,7 +111,7 @@ class WordCamp_QBO {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( __CLASS__, 'rest_callback_invoice_pdf' ),
-				'permission_callback' => array( __CLASS__, '_is_valid_request' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
 			)
 		);
 
@@ -121,7 +121,7 @@ class WordCamp_QBO {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( __CLASS__, 'rest_callback_paid_invoices' ),
-				'permission_callback' => array( __CLASS__, '_is_valid_request' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
 			)
 		);
 	}
@@ -1122,7 +1122,7 @@ class WordCamp_QBO {
 	 *
 	 * @return bool True if valid, false if invalid.
 	 */
-	private static function _is_valid_request( $request ) {
+	public static function is_valid_request( $request ) {
 		if ( ! $request->get_header( 'authorization' ) ) {
 			return false;
 		}

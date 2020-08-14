@@ -399,9 +399,10 @@ function register_fav_sessions_email() {
 		'wc-post-types/v1',
 		'/email-fav-sessions/',
 		array(
-			'methods'  => WP_REST_Server::CREATABLE,
-			'callback' => 'send_favourite_sessions_email',
-			'args'     => array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => 'send_favourite_sessions_email',
+			'permission_callback' => '__return_true',
+			'args'                => array(
 				'email-address' => array(
 					'required'          => true,
 					'validate_callback' => function( $value, $request, $param ) {

@@ -92,7 +92,7 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
-		// TODO: Figure out an alternative here. 
+		// TODO: Figure out an alternative here.
 		//phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Not sure whats the alternative to this could be.
 		extract( $GLOBALS['WordCamp_Coming_Soon_Page']->get_template_variables() );
 
@@ -180,6 +180,7 @@ class WordCamp_Coming_Soon_Page {
 			'contact_form_shortcode' => $this->get_contact_form_shortcode(),
 			'colors'                 => $this->get_colors(),
 			'introduction'           => $this->get_introduction(),
+			'status'                 => $this->get_status(),
 		);
 
 		return $variables;
@@ -278,6 +279,10 @@ class WordCamp_Coming_Soon_Page {
 	 * @return string|false
 	 */
 	public function get_dates() {
+		if ( 'wcpt-cancelled' === $this->get_status() ) {
+			return esc_html__( 'Cancelled', 'wordcamporg' );
+		}
+
 		$dates         = false;
 		$wordcamp_post = get_wordcamp_post();
 
@@ -370,6 +375,21 @@ class WordCamp_Coming_Soon_Page {
 		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
 
 		return $settings['introduction'];
+	}
+
+	/**
+	 * Retrieve the WordCamp status.
+	 *
+	 * @return string
+	 */
+	public function get_status() {
+		$wordcamp_post = get_wordcamp_post();
+
+		if ( isset( $wordcamp_post->ID ) ) {
+			return $wordcamp_post->post_status;
+		}
+
+		return null;
 	}
 
 	/**

@@ -85,25 +85,45 @@ class WordCamp_QBO {
 	 * Runs during rest_api_init.
 	 */
 	public static function rest_api_init() {
-		register_rest_route( 'wordcamp-qbo/v1', '/expense', array(
-			'methods'  => 'GET, POST',
-			'callback' => array( __CLASS__, 'rest_callback_expense' ),
-		) );
+		register_rest_route(
+			'wordcamp-qbo/v1',
+			'/expense',
+			array(
+				'methods'             => 'GET, POST',
+				'callback'            => array( __CLASS__, 'rest_callback_expense' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
+			)
+		);
 
-		register_rest_route( 'wordcamp-qbo/v1', '/invoice', array(
-			'methods'  => 'GET, POST',
-			'callback' => array( __CLASS__, 'rest_callback_invoice' ),
-		) );
+		register_rest_route(
+			'wordcamp-qbo/v1',
+			'/invoice',
+			array(
+				'methods'             => 'GET, POST',
+				'callback'            => array( __CLASS__, 'rest_callback_invoice' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
+			)
+		);
 
-		register_rest_route( 'wordcamp-qbo/v1', '/invoice_pdf', array(
-			'methods'  => 'GET',
-			'callback' => array( __CLASS__, 'rest_callback_invoice_pdf' ),
-		) );
+		register_rest_route(
+			'wordcamp-qbo/v1',
+			'/invoice_pdf',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'rest_callback_invoice_pdf' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
+			)
+		);
 
-		register_rest_route( 'wordcamp-qbo/v1', '/paid_invoices', array(
-			'methods'  => 'GET',
-			'callback' => array( __CLASS__, 'rest_callback_paid_invoices' ),
-		) );
+		register_rest_route(
+			'wordcamp-qbo/v1',
+			'/paid_invoices',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'rest_callback_paid_invoices' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
+			)
+		);
 	}
 
 	/**
@@ -112,10 +132,6 @@ class WordCamp_QBO {
 	 * @param WP_REST_Request $request
 	 */
 	public static function rest_callback_expense( $request ) {
-		if ( ! self::_is_valid_request( $request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
 		self::load_options();
 		$oauth_header = self::qbo_client()->get_oauth_header();
 		$realm_id     = self::qbo_client()->get_realm_id();
@@ -318,10 +334,6 @@ class WordCamp_QBO {
 	 * @return int|WP_Error The invoice ID on success, or a WP_Error on failure
 	 */
 	public static function rest_callback_invoice( $request ) {
-		if ( ! self::_is_valid_request( $request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
 		$invoice_id = self::create_invoice(
 			$request->get_param( 'wordcamp_name'     ),
 			$request->get_param( 'sponsor'           ),
@@ -668,10 +680,6 @@ class WordCamp_QBO {
 	 * @return string|WP_Error The filename on success, or a WP_Error on failure
 	 */
 	public static function rest_callback_invoice_pdf( $request ) {
-		if ( ! self::_is_valid_request( $request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
 		$qbo_request = self::build_qbo_get_invoice_pdf_request( $request->get_param( 'invoice_id' ) );
 		$response    = wp_remote_get( $qbo_request['url'], $qbo_request['args'] );
 
@@ -1022,10 +1030,6 @@ class WordCamp_QBO {
 	 * @return array|WP_Error
 	 */
 	public static function rest_callback_paid_invoices( $wordcamp_request ) {
-		if ( ! self::_is_valid_request( $wordcamp_request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
 		$qbo_request = self::build_qbo_paid_invoices_request( $wordcamp_request->get_param( 'invoice_ids' ) );
 
 		if ( is_wp_error( $qbo_request ) ) {
@@ -1118,7 +1122,7 @@ class WordCamp_QBO {
 	 *
 	 * @return bool True if valid, false if invalid.
 	 */
-	private static function _is_valid_request( $request ) {
+	public static function is_valid_request( $request ) {
 		if ( ! $request->get_header( 'authorization' ) ) {
 			return false;
 		}

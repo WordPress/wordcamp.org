@@ -27,8 +27,9 @@ class WordCamp_Lets_Encrypt_Helper {
 			'wordcamp-letsencrypt/v1',
 			'/domains-dehydrated',
 			array(
-				'methods'  => 'GET',
-				'callback' => array( __CLASS__, 'rest_callback_domains_dehydrated' ),
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'rest_callback_domains_dehydrated' ),
+				'permission_callback' => '__return_true',
 			)
 		);
 	}

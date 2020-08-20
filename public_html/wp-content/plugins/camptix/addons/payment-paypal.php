@@ -389,7 +389,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$statuses = array(
 			'Completed' => CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
 			'Pending'   => CampTix_Plugin::PAYMENT_STATUS_PENDING,
-			'Canceled' => CampTix_Plugin::PAYMENT_STATUS_CANCELED,
+			'Canceled'  => CampTix_Plugin::PAYMENT_STATUS_CANCELED,
 			'Failed'    => CampTix_Plugin::PAYMENT_STATUS_FAILED,
 			'Denied'    => CampTix_Plugin::PAYMENT_STATUS_FAILED,
 			'Refunded'  => CampTix_Plugin::PAYMENT_STATUS_REFUNDED,

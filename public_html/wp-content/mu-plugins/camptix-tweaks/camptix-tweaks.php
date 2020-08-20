@@ -344,7 +344,7 @@ function track_payment_results( $payment_token, $result, $data ) {
 	$valid_results = array(
 		CampTix_Plugin::PAYMENT_STATUS_COMPLETED     => 'purchased',
 		CampTix_Plugin::PAYMENT_STATUS_FAILED        => 'failed',
-		CampTix_Plugin::PAYMENT_STATUS_CANCELED     => 'canceled',
+		CampTix_Plugin::PAYMENT_STATUS_CANCELED      => 'canceled',
 		CampTix_Plugin::PAYMENT_STATUS_PENDING       => 'pending',
 		CampTix_Plugin::PAYMENT_STATUS_TIMEOUT       => 'timeout',
 		CampTix_Plugin::PAYMENT_STATUS_REFUNDED      => 'refunded',

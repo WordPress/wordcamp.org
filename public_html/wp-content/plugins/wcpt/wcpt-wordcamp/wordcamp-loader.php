@@ -170,7 +170,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => _x( 'More Info Requested',                         'wordcamp status', 'wordcamporg' ),
 			'wcpt-interview-sched' => _x( 'Interview/Orientation Scheduled',             'wordcamp status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                                    'wordcamp status', 'wordcamporg' ),
-			'wcpt-canceled'       => _x( 'Canceled',                                   'wordcamp status', 'wordcamporg' ),
+			'wcpt-canceled'        => _x( 'Canceled',                                    'wordcamp status', 'wordcamporg' ),
 			'wcpt-approved-pre-pl' => _x( 'Approved for Pre-Planning Pending Agreement', 'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-email'     => _x( 'Needs E-mail Address',                        'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-site'      => _x( 'Needs Site',                                  'wordcamp status', 'wordcamporg' ),
@@ -275,7 +275,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => 'Application vetted',
 			'wcpt-interview-sched' => 'Interview scheduled',
 			'wcpt-rejected'        => 'Sent response',
-			'wcpt-canceled'       => 'WordCamp canceled',
+			'wcpt-canceled'        => 'WordCamp canceled',
 			'wcpt-approved-pre-pl' => 'Orientation/interview held',
 			'wcpt-needs-email'     => 'Organizer agreement signed',
 			'wcpt-needs-site'      => 'Email address/fwd set up',
@@ -309,7 +309,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => array(),  // Allowed from any status, see below
 			'wcpt-interview-sched' => array( 'wcpt-needs-orientati', 'wcpt-approved-pre-pl' ),
 			'wcpt-rejected'        => array(),
-			'wcpt-canceled'       => array(),  // Allowed from any status, see below
+			'wcpt-canceled'        => array(),  // Allowed from any status, see below
 			'wcpt-approved-pre-pl' => array( 'wcpt-interview-sched', 'wcpt-needs-email' ),
 			'wcpt-needs-email'     => array( 'wcpt-approved-pre-pl', 'wcpt-needs-site' ),
 			'wcpt-needs-site'      => array( 'wcpt-needs-email', 'wcpt-needs-polldaddy' ),

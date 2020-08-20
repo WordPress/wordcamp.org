@@ -1388,8 +1388,7 @@ class WordCamp_Post_Types_Plugin {
 				),
 				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields' ),
 				'menu_position'   => 22,
-				'public'          => false,
-				// todo public or publicly_queryable = true, so consistent with others? at the very least set show_in_json = true.
+				'public'          => true,
 				'show_ui'         => true,
 				'can_export'      => true,
 				'capability_type' => 'post',

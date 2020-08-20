@@ -148,7 +148,7 @@ function register_tax() {
  */
 function register_status() {
 	$stati = array(
-		Mentors\PREFIX . '_task_incomplete'	=> esc_html__( 'Incomplete',  'wordcamporg' ),
+		Mentors\PREFIX . '_task_incomplete' => esc_html__( 'Incomplete',  'wordcamporg' ),
 		Mentors\PREFIX . '_task_pending'    => esc_html__( 'In progress',  'wordcamporg' ),
 		Mentors\PREFIX . '_task_complete'   => esc_html__( 'Complete', 'wordcamporg' ),
 		Mentors\PREFIX . '_task_skipped'    => esc_html__( 'Skipped',  'wordcamporg' ),

@@ -118,12 +118,12 @@ function ctx_append_post_status_list() {
 
 	global $post;
 	$refunded_selected  = '';
-	$canceled_selected = '';
+	$canceled_selected  = '';
 	$status             = '';
 	$refunded           = __( 'refunded', 'wordcamporg' );
-	$canceled          = __( 'canceled', 'wordcamporg' );
+	$canceled           = __( 'canceled', 'wordcamporg' );
 	$refunded_status    = _x( 'Refunded', 'post', 'wordcamporg' );
-	$canceled_status   = _x( 'Canceled', 'post', 'wordcamporg' );
+	$canceled_status    = _x( 'Canceled', 'post', 'wordcamporg' );
 
 	if ( 'tix_invoice' === $post->post_type ) {
 
@@ -133,7 +133,7 @@ function ctx_append_post_status_list() {
 		}
 
 		if ( 'canceled' === $post->post_status ) {
-			$canceled_selected = ' selected=\"selected\"';
+			$canceled_selected  = ' selected=\"selected\"';
 			$status             = $canceled_status;
 		}
 

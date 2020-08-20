@@ -176,7 +176,7 @@ h2 {
 
 		<p>11. Assignment. Neither WPCS nor the Sponsor will have the right to assign this Agreement without the prior written consent of the other party, and any purported assignment without such consent will be void. WPCS may delegate its duties under this Agreement to its volunteers and local WordCamp organizers.</p>
 
-		<p>12. Refund and Cancellation Policy. WordCamp Sponsors will not be acknowledged until payment is received in full. Sponsors may request a refund and cancel their sponsorship within 5 business days of payment of the sponsorship invoice. 5 business days after the sponsorship invoice is paid, refunds are no longer available. If a WordCamp is cancelled, sponsors will be refunded their sponsorship fees in full.</p>
+		<p>12. Refund and Cancellation Policy. WordCamp Sponsors will not be acknowledged until payment is received in full. Sponsors may request a refund and cancel their sponsorship within 5 business days of payment of the sponsorship invoice. 5 business days after the sponsorship invoice is paid, refunds are no longer available. If a WordCamp is canceled, sponsors will be refunded their sponsorship fees in full.</p>
 
 		<p>13. Entire Agreement; Amendment. This Agreement (including Exhibit A) constitutes the entire agreement of WPCS and the Sponsor with respect to the subject matter set forth herein, and this Agreement supersedes any prior or contemporaneous oral or written agreements, understandings, or communications or past courses of dealing between the Sponsor and WPCS with respect to that subject matter. This Agreement may not be amended or modified, except in a written amendment signed by duly authorized representatives of both parties.</p>
 

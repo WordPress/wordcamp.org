@@ -131,7 +131,7 @@ $asterisk2 = false;
 
 <?php if ( $failures['vendor_payment_count'] || $failures['reimbursement_count'] ) : ?>
 	<h3>
-		Failed/Cancelled Payments
+		Failed/Canceled Payments
 		<?php if ( $wordcamp_name ) : ?>
 			for <?php echo esc_html( $wordcamp_name ); ?>
 		<?php endif; ?>

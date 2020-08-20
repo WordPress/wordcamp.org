@@ -46,11 +46,11 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 		$public_statuses = WordCamp_Loader::get_public_post_statuses();
 
 		/*
-		 * Camps that are scheduled and then cancelled should still be available (though not included
+		 * Camps that are scheduled and then canceled should still be available (though not included
 		 * by default). This allows Official WordPress Events to update their status, so that they'll be removed
 		 * from the Events Widget.
 		 */
-		$public_statuses[] = 'wcpt-cancelled';
+		$public_statuses[] = 'wcpt-canceled';
 
 		/*
 		 * @todo This was originally added so that the Official Events plugin could update the status of postponed

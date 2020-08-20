@@ -593,7 +593,7 @@ function send_invoice_pending_reminder_mail( $invoice_id, $organizer_mail ) {
 			__(
 				'Howdy organizers,
 				<br>
-				It looks like the invoice <a href="%1$s">%2$s</a> is still unpaid. If you still expect the sponsor to pay this invoice, please contact them to find out when we should expect payment. If this invoice needs to be cancelled, please email support@wordcamp.org.
+				It looks like the invoice <a href="%1$s">%2$s</a> is still unpaid. If you still expect the sponsor to pay this invoice, please contact them to find out when we should expect payment. If this invoice needs to be canceled, please email support@wordcamp.org.
 				<br>
 				Thanks for all your hard work on WordCamp.',
 				'wordcamporg'

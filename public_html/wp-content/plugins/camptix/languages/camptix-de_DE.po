@@ -408,12 +408,12 @@ msgid "E-mails (debug)"
 msgstr "E-Mails (debug)"
 
 #: ../camptix.php:1010 ../camptix.php:1058
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Abgebrochen"
 
 #: ../camptix.php:1011
 #, php-format
-msgid "Cancelled <span class=\"count\">(%s)</span>"
+msgid "Canceled <span class=\"count\">(%s)</span>"
 msgstr "Abgebrochen <span class=\"count\">(%s)</span>"
 
 #: ../camptix.php:1019 ../camptix.php:1055
@@ -1471,7 +1471,7 @@ msgid "Your access token does not seem to be valid."
 msgstr "Dein Zugangstoken ist ungültig."
 
 #: ../camptix.php:4458
-msgid "Your payment has been cancelled. Feel free to try again!"
+msgid "Your payment has been canceled. Feel free to try again!"
 msgstr "Deine Zahlung wurde abgebrochen. Du darfst es gerne erneut versuchen!"
 
 #: ../camptix.php:4461
@@ -1487,7 +1487,7 @@ msgstr ""
 
 #: ../camptix.php:4467
 msgid ""
-"Sorry, but the reservation you are trying to use has been cancelled or has expired."
+"Sorry, but the reservation you are trying to use has been canceled or has expired."
 msgstr "Die gewählte Reservierung wurde zurückgenommen oder ist abgelaufen."
 
 #: ../camptix.php:4484 ../camptix.php:4663
@@ -1689,7 +1689,7 @@ msgstr "Erstattungsgrund"
 #: ../camptix.php:5287
 msgid ""
 "Refunds can take up to several days to process. All of the tickets you purchased in "
-"the original transaction will be cancelled. We are not able to provide partial refunds "
+"the original transaction will be canceled. We are not able to provide partial refunds "
 "and/or refunds to a different account than the original purchaser. You must agree to "
 "these terms before requesting a refund."
 msgstr ""
@@ -1789,7 +1789,7 @@ msgstr "%s wird von dieser Zahlungsmethode nicht unterstützt."
 #~ "Zahlung zugeordnet werden."
 
 #~ msgctxt "post"
-#~ msgid "Cancelled"
+#~ msgid "Canceled"
 #~ msgstr "Abgebrochen"
 
 #~ msgctxt "post"

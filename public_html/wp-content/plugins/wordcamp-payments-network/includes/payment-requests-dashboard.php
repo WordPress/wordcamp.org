@@ -298,7 +298,7 @@ class Payment_Requests_Dashboard {
 			'approved',
 			'pending-payment',
 			'paid',
-			'cancelled-failed',
+			'canceled-failed',
 			'incomplete',
 		);
 
@@ -321,7 +321,7 @@ class Payment_Requests_Dashboard {
 			'approved'         => __( 'Approved', 'wordcamporg' ),
 			'pending-payment'  => __( 'Pending Payment', 'wordcamporg' ),
 			'paid'             => __( 'Paid', 'wordcamporg' ),
-			'cancelled-failed' => __( 'Cancelled/Failed', 'wordcamporg' ),
+			'canceled-failed' => __( 'Canceled/Failed', 'wordcamporg' ),
 			'incomplete'       => __( 'Incomplete', 'wordcamporg' ),
 		);
 

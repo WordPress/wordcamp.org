@@ -78,13 +78,13 @@ function register_tix_invoice() {
 		)
 	);
 
-	register_post_status( 'cancelled',
+	register_post_status( 'canceled',
 		array(
-			'label'                     => _x( 'Cancelled', 'post', 'wordcamporg' ),
+			'label'                     => _x( 'Canceled', 'post', 'wordcamporg' ),
 			'public'                    => true,
 			'show_in_admin_all_list'    => false,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'               => _n_noop( 'Canceled <span class="count">(%s)</span>', 'Canceled <span class="count">(%s)</span>', 'wordcamporg' ),
 		)
 	);
 }
@@ -118,12 +118,12 @@ function ctx_append_post_status_list() {
 
 	global $post;
 	$refunded_selected  = '';
-	$cancelled_selected = '';
+	$canceled_selected = '';
 	$status             = '';
 	$refunded           = __( 'refunded', 'wordcamporg' );
-	$cancelled          = __( 'cancelled', 'wordcamporg' );
+	$canceled          = __( 'canceled', 'wordcamporg' );
 	$refunded_status    = _x( 'Refunded', 'post', 'wordcamporg' );
-	$cancelled_status   = _x( 'Cancelled', 'post', 'wordcamporg' );
+	$canceled_status   = _x( 'Canceled', 'post', 'wordcamporg' );
 
 	if ( 'tix_invoice' === $post->post_type ) {
 
@@ -132,16 +132,16 @@ function ctx_append_post_status_list() {
 			$status            = $refunded_status;
 		}
 
-		if ( 'cancelled' === $post->post_status ) {
-			$cancelled_selected = ' selected=\"selected\"';
-			$status             = $cancelled_status;
+		if ( 'canceled' === $post->post_status ) {
+			$canceled_selected = ' selected=\"selected\"';
+			$status             = $canceled_status;
 		}
 
 		?>
 		<script>
 			jQuery( document ).ready( function($) {
 				$( "select#post_status" ).append( "<option value=\"<?php echo esc_attr( $refunded ); ?>\" <?php echo esc_attr( $refunded_selected ); ?>><?php echo esc_html( $refunded_status ); ?></option>" );
-				$( "select#post_status" ).append( "<option value=\"<?php echo esc_attr( $cancelled ); ?>\" <?php echo esc_attr( $cancelled_selected ); ?>><?php echo esc_html( $cancelled_status ); ?></option>" );
+				$( "select#post_status" ).append( "<option value=\"<?php echo esc_attr( $canceled ); ?>\" <?php echo esc_attr( $canceled_selected ); ?>><?php echo esc_html( $canceled_status ); ?></option>" );
 				<?php if ( ! empty( $status ) ) { ?>
 					$( ".misc-pub-post-status #post-status-display" ).html( '<?php echo esc_html( $status ); ?>' );
 				<?php } ?>
@@ -164,9 +164,9 @@ function ctx_display_custom_statuses( $states, $post ) {
 		}
 	}
 
-	if ( 'cancelled' !== $arg ) {
-		if ( 'cancelled' === $post->post_status ) {
-			return array( _x( 'Cancelled', 'post', 'wordcamporg' ) );
+	if ( 'canceled' !== $arg ) {
+		if ( 'canceled' === $post->post_status ) {
+			return array( _x( 'Canceled', 'post', 'wordcamporg' ) );
 		}
 	}
 
@@ -187,7 +187,7 @@ function ctx_append_post_status_bulk_edit() {
 	<script>
 		jQuery( document ).ready( function($) {
 			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'refunded', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Refunded', 'post', 'wordcamporg' ); ?></option>" );
-			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'cancelled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Cancelled', 'post', 'wordcamporg' ); ?></option>" );
+			$( ".inline-edit-status select " ).append("<option value=\"<?php echo esc_attr( __( 'canceled', 'wordcamporg' ) ); ?>\"><?php echo esc_html_x( 'Canceled', 'post', 'wordcamporg' ); ?></option>" );
 		});
 	</script>
 	<?php
@@ -225,7 +225,7 @@ add_action( 'post_submitbox_misc_actions', 'ctx_invoice_link' );
  */
 function ctx_register_invoice_metabox( $post ) {
 
-	$non_editable_statuses = array( 'publish', 'cancelled', 'refunded' );
+	$non_editable_statuses = array( 'publish', 'canceled', 'refunded' );
 	if ( in_array( $post->post_status, $non_editable_statuses, true ) ) {
 		add_meta_box(
 			'ctx_invoice_metabox',
@@ -447,7 +447,7 @@ function ctx_generate_invoice_document( $invoice_id ) {
 		return;
 	}
 
-	if ( ! in_array( get_post_status( $invoice_id ), array( 'publish', 'cancelled', 'refunded' ), true ) ) {
+	if ( ! in_array( get_post_status( $invoice_id ), array( 'publish', 'canceled', 'refunded' ), true ) ) {
 		return;
 	}
 

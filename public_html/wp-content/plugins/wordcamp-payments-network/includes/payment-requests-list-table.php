@@ -70,8 +70,8 @@ class Payment_Requests_List_Table extends WP_List_Table {
 			$order   = 'desc';
 		} elseif ( 'incomplete' == $view ) {
 			$where .= " AND `status` = 'wcb-incomplete' ";
-		} elseif ( 'cancelled-failed' == $view ) {
-			$where .= " AND `status` IN ( 'wcb-failed', 'wcb-cancelled' ) ";
+		} elseif ( 'canceled-failed' == $view ) {
+			$where .= " AND `status` IN ( 'wcb-failed', 'wcb-canceled' ) ";
 		} elseif ( 'drafts' == $view ) {
 			$where .= " AND `status` = 'draft' ";
 		}

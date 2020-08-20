@@ -50,7 +50,7 @@ class Payment_Activity extends Date_Range {
 		<ol>
 			<li>Retrieve index entries for vendor payments and reimbursement requests that have a created and/or paid date that fall within the specified date range.</li>
 			<li>Query each WordCamp site from the index results and retrieve additional data for each matched payment.</li>
-			<li>Parse the activity log for each payment and determine (or guess) if/when the payment was approved, if/when it was paid, and if/when it was cancelled or it failed.</li>
+			<li>Parse the activity log for each payment and determine (or guess) if/when the payment was approved, if/when it was paid, and if/when it was canceled or it failed.</li>
 			<li>Filter out payments don't have an approved, paid, or failed date within the specified date range.</li>
 		</ol>
 	";
@@ -376,11 +376,11 @@ class Payment_Activity extends Date_Range {
 			$parsed_post['timestamp_approved'] = $parsed_post['timestamp_paid'];
 		}
 
-		// There isn't an explicit log entry for failed or cancelled payments, so we have to look at the post status.
-		if ( in_array( $parsed_post['status'], array( 'wcb-failed', 'wcb-cancelled' ), true ) ) {
+		// There isn't an explicit log entry for failed or canceled payments, so we have to look at the post status.
+		if ( in_array( $parsed_post['status'], array( 'wcb-failed', 'wcb-canceled' ), true ) ) {
 			$parsed_post['timestamp_paid'] = 0;
 
-			// Assume the last log entry is when the payment was marked failed/cancelled.
+			// Assume the last log entry is when the payment was marked failed/canceled.
 			$last_log = array_slice( $parsed_post['log'], -1 )[0];
 			$parsed_post['timestamp_failed'] = $last_log['timestamp'];
 		}
@@ -415,7 +415,7 @@ class Payment_Activity extends Date_Range {
 		);
 
 		$currencies      = array();
-		$failed_statuses = array( 'wcb-failed', 'wcb-cancelled' );
+		$failed_statuses = array( 'wcb-failed', 'wcb-canceled' );
 
 		foreach ( $payment_posts as $payment ) {
 			if ( ! isset( $payment['currency'] ) || ! $payment['currency'] ) {
@@ -627,7 +627,7 @@ class Payment_Activity extends Date_Range {
 			$filename[] = $report->start_date->format( 'Y-m-d' );
 			$filename[] = $report->end_date->format( 'Y-m-d' );
 
-			$headers = array( 'Blog ID', 'Payment ID', 'Payment Type', 'Currency', 'Amount', 'Status', 'Date Approved', 'Date Paid', 'Date Failed/Cancelled' );
+			$headers = array( 'Blog ID', 'Payment ID', 'Payment Type', 'Currency', 'Amount', 'Status', 'Date Approved', 'Date Paid', 'Date Failed/Canceled' );
 
 			$data = $report->get_data();
 

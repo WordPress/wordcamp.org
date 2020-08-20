@@ -93,13 +93,13 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-cancelled', array(
-			'label'       => esc_html_x( 'Cancelled', 'payment request', 'wordcamporg' ),
+		register_post_status( 'wcb-canceled', array(
+			'label'       => esc_html_x( 'Canceled', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
 			'label_count' => _nx_noop(
-				'Cancelled <span class="count">(%s)</span>',
-				'Cancelled <span class="count">(%s)</span>',
+				'Canceled <span class="count">(%s)</span>',
+				'Canceled <span class="count">(%s)</span>',
 				'wordcamporg'
 			),
 		) );

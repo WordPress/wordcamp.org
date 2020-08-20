@@ -526,13 +526,13 @@ msgstr ""
 
 #: camptix.php:1023
 msgctxt "post"
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Скасовано"
 
 #: camptix.php:1024
 msgctxt "camptix"
-msgid "Cancelled <span class=\"count\">(%s)</span>"
-msgid_plural "Cancelled <span class=\"count\">(%s)</span>"
+msgid "Canceled <span class=\"count\">(%s)</span>"
+msgid_plural "Canceled <span class=\"count\">(%s)</span>"
 msgstr[0] "Скасовано <span class=\"count\">(%s)</span>"
 msgstr[1] "Скасовано <span class=\"count\">(%s)</span>"
 msgstr[2] "Скасовано <span class=\"count\">(%s)</span>"
@@ -585,7 +585,7 @@ msgid "Failed"
 msgstr ""
 
 #: camptix.php:1071
-msgid "Cancelled"
+msgid "Canceled"
 msgstr ""
 
 #: camptix.php:1074
@@ -1520,7 +1520,7 @@ msgid "Your access token does not seem to be valid."
 msgstr "Схоже, що ваш ключ доступу не коректний."
 
 #: camptix.php:4604
-msgid "Your payment has been cancelled. Feel free to try again!"
+msgid "Your payment has been canceled. Feel free to try again!"
 msgstr "Вашу оплату було скасовано. Спробуйте ще раз!"
 
 #: camptix.php:4607
@@ -1532,7 +1532,7 @@ msgid "Your refund request can not be processed. Please try again later or conta
 msgstr "Ваш запит повернення не може бути виконаний. Будь ласка, спробуйте ще раз пізніше або зверніться в службу підтримки."
 
 #: camptix.php:4613
-msgid "Sorry, but the reservation you are trying to use has been cancelled or has expired."
+msgid "Sorry, but the reservation you are trying to use has been canceled or has expired."
 msgstr ""
 
 #: camptix.php:4632 camptix.php:4815
@@ -1716,7 +1716,7 @@ msgid "Refund Reason"
 msgstr ""
 
 #: camptix.php:5470
-msgid "Refunds can take up to several days to process. All of the tickets you purchased in the original transaction will be cancelled. We are not able to provide partial refunds and/or refunds to a different account than the original purchaser. You must agree to these terms before requesting a refund."
+msgid "Refunds can take up to several days to process. All of the tickets you purchased in the original transaction will be canceled. We are not able to provide partial refunds and/or refunds to a different account than the original purchaser. You must agree to these terms before requesting a refund."
 msgstr ""
 
 #: camptix.php:5472

@@ -389,7 +389,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$statuses = array(
 			'Completed' => CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
 			'Pending'   => CampTix_Plugin::PAYMENT_STATUS_PENDING,
-			'Cancelled' => CampTix_Plugin::PAYMENT_STATUS_CANCELLED,
+			'Canceled' => CampTix_Plugin::PAYMENT_STATUS_CANCELED,
 			'Failed'    => CampTix_Plugin::PAYMENT_STATUS_FAILED,
 			'Denied'    => CampTix_Plugin::PAYMENT_STATUS_FAILED,
 			'Refunded'  => CampTix_Plugin::PAYMENT_STATUS_REFUNDED,
@@ -410,7 +410,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 * Handle a canceled payment
 	 *
 	 * Runs when the user cancels their payment during checkout at PayPal.
-	 * his will simply tell CampTix to put the created attendee drafts into to Cancelled state.
+	 * his will simply tell CampTix to put the created attendee drafts into to Canceled state.
 	 *
 	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
 	 */
@@ -480,8 +480,8 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			}
 		}
 
-		// Set the associated attendees to cancelled.
-		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
+		// Set the associated attendees to canceled.
+		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELED );
 	}
 
 	/**

@@ -515,14 +515,14 @@ msgstr ""
 
 #: camptix.php:1087
 msgctxt "post"
-msgid "Cancelled"
+msgid "Canceled"
 msgstr ""
 
 #: camptix.php:1088
 #, php-format
 msgctxt "camptix"
-msgid "Cancelled <span class=\"count\">(%s)</span>"
-msgid_plural "Cancelled <span class=\"count\">(%s)</span>"
+msgid "Canceled <span class=\"count\">(%s)</span>"
+msgid_plural "Canceled <span class=\"count\">(%s)</span>"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -574,7 +574,7 @@ msgid "Failed"
 msgstr ""
 
 #: camptix.php:1135
-msgid "Cancelled"
+msgid "Canceled"
 msgstr ""
 
 #: camptix.php:1138
@@ -1571,7 +1571,7 @@ msgid "Your access token does not seem to be valid."
 msgstr ""
 
 #: camptix.php:5168
-msgid "Your payment has been cancelled. Feel free to try again!"
+msgid "Your payment has been canceled. Feel free to try again!"
 msgstr ""
 
 #: camptix.php:5171
@@ -1586,7 +1586,7 @@ msgstr ""
 
 #: camptix.php:5177
 msgid ""
-"Sorry, but the reservation you are trying to use has been cancelled or has "
+"Sorry, but the reservation you are trying to use has been canceled or has "
 "expired."
 msgstr ""
 
@@ -1785,7 +1785,7 @@ msgstr ""
 #: camptix.php:6041
 msgid ""
 "Refunds can take up to several days to process. All of the tickets you "
-"purchased in the original transaction will be cancelled. We are not able to "
+"purchased in the original transaction will be canceled. We are not able to "
 "provide partial refunds and/or refunds to a different account than the "
 "original purchaser. You must agree to these terms before requesting a refund."
 msgstr ""

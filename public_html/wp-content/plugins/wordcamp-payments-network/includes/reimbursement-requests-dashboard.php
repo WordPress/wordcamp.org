@@ -51,8 +51,8 @@ function render_submenu_page() {
 			$section_explanation = 'These requests have been reviewed by a deputy, and sent back to the organizer because they lacked some required information.';
 			break;
 
-		case 'wcb-cancelled':
-			$section_explanation = 'These requests have been reviewed by a deputy and cancelled/rejected.';
+		case 'wcb-canceled':
+			$section_explanation = 'These requests have been reviewed by a deputy and canceled/rejected.';
 			break;
 
 		case 'wcb-approved':

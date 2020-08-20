@@ -54,7 +54,7 @@ class WordCamp_Status extends Base_Status {
 		<ol>
 			<li>Retrieve all WordCamp posts that either don't have an event date yet or the event date isn't more than three months prior to the specified date range.</li>
 			<li>Parse the status log for each WordCamp and filter out log entries that aren't within the date range.</li>
-			<li>Filter out WordCamps that don't have any log entries within the date range and have an inactive status (rejected, cancelled, scheduled, or closed).</li>
+			<li>Filter out WordCamps that don't have any log entries within the date range and have an inactive status (rejected, canceled, scheduled, or closed).</li>
 		</ol>
 	";
 
@@ -360,7 +360,7 @@ class WordCamp_Status extends Base_Status {
 	protected static function get_inactive_statuses() {
 		return array(
 			'wcpt-rejected',
-			'wcpt-cancelled',
+			'wcpt-canceled',
 			'wcpt-scheduled',
 			'wcpt-closed',
 		);

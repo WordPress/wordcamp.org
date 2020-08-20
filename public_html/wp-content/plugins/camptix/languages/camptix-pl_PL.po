@@ -416,13 +416,13 @@ msgstr "E-maile (tryb debug)"
 #: camptix.php:1009
 #, fuzzy
 msgctxt "post"
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Anulowany"
 
 #: camptix.php:1010
 msgctxt "camptix"
-msgid "Cancelled <span class=\"count\">(%s)</span>"
-msgid_plural "Cancelled <span class=\"count\">(%s)</span>"
+msgid "Canceled <span class=\"count\">(%s)</span>"
+msgid_plural "Canceled <span class=\"count\">(%s)</span>"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -474,7 +474,7 @@ msgid "Failed"
 msgstr "Niepowodzenie"
 
 #: camptix.php:1057
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Anulowany"
 
 #: camptix.php:1060
@@ -1518,7 +1518,7 @@ msgstr "Twój token dostępowy wygląda na nieprawidłowy."
 
 #: camptix.php:4316
 #, fuzzy
-msgid "Your payment has been cancelled. Feel free to try again!"
+msgid "Your payment has been canceled. Feel free to try again!"
 msgstr ""
 "Wygląda na to, że anulowałeś transakcję via PayPal. Śmiało, spróbuj jeszcze "
 "raz!"
@@ -1538,7 +1538,7 @@ msgstr ""
 #: camptix.php:4325
 #, fuzzy
 msgid ""
-"Sorry, but the reservation you are trying to use has been cancelled or has "
+"Sorry, but the reservation you are trying to use has been canceled or has "
 "expired."
 msgstr ""
 "Przykro nam, ale używana przez Ciebie rezerwacja wygląda na błędną lub "
@@ -1758,7 +1758,7 @@ msgstr "Powód odmowy"
 #: camptix.php:5140
 msgid ""
 "Refunds can take up to several days to process. All purchased tickets will "
-"be cancelled. Partial refunds and refunds to a different account than the "
+"be canceled. Partial refunds and refunds to a different account than the "
 "original purchaser, are unavailable. You have to agree to these terms before "
 "requesting a refund."
 msgstr ""
@@ -1937,7 +1937,7 @@ msgstr ""
 #~ msgid "Released a reservation."
 #~ msgstr "Zwolniono rezerwację."
 
-#~ msgid "Cancelled a reservation."
+#~ msgid "Canceled a reservation."
 #~ msgstr "Anulowano rezerwację"
 
 #~ msgid "Saved ticket post with form data."
@@ -1998,13 +1998,13 @@ msgstr ""
 #~ "Pojedynczy zakup, więc bilet i potwierdzenie wysłane w jednym mailu."
 
 #~ msgid ""
-#~ "Payment cancelled due to an HTTP error during DoExpressCheckoutPayment."
+#~ "Payment canceled due to an HTTP error during DoExpressCheckoutPayment."
 #~ msgstr ""
 #~ "Płatność anulowana z powodu błędu HTTP w trakcie wykonywania "
 #~ "DoExpressCheckoutPayment."
 
 #~ msgid ""
-#~ "Payment cancelled due to an HTTP error during GetExpressCheckoutDetails."
+#~ "Payment canceled due to an HTTP error during GetExpressCheckoutDetails."
 #~ msgstr ""
 #~ "Płatność anulowana z powodu błędu HTTP w trakcie wykonywania "
 #~ "GetExpressCheckoutDetails."
@@ -2012,7 +2012,7 @@ msgstr ""
 #~ msgid "Attendee not found in paypal_return."
 #~ msgstr "Nie znaleziono uczestnika w paypal_return."
 
-#~ msgid "Transaction was cancelled at PayPal."
+#~ msgid "Transaction was canceled at PayPal."
 #~ msgstr "Transakcja została anulowana przez PayPal."
 
 #~ msgid "Could not verify PayPal IPN."

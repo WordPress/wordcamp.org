@@ -3,7 +3,7 @@ defined( 'WPINC' ) || die();
 
 /** @var array $application_data */
 ?>
-
+<?php if ( $application_data ) : ?>
 <table class="widefat striped">
 	<tbody>
 		<?php foreach ( $application_data as $question => $answer ) :
@@ -21,3 +21,6 @@ defined( 'WPINC' ) || die();
 		<?php endforeach; ?>
 	</tbody>
 </table>
+<?php else : ?>
+	<p><?php esc_html_e( 'No application data found.', 'wordcamporg' ); ?></p>
+<?php endif;

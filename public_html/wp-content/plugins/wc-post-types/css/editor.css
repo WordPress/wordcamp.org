@@ -28,3 +28,9 @@
 .wordcamp-panel-session-speakers .components-form-token-field__help {
 	display: none;
 }
+
+.wc-panel-organizer-info .components-notice,
+.wc-panel-speaker-info .components-notice {
+	margin-left: 0;
+	margin-right: 0;
+}

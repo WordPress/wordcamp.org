@@ -32,9 +32,9 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 	 */
 	$gutenberg_only = array(
 		'wcb_session',
-		// 'wcb_speaker',
+		'wcb_speaker',
 		// 'wcb_sponsor',
-		// 'wcb_organizer',
+		'wcb_organizer',
 	);
 
 	/*

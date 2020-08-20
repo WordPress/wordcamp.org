@@ -485,6 +485,11 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
+		$screen = get_current_screen();
+		if ( 'post' !== trim( $screen->id ) ) {
+			return;
+		}
+
 		$message = $this->get_notice_message(); ?>
 
 		<script type="text/javascript">

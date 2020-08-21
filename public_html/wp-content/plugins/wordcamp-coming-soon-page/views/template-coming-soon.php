@@ -28,7 +28,7 @@
 					</h2>
 				<?php endif; ?>
 
-				<?php if ( 'wcpt-canceled' !== $status && in_array( 'subscriptions', $active_modules ) ) : ?>
+				<?php if ( 'wcpt-cancelled' !== $status && in_array( 'subscriptions', $active_modules ) ) : ?>
 					<div class="wccsp-subscription">
 						<?php echo do_shortcode( sprintf(
 							'[jetpack_subscription_form subscribe_text="" title="" subscribe_button="%s"]',

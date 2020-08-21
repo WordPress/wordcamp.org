@@ -47,7 +47,7 @@ class CampTix_Plugin {
 	// Allow others to use this.
 	public $filter_post_meta = false;
 
-	const PAYMENT_STATUS_CANCELED = 1;
+	const PAYMENT_STATUS_CANCELLED = 1;
 	const PAYMENT_STATUS_COMPLETED = 2;
 	const PAYMENT_STATUS_PENDING = 3;
 	const PAYMENT_STATUS_FAILED = 4;
@@ -1172,10 +1172,10 @@ class CampTix_Plugin {
 			$states['failed'] = __( 'Failed', 'wordcamporg' );
 
 		if ( $post->post_status == 'cancel' && get_query_var( 'post_status' ) != 'cancel' )
-			$states['canceled'] = __( 'Canceled', 'wordcamporg' );
+			$states['cancelled'] = __( 'Canceled', 'wordcamporg' );
 
 		if ( $post->post_status == 'refund' && get_query_var( 'post_status' ) != 'refund' )
-			$states['canceled'] = __( 'Refunded', 'wordcamporg' );
+			$states['cancelled'] = __( 'Refunded', 'wordcamporg' );
 
 		return $states;
 	}
@@ -5387,7 +5387,7 @@ class CampTix_Plugin {
 			$this->error( __( 'Your access token does not seem to be valid.', 'wordcamporg' ) );
 		}
 
-		if ( isset( $redirected_error_flags['payment_canceled'] ) ) {
+		if ( isset( $redirected_error_flags['payment_cancelled'] ) ) {
 			$this->error( __( 'Your payment has been canceled. Feel free to try again!', 'wordcamporg' ) );
 		}
 
@@ -7354,7 +7354,7 @@ class CampTix_Plugin {
 			update_post_meta( $attendee->ID, 'tix_transaction_id', $transaction_id );
 			update_post_meta( $attendee->ID, 'tix_transaction_details', $transaction_details );
 
-			if ( self::PAYMENT_STATUS_CANCELED == $result ) {
+			if ( self::PAYMENT_STATUS_CANCELLED == $result ) {
 				$attendee->post_status = 'cancel';
 				wp_update_post( $attendee );
 			}
@@ -7419,8 +7419,8 @@ class CampTix_Plugin {
 		// Let's make a clean exit out of all of this.
 		switch ( $result ) :
 
-			case self::PAYMENT_STATUS_CANCELED :
-				$this->error_flag( 'payment_canceled' );
+			case self::PAYMENT_STATUS_CANCELLED :
+				$this->error_flag( 'payment_cancelled' );
 				$this->redirect_with_error_flags();
 				die();
 				break;

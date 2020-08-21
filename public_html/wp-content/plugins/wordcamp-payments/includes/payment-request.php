@@ -281,7 +281,7 @@ class WCP_Payment_Request {
 			'wcb-pending-payment',
 			'wcb-paid',
 			'wcb-failed',
-			'wcb-canceled',
+			'wcb-cancelled',
 		);
 	}
 

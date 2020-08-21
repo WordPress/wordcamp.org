@@ -360,7 +360,7 @@ class WordCamp_Status extends Base_Status {
 	protected static function get_inactive_statuses() {
 		return array(
 			'wcpt-rejected',
-			'wcpt-canceled',
+			'wcpt-cancelled',
 			'wcpt-scheduled',
 			'wcpt-closed',
 		);

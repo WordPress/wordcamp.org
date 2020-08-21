@@ -377,7 +377,7 @@ class Payment_Activity extends Date_Range {
 		}
 
 		// There isn't an explicit log entry for failed or canceled payments, so we have to look at the post status.
-		if ( in_array( $parsed_post['status'], array( 'wcb-failed', 'wcb-canceled' ), true ) ) {
+		if ( in_array( $parsed_post['status'], array( 'wcb-failed', 'wcb-cancelled' ), true ) ) {
 			$parsed_post['timestamp_paid'] = 0;
 
 			// Assume the last log entry is when the payment was marked failed/canceled.
@@ -415,7 +415,7 @@ class Payment_Activity extends Date_Range {
 		);
 
 		$currencies      = array();
-		$failed_statuses = array( 'wcb-failed', 'wcb-canceled' );
+		$failed_statuses = array( 'wcb-failed', 'wcb-cancelled' );
 
 		foreach ( $payment_posts as $payment ) {
 			if ( ! isset( $payment['currency'] ) || ! $payment['currency'] ) {

@@ -211,7 +211,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 *
 	 * @param string $payment_token
 	 *
-	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELED, PAYMENT_STATUS_COMPLETED, etc
+	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
 	 */
 	abstract function payment_checkout( $payment_token );
 
@@ -220,7 +220,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 *
 	 * @param string $payment_token
 	 *
-	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELED, PAYMENT_STATUS_COMPLETED, etc
+	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
 	 */
 	function payment_refund( $payment_token ) {
 		/** @var $camptix Camptix_Plugin  */

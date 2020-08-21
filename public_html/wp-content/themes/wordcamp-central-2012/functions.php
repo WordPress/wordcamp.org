@@ -179,8 +179,20 @@ class WordCamp_Central_Theme {
 	 * Enqueue scripts and styles.
 	 */
 	static function enqueue_scripts() {
-		wp_enqueue_style( 'central', get_stylesheet_uri(), array(), 15 );
-		wp_enqueue_script( 'wordcamp-central', get_stylesheet_directory_uri() . '/js/central.js', array( 'jquery', 'underscore' ), 4, true );
+		wp_enqueue_style(
+			'central',
+			get_stylesheet_uri(),
+			array(),
+			filemtime( __DIR__ . '/style.css' )
+		);
+
+		wp_enqueue_script(
+			'wordcamp-central',
+			get_stylesheet_directory_uri() . '/js/central.js',
+			array( 'jquery', 'underscore' ),
+			filemtime( __DIR__ . '/js/central.js' ),
+			true
+		);
 
 		wp_localize_script( 'wordcamp-central', 'wordcampCentralOptions', self::get_javascript_options() );
 

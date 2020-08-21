@@ -8,6 +8,9 @@ defined( 'WPINC' ) || die();
 // Allow Photon to fetch images that are served via HTTPS.
 add_filter( 'jetpack_photon_reject_https',    '__return_false' );
 
+// Disable Simple Payments feature
+add_filter( 'jetpack_disable_simple_payments', '__return_true' );
+
 /**
  * Filter the post types Jetpack has access to, and can synchronize with WordPress.com.
  *

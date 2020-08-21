@@ -335,7 +335,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy',
 		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
 		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'bilbao',
-		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'okc',
+		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'okc', 'la',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
@@ -366,7 +366,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 function unsubdomactories_redirects( $domain, $request_uri ) {
 	$redirect_cities = array(
 		// Wait until after the 2020 event.
-		'la', 'rochester', 'ogijima', 'asheville',
+		'rochester', 'ogijima', 'asheville',
 	);
 
 	$redirect_cities = apply_filters( 'unsubdomactories_redirect_cities', $redirect_cities );

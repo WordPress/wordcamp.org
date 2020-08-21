@@ -45,11 +45,12 @@ function register_speaker_post_meta() {
 		'wcb_speaker',
 		'_wcpt_user_id',
 		array(
-			'type'         => 'integer',
+			'type'          => 'integer',
 			// This is not set directly, but is set as a result of `_wcpt_user_name`.
 			// See update_wcorg_user_id() in wc-post-types.php.
-			'show_in_rest' => false,
-			'single'       => true,
+			'show_in_rest'  => false,
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 	register_post_meta(
@@ -59,6 +60,7 @@ function register_speaker_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest'      => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 			'sanitize_callback' => function( $value ) {
 				$wporg_user = wcorg_get_user_by_canonical_names( $value );
 				if ( ! $wporg_user ) {
@@ -72,13 +74,14 @@ function register_speaker_post_meta() {
 		'wcb_speaker',
 		'_wcb_speaker_email',
 		array(
-			'type'         => 'string',
-			'show_in_rest' => array(
+			'type'          => 'string',
+			'show_in_rest'  => array(
 				'schema' => array(
 					'context' => array( 'edit' ),
 				),
 			),
-			'single'       => true,
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 }
@@ -213,7 +216,7 @@ function register_organizer_post_meta() {
  * @param int    $object_id Object ID.
  */
 function meta_auth_callback( $allowed, $meta_key, $object_id ) {
-	if ( '_wcpt_' === substr( $meta_key, 0, 6 ) ) {
+	if ( '_wcpt_' === substr( $meta_key, 0, 6 ) || '_wcb_' === substr( $meta_key, 0, 5 ) ) {
 		return current_user_can( 'edit_post', $object_id );
 	}
 	return $allowed;

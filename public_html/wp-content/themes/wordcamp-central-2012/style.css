@@ -1971,10 +1971,6 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	-webkit-box-shadow: 0 1px 3px 1px rgba(0,0,0,.3);
 }
 
-.about-page .photo-slideshow img {
-	margin: 12px;
-}
-
 #content .about-stats {
 	margin: 0;
 	background-color: #f1f6f9;

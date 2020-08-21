@@ -192,10 +192,6 @@ class WordCamp_Central_Theme {
 			wp_enqueue_script( 'comment-reply' );
 		}
 
-		if ( is_front_page() || is_page( 'about' ) ) {
-			wp_enqueue_script( 'jquery-cycle', get_stylesheet_directory_uri() . '/js/jquery.cycle.min.js', array( 'jquery' ) );
-		}
-
 		if ( is_page( 'about' ) || is_page( 'schedule' ) ) {
 			$url = 'https://maps.googleapis.com/maps/api/js';
 

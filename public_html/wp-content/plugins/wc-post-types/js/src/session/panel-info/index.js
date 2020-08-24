@@ -14,7 +14,7 @@ import SessionDuration from './duration';
 import usePostMeta from '../../components/hooks/use-post-meta';
 
 export default function SessionSettings() {
-	const [ time, setStartTime ] = usePostMeta( '_wcpt_session_slides', WCPT_Session_Defaults.time );
+	const [ time, setStartTime ] = usePostMeta( '_wcpt_session_time', WCPT_Session_Defaults.time );
 	const [ duration, setDuration ] = usePostMeta( '_wcpt_session_duration', WCPT_Session_Defaults.duration );
 	const [ slides, setSlides ] = usePostMeta( '_wcpt_session_slides', '' );
 	const [ type, setType ] = usePostMeta( '_wcpt_session_type', '' );

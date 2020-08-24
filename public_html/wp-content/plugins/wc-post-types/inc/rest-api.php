@@ -6,7 +6,7 @@
  */
 
 namespace WordCamp\Post_Types\REST_API;
-use WP_Rest_Server, WP_Post_Type, WP_Post;
+use WP_Rest_Server, WP_Post_Type, WP_Post, WP_User;
 
 defined( 'WPINC' ) || die();
 
@@ -59,8 +59,18 @@ function register_speaker_post_meta() {
 		array(
 			'type'              => 'string',
 			'single'            => true,
-			'show_in_rest'      => true,
-			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+					if ( $user_id ) {
+						$wporg_user = get_userdata( $user_id );
+						if ( $wporg_user instanceof WP_User ) {
+							return $wporg_user->user_login;
+						}
+					}
+					return $value;
+				},
+			),
 			'sanitize_callback' => function( $value ) {
 				$wporg_user = wcorg_get_user_by_canonical_names( $value );
 				if ( ! $wporg_user ) {
@@ -68,6 +78,7 @@ function register_speaker_post_meta() {
 				}
 				return $wporg_user->user_login;
 			},
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
 	register_post_meta(
@@ -195,7 +206,18 @@ function register_organizer_post_meta() {
 		array(
 			'type'              => 'string',
 			'single'            => true,
-			'show_in_rest'      => true,
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+					if ( $user_id ) {
+						$wporg_user = get_userdata( $user_id );
+						if ( $wporg_user instanceof WP_User ) {
+							return $wporg_user->user_login;
+						}
+					}
+					return $value;
+				},
+			),
 			'sanitize_callback' => function( $value ) {
 				$wporg_user = wcorg_get_user_by_canonical_names( $value );
 				if ( ! $wporg_user ) {

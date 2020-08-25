@@ -20,11 +20,11 @@ function get_shared_definitions( $keys, $type ) {
 			$definitions = array(
 				// Generic attributes.
 				'boolean_false'     => array(
-					'type'    => 'bool',
+					'type'    => 'boolean',
 					'default' => false,
 				),
 				'boolean_true'      => array(
-					'type'    => 'bool',
+					'type'    => 'boolean',
 					'default' => true,
 				),
 				'string_empty'      => array(

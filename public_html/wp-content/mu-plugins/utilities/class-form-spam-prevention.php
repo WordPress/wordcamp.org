@@ -1,6 +1,8 @@
 <?php
 
 namespace WordCamp\Utilities;
+use function WordCamp\Logger\log;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -103,6 +105,10 @@ class Form_Spam_Prevention {
 		$score = $this->add_score_to_ip_address( $tests );
 
 		$pass = ! in_array( 'fail', $tests ) && $score < $this->config['score_threshold'];
+
+		if ( ! $pass ) {
+			log( 'fsp_validation_failed', compact( 'tests', 'score' ) );
+		}
 
 		/**
 		 * Action: Fires after the spam prevention fields are validated.

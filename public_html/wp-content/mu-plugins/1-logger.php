@@ -1,6 +1,8 @@
 <?php
 
 namespace WordCamp\Logger;
+use function WordCamp\Error_Handling\{ update_error_record, send_error_to_slack };
+
 defined( 'WPINC' ) or die();
 
 /**
@@ -19,41 +21,139 @@ defined( 'WPINC' ) or die();
  */
 function log( $error_code, $data = array() ) {
 	$backtrace = debug_backtrace( DEBUG_BACKTRACE_PROVIDE_OBJECT, 2 );
-	$meta_information = array();
+
+	$attachment_fields = array(
+		array(
+			'title' => 'Error Code',
+			'value' => $error_code,
+			'short' => false,
+		),
+
+//		array(
+//			'title' => 'Request ID',
+//			'value' => get_unique_request_id(),
+//			'short' => false,
+//		),
+		// not really needed?
+
+		array(
+			'title' => 'Location',
+			'value' => sprintf(
+				'%s() -- %s:%s',
+				$backtrace[1]['function'],
+				$backtrace[0]['file'],
+				$backtrace[0]['line']
+			),
+			'short' => false,
+		),
+
+		array(
+			'title' => 'Backtrace',
+			'value' => print_r( $backtrace, true ),
+			'short' => false,
+		),
+	);
 
 	if ( 'cli' === php_sapi_name() ) {
-		$meta_information['command'] = sprintf( '%s %s', $_SERVER['_'] ?? '', implode( ' ', $_SERVER['argv'] ) );
+		$attachment_fields[] = array(
+			'title' => 'CLI Command',
+			'value' => sprintf( '%s %s', $_SERVER['_'] ?? '', implode( ' ', $_SERVER['argv'] ) ),
+			'short' => false,
+		);
+
 	} else {
-		$meta_information['request_url'] = sprintf(
-			'%s://%s%s',
-			( empty( $_SERVER['HTTPS'] ) ) ? 'http' : 'https',
-			$_SERVER['SERVER_NAME'],
-			$_SERVER['REQUEST_URI']
+		$attachment_fields[] = array(
+			'title' => 'Request URL',
+			'value' => sprintf(
+				'%s://%s%s',
+				( empty( $_SERVER['HTTPS'] ) ) ? 'http' : 'https',
+				$_SERVER['SERVER_NAME'],
+				$_SERVER['REQUEST_URI']
+			),
+			'short' => false,
 		);
 
 		// Fall back to IP address if it's too early to detect the user
 		if ( did_action( 'after_setup_theme' ) > 0 ) {
-			$meta_information['current_user'] = get_current_user_id();
+			$attachment_fields[] = array(
+				'title' => 'Current User ID',
+				'value' => get_current_user_id(),
+				'short' => false,
+			);
+
 		} else {
-			$meta_information['remote_ip'] = $_SERVER['REMOTE_ADDR'];
+			$attachment_fields[] = array(
+				'title' => 'Requester IP Address',
+				'value' => $_SERVER['REMOTE_ADDR'],
+				'short' => false,
+			);
 		}
 	}
-	$data['logger_meta'] = $meta_information;
 
 	redact_keys( $data );
-	$data = str_replace( "\n", '[newline]', wp_json_encode( $data ) );
 
-	$log_entry = sprintf(
-		'[%s] %s:%s - %s:%s%s',
-		get_unique_request_id(),
-		basename( $backtrace[0]['file'] ),
-		$backtrace[0]['line'],
-		$backtrace[1]['function'],
-		$error_code,
-		$data ? ' -- ' . $data : ''
+	if ( $data ) {
+		$attachment_fields[] = array(
+			'title' => 'Error Details',
+//			'value' => str_replace( "\n", '[newline]', wp_json_encode( $data ) ),
+			'value' => print_r( $data, true ),
+			'short' => false,
+				// should be short to "show more" ?
+		);
+	}
+
+
+	/// ugh is sending this to slack really necessary or helpful?
+	/// maybe it'd be better to insert into custom database table
+		/// do via API call so non-blocking
+	/// then have private page that shows it
+	/// can rotate at 10k rows or something, or 1 month
+	/// well, shit, that'll probably be more work than
+
+	/// or maybe still write to disk, and just append a file, and have page show contents of that file
+	/// i think fwrite-whatever() has rotatting built in?
+
+
+	$attachment = array(
+		'fallback'    => $error_code . '-fall',
+//		'text'        => $error_code . '-text',
+		'author_name' => $error_code .'-auth',
+		'color'       => '#00A0D2',
+		'fields'      => $attachment_fields,
+		'footer'      => '',
 	);
 
-	error_log( $log_entry );
+
+	if ( 'local' === WORDCAMP_ENVIRONMENT ) {
+		error_log( $error_code . wp_json_encode( $attachment ) );
+		// ugh fuck this messes up the foramt-log command
+		// need to check if longer than `log_errors_max_len` ini ? or just increase that for this?
+
+	} else {
+		if ( 'development' === WORDCAMP_ENVIRONMENT && defined( 'SANDBOX_SLACK_USERNAME' ) ) {
+			$channels = array( SANDBOX_SLACK_USERNAME );
+
+		} else if ( 'production' === WORDCAMP_ENVIRONMENT ) {
+			$channels = array( '#dotorg-wordcamp-info' );
+			// setup constant for info channel, commit to capes before commit this
+			// rename other to -errors, even if keep this one as -info. ask corey
+		}
+
+		/*
+		 * Using `$error_code` as a key could create situations where multiple instances of an error happen, with
+		 * different `$data`, but those are squashed down into a single entry in Slack. That'd be bad, because it'd
+		 * hide potentially useful debugging data. Keeping the `$pause_interval` low mitigates that to some extent,
+		 * though.
+		 *
+		 * If we don't do that, though, then there's the risk that too many errors will happen, especially in bursts
+		 * -- e.g.,`gravatar_open_failed`, `insert_post_failed`, etc -- which would result in exceeding Slack's rate
+		 * limits, and nothing being recorded at all.
+		 */
+//		var_dump( WORDCAMP_ENVIRONMENT, SANDBOX_SLACK_USERNAME );
+		update_error_record( $error_code, 15 );
+//		send_error_to_slack( $attachment, $channels );
+		// todo throttling isn't working :(
+	}
 }
 
 /**

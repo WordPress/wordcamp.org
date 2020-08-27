@@ -86,35 +86,15 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
-	$err_key      = substr( base64_encode("$file-$line-$err_no" ), -254 ); // Max file length for ubuntu is 255.
-	$send_message = false;
-	$occurrences  = 0;
+	$error_key      = "$file-$line-$err_no";
+	$pause_interval = $is_fatal_error ? 30 : 600;
+	$record         = update_error_record( $error_key, $pause_interval );
 
-	$data = array(
-		'last_reported_at' => time(),
-		'error_count'      => 0, // Since last reported.
-	);
-
-	if ( error_record_exists( $err_key ) ) {
-		$data                 = get_error_record( $err_key );
-		$data['error_count'] += 1;
-		$occurrences          = $data['error_count'];
-		$time_elapsed         = time() - $data['last_reported_at'];
-		$pause_interval       = $is_fatal_error ? 30 : 600;
-
-		if ( $time_elapsed > $pause_interval ) {
-			$data['last_reported_at'] = time();
-			$data['error_count']      = 0;
-			$send_message             = true;
-		}
-	} else {
-		$send_message = true;
-	}
-
-	update_error_record( $err_key, $data );
-
-	if ( $send_message ) {
-		send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences );
+	if ( ! $record['is_throttled'] ) {
+		send_error_to_slack(
+			get_slack_message( $err_no, $err_msg, $file, $line, $record['error_count'] ),
+			get_destination_channels( $file, WORDCAMP_ENVIRONMENT, is_fatal_error( $err_no ) )
+		);
 	}
 
 	return false;
@@ -271,39 +251,43 @@ function get_error_record( $err_key ) {
 /**
  * Update the recorded data for an error.
  *
- * @param string $err_key
- * @param array  $data
+ * // document throttle b/c slack api has rate limit much lower than what this would normally produce. dont wanna get banned
+ *
+ * @param string $error_key
+ * @param int $pause_interval Number of seconds to throttle duplicate messages.
  *
  * @return bool|int
  */
-function update_error_record( $err_key, $data ) {
-	$error_file = ERROR_RATE_LIMITING_DIR . "/$err_key";
+function update_error_record( $error_key, $pause_interval ) {
+	$filename = substr( base64_encode( $error_key ), -254 ); // Max file length for Ubuntu is 255.
 
-	return file_put_contents( $error_file, wp_json_encode( $data ) );
-}
+	$data = array(
+		'last_reported_at' => time(),
+		'error_count'      => 0, // Since last reported.
+		'is_throttled'     => false,
+	);
 
-/**
- * Build and dispatch an error message to a channel or user on Slack.
- *
- * @param int    $err_no
- * @param string $err_msg
- * @param string $file
- * @param int    $line
- * @param int    $occurrences
- *
- * @return void
- */
-function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 ) {
-	// Local environments can just use `display_errors` etc, and shouldn't expose production's API token.
-	if ( ! defined( 'WORDCAMP_ENVIRONMENT' )
-		|| 'local' === WORDCAMP_ENVIRONMENT
-		|| ! is_readable( __DIR__ . '/includes/slack/send.php' )
-	) {
-		return;
+	if ( error_record_exists( $filename ) ) {
+		$data                 = get_error_record( $filename );
+		$data['error_count'] += 1;
+		$time_elapsed         = time() - $data['last_reported_at'];
+		$data['is_throttled'] = true;
+
+		if ( $time_elapsed > $pause_interval ) {
+			$data['last_reported_at'] = time();
+			$data['error_count']      = 0;
+			$data['is_throttled']     = false;
+			// have to delete file here instead? or does that happen elsewhere?
+		}
 	}
 
-	require_once( __DIR__ . '/includes/slack/send.php' );
+	file_put_contents( ERROR_RATE_LIMITING_DIR . "/$filename", wp_json_encode( $data ) );
 
+	return $data;
+}
+
+// todo
+function get_slack_message( $err_no, $err_msg, $file, $line, $occurrences = 0 ) {
 	$error_name  = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
 	$messages    = explode( 'Stack trace:', $err_msg, 2 );
 	$text        = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
@@ -372,15 +356,43 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		'footer'      => $footer,
 	);
 
+	return $attachment;
+}
+
+/**
+ * Build and dispatch an error message to a channel or user on Slack.
+ *
+ * @param int    $err_no
+ * @param string $err_msg
+ * @param string $file
+ * @param int    $line
+ * @param int    $occurrences
+ *
+ * @return void
+ */
+function send_error_to_slack( $attachment, $channels ) {
+//	var_dump( $channels, $attachment );
+
+	// Local environments can just use `display_errors` etc, and shouldn't expose production's API token.
+	if ( ! defined( 'WORDCAMP_ENVIRONMENT' )
+		|| 'local' === WORDCAMP_ENVIRONMENT
+		|| ! is_readable( __DIR__ . '/includes/slack/send.php' )
+	) {
+		return;
+	}
+
+	require_once( __DIR__ . '/includes/slack/send.php' );
+
 	$slack = new Send( SLACK_ERROR_REPORT_URL );
 	$slack->add_attachment( $attachment );
-
-	$channels = get_destination_channels( $file, WORDCAMP_ENVIRONMENT, is_fatal_error( $err_no ) );
 
 	foreach ( $channels as $channel ) {
 		$slack->send( $channel );
 	}
 }
+
+// todo test error handler still works as expected. unit + manual
+// todo also test
 
 /**
  * Determine which channels the error should be sent to.

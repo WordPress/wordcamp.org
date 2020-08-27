@@ -135,6 +135,13 @@ function _handle_post_data( &$data ) {
 
 			if ( ! $fsp->validate_form_submission() ) {
 				$data['errors'][] = 'Your form submission could not be processed. Please try again.';
+				// log so we know why, sponsor invoice payments are more important.
+				// make sure not being logged somewhere else. but if is, it isn't working.
+				// er, actually, logger\log() stuff isn't going to slack. it probably should, but to separate channel
+				// why do we even have spam on this? lookup commit and slack logs
+					// maybe rename current channel to "-errors" and new channel is "-logs"
+
+				// add a note to leave off dollar sign, and use . as separator? or does it use , for separator based on currency?
 				return;
 			}
 

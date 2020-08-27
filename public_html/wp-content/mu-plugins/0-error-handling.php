@@ -14,6 +14,9 @@ use Dotorg\Slack\Send;
  * Creating a `fatal-error-handler.php` file would let us override Core's fatal error handler, but we'd need
  * to update all the code here to not use any Core constants/functions that load after drop-in plugins. We also
  * want to handle non-fatals here.
+ *
+ * todo maybe could do ^ as part of this. maybe it can be tweaked to handle all errors, not just fatals? or maybe
+ * it could share some stuff w/ this?
  */
 
 /*

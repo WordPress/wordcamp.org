@@ -108,11 +108,68 @@ function log( $error_code, $data = array() ) {
 		/// do via API call so non-blocking
 	/// then have private page that shows it
 	/// can rotate at 10k rows or something, or 1 month
-	/// well, shit, that'll probably be more work than
+	/// well, frak, that'll probably be more work than
 
 	/// or maybe still write to disk, and just append a file, and have page show contents of that file
 	/// i think fwrite-whatever() has rotatting built in?
+	/// maybe limit it to 1mb or something like that
+	/// could add additional files later on if needed
+	///
+	/// remove the wc format-log command b/c no longer needed?
+	///
+	///
+	///
+	/// all of this feels like reinventing the wheel.
+	/// just `composer require monolog`, and write a lean wrapper function around the extraneous OOP stuff, so you have a streamlined function to call
+	/// how does it handle slack's api rate limit though?
+	///
+	///
+	///
 
+
+	/*
+	 * monolog
+	 *
+
+	log() stays the same maybe, but adds a new param $level that defaults to 'debug'
+		can pass in others though
+		debug goes to debug channel, everything else goes to errors channel
+		can remove some functionality that monolog provides, like adding remote_addr
+
+	HANDLE
+	----
+	prod + dev
+		SlackWebhookHandler
+		SlackHandler
+		FingersCrossedHandler - for throttling to avoid rate limit? but need to always send, even if only happens onces. just throttle/debounce, but never ignore anything.
+		DeduplicationHandler - for duplicate notices etc, but want to know the occurances count like we currently do
+		FilterHandler - maybe useful if other handlers aren't enough for rate limiting
+		SamplingHandler - maybe useful if other handlers aren't enough for rate limiting
+
+		in dev goes to separate channel though, but only if SLACK_USERNAME_WHATEVER is defined
+
+	local
+		BrowserConsoleHandler
+
+
+	FORMAT
+	-----
+	JsonFormatter
+
+	PROCES
+	-----
+	IntrospectionProcessor
+	WebProcessor
+	ProcessIdProcessor
+	UidProcessor
+
+
+	UTILS
+	------
+	ErrorHandler: The Monolog\ErrorHandler class allows you to easily register a Logger instance as an exception handler, error handler or fatal error handler.
+	ErrorLevelActivationStrategy: Activates a FingersCrossedHandler when a certain log level is reached.
+	ChannelLevelActivationStrategy: Activates a FingersCrossedHandler when a certain log level is reached, depending on which channel received the log record.
+	 */
 
 	$attachment = array(
 		'fallback'    => $error_code . '-fall',
@@ -126,7 +183,8 @@ function log( $error_code, $data = array() ) {
 
 	if ( 'local' === WORDCAMP_ENVIRONMENT ) {
 		error_log( $error_code . wp_json_encode( $attachment ) );
-		// ugh fuck this messes up the foramt-log command
+		// ugh frak this messes up the foramt-log command
+			// don't need it anymore though? just remove?
 		// need to check if longer than `log_errors_max_len` ini ? or just increase that for this?
 
 	} else {

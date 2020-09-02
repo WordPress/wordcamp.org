@@ -60,6 +60,7 @@ function register_scripts() {
 		'_wcscSettings',
 		array(
 			'apiUrl'        => get_rest_url( null, '/wordcamp-site-cloner/v1/sites/' ),
+			'nonce'         => wp_create_nonce( 'wp_rest' ),
 			'customizerUrl' => admin_url( 'customize.php' ),
 			'themes'        => get_available_themes(),
 		)

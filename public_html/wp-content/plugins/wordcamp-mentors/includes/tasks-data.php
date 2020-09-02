@@ -673,7 +673,7 @@ function _reset_tasks() {
 
 		$args = array(
 			'post_type'   => Mentors\PREFIX . '_task',
-			'post_status' => Mentors\PREFIX . '_task_pending',
+			'post_status' => Mentors\PREFIX . '_task_incomplete',
 			'post_title'  => $l10n_id,
 			'menu_order'  => $order,
 			'meta_input'  => array(

@@ -2,20 +2,13 @@
  * WordPress dependencies
  */
 import { useSelect } from '@wordpress/data';
-import { __experimentalGetSettings, dateI18n, setSettings } from '@wordpress/date';
+import { dateI18n } from '@wordpress/date';
 
 /**
  * Internal dependencies
  */
 import { WC_BLOCKS_STORE } from '../../data';
 
-/*
- * Work around Gutenberg bug: https://github.com/WordPress/gutenberg/issues/22193
- *
- * @todo remove this when that's resolved, because it adds ~150k to the build.
- */
-import 'moment-timezone/moment-timezone-utils';
-setSettings( __experimentalGetSettings() );
 
 /*
  * Create an implicit "0" track when none formally exist.

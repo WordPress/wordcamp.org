@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { dateI18n } from '@wordpress/date';
+import { dateI18n, format } from '@wordpress/date';
 import { __, _x } from '@wordpress/i18n';
 import { createContext, useContext } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -49,7 +49,7 @@ export function ScheduleGrid( { sessions } ) {
 		scheduleDays.push(
 			<ScheduleDay
 				key={ date }
-				date={ date }
+				localDate={ date }
 				sessions={ sessionsGroup }
 			/>
 		);
@@ -63,7 +63,7 @@ export function ScheduleGrid( { sessions } ) {
 }
 
 /**
- * Create an array of sessions, indexed by their date.
+ * Create an array of sessions, indexed by their date (according to the site's timezone).
  *
  * @param {Array} sessions
  *
@@ -94,17 +94,17 @@ function groupSessionsByDate( sessions ) {
  * Render the schedule for a specific day.
  *
  * @param {Object} props
- * @param {string} props.date     In a format acceptable by `wp.date.dateI18n()`.
- * @param {Array}  props.sessions
+ * @param {string} props.localDate The day being displayed in Ymd format (in the site's timezone).
+ * @param {Array}  props.sessions  The sessions assigned to the displayed date.
  *
  * @return {Element}
  */
-function ScheduleDay( { date, sessions } ) {
+function ScheduleDay( { localDate, sessions } ) {
 	const { attributes, allTracks, renderEnvironment, settings } = useContext( ScheduleGridContext );
 	const { chooseSpecificTracks, chosenTrackIds } = attributes;
 
 	const displayedTracks = getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTrackIds );
-	const formattedDate = dateI18n( DATE_SLUG_FORMAT, date );
+	const formattedDate = format( DATE_SLUG_FORMAT, localDate );
 	const formattedTrackIds = chooseSpecificTracks ? displayedTracks.map( ( track ) => track.id ).join( '-' ) : 'all';
 
 	/*
@@ -145,7 +145,7 @@ function ScheduleDay( { date, sessions } ) {
 			</style>
 
 			<h2 className="wordcamp-schedule__date">
-				{ dateI18n( settings.date_format, date ) }
+				{ format( settings.date_format, localDate ) }
 			</h2>
 
 			{ 'editor' === renderEnvironment && renderOverlappingSessionsWarning( overlappingSessions ) }

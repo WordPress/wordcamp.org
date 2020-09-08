@@ -9,7 +9,6 @@ import { dateI18n } from '@wordpress/date';
  */
 import { WC_BLOCKS_STORE } from '../../data';
 
-
 /*
  * Create an implicit "0" track when none formally exist.
  *

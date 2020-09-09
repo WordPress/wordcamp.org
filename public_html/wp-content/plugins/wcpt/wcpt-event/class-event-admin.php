@@ -895,6 +895,12 @@ abstract class Event_Admin {
 									<?php endforeach; ?>
 								</select>
 
+								<a href="https://www.zeitverschiebung.net/en/" target="_blank" rel="noopener noreferrer">
+									Lookup
+									<span class="screen-reader-text">(opens in a new tab)</span>
+									<span aria-hidden="true" class="dashicons dashicons-external"></span>
+								</a>
+
 								<?php
 								break;
 

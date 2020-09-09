@@ -472,6 +472,7 @@ class WordCamp_New_Site {
 
 		update_option( 'admin_email',                  $admin_email );
 		update_option( 'blogdescription',              __( 'Just another WordCamp', 'wordcamporg' ) );
+		update_option( 'timezone_string',              $meta['Event Timezone'][0] );
 		update_option( 'close_comments_for_old_posts', 1 );
 		update_option( 'close_comments_days_old',      30 );
 		update_option( 'wccsp_settings',               $coming_soon_settings );

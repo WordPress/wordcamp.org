@@ -357,6 +357,7 @@ class WordCamp_Loader extends Event_Loader {
 			// Sourced from wcorg_json_expose_whitelisted_meta_data()
 			'Start Date (YYYY-mm-dd)',
 			'End Date (YYYY-mm-dd)',
+			'Event Timezone',
 			'Location',
 			'URL',
 			'Twitter',

@@ -548,6 +548,13 @@ abstract class Event_Admin {
 					update_post_meta( $post_id, $key, $new_value );
 					break;
 
+				case 'select-timezone':
+					$allowed_zones = timezone_identifiers_list();
+					$new_value     = in_array( $values[ $key ], $allowed_zones, true ) ? $values[ $key ] : '';
+
+					update_post_meta( $post_id, $key, $new_value );
+					break;
+
 				case 'select-streaming':
 					$allowed_values = array_keys( self::get_streaming_services() );
 					$key_other = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
@@ -861,6 +868,32 @@ abstract class Event_Admin {
 									<?php endforeach; ?>
 								</select>
 							<?php endif; ?>
+
+								<?php
+								break;
+
+							case 'select-timezone':
+								$selected = get_post_meta( $post_id, $key, true );
+								?>
+
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+								>
+									<option value="">
+										<?php esc_html_e( 'Choose a timezone', 'wordcamporg' ); ?>
+									</option>
+									<option value=""></option>
+
+									<?php foreach ( timezone_identifiers_list() as $timezone ) : ?>
+										<option
+											value="<?php echo esc_attr( $timezone ); ?>"
+											<?php if ( $selected === $timezone ) { echo 'selected'; } ?>
+										>
+											<?php echo esc_html( $timezone ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
 
 								<?php
 								break;

@@ -6,14 +6,12 @@ define( 'WCPT_SLUG',           'wordcamps'          );
 define( 'WCPT_DEFAULT_STATUS', 'wcpt-needs-vetting' );
 define( 'WCPT_FINAL_STATUS',   'wcpt-closed'        );
 
-if ( ! class_exists( 'WordCamp_Loader' ) ) :
 /**
  * WordCamp_Loader
  *
  * @package
  * @subpackage Loader
  * @since WordCamp Post Type (0.1)
- *
  */
 class WordCamp_Loader extends Event_Loader {
 
@@ -37,18 +35,19 @@ class WordCamp_Loader extends Event_Loader {
 	 *
 	 * @uses is_admin If in WordPress admin, load additional file
 	 */
-	function includes () {
+	function includes() {
 		// Load the files
-		require_once ( WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-wordcamps-controller.php' );
-		require_once ( WCPT_DIR . 'wcpt-wordcamp/wordcamp-template.php' );
+		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-wordcamps-controller.php';
+		require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-template.php';
 
 		// Quick admin check and load if needed
-		if ( is_admin() )
-			require_once ( WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php' );
+		if ( is_admin() ) {
+			require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php';
+		}
 
-		require_once( WCPT_DIR . 'wcpt-wordcamp/wordcamp-new-site.php' );
+		require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-new-site.php';
 
-		$GLOBALS['wordcamp_new_site'] = new WordCamp_New_Site;
+		$GLOBALS['wordcamp_new_site'] = new WordCamp_New_Site();
 	}
 
 	/**
@@ -60,7 +59,7 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	function register_post_types() {
 		// WordCamp post type labels
-		$wcpt_labels = array (
+		$wcpt_labels = array(
 			'name'                  => __( 'WordCamps',                   'wordcamporg' ),
 			'singular_name'         => __( 'WordCamp',                    'wordcamporg' ),
 			'add_new'               => __( 'Add New',                     'wordcamporg' ),
@@ -73,17 +72,17 @@ class WordCamp_Loader extends Event_Loader {
 			'search_items'          => __( 'Search WordCamps',            'wordcamporg' ),
 			'not_found'             => __( 'No WordCamps found',          'wordcamporg' ),
 			'not_found_in_trash'    => __( 'No WordCamps found in Trash', 'wordcamporg' ),
-			'parent_item_colon'     => __( 'Parent WordCamp:',            'wordcamporg' )
+			'parent_item_colon'     => __( 'Parent WordCamp:',            'wordcamporg' ),
 		);
 
 		// WordCamp post type rewrite
-		$wcpt_rewrite = array (
+		$wcpt_rewrite = array(
 			'slug'        => WCPT_SLUG,
-			'with_front'  => false
+			'with_front'  => false,
 		);
 
 		// WordCamp post type supports
-		$wcpt_supports = array (
+		$wcpt_supports = array(
 			'title',
 			'editor',
 			'thumbnail',
@@ -244,7 +243,7 @@ class WordCamp_Loader extends Event_Loader {
 				'wcpt-needs-mentor',
 				'wcpt-needs-pre-plann',
 			),
-			\WordCamp_Loader::get_pre_planning_post_statuses(),
+			self::get_pre_planning_post_statuses(),
 			array( 'wcpt-scheduled' )
 		);
 	}
@@ -337,8 +336,9 @@ class WordCamp_Loader extends Event_Loader {
 			$transitions[ $key ] = array_keys( $transitions );
 		}
 
-		if ( empty( $transitions[ $status ] ) )
+		if ( empty( $transitions[ $status ] ) ) {
 			return array( 'wcpt-needs-vetting' );
+		}
 
 		return $transitions[ $status ];
 	}
@@ -351,7 +351,7 @@ class WordCamp_Loader extends Event_Loader {
 	 * @return array
 	 */
 	public static function get_public_meta_keys() {
-		require_once( __DIR__ . '/wordcamp-admin.php' );
+		require_once __DIR__ . '/wordcamp-admin.php';
 
 		$safe_fields = array(
 			// Sourced from wcorg_json_expose_whitelisted_meta_data()
@@ -396,7 +396,7 @@ class WordCamp_Loader extends Event_Loader {
 				array(
 					'get_callback' => function( $object, $field_name ) {
 						return get_post_meta( $object['id'], $field_name, true );
-					}
+					},
 				)
 			);
 		}
@@ -448,7 +448,7 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	public function set_rest_post_status_default( $query_params ) {
 		if ( isset( $query_params['status'] ) ) {
-			$query_params['status']['default'] = WordCamp_Loader::get_public_post_statuses();
+			$query_params['status']['default'] = self::get_public_post_statuses();
 		}
 
 		return $query_params;
@@ -478,5 +478,3 @@ class WordCamp_Loader extends Event_Loader {
 		return $vars;
 	}
 }
-
-endif; // class_exists check

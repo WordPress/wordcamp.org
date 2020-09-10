@@ -388,7 +388,7 @@ abstract class Event_Admin {
 		);
 
 		$gutenberg_enabled = false;
-		$current_screen = get_current_screen();
+		$current_screen    = get_current_screen();
 		if ( method_exists( $current_screen, 'is_block_editor' ) && $current_screen->is_block_editor() ) {
 			$gutenberg_enabled = true;
 		}
@@ -481,7 +481,7 @@ abstract class Event_Admin {
 			}
 		}
 
-		$meta_keys = $this->meta_keys();
+		$meta_keys        = $this->meta_keys();
 		$orig_meta_values = get_post_meta( $post_id );
 		$is_virtual_event = WordCamp_admin::is_virtual_event( $post_id );
 
@@ -557,7 +557,7 @@ abstract class Event_Admin {
 
 				case 'select-streaming':
 					$allowed_values = array_keys( self::get_streaming_services() );
-					$key_other = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
+					$key_other      = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
 					if ( in_array( $values[ $key ], $allowed_values ) ) {
 						update_post_meta( $post_id, $key, $values[ $key ] );
 
@@ -920,7 +920,7 @@ abstract class Event_Admin {
 								break;
 							case 'select-streaming':
 								$selected = get_post_meta( $post_id, $key, true );
-								$options = self::get_streaming_services();
+								$options  = self::get_streaming_services();
 								?>
 
 								<select

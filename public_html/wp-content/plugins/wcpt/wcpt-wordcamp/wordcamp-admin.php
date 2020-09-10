@@ -762,13 +762,13 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Not translating any string because they will be sent to slack.
-			$city             = get_post_meta( $wordcamp->ID, 'Location', true );
-			$start_date       = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
-			$wordcamp_url     = get_post_meta( $wordcamp->ID, 'URL', true );
-			$title            = 'New WordCamp scheduled!!!';
+			$city         = get_post_meta( $wordcamp->ID, 'Location', true );
+			$start_date   = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
+			$wordcamp_url = get_post_meta( $wordcamp->ID, 'URL', true );
+			$title        = 'New WordCamp scheduled!!!';
 
 			$message = sprintf(
-				"<%s|WordCamp $city> has been scheduled for a start date of %s. :tada: :community: :wordpress:\n\n%s",
+				"<%s|WordCamp $city> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,
 				gmdate( 'F j, Y', $start_date ),
 				$wordcamp_url
@@ -1201,7 +1201,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {
-		$address_instructions = "Please include the city, state/province and country.";
+		$address_instructions = 'Please include the city, state/province and country.';
 
 		if ( WordCamp_Admin::have_geocoded_location( $post_id ) ) {
 			$key_prefix = WordCamp_Admin::get_address_key_prefix( $post_id );

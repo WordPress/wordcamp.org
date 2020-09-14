@@ -41,6 +41,7 @@ class WordCamp_Post_Types_Plugin {
 
 		add_filter( 'updated_post_meta', array( $this, 'update_wcorg_user_id' ), 10, 4 );
 		add_filter( 'added_post_meta', array( $this, 'update_wcorg_user_id' ), 10, 4 );
+		add_filter( 'deleted_post_meta', array( $this, 'delete_wcorg_user_id' ), 10, 3 );
 
 		add_filter( 'manage_wcb_speaker_posts_columns', array( $this, 'manage_post_types_columns' ) );
 		add_filter( 'manage_wcb_session_posts_columns', array( $this, 'manage_post_types_columns' ) );
@@ -1232,6 +1233,19 @@ class WordCamp_Post_Types_Plugin {
 			} else {
 				delete_post_meta( $object_id, '_wcpt_user_id' );
 			}
+		}
+	}
+
+	/**
+	 * Remove the speaker's user ID when the name meta is deleted.
+	 *
+	 * @param string[] $unused    An array of metadata entry IDs to delete.
+	 * @param int      $object_id ID of the object metadata is for.
+	 * @param string   $meta_key  Metadata key.
+	 */
+	public function delete_wcorg_user_id( $unused, $object_id, $meta_key ) {
+		if ( '_wcpt_user_name' === $meta_key ) {
+			delete_post_meta( $object_id, '_wcpt_user_id' );
 		}
 	}
 

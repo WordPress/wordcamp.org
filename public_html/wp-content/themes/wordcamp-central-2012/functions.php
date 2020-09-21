@@ -325,6 +325,12 @@ class WordCamp_Central_Theme {
 
 			$coordinates = get_post_meta( $marker->ID, '_venue_coordinates', true );
 
+			// Try the host coordinates (for online events).
+			if ( ! $coordinates ) {
+				$coordinates = get_post_meta( $marker->ID, '_host_coordinates', true );
+			}
+
+			// No location found, skip this one.
 			if ( ! $coordinates ) {
 				continue;
 			}

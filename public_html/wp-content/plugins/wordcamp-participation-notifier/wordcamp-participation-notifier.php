@@ -94,6 +94,9 @@ class WordCamp_Participation_Notifier {
 	public function username_meta_add( $object_id, $meta_key, $meta_value ) {
 		if ( '_wcpt_user_id' === $meta_key && $meta_value ) {
 			$post = get_post( $object_id );
+			if ( 'publish' !== $post->post_status ) {
+				return;
+			}
 
 			$this->add_activity( $post, $meta_value );
 			$this->add_badge( $post, $meta_value );
@@ -111,6 +114,10 @@ class WordCamp_Participation_Notifier {
 	public function username_meta_update( $meta_id, $object_id, $meta_key, $meta_value ) {
 		if ( '_wcpt_user_id' === $meta_key && $meta_value ) {
 			$post = get_post( $object_id );
+			if ( 'publish' !== $post->post_status ) {
+				return;
+			}
+
 			$meta_value = absint( $meta_value );
 
 			$prev_value = absint( get_post_meta( $object_id, $meta_key, true ) );

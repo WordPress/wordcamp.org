@@ -339,9 +339,8 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 
 
 		// These domains were created after the 2014 URL migration was reverted, but before the 2020 migration.
-		'rome',
+		'rome', 'ahmedabad', 'alicante', 'asia', 'bangkok', 'bari', 'belfast', 'bengaluru', 'bern',
 
-//		'ahmedabad', 'alicante', 'asia', 'bangkok', 'bari', 'belfast', 'bengaluru', 'bern',
 //		'bharatpur', 'bhopal', 'bhubaneswar', 'biratnagar', 'bogota', 'boise', 'bordeaux', 'brno', 'buea',
 //		'bulawayo', 'bulgaria', 'caceres', 'cadiz', 'cali', 'cancun', 'cardiff', 'cartagena', 'charlotte',
 //		'chiclana', 'colombo', 'davao', 'delhi', 'denpasar', 'dhaka', 'douala', 'dublin', 'dusseldorf',

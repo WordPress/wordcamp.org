@@ -17,7 +17,7 @@ use WordCamp\Tests\Database_TestCase;
 
 use function WordCamp\Sunrise\{
 	get_canonical_year_url, get_post_slug_url_without_duplicate_dates, guess_requested_domain_path,
-	get_corrected_root_relative_url, get_city_slash_year_url, site_redirects, unsubdomactories_redirects,
+	get_corrected_root_relative_url, get_city_slash_year_url, site_redirects,
 };
 
 defined( 'WPINC' ) || die();
@@ -311,75 +311,6 @@ class Test_Sunrise extends Database_TestCase {
 				'2019-designers.testing.wordcamp.test',
 				'/2019/',
 				'https://testing.wordcamp.test/2019-designers/2019/',
-			),
-		);
-	}
-
-	/**
-	 * @covers ::unsubdomactories_redirects
-	 *
-	 * @dataProvider data_unsubdomactories_redirects
-	 */
-	public function test_unsubdomactories_redirects( $domain, $request_uri, $expected ) {
-		add_filter( 'unsubdomactories_redirect_cities', array( $this, 'add_old_url_cities' ) );
-		$actual = unsubdomactories_redirects( $domain, $request_uri );
-		remove_filter( 'unsubdomactories_redirect_cities', array( $this, 'add_old_url_cities' ) );
-
-		$this->assertSame( $expected, $actual );
-	}
-
-	/**
-	 * Overwrite `$redirect_cities` with mock values.
-	 *
-	 * @param string[] $redirect_cities
-	 *
-	 * @return string[]
-	 */
-	public function add_old_url_cities( $redirect_cities ) {
-		return array( 'oldtown' );
-	}
-
-	/**
-	 * Test cases for test_unsubdomactories_redirects().
-	 *
-	 * @return array
-	 */
-	public function data_unsubdomactories_redirects() {
-		return array(
-			'request without year should not redirect' => array(
-				'central.wordcamp.test',
-				'/',
-				false,
-			),
-
-			'city missing from `$redirect_cities` should not redirect' => array(
-				'fortaleza.wordcamp.test',
-				'/2016/',
-				false,
-			),
-
-			'year.city homepage request should not redirect' => array(
-				'2020.oldtown.wordcamp.test',
-				'/',
-				false,
-			),
-
-			'year.city subpage request should not redirect' => array(
-				'2020.oldtown.wordcamp.test',
-				'/schedule/',
-				false,
-			),
-
-			'city/year homepage request should redirect' => array(
-				'oldtown.wordcamp.test',
-				'/2020/',
-				'https://2020.oldtown.wordcamp.test/',
-			),
-
-			'city/year subpage request should redirect' => array(
-				'oldtown.wordcamp.test',
-				'/2020/schedule/',
-				'https://2020.oldtown.wordcamp.test/schedule/',
 			),
 		);
 	}

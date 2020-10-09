@@ -259,7 +259,7 @@ function get_domain_redirects() {
 		"2019.sevilla.wordcamp.$tld"              => "sevilla.wordcamp.$tld/2019-developers",
 		"2019.telaviv.wordcamp.$tld"              => "telaviv.wordcamp.$tld/2020",
 		"2020-barcelona.publishers.wordcamp.$tld" => "barcelona.wordcamp.$tld/2020",
-		"2020.losangeles.wordcamp.$tld"           => "2020.la.wordcamp.$tld",
+		"2020.losangeles.wordcamp.$tld"           => "la.wordcamp.$tld/2020",
 		"2020.bucharest.wordcamp.$tld"            => "bucharest.wordcamp.$tld/2021",
 		"philly.wordcamp.$tld"                    => "philadelphia.wordcamp.$tld",
 		"2010.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2010",
@@ -350,13 +350,12 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'kyoto', 'lagos', 'laspalmas', 'laspalmasgc', 'lausanne', 'lille', 'littlerock', 'lodz',
 		'longbeach', 'lublin', 'madison', 'madrid', 'managua', 'manila', 'mannheim', 'marbella', 'marseille',
 		'medellin', 'mombasa', 'montevideo', 'moscow', 'myrtlebeach', 'nagpur', 'nairobi', 'nashik', 'newcastle',
-
-//		'oslo', 'osnabrueck', 'panamacity', 'perth', 'plovdiv', 'pontevedra', 'portharcourt', 'portmacquarie',
-//		'portugal', 'puebla', 'puntarenas', 'quito', 'retreat', 'riga', 'riverside', 'rockford',
-//		 'rotterdam', 'saigon', 'sancarlos', 'sanjose', 'santaclarita', 'santander', 'skopje', 'spain',
-//		'split', 'stuttgart', 'taipei', 'tampere', 'thessaloniki', 'tulsa', 'turku', 'ubud', 'udaipur', 'utrecht',
-//		'vadodara', 'valencia', 'valladolid', 'verona', 'virginiabeach', 'vrsac', 'waukesha', 'wilmington',
-//		'zagreb', 'zaragoza', 'zurich',
+		'oslo', 'osnabrueck', 'panamacity', 'perth', 'plovdiv', 'pontevedra', 'portharcourt', 'portmacquarie',
+		'portugal', 'puebla', 'puntarenas', 'quito', 'retreat', 'riga', 'riverside', 'rockford',
+		 'rotterdam', 'saigon', 'sancarlos', 'sanjose', 'santaclarita', 'santander', 'skopje', 'spain',
+		'split', 'stuttgart', 'taipei', 'tampere', 'thessaloniki', 'tulsa', 'turku', 'ubud', 'udaipur', 'utrecht',
+		'vadodara', 'valencia', 'valladolid', 'verona', 'virginiabeach', 'vrsac', 'waukesha', 'wilmington',
+		'zagreb', 'zaragoza', 'zurich',
 
 		// Wait until event is over, then move to post-2014 list.
 //		'italia',

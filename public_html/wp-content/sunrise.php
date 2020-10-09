@@ -340,12 +340,12 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 
 		// These domains were created after the 2014 URL migration was reverted, but before the 2020 migration.
 		'rome', 'ahmedabad', 'alicante', 'asia', 'bangkok', 'bari', 'belfast', 'bengaluru', 'bern',
+		'bharatpur', 'bhopal', 'bhubaneswar', 'biratnagar', 'bogota', 'boise', 'bordeaux', 'brno', 'buea',
+		'bulawayo', 'bulgaria', 'caceres', 'cadiz', 'cali', 'cancun', 'cardiff', 'cartagena', 'charlotte',
+		'chiclana', 'colombo', 'davao', 'delhi', 'denpasar', 'dhaka', 'douala', 'dublin', 'dusseldorf',
+		'entebbe', 'floripa', 'nice', 'niigata', 'nijmegen', 'nis', 'noordnederland', 'nordic',
+		'geneva', 'glasgow', 'granada', 'guadalajara', 'guayaquil', 'halifax', 'haneda', 'harare', 'hongkong',
 
-//		'bharatpur', 'bhopal', 'bhubaneswar', 'biratnagar', 'bogota', 'boise', 'bordeaux', 'brno', 'buea',
-//		'bulawayo', 'bulgaria', 'caceres', 'cadiz', 'cali', 'cancun', 'cardiff', 'cartagena', 'charlotte',
-//		'chiclana', 'colombo', 'davao', 'delhi', 'denpasar', 'dhaka', 'douala', 'dublin', 'dusseldorf',
-//		'entebbe', 'floripa', 'nice', 'niigata', 'nijmegen', 'nis', 'noordnederland', 'nordic',
-//		'geneva', 'glasgow', 'granada', 'guadalajara', 'guayaquil', 'halifax', 'haneda', 'harare', 'hongkong',
 //		'ileife', 'irun', 'islamabad',  'jackson', 'johannesburg', 'jyvaskyla', 'kampala', 'kanpur',
 //		'karachi', 'kathmandu', 'kent', 'kigali', 'kochi', 'kosice', 'kotakinabalu', 'kualalumpur', 'kyiv',
 //		'kyoto', 'lagos', 'laspalmas', 'laspalmasgc', 'lausanne', 'lille', 'littlerock', 'lodz',

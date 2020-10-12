@@ -16,14 +16,10 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	brew install mkcert
 	brew install nss
 	mkcert -install
-	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test *.seattle.wordcamp.test *.shinynew.wordcamp.test buddycamp.test *.buddycamp.test *.brighton.buddycamp.test
+	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test buddycamp.test *.buddycamp.test
 	```
 	
 	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
-
-	_Note: That list of domains is generated with `docker-compose exec wordcamp.test wp site list --field=url`, but that command won't be available until after you've built the environment in the next steps._
-
-	_Note: When updating the database provision file with a new site (see more on this below), make sure you add it to the example above, and commit the change, so that others can just copy/paste the command, rather than re-doing the work of generating the full list. Add `*.{city}.wordcamp.test` rather than specific years like `2019.{city}.wordcamp.test`. Third-level domains like `central.wordcamp.test` are already covered by the `*.wordcamp.test`, and should not be added to the list._
 
 1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
     ```bash

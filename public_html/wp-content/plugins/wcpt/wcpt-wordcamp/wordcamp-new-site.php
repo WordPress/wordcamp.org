@@ -152,10 +152,6 @@ class WordCamp_New_Site {
 	 * @return bool
 	 */
 	public static function url_matches_expected_format( $domain, $path, $wordcamp_id ) {
-		if ( 'production' === WORDCAMP_ENVIRONMENT ) {
-			return true; // todo remove after URL migration complete.
-		}
-
 		$tld                            = get_top_level_domain();
 		$last_permitted_external_domain = 2341;
 		$external_domain_exceptions     = array( 169459 );

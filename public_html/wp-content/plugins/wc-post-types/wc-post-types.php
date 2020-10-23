@@ -859,7 +859,7 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
-		$session_slides_html  = '<div class="session-video">';
+		$session_slides_html  = '<div class="session-slides">';
 		$session_slides_html .= sprintf( __( '<a href="%s" target="_blank">View Session Slides</a>', 'wordcamporg' ), esc_url( $session_slides ) );
 		$session_slides_html .= '</div>';
 

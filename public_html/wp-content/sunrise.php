@@ -355,10 +355,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		 'rotterdam', 'saigon', 'sancarlos', 'sanjose', 'santaclarita', 'santander', 'skopje', 'spain',
 		'split', 'stuttgart', 'taipei', 'tampere', 'thessaloniki', 'tulsa', 'turku', 'ubud', 'udaipur', 'utrecht',
 		'vadodara', 'valencia', 'valladolid', 'verona', 'virginiabeach', 'vrsac', 'waukesha', 'wilmington',
-		'zagreb', 'zaragoza', 'zurich',
-
-		// Wait until event is over, then move to post-2014 list.
-//		'italia',
+		'zagreb', 'zaragoza', 'zurich', 'italia',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {

@@ -25,6 +25,7 @@ class Test_Lets_Encrypt extends Database_TestCase {
 		parent::wpSetUpBeforeClass( $factory );
 
 		$hardcoded_redirects = array_keys( get_domain_redirects() );
+		$hardcoded_redirects = WordCamp_Lets_Encrypt_Helper::parse_domain( $hardcoded_redirects );
 
 		// Test sites created by `parent::wpSetUpBeforeClass()`.
 		$database_sites = array(
@@ -64,10 +65,20 @@ class Test_Lets_Encrypt extends Database_TestCase {
 	 */
 	public function test_get_domains() {
 		$actual = WordCamp_Lets_Encrypt_Helper::get_domains();
+		$only_domains = true;
 
 		sort( $actual );
 
 		$this->assertSame( self::$expected_domains, $actual );
+
+		foreach ( $actual as $domain ) {
+			if ( $domain !== wp_parse_url( "https://$domain", PHP_URL_HOST ) ) {
+				$only_domains = false;
+				break;
+			}
+		}
+
+		$this->assertTrue( $only_domains, "Failed asserting that $domain is a valid hostname." );
 	}
 
 	/**

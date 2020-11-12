@@ -109,7 +109,7 @@ class Currency_XRT_Client {
 	/**
 	 * Get the currency exchange rates for a particular date.
 	 *
-	 * @param string $date The date to retrieve the rates for.
+	 * @param string $date The date to retrieve the rates for. Use any format accepted by `DateTime`.
 	 *
 	 * @return array|\WP_Error An array of rates, or an error.
 	 */
@@ -166,7 +166,7 @@ class Currency_XRT_Client {
 	 *
 	 * @param float  $amount        The amount to convert.
 	 * @param string $from_currency The currency to convert from.
-	 * @param string $date          The date to get the rate for.
+	 * @param string $date          The date to get the rate for. Use any format accepted by `DateTime`.
 	 *
 	 * @return object|\WP_Error An object with properties for the beginning and ending currencies,
 	 *                          each with a float value. Or an error.

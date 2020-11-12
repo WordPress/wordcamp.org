@@ -97,7 +97,12 @@ function main() {
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_duplicate_year_permalinks_to_post_slug' );
 
 	$status_code = 301;
-	$redirect    = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
+
+	$redirect = root_redirects( $domain, $_SERVER['REQUEST_URI'] );
+
+	if ( ! $redirect ) {
+		$redirect = domain_redirects( $domain, $_SERVER['REQUEST_URI'] );
+	}
 
 	if ( ! $redirect ) {
 		$redirect = get_city_slash_year_url( $domain, $_SERVER['REQUEST_URI'] );
@@ -171,30 +176,46 @@ function guess_requested_domain_path() {
 }
 
 /**
- * Get redirect URLs for root site requests and for hardcoded redirects.
+ * Redirect root site front-end requests to Central.
  *
- * @todo Split this into two functions because these aren't related to each other.
+ * @param string $domain
+ * @param string $request_uri
+ *
+ * @return false|string
+ */
+function root_redirects( $domain, $request_uri ) {
+	$tld          = get_top_level_domain();
+	$redirect     = false;
+	$root_domains = array( "wordcamp.$tld", "buddycamp.$tld" );
+
+	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
+	$front_end_request =
+		! is_admin() &&
+		! is_network_admin() &&
+		! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $request_uri );
+
+	if ( in_array( $domain, $root_domains, true ) && $front_end_request ) {
+		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $request_uri );
+	}
+
+	return $redirect;
+}
+
+/**
+ * Get redirect URLs for hardcoded domain redirects.
  *
  * @param string $domain
  * @param string $request_uri
  *
  * @return string|false
  */
-function site_redirects( $domain, $request_uri ) {
+function domain_redirects( $domain, $request_uri ) {
 	$tld              = get_top_level_domain();
 	$domain_redirects = get_domain_redirects();
 	$redirect         = false;
 
-	// If it's a front end request to the root site, redirect to Central.
-	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
-	if ( in_array( $domain, array( "wordcamp.$tld", "buddycamp.$tld" ), true )
-		 && ! is_network_admin()
-		 && ! is_admin()
-		 && ! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $request_uri )
-	) {
-		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $request_uri );
 
-	} elseif ( isset( $domain_redirects[ $domain ] ) ) {
+	if ( isset( $domain_redirects[ $domain ] ) ) {
 		$new_url = $domain_redirects[ $domain ];
 
 		// Central has a different content structure than other WordCamp sites, so don't include the request URI

@@ -17,7 +17,7 @@ use WordCamp\Tests\Database_TestCase;
 
 use function WordCamp\Sunrise\{
 	get_canonical_year_url, get_post_slug_url_without_duplicate_dates, guess_requested_domain_path,
-	get_corrected_root_relative_url, get_city_slash_year_url, site_redirects,
+	get_corrected_root_relative_url, get_city_slash_year_url, domain_redirects, root_redirects,
 };
 
 defined( 'WPINC' ) || die();
@@ -141,23 +141,22 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::site_redirects
-	 * @covers ::get_domain_redirects
+	 * @covers ::root_redirects
 	 *
-	 * @dataProvider data_site_redirects
+	 * @dataProvider data_root_redirects
 	 */
-	public function test_site_redirects( $domain, $path, $expected ) {
-		$actual = site_redirects( $domain, $path );
+	public function test_root_redirects( $domain, $path, $expected ) {
+		$actual = root_redirects( $domain, $path );
 
 		$this->assertSame( $expected, $actual );
 	}
 
 	/**
-	 * Test cases for test_site_redirects().
+	 * Test cases for test_root_redirects().
 	 *
 	 * @return array
 	 */
-	public function data_site_redirects() {
+	public function data_root_redirects() {
 		return array(
 			/*
 			 * There aren't any cases to test that front-end requests to the root site redirect to Central,
@@ -166,25 +165,52 @@ class Test_Sunrise extends Database_TestCase {
 			 * to help either.
 			 */
 
-			'root site cron requests are not redirected to Central' => array(
+			'root site cron requests _dont_ redirect to Central' => array(
 				'wordcamp.test',
 				'/wp-cron.php',
 				false,
 			),
 
-			'root site rest requests are not redirected to Central' => array(
+			'root site rest requests _dont_ redirect to Central' => array(
 				'wordcamp.test',
 				'/wp-json',
 				false,
 			),
 
+			'non-root domains _dont_ redirect' => array(
+				'narnia.wordcamp.test',
+				'/',
+				false,
+			),
+		);
+	}
+
+	/**
+	 * @covers ::domain_redirects
+	 * @covers ::get_domain_redirects
+	 *
+	 * @dataProvider data_domain_redirects
+	 */
+	public function test_domain_redirects( $domain, $path, $expected ) {
+		$actual = domain_redirects( $domain, $path );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_domain_redirects().
+	 *
+	 * @return array
+	 */
+	public function data_domain_redirects() {
+		return array(
 			'domain redirect to central removes request uri' => array(
 				'bg.wordcamp.test',
 				'/schedule/',
 				'https://central.wordcamp.test',
 			),
 
-			'domain redirect to city/year site includes request uri' => array(
+			'domain redirect to city/year domain includes request uri' => array(
 				'2010.philly.wordcamp.test',
 				'/schedule/',
 				'https://philadelphia.wordcamp.test/2010/schedule/',

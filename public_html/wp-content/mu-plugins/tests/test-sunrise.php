@@ -191,8 +191,8 @@ class Test_Sunrise extends Database_TestCase {
 	 *
 	 * @dataProvider data_domain_redirects
 	 */
-	public function test_domain_redirects( $domain, $path, $expected ) {
-		$actual = domain_redirects( $domain, $path );
+	public function test_domain_redirects( $domain, $path, $request_uri, $expected ) {
+		$actual = domain_redirects( $domain, $path, $request_uri );
 
 		$this->assertSame( $expected, $actual );
 	}
@@ -206,24 +206,35 @@ class Test_Sunrise extends Database_TestCase {
 		return array(
 			'domain redirect to central removes request uri' => array(
 				'bg.wordcamp.test',
+				'/',
 				'/schedule/',
 				'https://central.wordcamp.test',
 			),
 
-			'domain redirect to city/year domain includes request uri' => array(
+			'domain redirect from year.city site to city/year site, including request uri' => array(
 				'2010.philly.wordcamp.test',
+				'/',
 				'/schedule/',
 				'https://philadelphia.wordcamp.test/2010/schedule/',
 			),
 
+			'domain redirect from city/year site to other city/year site' => array(
+				'india.wordcamp.test',
+				'/2020/',
+				'/2020/schedule/',
+				'https://india.wordcamp.test/2021/schedule/',
+			),
+
 			'external domain redirects to central' => array(
 				'wordcampsf.org',
+				'/',
 				'/schedule/',
 				'https://sf.wordcamp.test/schedule/',
 			),
 
 			'unknown domain should not redirect' => array(
 				'narnia.wordcamp.test',
+				'/',
 				'/',
 				false,
 			),

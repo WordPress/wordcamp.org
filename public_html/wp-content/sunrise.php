@@ -101,7 +101,7 @@ function main() {
 	$redirect = root_redirects( $domain, $_SERVER['REQUEST_URI'] );
 
 	if ( ! $redirect ) {
-		$redirect = domain_redirects( $domain, $_SERVER['REQUEST_URI'] );
+		$redirect = domain_redirects( $domain, $path, $_SERVER['REQUEST_URI'] );
 	}
 
 	if ( ! $redirect ) {
@@ -205,23 +205,33 @@ function root_redirects( $domain, $request_uri ) {
  * Get redirect URLs for hardcoded domain redirects.
  *
  * @param string $domain
+ * @param string $path The year of a city.wordcamp.org/year site.
  * @param string $request_uri
  *
  * @return string|false
  */
-function domain_redirects( $domain, $request_uri ) {
+function domain_redirects( $domain, $path, $request_uri ) {
 	$tld              = get_top_level_domain();
+	$path             = untrailingslashit( $path );
 	$domain_redirects = get_domain_redirects();
+	$new_url          = false;
 	$redirect         = false;
 
-
+	// To a year.city.wordcamp.org site.
 	if ( isset( $domain_redirects[ $domain ] ) ) {
 		$new_url = $domain_redirects[ $domain ];
+	}
 
+	// To a city.wordcamp.org/year site.
+	if ( isset( $domain_redirects[ $domain . $path ] ) ) {
+		$new_url = $domain_redirects[ $domain . $path ];
+	}
+
+	if ( $new_url ) {
 		// Central has a different content structure than other WordCamp sites, so don't include the request URI
 		// if that's where we're going.
 		if ( "central.wordcamp.$tld" !== $new_url ) {
-			$new_url .= $request_uri;
+			$new_url .= str_replace( $path, '', $request_uri );
 		}
 
 		$redirect = "https://$new_url";
@@ -231,7 +241,7 @@ function domain_redirects( $domain, $request_uri ) {
 }
 
 /**
- * Centralized place to define domain-based redirects.
+ * Centralized place to define domain- (and path-) based redirects.
  *
  * Used by sunrise.php and WordCamp_Lets_Encrypt_Helper::rest_callback_domains.
  *
@@ -291,7 +301,9 @@ function get_domain_redirects() {
 		"2017.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2017",
 		"2018.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2018",
 		"2019.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2019",
-//		"india.wordcamp.$tld/2020"                => "india.wordcamp.$tld/2021",
+
+		// city.wordcamp.org/year redirects
+		"india.wordcamp.$tld/2020" => "india.wordcamp.$tld/2021",
 
 		/*
 		 * External domains.

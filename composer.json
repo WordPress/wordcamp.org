@@ -23,7 +23,7 @@
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"phpunit/phpunit": "^7",
 		"sirbrillig/phpcs-changed": "^2.2",
-		"spatie/phpunit-watcher": "^1.12"
+		"spatie/phpunit-watcher": "^1.23"
 	},
 	"scripts": {
 		"format": "phpcbf -p",

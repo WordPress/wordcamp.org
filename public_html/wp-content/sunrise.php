@@ -270,7 +270,7 @@ function get_domain_redirects() {
 		"2017.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2017",
 		"2018.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2018",
 		"2019.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2019",
-		"india.wordcamp.$tld/2020"                => "india.wordcamp.$tld/2021",
+//		"india.wordcamp.$tld/2020"                => "india.wordcamp.$tld/2021",
 
 		/*
 		 * External domains.

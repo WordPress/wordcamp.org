@@ -718,5 +718,4 @@ function debug_community_events_response( $response, $context, $transport, $requ
 	$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
 }
 // Comment this out when not needed, but leave the code for future use.
-// todo - leave this in place until WP 5.5.2 is released, to test #51130
-add_action( 'http_api_debug', 'debug_community_events_response', 10, 5 );
+// add_action( 'http_api_debug', 'debug_community_events_response', 10, 5 );

@@ -553,8 +553,6 @@ function get_canonical_year_url( $domain, $path ) {
 		return false;
 	}
 
-	// Default clause for retrieving the most recent year for a city.
-	$like = "%.{$domain}";
 
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
 	switch ( $domain ) {
@@ -575,12 +573,12 @@ function get_canonical_year_url( $domain, $path ) {
 		SELECT `domain`, `path`
 		FROM $wpdb->blogs
 		WHERE
-			domain = %s OR -- Match city/year format.
-			domain LIKE %s -- Match year.city format.
+			( domain =    %s AND path != '/' ) OR -- Match city/year format.
+			( domain LIKE %s AND path  = '/' )    -- Match year.city format.
 		ORDER BY path DESC, domain DESC
 		LIMIT 1;",
 		$domain,
-		$like
+		"%.{$domain}"
 	) );
 
 	return $latest ? 'https://' . $latest->domain . $latest->path : false;

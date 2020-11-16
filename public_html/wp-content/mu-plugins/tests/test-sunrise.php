@@ -525,6 +525,31 @@ class Test_Sunrise extends Database_TestCase {
 				false,
 			),
 
+			// e.g., https://japan.wordcamp.org/2019/12/13/call-for-wordcamp-ogijima-2020-organizer-and-support-staff/
+			'dont redirect a date-based permalink on an old yearless site' => array(
+				'japan.wordcamp.test',
+				'/2019/',
+				false,
+			),
+
+			'dont redirect a postname-based permalink on an old yearless site' => array(
+				'japan.wordcamp.test',
+				'/schedule/',
+				false,
+			),
+
+			'404 at canonical domain should redirect to latest site' => array(
+				'vancouver.wordcamp.test',
+				'/this-page-does-not-exist/',
+				'https://vancouver.wordcamp.test/2020/',
+			),
+
+			'future years that dont exist should redirect to latest site' => array(
+				'vancouver.wordcamp.test',
+				'/2024/',
+				'https://vancouver.wordcamp.test/2020/',
+			),
+
 			'redirect year.city root to latest camp' => array(
 				'seattle.wordcamp.test',
 				'/',

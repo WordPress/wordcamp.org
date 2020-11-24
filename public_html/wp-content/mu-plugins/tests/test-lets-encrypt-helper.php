@@ -46,6 +46,7 @@ class Test_Lets_Encrypt extends Database_TestCase {
 			'2016.vancouver.wordcamp.test',
 			'2018-developers.vancouver.wordcamp.test',
 			'2020.vancouver.wordcamp.test',
+			'2021.japan.wordcamp.test',
 
 			// It should contain old year-less domains.
 			'japan.wordcamp.test',

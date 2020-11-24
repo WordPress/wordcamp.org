@@ -513,6 +513,16 @@ class Test_Sunrise extends Database_TestCase {
 				false,
 			),
 
+			/*
+			 * e.g., https://japan.wordcamp.org/what-is-wordcamp/.
+			 * e.g., https://japan.wordcamp.org/blog/2019/12/13/call-for-wordcamp-ogijima-2020-organizer-and-support-staff/
+			 */
+			"dont redirect permalinks on an old yearless site, even if there's a newer city/year site" => array(
+				'japan.wordcamp.test',
+				'/', // `guess_requested_domain_path()` will correctly guess `/` as the site path rather than the query string.
+				false,
+			),
+
 			'dont redirect year.city sites' => array(
 				'2018.seattle.wordcamp.test',
 				'/',
@@ -525,17 +535,16 @@ class Test_Sunrise extends Database_TestCase {
 				false,
 			),
 
-			// e.g., https://japan.wordcamp.org/2019/12/13/call-for-wordcamp-ogijima-2020-organizer-and-support-staff/
-			'dont redirect a date-based permalink on an old yearless site' => array(
+			/*
+			 * e.g., https://japan.wordcamp.org/2019/12/13/call-for-wordcamp-ogijima-2020-organizer-and-support-staff/
+			 *
+			 * Ideally they wouldn't redirect, but this is such an edge case that it's not worth supporting. That's
+			 * enforced by `wcorg_prevent_date_permalinks()`.
+			 */
+			'redirect date-based permalinks on an old yearless sites to the latest site' => array(
 				'japan.wordcamp.test',
 				'/2019/',
-				false,
-			),
-
-			'dont redirect a postname-based permalink on an old yearless site' => array(
-				'japan.wordcamp.test',
-				'/schedule/',
-				false,
+				'https://japan.wordcamp.test/2021/',
 			),
 
 			'404 at canonical domain should redirect to latest site' => array(

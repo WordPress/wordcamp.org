@@ -46,6 +46,7 @@ function render_options_page() {
 		}
 	}
 
+	$coming_soon_enabled = 'on' === $GLOBALS['WCCSP_Settings']->get_settings()['enabled'];
 	$output_mode    = get_output_mode();
 	$remote_css_url = get_option( OPTION_REMOTE_CSS_URL, '' );
 	$fonts_tool_url = admin_url( 'themes.php?page=wc-fonts-options' );

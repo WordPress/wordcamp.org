@@ -1,6 +1,7 @@
 <?php
 
 namespace WordCamp\RemoteCSS;
+use WordCamp_Coming_Soon_Page;
 use WordCamp\Jetpack_Tweaks;
 
 defined( 'WPINC' ) || die();
@@ -8,6 +9,7 @@ defined( 'WPINC' ) || die();
 /**
  * @var string $notice
  * @var string $notice_class
+ * @var bool   $coming_soon_enabled
  * @var string $remote_css_url
  * @var string $output_mode
  */
@@ -29,6 +31,15 @@ defined( 'WPINC' ) || die();
 	<?php if ( $notice ) : ?>
 		<div id="message" class="notice <?php echo esc_attr( $notice_class ); ?> is-dismissible">
 			<p><?php echo wp_kses_data( $notice ); ?></p>
+		</div>
+	<?php endif; ?>
+
+	<?php if ( $coming_soon_enabled ) : ?>
+		<div class="notice notice-info notice-large">
+			<?php printf(
+				__( 'Note: The Remote CSS stylesheet won\'t be enqueued on the Coming Soon template. You can <a href="%s">modify Coming Soon via the Customizer</a>.', 'wordcamporg' ),
+				admin_url( WordCamp_Coming_Soon_Page::get_menu_slug() )
+			); ?>
 		</div>
 	<?php endif; ?>
 

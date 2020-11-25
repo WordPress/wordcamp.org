@@ -74,14 +74,19 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
-	 * Dequeue all enqueued stylesheets and Custom CSS
+	 * Dequeue all enqueued stylesheets and Custom CSS.
+	 *
+	 * This prevents Custom CSS & Remote CSS styles from conflicting with the Coming Soon template. Coming Soon
+	 * is intended to be a stripped down placeholder with minimal customization.
 	 */
 	protected function dequeue_all_stylesheets() {
 		foreach ( $GLOBALS['wp_styles']->queue as $stylesheet ) {
 			wp_dequeue_style( $stylesheet );
 		}
 
+		// Core and Jetpack's Custom CSS module both output Custom CSS, so they both need to be disabled.
 		remove_action( 'wp_head', 'wp_custom_css_cb', 101 );
+		remove_action( 'wp_head', array( 'Jetpack_Custom_CSS_Enhancements', 'wp_custom_css_cb' ), 101 );
 	}
 
 	/**

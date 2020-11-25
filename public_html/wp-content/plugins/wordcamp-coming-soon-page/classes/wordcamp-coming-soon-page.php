@@ -409,13 +409,7 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
-		$menu_slug = add_query_arg(
-			array(
-				'autofocus[section]' => 'wccsp_live_preview',
-				'url'                => rawurlencode( add_query_arg( 'wccsp-preview', '', site_url() ) ),
-			),
-			'/customize.php'
-		);
+		$menu_slug   = WordCamp_Coming_Soon_Page::get_menu_slug();
 		$setting_url = admin_url( $menu_slug );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -455,6 +449,23 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
+	 * Get the slug for the Coming Soon menu item.
+	 *
+	 * This is also the query string for links to the Coming Soon panel in the Customizer.
+	 *
+	 * @return string
+	 */
+	public static function get_menu_slug() {
+		return add_query_arg(
+			array(
+				'autofocus[section]' => 'wccsp_live_preview',
+				'url'                => rawurlencode( add_query_arg( 'wccsp-preview', '', site_url() ) ),
+			),
+			'/customize.php'
+		);
+	}
+
+	/**
 	 * Show a notice if Coming Soon is enabled.
 	 *
 	 * Explain to users why publishing is disabled when Coming Soon is enabled.
@@ -466,13 +477,7 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
-		$menu_slug = add_query_arg(
-			array(
-				'autofocus[section]' => 'wccsp_live_preview',
-				'url'                => rawurlencode( add_query_arg( 'wccsp-preview', '', site_url() ) ),
-			),
-			'/customize.php'
-		);
+		$menu_slug   = self::get_menu_slug();
 		$setting_url = admin_url( $menu_slug );
 		$screen      = get_current_screen();
 

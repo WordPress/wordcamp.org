@@ -57,13 +57,7 @@ class WCCSP_Settings {
 	 * discoverability.
 	 */
 	public function register_settings_pages() {
-		$menu_slug = add_query_arg(
-			array(
-				'autofocus[section]' => 'wccsp_live_preview',
-				'url'                => rawurlencode( add_query_arg( 'wccsp-preview', '', site_url() ) ),
-			),
-			'/customize.php'
-		);
+		$menu_slug = WordCamp_Coming_Soon_Page::get_menu_slug();
 
 		add_submenu_page(
 			'options-general.php',

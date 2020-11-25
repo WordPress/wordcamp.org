@@ -1,5 +1,22 @@
 <?php
 
+/*
+ * There's usually no need for caching in development environments, and it's often a hassle to work around it.
+ *
+ * For the occasions when it's needed for testing, this can be temporarily changed locally.
+ */
+if ( 'production' === WORDCAMP_ENVIRONMENT ) {
+	$cache_enabled           = true;
+	$super_cache_enabled     = true;
+	$cache_rebuild_files     = 1;
+	$wp_cache_mobile_enabled = 1;
+} else {
+	$cache_enabled           = false;
+	$super_cache_enabled     = false;
+	$cache_rebuild_files     = 0;
+	$wp_cache_mobile_enabled = 0;
+}
+
 if ( ! defined('WPCACHEHOME') )
 	define( 'WPCACHEHOME', WP_PLUGIN_DIR . '/wp-super-cache/' );
 
@@ -43,8 +60,6 @@ $wpsc_save_headers             = 0;
 $wp_cache_mfunc_enabled        = 0;
 
 $cache_compression   = 0;
-$cache_enabled       = true;
-$super_cache_enabled = true;
 // The cached files shouldn't expire until new preloaded ones have been generated.
 $cache_max_time      = 3600;
 $cache_path          = WP_CONTENT_DIR . '/cache/';
@@ -63,8 +78,6 @@ $cache_rejected_user_agent = array(
 	4 => 'spider',
 	5 => 'Yandex'
 );
-
-$cache_rebuild_files = 1;
 
 // Disable the file locking system.
 // If you are experiencing problems with clearing or creating cache files
@@ -117,5 +130,4 @@ $wp_cache_hide_donation      = 0;
 $wp_cache_not_logged_in      = 2;
 $wp_cache_clear_on_post_edit = 1;
 $wp_cache_hello_world        = 0;
-$wp_cache_mobile_enabled     = 1;
 $wp_cache_cron_check         = 1;

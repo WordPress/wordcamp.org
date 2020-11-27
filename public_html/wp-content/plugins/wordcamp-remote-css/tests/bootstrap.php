@@ -20,12 +20,12 @@ function manually_load_plugin() {
 	define( 'JETPACK_DEV_DEBUG', true );
 
 	// Initialize Jetpack.
-	require_once( dirname( dirname( __DIR__ ) ) . '/jetpack/jetpack.php' );
+	require_once dirname( dirname( __DIR__ ) ) . '/jetpack/jetpack.php';
 
 	// Some of the sanitization lives here because it runs for both Custom CSS and Remote CSS.
-	require_once( dirname( dirname( dirname( __DIR__ ) ) ) . '/mu-plugins/jetpack-tweaks/css-sanitization.php' );
+	require_once dirname( dirname( dirname( __DIR__ ) ) ) . '/mu-plugins/jetpack-tweaks/css-sanitization.php';
 
 	// Initialize the remote CSS plugin.
-	require_once( dirname( __DIR__ )  . '/bootstrap.php' );
+	require_once dirname( __DIR__ )  . '/bootstrap.php';
 }
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

@@ -36,10 +36,10 @@ defined( 'WPINC' ) || die();
 
 	<?php if ( $coming_soon_enabled ) : ?>
 		<div class="notice notice-info notice-large">
-			<?php printf(
+			<?php echo wp_kses_data( sprintf(
 				__( 'Note: The Remote CSS stylesheet won\'t be enqueued on the Coming Soon template. You can <a href="%s">modify Coming Soon via the Customizer</a>.', 'wordcamporg' ),
-				admin_url( WordCamp_Coming_Soon_Page::get_menu_slug() )
-			); ?>
+				esc_url( admin_url( WordCamp_Coming_Soon_Page::get_menu_slug() ) )
+			) ); ?>
 		</div>
 	<?php endif; ?>
 

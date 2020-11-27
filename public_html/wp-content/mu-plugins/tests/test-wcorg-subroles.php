@@ -17,7 +17,7 @@ defined( 'WPINC' ) || die();
  */
 class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
 	/**
-	 * @covers WordCamp\SubRoles\omit_usermeta_caps()
+	 * @covers ::omit_usermeta_caps()
 	 */
 	public function test_user_with_additional_caps_cannot() {
 		$user = self::factory()->user->create_and_get( array(
@@ -33,7 +33,7 @@ class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers WordCamp\SubRoles\omit_usermeta_caps()
+	 * @covers ::omit_usermeta_caps()
 	 */
 	public function test_user_with_subrole_can() {
 		$user = self::factory()->user->create_and_get( array(

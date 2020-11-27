@@ -44,14 +44,14 @@ defined( 'WPINC' ) || die();
 	<?php endif; ?>
 
 	<p>
-		<?php printf(
-			// translators: %s: button attributes.
-			wp_kses_data( __(
+		<?php echo wp_kses_post( sprintf(
+			__(
+				// translators: %s: button attributes.
 				'Remote CSS allows you to develop your CSS in any environment that you choose, and with whatever tools that you prefer. <button %s>Open the Help tab</button> for detailed instructions.',
 				'wordcamporg'
-			) ),
+			),
 			'type="button" id="wcrcss-open-help-tab" class="button-link"'
-		); ?>
+		) ); ?>
 	</p>
 
 	<form action="" method="POST">

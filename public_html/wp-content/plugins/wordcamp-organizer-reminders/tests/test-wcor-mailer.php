@@ -11,7 +11,7 @@ defined( 'WPINC' ) || die();
  *
  * These are intentionally closer to integration tests than unit tests.
  *
- * @group wordcamp-organizer-reminders
+ * @group organizer-reminders
  */
 class Test_WCOR_Mailer extends WP_UnitTestCase {
 	/**

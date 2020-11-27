@@ -6,7 +6,7 @@ defined( 'WPINC' ) || die();
 /**
  * Class Test_Synchronize_Remote_CSS
  *
- * @group wordcamp-remote-css
+ * @group remote-css
  */
 class Test_Synchronize_Remote_CSS extends \WP_UnitTestCase {
 	/**

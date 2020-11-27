@@ -6,7 +6,7 @@ defined( 'WPINC' ) || die();
 /**
  * Class Test_User_Interface
  *
- * @group wordcamp-remote-css
+ * @group remote-css
  */
 class Test_User_Interface extends \WP_UnitTestCase {
 	/**

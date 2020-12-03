@@ -1,7 +1,7 @@
-FROM php:7.2-fpm
+FROM php:7.4-fpm
 
 # Run some Debian packages installation.
-ENV PACKAGES="curl git mariadb-client subversion wget zlib1g-dev"
+ENV PACKAGES="curl git mariadb-client subversion wget zlib1g-dev libzip-dev"
 RUN apt-get update && \
     apt-get install -yq --no-install-recommends $PACKAGES && \
     apt-get clean && \

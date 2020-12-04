@@ -79,7 +79,7 @@ function groupSessionsByDate( sessions ) {
 			return groups;
 		}
 
-		const date = dateI18n( 'Ymd', session.derived.startTime );
+		const date = dateI18n( 'Y-m-d', session.derived.startTime );
 
 		if ( date ) {
 			groups[ date ] = groups[ date ] || [];
@@ -94,7 +94,7 @@ function groupSessionsByDate( sessions ) {
  * Render the schedule for a specific day.
  *
  * @param {Object} props
- * @param {string} props.localDate The day being displayed in Ymd format (in the site's timezone).
+ * @param {string} props.localDate The day being displayed in Y-m-d format (in the site's timezone).
  * @param {Array}  props.sessions  The sessions assigned to the displayed date.
  *
  * @return {Element}

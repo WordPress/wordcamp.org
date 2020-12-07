@@ -18,6 +18,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
     - uses: actions/cache@v2
       with:
@@ -45,4 +47,4 @@ jobs:
 
     - name: Lint PHP
       run: |
-        composer run lint
+        BASE_REF=${{ github.base_ref }} php .github/bin/phpcs-branch.php 

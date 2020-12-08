@@ -2019,7 +2019,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 }
 
 #content .logos li {
-	float: left;
+	display: inline-block;
 	list-style: none;
 	margin: 5px 0 0 20px;
 	text-align: center;
@@ -3166,6 +3166,11 @@ h3#comments-title {
 	.archive #content h1.page-title,
 	.search #content h1.page-title {
 		margin-right: 0;
+	}
+
+	#content .logos {
+		float: none;
+		display: block;
 	}
 }
 

@@ -1604,7 +1604,14 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'manage_wcb_session_posts_columns':
 				$columns = array_slice( $columns, 0, 2, true ) + array( 'wcb_session_speakers' => __( 'Speakers', 'wordcamporg' ) ) + array_slice( $columns, 2, null, true );
-				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Date & Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_filter(
+					$columns,
+					function( $col ) {
+						return 'date' !== $col;
+					},
+					ARRAY_FILTER_USE_KEY
+				);
 				break;
 			default:
 		}
@@ -1675,8 +1682,16 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'wcb_session_time':
 				$session_time = absint( get_post_meta( get_the_ID(), '_wcpt_session_time', true ) );
-				$session_time = ( $session_time ) ? wp_date( get_option( 'time_format' ), $session_time ) : '&mdash;';
-				echo esc_html( $session_time );
+				$output = '&mdash;';
+				if ( $session_time ) {
+					$output = sprintf(
+						/* translators: 1: A date; 2: A time; */
+						__( '%1$s at %2$s', 'wordcamporg' ),
+						wp_date( 'M j', $session_time ),
+						wp_date( get_option( 'time_format' ), $session_time )
+					);
+				}
+				echo esc_html( $output );
 				break;
 
 			default:

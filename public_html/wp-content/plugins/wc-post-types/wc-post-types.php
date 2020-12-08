@@ -222,9 +222,15 @@ class WordCamp_Post_Types_Plugin {
 		$current_screen = get_current_screen();
 
 		// Order by session time.
-		if ( 'edit-wcb_session' === $current_screen->id && $query->get( 'orderby' ) === '_wcpt_session_time' ) {
-			$query->set( 'meta_key', '_wcpt_session_time' );
-			$query->set( 'orderby', 'meta_value_num' );
+		if ( 'edit-wcb_session' === $current_screen->id ) {
+			if ( $query->get( 'orderby' ) === '_wcpt_session_time' ) {
+				$query->set( 'meta_key', '_wcpt_session_time' );
+				$query->set( 'orderby', 'meta_value_num' );
+			} else if ( $query->get( 'orderby' ) === '' ) {
+				$query->set( 'meta_key', '_wcpt_session_time' );
+				$query->set( 'orderby', 'meta_value_num' );
+				$query->set( 'order', 'asc' );
+			}
 		}
 	}
 

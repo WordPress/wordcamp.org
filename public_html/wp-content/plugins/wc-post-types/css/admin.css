@@ -5,7 +5,7 @@
 }
 
 #wcb_session_time {
-	width: 80px;
+	width: 140px;
 }
 
 #dashboard_right_now a.wcb_speaker-count::before,
@@ -52,4 +52,12 @@ li.wcpt-form-header {
 
 #wcpt-session-duration-container label {
 	margin-right: 5px;
+}
+
+@media screen and (max-width: 782px) {
+	th.column-wcb_session_time,
+	td.column-wcb_session_time {
+		display: none;
+		padding: 8px 8px 3px 35%;
+	}
 }

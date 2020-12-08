@@ -362,7 +362,12 @@ class WordCamp_Post_Types_Plugin {
 			case 'edit-wcb_session':
 			case 'wcb_sponsor':
 			case 'dashboard':
-				wp_enqueue_style( 'wcpt-admin', plugins_url( '/css/admin.css', __FILE__ ), array(), 2 );
+				wp_enqueue_style(
+					'wcpt-admin',
+					plugins_url( '/css/admin.css', __FILE__ ),
+					array(),
+					filemtime( __DIR__ . '/css/admin.css' )
+				);
 				break;
 			case 'wcb_session':
 			case 'wcb_organizer':

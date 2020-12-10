@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * @name MarkerClusterer for Google Maps v3
  * @version version 1.0
@@ -132,13 +133,13 @@ var WordCampCentral = ( function( $ ) {
 			}
 
 			if ( $items.length ) {
-				$items.hide();
+				$items.css( { opacity: 0, 'z-index': 0 } );
 
 				do {
 					randomIndex = Math.floor( Math.random() * ( max - min ) + min );
 				} while ( randomIndex === previousCycleIndex[ $container.attr( 'id' ) ] );
 
-				$items.eq( randomIndex ).fadeIn( 1100 );
+				$items.eq( randomIndex ).css( { 'z-index': 1 } ).animate( { opacity: 1 }, 600 );
 
 				previousCycleIndex[ $container.attr( 'id' ) ] = randomIndex;
 			}

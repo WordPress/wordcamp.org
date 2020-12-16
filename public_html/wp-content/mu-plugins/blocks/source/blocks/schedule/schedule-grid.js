@@ -43,7 +43,7 @@ export function ScheduleGrid( { sessions } ) {
 
 	const groupedSessions = groupSessionsByDate( sessions );
 
-	Object.keys( groupedSessions ).forEach( ( date ) => {
+	Object.keys( groupedSessions ).sort().forEach( ( date ) => {
 		const sessionsGroup = groupedSessions[ date ];
 
 		scheduleDays.push(

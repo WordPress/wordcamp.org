@@ -449,7 +449,7 @@ class WordCamp_Coming_Soon_Page {
 		<?php
 	}
 
-  /**
+	/**
 	 * Get the slug for the Coming Soon menu item.
 	 *
 	 * This is also the query string for links to the Coming Soon panel in the Customizer.
@@ -465,8 +465,8 @@ class WordCamp_Coming_Soon_Page {
 			'/customize.php'
 		);
 	}
-  
-  /**
+
+	/**
 	 * Get the message maybe shown in editor views.
 	 * NB! Block editor notices do not support HTML and all tags will be removed.
 	 */

@@ -476,7 +476,7 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
-	 * Show a notice if Coming Soon is enabled also in Gutenberg block editor.
+	 * Show a notice if Coming Soon is enabled also in block editor.
 	 */
 	public function maybe_show_block_editor_notice() {
 		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
@@ -490,18 +490,22 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
+		if ( ! $screen->is_block_editor() ) {
+			return;
+		}
+
 		$message = $this->get_notice_message(); ?>
 
 		<script type="text/javascript">
-		( function( wp ) {
-			wp.data.dispatch( 'core/notices' ).createNotice(
-				'warning',
-				'<?php echo esc_html( wp_strip_all_tags( $message ) ); ?>',
-				{
-					isDismissible: false,
-				}
-			);
-		} )( window.wp );
+			( function( wp ) {
+				wp.data.dispatch( 'core/notices' ).createNotice(
+					'warning',
+					'<?php echo esc_html( wp_strip_all_tags( $message ) ); ?>',
+					{
+						isDismissible: false,
+					}
+				);
+			} )( window.wp );
 		</script>
 	<?php }
 

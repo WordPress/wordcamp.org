@@ -67,8 +67,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				__( 'WordCamp Information', 'wordcamporg' ),
 				'wcpt_wordcamp_metabox',
 				WCPT_POST_TYPE_ID,
-				'advanced',
-				'high'
+				'advanced'
 			);
 
 			add_meta_box(
@@ -76,8 +75,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				__( 'Organizing Team', 'wordcamporg' ),
 				'wcpt_organizer_metabox',
 				WCPT_POST_TYPE_ID,
-				'advanced',
-				'high'
+				'advanced'
 			);
 
 			add_meta_box(
@@ -85,8 +83,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				__( 'Venue Information', 'wordcamporg' ),
 				'wcpt_venue_metabox',
 				WCPT_POST_TYPE_ID,
-				'advanced',
-				'high'
+				'advanced'
 			);
 
 			add_meta_box(
@@ -410,6 +407,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$retval = array(
 						'Start Date (YYYY-mm-dd)'           => 'date',
 						'End Date (YYYY-mm-dd)'             => 'date',
+						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
 						'E-mail Address'                    => 'text',
@@ -430,6 +428,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$retval = array(
 						'Start Date (YYYY-mm-dd)'           => 'date',
 						'End Date (YYYY-mm-dd)'             => 'date',
+						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
 						'E-mail Address'                    => 'text',
@@ -763,13 +762,13 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Not translating any string because they will be sent to slack.
-			$city             = get_post_meta( $wordcamp->ID, 'Location', true );
-			$start_date       = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
-			$wordcamp_url     = get_post_meta( $wordcamp->ID, 'URL', true );
-			$title            = 'New WordCamp scheduled!!!';
+			$city         = get_post_meta( $wordcamp->ID, 'Location', true );
+			$start_date   = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
+			$wordcamp_url = get_post_meta( $wordcamp->ID, 'URL', true );
+			$title        = 'New WordCamp scheduled!!!';
 
 			$message = sprintf(
-				"<%s|WordCamp $city> has been scheduled for a start date of %s. :tada: :community: :wordpress:\n\n%s",
+				"<%s|WordCamp $city> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,
 				gmdate( 'F j, Y', $start_date ),
 				$wordcamp_url
@@ -839,7 +838,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$required_needs_site_fields = $this->get_required_fields( 'needs-site', $post_data_raw['ID'] );
 			$required_scheduled_fields  = $this->get_required_fields( 'scheduled', $post_data_raw['ID'] );
 
-			// Check pending posts.
+			// Needs Site.
 			if ( 'wcpt-needs-site' == $post_data['post_status'] && absint( $post_data_raw['ID'] ) > $min_site_id ) {
 				foreach ( $required_needs_site_fields as $field ) {
 
@@ -854,7 +853,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				}
 			}
 
-			// Check published posts.
+			// Scheduled.
 			if ( 'wcpt-scheduled' == $post_data['post_status'] && isset( $post_data_raw['ID'] ) && absint( $post_data_raw['ID'] ) > $min_site_id ) {
 				foreach ( $required_scheduled_fields as $field ) {
 					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
@@ -879,7 +878,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @return array
 		 */
 		public static function get_required_fields( $status, $post_id ) {
-			$needs_site = array( 'E-mail Address' );
+			$needs_site = array(
+				'E-mail Address',
+				'Event Timezone',
+			);
 
 			$scheduled = array(
 				// WordCamp.
@@ -1199,7 +1201,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {
-		$address_instructions = "Please include the city, state/province and country.";
+		$address_instructions = 'Please include the city, state/province and country.';
 
 		if ( WordCamp_Admin::have_geocoded_location( $post_id ) ) {
 			$key_prefix = WordCamp_Admin::get_address_key_prefix( $post_id );

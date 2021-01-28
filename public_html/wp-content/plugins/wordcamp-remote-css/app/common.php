@@ -171,12 +171,15 @@ function migrate_jetpack_post( $jetpack_post ) {
  * @throws Exception
  */
 function create_new_post( $content = '' ) {
-	$post = wp_insert_post( array(
-		'post_type'    => POST_TYPE,
-		'post_name'    => SAFE_CSS_POST_SLUG,
-		'post_status'  => 'private',
-		'post_content' => $content,
-	), true );
+	$post = wp_insert_post(
+		array(
+			'post_type'    => POST_TYPE,
+			'post_name'    => SAFE_CSS_POST_SLUG,
+			'post_status'  => 'private',
+			'post_content' => $content,
+		),
+		true
+	);
 
 	if ( ! is_wp_error( $post ) ) {
 		$post = get_post( $post );
@@ -241,7 +244,7 @@ function add_discovery_notice( $wp_customize ) {
 	);
 
 	ob_start();
-	require_once( dirname( __DIR__ ) . '/views/template-discovery-notice.php' );
+	require_once dirname( __DIR__ ) . '/views/template-discovery-notice.php';
 	$description = ob_get_clean();
 
 	$wp_customize->add_control(

@@ -3,7 +3,7 @@
  */
 import { InspectorControls } from '@wordpress/block-editor';
 import { CheckboxControl, PanelBody, ToggleControl } from '@wordpress/components';
-import { dateI18n } from '@wordpress/date';
+import { dateI18n, format } from '@wordpress/date';
 import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -62,7 +62,7 @@ export default function ScheduleInspectorControls(
 }
 
 /**
- * Get all of the dates that the given sessions are assigned to.
+ * Get all of the dates (in site/venue timezone) that the given sessions are assigned to.
  *
  * @param {Array} sessions
  *
@@ -124,7 +124,7 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
 						return (
 							<CheckboxControl
 								key={ day }
-								label={ dateI18n( dateFormat, day ) }
+								label={ format( dateFormat, day ) }
 								checked={ chosenDays.includes( day ) }
 								onChange={ ( isChecked ) => {
 									/*

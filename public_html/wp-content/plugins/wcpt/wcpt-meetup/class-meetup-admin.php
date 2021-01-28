@@ -207,14 +207,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			);
 
 			add_meta_box(
-				'wcpt_meetup_swag',
-				__( 'Swag Information', 'wordcamporg' ),
-				array( $this, 'wcpt_swag_metabox' ),
-				Meetup_Application::POST_TYPE,
-				'advanced'
-			);
-
-			add_meta_box(
 				'wcpt_meetup_metadata',
 				__( 'Meetup.com API sync', 'wordcamporg' ),
 				array( $this, 'wcpt_meetup_sync' ),
@@ -246,14 +238,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 */
 		public function wcpt_organizer_info_metabox() {
 			$meta_keys = $this->meta_keys( 'organizer' );
-			$this->meetup_metabox( $meta_keys );
-		}
-
-		/**
-		 * Render swag metabox group.
-		 */
-		public function wcpt_swag_metabox() {
-			$meta_keys = $this->meta_keys( 'swag' );
 			$this->meetup_metabox( $meta_keys );
 		}
 
@@ -654,7 +638,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			$application_keys = array(
 				'Date Applied'                               => 'date',
-				'Already a meetup'                           => 'text',
 				'Date of Last Contact'                       => 'date',
 				'Who contacted (Wordpress.org username)'     => 'text',
 				'Vetted Date'                                => 'date',
@@ -680,10 +663,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Last meetup.com API sync' => 'date',
 			);
 
-			$swag_keys = array(
-				'Swag notes' => 'textarea',
-			);
-
 			switch ( $meta_group ) {
 				case 'information':
 					$data = $info_keys;
@@ -694,9 +673,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				case 'organizer':
 					$data = $organizer_keys;
 					break;
-				case 'swag':
-					$data = $swag_keys;
-					break;
 				case 'metadata':
 					$data = $metadata_keys;
 					break;
@@ -706,7 +682,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 						$info_keys,
 						$application_keys,
 						$organizer_keys,
-						$swag_keys,
 						$metadata_keys
 					);
 			}

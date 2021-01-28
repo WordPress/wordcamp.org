@@ -337,7 +337,7 @@ function generate_plaintext_fav_sessions( $sessions_rev, $fav_sessions_lookup ) 
 			}
 
 			$session              = get_post( $session_id );
-			$session_title        = apply_filters( 'the_title', $session->post_title );
+			$session_title        = html_entity_decode( apply_filters( 'the_title', $session->post_title ) );
 			$session_tracks       = get_the_terms( $session_id, 'wcb_track' );
 			$session_track_titles = is_array( $session_tracks ) ? implode( ', ', wp_list_pluck( $session_tracks, 'name' ) ) : '';
 

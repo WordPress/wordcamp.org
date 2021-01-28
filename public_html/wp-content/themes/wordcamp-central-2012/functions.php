@@ -179,8 +179,20 @@ class WordCamp_Central_Theme {
 	 * Enqueue scripts and styles.
 	 */
 	static function enqueue_scripts() {
-		wp_enqueue_style( 'central', get_stylesheet_uri(), array(), 15 );
-		wp_enqueue_script( 'wordcamp-central', get_stylesheet_directory_uri() . '/js/central.js', array( 'jquery', 'underscore' ), 4, true );
+		wp_enqueue_style(
+			'central',
+			get_stylesheet_uri(),
+			array(),
+			filemtime( __DIR__ . '/style.css' )
+		);
+
+		wp_enqueue_script(
+			'wordcamp-central',
+			get_stylesheet_directory_uri() . '/js/central.js',
+			array( 'jquery', 'underscore' ),
+			filemtime( __DIR__ . '/js/central.js' ),
+			true
+		);
 
 		wp_localize_script( 'wordcamp-central', 'wordcampCentralOptions', self::get_javascript_options() );
 
@@ -190,10 +202,6 @@ class WordCamp_Central_Theme {
 		 */
 		if ( is_singular() && get_option( 'thread_comments' ) ) {
 			wp_enqueue_script( 'comment-reply' );
-		}
-
-		if ( is_front_page() || is_page( 'about' ) ) {
-			wp_enqueue_script( 'jquery-cycle', get_stylesheet_directory_uri() . '/js/jquery.cycle.min.js', array( 'jquery' ) );
 		}
 
 		if ( is_page( 'about' ) || is_page( 'schedule' ) ) {
@@ -317,6 +325,12 @@ class WordCamp_Central_Theme {
 
 			$coordinates = get_post_meta( $marker->ID, '_venue_coordinates', true );
 
+			// Try the host coordinates (for online events).
+			if ( ! $coordinates ) {
+				$coordinates = get_post_meta( $marker->ID, '_host_coordinates', true );
+			}
+
+			// No location found, skip this one.
 			if ( ! $coordinates ) {
 				continue;
 			}

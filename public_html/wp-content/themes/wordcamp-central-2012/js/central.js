@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * @name MarkerClusterer for Google Maps v3
  * @version version 1.0
@@ -37,6 +38,7 @@
 var WordCampCentral = ( function( $ ) {
 	// templateOptions is copied from Core in order to avoid an extra HTTP request just to get wp.template
 	var options,
+		previousCycleIndex = {},
 		templateOptions = {
 			evaluate:    /<#([\s\S]+?)#>/g,
 			interpolate: /\{\{\{([\s\S]+?)\}\}\}/g,
@@ -65,6 +67,8 @@ var WordCampCentral = ( function( $ ) {
 	function documentReadyInit() {
 		try {
 			cycleLogos();
+			setInterval( cycleLogos, 6000 );
+
 			if ( options.hasOwnProperty( 'mapContainer' ) && options.hasOwnProperty( 'mapMarkers' ) ) {
 				loadMap( options.mapContainer, options.mapMarkers );
 			}
@@ -114,14 +118,32 @@ var WordCampCentral = ( function( $ ) {
 	 * Turn the sponsors widget list into a slideshow.
 	 */
 	function cycleLogos() {
-		var $container = $( '.sponsors-widget-list' );
+		var min = 0,
+			$containers = $( '.cycle-me' );
 
-		if ( $container.length ) {
-			$container.cycle( {
-				timeout: 5000,
-				speed: 500
-			} );
-		}
+		$containers.each( function() {
+			var randomIndex,
+				$container = $( this ),
+				$items = $container.children(),
+				max = $items.length; // Not subtracting 1, because the max value is exclusive.
+
+			// Don't change the image when the user is about to click on it.
+			if ( $container.is( ':hover' ) ) {
+				return;
+			}
+
+			if ( $items.length ) {
+				$items.css( { opacity: 0, 'z-index': 0 } );
+
+				do {
+					randomIndex = Math.floor( Math.random() * ( max - min ) + min );
+				} while ( randomIndex === previousCycleIndex[ $container.attr( 'id' ) ] );
+
+				$items.eq( randomIndex ).css( { 'z-index': 1 } ).animate( { opacity: 1 }, 600 );
+
+				previousCycleIndex[ $container.attr( 'id' ) ] = randomIndex;
+			}
+		} );
 	}
 
 	/**

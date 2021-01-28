@@ -75,14 +75,19 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
-	 * Dequeue all enqueued stylesheets and Custom CSS
+	 * Dequeue all enqueued stylesheets and Custom CSS.
+	 *
+	 * This prevents Custom CSS & Remote CSS styles from conflicting with the Coming Soon template. Coming Soon
+	 * is intended to be a stripped down placeholder with minimal customization.
 	 */
 	protected function dequeue_all_stylesheets() {
 		foreach ( $GLOBALS['wp_styles']->queue as $stylesheet ) {
 			wp_dequeue_style( $stylesheet );
 		}
 
+		// Core and Jetpack's Custom CSS module both output Custom CSS, so they both need to be disabled.
 		remove_action( 'wp_head', 'wp_custom_css_cb', 101 );
+		remove_action( 'wp_head', array( 'Jetpack_Custom_CSS_Enhancements', 'wp_custom_css_cb' ), 101 );
 	}
 
 	/**
@@ -181,6 +186,7 @@ class WordCamp_Coming_Soon_Page {
 			'contact_form_shortcode' => $this->get_contact_form_shortcode(),
 			'colors'                 => $this->get_colors(),
 			'introduction'           => $this->get_introduction(),
+			'status'                 => $this->get_status(),
 		);
 
 		return $variables;
@@ -279,6 +285,10 @@ class WordCamp_Coming_Soon_Page {
 	 * @return string|false
 	 */
 	public function get_dates() {
+		if ( 'wcpt-cancelled' === $this->get_status() ) {
+			return esc_html__( 'Cancelled', 'wordcamporg' );
+		}
+
 		$dates         = false;
 		$wordcamp_post = get_wordcamp_post();
 
@@ -374,6 +384,21 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
+	 * Retrieve the WordCamp status.
+	 *
+	 * @return string
+	 */
+	public function get_status() {
+		$wordcamp_post = get_wordcamp_post();
+
+		if ( isset( $wordcamp_post->ID ) ) {
+			return $wordcamp_post->post_status;
+		}
+
+		return null;
+	}
+
+	/**
 	 * Display notice in admin bar when Coming Soon mode is on.
 	 *
 	 * @param WP_Admin_Bar $wp_admin_bar WP_Admin_Bar instance, passed by reference.
@@ -385,13 +410,7 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
-		$menu_slug = add_query_arg(
-			array(
-				'autofocus[section]' => 'wccsp_live_preview',
-				'url'                => rawurlencode( add_query_arg( 'wccsp-preview', '', site_url() ) ),
-			),
-			'/customize.php'
-		);
+		$menu_slug   = WordCamp_Coming_Soon_Page::get_menu_slug();
 		$setting_url = admin_url( $menu_slug );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
@@ -430,7 +449,24 @@ class WordCamp_Coming_Soon_Page {
 		<?php
 	}
 
-	/**
+  /**
+	 * Get the slug for the Coming Soon menu item.
+	 *
+	 * This is also the query string for links to the Coming Soon panel in the Customizer.
+	 *
+	 * @return string
+	 */
+	public static function get_menu_slug() {
+		return add_query_arg(
+			array(
+				'autofocus[section]' => 'wccsp_live_preview',
+				'url'                => rawurlencode( add_query_arg( 'wccsp-preview', '', site_url() ) ),
+			),
+			'/customize.php'
+		);
+	}
+  
+  /**
 	 * Get the message maybe shown in editor views.
 	 * NB! Block editor notices do not support HTML and all tags will be removed.
 	 */
@@ -453,13 +489,7 @@ class WordCamp_Coming_Soon_Page {
 			return;
 		}
 
-		$menu_slug = add_query_arg(
-			array(
-				'autofocus[section]' => 'wccsp_live_preview',
-				'url'                => rawurlencode( add_query_arg( 'wccsp-preview', '', site_url() ) ),
-			),
-			'/customize.php'
-		);
+		$menu_slug   = self::get_menu_slug();
 		$setting_url = admin_url( $menu_slug );
 		$screen      = get_current_screen();
 

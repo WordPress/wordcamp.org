@@ -2,6 +2,7 @@
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
+import { getQueryArg, isURL } from '@wordpress/url';
 
 /**
  * Internal dependencies
@@ -28,9 +29,18 @@ export const settings = {
 			className={ className }
 			icon="text"
 			label={ __( 'StreamText Event', 'wordcamporg' ) }
-			instructions={ __( 'Enter the event name to embed the captions on your site.', 'wordcamporg' ) }
+			instructions={ __(
+				'Enter the event name to embed the captions on your site, for example "IHaveADream".',
+				'wordcamporg'
+			) }
 			value={ attributes.channel }
-			onChange={ ( newValue ) => setAttributes( { channel: newValue } ) }
+			onChange={ ( newValue ) => {
+				let eventName = newValue;
+				if ( isURL( newValue ) ) {
+					eventName = getQueryArg( newValue, 'event' );
+				}
+				setAttributes( { channel: eventName } );
+			} }
 		/>
 	),
 	// Save the block to the streamtext shortcode.

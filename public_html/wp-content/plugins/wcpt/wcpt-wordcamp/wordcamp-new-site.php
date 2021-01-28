@@ -42,6 +42,7 @@ class WordCamp_New_Site {
 				name="<?php echo esc_attr( $object_name ); ?>"
 				id="<?php echo esc_attr( $object_name ); ?>"
 				value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
+				placeholder="https://city.wordcamp.org/<?php echo esc_attr( wp_date( 'Y' ) ); ?>/"
 			/>
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
@@ -71,8 +72,6 @@ class WordCamp_New_Site {
 						<input id="<?php echo esc_attr( $checkbox_id ); ?>" type="checkbox" name="<?php echo esc_attr( $checkbox_id ); ?>" />
 						Create site in network
 					</label>
-
-					<span class="description">(e.g., https://<?php echo esc_attr( wp_date( 'Y' ) ); ?>.city.wordcamp.org)</span>
 				<?php endif; // Domain exists. ?>
 
 				<?php if ( $valid_url && ! self::url_matches_expected_format( $url['host'], $url['path'], $post_id ) ) : ?>
@@ -153,10 +152,6 @@ class WordCamp_New_Site {
 	 * @return bool
 	 */
 	public static function url_matches_expected_format( $domain, $path, $wordcamp_id ) {
-		if ( 'production' === WORDCAMP_ENVIRONMENT ) {
-			return true; // todo remove after URL migration complete.
-		}
-
 		$tld                            = get_top_level_domain();
 		$last_permitted_external_domain = 2341;
 		$external_domain_exceptions     = array( 169459 );
@@ -472,6 +467,7 @@ class WordCamp_New_Site {
 
 		update_option( 'admin_email',                  $admin_email );
 		update_option( 'blogdescription',              __( 'Just another WordCamp', 'wordcamporg' ) );
+		update_option( 'timezone_string',              $meta['Event Timezone'][0] );
 		update_option( 'close_comments_for_old_posts', 1 );
 		update_option( 'close_comments_days_old',      30 );
 		update_option( 'wccsp_settings',               $coming_soon_settings );

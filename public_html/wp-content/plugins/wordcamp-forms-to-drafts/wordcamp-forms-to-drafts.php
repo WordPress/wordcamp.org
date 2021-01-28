@@ -349,7 +349,7 @@ class WordCamp_Forms_To_Drafts {
 		global $current_user;
 
 		$all_values      = $this->get_unprefixed_grunion_form_values( $all_values );
-		$speaker_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] );
+		$speaker_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
 
 		if ( ! $speaker_user_id ) {
 			$speaker_user_id                      = $current_user->ID;
@@ -425,7 +425,7 @@ class WordCamp_Forms_To_Drafts {
 
 		if ( $speaker_id ) {
 			update_post_meta( $speaker_id, '_wcb_speaker_email', $speaker['Email Address'] ?? '' );
-			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ) );
+			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ?? '' ) );
 		}
 
 		return $speaker_id;
@@ -451,10 +451,10 @@ class WordCamp_Forms_To_Drafts {
 		$session_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_session',
-				'post_title'   => $session['Topic Title'],
+				'post_title'   => $session['Topic Title'] ?? '',
 				'post_content' => $content,
 				'post_status'  => 'draft',
-				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ),
+				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ?? '' ),
 			),
 			true
 		);

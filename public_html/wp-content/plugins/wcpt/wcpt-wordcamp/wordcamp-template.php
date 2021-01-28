@@ -34,9 +34,6 @@ function wcpt_has_wordcamps( $args = '' ) {
 
 		// Page Number
 		'paged'            => 1,
-
-		// Topic Search
-		's'                => empty( $_REQUEST['wcs'] ) ? '' : esc_attr( $_REQUEST['wcs'] ),
 	);
 
 	// Set up variables

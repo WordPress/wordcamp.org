@@ -18,12 +18,12 @@
 		"adhocore/jwt": "^1.0"
 	},
 	"require-dev": {
-		"dealerdirect/phpcodesniffer-composer-installer": "^0.5.0",
+		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
 		"wp-coding-standards/wpcs": "2.*",
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"phpunit/phpunit": "^7",
 		"sirbrillig/phpcs-changed": "^2.2",
-		"spatie/phpunit-watcher": "^1.12"
+		"spatie/phpunit-watcher": "^1.23"
 	},
 	"scripts": {
 		"format": "phpcbf -p",

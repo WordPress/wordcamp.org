@@ -15,39 +15,15 @@ class WordCamp_Participation_Notifier {
 	 * Constructor
 	 */
 	public function __construct() {
-		add_action( 'transition_post_status',                  array( $this, 'post_updated' ), 5, 3 );
+		// Sync with the wp.org username changes.
+		add_filter( 'update_post_meta', array( $this, 'username_meta_update' ), 10, 4 );
+		add_filter( 'add_post_meta',    array( $this, 'username_meta_add' ), 10, 3 );
+		add_filter( 'delete_post_meta', array( $this, 'username_meta_delete' ), 10, 3 );
+
 		add_action( 'camptix_rl_buyer_completed_registration', array( $this, 'primary_attendee_registered' ), 10, 2 );
 		add_action( 'camptix_rl_registration_confirmed',       array( $this, 'additional_attendee_confirmed_registration' ), 10, 2 );
 		add_action( 'added_post_meta',                         array( $this, 'attendee_checked_in' ), 10, 4 );
 		add_action( 'update_meetup_organizers',                array( $this, 'update_meetup_organizers' ), 10, 2 );
-	}
-
-	/**
-	 * Determines how to handle post updates.
-	 *
-	 * Ignores updates that shouldn't trigger notifications, and routes ones that do to the appropriate notifier.
-	 *
-	 * This hooks in before the custom post types save their post meta fields, so that we can access the
-	 * WordPress.org username from the previous revision and from the current one.
-	 *
-	 * @todo Maybe refactor this to work more like primary_attendee_registered(), so the speaker/sponsor plugins just fire a
-	 *       hook when they're ready to send the notification, rather than this plugin having to be aware of (and
-	 *       coupled to) the internal logic of those plugins.
-	 *
-	 * @param string  $new_status
-	 * @param string  $old_status
-	 * @param WP_Post $post
-	 */
-	public function post_updated( $new_status, $old_status, $post ) {
-		if ( ! $this->is_post_notifiable( $post ) ) {
-			return;
-		}
-
-		if ( 'publish' == $new_status && 'publish' == $old_status ) {
-			$this->published_post_updated( $post );
-		} elseif ( 'publish' == $new_status || 'publish' == $old_status ) {
-			$this->post_published_or_unpublished( $new_status, $old_status, $post );
-		}
 	}
 
 	/**
@@ -109,65 +85,83 @@ class WordCamp_Participation_Notifier {
 	}
 
 	/**
-	 * Updates the activity and associations of a profile when the WordPress.org username on a published speaker
-	 * or organizer post changes.
+	 * Add the organizer or speaker badge when the User ID meta is added
 	 *
-	 * IMPORTANT NOTE: When a draft post is published via the block editor, badges and activity must be managed here instead of in the `post_published_or_unpublished` method.
-	 * This is because when post is updated via Block editor, the status change request will not have any POST data, see @link https://github.com/WordPress/gutenberg/issues/12897
-	 *
-	 * @todo The handler doesn't support removing activity, but maybe do that here if support is added.
-	 *
-	 * @param WP_Post $post
+	 * @param int    $object_id  ID of the object metadata is for.
+	 * @param string $meta_key   Metadata key.
+	 * @param mixed  $meta_value Metadata value. Serialized if non-scalar.
 	 */
-	protected function published_post_updated( $post ) {
-		$previous_user_id       = $this->get_saved_wporg_user_id( $post );
-		$new_user_id            = $this->get_new_wporg_user_id( $post );
+	public function username_meta_add( $object_id, $meta_key, $meta_value ) {
+		if ( '_wcpt_user_id' === $meta_key && $meta_value ) {
+			$post = get_post( $object_id );
+			if ( 'publish' !== $post->post_status ) {
+				return;
+			}
+
+			$this->add_activity( $post, $meta_value );
+			$this->add_badge( $post, $meta_value );
+		}
+	}
+
+	/**
+	 * Maybe add or remove the organizer or speaker badge when the User ID meta is updated
+	 *
+	 * @param int    $meta_id    ID of the metadata entry to update.
+	 * @param int    $object_id  ID of the object metadata is for.
+	 * @param string $meta_key   Metadata key.
+	 * @param mixed  $meta_value Metadata value. Serialized if non-scalar.
+	 */
+	public function username_meta_update( $meta_id, $object_id, $meta_key, $meta_value ) {
+		if ( '_wcpt_user_id' === $meta_key && $meta_value ) {
+			$post = get_post( $object_id );
+			if ( 'publish' !== $post->post_status ) {
+				return;
+			}
+
+			$meta_value = absint( $meta_value );
+
+			$prev_value = absint( get_post_meta( $object_id, $meta_key, true ) );
+			if ( $prev_value && $prev_value !== $meta_value ) {
+				$this->maybe_remove_badge( $post, $prev_value );
+			}
+
+			$this->add_activity( $post, $meta_value );
+			$this->add_badge( $post, $meta_value );
+		}
+	}
+
+	/**
+	 * Remove the organizer or speaker badge when the User ID meta is deleted
+	 *
+	 * @param string[] $meta_ids   An array of metadata entry IDs to delete.
+	 * @param int      $object_id  ID of the object metadata is for.
+	 * @param string   $meta_key   Metadata key.
+	 */
+	public function username_meta_delete( $meta_ids, $object_id, $meta_key ) {
+		if ( '_wcpt_user_id' === $meta_key ) {
+			$post = get_post( $object_id );
+			$prev_value = absint( get_post_meta( $object_id, $meta_key, true ) );
+			$this->maybe_remove_badge( $post, $prev_value );
+		}
+	}
+
+	/**
+	 * Makes request to Profile URL to add the speaker or organizer entry to the profile's activity section
+	 *
+	 * @param WP_Post $post     Speaker/Organizer Post Object.
+	 * @param int     $user_id  User ID to add badge for.
+	 */
+	protected function add_activity( $post, $user_id ) {
 		$published_activity_key = $this->get_published_activity_key( $post );
-
-
-		if ( $previous_user_id ) {
-			$this->maybe_remove_badge( $post, $previous_user_id );
-		}
-
-		if ( $new_user_id ) {
-
-			if ( ! get_user_meta( $new_user_id, $published_activity_key ) ) {
-				$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_activity_payload( $post ) );
-				update_user_meta( $new_user_id, $published_activity_key, true );
-			}
-
-			$this->add_badge( $post, $new_user_id );
+		if ( ! get_user_meta( $user_id, $published_activity_key ) ) {
+			$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_activity_payload( $post, $user_id ) );
+			update_user_meta( $user_id, $published_activity_key, true );
 		}
 	}
 
 	/**
-	 * Adds new activity and associations to a user's profile when speaker or organizer posts are published, and
-	 * removes associations, when speaker or organizer posts are unpublished.
-	 *
-	 * @todo The handler doesn't support removing activity, but maybe do that here if support is added.
-	 *
-	 * @param string  $new_status
-	 * @param string  $old_status
-	 * @param WP_Post $post
-	 */
-	protected function post_published_or_unpublished( $new_status, $old_status, $post ) {
-		if ( 'publish' == $new_status ) {
-			$user_id = $this->get_new_wporg_user_id( $post );
-
-			if ( ! get_user_meta( $user_id, $this->get_published_activity_key( $post ) ) ) {
-				$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_activity_payload( $post ) );
-				update_user_meta( $user_id, $this->get_published_activity_key( $post ), true );
-			}
-
-			$this->add_badge( $post, $user_id );
-		} elseif( 'publish' == $old_status ) {
-			$user_id = $this->get_saved_wporg_user_id( $post );
-			$this->maybe_remove_badge( $post, $user_id );
-		}
-	}
-
-	/**
-	 * Makes request to Profile URL to add badge to organizer/speaker. Also adds a meta entry which is used by `maybe_remove_badge` function to figure out whether to remove a badge or not.
+	 * Makes request to Profile URL to add badge to organizer/speaker. Also adds a meta entry which is used by
+	 * `maybe_remove_badge` function to figure out whether to remove a badge or not.
 	 *
 	 * @param WP_Post $post     Speaker/Organizer Post Object.
 	 * @param int     $user_id  User ID to add badge for.
@@ -180,17 +174,18 @@ class WordCamp_Participation_Notifier {
 		$meta_key = $this->get_user_meta_key( $post );
 
 		// User already has a badge. Prevent wasteful API call and bail.
-		if ( get_user_meta( $user_id, $meta_key ) ) {
+		if ( get_user_meta( $user_id, $meta_key, true ) ) {
 			return;
 		}
 
-		update_user_meta( $user_id ,$meta_key, true );
+		update_user_meta( $user_id, $meta_key, true );
 
 		$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_association_payload( $post, 'add', $user_id ) );
 	}
 
 	/**
-	 * Makes a request to remove speaker/organizer badge from a user if the user is removed from all WordCamp where they were speaker/organizer.
+	 * Makes a request to remove the speaker or organizer badge from a user, if the user is removed from all
+	 * WordCamps where they were a speaker or organizer.
 	 *
 	 * @param WP_Post $post     Speaker/Organizer Post Object.
 	 * @param int     $user_id  User ID to remove the badge for.
@@ -205,7 +200,7 @@ class WordCamp_Participation_Notifier {
 		$meta_key = $this->get_user_meta_key( $post );
 
 		// User does not have a badge anyway. Prevent wasteful API call and bail.
-		if ( ! $user_id || ! get_user_meta( $user_id, $meta_key ) ) {
+		if ( ! $user_id || ! get_user_meta( $user_id, $meta_key, true ) ) {
 			return;
 		}
 
@@ -215,12 +210,9 @@ class WordCamp_Participation_Notifier {
 
 		$count = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM $wpdb->usermeta
-				WHERE
-					user_id = %d
-					AND meta_key like '$meta_key_prefix%';
-				",
-				$user_id
+				"SELECT COUNT(*) FROM $wpdb->usermeta WHERE user_id = %d AND meta_key like %s;",
+				$user_id,
+				"$meta_key_prefix%"
 			)
 		);
 
@@ -341,20 +333,12 @@ class WordCamp_Participation_Notifier {
 		$activity = false;
 		$wordcamp = get_wordcamp_post();
 
-		if ( ! $user_id ) {
-			$user_id = $this->get_new_wporg_user_id( $post );
-		}
-
 		if ( $user_id ) {
-			$user = get_user_by( 'id', $user_id );
-				// todo - This is a temporary workaround for r3806 until everything can be refactored.
-				// Refactoring may no longer be necessary, see https://meta.trac.wordpress.org/changeset/3894
-
 			$activity = array(
 				'action'        => 'wporg_handle_activity',
 				'source'        => 'wordcamp',
 				'timestamp'     => strtotime( $post->post_modified_gmt ),
-				'user'          => $user->user_login,
+				'user'          => $user_id,
 				'wordcamp_id'   => get_current_blog_id(),
 				'wordcamp_name' => get_wordcamp_name(),
 				'wordcamp_date' => empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? false : date( 'F jS', $wordcamp->meta['Start Date (YYYY-mm-dd)' ][0] ),
@@ -410,10 +394,6 @@ class WordCamp_Participation_Notifier {
 	protected function get_post_association_payload( $post, $command, $user_id = null ) {
 		$association = false;
 
-		if ( ! $user_id ) {
-			$user_id = $this->get_new_wporg_user_id( $post );
-		}
-
 		if ( $user_id ) {
 			$association = array(
 				'action'        => 'wporg_handle_association',
@@ -442,29 +422,6 @@ class WordCamp_Participation_Notifier {
 		}
 
 		return apply_filters( 'wpn_post_association_payload', $association, $post, $command, $user_id );
-	}
-
-	/**
-	 * Get the current WordPress.org user_id associated with a custom post
-	 *
-	 * This is called during the context of a post being updated, so the new username is the one submitted in
-	 * the $_POST request, or the currently logged in user, as opposed to the user_id saved in the database.
-	 *
-	 * @param WP_Post $post
-	 * @return false|int
-	 */
-	protected function get_new_wporg_user_id( $post ) {
-		$user_id = $user = false;
-
-		if ( in_array( $post->post_type, array( 'wcb_speaker', 'wcb_organizer' ) ) && isset( $_POST['wcpt-wporg-username'] ) ) {
-			$user = wcorg_get_user_by_canonical_names( $_POST['wcpt-wporg-username'] );
-		}
-
-		if ( ! empty( $user->ID ) ) {
-			$user_id = $user->ID;
-		}
-
-		return $user_id;
 	}
 
 	/**

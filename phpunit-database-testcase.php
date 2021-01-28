@@ -21,6 +21,8 @@ class Database_TestCase extends WP_UnitTestCase {
 	protected static $slash_year_2016_site_id;
 	protected static $slash_year_2018_dev_site_id;
 	protected static $slash_year_2020_site_id;
+	protected static $yearless_site_id;
+	protected static $slash_year_with_yearless_site_id;
 
 	/**
 	 * Create sites we'll need for the tests.
@@ -66,6 +68,20 @@ class Database_TestCase extends WP_UnitTestCase {
 		self::$slash_year_2020_site_id = $factory->blog->create( array(
 			'domain'     => 'vancouver.wordcamp.test',
 			'path'       => '/2020/',
+			'network_id' => self::$network_id,
+		) );
+
+		// Sites like this are old edge cases from before a consistent structure was enforced.
+		self::$yearless_site_id = $factory->blog->create( array(
+			'domain'     => 'japan.wordcamp.test',
+			'path'       => '/',
+			'network_id' => self::$network_id,
+		) );
+
+		// Sites like this are newer and conform to the existing structure, but share a domain with a site that doesn't.
+		self::$slash_year_with_yearless_site_id = $factory->blog->create( array(
+			'domain'     => 'japan.wordcamp.test',
+			'path'       => '/2021/',
 			'network_id' => self::$network_id,
 		) );
 	}

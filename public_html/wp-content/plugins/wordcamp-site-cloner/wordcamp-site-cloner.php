@@ -60,6 +60,7 @@ function register_scripts() {
 		'_wcscSettings',
 		array(
 			'apiUrl'        => get_rest_url( null, '/wordcamp-site-cloner/v1/sites/' ),
+			'nonce'         => wp_create_nonce( 'wp_rest' ),
 			'customizerUrl' => admin_url( 'customize.php' ),
 			'themes'        => get_available_themes(),
 		)
@@ -142,17 +143,14 @@ function register_customizer_components( $wp_customize ) {
  * Register the REST API endpoint for the Customizer to use to retriever the site list
  */
 function register_api_endpoints() {
-	if ( ! current_user_can( 'switch_themes' ) ) {
-		return;
-
-		// todo - use `permission_callback` instead
-	}
-
 	register_rest_route(
 		'wordcamp-site-cloner/v1',
 		'/sites',
 		array(
 			'methods'  => 'GET',
+			'permission_callback' => function() {
+				return current_user_can( 'switch_themes' );
+			},
 			'callback' => __NAMESPACE__ . '\sites_endpoint',
 		)
 	);

@@ -2,20 +2,12 @@
  * WordPress dependencies
  */
 import { useSelect } from '@wordpress/data';
-import { __experimentalGetSettings, dateI18n, setSettings } from '@wordpress/date';
+import { dateI18n } from '@wordpress/date';
 
 /**
  * Internal dependencies
  */
 import { WC_BLOCKS_STORE } from '../../data';
-
-/*
- * Work around Gutenberg bug: https://github.com/WordPress/gutenberg/issues/22193
- *
- * @todo remove this when that's resolved, because it adds ~150k to the build.
- */
-import 'moment-timezone/moment-timezone-utils';
-setSettings( __experimentalGetSettings() );
 
 /*
  * Create an implicit "0" track when none formally exist.
@@ -101,29 +93,10 @@ const fetchScheduleData = ( select, editorContext ) => {
 	}
 
 	// These must be kept in sync with `get_all_sessions()`.
-	const sessionArgs = {
-		/*
-		 * This doesn't include `session_cats_rendered` because we already need the category id/slug in other
-		 * places, so it's simpler to have single source of truth.
-		 */
-		_fields: [
-			'id',
-			'link',
-			'meta._wcpt_session_time',
-			'meta._wcpt_session_duration',
-			'meta._wcpt_session_type',
-			'session_category',
-			'session_speakers',
-			'session_track',
-			'slug',
-			'title',
-		],
-	};
+	const sessionArgs = {};
 
 	// These must be kept in sync with `get_all_tracks()`.
 	const trackArgs = {
-		_fields: [ 'id', 'name', 'slug' ],
-
 		/*
 		 * It's important that the order here match `getDisplayedTracks()`. The tracks must be sorted in a
 		 * predictable order, so that track spanning can be reliably detected; see
@@ -137,9 +110,7 @@ const fetchScheduleData = ( select, editorContext ) => {
 	};
 
 	// These must be kept in sync with `get_all_categories()`.
-	const categoryArgs = {
-		_fields: [ 'id', 'name', 'slug' ],
-	};
+	const categoryArgs = {};
 
 	const allSessions = getEntities( 'postType', 'wcb_session', sessionArgs );
 	const allTracks = getEntities( 'taxonomy', 'wcb_track', trackArgs );

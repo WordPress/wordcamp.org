@@ -27,8 +27,9 @@ class WordCamp_Lets_Encrypt_Helper {
 			'wordcamp-letsencrypt/v1',
 			'/domains-dehydrated',
 			array(
-				'methods'  => 'GET',
-				'callback' => array( __CLASS__, 'rest_callback_domains_dehydrated' ),
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'rest_callback_domains_dehydrated' ),
+				'permission_callback' => '__return_true',
 			)
 		);
 	}
@@ -85,15 +86,33 @@ class WordCamp_Lets_Encrypt_Helper {
 
 		// Back-compat domains. Note: is_callable() requires the full path, it doesn't follow namespace imports.
 		if ( is_callable( 'WordCamp\Sunrise\get_domain_redirects' ) ) {
-			$back_compat_domains = get_domain_redirects();
+			$back_compat_domains = array_keys( get_domain_redirects() );
+			$back_compat_domains = self::parse_domain( $back_compat_domains );
 
-			$domains = array_merge( $domains, array_keys( $back_compat_domains ) );
+			$domains = array_merge( $domains, $back_compat_domains );
 		}
 
 		$domains = array_unique( $domains );
 		$domains = apply_filters( 'wordcamp_letsencrypt_domains', $domains );
 
 		return array_values( $domains );
+	}
+
+	/**
+	 * Parse the domain out of a domain + request URI combination.
+	 *
+	 * e.g., `india.wordcamp.org/2020` becomes `india.wordcamp.org`.
+	 *
+	 * @param $domains
+	 *
+	 * @return mixed
+	 */
+	public static function parse_domain( $domains ) {
+		array_walk( $domains, function( & $domain ) {
+			$domain = wp_parse_url( "https://$domain", PHP_URL_HOST );
+		} );
+
+		return $domains;
 	}
 
 	/**

@@ -38,7 +38,9 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 	for ( let i = 0; i < timeSlots.length; i++ ) {
 		const currentSlot = timeSlots[ i ];
 		const startTime = parseInt( currentSlot );
-		const endTime = parseInt( timeSlots[ i + 1 ] );
+		// If this is the last session, this value is NaN, which date-fns cannot handle.
+		// Since this row is later removed (see below), fall back to any integer.
+		const endTime = parseInt( timeSlots[ i + 1 ] ) || 0;
 
 		const gridRow = `
 			time-${ dateI18n( 'Hi', startTime ) } /

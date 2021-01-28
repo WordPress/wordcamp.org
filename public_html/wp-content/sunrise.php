@@ -97,14 +97,15 @@ function main() {
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_duplicate_year_permalinks_to_post_slug' );
 
 	$status_code = 301;
-	$redirect    = site_redirects( $domain, $_SERVER['REQUEST_URI'] );
+
+	$redirect = root_redirects( $domain, $_SERVER['REQUEST_URI'] );
 
 	if ( ! $redirect ) {
-		$redirect = get_city_slash_year_url( $domain, $_SERVER['REQUEST_URI'] );
+		$redirect = domain_redirects( $domain, $path, $_SERVER['REQUEST_URI'] );
 	}
 
 	if ( ! $redirect ) {
-		$redirect = unsubdomactories_redirects( $domain, $_SERVER['REQUEST_URI'] );
+		$redirect = get_city_slash_year_url( $domain, $_SERVER['REQUEST_URI'] );
 	}
 
 	/*
@@ -175,36 +176,62 @@ function guess_requested_domain_path() {
 }
 
 /**
- * Get redirect URLs for root site requests and for hardcoded redirects.
- *
- * @todo Split this into two functions because these aren't related to each other.
+ * Redirect root site front-end requests to Central.
  *
  * @param string $domain
  * @param string $request_uri
  *
+ * @return false|string
+ */
+function root_redirects( $domain, $request_uri ) {
+	$tld          = get_top_level_domain();
+	$redirect     = false;
+	$root_domains = array( "wordcamp.$tld", "buddycamp.$tld" );
+
+	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
+	$front_end_request =
+		! is_admin() &&
+		! is_network_admin() &&
+		! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $request_uri );
+
+	if ( in_array( $domain, $root_domains, true ) && $front_end_request ) {
+		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $request_uri );
+	}
+
+	return $redirect;
+}
+
+/**
+ * Get redirect URLs for hardcoded domain redirects.
+ *
+ * @param string $domain
+ * @param string $path The year of a city.wordcamp.org/year site.
+ * @param string $request_uri
+ *
  * @return string|false
  */
-function site_redirects( $domain, $request_uri ) {
+function domain_redirects( $domain, $path, $request_uri ) {
 	$tld              = get_top_level_domain();
+	$path             = untrailingslashit( $path );
 	$domain_redirects = get_domain_redirects();
+	$new_url          = false;
 	$redirect         = false;
 
-	// If it's a front end request to the root site, redirect to Central.
-	// todo This could be simplified, see https://core.trac.wordpress.org/ticket/42061#comment:15.
-	if ( in_array( $domain, array( "wordcamp.$tld", "buddycamp.$tld" ), true )
-		 && ! is_network_admin()
-		 && ! is_admin()
-		 && ! preg_match( '/^\/(?:wp\-admin|wp\-login|wp\-cron|wp\-json|xmlrpc)\.php/i', $request_uri )
-	) {
-		$redirect = sprintf( '%s%s', NOBLOGREDIRECT, $request_uri );
-
-	} elseif ( isset( $domain_redirects[ $domain ] ) ) {
+	// To a year.city.wordcamp.org site.
+	if ( isset( $domain_redirects[ $domain ] ) ) {
 		$new_url = $domain_redirects[ $domain ];
+	}
 
+	// To a city.wordcamp.org/year site.
+	if ( isset( $domain_redirects[ $domain . $path ] ) ) {
+		$new_url = $domain_redirects[ $domain . $path ];
+	}
+
+	if ( $new_url ) {
 		// Central has a different content structure than other WordCamp sites, so don't include the request URI
 		// if that's where we're going.
 		if ( "central.wordcamp.$tld" !== $new_url ) {
-			$new_url .= $request_uri;
+			$new_url .= str_replace( $path, '', $request_uri );
 		}
 
 		$redirect = "https://$new_url";
@@ -214,7 +241,7 @@ function site_redirects( $domain, $request_uri ) {
 }
 
 /**
- * Centralized place to define domain-based redirects.
+ * Centralized place to define domain- (and path-) based redirects.
  *
  * Used by sunrise.php and WordCamp_Lets_Encrypt_Helper::rest_callback_domains.
  *
@@ -230,41 +257,41 @@ function get_domain_redirects() {
 		"utah.wordcamp.$tld" => $central,
 
 		// Language redirects.
-		"ca.2014.mallorca.wordcamp.$tld" => "2014-ca.mallorca.wordcamp.$tld",
-		"de.2014.mallorca.wordcamp.$tld" => "2014-de.mallorca.wordcamp.$tld",
-		"es.2014.mallorca.wordcamp.$tld" => "2014-es.mallorca.wordcamp.$tld",
-		"fr.2011.montreal.wordcamp.$tld" => "2011-fr.montreal.wordcamp.$tld",
-		"fr.2012.montreal.wordcamp.$tld" => "2012-fr.montreal.wordcamp.$tld",
-		"fr.2013.montreal.wordcamp.$tld" => "2013-fr.montreal.wordcamp.$tld",
-		"fr.2014.montreal.wordcamp.$tld" => "2014-fr.montreal.wordcamp.$tld",
-		"2014.fr.montreal.wordcamp.$tld" => "2014-fr.montreal.wordcamp.$tld",
-		"fr.2013.ottawa.wordcamp.$tld"   => "2013-fr.ottawa.wordcamp.$tld",
+		"ca.2014.mallorca.wordcamp.$tld" => "mallorca.wordcamp.$tld/2014-ca",
+		"de.2014.mallorca.wordcamp.$tld" => "mallorca.wordcamp.$tld/2014-de",
+		"es.2014.mallorca.wordcamp.$tld" => "mallorca.wordcamp.$tld/2014-es",
+		"fr.2011.montreal.wordcamp.$tld" => "montreal.wordcamp.$tld/2011-fr",
+		"fr.2012.montreal.wordcamp.$tld" => "montreal.wordcamp.$tld/2012-fr.",
+		"fr.2013.montreal.wordcamp.$tld" => "montreal.wordcamp.$tld/2013-fr",
+		"fr.2014.montreal.wordcamp.$tld" => "montreal.wordcamp.$tld/2014-fr",
+		"2014.fr.montreal.wordcamp.$tld" => "montreal.wordcamp.$tld/2014-fr",
+		"fr.2013.ottawa.wordcamp.$tld"   => "ottawa.wordcamp.$tld/2013-fr",
 
 		// Year & name change redirects.
 		"2006.wordcamp.$tld"                      => "sf.wordcamp.$tld/2006",
 		"2007.wordcamp.$tld"                      => "sf.wordcamp.$tld/2007",
-		"2012.torontodev.wordcamp.$tld"           => "2012-dev.toronto.wordcamp.$tld",
-		"2013.windsor.wordcamp.$tld"              => "2013.lancaster.wordcamp.$tld",
-		"2014.lima.wordcamp.$tld"                 => "2014.peru.wordcamp.$tld",
-		"2014.london.wordcamp.$tld"               => "2015.london.wordcamp.$tld",
-		"2016.pune.wordcamp.$tld"                 => "2017.pune.wordcamp.$tld",
-		"2016.bristol.wordcamp.$tld"              => "2017.bristol.wordcamp.$tld",
-		"2017.cusco.wordcamp.$tld"                => "2018.cusco.wordcamp.$tld",
-		"2017.dayton.wordcamp.$tld"               => "2018.dayton.wordcamp.$tld",
-		"2017.niagara.wordcamp.$tld"              => "2018.niagara.wordcamp.$tld",
-		"2017.saintpetersburg.wordcamp.$tld"      => "2018.saintpetersburg.wordcamp.$tld",
-		"2017.zilina.wordcamp.$tld"               => "2018.zilina.wordcamp.$tld",
-		"2018.wurzburg.wordcamp.$tld"             => "2018.wuerzburg.wordcamp.$tld",
-		"2019.lisbon.wordcamp.$tld"               => "2019.lisboa.wordcamp.$tld",
-		"2018.kolkata.wordcamp.$tld"              => "2019.kolkata.wordcamp.$tld",
-		"2018.montclair.wordcamp.$tld"            => "2019.montclair.wordcamp.$tld",
-		"2018.pune.wordcamp.$tld"                 => "2019.pune.wordcamp.$tld",
-		"2018.dc.wordcamp.$tld"                   => "2019.dc.wordcamp.$tld",
-		"2019.sevilla.wordcamp.$tld"              => "2019-developers.sevilla.wordcamp.$tld",
-		"2019.telaviv.wordcamp.$tld"              => "2020.telaviv.wordcamp.$tld",
+		"2012.torontodev.wordcamp.$tld"           => "toronto.wordcamp.$tld/2012-dev",
+		"2013.windsor.wordcamp.$tld"              => "lancaster.wordcamp.$tld/2013",
+		"2014.lima.wordcamp.$tld"                 => "peru.wordcamp.$tld/2014",
+		"2014.london.wordcamp.$tld"               => "london.wordcamp.$tld/2015",
+		"2016.pune.wordcamp.$tld"                 => "pune.wordcamp.$tld/2017",
+		"2016.bristol.wordcamp.$tld"              => "bristol.wordcamp.$tld/2017",
+		"2017.cusco.wordcamp.$tld"                => "cusco.wordcamp.$tld/2018",
+		"2017.dayton.wordcamp.$tld"               => "dayton.wordcamp.$tld/2018",
+		"2017.niagara.wordcamp.$tld"              => "niagara.wordcamp.$tld/2018",
+		"2017.saintpetersburg.wordcamp.$tld"      => "saintpetersburg.wordcamp.$tld/2018",
+		"2017.zilina.wordcamp.$tld"               => "zilina.wordcamp.$tld/2018",
+		"2018.wurzburg.wordcamp.$tld"             => "wuerzburg.wordcamp.$tld/2018",
+		"2019.lisbon.wordcamp.$tld"               => "lisboa.wordcamp.$tld/2019",
+		"2018.kolkata.wordcamp.$tld"              => "kolkata.wordcamp.$tld/2019",
+		"2018.montclair.wordcamp.$tld"            => "montclair.wordcamp.$tld/2019",
+		"2018.pune.wordcamp.$tld"                 => "pune.wordcamp.$tld/2019",
+		"2018.dc.wordcamp.$tld"                   => "dc.wordcamp.$tld/2019",
+		"2019.sevilla.wordcamp.$tld"              => "sevilla.wordcamp.$tld/2019-developers",
+		"2019.telaviv.wordcamp.$tld"              => "telaviv.wordcamp.$tld/2020",
 		"2020-barcelona.publishers.wordcamp.$tld" => "barcelona.wordcamp.$tld/2020",
-		"2020.losangeles.wordcamp.$tld"           => "2020.la.wordcamp.$tld",
-		"2020.bucharest.wordcamp.$tld"            => "2021.bucharest.wordcamp.$tld",
+		"2020.losangeles.wordcamp.$tld"           => "la.wordcamp.$tld/2020",
+		"2020.bucharest.wordcamp.$tld"            => "bucharest.wordcamp.$tld/2021",
 		"philly.wordcamp.$tld"                    => "philadelphia.wordcamp.$tld",
 		"2010.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2010",
 		"2011.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2011",
@@ -274,6 +301,9 @@ function get_domain_redirects() {
 		"2017.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2017",
 		"2018.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2018",
 		"2019.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2019",
+
+		// city.wordcamp.org/year redirects
+		"india.wordcamp.$tld/2020" => "india.wordcamp.$tld/2021",
 
 		/*
 		 * External domains.
@@ -294,7 +324,7 @@ function get_domain_redirects() {
  * Redirects from `year.city.wordcamp.org` to `city.wordcamp.org/year`.
  *
  * This is needed so that old external links will redirect to the current URL structure. New cities don't need to
- * be added to this list, only the ones that were migrated from the old structure to the new structure in July 2020.
+ * be added to this list, only the ones that existed before the 2020 migration.
  *
  * See https://make.wordpress.org/community/2020/03/03/proposal-for-wordcamp-sites-seo-fixes/
  *
@@ -307,9 +337,59 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
+		/*
+		 * These domains were created before the 2014 migration, and moved from `unsubdomactories_redirects()`
+		 * during the 2020 migration.
+		 */
 		'barcelona', 'chicago', 'columbus', 'geneve', 'philly', 'philadelphia', 'publishers',
 		'athens', 'atlanta', 'austin', 'brighton', 'europe', 'nyc', 'newyork', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
+		'denver', 'norway', 'russia', 'sofia', 'tokyo', 'toronto',
+		'mexico', 'mexicocity', 'colombia', 'saopaulo', 'iloilo', 'lima', 'pokhara',
+		'peoria', 'torino', 'aalborg', 'cebu', 'butwal', 'centroamerica', 'london', 'londonca',
+		'portland', 'portlandme', 'miami', 'mallorca', 'montreal', 'ottawa', 'bristol', 'cusco', 'niagara',
+		'saintpetersburg','zilina','wuerzburg', 'kolkata', 'montclair', 'telaviv', 'bucharest',
+		'lancasterpa','lancaster', 'peru', 'pune', 'lisboa', 'sevilla',
+		'us', 'dc', 'phoenix', 'slc', 'boston', 'orlando', 'melbourne',
+		'oc', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'maine',
+		'albuquerque', 'sacramento', 'calgary', 'porto', 'portoalegre', 'tampa',
+		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
+		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'kansai',
+		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
+		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'sanantonio', 'prague',
+		'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
+		'belohorizonte',  'switzerland', 'romania', 'saratoga', 'fayetteville',
+		'bournemouth', 'hanoi',  'cologne', 'louisville', 'annarbor', 'manchester',
+		'laspenitas', 'israel', 'ventura', 'vancouver', 'auckland', 'norrkoping', 'netherlands',
+		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee',
+		'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'kenya',
+		'malaga', 'lithuania', 'detroit', 'kobe', 'reno', 'indonesia', 'transylvania', 'nicaragua',
+		'gdansk', 'bologna', 'milano', 'catania', 'modena', 'stockholm', 'jerusalem', 'philippines',
+		'newzealand', 'cuttack', 'ponce', 'jabalpur', 'singapore', 'poznan', 'richmond', 'goldcoast', 'caguas',
+		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy',
+		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
+		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'bilbao',
+		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'okc', 'la', 'rochester', 'ogijima', 'asheville',
+
+
+		// These domains were created after the 2014 URL migration was reverted, but before the 2020 migration.
+		'rome', 'ahmedabad', 'alicante', 'asia', 'bangkok', 'bari', 'belfast', 'bengaluru', 'bern',
+		'bharatpur', 'bhopal', 'bhubaneswar', 'biratnagar', 'bogota', 'boise', 'bordeaux', 'brno', 'buea',
+		'bulawayo', 'bulgaria', 'caceres', 'cadiz', 'cali', 'cancun', 'cardiff', 'cartagena', 'charlotte',
+		'chiclana', 'colombo', 'davao', 'delhi', 'denpasar', 'dhaka', 'douala', 'dublin', 'dusseldorf',
+		'entebbe', 'floripa', 'nice', 'niigata', 'nijmegen', 'nis', 'noordnederland', 'nordic',
+		'geneva', 'glasgow', 'granada', 'guadalajara', 'guayaquil', 'halifax', 'haneda', 'harare', 'hongkong',
+		'ileife', 'irun', 'islamabad',  'jackson', 'johannesburg', 'jyvaskyla', 'kampala', 'kanpur',
+		'karachi', 'kathmandu', 'kent', 'kigali', 'kochi', 'kosice', 'kotakinabalu', 'kualalumpur', 'kyiv',
+		'kyoto', 'lagos', 'laspalmas', 'laspalmasgc', 'lausanne', 'lille', 'littlerock', 'lodz',
+		'longbeach', 'lublin', 'madison', 'madrid', 'managua', 'manila', 'mannheim', 'marbella', 'marseille',
+		'medellin', 'mombasa', 'montevideo', 'moscow', 'myrtlebeach', 'nagpur', 'nairobi', 'nashik', 'newcastle',
+		'oslo', 'osnabrueck', 'panamacity', 'perth', 'plovdiv', 'pontevedra', 'portharcourt', 'portmacquarie',
+		'portugal', 'puebla', 'puntarenas', 'quito', 'retreat', 'riga', 'riverside', 'rockford',
+		 'rotterdam', 'saigon', 'sancarlos', 'sanjose', 'santaclarita', 'santander', 'skopje', 'spain',
+		'split', 'stuttgart', 'taipei', 'tampere', 'thessaloniki', 'tulsa', 'turku', 'ubud', 'udaipur', 'utrecht',
+		'vadodara', 'valencia', 'valladolid', 'verona', 'virginiabeach', 'vrsac', 'waukesha', 'wilmington',
+		'zagreb', 'zaragoza', 'zurich', 'italia',
 	);
 
 	if ( ! preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $domain . $request_uri, $matches ) ) {
@@ -324,69 +404,6 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	}
 
 	return sprintf( 'https://%s.wordcamp.%s/%s%s', $city, $tld, $year, $request_uri );
-}
-
-/**
- * Redirects from city.wordcamp.org/year to year.city.wordcamp.org.
- *
- * This reverses the 2014 migration, so that sites use the year.city format again. Now that we've redoing the
- * migration, cities will be moved out of `$redirect_cities` until none remain.
- *
- * @param string $domain
- * @param string $request_uri
- *
- * @return string|false
- */
-function unsubdomactories_redirects( $domain, $request_uri ) {
-	$redirect_cities = array(
-		'russia', 'london', 'tokyo', 'portland', 'sofia', 'miami',
-		'montreal', 'phoenix', 'slc', 'boston', 'norway', 'orlando', 'dallas', 'melbourne',
-		'oc', 'la', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'ottawa', 'maine',
-		'albuquerque', 'sacramento', 'toronto', 'calgary', 'porto', 'tampa', 'sevilla',
-		'seoul', 'paris', 'osaka', 'kansascity', 'curitiba', 'buffalo', 'baroda', 'sandiego', 'nepal', 'raleigh',
-		'baltimore', 'sydney', 'providence', 'dfw', 'copenhagen', 'lisboa', 'kansai',
-		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
-		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'portoalegre', 'sanantonio', 'prague',
-		'denver', 'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
-		'belohorizonte', 'lancasterpa', 'switzerland', 'romania', 'saratoga', 'fayetteville',
-		'bournemouth', 'hanoi', 'saopaulo', 'cologne', 'louisville', 'mallorca', 'annarbor', 'manchester',
-		'laspenitas', 'israel', 'ventura', 'vancouver', 'peru', 'auckland', 'norrkoping', 'netherlands',
-		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee', 'lima',
-		'asheville', 'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'lancaster', 'kenya',
-		'malaga', 'lithuania', 'detroit', 'kobe', 'reno', 'indonesia', 'transylvania', 'mexico', 'nicaragua',
-		'gdansk', 'bologna', 'milano', 'catania', 'modena', 'stockholm', 'pune', 'jerusalem', 'philippines',
-		'newzealand', 'cuttack', 'ponce', 'jabalpur', 'singapore', 'poznan', 'richmond', 'goldcoast', 'caguas',
-		'savannah', 'ecuador', 'boulder', 'rdu', 'nc', 'lyon', 'scranton', 'brisbane', 'easttroy',
-		'croatia', 'cantabria', 'greenville', 'jacksonville', 'nuremberg', 'berlin', 'memphis', 'jakarta',
-		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'torino', 'bilbao', 'peoria',
-		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'rochester', 'okc',
-	);
-
-	$tld = 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
-
-	// Return if already on a 4th-level domain (e.g., 2020.narnia.wordcamp.org).
-	if ( ! preg_match( "#^([a-z0-9-]+)\.wordcamp\.$tld$#i", $domain, $matches ) ) {
-		return false;
-	}
-
-	$city = strtolower( $matches[1] );
-	if ( ! in_array( $city, $redirect_cities, true ) ) {
-		return false;
-	}
-
-	// If can't pick a year out of the path, return.
-	// Extra alpha characters are included, for sites like `seattle.wordcamp.org/2015-beginners`.
-	if ( ! preg_match( '#^/(\d{4}[a-z0-9-]*)#i', $request_uri, $matches ) ) {
-		return false;
-	}
-
-	$year        = strtolower( $matches[1] );
-	$pattern     = '#' . preg_quote( $year, '#' ) . '#';
-	$path        = preg_replace( $pattern, '', $request_uri, 1 );
-	$path        = str_replace( '//', '/', $path );
-	$redirect_to = sprintf( "https://%s.%s.wordcamp.$tld%s", $year, $city, $path );
-
-	return $redirect_to;
 }
 
 /**
@@ -536,8 +553,6 @@ function get_canonical_year_url( $domain, $path ) {
 		return false;
 	}
 
-	// Default clause for retrieving the most recent year for a city.
-	$like = "%.{$domain}";
 
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
 	switch ( $domain ) {
@@ -549,7 +564,7 @@ function get_canonical_year_url( $domain, $path ) {
 
 		case "us.wordcamp.$tld":
 			if ( time() <= strtotime( '2019-11-30' ) ) {
-				return "https://2019.us.wordcamp.$tld/";
+				return "https://us.wordcamp.$tld/2019";
 			}
 			break;
 	}
@@ -558,12 +573,12 @@ function get_canonical_year_url( $domain, $path ) {
 		SELECT `domain`, `path`
 		FROM $wpdb->blogs
 		WHERE
-			domain = %s OR -- Match city/year format.
-			domain LIKE %s -- Match year.city format.
+			( domain =    %s AND path != '/' ) OR -- Match city/year format.
+			( domain LIKE %s AND path  = '/' )    -- Match year.city format.
 		ORDER BY path DESC, domain DESC
 		LIMIT 1;",
 		$domain,
-		$like
+		"%.{$domain}"
 	) );
 
 	return $latest ? 'https://' . $latest->domain . $latest->path : false;

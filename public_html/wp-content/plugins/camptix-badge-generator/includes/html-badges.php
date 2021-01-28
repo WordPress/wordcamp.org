@@ -231,6 +231,7 @@ function remove_all_previewer_styles() {
 	remove_all_actions( 'wp_print_styles' );
 
 	remove_action( 'wp_head', 'wp_custom_css_cb', 101 );
+	remove_action( 'wp_head', array( 'Jetpack_Custom_CSS_Enhancements', 'wp_custom_css_cb' ), 101 );
 }
 
 /**

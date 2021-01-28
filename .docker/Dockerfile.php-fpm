@@ -1,4 +1,4 @@
-FROM php:7.2-fpm
+FROM php:7.4-fpm
 
 # Install additional packages.
 RUN apt-get update \
@@ -8,6 +8,7 @@ RUN apt-get update \
         less \
         libjpeg-dev \
         libpng-dev \
+        libzip-dev \
         libsqlite3-dev \
         libxext6 \
         mariadb-client \
@@ -26,7 +27,7 @@ RUN docker-php-ext-install -j "$(nproc)" \
     mysqli \
     opcache \
     zip
-RUN docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr
+RUN docker-php-ext-configure gd --with-jpeg
 
 # Add PHP configurations.
 COPY config/opcache-recommended.ini /usr/local/etc/php/conf.d/opcache-recommended.ini

@@ -46,11 +46,12 @@ function render_options_page() {
 		}
 	}
 
-	$output_mode    = get_output_mode();
-	$remote_css_url = get_option( OPTION_REMOTE_CSS_URL, '' );
-	$fonts_tool_url = admin_url( 'themes.php?page=wc-fonts-options' );
+	$coming_soon_enabled = 'on' === $GLOBALS['WCCSP_Settings']->get_settings()['enabled'];
+	$output_mode         = get_output_mode();
+	$remote_css_url      = get_option( OPTION_REMOTE_CSS_URL, '' );
+	$fonts_tool_url      = admin_url( 'themes.php?page=wc-fonts-options' );
 
-	require_once( dirname( __DIR__ ) . '/views/page-remote-css.php' );
+	require_once dirname( __DIR__ ) . '/views/page-remote-css.php';
 }
 
 /**
@@ -236,5 +237,5 @@ function render_contextual_help_tabs( $screen, $tab ) {
 			break;
 	}
 
-	require_once( sprintf( '%s/views/help-%s.php', dirname( __DIR__ ), $view_slug ) );
+	require_once sprintf( '%s/views/help-%s.php', dirname( __DIR__ ), $view_slug );
 }

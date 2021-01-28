@@ -1,5 +1,9 @@
 <?php
 
+use Dotorg\Slack\Send;
+use function WordCamp\Sunrise\get_top_level_domain;
+
+
 /*
  * Miscellaneous snippets that don't warrant their own file
  */
@@ -616,3 +620,127 @@ function wcorg_network_updates_notifier() {
 	}
 }
 add_action( 'network_admin_notices', 'wcorg_network_updates_notifier' );
+
+/**
+ * Add a 'WordCamp Post' link to the admin bar menu on camp sites.
+ *
+ * This provides an easy way to pull up the WCPT post that corresponds to the camp site you're currently on.
+ */
+function add_wcpt_cross_link( WP_Admin_Bar $wp_admin_bar ) {
+	if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+		return;
+	}
+
+	$wordcamp = get_wordcamp_post();
+
+	if ( ! $wordcamp ) {
+		return;
+	}
+
+	$wp_admin_bar->add_node(
+		array(
+			'parent' => 'site-name',
+			'id'     => 'wordcamp-post',
+			'title'  => __( 'WordCamp Post', 'wordcamporg' ),
+
+			'href' => sprintf(
+				'https://central.wordcamp.%s/wp-admin/post.php?post=%s&action=edit',
+				get_top_level_domain(),
+				$wordcamp->ID
+			),
+		)
+	);
+}
+// The Priority positions the link after the Dashboard link on the front end.
+add_action( 'admin_bar_menu', 'add_wcpt_cross_link', 35 );
+
+/**
+ * Log requests to the WordPress.org Events API and their responses, to aid debugging.
+ *
+ * @param array|WP_Error $response     HTTP response or WP_Error object.
+ * @param string         $context      Context under which the hook is fired.
+ * @param string         $transport    HTTP transport used.
+ * @param array          $request_args HTTP request arguments.
+ * @param string         $request_url  The request URL.
+ */
+function debug_community_events_response( $response, $context, $transport, $request_args, $request_url ) {
+	if ( false === strpos( $request_url, 'api.wordpress.org/events' ) ) {
+		return;
+	}
+
+	require_once __DIR__ . '/includes/slack/send.php';
+
+	$response_code = wp_remote_retrieve_response_code( $response );
+	$response_body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+	// Avoid bloating the log with all the event data, but the titles are enough to know what was returned.
+	$response_body['events'] = array_column( $response_body['events'], 'title' );
+
+	$message = sprintf(
+		'%s %s',
+		$response_code,
+		is_wp_error( $response ) ? $response->get_error_message() : 'Valid response received'
+	);
+
+	$attachment = array(
+		'author_name' => __FUNCTION__,
+		'color'       => '#00A0D2',
+
+		'fields' => array(
+			array(
+				'title' => 'User',
+				'value' => _wp_get_current_user()->get( 'user_login' ),
+				'short' => false,
+			),
+
+			array(
+				'title' => 'Result',
+				'value' => $message,
+				'short' => false,
+			),
+
+			array(
+				'title' => 'Request URL',
+				'value' => add_query_arg( $request_args['body'], $request_url ),
+				'short' => false,
+			),
+
+			array(
+				'title' => 'Response Body',
+				'value' => print_r( $response_body, true ),
+				'short' => false,
+			),
+		),
+	);
+
+	$slack = new Send( SLACK_ERROR_REPORT_URL );
+	$slack->add_attachment( $attachment );
+	$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
+}
+// Comment this out when not needed, but leave the code for future use.
+// add_action( 'http_api_debug', 'debug_community_events_response', 10, 5 );
+
+/**
+ * Prevent permalink structures from starting with `%year%`
+ *
+ * See https://make.wordpress.org/community/2020/03/03/proposal-for-wordcamp-sites-seo-fixes/#comment-28213.
+ * See `WordCamp\Sunrise\Tests\Test_Sunrise\data_get_canonical_year_url()`.
+ *
+ * @param string $new_value
+ *
+ * @return string
+ */
+function wcorg_prevent_date_permalinks( $new_value ) {
+	if ( '/%year%' === substr( $new_value, 0, 7 ) ) {
+		wp_die(
+			'<p>' .
+			__( "WordCamp.org permalinks can't start with `%year%`, because that conflicts with our URL structure (`https://city.wordcamp.org/year`).", 'wordcamporg' ) .
+			'</p> <p>' .
+			__( 'Please add a prefix like `/news/`, or choose a different structure (like `%postname%`).', 'wordcamporg' ) .
+			'</p>'
+		);
+	}
+
+	return $new_value;
+}
+add_filter( 'pre_update_option_permalink_structure', 'wcorg_prevent_date_permalinks' );

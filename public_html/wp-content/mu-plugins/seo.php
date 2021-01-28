@@ -3,6 +3,8 @@
 namespace WordCamp\SEO;
 use function WordCamp\Sunrise\get_top_level_domain;
 
+use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH };
+
 defined( 'WPINC' ) || die();
 
 // Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
@@ -66,7 +68,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		return false;
 	}
 
-	if ( '/' === $current_path ) { // The year.city.wordcamp.org format.
+	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $current_domain . $current_path ) ) {
 		// Remove the year prefix.
 		$city_domain = substr(
 			$current_domain,
@@ -84,7 +86,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 			'%.' . $city_domain
 		);
 
-	} else { // The city.wordcamp.org/year format.
+	} elseif ( preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $current_domain . $current_path ) ) {
 		$query = $wpdb->prepare( "
 			SELECT `domain`, `path`
 			FROM `$wpdb->blogs`
@@ -93,6 +95,8 @@ function get_latest_home_url( $current_domain, $current_path ) {
 			LIMIT 1",
 			$current_domain
 		);
+	} else {
+		return false;
 	}
 
 	$latest_site = $wpdb->get_results( $query ); // phpcs:ignore -- Prepared above.

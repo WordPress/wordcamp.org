@@ -1,20 +1,25 @@
+/* stylelint-disable selector-id-pattern, selector-class-pattern */
 #wcb_organizer_avatar,
 #wcb_speaker_avatar {
 	width: 44px;
 }
+
 #wcb_session_time {
-	width: 80px;
+	width: 140px;
 }
-#dashboard_right_now a.wcb_speaker-count:before,
-#dashboard_right_now span.wcb_speaker-count:before {
+
+#dashboard_right_now a.wcb_speaker-count::before,
+#dashboard_right_now span.wcb_speaker-count::before {
 	content: "\f488";
 }
-#dashboard_right_now a.wcb_session-count:before,
-#dashboard_right_now span.wcb_session-count:before {
+
+#dashboard_right_now a.wcb_session-count::before,
+#dashboard_right_now span.wcb_session-count::before {
 	content: "\f489";
 }
-#dashboard_right_now a.wcb_sponsor-count:before,
-#dashboard_right_now span.wcb_sponsor-count:before {
+
+#dashboard_right_now a.wcb_sponsor-count::before,
+#dashboard_right_now span.wcb_sponsor-count::before {
 	content: "\f487";
 }
 
@@ -22,24 +27,24 @@
 	display: table;
 }
 
-	.wcpt-form li {
-		display: table-row;
-	}
+.wcpt-form li {
+	display: table-row;
+}
 
-		.wcpt-form li label {
-			display: table-cell;
-		}
+.wcpt-form li label {
+	display: table-cell;
+}
 
-		.wcpt-form li input,
-		.wcpt-form li select {
-			display: table-cell;
-			margin-left: 1em;
-		}
+.wcpt-form li input,
+.wcpt-form li select {
+	display: table-cell;
+	margin-left: 1em;
+}
 
-		li.wcpt-form-header {
-			display: table-caption;
-			font-weight: bold;
-		}
+li.wcpt-form-header {
+	display: table-caption;
+	font-weight: 700;
+}
 
 #wcpt-session-duration-container input[type="number"] {
 	width: 55px;
@@ -47,4 +52,12 @@
 
 #wcpt-session-duration-container label {
 	margin-right: 5px;
+}
+
+@media screen and (max-width: 782px) {
+	th.column-wcb_session_time,
+	td.column-wcb_session_time {
+		display: none;
+		padding: 8px 8px 3px 35%;
+	}
 }

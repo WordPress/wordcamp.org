@@ -6,14 +6,17 @@
  */
 
 namespace WordCamp\Post_Types\REST_API;
-use WP_Rest_Server, WP_Post_Type, WP_Post;
+use WP_Rest_Server, WP_Post_Type, WP_Post, WP_User;
 
 defined( 'WPINC' ) || die();
 
 require_once 'favorite-schedule-shortcode.php';
 
 add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
+add_action( 'init', __NAMESPACE__ . '\register_speaker_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
+add_action( 'init', __NAMESPACE__ . '\register_organizer_post_meta' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_user_validation_route' );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -26,6 +29,68 @@ function register_sponsor_post_meta() {
 		'_wcpt_sponsor_website',
 		array(
 			'show_in_rest'  => true,
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+}
+
+/**
+ * Registers post meta to the Speaker post type.
+ *
+ * @return void
+ */
+function register_speaker_post_meta() {
+	register_post_meta(
+		'wcb_speaker',
+		'_wcpt_user_id',
+		array(
+			'type'          => 'integer',
+			// This is not set directly, but is set as a result of `_wcpt_user_name`.
+			// See update_wcorg_user_id() in wc-post-types.php.
+			'show_in_rest'  => false,
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+	register_post_meta(
+		'wcb_speaker',
+		'_wcpt_user_name',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+					if ( $user_id ) {
+						$wporg_user = get_userdata( $user_id );
+						if ( $wporg_user instanceof WP_User ) {
+							return $wporg_user->user_login;
+						}
+					}
+					return $value;
+				},
+			),
+			'sanitize_callback' => function( $value ) {
+				$wporg_user = wcorg_get_user_by_canonical_names( $value );
+				if ( ! $wporg_user ) {
+					return '';
+				}
+				return $wporg_user->user_login;
+			},
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+	register_post_meta(
+		'wcb_speaker',
+		'_wcb_speaker_email',
+		array(
+			'type'          => 'string',
+			'show_in_rest'  => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
 			'single'        => true,
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
@@ -118,6 +183,54 @@ function register_session_post_meta() {
 }
 
 /**
+ * Registers post meta to the Organizer post type.
+ *
+ * @return void
+ */
+function register_organizer_post_meta() {
+	register_post_meta(
+		'wcb_organizer',
+		'_wcpt_user_id',
+		array(
+			'type'         => 'integer',
+			// This is not set directly, but is set as a result of `_wcpt_user_name`.
+			// See update_wcorg_user_id() in wc-post-types.php.
+			'show_in_rest' => false,
+			'single'       => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+	register_post_meta(
+		'wcb_organizer',
+		'_wcpt_user_name',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+					if ( $user_id ) {
+						$wporg_user = get_userdata( $user_id );
+						if ( $wporg_user instanceof WP_User ) {
+							return $wporg_user->user_login;
+						}
+					}
+					return $value;
+				},
+			),
+			'sanitize_callback' => function( $value ) {
+				$wporg_user = wcorg_get_user_by_canonical_names( $value );
+				if ( ! $wporg_user ) {
+					return '';
+				}
+				return $wporg_user->user_login;
+			},
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+}
+
+/**
  * Check if the current user can edit the meta values.
  *
  * @param bool   $allowed   Whether the user can add the object meta. Default false.
@@ -125,10 +238,35 @@ function register_session_post_meta() {
  * @param int    $object_id Object ID.
  */
 function meta_auth_callback( $allowed, $meta_key, $object_id ) {
-	if ( '_wcpt_' === substr( $meta_key, 0, 6 ) ) {
+	if ( '_wcpt_' === substr( $meta_key, 0, 6 ) || '_wcb_' === substr( $meta_key, 0, 5 ) ) {
 		return current_user_can( 'edit_post', $object_id );
 	}
 	return $allowed;
+}
+
+/**
+ * Register route for validating usernames.
+ *
+ * @return void
+ */
+function register_user_validation_route() {
+	register_rest_route(
+		'wc-post-types/v1',
+		'/validation',
+		array(
+			'methods'             => WP_REST_Server::READABLE,
+			'callback'            => '__return_empty_string',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'username' => array(
+					'validate_callback' => function( $value ) {
+						$wporg_user = wcorg_get_user_by_canonical_names( $value );
+						return (bool) $wporg_user;
+					},
+				),
+			),
+		)
+	);
 }
 
 /**
@@ -399,9 +537,10 @@ function register_fav_sessions_email() {
 		'wc-post-types/v1',
 		'/email-fav-sessions/',
 		array(
-			'methods'  => WP_REST_Server::CREATABLE,
-			'callback' => 'send_favourite_sessions_email',
-			'args'     => array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => 'send_favourite_sessions_email',
+			'permission_callback' => '__return_true',
+			'args'                => array(
 				'email-address' => array(
 					'required'          => true,
 					'validate_callback' => function( $value, $request, $param ) {

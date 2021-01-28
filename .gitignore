@@ -4,6 +4,7 @@
 .docker/data/*.bkp
 .docker/database
 .docker/wordcamp*.pem
+.docker/test_suite
 
 
 #
@@ -30,7 +31,6 @@ public_html/wp-content/themes-private/
 public_html/wp-content/uploads/
 public_html/wp-content/debug.log
 
-.docker/test_suite
 
 #
 # Dev tools
@@ -90,3 +90,4 @@ public_html/wp-content/themes/twentysixteen
 public_html/wp-content/themes/twentyseventeen
 public_html/wp-content/themes/twentynineteen
 public_html/wp-content/themes/twentytwenty
+public_html/wp-content/themes/twentytwentyone

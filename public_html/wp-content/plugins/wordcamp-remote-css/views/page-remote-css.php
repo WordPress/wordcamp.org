@@ -1,6 +1,7 @@
 <?php
 
 namespace WordCamp\RemoteCSS;
+use WordCamp_Coming_Soon_Page;
 use WordCamp\Jetpack_Tweaks;
 
 defined( 'WPINC' ) || die();
@@ -8,6 +9,7 @@ defined( 'WPINC' ) || die();
 /**
  * @var string $notice
  * @var string $notice_class
+ * @var bool   $coming_soon_enabled
  * @var string $remote_css_url
  * @var string $output_mode
  */
@@ -32,15 +34,24 @@ defined( 'WPINC' ) || die();
 		</div>
 	<?php endif; ?>
 
+	<?php if ( $coming_soon_enabled ) : ?>
+		<div class="notice notice-info notice-large">
+			<?php echo wp_kses_data( sprintf(
+				__( 'Note: The Remote CSS stylesheet won\'t be enqueued on the Coming Soon template. You can <a href="%s">modify Coming Soon via the Customizer</a>.', 'wordcamporg' ),
+				esc_url( admin_url( WordCamp_Coming_Soon_Page::get_menu_slug() ) )
+			) ); ?>
+		</div>
+	<?php endif; ?>
+
 	<p>
-		<?php printf(
-			// translators: %s: button attributes.
-			wp_kses_data( __(
+		<?php echo wp_kses_post( sprintf(
+			__(
+				// translators: %s: button attributes.
 				'Remote CSS allows you to develop your CSS in any environment that you choose, and with whatever tools that you prefer. <button %s>Open the Help tab</button> for detailed instructions.',
 				'wordcamporg'
-			) ),
+			),
 			'type="button" id="wcrcss-open-help-tab" class="button-link"'
-		); ?>
+		) ); ?>
 	</p>
 
 	<form action="" method="POST">

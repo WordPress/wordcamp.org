@@ -17,7 +17,7 @@ use WordCamp\Tests\Database_TestCase;
 
 use function WordCamp\Sunrise\{
 	get_canonical_year_url, get_post_slug_url_without_duplicate_dates, guess_requested_domain_path,
-	get_corrected_root_relative_url, get_city_slash_year_url, site_redirects, unsubdomactories_redirects,
+	get_corrected_root_relative_url, get_city_slash_year_url, domain_redirects, root_redirects,
 };
 
 defined( 'WPINC' ) || die();
@@ -141,23 +141,22 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::site_redirects
-	 * @covers ::get_domain_redirects
+	 * @covers ::root_redirects
 	 *
-	 * @dataProvider data_site_redirects
+	 * @dataProvider data_root_redirects
 	 */
-	public function test_site_redirects( $domain, $path, $expected ) {
-		$actual = site_redirects( $domain, $path );
+	public function test_root_redirects( $domain, $path, $expected ) {
+		$actual = root_redirects( $domain, $path );
 
 		$this->assertSame( $expected, $actual );
 	}
 
 	/**
-	 * Test cases for test_site_redirects().
+	 * Test cases for test_root_redirects().
 	 *
 	 * @return array
 	 */
-	public function data_site_redirects() {
+	public function data_root_redirects() {
 		return array(
 			/*
 			 * There aren't any cases to test that front-end requests to the root site redirect to Central,
@@ -166,44 +165,76 @@ class Test_Sunrise extends Database_TestCase {
 			 * to help either.
 			 */
 
-			'root site cron requests are not redirected to Central' => array(
+			'root site cron requests _dont_ redirect to Central' => array(
 				'wordcamp.test',
 				'/wp-cron.php',
 				false,
 			),
 
-			'root site rest requests are not redirected to Central' => array(
+			'root site rest requests _dont_ redirect to Central' => array(
 				'wordcamp.test',
 				'/wp-json',
 				false,
 			),
 
+			'non-root domains _dont_ redirect' => array(
+				'narnia.wordcamp.test',
+				'/',
+				false,
+			),
+		);
+	}
+
+	/**
+	 * @covers ::domain_redirects
+	 * @covers ::get_domain_redirects
+	 *
+	 * @dataProvider data_domain_redirects
+	 */
+	public function test_domain_redirects( $domain, $path, $request_uri, $expected ) {
+		$actual = domain_redirects( $domain, $path, $request_uri );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_domain_redirects().
+	 *
+	 * @return array
+	 */
+	public function data_domain_redirects() {
+		return array(
 			'domain redirect to central removes request uri' => array(
 				'bg.wordcamp.test',
+				'/',
 				'/schedule/',
 				'https://central.wordcamp.test',
 			),
 
-			'domain redirect to year.city site includes request uri' => array(
-				'fr.2014.montreal.wordcamp.test',
-				'/schedule/',
-				'https://2014-fr.montreal.wordcamp.test/schedule/',
-			),
-
-			'domain redirect to city/year site includes request uri' => array(
+			'domain redirect from year.city site to city/year site, including request uri' => array(
 				'2010.philly.wordcamp.test',
+				'/',
 				'/schedule/',
 				'https://philadelphia.wordcamp.test/2010/schedule/',
 			),
 
+			'domain redirect from city/year site to other city/year site' => array(
+				'india.wordcamp.test',
+				'/2020/',
+				'/2020/schedule/',
+				'https://india.wordcamp.test/2021/schedule/',
+			),
+
 			'external domain redirects to central' => array(
 				'wordcampsf.org',
+				'/',
 				'/schedule/',
 				'https://sf.wordcamp.test/schedule/',
 			),
 
 			'unknown domain should not redirect' => array(
 				'narnia.wordcamp.test',
+				'/',
 				'/',
 				false,
 			),
@@ -317,62 +348,6 @@ class Test_Sunrise extends Database_TestCase {
 				'2019-designers.testing.wordcamp.test',
 				'/2019/',
 				'https://testing.wordcamp.test/2019-designers/2019/',
-			),
-		);
-	}
-
-	/**
-	 * @covers ::unsubdomactories_redirects
-	 *
-	 * @dataProvider data_unsubdomactories_redirects
-	 */
-	public function test_unsubdomactories_redirects( $domain, $request_uri, $expected ) {
-		$actual = unsubdomactories_redirects( $domain, $request_uri );
-
-		$this->assertSame( $expected, $actual );
-	}
-
-	/**
-	 * Test cases for test_unsubdomactories_redirects().
-	 *
-	 * @return array
-	 */
-	public function data_unsubdomactories_redirects() {
-		return array(
-			'request without year should not redirect' => array(
-				'central.wordcamp.test',
-				'/',
-				false,
-			),
-
-			'city missing from `$redirect_cities` should not redirect' => array(
-				'fortaleza.wordcamp.test',
-				'/2016/',
-				false,
-			),
-
-			'year.city homepage request should not redirect' => array(
-				'2020.vancouver.wordcamp.test',
-				'/',
-				false,
-			),
-
-			'year.city subpage request should not redirect' => array(
-				'2020.vancouver.wordcamp.test',
-				'/schedule/',
-				false,
-			),
-
-			'city/year homepage request should redirect' => array(
-				'vancouver.wordcamp.test',
-				'/2020/',
-				'https://2020.vancouver.wordcamp.test/',
-			),
-
-			'city/year subpage request should redirect' => array(
-				'vancouver.wordcamp.test',
-				'/2020/schedule/',
-				'https://2020.vancouver.wordcamp.test/schedule/',
 			),
 		);
 	}
@@ -538,6 +513,16 @@ class Test_Sunrise extends Database_TestCase {
 				false,
 			),
 
+			/*
+			 * e.g., https://japan.wordcamp.org/what-is-wordcamp/.
+			 * e.g., https://japan.wordcamp.org/blog/2019/12/13/call-for-wordcamp-ogijima-2020-organizer-and-support-staff/
+			 */
+			"dont redirect permalinks on an old yearless site, even if there's a newer city/year site" => array(
+				'japan.wordcamp.test',
+				'/', // `guess_requested_domain_path()` will correctly guess `/` as the site path rather than the query string.
+				false,
+			),
+
 			'dont redirect year.city sites' => array(
 				'2018.seattle.wordcamp.test',
 				'/',
@@ -548,6 +533,30 @@ class Test_Sunrise extends Database_TestCase {
 				'vancouver.wordcamp.test',
 				'/2020/',
 				false,
+			),
+
+			/*
+			 * e.g., https://japan.wordcamp.org/2019/12/13/call-for-wordcamp-ogijima-2020-organizer-and-support-staff/
+			 *
+			 * Ideally they wouldn't redirect, but this is such an edge case that it's not worth supporting. That's
+			 * enforced by `wcorg_prevent_date_permalinks()`.
+			 */
+			'redirect date-based permalinks on an old yearless sites to the latest site' => array(
+				'japan.wordcamp.test',
+				'/2019/',
+				'https://japan.wordcamp.test/2021/',
+			),
+
+			'404 at canonical domain should redirect to latest site' => array(
+				'vancouver.wordcamp.test',
+				'/this-page-does-not-exist/',
+				'https://vancouver.wordcamp.test/2020/',
+			),
+
+			'future years that dont exist should redirect to latest site' => array(
+				'vancouver.wordcamp.test',
+				'/2024/',
+				'https://vancouver.wordcamp.test/2020/',
 			),
 
 			'redirect year.city root to latest camp' => array(

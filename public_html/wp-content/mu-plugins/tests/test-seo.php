@@ -53,6 +53,18 @@ class Test_WordCamp_SEO extends Database_TestCase {
 				false,
 			),
 
+			"there isn't a newer site for the root site" => array(
+				'wordcamp.test',
+				'/',
+				false,
+			),
+
+			"there isn't a newer site for non-event sites" => array(
+				'central.wordcamp.test',
+				'/',
+				false,
+			),
+
 			'year.city past year should return the newest year' => array(
 				'2018.seattle.wordcamp.test',
 				'/',

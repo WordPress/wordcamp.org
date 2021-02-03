@@ -21,11 +21,19 @@ get_header(); ?>
 					'meta_key'       => 'Start Date (YYYY-mm-dd)',
 					'orderby'        => 'meta_value',
 					'order'          => 'ASC',
-					'meta_query'     => array( array(
-						'key'        => 'Start Date (YYYY-mm-dd)',
-						'value'      => strtotime( '-2 days' ),
-						'compare'    => '>'
-					) )
+					'meta_query'     => array(
+						'relation' => 'OR',
+						array(
+							'key'     => 'Start Date (YYYY-mm-dd)',
+							'value'   => strtotime( '-2 days' ),
+							'compare' => '>',
+						),
+						array(
+							'key'     => 'End Date (YYYY-mm-dd)',
+							'value'   => strtotime( 'today' ),
+							'compare' => '>',
+						),
+					)
 				) )
 			) :
 			?>

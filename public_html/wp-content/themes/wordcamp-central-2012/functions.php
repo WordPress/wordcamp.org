@@ -306,9 +306,17 @@ class WordCamp_Central_Theme {
 		switch ( $map_id ) {
 			case 'schedule':
 				$parameters['meta_query'][] = array(
-					'key'     => 'Start Date (YYYY-mm-dd)',
-					'value'   => strtotime( '-2 days' ),
-					'compare' => '>',
+					'relation' => 'OR',
+					array(
+						'key'     => 'Start Date (YYYY-mm-dd)',
+						'value'   => strtotime( '-2 days' ),
+						'compare' => '>',
+					),
+					array(
+						'key'     => 'End Date (YYYY-mm-dd)',
+						'value'   => strtotime( 'today' ),
+						'compare' => '>',
+					),
 				);
 				break;
 		}
@@ -320,7 +328,16 @@ class WordCamp_Central_Theme {
 			if ( 'schedule' === $map_id ) {
 				$marker_type = 'upcoming';
 			} else {
-				$marker_type = get_post_meta( $marker->ID, 'Start Date (YYYY-mm-dd)', true ) > strtotime( '-2 days' ) ? 'upcoming' : 'past';
+				$start_date = (int) get_post_meta( $marker->ID, 'Start Date (YYYY-mm-dd)', true );
+				$end_date   = (int) get_post_meta( $marker->ID, 'End Date (YYYY-mm-dd)', true );
+
+				$marker_type = 'upcoming';
+				if (
+					( $end_date && $end_date < time() ) ||
+					$start_date <= strtotime( '-2 days' )
+				 ) {
+					$marker_type = 'past';
+				}
 			}
 
 			$coordinates = get_post_meta( $marker->ID, '_venue_coordinates', true );
@@ -335,10 +352,15 @@ class WordCamp_Central_Theme {
 				continue;
 			}
 
+			$wordcamp_date = wcpt_get_wordcamp_start_date( $marker->ID );
+			if ( wcpt_get_wordcamp_end_date( $marker->ID ) ) {
+				$wordcamp_date .= '-' . wcpt_get_wordcamp_end_date( $marker->ID );
+			}
+
 			$markers[ $marker->ID ] = array(
 				'id'        => $marker->ID,
 				'name'      => wcpt_get_wordcamp_title( $marker->ID ),
-				'dates'     => wcpt_get_wordcamp_start_date( $marker->ID ),
+				'dates'     => $wordcamp_date,
 				'location'  => get_post_meta( $marker->ID, 'Location', true ),
 				'venueName' => get_post_meta( $marker->ID, 'Venue Name', true ),
 				'url'       => self::get_best_wordcamp_url( $marker->ID ),
@@ -622,9 +644,15 @@ class WordCamp_Central_Theme {
 				'order'          => 'ASC',
 
 				'meta_query' => array(
+					'relation' => 'OR',
 					array(
 						'key'     => 'Start Date (YYYY-mm-dd)',
 						'value'   => strtotime( '-2 days' ),
+						'compare' => '>',
+					),
+					array(
+						'key'     => 'End Date (YYYY-mm-dd)',
+						'value'   => strtotime( 'today' ),
 						'compare' => '>',
 					),
 				),

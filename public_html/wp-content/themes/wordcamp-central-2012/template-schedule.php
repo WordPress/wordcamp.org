@@ -35,12 +35,12 @@ get_header(); ?>
 								array(
 									'key'     => 'Start Date (YYYY-mm-dd)',
 									'value'   => strtotime( '-2 days' ),
-									'compare' => '>'
+									'compare' => '>',
 								),
 								array(
 									'key'     => 'End Date (YYYY-mm-dd)',
 									'value'   => strtotime( 'today' ),
-									'compare' => '>'
+									'compare' => '>',
 								),
 							)
 						) )

@@ -317,6 +317,20 @@ add_action( 'after_setup_theme', function() {
 	add_action( 'switch_blog', 'wcorg_switch_to_blog_locale', 10, 3 );
 } );
 
+/**
+ * Prevent `switch_to_locale` from unloading all plugin and theme translations.
+ *
+ * See https://core.trac.wordpress.org/ticket/39210
+ *
+ * The combination of `wcorg_switch_to_blog_locale` and something like `get_wordcamp_post`
+ * (which gets called on init in `\WordCamp\Jetpack_Tweaks\disable_jetpack_spam_delete`) means that
+ * all of the plugin and theme translations get unloaded on almost every request. This is a workaround
+ * suggested here: https://core.trac.wordpress.org/ticket/39210#comment:17
+ *
+ * Hopefully this won't be necessary after core-39210 is fixed.
+ */
+add_filter( 'change_locale', function() { $GLOBALS['l10n_unloaded'] = array(); }, 99 );
+
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {
 	if ( ! defined( 'WORDCAMP_QBO_CONSUMER_KEY' ) ) {

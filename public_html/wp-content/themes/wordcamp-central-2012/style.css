@@ -1114,7 +1114,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	zoom: 1
 }
 
-#wc-content-blocks>div ul {
+#wc-content-blocks > div ul {
 	list-style: none;
 	padding: 0;
 	margin: 0
@@ -1137,6 +1137,14 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 	position: absolute;
 	bottom: 0;
+}
+
+#home-sponsors-slideshow {
+	position: relative;
+}
+
+#home-sponsors-slideshow li {
+	position: absolute;
 }
 
 

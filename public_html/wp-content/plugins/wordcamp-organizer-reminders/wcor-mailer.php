@@ -111,7 +111,7 @@ class WCOR_Mailer {
 	 *
 	 * @return bool
 	 */
-	protected function mail( $to, $subject, $body, $headers = array(), $email, $wordcamp ) {
+	protected function mail( $to, $subject, $body, $headers, $email, $wordcamp ) {
 		if ( ! $this->validate_email_addresses( $to ) ) {
 			log( 'Message not sent because of invalid recipients.', compact( 'email', 'wordcamp' ) );
 			return false;

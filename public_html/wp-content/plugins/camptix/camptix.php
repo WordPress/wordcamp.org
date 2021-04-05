@@ -1927,7 +1927,7 @@ class CampTix_Plugin {
 			return 0;
 		}
 
-		return $a['label'] > $b['label'];
+		return $a['label'] > $b['label'] ? 1 : -1;
 	}
 
 	/**

@@ -77,7 +77,12 @@ class Payment_Requests_List_Table extends WP_List_Table {
 		}
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
-			$query = Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] );
+			// Support searching for both amounts and names.
+			if ( is_numeric( $_REQUEST['s'] ) ) {
+				$query = Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] );
+			} else {
+				$query = wp_unslash( $_REQUEST['s'] );
+			}
 
 			$where .= $wpdb->prepare(
 				' AND `keywords` LIKE %s ',

@@ -58,11 +58,16 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 		$search     = '';
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
+			// Support searching for both amounts and names.
+			if ( is_numeric( $_REQUEST['s'] ) ) {
+				$term = Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] );
+			} else {
+				$term = wp_unslash( $_REQUEST['s'] );
+			}
+
 			$search = $wpdb->prepare(
 				"AND `keywords` LIKE '%%%s%%'",
-				$wpdb->esc_like(
-					Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] )
-				)
+				$wpdb->esc_like( $term )
 			);
 		}
 

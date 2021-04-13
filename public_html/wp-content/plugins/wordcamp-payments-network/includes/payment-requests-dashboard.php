@@ -89,7 +89,7 @@ class Payment_Requests_Dashboard {
 		WCP_Payment_Request::register_post_statuses();
 
 		// Truncate existing table.
-		$wpdb->query( sprintf( "TRUNCATE TABLE %s;", self::get_table_name() ) );
+		$wpdb->query( "TRUNCATE TABLE " . self::get_table_name() );
 
 		$blogs = $wpdb->get_col( $wpdb->prepare( "SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d ORDER BY last_updated DESC LIMIT %d;", $wpdb->siteid, 1000 ) );
 		foreach ( $blogs as $blog_id ) {

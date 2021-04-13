@@ -66,26 +66,25 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 			}
 
 			$search = $wpdb->prepare(
-				"AND `keywords` LIKE '%%%s%%'",
-				$wpdb->esc_like( $term )
+				'AND `keywords` LIKE %s',
+				'%' . $wpdb->esc_like( $term ) . '%'
 			);
 		}
 
-		$query = "
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- This is safe, and there isn't a better way to do it.
+		$this->items = $wpdb->get_results( $wpdb->prepare( "
 			SELECT *
-			FROM $table_name
+			FROM `$table_name`
 			WHERE
 				status = %s
-				{{search}}
+				$search
 			ORDER BY date_requested ASC
 			LIMIT %d
-			OFFSET %d
-		";
-
-		$query = $wpdb->prepare( $query, $status, $limit, $offset );
-		$query = str_replace( '{{search}}', $search, $query );
-
-		$this->items = $wpdb->get_results( $query );
+			OFFSET %d",
+			$status,
+			$limit,
+			$offset
+		) );
 
 		// A second query is faster than using SQL_CALC_FOUND_ROWS during the first query
 		$total_items = $wpdb->get_var( $wpdb->prepare( "
@@ -94,6 +93,7 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 			WHERE status = %s",
 			$status
 		) );
+		// phpcs:enable
 
 		$this->set_pagination_args( array(
 			'total_items' => $total_items,

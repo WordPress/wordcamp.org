@@ -1129,12 +1129,14 @@ function redact_paid_requests() {
 	$encrypted_fields     = WordCamp_Budgets::get_encrypted_fields();
 	$retention_period     = strtotime( WordCamp_Budgets::PAYMENT_INFO_RETENTION_PERIOD . ' days ago' );
 
+	// phpcs:ignore WordPressDotOrg.sniffs.DirectDB.UnescapedDBParameter -- There isn't a good way to escape table names yet, see https://core.trac.wordpress.org/ticket/52506.
 	$paid_reimbursements = $wpdb->get_results( "
 		SELECT blog_id, request_id, date_paid
 		FROM `$reimbursements_index`
 		WHERE status = 'wcb-paid'
 	" );
 
+	// phpcs:ignore WordPressDotOrg.sniffs.DirectDB.UnescapedDBParameter -- There isn't a good way to escape table names yet, see https://core.trac.wordpress.org/ticket/52506.
 	$paid_vendors = $wpdb->get_results( "
 		SELECT blog_id, post_id AS request_id, paid AS date_paid
 		FROM `$vendors_index`

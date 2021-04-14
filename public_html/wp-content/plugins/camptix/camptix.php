@@ -5676,6 +5676,8 @@ class CampTix_Plugin {
 									<?php
 										$discount_price = (float) $this->coupon->tix_discount_price;
 										$discount_percent = (float) $this->coupon->tix_discount_percent;
+										$discount_text = '';
+
 										if ( $discount_price > 0 ) {
 											$discount_text = $this->append_currency( $discount_price );
 										} elseif ( $discount_percent > 0 ) {

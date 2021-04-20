@@ -1965,18 +1965,23 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 /* ------------------------------------- */
 
 .about-page .photo-slideshow {
+	position: relative;
 	float: right;
 	line-height: 1;
 
 	width: 357px;
 	height: 194px;
 
-
-	padding: 12px;
+	padding: 0;
 	margin: -4px 0 10px 20px;
 
 	box-shadow: 0 1px 3px 1px rgba(0,0,0,.3);
 	-webkit-box-shadow: 0 1px 3px 1px rgba(0,0,0,.3);
+}
+
+.about-page .photo-slideshow img {
+	position: absolute;
+	margin: 0;
 }
 
 #content .about-stats {

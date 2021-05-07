@@ -102,6 +102,9 @@ function pass_global_data_to_front_end() {
 		'settings'      => get_settings(),
 	);
 
+	// The rest request in get_all_sessions changes the global $post value.
+	wp_reset_postdata();
+
 	wp_add_inline_script(
 		'wordcamp-schedule-front-end',
 		sprintf(

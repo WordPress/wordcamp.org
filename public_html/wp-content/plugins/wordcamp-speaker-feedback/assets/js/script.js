@@ -6,7 +6,7 @@
 		event.preventDefault();
 		var value = event.target[ 0 ].value;
 		// Use the fact that post IDs will redirect to the right page.
-		window.location = '/?p=' + value + '&sft_feedback=1#sft-feedback';
+		window.location = SpeakerFeedbackData.url + '/?p=' + value + '&sft_feedback=1#sft-feedback';
 	}
 
 	function onFormSubmit( event ) {

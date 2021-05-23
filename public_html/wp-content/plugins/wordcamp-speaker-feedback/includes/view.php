@@ -308,6 +308,7 @@ function enqueue_assets() {
 		);
 
 		$data = array(
+			'url'      => home_url(),
 			'messages' => array(
 				'submitSuccess'         => __( 'Feedback submitted.', 'wordcamporg' ),
 				'markedHelpful'         => __( 'Feedback marked as helpful.', 'wordcamporg' ),

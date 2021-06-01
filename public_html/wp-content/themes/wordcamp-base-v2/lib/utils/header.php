@@ -5,8 +5,9 @@ function wcb_entry_meta() {
 }
 
 function __wcb_post_single_meta( $meta ) {
-	if ( get_post_type() != 'post' || ! is_single() )
+	if ( get_post_type() != 'post' || ! is_single() ) {
 		return $meta;
+	}
 
 	if ( is_object_in_taxonomy( get_post_type(), 'category' ) ) {
 		$meta['category'] = sprintf( __('Posted in %s', 'wordcamporg'), get_the_category_list( ', ' ) );
@@ -17,14 +18,15 @@ function __wcb_post_single_meta( $meta ) {
 
 	$meta['order'][] = 'br';
 
-	if ( isset( $meta['category'] ) && isset( $meta['tag'] ) )
+	if ( isset( $meta['category'] ) && isset( $meta['tag'] ) ) {
 		array_push( $meta['order'], 'category', 'sep', 'tag' );
-	elseif ( isset( $meta['category'] ) )
+	} elseif ( isset( $meta['category'] ) ) {
 		$meta['order'][] = 'category';
-	elseif ( isset( $meta['tag'] ) )
+	} elseif ( isset( $meta['tag'] ) ) {
 		$meta['order'][] = 'tag';
-	else
+	} else {
 		array_pop( $meta['order'] );
+	}
 
 	return $meta;
 }
@@ -59,7 +61,7 @@ function wcb_header_image() {
  */
 function wcb_title_tag() {
 	global $page, $paged;
-	echo "<title>";
+	echo '<title>';
 	wp_title( '|', true, 'right' );
 
 	// Add the blog name.
@@ -67,13 +69,15 @@ function wcb_title_tag() {
 
 	// Add the blog description for the home/front page.
 	$site_description = get_bloginfo( 'description', 'display' );
-	if ( $site_description && ( is_home() || is_front_page() ) )
+	if ( $site_description && ( is_home() || is_front_page() ) ) {
 		echo " | $site_description";
+	}
 
 	// Add a page number if necessary:
-	if ( $paged >= 2 || $page >= 2 )
+	if ( $paged >= 2 || $page >= 2 ) {
 		echo ' | ' . sprintf( __( 'Page %s', 'wordcamporg' ), max( $paged, $page ) );
-	echo "</title>";
+	}
+	echo '</title>';
 }
 
 /**

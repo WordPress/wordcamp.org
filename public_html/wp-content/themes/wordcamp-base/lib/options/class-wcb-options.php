@@ -4,7 +4,7 @@ class WCB_Options extends WCB_Loader {
 	var $options;
 
 	function includes() {
-		$option_slugs = array('option', 'array-option', 'radio-option', 'grid-option', 'button-option', 'typekit-option');
+		$option_slugs = array( 'option', 'array-option', 'radio-option', 'grid-option', 'button-option', 'typekit-option' );
 		foreach ( $option_slugs as $slug ) {
 			require_once "class-wcb-$slug.php";
 		}
@@ -23,7 +23,7 @@ class WCB_Options extends WCB_Loader {
 			'values'   => array(
 				'grid960'   => __( '960px wide', 'wordcamporg' ),
 				'grid720'   => __( '720px wide', 'wordcamporg' ),
-			)
+			),
 		) );
 
 		$this->options['after_header'] = new WCB_Grid_Option( array(
@@ -40,7 +40,7 @@ class WCB_Options extends WCB_Loader {
 			'key'       => 'before_content',
 			'default'   => array(
 				'visible'       => false,
-				'layout'        => array( 4,4,4 ),
+				'layout'        => array( 4, 4, 4 ),
 				'front_only'    => true,
 			),
 			'label'     => __('Before Content', 'wordcamporg'),
@@ -64,7 +64,7 @@ class WCB_Options extends WCB_Loader {
 			'key'       => 'after_content',
 			'default'   => array(
 				'visible'       => false,
-				'layout'        => array( 4,4,4 ),
+				'layout'        => array( 4, 4, 4 ),
 				'front_only'    => false,
 			),
 			'label'     => __('After Content', 'wordcamporg'),
@@ -74,7 +74,7 @@ class WCB_Options extends WCB_Loader {
 			'key'       => 'before_footer',
 			'default'   => array(
 				'visible'       => true,
-				'layout'        => array( 3,3,3,3 ),
+				'layout'        => array( 3, 3, 3, 3 ),
 				'front_only'    => false,
 			),
 			'label'     => __('Before Footer', 'wordcamporg'),
@@ -102,8 +102,9 @@ class WCB_Options extends WCB_Loader {
 	}
 
 	function get( $name ) {
-		if ( ! isset( $this->options[ $name ] ) )
+		if ( ! isset( $this->options[ $name ] ) ) {
 			return;
+		}
 		$values = get_option( 'wcb_theme_options' );
 		$option = $this->options[ $name ];
 
@@ -117,9 +118,9 @@ class WCB_Options extends WCB_Loader {
 	}
 
 	function enqueue_scripts() {
-		wp_enqueue_script( 'wcb-options', wcb_dev_url( WCB_LIB_URL . '/options/js/options.js' ), array('jquery'), '20110212' );
+		wp_enqueue_script( 'wcb-options', wcb_dev_url( WCB_LIB_URL . '/options/js/options.js' ), array( 'jquery' ), '20110212' );
 		wp_enqueue_style( 'wcb-options-grid', wcb_dev_url( WCB_LIB_URL . '/options/css/options-grid.css' ), array(), '20110212' );
-		wp_enqueue_style( 'wcb-options', wcb_dev_url( WCB_LIB_URL . '/options/css/options.css' ), array('wcb-options-grid'), '20110212' );
+		wp_enqueue_style( 'wcb-options', wcb_dev_url( WCB_LIB_URL . '/options/css/options.css' ), array( 'wcb-options-grid' ), '20110212' );
 	}
 
 	function admin_init() {
@@ -135,8 +136,9 @@ class WCB_Options extends WCB_Loader {
 	}
 
 	function render() {
-		if ( ! isset( $_REQUEST['updated'] ) )
+		if ( ! isset( $_REQUEST['updated'] ) ) {
 			$_REQUEST['updated'] = false;
+		}
 
 		?>
 		<div class="wrap">
@@ -192,8 +194,8 @@ class WCB_Options extends WCB_Loader {
 
 function wcb_get_option( $name ) {
 	$options = wcb_get('options');
-	$option = $options->get( $name );
-	$option = apply_filters('wcb_get_option', $option, $name );
+	$option  = $options->get( $name );
+	$option  = apply_filters('wcb_get_option', $option, $name );
 	return $option;
 }
 

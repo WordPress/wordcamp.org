@@ -12,4 +12,4 @@ class WCB_Body extends WCB_Elements {
 	}
 }
 
-?>
+

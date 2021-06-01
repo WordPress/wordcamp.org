@@ -26,21 +26,24 @@
 
 	// Add the blog description for the home/front page.
 	$site_description = get_bloginfo( 'description', 'display' );
-	if ( $site_description && ( is_home() || is_front_page() ) )
-		echo " | $site_description";
+if ( $site_description && ( is_home() || is_front_page() ) ) {
+	echo " | $site_description";
+}
 
 	// Add a page number if necessary:
-	if ( $paged >= 2 || $page >= 2 )
-		echo ' | ' . sprintf( __( 'Page %s', 'wordcamporg' ), max( $paged, $page ) );
+if ( $paged >= 2 || $page >= 2 ) {
+	echo ' | ' . sprintf( __( 'Page %s', 'wordcamporg' ), max( $paged, $page ) );
+}
 
-	?></title>
+?></title>
 <link rel="profile" href="http://gmpg.org/xfn/11" />
 <link rel="pingback" href="<?php bloginfo( 'pingback_url' ); ?>" />
 <!--[if lt IE 9]>
 <script src="<?php echo get_template_directory_uri(); ?>/js/html5.js" type="text/javascript"></script>
 <![endif]-->
 
-<?php /* Typekit now in SafeCSS addon plugin.
+<?php /*
+ Typekit now in SafeCSS addon plugin.
 	<script type="text/javascript" src="http://use.typekit.com/spx4bwt.js"></script>
 	<script type="text/javascript">try{Typekit.load();}catch(e){}</script>
 */ ?>

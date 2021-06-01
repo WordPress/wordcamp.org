@@ -8,6 +8,6 @@
 $structure = wcb_get('structure');
 $structure->full_width_content();
 
-include WCB_DIR . '/page.php';
+require WCB_DIR . '/page.php';
 
-?>
+

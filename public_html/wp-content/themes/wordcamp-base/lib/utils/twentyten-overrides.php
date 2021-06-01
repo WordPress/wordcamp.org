@@ -1,7 +1,7 @@
 <?php
 
 function twentyten_posted_on() {
-	$meta = array();
+	$meta           = array();
 	$meta['author'] = sprintf( __( '%1$s <span class="meta-sep">by</span> %2$s', 'wordcamporg' ),
 		sprintf( '<a href="%1$s" title="%2$s" rel="bookmark"><span class="entry-date">%3$s</span></a>',
 			get_permalink(),
@@ -15,7 +15,7 @@ function twentyten_posted_on() {
 		)
 	);
 
-	$meta['sep'] = ' <span class="meta-sep meta-sep-bull">&bull;</span> ';
+	$meta['sep']      = ' <span class="meta-sep meta-sep-bull">&bull;</span> ';
 	$meta['comments'] = array(
 		'before'    => '<span class="comments-link">',
 		'after'     => '</span>',
@@ -36,8 +36,9 @@ function twentyten_posted_on() {
 
 	$meta = apply_filters( 'wcb_entry_meta', $meta );
 
-	if ( !is_array( $meta ) || ! isset( $meta['order'] ) )
+	if ( ! is_array( $meta ) || ! isset( $meta['order'] ) ) {
 		return;
+	}
 
 	foreach ( $meta['order'] as $type ) {
 		$content = $meta[ $type ];
@@ -48,8 +49,9 @@ function twentyten_posted_on() {
 				echo $content['after'];
 				break;
 			case 'edit':
-				if ( isset( $meta['sep'] ) )
+				if ( isset( $meta['sep'] ) ) {
 					$content['before'] = $meta['sep'] . $content['before'];
+				}
 				edit_post_link( $content['title'], $content['before'], $content['after'] );
 				break;
 			default:
@@ -58,4 +60,4 @@ function twentyten_posted_on() {
 	}
 }
 
-?>
+

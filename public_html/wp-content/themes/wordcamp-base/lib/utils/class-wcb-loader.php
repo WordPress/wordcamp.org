@@ -14,8 +14,9 @@ class WCB_Loader {
 			'register_taxonomies'   => 'init',
 		);
 		foreach ( $method_action_map as $method => $action ) {
-			if ( method_exists( $this, $method ) )
+			if ( method_exists( $this, $method ) ) {
 				add_action( $action, array( &$this, $method ), 10, 99 ); // 99 is effectively infinite args.
+			}
 		}
 	}
 
@@ -28,4 +29,4 @@ class WCB_Loader {
 	function loaded() {}
 }
 
-?>
+

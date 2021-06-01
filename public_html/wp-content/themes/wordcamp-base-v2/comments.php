@@ -18,8 +18,9 @@
 	 * the visitor has not yet entered the password we will
 	 * return early without loading the comments.
 	 */
-	if ( post_password_required() )
-		return;
+if ( post_password_required() ) {
+	return;
+}
 ?>
 
 	<div id="comments" class="comments-area">
@@ -44,7 +45,8 @@
 
 		<ol class="commentlist">
 			<?php
-				/* Loop through and list the comments. Tell wp_list_comments()
+				/*
+				 Loop through and list the comments. Tell wp_list_comments()
 				 * to use wcbs_comment() to format the comments.
 				 * If you want to overload this in a child theme then you can
 				 * define wcbs_comment() and that will be used instead.
@@ -66,8 +68,8 @@
 
 	<?php
 		// If comments are closed and there are no comments, let's leave a little note, shall we?
-		if ( ! comments_open() && '0' != get_comments_number() && post_type_supports( get_post_type(), 'comments' ) ) :
-	?>
+	if ( ! comments_open() && '0' != get_comments_number() && post_type_supports( get_post_type(), 'comments' ) ) :
+		?>
 		<p class="nocomments"><?php _e( 'Comments are closed.', 'wordcamporg' ); ?></p>
 	<?php endif; ?>
 

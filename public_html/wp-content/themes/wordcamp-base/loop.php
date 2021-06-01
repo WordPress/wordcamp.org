@@ -34,7 +34,8 @@ if ( ! $gallery_term ) {
 	</div>
 <?php endif; ?>
 
-<?php while ( have_posts() ) : the_post(); ?>
+<?php while ( have_posts() ) :
+	the_post(); ?>
 	<?php /* How to display posts in the Gallery category. */ ?>
 	<?php if ( $gallery_term && in_category( $gallery_term->term_id ) ) : ?>
 		<div id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
@@ -63,7 +64,7 @@ if ( ! $gallery_term ) {
 					) );
 
 					if ( $images ) :
-						$total_images = count( $images );
+						$total_images  = count( $images );
 						$image         = array_shift( $images );
 						$image_img_tag = wp_get_attachment_image( $image->ID, 'thumbnail' );
 						?>
@@ -100,7 +101,7 @@ if ( ! $gallery_term ) {
 			</div>
 		</div><!-- #post-## -->
 
-	<?php /* How to display posts in the asides category */ ?>
+		<?php /* How to display posts in the asides category */ ?>
 	<?php elseif ( in_category( _x( 'asides', 'asides category slug', 'wordcamporg' ) ) ) : ?>
 		<div id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
 			<?php if ( is_archive() || is_search() ) : // Display excerpts for archives and search. ?>
@@ -151,9 +152,9 @@ if ( ! $gallery_term ) {
 					) ); ?>
 
 					<?php wp_link_pages( array(
-						'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
-						'after'  => '</div>',
-					) ); ?>
+					'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
+					'after'  => '</div>',
+) ); ?>
 				</div>
 			<?php endif; ?>
 

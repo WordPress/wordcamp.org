@@ -7,12 +7,13 @@ class WCB_Sidebar_Row extends WCB_Container {
 			'class' => '',
 			'name'  => '',
 			'grid'  => array(),
-			'width' => 12
+			'width' => 12,
 		);
 		extract( wp_parse_args( $args, $defaults ) );
 
-		if ( empty( $id ) || empty( $name ) || empty( $grid ) )
+		if ( empty( $id ) || empty( $name ) || empty( $grid ) ) {
 			return;
+		}
 
 		parent::__construct( array(
 			'id' => $id,
@@ -31,10 +32,12 @@ class WCB_Sidebar_Row extends WCB_Container {
 
 			$class = "grid_$cols sidebar-cell $id";
 
-			if ( $index == 0 )
-				$class .= " alpha";
-			if ( $index == count( $grid ) - 1 )
-				$class .= " omega";
+			if ( $index == 0 ) {
+				$class .= ' alpha';
+			}
+			if ( $index == count( $grid ) - 1 ) {
+				$class .= ' omega';
+			}
 
 			switch ( $type ) {
 				case 'sidebar':
@@ -42,13 +45,13 @@ class WCB_Sidebar_Row extends WCB_Container {
 					$this->add( new WCB_Sidebar( array(
 						'id'    => "$id-$sidebar_index",
 						'name'  => $sidebar_name,
-						'class' => $class
+						'class' => $class,
 					) ) );
 					$sidebar_index++;
 					break;
 				case 'content':
 					$this->add( new WCB_Content( array(
-						'class' => $class
+						'class' => $class,
 					) ) );
 					break;
 			}
@@ -56,4 +59,4 @@ class WCB_Sidebar_Row extends WCB_Container {
 	}
 }
 
-?>
+

@@ -10,13 +10,14 @@ class WCB_Option {
 			'default' => '',
 		);
 		extract( wp_parse_args( $args, $defaults ) );
-		$this->key = $key;
+		$this->key     = $key;
 		$this->default = $default;
 	}
 
 	function maybe_validate( $input ) {
-		if ( isset( $input[ $this->key ] ) )
+		if ( isset( $input[ $this->key ] ) ) {
 			$input[ $this->key ] = $this->validate( $input[ $this->key ] );
+		}
 		return $input;
 	}
 
@@ -48,4 +49,4 @@ class WCB_Option {
 	}
 }
 
-?>
+

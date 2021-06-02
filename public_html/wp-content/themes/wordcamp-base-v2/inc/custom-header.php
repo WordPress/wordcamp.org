@@ -116,7 +116,7 @@ if ( ! function_exists( 'wcbs_header_style' ) ) :
 				?>
 		.site-title a,
 		.site-description {
-			color: #<?php echo get_header_textcolor(); ?> !important;
+			color: #<?php echo esc_html( get_header_textcolor() ); ?> !important;
 		}
 	<?php endif; ?>
 	</style>
@@ -168,7 +168,7 @@ if ( ! function_exists( 'wcbs_admin_header_image' ) ) :
 			if ( 'blank' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) || '' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) ) {
 				$style = ' style="display:none;"';
 			} else {
-				$style = ' style="color:#' . get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) . ';"';
+				$style = ' style="color:#' . esc_attr( get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) ) . ';"';
 			}
 			?>
 		<h1><a id="name"<?php echo $style; ?> onclick="return false;" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php bloginfo( 'name' ); ?></a></h1>

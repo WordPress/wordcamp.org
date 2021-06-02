@@ -77,10 +77,16 @@ get_header();
 									}
 								?>
 
-								<a href="<?php echo $next_attachment_url; ?>" title="<?php echo esc_attr( get_the_title() ); ?>" rel="attachment"><?php
+								<a
+									href="<?php echo esc_url( $next_attachment_url ); ?>"
+									title="<?php echo esc_attr( get_the_title() ); ?>"
+									rel="attachment"
+								>
+									<?php
 									$attachment_size = apply_filters( 'wcbs_attachment_size', array( 1200, 1200 ) ); // Filterable image size.
 									echo wp_get_attachment_image( $post->ID, $attachment_size );
-								?></a>
+									?>
+								</a>
 							</div><!-- .attachment -->
 
 							<?php if ( ! empty( $post->post_excerpt ) ) : ?>

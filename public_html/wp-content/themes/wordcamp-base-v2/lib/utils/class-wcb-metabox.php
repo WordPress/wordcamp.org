@@ -145,7 +145,7 @@ class WCB_Metabox {
 	function name() {
 		$args = func_get_args();
 		$name = call_user_func_array( array( &$this, 'get_name' ), $args );
-		echo " name='$name' ";
+		echo " name='". esc_attr( $name ) ."' ";
 	}
 
 	// Only enqueues metabox scripts when necessary.
@@ -202,7 +202,16 @@ class WCB_Metabox {
 		// Keep track of the rendered screen
 		$screen_name  = $this->get_id('screens') . '[]';
 		$screen_value = esc_attr( $instance['screen'] );
-		echo "<input type='hidden' name='$screen_name' value='$screen_value' />";
+
+		?>
+
+		<input
+			type='hidden'
+			name='<?php echo esc_attr( $screen_name ); ?>'
+			value='<?php echo esc_attr( $screen_value ); ?>'
+		/>
+
+		<?php
 
 		$this->render( $object, $instance );
 		// Unset current instance
@@ -281,7 +290,3 @@ function wcb_get_metabox( $classname ) {
 	$registry = WCB_Metabox::registry();
 	return $registry->get( $classname );
 }
-
-
-
-

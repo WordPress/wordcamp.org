@@ -44,9 +44,9 @@ function twentyten_posted_on() {
 		$content = $meta[ $type ];
 		switch ( $type ) {
 			case 'comments':
-				echo $content['before'];
+				echo wp_kses_post( $content['before'] );
 				comments_popup_link( $content['zero'], $content['one'], $content['many'] );
-				echo $content['after'];
+				echo wp_kses_post(  $content['after'] );
 				break;
 			case 'edit':
 				if ( isset( $meta['sep'] ) ) {
@@ -55,9 +55,7 @@ function twentyten_posted_on() {
 				edit_post_link( $content['title'], $content['before'], $content['after'] );
 				break;
 			default:
-				echo $content;
+				echo wp_kses_post( $content );
 		}
 	}
 }
-
-

@@ -36,7 +36,12 @@ function wcb_site_title() {
 	$heading_tag = ( is_home() || is_front_page() ) ? 'h1' : 'div';
 	echo "<$heading_tag id='site-title'>"; ?>
 		<span>
-			<a href="<?php echo home_url( '/' ); ?>" title="<?php echo esc_attr( get_bloginfo( 'name', 'display' ) ); ?>" rel="home"><?php bloginfo( 'name' ); ?></a>
+			<a
+				href="<?php echo esc_url( home_url( '/' ) ); ?>"
+				title="<?php echo esc_attr( get_bloginfo( 'name', 'display' ) ); ?>"
+				rel="home">
+					<?php bloginfo( 'name' ); ?>
+			</a>
 		</span>
 	<?php echo "</$heading_tag>";
 }
@@ -50,9 +55,14 @@ function wcb_header_image() {
 	&& ( /* $src, $width, $height */ $image = wp_get_attachment_image_src( get_post_thumbnail_id( $post->ID ), 'post-thumbnail' ) )
 	&& $image[1] >= get_custom_header()->width ) :
 		// Houston, we have a new header image!
-		echo get_the_post_thumbnail( $post->ID );
+		echo wp_kses_post( get_the_post_thumbnail( $post->ID ) );
 	elseif ( get_header_image() ) : ?>
-		<img src="<?php header_image(); ?>" width="<?php echo get_custom_header()->width; ?>" height="<?php echo get_custom_header()->height; ?>" alt="" />
+		<img
+			src="<?php header_image(); ?>"
+			width="<?php echo esc_attr( get_custom_header()->width ); ?>"
+			height="<?php echo esc_attr( get_custom_header()->height ); ?>"
+			alt=""
+		/>
 	<?php endif;
 }
 

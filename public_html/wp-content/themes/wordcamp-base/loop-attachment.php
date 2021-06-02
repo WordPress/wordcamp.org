@@ -18,10 +18,17 @@
 <?php if ( have_posts() ) while ( have_posts() ) : the_post(); ?>
 
 				<?php if ( ! empty( $post->post_parent ) ) : ?>
-					<p class="page-title"><a href="<?php echo get_permalink( $post->post_parent ); ?>" title="<?php esc_attr( printf( __( 'Return to %s', 'wordcamporg' ), get_the_title( $post->post_parent ) ) ); ?>" rel="gallery"><?php
-						/* translators: %s - title of parent post */
-						printf( __( '<span class="meta-nav">&larr;</span> %s', 'wordcamporg' ), get_the_title( $post->post_parent ) );
-					?></a></p>
+					<p class="page-title">
+						<a
+							href="<?php echo esc_url( get_permalink( $post->post_parent ) ); ?>"
+							title="<?php esc_attr( printf( __( 'Return to %s', 'wordcamporg' ), get_the_title( $post->post_parent ) ) ); ?>"
+							rel="gallery">
+							<?php
+							/* translators: %s - title of parent post */
+							printf( __( '<span class="meta-nav">&larr;</span> %s', 'wordcamporg' ), get_the_title( $post->post_parent ) );
+							?>
+						</a>
+					</p>
 				<?php endif; ?>
 
 				<div id="post-<?php the_ID(); ?>" <?php post_class(); ?>>
@@ -85,18 +92,30 @@
 		$next_attachment_url = wp_get_attachment_url();
 	}
 ?>
-						<p class="attachment"><a href="<?php echo $next_attachment_url; ?>" title="<?php echo esc_attr( get_the_title() ); ?>" rel="attachment"><?php
-							$attachment_width  = apply_filters( 'twentyten_attachment_size', 900 );
-							$attachment_height = apply_filters( 'twentyten_attachment_height', 900 );
-							echo wp_get_attachment_image( $post->ID, array( $attachment_width, $attachment_height ) ); // filterable image width with, essentially, no limit for image height.
-						?></a></p>
+						<p class="attachment">
+							<a
+								href="<?php echo esc_url( $next_attachment_url ); ?>"
+								title="<?php echo esc_attr( get_the_title() ); ?>"
+								rel="attachment">
+								<?php
+								$attachment_width  = apply_filters( 'twentyten_attachment_size', 900 );
+								$attachment_height = apply_filters( 'twentyten_attachment_height', 900 );
+								echo wp_get_attachment_image( $post->ID, array( $attachment_width, $attachment_height ) ); // filterable image width with, essentially, no limit for image height.
+								?>
+							</a>
+						</p>
 
 						<div id="nav-below" class="navigation">
 							<div class="nav-previous"><?php previous_image_link( false ); ?></div>
 							<div class="nav-next"><?php next_image_link( false ); ?></div>
 						</div><!-- #nav-below -->
 <?php else : ?>
-						<a href="<?php echo wp_get_attachment_url(); ?>" title="<?php echo esc_attr( get_the_title() ); ?>" rel="attachment"><?php echo basename( get_permalink() ); ?></a>
+						<a
+							href="<?php echo esc_url( wp_get_attachment_url() ); ?>"
+							title="<?php echo esc_attr( get_the_title() ); ?>"
+							rel="attachment">
+								<?php echo esc_html( basename( get_permalink() ) ); ?>
+						</a>
 <?php endif; ?>
 						</div><!-- .entry-attachment -->
 						<div class="entry-caption"><?php if ( !empty( $post->post_excerpt ) ) the_excerpt(); ?></div>

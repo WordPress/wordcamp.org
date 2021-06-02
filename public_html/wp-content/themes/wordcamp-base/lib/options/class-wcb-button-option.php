@@ -38,7 +38,7 @@ class WCB_Button_Option extends WCB_Array_Option {
 				</label><br />
 				<label class="description text-field" for="<?php echo $ids['text']; ?>">
 					<span><?php esc_html_e( 'Text:', 'wordcamporg' ); ?></span>
-					<input type="text" id="<?php echo $ids['text']; ?>"
+					<input type="text" id="<?php echo esc_attr( $ids['text'] ); ?>"
 						<?php $this->name('text'); ?>
 						value="<?php echo esc_attr( $this->get_option('text') ); ?>" />
 				</label><br />

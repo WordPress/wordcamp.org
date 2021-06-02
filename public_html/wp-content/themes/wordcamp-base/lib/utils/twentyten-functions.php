@@ -324,10 +324,12 @@ if ( ! function_exists( 'twentyten_comment' ) ) :
 		<div class="comment-body"><?php comment_text(); ?></div>
 
 		<div class="reply">
-				<?php comment_reply_link( array_merge( $args, array(
+			<?php
+			comment_reply_link( array_merge( $args, array(
 				'depth' => $depth,
 				'max_depth' => $args['max_depth'],
-) ) ); ?>
+			) ) );
+			?>
 		</div><!-- .reply -->
 	</div><!-- #comment-##  -->
 

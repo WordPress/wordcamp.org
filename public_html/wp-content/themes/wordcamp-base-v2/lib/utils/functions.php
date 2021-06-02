@@ -58,12 +58,12 @@ function __wcb_render_menu_icons() {
 foreach ( $wcb_menu_icons as $post_type => $icon_url ) :
 	$class    = sanitize_html_class( $post_type );
 	$icon_url = esc_url( $icon_url ); ?>
-			#menu-posts-<?php echo $class; ?> .wp-menu-image {
-				background: url(<?php echo $icon_url; ?>) no-repeat 0 -32px;
+			#menu-posts-<?php echo esc_html( $class ); ?> .wp-menu-image {
+				background: url(<?php echo esc_url( $icon_url ); ?>) no-repeat 0 -32px;
 			}
-			#menu-posts-<?php echo $class; ?>:hover .wp-menu-image,
-			#menu-posts-<?php echo $class; ?>.wp-has-current-submenu .wp-menu-image {
-				background: url(<?php echo $icon_url; ?>) no-repeat 0 0;
+			#menu-posts-<?php echo esc_html( $class ); ?>:hover .wp-menu-image,
+			#menu-posts-<?php echo esc_html( $class ); ?>.wp-has-current-submenu .wp-menu-image {
+				background: url(<?php echo esc_url( $icon_url ); ?>) no-repeat 0 0;
 			}
 		<?php
 	endforeach;
@@ -125,7 +125,7 @@ function wcb_print_sharing() {
 	if ( have_posts() ) {
 		the_post();
 		if ( function_exists( 'sharing_display' ) ) {
-			echo sharing_display();
+			echo wp_kses_post( sharing_display() );
 		}
 	}
 }

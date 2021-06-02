@@ -108,7 +108,11 @@ class WCB_Grid_Option extends WCB_Array_Option {
 		?>
 		<div id="<?php echo esc_attr("grid-row-$this->key"); ?>" class="grid-row-layout clearfix <?php echo $this->get_option('visible') ? 'visible' : ''; ?>">
 			<div class="description row-name"><?php echo esc_html( $this->label ); ?></div>
-			<input class="signature" type="hidden" <?php $this->name('layout'); ?> value="<?php echo esc_attr( wp_json_encode( $layout ) ); ?>"/>
+			<input
+				class="signature"
+				type="hidden" <?php $this->name('layout'); ?>
+				value="<?php echo esc_attr( wp_json_encode( $layout ) ); ?>"
+			/>
 			<?php $this->render_row( $layout ); ?>
 			<div class="edit"><a href="#"><?php echo esc_html_e( 'Edit', 'wordcamporg'); ?></a></div>
 			<?php if ( $this->type != 'content' ) :

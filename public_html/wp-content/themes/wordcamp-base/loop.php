@@ -89,8 +89,11 @@ if ( ! $gallery_term ) {
 			</div><!-- .entry-content -->
 
 			<div class="entry-utility">
-				<a href="<?php echo get_term_link( $gallery_term->term_id, 'category' ); ?>" title="<?php esc_attr_e( 'View posts in the Gallery category', 'wordcamporg' ); ?>">
-					<?php _e( 'More Galleries', 'wordcamporg' ); ?>
+				<a
+					href="<?php echo esc_url( get_term_link( $gallery_term->term_id, 'category' ) ); ?>"
+					title="<?php esc_attr_e( 'View posts in the Gallery category', 'wordcamporg' ); ?>
+				">
+					<?php esc_html_e( 'More Galleries', 'wordcamporg' ); ?>
 				</a>
 				<span class="meta-sep">|</span>
 				<span class="comments-link">
@@ -151,10 +154,12 @@ if ( ! $gallery_term ) {
 						the_title( '<span class="screen-reader-text">', '</span> ', false )
 					) ); ?>
 
-					<?php wp_link_pages( array(
-					'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
-					'after'  => '</div>',
-) ); ?>
+					<?php
+					wp_link_pages( array(
+						'before' => '<div class="page-link">' . __( 'Pages:', 'wordcamporg' ),
+						'after'  => '</div>',
+					) );
+					?>
 				</div>
 			<?php endif; ?>
 

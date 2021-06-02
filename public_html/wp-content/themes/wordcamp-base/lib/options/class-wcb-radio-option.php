@@ -40,10 +40,23 @@ class WCB_Radio_Option extends WCB_Option {
 		echo "<tr valign='top'><th scope='row'>$this->label</th><td>";
 		echo "<fieldset><legend class='screen-reader-text'><span>$this->label</span></legend>";
 
-		$option = $this->get_option();
+		$option                = $this->get_option();
+		$allowed_html          = wp_kses_allowed_html( 'post' );
+		$allowed_html['input'] = array(
+			'name' => true,
+			'type' => true,
+			'value' => true,
+		);
 
 		foreach ( $this->values as $value => $label ) : ?>
-			<label class="description"><input type="radio" <?php $this->name(); ?> value="<?php echo esc_attr( $value ); ?>" <?php checked( $value, $option ); ?> /> <?php echo $label; ?></label><br />
+			<label class="description">
+				<input
+					type="radio" <?php $this->name(); ?>
+					value="<?php echo esc_attr( $value ); ?>"
+					<?php checked( $value, $option ); ?>
+				/>
+					<?php echo wp_kses( $label, $allowed_html ); ?>
+			</label><br />
 			<?php
 		endforeach;
 		echo '</fieldset></td></tr>';

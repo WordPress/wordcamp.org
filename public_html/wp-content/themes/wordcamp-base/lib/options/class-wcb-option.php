@@ -41,12 +41,10 @@ class WCB_Option {
 	function name() {
 		$args = func_get_args();
 		$name = call_user_func_array( array( &$this, 'get_name' ), $args );
-		echo " name='$name' ";
+		echo " name='". esc_attr( $name ) ."' ";
 	}
 
 	function maybe_unserialize( $value ) {
 		return $value;
 	}
 }
-
-

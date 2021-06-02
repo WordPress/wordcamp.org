@@ -758,3 +758,19 @@ function wcorg_prevent_date_permalinks( $new_value ) {
 	return $new_value;
 }
 add_filter( 'pre_update_option_permalink_structure', 'wcorg_prevent_date_permalinks' );
+
+/**
+ * Modify CLDR country data temporarily while awaiting an update to the data in the WP CLDR plugin.
+ *
+ * @param array $countries
+ *
+ * @return array
+ */
+function wcorg_country_list_mods( $countries ) {
+	if ( isset( $countries['MK'] ) ) {
+		$countries['MK']['name'] = 'North Macedonia';
+	}
+
+	return $countries;
+}
+add_filter( 'wcorg_get_countries', 'wcorg_country_list_mods' );

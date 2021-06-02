@@ -188,6 +188,15 @@ function wcorg_get_countries( array $args = array() ) {
 		}
 	}
 
+	/**
+	 * Filter: Modify the list of country names and codes retrieved from CLDR.
+	 *
+	 * This allows for things like country name changes before the CLDR plugin data gets updated.
+	 *
+	 * @param array $countries
+	 */
+	$countries = apply_filters( 'wcorg_get_countries', $countries );
+
 	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.
 	// See https://www.php.net/manual/en/function.iconv.php#74101.
 	$orig_locale = setlocale( LC_CTYPE, 0 );

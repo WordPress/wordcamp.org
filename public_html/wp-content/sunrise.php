@@ -128,6 +128,10 @@ function main() {
 	// Do this one last, because it sometimes executes a database query.
 	if ( ! $redirect ) {
 		$redirect = get_canonical_year_url( $domain, $path );
+
+		if ( $redirect ) {
+			$status_code = 302;
+		}
 	}
 
 	if ( ! $redirect ) {
@@ -557,7 +561,7 @@ function get_canonical_year_url( $domain, $path ) {
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2021-07-01' ) ) {
+			if ( time() <= strtotime( '2021-06-10' ) ) {
 				return "https://europe.wordcamp.$tld/2021/";
 			}
 			break;

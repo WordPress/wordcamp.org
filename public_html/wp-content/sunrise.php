@@ -557,7 +557,7 @@ function get_canonical_year_url( $domain, $path ) {
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2020-07-01' ) ) {
+			if ( time() <= strtotime( '2021-07-01' ) ) {
 				return "https://europe.wordcamp.$tld/2021/";
 			}
 			break;

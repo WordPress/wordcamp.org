@@ -5,7 +5,17 @@ namespace WordCamp\Privacy;
 defined( 'WPINC' ) || die();
 
 add_filter( 'privacy_policy_url', __NAMESPACE__ . '\set_privacy_policy_url', 10 );
+add_filter( 'the_privacy_policy_link', __NAMESPACE__ . '\use_privacy_policy_link', 10, 2 );
 add_filter( 'map_meta_cap', __NAMESPACE__ . '\disable_496_privacy_tools', 10, 4 );
+
+/**
+ * Get the URL for the Privacy Policy used across all sites.
+ *
+ * @return string
+ */
+function get_privacy_policy_url() {
+	return 'https://wordpress.org/about/privacy/';
+}
 
 /**
  * Set a consistent Privacy Policy across all sites.
@@ -15,7 +25,24 @@ add_filter( 'map_meta_cap', __NAMESPACE__ . '\disable_496_privacy_tools', 10, 4 
  * @return string
  */
 function set_privacy_policy_url( $url ) {
-	return 'https://wordpress.org/about/privacy/';
+	return get_privacy_policy_url();
+}
+
+/**
+ * Bypass the site's privacy policy to show the global wporg page.
+ *
+ * @param string $link The privacy policy link. Empty string if it doesn't exist.
+ *
+ * @return string
+ */
+function use_privacy_policy_link( $link ) {
+	if ( ! $link ) {
+		return sprintf( '<a class="privacy-policy-link" href="%s">%s</a>',
+			esc_url( get_privacy_policy_url() ),
+			esc_html__( 'Privacy Policy', 'wordcamporg')
+		);
+	}
+	return $link;
 }
 
 /**
@@ -25,7 +52,7 @@ function set_privacy_policy_url( $url ) {
  * on a network-wide basis.
  *
  * @param array  $required_capabilities The primitive capabilities that are required to perform the requested meta capability.
- * @param string $requested_capability  The requested meta capability
+ * @param string $requested_capability  The requested meta capability.
  * @param int    $user_id               The user ID.
  * @param array  $args                  Adds the context to the cap. Typically the object ID.
  *

@@ -678,7 +678,7 @@ function switch_email_template( $template_slug ) {
  * @return string
  */
 function get_global_sponsors_string( $sponsor_args = array() ) {
-	$sponsors = array( 'Jetpack', 'WooCommerce', 'Bluehost', 'GoDaddy Pro', 'GreenGeeks' );
+	$sponsors = array( 'Jetpack', 'WooCommerce', 'Bluehost', 'GoDaddy Pro', 'GreenGeeks', 'Yoast' );
 
 	$sponsors = array_map(
 		function ( $string ) {

@@ -333,14 +333,7 @@ add_filter( 'change_locale', function() { $GLOBALS['l10n_unloaded'] = array(); }
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {
-	if ( ! defined( 'WORDCAMP_QBO_CONSUMER_KEY' ) ) {
-		return $options;
-	}
-
 	// Secrets.
-	$options['app_token']       = WORDCAMP_QBO_APP_TOKEN;
-	$options['consumer_key']    = WORDCAMP_QBO_CONSUMER_KEY;
-	$options['consumer_secret'] = WORDCAMP_QBO_CONSUMER_SECRET;
 	$options['hmac_key']        = WORDCAMP_QBO_HMAC_KEY;
 
 	// WordCamp Payments to QBO categories mapping.

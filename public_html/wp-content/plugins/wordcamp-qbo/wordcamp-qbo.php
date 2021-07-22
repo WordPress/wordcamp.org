@@ -6,16 +6,13 @@
 // todo use wcorg_redundant_remote_get for all the calls in this file
 
 use WordCamp\Quickbooks;
+	// why is ^ being used? already migrated parts to v2? seems like it, but left dead code behind
 use WordCamp\Logger;
 
 class WordCamp_QBO {
 	const REMOTE_REQUEST_TIMEOUT = 45; // seconds
 
-	private static $app_token;
-	private static $consumer_key;
-	private static $consumer_secret;
 	private static $hmac_key;
-
 	private static $sandbox_mode;
 	private static $account;
 	private static $api_base_url;
@@ -51,21 +48,12 @@ class WordCamp_QBO {
 		self::$sandbox_mode = WORDCAMP_ENVIRONMENT !== 'production';
 
 		$init_options = wp_parse_args( apply_filters( 'wordcamp_qbo_options', array() ), array(
-			'app_token'       => '',
-			'consumer_key'    => '',
-			'consumer_secret' => '',
 			'hmac_key'        => '',
-
 			'categories_map'  => array(),
 		) );
 
 		foreach ( $init_options as $key => $value ) {
 			self::$$key = $value;
-		}
-
-		// There's no point in doing anything if we don't have the secrets.
-		if ( empty( self::$consumer_key ) ) {
-			return;
 		}
 
 		self::$api_base_url = sprintf(

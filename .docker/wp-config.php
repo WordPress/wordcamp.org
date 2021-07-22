@@ -118,10 +118,6 @@ define( 'TWITTER_CONSUMER_KEY_WORDCAMP_CENTRAL',    '' );
 define( 'TWITTER_CONSUMER_SECRET_WORDCAMP_CENTRAL', '' );
 define( 'TWITTER_BEARER_TOKEN_WORDCAMP_CENTRAL',    '' );
 
-// These can't be empty, but no real values are needed here for local development.
-define( 'WORDCAMP_QBO_APP_TOKEN',       'localtoken' );
-define( 'WORDCAMP_QBO_CONSUMER_KEY',    'localkey' );
-define( 'WORDCAMP_QBO_CONSUMER_SECRET', 'localsecret' );
 define( 'WORDCAMP_QBO_HMAC_KEY',        'localhmac' );
 
 define( 'WORDCAMP_SANDBOX_QBO_CLIENT_ID',        "(Optional) your app's development client ID key goes here" );

@@ -6,6 +6,7 @@ defined( 'WPINC' ) || die();
 
 add_filter( 'classic_editor_network_default_settings', __NAMESPACE__ . '\classic_editor_default_settings' );
 add_filter( 'classic_editor_enabled_editors_for_post_type', __NAMESPACE__ . '\disable_editors_by_post_type', 10, 2 );
+add_action( 'after_setup_theme', __NAMESPACE__ . '\enable_block_templates' );
 
 /**
  * Configure the default settings for the Classic Editor
@@ -57,4 +58,11 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 		$editors['block_editor'] = false;
 	}
 	return $editors;
+}
+
+/**
+ * Enable Templates and Template Parts post types for all themes.
+ */
+function enable_block_templates() {
+	add_theme_support( 'block-templates' );
 }

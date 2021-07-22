@@ -72,7 +72,7 @@ function convert_to_api_urls( $remote_css_url ) {
 /**
  * Add authentication parameters to GitHub API requests
  *
- * This allows us to make 5k requests per hour, instead of just 60.
+ * This allows us to make 12.5k requests per hour, instead of just 60.
  *
  * @action pre_http_request
  *

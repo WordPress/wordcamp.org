@@ -38,7 +38,11 @@ class Export_CSV {
 	 */
 	public $error = null;
 
-
+	/**
+	 * Export_CSV constructor.
+	 *
+	 * @param array $options
+	 */
 	public function __construct( array $options = array() ) {
 		$this->error = new \WP_Error();
 
@@ -206,16 +210,13 @@ class Export_CSV {
 		 * The file encoding can also effect the behavior; e.g., opening/importing as UTF-8 will enable newline
 		 * characters as delimiters.
 		 */
-		$delimiters = array(
-			',', ';', ':', '|', '^',
-			"\n", "\t", " "
-		);
+		$delimiters = array( ',', ';', ':', '|', '^', "\n", "\t", ' ' );
 
-		foreach( $fields as $index => $field ) {
+		foreach ( $fields as $index => $field ) {
 			// Escape trigger characters at the start of a new field
 			$first_cell_character = mb_substr( $field, 0, 1 );
 			$is_trigger_character = in_array( $first_cell_character, $active_content_triggers, true );
-			$is_delimiter         = in_array( $first_cell_character, $delimiters,              true );
+			$is_delimiter         = in_array( $first_cell_character, $delimiters, true );
 
 			if ( $is_trigger_character || $is_delimiter ) {
 				$field = "'" . $field;
@@ -289,7 +290,7 @@ class Export_CSV {
 
 			foreach ( $this->error->get_error_codes() as $code ) {
 				foreach ( $this->error->get_error_messages( $code ) as $message ) {
-					echo "$code: $message\n";
+					echo "$code: $message\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				}
 			}
 
@@ -299,7 +300,7 @@ class Export_CSV {
 		header( 'Content-Type: text/csv' );
 		header( sprintf( 'Content-Disposition: attachment; filename="%s"', sanitize_file_name( $this->filename ) ) );
 
-		echo $content;
+		echo $content; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		die();
 	}

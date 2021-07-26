@@ -329,12 +329,14 @@ add_action( 'after_setup_theme', function() {
  *
  * Hopefully this won't be necessary after core-39210 is fixed.
  */
-add_filter( 'change_locale', function() { $GLOBALS['l10n_unloaded'] = array(); }, 99 );
+add_filter( 'change_locale', function() {
+	$GLOBALS['l10n_unloaded'] = array();
+}, 99 );
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {
 	// Secrets.
-	$options['hmac_key']        = WORDCAMP_QBO_HMAC_KEY;
+	$options['hmac_key'] = WORDCAMP_QBO_HMAC_KEY;
 
 	// WordCamp Payments to QBO categories mapping.
 	$options['categories_map'] = array(

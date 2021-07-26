@@ -462,7 +462,7 @@ class WordCamp_QBO {
 		$realm_id     = self::qbo_client()->get_realm_id();
 
 		// Note: This has a character limit when combined with $description; see $customer_memo
-		$payment_instructions = trim( str_replace( "\t", '', "
+		$payment_instructions = trim( str_replace( "\t", '', '
 			Please indicate the invoice number in the memo field when making your payment.
 
 			To pay via credit card, please fill out the payment form at https://central.wordcamp.org/sponsorship-payment/
@@ -481,7 +481,7 @@ class WordCamp_QBO {
 			Bank Routing & Transit Number: 322271627
 			Account Number: 157120285
 
-			Please remit checks (USD only) to: WordPress Community Support, PBC, P.O. Box 101768, Pasadena, CA 91189-1768"
+			Please remit checks (USD only) to: WordPress Community Support, PBC, P.O. Box 101768, Pasadena, CA 91189-1768'
 		) );
 
 		/*

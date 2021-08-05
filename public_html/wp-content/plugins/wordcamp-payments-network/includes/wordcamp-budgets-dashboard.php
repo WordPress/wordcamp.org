@@ -1121,7 +1121,7 @@ function redact_paid_requests() {
 	global $wpdb;
 
 	if ( ! is_main_site() ) {
-		return;
+		wp_die( 'Must be run on Central.' );
 	}
 
 	$reimbursements_index = Reimbursements_Dashboard\get_index_table_name();

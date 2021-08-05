@@ -37,7 +37,7 @@ class WCP_Encryption {
 	 *
 	 * @param string $raw_data The string to encrypt.
 	 *
-	 * @return string|object Encrypted string (encrypted:data:key:iv:hmac) or WP_Error.
+	 * @return string|WP_Error Encrypted string (encrypted:data:iv:hmac) or WP_Error.
 	 */
 	public static function encrypt( $raw_data ) {
 		if ( ! is_string( $raw_data ) ) {
@@ -55,7 +55,7 @@ class WCP_Encryption {
 		$iv = openssl_random_pseudo_bytes( 16, $is_iv_strong );
 
 		if ( ! $is_iv_strong ) {
-			return new WP_Error( 'encryption-error', 'Could not obtain a strong iv.' );
+			return new WP_Error( 'encryption-error', 'Could not obtain a strong IV.' );
 		}
 
 		$data         = array();
@@ -80,8 +80,8 @@ class WCP_Encryption {
 	 * @return string|object The decrypted data or WP_Error.
 	 */
 	public static function decrypt( $data ) {
-		if ( ! is_string( $data ) ) {
-			return new WP_Error( 'encryption-error', 'Only strings can be decrypted.' );
+		if ( ! is_string( $data ) || empty( $data ) ) {
+			return new WP_Error( 'encryption-error', 'Only non-empty strings can be decrypted.' );
 		}
 
 		if ( ! self::init() ) {
@@ -106,7 +106,7 @@ class WCP_Encryption {
 	 * Look for encrypted:... and run self::decrypt() if found.
 	 *
 	 * @param string $data  Maybe some encrypted data.
-	 * @param object $error Null or WP_Error on error (by reference).
+	 * @param null|WP_Error $error Null or WP_Error on error (by reference).
 	 *
 	 * @return mixed The decrypted data, an empty string on decryption error, or anything else that's passed and isn't a string.
 	 */

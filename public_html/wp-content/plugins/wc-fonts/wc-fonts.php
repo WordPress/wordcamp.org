@@ -257,7 +257,7 @@ class WordCamp_Fonts_Plugin {
 			$lines = explode( "\n", $input['google-web-fonts'] );
 			foreach ( $lines as $line ) {
 				$matches = array();
-				$url     = preg_match( '#fonts\.googleapis\.com/css\?family=[^\)\'"]+#', $line, $matches );
+				$url     = preg_match( '#fonts\.googleapis\.com/css2?\?family=[^\)\'"]+#', $line, $matches );
 
 				if ( $matches ) {
 					$url = esc_url_raw( 'http://' . $matches[0] );

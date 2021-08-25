@@ -6,6 +6,7 @@ RUN apt-get update \
         build-essential \
         git \
         less \
+        libicu-dev \
         libjpeg-dev \
         libpng-dev \
         libzip-dev \
@@ -22,12 +23,14 @@ RUN apt-get update \
         wget
 
 # Install additional PHP extensions.
+RUN docker-php-ext-configure intl
+RUN docker-php-ext-configure gd --with-jpeg
 RUN docker-php-ext-install -j "$(nproc)" \
     gd \
+    intl \
     mysqli \
     opcache \
     zip
-RUN docker-php-ext-configure gd --with-jpeg
 
 # Add PHP configurations.
 COPY config/opcache-recommended.ini /usr/local/etc/php/conf.d/opcache-recommended.ini

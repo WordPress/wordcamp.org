@@ -129,7 +129,7 @@ function register_session_post_meta() {
 			'show_in_rest'  => true,
 			'single'        => true,
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
-			'default'       => 50,
+			'default'       => 50 * MINUTE_IN_SECONDS,
 		)
 	);
 	register_post_meta(

@@ -62,7 +62,7 @@ function register_block_categories( $default_categories ) {
 	return $default_categories;
 }
 
-add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories' );
+add_filter( 'block_categories_all', __NAMESPACE__ . '\register_block_categories' );
 
 /**
  * Register assets.

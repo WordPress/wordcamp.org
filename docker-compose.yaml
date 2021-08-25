@@ -20,6 +20,8 @@ services:
             - "1080:1080"
         environment:
             - IS_LOCAL_DEV=1
+        networks:
+            - wordcamp-network
         depends_on:
             - wordcamp.db
         # todo configure entrypoint to work around annoying wp-cli allow-root problem -- https://github.com/wp-cli/wp-cli/issues/1838#issuecomment-434077907
@@ -31,11 +33,17 @@ services:
             dockerfile: Dockerfile.mysql
             # todo maybe rename `wordcamp.db` to something more correct.
         volumes:
-            - dbdata:/var/lib/mysql
+            - wordcampdb:/var/lib/mysql
             - .docker/bin:/var/scripts
         ports:
             # Uses port 3307 to avoid conflicts with possible host mysql (running on 3306).
             - "3307:3306"
+        networks:
+            - wordcamp-network
 
 volumes:
-    dbdata:
+    wordcampdb:
+
+networks:
+  wordcamp-network:
+    driver: bridge

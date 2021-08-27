@@ -2,7 +2,7 @@
  * Internal dependencies
  */
 import './front-end.scss';
-import './style.scss';
+import './edit.scss';
 import LiveSchedule from './block.js';
 import renderFrontend from '../../utils/render-frontend';
 

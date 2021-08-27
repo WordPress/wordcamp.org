@@ -1,7 +1,7 @@
 /**
  * Internal dependencies
  */
-import './style.scss';
+import './edit.scss';
 
 /**
  * Additional component exports

@@ -11,7 +11,7 @@ import { Component } from '@wordpress/element';
 /**
  * Internal dependencies
  */
-import './style.scss';
+import './edit.scss';
 
 /**
  * Implements post list markup for WordCamp blocks, with options for list and grid layout.

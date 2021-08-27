@@ -11,7 +11,7 @@ import { Fragment } from '@wordpress/element';
 /**
  * Internal dependencies
  */
-import './style.scss';
+import './edit.scss';
 
 /**
  * Component for block controls when the block has a specific mode selected.

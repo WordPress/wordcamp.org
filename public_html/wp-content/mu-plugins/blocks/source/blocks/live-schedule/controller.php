@@ -44,9 +44,9 @@ function init() {
 
 	wp_register_style(
 		'wordcamp-live-schedule',
-		\WordCamp\Blocks\PLUGIN_URL . 'build/live-schedule.min.css',
+		\WordCamp\Blocks\PLUGIN_URL . 'build/live-schedule.css',
 		array(),
-		filemtime( \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.min.css' )
+		filemtime( \WordCamp\Blocks\PLUGIN_DIR . 'build/live-schedule.css' )
 	);
 
 	register_block_type(

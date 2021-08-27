@@ -15,7 +15,7 @@ import { withInstanceId } from '@wordpress/compose';
 /**
  * Internal dependencies
  */
-import './style.scss';
+import './edit.scss';
 
 /**
  * Style object passed to ReactSelect component.

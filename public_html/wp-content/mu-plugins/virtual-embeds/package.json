@@ -27,7 +27,7 @@
 		"build": "wp-scripts build",
 		"lint:js": "wp-scripts lint-js",
 		"lint:css": "wp-scripts lint-style",
-		"format:js": "wp-scripts format-js",
+		"format:js": "wp-scripts format src --config=../../../../.prettierrc.js",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"
 	}
 }

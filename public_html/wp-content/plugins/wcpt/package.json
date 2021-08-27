@@ -20,7 +20,7 @@
 		"start": "wp-scripts start",
 		"build": "wp-scripts build",
 		"lint:js": "wp-scripts lint-js javascript/tracker",
-		"format:js": "wp-scripts format-js javascript/tracker",
+		"format:js": "wp-scripts format javascript/tracker --config=../../../../.prettierrc.js",
 		"lint:css": "wp-scripts lint-style javascript/tracker/**/*.scss css/**/*.css"
 	}
 }

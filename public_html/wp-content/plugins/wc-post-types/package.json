@@ -28,7 +28,7 @@
 	"scripts": {
 		"start": "wp-scripts start",
 		"build": "wp-scripts build",
-		"format:js": "wp-scripts format-js js/src",
+		"format:js": "wp-scripts format js/src --config=../../../../.prettierrc.js",
 		"lint:js": "wp-scripts lint-js js/src",
 		"lint:css": "wp-scripts lint-style css/editor.css",
 		"lint:pkg-json": "wp-scripts lint-pkg-json"

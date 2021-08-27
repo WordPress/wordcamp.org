@@ -50,7 +50,7 @@
 		"start": "wp-scripts start",
 		"build": "wp-scripts build",
 		"lint:js": "wp-scripts lint-js",
-		"format:js": "wp-scripts format-js",
+		"format:js": "wp-scripts format source --config=../../../../.prettierrc.js",
 		"lint:css": "wp-scripts lint-style '**/*.scss'",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"test": "wp-scripts test-unit-js"

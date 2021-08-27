@@ -23,6 +23,7 @@
 	"scripts": {
 		"start": "wp-scripts start --entry ./src/inert.js --output-filename inert.js",
 		"build": "wp-scripts build --entry ./src/inert.js --output-filename inert.js",
+		"format:js": "echo \"No formatting.\"",
 		"lint:js": "wp-scripts lint-js",
 		"lint:css": "wp-scripts lint-style"
 	}

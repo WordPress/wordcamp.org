@@ -43,13 +43,12 @@ export const avatarSizePresets = [
  * This tries to mirror the markup output by WP's get_avatar function, with the addition
  * of an optional wrapping link and a container div.
  *
- * @param {Object} props {
- *     @type {string} className
- *     @type {string} name
- *     @type {number} size
- *     @type {string} url
- *     @type {string} imageLink
- * }
+ * @param {Object} props
+ * @param {string} props.className
+ * @param {string} props.name
+ * @param {number} props.size
+ * @param {string} props.url
+ * @param {string} props.imageLink
  * @return {Element}
  */
 export function AvatarImage( { className, name, size, url, imageLink } ) {

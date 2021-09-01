@@ -11,12 +11,12 @@ import { BaseControl, Toolbar } from '@wordpress/components';
 /**
  * Component for a UI control for image alignment.
  *
- * @param  root0
- * @param  root0.label
- * @param  root0.help
- * @param  root0.value
- * @param  root0.onChange
- * @param  root0.alignOptions
+ * @param {Object}   root0
+ * @param {Node}     root0.label
+ * @param {Node}     root0.help
+ * @param {string}   root0.value
+ * @param {Function} root0.onChange
+ * @param {Object[]} root0.alignOptions
  * @return {Element}
  */
 function ImageAlignmentControl( { label, help, value, onChange, alignOptions } ) {

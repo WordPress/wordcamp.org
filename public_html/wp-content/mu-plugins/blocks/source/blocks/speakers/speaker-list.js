@@ -25,10 +25,9 @@ import { arrayTokenReplace, tokenSplit } from '../../i18n';
 /**
  * Component for the section of each speaker post that displays information about relevant sessions.
  *
- * @param {Object} props {
- *     @type {Object} speaker
- *     @type {Array}  tracks
- * }
+ * @param {Object} props
+ * @param {Object} props.speaker
+ * @param {Array}  props.tracks
  * @return {Element}
  */
 function SpeakerSessions( { speaker, tracks } ) {

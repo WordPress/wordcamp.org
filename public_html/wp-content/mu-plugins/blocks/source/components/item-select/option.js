@@ -14,14 +14,13 @@ import { AvatarImage } from '../image';
  * Not all of the props need or should have a value. An option representing a speaker will have
  * an avatar prop, but not an icon or a count (of terms).
  *
- * @param {Object} props {
- *     @type {string} avatar
- *     @type {string} icon
- *     @type {string} label
- *     @type {number} count
- *     @type {string} context - `menu` or `value` for whether it's in the menu dropdown or the selected token.
- *     @type {Node}   details
- * }
+ * @param {Object} props
+ * @param {string} props.avatar
+ * @param {string} props.icon
+ * @param {string} props.label
+ * @param {number} props.count
+ * @param {string} props.context - `menu` or `value` for whether it's in the menu dropdown or the selected token.
+ * @param {Node}   props.details
  * @return {Element}
  */
 export function Option( { avatar, context, count, details, icon, label } ) {

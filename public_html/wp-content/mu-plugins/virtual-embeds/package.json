@@ -12,8 +12,14 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Blocks%22"
 	},
 	"devDependencies": {
+		"@wordpress/block-editor": "7.0.1",
+		"@wordpress/blocks": "11.0.1",
+		"@wordpress/components": "16.0.0",
+		"@wordpress/element": "4.0.0",
 		"@wordpress/eslint-plugin": "9.1.1",
-		"@wordpress/scripts": "18.0.0"
+		"@wordpress/i18n": "4.2.1",
+		"@wordpress/scripts": "18.0.0",
+		"@wordpress/url": "3.2.1"
 	},
 	"eslintConfig": {
 		"extends": "../../../../.eslintrc.js"

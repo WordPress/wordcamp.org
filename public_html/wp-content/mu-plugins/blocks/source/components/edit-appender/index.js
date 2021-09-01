@@ -17,10 +17,9 @@ import './edit.scss';
  * Component for block controls when the block has a specific mode selected.
  *
  * @param {Object} props
- *     @type {Node}   appender
- *     @type {string} className
- *     @type {Node}   content
- * }
+ * @param {Node}   props.appender
+ * @param {string} props.className
+ * @param {Node}   props.content
  * @return {Element}
  */
 function EditAppender( { className, content, appender } ) {

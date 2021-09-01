@@ -12,10 +12,10 @@ import { BlockControls } from '@wordpress/block-editor';
 /**
  * Component for a toolbar UI to the top of a post list block to change the layout.
  *
- * @param  root0
- * @param  root0.layout
- * @param  root0.options
- * @param  root0.setAttributes
+ * @param {Object}   root0
+ * @param {string}   root0.layout
+ * @param {Object[]} root0.options
+ * @param {Function} root0.setAttributes
  * @return {Element}
  */
 function LayoutToolbar( { layout, options, setAttributes } ) {

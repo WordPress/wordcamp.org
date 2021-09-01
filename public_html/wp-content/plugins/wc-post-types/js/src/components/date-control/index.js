@@ -1,6 +1,7 @@
 /**
  * WordPress dependencies
  */
+// eslint-disable-next-line @wordpress/no-unsafe-wp-apis -- Date settings OK.
 import { __experimentalGetSettings, dateI18n } from '@wordpress/date';
 import { BaseControl, Button, DateTimePicker, Dropdown } from '@wordpress/components';
 

@@ -8,7 +8,7 @@ import { useDispatch, useSelect } from '@wordpress/data';
  *
  * @param {string} key          Meta key.
  * @param {?*}     defaultValue A default value, if the key is not set.
- * @return {[*,Function]} A pair of values: the current meta value and a callback to update this meta value.
+ * @return {Object<*,Function>} A pair of values: the current meta value and a callback to update this meta value.
  */
 export default function usePostMeta( key, defaultValue = '' ) {
 	const metaValue = useSelect( ( select ) => {

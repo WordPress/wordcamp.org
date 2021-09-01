@@ -25,8 +25,8 @@ import { arrayTokenReplace, intersperse, listify, tokenSplit } from '../../i18n'
 /**
  * Component for the section of each session post that displays information about the session's speakers.
  *
- * @param          session.session
  * @param {Object} session
+ * @param {Object} session.session
  * @return {Element}
  */
 function SessionSpeakers( { session } ) {
@@ -70,8 +70,8 @@ function SessionSpeakers( { session } ) {
 /**
  * Component for the section of each session post that displays a session's assigned categories.
  *
- * @param          session.session
  * @param {Object} session
+ * @param {Object} session.session
  * @return {Element}
  */
 function SessionCategory( { session } ) {

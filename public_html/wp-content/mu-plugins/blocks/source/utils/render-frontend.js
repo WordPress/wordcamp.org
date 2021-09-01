@@ -65,7 +65,7 @@ class FrontBlockCrashBoundary extends Component {
  * @param {string}   selector   CSS selector to match the elements to replace.
  * @param {Function} Block      React block to use as a replacement.
  * @param {Function} [getProps] Function to generate the props object for the
- * block.
+ *                              block.
  */
 export default ( selector, Block, getProps = getPropsFallback ) => {
 	const containers = document.querySelectorAll( selector );

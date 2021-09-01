@@ -23,7 +23,6 @@ import { sortBySlug } from './data';
  * @param {Array}  props.sessions
  * @param {Array}  props.displayedTracks
  * @param {Array}  props.overlappingSessions
- *
  * @return {Element}
  */
 export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
@@ -85,7 +84,6 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
  * Group sessions by their time slot.
  *
  * @param {Array} ungroupedSessions
- *
  * @return {Object}
  */
 function groupSessionsByTimeSlot( ungroupedSessions ) {

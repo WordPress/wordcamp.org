@@ -26,7 +26,6 @@ const rawScheduleData = window.WordCampBlocks.schedule || {};
  * @param {Array}  props.allTracks
  * @param {Object} props.attributes
  * @param {Object} props.settings
- *
  * @return {Element}
  */
 function ScheduleGridWithContext( props ) {
@@ -64,7 +63,6 @@ function ScheduleGridWithContext( props ) {
  * document that pulling [...pulling what? forgot what i was gonna write - todo]
  *
  * @param {Element} element
- *
  * @return {Object}
  */
 function getScheduleGrdProps( element ) {

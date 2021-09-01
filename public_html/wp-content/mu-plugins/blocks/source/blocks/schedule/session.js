@@ -29,7 +29,6 @@ import { implicitTrack } from './data';
  * @param {Array}   props.displayedTracks
  * @param {boolean} props.showCategories
  * @param {boolean} props.overlapsAnother
- *
  * @return {Element}
  */
 export function Session( { session, displayedTracks, showCategories, overlapsAnother } ) {
@@ -139,9 +138,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
  * This assumes that both arrays are sorted using the same criteria, and that their order matches the order in
  * which they appear in the schedule.
  *
- * @param {Array} assignedTrackIds Tracks that the given session is assigned to.
+ * @param {Array} assignedTrackIds  Tracks that the given session is assigned to.
  * @param {Array} displayedTrackIds Tracks that are being displayed in the grid.
- *
  * @return {boolean}
  */
 function sessionSpansNonContiguousTracks( assignedTrackIds, displayedTrackIds ) {
@@ -170,7 +168,6 @@ function sessionSpansNonContiguousTracks( assignedTrackIds, displayedTrackIds ) 
  *
  * @param {Array}  speakers
  * @param {string} renderEnvironment
- *
  * @return {Element}
  */
 function renderSpeakers( speakers, renderEnvironment ) {
@@ -206,7 +203,6 @@ function renderSpeakers( speakers, renderEnvironment ) {
  * Render the session's tracks
  *
  * @param {Array} tracks
- *
  * @return {Element}
  */
 function renderAssignedTracks( tracks ) {
@@ -231,7 +227,6 @@ function renderAssignedTracks( tracks ) {
  * Render the session's categories
  *
  * @param {Array} categories
- *
  * @return {Element}
  */
 function renderCategories( categories ) {
@@ -256,7 +251,6 @@ function renderCategories( categories ) {
  * Warn organizers about problems with the session.
  *
  * @param {boolean} spansNonContiguousTracks
- *
  * @return {Element}
  */
 function renderWarnings( spansNonContiguousTracks ) {
@@ -292,7 +286,6 @@ function renderWarnings( spansNonContiguousTracks ) {
  * supports the old shortcode and this block.
  *
  * @param {string} title
- *
  * @return {Element}
  */
 function renderFavoriteButton( title ) {

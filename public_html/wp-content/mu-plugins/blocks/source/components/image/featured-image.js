@@ -78,7 +78,6 @@ export class FeaturedImage extends Component {
 	 * Get the details of the widest image size available.
 	 *
 	 * @param {Object} media_details
-	 *
 	 * @return {Object}
 	 */
 	static getWidestImage( media_details ) {
@@ -100,7 +99,6 @@ export class FeaturedImage extends Component {
 	 *
 	 * @param {number} newWidth
 	 * @param {Object} image
-	 *
 	 * @return {number|null}
 	 */
 	static getNewHeight( newWidth, image ) {

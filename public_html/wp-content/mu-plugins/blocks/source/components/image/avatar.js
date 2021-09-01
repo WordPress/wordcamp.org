@@ -50,7 +50,6 @@ export const avatarSizePresets = [
  *     @type {string} url
  *     @type {string} imageLink
  * }
- *
  * @return {Element}
  */
 export function AvatarImage( { className, name, size, url, imageLink } ) {

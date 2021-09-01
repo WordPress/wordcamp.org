@@ -21,7 +21,6 @@ import './edit.scss';
  *     @type {string} className
  *     @type {Node}   content
  * }
- *
  * @return {Element}
  */
 function EditAppender( { className, content, appender } ) {

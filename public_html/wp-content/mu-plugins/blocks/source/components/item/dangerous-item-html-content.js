@@ -21,6 +21,11 @@ import ItemPermalink from './item-permalink';
  * DO NOT use this to output untrusted content. Note that this takes a blob of arbitrary HTML as input,
  * and uses RawHTML (which uses dangerouslySetHTML) to render it in the node tree.
  *
+ * @param  root0
+ * @param  root0.className
+ * @param  root0.content
+ * @param  root0.link
+ * @param  root0.linkText
  * @return {Element}
  */
 function DangerousItemHTMLContent( { className, content, link, linkText } ) {

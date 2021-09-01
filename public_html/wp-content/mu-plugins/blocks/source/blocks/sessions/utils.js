@@ -18,7 +18,6 @@ import { arrayTokenReplace, tokenSplit } from '../../i18n';
  * passed to any react component and renders as text in the element on the browser.
  *
  * @param {Object} session
- *
  * @return {Array}
  */
 export function getSessionDetails( session ) {

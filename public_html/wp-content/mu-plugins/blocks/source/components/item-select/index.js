@@ -91,7 +91,6 @@ class ItemSelectBase extends Component {
 	 *
 	 * @param {Object} option
 	 * @param {Array}  selected
-	 *
 	 * @return {boolean}
 	 */
 	static isOptionDisabled( option, selected ) {
@@ -108,7 +107,6 @@ class ItemSelectBase extends Component {
 	 * Render the label of an option group.
 	 *
 	 * @param {Object} groupData
-	 *
 	 * @return {Element}
 	 */
 	static formatGroupLabel( groupData ) {

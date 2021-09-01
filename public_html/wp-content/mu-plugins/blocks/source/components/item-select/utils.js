@@ -100,7 +100,6 @@ export const buildOptions = createSelector(
  *
  * @param {string} value
  * @param {Array}  options
- *
  * @return {string}
  */
 export function getOptionLabel( value, options ) {

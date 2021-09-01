@@ -22,7 +22,6 @@ import { AvatarImage } from '../image';
  *     @type {string} context - `menu` or `value` for whether it's in the menu dropdown or the selected token.
  *     @type {Node}   details
  * }
- *
  * @return {Element}
  */
 export function Option( { avatar, context, count, details, icon, label } ) {

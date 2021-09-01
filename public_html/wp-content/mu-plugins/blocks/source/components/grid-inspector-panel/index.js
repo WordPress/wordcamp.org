@@ -16,6 +16,10 @@ import { __ } from '@wordpress/i18n';
  *
  * Intended to be used with PostList component, it will use and set attributes `layout` and `grid_columns`.
  *
+ * @param  root0
+ * @param  root0.attributes
+ * @param  root0.blockData
+ * @param  root0.setAttributes
  * @return {Element}
  */
 function GridInspectorPanel( { attributes, blockData, setAttributes } ) {

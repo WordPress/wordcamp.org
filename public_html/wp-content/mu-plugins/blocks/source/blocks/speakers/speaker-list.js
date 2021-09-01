@@ -29,7 +29,6 @@ import { arrayTokenReplace, tokenSplit } from '../../i18n';
  *     @type {Object} speaker
  *     @type {Array}  tracks
  * }
- *
  * @return {Element}
  */
 function SpeakerSessions( { speaker, tracks } ) {

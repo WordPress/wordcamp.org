@@ -70,7 +70,6 @@ export const settings = {
  * @param {Function} props.setAttributes
  * @param {string}   props.className
  * @param {boolean}  props.isSelected
- *
  * @return {Element}
  */
 function Edit( { attributes, setAttributes, className, isSelected } ) {
@@ -108,7 +107,6 @@ function Edit( { attributes, setAttributes, className, isSelected } ) {
  *
  * @param {Object} props
  * @param {*}      props.error
- *
  * @return {Element}
  */
 function InvalidUrl( { error } ) {
@@ -147,7 +145,6 @@ function InvalidUrl( { error } ) {
  * only for the video player `iframe`. See https://developers.google.com/youtube/iframe_api_reference?csw=1.
  *
  * @param {string} url
- *
  * @return {string}
  */
 function getVideoId( url ) {
@@ -168,7 +165,6 @@ function getVideoId( url ) {
  * @param {string}  props.classes
  * @param {string}  props.videoId
  * @param {boolean} props.isSelected
- *
  * @return {Element}
  */
 function Preview( { classes, videoId, isSelected } ) {

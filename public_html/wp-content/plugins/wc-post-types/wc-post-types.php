@@ -70,7 +70,8 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'option_default_comment_status', array( $this, 'default_comment_ping_status' ) );
 		add_filter( 'option_default_ping_status', array( $this, 'default_comment_ping_status' ) );
 
-		add_action( 'init', array( $this, 'rest_init' ), 9 );
+		// Needs to run before WordCamp\Blocks\register_assets.
+		add_action( 'init', array( $this, 'rest_init' ), 8 );
 	}
 
 	/**

@@ -33,6 +33,7 @@ function load_includes() {
 	require_once $components_dir . 'post-list/controller.php';
 
 	// Blocks.
+	require_once $blocks_dir . 'avatar/controller.php';
 	require_once $blocks_dir . 'organizers/controller.php';
 	require_once $blocks_dir . 'schedule/controller.php';
 	require_once $blocks_dir . 'sessions/controller.php';

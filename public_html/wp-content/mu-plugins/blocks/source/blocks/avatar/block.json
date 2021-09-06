@@ -1,0 +1,24 @@
+{
+	"apiVersion": 2,
+	"name": "wordcamp/avatar",
+	"title": "Avatar",
+	"category": "wordcamp",
+	"description": "Display the current person's avatar.",
+	"textdomain": "wordcamporg",
+	"usesContext": [ "postId", "postType", "queryId" ],
+	"attributes": {
+		"isLink": {
+			"type": "boolean",
+			"default": false
+		},
+		"size": {
+			"type": "number"
+		}
+	},
+	"supports": {
+		"align": [ "left", "right", "center" ],
+		"html": false
+	},
+	"editor_script": "wordcamp-blocks",
+	"editor_style": "wordcamp-blocks"
+}

@@ -17,6 +17,11 @@
 	},
 	"supports": {
 		"align": [ "left", "right", "center" ],
+		"color": {
+			"__experimentalDuotone": "img",
+			"text": false,
+			"background": false
+		},
 		"html": false
 	},
 	"editor_script": "wordcamp-blocks",

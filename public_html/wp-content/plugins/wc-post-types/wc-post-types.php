@@ -226,10 +226,6 @@ class WordCamp_Post_Types_Plugin {
 			if ( $query->get( 'orderby' ) === '_wcpt_session_time' ) {
 				$query->set( 'meta_key', '_wcpt_session_time' );
 				$query->set( 'orderby', 'meta_value_num' );
-			} else if ( $query->get( 'orderby' ) === '' ) {
-				$query->set( 'meta_key', '_wcpt_session_time' );
-				$query->set( 'orderby', 'meta_value_num' );
-				$query->set( 'order', 'asc' );
 			}
 		}
 	}

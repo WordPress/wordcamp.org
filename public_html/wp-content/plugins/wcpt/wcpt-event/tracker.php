@@ -152,7 +152,7 @@ function enqueue_scripts( $application_type ) {
 
 	wp_register_style(
 		'wpc-application-tracker',
-		plugins_url( 'javascript/tracker/build/applications.min.css', dirname( __FILE__ ) ),
+		plugins_url( 'javascript/tracker/build/style-applications.css', dirname( __FILE__ ) ),
 		array( 'dashicons', 'list-tables' ),
 		$script_info['version']
 	);

@@ -25,9 +25,9 @@ function init() {
 
 	wp_register_style(
 		'wordcamp-schedule-front-end',
-		PLUGIN_URL . 'build/schedule-front-end.min.css',
+		PLUGIN_URL . 'build/schedule-front-end.css',
 		array(),
-		filemtime( PLUGIN_DIR . 'build/schedule-front-end.min.css' )
+		filemtime( PLUGIN_DIR . 'build/schedule-front-end.css' )
 	);
 
 	wp_set_script_translations( 'wordcamp-schedule-front-end', 'wordcamporg' );

@@ -22,7 +22,6 @@ export const ScheduleGridContext = createContext();
  *
  * @param {Object} props
  * @param {Array}  props.sessions
- *
  * @return {Element}
  */
 export function ScheduleGrid( { sessions } ) {
@@ -66,7 +65,6 @@ export function ScheduleGrid( { sessions } ) {
  * Create an array of sessions, indexed by their date (according to the site's timezone).
  *
  * @param {Array} sessions
- *
  * @return {Array}
  */
 function groupSessionsByDate( sessions ) {
@@ -96,7 +94,6 @@ function groupSessionsByDate( sessions ) {
  * @param {Object} props
  * @param {string} props.localDate The day being displayed in Y-m-d format (in the site's timezone).
  * @param {Array}  props.sessions  The sessions assigned to the displayed date.
- *
  * @return {Element}
  */
 function ScheduleDay( { localDate, sessions } ) {
@@ -176,7 +173,6 @@ function ScheduleDay( { localDate, sessions } ) {
  * @param {Array}   allTracks
  * @param {boolean} chooseSpecificTracks
  * @param {Array}   chosenTrackIds
- *
  * @return {Array}
  */
 function getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTrackIds ) {
@@ -221,7 +217,6 @@ function getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTr
  * 9:15am.
  *
  * @param {Array} ungroupedSessions
- *
  * @return {Array}
  */
 function getOverlappingSessions( ungroupedSessions ) {
@@ -255,7 +250,6 @@ function getOverlappingSessions( ungroupedSessions ) {
  * appear in the list for each of their tracks.
  *
  * @param {Array} ungroupedSessions
- *
  * @return {Object}
  */
 function groupSessionsByTrack( ungroupedSessions ) {
@@ -290,7 +284,6 @@ function groupSessionsByTrack( ungroupedSessions ) {
  * other text overlaps them.
  *
  * @param {Array} overlappingSessions
- *
  * @return {Element}
  */
 function renderOverlappingSessionsWarning( overlappingSessions ) {
@@ -325,7 +318,6 @@ function renderOverlappingSessionsWarning( overlappingSessions ) {
  * @param {string} containerId
  * @param {Array}  tracks
  * @param {Array}  startEndTimes
- *
  * @return {string}
  */
 function renderDynamicGridStyles( containerId, tracks, startEndTimes ) {
@@ -348,7 +340,6 @@ function renderDynamicGridStyles( containerId, tracks, startEndTimes ) {
  * Render dynamic `grid-template-column` styles.
  *
  * @param {Array} tracks
- *
  * @return {string}
  */
 function renderGridTemplateColumns( tracks ) {
@@ -389,7 +380,6 @@ function renderGridTemplateColumns( tracks ) {
  *
  * @param {Array} startEndTimes All of the start and end times that should be present in the grid. They can be
  *                              passed in any format that Moment.js can parse.
- *
  * @return {string}
  */
 function renderGridTemplateRows( startEndTimes ) {
@@ -423,8 +413,7 @@ function renderGridTemplateRows( startEndTimes ) {
  * where it wouldn't be obvious to the user why the tracks that they selected aren't being shown.
  *
  * @param {Object} props
- * @param {Array} props.displayedTracks
- *
+ * @param {Array}  props.displayedTracks
  * @return {Element}
  */
 function GridColumnHeaders( { displayedTracks } ) {

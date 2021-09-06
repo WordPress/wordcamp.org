@@ -48,6 +48,9 @@ function fetchFromAPI() {
 /**
  * Given sessions, tracks, and the current time, find out which tracks are currently running, and which are next.
  *
+ * @param {Object}   root0
+ * @param {Object[]} root0.sessions
+ * @param {Object[]} root0.tracks
  * @return {Array} A list of objects, `{track, now, next}`.
  */
 export function getCurrentSessions( { sessions, tracks } ) {

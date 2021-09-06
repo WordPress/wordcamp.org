@@ -24,7 +24,6 @@ import { DATE_SLUG_FORMAT } from './data';
  * @param {Object}   props.allTracks
  * @param {Function} props.setAttributes
  * @param {Array}    props.settings
- *
  * @return {Element}
  */
 export default function ScheduleInspectorControls(
@@ -65,7 +64,6 @@ export default function ScheduleInspectorControls(
  * Get all of the dates (in site/venue timezone) that the given sessions are assigned to.
  *
  * @param {Array} sessions
- *
  * @return {string[]}
  */
 function getDisplayedDays( sessions ) {
@@ -89,7 +87,6 @@ function getDisplayedDays( sessions ) {
  * @param {Array}    props.chosenDays
  * @param {string}   props.dateFormat
  * @param {Function} props.setAttributes
- *
  * @return {Element}
  */
 function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, dateFormat, setAttributes } ) {
@@ -158,13 +155,11 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
  * @todo There's a couple issues related to hierarchical taxonomies:
  * https://github.com/WordPress/gutenberg/issues/13816#issuecomment-532885577
  * https://github.com/WordPress/gutenberg/issues/17476
- *
  * @param {Array}    props
  * @param {boolean}  props.chooseSpecificTracks
  * @param {Object}   props.allTracks
  * @param {Array}    props.chosenTrackIds
  * @param {Function} props.setAttributes
- *
  * @return {Element}
  */
 function ChooseSpecificTracks( { chooseSpecificTracks, allTracks, chosenTrackIds, setAttributes } ) {

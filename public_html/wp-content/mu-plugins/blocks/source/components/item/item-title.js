@@ -12,6 +12,12 @@ import { __ } from '@wordpress/i18n';
 /**
  * Component for an entity title, optionally linked.
  *
+ * @param {Object} root0
+ * @param {string} root0.align
+ * @param {string} root0.className
+ * @param {number} root0.headingLevel
+ * @param {string} root0.link
+ * @param {string} root0.title
  * @return {Element}
  */
 function ItemTitle( { align, className, headingLevel, link, title } ) {

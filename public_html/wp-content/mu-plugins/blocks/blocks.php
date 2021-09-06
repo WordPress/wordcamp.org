@@ -86,9 +86,9 @@ function register_assets() {
 
 	wp_register_style(
 		'wordcamp-blocks',
-		PLUGIN_URL . 'build/blocks.min.css',
+		PLUGIN_URL . 'build/blocks.css',
 		array(),
-		filemtime( PLUGIN_DIR . 'build/blocks.min.css' )
+		filemtime( PLUGIN_DIR . 'build/blocks.css' )
 	);
 
 	wp_register_script(

@@ -24,7 +24,6 @@ export const DATE_SLUG_FORMAT = 'Y-m-d';
  * Prepares the data for a Schedule Block.
  *
  * @param {Array} attributes
- *
  * @return {Object}
  */
 export function useScheduleData( attributes ) {
@@ -82,7 +81,6 @@ export function useScheduleData( attributes ) {
  * @param {Function} select
  * @param {boolean}  editorContext 'example' for the Block Styles preview in the inspector controls; 'live' for
  *                                 the actual block in the post editor content area.
- *
  * @return {Object}
  */
 const fetchScheduleData = ( select, editorContext ) => {
@@ -331,7 +329,6 @@ function getExampleData() {
  * @param {Array}  allCategories
  * @param {Array}  allTracks
  * @param {Object} attributes
- *
  * @return {Object}
  */
 export function getDerivedSessions( allSessions, allCategories, allTracks, attributes ) {
@@ -357,7 +354,6 @@ export function getDerivedSessions( allSessions, allCategories, allTracks, attri
  * Replace raw session timestamp with local timezone start/end times.
  *
  * @param {Array} sessions
- *
  * @return {Array}
  */
 function deriveSessionStartEndTimes( sessions ) {
@@ -381,7 +377,6 @@ function deriveSessionStartEndTimes( sessions ) {
  * @param {Array} allSessions
  * @param {Array} allCategories
  * @param {Array} allTracks
- *
  * @return {Array}
  */
 function deriveSessionTerms( allSessions, allCategories, allTracks ) {
@@ -428,7 +423,6 @@ function deriveSessionTerms( allSessions, allCategories, allTracks ) {
  *
  * @param {Object} first
  * @param {Object} second
- *
  * @return {number}
  */
 export function sortBySlug( first, second ) {
@@ -444,7 +438,6 @@ export function sortBySlug( first, second ) {
  *
  * @param {Array} sessions
  * @param {Array} chosenDays
- *
  * @return {Array}
  */
 function filterSessionsByChosenDays( sessions, chosenDays ) {
@@ -470,7 +463,6 @@ function filterSessionsByChosenDays( sessions, chosenDays ) {
  *
  * @param {Array} sessions
  * @param {Array} chosenTrackIds
- *
  * @return {Array}
  */
 function filterSessionsByChosenTracks( sessions, chosenTrackIds ) {

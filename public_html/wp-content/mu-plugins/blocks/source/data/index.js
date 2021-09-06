@@ -31,7 +31,6 @@ const DEFAULT_STATE = {};
  *     @type {string} sort   One string with two values, separated by `_`. The first value is the field to sort by.
  *                           The second value is the direction of the sort, either `asc` or `desc`.
  * }
- *
  * @return {Array} The filtered entities.
  */
 export const filterEntities = ( entities, args ) => {
@@ -98,7 +97,6 @@ const actions = {
 	 * Set the site settings object in this store.
 	 *
 	 * @param { Object } settings
-	 *
 	 * @return { Object }
 	 */
 	setSiteSettings( settings ) {
@@ -123,7 +121,6 @@ const selectors = {
 	 * @param {string} entityType Type of the entity to fetch
 	 * @param {string} entityName Type of the entity to fetch
 	 * @param {Object} queryArgs  Optional. Additional arguments for the fetch query.
-	 *
 	 * @return {Array} The results of the query.
 	 */
 	getEntities( state, entityType, entityName, queryArgs = {} ) {
@@ -140,7 +137,6 @@ const selectors = {
 	 * Get a site's settings via the REST API.
 	 *
 	 * @param {Object} state
-	 *
 	 * @return {Object.settings|null}
 	 */
 	getSiteSettings( state ) {
@@ -159,7 +155,6 @@ const selectors = {
  *
  * @param {Object} state
  * @param {Object} action
- *
  * @return {{state}}
  */
 const reducer = ( state = DEFAULT_STATE, action ) => {

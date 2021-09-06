@@ -15,7 +15,6 @@ import { Spinner } from '@wordpress/components';
  * @param {Array}   props
  * @param {boolean} props.loading
  * @param {string}  props.message Override the default message.
- *
  * @return {Element}
  */
 function NoContent( { loading, message } ) {

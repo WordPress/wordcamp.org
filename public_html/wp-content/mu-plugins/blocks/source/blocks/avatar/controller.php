@@ -38,16 +38,25 @@ function render( $attributes, $content, $block ) {
 	$attributes = wp_parse_args( $attributes, $defaults );
 	$email      = get_post_meta( $post_ID, '_wcb_speaker_email', true );
 	$user_id    = get_post_meta( $post_ID, '_wcpt_user_id', true );
-	if ( ! $email && ! $user_id ) {
-		return '';
-	}
 
 	$size = intval( $attributes['size'] );
 	$wrapper_attributes = get_block_wrapper_attributes( array(
 		'style' => "width:{$size}px;height:{$size}px;",
 	) );
 	$id_or_email = $email ? $email : $user_id;
-	$src = get_avatar_url( $id_or_email, array( 'size' => $size ) );
+
+	// Get the gravatar source, or the default if no user info is set.
+	if ( $id_or_email ) {
+		$src = get_avatar_url( $id_or_email, array( 'size' => $size ) );
+	} else {
+		$src = get_avatar_url(
+			0,
+			array(
+				'size' => $size,
+				'force_default' => true,
+			)
+		);
+	}
 
 	$avatar = sprintf(
 		'<img src="%1$s" alt="%2$s" />',
@@ -55,7 +64,12 @@ function render( $attributes, $content, $block ) {
 		get_the_title( $post_ID )
 	);
 
+	// Remove Jetpack filter so that we can always get the featured image.
+	remove_filter( 'get_post_metadata', 'jetpack_featured_images_remove_post_thumbnail', true, 4 );
 	$featured_image = get_the_post_thumbnail( $post_ID );
+	add_filter( 'get_post_metadata', 'jetpack_featured_images_remove_post_thumbnail', true, 4 );
+
+	// If there is a featured image, it should override the gravatar.
 	if ( $featured_image ) {
 		$avatar = $featured_image;
 	}

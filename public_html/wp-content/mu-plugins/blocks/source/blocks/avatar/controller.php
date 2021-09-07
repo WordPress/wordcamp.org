@@ -1,5 +1,6 @@
 <?php
 namespace WordCamp\Blocks\Avatar;
+use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
 
 defined( 'WPINC' ) || die();
 
@@ -43,36 +44,8 @@ function render( $attributes, $content, $block ) {
 	$wrapper_attributes = get_block_wrapper_attributes( array(
 		'style' => "width:{$size}px;height:{$size}px;",
 	) );
-	$id_or_email = $email ? $email : $user_id;
 
-	// Get the gravatar source, or the default if no user info is set.
-	if ( $id_or_email ) {
-		$src = get_avatar_url( $id_or_email, array( 'size' => $size ) );
-	} else {
-		$src = get_avatar_url(
-			0,
-			array(
-				'size' => $size,
-				'force_default' => true,
-			)
-		);
-	}
-
-	$avatar = sprintf(
-		'<img src="%1$s" alt="%2$s" />',
-		esc_url( $src ),
-		get_the_title( $post_ID )
-	);
-
-	// Remove Jetpack filter so that we can always get the featured image.
-	remove_filter( 'get_post_metadata', 'jetpack_featured_images_remove_post_thumbnail', true, 4 );
-	$featured_image = get_the_post_thumbnail( $post_ID );
-	add_filter( 'get_post_metadata', 'jetpack_featured_images_remove_post_thumbnail', true, 4 );
-
-	// If there is a featured image, it should override the gravatar.
-	if ( $featured_image ) {
-		$avatar = $featured_image;
-	}
+	$avatar = get_avatar_or_image( $post_ID, $size );
 
 	if ( isset( $attributes['isLink'] ) && $attributes['isLink'] ) {
 		$avatar = sprintf( '<a href="%1s">%2s</a>', get_the_permalink( $post_ID ), $avatar );

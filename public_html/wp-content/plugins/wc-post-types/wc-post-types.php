@@ -4,10 +4,13 @@
  * Plugin Description: Sessions, Speakers, Sponsors and much more.
  */
 
-require 'inc/back-compat.php';
+require_once 'inc/utilities.php';
+require_once 'inc/back-compat.php';
 require_once 'inc/favorite-schedule-shortcode.php';
 require_once 'inc/privacy.php';
 require_once 'inc/deprecated.php';
+
+use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
 
 // Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2
 // greater than the core-defined ep_masks, but could potentially conflict with another plugin.
@@ -757,7 +760,8 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
-		$avatar = get_avatar( get_post_meta( $post->ID, '_wcb_speaker_email', true ) );
+		$avatar = get_avatar_or_image( $post->ID, 96 );
+
 		return '<div class="speaker-avatar">' . $avatar . '</div>' . $content;
 	}
 

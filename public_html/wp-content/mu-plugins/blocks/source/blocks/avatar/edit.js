@@ -1,10 +1,11 @@
 /**
  * WordPress dependencies
  */
-import { useEntityProp } from '@wordpress/core-data';
-import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
-import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { __, sprintf } from '@wordpress/i18n';
+import { store as coreStore, useEntityProp } from '@wordpress/core-data';
+import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
 
 const placeholderChip = (
 	<div className="post-featured-image_placeholder">
@@ -29,8 +30,19 @@ export default function PostAvatarEdit( { attributes, setAttributes, context: { 
 	const { isLink, size = blockData.schema.size.default } = attributes;
 	const [ urls ] = useEntityProp( 'postType', postType, 'avatar_urls', postId );
 	const blockProps = useBlockProps( { style: { width: size, height: size } } );
+	const [ featuredImage ] = useEntityProp( 'postType', postType, 'featured_media', postId );
+	const url = useSelect(
+		( select ) => {
+			if ( ! featuredImage ) {
+				return urls ? urls[ size ] : '';
+			}
+			const image = select( coreStore ).getMedia( featuredImage, { context: 'view' } );
+			return image?.source_url || '';
+		},
+		[ featuredImage ]
+	);
 
-	if ( ! urls || ! urls[ size ] ) {
+	if ( ! url ) {
 		return <div { ...blockProps }>{ placeholderChip }</div>;
 	}
 
@@ -58,7 +70,7 @@ export default function PostAvatarEdit( { attributes, setAttributes, context: { 
 				</PanelBody>
 			</InspectorControls>
 			<figure { ...blockProps }>
-				<img src={ urls[ size ] } alt={ __( 'Avatar', 'wordcamporg' ) } />
+				<img src={ url } alt={ __( 'Avatar', 'wordcamporg' ) } />
 			</figure>
 		</>
 	);

@@ -55,6 +55,11 @@ function render( $attributes, $content, $block ) {
 		get_the_title( $post_ID )
 	);
 
+	$featured_image = get_the_post_thumbnail( $post_ID );
+	if ( $featured_image ) {
+		$avatar = $featured_image;
+	}
+
 	if ( isset( $attributes['isLink'] ) && $attributes['isLink'] ) {
 		$avatar = sprintf( '<a href="%1s">%2s</a>', get_the_permalink( $post_ID ), $avatar );
 	}

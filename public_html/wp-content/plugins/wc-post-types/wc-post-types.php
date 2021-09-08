@@ -68,6 +68,7 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'the_content', array( $this, 'add_video_info_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_categories_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_info_to_speaker_posts' ) );
+		add_filter( 'get_post_metadata', array( $this, 'hide_featured_image_on_people' ), 10, 3 );
 
 		add_filter( 'dashboard_glance_items', array( $this, 'glance_items' ) );
 		add_filter( 'option_default_comment_status', array( $this, 'default_comment_ping_status' ) );
@@ -1032,6 +1033,31 @@ class WordCamp_Post_Types_Plugin {
 		wp_reset_postdata();
 
 		return $content . $sessions_html;
+	}
+
+	/**
+	 * Prevent featured images from being displayed on organizer & speaker pages
+	 * by shortcutting the thumbnail lookup.
+	 *
+	 * See jetpack_featured_images_remove_post_thumbnail.
+	 *
+	 * @param mixed  $value     The value to return, either a single metadata value or an array
+	 *                          of values depending on the value of `$single`. Default null.
+	 * @param int    $object_id ID of the object metadata is for.
+	 * @param string $meta_key  Metadata key.
+	 * @return mixed False if a speaker/organizer thumbnail, otherwise fall through to the default value.
+	 */
+	public function hide_featured_image_on_people( $value, $object_id, $meta_key ) {
+		if ( '_thumbnail_id' !== $meta_key ) {
+			return $value;
+		}
+
+		$post_types = array( 'wcb_speaker', 'wcb_organizer' );
+		if ( in_array( get_post_type( $object_id ), $post_types, true ) ) {
+			return false;
+		}
+
+		return $value;
 	}
 
 	/**

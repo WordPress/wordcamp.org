@@ -19,6 +19,7 @@ defined( 'WPINC' ) || die();
  * @return string
  */
 function get_avatar_or_image( $post, $size ) {
+	global $wcpt_plugin;
 	$post = get_post( $post );
 	if ( ! $post ) {
 		return '';
@@ -47,6 +48,8 @@ function get_avatar_or_image( $post, $size ) {
 		get_the_title( $post->ID )
 	);
 
+	remove_filter( 'get_post_metadata', array( $wcpt_plugin, 'hide_featured_image_on_people' ), 10, 3 );
+
 	// Remove Jetpack filter so that we can always get the featured image.
 	if ( function_exists( 'jetpack_featured_images_remove_post_thumbnail' ) ) {
 		remove_filter( 'get_post_metadata', 'jetpack_featured_images_remove_post_thumbnail', true, 4 );
@@ -55,6 +58,7 @@ function get_avatar_or_image( $post, $size ) {
 	} else {
 		$featured_image = get_the_post_thumbnail( $post->ID, array( $size, $size ) );
 	}
+	add_filter( 'get_post_metadata', array( $wcpt_plugin, 'hide_featured_image_on_people' ), 10, 3 );
 
 	// If there is a featured image, it should override the gravatar.
 	if ( $featured_image ) {

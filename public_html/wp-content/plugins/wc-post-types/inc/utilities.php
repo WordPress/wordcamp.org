@@ -46,7 +46,7 @@ function get_avatar_or_image( $post, $size, $alt = false ) {
 		);
 	}
 
-	$avatar = sprintf( '<img src="%1$s" alt="%2$s" />', esc_url( $src ), $alt );
+	$avatar = sprintf( '<img src="%1$s" alt="%2$s" />', esc_attr( $src ), esc_attr( $alt ) );
 
 	// Remove the filter so that we can get the real featured image.
 	remove_filter( 'get_post_metadata', array( $wcpt_plugin, 'hide_featured_image_on_people' ), 10, 3 );

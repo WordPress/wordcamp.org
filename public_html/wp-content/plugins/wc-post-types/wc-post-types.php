@@ -1037,7 +1037,10 @@ class WordCamp_Post_Types_Plugin {
 
 	/**
 	 * Prevent featured images from being displayed on organizer & speaker pages
-	 * by shortcutting the thumbnail lookup.
+	 * by shortcutting the thumbnail lookup. This preserves the existing avatar
+	 * behavior - the avatar is already injected into the content  in
+	 * `add_avatar_to_speaker_posts`. Without this hook, the image would show
+	 * up twice.
 	 *
 	 * See jetpack_featured_images_remove_post_thumbnail.
 	 *

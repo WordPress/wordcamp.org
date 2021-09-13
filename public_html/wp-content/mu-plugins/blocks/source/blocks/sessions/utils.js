@@ -46,3 +46,21 @@ export function getSessionDetails( session ) {
 		]
 	);
 }
+
+/**
+ * Sort callback for ordering sessions by time, ascending (past -> future).
+ *
+ * @param {Object} sessionA
+ * @param {Object} sessionB
+ * @return {number}
+ */
+export function sortSessionByTime( sessionA, sessionB ) {
+	// If no meta values found, keep the same sort order.
+	if ( ! sessionA.meta?._wcpt_session_time || ! sessionB.meta?._wcpt_session_time ) {
+		return 0;
+	}
+	if ( sessionA.meta._wcpt_session_time < sessionB.meta._wcpt_session_time ) {
+		return -1;
+	}
+	return 1;
+}

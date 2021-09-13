@@ -1,0 +1,29 @@
+{
+	"apiVersion": 2,
+	"name": "wordcamp/speaker-sessions",
+	"title": "Speaker Sessions",
+	"category": "wordcamp",
+	"description": "Display the sessions attached to the current speaker.",
+	"textdomain": "wordcamporg",
+	"usesContext": [ "postId", "postType", "queryId" ],
+	"attributes": {
+		"hasSessionDetails": {
+			"type": "boolean",
+			"default": false
+		},
+		"isLink": {
+			"type": "boolean",
+			"default": false
+		}
+	},
+	"supports": {
+		"align": [ "left", "right", "center" ],
+		"color": {
+			"text": true,
+			"background": true
+		},
+		"html": false
+	},
+	"editorScript": "wordcamp-blocks",
+	"style": "wordcamp-blocks"
+}

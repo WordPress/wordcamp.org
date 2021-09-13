@@ -21,6 +21,7 @@ import {
 } from '../../components';
 import { filterEntities } from '../../data';
 import { arrayTokenReplace, tokenSplit } from '../../i18n';
+import { sortSessionByTime } from '../sessions/utils';
 
 /**
  * Component for the section of each speaker post that displays information about relevant sessions.
@@ -36,6 +37,8 @@ function SpeakerSessions( { speaker, tracks } ) {
 	if ( ! sessions.length ) {
 		return null;
 	}
+
+	sessions.sort( sortSessionByTime );
 
 	return (
 		<div className="wordcamp-speakers__sessions">

@@ -4,6 +4,7 @@ namespace WordCamp\Blocks\Speakers;
 use WP_Post;
 use function WordCamp\Blocks\Components\{ render_item_title, render_item_content, render_item_permalink };
 use function WordCamp\Blocks\Utilities\{ get_all_the_content, get_trimmed_content };
+use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
 
 defined( 'WPINC' ) || die();
 
@@ -28,12 +29,10 @@ setup_postdata( $speaker ); // This is necessary for generating an excerpt from 
 	<?php if ( true === $attributes['show_avatars'] ) : ?>
 		<div class="wordcamp-image__avatar-container align-<?php echo esc_attr( $attributes['avatar_align'] ); ?>">
 			<a href="<?php echo esc_url( get_permalink( $speaker ) ); ?>" class="wordcamp-image__avatar-link">
-				<?php echo get_avatar(
-					$speaker->_wcb_speaker_email,
+				<?php echo get_avatar_or_image( // phpcs:ignore -- escaped in function.
+					$speaker->ID,
 					$attributes['avatar_size'],
-					'',
-					sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $speaker ) ),
-					array( 'force_display' => true )
+					sprintf( __( 'Avatar of %s', 'wordcamporg'), get_the_title( $speaker ) )
 				); ?>
 			</a>
 		</div>

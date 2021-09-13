@@ -646,3 +646,19 @@ function link_session_to_speakers( $response, $post ) {
 }
 
 add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
+
+/**
+ * Add larger avatar sizes to the API response.
+ *
+ * @param int[] $sizes An array of int values that are the pixel sizes for avatars.
+ *
+ * @return array
+ */
+function add_larger_avatar_sizes( $sizes ) {
+	$sizes[] = 128;
+	$sizes[] = 256;
+	$sizes[] = 512;
+
+	return $sizes;
+}
+add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );

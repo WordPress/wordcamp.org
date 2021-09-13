@@ -4,10 +4,13 @@
  * Plugin Description: Sessions, Speakers, Sponsors and much more.
  */
 
-require 'inc/back-compat.php';
+require_once 'inc/utilities.php';
+require_once 'inc/back-compat.php';
 require_once 'inc/favorite-schedule-shortcode.php';
 require_once 'inc/privacy.php';
 require_once 'inc/deprecated.php';
+
+use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
 
 // Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2
 // greater than the core-defined ep_masks, but could potentially conflict with another plugin.
@@ -65,12 +68,14 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'the_content', array( $this, 'add_video_info_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_categories_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_info_to_speaker_posts' ) );
+		add_filter( 'get_post_metadata', array( $this, 'hide_featured_image_on_people' ), 10, 3 );
 
 		add_filter( 'dashboard_glance_items', array( $this, 'glance_items' ) );
 		add_filter( 'option_default_comment_status', array( $this, 'default_comment_ping_status' ) );
 		add_filter( 'option_default_ping_status', array( $this, 'default_comment_ping_status' ) );
 
-		add_action( 'init', array( $this, 'rest_init' ), 9 );
+		// Needs to run before WordCamp\Blocks\register_assets.
+		add_action( 'init', array( $this, 'rest_init' ), 8 );
 	}
 
 	/**
@@ -756,7 +761,8 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
-		$avatar = get_avatar( get_post_meta( $post->ID, '_wcb_speaker_email', true ) );
+		$avatar = get_avatar_or_image( $post->ID, 96 );
+
 		return '<div class="speaker-avatar">' . $avatar . '</div>' . $content;
 	}
 
@@ -1030,6 +1036,34 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
+	 * Prevent featured images from being displayed on organizer & speaker pages
+	 * by shortcutting the thumbnail lookup. This preserves the existing avatar
+	 * behavior - the avatar is already injected into the content  in
+	 * `add_avatar_to_speaker_posts`. Without this hook, the image would show
+	 * up twice.
+	 *
+	 * See jetpack_featured_images_remove_post_thumbnail.
+	 *
+	 * @param mixed  $value     The value to return, either a single metadata value or an array
+	 *                          of values depending on the value of `$single`. Default null.
+	 * @param int    $object_id ID of the object metadata is for.
+	 * @param string $meta_key  Metadata key.
+	 * @return mixed False if a speaker/organizer thumbnail, otherwise fall through to the default value.
+	 */
+	public function hide_featured_image_on_people( $value, $object_id, $meta_key ) {
+		if ( '_thumbnail_id' !== $meta_key ) {
+			return $value;
+		}
+
+		$post_types = array( 'wcb_speaker', 'wcb_organizer' );
+		if ( in_array( get_post_type( $object_id ), $post_types, true ) ) {
+			return false;
+		}
+
+		return $value;
+	}
+
+	/**
 	 * Fired during add_meta_boxes, adds extra meta boxes to our custom post types.
 	 */
 	public function add_meta_boxes() {
@@ -1286,7 +1320,7 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'speaker',
 					'with_front' => true,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'comments', 'custom-fields' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'comments', 'custom-fields', 'thumbnail' ),
 				'menu_position'   => 20,
 				'public'          => true,
 				'show_ui'         => true,
@@ -1407,7 +1441,7 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'organizer',
 					'with_front' => false,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail' ),
 				'menu_position'   => 22,
 				'public'          => true,
 				'show_ui'         => true,

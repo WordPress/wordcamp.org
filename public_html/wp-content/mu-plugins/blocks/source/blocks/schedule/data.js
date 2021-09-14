@@ -2,7 +2,7 @@
  * WordPress dependencies
  */
 import { useSelect } from '@wordpress/data';
-import { dateI18n } from '@wordpress/date';
+import { format } from '@wordpress/date';
 
 /**
  * Internal dependencies
@@ -447,7 +447,7 @@ function filterSessionsByChosenDays( sessions, chosenDays ) {
 	}
 
 	return sessions.filter( ( session ) => {
-		const date = dateI18n( DATE_SLUG_FORMAT, session.derived.startTime );
+		const date = format( DATE_SLUG_FORMAT, session.derived.startTime );
 		return chosenDays.includes( date );
 	} );
 

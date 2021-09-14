@@ -6,7 +6,7 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-import { dateI18n } from '@wordpress/date';
+import { format } from '@wordpress/date';
 import { useContext } from '@wordpress/element';
 
 /**
@@ -42,8 +42,8 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 		const endTime = parseInt( timeSlots[ i + 1 ] ) || 0;
 
 		const gridRow = `
-			time-${ dateI18n( 'Hi', startTime ) } /
-			time-${ dateI18n( 'Hi', endTime ) }
+			time-${ format( 'Hi', startTime ) } /
+			time-${ format( 'Hi', endTime ) }
 		`;
 
 		const classes = classnames(
@@ -53,7 +53,7 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 
 		timeGroups.push(
 			<h3 key={ startTime } className={ classes } style={ { gridRow } }>
-				{ dateI18n( timeFormat, startTime ) }
+				{ format( timeFormat, startTime ) }
 			</h3>
 		);
 

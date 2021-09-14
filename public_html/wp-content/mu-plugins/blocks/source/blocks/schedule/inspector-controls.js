@@ -3,7 +3,7 @@
  */
 import { InspectorControls } from '@wordpress/block-editor';
 import { CheckboxControl, PanelBody, ToggleControl } from '@wordpress/components';
-import { dateI18n, format } from '@wordpress/date';
+import { format } from '@wordpress/date';
 import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -68,7 +68,7 @@ export default function ScheduleInspectorControls(
  */
 function getDisplayedDays( sessions ) {
 	let uniqueDays = sessions.reduce( ( accumulatingDays, session ) => {
-		accumulatingDays[ dateI18n( DATE_SLUG_FORMAT, session.derived.startTime ) ] = true;
+		accumulatingDays[ format( DATE_SLUG_FORMAT, session.derived.startTime ) ] = true;
 
 		return accumulatingDays;
 	}, {} );

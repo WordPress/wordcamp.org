@@ -386,7 +386,7 @@ function renderGridTemplateRows( startEndTimes ) {
 	startEndTimes.sort(); // Put them in chronological order.
 
 	const timeList = startEndTimes.reduce( ( accumulatingTimes, time ) => {
-		const formattedTime = format( 'Hi', time );
+		const formattedTime = format( 'dHi', time );
 
 		return accumulatingTimes += `[time-${ formattedTime }] auto `;
 	}, '' );

@@ -42,8 +42,8 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 		const endTime = parseInt( timeSlots[ i + 1 ] ) || 0;
 
 		const gridRow = `
-			time-${ format( 'Hi', startTime ) } /
-			time-${ format( 'Hi', endTime ) }
+			time-${ format( 'dHi', startTime ) } /
+			time-${ format( 'dHi', endTime ) }
 		`;
 
 		const classes = classnames(

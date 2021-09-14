@@ -88,8 +88,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 	`;
 
 	const gridRow = `
-		time-${ format( 'Hi', startTime ) } /
-		time-${ format( 'Hi', endTime ) }
+		time-${ format( 'dHi', startTime ) } /
+		time-${ format( 'dHi', endTime ) }
 	`;
 
 	return (

@@ -78,7 +78,7 @@ setup_postdata( $session );
 							/* translators: 1: A date; 2: A time; 3: A location; */
 							esc_html__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
 							esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
-							esc_html( wp_date( get_option( 'time_format' ), $session->_wcpt_session_time ) ),
+							esc_html( wp_date( get_option( 'time_format' ) . ' T', $session->_wcpt_session_time ) ),
 							sprintf(
 								'<span class="wordcamp-sessions__track slug-%s">%s</span>',
 								esc_attr( $tracks[0]->slug ),
@@ -91,7 +91,7 @@ setup_postdata( $session );
 							/* translators: 1: A date; 2: A time; */
 							esc_html__( '%1$s at %2$s', 'wordcamporg' ),
 							esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
-							esc_html( wp_date( get_option( 'time_format' ), $session->_wcpt_session_time ) )
+							esc_html( wp_date( get_option( 'time_format' ) . ' T', $session->_wcpt_session_time ) )
 						);
 					endif; ?>
 				</div>

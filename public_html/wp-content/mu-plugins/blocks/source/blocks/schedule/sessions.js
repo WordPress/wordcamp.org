@@ -26,8 +26,7 @@ import { sortBySlug } from './data';
  * @return {Element}
  */
 export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
-	const { attributes, settings } = useContext( ScheduleGridContext );
-	const { time_format: timeFormat } = settings;
+	const { attributes } = useContext( ScheduleGridContext );
 
 	const sessionsByTimeSlot = groupSessionsByTimeSlot( sessions );
 	const overlappingSessionIds = overlappingSessions.map( ( session ) => session.id );
@@ -51,9 +50,10 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 			sessionsByTimeSlot[ currentSlot ].length ? 'has-sessions' : 'is-empty'
 		);
 
+		const date = new Date( startTime );
 		timeGroups.push(
 			<h3 key={ startTime } className={ classes } style={ { gridRow } }>
-				{ format( timeFormat, startTime ) }
+				{ date.toLocaleTimeString( [], { timeZoneName: 'short', hour: 'numeric', minute: '2-digit' } ) }
 			</h3>
 		);
 

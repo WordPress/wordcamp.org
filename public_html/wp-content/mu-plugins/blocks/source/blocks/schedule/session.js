@@ -7,7 +7,7 @@ import { isEqual } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { dateI18n } from '@wordpress/date';
+import { format } from '@wordpress/date';
 import { __, sprintf } from '@wordpress/i18n';
 import { createInterpolateElement, useContext } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -88,8 +88,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 	`;
 
 	const gridRow = `
-		time-${ dateI18n( 'Hi', startTime ) } /
-		time-${ dateI18n( 'Hi', endTime ) }
+		time-${ format( 'dHi', startTime ) } /
+		time-${ format( 'dHi', endTime ) }
 	`;
 
 	return (
@@ -111,7 +111,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 			</h4>
 
 			<p>
-				{ dateI18n( timeFormat, startTime ) } - { dateI18n( timeFormat, endTime ) }
+				{ format( timeFormat, startTime ) } -
+				{ format( timeFormat, endTime ) }
 			</p>
 
 			{ speakers.length > 0 && renderSpeakers( speakers, renderEnvironment ) }

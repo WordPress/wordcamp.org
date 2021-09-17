@@ -1,7 +1,7 @@
 /**
  * WordPress dependencies
  */
-import { dateI18n, format } from '@wordpress/date';
+import { format } from '@wordpress/date';
 import { __, _x } from '@wordpress/i18n';
 import { createContext, useContext } from '@wordpress/element';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -77,7 +77,7 @@ function groupSessionsByDate( sessions ) {
 			return groups;
 		}
 
-		const date = dateI18n( 'Y-m-d', session.derived.startTime );
+		const date = format( 'Y-m-d', session.derived.startTime );
 
 		if ( date ) {
 			groups[ date ] = groups[ date ] || [];
@@ -386,7 +386,7 @@ function renderGridTemplateRows( startEndTimes ) {
 	startEndTimes.sort(); // Put them in chronological order.
 
 	const timeList = startEndTimes.reduce( ( accumulatingTimes, time ) => {
-		const formattedTime = dateI18n( 'Hi', time );
+		const formattedTime = format( 'dHi', time );
 
 		return accumulatingTimes += `[time-${ formattedTime }] auto `;
 	}, '' );

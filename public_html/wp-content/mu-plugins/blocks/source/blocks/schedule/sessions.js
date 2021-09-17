@@ -6,7 +6,7 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-import { dateI18n } from '@wordpress/date';
+import { format } from '@wordpress/date';
 import { useContext } from '@wordpress/element';
 
 /**
@@ -26,8 +26,7 @@ import { sortBySlug } from './data';
  * @return {Element}
  */
 export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
-	const { attributes, settings } = useContext( ScheduleGridContext );
-	const { time_format: timeFormat } = settings;
+	const { attributes } = useContext( ScheduleGridContext );
 
 	const sessionsByTimeSlot = groupSessionsByTimeSlot( sessions );
 	const overlappingSessionIds = overlappingSessions.map( ( session ) => session.id );
@@ -42,8 +41,8 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 		const endTime = parseInt( timeSlots[ i + 1 ] ) || 0;
 
 		const gridRow = `
-			time-${ dateI18n( 'Hi', startTime ) } /
-			time-${ dateI18n( 'Hi', endTime ) }
+			time-${ format( 'dHi', startTime ) } /
+			time-${ format( 'dHi', endTime ) }
 		`;
 
 		const classes = classnames(
@@ -51,9 +50,10 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 			sessionsByTimeSlot[ currentSlot ].length ? 'has-sessions' : 'is-empty'
 		);
 
+		const date = new Date( startTime );
 		timeGroups.push(
 			<h3 key={ startTime } className={ classes } style={ { gridRow } }>
-				{ dateI18n( timeFormat, startTime ) }
+				{ date.toLocaleTimeString( [], { timeZoneName: 'short', hour: 'numeric', minute: '2-digit' } ) }
 			</h3>
 		);
 

@@ -372,6 +372,11 @@ function wcorg_json_v2_compat( $request ) {
 		$is_route_v2 = true;
 	}
 
+	// The batch route is a special case (not a namespace), check for it explicitly.
+	if ( '/batch/v1' === $route ) {
+		$is_route_v2 = true;
+	}
+
 	if ( ! $is_route_v2 ) {
 		foreach ( rest_get_server()->get_namespaces() as $namespace ) {
 			if ( 0 === strpos( $_SERVER['REQUEST_URI'], $site_path . "$rest_prefix/$namespace" ) ) {

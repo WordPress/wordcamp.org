@@ -240,7 +240,7 @@ function renderCategories( categories ) {
 			{ categories.map( ( category ) => {
 				return (
 					<dd key={ category.id }>
-						{ category.slug }
+						{ decodeEntities( stripTags( category.name ) ) }
 					</dd>
 				);
 			} ) }

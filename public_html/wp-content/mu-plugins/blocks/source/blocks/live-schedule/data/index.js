@@ -75,6 +75,16 @@ export function getCurrentSessions( { sessions, tracks } ) {
 			sessions: reverse( sortBy( sessions, 'meta._wcpt_session_time' ) ),
 		} ];
 
+	trackListWithSessions.sort( ( { track: trackA }, { track: trackB } ) => {
+		if ( trackA.slug < trackB.slug ) {
+			return -1;
+		}
+		if ( trackA.slug > trackB.slug ) {
+			return 1;
+		}
+		return 0;
+	} );
+
 	return trackListWithSessions.map( ( { track, sessions: sessionsInTrack } ) => {
 		if ( ! sessionsInTrack.length ) {
 			return {};

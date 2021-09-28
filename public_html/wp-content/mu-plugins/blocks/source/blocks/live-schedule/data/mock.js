@@ -14,6 +14,7 @@ const makeSession = ( name, time ) => ( {
 	title: { rendered: name },
 	meta: {
 		_wcpt_session_type: 'session',
+		_wcpt_session_time: new Date( `Oct 1 2021 ${ time } EDT` ).getTime() / 1000,
 	},
 	session_date_time: { time },
 	_embedded: {
@@ -22,7 +23,8 @@ const makeSession = ( name, time ) => ( {
 				id: 1,
 				title: { rendered: _x( 'Speaker Name', 'A fake speaker name', 'wordcamporg' ) },
 				link: '#',
-			}, {
+			},
+			{
 				id: 2,
 				title: { rendered: _x( 'Speaker Name', 'A fake speaker name', 'wordcamporg' ) },
 				link: '#',
@@ -33,18 +35,18 @@ const makeSession = ( name, time ) => ( {
 
 export default [
 	{
-		track: makeTrack( _x( 'Location', 'A fake track name', 'wordcamporg' ) ),
-		now: makeSession( _x( 'Session Title', 'A fake session name', 'wordcamporg' ), '10:00 AM' ),
-		next: makeSession( _x( 'Session Title', 'A fake session name', 'wordcamporg' ), '11:00 AM' ),
+		track: makeTrack( _x( 'Location A', 'A fake track name', 'wordcamporg' ) ),
+		now: makeSession( _x( 'Session Title', 'A fake session name', 'wordcamporg' ), '10:00' ),
+		next: makeSession( _x( 'Session Title', 'A fake session name', 'wordcamporg' ), '11:00' ),
 	},
 	{
-		track: makeTrack( _x( 'Location', 'A fake track name', 'wordcamporg' ) ),
-		now: makeSession( _x( 'Workshop Title', 'A fake session name', 'wordcamporg' ), '10:00 AM' ),
-		next: makeSession( _x( 'Session Title', 'A fake session name', 'wordcamporg' ), '1:00 PM' ),
+		track: makeTrack( _x( 'Location B', 'A fake track name', 'wordcamporg' ) ),
+		now: makeSession( _x( 'Workshop Title', 'A fake session name', 'wordcamporg' ), '10:00' ),
+		next: makeSession( _x( 'Session Title', 'A fake session name', 'wordcamporg' ), '13:00' ),
 	},
 	{
-		track: makeTrack( _x( 'Location', 'A fake track name', 'wordcamporg' ) ),
-		now: makeSession( _x( 'Flash Talk Title', 'A fake session name', 'wordcamporg' ), '10:15 AM' ),
-		next: makeSession( _x( 'Flash Talk Title', 'A fake session name', 'wordcamporg' ), '10:30 AM' ),
+		track: makeTrack( _x( 'Location C', 'A fake track name', 'wordcamporg' ) ),
+		now: makeSession( _x( 'Flash Talk Title', 'A fake session name', 'wordcamporg' ), '10:15' ),
+		next: makeSession( _x( 'Flash Talk Title', 'A fake session name', 'wordcamporg' ), '10:30' ),
 	},
 ];

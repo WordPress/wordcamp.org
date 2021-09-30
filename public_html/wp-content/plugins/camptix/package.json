@@ -1,0 +1,32 @@
+{
+	"name": "camptix",
+	"version": "1.0.0",
+	"description": "Ticketing tools for WordCamps.",
+	"author": "WordCamp Team",
+	"license": "GPL-2.0-or-later",
+	"private": true,
+	"keywords": [],
+	"homepage": "https://github.com/WordPress/wordcamp.org/tree/production/public_html/wp-content/plugins/camptix",
+	"repository": "git+https://github.com/WordPress/wordcamp.org.git",
+	"bugs": {
+		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+CampTix%22"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "8.0.1"
+	},
+	"scripts": {
+		"start": "wp-scripts start attendee-content='./blocks/src/attendee-content/index.js' --output-path='./blocks/build'",
+		"build": "wp-scripts build attendee-content='./blocks/src/attendee-content/index.js' --output-path='./blocks/build'",
+		"lint:js": "wp-scripts lint-js blocks/src",
+		"lint:css": "echo \"No CSS linting in this repo.\" && exit 0",
+		"format:js": "wp-scripts format-js",
+		"lint:pkg-json": "wp-scripts lint-pkg-json"
+	},
+	"eslintConfig": {
+		"extends": "../../../../.eslintrc.js"
+	},
+	"prettier": "../../../../.prettierrc.js",
+	"stylelint": {
+		"extends": "../../../../.stylelintrc"
+	}
+}

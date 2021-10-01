@@ -111,5 +111,5 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>This Code of Conduct is a direct swipe from the awesome work of Open Source Bridge, but with our event information substituted. The original is available at <a href="http://opensourcebridge.org/about/code-of-conduct/">http://opensourcebridge.org/about/code-of-conduct/</a> and is released under a <a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons Attribution-ShareAlike</a> license.</p>
+<p>This Code of Conduct is a direct swipe from the awesome work of Open Source Bridge, but with our event information substituted. The original is available at <a href="http://web.archive.org/web/20191206083557/http://opensourcebridge.org/about/code-of-conduct/">at the following link [archived]</a> and is released under a <a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons Attribution-ShareAlike</a> license.</p>
 <!-- /wp:paragraph -->

@@ -560,28 +560,24 @@ function load_addons( $addons ) {
  * WordCamp-specific addons.
  */
 function load_custom_addons() {
-	// Allergy field
-	require_once( __DIR__ . '/addons/allergy.php' );
-	// Accommodations field
-	require_once( __DIR__ . '/addons/accommodations.php' );
-	// Code of Conduct field
-	require_once( __DIR__ . '/addons/code-of-conduct.php' );
-	// Privacy field
-	require_once( __DIR__ . '/addons/privacy.php' );
-	// Spam prevention
-	require_once( __DIR__ . '/addons/spam-prevention.php' );
+	// Extra fields.
+	require_once __DIR__ . '/addons/allergy.php';
+	require_once __DIR__ . '/addons/accommodations.php';
+	require_once __DIR__ . '/addons/code-of-conduct.php';
+	require_once __DIR__ . '/addons/covid-waiver.php';
+	require_once __DIR__ . '/addons/privacy.php';
 
-	// Ticket types
-	require_once( __DIR__ . '/addons/ticket-types/ticket-types.php' );
+	// Miscellaneous.
+	require_once __DIR__ . '/addons/spam-prevention.php';
+	require_once __DIR__ . '/addons/ticket-types/ticket-types.php';
 
 	// Payment options.
 	if (
 		in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true ) &&
 		! wcorg_skip_feature( 'camptix_payment_options' )
 	) {
-		require_once( __DIR__ . '/addons/class-payment-options.php' );
+		require_once __DIR__ . '/addons/class-payment-options.php';
 	}
-
 }
 
 /**

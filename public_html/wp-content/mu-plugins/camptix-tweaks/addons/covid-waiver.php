@@ -136,7 +136,7 @@ class Covid_Waiver_Field extends CampTix_Addon {
 		global $camptix;
 
 		if ( isset( $error_flags[ self::SLUG . '_unchecked' ] ) ) {
-			$camptix->error( __( 'You must agree to accept COVID-19 conditions and risks in to obtain a ticket.', 'wordcamporg' ) );
+			$camptix->error( __( 'You must agree to accept COVID-19 conditions and risks in order to obtain a ticket.', 'wordcamporg' ) );
 		}
 	}
 

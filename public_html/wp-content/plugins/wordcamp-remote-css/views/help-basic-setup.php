@@ -42,17 +42,17 @@ defined( 'WPINC' ) || die();
 		<ul>
 			<li>
 				<?php esc_html_e( 'Web-based file browser:', 'wordcamporg' ); ?>
-				<code>https://github.com/WordPressSeattle/seattle.wordcamp.org-<?php echo esc_html( date( 'Y' ) ); ?>/blob/master/style.css</code>
+				<code>https://github.com/WordPress/example.wordcamp.org-<?php echo esc_html( date( 'Y' ) ); ?>/blob/master/style.css</code>
 			</li>
 
 			<li>
 				<?php esc_html_e( 'Raw file:', 'wordcamporg' ); ?>
-				<code>https://raw.githubusercontent.com/WordPressSeattle/seattle.wordcamp.org-<?php echo esc_html( date( 'Y' ) ); ?>/master/style.css</code>
+				<code>https://raw.githubusercontent.com/WordPress/example.wordcamp.org-<?php echo esc_html( date( 'Y' ) ); ?>/master/style.css</code>
 			</li>
 
 			<li>
 				<?php esc_html_e( 'API:', 'wordcamporg' ); ?>
-				<code>https://api.github.com/repos/WordPressSeattle/seattle.wordcamp.org-<?php echo esc_html( date( 'Y' ) ); ?>/contents/style.css</code>
+				<code>https://api.github.com/repos/WordPress/example.wordcamp.org-<?php echo esc_html( date( 'Y' ) ); ?>/contents/style.css</code>
 			</li>
 		</ul>
 	</li>

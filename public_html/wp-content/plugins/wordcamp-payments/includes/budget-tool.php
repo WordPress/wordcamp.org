@@ -169,9 +169,9 @@ class WordCamp_Budget_Tool {
             array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Livestream', 'amount' => 0 ),
             array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Printing', 'amount' => 0 ),
             array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Badges', 'amount' => 0, 'link' => 'per-attendee' ),
-            array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Snacks', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Lunch', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Coffee', 'amount' => 0 ),
+            array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Snacks', 'amount' => 0 ),
+            array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Lunch', 'amount' => 0 ),
+            array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Coffee', 'amount' => 0 ),
             array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
             array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
         );

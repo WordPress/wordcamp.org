@@ -213,6 +213,11 @@ function get_wordcamp_sites() {
 
 	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
 
+	$cloneable_post_statuses = array_merge(
+		\WordCamp_Loader::get_public_post_statuses(),
+		array( 'wcpt-cancelled' )
+	);
+
 	$wordcamp_query = new \WP_Query( array(
 		/*
 		 * todo - There's a bug where a `posts_per_page` value greater than ~250-300 will result in
@@ -220,7 +225,7 @@ function get_wordcamp_sites() {
 		 * and then `get_site_transient()` fails, so `sites_endpoint()` returns an empty array.
 		 */
 		'post_type'      => WCPT_POST_TYPE_ID,
-		'post_status'    => \WordCamp_Loader::get_public_post_statuses(),
+		'post_status'    => $cloneable_post_statuses,
 		'posts_per_page' => 250,
 		'meta_key'       => 'Start Date (YYYY-mm-dd)',
 		'orderby'        => 'meta_value_num',

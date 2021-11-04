@@ -146,11 +146,14 @@ class WordCamp_Budget_Tool {
         return $budget;
     }
 
+	/**
+	 * Set the intial values for a new budget
+	 */
 	private static function _get_default_budget() {
 		return array(
 			array(
-				'type' => 'meta', 
-				'name' => 'attendees', 
+				'type' => 'meta',
+				'name' => 'attendees',
 				'value' => 0,
 			),
 			array(
@@ -177,7 +180,7 @@ class WordCamp_Budget_Tool {
 				'type' => 'meta',
 				'name' => 'currency',
 				'value' => 'USD',
-			 ),
+			),
 			array(
 				'type' => 'meta',
 				'name' => 'ticket-price',
@@ -197,13 +200,13 @@ class WordCamp_Budget_Tool {
 				'note' => 'Community Sponsorships',
 				'amount' => 0,
 			),
-			array( 
+			array(
 				'type' => 'income',
 				'category' => 'other',
 				'note' => 'Local Sponsorships',
 				'amount' => 0,
 			),
-			array( 
+			array(
 				'type' => 'income',
 				'category' => 'other',
 				'note' => 'Microsponsors',

@@ -147,34 +147,34 @@ class WordCamp_Budget_Tool {
     }
 
     private static function _get_default_budget() {
-        return array(
-            array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
-            array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
-            array( 'type' => 'meta', 'name' => 'tracks', 'value' => 0 ),
-            array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
-            array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
-            array( 'type' => 'meta', 'name' => 'currency', 'value' => 'USD' ),
-            array( 'type' => 'meta', 'name' => 'ticket-price', 'value' => 0 ),
+	return array
+		array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
+		array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
+		array( 'type' => 'meta', 'name' => 'tracks', 'value' => 0 ),
+		array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
+		array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
+		array( 'type' => 'meta', 'name' => 'currency', 'value' => 'USD' ),
+		array( 'type' => 'meta', 'name' => 'ticket-price', 'value' => 0 ),
 
-            array( 'type' => 'income', 'category' => 'other', 'note' => 'Tickets Income', 'amount' => 0, 'link' => 'ticket-price-x-attendees' ),
-            array( 'type' => 'income', 'category' => 'other', 'note' => 'Community Sponsorships', 'amount' => 0 ),
-            array( 'type' => 'income', 'category' => 'other', 'note' => 'Local Sponsorships', 'amount' => 0 ),
-            array( 'type' => 'income', 'category' => 'other', 'note' => 'Microsponsors', 'amount' => 0 ),
+		array( 'type' => 'income', 'category' => 'other', 'note' => 'Tickets Income', 'amount' => 0, 'link' => 'ticket-price-x-attendees' ),
+		array( 'type' => 'income', 'category' => 'other', 'note' => 'Community Sponsorships', 'amount' => 0 ),
+		array( 'type' => 'income', 'category' => 'other', 'note' => 'Local Sponsorships', 'amount' => 0 ),
+		array( 'type' => 'income', 'category' => 'other', 'note' => 'Microsponsors', 'amount' => 0 ),
 
-            array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Venue', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Wifi Costs', 'amount' => 0, 'link' => 'per-day' ),
-            array( 'type' => 'expense', 'category' => 'other', 'note' => 'Comped Tickets', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Video recording', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Projector rental', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Livestream', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Printing', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Badges', 'amount' => 0, 'link' => 'per-attendee' ),
-            array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Snacks', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Lunch', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Coffee', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
-            array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
-        );
+		array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Venue', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Wifi Costs', 'amount' => 0, 'link' => 'per-day' ),
+		array( 'type' => 'expense', 'category' => 'other', 'note' => 'Comped Tickets', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Video recording', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Projector rental', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Livestream', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Printing', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Badges', 'amount' => 0, 'link' => 'per-attendee' ),
+		array( 'type' => 'expense', 'category' => 'food-beverages!', 'note' => 'Snacks', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Lunch', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'food-beverages', 'note' => 'Coffee', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
+		array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
+	);
     }
 
     public static function render() {

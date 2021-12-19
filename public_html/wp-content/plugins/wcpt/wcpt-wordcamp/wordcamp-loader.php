@@ -169,7 +169,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => _x( 'More Info Requested',                         'wordcamp status', 'wordcamporg' ),
 			'wcpt-interview-sched' => _x( 'Interview/Orientation Scheduled',             'wordcamp status', 'wordcamporg' ),
 			'wcpt-rejected'        => _x( 'Declined',                                    'wordcamp status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',                                   'wordcamp status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Canceled',                                    'wordcamp status', 'wordcamporg' ),
 			'wcpt-approved-pre-pl' => _x( 'Approved for Pre-Planning Pending Agreement', 'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-email'     => _x( 'Needs E-mail Address',                        'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-site'      => _x( 'Needs Site',                                  'wordcamp status', 'wordcamporg' ),
@@ -274,7 +274,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => 'Application vetted',
 			'wcpt-interview-sched' => 'Interview scheduled',
 			'wcpt-rejected'        => 'Sent response',
-			'wcpt-cancelled'       => 'WordCamp cancelled',
+			'wcpt-cancelled'       => 'WordCamp canceled',
 			'wcpt-approved-pre-pl' => 'Orientation/interview held',
 			'wcpt-needs-email'     => 'Organizer agreement signed',
 			'wcpt-needs-site'      => 'Email address/fwd set up',
@@ -325,13 +325,13 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-closed'          => array(),
 		);
 
-		// Cancelled and More Info Requested can be switched to from any status.
+		// Canceled and More Info Requested can be switched to from any status.
 		foreach ( array_keys( $transitions ) as $key ) {
 			$transitions[ $key ][] = 'wcpt-more-info-reque';
 			$transitions[ $key ][] = 'wcpt-cancelled';
 		}
 
-		// Any status can be switched to from More Info Requested and Cancelled.
+		// Any status can be switched to from More Info Requested and Canceled.
 		foreach ( array( 'wcpt-more-info-reque', 'wcpt-cancelled' ) as $key ) {
 			$transitions[ $key ] = array_keys( $transitions );
 		}

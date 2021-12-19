@@ -292,7 +292,7 @@ msgstr ""
 
 #: ../camptix.php:1008
 msgctxt "post"
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Отменённый"
 
 #: ../camptix.php:1017
@@ -319,7 +319,7 @@ msgid "Failed"
 msgstr "Недуачные"
 
 #: ../camptix.php:1056
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Отменено"
 
 #: ../camptix.php:1059
@@ -1266,7 +1266,7 @@ msgid "Your access token does not seem to be valid."
 msgstr "Неверная ссылка."
 
 #: ../camptix.php:4422
-msgid "Your payment has been cancelled. Feel free to try again!"
+msgid "Your payment has been canceled. Feel free to try again!"
 msgstr "Ваш платёж был отменён."
 
 #: ../camptix.php:4425
@@ -1281,7 +1281,7 @@ msgstr ""
 
 #: ../camptix.php:4431
 msgid ""
-"Sorry, but the reservation you are trying to use has been cancelled or has "
+"Sorry, but the reservation you are trying to use has been canceled or has "
 "expired."
 msgstr ""
 
@@ -1477,7 +1477,7 @@ msgstr ""
 #: ../camptix.php:5251
 msgid ""
 "Refunds can take up to several days to process. All of the tickets you "
-"purchased in the original transaction will be cancelled. We are not able to "
+"purchased in the original transaction will be canceled. We are not able to "
 "provide partial refunds and/or refunds to a different account than the "
 "original purchaser. You must agree to these terms before requesting a refund."
 msgstr ""
@@ -1668,8 +1668,8 @@ msgid "%s is not supported by this payment method."
 msgstr ""
 
 #~ msgctxt "camptix"
-#~ msgid "Cancelled <span class=\"count\">(%s)</span>"
-#~ msgid_plural "Cancelled <span class=\"count\">(%s)</span>"
+#~ msgid "Canceled <span class=\"count\">(%s)</span>"
+#~ msgid_plural "Canceled <span class=\"count\">(%s)</span>"
 #~ msgstr[0] "Отменено <span class=\"count\">(%s)</span>"
 #~ msgstr[1] "Отменено <span class=\"count\">(%s)</span>"
 #~ msgstr[2] "Отменено <span class=\"count\">(%s)</span>"

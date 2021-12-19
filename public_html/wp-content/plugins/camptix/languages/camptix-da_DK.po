@@ -406,13 +406,13 @@ msgstr ""
 
 #: camptix.php:1010
 msgctxt "post"
-msgid "Cancelled"
+msgid "Canceled"
 msgstr ""
 
 #: camptix.php:1011
 msgctxt "camptix"
-msgid "Cancelled <span class=\"count\">(%s)</span>"
-msgid_plural "Cancelled <span class=\"count\">(%s)</span>"
+msgid "Canceled <span class=\"count\">(%s)</span>"
+msgid_plural "Canceled <span class=\"count\">(%s)</span>"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -461,7 +461,7 @@ msgid "Failed"
 msgstr "Fejl"
 
 #: camptix.php:1058
-msgid "Cancelled"
+msgid "Canceled"
 msgstr "Annuller"
 
 #: camptix.php:1061
@@ -1478,7 +1478,7 @@ msgid "Your access token does not seem to be valid."
 msgstr "Din access token er ikke gyldig."
 
 #: camptix.php:4469
-msgid "Your payment has been cancelled. Feel free to try again!"
+msgid "Your payment has been canceled. Feel free to try again!"
 msgstr ""
 "Din betaling er blevet annulleret, du er velkommen til at komme tilbage og "
 "prøve igen senere!"
@@ -1498,7 +1498,7 @@ msgstr ""
 
 #: camptix.php:4478
 msgid ""
-"Sorry, but the reservation you are trying to use has been cancelled or has "
+"Sorry, but the reservation you are trying to use has been canceled or has "
 "expired."
 msgstr ""
 "Beklager, den reservation du prøver at bruge er blevet annulleret eller er "
@@ -1704,7 +1704,7 @@ msgstr "Begrundelse for rufundering"
 #: camptix.php:5298
 msgid ""
 "Refunds can take up to several days to process. All of the tickets you "
-"purchased in the original transaction will be cancelled. We are not able to "
+"purchased in the original transaction will be canceled. We are not able to "
 "provide partial refunds and/or refunds to a different account than the "
 "original purchaser. You must agree to these terms before requesting a refund."
 msgstr ""

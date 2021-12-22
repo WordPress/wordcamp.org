@@ -51,13 +51,12 @@ class Meetup_Events extends Base {
 	public static $methodology = '
 		Retrieve data about events in the Chapter program from the Meetup.com API.
 		
-		<strong>Note that this requires one or more requests to the API for every group in the Chapter program, so running this report may literally take 5-10 minutes.</strong>
-		
 		Known issues:
 		
 		<ul>
 			<li>This will not include events for groups that were in the chapter program within the given date range, but no longer are.</li>
-			<li>This will include a group\'s events within the date range that occurred before the group joined the chapter program.</li>
+			<li><s>This will include a group\'s events within the date range that occurred before the group joined the chapter program.</s></li>
+			<li><s>Note that this requires one or more requests to the API for every group in the Chapter program, so running this report may literally take 5-10 minutes.</s></li>
 		</ul>
 	';
 
@@ -167,56 +166,83 @@ class Meetup_Events extends Base {
 			return $data;
 		}
 
-		// @todo Maybe find a way to run this without having to hack the ini.
-		ini_set( 'memory_limit', '900M' );
-		ini_set( 'max_execution_time', 500 );
-
 		$meetup = new Meetup_Client();
 
-		$groups = $meetup->get_groups( array(
-			// Don't include groups that joined the chapter program later than the date range.
-			'pro_join_date_max' => $this->range->end->getTimestamp() * 1000,
-			// Don't include groups whose last event was before the start of the date range.
-			'last_event_min'    => $this->range->start->getTimestamp() * 1000,
-		) );
+		// How we're querying.
+		// Look for Network Events between the reporting dates
+		//  Include the Group Details & Projoin date within
+		// Exclude events where the date is before they joined the network
+		// Exclude cancelled events, as ProNetworkEventsFilter only lets us specifically include a singular status.
 
-		if ( is_wp_error( $groups ) ) {
-			$this->error->add( $groups->get_error_code(), $groups->get_error_message() );
+		// Filter options: https://www.meetup.com/api/schema/#ProNetworkEventsFilter
+
+		$query = '
+		query ( $cursor: String ) {
+			proNetworkByUrlname( urlname: "wordpress" ) {
+				eventsSearch(
+					input: { first: 200, after: $cursor },
+					filter: {
+						eventDateMin: "' . esc_attr( $this->range->start->format('c') ) . '",
+						eventDateMax: "' . esc_attr( $this->range->end->format('c') ) . '"
+					}
+				) {
+					count
+					' . $meetup->pageInfo . '
+					edges {
+						node {
+							id
+							eventUrl
+							title
+							description
+							dateTime
+							status
+							timeStatus
+							isOnline
+							group { proJoinDate name city country latitude longitude }
+							venue { city country lat lng }
+						}
+					}
+				}
+			}
+		}';
+
+		// Fetch results
+		$results = $meetup->send_paginated_request( $query, [ 'cursor' => '' ] );
+		if ( is_wp_error( $results ) ) {
+			$this->error->merge_from( $results );
 			return array();
 		}
 
-		$group_slugs = wp_list_pluck( $groups, 'urlname' );
-		$groups      = array_combine( $group_slugs, $groups );
-
-		/**
-		 * @todo This should probably be converted into a foreach loop that runs the `get_group_events` method
-		 *       separately for each group. That way we can modify the start/end date parameters individually for
-		 *       the case where the group had events before it joined the chapter program and some number of those
-		 *       are included within the report date range. (See Known Issues in the report methodology).
-		 */
-		$events = $meetup->get_events( $group_slugs, array(
-			'status' => 'upcoming,past',
-			'no_earlier_than' => $this->get_timezoneless_iso8601_format( $this->range->start ),
-			'no_later_than'   => $this->get_timezoneless_iso8601_format( $this->range->end ),
-		) );
+		$events = array_column( $results['proNetworkByUrlname']['eventsSearch']['edges'], 'node' );
 
 		$data = [];
-
-		$relevant_keys = $this->public_data_fields;
-
 		foreach ( $events as $event ) {
-			$group_slug = $event['group']['urlname'];
-			$event      = wp_parse_args( $event, $relevant_keys );
+			$pro_join_date = $meetup->datetime_to_time( $event['group']['proJoinDate'] );
+			$event_time    = $meetup->datetime_to_time( $event['dateTime'] );
 
-			$event['description']  = isset( $event['description'] ) ? trim( $event['description'] ) : '';
-			$event['time']         = absint( $event['time'] ) / 1000; // Convert to seconds.
-			$event['group']        = isset( $event['group']['name'] ) ? $event['group']['name'] : $groups[ $group_slug ]['name'];
-			$event['city']         = isset( $event['venue']['city'] ) ? $event['venue']['city'] : $groups[ $group_slug ]['city'];
-			$event['l10n_country'] = isset( $event['venue']['localized_country_name'] ) ? $event['venue']['localized_country_name'] : $groups[ $group_slug ]['country'];
-			$event['latitude']     = ! empty( $event['venue']['lat'] ) ? $event['venue']['lat'] : $groups[ $group_slug ]['lat'];
-			$event['longitude']    = ! empty( $event['venue']['lon'] ) ? $event['venue']['lon'] : $groups[ $group_slug ]['lon'];
+			// Exclude events that happened before a meetup joined the chapter.
+			if ( $event_time < $pro_join_date ) {
+				continue;
+			}
 
-			$data[] = array_intersect_key( $event, $relevant_keys );
+			// Exclude cancelled events.
+			if ( 'cancelled' === strtolower( $event['status'] ) ) {
+				continue;
+			}
+
+			$data[] = [
+				'id'           => $event['id'],
+				'link'         => $event['eventUrl'],
+				'name'         => $event['title'],
+				'description'  => $event['description'],
+				'time'         => $event_time,
+				'status'       => $event['timeStatus'],
+				'group'        => $event['group']['name'],
+				'city'         => ! empty( $event['venue']['city'] ) ? $event['venue']['city'] : $event['group']['city'],
+				'l10n_country' => $meetup->localised_country_name( ! empty( $event['venue']['country'] ) ? $event['venue']['country'] : $event['group']['country'] ),
+				'latitude'     => ( ! $event['isOnline'] && ! empty( $event['venue']['lat'] ) ) ? $event['venue']['lat'] : $event['group']['latitude'],
+				'longitude'    => ( ! $event['isOnline'] && ! empty( $event['venue']['lng'] ) ) ? $event['venue']['lng'] : $event['group']['longitude'],
+			];
 		}
 
 		$data = $this->filter_data_fields( $data );
@@ -335,27 +361,12 @@ class Meetup_Events extends Base {
 		$meetup       = new Meetup_Client();
 		$compiled_data['total_groups'] = absint( $meetup->get_result_count( 'pro/wordpress/groups', array(
 			// Don't include groups that joined the chapter program later than the date range.
-			'pro_join_date_max' => $this->range->end->getTimestamp() * 1000,
+			'pro_join_date_max' => $this->range->end,
 		) ) );
 
 		$compiled_data['groups_with_no_events'] = $compiled_data['total_groups'] - $compiled_data['groups_with_events'];
 
 		return $compiled_data;
-	}
-
-	/**
-	 * Format a date into a valid ISO 8601 string, and then strip off the timezone.
-	 *
-	 * This is the required format for Meetup's v3 events endpoint.
-	 *
-	 * @param DateTimeInterface $date
-	 *
-	 * @return bool|string
-	 */
-	protected function get_timezoneless_iso8601_format( DateTimeInterface $date ) {
-		$real_iso8601 = $date->format( 'c' );
-
-		return substr( $real_iso8601, 0, strpos( $real_iso8601, '+' ) );
 	}
 
 	/**

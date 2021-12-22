@@ -341,12 +341,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			$slug = array_pop( $url_path_segments );
 			$mtp_client = new \WordCamp\Utilities\Meetup_Client();
 
-			$group_details = $mtp_client->get_group_details(
-				$slug,
-				array(
-					'fields' => 'past_event_count,last_event',
-				)
-			);
+			$group_details = $mtp_client->get_group_details( $slug );
 
 			if ( is_wp_error( $group_details ) ) {
 				return $group_details;

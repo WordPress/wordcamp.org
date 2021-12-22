@@ -1193,12 +1193,15 @@ class Meetup_Client extends API_Client {
 			}
 
 			if ( ! empty( $result['pastEvents']['edges'] ) ) {
-				$result['last_event']         = [
+				$result['last_event']       = [
 					'time'           => $this->datetime_to_time( end( $result['pastEvents']['edges'] )['node']['dateTime'] ) * 1000,
 					'yes_rsvp_count' => end( $result['pastEvents']['edges'] )['node']['going'],
 				];
+				$result['past_event_count'] = count( $result['pastEvents']['edges'] );
 			} elseif ( ! empty( $result['groupAnalytics']['lastEventDate'] ) ) {
-				$result['last_event'] = $this->datetime_to_time( $result['groupAnalytics']['lastEventDate'] ) * 1000;
+				// NOTE: last_event here vs above differs intentionally.
+				$result['last_event']       = $this->datetime_to_time( $result['groupAnalytics']['lastEventDate'] ) * 1000;
+				$result['past_event_count'] = $result['groupAnalytics']['totalPastEvents'];
 			}
 
 			$result['lat'] = $result['latitude'];

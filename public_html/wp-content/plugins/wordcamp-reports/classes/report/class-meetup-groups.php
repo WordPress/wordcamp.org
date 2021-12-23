@@ -360,8 +360,8 @@ class Meetup_Groups extends Base {
 
 			array_walk( $data, function( &$group ) {
 				$group['urlname']       = ( $group['urlname'] ) ? esc_url( 'https://www.meetup.com/' . $group['urlname'] . '/' ) : '';
-				$group['founded_date']  = ( $group['founded_date'] ) ? date( 'Y-m-d', $group['founded_date'] ) : '';
-				$group['pro_join_date'] = ( $group['pro_join_date'] ) ? date( 'Y-m-d', $group['pro_join_date'] ) : '';
+				$group['founded_date']  = ( $group['founded_date'] ) ? gmdate( 'Y-m-d', $group['founded_date'] ) : '';
+				$group['pro_join_date'] = ( $group['pro_join_date'] ) ? gmdate( 'Y-m-d', $group['pro_join_date'] ) : '';
 			} );
 
 			$exporter = new Export_CSV( array(

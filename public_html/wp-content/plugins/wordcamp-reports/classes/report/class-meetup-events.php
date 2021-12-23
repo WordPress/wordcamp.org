@@ -168,14 +168,15 @@ class Meetup_Events extends Base {
 
 		$meetup = new Meetup_Client();
 
-		// How we're querying.
-		// Look for Network Events between the reporting dates
-		//  Include the Group Details & Projoin date within
-		// Exclude events where the date is before they joined the network
-		// Exclude cancelled events, as ProNetworkEventsFilter only lets us specifically include a singular status.
+		/*
+		 * How we're querying.
+		 * Look for Network Events between the reporting dates
+		 * Include the Group Details & Projoin date within
+		 * Exclude events where the date is before they joined the network
+		 * Exclude cancelled events, as ProNetworkEventsFilter only lets us specifically include a singular status.
+		 */
 
-		// Filter options: https://www.meetup.com/api/schema/#ProNetworkEventsFilter
-
+		// Filter options: https://www.meetup.com/api/schema/#ProNetworkEventsFilter.
 		$query = '
 		query ( $cursor: String ) {
 			proNetworkByUrlname( urlname: "wordpress" ) {
@@ -187,7 +188,7 @@ class Meetup_Events extends Base {
 					}
 				) {
 					count
-					' . $meetup->pageInfo . '
+					' . $meetup->pagination . '
 					edges {
 						node {
 							id
@@ -215,7 +216,7 @@ class Meetup_Events extends Base {
 
 		$events = array_column( $results['proNetworkByUrlname']['eventsSearch']['edges'], 'node' );
 
-		$data = [];
+		$data = array();
 		foreach ( $events as $event ) {
 			$pro_join_date = $meetup->datetime_to_time( $event['group']['proJoinDate'] );
 			$event_time    = $meetup->datetime_to_time( $event['dateTime'] );
@@ -230,7 +231,7 @@ class Meetup_Events extends Base {
 				continue;
 			}
 
-			$data[] = [
+			$data[] = array(
 				'id'           => $event['id'],
 				'link'         => $event['eventUrl'],
 				'name'         => $event['title'],
@@ -242,7 +243,7 @@ class Meetup_Events extends Base {
 				'l10n_country' => $meetup->localised_country_name( ! empty( $event['venue']['country'] ) ? $event['venue']['country'] : $event['group']['country'] ),
 				'latitude'     => ( ! $event['isOnline'] && ! empty( $event['venue']['lat'] ) ) ? $event['venue']['lat'] : $event['group']['latitude'],
 				'longitude'    => ( ! $event['isOnline'] && ! empty( $event['venue']['lng'] ) ) ? $event['venue']['lng'] : $event['group']['longitude'],
-			];
+			);
 		}
 
 		$data = $this->filter_data_fields( $data );

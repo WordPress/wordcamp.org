@@ -1,5 +1,5 @@
 <?php
-// phpcs:disable Generic.Arrays.DisallowShortArraySyntax, Universal.Operators.DisallowShortTernary
+// phpcs:disable Generic.Arrays.DisallowShortArraySyntax, WordPress.PHP.DisallowShortTernary.Found
 namespace WordCamp\Utilities;
 
 use DateTimeInterface, DateTimeImmutable, DateTimeZone, DateInterval;
@@ -58,6 +58,7 @@ class Meetup_Client extends API_Client {
 	 */
 	public function __construct( array $settings = [] ) {
 		parent::__construct( array(
+
 			/*
 			 * Response codes that should break the request loop.
 			 *
@@ -74,7 +75,7 @@ class Meetup_Client extends API_Client {
 				// TODO: NOTE: These headers are not returned from the GraphQL API, every request is 200 even if throttled.
 				401, // Unauthorized (invalid key).
 				429, // Too many requests (rate-limited).
-				404, // Unable to find group
+				404, // Unable to find group.
 
 				503, // Timeout between API cache & GraphQL Server.
 			),
@@ -95,7 +96,7 @@ class Meetup_Client extends API_Client {
 			self::cli_message( "Meetup Client debug is on. Results will be truncated." );
 		}
 
-		$this->oauth_client = new Meetup_OAuth2_Client;
+		$this->oauth_client = new Meetup_OAuth2_Client();
 
 		if ( ! empty( $this->oauth_client->error->get_error_messages() ) ) {
 			$this->error = $this->merge_errors( $this->error, $this->oauth_client->error );
@@ -284,7 +285,7 @@ class Meetup_Client extends API_Client {
 	/**
 	 * Check the rate limit status in an API response and delay further execution if necessary.
 	 *
-	 * @param array $headers
+	 * @param array $response
 	 *
 	 * @return void
 	 */

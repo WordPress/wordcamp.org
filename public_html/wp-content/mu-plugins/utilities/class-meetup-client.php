@@ -241,7 +241,7 @@ class Meetup_Client extends API_Client {
 		$merged = $array1;
 
 		foreach ( $array2 as $key => &$value ) {
-			// Merge numeric arrays
+			// Merge numeric arrays.
 			if ( is_array( $value ) && wp_is_numeric_array( $value ) && isset( $merged[ $key ] ) ) {
 				$merged[ $key ] = array_merge( $merged[ $key ], $value );
 			} elseif ( is_array( $value ) && isset( $merged[ $key ] ) && is_array( $merged[ $key ] ) ) {
@@ -353,13 +353,13 @@ class Meetup_Client extends API_Client {
 		}
 
 		$datetime_formats = [
-			'Y-m-d\TH:iP',   // 2021-11-20T17:00+05:30
-			'Y-m-d\TH:i:sP', // 2021-11-20T17:00:00+05:30
+			'Y-m-d\TH:iP',   // '2021-11-20T17:00+05:30'.
+			'Y-m-d\TH:i:sP', // '2021-11-20T17:00:00+05:30'.
 			// DateTime::createFromFormat() doesn't handle the final `]` character in the following timezone format.
-			'Y-m-d\TH:i\[e', // 2021-11-20T06:30[US/Eastern]
+			'Y-m-d\TH:i\[e', // '2021-11-20T06:30[US/Eastern]'.
 			'c',             // ISO8601, just incase the above don't cover it.
-			'Y-m-d\TH:i:s',  // timezoneless 2021-11-20T17:00:00
-			'Y-m-d\TH:i',    // timezoneless 2021-11-20T17:00
+			'Y-m-d\TH:i:s',  // timezoneless '2021-11-20T17:00:00'.
+			'Y-m-d\TH:i',    // timezoneless '2021-11-20T17:00'.
 		];
 
 		// See above, just keep one timezone if the timezone format is `P\[e\]`. Simpler matching, assume the timezones are the same.
@@ -518,14 +518,14 @@ class Meetup_Client extends API_Client {
 			return $result;
 		}
 
-		$results = array_column(
+		$groups = array_column(
 			$result['proNetworkByUrlname']['groupsSearch']['edges'],
 			'node'
 		);
 
-		$results = $this->apply_backcompat_fields( 'groups', $results );
+		$groups = $this->apply_backcompat_fields( 'groups', $groups );
 
-		return $results;
+		return $groups;
 	}
 
 	/**
@@ -783,7 +783,7 @@ class Meetup_Client extends API_Client {
 			'max_event_date' => time() + YEAR_IN_SECONDS,
 			'min_event_date' => false,
 			'online_events'  => null, // true: only online events, false: only IRL events.
-			'status'         => 'upcoming', //  UPCOMING, PAST, CANCELLED.
+			'status'         => 'upcoming', // UPCOMING, PAST, CANCELLED.
 			'sort'           => '',
 		];
 		$args = wp_parse_args( $args, $defaults );
@@ -834,7 +834,6 @@ class Meetup_Client extends API_Client {
 			'cursor'  => null,
 		];
 
-
 		$results = $this->send_paginated_request( $query, $variables );
 
 		if ( is_wp_error( $results ) || ! array_key_exists( 'eventsSearch', $results['proNetworkByUrlname'] ) ) {
@@ -846,14 +845,14 @@ class Meetup_Client extends API_Client {
 		}
 
 		// Select edges[*].node.
-		$results = array_column(
+		$events = array_column(
 			$results['proNetworkByUrlname']['eventsSearch']['edges'],
 			'node'
 		);
 
-		$results = $this->apply_backcompat_fields( 'events', $results );
+		$events = $this->apply_backcompat_fields( 'events', $events );
 
-		return $results;
+		return $events;
 
 	}
 
@@ -905,7 +904,7 @@ class Meetup_Client extends API_Client {
 			// Resort all items.
 			usort(
 				$events,
-					function( $a, $b ) {
+				function( $a, $b ) {
 					if ( $a['time'] == $b['time'] ) {
 						return 0;
 					}
@@ -965,29 +964,30 @@ class Meetup_Client extends API_Client {
 		}
 
 		// Select {$event_field}.edges[*].node.
-		$results = array_column(
+		$events = array_column(
 			$results['groupByUrlname'][ $event_field ]['edges'],
 			'node'
 		);
 
-		$results = $this->apply_backcompat_fields( 'events', $results );
+		$events = $this->apply_backcompat_fields( 'events', $events );
 
 		// Apply filters.
 		if ( $args['no_earlier_than'] || $args['no_later_than'] ) {
 			$args['no_earlier_than'] = $this->datetime_to_time( $args['no_earlier_than'] ) ?: 0;
 			$args['no_later_than']   = $this->datetime_to_time( $args['no_later_than'] ) ?: PHP_INT_MAX;
 
-			$results = array_filter(
-				$results,
-				function( $event ) use( $args ) {
-					return
+			$events = array_filter(
+				$events,
+				function ( $event ) use ( $args ) {
+					return (
 						$event['time'] >= $args['no_earlier_than'] &&
-						$event['time'] < $args['no_later_than'];
+						$event['time'] < $args['no_later_than']
+					);
 				}
 			);
 		}
 
-		return $results;
+		return $events;
 	}
 
 	/**
@@ -1065,14 +1065,8 @@ class Meetup_Client extends API_Client {
 					' . implode( ' ', $this->get_default_fields( 'group' ) ) . '
 				}',
 				'venue {
-					id
-					lat
-					lng
-					name
-					city
-					state
-					country
-				}'
+					' . implode( ' ', $this->get_default_fields( 'venue' ) ) . '
+				}',
 			];
 		} elseif ( 'memberships' === $type ) {
 			// See https://www.meetup.com/api/schema/#User for valid fields.
@@ -1099,6 +1093,16 @@ class Meetup_Client extends API_Client {
 				'proJoinDate',
 				'latitude',
 				'longitude',
+			];
+		} elseif ( 'venue' === $type ) {
+			return [
+				'id',
+				'lat',
+				'lng',
+				'name',
+				'city',
+				'state',
+				'country',
 			];
 		}
 	}

@@ -207,8 +207,8 @@ class Meetup_Events extends Base {
 			}
 		}';
 
-		// Fetch results
-		$results = $meetup->send_paginated_request( $query, [ 'cursor' => '' ] );
+		// Fetch results.
+		$results = $meetup->send_paginated_request( $query, array( 'cursor' => null ) );
 		if ( is_wp_error( $results ) ) {
 			$this->error->merge_from( $results );
 			return array();

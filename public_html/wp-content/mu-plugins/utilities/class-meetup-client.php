@@ -93,7 +93,7 @@ class Meetup_Client extends API_Client {
 		$this->debug = $settings['debug'];
 
 		if ( $this->debug ) {
-			self::cli_message( "Meetup Client debug is on. Results will be truncated." );
+			self::cli_message( 'Meetup Client debug is on. Results will be truncated.' );
 		}
 
 		$this->oauth_client = new Meetup_OAuth2_Client();
@@ -583,7 +583,7 @@ class Meetup_Client extends API_Client {
 		$fields = $this->get_default_fields( 'event' );
 
 		// Accepts, slug / id / slugId as the query-by fields.
-		$query = '
+		$query     = '
 		query ( $eventId: ID ) {
 			event( id: $eventId ) {
 				' . implode( ' ', $fields ) . '
@@ -621,11 +621,11 @@ class Meetup_Client extends API_Client {
 		$chunks = array_chunk( $event_ids, 250, true );
 
 		foreach ( $chunks as $chunked_events ) {
-			$keys      = [];
-			$query     = '';
+			$keys  = [];
+			$query = '';
 
 			foreach ( $chunked_events as $id => $event_id ) {
-				$key = 'e' . md5( $id );
+				$key          = 'e' . md5( $id );
 				$keys[ $key ] = $id;
 
 				$query .= sprintf(
@@ -678,7 +678,7 @@ class Meetup_Client extends API_Client {
 		// pastEvents cannot filter to the most recent past event, `last: 1`, `reverse:true, first: 1`, etc doesn't work.
 		// Instead, we fetch the details for every past event instead.
 
-		$query = '
+		$query     = '
 		query ( $urlname: String!, $perPage: Int!, $cursor: String ) {
 			groupByUrlname( urlname: $urlname ) {
 				' . implode( ' ', $fields ) . '
@@ -742,7 +742,7 @@ class Meetup_Client extends API_Client {
 		}
 
 		// 'memberships' => 'GroupUserConnection' not documented.
-		$query = '
+		$query     = '
 		query ( $urlname: String!, $perPage: Int!, $cursor: String ) {
 			groupByUrlname( urlname: $urlname ) {
 				memberships ( input: { first: $perPage, after: $cursor }, filter: { ' . implode( ', ', $filters ) . ' } ) {
@@ -787,7 +787,7 @@ class Meetup_Client extends API_Client {
 			'status'         => 'upcoming', // UPCOMING, PAST, CANCELLED.
 			'sort'           => '',
 		];
-		$args = wp_parse_args( $args, $defaults );
+		$args     = wp_parse_args( $args, $defaults );
 
 		$fields = $this->get_default_fields( 'event' );
 
@@ -816,7 +816,7 @@ class Meetup_Client extends API_Client {
 			}
 		}
 
-		$query = '
+		$query     = '
 		query ( $urlname: String!, $perPage: Int!, $cursor: String ) {
 			proNetworkByUrlname( urlname: $urlname ) {
 				eventsSearch ( input: { first: $perPage, after: $cursor }, filter: { ' . implode( ', ', $filters )  . ' } ) {
@@ -872,7 +872,7 @@ class Meetup_Client extends API_Client {
 			'no_later_than'   => '',
 			'fields'          => [],
 		];
-		$args = wp_parse_args( $args, $defaults );
+		$args     = wp_parse_args( $args, $defaults );
 
 		/*
 		 * The GraphQL API has 4 events fields, here's some comments:
@@ -940,7 +940,7 @@ class Meetup_Client extends API_Client {
 
 		// No filters defined, as we have to do it ourselves. See above.
 
-		$query = '
+		$query     = '
 		query ( $urlname: String!, $perPage: Int!, $cursor: String ) {
 			groupByUrlname( urlname: $urlname ) {
 				' . $event_field . ' ( input: { first: $perPage, after: $cursor } ) {
@@ -1024,7 +1024,7 @@ class Meetup_Client extends API_Client {
 
 		$query = '
 		query {
-			proNetworkByUrlname( urlname: "wordpress" ) {
+			proNetworkByUrlname( urlname: "WordPress" ) {
 				groupsSearch( filter: { ' .  implode( ', ', $filters ) . ' } ) {
 					count
 				}
@@ -1129,7 +1129,7 @@ class Meetup_Client extends API_Client {
 			}
 
 			// Parse an ISO DateInterval into seconds.
-			$now = time();
+			$now                = time();
 			$result['duration'] = ( DateTimeImmutable::createFromFormat( 'U', $now ) )->add( new DateInterval( $result['duration'] ) )->getTimestamp() - $now;
 
 			$result['utc_offset'] = 0;

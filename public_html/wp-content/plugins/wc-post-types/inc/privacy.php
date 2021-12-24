@@ -224,7 +224,14 @@ function get_wc_posts( $post_type, $email_address, $page ) {
 		'posts_per_page' => $number,
 		'paged'          => $page,
 		'post_type'      => $post_type,
-		'post_status'    => 'any',
+		'post_status'    => get_post_stati(
+			array(
+				'public'   => 1,
+				'_builtin' => false,
+			),
+			'names',
+			'or'
+		),
 		'orderby'        => 'ID',
 		'order'          => 'ASC',
 	];

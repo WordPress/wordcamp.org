@@ -341,12 +341,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			$slug = array_pop( $url_path_segments );
 			$mtp_client = new \WordCamp\Utilities\Meetup_Client();
 
-			$group_details = $mtp_client->get_group_details(
-				$slug,
-				array(
-					'fields' => 'past_event_count,last_event',
-				)
-			);
+			$group_details = $mtp_client->get_group_details( $slug );
 
 			if ( is_wp_error( $group_details ) ) {
 				return $group_details;
@@ -388,11 +383,11 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			update_post_meta( $post_id, 'Meetup Co-organizer names', $event_hosts );
 			update_post_meta( $post_id, 'Meetup Location (From meetup.com)', $group_details['localized_location'] );
 			update_post_meta( $post_id, 'Meetup members count', $group_details['members'] );
-			update_post_meta( $post_id, 'Meetup group created on', $group_details['created'] / 1000 );
+			update_post_meta( $post_id, 'Meetup group created on', $group_details['created'] );
 
 			if ( isset( $group_details['last_event'] ) && is_array( $group_details['last_event'] ) ) {
 				update_post_meta( $post_id, 'Number of past meetups', $group_details['past_event_count'] );
-				update_post_meta( $post_id, 'Last meetup on', $group_details['last_event']['time'] / 1000 );
+				update_post_meta( $post_id, 'Last meetup on', $group_details['last_event']['time'] );
 				update_post_meta( $post_id, 'Last meetup RSVP count', $group_details['last_event']['yes_rsvp_count'] );
 			}
 			update_post_meta( $post_id, 'Last meetup.com API sync', time() );

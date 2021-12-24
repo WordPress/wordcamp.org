@@ -158,7 +158,7 @@ class Meetup_Groups extends Base {
 		$meetup = new Meetup_Client();
 
 		$data = $meetup->get_groups( array(
-			'pro_join_date_max' => $this->range->end->getTimestamp() * 1000, // Meetup API uses milliseconds.
+			'pro_join_date_max' => $this->range->end,
 		) );
 
 		if ( is_wp_error( $data ) ) {
@@ -183,7 +183,7 @@ class Meetup_Groups extends Base {
 	public function compile_report_data( array $data ) {
 		$joined_groups = array_filter( $data, function( $group ) {
 			$join_date = new DateTimeImmutable();
-			$join_date = $join_date->setTimestamp( intval( $group['pro_join_date'] / 1000 ) ); // Meetup API uses milliseconds.
+			$join_date = $join_date->setTimestamp( $group['pro_join_date'] );
 
 			if ( $join_date >= $this->range->start && $join_date <= $this->range->end ) {
 				return true;
@@ -360,8 +360,8 @@ class Meetup_Groups extends Base {
 
 			array_walk( $data, function( &$group ) {
 				$group['urlname']       = ( $group['urlname'] ) ? esc_url( 'https://www.meetup.com/' . $group['urlname'] . '/' ) : '';
-				$group['founded_date']  = ( $group['founded_date'] ) ? date( 'Y-m-d', $group['founded_date'] / 1000 ) : '';
-				$group['pro_join_date'] = ( $group['pro_join_date'] ) ? date( 'Y-m-d', $group['pro_join_date'] / 1000 ) : '';
+				$group['founded_date']  = ( $group['founded_date'] ) ? gmdate( 'Y-m-d', $group['founded_date'] ) : '';
+				$group['pro_join_date'] = ( $group['pro_join_date'] ) ? gmdate( 'Y-m-d', $group['pro_join_date'] ) : '';
 			} );
 
 			$exporter = new Export_CSV( array(

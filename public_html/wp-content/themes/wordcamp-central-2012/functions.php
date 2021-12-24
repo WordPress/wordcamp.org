@@ -562,7 +562,9 @@ class WordCamp_Central_Theme {
 		$GLOBALS['comment'] = $comment;
 
 		switch ( $comment->comment_type ) :
-			case '': ?>
+			case '':
+			case 'comment':
+				?>
 				<li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
 					<div id="comment-<?php comment_ID(); ?>" class="comment-container">
 						<div class="comment-author vcard">

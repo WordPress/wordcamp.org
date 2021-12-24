@@ -10,22 +10,26 @@ License:     GPLv2 or later
 */
 
 namespace WordCamp\Site_Cloner;
-defined( 'WPINC' ) or die();
+use WP_Theme, WP_Customize_Manager, WP_Query;
+use WCCSP_Settings, WordCamp_Loader;
+use Jetpack;
 
-const PRIME_SITES_CRON_ACTION      = 'wcsc_prime_sites';
+defined( 'WPINC' ) || die();
+
+const PRIME_SITES_CRON_ACTION   = 'wcsc_prime_sites';
 const WORDCAMP_SITES_OPTION_KEY = 'wcsc_sites';
 
 /**
  * Initialization
  */
 function initialize() {
-	// We rely on the Custom CSS module being available
-	if ( ! class_exists( '\Jetpack' ) ) {
+	// We rely on the Custom CSS module being available.
+	if ( ! class_exists( 'Jetpack' ) ) {
 		return;
 	}
 
 	add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\register_scripts'               );
-	add_action( 'admin_menu',            __NAMESPACE__ . '\add_submenu_page'               );
+	add_action( 'admin_menu',            __NAMESPACE__ . '\add_submenu_pages'              );
 	add_action( 'customize_register',    __NAMESPACE__ . '\register_customizer_components' );
 	add_action( 'rest_api_init',         __NAMESPACE__ . '\register_api_endpoints'         );
 	add_action( PRIME_SITES_CRON_ACTION, __NAMESPACE__ . '\prime_wordcamp_sites'           );
@@ -34,7 +38,7 @@ function initialize() {
 		wp_schedule_event( time(), 'daily', PRIME_SITES_CRON_ACTION );
 	}
 }
-add_action( 'plugins_loaded', __NAMESPACE__ . '\initialize' ); // After Jetpack has loaded
+add_action( 'plugins_loaded', __NAMESPACE__ . '\initialize' ); // After Jetpack has loaded.
 
 /**
  * Register scripts and styles
@@ -73,7 +77,7 @@ function register_scripts() {
  * @return array
  */
 function get_available_themes() {
-	/** @var \WP_Theme $theme */
+	/** @var WP_Theme $theme */
 	$available_themes = array();
 	$raw_themes       = wp_get_themes( array( 'allowed' => true ) );
 
@@ -81,7 +85,7 @@ function get_available_themes() {
 		$theme_name         = $theme->display( 'Name' );
 		$available_themes[] = array(
 			'slug' => $theme->get_stylesheet(),
-			'name' => $theme_name ?: $theme->get_stylesheet()
+			'name' => $theme_name ?: $theme->get_stylesheet(),
 		);
 	}
 
@@ -94,8 +98,8 @@ function get_available_themes() {
  * This helps organizers to realize that this tool exists, because they otherwise wouldn't see it unless
  * they opened the Customizer.
  */
-function add_submenu_page() {
-	\add_submenu_page(
+function add_submenu_pages() {
+	add_submenu_page(
 		'themes.php',
 		__( 'Clone Another WordCamp', 'wordcamporg' ),
 		__( 'Clone Another WordCamp', 'wordcamporg' ),
@@ -107,11 +111,11 @@ function add_submenu_page() {
 /**
  * Register our Customizer settings, panels, sections, and controls
  *
- * @param \WP_Customize_Manager $wp_customize
+ * @param WP_Customize_Manager $wp_customize
  */
 function register_customizer_components( $wp_customize ) {
-	require_once( __DIR__ . '/includes/source-site-id-setting.php' );
-	require_once( __DIR__ . '/includes/site-control.php' );
+	require_once __DIR__ . '/includes/source-site-id-setting.php';
+	require_once __DIR__ . '/includes/site-control.php';
 
 	$wp_customize->add_setting( new Source_Site_ID_Setting(
 		$wp_customize,
@@ -123,7 +127,7 @@ function register_customizer_components( $wp_customize ) {
 		'wcsc_sites',
 		array(
 			'title'      => __( 'Clone Another WordCamp', 'wordcamporg' ),
-			'capability' => 'switch_themes'
+			'capability' => 'switch_themes',
 		)
 	);
 
@@ -134,7 +138,7 @@ function register_customizer_components( $wp_customize ) {
 			'type'     => 'wcscSearch',
 			'label'    => __( 'Search', 'wordcamporg' ),
 			'settings' => 'wcsc_source_site_id',
-			'section'  => 'wcsc_sites'
+			'section'  => 'wcsc_sites',
 		)
 	) );
 }
@@ -170,7 +174,7 @@ function sites_endpoint() {
 	if ( $cached_sites ) {
 		unset( $cached_sites[ get_current_blog_id() ] );
 
-	    $sites = array_values( $cached_sites );
+		$sites = array_values( $cached_sites );
 	}
 
 	return $sites;
@@ -185,7 +189,7 @@ function sites_endpoint() {
  * mentioned in `get_wordcamp_sites()` first.
  */
 function prime_wordcamp_sites() {
-	// This only needs to run on a single site, then the whole network can use the cached result
+	// This only needs to run on a single site, then the whole network can use the cached result.
 	if ( ! is_main_site() ) {
 		return;
 	}
@@ -200,27 +204,32 @@ function prime_wordcamp_sites() {
  */
 function get_wordcamp_sites() {
 	/*
-	 * The post statuses that \WordCamp_Loader::get_public_post_statuses() returns are only created on Central,
+	 * The post statuses that WordCamp_Loader::get_public_post_statuses() returns are only created on Central,
 	 * because the plugin isn't active on any other sites.
 	 */
 	if ( ! is_main_site() ) {
 		return array();
 	}
 
-	if ( ! \Jetpack::is_module_active( 'custom-css' ) ) {
-		\Jetpack::activate_module( 'custom-css', false, false );
+	if ( ! Jetpack::is_module_active( 'custom-css' ) ) {
+		Jetpack::activate_module( 'custom-css', false, false );
 	}
 
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org.
 
-	$wordcamp_query = new \WP_Query( array(
+	$cloneable_post_statuses = array_merge(
+		WordCamp_Loader::get_public_post_statuses(),
+		array( 'wcpt-cancelled' )
+	);
+
+	$wordcamp_query = new WP_Query( array(
 		/*
 		 * todo - There's a bug where a `posts_per_page` value greater than ~250-300 will result in
 		 * `set_site_transient()` calling `add_site_option()` rather than `update_site_option()`,
 		 * and then `get_site_transient()` fails, so `sites_endpoint()` returns an empty array.
 		 */
 		'post_type'      => WCPT_POST_TYPE_ID,
-		'post_status'    => \WordCamp_Loader::get_public_post_statuses(),
+		'post_status'    => $cloneable_post_statuses,
 		'posts_per_page' => 250,
 		'meta_key'       => 'Start Date (YYYY-mm-dd)',
 		'orderby'        => 'meta_value_num',
@@ -271,7 +280,7 @@ function get_filtered_wordcamp_sites( $wordcamps ) {
 				'name'             => get_wordcamp_name(),
 				'theme_slug'       => get_stylesheet(),
 				'screenshot_url'   => get_screenshot_url( $site_url ),
-				'year'             => date( 'Y', $start_date ),
+				'year'             => gmdate( 'Y', $start_date ),
 				'css_preprocessor' => $preprocessor,
 			);
 		}
@@ -295,14 +304,14 @@ function coming_soon_plugin_enabled() {
 		return $enabled;
 	}
 
-	// We may need to instantiate the class if this is the first time calling this function
+	// We may need to instantiate the class if this is the first time calling this function.
 	if ( ! is_a( $WCCSP_Settings, 'WCCSP_Settings' ) ) {
-		$WCCSP_Settings = new \WCCSP_Settings();
+		$WCCSP_Settings = new WCCSP_Settings();
 	}
 
 	$settings = $WCCSP_Settings->get_settings();
 
-	if ( isset( $settings[ 'enabled' ] ) && 'on' === $settings[ 'enabled' ] ) {
+	if ( isset( $settings['enabled'] ) && 'on' === $settings['enabled'] ) {
 		$enabled = true;
 	}
 
@@ -333,9 +342,9 @@ function get_screenshot_url( $site_url ) {
  * @return int
  */
 function sort_sites_by_year( $site_a, $site_b ) {
-	if ( $site_a[ 'year' ] === $site_b[ 'year' ] ) {
+	if ( $site_a['year'] === $site_b['year'] ) {
 		return 0;
 	}
 
-	return ( $site_a[ 'year' ] < $site_b[ 'year' ] ? 1 : -1 );
+	return ( $site_a['year'] < $site_b['year'] ? 1 : -1 );
 }

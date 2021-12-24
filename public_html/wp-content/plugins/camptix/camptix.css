@@ -71,6 +71,8 @@ body.admin-bar #tix {
 #tix-attendees li {
 	float: left;
 	width: 50%;
+	margin-left: 0px;
+	margin-right: 0px;
 	margin-bottom: 20px;
 	height: 80px;
 }

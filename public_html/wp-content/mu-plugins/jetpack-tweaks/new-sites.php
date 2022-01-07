@@ -10,12 +10,31 @@ add_filter( 'pre_update_site_option_jetpack-network-settings', __NAMESPACE__ . '
 add_action( 'wp_initialize_site',                              __NAMESPACE__ . '\schedule_connect_new_site', 11 );
 add_action( 'wcorg_connect_new_site',                          __NAMESPACE__ . '\wcorg_connect_new_site', 10, 2 );
 
-/*
+/**
  * Determine which Jetpack modules should be automatically activated when new sites are created
  */
 function default_jetpack_modules( $modules ) {
-	$modules = array_diff( $modules, array( 'widget-visibility' ) );
-	array_push( $modules, 'contact-form', 'shortcodes', 'custom-css', 'subscriptions' );
+	// Disable some default modules.
+	$modules = array_diff(
+		$modules,
+		array(
+			'widget-visibility', // better performance without.
+		)
+	);
+
+	// Add to default modules.
+	array_push(
+		$modules,
+		'contact-form',
+		'copy-post',
+		'custom-css',
+		'photon', // Site Accelerator.
+		'photon-cdn', // Site Accelerator.
+		'sharedaddy', // Sharing.
+		'shortcodes',
+		'sitemaps',
+		'subscriptions'
+	);
 
 	return $modules;
 }

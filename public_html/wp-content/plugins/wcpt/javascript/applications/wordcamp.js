@@ -11,6 +11,7 @@ jQuery( document ).ready( function( $ ) {
 	questions[ "pd-question-22" ] = Array( "23" );
 	questions[ "pd-question-27" ] = Array( "28" );
 	questions[ "pd-question-35" ] = Array( "30" );
+	questions[ "pd-question-37" ] = Array( "38" );
 
 	var yesanswers                 = Array();
 	yesanswers[ "pd-question-6" ]  = Array( "Yes, more than one", "Yes, I've been to one" );
@@ -21,6 +22,7 @@ jQuery( document ).ready( function( $ ) {
 	yesanswers[ "pd-question-22" ] = Array( "Yes, I have co-organizers already" );
 	yesanswers[ "pd-question-27" ] = Array( "Yes, I know lots of local WordPress users/developers", "Yes, I know a couple of people who would be qualified" );
 	yesanswers[ "pd-question-35" ] = Array( "It would be an in-person event", "It would be both in-person and streamed online" );
+	yesanswers[ "pd-question-37" ] = Array( "Yes, before session day(s)", "Yes, during session day(s)", "Yes, after session day(s)" );
 
 	$( "input" ).click( function() {
 		qid = $( this ).closest( ".PDF_question" ).attr( "id" );

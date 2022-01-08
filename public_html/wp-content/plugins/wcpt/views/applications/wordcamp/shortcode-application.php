@@ -1380,6 +1380,67 @@ function render_wordcamp_application_form( $countries, $prefilled_fields ) {
 
 				<div class="PDF_questionDivide" id="pd-divider-30"></div>
 
+				<div class="PDF_question" id="pd-question-37">
+					<div class="qNumber">
+						Q.37
+					</div>
+
+					<div class="qContent">
+						<div class="qText">
+							Are you planning to hold a KidsCamp?
+						</div>
+
+						<div class="PDF_QT400">
+							<ul>
+								<li>
+									<input type="radio" name="q_kidscamp"
+										value="Yes, before session day(s)" id="q_kidscamp_1" />
+
+									<label for="q_kidscamp_1">Yes, before session day(s)</label>
+								</li>
+								<li>
+									<input type="radio" name="q_kidscamp"
+										value="Yes, during session day(s)" id="q_kidscamp_2" />
+
+									<label for="q_kidscamp_2">Yes, during session day(s)</label>
+								</li>
+								<li>
+									<input type="radio" name="q_kidscamp"
+										value="Yes, after session day(s)" id="q_kidscamp_3" />
+
+									<label for="q_kidscamp_3">Yes, after session day(s)</label>
+								</li>
+								<li>
+									<input type="radio" name="q_kidscamp"
+										value="No" id="q_kidscamp_4" />
+
+									<label for="q_kidscamp_4">No</label>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_questionDivide" id="pd-divider-37"></div>
+
+				<div class="PDF_question" id="pd-question-38">
+					<div class="qNumber">
+						Q.38
+					</div>
+
+					<div class="qContent">
+						<div class="qText">
+							Who will be the lead organizer for KidsCamp?
+						</div>
+
+						<div class="PDF_QT100">
+							<input maxlength="500" name="q_kidscamp_lead_organizer" class="large" type="text" title="Who will be the lead organizer for KidsCamp?" />
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_questionDivide" id="pd-divider-38"></div>
+
 				<div class="PDF_question" id="pd-question-32">
 					<div class="qNumber">
 						Q.32

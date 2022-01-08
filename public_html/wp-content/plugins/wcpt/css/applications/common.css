@@ -54,12 +54,14 @@
 
 .wcfd-disabled-form #wcorg-login-message a {
 	color: #fff;
+	text-decoration: underline;
 }
 
 .wcfd-disabled-form #wcorg-login-message a:hover,
 .wcfd-disabled-form #wcorg-login-message a:focus,
 .wcfd-disabled-form #wcorg-login-message a:active {
-	color: #fff;
+	color: #eae7e7;
+	text-decoration: none;
 }
 
 .wcfd-overlay {

@@ -12,6 +12,7 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		var createSiteCheckbox = $( '#wcpt_create-site-in-network' ),
 			$mentorUserName = $( '#wcpt_mentor_wordpress_org_user_name' ),
 			hasContributor = $( '#wcpt_contributor_day' ),
+			hasKidsCamp = $( '#wcpt_kidscamp' ),
 			$virtualEventCheckbox = $( '#wcpt_virtual_event_only' ),
 			$streamingSelection = $( '.field__type-select-streaming' );
 
@@ -22,6 +23,10 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		// Contributor day info
 		hasContributor.change( self.toggleContributorInfo );
 		hasContributor.trigger( 'change' );
+
+		// KidsCamp day info
+		hasKidsCamp.change( self.toggleKidsCampInfo );
+		hasKidsCamp.trigger( 'change' );
 
 		// Date fields
 		$( '.date-field' ).datepicker( {
@@ -149,6 +154,25 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 			contributorInputElements.slideDown();
 		} else {
 			contributorInputElements.slideUp();
+		}
+
+	};
+
+	/**
+	 * Toggle the display of the KidsCamp Info fields
+	 *
+	 * @param {object} event
+	 */
+	self.toggleKidsCampInfo = function( event ) {
+
+		// Selects all the div enclosing input elements for kidscamp info,
+		// except for the one which has the checkbox with ID wcpt_kidscamp
+		var kidsCampInputElements = $( "#wcpt_kidscamp_info .inside .inside:not( :has( #wcpt_kidscamp ) )" );
+
+		if ( $( '#wcpt_kidscamp' ).is( ':checked' ) ) {
+			kidsCampInputElements.slideDown();
+		} else {
+			kidsCampInputElements.slideUp();
 		}
 
 	};

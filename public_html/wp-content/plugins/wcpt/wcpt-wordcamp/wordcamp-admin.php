@@ -94,6 +94,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'advanced'
 			);
 
+			add_meta_box(
+				'wcpt_kidscamp_info',
+				__( 'KidsCamp Information', 'wordcamporg' ),
+				'wcpt_kidscamp_metabox',
+				WCPT_POST_TYPE_ID,
+				'advanced'
+			);
+
 		}
 
 		/**
@@ -403,6 +411,20 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					);
 					break;
 
+				case 'kidscamp':
+					// These fields names need to be unique, hence the 'Contributor' prefix on each one.
+					$retval = array(
+						'KidsCamp'                    => 'checkbox',
+						'KidsCamp Lead Organizer'     => 'text',
+						'KidsCamp Date (YYYY-mm-dd)'  => 'date',
+						'KidsCamp Venue Name'         => 'text',
+						'KidsCamp Venue Address'      => 'textarea',
+						'KidsCamp Venue Capacity'     => 'text',
+						'KidsCamp Venue Website URL'  => 'text',
+						'KidsCamp Venue Contact Info' => 'textarea',
+					);
+					break;
+
 				case 'wordcamp':
 					$retval = array(
 						'Start Date (YYYY-mm-dd)'           => 'date',
@@ -498,6 +520,15 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Contributor Venue Capacity'       => 'text',
 						'Contributor Venue Website URL'    => 'text',
 						'Contributor Venue Contact Info'   => 'textarea',
+
+						'KidsCamp'                         => 'checkbox',
+						'KidsCamp Lead Organizer'          => 'text',
+						'KidsCamp Date (YYYY-mm-dd)'       => 'date',
+						'KidsCamp Venue Name'              => 'text',
+						'KidsCamp Venue Address'           => 'textarea',
+						'KidsCamp Venue Capacity'          => 'text',
+						'KidsCamp Venue Website URL'       => 'text',
+						'KidsCamp Venue Contact Info'      => 'textarea',
 					);
 					break;
 
@@ -1176,6 +1207,14 @@ function wcpt_venue_metabox( $post, $metabox ) {
  */
 function wcpt_contributor_metabox( $post, $metabox ) {
 	$meta_keys = $GLOBALS['wordcamp_admin']->meta_keys( 'contributor' );
+	wcpt_metabox( $meta_keys, $metabox['id'] );
+}
+
+/**
+ * Displays KidsCamp metabox
+ */
+function wcpt_kidscamp_metabox( $post, $metabox ) {
+	$meta_keys = $GLOBALS['wordcamp_admin']->meta_keys( 'kidscamp' );
 	wcpt_metabox( $meta_keys, $metabox['id'] );
 }
 

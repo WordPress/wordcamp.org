@@ -41,10 +41,9 @@ COPY wordcamp.test.pem     /etc/ssl/certs/wordcamp.test.pem
 COPY wordcamp.test.key.pem /etc/ssl/private/wordcamp.test.key.pem
 
 # Install `wkhtmltopdf` for WordCamp Docs, CampTix Invoices, etc. See https://stackoverflow.com/a/38336153/1845153
-RUN curl -L https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz > wkhtmltox.tar.xz
-RUN tar xvf wkhtmltox.tar.xz
-RUN mv wkhtmltox/bin/wkhtmlto* /usr/bin/
-RUN rm -rf wkhtmltox*
+RUN curl -L https://downloads.wkhtmltopdf.org/0.12/0.12.5/wkhtmltox_0.12.5-1.stretch_amd64.deb > wkhtmltox.deb
+RUN apt install ./wkhtmltox.deb -y
+RUN rm ./wkhtmltox.deb
 
 # Install WP-CLI.
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar

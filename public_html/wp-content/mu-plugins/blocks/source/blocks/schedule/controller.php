@@ -15,6 +15,7 @@ defined( 'WPINC' ) || die();
 function init() {
 	$front_end_assets = require PLUGIN_DIR . 'build/schedule-front-end.min.asset.php';
 
+	$front_end_assets['dependencies'][] = 'wp-sanitize';
 	wp_register_script(
 		'wordcamp-schedule-front-end',
 		PLUGIN_URL . 'build/schedule-front-end.min.js',
@@ -108,7 +109,7 @@ function pass_global_data_to_front_end() {
 	wp_add_inline_script(
 		'wordcamp-schedule-front-end',
 		sprintf(
-			'WordCampBlocks.schedule = JSON.parse( decodeURIComponent( \'%s\' ) );',
+			'var WordCampBlocks = WordCampBlocks || {}; WordCampBlocks.schedule = JSON.parse( decodeURIComponent( \'%s\' ) );',
 			rawurlencode( wp_json_encode( $schedule_data ) )
 		),
 		'before'

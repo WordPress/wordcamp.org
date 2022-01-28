@@ -166,3 +166,25 @@ function disable_jetpack_spam_delete() {
 	}
 }
 add_action( 'init', __NAMESPACE__ . '\disable_jetpack_spam_delete' );
+
+/**
+ * Filter the "is_frontend" check.
+ *
+ * The contact forms are not shown in cached pages because this function incorrectly thinks this isn't a
+ * frontend request. Filtering the value here is a nuclear option, intended to be a short-term fix while this
+ * is addressed in Jetpack itself.
+ * See https://github.com/Automattic/jetpack/issues/22410.
+ *
+ * @param bool $is_frontend Whether the current request is for accessing the frontend.
+ */
+function workaround_is_frontend( $is_frontend ) {
+	$is_frontend = true;
+
+	// Leave this check to prevent RSS feeds from showing the form.
+	if ( is_feed() ) {
+		$is_frontend = false;
+	}
+
+	return $is_frontend;
+}
+add_filter( 'jetpack_is_frontend', __NAMESPACE__ . '\workaround_is_frontend' );

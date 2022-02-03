@@ -117,7 +117,7 @@ function get_wordcamp_name( $site_id = 0 ) {
 	if ( $wordcamp ) {
 		if ( ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
 			$name = $wordcamp->post_title;
-			$year = date( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] );
+			$year = gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] );
 
 			// Appemd the Year to the WordCamp name if not present within the name.
 			if ( ! str_contains( $name, $year ) ) {
@@ -271,7 +271,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 				echo esc_html( $wordcamp->post_title );
 				if ( ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
-					echo ' ' . esc_html( date( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) );
+					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) );
 				}
 
 				?>
@@ -310,17 +310,17 @@ function get_wordcamp_date_range( $wordcamp ) {
 
 	// Assume a single-day event if there is no end date.
 	if ( ! $end ) {
-		return date( 'F j, Y', $start );
+		return gmdate( 'F j, Y', $start );
 	}
 
 	$range_str = esc_html__( '%1$s to %2$s', 'wordcamporg' );
 
-	if ( date( 'Y', $start ) !== date( 'Y', $end ) ) {
-		return sprintf( $range_str, date( 'F j, Y', $start ), date( 'F j, Y', $end ) );
-	} else if ( date( 'm', $start ) !== date( 'm', $end ) ) {
-		return sprintf( $range_str, date( 'F j', $start ), date( 'F j, Y', $end ) );
+	if ( gmdate( 'Y', $start ) !== gmdate( 'Y', $end ) ) {
+		return sprintf( $range_str, gmdate( 'F j, Y', $start ), gmdate( 'F j, Y', $end ) );
+	} else if ( gmdate( 'm', $start ) !== gmdate( 'm', $end ) ) {
+		return sprintf( $range_str, gmdate( 'F j', $start ), gmdate( 'F j, Y', $end ) );
 	} else {
-		return sprintf( $range_str, date( 'F j', $start ), date( 'j, Y', $end ) );
+		return sprintf( $range_str, gmdate( 'F j', $start ), gmdate( 'j, Y', $end ) );
 	}
 }
 

@@ -119,7 +119,7 @@ function get_wordcamp_name( $site_id = 0 ) {
 			$name = $wordcamp->post_title;
 			$year = gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] );
 
-			// Appemd the Year to the WordCamp name if not present within the name.
+			// Append the year to the WordCamp name if not present within the name.
 			if ( ! str_contains( $name, $year ) ) {
 				$name .= ' ' . $year;
 			}

@@ -134,7 +134,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * @return string     The cache key
 	 */
 	protected function generate_attendees_cache_key( $attr ) {
-		return 'camptix-attendees-' . md5( maybe_serialize( $attr ) );
+		// Increment this when the markup changes or there's some other reason to invalidate the cache on every site.
+		$cache_buster = 1;
+
+		return 'camptix-attendees-' . $cache_buster . '-' . md5( maybe_serialize( $attr ) );
 	}
 
 	/**

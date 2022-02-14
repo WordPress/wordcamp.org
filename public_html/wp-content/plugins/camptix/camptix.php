@@ -478,7 +478,8 @@ class CampTix_Plugin {
 			'camptix',
 			plugins_url( 'camptix.js', __FILE__ ),
 			array( 'jquery' ),
-			filemtime( __DIR__ . '/camptix.js' )
+			filemtime( __DIR__ . '/camptix.js' ),
+			true
 		);
 
 		wp_localize_script( 'camptix', 'camptix_l10n', array(

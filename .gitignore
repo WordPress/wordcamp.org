@@ -33,6 +33,13 @@ public_html/wp-content/debug.log
 
 
 #
+# Tracked in `yarn.lock`
+#
+package-lock.json
+public_html/wp-content/plugins/wc-post-types/package-lock.json
+
+
+#
 # Dev tools
 #
 public_html/wp-content/plugins/query-monitor/

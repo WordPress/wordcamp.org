@@ -251,10 +251,10 @@ class WordCamp_New_Site {
 			$this->configure_new_site( $wordcamp_id, $wordcamp );
 
 			$new_site_id = $this->new_site_id;
-			Logger\log( 'finished', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id' ) );
+			Logger\log( 'finished', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id', 'blog_name' ) );
 		} else {
 			$new_site_id = $this->new_site_id;
-			Logger\log( 'no_site_id', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id' ) );
+			Logger\log( 'no_site_id', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id', 'blog_name' ) );
 		}
 	}
 
@@ -484,7 +484,7 @@ class WordCamp_New_Site {
 		update_option( 'siteurl', set_url_scheme( get_option( 'siteurl' ), 'https' ) );
 		update_option( 'home',    set_url_scheme( get_option( 'home' ),    'https' ) );
 
-		Logger\log( 'finished', compact( 'admin_email', 'blog_name' ) );
+		Logger\log( 'finished', compact( 'admin_email' ) );
 	}
 
 	/**
@@ -556,7 +556,7 @@ class WordCamp_New_Site {
 			}
 		}
 
-		Logger\log( 'finished', compact( 'assigned_sponsor_data', 'stubs', 'blog_name' ) );
+		Logger\log( 'finished', compact( 'assigned_sponsor_data', 'stubs' ) );
 	}
 
 	/**

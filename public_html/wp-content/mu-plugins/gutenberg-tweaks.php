@@ -35,6 +35,7 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 		'wcb_session',
 		'wcb_speaker',
 		// 'wcb_sponsor',
+		// 'mes'
 		'wcb_organizer',
 	);
 

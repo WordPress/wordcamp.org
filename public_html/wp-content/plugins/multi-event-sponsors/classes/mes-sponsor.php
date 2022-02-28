@@ -53,6 +53,7 @@ class MES_Sponsor {
 			'labels'          => $labels,
 			'singular_label'  => __( 'Multi-Event Sponsor', 'wordcamporg' ),
 			'public'          => true,
+			'show_in_rest'    => true,
 			'menu_position'   => 20,
 			'hierarchical'    => false,
 			'capability_type' => 'page',

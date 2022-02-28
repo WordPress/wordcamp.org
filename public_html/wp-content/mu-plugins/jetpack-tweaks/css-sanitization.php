@@ -182,6 +182,7 @@ function sanitize_urls_in_css_properties( $url, $property ) {
  */
 function get_custom_css_properties_safelist() {
 	return array(
+		'aspect-ratio',
 		'background-blend-mode',
 		'clip-path',
 		'isolation',

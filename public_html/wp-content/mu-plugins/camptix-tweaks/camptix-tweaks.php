@@ -669,11 +669,10 @@ function switch_email_template( $template_slug ) {
 /**
  * Get a string for HTML email footers listing global sponsors.
  *
- * @param array $sponsor_args Args for filtering which sponsors to include.
- *
  * @return string
  */
-function get_global_sponsors_string( $sponsor_args = array() ) {
+function get_global_sponsors_string() {
+	// @todo Pull from MES_SPONSOR::POST_TYPE_SLUG so we don't have to manually update every time they change.
 	$sponsors = array( 'Jetpack', 'WooCommerce', 'Bluehost', 'GoDaddy Pro', 'GreenGeeks', 'Yoast' );
 
 	$sponsors = array_map(
@@ -719,62 +718,6 @@ function get_donation_string() {
 		__( 'Do you love WordPress events? To support open source education and charity hackathons, please <a href="%s">donate to the WordPress Foundation</a>.', 'wordcamporg' ),
 		'https://wordpressfoundation.org/donate/'
 	);
-}
-
-/**
- * Get an array of Global Sponsor names and URLs.
- *
- * @param array $args Args for filtering which sponsors to include.
- *
- * @return array
- */
-function get_global_sponsors( $args = array() ) {
-	$args = wp_parse_args(
-		$args,
-		array(
-			'region_id' => '',
-			'level_id'  => '',
-		)
-	);
-
-	$sponsors = array();
-
-	switch_to_blog( BLOG_ID_CURRENT_SITE );
-
-	$sponsor_posts = get_posts( array(
-		'post_type'   => 'mes',
-		'post_status' => 'publish',
-		'numberposts' => -1,
-	) );
-
-	foreach ( $sponsor_posts as $sponsor_post ) {
-		$sponsorships = $sponsor_post->mes_regional_sponsorships;
-
-		if ( $args['region_id'] ) {
-			if ( ! isset( $sponsorships[ $args['region_id'] ] ) || empty( $sponsorships[ $args['region_id'] ] ) ) {
-				continue;
-			}
-
-			$sponsorships = array_intersect_key( $sponsorships, array( $args['region_id'] => '' ) );
-		}
-
-		if ( $args['level_id'] ) {
-			$levels = array_map( 'absint', $sponsorships );
-
-			if ( ! in_array( $args['level_id'], $levels, true ) ) {
-				continue;
-			}
-		}
-
-		$sponsors[] = array(
-			'name' => $sponsor_post->post_title,
-			'url'  => $sponsor_post->mes_website,
-		);
-	}
-
-	restore_current_blog();
-
-	return $sponsors;
 }
 
 /**
@@ -909,10 +852,7 @@ function modify_shortcode_contents( $shortcode_contents, $tix_action ) {
 			$current_wordcamp = get_wordcamp_post();
 			$region_id = isset( $current_wordcamp->meta['Multi-Event Sponsor Region'][0] ) ? $current_wordcamp->meta['Multi-Event Sponsor Region'][0] : '';
 
-			$sponsors_string = get_global_sponsors_string( array(
-				'region_id' => $region_id,
-				'level_id'  => 3040794, // Gold
-			) );
+			$sponsors_string = get_global_sponsors_string();
 			$donation_string = get_donation_string();
 
 			if ( false !== strpos( $shortcode_contents, $content_end ) ) {

@@ -1,6 +1,6 @@
 <?php
 
-namespace WordCamp\SEO;
+namespace WordCamp\Latest_Site_Hints;
 use function WordCamp\Sunrise\get_top_level_domain;
 
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH };

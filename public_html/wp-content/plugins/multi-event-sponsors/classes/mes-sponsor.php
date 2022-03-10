@@ -58,7 +58,10 @@ class MES_Sponsor {
 			'hierarchical'    => false,
 			'capability_type' => 'page',
 			'has_archive'     => true,
-			'rewrite'         => array( 'slug' => 'multi-event-sponsor', 'with_front' => false ),
+			'rewrite'         => array(
+				'slug'       => 'multi-event-sponsor',
+				'with_front' => false,
+			),
 			'query_var'       => true,
 			'supports'        => array( 'title', 'editor', 'author', 'excerpt', 'revisions', 'thumbnail' ),
 			'taxonomies'      => array( MES_Region::TAXONOMY_SLUG ),
@@ -75,7 +78,7 @@ class MES_Sponsor {
 			'mes_regional_sponsorships',
 			__( 'Regional Sponsorships', 'wordcamporg' ),
 			array( $this, 'markup_meta_boxes' ),
-			MES_Sponsor::POST_TYPE_SLUG,
+			self::POST_TYPE_SLUG,
 			'normal',
 			'default'
 		);
@@ -84,7 +87,7 @@ class MES_Sponsor {
 			'mes_contact_information',
 			__( 'Contact Information', 'wordcamporg' ),
 			array( $this, 'markup_meta_boxes' ),
-			MES_Sponsor::POST_TYPE_SLUG,
+			self::POST_TYPE_SLUG,
 			'normal',
 			'default'
 		);
@@ -93,7 +96,7 @@ class MES_Sponsor {
 			'sponsor-agreement',
 			__( 'Sponsor Agreement', 'wordcamporg' ),
 			array( $this, 'markup_meta_boxes' ),
-			MES_Sponsor::POST_TYPE_SLUG,
+			self::POST_TYPE_SLUG,
 			'side'
 		);
 	}
@@ -110,7 +113,10 @@ class MES_Sponsor {
 		switch ( $box['id'] ) {
 			case 'mes_regional_sponsorships':
 				$regions               = get_terms( MES_Region::TAXONOMY_SLUG, array( 'hide_empty' => false ) );
-				$sponsorship_levels    = get_posts( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG, 'numberposts' => -1 ) );
+				$sponsorship_levels    = get_posts( array(
+					'post_type'   => MES_Sponsorship_Level::POST_TYPE_SLUG,
+					'numberposts' => - 1,
+				) );
 				$regional_sponsorships = $this->populate_default_regional_sponsorships( get_post_meta( $post->ID, 'mes_regional_sponsorships', true ), $regions );
 				$view                  = 'metabox-regional-sponsorships.php';
 				break;
@@ -148,7 +154,7 @@ class MES_Sponsor {
 				break;
 		}
 
-		require_once( dirname( __DIR__ ) . '/views/'. $view );
+		require_once dirname( __DIR__ ) . '/views/'. $view;
 	}
 
 	/**
@@ -216,23 +222,23 @@ class MES_Sponsor {
 	 * @param array $new_values
 	 */
 	protected function save_post_meta( $post_id, $new_values ) {
-		if ( isset( $new_values[ 'mes_regional_sponsorships' ] ) ) {
-			array_walk( $new_values[ 'mes_regional_sponsorships' ], 'absint' );
-			update_post_meta( $post_id, 'mes_regional_sponsorships', $new_values[ 'mes_regional_sponsorships' ] );
+		if ( isset( $new_values['mes_regional_sponsorships'] ) ) {
+			array_walk( $new_values['mes_regional_sponsorships'], 'absint' );
+			update_post_meta( $post_id, 'mes_regional_sponsorships', $new_values['mes_regional_sponsorships'] );
 		}
 
-		if ( isset( $new_values["mes_email_address"] ) ) {
+		if ( isset( $new_values['mes_email_address'] ) ) {
 			$new_values['mes_email_address'] = is_email( $new_values['mes_email_address'] );
 		}
 
 		$text_fields = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number', 'twitter_handle',
-			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country'
+			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
 		foreach ( $text_fields as $field ) {
-			if ( isset( $new_values["mes_$field"] ) ) {
-				update_post_meta( $post_id, "mes_$field", sanitize_text_field( $new_values["mes_$field"] ) );
+			if ( isset( $new_values[ "mes_$field" ] ) ) {
+				update_post_meta( $post_id, "mes_$field", sanitize_text_field( $new_values[ "mes_$field" ] ) );
 			}
 		}
 

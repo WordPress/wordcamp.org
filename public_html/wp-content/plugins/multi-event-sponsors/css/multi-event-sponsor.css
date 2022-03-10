@@ -1,0 +1,20 @@
+.push-to-active-camps {
+	padding: 16px; /* Mimic what Gutenberg applies to panels inside sidebars. */
+}
+
+.interface-complementary-area .push-to-active-camps p:not(:first-of-type) {
+	margin-top: 1em;
+}
+
+.push-to-active-camps .components-spinner {
+	display: block;
+	margin: 0 auto;
+}
+
+.push-to-active-camps .notice {
+	margin: 1em 0;
+}
+
+.push-to-active-camps .disclaimer {
+	font-style: italic;
+}

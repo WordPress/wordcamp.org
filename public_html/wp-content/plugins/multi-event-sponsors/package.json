@@ -1,0 +1,18 @@
+{
+	"name": "multi-event-sponsors",
+	"version": "0.1.0",
+	"license": "GPL-2.0-or-later",
+	"eslintConfig": {
+		"extends": "../../../../.eslintrc.js"
+	},
+	"scripts": {
+		"build": "wp-scripts build javascript/index.js --output-path=build",
+		"start": "wp-scripts start javascript/index.js --output-path=build --hot",
+		"lint:js": "wp-scripts lint-js",
+		"packages-update": "wp-scripts packages-update"
+	},
+	"devDependencies": {
+		"@wordpress/icons": "^7.0.1",
+		"@wordpress/scripts": "^22.0.1"
+	}
+}

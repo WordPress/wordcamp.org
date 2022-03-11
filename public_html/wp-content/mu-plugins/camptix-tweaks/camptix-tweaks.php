@@ -672,8 +672,17 @@ function switch_email_template( $template_slug ) {
  * @return string
  */
 function get_global_sponsors_string() {
-	// @todo Pull from MES_SPONSOR::POST_TYPE_SLUG so we don't have to manually update every time they change.
-	$sponsors = array( 'Jetpack', 'WooCommerce', 'Bluehost', 'GoDaddy Pro', 'GreenGeeks', 'Yoast' );
+	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordpress.org
+
+	$posts = get_posts( array(
+		'post_type'      => 'mes',
+		'posts_per_page' => -1,
+	) );
+
+	restore_current_blog();
+
+	$sponsors = wp_list_pluck( $posts, 'post_title' );
+	shuffle( $sponsors );
 
 	$sponsors = array_map(
 		function ( $string ) {

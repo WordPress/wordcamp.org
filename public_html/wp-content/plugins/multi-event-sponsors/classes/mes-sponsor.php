@@ -106,7 +106,7 @@ class MES_Sponsor {
 		) );
 
 		foreach ( $wordcamps as $wordcamp ) {
-			if ( ! $wordcamp->meta['_site_id'][0] ) {
+			if ( ! isset( $wordcamp->meta['_site_id'][0] ) ) {
 				continue;
 			}
 

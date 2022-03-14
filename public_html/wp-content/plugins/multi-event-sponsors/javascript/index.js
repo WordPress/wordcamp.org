@@ -43,7 +43,7 @@ function PushToActiveCamps( { adminUrl } ) {
 		<PluginSidebar
 			name="push-to-active-camps"
 			className="push-to-active-camps"
-			title="Push to Active Camps"
+			title={ __( 'Push to Active Camps', 'wordcamporg' ) }
 			icon={ <Dashicon icon="heart" /> }
 		>
 			<p>

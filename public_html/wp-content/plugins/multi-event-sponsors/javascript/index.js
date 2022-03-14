@@ -56,7 +56,7 @@ function PushToActiveCamps( { adminUrl } ) {
 
 			<p className="disclaimer">
 				{ createInterpolateElement(
-					__( 'This wont push to sites that were created before this post; for that please <a>edit their WordCamp post</a> and <code>Push new sponsors to site</code>.', 'wordcamporg' ),
+					__( "This won't push to sites that were created before this post; for that please <a>edit their WordCamp post</a> and <code>Push new sponsors to site</code>.", 'wordcamporg' ),
 					{
 						a: <a href={ adminUrl + 'edit.php?post_type=wordcamp' } >#21441-gutenberg</a>,
 						code: <code />,

@@ -814,7 +814,7 @@ class WordCamp_New_Site {
 	 *
 	 * @return array
 	 */
-	protected function get_stub_me_sponsors_meta( $assigned_sponsor ) {
+	public static function get_stub_me_sponsors_meta( $assigned_sponsor ) {
 		$sponsor_meta    = array( '_mes_id' => $assigned_sponsor->ID );
 		$meta_field_keys = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',

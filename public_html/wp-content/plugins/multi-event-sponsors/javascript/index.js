@@ -132,7 +132,7 @@ function PushButton( { sponsorId, setLoading, setResult } ) {
  * Render the result of a push.
  */
 function Result( { result } ) {
-	const { success, edited_posts, error } = result;
+	const { success, skipped_posts, error } = result;
 
 	return (
 		<div id="push-to-active-camps__result">
@@ -145,14 +145,14 @@ function Result( { result } ) {
 				</p>
 			</div>
 
-			{ success && edited_posts.length > 0 &&
+			{ success && skipped_posts.length > 0 &&
 				<div className="notice notice-warning">
 					<p>
 						{ __( 'These sites have already edited the post, so they were skipped to avoid overwriting their changes.', 'wordcamporg' ) }
 					</p>
 
 					<ul className="ul-disc">
-						{ edited_posts.map( ( { edit_url, site_name } ) => {
+						{ skipped_posts.map( ( { edit_url, site_name } ) => {
 							return (
 								<li key={ edit_url }>
 									<a href={ edit_url }>

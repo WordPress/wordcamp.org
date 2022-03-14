@@ -95,9 +95,9 @@ class MES_Sponsor {
 	 * Copy the contents of MES posts to their forked posts on active camp sites.
 	 */
 	public function push_to_active_camps( WP_REST_Request $request ) : array {
-		$edited_posts = array();
-		$source_post  = get_post( $request->get_param( 'sponsorId' ) );
-		$wordcamps    = get_wordcamps( array(
+		$skipped_posts = array();
+		$source_post   = get_post( $request->get_param( 'sponsorId' ) );
+		$wordcamps     = get_wordcamps( array(
 			'post_status' => array_merge(
 				// Any status where the camp might have a site created, and the event isn't over.
 				WordCamp_Loader::get_pre_planning_post_statuses(),
@@ -127,7 +127,7 @@ class MES_Sponsor {
 
 			// Organizers might have made changes that are specific to this camp, so don't overwrite them.
 			if ( self::post_has_been_edited( $fork_post->ID ) ) {
-				$edited_posts[] = array(
+				$skipped_posts[] = array(
 					// Can't use `get_post_edit_link()` because the `wcb_sponsor` post type isn't registered on Central or while switching blogs.
 					'edit_url'  => admin_url( "post.php?post={$fork_post->ID}&action=edit" ),
 					'site_name' => get_wordcamp_name(),
@@ -157,8 +157,8 @@ class MES_Sponsor {
 		}
 
 		return array(
-			'success'      => true,
-			'edited_posts' => $edited_posts,
+			'success'       => true,
+			'skipped_posts' => $skipped_posts,
 		);
 	}
 

@@ -113,10 +113,13 @@ class MES_Sponsor {
 			switch_to_blog( $wordcamp->meta['_site_id'][0] );
 
 			$fork_post = get_posts( array(
-				'post_type'      => 'wcb_sponsor',
-				'meta_key'       => '_mes_id',
-				'meta_value'     => $source_post->ID,
-				'meta_compare'   => '=',
+				'post_type'    => 'wcb_sponsor',
+				'meta_key'     => '_mes_id',
+				'meta_value'   => $source_post->ID,
+				'meta_compare' => '=',
+
+				// Only published ones will be updated, but the others should still be added to `$skipped_posts`.
+				'post_status'  => 'any',
 			) );
 			$fork_post = array_pop( $fork_post );
 

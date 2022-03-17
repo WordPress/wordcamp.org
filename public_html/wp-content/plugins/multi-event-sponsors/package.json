@@ -12,7 +12,7 @@
 		"packages-update": "wp-scripts packages-update"
 	},
 	"devDependencies": {
-		"@wordpress/icons": "^7.0.1",
-		"@wordpress/scripts": "^22.0.1"
+		"@wordpress/icons": "8.1.0",
+		"@wordpress/scripts": "22.3.0"
 	}
 }

@@ -21,8 +21,5 @@
 	],
 	"browserslist": [
 		"extends @wordpress/browserslist-config"
-	],
-	"devDependencies": {
-		"eslint-plugin-jsdoc": "^37.6.1"
-	}
+	]
 }

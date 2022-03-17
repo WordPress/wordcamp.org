@@ -14,7 +14,7 @@
 	"devDependencies": {
 		"@wordpress/eslint-plugin": "11.1.0",
 		"@wordpress/scripts": "22.3.0",
-		"node-sass": "7.0.1"
+		"sass": "1.49.9"
 	},
 	"browserslist": [
 		"extends @wordpress/browserslist-config"
@@ -45,8 +45,8 @@
 		"extends": "../../../../.stylelintrc"
 	},
 	"scripts": {
-		"start": "node-sass -wr assets/scss -o assets/build --source-map-embed",
-		"build": "node-sass assets/scss -o assets/build --output-style=compressed",
+		"start": "sass assets/scss:assets/build --watch --source-map-embed",
+		"build": "sass assets/scss:assets/build --style=compressed",
 		"format:js": "echo \"No formatting.\"",
 		"lint:js": "wp-scripts lint-js assets/js/*.js",
 		"lint:css": "wp-scripts lint-style 'assets/scss/*.scss'"

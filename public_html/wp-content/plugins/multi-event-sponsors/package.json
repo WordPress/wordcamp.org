@@ -8,7 +8,9 @@
 	"scripts": {
 		"build": "wp-scripts build javascript/index.js --output-path=build",
 		"start": "wp-scripts start javascript/index.js --output-path=build --hot",
-		"lint:js": "wp-scripts lint-js",
+		"lint:css": "wp-scripts lint-style css",
+		"lint:js": "wp-scripts lint-js javascript",
+		"format:js": "wp-scripts format javascript --config=../../../../.prettierrc.js",
 		"packages-update": "wp-scripts packages-update"
 	},
 	"devDependencies": {

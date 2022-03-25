@@ -1,4 +1,5 @@
-@import "_variables";
+@use "sass:color";
+@import "variables";
 
 /**
  * Basic form styles.
@@ -182,12 +183,12 @@
 
 	&.is-success {
 		border-left-color: $alert-green;
-		background-color: lighten($alert-green, 45%);
+		background-color: color.adjust($alert-green, $lightness: 45%);
 	}
 
 	&.is-error {
 		border-left-color: $alert-red;
-		background-color: lighten($alert-red, 35%);
+		background-color: color.adjust($alert-red, $lightness: 35%);
 	}
 }
 

@@ -2,10 +2,10 @@ const fileSystem = require( 'fs' );
 const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 const rootDirectory = process.cwd().replace( 'public_html/wp-content/plugins/multi-event-sponsors', '' );
 
-module.exports = {
-	...defaultConfig,
+const config = { ...defaultConfig };
 
-	devServer: {
+if ( fileSystem.existsSync( rootDirectory + '.docker/wordcamp.test.key.pem' ) ) {
+	config.devServer = {
 		...defaultConfig.devServer,
 
 		static: {
@@ -29,5 +29,7 @@ module.exports = {
 				cert: fileSystem.readFileSync( rootDirectory + '.docker/wordcamp.test.pem' ),
 			},
 		},
-	},
-};
+	};
+}
+
+module.exports = config;

@@ -3,8 +3,8 @@
 	"version": "0.0.1",
 	"license": "GPL-2.0+",
 	"dependencies": {
-		"@wordpress/element": "4.0.4",
-		"@wordpress/scripts": "19.2.3",
+		"@wordpress/element": "4.3.0",
+		"@wordpress/scripts": "22.3.0",
 		"prop-types": "15.8.1"
 	},
 	"eslintConfig": {

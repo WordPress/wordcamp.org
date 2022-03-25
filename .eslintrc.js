@@ -168,4 +168,11 @@ module.exports = {
 		 */
 		'jsdoc/require-returns-description': 'off',
 	},
+	overrides: [
+		{
+			// Unit test files and their helpers only.
+			files: [ '**/@(test|__tests__)/**/*.js', '**/?(*.)test.js' ],
+			extends: [ 'plugin:@wordpress/eslint-plugin/test-unit' ],
+		},
+	],
 };

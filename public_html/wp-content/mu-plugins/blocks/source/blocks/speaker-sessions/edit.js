@@ -57,7 +57,7 @@ export default function( { attributes, setAttributes, context: { postId } } ) {
 							) }
 						</p>
 						{ hasSessionDetails && (
-							<p className="wordcamp-speakers__session-info">{ getSessionDetails( session ) }</p>
+							<p className="wordcamp-speakers__session-info">{ getSessionDetails( session, true ) }</p>
 						) }
 					</li>
 				) ) }

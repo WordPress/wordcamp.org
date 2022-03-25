@@ -17,14 +17,15 @@ import { arrayTokenReplace, tokenSplit } from '../../i18n';
  * Fetch the details for a session as a human-readable string, in array-parts from `arrayTokenReplace`. This can be
  * passed to any react component and renders as text in the element on the browser.
  *
- * @param {Object} session
+ * @param {Object}  session
+ * @param {boolean} allTracks
  * @return {Array}
  */
-export function getSessionDetails( session ) {
-	const terms = get( session, '_embedded[\'wp:term\']', [] ).flat();
+export function getSessionDetails( session, allTracks = false ) {
+	const terms = get( session, "_embedded['wp:term']", [] ).flat();
 
 	if ( session.session_track.length ) {
-		const [ firstTrack ] = terms.filter( ( term ) => 'wcb_track' === term.taxonomy );
+		const tracks = terms.filter( ( term ) => 'wcb_track' === term.taxonomy );
 
 		return arrayTokenReplace(
 			/* translators: 1: A date; 2: A time; 3: A location; */
@@ -32,7 +33,7 @@ export function getSessionDetails( session ) {
 			[
 				session.session_date_time.date,
 				session.session_date_time.time,
-				firstTrack.name.trim(),
+				allTracks ? tracks.map( ( { name } ) => name.trim() ).join( ', ' ) : tracks[ 0 ].name.trim(),
 			]
 		);
 	}
@@ -40,10 +41,7 @@ export function getSessionDetails( session ) {
 	return arrayTokenReplace(
 		/* translators: 1: A date; 2: A time; */
 		tokenSplit( __( '%1$s at %2$s', 'wordcamporg' ) ),
-		[
-			session.session_date_time.date,
-			session.session_date_time.time,
-		]
+		[ session.session_date_time.date, session.session_date_time.time ]
 	);
 }
 

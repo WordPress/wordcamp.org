@@ -24,6 +24,5 @@
 		},
 		"html": false
 	},
-	"editor_script": "wordcamp-blocks",
-	"editor_style": "wordcamp-blocks"
+	"editorScript": "wordcamp-blocks"
 }

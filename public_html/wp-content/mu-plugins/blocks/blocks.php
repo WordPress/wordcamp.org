@@ -37,6 +37,7 @@ function load_includes() {
 	require_once $blocks_dir . 'organizers/controller.php';
 	require_once $blocks_dir . 'schedule/controller.php';
 	require_once $blocks_dir . 'sessions/controller.php';
+	require_once $blocks_dir . 'speaker-sessions/controller.php';
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
 	require_once $blocks_dir . 'live-schedule/controller.php';

@@ -1,0 +1,12 @@
+.wp-block-wordcamp-session-speakers__byline {
+	display: inline;
+	margin-right: 0.3em;
+}
+
+.wp-block-wordcamp-session-speakers__name::after {
+	content: ", ";
+}
+
+.wp-block-wordcamp-session-speakers__name:last-child::after {
+	content: "";
+}

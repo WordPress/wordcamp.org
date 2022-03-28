@@ -1,20 +1,36 @@
 /**
+ * External dependencies
+ */
+import classnames from 'classnames';
+
+/**
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { InspectorControls, RichText, useBlockProps } from '@wordpress/block-editor';
+import {
+	AlignmentControl,
+	BlockControls,
+	InspectorControls,
+	RichText,
+	useBlockProps,
+} from '@wordpress/block-editor';
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 
 export default function( { attributes, setAttributes, context: { postId, postType }, isSelected } ) {
-	const { byline, isLink } = attributes;
-	const blockProps = useBlockProps();
+	const { byline, isLink, textAlign } = attributes;
 	const speakers = useSelect( ( select ) => {
 		const { getEntityRecord } = select( coreStore );
 		const session = getEntityRecord( 'postType', postType, postId );
 		return session.session_speakers || [];
 	}, [] );
+
+	const blockProps = useBlockProps( {
+		className: classnames( {
+			[ `has-text-align-${ textAlign }` ]: textAlign,
+		} ),
+	} );
 
 	return (
 		<>
@@ -27,6 +43,14 @@ export default function( { attributes, setAttributes, context: { postId, postTyp
 					/>
 				</PanelBody>
 			</InspectorControls>
+			<BlockControls group="block">
+				<AlignmentControl
+					value={ textAlign }
+					onChange={ ( nextAlign ) => {
+						setAttributes( { textAlign: nextAlign } );
+					} }
+				/>
+			</BlockControls>
 			<div { ...blockProps }>
 				{ ( ! RichText.isEmpty( byline ) || isSelected ) && (
 					<RichText

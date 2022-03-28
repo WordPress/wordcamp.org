@@ -41,6 +41,9 @@ function render( $attributes, $content, $block ) {
 	}
 
 	$byline  = ! empty( $attributes['byline'] ) ? $attributes['byline'] : false;
+	$classes = array_filter( array(
+		isset( $attributes['textAlign'] ) ? 'has-text-align-' . $attributes['textAlign'] : false,
+	) );
 
 	$content = '';
 	if ( ! empty( $byline ) ) {
@@ -57,7 +60,7 @@ function render( $attributes, $content, $block ) {
 		$content .= '</span>';
 	}
 
-	$wrapper_attributes = get_block_wrapper_attributes();
+	$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => implode( ' ', $classes ) ) );
 	return "<div $wrapper_attributes>$content</div>";
 }
 /**

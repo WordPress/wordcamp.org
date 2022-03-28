@@ -24,7 +24,11 @@
 			"background": true,
 			"link": true
 		},
-		"html": false
+		"html": false,
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
 	},
 	"editorScript": "wordcamp-blocks",
 	"style": "wordcamp-blocks"

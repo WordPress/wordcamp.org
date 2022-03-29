@@ -18,12 +18,21 @@ defined( 'WPINC' ) || die();
 class Test_Jetpack_CSS_Sanitization extends WP_UnitTestCase {
 
 	/**
-	 * Test that the angle bracket is not encoded.
+	 * Test that no selector characters are encoded.
 	 */
-	public function test_gt_not_encoded() {
+	public function test_selectors_not_encoded() {
 		$input = <<<CSS
-/* Child combinator syntax */
-.class > p {
+.class > p,
+p ~ span,
+h2 + p,
+col || td,
+.pseudo:visited,
+.pseudo::before,
+[title],
+a[href="https://example.org"],
+a[title*='an example'],
+span[data-emoji~=🐈‍⬛]
+span[attr$="한글"] {
 	color: lightcoral;
 }
 CSS;

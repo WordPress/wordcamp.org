@@ -149,3 +149,15 @@ a {
 .gap-shorthand-allowed {
 	gap: 2em 10;
 }
+
+.inset-prop {
+	inset: 10px 2rem;
+	inset-block: 25%;
+}
+
+.logical-props {
+	writing-mode: vertical-rl;
+	margin-block: 1rem;
+	padding-inline-start: 20px;
+	text-align: end;
+}

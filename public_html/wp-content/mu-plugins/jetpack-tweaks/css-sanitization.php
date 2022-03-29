@@ -184,9 +184,11 @@ function get_custom_css_properties_safelist() {
 	return array(
 		'aspect-ratio',
 		'background-blend-mode',
+		'gap',
 		'isolation',
 		'mask',
 		'mix-blend-mode',
+		'row-gap',
 		'shape-image-threshold',
 		'shape-margin',
 		'shape-outside',
@@ -212,4 +214,8 @@ function update_csstidy_safelist() {
 	if ( ! empty( $GLOBALS['csstidy']['all_properties'] ) ) {
 		$GLOBALS['csstidy']['all_properties'] = array_merge( $GLOBALS['csstidy']['all_properties'], $properties_for_csstidy );
 	}
+
+	$GLOBALS['csstidy']['unit_values'][] = 'gap';
+	$GLOBALS['csstidy']['unit_values'][] = 'row-gap';
+	$GLOBALS['csstidy']['shorthands']['gap'] = array( 'row-gap', 'column-gap' );
 }

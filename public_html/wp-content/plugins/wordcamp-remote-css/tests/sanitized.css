@@ -116,3 +116,12 @@ a {
 .aspect-ratio-allowed {
 	aspect-ratio: 16 / 9;
 }
+
+.gap-allowed {
+	row-gap: 2vmin;
+	column-gap: 1vmin;
+}
+
+.gap-shorthand-allowed {
+	gap: 2em 10px;
+}

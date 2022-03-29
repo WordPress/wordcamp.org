@@ -12,6 +12,7 @@ add_action( 'csstidy_optimize_postparse', __NAMESPACE__ . '\sanitize_csstidy_par
 add_action( 'admin_notices',              __NAMESPACE__ . '\notify_import_rules_stripped'  );
 add_action( 'csstidy_optimize_subvalue',  __NAMESPACE__ . '\sanitize_csstidy_subvalues'    );
 add_action( 'safecss_parse_pre',          __NAMESPACE__ . '\update_csstidy_safelist', 0    );
+add_filter( 'wp_get_custom_css',          __NAMESPACE__ . '\filter_custom_css' );
 
 /**
  * Sanitize CSS saved through the Core/Jetpack editor inside the Customizer
@@ -221,4 +222,17 @@ function update_csstidy_safelist() {
 	if ( ! empty( $GLOBALS['csstidy']['all_properties'] ) ) {
 		$GLOBALS['csstidy']['all_properties'] = array_merge( $GLOBALS['csstidy']['all_properties'], $properties_for_csstidy );
 	}
+}
+
+/**
+ * Replace encoded &gt; in CSS with a > so that CSS rules are valid.
+ *
+ * Remove this once the root issue is fixed in https://github.com/Automattic/jetpack/issues/21603.
+ *
+ * @param string $css CSS pulled in from the Custom CSS post type.
+ *
+ * @return string
+ */
+function filter_custom_css( $css ) {
+	return str_replace( '&gt;', '>', $css );
 }

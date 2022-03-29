@@ -248,6 +248,7 @@ function get_custom_css_properties_safelist() {
 			'mix-blend-mode',
 			'shape-image-threshold',
 			'shape-outside',
+			'text-orientation',
 			'writing-mode',
 		)
 	);

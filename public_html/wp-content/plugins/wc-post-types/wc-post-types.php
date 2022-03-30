@@ -993,6 +993,11 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
+		// If the "Speaker Sessions" block is in the post content, we don't need to inject anything.
+		if ( has_block( 'wordcamp/speaker-sessions', $post ) ) {
+			return $content;
+		}
+
 		$site_id = get_current_blog_id();
 		if ( $site_id <= apply_filters( 'wcpt_speaker_post_session_info_min_site_id', 463 ) && ! in_array( $site_id, $enabled_site_ids, true ) ) {
 			return $content;

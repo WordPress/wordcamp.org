@@ -176,29 +176,81 @@ function sanitize_urls_in_css_properties( $url, $property ) {
 }
 
 /**
+ * Valid CSS properties that accept values with units.
+ *
+ * This is used to also set `unit_values`, in addition to safelisting the property names, so that any unitless
+ * nonzero number is given a `px` unit as a fallback. In these cases, unitless numbers are invalid.
+ *
+ * @return array
+ */
+function get_custom_css_properties_safelist_with_units() {
+	return array(
+		'block-size',
+		'border-block',
+		'border-block-end',
+		'border-block-end-width',
+		'border-block-start',
+		'border-block-start-width',
+		'border-block-width',
+		'border-inline',
+		'border-inline-end',
+		'border-inline-end-width',
+		'border-inline-start',
+		'border-inline-start-width',
+		'border-inline-width',
+		'border-start-start-radius',
+		'border-start-end-radius',
+		'border-end-start-radius',
+		'border-end-end-radius',
+		'gap',
+		'inline-size',
+		'inset',
+		'inset-block',
+		'inset-block-start',
+		'inset-block-end',
+		'inset-inline',
+		'inset-inline-start',
+		'inset-inline-end',
+		'margin-block',
+		'margin-block-start',
+		'margin-block-end',
+		'margin-inline',
+		'margin-inline-start',
+		'margin-inline-end',
+		'max-block-size',
+		'max-inline-size',
+		'min-block-size',
+		'min-inline-size',
+		'padding-block',
+		'padding-block-start',
+		'padding-block-end',
+		'padding-inline',
+		'padding-inline-start',
+		'padding-inline-end',
+		'row-gap',
+		'shape-margin',
+	);
+}
+
+/**
  * Additional CSS properties that the CSS sanitizer should recognize as valid.
  *
  * @return array
  */
 function get_custom_css_properties_safelist() {
-	return array(
-		'aspect-ratio',
-		'background-blend-mode',
-		'clip-path',
-		'isolation',
-		'mask',
-		'mask-clip',
-		'mask-composite',
-		'mask-image',
-		'mask-mode',
-		'mask-origin',
-		'mask-position',
-		'mask-repeat',
-		'mask-size',
-		'mix-blend-mode',
-		'shape-image-threshold',
-		'shape-margin',
-		'shape-outside',
+	return array_merge(
+		get_custom_css_properties_safelist_with_units(),
+		array(
+			'aspect-ratio',
+			'background-blend-mode',
+			'isolation',
+			'mask',
+			'mix-blend-mode',
+			'shape-image-threshold',
+			'shape-outside',
+			'text-orientation',
+			'writing-mode',
+		)
 	);
 }
 
@@ -221,4 +273,18 @@ function update_csstidy_safelist() {
 	if ( ! empty( $GLOBALS['csstidy']['all_properties'] ) ) {
 		$GLOBALS['csstidy']['all_properties'] = array_merge( $GLOBALS['csstidy']['all_properties'], $properties_for_csstidy );
 	}
+
+	$GLOBALS['csstidy']['unit_values'] = array_merge(
+		$GLOBALS['csstidy']['unit_values'],
+		get_custom_css_properties_safelist_with_units()
+	);
+
+	$GLOBALS['csstidy']['shorthands']['gap'] = array( 'row-gap', 'column-gap' );
+	$GLOBALS['csstidy']['shorthands']['inset'] = array( 'top', 'right', 'bottom', 'left' ); // `inset` is not a logical property itself.
+	$GLOBALS['csstidy']['shorthands']['inset-block'] = array( 'inset-block-start', 'inset-block-end' );
+	$GLOBALS['csstidy']['shorthands']['inset-inline'] = array( 'inset-inline-start', 'inset-inline-end' );
+	$GLOBALS['csstidy']['shorthands']['margin-block'] = array( 'margin-block-start', 'margin-block-end' );
+	$GLOBALS['csstidy']['shorthands']['margin-inline'] = array( 'margin-inline-start', 'margin-inline-end' );
+	$GLOBALS['csstidy']['shorthands']['padding-block'] = array( 'padding-block-start', 'padding-block-end' );
+	$GLOBALS['csstidy']['shorthands']['padding-inline'] = array( 'padding-inline-start', 'padding-inline-end' );
 }

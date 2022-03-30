@@ -112,3 +112,28 @@ a {
 	shape-outside: inherit;
 	shape-outside: path('M0.5,1 C0.5,1,0,0.7,0,0.3 A0.25,0.25,1,1,1,0.5,0.3 A0.25,0.25,1,1,1,1,0.3 C1,0.7,0.5,1,0.5,1 Z');
 }
+
+.aspect-ratio-allowed {
+	aspect-ratio: 16 / 9;
+}
+
+.gap-allowed {
+	row-gap: 2vmin;
+	column-gap: 1vmin;
+}
+
+.gap-shorthand-allowed {
+	gap: 2em 10px;
+}
+
+.inset-prop {
+	inset: 10px 2rem;
+	inset-block: 25%;
+}
+
+.logical-props {
+	writing-mode: vertical-rl;
+	margin-block: 1rem;
+	padding-inline-start: 20px;
+	text-align: end;
+}

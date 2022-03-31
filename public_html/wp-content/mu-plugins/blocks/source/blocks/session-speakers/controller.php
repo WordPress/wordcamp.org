@@ -47,7 +47,7 @@ function render( $attributes, $content, $block ) {
 
 	$content = '';
 	if ( ! empty( $byline ) ) {
-		$content .= '<span class="wp-block-wordcamp-session-speakers__byline">' . esc_html( $byline ) . '</span>';
+		$content .= '<span class="wp-block-wordcamp-session-speakers__byline">' . wp_kses_post( $byline ) . '</span>';
 	}
 
 	foreach ( $speaker_ids as $speaker_id ) {

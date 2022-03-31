@@ -12,11 +12,21 @@ defined( 'WPINC' ) || die();
 
 require_once 'favorite-schedule-shortcode.php';
 
+/**
+ * Actions and filters.
+ */
 add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_speaker_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_organizer_post_meta' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_user_validation_route' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
+add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args', 10, 2 );
+add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_meta_collection_params', 10, 2 );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_email' );
+add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
+add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
+add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -431,8 +441,6 @@ function register_additional_rest_fields() {
 	);
 }
 
-add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
-
 /**
  * Validate simple meta query parameters in an API request and add them to the args passed to WP_Query.
  *
@@ -449,8 +457,6 @@ function prepare_meta_query_args( $args, $request ) {
 
 	return $args;
 }
-
-add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args', 10, 2 );
 
 /**
  * Add meta field schemas to Sessions collection parameters.
@@ -493,8 +499,6 @@ function add_meta_collection_params( $query_params, $post_type ) {
 
 	return $query_params;
 }
-
-add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_meta_collection_params', 10, 2 );
 
 /**
  * Get the URLs for an avatar based on an email address or username.
@@ -573,7 +577,6 @@ function register_fav_sessions_email() {
 		)
 	);
 }
-add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_email' );
 
 /**
  * Link all sessions to the speaker in the `speakers` API endpoint
@@ -618,8 +621,6 @@ function link_speaker_to_sessions( $response, $post ) {
 	return $response;
 }
 
-add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
-
 /**
  * Link all speakers to the session in the `sessions` API endpoint
  *
@@ -645,8 +646,6 @@ function link_session_to_speakers( $response, $post ) {
 	return $response;
 }
 
-add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
-
 /**
  * Add larger avatar sizes to the API response.
  *
@@ -661,4 +660,3 @@ function add_larger_avatar_sizes( $sizes ) {
 
 	return $sizes;
 }
-add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );

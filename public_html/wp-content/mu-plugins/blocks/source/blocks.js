@@ -1,6 +1,7 @@
 /**
  * WordPress dependencies
  */
+import { __ } from '@wordpress/i18n';
 import { registerBlockType } from '@wordpress/blocks';
 
 /**
@@ -22,4 +23,24 @@ const enabledBlocks = BLOCKS.filter( ( block ) =>
 
 enabledBlocks.forEach( ( { NAME, SETTINGS } ) => {
 	registerBlockType( NAME, SETTINGS );
+} );
+
+/*
+ * Register the Tracks and Categories as variations on Post Terms.
+ * See https://github.com/WordPress/gutenberg/blob/41325b983feabcc46615cd6b1a8a5efe64c5a9f0/packages/block-library/src/post-terms/variations.js.
+ */
+wp.blocks.registerBlockVariation( 'core/post-terms', {
+	name: 'wcb_track',
+	title: __( 'Session Tracks', 'wordcamporg' ),
+	description: __( "Display a session's tracks.", 'wordcamporg' ),
+	attributes: { term: 'wcb_track' },
+	isActive: ( blockAttributes ) => blockAttributes.term === 'wcb_track',
+} );
+
+wp.blocks.registerBlockVariation( 'core/post-terms', {
+	name: 'wcb_session_category',
+	title: __( 'Session Categories', 'wordcamporg' ),
+	description: __( "Display a session's categories.", 'wordcamporg' ),
+	attributes: { term: 'wcb_session_category' },
+	isActive: ( blockAttributes ) => blockAttributes.term === 'wcb_session_category',
 } );

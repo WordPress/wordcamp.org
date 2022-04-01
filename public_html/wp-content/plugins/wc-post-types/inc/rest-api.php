@@ -21,8 +21,8 @@ add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_organizer_post_meta' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_user_validation_route' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
-add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args', 10, 2 );
-add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_meta_collection_params', 10, 2 );
+add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_session_query_args', 10, 2 );
+add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_session_collection_params', 10, 2 );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_email' );
 add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
 add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
@@ -449,10 +449,22 @@ function register_additional_rest_fields() {
  *
  * @return array
  */
-function prepare_meta_query_args( $args, $request ) {
+function prepare_session_query_args( $args, $request ) {
 	if ( isset( $request['wc_meta_key'], $request['wc_meta_value'] ) ) {
-		$args['meta_key']   = $request['wc_meta_key'];
-		$args['meta_value'] = $request['wc_meta_value'];
+		$meta_query = array(
+			'key' => $request['wc_meta_key'],
+			'value' => $request['wc_meta_value'],
+		);
+		if ( is_array( $args['meta_query'] ) ) {
+			$args['meta_query'][] = $meta_query;
+		} else {
+			$args['meta_query'] = array( $meta_query );
+		}
+	}
+
+	if ( 'session_date' === $request['orderby'] ) {
+		$args['meta_key'] = '_wcpt_session_time';
+		$args['orderby'] = 'meta_value_num';
 	}
 
 	return $args;
@@ -475,7 +487,7 @@ function prepare_meta_query_args( $args, $request ) {
  *
  * @return array
  */
-function add_meta_collection_params( $query_params, $post_type ) {
+function add_session_collection_params( $query_params, $post_type ) {
 	// Avoid exposing potentially sensitive data.
 	$public_meta_fields = wp_list_filter( get_registered_meta_keys( 'post', $post_type->name ), array( 'show_in_rest' => true ) );
 
@@ -496,6 +508,8 @@ function add_meta_collection_params( $query_params, $post_type ) {
 		'type'        => 'boolean',
 		'default'     => false,
 	);
+
+	$query_params['orderby']['enum'][] = 'session_date';
 
 	return $query_params;
 }

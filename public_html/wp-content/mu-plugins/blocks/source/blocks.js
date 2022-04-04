@@ -44,3 +44,11 @@ wp.blocks.registerBlockVariation( 'core/post-terms', {
 	attributes: { term: 'wcb_session_category' },
 	isActive: ( blockAttributes ) => blockAttributes.term === 'wcb_session_category',
 } );
+
+wp.blocks.registerBlockVariation( 'core/post-terms', {
+	name: 'wcb_organizer_team',
+	title: __( 'Organizer Teams', 'wordcamporg' ),
+	description: __( "Display an organizer's teams.", 'wordcamporg' ),
+	attributes: { term: 'wcb_organizer_team' },
+	isActive: ( blockAttributes ) => blockAttributes.term === 'wcb_organizer_team',
+} );

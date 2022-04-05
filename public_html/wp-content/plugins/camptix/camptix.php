@@ -19,6 +19,7 @@ class CampTix_Plugin {
 	protected $errors;
 	protected $infos;
 	protected $admin_notices;
+	protected $admin_errors;
 
 	protected $tmp;
 
@@ -144,6 +145,7 @@ class CampTix_Plugin {
 		// Notices, errors and infos, all in one.
 		add_action( 'camptix_notices', array( $this, 'do_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_notices' ) );
+		add_action( 'admin_notices', array( $this, 'do_admin_errors' ) );
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
@@ -7742,6 +7744,10 @@ class CampTix_Plugin {
 		$this->admin_notices[] = $notice;
 	}
 
+	protected function admin_error( $notice ) {
+		$this->admin_errors[] = $notice;
+	}
+
 	function do_notices() {
 
 		$printed = array();
@@ -7797,6 +7803,24 @@ class CampTix_Plugin {
 		if ( is_array( $this->admin_notices ) && ! empty( $this->admin_notices) )
 		foreach ( $this->admin_notices as $notice )
 			printf( '<div class="updated"><p>%s</p></div>', $notice );
+	}
+
+	/**
+	 * Runs during admin_notices
+	 */
+	function do_admin_errors() {
+		do_action( 'camptix_admin_errors' );
+
+		if ( is_array( $this->admin_errors ) && ! empty( $this->admin_errors ) ) {
+			foreach ( $this->admin_errors as $error ) {
+				printf(
+					'<div class="notice notice-error">
+						<p>%s</p>
+					</div>',
+					wp_kses_post( $error )
+				);
+			}
+		}
 	}
 
 	/**

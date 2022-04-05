@@ -7892,12 +7892,23 @@ class CampTix_Plugin {
 		do_action( 'camptix_admin_notices' );
 
 		// Signal when archived.
-		if ( $this->options['archived'] )
-			echo '<div class="updated"><p>' . __( 'CampTix is in <strong>archive mode</strong>. Please do not make any changes.', 'wordcamporg' ) . '</p></div>';
+		if ( $this->options['archived'] ) {
+			$this->admin_notice(
+			     __(
+					 'CampTix is in <strong>archive mode</strong>. Please do not make any changes.',
+					 'wordcamporg'
+			     )
+			);
+		}
 
-		if ( is_array( $this->admin_notices ) && ! empty( $this->admin_notices) )
-		foreach ( $this->admin_notices as $notice )
-			printf( '<div class="updated"><p>%s</p></div>', $notice );
+		if ( is_array( $this->admin_notices ) && ! empty( $this->admin_notices ) ) {
+			foreach ( $this->admin_notices as $notice ) {
+				printf(
+					'<div class="updated"> <p>%s</p> </div>',
+					wp_kses_post( $notice )
+				);
+			}
+		}
 	}
 
 	/**

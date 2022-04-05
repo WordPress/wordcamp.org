@@ -7477,8 +7477,6 @@ class CampTix_Plugin {
 	}
 
 	function email_tickets( $payment_token = false, $from_status = 'draft', $to_status = 'publish' ) {
-		global $shortcode_tags;
-
 		if ( ! $payment_token )
 			return;
 
@@ -7499,11 +7497,7 @@ class CampTix_Plugin {
 		if ( ! $attendees )
 			return;
 
-		// Remove all shortcodes before sending the e-mails, but bring them back later.
-		$this->removed_shortcodes = $shortcode_tags;
-		remove_all_shortcodes();
-
-		do_action( 'camptix_init_email_templates_shortcodes' );
+		$this->remove_shortcodes();
 
 		$access_token = get_post_meta( $attendees[0]->ID, 'tix_access_token', true );
 		$receipt_email = get_post_meta( $attendees[0]->ID, 'tix_receipt_email', true );
@@ -7539,22 +7533,7 @@ class CampTix_Plugin {
 		 */
 		if ( count( $attendees ) > 1 && $from_status == 'draft' && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
 			foreach ( $attendees as $attendee ) {
-				$attendee_email = $this->get_attendee_email( $attendee->ID );
-				$edit_token = get_post_meta( $attendee->ID, 'tix_edit_token', true );
-				$edit_link = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
-
-				$this->tmp( 'attendee_id', $attendee->ID );
-				$this->tmp( 'ticket_url', $edit_link );
-
-				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase', $attendee );
-				$content = do_shortcode( $this->options[ $email_template ] );
-
-				$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
-
-				$this->log( sprintf( 'Sent ticket e-mail to %s and receipt to %s.', $attendee_email, $receipt_email ), $attendee->ID );
-				$this->wp_mail( $attendee_email, $subject, $content );
-
-				do_action( 'camptix_ticket_emailed', $attendee->ID );
+				$this->email_attendee_ticket_multiple_template( $attendee );
 			}
 		}
 
@@ -7665,8 +7644,24 @@ class CampTix_Plugin {
 		$this->tmp( 'ticket_url', false );
 		$this->tmp( 'receipt', false );
 
-		// Bring the original shortcodes back.
-		$shortcode_tags = $this->removed_shortcodes;
+		$this->restore_shortcodes();
+	}
+
+	// Remove all shortcodes before sending the e-mails. Used with `restore_shortcodes()`.
+	protected function remove_shortcodes() {
+		global $shortcode_tags;
+
+		$this->removed_shortcodes = $shortcode_tags;
+
+		remove_all_shortcodes();
+		do_action( 'camptix_init_email_templates_shortcodes' );
+	}
+
+	// Bring the original shortcodes back. Used with `remove_shortcodes()`.
+	protected function restore_shortcodes() {
+		global $shortcode_tags;
+
+		$shortcode_tags           = $this->removed_shortcodes;
 		$this->removed_shortcodes = array();
 	}
 
@@ -7679,6 +7674,27 @@ class CampTix_Plugin {
 	 */
 	protected function get_attendee_email( $attendee_id ) {
 		return apply_filters( 'camptix_get_attendee_email', get_post_meta( $attendee_id, 'tix_email', true ), $attendee_id );
+	}
+
+	public function email_attendee_ticket_multiple_template( $attendee ) {
+		$attendee_email = $this->get_attendee_email( $attendee->ID );
+		$edit_token     = get_post_meta( $attendee->ID, 'tix_edit_token', true );
+		$edit_link      = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
+
+		$this->tmp( 'attendee_id', $attendee->ID );
+		$this->tmp( 'ticket_url', $edit_link );
+
+		$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase', $attendee );
+		$content        = do_shortcode( $this->options[ $email_template ] );
+
+		$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
+
+		$this->log( sprintf( 'Sent ticket e-mail to %s.', $attendee_email ), $attendee->ID );
+		$result = $this->wp_mail( $attendee_email, $subject, $content );
+
+		do_action( 'camptix_ticket_emailed', $attendee->ID );
+
+		return $result;
 	}
 
 	function redirect_with_error_flags( $query_args = array() ) {

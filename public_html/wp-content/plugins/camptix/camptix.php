@@ -129,6 +129,7 @@ class CampTix_Plugin {
 		// Handle meta for our post types.
 		add_action( 'save_post', array( $this, 'save_ticket_post' ) );
 		add_action( 'save_post', array( $this, 'save_attendee_post' ) );
+		add_action( 'save_post_tix_attendee', array( $this, 'resend_emails' ), 10, 2 );
 		add_action( 'save_post', array( $this, 'save_coupon_post' ) );
 
 		// Log attendee status changes.
@@ -146,6 +147,7 @@ class CampTix_Plugin {
 		add_action( 'camptix_notices', array( $this, 'do_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_errors' ) );
+		$this->add_resend_notices();
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
@@ -3888,6 +3890,7 @@ class CampTix_Plugin {
 		add_meta_box( 'tix_coupon_availability', __( 'Availability', 'wordcamporg' ), array( $this, 'metabox_coupon_availability' ), 'tix_coupon', 'side' );
 
 		add_meta_box( 'tix_attendee_info', __( 'Attendee Information', 'wordcamporg' ), array( $this, 'metabox_attendee_info' ), 'tix_attendee', 'normal' );
+		add_meta_box( 'tix_attendee_resend_emails', __( 'Resend Emails', 'wordcamporg' ), array( $this, 'metabox_attendee_resend_emails' ), 'tix_attendee', 'side' );
 
 		add_meta_box( 'tix_attendee_submitdiv', __( 'Publish', 'wordcamporg' ), array( $this, 'metabox_attendee_submitdiv' ), 'tix_attendee', 'side' );
 		remove_meta_box( 'submitdiv', 'tix_attendee', 'side' );
@@ -4712,6 +4715,82 @@ class CampTix_Plugin {
 			}
 		}
 		$this->table( $rows, 'tix-attendees-info' );
+	}
+
+	function metabox_attendee_resend_emails() {
+		global $post;
+
+		require_once __DIR__ . '/views/resend-attendee-emails.php';
+	}
+
+	function resend_emails( $post_id, $post ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		if ( empty( $_REQUEST['tix_resend_email'] ) ) {
+			return;
+		}
+
+		// `save_attendee_post()` calls `wp_update_post()`, which calls this function a second time.
+		if ( 1 !== did_action( 'save_post_tix_attendee' ) ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( $_REQUEST['tix_resend_nonce'], 'tix_resend_' . $post_id ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$this->remove_shortcodes();
+		$to     = is_email( $camptix->get_attendee_email( $post->ID ) );
+		$result = $this->email_attendee_ticket_multiple_template( $post );
+		$this->restore_shortcodes();
+
+		add_filter( 'redirect_post_location', function( $location ) use ( $to, $result ) {
+			$new_location = add_query_arg(
+				array(
+					'tix_resend_to'     => $to,
+					'tix_resend_result' => (int) $result,
+				),
+				$location
+			);
+
+			return $new_location;
+		} );
+	}
+
+	public function add_resend_notices() {
+		if ( ! isset ( $_GET['tix_resend_result'] ) ) {
+			return;
+		}
+
+		if ( $_GET['tix_resend_result'] ) {
+			$notice = sprintf(
+				__(
+					'Ticket successfully resent to %s.',
+					'wordcamporg'
+				),
+				is_email( $_GET['tix_resend_to'] )
+			);
+
+			$this->admin_notice( $notice );
+
+		} else {
+			$email_link = sprintf( '<a href="mailto:%s">%s</a>', EMAIL_CENTRAL_SUPPORT, EMAIL_CENTRAL_SUPPORT );
+			$notice = sprintf(
+				// translators: 1) email address
+				__(
+					'Ticket could not be resent. Please contact %1$s for help.',
+					'wordcamporg'
+				),
+				$email_link
+			);
+
+			$this->admin_error( $notice );
+		}
 	}
 
 	function create_reservation( $post_id, $name, $quantity ) {
@@ -7672,7 +7751,7 @@ class CampTix_Plugin {
 	 *
 	 * @return string
 	 */
-	protected function get_attendee_email( $attendee_id ) {
+	public function get_attendee_email( $attendee_id ) {
 		return apply_filters( 'camptix_get_attendee_email', get_post_meta( $attendee_id, 'tix_email', true ), $attendee_id );
 	}
 

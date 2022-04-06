@@ -3892,7 +3892,7 @@ class CampTix_Plugin {
 		add_meta_box( 'tix_attendee_info', __( 'Attendee Information', 'wordcamporg' ), array( $this, 'metabox_attendee_info' ), 'tix_attendee', 'normal' );
 		add_meta_box( 'tix_attendee_resend_emails', __( 'Resend Emails', 'wordcamporg' ), array( $this, 'metabox_attendee_resend_emails' ), 'tix_attendee', 'side' );
 
-		add_meta_box( 'tix_attendee_submitdiv', __( 'Publish', 'wordcamporg' ), array( $this, 'metabox_attendee_submitdiv' ), 'tix_attendee', 'side' );
+		add_meta_box( 'tix_attendee_submitdiv', __( 'Publish', 'wordcamporg' ), array( $this, 'metabox_attendee_submitdiv' ), 'tix_attendee', 'side', 'core' );
 		remove_meta_box( 'submitdiv', 'tix_attendee', 'side' );
 
 		do_action( 'camptix_add_meta_boxes' );

@@ -75,11 +75,30 @@ function render( $attributes, $content, $block ) {
 		$session_li .= '</p>';
 
 		if ( isset( $attributes['hasSessionDetails'] ) && $attributes['hasSessionDetails'] ) {
-			$tracks = get_the_terms( $session, 'wcb_track' );
+			$tracks     = get_the_terms( $session, 'wcb_track' );
+			$has_date   = (bool) $session->_wcpt_session_time;
+			$has_tracks = ! is_wp_error( $tracks ) && ! empty( $tracks );
+
 			$session_li .= '<p class="wordcamp-speaker-sessions__session-info">';
-			if ( ! is_wp_error( $tracks ) && ! empty( $tracks ) ) {
+
+			if ( ! $has_date && $has_tracks ) {
 				$session_li .= sprintf(
-					/* translators: 1: session date; 2: session time; 3: session track; */
+					/* translators: %s: session tracks */
+					esc_html__( 'In %s', 'wordcamporg' ),
+					implode( ', ', array_map( // phpcs:ignore -- escaped below.
+						function ( $track ) {
+							return sprintf(
+								'<span class="wordcamp-speaker-sessions__track slug-%s">%s</span>',
+								esc_attr( $track->slug ),
+								esc_html( $track->name )
+							);
+						},
+						$tracks
+					) )
+				);
+			} else if ( $has_tracks ) {
+				$session_li .= sprintf(
+					/* translators: 1: session date; 2: session time; 3: session tracks */
 					esc_html__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
 					esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
 					esc_html( wp_date( get_option( 'time_format' ), $session->_wcpt_session_time ) ),
@@ -94,9 +113,9 @@ function render( $attributes, $content, $block ) {
 						$tracks
 					) )
 				);
-			} else {
+			} else if ( $has_date ) {
 				$session_li .= sprintf(
-					/* translators: 1: session date; 2: session time; */
+					/* translators: 1: session date; 2: session time */
 					esc_html__( '%1$s at %2$s', 'wordcamporg' ),
 					esc_html( wp_date( get_option( 'date_format' ), $session->_wcpt_session_time ) ),
 					esc_html( wp_date( get_option( 'time_format' ), $session->_wcpt_session_time ) )

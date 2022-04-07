@@ -30,6 +30,5 @@
 			"padding": true
 		}
 	},
-	"editorScript": "wordcamp-blocks",
-	"style": "wordcamp-blocks"
+	"editorScript": "wordcamp-blocks"
 }

@@ -36,6 +36,9 @@ function render( $attributes, $content, $block ) {
 
 	$post_ID  = $block->context['postId'];
 	$sessions = get_speaker_sessions( array( $post_ID ) );
+	$classes  = array_filter( array(
+		isset( $attributes['textAlign'] ) ? 'has-text-align-' . $attributes['textAlign'] : false,
+	) );
 
 	// Speaker has no sessions.
 	if ( ! isset( $sessions[ $post_ID ] ) || count( $sessions[ $post_ID ] ) < 1 ) {
@@ -87,7 +90,7 @@ function render( $attributes, $content, $block ) {
 		$content .= $session_li;
 	}
 
-	$wrapper_attributes = get_block_wrapper_attributes();
+	$wrapper_attributes = get_block_wrapper_attributes( array( 'class' => implode( ' ', $classes ) ) );
 	return "<ul $wrapper_attributes>$content</ul>";
 }
 /**

@@ -1,8 +1,13 @@
 /**
+ * External dependencies
+ */
+import classnames from 'classnames';
+
+/**
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
+import { AlignmentControl, BlockControls, InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
@@ -13,8 +18,7 @@ import { useSelect } from '@wordpress/data';
 import { getSessionDetails, sortSessionByTime } from '../sessions/utils';
 
 export default function( { attributes, setAttributes, context: { postId } } ) {
-	const { hasSessionDetails, isLink } = attributes;
-	const blockProps = useBlockProps();
+	const { hasSessionDetails, isLink, textAlign } = attributes;
 	const sessions = useSelect( ( select ) => {
 		const { getEntityRecords } = select( coreStore );
 		const _sessions =
@@ -28,6 +32,12 @@ export default function( { attributes, setAttributes, context: { postId } } ) {
 
 		return _sessions;
 	}, [] );
+
+	const blockProps = useBlockProps( {
+		className: classnames( {
+			[ `has-text-align-${ textAlign }` ]: textAlign,
+		} ),
+	} );
 
 	return (
 		<>
@@ -46,6 +56,14 @@ export default function( { attributes, setAttributes, context: { postId } } ) {
 					/>
 				</PanelBody>
 			</InspectorControls>
+			<BlockControls group="block">
+				<AlignmentControl
+					value={ textAlign }
+					onChange={ ( nextAlign ) => {
+						setAttributes( { textAlign: nextAlign } );
+					} }
+				/>
+			</BlockControls>
 			<ul { ...blockProps }>
 				{ sessions.map( ( session ) => (
 					<li key={ session.id }>
@@ -57,7 +75,9 @@ export default function( { attributes, setAttributes, context: { postId } } ) {
 							) }
 						</p>
 						{ hasSessionDetails && (
-							<p className="wordcamp-speaker-sessions__session-info">{ getSessionDetails( session, true ) }</p>
+							<p className="wordcamp-speaker-sessions__session-info">
+								{ getSessionDetails( session, true ) }
+							</p>
 						) }
 					</li>
 				) ) }

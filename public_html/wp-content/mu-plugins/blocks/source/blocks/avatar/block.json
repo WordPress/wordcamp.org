@@ -5,7 +5,7 @@
 	"category": "wordcamp",
 	"description": "Display the current person's avatar.",
 	"textdomain": "wordcamporg",
-	"usesContext": [ "postId", "postType", "queryId" ],
+	"usesContext": [ "postId", "postType" ],
 	"attributes": {
 		"isLink": {
 			"type": "boolean",

@@ -34,19 +34,38 @@ function render( $attributes, $content, $block ) {
 		return '';
 	}
 
-	$post_ID  = $block->context['postId'];
-	$sessions = get_speaker_sessions( array( $post_ID ) );
-	$classes  = array_filter( array(
+	$post_ID = $block->context['postId'];
+	$classes = array_filter( array(
 		isset( $attributes['textAlign'] ) ? 'has-text-align-' . $attributes['textAlign'] : false,
 	) );
 
-	// Speaker has no sessions.
-	if ( ! isset( $sessions[ $post_ID ] ) || count( $sessions[ $post_ID ] ) < 1 ) {
+	$session_args = array(
+		'post_type'      => 'wcb_session',
+		'posts_per_page' => -1,
+		'meta_key'       => '_wcpt_speaker_id',
+		'meta_value'     => $post_ID,
+		'orderby'        => 'title',
+		'order'          => 'asc',
+	);
+
+	$sessions = get_posts( $session_args );
+
+	if ( ! isset( $sessions ) || count( $sessions ) < 1 ) {
 		return '';
 	}
 
+	// Sort the sessions in PHP rather than the DB query, so that we don't skip sessions without times set.
+	usort(
+		$sessions,
+		function( $session_a, $session_b ) {
+			$time_a = (int) get_post_meta( $session_a->ID, '_wcpt_session_time', true );
+			$time_b = (int) get_post_meta( $session_b->ID, '_wcpt_session_time', true );
+			return ( $time_a < $time_b ) ? -1 : 1;
+		}
+	);
+
 	$content = '';
-	foreach ( $sessions[ $post_ID ] as $session ) {
+	foreach ( $sessions as $session ) {
 		$session_li = '<li><p>';
 		if ( isset( $attributes['isLink'] ) && $attributes['isLink'] ) {
 			$session_li .= sprintf( '<a href="%1$s">%2$s</a>', get_the_permalink( $session->ID ), get_the_title( $session->ID ) );

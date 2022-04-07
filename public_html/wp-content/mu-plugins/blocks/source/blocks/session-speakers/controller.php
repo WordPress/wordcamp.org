@@ -25,7 +25,7 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  * @param array    $attributes Block attributes.
  * @param string   $content    Block default content.
  * @param WP_Block $block      Block instance.
- * @return string Returns the avatar for the current post.
+ * @return string Returns the speaker list for the current session post.
  */
 function render( $attributes, $content, $block ) {
 	if ( ! isset( $block->context['postId'] ) ) {

@@ -761,6 +761,11 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
+		// If the "Avatar" block is in the post content, we don't need to inject anything.
+		if ( has_block( 'wordcamp/avatar', $post ) ) {
+			return $content;
+		}
+
 		$avatar = get_avatar_or_image( $post->ID, 96 );
 
 		return '<div class="speaker-avatar">' . $avatar . '</div>' . $content;
@@ -787,6 +792,11 @@ class WordCamp_Post_Types_Plugin {
 
 		$site_id = get_current_blog_id();
 		if ( $site_id <= apply_filters( 'wcpt_session_post_speaker_info_min_site_id', 463 ) && ! in_array( $site_id, $enabled_site_ids, true ) ) {
+			return $content;
+		}
+
+		// If the "Session Speakers" block is in the post content, we don't need to inject anything.
+		if ( has_block( 'wordcamp/session-speakers', $post ) ) {
 			return $content;
 		}
 

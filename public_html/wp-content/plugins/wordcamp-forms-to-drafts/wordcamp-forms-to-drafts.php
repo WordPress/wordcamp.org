@@ -411,6 +411,10 @@ class WordCamp_Forms_To_Drafts {
 			$content = str_replace( '<p>', "<!-- wp:paragraph -->\n<p>", $content );
 			$content = str_replace( '</p>', "</p>\n<!-- /wp:paragraph -->", $content );
 		}
+		$content .= "\n";
+		$content .= '<!-- wp:heading {"level":2} --><h2>' . __( 'Sessions', 'wordcamporg' ) . '</h2><!-- /wp:heading -->';
+		$content .= "\n";
+		$content .= '<!-- wp:wordcamp/speaker-sessions {"isLink":true} /-->';
 
 		$speaker_id = wp_insert_post(
 			array(
@@ -447,6 +451,9 @@ class WordCamp_Forms_To_Drafts {
 			$content = str_replace( '<p>', "<!-- wp:paragraph -->\n<p>", $content );
 			$content = str_replace( '</p>', "</p>\n<!-- /wp:paragraph -->", $content );
 		}
+
+		$content .= "\n";
+		$content .= '<!-- wp:wordcamp/session-speakers {"byline":"' . __( 'Presented by', 'wordcamporg' ) . '","isLink":true} /-->';
 
 		$session_id = wp_insert_post(
 			array(

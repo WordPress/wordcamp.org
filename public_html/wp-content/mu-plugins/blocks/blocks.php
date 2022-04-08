@@ -34,6 +34,8 @@ function load_includes() {
 
 	// Blocks.
 	require_once $blocks_dir . 'avatar/controller.php';
+	require_once $blocks_dir . 'live-schedule/controller.php';
+	require_once $blocks_dir . 'meta-link/controller.php';
 	require_once $blocks_dir . 'organizers/controller.php';
 	require_once $blocks_dir . 'schedule/controller.php';
 	require_once $blocks_dir . 'session-date/controller.php';
@@ -42,7 +44,6 @@ function load_includes() {
 	require_once $blocks_dir . 'speaker-sessions/controller.php';
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
-	require_once $blocks_dir . 'live-schedule/controller.php';
 
 	// Hooks.
 	require_once $hooks_dir . 'latest-posts/controller.php';

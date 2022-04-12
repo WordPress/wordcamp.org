@@ -130,7 +130,7 @@ add_action( 'init', __NAMESPACE__ . '\register_assets', 9 );
 
 /**
  * Determine whether a $post or a string contains a block type with set attributes.
- * Used to check for variations of generic blocks, e.g., video session-link block.
+ * Used to check for variations of generic blocks, e.g., session video meta-link block.
  *
  * @param string                  $block_name Full block type to look for.
  * @param array                   $attrs      Associative array of attribute-name => value.

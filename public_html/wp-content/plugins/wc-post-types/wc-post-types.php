@@ -871,7 +871,7 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
-		// If the "Session Link" block is in the post content, with the slides key, we don't need to inject anything.
+		// If the "Meta Link" block is in the post content, with the slides key, we don't need to inject anything.
 		if ( has_block_with_attrs( 'wordcamp/meta-link', array( 'key' => '_wcpt_session_slides' ), $post ) ) {
 			return $content;
 		}
@@ -922,7 +922,7 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
-		// If the "Session Link" block is in the post content, with the video key, we don't need to inject anything.
+		// If the "Meta Link" block is in the post content, with the video key, we don't need to inject anything.
 		if ( has_block_with_attrs( 'wordcamp/meta-link', array( 'key' => '_wcpt_session_video' ), $post ) ) {
 			return $content;
 		}

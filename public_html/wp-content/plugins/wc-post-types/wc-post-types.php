@@ -1070,6 +1070,11 @@ class WordCamp_Post_Types_Plugin {
 			return $value;
 		}
 
+		// Allow the featured image ID through in REST API requests.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return $value;
+		}
+
 		$post_types = array( 'wcb_speaker', 'wcb_organizer' );
 		if ( in_array( get_post_type( $object_id ), $post_types, true ) ) {
 			return false;

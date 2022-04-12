@@ -32,6 +32,16 @@ function render( $attributes, $content, $block ) {
 		return '';
 	}
 
+	$meta_keys = array_merge(
+		get_registered_meta_keys( 'post' ),
+		get_registered_meta_keys( 'post', $block->context['postType'] )
+	);
+	// If the meta value is not visible in the API, it should not be visible here. This prevents leaking data
+	// that should not be public.
+	if ( ! isset( $meta_keys[ $attributes['key'] ] ) || ! $meta_keys[ $attributes['key'] ]['show_in_rest'] ) {
+		return '';
+	}
+
 	$post_ID = $block->context['postId'];
 	$url     = get_post_meta( $post_ID, $attributes['key'], true );
 	$text    = $attributes['text'];

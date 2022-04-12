@@ -7,7 +7,14 @@ import classnames from 'classnames';
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { AlignmentControl, BlockControls, RichText, useBlockProps } from '@wordpress/block-editor';
+import {
+	AlignmentControl,
+	BlockControls,
+	InspectorControls,
+	RichText,
+	useBlockProps,
+} from '@wordpress/block-editor';
+import { Notice } from '@wordpress/components';
 import { store as coreStore } from '@wordpress/core-data';
 import { useSelect } from '@wordpress/data';
 
@@ -38,6 +45,13 @@ export default function Edit( { attributes, setAttributes, context: { postId, po
 					} }
 				/>
 			</BlockControls>
+			{ ! url && (
+				<InspectorControls>
+					<Notice status="error" isDismissible={ false }>
+						{ __( 'The link for this content is missing. Add the URL in the Session tab.', 'wordcamporg' ) }
+					</Notice>
+				</InspectorControls>
+			) }
 			<div { ...blockProps }>
 				<RichText
 					tagName="a"

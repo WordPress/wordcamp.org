@@ -46,6 +46,10 @@ function render( $attributes, $content, $block ) {
 	$url     = get_post_meta( $post_ID, $attributes['key'], true );
 	$text    = $attributes['text'];
 
+	if ( ! $url ) {
+		return '';
+	}
+
 	$classes = array_filter( array(
 		isset( $attributes['textAlign'] ) ? 'has-text-align-' . $attributes['textAlign'] : false,
 	) );

@@ -11,6 +11,7 @@ require_once 'inc/privacy.php';
 require_once 'inc/deprecated.php';
 
 use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
+use function WordCamp\Blocks\has_block_with_attrs;
 
 // Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2
 // greater than the core-defined ep_masks, but could potentially conflict with another plugin.
@@ -870,6 +871,11 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
+		// If the "Meta Link" block is in the post content, with the slides key, we don't need to inject anything.
+		if ( has_block_with_attrs( 'wordcamp/meta-link', array( 'key' => '_wcpt_session_slides' ), $post ) ) {
+			return $content;
+		}
+
 		$site_id = get_current_blog_id();
 
 		if ( $site_id <= apply_filters( 'wcpt_session_post_slides_info_min_site_id', 699 ) && ! in_array( $site_id, $enabled_site_ids, true ) ) {
@@ -916,6 +922,11 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
+		// If the "Meta Link" block is in the post content, with the video key, we don't need to inject anything.
+		if ( has_block_with_attrs( 'wordcamp/meta-link', array( 'key' => '_wcpt_session_video' ), $post ) ) {
+			return $content;
+		}
+
 		$site_id = get_current_blog_id();
 
 		if ( $site_id <= apply_filters( 'wcpt_session_post_video_info_min_site_id', 699 ) && ! in_array( $site_id, $enabled_site_ids, true ) ) {
@@ -946,6 +957,11 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 
 		if ( ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+			return $content;
+		}
+
+		// If the "Post Terms" block is in the post content, with the session category term, we don't need to inject anything.
+		if ( has_block_with_attrs( 'core/post-terms', array( 'term' => 'wcb_session_category' ), $post ) ) {
 			return $content;
 		}
 

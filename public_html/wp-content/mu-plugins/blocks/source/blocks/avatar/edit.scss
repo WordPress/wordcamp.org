@@ -1,11 +1,17 @@
-.wp-block-wordcamp-avatar {
+.wp-block-wordcamp-avatar,
+.editor-styles-wrapper .wp-block-wordcamp-avatar {
 	margin-left: 0;
 	margin-right: 0;
 }
 
+[data-align="center"] .wp-block-wordcamp-avatar,
 .wp-block-wordcamp-avatar.aligncenter {
 	margin-left: auto;
 	margin-right: auto;
+}
+
+.wp-block-wordcamp-avatar img {
+	max-width: 100%;
 }
 
 // From the Image block.

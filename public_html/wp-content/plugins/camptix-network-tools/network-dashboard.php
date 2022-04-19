@@ -468,7 +468,7 @@ class CampTix_Network_Dashboard {
 			<p>This only searches the most recent <?php echo absint( self::$attendee_search_limit ); ?> sites.</p>
 		</div>
 
-		<?php if ( isset( $_POST['tix_dashboard_attendee_lookup_submit'], $_POST['s'] ) ) : ?>
+		<?php if ( isset( $_POST['tix_dashboard_attendee_lookup_submit'] ) && ! empty( $_POST['s'] ) ) : ?>
 			<style>
 			#tix-dashboard-attendees-table {
 				margin-top: 20px;

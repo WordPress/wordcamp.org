@@ -22,11 +22,13 @@ class CampTix_Network_Attendees_List_Table extends WP_List_Table {
 		$search_query = trim( $_POST['s'] );
 		$results = array();
 
-		$blogs = $wpdb->get_col( $wpdb->prepare(
-			"SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d ORDER BY last_updated DESC LIMIT %d;",
-			$wpdb->siteid,
-			CampTix_Network_Dashboard::$attendee_search_limit
+		$blogs = get_sites( array(
+			'number' => CampTix_Network_Dashboard::$attendee_search_limit,
+			'fields' => 'ids',
+			'orderby' => 'last_updated',
+			'order' => 'DESC',
 		) );
+
 		foreach ( $blogs as $bid ) {
 			
 			if ( count( $results ) >= $this->max_results )

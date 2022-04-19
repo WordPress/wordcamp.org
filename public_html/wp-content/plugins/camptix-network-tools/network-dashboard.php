@@ -15,11 +15,12 @@ class CampTix_Network_Dashboard {
 
 	function schedule_events() {
 		add_action( 'tix_dashboard_scheduled_hourly', array( $this, 'update_revenue_reports_data' ) );
-		add_action( 'tix_dashboard_scheduled_hourly', array( $this, 'gather_events_data' ), 11 );	// priority 11 so it runs after revenue data refreshed
+		add_action( 'tix_dashboard_scheduled_hourly', array( $this, 'gather_events_data' ), 11 );   // priority 11 so it runs after revenue data refreshed
 
 		// wp_clear_scheduled_hook( 'tix_scheduled_hourly' );
-		if ( ! wp_next_scheduled( 'tix_dashboard_scheduled_hourly' ) )
+		if ( ! wp_next_scheduled( 'tix_dashboard_scheduled_hourly' ) ) {
 			wp_schedule_event( time(), 'hourly', 'tix_dashboard_scheduled_hourly' );
+		}
 	}
 
 	/*
@@ -33,8 +34,9 @@ class CampTix_Network_Dashboard {
 	function update_revenue_reports_data() {
 		global $wpdb, $camptix;
 
-		if ( get_site_option( 'camptix_nt_revenue_report_last_run', 0 ) > ( time() - HOUR_IN_SECONDS ) )
-			return;		// prevent the job from firing more often than intended because it'll be triggered by multiple sites in the network
+		if ( get_site_option( 'camptix_nt_revenue_report_last_run', 0 ) > ( time() - HOUR_IN_SECONDS ) ) {
+			return;     // prevent the job from firing more often than intended because it'll be triggered by multiple sites in the network
+		}
 
 		// The cron job may be fired from a site that doesn't have CampTix loaded, so only run if it is loaded
 		if ( method_exists( $camptix, 'generate_revenue_report_data' ) ) {
@@ -132,87 +134,97 @@ class CampTix_Network_Dashboard {
 			switch_to_blog( $bid );
 
 				$post = $meta = false;
-				if ( in_array( 'camptix/camptix.php', (array) apply_filters( 'active_plugins', get_option( 'active_plugins', array() ) ) ) ) {
+			if ( in_array( 'camptix/camptix.php', (array) apply_filters( 'active_plugins', get_option( 'active_plugins', array() ) ) ) ) {
 
-					$options = get_option( 'camptix_options' );
+				$options = get_option( 'camptix_options' );
 
-					$post = array(
-						'post_type' => 'tix_event',
-						'post_status' => 'publish',
-						'post_title' => get_bloginfo( 'name' ),
-					);
+				$post = array(
+					'post_type' => 'tix_event',
+					'post_status' => 'publish',
+					'post_title' => get_bloginfo( 'name' ),
+				);
 
-					$meta = array(
-						'tix_options' => $options,
-						'tix_home_url' => home_url(),
-						'tix_admin_url' => admin_url(),
-					);
+				$meta = array(
+					'tix_options' => $options,
+					'tix_home_url' => home_url(),
+					'tix_admin_url' => admin_url(),
+				);
 
-					$stats = get_option( 'camptix_stats', array() );
-					foreach ( $stats as $key => $value )
-						$meta['tix_stats_' . $key] = $value;
+				$stats = get_option( 'camptix_stats', array() );
+				foreach ( $stats as $key => $value ) {
+					$meta[ 'tix_stats_' . $key ] = $value;
+				}
 
-					$meta['tix_earliest_start'] = null;
-					$meta['tix_undefined_start'] = false;
-					$meta['tix_latest_end'] = null;
-					$meta['tix_undefined_end'] = false;
+				$meta['tix_earliest_start']  = null;
+				$meta['tix_undefined_start'] = false;
+				$meta['tix_latest_end']      = null;
+				$meta['tix_undefined_end']   = false;
 
-					// Let's take a look at the tickets.
-					$paged = 1;
-					while ( $tickets = get_posts( array(
-						'post_type' => 'tix_ticket',
-						'post_status' => 'publish',
-						'paged' => $paged++,
-						'posts_per_page' => 10,
-					) ) ) {
+				// Let's take a look at the tickets.
+				$paged = 1;
+				while ( $tickets = get_posts( array(
+					'post_type' => 'tix_ticket',
+					'post_status' => 'publish',
+					'paged' => $paged++,
+					'posts_per_page' => 10,
+				) ) ) {
 
-						// Loop through tickets.
-						foreach ( $tickets as $ticket ) {
+					// Loop through tickets.
+					foreach ( $tickets as $ticket ) {
 
-							$start = get_post_meta( $ticket->ID, 'tix_start', true );
-							$end = get_post_meta( $ticket->ID, 'tix_end', true );
+						$start = get_post_meta( $ticket->ID, 'tix_start', true );
+						$end   = get_post_meta( $ticket->ID, 'tix_end', true );
 
-							if ( strtotime( $start ) )
-								if ( strtotime( $start ) < $meta['tix_earliest_start'] || ! $meta['tix_earliest_start'] )
-									$meta['tix_earliest_start'] = strtotime( $start );
+						if ( strtotime( $start ) ) {
+							if ( strtotime( $start ) < $meta['tix_earliest_start'] || ! $meta['tix_earliest_start'] ) {
+								$meta['tix_earliest_start'] = strtotime( $start );
+							}
+						}
 
-							if ( strtotime( $end ) )
-								if ( strtotime( $end ) > $meta['tix_latest_end'] || ! $meta['tix_latest_end'] )
-									$meta['tix_latest_end'] = strtotime( $end );
+						if ( strtotime( $end ) ) {
+							if ( strtotime( $end ) > $meta['tix_latest_end'] || ! $meta['tix_latest_end'] ) {
+								$meta['tix_latest_end'] = strtotime( $end );
+							}
+						}
 
-							if ( ! strtotime( $end ) )
-								$meta['tix_undefined_end'] = true;
+						if ( ! strtotime( $end ) ) {
+							$meta['tix_undefined_end'] = true;
+						}
 
-							if ( strtotime( $ticket->post_date ) < $meta['tix_earliest_start'] || ! $meta['tix_earliest_start'] )
-								$meta['tix_earliest_start'] = strtotime( $ticket->post_date );
+						if ( strtotime( $ticket->post_date ) < $meta['tix_earliest_start'] || ! $meta['tix_earliest_start'] ) {
+							$meta['tix_earliest_start'] = strtotime( $ticket->post_date );
+						}
 
-							if ( strtotime( $ticket->post_date ) > $meta['tix_latest_end'] || ! $meta['tix_latest_end'] )
-								$meta['tix_latest_end'] = strtotime( $ticket->post_date );
+						if ( strtotime( $ticket->post_date ) > $meta['tix_latest_end'] || ! $meta['tix_latest_end'] ) {
+							$meta['tix_latest_end'] = strtotime( $ticket->post_date );
 						}
 					}
-					
-					// Set latest end to 1 year from now for better sorting.
-					if ( $meta['tix_undefined_end'] || ! $meta['tix_latest_end'] ) {
-						$meta['tix_latest_end'] = time() + 60*60*24*356;
-						$meta['tix_undefined_end'] = true;
-					}
-						
-					if ( ! $meta['tix_earliest_start'] ) {
-						$meta['tix_earliest_start'] = time() + 60*60*24*356;
-						$meta['tix_undefined_start'] = true;
-					}
-
-					// Make note of archived sites
-					$meta['tix_archived'] = ( isset( $options['archived'] ) && $options['archived'] ) ? 1 : 0;
 				}
+
+				// Set latest end to 1 year from now for better sorting.
+				if ( $meta['tix_undefined_end'] || ! $meta['tix_latest_end'] ) {
+					$meta['tix_latest_end']    = time() + 60 * 60 * 24 * 356;
+					$meta['tix_undefined_end'] = true;
+				}
+
+				if ( ! $meta['tix_earliest_start'] ) {
+					$meta['tix_earliest_start']  = time() + 60 * 60 * 24 * 356;
+					$meta['tix_undefined_start'] = true;
+				}
+
+				// Make note of archived sites
+				$meta['tix_archived'] = ( isset( $options['archived'] ) && $options['archived'] ) ? 1 : 0;
+			}
 
 			restore_current_blog();
 
 			if ( $post ) {
 				$post_id = wp_insert_post( $post );
-				if ( $post_id )
-					foreach ( $meta as $meta_key => $meta_value )
+				if ( $post_id ) {
+					foreach ( $meta as $meta_key => $meta_value ) {
 						update_post_meta( $post_id, $meta_key, $meta_value );
+					}
+				}
 			}
 		}
 	}
@@ -258,7 +270,7 @@ class CampTix_Network_Dashboard {
 			$this->init_list_tables();
 			$this->list_table = new CampTix_Network_Log_List_Table();
 		}
-		
+
 		if ( 'attendees' == $this->get_current_tab() ) {
 			$this->init_list_tables();
 			$this->list_table = new CampTix_Network_Attendees_List_Table();
@@ -266,8 +278,9 @@ class CampTix_Network_Dashboard {
 	}
 
 	function get_current_tab() {
-		if ( isset( $_REQUEST['tix_section'] ) )
+		if ( isset( $_REQUEST['tix_section'] ) ) {
 			return strtolower( $_REQUEST['tix_section'] );
+		}
 
 		return 'overview';
 	}
@@ -277,7 +290,7 @@ class CampTix_Network_Dashboard {
 	 */
 	function render_dashboard_tabs() {
 		$current_section = $this->get_current_tab();
-		$sections = array(
+		$sections        = array(
 			'overview' => 'Overview',
 			'log' => 'Network Log',
 			'txn_lookup' => 'Transactions',
@@ -286,7 +299,7 @@ class CampTix_Network_Dashboard {
 
 		foreach ( $sections as $section_key => $section_caption ) {
 			$active = $current_section === $section_key ? 'nav-tab-active' : '';
-			$url = add_query_arg( array(
+			$url    = add_query_arg( array(
 				'tix_section' => $section_key,
 				'page' => 'camptix-dashboard',
 			), network_admin_url( 'index.php' ) );
@@ -303,14 +316,18 @@ class CampTix_Network_Dashboard {
 			<div id="tix">
 			<?php
 				$section = $this->get_current_tab();
-				if ( $section == 'overview' )
-					$this->render_dashboard_overview();
-				if ( $section == 'log' )
-					$this->render_dashboard_log();
-				if ( $section == 'txn_lookup' )
-					$this->render_dashboard_txn_lookup();
-				if ( $section == 'attendees' )
-					$this->render_dashboard_attendees();
+			if ( $section == 'overview' ) {
+				$this->render_dashboard_overview();
+			}
+			if ( $section == 'log' ) {
+				$this->render_dashboard_log();
+			}
+			if ( $section == 'txn_lookup' ) {
+				$this->render_dashboard_txn_lookup();
+			}
+			if ( $section == 'attendees' ) {
+				$this->render_dashboard_attendees();
+			}
 			?>
 			</div>
 		</div>
@@ -318,13 +335,13 @@ class CampTix_Network_Dashboard {
 	}
 
 	function init_list_tables() {
-		require_once ( plugin_dir_path( __FILE__ ) . 'includes/class-camptix-network-dashboard-list-table.php' );
-		require_once ( plugin_dir_path( __FILE__ ) . 'includes/class-camptix-network-log-list-table.php' );
-		require_once ( plugin_dir_path( __FILE__ ) . 'includes/class-camptix-network-attendees-list-table.php' );
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-camptix-network-dashboard-list-table.php';
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-camptix-network-log-list-table.php';
+		require_once plugin_dir_path( __FILE__ ) . 'includes/class-camptix-network-attendees-list-table.php';
 	}
 
 	function render_dashboard_overview() {
-		$last_updated = date( 'Y-m-d H:i:s', get_option( 'camptix_dashboard_timestamp', 0 ) );
+		$last_updated     = date( 'Y-m-d H:i:s', get_option( 'camptix_dashboard_timestamp', 0 ) );
 		$last_updated_ago = human_time_diff( get_option( 'camptix_dashboard_timestamp', 0 ), time() ) . ' ago';
 		$this->list_table->prepare_items();
 		?>
@@ -393,10 +410,10 @@ class CampTix_Network_Dashboard {
 		</script>
 		<?php
 	}
-	
+
 	function render_dashboard_txn_lookup() {
-		$txn_id = isset( $_POST['tix_txn_id'] ) ? $_POST['tix_txn_id'] : false;
-		$creds = isset( $_POST['tix_dashboard_credentials'] ) ? $_POST['tix_dashboard_credentials'] : false;
+		$txn_id                = isset( $_POST['tix_txn_id'] ) ? $_POST['tix_txn_id'] : false;
+		$creds                 = isset( $_POST['tix_dashboard_credentials'] ) ? $_POST['tix_dashboard_credentials'] : false;
 		$available_credentials = $this->get_paypal_credentials();
 		?>
 
@@ -423,10 +440,11 @@ class CampTix_Network_Dashboard {
 		if ( isset( $_POST['tix_dashboard_txn_lookup_submit'] ) && $txn_id && $creds ) {
 			check_admin_referer( 'dashboard_transactions_id_lookup', 'dashboard_transactions_id_lookup_nonce' );
 			$credentials = $this->get_paypal_credentials();
-			if ( ! isset( $credentials[$_POST['tix_dashboard_credentials']] ) )
+			if ( ! isset( $credentials[ $_POST['tix_dashboard_credentials'] ] ) ) {
 				return;
-				
-			$credentials = $credentials[$_POST['tix_dashboard_credentials']];
+			}
+
+			$credentials = $credentials[ $_POST['tix_dashboard_credentials'] ];
 
 			$payload = array(
 				'METHOD' => 'GetTransactionDetails',
@@ -435,7 +453,7 @@ class CampTix_Network_Dashboard {
 
 			$txn = wp_parse_args( wp_remote_retrieve_body( $this->paypal_request( $payload, $credentials ) ) );
 		}
-		
+
 		?>
 		<?php if ( $txn ) : ?>
 			<style>
@@ -444,17 +462,18 @@ class CampTix_Network_Dashboard {
 				background: #F5EFC6;
 			}
 			</style>
-			<pre id="tix-dashboard-txn-info"><?php 
+			<pre id="tix-dashboard-txn-info"><?php
 				echo esc_html( print_r( $txn, true ) );
 			?></pre>
 		<?php endif; ?>
 		<?php
 	}
-	
+
 	function render_dashboard_attendees() {
 		$search_query = isset( $_POST['s'] ) ? $_POST['s'] : '';
-		if ( isset( $_POST['tix_dashboard_attendee_lookup_submit'], $_POST['s'] ) )
+		if ( isset( $_POST['tix_dashboard_attendee_lookup_submit'], $_POST['s'] ) ) {
 			$this->list_table->prepare_items();
+		}
 		?>
 		<form method="POST">
 			<label class="description">Search Query:</label>
@@ -494,9 +513,9 @@ class CampTix_Network_Dashboard {
 		<?php endif; ?>
 		<?php
 	}
-	
+
 	function paypal_request( $payload, $credentials ) {
-		$url = $credentials['sandbox'] ? 'https://api-3t.sandbox.paypal.com/nvp' : 'https://api-3t.paypal.com/nvp';
+		$url     = $credentials['sandbox'] ? 'https://api-3t.sandbox.paypal.com/nvp' : 'https://api-3t.paypal.com/nvp';
 		$payload = array_merge( array(
 			'USER' => $credentials['api_username'],
 			'PWD' => $credentials['api_password'],
@@ -504,12 +523,15 @@ class CampTix_Network_Dashboard {
 			'VERSION' => '88.0', // https://cms.paypal.com/us/cgi-bin/?cmd=_render-content&content_ID=developer/e_howto_api_nvp_PreviousAPIVersionsNVP
 		), (array) $payload );
 
-		return wp_remote_post( $url, array( 'body' => $payload, 'timeout' => 20 ) );
+		return wp_remote_post( $url, array(
+			'body' => $payload,
+			'timeout' => 20,
+		) );
 	}
-	
+
 	function get_paypal_credentials() {
 		return apply_filters( 'camptix_dashboard_paypal_credentials', array() );
 	}
 }
 
-$GLOBALS['camptix_network_dashboard'] = new CampTix_Network_Dashboard;
+$GLOBALS['camptix_network_dashboard'] = new CampTix_Network_Dashboard();

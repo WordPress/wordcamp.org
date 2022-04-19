@@ -13,7 +13,7 @@
 class CampTix_Network_Tools {
 	private $options;
 	private $db_version = 20131202;
-	const PLUGIN_URL = "http://wordpress.org/plugins/camptix-network-tools";
+	const PLUGIN_URL    = 'http://wordpress.org/plugins/camptix-network-tools';
 
 	function __construct() {
 		add_action( 'init',             array( $this, 'init' ) );
@@ -43,13 +43,15 @@ class CampTix_Network_Tools {
 		global $wpdb;
 
 		$charset_collate = '';
-		if ( ! empty( $wpdb->charset ) )
+		if ( ! empty( $wpdb->charset ) ) {
 			$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-		if ( ! empty( $wpdb->collate ) )
+		}
+		if ( ! empty( $wpdb->collate ) ) {
 			$charset_collate .= " COLLATE $wpdb->collate";
+		}
 
-		$table_name = $wpdb->base_prefix . "camptix_log";
-		$sql = "CREATE TABLE $table_name (
+		$table_name = $wpdb->base_prefix . 'camptix_log';
+		$sql        = "CREATE TABLE $table_name (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			timestamp timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			blog_id bigint(20) NOT NULL,
@@ -60,7 +62,7 @@ class CampTix_Network_Tools {
 			UNIQUE KEY id (id)
 		) $charset_collate;";
 
-		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
 		$this->options['db_version'] = $this->db_version;
 	}
@@ -88,8 +90,9 @@ class CampTix_Network_Tools {
 			'tix_email',
 			'tix_coupon',
 		);
-		foreach ( $post_types as $post_type )
+		foreach ( $post_types as $post_type ) {
 			add_meta_box( 'tix_db_log', 'CampTix DB Log', array( $this, 'metabox_log' ), $post_type, 'normal' );
+		}
 	}
 
 	/**
@@ -98,17 +101,18 @@ class CampTix_Network_Tools {
 	function metabox_log() {
 		global $post, $camptix, $wpdb;
 
-		if ( ! get_current_blog_id() || ! $post->ID )
+		if ( ! get_current_blog_id() || ! $post->ID ) {
 			return;
+		}
 
-		$rows = array();
-		$table_name = $wpdb->base_prefix . "camptix_log";
-		$entries = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE blog_id = %d AND object_id = %d ORDER BY id ASC;", get_current_blog_id(), $post->ID ) );
+		$rows       = array();
+		$table_name = $wpdb->base_prefix . 'camptix_log';
+		$entries    = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE blog_id = %d AND object_id = %d ORDER BY id ASC;", get_current_blog_id(), $post->ID ) );
 
 		// Add entries as rows.
 		foreach ( $entries as $entry ) {
 			$message = esc_html( $entry->message );
-			$data = json_decode( $entry->data );
+			$data    = json_decode( $entry->data );
 			if ( $data ) {
 				$message .= ' <a href="#" class="tix-more-bytes">data</a>';
 				$message .= '<pre class="tix-bytes" style="display: none;">' . esc_html( print_r( $data, true ) ) . '</pre>';
@@ -116,8 +120,9 @@ class CampTix_Network_Tools {
 			$rows[] = array( date( 'Y-m-d H:i:s', strtotime( $entry->timestamp ) ), $message );
 		}
 
-		if ( count( $rows ) < 1 )
+		if ( count( $rows ) < 1 ) {
 			$rows[] = array( 'No log entries yet.', '' );
+		}
 
 		$camptix->table( $rows, 'tix-log-table' );
 		?>
@@ -131,7 +136,7 @@ class CampTix_Network_Tools {
 			});
 		</script>
 
-	<?php
+		<?php
 	}
 
 	/**
@@ -144,13 +149,13 @@ class CampTix_Network_Tools {
 			$post_id = 0;
 		}
 
-		$data = json_encode( stripslashes_deep( $data_raw ) );
+		$data            = json_encode( stripslashes_deep( $data_raw ) );
 		$json_last_error = json_last_error();
 		if ( JSON_ERROR_NONE != $json_last_error ) {
 			$data = sprintf( 'json_encode() error: code #%d. Raw data was: %s', $json_last_error, print_r( $data_raw, true ) );
 		}
 
-		$table_name = $wpdb->base_prefix . "camptix_log";
+		$table_name = $wpdb->base_prefix . 'camptix_log';
 		$wpdb->insert( $table_name, array(
 			'blog_id' => $blog_id,
 			'object_id' => $post_id,
@@ -169,13 +174,16 @@ class CampTix_Network_Tools {
 		);
 
 		if ( $post_id ) {
-			$entry['post_id'] = absint( $post_id );
-			$entry['edit_post_link'] = esc_url_raw( add_query_arg( array( 'post' => absint( $post_id ), 'action' => 'edit' ), admin_url( 'post.php' ) ) );
+			$entry['post_id']        = absint( $post_id );
+			$entry['edit_post_link'] = esc_url_raw( add_query_arg( array(
+				'post' => absint( $post_id ),
+				'action' => 'edit',
+			), admin_url( 'post.php' ) ) );
 		}
 
 		// (optional) Also write the message to the standard log file
 		if ( isset( $entry['message'] ) && apply_filters( 'camptix_nt_file_log', true ) ) {
-			$url = parse_url( home_url() );
+			$url    = parse_url( home_url() );
 			$prefix = sprintf( 'CampTix (%s): ', $url['host'] );
 			error_log( $prefix . $entry['message'] );
 		}
@@ -215,7 +223,7 @@ class CampTix_Network_Tools {
 						$user,
 						esc_html( $message ),
 						esc_html( $expression['pattern'] ),
-						date( 'Y-m-d H:i:s' ),	// assumes MySQL timezone matches PHP timezone, and that next clock tick hasn't occurred after record insertion
+						date( 'Y-m-d H:i:s' ),  // assumes MySQL timezone matches PHP timezone, and that next clock tick hasn't occurred after record insertion
 						add_query_arg(
 							array(
 								'tix_section' => 'log',
@@ -223,7 +231,7 @@ class CampTix_Network_Tools {
 								's' => 'id:' . absint( $camptix->tmp( 'last_log_id' ) ),
 							),
 							network_admin_url()
-						)	// assumes recipient has access to Network Log
+						)   // assumes recipient has access to Network Log
 					);
 
 					wp_mail( $expression['addresses'], $subject, $email_body );
@@ -263,10 +271,11 @@ class CampTix_Network_Tools {
 	}
 
 	function __destruct() {
-		if ( isset( $this->log_file ) && $this->log_file )
+		if ( isset( $this->log_file ) && $this->log_file ) {
 			fclose( $this->log_file );
+		}
 	}
 }
 
 $GLOBALS['camptix_network_tools'] = new CampTix_Network_Tools();
-require_once( plugin_dir_path( __FILE__ ) . 'network-dashboard.php' );
+require_once plugin_dir_path( __FILE__ ) . 'network-dashboard.php';

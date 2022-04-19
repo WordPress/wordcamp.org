@@ -1,10 +1,12 @@
 <?php
 
 class CampTix_Network_Dashboard {
-
+	public static $attendee_search_limit;
 	protected $debug = false;
 
 	function __construct() {
+		self::$attendee_search_limit = apply_filters( 'camptix_nt_attendee_list_blog_limit', 700 ); // PHP times out around 900 sites.
+
 		add_action( 'network_admin_menu', array( $this, 'admin_menu' ) );
 		add_action( 'init', array( $this, 'init' ) );
 
@@ -461,7 +463,11 @@ class CampTix_Network_Dashboard {
 			<input type="submit" value="Lookup" class="button-primary" />
 			<?php wp_nonce_field( 'dashboard_attendees_search_query', 'dashboard_attendees_search_query_nonce' ); ?>
 		</form>
-		
+
+		<div class="notice notice-warning">
+			<p>This only searches the most recent <?php echo absint( self::$attendee_search_limit ); ?> sites.</p>
+		</div>
+
 		<?php if ( isset( $_POST['tix_dashboard_attendee_lookup_submit'], $_POST['s'] ) ) : ?>
 			<style>
 			#tix-dashboard-attendees-table {
@@ -471,10 +477,18 @@ class CampTix_Network_Dashboard {
 				display: none;
 			}
 			</style>
+
 			<div id="tix-dashboard-attendees-table">
-				<?php if ( count( $this->list_table->items ) >= $this->list_table->max_results ) : ?>
-					<p class="description">Please note, that for performance reasons, we don't show more than <?php echo absint( $this->list_table->max_results ); ?> results.</p>
+				<?php if ( count( $this->list_table->items ) === $this->list_table->max_results ) : ?>
+					<div class="notice notice-warning">
+							<p>
+								More results were found within the searched sites, but only the most recent
+								<?php echo absint( $this->list_table->max_results ); ?>
+								are displayed, to avoid further delays.
+							</p>
+					</div>
 				<?php endif; ?>
+
 				<?php $this->list_table->display(); ?>
 			</div>
 		<?php endif; ?>

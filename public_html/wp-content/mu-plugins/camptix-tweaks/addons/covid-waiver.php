@@ -75,27 +75,32 @@ class Covid_Waiver_Field extends CampTix_Addon {
 
 				<p>
 					<?php
-
 					esc_html_e( 'An inherent risk of exposure to COVID-19 exists in any public place where people are present.', 'wordcamporg' );
-					echo '&nbsp;';
+					echo ' ';
 					esc_html_e( 'COVID-19 is an extremely contagious disease that can lead to severe illness and death.', 'wordcamporg' );
-					echo '&nbsp;';
+					echo ' ';
 					esc_html_e( 'According to the World Health Organization, senior citizens and guests with underlying medical conditions are especially vulnerable.', 'wordcamporg' );
-
 					?>
 				</p>
 
 				<p>
 					<?php
-
 					// translators: %s: name of WordCamp (e.g., "WordCamp São Paulo 2021").
 					echo esc_html( sprintf(
 						__( 'By attending %s, you voluntarily assume all risks related to exposure to COVID-19 and waive any claims against the event organizers; volunteers; sponsors; the WordPress Foundation; WordPress Community Support, PBC; and their respective affiliates.', 'wordcamporg' ),
 						get_wordcamp_name()
 					) );
-
 					?>
 				</p>
+
+				<p><?php esc_html_e( 'To the extent consistent with local law, when planning to attend WordCamp, follow these recommendations:', 'wordcamporg' ); ?></p>
+
+				<ul>
+					<li><?php esc_html_e( 'Stay at home if you are sick or have recently come in contact with someone who is ill.', 'wordcamporg' ); ?></li>
+					<li><?php esc_html_e( 'Only attend if you are vaccinated or have recently tested negative.', 'wordcamporg' ); ?></li>
+					<li><?php esc_html_e( 'Wear a mask while at WordCamp.', 'wordcamporg' ); ?></li>
+					<li><?php esc_html_e( 'If you see another attendee is wearing a sticker requesting people wear a mask near them, please wear a mask while within 6 feet (2 meters) of them or keep your distance.', 'wordcamporg' ); ?></li>
+				</ul>
 			</td>
 		</tr>
 

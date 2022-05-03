@@ -557,12 +557,12 @@ function get_canonical_year_url( $domain, $path ) {
 		return false;
 	}
 
-
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
+	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2021-06-10' ) ) {
-				return "https://europe.wordcamp.$tld/2021/";
+			if ( time() <= strtotime( '2022-06-05' ) ) {
+				return "https://europe.wordcamp.$tld/2022/";
 			}
 			break;
 

@@ -63,6 +63,8 @@ function get_latest_home_url( $current_domain, $current_path ) {
 	 *
 	 * This won't prevent the link from being added to past years, but that edge case isn't significant enough
 	 * to warrant the extra complexity.
+	 *
+	 * See also `WordCamp\Sunrise\get_canonical_year_url()`.
 	 */
 	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
 		return false;

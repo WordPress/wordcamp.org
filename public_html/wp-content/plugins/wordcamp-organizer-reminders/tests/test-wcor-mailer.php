@@ -103,14 +103,15 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 *                        isn't always accessible to the testing function.
 	 */
 	protected function assert_mail_succeeded( $to, $subject, $body, $result = true ) {
-		$mailer = tests_retrieve_phpmailer_instance();
+		$mailer                 = tests_retrieve_phpmailer_instance();
+		$normalized_actual_body = str_replace( "\r\n", "\n", $mailer->get_sent()->body );
 
 		$this->assertSame( true, $result );
 		$this->assertSame( 0, did_action( 'wp_mail_failed' ) );
 
 		$this->assertSame( $to,      $mailer->get_recipient( 'to' )->address );
 		$this->assertSame( $subject, $mailer->get_sent()->subject );
-		$this->assertSame( $body,    $mailer->get_sent()->body );
+		$this->assertSame( $body,    $normalized_actual_body );
 	}
 
 	/**

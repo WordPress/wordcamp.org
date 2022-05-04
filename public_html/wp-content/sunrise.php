@@ -561,7 +561,7 @@ function get_canonical_year_url( $domain, $path ) {
 	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2022-06-05' ) ) {
+			if ( time() <= strtotime( '2022-07-05' ) ) {
 				return "https://europe.wordcamp.$tld/2022/";
 			}
 			break;

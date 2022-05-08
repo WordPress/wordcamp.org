@@ -6,7 +6,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Clone the repo:
     ```bash
-    git clone git@github.com:WordPress/wordcamp.org.git wordcamp.test
+    git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
     cd wordcamp.test
     ```
 

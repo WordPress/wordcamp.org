@@ -384,7 +384,8 @@ function get_mentor_data( $username ) {
  * @return array
  */
 function get_all_mentor_data() {
-	if ( false !== $data = \get_site_transient( MENTORS_CACHE_KEY ) ) {
+	$data = get_site_transient( MENTORS_CACHE_KEY );
+	if ( false !== $data ) {
 		return $data;
 	}
 
@@ -397,7 +398,7 @@ function get_all_mentor_data() {
 
 	ksort( $data );
 
-	\set_site_transient( MENTORS_CACHE_KEY, $data, DAY_IN_SECONDS );
+	set_site_transient( MENTORS_CACHE_KEY, $data, DAY_IN_SECONDS );
 
 	return $data;
 }

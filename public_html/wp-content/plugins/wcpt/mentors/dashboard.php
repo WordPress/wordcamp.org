@@ -230,6 +230,10 @@ function get_usernames() {
 function set_usernames( $usernames ) {
 	$sanitized_usernames = sanitize_usernames( $usernames );
 
+	if ( $sanitized_usernames === get_usernames() ) {
+		return true;
+	}
+
 	return update_site_option( USERNAMES_KEY, $sanitized_usernames );
 }
 
@@ -246,8 +250,8 @@ function sanitize_usernames( $usernames ) {
 	}
 
 	$usernames = array_map( 'trim', $usernames );
-
 	$usernames = array_map( 'sanitize_user', $usernames );
+	$usernames = array_unique( $usernames );
 
 	// Remove empty array items
 	return array_filter( $usernames );
@@ -350,7 +354,7 @@ function get_mentor_data( $username ) {
 
 	// Data for specific mentor
 	if ( in_array( $username, $usernames ) ) {
-		$user = \get_user_by( 'login', $username );
+		$user = wcorg_get_user_by_canonical_names( $username );
 
 		if ( $user instanceof \WP_User ) {
 			// Make sure we get a name

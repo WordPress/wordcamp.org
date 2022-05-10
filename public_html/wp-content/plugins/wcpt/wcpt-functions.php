@@ -35,7 +35,7 @@ function wcpt_key_to_str( $key, $prefix = '' ) {
 function wcpt_log_metabox( $post ) {
 	$entries = wcpt_get_log_entries( $post->ID );
 
-	require( __DIR__ . '/views/common/metabox-log.php' );
+	require __DIR__ . '/views/common/metabox-log.php';
 }
 
 /**
@@ -56,7 +56,11 @@ function wcpt_get_log_entries( $event_id ) {
 	$status_changes = get_post_meta( $event_id, '_status_change' );
 	$tag_changes    = get_post_meta( $event_id, '_tags_log' );
 
-	foreach ( array( 'note' => $private_notes, 'status_change' => $status_changes, 'tag_change' => $tag_changes ) as $entry_type => $raw_entries ) {
+	foreach ( array(
+		'note' => $private_notes,
+		'status_change' => $status_changes,
+		'tag_change' => $tag_changes,
+	) as $entry_type => $raw_entries ) {
 		$entries = array_merge( process_raw_entries( $raw_entries, $entry_type ), $entries );
 	}
 
@@ -118,5 +122,5 @@ function wcpt_sort_log_entries( $a, $b ) {
 function wcpt_add_note_metabox( $post ) {
 	wp_nonce_field( 'wcpt_notes', 'wcpt_notes_nonce' );
 
-	require_once( __DIR__ . '/views/common/metabox-notes.php' );
+	require_once __DIR__ . '/views/common/metabox-notes.php';
 }

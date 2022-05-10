@@ -4,8 +4,8 @@
  * Slightly modify allowed html tags in entry message because default
  * "data" set is too restrictive and "post" set too broad.
  */
-$allowed_html = wp_kses_allowed_html( 'data' );
-$allowed_html['p'] = array(); // allow paragraph for easier reading.
+$allowed_html       = wp_kses_allowed_html( 'data' );
+$allowed_html['p']  = array(); // allow paragraph for easier reading.
 $allowed_html['br'] = array(); // allow line changes for easier reading.
 
 ?>

@@ -47,7 +47,7 @@ class WordCamp_New_Site {
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
 				<?php $url = trailingslashit( get_post_meta( $post_id, $key, true ) ); ?>
-				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );  ?>
+				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) ); ?>
 				<?php $valid_url = isset( $url['host'], $url['path'] ); ?>
 
 				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>

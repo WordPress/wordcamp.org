@@ -947,7 +947,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				if ( 'on' === $form_value ) {
 					$is_virtual_event = true;
 				}
-
 			} else {
 				$database_value = get_post_meta( $post_id, 'Virtual event only', true );
 

@@ -37,12 +37,12 @@ function get_active_events( $application_type ) {
 	$post_type          = '';
 
 	if ( 'wordcamp' === $application_type ) {
-		$statuses = WordCamp_Loader::get_post_statuses();
+		$statuses   = WordCamp_Loader::get_post_statuses();
 		$milestones = WordCamp_Loader::map_statuses_to_milestones();
 		unset( $shown_statuses[ WCPT_FINAL_STATUS ] );
 		$post_type = WCPT_POST_TYPE_ID;
 	} elseif ( 'meetup' === $application_type ) {
-		$statuses = \Meetup_Loader::get_post_statuses();
+		$statuses  = \Meetup_Loader::get_post_statuses();
 		$post_type = WCPT_MEETUP_SLUG;
 	}
 

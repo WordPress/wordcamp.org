@@ -42,22 +42,22 @@ if ( ! class_exists( 'WCPT_Loader' ) ) :
 		 */
 		public function includes() {
 			// Load the files.
-			require_once( WCPT_DIR . 'wcpt-functions.php' );
-			require_once( WCPT_DIR . 'wcpt-event/class-event-loader.php' );
-			require_once( WCPT_DIR . 'wcpt-wordcamp/wordcamp-loader.php' );
-			require_once( WCPT_DIR . 'wcpt-meetup/meetup-loader.php' );
-			require_once( WCPT_DIR . 'wcpt-event/tracker.php' );
-			require_once( WCPT_DIR . 'wcpt-wordcamp/wordcamp.php' );
-			require_once( WCPT_DIR . 'wcpt-meetup/meetup.php' );
-			require_once( WCPT_DIR . 'wcpt-meetup/class-meetup-admin.php' );
-			require_once( WCPT_DIR . 'wcpt-event/class-event-admin.php' ); // required for declined application cron to work.
+			require_once WCPT_DIR . 'wcpt-functions.php';
+			require_once WCPT_DIR . 'wcpt-event/class-event-loader.php';
+			require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-loader.php';
+			require_once WCPT_DIR . 'wcpt-meetup/meetup-loader.php';
+			require_once WCPT_DIR . 'wcpt-event/tracker.php';
+			require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp.php';
+			require_once WCPT_DIR . 'wcpt-meetup/meetup.php';
+			require_once WCPT_DIR . 'wcpt-meetup/class-meetup-admin.php';
+			require_once WCPT_DIR . 'wcpt-event/class-event-admin.php'; // required for declined application cron to work.
 
 			// Require admin files.
 			if ( is_admin() || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
-				require_once( WCPT_DIR . 'wcpt-admin.php' );
-				require_once( WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php' );
-				require_once( WCPT_DIR . 'wcpt-wordcamp/privacy.php' );
-				require_once( WCPT_DIR . 'mentors/dashboard.php' );
+				require_once WCPT_DIR . 'wcpt-admin.php';
+				require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php';
+				require_once WCPT_DIR . 'wcpt-wordcamp/privacy.php';
+				require_once WCPT_DIR . 'mentors/dashboard.php';
 			}
 		}
 

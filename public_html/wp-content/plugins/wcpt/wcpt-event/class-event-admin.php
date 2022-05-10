@@ -743,7 +743,7 @@ abstract class Event_Admin {
 		foreach ( $meta_keys as $key => $value ) :
 			$object_name = wcpt_key_to_str( $key, 'wcpt_' );
 			$readonly    = in_array( $key, $protected_fields ) ? ' readonly="readonly"' : '';
-			$classes = array(
+			$classes     = array(
 				'inside',
 				'wcpt-field',
 				'field__' . $object_name,
@@ -888,7 +888,8 @@ abstract class Event_Admin {
 									<?php foreach ( timezone_identifiers_list() as $timezone ) : ?>
 										<option
 											value="<?php echo esc_attr( $timezone ); ?>"
-											<?php if ( $selected === $timezone ) { echo 'selected'; } ?>
+											<?php if ( $selected === $timezone ) {
+												echo 'selected'; } ?>
 										>
 											<?php echo esc_html( $timezone ); ?>
 										</option>

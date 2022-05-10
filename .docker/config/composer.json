@@ -93,7 +93,6 @@
 		"wordpress-plugin/bbpress": "2.6.*",
 		"wpackagist-plugin/campt-indian-payment-gateway": "*",
 		"wordpress-plugin/camptix-bd-payments": "1.2",
-		"wpackagist-plugin/camptix-mercadopago": "*",
 		"wpackagist-plugin/camptix-pagseguro": "*",
 		"wpackagist-plugin/camptix-payfast-gateway": "*",
 		"wpackagist-plugin/camptix-trustcard": "*",

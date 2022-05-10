@@ -8,6 +8,17 @@ Version:     0.1
 License:     GPLv2 or later
 */
 
+use WordPressdotorg\Profiles;
+
+/*
+ * Requests will always fail when in local environments, unless the dev is proxied. Proxied devs could test
+ * locally if they're careful (especially with user IDs), but it's better to test on w.org sandboxes with
+ * test accounts. That prevents real profiles from having test data accidentally added to them.
+ */
+if ( 'local' === wp_get_environment_type() ) {
+	return;
+}
+
 class WordCamp_Participation_Notifier {
 	const PROFILES_HANDLER_URL = 'https://profiles.wordpress.org/wp-admin/admin-ajax.php';
 
@@ -15,6 +26,8 @@ class WordCamp_Participation_Notifier {
 	 * Constructor
 	 */
 	public function __construct() {
+		require_once WP_CONTENT_DIR . '/mu-plugins-private/wporg-mu-plugins/pub/profile-helpers.php';
+
 		// Sync with the wp.org username changes.
 		add_filter( 'update_post_meta', array( $this, 'username_meta_update' ), 10, 4 );
 		add_filter( 'add_post_meta',    array( $this, 'username_meta_add' ), 10, 3 );
@@ -39,7 +52,7 @@ class WordCamp_Participation_Notifier {
 			return;
 		}
 
-		return $this->remote_post( self::PROFILES_HANDLER_URL, $this->get_meetup_org_payload( $organizers, $post ) );
+		return Profiles\api( $this->get_meetup_org_payload( $organizers, $post ) );
 	}
 
 	/**
@@ -154,7 +167,7 @@ class WordCamp_Participation_Notifier {
 	protected function add_activity( $post, $user_id ) {
 		$published_activity_key = $this->get_published_activity_key( $post );
 		if ( ! get_user_meta( $user_id, $published_activity_key ) ) {
-			$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_activity_payload( $post, $user_id ) );
+			Profiles\api( $this->get_post_activity_payload( $post, $user_id ) );
 			update_user_meta( $user_id, $published_activity_key, true );
 		}
 	}
@@ -180,7 +193,7 @@ class WordCamp_Participation_Notifier {
 
 		update_user_meta( $user_id, $meta_key, true );
 
-		$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_association_payload( $post, 'add', $user_id ) );
+		Profiles\api( $this->get_post_association_payload( $post, 'add', $user_id ) );
 	}
 
 	/**
@@ -217,7 +230,7 @@ class WordCamp_Participation_Notifier {
 		);
 
 		if ( '0' === $count ) {
-			$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_association_payload( $post, 'remove', $user_id ) );
+			Profiles\api( $this->get_post_association_payload( $post, 'remove', $user_id ) );
 		}
 	}
 
@@ -279,7 +292,7 @@ class WordCamp_Participation_Notifier {
 	 */
 	public function primary_attendee_registered( $attendee, $username ) {
 		$user_id = $this->get_saved_wporg_user_id( $attendee );
-		$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' ) );
+		Profiles\api( $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' ) );
 	}
 
 	/**
@@ -296,7 +309,7 @@ class WordCamp_Participation_Notifier {
 		$attendee = get_post( $attendee_id );
 		$user_id  = $this->get_saved_wporg_user_id( $attendee );
 
-		$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' ) );
+		Profiles\api( $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' ) );
 	}
 
 	/**
@@ -317,7 +330,7 @@ class WordCamp_Participation_Notifier {
 		$attendee = get_post( $attendee_id );
 		$user_id  = $this->get_saved_wporg_user_id( $attendee );
 
-		$this->remote_post( self::PROFILES_HANDLER_URL, $this->get_post_activity_payload( $attendee, $user_id, 'attendee_checked_in' ) );
+		Profiles\api( $this->get_post_activity_payload( $attendee, $user_id, 'attendee_checked_in' ) );
 	}
 
 	/**
@@ -447,50 +460,6 @@ class WordCamp_Participation_Notifier {
 		}
 
 		return $user_id;
-	}
-
-	/**
-	 * Wrapper for wp_remote_post()
-	 *
-	 * This reduces the amount of duplicated code in the callers, makes them more readable, and logs errors to aid in debugging
-	 *
-	 * @param string $url
-	 * @param array  $body The value intended to be passed to wp_remote_post() as $args['body']
-	 * @return false|array|WP_Error False if a valid $body was not passed; otherwise the results from wp_remote_post()
-	 */
-	protected function remote_post( $url, $body ) {
-		$response = $error = false;
-
-		if ( $body ) {
-			$response = wp_remote_post( $url, array( 'body' => $body ) );
-
-			if ( is_wp_error( $response ) ) {
-				$error = sprintf(
-					'Received WP_Error message: %s Request was: %s',
-					implode( ', ', $response->get_error_messages() ),
-					print_r( $body, true )
-				);
-			} elseif ( 200 != $response['response']['code'] || 1 != (int) $response['body'] ) {
-				// error_log() has a message limit of 1024 bytes, so we truncate $response['body'] to make sure that $body doesn't get truncated.
-
-				$error = sprintf(
-					'Received HTTP code: %s and body: %s. Request was: %s',
-					$response['response']['code'],
-					substr( sanitize_text_field( $response['body'] ), 0, 500 ),
-					print_r( $body, true )
-				);
-			}
-
-			if ( $error ) {
-				error_log( sprintf( '%s error for %s: %s', __METHOD__, parse_url( site_url(), PHP_URL_HOST ), sanitize_text_field( $error ) ) );
-
-				if ( $to = apply_filters( 'wpn_error_email_addresses', array() ) ) {
-					wp_mail( $to, sprintf( '%s error for %s', __METHOD__, parse_url( site_url(), PHP_URL_HOST ) ), sanitize_text_field( $error ) );
-				}
-			}
-		}
-
-		return $response;
 	}
 }
 

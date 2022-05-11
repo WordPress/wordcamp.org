@@ -25,6 +25,7 @@ public_html/wp-content/languages/
 public_html/wp-content/**/build/
 public_html/wp-content/mu-plugins/includes/slack/
 public_html/wp-content/mu-plugins/vendor/
+public_html/wp-content/mu-plugins/0-sandbox-functionality.php
 public_html/wp-content/mu-plugins/sandbox-functionality.php
 public_html/wp-content/mu-plugins-private/
 public_html/wp-content/themes-private/

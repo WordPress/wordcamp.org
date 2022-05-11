@@ -18,7 +18,8 @@ use Dotorg\Slack\Send;
 
 /*
  * Intentionally not using `get_temp_dir()`, because that could potentially return `WP_CONTENT_DIR`. Storing
- * error records there would result in path disclosure.
+ * error records there could result in leaking sensitive information that failed to be redacted before being
+ * logged.
  */
 const ERROR_RATE_LIMITING_DIR = '/tmp/error_limiting';
 
@@ -302,7 +303,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		return;
 	}
 
-	require_once( __DIR__ . '/includes/slack/send.php' );
+	require_once __DIR__ . '/includes/slack/send.php';
 
 	$error_name  = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
 	$messages    = explode( 'Stack trace:', $err_msg, 2 );
@@ -340,28 +341,28 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			break;
 	}
 
-	$fields = [
-		[
+	$fields = array(
+		array(
 			'title' => 'Domain',
 			'value' => $domain,
 			'short' => false,
-		],
-		[
+		),
+		array(
 			'title' => 'Page',
 			'value' => $page_slug,
 			'short' => false,
-		],
-		[
+		),
+		array(
 			'title' => 'File',
 			'value' => "$file:$line",
 			'short' => false,
-		],
-		[
+		),
+		array(
 			'title' => 'Stack Trace',
 			'value' => $stack_trace,
 			'short' => false,
-		],
-	];
+		),
+	);
 
 	$attachment = array(
 		'fallback'    => $text,
@@ -396,7 +397,7 @@ function get_destination_channels( $file, $environment, $is_fatal_error ) {
 	$is_jetpack_error   = false !== stripos( $file, WP_PLUGIN_DIR . '/jetpack/' );
 	$is_gutenberg_error = false !== stripos( $file, WP_PLUGIN_DIR . '/gutenberg/' );
 
-	switch( $environment ) {
+	switch ( $environment ) {
 		case 'production':
 			// Send all Jetpack & Gutenberg errors to those teams. Only send fatals to us.
 			if ( $is_jetpack_error ) {
@@ -431,8 +432,8 @@ function get_destination_channels( $file, $environment, $is_fatal_error ) {
 		case 'local':
 		default:
 			// Intentionally empty.
-		break;
-	};
+			break;
+	}
 
 	return $channels;
 }

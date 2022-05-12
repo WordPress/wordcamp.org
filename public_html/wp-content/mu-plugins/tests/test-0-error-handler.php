@@ -96,7 +96,7 @@ class Test_Error_Handling extends WP_UnitTestCase {
 			),
 
 			'cron mu-plugin' => array(
-				WP_MU_PLUGIN_DIR . '/cron.php',
+				SUT_WPMU_PLUGIN_DIR . '/cron.php',
 				false
 			),
 

@@ -11,7 +11,7 @@ if ( 'cli' !== php_sapi_name() ) {
  */
 function manually_load_plugin() {
 	// Needed for `get_wordcamp_site_id()`.
-	require_once WP_MU_PLUGIN_DIR . '/4-helpers-wcpt.php';
+	require_once SUT_WPMU_PLUGIN_DIR . '/4-helpers-wcpt.php';
 
 	require_once dirname( __DIR__ )            . '/bootstrap.php';
 	require_once dirname( dirname( __DIR__ ) ) . '/multi-event-sponsors/bootstrap.php';

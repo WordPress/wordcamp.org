@@ -3,6 +3,8 @@
  * WordCamp.org configuration file.
  */
 
+define( 'IS_WORDCAMP_NETWORK', true );
+
 /**
  * The environment in which the WordCamp codebase is currently running.
  *

@@ -49,7 +49,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
 
     ```bash
-    wordcamp.test_1  | Startup complete.
+    wordcamp.test_1  | NOTICE: ready to handle connections
     ```
    
     In this case the Docker environment will be running in the foreground. To stop the environment, use `CTRL + c`.

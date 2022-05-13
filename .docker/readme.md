@@ -43,7 +43,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Build and boot the Docker environment.
     ```bash
-    docker-compose up --build
+    docker compose up --build
 	```
 
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
@@ -57,7 +57,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     On subsequent uses, you can start the already-built environment up in the background, thus allowing other commands to be issued while the environment is still running:
     
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
 	_Note: This will create `.docker/database` directory which will contain MySQL files to persist data across docker restarts._
@@ -68,7 +68,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     To get the list of sites, run the following command, and then remove the `http(s)://` prefix and `/` suffix.
 
     ```bash
-    docker-compose exec wordcamp.test wp site list --field=url --allow-root
+    docker compose exec wordcamp.test wp site list --field=url --allow-root
     ```
 
     Example hosts file entry:
@@ -80,7 +80,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 	If your browser warns you about the self-signed certificates, then the CA certificate is not properly installed. For Chrome, [manually add the CA cert to Keychain Access](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/). For Firefox, import it to `Preferences > Certificates > Advanced > Authorities`.
 
-1. By default, docker will start with data defined in `.docker/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/wordcamp_dev.sql` file and run `docker-compose up --build -d` again.
+1. By default, docker will start with data defined in `.docker/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
 
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash
@@ -100,21 +100,21 @@ Note: All of these commands are meant to be executed from project directory.
 
 1. To start WordCamp docker containers, use:
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
     The `-d` flag directs Docker to run in background.
 
 1. To stop the running the Docker containers, use:
     ```bash
-    docker-compose stop
+    docker compose stop
     ```
    
-   Note that using `docker-compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
+   Note that using `docker compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
 
 1. To open a shell inside the web container, use:
     ```bash
-    docker-compose exec wordcamp.test bash
+    docker compose exec wordcamp.test bash
     ```
 
     `wordcamp.test` is the name of docker service running `nginx` and `php`. `bash` is the name of command that we want to execute. This particular command will give us shell access inside the Docker.
@@ -122,14 +122,14 @@ Note: All of these commands are meant to be executed from project directory.
     Similarly, for the MySQL container, you can use:
 
     ```bash
-    docker-compose exec wordcamp.db bash
+    docker compose exec wordcamp.db bash
     ```
 
     `wordcamp.db` is the name of docker service running MySQL server.
 
 1. To view `nginx` and `php-logs` use:
     ```bash
-    docker-compose logs -f --tail=100 wordcamp.test
+    docker compose logs -f --tail=100 wordcamp.test
     ```
 
     The `-f` flag is used for consistently following the logs. Omit this to only dump the logs in terminal.
@@ -141,7 +141,7 @@ Note: All of these commands are meant to be executed from project directory.
     Similarly, to view MySQL server logs, use:
 
     ```bash
-    docker-compose logs -f --tail=100 wordcamp.db
+    docker compose logs -f --tail=100 wordcamp.db
     ```
 
     Note that this does not show MySQL queries made by application, these are just server logs.
@@ -158,7 +158,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
 1. Start up the container:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml up
+    docker compose -f docker-compose.phpunit.yml up
     ```
 
     Watch for the following output, to ensure that the server and database are finished starting up.
@@ -170,7 +170,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
 2. The first time you run this, you'll need to install the tests (future runs can skip this step). First, open a shell inside the web container:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml exec phpunit_wp bash
+    docker compose -f docker-compose.phpunit.yml exec phpunit_wp bash
     ```
 
     Then run the install script. It will download WordPress & the unit test framework (this skips installing a database, since that is set up as part of the docker process).
@@ -182,7 +182,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
 3. Now you can run `phpunit`. From the project folder on your machine:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
+    docker compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
     ```
 
     If you're still in the shell from the previous step, you can run `phpunit` directly.
@@ -192,11 +192,11 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
     Either way, you'll see "Installing...", and then the tests will run.
 
-4. The "useful commands" from the previous section will work here too— you just need to use `docker-compose -f docker-compose.phpunit.yml` to specify this configuration. 
+4. The "useful commands" from the previous section will work here too— you just need to use `docker compose -f docker-compose.phpunit.yml` to specify this configuration. 
 
     For example, to suspend the container, use:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml stop
+    docker compose -f docker-compose.phpunit.yml stop
     ```
 
 5. You can run `test:watch` to automatically watch files for changes, and re-run the tests:
@@ -232,7 +232,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 The **.docker/bin** directory gets mounted as a volume within the PHP container, and it contains a script, **database.sh**, with several useful commands. To run these commands, first open a shell inside the Docker container:
 
 ```bash
-docker-compose exec wordcamp.test bash
+docker compose exec wordcamp.test bash
 ```
 
 From there you can run the script using `bash /var/scripts/database.sh [subcommand]`. The most useful subcommands are:

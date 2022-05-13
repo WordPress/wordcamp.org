@@ -12,7 +12,10 @@
 		},
 		"vendor-dir": "public_html/wp-content/mu-plugins/vendor",
 		"_comment": "Work around `test:watch` timeout, see https://github.com/spatie/phpunit-watcher/issues/63#issuecomment-545633709",
-		"process-timeout": 0
+		"process-timeout": 0,
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
 	},
 	"require": {
 		"adhocore/jwt": "^1.0"

@@ -43,7 +43,8 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Build and boot the Docker environment.
     ```bash
-    docker compose up --build
+    docker compose build --pull
+    docker compose up
 	```
 
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:

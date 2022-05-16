@@ -266,27 +266,29 @@ function get_all_categories() {
 }
 
 /**
- * Get the site's settings.
+ * Get (a subset of) the site's settings.
+ *
+ * Using an internal REST API query because the data needs to match the same format that `fetchScheduleData()`
+ * returns.
  *
  * @return array
  */
 function get_settings() {
+	$request  = new WP_REST_Request( 'GET', '/wp/v2/settings' );
+	$response = rest_do_request( $request );
+
 	/*
-	 * This needs to match the same format that `fetchScheduleData()` returns.
-	 *
-	 * Hardcoding these instead of creating a `WP_REST_Request` because:
-	 *
-	 * 1) That API endpoint is only intended to be used by authorized users. Right now it doesn't contain anything
-	 *    particularly sensitive, but that could change at any point in the future.
-	 * 2) The data will need to be accessed by logged-out visitors, and that endpoint requires authentication by
-	 *    default.
-	 * 3) It makes the page size slightly smaller, and `WordCampBlocks` less cluttered.
+	 * Filter out the keys we need, to ensure only non-private data is exposed. This endpoint is only intended to be
+	 * used by authorized users. Right now it doesn't contain anything particularly sensitive, but that could change
+	 * at any point in the future. It also makes the page size slightly smaller, and `WordCampBlocks` less cluttered.
 	 */
-	return array(
-		'date_format' => get_option( 'date_format' ),
-		'time_format' => get_option( 'time_format' ),
-		'timezone'    => get_option( 'timezone' ),
+	$allowed_list = array_fill_keys( array( 'date_format', 'time_format', 'timezone' ), '' );
+	$data         = array_intersect_key(
+		$response->get_data(),
+		$allowed_list
 	);
+
+	return $data;
 }
 
 /**

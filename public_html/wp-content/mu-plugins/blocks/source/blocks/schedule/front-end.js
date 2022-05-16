@@ -48,7 +48,7 @@ function ScheduleGridWithContext( props ) {
  */
 function getScheduleGrdProps( element ) {
 	const { attributes: rawAttributes } = element.dataset;
-	const { allCategories, allTracks, settings } = rawScheduleData;
+	const { allCategories, allSessions, allTracks, settings } = rawScheduleData;
 	let parsedAttributes = {};
 	let derivedSessions = [];
 
@@ -56,7 +56,7 @@ function getScheduleGrdProps( element ) {
 		parsedAttributes = JSON.parse( decodeURIComponent( rawAttributes ) );
 
 		derivedSessions = getDerivedSessions(
-			rawScheduleData.allSessions,
+			allSessions,
 			allCategories,
 			allTracks,
 			parsedAttributes

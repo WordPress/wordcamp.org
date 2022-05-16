@@ -155,7 +155,6 @@ define( 'WORDCAMP_PAYMENT_STRIPE_SECRET_LIVE',      '' );
 
 define( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY', '' );
 
-define( 'MEETUP_API_KEY',      '' );
 define( 'MEETUP_API_BASE_URL', 'https://api.meetup.com/' );
 define( 'MEETUP_MEMBER_ID',     72560962                 );
 define( 'MEETUP_OAUTH_CONSUMER_KEY', '' );

@@ -24,7 +24,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		public function __construct() {
 			parent::__construct();
 
-			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ) );
+			// Register at priority `11` because `10` has already run by the time this class is instantiated.
+			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ), 11 );
 			add_action( 'wcpt_meetup_api_sync', array( $this, 'meetup_api_sync' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_update_meetup_data' ) );
 			add_action( 'wcpt_metabox_value', array( $this, 'render_co_organizers_list' ) );

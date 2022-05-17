@@ -68,7 +68,9 @@ export default function ScheduleInspectorControls(
  */
 function getDisplayedDays( sessions ) {
 	let uniqueDays = sessions.reduce( ( accumulatingDays, session ) => {
-		accumulatingDays[ format( DATE_SLUG_FORMAT, session.derived.startTime ) ] = true;
+		if ( session.derived.startTime ) {
+			accumulatingDays[ format( DATE_SLUG_FORMAT, session.derived.startTime ) ] = true;
+		}
 
 		return accumulatingDays;
 	}, {} );

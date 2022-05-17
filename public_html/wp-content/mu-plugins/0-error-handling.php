@@ -308,7 +308,6 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$error_name  = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
 	$messages    = explode( 'Stack trace:', $err_msg, 2 );
 	$text        = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
-	$stack_trace = wp_debug_backtrace_summary();
 	$domain      = esc_url( get_site_url() );
 	$page_slug   = sanitize_text_field( untrailingslashit( $_SERVER['REQUEST_URI'] ) ) ?: '/';
 	$footer      = '';
@@ -356,13 +355,18 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			'title' => 'File',
 			'value' => "$file:$line",
 			'short' => false,
-		),
-		array(
-			'title' => 'Stack Trace',
-			'value' => $stack_trace,
-			'short' => false,
-		),
+		)
 	);
+
+	// Fatals can only be caught with `register_shutdown_function()`, but that doesn't have access to the call
+	// stack of the previous script. It would only show the stack of the current script, which isn't useful.
+	if ( ! is_fatal_error( $err_no ) ) {
+		$fields[] = array(
+			'title' => 'Stack Trace',
+			'value' => wp_debug_backtrace_summary(),
+			'short' => false,
+		);
+	}
 
 	$attachment = array(
 		'fallback'    => $text,

@@ -8,7 +8,7 @@
 	},
 	"config": {
 		"platform": {
-			"php": "7.2"
+			"php": "7.4"
 		},
 		"vendor-dir": "public_html/wp-content/mu-plugins/vendor",
 		"_comment": "Work around `test:watch` timeout, see https://github.com/spatie/phpunit-watcher/issues/63#issuecomment-545633709",

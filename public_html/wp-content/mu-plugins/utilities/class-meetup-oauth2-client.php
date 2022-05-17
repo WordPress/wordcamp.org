@@ -149,14 +149,14 @@ class Meetup_OAuth2_Client extends API_Client {
 		$request_headers = $this->get_headers();
 		$request_body    = array();
 
-		switch( $type ) {
+		switch ( $type ) {
 			case 'access_token': // Request a new access token.
 				$args = wp_parse_args( $args, array(
 					'code' => '',
 				) );
 
-				$request_url  = self::URL_ACCESS_TOKEN;
-				$request_body = array(
+				$request_url                     = self::URL_ACCESS_TOKEN;
+				$request_body                    = array(
 					'client_id'     => self::CONSUMER_KEY,
 					'client_secret' => self::CONSUMER_SECRET,
 					'grant_type'    => 'authorization_code',
@@ -264,7 +264,6 @@ class Meetup_OAuth2_Client extends API_Client {
 			if ( $this->is_valid_token( $token, 'access_token' ) ) {
 				delete_site_option( self::SITE_OPTION_KEY_AUTHORIZATION, false );
 			}
-
 		} elseif ( $this->is_expired_token( $token ) ) {
 			$token = $this->request_token( 'refresh_token', $token );
 		}

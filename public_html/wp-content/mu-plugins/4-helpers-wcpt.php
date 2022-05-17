@@ -344,3 +344,23 @@ function get_wordcamp_location( $wordcamp ) {
 
 	return $venue . "\n" . $address;
 }
+
+/**
+ * Check if this WordCamp is virtual-only or in-person/hybrid.
+ *
+ * @param WP_Post $wordcamp
+ *
+ * @return bool
+ */
+function is_wordcamp_virtual( $wordcamp ) {
+	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+		return false;
+	}
+
+	// Switch to central.wordcamp.org to get post meta.
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
+	$is_virtual = (bool) get_post_meta( $wordcamp->ID, 'Virtual event only', true );
+	restore_current_blog();
+
+	return $is_virtual;
+}

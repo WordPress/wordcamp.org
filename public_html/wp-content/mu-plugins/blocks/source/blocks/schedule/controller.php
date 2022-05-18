@@ -266,21 +266,17 @@ function get_all_categories() {
 }
 
 /**
- * Get the site's settings.
+ * Get (a subset of) the site's settings.
  *
  * @return array
  */
 function get_settings() {
 	/*
-	 * This needs to match the same format that `fetchScheduleData()` returns.
+	 * This needs to match the format of `fetchScheduleData()`, which is the result of `/wp/v2/settings`.
 	 *
-	 * Hardcoding these instead of creating a `WP_REST_Request` because:
-	 *
-	 * 1) That API endpoint is only intended to be used by authorized users. Right now it doesn't contain anything
-	 *    particularly sensitive, but that could change at any point in the future.
-	 * 2) The data will need to be accessed by logged-out visitors, and that endpoint requires authentication by
-	 *    default.
-	 * 3) It makes the page size slightly smaller, and `WordCampBlocks` less cluttered.
+	 * The array is hard-coded because the settings endpoint requires authentication, and returns an error
+	 * when the viewer is logged-out. If you need to add or remove any values here, make sure they're also
+	 * available in the settings endpoint.
 	 */
 	return array(
 		'date_format' => get_option( 'date_format' ),

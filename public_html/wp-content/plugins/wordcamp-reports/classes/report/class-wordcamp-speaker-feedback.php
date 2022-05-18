@@ -4,7 +4,7 @@ namespace WordCamp\Reports\Report;
 
 use DateInterval, DateTime, Exception;
 use WordCamp_Loader;
-use WordCamp\Utilities\Export_CSV;
+use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
 use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\{ validate_date_range, validate_wordcamp_id };

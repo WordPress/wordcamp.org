@@ -9,7 +9,8 @@ namespace WordCamp\Reports\Report;
 
 use Exception;
 use WordCamp\Reports;
-use WordCamp\Utilities;
+use WordCamp\Utilities\{ Currency_XRT_Client };
+use WordPressdotorg\MU_Plugins\Utilities\{ Export_CSV };
 use WordCamp\Quickbooks\Client;
 use function WordCamp\Reports\Validation\{ validate_wordcamp_id };
 use WordCamp\Budgets_Dashboard\Sponsor_Invoices as WCBD_Sponsor_Invoices;
@@ -90,7 +91,7 @@ class Sponsor_Invoices extends Date_Range {
 	/**
 	 * Currency exchange rate client.
 	 *
-	 * @var Utilities\Currency_XRT_Client Utility to handle currency conversion.
+	 * @var Currency_XRT_Client Utility to handle currency conversion.
 	 */
 	protected $xrt = null;
 
@@ -124,7 +125,7 @@ class Sponsor_Invoices extends Date_Range {
 	public function __construct( $start_date, $end_date, $wordcamp_id = 0, array $options = array() ) {
 		parent::__construct( $start_date, $end_date, $options );
 
-		$this->xrt = new Utilities\Currency_XRT_Client();
+		$this->xrt = new Currency_XRT_Client();
 
 		if ( $wordcamp_id ) {
 			try {
@@ -633,7 +634,7 @@ class Sponsor_Invoices extends Date_Range {
 
 			$data = $report->get_data();
 
-			$exporter = new Utilities\Export_CSV( array(
+			$exporter = new Export_CSV( array(
 				'filename' => $filename,
 				'headers'  => $headers,
 				'data'     => $data,

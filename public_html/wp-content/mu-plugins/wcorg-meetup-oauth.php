@@ -8,6 +8,6 @@ add_action(
 	'admin_init',
 	function () {
 		// Store the new meetup oauth tokens.
-		( new WordCamp\Utilities\Meetup_OAuth2_Client() )->get_oauth_token();
+		( new WordPressdotorg\MU_Plugins\Utilities\Meetup_OAuth2_Client() )->get_oauth_token();
 	}
 );

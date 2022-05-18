@@ -14,7 +14,7 @@ use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\Validation\{validate_date_range, validate_wordcamp_status};
 use function WordCamp\Reports\Time\{year_array, quarter_array, month_array};
 use WordCamp_Loader;
-use WordCamp\Utilities\Export_CSV;
+use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
 
 /**
  * Class WordCamp_Status

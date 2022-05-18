@@ -340,7 +340,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			}
 			$url_path_segments = explode( '/', rtrim( $parsed_url['path'], '/' ) );
 			$slug              = array_pop( $url_path_segments );
-			$mtp_client        = new \WordCamp\Utilities\Meetup_Client();
+			$mtp_client        = new WordPressdotorg\MU_Plugins\Utilities\Meetup_Client();
 
 			$group_details = $mtp_client->get_group_details( $slug );
 

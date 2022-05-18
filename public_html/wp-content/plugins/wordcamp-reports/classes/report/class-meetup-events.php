@@ -14,7 +14,7 @@ use WP_Error;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\validate_date_range;
 use function WordCamp\Reports\Time\{year_array, quarter_array, month_array, convert_time_period_to_date_range};
-use WordCamp\Utilities\{Meetup_Client, Export_CSV};
+use WordPressdotorg\MU_Plugins\Utilities\{ Meetup_Client, Export_CSV };
 
 /**
  * Class Meetup_Events

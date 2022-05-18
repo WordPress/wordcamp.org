@@ -7,7 +7,7 @@ namespace WordCamp\Reports\Report;
 
 use Exception;
 use DateTime;
-use WordCamp\Utilities\Export_CSV;
+use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\validate_wordcamp_id;
 

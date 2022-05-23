@@ -43,7 +43,10 @@
 		]
 	},
 	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
+		"extends": "../../../../.eslintrc.js",
+		"globals": {
+			"WordCampBlocks": "readonly"
+		}
 	},
 	"jest": {
 		"preset": "@wordpress/jest-preset-default",

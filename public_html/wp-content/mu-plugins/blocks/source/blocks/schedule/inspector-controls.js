@@ -3,7 +3,7 @@
  */
 import { InspectorControls } from '@wordpress/block-editor';
 import { CheckboxControl, PanelBody, ToggleControl } from '@wordpress/components';
-import { format } from '@wordpress/date';
+import { date, format } from '@wordpress/date';
 import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -13,7 +13,7 @@ const { stripTags } = wp.sanitize;
 /**
  * Internal dependencies
  */
-import { DATE_SLUG_FORMAT } from './data';
+import { DATE_SLUG_FORMAT, SITE_TIMEZONE } from './data';
 
 /**
  * Render the inspector Controls for the Schedule block.
@@ -105,7 +105,9 @@ export default function ScheduleInspectorControls( {
 function getDisplayedDays( sessions ) {
 	let uniqueDays = sessions.reduce( ( accumulatingDays, session ) => {
 		if ( session.derived.startTime ) {
-			accumulatingDays[ format( DATE_SLUG_FORMAT, session.derived.startTime ) ] = true;
+			accumulatingDays[
+				date( DATE_SLUG_FORMAT, session.derived.startTime, SITE_TIMEZONE )
+			] = true;
 		}
 
 		return accumulatingDays;

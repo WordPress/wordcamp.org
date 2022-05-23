@@ -178,6 +178,12 @@ function get_attributes_schema() {
 			'type'    => 'boolean',
 			'default' => true,
 		),
+
+		'useClientTimezone' => array(
+			'type'    => 'boolean',
+			// This should default to true when the event is virtual.
+			'default' => is_wordcamp_virtual( get_wordcamp_post() ),
+		),
 	);
 
 	return $schema;

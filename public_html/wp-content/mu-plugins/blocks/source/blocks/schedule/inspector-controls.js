@@ -33,8 +33,31 @@ export default function ScheduleInspectorControls( {
 	setAttributes,
 	settings,
 } ) {
-	const { showCategories, chooseSpecificDays, chosenDays, chooseSpecificTracks, chosenTrackIds } = attributes;
+	const {
+		showCategories,
+		chooseSpecificDays,
+		chosenDays,
+		chooseSpecificTracks,
+		chosenTrackIds,
+		useClientTimezone,
+	} = attributes;
 	const displayedDays = getDisplayedDays( allSessions );
+
+	const clientTimezoneHelpText = __(
+		'Sessions will be shown using the local timezone of the viewer. This is best for virtual WordCamps or livestreams.',
+		'wordcamporg'
+	);
+
+	const siteTimezoneHelpText = createInterpolateElement(
+		__(
+			'Sessions will be shown using the site timezone. This uses the same timezone for everyone. <a>Set the site timezone.</a>',
+			'wordcamporg'
+		),
+		{
+			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
+			a: <a href="/wp-admin/options-general.php" />,
+		}
+	);
 
 	return (
 		<InspectorControls>
@@ -45,6 +68,15 @@ export default function ScheduleInspectorControls( {
 					onChange={ ( value ) => setAttributes( { showCategories: value } ) }
 				/>
 
+				<ToggleControl
+					label={ __( "Use visitor's timezone", 'wordcamporg' ) }
+					help={ useClientTimezone ? clientTimezoneHelpText : siteTimezoneHelpText }
+					checked={ useClientTimezone }
+					onChange={ ( value ) => setAttributes( { useClientTimezone: value } ) }
+				/>
+			</PanelBody>
+
+			<PanelBody title={ __( 'Filters', 'wordcamporg' ) } initialOpen={ true }>
 				<ChooseSpecificDays
 					chooseSpecificDays={ chooseSpecificDays }
 					displayedDays={ displayedDays }

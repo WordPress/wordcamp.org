@@ -402,6 +402,11 @@ class WordCamp_Post_Types_Plugin {
 		$sessions                    = get_schedule_sessions( $attr['date'], $tracks_explicitly_specified, $tracks );
 		$columns                     = get_schedule_columns( $tracks, $sessions, $tracks_explicitly_specified );
 
+		// If there are no columns to display, return early to prevent an empty table.
+		if ( count( $columns ) < 1 ) {
+			return '';
+		}
+
 		$class_names = 'wcpt-schedule';
 		// Twenty Twenty has a very narrow content width, use wide width when displaying more than 2 tracks.
 		if ( 'twentytwenty' === get_stylesheet() && ( count( $tracks ) > 2 ) ) {

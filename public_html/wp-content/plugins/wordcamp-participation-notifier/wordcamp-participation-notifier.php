@@ -15,7 +15,7 @@ use WordPressdotorg\Profiles;
  * locally if they're careful (especially with user IDs), but it's better to test on w.org sandboxes with
  * test accounts. That prevents real profiles from having test data accidentally added to them.
  */
-if ( 'local' === wp_get_environment_type() ) {
+if ( 'local' === WORDCAMP_ENVIRONMENT ) {
 	return;
 }
 

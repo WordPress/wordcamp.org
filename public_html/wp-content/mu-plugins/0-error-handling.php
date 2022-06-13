@@ -4,6 +4,7 @@ defined( 'WPINC' ) || die();
 
 use DirectoryIterator;
 use Dotorg\Slack\Send;
+use function WordCamp\Logger\{ redact_keys };
 
 /*
  * Catch errors on production and pipe them into Slack, because that's the only way we have to see them.
@@ -14,6 +15,9 @@ use Dotorg\Slack\Send;
  * Creating a `fatal-error-handler.php` file would let us override Core's fatal error handler, but we'd need
  * to update all the code here to not use any Core constants/functions that load after drop-in plugins. We also
  * want to handle non-fatals here.
+ *
+ * phpcs:disable WordPress.Security.NonceVerification -- This doesn't handle nonce'd actions, but does need to
+ * work with the raw $_POST at a generic level.
  */
 
 /*
@@ -48,6 +52,8 @@ if ( ! defined( 'WP_RUN_CORE_TESTS' ) || ! WP_RUN_CORE_TESTS ) {
  * @return bool
  */
 function handle_error( $err_no, $err_msg, $file, $line ) {
+	require_once __DIR__ . '/1-logger.php';
+
 	if ( ! check_error_handling_dependencies() ) {
 		return false;
 	}
@@ -357,6 +363,25 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			'short' => false,
 		)
 	);
+
+	if ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+		$fields[] = array(
+			'title' => 'Referer',
+			'value' => esc_url_raw( $_SERVER['HTTP_REFERER'] ),
+			'short' => false,
+		);
+	}
+
+	if ( $_POST ) {
+		$redacted_post = $_POST; // redact_keys() would redact $_POST if passed directly.
+		redact_keys( $redacted_post );
+
+		$fields[] = array(
+			'title' => 'POST',
+			'value' => print_r( $redacted_post, true ),
+			'short' => false,
+		);
+	}
 
 	// Fatals can only be caught with `register_shutdown_function()`, but that doesn't have access to the call
 	// stack of the previous script. It would only show the stack of the current script, which isn't useful.

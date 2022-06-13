@@ -32,7 +32,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	/**
 	 * Set up the mocked PHPMailer instance before each test method.
 	 */
-	public function setUp() {
+	protected function setUp() : void {
 		parent::setUp();
 		reset_phpmailer_instance();
 	}
@@ -88,7 +88,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	/**
 	 * Reset the mocked PHPMailer instance after each test method.
 	 */
-	public function tearDown() {
+	protected function tearDown() : void {
 		reset_phpmailer_instance();
 		parent::tearDown();
 	}

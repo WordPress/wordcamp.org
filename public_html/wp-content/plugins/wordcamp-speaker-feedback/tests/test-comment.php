@@ -51,7 +51,7 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	/**
 	 * Reset after each test.
 	 */
-	public function tearDown() {
+	protected function tearDown() : void {
 		global $wpdb;
 
 		$ids = $wpdb->get_col( "SELECT comment_ID FROM {$wpdb->prefix}comments" );

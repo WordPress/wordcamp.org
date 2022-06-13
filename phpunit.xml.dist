@@ -9,6 +9,7 @@
 >
 	<php>
 		<const name="WP_TESTS_MULTISITE" value="1" />
+		<const name="WordCamp\Error_Handling\SLACK_ERROR_REPORT_URL" value="" />
 	</php>
 
 	<testsuites>

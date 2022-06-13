@@ -91,7 +91,7 @@ class Test_SpeakerFeedback_REST_Notifications_Controller extends WP_UnitTestCase
 	/**
 	 * Set up before each test.
 	 */
-	public function setUp() {
+	protected function setUp() : void {
 		parent::setUp();
 
 		wp_set_current_user( self::$users['speaker']->ID );
@@ -102,7 +102,7 @@ class Test_SpeakerFeedback_REST_Notifications_Controller extends WP_UnitTestCase
 	/**
 	 * Reset after each test.
 	 */
-	public function tearDown() {
+	protected function tearDown() : void {
 		$this->request = null;
 
 		foreach ( self::$users as $user ) {

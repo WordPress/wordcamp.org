@@ -361,7 +361,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		);
 	}
 
-	if ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+	if ( ! empty( $_SERVER['HTTP_REFERER'] ) && $_SERVER['HTTP_REFERER'] !== $url ) {
 		$fields[] = array(
 			'title' => 'Referer',
 			'value' => esc_url_raw( $_SERVER['HTTP_REFERER'] ),

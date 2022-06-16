@@ -290,12 +290,12 @@ class WordCamp_New_Site {
 		$blog_id               = get_wordcamp_site_id( $wordcamp );
 		$lead_organizer        = $this->get_user_or_current_user( $meta['WordPress.org Username'][0] );
 		$assigned_sponsor_data = $this->get_assigned_sponsor_data( $wordcamp->ID );
-		$sponsors              = $this->get_stub_me_sponsors( $assigned_sponsor_data );
-		$existing_sponsors     = array();
+		$me_sponsor_stubs      = $this->get_stub_me_sponsors( $assigned_sponsor_data );
+		$existing_me_sponsors  = array();
 
 		switch_to_blog( $blog_id );
 
-		$sponsors_query = get_posts( array(
+		$site_sponsors = get_posts( array(
 			'fields'         => 'ids',
 			'post_type'      => 'wcb_sponsor',
 			'post_status'    => 'any',
@@ -303,49 +303,49 @@ class WordCamp_New_Site {
 			'cache_results'  => false,
 		) );
 
-		update_meta_cache( 'post', $sponsors_query );
+		update_meta_cache( 'post', $site_sponsors );
 
-		foreach ( $sponsors_query as $post_id ) {
-			$mes_id = get_post_meta( $post_id, '_mes_id', true );
+		foreach ( $site_sponsors as $new_post_id ) {
+			$mes_id = get_post_meta( $new_post_id, '_mes_id', true );
 			if ( $mes_id ) {
-				$existing_sponsors[] = absint( $mes_id );
+				$existing_me_sponsors[] = absint( $mes_id );
 			}
 		}
 
 		add_filter( 'upload_dir', array( $this, '_fix_wc_upload_dir' ) );
 
-		foreach ( $sponsors as $sponsor ) {
+		foreach ( $me_sponsor_stubs as $me_stub ) {
 			// Skip existing sponsors.
-			if ( in_array( absint( $sponsor['meta']['_mes_id'] ), $existing_sponsors ) ) {
+			if ( in_array( absint( $me_stub['meta']['_mes_id'] ), $existing_me_sponsors ) ) {
 				continue;
 			}
 
-			$post_id = wp_insert_post( array(
-				'post_type'    => $sponsor['type'],
+			$new_post_id = wp_insert_post( array(
+				'post_type'    => $me_stub['type'],
 				'post_status'  => 'draft',
 				'post_author'  => $lead_organizer->ID,
-				'post_title'   => $sponsor['title'],
-				'post_content' => $sponsor['content'],
+				'post_title'   => $me_stub['title'],
+				'post_content' => $me_stub['content'],
 			) );
 
-			if ( $post_id ) {
-				foreach ( $sponsor['meta'] as $key => $value ) {
-					update_post_meta( $post_id, $key, $value );
+			if ( $new_post_id ) {
+				foreach ( $me_stub['meta'] as $key => $value ) {
+					update_post_meta( $new_post_id, $key, $value );
 				}
 
 				// Set featured image.
-				if ( ! empty( $sponsor['featured_image'] ) ) {
-					$results = media_sideload_image( $sponsor['featured_image'], $post_id );
+				if ( ! empty( $me_stub['featured_image'] ) ) {
+					$results = media_sideload_image( $me_stub['featured_image'], $new_post_id );
 
 					if ( ! is_wp_error( $results ) ) {
 						$attachment_id = get_posts( array(
 							'posts_per_page' => 1,
 							'post_type'      => 'attachment',
-							'post_parent'    => $post_id,
+							'post_parent'    => $new_post_id,
 						) );
 
 						if ( isset( $attachment_id[0]->ID ) ) {
-							set_post_thumbnail( $post_id, $attachment_id[0]->ID );
+							set_post_thumbnail( $new_post_id, $attachment_id[0]->ID );
 						}
 					}
 				}

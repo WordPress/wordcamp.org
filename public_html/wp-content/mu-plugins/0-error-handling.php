@@ -383,9 +383,15 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	// Fatals can only be caught with `register_shutdown_function()`, but that doesn't have access to the call
 	// stack of the previous script. It would only show the stack of the current script, which isn't useful.
 	if ( ! is_fatal_error( $err_no ) ) {
+		$backtrace = str_replace(
+			', WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack',
+			'',
+			wp_debug_backtrace_summary()
+		);
+
 		$fields[] = array(
 			'title' => 'Stack Trace',
-			'value' => wp_debug_backtrace_summary(),
+			'value' => $backtrace,
 			'short' => false,
 		);
 	}

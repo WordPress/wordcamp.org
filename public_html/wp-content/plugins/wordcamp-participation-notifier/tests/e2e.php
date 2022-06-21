@@ -13,7 +13,7 @@ use Exception, WordCamp_Participation_Notifier, WP_User, WP_Post;
 ini_set( 'display_errors', 'On' ); // won't do anything if fatal errors
 
 if ( 'staging' !== wp_get_environment_type() || 'cli' !== php_sapi_name() ) {
-	die( 'Error: Wrong environment.' );
+	die( 'Error: This should only be run on a w.org remote sandbox.' );
 }
 
 const TEST_POST_ID  = 2529;

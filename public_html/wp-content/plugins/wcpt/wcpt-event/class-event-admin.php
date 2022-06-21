@@ -498,6 +498,7 @@ abstract class Event_Admin {
 				'Primary organizer WordPress.org username',
 				'Co-Organizers usernames (seperated by comma)',
 				'WordPress.org Username',
+				'Mentor WordPress.org User Name',
 			);
 
 			if ( in_array( $key, $username_fields, true ) ) {

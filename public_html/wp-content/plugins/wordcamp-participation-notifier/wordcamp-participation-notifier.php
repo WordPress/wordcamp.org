@@ -125,21 +125,28 @@ class WordCamp_Participation_Notifier {
 	 * @param mixed  $meta_value Metadata value. Serialized if non-scalar.
 	 */
 	public function username_meta_update( $meta_id, $object_id, $meta_key, $meta_value ) {
+		$post       = get_post( $object_id );
+		$prev_value = get_post_meta( $object_id, $meta_key, true );
+
 		if ( '_wcpt_user_id' === $meta_key && $meta_value ) {
-			$post = get_post( $object_id );
 			if ( 'publish' !== $post->post_status ) {
 				return;
 			}
 
 			$meta_value = absint( $meta_value );
+			$prev_value = absint( $prev_value );
 
-			$prev_value = absint( get_post_meta( $object_id, $meta_key, true ) );
 			if ( $prev_value && $prev_value !== $meta_value ) {
 				$this->maybe_remove_badge( $post, $prev_value );
 			}
 
 			$this->add_activity( $post, $meta_value );
 			$this->add_badge( $post, $meta_value );
+		}
+
+		if ( 'Mentor WordPress.org User Name' === $meta_key && $meta_value && $prev_value !== $meta_value ) {
+			// Username has already been validated by `Event_Admin::metabox_save()`.
+			$this->add_activity( $post, $meta_value, 'mentor_assign' );
 		}
 	}
 
@@ -161,13 +168,16 @@ class WordCamp_Participation_Notifier {
 	/**
 	 * Makes request to Profile URL to add the speaker or organizer entry to the profile's activity section
 	 *
-	 * @param WP_Post $post     Speaker/Organizer Post Object.
-	 * @param int     $user_id  User ID to add badge for.
+	 * @param WP_Post     $post          Speaker/Organizer Post Object.
+	 * @param int         $user_id       User ID to add badge for.
+	 * @param null|string $activity_type The type of activity. Optional for back-compat, but ideally this should
+	 *                                   always be used to avoid ambiguity and assumptions.
 	 */
-	protected function add_activity( $post, $user_id ) {
+	protected function add_activity( $post, $user_id, $activity_type = null ) {
 		$published_activity_key = $this->get_published_activity_key( $post );
+
 		if ( ! get_user_meta( $user_id, $published_activity_key ) ) {
-			Profiles\api( $this->get_post_activity_payload( $post, $user_id ) );
+			Profiles\api( $this->get_post_activity_payload( $post, $user_id, $activity_type ) );
 			update_user_meta( $user_id, $published_activity_key, true );
 		}
 	}
@@ -343,7 +353,7 @@ class WordCamp_Participation_Notifier {
 	 * @return array|false
 	 */
 	protected function get_post_activity_payload( $post, $user_id = null, $activity_type = null ) {
-		$wordcamp = get_wordcamp_post();
+		$wordcamp = 'wordcamp' === $post->post_type ? $post : get_wordcamp_post();
 
 		if ( ! $user_id ) {
 			return false;
@@ -387,6 +397,19 @@ class WordCamp_Participation_Notifier {
 
 					$activity['checked_in_count'] = $checked_in->found_posts;
 				}
+			break;
+
+			// Unlike the others, this one runs on Central and $wordcamp === $post.
+			case 'wordcamp':
+				if ( $post->URL ) {
+					$activity['url'] = sanitize_url( $post->URL );
+				} else {
+					unset( $activity['url'] );
+				}
+
+				$activity['type']          = $activity_type;
+				$activity['wordcamp_id']   = $post->_site_id;
+				$activity['wordcamp_name'] = $post->post_title;
 			break;
 
 			default:

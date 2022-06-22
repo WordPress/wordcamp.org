@@ -137,7 +137,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			"Huzzah! A new WordCamp is coming soon to Dayton, Ohio, USA! The lead organizer is janedoe, and the venue is at:\n\n3640 Colonel Glenn Hwy, Dayton, OH, US\n"
 		);
 
-		$this->assertInternalType( 'array', $wordcamp->wcor_sent_email_ids );
+		$this->assertIsArray( $wordcamp->wcor_sent_email_ids );
 		$this->assertContains( self::$triggered_reminder_post_id, $wordcamp->wcor_sent_email_ids );
 	}
 
@@ -180,7 +180,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			"Howdy Sally Smith, now's the perfect time to request reimbursement for any out of pocket expenses. You can do that at https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement.\n"
 		);
 
-		$this->assertInternalType( 'array', $wordcamp->wcor_sent_email_ids );
+		$this->assertIsArray( $wordcamp->wcor_sent_email_ids );
 		$this->assertContains( self::$timed_reminder_post_id, $wordcamp->wcor_sent_email_ids );
 	}
 

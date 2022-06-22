@@ -249,7 +249,7 @@ class WCOR_Mailer {
 			$wordcamp_meta['Location'][0] ?? '',
 			empty( $wordcamp_meta['URL'][0] ) ? '' : esc_url( $wordcamp_meta['URL'][0] ),
 			esc_url( admin_url( 'post.php?post=' . $wordcamp->ID . '&action=edit' ) ),
-			$wordcamp_meta['E-mail Address'][0] ?? '',
+			$wordcamp_meta['E-mail Address'][0] ?? '', // Group address for entire team.
 			empty( $wordcamp_meta['Twitter'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/' . $wordcamp_meta['Twitter'][0] ),
 			empty( $wordcamp_meta['WordCamp Hashtag'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/hashtag/' . $wordcamp_meta['WordCamp Hashtag'][0] ),
 			empty( $wordcamp_meta['Number of Anticipated Attendees'][0] ) ? '' : absint( $wordcamp_meta['Number of Anticipated Attendees'][0] ),
@@ -258,7 +258,7 @@ class WCOR_Mailer {
 			// The organizing team
 			$wordcamp_meta['Organizer Name'][0] ?? '',
 			$wordcamp_meta['WordPress.org Username'][0] ?? '',
-			$wordcamp_meta['Email Address'][0] ?? '',
+			$wordcamp_meta['Email Address'][0] ?? '', // Lead organizer's personal address.
 			$wordcamp_meta['Telephone'][0] ?? '',
 			$wordcamp_meta['Mailing Address'][0] ?? '',
 			$wordcamp_meta['Sponsor Wrangler Name'][0] ?? '',
@@ -410,7 +410,7 @@ class WCOR_Mailer {
 		}
 
 		if ( in_array( 'wcor_send_sponsor_wrangler', $send_where ) ) {
-			// If the Sponsor Wrangler email is invalid, use the default email address.
+			// If the Sponsor Wrangler email is invalid, use the lead organizer email address.
 			if ( is_email( get_post_meta( $wordcamp_id, 'Sponsor Wrangler E-mail Address', true ) ) ) {
 				$recipients[] = get_post_meta( $wordcamp_id, 'Sponsor Wrangler E-mail Address', true );
 			} else {
@@ -439,7 +439,7 @@ class WCOR_Mailer {
 		foreach( array_intersect( array_keys( $other_wranglers ), $send_where ) as $key ) {
 			$dest = get_post_meta( $wordcamp_id, $other_wranglers[ $key ], true );
 
-			// Default to the organizer e-mail.
+			// Default to the lead organizer e-mail.
 			if ( ! is_email( $dest ) ) {
 				$dest = get_post_meta( $wordcamp_id, 'Email Address', true );;
 			}
@@ -453,7 +453,7 @@ class WCOR_Mailer {
 		}
 
 		if ( in_array( 'wcor_send_organizers', $send_where ) ) {
-			$email_address_key = wcpt_key_to_str( 'E-mail Address', 'wcpt_' );
+			$email_address_key = wcpt_key_to_str( 'E-mail Address', 'wcpt_' ); // Team address.
 
 			/*
 			 * If a WordCamp post type is being updated, use the new address in the request, rather than the old
@@ -462,7 +462,7 @@ class WCOR_Mailer {
 			if ( ! empty( $_POST[ $email_address_key ] ) ) {
 				$recipients[] = sanitize_email( $_POST[ $email_address_key ] );
 			} else {
-				$recipients[] = sanitize_email( get_post_meta( $wordcamp_id, 'E-mail Address', true ) );
+				$recipients[] = sanitize_email( get_post_meta( $wordcamp_id, 'E-mail Address', true ) ); // Team address.
 			}
 		}
 

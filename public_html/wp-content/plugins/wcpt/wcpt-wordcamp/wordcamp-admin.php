@@ -410,8 +410,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
-						'E-mail Address'                    => 'text',
-						// Note: This is the address for the entire organizing team, which is different than the "Email Address" field.
+						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
@@ -431,7 +430,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
-						'E-mail Address'                    => 'text',
+						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
@@ -443,7 +442,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 						'Organizer Name'                   => 'text',
 						'WordPress.org Username'           => 'text',
-						'Email Address'                    => 'text',
+						'Email Address'                    => 'text', // Lead organizer.
 						'Telephone'                        => 'text',
 						'Mailing Address'                  => 'textarea',
 						'Sponsor Wrangler Name'            => 'text',
@@ -880,7 +879,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 */
 		public static function get_required_fields( $status, $post_id ) {
 			$needs_site = array(
-				'E-mail Address',
+				'E-mail Address', // The entire organizing team.
 				'Event Timezone',
 			);
 
@@ -889,14 +888,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'Start Date (YYYY-mm-dd)',
 				'Location',
 				'URL',
-				'E-mail Address',
+				'E-mail Address', // The entire organizing team.
 				'Number of Anticipated Attendees',
 				'Multi-Event Sponsor Region',
 
 				// Organizing Team.
 				'Organizer Name',
 				'WordPress.org Username',
-				'Email Address',
+				'Email Address', // Lead organizer.
 				'Telephone',
 				'Mailing Address',
 				'Sponsor Wrangler Name',

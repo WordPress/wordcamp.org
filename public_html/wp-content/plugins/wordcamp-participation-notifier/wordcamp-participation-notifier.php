@@ -408,8 +408,8 @@ class WordCamp_Participation_Notifier {
 				}
 
 				$activity['type']          = $activity_type;
-				$activity['wordcamp_id']   = $post->_site_id;
-				$activity['wordcamp_name'] = $post->post_title;
+				$activity['wordcamp_id']   = $post->ID;
+				$activity['wordcamp_name'] = $post->_site_id ? get_wordcamp_name( $post->_site_id ) : $post->post_title;
 			break;
 
 			default:

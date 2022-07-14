@@ -1,6 +1,8 @@
 <?php
 
 namespace WordCamp\Mentors_Dashboard;
+use WP_User;
+
 defined( 'WPINC' ) or die();
 
 const USERNAMES_KEY     = 'wcpt-mentors-usernames';
@@ -210,31 +212,34 @@ function get_unmentored_camps() {
 }
 
 /**
- * Get the stored array of mentor usernames and sanitize before returning.
+ * Get the stored array of mentor usernames.
  *
  * @return array
  */
 function get_usernames() {
-	$raw_usernames = get_site_option( USERNAMES_KEY, array() );
-
-	return sanitize_usernames( $raw_usernames );
+	return get_site_option( USERNAMES_KEY, array() );
 }
 
 /**
  * Sanitize a list of usernames and store in the database.
  *
  * @param string|array $usernames
- *
- * @return bool
  */
-function set_usernames( $usernames ) {
-	$sanitized_usernames = sanitize_usernames( $usernames );
+function set_usernames( $raw_usernames ) {
+	$sanitized_usernames = sanitize_usernames( $raw_usernames );
+	$official_usernames  = array();
 
-	if ( $sanitized_usernames === get_usernames() ) {
-		return true;
+	foreach ( $sanitized_usernames as $username ) {
+		$user = wcorg_get_user_by_canonical_names( $username );
+
+		if ( $user instanceof WP_User ) {
+			$official_usernames[] = $user->user_login;
+		} else {
+			wp_die( esc_html( "$username is not a valid WordPress.org username" ) );
+		}
 	}
 
-	return update_site_option( USERNAMES_KEY, $sanitized_usernames );
+	update_site_option( USERNAMES_KEY, $official_usernames );
 }
 
 /**
@@ -288,18 +293,11 @@ function update_usernames() {
 		$status_code = 'no-username';
 
 	} else {
+		$status_code   = 'updated';
 		$raw_usernames = $_POST['wcpt-mentors-usernames'];
 
-		$success = set_usernames( $raw_usernames );
-
-		if ( $success ) {
-			$status_code = 'updated';
-
-			// Bust cache
-			delete_site_transient( MENTORS_CACHE_KEY );
-		} else {
-			$status_code = 'update-failed';
-		}
+		set_usernames( $raw_usernames );
+		delete_site_transient( MENTORS_CACHE_KEY ); // Bust cache.
 	}
 
 	$redirect_url = add_query_arg( 'wcpt-status', $status_code, $redirect_url );
@@ -355,7 +353,7 @@ function get_mentor_data( $username ) {
 	if ( in_array( $username, $usernames ) ) {
 		$user = wcorg_get_user_by_canonical_names( $username );
 
-		if ( $user instanceof \WP_User ) {
+		if ( $user instanceof WP_User ) {
 			// Make sure we get a name
 			if ( $user->display_name ) {
 				$name = $user->display_name;

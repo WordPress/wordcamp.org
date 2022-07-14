@@ -416,7 +416,7 @@ class WordCamp_New_Site {
 
 		$meta = get_post_custom( $wordcamp_id );
 
-		$mentor = get_user_by( 'login', $meta['Mentor WordPress.org User Name'][0] );
+		$mentor = wcorg_get_user_by_canonical_names( $meta['Mentor WordPress.org User Name'][0] );
 		if ( $mentor ) {
 			add_user_to_blog( get_wordcamp_site_id( $wordcamp ), $mentor->ID, 'administrator' );
 		}

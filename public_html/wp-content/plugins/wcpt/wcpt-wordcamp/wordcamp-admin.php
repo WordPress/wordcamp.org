@@ -135,13 +135,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return;
 			}
 
-			// If the Mentor username changed, update the site.
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
-			$mentor_username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ];
-			if ( get_post_meta( $post_id, 'Mentor WordPress.org User Name', true ) !== $mentor_username ) {
-				$this->add_mentor( get_post( $post_id ), $mentor_username );
-			}
+			$username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ];
 
+			$this->add_mentor( get_post( $post_id ), $username );
 		}
 
 		/**
@@ -297,7 +294,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 */
 		protected function add_mentor( $wordcamp, $mentor_username ) {
 			$blog_id    = get_wordcamp_site_id( $wordcamp );
-			$new_mentor = get_user_by( 'login', $mentor_username );
+			$new_mentor = wcorg_get_user_by_canonical_names( $mentor_username );
 
 			if ( ! $blog_id || ! $new_mentor ) {
 				return;

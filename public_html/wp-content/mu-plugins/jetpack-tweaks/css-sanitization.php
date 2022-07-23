@@ -245,11 +245,17 @@ function get_custom_css_properties_safelist() {
 			'aspect-ratio',
 			'background-blend-mode',
 			'isolation',
+			'line-clamp',
 			'mask',
 			'mix-blend-mode',
+			'overscroll-behavior',
+			'place-content',
 			'shape-image-threshold',
 			'shape-outside',
+			'text-decoration-thickness',
 			'text-orientation',
+			'text-stroke',
+			'text-fill',
 			'writing-mode',
 		)
 	);

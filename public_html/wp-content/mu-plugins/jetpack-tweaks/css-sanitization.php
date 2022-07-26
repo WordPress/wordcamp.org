@@ -242,6 +242,9 @@ function get_custom_css_properties_safelist() {
 	return array_merge(
 		get_custom_css_properties_safelist_with_units(),
 		array(
+			'-webkit-line-clamp',
+			'-webkit-text-stroke',
+			'-webkit-text-fill',
 			'aspect-ratio',
 			'background-blend-mode',
 			'box-orient',

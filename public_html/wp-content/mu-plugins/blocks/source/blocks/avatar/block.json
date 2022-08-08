@@ -1,7 +1,7 @@
 {
 	"apiVersion": 2,
 	"name": "wordcamp/avatar",
-	"title": "Avatar",
+	"title": "Speaker/Organizer Avatar",
 	"category": "wordcamp",
 	"description": "Display the current person's avatar.",
 	"textdomain": "wordcamporg",

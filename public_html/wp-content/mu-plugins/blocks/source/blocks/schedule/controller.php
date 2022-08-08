@@ -59,6 +59,7 @@ add_action( 'init', __NAMESPACE__ . '\init' );
 function enable_js_block_registration( $data ) {
 	$data['schedule'] = array(
 		'timezone' => wp_timezone_string(),
+		'adminUrl' => admin_url(),
 	);
 
 	return $data;

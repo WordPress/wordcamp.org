@@ -55,7 +55,7 @@ export default function ScheduleInspectorControls( {
 		),
 		{
 			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
-			a: <a href="/wp-admin/options-general.php" />,
+			a: <a href={ `${ WordCampBlocks.schedule.adminUrl }options-general.php` } />,
 		}
 	);
 

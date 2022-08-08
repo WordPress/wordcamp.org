@@ -48,20 +48,19 @@ add_action( 'init', __NAMESPACE__ . '\init' );
 /**
  * Enable registration of the block on the JavaScript side.
  *
- * This only exists to pass the `enabledBlocks` test in `blocks.js`. We don't actually need to populate the
- * `WordCampBlocks.schedule` property with anything on the back end, because all of the necessary data has
- * to be fetched on the fly in `fetchScheduleData`.
- *
- * See `pass_global_data_to_front_end()` for details on front- vs back-end data sourcing.
- *
- * @todo There's probably an elegant way to avoid the need for a workaround, by refactoring `blocks.js`.
+ * In the backend, all schedule, track, and settings data is fetched via `fetchScheduleData`. The only thing
+ * we need to pass directly is the timezone. For the frontend, this value is overwritten by
+ * `pass_global_data_to_front_end` with data to set up the schedule without requiring extra API requests.
  *
  * @param array $data
  *
  * @return array
  */
 function enable_js_block_registration( $data ) {
-	$data['schedule'] = array();
+	$data['schedule'] = array(
+		'timezone' => wp_timezone_string(),
+		'adminUrl' => admin_url(),
+	);
 
 	return $data;
 }
@@ -101,6 +100,7 @@ function pass_global_data_to_front_end() {
 		'allTracks'     => get_all_tracks(),
 		'allCategories' => get_all_categories(),
 		'settings'      => get_settings(),
+		'timezone'      => wp_timezone_string(),
 	);
 
 	// The rest request in get_all_sessions changes the global $post value.
@@ -177,6 +177,12 @@ function get_attributes_schema() {
 		'showCategories' => array(
 			'type'    => 'boolean',
 			'default' => true,
+		),
+
+		'useClientTimezone' => array(
+			'type'    => 'boolean',
+			// This should default to true when the event is virtual.
+			'default' => is_wordcamp_virtual( get_wordcamp_post() ),
 		),
 	);
 

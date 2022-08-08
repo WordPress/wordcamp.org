@@ -3,7 +3,7 @@
  */
 import { InspectorControls } from '@wordpress/block-editor';
 import { CheckboxControl, PanelBody, ToggleControl } from '@wordpress/components';
-import { format } from '@wordpress/date';
+import { date, format } from '@wordpress/date';
 import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { decodeEntities } from '@wordpress/html-entities';
@@ -13,7 +13,7 @@ const { stripTags } = wp.sanitize;
 /**
  * Internal dependencies
  */
-import { DATE_SLUG_FORMAT } from './data';
+import { DATE_SLUG_FORMAT, SITE_TIMEZONE } from './data';
 
 /**
  * Render the inspector Controls for the Schedule block.
@@ -26,11 +26,38 @@ import { DATE_SLUG_FORMAT } from './data';
  * @param {Array}    props.settings
  * @return {Element}
  */
-export default function ScheduleInspectorControls(
-	{ attributes, allSessions, allTracks, setAttributes, settings }
-) {
-	const { showCategories, chooseSpecificDays, chosenDays, chooseSpecificTracks, chosenTrackIds } = attributes;
+export default function ScheduleInspectorControls( {
+	attributes,
+	allSessions,
+	allTracks,
+	setAttributes,
+	settings,
+} ) {
+	const {
+		showCategories,
+		chooseSpecificDays,
+		chosenDays,
+		chooseSpecificTracks,
+		chosenTrackIds,
+		useClientTimezone,
+	} = attributes;
 	const displayedDays = getDisplayedDays( allSessions );
+
+	const clientTimezoneHelpText = __(
+		'Sessions will be shown using the local timezone of the viewer. This is best for virtual WordCamps or livestreams.',
+		'wordcamporg'
+	);
+
+	const siteTimezoneHelpText = createInterpolateElement(
+		__(
+			'Sessions will be shown using the site timezone. This uses the same timezone for everyone. <a>Set the site timezone.</a>',
+			'wordcamporg'
+		),
+		{
+			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
+			a: <a href={ `${ WordCampBlocks.schedule.adminUrl }options-general.php` } />,
+		}
+	);
 
 	return (
 		<InspectorControls>
@@ -41,6 +68,15 @@ export default function ScheduleInspectorControls(
 					onChange={ ( value ) => setAttributes( { showCategories: value } ) }
 				/>
 
+				<ToggleControl
+					label={ __( "Use visitor's timezone", 'wordcamporg' ) }
+					help={ useClientTimezone ? clientTimezoneHelpText : siteTimezoneHelpText }
+					checked={ useClientTimezone }
+					onChange={ ( value ) => setAttributes( { useClientTimezone: value } ) }
+				/>
+			</PanelBody>
+
+			<PanelBody title={ __( 'Filters', 'wordcamporg' ) } initialOpen={ true }>
 				<ChooseSpecificDays
 					chooseSpecificDays={ chooseSpecificDays }
 					displayedDays={ displayedDays }
@@ -69,7 +105,9 @@ export default function ScheduleInspectorControls(
 function getDisplayedDays( sessions ) {
 	let uniqueDays = sessions.reduce( ( accumulatingDays, session ) => {
 		if ( session.derived.startTime ) {
-			accumulatingDays[ format( DATE_SLUG_FORMAT, session.derived.startTime ) ] = true;
+			accumulatingDays[
+				date( DATE_SLUG_FORMAT, session.derived.startTime, SITE_TIMEZONE )
+			] = true;
 		}
 
 		return accumulatingDays;
@@ -95,7 +133,8 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
 	const pleaseAssignDates = createInterpolateElement(
 		__( "There aren't any days to display. Please assign dates to <a>your sessions</a>.", 'wordcamporg' ),
 		{
-			a: <a href={ '/wp-admin/edit.php?post_type=wcb_session' } >#21441-gutenberg</a>,
+			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
+			a: <a href={ '/wp-admin/edit.php?post_type=wcb_session' } />,
 		}
 	);
 
@@ -110,15 +149,14 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
 					/>
 				</legend>
 
-				{ chooseSpecificDays && displayedDays.length === 0 &&
+				{ chooseSpecificDays && displayedDays.length === 0 && (
 					<div className="notice notice-warning has-no-dates">
-						<p>
-							{ pleaseAssignDates }
-						</p>
+						<p>{ pleaseAssignDates }</p>
 					</div>
-				}
+				) }
 
-				{ chooseSpecificDays && displayedDays.length > 0 &&
+				{ chooseSpecificDays &&
+					displayedDays.length > 0 &&
 					displayedDays.map( ( day ) => {
 						return (
 							<CheckboxControl
@@ -126,17 +164,9 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
 								label={ format( dateFormat, day ) }
 								checked={ chosenDays.includes( day ) }
 								onChange={ ( isChecked ) => {
-									/*
-									 * Use `.from()` because `setAttributes()` needs a new array to determine if
-									 * it's changed or not.
-									 */
-									const newDays = Array.from( chosenDays );
-
-									if ( isChecked ) {
-										newDays.push( day );
-									} else {
-										newDays.splice( newDays.indexOf( day ), 1 ); // Remove from the array.
-									}
+									const newDays = isChecked
+										? [ ...chosenDays, day ]
+										: chosenDays.filter( ( i ) => day !== i );
 
 									setAttributes( { chosenDays: newDays } );
 								} }
@@ -168,12 +198,16 @@ function ChooseSpecificTracks( { chooseSpecificTracks, allTracks, chosenTrackIds
 	const pleaseAssignTracks = createInterpolateElement(
 		__( "There aren't any tracks to display, but you can <a>create some</a>.", 'wordcamporg' ),
 		{
-			a: <a href={ '/wp-admin/edit-tags.php?taxonomy=wcb_track&post_type=wcb_session' } >#21441-gutenberg</a>,
+			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
+			a: <a href={ '/wp-admin/edit-tags.php?taxonomy=wcb_track&post_type=wcb_session' } />,
 		}
 	);
 
 	// See `fetchScheduleData()` for details on track sorting.
-	const tracksArrangedAlpha = __( 'Notes: Tracks are arranged alphabetically, according to their slug.', 'wordcamporg' );
+	const tracksArrangedAlpha = __(
+		'Notes: Tracks are arranged alphabetically, according to their slug.',
+		'wordcamporg'
+	);
 
 	return (
 		<div className="wordcamp-schedule__control-container">
@@ -187,15 +221,14 @@ function ChooseSpecificTracks( { chooseSpecificTracks, allTracks, chosenTrackIds
 					/>
 				</legend>
 
-				{ chooseSpecificTracks && allTracks.length === 0 &&
+				{ chooseSpecificTracks && allTracks.length === 0 && (
 					<div className="notice notice-warning has-no-tracks">
-						<p>
-							{ pleaseAssignTracks }
-						</p>
+						<p>{ pleaseAssignTracks }</p>
 					</div>
-				}
+				) }
 
-				{ chooseSpecificTracks && allTracks.length > 0 &&
+				{ chooseSpecificTracks &&
+					allTracks.length > 0 &&
 					allTracks.map( ( track ) => {
 						return (
 							<CheckboxControl
@@ -203,13 +236,9 @@ function ChooseSpecificTracks( { chooseSpecificTracks, allTracks, chosenTrackIds
 								label={ decodeEntities( stripTags( track.name ) ) }
 								checked={ chosenTrackIds.includes( track.id ) }
 								onChange={ ( isChecked ) => {
-									const newTracks = Array.from( chosenTrackIds ); // setAttributes() needs a new array to determine if it's changed or not.
-
-									if ( isChecked ) {
-										newTracks.push( track.id );
-									} else {
-										newTracks.splice( newTracks.indexOf( track.id ), 1 ); // Remove from the array.
-									}
+									const newTracks = isChecked
+										? [ ...chosenTrackIds, track.id ]
+										: chosenTrackIds.filter( ( id ) => track.id !== id );
 
 									setAttributes( { chosenTrackIds: newTracks } );
 								} }

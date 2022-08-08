@@ -9,15 +9,6 @@ import './front-end.scss';
 // See `pass_global_data_to_front_end()` for details on front- vs back-end data sourcing.
 const rawScheduleData = window.WordCampBlocks.schedule || {};
 
-/*
- * todo
- *
- * this file is being loading in the editor, but should only load on the front end.
- * probably a similar problem mentioned in render_callback -- https://github.com/WordPress/gutenberg/issues/18394
- * --, so maybe conditionally register it if on the front end?
- * `wp_using_themes() && ! wcorg_is_rest_api_request()` ? - https://wordpress.stackexchange.com/a/360401/3898
- */
-
 /**
  * Wrap ScheduleGrid with a Context provider.
  *
@@ -57,7 +48,7 @@ function ScheduleGridWithContext( props ) {
  */
 function getScheduleGrdProps( element ) {
 	const { attributes: rawAttributes } = element.dataset;
-	const { allCategories, allTracks, settings } = rawScheduleData;
+	const { allCategories, allSessions, allTracks, settings } = rawScheduleData;
 	let parsedAttributes = {};
 	let derivedSessions = [];
 
@@ -65,7 +56,7 @@ function getScheduleGrdProps( element ) {
 		parsedAttributes = JSON.parse( decodeURIComponent( rawAttributes ) );
 
 		derivedSessions = getDerivedSessions(
-			rawScheduleData.allSessions,
+			allSessions,
 			allCategories,
 			allTracks,
 			parsedAttributes

@@ -7,9 +7,9 @@ import { isEqual } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { format } from '@wordpress/date';
 import { __, sprintf } from '@wordpress/i18n';
 import { createInterpolateElement, useContext } from '@wordpress/element';
+import { date } from '@wordpress/date';
 import { decodeEntities } from '@wordpress/html-entities';
 import { Dashicon } from '@wordpress/components';
 
@@ -35,7 +35,7 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 	const { renderEnvironment, settings } = useContext( ScheduleGridContext );
 	const { time_format: timeFormat } = settings;
 	const { id, slug, title, link: permalink, meta: { _wcpt_session_type: type } } = session;
-	const { assignedCategories, assignedTracks, startTime, endTime } = session.derived;
+	const { assignedCategories, assignedTracks, startTime, endTime, timezone } = session.derived;
 	const displayedTrackIds = displayedTracks.map( ( track ) => track.id );
 
 	const displayedAssignedTracks = assignedTracks.filter(
@@ -88,8 +88,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 	`;
 
 	const gridRow = `
-		time-${ format( 'dHi', startTime ) } /
-		time-${ format( 'dHi', endTime ) }
+		time-${ date( 'dHi', startTime, timezone ) } /
+		time-${ date( 'dHi', endTime, timezone ) }
 	`;
 
 	return (
@@ -111,8 +111,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 			</h4>
 
 			<p>
-				{ format( timeFormat, startTime ) } -
-				{ format( timeFormat, endTime ) }
+				{ date( timeFormat, startTime, timezone ) } -
+				{ date( timeFormat, endTime, timezone ) }
 			</p>
 
 			{ speakers.length > 0 && renderSpeakers( speakers, renderEnvironment ) }

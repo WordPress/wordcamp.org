@@ -90,7 +90,7 @@ a {
  * CSS3 Properties
  */
 .clip-path-allowed {
-	clip-path: polygon(50% 0,100% 50%,50% 100%,0 50%);
+	clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
 	clip-path: url('resources.svg#c1');
 }
 
@@ -105,7 +105,7 @@ a {
 
 .mask-image-allowed {
 	mask-image: none;
-	mask-image: linear-gradient(rgba(0,0,0,1.0),transparent);
+	mask-image: linear-gradient(rgba(0, 0, 0, 1.0), transparent);
 }
 
 .shape-outside-allowed {

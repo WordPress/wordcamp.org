@@ -110,7 +110,19 @@ class WordCamp_Details extends Base_Details {
 			[
 				'Name',
 			],
-			WordCamp_Loader::get_public_meta_keys()
+			WordCamp_Loader::get_public_meta_keys(),
+			self::get_public_custom_data_keys()
+		);
+	}
+
+	// document that these are things that need to be added w/ custom code, not as simple as just a meta value
+	public static function get_public_custom_data_keys() : array {
+		return array(
+			// document that should be transparent, see https://make.wordpress.org/community/handbook/wordcamp-organizer/first-steps/budget-and-finances/#transparency
+			'Total Approved Expenses',
+			'Total Working Expenses',
+			'Approved Budget Surplus/Deficit',
+			'Working Budget Surplus/Deficit',
 		);
 	}
 
@@ -132,6 +144,30 @@ class WordCamp_Details extends Base_Details {
 			],
 			array_diff( $this->get_meta_keys(), array_keys( $this->get_public_data_fields() ) )
 		);
+	}
+
+	public function get_data() {
+		$wordcamps = parent::get_data();
+
+		if ( ! true ) { // if custom checkboxes not selected, plus any other checks
+			return $wordcamps;
+		}
+
+		$this->options['fields'] = array_merge( $this->options['fields'], self::get_public_custom_data_keys() );
+
+		foreach ( $wordcamps as & $wordcamp ) {
+			switch_to_blog( $wordcamp->_site_id );
+			$budget = get_option( 'wcb_budget' );
+
+			$wordcamp['Total Approved Expenses'] = '$800';
+			$wordcamp['Total Working Expenses']  = '$1200';
+			$wordcamp['Approved Budget Surplus/Deficit'] = '-$300';
+			$wordcamp['Working Budget Surplus/Deficit']  = '$500';
+
+			restore_current_blog();
+		}
+
+		return $wordcamps;
 	}
 
 	/**
@@ -387,15 +423,17 @@ class WordCamp_Details extends Base_Details {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$field_defaults = [
-			'ID'                      => 'checked',
-			'Name'                    => 'checked disabled',
-			'Start Date (YYYY-mm-dd)' => 'checked',
-			'End Date (YYYY-mm-dd)'   => 'checked',
-			'Location'                => 'checked',
-			'URL'                     => 'checked',
-		];
-
+		$field_defaults = array_merge(
+			[
+				'ID'                      => 'checked',
+				'Name'                    => 'checked disabled',
+				'Start Date (YYYY-mm-dd)' => 'checked',
+				'End Date (YYYY-mm-dd)'   => 'checked',
+				'Location'                => 'checked',
+				'URL'                     => 'checked',
+			],
+			array_flip( self::get_public_custom_data_keys() )
+		);
 		include get_views_dir_path() . 'report/wordcamp-details.php';
 	}
 

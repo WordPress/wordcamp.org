@@ -2,6 +2,22 @@
 .editor-styles-wrapper .wp-block-wordcamp-avatar {
 	margin-left: 0;
 	margin-right: 0;
+
+	// Fix the placeholder styles — it expects to be in a larger space.
+	.components-placeholder.components-placeholder.has-illustration {
+		height: 100%;
+		min-width: 0;
+		min-height: 0;
+		align-items: center;
+	}
+
+	.components-placeholder__label {
+		margin-bottom: 0;
+	}
+
+	.components-placeholder__fieldset {
+		display: none;
+	}
 }
 
 [data-align="center"] .wp-block-wordcamp-avatar,

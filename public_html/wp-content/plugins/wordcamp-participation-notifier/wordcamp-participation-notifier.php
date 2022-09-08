@@ -302,7 +302,13 @@ class WordCamp_Participation_Notifier {
 	 */
 	public function primary_attendee_registered( $attendee, $username ) {
 		$user_id = $this->get_saved_wporg_user_id( $attendee );
-		Profiles\api( $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' ) );
+		$payload = $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' );
+
+		if ( ! $payload ) {
+			return;
+		}
+
+		Profiles\api( $payload );
 	}
 
 	/**
@@ -318,8 +324,13 @@ class WordCamp_Participation_Notifier {
 	public function additional_attendee_confirmed_registration( $attendee_id, $username ) {
 		$attendee = get_post( $attendee_id );
 		$user_id  = $this->get_saved_wporg_user_id( $attendee );
+		$payload  = $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' );
 
-		Profiles\api( $this->get_post_activity_payload( $attendee, $user_id, 'attendee_registered' ) );
+		if ( ! $payload ) {
+			return;
+		}
+
+		Profiles\api( $payload );
 	}
 
 	/**
@@ -339,8 +350,13 @@ class WordCamp_Participation_Notifier {
 
 		$attendee = get_post( $attendee_id );
 		$user_id  = $this->get_saved_wporg_user_id( $attendee );
+		$payload  = $this->get_post_activity_payload( $attendee, $user_id, 'attendee_checked_in' );
 
-		Profiles\api( $this->get_post_activity_payload( $attendee, $user_id, 'attendee_checked_in' ) );
+		if ( ! $payload ) {
+			return;
+		}
+
+		Profiles\api( $payload );
 	}
 
 	/**

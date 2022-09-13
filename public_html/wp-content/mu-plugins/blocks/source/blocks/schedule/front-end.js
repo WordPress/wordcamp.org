@@ -22,16 +22,6 @@ const rawScheduleData = window.WordCampBlocks.schedule || {};
 function ScheduleGridWithContext( props ) {
 	const { chosenSessions, allTracks, attributes, settings } = props;
 
-	/*
-	 * `attributes.attributes` is an unparsed JSON string. It's an artifact from `renderFrontend()` expecting
-	 * individual `data-{foo}` HTML attributes, instead of a single `data-attributes` one. For this block, though,
-	 * that would take extra work to maintain without providing any benefit. Removing it prevents it from causing
-	 * any confusion.
-	 *
-	 * @todo-front Maybe look at refactoring that function to avoid workarounds like this.
-	 */
-	delete attributes.attributes;
-
 	const contextValues = {
 		allTracks: allTracks,
 		attributes: attributes,
@@ -56,7 +46,7 @@ function ScheduleGridWithContext( props ) {
  * @param {Element} element
  * @return {Object}
  */
-function getScheduleGrdProps( element ) {
+function getScheduleGridProps( element ) {
 	const { attributes: rawAttributes } = element.dataset;
 	const { allCategories, allSessions, allTracks, settings } = rawScheduleData;
 	let parsedAttributes = {};
@@ -83,4 +73,4 @@ function getScheduleGrdProps( element ) {
 	return props;
 }
 
-renderFrontend( '.wp-block-wordcamp-schedule', ScheduleGridWithContext, getScheduleGrdProps );
+renderFrontend( '.wp-block-wordcamp-schedule', ScheduleGridWithContext, getScheduleGridProps );

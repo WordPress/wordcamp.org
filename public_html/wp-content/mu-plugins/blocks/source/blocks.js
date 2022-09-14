@@ -7,7 +7,7 @@ import { registerBlockType, registerBlockVariation } from '@wordpress/blocks';
 /**
  * Internal dependencies
  */
-import './_z-index.scss'; // Have z-index values, similar to https://github.com/WordPress/gutenberg/blob/master/assets/stylesheets/_z-index.scss
+import './_z-index.scss'; // Have z-index values, similar to https://github.com/WordPress/gutenberg/blob/9a345b7e5c03ea57042115dcccb0bca0c0764d30/packages/base-styles/_z-index.scss
 import './edit.scss'; // Common styles for WordCamp Blocks.
 import { BLOCKS } from './blocks/'; // Trailing slash required to differentiate the folder from the file.
 // This attaches to the hook itself.

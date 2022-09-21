@@ -722,37 +722,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				)
 			);
 
-			$new_meetup_org_data = array();
 			foreach ( $query->posts as $post_id ) {
-
-				$meetup_organizers = get_post_meta( $post_id, 'Meetup Co-organizer names', true );
 				self::update_meetup_data( $post_id );
-				$new_meetup_organizers = get_post_meta( $post_id, 'Meetup Co-organizer names', true );
-
-				if ( empty( $new_meetup_organizers ) ) {
-					continue;
-				}
-
-				if ( empty( $meetup_organizers ) ) {
-					$new_ids = wp_list_pluck( $new_meetup_organizers, 'id' );
-				} else {
-					$new_ids = array_diff(
-						wp_list_pluck( $new_meetup_organizers, 'id' ),
-						wp_list_pluck( $meetup_organizers, 'id' )
-					);
-				}
-
-				if ( empty( $new_ids ) ) {
-					continue;
-				}
-
-				$new_meetup_org_data[ $post_id ] = array();
-
-				foreach ( $new_meetup_organizers as $org ) {
-					if ( in_array( $org['id'], $new_ids ) ) {
-						$new_meetup_org_data[ $post_id ][] = $org;
-					}
-				}
 			}
 		}
 

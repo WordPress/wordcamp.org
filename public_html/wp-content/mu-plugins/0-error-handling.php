@@ -510,3 +510,28 @@ function handle_clear_error_rate_limiting_files() {
 		}
 	}
 }
+
+/**
+ * Log a warning if we're close to running out of memory.
+ *
+ * This always runs on shutdown, but can also be hooked to other actions where high usage is suspected, in order
+ * to get debugging info.
+ */
+function warn_high_memory_usage() {
+	// Using `memory_limit` instead of `WP_MEMORY_LIMIT` because the latter isn't updated when the former changes
+	// at runtime.
+	$peak_percent = memory_get_peak_usage( true ) / wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
+	$peak_percent = round( $peak_percent * 100, 1 );
+
+	if ( $peak_percent >= 95 ) {
+		trigger_error(
+			sprintf(
+				'Peak memory usage at %s%%. Current action/filter: %s.',
+				$peak_percent,
+				current_action()
+			),
+			E_USER_WARNING
+		);
+	}
+}
+add_action( 'shutdown', __NAMESPACE__ . '\warn_high_memory_usage' );

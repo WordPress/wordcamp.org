@@ -8,6 +8,7 @@ use Payment_Requests_Dashboard;
 use WordCamp\Budgets\Reimbursement_Requests;
 use WordCamp\Budgets_Dashboard\Reimbursement_Requests AS Reimbursements_Dashboard;
 use DateTimeInterface;
+use WP_CLI;
 
 defined( 'WPINC' ) or die();
 
@@ -1121,7 +1122,11 @@ function redact_paid_requests() {
 	global $wpdb;
 
 	if ( ! is_main_site() ) {
-		wp_die( 'Must be run on Central.' );
+		if ( defined( 'WP_CLI' ) ) {
+			WP_CLI::error( 'Must be run on Central.', false ); // `exit`ing would prevent other jobs from running.
+		}
+
+		return;
 	}
 
 	$reimbursements_index = Reimbursements_Dashboard\get_index_table_name();

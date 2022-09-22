@@ -171,7 +171,7 @@ class CampTix_Plugin {
 
 		// Change updated messages
 		add_filter( 'post_updated_messages', array( $this, 'ticket_updated_messages' ) );
-		
+
 		// Add post statuses to bulk & quick edit.
 		add_action( 'admin_footer-edit.php', array( $this, 'append_post_status_bulk_edit' ) );
 

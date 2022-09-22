@@ -523,7 +523,15 @@ function handle_clear_error_rate_limiting_files() {
 function warn_high_memory_usage() {
 	// Using `memory_limit` instead of `WP_MEMORY_LIMIT` because the latter isn't updated when the former changes
 	// at runtime.
-	$peak_percent = memory_get_peak_usage( true ) / wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
+	$limit = ini_get( 'memory_limit' );
+
+	// Sometimes WP_CLI unsets the limit, which makes it look like the peak isn't being hit when testing on
+	// sandboxes. Production doesn't use that though.
+	if ( '-1' === $limit ) {
+		$limit = WP_MAX_MEMORY_LIMIT; // Match what production uses; see `mu-plugins/cron.php`.
+	}
+
+	$peak_percent = memory_get_peak_usage( true ) / wp_convert_hr_to_bytes( $limit );
 	$peak_percent = round( $peak_percent * 100, 1 );
 
 	if ( $peak_percent >= 95 ) {

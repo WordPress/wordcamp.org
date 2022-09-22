@@ -384,7 +384,10 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	// stack of the previous script. It would only show the stack of the current script, which isn't useful.
 	if ( ! is_fatal_error( $err_no ) ) {
 		$backtrace = str_replace(
-			', WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack',
+			array(
+				', WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack',
+				', WordCamp\Error_Handling\warn_high_memory_usage, trigger_error'
+			),
 			'',
 			wp_debug_backtrace_summary()
 		);

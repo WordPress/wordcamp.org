@@ -14,13 +14,16 @@
 namespace WordCamp\Cron;
 defined( 'WPINC' ) || die();
 
-if ( 'production' !== WORDCAMP_ENVIRONMENT || ! is_main_site() ) {
-	return;
+// Allocate maximum available ram, since jobs sometimes need it.
+// This can be removed if https://core.trac.wordpress.org/ticket/56628 is implemented.
+if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
+	wp_raise_memory_limit( 'admin' );
 }
 
-
-add_action( 'init',                __NAMESPACE__ . '\schedule_daily_jobs' );
-add_action( 'wordcamp_daily_jobs', __NAMESPACE__ . '\execute_daily_jobs' );
+if ( 'production' === WORDCAMP_ENVIRONMENT && is_main_site() ) {
+	add_action( 'init',                __NAMESPACE__ . '\schedule_daily_jobs' );
+	add_action( 'wordcamp_daily_jobs', __NAMESPACE__ . '\execute_daily_jobs' );
+}
 
 
 /**

@@ -1133,20 +1133,27 @@ function redact_paid_requests() {
 	$vendors_index        = Payment_Requests_Dashboard::get_table_name();
 	$encrypted_fields     = WordCamp_Budgets::get_encrypted_fields();
 	$retention_period     = strtotime( WordCamp_Budgets::PAYMENT_INFO_RETENTION_PERIOD . ' days ago' );
+	$update_period        = WordCamp_Budgets::PAYMENT_INFO_RETENTION_PERIOD + 2; // Extra days to cover edge cases.
 
-	// phpcs:ignore WordPressDotOrg.sniffs.DirectDB.UnescapedDBParameter -- There isn't a good way to escape table names yet, see https://core.trac.wordpress.org/ticket/52506.
-	$paid_reimbursements = $wpdb->get_results( "
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- There isn't a good way to escape table names yet, see https://core.trac.wordpress.org/ticket/52506.
+	$paid_reimbursements = $wpdb->get_results( $wpdb->prepare( "
 		SELECT blog_id, request_id, date_paid
 		FROM `$reimbursements_index`
-		WHERE status = 'wcb-paid'
-	" );
+		WHERE
+			status = 'wcb-paid' AND
+			date_updated > UNIX_TIMESTAMP( DATE_SUB( CURRENT_TIMESTAMP, INTERVAL %d day ) )",
+		$update_period
+	) );
 
-	// phpcs:ignore WordPressDotOrg.sniffs.DirectDB.UnescapedDBParameter -- There isn't a good way to escape table names yet, see https://core.trac.wordpress.org/ticket/52506.
-	$paid_vendors = $wpdb->get_results( "
+	$paid_vendors = $wpdb->get_results( $wpdb->prepare( "
 		SELECT blog_id, post_id AS request_id, paid AS date_paid
 		FROM `$vendors_index`
-		WHERE status = 'wcb-paid'
-	" );
+		WHERE
+			status = 'wcb-paid' AND
+			updated > UNIX_TIMESTAMP( DATE_SUB( CURRENT_TIMESTAMP, INTERVAL %d day ) )",
+		$update_period
+	) );
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	foreach ( array_merge( $paid_reimbursements, $paid_vendors ) as $indexed_reimbursement ) {
 		switch_to_blog( $indexed_reimbursement->blog_id );

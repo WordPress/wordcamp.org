@@ -93,7 +93,7 @@ class CampTix_Network_Dashboard {
 	 * Gather data on all CampTix events for the Overview tab on the CampTix NT Dashboard
 	 */
 	function gather_events_data() {
-		global $wpdb;
+		global $wpdb, $wp_object_cache;
 
 		/*
 		 * We only want this function to run on the main site.
@@ -215,6 +215,9 @@ class CampTix_Network_Dashboard {
 				// Make note of archived sites
 				$meta['tix_archived'] = ( isset( $options['archived'] ) && $options['archived'] ) ? 1 : 0;
 			}
+
+			// It won't be used again in this job, and caching them leads to out-of-memory fatal errors.
+			$wp_object_cache->delete( 'alloptions', 'options' );
 
 			restore_current_blog();
 

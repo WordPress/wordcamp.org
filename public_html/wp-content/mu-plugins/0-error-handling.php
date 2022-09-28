@@ -37,6 +37,8 @@ if ( ! defined( 'WP_RUN_CORE_TESTS' ) || ! WP_RUN_CORE_TESTS ) {
 	}
 
 	add_action( 'clear_error_rate_limiting_files', __NAMESPACE__ . '\handle_clear_error_rate_limiting_files' );
+	add_action( 'switch_blog', __NAMESPACE__ . '\warn_high_memory_usage', 10, 3 );
+	add_action( 'shutdown', __NAMESPACE__ . '\warn_high_memory_usage' );
 }
 
 /**
@@ -517,8 +519,8 @@ function handle_clear_error_rate_limiting_files() {
 /**
  * Log a warning if we're close to running out of memory.
  *
- * This always runs on shutdown, but can also be hooked to other actions where high usage is suspected, in order
- * to get debugging info.
+ * This always runs on `shutdown` and `switch_blog`, but can also be hooked to other actions where high usage
+ * is suspected, in order to get debugging info before it's lost to a fatal error.
  */
 function warn_high_memory_usage() {
 	// Using `memory_limit` instead of `WP_MEMORY_LIMIT` because the latter isn't updated when the former changes
@@ -545,4 +547,3 @@ function warn_high_memory_usage() {
 		);
 	}
 }
-add_action( 'shutdown', __NAMESPACE__ . '\warn_high_memory_usage' );

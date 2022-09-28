@@ -290,8 +290,6 @@ function wcorg_switch_to_blog_locale( $new_blog_id, $prev_blog_id, $context ) {
 
 	switch ( $context ) {
 		case 'switch':
-			WordCamp\Error_Handling\warn_high_memory_usage(); // todo: temporary to debug cron OOM
-
 			/*
 			 * Bypass `get_locale()` because it caches the original site's locale. This doesn't handle user
 			 * locales, but is good enough until #49263-core is resolved.

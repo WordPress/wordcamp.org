@@ -6,7 +6,7 @@ use WordCamp_Budgets;
 use WCP_Payment_Request;
 use Payment_Requests_Dashboard;
 use WordCamp\Budgets\Reimbursement_Requests;
-use WordCamp\Budgets_Dashboard\Reimbursement_Requests AS Reimbursements_Dashboard;
+use WordCamp\Budgets_Dashboard\Reimbursement_Requests as Reimbursements_Dashboard;
 use DateTimeInterface;
 use WP_CLI;
 
@@ -248,8 +248,8 @@ function render_import_tab() {
  * Render the export tab
  */
 function render_export_tab() {
-	$today      = date( 'Y-m-d' );
-	$last_month = date( 'Y-m-d', strtotime( 'now - 1 month' ) );
+	$today          = date( 'Y-m-d' );
+	$last_month     = date( 'Y-m-d', strtotime( 'now - 1 month' ) );
 	$starting_check = absint( get_site_option( '_wcb_jpm_checks_counter', 0 ) ) + 1;
 
 	?>
@@ -467,13 +467,16 @@ function process_export_request() {
 function generate_payment_report( $args ) {
 	global $wpdb;
 
-	$args = wp_parse_args( $args, array(
-		'status'      => '',
-		'start_date'  => '',
-		'end_date'    => '',
-		'export_type' => '',
-		'post_type'   => '',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'status'      => '',
+			'start_date'  => '',
+			'end_date'    => '',
+			'export_type' => '',
+			'post_type'   => '',
+		)
+	);
 
 	if ( ! is_int( $args['start_date'] ) || ! is_int( $args['end_date'] ) ) {
 		return new WP_Error( 'wcb-bad-dates', 'Invalid start or end date.' );
@@ -523,11 +526,14 @@ function generate_payment_report( $args ) {
  * @return string
  */
 function _generate_payment_report_default( $args ) {
-	$args = wp_parse_args( $args, array(
-		'data'      => array(),
-		'status'    => '',
-		'post_type' => '',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
 		return WCP_Payment_Request::_generate_payment_report_default( $args );
@@ -544,11 +550,14 @@ function _generate_payment_report_default( $args ) {
  * @return string
  */
 function _generate_payment_report_jpm_checks( $args ) {
-	$args = wp_parse_args( $args, array(
-		'data'      => array(),
-		'status'    => '',
-		'post_type' => '',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
 		return WCP_Payment_Request::_generate_payment_report_jpm_checks( $args );
@@ -565,11 +574,14 @@ function _generate_payment_report_jpm_checks( $args ) {
  * @return string
  */
 function _generate_payment_report_jpm_ach( $args ) {
-	$args = wp_parse_args( $args, array(
-		'data'      => array(),
-		'status'    => '',
-		'post_type' => '',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
 		return WCP_Payment_Request::_generate_payment_report_jpm_ach( $args );
@@ -586,11 +598,14 @@ function _generate_payment_report_jpm_ach( $args ) {
  * @return string
  */
 function _generate_payment_report_jpm_wires( $args ) {
-	$args = wp_parse_args( $args, array(
-		'data'      => array(),
-		'status'    => '',
-		'post_type' => '',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
 
 	if ( $args['post_type'] == 'wcp_payment_request' ) {
 		return WCP_Payment_Request::_generate_payment_report_jpm_wires( $args );
@@ -788,9 +803,12 @@ function process_action_approve() {
 	$post->post_status = 'wcb-approved';
 	wp_insert_post( $post );
 
-	WordCamp_Budgets::log( $post->ID, get_current_user_id(), 'Request approved via Network Admin', array(
-		'action' => 'approved',
-	) );
+	WordCamp_Budgets::log(
+		$post->ID,
+		get_current_user_id(),
+		'Request approved via Network Admin',
+		array( 'action' => 'approved' )
+	);
 
 	restore_current_blog();
 	add_settings_error( 'wcb-dashboard', 'success', 'Success! Request has been marked as Approved.', 'updated' );
@@ -829,9 +847,12 @@ function process_action_set_pending_payment() {
 	$post->post_status = 'wcb-pending-payment';
 	wp_insert_post( $post );
 
-	WordCamp_Budgets::log( $post->ID, get_current_user_id(), 'Request set as Pending Payment via Network Admin', array(
-		'action' => 'set-pending-payment',
-	) );
+	WordCamp_Budgets::log(
+		$post->ID,
+		get_current_user_id(),
+		'Request set as Pending Payment via Network Admin',
+		array( 'action' => 'set-pending-payment' )
+	);
 
 	restore_current_blog();
 	add_settings_error( 'wcb-dashboard', 'success', 'Success! Request has been marked as Pending Payment.', 'updated' );

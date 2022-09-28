@@ -69,7 +69,7 @@ function register_submenu_page() {
  * Render the admin page
  */
 function render_submenu_page() {
-	require_once( __DIR__ . '/sponsor-invoices-list-table.php' );
+	require_once __DIR__ . '/sponsor-invoices-list-table.php';
 
 	$list_table = new Sponsor_Invoices_List_Table();
 	$sections   = get_submenu_page_sections();
@@ -98,7 +98,7 @@ function render_submenu_page() {
 			break;
 	}
 
-	require_once( dirname( __DIR__ ) . '/views/sponsor-invoices/page-sponsor-invoices.php' );
+	require_once dirname( __DIR__ ) . '/views/sponsor-invoices/page-sponsor-invoices.php';
 }
 
 /**
@@ -179,7 +179,7 @@ function upgrade_database() {
 	}
 
 	$table_name = get_index_table_name();
-	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 	$schema = "
 		CREATE TABLE $table_name (

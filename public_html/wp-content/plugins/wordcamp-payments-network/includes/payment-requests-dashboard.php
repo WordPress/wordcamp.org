@@ -11,8 +11,9 @@ class Payment_Requests_Dashboard {
 		$current_site = get_current_site();
 
 		// Schedule the aggregate event only on the main blog in the network.
-		if ( get_current_blog_id() == $current_site->blog_id && ! wp_next_scheduled( 'wordcamp_payments_aggregate' ) )
+		if ( get_current_blog_id() == $current_site->blog_id && ! wp_next_scheduled( 'wordcamp_payments_aggregate' ) ) {
 			wp_schedule_event( time(), 'hourly', 'wordcamp_payments_aggregate' );
+		}
 
 		add_action( 'wordcamp_payments_aggregate', array( __CLASS__, 'aggregate' ) );
 		add_action( 'network_admin_menu', array( __CLASS__, 'network_admin_menu' ) );
@@ -44,17 +45,19 @@ class Payment_Requests_Dashboard {
 		global $wpdb;
 
 		// Don't attempt to perform upgrades outside of the dashboard.
-		if ( ! is_admin() )
+		if ( ! is_admin() ) {
 			return;
+		}
 
 		$current_version = get_site_option( 'wcp_network_db_version', 0 );
-		if ( version_compare( $current_version, self::$db_version, '>=' ) )
+		if ( version_compare( $current_version, self::$db_version, '>=' ) ) {
 			return;
+		}
 
-		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		$charset_collate = "DEFAULT CHARACTER SET {$wpdb->charset} COLLATE {$wpdb->collate}";
-		$sql = sprintf( "CREATE TABLE %s (
+		$sql             = sprintf( "CREATE TABLE %s (
 			id int(11) unsigned NOT NULL auto_increment,
 			blog_id int(11) unsigned NOT NULL default '0',
 			post_id int(11) unsigned NOT NULL default '0',
@@ -85,11 +88,11 @@ class Payment_Requests_Dashboard {
 		global $wpdb, $wp_object_cache;
 
 		// Register the custom payment statuses so that we can filter posts to include only them, in order to exclude trashed posts
-		require_once( WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php' );
+		require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 		WCP_Payment_Request::register_post_statuses();
 
 		// Truncate existing table.
-		$wpdb->query( "TRUNCATE TABLE " . self::get_table_name() );
+		$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() );
 
 		// This particular job needs at least 300mb circa 2022-10, and that will grow linearly with the number of
 		// sites in the network.
@@ -98,8 +101,16 @@ class Payment_Requests_Dashboard {
 		} );
 		wp_raise_memory_limit( 'wordcamp_payments_aggregate' );
 
-		// This may need to be refactored in the future use batching to avoid out-of-memory-issues.
-		$blogs = $wpdb->get_col( $wpdb->prepare( "SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d ORDER BY last_updated DESC LIMIT %d;", $wpdb->siteid, 3000 ) );
+		// This may need to be refactored in the future to use batching to avoid out-of-memory-issues.
+		$blogs = $wpdb->get_col( $wpdb->prepare( "
+			SELECT blog_id
+			FROM `{$wpdb->blogs}`
+			WHERE site_id = %d
+			ORDER BY last_updated DESC
+			LIMIT %d;",
+			$wpdb->siteid,
+			3000
+		) );
 
 		foreach ( $blogs as $blog_id ) {
 			switch_to_blog( $blog_id );
@@ -129,19 +140,21 @@ class Payment_Requests_Dashboard {
 	 * an index entry.
 	 */
 	public static function prepare_for_index( $request ) {
-		$request = get_post( $request );
+		$request    = get_post( $request );
 		$categories = WordCamp_Budgets::get_payment_categories();
 
 		// All things search.
 		$keywords = array( $request->post_title );
 
 		$category_slug = get_post_meta( $request->ID, '_camppayments_payment_category', true );
-		if ( ! empty( $categories[ $category_slug ] ) )
+		if ( ! empty( $categories[ $category_slug ] ) ) {
 			$keywords[] = $categories[ $category_slug ];
+		}
 
 		$payment_method = get_post_meta( $request->ID, '_camppayments_payment_method', true );
-		if ( ! empty( $payment_method ) )
+		if ( ! empty( $payment_method ) ) {
 			$keywords[] = $payment_method;
+		}
 
 		$vendor_name = get_post_meta( $request->ID, '_camppayments_vendor_name', true );
 		if ( ! empty( $vendor_name ) ) {
@@ -168,13 +181,19 @@ class Payment_Requests_Dashboard {
 		// One of these timestamps.
 		while ( true ) {
 			$updated_timestamp = absint( get_post_meta( $request->ID, '_wcb_updated_timestamp', time() ) );
-			if ( $updated_timestamp ) break;
+			if ( $updated_timestamp ) {
+				break;
+			}
 
 			$updated_timestamp = strtotime( $request->post_modified_gmt );
-			if ( $updated_timestamp ) break;
+			if ( $updated_timestamp ) {
+				break;
+			}
 
 			$updated_timestamp = strtotime( $request->post_date_gmt );
-			if ( $updated_timestamp ) break;
+			if ( $updated_timestamp ) {
+				break;
+			}
 
 			$updated_timestamp = strtotime( $request->post_date );
 			break;
@@ -201,14 +220,24 @@ class Payment_Requests_Dashboard {
 		global $wpdb;
 
 		$request = get_post( $post_id );
-		if ( 'wcp_payment_request' != $request->post_type )
+		if ( 'wcp_payment_request' != $request->post_type ) {
 			return;
+		}
 
 		// Update the timestamp and logs.
 		update_post_meta( $post_id, '_wcb_updated_timestamp', time() );
 
 		$table_name = self::get_table_name();
-		$entry_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table_name} WHERE `blog_id` = %d AND `post_id` = %d LIMIT 1;", get_current_blog_id(), $request->ID ) );
+		$entry_id   = $wpdb->get_var( $wpdb->prepare( "
+			SELECT id
+			FROM {$table_name}
+			WHERE
+				`blog_id` = %d AND
+				`post_id` = %d
+			LIMIT 1;",
+			get_current_blog_id(),
+			$request->ID
+		) );
 
 		// Insert or update this record.
 		if ( empty( $entry_id ) ) {
@@ -225,8 +254,9 @@ class Payment_Requests_Dashboard {
 		global $wpdb;
 
 		$request = get_post( $post_id );
-		if ( 'wcp_payment_request' != $request->post_type )
+		if ( 'wcp_payment_request' != $request->post_type ) {
 			return;
+		}
 
 		$table_name = self::get_table_name();
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$table_name} WHERE `blog_id` = %d AND `post_id` = %d LIMIT 1;", get_current_blog_id(), $request->ID ) );
@@ -292,7 +322,7 @@ class Payment_Requests_Dashboard {
 	 * Loads and initializes the list table object.
 	 */
 	public static function pre_render_dashboard() {
-		require_once( __DIR__ . '/payment-requests-list-table.php' );
+		require_once __DIR__ . '/payment-requests-list-table.php';
 
 		self::$list_table = new Payment_Requests_List_Table();
 	}
@@ -301,7 +331,7 @@ class Payment_Requests_Dashboard {
 	 * Returns the current active tab in the UI.
 	 */
 	public static function get_current_tab() {
-		$tab = 'overdue';
+		$tab  = 'overdue';
 		$tabs = array(
 			'drafts',
 			'overdue',
@@ -326,7 +356,7 @@ class Payment_Requests_Dashboard {
 	 */
 	public static function render_dashboard_tabs() {
 		$current_section = self::get_current_tab();
-		$sections = array(
+		$sections        = array(
 			'drafts'           => __( 'Drafts', 'wordcamporg' ),
 			'overdue'          => __( 'Overdue', 'wordcamporg' ), // pending-approval + after due date
 			'pending-approval' => __( 'Pending Approval', 'wordcamporg' ),
@@ -339,7 +369,7 @@ class Payment_Requests_Dashboard {
 
 		foreach ( $sections as $section_key => $section_caption ) {
 			$active = $current_section === $section_key ? 'nav-tab-active' : '';
-			$url = add_query_arg( array(
+			$url    = add_query_arg( array(
 				'wcp-section' => $section_key,
 				'page' => 'wcp-dashboard',
 			), network_admin_url( 'admin.php' ) );

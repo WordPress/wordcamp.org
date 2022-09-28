@@ -98,7 +98,9 @@ class Payment_Requests_Dashboard {
 		} );
 		wp_raise_memory_limit( 'wordcamp_payments_aggregate' );
 
-		$blogs = $wpdb->get_col( $wpdb->prepare( "SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d ORDER BY last_updated DESC LIMIT %d;", $wpdb->siteid, 1000 ) );
+		// This may need to be refactored in the future use batching to avoid out-of-memory-issues.
+		$blogs = $wpdb->get_col( $wpdb->prepare( "SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d ORDER BY last_updated DESC LIMIT %d;", $wpdb->siteid, 3000 ) );
+
 		foreach ( $blogs as $blog_id ) {
 			switch_to_blog( $blog_id );
 

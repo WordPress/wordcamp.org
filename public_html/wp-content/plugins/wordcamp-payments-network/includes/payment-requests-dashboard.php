@@ -82,7 +82,7 @@ class Payment_Requests_Dashboard {
 	 * and builds an index table for future queries.
 	 */
 	public static function aggregate() {
-		global $wpdb;
+		global $wpdb, $wp_object_cache;
 
 		// Register the custom payment statuses so that we can filter posts to include only them, in order to exclude trashed posts
 		require_once( WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php' );
@@ -90,6 +90,13 @@ class Payment_Requests_Dashboard {
 
 		// Truncate existing table.
 		$wpdb->query( "TRUNCATE TABLE " . self::get_table_name() );
+
+		// This particular job needs at least 300mb circa 2022-10, and that will grow linearly with the number of
+		// sites in the network.
+		add_filter( 'wordcamp_payments_aggregate_memory_limit', function() {
+			return '512M';
+		} );
+		wp_raise_memory_limit( 'wordcamp_payments_aggregate' );
 
 		$blogs = $wpdb->get_col( $wpdb->prepare( "SELECT blog_id FROM `{$wpdb->blogs}` WHERE site_id = %d ORDER BY last_updated DESC LIMIT %d;", $wpdb->siteid, 1000 ) );
 		foreach ( $blogs as $blog_id ) {
@@ -106,6 +113,9 @@ class Payment_Requests_Dashboard {
 					$wpdb->insert( self::get_table_name(), self::prepare_for_index( $request ) );
 				}
 			}
+
+			// It won't be used again in this job, and caching them leads to out-of-memory fatal errors.
+			$wp_object_cache->delete( 'alloptions', 'options' );
 
 			restore_current_blog();
 		}

@@ -534,7 +534,7 @@ function warn_high_memory_usage() {
 	$peak_percent = memory_get_peak_usage( true ) / wp_convert_hr_to_bytes( $limit );
 	$peak_percent = round( $peak_percent * 100, 1 );
 
-	if ( $peak_percent >= 95 ) {
+	if ( $peak_percent >= 90 ) {
 		trigger_error(
 			sprintf(
 				'Peak memory usage at %s%%. Current action/filter: %s.',

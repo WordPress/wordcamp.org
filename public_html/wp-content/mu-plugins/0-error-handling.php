@@ -313,11 +313,11 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 
 	require_once __DIR__ . '/includes/slack/send.php';
 
-	$error_name  = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
-	$messages    = explode( 'Stack trace:', $err_msg, 2 );
-	$text        = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
-	$url         = sprintf( 'https://%s%s', $_SERVER['SERVER_NAME'], $_SERVER['REQUEST_URI'] );
-	$footer      = '';
+	$error_name = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
+	$messages   = explode( 'Stack trace:', $err_msg, 2 );
+	$text       = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
+	$url        = sprintf( 'https://%s%s', $_SERVER['SERVER_NAME'], $_SERVER['REQUEST_URI'] );
+	$footer     = '';
 
 	if ( $occurrences > 0 ) {
 		$footer .= "Occurred *$occurrences time(s)* since last reported";
@@ -388,7 +388,7 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		$backtrace = str_replace(
 			array(
 				', WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack',
-				', WordCamp\Error_Handling\warn_high_memory_usage, trigger_error'
+				', WordCamp\Error_Handling\warn_high_memory_usage, trigger_error',
 			),
 			'',
 			wp_debug_backtrace_summary()

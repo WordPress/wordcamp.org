@@ -23,8 +23,6 @@ const CSS_VERSION          = 2;
  *
  * This function is called after template_redirect when the content is about to get loaded.
  * It is invoked from the template-sponsorship-payment.php page template in the central theme.
- *
- * @return string
  */
 function render() {
 	$keys = _get_keys();
@@ -33,7 +31,7 @@ function render() {
 		wp_die( 'Invalid keys' );
 	}
 
-	require_once( __DIR__ . '/wordcamp-budgets.php' );
+	require_once __DIR__ . '/wordcamp-budgets.php';
 
 	$data = array(
 		'keys'                   => $keys,
@@ -65,9 +63,9 @@ function render() {
 	);
 
 	$fsp = new Form_Spam_Prevention( get_fsp_config() );
-	add_action( 'wp_print_styles', [ $fsp, 'render_form_field_styles' ] );
+	add_action( 'wp_print_styles', array( $fsp, 'render_form_field_styles' ) );
 
-	require_once( dirname( __DIR__ ) . '/views/sponsor-payment/main.php' );
+	require_once dirname( __DIR__ ) . '/views/sponsor-payment/main.php';
 }
 
 /**
@@ -92,14 +90,17 @@ function get_fsp_config() : array {
  * @return array Stripe and HMAC keys.
  */
 function _get_keys() {
-	return apply_filters( 'wcorg_sponsor_payment_stripe', array(
-		// Stripe API credentials.
-		'publishable' => '',
-		'secret'      => '',
+	return apply_filters(
+		'wcorg_sponsor_payment_stripe',
+		array(
+			// Stripe API credentials.
+			'publishable' => '',
+			'secret'      => '',
 
-		// An HMAC key used to sign some data in between requests.
-		'hmac_key'    => '',
-	) );
+			// An HMAC key used to sign some data in between requests.
+			'hmac_key'    => '',
+		)
+	);
 }
 
 /**
@@ -167,7 +168,7 @@ function _handle_post_data( &$data ) {
 
 					if ( ! in_array( $wordcamp_id, $valid_ids ) ) {
 						$data['errors'][] = 'Please select a valid event.';
-						$fsp->add_score_to_ip_address( [ 1 ] );
+						$fsp->add_score_to_ip_address( array( 1 ) );
 						return;
 					}
 
@@ -201,7 +202,7 @@ function _handle_post_data( &$data ) {
 
 			if ( ! array_key_exists( $currency, $data['currencies'] ) || false !== strpos( $currency, 'null' ) ) {
 				$data['errors'][] = 'Invalid currency.';
-				$fsp->add_score_to_ip_address( [ 1 ] );
+				$fsp->add_score_to_ip_address( array( 1 ) );
 				return;
 			}
 
@@ -310,7 +311,7 @@ function _handle_post_data( &$data ) {
 
 			// All good!
 			$data['step'] = STEP_PAYMENT_SUCCESS;
-			$fsp->add_score_to_ip_address( [ -1 ] );
+			$fsp->add_score_to_ip_address( array( -1 ) );
 			break;
 	}
 }

@@ -42,8 +42,8 @@ class Form_Spam_Prevention {
 	 *                                     separate, collective block. Default false.
 	 * }
 	 */
-	public function __construct( array $config = [] ) {
-		$defaults = [
+	public function __construct( array $config = array() ) {
+		$defaults = array(
 			'score_threshold'     => 4,
 			'throttle_duration'   => HOUR_IN_SECONDS,
 			'prefix'              => 'fsp-',
@@ -51,7 +51,7 @@ class Form_Spam_Prevention {
 			'timestamp_name'      => 'dob-required',
 			'timestamp_max_range' => '- 2 seconds',
 			'individual_styles'   => false,
-		];
+		);
 
 		$this->config = wp_parse_args( $config, $defaults );
 	}
@@ -96,10 +96,10 @@ class Form_Spam_Prevention {
 	 * @return bool True if the submission "passes", and is not spam.
 	 */
 	public function validate_form_submission( $input_type = INPUT_POST ) {
-		$tests = [
+		$tests = array(
 			'honeypot'  => $this->validate_field_honeypot( $input_type ),
 			'timestamp' => $this->validate_field_timestamp( $input_type ),
-		];
+		);
 
 		$score = $this->add_score_to_ip_address( $tests );
 
@@ -157,9 +157,12 @@ class Form_Spam_Prevention {
 	 */
 	public function validate_field_honeypot( $input_type = INPUT_POST ) {
 		$name  = $this->config['prefix'] . $this->config['honeypot_name'];
-		$value = filter_input( $input_type, $name, FILTER_VALIDATE_BOOLEAN, [
-			'flags' => FILTER_NULL_ON_FAILURE,
-		] );
+		$value = filter_input(
+			$input_type,
+			$name,
+			FILTER_VALIDATE_BOOLEAN,
+			array( 'flags' => FILTER_NULL_ON_FAILURE )
+		);
 
 		$pass = is_null( $value ) || false === $value;
 
@@ -208,12 +211,17 @@ class Form_Spam_Prevention {
 	 */
 	public function validate_field_timestamp( $input_type = INPUT_POST ) {
 		$name  = $this->config['prefix'] . $this->config['timestamp_name'];
-		$value = filter_input( $input_type, $name, FILTER_VALIDATE_INT, [
-			'options' => [
-				'min_range' => strtotime( '- 15 minutes' ),
-				'max_range' => strtotime( $this->config['timestamp_max_range'] ),
-			],
-		] );
+		$value = filter_input(
+			$input_type,
+			$name,
+			FILTER_VALIDATE_INT,
+			array(
+				'options' => array(
+					'min_range' => strtotime( '- 15 minutes' ),
+					'max_range' => strtotime( $this->config['timestamp_max_range'] ),
+				),
+			)
+		);
 
 		$pass = is_int( $value ) && 0 !== $value;
 
@@ -235,7 +243,7 @@ class Form_Spam_Prevention {
 	 *
 	 * @return float|int
 	 */
-	public function add_score_to_ip_address( array $tests = [], $ip_address = '' ) {
+	public function add_score_to_ip_address( array $tests = array(), $ip_address = '' ) {
 		if ( ! $ip_address ) {
 			$ip_address = $this->get_ip_address();
 		}

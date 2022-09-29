@@ -108,6 +108,7 @@ abstract class Base {
 	 * }
 	 */
 	public function __construct( array $options = array() ) {
+		wp_raise_memory_limit( 'wordcamp_high' );
 
 		$this->options = wp_parse_args(
 			$options,

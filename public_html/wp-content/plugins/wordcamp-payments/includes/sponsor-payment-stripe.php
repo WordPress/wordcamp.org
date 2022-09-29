@@ -64,10 +64,26 @@ function render() {
 		)
 	);
 
-	$fsp = new Form_Spam_Prevention();
+	$fsp = new Form_Spam_Prevention( get_fsp_config() );
 	add_action( 'wp_print_styles', [ $fsp, 'render_form_field_styles' ] );
 
 	require_once( dirname( __DIR__ ) . '/views/sponsor-payment/main.php' );
+}
+
+/**
+ * Define the configuration for the `Form_Spam_Prevention` instances.
+ *
+ * This type of form should be less strict, since it's less likely to be spammed, there are automated
+ * fraud controls on Stripe's side to catch card testing, and there aren't emails or posts automatically
+ * generated that have to be cleaned up by contributors. Before making it less strict, sponsors were
+ * encountering false positives too often.
+ */
+function get_fsp_config() : array {
+	return array(
+		'score_threshold'     => 8,
+		'throttle_duration'   => 5 * MINUTE_IN_SECONDS,
+		'timestamp_max_range' => '0 seconds',
+	);
 }
 
 /**
@@ -120,7 +136,7 @@ function get_wordcamp_query_options() {
  */
 function _handle_post_data( &$data ) {
 	$step = filter_input( INPUT_POST, 'step' );
-	$fsp  = new Form_Spam_Prevention();
+	$fsp  = new Form_Spam_Prevention( get_fsp_config() );
 
 	switch ( $step ) {
 		// An invoice, event, currency and amount have been selected.

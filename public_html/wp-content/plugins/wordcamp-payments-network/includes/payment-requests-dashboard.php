@@ -94,13 +94,6 @@ class Payment_Requests_Dashboard {
 		// Truncate existing table.
 		$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() );
 
-		// This particular job needs at least 300mb circa 2022-10, and that will grow linearly with the number of
-		// sites in the network.
-		add_filter( 'wordcamp_payments_aggregate_memory_limit', function() {
-			return '512M';
-		} );
-		wp_raise_memory_limit( 'wordcamp_payments_aggregate' );
-
 		// This may need to be refactored in the future to use batching to avoid out-of-memory-issues.
 		$blogs = $wpdb->get_col( $wpdb->prepare( "
 			SELECT blog_id

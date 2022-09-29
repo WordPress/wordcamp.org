@@ -15,6 +15,16 @@ use function WordCamp\Sunrise\get_top_level_domain;
  */
 add_filter( 'got_url_rewrite', '__return_true' );
 
+/**
+ * Create a context for `wp_raise_memory_limit()` that allocates a large amount of memory.
+ *
+ * Suitable for cron jobs, reports, and other operations that legitimately need more than normal.
+ */
+function wcorg_high_memory_context() : string {
+	return '512M';
+}
+add_filter( 'wordcamp_high_memory_limit', 'wcorg_high_memory_context' );
+
 /*
  * Register an extra directory for private themes.
  *

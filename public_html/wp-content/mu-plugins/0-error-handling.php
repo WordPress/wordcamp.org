@@ -528,9 +528,13 @@ function warn_high_memory_usage() {
 	$limit = ini_get( 'memory_limit' );
 
 	// Sometimes WP_CLI unsets the limit, which makes it look like the peak isn't being hit when testing on
-	// sandboxes. Production doesn't use that though.
+	// sandboxes. This should match what production uses for accuracy.
 	if ( '-1' === $limit ) {
-		$limit = WP_MAX_MEMORY_LIMIT; // Match what production uses; see `mu-plugins/cron.php`.
+		if ( wp_doing_cron() ) {
+			$limit = wcorg_high_memory_context();
+		} else {
+			$limit = WP_MAX_MEMORY_LIMIT;
+		}
 	}
 
 	$peak_percent = memory_get_peak_usage( true ) / wp_convert_hr_to_bytes( $limit );

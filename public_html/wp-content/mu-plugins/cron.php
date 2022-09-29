@@ -14,10 +14,9 @@
 namespace WordCamp\Cron;
 defined( 'WPINC' ) || die();
 
-// Allocate maximum available ram, since jobs sometimes need it.
-// This can be removed if https://core.trac.wordpress.org/ticket/56628 is implemented.
-if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
-	wp_raise_memory_limit( 'admin' );
+// Allocate additional ram, since jobs sometimes need to loop through all sites.
+if ( wp_doing_cron() ) {
+	wp_raise_memory_limit( 'wordcamp_high' );
 }
 
 if ( 'production' === WORDCAMP_ENVIRONMENT && is_main_site() ) {

@@ -44,12 +44,13 @@ class Form_Spam_Prevention {
 	 */
 	public function __construct( array $config = [] ) {
 		$defaults = [
-			'score_threshold'   => 4,
-			'throttle_duration' => HOUR_IN_SECONDS,
-			'prefix'            => 'fsp-',
-			'honeypot_name'     => 'tos-required',
-			'timestamp_name'    => 'dob-required',
-			'individual_styles' => false,
+			'score_threshold'     => 4,
+			'throttle_duration'   => HOUR_IN_SECONDS,
+			'prefix'              => 'fsp-',
+			'honeypot_name'       => 'tos-required',
+			'timestamp_name'      => 'dob-required',
+			'timestamp_max_range' => '- 2 seconds',
+			'individual_styles'   => false,
 		];
 
 		$this->config = wp_parse_args( $config, $defaults );
@@ -210,7 +211,7 @@ class Form_Spam_Prevention {
 		$value = filter_input( $input_type, $name, FILTER_VALIDATE_INT, [
 			'options' => [
 				'min_range' => strtotime( '- 15 minutes' ),
-				'max_range' => strtotime( '- 5 seconds' ),
+				'max_range' => strtotime( $this->config['timestamp_max_range'] ),
 			],
 		] );
 

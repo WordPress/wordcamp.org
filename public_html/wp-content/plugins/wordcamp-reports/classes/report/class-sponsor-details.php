@@ -8,6 +8,7 @@ namespace WordCamp\Reports\Report;
 use Exception;
 use DateTime;
 use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\validate_wordcamp_id;
 
@@ -337,7 +338,7 @@ class Sponsor_Details extends Base {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$options = array(
 				'earliest_start' => new DateTime( '2015-01-01' ), // No indexed payment data before 2015.
 				'public'         => false,

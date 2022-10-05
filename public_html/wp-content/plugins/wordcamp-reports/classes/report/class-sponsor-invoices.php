@@ -12,6 +12,7 @@ use WordCamp\Reports;
 use WordCamp\Utilities\{ Currency_XRT_Client };
 use WordPressdotorg\MU_Plugins\Utilities\{ Export_CSV };
 use WordCamp\Quickbooks\Client;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Validation\{ validate_wordcamp_id };
 use WordCamp\Budgets_Dashboard\Sponsor_Invoices as WCBD_Sponsor_Invoices;
 
@@ -567,7 +568,7 @@ class Sponsor_Invoices extends Date_Range {
 
 		if ( 'Show results' === $action
 			&& wp_verify_nonce( $nonce, 'run-report' )
-			&& current_user_can( 'manage_network' )
+			&& current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2016-01-01' ), // No invoices in QBO before 2016.
@@ -607,7 +608,7 @@ class Sponsor_Invoices extends Date_Range {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2016-01-01' ), // No invoices in QBO before 2016.
 			);

@@ -9,6 +9,7 @@ defined( 'WPINC' ) || die();
 use Exception;
 use DateInterval;
 use WP_Query;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\{get_views_dir_path};
 use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\Validation\{validate_date_range, validate_wordcamp_status, validate_wordcamp_id};
@@ -674,7 +675,7 @@ class WordCamp_Counts extends Base {
 
 		if ( 'Show results' === $action
 		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+		     && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'public'       => false,

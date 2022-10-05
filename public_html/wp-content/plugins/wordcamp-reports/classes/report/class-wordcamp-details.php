@@ -9,6 +9,7 @@ defined( 'WPINC' ) || die();
 use Exception;
 use DateTime;
 use WP_Post, WP_Query, WP_Error;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\{get_views_dir_path};
 use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\Validation\{validate_date_range, validate_wordcamp_id};
@@ -421,7 +422,7 @@ class WordCamp_Details extends Base_Details {
 			return;
 		}
 
-		if ( ! current_user_can( 'manage_network' ) ) {
+		if ( ! current_user_can( CAPABILITY ) ) {
 			return;
 		}
 

@@ -6,6 +6,7 @@ use DateInterval, DateTime, Exception;
 use WordCamp_Loader;
 use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
 use WordCamp\Reports\Utility\Date_Range;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\{ validate_date_range, validate_wordcamp_id };
 use function WordCamp\SpeakerFeedback\Stats\{ should_generate_stats, gather_data, generate_stats, stat_keys };
@@ -327,7 +328,7 @@ class WordCamp_Speaker_Feedback extends Base {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$options = array(
 				'public'         => false,
 				'earliest_start' => new DateTime( '2020-01-01' ), // Speaker Feedback Tool was introduced in 2020.

@@ -11,6 +11,7 @@ defined( 'WPINC' ) || die();
 use Exception;
 use DateTime, DateTimeInterface, DateInterval;
 use WP_Error;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\validate_date_range;
 use function WordCamp\Reports\Time\{year_array, quarter_array, month_array, convert_time_period_to_date_range};
@@ -474,7 +475,7 @@ class Meetup_Events extends Base {
 
 		if ( 'Show results' === $action
 			&& wp_verify_nonce( $nonce, 'run-report' )
-			&& current_user_can( 'manage_network' )
+			&& current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new DateTime( '2015-01-01' ), // Chapter program started in 2015.
@@ -521,7 +522,7 @@ class Meetup_Events extends Base {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( 'manage_network' ) ) {
+		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( CAPABILITY ) ) {
 			return;
 		}
 

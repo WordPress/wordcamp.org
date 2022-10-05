@@ -7,6 +7,8 @@
 
 namespace WordCamp\Reports\Report;
 defined( 'WPINC' ) || die();
+
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\{get_views_dir_path};
 use Meetup_Admin;
 
@@ -241,7 +243,7 @@ class Meetup_Details extends Base_Details {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( ! wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			return;
 		}
 

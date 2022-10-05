@@ -12,6 +12,7 @@ use Exception;
 use WordCamp\Reports;
 use WordCamp\Utilities\{ Currency_XRT_Client };
 use WordPressdotorg\MU_Plugins\Utilities\{ Export_CSV };
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Validation\{validate_wordcamp_id};
 use WordCamp\Budgets_Dashboard\Reimbursement_Requests;
 
@@ -565,7 +566,7 @@ class Payment_Activity extends Date_Range {
 
 		if ( 'Show results' === $action
 		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+		     && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2015-01-01' ), // No indexed payment data before 2015.
@@ -605,7 +606,7 @@ class Payment_Activity extends Date_Range {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2015-01-01' ), // No indexed payment data before 2015.
 			);

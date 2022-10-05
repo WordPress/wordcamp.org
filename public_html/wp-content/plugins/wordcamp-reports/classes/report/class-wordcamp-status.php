@@ -9,6 +9,7 @@ defined( 'WPINC' ) || die();
 use Exception;
 use DateTime;
 use WP_Error, WP_Post;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\{get_views_dir_path};
 use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\Validation\{validate_date_range, validate_wordcamp_status};
@@ -466,7 +467,7 @@ class WordCamp_Status extends Base_Status {
 
 		if ( 'Show results' === $action
 		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+		     && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'public'         => false,
@@ -501,7 +502,7 @@ class WordCamp_Status extends Base_Status {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$error = null;
 
 			$options = array(

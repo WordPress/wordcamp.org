@@ -11,6 +11,7 @@ defined( 'WPINC' ) || die();
 use Exception;
 use WordCamp\Reports;
 use WordCamp\Utilities;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Validation\{validate_wordcamp_id};
 
 /**
@@ -312,7 +313,7 @@ class WordCamp_Payment_Methods extends Date_Range {
 
 		if ( 'Show results' === $action
 		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+		     && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2015-01-01' ), // No indexed CampTix events before 2015.

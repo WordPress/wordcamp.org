@@ -9,6 +9,7 @@ namespace WordCamp\Reports\Report;
 defined( 'WPINC' ) || die();
 
 use Exception;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Time\{year_array, quarter_array, month_array};
 use function WordCamp\Reports\{get_views_dir_path};
 use function WordCamp\Reports\Validation\{validate_date_range};
@@ -339,7 +340,7 @@ class Meetup_Status extends Base_Status {
 		$report = null;
 
 		if ( wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+		     && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'public' => false,

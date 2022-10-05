@@ -13,6 +13,7 @@ use WordCamp\Reports;
 use WordCamp\Reports\Report;
 use WordCamp\Utilities\{ Currency_XRT_Client };
 use WordPressdotorg\MU_Plugins\Utilities\{ Export_CSV };
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Validation\{validate_wordcamp_id};
 
 /**
@@ -361,7 +362,7 @@ class Sponsorship_Grants extends Date_Range {
 
 		if ( 'Show results' === $action
 		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+		     && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2017-01-01' ), // Currently no sponsorship grant data before 2017.
@@ -401,7 +402,7 @@ class Sponsorship_Grants extends Date_Range {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2017-01-01' ), // Currently no sponsorship grant data before 2017.
 			);

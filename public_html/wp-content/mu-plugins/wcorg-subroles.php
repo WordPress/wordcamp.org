@@ -81,6 +81,21 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 					);
 				}
 				break;
+
+			/**
+			 * Report Viewer
+			 *
+			 * - View private `wordcamp` reports on Central.
+			 */
+			case 'report_viewer':
+				// These capabilities only apply on central.wordcamp.org.
+				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
+					$newcaps = array(
+						'read'                  => true, // Access to wp-admin.
+						'view_wordcamp_reports' => true,
+					);
+				}
+				break;
 		}
 
 		$allcaps = array_merge( $allcaps, $newcaps );

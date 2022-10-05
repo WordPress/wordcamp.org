@@ -15,7 +15,15 @@ defined( 'WPINC' ) || die();
  *
  * @package WordCamp\Tests
  */
-class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
+class Test_SubRoles extends WP_UnitTestCase {
+	public function set_up() {
+		parent::set_up();
+
+		global $wcorg_subroles;
+
+		$wcorg_subroles = array();
+	}
+
 	/**
 	 * @covers \WordCamp\SubRoles\omit_usermeta_caps()
 	 */
@@ -72,6 +80,12 @@ class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
 				'subrole'       => 'mentor_manager',
 				'primitive_cap' => 'wordcamp_manage_mentors',
 				'meta_cap'      => 'wordcamp_manage_mentors',
+			),
+
+			'report_viewer' => array(
+				'subrole'       => 'report_viewer',
+				'primitive_cap' => 'view_wordcamp_reports',
+				'meta_cap'      => 'view_wordcamp_reports',
 			),
 		);
 	}

@@ -19,7 +19,7 @@ class Test_Logger extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers ::redact_keys
+	 * @covers WordCamp\Logger\redact_keys
 	 *
 	 * @dataProvider data_redact_keys
 	 */

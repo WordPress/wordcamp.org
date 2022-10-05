@@ -30,7 +30,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_latest_home_url
+	 * @covers WordCamp\Latest_Site_Hints\get_latest_home_url
 	 *
 	 * @dataProvider data_get_latest_home_url
 	 */

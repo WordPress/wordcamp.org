@@ -44,7 +44,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::guess_requested_domain_path
+	 * @covers WordCamp\Sunrise\guess_requested_domain_path
 	 *
 	 * @dataProvider data_guess_requested_domain_path
 	 */
@@ -141,7 +141,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::root_redirects
+	 * @covers WordCamp\Sunrise\root_redirects
 	 *
 	 * @dataProvider data_root_redirects
 	 */
@@ -186,8 +186,8 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::domain_redirects
-	 * @covers ::get_domain_redirects
+	 * @covers WordCamp\Sunrise\domain_redirects
+	 * @covers WordCamp\Sunrise\get_domain_redirects
 	 *
 	 * @dataProvider data_domain_redirects
 	 */
@@ -242,7 +242,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_city_slash_year_url
+	 * @covers WordCamp\Sunrise\get_city_slash_year_url
 	 *
 	 * @dataProvider data_get_city_slash_year_url
 	 */
@@ -353,7 +353,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_corrected_root_relative_url
+	 * @covers WordCamp\Sunrise\get_corrected_root_relative_url
 	 *
 	 * @dataProvider data_get_corrected_root_relative_url
 	 */
@@ -484,7 +484,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_canonical_year_url
+	 * @covers WordCamp\Sunrise\get_canonical_year_url
 	 *
 	 * @dataProvider data_get_canonical_year_url
 	 */
@@ -574,7 +574,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_post_slug_url_without_duplicate_dates
+	 * @covers WordCamp\Sunrise\get_post_slug_url_without_duplicate_dates
 	 *
 	 * @dataProvider data_get_post_slug_url_without_duplicate_dates
 	 */

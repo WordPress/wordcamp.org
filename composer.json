@@ -38,6 +38,7 @@
 		"_test:watch:fast_comment": "This can't use `@test:watch`, because that only works if `@` is the first character in the string. It can't manually call `composer run test:watch`, because that strips out extra arguments like `-- group=sunrise`. This must be manually kept in sync with the `test:watch` command.",
 		"test:watch:fast": "WP_TESTS_SKIP_INSTALL=1 phpunit-watcher watch < /dev/tty",
 		"test:db:reset": "/usr/bin/env php .docker/bin/reset-tests-database.php",
+		"test:coverage":  "php -d xdebug.mode=coverage public_html/wp-content/mu-plugins/vendor/bin/phpunit --coverage-html .phpunit/coverage-report",
 		"phpcs-changed": "phpcs-changed",
 		"_comment": "Below script names left in for back-compat",
 		"phpcs": "phpcs",

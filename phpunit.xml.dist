@@ -6,6 +6,7 @@
 	convertNoticesToExceptions="true"
 	convertWarningsToExceptions="true"
 	verbose="true"
+	cacheResultFile=".phpunit/.phpunit.result.cache"
 >
 	<php>
 		<const name="WP_TESTS_MULTISITE" value="1" />
@@ -49,4 +50,23 @@
 			</directory>
 		</testsuite>
 	</testsuites>
+
+	<coverage cacheDirectory=".phpunit/coverage-cache">
+		<include>
+			<directory suffix=".php">./public_html/wp-content/mu-plugins</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/camptix</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wcpt</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
+			<file>./public_html/wp-content/sunrise.php</file>
+		</include>
+
+		<exclude>
+			<directory>./public_html/wp-content/mu-plugins/tests</directory>
+			<directory>./public_html/wp-content/mu-plugins/vendor</directory>
+			<directory>./public_html/wp-content/plugins/*/tests</directory>
+			<directory>./public_html/wp-content/plugins/*/node_modules</directory>
+		</exclude>
+	</coverage>
 </phpunit>

@@ -12,7 +12,7 @@ defined( 'WPINC' ) || die();
  */
 class Test_Error_Handling extends WP_UnitTestCase {
 	/**
-	 * @covers ::is_third_party_file
+	 * @covers WordCamp\Error_Handling\is_third_party_file
 	 *
 	 * @dataProvider data_is_third_party_file
 	 */
@@ -113,7 +113,7 @@ class Test_Error_Handling extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers ::get_destination_channels
+	 * @covers WordCamp\Error_Handling\get_destination_channels
 	 *
 	 * @dataProvider data_get_destination_channels
 	 */

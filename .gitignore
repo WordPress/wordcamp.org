@@ -10,6 +10,7 @@
 #
 # Misc
 #
+.phpunit
 google*.html
 wp-cli.yml
 script-backups/

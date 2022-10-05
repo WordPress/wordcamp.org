@@ -45,7 +45,7 @@ CSS;
 	}
 
 	/**
-	 * Test that HTML code is correcly stripped.
+	 * Test that HTML code is correctly stripped.
 	 */
 	public function test_html_not_allowed() {
 		$input = <<<CSS
@@ -55,10 +55,17 @@ CSS;
 }
 CSS;
 
+		$expected = <<<CSS
+/* HTML-ish code should be stripped */
+p {
+	color: lightcoral;
+}
+CSS;
+
 		$post = wp_update_custom_css_post( $input );
 		$this->assertNotWPError( $post );
 
 		$output = wp_get_custom_css();
-		$this->assertNotEquals( $input, $output );
+		$this->assertSame( $expected, $output );
 	}
 }

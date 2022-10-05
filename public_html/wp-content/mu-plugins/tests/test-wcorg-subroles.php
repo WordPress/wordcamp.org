@@ -34,11 +34,13 @@ class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @dataProvider data_user_with_subrole_can
+	 *
 	 * @covers \WordCamp\SubRoles\map_subrole_caps()
 	 * @covers \WordCamp\SubRoles\add_subrole_caps()
 	 * @covers \WordCamp\SubRoles\get_user_subroles()
 	 */
-	public function test_user_with_subrole_can() {
+	public function test_user_with_subrole_can( $subrole, $primitive_cap, $meta_cap) {
 		global $wcorg_subroles;
 
 		$user = self::factory()->user->create_and_get( array(
@@ -46,15 +48,31 @@ class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
 		) );
 
 		$this->assertTrue( $user->has_cap( 'read' ) );
-		$this->assertFalse( $user->has_cap( 'wordcamp_wrangle_wordcamps' ) );
-		$this->assertFalse( user_can( $user->ID, 'edit_others_wordcamps' ) );
+		$this->assertFalse( $user->has_cap( $primitive_cap ) );
+		$this->assertFalse( user_can( $user->ID, $meta_cap ) );
 
 		$wcorg_subroles = array(
-			$user->ID => array( 'wordcamp_wrangler' ),
+			$user->ID => array( $subrole ),
 		);
 
 		$this->assertTrue( $user->has_cap( 'read' ) );
-		$this->assertTrue( $user->has_cap( 'wordcamp_wrangle_wordcamps' ) );
-		$this->assertTrue( user_can( $user->ID, 'edit_others_wordcamps' ) );
+		$this->assertTrue( $user->has_cap( $primitive_cap ) );
+		$this->assertTrue( user_can( $user->ID, $meta_cap ) );
+	}
+
+	function data_user_with_subrole_can() {
+		return array(
+			'wordcamp_wrangler' => array(
+				'subrole'       => 'wordcamp_wrangler',
+				'primitive_cap' => 'wordcamp_wrangle_wordcamps',
+				'meta_cap'      => 'edit_others_wordcamps',
+			),
+
+			'mentor_manager' => array(
+				'subrole'       => 'mentor_manager',
+				'primitive_cap' => 'wordcamp_manage_mentors',
+				'meta_cap'      => 'wordcamp_manage_mentors',
+			),
+		);
 	}
 }

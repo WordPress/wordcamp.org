@@ -319,6 +319,8 @@ class Sponsor_Details extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
+		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+
 		include get_views_dir_path() . 'report/sponsor-details.php';
 	}
 

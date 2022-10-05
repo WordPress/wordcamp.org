@@ -28,8 +28,9 @@ class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
 		$usermeta = get_user_meta( $user->ID, 'wptests_capabilities', true );
 
 		$this->assertTrue( $user->has_cap( 'read' ) );
+		$this->assertTrue( $usermeta['wordcamp_wrangle_wordcamps'] );
 		$this->assertFalse( $user->has_cap( 'wordcamp_wrangle_wordcamps' ) );
-		$this->assertTrue( array_key_exists( 'wordcamp_wrangle_wordcamps', $usermeta ) );
+		$this->assertFalse( user_can( $user->ID, 'wordcamp_wrangle_wordcamps' ) );
 	}
 
 	/**
@@ -38,16 +39,22 @@ class Test_Omit_UserMeta_Caps extends WP_UnitTestCase {
 	 * @covers \WordCamp\SubRoles\get_user_subroles()
 	 */
 	public function test_user_with_subrole_can() {
+		global $wcorg_subroles;
+
 		$user = self::factory()->user->create_and_get( array(
 			'role' => 'subscriber',
 		) );
 
-		global $wcorg_subroles;
+		$this->assertTrue( $user->has_cap( 'read' ) );
+		$this->assertFalse( $user->has_cap( 'wordcamp_wrangle_wordcamps' ) );
+		$this->assertFalse( user_can( $user->ID, 'edit_others_wordcamps' ) );
+
 		$wcorg_subroles = array(
 			$user->ID => array( 'wordcamp_wrangler' ),
 		);
 
 		$this->assertTrue( $user->has_cap( 'read' ) );
 		$this->assertTrue( $user->has_cap( 'wordcamp_wrangle_wordcamps' ) );
+		$this->assertTrue( user_can( $user->ID, 'edit_others_wordcamps' ) );
 	}
 }

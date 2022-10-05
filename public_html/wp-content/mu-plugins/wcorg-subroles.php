@@ -6,7 +6,6 @@
  */
 
 namespace WordCamp\SubRoles;
-
 use WP_User;
 
 defined( 'WPINC' ) || die();
@@ -28,29 +27,6 @@ function get_user_subroles( $user_id ) {
 	}
 
 	return array();
-}
-
-/**
- * Check if a particular user has a particular subrole.
- *
- * @param int    $user_id The ID of the user to check for a subrole.
- * @param string $subrole The subrole to check for.
- *
- * @return bool True if the user has the subrole.
- */
-function has_subrole( $user_id, $subrole ) {
-	$subroles = get_user_subroles( $user_id );
-
-	return in_array( $subrole, $subroles, true );
-}
-
-/**
- * Check if the current request is proxied.
- *
- * @return bool True if the request is proxied.
- */
-function is_proxied() {
-	return defined( 'WPORG_PROXIED_REQUEST' ) && WPORG_PROXIED_REQUEST;
 }
 
 /**

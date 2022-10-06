@@ -604,6 +604,11 @@ class WordCamp_Counts extends Base {
 
 			array_walk( $site_data, function( &$value ) use ( $gender_data ) {
 				$name = strtolower( $value['first_name'] );
+
+				if ( empty( $name ) ) {
+					return;
+				}
+
 				$data = $gender_data[ $name ];
 
 				if ( ! $data['gender'] || $data['probability'] < self::GENDER_PROBABILITY_THRESHOLD ) {

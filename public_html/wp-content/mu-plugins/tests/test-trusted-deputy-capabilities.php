@@ -12,7 +12,7 @@ defined( 'WPINC' ) || die();
  * @group trusted-deputies
  */
 class Test_Trusted_Deputy_Capabilities extends WP_UnitTestCase {
-	/*
+	/**
 	 * Note: `wporg_remove_super_caps()` denies `import` to non-Super Admins if the domain isn't wordcamp.org,
 	 * which results in a false-negative on sandboxes with alternate domain names.
 	 */
@@ -51,7 +51,10 @@ class Test_Trusted_Deputy_Capabilities extends WP_UnitTestCase {
 	protected static $subscriber_id;
 	protected static $trusted_deputy_id;
 
-	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
+	/**
+	 * Setup shared fixtures before any tests are run.
+	 */
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) : void {
 		global $trusted_deputies;
 
 		self::$subscriber_id = self::factory()->user->create( array(
@@ -63,11 +66,13 @@ class Test_Trusted_Deputy_Capabilities extends WP_UnitTestCase {
 		) );
 
 		$trusted_deputies = array(
-			self::$trusted_deputy_id
+			self::$trusted_deputy_id,
 		);
 	}
 
-	// Test that the user can do all capabilities that are granted to trusted deputies.
+	/**
+	 * Test that the user can do all capabilities that are granted to trusted deputies.
+	 */
 	protected function can_do_allowed_caps( int $user_id ) : bool {
 		$did_all_allowed = true;
 
@@ -81,7 +86,9 @@ class Test_Trusted_Deputy_Capabilities extends WP_UnitTestCase {
 		return $did_all_allowed;
 	}
 
-	// Test that the user can't do any capabilities that are denied to trusted deputies.
+	/**
+	 * Test that the user can't do any capabilities that are denied to trusted deputies.
+	 */
 	protected function can_do_denied_caps( int $user_id ): bool {
 		$did_denied_cap = false;
 
@@ -95,7 +102,7 @@ class Test_Trusted_Deputy_Capabilities extends WP_UnitTestCase {
 		return $did_denied_cap;
 	}
 
-	/*
+	/**
 	 * @covers \WordCamp\Trusted_Deputy_Capabilities\is_deputy()
 	 */
 	public function test_is_deputy() {

@@ -16,6 +16,9 @@ defined( 'WPINC' ) || die();
  * @package WordCamp\Tests
  */
 class Test_SubRoles extends WP_UnitTestCase {
+	/**
+	 * Reset global state between tests, for isolation.
+	 */
 	public function set_up() {
 		parent::set_up();
 
@@ -48,7 +51,7 @@ class Test_SubRoles extends WP_UnitTestCase {
 	 * @covers \WordCamp\SubRoles\add_subrole_caps()
 	 * @covers \WordCamp\SubRoles\get_user_subroles()
 	 */
-	public function test_user_with_subrole_can( $subrole, $primitive_cap, $meta_cap) {
+	public function test_user_with_subrole_can( $subrole, $primitive_cap, $meta_cap ) {
 		global $wcorg_subroles;
 
 		$user = self::factory()->user->create_and_get( array(
@@ -68,7 +71,10 @@ class Test_SubRoles extends WP_UnitTestCase {
 		$this->assertTrue( user_can( $user->ID, $meta_cap ) );
 	}
 
-	function data_user_with_subrole_can() {
+	/**
+	 * Define test cases for test_user_with_subrole_can().
+	 */
+	public function data_user_with_subrole_can() : array {
 		return array(
 			'wordcamp_wrangler' => array(
 				'subrole'       => 'wordcamp_wrangler',

@@ -29,8 +29,9 @@ namespace WordCamp\Trusted_Deputy_Capabilities;
  * @return array An array of this user's capabilities.
  */
 function trusted_deputy_has_cap( $allcaps, $caps, $args, $user ) {
-	if ( ! is_deputy( $user->ID ) )
+	if ( ! is_deputy( $user->ID ) ) {
 		return $allcaps;
+	}
 
 	$allcaps = array_merge( get_role( 'administrator' )->capabilities, array(
 		'manage_network' => true,
@@ -54,15 +55,16 @@ add_filter( 'user_has_cap', __NAMESPACE__ . '\trusted_deputy_has_cap', 10, 4 );
  * Uses the map_meta_cap filter to add some additional logic around meta-caps.
  * Mainly we just map some custom meta-caps back to primitive ones.
  *
- * @param array $required_caps An array of capabilites required to perform $cap.
+ * @param array  $required_caps An array of capabilites required to perform $cap.
  * @param string $cap The requested capability.
- * @param int $user_id The user ID.
+ * @param int    $user_id The user ID.
  *
  * @return array An array of required capababilities to perform $cap.
  */
 function trusted_deputy_meta_caps( $required_caps, $cap, $user_id ) {
-	if ( ! is_deputy( $user_id ) )
+	if ( ! is_deputy( $user_id ) ) {
 		return $required_caps;
+	}
 
 	switch ( $cap ) {
 

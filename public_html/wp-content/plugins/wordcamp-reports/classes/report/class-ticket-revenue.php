@@ -47,14 +47,14 @@ class Ticket_Revenue extends Date_Range {
 	 *
 	 * @var string
 	 */
-	public static $methodology = "
+	public static $methodology = '
 		<ol>
-			<li>Query the CampTix events log for attendee status changes to \"publish\" or \"refund\" during the specified date range.</li>
+			<li>Query the CampTix events log for attendee status changes to "publish" or "refund" during the specified date range.</li>
 			<li>Query each WordCamp site with matched events and retrieve ticket data related to each event.</li>
 			<li>Append the ticket data to the event data.</li>
 			<li>Group the events by payment method.</li>
 		</ol>
-	";
+	';
 
 	/**
 	 * Report group.
@@ -136,7 +136,7 @@ class Ticket_Revenue extends Date_Range {
 
 				$this->wordcamp_id      = $valid->post_id;
 				$this->wordcamp_site_id = $valid->site_id;
-			} catch( Exception $e ) {
+			} catch ( Exception $e ) {
 				$this->error->add(
 					self::$slug . '-wordcamp-id-error',
 					$e->getMessage()
@@ -249,15 +249,15 @@ class Ticket_Revenue extends Date_Range {
 		$where        = '';
 
 		$where_clause[] = 'UNIX_TIMESTAMP( timestamp ) BETWEEN ' .
-		                  $this->start_date->getTimestamp() .
-		                  ' AND ' .
-		                  $this->end_date->getTimestamp();
+						  $this->start_date->getTimestamp() .
+						  ' AND ' .
+						  $this->end_date->getTimestamp();
 
 		if ( ! empty( $message_filter ) ) {
 			$like_clause = array();
 
 			foreach ( $message_filter as $string ) {
-				$like_clause[] = 'message LIKE \'%%%s%%\'';
+				$like_clause[]  = 'message LIKE \'%%%s%%\'';
 				$where_values[] = $string;
 			}
 
@@ -268,7 +268,7 @@ class Ticket_Revenue extends Date_Range {
 			$where_clause[] = 'blog_id = %d';
 			$where_values[] = $this->wordcamp_site_id;
 		} else {
-			$excluded_ids = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
+			$excluded_ids   = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
 			$where_clause[] = "blog_id NOT IN ( $excluded_ids )";
 		}
 
@@ -394,7 +394,7 @@ class Ticket_Revenue extends Date_Range {
 			) ),
 		);
 
-		$currencies           = array();
+		$currencies = array();
 
 		foreach ( $events as $event ) {
 			$currency = $event['currency'];
@@ -420,11 +420,11 @@ class Ticket_Revenue extends Date_Range {
 				$data_groups['total']['discounts_by_currency'][ $currency ]         = 0;
 				$data_groups['total']['amount_refunded_by_currency'][ $currency ]   = 0;
 				$data_groups['total']['net_revenue_by_currency'][ $currency ]       = 0;
-				$currencies[]                                                       = $currency;
+				$currencies[] = $currency;
 			}
 
 			switch ( $type ) {
-				case 'Purchase' :
+				case 'Purchase':
 					$data_groups[ $method ]['tickets_sold'] ++;
 					$data_groups[ $method ]['gross_revenue_by_currency'][ $currency ] += $event['full_price'];
 					$data_groups[ $method ]['discounts_by_currency'][ $currency ]     += $event['full_price'] - $event['discounted_price'];
@@ -435,13 +435,13 @@ class Ticket_Revenue extends Date_Range {
 					$data_groups['total']['net_revenue_by_currency'][ $currency ]   += $event['discounted_price'];
 					break;
 
-				case 'Refund' :
+				case 'Refund':
 					$data_groups[ $method ]['tickets_refunded'] ++;
 					$data_groups[ $method ]['amount_refunded_by_currency'][ $currency ] += $event['discounted_price'];
 					$data_groups[ $method ]['net_revenue_by_currency'][ $currency ]     -= $event['discounted_price'];
 					$data_groups['total']['tickets_refunded']  ++;
-					$data_groups['total']['amount_refunded_by_currency'][ $currency ]  += $event['discounted_price'];
-					$data_groups['total']['net_revenue_by_currency'][ $currency ]      -= $event['discounted_price'];
+					$data_groups['total']['amount_refunded_by_currency'][ $currency ] += $event['discounted_price'];
+					$data_groups['total']['net_revenue_by_currency'][ $currency ]     -= $event['discounted_price'];
 					break;
 			}
 		} // End foreach().
@@ -518,8 +518,8 @@ class Ticket_Revenue extends Date_Range {
 		$report = null;
 
 		if ( 'Show results' === $action
-		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( CAPABILITY )
+			 && wp_verify_nonce( $nonce, 'run-report' )
+			 && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2015-01-01' ), // No indexed CampTix events before 2015.

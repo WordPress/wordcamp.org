@@ -285,7 +285,7 @@ class WordCamp_Speaker_Feedback extends Base {
 					'type'    => 'NUMERIC',
 				),
 			);
-			$post_args['orderby'] = 'meta_value_num title';
+			$post_args['orderby']    = 'meta_value_num title';
 		}
 
 		if ( $this->wordcamp_id ) {
@@ -362,7 +362,7 @@ class WordCamp_Speaker_Feedback extends Base {
 							if ( is_array( $value ) ) {
 								$string_value = '';
 								foreach ( $value as $subkey => $subvalue ) {
-									$subvalue = array_map( 'esc_html', (array) $subvalue );
+									$subvalue      = array_map( 'esc_html', (array) $subvalue );
 									$string_value .= sprintf(
 										'%1$s: %2$s; ',
 										esc_html( $subkey ),

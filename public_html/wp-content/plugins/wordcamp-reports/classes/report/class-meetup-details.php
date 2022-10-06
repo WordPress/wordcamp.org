@@ -47,13 +47,13 @@ class Meetup_Details extends Base_Details {
 	 *
 	 * @var string
 	 */
-	public static $methodology = "
+	public static $methodology = '
 		<ol>
 			<li>Fetch all meetup posts.</li>
 			<li>Extract the data for each post that match the fields requested.</li>
 			<li>Walk through all of the extracted data and format it for display.</li>
 		</ol>
-	";
+	';
 
 	/**
 	 * Report group.
@@ -75,11 +75,13 @@ class Meetup_Details extends Base_Details {
 	 *     @type array $fields        Not implemented yet.
 	 * }
 	 */
-	public function __construct( Date_Range $date_range = null, $meetup_ids = null, array $options = [] ) {
+	public function __construct( Date_Range $date_range = null, $meetup_ids = null, array $options = array() ) {
 		// Report-specific options.
-		$options = wp_parse_args( $options, [
-			'fields' => [],
-		] );
+		$options = wp_parse_args( $options,
+			array(
+				'fields' => array(),
+			)
+		);
 
 		parent::__construct( $date_range, $meetup_ids, $options );
 	}
@@ -91,9 +93,9 @@ class Meetup_Details extends Base_Details {
 	 */
 	public function get_public_data_fields() {
 		return array_merge(
-			[
+			array(
 				'Name',
-			],
+			),
 			Meetup_Admin::get_public_meta_keys()
 		);
 	}
@@ -105,7 +107,7 @@ class Meetup_Details extends Base_Details {
 	 */
 	public function get_private_data_fields() {
 		return array_merge(
-			[
+			array(
 				'ID',
 				'Created',
 				'Status',
@@ -113,7 +115,7 @@ class Meetup_Details extends Base_Details {
 				'Co-Organizers usernames (seperated by comma)',
 				'Number of past meetups',
 				'Last meetup RSVP count',
-			],
+			),
 			array_keys( Meetup_Admin::meta_keys( 'organizer' ) ),
 			array_keys( $this->get_public_data_fields() )
 		);
@@ -125,12 +127,12 @@ class Meetup_Details extends Base_Details {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$field_defaults = [
+		$field_defaults = array(
 			'ID' => 'checked',
 			'Name' => 'checked disabled',
 			'Created' => 'checked',
 			'Status' => 'checked',
-		];
+		);
 
 		include get_views_dir_path() . 'report/meetup-details.php';
 	}
@@ -154,20 +156,20 @@ class Meetup_Details extends Base_Details {
 
 		if ( $this->range instanceof Date_Range ) {
 			// This replaces the default meta query.
-			$post_args['meta_query'] = [
-				[
+			$post_args['meta_query'] = array(
+				array(
 					'key'      => 'Start Date (YYYY-mm-dd)',
 					'value'    => array( $this->range->start->getTimestamp(), $this->range->end->getTimestamp() ),
 					'compare'  => 'BETWEEN',
 					'type'     => 'NUMERIC',
-				],
-			];
-			$post_args['orderby'] = 'meta_value_num title';
+				),
+			);
+			$post_args['orderby']    = 'meta_value_num title';
 		}
 
 		if ( ! is_null( $this->event_ids ) ) {
 			if ( empty( $this->event_ids ) ) {
-				return [];
+				return array();
 			}
 			$post_args['post__in'] = $this->event_ids;
 		}
@@ -185,7 +187,7 @@ class Meetup_Details extends Base_Details {
 	 * @return array
 	 */
 	public function get_meta_keys() {
-	  return array_keys( \Meetup_Admin::meta_keys( 'all' ) );
+		return array_keys( \Meetup_Admin::meta_keys( 'all' ) );
 	}
 
 	/**
@@ -193,9 +195,9 @@ class Meetup_Details extends Base_Details {
 	 *
 	 * @return array
 	 */
-	static public function get_field_order() {
+	public static function get_field_order() {
 		return array_merge(
-			array('ID', 'name' ),
+			array( 'ID', 'name' ),
 			array_keys( Meetup_Admin::meta_keys( 'information') ),
 			array(
 				'Status',
@@ -211,17 +213,17 @@ class Meetup_Details extends Base_Details {
 	 *
 	 * @return Base_Details
 	 */
-	static public function create_shadow_report_obj( $context ) {
-		return new self( null, [], ['public' => 'public' === $context ] );
+	public static function create_shadow_report_obj( $context ) {
+		return new self( null, array(), array( 'public' => 'public' === $context ) );
 	}
 
 	/**
 	 * Render list of fields that can be present in exported CSV.
 	 *
 	 * @param string $context
-	 * @param array $field_defaults
+	 * @param array  $field_defaults
 	 */
-	static public function render_available_fields( $context = 'public', array $field_defaults = [] ) {
+	public static function render_available_fields( $context = 'public', array $field_defaults = array() ) {
 		$shadow_report = self::create_shadow_report_obj( $context );
 		self::render_available_fields_in_report( $shadow_report, $context, $field_defaults );
 	}
@@ -231,11 +233,11 @@ class Meetup_Details extends Base_Details {
 	 *
 	 * @return void
 	 */
-	public static function export_to_file( ) {
+	public static function export_to_file() {
 
-		$fields           = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, [ 'flags' => FILTER_REQUIRE_ARRAY ] );
-		$action           = filter_input( INPUT_POST, 'action' );
-		$nonce            = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$fields = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
+		$action = filter_input( INPUT_POST, 'action' );
+		$nonce  = filter_input( INPUT_POST, self::$slug . '-nonce' );
 
 		$report = null;
 
@@ -258,7 +260,7 @@ class Meetup_Details extends Base_Details {
 			'fields' => $fields,
 			'public' => false,
 		);
-		$report = new self( $range, null, $options );
+		$report  = new self( $range, null, $options );
 
 		self::export_to_file_common( $report );
 	}
@@ -284,7 +286,7 @@ class Meetup_Details extends Base_Details {
 						break;
 					case 'Meetup Co-organizer names':
 						if ( is_array( $value ) ) {
-							$org_names = wp_list_pluck( $value, 'name' );
+							$org_names   = wp_list_pluck( $value, 'name' );
 							$row[ $key ] = implode( ', ', $org_names );
 						}
 						break;

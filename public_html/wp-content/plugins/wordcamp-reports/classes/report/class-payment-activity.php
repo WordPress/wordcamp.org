@@ -131,7 +131,7 @@ class Payment_Activity extends Date_Range {
 
 				$this->wordcamp_id      = $valid->post_id;
 				$this->wordcamp_site_id = $valid->site_id;
-			} catch( Exception $e ) {
+			} catch ( Exception $e ) {
 				$this->error->add(
 					self::$slug . '-wordcamp-id-error',
 					$e->getMessage()
@@ -193,8 +193,8 @@ class Payment_Activity extends Date_Range {
 
 		$data = array_filter( $payment_posts, function( $payment ) {
 			if ( ! $this->timestamp_within_date_range( $payment['timestamp_approved'] )
-			     && ! $this->timestamp_within_date_range( $payment['timestamp_paid'] )
-			     && ! $this->timestamp_within_date_range( $payment['timestamp_failed'] )
+				 && ! $this->timestamp_within_date_range( $payment['timestamp_paid'] )
+				 && ! $this->timestamp_within_date_range( $payment['timestamp_failed'] )
 			) {
 				return false;
 			}
@@ -245,7 +245,7 @@ class Payment_Activity extends Date_Range {
 			);
 		} else {
 			$excluded_ids = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
-			$extra_where = " AND blog_id NOT IN ( $excluded_ids )";
+			$extra_where  = " AND blog_id NOT IN ( $excluded_ids )";
 		}
 
 		$index_query = $wpdb->prepare( "
@@ -296,17 +296,17 @@ class Payment_Activity extends Date_Range {
 
 		foreach ( $raw_posts as $raw_post ) {
 			switch ( $raw_post->post_type ) {
-				case 'wcp_payment_request' :
+				case 'wcp_payment_request':
 					$currency = $raw_post->_camppayments_currency;
 					$amount   = $raw_post->_camppayments_payment_amount;
 					break;
 
-				case 'wcb_reimbursement' :
+				case 'wcb_reimbursement':
 					$currency = get_post_meta( $raw_post->ID, '_wcbrr_currency', true );
 					$amount   = Reimbursement_Requests\get_amount( $raw_post->ID );
 					break;
 
-				default :
+				default:
 					$currency = '';
 					$amount   = '';
 					break;
@@ -383,7 +383,7 @@ class Payment_Activity extends Date_Range {
 			$parsed_post['timestamp_paid'] = 0;
 
 			// Assume the last log entry is when the payment was marked failed/cancelled.
-			$last_log = array_slice( $parsed_post['log'], -1 )[0];
+			$last_log                        = array_slice( $parsed_post['log'], -1 )[0];
 			$parsed_post['timestamp_failed'] = $last_log['timestamp'];
 		}
 
@@ -434,11 +434,11 @@ class Payment_Activity extends Date_Range {
 				$data_groups['failures']['vendor_payment_amount_by_currency'][ $payment['currency'] ] = 0;
 				$data_groups['failures']['reimbursement_amount_by_currency'][ $payment['currency'] ]  = 0;
 				$data_groups['failures']['total_amount_by_currency'][ $payment['currency'] ]          = 0;
-				$currencies[]                                                                         = $payment['currency'];
+				$currencies[] = $payment['currency'];
 			}
 
 			switch ( $payment['post_type'] ) {
-				case 'wcp_payment_request' :
+				case 'wcp_payment_request':
 					if ( $this->timestamp_within_date_range( $payment['timestamp_approved'] ) ) {
 						$data_groups['requests']['vendor_payment_count'] ++;
 						$data_groups['requests']['vendor_payment_amount_by_currency'][ $payment['currency'] ] += floatval( $payment['amount'] );
@@ -455,7 +455,7 @@ class Payment_Activity extends Date_Range {
 					}
 					break;
 
-				case 'wcb_reimbursement' :
+				case 'wcb_reimbursement':
 					if ( $this->timestamp_within_date_range( $payment['timestamp_approved'] ) ) {
 						$data_groups['requests']['reimbursement_count'] ++;
 						$data_groups['requests']['reimbursement_amount_by_currency'][ $payment['currency'] ] += floatval( $payment['amount'] );
@@ -538,8 +538,8 @@ class Payment_Activity extends Date_Range {
 		$now  = new \DateTime();
 		$data = $this->compile_report_data( $this->get_data() );
 
-		$start_date = $this->start_date;
-		$end_date   = $this->end_date;
+		$start_date    = $this->start_date;
+		$end_date      = $this->end_date;
 		$xrt_date      = ( $end_date > $now ) ? $now : $end_date;
 		$wordcamp_name = ( $this->wordcamp_site_id ) ? get_wordcamp_name( $this->wordcamp_site_id ) : '';
 		$requests      = $data['requests'];
@@ -565,8 +565,8 @@ class Payment_Activity extends Date_Range {
 		$report = null;
 
 		if ( 'Show results' === $action
-		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( CAPABILITY )
+			 && wp_verify_nonce( $nonce, 'run-report' )
+			 && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2015-01-01' ), // No indexed payment data before 2015.

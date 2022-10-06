@@ -50,9 +50,9 @@ class Meetup_Groups extends Base {
 	 *
 	 * @var string
 	 */
-	public static $methodology = "
+	public static $methodology = '
 		Retrieve data about groups in the Chapter program from the Meetup.com API. Only groups who joined the Chapter program before the specified end date will be included.
-	";
+	';
 
 	/**
 	 * Report group.
@@ -103,7 +103,7 @@ class Meetup_Groups extends Base {
 	 *     See Base::__construct and the functions in WordCamp\Reports\Validation for additional parameters.
 	 * }
 	 */
-	public function __construct( $start_date, $end_date, array $options = [] ) {
+	public function __construct( $start_date, $end_date, array $options = array() ) {
 		parent::__construct( $options );
 
 		try {
@@ -122,10 +122,10 @@ class Meetup_Groups extends Base {
 	 * @return string
 	 */
 	protected function get_cache_key() {
-		$cache_key_segments = [
+		$cache_key_segments = array(
 			parent::get_cache_key(),
 			$this->range->generate_cache_key_segment(),
-		];
+		);
 
 		return implode( '_', $cache_key_segments );
 	}
@@ -305,8 +305,8 @@ class Meetup_Groups extends Base {
 		$report = null;
 
 		if ( 'Show results' === $action
-		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( CAPABILITY )
+			 && wp_verify_nonce( $nonce, 'run-report' )
+			 && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new DateTime( '2015-01-01' ), // Chapter program started in 2015.

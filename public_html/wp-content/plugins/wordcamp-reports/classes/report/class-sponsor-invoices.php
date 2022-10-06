@@ -250,7 +250,7 @@ class Sponsor_Invoices extends Date_Range {
 			$where_clause[] = 'blog_id = %d';
 			$where_values[] = $this->wordcamp_site_id;
 		} else {
-			$excluded_ids   = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
+			$excluded_ids = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
 
 			if ( $excluded_ids ) {
 				$where_clause[] = "blog_id NOT IN ( $excluded_ids )";

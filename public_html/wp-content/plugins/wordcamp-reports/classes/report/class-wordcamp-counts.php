@@ -646,12 +646,13 @@ class WordCamp_Counts extends Base {
 	 * @return void
 	 */
 	public function render_html() {
+		$data = $this->compile_report_data( $this->get_data() );
+
 		if ( ! empty( $this->error->get_error_messages() ) ) {
 			$this->render_error_html();
 			return;
 		}
 
-		$data       = $this->compile_report_data( $this->get_data() );
 		$start_date = $this->range->start;
 		$end_date   = $this->range->end;
 		$statuses   = $this->statuses;

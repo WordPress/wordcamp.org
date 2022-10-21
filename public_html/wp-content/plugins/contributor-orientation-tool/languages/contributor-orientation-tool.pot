@@ -1,0 +1,268 @@
+# Copyright (C) 2017 Automattic
+# This file is distributed under the GNU General Public License v2 or later.
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: contributor-orientation-tool\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/tags/_s\n"
+"POT-Creation-Date: 2019-04-10 13:43+0200\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2017-MO-DA HO:MI+ZONE\n"
+"Last-Translator: \n"
+"Language-Team: WCEU Community team\n"
+"X-Generator: Poedit 1.8.7.1\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __;_e;_n;_x;esc_html__;esc_html_e;esc_html_x;"
+"esc_html_n\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-SearchPath-0: .\n"
+
+#: src/WPCOTool/Admin/Options.php:77
+msgid "Contributor orientation tool settings"
+msgstr ""
+
+#: src/WPCOTool/Admin/Options.php:104
+msgid "Enabled WordPress org teams"
+msgstr ""
+
+#: src/WPCOTool/Admin/Options.php:111
+msgid "Select teams to disable:"
+msgstr ""
+
+#: src/WPCOTool/Admin/Options.php:139
+msgid ""
+"Use this option to disable teams that you don't need it the tool."
+msgstr ""
+
+#: src/WPCOTool/Admin/Settings.php:43
+msgid "Contributor orientation tool"
+msgstr ""
+
+#: src/WPCOTool/Admin/Settings.php:63
+msgid "settings"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:81
+msgid "Submit"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:101
+msgid "Please enable some teams form plugin options!"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:146
+msgid ""
+"Based on your answers, we recommend that you join some of teams "
+"below:"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:149
+msgid "Previous section"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:209
+msgid "Continue"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:210
+msgid "Back"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:311
+msgid "Step"
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:334
+msgid ""
+"Please note that this is not Contributor Day registering form. This "
+"is just an orientation tool and results represent recommendations "
+"based on your answers. You still need to register for Contributor "
+"Day if you are planning to attend one."
+msgstr ""
+
+#: src/WPCOTool/Frontend/Shortcode.php:409
+msgid "Please select at least one answer!"
+msgstr ""
+
+#: src/WPCOTool/config/section-1.php:6
+msgid "What do you do with WordPress?"
+msgstr ""
+
+#: src/WPCOTool/config/section-1.php:9
+msgid "I'm a developer"
+msgstr ""
+
+#: src/WPCOTool/config/section-1.php:24
+msgid "I'm a designer"
+msgstr ""
+
+#: src/WPCOTool/config/section-1.php:34
+msgid "I'm a content creator, blogger or marketeer"
+msgstr ""
+
+#: src/WPCOTool/config/section-1.php:46
+msgid "I'm a WordPress user  / other"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:6
+msgid "What are you passionate about?"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:9
+msgid "Web development, backend development etc."
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:20
+msgid "Writing tests, support codebase for WordPress.org"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:27
+msgid "Helping others"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:34
+msgid "Mobile apps"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:40
+#: src/WPCOTool/config/teams.php:16
+msgid "Documentation"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:48
+msgid "Testing"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:56
+msgid "Web design"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:62
+msgid "Content creation"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:72
+#: src/WPCOTool/config/section-3.php:33
+#: src/WPCOTool/config/teams.php:10
+msgid "Marketing"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:78
+msgid "Organising a meetup and helping the community"
+msgstr ""
+
+#: src/WPCOTool/config/section-2.php:84
+msgid "Translation"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:6
+msgid "Are these areas you have experience with or are eager to try?"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:9
+msgid "Q&A, helping others use programmes, support"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:15
+msgid "Organizing events, groups, etc."
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:21
+msgid "Writing translations"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:27
+msgid "Teaching others"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:39
+msgid "Photography, video recording or processing"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:45
+msgid ""
+"Writing code, fixing bugs, writing developer documentation etc."
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:52
+msgid "Creating or editing WordPress themes"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:58
+msgid "Creating or editing WordPress plugins"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:64
+msgid ""
+"Writing content, creating documentation for projects or software"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:70
+msgid "Web design, UX or UI design"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:76
+msgid "Mobile apps development or design"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:82
+msgid "Implementing accessibility standards"
+msgstr ""
+
+#: src/WPCOTool/config/section-3.php:88
+msgid "Writing automated tests"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:6
+msgid "Support"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:7
+msgid "Community"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:8
+msgid "Polyglots"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:9
+msgid "Training"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:11
+msgid "TV"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:12
+msgid "Core"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:13
+msgid "Meta"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:14
+msgid "Themes"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:15
+msgid "Plugins"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:17
+msgid "Design"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:18
+msgid "Mobile"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:19
+msgid "Accessibility"
+msgstr ""
+
+#: src/WPCOTool/config/teams.php:20
+msgid "Tide"
+msgstr ""

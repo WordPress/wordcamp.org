@@ -547,7 +547,7 @@ class WordCamp_QBO {
 			),
 
 			'SalesTermRef' => array(
-				'value' => 1, // Due on receipt
+				'value' => 30, // Invoices are net 30
 			),
 
 			'BillEmail'    => array(

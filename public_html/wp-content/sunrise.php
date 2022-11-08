@@ -111,7 +111,7 @@ function main() {
 	/*
 	 * This has to run before `get_canonical_year_url()`, because that function will redirect these requests to
 	 * the latest site instead of the intended one, and would strip out the request URI.
-	 * 
+	 *
 	 * This branch specifically only processes root-relative urls which are linked to from the same domain.
 	 */
 	if ( ! $redirect ) {

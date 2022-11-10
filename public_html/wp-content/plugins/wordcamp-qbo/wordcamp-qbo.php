@@ -546,8 +546,10 @@ class WordCamp_QBO {
 				'value' => $customer_memo,
 			),
 
+			// Pick from the terms listed at https://app.sandbox.qbo.intuit.com/app/terms
+			// Get the ID via https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/term#read-a-term
 			'SalesTermRef' => array(
-				'value' => 30, // Invoices are net 30
+				'value' => 3, // Net 30
 			),
 
 			'BillEmail'    => array(

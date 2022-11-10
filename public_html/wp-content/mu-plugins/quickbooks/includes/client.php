@@ -161,15 +161,10 @@ class Client {
 	/**
 	 * The option key for storing OAuth token data.
 	 *
-	 * Note that this uses the current WordCamp environment so that separate OAuth tokens can be generated and stored
-	 * for development and production environments.
-	 *
 	 * @return string
 	 */
 	protected static function generate_oauth_option_key() {
-		$environment = ( defined( 'WORDCAMP_ENVIRONMENT' ) ) ? WORDCAMP_ENVIRONMENT : 'development';
-
-		return PLUGIN_PREFIX . '_oauth_' . $environment;
+		return PLUGIN_PREFIX . '_oauth';
 	}
 
 	/**

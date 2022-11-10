@@ -45,7 +45,7 @@ class WordCamp_QBO {
 	 * Runs during plugins_loaded.
 	 */
 	public static function plugins_loaded() {
-		self::$sandbox_mode = WORDCAMP_ENVIRONMENT !== 'production';
+		self::$sandbox_mode = 'local' === WORDCAMP_ENVIRONMENT;
 
 		$init_options = wp_parse_args( apply_filters( 'wordcamp_qbo_options', array() ), array(
 			'hmac_key'        => '',
@@ -546,7 +546,7 @@ class WordCamp_QBO {
 				'value' => $customer_memo,
 			),
 
-			// Pick from the terms listed at https://app.sandbox.qbo.intuit.com/app/terms
+			// Pick from the terms listed at https://app.qbo.intuit.com/app/terms
 			// Get the ID via https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/term#read-a-term
 			'SalesTermRef' => array(
 				'value' => 3, // Net 30

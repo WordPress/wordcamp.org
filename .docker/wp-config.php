@@ -16,6 +16,7 @@ define( 'IS_WORDCAMP_NETWORK', true );
  *                  functionality that relies on remote connections may not be available.
  */
 define( 'WORDCAMP_ENVIRONMENT', 'local' );
+define( 'WP_ENVIRONMENT_TYPE', 'local' );
 
 /*
  * Database

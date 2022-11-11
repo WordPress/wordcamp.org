@@ -8,6 +8,7 @@ defined( 'WPINC' ) or die();
 /**
  * @var WP_Post $post
  * @var string  $delete_text
+ * @var string  $invoice_url
  * @var array   $allowed_edit_statuses
  * @var bool    $current_user_can_edit_request
  * @var bool    $current_user_can_submit_request
@@ -45,8 +46,8 @@ defined( 'WPINC' ) or die();
 					<?php endif; ?>
 				</span>
 
-				<?php if ( current_user_can( 'manage_network' ) && ! empty( $post->_wcbsi_qbo_invoice_id ) ) : ?>
-					(<a href="https://qbo.intuit.com/app/invoice?txnId=<?php echo esc_attr( $post->_wcbsi_qbo_invoice_id ); ?>">View QBO Invoice</a>)
+				<?php if ( $invoice_url ) : ?>
+					(<a href="<?php echo esc_url( $invoice_url ); ?>">View QBO Invoice</a>)
 				<?php endif; ?>
 			</div> <!-- .misc-pub-section -->
 

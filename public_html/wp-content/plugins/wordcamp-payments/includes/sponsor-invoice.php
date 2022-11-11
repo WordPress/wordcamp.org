@@ -301,6 +301,15 @@ function render_status_metabox( $post ) {
 	$current_user_can_edit_request   = in_array( $post->post_status, $allowed_edit_statuses, true );
 	$current_user_can_submit_request = $wordcamp && in_array( $wordcamp->post_status, $allowed_submit_statuses, true );
 
+	$invoice_url = '';
+	if ( current_user_can( 'manage_network' ) && ! empty( $post->_wcbsi_qbo_invoice_id ) ) {
+		$invoice_url = sprintf(
+			'https://app%s.qbo.intuit.com/app/invoice?txnId=%s',
+			'local' === get_wordcamp_environment() ? '.sandbox' : '',
+			absint( $post->_wcbsi_qbo_invoice_id )
+		);
+	}
+
 	require_once dirname( __DIR__ ) . '/views/sponsor-invoice/metabox-status.php';
 }
 

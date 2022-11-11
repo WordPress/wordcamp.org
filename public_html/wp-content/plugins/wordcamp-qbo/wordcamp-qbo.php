@@ -83,15 +83,6 @@ class WordCamp_QBO {
 			)
 		);
 
-		register_rest_route(
-			'wordcamp-qbo/v1',
-			'/invoice_pdf',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( __CLASS__, 'rest_callback_invoice_pdf' ),
-				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
-			)
-		);
 
 		register_rest_route(
 			'wordcamp-qbo/v1',
@@ -642,18 +633,14 @@ class WordCamp_QBO {
 	}
 
 	/**
-	 * REST: /invoice_pdf
-	 *
 	 * Saves a PDF copy of the invoice and returns the filename
 	 *
 	 * Note: The function that eventually ends up using the file should delete it once it's done with it.
 	 *
-	 * @param WP_REST_Request $request
-	 *
 	 * @return string|WP_Error The filename on success, or a WP_Error on failure
 	 */
-	public static function rest_callback_invoice_pdf( $request ) {
-		$qbo_request = self::build_qbo_get_invoice_pdf_request( $request->get_param( 'invoice_id' ) );
+	public static function download_invoice_pdf( int $qbo_invoice_id ) {
+		$qbo_request = self::build_qbo_get_invoice_pdf_request( $qbo_invoice_id );
 		$response    = wp_remote_get( $qbo_request['url'], $qbo_request['args'] );
 
 		if ( is_wp_error( $response ) ) {
@@ -666,16 +653,16 @@ class WordCamp_QBO {
 			$valid_pdf_footer = '%%EOF' === substr( $body, strlen( $body ) - 7, 5 );
 
 			if ( $valid_pdf_header && $valid_pdf_footer ) {
-				$response['body'] = '[valid pdf body removed]'; // because the binary contents aren't printable
+				$response['body'] = "[PDF body was valid, but redacted from the log since the binary contents aren't readable]";
 
 				$filename = sprintf(
 					'%sWPCS-invoice-%d.pdf',
 					get_temp_dir(),
-					$request->get_param( 'invoice_id' )
+					$qbo_invoice_id
 				);
 
 				if ( file_put_contents( $filename, $body ) ) {
-					$result = array( 'filename' => $filename );
+					$result = $filename;
 				} else {
 					$result = new WP_Error( 'write_error', 'Failed writing PDF to disk.', compact( 'filename', 'body' ) );
 				}

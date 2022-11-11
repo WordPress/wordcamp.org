@@ -368,7 +368,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 		$sponsor_email    = get_post_meta( $sponsor_id, '_wcpt_sponsor_email_address', true );
 		$qbo_invoice_id   = get_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id',       true );
 		$status_message   = "has been sent to $sponsor_name via $sponsor_email. You will receive another notification when they have paid the invoice.";
-		$invoice_filename = WordCamp_QBO_Client::get_invoice_filename( $qbo_invoice_id );
+		$invoice_filename = WordCamp_QBO::download_invoice_pdf( $qbo_invoice_id );
 
 		Logger\log( 'get_invoice_filename', compact( 'qbo_invoice_id', 'invoice_filename' ) );
 

@@ -85,16 +85,6 @@ class WordCamp_QBO {
 
 		register_rest_route(
 			'wordcamp-qbo/v1',
-			'/invoice',
-			array(
-				'methods'             => 'GET, POST',
-				'callback'            => array( __CLASS__, 'rest_callback_invoice' ),
-				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
-			)
-		);
-
-		register_rest_route(
-			'wordcamp-qbo/v1',
 			'/invoice_pdf',
 			array(
 				'methods'             => 'GET',
@@ -313,65 +303,14 @@ class WordCamp_QBO {
 	}
 
 	/**
-	 * REST: /invoice
-	 *
-	 * Creates a new Invoice in QuickBooks and sends it to the Customer
-	 *
-	 * @param WP_REST_Request $request
-	 *
-	 * @return int|WP_Error The invoice ID on success, or a WP_Error on failure
-	 */
-	public static function rest_callback_invoice( $request ) {
-		$invoice_id = self::create_invoice(
-			$request->get_param( 'wordcamp_name'     ),
-			$request->get_param( 'sponsor'           ),
-			$request->get_param( 'currency_code'     ),
-			$request->get_param( 'qbo_class_id'      ),
-			$request->get_param( 'sponsorship_level' ),
-			$request->get_param( 'amount'            ),
-			$request->get_param( 'description'       ),
-			$request->get_param( 'statement_memo'    )
-		);
-
-		if ( is_wp_error( $invoice_id ) ) {
-			return $invoice_id;
-		}
-
-		$invoice_sent = self::send_invoice( $invoice_id );
-
-		if ( is_wp_error( $invoice_sent ) ) {
-			self::notify_invoice_failed_to_send( $invoice_id, $invoice_sent );
-		}
-
-		return $invoice_id;
-	}
-
-	/**
 	 * Creates an Invoice in QuickBooks
 	 *
-	 * @param string $wordcamp_name
-	 * @param array  $sponsor
-	 * @param string $currency_code
-	 * @param int    $class_id
-	 * @param string $sponsorship_level
-	 * @param float  $amount
-	 * @param string $description
-	 * @param string $statement_memo
+	 * This expects that the current blog has been switched to the site that hosts the invoice.
 	 *
 	 * @return int|WP_Error Invoice ID on success; error on failure
 	 */
-	protected static function create_invoice( $wordcamp_name, $sponsor, $currency_code, $class_id, $sponsorship_level, $amount, $description, $statement_memo ) {
-		$qbo_request = self::build_qbo_create_invoice_request(
-			$wordcamp_name,
-			$sponsor,
-			$currency_code,
-			$class_id,
-			$sponsorship_level,
-			$amount,
-			$description,
-			$sponsor['email-address'],
-			$statement_memo
-		);
+	public static function create_invoice( int $invoice_id ) {
+		$qbo_request = self::build_qbo_create_invoice_request( $invoice_id );
 
 		if ( is_wp_error( $qbo_request ) ) {
 			return $qbo_request;
@@ -400,45 +339,39 @@ class WordCamp_QBO {
 	/**
 	 * Build the request to create an invoice in QuickBooks
 	 *
-	 * @param string $wordcamp_name
-	 * @param array  $sponsor
-	 * @param string $currency_code
-	 * @param int    $class_id
-	 * @param string $sponsorship_level
-	 * @param float  $amount
-	 * @param string $description
-	 * @param string $customer_email
-	 * @param string $statement_memo
-	 *
 	 * @return array|WP_Error
 	 */
-	protected static function build_qbo_create_invoice_request( $wordcamp_name, $sponsor, $currency_code, $class_id, $sponsorship_level, $amount, $description, $customer_email, $statement_memo ) {
-		$customer_id = self::probably_get_customer_id( $sponsor, $currency_code );
-
-		if ( is_wp_error( $customer_id ) ) {
-			return $customer_id;
-		}
-
-		$wordcamp_name     = sanitize_text_field( $wordcamp_name     );
-		$class_id          = sanitize_text_field( $class_id          );
-		$sponsorship_level = sanitize_text_field( $sponsorship_level );
-		$amount            = floatval( $amount                       );
-		$description       = trim( sanitize_text_field( $description ) );
-		$statement_memo    = sanitize_text_field( $statement_memo    );
-
-		$sponsor = array_map( 'sanitize_text_field', $sponsor );
-
-		$line_description = $wordcamp_name;
-		if ( $sponsorship_level ) {
-			$line_description .= " - $sponsorship_level";
-		}
+	protected static function build_qbo_create_invoice_request( int $invoice_id ) {
+		$invoice_meta      = get_post_custom( $invoice_id );
+		$sponsor           = self::get_invoice_sponsor( $invoice_meta['_wcbsi_sponsor_id'][0] );
+		$sponsorship_level = self::get_sponsorship_level( $invoice_meta['_wcbsi_sponsor_id'][0] );
 
 		/*
 		 * The currency code only needs to be sanitized, not validated, because QBO will reject the invoice if
 		 * an invalid code is passed. We don't have to worry about an invoice being assigned the the home currency
 		 * by accident.
 		 */
-		$currency_code = sanitize_text_field( $currency_code );
+		$currency_code = sanitize_text_field( $invoice_meta['_wcbsi_currency'][0] );
+		$customer_id   = self::probably_get_customer_id( $sponsor, $currency_code );
+
+		if ( is_wp_error( $customer_id ) ) {
+			return $customer_id;
+		}
+
+		$wordcamp_name = sanitize_text_field( get_wordcamp_name() );
+		$class_id      = sanitize_text_field( $invoice_meta['_wcbsi_qbo_class_id'][0] );
+		$amount        = floatval( $invoice_meta['_wcbsi_amount'][0] );
+		$description   = trim( sanitize_text_field( $invoice_meta['_wcbsi_description'][0] ) );
+
+		$statement_memo = sprintf(
+			'WordCamp.org Invoice: %s',
+			esc_url_raw( admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) ) )
+		);
+
+		$line_description = $wordcamp_name;
+		if ( $sponsorship_level ) {
+			$line_description .= " - $sponsorship_level";
+		}
 
 		/*
 		 * QBO sandboxes will send invoices to whatever e-mail address you assign them, rather than sending them
@@ -448,7 +381,7 @@ class WordCamp_QBO {
 		if ( self::$sandbox_mode ) {
 			$customer_email = 'jane.doe@example.org';
 		} else {
-			$customer_email = is_email( $customer_email );
+			$customer_email = is_email( $sponsor['email-address'] );
 		}
 
 		foreach ( array( 'amount', 'customer_id', 'customer_email' ) as $field ) {
@@ -592,6 +525,56 @@ class WordCamp_QBO {
 			'url'  => $request_url,
 			'args' => $args,
 		);
+	}
+
+	/**
+	 * Get the info for an invoice's sponsor.
+	 */
+	protected static function get_invoice_sponsor( int $sponsor_id ) : array {
+		$sponsor_meta      = get_post_custom( $sponsor_id );
+
+		// The country might be the full name or a country code. We want the full name here.
+		$sponsor_country = $sponsor_meta['_wcpt_sponsor_country'][0];
+		$sponsor_country = wcorg_get_country_name_from_code( $sponsor_country ) ?: $sponsor_country;
+
+		$sponsor = array(
+			'company-name'  => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_company_name'][0] ),
+			'first-name'    => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_first_name'][0] ),
+			'last-name'     => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_last_name'][0] ),
+			'email-address' => is_email( $sponsor_meta['_wcpt_sponsor_email_address'][0] ),
+			'phone-number'  => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_phone_number'][0] ),
+			'address1'      => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_street_address1'][0] ),
+			'city'          => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_city'][0] ),
+			'state'         => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_state'][0] ),
+			'zip-code'      => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_zip_code'][0] ),
+			'country'       => sanitize_text_field( $sponsor_country ),
+		);
+
+		$sponsor['vat-number'] = isset( $sponsor_meta['_wcpt_sponsor_vat_number'][0] )
+			? sanitize_text_field( $sponsor_meta['_wcpt_sponsor_vat_number'][0] )
+			: '';
+
+		if ( isset( $sponsor_meta['_wcpt_sponsor_street_address2'][0] ) ) {
+			$sponsor['address2'] = sanitize_text_field( $sponsor_meta['_wcpt_sponsor_street_address2'][0] );
+		}
+
+		return $sponsor;
+	}
+
+	/**
+	 * Get the sponsorship level name assigned to a sponsor
+	 *
+	 * @return false|string
+	 */
+	public static function get_sponsorship_level( int $sponsor_id ) {
+		$sponsorship_level  = false;
+		$sponsorship_levels = wp_get_object_terms( $sponsor_id, 'wcb_sponsor_level' );
+
+		if ( isset( $sponsorship_levels[0]->name ) ) {
+			$sponsorship_level = $sponsorship_levels[0]->name;
+		}
+
+		return $sponsorship_level;
 	}
 
 	/**
@@ -770,7 +753,7 @@ class WordCamp_QBO {
 	/**
 	 * Get a Customer ID, either by finding an existing one, or creating a new one
 	 *
-	 * @param string $sponsor
+	 * @param array  $sponsor
 	 * @param string $currency_code
 	 *
 	 * @return int|WP_Error The customer ID if success; a WP_Error if failure

@@ -4,7 +4,7 @@ namespace WordCamp\Budgets_Dashboard\Sponsor_Invoices;
 
 use WP_Post;
 use WordCamp\Logger;
-use WordCamp_QBO_Client;
+use WordCamp_QBO, WordCamp_QBO_Client;
 use WordCamp_Budgets;
 use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
@@ -241,7 +241,7 @@ function handle_approve_invoice_request() {
 
 	switch_to_blog( $site_id );
 
-	$quickbooks_result = WordCamp_QBO_Client::send_invoice_to_quickbooks( $invoice_id );
+	$quickbooks_result = WordCamp_QBO::create_invoice( $invoice_id );
 	Logger\log( 'send_invoice', compact( 'invoice_id', 'quickbooks_result' ) );
 
 	if ( is_int( $quickbooks_result ) ) {
@@ -251,7 +251,7 @@ function handle_approve_invoice_request() {
 
 		$result = array( 'success' => 'The invoice has been approved and e-mailed to the sponsor.' );
 	} else {
-		$result = array( 'error' => $quickbooks_result );
+		$result = array( 'error' => $quickbooks_result->get_error_message() );
 	}
 
 	restore_current_blog();

@@ -534,7 +534,7 @@ function shortcode_sponsors( $attr, $content ) {
 						<?php if ( 'visible' === $attr['title'] ) : ?>
 							<?php if ( 'website' === $attr['link'] && $website ) : ?>
 								<h3>
-									<a href="<?php echo esc_attr( esc_url( $website ) ); ?>">
+									<a href="<?php echo esc_attr( esc_url( $website ) ); ?>" rel="nofollow">
 										<?php the_title(); ?>
 									</a>
 								</h3>

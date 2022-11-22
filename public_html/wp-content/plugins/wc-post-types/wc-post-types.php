@@ -69,6 +69,8 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'the_content', array( $this, 'add_video_info_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_categories_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_info_to_speaker_posts' ) );
+		add_filter( 'the_content', array( __CLASS__, 'add_nofollow_to_sponsor_links' ) );
+		add_filter( 'the_excerpt', array( __CLASS__, 'add_nofollow_to_sponsor_links' ) );
 		add_filter( 'get_post_metadata', array( $this, 'hide_featured_image_on_people' ), 10, 3 );
 
 		add_filter( 'dashboard_glance_items', array( $this, 'glance_items' ) );
@@ -1069,6 +1071,81 @@ class WordCamp_Post_Types_Plugin {
 		wp_reset_postdata();
 
 		return $content . $sessions_html;
+	}
+
+	/**
+	 * Add `rel="nofollow"` to sponsor links.
+	 *
+	 * These aren't organic, so adding `nofollow` is the right thing to do, and also avoids us and the sponsor
+	 * being penalized in rankings for not properly disclosing relationships. `sponsored` isn't used because we
+	 * don't consider it a paid link internally.
+	 *
+	 * @link https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links
+	 */
+	public static function add_nofollow_to_sponsor_links( string $content ) : string {
+		$sponsor_domains = self::get_sponsor_domains();
+
+		// Modified version of `wp_rel_nofollow()`, to only target sponsor links.
+		$content = preg_replace_callback(
+			'|<a (.+?)>|i',
+			static function( array $matches ) use ( $sponsor_domains ) : string {
+				$domain = '';
+				$text   = $matches[0];
+				$atts   = wp_kses_hair( $matches[1], wp_allowed_protocols() );
+
+				if ( ! empty( $atts['href']['value'] ) ) {
+					$url = wp_parse_url( $atts['href']['value'] );
+
+					if ( isset( $url['scheme'], $url['host'] ) ) {
+						if ( 0 === stripos( $url['scheme'], 'http' ) ) {
+							$domain = $url['host'];
+						}
+					}
+				}
+
+				if ( in_array( $domain, $sponsor_domains, true ) ) {
+					$text = wp_rel_callback( $matches, 'nofollow' );
+				}
+
+				return $text;
+			},
+			$content
+		);
+
+		return $content;
+	}
+
+	/**
+	 * Get all of the domains assigned to Sponsor posts.
+	 *
+	 * This will include both canonical and `www` domains for each sponsor.
+	 */
+	public static function get_sponsor_domains() : array {
+		$domains = array();
+
+		$sponsors = get_posts( array(
+			'fields'         => 'ids',
+			'post_type'      => 'wcb_sponsor',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+		) );
+
+		foreach ( $sponsors as $sponsor_id ) {
+			$website = get_post_meta( $sponsor_id, '_wcpt_sponsor_website', true );
+			$domain  = wp_parse_url( $website, PHP_URL_HOST );
+
+			if ( $domain ) {
+				$domains[] = $domain;
+
+				if ( 'www.' === substr( $domain, 0, 4 ) ) {
+					$domains[] = substr( $domain, 4 );
+				} else {
+					$domains[] = 'www.' . $domain;
+				}
+			}
+		}
+
+		return $domains;
 	}
 
 	/**

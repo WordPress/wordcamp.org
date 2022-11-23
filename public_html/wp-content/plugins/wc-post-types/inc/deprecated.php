@@ -553,7 +553,7 @@ function shortcode_sponsors( $attr, $content ) {
 
 						<div class="wcorg-sponsor-description">
 							<?php if ( 'website' == $attr['link'] && $website ) : ?>
-								<a href="<?php echo esc_attr( esc_url( $website ) ); ?>">
+								<a href="<?php echo esc_attr( esc_url( $website ) ); ?>" rel="nofollow">
 									<?php the_post_thumbnail( 'wcb-sponsor-logo-horizontal-2x', array( 'alt' => get_the_title() ) ); ?>
 								</a>
 							<?php elseif ( 'post' == $attr['link'] ) : ?>

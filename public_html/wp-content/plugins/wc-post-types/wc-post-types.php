@@ -69,7 +69,7 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'the_content', array( $this, 'add_video_info_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_categories_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_info_to_speaker_posts' ) );
-		add_filter( 'the_content', array( __CLASS__, 'add_nofollow_to_sponsor_links' ) );
+		add_filter( 'the_content', array( __CLASS__, 'add_nofollow_to_sponsor_links' ), 15 ); // After p2 `make_clickable`.
 		add_filter( 'the_excerpt', array( __CLASS__, 'add_nofollow_to_sponsor_links' ) );
 		add_filter( 'get_post_metadata', array( $this, 'hide_featured_image_on_people' ), 10, 3 );
 
@@ -1083,6 +1083,15 @@ class WordCamp_Post_Types_Plugin {
 	 * @link https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links
 	 */
 	public static function add_nofollow_to_sponsor_links( string $content ) : string {
+		$post = get_post();
+
+		// Add `nofollow` to all links in Sponsor post type, to match links to social media profiles etc.
+		if ( $post instanceof WP_Post && 'wcb_sponsor' === $post->post_type ) {
+			$content = wp_unslash( wp_rel_nofollow( $content ) );
+
+			return $content;
+		}
+
 		$sponsor_domains = self::get_sponsor_domains();
 
 		// Modified version of `wp_rel_nofollow()`, to only target sponsor links.

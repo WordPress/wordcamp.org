@@ -111,6 +111,8 @@ function main() {
 	/*
 	 * This has to run before `get_canonical_year_url()`, because that function will redirect these requests to
 	 * the latest site instead of the intended one, and would strip out the request URI.
+	 *
+	 * This branch specifically only processes root-relative urls which are linked to from the same domain.
 	 */
 	if ( ! $redirect ) {
 		$redirect = get_corrected_root_relative_url( $domain, $path, $_SERVER['REQUEST_URI'], $_SERVER['HTTP_REFERER'] ?? '' );
@@ -128,6 +130,15 @@ function main() {
 	// Do this one last, because it sometimes executes a database query.
 	if ( ! $redirect ) {
 		$redirect = get_canonical_year_url( $domain, $path );
+
+		/*
+		 * Keep the path components if we requested the root site.
+		 * Eg. narnia.wordcamp.org/tickets => narnia.worcamp.org/{$latest_year}/tickets
+		 *     narnia.wordcamp.org/wp-login.php => narnia.wordcamp.org/{$latest_year}/wp-login.php
+		 */
+		if ( $redirect && '/' === $path ) {
+			$redirect .= ltrim( $_SERVER['REQUEST_URI'], '/' );
+		}
 
 		if ( $redirect ) {
 			$status_code = 302;

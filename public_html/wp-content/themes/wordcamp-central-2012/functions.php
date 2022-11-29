@@ -134,8 +134,12 @@ class WordCamp_Central_Theme {
 
 				// Jetpack will do the is_email check for us
 				$jetpack_subscriptions = Jetpack_Subscriptions::init();
-				$email                 = $_REQUEST['wccentral-subscribe-email'];
-				$subscribe             = $jetpack_subscriptions->subscribe( $email, 0, false );
+				$email                 = wp_unslash( $_REQUEST['wccentral-subscribe-email'] );
+				$extra_data            = array(
+					'source'      => 'homepage-widget',
+					'server_data' => jetpack_subscriptions_cherry_pick_server_data(),
+				);
+				$subscribe             = $jetpack_subscriptions->subscribe( $email, 0, false, $extra_data );
 
 				// The following part is taken from the Jetpack subscribe widget (subscriptions.php)
 				if ( is_wp_error( $subscribe ) ) {
@@ -166,6 +170,8 @@ class WordCamp_Central_Theme {
 				} else {
 					$redirect = add_query_arg( 'subscribe', 'success' );
 				}
+
+				$redirect = remove_query_arg( array( 'wccentral-form-action', 'wccentral-subscribe-email' ), $redirect );
 
 				wp_safe_redirect( esc_url_raw( $redirect ) );
 				exit;
@@ -548,7 +554,12 @@ class WordCamp_Central_Theme {
 	 * Returns true if subscriptions are available.
 	 */
 	public static function can_subscribe() {
-		return class_exists( 'Jetpack_Subscriptions' ) && is_callable( array( 'Jetpack_Subscriptions', 'subscribe' ) );
+		return (
+			class_exists( 'Jetpack_Subscriptions' ) &&
+			is_callable( array( 'Jetpack_Subscriptions', 'init' ) ) &&
+			is_callable( array( Jetpack_Subscriptions::init(), 'subscribe' ) ) &&
+			function_exists( 'jetpack_subscriptions_cherry_pick_server_data' )
+		);
 	}
 
 	/**

@@ -78,7 +78,7 @@ function fetch_unsafe_remote_css( $remote_css_url ) {
 function sanitize_unsafe_css( $unsafe_css ) {
 	// Jetpack < 11.6 support.
 	$jetpack_custom_css_file = JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
-	if ( ! file_exists( $file ) ) {
+	if ( ! file_exists( $jetpack_custom_css_file ) ) {
 		// Jetpack 11.6+ support.
 		$jetpack_custom_css_file = JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
 	}

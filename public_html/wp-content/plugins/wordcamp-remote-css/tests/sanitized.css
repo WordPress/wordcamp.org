@@ -1,11 +1,12 @@
 /*
  * Malicious
  */
-/* Charset */
-/* Imports */
+/* Charset can the browser into interpreting the CSS as HTML, opening up XSS opportunities */
+/* Imports would allow stylesheets that haven't been sanitized */
 /* Javascript */
 body {
 	background: ;
+	background: var(foo);
 }
 
 header {
@@ -137,3 +138,12 @@ a {
 	padding-inline-start: 20px;
 	text-align: end;
 }
+
+/*
+ * Note: These files should _not_ end in a line break.
+ *
+ * If `sanitized.css` contains a break, the contents won't match the CSSTidy output because CSSTidy always trims
+ * the string. You may need to temporarily disable a setting in your IDE that automatically adds a
+ * line when making changes. In PhpStorm it's `Preferences > Editor > General > Ensure every saved file
+ * ends with a line break`.
+ */

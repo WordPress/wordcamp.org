@@ -76,14 +76,13 @@ function fetch_unsafe_remote_css( $remote_css_url ) {
  * @throws Exception
  */
 function sanitize_unsafe_css( $unsafe_css ) {
-	// Jetpack < 11.6 support.
-	$jetpack_custom_css_file = JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
-	if ( ! file_exists( $jetpack_custom_css_file ) ) {
-		// Jetpack 11.6+ support.
-		$jetpack_custom_css_file = JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
+	if ( ! class_exists( 'Jetpack_Custom_CSS_Enhancements' ) ) {
+		if ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
+			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
+		} else {
+			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
+		}
 	}
-
-	require_once $jetpack_custom_css_file;
 
 	$parser_rules_setup          = has_filter( 'csstidy_optimize_postparse', 'WordCamp\Jetpack_Tweaks\sanitize_csstidy_parsed_rules' );
 	$subvalue_sanitization_setup = has_filter( 'csstidy_optimize_subvalue',  'WordCamp\Jetpack_Tweaks\sanitize_csstidy_subvalues'    );

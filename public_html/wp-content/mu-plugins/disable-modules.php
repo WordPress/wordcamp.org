@@ -3,7 +3,12 @@ namespace WordCamp\Jetpack_Tweaks\DisabledModules;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'jetpack_get_available_modules', __NAMESPACE__ . '\disable_modules' );
+/**
+ * Disable Jetpack Modules which are not applicable to WordCamp.org.
+ *
+ * @param array $modules The Jetpack modules.
+ * @return array
+ */
 function disable_modules( $modules ) {
 	// WordCamp infrastructure has monitoring in place which alerts those who can resolve downtime issues.
 	unset( $modules['monitor'] );
@@ -13,3 +18,4 @@ function disable_modules( $modules ) {
 
 	return $modules;
 }
+add_filter( 'jetpack_get_available_modules', __NAMESPACE__ . '\disable_modules' );

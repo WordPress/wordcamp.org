@@ -242,7 +242,7 @@ function handle_approve_invoice_request() {
 	switch_to_blog( $site_id );
 
 	$quickbooks_result = WordCamp_QBO::create_invoice( $invoice_id );
-	Logger\log( 'send_invoice', compact( 'invoice_id', 'quickbooks_result' ) );
+	Logger\log( 'create_invoice', compact( 'invoice_id', 'quickbooks_result' ) );
 
 	if ( is_int( $quickbooks_result ) ) {
 		update_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id', absint( $quickbooks_result ) );

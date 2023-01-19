@@ -318,7 +318,12 @@ class WordCamp_QBO {
 			$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 			if ( isset( $body['Invoice']['Id'] ) ) {
-				$result = absint( $body['Invoice']['Id'] );
+				$result       = absint( $body['Invoice']['Id'] );
+				$invoice_sent = self::send_invoice( $result );
+
+				if ( is_wp_error( $invoice_sent ) ) {
+					self::notify_invoice_failed_to_send( $invoice_id, $invoice_sent );
+				}
 			} else {
 				$result = new WP_Error( 'empty_body', 'Could not decode invoice result.', $response );
 			}

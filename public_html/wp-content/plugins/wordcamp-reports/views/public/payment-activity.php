@@ -47,7 +47,14 @@ use WordCamp\Reports\Report;
 
 		<div class="field_wordcamp-id">
 			<label for="wordcamp-id">WordCamp <span>(optional)</span></label>
-			<?php echo get_wordcamp_dropdown( 'wordcamp-id', array(), $wordcamp_id ); ?>
+			<?php if ( ! isset( $_GET[ 'action' ] ) ) {
+				// Show only latest 100 WordCamps by default
+				echo get_wordcamp_dropdown( 'wordcamp-id', array( 'posts_per_page' => 100, 'order' => 'DESC' ), $wordcamp_id );
+			} else {
+				// If something is being searched, return WordCamps for that year, or the default latest year, to reduce memory usage
+				$wc_year = ( isset( $years ) ) ? $years : date( 'Y' );
+				echo get_wordcamp_dropdown( 'wordcamp-id', array( 'date_query' => array( 'year' => $year, 'compare' => '=' ) ), $wordcamp_id ); 
+			} ?>
 		</div>
 
 		<div class="submit_show-results">

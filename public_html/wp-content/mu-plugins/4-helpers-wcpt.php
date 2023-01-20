@@ -252,7 +252,7 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
 function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(), $selected = 0, $cached = false ) {
 	$cache_key = 'wc_dropdown_' . md5( serialize( $query_options ) );
 	$cached_data = get_transient( $cache_key );
-	
+
 	if ( $cache_data && $cached ) {
 		$wordcamps = $cached_data;
 	} else {
@@ -284,7 +284,15 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) );
 					$meta = $wordcamp->meta['Start Date (YYYY-mm-dd)'][0];
 				}
-				$wordcamps_cached[] = (object) array( 'ID' => $wordcamp->ID, 'post_title' => $wordcamp->post_title, 'meta' => array( 'Start Date (YYYY-mm-dd)' => array( $meta ) ) );
+				$wordcamps_cached[] = (object) array(
+					'ID' => $wordcamp->ID,
+					'post_title' => $wordcamp->post_title,
+					'meta' => array( 
+						'Start Date (YYYY-mm-dd)' => array( 
+							$meta 
+						)
+					)
+				);
 
 				?>
 			</option>
@@ -299,7 +307,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 	<?php
 
-	set_transient( $cache_key, $wordcamps_cached, HOUR_IN_SECONDS );	
+	set_transient( $cache_key, $wordcamps_cached, HOUR_IN_SECONDS );
 	return ob_get_clean();
 }
 

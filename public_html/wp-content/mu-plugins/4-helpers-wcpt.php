@@ -287,11 +287,11 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 				$wordcamps_cached[] = (object) array(
 					'ID' => $wordcamp->ID,
 					'post_title' => $wordcamp->post_title,
-					'meta' => array( 
-						'Start Date (YYYY-mm-dd)' => array( 
-							$meta 
-						)
-					)
+					'meta' => array(
+						'Start Date (YYYY-mm-dd)' => array(
+							$meta,
+						),
+					),
 				);
 
 				?>

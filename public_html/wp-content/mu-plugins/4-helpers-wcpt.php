@@ -245,16 +245,25 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
  * @param string $name          Optional. The `name` attribute for the `select` element. Defaults to `wordcamp_id`.
  * @param array  $query_options Optional. Extra arguments to pass to `get_posts()`. Defaults to the values in `get_wordcamps()`.
  * @param int    $selected      Optional. The list option to select. Defaults to not selecting any.
+ * @param bool   $cached        Optional. Cache the data. Default false.
  *
  * @return string The HTML for the <select> list.
  */
-function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(), $selected = 0 ) {
-	$wordcamps = get_wordcamps( $query_options );
+function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(), $selected = 0, $cached = false ) {
+	$cache_key = 'wc_dropdown_' . md5( serialize( $query_options ) );
+	$cached_data = get_transient( $cache_key );
+	
+	if ( $cache_data && $cached ) {
+		$wordcamps = $cached_data;
+	} else {
+		$wordcamps = get_wordcamps( $query_options );
+	}
 
 	wp_enqueue_script( 'select2' );
 	wp_enqueue_style(  'select2' );
 
 	ob_start();
+	$wordcamps_cached = array();
 
 	?>
 
@@ -270,9 +279,12 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 				<?php
 
 				echo esc_html( $wordcamp->post_title );
+				$meta = '';
 				if ( ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
 					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) );
+					$meta = $wordcamp->meta['Start Date (YYYY-mm-dd)'][0];
 				}
+				$wordcamps_cached[] = (object) array( 'ID' => $wordcamp->ID, 'post_title' => $wordcamp->post_title, 'meta' => array( 'Start Date (YYYY-mm-dd)' => array( $meta ) ) );
 
 				?>
 			</option>
@@ -287,6 +299,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 	<?php
 
+	set_transient( $cache_key, $wordcamps_cached, HOUR_IN_SECONDS );	
 	return ob_get_clean();
 }
 

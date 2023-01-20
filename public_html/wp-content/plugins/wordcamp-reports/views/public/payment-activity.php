@@ -47,7 +47,7 @@ use WordCamp\Reports\Report;
 
 		<div class="field_wordcamp-id">
 			<label for="wordcamp-id">WordCamp <span>(optional)</span></label>
-			<?php echo get_wordcamp_dropdown( 'wordcamp-id', array(), $wordcamp_id, true ); ?>
+			<?php echo get_wordcamp_dropdown( 'wordcamp-id', array(), $wordcamp_id, true ); // phpcs:ignore -- escaped in function. ?>
 		</div>
 
 		<div class="submit_show-results">

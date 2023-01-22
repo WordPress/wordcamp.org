@@ -1804,12 +1804,20 @@ class CampTix_Plugin {
 	function field_text( $args ) {
 		?>
 		<input type="text" name="<?php echo esc_attr( $args['name'] ); ?>" value="<?php echo esc_attr( $args['value'] ); ?>" class="regular-text" />
+
+		<?php if ( isset( $args['description'] ) ) : ?>
+		<p class="description"><?php echo wp_kses_data( $args['description'] ); ?></p>
+		<?php endif; ?>
 		<?php
 	}
 
 	function field_textarea( $args ) {
 		?>
 		<textarea class="large-text" rows="5" name="<?php echo esc_attr( $args['name'] ); ?>"><?php echo esc_textarea( $args['value'] ); ?></textarea>
+
+		<?php if ( isset( $args['description'] ) ) : ?>
+		<p class="description"><?php echo wp_kses_data( $args['description'] ); ?></p>
+		<?php endif; ?>
 		<?php
 	}
 

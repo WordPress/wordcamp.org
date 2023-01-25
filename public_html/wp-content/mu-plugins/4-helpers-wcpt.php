@@ -253,7 +253,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 	$cache_key = 'wc_dropdown_' . md5( serialize( $query_options ) );
 	$cached_data = get_transient( $cache_key );
 
-	if ( $cache_data && $cached ) {
+	if ( $cached_data && $cached ) {
 		$wordcamps = $cached_data;
 	} else {
 		$wordcamps = get_wordcamps( $query_options );

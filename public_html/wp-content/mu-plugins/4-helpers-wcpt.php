@@ -249,7 +249,8 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
  * @return string The HTML for the <select> list.
  */
 function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(), $selected = 0 ) {
-	$wordcamps = get_wordcamps( $query_options );
+	global $wpdb;
+	$wordcamps = $wpdb->get_results( "SELECT wc_5_posts.ID, wc_5_posts.post_title, wc_5_posts.post_status, wc_5_postmeta.meta_value  as start_date FROM wc_5_posts LEFT JOIN wc_5_postmeta ON wc_5_postmeta.post_id = wc_5_posts.ID WHERE 1=1 AND wc_5_posts.post_type =  'wordcamp' AND ((wc_5_posts.post_status <> 'trash' AND wc_5_posts.post_status <> 'auto-draft' AND wc_5_posts.post_status <> 'spam')) AND wc_5_postmeta.meta_key = 'Start Date (YYYY-mm-dd)' ORDER BY `wc_5_posts`.`ID` DESC" );
 
 	wp_enqueue_script( 'select2' );
 	wp_enqueue_style(  'select2' );
@@ -270,8 +271,8 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 				<?php
 
 				echo esc_html( $wordcamp->post_title );
-				if ( ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
-					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) );
+				if ( ! empty( $wordcamp->start_date ) ) {
+					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->start_date ) );
 				}
 
 				?>

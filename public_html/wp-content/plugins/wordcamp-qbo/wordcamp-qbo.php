@@ -769,7 +769,7 @@ class WordCamp_QBO {
 	 * @return int|false|WP_Error A customer ID as integer, if one was found; false if no match was found; a WP_Error if an error occurred.
 	 */
 	protected static function get_customer( $customer_name, $currency_code ) {
-		$qbo_request = self::build_qbo_get_customer_request( $customer_name );
+		$qbo_request = self::build_qbo_get_customer_request( $customer_name, $currency_code );
 
 		if ( is_wp_error( $qbo_request ) ) {
 			return $qbo_request;
@@ -786,7 +786,7 @@ class WordCamp_QBO {
 			$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 			if ( isset( $body['QueryResponse']['Customer'][0]['Id'] ) ) {
-				$result = self::pluck_customer_id_by_currency( $body['QueryResponse']['Customer'], $currency_code );
+				$result = absint( $body['QueryResponse']['Customer'][0]['Id'] );
 			} elseif ( isset( $body['QueryResponse'] ) && 0 === count( $body['QueryResponse'] ) ) {
 				$result = false;
 			} else {
@@ -804,10 +804,11 @@ class WordCamp_QBO {
 	 *
 	 * @return array|WP_Error
 	 */
-	protected static function build_qbo_get_customer_request( $customer_name ) {
+	protected static function build_qbo_get_customer_request( $customer_name, $currency_code ) {
 		global $wpdb;
 
 		$customer_name = sanitize_text_field( $customer_name );
+		$customer_name = str_replace( ':', '-', $customer_name );
 
 		self::load_options();
 		$oauth_header = self::qbo_client()->get_oauth_header();
@@ -820,9 +821,14 @@ class WordCamp_QBO {
 		);
 
 		$request_url_query = array(
+			// QBO uses a custom query language based on (generic) SQL, but $wpdb->prepare still works in this context.
+			// @link https://developer.intuit.com/app/developer/qbo/docs/learn/explore-the-quickbooks-online-api/data-queries
 			'query' => $wpdb->prepare(
-				"SELECT * FROM Customer WHERE CompanyName = '%s'",
-				str_replace( ':', '-', $customer_name )
+				// We can't filter by `CurrencyRef`, but `create_customer()` includes it the DisplayName, so we
+				// can use that instead.
+				// @link https://help.developer.intuit.com/s/question/0D5G000004Dk7XKKAZ/how-to-query-with-currencyref-condition-in-customerqb-online
+				"SELECT * FROM Customer WHERE DisplayName = '%s'",
+				self::get_company_display_name( $customer_name, $currency_code )
 			),
 		);
 
@@ -834,7 +840,7 @@ class WordCamp_QBO {
 			),
 		);
 
-		$request_url_query = array_map( 'rawurlencode', $request_url_query ); // has to be done after get_oauth_header(), or oauth_signature won't be generated correctly
+		$request_url_query = array_map( 'rawurlencode', $request_url_query ); // Has to be done after get_oauth_header(), or oauth_signature won't be generated correctly.
 		$request_url       = add_query_arg( $request_url_query, $request_url );
 
 		return array(
@@ -844,27 +850,15 @@ class WordCamp_QBO {
 	}
 
 	/**
-	 * Pluck a Customer out of an array based on their currency
+	 * Get the DisplayName for a company.
 	 *
-	 * QuickBook's API doesn't allow you to filter query results based on a CurrencyRef, so we have to do it
-	 * manually.
+	 * This should be used when creating and fetching Customers, to ensure they have consistent names. The currency
+	 * is necessary because a Customer in QBO can only have one currency (I think).
 	 *
-	 * @param array  $customers
-	 * @param string $currency_code
-	 *
-	 * @return int|false A customer ID on success, or false on failure
+	 * @link https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/customer#the-customer-object
 	 */
-	protected static function pluck_customer_id_by_currency( $customers, $currency_code ) {
-		$customer_id = false;
-
-		foreach ( $customers as $customer ) {
-			if ( $customer['CurrencyRef']['value'] === $currency_code ) {
-				$customer_id = absint( $customer['Id'] );
-				break;
-			}
-		}
-
-		return $customer_id;
+	public static function get_company_display_name( string $customer_name, string $currency_code ) : string {
+		return sprintf( '%s - %s', $customer_name, $currency_code );
 	}
 
 	/**
@@ -944,7 +938,7 @@ class WordCamp_QBO {
 			'GivenName'               => $sponsor['first-name'],
 			'FamilyName'              => $sponsor['last-name'],
 			'CompanyName'             => $sponsor['company-name'],
-			'DisplayName'             => sprintf( '%s - %s', $sponsor['company-name'], $currency_code ),
+			'DisplayName'             => self::get_company_display_name( $sponsor['company-name'], $currency_code ),
 			'PrintOnCheckName'        => $sponsor['company-name'],
 
 			'PrimaryPhone'            => array(

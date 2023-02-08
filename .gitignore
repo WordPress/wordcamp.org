@@ -78,11 +78,13 @@ public_html/wp-content/plugins/public-post-preview/
 public_html/wp-content/plugins/pwa/
 public_html/wp-content/plugins/supportflow
 public_html/wp-content/plugins/tagregator
+public_html/wp-content/plugins/two-factor
 public_html/wp-content/plugins/wordpress-importer
 public_html/wp-content/plugins/wp-cldr
 public_html/wp-content/plugins/wp-multibyte-patch
 public_html/wp-content/plugins/wp-super-cache
 public_html/wp-content/plugins/wporg-profiles-wp-activity-notifier/
+public_html/wp-content/plugins/wporg-two-factor
 
 
 #

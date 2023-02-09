@@ -7,7 +7,7 @@ use WP_Post;
 defined( 'WPINC' ) || die();
 
 class Health_Advisory_Field extends CampTix_Addon {
-	const SLUG = 'covid-waiver';
+	const SLUG = 'health-advisory';
 
 	/**
 	 * Hook into WordPress and Camptix.

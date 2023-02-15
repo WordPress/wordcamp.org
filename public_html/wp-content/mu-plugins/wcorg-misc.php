@@ -561,6 +561,7 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 		'camptix-trustcard/camptix-trustcard.php',
 		'camptix-trustpay/camptix-trustpay.php',
 		'edit-flow/edit_flow.php',
+		'lang-attribute/lang-attribute.php',
 		'liveblog/liveblog.php',
 		'public-post-preview/public-post-preview.php',
 		'pwa/pwa.php',

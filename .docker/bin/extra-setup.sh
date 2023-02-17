@@ -37,6 +37,7 @@ function do_extra_setup() {
 
   if [ ! -f $PKG_PATH/composer.lock ]; then
     echo "Installing additional plugins and themes... "
+    php composer.phar config --no-plugins allow-plugins.composer/installers true
     php composer.phar install
   fi
 }

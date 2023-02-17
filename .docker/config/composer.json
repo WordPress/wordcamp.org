@@ -9,6 +9,9 @@
 	"config": {
 		"platform": {
 			"php": "7.2"
+		},
+		"allow-plugins": {
+			"composer/installers": true
 		}
 	},
 	"extra": {

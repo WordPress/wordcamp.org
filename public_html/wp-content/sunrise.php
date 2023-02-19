@@ -582,6 +582,12 @@ function get_canonical_year_url( $domain, $path ) {
 				return "https://us.wordcamp.$tld/2023/";
 			}
 			break;
+
+		case "asia.wordcamp.$tld":
+			if ( time() <= strtotime( '2023-02-20' ) ) {
+				return "https://asia.wordcamp.$tld/2023/";
+			}
+			break;
 	}
 
 	$latest = $wpdb->get_row( $wpdb->prepare( "

@@ -584,7 +584,7 @@ function get_canonical_year_url( $domain, $path ) {
 			break;
 
 		case "asia.wordcamp.$tld":
-			if ( time() <= strtotime( '2023-02-19' ) ) {
+			if ( time() <= strtotime( '2023-02-20' ) ) {
 				return "https://asia.wordcamp.$tld/2023/";
 			}
 			break;

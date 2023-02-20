@@ -46,7 +46,7 @@ if ( 'buddycamp.test' === $_SERVER['HTTP_HOST'] || '.buddycamp.test' === substr(
 
 define( 'WP_ALLOW_MULTISITE',   true ); // Temporary workaround for https://github.com/Automattic/wp-super-cache/issues/97.
 define( 'MULTISITE',            true );
-define( 'SUBDOMAIN_INSTALL',    true );
+define( 'SUBDOMAIN_INSTALL',    false );
 define( 'DOMAIN_CURRENT_SITE',  $wcorg_domain_current_site );
 define( 'PATH_CURRENT_SITE',    '/' );
 define( 'SITE_ID_CURRENT_SITE',  1 );

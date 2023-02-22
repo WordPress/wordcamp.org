@@ -56,7 +56,6 @@ function _get_network_plugin_state_list( $state ) {
 			'wordcamp-qbo-client/wordcamp-qbo-client.php',
 			'wordpress-importer/wordpress-importer.php',
 			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
-			'json-rest-api/plugin.php',
 			'wp-super-cache/wp-cache.php',
 		),
 		'deactivated' => array(

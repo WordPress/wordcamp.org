@@ -33,7 +33,6 @@ function manually_load_plugins() {
 	require_once dirname( __DIR__ ) . '/lets-encrypt-helper.php';
 	require_once dirname( __DIR__ ) . '/latest-site-hints.php';
 	require_once dirname( __DIR__ ) . '/trusted-deputy-capabilities.php';
-	require_once dirname( __DIR__ ) . '/wcorg-json-api.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
 }
 

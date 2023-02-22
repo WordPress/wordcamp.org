@@ -7,6 +7,7 @@
  */
 class WordCamp_Post_Types_Plugin_Back_Compat {
 	protected $stylesheet = '';
+	protected $template   = '';
 
 	function __construct() {
 

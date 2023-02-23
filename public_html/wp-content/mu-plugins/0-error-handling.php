@@ -168,7 +168,6 @@ function is_third_party_file( $file ) {
 		// Gutenberg isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
 		WP_PLUGIN_DIR . '/hyperdb/',
 		// Jetpack isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
-		WP_PLUGIN_DIR . '/json-rest-api/',
 		WP_PLUGIN_DIR . '/liveblog/',
 		WP_PLUGIN_DIR . '/public-post-preview/',
 		WP_PLUGIN_DIR . '/pwa/',

@@ -1957,6 +1957,8 @@ class WordCamp_Post_Types_Plugin {
 	 * @return string Resulting status.
 	 */
 	public function default_comment_ping_status( $status ) {
+		require_once ABSPATH . 'wp-admin/includes/screen.php';
+
 		$screen = get_current_screen();
 		if ( ! empty( $screen->post_type ) && 'wcb_speaker' === $screen->post_type ) {
 			$status = 'closed';

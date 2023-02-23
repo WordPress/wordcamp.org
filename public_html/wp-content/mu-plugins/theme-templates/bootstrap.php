@@ -66,6 +66,8 @@ function get_offline_page() {
 function get_offline_content() {
 	$page = get_offline_page();
 	if ( $page ) {
+		require_once WP_CONTENT_DIR . '/mu-plugins/blocks/includes/content.php';
+
 		return array(
 			'title'   => apply_filters( 'the_title', $page->post_title, $page->ID ),
 			'content' => BlockUtilities\get_all_the_content( $page ),

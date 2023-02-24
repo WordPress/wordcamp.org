@@ -250,7 +250,21 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
  */
 function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(), $selected = 0 ) {
 	global $wpdb;
-	$wordcamps = $wpdb->get_results( "SELECT wc_5_posts.ID, wc_5_posts.post_title, wc_5_postmeta.meta_value as start_date FROM wc_5_posts LEFT JOIN wc_5_postmeta ON wc_5_postmeta.post_id = wc_5_posts.ID WHERE 1=1 AND wc_5_posts.post_type = 'wordcamp' AND ((wc_5_posts.post_status <> 'trash' AND wc_5_posts.post_status <> 'auto-draft' AND wc_5_posts.post_status <> 'spam')) AND wc_5_postmeta.meta_key = 'Start Date (YYYY-mm-dd)' ORDER BY `wc_5_posts`.`ID` DESC" );
+
+	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+
+	$wordcamps = $wpdb->get_results( "
+		SELECT $wpdb->posts.ID, $wpdb->posts.post_title, $wpdb->postmeta.meta_value AS start_date
+		FROM $wpdb->posts
+			LEFT JOIN $wpdb->postmeta ON $wpdb->postmeta.post_id = $wpdb->posts.ID
+		WHERE
+			$wpdb->posts.post_type = 'wordcamp' AND
+			( $wpdb->posts.post_status <> 'trash' AND $wpdb->posts.post_status <> 'auto-draft' AND $wpdb->posts.post_status <> 'spam' ) AND
+			$wpdb->postmeta.meta_key = 'Start Date (YYYY-mm-dd)'
+		ORDER BY `$wpdb->posts`.`ID` DESC
+	 " );
+
+	restore_current_blog();
 
 	wp_enqueue_script( 'select2' );
 	wp_enqueue_style(  'select2' );

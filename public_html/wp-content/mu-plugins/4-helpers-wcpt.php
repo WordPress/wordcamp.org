@@ -252,7 +252,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 	global $wpdb;
 
 	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
-	
+
 	if ( empty( $query_options ) {
 		$wordcamps = $wpdb->get_results( "
 			SELECT $wpdb->posts.ID, $wpdb->posts.post_title, $wpdb->postmeta.meta_value AS start_date
@@ -266,7 +266,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 		 " );
 	} else {
 		// Default to standard query when query_options is sent.
-		$wordcamps = get_wordcamps( $query_options );	
+		$wordcamps = get_wordcamps( $query_options );
 	}
 	restore_current_blog();
 

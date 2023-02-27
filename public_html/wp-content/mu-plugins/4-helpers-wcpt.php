@@ -289,7 +289,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 				<?php
 
 				echo esc_html( $wordcamp->post_title );
-				if ( ! empty( $wordcamp->start_date && false === strpos( $wordcamp->post_title, gmdate( 'Y', $wordcamp->start_date ) ) ) {
+				if ( ! empty( $wordcamp->start_date ) && false === strpos( $wordcamp->post_title, gmdate( 'Y', $wordcamp->start_date ) ) ) {
 					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->start_date ) );
 				} else if ( ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) && false === strpos( $wordcamp->post_title, gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) ) {
 					// Catches when query_options is sent, since format is different.

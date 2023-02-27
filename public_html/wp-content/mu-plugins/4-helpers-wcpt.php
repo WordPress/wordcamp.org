@@ -253,17 +253,21 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
 
-	$wordcamps = $wpdb->get_results( "
-		SELECT $wpdb->posts.ID, $wpdb->posts.post_title, $wpdb->postmeta.meta_value AS start_date
-		FROM $wpdb->posts
-			LEFT JOIN $wpdb->postmeta ON $wpdb->postmeta.post_id = $wpdb->posts.ID
-		WHERE
-			$wpdb->posts.post_type = 'wordcamp' AND
-			( $wpdb->posts.post_status <> 'trash' AND $wpdb->posts.post_status <> 'auto-draft' AND $wpdb->posts.post_status <> 'spam' ) AND
-			$wpdb->postmeta.meta_key = 'Start Date (YYYY-mm-dd)'
-		ORDER BY `$wpdb->posts`.`ID` DESC
-	 " );
-
+	if ( empty( $query_options ) ) {
+		$wordcamps = $wpdb->get_results( "
+			SELECT $wpdb->posts.ID, $wpdb->posts.post_title, $wpdb->postmeta.meta_value AS start_date
+			FROM $wpdb->posts
+				LEFT JOIN $wpdb->postmeta ON $wpdb->postmeta.post_id = $wpdb->posts.ID
+			WHERE
+				$wpdb->posts.post_type = 'wordcamp' AND
+				( $wpdb->posts.post_status <> 'trash' AND $wpdb->posts.post_status <> 'auto-draft' AND $wpdb->posts.post_status <> 'spam' ) AND
+				$wpdb->postmeta.meta_key = 'Start Date (YYYY-mm-dd)'
+			ORDER BY `$wpdb->posts`.`ID` DESC
+		 " );
+	} else {
+		// Default to standard query when query_options is sent.
+		$wordcamps = get_wordcamps( $query_options );
+	}
 	restore_current_blog();
 
 	wp_enqueue_script( 'select2' );
@@ -285,10 +289,12 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 				<?php
 
 				echo esc_html( $wordcamp->post_title );
-				if ( ! empty( $wordcamp->start_date ) ) {
+				if ( ! empty( $wordcamp->start_date ) && false === strpos( $wordcamp->post_title, gmdate( 'Y', $wordcamp->start_date ) ) ) {
 					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->start_date ) );
+				} else if ( ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) && false === strpos( $wordcamp->post_title, gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ) ) {
+					// Catches when query_options is sent, since format is different.
+					echo ' ' . esc_html( gmdate( 'Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) );
 				}
-
 				?>
 			</option>
 		<?php endforeach; ?>

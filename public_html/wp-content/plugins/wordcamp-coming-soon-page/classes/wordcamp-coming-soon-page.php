@@ -326,6 +326,8 @@ class WordCamp_Coming_Soon_Page {
 		$all_pages = get_posts( array(
 			'post_type'      => 'page',
 			'posts_per_page' => -1,
+			'orderby'        => 'date',
+			'order'          => 'ASC',
 		) );
 
 		foreach ( $all_pages as $page ) {

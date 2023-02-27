@@ -253,7 +253,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
 
-	if ( empty( $query_options ) {
+	if ( empty( $query_options ) ) {
 		$wordcamps = $wpdb->get_results( "
 			SELECT $wpdb->posts.ID, $wpdb->posts.post_title, $wpdb->postmeta.meta_value AS start_date
 			FROM $wpdb->posts

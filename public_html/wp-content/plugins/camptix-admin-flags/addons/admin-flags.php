@@ -354,7 +354,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		}
 
 		$meta_counts = $wpdb->get_results( "
-			SELECT meta_value, COUNT( post_id ) AS count
+			SELECT meta_value, COUNT( DISTINCT( post_id ) ) AS count
 			FROM {$wpdb->postmeta}
 			WHERE meta_key = 'camptix-admin-flag'
 			GROUP BY meta_value",

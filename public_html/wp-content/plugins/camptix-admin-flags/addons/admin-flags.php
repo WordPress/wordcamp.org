@@ -509,7 +509,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		}
 
 		if ( 'enable' === $command ) {
-			add_post_meta( $attendee_id, 'camptix-admin-flag', $key );
+			update_post_meta( $attendee_id, 'camptix-admin-flag', $key );
 		} elseif ( 'disable' === $command ) {
 			delete_post_meta( $attendee_id, 'camptix-admin-flag', $key );
 		}

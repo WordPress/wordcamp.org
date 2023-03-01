@@ -1,5 +1,4 @@
 <?php
-
 /**
  * T-shirt Field Addon for CampTix
  */

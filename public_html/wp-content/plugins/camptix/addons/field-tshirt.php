@@ -88,7 +88,7 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 
 			restore_current_blog();
 			// Reset DB query log each time, to reduce memory usage.
-            self::reset_db_query_log();
+			self::reset_db_query_log();
 		}
 
 		update_site_option( 'tix_aggregated_tshirt_sizes', $sizes_by_site );

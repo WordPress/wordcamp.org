@@ -92,7 +92,7 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 
 		update_site_option( 'tix_aggregated_tshirt_sizes', $sizes_by_site );
 	}
-	
+
 	/**
 	 * Resets the WordPress DB query log.
 	 * When multiple queries are run, the query log fills up.

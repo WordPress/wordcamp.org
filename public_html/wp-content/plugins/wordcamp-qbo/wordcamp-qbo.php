@@ -361,13 +361,13 @@ class WordCamp_QBO {
 		$internal_reference = trim( sanitize_text_field( $invoice_meta['_wcbsi_internal_reference'][0] ?? '' ) );
 
 		if ( $internal_reference ) {
-			$internal_reference = "Sponsor's internal reference: $internal_reference";
+			$internal_reference = "Sponsor's internal reference: $internal_reference\n\n";
 		}
 
 		$statement_memo = sprintf(
-			"WordCamp.org Invoice: %s\n\n%s",
-			esc_url_raw( admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) ) ),
-			$internal_reference
+			"%sWordCamp.org Invoice: %s",
+			$internal_reference,
+			esc_url_raw( admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) ) )
 		);
 
 		$line_description = $wordcamp_name;

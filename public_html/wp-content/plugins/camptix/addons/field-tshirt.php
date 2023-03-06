@@ -130,11 +130,11 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 					'posts_per_page' => 1000,
 					'paged'          => $i,
 				) );
-				
+
 				if ( empty( $attendees ) ) {
 					break;
 				}
-				
+
 				foreach ( $attendees as $attendee ) {
 					if ( empty( $attendee->tix_questions[ $question->ID ] ) ) {
 						continue;

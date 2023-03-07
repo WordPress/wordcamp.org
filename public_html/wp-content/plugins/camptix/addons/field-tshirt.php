@@ -122,24 +122,32 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 			return $size_counts;
 		}
 
-		$attendees = get_posts( array(
-			'post_type'      => 'tix_attendee',
-			'posts_per_page' => 10000,
-		) );
-
 		foreach ( $questions as $question ) {
-			foreach ( $attendees as $attendee ) {
-				if ( empty( $attendee->tix_questions[ $question->ID ] ) ) {
-					continue;
+			// Loop around attendees in pages of 1000 to avoid memory issues.
+			for ( $i = 1; $i <= 10; $i++ ) {
+				$attendees = get_posts( array(
+					'post_type'      => 'tix_attendee',
+					'posts_per_page' => 1000,
+					'paged'          => $i,
+				) );
+
+				if ( empty( $attendees ) ) {
+					break;
 				}
 
-				$size = $attendee->tix_questions[ $question->ID ];
+				foreach ( $attendees as $attendee ) {
+					if ( empty( $attendee->tix_questions[ $question->ID ] ) ) {
+						continue;
+					}
 
-				if ( empty( $size_counts[ $size ] ) ) {
-					$size_counts[ $size ] = 0;
+					$size = $attendee->tix_questions[ $question->ID ];
+
+					if ( empty( $size_counts[ $size ] ) ) {
+						$size_counts[ $size ] = 0;
+					}
+
+					$size_counts[ $size ]++;
 				}
-
-				$size_counts[ $size ]++;
 			}
 		}
 

@@ -730,6 +730,19 @@ function get_donation_string() {
 }
 
 /**
+ * Get a string for HTML email footers to link to the WP swag store.
+ *
+ * @return string
+ */
+function get_swag_store_string() {
+	return sprintf(
+	/* translators: %s is a placeholder for a URL. */
+		__( 'Wear your love of WordPress today with this exclusive <b>10% WordCamp discount</b> at the <a href="%s">WordPress Swag Store</a>!', 'wordcamporg' ),
+		'https://mercantile.wordpress.org/shop/?utm_source=receipt&utm_medium=email&utm_campaign=mercantile&utm_content=wordcamp_discount'
+	);
+}
+
+/**
  * Get a sponsorship region description.
  *
  * The two sponsorship regions currently in use are hard-coded so they can be translated. If a different region is
@@ -863,11 +876,12 @@ function modify_shortcode_contents( $shortcode_contents, $tix_action ) {
 
 			$sponsors_string = get_global_sponsors_string();
 			$donation_string = get_donation_string();
+			$swag_string = get_swag_store_string();
 
 			if ( false !== strpos( $shortcode_contents, $content_end ) ) {
 				$shortcode_contents = str_replace(
 					$content_end,
-					wpautop( "$sponsors_string\n\n$donation_string" ) . $content_end,
+					wpautop( "$sponsors_string\n\n$donation_string\n\n$swag_string" ) . $content_end,
 					$shortcode_contents
 				);
 			}

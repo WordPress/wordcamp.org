@@ -134,6 +134,29 @@ function redact_keys( & $data ) {
 }
 
 /**
+ * Redact sensitive values from URL query parameters.
+ *
+ * There are rare situations where this is needed, like `wp-json/wordcamp-letsencrypt/v1/domains-dehydrated`.
+ */
+function redact_url( string $raw_url ) : string {
+	$redacted_params = array();
+	$parsed_url      = wp_parse_url( $raw_url );
+	wp_parse_str( $parsed_url['query'] ?? '', $redacted_params );
+	$redacted_params = redact_keys( $redacted_params );
+
+	$redacted_url = sprintf(
+		'%s://%s%s',
+		$parsed_url['scheme'] ?? '',
+		$parsed_url['host'] ?? '',
+		$parsed_url['path'] ?? '',
+	);
+
+	$redacted_url = add_query_arg( $redacted_params, $redacted_url );
+
+	return $redacted_url;
+}
+
+/**
  * Generate a unique ID for the current request
  *
  * This is useful when debugging race conditions, etc, so that you can identify which log entries belong to each thread.

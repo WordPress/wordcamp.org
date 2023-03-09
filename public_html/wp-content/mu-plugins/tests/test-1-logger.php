@@ -1,7 +1,7 @@
 <?php
 
 namespace WordCamp\Logger\Tests;
-use function WordCamp\Logger\{ redact_keys };
+use function WordCamp\Logger\{ redact_keys, redact_url };
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
@@ -98,6 +98,54 @@ class Test_Logger extends WP_UnitTestCase {
 					'authorization' => '[redacted]',
 					'my_apikey'     => '[redacted]',
 				),
+			),
+		);
+
+		return $cases;
+	}
+
+	/**
+	 * @covers WordCamp\Logger\redact_url
+	 *
+	 * @dataProvider data_redact_url
+	 */
+	public function test_redact_url( string $raw_url, string $expected ) : void {
+		$this->assertSame( $expected, redact_url( $raw_url ) );
+	}
+
+	/**
+	 * Data provider for `test_redact_url()`.
+	 */
+	public function data_redact_url() : array {
+		$cases = array(
+			'one sensitive' => array(
+				'raw_url'  => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?api_key=secret',
+				'expected' => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?api_key=[redacted]',
+			),
+
+			'one regular' => array(
+				'raw_url'  => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?foo=bar',
+				'expected' => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?foo=bar',
+			),
+
+			'one sensitive, one regular' => array(
+				'raw_url'  => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?pwd=foo&cats=bar',
+				'expected' => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?pwd=[redacted]&cats=bar',
+			),
+
+			'two sensitive' => array(
+				'raw_url'  => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?pwd=foo&key=bar',
+				'expected' => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?pwd=[redacted]&key=[redacted]',
+			),
+
+			'two regular' => array(
+				'raw_url'  => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?pizza=good&burritos=great',
+				'expected' => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated?pizza=good&burritos=great',
+			),
+
+			'no query' => array(
+				'raw_url'  => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated',
+				'expected' => 'https://central.wordcamp.test/wp-json/wordcamp-letsencrypt/v1/domains-dehydrated',
 			),
 		);
 

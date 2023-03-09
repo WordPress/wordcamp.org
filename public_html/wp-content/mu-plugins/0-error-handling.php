@@ -4,7 +4,7 @@ defined( 'WPINC' ) || die();
 
 use DirectoryIterator;
 use Dotorg\Slack\Send;
-use function WordCamp\Logger\{ redact_keys };
+use function WordCamp\Logger\{ redact_keys, redact_url };
 
 /*
  * Catch errors on production and pipe them into Slack, because that's the only way we have to see them.
@@ -315,7 +315,8 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$error_name = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
 	$messages   = explode( 'Stack trace:', $err_msg, 2 );
 	$text       = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
-	$url        = sprintf( 'https://%s%s', $_SERVER['SERVER_NAME'], $_SERVER['REQUEST_URI'] );
+	$url        = redact_url( 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] );
+	$referer    = isset( $_SERVER['HTTP_REFERER'] ) ? redact_url( $_SERVER['HTTP_REFERER'] ) : '';
 	$footer     = '';
 
 	if ( $occurrences > 0 ) {
@@ -362,10 +363,10 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		);
 	}
 
-	if ( ! empty( $_SERVER['HTTP_REFERER'] ) && $_SERVER['HTTP_REFERER'] !== $url ) {
+	if ( ! empty( $referer ) && $referer !== $url ) {
 		$fields[] = array(
 			'title' => 'Referer',
-			'value' => esc_url_raw( $_SERVER['HTTP_REFERER'] ),
+			'value' => esc_url_raw( $referer ),
 			'short' => false,
 		);
 	}

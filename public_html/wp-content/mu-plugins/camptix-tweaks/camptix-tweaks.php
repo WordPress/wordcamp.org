@@ -737,8 +737,8 @@ function get_donation_string() {
 function get_swag_store_string() {
 	return sprintf(
 	/* translators: %s is a placeholder for a URL. */
-		__( 'In need of some branded WordPress merch? Why not visit the <a href="%s">WordPress Swag Store</a>.', 'wordcamporg' ),
-		'https://mercantile.wordpress.org/'
+		__( 'Wear your love of WordPress today with this exclusive <b>10% WordCamp discount</b> at the <a href="%s">WordPress Swag Store</a>!', 'wordcamporg' ),
+		'https://mercantile.wordpress.org/shop/?utm_source=receipt&utm_medium=email&utm_campaign=mercantile&utm_content=wordcamp_discount'
 	);
 }
 

@@ -627,8 +627,9 @@ function modify_default_options( $options ) {
 function modify_email_templates( $options ) {
 	$sponsors_string = get_global_sponsors_string();
 	$donation_string = get_donation_string();
+	$swag_string = get_swag_store_string();
 
-	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string";
+	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string\n\n$swag_string";
 
 	$templates_that_need_footers = array(
 		'email_template_single_purchase',

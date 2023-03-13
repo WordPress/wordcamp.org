@@ -508,8 +508,10 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			wp_send_json_error( array( 'error' => 'Invalid attendee.' ) );
 		}
 
-		if ( 'enable' === $command ) {
-			update_post_meta( $attendee_id, 'camptix-admin-flag', $key );
+		$attendee_flags = (array) get_post_meta( $attendee_id, 'camptix-admin-flag' );
+
+		if ( 'enable' === $command && ! in_array( $key, $attendee_flags, true ) ) {
+			add_post_meta( $attendee_id, 'camptix-admin-flag', $key );
 		} elseif ( 'disable' === $command ) {
 			delete_post_meta( $attendee_id, 'camptix-admin-flag', $key );
 		}

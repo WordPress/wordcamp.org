@@ -194,12 +194,12 @@ add_action( 'init', 'wcorg_show_tagregator_log' );
 function wcorg_set_per_camp_tagregator_end_date( $end_date ) {
 	$details = get_wordcamp_post();
 
-	if ( isset( $details->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
-		$offset = '2 weeks';
+	// Despite its key/label, the start date value is actually stored as a Unix timestamp.
+	$camp_start_timestamp = $details->meta['Start Date (YYYY-mm-dd)'][0] ?? 0;
 
-		// Despite its key/label, the start date value is actually stored as a Unix timestamp.
-		$camp_start_timestamp = $details->meta['Start Date (YYYY-mm-dd)'][0];
-		$end_date             = date_create( date( 'Y-m-d', $camp_start_timestamp ) . '  ' . $offset );
+	if ( $camp_start_timestamp ) {
+		$offset   = '2 weeks';
+		$end_date = date_create( date( 'Y-m-d', $camp_start_timestamp ) . '  ' . $offset );
 	}
 
 	return $end_date;

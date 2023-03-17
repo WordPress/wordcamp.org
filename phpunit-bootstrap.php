@@ -1,5 +1,10 @@
 <?php
 
+// Require composer dependencies.
+if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
+	require_once __DIR__ . '/vendor/autoload.php';
+}
+
 define( 'WP_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/plugins' );
 define( 'SUT_WPMU_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/mu-plugins' ); // WPMU_PLUGIN_DIR will be in `WP_TESTS_DIR`.
 

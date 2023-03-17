@@ -15,19 +15,12 @@ import {
 	useBlockProps,
 } from '@wordpress/block-editor';
 import { Notice } from '@wordpress/components';
-import { store as coreStore } from '@wordpress/core-data';
-import { useSelect } from '@wordpress/data';
+import { useEntityProp } from '@wordpress/core-data';
 
 export default function Edit( { attributes, setAttributes, context: { postId, postType } } ) {
 	const { key, text, textAlign } = attributes;
-	const url = useSelect(
-		( select ) => {
-			const { getEntityRecord } = select( coreStore );
-			const post = getEntityRecord( 'postType', postType, postId );
-			return post.meta[ key ];
-		},
-		[ key ]
-	);
+	const [ meta = {} ] = useEntityProp( 'postType', postType, 'meta', postId );
+	const url = meta[ key ] || '';
 
 	const blockProps = useBlockProps( {
 		className: classnames( {
@@ -45,10 +38,13 @@ export default function Edit( { attributes, setAttributes, context: { postId, po
 					} }
 				/>
 			</BlockControls>
-			{ ! url && (
+			{ postId && postType && ! url && (
 				<InspectorControls>
 					<Notice status="error" isDismissible={ false }>
-						{ __( 'The link for this content is missing. Add the URL in the Session tab.', 'wordcamporg' ) }
+						{ __(
+							'The link for this content is missing. Add the URL in the Session tab.',
+							'wordcamporg'
+						) }
 					</Notice>
 				</InspectorControls>
 			) }

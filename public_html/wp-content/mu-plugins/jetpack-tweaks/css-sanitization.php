@@ -242,13 +242,26 @@ function get_custom_css_properties_safelist() {
 	return array_merge(
 		get_custom_css_properties_safelist_with_units(),
 		array(
+			// "box-orient" is a non-standard property but is required for the line-clamp behavior to work. 
+			// See https://css-tricks.com/line-clampin/
+			'-webkit-box-orient',
+			'-webkit-line-clamp',
+			'-webkit-text-fill-color',
+			'-webkit-text-stroke',
+			'-webkit-text-stroke-width',
+			'-webkit-text-stroke-color',
 			'aspect-ratio',
 			'background-blend-mode',
 			'isolation',
 			'mask',
 			'mix-blend-mode',
+			'overscroll-behavior',
+			'overscroll-behavior-x',
+			'overscroll-behavior-y',
+			'place-content',
 			'shape-image-threshold',
 			'shape-outside',
+			'text-decoration-thickness',
 			'text-orientation',
 			'writing-mode',
 		)

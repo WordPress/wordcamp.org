@@ -68,4 +68,39 @@ CSS;
 		$output = wp_get_custom_css();
 		$this->assertSame( $expected, $output );
 	}
+
+	/**
+	 * Test that new properties are not stripped.
+	 */
+	public function test_properties_allowed() {
+		$input = <<<CSS
+p {
+	-webkit-line-clamp: 3;
+	-webkit-text-stroke: 4px navy;
+	-webkit-text-fill-color: green;
+	text-decoration-line: underline overline;
+	text-decoration-color: #000;
+	text-decoration-style: dotted;
+	text-decoration-thickness: 1px;
+}
+CSS;
+
+		$expected = <<<CSS
+p {
+	-webkit-line-clamp: 3;
+	-webkit-text-stroke: 4px navy;
+	-webkit-text-fill-color: green;
+	text-decoration-line: underline overline;
+	text-decoration-color: #000;
+	text-decoration-style: dotted;
+	text-decoration-thickness: 1px;
+}
+CSS;
+
+		$post = wp_update_custom_css_post( $input );
+		$this->assertNotWPError( $post );
+
+		$output = wp_get_custom_css();
+		$this->assertSame( $expected, $output );
+	}
 }

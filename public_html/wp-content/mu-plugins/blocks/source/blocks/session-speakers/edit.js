@@ -15,16 +15,11 @@ import {
 	useBlockProps,
 } from '@wordpress/block-editor';
 import { PanelBody, ToggleControl } from '@wordpress/components';
-import { store as coreStore } from '@wordpress/core-data';
-import { useSelect } from '@wordpress/data';
+import { useEntityProp } from '@wordpress/core-data';
 
 export default function( { attributes, setAttributes, context: { postId, postType }, isSelected } ) {
 	const { byline, isLink, textAlign } = attributes;
-	const speakers = useSelect( ( select ) => {
-		const { getEntityRecord } = select( coreStore );
-		const session = getEntityRecord( 'postType', postType, postId );
-		return session.session_speakers || [];
-	}, [] );
+	const [ speakers = [] ] = useEntityProp( 'postType', postType, 'session_speakers', postId );
 
 	const blockProps = useBlockProps( {
 		className: classnames( {
@@ -62,11 +57,17 @@ export default function( { attributes, setAttributes, context: { postId, postTyp
 						onChange={ ( value ) => setAttributes( { byline: value } ) }
 					/>
 				) }
-				{ speakers.map( ( { id, name, link } ) => (
-					<span key={ id } className="wp-block-wordcamp-session-speakers__name">
-						{ isLink ? <a href={ link }>{ name }</a> : name }
+				{ postType && postId ? (
+					speakers.map( ( { id, name, link } ) => (
+						<span key={ id } className="wp-block-wordcamp-session-speakers__name">
+							{ isLink ? <a href={ link }>{ name }</a> : name }
+						</span>
+					) )
+				) : (
+					<span className="wp-block-wordcamp-session-speakers__name">
+						{ __( 'Speaker Name', 'wordcamporg' ) }
 					</span>
-				) ) }
+				) }
 			</div>
 		</>
 	);

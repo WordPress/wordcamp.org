@@ -11,16 +11,12 @@ import { __, _x } from '@wordpress/i18n';
 import { AlignmentControl, BlockControls, InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { dateI18n, __experimentalGetSettings as getDateSettings } from '@wordpress/date'; // eslint-disable-line @wordpress/no-unsafe-wp-apis
 import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
-import { store as coreStore } from '@wordpress/core-data';
-import { useSelect } from '@wordpress/data';
+import { useEntityProp } from '@wordpress/core-data';
 
 export default function Edit( { attributes, setAttributes, context: { postId, postType } } ) {
 	const { format, showTimezone, textAlign } = attributes;
-	const date = useSelect( ( select ) => {
-		const { getEntityRecord } = select( coreStore );
-		const session = getEntityRecord( 'postType', postType, postId );
-		return session.meta._wcpt_session_time * 1000; // Convert from s to ms.
-	}, [] );
+	const [ meta = {} ] = useEntityProp( 'postType', postType, 'meta', postId );
+	const date = meta._wcpt_session_time;
 
 	const { formats } = getDateSettings();
 	const defaultFormat = formats.datetime;

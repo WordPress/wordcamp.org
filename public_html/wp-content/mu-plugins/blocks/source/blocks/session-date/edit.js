@@ -16,7 +16,7 @@ import { useEntityProp } from '@wordpress/core-data';
 export default function Edit( { attributes, setAttributes, context: { postId, postType } } ) {
 	const { format, showTimezone, textAlign } = attributes;
 	const [ meta = {} ] = useEntityProp( 'postType', postType, 'meta', postId );
-	const date = meta._wcpt_session_time;
+	const date = meta._wcpt_session_time * 1000; // Convert from s to ms.
 
 	const { formats } = getDateSettings();
 	const defaultFormat = formats.datetime;

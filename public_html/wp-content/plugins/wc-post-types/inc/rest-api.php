@@ -455,6 +455,22 @@ function prepare_session_query_args( $args, $request ) {
 			'key' => $request['wc_meta_key'],
 			'value' => $request['wc_meta_value'],
 		);
+
+		// If requesting only "session" types, also return null types, they're handled the same way.
+		if ( '_wcpt_session_type' === $request['wc_meta_key'] && 'session' === $request['wc_meta_value'] ) {
+			$meta_query = array(
+				'relation' => 'OR',
+				array(
+					'key' => '_wcpt_session_type',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key' => '_wcpt_session_type',
+					'value' => 'session',
+				),
+			);
+		}
+
 		if ( is_array( $args['meta_query'] ) ) {
 			$args['meta_query'][] = $meta_query;
 		} else {
@@ -464,7 +480,7 @@ function prepare_session_query_args( $args, $request ) {
 
 	if ( 'session_date' === $request['orderby'] ) {
 		$args['meta_key'] = '_wcpt_session_time';
-		$args['orderby'] = 'meta_value_num';
+		$args['orderby']  = 'meta_value_num';
 	}
 
 	return $args;

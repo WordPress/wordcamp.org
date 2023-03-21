@@ -69,6 +69,7 @@ function update_query_loop_vars( $query ) {
 		$query['orderby']  = 'meta_value_num';
 	}
 
+	// Only show real sessions (not breaks, etc) in the Sessions List.
 	$meta_query = array(
 		'relation' => 'OR',
 		array(

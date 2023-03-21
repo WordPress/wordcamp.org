@@ -35,6 +35,8 @@ registerBlockVariation( 'core/query', {
 			exclude: [],
 			sticky: '',
 			inherit: false,
+			wc_meta_key: '_wcpt_session_type',
+			wc_meta_value: 'session',
 		},
 	},
 	innerBlocks: [

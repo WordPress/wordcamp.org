@@ -24,6 +24,7 @@ function load_includes() {
 	$blocks_dir     = PLUGIN_DIR . 'source/blocks/';
 	$components_dir = PLUGIN_DIR . 'source/components/';
 	$hooks_dir      = PLUGIN_DIR . 'source/hooks/';
+	$variations_dir = PLUGIN_DIR . 'source/variations/';
 
 	// Utilities.
 	require_once $includes_dir . 'definitions.php';
@@ -49,6 +50,9 @@ function load_includes() {
 
 	// Hooks.
 	require_once $hooks_dir . 'latest-posts/controller.php';
+
+	// Variations.
+	require_once $variations_dir . 'sessions-list/controller.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_includes' );

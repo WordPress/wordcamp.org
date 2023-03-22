@@ -77,3 +77,14 @@ function get_avatar_or_image( $post, $size, $alt = false ) {
 
 	return $avatar;
 }
+
+/**
+ * Check whether this site supports and uses the new block templates.
+ *
+ * If it does, the custom content is added via blocks, and does not need to be appended to `the_content`.
+ *
+ * @return boolean
+ */
+function site_supports_block_templates() {
+	return wp_is_block_theme() && ! wcorg_skip_feature( 'wcpt_block_templates' );
+}

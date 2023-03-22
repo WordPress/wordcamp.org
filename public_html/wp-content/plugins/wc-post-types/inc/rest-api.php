@@ -471,7 +471,7 @@ function prepare_session_query_args( $args, $request ) {
 			);
 		}
 
-		if ( is_array( $args['meta_query'] ) ) {
+		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) ) {
 			$args['meta_query'][] = $meta_query;
 		} else {
 			$args['meta_query'] = array( $meta_query );

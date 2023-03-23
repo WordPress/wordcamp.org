@@ -10,7 +10,8 @@ require_once 'inc/favorite-schedule-shortcode.php';
 require_once 'inc/privacy.php';
 require_once 'inc/deprecated.php';
 
-use function WordCamp\Post_Types\Utilities\{ get_avatar_or_image, site_supports_block_templates };
+use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
+use function WordCamp\Theme_Templates\site_supports_block_templates;
 use function WordCamp\Blocks\has_block_with_attrs;
 
 // Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2

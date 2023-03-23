@@ -126,8 +126,7 @@ function add_offline_template_cachebuster( $entry ) {
  * @return WP_Block_Template[]
  */
 function inject_templates( $query_result, $query, $template_type ) {
-	// Don't affect older sites.
-	if ( ! wp_is_block_theme() || wcorg_skip_feature( 'wcpt_block_templates' ) ) {
+	if ( ! site_supports_block_templates() ) {
 		return $query_result;
 	}
 
@@ -180,8 +179,7 @@ function is_request_for_post_type( $query, $type ) {
  * @return WP_Block_Template|null
  */
 function inject_template( $block_template, $id, $template_type ) {
-	// Don't affect older sites.
-	if ( ! wp_is_block_theme() || wcorg_skip_feature( 'wcpt_block_templates' ) ) {
+	if ( ! site_supports_block_templates() ) {
 		return $query_result;
 	}
 
@@ -237,4 +235,14 @@ function get_wordcamp_block_template( $post_type = '' ) {
 	$template->content = _inject_theme_attribute_in_block_template_content( ob_get_clean() );
 
 	return $template;
+}
+
+
+/**
+ * Check whether this site supports and uses the new block templates.
+ *
+ * @return boolean
+ */
+function site_supports_block_templates() {
+	return wp_is_block_theme() && ! wcorg_skip_feature( 'wcpt_block_templates' );
 }

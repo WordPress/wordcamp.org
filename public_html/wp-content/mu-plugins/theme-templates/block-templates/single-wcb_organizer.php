@@ -1,3 +1,10 @@
+<?php
+// phpcs:ignoreFile
+/**
+ * Template: Single Organizer
+ */
+?>
+
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 
 <!-- wp:group {"tagName":"main","style":{"spacing":{"margin":{"top":"var:preset|spacing|50"}}}} -->

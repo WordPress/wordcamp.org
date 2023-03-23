@@ -12,7 +12,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { ItemSelect, Option, buildOptions } from '../../components';
+import { ItemSelect, buildOptions } from '../../components';
 
 /**
  * Component for selecting posts/terms for populating the block content.
@@ -101,7 +101,7 @@ class OrganizerSelect extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { label, icon, setAttributes } = this.props;
+		const { label, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
@@ -109,19 +109,8 @@ class OrganizerSelect extends Component {
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
-				selectProps={ {
-					options: this.buildSelectOptions(),
-					isLoading: this.isLoading(),
-					formatOptionLabel: ( optionData, { context } ) => (
-						<Option
-							context={ context }
-							icon={ 'wcb_organizer_team' === optionData.type ? icon : null }
-							avatar={ optionData.avatar }
-							label={ optionData.label }
-							count={ optionData.count }
-						/>
-					),
-				} }
+				options={ this.buildSelectOptions() }
+				isLoading={ this.isLoading() }
 			/>
 		);
 	}

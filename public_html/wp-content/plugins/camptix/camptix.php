@@ -5228,15 +5228,16 @@ class CampTix_Plugin {
 		// Populate selected tickets from $_POST!
 		if ( isset( $_REQUEST['tix_tickets_selected'] ) ) {
 			foreach ( $_REQUEST['tix_tickets_selected'] as $ticket_id => $count ) {
-				if ( isset( $this->tickets[ $ticket_id ] ) && $count > 0 )
+				if ( isset( $this->tickets[ $ticket_id ] ) && intval( $count ) > 0 ) {
 					$this->tickets_selected[ $ticket_id ] = intval( $count );
+				}
 			}
 		}
 
 		// Make an order.
 		$this->order = array( 'items' => array(), 'total' => 0 );
-		if ( isset( $_REQUEST['tix_tickets_selected'] ) ) {
-			foreach ( $_REQUEST['tix_tickets_selected'] as $ticket_id => $count ) {
+		if ( $this->tickets_selected ) {
+			foreach ( $this->tickets_selected as $ticket_id => $count ) {
 				$ticket = $this->tickets[ $ticket_id ];
 				$item = array(
 					'id' => $ticket->ID,

@@ -66,7 +66,7 @@ export default function Edit( { attributes, setAttributes, context: { postId, po
 				/>
 			</BlockControls>
 			<div { ...blockProps }>
-				<time dateTime={ dateI18n( 'c', date ) }>{ dateI18n( displayFormat, date ) }</time>
+				<time dateTime={ dateI18n( 'c', date ) }>{ dateI18n( displayFormat, date || new Date() ) }</time>
 			</div>
 		</>
 	);

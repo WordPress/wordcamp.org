@@ -180,7 +180,7 @@ function is_request_for_post_type( $query, $type ) {
  */
 function inject_template( $block_template, $id, $template_type ) {
 	if ( ! site_supports_block_templates() ) {
-		return $query_result;
+		return $block_template;
 	}
 
 	foreach ( array( 'wcb_organizer', 'wcb_session', 'wcb_speaker', 'wcb_sponsor' ) as $type ) {

@@ -199,8 +199,8 @@ class WordCamp_Coming_Soon_Page {
 	public function get_colors() {
 		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
 
-		if ( ! class_exists( 'Jetpack_Color' ) && function_exists( 'jetpack_require_lib' ) ) {
-			jetpack_require_lib( 'class.color' );
+		if ( ! class_exists( 'Jetpack_Color' ) && defined( 'JETPACK__PLUGIN_DIR' ) ) {
+			include JETPACK__PLUGIN_DIR . '/_inc/lib/class.color.php';
 		}
 
 		// If they never changed from the old default background color, then use the new default.

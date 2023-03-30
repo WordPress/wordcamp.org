@@ -183,7 +183,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		?>
 		<p>The Admin Flags addon for CampTix allows you to define a list of special flags that can be toggled for every attendee through the admin UI. Flags are not visible to attendees but can be seen and filtered in exports.</p>
 
-		<p><strong>Flags Data Format</strong>: One flag per line, each line in the format of <code>flag-slug: Flag label</code></p>
+		<p><strong>Flags Data Format</strong>: One flag per line, each line in the format of <code>flag-slug: Flag label</code>. Both slug and label should be unique.</p>
 		<?php
 	}
 

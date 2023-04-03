@@ -69,6 +69,7 @@ export function ItemSelect( { className, label, help, submitLabel, onChange, opt
 	const [ selectedOptions, setSelectedOptions ] = useState( null );
 	const currentValue = selectedOptions || value.map( ( item ) => item.type + ':' + item.value );
 	const id = `wordcamp-item-select-control-${ instanceId }`;
+	const length = options.reduce( ( acc = 0, group ) => acc + group.options.length, 0 );
 
 	if ( isLoading ) {
 		return null;
@@ -85,6 +86,9 @@ export function ItemSelect( { className, label, help, submitLabel, onChange, opt
 				value={ currentValue }
 				onChange={ ( newValue ) => {
 					setSelectedOptions( newValue || [] );
+				} }
+				style={ {
+					height: `${ length + 5 }em`,
 				} }
 			>
 				{ options.map( ( group, i ) => (

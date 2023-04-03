@@ -6,7 +6,7 @@
 .wordcamp-item-select__select {
 	margin-bottom: 1em;
 
-	input[type="text"]:focus {
-		box-shadow: none;
+	select {
+		max-height: 40em;
 	}
 }

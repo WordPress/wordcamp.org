@@ -739,7 +739,7 @@ function get_swag_store_string() {
 	return sprintf(
 	/* translators: %s is a placeholder for a URL. */
 		__( 'Wear your love of WordPress today with this exclusive <b>10%% WordCamp discount</b> at the <a href="%s">WordPress Swag Store</a>!', 'wordcamporg' ),
-		'https://mercantile.wordpress.org/shop/?utm_source=receipt&utm_medium=email&utm_campaign=mercantile&utm_content=wordcamp_discount'
+		'https://mercantile.wordpress.org/?coupon-code=wordcamps2023&sc-page=shop&utm_source=receipt&utm_medium=email&utm_campaign=mercantile&utm_content=wordcamp_discount'
 	);
 }
 

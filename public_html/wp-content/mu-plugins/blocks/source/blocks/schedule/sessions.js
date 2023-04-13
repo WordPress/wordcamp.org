@@ -34,6 +34,7 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 	const timeGroups = [];
 	const timeSlots = Object.keys( sessionsByTimeSlot ).sort();
 	const timezone = getTimezone( attributes );
+	const timeFormat = WordCampBlocks.schedule.timeFormat || 'g:i a T';
 
 	for ( let i = 0; i < timeSlots.length; i++ ) {
 		const currentSlot = timeSlots[ i ];
@@ -54,7 +55,7 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 
 		timeGroups.push(
 			<h3 key={ startTime } className={ classes } style={ { gridRow } }>
-				{ date( 'g:i a T', startTime, timezone ) }
+				{ date( timeFormat, startTime, timezone ) }
 			</h3>
 		);
 

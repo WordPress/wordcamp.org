@@ -21,6 +21,7 @@ add_filter( 'camptix_form_attendee_info_errors',             __NAMESPACE__ . '\s
 add_action( 'transition_post_status',                        __NAMESPACE__ . '\ticket_sales_opened',          10, 3 );
 add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 3 );
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
+add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
 
 // Attendees
 add_filter( 'camptix_name_order',                            __NAMESPACE__ . '\set_name_order'                      );
@@ -1000,3 +1001,24 @@ function stripe_default_checkout_image_url( $url ) {
 
 	return $url;
 }
+
+/**
+ * Restrict the max number of tickets per order to one for specific site(s).
+ *
+ * @param int $max Default ticket maximum.
+ * @return int Maybe updated max ticket amount.
+ */
+function limit_one_ticket_per_order( $max ) {
+	$limited_sites = array(
+		1056, // testing.wordcamp.org/2019.
+		1415, // communitysummit.wordcamp.org/2023.
+	);
+
+	$current_site_id = get_current_blog_id();
+	if ( in_array( $current_site_id, $limited_sites, true ) ) {
+		return 1;
+	}
+
+	return $max;
+}
+

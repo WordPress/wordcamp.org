@@ -60,7 +60,6 @@ function enable_js_block_registration( $data ) {
 	$data['schedule'] = array(
 		'timezone'   => wp_timezone_string(),
 		'adminUrl'   => admin_url(),
-		'timeFormat' => get_option( 'time_format', 'g:i a' ),
 	);
 
 	return $data;
@@ -102,7 +101,6 @@ function pass_global_data_to_front_end() {
 		'allCategories' => get_all_categories(),
 		'settings'      => get_settings(),
 		'timezone'      => wp_timezone_string(),
-		'timeFormat'    => get_option( 'time_format', 'g:i a' ),
 	);
 
 	// The rest request in get_all_sessions changes the global $post value.

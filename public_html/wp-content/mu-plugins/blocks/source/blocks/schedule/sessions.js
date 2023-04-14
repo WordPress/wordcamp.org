@@ -27,15 +27,14 @@ import { sortBySlug } from './data';
  * @return {Element}
  */
 export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
-	const { attributes } = useContext( ScheduleGridContext );
-
+	const { attributes, settings } = useContext( ScheduleGridContext );
 	const sessionsByTimeSlot = groupSessionsByTimeSlot( sessions );
 	const overlappingSessionIds = overlappingSessions.map( ( session ) => session.id );
 	const timeGroups = [];
 	const timeSlots = Object.keys( sessionsByTimeSlot ).sort();
 	const timezone = getTimezone( attributes );
 
-	let timeFormat = WordCampBlocks.schedule.timeFormat || 'g:i a';
+	let timeFormat = settings.time_format || 'g:i a';
 	// Append the timezone if it's not included.
 	if ( ! timeFormat.includes( 'T' ) ) {
 		timeFormat += ' T';

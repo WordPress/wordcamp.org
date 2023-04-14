@@ -27,13 +27,18 @@ import { sortBySlug } from './data';
  * @return {Element}
  */
 export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
-	const { attributes } = useContext( ScheduleGridContext );
-
+	const { attributes, settings } = useContext( ScheduleGridContext );
 	const sessionsByTimeSlot = groupSessionsByTimeSlot( sessions );
 	const overlappingSessionIds = overlappingSessions.map( ( session ) => session.id );
 	const timeGroups = [];
 	const timeSlots = Object.keys( sessionsByTimeSlot ).sort();
 	const timezone = getTimezone( attributes );
+
+	let timeFormat = settings.time_format || 'g:i a';
+	// Append the timezone if it's not included.
+	if ( ! timeFormat.includes( 'T' ) ) {
+		timeFormat += ' T';
+	}
 
 	for ( let i = 0; i < timeSlots.length; i++ ) {
 		const currentSlot = timeSlots[ i ];
@@ -54,7 +59,7 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 
 		timeGroups.push(
 			<h3 key={ startTime } className={ classes } style={ { gridRow } }>
-				{ date( 'g:i a T', startTime, timezone ) }
+				{ date( timeFormat, startTime, timezone ) }
 			</h3>
 		);
 

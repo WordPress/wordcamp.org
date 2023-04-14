@@ -34,7 +34,12 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 	const timeGroups = [];
 	const timeSlots = Object.keys( sessionsByTimeSlot ).sort();
 	const timezone = getTimezone( attributes );
-	const timeFormat = WordCampBlocks.schedule.timeFormat || 'g:i a T';
+
+	let timeFormat = WordCampBlocks.schedule.timeFormat || 'g:i a';
+	// Append the timezone if it's not included.
+	if ( ! timeFormat.includes( 'T' ) ) {
+		timeFormat += ' T';
+	}
 
 	for ( let i = 0; i < timeSlots.length; i++ ) {
 		const currentSlot = timeSlots[ i ];

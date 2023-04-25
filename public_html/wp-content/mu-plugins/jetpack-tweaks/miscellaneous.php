@@ -267,6 +267,12 @@ function inject_css_for_fieldset() {
 	font-weight: bold;
 	display: block;
 }
+.grunion-field-label span {
+	font-size: 85%;
+	margin-left: 0.25em;
+	font-weight: normal;
+	opacity: 0.45;
+}
 CSS;
 
 	wp_add_inline_style( 'grunion.css', $form_css );

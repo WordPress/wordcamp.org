@@ -216,6 +216,15 @@ function wrap_checkbox_radio_fieldset( $rendered_field, $field_label, $post_id )
 		// replace only the first label, others are for the options.
 		$rendered_field = preg_replace( '/<label/', '<legend', $rendered_field, 1);
 		$rendered_field = preg_replace( '/<\/label>/', '</legend>', $rendered_field, 1);
+		// Pull out the legend text so we can create a separate visual element.
+		// See https://adrianroselli.com/2022/07/use-legend-and-fieldset.html.
+		if ( preg_match( '/<legend[^>]*>(.*)<\/legend>/i', $rendered_field, $matches ) ) {
+			$visible_label = sprintf(
+				'<div class="grunion-field-label" aria-hidden="true">%s</div>',
+				$matches[1]
+			);
+			$rendered_field = str_replace( $matches[0], $matches[0] . $visible_label, $rendered_field );
+		}
 	}
 	return $rendered_field;
 }
@@ -235,6 +244,15 @@ function inject_css_for_fieldset() {
 	padding: 0;
 }
 :where(.contact-form) legend {
+	position: absolute;
+	overflow: hidden;
+	clip: rect(0 0 0 0); 
+	clip-path: inset(50%);
+	width: 1px;
+	height: 1px;
+	white-space: nowrap; 
+}
+.grunion-field-label {
 	margin-bottom: 0.25em;
 	float: none;
 	font-weight: bold;

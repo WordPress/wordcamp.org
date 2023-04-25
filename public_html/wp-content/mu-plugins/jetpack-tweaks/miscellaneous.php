@@ -2,6 +2,7 @@
 
 namespace WordCamp\Jetpack_Tweaks;
 use WP_Service_Worker_Caching_Routes, WP_Service_Worker_Scripts;
+use Grunion_Contact_Form;
 
 defined( 'WPINC' ) || die();
 
@@ -204,6 +205,14 @@ add_filter( 'jetpack_is_frontend', __NAMESPACE__ . '\workaround_is_frontend' );
  * @param int|null $post_id        Post ID.
  */
 function wrap_checkbox_radio_fieldset( $rendered_field, $field_label, $post_id ) {
+	// Get the current form style, if it's anything other than default, return early.
+	$class_name = Grunion_Contact_Form::$current_form->get_attribute( 'className' );
+	preg_match( '/is-style-([^\s]+)/i', $class_name, $matches );
+	$style = count( $matches ) >= 2 ? $matches[1] : 'default';
+	if ( 'default' !== $style ) {
+		return $rendered_field;
+	}
+
 	if (
 		str_contains( $rendered_field, 'grunion-checkbox-multiple-options' ) ||
 		str_contains( $rendered_field, 'grunion-radio-options' )

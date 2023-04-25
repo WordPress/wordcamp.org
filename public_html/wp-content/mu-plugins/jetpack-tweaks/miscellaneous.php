@@ -188,3 +188,60 @@ function workaround_is_frontend( $is_frontend ) {
 	return $is_frontend;
 }
 add_filter( 'jetpack_is_frontend', __NAMESPACE__ . '\workaround_is_frontend' );
+
+/**
+ * Filter the contact form HTML to replace the wrapper with a fieldset & legend
+ * for radio & multi-checkbox fields. This is necessary for screen reader users
+ * to understand the form questions.
+ *
+ * The single checkbox field is okay as-is.
+ *
+ * Upstream issue: https://github.com/Automattic/jetpack/issues/16685.
+ * When that is fixed, this & `inject_css_for_fieldset` can be removed.
+ *
+ * @param string   $rendered_field Contact Form HTML output.
+ * @param string   $field_label    Field label.
+ * @param int|null $post_id        Post ID.
+ */
+function wrap_checkbox_radio_fieldset( $rendered_field, $field_label, $post_id ) {
+	if (
+		str_contains( $rendered_field, 'grunion-checkbox-multiple-options' ) ||
+		str_contains( $rendered_field, 'grunion-radio-options' )
+	) {
+		// remove any whitespace so the offsets below work.
+		$rendered_field = trim( $rendered_field );
+		// replace wrapper div.
+		$rendered_field = substr_replace( $rendered_field, '<fieldset ', 0, 5 );
+		$rendered_field = substr_replace( $rendered_field, '</fieldset> ', -6, 6 );
+		// replace only the first label, others are for the options.
+		$rendered_field = preg_replace( '/<label/', '<legend', $rendered_field, 1);
+		$rendered_field = preg_replace( '/<\/label>/', '</legend>', $rendered_field, 1);
+	}
+	return $rendered_field;
+}
+add_filter( 'grunion_contact_form_field_html', __NAMESPACE__ . '\wrap_checkbox_radio_fieldset', 10, 3 );
+
+/**
+ * Add styles for the injected fieldset & legend.
+ *
+ * This resets the spacing around the fieldset, and styles the legend to match the label.
+ *
+ * See https://github.com/Automattic/jetpack/blob/trunk/projects/plugins/jetpack/modules/contact-form/css/grunion.css.
+ */
+function inject_css_for_fieldset() {
+	$form_css = <<<CSS
+.contact-form fieldset {
+	border: none;
+	padding: 0;
+}
+.contact-form legend {
+	margin-bottom: 0.25em;
+	float: none;
+	font-weight: bold;
+	display: block;
+}
+CSS;
+
+	wp_add_inline_style( 'grunion.css', $form_css );
+}
+add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\inject_css_for_fieldset' );

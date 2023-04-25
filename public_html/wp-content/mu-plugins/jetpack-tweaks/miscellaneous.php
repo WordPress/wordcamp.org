@@ -230,11 +230,11 @@ add_filter( 'grunion_contact_form_field_html', __NAMESPACE__ . '\wrap_checkbox_r
  */
 function inject_css_for_fieldset() {
 	$form_css = <<<CSS
-.contact-form fieldset {
+:where(.contact-form) fieldset {
 	border: none;
 	padding: 0;
 }
-.contact-form legend {
+:where(.contact-form) legend {
 	margin-bottom: 0.25em;
 	float: none;
 	font-weight: bold;

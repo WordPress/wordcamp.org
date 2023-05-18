@@ -7,6 +7,7 @@ import { registerBlockVariation } from '@wordpress/blocks';
 /**
  * Internal dependencies
  */
+import './organizers-list';
 import './sessions-list';
 
 /*

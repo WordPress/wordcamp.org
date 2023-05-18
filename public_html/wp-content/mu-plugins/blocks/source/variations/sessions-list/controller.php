@@ -1,27 +1,13 @@
 <?php
-namespace WordCamp\Blocks\Variations\Query;
+namespace WordCamp\Blocks\Variations\Query\Sessions_List;
 
 defined( 'WPINC' ) || die();
 
 /**
  * Actions and filters.
  */
-add_filter( 'wordcamp_blocks_script_data', __NAMESPACE__ . '\add_script_data' );
 add_filter( 'pre_render_block', __NAMESPACE__ . '\pre_render_block', 10, 2 );
 add_filter( 'render_block', __NAMESPACE__ . '\post_render_block', 20, 2 );
-
-/**
- * Enable the hook by adding a value to the script data.
- *
- * @param array $data
- *
- * @return array
- */
-function add_script_data( array $data ) {
-	$data['hook-query'] = true;
-
-	return $data;
-}
 
 /**
  * Attach the query modifications when starting to render this query block.

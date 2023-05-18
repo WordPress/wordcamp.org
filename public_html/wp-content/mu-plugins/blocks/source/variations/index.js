@@ -10,6 +10,7 @@ import { registerBlockVariation } from '@wordpress/blocks';
 import './organizers-list';
 import './sessions-list';
 import './speakers-list';
+import './sponsors-list';
 
 /*
  * Register the custom taxonomies as variations on Post Terms.

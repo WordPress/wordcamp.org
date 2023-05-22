@@ -7,7 +7,10 @@ import { registerBlockVariation } from '@wordpress/blocks';
 /**
  * Internal dependencies
  */
+import './organizers-list';
 import './sessions-list';
+import './speakers-list';
+import './sponsors-list';
 
 /*
  * Register the custom taxonomies as variations on Post Terms.

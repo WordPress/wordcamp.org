@@ -12,6 +12,7 @@ import { registerBlockVariation } from '@wordpress/blocks';
  * Internal dependencies
  */
 import OrderControl from './order-control';
+import SessionsQueryIcon from '../../icons/sessions-query';
 
 const NAMESPACE = 'wordcamp/sessions-query';
 const POST_TYPE = 'wcb_session';
@@ -21,6 +22,7 @@ registerBlockVariation( 'core/query', {
 	title: __( 'Sessions List', 'wordcamporg' ),
 	description: 'Display a list of sessions',
 	isActive: [ 'namespace' ],
+	icon: SessionsQueryIcon,
 	attributes: {
 		namespace: NAMESPACE,
 		query: {
@@ -49,7 +51,7 @@ registerBlockVariation( 'core/query', {
 				[ 'core/post-excerpt' ],
 				[
 					'core/group',
-					{ layout: { type: 'flex', allowOrientation: false } },
+					{ layout: { type: 'flex', flexWrap: 'wrap' } },
 					[
 						[ 'core/paragraph', { content: __( 'Tracks:', 'wordcamporg' ) } ],
 						[ 'core/post-terms', { term: 'wcb_track' } ],
@@ -57,7 +59,7 @@ registerBlockVariation( 'core/query', {
 				],
 				[
 					'core/group',
-					{ layout: { type: 'flex', allowOrientation: false } },
+					{ layout: { type: 'flex', flexWrap: 'wrap' } },
 					[
 						[ 'core/paragraph', { content: __( 'Time:', 'wordcamporg' ) } ],
 						[ 'wordcamp/session-date' ],

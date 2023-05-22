@@ -80,6 +80,7 @@ public_html/wp-content/plugins/pwa/
 public_html/wp-content/plugins/supportflow
 public_html/wp-content/plugins/tagregator
 public_html/wp-content/plugins/two-factor
+public_html/wp-content/plugins/two-factor-provider-webauthn
 public_html/wp-content/plugins/wordpress-importer
 public_html/wp-content/plugins/wp-cldr
 public_html/wp-content/plugins/wp-multibyte-patch

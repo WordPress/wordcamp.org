@@ -12,7 +12,7 @@ add_action( 'init', __NAMESPACE__ . '\register_patterns', 5 ); // Register our p
  * Register the patterns in the `./patterns/` directory. This matches the core
  * theme behavior to register patterns in a theme's `./patterns/` directory.
  *
- * See_register_theme_block_patterns().
+ * See _register_theme_block_patterns().
  *
  * The pattern fields include:
  *   - Title            (required)

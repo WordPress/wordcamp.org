@@ -3,6 +3,7 @@
  * Title: Basic speaker grid
  * Slug: wordcamp/speaker-grid-basic
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

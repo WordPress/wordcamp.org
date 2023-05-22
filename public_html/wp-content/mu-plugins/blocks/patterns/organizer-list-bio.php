@@ -3,6 +3,7 @@
  * Title: Organizer list with bio
  * Slug: wordcamp/organizer-list-bio
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

@@ -3,6 +3,7 @@
  * Title: Basic speaker list
  * Slug: wordcamp/speaker-list-basic
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

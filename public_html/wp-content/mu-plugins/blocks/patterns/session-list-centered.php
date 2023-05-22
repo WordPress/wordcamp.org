@@ -3,6 +3,7 @@
  * Title: Session list, centered
  * Slug: wordcamp/session-list-centered
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

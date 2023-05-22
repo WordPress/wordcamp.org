@@ -3,6 +3,7 @@
  * Title: Organizer grid, centered
  * Slug: wordcamp/organizer-grid-centered
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

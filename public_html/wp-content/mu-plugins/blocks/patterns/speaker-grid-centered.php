@@ -3,6 +3,7 @@
  * Title: Speaker grid, centered
  * Slug: wordcamp/speaker-grid-centered
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

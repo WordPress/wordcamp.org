@@ -3,6 +3,7 @@
  * Title: Speaker grid with bio
  * Slug: wordcamp/speaker-grid-bio
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

@@ -3,6 +3,7 @@
  * Title: Session list with description
  * Slug: wordcamp/session-list-basic
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

@@ -3,6 +3,7 @@
  * Title: Speaker list with bio
  * Slug: wordcamp/speaker-list-bio
  * Categories: wordcamp
+ * Block Types: core/query
  */
 
 ?>

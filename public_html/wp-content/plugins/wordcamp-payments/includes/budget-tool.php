@@ -1,4 +1,7 @@
 <?php
+
+use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
+
 class WordCamp_Budget_Tool {
 
 	/**
@@ -68,6 +71,41 @@ class WordCamp_Budget_Tool {
 			}
 
 			$item = $_item;
+		}
+
+		if ( ! empty( $_POST['wcb-budget-download-csv'] ) ) {
+			$column_headers = Export_CSV::esc_csv( array( 'Type', 'Category', 'Detail', 'Amount', 'Link', 'Total' ) );
+			$csv_data = array();
+
+			$meta = wp_list_filter( $data, array( 'type' => 'meta' ) );
+
+			foreach ( $data as $raw ) {
+				if ( 'meta' === $raw['type'] ) {
+					continue;
+				}
+				$raw['amount'] = 'income' === $raw['type'] ? (float) $raw['amount'] : (float) $raw['amount'] * -1;
+
+				$total = self::_get_real_value( $raw['amount'], $raw['link'], $meta );
+				$row = array(
+					$raw['type'],
+					$raw['category'],
+					$raw['note'],
+					$raw['amount'],
+					$raw['link'],
+					$total,
+				);
+
+				$csv_data[] = Export_CSV::esc_csv( $row );
+			}
+
+			$exporter = new Export_CSV( array(
+				'filename' => array( 'budget', get_wordcamp_name(), wp_date( 'Y-m-d' ) ),
+				'headers'  => $column_headers,
+				'data'     => $csv_data,
+			) );
+
+			$exporter->emit_file();
+			return;
 		}
 
 		if ( 'draft' === $budget['status'] && ! empty( $_POST['wcb-budget-save-draft'] ) ) {
@@ -154,6 +192,46 @@ class WordCamp_Budget_Tool {
 				true
 			);
 		}
+	}
+
+	/**
+	 * Helper function to get the real (total) value of an entry.
+	 * For example, if a line item is 10 per attendee, with 100 attendees, the result will be 1000.
+	 *
+	 * See wcb.linkData in ../javascript/budget-tool.js.
+	 *
+	 * @param float       $value The value of the current entry.
+	 * @param string|null $link  The quantity-type of the entry (per attendee, per day, etc), or null if plain value.
+	 * @param array       $meta  The metadata for this budget, which contains the attendee, speaker, etc counts.
+	 * @return int
+	 */
+	private static function _get_real_value( float $value, $link, $meta ) {
+		// The metadata is an array of arrays, so we can filter out the relevant item, pluck just the value, then retrieve it.
+		$count_speakers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'speakers' ) ), 'value' ) );
+		$count_volunteers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'volunteers' ) ), 'value' ) );
+		$count_attendees = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
+		$count_days = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
+		$count_tracks = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
+		$ticket_price = (float) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'ticket-price' ) ), 'value' ) );
+
+		switch ( $link ) {
+			case 'per-speaker':
+				return $value * $count_speakers;
+			case 'per-volunteer':
+				return $value * $count_volunteers;
+			case 'per-speaker-volunteer':
+				return $value * $count_speakers + $value * $count_volunteers;
+			case 'per-attendee':
+				return $value * $count_attendees;
+			case 'per-day':
+				return $value * $count_days;
+			case 'per-track':
+				return $value * $count_tracks;
+			case 'ticket-price-x-attendees':
+				return $ticket_price * $count_attendees;
+		}
+
+		return $value;
 	}
 
 	/**

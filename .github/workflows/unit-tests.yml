@@ -76,7 +76,7 @@ jobs:
 
     - name: Install WordPress
       run: |
-        bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 trunk
+        bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest
 
     - name: Install required plugins
       run: |

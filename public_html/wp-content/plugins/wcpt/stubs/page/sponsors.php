@@ -20,7 +20,7 @@
 <p>Blurb thanking sponsors</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:wordcamp/sponsors {"mode":"all"} /-->
+<!-- wp:pattern {"slug":"wordcamp/sponsor-grid-basic"} /-->
 
 <!-- wp:heading -->
 <h2 class="wp-block-heading">Interested in sponsoring WordCamp this year?</h2>

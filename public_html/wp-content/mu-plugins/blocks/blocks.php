@@ -51,6 +51,9 @@ function load_includes() {
 	// Hooks.
 	require_once $hooks_dir . 'latest-posts/controller.php';
 
+	// Patterns.
+	require_once PLUGIN_DIR . 'patterns.php';
+
 	// Variations.
 	require_once $variations_dir . 'sessions-list/controller.php';
 }

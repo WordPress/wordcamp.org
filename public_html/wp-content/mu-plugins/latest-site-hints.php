@@ -106,7 +106,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 	if ( ! $latest_site ) {
 		return false;
 	}
-	
+
 	if ( ( 'europe.wordcamp.org' === $latest_site[0]->domain ) && ( time() <= strtotime( '2023-06-20' ) ) ) {
 		$latest_site[0]->path = '/2023';
 	}

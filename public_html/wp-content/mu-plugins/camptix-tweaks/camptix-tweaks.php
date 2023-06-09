@@ -565,6 +565,7 @@ function load_custom_addons() {
 	require_once __DIR__ . '/addons/allergy.php';
 	require_once __DIR__ . '/addons/accommodations.php';
 	require_once __DIR__ . '/addons/code-of-conduct.php';
+	require_once __DIR__ . '/addons/first-time.php';
 	require_once __DIR__ . '/addons/health-advisory.php';
 	require_once __DIR__ . '/addons/privacy.php';
 

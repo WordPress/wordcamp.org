@@ -111,6 +111,12 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
         <?php settings_fields( 'wcb_budget_noop' ); ?>
         <input type="hidden" name="_wcb_budget_data" value="<?php echo esc_attr( json_encode( $budget ) ); ?>" />
 
+        <?php if ( current_user_can( WordCamp_Budgets::ADMIN_CAP ) ) : ?>
+        <p class="submit" style="padding-bottom:0">
+            <?php submit_button( esc_html__( 'Download CSV', 'wordcamporg' ), 'button-link', 'wcb-budget-download-csv', false ); ?>
+        </p>
+        <?php endif; ?>
+
         <?php if ( $budget['status'] == 'draft' && current_user_can( WordCamp_Budgets::ADMIN_CAP ) ) : ?>
         <p class="submit">
             <?php submit_button( esc_html__( 'Save Draft', 'wordcamporg' ), 'secondary', 'wcb-budget-save-draft', false ); ?>

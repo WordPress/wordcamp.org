@@ -1,3 +1,6 @@
+<?php
+// phpcs:disable -- Disable to avoid conflicts with HTML readability.
+?>
 <script>
 window.wcb = window.wcb || {models:{}, input:[]};
 wcb.input = <?php echo json_encode( $budget[ $view ] ); ?>;

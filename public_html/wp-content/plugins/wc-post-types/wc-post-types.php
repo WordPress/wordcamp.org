@@ -275,7 +275,7 @@ class WordCamp_Post_Types_Plugin {
 		if ( 'wcb_session' == $post_type ) {
 			wp_enqueue_script( 'wcb-session-meta' );
 
-			$session_time = false;
+			$session_time         = false;
 			$most_recent_sessions = get_posts( array(
 				'post_type'   => 'wcb_session',
 				'orderby'     => 'modified',
@@ -289,7 +289,7 @@ class WordCamp_Post_Types_Plugin {
 
 			if ( ! $session_time ) {
 				$wordcamp_start_date = get_wordcamp_post()->meta['Start Date (YYYY-mm-dd)'][0];
-				$session_time = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
+				$session_time        = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
 			}
 
 			$settings = array(
@@ -334,7 +334,7 @@ class WordCamp_Post_Types_Plugin {
 		$full_path   = __DIR__ . '/' . $path;
 		$deps_path   = __DIR__ . '/' . str_replace( '.js', '.asset.php', $path );
 		$script_info = file_exists( $deps_path )
-			? require( $deps_path )
+			? require $deps_path
 			: array(
 				'dependencies' => array(),
 				'version' => filemtime( $full_path ),
@@ -1919,7 +1919,7 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'wcb_session_time':
 				$session_time = absint( get_post_meta( get_the_ID(), '_wcpt_session_time', true ) );
-				$output = '&mdash;';
+				$output       = '&mdash;';
 				if ( $session_time ) {
 					$output = sprintf(
 						/* translators: 1: A date; 2: A time; */

@@ -43,7 +43,7 @@ function get_previous_components() {
 		);
 
 		if ( $short_descriptions ) {
-			$short_descriptions = trim( $short_descriptions );
+			$short_descriptions = array_map( 'trim', (array) $short_descriptions );
 		}
 
 		foreach ( $short_descriptions as $description ) {

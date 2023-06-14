@@ -19,6 +19,7 @@ add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_speaker_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_organizer_post_meta' );
+add_action( 'init', __NAMESPACE__ . '\register_volunteer_post_meta' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_user_validation_route' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
 add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_session_query_args', 10, 2 );
@@ -236,6 +237,70 @@ function register_organizer_post_meta() {
 				}
 				return $wporg_user->user_login;
 			},
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+}
+
+/**
+ * Registers post meta to the Volunteer post type.
+ *
+ * @return void
+ */
+function register_volunteer_post_meta() {
+	register_post_meta(
+		'wcb_volunteer',
+		'_wcpt_user_id',
+		array(
+			'type'         => 'integer',
+			// `false` because it's not set directly; it's set as a result of `_wcpt_user_name`.
+			// See update_wcorg_user_id() in wc-post-types.php.
+			'show_in_rest' => false,
+			'single'       => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+
+	register_post_meta(
+		'wcb_volunteer',
+		'_wcpt_user_name',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+					if ( $user_id ) {
+						$wporg_user = get_userdata( $user_id );
+						if ( $wporg_user instanceof WP_User ) {
+							return $wporg_user->user_login;
+						}
+					}
+					return $value;
+				},
+			),
+			'sanitize_callback' => function( $value ) {
+				$wporg_user = wcorg_get_user_by_canonical_names( $value );
+				if ( ! $wporg_user ) {
+					return '';
+				}
+				return $wporg_user->user_login;
+			},
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+
+	register_post_meta(
+		'wcb_volunteer',
+		'_wcb_volunteer_email',
+		array(
+			'type'          => 'string',
+			'show_in_rest'  => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
+			'single'        => true,
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);

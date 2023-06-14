@@ -37,6 +37,11 @@ function register_personal_data_exporters( $exporters ) {
 		'callback'               => __NAMESPACE__ . '\organizer_personal_data_exporter',
 	);
 
+	$exporters['wcb_volunteer'] = array(
+		'exporter_friendly_name' => __( 'WordCamp Volunteer Data', 'wordcamporg' ),
+		'callback'               => __NAMESPACE__ . '\volunteer_personal_data_exporter',
+	);
+
 	return $exporters;
 }
 
@@ -94,6 +99,25 @@ function organizer_personal_data_exporter( $email_address, $page ) {
 	];
 
 	return _personal_data_exporter( 'wcb_organizer', $props_to_export, $email_address, $page );
+}
+
+
+/**
+ * Finds and exports personal data in the Volunteer post type.
+ *
+ * @param string $email_address
+ * @param int    $page
+ *
+ * @return array
+ */
+function volunteer_personal_data_exporter( $email_address, $page ) {
+	$props_to_export = array(
+		'post_title'           => __( 'Volunteer Name', 'wordcamporg' ),
+		'_wcpt_user_id'        => __( 'WordPress.org Username', 'wordcamporg' ),
+		'_wcb_volunteer_email' => __( 'Email Address', 'wordcamporg' ),
+	);
+
+	return _personal_data_exporter( 'wcb_volunteer', $props_to_export, $email_address, $page );
 }
 
 /**
@@ -190,6 +214,11 @@ function register_personal_data_erasers( $erasers ) {
 		'callback'               => __NAMESPACE__ . '\organizer_personal_data_eraser',
 	);
 
+	$erasers['wcb_volunteer'] = array(
+		'exporter_friendly_name' => __( 'WordCamp Volunteer Data', 'wordcamporg' ),
+		'callback'               => __NAMESPACE__ . '\volunteer_personal_data_eraser',
+	);
+
 	return $erasers;
 }
 
@@ -205,6 +234,13 @@ function sponsor_personal_data_eraser( $email_address, $page ) {
 
 
 function organizer_personal_data_eraser( $email_address, $page ) {
+	// @todo
+}
+
+/**
+ * Erases personal data in the Volunteer post type.
+ */
+function volunteer_personal_data_eraser( $email_address, $page ) {
 	// @todo
 }
 
@@ -287,6 +323,31 @@ function get_wc_posts( $post_type, $email_address, $page ) {
 			} else {
 				$query_args = [];
 			}
+			break;
+
+		case 'wcb_volunteer':
+			$meta_query = array(
+				array(
+					'key'   => '_wcb_volunteer_email',
+					'value' => $email_address,
+				),
+			);
+
+			$user = get_user_by( 'email', $email_address );
+
+			if ( $user instanceof WP_User ) {
+				$meta_query[] = array(
+					array(
+						'key'   => '_wcpt_user_id',
+						'value' => $user->ID,
+						'type'  => 'NUMERIC',
+					),
+				);
+
+				$meta_query['relation'] = 'OR';
+			}
+
+			$query_args['meta_query'] = $meta_query;
 			break;
 	}
 

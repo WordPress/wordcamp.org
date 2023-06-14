@@ -37,6 +37,7 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 		// 'wcb_sponsor',
 		'mes', // Metaboxes not converted yet, but has other custom Gutenberg UI.
 		'wcb_organizer',
+		'wcb_volunteer',
 	);
 
 	/*

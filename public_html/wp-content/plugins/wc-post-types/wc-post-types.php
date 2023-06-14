@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WordCamp.org Post Types
- * Plugin Description: Sessions, Speakers, Sponsors and much more.
+ * Plugin Description: Custom post types for Sessions, Speakers, Sponsors, Organizers, Volunteers.
  */
 
 require_once 'inc/utilities.php';
@@ -269,6 +269,7 @@ class WordCamp_Post_Types_Plugin {
 		$this->register_script( 'wcb-session-meta', 'build/sessions.js' );
 		$this->register_script( 'wcb-speaker-meta', 'build/speakers.js' );
 		$this->register_script( 'wcb-organizer-meta', 'build/organizers.js' );
+		$this->register_script( 'wcb-volunteer-meta', 'build/volunteers.js' );
 
 		// Enqueues scripts and styles for session admin page.
 		if ( 'wcb_session' == $post_type ) {
@@ -319,6 +320,11 @@ class WordCamp_Post_Types_Plugin {
 		if ( 'wcb_organizer' === $post_type ) {
 			wp_enqueue_script( 'wcb-organizer-meta' );
 		}
+
+		// Enqueues scripts and styles for volunteer editor pages.
+		if ( 'wcb_volunteer' === $post_type ) {
+			wp_enqueue_script( 'wcb-volunteer-meta' );
+		}
 	}
 
 	/**
@@ -362,6 +368,7 @@ class WordCamp_Post_Types_Plugin {
 
 		switch ( $screen->id ) {
 			case 'edit-wcb_organizer':
+			case 'edit-wcb_volunteer':
 			case 'edit-wcb_speaker':
 			case 'edit-wcb_sponsor':
 			case 'edit-wcb_session':
@@ -377,6 +384,7 @@ class WordCamp_Post_Types_Plugin {
 			case 'wcb_session':
 			case 'wcb_organizer':
 			case 'wcb_speaker':
+			case 'wcb_volunteer':
 				wp_enqueue_style(
 					'wcpt-editor',
 					plugins_url( '/css/editor.css', __FILE__ ),
@@ -1582,6 +1590,44 @@ class WordCamp_Post_Types_Plugin {
 				'menu_icon'       => 'dashicons-groups',
 			)
 		);
+
+		// Volunteer post type labels.
+		$labels = array(
+			'name'               => __( 'Volunteers',                   'wordcamporg' ),
+			'singular_name'      => __( 'Volunteer',                    'wordcamporg' ),
+			'add_new'            => __( 'Add New',                      'wordcamporg' ),
+			'add_new_item'       => __( 'Add New Volunteer',            'wordcamporg' ),
+			'edit'               => __( 'Edit',                         'wordcamporg' ),
+			'edit_item'          => __( 'Edit Volunteer',               'wordcamporg' ),
+			'new_item'           => __( 'New Volunteer',                'wordcamporg' ),
+			'view'               => __( 'View Volunteer',               'wordcamporg' ),
+			'view_item'          => __( 'View Volunteer',               'wordcamporg' ),
+			'search_items'       => __( 'Search Volunteers',            'wordcamporg' ),
+			'not_found'          => __( 'No volunteers found',          'wordcamporg' ),
+			'not_found_in_trash' => __( 'No volunteers found in Trash', 'wordcamporg' ),
+		);
+
+		// Register volunteer post type.
+		register_post_type(
+			'wcb_volunteer',
+			array(
+				'labels'          => $labels,
+				'rewrite'         => array(
+					'slug'       => 'volunteer',
+					'with_front' => false,
+				),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail' ),
+				'menu_position'   => 22,
+				'public'          => false,
+				'show_ui'         => true,
+				'can_export'      => true,
+				'capability_type' => 'post',
+				'hierarchical'    => false,
+				'query_var'       => true,
+				'show_in_rest'    => true,
+				'menu_icon'       => 'dashicons-hammer',
+			)
+		);
 	}
 
 	/**
@@ -1701,6 +1747,34 @@ class WordCamp_Post_Types_Plugin {
 				'show_ui'      => true,
 				'show_in_rest' => true,
 				'rest_base'    => 'organizer_team',
+			)
+		);
+
+		// Labels for volunteer teams.
+		$labels = array(
+			'name'          => __( 'Teams',         'wordcamporg' ),
+			'singular_name' => __( 'Team',          'wordcamporg' ),
+			'search_items'  => __( 'Search Teams',  'wordcamporg' ),
+			'popular_items' => __( 'Popular Teams', 'wordcamporg' ),
+			'all_items'     => __( 'All Teams',     'wordcamporg' ),
+			'edit_item'     => __( 'Edit Team',     'wordcamporg' ),
+			'update_item'   => __( 'Update Team',   'wordcamporg' ),
+			'add_new_item'  => __( 'Add Team',      'wordcamporg' ),
+			'new_item_name' => __( 'New Team',      'wordcamporg' ),
+		);
+
+		// Register volunteer teams taxonomy.
+		register_taxonomy(
+			'wcb_volunteer_team',
+			'wcb_volunteer',
+			array(
+				'labels'       => $labels,
+				'rewrite'      => array( 'slug' => 'team' ),
+				'query_var'    => 'team',
+				'hierarchical' => true,
+				'public'       => true,
+				'show_ui'      => true,
+				'show_in_rest' => true,
 			)
 		);
 
@@ -1912,7 +1986,7 @@ class WordCamp_Post_Types_Plugin {
 	 * Add post types to 'At a Glance' dashboard widget
 	 */
 	public function glance_items( $items = array() ) {
-		$post_types = array( 'wcb_speaker', 'wcb_session', 'wcb_sponsor' );
+		$post_types = array( 'wcb_speaker', 'wcb_session', 'wcb_sponsor', 'wcb_organizer', 'wcb_volunteer' );
 
 		foreach ( $post_types as $post_type ) {
 
@@ -1934,6 +2008,12 @@ class WordCamp_Post_Types_Plugin {
 						break;
 					case 'wcb_sponsor':
 						$text = _n( '%s Sponsor', '%s Sponsors', $num_posts->publish );
+						break;
+					case 'wcb_organizer':
+						$text = _n( '%s Organizer', '%s Organizers', $num_posts->publish );
+						break;
+					case 'wcb_volunteer':
+						$text = _n( '%s Volunteer', '%s Volunteers', $num_posts->publish );
 						break;
 					default:
 				}

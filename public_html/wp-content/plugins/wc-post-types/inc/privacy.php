@@ -54,12 +54,12 @@ function register_personal_data_exporters( $exporters ) {
  * @return array
  */
 function speaker_personal_data_exporter( $email_address, $page ) {
-	$props_to_export = [
+	$props_to_export = array(
 		'post_title'         => __( 'Speaker Name', 'wordcamporg' ),
 		'post_content'       => __( 'Speaker Bio', 'wordcamporg' ),
 		'_wcb_speaker_email' => __( 'Gravatar Email', 'wordcamporg' ),
 		'_wcpt_user_id'      => __( 'WordPress.org Username', 'wordcamporg' ),
-	];
+	);
 
 	return _personal_data_exporter( 'wcb_speaker', $props_to_export, $email_address, $page );
 }
@@ -73,13 +73,13 @@ function speaker_personal_data_exporter( $email_address, $page ) {
  * @return array
  */
 function sponsor_personal_data_exporter( $email_address, $page ) {
-	$props_to_export = [
+	$props_to_export = array(
 		'_wcpt_sponsor_company_name'  => __( 'Company Name', 'wordcamporg' ),
 		'_wcpt_sponsor_first_name'    => __( 'First Name', 'wordcamporg' ),
 		'_wcpt_sponsor_last_name'     => __( 'Last Name', 'wordcamporg' ),
 		'_wcpt_sponsor_email_address' => __( 'Email Address', 'wordcamporg' ),
 		'_wcpt_sponsor_phone_number'  => __( 'Phone Number', 'wordcamporg' ),
-	];
+	);
 
 	return _personal_data_exporter( 'wcb_sponsor', $props_to_export, $email_address, $page );
 }
@@ -93,10 +93,10 @@ function sponsor_personal_data_exporter( $email_address, $page ) {
  * @return array
  */
 function organizer_personal_data_exporter( $email_address, $page ) {
-	$props_to_export = [
+	$props_to_export = array(
 		'post_title'    => __( 'Organizer Name', 'wordcamporg' ),
 		'_wcpt_user_id' => __( 'WordPress.org Username', 'wordcamporg' ),
-	];
+	);
 
 	return _personal_data_exporter( 'wcb_organizer', $props_to_export, $email_address, $page );
 }
@@ -131,7 +131,7 @@ function volunteer_personal_data_exporter( $email_address, $page ) {
 function _personal_data_exporter( $post_type, array $props_to_export, $email_address, $page ) {
 	$page = (int) $page;
 
-	$exporters   = apply_filters( 'wp_privacy_personal_data_exporters', [] );
+	$exporters   = apply_filters( 'wp_privacy_personal_data_exporters', array() );
 	$group_label = $exporters[ $post_type ]['exporter_friendly_name'] ?: sprintf( __( '%s Data', 'wordcamporg' ), $post_type );
 
 	$data_to_export = array();
@@ -139,17 +139,17 @@ function _personal_data_exporter( $post_type, array $props_to_export, $email_add
 	$post_query = get_wc_posts( $post_type, $email_address, $page );
 
 	if ( is_wp_error( $post_query ) ) {
-		return [
-			'data' => [],
+		return array(
+			'data' => array(),
 			'done' => true,
-		];
+		);
 	}
 
 	foreach ( (array) $post_query->posts as $post ) {
-		$post_data_to_export = [];
+		$post_data_to_export = array();
 
 		foreach ( $props_to_export as $key => $label ) {
-			if ( in_array( $key, [ 'post_title', 'post_content' ], true ) ) {
+			if ( in_array( $key, array( 'post_title', 'post_content' ), true ) ) {
 				$value = $post->$key;
 			} else {
 				$value = get_post_meta( $post->ID, $key, true );
@@ -166,29 +166,29 @@ function _personal_data_exporter( $post_type, array $props_to_export, $email_add
 			}
 
 			if ( ! empty( $value ) ) {
-				$post_data_to_export[] = [
+				$post_data_to_export[] = array(
 					'name'  => $label,
 					'value' => $value,
-				];
+				);
 			}
 		}
 
 		if ( ! empty( $post_data_to_export ) ) {
-			$data_to_export[] = [
+			$data_to_export[] = array(
 				'group_id'    => $post_type,
 				'group_label' => $group_label,
 				'item_id'     => "{$post_type}-{$post->ID}",
 				'data'        => $post_data_to_export,
-			];
+			);
 		}
 	}
 
 	$done = $post_query->max_num_pages <= $page;
 
-	return [
+	return array(
 		'data' => $data_to_export,
 		'done' => $done,
-	];
+	);
 }
 
 /**
@@ -256,7 +256,7 @@ function volunteer_personal_data_eraser( $email_address, $page ) {
 function get_wc_posts( $post_type, $email_address, $page ) {
 	$number = 20;
 
-	$query_args = [
+	$query_args = array(
 		'posts_per_page' => $number,
 		'paged'          => $page,
 		'post_type'      => $post_type,
@@ -270,58 +270,59 @@ function get_wc_posts( $post_type, $email_address, $page ) {
 		),
 		'orderby'        => 'ID',
 		'order'          => 'ASC',
-	];
+	);
 
 	switch ( $post_type ) {
-		case 'wcb_speaker' :
-			$meta_query = [
-				[
+		case 'wcb_speaker':
+			$meta_query = array(
+				array(
 					'key'   => '_wcb_speaker_email',
 					'value' => $email_address,
-				],
-			];
+				),
+			);
 
 			$user = get_user_by( 'email', $email_address );
 
 			if ( $user instanceof WP_User ) {
-				$meta_query[] = [
-					[
+				$meta_query[] = array(
+					array(
 						'key'   => '_wcpt_user_id',
 						'value' => $user->ID,
 						'type'  => 'NUMERIC',
-					],
-				];
+					),
+				);
 
 				$meta_query['relation'] = 'OR';
 			}
 
 			$query_args['meta_query'] = $meta_query;
 			break;
-		case 'wcb_sponsor' :
-			$meta_query = [
-				[
+		case 'wcb_sponsor':
+			$meta_query = array(
+				array(
 					'key'   => '_wcpt_sponsor_email_address',
 					'value' => $email_address,
-				],
-			];
+				),
+			);
 
 			$query_args['meta_query'] = $meta_query;
 			break;
-		case 'wcb_organizer' :
+
+		case 'wcb_organizer':
 			$user = get_user_by( 'email', $email_address );
 
 			if ( $user instanceof WP_User ) {
-				$meta_query = [
-					[
+				$meta_query = array(
+					array(
 						'key'   => '_wcpt_user_id',
 						'value' => $user->ID,
 						'type'  => 'NUMERIC',
-					],
-				];
+					),
+				);
 
 				$query_args['meta_query'] = $meta_query;
 			} else {
-				$query_args = [];
+				$query_args = array();
 			}
 			break;
 

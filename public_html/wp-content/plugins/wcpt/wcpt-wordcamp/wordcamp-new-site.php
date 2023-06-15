@@ -432,6 +432,8 @@ class WordCamp_New_Site {
 		$this->set_default_options( $wordcamp, $meta );
 		$this->create_post_stubs( $wordcamp, $meta, $lead_organizer );
 
+		Jetpack::activate_default_modules( false, false, array(), false, false, false, false );
+
 		/**
 		 * Hook into the configuration process for a new WordCamp site.
 		 *

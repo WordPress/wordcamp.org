@@ -115,6 +115,7 @@ function volunteer_personal_data_exporter( $email_address, $page ) {
 		'post_title'           => __( 'Volunteer Name', 'wordcamporg' ),
 		'_wcpt_user_id'        => __( 'WordPress.org Username', 'wordcamporg' ),
 		'_wcb_volunteer_email' => __( 'Email Address', 'wordcamporg' ),
+		'_wcb_volunteer_first_time' => __( 'First Time Volunteer', 'wordcamporg' ),
 	);
 
 	return _personal_data_exporter( 'wcb_volunteer', $props_to_export, $email_address, $page );

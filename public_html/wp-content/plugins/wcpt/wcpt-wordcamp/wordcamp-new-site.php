@@ -733,6 +733,9 @@ class WordCamp_New_Site {
 				'content' => $this->get_stub_content( 'post', 'call-for-volunteers' ),
 				'status'  => 'draft',
 				'type'    => 'post',
+				'meta'    => array(
+					'wcfd-key' => 'call-for-volunteers',
+				),
 			),
 		);
 

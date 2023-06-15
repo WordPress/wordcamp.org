@@ -16,6 +16,7 @@ add_action( 'wcorg_connect_new_site',                          __NAMESPACE__ . '
 function default_jetpack_modules( $modules ) {
 	$modules = array_diff( $modules, array( 'widget-visibility' ) );
 	array_push( $modules, 'contact-form', 'shortcodes', 'custom-css', 'subscriptions' );
+	$modules = array_unique( $modules );
 
 	return $modules;
 }

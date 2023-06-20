@@ -24,9 +24,9 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	brew install mkcert
 	brew install nss
 	mkcert -install
-	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test buddycamp.test *.buddycamp.test
+	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test buddycamp.test *.buddycamp.test events.wordpress.test
 	```
-	
+
 	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
 
 1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.

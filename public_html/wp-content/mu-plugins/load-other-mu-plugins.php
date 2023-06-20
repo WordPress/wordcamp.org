@@ -19,6 +19,7 @@ if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
 
 wcorg_include_individual_mu_plugins();
 wcorg_include_mu_plugin_folders();
+wcorg_include_events_network_mu_plugins();
 
 /**
  * Load individually-targeted files
@@ -28,9 +29,9 @@ wcorg_include_mu_plugin_folders();
 function wcorg_include_individual_mu_plugins() {
 	$shortcodes = dirname( __DIR__ ) . '/mu-plugins-private/wordcamp-shortcodes/wc-shortcodes.php';
 
-	require_once( __DIR__ . '/wp-cli-commands/bootstrap.php' );
-	require_once( __DIR__ . '/camptix-tweaks/camptix-tweaks.php' );
-	require_once( __DIR__ . '/blocks/blocks.php' );
+	require_once __DIR__ . '/wp-cli-commands/bootstrap.php';
+	require_once __DIR__ . '/camptix-tweaks/camptix-tweaks.php';
+	require_once __DIR__ . '/blocks/blocks.php';
 	require_once __DIR__ . '/quickbooks/quickbooks.php';
 	require_once __DIR__ . '/theme-templates/bootstrap.php';
 	require_once __DIR__ . '/virtual-embeds/virtual-embeds.php';
@@ -42,7 +43,7 @@ function wcorg_include_individual_mu_plugins() {
 	}
 
 	if ( is_file( $shortcodes ) ) {
-		require_once( $shortcodes );
+		require_once $shortcodes;
 	}
 }
 
@@ -61,9 +62,18 @@ function wcorg_include_mu_plugin_folders() {
 		if ( is_array( $plugins ) ) {
 			foreach ( $plugins as $plugin ) {
 				if ( is_file( $plugin ) ) {
-					require_once( $plugin );
+					require_once $plugin;
 				}
 			}
 		}
+	}
+}
+
+/**
+ * Load every mu-plugin that only runs on events network
+ */
+function wcorg_include_events_network_mu_plugins() {
+	if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
+		require_once __DIR__ . '/events/redirects.php';
 	}
 }

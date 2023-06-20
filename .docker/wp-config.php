@@ -38,22 +38,34 @@ $table_prefix = 'wc_'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride
 /*
  * Multisite
  */
-if ( 'buddycamp.test' === $_SERVER['HTTP_HOST'] || '.buddycamp.test' === substr( $_SERVER['HTTP_HOST'], strlen( $_SERVER['HTTP_HOST'] ) - 14, 14 ) ) {
-	$wcorg_domain_current_site = 'buddycamp.test';
-} else {
-	$wcorg_domain_current_site = 'wordcamp.test';
+const WORDCAMP_ROOT_BLOG_ID = 5;
+const EVENTS_ROOT_BLOG_ID   = 47;
+
+switch ( $_SERVER['HTTP_HOST'] ) {
+	case 'events.wordpress.test':
+		define( 'SITE_ID_CURRENT_SITE',  2 );
+		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID ); // events.wordpress.test.
+		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
+		define( 'SUBDOMAIN_INSTALL',     false );
+		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		break;
+
+	case 'wordcamp.test':
+	case 'buddycamp.test':
+	default:
+		define( 'SITE_ID_CURRENT_SITE',  1 );
+		define( 'BLOG_ID_CURRENT_SITE',  WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.test.
+		define( 'DOMAIN_CURRENT_SITE',   'buddycamp.test' === $_SERVER['HTTP_HOST'] ? 'buddycamp.test' : 'wordcamp.test' );
+		define( 'SUBDOMAIN_INSTALL',     true );
+		define( 'NOBLOGREDIRECT',        'https://central.wordcamp.test' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
+		break;
 }
 
-define( 'WP_ALLOW_MULTISITE',   true ); // Temporary workaround for https://github.com/Automattic/wp-super-cache/issues/97.
-define( 'MULTISITE',            true );
-define( 'SUBDOMAIN_INSTALL',    true );
-define( 'DOMAIN_CURRENT_SITE',  $wcorg_domain_current_site );
-define( 'PATH_CURRENT_SITE',    '/' );
-define( 'SITE_ID_CURRENT_SITE',  1 );
-define( 'BLOG_ID_CURRENT_SITE',  5 ); // central.wordcamp.test.
-define( 'NOBLOGREDIRECT',       'https://central.wordcamp.test' );
-define( 'SUNRISE',               true );
-define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
+define( 'MULTISITE',         true );
+define( 'SUNRISE',           true );
+define( 'PATH_CURRENT_SITE', '/' );
 
 
 /*

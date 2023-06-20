@@ -1,6 +1,6 @@
 <?php
 
-namespace WordCamp\Redirect;
+namespace WordCamp\Redirects;
 
 defined( 'WPINC' ) || die();
 

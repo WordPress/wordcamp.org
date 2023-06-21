@@ -2,6 +2,12 @@
 
 defined( 'WPINC' ) || die();
 
+if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
+	// @todo Remove this once https://github.com/WordPress/wordcamp.org/issues/906 is fixed.
+	// In the meantime it causes problems because of switch_to_blog().
+	return;
+}
+
 wcorg_include_individual_mu_plugins();
 wcorg_include_mu_plugin_folders();
 

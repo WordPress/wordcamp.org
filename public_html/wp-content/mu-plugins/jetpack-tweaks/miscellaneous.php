@@ -278,3 +278,6 @@ CSS;
 	wp_add_inline_style( 'grunion.css', $form_css );
 }
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\inject_css_for_fieldset' );
+
+// Default forms in Jetpack got switched in 12.2, and the fix for accessibility (wrap_checkbox_radio_fieldset) breaks when upgrading: to 12.2+.
+add_filter( 'jetpack_contact_form_use_package', '__return_false' );

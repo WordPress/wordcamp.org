@@ -5,6 +5,12 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 }
 
+const WORDCAMP_NETWORK_ID   = 1;
+const WORDCAMP_ROOT_BLOG_ID = 5;
+const EVENTS_NETWORK_ID     = 2;
+const EVENTS_ROOT_BLOG_ID   = 47;
+const SITE_ID_CURRENT_SITE  = WORDCAMP_NETWORK_ID;
+
 define( 'WP_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/plugins' );
 define( 'SUT_WPMU_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/mu-plugins' ); // WPMU_PLUGIN_DIR will be in `WP_TESTS_DIR`.
 

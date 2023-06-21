@@ -38,13 +38,15 @@ $table_prefix = 'wc_'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride
 /*
  * Multisite
  */
+const WORDCAMP_NETWORK_ID   = 1;
 const WORDCAMP_ROOT_BLOG_ID = 5;
+const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
 
 switch ( $_SERVER['HTTP_HOST'] ) {
 	case 'events.wordpress.test':
-		define( 'SITE_ID_CURRENT_SITE',  2 );
-		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID ); // events.wordpress.test.
+		define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
+		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
 		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
 		define( 'SUBDOMAIN_INSTALL',     false );
 		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test' );
@@ -54,8 +56,8 @@ switch ( $_SERVER['HTTP_HOST'] ) {
 	case 'wordcamp.test':
 	case 'buddycamp.test':
 	default:
-		define( 'SITE_ID_CURRENT_SITE',  1 );
-		define( 'BLOG_ID_CURRENT_SITE',  WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.test.
+		define( 'SITE_ID_CURRENT_SITE',  WORDCAMP_NETWORK_ID );
+		define( 'BLOG_ID_CURRENT_SITE',  WORDCAMP_ROOT_BLOG_ID );
 		define( 'DOMAIN_CURRENT_SITE',   'buddycamp.test' === $_SERVER['HTTP_HOST'] ? 'buddycamp.test' : 'wordcamp.test' );
 		define( 'SUBDOMAIN_INSTALL',     true );
 		define( 'NOBLOGREDIRECT',        'https://central.wordcamp.test' );

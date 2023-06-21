@@ -11,6 +11,10 @@ load_network_sunrise();
  */
 function load_network_sunrise() {
 	switch ( SITE_ID_CURRENT_SITE ) {
+		case EVENTS_NETWORK_ID:
+			require __DIR__ . '/sunrise-events.php';
+			break;
+
 		case WORDCAMP_NETWORK_ID:
 		default:
 			require __DIR__ . '/sunrise-wordcamp.php';

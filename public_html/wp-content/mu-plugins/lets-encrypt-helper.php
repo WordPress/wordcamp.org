@@ -53,7 +53,7 @@ class WordCamp_Lets_Encrypt_Helper {
 					`public`  = 1 AND
 					`deleted` = 0
 				ORDER BY `blog_id` ASC",
-				1
+				WORDCAMP_NETWORK_ID
 			),
 			ARRAY_A
 		);

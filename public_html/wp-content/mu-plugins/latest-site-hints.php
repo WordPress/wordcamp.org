@@ -2,10 +2,16 @@
 
 namespace WordCamp\Latest_Site_Hints;
 use function WordCamp\Sunrise\get_top_level_domain;
-
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH };
 
 defined( 'WPINC' ) || die();
+
+if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
+	// @todo Remove this once https://github.com/WordPress/wordcamp.org/issues/906 is fixed.
+	// If it's needed on the Events network, the constants above will need to be moved to `sunrise.php`, or
+	// defined in `sunrise-events.php` with a pattern designed for Events sites.
+	return;
+}
 
 // Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );

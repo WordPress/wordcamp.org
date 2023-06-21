@@ -154,15 +154,6 @@ function main() {
 }
 
 /**
- * Get the TLD for the current environment.
- *
- * @return string
- */
-function get_top_level_domain() {
-	return 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
-}
-
-/**
  * Parse the `$wpdb->blogs` `domain` and `path` out of the requested URL.
  *
  * This is only an educated guess, and cannot work in all cases (e.g., `central.wordcamp.org/2020` (year archive

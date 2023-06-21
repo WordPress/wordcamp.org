@@ -317,7 +317,7 @@ function get_domain_redirects() {
 		"2018.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2018",
 		"2019.philly.wordcamp.$tld"               => "philadelphia.wordcamp.$tld/2019",
 
-		// city.wordcamp.org/year redirects
+		// city.wordcamp.org/year redirects.
 		"india.wordcamp.$tld/2020" => "india.wordcamp.$tld/2021",
 
 		/*
@@ -352,10 +352,8 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 	$tld = get_top_level_domain();
 
 	$redirect_cities = array(
-		/*
-		 * These domains were created before the 2014 migration, and moved from `unsubdomactories_redirects()`
-		 * during the 2020 migration.
-		 */
+		// These domains were created before the 2014 migration, and moved from `unsubdomactories_redirects()`
+		// during the 2020 migration.
 		'barcelona', 'chicago', 'columbus', 'geneve', 'philly', 'philadelphia', 'publishers',
 		'athens', 'atlanta', 'austin', 'brighton', 'europe', 'nyc', 'newyork', 'organizers', 'rhodeisland', 'sf',
 		'cincinnati', 'dayton', 'denmark', 'finland', 'india', 'seattle', 'sunshinecoast', 'testing', 'varna',
@@ -363,8 +361,8 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'mexico', 'mexicocity', 'colombia', 'saopaulo', 'iloilo', 'lima', 'pokhara',
 		'peoria', 'torino', 'aalborg', 'cebu', 'butwal', 'centroamerica', 'london', 'londonca',
 		'portland', 'portlandme', 'miami', 'mallorca', 'montreal', 'ottawa', 'bristol', 'cusco', 'niagara',
-		'saintpetersburg','zilina','wuerzburg', 'kolkata', 'montclair', 'telaviv', 'bucharest',
-		'lancasterpa','lancaster', 'peru', 'pune', 'lisboa', 'sevilla',
+		'saintpetersburg', 'zilina', 'wuerzburg', 'kolkata', 'montclair', 'telaviv', 'bucharest',
+		'lancasterpa', 'lancaster', 'peru', 'pune', 'lisboa', 'sevilla',
 		'us', 'dc', 'phoenix', 'slc', 'boston', 'orlando', 'melbourne',
 		'oc', 'vegas', 'capetown', 'victoria', 'birmingham', 'birminghamuk', 'maine',
 		'albuquerque', 'sacramento', 'calgary', 'porto', 'portoalegre', 'tampa',
@@ -373,8 +371,8 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'biarritz', 'charleston', 'buenosaires', 'krakow', 'vienna', 'grandrapids', 'hamilton', 'minneapolis',
 		'stlouis', 'edinburgh', 'winnipeg', 'northcanton', 'sanantonio', 'prague',
 		'slovakia', 'salvador', 'maui', 'hamptonroads', 'houston', 'warsaw', 'belgrade', 'mumbai',
-		'belohorizonte',  'switzerland', 'romania', 'saratoga', 'fayetteville',
-		'bournemouth', 'hanoi',  'cologne', 'louisville', 'annarbor', 'manchester',
+		'belohorizonte', 'switzerland', 'romania', 'saratoga', 'fayetteville',
+		'bournemouth', 'hanoi', 'cologne', 'louisville', 'annarbor', 'manchester',
 		'laspenitas', 'israel', 'ventura', 'vancouver', 'auckland', 'norrkoping', 'netherlands',
 		'hamburg', 'nashville', 'connecticut', 'sheffield', 'wellington', 'omaha', 'milwaukee',
 		'riodejaneiro', 'wroclaw', 'santarosa', 'edmonton', 'kenya',
@@ -386,7 +384,6 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'pittsburgh', 'nola', 'neo', 'antwerp', 'helsinki', 'vernon', 'frankfurt', 'bilbao',
 		'gdynia', 'lehighvalley', 'lahore', 'bratislava', 'okc', 'la', 'rochester', 'ogijima', 'asheville',
 
-
 		// These domains were created after the 2014 URL migration was reverted, but before the 2020 migration.
 		'rome', 'ahmedabad', 'alicante', 'asia', 'bangkok', 'bari', 'belfast', 'bengaluru', 'bern',
 		'bharatpur', 'bhopal', 'bhubaneswar', 'biratnagar', 'bogota', 'boise', 'bordeaux', 'brno', 'buea',
@@ -394,7 +391,7 @@ function get_city_slash_year_url( $domain, $request_uri ) {
 		'chiclana', 'colombo', 'davao', 'delhi', 'denpasar', 'dhaka', 'douala', 'dublin', 'dusseldorf',
 		'entebbe', 'floripa', 'nice', 'niigata', 'nijmegen', 'nis', 'noordnederland', 'nordic',
 		'geneva', 'glasgow', 'granada', 'guadalajara', 'guayaquil', 'halifax', 'haneda', 'harare', 'hongkong',
-		'ileife', 'irun', 'islamabad',  'jackson', 'johannesburg', 'jyvaskyla', 'kampala', 'kanpur',
+		'ileife', 'irun', 'islamabad', 'jackson', 'johannesburg', 'jyvaskyla', 'kampala', 'kanpur',
 		'karachi', 'kathmandu', 'kent', 'kigali', 'kochi', 'kosice', 'kotakinabalu', 'kualalumpur', 'kyiv',
 		'kyoto', 'lagos', 'laspalmas', 'laspalmasgc', 'lausanne', 'lille', 'littlerock', 'lodz',
 		'longbeach', 'lublin', 'madison', 'madrid', 'managua', 'manila', 'mannheim', 'marbella', 'marseille',

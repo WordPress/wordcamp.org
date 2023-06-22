@@ -14,6 +14,8 @@ if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins/privacy-gdpr-exporter/privacy-gdpr-exporter.php';
 	}
 
+	require_once __DIR__ . '/events/redirects.php';
+
 	return;
 }
 

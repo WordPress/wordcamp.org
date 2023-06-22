@@ -5,6 +5,15 @@ defined( 'WPINC' ) || die();
 if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
 	// @todo Remove this once https://github.com/WordPress/wordcamp.org/issues/906 is fixed.
 	// In the meantime it causes problems because of switch_to_blog().
+
+	// Temporary: Load absolutely required plugins.
+	if ( 'local' !== WORDCAMP_ENVIRONMENT ) {
+		// SSO: Allows Auth and logins.
+		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-sso.php';
+		// Allows GDPR Export/Erasure to work
+		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins/privacy-gdpr-exporter/privacy-gdpr-exporter.php';
+	}
+
 	return;
 }
 

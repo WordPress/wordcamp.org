@@ -5,21 +5,10 @@ use WP_Site;
 
 defined( 'WPINC' ) or die();
 
-add_filter( 'jetpack_get_default_modules',                     __NAMESPACE__ . '\default_jetpack_modules'       );
+
 add_filter( 'pre_update_site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites', 10, 2 );
 add_action( 'wp_initialize_site',                              __NAMESPACE__ . '\schedule_connect_new_site', 11 );
 add_action( 'wcorg_connect_new_site',                          __NAMESPACE__ . '\wcorg_connect_new_site', 10, 2 );
-
-/*
- * Determine which Jetpack modules should be automatically activated when new sites are created
- */
-function default_jetpack_modules( $modules ) {
-	$modules = array_diff( $modules, array( 'widget-visibility' ) );
-	array_push( $modules, 'contact-form', 'shortcodes', 'custom-css', 'subscriptions' );
-	$modules = array_unique( $modules );
-
-	return $modules;
-}
 
 /**
  * Never automatically connect new sites to WordPress.com.

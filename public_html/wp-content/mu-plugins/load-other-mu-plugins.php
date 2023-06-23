@@ -2,26 +2,46 @@
 
 defined( 'WPINC' ) || die();
 
-if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
-	// @todo Remove this once https://github.com/WordPress/wordcamp.org/issues/906 is fixed.
-	// In the meantime it causes problems because of switch_to_blog().
+wcorg_include_common_plugins();
+wcorg_include_network_only_plugins();
 
-	// Temporary: Load absolutely required plugins.
+
+/**
+ * Load mu-plugins that should run on all networks.
+ */
+function wcorg_include_common_plugins() {
+	require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins/admin-bar-sandbox.php';
+
 	if ( 'local' !== WORDCAMP_ENVIRONMENT ) {
-		// SSO: Allows Auth and logins.
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-sso.php';
-		// Allows GDPR Export/Erasure to work
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins/privacy-gdpr-exporter/privacy-gdpr-exporter.php';
 	}
-
-	require_once __DIR__ . '/events/redirects.php';
-
-	return;
 }
 
-wcorg_include_individual_mu_plugins();
-wcorg_include_mu_plugin_folders();
-wcorg_include_events_network_mu_plugins();
+/**
+ * Include mu-plugins that should only run on a specific network.
+ */
+function wcorg_include_network_only_plugins() {
+	if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
+		$network_folder = 'events';
+	} else {
+		$network_folder = 'wordcamp';
+
+		// @todo temporary. some of this should be moved into into wcorg_include_common_plugins(), but it all needs to
+		// be audited and updated for the Events network first.
+		// see https://github.com/WordPress/wordcamp.org/issues/906.
+		wcorg_include_individual_mu_plugins();
+		wcorg_include_mu_plugin_folders();
+	}
+
+	$muplugins = glob( __DIR__ . "/$network_folder/*.php" );
+
+	foreach ( $muplugins as $plugin ) {
+		if ( is_file( $plugin ) ) {
+			require_once $plugin;
+		}
+	}
+}
 
 /**
  * Load individually-targeted files
@@ -29,6 +49,10 @@ wcorg_include_events_network_mu_plugins();
  * This is because the folder contains some .php files that we don't want to automatically include with glob().
  */
 function wcorg_include_individual_mu_plugins() {
+	// todo move some of this into wcorg_include_common_plugins() and wcorg_include_wordcamp_only_plugins() as
+	// they've been audited/updated for events sites.
+	// see https://github.com/WordPress/wordcamp.org/issues/906.
+
 	$shortcodes = dirname( __DIR__ ) . '/mu-plugins-private/wordcamp-shortcodes/wc-shortcodes.php';
 
 	require_once __DIR__ . '/wp-cli-commands/bootstrap.php';
@@ -53,6 +77,10 @@ function wcorg_include_individual_mu_plugins() {
  * Load every mu-plugin in these folders
  */
 function wcorg_include_mu_plugin_folders() {
+	// todo move some of this into wcorg_include_common_plugins() and wcorg_include_wordcamp_only_plugins() as
+	// they've been audited/updated for events sites.
+	// see https://github.com/WordPress/wordcamp.org/issues/906.
+
 	$include_folders = array(
 		dirname( __DIR__ ) . '/mu-plugins-private',
 		__DIR__ . '/jetpack-tweaks',
@@ -68,14 +96,5 @@ function wcorg_include_mu_plugin_folders() {
 				}
 			}
 		}
-	}
-}
-
-/**
- * Load every mu-plugin that only runs on events network
- */
-function wcorg_include_events_network_mu_plugins() {
-	if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
-		require_once __DIR__ . '/events/redirects.php';
 	}
 }

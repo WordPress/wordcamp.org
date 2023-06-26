@@ -14,7 +14,7 @@ function redirect_to_make_community() {
 		$request_uri = $_SERVER['REQUEST_URI'];
 
 		if ( '/' === $request_uri ) {
-			$new_url = 'https://make.wordpress.org/community/events';
+			$new_url = 'https://make.wordpress.org/community/events/';
 			wp_redirect( $new_url );
 			exit;
 		}

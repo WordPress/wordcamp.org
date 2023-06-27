@@ -81,4 +81,30 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 
 		return $statuses;
 	}
+
+	/**
+	 * Checks if user can read the WordCamp post.
+	 *
+	 * First make our custom check against public WordCamp statuses and
+	 * after that fallback to default WP_REST_Posts_Controller for assurance.
+	 *
+	 * @access public
+	 *
+	 * @param object $post Post object.
+	 * @return bool Whether the post can be read.
+	 */
+	public function check_read_permission( $post ) {
+		$public_statuses = WordCamp_Loader::get_public_post_statuses();
+
+		// Camps that are scheduled and then cancelled should still be available (though not included by default).
+		$public_statuses[] = 'wcpt-cancelled';
+
+		// If post status is not listed as public, it cannot be read.
+		if ( ! in_array( $post->post_status, $public_statuses ) ) {
+			return false;
+		}
+
+		// Fallback to default read permission check.
+		return WP_REST_Posts_Controller::check_read_permission( $post );
+	}
 }

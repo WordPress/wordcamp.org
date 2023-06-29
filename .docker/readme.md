@@ -10,7 +10,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     cd wordcamp.test
     ```
 
-    If you get an error about "Permission denied (publickey)", you have two options: 
+    If you get an error about "Permission denied (publickey)", you have two options:
       - Make sure you have [a working SSH key](https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey#make-sure-you-have-a-key-that-is-being-used).
       - Or use the HTTPS URL:
           ```bash
@@ -24,7 +24,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	brew install mkcert
 	brew install nss
 	mkcert -install
-	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test buddycamp.test *.buddycamp.test events.wordpress.test
+	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
 
 	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
@@ -56,7 +56,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     docker compose up
 	```
 
-    _Using an Apple ARM64 chip? You may see `failed to solve: rpc error: code = Unknown desc =...` after running either of commands above. Try adding `platform: linux/amd64` to both `wordcamp.test` and `wordcamp.db` in `docker-compose.yaml`. This will instruct Docker to create an image based on the `linux/amd64` architecture instead of `linux/arm64`, i.e._ 
+    _Using an Apple ARM64 chip? You may see `failed to solve: rpc error: code = Unknown desc =...` after running either of commands above. Try adding `platform: linux/amd64` to both `wordcamp.test` and `wordcamp.db` in `docker-compose.yaml`. This will instruct Docker to create an image based on the `linux/amd64` architecture instead of `linux/arm64`, i.e._
     ```
     build:
         context: .docker
@@ -70,11 +70,11 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     ```bash
     wordcamp.test_1  | NOTICE: ready to handle connections
     ```
-   
+
     In this case the Docker environment will be running in the foreground. To stop the environment, use `CTRL + c`.
-    
+
     On subsequent uses, you can start the already-built environment up in the background, thus allowing other commands to be issued while the environment is still running:
-    
+
     ```bash
     docker compose up -d
     ```
@@ -92,7 +92,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
     Example hosts file entry:
     ```bash
-    127.0.0.1 wordcamp.test central.wordcamp.test 2014.seattle.wordcamp.test 2020.shinynew.wordcamp.test buddycamp.test 2015.brighton.buddycamp.test
+    127.0.0.1 wordcamp.test central.wordcamp.test seattle.wordcamp.test shinynew.wordcamp.test events.wordpress.test
     ```
 
 1. `/wp-admin` pages for these sites should now be accessible. Use `admin` as username and `password` as password to login. Front end pages will not be accessible until you complete the remaining steps.
@@ -128,7 +128,7 @@ Note: All of these commands are meant to be executed from project directory.
     ```bash
     docker compose stop
     ```
-   
+
    Note that using `docker compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
 
 1. To open a shell inside the web container, use:
@@ -211,7 +211,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
     Either way, you'll see "Installing...", and then the tests will run.
 
-4. The "useful commands" from the previous section will work here too— you just need to use `docker compose -f docker-compose.phpunit.yml` to specify this configuration. 
+4. The "useful commands" from the previous section will work here too— you just need to use `docker compose -f docker-compose.phpunit.yml` to specify this configuration.
 
     For example, to suspend the container, use:
     ```bash

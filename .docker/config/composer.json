@@ -69,16 +69,6 @@
 					}
 				},
 				{
-					"name": "wordpress-plugin/json-rest-api",
-					"type": "wordpress-plugin",
-					"version": "1.2.5",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/json-rest-api/",
-						"reference": "tags/1.2.5/"
-					}
-				},
-				{
 					"name": "wordpress-meta/wporg-profiles-wp-activity-notifier",
 					"type": "wordpress-plugin",
 					"version": "1.1",
@@ -109,7 +99,6 @@
 		"wpackagist-plugin/gutenberg": "*",
 		"wpackagist-plugin/hyperdb": "dev-trunk",
 		"wpackagist-plugin/jetpack": "*",
-		"wordpress-plugin/json-rest-api": "1.2.5",
 		"wpackagist-plugin/liveblog": "*",
 		"wpackagist-plugin/public-post-preview": "*",
 		"wpackagist-plugin/pwa": "*",

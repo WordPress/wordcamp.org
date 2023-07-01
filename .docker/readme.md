@@ -86,7 +86,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     To get the list of sites, run the following command, and then remove the `http(s)://` prefix and `/` suffix.
 
     ```bash
-    docker compose exec wordcamp.test wp site list --field=url --allow-root
+    docker compose exec wordcamp.test wp site list --field=url
     ```
 
     Example hosts file entry:

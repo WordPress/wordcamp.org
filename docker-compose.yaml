@@ -13,21 +13,18 @@ services:
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"
             - ".docker/config/composer.json:/usr/src/composer.json"
-            # todo mount host ~/dotfiles into container /root, but can't b/c outside .docker folder?
         ports:
             - "80:80"
             - "443:443"
             - "1080:1080"
         environment:
             - IS_LOCAL_DEV=1
-        # todo configure entrypoint to work around annoying wp-cli allow-root problem -- https://github.com/wp-cli/wp-cli/issues/1838#issuecomment-434077907
+            - WP_CLI_ALLOW_ROOT=true
 
-    # todo document why this is a separate container
     wordcamp.db:
         build:
             context: .docker
             dockerfile: Dockerfile.mysql
-            # todo maybe rename `wordcamp.db` to something more correct.
         volumes:
             - ".docker/database:/var/lib/mysql"
             - ".docker/bin:/var/scripts"

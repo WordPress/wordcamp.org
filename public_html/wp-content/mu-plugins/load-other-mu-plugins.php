@@ -10,8 +10,11 @@ wcorg_include_network_only_plugins();
  * Load mu-plugins that should run on all networks.
  */
 function wcorg_include_common_plugins() {
-	if ( 'local' !== WORDCAMP_ENVIRONMENT ) {
+	if ( file_exists( dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins.php' ) ) {
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins.php';
+	}
+
+	if ( 'local' !== WORDCAMP_ENVIRONMENT ) {
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-sso.php';
 	}
 }

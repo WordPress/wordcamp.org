@@ -3,7 +3,7 @@
 namespace WordCamp\Permalinks;
 defined( 'WPINC' ) || die();
 
-add_filter( 'pre_update_option_permalink_structure', 'wcorg_prevent_date_permalinks' );
+add_filter( 'pre_update_option_permalink_structure', __NAMESPACE__ . '\prevent_date_permalinks' );
 
 
 /**
@@ -16,7 +16,7 @@ add_filter( 'pre_update_option_permalink_structure', 'wcorg_prevent_date_permali
  *
  * @return string
  */
-function wcorg_prevent_date_permalinks( $new_value ) {
+function prevent_date_permalinks( $new_value ) {
 	if ( '/%year%' === substr( $new_value, 0, 7 ) ) {
 		wp_die(
 			'<p>' .

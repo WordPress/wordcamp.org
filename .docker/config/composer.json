@@ -49,6 +49,16 @@
 					}
 				},
 				{
+					"name": "wordpress-plugin/camptix-mercadopago",
+					"type": "wordpress-plugin",
+					"version": "1.0.6",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/camptix-mercadopago/",
+						"reference": "tags/1.0.6/"
+					}
+				},
+				{
 					"name": "wordpress-plugin/camptix-paystack",
 					"type": "wordpress-plugin",
 					"version": "1.0.0",
@@ -86,6 +96,7 @@
 		"wordpress-plugin/bbpress": "2.6.*",
 		"wpackagist-plugin/campt-indian-payment-gateway": "*",
 		"wordpress-plugin/camptix-bd-payments": "1.2",
+		"wordpress-plugin/camptix-mercadopago": "1.0.6",
 		"wpackagist-plugin/camptix-pagseguro": "*",
 		"wpackagist-plugin/camptix-payfast-gateway": "*",
 		"wpackagist-plugin/camptix-trustcard": "*",
@@ -119,6 +130,8 @@
 		"wpackagist-theme/twentyseventeen": "*",
 		"wpackagist-theme/twentynineteen": "*",
 		"wpackagist-theme/twentytwenty": "*",
-		"wpackagist-theme/twentytwentyone": "*"
+		"wpackagist-theme/twentytwentyone": "*",
+		"wpackagist-theme/twentytwentytwo": "*",
+		"wpackagist-theme/twentytwentythree": "*"
 	}
 }

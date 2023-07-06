@@ -39,6 +39,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
 	```bash
+	cd .. # to the directory above public_html/
 	composer install
 	```
 

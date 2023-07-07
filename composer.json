@@ -18,7 +18,8 @@
 		}
 	},
 	"require": {
-		"adhocore/jwt": "^1.0"
+		"adhocore/jwt": "^1.0",
+		"quickbooks/v3-php-sdk": "^6.1"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",

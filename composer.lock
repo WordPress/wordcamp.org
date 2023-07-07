@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "58dd76c84ca37d77ba5781dec61d1989",
+    "content-hash": "1a114ebe74f8caf8badfa040f1739019",
     "packages": [
         {
             "name": "adhocore/jwt",
@@ -62,6 +62,65 @@
                 }
             ],
             "time": "2021-02-20T09:56:44+00:00"
+        },
+        {
+            "name": "quickbooks/v3-php-sdk",
+            "version": "v6.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/intuit/QuickBooks-V3-PHP-SDK.git",
+                "reference": "20ce804a7e643d91b0a8f115e969bf6a0713f64e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/intuit/QuickBooks-V3-PHP-SDK/zipball/20ce804a7e643d91b0a8f115e969bf6a0713f64e",
+                "reference": "20ce804a7e643d91b0a8f115e969bf6a0713f64e",
+                "shasum": ""
+            },
+            "require": {
+                "ext-dom": "*",
+                "ext-mbstring": "*",
+                "php": ">=5.6.0"
+            },
+            "require-dev": {
+                "php-mock/php-mock": "^2.3",
+                "php-mock/php-mock-phpunit": "^2.6",
+                "phpunit/phpunit": "^5.0 || ^6.0 || ^7.0 || ^8"
+            },
+            "suggest": {
+                "ext-curl": "Uses Curl to make HTTP Requests",
+                "guzzlehttp/guzzle": "Uses Guzzle to make HTTP Requests"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "QuickBooksOnline\\API\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "abisalehalliprasan",
+                    "email": "anil_kumar3@intuit.com"
+                }
+            ],
+            "description": "The Official PHP SDK for QuickBooks Online Accounting API",
+            "homepage": "http://developer.intuit.com",
+            "keywords": [
+                "api",
+                "http",
+                "quickbooks",
+                "rest",
+                "smallbusiness"
+            ],
+            "support": {
+                "issues": "https://github.com/intuit/QuickBooks-V3-PHP-SDK/issues",
+                "source": "https://github.com/intuit/QuickBooks-V3-PHP-SDK/tree/v6.1.1"
+            },
+            "time": "2023-02-06T05:25:54+00:00"
         }
     ],
     "packages-dev": [

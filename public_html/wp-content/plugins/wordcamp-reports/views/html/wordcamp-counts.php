@@ -109,6 +109,14 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 				<td class="number"><?php echo number_format_i18n( $data['genders']['speaker']['male'] ); ?></td>
 				<td class="number"><?php echo number_format_i18n( $data['genders']['speaker']['unknown'] ); ?></td>
 			</tr>
+
+			<tr>
+				<td>Volunteers</td>
+				<td class="number"><?php echo number_format_i18n( $data['totals']['volunteer'] ); ?></td>
+				<td class="number"><?php echo number_format_i18n( $data['genders']['volunteer']['female'] ); ?></td>
+				<td class="number"><?php echo number_format_i18n( $data['genders']['volunteer']['male'] ); ?></td>
+				<td class="number"><?php echo number_format_i18n( $data['genders']['volunteer']['unknown'] ); ?></td>
+			</tr>
 		</table>
 	<?php endif; ?>
 
@@ -127,6 +135,8 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>Speakers<?php if ( ! empty( $data['genders'] ) ) :
 				?><br /><?php echo $gender_legend; ?><?php endif; ?></td>
 			<td>Sponsors</td>
+			<td>Volunteers<?php if ( ! empty( $data['genders'] ) ) :
+				?><br /><?php echo $gender_legend; ?><?php endif; ?></td>
 		</tr>
 
 		<?php foreach ( $data['wordcamps'] as $event ) : ?>
@@ -168,6 +178,15 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 
 				<td class="number total">
 					<?php echo number_format_i18n( $event['totals']['sponsor'] ); ?>
+				</td>
+
+				<td class="number">
+					<span class="total"><?php echo number_format_i18n( $event['totals']['volunteer'] ); ?></span>
+					<?php if ( ! empty( $data['genders'] ) ) : ?>
+						/ <?php echo number_format_i18n( $event['genders']['volunteer']['female'] ); ?>
+						/ <?php echo number_format_i18n( $event['genders']['volunteer']['male'] ); ?>
+						/ <?php echo number_format_i18n( $event['genders']['volunteer']['unknown'] ); ?>
+					<?php endif; ?>
 				</td>
 			</tr>
 		<?php endforeach; ?>

@@ -284,12 +284,14 @@ class WordCamp_Counts extends Base {
 				'session'   => 0,
 				'speaker'   => 0,
 				'sponsor'   => 0,
+				'volunteer' => 0,
 			),
 			'uniques'   => array(
 				'attendee'  => array(),
 				'organizer' => array(),
 				'speaker'   => array(),
 				'sponsor'   => array(),
+				'volunteer'   => array(),
 			),
 		);
 
@@ -300,6 +302,7 @@ class WordCamp_Counts extends Base {
 				'session'   => 0,
 				'speaker'   => 0,
 				'sponsor'   => 0,
+				'volunteer'   => 0,
 			),
 		);
 
@@ -314,6 +317,7 @@ class WordCamp_Counts extends Base {
 				'attendee'  => $gender_template,
 				'organizer' => $gender_template,
 				'speaker'   => $gender_template,
+				'volunteer'   => $gender_template,
 			);
 		}
 
@@ -573,6 +577,30 @@ class WordCamp_Counts extends Base {
 			$site_data[] = $data;
 
 			clean_post_cache( $sponsor );
+		}
+
+		$volunteers = new WP_Query( array(
+			'posts_per_page' => -1,
+			'post_type'      => 'wcb_volunteer',
+			'post_status'    => 'publish',
+		) );
+
+		foreach ( $volunteers->posts as $volunteer ) {
+			$data = array(
+				'wordcamp_id' => $wordcamp_id,
+				'site_id'     => $site_id,
+				'post_id'     => $volunteer->ID,
+				'type'        => 'volunteer',
+				'identifier'  => $volunteer->_wcpt_user_name,
+			);
+
+			if ( $this->include_gender ) {
+				$data['first_name'] = explode( ' ', $volunteer->post_title )[0];
+			}
+
+			$site_data[] = $data;
+
+			clean_post_cache( $volunteer );
 		}
 
 		restore_current_blog();

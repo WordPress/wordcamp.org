@@ -35,13 +35,14 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 		</tr>
 	</table>
 
-	<h4>Totals and Uniques</h4>
+	<h4>Totals, Uniques and First times</h4>
 
 	<table class="striped widefat but-not-too-wide">
 		<tr>
 			<td>Type</td>
 			<td>Total</td>
 			<td>Unique</td>
+			<td>First time</td>
 		</tr>
 		<tr>
 			<td>Registered Attendees</td>
@@ -67,6 +68,12 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>Sponsors</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['sponsor'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['sponsor'] ); ?></td>
+		</tr>
+
+		<tr>
+			<td>Volunteers</td>
+			<td class="number"><?php echo number_format_i18n( $data['totals']['volunteer'] ); ?></td>
+			<td class="number"><?php echo number_format_i18n( $data['uniques']['volunteer'] ); ?></td>
 		</tr>
 	</table>
 
@@ -112,10 +119,13 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>WordCamp</td>
 			<td>Date</td>
 			<td>Status</td>
-			<td>Registered Attendees<?php if ( ! empty( $data['genders'] ) ) : ?><br /><?php echo $gender_legend ?><?php endif; ?></td>
-			<td>Organizers<?php if ( ! empty( $data['genders'] ) ) : ?><br /><?php echo $gender_legend ?><?php endif; ?></td>
+			<td>Registered Attendees<?php if ( ! empty( $data['genders'] ) ) :
+				?><br /><?php echo $gender_legend; ?><?php endif; ?></td>
+			<td>Organizers<?php if ( ! empty( $data['genders'] ) ) :
+				?><br /><?php echo $gender_legend; ?><?php endif; ?></td>
 			<td>Sessions</td>
-			<td>Speakers<?php if ( ! empty( $data['genders'] ) ) : ?><br /><?php echo $gender_legend ?><?php endif; ?></td>
+			<td>Speakers<?php if ( ! empty( $data['genders'] ) ) :
+				?><br /><?php echo $gender_legend; ?><?php endif; ?></td>
 			<td>Sponsors</td>
 		</tr>
 

@@ -130,6 +130,7 @@ class WordCamp_Counts extends Base {
 		'post_id'     => 0,
 		'type'        => '',
 		'gender'      => '',
+		'first_time'  => '',
 	);
 
 	/**
@@ -293,6 +294,14 @@ class WordCamp_Counts extends Base {
 				'sponsor'   => array(),
 				'volunteer'   => array(),
 			),
+			'first_times' => array(
+				'attendee'  => 0,
+				'organizer' => 0,
+				'session'   => 0,
+				'speaker'   => 0,
+				'sponsor'   => 0,
+				'volunteer' => 0,
+			),
 		);
 
 		$wordcamp_template = array(
@@ -335,9 +344,13 @@ class WordCamp_Counts extends Base {
 
 			$type       = $item['type'];
 			$identifier = $item['identifier'];
+			$first_time = $item['first_time'];
 
 			$compiled_data['wordcamps'][ $wordcamp_id ]['totals'][ $type ] ++;
 			$compiled_data['totals'][ $type ] ++;
+			if ( 'yes' === $first_time ) {
+				$compiled_data['first_times'][ $type ] ++;
+			}
 			if ( isset( $compiled_data['uniques'][ $type ] ) ) {
 				$compiled_data['uniques'][ $type ][] = $identifier;
 			}
@@ -592,6 +605,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $volunteer->ID,
 				'type'        => 'volunteer',
 				'identifier'  => $volunteer->_wcpt_user_name,
+				'first_time'  => $volunteer->_wcb_volunteer_first_time,
 			);
 
 			if ( $this->include_gender ) {

@@ -48,32 +48,38 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>Registered Attendees</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['attendee'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['attendee'] ); ?></td>
+			<td class="number"><?php echo number_format_i18n( $data['first_times']['attendee'] ); ?></td>
 		</tr>
 		<tr>
 			<td>Organizers</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['organizer'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['organizer'] ); ?></td>
+			<td class="number"><?php echo number_format_i18n( $data['first_times']['organizer'] ); ?></td>
 		</tr>
 		<tr>
 			<td>Sessions</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['session'] ); ?></td>
 			<td class="number">n/a</td>
+			<td class="number"><?php echo number_format_i18n( $data['first_times']['session'] ); ?></td>
 		</tr>
 		<tr>
 			<td>Speakers</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['speaker'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['speaker'] ); ?></td>
+			<td class="number"><?php echo number_format_i18n( $data['first_times']['speaker'] ); ?></td>
 		</tr>
 		<tr>
 			<td>Sponsors</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['sponsor'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['sponsor'] ); ?></td>
+			<td class="number"><?php echo number_format_i18n( $data['first_times']['sponsor'] ); ?></td>
 		</tr>
 
 		<tr>
 			<td>Volunteers</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['volunteer'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['volunteer'] ); ?></td>
+			<td class="number"><?php echo number_format_i18n( $data['first_times']['volunteer'] ); ?></td>
 		</tr>
 	</table>
 

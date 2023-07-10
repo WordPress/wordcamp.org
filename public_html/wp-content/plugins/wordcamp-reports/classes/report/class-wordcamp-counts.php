@@ -313,6 +313,14 @@ class WordCamp_Counts extends Base {
 				'sponsor'   => 0,
 				'volunteer'   => 0,
 			),
+			'first_times' => array(
+				'attendee'  => 0,
+				'organizer' => 0,
+				'session'   => 0,
+				'speaker'   => 0,
+				'sponsor'   => 0,
+				'volunteer' => 0,
+			),
 		);
 
 		if ( $this->include_gender ) {
@@ -349,6 +357,7 @@ class WordCamp_Counts extends Base {
 			$compiled_data['wordcamps'][ $wordcamp_id ]['totals'][ $type ] ++;
 			$compiled_data['totals'][ $type ] ++;
 			if ( 'yes' === $first_time ) {
+				$compiled_data['wordcamps'][ $wordcamp_id ]['first_times'][ $type ] ++;
 				$compiled_data['first_times'][ $type ] ++;
 			}
 			if ( isset( $compiled_data['uniques'][ $type ] ) ) {

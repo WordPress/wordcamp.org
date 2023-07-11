@@ -20,9 +20,9 @@ function get_wordcamp_post_type() {
 	}
 
 	return WCPT_POST_TYPE_ID;
- }
+}
 
- /**
+/**
  * Retrieves the post type string of the wordcamp depending on the current network.
  *
  * @param string $post_type The post type to check.

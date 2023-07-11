@@ -9,6 +9,20 @@ defined( 'WPINC' ) || die();
  */
 
 
+ /**
+  * Retrieves the post type string of the wordcamp depending on the current network.
+  *
+  * @return string
+  */
+ function get_wordcamp_post_type() {
+	if( defined( 'SITE_ID_CURRENT_SITE' ) && defined( 'EVENTS_NETWORK_ID' ) && SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID ) {
+		// Update to be he right cpt.
+		return WCPT_PILOT_EVENT_SLUG;
+	}
+
+	return WCPT_POST_TYPE_ID;
+ }
+
 /**
  * Retrieve `wordcamp` posts and their metadata.
  *
@@ -20,7 +34,7 @@ function get_wordcamps( $args = array() ) {
 	$args = wp_parse_args(
 		$args,
 		array(
-			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_type'   => get_wordcamp_post_type(),
 			'post_status' => 'any',
 			'orderby'     => 'ID',
 			'numberposts' => -1,
@@ -51,7 +65,7 @@ function get_wordcamp_post( $site_id = null ) {
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
 
 	$wordcamp = get_posts( array(
-		'post_type'   => 'wordcamp',
+		'post_type'   => get_wordcamp_post_type(),
 		'post_status' => 'any',
 		'meta_key'    => '_site_id',
 		'meta_value'  => $site_id,
@@ -319,7 +333,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
  * @return string
  */
 function get_wordcamp_date_range( $wordcamp ) {
-	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+	if ( ! $wordcamp instanceof WP_Post || WCPT_POST_TYPE_ID !== $wordcamp->post_type ) {
 		return '';
 	}
 
@@ -353,7 +367,7 @@ function get_wordcamp_date_range( $wordcamp ) {
  * @return string
  */
 function get_wordcamp_location( $wordcamp ) {
-	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+	if ( ! $wordcamp instanceof WP_Post || WCPT_POST_TYPE_ID !== $wordcamp->post_type ) {
 		return;
 	}
 
@@ -374,7 +388,7 @@ function get_wordcamp_location( $wordcamp ) {
  * @return bool
  */
 function is_wordcamp_virtual( $wordcamp ) {
-	if ( ! $wordcamp instanceof WP_Post || 'wordcamp' !== $wordcamp->post_type ) {
+	if ( ! $wordcamp instanceof WP_Post || WCPT_POST_TYPE_ID !== $wordcamp->post_type ) {
 		return false;
 	}
 

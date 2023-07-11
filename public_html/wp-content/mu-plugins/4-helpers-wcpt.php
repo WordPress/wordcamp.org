@@ -15,7 +15,7 @@ defined( 'WPINC' ) || die();
  * @return string
  */
 function get_wordcamp_post_type() {
-	if( defined( 'WCPT_PILOT_EVENT_SLUG' ) && defined( 'SITE_ID_CURRENT_SITE' ) && defined( 'EVENTS_NETWORK_ID' ) && SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID ) {
+	if( SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID ) {
 		return WCPT_PILOT_EVENT_SLUG;
 	}
 

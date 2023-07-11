@@ -9,12 +9,12 @@ defined( 'WPINC' ) || die();
  */
 
 
- /**
-  * Retrieves the post type string of the wordcamp depending on the current network.
-  *
-  * @return string
-  */
- function get_wordcamp_post_type() {
+/**
+ * Retrieves the post type string of the wordcamp depending on the current network.
+ *
+ * @return string
+ */
+function get_wordcamp_post_type() {
 	if( defined( 'SITE_ID_CURRENT_SITE' ) && defined( 'EVENTS_NETWORK_ID' ) && SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID ) {
 		// Update to be he right cpt.
 		return WCPT_PILOT_EVENT_SLUG;

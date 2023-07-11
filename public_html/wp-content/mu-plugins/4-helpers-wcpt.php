@@ -8,7 +8,6 @@ defined( 'WPINC' ) || die();
  * Helper functions related to the `wordcamp` post type.
  */
 
-
 /**
  * Retrieves the post type string of the wordcamp depending on the current network.
  *
@@ -16,10 +15,10 @@ defined( 'WPINC' ) || die();
  */
 function get_wordcamp_post_type() {
 	if ( SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID ) {
-		return WCPT_PILOT_EVENT_SLUG;
+		return defined( 'WCPT_PILOT_EVENT_SLUG' ) ? WCPT_PILOT_EVENT_SLUG : '';
 	}
 
-	return WCPT_POST_TYPE_ID;
+	return defined( 'WCPT_POST_TYPE_ID' ) ? WCPT_POST_TYPE_ID : '';
 }
 
 /**
@@ -30,7 +29,8 @@ function get_wordcamp_post_type() {
  * @return string
  */
 function is_valid_wordcamp_post_type( $post_type ) {
-	return WCPT_POST_TYPE_ID === $post_type || WCPT_PILOT_EVENT_SLUG === $post_type;
+	return ( defined( 'WCPT_POST_TYPE_ID' ) && WCPT_POST_TYPE_ID === $post_type ) ||
+	( defined( 'WCPT_PILOT_EVENT_SLUG' ) && WCPT_PILOT_EVENT_SLUG === $post_type );
 }
 
 /**

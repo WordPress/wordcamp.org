@@ -47,7 +47,9 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 		if ( $max_site_id ) {
 			$site_args['site__in'] = range( 1, $max_site_id );
 		}
-		$sites = get_sites( $site_args );
+		$sites = get_sites( $site_args ); // want all networks, or just camps?
+		// probably will depend on the situation, so force the caller to specify
+		// error if network_in empty. or maybe make it more ergonomic and allow passing 'wordcamp' or 'pilot' ?
 
 		$notify  = new Bar( 'Applying flag', count( $sites ) );
 		$results = array();

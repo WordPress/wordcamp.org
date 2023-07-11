@@ -240,6 +240,20 @@ function register_organizer_post_meta() {
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
+	register_post_meta(
+		'wcb_organizer',
+		'_wcb_organizer_first_time',
+		array(
+			'type'          => 'string',
+			'show_in_rest'  => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
 }
 
 /**

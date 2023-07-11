@@ -15,7 +15,7 @@ defined( 'WPINC' ) || die();
  * @return string
  */
 function get_wordcamp_post_type() {
-	if( defined( 'SITE_ID_CURRENT_SITE' ) && defined( 'EVENTS_NETWORK_ID' ) && SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID ) {
+	if( defined( 'WCPT_PILOT_EVENT_SLUG' ) && defined( 'SITE_ID_CURRENT_SITE' ) && defined( 'EVENTS_NETWORK_ID' ) && SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID ) {
 		return WCPT_PILOT_EVENT_SLUG;
 	}
 
@@ -275,7 +275,9 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
 function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(), $selected = 0 ) {
 	global $wpdb;
 
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+	switch_to_blog( BLOG_ID_CURRENT_SITE );
+
+	$post_type = get_wordcamp_post_type();
 
 	if ( empty( $query_options ) ) {
 		$wordcamps = $wpdb->get_results( "
@@ -283,7 +285,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 			FROM $wpdb->posts
 				LEFT JOIN $wpdb->postmeta ON $wpdb->postmeta.post_id = $wpdb->posts.ID
 			WHERE
-				$wpdb->posts.post_type = 'wordcamp' AND
+				$wpdb->posts.post_type = '$post_type' AND
 				( $wpdb->posts.post_status <> 'trash' AND $wpdb->posts.post_status <> 'auto-draft' AND $wpdb->posts.post_status <> 'spam' ) AND
 				$wpdb->postmeta.meta_key = 'Start Date (YYYY-mm-dd)'
 			ORDER BY `$wpdb->posts`.`ID` DESC

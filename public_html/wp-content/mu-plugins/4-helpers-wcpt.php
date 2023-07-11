@@ -277,19 +277,17 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
 
-	$post_type = get_wordcamp_post_type();
-
 	if ( empty( $query_options ) ) {
 		$wordcamps = $wpdb->get_results( "
 			SELECT $wpdb->posts.ID, $wpdb->posts.post_title, $wpdb->postmeta.meta_value AS start_date
 			FROM $wpdb->posts
 				LEFT JOIN $wpdb->postmeta ON $wpdb->postmeta.post_id = $wpdb->posts.ID
 			WHERE
-				$wpdb->posts.post_type = '$post_type' AND
+				$wpdb->posts.post_type = '%s' AND
 				( $wpdb->posts.post_status <> 'trash' AND $wpdb->posts.post_status <> 'auto-draft' AND $wpdb->posts.post_status <> 'spam' ) AND
 				$wpdb->postmeta.meta_key = 'Start Date (YYYY-mm-dd)'
 			ORDER BY `$wpdb->posts`.`ID` DESC
-		 " );
+		 ", get_wordcamp_post_type() );
 	} else {
 		// Default to standard query when query_options is sent.
 		$wordcamps = get_wordcamps( $query_options );

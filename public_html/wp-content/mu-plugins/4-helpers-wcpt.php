@@ -286,10 +286,11 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
 				$wpdb->posts.post_type = %s AND
 				( $wpdb->posts.post_status <> 'trash' AND $wpdb->posts.post_status <> 'auto-draft' AND $wpdb->posts.post_status <> 'spam' ) AND
 				$wpdb->postmeta.meta_key = 'Start Date (YYYY-mm-dd)'
-			ORDER BY `$wpdb->posts`.`ID` DESC
-		 ", get_wordcamp_post_type() );
+			ORDER BY `$wpdb->posts`.`ID` DESC",
+			get_wordcamp_post_type()
+		);
 
-		 $wordcamps = $wpdb->get_results( $query );
+		$wordcamps = $wpdb->get_results( $query );  // phpcs:ignore -- Prepared above.
 
 	} else {
 		// Default to standard query when query_options is sent.

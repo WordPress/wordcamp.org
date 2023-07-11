@@ -24,14 +24,17 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 	 * : The ID of the newest site that the flag will be set on. If empty,
 	 * the flag will be applied to all sites.
 	 *
+	 * [<network>]
+	 * : The ID of the todo
+	 *
 	 * [--dry-run]
 	 * : Show a report, but don't perform the changes.
 	 *
 	 * ## EXAMPLES
 	 *
-	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale                  # Sets the flag on all sites
-	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 437              # Sets the flag on all sites 1 through 437
-	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 437 --dry-run    # Shows a report of what would happen for sites 1 through 437
+	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale --network=1                   # Sets the flag on all sites on WordCamp network
+	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 437 --network=1               # Sets the flag on all sites 1 through 437 on WordCamp network
+	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 1520 --network=2 --dry-run    # Shows a report of what would happen for sites 1 through 520 on Pilot Events network
 	 *
 	 * @subcommand set-skip-feature-flag
 	 *
@@ -42,6 +45,7 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 		$flag_name   = $args[0];
 		$max_site_id = empty( $args[1] ) ? false : absint( $args[1] );
 		$dry_run     = isset( $assoc_args['dry-run'] );
+		$network     = $assoc_args['network'] ?? false;
 
 		$site_args = array( 'number' => 0 );
 		if ( $max_site_id ) {

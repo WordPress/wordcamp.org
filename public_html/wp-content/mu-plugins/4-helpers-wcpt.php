@@ -333,7 +333,7 @@ function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(),
  * @return string
  */
 function get_wordcamp_date_range( $wordcamp ) {
-	if ( ! $wordcamp instanceof WP_Post || WCPT_POST_TYPE_ID !== $wordcamp->post_type ) {
+	if ( ! $wordcamp instanceof WP_Post || ( WCPT_POST_TYPE_ID !== $wordcamp->post_type && WCPT_PILOT_EVENT_SLUG !== $wordcamp->post_type ) ) {
 		return '';
 	}
 
@@ -367,7 +367,7 @@ function get_wordcamp_date_range( $wordcamp ) {
  * @return string
  */
 function get_wordcamp_location( $wordcamp ) {
-	if ( ! $wordcamp instanceof WP_Post || WCPT_POST_TYPE_ID !== $wordcamp->post_type ) {
+	if ( ! $wordcamp instanceof WP_Post || ( WCPT_POST_TYPE_ID !== $wordcamp->post_type && WCPT_PILOT_EVENT_SLUG !== $wordcamp->post_type ) ) {
 		return;
 	}
 
@@ -388,7 +388,7 @@ function get_wordcamp_location( $wordcamp ) {
  * @return bool
  */
 function is_wordcamp_virtual( $wordcamp ) {
-	if ( ! $wordcamp instanceof WP_Post || WCPT_POST_TYPE_ID !== $wordcamp->post_type ) {
+	if ( ! $wordcamp instanceof WP_Post || ( WCPT_POST_TYPE_ID !== $wordcamp->post_type && WCPT_PILOT_EVENT_SLUG !== $wordcamp->post_type ) ) {
 		return false;
 	}
 

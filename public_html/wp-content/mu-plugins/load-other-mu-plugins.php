@@ -14,12 +14,10 @@ function wcorg_include_common_plugins() {
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins.php';
 	}
 
-	if ( 'local' !== WORDCAMP_ENVIRONMENT ) {
-		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-sso.php';
-	}
-
 	require_once __DIR__ . '/blocks/blocks.php';
 	require_once __DIR__ . '/theme-templates/bootstrap.php';
+
+	wcorg_include_mu_plugin_folders();
 }
 
 /**
@@ -35,7 +33,6 @@ function wcorg_include_network_only_plugins() {
 		// be audited and updated for the Events network first.
 		// see https://github.com/WordPress/wordcamp.org/issues/906.
 		wcorg_include_individual_mu_plugins();
-		wcorg_include_mu_plugin_folders();
 	}
 
 	$muplugins = glob( __DIR__ . "/$network_folder/*.php" );

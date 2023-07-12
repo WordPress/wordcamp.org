@@ -59,6 +59,7 @@ function speaker_personal_data_exporter( $email_address, $page ) {
 		'post_content'       => __( 'Speaker Bio', 'wordcamporg' ),
 		'_wcb_speaker_email' => __( 'Gravatar Email', 'wordcamporg' ),
 		'_wcpt_user_id'      => __( 'WordPress.org Username', 'wordcamporg' ),
+		'_wcb_speaker_first_time' => __( 'First Time Speaker', 'wordcamporg' ),
 	);
 
 	return _personal_data_exporter( 'wcb_speaker', $props_to_export, $email_address, $page );

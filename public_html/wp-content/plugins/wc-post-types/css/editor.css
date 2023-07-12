@@ -44,11 +44,13 @@
 	margin-right: 0;
 }
 
+.wc-panel-speaker-info .components-base-control,
 .wc-panel-organizer-info .components-base-control,
 .wc-panel-volunteer-info .components-base-control {
 	margin-bottom: 2em;
 }
 
+.wc-panel-speaker-info .components-base-control:last-child,
 .wc-panel-organizer-info .components-base-control:last-child,
 .wc-panel-volunteer-info .components-base-control:last-child {
 	margin-bottom: 0;

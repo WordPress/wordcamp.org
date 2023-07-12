@@ -179,7 +179,11 @@ $first_time_legend = '<span class="description small">Y / N / ?</span>';
 					<?php echo $gender_legend; ?>
 				<?php endif; ?>
 			</td>
-			<td>Sponsors</td>
+			<td>Sponsors
+				<br>
+				<span class="description small">First time: </span>
+				<?php echo $first_time_legend; ?>
+			</td>
 			<td>
 				Volunteers
 				<br>
@@ -239,8 +243,12 @@ $first_time_legend = '<span class="description small">Y / N / ?</span>';
 					<?php endif; ?>
 				</td>
 
-				<td class="number total">
-					<?php echo number_format_i18n( $event['totals']['sponsor'] ); ?>
+				<td class="number">
+					<span class="total">Total: <?php echo number_format_i18n( $event['totals']['sponsor'] ); ?></span>
+					<br>
+					FT: <?php echo number_format_i18n( $event['first_times']['sponsor']['yes'] ); ?>
+					/ <?php echo number_format_i18n( $event['first_times']['sponsor']['no'] ); ?>
+					/ <?php echo number_format_i18n( $event['first_times']['sponsor']['unsure'] ); ?>
 				</td>
 
 				<td class="number">

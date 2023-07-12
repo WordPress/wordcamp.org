@@ -14,7 +14,8 @@ use DateTime;
 /** @var DateTime $end_date */
 /** @var string $statuses */
 
-$gender_legend = '<span class="description small"><span class="total">Total</span> / F / M / ?</span>';
+$gender_legend     = '<span class="description small">Gender: F / M / ?</span>';
+$first_time_legend = '<span class="description small">Y / N / ?</span>';
 
 ?>
 
@@ -42,44 +43,68 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>Type</td>
 			<td>Total</td>
 			<td>Unique</td>
-			<td>First time</td>
+			<td>First time<br><?php echo $first_time_legend; ?></td>
 		</tr>
 		<tr>
 			<td>Registered Attendees</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['attendee'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['attendee'] ); ?></td>
-			<td class="number"><?php echo number_format_i18n( $data['first_times']['attendee'] ); ?></td>
+			<td class="number">
+				<?php echo number_format_i18n( $data['first_times']['attendee']['yes'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['attendee']['no'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['attendee']['unsure'] ); ?>
+			</td>
 		</tr>
 		<tr>
 			<td>Organizers</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['organizer'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['organizer'] ); ?></td>
-			<td class="number"><?php echo number_format_i18n( $data['first_times']['organizer'] ); ?></td>
+			<td class="number">
+				<?php echo number_format_i18n( $data['first_times']['organizer']['yes'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['organizer']['no'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['organizer']['unsure'] ); ?>
+			</td>
 		</tr>
 		<tr>
 			<td>Sessions</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['session'] ); ?></td>
 			<td class="number">n/a</td>
-			<td class="number"><?php echo number_format_i18n( $data['first_times']['session'] ); ?></td>
+			<td class="number">
+				<?php echo number_format_i18n( $data['first_times']['session']['yes'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['session']['no'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['session']['unsure'] ); ?>
+			</td>
 		</tr>
 		<tr>
 			<td>Speakers</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['speaker'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['speaker'] ); ?></td>
-			<td class="number"><?php echo number_format_i18n( $data['first_times']['speaker'] ); ?></td>
+			<td class="number">
+				<?php echo number_format_i18n( $data['first_times']['speaker']['yes'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['speaker']['no'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['speaker']['unsure'] ); ?>
+			</td>
 		</tr>
 		<tr>
 			<td>Sponsors</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['sponsor'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['sponsor'] ); ?></td>
-			<td class="number"><?php echo number_format_i18n( $data['first_times']['sponsor'] ); ?></td>
+			<td class="number">
+				<?php echo number_format_i18n( $data['first_times']['sponsor']['yes'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['sponsor']['no'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['sponsor']['unsure'] ); ?>
+			</td>
 		</tr>
 
 		<tr>
 			<td>Volunteers</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['volunteer'] ); ?></td>
 			<td class="number"><?php echo number_format_i18n( $data['uniques']['volunteer'] ); ?></td>
-			<td class="number"><?php echo number_format_i18n( $data['first_times']['volunteer'] ); ?></td>
+			<td class="number">
+				<?php echo number_format_i18n( $data['first_times']['volunteer']['yes'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['volunteer']['no'] ); ?>
+				/ <?php echo number_format_i18n( $data['first_times']['volunteer']['unsure'] ); ?>
+			</td>
 		</tr>
 	</table>
 
@@ -141,9 +166,16 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			<td>Speakers<?php if ( ! empty( $data['genders'] ) ) :
 				?><br /><?php echo $gender_legend; ?><?php endif; ?></td>
 			<td>Sponsors</td>
-			<td><?php if ( empty( $data['genders'] ) ) :
-				?>Volunteers (FT*)<?php else :
-					?>Volunteers<br /><?php echo $gender_legend; ?><?php endif; ?></td>
+			<td>
+				Volunteers
+				<br>
+				<span class="description small">First time: </span>
+				<?php echo $first_time_legend; ?>
+				<?php if ( ! empty( $data['genders'] ) ) : ?>
+					<br>
+					<?php echo $gender_legend; ?>
+				<?php endif; ?>
+			</td>
 		</tr>
 
 		<?php foreach ( $data['wordcamps'] as $event ) : ?>
@@ -188,9 +220,14 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 				</td>
 
 				<td class="number">
-					<span class="total"><?php echo number_format_i18n( $event['totals']['volunteer'] ) . ' (' . number_format_i18n( $event['first_times']['volunteer'] ) . ')'; ?></span>
+					<span class="total">Total: <?php echo number_format_i18n( $event['totals']['volunteer'] ); ?></span>
+					<br>
+					FT: <?php echo number_format_i18n( $event['first_times']['volunteer']['yes'] ); ?>
+					/ <?php echo number_format_i18n( $event['first_times']['volunteer']['no'] ); ?>
+					/ <?php echo number_format_i18n( $event['first_times']['volunteer']['unsure'] ); ?>
 					<?php if ( ! empty( $data['genders'] ) ) : ?>
-						/ <?php echo number_format_i18n( $event['genders']['volunteer']['female'] ); ?>
+						<br>
+						G: <?php echo number_format_i18n( $event['genders']['volunteer']['female'] ); ?>
 						/ <?php echo number_format_i18n( $event['genders']['volunteer']['male'] ); ?>
 						/ <?php echo number_format_i18n( $event['genders']['volunteer']['unknown'] ); ?>
 					<?php endif; ?>
@@ -198,7 +235,6 @@ $gender_legend = '<span class="description small"><span class="total">Total</spa
 			</tr>
 		<?php endforeach; ?>
 	</table>
-	<p class="table-abbrev-explainer">*FT = First Time</p>
 
 <?php else : ?>
 

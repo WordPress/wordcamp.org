@@ -277,6 +277,12 @@ class WordCamp_Counts extends Base {
 	public function compile_report_data( array $data ) {
 		$wordcamps = $this->prepare_data_for_display( $this->get_wordcamps() );
 
+		$first_time_template = array(
+			'yes'  => 0,
+			'no'    => 0,
+			'unsure' => 0,
+		);
+
 		$compiled_data = array(
 			'wordcamps' => array(),
 			'totals'    => array(
@@ -295,12 +301,12 @@ class WordCamp_Counts extends Base {
 				'volunteer'   => array(),
 			),
 			'first_times' => array(
-				'attendee'  => 0,
-				'organizer' => 0,
-				'session'   => 0,
-				'speaker'   => 0,
-				'sponsor'   => 0,
-				'volunteer' => 0,
+				'attendee'  => $first_time_template,
+				'organizer' => $first_time_template,
+				'session'   => $first_time_template,
+				'speaker'   => $first_time_template,
+				'sponsor'   => $first_time_template,
+				'volunteer' => $first_time_template,
 			),
 		);
 
@@ -314,12 +320,12 @@ class WordCamp_Counts extends Base {
 				'volunteer'   => 0,
 			),
 			'first_times' => array(
-				'attendee'  => 0,
-				'organizer' => 0,
-				'session'   => 0,
-				'speaker'   => 0,
-				'sponsor'   => 0,
-				'volunteer' => 0,
+				'attendee'  => $first_time_template,
+				'organizer' => $first_time_template,
+				'session'   => $first_time_template,
+				'speaker'   => $first_time_template,
+				'sponsor'   => $first_time_template,
+				'volunteer' => $first_time_template,
 			),
 		);
 
@@ -356,9 +362,9 @@ class WordCamp_Counts extends Base {
 
 			$compiled_data['wordcamps'][ $wordcamp_id ]['totals'][ $type ] ++;
 			$compiled_data['totals'][ $type ] ++;
-			if ( 'yes' === $first_time ) {
-				$compiled_data['wordcamps'][ $wordcamp_id ]['first_times'][ $type ] ++;
-				$compiled_data['first_times'][ $type ] ++;
+			if ( isset( $wordcamp_template['first_times'][ $type ] ) ) {
+				$compiled_data['wordcamps'][ $wordcamp_id ]['first_times'][ $type ][ $first_time ] ++;
+				$compiled_data['first_times'][ $type ][ $first_time ] ++;
 			}
 			if ( isset( $compiled_data['uniques'][ $type ] ) ) {
 				$compiled_data['uniques'][ $type ][] = $identifier;

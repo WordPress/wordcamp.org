@@ -573,6 +573,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $speaker->ID,
 				'type'        => 'speaker',
 				'identifier'  => $speaker->_wcb_speaker_email,
+				'first_time'  => $speaker->_wcb_speaker_first_time,
 			);
 
 			if ( $this->include_gender ) {

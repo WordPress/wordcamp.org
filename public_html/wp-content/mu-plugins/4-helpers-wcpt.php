@@ -5,11 +5,17 @@ use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_YEAR_D
 defined( 'WPINC' ) || die();
 
 /*
- * Helper functions related to the `wordcamp` post type.
+ * Helper functions related to retrieving WordCamp event data.
+ *
+ * These functions retrieve data for both WCPT_POST_TYPE_ID and WCPT_PILOT_EVENT_SLUG post types,
+ * which are both considered WordCamps but have different custom post types due to network
+ * separation and functionality.
+ *
+ * @see https://github.com/WordPress/wordcamp.org/pull/937
  */
 
 /**
- * Retrieves the post type string of the wordcamp depending on the current network.
+ * Retrieves the WordCamp event post type string depending on the current network.
  *
  * @return string
  */
@@ -22,11 +28,11 @@ function get_wordcamp_post_type() {
 }
 
 /**
- * Retrieves the post type string of the wordcamp depending on the current network.
+ * Returns true if the post type is a supported WordCamp event type.
  *
  * @param string $post_type The post type to check.
  *
- * @return string
+ * @return boolean
  */
 function is_valid_wordcamp_post_type( $post_type ) {
 	return ( defined( 'WCPT_POST_TYPE_ID' ) && WCPT_POST_TYPE_ID === $post_type ) ||
@@ -34,7 +40,7 @@ function is_valid_wordcamp_post_type( $post_type ) {
 }
 
 /**
- * Retrieve `wordcamp` posts and their metadata.
+ * Retrieves WordCamp posts and their metadata.
  *
  * @param array $args Optional. Extra arguments to pass to `get_posts()`.
  *
@@ -62,7 +68,7 @@ function get_wordcamps( $args = array() ) {
 }
 
 /**
- * Retrieves the `wordcamp` post and postmeta associated with the current site.
+ * Retrieves the WordCamp post and postmeta associated with the current site.
  *
  * @return false|WP_Post
  */
@@ -71,7 +77,7 @@ function get_wordcamp_post( $site_id = null ) {
 		$site_id = get_current_blog_id();
 	}
 
-	// Switch to central.wordcamp.org to get posts.
+	// Switch to the root network site to get posts.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
 
 	$wordcamp = get_posts( array(
@@ -94,14 +100,14 @@ function get_wordcamp_post( $site_id = null ) {
 }
 
 /**
- * Find the site that corresponds to the given `wordcamp` post
+ * Find the site that corresponds to the given WordCamp post
  *
  * @param WP_Post $wordcamp_post
  *
  * @return mixed An integer if successful, or boolean false if failed
  */
 function get_wordcamp_site_id( $wordcamp_post ) {
-	// Switch to central.wordcamp.org to get post meta.
+	// Switch to the root network site to get post meta.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
 
 	$site_id = get_post_meta( $wordcamp_post->ID, '_site_id', true );
@@ -262,7 +268,7 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
 }
 
 /**
- * Get a <select> dropdown of `wordcamp` posts with a select2 UI.
+ * Get a <select> dropdown of WordCamp posts with a select2 UI.
  *
  * The calling plugin is responsible for validating and processing the form, this just outputs a single field.
  *
@@ -351,7 +357,7 @@ function get_wordcamp_date_range( $wordcamp ) {
 		return '';
 	}
 
-	// Switch to central.wordcamp.org to get post meta.
+	// Switch to the root network site to get post meta.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
 	$start = (int) get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 	$end   = (int) get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
@@ -385,7 +391,7 @@ function get_wordcamp_location( $wordcamp ) {
 		return;
 	}
 
-	// Switch to central.wordcamp.org to get post meta.
+	// Switch to the root network site to get post meta.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
 	$venue   = get_post_meta( $wordcamp->ID, 'Venue Name', true );
 	$address = get_post_meta( $wordcamp->ID, 'Physical Address', true );
@@ -406,7 +412,7 @@ function is_wordcamp_virtual( $wordcamp ) {
 		return false;
 	}
 
-	// Switch to central.wordcamp.org to get post meta.
+	// Switch to the root network site to get post meta.
 	switch_to_blog( BLOG_ID_CURRENT_SITE );
 	$is_virtual = (bool) get_post_meta( $wordcamp->ID, 'Virtual event only', true );
 	restore_current_blog();

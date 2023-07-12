@@ -518,6 +518,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $organizer->ID,
 				'type'        => 'organizer',
 				'identifier'  => $organizer->_wcpt_user_id,
+				'first_time'  => $organizer->_wcb_organizer_first_time,
 			);
 
 			if ( $this->include_gender ) {

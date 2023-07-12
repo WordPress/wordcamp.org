@@ -300,6 +300,7 @@ function render_status_metabox( $post ) {
 	$allowed_submit_statuses         = WordCamp_Loader::get_after_contract_statuses();
 	$current_user_can_edit_request   = in_array( $post->post_status, $allowed_edit_statuses, true );
 	$current_user_can_submit_request = $wordcamp && in_array( $wordcamp->post_status, $allowed_submit_statuses, true );
+	// todo blocked on cpt. they may want different post statuses for the new cpt too? if so will have to update lots of stuff that uses that.
 
 	$invoice_url = '';
 	if ( current_user_can( 'manage_network' ) && ! empty( $post->_wcbsi_qbo_invoice_id ) ) {

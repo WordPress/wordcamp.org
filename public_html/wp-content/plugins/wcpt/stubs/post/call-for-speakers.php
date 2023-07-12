@@ -9,9 +9,9 @@
 <!-- wp:jetpack/contact-form {"subject":"WordCamp Speaker Request","hasFormSettingsSet":"yes"} -->
 <!-- wp:jetpack/field-name {"label":"Name","required":true} /-->
 
-<!-- wp:jetpack/field-email {"label":"Email Address","required":true} /-->
+<!-- wp:jetpack/field-email {"label":"Email","required":true,"requiredText":"(required)","id":"speaker-email"} /-->
 
-<!-- wp:jetpack/field-text {"label":"WordPress.org Username","required":true} /-->
+<!-- wp:jetpack/field-text {"label":"WordPress.org Username","requiredText":"(required)","id":"speaker-username"} /-->
 
 <!-- wp:jetpack/field-textarea {"label":"Your Bio","required":true} /-->
 
@@ -20,6 +20,8 @@
 <!-- wp:jetpack/field-textarea {"label":"Topic Description","required":true} /-->
 
 <!-- wp:jetpack/field-text {"label":"Intended Audience","required":true} /-->
+
+<!-- wp:jetpack/field-radio {"label":"Is this your first time being a speaker at a WordPress event?","requiredText":"(required)","options":["Yes","No","Unsure"],"id":"first-time-speaker"} /-->
 
 <!-- wp:jetpack/field-textarea {"label":"Past Speaking Experience (not necessary to apply)"} /-->
 <!-- /wp:jetpack/contact-form -->

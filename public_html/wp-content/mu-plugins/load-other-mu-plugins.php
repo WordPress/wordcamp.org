@@ -16,6 +16,7 @@ function wcorg_include_common_plugins() {
 
 	require_once __DIR__ . '/blocks/blocks.php';
 	require_once __DIR__ . '/theme-templates/bootstrap.php';
+	require_once __DIR__ . '/quickbooks/quickbooks.php';
 
 	wcorg_include_mu_plugin_folders();
 }

@@ -80,6 +80,7 @@ function sponsor_personal_data_exporter( $email_address, $page ) {
 		'_wcpt_sponsor_last_name'     => __( 'Last Name', 'wordcamporg' ),
 		'_wcpt_sponsor_email_address' => __( 'Email Address', 'wordcamporg' ),
 		'_wcpt_sponsor_phone_number'  => __( 'Phone Number', 'wordcamporg' ),
+		'_wcpt_sponsor_first_time'    => __( 'First Time Sponsor', 'wordcamporg' ),
 	);
 
 	return _personal_data_exporter( 'wcb_sponsor', $props_to_export, $email_address, $page );

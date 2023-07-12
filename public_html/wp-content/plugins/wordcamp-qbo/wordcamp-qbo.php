@@ -6,7 +6,6 @@
 // todo use wcorg_redundant_remote_get for all the calls in this file
 
 use WordCamp\Quickbooks;
-	// why is ^ being used? already migrated parts to v2? seems like it, but left dead code behind
 use WordCamp\Logger;
 
 class WordCamp_QBO {

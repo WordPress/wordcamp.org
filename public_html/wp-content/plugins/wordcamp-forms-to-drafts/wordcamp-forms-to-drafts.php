@@ -42,7 +42,7 @@ class WordCamp_Forms_To_Drafts {
 		?>
 
 		<style>
-			<?php require_once( __DIR__ . '/front-end.css' ); ?>
+			<?php require_once __DIR__ . '/front-end.css'; ?>
 		</style>
 
 		<?php
@@ -55,7 +55,7 @@ class WordCamp_Forms_To_Drafts {
 		if ( ! $this->form_requires_login( $this->get_current_form_id() ) ) {
 			return;
 		}
-		$deps_path = __DIR__ . '/build/inert.asset.php';
+		$deps_path   = __DIR__ . '/build/inert.asset.php';
 		$script_info = require $deps_path;
 
 		wp_enqueue_script(
@@ -472,8 +472,11 @@ class WordCamp_Forms_To_Drafts {
 		);
 
 		if ( $speaker_id ) {
+			$first_time = strtolower( $speaker['Is this your first time being a speaker at a WordPress event?'] ) ?? '';
+			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 			update_post_meta( $speaker_id, '_wcb_speaker_email', $speaker['Email Address'] ?? '' );
 			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ?? '' ) );
+			update_post_meta( $speaker_id, '_wcb_speaker_first_time', $first_time );
 		}
 
 		return $speaker_id;

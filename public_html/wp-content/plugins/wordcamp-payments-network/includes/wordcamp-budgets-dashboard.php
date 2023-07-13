@@ -801,6 +801,7 @@ function process_action_approve() {
 	}
 
 	$post->post_status = 'wcb-approved';
+	// this is just updating, but why use insert instead of update? maybe to skip some filters or something? should be documented.
 	wp_insert_post( $post );
 
 	WordCamp_Budgets::log(

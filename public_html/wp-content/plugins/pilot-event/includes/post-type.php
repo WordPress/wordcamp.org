@@ -39,6 +39,7 @@ function create_pilot_event_post_type() {
 
     $args = array(
         'labels'             => $labels,
+        'menu_icon'          => 'dashicons-wordpress',
         'public'             => true,
         'publicly_queryable' => true,
         'show_ui'            => true,
@@ -51,7 +52,8 @@ function create_pilot_event_post_type() {
         'hierarchical'       => false,
         'menu_position'      => null,
         'supports'           => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
+        'menu_icon'             => 'dashicons-wordpress',
     );
 
-    register_post_type( 'pilot_event', $args );
+    register_post_type( WCPT_PILOT_EVENT_SLUG, $args );
 }

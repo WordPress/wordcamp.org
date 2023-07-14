@@ -7,7 +7,7 @@ use WP_UnitTestCase, WP_UnitTest_Factory;
 defined( 'WPINC' ) || die();
 
 /**
- *
+ * Tests the Pilot Events Post type.
  */
 class Test_PilotEvents_PostType extends WP_UnitTestCase {
 

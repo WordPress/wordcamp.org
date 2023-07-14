@@ -38,21 +38,20 @@ function create_pilot_event_post_type() {
 	);
 
 	$args = array(
-		'labels'             => $labels,
-		'menu_icon'          => 'dashicons-wordpress',
-		'public'             => true,
-		'publicly_queryable' => true,
-		'show_ui'            => true,
-		'show_in_menu'       => true,
-		'show_in_rest'       => true,
-		'query_var'          => true,
-		'rewrite'            => array( 'slug' => 'pilot-event' ),
 		'capability_type'    => 'post',
 		'has_archive'        => true,
 		'hierarchical'       => false,
+		'labels'             => $labels,
+		'menu_icon'          => 'dashicons-wordpress',
 		'menu_position'      => null,
+		'public'             => true,
+		'publicly_queryable' => true,
+		'query_var'          => true,
+		'rewrite'            => array( 'slug' => 'pilot-event' ),
+		'show_ui'            => true,
+		'show_in_menu'       => true,
+		'show_in_rest'       => true,
 		'supports'           => array( 'title', 'editor', 'thumbnail', 'excerpt' ),
-		'menu_icon'             => 'dashicons-wordpress',
 	);
 
 	register_post_type( WCPT_PILOT_EVENT_SLUG, $args );

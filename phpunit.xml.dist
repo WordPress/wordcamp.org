@@ -72,7 +72,7 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
-			<directory suffix=".php">./public_html/wp-content/plugins/pilot-event/tests</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/pilot-event</directory>
 			<file>./public_html/wp-content/sunrise.php</file>
 		</include>
 

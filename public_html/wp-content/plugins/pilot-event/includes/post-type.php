@@ -1,6 +1,6 @@
 <?php
 
-namespace WordCampPilotEvents\PostType;
+namespace WordCamp\PilotEvents\PostType;
 
 defined( 'WPINC' ) || die();
 

@@ -55,6 +55,12 @@
 				./public_html/wp-content/plugins/wordcamp-speaker-feedback/tests/
 			</directory>
 		</testsuite>
+
+		<testsuite name="WordCamp Pilot Event Post Type">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/pilot-event/tests/
+			</directory>
+		</testsuite>
 	</testsuites>
 
 	<coverage cacheDirectory=".phpunit/coverage-cache">
@@ -66,6 +72,7 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/pilot-event/tests</directory>
 			<file>./public_html/wp-content/sunrise.php</file>
 		</include>
 

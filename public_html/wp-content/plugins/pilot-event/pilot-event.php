@@ -10,7 +10,7 @@
   * Text Domain:       wordcamp
   */
 
-namespace WordCampPilotEvents;
+namespace WordCamp\PilotEvents;
 
 defined( 'WPINC' ) || die();
 

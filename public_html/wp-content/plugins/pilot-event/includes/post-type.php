@@ -5,6 +5,11 @@ namespace WordCampPilotEvents\PostType;
 defined( 'WPINC' ) || die();
 
 /**
+ * Constants.
+ */
+define( 'WCPT_PILOT_EVENT_SLUG', 'pilot_event' );
+
+/**
  * Actions and filters.
  */
 add_action( 'init', __NAMESPACE__ . '\create_pilot_event_post_type' );

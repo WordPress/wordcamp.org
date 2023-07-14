@@ -14,7 +14,6 @@ function wcorg_include_common_plugins() {
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins.php';
 	}
 
-	
 	require_once __DIR__ . '/blocks/blocks.php';
 	require_once __DIR__ . '/theme-templates/bootstrap.php';
 	require_once __DIR__ . '/quickbooks/quickbooks.php';

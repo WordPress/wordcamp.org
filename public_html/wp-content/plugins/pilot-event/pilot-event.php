@@ -1,14 +1,14 @@
 <?php
  /**
- * Plugin name:       WordCamp Pilot Events
- * Plugin URI:        https://github.com/WordPress/wordcamp.org
- * Description:       [Experimental] Creates the custom post type for Pilot WordCamp events.
- * Version:           0.1.0-beta
- * Author:            WordPress.org
- * Author URI:        http://wordpress.org/
- * License:           GPLv2 or later
- * Text Domain:       wordcamp
- */
+  * Plugin name:       WordCamp Pilot Events
+  * Plugin URI:        https://github.com/WordPress/wordcamp.org
+  * Description:       [Experimental] Creates the custom post type for Pilot WordCamp events.
+  * Version:           0.1.0-beta
+  * Author:            WordPress.org
+  * Author URI:        http://wordpress.org/
+  * License:           GPLv2 or later
+  * Text Domain:       wordcamp
+  */
 
 namespace WordCampPilotEvents;
 

@@ -45,11 +45,7 @@ public_html/wp-content/plugins/wc-post-types/package-lock.json
 # Dev tools
 #
 public_html/wp-content/plugins/query-monitor/
-
-#
-# Dev tools
-#
-public_html/wp-content/plugins/query-monitor/
+public_html/wp-content/plugins/user-switching/
 
 
 #

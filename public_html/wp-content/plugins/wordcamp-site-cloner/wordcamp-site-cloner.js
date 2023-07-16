@@ -1,3 +1,4 @@
+/* eslint-disable */
 ( function( wp, $, Backbone, win, settings ) {
 	'use strict';
 
@@ -401,6 +402,9 @@
 
 			// Fill the site collection and setup search when complete
 			this.siteCollection.fetch( {
+				beforeSend: function( xhr ) {
+					xhr.setRequestHeader('X-WP-Nonce', wcsc.settings.nonce);
+				},
 				success : this.setupSearch.bind( this )
 			} );
 		},

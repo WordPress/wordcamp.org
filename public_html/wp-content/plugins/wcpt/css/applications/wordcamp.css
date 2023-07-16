@@ -483,10 +483,15 @@ body {
 
 .PDF_pageInner {
 	margin: auto;
-	width: 680px;
+	width: 100%;
+	max-width: 680px;
 	padding: 4px;
 	background-color: #ddd;
 	border: 1px solid #bbb;
+}
+
+.PDF_pageInner * {
+	box-sizing: border-box;
 }
 
 .PDF_question,
@@ -504,7 +509,8 @@ body {
 
 .qContent {
 	float: left;
-	width: 600px;
+	width: 100%;
+	max-width: 600px;
 }
 
 .qNumber {
@@ -615,15 +621,16 @@ body {
 	background-color: #eee;
 	font-size: 14px;
 	padding: 4px;
-	width: 150px;
+	width: 100%;
+	max-width: 150px;
 }
 
 .PDF_QT100 .medium {
-	width: 300px;
+	max-width: 300px;
 }
 
 .PDF_QT100 .large {
-	width: 450px;
+	max-width: 450px;
 }
 
 /* ---------------------- QT 200 ---------------------------------- */
@@ -634,7 +641,8 @@ body {
 	background-color: #eee;
 	font-size: 12px;
 	padding: 4px;
-	width: 450px;
+	width: 100%;
+	max-width: 450px;
 	height: 50px;
 }
 
@@ -762,7 +770,7 @@ body {
 
 .PDF_QT900 .a,
  .b {
-	width: 306px;
+	max-width: 306px;
 }
 
 /* ---------------------- QT 950 ---------------------------------- */
@@ -787,7 +795,7 @@ body {
 	background-color: #eee;
 	padding: 2px;
 	font-size: 14px;
-	width: 200px;
+	max-width: 200px;
 	padding: 5px;
 }
 
@@ -865,7 +873,8 @@ body {
 	background-color: #eee;
 	padding: 5px;
 	font-size: 14px;
-	width: 300px;
+	width: 100%;
+	max-width: 300px;
 }
 
 .PDF_QT1400 label {
@@ -883,7 +892,8 @@ body {
 	background-color: #eee;
 	padding: 5px;
 	font-size: 14px;
-	width: 300px;
+	width: 100%;
+	max-width: 300px;
 }
 
 .PDF_QT1500 label {

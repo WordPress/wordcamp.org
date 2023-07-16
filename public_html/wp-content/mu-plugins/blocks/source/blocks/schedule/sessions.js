@@ -6,14 +6,15 @@ import classnames from 'classnames';
 /**
  * WordPress dependencies
  */
-import { dateI18n } from '@wordpress/date';
+import { date } from '@wordpress/date';
 import { useContext } from '@wordpress/element';
 
 /**
  * Internal dependencies
  */
-import { Session } from './session';
+import { getTimezone } from './utils/date';
 import { ScheduleGridContext } from './schedule-grid';
+import { Session } from './session';
 import { sortBySlug } from './data';
 
 /**
@@ -23,26 +24,32 @@ import { sortBySlug } from './data';
  * @param {Array}  props.sessions
  * @param {Array}  props.displayedTracks
  * @param {Array}  props.overlappingSessions
- *
  * @return {Element}
  */
 export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 	const { attributes, settings } = useContext( ScheduleGridContext );
-	const { time_format: timeFormat } = settings;
-
 	const sessionsByTimeSlot = groupSessionsByTimeSlot( sessions );
 	const overlappingSessionIds = overlappingSessions.map( ( session ) => session.id );
 	const timeGroups = [];
 	const timeSlots = Object.keys( sessionsByTimeSlot ).sort();
+	const timezone = getTimezone( attributes );
+
+	let timeFormat = settings.time_format || 'g:i a';
+	// Append the timezone if it's not included.
+	if ( ! timeFormat.includes( 'T' ) ) {
+		timeFormat += ' T';
+	}
 
 	for ( let i = 0; i < timeSlots.length; i++ ) {
 		const currentSlot = timeSlots[ i ];
 		const startTime = parseInt( currentSlot );
-		const endTime = parseInt( timeSlots[ i + 1 ] );
+		// If this is the last session, this value is NaN, which date-fns cannot handle.
+		// Since this row is later removed (see below), fall back to any integer.
+		const endTime = parseInt( timeSlots[ i + 1 ] ) || 0;
 
 		const gridRow = `
-			time-${ dateI18n( 'Hi', startTime ) } /
-			time-${ dateI18n( 'Hi', endTime ) }
+			time-${ date( 'dHi', startTime, timezone ) } /
+			time-${ date( 'dHi', endTime, timezone ) }
 		`;
 
 		const classes = classnames(
@@ -52,7 +59,7 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
 
 		timeGroups.push(
 			<h3 key={ startTime } className={ classes } style={ { gridRow } }>
-				{ dateI18n( timeFormat, startTime ) }
+				{ date( timeFormat, startTime, timezone ) }
 			</h3>
 		);
 
@@ -83,7 +90,6 @@ export function Sessions( { sessions, displayedTracks, overlappingSessions } ) {
  * Group sessions by their time slot.
  *
  * @param {Array} ungroupedSessions
- *
  * @return {Object}
  */
 function groupSessionsByTimeSlot( ungroupedSessions ) {

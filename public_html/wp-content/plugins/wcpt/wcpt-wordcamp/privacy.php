@@ -40,28 +40,28 @@ function register_personal_data_exporters( $exporters ) {
 function details_personal_data_exporter( $email_address, $page ) {
 	$post_query     = _get_wordcamp_posts( 'details', $email_address, $page );
 	$email_keys     = _get_email_postmeta_keys();
-	$data_to_export = [];
+	$data_to_export = array();
 
 	foreach ( (array) $post_query->posts as $post ) {
-		$wcpt_data_to_export = [];
+		$wcpt_data_to_export = array();
 
 		foreach ( $email_keys as $email_key => $props ) {
 			$email_value = get_post_meta( $post->ID, $email_key, true );
 
 			if ( $email_value === $email_address ) {
-				$wcpt_data_to_export[] = [
+				$wcpt_data_to_export[] = array(
 					'name'  => $email_key,
 					'value' => $email_value,
-				];
+				);
 
 				foreach ( $props['assoc_fields'] as $assoc_key ) {
 					$assoc_value = get_post_meta( $post->ID, $assoc_key, true );
 
 					if ( ! empty( $assoc_value ) ) {
-						$wcpt_data_to_export[] = [
+						$wcpt_data_to_export[] = array(
 							'name'  => $assoc_key,
 							'value' => $assoc_value,
-						];
+						);
 					}
 				}
 			}
@@ -79,10 +79,10 @@ function details_personal_data_exporter( $email_address, $page ) {
 
 	$done = $post_query->max_num_pages <= $page;
 
-	return [
+	return array(
 		'data' => $data_to_export,
 		'done' => $done,
-	];
+	);
 }
 
 /**
@@ -95,13 +95,13 @@ function details_personal_data_exporter( $email_address, $page ) {
  */
 function application_personal_data_exporter( $email_address, $page ) {
 	$post_query     = _get_wordcamp_posts( 'application', $email_address, $page );
-	$data_to_export = [];
+	$data_to_export = array();
 
 	foreach ( (array) $post_query->posts as $post ) {
 		$application_data    = get_post_meta( $post->ID, '_application_data', true );
-		$wcpt_data_to_export = [];
+		$wcpt_data_to_export = array();
 
-		$lead_organizer_keys = [
+		$lead_organizer_keys = array(
 			'q_1079074_first_name'                       => 'First Name',
 			'q_1079074_last_name'                        => 'Last Name',
 			'q_1079059_email'                            => 'Email',
@@ -130,13 +130,13 @@ function application_personal_data_exporter( $email_address, $page ) {
 			'q_1079098_anything_else'                    => 'Anything else you want us to know while we&#039;re looking over your application?',
 			'q_1079112_best_describes_you'               => 'Which of these best describes you?',
 			'q_1079112_best_describes_you_other'         => 'Which of these best describes you? (Other)',
-		];
+		);
 
-		$co_organizer_keys = [
+		$co_organizer_keys = array(
 			'q_1068188_relationship_co_organizers'       => 'What&#039;s your relationship to your co-organizers?',
 			'q_1068188_relationship_co_organizers_other' => 'What&#039;s your relationship to your co-organizers? (Other)',
 			'q_1068187_co_organizer_contact_info'        => 'Please enter the names and email addresses of your co-organizers',
-		];
+		);
 
 		if ( $application_data['q_1079059_email'] === $email_address ) {
 			foreach ( $lead_organizer_keys as $lkey => $llabel ) {
@@ -147,10 +147,10 @@ function application_personal_data_exporter( $email_address, $page ) {
 						$lvalue = implode( ', ', $lvalue );
 					}
 
-					$wcpt_data_to_export[] = [
+					$wcpt_data_to_export[] = array(
 						'name'  => $llabel,
 						'value' => $lvalue,
-					];
+					);
 				}
 			}
 		}
@@ -164,10 +164,10 @@ function application_personal_data_exporter( $email_address, $page ) {
 						$cvalue = implode( ', ', $cvalue );
 					}
 
-					$wcpt_data_to_export[] = [
+					$wcpt_data_to_export[] = array(
 						'name'  => $clabel,
 						'value' => $cvalue,
-					];
+					);
 				}
 			}
 		}
@@ -184,10 +184,10 @@ function application_personal_data_exporter( $email_address, $page ) {
 
 	$done = $post_query->max_num_pages <= $page;
 
-	return [
+	return array(
 		'data' => $data_to_export,
 		'done' => $done,
-	];
+	);
 }
 
 /**
@@ -223,7 +223,7 @@ function details_personal_data_eraser( $email_address, $page ) {
 	$post_query     = _get_wordcamp_posts( 'details', $email_address, $page );
 	$items_removed  = false;
 	$items_retained = false;
-	$messages       = [];
+	$messages       = array();
 
 	foreach ( (array) $post_query->posts as $post ) {
 		// @todo
@@ -251,7 +251,7 @@ function application_personal_data_eraser( $email_address, $page ) {
 	$post_query     = _get_wordcamp_posts( 'application', $email_address, $page );
 	$items_removed  = false;
 	$items_retained = false;
-	$messages       = [];
+	$messages       = array();
 
 	foreach ( (array) $post_query->posts as $post ) {
 		// @todo
@@ -280,7 +280,7 @@ function _get_wordcamp_posts( $query_type, $email_address, $page ) {
 	$page   = (int) $page;
 	$number = 20;
 
-	$args = [
+	$args = array(
 		'post_type'      => WCPT_POST_TYPE_ID,
 		'post_status'    => 'any',
 		'orderby'        => 'ID',
@@ -288,32 +288,32 @@ function _get_wordcamp_posts( $query_type, $email_address, $page ) {
 		'perm'           => 'readable',
 		'posts_per_page' => $number,
 		'paged'          => $page,
-	];
+	);
 
 	switch ( $query_type ) {
-		case 'details' :
+		case 'details':
 			$email_keys = _get_email_postmeta_keys();
 
-			$args['meta_query'] = [
+			$args['meta_query'] = array(
 				'relation' => 'OR',
-			];
+			);
 
 			foreach ( $email_keys as $key => $props ) {
-				$args['meta_query'][] = [
+				$args['meta_query'][] = array(
 					'key'   => $key,
 					'value' => $email_address,
-				];
+				);
 			}
 			break;
-		case 'application' :
-			$args['meta_query'] = [
+		case 'application':
+			$args['meta_query'] = array(
 				'relation' => 'OR',
-				[
+				array(
 					'key'     => '_application_data',
 					'value'   => $email_address,
 					'compare' => 'LIKE', // There are multiple places in the serialized array where an email address could be.
-				],
-			];
+				),
+			);
 			break;
 	}
 
@@ -329,95 +329,95 @@ function _get_email_postmeta_keys() {
 	// @todo Since the postmeta keys are also the field labels, we might need to expand this array to include translatable
 	// strings for the labels.
 
-	return [
-		'Email Address' => [
-			'assoc_fields' => [
+	return array(
+		'Email Address' => array(
+			'assoc_fields' => array(
 				'Organizer Name',
 				'WordPress.org Username',
 				'Telephone',
 				'Mailing Address',
-			],
-		],
-		'Sponsor Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Sponsor Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Sponsor Wrangler Name',
-			],
-		],
-		'Budget Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Budget Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Budget Wrangler Name',
-			],
-		],
-		'Venue Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Venue Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Venue Wrangler Name',
-			],
-		],
-		'Speaker Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Speaker Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Speaker Wrangler Name',
-			],
-		],
-		'Food/Beverage Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Food/Beverage Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Food/Beverage Wrangler Name',
-			],
-		],
-		'Swag Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Swag Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Swag Wrangler Name',
-			],
-		],
-		'Volunteer Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Volunteer Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Volunteer Wrangler Name',
-			],
-		],
-		'Printing Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Printing Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Printing Wrangler Name',
-			],
-		],
-		'Design Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Design Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Design Wrangler Name',
-			],
-		],
-		'Website Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Website Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Website Wrangler Name',
-			],
-		],
-		'Social Media/Publicity Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Social Media/Publicity Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Social Media/Publicity Wrangler Name',
-			],
-		],
-		'A/V Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'A/V Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'A/V Wrangler Name',
-			],
-		],
-		'Party Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Party Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Party Wrangler Name',
-			],
-		],
-		'Travel Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Travel Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Travel Wrangler Name',
-			],
-		],
-		'Safety Wrangler E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Safety Wrangler E-mail Address' => array(
+			'assoc_fields' => array(
 				'Safety Wrangler Name',
-			],
-		],
-		'Mentor E-mail Address' => [
-			'assoc_fields' => [
+			),
+		),
+		'Mentor E-mail Address' => array(
+			'assoc_fields' => array(
 				'Mentor WordPress.org User Name',
 				'Mentor Name',
-			],
-		],
-	];
+			),
+		),
+	);
 }

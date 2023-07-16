@@ -241,7 +241,6 @@ ADDRESS;
 		add_post_meta( $post_id, 'Email', $data['q_email'] );
 		add_post_meta( $post_id, 'City', $data['q_mtp_loc'] );
 		add_post_meta( $post_id, 'Address', $organizer_address );
-		add_post_meta( $post_id, 'Already a meetup', $data['q_already_a_meetup'] );
 		add_post_meta( $post_id, 'Meetup URL', $data['q_existing_meetup_url'] );
 		add_post_meta( $post_id, 'Primary organizer WordPress.org username', $data['q_wporg_username'] );
 		add_post_meta( $post_id, 'Slack', $data['q_wp_slack_username'] );

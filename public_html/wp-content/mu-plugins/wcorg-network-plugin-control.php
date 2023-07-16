@@ -50,12 +50,12 @@ function _get_network_plugin_state_list( $state ) {
 			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
 			'wordcamp-remote-css/bootstrap.php',
 			'wordcamp-site-cloner/wordcamp-site-cloner.php',
+			'wordcamp-speaker-feedback/wordcamp-speaker-feedback.php',
 			'wc-fonts/wc-fonts.php',
 			'wc-post-types/wc-post-types.php',
 			'wordcamp-qbo-client/wordcamp-qbo-client.php',
 			'wordpress-importer/wordpress-importer.php',
 			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
-			'json-rest-api/plugin.php',
 			'wp-super-cache/wp-cache.php',
 		),
 		'deactivated' => array(

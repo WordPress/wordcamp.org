@@ -2,15 +2,16 @@
 
 class WCB_Elements extends WCB_Element {
 	var $elements = array();
-	var $_queue = array();
+	var $_queue   = array();
 
-	function __construct( $elements=array() ) {
+	function __construct( $elements = array() ) {
 		$this->add( $elements );
 	}
 
 	function add( $elements ) {
-		if ( ! is_array( $elements ) )
+		if ( ! is_array( $elements ) ) {
 			$elements = array( $elements );
+		}
 		$this->elements = array_merge( $this->elements, $elements );
 	}
 
@@ -25,11 +26,12 @@ class WCB_Elements extends WCB_Element {
 	 *
 	 * @param boolean $resume_only If true, will only render if the queue has already been stopped.
 	 */
-	function render( $resume_only=false ) {
+	function render( $resume_only = false ) {
 		if ( ! $this->in_progress() ) {
 
-			if ( $resume_only )
+			if ( $resume_only ) {
 				return;
+			}
 
 			$this->_queue = $this->elements;
 			$this->before();
@@ -37,10 +39,11 @@ class WCB_Elements extends WCB_Element {
 
 		$this->content();
 
-		if ( ! $this->in_progress() )   // Finish the collection.
+		if ( ! $this->in_progress() ) {   // Finish the collection.
 			$this->after();
-		else                            // We encountered a break.
+		} else { // We encountered a break.
 			return false;
+		}
 	}
 
 	/**
@@ -59,11 +62,12 @@ class WCB_Elements extends WCB_Element {
 
 	function content() {
 		while ( $this->in_progress() ) {
-			if ( $this->_queue[0]->render() === false )
+			if ( $this->_queue[0]->render() === false ) {
 				break;
+			}
 			array_shift( $this->_queue );
 		}
 	}
 }
 
-?>
+

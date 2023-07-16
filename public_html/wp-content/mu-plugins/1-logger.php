@@ -71,8 +71,17 @@ function log( $error_code, $data = array() ) {
  * @return array
  */
 function redact_keys( & $data ) {
-	$redacted_keys = array( 'Authorization', 'password', 'user_pass', 'key', 'apikey', 'api_key', 'client_secret' );
-	$redacted_keys = array_map( 'strtolower', $redacted_keys ); // to avoid human error
+	$redacted_keys_exact = array(
+		'Authorization', 'key', 'user_pass', 'pwd', 'pass1-text', 'pass1', 'pass2',
+	);
+
+	$redacted_keys_fuzzy = array(
+		'password', 'nonce', 'apikey', 'api_key', 'secret',
+	);
+
+	// Normalize to avoid human error.
+	$redacted_keys_exact = array_map( 'strtolower', $redacted_keys_exact );
+	$redacted_keys_fuzzy = array_map( 'strtolower', $redacted_keys_fuzzy );
 
 	foreach ( $data as $key => $value ) {
 		/*
@@ -106,8 +115,14 @@ function redact_keys( & $data ) {
 			}
 		}
 
-		if ( in_array( strtolower( $key ), $redacted_keys, true ) ) {
-			 $data[ $key ] = '[redacted]';
+		foreach ( $redacted_keys_fuzzy as $fuzzy_key ) {
+			if ( str_contains( strtolower( $key ), $fuzzy_key ) ) {
+				$data[ $key ] = '[redacted]';
+			}
+		}
+
+		if ( in_array( strtolower( $key ), $redacted_keys_exact, true ) ) {
+			$data[ $key ] = '[redacted]';
 		}
 
 		if ( is_array( $value ) ) {
@@ -116,6 +131,29 @@ function redact_keys( & $data ) {
 	}
 
 	return $data;
+}
+
+/**
+ * Redact sensitive values from URL query parameters.
+ *
+ * There are rare situations where this is needed, like `wp-json/wordcamp-letsencrypt/v1/domains-dehydrated`.
+ */
+function redact_url( string $raw_url ) : string {
+	$redacted_params = array();
+	$parsed_url      = wp_parse_url( $raw_url );
+	wp_parse_str( $parsed_url['query'] ?? '', $redacted_params );
+	$redacted_params = redact_keys( $redacted_params );
+
+	$redacted_url = sprintf(
+		'%s://%s%s',
+		$parsed_url['scheme'] ?? '',
+		$parsed_url['host'] ?? '',
+		$parsed_url['path'] ?? '',
+	);
+
+	$redacted_url = add_query_arg( $redacted_params, $redacted_url );
+
+	return $redacted_url;
 }
 
 /**

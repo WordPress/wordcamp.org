@@ -15,6 +15,7 @@ defined( 'WPINC' ) || die();
 function init() {
 	$front_end_assets = require PLUGIN_DIR . 'build/schedule-front-end.min.asset.php';
 
+	$front_end_assets['dependencies'][] = 'wp-sanitize';
 	wp_register_script(
 		'wordcamp-schedule-front-end',
 		PLUGIN_URL . 'build/schedule-front-end.min.js',
@@ -25,9 +26,9 @@ function init() {
 
 	wp_register_style(
 		'wordcamp-schedule-front-end',
-		PLUGIN_URL . 'build/schedule-front-end.min.css',
+		PLUGIN_URL . 'build/schedule-front-end.css',
 		array(),
-		filemtime( PLUGIN_DIR . 'build/schedule-front-end.min.css' )
+		filemtime( PLUGIN_DIR . 'build/schedule-front-end.css' )
 	);
 
 	wp_set_script_translations( 'wordcamp-schedule-front-end', 'wordcamporg' );
@@ -47,20 +48,19 @@ add_action( 'init', __NAMESPACE__ . '\init' );
 /**
  * Enable registration of the block on the JavaScript side.
  *
- * This only exists to pass the `enabledBlocks` test in `blocks.js`. We don't actually need to populate the
- * `WordCampBlocks.schedule` property with anything on the back end, because all of the necessary data has
- * to be fetched on the fly in `fetchScheduleData`.
- *
- * See `pass_global_data_to_front_end()` for details on front- vs back-end data sourcing.
- *
- * @todo There's probably an elegant way to avoid the need for a workaround, by refactoring `blocks.js`.
+ * In the backend, all schedule, track, and settings data is fetched via `fetchScheduleData`. The only thing
+ * we need to pass directly is the timezone. For the frontend, this value is overwritten by
+ * `pass_global_data_to_front_end` with data to set up the schedule without requiring extra API requests.
  *
  * @param array $data
  *
  * @return array
  */
 function enable_js_block_registration( $data ) {
-	$data['schedule'] = array();
+	$data['schedule'] = array(
+		'timezone' => wp_timezone_string(),
+		'adminUrl' => admin_url(),
+	);
 
 	return $data;
 }
@@ -100,12 +100,16 @@ function pass_global_data_to_front_end() {
 		'allTracks'     => get_all_tracks(),
 		'allCategories' => get_all_categories(),
 		'settings'      => get_settings(),
+		'timezone'      => wp_timezone_string(),
 	);
+
+	// The rest request in get_all_sessions changes the global $post value.
+	wp_reset_postdata();
 
 	wp_add_inline_script(
 		'wordcamp-schedule-front-end',
 		sprintf(
-			'WordCampBlocks.schedule = JSON.parse( decodeURIComponent( \'%s\' ) );',
+			'var WordCampBlocks = WordCampBlocks || {}; WordCampBlocks.schedule = JSON.parse( decodeURIComponent( \'%s\' ) );',
 			rawurlencode( wp_json_encode( $schedule_data ) )
 		),
 		'before'
@@ -173,6 +177,12 @@ function get_attributes_schema() {
 		'showCategories' => array(
 			'type'    => 'boolean',
 			'default' => true,
+		),
+
+		'useClientTimezone' => array(
+			'type'    => 'boolean',
+			// This should default to true when the event is virtual.
+			'default' => is_wordcamp_virtual( get_wordcamp_post() ),
 		),
 	);
 
@@ -262,21 +272,17 @@ function get_all_categories() {
 }
 
 /**
- * Get the site's settings.
+ * Get (a subset of) the site's settings.
  *
  * @return array
  */
 function get_settings() {
 	/*
-	 * This needs to match the same format that `fetchScheduleData()` returns.
+	 * This needs to match the format of `fetchScheduleData()`, which is the result of `/wp/v2/settings`.
 	 *
-	 * Hardcoding these instead of creating a `WP_REST_Request` because:
-	 *
-	 * 1) That API endpoint is only intended to be used by authorized users. Right now it doesn't contain anything
-	 *    particularly sensitive, but that could change at any point in the future.
-	 * 2) The data will need to be accessed by logged-out visitors, and that endpoint requires authentication by
-	 *    default.
-	 * 3) It makes the page size slightly smaller, and `WordCampBlocks` less cluttered.
+	 * The array is hard-coded because the settings endpoint requires authentication, and returns an error
+	 * when the viewer is logged-out. If you need to add or remove any values here, make sure they're also
+	 * available in the settings endpoint.
 	 */
 	return array(
 		'date_format' => get_option( 'date_format' ),

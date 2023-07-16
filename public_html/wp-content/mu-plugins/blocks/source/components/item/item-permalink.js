@@ -12,6 +12,10 @@ import { __ } from '@wordpress/i18n';
 /**
  * Component for an entity's permalink.
  *
+ * @param {Object} root0
+ * @param {string} root0.className
+ * @param {string} root0.link
+ * @param {string} root0.linkText
  * @return {Element}
  */
 function ItemPermalink( { className, link, linkText } ) {

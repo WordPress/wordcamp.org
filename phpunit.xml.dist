@@ -5,9 +5,12 @@
 	convertErrorsToExceptions="true"
 	convertNoticesToExceptions="true"
 	convertWarningsToExceptions="true"
+	verbose="true"
+	cacheResultFile=".phpunit/.phpunit.result.cache"
 >
 	<php>
 		<const name="WP_TESTS_MULTISITE" value="1" />
+		<const name="WordCamp\Error_Handling\SLACK_ERROR_REPORT_URL" value="" />
 	</php>
 
 	<testsuites>
@@ -29,6 +32,18 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Post Types">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wc-post-types/tests/
+			</directory>
+		</testsuite>
+
+		<testsuite name="WordCamp Post Type">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wcpt/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Remote CSS">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wordcamp-remote-css/tests/
@@ -41,4 +56,24 @@
 			</directory>
 		</testsuite>
 	</testsuites>
+
+	<coverage cacheDirectory=".phpunit/coverage-cache">
+		<include>
+			<directory suffix=".php">./public_html/wp-content/mu-plugins</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/camptix</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wc-post-types</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wcpt</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
+			<file>./public_html/wp-content/sunrise.php</file>
+		</include>
+
+		<exclude>
+			<directory>./public_html/wp-content/mu-plugins/tests</directory>
+			<directory>./public_html/wp-content/mu-plugins/vendor</directory>
+			<directory>./public_html/wp-content/plugins/*/tests</directory>
+			<directory>./public_html/wp-content/plugins/*/node_modules</directory>
+		</exclude>
+	</coverage>
 </phpunit>

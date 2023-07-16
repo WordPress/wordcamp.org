@@ -10,9 +10,10 @@ defined( 'WP_CLI' ) || die();
  */
 class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 	/**
-	 * Sets skip-feature flags on existing sites when new functionality is introduced
+	 * Sets skip-feature flags on all sites up to a given ID
 	 *
-	 * See wcorg_skip_feature() for context.
+	 * See wcorg_skip_feature() for context. This is useful when you new functionality is introduced, but you want
+	 * to skip it on older sites.
 	 *
 	 * ## OPTIONS
 	 *
@@ -28,9 +29,9 @@ class WordCamp_CLI_Miscellaneous extends WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale
-	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 437
-	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 437 --dry-run
+	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale                  # Sets the flag on all sites
+	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 437              # Sets the flag on all sites 1 through 437
+	 * wp wc-misc set-skip-feature-flag wcb_viewport_initial_scale 437 --dry-run    # Shows a report of what would happen for sites 1 through 437
 	 *
 	 * @subcommand set-skip-feature-flag
 	 *

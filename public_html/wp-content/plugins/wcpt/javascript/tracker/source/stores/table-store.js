@@ -8,7 +8,6 @@ module.exports = {
 	 * Apply all filters to the given rows
 	 *
 	 * @param {Object} options
-	 *
 	 * @return {Array}
 	 */
 	getFilteredRows( options ) {
@@ -30,7 +29,6 @@ module.exports = {
 	 *
 	 * @param {Array}  rows
 	 * @param {string} searchQuery
-	 *
 	 * @return {Array}
 	 */
 	_searchRows( rows, searchQuery ) {
@@ -69,7 +67,6 @@ module.exports = {
 	 *
 	 * @param {Object} a
 	 * @param {Object} b
-	 *
 	 * @return {number}
 	 */
 	_sortRows( a, b ) {

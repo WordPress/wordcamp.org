@@ -1,7 +1,3 @@
-<?php
-/** @var WordCamp_New_Site $this */
-
-?>
 <!-- wp:paragraph {"customBackgroundColor":"#eeeeee"} -->
 <p style="background-color:#eeeeee" class="has-background"><em>Organizers note:</em> Below is a boilerplate code of conduct that you can customize; another great example is the Ada Initiative <a href="http://geekfeminism.wikia.com/wiki/Conference_anti-harassment/Policy">anti-harassment policy.</a></p>
 <!-- /wp:paragraph -->
@@ -14,6 +10,118 @@
 <p style="background-color:#eeeeee" class="has-background">Please update the portions <span style="color: red; text-decoration: underline;">with red text.</span> To remove the red underline formatting, click the arrow in the toolbar called "more rich text controls," and toggle off the underline.</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:list {"ordered":true} -->
-<?php echo $this->get_code_of_conduct(); /* phpcs:ignore */ ?>
+<!-- wp:heading {"level":3} -->
+<h3>1. Purpose</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> believes our community should be truly open for everyone. As such, we are committed to providing a friendly, safe and welcoming environment for all, regardless of gender, sexual orientation, disability, ethnicity, religion, age, caste, social class, preferred operating system, programming language, or text editor, among other identifying characteristics.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>This code of conduct outlines our expectations for participant behavior as well as the consequences for unacceptable behavior.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>We invite all sponsors, volunteers, speakers, attendees, and other participants to help us realize a safe and positive conference experience for everyone.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>2. Open Source Citizenship</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>A supplemental goal of this code of conduct is to increase open source citizenship by encouraging participants to recognize and strengthen the relationships between what we do and the community at large.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>In service of this goal, <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> organizers will be taking nominations for exemplary citizens throughout the event and will recognize select participants after the conference on the website.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>If you see someone who is making an extra effort to ensure our community is welcoming, friendly, and encourages all participants to contribute to the fullest extent, we want to know. <span style="color: red; text-decoration: underline;">You can nominate someone at the Registration table or online at URL HERE.</span></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>3. Expected Behavior</h3>
+<!-- /wp:heading -->
+
+<!-- wp:list -->
+<ul><li>Be considerate, respectful, and collaborative.</li><li>Refrain from demeaning, discriminatory or harassing behavior and speech.</li><li>Be mindful of your surroundings and of your fellow participants. Alert conference organizers if you notice a dangerous situation or someone in distress.</li><li>Participate in an authentic and active way. In doing so, you help to create <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and make it your own.</li></ul>
 <!-- /wp:list -->
+
+<!-- wp:heading {"level":3} -->
+<h3>4. Unacceptable Behavior</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Unacceptable behaviors include: intimidating, harassing, abusive, discriminatory, derogatory or demeaning conduct by any attendees of <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and related events. All <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues may be shared with members of the public; please be respectful to all patrons of these locations.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Harassment includes: offensive verbal comments related to gender, sexual orientation, race, religion, disability; inappropriate use of nudity and/or sexual images in public spaces (including presentation slides); deliberate intimidation, stalking or following; harassing photography or recording; sustained disruption of talks or other events; inappropriate physical contact, and unwelcome sexual attention.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>5. Consequences Of Unacceptable Behavior</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Unacceptable behavior will not be tolerated whether by other attendees, organizers, venue staff, sponsors, or other patrons of <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Anyone asked to stop unacceptable behavior is expected to comply immediately.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>If a participant engages in unacceptable behavior, the conference organizers may take any action they deem appropriate, up to and including expulsion from the conference without warning or refund.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>6. What To Do If You Witness Or Are Subject To Unacceptable Behavior</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>If you are subject to unacceptable behavior, notice that someone else is being subject to unacceptable behavior, or have any other concerns, please notify a conference organizer as soon as possible.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>The <span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> team will be available to help participants contact venue security or local law enforcement, to provide escorts, or to otherwise assist those experiencing unacceptable behavior to feel safe for the duration of the conference. <span style="color: red; text-decoration: underline;">Volunteers will be wearing XXXXXXXXXXXXXXXXXXXXXXXX.</span> Any volunteer can connect you with a conference organizer. You can also come to the special registration desk in the lobby and ask for the organizers.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>7. Scope</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>We expect all conference participants (sponsors, volunteers, speakers, attendees, and other guests) to abide by this code of conduct at all conference venues and conference-related social events.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>8. Contact Information</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><span style="color: red; text-decoration: underline;">Contact info here! Make sure this includes a way to access the organizers during the event.</span></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>9. License And Attribution</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>This Code of Conduct is a direct swipe from the awesome work of Open Source Bridge, but with our event information substituted. The original is available at <a href="http://web.archive.org/web/20191206083557/http://opensourcebridge.org/about/code-of-conduct/">Open Source Bridge 2018 [archived]</a> and is released under a <a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons Attribution-ShareAlike</a> license.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3>Statement about Socials or Supplemental Events (where applicable)</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Social and supplemental events are intended to provide networking and additional educational opportunities, as well as an opportunity to unwind after a full WordCamp. They should also be places where attendees can feel safe and secure.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>We want you to enjoy yourself at these events, and we want you to do so safely. If you experience a Code of Conduct violation, see a violation, are concerned about the well-being, safety or behavior of another attendee, or have a general question (we understand that violations are not always obvious!) contact us immediately by notifying a WordCamp organizer or emailing <a href="mailto:report@wordcamp.org">report@wordcamp.org</a>. For in-person events, if you need help or are unable to comfortably or safely remove yourself from a situation you do not want to be in, organizers will prioritize assisting you immediately and discretely. Some examples are: not feeling well; your transportation arrangements fall through; you are intoxicated, you are alone or with someone you do not trust, you are overwhelmed, you have experienced or witnessed a Code of Conduct violation. Please ask any nearby event volunteer or organizer to help you.</p>
+<!-- /wp:paragraph -->

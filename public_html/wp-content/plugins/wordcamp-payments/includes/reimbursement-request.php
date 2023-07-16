@@ -9,7 +9,7 @@ defined( 'WPINC' ) or die();
 
 use WP_Post;
 use WCP_Encryption;
-use WordCamp\Utilities;
+use WordPressdotorg\MU_Plugins\Utilities;
 use WordCamp_Budgets;
 
 const POST_TYPE = 'wcb_reimbursement';
@@ -257,7 +257,7 @@ function enqueue_assets() {
  * @return bool
  */
 function user_can_edit_request( $post ) {
-	$editable_status = in_array( $post->post_status, array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
+	$editable_status = in_array( $post->post_status ?? '', array( 'auto-draft', 'draft', 'wcb-incomplete' ), true );
 	return current_user_can( 'manage_network' ) || $editable_status;
 }
 

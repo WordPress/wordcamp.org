@@ -3,6 +3,8 @@
  * WordCamp.org configuration file.
  */
 
+define( 'IS_WORDCAMP_NETWORK', true );
+
 /**
  * The environment in which the WordCamp codebase is currently running.
  *
@@ -14,6 +16,7 @@
  *                  functionality that relies on remote connections may not be available.
  */
 define( 'WORDCAMP_ENVIRONMENT', 'local' );
+define( 'WP_ENVIRONMENT_TYPE', 'local' );
 
 /*
  * Database
@@ -35,22 +38,36 @@ $table_prefix = 'wc_'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride
 /*
  * Multisite
  */
-if ( 'buddycamp.test' === $_SERVER['HTTP_HOST'] || '.buddycamp.test' === substr( $_SERVER['HTTP_HOST'], strlen( $_SERVER['HTTP_HOST'] ) - 14, 14 ) ) {
-	$wcorg_domain_current_site = 'buddycamp.test';
-} else {
-	$wcorg_domain_current_site = 'wordcamp.test';
+const WORDCAMP_NETWORK_ID   = 1;
+const WORDCAMP_ROOT_BLOG_ID = 5;
+const EVENTS_NETWORK_ID     = 2;
+const EVENTS_ROOT_BLOG_ID   = 47;
+
+switch ( $_SERVER['HTTP_HOST'] ) {
+	case 'events.wordpress.test':
+		define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
+		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
+		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
+		define( 'SUBDOMAIN_INSTALL',     false );
+		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		break;
+
+	case 'wordcamp.test':
+	case 'buddycamp.test':
+	default:
+		define( 'SITE_ID_CURRENT_SITE',  WORDCAMP_NETWORK_ID );
+		define( 'BLOG_ID_CURRENT_SITE',  WORDCAMP_ROOT_BLOG_ID );
+		define( 'DOMAIN_CURRENT_SITE',   'buddycamp.test' === $_SERVER['HTTP_HOST'] ? 'buddycamp.test' : 'wordcamp.test' );
+		define( 'SUBDOMAIN_INSTALL',     true );
+		define( 'NOBLOGREDIRECT',        'https://central.wordcamp.test' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
+		break;
 }
 
-define( 'WP_ALLOW_MULTISITE',   true ); // Temporary workaround for https://github.com/Automattic/wp-super-cache/issues/97.
-define( 'MULTISITE',            true );
-define( 'SUBDOMAIN_INSTALL',    true );
-define( 'DOMAIN_CURRENT_SITE',  $wcorg_domain_current_site );
-define( 'PATH_CURRENT_SITE',    '/' );
-define( 'SITE_ID_CURRENT_SITE',  1 );
-define( 'BLOG_ID_CURRENT_SITE',  5 ); // central.wordcamp.test.
-define( 'NOBLOGREDIRECT',       'https://central.wordcamp.test' );
-define( 'SUNRISE',               true );
-define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
+define( 'MULTISITE',         true );
+define( 'SUNRISE',           true );
+define( 'PATH_CURRENT_SITE', '/' );
 
 
 /*
@@ -111,15 +128,13 @@ $trusted_deputies = array(
  */
 define( 'SLACK_ERROR_REPORT_URL',      '(Optional) you can configure slack and add your webhook url. Errors will be posted to this slack url' );
 define( 'WORDCAMP_LOGS_SLACK_CHANNEL', '(Optional) @your_slack_username' );
+define( 'WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL',   '(Optional) @your_slack_username' );
+define( 'WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL', '(Optional) @your_slack_username' );
 
 define( 'TWITTER_CONSUMER_KEY_WORDCAMP_CENTRAL',    '' );
 define( 'TWITTER_CONSUMER_SECRET_WORDCAMP_CENTRAL', '' );
 define( 'TWITTER_BEARER_TOKEN_WORDCAMP_CENTRAL',    '' );
 
-// These can't be empty, but no real values are needed here for local development.
-define( 'WORDCAMP_QBO_APP_TOKEN',       'localtoken' );
-define( 'WORDCAMP_QBO_CONSUMER_KEY',    'localkey' );
-define( 'WORDCAMP_QBO_CONSUMER_SECRET', 'localsecret' );
 define( 'WORDCAMP_QBO_HMAC_KEY',        'localhmac' );
 
 define( 'WORDCAMP_SANDBOX_QBO_CLIENT_ID',        "(Optional) your app's development client ID key goes here" );
@@ -155,7 +170,6 @@ define( 'WORDCAMP_PAYMENT_STRIPE_SECRET_LIVE',      '' );
 
 define( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY', '' );
 
-define( 'MEETUP_API_KEY',      '' );
 define( 'MEETUP_API_BASE_URL', 'https://api.meetup.com/' );
 define( 'MEETUP_MEMBER_ID',     72560962                 );
 define( 'MEETUP_OAUTH_CONSUMER_KEY', '' );
@@ -185,4 +199,4 @@ if ( ! defined('ABSPATH') ) {
 	define( 'ABSPATH', dirname( __FILE__ ) . '/mu' );
 }
 
-require_once( ABSPATH . 'wp-settings.php' );
+require_once ABSPATH . 'wp-settings.php';

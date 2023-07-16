@@ -65,7 +65,7 @@ class FrontBlockCrashBoundary extends Component {
  * @param {string}   selector   CSS selector to match the elements to replace.
  * @param {Function} Block      React block to use as a replacement.
  * @param {Function} [getProps] Function to generate the props object for the
- * block.
+ *                              block.
  */
 export default ( selector, Block, getProps = getPropsFallback ) => {
 	const containers = document.querySelectorAll( selector );
@@ -74,16 +74,12 @@ export default ( selector, Block, getProps = getPropsFallback ) => {
 		// Use Array.forEach for IE11 compatibility
 		Array.prototype.forEach.call( containers, ( element ) => {
 			const props = getProps( element ) || {};
-			const attributes = {
-				...element.dataset,
-				...props.attributes,
-			};
 
 			element.classList.remove( 'is-loading' );
 
 			render(
 				<FrontBlockCrashBoundary
-					block={ <Block { ...props } attributes={ attributes } /> }
+					block={ <Block { ...props } /> }
 				/>,
 				element
 			);

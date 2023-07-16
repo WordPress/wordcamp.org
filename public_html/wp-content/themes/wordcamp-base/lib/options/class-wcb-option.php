@@ -10,13 +10,14 @@ class WCB_Option {
 			'default' => '',
 		);
 		extract( wp_parse_args( $args, $defaults ) );
-		$this->key = $key;
+		$this->key     = $key;
 		$this->default = $default;
 	}
 
 	function maybe_validate( $input ) {
-		if ( isset( $input[ $this->key ] ) )
+		if ( isset( $input[ $this->key ] ) ) {
 			$input[ $this->key ] = $this->validate( $input[ $this->key ] );
+		}
 		return $input;
 	}
 
@@ -40,12 +41,10 @@ class WCB_Option {
 	function name() {
 		$args = func_get_args();
 		$name = call_user_func_array( array( &$this, 'get_name' ), $args );
-		echo " name='$name' ";
+		echo " name='". esc_attr( $name ) ."' ";
 	}
 
 	function maybe_unserialize( $value ) {
 		return $value;
 	}
 }
-
-?>

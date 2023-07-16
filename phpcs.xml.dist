@@ -78,6 +78,7 @@
 	<!-- Exclude 3rd-party files -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>./public_html/mu/*</exclude-pattern>
 
 	<!-- Scan all (php) files in the current folder and subfolders -->
 	<file>.</file>

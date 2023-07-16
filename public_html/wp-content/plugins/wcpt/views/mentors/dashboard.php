@@ -17,7 +17,7 @@ defined( 'WPINC' ) or die();
 		<li>Active camps without a mentor: <strong><?php echo absint( count_camps_without_mentors( $unmentored_camps ) ); ?></strong></li>
 	</ul>
 
-	<?php require_once( __DIR__ . '/mentors.php'          ); ?>
-	<?php require_once( __DIR__ . '/unmentored-camps.php' ); ?>
-	<?php require_once( __DIR__ . '/manage-mentors.php' ); ?>
+	<?php require_once __DIR__ . '/mentors.php'; ?>
+	<?php require_once __DIR__ . '/unmentored-camps.php'; ?>
+	<?php require_once __DIR__ . '/manage-mentors.php'; ?>
 </div>

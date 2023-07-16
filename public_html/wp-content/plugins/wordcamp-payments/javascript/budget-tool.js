@@ -1,3 +1,4 @@
+/* eslint-disable */
 window.wcb = window.wcb || { models: {}, input: [] };
 
 ( function( $ ) {

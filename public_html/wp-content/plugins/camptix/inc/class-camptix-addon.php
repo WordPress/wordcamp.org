@@ -17,6 +17,19 @@ abstract class CampTix_Addon {
 	 * Initialization
 	 */
 	public function camptix_init() {}
+
+	/**
+	 * Filter callback: Set the locale to `en_US`.
+	 *
+	 * For some purposes, such as internal logging, strings that would normally be translated to the
+	 * current user's locale should be in English, so that other users who may not share the same
+	 * locale can read them.
+	 *
+	 * @return string
+	 */
+	public function set_locale_to_en_us() {
+		return 'en_US';
+	}
 }
 
 /**

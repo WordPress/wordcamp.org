@@ -4,11 +4,13 @@
 .docker/data/*.bkp
 .docker/database
 .docker/wordcamp*.pem
+.docker/test_suite
 
 
 #
 # Misc
 #
+.phpunit
 google*.html
 wp-cli.yml
 script-backups/
@@ -24,13 +26,25 @@ public_html/wp-content/languages/
 public_html/wp-content/**/build/
 public_html/wp-content/mu-plugins/includes/slack/
 public_html/wp-content/mu-plugins/vendor/
+public_html/wp-content/mu-plugins/0-sandbox-functionality.php
 public_html/wp-content/mu-plugins/sandbox-functionality.php
 public_html/wp-content/mu-plugins-private/
 public_html/wp-content/themes-private/
 public_html/wp-content/uploads/
 public_html/wp-content/debug.log
 
-.docker/test_suite
+
+#
+# Tracked in `yarn.lock`
+#
+package-lock.json
+public_html/wp-content/plugins/wc-post-types/package-lock.json
+
+
+#
+# Dev tools
+#
+public_html/wp-content/plugins/query-monitor/
 
 #
 # Dev tools
@@ -63,17 +77,21 @@ public_html/wp-content/plugins/gutenberg/
 public_html/wp-content/plugins/hyperdb/
 public_html/wp-content/plugins/json-rest-api/
 public_html/wp-content/plugins/jetpack
+public_html/wp-content/plugins/lang-attribute
 public_html/wp-content/plugins/liveblog
 public_html/wp-content/plugins/polldaddy
 public_html/wp-content/plugins/public-post-preview/
 public_html/wp-content/plugins/pwa/
 public_html/wp-content/plugins/supportflow
 public_html/wp-content/plugins/tagregator
+public_html/wp-content/plugins/two-factor
+public_html/wp-content/plugins/two-factor-provider-webauthn
 public_html/wp-content/plugins/wordpress-importer
 public_html/wp-content/plugins/wp-cldr
 public_html/wp-content/plugins/wp-multibyte-patch
 public_html/wp-content/plugins/wp-super-cache
 public_html/wp-content/plugins/wporg-profiles-wp-activity-notifier/
+public_html/wp-content/plugins/wporg-two-factor
 
 
 #
@@ -90,3 +108,6 @@ public_html/wp-content/themes/twentysixteen
 public_html/wp-content/themes/twentyseventeen
 public_html/wp-content/themes/twentynineteen
 public_html/wp-content/themes/twentytwenty
+public_html/wp-content/themes/twentytwentyone
+public_html/wp-content/themes/twentytwentytwo
+public_html/wp-content/themes/twentytwentythree

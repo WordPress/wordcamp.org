@@ -20,7 +20,8 @@ export default function( { headingLevel = 3, session, track } ) {
 	const link = get( session, 'link', '' );
 	const categories = get( session, 'session_cats_rendered', '' );
 	const type = get( session, 'meta._wcpt_session_type', '' );
-	const time = get( session, 'session_date_time.time', '' );
+	const time = parseInt( session.meta._wcpt_session_time ) * 1000;
+	const date = new Date( time ).toLocaleTimeString( [], { timeZoneName: 'short', hour: 'numeric', minute: '2-digit' } );
 
 	const speakers = get( session, 'session_speakers', [] );
 	const validSpeakers = speakers.filter( ( speaker ) => !! speaker.id );
@@ -30,19 +31,17 @@ export default function( { headingLevel = 3, session, track } ) {
 	return (
 		<div className={ `wordcamp-live-schedule__session type-${ type }` }>
 			{ !! track.slug && (
-				<span className={ `wordcamp-live-schedule__session-track track-${ track.slug }` }>{ track.name }</span>
+				<span className={ `wordcamp-live-schedule__session-track track-${ track.slug }` }>
+					{ track.name }
+				</span>
 			) }
 
 			<div className="wordcamp-live-schedule__session-details">
 				<Heading className="wordcamp-live-schedule__session-title">
-					{ !! link ? (
-						<a href={ link }>{ cleanTitle }</a>
-					) : (
-						cleanTitle
-					) }
+					{ !! link ? <a href={ link }>{ cleanTitle }</a> : cleanTitle }
 				</Heading>
 
-				<span className="wordcamp-live-schedule__session-time">{ time }</span>
+				<span className="wordcamp-live-schedule__session-time">{ date }</span>
 
 				<span className="wordcamp-live-schedule__session-speaker">
 					{ !! validSpeakers.length &&
@@ -53,9 +52,7 @@ export default function( { headingLevel = 3, session, track } ) {
 						) ) }
 				</span>
 
-				<span className="wordcamp-live-schedule__session-cats">
-					{ categories }
-				</span>
+				<span className="wordcamp-live-schedule__session-cats">{ categories }</span>
 			</div>
 		</div>
 	);

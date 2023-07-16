@@ -14,12 +14,11 @@ import { BlockIcon } from '@wordpress/block-editor';
  * @param {Object}   props
  * @param {string}   props.classes
  * @param {string}   props.help
- * @param {Object}   props.icon A `BlockIcon` or other value compatible with `<Icon />`.
+ * @param {Object}   props.icon         A `BlockIcon` or other value compatible with `<Icon />`.
  * @param {string}   props.instructions
  * @param {string}   props.label
  * @param {Function} props.embedHandler
  * @param {string}   props.placeholder
- *
  * @return {Element}
  */
 export default function( { classes, help, icon, instructions, label, embedHandler, placeholder } ) {

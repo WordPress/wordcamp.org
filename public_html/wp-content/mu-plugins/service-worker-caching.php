@@ -160,8 +160,8 @@ function disable_app_install_prompt() {
 	}
 	$wordcamp   = get_wordcamp_post();
 	$start_date = $wordcamp->meta['Start Date (YYYY-mm-dd)'] ?? array( 0 );
-	$show_after = $start_date[0] - ( 2 * WEEK_IN_SECONDS );
-	$hide_after = $start_date[0] + ( 1 * WEEK_IN_SECONDS );
+	$show_after = absint( $start_date[0] ) - ( 2 * WEEK_IN_SECONDS );
+	$hide_after = absint( $start_date[0] ) + ( 1 * WEEK_IN_SECONDS );
 	$now        = time();
 
 	// We are in the window to show the prompt, so short out to prevent removing it.

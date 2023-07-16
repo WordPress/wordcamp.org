@@ -13,7 +13,6 @@ import './edit.scss';
  * @param {Object}   props
  * @param {Object}   props.attributes
  * @param {Function} props.setAttributes
- *
  * @return {Element}
  */
 export function ScheduleEdit( { attributes, setAttributes } ) {

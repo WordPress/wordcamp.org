@@ -28,6 +28,7 @@ class WordCamp_Forms_To_Drafts {
 		add_action( 'template_redirect',        array( $this, 'populate_form_based_on_user' ),  9    );
 		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_sponsors'           ), 10, 3 );
 		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_speakers'           ), 10, 3 );
+		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_volunteers'         ), 10, 3 );
 	}
 
 	/**
@@ -102,11 +103,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return string
 	 */
 	protected function inject_disabled_form_elements( $content, $please_login_message ) {
-		$please_login_message = str_replace(
-			__( 'Please use your <strong>WordPress.org</strong>* account to log in.', 'wordcamporg' ),
-			$please_login_message,
-			wcorg_login_message( '', get_permalink() )
-		);
+		$please_login_message = wcorg_login_message( $please_login_message, get_permalink() );
 
 		$form_wrapper = sprintf(
 			'<div class="wcfd-disabled-form">%s<div class="wcfd-overlay"></div><div inert>',
@@ -353,7 +350,7 @@ class WordCamp_Forms_To_Drafts {
 		global $current_user;
 
 		$all_values      = $this->get_unprefixed_grunion_form_values( $all_values );
-		$speaker_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] );
+		$speaker_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
 
 		if ( ! $speaker_user_id ) {
 			$speaker_user_id                      = $current_user->ID;
@@ -372,6 +369,49 @@ class WordCamp_Forms_To_Drafts {
 
 		if ( is_a( $speaker, 'WP_Post' ) ) {
 			$this->create_draft_session( $all_values, $speaker );
+		}
+	}
+
+	/**
+	 * Create draft Volunteer post from a Call for Volunteers form submission.
+	 *
+	 * @todo If creating volunteer fails, report to organizer so that submission doesn't get missed
+	 *
+	 * @param int   $submission_id
+	 * @param array $all_values
+	 * @param array $extra_values
+	 */
+	public function call_for_volunteers( $submission_id, $all_values, $extra_values ) {
+		if ( 'call-for-volunteers' != $this->get_form_key( $submission_id ) ) {
+			return;
+		}
+
+		global $current_user;
+
+		$all_values        = $this->get_unprefixed_grunion_form_values( $all_values );
+		$volunteer_user_id = $this->get_user_id_from_username( $all_values['WordPress.org Username'] ?? '' );
+
+		if ( ! $volunteer_user_id ) {
+			$volunteer_user_id                    = $current_user->ID;
+			$all_values['WordPress.org Username'] = $current_user->user_login;
+		}
+
+		$volunteer_user = get_user_by( 'id', $volunteer_user_id );
+
+		$draft_id = wp_insert_post( array(
+			'post_type'    => 'wcb_volunteer',
+			'post_title'   => sanitize_text_field( $all_values['Name'] ),
+			'post_status'  => 'draft',
+			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
+		) );
+
+		if ( $draft_id ) {
+			$first_time = strtolower( $all_values['Is this the first time you have volunteered at a WordPress event?'] ) ?? '';
+			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
+
+			update_post_meta( $draft_id, '_wcb_volunteer_email', is_email( $all_values['Email'] ) ?? '' );
+			update_post_meta( $draft_id, '_wcpt_user_name', $volunteer_user->user_login ?? '' );
+			update_post_meta( $draft_id, '_wcb_volunteer_first_time', $first_time );
 		}
 	}
 
@@ -415,6 +455,10 @@ class WordCamp_Forms_To_Drafts {
 			$content = str_replace( '<p>', "<!-- wp:paragraph -->\n<p>", $content );
 			$content = str_replace( '</p>', "</p>\n<!-- /wp:paragraph -->", $content );
 		}
+		$content .= "\n";
+		$content .= '<!-- wp:heading {"level":2} --><h2>' . __( 'Sessions', 'wordcamporg' ) . '</h2><!-- /wp:heading -->';
+		$content .= "\n";
+		$content .= '<!-- wp:wordcamp/speaker-sessions {"isLink":true} /-->';
 
 		$speaker_id = wp_insert_post(
 			array(
@@ -429,7 +473,7 @@ class WordCamp_Forms_To_Drafts {
 
 		if ( $speaker_id ) {
 			update_post_meta( $speaker_id, '_wcb_speaker_email', $speaker['Email Address'] ?? '' );
-			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ) );
+			update_post_meta( $speaker_id, '_wcpt_user_id',      $this->get_user_id_from_username( $speaker['WordPress.org Username'] ?? '' ) );
 		}
 
 		return $speaker_id;
@@ -452,13 +496,16 @@ class WordCamp_Forms_To_Drafts {
 			$content = str_replace( '</p>', "</p>\n<!-- /wp:paragraph -->", $content );
 		}
 
+		$content .= "\n";
+		$content .= '<!-- wp:wordcamp/session-speakers {"byline":"' . __( 'Presented by', 'wordcamporg' ) . '","isLink":true} /-->';
+
 		$session_id = wp_insert_post(
 			array(
 				'post_type'    => 'wcb_session',
-				'post_title'   => $session['Topic Title'],
+				'post_title'   => $session['Topic Title'] ?? '',
 				'post_content' => $content,
 				'post_status'  => 'draft',
-				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ),
+				'post_author'  => $this->get_user_id_from_username( $session['WordPress.org Username'] ?? '' ),
 			),
 			true
 		);

@@ -8,11 +8,11 @@ class WCB_Header extends WCB_Element {
 	function content() { ?>
 		<div id="<?php echo $this->get_id(); ?>" class="grid_12">
 			<div id="return-to-central">
-<?php if ( false !== strpos($_SERVER['HTTP_HOST'], 'wordpress.org')) { ?>
+		<?php if ( false !== strpos($_SERVER['HTTP_HOST'], 'wordpress.org') ) { ?>
 				<a href="http://wordpress.org/" title="<?php esc_attr_e( 'Return to WordPress.org', 'wordcamporg' ); ?>"><?php _e('&larr; WordPress.org', 'wordcamporg'); ?></a>
-<?php } else { ?>
+		<?php } else { ?>
 				<a href="http://central.wordcamp.org/" title="<?php esc_attr_e( 'Return to WordCamp Central', 'wordcamporg' ); ?>"><?php _e('&larr; WordCamp Central', 'wordcamporg'); ?></a>
-<?php } ?>
+		<?php } ?>
 
 			</div>
 			<div id="masthead">
@@ -25,7 +25,7 @@ class WCB_Header extends WCB_Element {
 				</div><!-- #branding -->
 			</div><!-- #masthead -->
 		</div><!-- #header -->
-	<?php
+		<?php
 	}
 }
 

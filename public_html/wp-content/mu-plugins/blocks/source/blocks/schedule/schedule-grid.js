@@ -1,9 +1,9 @@
 /**
  * WordPress dependencies
  */
-import { dateI18n } from '@wordpress/date';
 import { __, _x } from '@wordpress/i18n';
 import { createContext, useContext } from '@wordpress/element';
+import { date, format } from '@wordpress/date';
 import { decodeEntities } from '@wordpress/html-entities';
 
 const { stripTags } = wp.sanitize;
@@ -22,7 +22,6 @@ export const ScheduleGridContext = createContext();
  *
  * @param {Object} props
  * @param {Array}  props.sessions
- *
  * @return {Element}
  */
 export function ScheduleGrid( { sessions } ) {
@@ -43,13 +42,13 @@ export function ScheduleGrid( { sessions } ) {
 
 	const groupedSessions = groupSessionsByDate( sessions );
 
-	Object.keys( groupedSessions ).forEach( ( date ) => {
-		const sessionsGroup = groupedSessions[ date ];
+	Object.keys( groupedSessions ).sort().forEach( ( day ) => {
+		const sessionsGroup = groupedSessions[ day ];
 
 		scheduleDays.push(
 			<ScheduleDay
-				key={ date }
-				date={ date }
+				key={ day }
+				localDate={ day }
 				sessions={ sessionsGroup }
 			/>
 		);
@@ -63,10 +62,9 @@ export function ScheduleGrid( { sessions } ) {
 }
 
 /**
- * Create an array of sessions, indexed by their date.
+ * Create an array of sessions, indexed by their date (according to the site's timezone).
  *
  * @param {Array} sessions
- *
  * @return {Array}
  */
 function groupSessionsByDate( sessions ) {
@@ -79,11 +77,11 @@ function groupSessionsByDate( sessions ) {
 			return groups;
 		}
 
-		const date = dateI18n( 'Ymd', session.derived.startTime );
+		const day = date( 'Y-m-d', session.derived.startTime, session.derived.timezone );
 
-		if ( date ) {
-			groups[ date ] = groups[ date ] || [];
-			groups[ date ].push( session );
+		if ( day ) {
+			groups[ day ] = groups[ day ] || [];
+			groups[ day ].push( session );
 		}
 
 		return groups;
@@ -94,17 +92,16 @@ function groupSessionsByDate( sessions ) {
  * Render the schedule for a specific day.
  *
  * @param {Object} props
- * @param {string} props.date     In a format acceptable by `wp.date.dateI18n()`.
- * @param {Array}  props.sessions
- *
+ * @param {string} props.localDate The day being displayed in Y-m-d format (in the site's timezone).
+ * @param {Array}  props.sessions  The sessions assigned to the displayed date.
  * @return {Element}
  */
-function ScheduleDay( { date, sessions } ) {
+function ScheduleDay( { localDate, sessions } ) {
 	const { attributes, allTracks, renderEnvironment, settings } = useContext( ScheduleGridContext );
 	const { chooseSpecificTracks, chosenTrackIds } = attributes;
 
 	const displayedTracks = getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTrackIds );
-	const formattedDate = dateI18n( DATE_SLUG_FORMAT, date );
+	const formattedDate = format( DATE_SLUG_FORMAT, localDate );
 	const formattedTrackIds = chooseSpecificTracks ? displayedTracks.map( ( track ) => track.id ).join( '-' ) : 'all';
 
 	/*
@@ -129,8 +126,8 @@ function ScheduleDay( { date, sessions } ) {
 	const sectionId = `wordcamp-schedule__day-${ formattedDate }-tracks-${ formattedTrackIds }`;
 
 	const startEndTimes = sessions.reduce( ( accumulatingTimes, session ) => {
-		accumulatingTimes.push( session.derived.startTime );
-		accumulatingTimes.push( session.derived.endTime );
+		accumulatingTimes.push( date( 'dHi', session.derived.startTime, session.derived.timezone ) );
+		accumulatingTimes.push( date( 'dHi', session.derived.endTime, session.derived.timezone ) );
 
 		return accumulatingTimes;
 	}, [] );
@@ -145,7 +142,7 @@ function ScheduleDay( { date, sessions } ) {
 			</style>
 
 			<h2 className="wordcamp-schedule__date">
-				{ dateI18n( settings.date_format, date ) }
+				{ format( settings.date_format, localDate ) }
 			</h2>
 
 			{ 'editor' === renderEnvironment && renderOverlappingSessionsWarning( overlappingSessions ) }
@@ -176,7 +173,6 @@ function ScheduleDay( { date, sessions } ) {
  * @param {Array}   allTracks
  * @param {boolean} chooseSpecificTracks
  * @param {Array}   chosenTrackIds
- *
  * @return {Array}
  */
 function getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTrackIds ) {
@@ -221,7 +217,6 @@ function getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTr
  * 9:15am.
  *
  * @param {Array} ungroupedSessions
- *
  * @return {Array}
  */
 function getOverlappingSessions( ungroupedSessions ) {
@@ -255,7 +250,6 @@ function getOverlappingSessions( ungroupedSessions ) {
  * appear in the list for each of their tracks.
  *
  * @param {Array} ungroupedSessions
- *
  * @return {Object}
  */
 function groupSessionsByTrack( ungroupedSessions ) {
@@ -290,7 +284,6 @@ function groupSessionsByTrack( ungroupedSessions ) {
  * other text overlaps them.
  *
  * @param {Array} overlappingSessions
- *
  * @return {Element}
  */
 function renderOverlappingSessionsWarning( overlappingSessions ) {
@@ -325,7 +318,6 @@ function renderOverlappingSessionsWarning( overlappingSessions ) {
  * @param {string} containerId
  * @param {Array}  tracks
  * @param {Array}  startEndTimes
- *
  * @return {string}
  */
 function renderDynamicGridStyles( containerId, tracks, startEndTimes ) {
@@ -348,7 +340,6 @@ function renderDynamicGridStyles( containerId, tracks, startEndTimes ) {
  * Render dynamic `grid-template-column` styles.
  *
  * @param {Array} tracks
- *
  * @return {string}
  */
 function renderGridTemplateColumns( tracks ) {
@@ -389,16 +380,13 @@ function renderGridTemplateColumns( tracks ) {
  *
  * @param {Array} startEndTimes All of the start and end times that should be present in the grid. They can be
  *                              passed in any format that Moment.js can parse.
- *
  * @return {string}
  */
 function renderGridTemplateRows( startEndTimes ) {
 	startEndTimes.sort(); // Put them in chronological order.
 
 	const timeList = startEndTimes.reduce( ( accumulatingTimes, time ) => {
-		const formattedTime = dateI18n( 'Hi', time );
-
-		return accumulatingTimes += `[time-${ formattedTime }] auto `;
+		return accumulatingTimes += `[time-${ time }] auto `;
 	}, '' );
 
 	const templateRows = `
@@ -423,8 +411,7 @@ function renderGridTemplateRows( startEndTimes ) {
  * where it wouldn't be obvious to the user why the tracks that they selected aren't being shown.
  *
  * @param {Object} props
- * @param {Array} props.displayedTracks
- *
+ * @param {Array}  props.displayedTracks
  * @return {Element}
  */
 function GridColumnHeaders( { displayedTracks } ) {

@@ -5,10 +5,10 @@ defined( 'WPINC' ) || die();
  * Renders the status metabox for events. Will display current status of the event. If user has edit_post access then will display dropdown of all available statuses for this post.
  *
  * @param Event_Admin $event_admin Event admin object. Must have methods `get_valid_status_transitions` and `get_post_statuses`
- * @param WP_Post $post Post object
- * @param string $event_type Type of event. Could be 'wordcamp' or 'wp_meetup'.
- * @param string $label Label to display. Could be 'WordCamp' or 'Meetup' as of now.
- * @param string $edit_capability Name of the capability which allows to edit the event
+ * @param WP_Post     $post Post object
+ * @param string      $event_type Type of event. Could be 'wordcamp' or 'wp_meetup'.
+ * @param string      $label Label to display. Could be 'WordCamp' or 'Meetup' as of now.
+ * @param string      $edit_capability Name of the capability which allows to edit the event
  */
 function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_capability ) {
 	$wcpt = get_post_type_object( $event_type );
@@ -30,11 +30,11 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 								<?php foreach ( $event_admin->get_post_statuses() as $key => $label ) : ?>
 									<?php $status = get_post_status_object( $key ); ?>
 									<option value="<?php echo esc_attr( $status->name ); ?>" <?php
-										if ( $post->post_status == $status->name ) {
-											selected( true );
-										} elseif ( ! in_array( $status->name, $transitions ) ) {
-											echo ' disabled ';
-										}
+									if ( $post->post_status == $status->name ) {
+										selected( true );
+									} elseif ( ! in_array( $status->name, $transitions ) ) {
+										echo ' disabled ';
+									}
 									?>>
 										<?php echo esc_html( $status->label ); ?>
 									</option>

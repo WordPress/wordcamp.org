@@ -1,4 +1,4 @@
-FROM php:7.2-fpm
+FROM php:7.4-fpm
 
 # Install additional packages.
 RUN apt-get update \
@@ -6,8 +6,10 @@ RUN apt-get update \
         build-essential \
         git \
         less \
+        libicu-dev \
         libjpeg-dev \
         libpng-dev \
+        libzip-dev \
         libsqlite3-dev \
         libxext6 \
         mariadb-client \
@@ -21,12 +23,14 @@ RUN apt-get update \
         wget
 
 # Install additional PHP extensions.
+RUN docker-php-ext-configure intl
+RUN docker-php-ext-configure gd --with-jpeg
 RUN docker-php-ext-install -j "$(nproc)" \
     gd \
+    intl \
     mysqli \
     opcache \
     zip
-RUN docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr
 
 # Add PHP configurations.
 COPY config/opcache-recommended.ini /usr/local/etc/php/conf.d/opcache-recommended.ini
@@ -54,7 +58,7 @@ RUN chown www-data /etc/msmtprc
 RUN chmod 600 /etc/msmtprc
 
 # Install MailCatcher.
-RUN gem install mailcatcher --no-ri --no-rdoc
+RUN gem install mailcatcher --no-document
 
 # todo Maybe install phpMyAdmin?
 

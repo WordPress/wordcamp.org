@@ -1,3 +1,4 @@
+/* stylelint-disable selector-id-pattern */
 span.swag-needed-icon {
 	color: #daa520;
 }
@@ -62,4 +63,8 @@ body.wp-admin.post-type-wp_meetup .postbox textarea {
 #wcpt_log .widefat tr.note td p,
 #wcpt_log .widefat tr.note th p {
 	color: #222;
+}
+
+.postbox a .dashicons {
+	text-decoration: none;
 }

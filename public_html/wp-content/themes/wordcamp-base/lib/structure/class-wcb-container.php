@@ -4,15 +4,15 @@ class WCB_Container extends WCB_Elements {
 	var $attrs;
 	var $tag;
 
-	function __construct( $args=array(), $elements=array() ) {
+	function __construct( $args = array(), $elements = array() ) {
 		parent::__construct( $elements );
 
 		$defaults = array(
 			'id' => '',
 			'class' => '',
-			'tag' => 'div'
+			'tag' => 'div',
 		);
-		$args = wp_parse_args( $args, $defaults );
+		$args     = wp_parse_args( $args, $defaults );
 
 		$this->tag = $args['tag'];
 		unset( $args['tag'] );
@@ -23,8 +23,9 @@ class WCB_Container extends WCB_Elements {
 	function esc_attrs( $attrs ) {
 		$html = '';
 		foreach ( $attrs as $k => $v ) {
-			if ( ! empty( $k ) && ! empty( $v ) )
+			if ( ! empty( $k ) && ! empty( $v ) ) {
 				$html .= ' ' . esc_html( $k ) . '="' . esc_attr( $v ) . '"';
+			}
 		}
 		return $html;
 	}
@@ -42,4 +43,4 @@ class WCB_Container extends WCB_Elements {
 	}
 }
 
-?>
+

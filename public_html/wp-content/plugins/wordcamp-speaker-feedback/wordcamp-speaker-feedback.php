@@ -21,18 +21,21 @@ const OPTION_KEY           = 'sft_feedback_page';
 const QUERY_VAR            = 'sft_feedback';
 const SUPPORTED_POST_TYPES = array( 'wcb_session' );
 
-// Only add actions to sites without the skip flag, and only if WC Post Types exist.
-if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_Types_Plugin' ) ) {
-	register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
-	register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
+register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
+register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
-	add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
-	add_action( 'init', __NAMESPACE__ . '\add_support', 99 );
-	add_action( 'init', __NAMESPACE__ . '\add_page_endpoint' );
-	add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_routes', 100 );
+add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 
-	// Check if the page exists, and add it if not.
-	add_action( 'init', __NAMESPACE__ . '\add_feedback_page' );
+/**
+ * Check dependencies for loading the plugin.
+ *
+ * @return bool
+ */
+function can_load() {
+	$skip_feature   = wcorg_skip_feature( 'speaker_feedback' );
+	$has_dependency = class_exists( 'WordCamp_Post_Types_Plugin' );
+
+	return ! $skip_feature && $has_dependency;
 }
 
 /**
@@ -41,6 +44,10 @@ if ( ! wcorg_skip_feature( 'speaker_feedback' ) && class_exists( 'WordCamp_Post_
  * @return void
  */
 function load() {
+	if ( ! can_load() ) {
+		return;
+	}
+
 	require_once get_includes_path() . 'class-feedback.php';
 	require_once get_includes_path() . 'class-rest-feedback-controller.php';
 	require_once get_includes_path() . 'class-rest-notifications-controller.php';
@@ -55,27 +62,96 @@ function load() {
 	require_once get_includes_path() . 'spam.php';
 	require_once get_includes_path() . 'stats.php';
 	require_once get_includes_path() . 'view.php';
-
 	require_once get_includes_path() . 'admin.php';
+
+	add_action( 'init', __NAMESPACE__ . '\add_support', 99 );
+	add_action( 'init', __NAMESPACE__ . '\add_page_endpoint' );
+	add_action( 'rest_api_init', __NAMESPACE__ . '\register_rest_routes', 100 );
+
+	// Check if the page exists, and add it if not.
+	add_action( 'init', __NAMESPACE__ . '\add_feedback_page' );
 }
 
 /**
  * Create main Feedback page.
  *
+ * @param bool $is_network True if activating network-wide.
+ *
  * @return void
  */
-function activate() {
+function activate( $is_network = false ) {
+	if ( $is_network ) {
+		activate_on_network();
+	} else {
+		activate_on_current_site();
+	}
+}
+
+/**
+ * Run the activation routine on all valid sites in the network.
+ *
+ * @return void
+ */
+function activate_on_network() {
+	$valid_sites = get_site_ids_without_skip_flag();
+
+	foreach ( $valid_sites as $blog_id ) {
+		switch_to_blog( $blog_id );
+		activate_on_current_site();
+		restore_current_blog();
+	}
+}
+
+/**
+ * The activation routine for a single site.
+ *
+ * @return void
+ */
+function activate_on_current_site() {
 	add_feedback_page();
 	add_page_endpoint();
-	flush_rewrite_rules();
+
+	// Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
+	// The rules will automatically get recreated on the next request to the site.
+	delete_option( 'rewrite_rules' );
 }
 
 /**
  * Remove the feedback page.
  *
+ * @param bool $is_network True if deactivating network-wide.
+ *
  * @return void
  */
-function deactivate() {
+function deactivate( $is_network = false ) {
+	if ( $is_network ) {
+		deactivate_on_network();
+	} else {
+		deactivate_on_current_site();
+	}
+}
+
+/**
+ * Run the deactivation routine on all valid sites in the network.
+ *
+ * @return void
+ */
+function deactivate_on_network() {
+	$valid_sites = get_site_ids_without_skip_flag();
+
+	foreach ( $valid_sites as $blog_id ) {
+		switch_to_blog( $blog_id );
+		deactivate_on_current_site();
+		restore_current_blog();
+	}
+}
+
+/**
+ * The deactivation routine for a single site.
+ *
+ * @return void
+ */
+function deactivate_on_current_site() {
 	$page_id = get_option( OPTION_KEY );
 	wp_delete_post( $page_id, true );
 }
@@ -194,4 +270,23 @@ function get_assets_path() {
  */
 function get_assets_url() {
 	return plugin_dir_url( __FILE__ ) . 'assets/';
+}
+
+/**
+ * Get the IDs of sites that do not have the `speaker_feedback` skip feature flag.
+ *
+ * @return array
+ */
+function get_site_ids_without_skip_flag() {
+	global $wpdb;
+
+	$blog_ids = $wpdb->get_col( "
+		SELECT b.blog_id
+		FROM $wpdb->blogs AS b
+		LEFT OUTER JOIN $wpdb->blogmeta AS m
+		ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = 'speaker_feedback'
+		WHERE m.meta_value IS NULL
+	" );
+
+	return array_map( 'absint', $blog_ids );
 }

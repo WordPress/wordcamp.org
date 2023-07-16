@@ -12,24 +12,29 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Blocks%22"
 	},
 	"dependencies": {
-		"classnames": "2.2.6",
-		"react-select": "3.1.0",
-		"rememo": "3.0.0"
+		"classnames": "2.3.1",
+		"rememo": "4.0.0"
 	},
 	"devDependencies": {
-		"@wordpress/api-fetch": "3.13.1",
-		"@wordpress/components": "9.4.1",
-		"@wordpress/date": "3.9.0",
-		"@wordpress/element": "2.13.1",
-		"@wordpress/eslint-plugin": "5.0.1",
-		"@wordpress/scripts": "8.0.1",
-		"@wordpress/url": "2.13.0",
-		"css-loader": "3.5.2",
-		"mini-css-extract-plugin": "0.9.0",
-		"node-sass": "4.13.1",
-		"prop-types": "15.7.2",
-		"sass-loader": "8.0.2",
-		"webpack-cli": "3.3.11"
+		"@wordpress/api-fetch": "6.2.0",
+		"@wordpress/block-editor": "8.4.0",
+		"@wordpress/blocks": "11.4.0",
+		"@wordpress/components": "19.7.0",
+		"@wordpress/compose": "5.3.0",
+		"@wordpress/core-data": "4.3.0",
+		"@wordpress/data": "6.5.0",
+		"@wordpress/date": "4.5.0",
+		"@wordpress/element": "4.3.0",
+		"@wordpress/eslint-plugin": "11.1.0",
+		"@wordpress/html-entities": "3.5.0",
+		"@wordpress/i18n": "4.5.0",
+		"@wordpress/icons": "8.1.0",
+		"@wordpress/scripts": "22.3.0",
+		"@wordpress/server-side-render": "^3.3.0",
+		"@wordpress/url": "3.6.0",
+		"lodash": "4.17.21",
+		"prop-types": "15.8.1",
+		"react-test-renderer": "^17.0.2"
 	},
 	"babel": {
 		"presets": [
@@ -37,7 +42,10 @@
 		]
 	},
 	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
+		"extends": "../../../../.eslintrc.js",
+		"globals": {
+			"WordCampBlocks": "readonly"
+		}
 	},
 	"jest": {
 		"preset": "@wordpress/jest-preset-default",
@@ -52,10 +60,10 @@
 	},
 	"scripts:comment": "See ./readme.md for parameter documentaton, usage examples, etc",
 	"scripts": {
-		"start": "wp-scripts start blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js schedule-front-end=./source/blocks/schedule/front-end.js",
-		"build": "wp-scripts build blocks=./source/blocks.js live-schedule=./source/blocks/live-schedule/front-end.js live-posts=./source/hooks/latest-posts/front-end.js schedule-front-end=./source/blocks/schedule/front-end.js",
-		"lint:js": "wp-scripts lint-js",
-		"format:js": "wp-scripts format-js",
+		"start": "wp-scripts start",
+		"build": "wp-scripts build",
+		"lint:js": "wp-scripts lint-js source",
+		"format:js": "wp-scripts format source --config=../../../../.prettierrc.js",
 		"lint:css": "wp-scripts lint-style '**/*.scss'",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"test": "wp-scripts test-unit-js"

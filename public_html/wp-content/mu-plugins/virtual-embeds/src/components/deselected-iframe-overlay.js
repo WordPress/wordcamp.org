@@ -10,7 +10,6 @@
  * This can probably be removed when https://github.com/WordPress/gutenberg/issues/13490 is resolved.
  *
  * @param {boolean} isSelected Whether or not the block is selected.
- *
  * @return {*} Nothing when the block is selected, and the overlay when it's not.
  */
 export default function( { isSelected } ) {

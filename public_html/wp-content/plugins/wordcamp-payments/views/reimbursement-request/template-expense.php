@@ -16,7 +16,7 @@ defined( 'WPINC' ) or die();
 				<?php _e( 'Category:', 'wordcamporg' ) ?>
 			</label>
 
-			<select id="_wcbrr_category_{{data.id}}" name="_wcbrr_category_{{data.id}}">
+			<select id="_wcbrr_category_{{data.id}}" name="_wcbrr_category_{{data.id}}" class="regular-text">
 				<option value="">
 					<?php _e( '-- Select a Category --', 'wordcamporg' ); ?>
 				</option>
@@ -77,6 +77,7 @@ defined( 'WPINC' ) or die();
 				rows="2"
 				cols="38"
 				id="_wcbrr_description_{{data.id}}"
+				class="regular-text"
 				name="_wcbrr_description_{{data.id}}"
 				maxlength="75"
 			    required

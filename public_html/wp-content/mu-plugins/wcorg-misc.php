@@ -1,5 +1,9 @@
 <?php
 
+use Dotorg\Slack\Send;
+use function WordCamp\Sunrise\get_top_level_domain;
+
+
 /*
  * Miscellaneous snippets that don't warrant their own file
  */
@@ -10,6 +14,16 @@
  * is_nginx() returns false on WordCamp.org because $_SERVER['SERVER_SOFTWARE'] is empty.
  */
 add_filter( 'got_url_rewrite', '__return_true' );
+
+/**
+ * Create a context for `wp_raise_memory_limit()` that allocates a large amount of memory.
+ *
+ * Suitable for cron jobs, reports, and other operations that legitimately need more than normal.
+ */
+function wcorg_high_memory_context() : string {
+	return '512M';
+}
+add_filter( 'wordcamp_high_memory_limit', 'wcorg_high_memory_context' );
 
 /*
  * Register an extra directory for private themes.
@@ -119,32 +133,6 @@ function wcorg_disable_network_activated_plugins_on_sites( $plugins ) {
 }
 add_filter( 'site_option_active_sitewide_plugins', 'wcorg_disable_network_activated_plugins_on_sites' );
 
-/**
- * Disable Global Terms on new sites.
- *
- * Global Terms is an old, largely unused, and undocumented feature of WordPress. It was used on WordPress.com
- * for many years, but even they turned it off around 2015. We don't know why it was ever enabled for
- * WordCamp.org.
- *
- * When it's enabled, the "local" terms are still created like normal, but the `term_id_filter` will override
- * their IDs at runtime, so that all sites use the same ID for the same slug, across sites _and_ across taxonomies.
- * Because the local terms still exist, it can (theoretically) be safely disabled without any consequences, and
- * then the local terms will be used instead.
- *
- * When term splitting was introduced in WP 4.2 - 4.4, though, it was not compatible with Global Terms, and any
- * term that was split while Global Terms is enabled will have the wrong IDs set, which causes bugs, like not
- * being able to assign shared terms to a post, and not being able to edit the name of a shared term. So, we're
- * turning it off for new sites.
- *
- * It's left on for old sites out of caution, since there could be some unforeseeable consequences or hassles
- * with turning it off for them.
- *
- * This will not retroactively fix any terms that have been split with the wrong ID, those need to be fixed
- * manually.
- */
-add_filter( 'global_terms_enabled', function() {
-	return wcorg_skip_feature( 'local_terms' );
-} );
 
 /**
  * Remove menu items on certain sites.
@@ -180,12 +168,12 @@ add_action( 'init', 'wcorg_show_tagregator_log' );
 function wcorg_set_per_camp_tagregator_end_date( $end_date ) {
 	$details = get_wordcamp_post();
 
-	if ( isset( $details->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
-		$offset = '2 weeks';
+	// Despite its key/label, the start date value is actually stored as a Unix timestamp.
+	$camp_start_timestamp = $details->meta['Start Date (YYYY-mm-dd)'][0] ?? 0;
 
-		// Despite its key/label, the start date value is actually stored as a Unix timestamp.
-		$camp_start_timestamp = $details->meta['Start Date (YYYY-mm-dd)'][0];
-		$end_date             = date_create( date( 'Y-m-d', $camp_start_timestamp ) . '  ' . $offset );
+	if ( $camp_start_timestamp ) {
+		$offset   = '2 weeks';
+		$end_date = date_create( date( 'Y-m-d', $camp_start_timestamp ) . '  ' . $offset );
 	}
 
 	return $end_date;
@@ -313,17 +301,26 @@ add_action( 'after_setup_theme', function() {
 	add_action( 'switch_blog', 'wcorg_switch_to_blog_locale', 10, 3 );
 } );
 
+/**
+ * Prevent `switch_to_locale` from unloading all plugin and theme translations.
+ *
+ * See https://core.trac.wordpress.org/ticket/39210
+ *
+ * The combination of `wcorg_switch_to_blog_locale` and something like `get_wordcamp_post`
+ * (which gets called on init in `\WordCamp\Jetpack_Tweaks\disable_jetpack_spam_delete`) means that
+ * all of the plugin and theme translations get unloaded on almost every request. This is a workaround
+ * suggested here: https://core.trac.wordpress.org/ticket/39210#comment:17
+ *
+ * Hopefully this won't be necessary after core-39210 is fixed.
+ */
+add_filter( 'change_locale', function() {
+	$GLOBALS['l10n_unloaded'] = array();
+}, 99 );
+
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {
-	if ( ! defined( 'WORDCAMP_QBO_CONSUMER_KEY' ) ) {
-		return $options;
-	}
-
 	// Secrets.
-	$options['app_token']       = WORDCAMP_QBO_APP_TOKEN;
-	$options['consumer_key']    = WORDCAMP_QBO_CONSUMER_KEY;
-	$options['consumer_secret'] = WORDCAMP_QBO_CONSUMER_SECRET;
-	$options['hmac_key']        = WORDCAMP_QBO_HMAC_KEY;
+	$options['hmac_key'] = WORDCAMP_QBO_HMAC_KEY;
 
 	// WordCamp Payments to QBO categories mapping.
 	$options['categories_map'] = array(
@@ -538,6 +535,7 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 		'camptix-trustcard/camptix-trustcard.php',
 		'camptix-trustpay/camptix-trustpay.php',
 		'edit-flow/edit_flow.php',
+		'lang-attribute/lang-attribute.php',
 		'liveblog/liveblog.php',
 		'public-post-preview/public-post-preview.php',
 		'pwa/pwa.php',
@@ -583,7 +581,15 @@ function wcorg_network_updates_notifier() {
 				<p>The following plugins have updates available:</p>
 
 				<ul class="ul-disc">
-					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_plugins->response, 'slug' ) ) ); ?></li>
+					<?php foreach ( $update_plugins->response as $plugin ) : ?>
+						<li>
+							<?php printf(
+								'%s %s',
+								esc_html( $plugin->slug ),
+								esc_html( $plugin->new_version )
+							); ?>
+						</li>
+					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
 
@@ -591,7 +597,15 @@ function wcorg_network_updates_notifier() {
 				<p>The following themes have updates available:</p>
 
 				<ul class="ul-disc">
-					<li><?php echo implode( '</li><li>', array_map( 'esc_html', wp_list_pluck( $update_themes->response, 'theme' ) ) ); ?></li>
+					<?php foreach ( $update_themes->response as $theme ) : ?>
+						<li>
+							<?php printf(
+								'%s %s',
+								esc_html( $theme['theme'] ),
+								esc_html( $theme['new_version'] )
+							); ?>
+						</li>
+					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
 		</div>
@@ -600,3 +614,118 @@ function wcorg_network_updates_notifier() {
 	}
 }
 add_action( 'network_admin_notices', 'wcorg_network_updates_notifier' );
+
+/**
+ * Add a 'WordCamp Post' link to the admin bar menu on camp sites.
+ *
+ * This provides an easy way to pull up the WCPT post that corresponds to the camp site you're currently on.
+ */
+function add_wcpt_cross_link( WP_Admin_Bar $wp_admin_bar ) {
+	if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+		return;
+	}
+
+	$wordcamp = get_wordcamp_post();
+
+	if ( ! $wordcamp ) {
+		return;
+	}
+
+	$wp_admin_bar->add_node(
+		array(
+			'parent' => 'site-name',
+			'id'     => 'wordcamp-post',
+			'title'  => __( 'WordCamp Post', 'wordcamporg' ),
+
+			'href' => sprintf(
+				'https://central.wordcamp.%s/wp-admin/post.php?post=%s&action=edit',
+				get_top_level_domain(),
+				$wordcamp->ID
+			),
+		)
+	);
+}
+// The Priority positions the link after the Dashboard link on the front end.
+add_action( 'admin_bar_menu', 'add_wcpt_cross_link', 35 );
+
+/**
+ * Log requests to the WordPress.org Events API and their responses, to aid debugging.
+ *
+ * @param array|WP_Error $response     HTTP response or WP_Error object.
+ * @param string         $context      Context under which the hook is fired.
+ * @param string         $transport    HTTP transport used.
+ * @param array          $request_args HTTP request arguments.
+ * @param string         $request_url  The request URL.
+ */
+function debug_community_events_response( $response, $context, $transport, $request_args, $request_url ) {
+	if ( false === strpos( $request_url, 'api.wordpress.org/events' ) ) {
+		return;
+	}
+
+	require_once __DIR__ . '/includes/slack/send.php';
+
+	$response_code = wp_remote_retrieve_response_code( $response );
+	$response_body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+	// Avoid bloating the log with all the event data, but the titles are enough to know what was returned.
+	$response_body['events'] = array_column( $response_body['events'], 'title' );
+
+	$message = sprintf(
+		'%s %s',
+		$response_code,
+		is_wp_error( $response ) ? $response->get_error_message() : 'Valid response received'
+	);
+
+	$attachment = array(
+		'author_name' => __FUNCTION__,
+		'color'       => '#00A0D2',
+
+		'fields' => array(
+			array(
+				'title' => 'User',
+				'value' => _wp_get_current_user()->get( 'user_login' ),
+				'short' => false,
+			),
+
+			array(
+				'title' => 'Result',
+				'value' => $message,
+				'short' => false,
+			),
+
+			array(
+				'title' => 'Request URL',
+				'value' => add_query_arg( $request_args['body'], $request_url ),
+				'short' => false,
+			),
+
+			array(
+				'title' => 'Response Body',
+				'value' => print_r( $response_body, true ),
+				'short' => false,
+			),
+		),
+	);
+
+	$slack = new Send( SLACK_ERROR_REPORT_URL );
+	$slack->add_attachment( $attachment );
+	$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
+}
+// Comment this out when not needed, but leave the code for future use.
+// add_action( 'http_api_debug', 'debug_community_events_response', 10, 5 );
+
+/**
+ * Modify CLDR country data temporarily while awaiting an update to the data in the WP CLDR plugin.
+ *
+ * @param array $countries
+ *
+ * @return array
+ */
+function wcorg_country_list_mods( $countries ) {
+	if ( isset( $countries['MK'] ) ) {
+		$countries['MK']['name'] = 'North Macedonia';
+	}
+
+	return $countries;
+}
+add_filter( 'wcorg_get_countries', 'wcorg_country_list_mods' );

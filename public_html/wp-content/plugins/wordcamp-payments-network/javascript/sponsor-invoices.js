@@ -48,10 +48,10 @@
 
 						try {
 							if ( response.hasOwnProperty( 'success' ) && true === response.success ) {
-								statusMessage.addClass( 'notice notice-success' );
+								statusMessage.addClass( 'notice notice-success inline' );
 								statusMessage.html( _.escape( response.data.success ) );
 							} else {
-								statusMessage.addClass( 'notice notice-error' );
+								statusMessage.addClass( 'notice notice-error inline' );
 								statusMessage.html( _.escape( 'ERROR: ' + response.data.error ) );
 
 								// todo bring button back so they can try again?

@@ -1,7 +1,7 @@
-FROM php:7.2-fpm
+FROM php:7.4-fpm
 
 # Run some Debian packages installation.
-ENV PACKAGES="curl git mariadb-client subversion wget zlib1g-dev"
+ENV PACKAGES="curl git mariadb-client subversion wget zlib1g-dev libzip-dev"
 RUN apt-get update && \
     apt-get install -yq --no-install-recommends $PACKAGES && \
     apt-get clean && \
@@ -18,7 +18,7 @@ RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
     && php -r "unlink('composer-setup.php');"
 
 # Run composer and phpunit installation.
-RUN composer require "phpunit/phpunit:^7" --prefer-source --no-interaction && \
+RUN composer require "phpunit/phpunit:^9" "yoast/phpunit-polyfills:^1.0" --prefer-source --no-interaction && \
     ln -s /tmp/vendor/bin/phpunit /usr/local/bin/phpunit
 
 # Set up the application directory.

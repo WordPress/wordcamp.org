@@ -9,6 +9,7 @@ services:
       - "./public_html/wp-content:/app/public_html/wp-content"
       - "./phpunit.xml.dist:/app/phpunit.xml.dist"
       - "./phpunit-bootstrap.php:/app/phpunit-bootstrap.php"
+      - "./phpunit-database-testcase.php:/app/phpunit-database-testcase.php"
       - "./.docker/bin:/var/scripts"
       - "./.docker/test_suite:/tmp/wp"
     stdin_open: true

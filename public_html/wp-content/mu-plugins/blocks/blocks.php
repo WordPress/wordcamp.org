@@ -2,6 +2,8 @@
 
 namespace WordCamp\Blocks;
 
+use WP_Post;
+
 defined( 'WPINC' ) || die();
 
 define( __NAMESPACE__ . '\PLUGIN_DIR', \plugin_dir_path( __FILE__ ) );
@@ -22,6 +24,7 @@ function load_includes() {
 	$blocks_dir     = PLUGIN_DIR . 'source/blocks/';
 	$components_dir = PLUGIN_DIR . 'source/components/';
 	$hooks_dir      = PLUGIN_DIR . 'source/hooks/';
+	$variations_dir = PLUGIN_DIR . 'source/variations/';
 
 	// Utilities.
 	require_once $includes_dir . 'definitions.php';
@@ -33,15 +36,26 @@ function load_includes() {
 	require_once $components_dir . 'post-list/controller.php';
 
 	// Blocks.
+	require_once $blocks_dir . 'avatar/controller.php';
+	require_once $blocks_dir . 'live-schedule/controller.php';
+	require_once $blocks_dir . 'meta-link/controller.php';
 	require_once $blocks_dir . 'organizers/controller.php';
 	require_once $blocks_dir . 'schedule/controller.php';
+	require_once $blocks_dir . 'session-date/controller.php';
+	require_once $blocks_dir . 'session-speakers/controller.php';
 	require_once $blocks_dir . 'sessions/controller.php';
+	require_once $blocks_dir . 'speaker-sessions/controller.php';
 	require_once $blocks_dir . 'speakers/controller.php';
 	require_once $blocks_dir . 'sponsors/controller.php';
-	require_once $blocks_dir . 'live-schedule/controller.php';
 
 	// Hooks.
 	require_once $hooks_dir . 'latest-posts/controller.php';
+
+	// Patterns.
+	require_once PLUGIN_DIR . 'patterns.php';
+
+	// Variations.
+	require_once $variations_dir . 'sessions-list/controller.php';
 }
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load_includes' );
@@ -62,7 +76,7 @@ function register_block_categories( $default_categories ) {
 	return $default_categories;
 }
 
-add_filter( 'block_categories', __NAMESPACE__ . '\register_block_categories' );
+add_filter( 'block_categories_all', __NAMESPACE__ . '\register_block_categories' );
 
 /**
  * Register assets.
@@ -86,9 +100,9 @@ function register_assets() {
 
 	wp_register_style(
 		'wordcamp-blocks',
-		PLUGIN_URL . 'build/blocks.min.css',
+		PLUGIN_URL . 'build/blocks.css',
 		array(),
-		filemtime( PLUGIN_DIR . 'build/blocks.min.css' )
+		filemtime( PLUGIN_DIR . 'build/blocks.css' )
 	);
 
 	wp_register_script(
@@ -119,3 +133,53 @@ function register_assets() {
 }
 
 add_action( 'init', __NAMESPACE__ . '\register_assets', 9 );
+
+
+/**
+ * Determine whether a $post or a string contains a block type with set attributes.
+ * Used to check for variations of generic blocks, e.g., session video meta-link block.
+ *
+ * @param string                  $block_name Full block type to look for.
+ * @param array                   $attrs      Associative array of attribute-name => value.
+ * @param int|string|WP_Post|null $post       Optional. Post content, post ID, or post object.
+ *                                            Defaults to global $post.
+ * @return bool Whether the post content contains the specified block.
+ */
+function has_block_with_attrs( $block_name, $attrs, $post = null ) {
+	// Short out if the block is not found, avoids running `parse_block` unless we need to.
+	if ( ! has_block( $block_name, $post ) ) {
+		return false;
+	}
+
+	if ( ! is_string( $post ) ) {
+		$wp_post = get_post( $post );
+		if ( $wp_post instanceof WP_Post ) {
+			$post = $wp_post->post_content;
+		}
+	}
+
+	$all_blocks = array();
+	$blocks = parse_blocks( $post );
+	$blocks_queue = $blocks;
+
+	// Flatten the nested blocks list returned by parse_blocks.
+	while ( count( $blocks_queue ) > 0 ) { // phpcs:ignore -- inline count OK.
+		$block = array_shift( $blocks_queue );
+		array_push( $all_blocks, $block );
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			foreach ( $block['innerBlocks'] as $inner_block ) {
+				array_push( $blocks_queue, $inner_block );
+			}
+		}
+	}
+
+	foreach ( $all_blocks as $block ) {
+		// If there is no diff result between the requested attributes & the set attributes, all the
+		// searched-for values have been found.
+		if ( ( $block_name === $block['blockName'] ) && ! array_diff( $attrs, $block['attrs'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
+}

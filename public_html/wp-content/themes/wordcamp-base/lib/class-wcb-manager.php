@@ -21,12 +21,13 @@ class WCB_Manager extends WCB_Loader {
 	}
 }
 
-$GLOBALS['wcb_manager'] = new WCB_Manager;
+$GLOBALS['wcb_manager'] = new WCB_Manager();
 
-function wcb_get( $component='' ) {
+function wcb_get( $component = '' ) {
 	global $wcb_manager;
-	if ( isset( $wcb_manager->components[ $component ] ) )
+	if ( isset( $wcb_manager->components[ $component ] ) ) {
 		return $wcb_manager->components[ $component ];
-	else
+	} else {
 		return $wcb_manager;
+	}
 }

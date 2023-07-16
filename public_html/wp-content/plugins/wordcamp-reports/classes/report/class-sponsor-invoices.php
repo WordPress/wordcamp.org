@@ -9,8 +9,10 @@ namespace WordCamp\Reports\Report;
 
 use Exception;
 use WordCamp\Reports;
-use WordCamp\Utilities;
+use WordCamp\Utilities\{ Currency_XRT_Client };
+use WordPressdotorg\MU_Plugins\Utilities\{ Export_CSV };
 use WordCamp\Quickbooks\Client;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Validation\{ validate_wordcamp_id };
 use WordCamp\Budgets_Dashboard\Sponsor_Invoices as WCBD_Sponsor_Invoices;
 
@@ -90,7 +92,7 @@ class Sponsor_Invoices extends Date_Range {
 	/**
 	 * Currency exchange rate client.
 	 *
-	 * @var Utilities\Currency_XRT_Client Utility to handle currency conversion.
+	 * @var Currency_XRT_Client Utility to handle currency conversion.
 	 */
 	protected $xrt = null;
 
@@ -124,7 +126,7 @@ class Sponsor_Invoices extends Date_Range {
 	public function __construct( $start_date, $end_date, $wordcamp_id = 0, array $options = array() ) {
 		parent::__construct( $start_date, $end_date, $options );
 
-		$this->xrt = new Utilities\Currency_XRT_Client();
+		$this->xrt = new Currency_XRT_Client();
 
 		if ( $wordcamp_id ) {
 			try {
@@ -248,8 +250,11 @@ class Sponsor_Invoices extends Date_Range {
 			$where_clause[] = 'blog_id = %d';
 			$where_values[] = $this->wordcamp_site_id;
 		} else {
-			$excluded_ids   = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
-			$where_clause[] = "blog_id NOT IN ( $excluded_ids )";
+			$excluded_ids = implode( ',', array_map( 'absint', Reports\get_excluded_site_ids() ) );
+
+			if ( $excluded_ids ) {
+				$where_clause[] = "blog_id NOT IN ( $excluded_ids )";
+			}
 		}
 
 		if ( ! empty( $where_clause ) ) {
@@ -563,7 +568,7 @@ class Sponsor_Invoices extends Date_Range {
 
 		if ( 'Show results' === $action
 			&& wp_verify_nonce( $nonce, 'run-report' )
-			&& current_user_can( 'manage_network' )
+			&& current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2016-01-01' ), // No invoices in QBO before 2016.
@@ -603,7 +608,7 @@ class Sponsor_Invoices extends Date_Range {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2016-01-01' ), // No invoices in QBO before 2016.
 			);
@@ -630,7 +635,7 @@ class Sponsor_Invoices extends Date_Range {
 
 			$data = $report->get_data();
 
-			$exporter = new Utilities\Export_CSV( array(
+			$exporter = new Export_CSV( array(
 				'filename' => $filename,
 				'headers'  => $headers,
 				'data'     => $data,

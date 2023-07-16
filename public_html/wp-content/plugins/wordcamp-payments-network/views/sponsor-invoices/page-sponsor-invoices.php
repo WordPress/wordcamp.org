@@ -18,7 +18,7 @@ defined( 'WPINC' ) or die();
 		<?php foreach ( $sections as $section ) : ?>
 			<a
 				class="<?php echo esc_attr( $section['classes'] ); ?>"
-				href="<?php  echo esc_attr( $section['href']    ); ?>"
+				href="<?php echo esc_attr( $section['href']    ); ?>"
 			>
 				<?php echo esc_html( $section['text'] ); ?>
 			</a>

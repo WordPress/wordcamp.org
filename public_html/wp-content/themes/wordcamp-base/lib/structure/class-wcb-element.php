@@ -16,4 +16,4 @@ class WCB_Element {
 	}
 }
 
-?>
+

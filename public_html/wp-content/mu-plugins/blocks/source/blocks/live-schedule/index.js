@@ -9,7 +9,7 @@ import { PanelBody, TextControl } from '@wordpress/components';
 /**
  * Internal dependencies
  */
-import './style.scss';
+import './edit.scss';
 import { HeadingToolbar } from '../../components';
 import LiveSchedule from './components/schedule';
 import mockSessions from './data/mock';

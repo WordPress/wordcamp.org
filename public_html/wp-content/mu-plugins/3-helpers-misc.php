@@ -188,6 +188,15 @@ function wcorg_get_countries( array $args = array() ) {
 		}
 	}
 
+	/**
+	 * Filter: Modify the list of country names and codes retrieved from CLDR.
+	 *
+	 * This allows for things like country name changes before the CLDR plugin data gets updated.
+	 *
+	 * @param array $countries
+	 */
+	$countries = apply_filters( 'wcorg_get_countries', $countries );
+
 	// ASCII transliteration doesn't work if the LC_CTYPE is 'C' or 'POSIX'.
 	// See https://www.php.net/manual/en/function.iconv.php#74101.
 	$orig_locale = setlocale( LC_CTYPE, 0 );
@@ -322,8 +331,12 @@ function wcorg_get_custom_css_url() {
 	 * This has side-effects because `add_hooks()` is called immediately, but it doesn't seem problematic because
 	 * it gets loaded on every front/back-end page anyway.
 	 */
-	require_once WP_PLUGIN_DIR . '/jetpack/modules/custom-css/custom-css-4.7.php';
-
+	if ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
+		require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
+	} else {
+		require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
+	}
+	
 	ob_start();
 	Jetpack_Custom_CSS_Enhancements::wp_custom_css_cb();
 	$markup = ob_get_clean();

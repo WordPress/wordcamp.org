@@ -44,138 +44,141 @@
  * Used to set the width of images and content. Should be equal to the width the theme
  * is designed for, generally via the style.css stylesheet.
  */
-if ( ! isset( $content_width ) )
+if ( ! isset( $content_width ) ) {
 	$content_width = 640;
+}
 
 /** Tell WordPress to run twentyten_setup() when the 'after_setup_theme' hook is run. */
 add_action( 'after_setup_theme', 'twentyten_setup' );
 
-if ( ! function_exists( 'twentyten_setup' ) ):
-/**
- * Sets up theme defaults and registers support for various WordPress features.
- *
- * Note that this function is hooked into the after_setup_theme hook, which runs
- * before the init hook. The init hook is too late for some features, such as indicating
- * support post thumbnails.
- *
- * To override twentyten_setup() in a child theme, add your own twentyten_setup to your child theme's
- * functions.php file.
- *
- * @uses add_theme_support() To add support for post thumbnails and automatic feed links.
- * @uses register_nav_menus() To add support for navigation menus.
- * @uses add_custom_background() To add support for a custom background.
- * @uses add_editor_style() To style the visual editor.
- * @uses add_custom_image_header() To add support for a custom header.
- * @uses register_default_headers() To register the default custom header images provided with the theme.
- * @uses set_post_thumbnail_size() To set a custom post thumbnail size.
- *
- * @since Twenty Ten 1.0
- */
-function twentyten_setup() {
+if ( ! function_exists( 'twentyten_setup' ) ) :
+	/**
+	 * Sets up theme defaults and registers support for various WordPress features.
+	 *
+	 * Note that this function is hooked into the after_setup_theme hook, which runs
+	 * before the init hook. The init hook is too late for some features, such as indicating
+	 * support post thumbnails.
+	 *
+	 * To override twentyten_setup() in a child theme, add your own twentyten_setup to your child theme's
+	 * functions.php file.
+	 *
+	 * @uses add_theme_support() To add support for post thumbnails and automatic feed links.
+	 * @uses register_nav_menus() To add support for navigation menus.
+	 * @uses add_custom_background() To add support for a custom background.
+	 * @uses add_editor_style() To style the visual editor.
+	 * @uses add_custom_image_header() To add support for a custom header.
+	 * @uses register_default_headers() To register the default custom header images provided with the theme.
+	 * @uses set_post_thumbnail_size() To set a custom post thumbnail size.
+	 *
+	 * @since Twenty Ten 1.0
+	 */
+	function twentyten_setup() {
 
-	// This theme styles the visual editor with editor-style.css to match the theme style.
-	add_editor_style();
+		// This theme styles the visual editor with editor-style.css to match the theme style.
+		add_editor_style();
 
-	// This theme uses post thumbnails
-	add_theme_support( 'post-thumbnails' );
+		// This theme uses post thumbnails
+		add_theme_support( 'post-thumbnails' );
 
-	// Add default posts and comments RSS feed links to head
-	add_theme_support( 'automatic-feed-links' );
+		// Add default posts and comments RSS feed links to head
+		add_theme_support( 'automatic-feed-links' );
 
-	$locale = get_locale();
-	$locale_file = TEMPLATEPATH . "/languages/$locale.php";
-	if ( is_readable( $locale_file ) )
-		require_once( $locale_file );
+		$locale      = get_locale();
+		$locale_file = TEMPLATEPATH . "/languages/$locale.php";
+		if ( is_readable( $locale_file ) ) {
+			require_once $locale_file;
+		}
 
-	// This theme uses wp_nav_menu() in one location.
-	register_nav_menus( array(
-		'primary' => __( 'Primary Navigation', 'wordcamporg' ),
-	) );
+		// This theme uses wp_nav_menu() in one location.
+		register_nav_menus( array(
+			'primary' => __( 'Primary Navigation', 'wordcamporg' ),
+		) );
 
-	// This theme allows users to set a custom background
-	add_theme_support( 'custom-background', array(
-		// Let WordPress know what our default background color is.
-		'default-color' => 'ffffff',
-	) );
+		// This theme allows users to set a custom background
+		add_theme_support( 'custom-background', array(
+			// Let WordPress know what our default background color is.
+			'default-color' => 'ffffff',
+		) );
 
-	// Your changeable header business starts here
-	// define( 'HEADER_TEXTCOLOR', '' );
-	// No CSS, just IMG call. The %s is a placeholder for the theme template directory URI.
-	// define( 'HEADER_IMAGE', '%s/images/headers/path.jpg' );
+		// Your changeable header business starts here
+		// define( 'HEADER_TEXTCOLOR', '' );
+		// No CSS, just IMG call. The %s is a placeholder for the theme template directory URI.
+		// define( 'HEADER_IMAGE', '%s/images/headers/path.jpg' );
 
-	// The height and width of your custom header. You can hook into the theme's own filters to change these values.
-	// Add a filter to twentyten_header_image_width and twentyten_header_image_height to change these values.
-	// define( 'HEADER_IMAGE_WIDTH', apply_filters( 'twentyten_header_image_width', 940 ) );
-	// define( 'HEADER_IMAGE_HEIGHT', apply_filters( 'twentyten_header_image_height', 198 ) );
+		// The height and width of your custom header. You can hook into the theme's own filters to change these values.
+		// Add a filter to twentyten_header_image_width and twentyten_header_image_height to change these values.
+		// define( 'HEADER_IMAGE_WIDTH', apply_filters( 'twentyten_header_image_width', 940 ) );
+		// define( 'HEADER_IMAGE_HEIGHT', apply_filters( 'twentyten_header_image_height', 198 ) );
 
-	// We'll be using post thumbnails for custom header images on posts and pages.
-	set_post_thumbnail_size( 1000, 1000, false );
+		// We'll be using post thumbnails for custom header images on posts and pages.
+		set_post_thumbnail_size( 1000, 1000, false );
 
-	// Don't support text inside the header image.
-	// define( 'NO_HEADER_TEXT', true );
+		// Don't support text inside the header image.
+		// define( 'NO_HEADER_TEXT', true );
 
-	// Add a way for the custom header to be styled in the admin panel that controls
-	// custom headers. See twentyten_admin_header_style(), below.
-	// add_custom_image_header( '', 'twentyten_admin_header_style' );
+		// Add a way for the custom header to be styled in the admin panel that controls
+		// custom headers. See twentyten_admin_header_style(), below.
+		// add_custom_image_header( '', 'twentyten_admin_header_style' );
 
-	// ... and thus ends the changeable header business.
+		// ... and thus ends the changeable header business.
 
-	// Default custom headers packaged with the theme. %s is a placeholder for the theme template directory URI.
-	/*register_default_headers( array(
-		'berries' => array(
+		// Default custom headers packaged with the theme. %s is a placeholder for the theme template directory URI.
+		/*
+		register_default_headers( array(
+			'berries' => array(
 			'url' => '%s/images/headers/berries.jpg',
 			'thumbnail_url' => '%s/images/headers/berries-thumbnail.jpg',
 			'description' => __( 'Berries', 'wordcamporg' )
-		),
-		'cherryblossom' => array(
+			),
+			'cherryblossom' => array(
 			'url' => '%s/images/headers/cherryblossoms.jpg',
 			'thumbnail_url' => '%s/images/headers/cherryblossoms-thumbnail.jpg',
 			'description' => __( 'Cherry Blossoms', 'wordcamporg' )
-		),
-		'concave' => array(
+			),
+			'concave' => array(
 			'url' => '%s/images/headers/concave.jpg',
 			'thumbnail_url' => '%s/images/headers/concave-thumbnail.jpg',
 			'description' => __( 'Concave', 'wordcamporg' )
-		),
-		'fern' => array(
+			),
+			'fern' => array(
 			'url' => '%s/images/headers/fern.jpg',
 			'thumbnail_url' => '%s/images/headers/fern-thumbnail.jpg',
 			'description' => __( 'Fern', 'wordcamporg' )
-		),
-		'forestfloor' => array(
+			),
+			'forestfloor' => array(
 			'url' => '%s/images/headers/forestfloor.jpg',
 			'thumbnail_url' => '%s/images/headers/forestfloor-thumbnail.jpg',
 			'description' => __( 'Forest Floor', 'wordcamporg' )
-		),
-		'inkwell' => array(
+			),
+			'inkwell' => array(
 			'url' => '%s/images/headers/inkwell.jpg',
 			'thumbnail_url' => '%s/images/headers/inkwell-thumbnail.jpg',
 			'description' => __( 'Inkwell', 'wordcamporg' )
-		),
-		'path' => array(
+			),
+			'path' => array(
 			'url' => '%s/images/headers/path.jpg',
 			'thumbnail_url' => '%s/images/headers/path-thumbnail.jpg',
 			'description' => __( 'Path', 'wordcamporg' )
-		),
-		'sunset' => array(
+			),
+			'sunset' => array(
 			'url' => '%s/images/headers/sunset.jpg',
 			'thumbnail_url' => '%s/images/headers/sunset-thumbnail.jpg',
 			'description' => __( 'Sunset', 'wordcamporg' )
-		)
-	) );*/
-}
+			)
+		) );*/
+	}
 endif;
 
 if ( ! function_exists( 'twentyten_admin_header_style' ) ) :
-/**
- * Styles the header image displayed on the Appearance > Header admin panel.
- *
- * Referenced via add_custom_image_header() in twentyten_setup().
- *
- * @since Twenty Ten 1.0
- */
-function twentyten_admin_header_style() {
-?>
+	/**
+	 * Styles the header image displayed on the Appearance > Header admin panel.
+	 *
+	 * Referenced via add_custom_image_header() in twentyten_setup().
+	 *
+	 * @since Twenty Ten 1.0
+	 */
+	function twentyten_admin_header_style() {
+		?>
 <style type="text/css">
 /* Shows the same border as on front end */
 #headimg {
@@ -187,8 +190,8 @@ function twentyten_admin_header_style() {
 	#headimg #desc { }
 */
 </style>
-<?php
-}
+		<?php
+	}
 endif;
 
 /**
@@ -284,57 +287,63 @@ function twentyten_remove_gallery_css( $css ) {
 add_filter( 'gallery_style', 'twentyten_remove_gallery_css' );
 
 if ( ! function_exists( 'twentyten_comment' ) ) :
-/**
- * Template for comments and pingbacks.
- *
- * To override this walker in a child theme without modifying the comments template
- * simply create your own twentyten_comment(), and that function will be used instead.
- *
- * Used as a callback by wp_list_comments() for displaying the comments.
- *
- * @since Twenty Ten 1.0
- */
-function twentyten_comment( $comment, $args, $depth ) {
-	$GLOBALS['comment'] = $comment;
-	switch ( $comment->comment_type ) :
-		case '' :
-	?>
+	/**
+	 * Template for comments and pingbacks.
+	 *
+	 * To override this walker in a child theme without modifying the comments template
+	 * simply create your own twentyten_comment(), and that function will be used instead.
+	 *
+	 * Used as a callback by wp_list_comments() for displaying the comments.
+	 *
+	 * @since Twenty Ten 1.0
+	 */
+	function twentyten_comment( $comment, $args, $depth ) {
+		$GLOBALS['comment'] = $comment;
+		switch ( $comment->comment_type ) :
+			case '':
+			case 'comment':
+				?>
 	<li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
 		<div id="comment-<?php comment_ID(); ?>">
 		<div class="comment-author vcard">
-			<?php echo get_avatar( $comment, 40 ); ?>
-			<?php printf( __( '%s <span class="says">says:</span>', 'wordcamporg' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
+				<?php echo get_avatar( $comment, 40 ); ?>
+				<?php printf( __( '%s <span class="says">says:</span>', 'wordcamporg' ), sprintf( '<cite class="fn">%s</cite>', get_comment_author_link() ) ); ?>
 		</div><!-- .comment-author .vcard -->
-		<?php if ( $comment->comment_approved == '0' ) : ?>
+				<?php if ( $comment->comment_approved == '0' ) : ?>
 			<em><?php _e( 'Your comment is awaiting moderation.', 'wordcamporg' ); ?></em>
 			<br />
 		<?php endif; ?>
 
 		<div class="comment-meta commentmetadata"><a href="<?php echo esc_url( get_comment_link( $comment->comment_ID ) ); ?>">
-			<?php
+				<?php
 				/* translators: 1: date, 2: time */
 				printf( __( '%1$s at %2$s', 'wordcamporg' ), get_comment_date(),  get_comment_time() ); ?></a><?php edit_comment_link( __( '(Edit)', 'wordcamporg' ), ' ' );
-			?>
+?>
 		</div><!-- .comment-meta .commentmetadata -->
 
 		<div class="comment-body"><?php comment_text(); ?></div>
 
 		<div class="reply">
-			<?php comment_reply_link( array_merge( $args, array( 'depth' => $depth, 'max_depth' => $args['max_depth'] ) ) ); ?>
+			<?php
+			comment_reply_link( array_merge( $args, array(
+				'depth'     => $depth,
+				'max_depth' => $args['max_depth'],
+			) ) );
+			?>
 		</div><!-- .reply -->
 	</div><!-- #comment-##  -->
 
-	<?php
-			break;
-		case 'pingback'  :
-		case 'trackback' :
-	?>
+				<?php
+				break;
+			case 'pingback':
+			case 'trackback':
+				?>
 	<li class="post pingback">
 		<p><?php _e( 'Pingback:', 'wordcamporg' ); ?> <?php comment_author_link(); ?><?php edit_comment_link( __('(Edit)', 'wordcamporg'), ' ' ); ?></p>
-	<?php
-			break;
-	endswitch;
-}
+				<?php
+				break;
+		endswitch;
+	}
 endif;
 
 /**
@@ -431,13 +440,13 @@ function twentyten_remove_recent_comments_style() {
 add_action( 'widgets_init', 'twentyten_remove_recent_comments_style' );
 
 if ( ! function_exists( 'twentyten_posted_on' ) ) :
-/**
- * Prints HTML with meta information for the current post—date/time and author.
- *
- * @since Twenty Ten 1.0
- */
-function twentyten_posted_on() {
-	printf( __( '<span class="%1$s">Posted on</span> %2$s <span class="meta-sep">by</span> %3$s', 'wordcamporg' ),
+	/**
+	 * Prints HTML with meta information for the current post—date/time and author.
+	 *
+	 * @since Twenty Ten 1.0
+	 */
+	function twentyten_posted_on() {
+		printf( __( '<span class="%1$s">Posted on</span> %2$s <span class="meta-sep">by</span> %3$s', 'wordcamporg' ),
 		'meta-prep meta-prep-author',
 		sprintf( '<a href="%1$s" title="%2$s" rel="bookmark"><span class="entry-date">%3$s</span></a>',
 			get_permalink(),
@@ -449,33 +458,33 @@ function twentyten_posted_on() {
 			sprintf( esc_attr__( 'View all posts by %s', 'wordcamporg' ), get_the_author() ),
 			get_the_author()
 		)
-	);
-}
+		);
+	}
 endif;
 
 if ( ! function_exists( 'twentyten_posted_in' ) ) :
-/**
- * Prints HTML with meta information for the current post (category, tags and permalink).
- *
- * @since Twenty Ten 1.0
- */
-function twentyten_posted_in() {
-	// Retrieves tag list of current post, separated by commas.
-	$tag_list = get_the_tag_list( '', ', ' );
-	if ( $tag_list ) {
-		$posted_in = __( 'This entry was posted in %1$s and tagged %2$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'wordcamporg' );
-	} elseif ( is_object_in_taxonomy( get_post_type(), 'category' ) ) {
-		$posted_in = __( 'This entry was posted in %1$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'wordcamporg' );
-	} else {
-		$posted_in = __( 'Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'wordcamporg' );
-	}
-	// Prints the string, replacing the placeholders.
-	printf(
+	/**
+	 * Prints HTML with meta information for the current post (category, tags and permalink).
+	 *
+	 * @since Twenty Ten 1.0
+	 */
+	function twentyten_posted_in() {
+		// Retrieves tag list of current post, separated by commas.
+		$tag_list = get_the_tag_list( '', ', ' );
+		if ( $tag_list ) {
+			$posted_in = __( 'This entry was posted in %1$s and tagged %2$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'wordcamporg' );
+		} elseif ( is_object_in_taxonomy( get_post_type(), 'category' ) ) {
+			$posted_in = __( 'This entry was posted in %1$s. Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'wordcamporg' );
+		} else {
+			$posted_in = __( 'Bookmark the <a href="%3$s" title="Permalink to %4$s" rel="bookmark">permalink</a>.', 'wordcamporg' );
+		}
+		// Prints the string, replacing the placeholders.
+		printf(
 		$posted_in,
 		get_the_category_list( ', ' ),
 		$tag_list,
 		get_permalink(),
 		the_title_attribute( 'echo=0' )
-	);
-}
+		);
+	}
 endif;

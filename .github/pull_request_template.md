@@ -3,6 +3,9 @@
 <!-- Reference any related issues or PRs here. Each issue needs the "fixes" keyword if the PR fixes more than one thing. -->
 Fixes #, See #
 
+<!-- List out anyone who helped with this task. -->
+Props <username>, <username>
+
 <!-- Don't forget to update the title with something descriptive. -->
 
 ### Screenshots

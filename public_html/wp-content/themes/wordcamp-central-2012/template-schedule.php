@@ -30,11 +30,19 @@ get_header(); ?>
 							'meta_key'       => 'Start Date (YYYY-mm-dd)',
 							'orderby'        => 'meta_value',
 							'order'          => 'ASC',
-							'meta_query'     => array( array(
-								'key'        => 'Start Date (YYYY-mm-dd)',
-								'value'      => strtotime( '-2 days' ),
-								'compare'    => '>'
-							) )
+							'meta_query'     => array(
+								'relation' => 'OR',
+								array(
+									'key'     => 'Start Date (YYYY-mm-dd)',
+									'value'   => strtotime( '-2 days' ),
+									'compare' => '>',
+								),
+								array(
+									'key'     => 'End Date (YYYY-mm-dd)',
+									'value'   => strtotime( 'today' ),
+									'compare' => '>',
+								),
+							)
 						) )
 					) :
 						global $wcpt_template;
@@ -84,11 +92,6 @@ get_header(); ?>
 
 				<ul>
 					<li><strong>RSS Feed</strong> -- Learn <a href="https://central.wordcamp.org/news/2013/12/30/rss-feed-now-available-for-newly-announced-wordcamps/">how to subscribe via RSS</a>.</li>
-					<li>
-						<strong>Android app</strong> --
-						<a href="https://play.google.com/store/apps/details?id=org.wordcamp.android">Install it for free</a>,
-						or <a href="https://github.com/wordpress-mobile/WordCamp-Android">contribute on GitHub</a>.
-					</li>
 					<li><strong>ICS Calendar</strong> -- Add this URL as a remote calendar in your calendar application to subscribe: <?php echo esc_url( site_url( 'calendar.ics' ) ); ?></li>
 					<li>
 						<strong>JSON API</strong> --

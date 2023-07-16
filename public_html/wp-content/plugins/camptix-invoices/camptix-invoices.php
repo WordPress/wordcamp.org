@@ -594,7 +594,7 @@ function ctx_invoice_data_exporter( $email_address, $page ) {
 					break;
 
 				default:
-					continue;
+					continue 2;
 			}
 
 			if ( ! empty( $value ) ) {

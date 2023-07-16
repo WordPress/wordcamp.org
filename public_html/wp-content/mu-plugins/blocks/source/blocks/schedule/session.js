@@ -7,9 +7,9 @@ import { isEqual } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { dateI18n } from '@wordpress/date';
 import { __, sprintf } from '@wordpress/i18n';
 import { createInterpolateElement, useContext } from '@wordpress/element';
+import { date } from '@wordpress/date';
 import { decodeEntities } from '@wordpress/html-entities';
 import { Dashicon } from '@wordpress/components';
 
@@ -29,14 +29,13 @@ import { implicitTrack } from './data';
  * @param {Array}   props.displayedTracks
  * @param {boolean} props.showCategories
  * @param {boolean} props.overlapsAnother
- *
  * @return {Element}
  */
 export function Session( { session, displayedTracks, showCategories, overlapsAnother } ) {
 	const { renderEnvironment, settings } = useContext( ScheduleGridContext );
 	const { time_format: timeFormat } = settings;
 	const { id, slug, title, link: permalink, meta: { _wcpt_session_type: type } } = session;
-	const { assignedCategories, assignedTracks, startTime, endTime } = session.derived;
+	const { assignedCategories, assignedTracks, startTime, endTime, timezone } = session.derived;
 	const displayedTrackIds = displayedTracks.map( ( track ) => track.id );
 
 	const displayedAssignedTracks = assignedTracks.filter(
@@ -89,8 +88,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 	`;
 
 	const gridRow = `
-		time-${ dateI18n( 'Hi', startTime ) } /
-		time-${ dateI18n( 'Hi', endTime ) }
+		time-${ date( 'dHi', startTime, timezone ) } /
+		time-${ date( 'dHi', endTime, timezone ) }
 	`;
 
 	return (
@@ -112,7 +111,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 			</h4>
 
 			<p>
-				{ dateI18n( timeFormat, startTime ) } - { dateI18n( timeFormat, endTime ) }
+				{ date( timeFormat, startTime, timezone ) } -
+				{ date( timeFormat, endTime, timezone ) }
 			</p>
 
 			{ speakers.length > 0 && renderSpeakers( speakers, renderEnvironment ) }
@@ -139,9 +139,8 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
  * This assumes that both arrays are sorted using the same criteria, and that their order matches the order in
  * which they appear in the schedule.
  *
- * @param {Array} assignedTrackIds Tracks that the given session is assigned to.
+ * @param {Array} assignedTrackIds  Tracks that the given session is assigned to.
  * @param {Array} displayedTrackIds Tracks that are being displayed in the grid.
- *
  * @return {boolean}
  */
 function sessionSpansNonContiguousTracks( assignedTrackIds, displayedTrackIds ) {
@@ -170,7 +169,6 @@ function sessionSpansNonContiguousTracks( assignedTrackIds, displayedTrackIds ) 
  *
  * @param {Array}  speakers
  * @param {string} renderEnvironment
- *
  * @return {Element}
  */
 function renderSpeakers( speakers, renderEnvironment ) {
@@ -206,7 +204,6 @@ function renderSpeakers( speakers, renderEnvironment ) {
  * Render the session's tracks
  *
  * @param {Array} tracks
- *
  * @return {Element}
  */
 function renderAssignedTracks( tracks ) {
@@ -231,7 +228,6 @@ function renderAssignedTracks( tracks ) {
  * Render the session's categories
  *
  * @param {Array} categories
- *
  * @return {Element}
  */
 function renderCategories( categories ) {
@@ -244,7 +240,7 @@ function renderCategories( categories ) {
 			{ categories.map( ( category ) => {
 				return (
 					<dd key={ category.id }>
-						{ category.slug }
+						{ decodeEntities( stripTags( category.name ) ) }
 					</dd>
 				);
 			} ) }
@@ -256,7 +252,6 @@ function renderCategories( categories ) {
  * Warn organizers about problems with the session.
  *
  * @param {boolean} spansNonContiguousTracks
- *
  * @return {Element}
  */
 function renderWarnings( spansNonContiguousTracks ) {
@@ -292,7 +287,6 @@ function renderWarnings( spansNonContiguousTracks ) {
  * supports the old shortcode and this block.
  *
  * @param {string} title
- *
  * @return {Element}
  */
 function renderFavoriteButton( title ) {

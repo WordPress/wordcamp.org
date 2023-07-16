@@ -7,7 +7,7 @@ class WCB_Structure extends WCB_Loader {
 
 	function includes() {
 		// Require all elements
-		$elements = array('element', 'elements', 'container', 'sidebar', 'sidebar-row', 'content', 'header', 'footer', 'menu', 'body');
+		$elements = array( 'element', 'elements', 'container', 'sidebar', 'sidebar-row', 'content', 'header', 'footer', 'menu', 'body' );
 		foreach ( $elements as $element ) {
 			require_once "class-wcb-$element.php";
 		}
@@ -29,8 +29,9 @@ class WCB_Structure extends WCB_Loader {
 	}
 
 	function enqueue_styles() {
-		if ( is_admin() )
+		if ( is_admin() ) {
 			return;
+		}
 
 		// The user chooses a grid.
 		$versions = array(
@@ -38,10 +39,15 @@ class WCB_Structure extends WCB_Loader {
 			'grid720' => '20110221',
 		);
 
-		$grid  = wcb_get_option('grid');
+		$grid = wcb_get_option('grid');
 
 		// Don't output CSS if Jetpack Custom CSS/RemoteCSS is set to 'replace' mode
-		require_once( JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php' );
+		if ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
+			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
+		} else {
+			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
+		}
+
 		if ( Jetpack_Custom_CSS_Enhancements::skip_stylesheet() ) {
 			return;
 		}
@@ -59,21 +65,21 @@ class WCB_Structure extends WCB_Loader {
 			);
 
 			$version = isset( $versions[ $grid ] ) ? $versions[ $grid ] : false;
-			wp_enqueue_style( "wcb-$grid", wcb_dev_url( WCB_URL . "/css/$grid.css" ), array('wcb-foundation'), $version );
-			wp_enqueue_style( "wcb-style", wcb_dev_url( WCB_URL . '/css/default.css' ), array('wcb-foundation', "wcb-$grid"), '20110421' );
+			wp_enqueue_style( "wcb-$grid", wcb_dev_url( WCB_URL . "/css/$grid.css" ), array( 'wcb-foundation' ), $version );
+			wp_enqueue_style( 'wcb-style', wcb_dev_url( WCB_URL . '/css/default.css' ), array( 'wcb-foundation', "wcb-$grid" ), '20110421' );
 
-			$child_recs = array('wcb-foundation', "wcb-$grid", 'wcb-style');
+			$child_recs = array( 'wcb-foundation', "wcb-$grid", 'wcb-style' );
 		}
 
 		if ( is_child_theme() ) {
 			$child_version = apply_filters( 'wcb_child_css_version', false );
-			wp_enqueue_style( "wcb-child", get_stylesheet_uri(), $child_recs, $child_version );
+			wp_enqueue_style( 'wcb-child', get_stylesheet_uri(), $child_recs, $child_version );
 		}
 	}
 
 	function register_sidebars() {
 		$this->sidebars = array();
-		$sidebar_args = array(
+		$sidebar_args   = array(
 			'after_header'      => array(
 				'id'   => 'after-header',
 				'name' => __('After Header', 'wordcamporg'),
@@ -99,13 +105,15 @@ class WCB_Structure extends WCB_Loader {
 		foreach ( $sidebar_args as $id => $args ) {
 			$option = wcb_get_option( $id );
 
-			if ( ! $option['visible'] )
+			if ( ! $option['visible'] ) {
 				continue;
+			}
 
 			$args['grid'] = $option['layout'];
 
-			if ( $option['front_only'] )
+			if ( $option['front_only'] ) {
 				$args['name'] = sprintf( __('Front Page: %s', 'wordcamporg'), $args['name'] );
+			}
 
 			$this->sidebars[ $id ] = new WCB_Sidebar_Row( $args );
 		}
@@ -124,13 +132,15 @@ class WCB_Structure extends WCB_Loader {
 		$keys = array( 'after_header', 'before_content', 'content', 'after_content', 'before_footer' );
 
 		foreach ( $keys as $id ) {
-			if ( ! isset( $this->sidebars[ $id ] ) )
+			if ( ! isset( $this->sidebars[ $id ] ) ) {
 				continue;
+			}
 
 			$option = wcb_get_option( $id );
 
-			if ( ! $option['front_only'] || is_front_page() )
+			if ( ! $option['front_only'] || is_front_page() ) {
 				$rows[] = $this->sidebars[ $id ];
+			}
 		}
 
 		$rows[] = new WCB_Footer();
@@ -150,7 +160,7 @@ class WCB_Structure extends WCB_Loader {
 		$this->body = new WCB_Body();
 
 		foreach ( $rows as $row ) {
-			$id = $row->get_id();
+			$id        = $row->get_id();
 			$container = new WCB_Container( array(
 				'id'    => "$id-container",
 				'class' => 'container_12 hfeed clearfix',
@@ -169,11 +179,12 @@ class WCB_Structure extends WCB_Loader {
 	 * Replace the content with an excerpt on the home page.
 	 */
 	function home_excerpts( $content ) {
-		if ( ! is_front_page() || $this->excerpting )
+		if ( ! is_front_page() || $this->excerpting ) {
 			return $content;
+		}
 
 		$this->excerpting = true;
-		$content = get_the_excerpt();
+		$content          = get_the_excerpt();
 		$this->excerpting = false;
 		return $content;
 	}
@@ -189,4 +200,4 @@ function wcb_finish_rendering() {
 	$structure->body->resume();
 }
 
-?>
+

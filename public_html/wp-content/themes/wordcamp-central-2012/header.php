@@ -32,9 +32,6 @@
 
 <script type="text/javascript" src="//use.typekit.com/yqt7hkl.js"></script>
 <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
-<?php if ( is_front_page() || is_page('about') ) : ?>
-<script type="text/javascript">jQuery(document).ready(function($) { $('.cycle-me').cycle(); });</script>
-<?php endif; ?>
 
 </head>
 
@@ -101,7 +98,7 @@
 			</p>
 		</div><!-- .wc-hero-intro -->
 
-		<div class="wc-hero-image cycle-me">
+		<div id="home-hero-slideshow" class="wc-hero-image cycle-me">
 			<?php
 				// Get image attachments from page Home.
 				$attachments = get_posts( array(
@@ -120,9 +117,12 @@
 					$image_src = wp_get_attachment_image_src( $image->ID, 'wccentral-thumbnail-hero' );
 					if ( ! $image_src ) continue;
 					list( $src, $width, $height ) = $image_src;
+
+					$image_alt = get_post_meta( $image->ID, '_wp_attachment_image_alt', true );
+					$image_title = get_the_title( $image->ID );
 				?>
 				<div class="wc-hero-entry" style="position: absolute;">
-					<img src="<?php echo esc_url( $src ); ?>" width="<?php echo absint( $width ); ?>" height="<?php echo absint( $height ); ?>" alt="<?php echo esc_attr( $image->post_excerpt ); ?>" title="<?php echo esc_attr( $image->post_excerpt ); ?>" />
+					<img src="<?php echo esc_url( $src ); ?>" width="<?php echo absint( $width ); ?>" height="<?php echo absint( $height ); ?>" alt="<?php echo esc_attr( $image_alt ); ?>" title="<?php echo esc_attr( $image_title ); ?>" />
 					<?php if ( ! empty( $image->post_excerpt ) ) : ?>
 					<span class="wc-hero-caption"><?php echo esc_html( $image->post_excerpt ); ?></span>
 					<?php endif; ?>

@@ -19,6 +19,7 @@ class CampTix_Plugin {
 	protected $errors;
 	protected $infos;
 	protected $admin_notices;
+	protected $admin_errors;
 
 	protected $tmp;
 
@@ -128,6 +129,7 @@ class CampTix_Plugin {
 		// Handle meta for our post types.
 		add_action( 'save_post', array( $this, 'save_ticket_post' ) );
 		add_action( 'save_post', array( $this, 'save_attendee_post' ) );
+		add_action( 'save_post_tix_attendee', array( $this, 'resend_emails' ), 10, 2 );
 		add_action( 'save_post', array( $this, 'save_coupon_post' ) );
 
 		// Log attendee status changes.
@@ -144,6 +146,8 @@ class CampTix_Plugin {
 		// Notices, errors and infos, all in one.
 		add_action( 'camptix_notices', array( $this, 'do_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_notices' ) );
+		add_action( 'admin_notices', array( $this, 'do_admin_errors' ) );
+		$this->add_resend_notices();
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
@@ -167,7 +171,7 @@ class CampTix_Plugin {
 
 		// Change updated messages
 		add_filter( 'post_updated_messages', array( $this, 'ticket_updated_messages' ) );
-		
+
 		// Add post statuses to bulk & quick edit.
 		add_action( 'admin_footer-edit.php', array( $this, 'append_post_status_bulk_edit' ) );
 
@@ -478,7 +482,8 @@ class CampTix_Plugin {
 			'camptix',
 			plugins_url( 'camptix.js', __FILE__ ),
 			array( 'jquery' ),
-			filemtime( __DIR__ . '/camptix.js' )
+			filemtime( __DIR__ . '/camptix.js' ),
+			true
 		);
 
 		wp_localize_script( 'camptix', 'camptix_l10n', array(
@@ -1927,7 +1932,7 @@ class CampTix_Plugin {
 			return 0;
 		}
 
-		return $a['label'] > $b['label'];
+		return $a['label'] > $b['label'] ? 1 : -1;
 	}
 
 	/**
@@ -1954,10 +1959,9 @@ class CampTix_Plugin {
 			$currency['decimal_point'] = 2;
 		}
 
-		// `money_format` is not available on Windows and some other systems.
-		if ( isset( $currency['locale'] ) && function_exists( 'money_format' ) ) {
-			setlocale( LC_MONETARY, $currency['locale'] );
-			$formatted_amount = money_format( "%.{$currency['decimal_point']}n", $amount );
+		if ( isset( $currency['locale'] ) ) {
+			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
+			$formatted_amount = $formatter->format( $amount );
 		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
 			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
 		} else {
@@ -3886,8 +3890,9 @@ class CampTix_Plugin {
 		add_meta_box( 'tix_coupon_availability', __( 'Availability', 'wordcamporg' ), array( $this, 'metabox_coupon_availability' ), 'tix_coupon', 'side' );
 
 		add_meta_box( 'tix_attendee_info', __( 'Attendee Information', 'wordcamporg' ), array( $this, 'metabox_attendee_info' ), 'tix_attendee', 'normal' );
+		add_meta_box( 'tix_attendee_resend_emails', __( 'Resend Emails', 'wordcamporg' ), array( $this, 'metabox_attendee_resend_emails' ), 'tix_attendee', 'side' );
 
-		add_meta_box( 'tix_attendee_submitdiv', __( 'Publish', 'wordcamporg' ), array( $this, 'metabox_attendee_submitdiv' ), 'tix_attendee', 'side' );
+		add_meta_box( 'tix_attendee_submitdiv', __( 'Publish', 'wordcamporg' ), array( $this, 'metabox_attendee_submitdiv' ), 'tix_attendee', 'side', 'core' );
 		remove_meta_box( 'submitdiv', 'tix_attendee', 'side' );
 
 		do_action( 'camptix_add_meta_boxes' );
@@ -4712,6 +4717,82 @@ class CampTix_Plugin {
 		$this->table( $rows, 'tix-attendees-info' );
 	}
 
+	function metabox_attendee_resend_emails() {
+		global $post;
+
+		require_once __DIR__ . '/views/resend-attendee-emails.php';
+	}
+
+	function resend_emails( $post_id, $post ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		if ( empty( $_REQUEST['tix_resend_email'] ) ) {
+			return;
+		}
+
+		// `save_attendee_post()` calls `wp_update_post()`, which calls this function a second time.
+		if ( 1 !== did_action( 'save_post_tix_attendee' ) ) {
+			return;
+		}
+
+		if ( ! wp_verify_nonce( $_REQUEST['tix_resend_nonce'], 'tix_resend_' . $post_id ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
+			return;
+		}
+
+		$this->remove_shortcodes();
+		$to     = is_email( $camptix->get_attendee_email( $post->ID ) );
+		$result = $this->email_attendee_ticket_multiple_template( $post );
+		$this->restore_shortcodes();
+
+		add_filter( 'redirect_post_location', function( $location ) use ( $to, $result ) {
+			$new_location = add_query_arg(
+				array(
+					'tix_resend_to'     => $to,
+					'tix_resend_result' => (int) $result,
+				),
+				$location
+			);
+
+			return $new_location;
+		} );
+	}
+
+	public function add_resend_notices() {
+		if ( ! isset ( $_GET['tix_resend_result'] ) ) {
+			return;
+		}
+
+		if ( $_GET['tix_resend_result'] ) {
+			$notice = sprintf(
+				__(
+					'Ticket successfully resent to %s.',
+					'wordcamporg'
+				),
+				is_email( $_GET['tix_resend_to'] )
+			);
+
+			$this->admin_notice( $notice );
+
+		} else {
+			$email_link = sprintf( '<a href="mailto:%s">%s</a>', EMAIL_CENTRAL_SUPPORT, EMAIL_CENTRAL_SUPPORT );
+			$notice = sprintf(
+				// translators: 1) email address
+				__(
+					'Ticket could not be resent. Please contact %1$s for help.',
+					'wordcamporg'
+				),
+				$email_link
+			);
+
+			$this->admin_error( $notice );
+		}
+	}
+
 	function create_reservation( $post_id, $name, $quantity ) {
 		$id = sanitize_title_with_dashes( $name );
 		$name = sanitize_text_field( $name );
@@ -5147,15 +5228,16 @@ class CampTix_Plugin {
 		// Populate selected tickets from $_POST!
 		if ( isset( $_REQUEST['tix_tickets_selected'] ) ) {
 			foreach ( $_REQUEST['tix_tickets_selected'] as $ticket_id => $count ) {
-				if ( isset( $this->tickets[ $ticket_id ] ) && $count > 0 )
+				if ( isset( $this->tickets[ $ticket_id ] ) && intval( $count ) > 0 ) {
 					$this->tickets_selected[ $ticket_id ] = intval( $count );
+				}
 			}
 		}
 
 		// Make an order.
 		$this->order = array( 'items' => array(), 'total' => 0 );
-		if ( isset( $_REQUEST['tix_tickets_selected'] ) ) {
-			foreach ( $_REQUEST['tix_tickets_selected'] as $ticket_id => $count ) {
+		if ( $this->tickets_selected ) {
+			foreach ( $this->tickets_selected as $ticket_id => $count ) {
 				$ticket = $this->tickets[ $ticket_id ];
 				$item = array(
 					'id' => $ticket->ID,
@@ -5677,6 +5759,8 @@ class CampTix_Plugin {
 									<?php
 										$discount_price = (float) $this->coupon->tix_discount_price;
 										$discount_percent = (float) $this->coupon->tix_discount_percent;
+										$discount_text = '';
+
 										if ( $discount_price > 0 ) {
 											$discount_text = $this->append_currency( $discount_price );
 										} elseif ( $discount_percent > 0 ) {
@@ -7473,8 +7557,6 @@ class CampTix_Plugin {
 	}
 
 	function email_tickets( $payment_token = false, $from_status = 'draft', $to_status = 'publish' ) {
-		global $shortcode_tags;
-
 		if ( ! $payment_token )
 			return;
 
@@ -7495,11 +7577,7 @@ class CampTix_Plugin {
 		if ( ! $attendees )
 			return;
 
-		// Remove all shortcodes before sending the e-mails, but bring them back later.
-		$this->removed_shortcodes = $shortcode_tags;
-		remove_all_shortcodes();
-
-		do_action( 'camptix_init_email_templates_shortcodes' );
+		$this->remove_shortcodes();
 
 		$access_token = get_post_meta( $attendees[0]->ID, 'tix_access_token', true );
 		$receipt_email = get_post_meta( $attendees[0]->ID, 'tix_receipt_email', true );
@@ -7535,22 +7613,7 @@ class CampTix_Plugin {
 		 */
 		if ( count( $attendees ) > 1 && $from_status == 'draft' && ( in_array( $to_status, array( 'publish', 'pending' ) ) ) ) {
 			foreach ( $attendees as $attendee ) {
-				$attendee_email = $this->get_attendee_email( $attendee->ID );
-				$edit_token = get_post_meta( $attendee->ID, 'tix_edit_token', true );
-				$edit_link = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
-
-				$this->tmp( 'attendee_id', $attendee->ID );
-				$this->tmp( 'ticket_url', $edit_link );
-
-				$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase', $attendee );
-				$content = do_shortcode( $this->options[ $email_template ] );
-
-				$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
-
-				$this->log( sprintf( 'Sent ticket e-mail to %s and receipt to %s.', $attendee_email, $receipt_email ), $attendee->ID );
-				$this->wp_mail( $attendee_email, $subject, $content );
-
-				do_action( 'camptix_ticket_emailed', $attendee->ID );
+				$this->email_attendee_ticket_multiple_template( $attendee );
 			}
 		}
 
@@ -7661,8 +7724,24 @@ class CampTix_Plugin {
 		$this->tmp( 'ticket_url', false );
 		$this->tmp( 'receipt', false );
 
-		// Bring the original shortcodes back.
-		$shortcode_tags = $this->removed_shortcodes;
+		$this->restore_shortcodes();
+	}
+
+	// Remove all shortcodes before sending the e-mails. Used with `restore_shortcodes()`.
+	protected function remove_shortcodes() {
+		global $shortcode_tags;
+
+		$this->removed_shortcodes = $shortcode_tags;
+
+		remove_all_shortcodes();
+		do_action( 'camptix_init_email_templates_shortcodes' );
+	}
+
+	// Bring the original shortcodes back. Used with `remove_shortcodes()`.
+	protected function restore_shortcodes() {
+		global $shortcode_tags;
+
+		$shortcode_tags           = $this->removed_shortcodes;
 		$this->removed_shortcodes = array();
 	}
 
@@ -7673,8 +7752,29 @@ class CampTix_Plugin {
 	 *
 	 * @return string
 	 */
-	protected function get_attendee_email( $attendee_id ) {
+	public function get_attendee_email( $attendee_id ) {
 		return apply_filters( 'camptix_get_attendee_email', get_post_meta( $attendee_id, 'tix_email', true ), $attendee_id );
+	}
+
+	public function email_attendee_ticket_multiple_template( $attendee ) {
+		$attendee_email = $this->get_attendee_email( $attendee->ID );
+		$edit_token     = get_post_meta( $attendee->ID, 'tix_edit_token', true );
+		$edit_link      = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
+
+		$this->tmp( 'attendee_id', $attendee->ID );
+		$this->tmp( 'ticket_url', $edit_link );
+
+		$email_template = apply_filters( 'camptix_email_tickets_template', 'email_template_multiple_purchase', $attendee );
+		$content        = do_shortcode( $this->options[ $email_template ] );
+
+		$subject = sprintf( __( "Your Ticket to %s", 'wordcamporg' ), $this->options['event_name'] );
+
+		$this->log( sprintf( 'Sent ticket e-mail to %s.', $attendee_email ), $attendee->ID );
+		$result = $this->wp_mail( $attendee_email, $subject, $content );
+
+		do_action( 'camptix_ticket_emailed', $attendee->ID );
+
+		return $result;
 	}
 
 	function redirect_with_error_flags( $query_args = array() ) {
@@ -7740,6 +7840,10 @@ class CampTix_Plugin {
 		$this->admin_notices[] = $notice;
 	}
 
+	protected function admin_error( $notice ) {
+		$this->admin_errors[] = $notice;
+	}
+
 	function do_notices() {
 
 		$printed = array();
@@ -7789,12 +7893,41 @@ class CampTix_Plugin {
 		do_action( 'camptix_admin_notices' );
 
 		// Signal when archived.
-		if ( $this->options['archived'] )
-			echo '<div class="updated"><p>' . __( 'CampTix is in <strong>archive mode</strong>. Please do not make any changes.', 'wordcamporg' ) . '</p></div>';
+		if ( $this->options['archived'] ) {
+			$this->admin_notice(
+			     __(
+					 'CampTix is in <strong>archive mode</strong>. Please do not make any changes.',
+					 'wordcamporg'
+			     )
+			);
+		}
 
-		if ( is_array( $this->admin_notices ) && ! empty( $this->admin_notices) )
-		foreach ( $this->admin_notices as $notice )
-			printf( '<div class="updated"><p>%s</p></div>', $notice );
+		if ( is_array( $this->admin_notices ) && ! empty( $this->admin_notices ) ) {
+			foreach ( $this->admin_notices as $notice ) {
+				printf(
+					'<div class="updated"> <p>%s</p> </div>',
+					wp_kses_post( $notice )
+				);
+			}
+		}
+	}
+
+	/**
+	 * Runs during admin_notices
+	 */
+	function do_admin_errors() {
+		do_action( 'camptix_admin_errors' );
+
+		if ( is_array( $this->admin_errors ) && ! empty( $this->admin_errors ) ) {
+			foreach ( $this->admin_errors as $error ) {
+				printf(
+					'<div class="notice notice-error">
+						<p>%s</p>
+					</div>',
+					wp_kses_post( $error )
+				);
+			}
+		}
 	}
 
 	/**

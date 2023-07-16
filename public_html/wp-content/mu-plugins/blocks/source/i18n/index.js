@@ -31,7 +31,6 @@ import { __ } from '@wordpress/i18n';
  *   [ 'I accuse ', '%1$s', ' in the ', '%2$s', ' with the ', '%3$s', '!' ]
  *
  * @param {string} string
- *
  * @return {Array} The split string.
  */
 export function tokenSplit( string ) {
@@ -62,7 +61,6 @@ export function tokenSplit( string ) {
  *
  * @param {Array} source
  * @param {Array} args
- *
  * @return {Array} Array with token items replaced.
  */
 export function arrayTokenReplace( source, args ) {
@@ -96,9 +94,8 @@ export function arrayTokenReplace( source, args ) {
  *
  * See https://stackoverflow.com/a/23619085/402766
  *
- * @param {Array} array
+ * @param {Array}  array
  * @param {string} separator
- *
  * @return {Array} Array with separator items.
  */
 export function intersperse( array, separator ) {
@@ -137,7 +134,6 @@ export function intersperse( array, separator ) {
  *   '<em>apples</em>, <strong>oranges</strong>, and <del>bananas</del>'
  *
  * @param {Array} array
- *
  * @return {Array} Array with separator items.
  */
 export function listify( array ) {

@@ -4,6 +4,10 @@
 
 use \WordCamp\Logger;
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
+use const WordCamp\Sunrise\PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH;
+
 class WordCamp_New_Site {
 	protected $new_site_id;
 
@@ -38,11 +42,15 @@ class WordCamp_New_Site {
 				name="<?php echo esc_attr( $object_name ); ?>"
 				id="<?php echo esc_attr( $object_name ); ?>"
 				value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
+				placeholder="https://city.wordcamp.org/<?php echo esc_attr( wp_date( 'Y' ) ); ?>/"
 			/>
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
-				<?php $url = parse_url( trailingslashit( get_post_meta( $post_id, $key, true ) ) ); ?>
-				<?php if ( isset( $url['host'], $url['path'] ) && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
+				<?php $url = trailingslashit( get_post_meta( $post_id, $key, true ) ); ?>
+				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) ); ?>
+				<?php $valid_url = isset( $url['host'], $url['path'] ); ?>
+
+				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
 					<?php
 						$blog_details = get_blog_details(
 							array(
@@ -53,7 +61,7 @@ class WordCamp_New_Site {
 						);
 					?>
 
-					<a target="_blank" href="<?php echo esc_url( add_query_arg( 's', $blog_details->blog_id, network_admin_url( 'sites.php' ) ) ); ?>">Edit</a> |
+					<a target="_blank" href="<?php echo esc_url( add_query_arg( 'id', $blog_details->blog_id, network_admin_url( 'site-info.php' ) ) ); ?>">Edit</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
 
@@ -64,9 +72,15 @@ class WordCamp_New_Site {
 						<input id="<?php echo esc_attr( $checkbox_id ); ?>" type="checkbox" name="<?php echo esc_attr( $checkbox_id ); ?>" />
 						Create site in network
 					</label>
-
-					<span class="description">(e.g., https://<?php echo esc_attr( wp_date( 'Y' ) ); ?>.city.wordcamp.org)</span>
 				<?php endif; // Domain exists. ?>
+
+				<?php if ( $valid_url && ! self::url_matches_expected_format( $url['host'], $url['path'], $post_id ) ) : ?>
+					<br /><br />
+
+					<span class="notice notice-large notice-warning">
+						Warning: This URL doesn't match the expected <code>city.wordcamp.org/year</code> format.
+					</span>
+				<?php endif; ?>
 			<?php endif; // User can manage sites. ?>
 		<?php endif;
 	}
@@ -109,17 +123,47 @@ class WordCamp_New_Site {
 			return;
 		}
 
+		$url        = trailingslashit( $url );
+		$parsed_url = wp_parse_url( $url );
+
+		if ( ! self::url_matches_expected_format( $parsed_url['host'], $parsed_url['path'], $wordcamp_id ) ) {
+			wp_die( 'The URL does not match the expected <code>city.wordcamp.org/year/</code> format. Please press the back button and update it.' );
+		}
+
 		update_post_meta( $wordcamp_id, $key, esc_url( $url ) );
 
 		// If this site exists make sure we update the _site_id mapping.
-		$path             = parse_url( $url, PHP_URL_PATH ) ? parse_url( $url, PHP_URL_PATH ) : '/';
-		$existing_site_id = domain_exists( parse_url( $url, PHP_URL_HOST ), $path, 1 );
+		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], 1 );
 
 		if ( $existing_site_id ) {
 			update_post_meta( $wordcamp_id, '_site_id', absint( $existing_site_id ) );
 		} else {
 			delete_post_meta( $wordcamp_id, '_site_id' );
 		}
+	}
+
+	/**
+	 * Check if the given URL matches the expected format.
+	 *
+	 * @param string $domain
+	 * @param string $path
+	 * @param int    $wordcamp_id
+	 *
+	 * @return bool
+	 */
+	public static function url_matches_expected_format( $domain, $path, $wordcamp_id ) {
+		$tld                            = get_top_level_domain();
+		$last_permitted_external_domain = 2341;
+		$external_domain_exceptions     = array( 169459 );
+		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld @ix", $domain );
+		$can_have_external_domain       = $wordcamp_id <= $last_permitted_external_domain || in_array( $wordcamp_id, $external_domain_exceptions );
+
+		if ( $is_external_domain && $can_have_external_domain ) {
+			// Many old camps had external websites.
+			return true;
+		}
+
+		return 1 === preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path );
 	}
 
 	/**
@@ -207,10 +251,10 @@ class WordCamp_New_Site {
 			$this->configure_new_site( $wordcamp_id, $wordcamp );
 
 			$new_site_id = $this->new_site_id;
-			Logger\log( 'finished', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id' ) );
+			Logger\log( 'finished', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id', 'blog_name' ) );
 		} else {
 			$new_site_id = $this->new_site_id;
-			Logger\log( 'no_site_id', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id' ) );
+			Logger\log( 'no_site_id', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id', 'blog_name' ) );
 		}
 	}
 
@@ -246,12 +290,12 @@ class WordCamp_New_Site {
 		$blog_id               = get_wordcamp_site_id( $wordcamp );
 		$lead_organizer        = $this->get_user_or_current_user( $meta['WordPress.org Username'][0] );
 		$assigned_sponsor_data = $this->get_assigned_sponsor_data( $wordcamp->ID );
-		$sponsors              = $this->get_stub_me_sponsors( $assigned_sponsor_data );
-		$existing_sponsors     = array();
+		$me_sponsor_stubs      = $this->get_stub_me_sponsors( $assigned_sponsor_data );
+		$existing_me_sponsors  = array();
 
 		switch_to_blog( $blog_id );
 
-		$sponsors_query = get_posts( array(
+		$site_sponsors = get_posts( array(
 			'fields'         => 'ids',
 			'post_type'      => 'wcb_sponsor',
 			'post_status'    => 'any',
@@ -259,49 +303,49 @@ class WordCamp_New_Site {
 			'cache_results'  => false,
 		) );
 
-		update_meta_cache( 'post', $sponsors_query );
+		update_meta_cache( 'post', $site_sponsors );
 
-		foreach ( $sponsors_query as $post_id ) {
-			$mes_id = get_post_meta( $post_id, '_mes_id', true );
+		foreach ( $site_sponsors as $new_post_id ) {
+			$mes_id = get_post_meta( $new_post_id, '_mes_id', true );
 			if ( $mes_id ) {
-				$existing_sponsors[] = absint( $mes_id );
+				$existing_me_sponsors[] = absint( $mes_id );
 			}
 		}
 
 		add_filter( 'upload_dir', array( $this, '_fix_wc_upload_dir' ) );
 
-		foreach ( $sponsors as $sponsor ) {
+		foreach ( $me_sponsor_stubs as $me_stub ) {
 			// Skip existing sponsors.
-			if ( in_array( absint( $sponsor['meta']['_mes_id'] ), $existing_sponsors ) ) {
+			if ( in_array( absint( $me_stub['meta']['_mes_id'] ), $existing_me_sponsors ) ) {
 				continue;
 			}
 
-			$post_id = wp_insert_post( array(
-				'post_type'    => $sponsor['type'],
+			$new_post_id = wp_insert_post( array(
+				'post_type'    => $me_stub['type'],
 				'post_status'  => 'draft',
 				'post_author'  => $lead_organizer->ID,
-				'post_title'   => $sponsor['title'],
-				'post_content' => $sponsor['content'],
+				'post_title'   => $me_stub['title'],
+				'post_content' => $me_stub['content'],
 			) );
 
-			if ( $post_id ) {
-				foreach ( $sponsor['meta'] as $key => $value ) {
-					update_post_meta( $post_id, $key, $value );
+			if ( $new_post_id ) {
+				foreach ( $me_stub['meta'] as $key => $value ) {
+					update_post_meta( $new_post_id, $key, $value );
 				}
 
 				// Set featured image.
-				if ( ! empty( $sponsor['featured_image'] ) ) {
-					$results = media_sideload_image( $sponsor['featured_image'], $post_id );
+				if ( ! empty( $me_stub['featured_image'] ) ) {
+					$results = media_sideload_image( $me_stub['featured_image'], $new_post_id );
 
 					if ( ! is_wp_error( $results ) ) {
 						$attachment_id = get_posts( array(
 							'posts_per_page' => 1,
 							'post_type'      => 'attachment',
-							'post_parent'    => $post_id,
+							'post_parent'    => $new_post_id,
 						) );
 
 						if ( isset( $attachment_id[0]->ID ) ) {
-							set_post_thumbnail( $post_id, $attachment_id[0]->ID );
+							set_post_thumbnail( $new_post_id, $attachment_id[0]->ID );
 						}
 					}
 				}
@@ -372,7 +416,7 @@ class WordCamp_New_Site {
 
 		$meta = get_post_custom( $wordcamp_id );
 
-		$mentor = get_user_by( 'login', $meta['Mentor WordPress.org User Name'][0] );
+		$mentor = wcorg_get_user_by_canonical_names( $meta['Mentor WordPress.org User Name'][0] );
 		if ( $mentor ) {
 			add_user_to_blog( get_wordcamp_site_id( $wordcamp ), $mentor->ID, 'administrator' );
 		}
@@ -387,6 +431,8 @@ class WordCamp_New_Site {
 
 		$this->set_default_options( $wordcamp, $meta );
 		$this->create_post_stubs( $wordcamp, $meta, $lead_organizer );
+
+		Jetpack::activate_default_modules( false, false, array(), false, false, false, false );
 
 		/**
 		 * Hook into the configuration process for a new WordCamp site.
@@ -423,11 +469,16 @@ class WordCamp_New_Site {
 
 		update_option( 'admin_email',                  $admin_email );
 		update_option( 'blogdescription',              __( 'Just another WordCamp', 'wordcamporg' ) );
+		update_option( 'timezone_string',              $meta['Event Timezone'][0] );
 		update_option( 'close_comments_for_old_posts', 1 );
 		update_option( 'close_comments_days_old',      30 );
 		update_option( 'wccsp_settings',               $coming_soon_settings );
 
-		// Avoids URLs like `narnia.wordcamp.org/2020/2010/06/04/foo`. See `redirect_date_permalinks_to_post_slug()`.
+		/*
+		 * Avoids URLs like `narnia.wordcamp.org/2020/2010/06/04/foo`. See `redirect_date_permalinks_to_post_slug()`.
+		 *
+		 * If ths ever changes, the link in `stubs/page/sponsors.php may need to be updated.
+		 */
 		$wp_rewrite->set_permalink_structure( '/%postname%/' );
 		delete_option( 'rewrite_rules' ); // Delete because can't be flushed during `switch_to_blog()`.
 
@@ -435,7 +486,7 @@ class WordCamp_New_Site {
 		update_option( 'siteurl', set_url_scheme( get_option( 'siteurl' ), 'https' ) );
 		update_option( 'home',    set_url_scheme( get_option( 'home' ),    'https' ) );
 
-		Logger\log( 'finished', compact( 'admin_email', 'blog_name' ) );
+		Logger\log( 'finished', compact( 'admin_email' ) );
 	}
 
 	/**
@@ -507,7 +558,7 @@ class WordCamp_New_Site {
 			}
 		}
 
-		Logger\log( 'finished', compact( 'assigned_sponsor_data', 'stubs', 'blog_name' ) );
+		Logger\log( 'finished', compact( 'assigned_sponsor_data', 'stubs' ) );
 	}
 
 	/**
@@ -605,13 +656,6 @@ class WordCamp_New_Site {
 			),
 
 			array(
-				'title'   => __( 'Code of Conduct', 'wordcamporg' ),
-				'content' => $this->get_stub_content( 'page', 'code-of-conduct' ),
-				'status'  => 'publish',
-				'type'    => 'page',
-			),
-
-			array(
 				'title'   => __( 'Offline', 'wordcamporg' ),
 				'content' => $this->get_stub_content( 'page', 'offline', $wordcamp ),
 				'status'  => 'publish',
@@ -628,6 +672,22 @@ class WordCamp_New_Site {
 				'type'    => 'page',
 			),
 		);
+
+		if ( isset( $meta['Virtual event only'][0] ) && $meta['Virtual event only'][0] ) {
+			$pages[] = array(
+				'title'   => __( 'Code of Conduct', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'code-of-conduct-online' ),
+				'status'  => 'publish',
+				'type'    => 'page',
+			);
+		} else {
+			$pages[] = array(
+				'title'   => __( 'Code of Conduct', 'wordcamporg' ),
+				'content' => $this->get_stub_content( 'page', 'code-of-conduct' ),
+				'status'  => 'publish',
+				'type'    => 'page',
+			);
+		}
 
 		return $pages;
 	}
@@ -652,6 +712,7 @@ class WordCamp_New_Site {
 
 			array(
 				'title'   => __( 'Call for Sponsors', 'wordcamporg' ),
+				// Update the slug in `sponsors.php` if the slug below ever changes.
 				'content' => $this->get_stub_content( 'post', 'call-for-sponsors' ),
 				'status'  => 'draft',
 				'type'    => 'post',
@@ -672,6 +733,9 @@ class WordCamp_New_Site {
 				'content' => $this->get_stub_content( 'post', 'call-for-volunteers' ),
 				'status'  => 'draft',
 				'type'    => 'post',
+				'meta'    => array(
+					'wcfd-key' => 'call-for-volunteers',
+				),
 			),
 		);
 
@@ -755,7 +819,7 @@ class WordCamp_New_Site {
 	 *
 	 * @return array
 	 */
-	protected function get_stub_me_sponsors_meta( $assigned_sponsor ) {
+	public static function get_stub_me_sponsors_meta( $assigned_sponsor ) {
 		$sponsor_meta    = array( '_mes_id' => $assigned_sponsor->ID );
 		$meta_field_keys = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',
@@ -847,115 +911,5 @@ class WordCamp_New_Site {
 		}
 
 		return $pages;
-	}
-
-	/**
-	 * Get the default code of conduct
-	 *
-	 * @return string
-	 */
-	protected function get_code_of_conduct() {
-		ob_start();
-		?>
-
-		<ol>
-			<li>
-				<h3>Purpose</h3>
-
-				<p>
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> believes our community should be truly open for everyone. As such, we are committed to providing a friendly, safe and welcoming environment for all, regardless of gender, sexual orientation, disability, ethnicity, religion, preferred operating system, programming language, or text editor.
-				</p>
-
-				<p>This code of conduct outlines our expectations for participant behavior as well as the consequences for unacceptable behavior.</p>
-
-				<p>We invite all sponsors, volunteers, speakers, attendees, and other participants to help us realize a safe and positive conference experience for everyone.</p>
-			</li>
-
-			<li>
-				<h3>Open Source Citizenship</h3>
-
-				<p>A supplemental goal of this code of conduct is to increase open source citizenship by encouraging participants to recognize and strengthen the relationships between what we do and the community at large.</p>
-
-				<p>In service of this goal,
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> organizers will be taking nominations for exemplary citizens throughout the event and will recognize select participants after the conference on the website.
-				</p>
-
-				<p>If you see someone who is making an extra effort to ensure our community is welcoming, friendly, and encourages all participants to contribute to the fullest extent, we want to know.
-					<span style="color: red; text-decoration: underline;">You can nominate someone at the Registration table or online at URL HERE.</span>
-				</p>
-			</li>
-
-			<li>
-				<h3>Expected Behavior</h3>
-
-				<ul>
-					<li>Be considerate, respectful, and collaborative.</li>
-					<li>Refrain from demeaning, discriminatory or harassing behavior and speech.</li>
-					<li>Be mindful of your surroundings and of your fellow participants. Alert conference organizers if you notice a dangerous situation or someone in distress.</li>
-					<li>Participate in an authentic and active way. In doing so, you help to create
-						<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and make it your own.
-					</li>
-				</ul>
-			</li>
-
-			<li>
-				<h3>Unacceptable Behavior</h3>
-
-				<p>Unacceptable behaviors include: intimidating, harassing, abusive, discriminatory, derogatory or demeaning conduct by any attendees of
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> and related events. All
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues may be shared with members of the public; please be respectful to all patrons of these locations.
-				</p>
-
-				<p>Harassment includes: offensive verbal comments related to gender, sexual orientation, race, religion, disability; inappropriate use of nudity and/or sexual images in public spaces (including presentation slides); deliberate intimidation, stalking or following; harassing photography or recording; sustained disruption of talks or other events; inappropriate physical contact, and unwelcome sexual attention.</p>
-			</li>
-
-			<li>
-				<h3>Consequences Of Unacceptable Behavior</h3>
-
-				<p>Unacceptable behavior will not be tolerated whether by other attendees, organizers, venue staff, sponsors, or other patrons of
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> venues.</p>
-
-				<p>Anyone asked to stop unacceptable behavior is expected to comply immediately.</p>
-
-				<p>If a participant engages in unacceptable behavior, the conference organizers may take any action they deem appropriate, up to and including expulsion from the conference without warning or refund.</p>
-			</li>
-
-			<li>
-				<h3>What To Do If You Witness Or Are Subject To Unacceptable Behavior</h3>
-
-				<p>If you are subject to unacceptable behavior, notice that someone else is being subject to unacceptable behavior, or have any other concerns, please notify a conference organizer as soon as possible.</p>
-
-				<p>The
-					<span style="color: red; text-decoration: underline;">WordCamp YourCityName</span> team will be available to help participants contact venue security or local law enforcement, to provide escorts, or to otherwise assist those experiencing unacceptable behavior to feel safe for the duration of the conference.
-					<span style="color: red; text-decoration: underline;">Volunteers will be wearing XXXXXXXXXXXXXXXXXXXXXXXX.</span> Any volunteer can connect you with a conference organizer. You can also come to the special registration desk in the lobby and ask for the organizers.
-				</p>
-			</li>
-
-			<li>
-				<h3>Scope</h3>
-
-				<p>We expect all conference participants (sponsors, volunteers, speakers, attendees, and other guests) to abide by this code of conduct at all conference venues and conference-related social events.</p>
-			</li>
-
-			<li>
-				<h3>Contact Information</h3>
-
-				<p>
-					<span style="color: red; text-decoration: underline;">Contact info here! Make sure this includes a way to access the organizers during the event.</span>
-				</p>
-			</li>
-
-			<li>
-				<h3>License And Attribution</h3>
-
-				<p>This Code of Conduct is a direct swipe from the awesome work of Open Source Bridge, but with our event information substituted. The original is available at
-					<a href="http://opensourcebridge.org/about/code-of-conduct/">http://opensourcebridge.org/about/code-of-conduct/</a> and is released under a
-					<a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons Attribution-ShareAlike</a> license.
-				</p>
-			</li>
-		</ol>
-
-		<?php
-		return ob_get_clean();
 	}
 } // WordCamp_New_Site

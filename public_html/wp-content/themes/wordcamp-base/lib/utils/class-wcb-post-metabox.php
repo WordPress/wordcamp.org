@@ -1,7 +1,7 @@
 <?php
 
 class WCB_Post_Metabox extends WCB_Metabox {
-	function __construct( $id_base='' ) {
+	function __construct( $id_base = '' ) {
 		parent::__construct( $id_base );
 
 		$this->add_save_action( 'save_post' );
@@ -9,14 +9,16 @@ class WCB_Post_Metabox extends WCB_Metabox {
 
 	function maybe_save( $post_id, $post ) {
 		// Bail if we're autosaving
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
 			return;
+		}
 
 		// @todo revision check
 
 		// Cap check
-		if ( !current_user_can( 'edit_post', $post_id ) )
+		if ( ! current_user_can( 'edit_post', $post_id ) ) {
 			return;
+		}
 
 		return true;
 	}
@@ -29,10 +31,11 @@ class WCB_Post_Metabox extends WCB_Metabox {
 	 */
 	function render( $post, $instance ) {
 		if ( isset( $instance['meta_manager'] ) ) {
-			if ( isset( $instance['meta_fields'] ) )
+			if ( isset( $instance['meta_fields'] ) ) {
 				return $this->render_meta_fields( $post, $instance );
-			else
+			} else {
 				return $instance['meta_manager']->get( $post->ID );
+			}
 		}
 	}
 
@@ -43,7 +46,8 @@ class WCB_Post_Metabox extends WCB_Metabox {
 		foreach ( $fields as $key => $field ) {
 			$meta = $manager->get( $post->ID, $key );
 			switch ( $field['type'] ) {
-				case 'text': ?>
+				case 'text':
+					?>
 					<label class="description">
 						<?php echo esc_html( $field['label'] ); ?>
 						<input type="text" <?php $this->name( $key ); ?> value="<?php echo esc_attr( $meta ); ?>" />
@@ -63,8 +67,9 @@ class WCB_Post_Metabox extends WCB_Metabox {
 			$updates = array();
 			foreach ( $instance['meta_manager']->keys as $key ) {
 				$name = $this->get_name();
-				if ( isset( $_POST[ $name ][ $key ] ) )
+				if ( isset( $_POST[ $name ][ $key ] ) ) {
 					$updates[ $key ] = $_POST[ $name ][ $key ];
+				}
 			}
 			$instance['meta_manager']->update( $post_id, $updates );
 		}

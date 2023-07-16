@@ -6,7 +6,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import './style.scss';
+import './edit.scss';
 import Edit from './edit';
 
 export const NAME = 'wordcamp/sessions';

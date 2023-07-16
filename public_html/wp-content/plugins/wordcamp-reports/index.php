@@ -15,8 +15,11 @@ defined( 'WPINC' ) || die();
 
 use WordCamp\Reports\Report;
 
+require_once ABSPATH . 'wp-admin/includes/template.php'; // For submit_button().
+
 define( __NAMESPACE__ . '\PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( __NAMESPACE__ . '\PLUGIN_URL', plugins_url( '/', __FILE__ ) );
+define( __NAMESPACE__ . '\CAPABILITY', 'view_wordcamp_reports' );
 
 /**
  * Get the path for the includes directory.
@@ -197,7 +200,7 @@ function add_reports_page() {
 		'index.php',
 		__( 'Reports', 'wordcamporg' ),
 		__( 'Reports', 'wordcamporg' ),
-		'manage_network',
+		CAPABILITY,
 		'wordcamp-reports',
 		__NAMESPACE__ . '\render_page'
 	);

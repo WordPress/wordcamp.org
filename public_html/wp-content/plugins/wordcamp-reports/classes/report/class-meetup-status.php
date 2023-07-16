@@ -9,6 +9,7 @@ namespace WordCamp\Reports\Report;
 defined( 'WPINC' ) || die();
 
 use Exception;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Time\{year_array, quarter_array, month_array};
 use function WordCamp\Reports\{get_views_dir_path};
 use function WordCamp\Reports\Validation\{validate_date_range};
@@ -47,9 +48,9 @@ class Meetup_Status extends Base_Status {
 	 *
 	 * @var string
 	 */
-	public static $methodology = "
+	public static $methodology = '
 	Retrieve all Meetup posts which have status change in given time range.
-";
+';
 
 	/**
 	 * A container object to hold error messages.
@@ -104,7 +105,7 @@ class Meetup_Status extends Base_Status {
 	 * @param string $start_date
 	 * @param string $end_date
 	 * @param string $status
-	 * @param array $options
+	 * @param array  $options
 	 */
 	public function __construct( $start_date, $end_date, $status = '', array $options = array() ) {
 
@@ -127,10 +128,10 @@ class Meetup_Status extends Base_Status {
 	 * @return string
 	 */
 	protected function get_cache_key() {
-		$cache_key_segments = [
+		$cache_key_segments = array(
 			parent::get_cache_key(),
 			$this->range->generate_cache_key_segment(),
-		];
+		);
 
 		if ( $this->status ) {
 			$cache_key_segments[] = $this->status;
@@ -190,13 +191,13 @@ class Meetup_Status extends Base_Status {
 						$this->get_log_status_result( $entry, Meetup_Application::get_post_statuses() ) === $this->status
 					)
 				);
-			} ) ;
+			} );
 
 			if ( empty( $filtered_logs ) ) {
 				continue;
 			}
 
-			$latest_log = end( $logs );
+			$latest_log          = end( $logs );
 			$data[ $meetup->ID ] = array(
 				'name' => get_the_title( $meetup ),
 				'logs' => $logs,
@@ -238,8 +239,8 @@ class Meetup_Status extends Base_Status {
 				$this->range->end->getTimestamp()
 			)
 		);
-		$meetup_post_ids = wp_list_pluck( $meetup_post_objs, 'post_id' );
-		$post_args = array(
+		$meetup_post_ids  = wp_list_pluck( $meetup_post_objs, 'post_id' );
+		$post_args        = array(
 			'post_status' => array_keys( \Meetup_Admin::get_post_statuses() ),
 			'post_type' => WCPT_MEETUP_SLUG,
 			'posts_per_page' => -1,
@@ -252,6 +253,7 @@ class Meetup_Status extends Base_Status {
 
 	/**
 	 * Return groups of data to be returned.
+	 *
 	 * @param array $data
 	 *
 	 * @return array
@@ -292,16 +294,16 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function render_public_page() {
-		$params = self::parse_public_report_input();
+		$params   = self::parse_public_report_input();
 		$years    = year_array( absint( date( 'Y' ) ), 2015 );
 		$quarters = quarter_array();
 		$months   = month_array();
 		$statuses = \Meetup_Admin::get_post_statuses();
 
-		$error = $params['error'];
+		$error  = $params['error'];
 		$report = null;
 		$period = $params['period'];
-		$year = $params['year'];
+		$year   = $params['year'];
 		$status = $params['status'];
 		if ( ! empty( $params )  && isset( $params['range'] ) ) {
 			$report = new self( $params['range']->start, $params['range']->end, $params['status'], $params['options'] );
@@ -322,10 +324,10 @@ class Meetup_Status extends Base_Status {
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
 		$action     = filter_input( INPUT_POST, 'action' );
 		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
-		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, [ 'flags' => FILTER_REQUIRE_ARRAY ] );
+		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$statuses   = Meetup_Application::get_post_statuses();
 
-		$field_defaults = [
+		$field_defaults = array(
 			'ID'                      => 'checked',
 			'Name'                    => 'checked disabled',
 			'Start Date (YYYY-mm-dd)' => 'checked',
@@ -334,12 +336,12 @@ class Meetup_Status extends Base_Status {
 			'URL'                     => 'checked',
 			'Created'                 => 'checked',
 			'Status'                  => 'checked',
-		];
+		);
 
 		$report = null;
 
 		if ( wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+			 && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'public' => false,
@@ -353,11 +355,11 @@ class Meetup_Status extends Base_Status {
 				// $report variable is used in meetup-status.php to render report.
 				$report = new self( $start_date, $end_date, $status, $options );
 			} elseif ( 'Export CSV' === $action ) {
-				$status_report = new self( $start_date, $end_date, $status, $options );
-				$meetup_ids = array_keys( $status_report->get_data() );
-				$fields[] = 'Name';
+				$status_report     = new self( $start_date, $end_date, $status, $options );
+				$meetup_ids        = array_keys( $status_report->get_data() );
+				$fields[]          = 'Name';
 				$options['fields'] = $fields;
-				$detail_report = new Meetup_Details( null, $meetup_ids, $options );
+				$detail_report     = new Meetup_Details( null, $meetup_ids, $options );
 				Meetup_Details::export_to_file_common( $detail_report );
 				return;
 			}

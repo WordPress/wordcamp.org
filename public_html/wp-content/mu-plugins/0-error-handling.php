@@ -4,11 +4,42 @@ defined( 'WPINC' ) || die();
 
 use DirectoryIterator;
 use Dotorg\Slack\Send;
+use function WordCamp\Logger\{ redact_keys, redact_url };
 
+/*
+ * Catch errors on production and pipe them into Slack, because that's the only way we have to see them.
+ *
+ * See https://make.wordpress.org/systems/2018/02/11/access-to-wordcamp-error-logs/.
+ *
+ * Note that this won't catch errors in drop-in plugins or Sunrise, because they load much earlier than this.
+ * Creating a `fatal-error-handler.php` file would let us override Core's fatal error handler, but we'd need
+ * to update all the code here to not use any Core constants/functions that load after drop-in plugins. We also
+ * want to handle non-fatals here.
+ *
+ * phpcs:disable WordPress.Security.NonceVerification -- This doesn't handle nonce'd actions, but does need to
+ * work with the raw $_POST at a generic level.
+ */
+
+/*
+ * Intentionally not using `get_temp_dir()`, because that could potentially return `WP_CONTENT_DIR`. Storing
+ * error records there could result in leaking sensitive information that failed to be redacted before being
+ * logged.
+ */
 const ERROR_RATE_LIMITING_DIR = '/tmp/error_limiting';
 
-set_error_handler( __NAMESPACE__ . '\handle_error' );
-register_shutdown_function( __NAMESPACE__ . '\catch_fatal' );
+// Setting an error handler would interfere with PHPUnit. Tests only need to test individual functions.
+if ( ! defined( 'WP_RUN_CORE_TESTS' ) || ! WP_RUN_CORE_TESTS ) {
+	set_error_handler( __NAMESPACE__ . '\handle_error' );
+	register_shutdown_function( __NAMESPACE__ . '\catch_fatal' );
+
+	if ( ! wp_next_scheduled( 'clear_error_rate_limiting_files' ) ) {
+		wp_schedule_event( time(), 'daily', 'clear_error_rate_limiting_files' );
+	}
+
+	add_action( 'clear_error_rate_limiting_files', __NAMESPACE__ . '\handle_clear_error_rate_limiting_files' );
+	add_action( 'switch_blog', __NAMESPACE__ . '\warn_high_memory_usage', 10, 3 );
+	add_action( 'shutdown', __NAMESPACE__ . '\warn_high_memory_usage' );
+}
 
 /**
  * Error handler to track error frequency and conditionally send error messages to Slack.
@@ -23,6 +54,8 @@ register_shutdown_function( __NAMESPACE__ . '\catch_fatal' );
  * @return bool
  */
 function handle_error( $err_no, $err_msg, $file, $line ) {
+	require_once __DIR__ . '/1-logger.php';
+
 	if ( ! check_error_handling_dependencies() ) {
 		return false;
 	}
@@ -54,19 +87,12 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		return false;
 	}
 
-	$error_ignorelist = get_ignorelist();
+	$is_third_party = is_third_party_file( $file );
+	$is_fatal_error = is_fatal_error( $err_no );
 
-	if ( isset( $error_ignorelist[ $file ] ) ) {
-		$matches = array_filter(
-			$error_ignorelist[ $file ],
-			function( $pattern ) use ( $err_msg ) {
-				return false !== strpos( $err_msg, $pattern );
-			}
-		);
-
-		if ( ! empty( $matches ) ) {
-			return false;
-		}
+	// Non-fatals from third party code usually aren't actionable or important.
+	if ( $is_third_party && ! $is_fatal_error ) {
+		return false;
 	}
 
 	$err_key      = substr( base64_encode("$file-$line-$err_no" ), -254 ); // Max file length for ubuntu is 255.
@@ -83,8 +109,9 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		$data['error_count'] += 1;
 		$occurrences          = $data['error_count'];
 		$time_elapsed         = time() - $data['last_reported_at'];
+		$pause_interval       = $is_fatal_error ? 30 : 600;
 
-		if ( $time_elapsed > 600 ) {
+		if ( $time_elapsed > $pause_interval ) {
 			$data['last_reported_at'] = time();
 			$data['error_count']      = 0;
 			$send_message             = true;
@@ -103,88 +130,84 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 }
 
 /**
- * List of warnings/notices to ignore because they aren't actionable.
+ * Check if a file is custom code or from a third-party.
  *
- * Always use constants in the keys here to avoid path disclosure.
+ * @param string $file
  *
- * Some constants here will require a trailing slash, and some won't. Avoid adding an extra slash if one
- * already exists in the constant itself, because double-slashes will prevent the string from matching.
- *
- * The line number is omitted from the filename key because it can change when edits are made to other parts of
- * the file, which would cause the warning/notice to start appearing again.
- *
- * @return array Associative array. Key is filename, value is array of error message patterns to match.
+ * @return bool `true` if the file is from a third party.
  */
-function get_ignorelist() {
-	return array(
-		// See https://core.trac.wordpress.org/ticket/29204.
-		ABSPATH . 'wp-includes/SimplePie/Registry.php' => array(
-			'Non-static method WP_Feed_Cache::create() should not be called statically',
-		),
+function is_third_party_file( $file ) {
+	/*
+	 * Use constants in the keys here to avoid path disclosure.
+	 * `ABSPATH` already has a trailing slash, `WP_PLUGIN_DIR` and `WP_CONTENT_DIR` don't.
+	 */
+	$third_party_folders = array(
+		/*
+		 * For Core, this can only have subfolders. `ABSPATH` alone would match things like `themes/campsite-2017`.
+		 * Core's `wp-content` folder isn't included here, because we use a separate one instead on production, but
+		 * a standard `wordpress-develop` test environment doesn't.
+		 */
+		ABSPATH . 'wp-admin/',
+		WPINC,
 
-		// This is normal.
-		WP_PLUGIN_DIR . '/hyperdb/db.php' => array(
-			'mysqli_query(): MySQL server has gone away',
-		),
+		WP_PLUGIN_DIR . '/akismet/',
+		WP_PLUGIN_DIR . '/bbpress/',
+		WP_PLUGIN_DIR . '/campt-indian-payment-gateway/',
+		WP_PLUGIN_DIR . '/camptix-bd-payments/',
+		WP_PLUGIN_DIR . '/camptix-mercadopago/',
+		WP_PLUGIN_DIR . '/camptix-pagseguro/',
+		WP_PLUGIN_DIR . '/camptix-payfast-gateway/',
+		WP_PLUGIN_DIR . '/camptix-paynow/',
+		WP_PLUGIN_DIR . '/camptix-paystack/',
+		WP_PLUGIN_DIR . '/camptix-trustcard/',
+		WP_PLUGIN_DIR . '/camptix-trustpay/',
+		WP_PLUGIN_DIR . '/classic-editor/',
+		WP_PLUGIN_DIR . '/custom-content-width/',
+		WP_PLUGIN_DIR . '/edit-flow/',
+		WP_PLUGIN_DIR . '/email-post-changes/',
+		// Gutenberg isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
+		WP_PLUGIN_DIR . '/hyperdb/',
+		// Jetpack isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
+		WP_PLUGIN_DIR . '/liveblog/',
+		WP_PLUGIN_DIR . '/public-post-preview/',
+		WP_PLUGIN_DIR . '/pwa/',
+		WP_PLUGIN_DIR . '/wordpress-importer/',
+		WP_PLUGIN_DIR . '/wp-cldr/',
+		WP_PLUGIN_DIR . '/wp-super-cache/',
 
-		// These are trivial mistakes in 3rd party code. They indicate poor quality, but don't warrant action.
-		ABSPATH . 'wp-cron.php'                            => array(
-			'Invalid argument supplied for foreach()',
-		),
-		ABSPATH . 'wp-includes/class-wp-query.php'         => array(
-			'trim() expects parameter 1 to be string, array given',
-			"Trying to get property 'ID' of non-object",
-			"Trying to get property 'post_title' of non-object",
-			"Trying to get property 'post_name' of non-object",
-		),
-		ABSPATH . 'wp-includes/class-wp-post.php'          => array(
-			'Undefined property: WP_Post::$filter',
-		),
-		ABSPATH . 'wp-includes/class-wp-xmlrpc-server.php' => array(
-			'Undefined variable: url',
-		),
-		ABSPATH . 'wp-includes/comment-template.php'       => array(
-			"Trying to get property 'comment_ID' of non-object",
-			"Trying to get property 'comment_status' of non-object",
-			"Trying to get property 'user_id' of non-object",
-		),
-		ABSPATH . 'wp-includes/link-template.php'          => array(
-			"Trying to get property 'post_type' of non-object",
-		),
-		ABSPATH . 'wp-includes/post-template.php'          => array(
-			"Trying to get property 'post_content' of non-object",
-		),
-		ABSPATH . 'wp-includes/rest-api.php' => array(
-			'Undefined index: items',
-		),
-		ABSPATH . 'wp-includes/rss.php'                    => array(
-			'Undefined index: description',
-			'Undefined property: stdClass::$error',
-		),
-
-		WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php'                       => array(
-			'Undefined variable: txn',
-		),
-		WP_PLUGIN_DIR . '/gutenberg/build/block-library/blocks/latest-posts.php' => array(
-			'array_column() expects parameter 1 to be array, string given',
-		),
-		WP_PLUGIN_DIR . '/jetpack/class.jetpack-gutenberg.php'                                => array(
-			'Undefined index: query',
-		),
-		WP_PLUGIN_DIR . '/jetpack/_inc/lib/class.media-summary.php'                           => array(
-			'Undefined index: id',
-		),
-		WP_PLUGIN_DIR . '/jetpack/modules/comments/comments.php' => array(
-			"Trying to get property 'secret' of non-object",
-		),
-		WP_PLUGIN_DIR . '/jetpack/modules/contact-form/grunion-contact-form.php'              => array(
-			'Undefined index: HTTP_REFERER',
-		),
-		WP_PLUGIN_DIR . '/jetpack/vendor/automattic/jetpack-sync/src/modules/class-posts.php' => array(
-			"Trying to get property 'post_type' of non-object",
-			'Undefined offset:',
-		),
+		WP_CONTENT_DIR . '/themes/p2/',
+		WP_CONTENT_DIR . '/themes/twenty', // Partial so that it matches all Core themes.
 	);
+
+	$matches = array_filter(
+		$third_party_folders,
+		function( $folder ) use ( $file ) {
+			return false !== stripos( $file, $folder );
+		}
+	);
+
+	/*
+	 * Match known Core root files, because `$third_party_folders` can't include them.
+	 *
+	 * On production, Core is installed in a subfolder, and root-level files _are_ custom, so we don't want to
+	 * ignore errors in them. In a standard `wordpress-develop` test environment, though, Core is installed at
+	 * the root of the `src/` folder.
+	 */
+	$filename           = basename( $file );
+	$is_at_install_root = ABSPATH === trailingslashit( dirname( $file ) );
+
+	if ( $is_at_install_root ) {
+		$is_known_core_root_file = $filename === 'xmlrpc.php' || 'wp-' === substr( $filename, 0, 3 );
+
+		// `index.php` could be Core's version, or our wrapper, so just accept either.
+		$is_custom_root_file = in_array( $filename, array( 'index.php', 'wp-config.php' ), true );
+
+		if ( $is_known_core_root_file && ! $is_custom_root_file ) {
+			$matches[] = $file;
+		}
+	}
+
+	return ! empty( $matches );
 }
 
 /**
@@ -199,11 +222,29 @@ function catch_fatal() {
 	$error = error_get_last();
 
 	// See https://secure.php.net/manual/en/function.set-error-handler.php.
-	$unhandled_error_types = [ E_ERROR, E_PARSE, E_CORE_ERROR, E_CORE_WARNING, E_COMPILE_ERROR, E_COMPILE_WARNING ];
-
-	if ( ! empty( $error ) && in_array( $error['type'], $unhandled_error_types, true ) ) {
+	if ( ! empty( $error ) && is_fatal_error( $error['type'] ) ) {
 		handle_error( $error['type'], $error['message'], $error['file'], $error['line'] );
 	}
+}
+
+/**
+ * Determine if we want to treat the given error as a fatal.
+ *
+ * @param int $error_type
+ *
+ * @return bool
+ */
+function is_fatal_error( $error_type ) {
+	$unhandled_error_types = array(
+		E_ERROR,
+		E_PARSE,
+		E_CORE_ERROR,
+		E_CORE_WARNING,
+		E_COMPILE_ERROR,
+		E_COMPILE_WARNING,
+	);
+
+	return in_array( $error_type, $unhandled_error_types, true );
 }
 
 /**
@@ -261,22 +302,22 @@ function update_error_record( $err_key, $data ) {
  * @return void
  */
 function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 ) {
+	// Local environments can just use `display_errors` etc, and shouldn't expose production's API token.
 	if ( ! defined( 'WORDCAMP_ENVIRONMENT' )
-		|| ( 'production' !== WORDCAMP_ENVIRONMENT && ! defined( 'SANDBOX_SLACK_USERNAME' ) )
+		|| 'local' === WORDCAMP_ENVIRONMENT
 		|| ! is_readable( __DIR__ . '/includes/slack/send.php' )
 	) {
 		return;
 	}
 
-	require_once( __DIR__ . '/includes/slack/send.php' );
+	require_once __DIR__ . '/includes/slack/send.php';
 
-	$error_name  = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
-	$messages    = explode( 'Stack trace:', $err_msg, 2 );
-	$text        = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
-	$stack_trace = wp_debug_backtrace_summary();
-	$domain      = esc_url( get_site_url() );
-	$page_slug   = sanitize_text_field( untrailingslashit( $_SERVER['REQUEST_URI'] ) ) ?: '/';
-	$footer      = '';
+	$error_name = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
+	$messages   = explode( 'Stack trace:', $err_msg, 2 );
+	$text       = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
+	$url        = redact_url( 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] );
+	$referer    = isset( $_SERVER['HTTP_REFERER'] ) ? redact_url( $_SERVER['HTTP_REFERER'] ) : '';
+	$footer     = '';
 
 	if ( $occurrences > 0 ) {
 		$footer .= "Occurred *$occurrences time(s)* since last reported";
@@ -306,28 +347,59 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			break;
 	}
 
-	$fields = [
-		[
-			'title' => 'Domain',
-			'value' => $domain,
+	$fields = array(
+		array(
+			'title' => 'URL',
+			'value' => esc_url_raw( $url ),
 			'short' => false,
-		],
-		[
-			'title' => 'Page',
-			'value' => $page_slug,
-			'short' => false,
-		],
-		[
+		),
+	);
+
+	if ( ! str_contains( $err_msg, $file ) ) {
+		$fields[] = array(
 			'title' => 'File',
 			'value' => "$file:$line",
 			'short' => false,
-		],
-		[
-			'title' => 'Stack Trace',
-			'value' => $stack_trace,
+		);
+	}
+
+	if ( ! empty( $referer ) && $referer !== $url ) {
+		$fields[] = array(
+			'title' => 'Referer',
+			'value' => esc_url_raw( $referer ),
 			'short' => false,
-		],
-	];
+		);
+	}
+
+	if ( $_POST ) {
+		$redacted_post = $_POST; // redact_keys() would redact $_POST if passed directly.
+		redact_keys( $redacted_post );
+
+		$fields[] = array(
+			'title' => 'POST',
+			'value' => print_r( $redacted_post, true ),
+			'short' => false,
+		);
+	}
+
+	// Fatals can only be caught with `register_shutdown_function()`, but that doesn't have access to the call
+	// stack of the previous script. It would only show the stack of the current script, which isn't useful.
+	if ( ! is_fatal_error( $err_no ) ) {
+		$backtrace = str_replace(
+			array(
+				', WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack',
+				', WordCamp\Error_Handling\warn_high_memory_usage, trigger_error',
+			),
+			'',
+			wp_debug_backtrace_summary()
+		);
+
+		$fields[] = array(
+			'title' => 'Stack Trace',
+			'value' => $backtrace,
+			'short' => false,
+		);
+	}
 
 	$attachment = array(
 		'fallback'    => $text,
@@ -341,11 +413,66 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 	$slack = new Send( SLACK_ERROR_REPORT_URL );
 	$slack->add_attachment( $attachment );
 
-	if ( 'production' === WORDCAMP_ENVIRONMENT ) {
-		$slack->send( WORDCAMP_LOGS_SLACK_CHANNEL );
-	} else {
-		$slack->send( SANDBOX_SLACK_USERNAME );
+	$channels = get_destination_channels( $file, WORDCAMP_ENVIRONMENT, is_fatal_error( $err_no ) );
+
+	foreach ( $channels as $channel ) {
+		$slack->send( $channel );
 	}
+}
+
+/**
+ * Determine which channels the error should be sent to.
+ *
+ * @param string $file
+ * @param string $environment
+ * @param bool   $is_fatal_error
+ *
+ * @return array
+ */
+function get_destination_channels( $file, $environment, $is_fatal_error ) {
+	$channels           = array();
+	$is_jetpack_error   = false !== stripos( $file, WP_PLUGIN_DIR . '/jetpack/' );
+	$is_gutenberg_error = false !== stripos( $file, WP_PLUGIN_DIR . '/gutenberg/' );
+
+	switch ( $environment ) {
+		case 'production':
+			// Send all Jetpack & Gutenberg errors to those teams. Only send fatals to us.
+			if ( $is_jetpack_error ) {
+				$channels[] = WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL;
+
+				if ( $is_fatal_error ) {
+					$channels[] = WORDCAMP_LOGS_SLACK_CHANNEL;
+				}
+
+			} elseif ( $is_gutenberg_error ) {
+				$channels[] = WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL;
+
+				if ( $is_fatal_error ) {
+					$channels[] = WORDCAMP_LOGS_SLACK_CHANNEL;
+				}
+
+			} else {
+				$channels[] = WORDCAMP_LOGS_SLACK_CHANNEL;
+			}
+
+			break;
+
+		case 'development':
+			if ( ! $is_jetpack_error && ! $is_gutenberg_error ) {
+				if ( defined( 'SANDBOX_SLACK_USERNAME' ) ) {
+					$channels[] = SANDBOX_SLACK_USERNAME;
+				}
+			}
+
+			break;
+
+		case 'local':
+		default:
+			// Intentionally empty.
+			break;
+	}
+
+	return $channels;
 }
 
 /**
@@ -389,8 +516,38 @@ function handle_clear_error_rate_limiting_files() {
 	}
 }
 
-if ( ! wp_next_scheduled( 'clear_error_rate_limiting_files' ) ) {
-	wp_schedule_event( time(), 'daily', 'clear_error_rate_limiting_files' );
-}
+/**
+ * Log a warning if we're close to running out of memory.
+ *
+ * This always runs on `shutdown` and `switch_blog`, but can also be hooked to other actions where high usage
+ * is suspected, in order to get debugging info before it's lost to a fatal error.
+ */
+function warn_high_memory_usage() {
+	// Using `memory_limit` instead of `WP_MEMORY_LIMIT` because the latter isn't updated when the former changes
+	// at runtime.
+	$limit = ini_get( 'memory_limit' );
 
-add_action( 'clear_error_rate_limiting_files', __NAMESPACE__ . '\handle_clear_error_rate_limiting_files' );
+	// Sometimes WP_CLI unsets the limit, which makes it look like the peak isn't being hit when testing on
+	// sandboxes. This should match what production uses for accuracy.
+	if ( '-1' === $limit ) {
+		if ( wp_doing_cron() ) {
+			$limit = wcorg_high_memory_context();
+		} else {
+			$limit = WP_MAX_MEMORY_LIMIT;
+		}
+	}
+
+	$peak_percent = memory_get_peak_usage( true ) / wp_convert_hr_to_bytes( $limit );
+	$peak_percent = round( $peak_percent * 100, 1 );
+
+	if ( $peak_percent >= 90 ) {
+		trigger_error(
+			sprintf(
+				'Peak memory usage at %s%%. Current action/filter: %s.',
+				$peak_percent,
+				current_action()
+			),
+			E_USER_WARNING
+		);
+	}
+}

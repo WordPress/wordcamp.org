@@ -1,10 +1,13 @@
 /*
  * @todo
  *
- * should use hasOwnProperty or Object.getOwnPropertyDescriptors(). the latter usually makes code more readable, but sometimes the former first better
- * assignment and control structures/returns/etc should be separate by a blank line for readability.
+ * should use hasOwnProperty or Object.getOwnPropertyDescriptors(). the latter usually makes code more readable,
+ * but sometimes the former first better assignment and control structures/returns/etc should be separate by a
+ * blank line for readability.
  *      same for div and other block-level html elements
- * disable `no-console` b/c valid use case. if can make exception for `log` function without disabling, then do that. don't want console used for temporary debugging, but there are valid cases where you want to provide the user some insight into what went wrong
+ * disable `no-console` b/c valid use case. if can make exception for `log` function without disabling, then do
+ * that. don't want console used for temporary debugging, but there are valid cases where you want to provide the
+ * user some insight into what went wrong
  */
 
 module.exports = {
@@ -17,8 +20,15 @@ module.exports = {
 	 */
 	root: true,
 
+	parserOptions: {
+		requireConfigFile: false,
+		babelOptions: {
+			presets: [ require.resolve( '@wordpress/babel-preset-default' ) ],
+		},
+	},
+
 	globals: {
-		wp: true,
+		wp: true, // eslint-disable-line id-length
 	},
 
 	ignorePatterns: [ '*.min.js' ],
@@ -71,7 +81,7 @@ module.exports = {
 			'error',
 			{
 				min: 3,
-				exceptions: [ '__', '_n', '_x', 'id', 'a', 'b', 'i' ],
+				exceptions: [ '__', '_n', '_x', 'id', 'a', 'b', 'i', '$' ],
 			},
 		],
 
@@ -158,4 +168,11 @@ module.exports = {
 		 */
 		'jsdoc/require-returns-description': 'off',
 	},
+	overrides: [
+		{
+			// Unit test files and their helpers only.
+			files: [ '**/@(test|__tests__)/**/*.js', '**/?(*.)test.js' ],
+			extends: [ 'plugin:@wordpress/eslint-plugin/test-unit' ],
+		},
+	],
 };

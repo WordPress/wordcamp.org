@@ -68,9 +68,14 @@ abstract class Event_Application {
 		} else {
 			$countries = wcorg_get_countries();
 
-			$wporg_username = '';
+			$prefilled_fields = array(
+				'wporg_name'     => '',
+				'wporg_username' => '',
+				'wporg_email'    => '',
+			);
+
 			if ( is_user_logged_in() ) {
-				$current_user = wp_get_current_user();
+				$current_user     = wp_get_current_user();
 				$prefilled_fields = array(
 					'wporg_name'     => $current_user->display_name,
 					'wporg_username' => $current_user->user_login,
@@ -79,8 +84,15 @@ abstract class Event_Application {
 			}
 
 			if ( ! is_user_logged_in() ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				echo '<div class="wcfd-disabled-form">' . wcorg_login_message( '', get_permalink() ) . '<div class="wcfd-overlay"></div><div inert>';
+				$please_login_message = sprintf(
+					__( 'Before submitting your application, please <a href="%s">log in to WordCamp.org</a> using your Word<em><strong>Press</strong></em>.org account*.', 'wordcamporg' ),
+					wp_login_url( get_permalink() )
+				);
+				printf(
+					'<div class="wcfd-disabled-form">%s<div class="wcfd-overlay"></div><div inert>',
+					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					wcorg_login_message( $please_login_message, get_permalink() )
+				);
 			}
 
 			$this->render_application_form( $countries, $prefilled_fields );
@@ -277,11 +289,11 @@ abstract class Event_Application {
 		}
 
 		$default_status = $this->get_default_status();
-		$queue_size = wp_count_posts( $this->get_event_type() )->$default_status;
+		$queue_size     = wp_count_posts( $this->get_event_type() )->$default_status;
 		if ( isset( $queue_size ) ) {
 			$singular = "is $queue_size application";
 			$plural   = "are $queue_size applications";
-			$message = sprintf(
+			$message  = sprintf(
 				"%s\n _There %s in vetting queue._",
 				$message,
 				1 === $queue_size ? $singular : $plural

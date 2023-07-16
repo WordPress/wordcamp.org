@@ -1,21 +1,14 @@
 /**
  * WordPress dependencies
  */
+import { date } from '@wordpress/date';
 import { useSelect } from '@wordpress/data';
-import { __experimentalGetSettings, dateI18n, setSettings } from '@wordpress/date';
 
 /**
  * Internal dependencies
  */
+import { getTimezone } from './utils/date';
 import { WC_BLOCKS_STORE } from '../../data';
-
-/*
- * Work around Gutenberg bug: https://github.com/WordPress/gutenberg/issues/22193
- *
- * @todo remove this when that's resolved, because it adds ~150k to the build.
- */
-import 'moment-timezone/moment-timezone-utils';
-setSettings( __experimentalGetSettings() );
 
 /*
  * Create an implicit "0" track when none formally exist.
@@ -28,11 +21,13 @@ export const implicitTrack = { id: 0 };
 // Used when indexing array items by date, etc.
 export const DATE_SLUG_FORMAT = 'Y-m-d';
 
+// Shortcut to the site timezone.
+export const SITE_TIMEZONE = WordCampBlocks.schedule.timezone;
+
 /**
  * Prepares the data for a Schedule Block.
  *
  * @param {Array} attributes
- *
  * @return {Object}
  */
 export function useScheduleData( attributes ) {
@@ -90,7 +85,6 @@ export function useScheduleData( attributes ) {
  * @param {Function} select
  * @param {boolean}  editorContext 'example' for the Block Styles preview in the inspector controls; 'live' for
  *                                 the actual block in the post editor content area.
- *
  * @return {Object}
  */
 const fetchScheduleData = ( select, editorContext ) => {
@@ -101,29 +95,10 @@ const fetchScheduleData = ( select, editorContext ) => {
 	}
 
 	// These must be kept in sync with `get_all_sessions()`.
-	const sessionArgs = {
-		/*
-		 * This doesn't include `session_cats_rendered` because we already need the category id/slug in other
-		 * places, so it's simpler to have single source of truth.
-		 */
-		_fields: [
-			'id',
-			'link',
-			'meta._wcpt_session_time',
-			'meta._wcpt_session_duration',
-			'meta._wcpt_session_type',
-			'session_category',
-			'session_speakers',
-			'session_track',
-			'slug',
-			'title',
-		],
-	};
+	const sessionArgs = {};
 
 	// These must be kept in sync with `get_all_tracks()`.
 	const trackArgs = {
-		_fields: [ 'id', 'name', 'slug' ],
-
 		/*
 		 * It's important that the order here match `getDisplayedTracks()`. The tracks must be sorted in a
 		 * predictable order, so that track spanning can be reliably detected; see
@@ -137,9 +112,7 @@ const fetchScheduleData = ( select, editorContext ) => {
 	};
 
 	// These must be kept in sync with `get_all_categories()`.
-	const categoryArgs = {
-		_fields: [ 'id', 'name', 'slug' ],
-	};
+	const categoryArgs = {};
 
 	const allSessions = getEntities( 'postType', 'wcb_session', sessionArgs );
 	const allTracks = getEntities( 'taxonomy', 'wcb_track', trackArgs );
@@ -360,13 +333,12 @@ function getExampleData() {
  * @param {Array}  allCategories
  * @param {Array}  allTracks
  * @param {Object} attributes
- *
  * @return {Object}
  */
 export function getDerivedSessions( allSessions, allCategories, allTracks, attributes ) {
 	const { chooseSpecificDays, chooseSpecificTracks, chosenDays, chosenTrackIds } = attributes;
 
-	allSessions = deriveSessionStartEndTimes( allSessions );
+	allSessions = deriveSessionStartEndTimes( allSessions, attributes );
 	allSessions = deriveSessionTerms( allSessions, allCategories, allTracks );
 
 	let chosenSessions = Array.from( allSessions );
@@ -385,17 +357,18 @@ export function getDerivedSessions( allSessions, allCategories, allTracks, attri
 /**
  * Replace raw session timestamp with local timezone start/end times.
  *
- * @param {Array} sessions
- *
+ * @param {Array}  sessions
+ * @param {Object} attributes
  * @return {Array}
  */
-function deriveSessionStartEndTimes( sessions ) {
+function deriveSessionStartEndTimes( sessions, attributes ) {
 	return sessions.map( ( session ) => {
 		const durationInMs = parseInt( session.meta._wcpt_session_duration ) * 1000; // Convert to milliseconds.
 
 		session.derived = session.derived || {};
 		session.derived.startTime = parseInt( session.meta._wcpt_session_time ) * 1000;
 		session.derived.endTime = session.derived.startTime + durationInMs;
+		session.derived.timezone = getTimezone( attributes );
 
 		return session;
 	} );
@@ -410,7 +383,6 @@ function deriveSessionStartEndTimes( sessions ) {
  * @param {Array} allSessions
  * @param {Array} allCategories
  * @param {Array} allTracks
- *
  * @return {Array}
  */
 function deriveSessionTerms( allSessions, allCategories, allTracks ) {
@@ -457,7 +429,6 @@ function deriveSessionTerms( allSessions, allCategories, allTracks ) {
  *
  * @param {Object} first
  * @param {Object} second
- *
  * @return {number}
  */
 export function sortBySlug( first, second ) {
@@ -473,7 +444,6 @@ export function sortBySlug( first, second ) {
  *
  * @param {Array} sessions
  * @param {Array} chosenDays
- *
  * @return {Array}
  */
 function filterSessionsByChosenDays( sessions, chosenDays ) {
@@ -483,15 +453,9 @@ function filterSessionsByChosenDays( sessions, chosenDays ) {
 	}
 
 	return sessions.filter( ( session ) => {
-		const date = dateI18n( DATE_SLUG_FORMAT, session.derived.startTime );
-		return chosenDays.includes( date );
+		const day = date( DATE_SLUG_FORMAT, session.derived.startTime, SITE_TIMEZONE );
+		return chosenDays.includes( day );
 	} );
-
-	/*
-	 todo kinda bad UX b/c don't really see the changes happening, below/above fold.
-	 and/or it happens so quick that kind of jarring. maybe add some jumpToBlah() and/or smoothed animation
-	 iirc G has some animation stuff built in for moving blocks around, might be reusable
-	 */
 }
 
 /**
@@ -499,7 +463,6 @@ function filterSessionsByChosenDays( sessions, chosenDays ) {
  *
  * @param {Array} sessions
  * @param {Array} chosenTrackIds
- *
  * @return {Array}
  */
 function filterSessionsByChosenTracks( sessions, chosenTrackIds ) {

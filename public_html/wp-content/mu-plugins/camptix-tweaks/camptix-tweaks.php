@@ -21,6 +21,7 @@ add_filter( 'camptix_form_attendee_info_errors',             __NAMESPACE__ . '\s
 add_action( 'transition_post_status',                        __NAMESPACE__ . '\ticket_sales_opened',          10, 3 );
 add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 3 );
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
+add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
 
 // Attendees
 add_filter( 'camptix_name_order',                            __NAMESPACE__ . '\set_name_order'                      );
@@ -252,11 +253,7 @@ function override_please_login_message( $message ) {
 		wp_login_url( get_redirect_return_url() )
 	);
 
-	$message = str_replace(
-		__( 'Please use your <strong>WordPress.org</strong>* account to log in.', 'wordcamporg' ),
-		$please_login_message,
-		wcorg_login_message( '', get_redirect_return_url() )
-	);
+	$message = wcorg_login_message( $please_login_message, get_redirect_return_url() );
 
 	return $message;
 }
@@ -564,28 +561,24 @@ function load_addons( $addons ) {
  * WordCamp-specific addons.
  */
 function load_custom_addons() {
-	// Allergy field
-	require_once( __DIR__ . '/addons/allergy.php' );
-	// Accommodations field
-	require_once( __DIR__ . '/addons/accommodations.php' );
-	// Code of Conduct field
-	require_once( __DIR__ . '/addons/code-of-conduct.php' );
-	// Privacy field
-	require_once( __DIR__ . '/addons/privacy.php' );
-	// Spam prevention
-	require_once( __DIR__ . '/addons/spam-prevention.php' );
+	// Extra fields.
+	require_once __DIR__ . '/addons/allergy.php';
+	require_once __DIR__ . '/addons/accommodations.php';
+	require_once __DIR__ . '/addons/code-of-conduct.php';
+	require_once __DIR__ . '/addons/health-advisory.php';
+	require_once __DIR__ . '/addons/privacy.php';
 
-	// Ticket types
-	require_once( __DIR__ . '/addons/ticket-types/ticket-types.php' );
+	// Miscellaneous.
+	require_once __DIR__ . '/addons/spam-prevention.php';
+	require_once __DIR__ . '/addons/ticket-types/ticket-types.php';
 
 	// Payment options.
 	if (
 		in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true ) &&
 		! wcorg_skip_feature( 'camptix_payment_options' )
 	) {
-		require_once( __DIR__ . '/addons/class-payment-options.php' );
+		require_once __DIR__ . '/addons/class-payment-options.php';
 	}
-
 }
 
 /**
@@ -635,8 +628,9 @@ function modify_default_options( $options ) {
 function modify_email_templates( $options ) {
 	$sponsors_string = get_global_sponsors_string();
 	$donation_string = get_donation_string();
+	$swag_string = get_swag_store_string();
 
-	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string";
+	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string\n\n$swag_string";
 
 	$templates_that_need_footers = array(
 		'email_template_single_purchase',
@@ -677,12 +671,20 @@ function switch_email_template( $template_slug ) {
 /**
  * Get a string for HTML email footers listing global sponsors.
  *
- * @param array $sponsor_args Args for filtering which sponsors to include.
- *
  * @return string
  */
-function get_global_sponsors_string( $sponsor_args = array() ) {
-	$sponsors = array( 'Jetpack', 'WooCommerce', 'Bluehost', 'GoDaddy', 'Liquid Web', 'GreenGeeks' );
+function get_global_sponsors_string() {
+	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordpress.org
+
+	$posts = get_posts( array(
+		'post_type'      => 'mes',
+		'posts_per_page' => -1,
+	) );
+
+	restore_current_blog();
+
+	$sponsors = wp_list_pluck( $posts, 'post_title' );
+	shuffle( $sponsors );
 
 	$sponsors = array_map(
 		function ( $string ) {
@@ -730,59 +732,16 @@ function get_donation_string() {
 }
 
 /**
- * Get an array of Global Sponsor names and URLs.
+ * Get a string for HTML email footers to link to the WP swag store.
  *
- * @param array $args Args for filtering which sponsors to include.
- *
- * @return array
+ * @return string
  */
-function get_global_sponsors( $args = array() ) {
-	$args = wp_parse_args(
-		$args,
-		array(
-			'region_id' => '',
-			'level_id'  => '',
-		)
+function get_swag_store_string() {
+	return sprintf(
+	/* translators: %s is a placeholder for a URL. */
+		__( 'Wear your love of WordPress today with this exclusive <b>10%% WordCamp discount</b> at the <a href="%s">WordPress Swag Store</a>!', 'wordcamporg' ),
+		'https://mercantile.wordpress.org/?coupon-code=wordcamps2023&sc-page=shop&utm_source=receipt&utm_medium=email&utm_campaign=mercantile&utm_content=wordcamp_discount'
 	);
-
-	$sponsors = array();
-
-	switch_to_blog( BLOG_ID_CURRENT_SITE );
-
-	$sponsor_posts = get_posts( array(
-		'post_type'   => 'mes',
-		'post_status' => 'publish',
-		'numberposts' => -1,
-	) );
-
-	foreach ( $sponsor_posts as $sponsor_post ) {
-		$sponsorships = $sponsor_post->mes_regional_sponsorships;
-
-		if ( $args['region_id'] ) {
-			if ( ! isset( $sponsorships[ $args['region_id'] ] ) || empty( $sponsorships[ $args['region_id'] ] ) ) {
-				continue;
-			}
-
-			$sponsorships = array_intersect_key( $sponsorships, array( $args['region_id'] => '' ) );
-		}
-
-		if ( $args['level_id'] ) {
-			$levels = array_map( 'absint', $sponsorships );
-
-			if ( ! in_array( $args['level_id'], $levels, true ) ) {
-				continue;
-			}
-		}
-
-		$sponsors[] = array(
-			'name' => $sponsor_post->post_title,
-			'url'  => $sponsor_post->mes_website,
-		);
-	}
-
-	restore_current_blog();
-
-	return $sponsors;
 }
 
 /**
@@ -917,16 +876,14 @@ function modify_shortcode_contents( $shortcode_contents, $tix_action ) {
 			$current_wordcamp = get_wordcamp_post();
 			$region_id = isset( $current_wordcamp->meta['Multi-Event Sponsor Region'][0] ) ? $current_wordcamp->meta['Multi-Event Sponsor Region'][0] : '';
 
-			$sponsors_string = get_global_sponsors_string( array(
-				'region_id' => $region_id,
-				'level_id'  => 3040794, // Gold
-			) );
+			$sponsors_string = get_global_sponsors_string();
 			$donation_string = get_donation_string();
+			$swag_string = get_swag_store_string();
 
 			if ( false !== strpos( $shortcode_contents, $content_end ) ) {
 				$shortcode_contents = str_replace(
 					$content_end,
-					wpautop( "$sponsors_string\n\n$donation_string" ) . $content_end,
+					wpautop( "$sponsors_string\n\n$donation_string\n\n$swag_string" ) . $content_end,
 					$shortcode_contents
 				);
 			}
@@ -1044,3 +1001,24 @@ function stripe_default_checkout_image_url( $url ) {
 
 	return $url;
 }
+
+/**
+ * Restrict the max number of tickets per order to one for specific site(s).
+ *
+ * @param int $max Default ticket maximum.
+ * @return int Maybe updated max ticket amount.
+ */
+function limit_one_ticket_per_order( $max ) {
+	$limited_sites = array(
+		1056, // testing.wordcamp.org/2019.
+		1415, // communitysummit.wordcamp.org/2023.
+	);
+
+	$current_site_id = get_current_blog_id();
+	if ( in_array( $current_site_id, $limited_sites, true ) ) {
+		return 1;
+	}
+
+	return $max;
+}
+

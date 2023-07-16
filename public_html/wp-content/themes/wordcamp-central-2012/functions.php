@@ -134,8 +134,12 @@ class WordCamp_Central_Theme {
 
 				// Jetpack will do the is_email check for us
 				$jetpack_subscriptions = Jetpack_Subscriptions::init();
-				$email                 = $_REQUEST['wccentral-subscribe-email'];
-				$subscribe             = $jetpack_subscriptions->subscribe( $email, 0, false );
+				$email                 = wp_unslash( $_REQUEST['wccentral-subscribe-email'] );
+				$extra_data            = array(
+					'source'      => 'homepage-widget',
+					'server_data' => jetpack_subscriptions_cherry_pick_server_data(),
+				);
+				$subscribe             = $jetpack_subscriptions->subscribe( $email, 0, false, $extra_data );
 
 				// The following part is taken from the Jetpack subscribe widget (subscriptions.php)
 				if ( is_wp_error( $subscribe ) ) {
@@ -167,6 +171,8 @@ class WordCamp_Central_Theme {
 					$redirect = add_query_arg( 'subscribe', 'success' );
 				}
 
+				$redirect = remove_query_arg( array( 'wccentral-form-action', 'wccentral-subscribe-email' ), $redirect );
+
 				wp_safe_redirect( esc_url_raw( $redirect ) );
 				exit;
 				break;
@@ -179,8 +185,20 @@ class WordCamp_Central_Theme {
 	 * Enqueue scripts and styles.
 	 */
 	static function enqueue_scripts() {
-		wp_enqueue_style( 'central', get_stylesheet_uri(), array(), 15 );
-		wp_enqueue_script( 'wordcamp-central', get_stylesheet_directory_uri() . '/js/central.js', array( 'jquery', 'underscore' ), 4, true );
+		wp_enqueue_style(
+			'central',
+			get_stylesheet_uri(),
+			array(),
+			filemtime( __DIR__ . '/style.css' )
+		);
+
+		wp_enqueue_script(
+			'wordcamp-central',
+			get_stylesheet_directory_uri() . '/js/central.js',
+			array( 'jquery', 'underscore' ),
+			filemtime( __DIR__ . '/js/central.js' ),
+			true
+		);
 
 		wp_localize_script( 'wordcamp-central', 'wordcampCentralOptions', self::get_javascript_options() );
 
@@ -190,10 +208,6 @@ class WordCamp_Central_Theme {
 		 */
 		if ( is_singular() && get_option( 'thread_comments' ) ) {
 			wp_enqueue_script( 'comment-reply' );
-		}
-
-		if ( is_front_page() || is_page( 'about' ) ) {
-			wp_enqueue_script( 'jquery-cycle', get_stylesheet_directory_uri() . '/js/jquery.cycle.min.js', array( 'jquery' ) );
 		}
 
 		if ( is_page( 'about' ) || is_page( 'schedule' ) ) {
@@ -298,9 +312,17 @@ class WordCamp_Central_Theme {
 		switch ( $map_id ) {
 			case 'schedule':
 				$parameters['meta_query'][] = array(
-					'key'     => 'Start Date (YYYY-mm-dd)',
-					'value'   => strtotime( '-2 days' ),
-					'compare' => '>',
+					'relation' => 'OR',
+					array(
+						'key'     => 'Start Date (YYYY-mm-dd)',
+						'value'   => strtotime( '-2 days' ),
+						'compare' => '>',
+					),
+					array(
+						'key'     => 'End Date (YYYY-mm-dd)',
+						'value'   => strtotime( 'today' ),
+						'compare' => '>',
+					),
 				);
 				break;
 		}
@@ -312,19 +334,39 @@ class WordCamp_Central_Theme {
 			if ( 'schedule' === $map_id ) {
 				$marker_type = 'upcoming';
 			} else {
-				$marker_type = get_post_meta( $marker->ID, 'Start Date (YYYY-mm-dd)', true ) > strtotime( '-2 days' ) ? 'upcoming' : 'past';
+				$start_date = (int) get_post_meta( $marker->ID, 'Start Date (YYYY-mm-dd)', true );
+				$end_date   = (int) get_post_meta( $marker->ID, 'End Date (YYYY-mm-dd)', true );
+
+				$marker_type = 'upcoming';
+				if (
+					( $end_date && $end_date < time() ) ||
+					$start_date <= strtotime( '-2 days' )
+				 ) {
+					$marker_type = 'past';
+				}
 			}
 
 			$coordinates = get_post_meta( $marker->ID, '_venue_coordinates', true );
 
+			// Try the host coordinates (for online events).
+			if ( ! $coordinates ) {
+				$coordinates = get_post_meta( $marker->ID, '_host_coordinates', true );
+			}
+
+			// No location found, skip this one.
 			if ( ! $coordinates ) {
 				continue;
+			}
+
+			$wordcamp_date = wcpt_get_wordcamp_start_date( $marker->ID );
+			if ( wcpt_get_wordcamp_end_date( $marker->ID ) ) {
+				$wordcamp_date .= '-' . wcpt_get_wordcamp_end_date( $marker->ID );
 			}
 
 			$markers[ $marker->ID ] = array(
 				'id'        => $marker->ID,
 				'name'      => wcpt_get_wordcamp_title( $marker->ID ),
-				'dates'     => wcpt_get_wordcamp_start_date( $marker->ID ),
+				'dates'     => $wordcamp_date,
 				'location'  => get_post_meta( $marker->ID, 'Location', true ),
 				'venueName' => get_post_meta( $marker->ID, 'Venue Name', true ),
 				'url'       => self::get_best_wordcamp_url( $marker->ID ),
@@ -512,7 +554,12 @@ class WordCamp_Central_Theme {
 	 * Returns true if subscriptions are available.
 	 */
 	public static function can_subscribe() {
-		return class_exists( 'Jetpack_Subscriptions' ) && is_callable( array( 'Jetpack_Subscriptions', 'subscribe' ) );
+		return (
+			class_exists( 'Jetpack_Subscriptions' ) &&
+			is_callable( array( 'Jetpack_Subscriptions', 'init' ) ) &&
+			is_callable( array( Jetpack_Subscriptions::init(), 'subscribe' ) ) &&
+			function_exists( 'jetpack_subscriptions_cherry_pick_server_data' )
+		);
 	}
 
 	/**
@@ -526,7 +573,9 @@ class WordCamp_Central_Theme {
 		$GLOBALS['comment'] = $comment;
 
 		switch ( $comment->comment_type ) :
-			case '': ?>
+			case '':
+			case 'comment':
+				?>
 				<li <?php comment_class(); ?> id="li-comment-<?php comment_ID(); ?>">
 					<div id="comment-<?php comment_ID(); ?>" class="comment-container">
 						<div class="comment-author vcard">
@@ -608,9 +657,15 @@ class WordCamp_Central_Theme {
 				'order'          => 'ASC',
 
 				'meta_query' => array(
+					'relation' => 'OR',
 					array(
 						'key'     => 'Start Date (YYYY-mm-dd)',
 						'value'   => strtotime( '-2 days' ),
+						'compare' => '>',
+					),
+					array(
+						'key'     => 'End Date (YYYY-mm-dd)',
+						'value'   => strtotime( 'today' ),
 						'compare' => '>',
 					),
 				),
@@ -639,7 +694,7 @@ class WordCamp_Central_Theme {
 			$end_year   = wcpt_get_wordcamp_end_date( $wordcamp_id, 'Y' );
 		}
 
-		echo esc_html( "$start_month $start_day" );
+		echo esc_html( "$start_day $start_month" );
 
 		if ( $end_day && ! $one_day_event ) {
 			if ( $show_year && $start_year !== $end_year ) {
@@ -648,11 +703,7 @@ class WordCamp_Central_Theme {
 
 			echo '&ndash;';
 
-			if ( $start_month !== $end_month ) {
-				echo esc_html( "$end_month " );
-			}
-
-			echo esc_html( $end_day );
+			echo esc_html( $end_day . " $end_month" );
 
 			if ( $show_year ) {
 				echo esc_html( ", $end_year" );

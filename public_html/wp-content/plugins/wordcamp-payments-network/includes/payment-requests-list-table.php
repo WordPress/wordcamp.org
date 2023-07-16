@@ -46,13 +46,10 @@ class Payment_Requests_List_Table extends WP_List_Table {
 	public function prepare_items() {
 		global $wpdb;
 
-		$sql     = sprintf( 'SELECT SQL_CALC_FOUND_ROWS blog_id, post_id FROM `%s` WHERE 1=1 ', Payment_Requests_Dashboard::get_table_name() );
-		$view    = Payment_Requests_Dashboard::get_current_tab();
-		$where   = '';
-		$orderby = '';
-		$limit   = '';
-
+		$view     = Payment_Requests_Dashboard::get_current_tab();
+		$where    = '';
 		$per_page = 10;
+		$paged    = $_REQUEST['paged'] ?? 1;
 		$orderby  = 'due';
 		$order    = 'asc';
 
@@ -77,7 +74,12 @@ class Payment_Requests_List_Table extends WP_List_Table {
 		}
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
-			$query = Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] );
+			// Support searching for both amounts and names.
+			if ( is_numeric( $_REQUEST['s'] ) ) {
+				$query = Budgets_Dashboard\formatted_amount_to_float( $_REQUEST['s'] );
+			} else {
+				$query = wp_unslash( $_REQUEST['s'] );
+			}
 
 			$where .= $wpdb->prepare(
 				' AND `keywords` LIKE %s ',
@@ -89,20 +91,24 @@ class Payment_Requests_List_Table extends WP_List_Table {
 			$orderby = $_REQUEST['orderby'];
 		}
 
-		if ( ! empty( $_REQUEST['order'] ) && in_array( $_REQUEST['order'], array( 'asc', 'desc' ) ) ) {
-			$order = $_REQUEST['order'];
+		if ( ! empty( $_REQUEST['order'] ) && 'desc' === $_REQUEST['order'] ) {
+			$order = 'desc';
 		}
 
-		$orderby = sprintf( ' ORDER BY `%s` %s ', $orderby, $order );
+		$table_name = Payment_Requests_Dashboard::get_table_name();
 
-		$paged = isset( $_REQUEST['paged'] ) ? absint( $_REQUEST['paged'] ) : 1;
+		$this->items = $wpdb->get_results( $wpdb->prepare( "
+			SELECT SQL_CALC_FOUND_ROWS blog_id, post_id
+			FROM `$table_name`
+			WHERE 1=1 $where
+			ORDER BY `$orderby` $order
+			LIMIT %d
+			OFFSET %d",
+			$per_page,
+			$per_page * ( $paged - 1 )
+		) );
 
-		$limit .= sprintf( ' LIMIT %d OFFSET %d ', $per_page, $per_page * ( $paged - 1 ) );
-
-		$sql .= $where . $orderby . $limit;
-
-		$this->items = $wpdb->get_results( $sql );
-		$total_items = $wpdb->get_var( "SELECT FOUND_ROWS();" );
+		$total_items = $wpdb->get_var( 'SELECT FOUND_ROWS();' );
 
 		$this->set_pagination_args( array(
 			'total_items' => $total_items,

@@ -1,13 +1,18 @@
 <?php
 /**
  * Plugin Name: WordCamp.org Post Types
- * Plugin Description: Sessions, Speakers, Sponsors and much more.
+ * Plugin Description: Custom post types for Sessions, Speakers, Sponsors, Organizers, Volunteers.
  */
 
-require 'inc/back-compat.php';
+require_once 'inc/utilities.php';
+require_once 'inc/back-compat.php';
 require_once 'inc/favorite-schedule-shortcode.php';
 require_once 'inc/privacy.php';
 require_once 'inc/deprecated.php';
+
+use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
+use function WordCamp\Theme_Templates\site_supports_block_templates;
+use function WordCamp\Blocks\has_block_with_attrs;
 
 // Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2
 // greater than the core-defined ep_masks, but could potentially conflict with another plugin.
@@ -36,10 +41,12 @@ class WordCamp_Post_Types_Plugin {
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue_scripts' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'wp_enqueue_scripts' ) );
 
-		add_action( 'save_post', array( $this, 'save_post_speaker' ), 10, 2 );
 		add_action( 'save_post', array( $this, 'save_post_session' ), 10, 2 );
-		add_action( 'save_post', array( $this, 'save_post_organizer' ), 10, 2);
 		add_action( 'save_post', array( $this, 'save_post_sponsor' ), 10, 2);
+
+		add_filter( 'updated_post_meta', array( $this, 'update_wcorg_user_id' ), 10, 4 );
+		add_filter( 'added_post_meta', array( $this, 'update_wcorg_user_id' ), 10, 4 );
+		add_filter( 'deleted_post_meta', array( $this, 'delete_wcorg_user_id' ), 10, 3 );
 
 		add_filter( 'manage_wcb_speaker_posts_columns', array( $this, 'manage_post_types_columns' ) );
 		add_filter( 'manage_wcb_session_posts_columns', array( $this, 'manage_post_types_columns' ) );
@@ -63,12 +70,16 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'the_content', array( $this, 'add_video_info_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_categories_to_session_posts' ) );
 		add_filter( 'the_content', array( $this, 'add_session_info_to_speaker_posts' ) );
+		add_filter( 'the_content', array( __CLASS__, 'add_nofollow_to_sponsor_links' ), 15 ); // After p2 `make_clickable`.
+		add_filter( 'the_excerpt', array( __CLASS__, 'add_nofollow_to_sponsor_links' ) );
+		add_filter( 'get_post_metadata', array( $this, 'hide_featured_image_on_people' ), 10, 3 );
 
 		add_filter( 'dashboard_glance_items', array( $this, 'glance_items' ) );
 		add_filter( 'option_default_comment_status', array( $this, 'default_comment_ping_status' ) );
 		add_filter( 'option_default_ping_status', array( $this, 'default_comment_ping_status' ) );
 
-		add_action( 'init', array( $this, 'rest_init' ), 9 );
+		// Needs to run before WordCamp\Blocks\register_assets.
+		add_action( 'init', array( $this, 'rest_init' ), 8 );
 	}
 
 	/**
@@ -220,9 +231,11 @@ class WordCamp_Post_Types_Plugin {
 		$current_screen = get_current_screen();
 
 		// Order by session time.
-		if ( 'edit-wcb_session' === $current_screen->id && $query->get( 'orderby' ) === '_wcpt_session_time' ) {
-			$query->set( 'meta_key', '_wcpt_session_time' );
-			$query->set( 'orderby', 'meta_value_num' );
+		if ( 'edit-wcb_session' === $current_screen->id ) {
+			if ( $query->get( 'orderby' ) === '_wcpt_session_time' ) {
+				$query->set( 'meta_key', '_wcpt_session_time' );
+				$query->set( 'orderby', 'meta_value_num' );
+			}
 		}
 	}
 
@@ -253,28 +266,16 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		$path        = __DIR__ . '/build/sessions.js';
-		$deps_path   = __DIR__ . '/build/sessions.asset.php';
-		$script_info = file_exists( $deps_path )
-			? require( $deps_path )
-			: array(
-				'dependencies' => array(),
-				'version' => filemtime( $path ),
-			);
-
-		wp_register_script(
-			'wcb-session-meta',
-			plugins_url( 'build/sessions.js', __FILE__ ),
-			$script_info['dependencies'],
-			$script_info['version'],
-			true
-		);
+		$this->register_script( 'wcb-session-meta', 'build/sessions.js' );
+		$this->register_script( 'wcb-speaker-meta', 'build/speakers.js' );
+		$this->register_script( 'wcb-organizer-meta', 'build/organizers.js' );
+		$this->register_script( 'wcb-volunteer-meta', 'build/volunteers.js' );
 
 		// Enqueues scripts and styles for session admin page.
 		if ( 'wcb_session' == $post_type ) {
 			wp_enqueue_script( 'wcb-session-meta' );
 
-			$session_time = false;
+			$session_time         = false;
 			$most_recent_sessions = get_posts( array(
 				'post_type'   => 'wcb_session',
 				'orderby'     => 'modified',
@@ -288,7 +289,7 @@ class WordCamp_Post_Types_Plugin {
 
 			if ( ! $session_time ) {
 				$wordcamp_start_date = get_wordcamp_post()->meta['Start Date (YYYY-mm-dd)'][0];
-				$session_time = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
+				$session_time        = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
 			}
 
 			$settings = array(
@@ -305,10 +306,47 @@ class WordCamp_Post_Types_Plugin {
 			);
 		}
 
-		// Enqueues scripts and styles for sponsors admin page.
+		// Enqueues scripts and styles for sponsors editor page.
 		if ( 'wcb_sponsor' === $post_type ) {
 			wp_enqueue_script( 'wcb-spon' );
 		}
+
+		// Enqueues scripts and styles for speakers editor pages.
+		if ( 'wcb_speaker' === $post_type ) {
+			wp_enqueue_script( 'wcb-speaker-meta' );
+		}
+
+		// Enqueues scripts and styles for organizers editor pages.
+		if ( 'wcb_organizer' === $post_type ) {
+			wp_enqueue_script( 'wcb-organizer-meta' );
+		}
+
+		// Enqueues scripts and styles for volunteer editor pages.
+		if ( 'wcb_volunteer' === $post_type ) {
+			wp_enqueue_script( 'wcb-volunteer-meta' );
+		}
+	}
+
+	/**
+	 * Register a script generated by `wp-scripts`
+	 */
+	public function register_script( $handle, $path ) {
+		$full_path   = __DIR__ . '/' . $path;
+		$deps_path   = __DIR__ . '/' . str_replace( '.js', '.asset.php', $path );
+		$script_info = file_exists( $deps_path )
+			? require $deps_path
+			: array(
+				'dependencies' => array(),
+				'version' => filemtime( $full_path ),
+			);
+
+		wp_register_script(
+			$handle,
+			plugins_url( $path, __FILE__ ),
+			$script_info['dependencies'],
+			$script_info['version'],
+			true
+		);
 	}
 
 	/**
@@ -330,14 +368,23 @@ class WordCamp_Post_Types_Plugin {
 
 		switch ( $screen->id ) {
 			case 'edit-wcb_organizer':
+			case 'edit-wcb_volunteer':
 			case 'edit-wcb_speaker':
 			case 'edit-wcb_sponsor':
 			case 'edit-wcb_session':
 			case 'wcb_sponsor':
 			case 'dashboard':
-				wp_enqueue_style( 'wcpt-admin', plugins_url( '/css/admin.css', __FILE__ ), array(), 2 );
+				wp_enqueue_style(
+					'wcpt-admin',
+					plugins_url( '/css/admin.css', __FILE__ ),
+					array(),
+					filemtime( __DIR__ . '/css/admin.css' )
+				);
 				break;
 			case 'wcb_session':
+			case 'wcb_organizer':
+			case 'wcb_speaker':
+			case 'wcb_volunteer':
 				wp_enqueue_style(
 					'wcpt-editor',
 					plugins_url( '/css/editor.css', __FILE__ ),
@@ -365,6 +412,11 @@ class WordCamp_Post_Types_Plugin {
 		$tracks_explicitly_specified = 'all' !== $attr['tracks'];
 		$sessions                    = get_schedule_sessions( $attr['date'], $tracks_explicitly_specified, $tracks );
 		$columns                     = get_schedule_columns( $tracks, $sessions, $tracks_explicitly_specified );
+
+		// If there are no columns to display, return early to prevent an empty table.
+		if ( count( $columns ) < 1 ) {
+			return '';
+		}
 
 		$class_names = 'wcpt-schedule';
 		// Twenty Twenty has a very narrow content width, use wide width when displaying more than 2 tracks.
@@ -717,7 +769,7 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_avatar_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( ! $this->is_single_cpt_post( 'wcb_speaker') ) {
+		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_speaker') ) {
 			return $content;
 		}
 
@@ -726,7 +778,13 @@ class WordCamp_Post_Types_Plugin {
 			return $content;
 		}
 
-		$avatar = get_avatar( get_post_meta( $post->ID, '_wcb_speaker_email', true ) );
+		// If the "Avatar" block is in the post content, we don't need to inject anything.
+		if ( has_block( 'wordcamp/avatar', $post ) ) {
+			return $content;
+		}
+
+		$avatar = get_avatar_or_image( $post->ID, 96 );
+
 		return '<div class="speaker-avatar">' . $avatar . '</div>' . $content;
 	}
 
@@ -745,12 +803,17 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_session_post_speaker_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session') ) {
+		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session') ) {
 			return $content;
 		}
 
 		$site_id = get_current_blog_id();
 		if ( $site_id <= apply_filters( 'wcpt_session_post_speaker_info_min_site_id', 463 ) && ! in_array( $site_id, $enabled_site_ids, true ) ) {
+			return $content;
+		}
+
+		// If the "Session Speakers" block is in the post content, we don't need to inject anything.
+		if ( has_block( 'wordcamp/session-speakers', $post ) ) {
 			return $content;
 		}
 
@@ -820,7 +883,12 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+			return $content;
+		}
+
+		// If the "Meta Link" block is in the post content, with the slides key, we don't need to inject anything.
+		if ( has_block_with_attrs( 'wordcamp/meta-link', array( 'key' => '_wcpt_session_slides' ), $post ) ) {
 			return $content;
 		}
 
@@ -866,7 +934,12 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+			return $content;
+		}
+
+		// If the "Meta Link" block is in the post content, with the video key, we don't need to inject anything.
+		if ( has_block_with_attrs( 'wordcamp/meta-link', array( 'key' => '_wcpt_session_video' ), $post ) ) {
 			return $content;
 		}
 
@@ -899,7 +972,12 @@ class WordCamp_Post_Types_Plugin {
 	public function add_session_categories_to_session_posts( $content ) {
 		global $post;
 
-		if ( ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_session' ) ) {
+			return $content;
+		}
+
+		// If the "Post Terms" block is in the post content, with the session category term, we don't need to inject anything.
+		if ( has_block_with_attrs( 'core/post-terms', array( 'term' => 'wcb_session_category' ), $post ) ) {
 			return $content;
 		}
 
@@ -953,7 +1031,12 @@ class WordCamp_Post_Types_Plugin {
 		global $post;
 		$enabled_site_ids = apply_filters( 'wcpt_speaker_post_session_info_enabled_site_ids', array( 364 ) );    // 2014.sf
 
-		if ( ! $this->is_single_cpt_post( 'wcb_speaker') ) {
+		if ( site_supports_block_templates() || ! $this->is_single_cpt_post( 'wcb_speaker') ) {
+			return $content;
+		}
+
+		// If the "Speaker Sessions" block is in the post content, we don't need to inject anything.
+		if ( has_block( 'wordcamp/speaker-sessions', $post ) ) {
 			return $content;
 		}
 
@@ -1000,70 +1083,129 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
+	 * Add `rel="nofollow"` to sponsor links.
+	 *
+	 * These aren't organic, so adding `nofollow` is the right thing to do, and also avoids us and the sponsor
+	 * being penalized in rankings for not properly disclosing relationships. `sponsored` isn't used because we
+	 * don't consider it a paid link internally.
+	 *
+	 * @link https://developers.google.com/search/docs/crawling-indexing/qualify-outbound-links
+	 */
+	public static function add_nofollow_to_sponsor_links( string $content ) : string {
+		$post = get_post();
+
+		// Add `nofollow` to all links in Sponsor post type, to match links to social media profiles etc.
+		if ( $post instanceof WP_Post && 'wcb_sponsor' === $post->post_type ) {
+			$content = wp_unslash( wp_rel_nofollow( $content ) );
+
+			return $content;
+		}
+
+		$sponsor_domains = self::get_sponsor_domains();
+
+		// Modified version of `wp_rel_nofollow()`, to only target sponsor links.
+		$content = preg_replace_callback(
+			'|<a (.+?)>|i',
+			static function( array $matches ) use ( $sponsor_domains ) : string {
+				$domain = '';
+				$text   = $matches[0];
+				$atts   = wp_kses_hair( $matches[1], wp_allowed_protocols() );
+
+				if ( ! empty( $atts['href']['value'] ) ) {
+					$url = wp_parse_url( $atts['href']['value'] );
+
+					if ( isset( $url['scheme'], $url['host'] ) ) {
+						if ( 0 === stripos( $url['scheme'], 'http' ) ) {
+							$domain = $url['host'];
+						}
+					}
+				}
+
+				if ( in_array( $domain, $sponsor_domains, true ) ) {
+					$text = wp_rel_callback( $matches, 'nofollow' );
+				}
+
+				return $text;
+			},
+			$content
+		);
+
+		return $content;
+	}
+
+	/**
+	 * Get all of the domains assigned to Sponsor posts.
+	 *
+	 * This will include both canonical and `www` domains for each sponsor.
+	 */
+	public static function get_sponsor_domains() : array {
+		$domains = array();
+
+		$sponsors = get_posts( array(
+			'fields'         => 'ids',
+			'post_type'      => 'wcb_sponsor',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+		) );
+
+		foreach ( $sponsors as $sponsor_id ) {
+			$website = get_post_meta( $sponsor_id, '_wcpt_sponsor_website', true );
+			$domain  = wp_parse_url( $website, PHP_URL_HOST );
+
+			if ( $domain ) {
+				$domains[] = $domain;
+
+				if ( 'www.' === substr( $domain, 0, 4 ) ) {
+					$domains[] = substr( $domain, 4 );
+				} else {
+					$domains[] = 'www.' . $domain;
+				}
+			}
+		}
+
+		return $domains;
+	}
+
+	/**
+	 * Prevent featured images from being displayed on organizer & speaker pages
+	 * by shortcutting the thumbnail lookup. This preserves the existing avatar
+	 * behavior - the avatar is already injected into the content  in
+	 * `add_avatar_to_speaker_posts`. Without this hook, the image would show
+	 * up twice.
+	 *
+	 * See jetpack_featured_images_remove_post_thumbnail.
+	 *
+	 * @param mixed  $value     The value to return, either a single metadata value or an array
+	 *                          of values depending on the value of `$single`. Default null.
+	 * @param int    $object_id ID of the object metadata is for.
+	 * @param string $meta_key  Metadata key.
+	 * @return mixed False if a speaker/organizer thumbnail, otherwise fall through to the default value.
+	 */
+	public function hide_featured_image_on_people( $value, $object_id, $meta_key ) {
+		if ( '_thumbnail_id' !== $meta_key ) {
+			return $value;
+		}
+
+		// Allow the featured image ID through in REST API requests.
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return $value;
+		}
+
+		$post_types = array( 'wcb_speaker', 'wcb_organizer' );
+		if ( in_array( get_post_type( $object_id ), $post_types, true ) ) {
+			return false;
+		}
+
+		return $value;
+	}
+
+	/**
 	 * Fired during add_meta_boxes, adds extra meta boxes to our custom post types.
 	 */
 	public function add_meta_boxes() {
-		add_meta_box( 'speaker-info',      __( 'Speaker Info',      'wordcamporg'  ), array( $this, 'metabox_speaker_info'      ), 'wcb_speaker',   'side'   );
-		add_meta_box( 'organizer-info',    __( 'Organizer Info',    'wordcamporg'  ), array( $this, 'metabox_organizer_info'    ), 'wcb_organizer', 'side'   );
 		add_meta_box( 'sponsor-info',      __( 'Sponsor Info',      'wordcamporg'  ), array( $this, 'metabox_sponsor_info'      ), 'wcb_sponsor',   'normal' );
 		add_meta_box( 'sponsor-agreement', __( 'Sponsor Agreement', 'wordcamporg'  ), array( $this, 'metabox_sponsor_agreement' ), 'wcb_sponsor',   'side'   );
 		add_meta_box( 'invoice-sponsor',   __( 'Invoice Sponsor',   'wordcamporg'  ), array( $this, 'metabox_invoice_sponsor'   ), 'wcb_sponsor',   'side'   );
-	}
-
-	/**
-	 * Used by the Speakers post type
-	 */
-	public function metabox_speaker_info() {
-		global $post;
-		$email = get_post_meta( $post->ID, '_wcb_speaker_email', true );
-
-		$wporg_username = '';
-		$user_id        = get_post_meta( $post->ID, '_wcpt_user_id', true );
-		$wporg_user     = get_user_by( 'id', $user_id );
-
-		if ( $wporg_user ) {
-			$wporg_username = $wporg_user->user_login;
-		}
-		?>
-
-		<?php wp_nonce_field( 'edit-speaker-info', 'wcpt-meta-speaker-info' ); ?>
-
-		<p>
-			<label for="wcpt-gravatar-email"><?php esc_html_e( 'Gravatar Email:', 'wordcamporg' ); ?></label>
-			<input type="text" class="widefat" id="wcpt-gravatar-email" name="wcpt-gravatar-email" value="<?php echo esc_attr( $email ); ?>" />
-		</p>
-
-		<p>
-			<label for="wcpt-wporg-username"><?php esc_html_e( 'WordPress.org Username:', 'wordcamporg' ); ?></label>
-			<input type="text" class="widefat" id="wcpt-wporg-username" name="wcpt-wporg-username" value="<?php echo esc_attr( $wporg_username ); ?>" />
-		</p>
-
-		<?php
-	}
-
-	/**
-	 * Rendered in the Organizer post type
-	 */
-	public function metabox_organizer_info() {
-		global $post;
-
-		$wporg_username = '';
-		$user_id        = get_post_meta( $post->ID, '_wcpt_user_id', true );
-		$wporg_user     = get_user_by( 'id', $user_id );
-
-		if ( $wporg_user ) {
-			$wporg_username = $wporg_user->user_login;
-		}
-		?>
-
-		<?php wp_nonce_field( 'edit-organizer-info', 'wcpt-meta-organizer-info' ); ?>
-
-		<p>
-			<label for="wcpt-wporg-username"><?php esc_html_e( 'WordPress.org Username:', 'wordcamporg' ); ?></label>
-			<input type="text" class="widefat" id="wcpt-wporg-username" name="wcpt-wporg-username" value="<?php echo esc_attr( $wporg_username ); ?>" />
-		</p>
-
-		<?php
 	}
 
 	/**
@@ -1172,53 +1314,6 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
-	 * Fired when a post is saved, makes sure additional metadata is also updated.
-	 */
-	public function save_post_speaker( $post_id, $post ) {
-		if ( wp_is_post_revision( $post_id ) || 'wcb_speaker' !== $post->post_type || ! current_user_can( 'edit_post', $post_id ) ) {
-			return;
-		}
-
-		if ( isset( $_POST['wcpt-meta-speaker-info'] ) && wp_verify_nonce( $_POST['wcpt-meta-speaker-info'], 'edit-speaker-info' ) ) {
-			$email          = sanitize_text_field( $_POST['wcpt-gravatar-email'] );
-			$wporg_username = sanitize_text_field( $_POST['wcpt-wporg-username'] );
-			$wporg_user     = wcorg_get_user_by_canonical_names( $wporg_username );
-
-			if ( empty( $email ) ) {
-				delete_post_meta( $post_id, '_wcb_speaker_email' );
-			} elseif ( $email && is_email( $email ) ) {
-				update_post_meta( $post_id, '_wcb_speaker_email', $email );
-			}
-
-			if ( ! $wporg_user ) {
-				delete_post_meta( $post_id, '_wcpt_user_id' );
-			} else {
-				update_post_meta( $post_id, '_wcpt_user_id', $wporg_user->ID );
-			}
-		}
-	}
-
-	/**
-	 * When an Organizer post is saved, update some meta data.
-	 */
-	public function save_post_organizer( $post_id, $post ) {
-		if ( wp_is_post_revision( $post_id ) || 'wcb_organizer' !== $post->post_type || ! current_user_can( 'edit_post', $post_id ) ) {
-			return;
-		}
-
-		if ( isset( $_POST['wcpt-meta-organizer-info'] ) && wp_verify_nonce( $_POST['wcpt-meta-organizer-info'], 'edit-organizer-info' ) ) {
-			$wporg_username = sanitize_text_field( $_POST['wcpt-wporg-username'] );
-			$wporg_user     = wcorg_get_user_by_canonical_names( $wporg_username );
-
-			if ( ! $wporg_user ) {
-				delete_post_meta( $post_id, '_wcpt_user_id' );
-			} else {
-				update_post_meta( $post_id, '_wcpt_user_id', $wporg_user->ID );
-			}
-		}
-	}
-
-	/**
 	 * Fires after a session post is saved.
 	 *
 	 * Set the speaker as the author of the session post, so the single view doesn't confuse users who see
@@ -1300,6 +1395,38 @@ class WordCamp_Post_Types_Plugin {
 	}
 
 	/**
+	 * Save the speaker's wp.org user ID when the username is updated.
+	 *
+	 * @param int    $meta_id   The meta ID after successful update.
+	 * @param int    $object_id ID of the object metadata is for.
+	 * @param string $meta_key  Metadata key.
+	 * @param mixed  $value     Metadata value.
+	 */
+	public function update_wcorg_user_id( $meta_id, $object_id, $meta_key, $value ) {
+		if ( '_wcpt_user_name' === $meta_key ) {
+			$wporg_user = wcorg_get_user_by_canonical_names( $value );
+			if ( $wporg_user instanceof WP_User ) {
+				update_post_meta( $object_id, '_wcpt_user_id', absint( $wporg_user->ID ) );
+			} else {
+				delete_post_meta( $object_id, '_wcpt_user_id' );
+			}
+		}
+	}
+
+	/**
+	 * Remove the speaker's user ID when the name meta is deleted.
+	 *
+	 * @param string[] $unused    An array of metadata entry IDs to delete.
+	 * @param int      $object_id ID of the object metadata is for.
+	 * @param string   $meta_key  Metadata key.
+	 */
+	public function delete_wcorg_user_id( $unused, $object_id, $meta_key ) {
+		if ( '_wcpt_user_name' === $meta_key ) {
+			delete_post_meta( $object_id, '_wcpt_user_id' );
+		}
+	}
+
+	/**
 	 * Registers the custom post types, runs during init.
 	 */
 	public function register_post_types() {
@@ -1329,7 +1456,7 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'speaker',
 					'with_front' => true,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'comments', 'custom-fields' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'comments', 'custom-fields', 'thumbnail' ),
 				'menu_position'   => 20,
 				'public'          => true,
 				'show_ui'         => true,
@@ -1450,10 +1577,9 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'organizer',
 					'with_front' => false,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail' ),
 				'menu_position'   => 22,
-				'public'          => false,
-				// todo public or publicly_queryable = true, so consistent with others? at the very least set show_in_json = true.
+				'public'          => true,
 				'show_ui'         => true,
 				'can_export'      => true,
 				'capability_type' => 'post',
@@ -1462,6 +1588,44 @@ class WordCamp_Post_Types_Plugin {
 				'show_in_rest'    => true,
 				'rest_base'       => 'organizers',
 				'menu_icon'       => 'dashicons-groups',
+			)
+		);
+
+		// Volunteer post type labels.
+		$labels = array(
+			'name'               => __( 'Volunteers',                   'wordcamporg' ),
+			'singular_name'      => __( 'Volunteer',                    'wordcamporg' ),
+			'add_new'            => __( 'Add New',                      'wordcamporg' ),
+			'add_new_item'       => __( 'Add New Volunteer',            'wordcamporg' ),
+			'edit'               => __( 'Edit',                         'wordcamporg' ),
+			'edit_item'          => __( 'Edit Volunteer',               'wordcamporg' ),
+			'new_item'           => __( 'New Volunteer',                'wordcamporg' ),
+			'view'               => __( 'View Volunteer',               'wordcamporg' ),
+			'view_item'          => __( 'View Volunteer',               'wordcamporg' ),
+			'search_items'       => __( 'Search Volunteers',            'wordcamporg' ),
+			'not_found'          => __( 'No volunteers found',          'wordcamporg' ),
+			'not_found_in_trash' => __( 'No volunteers found in Trash', 'wordcamporg' ),
+		);
+
+		// Register volunteer post type.
+		register_post_type(
+			'wcb_volunteer',
+			array(
+				'labels'          => $labels,
+				'rewrite'         => array(
+					'slug'       => 'volunteer',
+					'with_front' => false,
+				),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail' ),
+				'menu_position'   => 22,
+				'public'          => false,
+				'show_ui'         => true,
+				'can_export'      => true,
+				'capability_type' => 'post',
+				'hierarchical'    => false,
+				'query_var'       => true,
+				'show_in_rest'    => true,
+				'menu_icon'       => 'dashicons-hammer',
 			)
 		);
 	}
@@ -1586,6 +1750,34 @@ class WordCamp_Post_Types_Plugin {
 			)
 		);
 
+		// Labels for volunteer teams.
+		$labels = array(
+			'name'          => __( 'Teams',         'wordcamporg' ),
+			'singular_name' => __( 'Team',          'wordcamporg' ),
+			'search_items'  => __( 'Search Teams',  'wordcamporg' ),
+			'popular_items' => __( 'Popular Teams', 'wordcamporg' ),
+			'all_items'     => __( 'All Teams',     'wordcamporg' ),
+			'edit_item'     => __( 'Edit Team',     'wordcamporg' ),
+			'update_item'   => __( 'Update Team',   'wordcamporg' ),
+			'add_new_item'  => __( 'Add Team',      'wordcamporg' ),
+			'new_item_name' => __( 'New Team',      'wordcamporg' ),
+		);
+
+		// Register volunteer teams taxonomy.
+		register_taxonomy(
+			'wcb_volunteer_team',
+			'wcb_volunteer',
+			array(
+				'labels'       => $labels,
+				'rewrite'      => array( 'slug' => 'team' ),
+				'query_var'    => 'team',
+				'hierarchical' => true,
+				'public'       => true,
+				'show_ui'      => true,
+				'show_in_rest' => true,
+			)
+		);
+
 		// Labels for speaker groups.
 		$labels = array(
 			'name'          => __( 'Groups',         'wordcamporg' ),
@@ -1649,7 +1841,14 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'manage_wcb_session_posts_columns':
 				$columns = array_slice( $columns, 0, 2, true ) + array( 'wcb_session_speakers' => __( 'Speakers', 'wordcamporg' ) ) + array_slice( $columns, 2, null, true );
-				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Date & Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_filter(
+					$columns,
+					function( $col ) {
+						return 'date' !== $col;
+					},
+					ARRAY_FILTER_USE_KEY
+				);
 				break;
 			default:
 		}
@@ -1720,8 +1919,16 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'wcb_session_time':
 				$session_time = absint( get_post_meta( get_the_ID(), '_wcpt_session_time', true ) );
-				$session_time = ( $session_time ) ? wp_date( get_option( 'time_format' ), $session_time ) : '&mdash;';
-				echo esc_html( $session_time );
+				$output       = '&mdash;';
+				if ( $session_time ) {
+					$output = sprintf(
+						/* translators: 1: A date; 2: A time; */
+						__( '%1$s at %2$s', 'wordcamporg' ),
+						wp_date( 'M j', $session_time ),
+						wp_date( get_option( 'time_format' ), $session_time )
+					);
+				}
+				echo esc_html( $output );
 				break;
 
 			default:
@@ -1779,7 +1986,7 @@ class WordCamp_Post_Types_Plugin {
 	 * Add post types to 'At a Glance' dashboard widget
 	 */
 	public function glance_items( $items = array() ) {
-		$post_types = array( 'wcb_speaker', 'wcb_session', 'wcb_sponsor' );
+		$post_types = array( 'wcb_speaker', 'wcb_session', 'wcb_sponsor', 'wcb_organizer', 'wcb_volunteer' );
 
 		foreach ( $post_types as $post_type ) {
 
@@ -1801,6 +2008,12 @@ class WordCamp_Post_Types_Plugin {
 						break;
 					case 'wcb_sponsor':
 						$text = _n( '%s Sponsor', '%s Sponsors', $num_posts->publish );
+						break;
+					case 'wcb_organizer':
+						$text = _n( '%s Organizer', '%s Organizers', $num_posts->publish );
+						break;
+					case 'wcb_volunteer':
+						$text = _n( '%s Volunteer', '%s Volunteers', $num_posts->publish );
 						break;
 					default:
 				}
@@ -1825,6 +2038,8 @@ class WordCamp_Post_Types_Plugin {
 	 * @return string Resulting status.
 	 */
 	public function default_comment_ping_status( $status ) {
+		require_once ABSPATH . 'wp-admin/includes/screen.php';
+
 		$screen = get_current_screen();
 		if ( ! empty( $screen->post_type ) && 'wcb_speaker' === $screen->post_type ) {
 			$status = 'closed';

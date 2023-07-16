@@ -1,22 +1,22 @@
-# Note that all values have to be set, we can't selectively override defaults.
-# See https://github.com/spatie/phpunit-watcher/pull/115
-
 watch:
   directories:
     - ./public_html/wp-content/mu-plugins/
     - ./public_html/wp-content/plugins/camptix/
     - ./public_html/wp-content/plugins/wordcamp-organizer-reminders/
+    - ./public_html/wp-content/plugins/wc-post-types/
+    - ./public_html/wp-content/plugins/wcpt/
     - ./public_html/wp-content/plugins/wordcamp-remote-css/
     - ./public_html/wp-content/plugins/wordcamp-speaker-feedback/
 
+  # Still need to explicitly declare some things here, even though `ignoreVCSIgnored` defaults to `true`.
+  # Maybe because of paths?
   exclude:
-   - vendor
-
+    - vendor
+    - node_modules
+  fileMask: '*.php'
   ignoreDotFiles: true
   ignoreVCS: true
-  ignoreVCSIgnored: false
-
-  fileMask: '*.php'
+  ignoreVCSIgnored: true
 
 notifications:
   passingTests: false

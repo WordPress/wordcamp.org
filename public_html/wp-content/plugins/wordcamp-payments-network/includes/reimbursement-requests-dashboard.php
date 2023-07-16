@@ -34,7 +34,7 @@ function register_submenu_page() {
  * Render the admin page
  */
 function render_submenu_page() {
-	require_once( __DIR__ . '/reimbursement-requests-list-table.php' );
+	require_once __DIR__ . '/reimbursement-requests-list-table.php';
 
 	$list_table = new Reimbursement_Requests_List_Table();
 	$sections   = get_submenu_page_sections();
@@ -56,7 +56,7 @@ function render_submenu_page() {
 			break;
 
 		case 'wcb-approved':
-			$section_explanation = "These requests have been reviewed and approved by a deputy and payment is pending.";
+			$section_explanation = 'These requests have been reviewed and approved by a deputy and payment is pending.';
 			break;
 
 		case 'wcb-pending-payment':
@@ -68,7 +68,7 @@ function render_submenu_page() {
 			break;
 	}
 
-	require_once( dirname( __DIR__ ) . '/views/reimbursement-requests/page-reimbursement-requests.php' );
+	require_once dirname( __DIR__ ) . '/views/reimbursement-requests/page-reimbursement-requests.php';
 }
 
 /**
@@ -145,7 +145,7 @@ function upgrade_database() {
 	}
 
 	$table_name = get_index_table_name();
-	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 	$schema = "
 		CREATE TABLE $table_name (

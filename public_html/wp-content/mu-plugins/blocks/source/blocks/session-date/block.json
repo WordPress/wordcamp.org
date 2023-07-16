@@ -1,0 +1,34 @@
+{
+	"apiVersion": 2,
+	"name": "wordcamp/session-date",
+	"title": "Session Date & Time",
+	"category": "wordcamp",
+	"description": "Display the date and time of the current session.",
+	"textdomain": "wordcamporg",
+	"usesContext": [ "postId", "postType" ],
+	"attributes": {
+		"format": {
+			"type": "string"
+		},
+		"showTimezone": {
+			"type": "boolean",
+			"default": true
+		},
+		"textAlign": {
+			"type": "string"
+		}
+	},
+	"supports": {
+		"color": {
+			"text": true,
+			"background": true,
+			"link": true
+		},
+		"html": false,
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
+	},
+	"editorScript": "wordcamp-blocks"
+}

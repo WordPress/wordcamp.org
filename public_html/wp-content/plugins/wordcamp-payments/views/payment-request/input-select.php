@@ -9,6 +9,7 @@
 		<select
 			id="<?php echo esc_attr( $name ); ?>"
 			name="<?php echo esc_attr( $name ); ?>"
+			class="regular-text"
 		    <?php __checked_selected_helper( $required, true, true, 'required' ); ?>
 		>
 			<option value="">

@@ -1114,7 +1114,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	zoom: 1
 }
 
-#wc-content-blocks>div ul {
+#wc-content-blocks > div ul {
 	list-style: none;
 	padding: 0;
 	margin: 0
@@ -1137,6 +1137,14 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 	position: absolute;
 	bottom: 0;
+}
+
+#home-sponsors-slideshow {
+	position: relative;
+}
+
+#home-sponsors-slideshow li {
+	position: absolute;
 }
 
 
@@ -1957,14 +1965,14 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 /* ------------------------------------- */
 
 .about-page .photo-slideshow {
+	position: relative;
 	float: right;
 	line-height: 1;
 
 	width: 357px;
 	height: 194px;
 
-
-	padding: 12px;
+	padding: 0;
 	margin: -4px 0 10px 20px;
 
 	box-shadow: 0 1px 3px 1px rgba(0,0,0,.3);
@@ -1972,7 +1980,8 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 }
 
 .about-page .photo-slideshow img {
-	margin: 12px;
+	position: absolute;
+	margin: 0;
 }
 
 #content .about-stats {
@@ -2023,7 +2032,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 }
 
 #content .logos li {
-	float: left;
+	display: inline-block;
 	list-style: none;
 	margin: 5px 0 0 20px;
 	text-align: center;
@@ -3170,6 +3179,11 @@ h3#comments-title {
 	.archive #content h1.page-title,
 	.search #content h1.page-title {
 		margin-right: 0;
+	}
+
+	#content .logos {
+		float: none;
+		display: block;
 	}
 }
 

@@ -142,6 +142,7 @@ function get_speaker_sessions( array $speaker_ids ) {
 		'posts_per_page' => -1,
 		'meta_key'       => '_wcpt_session_time',
 		'orderby'        => 'meta_value_num',
+		'order'          => 'ASC',
 	);
 
 	$session_posts = get_posts( $session_args );

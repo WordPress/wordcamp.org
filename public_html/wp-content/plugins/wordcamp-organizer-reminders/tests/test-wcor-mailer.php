@@ -11,7 +11,7 @@ defined( 'WPINC' ) || die();
  *
  * These are intentionally closer to integration tests than unit tests.
  *
- * @group wordcamp-organizer-reminders
+ * @group organizer-reminders
  */
 class Test_WCOR_Mailer extends WP_UnitTestCase {
 	/**
@@ -32,7 +32,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	/**
 	 * Set up the mocked PHPMailer instance before each test method.
 	 */
-	public function setUp() {
+	protected function setUp() : void {
 		parent::setUp();
 		reset_phpmailer_instance();
 	}
@@ -88,7 +88,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	/**
 	 * Reset the mocked PHPMailer instance after each test method.
 	 */
-	public function tearDown() {
+	protected function tearDown() : void {
 		reset_phpmailer_instance();
 		parent::tearDown();
 	}
@@ -103,14 +103,15 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 *                        isn't always accessible to the testing function.
 	 */
 	protected function assert_mail_succeeded( $to, $subject, $body, $result = true ) {
-		$mailer = tests_retrieve_phpmailer_instance();
+		$mailer                 = tests_retrieve_phpmailer_instance();
+		$normalized_actual_body = str_replace( "\r\n", "\n", $mailer->get_sent()->body );
 
 		$this->assertSame( true, $result );
 		$this->assertSame( 0, did_action( 'wp_mail_failed' ) );
 
 		$this->assertSame( $to,      $mailer->get_recipient( 'to' )->address );
 		$this->assertSame( $subject, $mailer->get_sent()->subject );
-		$this->assertSame( $body,    $mailer->get_sent()->body );
+		$this->assertSame( $body,    $normalized_actual_body );
 	}
 
 	/**
@@ -136,7 +137,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			"Huzzah! A new WordCamp is coming soon to Dayton, Ohio, USA! The lead organizer is janedoe, and the venue is at:\n\n3640 Colonel Glenn Hwy, Dayton, OH, US\n"
 		);
 
-		$this->assertInternalType( 'array', $wordcamp->wcor_sent_email_ids );
+		$this->assertIsArray( $wordcamp->wcor_sent_email_ids );
 		$this->assertContains( self::$triggered_reminder_post_id, $wordcamp->wcor_sent_email_ids );
 	}
 
@@ -179,7 +180,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			"Howdy Sally Smith, now's the perfect time to request reimbursement for any out of pocket expenses. You can do that at https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement.\n"
 		);
 
-		$this->assertInternalType( 'array', $wordcamp->wcor_sent_email_ids );
+		$this->assertIsArray( $wordcamp->wcor_sent_email_ids );
 		$this->assertContains( self::$timed_reminder_post_id, $wordcamp->wcor_sent_email_ids );
 	}
 

@@ -11,7 +11,6 @@
 			<img src="<?php header_image(); ?>" width="<?php echo get_custom_header()->width; ?>" height="<?php echo get_custom_header()->height; ?>" alt="" />
 		</a>
 	<?php } // if ( ! empty( $header_image ) ) ?>
-
  *
  * @package WCBS
  * @since WCBS 1.0
@@ -84,56 +83,57 @@ if ( ! function_exists( 'get_custom_header' ) ) {
 }
 
 if ( ! function_exists( 'wcbs_header_style' ) ) :
-/**
- * Styles the header image and text displayed on the blog
- *
- * @see wcbs_custom_header_setup().
- *
- * @since WCBS 1.0
- */
-function wcbs_header_style() {
+	/**
+	 * Styles the header image and text displayed on the blog
+	 *
+	 * @see wcbs_custom_header_setup().
+	 *
+	 * @since WCBS 1.0
+	 */
+	function wcbs_header_style() {
 
-	// If no custom options for text are set, let's bail
-	// get_header_textcolor() options: HEADER_TEXTCOLOR is default, hide text (returns 'blank') or any hex value
-	if ( HEADER_TEXTCOLOR == get_header_textcolor() )
-		return;
-	// If we get this far, we have custom styles. Let's do this.
-	?>
+		// If no custom options for text are set, let's bail
+		// get_header_textcolor() options: HEADER_TEXTCOLOR is default, hide text (returns 'blank') or any hex value
+		if ( HEADER_TEXTCOLOR == get_header_textcolor() ) {
+			return;
+		}
+		// If we get this far, we have custom styles. Let's do this.
+		?>
 	<style type="text/css">
-	<?php
+		<?php
 		// Has the text been hidden?
 		if ( 'blank' == get_header_textcolor() ) :
-	?>
+			?>
 		.site-title,
 		.site-description {
 			position: absolute !important;
 			clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
 			clip: rect(1px, 1px, 1px, 1px);
 		}
-	<?php
-		// If the user has set a custom color for the text use that
-		else :
-	?>
+			<?php
+			// If the user has set a custom color for the text use that
+			else :
+				?>
 		.site-title a,
 		.site-description {
-			color: #<?php echo get_header_textcolor(); ?> !important;
+			color: #<?php echo esc_html( get_header_textcolor() ); ?> !important;
 		}
 	<?php endif; ?>
 	</style>
-	<?php
-}
+		<?php
+	}
 endif; // wcbs_header_style
 
 if ( ! function_exists( 'wcbs_admin_header_style' ) ) :
-/**
- * Styles the header image displayed on the Appearance > Header admin panel.
- *
- * @see wcbs_custom_header_setup().
- *
- * @since WCBS 1.0
- */
-function wcbs_admin_header_style() {
-?>
+	/**
+	 * Styles the header image displayed on the Appearance > Header admin panel.
+	 *
+	 * @see wcbs_custom_header_setup().
+	 *
+	 * @since WCBS 1.0
+	 */
+	function wcbs_admin_header_style() {
+		?>
 	<style type="text/css">
 	.appearance_page_custom-header #headimg {
 		border: none;
@@ -150,26 +150,27 @@ function wcbs_admin_header_style() {
 	#headimg img {
 	}
 	</style>
-<?php
-}
+		<?php
+	}
 endif; // wcbs_admin_header_style
 
 if ( ! function_exists( 'wcbs_admin_header_image' ) ) :
-/**
- * Custom header image markup displayed on the Appearance > Header admin panel.
- *
- * @see wcbs_custom_header_setup().
- *
- * @since WCBS 1.0
- */
-function wcbs_admin_header_image() { ?>
+	/**
+	 * Custom header image markup displayed on the Appearance > Header admin panel.
+	 *
+	 * @see wcbs_custom_header_setup().
+	 *
+	 * @since WCBS 1.0
+	 */
+	function wcbs_admin_header_image() { ?>
 	<div id="headimg">
-		<?php
-		if ( 'blank' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) || '' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) )
-			$style = ' style="display:none;"';
-		else
-			$style = ' style="color:#' . get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) . ';"';
-		?>
+			<?php
+			if ( 'blank' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) || '' == get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) ) {
+				$style = ' style="display:none;"';
+			} else {
+				$style = ' style="color:#' . esc_attr( get_theme_mod( 'header_textcolor', HEADER_TEXTCOLOR ) ) . ';"';
+			}
+			?>
 		<h1><a id="name"<?php echo $style; ?> onclick="return false;" href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php bloginfo( 'name' ); ?></a></h1>
 		<div id="desc"<?php echo $style; ?>><?php bloginfo( 'description' ); ?></div>
 		<?php $header_image = get_header_image();
@@ -177,5 +178,5 @@ function wcbs_admin_header_image() { ?>
 			<img src="<?php echo esc_url( $header_image ); ?>" alt="" />
 		<?php endif; ?>
 	</div>
-<?php }
+	<?php }
 endif; // wcbs_admin_header_image

@@ -1,0 +1,33 @@
+{
+	"apiVersion": 2,
+	"name": "wordcamp/meta-link",
+	"title": "Meta Link",
+	"category": "wordcamp",
+	"description": "Display a link using a meta value.",
+	"textdomain": "wordcamporg",
+	"usesContext": [ "postId", "postType" ],
+	"attributes": {
+		"key": {
+			"type": "string"
+		},
+		"text": {
+			"type": "string"
+		},
+		"textAlign": {
+			"type": "string"
+		}
+	},
+	"supports": {
+		"color": {
+			"text": true,
+			"background": true,
+			"link": true
+		},
+		"html": false,
+		"spacing": {
+			"margin": true,
+			"padding": true
+		}
+	},
+	"editorScript": "wordcamp-blocks"
+}

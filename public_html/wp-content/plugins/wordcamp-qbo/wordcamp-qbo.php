@@ -11,11 +11,7 @@ use WordCamp\Logger;
 class WordCamp_QBO {
 	const REMOTE_REQUEST_TIMEOUT = 45; // seconds
 
-	private static $app_token;
-	private static $consumer_key;
-	private static $consumer_secret;
 	private static $hmac_key;
-
 	private static $sandbox_mode;
 	private static $account;
 	private static $api_base_url;
@@ -48,24 +44,15 @@ class WordCamp_QBO {
 	 * Runs during plugins_loaded.
 	 */
 	public static function plugins_loaded() {
-		self::$sandbox_mode = WORDCAMP_ENVIRONMENT !== 'production';
+		self::$sandbox_mode = 'local' === WORDCAMP_ENVIRONMENT;
 
 		$init_options = wp_parse_args( apply_filters( 'wordcamp_qbo_options', array() ), array(
-			'app_token'       => '',
-			'consumer_key'    => '',
-			'consumer_secret' => '',
 			'hmac_key'        => '',
-
 			'categories_map'  => array(),
 		) );
 
 		foreach ( $init_options as $key => $value ) {
 			self::$$key = $value;
-		}
-
-		// There's no point in doing anything if we don't have the secrets.
-		if ( empty( self::$consumer_key ) ) {
-			return;
 		}
 
 		self::$api_base_url = sprintf(
@@ -85,25 +72,26 @@ class WordCamp_QBO {
 	 * Runs during rest_api_init.
 	 */
 	public static function rest_api_init() {
-		register_rest_route( 'wordcamp-qbo/v1', '/expense', array(
-			'methods'  => 'GET, POST',
-			'callback' => array( __CLASS__, 'rest_callback_expense' ),
-		) );
+		register_rest_route(
+			'wordcamp-qbo/v1',
+			'/expense',
+			array(
+				'methods'             => 'GET, POST',
+				'callback'            => array( __CLASS__, 'rest_callback_expense' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
+			)
+		);
 
-		register_rest_route( 'wordcamp-qbo/v1', '/invoice', array(
-			'methods'  => 'GET, POST',
-			'callback' => array( __CLASS__, 'rest_callback_invoice' ),
-		) );
 
-		register_rest_route( 'wordcamp-qbo/v1', '/invoice_pdf', array(
-			'methods'  => 'GET',
-			'callback' => array( __CLASS__, 'rest_callback_invoice_pdf' ),
-		) );
-
-		register_rest_route( 'wordcamp-qbo/v1', '/paid_invoices', array(
-			'methods'  => 'GET',
-			'callback' => array( __CLASS__, 'rest_callback_paid_invoices' ),
-		) );
+		register_rest_route(
+			'wordcamp-qbo/v1',
+			'/paid_invoices',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'rest_callback_paid_invoices' ),
+				'permission_callback' => array( __CLASS__, 'is_valid_request' ),
+			)
+		);
 	}
 
 	/**
@@ -112,10 +100,6 @@ class WordCamp_QBO {
 	 * @param WP_REST_Request $request
 	 */
 	public static function rest_callback_expense( $request ) {
-		if ( ! self::_is_valid_request( $request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
 		self::load_options();
 		$oauth_header = self::qbo_client()->get_oauth_header();
 		$realm_id     = self::qbo_client()->get_realm_id();
@@ -283,7 +267,7 @@ class WordCamp_QBO {
 				),
 			)
 		);
-		Logger\log( 'remote_request', compact( 'args', 'response' ) );
+		Logger\log( 'remote_request', compact( 'request_url', 'args', 'response' ) );
 
 		if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
 			return;
@@ -309,69 +293,14 @@ class WordCamp_QBO {
 	}
 
 	/**
-	 * REST: /invoice
-	 *
-	 * Creates a new Invoice in QuickBooks and sends it to the Customer
-	 *
-	 * @param WP_REST_Request $request
-	 *
-	 * @return int|WP_Error The invoice ID on success, or a WP_Error on failure
-	 */
-	public static function rest_callback_invoice( $request ) {
-		if ( ! self::_is_valid_request( $request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
-		$invoice_id = self::create_invoice(
-			$request->get_param( 'wordcamp_name'     ),
-			$request->get_param( 'sponsor'           ),
-			$request->get_param( 'currency_code'     ),
-			$request->get_param( 'qbo_class_id'      ),
-			$request->get_param( 'sponsorship_level' ),
-			$request->get_param( 'amount'            ),
-			$request->get_param( 'description'       ),
-			$request->get_param( 'statement_memo'    )
-		);
-
-		if ( is_wp_error( $invoice_id ) ) {
-			return $invoice_id;
-		}
-
-		$invoice_sent = self::send_invoice( $invoice_id );
-
-		if ( is_wp_error( $invoice_sent ) ) {
-			self::notify_invoice_failed_to_send( $invoice_id, $invoice_sent );
-		}
-
-		return $invoice_id;
-	}
-
-	/**
 	 * Creates an Invoice in QuickBooks
 	 *
-	 * @param string $wordcamp_name
-	 * @param array  $sponsor
-	 * @param string $currency_code
-	 * @param int    $class_id
-	 * @param string $sponsorship_level
-	 * @param float  $amount
-	 * @param string $description
-	 * @param string $statement_memo
+	 * This expects that the current blog has been switched to the site that hosts the invoice.
 	 *
 	 * @return int|WP_Error Invoice ID on success; error on failure
 	 */
-	protected static function create_invoice( $wordcamp_name, $sponsor, $currency_code, $class_id, $sponsorship_level, $amount, $description, $statement_memo ) {
-		$qbo_request = self::build_qbo_create_invoice_request(
-			$wordcamp_name,
-			$sponsor,
-			$currency_code,
-			$class_id,
-			$sponsorship_level,
-			$amount,
-			$description,
-			$sponsor['email-address'],
-			$statement_memo
-		);
+	public static function create_invoice( int $invoice_id ) {
+		$qbo_request = self::build_qbo_create_invoice_request( $invoice_id );
 
 		if ( is_wp_error( $qbo_request ) ) {
 			return $qbo_request;
@@ -388,7 +317,12 @@ class WordCamp_QBO {
 			$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 			if ( isset( $body['Invoice']['Id'] ) ) {
-				$result = absint( $body['Invoice']['Id'] );
+				$result       = absint( $body['Invoice']['Id'] );
+				$invoice_sent = self::send_invoice( $result );
+
+				if ( is_wp_error( $invoice_sent ) ) {
+					self::notify_invoice_failed_to_send( $invoice_id, $invoice_sent );
+				}
 			} else {
 				$result = new WP_Error( 'empty_body', 'Could not decode invoice result.', $response );
 			}
@@ -400,45 +334,39 @@ class WordCamp_QBO {
 	/**
 	 * Build the request to create an invoice in QuickBooks
 	 *
-	 * @param string $wordcamp_name
-	 * @param array  $sponsor
-	 * @param string $currency_code
-	 * @param int    $class_id
-	 * @param string $sponsorship_level
-	 * @param float  $amount
-	 * @param string $description
-	 * @param string $customer_email
-	 * @param string $statement_memo
-	 *
 	 * @return array|WP_Error
 	 */
-	protected static function build_qbo_create_invoice_request( $wordcamp_name, $sponsor, $currency_code, $class_id, $sponsorship_level, $amount, $description, $customer_email, $statement_memo ) {
-		$customer_id = self::probably_get_customer_id( $sponsor, $currency_code );
-
-		if ( is_wp_error( $customer_id ) ) {
-			return $customer_id;
-		}
-
-		$wordcamp_name     = sanitize_text_field( $wordcamp_name     );
-		$class_id          = sanitize_text_field( $class_id          );
-		$sponsorship_level = sanitize_text_field( $sponsorship_level );
-		$amount            = floatval( $amount                       );
-		$description       = trim( sanitize_text_field( $description ) );
-		$statement_memo    = sanitize_text_field( $statement_memo    );
-
-		$sponsor = array_map( 'sanitize_text_field', $sponsor );
-
-		$line_description = $wordcamp_name;
-		if ( $sponsorship_level ) {
-			$line_description .= " - $sponsorship_level";
-		}
+	protected static function build_qbo_create_invoice_request( int $invoice_id ) {
+		$invoice_meta      = get_post_custom( $invoice_id );
+		$sponsor           = self::get_invoice_sponsor( $invoice_meta['_wcbsi_sponsor_id'][0] );
+		$sponsorship_level = self::get_sponsorship_level( $invoice_meta['_wcbsi_sponsor_id'][0] );
 
 		/*
 		 * The currency code only needs to be sanitized, not validated, because QBO will reject the invoice if
 		 * an invalid code is passed. We don't have to worry about an invoice being assigned the the home currency
 		 * by accident.
 		 */
-		$currency_code = sanitize_text_field( $currency_code );
+		$currency_code = sanitize_text_field( $invoice_meta['_wcbsi_currency'][0] );
+		$customer_id   = self::probably_get_customer_id( $sponsor, $currency_code );
+
+		if ( is_wp_error( $customer_id ) ) {
+			return $customer_id;
+		}
+
+		$wordcamp_name = sanitize_text_field( get_wordcamp_name() );
+		$class_id      = sanitize_text_field( $invoice_meta['_wcbsi_qbo_class_id'][0] );
+		$amount        = floatval( $invoice_meta['_wcbsi_amount'][0] );
+		$description   = trim( sanitize_text_field( $invoice_meta['_wcbsi_description'][0] ) );
+
+		$statement_memo = sprintf(
+			'WordCamp.org Invoice: %s',
+			esc_url_raw( admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) ) )
+		);
+
+		$line_description = $wordcamp_name;
+		if ( $sponsorship_level ) {
+			$line_description .= " - $sponsorship_level";
+		}
 
 		/*
 		 * QBO sandboxes will send invoices to whatever e-mail address you assign them, rather than sending them
@@ -448,7 +376,7 @@ class WordCamp_QBO {
 		if ( self::$sandbox_mode ) {
 			$customer_email = 'jane.doe@example.org';
 		} else {
-			$customer_email = is_email( $customer_email );
+			$customer_email = is_email( $sponsor['email-address'] );
 		}
 
 		foreach ( array( 'amount', 'customer_id', 'customer_email' ) as $field ) {
@@ -462,7 +390,7 @@ class WordCamp_QBO {
 		$realm_id     = self::qbo_client()->get_realm_id();
 
 		// Note: This has a character limit when combined with $description; see $customer_memo
-		$payment_instructions = trim( str_replace( "\t", '', "
+		$payment_instructions = trim( str_replace( "\t", '', '
 			Please indicate the invoice number in the memo field when making your payment.
 
 			To pay via credit card, please fill out the payment form at https://central.wordcamp.org/sponsorship-payment/
@@ -481,7 +409,7 @@ class WordCamp_QBO {
 			Bank Routing & Transit Number: 322271627
 			Account Number: 157120285
 
-			Please remit checks (USD only) to: WordPress Community Support, PBC, P.O. Box 101768, Pasadena, CA 91189-1768"
+			Please remit checks (USD only) to: WordPress Community Support, PBC, P.O. Box 101768, Pasadena, CA 91189-1768'
 		) );
 
 		/*
@@ -546,8 +474,10 @@ class WordCamp_QBO {
 				'value' => $customer_memo,
 			),
 
+			// Pick from the terms listed at https://app.qbo.intuit.com/app/terms
+			// Get the ID via https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/term#read-a-term
 			'SalesTermRef' => array(
-				'value' => 1, // Due on receipt
+				'value' => 3, // Net 30
 			),
 
 			'BillEmail'    => array(
@@ -590,6 +520,56 @@ class WordCamp_QBO {
 			'url'  => $request_url,
 			'args' => $args,
 		);
+	}
+
+	/**
+	 * Get the info for an invoice's sponsor.
+	 */
+	protected static function get_invoice_sponsor( int $sponsor_id ) : array {
+		$sponsor_meta      = get_post_custom( $sponsor_id );
+
+		// The country might be the full name or a country code. We want the full name here.
+		$sponsor_country = $sponsor_meta['_wcpt_sponsor_country'][0];
+		$sponsor_country = wcorg_get_country_name_from_code( $sponsor_country ) ?: $sponsor_country;
+
+		$sponsor = array(
+			'company-name'  => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_company_name'][0] ),
+			'first-name'    => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_first_name'][0] ),
+			'last-name'     => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_last_name'][0] ),
+			'email-address' => is_email( $sponsor_meta['_wcpt_sponsor_email_address'][0] ),
+			'phone-number'  => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_phone_number'][0] ),
+			'address1'      => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_street_address1'][0] ),
+			'city'          => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_city'][0] ),
+			'state'         => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_state'][0] ),
+			'zip-code'      => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_zip_code'][0] ),
+			'country'       => sanitize_text_field( $sponsor_country ),
+		);
+
+		$sponsor['vat-number'] = isset( $sponsor_meta['_wcpt_sponsor_vat_number'][0] )
+			? sanitize_text_field( $sponsor_meta['_wcpt_sponsor_vat_number'][0] )
+			: '';
+
+		if ( isset( $sponsor_meta['_wcpt_sponsor_street_address2'][0] ) ) {
+			$sponsor['address2'] = sanitize_text_field( $sponsor_meta['_wcpt_sponsor_street_address2'][0] );
+		}
+
+		return $sponsor;
+	}
+
+	/**
+	 * Get the sponsorship level name assigned to a sponsor
+	 *
+	 * @return false|string
+	 */
+	public static function get_sponsorship_level( int $sponsor_id ) {
+		$sponsorship_level  = false;
+		$sponsorship_levels = wp_get_object_terms( $sponsor_id, 'wcb_sponsor_level' );
+
+		if ( isset( $sponsorship_levels[0]->name ) ) {
+			$sponsorship_level = $sponsorship_levels[0]->name;
+		}
+
+		return $sponsorship_level;
 	}
 
 	/**
@@ -657,22 +637,14 @@ class WordCamp_QBO {
 	}
 
 	/**
-	 * REST: /invoice_pdf
-	 *
 	 * Saves a PDF copy of the invoice and returns the filename
 	 *
 	 * Note: The function that eventually ends up using the file should delete it once it's done with it.
 	 *
-	 * @param WP_REST_Request $request
-	 *
 	 * @return string|WP_Error The filename on success, or a WP_Error on failure
 	 */
-	public static function rest_callback_invoice_pdf( $request ) {
-		if ( ! self::_is_valid_request( $request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
-		$qbo_request = self::build_qbo_get_invoice_pdf_request( $request->get_param( 'invoice_id' ) );
+	public static function download_invoice_pdf( int $qbo_invoice_id ) {
+		$qbo_request = self::build_qbo_get_invoice_pdf_request( $qbo_invoice_id );
 		$response    = wp_remote_get( $qbo_request['url'], $qbo_request['args'] );
 
 		if ( is_wp_error( $response ) ) {
@@ -685,16 +657,16 @@ class WordCamp_QBO {
 			$valid_pdf_footer = '%%EOF' === substr( $body, strlen( $body ) - 7, 5 );
 
 			if ( $valid_pdf_header && $valid_pdf_footer ) {
-				$response['body'] = '[valid pdf body removed]'; // because the binary contents aren't printable
+				$response['body'] = "[PDF body was valid, but redacted from the log since the binary contents aren't readable]";
 
 				$filename = sprintf(
 					'%sWPCS-invoice-%d.pdf',
 					get_temp_dir(),
-					$request->get_param( 'invoice_id' )
+					$qbo_invoice_id
 				);
 
 				if ( file_put_contents( $filename, $body ) ) {
-					$result = array( 'filename' => $filename );
+					$result = $filename;
 				} else {
 					$result = new WP_Error( 'write_error', 'Failed writing PDF to disk.', compact( 'filename', 'body' ) );
 				}
@@ -772,7 +744,7 @@ class WordCamp_QBO {
 	/**
 	 * Get a Customer ID, either by finding an existing one, or creating a new one
 	 *
-	 * @param string $sponsor
+	 * @param array  $sponsor
 	 * @param string $currency_code
 	 *
 	 * @return int|WP_Error The customer ID if success; a WP_Error if failure
@@ -796,7 +768,7 @@ class WordCamp_QBO {
 	 * @return int|false|WP_Error A customer ID as integer, if one was found; false if no match was found; a WP_Error if an error occurred.
 	 */
 	protected static function get_customer( $customer_name, $currency_code ) {
-		$qbo_request = self::build_qbo_get_customer_request( $customer_name );
+		$qbo_request = self::build_qbo_get_customer_request( $customer_name, $currency_code );
 
 		if ( is_wp_error( $qbo_request ) ) {
 			return $qbo_request;
@@ -813,7 +785,7 @@ class WordCamp_QBO {
 			$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 			if ( isset( $body['QueryResponse']['Customer'][0]['Id'] ) ) {
-				$result = self::pluck_customer_id_by_currency( $body['QueryResponse']['Customer'], $currency_code );
+				$result = absint( $body['QueryResponse']['Customer'][0]['Id'] );
 			} elseif ( isset( $body['QueryResponse'] ) && 0 === count( $body['QueryResponse'] ) ) {
 				$result = false;
 			} else {
@@ -831,10 +803,11 @@ class WordCamp_QBO {
 	 *
 	 * @return array|WP_Error
 	 */
-	protected static function build_qbo_get_customer_request( $customer_name ) {
+	protected static function build_qbo_get_customer_request( $customer_name, $currency_code ) {
 		global $wpdb;
 
 		$customer_name = sanitize_text_field( $customer_name );
+		$customer_name = str_replace( ':', '-', $customer_name );
 
 		self::load_options();
 		$oauth_header = self::qbo_client()->get_oauth_header();
@@ -847,9 +820,14 @@ class WordCamp_QBO {
 		);
 
 		$request_url_query = array(
+			// QBO uses a custom query language based on (generic) SQL, but $wpdb->prepare still works in this context.
+			// @link https://developer.intuit.com/app/developer/qbo/docs/learn/explore-the-quickbooks-online-api/data-queries
 			'query' => $wpdb->prepare(
-				"SELECT * FROM Customer WHERE CompanyName = '%s'",
-				str_replace( ':', '-', $customer_name )
+				// We can't filter by `CurrencyRef`, but `create_customer()` includes it the DisplayName, so we
+				// can use that instead.
+				// @link https://help.developer.intuit.com/s/question/0D5G000004Dk7XKKAZ/how-to-query-with-currencyref-condition-in-customerqb-online
+				"SELECT * FROM Customer WHERE DisplayName = '%s'",
+				self::get_company_display_name( $customer_name, $currency_code )
 			),
 		);
 
@@ -861,7 +839,7 @@ class WordCamp_QBO {
 			),
 		);
 
-		$request_url_query = array_map( 'rawurlencode', $request_url_query ); // has to be done after get_oauth_header(), or oauth_signature won't be generated correctly
+		$request_url_query = array_map( 'rawurlencode', $request_url_query ); // Has to be done after get_oauth_header(), or oauth_signature won't be generated correctly.
 		$request_url       = add_query_arg( $request_url_query, $request_url );
 
 		return array(
@@ -871,27 +849,15 @@ class WordCamp_QBO {
 	}
 
 	/**
-	 * Pluck a Customer out of an array based on their currency
+	 * Get the DisplayName for a company.
 	 *
-	 * QuickBook's API doesn't allow you to filter query results based on a CurrencyRef, so we have to do it
-	 * manually.
+	 * This should be used when creating and fetching Customers, to ensure they have consistent names. The currency
+	 * is necessary because a Customer in QBO can only have one currency (I think).
 	 *
-	 * @param array  $customers
-	 * @param string $currency_code
-	 *
-	 * @return int|false A customer ID on success, or false on failure
+	 * @link https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/customer#the-customer-object
 	 */
-	protected static function pluck_customer_id_by_currency( $customers, $currency_code ) {
-		$customer_id = false;
-
-		foreach ( $customers as $customer ) {
-			if ( $customer['CurrencyRef']['value'] === $currency_code ) {
-				$customer_id = absint( $customer['Id'] );
-				break;
-			}
-		}
-
-		return $customer_id;
+	public static function get_company_display_name( string $customer_name, string $currency_code ) : string {
+		return sprintf( '%s - %s', $customer_name, $currency_code );
 	}
 
 	/**
@@ -971,7 +937,7 @@ class WordCamp_QBO {
 			'GivenName'               => $sponsor['first-name'],
 			'FamilyName'              => $sponsor['last-name'],
 			'CompanyName'             => $sponsor['company-name'],
-			'DisplayName'             => sprintf( '%s - %s', $sponsor['company-name'], $currency_code ),
+			'DisplayName'             => self::get_company_display_name( $sponsor['company-name'], $currency_code ),
 			'PrintOnCheckName'        => $sponsor['company-name'],
 
 			'PrimaryPhone'            => array(
@@ -1022,10 +988,6 @@ class WordCamp_QBO {
 	 * @return array|WP_Error
 	 */
 	public static function rest_callback_paid_invoices( $wordcamp_request ) {
-		if ( ! self::_is_valid_request( $wordcamp_request ) ) {
-			return new WP_Error( 'unauthorized', 'Unauthorized', array( 'status' => 401 ) );
-		}
-
 		$qbo_request = self::build_qbo_paid_invoices_request( $wordcamp_request->get_param( 'invoice_ids' ) );
 
 		if ( is_wp_error( $qbo_request ) ) {
@@ -1118,7 +1080,7 @@ class WordCamp_QBO {
 	 *
 	 * @return bool True if valid, false if invalid.
 	 */
-	private static function _is_valid_request( $request ) {
+	public static function is_valid_request( $request ) {
 		if ( ! $request->get_header( 'authorization' ) ) {
 			return false;
 		}

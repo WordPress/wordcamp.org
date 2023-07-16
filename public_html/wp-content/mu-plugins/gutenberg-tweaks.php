@@ -6,6 +6,7 @@ defined( 'WPINC' ) || die();
 
 add_filter( 'classic_editor_network_default_settings', __NAMESPACE__ . '\classic_editor_default_settings' );
 add_filter( 'classic_editor_enabled_editors_for_post_type', __NAMESPACE__ . '\disable_editors_by_post_type', 10, 2 );
+add_action( 'after_setup_theme', __NAMESPACE__ . '\enable_block_templates' );
 
 /**
  * Configure the default settings for the Classic Editor
@@ -32,9 +33,11 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 	 */
 	$gutenberg_only = array(
 		'wcb_session',
-		// 'wcb_speaker',
+		'wcb_speaker',
 		// 'wcb_sponsor',
-		// 'wcb_organizer',
+		'mes', // Metaboxes not converted yet, but has other custom Gutenberg UI.
+		'wcb_organizer',
+		'wcb_volunteer',
 	);
 
 	/*
@@ -48,7 +51,7 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 
 	// Currently not necessary to set on these post types, they don't support gutenberg. This is either because
 	// they don't support the `editor`, or they have `public`/`show_in_rest` set to false:
-	// WCPT_MEETUP_SLUG, \MES_Sponsor::POST_TYPE_SLUG, Payment CPTs, CampTix CPTs.
+	// WCPT_MEETUP_SLUG, Payment CPTs, CampTix CPTs.
 
 	if ( in_array( $post_type, $gutenberg_only ) ) {
 		$editors['classic_editor'] = false;
@@ -57,4 +60,11 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 		$editors['block_editor'] = false;
 	}
 	return $editors;
+}
+
+/**
+ * Enable Templates and Template Parts post types for all themes.
+ */
+function enable_block_templates() {
+	add_theme_support( 'block-templates' );
 }

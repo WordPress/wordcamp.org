@@ -2,42 +2,36 @@
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { getDate, gmdate } from '@wordpress/date';
-import { BaseControl, SelectControl, TextControl } from '@wordpress/components';
-import { compose } from '@wordpress/compose';
+import { SelectControl, TextControl } from '@wordpress/components';
 import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
-import { withDispatch, withSelect } from '@wordpress/data';
 
 /**
  * Internal dependencies
  */
-import SessionDate from './date';
+import DateControl from '../../components/date-control';
 import SessionDuration from './duration';
+import usePostMeta from '../../components/hooks/use-post-meta';
 
-function SessionSettings( {
-	duration,
-	slides,
-	start,
-	type,
-	video,
-	onChangeDuration,
-	onChangeSlides,
-	onChangeStartTime,
-	onChangeType,
-	onChangeVideo,
-} ) {
+export default function SessionSettings() {
+	const [ time, setStartTime ] = usePostMeta( '_wcpt_session_time', WCPT_Session_Defaults.time );
+	const [ duration, setDuration ] = usePostMeta( '_wcpt_session_duration', WCPT_Session_Defaults.duration );
+	const [ slides, setSlides ] = usePostMeta( '_wcpt_session_slides', '' );
+	const [ type, setType ] = usePostMeta( '_wcpt_session_type', '' );
+	const [ video, setVideo ] = usePostMeta( '_wcpt_session_video', '' );
+
 	return (
 		<PluginDocumentSettingPanel
 			name="wordcamp/session-info"
 			className="wordcamp-panel-session-info"
 			title={ __( 'Session Info', 'wordcamporg' ) }
 		>
-			<BaseControl>
-				<BaseControl.VisualLabel>{ __( 'Day & Time', 'wordcamporg' ) }</BaseControl.VisualLabel>
-				<SessionDate date={ start } onChange={ onChangeStartTime } />
-			</BaseControl>
+			<DateControl
+				label={ __( 'Day & Time', 'wordcamporg' ) }
+				date={ time * 1000 }
+				onChange={ setStartTime }
+			/>
 
-			<SessionDuration value={ duration } onChange={ onChangeDuration } />
+			<SessionDuration value={ duration } onChange={ setDuration } />
 
 			<SelectControl
 				label={ __( 'Session Type', 'wordcamporg' ) }
@@ -46,66 +40,22 @@ function SessionSettings( {
 					{ label: __( 'Regular Session', 'wordcamporg' ), value: 'session' },
 					{ label: __( 'Break, Lunch, etc.', 'wordcamporg' ), value: 'custom' },
 				] }
-				onChange={ onChangeType }
+				onChange={ setType }
 			/>
 
 			<TextControl
 				label={ __( 'Link to slides', 'wordcamporg' ) }
 				value={ slides }
-				onChange={ onChangeSlides }
+				onChange={ setSlides }
 				placeholder="https://…"
 			/>
 
 			<TextControl
 				label={ __( 'Link to video on WordPress.tv', 'wordcamporg' ) }
 				value={ video }
-				onChange={ onChangeVideo }
+				onChange={ setVideo }
 				placeholder="https://…"
 			/>
 		</PluginDocumentSettingPanel>
 	);
 }
-
-export default compose( [
-	withSelect( ( select ) => {
-		const meta = select( 'core/editor' ).getEditedPostAttribute( 'meta' );
-		const time = meta._wcpt_session_time || WCPT_Session_Defaults.time;
-		const start = getDate( time * 1000 );
-
-		return {
-			start: start,
-			duration: meta._wcpt_session_duration || WCPT_Session_Defaults.duration,
-			type: meta._wcpt_session_type || '',
-			slides: meta._wcpt_session_slides || '',
-			video: meta._wcpt_session_video || '',
-		};
-	} ),
-	withDispatch( ( dispatch ) => {
-		function onChange( key, value ) {
-			dispatch( 'core/editor' ).editPost( {
-				meta: {
-					[ key ]: value,
-				},
-			} );
-		}
-
-		return {
-			onChangeStartTime( dateValue ) {
-				const value = gmdate( 'U', dateValue );
-				onChange( '_wcpt_session_time', value );
-			},
-			onChangeDuration( value ) {
-				onChange( '_wcpt_session_duration', value );
-			},
-			onChangeType( value ) {
-				onChange( '_wcpt_session_type', value );
-			},
-			onChangeSlides( value ) {
-				onChange( '_wcpt_session_slides', value );
-			},
-			onChangeVideo( value ) {
-				onChange( '_wcpt_session_video', value );
-			},
-		};
-	} ),
-] )( SessionSettings );

@@ -43,7 +43,7 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			$this->get_columns(),
 			array(),
 			array(),
-			$this->get_primary_column_name()
+			$this->get_primary_column_name(),
 		);
 
 		$table_name = get_index_table_name();
@@ -137,9 +137,9 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 
 		<button
 			class="wcbdsi-approve-invoice button-secondary"
-			data-site-id="<?php    echo esc_attr( $index_row->blog_id    ); ?>"
+			data-site-id="<?php echo esc_attr( $index_row->blog_id    ); ?>"
 			data-invoice-id="<?php echo esc_attr( $index_row->invoice_id ); ?>"
-			data-nonce="<?php      echo esc_attr( $nonce                 ); ?>"
+			data-nonce="<?php echo esc_attr( $nonce                 ); ?>"
 		>
 			Approve
 		</button>

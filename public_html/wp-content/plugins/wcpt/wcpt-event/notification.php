@@ -87,8 +87,8 @@ function create_event_status_attachment( $message, $event_id, $title ) {
 		'text'   => $message,
 		'fields' => array(
 			array(
-				"title" => "Application processed by",
-				"value" => $props_string,
+				'title' => 'Application processed by',
+				'value' => $props_string,
 			),
 		),
 	);
@@ -142,7 +142,7 @@ function get_user_nicenames_from_ids( $user_ids ) {
 		)
 	);
 
-	$users = $user_query->get_results();
+	$users              = $user_query->get_results();
 	$user_display_names = array();
 	foreach ( $users as $user ) {
 		$user_display_names[] = $user->user_nicename;

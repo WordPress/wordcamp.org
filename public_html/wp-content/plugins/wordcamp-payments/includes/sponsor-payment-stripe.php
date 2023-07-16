@@ -23,8 +23,6 @@ const CSS_VERSION          = 2;
  *
  * This function is called after template_redirect when the content is about to get loaded.
  * It is invoked from the template-sponsorship-payment.php page template in the central theme.
- *
- * @return string
  */
 function render() {
 	$keys = _get_keys();
@@ -33,7 +31,7 @@ function render() {
 		wp_die( 'Invalid keys' );
 	}
 
-	require_once( __DIR__ . '/wordcamp-budgets.php' );
+	require_once __DIR__ . '/wordcamp-budgets.php';
 
 	$data = array(
 		'keys'                   => $keys,
@@ -64,10 +62,26 @@ function render() {
 		)
 	);
 
-	$fsp = new Form_Spam_Prevention();
-	add_action( 'wp_print_styles', [ $fsp, 'render_form_field_styles' ] );
+	$fsp = new Form_Spam_Prevention( get_fsp_config() );
+	add_action( 'wp_print_styles', array( $fsp, 'render_form_field_styles' ) );
 
-	require_once( dirname( __DIR__ ) . '/views/sponsor-payment/main.php' );
+	require_once dirname( __DIR__ ) . '/views/sponsor-payment/main.php';
+}
+
+/**
+ * Define the configuration for the `Form_Spam_Prevention` instances.
+ *
+ * This type of form should be less strict, since it's less likely to be spammed, there are automated
+ * fraud controls on Stripe's side to catch card testing, and there aren't emails or posts automatically
+ * generated that have to be cleaned up by contributors. Before making it less strict, sponsors were
+ * encountering false positives too often.
+ */
+function get_fsp_config() : array {
+	return array(
+		'score_threshold'     => 8,
+		'throttle_duration'   => 5 * MINUTE_IN_SECONDS,
+		'timestamp_max_range' => '0 seconds',
+	);
 }
 
 /**
@@ -76,14 +90,17 @@ function render() {
  * @return array Stripe and HMAC keys.
  */
 function _get_keys() {
-	return apply_filters( 'wcorg_sponsor_payment_stripe', array(
-		// Stripe API credentials.
-		'publishable' => '',
-		'secret'      => '',
+	return apply_filters(
+		'wcorg_sponsor_payment_stripe',
+		array(
+			// Stripe API credentials.
+			'publishable' => '',
+			'secret'      => '',
 
-		// An HMAC key used to sign some data in between requests.
-		'hmac_key'    => '',
-	) );
+			// An HMAC key used to sign some data in between requests.
+			'hmac_key'    => '',
+		)
+	);
 }
 
 /**
@@ -120,7 +137,7 @@ function get_wordcamp_query_options() {
  */
 function _handle_post_data( &$data ) {
 	$step = filter_input( INPUT_POST, 'step' );
-	$fsp  = new Form_Spam_Prevention();
+	$fsp  = new Form_Spam_Prevention( get_fsp_config() );
 
 	switch ( $step ) {
 		// An invoice, event, currency and amount have been selected.
@@ -151,7 +168,7 @@ function _handle_post_data( &$data ) {
 
 					if ( ! in_array( $wordcamp_id, $valid_ids ) ) {
 						$data['errors'][] = 'Please select a valid event.';
-						$fsp->add_score_to_ip_address( [ 1 ] );
+						$fsp->add_score_to_ip_address( array( 1 ) );
 						return;
 					}
 
@@ -185,7 +202,7 @@ function _handle_post_data( &$data ) {
 
 			if ( ! array_key_exists( $currency, $data['currencies'] ) || false !== strpos( $currency, 'null' ) ) {
 				$data['errors'][] = 'Invalid currency.';
-				$fsp->add_score_to_ip_address( [ 1 ] );
+				$fsp->add_score_to_ip_address( array( 1 ) );
 				return;
 			}
 
@@ -294,7 +311,7 @@ function _handle_post_data( &$data ) {
 
 			// All good!
 			$data['step'] = STEP_PAYMENT_SUCCESS;
-			$fsp->add_score_to_ip_address( [ -1 ] );
+			$fsp->add_score_to_ip_address( array( -1 ) );
 			break;
 	}
 }

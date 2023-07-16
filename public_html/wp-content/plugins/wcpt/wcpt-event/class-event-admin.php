@@ -214,8 +214,8 @@ abstract class Event_Admin {
 			__( 'Add Private Note', 'wordcamporg' ),
 			'wcpt_add_note_metabox',
 			$this->get_event_type(),
-			'side',
-			'low'
+			'advanced',
+			'high'
 		);
 	}
 
@@ -244,7 +244,7 @@ abstract class Event_Admin {
 	 */
 	public function original_application_metabox( $post ) {
 		$application_data = get_post_meta( $post->ID, '_application_data', true );
-		require_once WCPT_DIR . 'views/wordcamp/metabox-original-application.php';
+		require_once WCPT_DIR . 'views/common/metabox-original-application.php';
 	}
 
 	/**
@@ -388,7 +388,7 @@ abstract class Event_Admin {
 		);
 
 		$gutenberg_enabled = false;
-		$current_screen = get_current_screen();
+		$current_screen    = get_current_screen();
 		if ( method_exists( $current_screen, 'is_block_editor' ) && $current_screen->is_block_editor() ) {
 			$gutenberg_enabled = true;
 		}
@@ -481,7 +481,7 @@ abstract class Event_Admin {
 			}
 		}
 
-		$meta_keys = $this->meta_keys();
+		$meta_keys        = $this->meta_keys();
 		$orig_meta_values = get_post_meta( $post_id );
 		$is_virtual_event = WordCamp_admin::is_virtual_event( $post_id );
 
@@ -498,6 +498,7 @@ abstract class Event_Admin {
 				'Primary organizer WordPress.org username',
 				'Co-Organizers usernames (seperated by comma)',
 				'WordPress.org Username',
+				'Mentor WordPress.org User Name',
 			);
 
 			if ( in_array( $key, $username_fields, true ) ) {
@@ -548,9 +549,16 @@ abstract class Event_Admin {
 					update_post_meta( $post_id, $key, $new_value );
 					break;
 
+				case 'select-timezone':
+					$allowed_zones = timezone_identifiers_list();
+					$new_value     = in_array( $values[ $key ], $allowed_zones, true ) ? $values[ $key ] : '';
+
+					update_post_meta( $post_id, $key, $new_value );
+					break;
+
 				case 'select-streaming':
 					$allowed_values = array_keys( self::get_streaming_services() );
-					$key_other = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
+					$key_other      = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
 					if ( in_array( $values[ $key ], $allowed_values ) ) {
 						update_post_meta( $post_id, $key, $values[ $key ] );
 
@@ -736,7 +744,7 @@ abstract class Event_Admin {
 		foreach ( $meta_keys as $key => $value ) :
 			$object_name = wcpt_key_to_str( $key, 'wcpt_' );
 			$readonly    = in_array( $key, $protected_fields ) ? ' readonly="readonly"' : '';
-			$classes = array(
+			$classes     = array(
 				'inside',
 				'wcpt-field',
 				'field__' . $object_name,
@@ -865,6 +873,39 @@ abstract class Event_Admin {
 								<?php
 								break;
 
+							case 'select-timezone':
+								$selected = get_post_meta( $post_id, $key, true );
+								?>
+
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>"
+									id="<?php echo esc_attr( $object_name ); ?>"
+								>
+									<option value="">
+										<?php esc_html_e( 'Choose a timezone', 'wordcamporg' ); ?>
+									</option>
+									<option value=""></option>
+
+									<?php foreach ( timezone_identifiers_list() as $timezone ) : ?>
+										<option
+											value="<?php echo esc_attr( $timezone ); ?>"
+											<?php if ( $selected === $timezone ) {
+												echo 'selected'; } ?>
+										>
+											<?php echo esc_html( $timezone ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+
+								<a href="https://www.zeitverschiebung.net/en/" target="_blank" rel="noopener noreferrer">
+									Lookup
+									<span class="screen-reader-text">(opens in a new tab)</span>
+									<span aria-hidden="true" class="dashicons dashicons-external"></span>
+								</a>
+
+								<?php
+								break;
+
 							case 'deputy_list':
 								wp_dropdown_users(
 									array(
@@ -881,7 +922,7 @@ abstract class Event_Admin {
 								break;
 							case 'select-streaming':
 								$selected = get_post_meta( $post_id, $key, true );
-								$options = self::get_streaming_services();
+								$options  = self::get_streaming_services();
 								?>
 
 								<select

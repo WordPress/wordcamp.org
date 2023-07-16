@@ -1,19 +1,43 @@
 <?php
 
+/*
+ * There's usually no need for caching in development environments, and it's often a hassle to work around it.
+ *
+ * For the occasions when it's needed for testing, the `test-cache` param can be added to the URL.
+ */
+$cache_enabled           = false;
+$super_cache_enabled     = false;
+$cache_rebuild_files     = 0;
+$wp_cache_mobile_enabled = 0;
+
+if ( 'production' === WORDCAMP_ENVIRONMENT || isset( $_GET['test-cache'] ) ) {
+	$cache_enabled           = true;
+	$super_cache_enabled     = true;
+	$cache_rebuild_files     = 1;
+	$wp_cache_mobile_enabled = 1;
+}
+
 if ( ! defined('WPCACHEHOME') )
 	define( 'WPCACHEHOME', WP_PLUGIN_DIR . '/wp-super-cache/' );
 
+$wp_super_cache_comments       = 1;
 $wpsc_version                  = 169;
 $wp_cache_debug_username       = WP_CACHE_DEBUG_USERNAME;
 $cached_direct_pages           = array();
 $wp_cache_rest_prefix          = 'wp-json';
 $wp_cache_home_path            = '/';
-$wp_cache_preload_on           = 0;
+
+/*
+ * Preloading should happen faster than expiration ($cache_max_time), so that fresh static pages are always
+ * available, without the visitor having to wait for one to be generated.
+ */
+$wp_cache_preload_on           = 1;
 $wp_cache_preload_taxonomies   = 0;
-$wp_cache_preload_email_volume = 'many';
+$wp_cache_preload_email_volume = 'none';
 $wp_cache_preload_email_me     = 0;
-$wp_cache_preload_interval     = 0;
-$wp_cache_preload_posts        = 'all';
+$wp_cache_preload_interval     = 30;
+$wp_cache_preload_posts        = 4;
+
 $cache_schedule_interval       = 'hourly';
 $cache_gc_email_me             = 0;
 $cache_time_interval           = '300';
@@ -36,9 +60,8 @@ $wpsc_save_headers             = 0;
 $wp_cache_mfunc_enabled        = 0;
 
 $cache_compression   = 0;
-$cache_enabled       = true;
-$super_cache_enabled = true;
-$cache_max_time      = 1300;
+// The cached files shouldn't expire until new preloaded ones have been generated.
+$cache_max_time      = 3600;
 $cache_path          = WP_CONTENT_DIR . '/cache/';
 $file_prefix         = 'wp-cache-';
 $ossdlcdn            = 0;
@@ -55,8 +78,6 @@ $cache_rejected_user_agent = array(
 	4 => 'spider',
 	5 => 'Yandex'
 );
-
-$cache_rebuild_files = 1;
 
 // Disable the file locking system.
 // If you are experiencing problems with clearing or creating cache files
@@ -109,5 +130,4 @@ $wp_cache_hide_donation      = 0;
 $wp_cache_not_logged_in      = 2;
 $wp_cache_clear_on_post_edit = 1;
 $wp_cache_hello_world        = 0;
-$wp_cache_mobile_enabled     = 1;
 $wp_cache_cron_check         = 1;

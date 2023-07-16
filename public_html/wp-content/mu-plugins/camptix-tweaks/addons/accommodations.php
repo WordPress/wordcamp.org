@@ -324,19 +324,12 @@ class Accommodations_Field extends CampTix_Addon {
 		$post_type_object = get_post_type_object( $attendee->post_type );
 		$attendee_link    = add_query_arg( 'action', 'edit', admin_url( sprintf( $post_type_object->_edit_link, $attendee->ID ) ) );
 		$handbook_link    = 'https://make.wordpress.org/community/handbook/wordcamp-organizer/first-steps/inclusive-and-welcoming-events/#requests-for-special-accommodations';
-		$support_email    = 'support@wordcamp.org';
 		$recipients       = array(
 			$current_wordcamp->meta['Email Address'][0], // Lead organizer
 			$current_wordcamp->meta['E-mail Address'][0], // City address
-			$support_email,
 		);
 
 		foreach ( $recipients as $recipient ) {
-			if ( $support_email === $recipient ) {
-				// Make sure the email to WordCamp Central is in English.
-				add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
-			}
-
 			$subject = sprintf(
 				/* translators: Email subject line. The %s placeholder is the name of a WordCamp. */
 				wp_strip_all_tags( __( 'An attendee who requires special accommodations has registered for %s', 'wordcamporg' ) ),
@@ -346,9 +339,6 @@ class Accommodations_Field extends CampTix_Addon {
 			$message_line_1 = wp_strip_all_tags( __( 'The following attendee has indicated that they require special accommodations. Please note that this information is confidential.', 'wordcamporg' ) );
 
 			$message_line_2 = wp_strip_all_tags( __( 'Please follow the procedure outlined in the WordCamp Organizer Handbook to ensure the health and safety of this event\'s attendees.', 'wordcamporg' ) );
-			if ( $support_email === $recipient ) {
-				$message_line_2 = 'Please check in with the organizing team to ensure they\'re following the procedure outlined in the WordCamp Organizer Handbook to ensure the health and safety of this event\'s attendees.';
-			}
 
 			$message = sprintf(
 				"%s\n\n%s\n\n%s\n\n%s",
@@ -357,10 +347,6 @@ class Accommodations_Field extends CampTix_Addon {
 				$message_line_2,
 				$handbook_link // Link to page in WordCamp Organizer Handbook.
 			);
-
-			if ( $support_email === $recipient ) {
-				remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
-			}
 
 			wp_mail( $recipient, $subject, $message );
 		}

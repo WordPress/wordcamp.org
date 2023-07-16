@@ -329,6 +329,8 @@ class Accommodations_Field extends CampTix_Addon {
 			$current_wordcamp->meta['E-mail Address'][0], // City address
 		);
 
+		$recipients = array_unique( $recipients );
+
 		foreach ( $recipients as $recipient ) {
 			$subject = sprintf(
 				/* translators: Email subject line. The %s placeholder is the name of a WordCamp. */

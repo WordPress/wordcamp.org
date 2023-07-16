@@ -54,16 +54,19 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 					'object_ids' => $event_id,
 					'term_taxonomy_id' => $tt_added_ids,
 					'fields' => 'names',
-				)
-				);
+				) );
 
 				$added_terms = $added_terms_query->get_terms();
 
-				add_post_meta( $event_id, '_tags_log', array(
-					'timestamp' => time(),
-					'user_id'   => get_current_user_id(),
-					'message'   => 'Tags added: ' . join( ', ', $added_terms ),
-				) );
+				add_post_meta(
+					$event_id,
+					'_tags_log',
+					array(
+						'timestamp' => time(),
+						'user_id'   => get_current_user_id(),
+						'message'   => 'Tags added: ' . join( ', ', $added_terms ),
+					)
+				);
 			}
 
 			if ( count( $tt_removed_ids ) > 0 ) {
@@ -72,14 +75,17 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 					'term_taxonomy_id' => $tt_removed_ids,
 					'fields'           => 'names',
 					'hide_empty'       => false,
-				)
-				) )->get_terms();
+				) ) )->get_terms();
 
-				add_post_meta( $event_id, '_tags_log', array(
-					'timestamp' => time(),
-					'user_id'   => get_current_user_id(),
-					'message'   => 'Tags removed: ' . join( ', ', $removed_terms ),
-				) );
+				add_post_meta(
+					$event_id,
+					'_tags_log',
+					array(
+						'timestamp' => time(),
+						'user_id'   => get_current_user_id(),
+						'message'   => 'Tags removed: ' . join( ', ', $removed_terms ),
+					)
+				);
 			}
 
 		}
@@ -112,14 +118,14 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 * Include files specific for meetup event
 		 */
 		public function includes() {
-			require_once ( WCPT_DIR . 'wcpt-meetup/class-wp-rest-meetups-controller.php' );
+			require_once WCPT_DIR . 'wcpt-meetup/class-wp-rest-meetups-controller.php';
 		}
 
 		/**
 		 * Register meetup custom post type
 		 */
 		public function register_post_types() {
-			// Meetup post type labels
+			// Meetup post type labels.
 			$wcpt_labels = array(
 				'name'               => __( 'Meetups', 'wordcamporg' ),
 				'singular_name'      => __( 'Meetup', 'wordcamporg' ),
@@ -214,7 +220,7 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 */
 		public function set_rest_post_status_default( $query_params ) {
 			if ( isset( $query_params['status'] ) ) {
-				$query_params['status']['default'] = Meetup_Loader::get_public_post_statuses();
+				$query_params['status']['default'] = self::get_public_post_statuses();
 			}
 
 			return $query_params;

@@ -106,7 +106,7 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 * Include files specific for meetup event
 		 */
 		public function includes() {
-			require_once ( WCPT_DIR . 'wcpt-meetup/class-wp-rest-meetups-controller.php' );
+			require_once( WCPT_DIR . 'wcpt-meetup/class-wp-rest-meetups-controller.php' );
 		}
 
 		/**
@@ -143,23 +143,23 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 				'author',
 			);
 
-			// Register meetup post type
+			// Register meetup post type.
 			register_post_type(
 				Meetup_Application::POST_TYPE, array(
-					'labels'          			=> $wcpt_labels,
-					'rewrite'         			=> $wcpt_rewrite,
-					'supports'        			=> $wcpt_supports,
-					'menu_position'   			=> '100',
-					'public'          			=> false,
-					'show_ui'         			=> true,
-					'can_export'      			=> true,
-					'capability_type' 			=> Meetup_Application::POST_TYPE,
-					'map_meta_cap'    			=> true,
-					'hierarchical'    			=> false,
-					'has_archive'     			=> false,
-					'menu_icon'       			=> 'dashicons-wordpress',
-					'show_in_rest'    			=> true,
-					'rest_base'       			=> 'meetups',
+					'labels'           => $wcpt_labels,
+					'rewrite'          => $wcpt_rewrite,
+					'supports'         => $wcpt_supports,
+					'menu_position'    => '100',
+					'public'           => false,
+					'show_ui'          => true,
+					'can_export'       => true,
+					'capability_type'  => Meetup_Application::POST_TYPE,
+					'map_meta_cap'     => true,
+					'hierarchical'     => false,
+					'has_archive'      => false,
+					'menu_icon'        => 'dashicons-wordpress',
+					'show_in_rest'     => true,
+					'rest_base'        => 'meetups',
 					'rest_controller_class' => 'WordCamp_REST_Meetups_Controller',
 				)
 			);
@@ -194,7 +194,7 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 */
 		public function set_rest_post_status_default( $query_params ) {
 			if ( isset( $query_params['status'] ) ) {
-				$query_params['status']['default'] = Meetup_Loader::get_public_post_statuses();
+				$query_params['status']['default'] = self::get_public_post_statuses();
 			}
 
 			return $query_params;

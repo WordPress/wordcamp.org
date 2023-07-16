@@ -331,6 +331,8 @@ class Accommodations_Field extends CampTix_Addon {
 			$support_email,
 		);
 
+		$recipients = array_unique( $recipients );
+
 		foreach ( $recipients as $recipient ) {
 			if ( $support_email === $recipient ) {
 				// Make sure the email to WordCamp Central is in English.

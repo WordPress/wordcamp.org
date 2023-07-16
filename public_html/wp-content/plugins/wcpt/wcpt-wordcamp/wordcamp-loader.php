@@ -363,6 +363,7 @@ class WordCamp_Loader extends Event_Loader {
 			'Number of Anticipated Attendees',
 			'Organizer Name',
 			'WordPress.org Username',
+			'A/V Wrangler Name',
 			'Virtual event only',
 			'Host region',
 			'Venue Name',

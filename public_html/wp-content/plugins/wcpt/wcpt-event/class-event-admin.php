@@ -701,10 +701,10 @@ abstract class Event_Admin {
 	 * Prevent users from creating new WordCamp and Meetup posts on dashboard. In most of the cases, all posts should be created
 	 * thru the public application forms in order to get all needed information and to initiate the vetting process correctly.
 	 *
-	 * Expectatio is made for users with administartor and deputy roles, as they need to create events manually from time to time,
+	 * Expectation is made for users with administrator and deputy roles, as they need to create events manually from time to time.
 	 *
 	 * Used wp_insert_post_empty_content hook is run fo creation and updates, which is why post ID needs to be checked. The hook
-	 * short circuits creation of new post when truthy value is retuned.
+	 * short circuits creation of new post when truthy value is returned.
 	 *
 	 * @param  boolean $maybe_empty Whether the post should be considered "empty".
 	 * @param  array   $postarr      Array of post data.
@@ -745,7 +745,7 @@ abstract class Event_Admin {
 		);
 
 		// Display the error.
-		wp_die( $error );
+		wp_die( $error ); // phpcs:ignore -- User input escaped in function.
 
 		return $error;
 	}

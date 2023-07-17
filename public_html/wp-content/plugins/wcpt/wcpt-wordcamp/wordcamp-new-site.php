@@ -6,7 +6,7 @@ use \WordCamp\Logger;
 
 use function WordCamp\Sunrise\get_top_level_domain;
 
-use const WordCamp\Sunrise\PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH;
+use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 class WordCamp_New_Site {
 	protected $new_site_id;
@@ -78,7 +78,7 @@ class WordCamp_New_Site {
 					<br /><br />
 
 					<span class="notice notice-large notice-warning">
-						Warning: This URL doesn't match the expected <code>city.wordcamp.org/year</code> format.
+						Warning: This URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code> or <code>events.wordpress.org/city/year/type/</code>.
 					</span>
 				<?php endif; ?>
 			<?php endif; // User can manage sites. ?>
@@ -127,7 +127,7 @@ class WordCamp_New_Site {
 		$parsed_url = wp_parse_url( $url );
 
 		if ( ! self::url_matches_expected_format( $parsed_url['host'], $parsed_url['path'], $wordcamp_id ) ) {
-			wp_die( 'The URL does not match the expected <code>city.wordcamp.org/year/</code> format. Please press the back button and update it.' );
+			wp_die( "The URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code> or <code>events.wordpress.org/city/year/type/</code>. Please press the back button and update it." );
 		}
 
 		update_post_meta( $wordcamp_id, $key, esc_url( $url ) );
@@ -155,7 +155,7 @@ class WordCamp_New_Site {
 		$tld                            = get_top_level_domain();
 		$last_permitted_external_domain = 2341;
 		$external_domain_exceptions     = array( 169459 );
-		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld @ix", $domain );
+		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld | events\.wordpress\.$tld @ix", $domain );
 		$can_have_external_domain       = $wordcamp_id <= $last_permitted_external_domain || in_array( $wordcamp_id, $external_domain_exceptions );
 
 		if ( $is_external_domain && $can_have_external_domain ) {
@@ -163,7 +163,13 @@ class WordCamp_New_Site {
 			return true;
 		}
 
-		return 1 === preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path );
+		if ( "events.wordpress.$tld" === $domain ) {
+			$match = preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $path );
+		} else {
+			$match = preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path );
+		}
+
+		return 1 === $match;
 	}
 
 	/**

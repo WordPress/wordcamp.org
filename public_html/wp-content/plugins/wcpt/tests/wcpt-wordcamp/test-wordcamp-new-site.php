@@ -76,6 +76,13 @@ class Test_WordCamp_New_Site extends WP_UnitTestCase {
 				2342,
 				true,
 			),
+
+			'events.wordpress.org url are also valid' => array(
+				'events.wordpress.test',
+				'/rome/2023/training/',
+				2342,
+				true,
+			),
 		);
 	}
 }

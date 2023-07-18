@@ -12,6 +12,9 @@ defined( 'WPINC' ) || die();
 /**
  * Retrieve `wordcamp` posts and their metadata.
  *
+ * This assumes is it's being called on WORDCAMP_ROOT_BLOG_ID, so the caller will need to switch_to_blog()
+ * if needed.
+ *
  * @param array $args Optional. Extra arguments to pass to `get_posts()`.
  *
  * @return array
@@ -38,7 +41,7 @@ function get_wordcamps( $args = array() ) {
 }
 
 /**
- * Retrieves the `wordcamp` post and postmeta associated with the current site.
+ * Retrieves the `wordcamp` post and post meta associated with the current site.
  *
  * @return false|WP_Post
  */
@@ -48,7 +51,7 @@ function get_wordcamp_post( $site_id = null ) {
 	}
 
 	// Switch to central.wordcamp.org to get posts.
-	switch_to_blog( BLOG_ID_CURRENT_SITE );
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 	$wordcamp = get_posts( array(
 		'post_type'   => 'wordcamp',
@@ -78,7 +81,7 @@ function get_wordcamp_post( $site_id = null ) {
  */
 function get_wordcamp_site_id( $wordcamp_post ) {
 	// Switch to central.wordcamp.org to get post meta.
-	switch_to_blog( BLOG_ID_CURRENT_SITE );
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 	$site_id = get_post_meta( $wordcamp_post->ID, '_site_id', true );
 	if ( ! $site_id ) {
@@ -251,7 +254,7 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
 function get_wordcamp_dropdown( $name = 'wordcamp_id', $query_options = array(), $selected = 0 ) {
 	global $wpdb;
 
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 	if ( empty( $query_options ) ) {
 		$wordcamps = $wpdb->get_results( "

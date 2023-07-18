@@ -39,7 +39,7 @@ function maybe_add_latest_site_hints() {
 	if ( ! is_user_logged_in() ) {
 		add_filter( 'body_class',   __NAMESPACE__ . '\add_notification_classes_to_body' );
 		add_action( 'wp_head',      __NAMESPACE__ . '\add_notification_styles' );
-		add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_about_latest_site' );
+		add_action( 'wp_footer',    __NAMESPACE__ . '\show_notification_about_latest_site' );
 	}
 }
 

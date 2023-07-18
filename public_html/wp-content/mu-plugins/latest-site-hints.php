@@ -76,7 +76,7 @@ function canonical_link_past_home_pages_to_current_year() {
 
 /**
  * If notification is shown, misuse body.admin-bar class as most of the WordCamp themes already that that into
- * account. This makes its a whole lot easier to place the notification on top of contens.
+ * account. This makes its a whole lot easier to place the notification on top of content.
  */
 function add_notification_classes_to_body( $classes ) {
 	$classes[] = 'admin-bar'; // Add this as most of the current WordCamp themes already take the adminbar into account.

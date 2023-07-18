@@ -707,7 +707,7 @@ abstract class Event_Admin {
 	 * @param  boolean $maybe_empty Whether the post should be considered "empty".
 	 * @param  array   $postarr     Array of post data.
 	 *
-	 * @return mixed                Booleab whether the post should be considered "empty" or WP_Error in case user is not allowed to create post.
+	 * @return mixed                Boolean whether the post should be considered "empty" or WP_Error in case user is not allowed to create post.
 	 */
 	public function maybe_prevent_creation_of_new_post( $maybe_empty, $postarr ) {
 		$post_type = $postarr['post_type'];

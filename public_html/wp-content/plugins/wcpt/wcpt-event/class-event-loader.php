@@ -116,7 +116,7 @@ abstract class Event_Loader {
 
 		$schedules['weekly'] = array(
 			'interval' => WEEK_IN_SECONDS,
-			'display'  => __( 'Once weekly', 'wordcamporg' )
+			'display'  => __( 'Once weekly', 'wordcamporg' ),
 		);
 
 		return $schedules;

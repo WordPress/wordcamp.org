@@ -108,11 +108,16 @@ abstract class Base {
 	 * }
 	 */
 	public function __construct( array $options = array() ) {
-		$this->options = wp_parse_args( $options, array(
-			'cache_data'  => true,
-			'flush_cache' => false,
-			'public'      => true,
-		) );
+		wp_raise_memory_limit( 'wordcamp_high' );
+
+		$this->options = wp_parse_args(
+			$options,
+			array(
+				'cache_data'  => true,
+				'flush_cache' => false,
+				'public'      => true,
+			)
+		);
 
 		$this->error = new WP_Error();
 	}
@@ -122,7 +127,7 @@ abstract class Base {
 	 *
 	 * @return array
 	 */
-	public abstract function get_data();
+	abstract public function get_data();
 
 	/**
 	 * Compile the report data into results.
@@ -131,7 +136,7 @@ abstract class Base {
 	 *
 	 * @return array
 	 */
-	public abstract function compile_report_data( array $data );
+	abstract public function compile_report_data( array $data );
 
 	/**
 	 * Filter the report data prior to caching and compiling.
@@ -143,9 +148,12 @@ abstract class Base {
 	protected function filter_data_fields( array $data ) {
 		$safelist = $this->get_data_fields_safelist();
 
-		array_walk( $data, function ( &$row ) use ( $safelist ) {
-			$row = shortcode_atts( $safelist, $row );
-		} );
+		array_walk(
+			$data,
+			function ( &$row ) use ( $safelist ) {
+				$row = shortcode_atts( $safelist, $row );
+			}
+		);
 
 		return $data;
 	}
@@ -319,10 +327,13 @@ abstract class Base {
 	 * @return WP_REST_Response
 	 */
 	protected static function prepare_rest_response( $data, array $additional_response_params = array() ) {
-		$response_data = array_merge( array(
-			'report_name'        => static::$name,
-			'report_description' => static::$description,
-		), $additional_response_params );
+		$response_data = array_merge(
+			array(
+				'report_name'        => static::$name,
+				'report_description' => static::$description,
+			),
+			$additional_response_params
+		);
 
 		$response_data['data'] = $data;
 

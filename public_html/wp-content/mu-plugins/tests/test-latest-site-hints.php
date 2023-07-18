@@ -1,16 +1,16 @@
 <?php
 
-namespace WordCamp\SEO\Tests;
+namespace WordCamp\Latest_Site_Hints\Tests;
 use WP_UnitTest_Factory;
 use WordCamp\Tests\Database_TestCase;
 
-use function WordCamp\SEO\get_latest_home_url;
+use function WordCamp\Latest_Site_Hints\get_latest_home_url;
 
 defined( 'WPINC' ) || die();
 
 /**
  * @group mu-plugins
- * @group seo
+ * @group latest-site-hints
  */
 class Test_WordCamp_SEO extends Database_TestCase {
 	/**
@@ -30,7 +30,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_latest_home_url
+	 * @covers WordCamp\Latest_Site_Hints\get_latest_home_url
 	 *
 	 * @dataProvider data_get_latest_home_url
 	 */

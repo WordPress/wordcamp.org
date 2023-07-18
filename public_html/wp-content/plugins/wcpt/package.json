@@ -3,9 +3,9 @@
 	"version": "0.0.1",
 	"license": "GPL-2.0+",
 	"dependencies": {
-		"@wordpress/element": "4.0.0",
-		"@wordpress/scripts": "18.0.0",
-		"prop-types": "15.7.2"
+		"@wordpress/element": "4.3.0",
+		"@wordpress/scripts": "22.3.0",
+		"prop-types": "15.8.1"
 	},
 	"eslintConfig": {
 		"extends": "../../../../.eslintrc.js",

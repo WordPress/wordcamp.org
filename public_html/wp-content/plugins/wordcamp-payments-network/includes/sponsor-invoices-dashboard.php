@@ -4,7 +4,7 @@ namespace WordCamp\Budgets_Dashboard\Sponsor_Invoices;
 
 use WP_Post;
 use WordCamp\Logger;
-use WordCamp_QBO_Client;
+use WordCamp_QBO, WordCamp_QBO_Client;
 use WordCamp_Budgets;
 use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
@@ -69,7 +69,7 @@ function register_submenu_page() {
  * Render the admin page
  */
 function render_submenu_page() {
-	require_once( __DIR__ . '/sponsor-invoices-list-table.php' );
+	require_once __DIR__ . '/sponsor-invoices-list-table.php';
 
 	$list_table = new Sponsor_Invoices_List_Table();
 	$sections   = get_submenu_page_sections();
@@ -98,7 +98,7 @@ function render_submenu_page() {
 			break;
 	}
 
-	require_once( dirname( __DIR__ ) . '/views/sponsor-invoices/page-sponsor-invoices.php' );
+	require_once dirname( __DIR__ ) . '/views/sponsor-invoices/page-sponsor-invoices.php';
 }
 
 /**
@@ -179,7 +179,7 @@ function upgrade_database() {
 	}
 
 	$table_name = get_index_table_name();
-	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 	$schema = "
 		CREATE TABLE $table_name (
@@ -241,8 +241,8 @@ function handle_approve_invoice_request() {
 
 	switch_to_blog( $site_id );
 
-	$quickbooks_result = WordCamp_QBO_Client::send_invoice_to_quickbooks( $invoice_id );
-	Logger\log( 'send_invoice', compact( 'invoice_id', 'quickbooks_result' ) );
+	$quickbooks_result = WordCamp_QBO::create_invoice( $invoice_id );
+	Logger\log( 'create_invoice', compact( 'invoice_id', 'quickbooks_result' ) );
 
 	if ( is_int( $quickbooks_result ) ) {
 		update_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id', absint( $quickbooks_result ) );
@@ -251,7 +251,7 @@ function handle_approve_invoice_request() {
 
 		$result = array( 'success' => 'The invoice has been approved and e-mailed to the sponsor.' );
 	} else {
-		$result = array( 'error' => $quickbooks_result );
+		$result = array( 'error' => $quickbooks_result->get_error_message() );
 	}
 
 	restore_current_blog();
@@ -368,7 +368,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 		$sponsor_email    = get_post_meta( $sponsor_id, '_wcpt_sponsor_email_address', true );
 		$qbo_invoice_id   = get_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id',       true );
 		$status_message   = "has been sent to $sponsor_name via $sponsor_email. You will receive another notification when they have paid the invoice.";
-		$invoice_filename = WordCamp_QBO_Client::get_invoice_filename( $qbo_invoice_id );
+		$invoice_filename = WordCamp_QBO::download_invoice_pdf( $qbo_invoice_id );
 
 		Logger\log( 'get_invoice_filename', compact( 'qbo_invoice_id', 'invoice_filename' ) );
 

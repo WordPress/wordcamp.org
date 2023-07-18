@@ -19,6 +19,7 @@ class MES_Sponsor {
 	 */
 	public function __construct() {
 		add_action( 'init',                  array( $this, 'create_post_type' ) );
+		add_action( 'rest_api_init',         array( $this, 'register_routes'  ) );
 		add_action( 'admin_init',            array( $this, 'add_meta_boxes'   ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'admin_enqueue'    ), 20 );
 		add_action( 'save_post',             array( $this, 'save_post'        ), 10, 2 );
@@ -53,17 +54,140 @@ class MES_Sponsor {
 			'labels'          => $labels,
 			'singular_label'  => __( 'Multi-Event Sponsor', 'wordcamporg' ),
 			'public'          => true,
+			'show_in_rest'    => true,
 			'menu_position'   => 20,
 			'hierarchical'    => false,
 			'capability_type' => 'page',
 			'has_archive'     => true,
-			'rewrite'         => array( 'slug' => 'multi-event-sponsor', 'with_front' => false ),
+			'rewrite'         => array(
+				'slug'       => 'multi-event-sponsor',
+				'with_front' => false,
+			),
 			'query_var'       => true,
+			'menu_icon'       => 'dashicons-heart',
 			'supports'        => array( 'title', 'editor', 'author', 'excerpt', 'revisions', 'thumbnail' ),
 			'taxonomies'      => array( MES_Region::TAXONOMY_SLUG ),
 		);
 
 		register_post_type( self::POST_TYPE_SLUG, $post_type_params );
+	}
+
+	/**
+	 * Register endpoints for the REST API.
+	 */
+	public function register_routes() : void {
+		register_rest_route(
+			'multi-event-sponsors/v1',
+			'/push-to-active-camps',
+			array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'push_to_active_camps' ),
+					'permission_callback' => function() {
+						return current_user_can( 'manage_network' );
+					},
+				),
+			)
+		);
+	}
+
+	/**
+	 * Copy the contents of MES posts to their forked posts on active camp sites.
+	 */
+	public function push_to_active_camps( WP_REST_Request $request ) : array {
+		$skipped_posts = array();
+		$source_post   = get_post( $request->get_param( 'sponsorId' ) );
+		$wordcamps     = get_wordcamps( array(
+			'post_status' => array_merge(
+				// Any status where the camp might have a site created, and the event isn't over.
+				WordCamp_Loader::get_pre_planning_post_statuses(),
+				WordCamp_Loader::get_active_wordcamp_statuses(),
+			),
+		) );
+
+		foreach ( $wordcamps as $wordcamp ) {
+			if ( ! isset( $wordcamp->meta['_site_id'][0] ) ) {
+				continue;
+			}
+
+			switch_to_blog( $wordcamp->meta['_site_id'][0] );
+
+			$fork_post = get_posts( array(
+				'post_type'    => 'wcb_sponsor',
+				'meta_key'     => '_mes_id',
+				'meta_value'   => $source_post->ID,
+				'meta_compare' => '=',
+
+				// Only published ones will be updated, but the others should still be added to `$skipped_posts`.
+				'post_status'  => 'any',
+			) );
+			$fork_post = array_pop( $fork_post );
+
+			if ( ! $fork_post ) {
+				restore_current_blog();
+				continue;
+			}
+
+			// Organizers might have made changes that are specific to this camp, so don't overwrite them.
+			if ( self::post_has_been_edited( $fork_post->ID ) ) {
+				$skipped_posts[] = array(
+					// Can't use `get_post_edit_link()` because the `wcb_sponsor` post type isn't registered on Central or while switching blogs.
+					'edit_url'  => admin_url( "post.php?post={$fork_post->ID}&action=edit" ),
+					'site_name' => get_wordcamp_name(),
+				);
+				restore_current_blog();
+				continue;
+			}
+
+			wp_update_post( array(
+				'ID'           => $fork_post->ID,
+				'post_title'   => $source_post->post_title,
+				'post_content' => $source_post->post_content,
+
+				// This triggers a database query for every item, so it's a good optimization candidate if needed.
+				'meta_input'   => WordCamp_New_Site::get_stub_me_sponsors_meta( $source_post ),
+			) );
+
+			// Reset date so that post_has_been_edited() will continue detecting that it hasn't been edited (by a user).
+			self::reset_post_modified_date( $fork_post );
+
+			// Default to Gutenberg since all the source posts now use it.
+			if ( is_callable( array( 'Classic_Editor', 'remember_block_editor' ) ) ) {
+				Classic_Editor::remember_block_editor( array(), $fork_post );
+			}
+
+			restore_current_blog();
+		}
+
+		return array(
+			'success'       => true,
+			'skipped_posts' => $skipped_posts,
+		);
+	}
+
+	/**
+	 * Check if the post has been edited since it was created.
+	 *
+	 * WP will update modified date when saving posts, even if only post meta is changed and the title/content are untouched.
+	 */
+	public static function post_has_been_edited( int $post_id ) : bool {
+		return get_the_modified_time( 'U', $post_id ) !== get_the_time( 'U', $post_id );
+	}
+
+	/**
+	 * Revert the post modified date back to the creation date.
+	 */
+	public static function reset_post_modified_date( WP_Post $post ) : void {
+		global $wpdb;
+
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_modified'     => $post->post_date,
+				'post_modified_gmt' => $post->post_date_gmt,
+			),
+			array( 'ID' => $post->ID )
+		);
 	}
 
 	/**
@@ -74,7 +198,7 @@ class MES_Sponsor {
 			'mes_regional_sponsorships',
 			__( 'Regional Sponsorships', 'wordcamporg' ),
 			array( $this, 'markup_meta_boxes' ),
-			MES_Sponsor::POST_TYPE_SLUG,
+			self::POST_TYPE_SLUG,
 			'normal',
 			'default'
 		);
@@ -83,7 +207,7 @@ class MES_Sponsor {
 			'mes_contact_information',
 			__( 'Contact Information', 'wordcamporg' ),
 			array( $this, 'markup_meta_boxes' ),
-			MES_Sponsor::POST_TYPE_SLUG,
+			self::POST_TYPE_SLUG,
 			'normal',
 			'default'
 		);
@@ -92,7 +216,7 @@ class MES_Sponsor {
 			'sponsor-agreement',
 			__( 'Sponsor Agreement', 'wordcamporg' ),
 			array( $this, 'markup_meta_boxes' ),
-			MES_Sponsor::POST_TYPE_SLUG,
+			self::POST_TYPE_SLUG,
 			'side'
 		);
 	}
@@ -109,7 +233,10 @@ class MES_Sponsor {
 		switch ( $box['id'] ) {
 			case 'mes_regional_sponsorships':
 				$regions               = get_terms( MES_Region::TAXONOMY_SLUG, array( 'hide_empty' => false ) );
-				$sponsorship_levels    = get_posts( array( 'post_type' => MES_Sponsorship_Level::POST_TYPE_SLUG, 'numberposts' => -1 ) );
+				$sponsorship_levels    = get_posts( array(
+					'post_type'   => MES_Sponsorship_Level::POST_TYPE_SLUG,
+					'numberposts' => - 1,
+				) );
 				$regional_sponsorships = $this->populate_default_regional_sponsorships( get_post_meta( $post->ID, 'mes_regional_sponsorships', true ), $regions );
 				$view                  = 'metabox-regional-sponsorships.php';
 				break;
@@ -147,17 +274,55 @@ class MES_Sponsor {
 				break;
 		}
 
-		require_once( dirname( __DIR__ ) . '/views/'. $view );
+		require_once dirname( __DIR__ ) . '/views/'. $view;
 	}
 
 	/**
 	 * Enqueue admin scripts.
 	 */
 	function admin_enqueue() {
-		global $post_type;
+		$screen = get_current_screen();
+
+		if ( self::POST_TYPE_SLUG !== $screen->id ) {
+			return;
+		}
+
+		if ( current_user_can( 'manage_network' ) ) {
+			$asset                   = require_once dirname( __DIR__ ) . '/build/index.asset.php';
+			$asset['dependencies'][] = 'wp-sanitize';
+
+			wp_enqueue_script(
+				'multi-event-sponsor',
+				plugins_url( 'build/index.js', __DIR__ ),
+				$asset['dependencies'],
+				$asset['version'],
+				true
+			);
+
+			$data = array(
+				'admin_url' => admin_url(),
+			);
+			wp_add_inline_script(
+				'multi-event-sponsor',
+				sprintf(
+					'var MultiEventSponsor = JSON.parse( decodeURIComponent( \'%s\' ) );',
+					rawurlencode( wp_json_encode( $data ) )
+				),
+				'before'
+			);
+
+			wp_set_script_translations( 'multi-event-sponsor', 'wordcamporg' );
+
+			wp_enqueue_style(
+				'multi-event-sponsor',
+				plugins_url( 'css/multi-event-sponsor.css', __DIR__ ),
+				array(),
+				filemtime( dirname( __DIR__ ) . '/css/multi-event-sponsor.css' )
+			);
+		}
 
 		// Enqueues scripts and styles for sponsors admin page
-		if ( self::POST_TYPE_SLUG == $post_type && wp_script_is( 'wcb-spon', 'registered' ) ) {
+		if ( wp_script_is( 'wcb-spon', 'registered' ) ) {
 			wp_enqueue_script( 'wcb-spon' );
 		}
 	}
@@ -215,23 +380,23 @@ class MES_Sponsor {
 	 * @param array $new_values
 	 */
 	protected function save_post_meta( $post_id, $new_values ) {
-		if ( isset( $new_values[ 'mes_regional_sponsorships' ] ) ) {
-			array_walk( $new_values[ 'mes_regional_sponsorships' ], 'absint' );
-			update_post_meta( $post_id, 'mes_regional_sponsorships', $new_values[ 'mes_regional_sponsorships' ] );
+		if ( isset( $new_values['mes_regional_sponsorships'] ) ) {
+			array_walk( $new_values['mes_regional_sponsorships'], 'absint' );
+			update_post_meta( $post_id, 'mes_regional_sponsorships', $new_values['mes_regional_sponsorships'] );
 		}
 
-		if ( isset( $new_values["mes_email_address"] ) ) {
+		if ( isset( $new_values['mes_email_address'] ) ) {
 			$new_values['mes_email_address'] = is_email( $new_values['mes_email_address'] );
 		}
 
 		$text_fields = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number', 'twitter_handle',
-			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country'
+			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
 		foreach ( $text_fields as $field ) {
-			if ( isset( $new_values["mes_$field"] ) ) {
-				update_post_meta( $post_id, "mes_$field", sanitize_text_field( $new_values["mes_$field"] ) );
+			if ( isset( $new_values[ "mes_$field" ] ) ) {
+				update_post_meta( $post_id, "mes_$field", sanitize_text_field( $new_values[ "mes_$field" ] ) );
 			}
 		}
 

@@ -43,3 +43,11 @@
 	margin-left: 0;
 	margin-right: 0;
 }
+
+.wc-panel-volunteer-info .components-base-control {
+	margin-bottom: 2em;
+}
+
+.wc-panel-volunteer-info .components-base-control:last-child {
+	margin-bottom: 0;
+}

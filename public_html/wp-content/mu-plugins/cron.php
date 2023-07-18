@@ -14,13 +14,15 @@
 namespace WordCamp\Cron;
 defined( 'WPINC' ) || die();
 
-if ( 'production' !== WORDCAMP_ENVIRONMENT || ! is_main_site() ) {
-	return;
+// Allocate additional ram, since jobs sometimes need to loop through all sites.
+if ( wp_doing_cron() ) {
+	wp_raise_memory_limit( 'wordcamp_high' );
 }
 
-
-add_action( 'init',                __NAMESPACE__ . '\schedule_daily_jobs' );
-add_action( 'wordcamp_daily_jobs', __NAMESPACE__ . '\execute_daily_jobs' );
+if ( 'production' === WORDCAMP_ENVIRONMENT && is_main_site() ) {
+	add_action( 'init',                __NAMESPACE__ . '\schedule_daily_jobs' );
+	add_action( 'wordcamp_daily_jobs', __NAMESPACE__ . '\execute_daily_jobs' );
+}
 
 
 /**

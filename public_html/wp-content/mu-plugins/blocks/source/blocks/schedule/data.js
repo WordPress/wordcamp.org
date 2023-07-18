@@ -1,12 +1,13 @@
 /**
  * WordPress dependencies
  */
+import { date } from '@wordpress/date';
 import { useSelect } from '@wordpress/data';
-import { format } from '@wordpress/date';
 
 /**
  * Internal dependencies
  */
+import { getTimezone } from './utils/date';
 import { WC_BLOCKS_STORE } from '../../data';
 
 /*
@@ -19,6 +20,9 @@ export const implicitTrack = { id: 0 };
 
 // Used when indexing array items by date, etc.
 export const DATE_SLUG_FORMAT = 'Y-m-d';
+
+// Shortcut to the site timezone.
+export const SITE_TIMEZONE = WordCampBlocks.schedule.timezone;
 
 /**
  * Prepares the data for a Schedule Block.
@@ -334,7 +338,7 @@ function getExampleData() {
 export function getDerivedSessions( allSessions, allCategories, allTracks, attributes ) {
 	const { chooseSpecificDays, chooseSpecificTracks, chosenDays, chosenTrackIds } = attributes;
 
-	allSessions = deriveSessionStartEndTimes( allSessions );
+	allSessions = deriveSessionStartEndTimes( allSessions, attributes );
 	allSessions = deriveSessionTerms( allSessions, allCategories, allTracks );
 
 	let chosenSessions = Array.from( allSessions );
@@ -353,16 +357,18 @@ export function getDerivedSessions( allSessions, allCategories, allTracks, attri
 /**
  * Replace raw session timestamp with local timezone start/end times.
  *
- * @param {Array} sessions
+ * @param {Array}  sessions
+ * @param {Object} attributes
  * @return {Array}
  */
-function deriveSessionStartEndTimes( sessions ) {
+function deriveSessionStartEndTimes( sessions, attributes ) {
 	return sessions.map( ( session ) => {
 		const durationInMs = parseInt( session.meta._wcpt_session_duration ) * 1000; // Convert to milliseconds.
 
 		session.derived = session.derived || {};
 		session.derived.startTime = parseInt( session.meta._wcpt_session_time ) * 1000;
 		session.derived.endTime = session.derived.startTime + durationInMs;
+		session.derived.timezone = getTimezone( attributes );
 
 		return session;
 	} );
@@ -447,15 +453,9 @@ function filterSessionsByChosenDays( sessions, chosenDays ) {
 	}
 
 	return sessions.filter( ( session ) => {
-		const date = format( DATE_SLUG_FORMAT, session.derived.startTime );
-		return chosenDays.includes( date );
+		const day = date( DATE_SLUG_FORMAT, session.derived.startTime, SITE_TIMEZONE );
+		return chosenDays.includes( day );
 	} );
-
-	/*
-	 todo kinda bad UX b/c don't really see the changes happening, below/above fold.
-	 and/or it happens so quick that kind of jarring. maybe add some jumpToBlah() and/or smoothed animation
-	 iirc G has some animation stuff built in for moving blocks around, might be reusable
-	 */
 }
 
 /**

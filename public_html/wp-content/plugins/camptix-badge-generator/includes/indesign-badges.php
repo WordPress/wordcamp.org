@@ -6,7 +6,7 @@ use CampTix_Plugin;
 use CampTix\Badge_Generator;
 use CampTix\Badge_Generator\HTML;
 use WordCamp\Logger;
-use WordCamp\Utilities;
+use WordPressdotorg\MU_Plugins\Utilities;
 
 defined( 'WPINC' ) || die();
 

@@ -15,6 +15,16 @@ use function WordCamp\Sunrise\get_top_level_domain;
  */
 add_filter( 'got_url_rewrite', '__return_true' );
 
+/**
+ * Create a context for `wp_raise_memory_limit()` that allocates a large amount of memory.
+ *
+ * Suitable for cron jobs, reports, and other operations that legitimately need more than normal.
+ */
+function wcorg_high_memory_context() : string {
+	return '512M';
+}
+add_filter( 'wordcamp_high_memory_limit', 'wcorg_high_memory_context' );
+
 /*
  * Register an extra directory for private themes.
  *
@@ -123,32 +133,6 @@ function wcorg_disable_network_activated_plugins_on_sites( $plugins ) {
 }
 add_filter( 'site_option_active_sitewide_plugins', 'wcorg_disable_network_activated_plugins_on_sites' );
 
-/**
- * Disable Global Terms on new sites.
- *
- * Global Terms is an old, largely unused, and undocumented feature of WordPress. It was used on WordPress.com
- * for many years, but even they turned it off around 2015. We don't know why it was ever enabled for
- * WordCamp.org.
- *
- * When it's enabled, the "local" terms are still created like normal, but the `term_id_filter` will override
- * their IDs at runtime, so that all sites use the same ID for the same slug, across sites _and_ across taxonomies.
- * Because the local terms still exist, it can (theoretically) be safely disabled without any consequences, and
- * then the local terms will be used instead.
- *
- * When term splitting was introduced in WP 4.2 - 4.4, though, it was not compatible with Global Terms, and any
- * term that was split while Global Terms is enabled will have the wrong IDs set, which causes bugs, like not
- * being able to assign shared terms to a post, and not being able to edit the name of a shared term. So, we're
- * turning it off for new sites.
- *
- * It's left on for old sites out of caution, since there could be some unforeseeable consequences or hassles
- * with turning it off for them.
- *
- * This will not retroactively fix any terms that have been split with the wrong ID, those need to be fixed
- * manually.
- */
-add_filter( 'global_terms_enabled', function() {
-	return wcorg_skip_feature( 'local_terms' );
-} );
 
 /**
  * Remove menu items on certain sites.
@@ -184,12 +168,12 @@ add_action( 'init', 'wcorg_show_tagregator_log' );
 function wcorg_set_per_camp_tagregator_end_date( $end_date ) {
 	$details = get_wordcamp_post();
 
-	if ( isset( $details->meta['Start Date (YYYY-mm-dd)'][0] ) ) {
-		$offset = '2 weeks';
+	// Despite its key/label, the start date value is actually stored as a Unix timestamp.
+	$camp_start_timestamp = $details->meta['Start Date (YYYY-mm-dd)'][0] ?? 0;
 
-		// Despite its key/label, the start date value is actually stored as a Unix timestamp.
-		$camp_start_timestamp = $details->meta['Start Date (YYYY-mm-dd)'][0];
-		$end_date             = date_create( date( 'Y-m-d', $camp_start_timestamp ) . '  ' . $offset );
+	if ( $camp_start_timestamp ) {
+		$offset   = '2 weeks';
+		$end_date = date_create( date( 'Y-m-d', $camp_start_timestamp ) . '  ' . $offset );
 	}
 
 	return $end_date;
@@ -551,6 +535,7 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 		'camptix-trustcard/camptix-trustcard.php',
 		'camptix-trustpay/camptix-trustpay.php',
 		'edit-flow/edit_flow.php',
+		'lang-attribute/lang-attribute.php',
 		'liveblog/liveblog.php',
 		'public-post-preview/public-post-preview.php',
 		'pwa/pwa.php',
@@ -728,31 +713,6 @@ function debug_community_events_response( $response, $context, $transport, $requ
 }
 // Comment this out when not needed, but leave the code for future use.
 // add_action( 'http_api_debug', 'debug_community_events_response', 10, 5 );
-
-/**
- * Prevent permalink structures from starting with `%year%`
- *
- * See https://make.wordpress.org/community/2020/03/03/proposal-for-wordcamp-sites-seo-fixes/#comment-28213.
- * See `WordCamp\Sunrise\Tests\Test_Sunrise\data_get_canonical_year_url()`.
- *
- * @param string $new_value
- *
- * @return string
- */
-function wcorg_prevent_date_permalinks( $new_value ) {
-	if ( '/%year%' === substr( $new_value, 0, 7 ) ) {
-		wp_die(
-			'<p>' .
-			__( "WordCamp.org permalinks can't start with `%year%`, because that conflicts with our URL structure (`https://city.wordcamp.org/year`).", 'wordcamporg' ) .
-			'</p> <p>' .
-			__( 'Please add a prefix like `/news/`, or choose a different structure (like `%postname%`).', 'wordcamporg' ) .
-			'</p>'
-		);
-	}
-
-	return $new_value;
-}
-add_filter( 'pre_update_option_permalink_structure', 'wcorg_prevent_date_permalinks' );
 
 /**
  * Modify CLDR country data temporarily while awaiting an update to the data in the WP CLDR plugin.

@@ -6,43 +6,66 @@ import { get } from 'lodash';
 /**
  * WordPress dependencies
  */
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 
 /**
- * Internal dependencies
- */
-import { arrayTokenReplace, tokenSplit } from '../../i18n';
-
-/**
- * Fetch the details for a session as a human-readable string, in array-parts from `arrayTokenReplace`. This can be
- * passed to any react component and renders as text in the element on the browser.
+ * Fetch the details for a session as a human-readable string.
  *
- * @param {Object} session
- * @return {Array}
+ * @param {Object}  session
+ * @param {boolean} allTracks
+ * @return {string}
  */
-export function getSessionDetails( session ) {
-	const terms = get( session, '_embedded[\'wp:term\']', [] ).flat();
+export function getSessionDetails( session, allTracks = false ) {
+	const terms = get( session, "_embedded['wp:term']", [] ).flat();
+	const hasDate = !! session.session_date_time?.date;
+	const hasTracks = !! session.session_track.length;
 
-	if ( session.session_track.length ) {
-		const [ firstTrack ] = terms.filter( ( term ) => 'wcb_track' === term.taxonomy );
+	if ( ! hasDate && ! hasTracks ) {
+		return '';
+	}
 
-		return arrayTokenReplace(
-			/* translators: 1: A date; 2: A time; 3: A location; */
-			tokenSplit( __( '%1$s at %2$s in %3$s', 'wordcamporg' ) ),
-			[
-				session.session_date_time.date,
-				session.session_date_time.time,
-				firstTrack.name.trim(),
-			]
+	if ( ! hasDate && hasTracks ) {
+		const tracks = terms.filter( ( term ) => 'wcb_track' === term.taxonomy );
+
+		return sprintf(
+			/* translators: %s: Session track(s) */
+			__( 'In %s', 'wordcamporg' ),
+			allTracks ? tracks.map( ( { name } ) => name.trim() ).join( ', ' ) : tracks[ 0 ].name.trim()
+		);
+	} else if ( hasTracks ) {
+		const tracks = terms.filter( ( term ) => 'wcb_track' === term.taxonomy );
+
+		return sprintf(
+			/* translators: 1: A date; 2: A time; 3: Session track(s) */
+			__( '%1$s at %2$s in %3$s', 'wordcamporg' ),
+			session.session_date_time.date,
+			session.session_date_time.time,
+			allTracks ? tracks.map( ( { name } ) => name.trim() ).join( ', ' ) : tracks[ 0 ].name.trim()
 		);
 	}
 
-	return arrayTokenReplace(
+	return sprintf(
 		/* translators: 1: A date; 2: A time; */
-		tokenSplit( __( '%1$s at %2$s', 'wordcamporg' ) ),
-		[
-			session.session_date_time.date,
-			session.session_date_time.time,
-		]
+		__( '%1$s at %2$s', 'wordcamporg' ),
+		session.session_date_time.date,
+		session.session_date_time.time
 	);
+}
+
+/**
+ * Sort callback for ordering sessions by time, ascending (past -> future).
+ *
+ * @param {Object} sessionA
+ * @param {Object} sessionB
+ * @return {number}
+ */
+export function sortSessionByTime( sessionA, sessionB ) {
+	// If no meta values found, keep the same sort order.
+	if ( ! sessionA.meta?._wcpt_session_time || ! sessionB.meta?._wcpt_session_time ) {
+		return 0;
+	}
+	if ( sessionA.meta._wcpt_session_time < sessionB.meta._wcpt_session_time ) {
+		return -1;
+	}
+	return 1;
 }

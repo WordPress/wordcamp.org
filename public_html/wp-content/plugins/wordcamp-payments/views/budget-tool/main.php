@@ -1,3 +1,6 @@
+<?php
+// phpcs:disable -- Disable to avoid conflicts with HTML readability.
+?>
 <script>
 window.wcb = window.wcb || {models:{}, input:[]};
 wcb.input = <?php echo json_encode( $budget[ $view ] ); ?>;
@@ -107,6 +110,12 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
     <form class="wcb-submit-form" action="options.php" method="post">
         <?php settings_fields( 'wcb_budget_noop' ); ?>
         <input type="hidden" name="_wcb_budget_data" value="<?php echo esc_attr( json_encode( $budget ) ); ?>" />
+
+        <?php if ( current_user_can( WordCamp_Budgets::ADMIN_CAP ) ) : ?>
+        <p class="submit" style="padding-bottom:0">
+            <?php submit_button( esc_html__( 'Download CSV', 'wordcamporg' ), 'button-link', 'wcb-budget-download-csv', false ); ?>
+        </p>
+        <?php endif; ?>
 
         <?php if ( $budget['status'] == 'draft' && current_user_can( WordCamp_Budgets::ADMIN_CAP ) ) : ?>
         <p class="submit">

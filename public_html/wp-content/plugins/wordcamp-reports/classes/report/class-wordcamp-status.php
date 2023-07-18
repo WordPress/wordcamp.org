@@ -9,12 +9,13 @@ defined( 'WPINC' ) || die();
 use Exception;
 use DateTime;
 use WP_Error, WP_Post;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\{get_views_dir_path};
 use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\Validation\{validate_date_range, validate_wordcamp_status};
 use function WordCamp\Reports\Time\{year_array, quarter_array, month_array};
 use WordCamp_Loader;
-use WordCamp\Utilities\Export_CSV;
+use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
 
 /**
  * Class WordCamp_Status
@@ -114,7 +115,7 @@ class WordCamp_Status extends Base_Status {
 	public function __construct( $start_date, $end_date, $status = '', array $options = array() ) {
 		// Report-specific options.
 		$options = wp_parse_args( $options, array(
-			'status_subset' => [],
+			'status_subset' => array(),
 		) );
 
 		parent::__construct( $options );
@@ -159,10 +160,10 @@ class WordCamp_Status extends Base_Status {
 	 * @return string
 	 */
 	protected function get_cache_key() {
-		$cache_key_segments = [
+		$cache_key_segments = array(
 			parent::get_cache_key(),
 			$this->range->generate_cache_key_segment(),
-		];
+		);
 
 		if ( $this->status ) {
 			$cache_key_segments[] = $this->status;
@@ -419,16 +420,16 @@ class WordCamp_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function render_public_page() {
-		$params = self::parse_public_report_input();
+		$params   = self::parse_public_report_input();
 		$years    = year_array( absint( date( 'Y' ) ), 2015 );
 		$quarters = quarter_array();
 		$months   = month_array();
 		$statuses = WordCamp_Loader::get_post_statuses();
 
-		$error = $params['error'];
+		$error  = $params['error'];
 		$report = null;
 		$period = $params['period'];
-		$year = $params['year'];
+		$year   = $params['year'];
 		$status = $params['status'];
 		if ( ! empty( $params ) && isset( $params['range'] ) ) {
 			$report = new self( $params['range']->start, $params['range']->end, $params['status'], $params['options'] );
@@ -451,7 +452,7 @@ class WordCamp_Status extends Base_Status {
 		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
 		$statuses   = WordCamp_Loader::get_post_statuses();
 
-		$field_defaults = [
+		$field_defaults = array(
 			'ID'                      => 'checked',
 			'Name'                    => 'checked disabled',
 			'Start Date (YYYY-mm-dd)' => 'checked',
@@ -460,13 +461,13 @@ class WordCamp_Status extends Base_Status {
 			'URL'                     => 'checked',
 			'Created'                 => 'checked',
 			'Status'                  => 'checked',
-		];
+		);
 
 		$report = null;
 
 		if ( 'Show results' === $action
-		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+			 && wp_verify_nonce( $nonce, 'run-report' )
+			 && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'public'         => false,
@@ -492,7 +493,7 @@ class WordCamp_Status extends Base_Status {
 		$start_date = filter_input( INPUT_POST, 'start-date' );
 		$end_date   = filter_input( INPUT_POST, 'end-date' );
 		$status     = filter_input( INPUT_POST, 'status' );
-		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, [ 'flags' => FILTER_REQUIRE_ARRAY ] );
+		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
 		$action     = filter_input( INPUT_POST, 'action' );
 		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
@@ -501,7 +502,7 @@ class WordCamp_Status extends Base_Status {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$error = null;
 
 			$options = array(
@@ -526,7 +527,7 @@ class WordCamp_Status extends Base_Status {
 			}
 
 			$include_counts = false;
-			if ( ! empty( array_intersect( $fields, [ 'Tickets', 'Speakers', 'Sponsors', 'Organizers' ] ) ) ) {
+			if ( ! empty( array_intersect( $fields, array( 'Tickets', 'Speakers', 'Sponsors', 'Organizers' ) ) ) ) {
 				$include_counts = true;
 			}
 
@@ -541,9 +542,10 @@ class WordCamp_Status extends Base_Status {
 
 			$details_report = new WordCamp_Details( null, $wordcamp_ids, $include_counts, $options );
 
-			$filename = [ $status_report::$name ];
+			$filename   = array( $status_report::$name );
 			$filename[] = $status_report->range->start->format( 'Y-m-d' );
 			$filename[] = $status_report->range->end->format( 'Y-m-d' );
+
 			if ( $status_report->status ) {
 				$filename[] = $status_report->status;
 			}
@@ -553,7 +555,7 @@ class WordCamp_Status extends Base_Status {
 
 			$data = $details_report->prepare_data_for_display( $details_report->get_data() );
 
-			$headers = ( ! empty( $data ) ) ? array_keys( $data[0] ) : [];
+			$headers = ( ! empty( $data ) ) ? array_keys( $data[0] ) : array();
 
 			$exporter = new Export_CSV( array(
 				'filename' => $filename,
@@ -573,8 +575,10 @@ class WordCamp_Status extends Base_Status {
 		} // End if().
 	}
 
-	static public function get_report_object( $date_range, $status, $options ) {
+	/**
+	 * Get an instance of this report object with the specified options.
+	 */
+	public static function get_report_object( $date_range, $status, $options ) {
 		return new self( $date_range->start, $date_range->end, $status, $options );
 	}
-
 }

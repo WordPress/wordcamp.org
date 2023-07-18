@@ -12,11 +12,22 @@ defined( 'WPINC' ) || die();
 
 require_once 'favorite-schedule-shortcode.php';
 
+/**
+ * Actions and filters.
+ */
 add_action( 'init', __NAMESPACE__ . '\register_sponsor_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_speaker_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_session_post_meta' );
 add_action( 'init', __NAMESPACE__ . '\register_organizer_post_meta' );
+add_action( 'init', __NAMESPACE__ . '\register_volunteer_post_meta' );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_user_validation_route' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
+add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_session_query_args', 10, 2 );
+add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_session_collection_params', 10, 2 );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_email' );
+add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
+add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
+add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );
 
 /**
  * Registers post meta to the Sponsor post type.
@@ -232,6 +243,85 @@ function register_organizer_post_meta() {
 }
 
 /**
+ * Registers post meta to the Volunteer post type.
+ *
+ * @return void
+ */
+function register_volunteer_post_meta() {
+	register_post_meta(
+		'wcb_volunteer',
+		'_wcpt_user_id',
+		array(
+			'type'         => 'integer',
+			// `false` because it's not set directly; it's set as a result of `_wcpt_user_name`.
+			// See update_wcorg_user_id() in wc-post-types.php.
+			'show_in_rest' => false,
+			'single'       => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+
+	register_post_meta(
+		'wcb_volunteer',
+		'_wcpt_user_name',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'show_in_rest' => array(
+				'prepare_callback' => function( $value, $request, $args ) {
+					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
+					if ( $user_id ) {
+						$wporg_user = get_userdata( $user_id );
+						if ( $wporg_user instanceof WP_User ) {
+							return $wporg_user->user_login;
+						}
+					}
+					return $value;
+				},
+			),
+			'sanitize_callback' => function( $value ) {
+				$wporg_user = wcorg_get_user_by_canonical_names( $value );
+				if ( ! $wporg_user ) {
+					return '';
+				}
+				return $wporg_user->user_login;
+			},
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+
+	register_post_meta(
+		'wcb_volunteer',
+		'_wcb_volunteer_email',
+		array(
+			'type'          => 'string',
+			'show_in_rest'  => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+
+	register_post_meta(
+		'wcb_volunteer',
+		'_wcb_volunteer_first_time',
+		array(
+			'type'          => 'string',
+			'show_in_rest'  => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
+			'single'        => true,
+			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+}
+
+/**
  * Check if the current user can edit the meta values.
  *
  * @param bool   $allowed   Whether the user can add the object meta. Default false.
@@ -431,8 +521,6 @@ function register_additional_rest_fields() {
 	);
 }
 
-add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' );
-
 /**
  * Validate simple meta query parameters in an API request and add them to the args passed to WP_Query.
  *
@@ -441,16 +529,42 @@ add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' 
  *
  * @return array
  */
-function prepare_meta_query_args( $args, $request ) {
+function prepare_session_query_args( $args, $request ) {
 	if ( isset( $request['wc_meta_key'], $request['wc_meta_value'] ) ) {
-		$args['meta_key']   = $request['wc_meta_key'];
-		$args['meta_value'] = $request['wc_meta_value'];
+		$meta_query = array(
+			'key' => $request['wc_meta_key'],
+			'value' => $request['wc_meta_value'],
+		);
+
+		// If requesting only "session" types, also return null types, they're handled the same way.
+		if ( '_wcpt_session_type' === $request['wc_meta_key'] && 'session' === $request['wc_meta_value'] ) {
+			$meta_query = array(
+				'relation' => 'OR',
+				array(
+					'key' => '_wcpt_session_type',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key' => '_wcpt_session_type',
+					'value' => 'session',
+				),
+			);
+		}
+
+		if ( isset( $args['meta_query'] ) && is_array( $args['meta_query'] ) ) {
+			$args['meta_query'][] = $meta_query;
+		} else {
+			$args['meta_query'] = array( $meta_query );
+		}
+	}
+
+	if ( 'session_date' === $request['orderby'] ) {
+		$args['meta_key'] = '_wcpt_session_time';
+		$args['orderby']  = 'meta_value_num';
 	}
 
 	return $args;
 }
-
-add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args', 10, 2 );
 
 /**
  * Add meta field schemas to Sessions collection parameters.
@@ -469,7 +583,7 @@ add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_meta_query_args'
  *
  * @return array
  */
-function add_meta_collection_params( $query_params, $post_type ) {
+function add_session_collection_params( $query_params, $post_type ) {
 	// Avoid exposing potentially sensitive data.
 	$public_meta_fields = wp_list_filter( get_registered_meta_keys( 'post', $post_type->name ), array( 'show_in_rest' => true ) );
 
@@ -491,10 +605,10 @@ function add_meta_collection_params( $query_params, $post_type ) {
 		'default'     => false,
 	);
 
+	$query_params['orderby']['enum'][] = 'session_date';
+
 	return $query_params;
 }
-
-add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_meta_collection_params', 10, 2 );
 
 /**
  * Get the URLs for an avatar based on an email address or username.
@@ -573,7 +687,6 @@ function register_fav_sessions_email() {
 		)
 	);
 }
-add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_email' );
 
 /**
  * Link all sessions to the speaker in the `speakers` API endpoint
@@ -618,8 +731,6 @@ function link_speaker_to_sessions( $response, $post ) {
 	return $response;
 }
 
-add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
-
 /**
  * Link all speakers to the session in the `sessions` API endpoint
  *
@@ -645,8 +756,6 @@ function link_session_to_speakers( $response, $post ) {
 	return $response;
 }
 
-add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
-
 /**
  * Add larger avatar sizes to the API response.
  *
@@ -661,4 +770,3 @@ function add_larger_avatar_sizes( $sizes ) {
 
 	return $sizes;
 }
-add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );

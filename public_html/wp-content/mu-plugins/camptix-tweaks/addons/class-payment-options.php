@@ -34,7 +34,8 @@ class Payment_Options extends CampTix_Addon {
 			'payment_options',
 			plugins_url( 'js/payment-options.js', __FILE__ ),
 			array( 'stripe-checkout', 'camptix' ),
-			filemtime( __DIR__ . '/js/payment-options.js' )
+			filemtime( __DIR__ . '/js/payment-options.js' ),
+			true
 		);
 
 		wp_register_style(

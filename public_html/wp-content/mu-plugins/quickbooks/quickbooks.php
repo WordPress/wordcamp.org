@@ -20,10 +20,15 @@ add_filter( 'wordcamp_qbo_client_config', __NAMESPACE__ . '\set_client_config' )
  * @return array
  */
 function set_client_config( array $config ) {
-	$environment = ( defined( 'WORDCAMP_ENVIRONMENT' ) ) ? WORDCAMP_ENVIRONMENT : 'development';
+	$environment = get_wordcamp_environment();
 
 	switch ( $environment ) {
+		// Sandboxes use the production database, so we should also use the production QBO account.
+		// Otherwise production invoices would be sent to the sandbox company during sandbox testing, and it
+		// wouldn't be possible to debug production errors on a sandbox.
 		case 'production':
+		case 'staging':
+		case 'development':
 			if ( defined( 'WORDCAMP_PRODUCTION_QBO_CLIENT_ID' ) && defined( 'WORDCAMP_PRODUCTION_QBO_CLIENT_SECRET' ) ) {
 				$config = array_merge(
 					$config,
@@ -36,7 +41,7 @@ function set_client_config( array $config ) {
 			}
 			break;
 
-		case 'development':
+		case 'local':
 		default:
 			if ( defined( 'WORDCAMP_SANDBOX_QBO_CLIENT_ID' ) && defined( 'WORDCAMP_SANDBOX_QBO_CLIENT_SECRET' ) ) {
 				$config = array_merge(

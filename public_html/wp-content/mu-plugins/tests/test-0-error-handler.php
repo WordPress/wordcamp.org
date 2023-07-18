@@ -12,7 +12,7 @@ defined( 'WPINC' ) || die();
  */
 class Test_Error_Handling extends WP_UnitTestCase {
 	/**
-	 * @covers ::is_third_party_file
+	 * @covers WordCamp\Error_Handling\is_third_party_file
 	 *
 	 * @dataProvider data_is_third_party_file
 	 */
@@ -46,27 +46,27 @@ class Test_Error_Handling extends WP_UnitTestCase {
 
 			'core admin' => array(
 				ABSPATH . 'wp-admin/includes/class-wp-site-health.php',
-				true
+				true,
 			),
 
 			'core include' => array(
 				ABSPATH . 'wp-includes/SimplePie/Registry.php',
-				true
+				true,
 			),
 
 			'core-themes' => array(
 				WP_CONTENT_DIR . '/themes/twentytwenty/functions.php',
-				true
+				true,
 			),
 
 			'hyperdb' => array(
 				WP_PLUGIN_DIR . '/hyperdb/db.php',
-				true
+				true,
 			),
 
 			'camptix-paystack' => array(
 				WP_PLUGIN_DIR . '/camptix-paystack/includes/class-paystack.php',
-				true
+				true,
 			),
 
 			/*
@@ -79,12 +79,12 @@ class Test_Error_Handling extends WP_UnitTestCase {
 
 			'gutenberg errors are sent to a special channel' => array(
 				WP_PLUGIN_DIR . '/gutenberg/build/block-library/blocks/latest-posts.php',
-				false
+				false,
 			),
 
 			'jetpack errors are sent to a special channel' => array(
 				WP_PLUGIN_DIR . '/jetpack/jetpack.php',
-				false
+				false,
 			),
 
 			/*
@@ -92,28 +92,28 @@ class Test_Error_Handling extends WP_UnitTestCase {
 			 */
 			'wp-config.php' => array(
 				ABSPATH . 'wp-config.php',
-				false
+				false,
 			),
 
 			'cron mu-plugin' => array(
-				WP_MU_PLUGIN_DIR . '/cron.php',
-				false
+				SUT_WPMU_PLUGIN_DIR . '/cron.php',
+				false,
 			),
 
 			'wcpt' => array(
 				WP_PLUGIN_DIR . '/wcpt/wcpt-admin.php',
-				false
+				false,
 			),
 
 			'campsite' => array(
 				WP_CONTENT_DIR . '/themes/campsite-2017/functions.php',
-				false
+				false,
 			),
 		);
 	}
 
 	/**
-	 * @covers ::get_destination_channels
+	 * @covers WordCamp\Error_Handling\get_destination_channels
 	 *
 	 * @dataProvider data_get_destination_channels
 	 */

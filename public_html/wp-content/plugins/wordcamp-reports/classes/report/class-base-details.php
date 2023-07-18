@@ -11,7 +11,7 @@ use Exception;
 use WordCamp\Reports\Utility\Date_Range;
 use function WordCamp\Reports\{get_assets_url, get_assets_dir_path, get_views_dir_path};
 use function WordCamp\Reports\Validation\{validate_date_range};
-use WordCamp\Utilities\Export_CSV;
+use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
 
 /**
  * Class Base_Details

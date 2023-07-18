@@ -9,7 +9,7 @@ defined( 'WPINC' ) or die();
 
 use WP_Post;
 use WCP_Encryption;
-use WordCamp\Utilities;
+use WordPressdotorg\MU_Plugins\Utilities;
 use WordCamp_Budgets;
 
 const POST_TYPE = 'wcb_reimbursement';

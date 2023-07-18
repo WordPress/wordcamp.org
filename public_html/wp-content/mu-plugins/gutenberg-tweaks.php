@@ -35,7 +35,9 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 		'wcb_session',
 		'wcb_speaker',
 		// 'wcb_sponsor',
+		'mes', // Metaboxes not converted yet, but has other custom Gutenberg UI.
 		'wcb_organizer',
+		'wcb_volunteer',
 	);
 
 	/*
@@ -49,7 +51,7 @@ function disable_editors_by_post_type( $editors, $post_type ) {
 
 	// Currently not necessary to set on these post types, they don't support gutenberg. This is either because
 	// they don't support the `editor`, or they have `public`/`show_in_rest` set to false:
-	// WCPT_MEETUP_SLUG, \MES_Sponsor::POST_TYPE_SLUG, Payment CPTs, CampTix CPTs.
+	// WCPT_MEETUP_SLUG, Payment CPTs, CampTix CPTs.
 
 	if ( in_array( $post_type, $gutenberg_only ) ) {
 		$editors['classic_editor'] = false;

@@ -25,6 +25,15 @@ function get_avatar_or_image( $post, $size, $alt = false ) {
 	if ( ! $post ) {
 		return '';
 	}
+
+	// If we're on a session, grab the first speaker and return that avatar.
+	if ( 'wcb_session' === $post->post_type ) {
+		$speakers = get_post_meta( $post->ID, '_wcpt_speaker_id' );
+		if ( ! empty( $speakers[0] ) ) {
+			return get_avatar_or_image( $speakers[0], $size, $alt );
+		}
+	}
+
 	if ( false === $alt ) {
 		$alt = get_the_title( $post->ID );
 	}

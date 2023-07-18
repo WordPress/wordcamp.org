@@ -11,10 +11,11 @@ defined( 'WPINC' ) || die();
 use Exception;
 use DateTime, DateTimeInterface, DateInterval;
 use WP_Error;
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\get_views_dir_path;
 use function WordCamp\Reports\Validation\validate_date_range;
 use function WordCamp\Reports\Time\{year_array, quarter_array, month_array, convert_time_period_to_date_range};
-use WordCamp\Utilities\{Meetup_Client, Export_CSV};
+use WordPressdotorg\MU_Plugins\Utilities\{ Meetup_Client, Export_CSV };
 
 /**
  * Class Meetup_Events
@@ -88,7 +89,7 @@ class Meetup_Events extends Base {
 	 *
 	 * @var array An associative array of key/default value pairs.
 	 */
-	protected $public_data_fields = [
+	protected $public_data_fields = array(
 		'id'           => '',
 		'link'         => '',
 		'name'         => '',
@@ -100,7 +101,7 @@ class Meetup_Events extends Base {
 		'l10n_country' => '',
 		'latitude'     => 0,
 		'longitude'    => 0,
-	];
+	);
 
 	/**
 	 * Meetup_Events constructor.
@@ -112,7 +113,7 @@ class Meetup_Events extends Base {
 	 *     See Base::__construct and the functions in WordCamp\Reports\Validation for additional parameters.
 	 * }
 	 */
-	public function __construct( $start_date, $end_date, array $options = [] ) {
+	public function __construct( $start_date, $end_date, array $options = array() ) {
 		parent::__construct( $options );
 
 		try {
@@ -131,11 +132,11 @@ class Meetup_Events extends Base {
 	 * @return string
 	 */
 	protected function get_cache_key() {
-		$cache_key_segments = [
+		$cache_key_segments = array(
 			parent::get_cache_key(),
 			$this->range->generate_cache_key_segment(),
 			$this->options['search_query'],
-		];
+		);
 
 		return implode( '_', $cache_key_segments );
 	}
@@ -178,34 +179,35 @@ class Meetup_Events extends Base {
 
 		// Filter options: https://www.meetup.com/api/schema/#ProNetworkEventsFilter.
 		$query = '
-		query ( $cursor: String ) {
-			proNetworkByUrlname( urlname: "wordpress" ) {
-				eventsSearch(
-					input: { first: 200, after: $cursor },
-					filter: {
-						eventDateMin: "' . esc_attr( $this->range->start->format('c') ) . '",
-						eventDateMax: "' . esc_attr( $this->range->end->format('c') ) . '"
-					}
-				) {
-					count
-					' . $meetup->pagination . '
-					edges {
-						node {
-							id
-							eventUrl
-							title
-							description
-							dateTime
-							status
-							timeStatus
-							isOnline
-							group { proJoinDate name city country latitude longitude }
-							venue { city country lat lng }
+			query ( $cursor: String ) {
+	            proNetworkByUrlname( urlname: "WordPress" ) {
+					eventsSearch(
+						input: { first: 200, after: $cursor },
+						filter: {
+							eventDateMin: "' . esc_attr( $this->range->start->format('c') ) . '",
+							eventDateMax: "' . esc_attr( $this->range->end->format('c') ) . '"
+						}
+					) {
+						count
+						' . $meetup->pagination . '
+						edges {
+							node {
+								id
+								eventUrl
+								title
+								description
+								dateTime
+								status
+								timeStatus
+								isOnline
+								group { proJoinDate name city country latitude longitude }
+								venue { city country lat lng }
+							}
 						}
 					}
 				}
 			}
-		}';
+		';
 
 		// Fetch results.
 		$results = $meetup->send_paginated_request( $query, array( 'cursor' => null ) );
@@ -261,14 +263,14 @@ class Meetup_Events extends Base {
 	 * @return array
 	 */
 	public function compile_report_data( array $data ) {
-		$compiled_data = [
+		$compiled_data = array(
 			'total_events'              => count( $data ),
-			'total_events_by_country'   => [],
-			'total_events_by_group'     => [],
-			'monthly_events'            => [],
-			'monthly_events_by_country' => [],
-			'monthly_events_by_group'   => [],
-		];
+			'total_events_by_country'   => array(),
+			'total_events_by_group'     => array(),
+			'monthly_events'            => array(),
+			'monthly_events_by_country' => array(),
+			'monthly_events_by_group'   => array(),
+		);
 
 		try {
 			$compiled_data['monthly_events'] = $this->count_events_by_month( $data );
@@ -359,7 +361,7 @@ class Meetup_Events extends Base {
 
 		$compiled_data['groups_with_events'] = count( $compiled_data['total_events_by_group'] );
 
-		$meetup       = new Meetup_Client();
+		$meetup                        = new Meetup_Client();
 		$compiled_data['total_groups'] = absint( $meetup->get_result_count( 'pro/wordpress/groups', array(
 			// Don't include groups that joined the chapter program later than the date range.
 			'pro_join_date_max' => $this->range->end,
@@ -391,17 +393,21 @@ class Meetup_Events extends Base {
 			) );
 		}
 
-		return array_reduce( $data, function( $carry, $item ) use ( $field ) {
-			$group = $item[ $field ];
+		return array_reduce(
+			$data,
+			function( $carry, $item ) use ( $field ) {
+				$group = $item[ $field ];
 
-			if ( ! isset( $carry[ $group ] ) ) {
-				$carry[ $group ] = [];
-			}
+				if ( ! isset( $carry[ $group ] ) ) {
+					$carry[ $group ] = array();
+				}
 
-			$carry[ $group ][] = $item;
+				$carry[ $group ][] = $item;
 
-			return $carry;
-		}, [] );
+				return $carry;
+			},
+			array()
+		);
 	}
 
 	/**
@@ -416,7 +422,7 @@ class Meetup_Events extends Base {
 		$month_iterator = new DateTime( $this->range->start->format( 'Y-m' ) . '-01' );
 		$end_month      = new DateTime( $this->range->end->format( 'Y-m' ) . '-01' );
 		$interval       = new DateInterval( 'P1M' );
-		$months         = [];
+		$months         = array();
 
 		while ( $month_iterator <= $end_month ) {
 			$months[ $month_iterator->format( 'M Y' ) ] = 0;
@@ -424,7 +430,7 @@ class Meetup_Events extends Base {
 		}
 
 		if ( count( $months ) < 2 ) {
-			return [];
+			return array();
 		}
 
 		foreach ( $events as $event ) {
@@ -463,18 +469,18 @@ class Meetup_Events extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
+		$start_date   = filter_input( INPUT_POST, 'start-date' );
+		$end_date     = filter_input( INPUT_POST, 'end-date' );
 		$search_query = sanitize_text_field( filter_input( INPUT_POST, 'search-query' ) );
-		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$refresh      = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
+		$action       = filter_input( INPUT_POST, 'action' );
+		$nonce        = filter_input( INPUT_POST, self::$slug . '-nonce' );
 
 		$report = null;
 
 		if ( 'Show results' === $action
 			&& wp_verify_nonce( $nonce, 'run-report' )
-			&& current_user_can( 'manage_network' )
+			&& current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new DateTime( '2015-01-01' ), // Chapter program started in 2015.
@@ -508,12 +514,12 @@ class Meetup_Events extends Base {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
+		$start_date   = filter_input( INPUT_POST, 'start-date' );
+		$end_date     = filter_input( INPUT_POST, 'end-date' );
 		$search_query = sanitize_text_field( filter_input( INPUT_POST, 'search-query' ) );
-		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$refresh      = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
+		$action       = filter_input( INPUT_POST, 'action' );
+		$nonce        = filter_input( INPUT_POST, self::$slug . '-nonce' );
 
 		$report = null;
 
@@ -521,7 +527,7 @@ class Meetup_Events extends Base {
 			return;
 		}
 
-		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( 'manage_network' ) ) {
+		if ( ! wp_verify_nonce( $nonce, 'run-report' ) || ! current_user_can( CAPABILITY ) ) {
 			return;
 		}
 
@@ -542,7 +548,7 @@ class Meetup_Events extends Base {
 		$filename[] = $report->range->start->format( 'Y-m-d' );
 		$filename[] = $report->range->end->format( 'Y-m-d' );
 
-		$headers = [ 'Event ID', 'Event URL', 'Event Name', 'Description', 'Date', 'Event Status', 'Group Name', 'City', 'Country (localized)', 'Latitude', 'Longitude' ];
+		$headers = array( 'Event ID', 'Event URL', 'Event Name', 'Description', 'Date', 'Event Status', 'Group Name', 'City', 'Country (localized)', 'Latitude', 'Longitude' );
 
 		$data = $report->get_data();
 

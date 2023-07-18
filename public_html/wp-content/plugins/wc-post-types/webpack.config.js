@@ -8,5 +8,6 @@ module.exports = {
 		sessions: path.resolve( __dirname, 'js/src/session/index.js' ),
 		speakers: path.resolve( __dirname, './js/src/speaker/index.js' ),
 		organizers: path.resolve( __dirname, 'js/src/organizer/index.js' ),
+		volunteers: path.resolve( __dirname, 'js/src/volunteer/index.js' ),
 	},
 };

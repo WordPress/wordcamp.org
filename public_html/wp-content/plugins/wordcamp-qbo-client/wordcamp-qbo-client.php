@@ -1,6 +1,10 @@
 <?php
 /**
  * Plugin Name: WordCamp.org QBO Client
+ *
+ * @todo Having a separate server/client is over-engineered and unnecessary, because both are running on the same
+ *       machine. Over time pieces of the client are being moved directly into `wordcamp-qbo.php`, because that
+ *       makes everything much simpler.
  */
 
 // todo use wcorg_redundant_remote_get for all the calls in this file
@@ -285,130 +289,6 @@ class WordCamp_QBO_Client {
 	}
 
 	/**
-	 * Send an invoice to the sponsor through QuickBooks Online's API
-	 *
-	 * @param int $invoice_id
-	 *
-	 * @return string
-	 */
-	public static function send_invoice_to_quickbooks( $invoice_id ) {
-		$request  = self::build_send_invoice_request( $invoice_id );
-		$response = wp_remote_post( $request['url'], $request['args'] );
-
-		Logger\log( 'remote_request', compact( 'request', 'response' ) );
-
-		if ( is_wp_error( $response ) ) {
-			$sent = $response->get_error_message();
-		} else {
-			$body = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( is_numeric( $body ) ) {
-				$sent = absint( $body );
-			} elseif ( isset( $body->message ) ) {
-				$sent = $body->message;
-			} else {
-				$sent = 'Unknown error.';
-			}
-		}
-
-		return $sent;
-	}
-
-	/**
-	 * Build a request for sending an invoice to QuickBooks
-	 *
-	 * @param int $invoice_id
-	 *
-	 * @return array
-	 */
-	protected static function build_send_invoice_request( $invoice_id ) {
-		$invoice           = get_post( $invoice_id );
-		$invoice_meta      = get_post_custom( $invoice_id );
-		$sponsor_meta      = get_post_custom( $invoice_meta['_wcbsi_sponsor_id'][0] );
-		$sponsorship_level = self::get_sponsorship_level( $invoice_meta['_wcbsi_sponsor_id'][0] );
-
-		// The country might be the full name or a country code. We want the full name here.
-		$sponsor_country = $sponsor_meta['_wcpt_sponsor_country'][0];
-		$sponsor_country = ( wcorg_get_country_name_from_code( $sponsor_country ) ) ?: $sponsor_country;
-
-		$payload = array(
-			'wordcamp_name'     => sanitize_text_field( get_wordcamp_name()                        ),
-			'sponsorship_level' => sanitize_text_field( $sponsorship_level                         ),
-			'currency_code'     => sanitize_text_field( $invoice_meta['_wcbsi_currency'       ][0] ),
-			'qbo_class_id'      => sanitize_text_field( $invoice_meta['_wcbsi_qbo_class_id'   ][0] ),
-			'amount'            => floatval(            $invoice_meta['_wcbsi_amount'         ][0] ),
-			'description'       => sanitize_text_field( $invoice_meta['_wcbsi_description'    ][0] ),
-
-			'statement_memo'    => sprintf(
-				'WordCamp.org Invoice: %s',
-				esc_url_raw( admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) ) )
-			),
-
-			'sponsor' => array(
-				'company-name'  => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_company_name' ][0] ),
-				'first-name'    => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_first_name'   ][0] ),
-				'last-name'     => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_last_name'    ][0] ),
-				'email-address' => is_email(            $sponsor_meta['_wcpt_sponsor_email_address'][0] ),
-				'phone-number'  => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_phone_number' ][0] ),
-
-				'address1' => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_street_address1'][0] ),
-				'city'     => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_city'           ][0] ),
-				'state'    => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_state'          ][0] ),
-				'zip-code' => sanitize_text_field( $sponsor_meta['_wcpt_sponsor_zip_code'       ][0] ),
-				'country'  => sanitize_text_field( $sponsor_country ),
-			)
-		);
-
-		$payload['sponsor']['vat-number'] = isset( $sponsor_meta['_wcpt_sponsor_vat_number'][0] )
-			? sanitize_text_field( $sponsor_meta['_wcpt_sponsor_vat_number'][0] )
-			: '';
-
-		if ( isset( $sponsor_meta['_wcpt_sponsor_street_address2'][0] ) ) {
-			$payload['sponsor']['address2'] = sanitize_text_field( $sponsor_meta['_wcpt_sponsor_street_address2'][0] );
-		}
-
-		$request_url  = self::$api_base . '/invoice';
-		$body         = wp_json_encode( $payload );
-		$oauth_header = self::_get_auth_header( 'post', $request_url, $body );
-
-		$args = array(
-			'body'    => $body,
-			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
-			'headers' => array(
-				'Authorization' => $oauth_header,
-				'Content-Type'  => 'application/json',
-			),
-		);
-
-		if ( 'local' === get_wordcamp_environment() ) {
-			$args['sslverify'] = false;
-		}
-
-		return array(
-			'url'  => $request_url,
-			'args' => $args,
-		);
-	}
-
-	/**
-	 * Get the sponsorship level name assigned to a sponsor
-	 *
-	 * @param int $sponsor_id
-	 *
-	 * @return false|string
-	 */
-	public static function get_sponsorship_level( $sponsor_id ) {
-		$sponsorship_level  = false;
-		$sponsorship_levels = wp_get_object_terms( $sponsor_id, 'wcb_sponsor_level' );
-
-		if ( isset( $sponsorship_levels[0]->name ) ) {
-			$sponsorship_level = $sponsorship_levels[0]->name;
-		}
-
-		return $sponsorship_level;
-	}
-
-	/**
 	 * Get the paid invoices from the given set of sent invoices
 	 *
 	 * @param array $sent_invoices
@@ -449,68 +329,6 @@ class WordCamp_QBO_Client {
 		);
 
 		$request_url = self::$api_base . '/paid_invoices';
-
-		$args = array(
-			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
-			'headers' => array(
-				'Authorization' => self::_get_auth_header( 'get', $request_url, '', $params ),
-				'Content-Type'  => 'application/json',
-			),
-		);
-
-		if ( 'local' === get_wordcamp_environment() ) {
-			$args['sslverify'] = false;
-		}
-
-		$request_url = add_query_arg( $params, $request_url );  // has to be done after get_auth_header() is called so that the base url and params can be passed separately.
-
-		return array(
-			'url'  => $request_url,
-			'args' => $args,
-		);
-	}
-
-	/**
-	 * Get the filename for a PDF copy of an invoice
-	 *
-	 * @param int $invoice_id
-	 *
-	 * @return WP_Error|string
-	 */
-	public static function get_invoice_filename( $invoice_id ) {
-		$request  = self::build_invoice_filename_request( $invoice_id );
-		$response = wp_remote_get( $request['url'], $request['args'] );
-
-		Logger\log( 'remote_request', compact( 'request', 'response' ) );
-
-		if ( is_wp_error( $response ) ) {
-			$result = $response;
-		} else {
-			$result = json_decode( wp_remote_retrieve_body( $response ) );
-
-			if ( $result && is_file( $result->filename ) ) {
-				$result = $result->filename;
-			} else {
-				$result = new WP_Error( 'invalid_filename', 'The filename was not valid.', $result );
-			}
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Build the request to get the filename for a PDF copy of an invoice
-	 *
-	 * @param array $invoice_ids
-	 *
-	 * @return array
-	 */
-	protected static function build_invoice_filename_request( $invoice_id ) {
-		$params = array(
-			'invoice_id' => strval( absint( $invoice_id ) ),    // absint() to validate, strval() to convert to type expected by API
-		);
-
-		$request_url = self::$api_base . '/invoice_pdf';
 
 		$args = array(
 			'timeout' => self::REMOTE_REQUEST_TIMEOUT,

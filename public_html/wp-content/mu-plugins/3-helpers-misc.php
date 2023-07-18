@@ -331,8 +331,12 @@ function wcorg_get_custom_css_url() {
 	 * This has side-effects because `add_hooks()` is called immediately, but it doesn't seem problematic because
 	 * it gets loaded on every front/back-end page anyway.
 	 */
-	require_once WP_PLUGIN_DIR . '/jetpack/modules/custom-css/custom-css-4.7.php';
-
+	if ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
+		require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
+	} else {
+		require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
+	}
+	
 	ob_start();
 	Jetpack_Custom_CSS_Enhancements::wp_custom_css_cb();
 	$markup = ob_get_clean();

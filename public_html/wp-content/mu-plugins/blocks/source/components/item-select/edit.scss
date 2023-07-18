@@ -4,64 +4,9 @@
 }
 
 .wordcamp-item-select__select {
-	flex-grow: 2;
 	margin-bottom: 1em;
 
-	input[type="text"]:focus {
-		box-shadow: none;
+	select {
+		max-height: 40em;
 	}
-}
-
-.wordcamp-item-select__option {
-	display: flex;
-	align-items: center;
-}
-
-.wordcamp-item-select__option-group-label {
-	color: #555d66;
-}
-
-.wordcamp-item-select__option-avatar,
-.wordcamp-item-select__option-icon-container {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.wordcamp-item-select__option-avatar {
-	flex: 0 0 50px;
-	height: 50px;
-	margin-right: 10px;
-}
-
-.wordcamp-item-select__option-icon-container {
-	flex: 0 0 24px;
-	height: 24px;
-	margin-right: 10px;
-	background-color: #f3f3f4;
-}
-
-.wordcamp-item-select__option-label {
-	margin: 0;
-	white-space: normal;
-}
-
-
-.wordcamp-item-select__option-label-count {
-	font-size: 0.6em;
-	display: inline-block;
-	border-radius: 50%;
-	background-color: #f3f3f4;
-	width: 2.2em;
-	height: 2.2em;
-	margin: 0 0.5em;
-	text-align: center;
-	line-height: 2.2;
-	vertical-align: text-top;
-}
-
-.wordcamp-item-select__option-label-details {
-	display: block;
-	color: #6c7781;
-	font-style: italic;
 }

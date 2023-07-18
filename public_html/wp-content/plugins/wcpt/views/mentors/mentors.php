@@ -21,9 +21,9 @@ defined( 'WPINC' ) or die();
 	<tbody>
 		<?php foreach ( $mentors as $username => $mentor ) : ?>
 			<tr>
-				<td><?php echo esc_html( $mentor['name'] );         ?></td>
-				<td><?php echo esc_html( $username );               ?></td>
-				<td><?php echo esc_html( $mentor['email'] );        ?></td>
+				<td><?php echo esc_html( $mentor['name'] ); ?></td>
+				<td><?php echo esc_html( $username ); ?></td>
+				<td><?php echo esc_html( $mentor['email'] ); ?></td>
 				<td><?php echo count( $mentor['camps_mentoring'] ); ?></td>
 				<td>
 					<ul>

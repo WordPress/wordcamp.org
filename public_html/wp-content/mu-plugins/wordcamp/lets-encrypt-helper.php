@@ -44,13 +44,17 @@ class WordCamp_Lets_Encrypt_Helper {
 
 		$tld     = get_top_level_domain();
 		$domains = array();
-		$blogs   = $wpdb->get_results( "
-			SELECT `domain`, `path`
-			FROM `$wpdb->blogs`
-			WHERE
-				`public`  = 1 AND
-				`deleted` = 0
-			ORDER BY `blog_id` ASC",
+		$blogs   = $wpdb->get_results(
+			$wpdb->prepare( "
+				SELECT `domain`, `path`
+				FROM `$wpdb->blogs`
+				WHERE
+					`site_id` = %d AND
+					`public`  = 1 AND
+					`deleted` = 0
+				ORDER BY `blog_id` ASC",
+				WORDCAMP_NETWORK_ID
+			),
 			ARRAY_A
 		);
 

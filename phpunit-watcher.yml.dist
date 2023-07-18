@@ -3,6 +3,7 @@ watch:
     - ./public_html/wp-content/mu-plugins/
     - ./public_html/wp-content/plugins/camptix/
     - ./public_html/wp-content/plugins/wordcamp-organizer-reminders/
+    - ./public_html/wp-content/plugins/wc-post-types/
     - ./public_html/wp-content/plugins/wcpt/
     - ./public_html/wp-content/plugins/wordcamp-remote-css/
     - ./public_html/wp-content/plugins/wordcamp-speaker-feedback/
@@ -12,6 +13,10 @@ watch:
   exclude:
     - vendor
     - node_modules
+  fileMask: '*.php'
+  ignoreDotFiles: true
+  ignoreVCS: true
+  ignoreVCSIgnored: true
 
 notifications:
   passingTests: false

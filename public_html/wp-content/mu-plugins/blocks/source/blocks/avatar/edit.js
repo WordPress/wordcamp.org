@@ -4,13 +4,11 @@
 import { __, sprintf } from '@wordpress/i18n';
 import { store as coreStore, useEntityProp } from '@wordpress/core-data';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
+import { PanelBody, Placeholder, SelectControl, ToggleControl } from '@wordpress/components';
 import { useSelect } from '@wordpress/data';
 
 const placeholderChip = (
-	<div className="post-featured-image_placeholder">
-		<p> { __( 'Avatar', 'wordcamporg' ) }</p>
-	</div>
+	<Placeholder withIllustration label={ __( 'Avatar', 'wordcamporg' ) } />
 );
 
 function getPostLabel( postType ) {

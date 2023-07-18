@@ -35,6 +35,17 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  * @return string
  */
 function render( $attributes ) {
+	$current_post = get_post();
+
+	if ( 'revision' === $current_post->post_type ) {
+		$current_post = get_post( $current_post->post_parent );
+	}
+
+	// Showing sessions inside a session can lead to an infinite loop, and doesn't have any apparent use cases.
+	if ( 'wcb_session' === $current_post->post_type ) {
+		return '<div class="notice notice-error"> <p> This block can\'t be used inside a Session post. It\'s intended to be used in a page or post. </p> </div>';
+	}
+
 	$defaults   = wp_list_pluck( get_attributes_schema(), 'default' );
 	$attributes = wp_parse_args( $attributes, $defaults );
 	$sessions   = get_session_posts( $attributes );

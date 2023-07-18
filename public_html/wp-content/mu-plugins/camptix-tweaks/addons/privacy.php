@@ -17,8 +17,8 @@ class Privacy_Field extends CampTix_Addon {
 	const SLUG = 'privacy';
 
 	public $question = '';
-
 	public $options = array();
+	public $a11y_label;
 
 	/**
 	 * Hook into WordPress and Camptix.

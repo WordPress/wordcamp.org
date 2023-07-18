@@ -8,11 +8,14 @@
 	},
 	"config": {
 		"platform": {
-			"php": "7.2"
+			"php": "7.4"
 		},
 		"vendor-dir": "public_html/wp-content/mu-plugins/vendor",
 		"_comment": "Work around `test:watch` timeout, see https://github.com/spatie/phpunit-watcher/issues/63#issuecomment-545633709",
-		"process-timeout": 0
+		"process-timeout": 0,
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
 	},
 	"require": {
 		"adhocore/jwt": "^1.0"
@@ -21,7 +24,7 @@
 		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
 		"wp-coding-standards/wpcs": "2.*",
 		"phpcompatibility/phpcompatibility-wp": "*",
-		"phpunit/phpunit": "^7",
+		"phpunit/phpunit": "^9",
 		"sirbrillig/phpcs-changed": "^2.2",
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^1.0"
@@ -31,12 +34,17 @@
 		"lint": "phpcs",
 		"test": "phpunit",
 		"test:watch": "phpunit-watcher watch < /dev/tty",
+		"test:watch:group": "phpunit-watcher watch --group=",
 		"_test:watch:fast_comment": "This can't use `@test:watch`, because that only works if `@` is the first character in the string. It can't manually call `composer run test:watch`, because that strips out extra arguments like `-- group=sunrise`. This must be manually kept in sync with the `test:watch` command.",
 		"test:watch:fast": "WP_TESTS_SKIP_INSTALL=1 phpunit-watcher watch < /dev/tty",
 		"test:db:reset": "/usr/bin/env php .docker/bin/reset-tests-database.php",
+		"test:coverage":  "php -d xdebug.mode=coverage public_html/wp-content/mu-plugins/vendor/bin/phpunit --coverage-html .phpunit/coverage-report",
 		"phpcs-changed": "phpcs-changed",
 		"_comment": "Below script names left in for back-compat",
 		"phpcs": "phpcs",
-		"phpcbf": "phpcbf -p"
+		"phpcbf": "phpcbf -p",
+
+		"tw": "@test:watch",
+		"twg": "@test:watch:group"
 	}
 }

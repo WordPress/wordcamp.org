@@ -88,11 +88,7 @@ class Code_Of_Conduct_Field extends CampTix_Addon {
 		/* @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		if ( ! isset( $data[ self::SLUG ] ) || empty( $data[ self::SLUG ] ) ) {
-			$camptix->error_flags[ self::SLUG . '_unchecked' ] = true;
-		}
-
-		$data[ self::SLUG ] = wp_validate_boolean( $data[ self::SLUG ] );
+		$data[ self::SLUG ] = wp_validate_boolean( $data[ self::SLUG ] ?? false );
 
 		if ( true !== $data[ self::SLUG ] ) {
 			$camptix->error_flags[ self::SLUG . '_unchecked' ] = true;

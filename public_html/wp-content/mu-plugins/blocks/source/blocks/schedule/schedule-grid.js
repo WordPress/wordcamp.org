@@ -1,9 +1,9 @@
 /**
  * WordPress dependencies
  */
-import { format } from '@wordpress/date';
 import { __, _x } from '@wordpress/i18n';
 import { createContext, useContext } from '@wordpress/element';
+import { date, format } from '@wordpress/date';
 import { decodeEntities } from '@wordpress/html-entities';
 
 const { stripTags } = wp.sanitize;
@@ -42,13 +42,13 @@ export function ScheduleGrid( { sessions } ) {
 
 	const groupedSessions = groupSessionsByDate( sessions );
 
-	Object.keys( groupedSessions ).sort().forEach( ( date ) => {
-		const sessionsGroup = groupedSessions[ date ];
+	Object.keys( groupedSessions ).sort().forEach( ( day ) => {
+		const sessionsGroup = groupedSessions[ day ];
 
 		scheduleDays.push(
 			<ScheduleDay
-				key={ date }
-				localDate={ date }
+				key={ day }
+				localDate={ day }
 				sessions={ sessionsGroup }
 			/>
 		);
@@ -77,11 +77,11 @@ function groupSessionsByDate( sessions ) {
 			return groups;
 		}
 
-		const date = format( 'Y-m-d', session.derived.startTime );
+		const day = date( 'Y-m-d', session.derived.startTime, session.derived.timezone );
 
-		if ( date ) {
-			groups[ date ] = groups[ date ] || [];
-			groups[ date ].push( session );
+		if ( day ) {
+			groups[ day ] = groups[ day ] || [];
+			groups[ day ].push( session );
 		}
 
 		return groups;
@@ -126,8 +126,8 @@ function ScheduleDay( { localDate, sessions } ) {
 	const sectionId = `wordcamp-schedule__day-${ formattedDate }-tracks-${ formattedTrackIds }`;
 
 	const startEndTimes = sessions.reduce( ( accumulatingTimes, session ) => {
-		accumulatingTimes.push( session.derived.startTime );
-		accumulatingTimes.push( session.derived.endTime );
+		accumulatingTimes.push( date( 'dHi', session.derived.startTime, session.derived.timezone ) );
+		accumulatingTimes.push( date( 'dHi', session.derived.endTime, session.derived.timezone ) );
 
 		return accumulatingTimes;
 	}, [] );
@@ -386,9 +386,7 @@ function renderGridTemplateRows( startEndTimes ) {
 	startEndTimes.sort(); // Put them in chronological order.
 
 	const timeList = startEndTimes.reduce( ( accumulatingTimes, time ) => {
-		const formattedTime = format( 'dHi', time );
-
-		return accumulatingTimes += `[time-${ formattedTime }] auto `;
+		return accumulatingTimes += `[time-${ time }] auto `;
 	}, '' );
 
 	const templateRows = `

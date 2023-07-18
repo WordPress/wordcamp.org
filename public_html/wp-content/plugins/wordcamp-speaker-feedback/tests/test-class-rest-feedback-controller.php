@@ -135,7 +135,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	/**
 	 * Set up before each test.
 	 */
-	public function setUp() {
+	protected function setUp() : void {
 		parent::setUp();
 
 		$this->request = new WP_REST_Request( 'POST', '/wordcamp-speaker-feedback/v1/feedback' );
@@ -146,7 +146,7 @@ class Test_SpeakerFeedback_REST_Feedback_Controller extends WP_UnitTestCase {
 	/**
 	 * Reset after each test.
 	 */
-	public function tearDown() {
+	protected function tearDown() : void {
 		$created_feedback = get_feedback( array( self::$posts['valid-session']->ID ) );
 		foreach ( $created_feedback as $feedback ) {
 			wp_delete_comment( $feedback->comment_ID, true );

@@ -17,6 +17,10 @@ function manually_load_plugins() {
 	define( 'WORDCAMP_LOGS_GUTENBERG_SLACK_CHANNEL', '#logs-gutenberg' );
 	define( 'WORDCAMP_LOGS_JETPACK_SLACK_CHANNEL',   '#logs-jetpack' );
 
+	define( 'DISALLOW_UNFILTERED_HTML', true );
+	define( 'DISALLOW_FILE_MODS',       true );
+	define( 'DISALLOW_FILE_EDIT',       true );
+
 	// Needed for checking subrole capabilities. The ID is 1 because there's only one site in the test instance.
 	define( 'BLOG_ID_CURRENT_SITE', 1 );
 
@@ -26,9 +30,9 @@ function manually_load_plugins() {
 	require_once dirname( dirname( __DIR__ ) ) . '/sunrise.php';
 
 	require_once dirname( __DIR__ ) . '/0-error-handling.php';
-	require_once dirname( __DIR__ ) . '/lets-encrypt-helper.php';
+	require_once dirname( __DIR__ ) . '/wordcamp/lets-encrypt-helper.php';
 	require_once dirname( __DIR__ ) . '/latest-site-hints.php';
-	require_once dirname( __DIR__ ) . '/wcorg-json-api.php';
+	require_once dirname( __DIR__ ) . '/trusted-deputy-capabilities.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
 }
 

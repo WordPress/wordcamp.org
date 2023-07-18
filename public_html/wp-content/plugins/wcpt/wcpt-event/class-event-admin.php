@@ -5,8 +5,6 @@
  * @package WordCamp Post Type
  */
 
-use function WordCamp\Trusted_Deputy_Capabilities\is_deputy as is_deputy;
-
 /**
  * Class Event_Admin
  *
@@ -67,7 +65,7 @@ abstract class Event_Admin {
 
 		add_action( 'send_decline_notification_action',  'Event_Admin::send_decline_notification', 10, 3 );
 
-		add_action( 'wp_insert_post_empty_content', array( $this, 'maybe_prevent_creation_of_new_post' ), 999, 2 );
+		add_filter( 'wp_insert_post_empty_content', array( $this, 'maybe_prevent_creation_of_new_post' ), 999, 2 );
 	}
 
 	/**
@@ -707,9 +705,9 @@ abstract class Event_Admin {
 	 * short circuits creation of new post when truthy value is returned.
 	 *
 	 * @param  boolean $maybe_empty Whether the post should be considered "empty".
-	 * @param  array   $postarr      Array of post data.
+	 * @param  array   $postarr     Array of post data.
 	 *
-	 * @return boolean              Whether the post should be considered "empty".
+	 * @return mixed                Booleab whether the post should be considered "empty" or WP_Error in case user is not allowed to create post.
 	 */
 	public function maybe_prevent_creation_of_new_post( $maybe_empty, $postarr ) {
 		$post_type = $postarr['post_type'];
@@ -729,13 +727,8 @@ abstract class Event_Admin {
 			return $maybe_empty;
 		}
 
-		// Allow admins to create new posts in event CPT's.
-		if ( in_array('administrator',  wp_get_current_user()->roles) ) {
-			return $maybe_empty;
-		}
-
-		// Allow deputies to create new posts in event CPT's.
-		if ( is_deputy( get_current_user_id() ) ) {
+		// Allow WordCamp Wranglers (deputies, admins) to create new posts in event CPT's.
+		if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 			return $maybe_empty;
 		}
 

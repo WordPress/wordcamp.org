@@ -206,8 +206,23 @@ class WCCSP_Customizer {
 	 * @return boolean           Status of the field validity.
 	 */
 	public function maybe_prevent_disable( $validity, $value ) {
-		// Coming soon page on is always valid.
+		// Short circuit when the value is on.
 		if ( 'on' === $value ) {
+			return $validity;
+		}
+
+		/**
+		 * Short circuit when network admin is changing the value.
+		 *
+		 * On typical WordCamp site, at least some organisers do have administrator role so that
+		 * capability can not be used for this check.
+		 */
+		if ( in_array( 'manage_network', wp_get_current_user()->roles ) ) {
+			return $maybe_empty;
+		}
+
+		// Short circuit when deputy is changing the value.
+		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 			return $validity;
 		}
 

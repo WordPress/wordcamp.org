@@ -47,10 +47,10 @@ class WordCamp_New_Site {
 			/>
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
-				<?php $url = trailingslashit( get_post_meta( $post_id, $key, true ) ); ?>
-				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) ); ?>
-				<?php $valid_url = isset( $url['host'], $url['path'] ); ?>
 				<?php
+				$url        = trailingslashit( get_post_meta( $post_id, $key, true ) );
+				$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
+				$valid_url  = isset( $url['host'], $url['path'] );
 				$tld        = get_top_level_domain();
 				$network_id = "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
 				?>
@@ -227,7 +227,7 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		$url_components = parse_url( $url );
+		$url_components = wp_parse_url( $url );
 		if ( ! $url_components || empty( $url_components['scheme'] ) || empty( $url_components['host'] ) ) {
 			Logger\log( 'return_invalid_url', compact( 'wordcamp_id', 'url', 'url_components' ) );
 			return;

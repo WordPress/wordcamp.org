@@ -11,6 +11,11 @@
 namespace WordCamp\Plugins\Network;
 defined( 'WPINC' ) || die();
 
+add_filter( 'network_admin_plugin_action_links', __NAMESPACE__ . '\network_plugin_actions', 10, 2 );
+add_action( 'network_admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );
+add_action( 'admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );
+
+
 /**
  * The two arrays here depict the intended network activation state of each
  * plugin on WordCamp.org. When plugins are added, removed, or their state is
@@ -111,8 +116,6 @@ function network_plugin_actions( $actions, $plugin_file ) {
 	return $actions;
 }
 
-add_filter( 'network_admin_plugin_action_links', __NAMESPACE__ . '\network_plugin_actions', 10, 2 );
-
 /**
  * Display a network admin notice if there are plugins that don't have their intended
  * activation state.
@@ -127,7 +130,6 @@ function network_plugin_notifier() {
 
 	$all_plugins             = array_keys( get_plugins() );
 	$missing_plugins         = array_diff( array_merge( $state_activated, $state_deactivated ), $all_plugins );
-
 	$active_plugins          = array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) );
 	$wrong_state_deactivated = array_diff( $state_activated, $active_plugins, $missing_plugins );
 	$wrong_state_activated   = array_intersect( $state_deactivated, $active_plugins );
@@ -159,5 +161,3 @@ function network_plugin_notifier() {
 		<?php
 	}
 }
-
-add_action( 'network_admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );

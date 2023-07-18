@@ -4,6 +4,17 @@
  * Plugin Description: Custom post types for Sessions, Speakers, Sponsors, Organizers, Volunteers.
  */
 
+// Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2
+// greater than the core-defined ep_masks, but could potentially conflict with another plugin.
+// See https://developer.wordpress.org/reference/functions/add_rewrite_endpoint/.
+define( 'EP_SESSIONS', 16384 );
+
+// This should be network-activated, but isn't used on the root sites. On those it just clutters the admin menu
+// and slows down page loads. The constant above is needed for Speaker Feedback though.
+if ( get_current_blog_id() === BLOG_ID_CURRENT_SITE ) {
+	return;
+}
+
 require_once 'inc/utilities.php';
 require_once 'inc/back-compat.php';
 require_once 'inc/favorite-schedule-shortcode.php';
@@ -13,11 +24,6 @@ require_once 'inc/deprecated.php';
 use function WordCamp\Post_Types\Utilities\get_avatar_or_image;
 use function WordCamp\Theme_Templates\site_supports_block_templates;
 use function WordCamp\Blocks\has_block_with_attrs;
-
-// Bitwise mask for the sessions CPT, to add endpoints to the session pages. This should be a unique power of 2
-// greater than the core-defined ep_masks, but could potentially conflict with another plugin.
-// See https://developer.wordpress.org/reference/functions/add_rewrite_endpoint/.
-define( 'EP_SESSIONS', 16384 );
 
 class WordCamp_Post_Types_Plugin {
 	protected $wcpt_permalinks;

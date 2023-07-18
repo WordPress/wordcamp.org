@@ -99,42 +99,6 @@ function wcorg_shortcode_menu( $attributes ) {
 add_shortcode( 'menu', 'wcorg_shortcode_menu' );
 
 /**
- * Disable certain network-activate plugins on specific sites.
- *
- * @param array $plugins
- *
- * @return array
- */
-function wcorg_disable_network_activated_plugins_on_sites( $plugins ) {
-	/*
-	 * central.wordcamp.org, plan.wordcamp.org
-	 *
-	 * These are plugins for individual WordCamp sites, so they aren't relevant for Central and Plan.
-	 * They clutter the admin menu and slow down page loads.
-	 */
-	if ( in_array( get_current_blog_id(), array( BLOG_ID_CURRENT_SITE, 63 ), true ) ) {
-		unset( $plugins['camptix-extras/camptix-extras.php'] );
-		unset( $plugins['camptix-network-tools/camptix-network-tools.php'] );
-		unset( $plugins['tagregator/bootstrap.php'] );
-		unset( $plugins['wordcamp-organizer-nags/wordcamp-organizer-nags.php'] );
-		unset( $plugins['wc-post-types/wc-post-types.php'] );
-	}
-
-	/*
-	 * plan.wordcamp.org
-	 */
-	if ( 63 === get_current_blog_id() ) {
-		unset( $plugins['camptix/camptix.php'] );
-		unset( $plugins['wordcamp-payments/bootstrap.php'] );
-		unset( $plugins['wordcamp-payments-network/bootstrap.php'] );
-	}
-
-	return $plugins;
-}
-add_filter( 'site_option_active_sitewide_plugins', 'wcorg_disable_network_activated_plugins_on_sites' );
-
-
-/**
  * Remove menu items on certain sites.
  *
  * This works together with `wcorg_disable_network_activated_plugins_on_sites()`. There are some plugins that we

@@ -1,11 +1,15 @@
 <?php
 
-/*
+/**
  * Plugin Name: WordCamp Dashboard Widgets
  * Description: Communicate non-urgent messages from Central to organizers through Dashboard widgets.
- * Version:     0.1
- * Author:      Ian Dunn
  */
+
+// This should be network-activated, but isn't used on the root sites. On those it just clutters the dashboard
+// and slows down page loads.
+if ( get_current_blog_id() === BLOG_ID_CURRENT_SITE ) {
+	return;
+}
 
 class WordCamp_Dashboard_Widgets {
 	protected $need_central_about_info;

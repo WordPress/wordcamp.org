@@ -25,7 +25,7 @@
 		"wp-coding-standards/wpcs": "2.*",
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"phpunit/phpunit": "^9",
-		"sirbrillig/phpcs-changed": "^2.2",
+		"sirbrillig/phpcs-changed": "2.10.0",
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^1.0"
 	},

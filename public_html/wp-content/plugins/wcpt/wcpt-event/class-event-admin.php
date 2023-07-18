@@ -697,7 +697,7 @@ abstract class Event_Admin {
 
 	/**
 	 * Prevent users from creating new WordCamp and Meetup posts on dashboard. In most of the cases, all posts should be created
-	 * thru the public application forms in order to get all needed information and to initiate the vetting process correctly.
+	 * through the public application forms in order to get all needed information and to initiate the vetting process correctly.
 	 *
 	 * Expectation is made for users with administrator and deputy roles, as they need to create events manually from time to time.
 	 *

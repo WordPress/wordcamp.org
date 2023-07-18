@@ -1,6 +1,7 @@
 <?php
 
 // PHPCS note: Nonces are verified in Event_Admin::metabox_save (if applicable), we don't need to re-verify.
+// phpcs:disable WordPress.WP.CapitalPDangit -- This has false positives on all the `events.wordpress.org` URLs in this file.
 
 use \WordCamp\Logger;
 
@@ -49,8 +50,12 @@ class WordCamp_New_Site {
 				<?php $url = trailingslashit( get_post_meta( $post_id, $key, true ) ); ?>
 				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) ); ?>
 				<?php $valid_url = isset( $url['host'], $url['path'] ); ?>
+				<?php
+				$tld        = get_top_level_domain();
+				$network_id = "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+				?>
 
-				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
+				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>
 					<?php
 						$blog_details = get_blog_details(
 							array(
@@ -59,9 +64,14 @@ class WordCamp_New_Site {
 							),
 							true
 						);
+						$edit_url     = add_query_arg( 'id', $blog_details->blog_id, network_admin_url( 'site-info.php' ) );
+
+					if ( "events.wordpress.$tld" === $url['host'] ) {
+						$edit_url = str_replace( '://wordcamp.', '://events.wordpress.', $edit_url );
+					}
 					?>
 
-					<a target="_blank" href="<?php echo esc_url( add_query_arg( 'id', $blog_details->blog_id, network_admin_url( 'site-info.php' ) ) ); ?>">Edit</a> |
+					<a target="_blank" href="<?php echo esc_url( $edit_url ); ?>">Edit</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
 
@@ -232,7 +242,10 @@ class WordCamp_New_Site {
 			$blog_name .= wp_date( ' Y', $wordcamp->{'Start Date (YYYY-mm-dd)'} );
 		}
 
+		$tld = get_top_level_domain();
+
 		$this->new_site_id = wp_insert_site( array(
+			'network_id' => "events.wordpress.$tld" === $url_components['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID,
 			'domain'  => $url_components['host'],
 			'path'    => $path,
 			'title'   => $blog_name,

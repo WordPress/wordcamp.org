@@ -283,11 +283,11 @@ function render_status_metabox( $post ) {
 		$post->post_status = $back_compat_statuses[ $post->post_status ];
 	}
 
-	$editable_statuses = array( 'auto-draft', 'draft', 'wcb-incomplete' );
+	$editable_statuses             = array( 'auto-draft', 'draft', 'wcb-incomplete' );
 	$current_user_can_edit_request = false;
-	$submit_text = esc_html_x( 'Update', 'payment request', 'wordcamporg' );
-	$submit_note = '';
-	$submit_note_class = 'warning';
+	$submit_text                   = esc_html_x( 'Update', 'payment request', 'wordcamporg' );
+	$submit_note                   = '';
+	$submit_note_class             = 'warning';
 
 	if ( current_user_can( 'manage_network' ) ) {
 		$current_user_can_edit_request = true;
@@ -296,20 +296,20 @@ function render_status_metabox( $post ) {
 			$submit_text = __( 'Submit for Review', 'wordcamporg' );
 			$submit_note = __( 'Once submitted for review, this request cannot be edited.', 'wordcamporg' );
 		} else {
-			$submit_note = __( 'Please add an invoice or other supporting documentation in the Files section and save the draft.', 'wordcamporg' );
+			$submit_note       = __( 'Please add an invoice or other supporting documentation in the Files section and save the draft.', 'wordcamporg' );
 			$submit_note_class = 'error';
 		}
 
 		$current_user_can_edit_request = true;
 	}
 
-	$incomplete_notes = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
+	$incomplete_notes    = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
 	$incomplete_readonly = ! current_user_can( 'manage_network' ) ? 'readonly' : '';
 
-	$request_id         = get_current_blog_id() . '-' . $post->ID;
-	$requested_by       = \WordCamp_Budgets::get_requester_name( $post->post_author );
+	$request_id   = get_current_blog_id() . '-' . $post->ID;
+	$requested_by = \WordCamp_Budgets::get_requester_name( $post->post_author );
 
-	require_once( dirname( __DIR__ ) . '/views/reimbursement-request/metabox-status.php' );
+	require_once dirname( __DIR__ ) . '/views/reimbursement-request/metabox-status.php';
 }
 
 /**
@@ -322,14 +322,13 @@ function render_notes_metabox( $post ) {
 
 	$existing_notes = get_post_meta( $post->ID, '_wcbrr_notes', true );
 
-	require_once( dirname( __DIR__ ) . '/views/reimbursement-request/metabox-notes.php' );
+	require_once dirname( __DIR__ ) . '/views/reimbursement-request/metabox-notes.php';
 }
 
 /**
  * Render General Information Metabox
  *
  * @param WP_Post $post
- *
  */
 function render_general_information_metabox( $post ) {
 	wp_nonce_field( 'general_information', 'general_information_nonce' );
@@ -350,7 +349,7 @@ function render_general_information_metabox( $post ) {
 
 	wp_localize_script( 'wcb-attached-files', 'wcbAttachedFiles', $files );
 
-	require_once( dirname( __DIR__ ) . '/views/reimbursement-request/metabox-general-information.php' );
+	require_once dirname( __DIR__ ) . '/views/reimbursement-request/metabox-general-information.php';
 }
 
 /**
@@ -373,7 +372,6 @@ function get_reimbursement_reasons() {
  * Render Expenses Metabox
  *
  * @param WP_Post $post
- *
  */
 function render_expenses_metabox( $post ) {
 	wp_nonce_field( 'expenses', 'expenses_nonce' );
@@ -385,8 +383,8 @@ function render_expenses_metabox( $post ) {
 
 	wp_localize_script( 'wordcamp-reimbursement-requests', 'wcbPaymentCategories', \WordCamp_Budgets::get_payment_categories() );
 
-	require_once( dirname( __DIR__ ) . '/views/reimbursement-request/metabox-expenses.php' );
-	require_once( dirname( __DIR__ ) . '/views/reimbursement-request/template-expense.php' );
+	require_once dirname( __DIR__ ) . '/views/reimbursement-request/metabox-expenses.php';
+	require_once dirname( __DIR__ ) . '/views/reimbursement-request/template-expense.php';
 }
 
 /**
@@ -447,7 +445,7 @@ function set_request_status( $post_data, $post_data_raw ) {
 /**
  * Save the post's data
  *
- * @param int      $post_id
+ * @param int     $post_id
  * @param WP_Post $post
  */
 function save_request( $post_id, $post ) {
@@ -503,8 +501,9 @@ function save_request( $post_id, $post ) {
 		list( $new, $old, $transition_post ) = $data;
 
 		// Transitioning a different post.
-		if ( $transition_post->ID != $post->ID )
+		if ( $transition_post->ID != $post->ID ) {
 			continue;
+		}
 
 		if ( $new == 'incomplete' || $new == 'wcb-incomplete' ) {
 			$incomplete_text = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
@@ -547,11 +546,13 @@ function save_request( $post_id, $post ) {
  * @param WP_Post $post
  */
 function transition_post_status( $new, $old, $post ) {
-	if ( $post->post_type != POST_TYPE )
+	if ( POST_TYPE !== $post->post_type ) {
 		return;
+	}
 
-	if ( $new == 'auto-draft' || $new == $old )
+	if ( 'auto-draft' === $new || $new === $old ) {
 		return;
+	}
 
 	// Move logging to save_post because transitions are fired before save_post.
 	_transition_post_status( array( $new, $old, $post ) );
@@ -567,11 +568,13 @@ function transition_post_status( $new, $old, $post ) {
 function _transition_post_status( $set = null ) {
 	static $transitions;
 
-	if ( ! isset( $transitions ) )
+	if ( ! isset( $transitions ) ) {
 		$transitions = array();
+	}
 
-	if ( is_null( $set ) )
+	if ( is_null( $set ) ) {
 		return $transitions;
+	}
 
 	$transitions[] = $set;
 	return $transitions;
@@ -584,20 +587,22 @@ function _transition_post_status( $set = null ) {
  */
 function render_log_metabox( $post ) {
 	$log = get_post_meta( $post->ID, '_wcp_log', true );
-	if ( empty( $log ) )
+	if ( empty( $log ) ) {
 		$log = '[]';
+	}
 
 	$log = json_decode( $log, true );
 
 	// I wish I had a spaceship.
 	uasort( $log, function( $a, $b ) {
-		if ( $b['timestamp'] == $a )
+		if ( $b['timestamp'] == $a ) {
 			return 0;
+		}
 
 		return ( $a['timestamp'] > $b['timestamp'] ) ? -1 : 1;
 	});
 
-	require_once( dirname( __DIR__ ) . '/views/reimbursement-request/metabox-log.php' );
+	require_once dirname( __DIR__ ) . '/views/reimbursement-request/metabox-log.php';
 }
 
 /**
@@ -609,7 +614,7 @@ function verify_metabox_nonces() {
 		'notes_nonce',
 		'general_information_nonce',
 		'payment_details_nonce',
-		'expenses_nonce'
+		'expenses_nonce',
 	);
 
 	foreach ( $nonces as $nonce ) {
@@ -627,7 +632,7 @@ function verify_metabox_nonces() {
 function validate_and_save_text_fields( $post_id, $field_names, $data ) {
 	foreach ( $field_names as $field ) {
 		$meta_key = "_wcbrr_$field";
-		$value = sanitize_text_field( wp_unslash( $data[ $meta_key ] ) );
+		$value    = sanitize_text_field( wp_unslash( $data[ $meta_key ] ) );
 
 		if ( empty( $value ) ) {
 			delete_post_meta( $post_id, $meta_key );
@@ -680,7 +685,7 @@ function validate_and_save_expenses( $post_id, $expenses ) {
  * Validate and save expense data
  *
  * @param WP_Post $post
- * @param array    $expenses
+ * @param string  $new_note_message
  */
 function validate_and_save_notes( $post, $new_note_message ) {
 
@@ -708,7 +713,7 @@ function validate_and_save_notes( $post, $new_note_message ) {
 	$new_note = array(
 		'timestamp' => time(),
 		'author_id' => get_current_user_id(),
-		'message'   => $new_note_message
+		'message'   => $new_note_message,
 	);
 
 	$notes[] = $new_note;
@@ -725,16 +730,16 @@ function validate_and_save_notes( $post, $new_note_message ) {
  * Notify WordCamp Central or the request author when new notes are added
  *
  * @param WP_Post $request
- * @param array    $note
+ * @param array   $note
  */
 function notify_parties_of_new_note( $request, $note ) {
 	$note_author = get_user_by( 'id', $note['author_id'] );
 
 	if ( $note_author->has_cap( 'manage_network' ) ) {
-		$to = \WordCamp_Budgets::get_requester_formatted_email( $request->post_author );
+		$to             = \WordCamp_Budgets::get_requester_formatted_email( $request->post_author );
 		$subject_prefix = sprintf( '[%s] ', get_wordcamp_name() );
 	} else {
-		$to = 'support@wordcamp.org';
+		$to             = 'support@wordcamp.org';
 		$subject_prefix = '';
 	}
 
@@ -747,14 +752,14 @@ function notify_parties_of_new_note( $request, $note ) {
 	$request_url      = admin_url( sprintf( 'post.php?post=%s&action=edit', $request->ID ) );
 	$headers          = array( 'Reply-To: support@wordcamp.org' );
 
-	$message = sprintf( "
+	$message = sprintf( '
 		%s has added the following note on the reimbursement request for %s:
 
 		%s
 
 		You can view the request and respond to their note at:
 
-		%s",
+		%s',
 		sanitize_text_field( $note_author_name ),
 		sanitize_text_field( $request->post_title ),
 		sanitize_text_field( $note['message'] ),
@@ -768,8 +773,8 @@ function notify_parties_of_new_note( $request, $note ) {
 /**
  * Notify the organizer when the status of their reimbursement changes or when notes are added
  *
- * @param string   $new_status
- * @param string   $old_status
+ * @param string  $new_status
+ * @param string  $old_status
  * @param WP_Post $request
  */
 function notify_organizer_request_updated( $new_status, $old_status, $request ) {
@@ -794,12 +799,12 @@ function notify_organizer_request_updated( $new_status, $old_status, $request ) 
 	$request_url = admin_url( sprintf( 'post.php?post=%s&action=edit', $request->ID ) );
 	$headers     = array( 'Reply-To: support@wordcamp.org' );
 
-	$message = sprintf( "
+	$message = sprintf( '
 		The status of your reimbursement request for %s has been updated to %s.
 
 		You can view the request and add notes at:
 
-		%s",
+		%s',
 		sanitize_text_field( $request->post_title ),
 		sanitize_text_field( $status_name ),
 		esc_url_raw( $request_url )
@@ -830,14 +835,14 @@ function modify_capabilities( $required_capabilities, $requested_capability, $us
 	$draft_or_incomplete_status = $drafted_status || 'wcb-incomplete' === $post->post_status;
 	$is_bulk_edit               = isset( $_REQUEST['bulk_edit'] );
 
-	switch( $requested_capability ) {
+	switch ( $requested_capability ) {
 		case 'edit_post':
 			$is_saving_edit = isset( $_REQUEST['action'] ) && 'edit' != $_REQUEST['action'];  // 'edit' is opening the Edit Invoice screen, 'editpost' is when it's submitted
 
 			if ( ( $is_saving_edit && ! $draft_or_incomplete_status ) || $is_bulk_edit ) {
 				$required_capabilities[] = 'manage_network';
 			}
-		break;
+			break;
 
 		case 'draft_post':
 			if ( $draft_or_incomplete_status ) {
@@ -876,7 +881,7 @@ function _generate_payment_report_default( $args ) {
 
 	fputcsv( $report, Utilities\Export_CSV::esc_csv( $column_headings ) );
 
-	foreach( $args['data'] as $entry ) {
+	foreach ( $args['data'] as $entry ) {
 		switch_to_blog( $entry->blog_id );
 
 		$post = get_post( $entry->request_id );
@@ -904,10 +909,10 @@ function _generate_payment_report_default( $args ) {
 		}
 
 		$currency = get_post_meta( $post->ID, '_wcbrr_currency', true );
-		$reason = get_post_meta( $post->ID, '_wcbrr_reason', true );
+		$reason   = get_post_meta( $post->ID, '_wcbrr_reason', true );
 		$expenses = get_post_meta( $post->ID, '_wcbrr_expenses', true );
 
-		$amount = 0;
+		$amount     = 0;
 		$categories = array();
 
 		if ( false !== strpos( $currency, 'null' ) ) {
@@ -1042,7 +1047,7 @@ function _generate_payment_report_jpm_checks( $args ) {
 			continue;
 		}
 
-		$amount = 0;
+		$amount      = 0;
 		$description = array();
 
 		$expenses = get_post_meta( $post->ID, '_wcbrr_expenses', true );
@@ -1215,7 +1220,7 @@ function _generate_payment_report_jpm_ach( $args ) {
 
 	$count = 0;
 	$total = 0;
-	$hash = 0;
+	$hash  = 0;
 
 	foreach ( $args['data'] as $entry ) {
 		switch_to_blog( $entry->blog_id );
@@ -1244,7 +1249,7 @@ function _generate_payment_report_jpm_ach( $args ) {
 		$routing_number = \WCP_Encryption::maybe_decrypt( $routing_number );
 		$routing_number = substr( $routing_number, 0, 8 + 1 );
 		$routing_number = str_pad( $routing_number, 8 + 1 );
-		$hash += absint( substr( $routing_number, 0, 8 ) );
+		$hash          += absint( substr( $routing_number, 0, 8 ) );
 		echo $routing_number;
 
 		// Bank Account Number
@@ -1255,7 +1260,7 @@ function _generate_payment_report_jpm_ach( $args ) {
 		echo $account_number;
 
 		// Amount
-		$amount = 0;
+		$amount   = 0;
 		$expenses = get_post_meta( $post->ID, '_wcbrr_expenses', true );
 		foreach ( $expenses as $expense ) {
 			if ( ! empty( $expense['_wcbrr_amount'] ) ) {
@@ -1300,7 +1305,6 @@ function _generate_payment_report_jpm_ach( $args ) {
 	echo str_pad( substr( $ach_options['financial-inst'], 0, 8 ), 8 ); // Originating Financial Institution
 	echo '0000001'; // Batch Number
 	echo PHP_EOL;
-
 
 	// File Trailer Record
 
@@ -1357,7 +1361,7 @@ function _generate_payment_report_jpm_wires( $args ) {
 			continue;
 		}
 
-		$amount = 0;
+		$amount   = 0;
 		$expenses = get_post_meta( $post->ID, '_wcbrr_expenses', true );
 		foreach ( $expenses as $expense ) {
 			if ( ! empty( $expense['_wcbrr_amount'] ) ) {
@@ -1370,9 +1374,9 @@ function _generate_payment_report_jpm_wires( $args ) {
 		$count += 1;
 
 		// If account starts with two letters, it's most likely an IBAN
-		$account = get_post_meta( $post->ID, '_wcbrr_beneficiary_account_number', true );
-		$account = \WCP_Encryption::maybe_decrypt( $account );
-		$account = preg_replace( '#\s#','', $account );
+		$account      = get_post_meta( $post->ID, '_wcbrr_beneficiary_account_number', true );
+		$account      = \WCP_Encryption::maybe_decrypt( $account );
+		$account      = preg_replace( '#\s#', '', $account );
 		$account_type = preg_match( '#^[a-z]{2}#i', $account ) ? 'IBAN' : 'ACCT';
 
 		$row = array(
@@ -1522,7 +1526,7 @@ function _generate_payment_report_jpm_wires( $args ) {
 		// If an intermediary bank is given.
 		$interm_swift = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_interm_bank_swift', true ) );
 		if ( ! empty( $iterm_swift ) ) {
-			$row['40-id-type'] = 'SWIFT';
+			$row['40-id-type']  = 'SWIFT';
 			$row['41-id-value'] = $interm_swift;
 
 			$row['42-interm-bank-name']      = substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_interm_bank_name',           true ) ), 0, 35 );
@@ -1537,7 +1541,7 @@ function _generate_payment_report_jpm_wires( $args ) {
 
 			$row['46-interm-bank-country'] = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_interm_bank_country_iso3166', true ) );
 
-			$row['47-supl-id-type'] = 'ACCT';
+			$row['47-supl-id-type']  = 'ACCT';
 			$row['48-supl-id-value'] = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_interm_bank_account', true ) );
 		}
 

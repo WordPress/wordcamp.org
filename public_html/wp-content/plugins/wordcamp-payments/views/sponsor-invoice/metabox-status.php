@@ -28,21 +28,21 @@ defined( 'WPINC' ) or die();
 
 		<div id="misc-publishing-actions">
 			<div class="misc-pub-section misc-pub-post-status">
-				<label for="post_status"><?php _e( 'Status:' ) ?></label>
+				<label for="post_status"><?php esc_html_e( 'Status:' ); ?></label>
 
 				<span id="post-status-display">
 					<?php if ( in_array( $post->post_status, array( 'auto-draft', 'draft' ), true ) ) : ?>
-						<?php _e( 'Draft', 'wordcamporg' ); ?>
+						<?php esc_html_e( 'Draft', 'wordcamporg' ); ?>
 					<?php elseif ( 'wcbsi_submitted' == $post->post_status ) : ?>
-						<?php _e( 'Submitted', 'wordcamporg' ); ?>
+						<?php esc_html_e( 'Submitted', 'wordcamporg' ); ?>
 					<?php elseif ( 'wcbsi_approved' == $post->post_status ) : ?>
-						<?php _e( 'Sent', 'wordcamporg' ); ?>
+						<?php esc_html_e( 'Sent', 'wordcamporg' ); ?>
 					<?php elseif ( 'wcbsi_paid' == $post->post_status ) : ?>
-						<?php _e( 'Paid', 'wordcamporg' ); ?>
+						<?php esc_html_e( 'Paid', 'wordcamporg' ); ?>
 					<?php elseif ( 'wcbsi_uncollectible' == $post->post_status ) : ?>
-						<?php _e( 'Uncollectible', 'wordcamporg' ); ?>
+						<?php esc_html_e( 'Uncollectible', 'wordcamporg' ); ?>
 					<?php elseif ( 'wcbsi_refunded' == $post->post_status ) : ?>
-						<?php _e( 'Refunded', 'wordcamporg' ); ?>
+						<?php esc_html_e( 'Refunded', 'wordcamporg' ); ?>
 					<?php endif; ?>
 				</span>
 
@@ -70,7 +70,7 @@ defined( 'WPINC' ) or die();
 			</div>
 
 			<div id="publishing-action">
-				<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr( esc_html__( 'Send Invoice', 'wordcamporg' ) ) ?>" />
+				<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr( esc_html__( 'Send Invoice', 'wordcamporg' ) ); ?>" />
 				<?php submit_button(
 					esc_html__( 'Send Invoice', 'wordcamporg' ),
 					'primary button-large',
@@ -85,13 +85,13 @@ defined( 'WPINC' ) or die();
 		<?php elseif ( ! $current_user_can_submit_request ) : ?>
 
 			<p>
-				<?php _e( "Invoices can't be submitted until your venue contract has been signed.", 'wordcamporg' ); ?>
+				<?php esc_html_e( "Invoices can't be submitted until your venue contract has been signed.", 'wordcamporg' ); ?>
 			</p>
 
 		<?php else : ?>
 
 			<p>
-				<?php _e( "Invoices can't be edited after they've been submitted.", 'wordcamporg' ); ?>
+				<?php esc_html_e( "Invoices can't be edited after they've been submitted.", 'wordcamporg' ); ?>
 			</p>
 
 		<?php endif; ?>

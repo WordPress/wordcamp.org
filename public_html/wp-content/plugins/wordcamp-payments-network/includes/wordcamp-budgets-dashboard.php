@@ -29,7 +29,7 @@ define( 'REDACT_PAID_REQUESTS_CRON_ID', 'wcb_redact_paid_requests' );
  */
 
 add_action( 'network_admin_menu',    __NAMESPACE__ . '\register_budgets_menu' );
-add_action( 'network_admin_menu',    __NAMESPACE__ . '\remove_budgets_submenu', 11 ); // after other modules have registered their submenu pages
+add_action( 'network_admin_menu',    __NAMESPACE__ . '\remove_budgets_submenu', 11 ); // After other modules have registered their submenu pages.
 add_action( 'network_admin_menu',    __NAMESPACE__ . '\import_export_admin_menu', 11 );
 add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_scripts', 10, 1 );
 

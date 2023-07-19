@@ -554,7 +554,7 @@ function add_row_action( $actions, $post ) {
 				admin_url( sprintf( $post_type_object->_edit_link, $post->ID ) )
 			);
 
-			$status = get_post_status_object( $new_status );
+			$status                            = get_post_status_object( $new_status );
 			$actions[ 'new-status-' . $index ] = sprintf(
 				'<a href="%1$s" aria-label="%2$s">%3$s</a>',
 				wp_nonce_url( $url, 'wcbsi_update-post_' . $post->ID ),

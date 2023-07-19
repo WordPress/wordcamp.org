@@ -7,7 +7,11 @@ class CampTix_Network_Dashboard {
 	function __construct() {
 		self::$attendee_search_limit = apply_filters( 'camptix_nt_attendee_list_blog_limit', 700 ); // PHP times out around 900 sites.
 
-		add_action( 'network_admin_menu', array( $this, 'admin_menu' ) );
+		// The WordCamp network is the canonical place for network admin tools, but the rest of this file still
+		// needs to run to collect data.
+		if ( get_current_network_id() === WORDCAMP_NETWORK_ID ) {
+			add_action( 'network_admin_menu', array( $this, 'admin_menu' ) );
+		}
 		add_action( 'init', array( $this, 'init' ) );
 
 		$this->schedule_events();
@@ -134,8 +138,10 @@ class CampTix_Network_Dashboard {
 			switch_to_blog( $bid );
 
 			$post = $meta = false;
-			if ( in_array( 'camptix/camptix.php', (array) apply_filters( 'active_plugins', get_option( 'active_plugins', array() ) ) ) ) {
 
+			// Fetching database plugins because `switch_to_blog()` doesn't (de-)activate plugins.
+			// @todo: check if network-activated too, otherwise missing sites.
+			if ( in_array( 'camptix/camptix.php', (array) apply_filters( 'active_plugins', get_option( 'active_plugins', array() ) ) ) ) {
 				$options = get_option( 'camptix_options' );
 
 				$post = array(

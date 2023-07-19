@@ -303,7 +303,7 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	public static function get_valid_status_transitions( $status ) {
 		$transitions = array(
-			'wcpt-needs-vetting'   => array( 'wcpt-needs-orientati', 'wcpt-more-info-reque' ),
+			'wcpt-needs-vetting'   => array( 'wcpt-needs-orientati', 'wcpt-more-info-reque', 'wcpt-rejected' ),
 			'wcpt-needs-orientati' => array( 'wcpt-needs-vetting', 'wcpt-interview-sched' ),
 			'wcpt-more-info-reque' => array(),  // Allowed from any status, see below
 			'wcpt-interview-sched' => array( 'wcpt-needs-orientati', 'wcpt-approved-pre-pl' ),

@@ -33,6 +33,7 @@ function default_jetpack_modules( $modules ) {
 		$modules,
 		array(
 			'widget-visibility', // better performance without.
+			'sitemaps', // Core generates basic sitemaps.
 		)
 	);
 
@@ -45,7 +46,6 @@ function default_jetpack_modules( $modules ) {
 		'image-cdn',
 		'sharedaddy',
 		'shortcodes',
-		'sitemaps',
 		'subscriptions'
 	);
 

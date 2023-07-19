@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/local/bin/php
 <?php
 
 function get_custom_message() {
@@ -7,9 +7,9 @@ function get_custom_message() {
 	$custom_message = "
 		Component: Summarize _what_ changed, and _why_ (but not _how_). Limit to 70 characters (or 63 if you're going to let GitHub add the PR number).
 
-		Longer description with more details, like historical context for the changes, links to external discussions, etc. 
+		Longer description with more details, like historical context for the changes, links to external discussions, etc.
 
-		Do not include additional information about the new code here; that should be documented with the code itself. The commit message should focus on additional information for _why_ the change was needed. 
+		Do not include additional information about the new code here; that should be documented with the code itself. The commit message should focus on additional information for _why_ the change was needed.
 
 		Props person, another.
 		Fixes #30000. See #20202, #105.
@@ -39,8 +39,12 @@ function get_previous_components() {
 	foreach ( $staged_files as $file ) {
 		$short_descriptions = explode(
 			PHP_EOL,
-			trim( shell_exec( "/usr/bin/git log --format='%s' --max-count=5 $file" ) )
+			shell_exec( "/usr/bin/git log --format='%s' --max-count=5 $file" )
 		);
+
+		if ( $short_descriptions ) {
+			$short_descriptions = array_map( 'trim', (array) $short_descriptions );
+		}
 
 		foreach ( $short_descriptions as $description ) {
 			$component_marker = strpos( $description, ': ' );

@@ -8,7 +8,10 @@
 	},
 	"config": {
 		"platform": {
-			"php": "7.2"
+			"php": "7.4"
+		},
+		"allow-plugins": {
+			"composer/installers": true
 		}
 	},
 	"extra": {
@@ -46,6 +49,16 @@
 					}
 				},
 				{
+					"name": "wordpress-plugin/camptix-mercadopago",
+					"type": "wordpress-plugin",
+					"version": "1.0.6",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/camptix-mercadopago/",
+						"reference": "tags/1.0.6/"
+					}
+				},
+				{
 					"name": "wordpress-plugin/camptix-paystack",
 					"type": "wordpress-plugin",
 					"version": "1.0.0",
@@ -66,16 +79,6 @@
 					}
 				},
 				{
-					"name": "wordpress-plugin/json-rest-api",
-					"type": "wordpress-plugin",
-					"version": "1.2.5",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/json-rest-api/",
-						"reference": "tags/1.2.5/"
-					}
-				},
-				{
 					"name": "wordpress-meta/wporg-profiles-wp-activity-notifier",
 					"type": "wordpress-plugin",
 					"version": "1.1",
@@ -93,7 +96,7 @@
 		"wordpress-plugin/bbpress": "2.6.*",
 		"wpackagist-plugin/campt-indian-payment-gateway": "*",
 		"wordpress-plugin/camptix-bd-payments": "1.2",
-		"wpackagist-plugin/camptix-mercadopago": "*",
+		"wordpress-plugin/camptix-mercadopago": "1.0.6",
 		"wpackagist-plugin/camptix-pagseguro": "*",
 		"wpackagist-plugin/camptix-payfast-gateway": "*",
 		"wpackagist-plugin/camptix-trustcard": "*",
@@ -107,7 +110,6 @@
 		"wpackagist-plugin/gutenberg": "*",
 		"wpackagist-plugin/hyperdb": "dev-trunk",
 		"wpackagist-plugin/jetpack": "*",
-		"wordpress-plugin/json-rest-api": "1.2.5",
 		"wpackagist-plugin/liveblog": "*",
 		"wpackagist-plugin/public-post-preview": "*",
 		"wpackagist-plugin/pwa": "*",
@@ -128,6 +130,8 @@
 		"wpackagist-theme/twentyseventeen": "*",
 		"wpackagist-theme/twentynineteen": "*",
 		"wpackagist-theme/twentytwenty": "*",
-		"wpackagist-theme/twentytwentyone": "*"
+		"wpackagist-theme/twentytwentyone": "*",
+		"wpackagist-theme/twentytwentytwo": "*",
+		"wpackagist-theme/twentytwentythree": "*"
 	}
 }

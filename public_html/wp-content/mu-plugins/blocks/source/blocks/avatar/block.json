@@ -1,11 +1,11 @@
 {
 	"apiVersion": 2,
 	"name": "wordcamp/avatar",
-	"title": "Avatar",
+	"title": "Speaker/Organizer Avatar",
 	"category": "wordcamp",
 	"description": "Display the current person's avatar.",
 	"textdomain": "wordcamporg",
-	"usesContext": [ "postId", "postType", "queryId" ],
+	"usesContext": [ "postId", "postType" ],
 	"attributes": {
 		"isLink": {
 			"type": "boolean",
@@ -24,6 +24,14 @@
 		},
 		"html": false
 	},
-	"editor_script": "wordcamp-blocks",
-	"editor_style": "wordcamp-blocks"
+	"styles": [
+		{
+			"name": "default",
+			"label": "Default",
+			"isDefault": true
+		},
+		{ "name": "rounded", "label": "Rounded" }
+	],
+	"editorScript": "wordcamp-blocks",
+	"style": "wordcamp-blocks"
 }

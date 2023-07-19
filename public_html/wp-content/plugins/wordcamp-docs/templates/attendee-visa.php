@@ -173,7 +173,7 @@ h2 {
 
 		<p>This letter is to confirm that <?php echo esc_html( $data['attendee_first_name'] ); ?> <?php echo esc_html( $data['attendee_last_name'] ); ?>
 		<?php echo esc_html( $data['country_of_residency'] ); ?> passport number <?php echo esc_html( $data['passport_number'] ); ?>,
-		is attending <?php echo esc_html( $data['wordcamp_name'] ); ?>, a community-organized event focusing on WordPress
+		has purchased a ticket to attend <?php echo esc_html( $data['wordcamp_name'] ); ?>, a community-organized event focusing on WordPress
 		development and technology.</p>
 
 		<p>WordPress is a web software you can use to create a beautiful website or blog. The core software is built by hundreds of community

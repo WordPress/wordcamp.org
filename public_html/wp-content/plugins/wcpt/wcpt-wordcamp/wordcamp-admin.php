@@ -135,13 +135,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return;
 			}
 
-			// If the Mentor username changed, update the site.
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
-			$mentor_username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ];
-			if ( get_post_meta( $post_id, 'Mentor WordPress.org User Name', true ) !== $mentor_username ) {
-				$this->add_mentor( get_post( $post_id ), $mentor_username );
-			}
+			$username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ];
 
+			$this->add_mentor( get_post( $post_id ), $username );
 		}
 
 		/**
@@ -297,7 +294,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 */
 		protected function add_mentor( $wordcamp, $mentor_username ) {
 			$blog_id    = get_wordcamp_site_id( $wordcamp );
-			$new_mentor = get_user_by( 'login', $mentor_username );
+			$new_mentor = wcorg_get_user_by_canonical_names( $mentor_username );
 
 			if ( ! $blog_id || ! $new_mentor ) {
 				return;
@@ -410,8 +407,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
-						'E-mail Address'                    => 'text',
-						// Note: This is the address for the entire organizing team, which is different than the "Email Address" field.
+						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
@@ -431,7 +427,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
-						'E-mail Address'                    => 'text',
+						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
@@ -443,7 +439,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 						'Organizer Name'                   => 'text',
 						'WordPress.org Username'           => 'text',
-						'Email Address'                    => 'text',
+						'Email Address'                    => 'text', // Lead organizer.
 						'Telephone'                        => 'text',
 						'Mailing Address'                  => 'textarea',
 						'Sponsor Wrangler Name'            => 'text',
@@ -880,7 +876,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 */
 		public static function get_required_fields( $status, $post_id ) {
 			$needs_site = array(
-				'E-mail Address',
+				'E-mail Address', // The entire organizing team.
 				'Event Timezone',
 			);
 
@@ -889,14 +885,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'Start Date (YYYY-mm-dd)',
 				'Location',
 				'URL',
-				'E-mail Address',
+				'E-mail Address', // The entire organizing team.
 				'Number of Anticipated Attendees',
 				'Multi-Event Sponsor Region',
 
 				// Organizing Team.
 				'Organizer Name',
 				'WordPress.org Username',
-				'Email Address',
+				'Email Address', // Lead organizer.
 				'Telephone',
 				'Mailing Address',
 				'Sponsor Wrangler Name',
@@ -947,7 +943,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				if ( 'on' === $form_value ) {
 					$is_virtual_event = true;
 				}
-
 			} else {
 				$database_value = get_post_meta( $post_id, 'Virtual event only', true );
 

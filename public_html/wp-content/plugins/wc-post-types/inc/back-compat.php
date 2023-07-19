@@ -7,6 +7,7 @@
  */
 class WordCamp_Post_Types_Plugin_Back_Compat {
 	protected $stylesheet = '';
+	protected $template   = '';
 
 	function __construct() {
 
@@ -87,13 +88,13 @@ class WordCamp_Post_Types_Plugin_Back_Compat {
 			<p>
 			<?php while ( $speakers->have_posts() ) :
 				$speakers->the_post(); ?>
-			<?php
+				<?php
 				$href  = '#' . esc_attr( $post->post_name );
 				$title = esc_attr( get_the_title() );
 				echo "<a href='$href' title='$title'>";
 				echo get_avatar( get_post_meta( get_the_ID(), '_wcb_speaker_email', true ), 48 );
 				echo '</a>';
-			?>
+				?>
 			<?php endwhile; ?>
 			</p>
 		</div>

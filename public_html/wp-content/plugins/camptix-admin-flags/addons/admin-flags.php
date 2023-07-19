@@ -183,7 +183,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		?>
 		<p>The Admin Flags addon for CampTix allows you to define a list of special flags that can be toggled for every attendee through the admin UI. Flags are not visible to attendees but can be seen and filtered in exports.</p>
 
-		<p><strong>Flags Data Format</strong>: One flag per line, each line in the format of <code>flag-slug: Flag label</code></p>
+		<p><strong>Flags Data Format</strong>: One flag per line, each line in the format of <code>flag-slug: Flag label</code>. Both slug and label should be unique.</p>
 		<?php
 	}
 
@@ -354,7 +354,7 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 		}
 
 		$meta_counts = $wpdb->get_results( "
-			SELECT meta_value, COUNT( post_id ) AS count
+			SELECT meta_value, COUNT( DISTINCT( post_id ) ) AS count
 			FROM {$wpdb->postmeta}
 			WHERE meta_key = 'camptix-admin-flag'
 			GROUP BY meta_value",
@@ -508,7 +508,9 @@ class CampTix_Admin_Flags_Addon extends CampTix_Addon {
 			wp_send_json_error( array( 'error' => 'Invalid attendee.' ) );
 		}
 
-		if ( 'enable' === $command ) {
+		$attendee_flags = (array) get_post_meta( $attendee_id, 'camptix-admin-flag' );
+
+		if ( 'enable' === $command && ! in_array( $key, $attendee_flags, true ) ) {
 			add_post_meta( $attendee_id, 'camptix-admin-flag', $key );
 		} elseif ( 'disable' === $command ) {
 			delete_post_meta( $attendee_id, 'camptix-admin-flag', $key );

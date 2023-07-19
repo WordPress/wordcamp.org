@@ -3,18 +3,18 @@
 /*
  * There's usually no need for caching in development environments, and it's often a hassle to work around it.
  *
- * For the occasions when it's needed for testing, this can be temporarily changed locally.
+ * For the occasions when it's needed for testing, the `test-cache` param can be added to the URL.
  */
-if ( 'production' === WORDCAMP_ENVIRONMENT ) {
+$cache_enabled           = false;
+$super_cache_enabled     = false;
+$cache_rebuild_files     = 0;
+$wp_cache_mobile_enabled = 0;
+
+if ( 'production' === WORDCAMP_ENVIRONMENT || isset( $_GET['test-cache'] ) ) {
 	$cache_enabled           = true;
 	$super_cache_enabled     = true;
 	$cache_rebuild_files     = 1;
 	$wp_cache_mobile_enabled = 1;
-} else {
-	$cache_enabled           = false;
-	$super_cache_enabled     = false;
-	$cache_rebuild_files     = 0;
-	$wp_cache_mobile_enabled = 0;
 }
 
 if ( ! defined('WPCACHEHOME') )

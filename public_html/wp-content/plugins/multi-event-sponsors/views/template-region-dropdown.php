@@ -23,6 +23,14 @@
 <?php if ( $site_id && ! $protected ) : ?>
 	<label>
 		<input type="checkbox" name="<?php echo esc_attr( $cb_push_name ); ?>" value="1" />
-		Push sponsors to site
+		Push new sponsors to site
 	</label>
+
+	<br />
+	<em>That won't push updates from existing sponsors. For that, please <a href="<?php echo esc_url( admin_url( 'edit.php?post_type=mes' ) ); ?>">Edit a sponsor</a> and click the
+	<span class="dashicons dashicons-heart">
+		<span class="screen-reader-text">heart</span>
+	</span>
+	icon in the toolbar.</em>
+
 <?php endif;

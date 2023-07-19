@@ -220,7 +220,7 @@ class WordCamp_Application extends Event_Application {
 			)
 		);
 
-		add_post_meta( $post_id, 'Email Address', $data['q_1079059_email'] );
+		add_post_meta( $post_id, 'Email Address', $data['q_1079059_email'] ); // Lead organizer.
 		add_post_meta( $post_id, 'Location', $data['q_1079103_wordcamp_location'] );
 		add_post_meta( $post_id, 'Number of Anticipated Attendees', $data['q_1046007_how_many_attendees'] );
 		add_post_meta( $post_id, 'WordPress.org Username', $data['q_4236565_wporg_username'] );
@@ -258,7 +258,7 @@ class WordCamp_Application extends Event_Application {
 	}
 
 	/**
-	 * Get organizer email if set
+	 * Get lead organizer email if set.
 	 *
 	 * @return null|string
 	 */

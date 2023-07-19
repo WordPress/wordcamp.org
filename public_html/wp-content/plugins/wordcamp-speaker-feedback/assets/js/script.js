@@ -1,6 +1,7 @@
 /**
  * Handle any frontend activity for the Speaker Feedback forms.
  */
+
 ( function( $ ) {
 	function onFormNavigate( event ) {
 		event.preventDefault();

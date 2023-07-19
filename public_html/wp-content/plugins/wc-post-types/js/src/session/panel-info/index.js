@@ -2,7 +2,6 @@
  * WordPress dependencies
  */
 import { __ } from '@wordpress/i18n';
-import { getDate, gmdate } from '@wordpress/date';
 import { SelectControl, TextControl } from '@wordpress/components';
 import { PluginDocumentSettingPanel } from '@wordpress/edit-post';
 
@@ -20,8 +19,6 @@ export default function SessionSettings() {
 	const [ type, setType ] = usePostMeta( '_wcpt_session_type', '' );
 	const [ video, setVideo ] = usePostMeta( '_wcpt_session_video', '' );
 
-	const start = getDate( time * 1000 );
-
 	return (
 		<PluginDocumentSettingPanel
 			name="wordcamp/session-info"
@@ -30,11 +27,8 @@ export default function SessionSettings() {
 		>
 			<DateControl
 				label={ __( 'Day & Time', 'wordcamporg' ) }
-				date={ start }
-				onChange={ ( dateValue ) => {
-					const value = gmdate( 'U', dateValue );
-					setStartTime( value );
-				} }
+				date={ time * 1000 }
+				onChange={ setStartTime }
 			/>
 
 			<SessionDuration value={ duration } onChange={ setDuration } />

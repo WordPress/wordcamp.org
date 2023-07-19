@@ -11,7 +11,9 @@ defined( 'WPINC' ) || die();
 use Exception;
 use WordCamp\Reports;
 use WordCamp\Reports\Report;
-use WordCamp\Utilities;
+use WordCamp\Utilities\{ Currency_XRT_Client };
+use WordPressdotorg\MU_Plugins\Utilities\{ Export_CSV };
+use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\Validation\{validate_wordcamp_id};
 
 /**
@@ -46,12 +48,12 @@ class Sponsorship_Grants extends Date_Range {
 	 *
 	 * @var string
 	 */
-	public static $methodology = "
+	public static $methodology = '
 		<ol>
-			<li>Use the WordCamp Status report to pull a list of WordCamps that received the status of \"Needs Contract to be Signed\" sometime during the specified date range.</li>
+			<li>Use the WordCamp Status report to pull a list of WordCamps that received the status of "Needs Contract to be Signed" sometime during the specified date range.</li>
 			<li>Parse the status log of each matched WordCamp to determine when the sponsorship grant was approved.</li>
 		</ol>
-	";
+	';
 
 	/**
 	 * Report group.
@@ -84,7 +86,7 @@ class Sponsorship_Grants extends Date_Range {
 	/**
 	 * Currency exchange rate client.
 	 *
-	 * @var Utilities\Currency_XRT_Client Utility to handle currency conversion.
+	 * @var Currency_XRT_Client Utility to handle currency conversion.
 	 */
 	protected $xrt = null;
 
@@ -115,7 +117,7 @@ class Sponsorship_Grants extends Date_Range {
 	public function __construct( $start_date, $end_date, $wordcamp_id = 0, array $options = array() ) {
 		parent::__construct( $start_date, $end_date, $options );
 
-		$this->xrt = new Utilities\Currency_XRT_Client();
+		$this->xrt = new Currency_XRT_Client();
 
 		if ( $wordcamp_id ) {
 			try {
@@ -123,7 +125,7 @@ class Sponsorship_Grants extends Date_Range {
 
 				$this->wordcamp_id      = $valid->post_id;
 				$this->wordcamp_site_id = $valid->site_id;
-			} catch( Exception $e ) {
+			} catch ( Exception $e ) {
 				$this->error->add(
 					self::$slug . '-wordcamp-id-error',
 					$e->getMessage()
@@ -287,7 +289,7 @@ class Sponsorship_Grants extends Date_Range {
 		foreach ( $grants as $grant ) {
 			if ( ! in_array( $grant['currency'], $currencies, true ) ) {
 				$data['total_amount_by_currency'][ $grant['currency'] ] = 0;
-				$currencies[]                                           = $grant['currency'];
+				$currencies[] = $grant['currency'];
 			}
 
 			$data['grant_count'] ++;
@@ -359,8 +361,8 @@ class Sponsorship_Grants extends Date_Range {
 		$report = null;
 
 		if ( 'Show results' === $action
-		     && wp_verify_nonce( $nonce, 'run-report' )
-		     && current_user_can( 'manage_network' )
+			 && wp_verify_nonce( $nonce, 'run-report' )
+			 && current_user_can( CAPABILITY )
 		) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2017-01-01' ), // Currently no sponsorship grant data before 2017.
@@ -400,7 +402,7 @@ class Sponsorship_Grants extends Date_Range {
 			return;
 		}
 
-		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( 'manage_network' ) ) {
+		if ( wp_verify_nonce( $nonce, 'run-report' ) && current_user_can( CAPABILITY ) ) {
 			$options = array(
 				'earliest_start' => new \DateTime( '2017-01-01' ), // Currently no sponsorship grant data before 2017.
 			);
@@ -431,7 +433,7 @@ class Sponsorship_Grants extends Date_Range {
 				$grant['timestamp'] = date( 'Y-m-d', $grant['timestamp'] );
 			} );
 
-			$exporter = new Utilities\Export_CSV( array(
+			$exporter = new Export_CSV( array(
 				'filename' => $filename,
 				'headers'  => $headers,
 				'data'     => $data,

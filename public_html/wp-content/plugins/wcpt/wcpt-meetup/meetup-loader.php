@@ -44,16 +44,16 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 				return;
 			}
 
-			$tt_added_ids = array_diff( $tt_ids, $old_tt_ids );
+			$tt_added_ids   = array_diff( $tt_ids, $old_tt_ids );
 			$tt_removed_ids = array_diff( $old_tt_ids, $tt_ids );
 
 			if ( count( $tt_added_ids ) > 0 ) {
 				$added_terms_query = new WP_Term_Query( array(
-						'taxonomy'   => WCPT_MEETUP_TAG_SLUG,
-						'object_ids' => $event_id,
-						'term_taxonomy_id' => $tt_added_ids,
-						'fields' => 'names'
-					)
+					'taxonomy'   => WCPT_MEETUP_TAG_SLUG,
+					'object_ids' => $event_id,
+					'term_taxonomy_id' => $tt_added_ids,
+					'fields' => 'names',
+				)
 				);
 
 				$added_terms = $added_terms_query->get_terms();
@@ -67,11 +67,11 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 
 			if ( count( $tt_removed_ids ) > 0 ) {
 				$removed_terms = ( new WP_Term_Query( array(
-						'taxonomy'         => WCPT_MEETUP_TAG_SLUG,
-						'term_taxonomy_id' => $tt_removed_ids,
-						'fields'           => 'names',
-						'hide_empty'       => false,
-					)
+					'taxonomy'         => WCPT_MEETUP_TAG_SLUG,
+					'term_taxonomy_id' => $tt_removed_ids,
+					'fields'           => 'names',
+					'hide_empty'       => false,
+				)
 				) )->get_terms();
 
 				add_post_meta( $event_id, '_tags_log', array(

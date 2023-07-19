@@ -120,18 +120,6 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * Callback for the [camptix_attendees] shortcode.
 	 */
 	public function shortcode_attendees( $attr ) {
-		// Required scripts.
-		wp_enqueue_script( 'wp-util' ); // For wp.template().
-		if ( wp_script_is( 'jquery.spin', 'registered' ) ) {
-			wp_enqueue_script( 'jquery.spin' ); // Enqueue Jetpack's spinner script if available.
-		}
-		wp_enqueue_script( 'camptix' );
-
-		// Only print the JS template once.
-		if ( ! has_action( 'wp_print_footer_scripts', array( $this, 'avatar_js_template' ) ) ) {
-			add_action( 'wp_print_footer_scripts', array( $this, 'avatar_js_template' ) );
-		}
-
 		$attr = $this->sanitize_attendees_atts( $attr );
 
 		return $this->get_attendees_shortcode_content( $attr );
@@ -146,7 +134,10 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	 * @return string     The cache key
 	 */
 	protected function generate_attendees_cache_key( $attr ) {
-		return 'camptix-attendees-' . md5( maybe_serialize( $attr ) );
+		// Increment this when the markup changes or there's some other reason to invalidate the cache on every site.
+		$cache_buster = 1;
+
+		return 'camptix-attendees-' . $cache_buster . '-' . md5( maybe_serialize( $attr ) );
 	}
 
 	/**
@@ -172,9 +163,9 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 
 		$cache_key = $this->generate_attendees_cache_key( $attr );
 
-		// Cache duration. Day for active sites, month for archived sites.
+		// Cache duration. 3 hours for active sites, day for archived sites.
 		$camptix_options = $camptix->get_options();
-		$cache_time      = ( $camptix_options['archived'] ) ? MONTH_IN_SECONDS : DAY_IN_SECONDS;
+		$cache_time      = ( $camptix_options['archived'] ) ? DAY_IN_SECONDS : HOUR_IN_SECONDS * 3;
 
 		// Timestamp for last change in Camptix purchases/profile edits.
 		$last_modified = $camptix->get_stats( 'last_modified' );
@@ -321,8 +312,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 						$first = get_post_meta( $attendee_id, 'tix_first_name', true );
 						$last  = get_post_meta( $attendee_id, 'tix_last_name', true );
 
-						// Avatar placeholder.
-						echo $this->get_avatar_placeholder( get_post_meta( $attendee_id, 'tix_email', true ) ); // phpcs:ignore
+						echo get_avatar( get_post_meta( $attendee_id, 'tix_email', true ) ); // phpcs:ignore
 						?>
 
 						<div class="tix-field tix-attendee-name">
@@ -378,52 +368,6 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		wp_reset_postdata();
 
 		return ob_get_clean();
-	}
-
-	/**
-	 * Generate an avatar placeholder element with a data attribute that contains
-	 * the Gravatar hash so the real avatar can be loaded asynchronously.
-	 *
-	 * @param string $id_or_email
-	 *
-	 * @return string
-	 */
-	protected function get_avatar_placeholder( $id_or_email ) {
-		// @todo Allow customization of avatar and placeholder size
-		$size = 96;
-
-		return sprintf(
-			'<div
-                class="avatar avatar-placeholder"
-                data-url="%s"
-                data-url2x="%s"
-                data-size="%s"
-                data-alt="%s"
-                data-appear-top-offset="500"
-                ></div>',
-			get_avatar_url( $id_or_email ),
-			get_avatar_url( $id_or_email, array( 'size' => $size * 2 ) ),
-			$size,
-			''
-		);
-	}
-
-	/**
-	 * An Underscore.js template for the attendee avatar.
-	 */
-	public function avatar_js_template() {
-		?>
-		<script type="text/html" id="tmpl-tix-attendee-avatar">
-			<img
-					alt="{{ data.alt }}"
-					src="{{ data.url }}"
-					srcset="{{ data.url2x }} 2x"
-					class="avatar avatar-{{ data.size }} photo"
-					height="{{ data.size }}"
-					width="{{ data.size }}"
-			>
-		</script>
-		<?php
 	}
 
 	/**

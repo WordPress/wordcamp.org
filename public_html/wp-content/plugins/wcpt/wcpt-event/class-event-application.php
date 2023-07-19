@@ -72,10 +72,10 @@ abstract class Event_Application {
 				'wporg_name'     => '',
 				'wporg_username' => '',
 				'wporg_email'    => '',
-			);				
+			);
 
 			if ( is_user_logged_in() ) {
-				$current_user = wp_get_current_user();
+				$current_user     = wp_get_current_user();
 				$prefilled_fields = array(
 					'wporg_name'     => $current_user->display_name,
 					'wporg_username' => $current_user->user_login,
@@ -289,11 +289,11 @@ abstract class Event_Application {
 		}
 
 		$default_status = $this->get_default_status();
-		$queue_size = wp_count_posts( $this->get_event_type() )->$default_status;
+		$queue_size     = wp_count_posts( $this->get_event_type() )->$default_status;
 		if ( isset( $queue_size ) ) {
 			$singular = "is $queue_size application";
 			$plural   = "are $queue_size applications";
-			$message = sprintf(
+			$message  = sprintf(
 				"%s\n _There %s in vetting queue._",
 				$message,
 				1 === $queue_size ? $singular : $plural

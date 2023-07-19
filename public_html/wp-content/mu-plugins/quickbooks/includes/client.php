@@ -161,15 +161,10 @@ class Client {
 	/**
 	 * The option key for storing OAuth token data.
 	 *
-	 * Note that this uses the current WordCamp environment so that separate OAuth tokens can be generated and stored
-	 * for development and production environments.
-	 *
 	 * @return string
 	 */
 	protected static function generate_oauth_option_key() {
-		$environment = ( defined( 'WORDCAMP_ENVIRONMENT' ) ) ? WORDCAMP_ENVIRONMENT : 'development';
-
-		return PLUGIN_PREFIX . '_oauth_' . $environment;
+		return PLUGIN_PREFIX . '_oauth';
 	}
 
 	/**
@@ -180,7 +175,8 @@ class Client {
 	protected static function get_oauth_token_data() {
 		$key = self::generate_oauth_option_key();
 
-		return get_site_option( $key, array() );
+		// Share this connection between the WordCamp and Events networks.
+		return get_network_option( WORDCAMP_NETWORK_ID, $key, array() );
 	}
 
 	/**
@@ -200,7 +196,8 @@ class Client {
 
 		$key = self::generate_oauth_option_key();
 
-		return update_site_option( $key, $data );
+		// Share this connection between the WordCamp and Events networks.
+		return update_network_option( WORDCAMP_NETWORK_ID, $key, $data );
 	}
 
 	/**
@@ -213,7 +210,8 @@ class Client {
 	public static function delete_oauth_token_data() {
 		$key = self::generate_oauth_option_key();
 
-		return delete_site_option( $key );
+		// Share this connection between the WordCamp and Events networks.
+		return delete_network_option( WORDCAMP_NETWORK_ID, $key );
 	}
 
 	/**

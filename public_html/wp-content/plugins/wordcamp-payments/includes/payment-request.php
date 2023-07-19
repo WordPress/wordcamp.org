@@ -1,6 +1,6 @@
 <?php
 
-use WordCamp\Utilities;
+use WordPressdotorg\MU_Plugins\Utilities;
 
 /*
  * Create the Vendor Payments post type and associated functionality

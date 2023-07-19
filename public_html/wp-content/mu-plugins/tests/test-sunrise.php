@@ -44,7 +44,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::guess_requested_domain_path
+	 * @covers WordCamp\Sunrise\guess_requested_domain_path
 	 *
 	 * @dataProvider data_guess_requested_domain_path
 	 */
@@ -73,75 +73,83 @@ class Test_Sunrise extends Database_TestCase {
 	 */
 	public function data_guess_requested_domain_path() {
 		return array(
-			'root site' => array( array(
-				'domain' => 'wordcamp.test',
-
-				'test-paths' => array(
-					'/',
-					'/schedule/',
-					'/2020/', // Year archive.
-				),
-
-				'expected' => array(
+			'root site' => array(
+				array(
 					'domain' => 'wordcamp.test',
-					'path'   => '/',
+
+					'test-paths' => array(
+						'/',
+						'/schedule/',
+						'/2020/', // Year archive.
+					),
+
+					'expected' => array(
+						'domain' => 'wordcamp.test',
+						'path'   => '/',
+					),
 				),
-			) ),
+			),
 
-			'central' => array( array(
-				'domain' => 'central.wordcamp.test',
-
-				'test-paths' => array(
-					'/',
-					'/schedule/',
-
-					// This function isn't expected to distinguish the `/2020/` path as a year archive. See its phpdoc.
-				),
-
-				'expected' => array(
+			'central' => array(
+				array(
 					'domain' => 'central.wordcamp.test',
-					'path'   => '/',
+
+					'test-paths' => array(
+						'/',
+						'/schedule/',
+
+						// This function isn't expected to distinguish the `/2020/` path as a year archive. See its phpdoc.
+					),
+
+					'expected' => array(
+						'domain' => 'central.wordcamp.test',
+						'path'   => '/',
+					),
 				),
-			) ),
+			),
 
-			'year.city site' => array( array(
-				'domain' => '2020.seattle.wordcamp.test',
-
-				'test-paths' => array(
-					'/',
-					'/schedule/',
-					'/2020/', // Year archive.
-				),
-
-				'expected' => array(
+			'year.city site' => array(
+				array(
 					'domain' => '2020.seattle.wordcamp.test',
-					'path'   => '/',
+
+					'test-paths' => array(
+						'/',
+						'/schedule/',
+						'/2020/', // Year archive.
+					),
+
+					'expected' => array(
+						'domain' => '2020.seattle.wordcamp.test',
+						'path'   => '/',
+					),
 				),
-			) ),
+			),
 
-			'city/year site' => array( array(
-				'domain' => 'vancouver.wordcamp.test',
-
-				'test-paths' => array(
-					'/2020/',
-					'/2020/schedule/',
-					'/2020/2020/', // Year archive.
-					'/2020',
-					'/2020?s=foo',
-					'/2020?s=foo&bar=1',
-					'/2020?s=foo&bar=1#quix',
-				),
-
-				'expected' => array(
+			'city/year site' => array(
+				array(
 					'domain' => 'vancouver.wordcamp.test',
-					'path'   => '/2020/',
+
+					'test-paths' => array(
+						'/2020/',
+						'/2020/schedule/',
+						'/2020/2020/', // Year archive.
+						'/2020',
+						'/2020?s=foo',
+						'/2020?s=foo&bar=1',
+						'/2020?s=foo&bar=1#quix',
+					),
+
+					'expected' => array(
+						'domain' => 'vancouver.wordcamp.test',
+						'path'   => '/2020/',
+					),
 				),
-			) ),
+			),
 		);
 	}
 
 	/**
-	 * @covers ::root_redirects
+	 * @covers WordCamp\Sunrise\root_redirects
 	 *
 	 * @dataProvider data_root_redirects
 	 */
@@ -186,8 +194,8 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::domain_redirects
-	 * @covers ::get_domain_redirects
+	 * @covers WordCamp\Sunrise\domain_redirects
+	 * @covers WordCamp\Sunrise\get_domain_redirects
 	 *
 	 * @dataProvider data_domain_redirects
 	 */
@@ -242,7 +250,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_city_slash_year_url
+	 * @covers WordCamp\Sunrise\get_city_slash_year_url
 	 *
 	 * @dataProvider data_get_city_slash_year_url
 	 */
@@ -310,7 +318,6 @@ class Test_Sunrise extends Database_TestCase {
 				false,
 			),
 
-
 			/*
 			 * Should redirect.
 			 */
@@ -353,7 +360,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_corrected_root_relative_url
+	 * @covers WordCamp\Sunrise\get_corrected_root_relative_url
 	 *
 	 * @dataProvider data_get_corrected_root_relative_url
 	 */
@@ -484,7 +491,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_canonical_year_url
+	 * @covers WordCamp\Sunrise\get_canonical_year_url
 	 *
 	 * @dataProvider data_get_canonical_year_url
 	 */
@@ -574,7 +581,7 @@ class Test_Sunrise extends Database_TestCase {
 	}
 
 	/**
-	 * @covers ::get_post_slug_url_without_duplicate_dates
+	 * @covers WordCamp\Sunrise\get_post_slug_url_without_duplicate_dates
 	 *
 	 * @dataProvider data_get_post_slug_url_without_duplicate_dates
 	 */

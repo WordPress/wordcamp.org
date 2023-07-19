@@ -1,6 +1,8 @@
 <?php
 
 namespace WordCamp\Mentors_Dashboard;
+use WP_User;
+
 defined( 'WPINC' ) or die();
 
 const USERNAMES_KEY     = 'wcpt-mentors-usernames';
@@ -53,7 +55,7 @@ function render_options_page() {
 	$unmentored_camps = get_unmentored_camps();
 	$usernames        = get_usernames();
 
-	require_once( dirname( __DIR__ ) . '/views/mentors/dashboard.php' );
+	require_once dirname( __DIR__ ) . '/views/mentors/dashboard.php';
 }
 
 /**
@@ -110,7 +112,7 @@ function get_mentors() {
 			$mentors[ $username ]['camps_mentoring'][ $camp->ID ] = $camp->post_title;
 		}
 		// Camp doesn't have username, but has email
-		else if ( false !== $email && false !== $key = array_search( $email, $mentor_email ) ) {
+		elseif ( false !== $email && false !== $key = array_search( $email, $mentor_email ) ) {
 			// Add asterisk to show camp has mentor email but not username
 			$mentors[ $key ]['camps_mentoring'][ $camp->ID ] = $camp->post_title . ' *';
 		}
@@ -185,19 +187,19 @@ function get_unmentored_camps() {
 			array(
 				'key'     => 'Mentor WordPress.org User Name',
 				'value'   => get_usernames(),
-				'compare' => 'NOT IN'
+				'compare' => 'NOT IN',
 			),
 			array(
 				'key'     => 'Mentor WordPress.org User Name',
-				'compare' => 'NOT EXISTS'
+				'compare' => 'NOT EXISTS',
 			),
 		),
 	) );
 
 	foreach ( $posts as $post ) {
 		$start_date = wcpt_get_wordcamp_start_date( $post->ID );
-		$email = get_post_meta( $post->ID, 'Mentor E-mail Address', true );
-		$section = ( $start_date ) ? 'yesdate' : 'nodate';
+		$email      = get_post_meta( $post->ID, 'Mentor E-mail Address', true );
+		$section    = ( $start_date ) ? 'yesdate' : 'nodate';
 
 		$unmentored_camps[ $section ][ $post->ID ] = array(
 			'name'      => $post->post_title,
@@ -210,27 +212,34 @@ function get_unmentored_camps() {
 }
 
 /**
- * Get the stored array of mentor usernames and sanitize before returning.
+ * Get the stored array of mentor usernames.
  *
  * @return array
  */
 function get_usernames() {
-	$raw_usernames = get_site_option( USERNAMES_KEY, array() );
-
-	return sanitize_usernames( $raw_usernames );
+	return get_site_option( USERNAMES_KEY, array() );
 }
 
 /**
  * Sanitize a list of usernames and store in the database.
  *
  * @param string|array $usernames
- *
- * @return bool
  */
-function set_usernames( $usernames ) {
-	$sanitized_usernames = sanitize_usernames( $usernames );
+function set_usernames( $raw_usernames ) {
+	$sanitized_usernames = sanitize_usernames( $raw_usernames );
+	$official_usernames  = array();
 
-	return update_site_option( USERNAMES_KEY, $sanitized_usernames );
+	foreach ( $sanitized_usernames as $username ) {
+		$user = wcorg_get_user_by_canonical_names( $username );
+
+		if ( $user instanceof WP_User ) {
+			$official_usernames[] = $user->user_login;
+		} else {
+			wp_die( esc_html( "$username is not a valid WordPress.org username" ) );
+		}
+	}
+
+	update_site_option( USERNAMES_KEY, $official_usernames );
 }
 
 /**
@@ -246,8 +255,8 @@ function sanitize_usernames( $usernames ) {
 	}
 
 	$usernames = array_map( 'trim', $usernames );
-
 	$usernames = array_map( 'sanitize_user', $usernames );
+	$usernames = array_unique( $usernames );
 
 	// Remove empty array items
 	return array_filter( $usernames );
@@ -278,25 +287,17 @@ function update_usernames() {
 	if ( ! isset( $_POST['wcpt-mentors-nonce'] ) ||
 		 ! wp_verify_nonce( $_POST['wcpt-mentors-nonce'], 'wcpt-mentors-update-usernames' ) ) {
 		$status_code = 'invalid-nonce';
-	}
-	// No usernames field
-	else if ( ! isset( $_POST['wcpt-mentors-usernames'] ) ) {
+
+	} elseif ( ! isset( $_POST['wcpt-mentors-usernames'] ) ) {
+		// No usernames field
 		$status_code = 'no-username';
-	}
-	//
-	else {
+
+	} else {
+		$status_code   = 'updated';
 		$raw_usernames = $_POST['wcpt-mentors-usernames'];
 
-		$success = set_usernames( $raw_usernames );
-
-		if ( $success ) {
-			$status_code = 'updated';
-
-			// Bust cache
-			delete_site_transient( MENTORS_CACHE_KEY );
-		} else {
-			$status_code = 'update-failed';
-		}
+		set_usernames( $raw_usernames );
+		delete_site_transient( MENTORS_CACHE_KEY ); // Bust cache.
 	}
 
 	$redirect_url = add_query_arg( 'wcpt-status', $status_code, $redirect_url );
@@ -334,7 +335,7 @@ function status_admin_notice() {
 	<div class="notice notice-<?php echo esc_attr( $type ); ?> is-dismissible">
 		<?php echo wpautop( esc_html( $message ) ); ?>
 	</div>
-<?php
+	<?php
 }
 
 /**
@@ -346,19 +347,19 @@ function status_admin_notice() {
  */
 function get_mentor_data( $username ) {
 	$usernames = get_usernames();
-	$data = array();
+	$data      = array();
 
 	// Data for specific mentor
 	if ( in_array( $username, $usernames ) ) {
-		$user = \get_user_by( 'login', $username );
+		$user = wcorg_get_user_by_canonical_names( $username );
 
-		if ( $user instanceof \WP_User ) {
+		if ( $user instanceof WP_User ) {
 			// Make sure we get a name
 			if ( $user->display_name ) {
 				$name = $user->display_name;
-			} else if ( $user->nickname ) {
+			} elseif ( $user->nickname ) {
 				$name = $user->nickname;
-			} else if ( $user->first_name && $user->last_name ) {
+			} elseif ( $user->first_name && $user->last_name ) {
 				$name = sprintf( '%s %s', $user->first_name, $user->last_name );
 			} else {
 				$name = $username;
@@ -380,12 +381,13 @@ function get_mentor_data( $username ) {
  * @return array
  */
 function get_all_mentor_data() {
-	if ( false !== $data = \get_site_transient( MENTORS_CACHE_KEY ) ) {
+	$data = get_site_transient( MENTORS_CACHE_KEY );
+	if ( false !== $data ) {
 		return $data;
 	}
 
 	$usernames = get_usernames();
-	$data = array();
+	$data      = array();
 
 	foreach ( $usernames as $username ) {
 		$data = array_merge( $data, get_mentor_data( $username ) );
@@ -393,7 +395,7 @@ function get_all_mentor_data() {
 
 	ksort( $data );
 
-	\set_site_transient( MENTORS_CACHE_KEY, $data, DAY_IN_SECONDS );
+	set_site_transient( MENTORS_CACHE_KEY, $data, DAY_IN_SECONDS );
 
 	return $data;
 }
@@ -417,10 +419,10 @@ function assignment_nag() {
 
 	// Render message
 	ob_start(); ?>
-<?php require_once( dirname( __DIR__ ) . '/views/mentors/unmentored-camps.php' ); ?>
+	<?php require_once dirname( __DIR__ ) . '/views/mentors/unmentored-camps.php'; ?>
 
 <p><a href="<?php echo esc_url( $dashboard_url ); ?>">Mentors Dashboard &raquo;</a></p>
-<?php
+	<?php
 
 	$to      = array( 'support@wordcamp.org' );
 	$subject = 'WordCamps without a mentor as of ' . gmdate( 'Y-m-d \T H:i:s \Z' );

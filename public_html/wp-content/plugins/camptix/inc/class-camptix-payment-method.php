@@ -14,6 +14,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		'refund-single' => false,
 		'refund-all' => false,
 	);
+	public $camptix_options;
 
 	/**
 	 * Constructor

@@ -58,7 +58,7 @@ RUN chown www-data /etc/msmtprc
 RUN chmod 600 /etc/msmtprc
 
 # Install MailCatcher.
-RUN gem install mailcatcher --no-ri --no-rdoc
+RUN gem install mailcatcher --no-document
 
 # todo Maybe install phpMyAdmin?
 

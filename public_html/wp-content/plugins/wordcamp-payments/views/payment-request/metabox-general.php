@@ -4,7 +4,7 @@
 		$this->render_text_input( $post, esc_html__( 'Invoice Number', 'wordcamporg' ), 'invoice_number' );
 		$this->render_text_input( $post, esc_html__( 'Invoice date', 'wordcamporg' ), 'invoice_date', '', 'date' );
 		$this->render_text_input( $post, esc_html__( 'Requested date for payment/due by', 'wordcamporg' ), 'due_by', '', 'date' );
-		$this->render_text_input( $post, esc_html__( 'Amount', 'wordcamporg' ), 'payment_amount', esc_html__( 'No commas, thousands separators or currency symbols. Ex. 1234.56', 'wordcamporg' ) );
+		$this->render_text_input( $post, esc_html__( 'Amount', 'wordcamporg' ), 'payment_amount', esc_html__( 'No thousands separators or currency symbols. Use a period for the decimal separator. Ex. 1234.56', 'wordcamporg' ) );
 		$this->render_select_input( $post, esc_html__( 'Currency', 'wordcamporg' ), 'currency' );
 		$this->render_select_input( $post, esc_html__( 'Category', 'wordcamporg' ), 'payment_category' );
 	?>

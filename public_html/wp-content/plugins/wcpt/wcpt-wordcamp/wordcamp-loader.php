@@ -346,8 +346,6 @@ class WordCamp_Loader extends Event_Loader {
 	/**
 	 * Meta field keys that are safe to publicly expose in the v2 REST API.
 	 *
-	 * @see wcorg_json_expose_whitelisted_meta_data() in mu-plugins/wcorg-json-api.php.
-	 *
 	 * @return array
 	 */
 	public static function get_public_meta_keys() {

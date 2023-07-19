@@ -214,7 +214,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers \WordCamp\SpeakerFeedback\Post\test_get_session_speaker_user_ids()
+	 * @covers \WordCamp\SpeakerFeedback\Post\get_session_speaker_user_ids()
 	 */
 	public function test_get_session_speaker_user_ids() {
 		$user_ids = get_session_speaker_user_ids( self::$posts['yes']->ID );
@@ -223,7 +223,7 @@ class Test_SpeakerFeedback_Post extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers \WordCamp\SpeakerFeedback\Post\test_get_session_speaker_user_ids()
+	 * @covers \WordCamp\SpeakerFeedback\Post\get_session_speaker_user_ids()
 	 */
 	public function test_get_session_speaker_user_ids_invalid() {
 		$user_ids = get_session_speaker_user_ids( self::$posts['no-too-soon']->ID );

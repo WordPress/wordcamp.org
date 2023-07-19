@@ -24,7 +24,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		public function __construct() {
 			parent::__construct();
 
-			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ) );
+			// Register at priority `11` because `10` has already run by the time this class is instantiated.
+			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ), 11 );
 			add_action( 'wcpt_meetup_api_sync', array( $this, 'meetup_api_sync' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_update_meetup_data' ) );
 			add_action( 'wcpt_metabox_value', array( $this, 'render_co_organizers_list' ) );
@@ -273,9 +274,9 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 */
 		public function wcpt_meetup_sync() {
 			global $post_id;
-			$meta_key = 'Last meetup.com API sync';
+			$meta_key       = 'Last meetup.com API sync';
 			$last_synced_on = get_post_meta( $post_id, $meta_key, true );
-			$element_name = 'sync_with_meetup_api';
+			$element_name   = 'sync_with_meetup_api';
 
 			if ( empty( $last_synced_on ) ) {
 				$last_synced_on = 'Never';
@@ -338,8 +339,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return new WP_Error( 'invalid-url', __('Provided Meetup URL is not a valid URL.', 'wordcamporg' ) );
 			}
 			$url_path_segments = explode( '/', rtrim( $parsed_url['path'], '/' ) );
-			$slug = array_pop( $url_path_segments );
-			$mtp_client = new \WordCamp\Utilities\Meetup_Client();
+			$slug              = array_pop( $url_path_segments );
+			$mtp_client        = new WordPressdotorg\MU_Plugins\Utilities\Meetup_Client();
 
 			$group_details = $mtp_client->get_group_details( $slug );
 
@@ -366,7 +367,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return new WP_Error( 'invalid-response-leads', __( 'Received invalid response from Meetup API.', 'wordcamporg' ) );
 			}
 
-			$event_hosts = [];
+			$event_hosts = array();
 			if ( isset( $group_leads ) && is_array( $group_leads ) ) {
 				foreach ( $group_leads as $event_host ) {
 					if ( WCPT_WORDPRESS_MEETUP_ID === $event_host['id'] ) {
@@ -497,7 +498,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			$title           = 'New meetup group added';
 
 			$message = sprintf(
-				"Let's welcome the new WordPress meetup group%s%s, to the chapter! :tada: :community: :wordpress:\n%s",
+				"Let's welcome the new WordPress meetup group%s%s, to the chapter! :tada: :community: :WordPress:\n%s",
 				empty( $city ) ? '' : " in $city,",
 				empty( $organizer_slack ) ? '' : " organized by @$organizer_slack",
 				$meetup_link
@@ -528,7 +529,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			if ( ! empty( $co_organizers ) ) {
 				$co_organizers_list = array_map( 'trim', explode( ',', $co_organizers ) );
-				$organizer_list = array_merge( $organizer_list, $co_organizers_list );
+				$organizer_list     = array_merge( $organizer_list, $co_organizers_list );
 			}
 			return $organizer_list;
 		}
@@ -592,7 +593,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				}
 				echo '<ul>';
 				foreach ( $organizers as $organizer ) {
-					$organizer_id = $organizer['id'];
+					$organizer_id       = $organizer['id'];
 					$meetup_profile_url = "$group_slug/members/$organizer_id";
 					?>
 					<li>
@@ -721,37 +722,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				)
 			);
 
-			$new_meetup_org_data = array();
 			foreach ( $query->posts as $post_id ) {
-
-				$meetup_organizers = get_post_meta( $post_id, 'Meetup Co-organizer names', true );
 				self::update_meetup_data( $post_id );
-				$new_meetup_organizers = get_post_meta( $post_id, 'Meetup Co-organizer names', true );
-
-				if ( empty( $new_meetup_organizers ) ) {
-					continue;
-				}
-
-				if ( empty( $meetup_organizers ) ) {
-					$new_ids = wp_list_pluck( $new_meetup_organizers, 'id' );
-				} else {
-					$new_ids = array_diff(
-						wp_list_pluck( $new_meetup_organizers, 'id' ),
-						wp_list_pluck( $meetup_organizers, 'id' )
-					);
-				}
-
-				if ( empty( $new_ids ) ) {
-					continue;
-				}
-
-				$new_meetup_org_data[ $post_id ] = array();
-
-				foreach ( $new_meetup_organizers as $org ) {
-					if ( in_array( $org['id'], $new_ids ) ) {
-						$new_meetup_org_data[ $post_id ][] = $org;
-					}
-				}
 			}
 		}
 

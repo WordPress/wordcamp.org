@@ -18,7 +18,10 @@ defined( 'WPINC' ) or die();
 			<ul class="ul-disc">
 				<?php foreach ( $unmentored_camps['yesdate'] as $id => $camp ) : ?>
 					<li>
-						<a href="<?php echo esc_url( admin_url( "post.php?post=$id&action=edit#wcpt_mentor_wordpress_org_user_name" ) ); ?>"><?php echo esc_html( $camp['name'] ); ?></a> (<?php echo esc_html( $camp['date'] ); ?>)<?php if ( $camp['has_email'] ) : echo ' *'; $unmentored_camps['footnote'] = true; endif; ?>
+						<a href="<?php echo esc_url( admin_url( "post.php?post=$id&action=edit#wcpt_mentor_wordpress_org_user_name" ) ); ?>"><?php echo esc_html( $camp['name'] ); ?></a> (<?php echo esc_html( $camp['date'] ); ?>)<?php if ( $camp['has_email'] ) :
+							echo ' *';
+							$unmentored_camps['footnote'] = true;
+endif; ?>
 					</li>
 				<?php endforeach; ?>
 			</ul>
@@ -31,7 +34,10 @@ defined( 'WPINC' ) or die();
 			<ul class="ul-disc">
 				<?php foreach ( $unmentored_camps['nodate'] as $id => $camp ) : ?>
 					<li>
-						<a href="<?php echo esc_url( admin_url( "post.php?post=$id&action=edit#wcpt_mentor_wordpress_org_user_name" ) ); ?>"><?php echo esc_html( $camp['name'] ); ?></a><?php if ( $camp['has_email'] ) : echo ' *'; $unmentored_camps['footnote'] = true; endif; ?>
+						<a href="<?php echo esc_url( admin_url( "post.php?post=$id&action=edit#wcpt_mentor_wordpress_org_user_name" ) ); ?>"><?php echo esc_html( $camp['name'] ); ?></a><?php if ( $camp['has_email'] ) :
+							echo ' *';
+							$unmentored_camps['footnote'] = true;
+endif; ?>
 					</li>
 				<?php endforeach; ?>
 			</ul>

@@ -10,15 +10,23 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     cd wordcamp.test
     ```
 
+    If you get an error about "Permission denied (publickey)", you have two options:
+      - Make sure you have [a working SSH key](https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey#make-sure-you-have-a-key-that-is-being-used).
+      - Or use the HTTPS URL:
+          ```bash
+          git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
+          cd wordcamp.test
+          ```
+
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.
 	```bash
 	cd .docker
 	brew install mkcert
 	brew install nss
 	mkcert -install
-	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test buddycamp.test *.buddycamp.test
+	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
-	
+
 	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
 
 1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
@@ -26,11 +34,12 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     cd public_html
     git clone git://core.git.wordpress.org/ mu
     cd mu
-    git checkout 5.4
+    git checkout 6.2
     ```
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
 	```bash
+	cd .. # to the directory above public_html/
 	composer install
 	```
 
@@ -43,21 +52,31 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Build and boot the Docker environment.
     ```bash
-    docker-compose up --build
+    docker compose build --pull
+    docker compose up
 	```
+
+    _Using an Apple ARM64 chip? You may see `failed to solve: rpc error: code = Unknown desc =...` after running either of commands above. Try adding `platform: linux/amd64` to both `wordcamp.test` and `wordcamp.db` in `docker-compose.yaml`. This will instruct Docker to create an image based on the `linux/amd64` architecture instead of `linux/arm64`, i.e._
+    ```
+    build:
+        context: .docker
+        dockerfile: Dockerfile.php-fpm
+    platform: linux/amd64
+    ```
+
 
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
 
     ```bash
-    wordcamp.test_1  | Startup complete.
+    wordcamp.test_1  | NOTICE: ready to handle connections
     ```
-   
+
     In this case the Docker environment will be running in the foreground. To stop the environment, use `CTRL + c`.
-    
+
     On subsequent uses, you can start the already-built environment up in the background, thus allowing other commands to be issued while the environment is still running:
-    
+
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
 	_Note: This will create `.docker/database` directory which will contain MySQL files to persist data across docker restarts._
@@ -68,19 +87,19 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     To get the list of sites, run the following command, and then remove the `http(s)://` prefix and `/` suffix.
 
     ```bash
-    docker-compose exec wordcamp.test wp site list --field=url --allow-root
+    docker compose exec wordcamp.test wp site list --field=url
     ```
 
     Example hosts file entry:
     ```bash
-    127.0.0.1 wordcamp.test central.wordcamp.test 2014.seattle.wordcamp.test 2020.shinynew.wordcamp.test buddycamp.test 2015.brighton.buddycamp.test
+    127.0.0.1 wordcamp.test central.wordcamp.test seattle.wordcamp.test shinynew.wordcamp.test events.wordpress.test
     ```
 
 1. `/wp-admin` pages for these sites should now be accessible. Use `admin` as username and `password` as password to login. Front end pages will not be accessible until you complete the remaining steps.
 
 	If your browser warns you about the self-signed certificates, then the CA certificate is not properly installed. For Chrome, [manually add the CA cert to Keychain Access](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/). For Firefox, import it to `Preferences > Certificates > Advanced > Authorities`.
 
-1. By default, docker will start with data defined in `.docker/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/wordcamp_dev.sql` file and run `docker-compose up --build -d` again.
+1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
 
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash
@@ -100,21 +119,21 @@ Note: All of these commands are meant to be executed from project directory.
 
 1. To start WordCamp docker containers, use:
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
     The `-d` flag directs Docker to run in background.
 
 1. To stop the running the Docker containers, use:
     ```bash
-    docker-compose stop
+    docker compose stop
     ```
-   
-   Note that using `docker-compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
+
+   Note that using `docker compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
 
 1. To open a shell inside the web container, use:
     ```bash
-    docker-compose exec wordcamp.test bash
+    docker compose exec wordcamp.test bash
     ```
 
     `wordcamp.test` is the name of docker service running `nginx` and `php`. `bash` is the name of command that we want to execute. This particular command will give us shell access inside the Docker.
@@ -122,14 +141,14 @@ Note: All of these commands are meant to be executed from project directory.
     Similarly, for the MySQL container, you can use:
 
     ```bash
-    docker-compose exec wordcamp.db bash
+    docker compose exec wordcamp.db bash
     ```
 
     `wordcamp.db` is the name of docker service running MySQL server.
 
 1. To view `nginx` and `php-logs` use:
     ```bash
-    docker-compose logs -f --tail=100 wordcamp.test
+    docker compose logs -f --tail=100 wordcamp.test
     ```
 
     The `-f` flag is used for consistently following the logs. Omit this to only dump the logs in terminal.
@@ -141,7 +160,7 @@ Note: All of these commands are meant to be executed from project directory.
     Similarly, to view MySQL server logs, use:
 
     ```bash
-    docker-compose logs -f --tail=100 wordcamp.db
+    docker compose logs -f --tail=100 wordcamp.db
     ```
 
     Note that this does not show MySQL queries made by application, these are just server logs.
@@ -158,7 +177,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
 1. Start up the container:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml up
+    docker compose -f docker-compose.phpunit.yml up
     ```
 
     Watch for the following output, to ensure that the server and database are finished starting up.
@@ -170,7 +189,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
 2. The first time you run this, you'll need to install the tests (future runs can skip this step). First, open a shell inside the web container:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml exec phpunit_wp bash
+    docker compose -f docker-compose.phpunit.yml exec phpunit_wp bash
     ```
 
     Then run the install script. It will download WordPress & the unit test framework (this skips installing a database, since that is set up as part of the docker process).
@@ -182,7 +201,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
 3. Now you can run `phpunit`. From the project folder on your machine:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
+    docker compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
     ```
 
     If you're still in the shell from the previous step, you can run `phpunit` directly.
@@ -192,11 +211,11 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 
     Either way, you'll see "Installing...", and then the tests will run.
 
-4. The "useful commands" from the previous section will work here too— you just need to use `docker-compose -f docker-compose.phpunit.yml` to specify this configuration. 
+4. The "useful commands" from the previous section will work here too— you just need to use `docker compose -f docker-compose.phpunit.yml` to specify this configuration.
 
     For example, to suspend the container, use:
     ```bash
-    docker-compose -f docker-compose.phpunit.yml stop
+    docker compose -f docker-compose.phpunit.yml stop
     ```
 
 5. You can run `test:watch` to automatically watch files for changes, and re-run the tests:
@@ -232,7 +251,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
 The **.docker/bin** directory gets mounted as a volume within the PHP container, and it contains a script, **database.sh**, with several useful commands. To run these commands, first open a shell inside the Docker container:
 
 ```bash
-docker-compose exec wordcamp.test bash
+docker compose exec wordcamp.test bash
 ```
 
 From there you can run the script using `bash /var/scripts/database.sh [subcommand]`. The most useful subcommands are:

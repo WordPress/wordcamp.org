@@ -48,7 +48,7 @@ function render( $attributes, $content, $block ) {
 	$avatar = get_avatar_or_image( $post_ID, $size );
 
 	if ( isset( $attributes['isLink'] ) && $attributes['isLink'] ) {
-		$avatar = sprintf( '<a href="%1s">%2s</a>', get_the_permalink( $post_ID ), $avatar );
+		$avatar = sprintf( '<a href="%1$s">%2$s</a>', get_the_permalink( $post_ID ), $avatar );
 	}
 
 	return "<figure $wrapper_attributes>$avatar</figure>";

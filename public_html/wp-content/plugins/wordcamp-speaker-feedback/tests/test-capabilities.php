@@ -101,7 +101,7 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers \WordCamp\SpeakerFeedback\Comment\map_meta_caps()
+	 * @covers \WordCamp\SpeakerFeedback\Capabilities\map_meta_caps()
 	 */
 	public function test_cap_read() {
 		// Session 1 approved feedback comment.
@@ -157,7 +157,7 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers \WordCamp\SpeakerFeedback\Comment\map_meta_caps()
+	 * @covers \WordCamp\SpeakerFeedback\Capabilities\map_meta_caps()
 	 */
 	public function test_cap_read_post() {
 		// Session 1.
@@ -196,7 +196,7 @@ class Test_SpeakerFeedback_Capabilities extends WP_UnitTestCase {
 	}
 
 	/**
-	 * @covers \WordCamp\SpeakerFeedback\Comment\map_meta_caps()
+	 * @covers \WordCamp\SpeakerFeedback\Capabilities\map_meta_caps()
 	 */
 	public function test_cap_moderate() {
 		$this->assertFalse( user_can(

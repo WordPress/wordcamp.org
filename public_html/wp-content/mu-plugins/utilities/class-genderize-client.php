@@ -5,6 +5,7 @@ defined( 'WPINC' ) || die();
 
 use WP_Error;
 use GP_Locales;
+use WordPressdotorg\MU_Plugins\Utilities\{ API_Client };
 
 /**
  * Class Genderize_Client

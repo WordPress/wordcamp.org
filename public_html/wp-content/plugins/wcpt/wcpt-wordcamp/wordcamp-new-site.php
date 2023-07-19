@@ -47,7 +47,7 @@ class WordCamp_New_Site {
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
 				<?php $url = trailingslashit( get_post_meta( $post_id, $key, true ) ); ?>
-				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );  ?>
+				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) ); ?>
 				<?php $valid_url = isset( $url['host'], $url['path'] ); ?>
 
 				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
@@ -251,10 +251,10 @@ class WordCamp_New_Site {
 			$this->configure_new_site( $wordcamp_id, $wordcamp );
 
 			$new_site_id = $this->new_site_id;
-			Logger\log( 'finished', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id' ) );
+			Logger\log( 'finished', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id', 'blog_name' ) );
 		} else {
 			$new_site_id = $this->new_site_id;
-			Logger\log( 'no_site_id', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id' ) );
+			Logger\log( 'no_site_id', compact( 'wordcamp_id', 'url', 'lead_organizer', 'new_site_id', 'blog_name' ) );
 		}
 	}
 
@@ -290,12 +290,12 @@ class WordCamp_New_Site {
 		$blog_id               = get_wordcamp_site_id( $wordcamp );
 		$lead_organizer        = $this->get_user_or_current_user( $meta['WordPress.org Username'][0] );
 		$assigned_sponsor_data = $this->get_assigned_sponsor_data( $wordcamp->ID );
-		$sponsors              = $this->get_stub_me_sponsors( $assigned_sponsor_data );
-		$existing_sponsors     = array();
+		$me_sponsor_stubs      = $this->get_stub_me_sponsors( $assigned_sponsor_data );
+		$existing_me_sponsors  = array();
 
 		switch_to_blog( $blog_id );
 
-		$sponsors_query = get_posts( array(
+		$site_sponsors = get_posts( array(
 			'fields'         => 'ids',
 			'post_type'      => 'wcb_sponsor',
 			'post_status'    => 'any',
@@ -303,49 +303,49 @@ class WordCamp_New_Site {
 			'cache_results'  => false,
 		) );
 
-		update_meta_cache( 'post', $sponsors_query );
+		update_meta_cache( 'post', $site_sponsors );
 
-		foreach ( $sponsors_query as $post_id ) {
-			$mes_id = get_post_meta( $post_id, '_mes_id', true );
+		foreach ( $site_sponsors as $new_post_id ) {
+			$mes_id = get_post_meta( $new_post_id, '_mes_id', true );
 			if ( $mes_id ) {
-				$existing_sponsors[] = absint( $mes_id );
+				$existing_me_sponsors[] = absint( $mes_id );
 			}
 		}
 
 		add_filter( 'upload_dir', array( $this, '_fix_wc_upload_dir' ) );
 
-		foreach ( $sponsors as $sponsor ) {
+		foreach ( $me_sponsor_stubs as $me_stub ) {
 			// Skip existing sponsors.
-			if ( in_array( absint( $sponsor['meta']['_mes_id'] ), $existing_sponsors ) ) {
+			if ( in_array( absint( $me_stub['meta']['_mes_id'] ), $existing_me_sponsors ) ) {
 				continue;
 			}
 
-			$post_id = wp_insert_post( array(
-				'post_type'    => $sponsor['type'],
+			$new_post_id = wp_insert_post( array(
+				'post_type'    => $me_stub['type'],
 				'post_status'  => 'draft',
 				'post_author'  => $lead_organizer->ID,
-				'post_title'   => $sponsor['title'],
-				'post_content' => $sponsor['content'],
+				'post_title'   => $me_stub['title'],
+				'post_content' => $me_stub['content'],
 			) );
 
-			if ( $post_id ) {
-				foreach ( $sponsor['meta'] as $key => $value ) {
-					update_post_meta( $post_id, $key, $value );
+			if ( $new_post_id ) {
+				foreach ( $me_stub['meta'] as $key => $value ) {
+					update_post_meta( $new_post_id, $key, $value );
 				}
 
 				// Set featured image.
-				if ( ! empty( $sponsor['featured_image'] ) ) {
-					$results = media_sideload_image( $sponsor['featured_image'], $post_id );
+				if ( ! empty( $me_stub['featured_image'] ) ) {
+					$results = media_sideload_image( $me_stub['featured_image'], $new_post_id );
 
 					if ( ! is_wp_error( $results ) ) {
 						$attachment_id = get_posts( array(
 							'posts_per_page' => 1,
 							'post_type'      => 'attachment',
-							'post_parent'    => $post_id,
+							'post_parent'    => $new_post_id,
 						) );
 
 						if ( isset( $attachment_id[0]->ID ) ) {
-							set_post_thumbnail( $post_id, $attachment_id[0]->ID );
+							set_post_thumbnail( $new_post_id, $attachment_id[0]->ID );
 						}
 					}
 				}
@@ -416,7 +416,7 @@ class WordCamp_New_Site {
 
 		$meta = get_post_custom( $wordcamp_id );
 
-		$mentor = get_user_by( 'login', $meta['Mentor WordPress.org User Name'][0] );
+		$mentor = wcorg_get_user_by_canonical_names( $meta['Mentor WordPress.org User Name'][0] );
 		if ( $mentor ) {
 			add_user_to_blog( get_wordcamp_site_id( $wordcamp ), $mentor->ID, 'administrator' );
 		}
@@ -431,6 +431,8 @@ class WordCamp_New_Site {
 
 		$this->set_default_options( $wordcamp, $meta );
 		$this->create_post_stubs( $wordcamp, $meta, $lead_organizer );
+
+		Jetpack::activate_default_modules( false, false, array(), false, false, false, false );
 
 		/**
 		 * Hook into the configuration process for a new WordCamp site.
@@ -484,7 +486,7 @@ class WordCamp_New_Site {
 		update_option( 'siteurl', set_url_scheme( get_option( 'siteurl' ), 'https' ) );
 		update_option( 'home',    set_url_scheme( get_option( 'home' ),    'https' ) );
 
-		Logger\log( 'finished', compact( 'admin_email', 'blog_name' ) );
+		Logger\log( 'finished', compact( 'admin_email' ) );
 	}
 
 	/**
@@ -556,7 +558,7 @@ class WordCamp_New_Site {
 			}
 		}
 
-		Logger\log( 'finished', compact( 'assigned_sponsor_data', 'stubs', 'blog_name' ) );
+		Logger\log( 'finished', compact( 'assigned_sponsor_data', 'stubs' ) );
 	}
 
 	/**
@@ -731,6 +733,9 @@ class WordCamp_New_Site {
 				'content' => $this->get_stub_content( 'post', 'call-for-volunteers' ),
 				'status'  => 'draft',
 				'type'    => 'post',
+				'meta'    => array(
+					'wcfd-key' => 'call-for-volunteers',
+				),
 			),
 		);
 
@@ -814,7 +819,7 @@ class WordCamp_New_Site {
 	 *
 	 * @return array
 	 */
-	protected function get_stub_me_sponsors_meta( $assigned_sponsor ) {
+	public static function get_stub_me_sponsors_meta( $assigned_sponsor ) {
 		$sponsor_meta    = array( '_mes_id' => $assigned_sponsor->ID );
 		$meta_field_keys = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number',

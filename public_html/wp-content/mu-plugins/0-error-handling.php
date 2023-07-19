@@ -4,6 +4,7 @@ defined( 'WPINC' ) || die();
 
 use DirectoryIterator;
 use Dotorg\Slack\Send;
+use function WordCamp\Logger\{ redact_keys, redact_url };
 
 /*
  * Catch errors on production and pipe them into Slack, because that's the only way we have to see them.
@@ -14,11 +15,15 @@ use Dotorg\Slack\Send;
  * Creating a `fatal-error-handler.php` file would let us override Core's fatal error handler, but we'd need
  * to update all the code here to not use any Core constants/functions that load after drop-in plugins. We also
  * want to handle non-fatals here.
+ *
+ * phpcs:disable WordPress.Security.NonceVerification -- This doesn't handle nonce'd actions, but does need to
+ * work with the raw $_POST at a generic level.
  */
 
 /*
  * Intentionally not using `get_temp_dir()`, because that could potentially return `WP_CONTENT_DIR`. Storing
- * error records there would result in path disclosure.
+ * error records there could result in leaking sensitive information that failed to be redacted before being
+ * logged.
  */
 const ERROR_RATE_LIMITING_DIR = '/tmp/error_limiting';
 
@@ -32,6 +37,8 @@ if ( ! defined( 'WP_RUN_CORE_TESTS' ) || ! WP_RUN_CORE_TESTS ) {
 	}
 
 	add_action( 'clear_error_rate_limiting_files', __NAMESPACE__ . '\handle_clear_error_rate_limiting_files' );
+	add_action( 'switch_blog', __NAMESPACE__ . '\warn_high_memory_usage', 10, 3 );
+	add_action( 'shutdown', __NAMESPACE__ . '\warn_high_memory_usage' );
 }
 
 /**
@@ -47,6 +54,8 @@ if ( ! defined( 'WP_RUN_CORE_TESTS' ) || ! WP_RUN_CORE_TESTS ) {
  * @return bool
  */
 function handle_error( $err_no, $err_msg, $file, $line ) {
+	require_once __DIR__ . '/1-logger.php';
+
 	if ( ! check_error_handling_dependencies() ) {
 		return false;
 	}
@@ -159,7 +168,6 @@ function is_third_party_file( $file ) {
 		// Gutenberg isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
 		WP_PLUGIN_DIR . '/hyperdb/',
 		// Jetpack isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
-		WP_PLUGIN_DIR . '/json-rest-api/',
 		WP_PLUGIN_DIR . '/liveblog/',
 		WP_PLUGIN_DIR . '/public-post-preview/',
 		WP_PLUGIN_DIR . '/pwa/',
@@ -302,15 +310,14 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		return;
 	}
 
-	require_once( __DIR__ . '/includes/slack/send.php' );
+	require_once __DIR__ . '/includes/slack/send.php';
 
-	$error_name  = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
-	$messages    = explode( 'Stack trace:', $err_msg, 2 );
-	$text        = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
-	$stack_trace = wp_debug_backtrace_summary();
-	$domain      = esc_url( get_site_url() );
-	$page_slug   = sanitize_text_field( untrailingslashit( $_SERVER['REQUEST_URI'] ) ) ?: '/';
-	$footer      = '';
+	$error_name = array_search( $err_no, get_defined_constants( true )['Core'] ) ?: '';
+	$messages   = explode( 'Stack trace:', $err_msg, 2 );
+	$text       = ( ! empty( $messages[0] ) ) ? trim( sanitize_text_field( $messages[0] ) ) : '';
+	$url        = redact_url( 'https://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'] );
+	$referer    = isset( $_SERVER['HTTP_REFERER'] ) ? redact_url( $_SERVER['HTTP_REFERER'] ) : '';
+	$footer     = '';
 
 	if ( $occurrences > 0 ) {
 		$footer .= "Occurred *$occurrences time(s)* since last reported";
@@ -340,28 +347,59 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			break;
 	}
 
-	$fields = [
-		[
-			'title' => 'Domain',
-			'value' => $domain,
+	$fields = array(
+		array(
+			'title' => 'URL',
+			'value' => esc_url_raw( $url ),
 			'short' => false,
-		],
-		[
-			'title' => 'Page',
-			'value' => $page_slug,
-			'short' => false,
-		],
-		[
+		),
+	);
+
+	if ( ! str_contains( $err_msg, $file ) ) {
+		$fields[] = array(
 			'title' => 'File',
 			'value' => "$file:$line",
 			'short' => false,
-		],
-		[
-			'title' => 'Stack Trace',
-			'value' => $stack_trace,
+		);
+	}
+
+	if ( ! empty( $referer ) && $referer !== $url ) {
+		$fields[] = array(
+			'title' => 'Referer',
+			'value' => esc_url_raw( $referer ),
 			'short' => false,
-		],
-	];
+		);
+	}
+
+	if ( $_POST ) {
+		$redacted_post = $_POST; // redact_keys() would redact $_POST if passed directly.
+		redact_keys( $redacted_post );
+
+		$fields[] = array(
+			'title' => 'POST',
+			'value' => print_r( $redacted_post, true ),
+			'short' => false,
+		);
+	}
+
+	// Fatals can only be caught with `register_shutdown_function()`, but that doesn't have access to the call
+	// stack of the previous script. It would only show the stack of the current script, which isn't useful.
+	if ( ! is_fatal_error( $err_no ) ) {
+		$backtrace = str_replace(
+			array(
+				', WordCamp\Error_Handling\handle_error, WordCamp\Error_Handling\send_error_to_slack',
+				', WordCamp\Error_Handling\warn_high_memory_usage, trigger_error',
+			),
+			'',
+			wp_debug_backtrace_summary()
+		);
+
+		$fields[] = array(
+			'title' => 'Stack Trace',
+			'value' => $backtrace,
+			'short' => false,
+		);
+	}
 
 	$attachment = array(
 		'fallback'    => $text,
@@ -396,7 +434,7 @@ function get_destination_channels( $file, $environment, $is_fatal_error ) {
 	$is_jetpack_error   = false !== stripos( $file, WP_PLUGIN_DIR . '/jetpack/' );
 	$is_gutenberg_error = false !== stripos( $file, WP_PLUGIN_DIR . '/gutenberg/' );
 
-	switch( $environment ) {
+	switch ( $environment ) {
 		case 'production':
 			// Send all Jetpack & Gutenberg errors to those teams. Only send fatals to us.
 			if ( $is_jetpack_error ) {
@@ -431,8 +469,8 @@ function get_destination_channels( $file, $environment, $is_fatal_error ) {
 		case 'local':
 		default:
 			// Intentionally empty.
-		break;
-	};
+			break;
+	}
 
 	return $channels;
 }
@@ -475,5 +513,41 @@ function handle_clear_error_rate_limiting_files() {
 		if ( ! $file_info->isDot() ) {
 			unlink( $file_info->getPathname() );
 		}
+	}
+}
+
+/**
+ * Log a warning if we're close to running out of memory.
+ *
+ * This always runs on `shutdown` and `switch_blog`, but can also be hooked to other actions where high usage
+ * is suspected, in order to get debugging info before it's lost to a fatal error.
+ */
+function warn_high_memory_usage() {
+	// Using `memory_limit` instead of `WP_MEMORY_LIMIT` because the latter isn't updated when the former changes
+	// at runtime.
+	$limit = ini_get( 'memory_limit' );
+
+	// Sometimes WP_CLI unsets the limit, which makes it look like the peak isn't being hit when testing on
+	// sandboxes. This should match what production uses for accuracy.
+	if ( '-1' === $limit ) {
+		if ( wp_doing_cron() ) {
+			$limit = wcorg_high_memory_context();
+		} else {
+			$limit = WP_MAX_MEMORY_LIMIT;
+		}
+	}
+
+	$peak_percent = memory_get_peak_usage( true ) / wp_convert_hr_to_bytes( $limit );
+	$peak_percent = round( $peak_percent * 100, 1 );
+
+	if ( $peak_percent >= 90 ) {
+		trigger_error(
+			sprintf(
+				'Peak memory usage at %s%%. Current action/filter: %s.',
+				$peak_percent,
+				current_action()
+			),
+			E_USER_WARNING
+		);
 	}
 }

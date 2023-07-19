@@ -12,7 +12,7 @@ import { __ } from '@wordpress/i18n';
 /**
  * Internal dependencies
  */
-import { ItemSelect, Option, buildOptions } from '../../components';
+import { ItemSelect, buildOptions } from '../../components';
 
 /**
  * Component for selecting posts/terms for populating the block content.
@@ -107,7 +107,7 @@ class SessionSelect extends Component {
 	 * @return {Element}
 	 */
 	render() {
-		const { icon, label, setAttributes } = this.props;
+		const { label, setAttributes } = this.props;
 
 		return (
 			<ItemSelect
@@ -115,19 +115,8 @@ class SessionSelect extends Component {
 				label={ label }
 				value={ this.getCurrentSelectValue() }
 				onChange={ ( changed ) => setAttributes( changed ) }
-				selectProps={ {
-					options: this.buildSelectOptions(),
-					isLoading: this.isLoading(),
-					formatOptionLabel: ( optionData, { context } ) => (
-						<Option
-							icon={ includes( [ 'wcb_track', 'wcb_session_category' ], optionData.type ) ? icon : null }
-							label={ optionData.label }
-							details={ optionData.details }
-							count={ optionData.count }
-							context={ context }
-						/>
-					),
-				} }
+				options={ this.buildSelectOptions() }
+				isLoading={ this.isLoading() }
 			/>
 		);
 	}

@@ -3,6 +3,8 @@
  * WordCamp.org configuration file.
  */
 
+define( 'IS_WORDCAMP_NETWORK', true );
+
 /**
  * The environment in which the WordCamp codebase is currently running.
  *
@@ -14,6 +16,7 @@
  *                  functionality that relies on remote connections may not be available.
  */
 define( 'WORDCAMP_ENVIRONMENT', 'local' );
+define( 'WP_ENVIRONMENT_TYPE', 'local' );
 
 /*
  * Database
@@ -35,22 +38,36 @@ $table_prefix = 'wc_'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride
 /*
  * Multisite
  */
-if ( 'buddycamp.test' === $_SERVER['HTTP_HOST'] || '.buddycamp.test' === substr( $_SERVER['HTTP_HOST'], strlen( $_SERVER['HTTP_HOST'] ) - 14, 14 ) ) {
-	$wcorg_domain_current_site = 'buddycamp.test';
-} else {
-	$wcorg_domain_current_site = 'wordcamp.test';
+const WORDCAMP_NETWORK_ID   = 1;
+const WORDCAMP_ROOT_BLOG_ID = 5;
+const EVENTS_NETWORK_ID     = 2;
+const EVENTS_ROOT_BLOG_ID   = 47;
+
+switch ( $_SERVER['HTTP_HOST'] ) {
+	case 'events.wordpress.test':
+		define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
+		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
+		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
+		define( 'SUBDOMAIN_INSTALL',     false );
+		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		break;
+
+	case 'wordcamp.test':
+	case 'buddycamp.test':
+	default:
+		define( 'SITE_ID_CURRENT_SITE',  WORDCAMP_NETWORK_ID );
+		define( 'BLOG_ID_CURRENT_SITE',  WORDCAMP_ROOT_BLOG_ID );
+		define( 'DOMAIN_CURRENT_SITE',   'buddycamp.test' === $_SERVER['HTTP_HOST'] ? 'buddycamp.test' : 'wordcamp.test' );
+		define( 'SUBDOMAIN_INSTALL',     true );
+		define( 'NOBLOGREDIRECT',        'https://central.wordcamp.test' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
+		break;
 }
 
-define( 'WP_ALLOW_MULTISITE',   true ); // Temporary workaround for https://github.com/Automattic/wp-super-cache/issues/97.
-define( 'MULTISITE',            true );
-define( 'SUBDOMAIN_INSTALL',    true );
-define( 'DOMAIN_CURRENT_SITE',  $wcorg_domain_current_site );
-define( 'PATH_CURRENT_SITE',    '/' );
-define( 'SITE_ID_CURRENT_SITE',  1 );
-define( 'BLOG_ID_CURRENT_SITE',  5 ); // central.wordcamp.test.
-define( 'NOBLOGREDIRECT',       'https://central.wordcamp.test' );
-define( 'SUNRISE',               true );
-define( 'CLI_HOSTNAME_OVERRIDE', 'wordcamp.test' );
+define( 'MULTISITE',         true );
+define( 'SUNRISE',           true );
+define( 'PATH_CURRENT_SITE', '/' );
 
 
 /*
@@ -153,7 +170,6 @@ define( 'WORDCAMP_PAYMENT_STRIPE_SECRET_LIVE',      '' );
 
 define( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY', '' );
 
-define( 'MEETUP_API_KEY',      '' );
 define( 'MEETUP_API_BASE_URL', 'https://api.meetup.com/' );
 define( 'MEETUP_MEMBER_ID',     72560962                 );
 define( 'MEETUP_OAUTH_CONSUMER_KEY', '' );

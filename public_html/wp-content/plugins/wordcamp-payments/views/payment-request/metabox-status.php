@@ -46,7 +46,7 @@
 
 			<div class="misc-pub-section misc-pub-post-status">
 				<label>
-					<?php _e( 'Status:' ) ?>
+					<?php esc_html_e( 'Status:' ); ?>
 
 					<span id="post-status-display">
 						<?php if ( current_user_can( 'manage_network' ) ) : ?>

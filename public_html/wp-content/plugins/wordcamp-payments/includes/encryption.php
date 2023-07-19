@@ -88,8 +88,8 @@ class WCP_Encryption {
 			return new WP_Error( 'encryption-error', 'Could not init encryption keys.' );
 		}
 
-		$data = explode( ':', $data );
-		$data = array_map( 'base64_decode', $data );
+		$data                            = explode( ':', $data );
+		$data                            = array_map( 'base64_decode', $data );
 		list( $null, $data, $iv, $hmac ) = $data;
 
 		// Verify hmac.
@@ -105,7 +105,7 @@ class WCP_Encryption {
 	/**
 	 * Look for encrypted:... and run self::decrypt() if found.
 	 *
-	 * @param string $data  Maybe some encrypted data.
+	 * @param string        $data  Maybe some encrypted data.
 	 * @param null|WP_Error $error Null or WP_Error on error (by reference).
 	 *
 	 * @return mixed The decrypted data, an empty string on decryption error, or anything else that's passed and isn't a string.

@@ -30,7 +30,7 @@ defined( 'WPINC' ) or die();
 
 		<div id="misc-publishing-actions">
 			<div class="misc-pub-section misc-pub-request-id">
-				<?php _e( 'ID:' ) ?>
+				<?php esc_html_e( 'ID:' ); ?>
 
 				<span id="request_id">
 					<?php echo esc_html( $request_id ); ?>
@@ -38,7 +38,7 @@ defined( 'WPINC' ) or die();
 			</div> <!-- .misc-pub-section -->
 
 			<div class="misc-pub-section misc-pub-requested-by">
-				<label><?php _e( 'Requested By:' ) ?>
+				<label><?php esc_html_e( 'Requested By:' ); ?>
 
 					<span id="requested_by">
 						<?php echo esc_html( $requested_by ); ?>
@@ -48,7 +48,7 @@ defined( 'WPINC' ) or die();
 
 			<div class="misc-pub-section misc-pub-post-status">
 				<label>
-					<?php _e( 'Status:' ) ?>
+					<?php esc_html_e( 'Status:' ); ?>
 
 					<span id="post-status-display">
 						<?php if ( current_user_can( 'manage_network' ) ) : ?>
@@ -81,7 +81,7 @@ defined( 'WPINC' ) or die();
 
 			<div class="misc-pub-section misc-pub-total-amount-requested">
 				<label>
-					<?php _e( 'Total Amount Requested:' ) ?>
+					<?php esc_html_e( 'Total Amount Requested:' ); ?>
 
 					<span id="total_amount_requested" class="loading-content">
 						<span class="spinner is-active"></span>

@@ -8007,7 +8007,7 @@ class CampTix_Plugin {
 		<?php
 	}
 
-	function wp_mail( $to, $subject, $message, $headers = array(), $attachments = '' ) {
+	function wp_mail( $to, $subject, $message, $headers = array(), $attachments = array() ) {
 		do_action( 'camptix_wp_mail_start' );
 
 		// Allow plugins and addons to override any outgoing CampTix e-mail.

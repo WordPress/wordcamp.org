@@ -285,7 +285,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 						),
 						$attr
 					);
-					$attendees = get_posts( $attendee_args );
+					$attendees     = get_posts( $attendee_args );
 
 					if ( ! is_array( $attendees ) || count( $attendees ) < 1 ) {
 						break; // life saver!
@@ -530,7 +530,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					),
 				)
 			);
-			$attendees = get_posts( $attendees_params );
+			$attendees        = get_posts( $attendees_params );
 
 			// Having attendees is one piece of the puzzle.
 			// Making sure they have the right tickets is the other.
@@ -574,13 +574,15 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		}
 
 		if ( $can_view_content && $attendee ) {
-			if ( isset( $_POST['tix_private_shortcode_submit'] ) )
+			if ( isset( $_POST['tix_private_shortcode_submit'] ) ) {
 				$camptix->info( __( 'Success! Enjoy your content!', 'wordcamporg' ) );
+			}
 
 			return $this->shortcode_private_display_content( $args, $content );
 		} else {
-			if ( ! isset( $_POST['tix_private_shortcode_submit'] ) && ! $error )
+			if ( ! isset( $_POST['tix_private_shortcode_submit'] ) && ! $error ) {
 				$camptix->notice( __( 'The content on this page is private. Please log in using the form below.', 'wordcamporg' ) );
+			}
 
 			return $this->shortcode_private_login_form( $args, $content );
 		}

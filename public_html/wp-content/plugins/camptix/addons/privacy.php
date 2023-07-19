@@ -81,7 +81,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 					$export = array();
 
 					switch ( $key ) {
-						case 'tix_receipt_email' :
+						case 'tix_receipt_email':
 							$value = get_post_meta( $post->ID, $key, true );
 
 							if ( ! empty( $value ) ) {
@@ -114,9 +114,9 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 					$export = array();
 
 					switch ( $key ) {
-						case 'tix_first_name' :
-						case 'tix_last_name' :
-						case 'tix_email' :
+						case 'tix_first_name':
+						case 'tix_last_name':
+						case 'tix_email':
 							$value = get_post_meta( $post->ID, $key, true );
 
 							if ( ! empty( $value ) ) {
@@ -126,7 +126,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 								);
 							}
 							break;
-						case 'questions' :
+						case 'questions':
 							$questions = $camptix->get_sorted_questions( $post->tix_ticket_id );
 							$answers   = $post->tix_questions;
 
@@ -147,7 +147,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 								}
 							}
 							break;
-						case 'tix_private_form_submit_ip' :
+						case 'tix_private_form_submit_ip':
 							$values = get_post_meta( $post->ID, $key );
 							/* translators: used between list items, there is a space after the comma */
 							$values = implode( __( ', ', 'wordcamporg' ), $values );
@@ -295,7 +295,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 					do_action( 'camptix_privacy_erase_buyer_prop', $key, $type, $post );
 
 					switch ( $key ) {
-						case 'tix_receipt_email' :
+						case 'tix_receipt_email':
 							$anonymized_value = wp_privacy_anonymize_data( $type );
 							update_post_meta( $post->ID, $key, $anonymized_value );
 							break;
@@ -320,13 +320,13 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 					do_action( 'camptix_privacy_erase_attendee_prop', $key, $type, $post );
 
 					switch ( $key ) {
-						case 'tix_first_name' :
-						case 'tix_last_name' :
-						case 'tix_email' :
+						case 'tix_first_name':
+						case 'tix_last_name':
+						case 'tix_email':
 							$anonymized_value = wp_privacy_anonymize_data( $type );
 							update_post_meta( $post->ID, $key, $anonymized_value );
 							break;
-						case 'questions' :
+						case 'questions':
 							$questions = $camptix->get_sorted_questions( $post->tix_ticket_id );
 							$answers   = $post->tix_questions;
 
@@ -343,7 +343,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 									$erase = apply_filters( 'camptix_privacy_erase_attendee_question', true, $question );
 
 									if ( false !== $erase ) {
-										$type = 'camptix_question_' . $question->tix_type;
+										$type                                = 'camptix_question_' . $question->tix_type;
 										$anonymized_answers[ $question->ID ] = wp_privacy_anonymize_data( $type );
 									}
 								}
@@ -351,7 +351,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 
 							update_post_meta( $post->ID, 'tix_questions', $anonymized_answers );
 							break;
-						case 'tix_private_form_submit_ip' :
+						case 'tix_private_form_submit_ip':
 							$values = get_post_meta( $post->ID, $key );
 							$prev   = '';
 
@@ -430,20 +430,20 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 	 */
 	public function data_anonymizers( $anonymous, $type, $data ) {
 		switch ( $type ) {
-			case 'camptix_full_name' :
+			case 'camptix_full_name':
 				$anonymous = __( 'Anonymous', 'wordcamporg' );
 				break;
-			case 'camptix_first_name' :
+			case 'camptix_first_name':
 				$anonymous = __( 'Anonymous', 'wordcamporg' );
 				break;
-			case 'camptix_last_name' :
+			case 'camptix_last_name':
 				$anonymous = '';
 				break;
-			case 'camptix_question_text' :
-			case 'camptix_question_textarea' :
+			case 'camptix_question_text':
+			case 'camptix_question_textarea':
 				$anonymous = wp_privacy_anonymize_data( 'text' );
 				break;
-			case 'camptix_question_url' :
+			case 'camptix_question_url':
 				$anonymous = wp_privacy_anonymize_data( 'url' );
 				break;
 		}

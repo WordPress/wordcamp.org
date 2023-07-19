@@ -103,7 +103,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			return;
 		}
 
-		$credentials  = $this->get_api_credentials();
+		$credentials = $this->get_api_credentials();
 
 		$item_summary = array();
 		foreach ( $order['items'] as $item ) {
@@ -403,7 +403,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		// One final check before charging the user.
 		if ( ! $camptix->verify_order( $order ) ) {
-			$camptix->log( "Could not verify order", $order['attendee_id'], array( 'payment_token' => $payment_token ), 'stripe' );
+			$camptix->log( 'Could not verify order', $order['attendee_id'], array( 'payment_token' => $payment_token ), 'stripe' );
 			wp_die( 'Something went wrong, order is not available.' );
 		}
 
@@ -458,9 +458,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	/**
 	 * Adds a failure reason / code to the post-payment screen when the payment fails.
 	 *
-	 * @param string $payment_token
-	 * @param int    $result
-	 * @param array|WP_Error  $data
+	 * @param string         $payment_token
+	 * @param int            $result
+	 * @param array|WP_Error $data
 	 */
 	public function camptix_payment_result( $payment_token, $result, $data ) {
 		/** @var CampTix_Plugin $camptix */
@@ -651,10 +651,10 @@ class CampTix_Stripe_API_Client {
 		$api_base = 'https://api.stripe.com/';
 
 		switch ( $request_type ) {
-			case 'charge' :
+			case 'charge':
 				$request_url = $api_base . 'v1/charges';
 				break;
-			case 'refund' :
+			case 'refund':
 				$request_url = $api_base . 'v1/refunds';
 				break;
 		}
@@ -731,7 +731,7 @@ class CampTix_Stripe_API_Client {
 		$error = new WP_Error();
 
 		switch ( $error_content['type'] ) {
-			case 'card_error' :
+			case 'card_error':
 				if ( isset( $error_content['message'] ) ) {
 					$reason = $error_content['message'];
 				} elseif ( isset( $error_content['decline_code'] ) ) {
@@ -747,7 +747,7 @@ class CampTix_Stripe_API_Client {
 					esc_html( $reason )
 				);
 				break;
-			default :
+			default:
 				$message = sprintf(
 					__( '%1$d error: %2$s', 'wordcamporg' ),
 					$error_code,

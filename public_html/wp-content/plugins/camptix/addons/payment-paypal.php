@@ -13,13 +13,14 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	/**
 	 * The following variables are required for every payment method.
 	 */
-	public $id = 'paypal';
-	public $name = 'PayPal';
+	public $id          = 'paypal';
+	public $name        = 'PayPal';
 	public $description = 'PayPal Express Checkout';
 
 	public $supported_currencies = array( 'AUD', 'CAD', 'EUR', 'GBP', 'JPY', 'USD', 'NZD', 'CHF', 'HKD', 'SGD', 'SEK',
-		'DKK', 'PLN', 'NOK', 'HUF', 'CZK', 'ILS', 'MXN', 'BRL', 'MYR', 'PHP', 'TWD', 'THB', 'TRY' );
-	public $supported_features = array(
+		'DKK', 'PLN', 'NOK', 'HUF', 'CZK', 'ILS', 'MXN', 'BRL', 'MYR', 'PHP', 'TWD', 'THB', 'TRY',
+	);
+	public $supported_features   = array(
 		'refund-single' => true,
 		'refund-all' => true,
 	);
@@ -292,7 +293,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			'METHOD' => 'GetTransactionDetails',
 			'TRANSACTIONID' => $txn_id,
 		);
-		$txn_details = wp_parse_args( wp_remote_retrieve_body( $this->request( $txn_details_payload ) ) );
+		$txn_details         = wp_parse_args( wp_remote_retrieve_body( $this->request( $txn_details_payload ) ) );
 		if ( ! isset( $txn_details['ACK'] ) || 'Success' != $txn_details['ACK'] ) {
 			$camptix->log( sprintf( 'Fetching transaction after IPN failed %s.', $txn_id, 0, $txn_details ) );
 			return;
@@ -422,7 +423,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$camptix->log( sprintf( 'Running payment_cancel. Server data attached.'  ), null, $_SERVER );
 
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
-		$paypal_token = ( isset( $_REQUEST['token'] ) ) ? trim( $_REQUEST['token'] ) : '';
+		$paypal_token  = ( isset( $_REQUEST['token'] ) ) ? trim( $_REQUEST['token'] ) : '';
 
 		if ( ! $payment_token || ! $paypal_token ) {
 			wp_die( 'empty token' );
@@ -471,7 +472,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			if ( isset( $transaction_details['ACK'] ) && 'Success' == $transaction_details['ACK'] ) {
 				$status = $this->get_status_from_string( $transaction_details['PAYMENTSTATUS'] );
 
-				if ( in_array( $status, array( CampTix_Plugin::PAYMENT_STATUS_PENDING, CampTix_Plugin::PAYMENT_STATUS_COMPLETED	) ) ) {
+				if ( in_array( $status, array( CampTix_Plugin::PAYMENT_STATUS_PENDING, CampTix_Plugin::PAYMENT_STATUS_COMPLETED ) ) ) {
 					// False alarm. The payment has indeed been made and no need to cancel.
 					$camptix->log( 'False alarm on payment_cancel. This transaction is valid.', 0, $transaction_details );
 					wp_safe_redirect( $camptix->get_access_tickets_link( $access_token ) );
@@ -526,7 +527,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			'TOKEN'  => $paypal_token,
 		);
 
-		$request = $this->request( $payload );
+		$request          = $this->request( $payload );
 		$checkout_details = wp_parse_args( wp_remote_retrieve_body( $request ) );
 
 		if ( isset( $checkout_details['ACK'] ) && 'Success' == $checkout_details['ACK'] ) {
@@ -549,7 +550,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 
 			if ( (float) $checkout_details['PAYMENTREQUEST_0_AMT'] != $order['total'] ) {
 				$camptix->log( 'Dying because unexpected total', $order['attendee_id'], compact( 'checkout_details', 'order' ) );
-				wp_die( __( "Unexpected total!", 'wordcamporg' ) );
+				wp_die( esc_html__( 'Unexpected total!', 'wordcamporg' ) );
 			}
 
 			// One final check before charging the user.
@@ -560,10 +561,10 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 
 			// Get money money, get money money money!
 			$request = $this->request( $payload );
-			$txn = wp_parse_args( wp_remote_retrieve_body( $request ) );
+			$txn     = wp_parse_args( wp_remote_retrieve_body( $request ) );
 
 			if ( isset( $txn['ACK'], $txn['PAYMENTINFO_0_PAYMENTSTATUS'] ) && in_array( $txn['ACK'], array( 'Success', 'SuccessWithWarning' ) ) ) {
-				$txn_id = $txn['PAYMENTINFO_0_TRANSACTIONID'];
+				$txn_id         = $txn['PAYMENTINFO_0_TRANSACTIONID'];
 				$payment_status = $txn['PAYMENTINFO_0_PAYMENTSTATUS'];
 
 				$camptix->log( sprintf( 'Payment details for %s', $txn_id ), $order['attendee_id'], $txn );
@@ -620,8 +621,9 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		if ( ! $payment_token || empty( $payment_token ) )
+		if ( ! $payment_token || empty( $payment_token ) ) {
 			return false;
+		}
 
 		if ( ! in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
 			wp_die( __( 'The selected currency is not supported by this payment method.', 'wordcamporg' ) );
@@ -662,18 +664,22 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$order = $this->get_order( $payment_token );
 		$this->fill_payload_with_order( $payload, $order );
 
-		$request = $this->request( $payload );
+		$request  = $this->request( $payload );
 		$response = wp_parse_args( wp_remote_retrieve_body( $request ) );
 		$camptix->log(
 			'Requesting PayPal transaction token',
 			null,
-			array( 'camptix_payment_token' => $payment_token, 'request_payload' => $payload, 'response' => $request )
+			array(
+				'camptix_payment_token' => $payment_token,
+				'request_payload' => $payload,
+				'response' => $request,
+			)
 		);
 
 		if ( isset( $response['ACK'], $response['TOKEN'] ) && 'Success' == $response['ACK'] ) {
 			$token = $response['TOKEN'];
-			$url = $options['sandbox'] ? 'https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_express-checkout' : 'https://www.paypal.com/cgi-bin/webscr?cmd=_express-checkout';
-			$url = add_query_arg( 'token', $token, $url );
+			$url   = $options['sandbox'] ? 'https://www.sandbox.paypal.com/cgi-bin/webscr?cmd=_express-checkout' : 'https://www.paypal.com/cgi-bin/webscr?cmd=_express-checkout';
+			$url   = add_query_arg( 'token', $token, $url );
 			wp_redirect( esc_url_raw( $url ) );
 			die();
 		} else {
@@ -715,15 +721,15 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 
 		$i = 0;
 		foreach ( $order['items'] as $item ) {
-			$payload['L_PAYMENTREQUEST_0_NAME'   . $i] = $camptix->substr_bytes( strip_tags( $event_name . ': ' . $item['name'] ), 0, 127 );
-			$payload['L_PAYMENTREQUEST_0_DESC'   . $i] = $camptix->substr_bytes( strip_tags( $item['description'] ),               0, 127 );
-			$payload['L_PAYMENTREQUEST_0_NUMBER' . $i] = $item['id'];
-			$payload['L_PAYMENTREQUEST_0_AMT'    . $i] = $item['price'];
-			$payload['L_PAYMENTREQUEST_0_QTY'    . $i] = $item['quantity'];
+			$payload[ 'L_PAYMENTREQUEST_0_NAME'   . $i ] = $camptix->substr_bytes( strip_tags( $event_name . ': ' . $item['name'] ), 0, 127 );
+			$payload[ 'L_PAYMENTREQUEST_0_DESC'   . $i ] = $camptix->substr_bytes( strip_tags( $item['description'] ),               0, 127 );
+			$payload[ 'L_PAYMENTREQUEST_0_NUMBER' . $i ] = $item['id'];
+			$payload[ 'L_PAYMENTREQUEST_0_AMT'    . $i ] = $item['price'];
+			$payload[ 'L_PAYMENTREQUEST_0_QTY'    . $i ] = $item['quantity'];
 			$i++;
 		}
 
-		/** @todo add coupon/reservation as a note. **/
+		/** @todo add coupon/reservation as a note. */
 
 		$payload['PAYMENTREQUEST_0_ITEMAMT']      = $order['total'];
 		$payload['PAYMENTREQUEST_0_AMT']          = $order['total'];
@@ -766,7 +772,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			),
 		);
 
-		return $camptix->payment_result( $payment_token, $result['status'] , $refund_data );
+		return $camptix->payment_result( $payment_token, $result['status'], $refund_data );
 	}
 
 	/*
@@ -786,7 +792,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		);
 
 		// Craft and submit the request
-		$payload = array(
+		$payload  = array(
 			'METHOD'        => 'RefundTransaction',
 			'TRANSACTIONID' => $result['transaction_id'],
 			'REFUNDTYPE'    => 'Full',
@@ -799,7 +805,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 			$response = array(
 				'ACK'            => 'Failure',
 				'L_ERRORCODE0'   => 0,
-				'L_LONGMESSAGE0' => __( 'Request did not complete successfully', 'wordcamporg' ),	// don't reveal the raw error message to the user in case it contains sensitive network/server/application-layer data. It will be logged instead later on.
+				'L_LONGMESSAGE0' => __( 'Request did not complete successfully', 'wordcamporg' ),   // don't reveal the raw error message to the user in case it contains sensitive network/server/application-layer data. It will be logged instead later on.
 				'raw'            => $response,
 			);
 		} else {
@@ -847,7 +853,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$response = wp_remote_post( $url, array(
 			'body'        => $payload,
 			'timeout'     => apply_filters( 'camptix_paypal_timeout', 20 ),
-			'httpversion' => '1.1'
+			'httpversion' => '1.1',
 		) );
 
 		$status = wp_parse_args( wp_remote_retrieve_body( $response ) );
@@ -874,7 +880,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$request_args = array(
 			'body'        => $payload,
 			'timeout'     => apply_filters( 'camptix_paypal_timeout', 20 ),
-			'httpversion' => '1.1'
+			'httpversion' => '1.1',
 		);
 
 		return wp_remote_post( $url, $request_args );

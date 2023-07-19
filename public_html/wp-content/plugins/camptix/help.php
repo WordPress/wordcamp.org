@@ -17,9 +17,9 @@ function tix_contextual_help() {
 			$screen->add_help_tab( array(
 				'title' => 'Excerpt',
 				'id' => 'tix-excerpt',
-				'content' => "
+				'content' => '
 					<h3>Excerpt</h3>
-					<p>The ticket excerpt contains the description of the ticket, generally things like whether it include a t-shirt, food, and so on. This will be displayed underneath the ticket title on the ticketing page.</p>",
+					<p>The ticket excerpt contains the description of the ticket, generally things like whether it include a t-shirt, food, and so on. This will be displayed underneath the ticket title on the ticketing page.</p>',
 			) );
 
 		$screen->add_help_tab( array(
@@ -87,26 +87,26 @@ function tix_contextual_help() {
 			$screen->add_help_tab( array(
 				'title' => 'Searching',
 				'id' => 'tix-searching',
-				'content' => "
+				'content' => '
 					<h3>Searching</h3>
-					<p>Searching through attendees is easy, on the attendees list, in the top right corner. You can search by name, e-mail, transaction id or even by an answer to the asked questions.</p>",
+					<p>Searching through attendees is easy, on the attendees list, in the top right corner. You can search by name, e-mail, transaction id or even by an answer to the asked questions.</p>',
 			) );
 
 		if ( $screen->id == 'tix_attendee' )
 			$screen->add_help_tab( array(
 				'title' => 'Attendee Information',
 				'id' => 'tix-attendee-info',
-				'content' => "
+				'content' => '
 					<h3>Attendee Information</h3>
-					<p>The Attendee Information table will show you everything you need to know about the attendee, the answers to the questions asked by their ticket, their payment status, coupon code as well as the access token, which is a secret link where they can edit their information.</p>",
+					<p>The Attendee Information table will show you everything you need to know about the attendee, the answers to the questions asked by their ticket, their payment status, coupon code as well as the access token, which is a secret link where they can edit their information.</p>',
 			) );
 
 		$screen->add_help_tab( array(
 			'title' => 'Attendees List',
 			'id' => 'tix-attendees-list',
-			'content' => "
+			'content' => '
 				<h3>Attendees List</h3>
-				<p>You can create a list of attendees on any page by using the <code>[camptix_attendees]</code> shortcode. This will create a list of avatars, names, URLs and Twitter handles if provided by the attendees. You can style the list with CSS, each item is fairly easy to target with selectors. You can even change the number of columns by adding a <code>columns</code> attribute, for example <code>[camptix_attendees columns=&quot;2&quot;]</code>.</p>",
+				<p>You can create a list of attendees on any page by using the <code>[camptix_attendees]</code> shortcode. This will create a list of avatars, names, URLs and Twitter handles if provided by the attendees. You can style the list with CSS, each item is fairly easy to target with selectors. You can even change the number of columns by adding a <code>columns</code> attribute, for example <code>[camptix_attendees columns=&quot;2&quot;]</code>.</p>',
 		) );
 
 	} elseif ( $screen->id == 'edit-tix_coupon' || $screen->id == 'tix_coupon' ) {
@@ -132,33 +132,33 @@ function tix_contextual_help() {
 		$screen->add_help_tab( array(
 			'title' => 'Summarize',
 			'id' => 'tix-summarize',
-			'content' => "
+			'content' => '
 				<h3>Summarize</h3>
-				<p>Summaries is a great way to group your event attendees by any of the attributes, including all the possible ticket questions. Useful to find out which t-shirt sizes you need to order, or what type of food you need to get. You can also export summaries into CSV.</p>",
+				<p>Summaries is a great way to group your event attendees by any of the attributes, including all the possible ticket questions. Useful to find out which t-shirt sizes you need to order, or what type of food you need to get. You can also export summaries into CSV.</p>',
 		) );
 
 		$screen->add_help_tab( array(
 			'title' => 'Revenue',
 			'id' => 'tix-revenue',
-			'content' => "
+			'content' => '
 				<h3>Revenue</h3>
-				<p>The Revenue report shows the numbers and the pricing for each ticket sold, including discounts, etc. Compare the total revenue number to the one in your PayPal reports to make sure everything is in order.</p>",
+				<p>The Revenue report shows the numbers and the pricing for each ticket sold, including discounts, etc. Compare the total revenue number to the one in your PayPal reports to make sure everything is in order.</p>',
 		) );
 
 		$screen->add_help_tab( array(
 			'title' => 'Export',
 			'id' => 'tix-export',
-			'content' => "
+			'content' => '
 				<h3>Export</h3>
-				<p>The Export tools helps you export all your attendee data into various formats.</p>",
+				<p>The Export tools helps you export all your attendee data into various formats.</p>',
 		) );
 
 		$screen->add_help_tab( array(
 			'title' => 'Notify',
 			'id' => 'tix-export',
-			'content' => "
+			'content' => '
 				<h3>Notify</h3>
-				<p>The Notify section lets you send e-mails targeted at specific ticket groups. Note that the e-mails will not be sent out straight away, but rather grouped into tasks, which are carried out using a cron schedule. You can monitor the status of every e-mail job in the History section.</p>",
+				<p>The Notify section lets you send e-mails targeted at specific ticket groups. Note that the e-mails will not be sent out straight away, but rather grouped into tasks, which are carried out using a cron schedule. You can monitor the status of every e-mail job in the History section.</p>',
 		) );
 
 	} elseif ( $screen->id == 'tix_ticket_page_camptix_options' ) {

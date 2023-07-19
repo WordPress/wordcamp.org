@@ -6,8 +6,8 @@
  * @param $payment_methods array Enabled payment methods
  * @param $selected_payment_method string Key for the payment method already selected
  * (Useful when form is refreshed or some error happens while checkout )
- * 
- * @return string HTML output for payment options form 
+ *
+ * @return string HTML output for payment options form
  */
 function generate_payment_options( $payment_output, $total, $payment_methods, $selected_payment_method ) {
 	ob_start();
@@ -18,10 +18,10 @@ function generate_payment_options( $payment_output, $total, $payment_methods, $s
 		<select name="tix_payment_method">
 			<?php foreach ( $payment_methods as $payment_method_key => $payment_method ) : ?>
 				<option 
-					<?php 
-						selected( 
-							! empty( $selected_payment_method ) && $selected_payment_method == $payment_method_key 
-						); 
+					<?php
+						selected(
+							! empty( $selected_payment_method ) && $selected_payment_method == $payment_method_key
+						);
 					?> 
 					value="<?php echo esc_attr( $payment_method_key ); ?>"><?php echo esc_html( $payment_method['name'] ); ?>
 

@@ -69,11 +69,7 @@ $first_time_legend = '<span class="description small">Y / N / ?</span>';
 			<td>Sessions</td>
 			<td class="number"><?php echo number_format_i18n( $data['totals']['session'] ); ?></td>
 			<td class="number">n/a</td>
-			<td class="number">
-				<?php echo number_format_i18n( $data['first_times']['session']['yes'] ); ?>
-				/ <?php echo number_format_i18n( $data['first_times']['session']['no'] ); ?>
-				/ <?php echo number_format_i18n( $data['first_times']['session']['unsure'] ); ?>
-			</td>
+			<td class="number">n/a</td>
 		</tr>
 		<tr>
 			<td>Speakers</td>

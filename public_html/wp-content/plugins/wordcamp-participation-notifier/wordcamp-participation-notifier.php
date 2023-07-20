@@ -29,7 +29,7 @@ class WordCamp_Participation_Notifier {
 		require_once WP_CONTENT_DIR . '/mu-plugins-private/wporg-mu-plugins/pub/profile-helpers.php';
 
 		// Sync with the wp.org username changes.
-		add_filter( 'update_post_meta', array( $this, 'username_meta_update' ), 10, 4 );
+		add_filter( 'update_post_meta',     array( $this, 'username_meta_update' ), 10, 4 );
 		add_filter( 'delete_post_meta',     array( $this, 'username_meta_delete' ), 10, 3 );
 		add_action( 'wp_after_insert_post', array( $this, 'maybe_notify_on_post_save' ) );
 

@@ -77,7 +77,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			'invoice',
 			array(
 				'id'    => 'invoice-date-format',
-				'value' => ! empty( $opt['invoice-date-format'] ) ? $opt['invoice-date-format'] : 'd F Y',
+				'value' => ! empty( $opt['invoice-date-format'] ) ? $opt['invoice-date-format'] : '',
 			)
 		);
 
@@ -115,10 +115,12 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		$id          = $args['id'];
 		$value       = $args['value'];
+		$date_format = get_option( 'date_format' );
 		$description = sprintf(
 			// translators: %s is a date.
-			__( 'Date format to use on the invoice, as a PHP Date formatting string (default \'d F Y\' formats dates as %s)', 'wordcamporg' ),
-			date( 'd F Y' )
+			__( 'Date format to use on the invoice, as a PHP Date formatting string (default %1$s formats dates as %2$s)', 'wordcamporg' ),
+			$date_format,
+			wp_date( $date_format )
 		);
 
 		include CTX_INV_DIR . '/includes/views/date-format-field.php';
@@ -347,8 +349,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	public static function create_invoice_document( $invoice_id ) {
 
 		$camptix_opts   = get_option( 'camptix_options' );
+		$date_format 		= ! empty( $camptix_opts['invoice-date-format'] ) ? $camptix_opts['invoice-date-format'] : get_option( 'date_format' );
+
 		$invoice_number = get_post_meta( $invoice_id, 'invoice_number', true );
-		$invoice_date   = get_the_date( $camptix_opts['invoice-date-format'], $invoice_id );
+		$invoice_date   = get_the_date( $date_format, $invoice_id );
 		$invoice_metas  = get_post_meta( $invoice_id, 'invoice_metas', true );
 		$invoice_order  = get_post_meta( $invoice_id, 'original_order', true );
 

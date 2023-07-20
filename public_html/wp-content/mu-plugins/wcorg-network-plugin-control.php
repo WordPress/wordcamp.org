@@ -45,7 +45,6 @@ function _get_network_plugin_state_list( $state ) {
 			'gutenberg/gutenberg.php',
 			'jetpack/jetpack.php',
 			'jquery-ui-css/jquery-ui-css.php',
-			'tagregator/bootstrap.php',
 			'wordcamp-payments/bootstrap.php',
 			'wordcamp-payments-network/bootstrap.php',
 			'wordcamp-coming-soon-page/bootstrap.php',
@@ -84,6 +83,14 @@ function _get_network_plugin_state_list( $state ) {
 			'wp-cldr/wp-cldr.php',
 		),
 	);
+
+	$network_id = get_current_network_id();
+
+	if ( WORDCAMP_NETWORK_ID === $network_id ) {
+		$network_plugin_state['activated'][] = 'tagregator/bootstrap.php';
+	} elseif ( EVENTS_NETWORK_ID === $network_id ) {
+		$network_plugin_state['deactivated'][] = 'tagregator/bootstrap.php';
+	}
 
 	return $network_plugin_state[ $state ];
 }

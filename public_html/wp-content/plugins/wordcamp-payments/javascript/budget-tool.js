@@ -269,7 +269,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				var value = this.$el.find( '.value' ).val(),
 					name  = this.model.get( 'name' );
 
-				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers' ], name ) ) {
+				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				} else if ( _.contains( [ 'ticket-price' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
@@ -396,6 +396,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		'tracks'       : 'Tracks',
 		'speakers'     : 'Speakers',
 		'volunteers'   : 'Volunteers',
+		'organizers'   : 'Organizers',
 		'currency'     : 'Currency',
 		'ticket-price' : 'Ticket Price',
 	};

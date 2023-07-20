@@ -9,6 +9,7 @@ use WordCamp\Budgets\Reimbursement_Requests;
 use WordCamp\Budgets_Dashboard\Reimbursement_Requests as Reimbursements_Dashboard;
 use DateTimeInterface;
 use WP_CLI;
+use WP_Error;
 
 defined( 'WPINC' ) || die();
 
@@ -468,7 +469,7 @@ function process_export_request() {
 	}
 }
 
-/*
+/**
  * Generate and return the raw payment report contents
  *
  * @param array $args

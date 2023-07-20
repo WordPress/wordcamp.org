@@ -65,8 +65,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			__( 'Activate invoice requests', 'wordcamporg' ),
 			'field_yesno',
 			'invoice',
-			// translators: %1$s is a date.
-			sprintf( __( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'wordcamporg' ), date( 'Y' ) )
+			__( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'wordcamporg' )
 		);
 
 		add_settings_field(
@@ -86,8 +85,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			__( 'VAT number', 'wordcamporg' ),
 			'field_yesno',
 			'invoice',
-			// translators: %1$s is a date.
-			sprintf( __( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' ), date( 'Y' ) )
+			__( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' )
 		);
 
 		add_settings_field(

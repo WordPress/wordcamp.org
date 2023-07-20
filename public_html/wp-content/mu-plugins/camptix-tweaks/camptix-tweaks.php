@@ -590,7 +590,7 @@ function load_custom_addons() {
  * @return string
  */
 function modify_default_fields_list( $default_fields ) {
-	return __( 'Top three fields: First name, last name, e-mail address.<br />Bottom four fields: Attendee list opt-out, life-threatening allergy, accessibility needs, Code of Conduct agreement.', 'wordcamporg' );
+	return __( 'Top three fields: First name, last name, e-mail address.<br />Bottom four fields: Attendee list opt-out, severe allergy, accessibility needs, Code of Conduct agreement.', 'wordcamporg' );
 }
 
 /**

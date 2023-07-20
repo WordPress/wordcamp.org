@@ -391,7 +391,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 	} );
 
 	wcb.metaLabels = {
-		'attendees'    : 'Attendees',
+		'attendees'    : 'Total attendees',
 		'days'         : 'Days',
 		'tracks'       : 'Tracks',
 		'speakers'     : 'Speakers',

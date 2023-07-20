@@ -10,7 +10,7 @@ use PHPMailer;
 /**
  * Class Allergy_Field.
  *
- * Add a non-optional attendee field indicating if they have a life-threatening allergy.
+ * Add a non-optional attendee field indicating if they have a severe allergy.
  *
  * @package WordCamp\CampTix_Tweaks
  */
@@ -27,9 +27,9 @@ class Allergy_Field extends CampTix_Addon {
 	 * Hook into WordPress and Camptix.
 	 */
 	public function camptix_init() {
-		$this->label = __( 'Life-threatening allergy', 'wordcamporg' );
+		$this->label = __( 'Severe allergy', 'wordcamporg' );
 
-		$this->question = __( 'Do you have a life-threatening allergy that would affect your experience at WordCamp?', 'wordcamporg' );
+		$this->question = __( 'Do you have a severe allergy that would affect your experience at WordCamp?', 'wordcamporg' );
 
 		$this->options = array(
 			'yes' => _x( 'Yes (we will contact you)', 'ticket registration option', 'wordcamporg' ),
@@ -330,11 +330,11 @@ class Allergy_Field extends CampTix_Addon {
 		foreach ( $recipients as $recipient ) {
 			$subject = sprintf(
 				/* translators: Email subject line. The %s placeholder is the name of a WordCamp. */
-				wp_strip_all_tags( __( 'An attendee who has a life-threatening allergy has registered for %s', 'wordcamporg' ) ),
+				wp_strip_all_tags( __( 'An attendee who has a severe allergy has registered for %s', 'wordcamporg' ) ),
 				$wordcamp_name
 			);
 
-			$message_line_1 = wp_strip_all_tags( __( 'The following attendee has indicated that they have a life-threatening allergy. Please note that this information is confidential.', 'wordcamporg' ) );
+			$message_line_1 = wp_strip_all_tags( __( 'The following attendee has indicated that they have a severe allergy. Please note that this information is confidential.', 'wordcamporg' ) );
 
 			$message_line_2 = wp_strip_all_tags( __( 'Please follow the procedure outlined in the WordCamp Organizer Handbook to ensure the health and safety of this event\'s attendees.', 'wordcamporg' ) );
 
@@ -350,7 +350,7 @@ class Allergy_Field extends CampTix_Addon {
 		}
 
 		/**
-		 * Action: Fires when a notification is sent about a WordCamp attendee with a life-threatening allergy.
+		 * Action: Fires when a notification is sent about a WordCamp attendee with a severe allergy.
 		 *
 		 * @param array $details Contains information about the WordCamp and the attendee.
 		 */

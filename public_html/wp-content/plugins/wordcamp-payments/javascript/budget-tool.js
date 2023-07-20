@@ -452,6 +452,27 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			},
 		},
 
+		'per-speaker-volunteer-organizer' : {
+			'label'    : 'per speakers + volunteers + organizers',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * (
+					parseInt( wcb.table.collection.findWhere( {
+						type : 'meta',
+						name : 'volunteers',
+					} ).get( 'value' ) )
+					+ parseInt( wcb.table.collection.findWhere( {
+						type : 'meta',
+						name : 'speakers',
+					} ).get( 'value' ) )
+					+ parseInt( wcb.table.collection.findWhere( {
+						type : 'meta',
+						name : 'organizers',
+					} ).get( 'value' ) )
+				);
+			},
+		},
+
 		'per-attendee' : {
 			'label'    : 'per attendee',
 			'hasValue' : true,

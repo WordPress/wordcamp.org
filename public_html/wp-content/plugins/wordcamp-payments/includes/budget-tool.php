@@ -224,6 +224,8 @@ class WordCamp_Budget_Tool {
 				return $value * $count_organizers;
 			case 'per-speaker-volunteer':
 				return $value * $count_speakers + $value * $count_volunteers;
+			case 'per-speaker-volunteer-organizer':
+				return $value * $count_speakers + $value * $count_volunteers + $value * $count_organizers;
 			case 'per-attendee':
 				return $value * $count_attendees;
 			case 'per-day':

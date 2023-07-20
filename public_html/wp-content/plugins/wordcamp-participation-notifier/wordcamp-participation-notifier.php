@@ -30,8 +30,8 @@ class WordCamp_Participation_Notifier {
 
 		// Sync with the wp.org username changes.
 		add_filter( 'update_post_meta', array( $this, 'username_meta_update' ), 10, 4 );
-		add_filter( 'add_post_meta',    array( $this, 'username_meta_add' ), 10, 3 );
-		add_filter( 'delete_post_meta', array( $this, 'username_meta_delete' ), 10, 3 );
+		add_filter( 'delete_post_meta',     array( $this, 'username_meta_delete' ), 10, 3 );
+		add_action( 'wp_after_insert_post', array( $this, 'maybe_notify_on_post_save' ) );
 
 		add_action( 'camptix_rl_buyer_completed_registration', array( $this, 'primary_attendee_registered' ), 10, 2 );
 		add_action( 'camptix_rl_registration_confirmed',       array( $this, 'additional_attendee_confirmed_registration' ), 10, 2 );
@@ -98,26 +98,7 @@ class WordCamp_Participation_Notifier {
 	}
 
 	/**
-	 * Add the organizer or speaker badge when the User ID meta is added
-	 *
-	 * @param int    $object_id  ID of the object metadata is for.
-	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Metadata value. Serialized if non-scalar.
-	 */
-	public function username_meta_add( $object_id, $meta_key, $meta_value ) {
-		if ( '_wcpt_user_id' === $meta_key && $meta_value ) {
-			$post = get_post( $object_id );
-			if ( 'publish' !== $post->post_status ) {
-				return;
-			}
-
-			$this->add_activity( $post, $meta_value );
-			$this->add_badge( $post, $meta_value );
-		}
-	}
-
-	/**
-	 * Maybe add or remove the organizer or speaker badge when the User ID meta is updated
+	 * Maybe add mentor activity when the User ID meta is updated.
 	 *
 	 * @param int    $meta_id    ID of the metadata entry to update.
 	 * @param int    $object_id  ID of the object metadata is for.
@@ -127,22 +108,6 @@ class WordCamp_Participation_Notifier {
 	public function username_meta_update( $meta_id, $object_id, $meta_key, $meta_value ) {
 		$post       = get_post( $object_id );
 		$prev_value = get_post_meta( $object_id, $meta_key, true );
-
-		if ( '_wcpt_user_id' === $meta_key && $meta_value ) {
-			if ( 'publish' !== $post->post_status ) {
-				return;
-			}
-
-			$meta_value = absint( $meta_value );
-			$prev_value = absint( $prev_value );
-
-			if ( $prev_value && $prev_value !== $meta_value ) {
-				$this->maybe_remove_badge( $post, $prev_value );
-			}
-
-			$this->add_activity( $post, $meta_value );
-			$this->add_badge( $post, $meta_value );
-		}
 
 		if ( 'Mentor WordPress.org User Name' === $meta_key && $meta_value && $prev_value !== $meta_value ) {
 			// Username has already been validated by `Event_Admin::metabox_save()`.
@@ -163,6 +128,34 @@ class WordCamp_Participation_Notifier {
 			$prev_value = absint( get_post_meta( $object_id, $meta_key, true ) );
 			$this->maybe_remove_badge( $post, $prev_value );
 		}
+	}
+
+	/**
+	 * Add the organizer or speaker badge when notifiable post types are saved and User ID meta exists.
+	 *
+	 * @param  WP_Post $post The post object.
+	 */
+	public function maybe_notify_on_post_save( $post ) {
+		if ( wp_is_post_revision( $post ) ) {
+			return;
+		}
+
+		if ( 'publish' !== get_post_status( $post ) ) {
+			return;
+		}
+
+		if ( ! $this->is_post_notifiable( $post ) ) {
+			return;
+		}
+
+		$user_id = get_post_meta( $post_id, '_wcpt_user_id', true );
+
+		if ( empty( $user_id ) ) {
+			return;
+		}
+
+		$this->add_activity( $post, $user_id );
+		$this->add_badge( $post, $user_id );
 	}
 
 	/**

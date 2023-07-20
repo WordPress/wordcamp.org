@@ -67,6 +67,8 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
 			<file>./public_html/wp-content/sunrise.php</file>
+			<file>./public_html/wp-content/sunrise-events.php</file>
+			<file>./public_html/wp-content/sunrise-wordcamp.php</file>
 		</include>
 
 		<exclude>

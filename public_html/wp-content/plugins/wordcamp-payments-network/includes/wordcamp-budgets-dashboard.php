@@ -10,6 +10,12 @@ use WordCamp\Budgets_Dashboard\Reimbursement_Requests as Reimbursements_Dashboar
 use DateTimeInterface;
 use WP_CLI;
 
+defined( 'WPINC' ) || die();
+
+define( 'REDACTED_VALUE',               '[deleted for privacy]'    );
+define( 'REDACT_PAID_REQUESTS_CRON_ID', 'wcb_redact_paid_requests' );
+
+
 /*
  * This _plugin_ needs to be network-activated on the NextGen network so that things like
  * `WordCamp\Budgets_Dashboard\Sponsor_Invoices\update_index_row` run. This _file_ shouldn't be loaded, though,
@@ -19,10 +25,6 @@ if ( get_current_network_id() !== WORDCAMP_NETWORK_ID ) {
 	return;
 }
 
-defined( 'WPINC' ) or die();
-
-define( 'REDACTED_VALUE',               '[deleted for privacy]'    );
-define( 'REDACT_PAID_REQUESTS_CRON_ID', 'wcb_redact_paid_requests' );
 
 /*
  * Core functionality and helper functions shared between modules

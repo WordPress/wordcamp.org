@@ -424,6 +424,17 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			},
 		},
 
+		'per-organizer' : {
+			'label'    : 'per organizer',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'organizers',
+				} ).get( 'value' ) );
+			},
+		},
+
 		'per-speaker-volunteer' : {
 			'label'    : 'per speakers + volunteers',
 			'hasValue' : true,

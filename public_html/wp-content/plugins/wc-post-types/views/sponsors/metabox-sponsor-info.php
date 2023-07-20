@@ -310,7 +310,7 @@
 	</li>
 	<li>
 		<label for="_wcpt_sponsor_first_time_unsure">
-			<?php esc_html_e( 'Unsure', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'I don\'t know', 'wordcamporg' ); ?>
 		</label>
 		<input
 			type="radio"

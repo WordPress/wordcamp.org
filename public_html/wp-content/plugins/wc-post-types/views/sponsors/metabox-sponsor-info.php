@@ -293,7 +293,7 @@
 			id="_wcpt_sponsor_first_time_yes"
 			name="_wcpt_sponsor_first_time"
 			value="yes"
-			<?php echo 'yes' === $first_time  ? 'checked' : ''; ?>
+			<?php checked( $first_time, 'yes' ); ?>
 		/>
 	</li>
 	<li>
@@ -305,7 +305,7 @@
 			id="_wcpt_sponsor_first_time_no"
 			name="_wcpt_sponsor_first_time"
 			value="no"
-			<?php echo 'no' === $first_time ? 'checked' : ''; ?>
+			<?php checked( $first_time, 'no' ); ?>
 		/>
 	</li>
 	<li>
@@ -317,7 +317,7 @@
 			id="_wcpt_sponsor_first_time_unsure"
 			name="_wcpt_sponsor_first_time"
 			value="unsure"
-			<?php echo 'unsure' === $first_time ? 'checked' : ''; ?>
+			<?php checked( $first_time, 'unsure' ); ?>
 		/>
 	</li>
 </ul>

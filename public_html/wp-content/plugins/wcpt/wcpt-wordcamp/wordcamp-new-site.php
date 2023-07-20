@@ -52,7 +52,7 @@ class WordCamp_New_Site {
 				$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
 				$valid_url  = isset( $url['host'], $url['path'] );
 				$tld        = get_top_level_domain();
-				$network_id = "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+				$network_id = $valid_url && "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
 				?>
 
 				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>

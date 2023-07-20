@@ -69,15 +69,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			sprintf( __( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'wordcamporg' ), date( 'Y' ) )
 		);
 
-		$camptix->add_settings_field_helper(
-			'invoice-new-year-reset',
-			__( 'Yearly reset', 'wordcamporg' ),
-			'field_yesno',
-			'invoice',
-			// translators: %1$s is a date.
-			sprintf( __( 'Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)', 'wordcamporg' ), date( 'Y' ) )
-		);
-
 		add_settings_field(
 			'invoice-date-format',
 			__( 'Date format', 'wordcamporg' ),
@@ -166,9 +157,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		if ( isset( $input['invoice-active'] ) ) {
 			$output['invoice-active'] = (int) $input['invoice-active'];
 		}//end if
-		if ( isset( $input['invoice-new-year-reset'] ) ) {
-			$output['invoice-new-year-reset'] = (int) $input['invoice-new-year-reset'];
-		}//end if
 		if ( isset( $input['invoice-date-format'] ) ) {
 			$output['invoice-date-format'] = $input['invoice-date-format'];
 		}//end if
@@ -234,15 +222,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$opt     = get_option( 'camptix_options' );
 		$current = get_option( 'invoice_current_number', 1 );
 
-		$year = date( 'Y' );
-		if ( ! empty( $opt['invoice-new-year-reset'] ) ) {
-			if ( ! empty( $opt['invoice-current-year'] ) && $opt['invoice-current-year'] !== $year ) {
-				$current                     = 1;
-				$opt['invoice-current-year'] = $year;
-				update_option( 'camptix_options', $opt );
-			}//end if
-		}//end if
-
 		/**
 		 * Sets the current invoice number.
 		 *
@@ -251,11 +230,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$current = apply_filters( 'tix_invoice_current_number', $current );
 		update_option( 'invoice_current_number', $current + 1 );
 
-		if ( empty( $opt['invoice-new-year-reset'] ) ) {
-			return sprintf( '%s-%s', get_current_blog_id(), $current );
-		} else {
-			return sprintf( '%s-%s-%s', get_current_blog_id(), $year, $current );
-		}
+		return sprintf( '%s-%s', get_current_blog_id(), $current );
 	}
 
 	/**

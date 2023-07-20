@@ -12,7 +12,8 @@ const EVENTS_ROOT_BLOG_ID   = 47;
 const SITE_ID_CURRENT_SITE  = WORDCAMP_NETWORK_ID;
 
 define( 'WP_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/plugins' );
-define( 'SUT_WPMU_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/mu-plugins' ); // WPMU_PLUGIN_DIR will be in `WP_TESTS_DIR`.
+define( 'SUT_WP_CONTENT_DIR', __DIR__ . '/public_html/wp-content/' ); // WP_CONTENT_DIR will be in `WP_TESTS_DIR`.
+define( 'SUT_WPMU_PLUGIN_DIR', SUT_WP_CONTENT_DIR . '/mu-plugins' ); // WPMU_PLUGIN_DIR will be in `WP_TESTS_DIR`.
 
 $core_tests_directory = getenv( 'WP_TESTS_DIR' );
 
@@ -46,6 +47,7 @@ require_once( WP_PLUGIN_DIR . '/wordcamp-organizer-reminders/tests/bootstrap.php
 require_once WP_PLUGIN_DIR . '/wcpt/tests/bootstrap.php';
 require_once( WP_PLUGIN_DIR . '/wordcamp-remote-css/tests/bootstrap.php' );
 require_once WP_PLUGIN_DIR . '/wordcamp-speaker-feedback/tests/bootstrap.php';
+require_once WP_PLUGIN_DIR . '/wordcamp-payments-network/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/tests/bootstrap.php';
 
 /*

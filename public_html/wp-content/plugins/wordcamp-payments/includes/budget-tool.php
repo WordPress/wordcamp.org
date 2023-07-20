@@ -209,6 +209,7 @@ class WordCamp_Budget_Tool {
 		// The metadata is an array of arrays, so we can filter out the relevant item, pluck just the value, then retrieve it.
 		$count_speakers   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'speakers' ) ), 'value' ) );
 		$count_volunteers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'volunteers' ) ), 'value' ) );
+		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
 		$count_tracks     = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
@@ -219,6 +220,8 @@ class WordCamp_Budget_Tool {
 				return $value * $count_speakers;
 			case 'per-volunteer':
 				return $value * $count_volunteers;
+			case 'per-organizer':
+				return $value * $count_organizers;
 			case 'per-speaker-volunteer':
 				return $value * $count_speakers + $value * $count_volunteers;
 			case 'per-attendee':

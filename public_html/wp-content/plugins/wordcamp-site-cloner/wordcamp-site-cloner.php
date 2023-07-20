@@ -217,6 +217,10 @@ function get_wordcamp_sites() {
 
 	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org.
 
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php';
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
+
+	// Cancelled camps are often restarted in future years, especially after COVID.
 	$cloneable_post_statuses = array_merge(
 		WordCamp_Loader::get_public_post_statuses(),
 		array( 'wcpt-cancelled' )

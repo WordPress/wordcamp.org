@@ -171,6 +171,10 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
         </tr>
         <tr>
             <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
             <td class="amount">
                 <# if (data.variance_raw < 0) { #>
                 <a href="#" target="_blank" class="inspire"><?php esc_html_e( 'inspire me', 'wordcamporg' ); ?></a>

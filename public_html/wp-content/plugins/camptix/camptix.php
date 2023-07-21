@@ -116,8 +116,10 @@ class CampTix_Plugin {
 		add_shortcode( 'camptix', array( $this, 'shortcode_callback' ) );
 
 		// Prevent shortcode removal, slug change and page removal when tickets have been sold
-		// add_action( 'post_updated', array( $this, 'prevent_tickets_page_breaking_when_tickets_sold' ), 10, 3 );
-		add_action( 'wp_insert_post_empty_content', array( $this, 'prevent_tickets_page_breaking_when_tickets_sold' ), 10, 2 );
+		// add_action( 'post_updated', array( $this, 'maybe_prevent_tickets_page_update' ), 10, 3 );
+		add_action( 'wp_insert_post_empty_content', array( $this, 'maybe_prevent_tickets_page_update' ), 10, 2 );
+		add_action( 'admin_notices',                array( $this, 'show_tickets_page_update_warning' ) );
+		add_action( 'admin_footer',                 array( $this, 'show_tickets_page_update_warning_block_editor' ) );
 
 		// Hack to avoid object caching, see revenue report.
 		add_filter( 'get_post_metadata', array( $this, 'get_post_metadata' ), 10, 4 );
@@ -182,15 +184,13 @@ class CampTix_Plugin {
 		do_action( 'camptix_init' );
 	}
 
-	public function prevent_tickets_page_breaking_when_tickets_sold( $maybe_empty, $postarr ) {
-		$post_id = $postarr['ID'];
-
+	public function should_prevent_tickets_page_update( $post_id ) {
 		if ( wp_is_post_revision( $post_id ) ) {
-			return $maybe_empty;
+			return false;
 		}
 
 		if ( 'page' !== get_post_type( $post_id ) ) {
-			return $maybe_empty;
+			return false;
 		}
 
 		// Get the post data as it is, before update.
@@ -198,23 +198,31 @@ class CampTix_Plugin {
 
 		// Allow save if not tickets page.
 		if ( ! has_shortcode( $post_before->post_content, 'camptix' ) ) {
-			return $maybe_empty;
+			return false;
 		}
 
 		// Allow save until the page has been published.
 		if ( 'publish' !== $post_before->post_status ) {
-			return $maybe_empty;
+			return false;
 		}
 
 		// Allow save if no tickets bought yet.
 		if ( ! wp_count_posts( 'tix_attendee' )->publish ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	public function maybe_prevent_tickets_page_update( $maybe_empty, $postarr ) {
+		if ( ! $this->should_prevent_tickets_page_update( $postarr['ID'] ) ) {
 			return $maybe_empty;
 		}
 
 		// Cannot remove the camptix shortcode anymore.
 		if ( ! has_shortcode( $postarr['post_content'], 'camptix' ) ) {
 			wp_die(
-				__( 'Tickets have been sold, so you cannot remove the <pre>camptix</pre> shortcode from the page anymore.', 'wordcamporg' ) . ' ' .
+				__( 'You cannot remove the <code>camptix</code> shortcode from the page because tickets have been sold.', 'wordcamporg' ) . ' ' .
 				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
 			);
 			return false;
@@ -223,7 +231,7 @@ class CampTix_Plugin {
 		// Cannot change the visibility of the page anymore.
 		if ( 'publish' !== $postarr['post_status'] || ! empty( $postarr['post_password'] ) ) {
 			wp_die(
-				__( 'Tickets have been sold, so you cannot unpublish or make the page private anymore.', 'wordcamporg' ) . ' ' .
+				__( 'You cannot unpublish or make the page private because tickets have been sold.', 'wordcamporg' ) . ' ' .
 				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
 			);
 			return false;
@@ -232,13 +240,81 @@ class CampTix_Plugin {
 		// Cannot change the slug anymore.
 		if ( $postarr['post_name'] !== $post_before->post_name ) {
 			wp_die(
-				__( 'Tickets have been sold, so you cannot change the page slug anymore.', 'wordcamporg' ) . ' ' .
+				__( 'You cannot change the page slug because tickets have been sold.', 'wordcamporg' ) . ' ' .
 				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
 			);
 			return false;
 		}
 
 		return $maybe_empty;
+	}
+
+	/**
+	 * Get the message maybe shown in editor views.
+	 * NB! Block editor notices do not support HTML and all tags will be removed.
+	 */
+	public function get_prevent_tickets_page_update_warning_message() {
+		return __( 'You cannot remove <code>camptix</code> shortcode, unpublish the page, make it private or change the slug because tickets have been sold.', 'wordcamporg' ) . ' ' .
+			__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
+	}
+
+	public function show_tickets_page_update_warning_block_editor() {
+		$screen = get_current_screen();
+
+		if ( ! $screen->is_block_editor() ) {
+			return;
+		}
+
+		if ( 'post' !== $screen->base ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['post'] ) ) {
+			return;
+		}
+
+		if ( ! $this->should_prevent_tickets_page_update( $_GET['post'] ) ) {
+			return;
+		}
+
+		$message = $this->get_prevent_tickets_page_update_warning_message(); ?>
+
+		<script type="text/javascript">
+			( function( wp ) {
+				wp.data.dispatch( 'core/notices' ).createNotice(
+					'warning',
+					'<?php echo esc_html( wp_strip_all_tags( $message ) ); ?>',
+					{
+						isDismissible: false,
+					}
+				);
+			} )( window.wp );
+		</script>
+	<?php }
+
+	public function show_tickets_page_update_warning() {
+		$screen = get_current_screen();
+
+		if ( 'post' !== $screen->base ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['post'] ) ) {
+			return;
+		}
+
+		if ( ! $this->should_prevent_tickets_page_update( $_GET['post'] ) ) {
+			return;
+		}
+
+		$class   = 'notice notice-warning';
+		$message = $this->get_prevent_tickets_page_update_warning_message();
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$message = wp_strip_all_tags( $message );
+		}
+
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_post( $message ) );
 	}
 
 	/**

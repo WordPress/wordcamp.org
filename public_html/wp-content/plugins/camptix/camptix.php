@@ -115,6 +115,10 @@ class CampTix_Plugin {
 		// Our main shortcode
 		add_shortcode( 'camptix', array( $this, 'shortcode_callback' ) );
 
+		// Prevent shortcode removal, slug change and page removal when tickets have been sold
+		// add_action( 'post_updated', array( $this, 'prevent_tickets_page_breaking_when_tickets_sold' ), 10, 3 );
+		add_action( 'wp_insert_post_empty_content', array( $this, 'prevent_tickets_page_breaking_when_tickets_sold' ), 10, 2 );
+
 		// Hack to avoid object caching, see revenue report.
 		add_filter( 'get_post_metadata', array( $this, 'get_post_metadata' ), 10, 4 );
 
@@ -176,6 +180,65 @@ class CampTix_Plugin {
 		add_action( 'admin_footer-edit.php', array( $this, 'append_post_status_bulk_edit' ) );
 
 		do_action( 'camptix_init' );
+	}
+
+	public function prevent_tickets_page_breaking_when_tickets_sold( $maybe_empty, $postarr ) {
+		$post_id = $postarr['ID'];
+
+		if ( wp_is_post_revision( $post_id ) ) {
+			return $maybe_empty;
+		}
+
+		if ( 'page' !== get_post_type( $post_id ) ) {
+			return $maybe_empty;
+		}
+
+		// Get the post data as it is, before update.
+		$post_before = get_post( $post_id );
+
+		// Allow save if not tickets page.
+		if ( ! has_shortcode( $post_before->post_content, 'camptix' ) ) {
+			return $maybe_empty;
+		}
+
+		// Allow save until the page has been published.
+		if ( 'publish' !== $post_before->post_status ) {
+			return $maybe_empty;
+		}
+
+		// Allow save if no tickets bought yet.
+		if ( ! wp_count_posts( 'tix_attendee' )->publish ) {
+			return $maybe_empty;
+		}
+
+		// Cannot remove the camptix shortcode anymore.
+		if ( ! has_shortcode( $postarr['post_content'], 'camptix' ) ) {
+			wp_die(
+				__( 'Tickets have been sold, so you cannot remove the <pre>camptix</pre> shortcode from the page anymore.', 'wordcamporg' ) . ' ' .
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
+			);
+			return false;
+		}
+
+		// Cannot change the visibility of the page anymore.
+		if ( 'publish' !== $postarr['post_status'] || ! empty( $postarr['post_password'] ) ) {
+			wp_die(
+				__( 'Tickets have been sold, so you cannot unpublish or make the page private anymore.', 'wordcamporg' ) . ' ' .
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
+			);
+			return false;
+		}
+
+		// Cannot change the slug anymore.
+		if ( $postarr['post_name'] !== $post_before->post_name ) {
+			wp_die(
+				__( 'Tickets have been sold, so you cannot change the page slug anymore.', 'wordcamporg' ) . ' ' .
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
+			);
+			return false;
+		}
+
+		return $maybe_empty;
 	}
 
 	/**

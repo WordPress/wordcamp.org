@@ -591,6 +591,10 @@ class WCOR_Mailer {
 			return $ready;
 		}
 
+		if ( ! in_array( $email->ID, $sent_email_ids ) ) {
+			return $ready;
+		}
+
 		$send_when  = get_post_meta( $email->ID, 'wcor_send_when', true );
 		$start_date = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 		$end_date   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
@@ -599,43 +603,41 @@ class WCOR_Mailer {
 			$end_date = $start_date;
 		}
 
-		if ( ! in_array( $email->ID, $sent_email_ids ) ) {
-			if ( 'wcor_send_before' == $send_when ) {
-				$days_before = absint( get_post_meta( $email->ID, 'wcor_send_days_before', true ) );
+		if ( 'wcor_send_before' == $send_when ) {
+			$days_before = absint( get_post_meta( $email->ID, 'wcor_send_days_before', true ) );
 
-				if ( $start_date && $days_before ) {
-					$send_date = $start_date - ( $days_before * DAY_IN_SECONDS );
+			if ( $start_date && $days_before ) {
+				$send_date = $start_date - ( $days_before * DAY_IN_SECONDS );
+
+				if ( $send_date <= current_time( 'timestamp' ) ) {
+					$ready = true;
+				}
+			}
+		} elseif ( 'wcor_send_after' == $send_when ) {
+			/**
+			 * Do not send emails with "send X days after the camp ends" trigger if WordCamp didn't happen.
+			 * All WordCamps that happen, should have public status.
+			 */
+			if ( in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
+				$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+
+				if ( $end_date && $days_after ) {
+					$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
 
 					if ( $send_date <= current_time( 'timestamp' ) ) {
 						$ready = true;
 					}
 				}
-			} elseif ( 'wcor_send_after' == $send_when ) {
-				/**
-				 * Do not send emails with "send X days after the camp ends" trigger if WordCamp didn't happen.
-				 * All WordCamps that happen, should have public status.
-				 */
-				if ( in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
-					$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+			}
+		} elseif ( 'wcor_send_after_pending' == $send_when ) {
+			$days_after_pending                  = absint( get_post_meta( $email->ID, 'wcor_send_days_after_pending', true ) );
+			$timestamp_added_to_pending_schedule = absint( get_post_meta( $wordcamp->ID, '_timestamp_added_to_planning_schedule', true ) );
 
-					if ( $end_date && $days_after ) {
-						$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
+			if ( $days_after_pending && $timestamp_added_to_pending_schedule ) {
+				$execution_timestamp = $timestamp_added_to_pending_schedule + ( $days_after_pending * DAY_IN_SECONDS );
 
-						if ( $send_date <= current_time( 'timestamp' ) ) {
-							$ready = true;
-						}
-					}
-				}
-			} elseif ( 'wcor_send_after_pending' == $send_when ) {
-				$days_after_pending                  = absint( get_post_meta( $email->ID, 'wcor_send_days_after_pending', true ) );
-				$timestamp_added_to_pending_schedule = absint( get_post_meta( $wordcamp->ID, '_timestamp_added_to_planning_schedule', true ) );
-
-				if ( $days_after_pending && $timestamp_added_to_pending_schedule ) {
-					$execution_timestamp = $timestamp_added_to_pending_schedule + ( $days_after_pending * DAY_IN_SECONDS );
-
-					if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
-						$ready = true;
-					}
+				if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
+					$ready = true;
 				}
 			} elseif ( 'wcor_send_after_and_no_report' == $send_when ) {
 				$days_after_and_no_report = absint( get_post_meta( $email->ID, 'wcor_send_days_after_and_no_report', true ) );

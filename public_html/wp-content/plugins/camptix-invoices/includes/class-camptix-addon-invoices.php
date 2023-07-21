@@ -334,6 +334,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		if ( empty( $invoice_metas['email'] ) && is_email( $invoice_metas['email'] ) ) {
 			return false;
 		}//end if
+
 		$invoice_pdf = ctx_get_invoice( $invoice_id );
 		$attachments = array( $invoice_pdf );
 		$opt         = get_option( 'camptix_options' );
@@ -348,6 +349,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 				'Content-type: text/html; charset=UTF-8',
 			)
 		);
+
 		$message = array(
 			__( 'Hello,', 'wordcamporg' ),
 			// translators: event name.
@@ -359,6 +361,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			// translators: event name.
 			sprintf( __( 'The %s team', 'wordcamporg' ), sanitize_text_field( $opt['event_name'] ) ),
 		);
+
 		$message = implode( PHP_EOL, $message );
 		$message = '<p>' . nl2br( $message ) . '</p>';
 		wp_mail( $invoice_metas['email'], $subject, $message, $headers, $attachments );

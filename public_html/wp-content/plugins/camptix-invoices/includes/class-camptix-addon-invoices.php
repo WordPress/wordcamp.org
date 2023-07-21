@@ -336,6 +336,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 
 		$invoice_pdf = ctx_get_invoice( $invoice_id );
+		if ( empty( $invoice_pdf ) ) {
+			return false;
+		}
+
 		$attachments = array( $invoice_pdf );
 		$opt         = get_option( 'camptix_options' );
 

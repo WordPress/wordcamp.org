@@ -394,7 +394,7 @@ function get_all_mentor_data() {
 		$data = array_merge( $data, get_mentor_data( $username ) );
 	}
 
-	usort(
+	uasort(
 		$data,
 		function( $a, $b ) {
 			return strnatcasecmp( $a['name'], $b['name'] );

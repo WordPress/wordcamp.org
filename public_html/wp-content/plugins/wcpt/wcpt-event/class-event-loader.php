@@ -85,7 +85,12 @@ abstract class Event_Loader {
 			return;
 		}
 
+		if ( ! $query->is_main_query() ) {
+			return;
+		}
+
 		// Bail if post type is something other than WordCamp.
+		// is_singular check breaks the frontpage so let's do it this way.
 		if ( ! $query->is_post_type_archive( WCPT_POST_TYPE_ID ) && ! ( isset( $query->query_vars['post_type'] ) && WCPT_POST_TYPE_ID === $query->query_vars['post_type'] ) ) {
 			return;
 		}

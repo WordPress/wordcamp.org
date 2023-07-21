@@ -17,7 +17,7 @@ abstract class Event_Loader {
 		add_action( 'plugins_loaded', array( $this, 'includes' ) );
 		add_action( 'init', array( $this, 'register_post_types' ) );
 		add_action( 'init', array( $this, 'register_post_statuses' ) );
-		add_filter( 'pre_get_posts', array( $this, 'query_public_statuses_on_archives' ) );
+		add_filter( 'pre_get_posts', array( $this, 'query_public_statuses' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_weekly_cron_interval' ) );
 	}
 
@@ -80,12 +80,13 @@ abstract class Event_Loader {
 	 *
 	 * @param WP_Query $query
 	 */
-	public function query_public_statuses_on_archives( $query ) {
-		if ( ! $query->is_post_type_archive( WCPT_POST_TYPE_ID ) ) {
+	public function query_public_statuses( $query ) {
+		if ( is_admin() ) {
 			return;
 		}
 
-		if ( is_admin() ) {
+		// Bail if post type is something other than WordCamp.
+		if ( ! $query->is_post_type_archive( WCPT_POST_TYPE_ID ) && ! ( isset( $query->query_vars['post_type'] ) && WCPT_POST_TYPE_ID === $query->query_vars['post_type'] ) ) {
 			return;
 		}
 

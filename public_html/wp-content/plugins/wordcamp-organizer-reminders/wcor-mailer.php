@@ -548,9 +548,9 @@ class WCOR_Mailer {
 			}
 
 			foreach ( $reminder_emails as $email ) {
-				$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
-
 				if ( $this->timed_email_is_ready_to_send( $wordcamp, $email, $sent_email_ids ) ) {
+					$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
+
 					if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
 						$sent_email_ids[] = $email->ID;
 						update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );

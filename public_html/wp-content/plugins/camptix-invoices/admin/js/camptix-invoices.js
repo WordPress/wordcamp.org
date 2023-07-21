@@ -3,7 +3,7 @@
 jQuery( document ).ready( function( $ ) {
 	function toggleInvoiceDetailsForm( showForm ) {
 		const $camptixInvoiceDetailsForm = $( '.camptix-invoice-details' );
-		const $camptixInvoiceDetailsFormFields = $camptixInvoiceDetailsForm.find( 'input,textarea' );
+		const $camptixInvoiceDetailsFormFields = $camptixInvoiceDetailsForm.find( 'input,select' );
 
 		if ( showForm ) {
 			$camptixInvoiceDetailsForm.show();

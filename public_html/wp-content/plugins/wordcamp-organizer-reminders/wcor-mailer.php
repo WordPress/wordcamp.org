@@ -552,16 +552,6 @@ class WCOR_Mailer {
 					continue;
 				}
 
-				$send_when = get_post_meta( $email->ID, 'wcor_send_when', true );
-
-				/**
-				 * Do not send emails with "send X days after the camp ends" trigger if WordCamp didn't happen.
-				 * All WordCamps that happen, should have public status.
-				 */
-				if ( 'wcor_send_after' === $send_when && ! in_array( $post->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
-					continue;
-				}
-
 				$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
 
 				if ( ! $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
@@ -621,13 +611,19 @@ class WCOR_Mailer {
 					}
 				}
 			} elseif ( 'wcor_send_after' == $send_when ) {
-				$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+				/**
+				 * Do not send emails with "send X days after the camp ends" trigger if WordCamp didn't happen.
+				 * All WordCamps that happen, should have public status.
+				 */
+				if ( in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
+					$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
 
-				if ( $end_date && $days_after ) {
-					$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
+					if ( $end_date && $days_after ) {
+						$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
 
-					if ( $send_date <= current_time( 'timestamp' ) ) {
-						$ready = true;
+						if ( $send_date <= current_time( 'timestamp' ) ) {
+							$ready = true;
+						}
 					}
 				}
 			} elseif ( 'wcor_send_after_pending' == $send_when ) {

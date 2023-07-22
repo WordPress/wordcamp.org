@@ -611,6 +611,8 @@ function modify_default_options( $options ) {
 	$options['payment_options_stripe'] = array( 'api_predef' => 'wpcs-sandbox'     );
 	$options['payment_methods']        = array( 'paypal'     => false              );
 	$options['payment_options_paypal'] = array( 'api_predef' => 'wordcamp-sandbox' );
+	$options['invoice-active']         = true;
+	$options['invoice-vat-number']     = true;
 
 	return $options;
 }

@@ -622,9 +622,9 @@ function modify_default_options( $options ) {
 /**
  * Set Camptix Invoices company address based on paymenth methods enabled.
  *
- * @param  array  $options Camptix options.
+ * @param  array $options Camptix options.
  *
- * @return array           Camptix options.
+ * @return array          Camptix options.
  */
 function handle_invoices_company( $options ) {
 	if ( ! $options['invoice-active'] ) {

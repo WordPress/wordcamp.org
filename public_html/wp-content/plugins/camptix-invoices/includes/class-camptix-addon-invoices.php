@@ -68,15 +68,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			__( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'wordcamporg' )
 		);
 
-		$camptix->add_settings_field_helper(
-			'invoice-new-year-reset',
-			__( 'Yearly reset', 'wordcamporg' ),
-			'field_yesno',
-			'invoice',
-			// translators: %1$s is a date.
-			sprintf( __( 'Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)', 'wordcamporg' ), date( 'Y' ) )
-		);
-
 		add_settings_field(
 			'invoice-date-format',
 			__( 'Date format', 'wordcamporg' ),
@@ -95,6 +86,15 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			'field_yesno',
 			'invoice',
 			__( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' )
+		);
+
+		$camptix->add_settings_field_helper(
+			'invoice-new-year-reset',
+			__( 'Yearly reset', 'wordcamporg' ),
+			'field_yesno',
+			'invoice',
+			// translators: %1$s is a year.
+			sprintf( __( 'Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)', 'wordcamporg' ), wp_date( 'Y' ) )
 		);
 
 		add_settings_field(

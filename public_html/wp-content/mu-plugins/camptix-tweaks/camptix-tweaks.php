@@ -633,6 +633,8 @@ function handle_invoices_company( $options ) {
 
 	$can_use_wpcs = array();
 
+	$wpcs_address = "WordPress Community Support, PBC\r\n660 4th Street #119\r\nSan Francisco CA 94107\r\nTax ID: 81-0896291";
+
 	// List of allowed predefined payment method api accounts.
 	$wpcs_allowed_predef = array(
 		'wpcs-sandbox',
@@ -667,11 +669,16 @@ function handle_invoices_company( $options ) {
 	 * If all enabled payment methods can use WPCS, force the invoice company details.
 	 */
 	if ( $options['payment_methods'] === $can_use_wpcs ) {
-		$options['invoice-company'] = "WordPress Community Support, PBC\r\n660 4th Street #119\r\nSan Francisco CA 94107\r\nTax ID: 81-0896291";
+		$options['invoice-company'] = $wpcs_address;
 
 		// Hide the field, since we are forcing the value to it.
 		add_filter( 'camptix_invoices_company_override', '__return_true' );
 	} else {
+		// Reset company if it is WPCS.
+		if ( $options['invoice-company'] === $wpcs_address ) {
+			$options['invoice-company'] = get_bloginfo( 'name' );
+		}
+
 		// Show notice about updating company info.
 		add_action( 'admin_notices', __NAMESPACE__ . '\show_invoices_company_notice' );
 	}

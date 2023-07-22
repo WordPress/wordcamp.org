@@ -116,7 +116,6 @@ class CampTix_Plugin {
 		add_shortcode( 'camptix', array( $this, 'shortcode_callback' ) );
 
 		// Prevent shortcode removal, slug change and page removal when tickets have been sold
-		// add_action( 'post_updated', array( $this, 'maybe_prevent_tickets_page_update' ), 10, 3 );
 		add_action( 'wp_insert_post_empty_content', array( $this, 'maybe_prevent_tickets_page_update' ), 10, 2 );
 		add_action( 'admin_notices',                array( $this, 'show_tickets_page_update_warning' ) );
 		add_action( 'admin_footer',                 array( $this, 'show_tickets_page_update_warning_block_editor' ) );
@@ -182,160 +181,6 @@ class CampTix_Plugin {
 		add_action( 'admin_footer-edit.php', array( $this, 'append_post_status_bulk_edit' ) );
 
 		do_action( 'camptix_init' );
-	}
-
-	public function should_prevent_tickets_page_update( $post_id ) {
-		if ( wp_is_post_revision( $post_id ) ) {
-			return false;
-		}
-
-		if ( 'page' !== get_post_type( $post_id ) ) {
-			return false;
-		}
-
-		// Get the post data as it is, before update.
-		$post_before = get_post( $post_id );
-
-		// Allow save if not tickets page.
-		if ( ! has_shortcode( $post_before->post_content, 'camptix' ) ) {
-			return false;
-		}
-
-		// Allow save until the page has been published.
-		if ( 'publish' !== $post_before->post_status ) {
-			return false;
-		}
-
-		// Allow save if no tickets bought yet.
-		if ( ! wp_count_posts( 'tix_attendee' )->publish ) {
-			return false;
-		}
-
-		return true;
-	}
-
-	public function maybe_prevent_tickets_page_update( $maybe_empty, $postarr ) {
-		if ( ! $this->should_prevent_tickets_page_update( $postarr['ID'] ) ) {
-			return $maybe_empty;
-		}
-
-		// Cannot remove the camptix shortcode anymore.
-		if ( ! has_shortcode( $postarr['post_content'], 'camptix' ) ) {
-			$maybe_empty = true;
-			$message =
-				__( 'You cannot remove the <code>camptix</code> shortcode from the page because tickets have been sold.', 'wordcamporg' ) . ' ' .
-				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
-		}
-
-		// Cannot change the visibility of the page anymore.
-		if ( 'publish' !== $postarr['post_status'] || ! empty( $postarr['post_password'] ) ) {
-			$maybe_empty = true;
-			$message =
-				__( 'You cannot unpublish or make the page private because tickets have been sold.', 'wordcamporg' ) . ' ' .
-				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
-		}
-
-		// Cannot change the slug anymore.
-		if ( $postarr['post_name'] !== $post_before->post_name ) {
-			$maybe_empty = true;
-			$message =
-				__( 'You cannot change the page slug because tickets have been sold.', 'wordcamporg' ) . ' ' .
-				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
-		}
-
-		// Should update be prevented?
-		if ( $maybe_empty ) {
-			if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
-				/**
-				 * If page should not be updated and save request comes from REST API (eg. block editor), send error message
-				 * and status code to prevent the editor showing success message.
-				 */
-				add_filter( 'rest_post_dispatch', function( $response ) use ( $message ) {
-					$response->set_data( array(
-						'code'    => 'prevented_tickets_page_breakage',
-						'message' => $message,
-						'data'    => array(
-							'status'	=> 400,
-						),
-					) );
-
-					return $response;
-				} );
-			} else {
-				// Save request is coming from classic editor or quick edit, send error message.
-				wp_die( $message );
-			}
-		}
-
-		return $maybe_empty;
-	}
-
-	/**
-	 * Get the message maybe shown in editor views.
-	 * NB! Block editor notices do not support HTML and all tags will be removed.
-	 */
-	public function get_prevent_tickets_page_update_warning_message() {
-		return __( 'You cannot remove <code>camptix</code> shortcode, unpublish the page, make it private or change the slug because tickets have been sold.', 'wordcamporg' ) . ' ' .
-			__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
-	}
-
-	public function show_tickets_page_update_warning_block_editor() {
-		$screen = get_current_screen();
-
-		if ( ! $screen->is_block_editor() ) {
-			return;
-		}
-
-		if ( 'post' !== $screen->base ) {
-			return;
-		}
-
-		if ( ! isset( $_GET['post'] ) ) {
-			return;
-		}
-
-		if ( ! $this->should_prevent_tickets_page_update( $_GET['post'] ) ) {
-			return;
-		}
-
-		$message = $this->get_prevent_tickets_page_update_warning_message(); ?>
-
-		<script type="text/javascript">
-			( function( wp ) {
-				wp.data.dispatch( 'core/notices' ).createNotice(
-					'warning',
-					'<?php echo esc_html( wp_strip_all_tags( $message ) ); ?>',
-					{
-						isDismissible: false,
-					}
-				);
-			} )( window.wp );
-		</script>
-	<?php }
-
-	public function show_tickets_page_update_warning() {
-		$screen = get_current_screen();
-
-		if ( 'post' !== $screen->base ) {
-			return;
-		}
-
-		if ( ! isset( $_GET['post'] ) ) {
-			return;
-		}
-
-		if ( ! $this->should_prevent_tickets_page_update( $_GET['post'] ) ) {
-			return;
-		}
-
-		$class   = 'notice notice-warning';
-		$message = $this->get_prevent_tickets_page_update_warning_message();
-
-		if ( ! current_user_can( 'manage_options' ) ) {
-			$message = wp_strip_all_tags( $message );
-		}
-
-		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_post( $message ) );
 	}
 
 	/**
@@ -5553,6 +5398,198 @@ class CampTix_Plugin {
 
 		wp_enqueue_script( 'camptix' ); // js in footer
 		return $this->shortcode_contents;
+	}
+
+	/**
+	 * Detect condition where tickets page updates might break things.
+	 *
+	 * @param  integer $post_id Post ID to test.
+	 *
+	 * @return boolean          True if updating page can break things.
+	 */
+	public function should_prevent_tickets_page_update( $post_id ) {
+		if ( wp_is_post_revision( $post_id ) ) {
+			return false;
+		}
+
+		if ( 'page' !== get_post_type( $post_id ) ) {
+			return false;
+		}
+
+		// Get the post data as it is, before update.
+		$post_before = get_post( $post_id );
+
+		// Allow save if not tickets page.
+		if ( ! has_shortcode( $post_before->post_content, 'camptix' ) ) {
+			return false;
+		}
+
+		// Allow save until the page has been published.
+		if ( 'publish' !== $post_before->post_status ) {
+			return false;
+		}
+
+		// Allow save if no tickets bought yet.
+		if ( ! wp_count_posts( 'tix_attendee' )->publish ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * On tickets page update, check if updates are something that can break things after tickets page
+	 * have been published and tickets have been sold. Camptix send ticket emails with links to the
+	 * tickets page, and certain changes to the page do break those links. By not allowing certain updates,
+	 * we try to mitigate the risk of organisers doing odd stuff after ticket sales has opened.
+	 *
+	 * Hooked filter `wp_insert_post_empty_content` only short circuits the save, so we need to handle
+	 * sending meaningful error message ourselves. Otherwise the post wouldn't just update and user would
+	 * get confused with not seeing the applied changes.
+	 *
+	 * @param  boolean $maybe_empty Whether the post should be considered "empty".
+	 * @param  array   $postarr     Array of post data.
+	 *
+	 * @return boolean              Whether the post should be considered "empty". When update should be prevented, send error message.
+	 */
+	public function maybe_prevent_tickets_page_update( $maybe_empty, $postarr ) {
+		if ( ! $this->should_prevent_tickets_page_update( $postarr['ID'] ) ) {
+			return $maybe_empty;
+		}
+
+		// Cannot remove the camptix shortcode anymore.
+		if ( ! has_shortcode( $postarr['post_content'], 'camptix' ) ) {
+			$maybe_empty = true;
+			$message =
+				__( 'You cannot remove the <code>camptix</code> shortcode from the page because tickets have been sold.', 'wordcamporg' ) . ' ' .
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
+		}
+
+		// Cannot change the visibility of the page anymore.
+		if ( 'publish' !== $postarr['post_status'] || ! empty( $postarr['post_password'] ) ) {
+			$maybe_empty = true;
+			$message =
+				__( 'You cannot unpublish or make the page private because tickets have been sold.', 'wordcamporg' ) . ' ' .
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
+		}
+
+		// Cannot change the slug anymore.
+		if ( $postarr['post_name'] !== $post_before->post_name ) {
+			$maybe_empty = true;
+			$message =
+				__( 'You cannot change the page slug because tickets have been sold.', 'wordcamporg' ) . ' ' .
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
+		}
+
+		// Should update be prevented?
+		if ( $maybe_empty ) {
+			if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+				/**
+				 * If page should not be updated and save request comes from REST API (eg. block editor), send error message
+				 * and status code to prevent the editor showing success message.
+				 */
+				add_filter( 'rest_post_dispatch', function( $response ) use ( $message ) {
+					$response->set_data( array(
+						'code'    => 'prevented_tickets_page_breakage',
+						'message' => $message,
+						'data'    => array(
+							'status'	=> 400,
+						),
+					) );
+
+					return $response;
+				} );
+			} else {
+				// Save request is coming from classic editor or quick edit, send error message.
+				wp_die( $message );
+			}
+		}
+
+		return $maybe_empty;
+	}
+
+	/**
+	 * Get the message shown in editor views.
+	 * NB! Block editor notices do not support HTML and all tags will be removed.
+	 *
+	 * @return string Message content.
+	 */
+	public function get_prevent_tickets_page_update_warning_message() {
+		return __( 'You cannot remove <code>camptix</code> shortcode, unpublish the page, make it private or change the slug because tickets have been sold.', 'wordcamporg' ) . ' ' .
+			__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
+	}
+
+	/**
+	 * Maybe show the warning message on block editor when editing tickets page.
+	 */
+	public function show_tickets_page_update_warning_block_editor() {
+		$screen = get_current_screen();
+
+		if ( ! $screen->is_block_editor() ) {
+			return;
+		}
+
+		if ( 'post' !== $screen->base ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['post'] ) ) {
+			return;
+		}
+
+		/**
+		 * Check that page meets conditions when update should be prevented.
+		 * This check takes also care of checking that the page is actually tickets page.
+		 */
+		if ( ! $this->should_prevent_tickets_page_update( $_GET['post'] ) ) {
+			return;
+		}
+
+		$message = $this->get_prevent_tickets_page_update_warning_message(); ?>
+
+		<script type="text/javascript">
+			( function( wp ) {
+				wp.data.dispatch( 'core/notices' ).createNotice(
+					'warning',
+					'<?php echo esc_html( wp_strip_all_tags( $message ) ); ?>',
+					{
+						isDismissible: false,
+					}
+				);
+			} )( window.wp );
+		</script>
+	<?php }
+
+	/**
+	 * Maybe show the warning message on classic editor when editing tickets page.
+	 */
+	public function show_tickets_page_update_warning() {
+		$screen = get_current_screen();
+
+		if ( 'post' !== $screen->base ) {
+			return;
+		}
+
+		if ( ! isset( $_GET['post'] ) ) {
+			return;
+		}
+
+		/**
+		 * Check that page meets conditions when update should be prevented.
+		 * This check takes also care of checking that the page is actually tickets page.
+		 */
+		if ( ! $this->should_prevent_tickets_page_update( $_GET['post'] ) ) {
+			return;
+		}
+
+		$class   = 'notice notice-warning';
+		$message = $this->get_prevent_tickets_page_update_warning_message();
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$message = wp_strip_all_tags( $message );
+		}
+
+		printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_post( $message ) );
 	}
 
 	/**

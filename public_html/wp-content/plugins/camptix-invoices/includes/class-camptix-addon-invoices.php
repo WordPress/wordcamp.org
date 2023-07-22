@@ -347,7 +347,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	public static function create_invoice_document( $invoice_id ) {
 
 		$camptix_opts   = get_option( 'camptix_options' );
-		$date_format 		= ! empty( $camptix_opts['invoice-date-format'] ) ? $camptix_opts['invoice-date-format'] : get_option( 'date_format' );
+		$date_format    = ! empty( $camptix_opts['invoice-date-format'] ) ? $camptix_opts['invoice-date-format'] : get_option( 'date_format' );
 
 		$invoice_number = get_post_meta( $invoice_id, 'invoice_number', true );
 		$invoice_date   = get_the_date( $date_format, $invoice_id );

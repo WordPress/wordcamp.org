@@ -221,29 +221,50 @@ class CampTix_Plugin {
 
 		// Cannot remove the camptix shortcode anymore.
 		if ( ! has_shortcode( $postarr['post_content'], 'camptix' ) ) {
-			wp_die(
+			$maybe_empty = true;
+			$message =
 				__( 'You cannot remove the <code>camptix</code> shortcode from the page because tickets have been sold.', 'wordcamporg' ) . ' ' .
-				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
-			);
-			return false;
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
 		}
 
 		// Cannot change the visibility of the page anymore.
 		if ( 'publish' !== $postarr['post_status'] || ! empty( $postarr['post_password'] ) ) {
-			wp_die(
+			$maybe_empty = true;
+			$message =
 				__( 'You cannot unpublish or make the page private because tickets have been sold.', 'wordcamporg' ) . ' ' .
-				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
-			);
-			return false;
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
 		}
 
 		// Cannot change the slug anymore.
 		if ( $postarr['post_name'] !== $post_before->post_name ) {
-			wp_die(
+			$maybe_empty = true;
+			$message =
 				__( 'You cannot change the page slug because tickets have been sold.', 'wordcamporg' ) . ' ' .
-				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' )
-			);
-			return false;
+				__( 'Doing that would break the links on ticket emails sent to attendees.', 'wordcamporg' );
+		}
+
+		// Should update be prevented?
+		if ( $maybe_empty ) {
+			if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+				/**
+				 * If page should not be updated and save request comes from REST API (eg. block editor), send error message
+				 * and status code to prevent the editor showing success message.
+				 */
+				add_filter( 'rest_post_dispatch', function( $response ) use ( $message ) {
+					$response->set_data( array(
+						'code'    => 'prevented_tickets_page_breakage',
+						'message' => $message,
+						'data'    => array(
+							'status'	=> 400,
+						),
+					) );
+
+					return $response;
+				} );
+			} else {
+				// Save request is coming from classic editor or quick edit, send error message.
+				wp_die( $message );
+			}
 		}
 
 		return $maybe_empty;

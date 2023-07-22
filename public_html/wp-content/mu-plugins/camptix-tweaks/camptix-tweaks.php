@@ -40,6 +40,7 @@ add_action( 'camptix_load_addons',                           __NAMESPACE__ . '\l
 add_filter( 'camptix_metabox_questions_default_fields_list', __NAMESPACE__ . '\modify_default_fields_list'          );
 add_filter( 'camptix_capabilities',                          __NAMESPACE__ . '\modify_capabilities'                 );
 add_filter( 'camptix_default_options',                       __NAMESPACE__ . '\modify_default_options'              );
+add_filter( 'camptix_options',                               __NAMESPACE__ . '\handle_invoices_company'             );
 add_filter( 'camptix_options',                               __NAMESPACE__ . '\modify_email_templates'              );
 add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\switch_email_template'               );
 add_filter( 'camptix_html_message',                          __NAMESPACE__ . '\render_html_emails',           10, 2 );
@@ -613,8 +614,95 @@ function modify_default_options( $options ) {
 	$options['payment_options_paypal'] = array( 'api_predef' => 'wordcamp-sandbox' );
 	$options['invoice-active']         = true;
 	$options['invoice-vat-number']     = true;
+	$options['invoice-company']        = get_bloginfo( 'name' );
 
 	return $options;
+}
+
+/**
+ * TODO
+ *
+ * @param  [type] $options [description]
+ * @return [type]          [description]
+ */
+function handle_invoices_company( $options ) {
+	if ( ! $options['invoice-active'] ) {
+		return $options;
+	}
+
+	$can_use_wpcs = array();
+
+	// List of allowed predefined payment method api accounts.
+	$wpcs_allowed_predef = array(
+		'wpcs-sandbox',
+		'wordcamp-sandbox',
+		'foundation',
+	);
+
+	foreach ( $options['payment_methods'] as $method => $status ) {
+		// Default to payment method cannot use WPCS as company.
+		$can_use_wpcs[ $method ] = false;
+
+		// Skip if payment method is not enabled.
+		if ( ! $status ) {
+			continue;
+		}
+
+		// Skip if payment method is not configured.
+		if ( ! isset( $options[ 'payment_options_' . $method ] ) ) {
+			continue;
+		}
+
+		// Skip if payment method is not using WPCS account.
+		if ( ! in_array( $options[ 'payment_options_' . $method ]['api_predef'], $wpcs_allowed_predef ) ) {
+			continue;
+		}
+
+		$can_use_wpcs[ $method ] = true;
+	}
+
+	/**
+	 * Check that all payment methods enable statuses match with payment methods that can use WPCS information as a company.
+	 * If all enabled payment methods can use WPCS, force the invoice company details.
+	 */
+	if ( $options['payment_methods'] === $can_use_wpcs ) {
+		$options['invoice-company'] = "WordPress Community Support, PBC\r\n660 4th Street #119\r\nSan Francisco CA 94107\r\nTax ID: 81-0896291";
+
+		// Hide the field, since we are forcing the value to it.
+		add_filter( 'camptix_invoices_company_override', '__return_true' );
+	} else {
+		add_action( 'admin_notices', __NAMESPACE__ . '\show_invoices_company_notice' );
+	}
+
+	return $options;
+}
+
+/**
+ * TODO
+ *
+ * @return [type] [description]
+ */
+function show_invoices_company_notice() {
+	global $camptix;
+
+	$options = $camptix->get_options();
+
+	if ( ! $options['invoice-active'] ) {
+		return;
+	}
+
+	// When not using WPCS, site name is default. If the site name isn't the value, assume that it has been updated.
+	if ( get_bloginfo( 'name' ) !== $options['invoice-company'] ) {
+		return;
+	}
+
+	// Prevent multiple notices.
+	remove_action( 'admin_notices', __NAMESPACE__ . '\show_invoices_company_notice' );
+
+	$class   = 'notice notice-warning';
+	$message = __( 'CampTix Invoices are enabled and you don\'t use WPCS accounts on payment methods. Make sure to update your company address for invoices!', 'wordcamporg' );
+
+	printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html( $message ) );
 }
 
 /**

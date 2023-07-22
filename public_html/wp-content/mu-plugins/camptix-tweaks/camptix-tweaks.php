@@ -620,10 +620,11 @@ function modify_default_options( $options ) {
 }
 
 /**
- * TODO
+ * Set Camptix Invoices company address based on paymenth methods enabled.
  *
- * @param  [type] $options [description]
- * @return [type]          [description]
+ * @param  array  $options Camptix options.
+ *
+ * @return array           Camptix options.
  */
 function handle_invoices_company( $options ) {
 	if ( ! $options['invoice-active'] ) {
@@ -671,6 +672,7 @@ function handle_invoices_company( $options ) {
 		// Hide the field, since we are forcing the value to it.
 		add_filter( 'camptix_invoices_company_override', '__return_true' );
 	} else {
+		// Show notice about updating company info.
 		add_action( 'admin_notices', __NAMESPACE__ . '\show_invoices_company_notice' );
 	}
 
@@ -678,9 +680,7 @@ function handle_invoices_company( $options ) {
 }
 
 /**
- * TODO
- *
- * @return [type] [description]
+ * Show notice about updating company info when Camptix payment methods are not using WPCS.
  */
 function show_invoices_company_notice() {
 	global $camptix;

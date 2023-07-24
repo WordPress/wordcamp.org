@@ -44,6 +44,7 @@ class WCCSP_Customizer {
 				'type'              => 'option',
 				'capability'        => $GLOBALS['WCCSP_Settings']::REQUIRED_CAPABILITY,
 				'sanitize_callback' => 'sanitize_text_field',
+				'validate_callback' => array( $this, 'maybe_prevent_disable' ),
 			)
 		);
 
@@ -177,5 +178,49 @@ class WCCSP_Customizer {
 			1,
 			true
 		);
+	}
+
+	/**
+	 * Retrieve the WordCamp status.
+	 *
+	 * @return string
+	 */
+	public function get_status() {
+		$wordcamp_post = get_wordcamp_post();
+
+		if ( isset( $wordcamp_post->ID ) ) {
+			return $wordcamp_post->post_status;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Validate the wccsp_settings[enabled] and maybe prevent disabling the coming soon page.
+	 *
+	 * Non valid field prevents the save, thus also disabling the coming soon page.
+	 *
+	 * @param  boolean $validity Status of the field validity.
+	 * @param  string  $value    Field value.
+	 *
+	 * @return boolean           Status of the field validity.
+	 */
+	public function maybe_prevent_disable( $validity, $value ) {
+		// Short circuit when the value is on.
+		if ( 'on' === $value ) {
+			return $validity;
+		}
+
+		// Short circuit when deputy is changing the value.
+		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			return $validity;
+		}
+
+		// If WordCamp is not added to schedule, field is not valid.
+		if ( 'wcpt-scheduled' !== $this->get_status() ) {
+			return new WP_Error( 'wcpt-not-in-schedule', __( 'The Coming Soon page can not be turned off because WordCamp is not yet published in the schedule.' ) );
+		}
+
+		return $validity;
 	}
 }

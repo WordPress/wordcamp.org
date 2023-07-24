@@ -431,10 +431,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			return true;
 		}
 
-		if ( empty( $invoice_metas['address'] ) ) {
-			return true;
-		}
-
 		if ( empty( $invoice_order['items'] ) ) {
 			return true;
 		}
@@ -540,7 +536,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		if ( empty( $_POST['invoice-email'] )
 			|| empty( $_POST['invoice-name'] )
-			|| empty( $_POST['invoice-address'] )
 			|| ! is_email( wp_unslash( $_POST['invoice-email'] ) ) ) {
 
 			$camptix->error_flag( 'nope' );

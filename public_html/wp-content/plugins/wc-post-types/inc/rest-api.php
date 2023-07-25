@@ -48,14 +48,15 @@ function register_sponsor_post_meta() {
 		'wcb_sponsor',
 		'_wcpt_sponsor_first_time',
 		array(
-			'type'          => 'string',
-			'show_in_rest'  => array(
+			'type'              => 'string',
+			'show_in_rest'      => array(
 				'schema' => array(
 					'context' => array( 'edit' ),
 				),
 			),
-			'single'        => true,
-			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_first_time_value',
 		)
 	);
 }
@@ -124,14 +125,15 @@ function register_speaker_post_meta() {
 		'wcb_speaker',
 		'_wcb_speaker_first_time',
 		array(
-			'type'          => 'string',
-			'show_in_rest'  => array(
+			'type'              => 'string',
+			'show_in_rest'      => array(
 				'schema' => array(
 					'context' => array( 'edit' ),
 				),
 			),
-			'single'        => true,
-			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_first_time_value',
 		)
 	);
 }
@@ -272,14 +274,15 @@ function register_organizer_post_meta() {
 		'wcb_organizer',
 		'_wcb_organizer_first_time',
 		array(
-			'type'          => 'string',
-			'show_in_rest'  => array(
+			'type'              => 'string',
+			'show_in_rest'      => array(
 				'schema' => array(
 					'context' => array( 'edit' ),
 				),
 			),
-			'single'        => true,
-			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_first_time_value',
 		)
 	);
 }
@@ -811,4 +814,21 @@ function add_larger_avatar_sizes( $sizes ) {
 	$sizes[] = 512;
 
 	return $sizes;
+}
+
+/**
+ * Sanitize the 'first_time' meta value before storing it.
+ *
+ * @param string $value The unsanitized meta value.
+ *
+ * @return string The sanitized meta value.
+ */
+function sanitize_first_time_value( $value ) {
+	$allowed_values = array( 'yes', 'no', 'unsure' );
+
+	if ( in_array( $value, $allowed_values, true ) ) {
+		return $value;
+	} else {
+		return 'unsure';
+	}
 }

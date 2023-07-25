@@ -391,7 +391,7 @@ class MES_Sponsor {
 
 		$text_fields = array(
 			'company_name', 'website', 'first_name', 'last_name', 'email_address', 'phone_number', 'twitter_handle',
-			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country', 'first_time',
+			'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
 		foreach ( $text_fields as $field ) {

@@ -55,31 +55,27 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 *
 			 * - Access and use the WordCamp Mentors Dashboard screen on Central.
 			 * - Edit `wordcamp` posts on Central.
+			 * - Use "WordCamp Post" link in Admin Bar on all sites (sse `add_wcpt_cross_link()`)
 			 */
 			case 'mentor_manager':
-				// These capabilities only apply on central.wordcamp.org.
-				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
-					$newcaps = array(
-						'read'                       => true, // Access to wp-admin.
-						'wordcamp_manage_mentors'    => true,
-						'wordcamp_wrangle_wordcamps' => true,
-					);
-				}
+				$newcaps = array(
+					'read'                       => true, // Access to wp-admin.
+					'wordcamp_manage_mentors'    => true,
+					'wordcamp_wrangle_wordcamps' => true,
+				);
 				break;
 
 			/**
 			 * WordCamp Wrangler
 			 *
 			 * - Edit `wordcamp` posts on Central.
+			 * - Use "WordCamp Post" link in Admin Bar on all sites (sse `add_wcpt_cross_link()`)
 			 */
 			case 'wordcamp_wrangler':
-				// These capabilities only apply on central.wordcamp.org.
-				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
-					$newcaps = array(
-						'read'                       => true, // Access to wp-admin.
-						'wordcamp_wrangle_wordcamps' => true,
-					);
-				}
+				$newcaps = array(
+					'read'                       => true, // Access to wp-admin.
+					'wordcamp_wrangle_wordcamps' => true,
+				);
 				break;
 
 			/**
@@ -89,7 +85,7 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 */
 			case 'report_viewer':
 				// These capabilities only apply on central.wordcamp.org.
-				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
+				if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
 					$newcaps = array(
 						'read'                  => true, // Access to wp-admin.
 						'view_wordcamp_reports' => true,

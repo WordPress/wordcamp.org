@@ -735,6 +735,9 @@ class WordCamp_New_Site {
 				'content' => $this->get_stub_content( 'post', 'call-for-sponsors' ),
 				'status'  => 'draft',
 				'type'    => 'post',
+				'meta'    => array(
+					'wcfd-key' => 'call-for-sponsors',
+				),
 			),
 
 			array(
@@ -850,6 +853,9 @@ class WordCamp_New_Site {
 		foreach ( $meta_field_keys as $key ) {
 			$sponsor_meta[ "_wcpt_sponsor_$key" ] = get_post_meta( $assigned_sponsor->ID, "mes_$key", true );
 		}
+
+		// Always set the first-time sponsor value to 'no' for Multi Event (ME) Sponsors.
+		$sponsor_meta['_wcb_sponsor_first_time'] = 'no';
 
 		restore_current_blog();
 

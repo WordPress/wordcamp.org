@@ -10,6 +10,7 @@ const WORDCAMP_ROOT_BLOG_ID = 5;
 const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
 const SITE_ID_CURRENT_SITE  = WORDCAMP_NETWORK_ID;
+const BLOG_ID_CURRENT_SITE  = WORDCAMP_ROOT_BLOG_ID;
 
 define( 'WP_PLUGIN_DIR', __DIR__ . '/public_html/wp-content/plugins' );
 define( 'SUT_WP_CONTENT_DIR', __DIR__ . '/public_html/wp-content/' ); // WP_CONTENT_DIR will be in `WP_TESTS_DIR`.

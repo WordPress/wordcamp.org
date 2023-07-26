@@ -26,7 +26,7 @@
 
 <!-- wp:jetpack/field-textarea {"label":"Why Would you Like to Sponsor WordCamp?","required":true} /-->
 
-<!-- wp:jetpack/field-radio {"label":"Is this your first time being a sponsor at a WordPress event?","requiredText":"(required)","options":["Yes","No","Unsure"],"id":"first-time-sponsor"} /-->
+<!-- wp:jetpack/field-radio {"label":"Is this your first time being a sponsor at a WordPress event?","options":["Yes","No","Unsure"],"id":"first-time-sponsor"} /-->
 
 <!-- wp:jetpack/field-textarea {"label":"Questions / Comments"} /-->
 <!-- /wp:jetpack/contact-form -->

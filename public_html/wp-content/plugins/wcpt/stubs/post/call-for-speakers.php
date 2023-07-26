@@ -11,7 +11,7 @@
 
 <!-- wp:jetpack/field-email {"label":"Email","required":true,"requiredText":"(required)","id":"speaker-email"} /-->
 
-<!-- wp:jetpack/field-text {"label":"WordPress.org Username","requiredText":"(required)","id":"speaker-username"} /-->
+<!-- wp:jetpack/field-text {"label":"WordPress.org Username","requiredText":"(required)","id":"speaker-username","required":true} /-->
 
 <!-- wp:jetpack/field-textarea {"label":"Your Bio","required":true} /-->
 
@@ -21,7 +21,7 @@
 
 <!-- wp:jetpack/field-text {"label":"Intended Audience","required":true} /-->
 
-<!-- wp:jetpack/field-radio {"label":"Is this your first time being a speaker at a WordPress event?","requiredText":"(required)","options":["Yes","No","Unsure"],"id":"first-time-speaker"} /-->
+<!-- wp:jetpack/field-radio {"label":"Is this your first time being a speaker at a WordPress event?","options":["Yes","No","Unsure"],"id":"first-time-speaker"} /-->
 
 <!-- wp:jetpack/field-textarea {"label":"Past Speaking Experience (not necessary to apply)"} /-->
 <!-- /wp:jetpack/contact-form -->

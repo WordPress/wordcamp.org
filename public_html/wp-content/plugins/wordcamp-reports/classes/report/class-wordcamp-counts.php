@@ -598,7 +598,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $sponsor->ID,
 				'type'        => 'sponsor',
 				'identifier'  => $this->get_sponsor_identifier( $sponsor->_wcpt_sponsor_website ),
-				'first_time'  => $sponsor->_wcpt_sponsor_first_time,
+				'first_time'  => $sponsor->_wcb_sponsor_first_time,
 			);
 
 			if ( $this->include_gender ) {

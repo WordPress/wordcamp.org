@@ -154,8 +154,15 @@ $first_time_legend = '<span class="description small">Y / N / ?</span>';
 			<td>WordCamp</td>
 			<td>Date</td>
 			<td>Status</td>
-			<td>Registered Attendees<?php if ( ! empty( $data['genders'] ) ) :
-				?><br /><?php echo $gender_legend; ?><?php endif; ?></td>
+			<td>Registered Attendees
+				<br>
+				<span class="description small">First time: </span>
+				<?php echo $first_time_legend; ?>
+				<?php if ( ! empty( $data['genders'] ) ) : ?>
+					<br />
+					<?php echo $gender_legend; ?>
+				<?php endif; ?>	
+			</td>
 			<td>Organizers
 				<br>
 				<span class="description small">First time: </span>
@@ -199,9 +206,14 @@ $first_time_legend = '<span class="description small">Y / N / ?</span>';
 				<td><?php echo esc_html( $event['info']['Status'] ); ?></td>
 
 				<td class="number">
-					<span class="total"><?php echo number_format_i18n( $event['totals']['attendee'] ); ?></span>
+					<span class="total">Total: <?php echo number_format_i18n( $event['totals']['attendee'] ); ?></span>
+					<br>
+					FT: <?php echo number_format_i18n( $event['first_times']['attendee']['yes'] ); ?>
+					/ <?php echo number_format_i18n( $event['first_times']['attendee']['no'] ); ?>
+					/ <?php echo number_format_i18n( $event['first_times']['attendee']['unsure'] ); ?>
 					<?php if ( ! empty( $data['genders'] ) ) : ?>
-						/ <?php echo number_format_i18n( $event['genders']['attendee']['female'] ); ?>
+						<br>
+						G: <?php echo number_format_i18n( $event['genders']['attendee']['female'] ); ?>
 						/ <?php echo number_format_i18n( $event['genders']['attendee']['male'] ); ?>
 						/ <?php echo number_format_i18n( $event['genders']['attendee']['unknown'] ); ?>
 					<?php endif; ?>

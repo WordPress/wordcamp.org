@@ -78,6 +78,12 @@ class Database_TestCase extends WP_UnitTestCase {
 			'path'       => '/2021/',
 			'network_id' => WORDCAMP_NETWORK_ID,
 		) );
+
+		self::$slash_year_with_yearless_site_id = $factory->blog->create( array(
+			'domain'     => 'events.wordpress.test',
+			'path'       => '/rome/2024/training/',
+			'network_id' => EVENTS_NETWORK_ID,
+		) );
 	}
 
 	/**

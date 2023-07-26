@@ -76,6 +76,10 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 
 		if ( is_wp_error( $actual ) ) {
 			$actual = $actual->get_error_message();
+		} else {
+			// Replace the dynamic date because it's not easily mocked.
+			$actual = preg_replace( '/HEADER,\d{14},1/', 'HEADER,date,1', $actual );
+			$actual = preg_replace( '/,wcb-\d+-\d+/', ',wcb-site_id-blog_id', $actual );
 		}
 
 		$this->assertSame( $expected, $actual );
@@ -85,10 +89,6 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	 * Test cases for `test_generate_payment_report()`.
 	 */
 	public function data_generate_payment_report() : array {
-		// This isn't guaranteed to match the value used in `_generate_payment_report_jpm_wires()` due to the time
-		// between when this case is generated and when the test is ran. It seems to work most of the time though.
-		$export_date = gmdate( 'YmdHis' );
-
 		$cases = array(
 			'vendor payment wire' => array(
 				'args' => array(
@@ -106,8 +106,8 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				),
 
 				'expected' => <<<EOD
-					HEADER,$export_date,1
-					P,WIRES,,,N,USD,500.00,,,,,,,ACCT,987654,"Jane Beneficiary","9876 Beneficiary St",,"Benficiaryville New Bennieswick ",,Test,,,SWIFT,123456,"A Bank","1234 Bank St",,"Bankersville New Bankswick 12345",US,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Invoice 1234",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,OUR,,,wcb-1-4
+					HEADER,date,1
+					P,WIRES,,,N,USD,500.00,,,,,,,ACCT,987654,"Jane Beneficiary","9876 Beneficiary St",,"Benficiaryville New Bennieswick ",,Test,,,SWIFT,123456,"A Bank","1234 Bank St",,"Bankersville New Bankswick 12345",US,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Invoice 1234",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,OUR,,,wcb-site_id-blog_id
 					TRAILER,1,500
 
 					EOD
@@ -130,7 +130,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				),
 
 				'expected' => <<<EOD
-					HEADER,$export_date,1
+					HEADER,date,1
 					TRAILER,0,0
 
 					EOD

@@ -855,7 +855,7 @@ class WordCamp_New_Site {
 		}
 
 		// Always set the first-time sponsor value to 'no' for Multi Event (ME) Sponsors.
-		$sponsor_meta['_wcpt_sponsor_first_time'] = 'no';
+		$sponsor_meta['_wcb_sponsor_first_time'] = 'no';
 
 		restore_current_blog();
 

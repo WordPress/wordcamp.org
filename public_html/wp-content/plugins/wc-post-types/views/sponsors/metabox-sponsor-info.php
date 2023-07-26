@@ -285,37 +285,37 @@
 	</li>
 
 	<li>
-		<label for="_wcpt_sponsor_first_time_yes">
+		<label for="_wcb_sponsor_first_time_yes">
 			<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
 		</label>
 		<input
 			type="radio"
-			id="_wcpt_sponsor_first_time_yes"
-			name="_wcpt_sponsor_first_time"
+			id="_wcb_sponsor_first_time_yes"
+			name="_wcb_sponsor_first_time"
 			value="yes"
 			<?php checked( $first_time, 'yes' ); ?>
 		/>
 	</li>
 	<li>
-		<label for="_wcpt_sponsor_first_time_no">
+		<label for="_wcb_sponsor_first_time_no">
 			<?php esc_html_e( 'No', 'wordcamporg' ); ?>
 		</label>
 		<input
 			type="radio"
-			id="_wcpt_sponsor_first_time_no"
-			name="_wcpt_sponsor_first_time"
+			id="_wcb_sponsor_first_time_no"
+			name="_wcb_sponsor_first_time"
 			value="no"
 			<?php checked( $first_time, 'no' ); ?>
 		/>
 	</li>
 	<li>
-		<label for="_wcpt_sponsor_first_time_unsure">
+		<label for="_wcb_sponsor_first_time_unsure">
 			<?php esc_html_e( 'I don\'t know', 'wordcamporg' ); ?>
 		</label>
 		<input
 			type="radio"
-			id="_wcpt_sponsor_first_time_unsure"
-			name="_wcpt_sponsor_first_time"
+			id="_wcb_sponsor_first_time_unsure"
+			name="_wcb_sponsor_first_time"
 			value="unsure"
 			<?php checked( $first_time, 'unsure' ); ?>
 		/>

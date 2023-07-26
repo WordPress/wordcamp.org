@@ -1235,6 +1235,7 @@ class WordCamp_Post_Types_Plugin {
 		$state           = get_post_meta( $sponsor->ID, '_wcpt_sponsor_state',           true );
 		$zip_code        = get_post_meta( $sponsor->ID, '_wcpt_sponsor_zip_code',        true );
 		$country         = get_post_meta( $sponsor->ID, '_wcpt_sponsor_country',         true );
+		$first_time      = get_post_meta( $sponsor->ID, '_wcb_sponsor_first_time',       true );
 
 		if ( $state === $this->get_sponsor_info_state_default_value() ) {
 			$state = '';
@@ -1358,7 +1359,7 @@ class WordCamp_Post_Types_Plugin {
 		}
 
 		if ( wp_verify_nonce( filter_input( INPUT_POST, 'wcpt-meta-sponsor-info' ), 'edit-sponsor-info' ) ) {
-			$text_values = array(
+			$text_values_wcpt = array(
 				'company_name',
 				'first_name',
 				'last_name',
@@ -1374,8 +1375,16 @@ class WordCamp_Post_Types_Plugin {
 				'country',
 			);
 
-			foreach ( $text_values as $id ) {
+			$text_values_wcb = array(
+				'first_time',
+			);
+
+			foreach ( $text_values_wcpt as $id ) {
 				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcpt_sponsor_' . $id ) );
+			}
+
+			foreach ( $text_values_wcb as $id ) {
+				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcb_sponsor_' . $id ) );
 			}
 
 			if ( empty( $values['state'] ) ) {
@@ -1389,7 +1398,9 @@ class WordCamp_Post_Types_Plugin {
 			$values['agreement']  = filter_input( INPUT_POST, '_wcpt_sponsor_agreement', FILTER_SANITIZE_NUMBER_INT );
 
 			foreach ( $values as $id => $value ) {
-				$meta_key = '_wcpt_sponsor_' . $id;
+				$meta_key = in_array($id, $text_values_wcb, true)
+					? '_wcb_sponsor_' . $id
+					: '_wcpt_sponsor_' . $id;
 
 				if ( empty( $value ) ) {
 					delete_post_meta( $post_id, $meta_key );

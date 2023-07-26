@@ -46,7 +46,7 @@ function register_sponsor_post_meta() {
 	);
 	register_post_meta(
 		'wcb_sponsor',
-		'_wcpt_sponsor_first_time',
+		'_wcb_sponsor_first_time',
 		array(
 			'type'              => 'string',
 			'show_in_rest'      => array(

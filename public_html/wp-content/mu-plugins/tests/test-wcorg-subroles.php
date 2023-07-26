@@ -54,6 +54,9 @@ class Test_SubRoles extends WP_UnitTestCase {
 	public function test_user_with_subrole_can( $subrole, $primitive_cap, $meta_cap ) {
 		global $wcorg_subroles;
 
+		// Some caps are only applied on Central.
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
 		$user = self::factory()->user->create_and_get( array(
 			'role' => 'subscriber',
 		) );
@@ -69,6 +72,8 @@ class Test_SubRoles extends WP_UnitTestCase {
 		$this->assertTrue( $user->has_cap( 'read' ) );
 		$this->assertTrue( $user->has_cap( $primitive_cap ) );
 		$this->assertTrue( user_can( $user->ID, $meta_cap ) );
+
+		restore_current_blog();
 	}
 
 	/**

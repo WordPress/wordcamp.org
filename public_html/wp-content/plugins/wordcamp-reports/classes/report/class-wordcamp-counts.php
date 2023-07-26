@@ -494,6 +494,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $attendee->ID,
 				'type'        => 'attendee',
 				'identifier'  => $attendee->tix_email,
+				'first_time'  => $attendee->tix_first_time_attending_wp_event,
 			);
 
 			if ( $this->include_gender ) {

@@ -143,7 +143,8 @@ class WordCamp_New_Site {
 		update_post_meta( $wordcamp_id, $key, esc_url( $url ) );
 
 		// If this site exists make sure we update the _site_id mapping.
-		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], 1 );
+		$network_id       = 'events.wordpress.test' === $parsed_url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], $network_id );
 
 		if ( $existing_site_id ) {
 			update_post_meta( $wordcamp_id, '_site_id', absint( $existing_site_id ) );

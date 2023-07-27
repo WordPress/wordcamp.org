@@ -1,13 +1,16 @@
+
+/* global jQuery, ajaxurl, _ */
+
 ( function( $ ) {
 	'use strict';
 
 	window.WordCampBudgetsDashboard = window.WordCampBudgetsDashboard || {};
 
-	var app = window.WordCampBudgetsDashboard.SponsorInvoices = {
+	const app = window.WordCampBudgetsDashboard.SponsorInvoices = {
 		/**
 		 * Initialization that runs as soon as this file has loaded
 		 */
-		start : function() {
+		start: function() {
 			try {
 				$( '.wcbdsi-approve-invoice' ).click( app.approveInvoice );
 			} catch ( exception ) {
@@ -20,27 +23,27 @@
 		 *
 		 * @param {event} event
 		 */
-		approveInvoice : function( event ) {
-			var approvalButton = $( this ),
-			    statusMessage  = $( this ).parent().find( '.wcbd-inline-notice' ),
-			    siteID         = approvalButton.data( 'site-id'    ),
-				invoiceID      = approvalButton.data( 'invoice-id' ),
-				nonce          = approvalButton.data( 'nonce'      );
+		approveInvoice: function( event ) {
+			const approvalButton = $( this ),
+				statusMessage = $( this ).parent().find( '.wcbd-inline-notice' ),
+				siteID = approvalButton.data( 'site-id' ),
+				invoiceID = approvalButton.data( 'invoice-id' ),
+				nonce = approvalButton.data( 'nonce' );
 
 			event.preventDefault();
 
 			try {
 				approvalButton.addClass( 'hidden' );
-				statusMessage.html( 'Submitting to QuickBooks...' );   // todo show spinner instead
+				statusMessage.html( 'Submitting to QuickBooks...' ); // todo show spinner instead
 				statusMessage.removeClass( 'hidden' );
 
 				$.post(
 					ajaxurl,
 					{
-						action     : 'wcbdsi_approve_invoice',
-						nonce      : nonce,
-						site_id    : siteID,
-						invoice_id : invoiceID
+						action: 'wcbdsi_approve_invoice',
+						nonce: nonce,
+						site_id: siteID,
+						invoice_id: invoiceID,
 					},
 
 					function( response ) {
@@ -73,7 +76,7 @@
 		 *
 		 * @param {*} error
 		 */
-		log : function( error ) {
+		log: function( error ) {
 			if ( ! window.console ) {
 				return;
 			}
@@ -83,9 +86,8 @@
 			} else {
 				console.log( 'WordCamp Budgets Dashboard: ', error );
 			}
-		}
+		},
 	};
-
-} )( jQuery );
+}( jQuery ) );
 
 window.WordCampBudgetsDashboard.SponsorInvoices.start();

@@ -669,13 +669,6 @@ class WordCamp_New_Site {
 			),
 
 			array(
-				'title'   => __( 'Social Media Stream', 'wordcamporg' ),
-				'content' => $this->get_stub_content( 'page', 'social-media-stream' ),
-				'status'  => 'publish',
-				'type'    => 'page',
-			),
-
-			array(
 				'title'   => __( 'Offline', 'wordcamporg' ),
 				'content' => $this->get_stub_content( 'page', 'offline', $wordcamp ),
 				'status'  => 'publish',

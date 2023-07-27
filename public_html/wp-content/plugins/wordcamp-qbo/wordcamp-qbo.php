@@ -908,12 +908,8 @@ class WordCamp_QBO {
 		$oauth_header = self::qbo_client()->get_oauth_header();
 		$realm_id     = self::qbo_client()->get_realm_id();
 
-		$sponsor                  = array_map( 'sanitize_text_field', $sponsor );
-		$sponsor['email-address'] = is_email( $sponsor['email-address'] );
-		$sponsor['first-name']    = str_replace( ':', '-', $sponsor['first-name']   );
-		$sponsor['last-name']     = str_replace( ':', '-', $sponsor['last-name']    );
-		$sponsor['company-name']  = str_replace( ':', '-', $sponsor['company-name'] );
-		$currency_code            = sanitize_text_field( $currency_code );
+		$sponsor       = self::normalize_sponsor( $sponsor );
+		$currency_code = sanitize_text_field( $currency_code );
 
 		if ( empty( $sponsor['company-name'] ) || empty( $sponsor['email-address'] ) ) {
 			return new WP_Error( 'required_fields_missing', 'Required fields are missing.', $sponsor );
@@ -975,6 +971,19 @@ class WordCamp_QBO {
 			'url'  => $request_url,
 			'args' => $args,
 		);
+	}
+
+	/**
+	 * Normalize sponsor values in preparation to send to QBO.
+	 */
+	protected static function normalize_sponsor( array $sponsor ) : array {
+		$sponsor                  = array_map( 'sanitize_text_field', $sponsor );
+		$sponsor['email-address'] = is_email( $sponsor['email-address'] );
+		$sponsor['first-name']    = str_replace( ':', '-', $sponsor['first-name']   );
+		$sponsor['last-name']     = str_replace( ':', '-', $sponsor['last-name']    );
+		$sponsor['company-name']  = str_replace( ':', '-', $sponsor['company-name'] );
+
+		return $sponsor;
 	}
 
 	/**

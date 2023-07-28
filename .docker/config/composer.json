@@ -17,6 +17,7 @@
 	"extra": {
 		"installer-paths": {
 			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+			"public_html/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
 			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
 		}
 	},
@@ -24,6 +25,10 @@
 		{
 			"type": "composer",
 			"url": "https://wpackagist.org/"
+		},
+		{
+			"type": "vcs",
+			"url": "https://github.com/WordPress/wporg-mu-plugins.git"
 		},
 		{
 			"type": "package",
@@ -119,6 +124,7 @@
 		"wpackagist-plugin/wp-cldr": "*",
 		"wpackagist-plugin/wp-super-cache": "*",
 		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
+		"wporg/wporg-mu-plugins": "dev-build",
 		"wpackagist-theme/p2": "*",
 		"wpackagist-theme/twentyten": "*",
 		"wpackagist-theme/twentyeleven": "*",
@@ -133,5 +139,12 @@
 		"wpackagist-theme/twentytwentyone": "*",
 		"wpackagist-theme/twentytwentytwo": "*",
 		"wpackagist-theme/twentytwentythree": "*"
+	},
+	"scripts": {
+		"post-update-cmd": [
+			"mkdir -p public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"mv public_html/wp-content/mu-plugins/wporg-mu-plugins/mu-plugins/utilities public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"rm -rf public_html/wp-content/mu-plugins/wporg-mu-plugins"
+		]
 	}
 }

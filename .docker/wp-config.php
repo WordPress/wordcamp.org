@@ -119,9 +119,17 @@ define( 'EMAIL_DEVELOPER_NOTIFICATIONS', 'developers@example.test' );
 define( 'EMAIL_CENTRAL_SUPPORT',         'support@wordcamp.test' );
 
 $trusted_deputies = array(
-	3, // role-tester.
+	6, // contributorrole.
 );
 
+$wcorg_subroles = array(
+	// contributorrole.
+	6 => array(
+		'wordcamp_wrangler',
+		'mentor_manager',
+		'report_viewer',
+	),
+);
 
 /*
  * Third party services

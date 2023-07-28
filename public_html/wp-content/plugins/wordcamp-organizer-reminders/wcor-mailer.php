@@ -591,7 +591,7 @@ class WCOR_Mailer {
 			return $ready;
 		}
 
-		if ( ! in_array( $email->ID, $sent_email_ids ) ) {
+		if ( in_array( $email->ID, $sent_email_ids ) ) {
 			return $ready;
 		}
 

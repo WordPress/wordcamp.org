@@ -168,6 +168,13 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			update_post_meta( self::$wordcamp_dayton_post_id, '_timestamp_added_to_planning_schedule', $compare_date );
 		}
 
+		if ( 'wcor_send_after' === $send_when ) {
+			wp_update_post( array(
+				'ID'          => self::$wordcamp_dayton_post_id,
+				'post_status' => 'wcpt-scheduled',
+			) );
+		}
+
 		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
 
 		$this->assertSame( '', $wordcamp->wcor_sent_email_ids );

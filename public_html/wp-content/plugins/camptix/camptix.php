@@ -4592,6 +4592,10 @@ class CampTix_Plugin {
 		$quantity = intval( get_post_meta( $post->ID, 'tix_coupon_quantity', true ) );
 		$used = intval( $this->get_used_coupons_count( $post->ID ) );
 		$applies_to = (array) get_post_meta( $post->ID, 'tix_applies_to' );
+		$bypass_max_tickets_per_order = (boolean) get_post_meta( $post->ID, 'tix_bypass_max_tickets_per_order', true );
+
+		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
+		$max_tickets_per_order_after_bypass = apply_filters( 'camptix_max_tickets_per_order_after_coupon_bypass', $max_tickets_per_order * 3, $max_tickets_per_order );
 		?>
 		<div class="misc-pub-section">
 			<span class="left"><?php _e( 'Discount:', 'wordcamporg' ); ?></span>
@@ -4632,6 +4636,14 @@ class CampTix_Plugin {
 				<?php endwhile; ?>
 				<input type="hidden" name="tix_applies_to_submit" value="1" />
 			</div>
+		</div>
+		<div class="misc-pub-section">
+			<span class="left"><?php _e( 'Bulk buy:', 'wordcamporg' ) ?></span>
+			<?php $this->field_yesno( array(
+				'name'        => 'tix_bypass_max_tickets_per_order',
+				'value'       => $bypass_max_tickets_per_order,
+				'description' => wp_sprintf( __( 'Allow buying maximum of %s tickets instead of %s when this coupon is applied.', 'wordcamporg' ), $max_tickets_per_order_after_bypass, $max_tickets_per_order ),
+			) ); ?>
 		</div>
 		<div class="clear"></div>
 		<?php
@@ -5123,6 +5135,10 @@ class CampTix_Plugin {
 						add_post_meta( $post_id, 'tix_applies_to', $ticket_id );
 		}
 
+		if ( isset( $_POST['tix_bypass_max_tickets_per_order'] ) ) {
+			update_post_meta( $post_id, 'tix_bypass_max_tickets_per_order', intval( $_POST['tix_bypass_max_tickets_per_order'] ) );
+		}
+
 		if ( isset( $_POST['tix_coupon_start'] ) ) {
 			$_POST['tix_coupon_start'] = preg_match( '/^\d{4}\-\d{2}\-\d{2}$/', $_POST['tix_coupon_start'] ) ? $_POST['tix_coupon_start'] : '';
 			update_post_meta( $post_id, 'tix_coupon_start', $_POST['tix_coupon_start'] );
@@ -5205,7 +5221,7 @@ class CampTix_Plugin {
 				$coupon->tix_discount_price = (float) get_post_meta( $coupon->ID, 'tix_discount_price', true );
 				$coupon->tix_discount_percent = (int) get_post_meta( $coupon->ID, 'tix_discount_percent', true );
 				$coupon->tix_applies_to = (array) get_post_meta( $coupon->ID, 'tix_applies_to' );
-				$coupon->tix_bypass_max_tickets_per_order = true;
+				$coupon->tix_bypass_max_tickets_per_order = (int) get_post_meta( $coupon->ID, 'tix_bypass_max_tickets_per_order', true );
 				$this->coupon = $coupon;
 
 				if ( $coupon->tix_bypass_max_tickets_per_order ) {
@@ -7347,7 +7363,7 @@ class CampTix_Plugin {
 				$coupon->tix_discount_price = (float) get_post_meta( $coupon->ID, 'tix_discount_price', true );
 				$coupon->tix_discount_percent = (int) get_post_meta( $coupon->ID, 'tix_discount_percent', true );
 				$coupon->tix_applies_to = (array) get_post_meta( $coupon->ID, 'tix_applies_to' );
-				$coupon->tix_bypass_max_tickets_per_order = true;
+				$coupon->tix_bypass_max_tickets_per_order = (int) get_post_meta( $coupon->ID, 'tix_bypass_max_tickets_per_order', true );
 
 				if ( $coupon->tix_bypass_max_tickets_per_order ) {
 					$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order_after_coupon_bypass', $max_tickets_per_order * 3, $max_tickets_per_order );

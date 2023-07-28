@@ -17,6 +17,7 @@
 	"extra": {
 		"installer-paths": {
 			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+			"public_html/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
 			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
 		}
 	},
@@ -142,8 +143,8 @@
 	"scripts": {
     "post-update-cmd": [
     	"mkdir -p public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
-    	"mv wp-content/mu-plugins/wporg-mu-plugins/mu-plugins/utilities public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
-    	"rm -rf wp-content/mu-plugins/wporg-mu-plugins"
+    	"mv public_html/wp-content/mu-plugins/wporg-mu-plugins/mu-plugins/utilities public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+    	"rm -rf public_html/wp-content/mu-plugins/wporg-mu-plugins"
     ]
 	}
 }

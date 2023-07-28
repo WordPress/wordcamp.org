@@ -141,10 +141,10 @@
 		"wpackagist-theme/twentytwentythree": "*"
 	},
 	"scripts": {
-    "post-update-cmd": [
-    	"mkdir -p public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
-    	"mv public_html/wp-content/mu-plugins/wporg-mu-plugins/mu-plugins/utilities public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
-    	"rm -rf public_html/wp-content/mu-plugins/wporg-mu-plugins"
-    ]
+		"post-update-cmd": [
+			"mkdir -p public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"mv public_html/wp-content/mu-plugins/wporg-mu-plugins/mu-plugins/utilities public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"rm -rf public_html/wp-content/mu-plugins/wporg-mu-plugins"
+		]
 	}
 }

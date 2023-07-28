@@ -5205,7 +5205,12 @@ class CampTix_Plugin {
 				$coupon->tix_discount_price = (float) get_post_meta( $coupon->ID, 'tix_discount_price', true );
 				$coupon->tix_discount_percent = (int) get_post_meta( $coupon->ID, 'tix_discount_percent', true );
 				$coupon->tix_applies_to = (array) get_post_meta( $coupon->ID, 'tix_applies_to' );
+				$coupon->tix_bypass_max_tickets_per_order = true;
 				$this->coupon = $coupon;
+
+				if ( $coupon->tix_bypass_max_tickets_per_order ) {
+					$max_tickets_per_order = $max_tickets_per_order * 3;
+				}
 			} else {
 				$this->error_flags['invalid_coupon'] = true;
 			}
@@ -5578,7 +5583,12 @@ class CampTix_Plugin {
 
 							// Recount selects, change price.
 							if ( $ticket->tix_coupon_applied ) {
+								if ( $this->coupon->tix_bypass_max_tickets_per_order ) {
+									$max_tickets_per_order = $max_tickets_per_order * 3;
+								}
+
 								$max = min( $this->coupon->tix_coupon_remaining, $ticket->tix_remaining, $max_tickets_per_order );
+
 								if ( $selected > $this->coupon->tix_coupon_remaining )
 									$selected = $this->coupon->tix_coupon_remaining;
 
@@ -5645,6 +5655,11 @@ class CampTix_Plugin {
 											esc_html( $this->coupon->post_title ),
 											esc_html( $discount_text )
 										);
+
+										if ( $this->coupon->tix_bypass_max_tickets_per_order ) {
+											echo '. ';
+											_e( 'Max quantity changed.', 'wordcamporg' );
+										}
 										?>
 									<?php else : ?>
 										<a href="#" id="tix-coupon-link" class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_coupon_link_classes', array() ) ) ); ?>">
@@ -7332,6 +7347,11 @@ class CampTix_Plugin {
 				$coupon->tix_discount_price = (float) get_post_meta( $coupon->ID, 'tix_discount_price', true );
 				$coupon->tix_discount_percent = (int) get_post_meta( $coupon->ID, 'tix_discount_percent', true );
 				$coupon->tix_applies_to = (array) get_post_meta( $coupon->ID, 'tix_applies_to' );
+				$coupon->tix_bypass_max_tickets_per_order = true;
+
+				if ( $coupon->tix_bypass_max_tickets_per_order ) {
+					$max_tickets_per_order = $max_tickets_per_order * 3;
+				}
 			} else {
 				$order['coupon'] = null;
 				$coupon = null;

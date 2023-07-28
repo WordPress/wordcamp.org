@@ -3983,6 +3983,19 @@ class CampTix_Plugin {
 					</div>
 
 					<div class="misc-pub-section">
+						<?php
+							$access_token = get_post_meta( $post->ID, 'tix_access_token', true );
+							$refund_link = $this->get_refund_tickets_link( $access_token );
+
+							$refunds_available_text = __( 'only for organizers', 'wordcamporg' );
+							if ( $this->options['refunds_enabled'] ) {
+								$refunds_available_text = __( 'for attendee', 'wordcamporg' );
+							}
+						?>
+						<span><a href="<?php echo esc_url( $refund_link ); ?>"><?php _e( 'Refund Request', 'wordcamporg' ); ?></a> (<?php echo $refunds_available_text ?>)</span>
+					</div>
+
+					<div class="misc-pub-section">
 						<div class="tix-pub-section-item">
 							<input id="tix_privacy_<?php esc_attr( $post->ID ); ?>" name="tix_privacy" type="checkbox" <?php checked( get_post_meta( $post->ID, 'tix_privacy', true ), 'private' ); ?> />
 							<label for="tix_privacy_<?php esc_attr( $post->ID ); ?>"><?php _e( 'Hide from public attendees list', 'wordcamporg' ); ?></label>
@@ -4661,6 +4674,12 @@ class CampTix_Plugin {
 
 		$rows[] = array( __( 'Edit Token', 'wordcamporg' ), sprintf( '<a href="%s">%s</a>', $this->get_edit_attendee_link( $post->ID, $edit_token ), $edit_token ) );
 		$rows[] = array( __( 'Access Token', 'wordcamporg' ), sprintf( '<a href="%s">%s</a>', $this->get_access_tickets_link( $access_token ), $access_token ) );
+
+		$refunds_available_text = __( 'only for organizers', 'wordcamporg' );
+		if ( $this->options['refunds_enabled'] ) {
+			$refunds_available_text = __( 'for attendee', 'wordcamporg' );
+		}
+		$rows[] = array( __( 'Refund Request', 'wordcamporg' ), sprintf( '<a href="%s">Link</a> %s', $this->get_refund_tickets_link( $access_token ), $refunds_available_text ) );
 
 		// Transaction
 		$rows[] = array( __( 'Transaction', 'wordcamporg' ), '' );

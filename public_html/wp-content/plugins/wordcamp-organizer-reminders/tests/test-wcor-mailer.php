@@ -200,7 +200,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 */
 	public function data_timed_messages_sent() {
 		return array(
-			// Before the camp starts
+			// Before the camp starts.
 			array(
 				'wcor_send_before',
 				'wcor_send_days_before',
@@ -209,7 +209,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 				'wcpt-scheduled',
 			),
 
-			// After the camp ends
+			// After the camp ends.
 			array(
 				'wcor_send_after',
 				'wcor_send_days_after',
@@ -218,7 +218,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 				'wcpt-scheduled',
 			),
 
-			// After the camp ends but it does not have public status
+			// After the camp ends but it does not have public status.
 			array(
 				'wcor_send_after',
 				'wcor_send_days_after',
@@ -227,7 +227,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 				'wcpt-cancelled',
 			),
 
-			// After added to the pending schedule
+			// After added to the pending schedule.
 			array(
 				'wcor_send_after_pending',
 				'wcor_send_days_after_pending',

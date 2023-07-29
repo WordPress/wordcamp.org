@@ -6469,6 +6469,7 @@ class CampTix_Plugin {
 						wp_update_post( $attendee );
 					}
 
+					// Dumb result in order for checks below to pass, with this we avoid adding new check.
 					$result = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
 				} else {
 					$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );

@@ -6433,17 +6433,19 @@ class CampTix_Plugin {
 				$tickets[$ticket_id] = 1;
 		}
 
-		if ( count( $transactions ) != 1 || $transactions[ $txn_id ]['payment_amount'] <= 0 ) {
-			$this->error_flags['cannot_refund'] = true;
-			$this->redirect_with_error_flags();
-			die();
-		}
+		if ( ! current_user_can( $this->caps['manage_attendees'] ) ) {
+			if ( count( $transactions ) != 1 || $transactions[ $txn_id ]['payment_amount'] <= 0 ) {
+				$this->error_flags['cannot_refund'] = true;
+				$this->redirect_with_error_flags();
+				die();
+			}
 
-		$transaction = array_shift( $transactions );
-		if ( ! $transaction['receipt_email'] || ! $transaction['transaction_id'] || ! $transaction['payment_amount'] ) {
-			$this->error_flags['cannot_refund'] = true;
-			$this->redirect_with_error_flags();
-			die();
+			$transaction = array_shift( $transactions );
+			if ( ! $transaction['receipt_email'] || ! $transaction['transaction_id'] || ! $transaction['payment_amount'] ) {
+				$this->error_flags['cannot_refund'] = true;
+				$this->redirect_with_error_flags();
+				die();
+			}
 		}
 
 		// Has a refund request been submitted?
@@ -6459,22 +6461,33 @@ class CampTix_Plugin {
 			if ( ! $check ) {
 				$this->error( __( 'You have to agree to the terms to request a refund.', 'wordcamporg' ) );
 			} else {
+				// Allow organisers to refund tickets without transactions (i.e. free tickets)
+				if ( current_user_can( $this->caps['manage_attendees'] ) && empty( $transactions ) ) {
+					// Change status for all attendees within the same purchase.
+					foreach ( $attendees as $attendee ) {
+						$attendee->post_status = 'refund';
+						wp_update_post( $attendee );
+					}
 
-				$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
+					$result = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+				} else {
+					$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
 
-				// Bail if a payment method does not exist.
-				if ( ! $payment_method_obj ) {
-					$this->error_flags['cannot_refund'] = true;
-					$this->redirect_with_error_flags();
-					die();
+					// Bail if a payment method does not exist.
+					if ( ! $payment_method_obj ) {
+						$this->error_flags['cannot_refund'] = true;
+						$this->redirect_with_error_flags();
+						die();
+					}
+
+					/**
+					 * @todo: Better error messaging for misconfigured payment methods
+					 */
+
+					// Attempt to process the refund transaction
+					$result = $payment_method_obj->payment_refund( $transaction['payment_token'] );
 				}
 
-				/**
-				 * @todo: Better error messaging for misconfigured payment methods
-				 */
-
-				// Attempt to process the refund transaction
-				$result = $payment_method_obj->payment_refund( $transaction['payment_token'] );
 				$this->log( 'Individual refund request result.', $attendee->ID, $result, 'refund' );
 				if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED == $result ) {
 					foreach ( $attendees as $attendee ) {

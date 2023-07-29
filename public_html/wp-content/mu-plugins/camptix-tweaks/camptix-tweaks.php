@@ -56,6 +56,12 @@ add_filter( 'camptix_html_message',                          __NAMESPACE__ . '\r
 add_action( 'camptix_tshirt_report_intro',                   __NAMESPACE__ . '\tshirt_report_intro_message',  10, 3 );
 add_filter( 'camptix_stripe_checkout_image_url',             __NAMESPACE__ . '\stripe_default_checkout_image_url'   );
 
+// Dashboard.
+add_action( 'restrict_manage_posts',                         __NAMESPACE__ . '\add_show_attendees_filter'           );
+add_filter( 'parse_query',                                   __NAMESPACE__ . '\apply_show_attendees_filter'         );
+
+
+
 // Prefix for Form_Spam_Prevention class.
 define( 'WC_CAMPTIX_FSP_PREFIX', 'wc-camptix-fsp-prefix' );
 
@@ -1008,3 +1014,62 @@ function limit_one_ticket_per_order( $max ) {
 	return $max;
 }
 
+/**
+ * Add filter to attendees listing (edit.php) on dashboard.
+ */
+function add_show_attendees_filter() {
+	if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
+		return;
+	}
+
+	$filter = isset( $_GET['tix_show_attendees'] ) ? $_GET['tix_show_attendees'] : '';
+
+	$filters = array(
+		'with-allergy'        => __( 'Attendees with severe allergy', 'wordcamporg' ),
+		'with-accommodations' => __( 'Attendees with accessibility needs', 'wordcamporg' ),
+	); ?>
+
+	<select name="tix_show_attendees">
+		<option value=""><?php esc_html_e( 'All attendees', 'wordcamporg' ); ?></option>
+		<?php foreach ( $filters as $value => $label ) : ?>
+			<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $filter, $value ); ?>><?php echo esc_html( $label ); ?></option>
+		<?php endforeach; ?>
+	</select>
+<?php }
+
+/**
+ * Maybe filter attendees listing (edit.php) on dashboard.
+ *
+ * @param  WP_Query $query The WP_Query instance (passed by reference).
+ */
+function apply_show_attendees_filter( $query ) {
+	if ( ! is_admin() ) {
+		return;
+	}
+
+	if ( ! $query->is_main_query() ) {
+		return;
+	}
+
+	if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
+		return;
+	}
+
+	$filter = isset( $_GET['tix_show_attendees'] ) ? $_GET['tix_show_attendees'] : '';
+
+	if ( empty( $filter ) ) {
+		return;
+	}
+
+	switch ( $filter ) {
+		case 'with-allergy':
+			$query->query_vars['meta_key'] = 'tix_allergy';
+			$query->query_vars['meta_value'] = 'yes';
+			break;
+
+		case 'with-accommodations':
+			$query->query_vars['meta_key'] = 'tix_accommodations';
+			$query->query_vars['meta_value'] = 'yes';
+			break;
+	}
+}

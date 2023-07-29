@@ -5365,7 +5365,7 @@ class CampTix_Plugin {
 				$this->shortcode_contents = $this->form_access_tickets();
 			} elseif ( 'edit_attendee' == $tix_action ) {
 				$this->shortcode_contents = $this->form_edit_attendee();
-			} elseif ( 'refund_request' == $tix_action && $this->options['refunds_enabled'] ) {
+			} elseif ( 'refund_request' == $tix_action && ( $this->options['refunds_enabled'] || current_user_can( $this->caps['manage_attendees'] ) ) ) {
 				$this->shortcode_contents = $this->form_refund_request();
 			} else {
 				// If we end up here, start over.
@@ -6367,7 +6367,13 @@ class CampTix_Plugin {
 		// Clean things up before and after the shortcode.
 		$post->post_content = apply_filters( 'camptix_post_content_override', $this->shortcode_str, $post->post_content, $_GET['tix_action'] );
 
-		if ( ! $this->options['refunds_enabled'] || ! isset( $_REQUEST['tix_access_token'] ) || ! ctype_alnum( $_REQUEST['tix_access_token'] ) ) {
+		if ( ! isset( $_REQUEST['tix_access_token'] ) || ! ctype_alnum( $_REQUEST['tix_access_token'] ) ) {
+			$this->error_flags['invalid_access_token'] = true;
+			$this->redirect_with_error_flags();
+			die();
+		}
+
+		if ( ! $this->options['refunds_enabled'] && ! current_user_can( $this->caps['manage_attendees'] ) ) {
 			$this->error_flags['invalid_access_token'] = true;
 			$this->redirect_with_error_flags();
 			die();
@@ -6442,6 +6448,10 @@ class CampTix_Plugin {
 
 		// Has a refund request been submitted?
 		$reason = '';
+		if ( current_user_can( $this->caps['manage_attendees'] ) ) {
+			$reason = wp_sprintf( __( 'In behalf of attendee by %s (%s)', 'wordcamporg' ), wp_get_current_user()->display_name, wp_get_current_user()->user_login );
+		}
+
 		if ( isset( $_POST['tix_refund_request_submit'] ) ) {
 			$reason = esc_html( $_POST['tix_refund_request_reason'] );
 			$check = isset( $_POST['tix_refund_request_confirmed'] ) ? $_POST['tix_refund_request_confirmed'] : false;

@@ -100,14 +100,18 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 			style={ { gridColumn, gridRow } }
 		>
 			<h4 className="wordcamp-schedule__session-title">
-				<a href={ titleLinkUrl } target={ titleLinkTarget } rel="noopener noreferrer">
-					{ decodeEntities( stripTags( title.rendered ) ) }
-				</a>
+				{ 'session' === type ? (
+					<a href={ titleLinkUrl } target={ titleLinkTarget } rel="noopener noreferrer">
+						{ decodeEntities( stripTags( title.rendered ) ) }
+					</a>
+				) : (
+					decodeEntities( stripTags( title.rendered ) )
+				) }
 
-				{ 'front-end' === renderEnvironment && 'session' === type &&
+				{ 'front-end' === renderEnvironment &&
+					'session' === type &&
 					// There isn't much of a point to show this in the editor, and it'd add clutter/confusion.
-					renderFavoriteButton( title.rendered )
-				}
+					renderFavoriteButton( title.rendered ) }
 			</h4>
 
 			<p>

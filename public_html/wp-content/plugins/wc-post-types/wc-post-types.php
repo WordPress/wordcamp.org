@@ -1858,7 +1858,8 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'manage_wcb_session_posts_columns':
 				$columns = array_slice( $columns, 0, 2, true ) + array( 'wcb_session_speakers' => __( 'Speakers', 'wordcamporg' ) ) + array_slice( $columns, 2, null, true );
-				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Date & Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Date & Time', 'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_slice( $columns, 0, 4, true ) + array( 'wcb_session_track' => __( 'Track', 'wordcamporg' ) ) + array_slice( $columns, 4, null, true );
 				$columns = array_filter(
 					$columns,
 					function( $col ) {
@@ -1947,7 +1948,9 @@ class WordCamp_Post_Types_Plugin {
 				}
 				echo esc_html( $output );
 				break;
-
+			case 'wcb_session_track':
+				echo get_the_term_list( get_the_ID(), 'wcb_track', '', ', ' );
+				break;
 			default:
 		}
 	}

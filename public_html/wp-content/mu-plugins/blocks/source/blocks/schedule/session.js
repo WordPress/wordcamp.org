@@ -115,8 +115,11 @@ export function Session( { session, displayedTracks, showCategories, overlapsAno
 			</h4>
 
 			<p>
-				{ date( timeFormat, startTime, timezone ) } -
-				{ date( timeFormat, endTime, timezone ) }
+				{ sprintf(
+					'%1$s - %2$s',
+					date( timeFormat, startTime, timezone ),
+					date( timeFormat, endTime, timezone )
+				) }
 			</p>
 
 			{ speakers.length > 0 && renderSpeakers( speakers, renderEnvironment ) }

@@ -1273,7 +1273,7 @@ class WordCamp_Post_Types_Plugin {
 		$mes_id = get_post_meta( $sponsor->ID, '_mes_id', true );
 
 		if ( $mes_id ) {
-			switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org .
+			switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.org.
 
 			$mes_agreement_id = get_post_meta( $mes_id, 'mes_sponsor_agreement', true );
 			if ( $mes_agreement_id ) {

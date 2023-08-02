@@ -675,7 +675,7 @@ function switch_email_template( $template_slug ) {
  * @return string
  */
 function get_global_sponsors_string() {
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordpress.org
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.org.
 
 	$posts = get_posts( array(
 		'post_type'      => 'mes',

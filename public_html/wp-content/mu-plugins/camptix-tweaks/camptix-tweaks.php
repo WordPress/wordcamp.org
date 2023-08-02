@@ -771,7 +771,7 @@ function get_sponsorship_region_description_from_id( $region_id ) {
 		}
 
 		if ( ! $region_description ) {
-			switch_to_blog( BLOG_ID_CURRENT_SITE );
+			switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 			$region = get_term( $region_id, 'mes-regions' );
 

@@ -798,7 +798,7 @@ function get_sponsorship_level_name_from_id( $level_id ) {
 	$level_name = '';
 
 	if ( $level_id ) {
-		switch_to_blog( BLOG_ID_CURRENT_SITE );
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 		$level_name = get_the_title( $level_id );
 

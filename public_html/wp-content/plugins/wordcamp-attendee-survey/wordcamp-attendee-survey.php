@@ -17,7 +17,11 @@ defined( 'WPINC' ) || die();
 define( __NAMESPACE__ . '\PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( __NAMESPACE__ . '\PLUGIN_URL', plugins_url( '/', __FILE__ ) );
 
-const OPTION_KEY = 'as_survey_page';
+const SKIP_KEY_ID = 'attendee_survey';
+const OPTION_KEY  = 'attendee_survey_page';
+
+register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
+register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 
@@ -27,7 +31,7 @@ add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
  * @return bool
  */
 function can_load() {
-	$skip_feature = wcorg_skip_feature( 'attendee_survey' );
+	$skip_feature = wcorg_skip_feature( SKIP_KEY_ID );
 
 	return ! $skip_feature;
 }
@@ -130,20 +134,6 @@ function deactivate_on_current_site() {
 }
 
 /**
- * Add post type support for supported post types. Only for the types that are supported though.
- *
- * This makes it easy to check if a particular post type can have feedback comments using Core functionality, rather
- * than having to import a namespaced constant or function.
- *
- * @return void
- */
-function add_support() {
-	foreach ( SUPPORTED_POST_TYPES as $post_type ) {
-		add_post_type_support( $post_type, 'wordcamp-speaker-feedback' );
-	}
-}
-
-/**
  * Create the Feedback page, save ID into an option.
  *
  * @return void
@@ -195,7 +185,6 @@ function get_includes_path() {
 	return plugin_dir_path( __FILE__ ) . 'includes/';
 }
 
-
 /**
  * Get the IDs of sites that do not have the `speaker_feedback` skip feature flag.
  *
@@ -204,13 +193,13 @@ function get_includes_path() {
 function get_site_ids_without_skip_flag() {
 	global $wpdb;
 
-	$blog_ids = $wpdb->get_col( "
+	$blog_ids = $wpdb->get_col( $wpdb->prepare("
 		SELECT b.blog_id
 		FROM $wpdb->blogs AS b
 		LEFT OUTER JOIN $wpdb->blogmeta AS m
-		ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = 'speaker_feedback'
+		ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = %s
 		WHERE m.meta_value IS NULL
-	" );
+	", SKIP_KEY_ID ) );
 
 	return array_map( 'absint', $blog_ids );
 }

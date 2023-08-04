@@ -191,6 +191,14 @@ class WordCamp_Budget_Tool {
 				3,
 				true
 			);
+
+			wp_localize_script(
+				'wcb-budget-tool',
+				'networkStatus',
+				array(
+					'isNextGenWordCamp' => is_next_gen_wordcamp(),
+				)
+			);
 		}
 	}
 

@@ -211,13 +211,17 @@ function get_includes_path() {
 function get_site_ids_without_skip_flag() {
 	global $wpdb;
 
-	$blog_ids = $wpdb->get_col( $wpdb->prepare("
-		SELECT b.blog_id
-		FROM $wpdb->blogs AS b
-		LEFT OUTER JOIN $wpdb->blogmeta AS m
-		ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = %s
-		WHERE m.meta_value IS NULL
-	", SKIP_KEY_ID ) );
+	$blog_ids = $wpdb->get_col(
+		$wpdb->prepare("
+			SELECT b.blog_id
+			FROM $wpdb->blogs AS b
+			LEFT OUTER JOIN $wpdb->blogmeta AS m
+			ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = %s
+			WHERE m.meta_value IS NULL
+			",
+			SKIP_KEY_ID
+		)
+	);
 
 	return array_map( 'absint', $blog_ids );
 }

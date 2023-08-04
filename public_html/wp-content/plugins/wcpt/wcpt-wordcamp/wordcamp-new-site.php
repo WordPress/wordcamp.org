@@ -702,15 +702,6 @@ class WordCamp_New_Site {
 			);
 		}
 
-		if ( isset( $meta['URL'] ) && $meta['URL'][0] && is_event_url( $meta['URL'][0] ) ) {
-			$pages[] = array(
-				'title'   => __( 'Attendee Survey', 'wordcamporg' ),
-				'content' => $this->get_stub_content( 'page', 'attendee-survey' ),
-				'status'  => 'draft',
-				'type'    => 'page',
-			);
-		}
-
 		return $pages;
 	}
 

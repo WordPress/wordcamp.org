@@ -1,7 +1,5 @@
 <?php
 
-use function WordCamp\Sunrise\get_top_level_domain;
-
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_YEAR_DOT_CITY_DOMAIN_PATH };
 
 defined( 'WPINC' ) || die();
@@ -389,18 +387,4 @@ function is_wordcamp_virtual( $wordcamp ) {
 	restore_current_blog();
 
 	return $is_virtual;
-}
-
-/**
- * Check if this is an event network wordcamp based on url.
- * Sometimes we only have that to go on.
- *
- * @param string $url
- *
- * @return bool
- */
-function is_event_url( $url ) {
-	$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
-	$tld        = get_top_level_domain();
-	return "events.wordpress.$tld" === $url['host'];
 }

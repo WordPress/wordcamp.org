@@ -144,21 +144,10 @@ function add_page() {
 		return;
 	}
 
-	$content  = '<!-- wp:paragraph {"textColor":"white","customBackgroundColor":"#94240b"} -->';
-	$content .= '<p style="background-color:#94240b" class="has-text-color has-background has-white-color">';
-	$content .= __( 'Organizer Note: This page is used to display the session list for the Speaker Feedback form. It will be added after the content you enter here. You can remove this note.', 'wordcamporg' );
-	$content .= '</p>';
-	$content .= '<!-- /wp:paragraph -->';
 
 	$content .= '<!-- wp:paragraph -->';
 	$content .= '<p>';
-	$content .= __( 'You can show your appreciation and contribute back to the community by leaving constructive feedback. This not only helps speakers know what worked in their presentation and what didn’t, but it helps organizers get a sense of how successful the event was as a whole.', 'wordcamporg' );
-	$content .= '</p>';
-	$content .= '<!-- /wp:paragraph -->';
-
-	$content .= '<!-- wp:paragraph -->';
-	$content .= '<p>';
-	$content .= __( 'The feedback you give will only be shown to speakers and organizers.', 'wordcamporg' );
+	$content .= __( 'Insert survey here', 'wordcamporg' );
 	$content .= '</p>';
 	$content .= '<!-- /wp:paragraph -->';
 

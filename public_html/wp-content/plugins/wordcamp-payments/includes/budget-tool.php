@@ -267,7 +267,7 @@ class WordCamp_Budget_Tool {
 	 */
 	private static function _get_default_budget() {
 		// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
-		return array(
+		$default_budget = array(
 			array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'tracks', 'value' => 0 ),
@@ -296,6 +296,21 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
 		);
+
+		if ( is_next_gen_wordcamp() ) {
+			$default_budget = array_filter(
+				$default_budget,
+				function ( $item ) {
+					if ( ! isset( $item['category'] ) ) {
+						return true;
+					}
+
+					return 'speaker-event' !== $item['category'];
+				}
+			);
+		}
+
+		return $default_budget;
 		// phpcs:enable
 	}
 

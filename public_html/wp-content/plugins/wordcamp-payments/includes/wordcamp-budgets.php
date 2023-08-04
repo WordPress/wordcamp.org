@@ -579,7 +579,7 @@ class WordCamp_Budgets {
 	 * @return array
 	 */
 	public static function get_payment_categories() {
-		return array(
+		$categories = array(
 			// Changes here may need to be synchronized with `_get_default_budget()`.
 			'after-party'     => esc_html__( 'After Party',                    'wordcamporg' ),
 			'audio-visual'    => esc_html__( 'Audio Visual',                   'wordcamporg' ),
@@ -592,6 +592,12 @@ class WordCamp_Budgets {
 			'venue'           => esc_html__( 'Venue',                          'wordcamporg' ),
 			'other'           => esc_html__( 'Other',                          'wordcamporg' ), // This one is intentionally last, regardless of alphabetical order
 		);
+
+		if ( is_next_gen_wordcamp() ) {
+			unset($categories['speaker-event'], $categories['after-party'], $categories['camera-shipping']);
+		}
+
+		return $categories;
 	}
 
 	/**

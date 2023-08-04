@@ -23,6 +23,15 @@ if ( is_admin() ) {
 
 	$GLOBALS['wordcamp_budgets']    = new WordCamp_Budgets();
 	$GLOBALS['wcp_payment_request'] = new WCP_Payment_Request();
+
+	/**
+	 * Determines if the current site is a "next generation" WordCamp.
+	 *
+	 * @return bool Returns true if the current site is a "next generation" WordCamp, otherwise false.
+	 */
+	function is_next_gen_wordcamp() {
+		return SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID;
+	}
 }
 
 if ( is_admin() || wp_doing_cron() || wp_doing_ajax() ) {

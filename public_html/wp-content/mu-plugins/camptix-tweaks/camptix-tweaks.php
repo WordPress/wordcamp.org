@@ -675,7 +675,7 @@ function switch_email_template( $template_slug ) {
  * @return string
  */
 function get_global_sponsors_string() {
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordpress.org
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.org.
 
 	$posts = get_posts( array(
 		'post_type'      => 'mes',
@@ -771,7 +771,7 @@ function get_sponsorship_region_description_from_id( $region_id ) {
 		}
 
 		if ( ! $region_description ) {
-			switch_to_blog( BLOG_ID_CURRENT_SITE );
+			switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 			$region = get_term( $region_id, 'mes-regions' );
 
@@ -798,7 +798,7 @@ function get_sponsorship_level_name_from_id( $level_id ) {
 	$level_name = '';
 
 	if ( $level_id ) {
-		switch_to_blog( BLOG_ID_CURRENT_SITE );
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 		$level_name = get_the_title( $level_id );
 

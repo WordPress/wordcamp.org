@@ -842,7 +842,7 @@ class WordCamp_New_Site {
 			'twitter_handle', 'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // Switch to central.wordcamp.org.
 
 		foreach ( $meta_field_keys as $key ) {
 			$sponsor_meta[ "_wcpt_sponsor_$key" ] = get_post_meta( $assigned_sponsor->ID, "mes_$key", true );
@@ -868,7 +868,7 @@ class WordCamp_New_Site {
 		global $multi_event_sponsors;
 		$data = array();
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // Switch to central.wordcamp.org.
 
 		$data['featured_images']   = array();
 		$data['assigned_sponsors'] = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );

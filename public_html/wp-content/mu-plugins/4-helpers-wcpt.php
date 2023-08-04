@@ -401,7 +401,6 @@ function is_wordcamp_virtual( $wordcamp ) {
  */
 function is_event_url( $url ) {
 	$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
-	$valid_url  = isset( $url['host'], $url['path'] );
 	$tld        = get_top_level_domain();
 	return "events.wordpress.$tld" === $url['host'];
 }

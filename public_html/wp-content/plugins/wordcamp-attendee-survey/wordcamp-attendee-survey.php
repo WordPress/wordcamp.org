@@ -48,6 +48,10 @@ function load() {
 
 	// Check if the page exists, and add it if not.
 	add_action( 'init', __NAMESPACE__ . '\add_page' );
+
+	if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
+		add_action( 'admin_menu', __NAMESPACE__ . '\admin_menu' );
+	}
 }
 
 /**
@@ -144,7 +148,6 @@ function add_page() {
 		return;
 	}
 
-
 	$content .= '<!-- wp:paragraph -->';
 	$content .= '<p>';
 	$content .= __( 'Insert survey here', 'wordcamporg' );
@@ -163,6 +166,32 @@ function add_page() {
 	if ( $page_id > 0 ) {
 		update_option( OPTION_KEY, $page_id );
 	}
+}
+
+/**
+ * Add a menu item.
+ */
+function admin_menu() {
+	add_menu_page(
+		__( 'WordCamp Attendee Survey', 'wordcamporg' ),
+		__( 'Attendee Survey', 'wordcamporg' ),
+		'manage_options',
+		OPTION_KEY,
+		__NAMESPACE__ . '\render_menu_page',
+		'dashicons-feedback',
+		58
+	);
+}
+
+/**
+ * Render the menu page.
+ */
+function render_menu_page() {
+	?>
+	<div class="wrap">
+		<h1><?php echo esc_html__( 'Attendees', 'wordcamporg' ); ?></h1>
+	</div>
+	<?php
 }
 
 /**

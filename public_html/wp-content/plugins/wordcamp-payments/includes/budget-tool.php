@@ -307,7 +307,9 @@ class WordCamp_Budget_Tool {
 		);
 
 		if ( is_next_gen_wordcamp() ) {
-			$default_budget = array_merge($default_budget, $extra_budget_for_next_gen);
+			// $extra_budget_for_next_gen should be positioned after the 'days' element for proper ordering.
+			$insert_position = array_search( 'days', array_column( $default_budget, 'name' ), true ) + 1;
+			array_splice( $default_budget, $insert_position, 0, $extra_budget_for_next_gen );
 
 			$default_budget = array_filter(
 				$default_budget,

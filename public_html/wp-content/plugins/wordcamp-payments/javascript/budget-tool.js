@@ -269,7 +269,10 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				var value = this.$el.find( '.value' ).val(),
 					name  = this.model.get( 'name' );
 
-				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
+				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ||
+					( networkStatus.isNextGenWordCamp && _.contains( [
+						'wp-expertise-level', 'focused-activity', 'job-status', 'identity-based', 'content-topic-focused', 'other'
+					], name ) ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				} else if ( _.contains( [ 'ticket-price' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
@@ -391,14 +394,20 @@ window.wcb = window.wcb || { models: {}, input: [] };
 	} );
 
 	wcb.metaLabels = {
-		'attendees'    : 'Total attendees',
-		'days'         : 'Days',
-		'tracks'       : 'Tracks',
-		'speakers'     : networkStatus.isNextGenWordCamp ? 'Facilitators' : 'Speakers',
-		'volunteers'   : 'Volunteers',
-		'organizers'   : 'Organizers',
-		'currency'     : 'Currency',
-		'ticket-price' : 'Ticket Price',
+		'attendees'             : 'Total attendees',
+		'days'                  : 'Days',
+		'tracks'                : 'Tracks',
+		'wp-expertise-level'    : 'WP Expertise Level',
+		'focused-activity'      : 'Focused Activity',
+		'job-status'            : 'Job Status',
+		'identity-based'        : 'Identity Based',
+		'content-topic-focused' : 'Content Topic Focused',
+		'other'                 : 'Other',
+		'speakers'              : networkStatus.isNextGenWordCamp ? 'Facilitators' : 'Speakers',
+		'volunteers'            : 'Volunteers',
+		'organizers'            : 'Organizers',
+		'currency'              : 'Currency',
+		'ticket-price'          : 'Ticket Price',
 	};
 
 	wcb.linkData = {

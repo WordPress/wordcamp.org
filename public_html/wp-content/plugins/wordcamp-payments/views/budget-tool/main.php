@@ -194,10 +194,6 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
                 <td></td>
                 <td></td>
             </tr>
-            <tr>
-                <td></td>
-                <td></td>
-            </tr>
         <?php endif; ?>
         <tr>
             <td></td>

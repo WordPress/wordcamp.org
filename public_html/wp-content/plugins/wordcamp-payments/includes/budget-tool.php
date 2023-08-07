@@ -220,7 +220,7 @@ class WordCamp_Budget_Tool {
 		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
-		$count_tracks     = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
+		$count_tracks     = is_next_gen_wordcamp() ? 0 : (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
 		$ticket_price     = (float) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'ticket-price' ) ), 'value' ) );
 
 		switch ( $link ) {
@@ -260,6 +260,29 @@ class WordCamp_Budget_Tool {
 		);
 
 		return $budget;
+	}
+
+	/**
+	 * Helper function to filter out the budget items.
+	 */
+	private static function _filter_budget_items( $item ) {
+		// List of categories to filter out.
+		$filtered_categories = array( 'speaker-event' );
+
+		// List of names to filter out.
+		$filtered_names = array( 'tracks' );
+
+		// Filter out items with the filtered categories.
+		if ( isset($item['category']) && in_array( $item['category'], $filtered_categories, true ) ) {
+			return false;
+		}
+
+		// Filter out items with the filtered names.
+		if ( isset($item['name']) && in_array( $item['name'], $filtered_names, true) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -311,16 +334,7 @@ class WordCamp_Budget_Tool {
 			$insert_position = array_search( 'days', array_column( $default_budget, 'name' ), true ) + 1;
 			array_splice( $default_budget, $insert_position, 0, $extra_budget_for_next_gen );
 
-			$default_budget = array_filter(
-				$default_budget,
-				function ( $item ) {
-					if ( ! isset( $item['category'] ) ) {
-						return true;
-					}
-
-					return 'speaker-event' !== $item['category'];
-				}
-			);
+			$default_budget = array_filter( $default_budget, 'self::_filter_budget_items' );
 		}
 
 		return $default_budget;

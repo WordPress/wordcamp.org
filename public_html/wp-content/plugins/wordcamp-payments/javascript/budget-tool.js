@@ -396,18 +396,20 @@ window.wcb = window.wcb || { models: {}, input: [] };
 	wcb.metaLabels = {
 		'attendees'             : 'Total attendees',
 		'days'                  : 'Days',
+		'speakers'              : networkStatus.isNextGenWordCamp ? 'Facilitators' : 'Speakers',
+		'volunteers'            : 'Volunteers',
+		'organizers'            : 'Organizers',
+		'currency'              : 'Currency',
+		'ticket-price'          : 'Ticket Price',
+		// Only exists in the Central Network.
 		'tracks'                : 'Tracks',
+		// Only exists in the Event Network.
 		'wp-expertise-level'    : 'WP Expertise Level',
 		'focused-activity'      : 'Focused Activity',
 		'job-status'            : 'Job Status',
 		'identity-based'        : 'Identity Based',
 		'content-topic-focused' : 'Content Topic Focused',
 		'other'                 : 'Other',
-		'speakers'              : networkStatus.isNextGenWordCamp ? 'Facilitators' : 'Speakers',
-		'volunteers'            : 'Volunteers',
-		'organizers'            : 'Organizers',
-		'currency'              : 'Currency',
-		'ticket-price'          : 'Ticket Price',
 	};
 
 	wcb.linkData = {
@@ -532,6 +534,10 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			},
 		},
 	};
+
+	if (networkStatus.isNextGenWordCamp) {
+		delete wcb.linkData[ 'per-track' ];
+	}
 
 	var table = new EntriesView( { collection: new Entries() } );
 

@@ -216,15 +216,29 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
         <# if (wcb.editable) { #>
             <td class="editable">
 
-            <# if (data.name == 'currency') { #>
+            <# const selectData = {
+                'wp-expertise-level': wcb.wpExpertiseLevel,
+                'focused-activity': wcb.focusedActivity,
+                'job-status': wcb.jobStatus,
+                'identity-based': wcb.identityBased,
+                'content-topic-focused': wcb.contentTopicFocused,
+                'other': wcb.other,
+                'currency': wcb.currencies
+            };    
+                        
+            if (Object.keys(selectData).includes(data.name)) { #>
                 <select class="value">
 					<option value="">
-						<?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
+                        <# if (data.name == 'currency') { #>
+						    <?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
+                        <# } else { #>
+                            <?php _e( '-- Select an Option --', 'wordcamporg' ); ?>
+                        <# } #>
 					</option>
 
 					<option value=""></option>
 
-					<# _.each( wcb.currencies, function( value, key ) { #>
+					<# _.each( selectData[data.name], function( value, key ) { #>
 						<option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
 							{{value}}
 
@@ -240,11 +254,13 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             </td>
         <# } else { #>
             <td>
-                <# if (data.name == 'currency') { #>
-                <div class="value">{{data.value}} - {{wcb.currencies[data.value]}}</div>
+                <div class="value">
+                <# if (Object.keys(selectData).includes(data.name)) { #>
+                    {{data.value}} - {{selectData[data.name][data.value]}}
                 <# } else { #>
-                <div class="value">{{data.value}}</div>
+                    {{data.value}}
                 <# } #>
+                </div>
             </td>
         <# } #>
 

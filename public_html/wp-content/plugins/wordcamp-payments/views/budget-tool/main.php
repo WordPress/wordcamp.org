@@ -217,12 +217,11 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             <td class="editable">
 
             <# const selectData = {
-                'wp-expertise-level': wcb.wpExpertiseLevel,
-                'focused-activity': wcb.focusedActivity,
-                'job-status': wcb.jobStatus,
-                'identity-based': wcb.identityBased,
-                'content-topic-focused': wcb.contentTopicFocused,
-                'other': wcb.other,
+                'wp-expertise-level': ['Beginner', 'Intermediate', 'Advanced'],
+                'focused-activity': ['Workshops', 'Networking', 'Contributing'],
+                'job-status': ['Students', 'Job Seekers', 'Business Owners', 'Freelancers'],
+                'identity-based': ['Women', 'BIPOC', 'LGBTQ+', 'Age', 'Accessibility Needs'],
+                'content-topic-focused': ['Hosting', 'Block Development', 'Designers'],
                 'currency': wcb.currencies
             };    
                         
@@ -236,13 +235,15 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
                         <# } #>
 					</option>
 
-					<option value=""></option>
+                    <# if (data.name == 'currency') { #>
+					    <option value=""></option>
+                    <# } #>
 
 					<# _.each( selectData[data.name], function( value, key ) { #>
 						<option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
 							{{value}}
 
-							<# if ( key ) { #>
+							<# if ( data.name == 'currency' && key ) { #>
 								({{key}})
 							<# } #>
 						</option>

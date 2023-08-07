@@ -291,6 +291,10 @@ tr#row-payment-method label {
 	background-position: 98% center;
 }
 
+.wcb-budget-container .wcb-entry .select2-container {
+	vertical-align: bottom;
+}
+
 .wcb-budget-container .wcb-entry td.focused {
 	background: #e8f1f7;
 	border: double 1px #999;

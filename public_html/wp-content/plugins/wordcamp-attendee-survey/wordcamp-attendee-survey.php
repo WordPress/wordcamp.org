@@ -12,6 +12,8 @@
 
 namespace WordCamp\AttendeeSurvey;
 
+use function WordCamp\AttendeeSurvey\Page\{addPage};
+
 defined( 'WPINC' ) || die();
 
 define( __NAMESPACE__ . '\PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -24,6 +26,15 @@ register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
+
+/**
+ * Returns the option key used to store the survey page ID.
+ *
+ * @return string
+ */
+function get_option_key() {
+	return OPTION_KEY;
+}
 
 /**
  * Check dependencies for loading the plugin.
@@ -46,16 +57,16 @@ function load() {
 		return;
 	}
 
-	// Check if the page exists, and add it if not.
-	add_action( 'init', __NAMESPACE__ . '\add_page' );
+	require_once get_includes_path() . 'cron.php';
+	require_once get_includes_path() . 'page.php';
 
 	if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
-		add_action( 'admin_menu', __NAMESPACE__ . '\admin_menu' );
+		require_once get_includes_path() . 'admin-page.php';
 	}
 }
 
 /**
- * Create main Feedback page.
+ * Create main survey page.
  *
  * @param bool $is_network True if activating network-wide.
  *
@@ -98,7 +109,7 @@ function activate_on_current_site() {
 }
 
 /**
- * Remove the feedback page.
+ * Remove the survey page.
  *
  * @param bool $is_network True if deactivating network-wide.
  *
@@ -138,73 +149,7 @@ function deactivate_on_current_site() {
 }
 
 /**
- * Create the Feedback page, save ID into an option.
- *
- * @return void
- */
-function add_page() {
-	$page_id = get_option( OPTION_KEY );
-	if ( $page_id ) {
-		return;
-	}
-
-	$content .= '<!-- wp:paragraph -->';
-	$content .= '<p>';
-	$content .= __( 'Insert survey here', 'wordcamporg' );
-	$content .= '</p>';
-	$content .= '<!-- /wp:paragraph -->';
-
-	$page_id = wp_insert_post( array(
-		'post_title'   => __( 'Attendee Survey', 'wordcamporg' ),
-		/* translators: Page slug for the attendee survey. */
-		'post_name'    => __( 'attendee survey', 'wordcamporg' ),
-		'post_content' => $content,
-		'post_status'  => 'draft',
-		'post_type'    => 'page',
-	) );
-
-	if ( $page_id > 0 ) {
-		update_option( OPTION_KEY, $page_id );
-	}
-}
-
-/**
- * Add a menu item.
- */
-function admin_menu() {
-	add_menu_page(
-		__( 'WordCamp Attendee Survey', 'wordcamporg' ),
-		__( 'Attendee Survey', 'wordcamporg' ),
-		'manage_options',
-		OPTION_KEY,
-		__NAMESPACE__ . '\render_menu_page',
-		'dashicons-feedback',
-		58
-	);
-}
-
-/**
- * Render the menu page.
- */
-function render_menu_page() {
-	?>
-	<div class="wrap">
-		<h1><?php echo esc_html__( 'Attendees', 'wordcamporg' ); ?></h1>
-	</div>
-	<?php
-}
-
-/**
- * Shortcut to the includes directory.
- *
- * @return string
- */
-function get_includes_path() {
-	return plugin_dir_path( __FILE__ ) . 'includes/';
-}
-
-/**
- * Get the IDs of sites that do not have the `speaker_feedback` skip feature flag.
+ * Get the IDs of sites that do not have the SKIP_KEY_ID skip feature flag.
  *
  * @return array
  */
@@ -224,4 +169,13 @@ function get_site_ids_without_skip_flag() {
 	);
 
 	return array_map( 'absint', $blog_ids );
+}
+
+/**
+ * Shortcut to the includes directory.
+ *
+ * @return string
+ */
+function get_includes_path() {
+	return plugin_dir_path( __FILE__ ) . 'includes/';
 }

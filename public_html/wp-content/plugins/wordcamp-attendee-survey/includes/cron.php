@@ -16,7 +16,7 @@ const DAYS_AFTER_TO_SEND = 2;
  * Actions & hooks
  */
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
-add_action( 'init', __NAMESPACE__ . '\remind_attendees' );
+add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\send_attendee_survey' );
 
 /**
  * Add cron jobs to the schedule.
@@ -133,7 +133,7 @@ function is_time_to_send_email( $email_id ) {
  *
  * @return void
  */
-function remind_attendees() {
+function send_attendee_survey() {
 	$email_id = get_email_id();
 
 	if ( empty( $email_id ) ) {

@@ -1,4 +1,9 @@
 <?php
+/** Metabox view */
+
+/** @var string $amount */
+/** @var string $available_currencies */
+/** @var string $currency */
 /** @var string $company_name */
 /** @var string $website */
 /** @var string $first_name */
@@ -16,6 +21,56 @@
 /** @var string $first_time */
 /** @var array $available_countries */
 ?>
+<ul class="wcpt-form">
+	<li class="wcpt-form-header">
+		<?php esc_html_e( 'Sponsorship', 'wordcamporg' ); ?>
+	</li>
+
+	<li>
+		<label for="_wcb_sponsor_amount">
+			<?php esc_html_e( 'Amount:', 'wordcamporg' ); ?>
+		</label>
+
+		<input
+			type="number"
+			class="regular-text"
+			id="_wcb_sponsor_amount"
+			name="_wcb_sponsor_amount"
+			value="<?php echo esc_attr( $amount ); ?>"
+			step="any"
+			min="0"
+			required
+		/>
+
+		<?php wcorg_required_indicator(); ?>
+
+		<span class="description"><?php esc_html_e( 'No commas, thousands separators or currency symbols. Ex. 1234.56', 'wordcamporg' ); ?></span>
+	</li>
+
+	<li>
+		<label for="_wcb_sponsor_currency">
+			<?php esc_html_e( 'Currency:', 'wordcamporg' ); ?>
+		</label>
+
+		<select
+			id="_wcb_sponsor_currency"
+			name="_wcb_sponsor_currency"
+			class="select-currency"
+		>
+			<?php foreach ( $available_currencies as $symbol => $name ) : ?>
+				<option
+					value="<?php echo esc_attr( $symbol ); ?>"
+					<?php selected( $symbol, $currency ); ?>
+				>
+					<?php echo ( $symbol ) ? esc_html( $name . ' (' . $symbol . ')' ) : ''; ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+
+		<?php wcorg_required_indicator(); ?>
+	</li>
+</ul>
+
 <ul class="wcpt-form">
 	<li class="wcpt-form-header">
 		<?php _e( 'Contact Information', 'wordcamporg' ); ?>

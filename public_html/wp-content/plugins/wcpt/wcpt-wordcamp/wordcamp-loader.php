@@ -223,7 +223,8 @@ class WordCamp_Loader extends Event_Loader {
 		return array_merge(
 			array( 'wcpt-needs-pre-plann' ),
 			self::get_pre_planning_post_statuses(),
-			self::get_public_post_statuses()
+			self::get_public_post_statuses(),
+			self::get_active_wordcamp_statuses()
 		);
 	}
 

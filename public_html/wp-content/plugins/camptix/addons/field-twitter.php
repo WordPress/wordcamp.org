@@ -34,22 +34,25 @@ class CampTix_Addon_Twitter_Field extends CampTix_Addon {
 
 	function attendees_shortcode_item( $attendee_id ) {
 		foreach ( $this->questions as $question ) {
-			if ( get_post_meta( $question->ID, 'tix_type', true ) != 'twitter' )
+			if ( get_post_meta( $question->ID, 'tix_type', true ) != 'twitter' ) {
 				continue;
+			}
 
 			$answers = (array) get_post_meta( $attendee_id, 'tix_questions', true );
-			if ( ! isset( $answers[ $question->ID ] ) )
+			if ( ! isset( $answers[ $question->ID ] ) ) {
 				continue;
+			}
 
-			$value = trim( $answers[ $question->ID ] );
-			$matches = array();
+			$value       = trim( $answers[ $question->ID ] );
+			$matches     = array();
 			$screen_name = false;
 
 			// We allow "username", "@username" and "http://twitter.com/username" values.
-			if ( preg_match( '#^@?([a-z0-9_]+)$#i', $value, $matches ) )
+			if ( preg_match( '#^@?([a-z0-9_]+)$#i', $value, $matches ) ) {
 				$screen_name = $matches[1];
-			elseif ( preg_match( '#^(https?://)?(www\.)?twitter\.com/(\#!/)?([a-z0-9]+)$#i', $value, $matches ) )
+			} elseif ( preg_match( '#^(https?://)?(www\.)?twitter\.com/(\#!/)?([a-z0-9]+)$#i', $value, $matches ) ) {
 				$screen_name = $matches[4];
+			}
 
 			if ( $screen_name ) {
 				$url = 'http://twitter.com/' . $screen_name;

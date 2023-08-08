@@ -1,6 +1,7 @@
 <?php
 /**
  * CampTix commands for WP-CLI.
+ *
  * @since 1.3.2
  */
 class CampTix_Command extends WP_CLI_Command {

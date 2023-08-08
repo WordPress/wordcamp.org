@@ -565,6 +565,7 @@ function load_custom_addons() {
 	require_once __DIR__ . '/addons/allergy.php';
 	require_once __DIR__ . '/addons/accommodations.php';
 	require_once __DIR__ . '/addons/code-of-conduct.php';
+	require_once __DIR__ . '/addons/first-time.php';
 	require_once __DIR__ . '/addons/health-advisory.php';
 	require_once __DIR__ . '/addons/privacy.php';
 
@@ -589,7 +590,7 @@ function load_custom_addons() {
  * @return string
  */
 function modify_default_fields_list( $default_fields ) {
-	return __( 'Top three fields: First name, last name, e-mail address.<br />Bottom four fields: Attendee list opt-out, life-threatening allergy, accessibility needs, Code of Conduct agreement.', 'wordcamporg' );
+	return __( 'Top three fields: First name, last name, e-mail address.<br />Bottom four fields: Attendee list opt-out, severe allergy, accessibility needs, Code of Conduct agreement.', 'wordcamporg' );
 }
 
 /**
@@ -674,7 +675,7 @@ function switch_email_template( $template_slug ) {
  * @return string
  */
 function get_global_sponsors_string() {
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordpress.org
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.org.
 
 	$posts = get_posts( array(
 		'post_type'      => 'mes',
@@ -770,7 +771,7 @@ function get_sponsorship_region_description_from_id( $region_id ) {
 		}
 
 		if ( ! $region_description ) {
-			switch_to_blog( BLOG_ID_CURRENT_SITE );
+			switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 			$region = get_term( $region_id, 'mes-regions' );
 
@@ -797,7 +798,7 @@ function get_sponsorship_level_name_from_id( $level_id ) {
 	$level_name = '';
 
 	if ( $level_id ) {
-		switch_to_blog( BLOG_ID_CURRENT_SITE );
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 		$level_name = get_the_title( $level_id );
 

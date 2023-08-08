@@ -8,6 +8,6 @@
 			</p>
 		<?php endif; ?>
 
-		<?php require_once( dirname( __DIR__ ) . '/wordcamp-budgets/field-attached-files.php' ); ?>
+		<?php require_once dirname( __DIR__ ) . '/wordcamp-budgets/field-attached-files.php'; ?>
 	</td>
 </tr>

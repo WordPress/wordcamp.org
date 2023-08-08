@@ -7,18 +7,18 @@ defined( 'WPINC' ) or die();
 
 <script type="text/html" id="tmpl-wcbrr-expense">
 	<h3>
-		<?php _e( 'Expense', 'wordcamporg' ); ?> #{{data.id}}
+		<?php esc_html_e( 'Expense', 'wordcamporg' ); ?> #{{data.id}}
 	</h3>
 
 	<ul class="wcb-form">
 		<li>
 			<label for="_wcbrr_category_{{data.id}}">
-				<?php _e( 'Category:', 'wordcamporg' ) ?>
+				<?php esc_html_e( 'Category:', 'wordcamporg' ); ?>
 			</label>
 
 			<select id="_wcbrr_category_{{data.id}}" name="_wcbrr_category_{{data.id}}" class="regular-text">
 				<option value="">
-					<?php _e( '-- Select a Category --', 'wordcamporg' ); ?>
+					<?php esc_html_e( '-- Select a Category --', 'wordcamporg' ); ?>
 				</option>
 				<option value=""></option>
 
@@ -37,7 +37,7 @@ defined( 'WPINC' ) or die();
 		<# var otherCategoryClasses = 'other' === data._wcbrr_category ? '' : 'hidden'; #>
 		<li id="_wcbrr_category_other_container" class="{{otherCategoryClasses}}">
 			<label for="_wcbrr_category_other_{{data.id}}">
-				<?php _e( 'Other Category:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Other Category:', 'wordcamporg' ); ?>
 			</label>
 
 			<input
@@ -53,7 +53,7 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_vendor_name_{{data.id}}">
-				<?php _e( 'Vendor Name:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Vendor Name:', 'wordcamporg' ); ?>
 			</label>
 
 			<input
@@ -62,7 +62,7 @@ defined( 'WPINC' ) or die();
 				id="_wcbrr_vendor_name_{{data.id}}"
 				name="_wcbrr_vendor_name_{{data.id}}"
 				value="{{data._wcbrr_vendor_name}}"
-			    required
+				required
 			/>
 
 			<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
@@ -70,7 +70,7 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_description_{{data.id}}">
-				<?php _e( 'Description:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Description:', 'wordcamporg' ); ?>
 			</label>
 
 			<textarea
@@ -80,7 +80,7 @@ defined( 'WPINC' ) or die();
 				class="regular-text"
 				name="_wcbrr_description_{{data.id}}"
 				maxlength="75"
-			    required
+				required
 			>{{data._wcbrr_description}}</textarea>
 
 			<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
@@ -88,7 +88,7 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_date_{{data.id}}">
-				<?php _e( 'Date:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Date:', 'wordcamporg' ); ?>
 			</label>
 
 			<input
@@ -97,7 +97,7 @@ defined( 'WPINC' ) or die();
 				id="_wcbrr_date_{{data.id}}"
 				name="_wcbrr_date_{{data.id}}"
 				value="{{data._wcbrr_date}}"
-			    required
+				required
 			/>
 
 			<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
@@ -105,7 +105,7 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_amount_{{data.id}}">
-				<?php _e( 'Amount:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Amount:', 'wordcamporg' ); ?>
 			</label>
 
 			<div class="wcb-form-input-wrapper">
@@ -115,20 +115,20 @@ defined( 'WPINC' ) or die();
 					id="_wcbrr_amount_{{data.id}}"
 					name="_wcbrr_amount_{{data.id}}"
 					value="{{data._wcbrr_amount}}"
-				    required
+					required
 				/>
 
 				<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
 
 				<p class="description">
-					<?php _e( 'No commas, thousands separators or currency symbols. Ex. 1234.56', 'wordcamporg' ); ?>
+					<?php esc_html_e( 'No commas, thousands separators or currency symbols. Ex. 1234.56', 'wordcamporg' ); ?>
 				</p>
 			</div>
 		</li>
 
 		<li>
 			<label>
-				<?php _e( 'Vendor Location:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Vendor Location:', 'wordcamporg' ); ?>
 			</label>
 
 			<div class="wcb-form-input-wrapper">
@@ -140,9 +140,9 @@ defined( 'WPINC' ) or die();
 						name="_wcbrr_vendor_location_{{data.id}}"
 						value="local"
 						required
-					    {{checked}}
+						{{checked}}
 					/>
-			       <?php _e( 'Local', 'wordcamporg' ); ?>
+					<?php esc_html_e( 'Local', 'wordcamporg' ); ?>
 				</label>
 
 				<br />
@@ -155,9 +155,9 @@ defined( 'WPINC' ) or die();
 						name="_wcbrr_vendor_location_{{data.id}}"
 						value="online"
 						required
-					    {{checked}}
+						{{checked}}
 					/>
-					<?php _e( 'Not Local / Online', 'wordcamporg' ); ?>
+					<?php esc_html_e( 'Not Local / Online', 'wordcamporg' ); ?>
 				</label>
 
 				<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
@@ -166,7 +166,7 @@ defined( 'WPINC' ) or die();
 	</ul>
 
 	<button class="wcbrr-delete-expense button-secondary" data-expense-id="{{data.id}}">
-		<?php _e( 'Delete Expense', 'wordcamporg' ); ?> #{{data.id}}
+		<?php esc_html_e( 'Delete Expense', 'wordcamporg' ); ?> #{{data.id}}
 	</button>
 
 	<hr />

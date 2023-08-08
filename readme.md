@@ -7,11 +7,7 @@ The platform also includes tools for program volunteers and administrators to ma
 
 ## Setup
 
-There are two primary ways to setup this repo for local development.
-
-1. [Using VVV for installing as WordCamp.org as a part of WordPress.org meta network.](https://github.com/WordPress/meta-environment/blob/master/docs/install.md)
-
-1. [Using Docker for a standalone WordCamp.org installation.](.docker/readme.md)
+Follow the instructions for [setting up a Docker environment](.docker/readme.md).
 
 
 ## Support

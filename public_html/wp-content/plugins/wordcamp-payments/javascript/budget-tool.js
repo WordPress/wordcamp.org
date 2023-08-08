@@ -269,7 +269,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				var value = this.$el.find( '.value' ).val(),
 					name  = this.model.get( 'name' );
 
-				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers' ], name ) ) {
+				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				} else if ( _.contains( [ 'ticket-price' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
@@ -391,11 +391,12 @@ window.wcb = window.wcb || { models: {}, input: [] };
 	} );
 
 	wcb.metaLabels = {
-		'attendees'    : 'Attendees',
+		'attendees'    : 'Total attendees',
 		'days'         : 'Days',
 		'tracks'       : 'Tracks',
 		'speakers'     : 'Speakers',
 		'volunteers'   : 'Volunteers',
+		'organizers'   : 'Organizers',
 		'currency'     : 'Currency',
 		'ticket-price' : 'Ticket Price',
 	};
@@ -423,6 +424,17 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			},
 		},
 
+		'per-organizer' : {
+			'label'    : 'per organizer',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'organizers',
+				} ).get( 'value' ) );
+			},
+		},
+
 		'per-speaker-volunteer' : {
 			'label'    : 'per speakers + volunteers',
 			'hasValue' : true,
@@ -435,6 +447,27 @@ window.wcb = window.wcb || { models: {}, input: [] };
 					+ parseInt( wcb.table.collection.findWhere( {
 						type : 'meta',
 						name : 'speakers',
+					} ).get( 'value' ) )
+				);
+			},
+		},
+
+		'per-speaker-volunteer-organizer' : {
+			'label'    : 'per speakers + volunteers + organizers',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * (
+					parseInt( wcb.table.collection.findWhere( {
+						type : 'meta',
+						name : 'volunteers',
+					} ).get( 'value' ) )
+					+ parseInt( wcb.table.collection.findWhere( {
+						type : 'meta',
+						name : 'speakers',
+					} ).get( 'value' ) )
+					+ parseInt( wcb.table.collection.findWhere( {
+						type : 'meta',
+						name : 'organizers',
 					} ).get( 'value' ) )
 				);
 			},

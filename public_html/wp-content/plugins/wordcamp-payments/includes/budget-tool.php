@@ -52,8 +52,8 @@ class WordCamp_Budget_Tool {
 		}
 
 		$budget = self::_get_budget();
-		$data = json_decode( wp_unslash( $_POST['_wcb_budget_data'] ), true );
-		$user = get_user_by( 'id', get_current_user_id() );
+		$data   = json_decode( wp_unslash( $_POST['_wcb_budget_data'] ), true );
+		$user   = get_user_by( 'id', get_current_user_id() );
 
 		$valid_attributes = array( 'type', 'category', 'amount', 'note', 'link', 'name', 'value' );
 		foreach ( $data as &$item ) {
@@ -75,7 +75,7 @@ class WordCamp_Budget_Tool {
 
 		if ( ! empty( $_POST['wcb-budget-download-csv'] ) ) {
 			$column_headers = Export_CSV::esc_csv( array( 'Type', 'Category', 'Detail', 'Amount', 'Link', 'Total' ) );
-			$csv_data = array();
+			$csv_data       = array();
 
 			$meta = wp_list_filter( $data, array( 'type' => 'meta' ) );
 
@@ -86,7 +86,7 @@ class WordCamp_Budget_Tool {
 				$raw['amount'] = 'income' === $raw['type'] ? (float) $raw['amount'] : (float) $raw['amount'] * -1;
 
 				$total = self::_get_real_value( $raw['amount'], $raw['link'], $meta );
-				$row = array(
+				$row   = array(
 					$raw['type'],
 					$raw['category'],
 					$raw['note'],
@@ -115,8 +115,8 @@ class WordCamp_Budget_Tool {
 			// Submit for Approval.
 			$budget['prelim'] = $data;
 			$budget['status'] = 'pending';
-			$domain = parse_url( home_url(), PHP_URL_HOST );
-			$link = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
+			$domain           = parse_url( home_url(), PHP_URL_HOST );
+			$link             = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
 
 			$content = "A budget approval request has been submitted for {$domain} by {$user->user_login}:\n\n{$link}\n\nYours, Mr. Budget Tool";
 			wp_mail( 'support@wordcamp.org', 'Budget Approval Requested: ' . $domain, $content );
@@ -124,8 +124,8 @@ class WordCamp_Budget_Tool {
 		} elseif ( 'draft' === $budget['status'] && ! empty( $_POST['wcb-budget-request-review'] ) ) {
 			// Save draft and request review.
 			$budget['prelim'] = $data;
-			$domain = parse_url( home_url(), PHP_URL_HOST );
-			$link = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
+			$domain           = parse_url( home_url(), PHP_URL_HOST );
+			$link             = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
 
 			$content = "A budget review has been requested for {$domain} by {$user->user_login}:\n\n{$link}\n\nYours, Mr. Budget Tool";
 			wp_mail( 'support@wordcamp.org', 'Budget Review Requested: ' . $domain, $content );
@@ -134,12 +134,12 @@ class WordCamp_Budget_Tool {
 			if ( ! empty( $_POST['wcb-budget-reject'] ) ) {
 				$budget['status'] = 'draft';
 			} elseif ( ! empty( $_POST['wcb-budget-approve'] ) ) {
-				$budget['status'] = 'approved';
+				$budget['status']      = 'approved';
 				$budget['approved_by'] = $user->ID;
 
 				// Clone the approved prelim. budget.
 				$budget['approved'] = $budget['prelim'];
-				$budget['working'] = $budget['prelim'];
+				$budget['working']  = $budget['prelim'];
 			}
 		} elseif ( 'approved' === $budget['status'] && ! empty( $_POST['wcb-budget-update-working'] ) ) {
 			$budget['working'] = $data;
@@ -147,7 +147,7 @@ class WordCamp_Budget_Tool {
 			$budget['working'] = $budget['approved'];
 		}
 
-		$budget['updated'] = time();
+		$budget['updated']    = time();
 		$budget['updated_by'] = $user->ID;
 
 		self::rotate_backups();
@@ -207,20 +207,25 @@ class WordCamp_Budget_Tool {
 	 */
 	private static function _get_real_value( float $value, $link, $meta ) {
 		// The metadata is an array of arrays, so we can filter out the relevant item, pluck just the value, then retrieve it.
-		$count_speakers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'speakers' ) ), 'value' ) );
+		$count_speakers   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'speakers' ) ), 'value' ) );
 		$count_volunteers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'volunteers' ) ), 'value' ) );
-		$count_attendees = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
-		$count_days = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
-		$count_tracks = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
-		$ticket_price = (float) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'ticket-price' ) ), 'value' ) );
+		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
+		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
+		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
+		$count_tracks     = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
+		$ticket_price     = (float) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'ticket-price' ) ), 'value' ) );
 
 		switch ( $link ) {
 			case 'per-speaker':
 				return $value * $count_speakers;
 			case 'per-volunteer':
 				return $value * $count_volunteers;
+			case 'per-organizer':
+				return $value * $count_organizers;
 			case 'per-speaker-volunteer':
 				return $value * $count_speakers + $value * $count_volunteers;
+			case 'per-speaker-volunteer-organizer':
+				return $value * $count_speakers + $value * $count_volunteers + $value * $count_organizers;
 			case 'per-attendee':
 				return $value * $count_attendees;
 			case 'per-day':
@@ -260,6 +265,7 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'meta', 'name' => 'tracks', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
+			array( 'type' => 'meta', 'name' => 'organizers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'currency', 'value' => 'USD' ),
 			array( 'type' => 'meta', 'name' => 'ticket-price', 'value' => 0 ),
 
@@ -310,9 +316,9 @@ class WordCamp_Budget_Tool {
 		$inspire_urls = get_site_transient( 'wcb-inspire-urls' );
 		if ( ! $inspire_urls ) {
 			$urls = array( 'https://jawordpressorg.github.io/wapuu/wapuu-archive/original-wapuu.png' );
-			$r = wp_remote_get( 'https://jawordpressorg.github.io/wapuu-api/v1/wapuu.json' );
+			$r    = wp_remote_get( 'https://jawordpressorg.github.io/wapuu-api/v1/wapuu.json' );
 			if ( ! is_wp_error( $r ) && wp_remote_retrieve_response_code( $r ) == 200 ) {
-				$body = json_decode( wp_remote_retrieve_body( $r ), true );
+				$body       = json_decode( wp_remote_retrieve_body( $r ), true );
 				$maybe_urls = wp_list_pluck( wp_list_pluck( $body, 'wapuu' ), 'src' );
 				if ( count( $maybe_urls ) > 0 ) {
 					$inspire_urls = $maybe_urls;
@@ -329,7 +335,7 @@ class WordCamp_Budget_Tool {
 			}
 		}
 
-		require( dirname( __DIR__ ) . '/views/budget-tool/main.php' );
+		require dirname( __DIR__ ) . '/views/budget-tool/main.php';
 	}
 
 	/**

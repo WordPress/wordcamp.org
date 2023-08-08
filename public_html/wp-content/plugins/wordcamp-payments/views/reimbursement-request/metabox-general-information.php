@@ -27,7 +27,7 @@ defined( 'WPINC' ) or die();
 				id="_wcbrr_name_of_payer"
 				name="_wcbrr_name_of_payer"
 				value="<?php echo esc_attr( $name_of_payer ); ?>"
-			    required
+				required
 			/>
 
 			<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
@@ -35,12 +35,12 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_currency">
-				<?php _e( 'Currency:', 'wordcamporg' ) ?>
+				<?php esc_html_e( 'Currency:', 'wordcamporg' ); ?>
 			</label>
 
 			<select id="_wcbrr_currency" name="_wcbrr_currency" class="regular-text">
 				<option value="">
-					<?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
+					<?php esc_html_e( '-- Select a Currency --', 'wordcamporg' ); ?>
 				</option>
 
 				<?php foreach ( $available_currencies as $currency_key => $currency_name ) : ?>
@@ -58,12 +58,12 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_reason">
-				<?php _e( 'Reason for Reimbursement:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Reason for Reimbursement:', 'wordcamporg' ); ?>
 			</label>
 
 			<select id="_wcbrr_reason" name="_wcbrr_reason" class="regular-text">
 				<option value="">
-					<?php _e( '-- Select a Reason --', 'wordcamporg' ); ?>
+					<?php esc_html_e( '-- Select a Reason --', 'wordcamporg' ); ?>
 				</option>
 				<option value=""></option>
 
@@ -79,7 +79,7 @@ defined( 'WPINC' ) or die();
 
 		<li id="_wcbrr_reason_other_container">
 			<label for="_wcbrr_reason_other">
-				<?php _e( 'Other Reason:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Other Reason:', 'wordcamporg' ); ?>
 			</label>
 
 			<input
@@ -95,7 +95,7 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_date_paid">
-				<?php _e( 'Payment Release Date:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Payment Release Date:', 'wordcamporg' ); ?>
 			</label>
 
 			<?php if ( $date_paid ) $date_paid = date( 'Y-m-d', $date_paid ); ?>
@@ -105,11 +105,11 @@ defined( 'WPINC' ) or die();
 
 		<li>
 			<label for="_wcbrr_files">
-				<?php _e( 'Files:', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Files:', 'wordcamporg' ); ?>
 			</label>
 
 			<div class="wcb-form-input-wrapper">
-				<?php require_once( dirname( __DIR__ ) . '/wordcamp-budgets/field-attached-files.php' ); ?>
+				<?php require_once dirname( __DIR__ ) . '/wordcamp-budgets/field-attached-files.php'; ?>
 			</div>
 		</li>
 

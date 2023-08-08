@@ -2,16 +2,9 @@
 
 namespace WordCamp\Latest_Site_Hints;
 use function WordCamp\Sunrise\get_top_level_domain;
-use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH };
+use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 defined( 'WPINC' ) || die();
-
-if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
-	// @todo Remove this once https://github.com/WordPress/wordcamp.org/issues/906 is fixed.
-	// If it's needed on the Events network, the constants above will need to be moved to `sunrise.php`, or
-	// defined in `sunrise-events.php` with a pattern designed for Events sites.
-	return;
-}
 
 add_action( 'wp', __NAMESPACE__ . '\maybe_add_latest_site_hints' );
 
@@ -142,7 +135,13 @@ function show_notification_about_latest_site() {
 }
 
 /**
- * Get the home URL of the most recent camp in a given city.
+ * Get the home URL of the most recent event in a given city.
+ *
+ * For WordCamps, this is just the most recent WordCamp in the city. For NextGen events, it's the most recent event in that city with the same type.
+ *
+ * For example:
+ * - `narnia.wordcamp.org/2023/` -> `narnia.wordcamp.org/2024/`
+ * - `events.wordpress.org/narnia/2023/training/` -> `events.wordpress.org/narnia/2024/training/`
  *
  * @param string $current_domain
  * @param string $current_path
@@ -152,7 +151,6 @@ function show_notification_about_latest_site() {
 function get_latest_home_url( $current_domain, $current_path ) {
 	global $wpdb;
 
-	$tld      = get_top_level_domain();
 	$wordcamp = get_wordcamp_post();
 	$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
 
@@ -196,6 +194,24 @@ function get_latest_home_url( $current_domain, $current_path ) {
       LIMIT 1",
 			$current_domain
 		);
+
+	} elseif ( preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $current_path, $matches ) ) {
+		$city        = $matches[1] ?? '';
+		$type        = $matches[3] ?? '';
+		$latest_path = "/$city/%%/$type/";
+
+		$query = $wpdb->prepare( "
+			SELECT `domain`, `path`
+			FROM `$wpdb->blogs`
+			WHERE
+				`domain` = %s AND
+				`path` LIKE %s
+			ORDER BY `path` DESC
+			LIMIT 1",
+			$current_domain,
+			$latest_path
+		);
+
 	} else {
 		return false;
 	}

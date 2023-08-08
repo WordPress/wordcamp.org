@@ -8,7 +8,7 @@
 
 	<p>
 		<?php echo esc_html( sprintf(
-			__( "Payment information will be deleted %d days after the payment has been sent. Until then, it will be available to you and to trusted network administrators.", 'wordcamporg' ),
+			__( 'Payment information will be deleted %d days after the payment has been sent. Until then, it will be available to you and to trusted network administrators.', 'wordcamporg' ),
 			WordCamp_Budgets::PAYMENT_INFO_RETENTION_PERIOD
 		) ); ?>
 	</p>
@@ -23,17 +23,17 @@
 					esc_html__( 'Add any relevant details', 'wordcamporg' ),
 					false
 				); ?>
-			<?php endif;?>
+			<?php endif; ?>
 
 			<?php $this->render_radio_input( $post, esc_html__( 'Payment Method', 'wordcamporg' ), 'payment_method' ); ?>
 		</table>
 
 		<table id="payment_method_direct_deposit_fields" class="form-table payment_method_fields <?php echo 'Direct Deposit' == $selected_payment_method ? 'active' : 'hidden'; ?>">
-			<?php $this->render_text_input(  $post, esc_html__( 'Bank Name',           'wordcamporg' ),	'ach_bank_name'           ); ?>
-			<?php $this->render_radio_input( $post, esc_html__( 'Account Type',        'wordcamporg' ),	'ach_account_type'        ); ?>
-			<?php $this->render_text_input(  $post, esc_html__( 'Routing Number',      'wordcamporg' ),	'ach_routing_number'      ); ?>
-			<?php $this->render_text_input(  $post, esc_html__( 'Account Number',      'wordcamporg' ),	'ach_account_number'      ); ?>
-			<?php $this->render_text_input(  $post, esc_html__( 'Account Holder Name', 'wordcamporg' ),	'ach_account_holder_name' ); ?>
+			<?php $this->render_text_input(  $post, esc_html__( 'Bank Name',           'wordcamporg' ), 'ach_bank_name'           ); ?>
+			<?php $this->render_radio_input( $post, esc_html__( 'Account Type',        'wordcamporg' ), 'ach_account_type'        ); ?>
+			<?php $this->render_text_input(  $post, esc_html__( 'Routing Number',      'wordcamporg' ), 'ach_routing_number'      ); ?>
+			<?php $this->render_text_input(  $post, esc_html__( 'Account Number',      'wordcamporg' ), 'ach_account_number'      ); ?>
+			<?php $this->render_text_input(  $post, esc_html__( 'Account Holder Name', 'wordcamporg' ), 'ach_account_holder_name' ); ?>
 		</table>
 
 		<div id="payment_method_check_fields" class="form-table payment_method_fields <?php echo 'Check' == $selected_payment_method ? 'active' : 'hidden'; ?>">

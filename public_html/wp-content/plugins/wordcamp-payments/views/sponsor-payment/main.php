@@ -82,7 +82,7 @@ get_header();
 				<label class="control-header"><?php esc_html_e( 'Amount', 'wordcamporg' ); ?></label>
 				<div class="control">
 					<input type="text" name="amount" /><br />
-                    <em><?php esc_html_e( 'An additional 2.9% to cover processing fees on credit card payments is highly appreciated but not required.', 'wordcamporg' ); ?></em>
+					<em><?php esc_html_e( 'An additional 2.9% to cover processing fees on credit card payments is highly appreciated but not required.', 'wordcamporg' ); ?></em>
 				</div>
 
 				<div class="clear"></div>

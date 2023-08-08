@@ -7,56 +7,6 @@ defined( 'WPINC' ) || die();
 
 
 /*
- * Matches `2020-foo.narnia.wordcamp.org/`, with or without additional `REQUEST_URI` params.
- */
-const PATTERN_YEAR_DOT_CITY_DOMAIN_PATH = '
-	@ ^
-	( \d{4} [\w-]* )           # Capture the year, plus any optional extra identifier.
-	\.
-	( [\w-]+ )                 # Capture the city.
-	\.
-	( wordcamp | buddycamp )   # Capture the second-level domain.
-	\.
-	( org | test )             # Capture the top level domain.
-	/
-	@ix
-';
-
-/*
- * Matches `narnia.wordcamp.org/2020-foo/`, with or without additional `REQUEST_URI` params.
- */
-const PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH = '
-	@ ^
-	( [\w-]+ )                 # Capture the city.
-	\.
-	( wordcamp | buddycamp )   # Capture the second-level domain.
-	\.
-	( org | test )             # Capture the top-level domain.
-	( / \d{4} [\w-]* / )       # Capture the site path (the year, plus any optional extra identifier).
-	@ix
-';
-
-/*
- * Matches a request URI like `/2020/2019/save-the-date-for-wordcamp-vancouver-2020/`.
- */
-const PATTERN_CITY_SLASH_YEAR_REQUEST_URI_WITH_DUPLICATE_DATE = '
-	@ ^
-	( / \d{4} [\w-]* / )   # Capture the site path (the year, plus any optional extra identifier).
-
-	(                      # Capture the `/%year%/%monthnum%/%day%/` permastruct tags.
-		[0-9]{4} /         # The year is required.
-
-		(?:                # The month and day are optional.
-			[0-9]{2} /
-		){0,2}
-	)
-
-	(.+)                   # Capture the slug.
-	$ @ix
-';
-
-
-/*
  * Allow legacy CLI scripts in local dev environments to override the server hostname.
  *
  * This makes it possible to run bin scripts in local environments that use different domain names (e.g., wordcamp.dev)

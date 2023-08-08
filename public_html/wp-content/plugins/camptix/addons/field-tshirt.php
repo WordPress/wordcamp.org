@@ -52,7 +52,7 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 		$sizes_by_site = get_site_option( 'tix_aggregated_tshirt_sizes', array() );
 
 		ob_start();
-		require_once( dirname( dirname( __FILE__ ) ) . '/views/addons/field-tshirt-report.php' );
+		require_once dirname( dirname( __FILE__ ) ) . '/views/addons/field-tshirt-report.php';
 
 		return ob_get_clean();
 	}

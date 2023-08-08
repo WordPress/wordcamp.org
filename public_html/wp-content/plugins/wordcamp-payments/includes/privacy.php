@@ -191,14 +191,14 @@ function vendor_payment_exporter( $email_address, $page ) {
 		$vendor_payment_exp_data = array();
 		$meta                    = get_post_meta( $post->ID );
 
-		$vendor_payment_exp_data[] = [
+		$vendor_payment_exp_data[] = array(
 			'name'  => __( 'Title', 'wordcamporg' ),
 			'value' => $post->post_title,
-		];
-		$vendor_payment_exp_data[] = [
+		);
+		$vendor_payment_exp_data[] = array(
 			'name'  => __( 'Date', 'wordcamporg' ),
 			'value' => $post->post_date,
-		];
+		);
 
 		$vendor_payment_exp_data = array_merge(
 			$vendor_payment_exp_data, get_meta_details( $meta, WCP_Payment_Request::POST_TYPE )
@@ -246,14 +246,14 @@ function reimbursements_exporter( $email_address, $page ) {
 		$reimbursement_data_to_export = array();
 		$meta                         = get_post_meta( $post->ID );
 
-		$reimbursement_data_to_export[] = [
+		$reimbursement_data_to_export[] = array(
 			'name'  => __( 'Title', 'wordcamporg' ),
 			'value' => $post->post_title,
-		];
-		$reimbursement_data_to_export[] = [
+		);
+		$reimbursement_data_to_export[] = array(
 			'name'  => __( 'Date', 'wordcamporg' ),
 			'value' => $post->post_date,
-		];
+		);
 
 		// Meta fields.
 		$reimbursement_data_to_export = array_merge(
@@ -309,14 +309,14 @@ function get_post_wp_query( $query_type, $page, $email_address ) {
 			break;
 
 		case WCP_Payment_Request::POST_TYPE:
-			$query_args['meta_query'] = [
+			$query_args['meta_query'] = array(
 				'relation' => 'AND',
-			];
+			);
 
-			$query_args['meta_query'][] = [
+			$query_args['meta_query'][] = array(
 				'key'   => '_camppayments_vendor_email_address',
 				'value' => $email_address,
-			];
+			);
 			break;
 
 		default:
@@ -340,10 +340,10 @@ function get_meta_details( $meta, $post_type ) {
 		$data = isset( $meta[ $meta_field ] ) ? $meta[ $meta_field ] : null;
 
 		if ( ! empty( $data ) && is_array( $data ) && ! empty( $data[0] ) ) {
-			$meta_details[] = [
+			$meta_details[] = array(
 				'name'  => $meta_field_name,
 				'value' => $meta [ $meta_field ][0],
-			];
+			);
 		}
 	}
 

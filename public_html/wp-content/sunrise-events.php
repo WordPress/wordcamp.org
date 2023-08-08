@@ -4,24 +4,7 @@ namespace WordCamp\Sunrise\Events;
 use WP_Network, WP_Site;
 
 defined( 'WPINC' ) || die();
-
-/*
- * Matches URLs of regular sites, but not the root site.
- *
- * For example, `events.wordpress.org/vancouver/2023/diversity-day/`.
- *
- */
-const PATTERN_EVENT_SITE = '
-	@ ^
-	/
-	( [\w-]+ )    # Capture the city.
-	/
-	( \d{4} )     # Capture the year.
-	/
-	( [\w-]+ )    # Capture the event type.
-	/?
-	@ix
-';
+use const WordCamp\Sunrise\PATTERN_CITY_YEAR_TYPE_PATH;
 
 set_network_and_site();
 
@@ -44,7 +27,7 @@ function set_network_and_site() {
 	$site_id      = $current_site->id;
 	$path         = stripslashes( $_SERVER['REQUEST_URI'] );
 
-	if ( 1 === preg_match( PATTERN_EVENT_SITE, $path ) ) {
+	if ( 1 === preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $path ) ) {
 		if ( is_admin() ) {
 			$path = preg_replace( '#(.*)/wp-admin/.*#', '$1/', $path );
 		}

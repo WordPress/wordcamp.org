@@ -2,9 +2,9 @@
 /**
  * Post Meta Logging Addon for CampTix
  *
- * This addon logs entries about tickets, attendees, coupons, etc., 
- * into the postmeta table. If you have a lot of data and/or use a 
- * persistent mem-based object caching plugin, you should use database 
+ * This addon logs entries about tickets, attendees, coupons, etc.,
+ * into the postmeta table. If you have a lot of data and/or use a
+ * persistent mem-based object caching plugin, you should use database
  * of file-based logging instead.
  */
 class CampTix_Addon_Logging_Meta extends CampTix_Addon {
@@ -27,13 +27,22 @@ class CampTix_Addon_Logging_Meta extends CampTix_Addon {
 		);
 
 		if ( $post_id ) {
-			$entry['post_id'] = $post_id;
-			$entry['edit_post_link'] = esc_url_raw( add_query_arg( array( 'post' => $post_id, 'action' => 'edit' ), admin_url( 'post.php' ) ) );
-			$log = get_post_meta( $post_id, 'tix_log', true );
-			if ( is_array( $log ) )
+			$entry['post_id']        = $post_id;
+			$entry['edit_post_link'] = esc_url_raw(
+				add_query_arg(
+					array(
+						'post'   => $post_id,
+						'action' => 'edit',
+					),
+					admin_url( 'post.php' )
+				)
+			);
+			$log                     = get_post_meta( $post_id, 'tix_log', true );
+			if ( is_array( $log ) ) {
 				$log[] = $entry;
-			else
+			} else {
 				$log = array( $entry );
+			}
 
 			update_post_meta( $post_id, 'tix_log', $log );
 		}
@@ -47,8 +56,9 @@ class CampTix_Addon_Logging_Meta extends CampTix_Addon {
 			'tix_email',
 		);
 
-		foreach ( $post_types as $post_type )
+		foreach ( $post_types as $post_type ) {
 			add_meta_box( 'tix_log', 'CampTix Meta Log', array( $this, 'metabox_log' ), $post_type, 'normal' );
+		}
 	}
 
 	/**
@@ -60,14 +70,18 @@ class CampTix_Addon_Logging_Meta extends CampTix_Addon {
 
 		// The log is stored in an array of array( 'timestamp' => x, 'message' => y ) format.
 		$log = get_post_meta( $post->ID, 'tix_log', true );
-		if ( !$log ) $log = array();
+		if ( ! $log ) {
+			$log = array();
+		}
 
 		// Add entries as rows.
-		foreach ( $log as $entry )
+		foreach ( $log as $entry ) {
 			$rows[] = array( date( 'Y-m-d H:i:s', intval( $entry['timestamp'] ) ), esc_html( $entry['message'] ) );
+		}
 
-		if ( count( $rows ) < 1 )
+		if ( count( $rows ) < 1 ) {
 			$rows[] = array( 'No log entries yet.', '' );
+		}
 
 		$camptix->table( $rows, 'tix-log-table' );
 	}

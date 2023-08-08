@@ -750,10 +750,13 @@ class WordCamp_QBO {
 	 * @return int|WP_Error The customer ID if success; a WP_Error if failure
 	 */
 	protected static function probably_get_customer_id( $sponsor, $currency_code ) {
-		$customer_id = self::get_customer( $sponsor['company-name'], $currency_code );
+		$customer    = self::get_customer( $sponsor['company-name'], $currency_code );
+		$customer_id = $customer['Id'];
 
-		if ( is_wp_error( $customer_id ) || ! $customer_id ) {
+		if ( is_wp_error( $customer ) || ! $customer ) {
 			$customer_id = self::create_customer( $sponsor, $currency_code );
+		} else {
+			self::update_customer( $customer, $sponsor );
 		}
 
 		return $customer_id;
@@ -765,7 +768,7 @@ class WordCamp_QBO {
 	 * @param string $customer_name
 	 * @param string $currency_code
 	 *
-	 * @return int|false|WP_Error A customer ID as integer, if one was found; false if no match was found; a WP_Error if an error occurred.
+	 * @return array|false|WP_Error A customer array if one was found; false if no match was found; a WP_Error if an error occurred.
 	 */
 	protected static function get_customer( $customer_name, $currency_code ) {
 		$qbo_request = self::build_qbo_get_customer_request( $customer_name, $currency_code );
@@ -785,7 +788,8 @@ class WordCamp_QBO {
 			$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 			if ( isset( $body['QueryResponse']['Customer'][0]['Id'] ) ) {
-				$result = absint( $body['QueryResponse']['Customer'][0]['Id'] );
+				$result = $body['QueryResponse']['Customer'][0];
+				$result['Id'] = absint( $result['Id'] );
 			} elseif ( isset( $body['QueryResponse'] ) && 0 === count( $body['QueryResponse'] ) ) {
 				$result = false;
 			} else {
@@ -908,12 +912,8 @@ class WordCamp_QBO {
 		$oauth_header = self::qbo_client()->get_oauth_header();
 		$realm_id     = self::qbo_client()->get_realm_id();
 
-		$sponsor                  = array_map( 'sanitize_text_field', $sponsor );
-		$sponsor['email-address'] = is_email( $sponsor['email-address'] );
-		$sponsor['first-name']    = str_replace( ':', '-', $sponsor['first-name']   );
-		$sponsor['last-name']     = str_replace( ':', '-', $sponsor['last-name']    );
-		$sponsor['company-name']  = str_replace( ':', '-', $sponsor['company-name'] );
-		$currency_code            = sanitize_text_field( $currency_code );
+		$sponsor       = self::normalize_sponsor( $sponsor );
+		$currency_code = sanitize_text_field( $currency_code );
 
 		if ( empty( $sponsor['company-name'] ) || empty( $sponsor['email-address'] ) ) {
 			return new WP_Error( 'required_fields_missing', 'Required fields are missing.', $sponsor );
@@ -939,6 +939,128 @@ class WordCamp_QBO {
 			'CompanyName'             => $sponsor['company-name'],
 			'DisplayName'             => self::get_company_display_name( $sponsor['company-name'], $currency_code ),
 			'PrintOnCheckName'        => $sponsor['company-name'],
+
+			'PrimaryPhone'            => array(
+				'FreeFormNumber' => $sponsor['phone-number'],
+			),
+
+			'PrimaryEmailAddr'        => array(
+				'Address' => $sponsor['email-address'],
+			),
+		);
+
+		if ( isset( $sponsor['address2'] ) ) {
+			$payload['BillAddr']['Line2'] = $sponsor['address2'];
+		}
+
+		$request_url = sprintf(
+			'%s/v3/company/%d/customer',
+			self::$api_base_url,
+			rawurlencode( $realm_id )
+		);
+
+		$payload = wp_json_encode( $payload );
+
+		$args = array(
+			'timeout' => self::REMOTE_REQUEST_TIMEOUT,
+			'headers' => array(
+				'Authorization' => $oauth_header,
+				'Accept'        => 'application/json',
+				'Content-Type'  => 'application/json',
+			),
+			'body'    => $payload,
+		);
+
+		return array(
+			'url'  => $request_url,
+			'args' => $args,
+		);
+	}
+
+	/**
+	 * Normalize sponsor values in preparation to send to QBO.
+	 */
+	protected static function normalize_sponsor( array $sponsor ) : array {
+		$sponsor                  = array_map( 'sanitize_text_field', $sponsor );
+		$sponsor['email-address'] = is_email( $sponsor['email-address'] );
+		$sponsor['first-name']    = str_replace( ':', '-', $sponsor['first-name']   );
+		$sponsor['last-name']     = str_replace( ':', '-', $sponsor['last-name']    );
+		$sponsor['company-name']  = str_replace( ':', '-', $sponsor['company-name'] );
+
+		return $sponsor;
+	}
+
+	/**
+	 * Update a customer in QuickBooks with the latest info for a corresponding Sponsor in WordCamp.org
+	 *
+	 * Over time the info in QBO gets out of date, so it should be refreshed based the info that active camps
+	 * provide.
+	 *
+	 * @param array $customer
+	 * @param array $sponsor
+	 *
+	 * @return bool|WP_Error The customer ID if success; a WP_Error if failure
+	 */
+	protected static function update_customer( array $customer, array $sponsor ) {
+		$qbo_request = self::build_qbo_update_customer_request( $customer, $sponsor );
+
+		if ( is_wp_error( $qbo_request ) ) {
+			return $qbo_request;
+		}
+
+		$response = wp_remote_post( $qbo_request['url'], $qbo_request['args'] );
+		Logger\log( 'remote_request', compact( 'qbo_request', 'response' ) );
+
+		if ( is_wp_error( $response ) ) {
+			$result = $response;
+		} elseif ( 200 != wp_remote_retrieve_response_code( $response ) ) {
+			$result = new WP_Error( 'invalid_http_code', 'Invalid HTTP response code', $response );
+		} else {
+			$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+			if ( isset( $body['Customer']['Id'] ) ) {
+				$result = true;
+			} else {
+				$result = new WP_Error( 'invalid_response_body', 'Could not extract customer ID from response.', $response );
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Build a request to update a Customer via QuickBook's API
+	 *
+	 * @param array $customer
+	 * @param array $sponsor
+	 *
+	 * @return array|WP_Error
+	 */
+	protected static function build_qbo_update_customer_request( array $customer, array $sponsor ) {
+		self::load_options();
+		$oauth_header = self::qbo_client()->get_oauth_header();
+		$realm_id     = self::qbo_client()->get_realm_id();
+		$sponsor      = self::normalize_sponsor( $sponsor );
+
+		if ( empty( $sponsor['email-address'] ) ) {
+			return new WP_Error( 'required_fields_missing', 'Required fields are missing.', $sponsor );
+		}
+
+		$payload = array(
+			'Id'        => $customer['Id'],
+			'sparse'    => true,
+			'SyncToken' => $customer['SyncToken'],
+
+			'BillAddr' => array(
+				'Line1'                  => $sponsor['address1'],
+				'City'                   => $sponsor['city'],
+				'Country'                => $sponsor['country'],
+				'CountrySubDivisionCode' => $sponsor['state'],
+				'PostalCode'             => $sponsor['zip-code'],
+			),
+
+			'GivenName'  => $sponsor['first-name'],
+			'FamilyName' => $sponsor['last-name'],
 
 			'PrimaryPhone'            => array(
 				'FreeFormNumber' => $sponsor['phone-number'],

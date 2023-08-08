@@ -21,9 +21,9 @@
 		</select>
 
 		<?php
-			if ( $required ) {
-				WordCamp_Budgets::render_form_field_required_indicator();
-			}
+		if ( $required ) {
+			WordCamp_Budgets::render_form_field_required_indicator();
+		}
 		?>
 	</td>
 </tr>

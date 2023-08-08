@@ -9,18 +9,30 @@ use WordCamp\Budgets\Reimbursement_Requests;
 use WordCamp\Budgets_Dashboard\Reimbursement_Requests as Reimbursements_Dashboard;
 use DateTimeInterface;
 use WP_CLI;
+use WP_Error;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 define( 'REDACTED_VALUE',               '[deleted for privacy]'    );
 define( 'REDACT_PAID_REQUESTS_CRON_ID', 'wcb_redact_paid_requests' );
+
+
+/*
+ * This _plugin_ needs to be network-activated on the NextGen network so that things like
+ * `WordCamp\Budgets_Dashboard\Sponsor_Invoices\update_index_row` run. This _file_ shouldn't be loaded, though,
+ * because invoices/payments/etc are manages centrally in the WordCamp network admin.
+ */
+if ( get_current_network_id() !== WORDCAMP_NETWORK_ID ) {
+	return;
+}
+
 
 /*
  * Core functionality and helper functions shared between modules
  */
 
 add_action( 'network_admin_menu',    __NAMESPACE__ . '\register_budgets_menu' );
-add_action( 'network_admin_menu',    __NAMESPACE__ . '\remove_budgets_submenu', 11 ); // after other modules have registered their submenu pages
+add_action( 'network_admin_menu',    __NAMESPACE__ . '\remove_budgets_submenu', 11 ); // After other modules have registered their submenu pages.
 add_action( 'network_admin_menu',    __NAMESPACE__ . '\import_export_admin_menu', 11 );
 add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_scripts', 10, 1 );
 
@@ -457,7 +469,7 @@ function process_export_request() {
 	}
 }
 
-/*
+/**
  * Generate and return the raw payment report contents
  *
  * @param array $args

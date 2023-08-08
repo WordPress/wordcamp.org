@@ -11,6 +11,11 @@
 namespace WordCamp\Plugins\Network;
 defined( 'WPINC' ) || die();
 
+add_filter( 'network_admin_plugin_action_links', __NAMESPACE__ . '\network_plugin_actions', 10, 2 );
+add_action( 'network_admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );
+add_action( 'admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );
+
+
 /**
  * The two arrays here depict the intended network activation state of each
  * plugin on WordCamp.org. When plugins are added, removed, or their state is
@@ -40,14 +45,12 @@ function _get_network_plugin_state_list( $state ) {
 			'gutenberg/gutenberg.php',
 			'jetpack/jetpack.php',
 			'jquery-ui-css/jquery-ui-css.php',
-			'tagregator/bootstrap.php',
 			'wordcamp-payments/bootstrap.php',
 			'wordcamp-payments-network/bootstrap.php',
 			'wordcamp-coming-soon-page/bootstrap.php',
 			'wordcamp-dashboard-widgets/wordcamp-dashboard-widgets.php',
 			'wordcamp-docs/wordcamp-docs.php',
 			'wordcamp-forms-to-drafts/wordcamp-forms-to-drafts.php',
-			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
 			'wordcamp-remote-css/bootstrap.php',
 			'wordcamp-site-cloner/wordcamp-site-cloner.php',
 			'wordcamp-speaker-feedback/wordcamp-speaker-feedback.php',
@@ -55,7 +58,6 @@ function _get_network_plugin_state_list( $state ) {
 			'wc-post-types/wc-post-types.php',
 			'wordcamp-qbo-client/wordcamp-qbo-client.php',
 			'wordpress-importer/wordpress-importer.php',
-			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
 			'wp-super-cache/wp-cache.php',
 		),
 		'deactivated' => array(
@@ -79,6 +81,19 @@ function _get_network_plugin_state_list( $state ) {
 			'wp-cldr/wp-cldr.php',
 		),
 	);
+
+	if ( 'local' !== wp_get_environment_type() ) {
+		$network_plugin_state['activated'][] = 'wordcamp-participation-notifier/wordcamp-participation-notifier.php';
+		$network_plugin_state['activated'][] = 'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php';
+	}
+
+	$network_id = get_current_network_id();
+
+	if ( WORDCAMP_NETWORK_ID === $network_id ) {
+		$network_plugin_state['activated'][] = 'tagregator/bootstrap.php';
+	} elseif ( EVENTS_NETWORK_ID === $network_id ) {
+		$network_plugin_state['deactivated'][] = 'tagregator/bootstrap.php';
+	}
 
 	return $network_plugin_state[ $state ];
 }
@@ -111,8 +126,6 @@ function network_plugin_actions( $actions, $plugin_file ) {
 	return $actions;
 }
 
-add_filter( 'network_admin_plugin_action_links', __NAMESPACE__ . '\network_plugin_actions', 10, 2 );
-
 /**
  * Display a network admin notice if there are plugins that don't have their intended
  * activation state.
@@ -127,7 +140,6 @@ function network_plugin_notifier() {
 
 	$all_plugins             = array_keys( get_plugins() );
 	$missing_plugins         = array_diff( array_merge( $state_activated, $state_deactivated ), $all_plugins );
-
 	$active_plugins          = array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) );
 	$wrong_state_deactivated = array_diff( $state_activated, $active_plugins, $missing_plugins );
 	$wrong_state_activated   = array_intersect( $state_deactivated, $active_plugins );
@@ -159,5 +171,3 @@ function network_plugin_notifier() {
 		<?php
 	}
 }
-
-add_action( 'network_admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );

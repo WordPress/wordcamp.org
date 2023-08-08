@@ -15,14 +15,14 @@ if ( ! $core_tests_directory ) {
 	return;
 }
 
-require_once( $core_tests_directory . '/includes/functions.php' );
+require_once $core_tests_directory . '/includes/functions.php';
 
 /**
  * Load the plugins that we'll need to be active for the tests
  */
 function manually_load_plugin() {
-	require_once( dirname( __DIR__ ) . '/camptix.php' );
+	require_once dirname( __DIR__ ) . '/camptix.php';
 }
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );
 
-require( $core_tests_directory . '/includes/bootstrap.php' );
+require $core_tests_directory . '/includes/bootstrap.php';

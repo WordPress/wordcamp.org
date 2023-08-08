@@ -57,7 +57,7 @@ class WCP_Payment_Request {
 			'search_items'       => esc_html__( 'Search Vendor Payments',             'wordcamporg' ),
 			'parent_item_colon'  => esc_html__( 'Parent Vendor Payments:',            'wordcamporg' ),
 			'not_found'          => esc_html__( 'No Vendor Payments found.',          'wordcamporg' ),
-			'not_found_in_trash' => esc_html__( 'No Vendor Payments found in Trash.', 'wordcamporg' )
+			'not_found_in_trash' => esc_html__( 'No Vendor Payments found in Trash.', 'wordcamporg' ),
 		);
 
 		$args = array(
@@ -116,7 +116,7 @@ class WCP_Payment_Request {
 	 * @return array
 	 */
 	protected static function get_editable_statuses() {
-		return [ 'auto-draft', 'draft', 'wcb-incomplete' ];
+		return array( 'auto-draft', 'draft', 'wcb-incomplete' );
 	}
 
 	/**
@@ -239,11 +239,11 @@ class WCP_Payment_Request {
 			$post->post_status = $back_compat_statuses[ $post->post_status ];
 		}
 
-		$editable_statuses = self::get_editable_statuses();
+		$editable_statuses             = self::get_editable_statuses();
 		$current_user_can_edit_request = false;
-		$submit_text = esc_html_x( 'Update', 'payment request', 'wordcamporg' );
-		$submit_note = '';
-		$submit_note_class = 'warning';
+		$submit_text                   = esc_html_x( 'Update', 'payment request', 'wordcamporg' );
+		$submit_note                   = '';
+		$submit_note_class             = 'warning';
 
 		if ( current_user_can( 'manage_network' ) ) {
 			$current_user_can_edit_request = true;
@@ -252,7 +252,7 @@ class WCP_Payment_Request {
 				$submit_text = __( 'Submit for Review', 'wordcamporg' );
 				$submit_note = __( 'Once submitted for review, this request cannot be edited.', 'wordcamporg' );
 			} else {
-				$submit_note = __( 'Please add an invoice or other supporting documentation in the Files section and save the draft.', 'wordcamporg' );
+				$submit_note       = __( 'Please add an invoice or other supporting documentation in the Files section and save the draft.', 'wordcamporg' );
 				$submit_note_class = 'error';
 			}
 
@@ -266,10 +266,10 @@ class WCP_Payment_Request {
 			$date_vendor_paid_readonly = true;
 		}
 
-		$incomplete_notes = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
+		$incomplete_notes    = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
 		$incomplete_readonly = ! current_user_can( 'manage_network' ) ? 'readonly' : '';
 
-		require_once( dirname( __DIR__ ) . '/views/payment-request/metabox-status.php' );
+		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-status.php';
 	}
 
 	public static function get_post_statuses() {
@@ -295,7 +295,7 @@ class WCP_Payment_Request {
 
 		$assigned_category = get_post_meta( $post->ID, '_camppayments_payment_category', true );
 
-		require_once( dirname( __DIR__ ) . '/views/payment-request/metabox-general.php' );
+		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-general.php';
 
 		// todo If they select other but don't fill in the explanation, set to draft and display error msg, similar to require_complete_meta_to_publish_wordcamp()
 	}
@@ -308,7 +308,7 @@ class WCP_Payment_Request {
 	public function render_vendor_metabox( $post ) {
 		wp_nonce_field( 'vendor_details', 'vendor_details_nonce' );
 
-		require_once( dirname( __DIR__ ) . '/views/payment-request/metabox-vendor.php' );
+		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-vendor.php';
 	}
 
 	/**
@@ -322,7 +322,7 @@ class WCP_Payment_Request {
 
 		wp_nonce_field( 'payment_details', 'payment_details_nonce' );
 
-		$this->meta_key_prefix   = $box['args']['meta_key_prefix'];
+		$this->meta_key_prefix = $box['args']['meta_key_prefix'];
 
 		if ( ! isset( $box['args']['fields_enabled'] ) ) {
 			$box['args']['fields_enabled'] = true;
@@ -334,7 +334,7 @@ class WCP_Payment_Request {
 
 		$selected_payment_method = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_method", true );
 
-		require_once( dirname( __DIR__ ) . '/views/payment-request/metabox-payment.php' );
+		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-payment.php';
 	}
 
 	/**
@@ -344,50 +344,52 @@ class WCP_Payment_Request {
 	 */
 	public function render_log_metabox( $post ) {
 		$log = get_post_meta( $post->ID, '_wcp_log', true );
-		if ( empty( $log ) )
+		if ( empty( $log ) ) {
 			$log = '[]';
+		}
 
 		$log = json_decode( $log, true );
 
 		// I wish I had a spaceship.
 		uasort( $log, function( $a, $b ) {
-			if ( $b['timestamp'] == $a )
+			if ( $b['timestamp'] == $a ) {
 				return 0;
+			}
 
 			return ( $a['timestamp'] > $b['timestamp'] ) ? -1 : 1;
 		});
 
-		require_once( dirname( __DIR__ ) . '/views/payment-request/metabox-log.php' );
+		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-log.php';
 	}
 
 	/**
 	 * Render a <textarea> field with the given attributes.
 	 *
 	 * @param WP_Post $post
-	 * @param string $label
-	 * @param string $name
-	 * @param string $description
-	 * @param bool   $required
+	 * @param string  $label
+	 * @param string  $name
+	 * @param string  $description
+	 * @param bool    $required
 	 */
 	protected function render_textarea_input( $post, $label, $name, $description = '', $required = true ) {
 		$text = $this->get_field_value( $name, $post );
 
-		require( dirname( __DIR__ ) . '/views/payment-request/input-textarea.php' );
+		require dirname( __DIR__ ) . '/views/payment-request/input-textarea.php';
 	}
 
 	/**
 	 * Render a <select> field with the given attributes.
 	 *
 	 * @param WP_Post $post
-	 * @param string $label
-	 * @param string $name
-	 * @param bool   $required
+	 * @param string  $label
+	 * @param string  $name
+	 * @param bool    $required
 	 */
 	protected function render_select_input( $post, $label, $name, $required = true ) {
 		$selected = get_post_meta( $post->ID, '_camppayments_' . $name, true );
 		$options  = $this->get_field_value( $name, $post );
 
-		require( dirname( __DIR__ ) . '/views/payment-request/input-select.php' );
+		require dirname( __DIR__ ) . '/views/payment-request/input-select.php';
 	}
 
 	/**
@@ -400,86 +402,87 @@ class WCP_Payment_Request {
 	 */
 	protected function render_country_input( $post, $label, $name, $required = true ) {
 		$selected = $this->get_field_value( $name, $post );
-		$options = wcorg_get_countries();
+		$options  = wcorg_get_countries();
 
-		require( dirname( __DIR__ ) . '/views/payment-request/input-country.php' );
+		require dirname( __DIR__ ) . '/views/payment-request/input-country.php';
 	}
 
 	/**
 	 * Render a <input type="radio"> field with the given attributes.
 	 *
 	 * @param WP_Post $post
-	 * @param string $label
-	 * @param string $name
-	 * @param bool   $required
+	 * @param string  $label
+	 * @param string  $name
+	 * @param bool    $required
 	 */
 	protected function render_radio_input( $post, $label, $name, $required = true ) {
 		$selected = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_" . $name, true );
 		$options  = $this->get_field_value( $name, $post );
 
-		require( dirname( __DIR__ ) . '/views/payment-request/input-radio.php' );
+		require dirname( __DIR__ ) . '/views/payment-request/input-radio.php';
 	}
 
 	/**
 	 * Render a <input type="checkbox"> field with the given attributes.
 	 *
 	 * @param WP_Post $post
-	 * @param string $label
-	 * @param string $name
-	 * @param bool   $required
+	 * @param string  $label
+	 * @param string  $name
+	 * @param string  $description
+	 * @param bool    $required
 	 */
 	protected function render_checkbox_input( $post, $label, $name, $description = '', $required = true ) {
 		$value = $this->get_field_value( $name, $post );
 
-		require( dirname( __DIR__ ) . '/views/payment-request/input-checkbox.php' );
+		require dirname( __DIR__ ) . '/views/payment-request/input-checkbox.php';
 	}
 
 	/**
 	 * Render a <input type="text"> field with the given attributes.
 	 *
 	 * @param WP_Post $post
-	 * @param string $label
-	 * @param string $name
-	 * @param string $description
-	 * @param string $variant
-	 * @param array  $row_classes
-	 * @param bool   $readonly
-	 * @param bool   $required
+	 * @param string  $label
+	 * @param string  $name
+	 * @param string  $description
+	 * @param string  $variant
+	 * @param array   $row_classes
+	 * @param bool    $readonly
+	 * @param bool    $required
 	 */
 	protected function render_text_input( $post, $label, $name, $description = '', $variant = 'text', $row_classes = array(), $readonly = false, $required = true ) {
 		$value = $this->get_field_value( $name, $post );
 		array_walk( $row_classes, 'sanitize_html_class' );
 		$row_classes = implode( ' ', $row_classes );
 
-		require( dirname( __DIR__ ) . '/views/payment-request/input-text.php' );
+		require dirname( __DIR__ ) . '/views/payment-request/input-text.php';
 	}
 
 	/**
 	 * Render an upload button and list of uploaded files.
 	 *
 	 * @param WP_Post $post
-	 * @param string $label
-	 * @param string $name
-	 * @param string $description
+	 * @param string  $label
+	 * @param string  $name
+	 * @param string  $description
 	 */
 	protected function render_files_input( $post, $label, $name, $description = '' ) {
 		$files = WordCamp_Budgets::get_attached_files( $post );
 
 		wp_localize_script( 'wcb-attached-files', 'wcbAttachedFiles', $files ); // todo merge into wordcampBudgets var
 
-		require( dirname( __DIR__ ) . '/views/payment-request/input-files.php' );
+		require dirname( __DIR__ ) . '/views/payment-request/input-files.php';
 	}
 
 	/**
 	 * Get the value of a given field.
 	 *
-	 * @param string $name
+	 * @param string  $name
 	 * @param WP_Post $post
 	 *
 	 * @return mixed
 	 */
 	protected function get_field_value( $name, $post ) {
-		switch( $name ) {
+		switch ( $name ) {
 			case 'request_id':
 				$value = get_current_blog_id() . '-' . $post->ID;
 				break;
@@ -533,8 +536,9 @@ class WCP_Payment_Request {
 
 		if ( in_array( $name, WordCamp_Budgets::get_encrypted_fields() ) ) {
 			$decrypted = WCP_Encryption::maybe_decrypt( $value );
-			if ( ! is_wp_error( $decrypted ) )
+			if ( ! is_wp_error( $decrypted ) ) {
 				$value = $decrypted;
+			}
 		}
 
 		return $value;
@@ -582,8 +586,9 @@ class WCP_Payment_Request {
 	 * @return array
 	 */
 	public function wp_insert_post_data( $post_data, $post_data_raw ) {
-		if ( $post_data['post_type'] != self::POST_TYPE )
+		if ( self::POST_TYPE !== $post_data['post_type'] ) {
 			return $post_data;
+		}
 
 		// Ensure that new posts have the `post_date_gmt` field populated.
 		if ( 'auto-draft' !== $post_data['post_status'] ) {
@@ -653,7 +658,7 @@ class WCP_Payment_Request {
 
 		$subject = sprintf( '"%s" is incomplete', $post->post_title );
 		$headers = array( 'Reply-To: support@wordcamp.org' );
-		$notes = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
+		$notes   = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
 
 		$message = sprintf(
 			"The request for \"%s\" has been marked as incomplete by WordCamp Central.
@@ -685,8 +690,9 @@ Thanks for helping us with these details!",
 	 * @param WP_Post $post
 	 */
 	public function save_payment( $post_id, $post ) {
-		if ( $post->post_type != self::POST_TYPE )
+		if ( self::POST_TYPE !== $post->post_type ) {
 			return;
+		}
 
 		if ( WordCamp_Budgets::post_edit_is_actionable( $post, self::POST_TYPE ) ) {
 			// Verify nonces
@@ -711,8 +717,9 @@ Thanks for helping us with these details!",
 			list( $new, $old, $transition_post ) = $data;
 
 			// Transitioning a different post.
-			if ( $transition_post->ID != $post->ID )
+			if ( $transition_post->ID != $post->ID ) {
 				continue;
+			}
 
 			if ( $new == 'incomplete' || $new == 'wcb-incomplete' ) {
 				$incomplete_text = get_post_meta( $post->ID, '_wcp_incomplete_notes', true );
@@ -842,11 +849,13 @@ Thanks for helping us with these details!",
 	 * @param WP_Post $post
 	 */
 	public function transition_post_status( $new, $old, $post ) {
-		if ( $post->post_type != self::POST_TYPE )
+		if ( self::POST_TYPE !== $post->post_type ) {
 			return;
+		}
 
-		if ( $new == 'auto-draft' || $new == $old )
+		if ( 'auto-draft' === $new || $new === $old ) {
 			return;
+		}
 
 		// Move logging to save_post because transitions are fired before save_post.
 		self::$transition_post_status[] = array( $new, $old, $post );
@@ -879,7 +888,7 @@ Thanks for helping us with these details!",
 	 * @return array
 	 */
 	public function get_sortable_columns( $columns ) {
-		$columns['due_by']   = '_camppayments_due_by';
+		$columns['due_by'] = '_camppayments_due_by';
 
 		return $columns;
 	}
@@ -888,7 +897,7 @@ Thanks for helping us with these details!",
 	 * Render custom columns on the Vendor Payments screen.
 	 *
 	 * @param string $column
-	 * @param int $post_id
+	 * @param int    $post_id
 	 */
 	public function render_columns( $column, $post_id ) {
 		switch ( $column ) {
@@ -925,7 +934,7 @@ Thanks for helping us with these details!",
 
 		$orderby = $query->get( 'orderby' );
 
-		switch( $orderby ) {
+		switch ( $orderby ) {
 			case '_camppayments_due_by':
 				$query->set( 'meta_key', '_camppayments_due_by' );
 				$query->set( 'orderby', 'meta_value_num' );
@@ -978,7 +987,7 @@ Thanks for helping us with these details!",
 	public static function _generate_payment_report_default( $args ) {
 		$column_headings = array(
 			'WordCamp', 'ID', 'Title', 'Status', 'Date Vendor was Paid', 'Creation Date', 'Due Date', 'Amount',
-			'Currency', 'Category', 'Payment Method','Vendor Name', 'Vendor Contact Person', 'Vendor Country',
+			'Currency', 'Category', 'Payment Method', 'Vendor Name', 'Vendor Contact Person', 'Vendor Country',
 			'Check Payable To', 'URL', 'Supporting Documentation Notes',
 		);
 
@@ -987,7 +996,7 @@ Thanks for helping us with these details!",
 
 		fputcsv( $report, Utilities\Export_CSV::esc_csv( $column_headings ) );
 
-		foreach( $args['data'] as $entry ) {
+		foreach ( $args['data'] as $entry ) {
 			switch_to_blog( $entry->blog_id );
 
 			$post = get_post( $entry->post_id );
@@ -1012,8 +1021,8 @@ Thanks for helping us with these details!",
 				continue;
 			}
 
-			$currency = get_post_meta( $post->ID, '_camppayments_currency', true );
-			$category = get_post_meta( $post->ID, '_camppayments_payment_category', true );
+			$currency         = get_post_meta( $post->ID, '_camppayments_currency', true );
+			$category         = get_post_meta( $post->ID, '_camppayments_payment_category', true );
 			$date_vendor_paid = get_post_meta( $post->ID, '_camppayments_date_vendor_paid', true );
 
 			if ( $date_vendor_paid ) {
@@ -1127,16 +1136,16 @@ Thanks for helping us with these details!",
 			$amount = round( floatval( get_post_meta( $post->ID, '_camppayments_payment_amount', true ) ), 2 );
 			$total += $amount;
 
-			$payable_to = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_payable_to', true ) );
-			$payable_to = html_entity_decode( $payable_to ); // J&amp;J to J&J
-			$countries = wcorg_get_countries( array( 'include_alpha3' => true ) );
+			$payable_to          = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_payable_to', true ) );
+			$payable_to          = html_entity_decode( $payable_to ); // Convert `J&amp;J` to `J&J`.
+			$countries           = wcorg_get_countries( array( 'include_alpha3' => true ) );
 			$vendor_country_code = get_post_meta( $post->ID, '_camppayments_vendor_country_iso3166', true );
 			if ( ! empty( $countries[ $vendor_country_code ] ) ) {
 				$vendor_country_code = $countries[ $vendor_country_code ]['alpha3'];
 			}
 
-			$description = sanitize_text_field( get_post_meta( $post->ID, '_camppayments_description', true ) );
-			$description = html_entity_decode( $description );
+			$description    = sanitize_text_field( get_post_meta( $post->ID, '_camppayments_description', true ) );
+			$description    = html_entity_decode( $description );
 			$invoice_number = get_post_meta( $post->ID, '_camppayments_invoice_number', true );
 			if ( ! empty( $invoice_number ) ) {
 				$description = sprintf( 'Invoice %s. %s', $invoice_number, $description );
@@ -1286,7 +1295,7 @@ Thanks for helping us with these details!",
 
 		$count = 0;
 		$total = 0;
-		$hash = 0;
+		$hash  = 0;
 
 		foreach ( $args['data'] as $entry ) {
 			switch_to_blog( $entry->blog_id );
@@ -1315,7 +1324,7 @@ Thanks for helping us with these details!",
 			$routing_number = WCP_Encryption::maybe_decrypt( $routing_number );
 			$routing_number = substr( $routing_number, 0, 8 + 1 );
 			$routing_number = str_pad( $routing_number, 8 + 1 );
-			$hash += absint( substr( $routing_number, 0, 8 ) );
+			$hash          += absint( substr( $routing_number, 0, 8 ) );
 			echo $routing_number;
 
 			// Bank Account Number
@@ -1363,7 +1372,6 @@ Thanks for helping us with these details!",
 		echo str_pad( substr( $ach_options['financial-inst'], 0, 8 ), 8 ); // Originating Financial Institution
 		echo '0000001'; // Batch Number
 		echo PHP_EOL;
-
 
 		// File Trailer Record
 
@@ -1425,9 +1433,9 @@ Thanks for helping us with these details!",
 			$count += 1;
 
 			// If account starts with two letters, it's most likely an IBAN
-			$account = get_post_meta( $post->ID, '_camppayments_beneficiary_account_number', true );
-			$account = WCP_Encryption::maybe_decrypt( $account );
-			$account = preg_replace( '#\s#','', $account );
+			$account      = get_post_meta( $post->ID, '_camppayments_beneficiary_account_number', true );
+			$account      = WCP_Encryption::maybe_decrypt( $account );
+			$account      = preg_replace( '#\s#', '', $account );
 			$account_type = preg_match( '#^[a-z]{2}#i', $account ) ? 'IBAN' : 'ACCT';
 
 			$row = array(
@@ -1577,7 +1585,7 @@ Thanks for helping us with these details!",
 			// If an intermediary bank is given.
 			$interm_swift = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_interm_bank_swift', true ) );
 			if ( ! empty( $iterm_swift ) ) {
-				$row['40-id-type'] = 'SWIFT';
+				$row['40-id-type']  = 'SWIFT';
 				$row['41-id-value'] = $interm_swift;
 
 				$row['42-interm-bank-name']      = substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_interm_bank_name',           true ) ), 0, 35 );
@@ -1592,7 +1600,7 @@ Thanks for helping us with these details!",
 
 				$row['46-interm-bank-country'] = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_interm_bank_country_iso3166', true ) );
 
-				$row['47-supl-id-type'] = 'ACCT';
+				$row['47-supl-id-type']  = 'ACCT';
 				$row['48-supl-id-value'] = WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_interm_bank_account', true ) );
 			}
 

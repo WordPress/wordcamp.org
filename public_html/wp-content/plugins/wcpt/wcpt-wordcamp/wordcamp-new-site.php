@@ -1,12 +1,13 @@
 <?php
 
 // PHPCS note: Nonces are verified in Event_Admin::metabox_save (if applicable), we don't need to re-verify.
+// phpcs:disable WordPress.WP.CapitalPDangit -- This has false positives on all the `events.wordpress.org` URLs in this file.
 
 use \WordCamp\Logger;
 
 use function WordCamp\Sunrise\get_top_level_domain;
 
-use const WordCamp\Sunrise\PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH;
+use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 class WordCamp_New_Site {
 	protected $new_site_id;
@@ -46,11 +47,15 @@ class WordCamp_New_Site {
 			/>
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
-				<?php $url = trailingslashit( get_post_meta( $post_id, $key, true ) ); ?>
-				<?php $url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) ); ?>
-				<?php $valid_url = isset( $url['host'], $url['path'] ); ?>
+				<?php
+				$url        = trailingslashit( get_post_meta( $post_id, $key, true ) );
+				$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
+				$valid_url  = isset( $url['host'], $url['path'] );
+				$tld        = get_top_level_domain();
+				$network_id = $valid_url && "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+				?>
 
-				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], 1 ) ) : ?>
+				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>
 					<?php
 						$blog_details = get_blog_details(
 							array(
@@ -59,9 +64,14 @@ class WordCamp_New_Site {
 							),
 							true
 						);
+						$edit_url     = add_query_arg( 'id', $blog_details->blog_id, network_admin_url( 'site-info.php' ) );
+
+					if ( "events.wordpress.$tld" === $url['host'] ) {
+						$edit_url = str_replace( '://wordcamp.', '://events.wordpress.', $edit_url );
+					}
 					?>
 
-					<a target="_blank" href="<?php echo esc_url( add_query_arg( 'id', $blog_details->blog_id, network_admin_url( 'site-info.php' ) ) ); ?>">Edit</a> |
+					<a target="_blank" href="<?php echo esc_url( $edit_url ); ?>">Edit</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
 
@@ -78,7 +88,7 @@ class WordCamp_New_Site {
 					<br /><br />
 
 					<span class="notice notice-large notice-warning">
-						Warning: This URL doesn't match the expected <code>city.wordcamp.org/year</code> format.
+						Warning: This URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code> or <code>events.wordpress.org/city/year/type/</code>.
 					</span>
 				<?php endif; ?>
 			<?php endif; // User can manage sites. ?>
@@ -127,13 +137,14 @@ class WordCamp_New_Site {
 		$parsed_url = wp_parse_url( $url );
 
 		if ( ! self::url_matches_expected_format( $parsed_url['host'], $parsed_url['path'], $wordcamp_id ) ) {
-			wp_die( 'The URL does not match the expected <code>city.wordcamp.org/year/</code> format. Please press the back button and update it.' );
+			wp_die( "The URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code> or <code>events.wordpress.org/city/year/type/</code>. Please press the back button and update it." );
 		}
 
 		update_post_meta( $wordcamp_id, $key, esc_url( $url ) );
 
 		// If this site exists make sure we update the _site_id mapping.
-		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], 1 );
+		$network_id       = 'events.wordpress.test' === $parsed_url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], $network_id );
 
 		if ( $existing_site_id ) {
 			update_post_meta( $wordcamp_id, '_site_id', absint( $existing_site_id ) );
@@ -155,7 +166,7 @@ class WordCamp_New_Site {
 		$tld                            = get_top_level_domain();
 		$last_permitted_external_domain = 2341;
 		$external_domain_exceptions     = array( 169459 );
-		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld @ix", $domain );
+		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld | events\.wordpress\.$tld @ix", $domain );
 		$can_have_external_domain       = $wordcamp_id <= $last_permitted_external_domain || in_array( $wordcamp_id, $external_domain_exceptions );
 
 		if ( $is_external_domain && $can_have_external_domain ) {
@@ -163,7 +174,13 @@ class WordCamp_New_Site {
 			return true;
 		}
 
-		return 1 === preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path );
+		if ( "events.wordpress.$tld" === $domain ) {
+			$match = preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $path );
+		} else {
+			$match = preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path );
+		}
+
+		return 1 === $match;
 	}
 
 	/**
@@ -211,7 +228,7 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		$url_components = parse_url( $url );
+		$url_components = wp_parse_url( $url );
 		if ( ! $url_components || empty( $url_components['scheme'] ) || empty( $url_components['host'] ) ) {
 			Logger\log( 'return_invalid_url', compact( 'wordcamp_id', 'url', 'url_components' ) );
 			return;
@@ -226,7 +243,10 @@ class WordCamp_New_Site {
 			$blog_name .= wp_date( ' Y', $wordcamp->{'Start Date (YYYY-mm-dd)'} );
 		}
 
+		$tld = get_top_level_domain();
+
 		$this->new_site_id = wp_insert_site( array(
+			'network_id' => "events.wordpress.$tld" === $url_components['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID,
 			'domain'  => $url_components['host'],
 			'path'    => $path,
 			'title'   => $blog_name,
@@ -649,13 +669,6 @@ class WordCamp_New_Site {
 			),
 
 			array(
-				'title'   => __( 'Social Media Stream', 'wordcamporg' ),
-				'content' => $this->get_stub_content( 'page', 'social-media-stream' ),
-				'status'  => 'publish',
-				'type'    => 'page',
-			),
-
-			array(
 				'title'   => __( 'Offline', 'wordcamporg' ),
 				'content' => $this->get_stub_content( 'page', 'offline', $wordcamp ),
 				'status'  => 'publish',
@@ -716,6 +729,9 @@ class WordCamp_New_Site {
 				'content' => $this->get_stub_content( 'post', 'call-for-sponsors' ),
 				'status'  => 'draft',
 				'type'    => 'post',
+				'meta'    => array(
+					'wcfd-key' => 'call-for-sponsors',
+				),
 			),
 
 			array(
@@ -826,11 +842,14 @@ class WordCamp_New_Site {
 			'twitter_handle', 'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // Switch to central.wordcamp.org.
 
 		foreach ( $meta_field_keys as $key ) {
 			$sponsor_meta[ "_wcpt_sponsor_$key" ] = get_post_meta( $assigned_sponsor->ID, "mes_$key", true );
 		}
+
+		// Always set the first-time sponsor value to 'no' for Multi Event (ME) Sponsors.
+		$sponsor_meta['_wcb_sponsor_first_time'] = 'no';
 
 		restore_current_blog();
 
@@ -849,7 +868,7 @@ class WordCamp_New_Site {
 		global $multi_event_sponsors;
 		$data = array();
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // Switch to central.wordcamp.org.
 
 		$data['featured_images']   = array();
 		$data['assigned_sponsors'] = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );

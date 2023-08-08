@@ -753,7 +753,7 @@ class WordCamp_Budgets {
 	 * Display the indicator that marks a form field as required
 	 */
 	public static function render_form_field_required_indicator() {
-		require( dirname( __DIR__ ) . '/views/wordcamp-budgets/form-field-required-indicator.php' );
+		require dirname( __DIR__ ) . '/views/wordcamp-budgets/form-field-required-indicator.php';
 	}
 
 	/**

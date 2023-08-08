@@ -16,9 +16,9 @@
 			'other_category_explanation',
 			esc_html__( 'Please describe what category this request fits under.', 'wordcamporg' ),
 			'text',
-			isset( $assigned_category->name ) && 'Other' == $assigned_category->name ? array() : array( 'hidden')    // todo i18n, see notes in insert_default_terms()
+			isset( $assigned_category->name ) && 'Other' == $assigned_category->name ? array() : array( 'hidden' )    // todo i18n, see notes in insert_default_terms().
 		);
-	?>
+		?>
 
 	<?php $this->render_files_input(
 		$post,

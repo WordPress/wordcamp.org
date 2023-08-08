@@ -6,11 +6,11 @@
  * @since 1.2
  */
 abstract class CampTix_Payment_Method extends CampTix_Addon {
-	public $id = false;
-	public $name = false;
-	public $description = false;
+	public $id                   = false;
+	public $name                 = false;
+	public $description          = false;
 	public $supported_currencies = array();
-	public $supported_features = array(
+	public $supported_features   = array(
 		'refund-single' => false,
 		'refund-all' => false,
 	);
@@ -182,7 +182,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 * @return array
 	 */
 	function _camptix_validate_options( $camptix_options ) {
-		$post_key = "camptix_payment_options_{$this->id}";
+		$post_key   = "camptix_payment_options_{$this->id}";
 		$option_key = "payment_options_{$this->id}";
 
 		if ( ! isset( $_POST[ $post_key ] ) ) {
@@ -190,7 +190,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		}
 
 		$input = $_POST[ $post_key ];
-		$output = $this->validate_options( $input );
+		$output                         = $this->validate_options( $input );
 		$camptix_options[ $option_key ] = $output;
 
 		return $camptix_options;
@@ -248,7 +248,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 			'token' => $payment_token,
 			'status' => CampTix_Plugin::PAYMENT_STATUS_REFUND_FAILED,
 			'refund_transaction_id' => null,
-			'refund_transaction_details' => array()
+			'refund_transaction_details' => array(),
 		);
 
 		$camptix->log( __FUNCTION__ . ' not implemented in payment module.', 0, null, 'refund' );
@@ -359,7 +359,8 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 				'name' => $this->settings_field_name_attr( $option_name ),
 				'value' => $this->options[ $option_name ],
 				'description' => $description,
-		) );
+			)
+		);
 	}
 
 	/**
@@ -369,7 +370,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 */
 	function get_payment_options() {
 		$payment_options = array();
-		$option_key = "payment_options_{$this->id}";
+		$option_key      = "payment_options_{$this->id}";
 
 		if ( isset( $this->camptix_options[ $option_key ] ) ) {
 			$payment_options = (array) $this->camptix_options[ $option_key ];

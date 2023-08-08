@@ -21,11 +21,11 @@
 		"adhocore/jwt": "^1.0"
 	},
 	"require-dev": {
-		"dealerdirect/phpcodesniffer-composer-installer": "^0.7.0",
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
 		"wp-coding-standards/wpcs": "2.*",
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"phpunit/phpunit": "^9",
-		"sirbrillig/phpcs-changed": "^2.2",
+		"sirbrillig/phpcs-changed": "2.10.0",
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^1.0"
 	},
@@ -39,7 +39,7 @@
 		"test:watch:fast": "WP_TESTS_SKIP_INSTALL=1 phpunit-watcher watch < /dev/tty",
 		"test:db:reset": "/usr/bin/env php .docker/bin/reset-tests-database.php",
 		"test:coverage":  "php -d xdebug.mode=coverage public_html/wp-content/mu-plugins/vendor/bin/phpunit --coverage-html .phpunit/coverage-report",
-		"phpcs-changed": "phpcs-changed",
+		"phpcs-changed": "BASE_REF=production php .github/bin/phpcs-branch.php ",
 		"_comment": "Below script names left in for back-compat",
 		"phpcs": "phpcs",
 		"phpcbf": "phpcbf -p",

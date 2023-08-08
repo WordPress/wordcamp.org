@@ -27,7 +27,7 @@
 
 		<?php if ( \WordCamp_Budgets::can_submit_request( $post ) ) : ?>
 			<div id="publishing-action">
-				<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr( $submit_text ) ?>" />
+				<input name="original_publish" type="hidden" id="original_publish" value="<?php esc_attr( $submit_text ); ?>" />
 				<?php submit_button( $submit_text, 'primary button-large', 'wcb-update', false, array( 'accesskey' => 'p' ) ); ?>
 			</div>
 		<?php endif; ?>

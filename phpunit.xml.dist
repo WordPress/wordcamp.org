@@ -32,6 +32,12 @@
 			</directory>
 		</testsuite>
 
+		<testsuite name="WordCamp Budgets Dashboard">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/wordcamp-payments-network/tests/
+			</directory>
+		</testsuite>
+
 		<testsuite name="WordCamp Post Types">
 			<directory prefix="test-" suffix=".php">
 				./public_html/wp-content/plugins/wc-post-types/tests/
@@ -64,9 +70,13 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wc-post-types</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wcpt</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments/</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments-network/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-speaker-feedback</directory>
 			<file>./public_html/wp-content/sunrise.php</file>
+			<file>./public_html/wp-content/sunrise-events.php</file>
+			<file>./public_html/wp-content/sunrise-wordcamp.php</file>
 		</include>
 
 		<exclude>

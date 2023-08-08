@@ -1,65 +1,59 @@
 <?php
 
 namespace WordCamp\CampTix_Tweaks;
+
 defined( 'WPINC' ) || die();
 
-use CampTix_Plugin, CampTix_Addon;
+use CampTix_Addon;
 use WP_Post;
-use PHPMailer;
 
 /**
- * Class Accommodations_Field.
- *
- * Add a non-optional attendee field indicating if they require special accommodations.
- *
- * Note that the user-facing wording has been changed to "accessibility needs" to avoid confusion for attendees and translators.
- *
- * @package WordCamp\CampTix_Tweaks
+ * Add an required attendee field asking if they've attended a WordCamp before.
  */
-class Accommodations_Field extends CampTix_Addon {
-	const SLUG = 'accommodations';
+class First_Time_Field extends CampTix_Addon {
+	const SLUG = 'first_time_attending_wp_event';
 
-	public $label = '';
-
+	public $label    = '';
 	public $question = '';
+	public $options  = array();
 
-	public $options = array();
 
 	/**
-	 * Hook into WordPress and Camptix.
+	 * Hook into WordPress and CampTix.
 	 */
 	public function camptix_init() {
-		$this->label = __( 'Accessibility needs', 'wordcamporg' );
-
-		$this->question = __( 'Do you have any accessibility needs, such as a sign language interpreter or wheelchair access, to participate in WordCamp?', 'wordcamporg' );
+		$this->label    = __( 'First Time Attending', 'wordcamporg' );
+		$this->question = __( 'Will this be your first time attending a WordPress event?', 'wordcamporg' );
 
 		$this->options = array(
-			'yes' => _x( 'Yes (we will contact you)', 'ticket registration option', 'wordcamporg' ),
-			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
+			'yes' => _x( 'Yes', 'answer to question during ticket registration', 'wordcamporg' ),
+			'no'  => _x( 'No', 'answer to question during ticket registration', 'wordcamporg' ),
+
+			// Sometimes people buy tickets for others, and they may not know.
+			'unsure'  => _x( "I don't know", 'answer to question during ticket registration', 'wordcamporg' ),
 		);
 
-		// Registration field
+		// Registration field.
 		add_action( 'camptix_attendee_form_after_questions', array( $this, 'render_registration_field' ), 12, 2 );
 		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ), 11 );
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'populate_attendee_object' ), 10, 2 );
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
-		add_action( 'camptix_ticket_emailed', array( $this, 'after_email_receipt' ) );
 
-		// Edit info field
+		// Edit info field.
 		add_filter( 'camptix_form_edit_attendee_ticket_info', array( $this, 'populate_ticket_info_array' ), 10, 2 );
 		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'validate_save_ticket_info_field' ), 10, 2 );
 		add_action( 'camptix_form_edit_attendee_after_questions', array( $this, 'render_ticket_info_field' ), 12 );
 
-		// Metabox
+		// Metabox.
 		add_filter( 'camptix_metabox_attendee_info_additional_rows', array( $this, 'add_metabox_row' ), 12, 2 );
 
-		// Reporting
+		// Reporting.
 		add_filter( 'camptix_summary_fields', array( $this, 'add_summary_field' ) );
 		add_action( 'camptix_summarize_by_' . self::SLUG, array( $this, 'summarize' ), 10, 2 );
 		add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'add_export_column' ) );
 		add_filter( 'camptix_attendee_report_column_value_' . self::SLUG, array( $this, 'add_export_column_value' ), 10, 2 );
 
-		// Privacy
+		// Privacy.
 		add_filter( 'camptix_privacy_attendee_props_to_export', array( $this, 'attendee_props_to_export' ) );
 		add_filter( 'camptix_privacy_export_attendee_prop', array( $this, 'export_attendee_prop' ), 10, 4 );
 		add_filter( 'camptix_privacy_attendee_props_to_erase', array( $this, 'attendee_props_to_erase' ) );
@@ -74,11 +68,11 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @param int    $ticket_id
 	 */
 	public function render_field( $name, $value, $ticket_id ) {
-		if ( apply_filters( 'camptix_accommodations_should_skip', false ) ) {
+		if ( apply_filters( 'camptix_first_time_should_skip', false ) ) {
 			return;
 		}
 
-		$question = apply_filters( 'camptix_accommodations_question_text', $this->question, $ticket_id );
+		$question = apply_filters( 'camptix_first_time_question_text', $this->question, $ticket_id );
 		?>
 
 		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
@@ -99,7 +93,9 @@ class Accommodations_Field extends CampTix_Addon {
 						/>
 						<?php echo esc_html( $this->options['yes'] ); ?>
 					</label>
+
 					<br />
+
 					<label>
 						<input
 							name="<?php echo esc_attr( $name ); ?>"
@@ -109,6 +105,19 @@ class Accommodations_Field extends CampTix_Addon {
 							required
 						/>
 						<?php echo esc_html( $this->options['no'] ); ?>
+					</label>
+
+					<br />
+
+					<label>
+						<input
+							name="<?php echo esc_attr( $name ); ?>"
+							type="radio"
+							value="unsure"
+							<?php checked( 'unsure', $value ); ?>
+							required
+						/>
+						<?php echo esc_html( $this->options['unsure'] ); ?>
 					</label>
 				</fieldset>
 			</td>
@@ -124,10 +133,7 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @param int   $i
 	 */
 	public function render_registration_field( $form_data, $i ) {
-		$current_data = ( isset( $form_data['tix_attendee_info'][ $i ] ) )
-			? $form_data['tix_attendee_info'][ $i ]
-			: array();
-
+		$current_data = $form_data['tix_attendee_info'][ $i ] ?? array();
 		$current_data = wp_parse_args( $current_data, array( self::SLUG => '' ) );
 
 		$this->render_field(
@@ -145,18 +151,18 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @return array
 	 */
 	public function validate_registration_field( $data ) {
-		/* @var CampTix_Plugin $camptix */
+		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		$skip_question = apply_filters( 'camptix_accommodations_should_skip', false );
+		$skip_question = apply_filters( 'camptix_first_time_should_skip', false );
 		if ( $skip_question ) {
 			return $data;
 		}
 
-		if ( ! isset( $data[ self::SLUG ] ) || empty( $data[ self::SLUG ] ) ) {
+		$data[ self::SLUG ] = $this->validate_value( $data[ self::SLUG ] ?? '' );
+
+		if ( empty( $data[ self::SLUG ] ) ) {
 			$camptix->error_flags['required_fields'] = true;
-		} else {
-			$data[ self::SLUG ] = ( 'yes' === $data[ self::SLUG ] ) ? 'yes' : 'no';
 		}
 
 		return $data;
@@ -171,7 +177,7 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @return WP_Post
 	 */
 	public function populate_attendee_object( $attendee, $data ) {
-		$attendee->{ self::SLUG } = isset( $data[ self::SLUG ] ) ? $data[ self::SLUG ] : 'no';
+		$attendee->{ self::SLUG } = $data[ self::SLUG ] ?? '';
 
 		return $attendee;
 	}
@@ -186,20 +192,6 @@ class Accommodations_Field extends CampTix_Addon {
 	 */
 	public function save_registration_field( $post_id, $attendee ) {
 		return update_post_meta( $post_id, 'tix_' . self::SLUG, $attendee->{ self::SLUG } );
-	}
-
-	/**
-	 * Initialize email notifications after the ticket receipt email has been sent.
-	 *
-	 * @param int $attendee_id
-	 */
-	public function after_email_receipt( $attendee_id ) {
-		$attendee = get_post( $attendee_id );
-		$value    = get_post_meta( $attendee_id, 'tix_' . self::SLUG, true );
-
-		if ( $attendee instanceof WP_Post && 'tix_attendee' === $attendee->post_type ) {
-			$this->maybe_send_notification_email( $value, $attendee );
-		}
 	}
 
 	/**
@@ -225,11 +217,24 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @return bool|int
 	 */
 	public function validate_save_ticket_info_field( $data, $attendee ) {
-		$value = ( isset( $data[ self::SLUG ] ) && 'yes' === $data[ self::SLUG ] ) ? 'yes' : 'no';
+		if ( empty( $data[ self::SLUG ] ) ) {
+			return true;
+		}
 
-		$this->maybe_send_notification_email( $value, $attendee );
+		$value = $this->validate_value( $data[ self::SLUG ] );
 
 		return update_post_meta( $attendee->ID, 'tix_' . self::SLUG, $value );
+	}
+
+	/**
+	 * Validate the given value against the valid options.
+	 */
+	public function validate_value( $value ) {
+		if ( ! in_array( $value, array_keys( $this->options ), true ) ) {
+			$value = '';
+		}
+
+		return $value;
 	}
 
 	/**
@@ -238,7 +243,7 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @param array $ticket_info
 	 */
 	public function render_ticket_info_field( $ticket_info ) {
-		$current_data = wp_parse_args( $ticket_info, array( self::SLUG => 'no' ) );
+		$current_data = wp_parse_args( $ticket_info, array( self::SLUG => '' ) );
 
 		$this->render_field(
 			sprintf( 'tix_ticket_info[%s]', self::SLUG ),
@@ -256,12 +261,15 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @return mixed
 	 */
 	public function add_metabox_row( $rows, $post ) {
+		$label = '';
 		$value = get_post_meta( $post->ID, 'tix_' . self::SLUG, true );
+
 		if ( $value && isset( $this->options[ $value ] ) ) {
-			$value = $this->options[ $value ];
+			$label = $this->options[ $value ];
 		}
-		$question = apply_filters( 'camptix_accommodations_question_text', $this->question, $post->tix_ticket_id );
-		$new_row = array( $question, esc_html( $value ) );
+
+		$question = apply_filters( 'camptix_first_time_question_text', $this->question, $post->tix_ticket_id );
+		$new_row  = array( $question, esc_html( $label ) );
 
 		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
 
@@ -281,9 +289,8 @@ class Accommodations_Field extends CampTix_Addon {
 		if ( ! empty( $ticket_row ) ) {
 			$ticket_row_key = key( $ticket_row );
 			$row_indexes    = array_keys( $rows );
-			$position       = array_search( $ticket_row_key, $row_indexes );
-
-			$slice = array_slice( $rows, $position );
+			$position       = array_search( $ticket_row_key, $row_indexes, true );
+			$slice          = array_slice( $rows, $position );
 
 			array_unshift( $slice, $new_row );
 			array_splice( $rows, $position, count( $rows ), $slice );
@@ -292,81 +299,6 @@ class Accommodations_Field extends CampTix_Addon {
 		}
 
 		return $rows;
-	}
-
-	/**
-	 * Send a notification if it hasn't been sent already.
-	 *
-	 * @param string  $value
-	 * @param WP_Post $attendee
-	 */
-	protected function maybe_send_notification_email( $value, $attendee ) {
-		// Only send notifications for 'yes' answers.
-		if ( 'yes' !== $value ) {
-			return;
-		}
-
-		$already_sent = get_post_meta( $attendee->ID, '_tix_notify_' . self::SLUG, true );
-
-		// Only send the notification once.
-		if ( $already_sent ) {
-			return;
-		}
-
-		global $phpmailer;
-		if ( $phpmailer instanceof PHPMailer ) {
-			// Clear out any lingering content from a previously sent message.
-			$phpmailer = new PHPMailer( true ); // phpcs:disable WordPress.WP.GlobalVariablesOverride
-		}
-
-		$current_wordcamp = get_wordcamp_post();
-		$wordcamp_name    = get_wordcamp_name( get_wordcamp_site_id( $current_wordcamp ) );
-		$post_type_object = get_post_type_object( $attendee->post_type );
-		$attendee_link    = add_query_arg( 'action', 'edit', admin_url( sprintf( $post_type_object->_edit_link, $attendee->ID ) ) );
-		$handbook_link    = 'https://make.wordpress.org/community/handbook/wordcamp-organizer/first-steps/inclusive-and-welcoming-events/#requests-for-special-accommodations';
-		$recipients       = array(
-			$current_wordcamp->meta['Email Address'][0], // Lead organizer
-			$current_wordcamp->meta['E-mail Address'][0], // City address
-		);
-
-		$recipients = array_unique( $recipients );
-
-		foreach ( $recipients as $recipient ) {
-			$subject = sprintf(
-				/* translators: Email subject line. The %s placeholder is the name of a WordCamp. */
-				wp_strip_all_tags( __( 'An attendee who requires special accommodations has registered for %s', 'wordcamporg' ) ),
-				$wordcamp_name
-			);
-
-			$message_line_1 = wp_strip_all_tags( __( 'The following attendee has indicated that they require special accommodations. Please note that this information is confidential.', 'wordcamporg' ) );
-
-			$message_line_2 = wp_strip_all_tags( __( 'Please follow the procedure outlined in the WordCamp Organizer Handbook to ensure the health and safety of this event\'s attendees.', 'wordcamporg' ) );
-
-			$message = sprintf(
-				"%s\n\n%s\n\n%s\n\n%s",
-				$message_line_1,
-				esc_url_raw( $attendee_link ), // Link to attendee post's Edit screen.
-				$message_line_2,
-				$handbook_link // Link to page in WordCamp Organizer Handbook.
-			);
-
-			wp_mail( $recipient, $subject, $message );
-		}
-
-		/**
-		 * Action: Fires when a notification is sent about a WordCamp attendee who requires special accommodations.
-		 *
-		 * @param array $details Contains information about the WordCamp and the attendee.
-		 */
-		do_action(
-			'camptix_tweaks_accommodations_notification',
-			array(
-				'wordcamp' => $current_wordcamp,
-				'attendee' => $attendee,
-			)
-		);
-
-		update_post_meta( $attendee->ID, '_tix_notify_' . self::SLUG, true );
 	}
 
 	/**
@@ -491,7 +423,7 @@ class Accommodations_Field extends CampTix_Addon {
 	 * @return array
 	 */
 	public function attendee_props_to_erase( $props ) {
-		$props[ 'tix_' . self::SLUG ] = 'camptix_yesno';
+		$props[ 'tix_' . self::SLUG ] = 'camptix_yesnounsure';
 
 		return $props;
 	}
@@ -511,4 +443,4 @@ class Accommodations_Field extends CampTix_Addon {
 	}
 }
 
-camptix_register_addon( __NAMESPACE__ . '\Accommodations_Field' );
+camptix_register_addon( __NAMESPACE__ . '\First_Time_Field' );

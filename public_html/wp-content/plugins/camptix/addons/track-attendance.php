@@ -105,7 +105,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 	/**
 	 * Set the value for the 'Attended the Event' column for the given attendee in the attendee export
 	 *
-	 * @param string $value
+	 * @param string  $value
 	 * @param WP_Post $attendee
 	 * @return string
 	 */
@@ -129,7 +129,7 @@ class CampTix_Track_Attendance extends CampTix_Addon {
 	 * Render custom columns on the Attendees screen.
 	 *
 	 * @param string $column
-	 * @param int $attendee_id
+	 * @param int    $attendee_id
 	 */
 	public function render_custom_columns( $column, $attendee_id ) {
 		switch ( $column ) {

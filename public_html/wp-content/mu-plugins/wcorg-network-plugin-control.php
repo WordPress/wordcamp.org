@@ -11,7 +11,7 @@
 namespace WordCamp\Plugins\Network;
 defined( 'WPINC' ) || die();
 
-add_filter( 'network_admin_plugin_action_links', __NAMESPACE__ . '\network_plugin_actions', 10, 2 );
+//add_filter( 'network_admin_plugin_action_links', __NAMESPACE__ . '\network_plugin_actions', 10, 2 );
 add_action( 'network_admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );
 add_action( 'admin_notices', __NAMESPACE__ . '\network_plugin_notifier' );
 

@@ -4,8 +4,19 @@ namespace WordCamp\AttendeeSurvey\Cron;
 
 defined( 'WPINC' ) || die();
 
-//add_action( 'transition_post_status', __NAMESPACE__ . '\schedule_jobs' );
-add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\remind_attendees' );
+use function WordCamp\AttendeeSurvey\Email\{get_email_id, publish_survey_email};
+use function WordCamp\AttendeeSurvey\Page\{publish_survey_page};
+
+/**
+ * Constants.
+ */
+const DAYS_AFTER_TO_SEND = 2;
+
+/**
+ * Actions & hooks
+ */
+add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
+add_action( 'init', __NAMESPACE__ . '\remind_attendees' );
 
 /**
  * Add cron jobs to the schedule.
@@ -14,7 +25,7 @@ add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\remind_attendees' );
  */
 function schedule_jobs() {
 	if ( ! wp_next_scheduled( 'wc_attendee_survey_email' ) ) {
-		wp_schedule_event( time(), 'daily', 'wc_attendee_survey_email' );
+		wp_schedule_event( time(), 'hourly', 'wc_attendee_survey_email' );
 	}
 }
 
@@ -23,41 +34,16 @@ function schedule_jobs() {
  *
  * @return array
  */
-function get_wordcamp_attendees() {
-	$attendees = get_posts( array(
+function get_wordcamp_attendees_id() {
+	return get_posts( array(
 		'post_type' => 'tix_attendee',
 		'posts_per_page' => -1,
-		'post_status' => array( 'publish' ),
+		'post_status' => 'publish',
 		'fields' => 'ids',
 		'orderby' => 'ID',
 		'order' => 'ASC',
 		'cache_results' => false,
 	) );
-
-	return $attendees;
-}
-
-/**
- * Get Wordcamp Survey Page ID
- *
- * @return int
- */
-function get_wordcamp_attendee_survey_page_id() {
-	$survey_page_id = get_option( 'attendee_survey_page' );
-
-	return $survey_page_id;
-}
-
-/**
- * Get all WordCamps survey urls
- *
- * @return array
- */
-function get_wordcamp_attendee_survey_url( $wordcamp_id ) {
-	$survey_page_id = get_wordcamp_attendee_survey_page_id( $wordcamp_id );
-	$survey_url     = get_permalink( $survey_page_id );
-
-	return $survey_url;
 }
 
 /**
@@ -68,57 +54,114 @@ function get_date_since_closed() {
 }
 
 /**
- * Sends email to attendee.
+ * Associates attendees to emails.
  */
-function send_attendee_email() {
+function associate_attendee_to_email( $email_id ) {
+	$failed_to_add      = array();
+	$successfully_added = array();
+	$recipients         = get_wordcamp_attendees_id();
 
+	if ( empty( $recipients ) ) {
+		return;
+	}
+
+	$existing_post_meta = get_post_meta( $email_id, 'tix_email_recipient_id' );
+
+	// Associate attendee to tix_email as a recipient.
+	foreach ( $recipients as $recipient_id ) {
+		if ( ! in_array( $recipient_id, $existing_post_meta, true ) ) {
+			$result = add_post_meta( $email_id, 'tix_email_recipient_id', $recipient_id );
+
+			if ( ! $result ) {
+				$failed_to_add[] = $recipient_id;
+			} else {
+				$successfully_added[] = $recipient_id;
+			}
+		}
+	}
+
+	if ( ! empty( $failed_to_add ) ) {
+		do_action( 'camptix_log_raw', 'Failed to add recipients:', $email_id, $failed_to_add, 'notify');
+	}
+
+	if ( ! empty( $successfully_added ) ) {
+		// Copied from camptix.php.
+		update_post_meta( $email_id, 'tix_email_recipients_backup', $successfully_added );
+
+		do_action( 'camptix_log_raw', 'Successfully added recipients:', $email_id, $successfully_added, 'notify');
+	}
 }
 
 /**
- * Send email to attendees who attended a WordCamp 2 days ago.
+ * Returns true if we sent an email for this wordcamp.
+ */
+function email_already_sent_or_queued( $email_id ) {
+	$email = get_post( $email_id );
+	return 'publish' === $email->post_status || 'pending' === $email->post_status;
+}
+
+/**
+ * Return true if it is time to send the email.
+ */
+function is_time_to_send_email( $email_id ) {
+	$wordcamp_post = get_wordcamp_post();
+
+	if ( ! isset( $wordcamp_post->ID ) ) {
+		do_action( 'camptix_log_raw', 'Couldn\'t retrieve wordcamp post id', $email_id, null, 'notify');
+		return false;
+	}
+
+	$end_date = $wordcamp_post->meta['End Date (YYYY-mm-dd)'][0];
+
+	if ( ! isset( $end_date ) ) {
+		do_action( 'camptix_log_raw', 'WordCamp doesn\'t have end date', $email_id, $wordcamp_post, 'notify');
+		return false;
+	}
+
+	$date           = new \DateTime("@$end_date ");
+	$currentDate    = new \DateTime();
+	$interval       = $currentDate->diff($date);
+	$daysDifference = $interval->days;
+
+	return DAYS_AFTER_TO_SEND === $daysDifference;
+}
+
+
+/**
+ * Associates recipients to email and changes its status to be picked up
+ * by the camptix email cron job `tix_scheduled_every_ten_minutes`.
  *
  * @return void
  */
 function remind_attendees() {
+	$email_id = get_email_id();
 
-	$wordcamps = get_wordcamps( array(
-		'status' => 'wcpt-closed',
-		'end_date' => get_date_since_closed(),
-	) );
+	if ( empty( $email_id ) ) {
+		return;
+	}
 
-	foreach ( $wordcamps as $wordcamp ) {
-		$attendees = get_wordcamp_attendees( $wordcamp->ID );
+	// check to make sure we didn't already send an email for this wordcamp.
+	if ( email_already_sent_or_queued( $email_id ) ) {
+		return;
+	}
 
-		// we ay be able to push this to `tix_email` which will get picked up by the queue.
-		foreach ( $attendees as $attendee ) {
-			$email         = $attendee->email;
-			$name          = $attendee->first_name . ' ' . $attendee->last_name;
-			$wordcamp_name = $wordcamp->post_title;
-			$wordcamp_url  = get_wordcamp_url( $wordcamp->ID );
-			$survey_url    = get_wordcamp_attendee_survey_url( $wordcamp->ID );
-		}
+	if ( ! is_time_to_send_email( $email_id ) ) {
+		return;
+	}
+
+	$page_published = publish_survey_page();
+
+	if ( is_wp_error( $page_published ) ) {
+		do_action( 'camptix_log_raw', 'No page to send to', $email_id, $page_published, 'notify');
+	}
+
+	associate_attendee_to_email( $email_id );
+
+	$email_status = publish_survey_email( $email_id );
+
+	if ( is_wp_error( $email_status ) ) {
+		do_action( 'camptix_log_raw', 'Failed updating email status', $email_id, $email_status, 'notify');
+	} else {
+		do_action( 'camptix_log_raw', 'Email status change to `pending`.', $email_id, null, 'notify');
 	}
 }
-
-remind_attendees();
-
-
-
-// $email_id = wp_insert_post( array(
-// 'post_type' => 'tix_email',
-// 'post_status' => 'pending',
-// 'post_title' => $subject,
-// 'post_content' => $body,
-// ) );
-
-// // Add recipients as post meta.
-// if ( $email_id ) {
-// add_settings_error( 'camptix', 'none', sprintf( __( 'Your e-mail job has been queued for %s recipients.', 'wordcamporg' ), count( $recipients ) ), 'updated' );
-// $this->log( sprintf( 'Created e-mail job with %s recipients.', count( $recipients ) ), $email_id, null, 'notify' );
-
-// foreach ( $recipients as $recipient_id )
-// add_post_meta( $email_id, 'tix_email_recipient_id', $recipient_id );
-
-// update_post_meta( $email_id, 'tix_email_recipients_backup', $recipients ); // for logging purposes
-// unset( $recipients );
-// }

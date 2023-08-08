@@ -7,16 +7,16 @@ namespace WordCamp\AttendeeSurvey\AdminPage;
 
 defined( 'WPINC' ) || die();
 
-use function WordCamp\AttendeeSurvey\{get_option_key};
+use function WordCamp\AttendeeSurvey\{get_feature_id};
 
-add_action( 'init', __NAMESPACE__ . '\load' );
+add_action( 'init', __NAMESPACE__ . '\init' );
 
 /**
  * Include the rest of the plugin.
  *
  * @return void
  */
-function load() {
+function init() {
 	add_action( 'admin_menu', __NAMESPACE__ . '\admin_menu' );
 }
 
@@ -28,7 +28,7 @@ function admin_menu() {
 		__( 'WordCamp Attendee Survey', 'wordcamporg' ),
 		__( 'Attendee Survey', 'wordcamporg' ),
 		'manage_options',
-		get_option_key(),
+		get_feature_id(),
 		__NAMESPACE__ . '\render_menu_page',
 		'dashicons-feedback',
 		58

@@ -12,28 +12,33 @@
 
 namespace WordCamp\AttendeeSurvey;
 
-use function WordCamp\AttendeeSurvey\Page\{addPage};
+use function WordCamp\AttendeeSurvey\Email\{add_email, delete_email};
+use function WordCamp\AttendeeSurvey\Page\{add_page,delete_page};
 
 defined( 'WPINC' ) || die();
 
-define( __NAMESPACE__ . '\PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-define( __NAMESPACE__ . '\PLUGIN_URL', plugins_url( '/', __FILE__ ) );
+/**
+ * Local dependencies.
+ */
+require_once get_includes_path() . 'email.php';
+require_once get_includes_path() . 'page.php';
 
-const SKIP_KEY_ID = 'attendee_survey';
-const OPTION_KEY  = 'attendee_survey_page';
-
+/**
+ * Plugin activation and deactivation hooks.
+ */
 register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
+/**
+ * Actions & hooks
+ */
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 
 /**
- * Returns the option key used to store the survey page ID.
- *
- * @return string
+ * Get the ID of the survey feature.
  */
-function get_option_key() {
-	return OPTION_KEY;
+function get_feature_id() {
+	return 'attendee_survey';
 }
 
 /**
@@ -42,7 +47,7 @@ function get_option_key() {
  * @return bool
  */
 function can_load() {
-	$skip_feature = wcorg_skip_feature( SKIP_KEY_ID );
+	$skip_feature = wcorg_skip_feature( get_feature_id() );
 
 	return ! $skip_feature;
 }
@@ -58,7 +63,6 @@ function load() {
 	}
 
 	require_once get_includes_path() . 'cron.php';
-	require_once get_includes_path() . 'page.php';
 
 	if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
 		require_once get_includes_path() . 'admin-page.php';
@@ -102,6 +106,7 @@ function activate_on_network() {
  */
 function activate_on_current_site() {
 	add_page();
+	add_email();
 
 	// Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
 	// The rules will automatically get recreated on the next request to the site.
@@ -144,12 +149,12 @@ function deactivate_on_network() {
  * @return void
  */
 function deactivate_on_current_site() {
-	$page_id = get_option( OPTION_KEY );
-	wp_delete_post( $page_id, true );
+	delete_page();
+	delete_email();
 }
 
 /**
- * Get the IDs of sites that do not have the SKIP_KEY_ID skip feature flag.
+ * Get the IDs of sites that do not have the FEATURE_ID skip feature flag.
  *
  * @return array
  */
@@ -164,7 +169,7 @@ function get_site_ids_without_skip_flag() {
 			ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = %s
 			WHERE m.meta_value IS NULL
 			",
-			SKIP_KEY_ID
+			get_feature_id()
 		)
 	);
 

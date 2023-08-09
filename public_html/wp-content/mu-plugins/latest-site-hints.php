@@ -25,15 +25,9 @@ function maybe_add_latest_site_hints() {
 	// Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 	add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );
 
-	/**
-	 * Show notification about newer WordCamp. Logged in users most probably know that already,
-	 * so no need to bother them (and we also misuse the body.admin-bar class).
-	 */
-	if ( ! is_user_logged_in() ) {
-		add_filter( 'body_class',   __NAMESPACE__ . '\add_notification_classes_to_body' );
-		add_action( 'wp_head',      __NAMESPACE__ . '\add_notification_styles' );
-		add_action( 'wp_footer',    __NAMESPACE__ . '\show_notification_about_latest_site' );
-	}
+	// Add a banner with a link to the latest WordCamp.
+	add_action( 'wp_head', __NAMESPACE__ . '\add_notification_styles' );
+	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_about_latest_site' );
 }
 
 /**
@@ -68,50 +62,47 @@ function canonical_link_past_home_pages_to_current_year() {
 }
 
 /**
- * If notification is shown, misuse body.admin-bar class as most of the WordCamp themes already that that into
- * account. This makes its a whole lot easier to place the notification on top of content.
- */
-function add_notification_classes_to_body( $classes ) {
-	$classes[] = 'admin-bar'; // Add this as most of the current WordCamp themes already take the adminbar into account.
-	return $classes;
-}
-
-/**
  * Simple styles for the notification.
  */
 function add_notification_styles() { ?>
   <style type="text/css">
-		html {
-		  margin-top: 35px !important;
+		html:not(#specificity-hack) {
+			/* 44 = 10px x2 for padding, 24px for line height. */
+			margin-top: calc(44px + var(--wp-admin--admin-bar--height, 0px)) !important;
 		}
 
 		.wordcamp-latest-site-notify {
-		  background: #1d2327;
-		  text-align: center;
-		  padding-top: 5px;
-		  font-size: 15px;
-		  height: 35px;
-		  position: fixed;
-		  top: 0;
-		  left: 0;
-		  width: 100%;
-		  min-width: 600px;
-		  z-index: 99999;
+			background: #1d2327;
+			text-align: center;
+			padding: 10px 20px;
+			font-size: 16px;
+			line-height: 1.5;
+			position: fixed;
+			top: var(--wp-admin--admin-bar--height, 0);
+			left: 0;
+			width: 100%;
+			z-index: 99999;
+		}
+
+		@media screen and (max-width: 600px) {
+			.wordcamp-latest-site-notify {
+				position: absolute;
+			}
 		}
 
 		.wordcamp-latest-site-notify p,
 		.wordcamp-latest-site-notify a {
-		  color: #f0f0f1;
-		  margin: 0;
+			color: #f0f0f1;
+			margin: 0;
 		}
 
 		.wordcamp-latest-site-notify a {
-		  font-weight: 600;
+			font-weight: 600;
 		}
 
 		.wordcamp-latest-site-notify a:hover,
 		.wordcamp-latest-site-notify a:active {
-		  color: #72aee6;
+			color: #72aee6;
 		}
   </style>
 <?php }
@@ -129,7 +120,7 @@ function show_notification_about_latest_site() {
 		return;
 	}
 
-	echo '<div id="wpadminbar" class="wordcamp-latest-site-notify"><p>' .
+	echo '<div class="wordcamp-latest-site-notify"><p>' .
 		wp_sprintf( '%s is over. Check out <a href="%s">the next edition</a>!', esc_html( get_blog_details( $current_blog->blog_id )->blogname ), esc_url( $latest_domain ) ) .
 	'</p></div>';
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Adds an admin page.
+ * Adds a page to the central admin.
  */
 
 namespace WordCamp\AttendeeSurvey\AdminPage;
@@ -17,9 +17,7 @@ use function WordCamp\AttendeeSurvey\Cron\{get_wordcamp_attendees_id};
 add_action( 'init', __NAMESPACE__ . '\init' );
 
 /**
- * Include the rest of the plugin.
- *
- * @return void
+ * Registered the appropriate filters and actions.
  */
 function init() {
 	add_action( 'admin_menu', __NAMESPACE__ . '\admin_menu' );
@@ -42,6 +40,15 @@ function admin_menu() {
 
 /**
  * Get stats for each feedback for all sites.
+ *
+ * @return array[] An array of custom elements.
+ *                Each element has the following structure:
+ *                [
+ *                  'title' => string,
+ *                  'sent' => string,
+ *                  'responses' => string,
+ *                  'rate' => string,
+ *                ]
  */
 function get_feedback_details() {
 	/* @var CampTix_Plugin $camptix */

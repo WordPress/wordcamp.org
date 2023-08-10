@@ -33,8 +33,6 @@ function log( $message, $post_id, $data = null ) {
 
 /**
  * Add cron jobs to the schedule.
- *
- * @return void
  */
 function schedule_jobs() {
 	if ( ! wp_next_scheduled( 'wc_attendee_survey_email' ) ) {
@@ -45,7 +43,7 @@ function schedule_jobs() {
 /**
  * Get Wordcamp attendees.
  *
- * @return array
+ * @return int[]
  */
 function get_wordcamp_attendees_id() {
 	return get_posts( array(
@@ -100,7 +98,9 @@ function associate_attendee_to_email( $email_id ) {
 }
 
 /**
- * Returns true if we sent an email for this wordcamp.
+ * Returns true if an emailed will be sent or is queued.
+ *
+ * @return bool
  */
 function email_already_sent_or_queued( $email_id ) {
 	$email = get_post( $email_id );
@@ -108,7 +108,9 @@ function email_already_sent_or_queued( $email_id ) {
 }
 
 /**
- * Return true if it is time to send the email.
+ * Returns true if it is time to send the email.
+ *
+ * @return bool
  */
 function is_time_to_send_email( $email_id ) {
 	$blog_id       = get_current_blog_id();
@@ -137,8 +139,6 @@ function is_time_to_send_email( $email_id ) {
 /**
  * Associates recipients to email and changes its status to be picked up
  * by the camptix email cron job `tix_scheduled_every_ten_minutes`.
- *
- * @return void
  */
 function send_attendee_survey() {
 	$email_id = get_email_id();

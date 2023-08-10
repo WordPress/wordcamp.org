@@ -1,6 +1,6 @@
 <?php
 /**
- * Creates the Attendee Survey email in the Camptix email queue
+ * Creates the Attendee Survey email in the Camptix email queue.
  */
 
 namespace WordCamp\AttendeeSurvey\Email;
@@ -16,6 +16,8 @@ const EMAIL_KEY_ID = 'attendee_survey_email';
 
 /**
  * Return the email ID.
+ *
+ * @return mixed
  */
 function get_email_id() {
 	return get_option( EMAIL_KEY_ID );
@@ -23,6 +25,8 @@ function get_email_id() {
 
 /**
  * Returns content for the reminder email.
+ *
+ * @return string
  */
 function get_email_content() {
 	return sprintf(
@@ -61,19 +65,14 @@ function add_email() {
  * @return int|WP_Error
  */
 function publish_survey_email( $email_id ) {
-	$new_status = 'pending';
-	$result     = wp_update_post( array(
+	return wp_update_post( array(
 		'ID'            => $email_id,
-		'post_status'   => $new_status,
+		'post_status'   => 'pending',
 	) );
-
-	return $result;
 }
 
 /**
  * Delete the email and associated meta data.
- *
- * @return void
  */
 function delete_email() {
 	$post_id = get_email_id();

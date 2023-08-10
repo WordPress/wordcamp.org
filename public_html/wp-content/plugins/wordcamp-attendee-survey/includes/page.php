@@ -1,6 +1,6 @@
 <?php
 /**
- * Adds an admin page.
+ * Adds a page which contains the survey.
  */
 
 namespace WordCamp\AttendeeSurvey\Page;
@@ -20,6 +20,8 @@ const SURVEY_PAGE_ID = 'attendee_survey_page';
 
 /**
  * Return the page ID.
+ *
+ * @return mixed
  */
 function get_page_id() {
 	return get_option( SURVEY_PAGE_ID );
@@ -51,6 +53,8 @@ function prevent_deletion( $check, $post, $force_delete = false ) {
 
 /**
  * Get the content of the survey page.
+ *
+ * @return string
  */
 function get_page_content() {
 	return <<<EOT
@@ -212,6 +216,8 @@ EOT;
 
 /**
  * Turns on the page by changing its status to 'publish'.
+ *
+ * @return int|WP_Error
  */
 function publish_survey_page() {
 	return wp_update_post( array(
@@ -223,7 +229,7 @@ function publish_survey_page() {
 /**
  * Generate a link to the front end feedback UI for a particular session.
  *
- * @return string
+ * @return string|bool
  */
 function get_survey_page_url() {
 	return get_permalink( get_option( SURVEY_PAGE_ID ) );

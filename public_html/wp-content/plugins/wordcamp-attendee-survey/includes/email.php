@@ -7,6 +7,8 @@ namespace WordCamp\AttendeeSurvey\Email;
 
 defined( 'WPINC' ) || die();
 
+use function WordCamp\AttendeeSurvey\Page\{get_survey_page_url};
+
 /**
  * Constants.
  */
@@ -17,6 +19,15 @@ const EMAIL_KEY_ID = 'attendee_survey_email';
  */
 function get_email_id() {
 	return get_option( EMAIL_KEY_ID );
+}
+
+/**
+ * Returns content for the reminder email.
+ */
+function get_email_content() {
+	return sprintf(
+		__( 'Thanks for participating in the event. Here is the url: %s', 'wordcamporg' ),
+	get_survey_page_url()  );
 }
 
 /**
@@ -31,10 +42,11 @@ function add_email() {
 	$email_id = wp_insert_post(
 		array(
 			'post_title'   => __( 'Attendee Survey Email', 'wordcamporg' ),
-			'post_content' => 'content',
+			'post_content' => get_email_content(),
 			'post_status'  => 'draft',
 			'post_type'    => 'tix_email',
-		) );
+		)
+	);
 
 	if ( $email_id > 0 ) {
 		update_option( EMAIL_KEY_ID, $email_id );

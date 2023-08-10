@@ -17,6 +17,15 @@ add_filter( 'pre_delete_post', __NAMESPACE__ . '\prevent_deletion', 10, 3 );
  */
 const SURVEY_PAGE_ID = 'attendee_survey_page';
 
+
+/**
+ * Return the page ID.
+ */
+function get_page_id() {
+	return get_option( SURVEY_PAGE_ID );
+}
+
+
 /**
  * Prevent deletion of the Survey page, unless force_delete is true.
  *
@@ -40,6 +49,9 @@ function prevent_deletion( $check, $post, $force_delete = false ) {
 	return $check;
 }
 
+/**
+ * Get the content of the survey page.
+ */
 function get_page_content() {
 	return <<<EOT
 		<!-- wp:paragraph -->
@@ -198,14 +210,25 @@ function get_page_content() {
 EOT;
 }
 
+/**
+ * Turns on the page by changing its status to 'publish'.
+ */
 function publish_survey_page() {
-	$result = wp_update_post( array(
+	return wp_update_post( array(
 		'ID'            => get_option( SURVEY_PAGE_ID ),
 		'post_status'   => 'publish',
 	) );
-
-	return $result;
 }
+
+/**
+ * Generate a link to the front end feedback UI for a particular session.
+ *
+ * @return string
+ */
+function get_survey_page_url() {
+	return get_permalink( get_option( SURVEY_PAGE_ID ) );
+}
+
 
 /**
  * Create the Survey page, save ID into an option.

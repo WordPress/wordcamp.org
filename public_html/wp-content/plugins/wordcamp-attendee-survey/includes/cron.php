@@ -47,13 +47,6 @@ function get_wordcamp_attendees_id() {
 }
 
 /**
- * Returns the date when we should look for closed WordCamps.
- */
-function get_date_since_closed() {
-	return date( 'Y-m-d', strtotime( '-2 days' ) );
-}
-
-/**
  * Associates attendees to emails.
  */
 function associate_attendee_to_email( $email_id ) {
@@ -62,6 +55,7 @@ function associate_attendee_to_email( $email_id ) {
 	$recipients         = get_wordcamp_attendees_id();
 
 	if ( empty( $recipients ) ) {
+		do_action( 'camptix_log_raw', 'No valid recipients', $email_id, null, 'notify');
 		return;
 	}
 
@@ -106,7 +100,7 @@ function email_already_sent_or_queued( $email_id ) {
 function is_time_to_send_email( $email_id ) {
 	$wordcamp_post = get_wordcamp_post();
 
-	if ( ! isset( $wordcamp_post->ID ) ) {
+	if ( ! $wordcamp_post ) {
 		do_action( 'camptix_log_raw', 'Couldn\'t retrieve wordcamp post id', $email_id, null, 'notify');
 		return false;
 	}
@@ -118,12 +112,12 @@ function is_time_to_send_email( $email_id ) {
 		return false;
 	}
 
-	$date           = new \DateTime("@$end_date ");
-	$currentDate    = new \DateTime();
-	$interval       = $currentDate->diff($date);
-	$daysDifference = $interval->days;
+	$date            = new \DateTime("@$end_date ");
+	$current_date    = new \DateTime();
+	$interval        = $current_date->diff($date);
+	$days_difference = $interval->days;
 
-	return DAYS_AFTER_TO_SEND === $daysDifference;
+	return DAYS_AFTER_TO_SEND === $days_difference;
 }
 
 

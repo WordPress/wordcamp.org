@@ -4,6 +4,8 @@ namespace WordCamp\AttendeeSurvey\Cron;
 
 defined( 'WPINC' ) || die();
 
+use CampTix_Plugin;
+
 use function WordCamp\AttendeeSurvey\Email\{get_email_id, publish_survey_email};
 use function WordCamp\AttendeeSurvey\Page\{publish_survey_page};
 
@@ -17,6 +19,17 @@ const DAYS_AFTER_TO_SEND = 2;
  */
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
 add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\send_attendee_survey' );
+
+
+/**
+ * Logs a message to the CampTix email log.
+ */
+function log( $message, $post_id, $data = null ) {
+	/* @var CampTix_Plugin $camptix */
+	global $camptix;
+
+	$camptix->log( $message, $post_id, $data );
+}
 
 /**
  * Add cron jobs to the schedule.
@@ -55,7 +68,7 @@ function associate_attendee_to_email( $email_id ) {
 	$recipients         = get_wordcamp_attendees_id();
 
 	if ( empty( $recipients ) ) {
-		do_action( 'camptix_log_raw', 'No valid recipients', $email_id, null, 'notify');
+		log( 'No valid recipients', $email_id, null );
 		return;
 	}
 
@@ -75,14 +88,14 @@ function associate_attendee_to_email( $email_id ) {
 	}
 
 	if ( ! empty( $failed_to_add ) ) {
-		do_action( 'camptix_log_raw', 'Failed to add recipients:', $email_id, $failed_to_add, 'notify');
+		log( 'Failed to add recipients:', $email_id, $failed_to_add );
 	}
 
 	if ( ! empty( $successfully_added ) ) {
 		// Copied from camptix.php.
 		update_post_meta( $email_id, 'tix_email_recipients_backup', $successfully_added );
 
-		do_action( 'camptix_log_raw', 'Successfully added recipients:', $email_id, $successfully_added, 'notify');
+		log( 'Successfully added recipients:', $email_id, $successfully_added );
 	}
 }
 
@@ -98,17 +111,18 @@ function email_already_sent_or_queued( $email_id ) {
  * Return true if it is time to send the email.
  */
 function is_time_to_send_email( $email_id ) {
-	$wordcamp_post = get_wordcamp_post();
+	$blog_id       = get_current_blog_id();
+	$wordcamp_post = get_wordcamp_post( $blog_id );
 
 	if ( ! $wordcamp_post ) {
-		do_action( 'camptix_log_raw', 'Couldn\'t retrieve wordcamp post id', $email_id, null, 'notify');
+		log( 'Couldn\'t retrieve wordcamp for blog id:', $email_id, $blog_id );
 		return false;
 	}
 
 	$end_date = $wordcamp_post->meta['End Date (YYYY-mm-dd)'][0];
 
 	if ( ! isset( $end_date ) ) {
-		do_action( 'camptix_log_raw', 'WordCamp doesn\'t have end date', $email_id, $wordcamp_post, 'notify');
+		log( 'WordCamp missing end date', $email_id, $wordcamp_post );
 		return false;
 	}
 
@@ -119,7 +133,6 @@ function is_time_to_send_email( $email_id ) {
 
 	return DAYS_AFTER_TO_SEND === $days_difference;
 }
-
 
 /**
  * Associates recipients to email and changes its status to be picked up
@@ -146,7 +159,7 @@ function send_attendee_survey() {
 	$page_published = publish_survey_page();
 
 	if ( is_wp_error( $page_published ) ) {
-		do_action( 'camptix_log_raw', 'No page to send to', $email_id, $page_published, 'notify');
+		log( 'No page to send to', $email_id, $page_published );
 	}
 
 	associate_attendee_to_email( $email_id );
@@ -154,8 +167,8 @@ function send_attendee_survey() {
 	$email_status = publish_survey_email( $email_id );
 
 	if ( is_wp_error( $email_status ) ) {
-		do_action( 'camptix_log_raw', 'Failed updating email status', $email_id, $email_status, 'notify');
+		log( 'Failed updating email status', $email_id, $email_status );
 	} else {
-		do_action( 'camptix_log_raw', 'Email status change to `pending`.', $email_id, null, 'notify');
+		log( 'Email status change to `pending`.', $email_id );
 	}
 }

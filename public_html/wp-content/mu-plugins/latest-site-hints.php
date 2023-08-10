@@ -145,15 +145,15 @@ function get_latest_home_url( $current_domain, $current_path ) {
 	$wordcamp = get_wordcamp_post();
 	$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
 
-	/*
-	* In rare cases, the site for next year's camp will be created before this year's camp is over. When that
-	* happens, we should wait to add the canonical link until after the current year's camp is over.
-	*
-	* This won't prevent the link from being added to past years, but that edge case isn't significant enough
-	* to warrant the extra complexity.
-	*
-	* See also `WordCamp\Sunrise\get_canonical_year_url()`.
-	*/
+	/**
+	 * In rare cases, the site for next year's camp will be created before this year's camp is over. When that
+	 * happens, we should wait to add the canonical link until after the current year's camp is over.
+	 *
+	 * This won't prevent the link from being added to past years, but that edge case isn't significant enough
+	 * to warrant the extra complexity.
+	 *
+	 * See also `WordCamp\Sunrise\get_canonical_year_url()`.
+	 */
 	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
 		return false;
 	}
@@ -166,23 +166,23 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		);
 
 		$query = $wpdb->prepare( "
-      SELECT `domain`, `path`
-      FROM `$wpdb->blogs`
-      WHERE
-        `domain` LIKE %s AND
-        SUBSTR( domain, 1, 4 ) REGEXP '^-?[0-9]+$' -- exclude secondary language domains like 2013-fr.ottawa.wordcamp.org
-      ORDER BY `domain` DESC
-      LIMIT 1",
+			SELECT `domain`, `path`
+			FROM `$wpdb->blogs`
+			WHERE
+				`domain` LIKE %s AND
+				SUBSTR( domain, 1, 4 ) REGEXP '^-?[0-9]+$' -- exclude secondary language domains like 2013-fr.ottawa.wordcamp.org
+			ORDER BY `domain` DESC
+			LIMIT 1",
 			'%.' . $city_domain
 		);
 
 	} elseif ( preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $current_domain . $current_path ) ) {
 		$query = $wpdb->prepare( "
-      SELECT `domain`, `path`
-      FROM `$wpdb->blogs`
-      WHERE `domain` = %s
-      ORDER BY `domain`, `path` DESC
-      LIMIT 1",
+			SELECT `domain`, `path`
+			FROM `$wpdb->blogs`
+			WHERE `domain` = %s
+			ORDER BY `domain`, `path` DESC
+			LIMIT 1",
 			$current_domain
 		);
 

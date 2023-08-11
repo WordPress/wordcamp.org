@@ -159,7 +159,7 @@ function send_attendee_survey() {
 	$page_published = publish_survey_page();
 
 	if ( is_wp_error( $page_published ) ) {
-		log( 'Error publishing survey page:', $email_id, $page_published );
+		log( 'No page to send to', $email_id, $page_published );
 	}
 
 	associate_attendee_to_email( $email_id );

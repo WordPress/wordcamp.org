@@ -63,6 +63,7 @@ function get_feedback_details() {
 
 		$blog_details = get_blog_details($site->blog_id);
 
+		// TODO: This should be tested elsewhere.
 		if ( 'events.wordpress.test' !== $blog_details->domain ) {
 			continue;
 		}

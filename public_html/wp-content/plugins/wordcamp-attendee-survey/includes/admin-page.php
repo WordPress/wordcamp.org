@@ -54,21 +54,23 @@ function get_feedback_details() {
 	/* @var CampTix_Plugin $camptix */
 	global $camptix;
 
-	$sites = get_sites( array( 'network_id' => EVENTS_NETWORK_ID ));
+	$wordcamps = get_posts( array(
+		'post_type' => WCPT_POST_TYPE_ID,
+		'post_status' => 'wcpt-closed',
+		'posts_per_page' => -1,
+	) );
 
 	$feedback_details = array();
 
-	foreach ( $sites as $site ) {
-		switch_to_blog($site->blog_id);
+	foreach ( $wordcamps as $camp ) {
+		$site_id = get_post_meta( $camp->ID, '_site_id', true );
 
-		$blog_details = get_blog_details($site->blog_id);
+		switch_to_blog( $site_id );
+
+		$blog_details = get_blog_details( $site_id );
 
 		// TODO: This should be tested elsewhere.
 		if ( 'events.wordpress.test' !== $blog_details->domain ) {
-			continue;
-		}
-
-		if ( EVENTS_ROOT_BLOG_ID === (int) $blog_details->blog_id ) {
 			continue;
 		}
 

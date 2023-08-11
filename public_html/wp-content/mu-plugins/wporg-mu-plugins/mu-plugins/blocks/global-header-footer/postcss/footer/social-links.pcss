@@ -1,0 +1,29 @@
+.wp-block-group.global-footer {
+	& .wp-block-social-links,
+	& .wp-block-social-links .wp-social-link.wp-social-link.wp-social-link,
+	& .wp-block-social-links .wp-social-link a {
+		margin-top: 0;
+		margin-bottom: 0;
+		padding-top: 0;
+		padding-bottom: 0;
+	}
+}
+
+.wp-block-group.global-footer .wp-block-social-links {
+	position: relative;
+	top: -3px; /* Align with W logo. */
+	justify-content: flex-end;
+	align-content: flex-start;
+	min-width: 100px;
+
+	@media (--tablet) {
+		justify-content: flex-end;
+		flex-basis: 33%;
+		order: 3;
+	}
+
+	& .wp-social-link svg {
+		width: 28px;
+		height: 28px;
+	}
+}

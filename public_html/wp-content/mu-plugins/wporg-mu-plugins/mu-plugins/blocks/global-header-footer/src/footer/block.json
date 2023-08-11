@@ -1,0 +1,34 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/global-footer",
+	"title": "Global Footer",
+	"category": "design",
+	"description": "Global footer for all of WordPress.org",
+	"supports": {
+		"color": {
+			"background": true,
+			"link": false,
+			"text": true
+		},
+		"html": false,
+		"multiple": false,
+		"reusable": false,
+		"spacing": {
+			"margin": [ "top" ],
+			"padding": false,
+			"blockGap": false
+		},
+		"__experimentalBorder": {
+			"color": true,
+			"radius": false,
+			"style": true,
+			"width": true
+		}
+	},
+	"attributes": {},
+	"textdomain": "wporg",
+	"style": "wporg-global-header-footer",
+	"editorStyle": "wporg-global-header-footer",
+	"editorScript": "file:./index.js"
+}

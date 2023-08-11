@@ -1,0 +1,73 @@
+:root {
+	--wp-screenshot-theme-color: #007cba;
+}
+
+.wporg-screenshot-card {
+	border-radius: 1px;
+	box-shadow: 0 0 0 2px #fff, 0 0 0 3px #f0f0f1;
+	display: block;
+	overflow: hidden;
+	position: relative;
+	transition: all 75ms ease-in-out;
+	width: 100%;
+}
+
+.wporg-screenshot-card:hover,
+.wporg-screenshot-card:focus {
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--wp-screenshot-theme-color);
+	outline: none;
+}
+
+/**
+ * The controls doesn't use this yet, it's being used externally.
+ * See: https://meta.trac.wordpress.org/ticket/6059
+*/
+
+.wporg-screenshot-card__active {
+	box-shadow: 0 0 0 2px #fff, 0 0 0 3px #1e1e1e;
+}
+
+.wporg-screenshot {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+	height: 100%;
+}
+
+.wporg-screenshot__has-error,
+.wporg-screenshot__has-error:hover {
+	font-size: 10px;
+	color: #aaa;
+	text-decoration: none;
+}
+
+.wporg-screenshot-loader {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+}
+
+.wporg-screenshot-loader::after {
+	content: "";
+	display: inline-block;
+	box-sizing: border-box;
+	height: 24px;
+	width: 24px;
+	border: 2px solid;
+	border-color: #ddd #ddd #0073aa;
+	border-radius: 50%;
+
+	animation: rotate-360 1.4s linear infinite;
+}
+
+@keyframes rotate-360 {
+	0% {
+		transform: rotate(0deg);
+	}
+
+	100% {
+		transform: rotate(360deg);
+	}
+}

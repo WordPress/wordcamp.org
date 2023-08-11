@@ -1,0 +1,344 @@
+.wp-block-group.global-header > .global-header__navigation {
+	order: 3;
+
+	@media (--tablet) {
+		flex-basis: 100%;
+		flex-shrink: 1;
+		order: unset;
+		padding-bottom: 0;
+		text-align: left;
+		overflow: clip;
+		height: var(--wp-global-header-height);
+
+		&.has-menu-loaded {
+			overflow: visible;
+		}
+	}
+
+	& .wp-block-navigation__responsive-container-open {
+		display: flex; /* Gutenberg has the button hardcoded to hide at 600px, but we need it to wait until `--tablet`. */
+		padding-right: calc(16px + var(--wp--custom--alignment--scroll-bar-width));
+
+		@media (--tablet) {
+			display: none;
+		}
+
+		&:hover,
+		&:focus-visible {
+			background-color: var(--wp-global-header--background-color--hover);
+		}
+
+		&:focus-visible {
+			outline: none;
+			border-radius: 2px;
+			box-shadow: inset 0 0 0 1.5px var(--wp-global-header--link-color--active);
+		}
+	}
+
+	& .wp-block-navigation__responsive-container-close {
+		&:focus-visible {
+			outline: none;
+			border-radius: 2px;
+			box-shadow: inset 0 0 0 1.5px var(--wp-global-header--link-color--active);
+		}
+	}
+
+	/* Remove the max-width, see https://github.com/WordPress/wporg-mu-plugins/issues/274. */
+	& .wp-block-navigation__responsive-close {
+		max-width: revert;
+	}
+
+	& .wp-block-navigation__responsive-container {
+		&:not(.is-menu-open) {
+			display: none; /* Gutenberg has the menu hardcoded to open at 600px, but we need it to wait until `--tablet`. */
+
+			@media (--tablet) {
+				display: flex;
+			}
+		}
+
+		&.is-menu-open {
+			padding: 0;
+
+			& .wp-block-navigation__container {
+				line-height: 1;
+				width: 100%;
+			}
+
+			& .wp-block-navigation__submenu-icon {
+				display: none;
+			}
+
+			& .wp-block-navigation__responsive-container-content {
+				padding-top: 2em;
+				padding-left: calc(var(--wp--style--block-gap) / 2);
+				padding-right: calc(var(--wp--style--block-gap) / 2);
+			}
+		}
+	}
+
+	& .wp-block-navigation__container {
+		padding: 0 0 var(--wp--custom--margin--vertical) 0;
+		row-gap: 0;
+		column-gap: 0;
+		font-size: inherit;
+		line-height: 24px;
+
+		@media (--tablet) {
+			padding-bottom: 0;
+
+			& > .wp-block-navigation-item {
+				border-bottom: var(--active-menu-item-border-height) solid transparent;
+			}
+		}
+
+		& .wp-block-navigation-item {
+			&:hover,
+			&:focus-within {
+				background-color: var(--wp-global-header--background-color--hover);
+			}
+
+			&.current-menu-item:not(.global-header__get-wordpress) {
+				border-left: var(--active-menu-item-border-height) solid var(--wp-global-header--link-color--active);
+				margin-left: calc((var(--wp--style--block-gap) / 2) * -1);
+				padding-left: calc(var(--wp--style--block-gap) / 2 - var(--active-menu-item-border-height));
+
+				@media (--tablet) {
+					margin-left: 0;
+					padding-left: 0;
+					border-bottom: var(--active-menu-item-border-height) solid var(--wp-global-header--link-color--active);
+					border-left: none;
+				}
+
+				& > a {
+					color: var(--wp-global-header--link-color--active);
+					font-weight: 700;
+				}
+
+				& > button svg {
+					stroke: var(--wp-global-header--link-color--active);
+				}
+			}
+
+			&.has-child {
+				padding-bottom: 0;
+			}
+
+			& ul.wp-block-navigation-submenu .current-menu-item {
+				border-left-color: transparent;
+				border-bottom: none;
+			}
+		}
+
+		& .wp-block-navigation-item a,
+		& .wp-block-navigation-submenu__toggle {
+			padding: calc(var(--wp--style--block-gap) / 2);
+
+			&:hover,
+			&:focus {
+				background-color: var(--wp-global-header--background-color--hover);
+				outline: none;
+			}
+
+			&:focus:not(:hover) {
+				text-decoration: none;
+			}
+
+			&:focus-visible {
+				outline: none;
+				border-radius: 2px;
+				box-shadow: inset 0 0 0 1.5px var(--wp-global-header--link-color--active);
+			}
+
+			@media (--tablet) {
+				padding-bottom: calc(33px - var(--active-menu-item-border-height, 0px));
+				padding-top: 33px;
+				padding-left: calc(var(--wp--style--block-gap) / 2);
+				padding-right: calc(var(--wp--style--block-gap) / 2);
+			}
+
+			@media (--short-screen) {
+				padding-bottom: calc(18px - var(--active-menu-item-border-height, 0px));
+				padding-top: 18px;
+			}
+		}
+
+		& .wp-block-navigation-submenu__toggle {
+
+			@media (--tablet) {
+				margin: 0;
+				padding-left: calc(var(--wp--style--block-gap) / 6);
+				padding-right: calc(var(--wp--style--block-gap) / 2);
+				height: 24px;
+				width: 12px;
+				box-sizing: content-box;
+			}
+		}
+
+		& .wp-block-navigation-item.has-child a {
+
+			@media (--tablet) {
+				padding-right: 6px;
+			}
+		}
+	}
+
+	& .wp-block-navigation__container .wp-block-navigation__submenu-container {
+		font-size: 15px;
+		gap: 0.5em;
+		padding-top: calc(var(--wp--style--block-gap) / 2);
+		padding-bottom: calc(var(--wp--style--block-gap) / 2);
+		border: none;
+		white-space: nowrap;
+
+		@media (--tablet) {
+			font-size: inherit;
+			gap: inherit;
+			padding-top: 0;
+			left: 0;
+
+			& a:hover,
+			& a:focus {
+				text-decoration: underline;
+			}
+		}
+
+		& .wp-block-navigation-item a {
+			padding: calc(var(--wp--style--block-gap) / 4);
+
+			@media (--tablet) {
+				padding: calc(var(--wp--style--block-gap) / 2) var(--wp--style--block-gap);
+			}
+		}
+	}
+
+	& .wp-block-navigation__container .wp-block-navigation-item.global-header__overflow-menu {
+
+		@media (--tablet) {
+
+			/* Add extra space around the overflow … to make a bigger tap/hover target. */
+			& button {
+				margin: 0;
+				padding-left: var(--wp--style--block-gap);
+				padding-right: var(--wp--style--block-gap);
+			}
+		}
+
+		& .global-header__overflow-item {
+			display: inherit;
+		}
+
+		& .global-header__get-wordpress {
+			display: none;
+		}
+
+		& > ul {
+			padding-left: 0;
+
+			& li a {
+				padding-left: var(--wp--style--block-gap);
+			}
+		}
+
+		/* Hide the submenu toggle & display child items inline. */
+		& .wp-block-navigation__submenu-container {
+			& .wp-block-navigation-submenu {
+				display: block;
+			}
+
+			& .wp-block-navigation-submenu__toggle {
+				display: none;
+			}
+
+			& .wp-block-navigation__submenu-container {
+				position: static;
+				height: auto;
+				min-width: 200px;
+				opacity: 1;
+				overflow: visible;
+				width: auto;
+				padding-left: 1em;
+			}
+		}
+
+		&:hover .wp-block-navigation__submenu-container,
+		& [aria-expanded="true"] ~ .wp-block-navigation__submenu-container,
+		& [aria-expanded="true"] ~ .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container {
+			visibility: visible;
+		}
+	}
+
+	& .global-header__overflow-item {
+		display: none;
+	}
+
+	& .wp-block-navigation-item {
+		padding-bottom: 0;
+	}
+
+	& .wp-block-navigation__submenu-icon {
+		margin-left: 0;
+		padding-right: 22px;
+
+		& svg {
+			fill: none;
+			stroke: currentcolor;
+		}
+	}
+}
+
+.global-header {
+	& .global-header__search {
+		position: relative;
+	}
+
+	& .wp-block-navigation__responsive-container.is-menu-open {
+		top: calc(var(--wp-global-header-height, 0px) + var(--wp-admin--admin-bar--height, 0px));
+
+		@media (--tablet) {
+			position: absolute;
+			top: 100%;
+			left: auto;
+			right: 0;
+			bottom: auto;
+			width: 300px;
+			padding: 0;
+
+			& .wp-block-navigation__responsive-container-content {
+				padding-top: 0;
+			}
+		}
+
+		&:not(.has-background) {
+			background: var(--wp-global-header--background-color--hover);
+		}
+	}
+}
+
+/* Gutenberg bug: Close button is not visible in Safari; override it locally */
+.global-header__navigation .is-menu-open {
+	overflow: visible;
+
+	& > div {
+		overflow: scroll;
+	}
+}
+
+/*
+ * On small screens, when the nav modal is open, position the header to overlay
+ * the page content.
+ *
+ * Technically, this should not scroll - GB sets `overflow: hidden` - but when
+ * the keyboard is open, iOS overrides the scroll behavior. This solution
+ * prevents visible page scroll without affecting layout of the page itself.
+ *
+ * See https://github.com/WordPress/wporg-mu-plugins/issues/371/.
+ */
+@media (--mobile-only) {
+	html.has-global-modal-open .global-header {
+		position: fixed;
+		z-index: 9999; /* Arbitrary z-index to be above any possible element on a page. */
+		left: 0;
+		right: 0;
+	}
+}

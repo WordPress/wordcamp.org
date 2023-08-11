@@ -1,0 +1,68 @@
+/*
+ * There are separate buttons for mobile and desktop; see `header.php` for more info.
+ */
+
+.wp-block-group.global-header {
+	& .global-header__desktop-get-wordpress,
+	& .global-header__mobile-get-wordpress a {
+		background-color: var(--wp--preset--color--blueberry-1) !important; /* Override Gutenberg's !important */
+		color: var(--wp--preset--color--white) !important; /* Override the header color scheme */
+		padding: 10px 19px;
+		border-radius: 2px;
+		font-weight: 700;
+		font-size: var(--wp--preset--font-size--small);
+
+		&:hover {
+			cursor: pointer;
+			background-color: var(--wp--preset--color--deep-blueberry) !important; /* Override Gutenberg's !important */
+		}
+
+		&:active {
+			background-color: var(--wp--preset--color--charcoal-1) !important; /* Override Gutenberg's !important */
+			border-color: var(--wp--preset--color--white);
+		}
+
+		&:focus,
+		&:focus-visible,
+		&:focus-within {
+			outline: none;
+			border-radius: 2px;
+			box-shadow: 0 0 0 1.5px var(--wp-global-header--link-color--active);
+		}
+	}
+
+
+	/* Desktop - `div` containing `a` */
+	& .global-header__desktop-get-wordpress-container {
+		display: none;
+		padding-left: var(--wp--style--block-gap);
+
+		@media (--tablet) {
+			display: inline;
+		}
+
+		@media (--short-screen) {
+			padding-top: 18px;
+			padding-bottom: 18px;
+		}
+
+		& a:hover,
+		& a:focus {
+			text-decoration: none;
+		}
+	}
+
+	/* Mobile - `li` containing `a` */
+	& .wp-block-navigation__container .wp-block-navigation-item.global-header__mobile-get-wordpress {
+		margin-top: calc(var(--wp--style--block-gap) / 2);
+		margin-left: calc(var(--wp--style--block-gap) / 2);
+
+		& a {
+			padding: 10px 19px;
+		}
+
+		@media (--tablet) {
+			display: none;
+		}
+	}
+}

@@ -1,0 +1,128 @@
+.wp-block-group.global-footer .global-footer__logos-container {
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	margin-top: 60px;
+
+	@media (--tablet) {
+		justify-content: space-between;
+		flex-wrap: nowrap;
+	}
+
+	& .global-footer__wporg-logo-full,
+	& .global-footer__wporg-logo-mark {
+		& a {
+			color: var(--wp-global-header--text-color);
+		}
+
+		& svg {
+			height: 27px;
+			width: auto;
+		}
+	}
+
+	& > :first-child {
+		flex-grow: 1;
+		gap: var(--wp--style--block-gap);
+	}
+
+	& .wp-block-image {
+		text-align: left;
+		margin: 0;
+
+		& a {
+			display: block;
+			line-height: 1;
+		}
+	}
+
+	& .global-footer__wporg-logo-mark {
+
+		@media (--tablet) {
+			display: none;
+		}
+	}
+
+	& .global-footer__wporg-logo-full {
+		display: none;
+
+		@media (--tablet) {
+			display: inline;
+			position: relative;
+			top: -2px; /* Align baseline of "wordpress.org" with baseline of "code is poetry". */
+			margin-bottom: 0;
+		}
+	}
+
+	& .global-footer__wporg-locale-title {
+		font-size: 16px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+
+		@media (--tablet) {
+			font-size: 13px;
+			max-width: 8em;
+		}
+
+		@media (--desktop) {
+			max-width: 15em;
+		}
+
+		@media (--desktop-wide) {
+			max-width: 20em;
+		}
+
+		& a {
+			color: inherit;
+			text-decoration: none;
+
+			&:hover,
+			&:focus {
+				text-decoration: underline;
+			}
+		}
+	}
+
+	/* An image is used on `en_*` locales. */
+	& .wp-block-image.global-footer__code_is_poetry {
+		flex-basis: 100%;
+		margin-top: 9px;
+		margin-bottom: 0;
+
+		@media (--tablet) {
+			flex-basis: unset;
+
+			& img {
+				position: absolute;
+				width: 188px;
+				height: 13px;
+				left: calc(50% - (188px / 2)); /* Align horizontally. Width must match width of the image. */
+				top: 6px; /* Align baseline of "code is poetry" with "wordpress.org" logo. */
+			}
+		}
+	}
+
+	/* The translated text is used on non-English locales. */
+	& span.global-footer__code_is_poetry {
+		flex-basis: 100%;
+		margin-top: 12px;
+		margin-bottom: 0;
+		font-family: serif; /* MrsEaves doesn't support non-latin characters well. */
+		font-size: 20px;
+		color: rgba(255, 255, 255, 0.25);
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+
+		@media (--tablet) {
+			margin-top: 0;
+			text-align: center;
+		}
+	}
+}
+
+.wp-block-group.global-footer {
+	&.has-white-background-color span.global-footer__code_is_poetry {
+		color: #8f8f8f;
+	}
+}

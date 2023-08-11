@@ -47,7 +47,7 @@ function add_email() {
 		array(
 			'post_title'   => __( 'Attendee Survey Email', 'wordcamporg' ),
 			'post_content' => get_email_content(),
-			'post_status'  => 'draft',
+			'post_status'  => 'draft', // Must be 'draft' to avoid processing.
 			'post_type'    => 'tix_email',
 		)
 	);

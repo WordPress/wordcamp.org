@@ -109,10 +109,10 @@ function render_menu_page() {
 		<table class="wp-list-table widefat fixed striped table-view-list">
 			<thead>
 				<tr>
-					<td>Event</td>
-					<td>Total Sent</td>
-					<td>Total Responses</td>
-					<td>Response rate</td>
+					<td><?php esc_html_e( 'Event', 'wordcamporg' ); ?></td>
+					<td><?php esc_html_e( 'Total Sent', 'wordcamporg' ); ?></td>
+					<td><?php esc_html_e( 'Total Responses', 'wordcamporg' ); ?></td>
+					<td><?php esc_html_e( 'Response rate', 'wordcamporg' ); ?></td>
 				</tr>
 			</thead>
 			<tbody>

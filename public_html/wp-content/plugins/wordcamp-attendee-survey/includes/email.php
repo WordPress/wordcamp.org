@@ -64,7 +64,7 @@ function add_email() {
  *
  * @return int|WP_Error
  */
-function publish_survey_email( $email_id ) {
+function queue_survey_email( $email_id ) {
 	return wp_update_post( array(
 		'ID'            => $email_id,
 		'post_status'   => 'pending',

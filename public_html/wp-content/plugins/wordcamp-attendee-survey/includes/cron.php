@@ -6,7 +6,7 @@ defined( 'WPINC' ) || die();
 
 use CampTix_Plugin;
 
-use function WordCamp\AttendeeSurvey\Email\{get_email_id, publish_survey_email};
+use function WordCamp\AttendeeSurvey\Email\{get_email_id, queue_survey_email};
 use function WordCamp\AttendeeSurvey\Page\{publish_survey_page};
 
 /**
@@ -164,7 +164,7 @@ function send_attendee_survey() {
 
 	associate_attendee_to_email( $email_id );
 
-	$email_status = publish_survey_email( $email_id );
+	$email_status = queue_survey_email( $email_id );
 
 	if ( is_wp_error( $email_status ) ) {
 		log( 'Failed updating email status', $email_id, $email_status );

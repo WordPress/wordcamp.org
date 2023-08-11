@@ -85,6 +85,9 @@ function get_feedback_details() {
 
 		$feedback_details[] = array(
 			'title' => $blog_details->blogname,
+			'admin_url' => admin_url(),
+			'email_url' => get_edit_post_link( get_email_id() ),
+			'responses_url' => admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_page_id() ) ),
 			'sent' => $sent,
 			'responses' => $responses,
 			'rate' => 0 !== $sent ? ( $responses / $sent ) * 100 . '%' : '',
@@ -123,9 +126,9 @@ function render_menu_page() {
 
 			foreach ( $feedback_details as $feedback_detail ) {
 				echo '<tr>';
-				echo '<td>' . esc_html( $feedback_detail['title'] ) . '</td>';
-				echo '<td>' . esc_html( $feedback_detail['sent'] ) . '</td>';
-				echo '<td>' . esc_html( $feedback_detail['responses'] ) . '</td>';
+				echo '<td><a href="'. esc_url( $feedback_detail['admin_url'] ) . '">' . esc_html( $feedback_detail['title'] ) . '</a></td>';
+				echo '<td><a href="'. esc_url( $feedback_detail['email_url'] ) . '">' . esc_html( $feedback_detail['sent'] ) . '</a></td>';
+				echo '<td><a href="'. esc_url( $feedback_detail['responses_url'] ) . '">' . esc_html( $feedback_detail['responses'] ) . '</a></td>';
 				echo '<td>' . esc_html( $feedback_detail['rate'] ) . '</td>';
 				echo '</tr>';
 			}

@@ -167,6 +167,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			'click .move'              : 'move',
 			'change input'             : 'editSave',
 			'change select.category'   : 'editSave',
+			'change select.name'       : 'editSave',
 			'change select.link-value' : 'linkChange',
 			'change select.value'      : 'editSave',
 
@@ -268,10 +269,13 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			if ( this.model.get( 'type' ) == 'meta' ) {
 				var value = this.$el.find( '.value' ).val(),
 					name  = this.model.get( 'name' );
-
+				
+				if (name === 'days' || name === 'hours') {
+					this.model.set( 'name', this.$el.find( '.name' ).val() );
+				}
 				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ||
 					( networkStatus.isNextGenWordCamp && _.contains( [
-						'wp-expertise-level', 'focused-activity', 'job-status', 'identity-based', 'content-topic-focused', 'other'
+						'hours', 'wp-expertise-level', 'focused-activity', 'job-status', 'identity-based', 'content-topic-focused', 'other'
 					], name ) ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				} else if ( _.contains( [ 'ticket-price' ], name ) ) {
@@ -411,6 +415,15 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		'content-topic-focused' : 'Content Topic Focused',
 		'other'                 : 'Other',
 	};
+
+	if (networkStatus.isNextGenWordCamp) {
+		wcb.metaDropdown = {
+			'days': 'Days',
+			'hours': 'Hours',
+		};
+
+		delete wcb.metaLabels['days'];
+	}
 
 	wcb.linkData = {
 		'per-speaker' : {

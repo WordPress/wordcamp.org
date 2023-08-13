@@ -8,6 +8,15 @@ use function WordCamp\Logger\log;
  */
 
 /**
+ * Determines if the current site is a "next generation" WordCamp.
+ *
+ * @return bool Returns true if the current site is a "next generation" WordCamp, otherwise false.
+ */
+function is_next_gen_wordcamp() {
+	return SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID;
+}
+
+/**
  * Get the current environment.
  *
  * Defaults to 'development' if the `WORDCAMP_ENVIRONMENT` constant isn't set or is empty. Other values may

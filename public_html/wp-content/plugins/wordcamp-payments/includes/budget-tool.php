@@ -196,7 +196,7 @@ class WordCamp_Budget_Tool {
 				'wcb-budget-tool',
 				'networkStatus',
 				array(
-					'isNextGenWordCamp' => is_next_gen_wordcamp(),
+					'isNextGenWordCamp' => is_wordcamp_type('next-gen'),
 				)
 			);
 		}
@@ -220,7 +220,7 @@ class WordCamp_Budget_Tool {
 		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
-		$count_tracks     = is_next_gen_wordcamp() ? 0 : (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
+		$count_tracks     = is_wordcamp_type('next-gen') ? 0 : (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
 		$ticket_price     = (float) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'ticket-price' ) ), 'value' ) );
 
 		switch ( $link ) {
@@ -255,7 +255,7 @@ class WordCamp_Budget_Tool {
 			'wcb_budget',
 			array(
 				'status' => 'draft',
-				'prelim' => is_next_gen_wordcamp() ?
+				'prelim' => is_wordcamp_type('next-gen') ?
 					self::_get_default_budget_next_gen_wordcamp() :
 					self::_get_default_budget_og_wordcamp(),
 			)

@@ -17,7 +17,6 @@ function manually_load_plugin() {
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/wordcamp-budgets.php';
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/encryption.php';
-	require_once WP_PLUGIN_DIR . '/wordcamp-payments/bootstrap.php';
 
 	require_once dirname( __DIR__ )  . '/includes/payment-requests-dashboard.php';
 	require_once dirname( __DIR__ )  . '/includes/wordcamp-budgets-dashboard.php';

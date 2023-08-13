@@ -580,7 +580,7 @@ class WordCamp_Budgets {
 	 */
 	public static function get_payment_categories() {
 		$categories = array(
-			// Changes here may need to be synchronized with `_get_default_budget()`.
+			// Changes here may need to be synchronized with `_get_default_budget_og_wordcamp()` or `_get_default_budget_next_gen_wordcamp`.
 			'after-party'     => esc_html__( 'After Party',                    'wordcamporg' ),
 			'audio-visual'    => esc_html__( 'Audio Visual',                   'wordcamporg' ),
 			'camera-shipping' => esc_html__( 'Camera Shipping',                'wordcamporg' ),

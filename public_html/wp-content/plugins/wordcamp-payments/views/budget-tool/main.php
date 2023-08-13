@@ -185,7 +185,19 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
 </script>
 <script type="text/template" id="wcb-tmpl-entry">
     <# if (data.type == 'meta') { #>
-        <td>{{wcb.metaLabels[data.name]}}</td>
+        <td>
+            <# if (wcb.metaDropdown?.[data.name]) { #>
+                <select class="name">
+					<# _.each( wcb.metaDropdown, function( value, key ) { #>
+						<option value="{{key}}" <# if( key === data.name ) { #> selected <# } #> >
+							{{value}}
+						</option>
+					<# }); #>
+                </select>
+            <# } else { #>
+                {{wcb.metaLabels[data.name]}}
+            <# } #>
+        </td>
 
         <# if (wcb.editable) { #>
             <td class="editable">

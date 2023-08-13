@@ -167,6 +167,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			'click .move'              : 'move',
 			'change input'             : 'editSave',
 			'change select.category'   : 'editSave',
+			'change select.name'       : 'editSave',
 			'change select.link-value' : 'linkChange',
 			'change select.value'      : 'editSave',
 
@@ -268,10 +269,13 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			if ( this.model.get( 'type' ) == 'meta' ) {
 				var value = this.$el.find( '.value' ).val(),
 					name  = this.model.get( 'name' );
-
+				
+				if ( networkStatus.isNextGenWordCamp && ( name === 'days' || name === 'hours' ) ) {
+					this.model.set( 'name', this.$el.find( '.name' ).val() );
+				}
 				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
-				} else if ( _.contains( [ 'ticket-price' ], name ) ) {
+				} else if ( _.contains( [ 'ticket-price', 'hours' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				}
 
@@ -403,6 +407,15 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		// Only exists in the Event Network.
 		'format'				: 'Format of Event',
 	};
+
+	if (networkStatus.isNextGenWordCamp) {
+		wcb.metaDropdown = {
+			'days': 'Days',
+			'hours': 'Hours',
+		};
+
+		delete wcb.metaLabels['days'];
+	}
 
 	wcb.linkData = {
 		'per-speaker' : {

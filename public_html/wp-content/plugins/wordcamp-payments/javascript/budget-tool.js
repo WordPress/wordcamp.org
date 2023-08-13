@@ -108,12 +108,14 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		render: function() {
 			var attendees = wcb.table.collection.findWhere( { type: 'meta', name: 'attendees' } ),
 				days      = wcb.table.collection.findWhere( { type: 'meta', name: 'days' } ),
+				hours     = wcb.table.collection.findWhere( { type: 'meta', name: 'hours' } ),
 				data      = {
 					income       : 0,
 					expenses     : 0,
 					variance     : 0,
 					variance_raw : 0,
 					per_person   : 0,
+					duration     : days ? 'days' : 'hours',
 				};
 
 			_.each( wcb.table.collection.where( { type: 'income' } ), function( item ) {
@@ -126,7 +128,11 @@ window.wcb = window.wcb || { models: {}, input: [] };
 
 			data[ 'variance' ]     = data[ 'income' ] - data[ 'expenses' ];
 			data[ 'variance_raw' ] = data[ 'variance' ];
-			data[ 'per_person' ]   = ( attendees && days ) ? data[ 'expenses' ] / attendees.get( 'value' ) / days.get( 'value' ) : 0;
+			
+			const duration = (attendees && days) ? 
+				days.get('value') : 
+				(attendees && hours) ? hours.get('value') : null;
+			data[ 'per_person' ]   = ( attendees && duration ) ? data[ 'expenses' ] / attendees.get( 'value' ) / duration : 0;
 
 			data = _.mapObject( data, function( v, k ) {
 				if ( k == 'variance_raw' ) {
@@ -515,7 +521,18 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
 					type : 'meta',
 					name : 'days',
-				} ).get( 'value' ) );
+				} )?.get( 'value' ) );
+			},
+		},
+
+		'per-hour' : {
+			'label'    : 'per hour',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'hours',
+				} )?.get( 'value' ) );
 			},
 		},
 

@@ -220,6 +220,7 @@ class WordCamp_Budget_Tool {
 		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
+		$count_hours      = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'hours' ) ), 'value' ) );
 		$count_tracks     = is_wordcamp_type('next-gen') ? 0 : (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
 		$ticket_price     = (float) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'ticket-price' ) ), 'value' ) );
 
@@ -238,6 +239,8 @@ class WordCamp_Budget_Tool {
 				return $value * $count_attendees;
 			case 'per-day':
 				return $value * $count_days;
+			case 'per-hour':
+				return $value * $count_hours;
 			case 'per-track':
 				return $value * $count_tracks;
 			case 'ticket-price-x-attendees':

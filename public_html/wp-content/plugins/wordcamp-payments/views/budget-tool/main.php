@@ -158,7 +158,13 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             <td class="amount <# if (data.variance_raw < 0) { #>wcb-negative<# } #>">{{data.variance}}</td>
         </tr>
         <tr>
-            <td><?php esc_html_e( 'Cost Per Person Per Day', 'wordcamporg' ); ?></td>
+            <td>
+                <# if ( 'days' === data.duration ) { #>
+                    <?php esc_html_e( 'Cost Per Person Per Day', 'wordcamporg' ); ?>
+                <# } else { #>
+                    <?php esc_html_e( 'Cost Per Person Per Hour', 'wordcamporg' ); ?>
+                <# } #>
+            </td>
             <td class="amount">{{data.per_person}}</td>
         </tr>
         <tr>

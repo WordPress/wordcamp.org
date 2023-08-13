@@ -173,7 +173,7 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             <td></td>
             <td></td>
         </tr>
-        <?php if ( is_next_gen_wordcamp() ) : ?>
+        <?php if ( is_wordcamp_type('next-gen') ) : ?>
             <tr>
                 <td></td>
                 <td></td>

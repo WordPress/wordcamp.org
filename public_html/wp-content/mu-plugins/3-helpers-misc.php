@@ -8,12 +8,21 @@ use function WordCamp\Logger\log;
  */
 
 /**
- * Determines if the current site is a "next generation" WordCamp.
+ * Determines the type of the current WordCamp.
  *
- * @return bool Returns true if the current site is a "next generation" WordCamp, otherwise false.
+ * @param string $type The type of WordCamp to check.
+ *
+ * @return bool Returns true if the current site matches the provided WordCamp type, otherwise false.
  */
-function is_next_gen_wordcamp() {
-	return SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID;
+function is_wordcamp_type( $type ) {
+	switch ( $type ) {
+		case 'original':
+			return SITE_ID_CURRENT_SITE === WORDCAMP_NETWORK_ID;
+		case 'next-gen':
+			return SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID;
+		default:
+			return false;
+	}
 }
 
 /**

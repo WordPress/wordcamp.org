@@ -593,7 +593,7 @@ class WordCamp_Budgets {
 			'other'           => esc_html__( 'Other',                          'wordcamporg' ), // This one is intentionally last, regardless of alphabetical order
 		);
 
-		if ( is_next_gen_wordcamp() ) {
+		if ( is_wordcamp_type('next-gen') ) {
 			unset($categories['speaker-event'], $categories['after-party'], $categories['camera-shipping']);
 		}
 

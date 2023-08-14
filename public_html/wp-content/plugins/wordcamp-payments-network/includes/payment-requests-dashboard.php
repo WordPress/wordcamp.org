@@ -105,10 +105,8 @@ class Payment_Requests_Dashboard {
 		$blogs = $wpdb->get_col( $wpdb->prepare( "
 			SELECT blog_id
 			FROM `{$wpdb->blogs}`
-			WHERE site_id = %d
 			ORDER BY last_updated DESC
 			LIMIT %d;",
-			$wpdb->siteid,
 			3000
 		) );
 

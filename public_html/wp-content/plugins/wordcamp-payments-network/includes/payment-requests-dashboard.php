@@ -10,12 +10,15 @@ class Payment_Requests_Dashboard {
 	public static function plugins_loaded() {
 		$current_site = get_current_site();
 
-		// Schedule the aggregate event only on the main blog in the network.
-		if ( get_current_blog_id() == $current_site->blog_id && ! wp_next_scheduled( 'wordcamp_payments_aggregate' ) ) {
-			wp_schedule_event( time(), 'daily', 'wordcamp_payments_aggregate' );
+		if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
+			// Schedule the aggregate event only on the main blog in the network.
+			if ( get_current_blog_id() == $current_site->blog_id && ! wp_next_scheduled( 'wordcamp_payments_aggregate' ) ) {
+				wp_schedule_event( time(), 'daily', 'wordcamp_payments_aggregate' );
+			}
+
+			add_action( 'wordcamp_payments_aggregate', array( __CLASS__, 'aggregate' ) );
 		}
 
-		add_action( 'wordcamp_payments_aggregate', array( __CLASS__, 'aggregate' ) );
 		add_action( 'network_admin_menu', array( __CLASS__, 'network_admin_menu' ) );
 		add_action( 'init', array( __CLASS__, 'upgrade' ) );
 

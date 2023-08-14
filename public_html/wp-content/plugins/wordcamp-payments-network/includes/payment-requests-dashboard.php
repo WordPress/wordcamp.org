@@ -12,7 +12,7 @@ class Payment_Requests_Dashboard {
 
 		// Schedule the aggregate event only on the main blog in the network.
 		if ( get_current_blog_id() == $current_site->blog_id && ! wp_next_scheduled( 'wordcamp_payments_aggregate' ) ) {
-			wp_schedule_event( time(), 'hourly', 'wordcamp_payments_aggregate' );
+			wp_schedule_event( time(), 'daily', 'wordcamp_payments_aggregate' );
 		}
 
 		add_action( 'wordcamp_payments_aggregate', array( __CLASS__, 'aggregate' ) );
@@ -83,11 +83,15 @@ class Payment_Requests_Dashboard {
 	/**
 	 * Runs on a cron job, reads data from all sites in the network
 	 * and builds an index table for future queries.
+	 *
+	 * This is a backup for the diff-based updates in `save_post()` / `delete_post()`. Those are fast but have the
+	 * chance of getting out of sync over time if an error occurs, etc. This is slow but more likely to be accurate.
+	 * The diff-based updates keep things up to date in-between the full updates done here.
 	 */
 	public static function aggregate() {
 		global $wpdb, $wp_object_cache;
 
-		// Register the custom payment statuses so that we can filter posts to include only them, in order to exclude trashed posts
+		// Register the custom payment statuses so that we can filter posts to include only them, in order to exclude trashed posts.
 		require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 		WCP_Payment_Request::register_post_statuses();
 

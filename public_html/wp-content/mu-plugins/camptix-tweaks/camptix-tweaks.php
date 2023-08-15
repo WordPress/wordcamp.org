@@ -705,7 +705,7 @@ function get_global_sponsors_string() {
 		$last_sponsor
 	);
 
-	$intro = __( 'WordPress Global Community Sponsors help fund WordCamps and meetups around the world.', 'wordcamporg' );
+	$intro = __( 'WordPress Global Community Sponsors help fund WordPress events around the world.', 'wordcamporg' );
 
 	$thank_you = sprintf(
 		/* translators: %1$s: list of sponsor names; %2$s: URL; */

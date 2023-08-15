@@ -81,7 +81,7 @@ function add_notification_styles() { ?>
 			top: var(--wp-admin--admin-bar--height, 0);
 			left: 0;
 			width: 100%;
-			z-index: 99999;
+			z-index: 99998;
 		}
 
 		@media screen and (max-width: 600px) {

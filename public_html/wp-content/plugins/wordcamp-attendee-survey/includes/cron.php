@@ -129,7 +129,7 @@ function is_time_to_send_email( $email_id ) {
 	$interval        = $current_date->diff($date);
 	$days_difference = $interval->days;
 
-	return DAYS_AFTER_TO_SEND === $days_difference;
+	return DAYS_AFTER_TO_SEND <= $days_difference;
 }
 
 /**

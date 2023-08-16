@@ -1,8 +1,0 @@
-# standards
-/.cache/
-/.env
-/.idea/
-/vendor/
-composer.lock
-coverage.xml
-/build/

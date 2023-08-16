@@ -272,6 +272,7 @@ class WordCamp_Budget_Tool {
 		$default_budget = array(
 			array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
+			array( 'type' => 'meta', 'name' => 'format', 'value' => '', 'placeholder' => 'e.g. Workshop, Contributing, Networking' ),
 			array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'organizers', 'value' => 0 ),

@@ -269,9 +269,8 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				var value = this.$el.find( '.value' ).val(),
 					name  = this.model.get( 'name' );
 
-				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ||
-					( networkStatus.isNextGenWordCamp && _.contains( [ 'format' ], name ) ) ) {
-						value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
+				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
+					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				} else if ( _.contains( [ 'ticket-price' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				}
@@ -401,6 +400,8 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		'ticket-price'          : 'Ticket Price',
 		// Only exists in the Central Network.
 		'tracks'                : 'Tracks',
+		// Only exists in the Event Network.
+		'format'				: 'Format of Event',
 	};
 
 	wcb.linkData = {

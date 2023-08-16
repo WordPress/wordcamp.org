@@ -209,7 +209,7 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
                     <# }); #>
                 </select>
             <# } else { #>
-                <input class="value" type="text" value="{{data.value}}" />
+                <input class="value" type="text" value="{{data.value}}" placeholder="{{data.placeholder}}"/>
             <# } #>
             </td>
         <# } else { #>

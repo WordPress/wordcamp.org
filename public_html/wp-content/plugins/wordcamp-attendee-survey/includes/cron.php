@@ -70,18 +70,14 @@ function associate_attendee_to_email( $email_id ) {
 		return;
 	}
 
-	$existing_post_meta = get_post_meta( $email_id, 'tix_email_recipient_id' );
-
 	// Associate attendee to tix_email as a recipient.
 	foreach ( $recipients as $recipient_id ) {
-		if ( ! in_array( $recipient_id, $existing_post_meta, true ) ) {
-			$result = add_post_meta( $email_id, 'tix_email_recipient_id', $recipient_id );
+		$result = add_post_meta( $email_id, 'tix_email_recipient_id', $recipient_id );
 
-			if ( ! $result ) {
-				$failed_to_add[] = $recipient_id;
-			} else {
-				$successfully_added[] = $recipient_id;
-			}
+		if ( ! $result ) {
+			$failed_to_add[] = $recipient_id;
+		} else {
+			$successfully_added[] = $recipient_id;
 		}
 	}
 

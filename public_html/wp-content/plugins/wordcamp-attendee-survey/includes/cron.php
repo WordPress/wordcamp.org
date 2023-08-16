@@ -18,7 +18,7 @@ const DAYS_AFTER_TO_SEND = 2;
  * Actions & hooks
  */
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
-add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\send_attendee_survey' );
+add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\queue_attendee_survey' );
 
 
 /**
@@ -136,7 +136,7 @@ function is_time_to_send_email( $email_id ) {
  * Associates recipients to email and changes its status to be picked up
  * by the camptix email cron job `tix_scheduled_every_ten_minutes`.
  */
-function send_attendee_survey() {
+function queue_attendee_survey() {
 	$email_id = get_email_id();
 
 	if ( empty( $email_id ) ) {

@@ -173,28 +173,6 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             <td></td>
             <td></td>
         </tr>
-        <?php if ( is_wordcamp_type('next-gen') ) : ?>
-            <tr>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td></td>
-                <td></td>
-            </tr>
-        <?php endif; ?>
         <tr>
             <td></td>
             <td class="amount">
@@ -212,38 +190,23 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
         <# if (wcb.editable) { #>
             <td class="editable">
 
-            <# const selectData = {
-                'wp-expertise-level': ['Beginner', 'Intermediate', 'Advanced'],
-                'focused-activity': ['Workshops', 'Networking', 'Contributing'],
-                'job-status': ['Students', 'Job Seekers', 'Business Owners', 'Freelancers'],
-                'identity-based': ['Women', 'BIPOC', 'LGBTQ+', 'Age', 'Accessibility Needs'],
-                'content-topic-focused': ['Hosting', 'Block Development', 'Designers'],
-                'currency': wcb.currencies
-            };    
-                        
-            if (Object.keys(selectData).includes(data.name)) { #>
+            <# if (data.name == 'currency') { #>
                 <select class="value">
 					<option value="">
-                        <# if (data.name == 'currency') { #>
-						    <?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
-                        <# } else { #>
-                            <?php _e( '-- Select an Option --', 'wordcamporg' ); ?>
-                        <# } #>
+                        <?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
 					</option>
 
-                    <# if (data.name == 'currency') { #>
-					    <option value=""></option>
-                    <# } #>
+                    <option value=""></option>
 
-					<# _.each( selectData[data.name], function( value, key ) { #>
-						<option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
-							{{value}}
-
-							<# if ( data.name == 'currency' && key ) { #>
-								({{key}})
-							<# } #>
-						</option>
-					<# }); #>
+                    <# _.each( wcb.currencies, function( value, key ) { #>
+                        <option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
+                            {{value}}
+                            
+                            <# if ( key ) { #>
+                                ({{key}})
+                            <# } #>
+                        </option>
+                    <# }); #>
                 </select>
             <# } else { #>
                 <input class="value" type="text" value="{{data.value}}" />
@@ -251,13 +214,11 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             </td>
         <# } else { #>
             <td>
-                <div class="value">
-                <# if (Object.keys(selectData).includes(data.name)) { #>
-                    {{data.value}} - {{selectData[data.name][data.value]}}
+                <# if (data.name == 'currency') { #>
+                    <div class="value">{{data.value}} - {{wcb.currencies[data.value]}}</div>
                 <# } else { #>
-                    {{data.value}}
+                    <div class="value">{{data.value}}</div>
                 <# } #>
-                </div>
             </td>
         <# } #>
 

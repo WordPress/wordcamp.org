@@ -272,12 +272,6 @@ class WordCamp_Budget_Tool {
 		$default_budget = array(
 			array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
-			array( 'type' => 'meta', 'name' => 'wp-expertise-level', 'value' => '' ),
-			array( 'type' => 'meta', 'name' => 'focused-activity', 'value' => '' ),
-			array( 'type' => 'meta', 'name' => 'job-status', 'value' => '' ),
-			array( 'type' => 'meta', 'name' => 'identity-based', 'value' => '' ),
-			array( 'type' => 'meta', 'name' => 'content-topic-focused', 'value' => '' ),
-			array( 'type' => 'meta', 'name' => 'other', 'value' => '-' ),
 			array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'organizers', 'value' => 0 ),

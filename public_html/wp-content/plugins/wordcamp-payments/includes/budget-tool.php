@@ -191,6 +191,14 @@ class WordCamp_Budget_Tool {
 				3,
 				true
 			);
+
+			wp_localize_script(
+				'wcb-budget-tool',
+				'networkStatus',
+				array(
+					'isNextGenWordCamp' => is_wordcamp_type('next-gen'),
+				)
+			);
 		}
 	}
 
@@ -212,7 +220,7 @@ class WordCamp_Budget_Tool {
 		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
-		$count_tracks     = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
+		$count_tracks     = is_wordcamp_type('next-gen') ? 0 : (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
 		$ticket_price     = (float) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'ticket-price' ) ), 'value' ) );
 
 		switch ( $link ) {
@@ -259,7 +267,7 @@ class WordCamp_Budget_Tool {
 	 */
 	private static function _get_default_budget() {
 		// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
-		return array(
+		$default_budget = array(
 			array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'tracks', 'value' => 0 ),
@@ -288,6 +296,29 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
 		);
+
+		$extra_budget_for_next_gen = array(
+			array( 'type' => 'meta', 'name' => 'format', 'value' => '', 'placeholder' => 'e.g. Workshop, Contributing, Networking' ),
+		);
+
+		if ( is_wordcamp_type('next-gen') ) {
+			// $extra_budget_for_next_gen should be positioned after the 'days' element for proper ordering.
+			$insert_position = array_search( 'days', array_column( $default_budget, 'name' ), true ) + 1;
+			array_splice( $default_budget, $insert_position, 0, $extra_budget_for_next_gen );
+
+			// Filter out items.
+			$default_budget = array_filter(
+				$default_budget,
+				function ( $item ) {
+					return (
+						( ! isset($item['category']) || 'speaker-event' !== $item['category'] ) &&
+						( ! isset($item['name']) || 'tracks' !== $item['name'] )
+					);
+				}
+			);
+		}
+
+		return $default_budget;
 		// phpcs:enable
 	}
 

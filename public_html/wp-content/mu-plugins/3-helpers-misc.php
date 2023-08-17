@@ -8,6 +8,24 @@ use function WordCamp\Logger\log;
  */
 
 /**
+ * Determines the type of the current WordCamp.
+ *
+ * @param string $type The type of WordCamp to check.
+ *
+ * @return bool Returns true if the current site matches the provided WordCamp type, otherwise false.
+ */
+function is_wordcamp_type( $type ) {
+	switch ( $type ) {
+		case 'original':
+			return SITE_ID_CURRENT_SITE === WORDCAMP_NETWORK_ID;
+		case 'next-gen':
+			return SITE_ID_CURRENT_SITE === EVENTS_NETWORK_ID;
+		default:
+			return false;
+	}
+}
+
+/**
  * Get the current environment.
  *
  * Defaults to 'development' if the `WORDCAMP_ENVIRONMENT` constant isn't set or is empty. Other values may

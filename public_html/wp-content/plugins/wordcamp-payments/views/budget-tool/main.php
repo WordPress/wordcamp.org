@@ -193,31 +193,31 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             <# if (data.name == 'currency') { #>
                 <select class="value">
 					<option value="">
-						<?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
+                        <?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
 					</option>
 
-					<option value=""></option>
+                    <option value=""></option>
 
-					<# _.each( wcb.currencies, function( value, key ) { #>
-						<option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
-							{{value}}
-
-							<# if ( key ) { #>
-								({{key}})
-							<# } #>
-						</option>
-					<# }); #>
+                    <# _.each( wcb.currencies, function( value, key ) { #>
+                        <option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
+                            {{value}}
+                            
+                            <# if ( key ) { #>
+                                ({{key}})
+                            <# } #>
+                        </option>
+                    <# }); #>
                 </select>
             <# } else { #>
-                <input class="value" type="text" value="{{data.value}}" />
+                <input class="value" type="text" value="{{data.value}}" placeholder="{{data.placeholder}}"/>
             <# } #>
             </td>
         <# } else { #>
             <td>
                 <# if (data.name == 'currency') { #>
-                <div class="value">{{data.value}} - {{wcb.currencies[data.value]}}</div>
+                    <div class="value">{{data.value}} - {{wcb.currencies[data.value]}}</div>
                 <# } else { #>
-                <div class="value">{{data.value}}</div>
+                    <div class="value">{{data.value}}</div>
                 <# } #>
             </td>
         <# } #>

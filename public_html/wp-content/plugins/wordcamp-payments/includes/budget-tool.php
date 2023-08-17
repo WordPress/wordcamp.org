@@ -255,9 +255,7 @@ class WordCamp_Budget_Tool {
 			'wcb_budget',
 			array(
 				'status' => 'draft',
-				'prelim' => is_wordcamp_type('next-gen') ?
-					self::_get_default_budget_next_gen_wordcamp() :
-					self::_get_default_budget_og_wordcamp(),
+				'prelim' => self::_get_default_budget(),
 			)
 		);
 
@@ -265,47 +263,9 @@ class WordCamp_Budget_Tool {
 	}
 
 	/**
-	 * Helper function to get the next generation wordcamp default budget.
+	 * Helper function to get the default budget.
 	 */
-	private static function _get_default_budget_next_gen_wordcamp() {
-		// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
-		$default_budget = array(
-			array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
-			array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
-			array( 'type' => 'meta', 'name' => 'format', 'value' => '', 'placeholder' => 'e.g. Workshop, Contributing, Networking' ),
-			array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
-			array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
-			array( 'type' => 'meta', 'name' => 'organizers', 'value' => 0 ),
-			array( 'type' => 'meta', 'name' => 'currency', 'value' => 'USD' ),
-			array( 'type' => 'meta', 'name' => 'ticket-price', 'value' => 0 ),
-
-			array( 'type' => 'income', 'category' => 'other', 'note' => 'Tickets Income', 'amount' => 0, 'link' => 'ticket-price-x-attendees' ),
-			array( 'type' => 'income', 'category' => 'other', 'note' => 'Community Sponsorships', 'amount' => 0 ),
-			array( 'type' => 'income', 'category' => 'other', 'note' => 'Local Sponsorships', 'amount' => 0 ),
-			array( 'type' => 'income', 'category' => 'other', 'note' => 'Microsponsors', 'amount' => 0 ),
-
-			array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Venue', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Wifi Costs', 'amount' => 0, 'link' => 'per-day' ),
-			array( 'type' => 'expense', 'category' => 'other', 'note' => 'Comped Tickets', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Video recording', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Projector rental', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Livestream', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Printing', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'signage-badges', 'note' => 'Badges', 'amount' => 0, 'link' => 'per-attendee' ),
-			array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Snacks', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Lunch', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Coffee', 'amount' => 0 ),
-			array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
-		);
-
-		return $default_budget;
-		// phpcs:enable
-	}
-
-	/**
-	 * Helper function to get the original wordcamp default budget.
-	 */
-	private static function _get_default_budget_og_wordcamp() {
+	private static function _get_default_budget() {
 		// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
 		$default_budget = array(
 			array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
@@ -336,6 +296,27 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
 		);
+
+		$extra_budget_for_next_gen = array(
+			array( 'type' => 'meta', 'name' => 'format', 'value' => '', 'placeholder' => 'e.g. Workshop, Contributing, Networking' ),
+		);
+
+		if ( is_wordcamp_type('next-gen') ) {
+			// $extra_budget_for_next_gen should be positioned after the 'days' element for proper ordering.
+			$insert_position = array_search( 'days', array_column( $default_budget, 'name' ), true ) + 1;
+			array_splice( $default_budget, $insert_position, 0, $extra_budget_for_next_gen );
+
+			// Filter out items.
+			$default_budget = array_filter(
+				$default_budget,
+				function ( $item ) {
+					return (
+						( ! isset($item['category']) || 'speaker-event' !== $item['category'] ) &&
+						( ! isset($item['name']) || 'tracks' !== $item['name'] )
+					);
+				}
+			);
+		}
 
 		return $default_budget;
 		// phpcs:enable

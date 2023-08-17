@@ -126,7 +126,11 @@ window.wcb = window.wcb || { models: {}, input: [] };
 
 			data[ 'variance' ]     = data[ 'income' ] - data[ 'expenses' ];
 			data[ 'variance_raw' ] = data[ 'variance' ];
-			data[ 'per_person' ]   = ( attendees && days ) ? data[ 'expenses' ] / attendees.get( 'value' ) / days.get( 'value' ) : 0;
+			if ( networkStatus.isNextGenWordCamp ) {
+				data[ 'per_person' ]   = ( attendees ) ? data[ 'expenses' ] / attendees.get( 'value' ) : 0;	
+			} else {
+				data[ 'per_person' ]   = ( attendees && days ) ? data[ 'expenses' ] / attendees.get( 'value' ) / days.get( 'value' ) : 0;
+			}
 
 			data = _.mapObject( data, function( v, k ) {
 				if ( k == 'variance_raw' ) {

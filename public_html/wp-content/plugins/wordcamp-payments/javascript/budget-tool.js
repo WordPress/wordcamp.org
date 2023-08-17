@@ -507,7 +507,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
 					type : 'meta',
 					name : 'days',
-				} ).get( 'value' ) );
+				} )?.get( 'value' ) );
 			},
 		},
 

@@ -546,6 +546,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 
 	if (networkStatus.isNextGenWordCamp) {
 		delete wcb.linkData[ 'per-track' ];
+		delete wcb.linkData[ 'per-day' ];
 	}
 
 	var table = new EntriesView( { collection: new Entries() } );

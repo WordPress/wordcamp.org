@@ -294,6 +294,7 @@ tr#row-payment-method label {
 
 .wcb-budget-container .wcb-entry select.name {
 	padding: 0;
+	max-width: unset;
 }
 
 

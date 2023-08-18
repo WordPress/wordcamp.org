@@ -292,6 +292,11 @@ tr#row-payment-method label {
 	cursor: pointer;
 }
 
+.wcb-budget-container .wcb-entry select.name {
+	padding: 0;
+}
+
+
 .wcb-budget-container .wcb-entry .select2-container {
 	vertical-align: bottom;
 }

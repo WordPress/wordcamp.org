@@ -126,7 +126,11 @@ window.wcb = window.wcb || { models: {}, input: [] };
 
 			data[ 'variance' ]     = data[ 'income' ] - data[ 'expenses' ];
 			data[ 'variance_raw' ] = data[ 'variance' ];
-			data[ 'per_person' ]   = ( attendees && days ) ? data[ 'expenses' ] / attendees.get( 'value' ) / days.get( 'value' ) : 0;
+			if ( networkStatus.isNextGenWordCamp ) {
+				data[ 'per_person' ]   = ( attendees ) ? data[ 'expenses' ] / attendees.get( 'value' ) : 0;	
+			} else {
+				data[ 'per_person' ]   = ( attendees && days ) ? data[ 'expenses' ] / attendees.get( 'value' ) / days.get( 'value' ) : 0;
+			}
 
 			data = _.mapObject( data, function( v, k ) {
 				if ( k == 'variance_raw' ) {
@@ -167,6 +171,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			'click .move'              : 'move',
 			'change input'             : 'editSave',
 			'change select.category'   : 'editSave',
+			'change select.name'       : 'editSave',
 			'change select.link-value' : 'linkChange',
 			'change select.value'      : 'editSave',
 
@@ -268,10 +273,13 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			if ( this.model.get( 'type' ) == 'meta' ) {
 				var value = this.$el.find( '.value' ).val(),
 					name  = this.model.get( 'name' );
-
+				
+				if ( networkStatus.isNextGenWordCamp && ( name === 'days' || name === 'hours' ) ) {
+					this.model.set( 'name', this.$el.find( '.name' ).val() );
+				}
 				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
-				} else if ( _.contains( [ 'ticket-price' ], name ) ) {
+				} else if ( _.contains( [ 'ticket-price', 'hours' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				}
 
@@ -404,6 +412,15 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		'format'				: 'Format of Event',
 	};
 
+	if (networkStatus.isNextGenWordCamp) {
+		wcb.metaDropdown = {
+			'days': 'Days',
+			'hours': 'Hours',
+		};
+
+		delete wcb.metaLabels['days'];
+	}
+
 	wcb.linkData = {
 		'per-speaker' : {
 			'label'    : networkStatus.isNextGenWordCamp ? 'per facilitator' : 'per speaker',
@@ -494,7 +511,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
 					type : 'meta',
 					name : 'days',
-				} ).get( 'value' ) );
+				} )?.get( 'value' ) );
 			},
 		},
 
@@ -529,6 +546,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 
 	if (networkStatus.isNextGenWordCamp) {
 		delete wcb.linkData[ 'per-track' ];
+		delete wcb.linkData[ 'per-day' ];
 	}
 
 	var table = new EntriesView( { collection: new Entries() } );

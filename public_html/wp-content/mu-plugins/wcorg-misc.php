@@ -693,3 +693,18 @@ function wcorg_country_list_mods( $countries ) {
 	return $countries;
 }
 add_filter( 'wcorg_get_countries', 'wcorg_country_list_mods' );
+
+/**
+ * Fix malformed URLs for the `mu-plugins-private` folder.
+ *
+ * If `plugins_url()` is called for a file in the `mu-plugins-private` directory, then the URL will contain the
+ * absolute path to it, rather than just the URL path. That's because `plugin_basename()` only checks for the regular
+ * `mu-plugins` directory, and doesn't know about `mu-plugins-private`.
+ */
+function fix_mu_plugins_private_urls( string $url ) : string {
+	$search  = 'mu-plugins' . WPMU_PLUGIN_DIR . '-private';
+	$replace = 'mu-plugins-private';
+
+	return str_replace( $search, $replace, $url );
+}
+add_filter( 'plugins_url', 'fix_mu_plugins_private_urls' );

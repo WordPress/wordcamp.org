@@ -49,7 +49,7 @@ switch ( $_SERVER['HTTP_HOST'] ) {
 		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
 		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
 		define( 'SUBDOMAIN_INSTALL',     false );
-		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test' );
+		// NOBLOGREDIRECT is intentionally omitted so that the 404 template works.
 		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
 		break;
 

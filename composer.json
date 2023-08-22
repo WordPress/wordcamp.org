@@ -30,7 +30,8 @@
 		}
 	],
 	"require": {
-		"adhocore/jwt": "^1.0"
+		"adhocore/jwt": "^1.0",
+		"wporg/wporg-parent-2021": "dev-build"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
@@ -40,7 +41,6 @@
 		"sirbrillig/phpcs-changed": "2.10.0",
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^1.0",
-		"wporg/wporg-parent-2021": "dev-build",
 		"composer/installers": "^2.2"
 	},
 	"scripts": {

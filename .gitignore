@@ -5,6 +5,7 @@
 .docker/database
 .docker/wordcamp*.pem
 .docker/test_suite
+docker-compose.override.yaml
 
 
 #

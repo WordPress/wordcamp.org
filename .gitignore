@@ -5,6 +5,7 @@
 .docker/database
 .docker/wordcamp*.pem
 .docker/test_suite
+docker-compose.override.yaml
 
 
 #
@@ -47,7 +48,7 @@ public_html/wp-content/plugins/wc-post-types/package-lock.json
 #
 public_html/wp-content/plugins/query-monitor/
 public_html/wp-content/plugins/user-switching/
-docker-compose.override.yaml
+
 
 #
 # Plugins

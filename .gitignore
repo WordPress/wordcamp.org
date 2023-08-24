@@ -47,7 +47,7 @@ public_html/wp-content/plugins/wc-post-types/package-lock.json
 #
 public_html/wp-content/plugins/query-monitor/
 public_html/wp-content/plugins/user-switching/
-
+docker-compose.override.yaml
 
 #
 # Plugins
@@ -109,3 +109,9 @@ public_html/wp-content/themes/twentytwentyone
 public_html/wp-content/themes/twentytwentytwo
 public_html/wp-content/themes/twentytwentythree
 public_html/wp-content/themes/wporg-parent-2021
+
+
+#
+# File System
+#
+.DS_Store

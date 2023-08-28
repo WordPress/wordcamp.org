@@ -67,6 +67,8 @@ function load() {
 	if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
 		require_once get_includes_path() . 'admin-page.php';
 	}
+
+	add_action( 'init', __NAMESPACE__ . '\activate_on_current_site' );
 }
 
 /**

@@ -240,6 +240,11 @@ function get_survey_page_url() {
  * Create the Survey page, save ID into an option.
  */
 function add_page() {
+	$page_id = get_option( SURVEY_PAGE_ID );
+	if ( $page_id ) {
+		return;
+	}
+
 	$page_id = wp_insert_post( array(
 		'post_title'   => __( 'Attendee Survey', 'wordcamporg' ),
 		/* translators: Page slug for the attendee survey. */

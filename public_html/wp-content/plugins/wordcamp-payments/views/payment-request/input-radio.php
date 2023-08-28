@@ -7,18 +7,20 @@
 		<?php foreach ( $options as $option ) : ?>
 			<?php $option_name = $name . '_' . sanitize_title_with_dashes( str_replace( ' ', '_', $option ) ); ?>
 
-			<input
-				type="radio"
-				id="<?php echo esc_attr( $option_name ); ?>"
-				name="<?php echo esc_attr( $name ); ?>"
-				value="<?php echo esc_attr( $option ); ?>"
-				<?php checked( $option, $selected ); ?>
-				<?php __checked_selected_helper( $required, true, true, 'required' ); ?>
-				/>
+			<span id="<?php echo esc_attr( $option_name ) . '_container'; ?>">
+				<input
+					type="radio"
+					id="<?php echo esc_attr( $option_name ); ?>"
+					name="<?php echo esc_attr( $name ); ?>"
+					value="<?php echo esc_attr( $option ); ?>"
+					<?php checked( $option, $selected ); ?>
+					<?php __checked_selected_helper( $required, true, true, 'required' ); ?>
+					/>
 
-			<label for="<?php echo esc_attr( $option_name ); ?>">
-				<?php echo esc_html( $option ); ?>:
-			</label>
+				<label for="<?php echo esc_attr( $option_name ); ?>">
+					<?php echo esc_html( $option ); ?>:
+				</label>
+			</span>
 		<?php endforeach; ?>
 
 		<?php

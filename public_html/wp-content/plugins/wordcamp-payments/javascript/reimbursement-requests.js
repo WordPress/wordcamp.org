@@ -1,3 +1,4 @@
+/* eslint-disable */
 jQuery( document ).ready( function( $ ) {
 	'use strict';
 
@@ -59,6 +60,20 @@ jQuery( document ).ready( function( $ ) {
 				$notes.toggle(state);
 				$notes.find('textarea').attr('required', state);
 			}).trigger('change');
+
+			var initialValue = $('#bank_country_iso3166').val();
+			if (initialValue !== 'US') {
+				$('#payment_method_direct_deposit_container, #payment_method_check_container').hide();
+			}
+			$('#bank_country_iso3166').on('select2:select', function(e) {
+				var selectedValue = $(this).val();
+			
+				if (selectedValue === 'US') {
+					$('#payment_method_direct_deposit_container, #payment_method_check_container').show();
+				} else {
+					$('#payment_method_direct_deposit_container, #payment_method_check_container').hide();
+				}
+			});
 		},
 
 		/**

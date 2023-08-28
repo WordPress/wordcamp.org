@@ -64,6 +64,20 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             </tbody>
         </table>
     </div>
+    <div class="left">
+        <h2><?php esc_html_e( 'Attendees', 'wordcamporg' ); ?></h2>
+        <table class="wcb-budget-container">
+            <tbody>
+                <tr class="wcb-group-header">
+                    <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
+                    <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
+                </tr>
+                <tr class="wcb-attendees-placeholder" style="display: none;">
+                    <td colspan="2"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
     <div class="right">
         <h2><?php esc_html_e( 'Summary', 'wordcamporg' ); ?></h2>
         <div class="wcb-summary-placeholder"></div>

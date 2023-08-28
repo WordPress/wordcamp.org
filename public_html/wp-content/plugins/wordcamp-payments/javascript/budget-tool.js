@@ -9,6 +9,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		$income    = $container.find( '.wcb-income-placeholder' ),
 		$expense   = $container.find( '.wcb-expense-placeholder' ),
 		$meta      = $container.find( '.wcb-meta-placeholder' ),
+		$attendees = $container.find( '.wcb-attendees-placeholder' ),
 		$summary   = $( '.wcb-summary-placeholder' ),
 		$form      = $( '.wcb-submit-form' );
 
@@ -368,7 +369,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		},
 
 		addOne: function( item ) {
-			var view = new EntryView( { model: item } );
+			const view = new EntryView( { model: item } );
 
 			switch ( view.model.get( 'type' ) ) {
 				case 'expense':
@@ -378,6 +379,17 @@ window.wcb = window.wcb || { models: {}, input: [] };
 					var $c = $income;
 					break;
 				case 'meta':
+					switch ( view.model.get( 'name' ) ) {
+						case 'attendees':
+						case 'speakers':
+						case 'volunteers':
+						case 'organizers':
+							var $c = $attendees;
+							break;
+						default:
+							var $c = $meta;
+					}
+					break;
 				default:
 					var $c = $meta;
 			}

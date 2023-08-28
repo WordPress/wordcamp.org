@@ -29,10 +29,26 @@ function get_email_id() {
  * @return string
  */
 function get_email_content() {
-	return sprintf(
-		__( 'Thanks for participating in the event. Here is the url: %s', 'wordcamporg' ),
-	get_survey_page_url()  );
+	$wordcamp_name   = get_wordcamp_name();
+	$closing_date    = date_i18n( 'Y-m-d', strtotime('+2 weeks') );
+	$survey_page_url = get_survey_page_url();
+
+	$email  = "Hi [first_name] [last_name],\r\n\r\n";
+	$email .= sprintf( "%s is over, thank you to everyone who joined us! \r\n\r\n", esc_html( $wordcamp_name ) );
+	$email .= "As a community-led event, feedback is really important to us. It helps us improve our events and to keep providing high quality content.\r\n\r\n";
+	$email .= sprintf( "Please take a moment to answer our <a href='%s'>post-event survey</a> and help us to do amazing WordPress events!\r\n", esc_url( $survey_page_url ) );
+	$email .= "(If you can't open the link, copy and paste the following URL)\r\n";
+	$email .= $survey_page_url . "\r\n\r\n";
+	$email .= sprintf( "Please complete the survey by %s.\r\n\r\n", $closing_date );
+	$email .= "Please also note that all responses will be kept confidential, and we will not share your personal information with any third parties.\r\n\r\n";
+	$email .= "Thank you in advance, we really appreciate your time!\r\n\r\n";
+	$email .= "Best regards,\r\n";
+	$email .= "Organising Team,\r\n";
+	$email .= esc_html( $wordcamp_name );
+
+	return $email;
 }
+
 
 /**
  * Adds email to camptix email queue.
@@ -45,7 +61,7 @@ function add_email() {
 
 	$email_id = wp_insert_post(
 		array(
-			'post_title'   => __( 'Attendee Survey Email', 'wordcamporg' ),
+			'post_title'   => __( '[first_name], tell us what you thought: Post-event survey', 'wordcamporg' ),
 			'post_content' => get_email_content(),
 			'post_status'  => 'draft', // Must be 'draft' to avoid processing.
 			'post_type'    => 'tix_email',

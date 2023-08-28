@@ -816,6 +816,9 @@ class CampTix_Plugin {
 	function get_sent_email_count( $email_id ) {
 		$recipients_backup = get_post_meta( $email_id, 'tix_email_recipients_backup', true );
 		$recipients_remaining = (array) get_post_meta( $email_id, 'tix_email_recipient_id' );
+		if ( empty( $recipients_backup ) && empty( $recipients_remaining ) ) {
+			return 0;
+		}
 		return count( $recipients_backup ) - count( $recipients_remaining );
 	}
 

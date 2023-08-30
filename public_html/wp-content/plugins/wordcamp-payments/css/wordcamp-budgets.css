@@ -187,14 +187,8 @@ tr#row-payment-method label {
 	}
 
 /* Budget Tool */
-.wcb-budget-tool .left {
-	width: 50%;
-	float: left;
-}
-
-.wcb-budget-tool .right {
-	width: 50%;
-	float: left;
+.wcb-budget-tool .first-section {
+	display: flex;
 }
 
 .wcb-budget-tool .nav-tab-wrapper svg {
@@ -418,4 +412,10 @@ tr#row-payment-method label {
 .wcb-budget-summary .inspire {
 	color: #aaa;
 	font-weight: normal;
+}
+
+.wcb-budget-attendees,
+.wcb-budget-attendees td,
+.wcb-budget-attendees th {
+	border-left: none;
 }

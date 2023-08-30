@@ -50,37 +50,43 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
 		<p style="max-width: 800px;"><?php esc_html_e( 'Welcome to your working budget. Feel free to play around with numbers here. They will not affect your approved budget.', 'wordcamporg' ); ?></p>
     <?php endif; ?>
 
-    <div class="left">
-        <h2><?php esc_html_e( 'Event Data', 'wordcamporg' ); ?></h2>
-        <table class="wcb-budget-container">
-            <tbody>
-                <tr class="wcb-group-header">
-                    <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
-                    <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
-                </tr>
-                <tr class="wcb-meta-placeholder" style="display: none;">
-                    <td colspan="2"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="left">
-        <h2><?php esc_html_e( 'Attendees', 'wordcamporg' ); ?></h2>
-        <table class="wcb-budget-container">
-            <tbody>
-                <tr class="wcb-group-header">
-                    <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
-                    <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
-                </tr>
-                <tr class="wcb-attendees-placeholder" style="display: none;">
-                    <td colspan="2"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="right">
-        <h2><?php esc_html_e( 'Summary', 'wordcamporg' ); ?></h2>
-        <div class="wcb-summary-placeholder"></div>
+    <div class="first-section">
+        <div>
+            <h2><?php esc_html_e( 'Event Data', 'wordcamporg' ); ?></h2>
+            <table class="wcb-budget-container">
+                <tbody>
+                    <tr class="wcb-group-header">
+                        <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
+                        <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
+                    </tr>
+                    <tr class="wcb-meta-placeholder" style="display: none;">
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2><?php esc_html_e( 'Attendees', 'wordcamporg' ); ?></h2>
+            <table class="wcb-budget-container wcb-budget-attendees">
+                <tbody>
+                    <tr class="wcb-group-header">
+                        <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
+                        <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
+                    </tr>
+                    <tr class="wcb-attendees-placeholder" style="display: none;">
+                        <td colspan="2"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2><?php esc_html_e( 'Summary', 'wordcamporg' ); ?></h2>
+            <div class="wcb-summary-placeholder"></div>
+        </div>
     </div>
 
     <div class="clear"></div>
@@ -180,18 +186,6 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
                 ?>
             </td>
             <td class="amount">{{data.per_person}}</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
         </tr>
         <tr>
             <td></td>

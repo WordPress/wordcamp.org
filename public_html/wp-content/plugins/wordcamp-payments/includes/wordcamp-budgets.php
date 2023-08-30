@@ -312,6 +312,7 @@ class WordCamp_Budgets {
 				 */
 				case 'vendor_country_iso3166':
 				case 'bank_country_iso3166':
+				case 'payment_receipt_country_iso3166':
 				case 'interm_bank_country_iso3166':
 				case 'beneficiary_country_iso3166':
 				case 'check_country':
@@ -376,6 +377,7 @@ class WordCamp_Budgets {
 			'bank_state',
 			'bank_zip_code',
 			'bank_country_iso3166',
+			'payment_receipt_country_iso3166',
 			'bank_bic',
 			'interm_bank_name',
 			'interm_bank_street_address',

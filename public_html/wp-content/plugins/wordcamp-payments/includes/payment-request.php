@@ -332,7 +332,8 @@ class WCP_Payment_Request {
 			$box['args']['show_vendor_requested_payment_method'] = true;
 		}
 
-		$selected_payment_method = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_method", true );
+		$selected_payment_method          = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_method", true );
+		$selected_payment_receipt_country = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_receipt_country_iso3166", true );
 
 		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-payment.php';
 	}

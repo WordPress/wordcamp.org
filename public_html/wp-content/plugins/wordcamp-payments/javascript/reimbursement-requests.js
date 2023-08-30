@@ -39,9 +39,6 @@ jQuery( document ).ready( function( $ ) {
 			reason.change( app.toggleOtherReasonDescription );
 			reason.trigger( 'change' );   // Set the initial state
 
-			currency.change( wcb.setDefaultPaymentMethod );
-			currency.trigger( 'change' );   // Set the initial state
-
 			paymentMethod.find( 'input[name=payment_method]' ).change( wcb.togglePaymentMethodFields );
 			paymentMethod.find( 'input[name=payment_method]:checked' ).trigger( 'change' ); // Set the initial state
 

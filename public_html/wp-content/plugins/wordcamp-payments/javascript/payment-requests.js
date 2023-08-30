@@ -35,9 +35,6 @@ jQuery( document ).ready( function( $ ) {
 			paymentCategory.change( app.toggleOtherCategoryDescription );
 			paymentCategory.trigger( 'change' );   // Set the initial state
 
-			currency.change( wcb.setDefaultPaymentMethod );
-			currency.trigger( 'change' );   // Set the initial state
-
 			$( '#row-files' ).find( 'a.wcb-insert-media' ).click( wcb.showUploadModal );
 
 			$('[name="post_status"]').on('change', function() {

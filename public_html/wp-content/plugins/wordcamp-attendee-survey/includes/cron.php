@@ -146,10 +146,6 @@ function disable_attendee_survey() {
  */
 function queue_attendee_survey() {
 	$email_id = get_email_id();
-	if ( ! wp_next_scheduled( 'wc_attendee_disable_survey' ) ) {
-		$next_time = strtotime( '+2 weeks' . wp_timezone_string() );
-		wp_schedule_single_event( $next_time, 'wc_attendee_disable_survey' );
-	}
 
 	if ( empty( $email_id ) ) {
 		return;
@@ -180,5 +176,9 @@ function queue_attendee_survey() {
 		log( 'Email status change to `pending`.', $email_id );
 	}
 
+	if ( ! wp_next_scheduled( 'wc_attendee_disable_survey' ) ) {
+		$next_time = strtotime( '+2 weeks' . wp_timezone_string() );
+		wp_schedule_single_event( $next_time, 'wc_attendee_disable_survey' );
+	}
 }
 

@@ -62,11 +62,16 @@ function load() {
 		return;
 	}
 
-	require_once get_includes_path() . 'cron.php';
-
 	if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
 		require_once get_includes_path() . 'admin-page.php';
 	}
+
+	// We only want to admin panel on central, nothing else.
+	if ( ! is_wordcamp_type( 'next-gen' ) ) {
+		return;
+	}
+
+	require_once get_includes_path() . 'cron.php';
 
 	add_action( 'init', __NAMESPACE__ . '\maybe_activate_on_current_site' );
 }

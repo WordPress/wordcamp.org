@@ -274,6 +274,7 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'organizers', 'value' => 0 ),
+			array( 'type' => 'meta', 'name' => 'sponsor-tickets', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'currency', 'value' => 'USD' ),
 			array( 'type' => 'meta', 'name' => 'ticket-price', 'value' => 0 ),
 

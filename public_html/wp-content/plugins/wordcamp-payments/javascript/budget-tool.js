@@ -278,7 +278,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				if ( networkStatus.isNextGenWordCamp && ( name === 'days' || name === 'hours' ) ) {
 					this.model.set( 'name', this.$el.find( '.name' ).val() );
 				}
-				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
+				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers', 'sponsor-tickets' ], name ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				} else if ( _.contains( [ 'ticket-price', 'hours' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
@@ -384,6 +384,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 						case 'speakers':
 						case 'volunteers':
 						case 'organizers':
+						case 'sponsor-tickets':
 							var $c = $attendees;
 							break;
 						default:
@@ -416,6 +417,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		'speakers'              : networkStatus.isNextGenWordCamp ? 'Facilitators' : 'Speakers',
 		'volunteers'            : 'Volunteers',
 		'organizers'            : 'Organizers',
+		'sponsor-tickets'       : 'Sponsor Tickets',
 		'currency'              : 'Currency',
 		'ticket-price'          : 'Ticket Price',
 		// Only exists in the Central Network.

@@ -1,4 +1,4 @@
-<tr id="row-<?php echo esc_attr( str_replace( '_', '-', $name ) ); ?>">
+<tr id="row-<?php echo esc_attr( str_replace( '_', '-', $name ) ); ?>" class="<?php echo true === $is_visible ? 'active' : 'hidden'; ?>">
 	<th>
 		<?php echo esc_html( $label ); ?>:
 	</th>

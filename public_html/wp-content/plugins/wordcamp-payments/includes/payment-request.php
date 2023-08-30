@@ -415,7 +415,7 @@ class WCP_Payment_Request {
 	 * @param string  $name
 	 * @param bool    $required
 	 */
-	protected function render_radio_input( $post, $label, $name, $required = true ) {
+	protected function render_radio_input( $post, $label, $name, $required = true, $is_visible = true ) {
 		$selected = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_" . $name, true );
 		$options  = $this->get_field_value( $name, $post );
 

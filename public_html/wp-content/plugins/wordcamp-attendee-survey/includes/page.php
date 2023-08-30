@@ -260,6 +260,22 @@ function add_page() {
 }
 
 /**
+ * Turns off the page by changing its status to 'draft'.
+ */
+function disable_page() {
+	$page_id = get_option( SURVEY_PAGE_ID );
+
+	if ( ! $page_id ) {
+		return;
+	}
+
+	return wp_update_post( array(
+		'ID'            => $page_id,
+		'post_status'   => 'draft',
+	) );
+}
+
+/**
  * Delete the Survey page and associated meta data.
  */
 function delete_page() {

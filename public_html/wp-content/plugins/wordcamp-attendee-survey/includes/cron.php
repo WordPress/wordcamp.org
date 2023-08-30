@@ -7,7 +7,7 @@ defined( 'WPINC' ) || die();
 use CampTix_Plugin;
 
 use function WordCamp\AttendeeSurvey\Email\{get_email_id, queue_survey_email};
-use function WordCamp\AttendeeSurvey\Page\{publish_survey_page};
+use function WordCamp\AttendeeSurvey\Page\{disable_page,publish_survey_page};
 
 /**
  * Constants.
@@ -19,6 +19,7 @@ const DAYS_AFTER_TO_SEND = 2;
  */
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
 add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\queue_attendee_survey' );
+add_action( 'wc_attendee_disable_survey', __NAMESPACE__ . '\disable_attendee_survey' );
 
 
 /**
@@ -133,11 +134,22 @@ function is_time_to_send_email( $email_id ) {
 }
 
 /**
+ * Turns off the survey to avoid spam.
+ */
+function disable_attendee_survey() {
+	disable_page();
+}
+
+/**
  * Associates recipients to email and changes its status to be picked up
  * by the camptix email cron job `tix_scheduled_every_ten_minutes`.
  */
 function queue_attendee_survey() {
 	$email_id = get_email_id();
+	if ( ! wp_next_scheduled( 'wc_attendee_disable_survey' ) ) {
+		$next_time = strtotime( '+2 weeks' . wp_timezone_string() );
+		wp_schedule_single_event( $next_time, 'wc_attendee_disable_survey' );
+	}
 
 	if ( empty( $email_id ) ) {
 		return;
@@ -167,4 +179,6 @@ function queue_attendee_survey() {
 	} else {
 		log( 'Email status change to `pending`.', $email_id );
 	}
+
 }
+

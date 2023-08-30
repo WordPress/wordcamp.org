@@ -218,6 +218,7 @@ class WordCamp_Budget_Tool {
 		$count_speakers   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'speakers' ) ), 'value' ) );
 		$count_volunteers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'volunteers' ) ), 'value' ) );
 		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
+		$count_sponsors   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'sponsor-tickets' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
 		$count_tracks     = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
@@ -230,12 +231,16 @@ class WordCamp_Budget_Tool {
 				return $value * $count_volunteers;
 			case 'per-organizer':
 				return $value * $count_organizers;
+			case 'per-sponsor':
+				return $value * $count_sponsors;
 			case 'per-speaker-volunteer':
 				return $value * $count_speakers + $value * $count_volunteers;
 			case 'per-speaker-volunteer-organizer':
 				return $value * $count_speakers + $value * $count_volunteers + $value * $count_organizers;
 			case 'per-attendee':
 				return $value * $count_attendees;
+			case 'per-attendee-sponsor':
+				return $value * $count_attendees + $value * $count_sponsors;
 			case 'per-day':
 				return $value * $count_days;
 			case 'per-track':

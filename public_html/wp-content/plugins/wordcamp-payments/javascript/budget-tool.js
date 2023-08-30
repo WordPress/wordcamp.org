@@ -469,6 +469,17 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			},
 		},
 
+		'per-sponsor' : {
+			'label'    : 'per sponsor',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'sponsor-tickets',
+				} )?.get( 'value' ) );
+			},
+		},
+
 		'per-speaker-volunteer' : {
 			'label'    : ( networkStatus.isNextGenWordCamp ? 'per facilitator' : 'per speaker' ) + ' + volunteer',
 			'hasValue' : true,
@@ -514,6 +525,21 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
 					type : 'meta',
 					name : 'attendees',
+				} ).get( 'value' ) );
+			},
+		},
+
+		'per-attendee-sponsor' : {
+			'label'    : 'per attendee + sponsor',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'attendees',
+				} ).get( 'value' ) )
+				+ parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'sponsor-tickets',
 				} ).get( 'value' ) );
 			},
 		},

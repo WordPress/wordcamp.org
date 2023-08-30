@@ -68,7 +68,7 @@ function load() {
 		require_once get_includes_path() . 'admin-page.php';
 	}
 
-	add_action( 'init', __NAMESPACE__ . '\activate_on_current_site' );
+	add_action( 'init', __NAMESPACE__ . '\maybe_activate_on_current_site' );
 }
 
 /**
@@ -82,7 +82,7 @@ function activate( $is_network = false ) {
 	if ( $is_network ) {
 		activate_on_network();
 	} else {
-		activate_on_current_site();
+		maybe_activate_on_current_site();
 	}
 }
 
@@ -96,7 +96,7 @@ function activate_on_network() {
 
 	foreach ( $valid_sites as $blog_id ) {
 		switch_to_blog( $blog_id );
-		activate_on_current_site();
+		maybe_activate_on_current_site();
 		restore_current_blog();
 	}
 }
@@ -106,7 +106,13 @@ function activate_on_network() {
  *
  * @return void
  */
-function activate_on_current_site() {
+function maybe_activate_on_current_site() {
+
+	// Currently only running this for events that are next-gen.
+	if ( ! is_wordcamp_type( 'next-gen' ) ) {
+		return;
+	}
+
 	add_page();
 	add_email();
 

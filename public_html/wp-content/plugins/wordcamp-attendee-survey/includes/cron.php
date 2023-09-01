@@ -21,7 +21,6 @@ add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
 add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\queue_attendee_survey' );
 add_action( 'wc_attendee_disable_survey', __NAMESPACE__ . '\disable_attendee_survey' );
 
-
 /**
  * Logs a message to the CampTix email log.
  */

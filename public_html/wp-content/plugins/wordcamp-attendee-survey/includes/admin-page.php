@@ -132,6 +132,11 @@ function render_menu_page() {
 				echo '<td>' . esc_html( $feedback_detail['rate'] ) . '</td>';
 				echo '</tr>';
 			}
+
+			if ( empty( $feedback_details ) ) {
+				echo '<tr><td colspan="4">' . esc_html__( 'Nothing to report', 'wordcamporg' ) . '</td></tr>';
+			}
+
 			?>
 			</tbody>
 		</table>

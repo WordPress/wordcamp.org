@@ -58,7 +58,7 @@ jQuery( document ).ready( function( $ ) {
 				$notes.find('textarea').attr('required', state);
 			}).trigger('change');
 
-			$('#payment_receipt_country_iso3166').on('select2:select', function(e) {
+			$('#payment_receipt_country_iso3166').on('change', function(e) {
 				const selectedValue = $(this).val();
 			
 				if (selectedValue === 'US') {
@@ -68,7 +68,7 @@ jQuery( document ).ready( function( $ ) {
 				}
 
 				$('#row-payment-method').show();
-			}).trigger('select2:select');
+			}).trigger('change');
 		},
 
 		/**

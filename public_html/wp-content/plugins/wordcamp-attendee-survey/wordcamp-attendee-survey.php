@@ -13,7 +13,7 @@
 namespace WordCamp\AttendeeSurvey;
 
 use function WordCamp\AttendeeSurvey\Email\{add_email, delete_email};
-use function WordCamp\AttendeeSurvey\Page\{add_page,delete_page};
+use function WordCamp\AttendeeSurvey\Page\{add_page, delete_page};
 
 defined( 'WPINC' ) || die();
 
@@ -26,7 +26,6 @@ require_once get_includes_path() . 'page.php';
 /**
  * Plugin activation and deactivation hooks.
  */
-register_activation_hook( __FILE__, __NAMESPACE__ . '\activate' );
 register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
 
 /**
@@ -74,36 +73,6 @@ function load() {
 	require_once get_includes_path() . 'cron.php';
 
 	add_action( 'init', __NAMESPACE__ . '\maybe_activate_on_current_site' );
-}
-
-/**
- * Create main survey page.
- *
- * @param bool $is_network True if activating network-wide.
- *
- * @return void
- */
-function activate( $is_network = false ) {
-	if ( $is_network ) {
-		activate_on_network();
-	} else {
-		maybe_activate_on_current_site();
-	}
-}
-
-/**
- * Run the activation routine on all valid sites in the network.
- *
- * @return void
- */
-function activate_on_network() {
-	$valid_sites = get_site_ids_without_skip_flag();
-
-	foreach ( $valid_sites as $blog_id ) {
-		switch_to_blog( $blog_id );
-		maybe_activate_on_current_site();
-		restore_current_blog();
-	}
 }
 
 /**

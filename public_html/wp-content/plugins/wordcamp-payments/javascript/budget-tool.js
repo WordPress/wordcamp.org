@@ -370,29 +370,27 @@ window.wcb = window.wcb || { models: {}, input: [] };
 
 		addOne: function( item ) {
 			const view = new EntryView( { model: item } );
+			const type = view.model.get('type');
+			const name = view.model.get('name');
 
-			switch ( view.model.get( 'type' ) ) {
-				case 'expense':
-					var $c = $expense;
-					break;
-				case 'income':
-					var $c = $income;
-					break;
-				case 'meta':
-					switch ( view.model.get( 'name' ) ) {
-						case 'attendees':
-						case 'speakers':
-						case 'volunteers':
-						case 'organizers':
-						case 'sponsor-tickets':
-							var $c = $attendees;
-							break;
-						default:
-							var $c = $meta;
-					}
-					break;
-				default:
-					var $c = $meta;
+			const typeMappings = {
+				'expense': $expense,
+				'income': $income,
+				'meta': $meta
+			};
+			
+			const metaNameMappings = {
+				'attendees': $attendees,
+				'speakers': $attendees,
+				'volunteers': $attendees,
+				'organizers': $attendees,
+				'sponsor-tickets': $attendees
+			};
+			
+			let $c = typeMappings[type] || $meta; // default to $meta if type is not found
+			
+			if (type === 'meta' && metaNameMappings[name]) {
+				$c = metaNameMappings[name];
 			}
 
 			$c.before( view.render().el );

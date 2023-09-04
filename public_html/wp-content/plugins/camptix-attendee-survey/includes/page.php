@@ -231,7 +231,7 @@ function get_page_content() {
 	<!-- /wp:group -->
 
 	<!-- wp:group {"layout":{"type":"constrained"}} -->
-	<div class="wp-block-group"><!-- wp:jetpack/field-email {"label":"If you are willing to answer follow-up questions about this survey, please enter your email address here.  (e.g. \u003ca href=\u0022mailto:john@example.com\u0022\u003ejohn@example.com\u003c/a\u003e)","requiredText":"(required)","options":[""]} /--></div>
+	<div class="wp-block-group"><!-- wp:jetpack/field-email {"label":"If you are willing to answer follow-up questions about this survey, please enter your email address here.  (e.g. john@example.com)","requiredText":"(required)","options":[""]} /--></div>
 	<!-- /wp:group --></div>
 	<!-- /wp:group -->
 

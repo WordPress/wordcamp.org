@@ -21,6 +21,7 @@ add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
 add_action( 'wc_attendee_survey_email', __NAMESPACE__ . '\queue_attendee_survey' );
 add_action( 'wc_attendee_disable_survey', __NAMESPACE__ . '\disable_attendee_survey' );
 
+
 /**
  * Logs a message to the CampTix email log.
  */
@@ -98,7 +99,7 @@ function associate_attendee_to_email( $email_id ) {
  *
  * @return bool
  */
-function email_already_sent_or_queued( $email_id ) {
+function is_email_already_sent_or_queued( $email_id ) {
 	$email = get_post( $email_id );
 	return 'publish' === $email->post_status || 'pending' === $email->post_status;
 }
@@ -151,7 +152,7 @@ function queue_attendee_survey() {
 	}
 
 	// check to make sure we didn't already send an email for this wordcamp.
-	if ( email_already_sent_or_queued( $email_id ) ) {
+	if ( is_email_already_sent_or_queued( $email_id ) ) {
 		return;
 	}
 

@@ -61,12 +61,6 @@
 				./public_html/wp-content/plugins/wordcamp-speaker-feedback/tests/
 			</directory>
 		</testsuite>
-	
-		<testsuite name="WordCamp Attendee Survey">
-			<directory prefix="test-" suffix=".php">
-				./public_html/wp-content/plugins/wordcamp-attendee-survey/tests/
-			</directory>
-		</testsuite>
 	</testsuites>
 
 	<coverage cacheDirectory=".phpunit/coverage-cache">
@@ -75,7 +69,6 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/camptix</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wc-post-types</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wcpt</directory>
-			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-attendee-survey</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments-network/</directory>

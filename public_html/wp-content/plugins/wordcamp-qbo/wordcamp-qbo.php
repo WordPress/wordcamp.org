@@ -750,12 +750,12 @@ class WordCamp_QBO {
 	 * @return int|WP_Error The customer ID if success; a WP_Error if failure
 	 */
 	protected static function probably_get_customer_id( $sponsor, $currency_code ) {
-		$customer    = self::get_customer( $sponsor['company-name'], $currency_code );
-		$customer_id = $customer['Id'];
+		$customer = self::get_customer( $sponsor['company-name'], $currency_code );
 
 		if ( is_wp_error( $customer ) || ! $customer ) {
 			$customer_id = self::create_customer( $sponsor, $currency_code );
 		} else {
+			$customer_id = $customer['Id'];
 			self::update_customer( $customer, $sponsor );
 		}
 

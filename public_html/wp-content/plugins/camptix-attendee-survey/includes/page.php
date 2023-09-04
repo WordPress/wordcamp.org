@@ -3,11 +3,11 @@
  * Adds a page which contains the survey.
  */
 
-namespace WordCamp\AttendeeSurvey\Page;
+namespace CampTix\AttendeeSurvey\Page;
 
 defined( 'WPINC' ) || die();
 
-use function WordCamp\AttendeeSurvey\{get_survey_page_id};
+use function CampTix\AttendeeSurvey\{get_survey_page_id};
 
 add_filter( 'pre_trash_post', __NAMESPACE__ . '\prevent_deletion', 10, 2 );
 add_filter( 'pre_delete_post', __NAMESPACE__ . '\prevent_deletion', 10, 3 );

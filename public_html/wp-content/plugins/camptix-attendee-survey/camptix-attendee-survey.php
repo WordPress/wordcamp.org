@@ -1,19 +1,19 @@
 <?php
 /**
- * Plugin Name:     WordCamp Attendee Survey
+ * Plugin Name:     CampTix Attendee Survey
  * Plugin URI:      https://wordcamp.org
  * Description:     Send survey to WordCamp attendees.
  * Author:          WordCamp.org
  * Author URI:      https://wordcamp.org
  * Version:         1
  *
- * @package         WordCamp\AttendeeSurvey
+ * @package         CampTix\AttendeeSurvey
  */
 
-namespace WordCamp\AttendeeSurvey;
+namespace CampTix\AttendeeSurvey;
 
-use function WordCamp\AttendeeSurvey\Email\{add_email, delete_email};
-use function WordCamp\AttendeeSurvey\Page\{add_page, delete_page};
+use function CampTix\AttendeeSurvey\Email\{add_email, delete_email};
+use function CampTix\AttendeeSurvey\Page\{add_page, delete_page};
 
 defined( 'WPINC' ) || die();
 

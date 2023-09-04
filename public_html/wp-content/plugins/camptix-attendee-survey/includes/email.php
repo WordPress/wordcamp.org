@@ -3,11 +3,11 @@
  * Creates the Attendee Survey email in the Camptix email queue.
  */
 
-namespace WordCamp\AttendeeSurvey\Email;
+namespace CampTix\AttendeeSurvey\Email;
 
 defined( 'WPINC' ) || die();
 
-use function WordCamp\AttendeeSurvey\Page\{get_survey_page_url};
+use function CampTix\AttendeeSurvey\Page\{get_survey_page_url};
 
 /**
  * Constants.

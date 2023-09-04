@@ -3,16 +3,16 @@
  * Adds a page to the central admin.
  */
 
-namespace WordCamp\AttendeeSurvey\AdminPage;
+namespace CampTix\AttendeeSurvey\AdminPage;
 
 defined( 'WPINC' ) || die();
 
 use CampTix_Plugin;
 
-use function WordCamp\AttendeeSurvey\{get_feature_id};
-use function WordCamp\AttendeeSurvey\Email\{get_email_id};
-use function WordCamp\AttendeeSurvey\Page\{get_page_id};
-use function WordCamp\AttendeeSurvey\Cron\{get_wordcamp_attendees_id};
+use function CampTix\AttendeeSurvey\{get_feature_id};
+use function CampTix\AttendeeSurvey\Email\{get_email_id};
+use function CampTix\AttendeeSurvey\Page\{get_page_id};
+use function CampTix\AttendeeSurvey\Cron\{get_wordcamp_attendees_id};
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 

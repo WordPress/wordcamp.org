@@ -7,7 +7,7 @@ defined( 'WPINC' ) || die();
 use CampTix_Plugin;
 
 use function WordCamp\AttendeeSurvey\Email\{get_email_id, queue_survey_email};
-use function WordCamp\AttendeeSurvey\Page\{disable_page,publish_survey_page};
+use function WordCamp\AttendeeSurvey\Page\{disable_page, publish_survey_page};
 
 /**
  * Constants.
@@ -181,4 +181,3 @@ function queue_attendee_survey() {
 		wp_schedule_single_event( $next_time, 'wc_attendee_disable_survey' );
 	}
 }
-

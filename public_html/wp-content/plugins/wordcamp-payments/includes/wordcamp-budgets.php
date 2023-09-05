@@ -580,10 +580,11 @@ class WordCamp_Budgets {
 	 */
 	public static function get_payment_categories() {
 		$categories = array(
-			// Changes here may need to be synchronized with `_get_default_budget_og_wordcamp()` or `_get_default_budget_next_gen_wordcamp`.
+			// Changes here may need to be synchronized with `_get_default_budget()`.
 			'after-party'     => esc_html__( 'After Party',                    'wordcamporg' ),
 			'audio-visual'    => esc_html__( 'Audio Visual',                   'wordcamporg' ),
 			'camera-shipping' => esc_html__( 'Camera Shipping',                'wordcamporg' ),
+			'comped-tickets'  => esc_html__( 'Complimentary Tickets',          'wordcamporg' ),
 			'food-beverages'  => esc_html__( 'Food & Beverage',                'wordcamporg' ),
 			'office-supplies' => esc_html__( 'Office Supplies',                'wordcamporg' ),
 			'signage-badges'  => esc_html__( 'Signage & Badges',               'wordcamporg' ),

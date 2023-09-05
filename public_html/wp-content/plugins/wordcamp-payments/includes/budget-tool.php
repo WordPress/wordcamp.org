@@ -218,6 +218,7 @@ class WordCamp_Budget_Tool {
 		$count_speakers   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'speakers' ) ), 'value' ) );
 		$count_volunteers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'volunteers' ) ), 'value' ) );
 		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
+		$count_sponsors   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'sponsor-tickets' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
 		$count_tracks     = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
@@ -230,12 +231,16 @@ class WordCamp_Budget_Tool {
 				return $value * $count_volunteers;
 			case 'per-organizer':
 				return $value * $count_organizers;
+			case 'per-sponsor':
+				return $value * $count_sponsors;
 			case 'per-speaker-volunteer':
 				return $value * $count_speakers + $value * $count_volunteers;
 			case 'per-speaker-volunteer-organizer':
 				return $value * $count_speakers + $value * $count_volunteers + $value * $count_organizers;
 			case 'per-attendee':
 				return $value * $count_attendees;
+			case 'per-attendee-sponsor':
+				return $value * $count_attendees + $value * $count_sponsors;
 			case 'per-day':
 				return $value * $count_days;
 			case 'per-track':
@@ -274,6 +279,7 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'organizers', 'value' => 0 ),
+			array( 'type' => 'meta', 'name' => 'sponsor-tickets', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'currency', 'value' => 'USD' ),
 			array( 'type' => 'meta', 'name' => 'ticket-price', 'value' => 0 ),
 
@@ -284,7 +290,6 @@ class WordCamp_Budget_Tool {
 
 			array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Venue', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Wifi Costs', 'amount' => 0, 'link' => 'per-day' ),
-			array( 'type' => 'expense', 'category' => 'other', 'note' => 'Comped Tickets', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Video recording', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Projector rental', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Livestream', 'amount' => 0 ),
@@ -295,6 +300,7 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Coffee', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
+			array( 'type' => 'expense', 'category' => 'comped-tickets', 'note' => 'For speakers, special guests, members of the press, volunteers, etc.', 'amount' => 0 ),
 		);
 
 		$extra_budget_for_next_gen = array(

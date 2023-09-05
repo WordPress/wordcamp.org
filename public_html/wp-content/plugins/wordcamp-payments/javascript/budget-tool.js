@@ -9,6 +9,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		$income    = $container.find( '.wcb-income-placeholder' ),
 		$expense   = $container.find( '.wcb-expense-placeholder' ),
 		$meta      = $container.find( '.wcb-meta-placeholder' ),
+		$attendees = $container.find( '.wcb-attendees-placeholder' ),
 		$summary   = $( '.wcb-summary-placeholder' ),
 		$form      = $( '.wcb-submit-form' );
 
@@ -277,7 +278,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				if ( networkStatus.isNextGenWordCamp && ( name === 'days' || name === 'hours' ) ) {
 					this.model.set( 'name', this.$el.find( '.name' ).val() );
 				}
-				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers' ], name ) ) {
+				if ( _.contains( [ 'attendees', 'days', 'tracks', 'speakers', 'volunteers', 'organizers', 'sponsor-tickets' ], name ) ) {
 					value = parseInt( value.replace( /[^\d.-]/g, '' ) ) || 0;
 				} else if ( _.contains( [ 'ticket-price', 'hours' ], name ) ) {
 					value = parseFloat( value.replace( /[^\d.-]/g, '' ) ) || 0;
@@ -368,18 +369,28 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		},
 
 		addOne: function( item ) {
-			var view = new EntryView( { model: item } );
+			const view = new EntryView( { model: item } );
+			const type = view.model.get('type');
+			const name = view.model.get('name');
 
-			switch ( view.model.get( 'type' ) ) {
-				case 'expense':
-					var $c = $expense;
-					break;
-				case 'income':
-					var $c = $income;
-					break;
-				case 'meta':
-				default:
-					var $c = $meta;
+			const typeMappings = {
+				'expense': $expense,
+				'income': $income,
+				'meta': $meta
+			};
+			
+			const metaNameMappings = {
+				'attendees': $attendees,
+				'speakers': $attendees,
+				'volunteers': $attendees,
+				'organizers': $attendees,
+				'sponsor-tickets': $attendees
+			};
+			
+			let $c = typeMappings[type] || $meta; // default to $meta if type is not found
+			
+			if (type === 'meta' && metaNameMappings[name]) {
+				$c = metaNameMappings[name];
 			}
 
 			$c.before( view.render().el );
@@ -404,6 +415,7 @@ window.wcb = window.wcb || { models: {}, input: [] };
 		'speakers'              : networkStatus.isNextGenWordCamp ? 'Facilitators' : 'Speakers',
 		'volunteers'            : 'Volunteers',
 		'organizers'            : 'Organizers',
+		'sponsor-tickets'       : 'Sponsor Tickets',
 		'currency'              : 'Currency',
 		'ticket-price'          : 'Ticket Price',
 		// Only exists in the Central Network.
@@ -455,6 +467,17 @@ window.wcb = window.wcb || { models: {}, input: [] };
 			},
 		},
 
+		'per-sponsor' : {
+			'label'    : 'per sponsor',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'sponsor-tickets',
+				} )?.get( 'value' ) );
+			},
+		},
+
 		'per-speaker-volunteer' : {
 			'label'    : ( networkStatus.isNextGenWordCamp ? 'per facilitator' : 'per speaker' ) + ' + volunteer',
 			'hasValue' : true,
@@ -500,6 +523,21 @@ window.wcb = window.wcb || { models: {}, input: [] };
 				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
 					type : 'meta',
 					name : 'attendees',
+				} ).get( 'value' ) );
+			},
+		},
+
+		'per-attendee-sponsor' : {
+			'label'    : 'per attendee + sponsor',
+			'hasValue' : true,
+			'callback' : function( value ) {
+				return parseFloat( value ) * parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'attendees',
+				} ).get( 'value' ) )
+				+ parseInt( wcb.table.collection.findWhere( {
+					type : 'meta',
+					name : 'sponsor-tickets',
 				} ).get( 'value' ) );
 			},
 		},

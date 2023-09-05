@@ -2335,8 +2335,39 @@ LOCK TABLES `wc_wordcamp_payments_index` WRITE;
 /*!40000 ALTER TABLE `wc_wordcamp_payments_index` DISABLE KEYS */;
 /*!40000 ALTER TABLE `wc_wordcamp_payments_index` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
+--
+-- Dumping data for table `wporg_events`
+--
+
+CREATE TABLE `wporg_events` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `type` varchar(32) NOT NULL DEFAULT '',
+  `source_id` varchar(32) NOT NULL DEFAULT '',
+  `status` varchar(16) NOT NULL,
+  `title` varchar(255) NOT NULL DEFAULT '',
+  `url` text NOT NULL,
+  `description` longtext,
+  `attendees` int unsigned DEFAULT NULL,
+  `meetup` varchar(255) DEFAULT NULL,
+  `meetup_url` text,
+  `date_utc` datetime NOT NULL,
+  `date_utc_offset` varchar(32) DEFAULT NULL,
+  `end_date` datetime NOT NULL,
+  `location` text,
+  `country` varchar(64) DEFAULT NULL,
+  `latitude` double NOT NULL,
+  `longitude` double NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `event_source_id` (`type`,`source_id`),
+  UNIQUE KEY `event_type_url` (`type`,`url`(255)),
+  KEY `date` (`date_utc`),
+  KEY `country` (`country`),
+  KEY `lat_lon` (`latitude`,`longitude`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
+
+
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;

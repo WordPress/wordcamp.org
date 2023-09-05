@@ -1,3 +1,4 @@
+/* eslint-disable */
 jQuery( document ).ready( function( $ ) {
 	'use strict';
 
@@ -147,32 +148,6 @@ jQuery( document ).ready( function( $ ) {
 			} catch( exception ) {
 				app.log( exception );
 			}
-		},
-
-		/**
-		 * Set the default payment method based on the currency
-		 *
-		 * Don't override any existing payment method choices.
-		 *
-		 * @param {object} event
-		 */
-		setDefaultPaymentMethod : function ( event ) {
-			var newCurrency           = $( this ).find( 'option:selected' ).val(),
-			    selectedPaymentMethod = $( 'input[name=payment_method]:checked' ).val(),
-				newPaymentMethod;
-
-			if ( 'null' === newCurrency.slice( 0, 4 ) || undefined !== selectedPaymentMethod ) {
-				return;
-			}
-
-			if ( 'USD' == newCurrency ) {
-				newPaymentMethod = $( '#payment_method_direct_deposit' );
-			} else {
-				newPaymentMethod = $( '#payment_method_wire' );
-			}
-
-			newPaymentMethod.prop( 'checked', true );
-			newPaymentMethod.trigger( 'change' );
 		},
 
 		/**

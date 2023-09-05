@@ -1,3 +1,4 @@
+/* eslint-disable */
 jQuery( document ).ready( function( $ ) {
 	'use strict';
 
@@ -39,9 +40,6 @@ jQuery( document ).ready( function( $ ) {
 			reason.change( app.toggleOtherReasonDescription );
 			reason.trigger( 'change' );   // Set the initial state
 
-			currency.change( wcb.setDefaultPaymentMethod );
-			currency.trigger( 'change' );   // Set the initial state
-
 			paymentMethod.find( 'input[name=payment_method]' ).change( wcb.togglePaymentMethodFields );
 			paymentMethod.find( 'input[name=payment_method]:checked' ).trigger( 'change' ); // Set the initial state
 
@@ -58,6 +56,18 @@ jQuery( document ).ready( function( $ ) {
 
 				$notes.toggle(state);
 				$notes.find('textarea').attr('required', state);
+			}).trigger('change');
+
+			$('#payment_receipt_country_iso3166').on('change', function(e) {
+				const selectedValue = $(this).val();
+			
+				if (selectedValue === 'US') {
+					$('#payment_method_direct_deposit_container, #payment_method_check_container').show();
+				} else {
+					$('#payment_method_direct_deposit_container, #payment_method_check_container').hide();
+				}
+
+				$('#row-payment-method').show();
 			}).trigger('change');
 		},
 

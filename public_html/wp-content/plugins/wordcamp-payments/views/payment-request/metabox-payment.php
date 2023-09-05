@@ -25,7 +25,8 @@
 				); ?>
 			<?php endif; ?>
 
-			<?php $this->render_radio_input( $post, esc_html__( 'Payment Method', 'wordcamporg' ), 'payment_method' ); ?>
+			<?php $this->render_country_input( $post, esc_html__( 'Country for payment receipt', 'wordcamporg' ), 'payment_receipt_country_iso3166' ); ?>
+			<?php $this->render_radio_input( $post, esc_html__( 'Payment Method', 'wordcamporg' ), 'payment_method', true, $selected_payment_receipt_country ? true : false ); ?>
 		</table>
 
 		<table id="payment_method_direct_deposit_fields" class="form-table payment_method_fields <?php echo 'Direct Deposit' == $selected_payment_method ? 'active' : 'hidden'; ?>">
@@ -62,7 +63,7 @@
 				<?php $this->render_text_input(    $post, esc_html__( 'Beneficiary’s Bank City',              'wordcamporg' ), 'bank_city'                  ); ?>
 				<?php $this->render_text_input(    $post, esc_html__( 'Beneficiary’s Bank State / Province',  'wordcamporg' ), 'bank_state'                 ); ?>
 				<?php $this->render_text_input(    $post, esc_html__( 'Beneficiary’s Bank ZIP / Postal Code', 'wordcamporg' ), 'bank_zip_code'              ); ?>
-				<?php $this->render_country_input( $post, esc_html__( 'Beneficiary’s Bank Country',           'wordcamporg' ), 'bank_country_iso3166'       ); ?>
+				<?php $this->render_country_input( $post, esc_html__( 'Beneficiary’s Bank Country',           'wordcamporg' ), 'bank_country_iso3166' ); ?>
 				<?php $this->render_text_input(    $post, esc_html__( 'Beneficiary’s Bank SWIFT BIC',         'wordcamporg' ), 'bank_bic'                   ); ?>
 				<?php $this->render_text_input(    $post, esc_html__( 'Beneficiary’s Account Number or IBAN', 'wordcamporg' ), 'beneficiary_account_number' ); ?>
 			</table>

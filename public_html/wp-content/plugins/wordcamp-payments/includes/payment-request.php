@@ -332,7 +332,8 @@ class WCP_Payment_Request {
 			$box['args']['show_vendor_requested_payment_method'] = true;
 		}
 
-		$selected_payment_method = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_method", true );
+		$selected_payment_method          = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_method", true );
+		$selected_payment_receipt_country = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_receipt_country_iso3166", true );
 
 		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-payment.php';
 	}
@@ -415,7 +416,7 @@ class WCP_Payment_Request {
 	 * @param string  $name
 	 * @param bool    $required
 	 */
-	protected function render_radio_input( $post, $label, $name, $required = true ) {
+	protected function render_radio_input( $post, $label, $name, $required = true, $is_visible = true ) {
 		$selected = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_" . $name, true );
 		$options  = $this->get_field_value( $name, $post );
 

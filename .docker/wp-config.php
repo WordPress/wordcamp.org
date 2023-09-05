@@ -176,6 +176,7 @@ define( 'WORDCAMP_PAYMENT_STRIPE_SECRET',           '' );
 define( 'WORDCAMP_PAYMENT_STRIPE_PUBLISHABLE_LIVE', '' );
 define( 'WORDCAMP_PAYMENT_STRIPE_SECRET_LIVE',      '' );
 
+define( 'WORDCAMP_PROD_GOOGLE_MAPS_API_KEY', '' );
 define( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY', '' );
 
 define( 'MEETUP_API_BASE_URL', 'https://api.meetup.com/' );

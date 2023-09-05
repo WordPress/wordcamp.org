@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * Title: Event Map
+ * Slug: wporg-events-2023/event-map
+ * Inserter: no
+ */
+
+namespace WordPressdotorg\Events_2023;
+
+defined( 'WPINC' ) || die();
+
+$map_options = array(
+	'id'      => 'all-upcoming-events',
+	'markers' => get_all_upcoming_events(),
+);
+
+?>
+
+<!-- wp:wporg/google-map <?php echo wp_json_encode( $map_options ); ?> /-->

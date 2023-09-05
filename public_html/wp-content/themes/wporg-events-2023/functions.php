@@ -4,6 +4,7 @@ namespace WordPressdotorg\Events_2023;
 
 defined( 'WPINC' ) || die();
 
+require_once __DIR__ . '/inc/event-getters.php';
 
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 

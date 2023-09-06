@@ -66,13 +66,10 @@ function load() {
 		require_once get_includes_path() . 'admin-page.php';
 	}
 
-	if ( ! is_wordcamp_type( 'next-gen' ) ) {
-		return;
+	if ( is_wordcamp_type( 'next-gen' ) ) {
+		require_once get_includes_path() . 'cron.php';
+		add_action( 'init', __NAMESPACE__ . '\activate_on_current_site' );
 	}
-
-	require_once get_includes_path() . 'cron.php';
-
-	add_action( 'init', __NAMESPACE__ . '\maybe_activate_on_current_site' );
 }
 
 /**
@@ -80,13 +77,7 @@ function load() {
  *
  * @return void
  */
-function maybe_activate_on_current_site() {
-
-	// Currently only running this for events that are next-gen.
-	if ( ! is_wordcamp_type( 'next-gen' ) ) {
-		return;
-	}
-
+function activate_on_current_site() {
 	add_page();
 	add_email();
 

@@ -62,7 +62,7 @@ function get_page_content() {
 	<p>If you recently attended a WordPress event, please take the survey below to help us make them even better in the future.</p>
 	<!-- /wp:paragraph -->
 
-	<!-- wp:jetpack/contact-form {"subject":"New feedback received from your website","to":"admin@wordcamp.test","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
+	<!-- wp:jetpack/contact-form {"subject":"New feedback received from your website","style":{"spacing":{"padding":{"top":"16px","right":"16px","bottom":"16px","left":"16px"}}}} -->
 	<div class="wp-block-jetpack-contact-form" style="padding-top:16px;padding-right:16px;padding-bottom:16px;padding-left:16px"><!-- wp:group {"layout":{"type":"constrained"}} -->
 	<div class="wp-block-group"><!-- wp:heading -->
 	<h2 class="wp-block-heading"><strong>Part I. Tell us about you!</strong></h2>

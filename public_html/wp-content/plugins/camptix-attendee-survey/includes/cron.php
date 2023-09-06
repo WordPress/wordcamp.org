@@ -37,7 +37,7 @@ function log( $message, $post_id, $data = null ) {
  */
 function schedule_jobs() {
 	if ( ! wp_next_scheduled( 'wc_attendee_survey_email' ) ) {
-		wp_schedule_event( time(), 'hourly', 'wc_attendee_survey_email' );
+		wp_schedule_event( time(), 'daily', 'wc_attendee_survey_email' );
 	}
 }
 

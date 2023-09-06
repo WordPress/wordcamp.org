@@ -12,8 +12,8 @@
 
 namespace WordCamp\OrganizerSurvey;
 
+use function WordCamp\OrganizerSurvey\DebriefSurvey\{add_page, delete_page};
 // use function WordCamp\OrganizerSurvey\Email\{add_email, delete_email};
-// use function WordCamp\OrganizerSurvey\Page\{add_page, delete_page};
 
 defined( 'WPINC' ) || die();
 
@@ -21,7 +21,7 @@ defined( 'WPINC' ) || die();
  * Local dependencies.
  */
 // require_once get_includes_path() . 'email.php';
-// require_once get_includes_path() . 'page.php';
+require_once get_includes_path() . 'pages/debrief-survey.php';
 
 /**
  * Plugin deactivation hook.
@@ -63,12 +63,12 @@ function load() {
  * @return void
  */
 function activate_on_current_site() {
-	// add_page();
+	add_page();
 	// add_email();
 
-	// // Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
-	// // The rules will automatically get recreated on the next request to the site.
-	// delete_option( 'rewrite_rules' );
+	// Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
+	// The rules will automatically get recreated on the next request to the site.
+	delete_option( 'rewrite_rules' );
 }
 
 /**
@@ -107,7 +107,7 @@ function deactivate_on_network() {
  * @return void
  */
 function deactivate_on_current_site() {
-	// delete_page();
+	delete_page();
 	// delete_email();
 }
 

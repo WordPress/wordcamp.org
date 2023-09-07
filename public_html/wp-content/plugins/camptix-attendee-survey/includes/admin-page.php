@@ -13,7 +13,6 @@ use function CampTix\AttendeeSurvey\{get_feature_id};
 use function CampTix\AttendeeSurvey\Email\{get_email_id};
 use function CampTix\AttendeeSurvey\Page\{get_page_id};
 use function CampTix\AttendeeSurvey\Cron\{get_wordcamp_attendees_id};
-use function WordCamp\Sunrise\{get_top_level_domain};
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -67,14 +66,14 @@ function get_feedback_details() {
 	$feedback_details = array();
 
 	foreach ( $wordcamps as $camp ) {
-		$site_id = get_post_meta( $camp->ID, '_site_id', true );
+		// It's a bit counter intuitive, but the site ID is the blog ID.
+		$blog_id = get_post_meta( $camp->ID, '_site_id', true );
 
-		switch_to_blog( $site_id );
+		switch_to_blog( $blog_id );
 
-		$blog_details = get_blog_details( $site_id );
+		$blog_details = get_blog_details( $blog_id );
 
-		$tld = get_top_level_domain();
-		if ( "events.WordPress.$tld" !== $blog_details->domain ) {
+		if ( (int) get_site()->site_id !== EVENTS_NETWORK_ID ) {
 			continue;
 		}
 

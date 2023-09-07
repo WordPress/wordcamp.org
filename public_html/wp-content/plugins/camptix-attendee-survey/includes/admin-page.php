@@ -46,6 +46,9 @@ function admin_menu() {
  *                Each element has the following structure:
  *                [
  *                  'title' => string,
+ *                  'admin_url' => string,
+ *                  'email_url' => string,
+ *                  'responses_url' => string,
  *                  'sent' => string,
  *                  'responses' => string,
  *                  'rate' => string,

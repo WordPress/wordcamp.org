@@ -13,6 +13,7 @@ use function CampTix\AttendeeSurvey\{get_feature_id};
 use function CampTix\AttendeeSurvey\Email\{get_email_id};
 use function CampTix\AttendeeSurvey\Page\{get_page_id};
 use function CampTix\AttendeeSurvey\Cron\{get_wordcamp_attendees_id};
+use function WordCamp\Sunrise\{get_top_level_domain};
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -69,8 +70,8 @@ function get_feedback_details() {
 
 		$blog_details = get_blog_details( $site_id );
 
-		// TODO: This should be tested elsewhere.
-		if ( 'events.wordpress.test' !== $blog_details->domain ) {
+		$tld = get_top_level_domain();
+		if ( "events.WordPress.$tld" !== $blog_details->domain ) {
 			continue;
 		}
 

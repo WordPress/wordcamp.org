@@ -20,6 +20,7 @@ class WordCamp_Coming_Soon_Page {
 		add_action( 'admin_notices',              array( $this, 'block_new_post_admin_notice'     )        );
 		add_filter( 'get_post_metadata',          array( $this, 'jetpack_dont_email_post_to_subs' ), 10, 4 );
 		add_filter( 'publicize_should_publicize_published_post', array( $this, 'jetpack_prevent_publicize' ) );
+		add_filter( 'document_title_parts',       array( $this, 'force_empty_tagline' ) );
 
 		add_image_size( 'wccsp_image_medium_rectangle', 500, 300 );
 	}
@@ -538,6 +539,23 @@ class WordCamp_Coming_Soon_Page {
 		}
 
 		return $should_publicize;
+	}
+
+	/**
+	 * Prevent any dates or locations being leaked out by tagline while site is on Coming Soon mode.
+	 *
+	 * @param  array $parts The document title parts.
+	 *
+	 * @return array        The document title parts.
+	 */
+	public function force_empty_tagline( $parts ) {
+		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+		if ( 'on' === $settings['enabled'] ) {
+			$parts['tagline'] = '';
+		}
+
+		return $parts;
 	}
 
 } // end WordCamp_Coming_Soon_Page.

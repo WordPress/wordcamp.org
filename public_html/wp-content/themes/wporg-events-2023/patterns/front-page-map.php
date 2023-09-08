@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Title: Event Map
- * Slug: wporg-events-2023/event-map
+ * Title: Front Page Map
+ * Slug: wporg-events-2023/front-page-map
  * Inserter: no
  */
 

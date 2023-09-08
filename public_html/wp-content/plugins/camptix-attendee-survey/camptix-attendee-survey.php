@@ -41,26 +41,11 @@ function get_feature_id() {
 }
 
 /**
- * Check dependencies for loading the plugin.
- *
- * @return bool
- */
-function can_load() {
-	$skip_feature = wcorg_skip_feature( get_feature_id() );
-
-	return ! $skip_feature;
-}
-
-/**
  * Include the rest of the plugin.
  *
  * @return void
  */
 function load() {
-	if ( ! can_load() ) {
-		return;
-	}
-
 	// We only want to admin panel on central, nothing else.
 	if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
 		require_once get_includes_path() . 'admin-page.php';
@@ -139,8 +124,7 @@ function get_site_ids_without_skip_flag() {
 			SELECT b.blog_id
 			FROM $wpdb->blogs AS b
 			LEFT OUTER JOIN $wpdb->blogmeta AS m
-			ON b.blog_id = m.blog_id AND m.meta_key = 'wordcamp_skip_feature' AND m.meta_value = %s
-			WHERE m.meta_value IS NULL
+			ON b.blog_id = m.blog_id AND m.meta_value = %s
 			",
 			get_feature_id()
 		)

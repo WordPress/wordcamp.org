@@ -108,7 +108,7 @@ function get_city_landing_sites( string $request_uri, int $limit ): array {
 		$year  = absint( $request[1] );
 		$title = false;
 	} else {
-		$title = $request[1] ?? '';
+		$title = $request[1] ?? false;
 		$year  = false;
 	}
 

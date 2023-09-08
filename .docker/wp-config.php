@@ -43,7 +43,7 @@ const WORDCAMP_ROOT_BLOG_ID = 5;
 const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
 
-switch ( $_SERVER['HTTP_HOST'] ) {
+switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 	case 'events.wordpress.test':
 		define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
 		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );

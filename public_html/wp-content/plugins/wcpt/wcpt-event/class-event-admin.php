@@ -65,6 +65,7 @@ abstract class Event_Admin {
 
 		add_action( 'send_decline_notification_action',  'Event_Admin::send_decline_notification', 10, 3 );
 
+		add_filter( 'wp_insert_post_empty_content', array( $this, 'maybe_prevent_creation_of_new_post' ), 999, 2 );
 	}
 
 	/**
@@ -692,6 +693,54 @@ abstract class Event_Admin {
 			}
 		}
 
+	}
+
+	/**
+	 * Prevent users from creating new WordCamp and Meetup posts on dashboard. In most of the cases, all posts should be created
+	 * through the public application forms in order to get all needed information and to initiate the vetting process correctly.
+	 *
+	 * Expectation is made for users with administrator and deputy roles, as they need to create events manually from time to time.
+	 *
+	 * Used wp_insert_post_empty_content hook is run fo creation and updates, which is why post ID needs to be checked. The hook
+	 * short circuits creation of new post when truthy value is returned.
+	 *
+	 * @param  boolean $maybe_empty Whether the post should be considered "empty".
+	 * @param  array   $postarr     Array of post data.
+	 *
+	 * @return mixed                Boolean whether the post should be considered "empty" or WP_Error in case user is not allowed to create post.
+	 */
+	public function maybe_prevent_creation_of_new_post( $maybe_empty, $postarr ) {
+		$post_type = $postarr['post_type'];
+
+		// Apply only for WordCamp and Meetup post types.
+		if ( $this->get_event_type() !== $post_type ) {
+			return $maybe_empty;
+		}
+
+		// The action hooked into is used also when updating posts, which all users should be able to do based on their caps.
+		if ( ! empty( $postarr['ID'] ) ) {
+			return $maybe_empty;
+		}
+
+		// Doing the checks only on dashboard ensures that other use cases like application forms do still work.
+		if ( ! is_admin() ) {
+			return $maybe_empty;
+		}
+
+		// Allow WordCamp Wranglers (deputies, admins) to create new posts in event CPT's.
+		if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+			return $maybe_empty;
+		}
+
+		$error = new WP_Error(
+			'not_allowed_to_create_new_wcpt',
+			esc_html( wp_sprintf( 'Only administrators and deputies can create new %s\'s. You should probably be using the public application forms on central.wordcamp.org.', $post_type ) )
+		);
+
+		// Display the error.
+		wp_die( $error ); // phpcs:ignore -- User input escaped in function.
+
+		return $error;
 	}
 
 	/**

@@ -20,6 +20,9 @@ defined( 'WPINC' ) || die();
  * @return array
  */
 function get_wordcamps( $args = array() ) {
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php';
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
+
 	$args = wp_parse_args(
 		$args,
 		array(

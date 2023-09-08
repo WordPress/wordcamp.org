@@ -174,7 +174,6 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-needs-email'     => _x( 'Needs E-mail Address',                        'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-site'      => _x( 'Needs Site',                                  'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-polldaddy' => _x( 'Needs Crowdsignal Account',                   'wordcamp status', 'wordcamporg' ),
-			'wcpt-needs-mentor'    => _x( 'Needs Mentor',                                'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-pre-plann' => _x( 'Needs to be Added to Pre-Planning Schedule',  'wordcamp status', 'wordcamporg' ),
 			'wcpt-pre-planning'    => _x( 'In Pre-Planning',                             'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-budget-re' => _x( 'Needs Budget Review',                         'wordcamp status', 'wordcamporg' ),
@@ -224,7 +223,8 @@ class WordCamp_Loader extends Event_Loader {
 		return array_merge(
 			array( 'wcpt-needs-pre-plann' ),
 			self::get_pre_planning_post_statuses(),
-			self::get_public_post_statuses()
+			self::get_public_post_statuses(),
+			self::get_active_wordcamp_statuses()
 		);
 	}
 
@@ -240,7 +240,6 @@ class WordCamp_Loader extends Event_Loader {
 				'wcpt-needs-email',
 				'wcpt-needs-site',
 				'wcpt-needs-polldaddy',
-				'wcpt-needs-mentor',
 				'wcpt-needs-pre-plann',
 			),
 			self::get_pre_planning_post_statuses(),
@@ -312,9 +311,8 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-approved-pre-pl' => array( 'wcpt-interview-sched', 'wcpt-needs-email' ),
 			'wcpt-needs-email'     => array( 'wcpt-approved-pre-pl', 'wcpt-needs-site' ),
 			'wcpt-needs-site'      => array( 'wcpt-needs-email', 'wcpt-needs-polldaddy' ),
-			'wcpt-needs-polldaddy' => array( 'wcpt-needs-site', 'wcpt-needs-mentor' ),
-			'wcpt-needs-mentor'    => array( 'wcpt-needs-polldaddy', 'wcpt-needs-pre-plann' ),
-			'wcpt-needs-pre-plann' => array( 'wcpt-needs-mentor', 'wcpt-pre-planning' ),
+			'wcpt-needs-polldaddy' => array( 'wcpt-needs-site' ),
+			'wcpt-needs-pre-plann' => array( 'wcpt-pre-planning' ),
 			'wcpt-pre-planning'    => array( 'wcpt-needs-pre-plann', 'wcpt-needs-budget-re' ),
 			'wcpt-needs-budget-re' => array( 'wcpt-pre-planning', 'wcpt-budget-rev-sche' ),
 			'wcpt-budget-rev-sche' => array( 'wcpt-needs-budget-re', 'wcpt-needs-contract' ),

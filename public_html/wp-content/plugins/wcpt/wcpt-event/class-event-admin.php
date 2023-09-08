@@ -64,7 +64,6 @@ abstract class Event_Admin {
 		add_action( 'admin_notices', array( $this, 'print_admin_notices' ) );
 
 		add_action( 'send_decline_notification_action',  'Event_Admin::send_decline_notification', 10, 3 );
-
 	}
 
 	/**

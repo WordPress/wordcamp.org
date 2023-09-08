@@ -1220,6 +1220,9 @@ class WordCamp_Post_Types_Plugin {
 	 * @param WP_Post $sponsor
 	 */
 	public function metabox_sponsor_info( $sponsor ) {
+		$amount   = get_post_meta( $sponsor->ID, '_wcb_sponsor_amount',   true );
+		$currency = get_post_meta( $sponsor->ID, '_wcb_sponsor_currency', true );
+
 		$company_name   = get_post_meta( $sponsor->ID, '_wcpt_sponsor_company_name',   true );
 		$website        = get_post_meta( $sponsor->ID, '_wcpt_sponsor_website',        true );
 		$first_name     = get_post_meta( $sponsor->ID, '_wcpt_sponsor_first_name',     true );
@@ -1246,6 +1249,8 @@ class WordCamp_Post_Types_Plugin {
 		} else {
 			$available_countries = wcorg_get_countries();
 		}
+
+		$available_currencies = WordCamp_Budgets::get_currencies();
 
 		wp_nonce_field( 'edit-sponsor-info', 'wcpt-meta-sponsor-info' );
 
@@ -1376,6 +1381,8 @@ class WordCamp_Post_Types_Plugin {
 			);
 
 			$text_values_wcb = array(
+				'amount',
+				'currency',
 				'first_time',
 			);
 
@@ -1727,14 +1734,15 @@ class WordCamp_Post_Types_Plugin {
 			'wcb_sponsor_level',
 			'wcb_sponsor',
 			array(
-				'labels'       => $labels,
-				'rewrite'      => array( 'slug' => 'sponsor_level' ),
-				'query_var'    => 'sponsor_level',
-				'hierarchical' => true,
-				'public'       => true,
-				'show_ui'      => true,
-				'show_in_rest' => true,
-				'rest_base'    => 'sponsor_level',
+				'labels'            => $labels,
+				'rewrite'           => array( 'slug' => 'sponsor_level' ),
+				'query_var'         => 'sponsor_level',
+				'hierarchical'      => true,
+				'public'            => true,
+				'show_ui'           => true,
+				'show_in_rest'      => true,
+				'show_admin_column' => true,
+				'rest_base'         => 'sponsor_level',
 			)
 		);
 
@@ -1868,6 +1876,15 @@ class WordCamp_Post_Types_Plugin {
 					ARRAY_FILTER_USE_KEY
 				);
 				break;
+
+			case 'manage_wcb_sponsor_posts_columns':
+				$original_columns = $columns;
+
+				$columns = array_slice( $original_columns, 0, 3, true );
+				$columns += array( 'wcb_sponsor_amount' => __( 'Amount', 'wordcamporg' ) );
+				$columns += array_slice( $original_columns, 1, null, true );
+
+				break;
 			default:
 		}
 
@@ -1950,6 +1967,14 @@ class WordCamp_Post_Types_Plugin {
 				break;
 			case 'wcb_session_track':
 				echo get_the_term_list( get_the_ID(), 'wcb_track', '', ', ' );
+				break;
+
+			case 'wcb_sponsor_amount':
+				echo sprintf(
+					'%1$s %2$s',
+					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_amount', true ) ),
+					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_currency', true ) )
+				);
 				break;
 			default:
 		}

@@ -180,4 +180,7 @@ function queue_attendee_survey() {
 		$next_time = strtotime( '+2 weeks' . wp_timezone_string() );
 		wp_schedule_single_event( $next_time, 'wc_attendee_disable_survey' );
 	}
+
+	// Remove the cron job that queues everything.
+	wp_clear_scheduled_hook( 'wc_attendee_survey_email' );
 }

@@ -126,9 +126,12 @@ function get_city_landing_sites( string $request_uri, int $limit ): array {
 		FROM {$wpdb->blogs}
 		WHERE
 			site_id = %d AND
-			path REGEXP %s
-			ORDER BY blog_id DESC
-			LIMIT %d",
+			path REGEXP %s AND
+			public = 1 AND
+			archived = 0 AND
+			deleted = 0
+		ORDER BY blog_id DESC
+		LIMIT %d",
 		EVENTS_NETWORK_ID,
 		$regex,
 		$limit

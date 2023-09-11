@@ -65,6 +65,10 @@ function get_city_landing_page_events( string $request_uri ): array {
 	foreach ( $wordcamps as $wordcamp ) {
 		$coordinates = $wordcamp->_venue_coordinates ?? $wordcamp->_host_coordinates;
 
+		if ( empty( $coordinates['latitude'] ) || empty( $coordinates['longitude'] ) ) {
+			continue;
+		}
+
 		$events[] = array(
 			'id'        => $wordcamp->_site_id,
 			'title'     => get_wordcamp_name( $wordcamp->_site_id ),
@@ -72,8 +76,8 @@ function get_city_landing_page_events( string $request_uri ): array {
 			'type'      => 'wordcamp',
 			'meetup'    => '',
 			'location'  => $wordcamp->{'Location'},
-			'latitude'  => $coordinates['latitude'] ?? '',
-			'longitude' => $coordinates['longitude'] ?? '',
+			'latitude'  => $coordinates['latitude'],
+			'longitude' => $coordinates['longitude'],
 			'timestamp' => $wordcamp->{'Start Date (YYYY-mm-dd)'},
 			'tz_offset' => get_wordcamp_offset( $wordcamp ),
 		);

@@ -10,7 +10,7 @@ namespace WordPressdotorg\Events_2023;
 
 defined( 'WPINC' ) || die();
 
-if ( ! function_exists( 'get_city_landing_page_events' ) ) {
+if ( ! function_exists( __NAMESPACE__ . '\get_city_landing_page_events' ) ) {
 	return;
 }
 

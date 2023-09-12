@@ -8,9 +8,8 @@ namespace WordCamp\OrganizerSurvey\AdminPage;
 defined( 'WPINC' ) || die();
 
 use function WordCamp\OrganizerSurvey\{get_feature_id};
-// use function WordCamp\OrganizerSurvey\Email\{get_email_id};
+use function WordCamp\OrganizerSurvey\Reminder\{get_reminder_id};
 use function WordCamp\OrganizerSurvey\DebriefSurvey\{get_page_id};
-// use function WordCamp\OrganizerSurvey\Cron\{get_wordcamp_organizer_id};
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -43,13 +42,15 @@ function admin_menu() {
  *                Each element has the following structure:
  *                [
  *                  'title' => string,
+ *                  'admin_url' => string,
+ *                  'reminder_url' => string,
+ *                  'responses_url' => string,
  *                  'sent' => string,
  *                  'responses' => string,
  *                  'rate' => string,
  *                ]
  */
 function get_feedback_details() {
-
 	$wordcamps = get_posts( array(
 		'post_type' => WCPT_POST_TYPE_ID,
 		'post_status' => 'wcpt-closed',
@@ -76,17 +77,18 @@ function get_feedback_details() {
 			'posts_per_page' => -1,
 		) );
 
-		$sent      = '(int) $camptix->get_sent_email_count( get_email_id() )';
-		$responses = (int) $query->found_posts;
+		$sent_reminder_ids = (array) get_post_meta( $camp->ID, 'wcor_sent_email_ids', true );
+		$is_reminder_sent  = in_array( get_reminder_id(), $sent_reminder_ids, true );
+		$sent              = $is_reminder_sent ? 'Yes' : 'No';
+		$responses         = (int) $query->found_posts; // TODO.
 
 		$feedback_details[] = array(
 			'title' => $blog_details->blogname,
 			'admin_url' => admin_url(),
-			'email_url' => 'get_edit_post_link( get_email_id() )',
+			'reminder_url' => get_edit_post_link( get_reminder_id() ),
 			'responses_url' => admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_page_id() ) ),
 			'sent' => $sent,
 			'responses' => $responses,
-			'rate' => 0 !== $sent ? ( $responses / $sent ) * 100 . '%' : '',
 		);
 
 		// Restore the original site context.
@@ -111,9 +113,8 @@ function render_menu_page() {
 			<thead>
 				<tr>
 					<td><?php esc_html_e( 'Event', 'wordcamporg' ); ?></td>
-					<td><?php esc_html_e( 'Total Sent', 'wordcamporg' ); ?></td>
-					<td><?php esc_html_e( 'Total Responses', 'wordcamporg' ); ?></td>
-					<td><?php esc_html_e( 'Response rate', 'wordcamporg' ); ?></td>
+					<td><?php esc_html_e( 'Sent', 'wordcamporg' ); ?></td>
+					<td><?php esc_html_e( 'Response', 'wordcamporg' ); ?></td>
 				</tr>
 			</thead>
 			<tbody>
@@ -123,9 +124,8 @@ function render_menu_page() {
 			foreach ( $feedback_details as $feedback_detail ) {
 				echo '<tr>';
 				echo '<td><a href="'. esc_url( $feedback_detail['admin_url'] ) . '">' . esc_html( $feedback_detail['title'] ) . '</a></td>';
-				echo '<td><a href="'. esc_url( $feedback_detail['email_url'] ) . '">' . esc_html( $feedback_detail['sent'] ) . '</a></td>';
+				echo '<td><a href="'. esc_url( $feedback_detail['reminder_url'] ) . '">' . esc_html( $feedback_detail['sent'] ) . '</a></td>';
 				echo '<td><a href="'. esc_url( $feedback_detail['responses_url'] ) . '">' . esc_html( $feedback_detail['responses'] ) . '</a></td>';
-				echo '<td>' . esc_html( $feedback_detail['rate'] ) . '</td>';
 				echo '</tr>';
 			}
 

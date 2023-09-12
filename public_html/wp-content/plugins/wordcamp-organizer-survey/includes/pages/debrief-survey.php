@@ -287,9 +287,9 @@ function publish_survey_page() {
  *
  * @return string|bool
  */
-// function get_survey_page_url() {
-// 	return get_permalink( get_option( SURVEY_PAGE_ID ) );
-// }
+function get_survey_page_url() {
+	return get_permalink( get_option( SURVEY_PAGE_ID ) );
+}
 
 
 /**

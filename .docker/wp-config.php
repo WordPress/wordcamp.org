@@ -126,6 +126,7 @@ $wcorg_subroles = array(
 	// contributorrole.
 	6 => array(
 		'wordcamp_wrangler',
+		'meetup_wrangler',
 		'mentor_manager',
 		'report_viewer',
 	),

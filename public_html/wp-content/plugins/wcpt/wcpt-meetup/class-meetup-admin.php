@@ -77,7 +77,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @return string
 		 */
 		public static function get_edit_capability() {
-			return 'wordcamp_wrangle_wordcamps';
+			return 'wordcamp_wrangle_meetups';
 		}
 
 		/**

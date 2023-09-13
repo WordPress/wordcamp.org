@@ -14,11 +14,12 @@ if ( ! function_exists( __NAMESPACE__ . '\get_city_landing_page_events' ) ) {
 	return;
 }
 
-$map_options = array(
-	'id' => 'city-landing-page',
+// Can't use $wp->request because Gutenberg calls this on `init`, before `parse_request`.
+$request_uri = str_replace( '?' . $_SERVER['QUERY_STRING'], '', $_SERVER['REQUEST_URI'] );
 
-	// Can't use $wp->request because Gutenberg calls this on `init`, before `parse_request`.
-	'markers' => get_city_landing_page_events( $_SERVER['REQUEST_URI'] ),
+$map_options = array(
+	'id'      => 'city-landing-page',
+	'markers' => get_city_landing_page_events( $request_uri ),
 );
 
 ?>

@@ -92,7 +92,7 @@ function deactivate( $is_network = false ) {
  * @return void
  */
 function deactivate_on_network() {
-	$valid_sites = get_site_ids_without_skip_flag();
+	$valid_sites = get_site_ids();
 
 	foreach ( $valid_sites as $blog_id ) {
 		switch_to_blog( $blog_id );
@@ -116,7 +116,7 @@ function deactivate_on_current_site() {
  *
  * @return array
  */
-function get_site_ids_without_skip_flag() {
+function get_site_ids() {
 	global $wpdb;
 
 	$blog_ids = $wpdb->get_col(

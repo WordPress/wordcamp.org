@@ -79,6 +79,18 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 				break;
 
 			/**
+			 * Meetup Wrangler
+			 *
+			 * - Edit `wp_meetup` posts on Central.
+			 */
+			case 'meetup_wrangler':
+				$newcaps = array(
+					'read'                     => true, // Access to wp-admin.
+					'wordcamp_wrangle_meetups' => true,
+				);
+				break;
+
+			/**
 			 * Report Viewer
 			 *
 			 * - View private `wordcamp` reports on Central.
@@ -119,6 +131,7 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 	switch ( $meta_cap ) {
 		case 'wordcamp_manage_mentors':
 		case 'wordcamp_wrangle_wordcamps':
+		case 'wordcamp_wrangle_meetups':
 			$required_caps[] = $meta_cap;
 			break;
 
@@ -127,12 +140,18 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 		case 'edit_published_wordcamps':
 		case 'edit_wordcamp':
 		case 'edit_others_wordcamps':
+			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
+				$required_caps[] = 'wordcamp_wrangle_wordcamps';
+			}
+			break;
+
+		// Allow Meetup Wranglers to edit Meetup posts.
 		case 'edit_wp_meetups':
 		case 'edit_published_wp_meetups':
 		case 'edit_wp_meetup':
 		case 'edit_others_wp_meetups':
-			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
-				$required_caps[] = 'wordcamp_wrangle_wordcamps';
+			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_meetups' ) ) {
+				$required_caps[] = 'wordcamp_wrangle_meetups';
 			}
 			break;
 
@@ -151,10 +170,8 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 			}
 
 			if ( defined( 'WCPT_MEETUP_SLUG' ) && WCPT_MEETUP_SLUG === $post_type ) {
-				// Use same permission for meetups as well as wordcamps.
-				// TODO: In future consider changing this to wrangle_events.
-				if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
-					$required_caps[] = 'wordcamp_wrangle_wordcamps';
+				if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_meetups' ) ) {
+					$required_caps[] = 'wordcamp_wrangle_meetups';
 				}
 			}
 			break;

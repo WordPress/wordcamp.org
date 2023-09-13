@@ -797,9 +797,7 @@ class CampTix_Plugin {
 	function manage_columns_email_action( $column, $post_id ) {
 		switch ( $column ) {
 			case 'tix_sent':
-				$recipients_backup = get_post_meta( $post_id, 'tix_email_recipients_backup', true );
-				$recipients_remaining = (array) get_post_meta( $post_id, 'tix_email_recipient_id' );
-				echo count( $recipients_backup ) - count( $recipients_remaining );
+				echo $this->get_sent_email_count( $post_id );
 				break;
 			case 'tix_remaining':
 				$recipients_remaining = (array) get_post_meta( $post_id, 'tix_email_recipient_id' );
@@ -810,6 +808,18 @@ class CampTix_Plugin {
 				echo count( $recipients_backup );
 				break;
 		}
+	}
+
+	/**
+	 * Returns the number of emails sent for an email job.
+	 */
+	function get_sent_email_count( $email_id ) {
+		$recipients_backup = get_post_meta( $email_id, 'tix_email_recipients_backup', true );
+		$recipients_remaining = (array) get_post_meta( $email_id, 'tix_email_recipient_id' );
+		if ( empty( $recipients_backup ) && empty( $recipients_remaining ) ) {
+			return 0;
+		}
+		return count( $recipients_backup ) - count( $recipients_remaining );
 	}
 
 	/**

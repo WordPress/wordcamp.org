@@ -93,6 +93,7 @@ function _get_network_plugin_state_list( $state ) {
 		$network_plugin_state['activated'][] = 'tagregator/bootstrap.php';
 	} elseif ( EVENTS_NETWORK_ID === $network_id ) {
 		$network_plugin_state['deactivated'][] = 'tagregator/bootstrap.php';
+		$network_plugin_state['activated'][]   = 'camptix-attendee-survey/camptix-attendee-survey.php';
 	}
 
 	return $network_plugin_state[ $state ];

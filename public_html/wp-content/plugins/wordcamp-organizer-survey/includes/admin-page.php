@@ -7,8 +7,10 @@ namespace WordCamp\OrganizerSurvey\AdminPage;
 
 defined( 'WPINC' ) || die();
 
+use CampTix_Plugin;
+
 use function WordCamp\OrganizerSurvey\{get_feature_id};
-use function WordCamp\OrganizerSurvey\Reminder\{get_reminder_id};
+use function WordCamp\OrganizerSurvey\Email\{get_email_id};
 use function WordCamp\OrganizerSurvey\DebriefSurvey\{get_page_id};
 
 add_action( 'init', __NAMESPACE__ . '\init' );
@@ -51,6 +53,9 @@ function admin_menu() {
  *                ]
  */
 function get_feedback_details() {
+	/* @var CampTix_Plugin $camptix */
+	global $camptix;
+
 	$wordcamps = get_posts( array(
 		'post_type' => WCPT_POST_TYPE_ID,
 		'post_status' => 'wcpt-closed',
@@ -77,15 +82,13 @@ function get_feedback_details() {
 			'posts_per_page' => -1,
 		) );
 
-		$sent_reminder_ids = (array) get_post_meta( $camp->ID, 'wcor_sent_email_ids', true );
-		$is_reminder_sent  = in_array( get_reminder_id(), $sent_reminder_ids, true );
-		$sent              = $is_reminder_sent ? 'Yes' : 'No';
-		$responses         = (int) $query->found_posts; // TODO.
+		$sent      = (int) $camptix->get_sent_email_count( get_email_id() ) ? 'Yes' : 'No';
+		$responses = (int) $query->found_posts;
 
 		$feedback_details[] = array(
 			'title' => $blog_details->blogname,
 			'admin_url' => admin_url(),
-			'reminder_url' => get_edit_post_link( get_reminder_id() ),
+			'email_url' => get_edit_post_link( get_email_id() ),
 			'responses_url' => admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_page_id() ) ),
 			'sent' => $sent,
 			'responses' => $responses,
@@ -124,7 +127,7 @@ function render_menu_page() {
 			foreach ( $feedback_details as $feedback_detail ) {
 				echo '<tr>';
 				echo '<td><a href="'. esc_url( $feedback_detail['admin_url'] ) . '">' . esc_html( $feedback_detail['title'] ) . '</a></td>';
-				echo '<td><a href="'. esc_url( $feedback_detail['reminder_url'] ) . '">' . esc_html( $feedback_detail['sent'] ) . '</a></td>';
+				echo '<td><a href="'. esc_url( $feedback_detail['email_url'] ) . '">' . esc_html( $feedback_detail['sent'] ) . '</a></td>';
 				echo '<td><a href="'. esc_url( $feedback_detail['responses_url'] ) . '">' . esc_html( $feedback_detail['responses'] ) . '</a></td>';
 				echo '</tr>';
 			}

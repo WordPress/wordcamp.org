@@ -13,14 +13,14 @@
 namespace WordCamp\OrganizerSurvey;
 
 use function WordCamp\OrganizerSurvey\DebriefSurvey\{add_page, delete_page};
-use function WordCamp\OrganizerSurvey\Reminder\{add_reminder, delete_reminder};
+use function WordCamp\OrganizerSurvey\Email\{add_email, delete_email};
 
 defined( 'WPINC' ) || die();
 
 /**
  * Local dependencies.
  */
-require_once get_includes_path() . 'reminder.php';
+require_once get_includes_path() . 'email.php';
 require_once get_includes_path() . 'pages/debrief-survey.php';
 
 /**
@@ -64,7 +64,7 @@ function load() {
  */
 function activate_on_current_site() {
 	add_page();
-	add_reminder();
+	add_email();
 
 	// Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
 	// The rules will automatically get recreated on the next request to the site.
@@ -108,7 +108,7 @@ function deactivate_on_network() {
  */
 function deactivate_on_current_site() {
 	delete_page();
-	delete_reminder();
+	delete_email();
 }
 
 /**

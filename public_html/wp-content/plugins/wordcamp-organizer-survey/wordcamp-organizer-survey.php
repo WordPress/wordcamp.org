@@ -12,9 +12,11 @@
 
 namespace WordCamp\OrganizerSurvey;
 
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{add_page, delete_page};
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{add_email, delete_email};
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Cron\delete_temp_attendee;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\add_page as add_debrief_survey_page;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\delete_page as delete_debrief_survey_page;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\add_email as add_debrief_survey_email;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\delete_email as delete_debrief_survey_email;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Cron\delete_temp_attendee as delete_debrief_survey_temp_attendee;
 
 defined( 'WPINC' ) || die();
 
@@ -53,7 +55,9 @@ function load() {
 	}
 
 	if ( is_wordcamp_type( 'next-gen' ) ) {
-		require_once get_includes_path() . 'cron.php';
+		// Debrief Survey.
+		require_once get_includes_path() . 'debrief-survey/cron.php';
+
 		add_action( 'init', __NAMESPACE__ . '\activate_on_current_site' );
 	}
 }
@@ -64,8 +68,9 @@ function load() {
  * @return void
  */
 function activate_on_current_site() {
-	add_page();
-	add_email();
+	// Debrief Survey.
+	add_debrief_survey_page();
+	add_debrief_survey_email();
 
 	// Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
 	// The rules will automatically get recreated on the next request to the site.
@@ -108,9 +113,10 @@ function deactivate_on_network() {
  * @return void
  */
 function deactivate_on_current_site() {
-	delete_page();
-	delete_email();
-	delete_temp_attendee();
+	// Debrief Survey.
+	delete_debrief_survey_page();
+	delete_debrief_survey_email();
+	delete_debrief_survey_temp_attendee();
 }
 
 /**

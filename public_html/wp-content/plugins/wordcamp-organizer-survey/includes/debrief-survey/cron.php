@@ -13,14 +13,14 @@ use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{disable_page, publish_
  * Constants.
  */
 const DAYS_AFTER_TO_SEND = 2;
-const TEMP_ATTENDEE_ID   = 'organizer_survey_temp_attendee';
+const TEMP_ATTENDEE_ID   = 'organizer_debrief_survey_temp_attendee';
 
 /**
  * Actions & hooks
  */
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
-add_action( 'wc_organizer_survey_email', __NAMESPACE__ . '\queue_organizer_survey' );
-add_action( 'wc_organizer_disable_survey', __NAMESPACE__ . '\disable_organizer_survey' );
+add_action( 'wc_organizer_debrief_survey_email', __NAMESPACE__ . '\queue_organizer_survey' );
+add_action( 'wc_organizer_disable_debrief_survey', __NAMESPACE__ . '\disable_organizer_survey' );
 
 /**
  * Logs a message to the CampTix email log.
@@ -45,8 +45,8 @@ function get_wordcamp_attendees_id() {
  * Add cron jobs to the schedule.
  */
 function schedule_jobs() {
-	if ( ! wp_next_scheduled( 'wc_organizer_survey_email' ) ) {
-		wp_schedule_event( time(), 'daily', 'wc_organizer_survey_email' );
+	if ( ! wp_next_scheduled( 'wc_organizer_debrief_survey_email' ) ) {
+		wp_schedule_event( time(), 'daily', 'wc_organizer_debrief_survey_email' );
 	}
 }
 
@@ -190,11 +190,11 @@ function queue_organizer_survey() {
 		log( 'Email status change to `pending`.', $email_id );
 	}
 
-	if ( ! wp_next_scheduled( 'wc_organizer_disable_survey' ) ) {
+	if ( ! wp_next_scheduled( 'wc_organizer_disable_debrief_survey' ) ) {
 		$next_time = strtotime( '+2 weeks' . wp_timezone_string() );
-		wp_schedule_single_event( $next_time, 'wc_organizer_disable_survey' );
+		wp_schedule_single_event( $next_time, 'wc_organizer_disable_debrief_survey' );
 	}
 
 	// Remove the cron job that queues everything.
-	wp_clear_scheduled_hook( 'wc_organizer_survey_email' );
+	wp_clear_scheduled_hook( 'wc_organizer_debrief_survey_email' );
 }

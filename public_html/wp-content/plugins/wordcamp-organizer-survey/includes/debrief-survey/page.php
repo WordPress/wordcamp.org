@@ -13,7 +13,7 @@ add_filter( 'pre_delete_post', __NAMESPACE__ . '\prevent_deletion', 10, 3 );
 /**
  * Constants.
  */
-const SURVEY_PAGE_ID = 'organizer_debrief_survey';
+const SURVEY_PAGE_ID = 'organizer_debrief_survey_page';
 
 
 /**

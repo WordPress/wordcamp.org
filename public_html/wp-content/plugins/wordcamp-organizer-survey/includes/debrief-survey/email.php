@@ -12,7 +12,7 @@ use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{get_survey_page_url};
 /**
  * Constants.
  */
-const EMAIL_KEY_ID = 'organizer_survey_email';
+const EMAIL_KEY_ID = 'organizer_debrief_survey_email';
 
 /**
  * Return the email ID.

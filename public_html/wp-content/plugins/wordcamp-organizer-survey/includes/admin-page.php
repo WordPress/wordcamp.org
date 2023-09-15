@@ -10,8 +10,8 @@ defined( 'WPINC' ) || die();
 use CampTix_Plugin;
 
 use function WordCamp\OrganizerSurvey\{get_feature_id};
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{get_email_id};
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{get_page_id};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\get_email_id as get_debrief_survey_email_id;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\get_page_id as get_debrief_survey_page_id;
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -38,7 +38,7 @@ function admin_menu() {
 }
 
 /**
- * Get stats for each feedback for all sites.
+ * Debrief Survey: Get stats for each feedback for all sites.
  *
  * @return array[] An array of custom elements.
  *                Each element has the following structure:
@@ -78,18 +78,19 @@ function get_feedback_details() {
 
 		$query = new \WP_Query( array(
 			'post_type'      => 'feedback',
-			'post_parent'    => get_page_id(),
+			'post_parent'    => get_debrief_survey_page_id(),
 			'posts_per_page' => -1,
 		) );
 
-		$sent      = (int) $camptix->get_sent_email_count( get_email_id() ) ? 'Yes' : 'No';
+		$email_id  = get_debrief_survey_email_id();
+		$sent      = (int) $camptix->get_sent_email_count( $email_id ) ? 'Yes' : 'No';
 		$responses = (int) $query->found_posts;
 
 		$feedback_details[] = array(
 			'title' => $blog_details->blogname,
 			'admin_url' => admin_url(),
-			'email_url' => get_edit_post_link( get_email_id() ),
-			'responses_url' => admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_page_id() ) ),
+			'email_url' => get_edit_post_link( $email_id ),
+			'responses_url' => admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_debrief_survey_page_id() ) ),
 			'sent' => $sent,
 			'responses' => $responses,
 		);

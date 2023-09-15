@@ -12,17 +12,17 @@
 
 namespace WordCamp\OrganizerSurvey;
 
-use function WordCamp\OrganizerSurvey\DebriefSurvey\{add_page, delete_page};
-use function WordCamp\OrganizerSurvey\Email\{add_email, delete_email};
-use function WordCamp\OrganizerSurvey\Cron\delete_temp_attendee;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{add_page, delete_page};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{add_email, delete_email};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Cron\delete_temp_attendee;
 
 defined( 'WPINC' ) || die();
 
 /**
  * Local dependencies.
  */
-require_once get_includes_path() . 'email.php';
-require_once get_includes_path() . 'pages/debrief-survey.php';
+require_once get_includes_path() . 'debrief-survey/email.php';
+require_once get_includes_path() . 'debrief-survey/page.php';
 
 /**
  * Plugin deactivation hook.

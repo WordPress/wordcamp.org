@@ -3,11 +3,11 @@
  * Creates the Organizer Debrief Survey email in the Camptix email queue.
  */
 
-namespace WordCamp\OrganizerSurvey\Email;
+namespace WordCamp\OrganizerSurvey\DebriefSurvey\Email;
 
 defined( 'WPINC' ) || die();
 
-use function WordCamp\OrganizerSurvey\DebriefSurvey\{get_survey_page_url};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{get_survey_page_url};
 
 /**
  * Constants.

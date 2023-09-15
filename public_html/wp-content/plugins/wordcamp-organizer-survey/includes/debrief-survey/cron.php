@@ -1,13 +1,13 @@
 <?php
 
-namespace WordCamp\OrganizerSurvey\Cron;
+namespace WordCamp\OrganizerSurvey\DebriefSurvey\Cron;
 
 defined( 'WPINC' ) || die();
 
 use CampTix_Plugin;
 
-use function WordCamp\OrganizerSurvey\Email\{get_email_id, queue_survey_email};
-use function WordCamp\OrganizerSurvey\DebriefSurvey\{disable_page, publish_survey_page};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{get_email_id, queue_survey_email};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{disable_page, publish_survey_page};
 
 /**
  * Constants.

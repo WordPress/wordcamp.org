@@ -3,7 +3,7 @@
  * Adds a page which contains the debrief survey.
  */
 
-namespace WordCamp\OrganizerSurvey\DebriefSurvey;
+namespace WordCamp\OrganizerSurvey\DebriefSurvey\Page;
 
 defined( 'WPINC' ) || die();
 

@@ -10,8 +10,8 @@ defined( 'WPINC' ) || die();
 use CampTix_Plugin;
 
 use function WordCamp\OrganizerSurvey\{get_feature_id};
-use function WordCamp\OrganizerSurvey\Email\{get_email_id};
-use function WordCamp\OrganizerSurvey\DebriefSurvey\{get_page_id};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{get_email_id};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{get_page_id};
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 

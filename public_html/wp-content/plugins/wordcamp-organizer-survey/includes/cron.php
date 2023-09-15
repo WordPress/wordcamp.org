@@ -4,13 +4,16 @@ namespace WordCamp\OrganizerSurvey\Cron;
 
 defined( 'WPINC' ) || die();
 
+use CampTix_Plugin;
+
 use function WordCamp\OrganizerSurvey\Email\{get_email_id, queue_survey_email};
-use function WordCamp\OrganizerSurvey\Page\{disable_page, publish_survey_page};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\{disable_page, publish_survey_page};
 
 /**
  * Constants.
  */
 const DAYS_AFTER_TO_SEND = 2;
+const TEMP_ATTENDEE_ID   = 'organizer_survey_temp_attendee';
 
 /**
  * Actions & hooks
@@ -19,6 +22,24 @@ add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
 add_action( 'wc_organizer_survey_email', __NAMESPACE__ . '\queue_organizer_survey' );
 add_action( 'wc_organizer_disable_survey', __NAMESPACE__ . '\disable_organizer_survey' );
 
+/**
+ * Logs a message to the CampTix email log.
+ */
+function log( $message, $post_id, $data = null ) {
+	/* @var CampTix_Plugin $camptix */
+	global $camptix;
+
+	$camptix->log( $message, $post_id, $data );
+}
+
+/**
+ * Get Wordcamp attendee ID.
+ *
+ * @return int
+ */
+function get_wordcamp_attendees_id() {
+	return get_option( TEMP_ATTENDEE_ID );
+}
 
 /**
  * Add cron jobs to the schedule.
@@ -30,28 +51,51 @@ function schedule_jobs() {
 }
 
 /**
- * Get Wordcamp lead organizer.
- *
- * @return int[]
+ * Add temporary attendee since email can only be sent to items in attendee tracker.
  */
-function get_wordcamp_organizer_id() {
-	// TODO
+function add_temp_attendee() {
+	if ( ! get_wordcamp_attendees_id() ) {
+		$attendees_id = wp_insert_post( array(
+			'post_title' => 'Organizer debrief survey',
+			'post_name' => 'organizer-debrief-survey',
+			'post_type' => 'tix_attendee',
+			'post_status' => 'publish',
+		) );
+
+		if ( $attendees_id ) {
+			$meta = get_wordcamp_post( get_current_blog_id() )->meta;
+			update_post_meta( $attendees_id, 'tix_email', $meta['Email Address'][0] );
+			update_post_meta( $attendees_id, 'tix_receipt_email', $meta['Email Address'][0] );
+			update_post_meta( $attendees_id, 'tix_first_name', $meta['Organizer Name'][0] );
+
+			update_option( TEMP_ATTENDEE_ID, $attendees_id );
+			log( 'Successfully added attendee:', get_email_id(), $attendees_id );
+		} else {
+			log( 'Failed to add attendee:', get_email_id(), $attendees_id );
+		}
+	}
 }
 
 /**
- * Associates lead organizer to email.
+ * Associates attendee to emails.
  */
-function associate_organizer_to_email( $email_id ) {
-	$failed_to_add      = array();
-	$successfully_added = array();
-	$recipient_id       = get_wordcamp_organizer_id();
+function associate_attendee_to_email( $email_id ) {
+	$recipient_id = get_wordcamp_attendees_id();
 
-	if ( empty( $recipients ) ) {
+	if ( empty( $recipient_id ) ) {
 		log( 'No valid recipients', $email_id, null );
 		return;
 	}
 
-	// TODO
+	// Associate attendee to tix_email as a recipient.
+	$result = add_post_meta( $email_id, 'tix_email_recipient_id', $recipient_id );
+
+	if ( ! $result ) {
+		log( 'Failed to add recipients:', $email_id, $recipient_id );
+	} else {
+		update_post_meta( $email_id, 'tix_email_recipients_backup', (array) $recipient_id );
+		log( 'Successfully added recipients:', $email_id, $recipient_id );
+	}
 }
 
 /**
@@ -60,8 +104,8 @@ function associate_organizer_to_email( $email_id ) {
  * @return bool
  */
 function is_email_already_sent_or_queued( $email_id ) {
-	// $email = get_post( $email_id );
-	// return 'publish' === $email->post_status || 'pending' === $email->post_status;
+	$email = get_post( $email_id );
+	return 'publish' === $email->post_status || 'pending' === $email->post_status;
 }
 
 /**
@@ -94,6 +138,15 @@ function is_time_to_send_email( $email_id ) {
 }
 
 /**
+ * Delete the temporary attendee.
+ */
+function delete_temp_attendee() {
+	$attendee_id = get_wordcamp_attendees_id();
+	wp_delete_post( $attendee_id, true );
+	delete_option( TEMP_ATTENDEE_ID );
+}
+
+/**
  * Turns off the survey to avoid spam.
  */
 function disable_organizer_survey() {
@@ -101,7 +154,6 @@ function disable_organizer_survey() {
 }
 
 /**
- * TODO: Just send email
  * Associates recipients to email and changes its status to be picked up
  * by the camptix email cron job `tix_scheduled_every_ten_minutes`.
  */
@@ -127,7 +179,8 @@ function queue_organizer_survey() {
 		log( 'Error publishing survey page:', $email_id, $page_published );
 	}
 
-	associate_organizer_to_email( $email_id );
+	add_temp_attendee();
+	associate_attendee_to_email( $email_id );
 
 	$email_status = queue_survey_email( $email_id );
 
@@ -143,5 +196,5 @@ function queue_organizer_survey() {
 	}
 
 	// Remove the cron job that queues everything.
-	wp_clear_scheduled_hook( 'wc_attendee_survey_email' );
+	wp_clear_scheduled_hook( 'wc_organizer_survey_email' );
 }

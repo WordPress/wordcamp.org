@@ -14,6 +14,7 @@ namespace WordCamp\OrganizerSurvey;
 
 use function WordCamp\OrganizerSurvey\DebriefSurvey\{add_page, delete_page};
 use function WordCamp\OrganizerSurvey\Email\{add_email, delete_email};
+use function WordCamp\OrganizerSurvey\Cron\delete_temp_attendee;
 
 defined( 'WPINC' ) || die();
 
@@ -109,6 +110,7 @@ function deactivate_on_network() {
 function deactivate_on_current_site() {
 	delete_page();
 	delete_email();
+	delete_temp_attendee();
 }
 
 /**

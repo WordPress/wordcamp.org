@@ -33,7 +33,7 @@ function get_email_content() {
 	$closing_date    = date_i18n( 'Y-m-d', strtotime('+2 weeks') );
 	$survey_page_url = get_survey_page_url();
 
-	$email  = "Hi [first_name] [last_name],\r\n\r\n";
+	$email  = "Hi [first_name],\r\n\r\n";
 	$email .= sprintf( "%s is over, thank you for lead organizing it! \r\n\r\n", esc_html( $wordcamp_name ) );
 	$email .= "As a community-led event, feedback is really important to us. It helps us improve our events and to keep providing high quality content.\r\n\r\n";
 	$email .= sprintf( "Please take a moment to answer our <a href='%s'>post-event survey</a> and help us to do amazing WordPress events!\r\n", esc_url( $survey_page_url ) );
@@ -48,7 +48,6 @@ function get_email_content() {
 
 	return $email;
 }
-
 
 /**
  * Adds email to camptix email queue.
@@ -69,6 +68,7 @@ function add_email() {
 	);
 
 	if ( $email_id > 0 ) {
+		update_post_meta( $email_id, 'tix_email_recipients_backup', array() );
 		update_option( EMAIL_KEY_ID, $email_id );
 	}
 }
@@ -91,12 +91,10 @@ function queue_survey_email( $email_id ) {
  * Delete the email and associated meta data.
  */
 function delete_email() {
-	$post_id = get_email_id();
-	wp_delete_post( $post_id, true );
-	delete_option( EMAIL_KEY_ID );
-
+	$email_id = get_email_id();
 	// Clean up any associated attendees to the email.
-	delete_post_meta( $post_id, 'tix_email_recipient_id' );
-	delete_post_meta( $post_id, 'tix_email_recipients_backup' );
+	delete_post_meta( $email_id, 'tix_email_recipient_id' );
+	delete_post_meta( $email_id, 'tix_email_recipients_backup' );
+	wp_delete_post( $email_id, true );
+	delete_option( EMAIL_KEY_ID );
 }
-

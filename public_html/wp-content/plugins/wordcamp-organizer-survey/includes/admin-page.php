@@ -45,7 +45,7 @@ function admin_menu() {
  *                [
  *                  'title' => string,
  *                  'admin_url' => string,
- *                  'reminder_url' => string,
+ *                  'email_url' => string,
  *                  'responses_url' => string,
  *                  'sent' => string,
  *                  'responses' => string,

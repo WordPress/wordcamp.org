@@ -116,7 +116,11 @@ function deactivate_on_current_site() {
 	// Debrief Survey.
 	delete_debrief_survey_page();
 	delete_debrief_survey_email();
-	delete_debrief_survey_temp_attendee();
+
+	if ( is_wordcamp_type( 'next-gen' ) ) {
+		// A temp attendee is only added in cron.
+		delete_debrief_survey_temp_attendee();
+	}
 }
 
 /**

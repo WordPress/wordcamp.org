@@ -71,10 +71,6 @@ function activate_on_current_site() {
 	// Debrief Survey.
 	add_debrief_survey_page();
 	add_debrief_survey_email();
-
-	// Flushing the rewrite rules is buggy in the context of `switch_to_blog`.
-	// The rules will automatically get recreated on the next request to the site.
-	delete_option( 'rewrite_rules' );
 }
 
 /**

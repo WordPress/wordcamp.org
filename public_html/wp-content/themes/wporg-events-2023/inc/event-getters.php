@@ -1,10 +1,34 @@
 <?php
 
 namespace WordPressdotorg\Events_2023;
-use WP_Post, DateTimeZone, DateTime;
+use WP_Post, DateTimeZone, DateTime, hyperdb;
 
 defined( 'WPINC' ) || die();
 
+/**
+ * Query a table that's encoded with the `latin1` charset.
+ *
+ * Unlike wordpress.org, wordcamp.org has a `DB_CHARSET` of `utf8mb4`, so that's what WPDB uses when querying
+ * tables. w.org tables use `latin1`, so we need to switch to that when pulling from them. If you query it with
+ * `utf8mb4`, you'll get Mojibake.
+ *
+ * @param string $prepared_query ⚠️ This must have already be ran through `$wpdb->prepare()` if needed.
+ */
+function get_latin1_results_with_prepared_query( string $prepared_query ) {
+	global $wpdb;
+
+	// Local environments don't always use HyperDB, but production does.
+	$db_handle = $wpdb instanceof hyperdb ? $wpdb->db_connect( $prepared_query ) : $wpdb->dbh;
+	$wpdb->set_charset( $db_handle, 'latin1', 'latin1_swedish_ci' );
+
+	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- This function doesn't have the context to prepare it, the caller must.
+	$results = $wpdb->get_results( $prepared_query );
+
+	// Revert to the default charset to avoid affecting other queries.
+	$wpdb->set_charset( $db_handle, DB_CHARSET, DB_COLLATE );
+
+	return $results;
+}
 
 /**
  * Get a list of all upcoming events across all sites.
@@ -12,7 +36,7 @@ defined( 'WPINC' ) || die();
 function get_all_upcoming_events(): array {
 	global $wpdb;
 
-	$events = $wpdb->get_results( '
+	$events = get_latin1_results_with_prepared_query( '
 		SELECT
 			id, `type`, title, url, meetup, location, latitude, longitude, date_utc,
 			date_utc_offset AS tz_offset

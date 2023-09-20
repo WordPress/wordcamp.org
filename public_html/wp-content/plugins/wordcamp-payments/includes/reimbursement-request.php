@@ -164,15 +164,6 @@ function init_meta_boxes() {
 	);
 
 	add_meta_box(
-		'wcbrr_notes',
-		esc_html__( 'Notes', 'wordcamporg' ),
-		__NAMESPACE__ . '\render_notes_metabox',
-		POST_TYPE,
-		'side',
-		'high'
-	);
-
-	add_meta_box(
 		'wcbrr_general_information',
 		esc_html__( 'General Information', 'wordcamporg' ),
 		__NAMESPACE__ . '\render_general_information_metabox',
@@ -315,19 +306,6 @@ function render_status_metabox( $post ) {
 	$requested_by = \WordCamp_Budgets::get_requester_name( $post->post_author );
 
 	require_once dirname( __DIR__ ) . '/views/reimbursement-request/metabox-status.php';
-}
-
-/**
- * Render the Notes metabox
- *
- * @param WP_Post $post
- */
-function render_notes_metabox( $post ) {
-	wp_nonce_field( 'notes', 'notes_nonce' );
-
-	$existing_notes = get_post_meta( $post->ID, '_wcbrr_notes', true );
-
-	require_once dirname( __DIR__ ) . '/views/reimbursement-request/metabox-notes.php';
 }
 
 /**
@@ -521,7 +499,6 @@ function save_request( $post_id, $post ) {
 	}
 
 	verify_metabox_nonces();
-	validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
 
 	/*
 	 * We need to determine if the user is allowed to modify the request -- in terms of this plugin's post_status
@@ -674,7 +651,6 @@ function render_log_metabox( $post ) {
 function verify_metabox_nonces() {
 	$nonces = array(
 		'status_nonce',
-		'notes_nonce',
 		'general_information_nonce',
 		'payment_details_nonce',
 		'expenses_nonce',
@@ -742,95 +718,6 @@ function validate_and_save_expenses( $post_id, $expenses ) {
 	}
 
 	update_post_meta( $post_id, '_wcbrr_expenses', $expenses );
-}
-
-/**
- * Validate and save expense data
- *
- * @param WP_Post $post
- * @param string  $new_note_message
- */
-function validate_and_save_notes( $post, $new_note_message ) {
-
-	// Save incomplete message.
-	if ( isset( $_POST['wcp_mark_incomplete_notes'] ) ) {
-		$safe_value = '';
-		if ( $post->post_status == 'wcb-incomplete' ) {
-			$safe_value = wp_kses( $_POST['wcp_mark_incomplete_notes'], wp_kses_allowed_html( 'strip' ) );
-		}
-
-		update_post_meta( $post->ID, '_wcp_incomplete_notes', $safe_value );
-	}
-
-	$new_note_message = sanitize_text_field( wp_unslash( $new_note_message ) );
-
-	if ( empty( $new_note_message ) ) {
-		return;
-	}
-
-	$notes = get_post_meta( $post->ID, '_wcbrr_notes', true );
-	if ( ! is_array( $notes ) ) {
-		$notes = array();
-	}
-
-	$new_note = array(
-		'timestamp' => time(),
-		'author_id' => get_current_user_id(),
-		'message'   => $new_note_message,
-	);
-
-	$notes[] = $new_note;
-
-	update_post_meta( $post->ID, '_wcbrr_notes', $notes );
-	notify_parties_of_new_note( $post, $new_note );
-
-	\WordCamp_Budgets::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array(
-		'action' => 'note-added',
-	) );
-}
-
-/**
- * Notify WordCamp Central or the request author when new notes are added
- *
- * @param WP_Post $request
- * @param array   $note
- */
-function notify_parties_of_new_note( $request, $note ) {
-	$note_author = get_user_by( 'id', $note['author_id'] );
-
-	if ( $note_author->has_cap( 'manage_network' ) ) {
-		$to             = \WordCamp_Budgets::get_requester_formatted_email( $request->post_author );
-		$subject_prefix = sprintf( '[%s] ', get_wordcamp_name() );
-	} else {
-		$to             = 'support@wordcamp.org';
-		$subject_prefix = '';
-	}
-
-	if ( ! $to ) {
-		return;
-	}
-
-	$subject          = sprintf( '%sNew note on `%s`', $subject_prefix, sanitize_text_field( $request->post_title ) );
-	$note_author_name = \WordCamp_Budgets::get_requester_name( $note['author_id'] );
-	$request_url      = admin_url( sprintf( 'post.php?post=%s&action=edit', $request->ID ) );
-	$headers          = array( 'Reply-To: support@wordcamp.org' );
-
-	$message = sprintf( '
-		%s has added the following note on the reimbursement request for %s:
-
-		%s
-
-		You can view the request and respond to their note at:
-
-		%s',
-		sanitize_text_field( $note_author_name ),
-		sanitize_text_field( $request->post_title ),
-		sanitize_text_field( $note['message'] ),
-		esc_url_raw( $request_url )
-	);
-	$message = str_replace( "\t", '', $message );
-
-	wp_mail( $to, $subject, $message, $headers );
 }
 
 /**

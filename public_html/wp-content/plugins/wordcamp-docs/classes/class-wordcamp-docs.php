@@ -87,14 +87,14 @@ class WordCamp_Docs {
 		// Check selected template on any step.
 		$templates = self::get_templates();
 		$template_selected = sanitize_text_field( $_POST['wcdocs_template'] );
-		if ( ! array_key_exists( $template_selected, $templates ) )
+		if ( ! array_key_exists( $template_selected, $templates ) ) {
 			return self::error( __( 'Selected template does not exist', 'wordcamporg' ) );
+		}
 
 		$template = $templates[ $template_selected ];
 
 		switch ( $step ) {
-			case 1: // submitted step 1
-
+			case 1: // submitted step 1.
 				if ( 'sponsorship-agreement' == $template_selected ) {
 					self::$step = 10;
 				} else {
@@ -104,8 +104,7 @@ class WordCamp_Docs {
 
 				break;
 
-			case 10; // submitted step 10
-				// Sanitize input
+			case 10: // submitted step 10.
 				$data = $template->sanitize( $_POST );
 
 				if ( 'sponsorship-agreement' == $template_selected ) {
@@ -113,10 +112,10 @@ class WordCamp_Docs {
 						self::$step = 20;
 					}
 				}
+
 				break;
 
-			case 20: // submitted step 20
-
+			case 20: // submitted step 20.
 				require_once( WORDCAMP_DOCS__PLUGIN_DIR . 'classes/class-wordcamp-docs-pdf-generator.php' );
 				$generator = new WordCamp_Docs_PDF_Generator;
 
@@ -149,6 +148,9 @@ class WordCamp_Docs {
 
 	/**
 	 * Render the contents of our admin section.
+	 *
+	 * phpcs:disable WordPress.Security.NonceVerification.Missing
+	 * nonce is checked on form_handler function
 	 */
 	public static function render_menu_page() {
 		?>
@@ -182,7 +184,7 @@ class WordCamp_Docs {
 					</p>
 				</form>
 
-				<?php elseif ( self::$step == 10 ) : ?>
+				<?php elseif ( 10 == self::$step ) : ?>
 
 				<form method="POST">
 					<input type="hidden" name="wcdocs_submit" value="10" />
@@ -199,7 +201,7 @@ class WordCamp_Docs {
 					</p>
 				</form>
 
-			<?php elseif ( self::$step == 20 ) : ?>
+			<?php elseif ( 20 == self::$step ) : ?>
 
 				<form method="POST">
 					<input type="hidden" name="wcdocs_submit" value="20" />
@@ -220,6 +222,7 @@ class WordCamp_Docs {
 		</div>
 		<?php
 	}
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 	private function __construct() {} // Not this time.
 }

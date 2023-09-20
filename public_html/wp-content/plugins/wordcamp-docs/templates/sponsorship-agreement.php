@@ -3,11 +3,14 @@
  * Sponsorship Agreement Template
  */
 class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Template {
+	/**
+	 * Step 10. Select the sposnor post from which the form will be pre-filled.
+	 */
 	public function form_prefill_select( $data ) {
 		$sponsors = get_posts( array(
-			'post_type' 			=> 'wcb_sponsor',
-			'post_status'			=> 'publish',
-			'posts_per_page'	=> 500,
+			'post_type'      => 'wcb_sponsor',
+			'post_status'    => 'publish',
+			'posts_per_page' => 500,
 		) );
 		?>
 		<style>
@@ -34,17 +37,17 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		</style>
 
 		<div class="wcorg-sponsorship-agreement-form">
-			<label><?php _e( 'Sponsor:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsor:', 'wordcamporg' ); ?></label>
 			<select name="sponsor_id">
 				<?php foreach ( $sponsors as $sponsor ) : ?>
 					<option value="<?php echo esc_attr( $sponsor->ID ) ?>"><?php echo esc_html( get_the_title( $sponsor ) ) ?></option>
 				<?php endforeach; ?>
 			</select>
-			<span class="description"><?php _e( 'Sponsorship details will be pre-filled with the data on sponsor post.', 'wordcamporg' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Sponsorship details will be pre-filled with the data on sponsor post.', 'wordcamporg' ); ?></span>
 
-			<label><?php _e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
 			<textarea name="sponsorship_benefits"><?php echo esc_textarea( $data['sponsorship_benefits'] ); ?></textarea>
-			<span class="description"><?php _e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
 		</div>
 
 		<?php
@@ -58,8 +61,8 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		$sponsor_currency = get_post_meta( $sponsor_id, '_wcb_sponsor_currency', true );
 
 		$wordcamp   = get_wordcamp_post();
-		$start_date = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? date( $date_format, $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) : '';
-		$end_date   = ! empty( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   ? date( $date_format, $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   : $start_date;
+		$start_date = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? gmdate( $date_format, $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) : '';
+		$end_date   = ! empty( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   ? gmdate( $date_format, $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   : $start_date;
 
 		$number_formatter   = new NumberFormatter( get_locale(), NumberFormatter::SPELLOUT );
 		$sponsorship_amount = $number_formatter->format( $sponsor_amount ) . " {$sponsor_currency}";
@@ -67,7 +70,7 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		$number_formatter       = new NumberFormatter( get_locale(), NumberFormatter::CURRENCY );
 		$sponsorship_amount_num = $number_formatter->formatCurrency( $sponsor_amount, $sponsor_currency );
 
-		$data = wp_parse_args( $data, array(
+		$data = wp_parse_args( $data, array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'sponsor_name'            => get_the_title( $sponsor_id ),
 			'sponsor_rep_name'        => get_post_meta( $sponsor_id, '_wcpt_sponsor_first_name', true ) . ' ' . get_post_meta( $sponsor_id, '_wcpt_sponsor_last_name', true ),
 			'sponsor_rep_title'       => '',

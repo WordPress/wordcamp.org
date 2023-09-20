@@ -79,6 +79,7 @@ function get_post_statuses() {
 		'draft',
 		'wcb-incomplete',
 		'wcb-pending-approval',
+		'wcb-needs-followup',
 		'wcb-approved',
 		'wcb-pending-payment',
 		'wcb-paid',

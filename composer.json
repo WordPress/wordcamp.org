@@ -14,20 +14,34 @@
 		"_comment": "Work around `test:watch` timeout, see https://github.com/spatie/phpunit-watcher/issues/63#issuecomment-545633709",
 		"process-timeout": 0,
 		"allow-plugins": {
-			"dealerdirect/phpcodesniffer-composer-installer": true
+			"dealerdirect/phpcodesniffer-composer-installer": true,
+			"composer/installers": true
 		}
 	},
+	"extra": {
+		"installer-paths": {
+			"public_html/wp-content/themes/{$name}": ["wporg/wporg-parent-2021"]
+		}
+	},
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "git@github.com:WordPress/wporg-parent-2021.git"
+		}
+	],
 	"require": {
-		"adhocore/jwt": "^1.0"
+		"adhocore/jwt": "^1.0",
+		"wporg/wporg-parent-2021": "dev-build"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
-		"wp-coding-standards/wpcs": "2.*",
+		"wp-coding-standards/wpcs": "~3.0.0",
 		"phpcompatibility/phpcompatibility-wp": "*",
 		"phpunit/phpunit": "^9",
 		"sirbrillig/phpcs-changed": "2.10.0",
 		"spatie/phpunit-watcher": "^1.23",
-		"yoast/phpunit-polyfills": "^1.0"
+		"yoast/phpunit-polyfills": "^1.0",
+		"composer/installers": "^2.2"
 	},
 	"scripts": {
 		"format": "phpcbf -p",

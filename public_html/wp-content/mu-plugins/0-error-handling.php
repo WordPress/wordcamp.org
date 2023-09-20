@@ -371,6 +371,14 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		);
 	}
 
+	if ( ! empty( $_SERVER['HTTP_USER_AGENT'] ) ) {
+		$fields[] = array(
+			'title' => 'User Agent',
+			'value' => $_SERVER['HTTP_USER_AGENT'],
+			'short' => false,
+		);
+	}
+
 	if ( $_POST ) {
 		$redacted_post = $_POST; // redact_keys() would redact $_POST if passed directly.
 		redact_keys( $redacted_post );

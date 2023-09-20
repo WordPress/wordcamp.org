@@ -52,16 +52,26 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Build and boot the Docker environment.
     ```bash
+	#
+	# **** If you have an Apple Silicon CPU, make the edits below _before_ running these commands ****
+	#
     docker compose build --pull
     docker compose up
 	```
 
-    _Using an Apple ARM64 chip? You may see `failed to solve: rpc error: code = Unknown desc =...` after running either of commands above. Try adding `platform: linux/amd64` to both `wordcamp.test` and `wordcamp.db` in `docker-compose.yaml`. This will instruct Docker to create an image based on the `linux/amd64` architecture instead of `linux/arm64`, i.e._
+    _Using an Apple ARM64 (Silicon) chip? You may see `failed to solve: rpc error: code = Unknown desc =...` or `failed to solve: mysql:5.7-debian: no match for platform in manifest` after running either of commands above. Try adding `platform: linux/amd64` to _both_ `wordcamp.test` and `wordcamp.db` in `docker-compose.yaml`. This will instruct Docker to create an image based on the `linux/amd64` architecture instead of `linux/arm64`, i.e._
     ```
-    build:
-        context: .docker
-        dockerfile: Dockerfile.php-fpm
-    platform: linux/amd64
+	wordcamp.test:
+	  build:
+	    context: .docker
+	    dockerfile: Dockerfile.php-fpm
+	  platform: linux/amd64
+
+	wordcamp.db:
+	  build:
+	    context: .docker
+	    dockerfile: Dockerfile.mysql
+	  platform: linux/amd64
     ```
 
 

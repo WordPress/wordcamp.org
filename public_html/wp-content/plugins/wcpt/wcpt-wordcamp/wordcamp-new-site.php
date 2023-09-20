@@ -52,7 +52,7 @@ class WordCamp_New_Site {
 				$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
 				$valid_url  = isset( $url['host'], $url['path'] );
 				$tld        = get_top_level_domain();
-				$network_id = "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+				$network_id = $valid_url && "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
 				?>
 
 				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>
@@ -143,7 +143,9 @@ class WordCamp_New_Site {
 		update_post_meta( $wordcamp_id, $key, esc_url( $url ) );
 
 		// If this site exists make sure we update the _site_id mapping.
-		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], 1 );
+		$tld              = get_top_level_domain();
+		$network_id       = "events.wordpress.$tld" === $parsed_url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], $network_id );
 
 		if ( $existing_site_id ) {
 			update_post_meta( $wordcamp_id, '_site_id', absint( $existing_site_id ) );
@@ -668,13 +670,6 @@ class WordCamp_New_Site {
 			),
 
 			array(
-				'title'   => __( 'Social Media Stream', 'wordcamporg' ),
-				'content' => $this->get_stub_content( 'page', 'social-media-stream' ),
-				'status'  => 'publish',
-				'type'    => 'page',
-			),
-
-			array(
 				'title'   => __( 'Offline', 'wordcamporg' ),
 				'content' => $this->get_stub_content( 'page', 'offline', $wordcamp ),
 				'status'  => 'publish',
@@ -735,6 +730,9 @@ class WordCamp_New_Site {
 				'content' => $this->get_stub_content( 'post', 'call-for-sponsors' ),
 				'status'  => 'draft',
 				'type'    => 'post',
+				'meta'    => array(
+					'wcfd-key' => 'call-for-sponsors',
+				),
 			),
 
 			array(
@@ -845,11 +843,14 @@ class WordCamp_New_Site {
 			'twitter_handle', 'street_address1', 'street_address2', 'city', 'state', 'zip_code', 'country',
 		);
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // Switch to central.wordcamp.org.
 
 		foreach ( $meta_field_keys as $key ) {
 			$sponsor_meta[ "_wcpt_sponsor_$key" ] = get_post_meta( $assigned_sponsor->ID, "mes_$key", true );
 		}
+
+		// Always set the first-time sponsor value to 'no' for Multi Event (ME) Sponsors.
+		$sponsor_meta['_wcb_sponsor_first_time'] = 'no';
 
 		restore_current_blog();
 
@@ -868,7 +869,7 @@ class WordCamp_New_Site {
 		global $multi_event_sponsors;
 		$data = array();
 
-		switch_to_blog( BLOG_ID_CURRENT_SITE ); // Switch to central.wordcamp.org.
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // Switch to central.wordcamp.org.
 
 		$data['featured_images']   = array();
 		$data['assigned_sponsors'] = $multi_event_sponsors->get_wordcamp_me_sponsors( $wordcamp_id, 'sponsor_level' );

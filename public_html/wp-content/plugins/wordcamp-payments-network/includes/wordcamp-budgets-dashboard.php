@@ -9,6 +9,13 @@ use WordCamp\Budgets\Reimbursement_Requests;
 use WordCamp\Budgets_Dashboard\Reimbursement_Requests as Reimbursements_Dashboard;
 use DateTimeInterface;
 use WP_CLI;
+use WP_Error;
+
+defined( 'WPINC' ) || die();
+
+define( 'REDACTED_VALUE',               '[deleted for privacy]'    );
+define( 'REDACT_PAID_REQUESTS_CRON_ID', 'wcb_redact_paid_requests' );
+
 
 /*
  * This _plugin_ needs to be network-activated on the NextGen network so that things like
@@ -19,10 +26,6 @@ if ( get_current_network_id() !== WORDCAMP_NETWORK_ID ) {
 	return;
 }
 
-defined( 'WPINC' ) or die();
-
-define( 'REDACTED_VALUE',               '[deleted for privacy]'    );
-define( 'REDACT_PAID_REQUESTS_CRON_ID', 'wcb_redact_paid_requests' );
 
 /*
  * Core functionality and helper functions shared between modules
@@ -466,7 +469,7 @@ function process_export_request() {
 	}
 }
 
-/*
+/**
  * Generate and return the raw payment report contents
  *
  * @param array $args

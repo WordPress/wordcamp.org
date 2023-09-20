@@ -191,6 +191,14 @@ class WordCamp_Budget_Tool {
 				3,
 				true
 			);
+
+			wp_localize_script(
+				'wcb-budget-tool',
+				'networkStatus',
+				array(
+					'isNextGenWordCamp' => is_wordcamp_type('next-gen'),
+				)
+			);
 		}
 	}
 
@@ -209,6 +217,8 @@ class WordCamp_Budget_Tool {
 		// The metadata is an array of arrays, so we can filter out the relevant item, pluck just the value, then retrieve it.
 		$count_speakers   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'speakers' ) ), 'value' ) );
 		$count_volunteers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'volunteers' ) ), 'value' ) );
+		$count_organizers = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'organizers' ) ), 'value' ) );
+		$count_sponsors   = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'sponsor-tickets' ) ), 'value' ) );
 		$count_attendees  = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'attendees' ) ), 'value' ) );
 		$count_days       = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'days' ) ), 'value' ) );
 		$count_tracks     = (int) current( wp_list_pluck( wp_list_filter( $meta, array( 'name' => 'tracks' ) ), 'value' ) );
@@ -219,10 +229,18 @@ class WordCamp_Budget_Tool {
 				return $value * $count_speakers;
 			case 'per-volunteer':
 				return $value * $count_volunteers;
+			case 'per-organizer':
+				return $value * $count_organizers;
+			case 'per-sponsor':
+				return $value * $count_sponsors;
 			case 'per-speaker-volunteer':
 				return $value * $count_speakers + $value * $count_volunteers;
+			case 'per-speaker-volunteer-organizer':
+				return $value * $count_speakers + $value * $count_volunteers + $value * $count_organizers;
 			case 'per-attendee':
 				return $value * $count_attendees;
+			case 'per-attendee-sponsor':
+				return $value * $count_attendees + $value * $count_sponsors;
 			case 'per-day':
 				return $value * $count_days;
 			case 'per-track':
@@ -254,12 +272,14 @@ class WordCamp_Budget_Tool {
 	 */
 	private static function _get_default_budget() {
 		// phpcs:disable WordPress.Arrays.ArrayDeclarationSpacing.AssociativeArrayFound
-		return array(
+		$default_budget = array(
 			array( 'type' => 'meta', 'name' => 'attendees', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'days', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'tracks', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'speakers', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'volunteers', 'value' => 0 ),
+			array( 'type' => 'meta', 'name' => 'organizers', 'value' => 0 ),
+			array( 'type' => 'meta', 'name' => 'sponsor-tickets', 'value' => 0 ),
 			array( 'type' => 'meta', 'name' => 'currency', 'value' => 'USD' ),
 			array( 'type' => 'meta', 'name' => 'ticket-price', 'value' => 0 ),
 
@@ -270,7 +290,6 @@ class WordCamp_Budget_Tool {
 
 			array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Venue', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'venue', 'note' => 'Wifi Costs', 'amount' => 0, 'link' => 'per-day' ),
-			array( 'type' => 'expense', 'category' => 'other', 'note' => 'Comped Tickets', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Video recording', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Projector rental', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'audio-visual', 'note' => 'Livestream', 'amount' => 0 ),
@@ -281,7 +300,31 @@ class WordCamp_Budget_Tool {
 			array( 'type' => 'expense', 'category' => 'food-beverage', 'note' => 'Coffee', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'swag', 'note' => 'T-shirts', 'amount' => 0 ),
 			array( 'type' => 'expense', 'category' => 'speaker-event', 'note' => 'Speakers Dinner', 'amount' => 0, 'link' => 'per-speaker' ),
+			array( 'type' => 'expense', 'category' => 'comped-tickets', 'note' => 'For speakers, special guests, members of the press, volunteers, etc.', 'amount' => 0 ),
 		);
+
+		$extra_budget_for_next_gen = array(
+			array( 'type' => 'meta', 'name' => 'format', 'value' => '', 'placeholder' => 'e.g. Workshop, Contributing, Networking' ),
+		);
+
+		if ( is_wordcamp_type('next-gen') ) {
+			// $extra_budget_for_next_gen should be positioned after the 'days' element for proper ordering.
+			$insert_position = array_search( 'days', array_column( $default_budget, 'name' ), true ) + 1;
+			array_splice( $default_budget, $insert_position, 0, $extra_budget_for_next_gen );
+
+			// Filter out items.
+			$default_budget = array_filter(
+				$default_budget,
+				function ( $item ) {
+					return (
+						( ! isset($item['category']) || 'speaker-event' !== $item['category'] ) &&
+						( ! isset($item['name']) || 'tracks' !== $item['name'] )
+					);
+				}
+			);
+		}
+
+		return $default_budget;
 		// phpcs:enable
 	}
 

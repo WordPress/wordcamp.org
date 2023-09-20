@@ -44,6 +44,12 @@ $show_order = isset( $_GET['forder'] ) ? $_GET['forder'] : 'oldest';
 <div class="speaker-feedback">
 	<h2><?php esc_html_e( 'Session Feedback', 'wordcamporg' ); ?></h2>
 
+	<?php if ( $is_session_speaker ) : ?>
+		<p><?php esc_html_e( 'This feedback is visible only to you and the event organizers. It was submitted by attendees who watched your talk and has been reviewed and approved by the event organizers.', 'wordcamporg' ); ?></p>
+
+		<p><?php esc_html_e( 'While marking feedback as "helpful" is optional, you can use this to filter messages that you would like to come back to later, and it helps the WordCamp program track the overall helpfulness of the feedback tool. Please note that commenters will not be able to see if you mark their comment as helpful.', 'wordcamporg' ); ?></p>
+	<?php endif; ?>
+
 	<p class="speaker-feedback__notice">
 		<?php if ( $is_session_speaker ) : ?>
 			<?php

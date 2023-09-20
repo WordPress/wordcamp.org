@@ -187,14 +187,8 @@ tr#row-payment-method label {
 	}
 
 /* Budget Tool */
-.wcb-budget-tool .left {
-	width: 50%;
-	float: left;
-}
-
-.wcb-budget-tool .right {
-	width: 50%;
-	float: left;
+.wcb-budget-tool .first-section {
+	display: flex;
 }
 
 .wcb-budget-tool .nav-tab-wrapper svg {
@@ -286,9 +280,20 @@ tr#row-payment-method label {
 }
 
 .wcb-budget-container .wcb-entry select {
-	background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg"><path fill="#888" d="M1408 704q0 26-19 45l-448 448q-19 19-45 19t-45-19l-448-448q-19-19-19-45t19-45 45-19h896q26 0 45 19t19 45z"/></svg>');
+	background-image: url('data:image/svg+xml;utf8,<svg width="16" height="16" viewBox="0 0 1792 1792" xmlns="http://www.w3.org/2000/svg"><path fill="%23888" d="M1408 704q0 26-19 45l-448 448q-19 19-45 19t-45-19l-448-448q-19-19-19-45t19-45 45-19h896q26 0 45 19t19 45z"/></svg>');
 	background-repeat: no-repeat;
 	background-position: 98% center;
+	cursor: pointer;
+}
+
+.wcb-budget-container .wcb-entry select.name {
+	padding: 0;
+	max-width: unset;
+}
+
+
+.wcb-budget-container .wcb-entry .select2-container {
+	vertical-align: bottom;
 }
 
 .wcb-budget-container .wcb-entry td.focused {
@@ -407,4 +412,10 @@ tr#row-payment-method label {
 .wcb-budget-summary .inspire {
 	color: #aaa;
 	font-weight: normal;
+}
+
+.wcb-budget-attendees,
+.wcb-budget-attendees td,
+.wcb-budget-attendees th {
+	border-left: none;
 }

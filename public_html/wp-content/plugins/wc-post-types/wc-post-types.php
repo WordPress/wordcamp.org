@@ -1220,6 +1220,9 @@ class WordCamp_Post_Types_Plugin {
 	 * @param WP_Post $sponsor
 	 */
 	public function metabox_sponsor_info( $sponsor ) {
+		$amount   = get_post_meta( $sponsor->ID, '_wcb_sponsor_amount',   true );
+		$currency = get_post_meta( $sponsor->ID, '_wcb_sponsor_currency', true );
+
 		$company_name   = get_post_meta( $sponsor->ID, '_wcpt_sponsor_company_name',   true );
 		$website        = get_post_meta( $sponsor->ID, '_wcpt_sponsor_website',        true );
 		$first_name     = get_post_meta( $sponsor->ID, '_wcpt_sponsor_first_name',     true );
@@ -1235,6 +1238,7 @@ class WordCamp_Post_Types_Plugin {
 		$state           = get_post_meta( $sponsor->ID, '_wcpt_sponsor_state',           true );
 		$zip_code        = get_post_meta( $sponsor->ID, '_wcpt_sponsor_zip_code',        true );
 		$country         = get_post_meta( $sponsor->ID, '_wcpt_sponsor_country',         true );
+		$first_time      = get_post_meta( $sponsor->ID, '_wcb_sponsor_first_time',       true );
 
 		if ( $state === $this->get_sponsor_info_state_default_value() ) {
 			$state = '';
@@ -1245,6 +1249,8 @@ class WordCamp_Post_Types_Plugin {
 		} else {
 			$available_countries = wcorg_get_countries();
 		}
+
+		$available_currencies = WordCamp_Budgets::get_currencies();
 
 		wp_nonce_field( 'edit-sponsor-info', 'wcpt-meta-sponsor-info' );
 
@@ -1272,7 +1278,7 @@ class WordCamp_Post_Types_Plugin {
 		$mes_id = get_post_meta( $sponsor->ID, '_mes_id', true );
 
 		if ( $mes_id ) {
-			switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org .
+			switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.org.
 
 			$mes_agreement_id = get_post_meta( $mes_id, 'mes_sponsor_agreement', true );
 			if ( $mes_agreement_id ) {
@@ -1358,7 +1364,7 @@ class WordCamp_Post_Types_Plugin {
 		}
 
 		if ( wp_verify_nonce( filter_input( INPUT_POST, 'wcpt-meta-sponsor-info' ), 'edit-sponsor-info' ) ) {
-			$text_values = array(
+			$text_values_wcpt = array(
 				'company_name',
 				'first_name',
 				'last_name',
@@ -1374,8 +1380,18 @@ class WordCamp_Post_Types_Plugin {
 				'country',
 			);
 
-			foreach ( $text_values as $id ) {
+			$text_values_wcb = array(
+				'amount',
+				'currency',
+				'first_time',
+			);
+
+			foreach ( $text_values_wcpt as $id ) {
 				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcpt_sponsor_' . $id ) );
+			}
+
+			foreach ( $text_values_wcb as $id ) {
+				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcb_sponsor_' . $id ) );
 			}
 
 			if ( empty( $values['state'] ) ) {
@@ -1389,7 +1405,9 @@ class WordCamp_Post_Types_Plugin {
 			$values['agreement']  = filter_input( INPUT_POST, '_wcpt_sponsor_agreement', FILTER_SANITIZE_NUMBER_INT );
 
 			foreach ( $values as $id => $value ) {
-				$meta_key = '_wcpt_sponsor_' . $id;
+				$meta_key = in_array($id, $text_values_wcb, true)
+					? '_wcb_sponsor_' . $id
+					: '_wcpt_sponsor_' . $id;
 
 				if ( empty( $value ) ) {
 					delete_post_meta( $post_id, $meta_key );
@@ -1716,14 +1734,15 @@ class WordCamp_Post_Types_Plugin {
 			'wcb_sponsor_level',
 			'wcb_sponsor',
 			array(
-				'labels'       => $labels,
-				'rewrite'      => array( 'slug' => 'sponsor_level' ),
-				'query_var'    => 'sponsor_level',
-				'hierarchical' => true,
-				'public'       => true,
-				'show_ui'      => true,
-				'show_in_rest' => true,
-				'rest_base'    => 'sponsor_level',
+				'labels'            => $labels,
+				'rewrite'           => array( 'slug' => 'sponsor_level' ),
+				'query_var'         => 'sponsor_level',
+				'hierarchical'      => true,
+				'public'            => true,
+				'show_ui'           => true,
+				'show_in_rest'      => true,
+				'show_admin_column' => true,
+				'rest_base'         => 'sponsor_level',
 			)
 		);
 
@@ -1847,7 +1866,8 @@ class WordCamp_Post_Types_Plugin {
 
 			case 'manage_wcb_session_posts_columns':
 				$columns = array_slice( $columns, 0, 2, true ) + array( 'wcb_session_speakers' => __( 'Speakers', 'wordcamporg' ) ) + array_slice( $columns, 2, null, true );
-				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Date & Time',     'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_slice( $columns, 0, 1, true ) + array( 'wcb_session_time' => __( 'Date & Time', 'wordcamporg' ) ) + array_slice( $columns, 1, null, true );
+				$columns = array_slice( $columns, 0, 4, true ) + array( 'wcb_session_track' => __( 'Track', 'wordcamporg' ) ) + array_slice( $columns, 4, null, true );
 				$columns = array_filter(
 					$columns,
 					function( $col ) {
@@ -1855,6 +1875,15 @@ class WordCamp_Post_Types_Plugin {
 					},
 					ARRAY_FILTER_USE_KEY
 				);
+				break;
+
+			case 'manage_wcb_sponsor_posts_columns':
+				$original_columns = $columns;
+
+				$columns = array_slice( $original_columns, 0, 3, true );
+				$columns += array( 'wcb_sponsor_amount' => __( 'Amount', 'wordcamporg' ) );
+				$columns += array_slice( $original_columns, 1, null, true );
+
 				break;
 			default:
 		}
@@ -1936,7 +1965,17 @@ class WordCamp_Post_Types_Plugin {
 				}
 				echo esc_html( $output );
 				break;
+			case 'wcb_session_track':
+				echo get_the_term_list( get_the_ID(), 'wcb_track', '', ', ' );
+				break;
 
+			case 'wcb_sponsor_amount':
+				echo sprintf(
+					'%1$s %2$s',
+					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_amount', true ) ),
+					esc_html( get_post_meta( get_the_ID(), '_wcb_sponsor_currency', true ) )
+				);
+				break;
 			default:
 		}
 	}

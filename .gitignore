@@ -5,6 +5,7 @@
 .docker/database
 .docker/wordcamp*.pem
 .docker/test_suite
+docker-compose.override.yaml
 
 
 #
@@ -108,3 +109,4 @@ public_html/wp-content/themes/twentytwenty
 public_html/wp-content/themes/twentytwentyone
 public_html/wp-content/themes/twentytwentytwo
 public_html/wp-content/themes/twentytwentythree
+public_html/wp-content/themes/wporg-parent-2021

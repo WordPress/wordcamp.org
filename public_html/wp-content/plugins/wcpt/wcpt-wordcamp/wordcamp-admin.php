@@ -586,6 +586,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				// 'wcpt_location'    => __( 'Location', 'wordcamporg' ),
 				'wcpt_date'      => __( 'Date',      'wordcamporg' ),
 				'wcpt_organizer' => __( 'Organizer', 'wordcamporg' ),
+				'wcpt_mentor'    => __( 'Mentor', 'wordcamporg' ),
 				'wcpt_venue'     => __( 'Venue',     'wordcamporg' ),
 				'date'           => __( 'Status',    'wordcamporg' ),
 			);
@@ -633,6 +634,19 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'wcpt_organizer':
 					echo esc_html( wcpt_get_wordcamp_organizer_name() ? wcpt_get_wordcamp_organizer_name() : __( 'No Organizer', 'wordcamporg' ) );
+					break;
+
+				case 'wcpt_mentor':
+					$mentor_by = get_post_meta( $post_id, 'Mentor WordPress.org User Name', true );
+					$mentor_by_field = 'login';
+					if ( empty( $mentor_by ) ) {
+						$mentor_by = get_post_meta( $post_id, 'Mentor E-mail Address', true );
+						$mentor_by_field = 'email';
+					}
+
+					$mentor = get_user_by( $mentor_by_field, $mentor_by );
+
+					echo esc_html( is_a( $mentor, 'WP_User' ) ? $mentor->display_name : __( 'No Mentor', 'wordcamporg' ) );
 					break;
 
 				case 'wcpt_venue':

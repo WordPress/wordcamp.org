@@ -55,31 +55,39 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 *
 			 * - Access and use the WordCamp Mentors Dashboard screen on Central.
 			 * - Edit `wordcamp` posts on Central.
+			 * - Use "WordCamp Post" link in Admin Bar on all sites (sse `add_wcpt_cross_link()`)
 			 */
 			case 'mentor_manager':
-				// These capabilities only apply on central.wordcamp.org.
-				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
-					$newcaps = array(
-						'read'                       => true, // Access to wp-admin.
-						'wordcamp_manage_mentors'    => true,
-						'wordcamp_wrangle_wordcamps' => true,
-					);
-				}
+				$newcaps = array(
+					'read'                       => true, // Access to wp-admin.
+					'wordcamp_manage_mentors'    => true,
+					'wordcamp_wrangle_wordcamps' => true,
+				);
 				break;
 
 			/**
 			 * WordCamp Wrangler
 			 *
 			 * - Edit `wordcamp` posts on Central.
+			 * - Use "WordCamp Post" link in Admin Bar on all sites (sse `add_wcpt_cross_link()`)
 			 */
 			case 'wordcamp_wrangler':
-				// These capabilities only apply on central.wordcamp.org.
-				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
-					$newcaps = array(
-						'read'                       => true, // Access to wp-admin.
-						'wordcamp_wrangle_wordcamps' => true,
-					);
-				}
+				$newcaps = array(
+					'read'                       => true, // Access to wp-admin.
+					'wordcamp_wrangle_wordcamps' => true,
+				);
+				break;
+
+			/**
+			 * Meetup Wrangler
+			 *
+			 * - Edit `wp_meetup` posts on Central.
+			 */
+			case 'meetup_wrangler':
+				$newcaps = array(
+					'read'                     => true, // Access to wp-admin.
+					'wordcamp_wrangle_meetups' => true,
+				);
 				break;
 
 			/**
@@ -89,7 +97,7 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 */
 			case 'report_viewer':
 				// These capabilities only apply on central.wordcamp.org.
-				if ( BLOG_ID_CURRENT_SITE === get_current_blog_id() ) {
+				if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
 					$newcaps = array(
 						'read'                  => true, // Access to wp-admin.
 						'view_wordcamp_reports' => true,
@@ -123,6 +131,7 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 	switch ( $meta_cap ) {
 		case 'wordcamp_manage_mentors':
 		case 'wordcamp_wrangle_wordcamps':
+		case 'wordcamp_wrangle_meetups':
 			$required_caps[] = $meta_cap;
 			break;
 
@@ -131,12 +140,18 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 		case 'edit_published_wordcamps':
 		case 'edit_wordcamp':
 		case 'edit_others_wordcamps':
+			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
+				$required_caps[] = 'wordcamp_wrangle_wordcamps';
+			}
+			break;
+
+		// Allow Meetup Wranglers to edit Meetup posts.
 		case 'edit_wp_meetups':
 		case 'edit_published_wp_meetups':
 		case 'edit_wp_meetup':
 		case 'edit_others_wp_meetups':
-			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
-				$required_caps[] = 'wordcamp_wrangle_wordcamps';
+			if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_meetups' ) ) {
+				$required_caps[] = 'wordcamp_wrangle_meetups';
 			}
 			break;
 
@@ -155,10 +170,8 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 			}
 
 			if ( defined( 'WCPT_MEETUP_SLUG' ) && WCPT_MEETUP_SLUG === $post_type ) {
-				// Use same permission for meetups as well as wordcamps.
-				// TODO: In future consider changing this to wrangle_events.
-				if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_wordcamps' ) ) {
-					$required_caps[] = 'wordcamp_wrangle_wordcamps';
+				if ( $current_user && $current_user->has_cap( 'wordcamp_wrangle_meetups' ) ) {
+					$required_caps[] = 'wordcamp_wrangle_meetups';
 				}
 			}
 			break;

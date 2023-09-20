@@ -43,6 +43,7 @@
 
 li.wcpt-form-header {
 	display: table-caption;
+	width: max-content;
 	font-weight: 700;
 }
 

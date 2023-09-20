@@ -1,5 +1,4 @@
-
-.wordcamp-panel-session-info .components-base-control {
+.wordcamp-panel-session-info > .components-base-control {
 	margin-bottom: 16px;
 }
 
@@ -19,6 +18,14 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
+}
+
+.wordcamp-panel-session-info__duration legend {
+	margin-bottom: 8px;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
 }
 
 .wordcamp-panel-session-info__duration label {
@@ -44,10 +51,14 @@
 	margin-right: 0;
 }
 
+.wc-panel-speaker-info .components-base-control,
+.wc-panel-organizer-info .components-base-control,
 .wc-panel-volunteer-info .components-base-control {
 	margin-bottom: 2em;
 }
 
+.wc-panel-speaker-info .components-base-control:last-child,
+.wc-panel-organizer-info .components-base-control:last-child,
 .wc-panel-volunteer-info .components-base-control:last-child {
 	margin-bottom: 0;
 }

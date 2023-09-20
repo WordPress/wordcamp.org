@@ -370,21 +370,6 @@ function wcorg_disable_admin_pointers() {
 }
 add_action( 'admin_init', 'wcorg_disable_admin_pointers' );
 
-// Prevent password resets, since they need to be done on w.org.
-add_filter( 'allow_password_reset', '__return_false' );
-add_filter( 'show_password_fields', '__return_false' );
-
-/**
- * Redirect users to WordPress.org to reset their passwords.
- *
- * Otherwise, there's nothing to indicate where they can reset it.
- */
-function wcorg_reset_passwords_at_wporg() {
-	wp_redirect( 'https://login.wordpress.org/lostpassword/' );
-	die();
-}
-add_action( 'login_form_lostpassword', 'wcorg_reset_passwords_at_wporg' );
-
 /**
  * Register scripts and styles.
  */
@@ -710,3 +695,18 @@ function wcorg_user_new_wporg_credentials_notice() {
 	<?php
 }
 add_action( 'admin_notices', 'wcorg_user_new_wporg_credentials_notice' );
+
+/**
+ * Fix malformed URLs for the `mu-plugins-private` folder.
+ *
+ * If `plugins_url()` is called for a file in the `mu-plugins-private` directory, then the URL will contain the
+ * absolute path to it, rather than just the URL path. That's because `plugin_basename()` only checks for the regular
+ * `mu-plugins` directory, and doesn't know about `mu-plugins-private`.
+ */
+function fix_mu_plugins_private_urls( string $url ) : string {
+	$search  = 'mu-plugins' . WPMU_PLUGIN_DIR . '-private';
+	$replace = 'mu-plugins-private';
+
+	return str_replace( $search, $replace, $url );
+}
+add_filter( 'plugins_url', 'fix_mu_plugins_private_urls' );

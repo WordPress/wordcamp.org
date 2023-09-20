@@ -1,3 +1,4 @@
+/* eslint-disable */
 jQuery( document ).ready( function( $ ) {
 	'use strict';
 
@@ -35,9 +36,6 @@ jQuery( document ).ready( function( $ ) {
 			paymentCategory.change( app.toggleOtherCategoryDescription );
 			paymentCategory.trigger( 'change' );   // Set the initial state
 
-			currency.change( wcb.setDefaultPaymentMethod );
-			currency.trigger( 'change' );   // Set the initial state
-
 			$( '#row-files' ).find( 'a.wcb-insert-media' ).click( wcb.showUploadModal );
 
 			$('[name="post_status"]').on('change', function() {
@@ -46,6 +44,18 @@ jQuery( document ).ready( function( $ ) {
 
 				$notes.toggle(state);
 				$notes.find('textarea').attr('required', state);
+			}).trigger('change');
+
+			$('#payment_receipt_country_iso3166').on('change', function(e) {
+				const selectedValue = $(this).val();
+			
+				if (selectedValue === 'US') {
+					$('#payment_method_direct_deposit_container, #payment_method_check_container').show();
+				} else {
+					$('#payment_method_direct_deposit_container, #payment_method_check_container').hide();
+				}
+
+				$('#row-payment-method').show();
 			}).trigger('change');
 		},
 

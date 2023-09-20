@@ -312,6 +312,7 @@ class WordCamp_Budgets {
 				 */
 				case 'vendor_country_iso3166':
 				case 'bank_country_iso3166':
+				case 'payment_receipt_country_iso3166':
 				case 'interm_bank_country_iso3166':
 				case 'beneficiary_country_iso3166':
 				case 'check_country':
@@ -376,6 +377,7 @@ class WordCamp_Budgets {
 			'bank_state',
 			'bank_zip_code',
 			'bank_country_iso3166',
+			'payment_receipt_country_iso3166',
 			'bank_bic',
 			'interm_bank_name',
 			'interm_bank_street_address',
@@ -579,11 +581,12 @@ class WordCamp_Budgets {
 	 * @return array
 	 */
 	public static function get_payment_categories() {
-		return array(
+		$categories = array(
 			// Changes here may need to be synchronized with `_get_default_budget()`.
 			'after-party'     => esc_html__( 'After Party',                    'wordcamporg' ),
 			'audio-visual'    => esc_html__( 'Audio Visual',                   'wordcamporg' ),
 			'camera-shipping' => esc_html__( 'Camera Shipping',                'wordcamporg' ),
+			'comped-tickets'  => esc_html__( 'Complimentary Tickets',          'wordcamporg' ),
 			'food-beverages'  => esc_html__( 'Food & Beverage',                'wordcamporg' ),
 			'office-supplies' => esc_html__( 'Office Supplies',                'wordcamporg' ),
 			'signage-badges'  => esc_html__( 'Signage & Badges',               'wordcamporg' ),
@@ -592,6 +595,12 @@ class WordCamp_Budgets {
 			'venue'           => esc_html__( 'Venue',                          'wordcamporg' ),
 			'other'           => esc_html__( 'Other',                          'wordcamporg' ), // This one is intentionally last, regardless of alphabetical order
 		);
+
+		if ( is_wordcamp_type('next-gen') ) {
+			unset($categories['speaker-event'], $categories['after-party'], $categories['camera-shipping']);
+		}
+
+		return $categories;
 	}
 
 	/**

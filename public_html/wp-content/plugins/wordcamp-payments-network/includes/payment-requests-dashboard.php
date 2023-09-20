@@ -340,6 +340,7 @@ class Payment_Requests_Dashboard {
 			'paid',
 			'cancelled-failed',
 			'incomplete',
+			'needs-followup',
 		);
 
 		if ( isset( $_REQUEST['wcp-section'] ) && in_array( $_REQUEST['wcp-section'], $tabs ) ) {
@@ -363,6 +364,7 @@ class Payment_Requests_Dashboard {
 			'paid'             => __( 'Paid', 'wordcamporg' ),
 			'cancelled-failed' => __( 'Cancelled/Failed', 'wordcamporg' ),
 			'incomplete'       => __( 'Incomplete', 'wordcamporg' ),
+			'needs-followup'   => __( 'Needs follow-up', 'wordcamporg' ),
 		);
 
 		foreach ( $sections as $section_key => $section_caption ) {

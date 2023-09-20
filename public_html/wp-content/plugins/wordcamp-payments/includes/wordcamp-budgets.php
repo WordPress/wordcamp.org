@@ -19,8 +19,8 @@ class WordCamp_Budgets {
 		add_action( 'admin_enqueue_scripts',  array( $this, 'enqueue_common_assets' ),             11    );
 		add_filter( 'user_has_cap',           array( __CLASS__, 'user_can_view_payment_details' ), 10, 4 );
 		add_filter( 'default_title',          array( $this, 'set_default_payments_title' ),        10, 2 );
-		add_action( 'add_meta_boxes',         array( $this, 'init_meta_boxes' )       		                );
-		add_action( 'save_post',              array( $this, 'save_request' ),                     10, 2 );
+		add_action( 'add_meta_boxes',         array( $this, 'init_meta_boxes' )                          );
+		add_action( 'save_post',              array( $this, 'save_request' ),                      10, 2 );
 	}
 
 	/**
@@ -29,7 +29,7 @@ class WordCamp_Budgets {
 	public static function register_post_statuses() {
 		// Uses core's draft status too.
 
-		register_post_status( 'wcb-incomplete', array(
+		register_post_status( 'wcb-incomplete', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Incomplete', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -40,7 +40,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-pending-approval', array(
+		register_post_status( 'wcb-pending-approval', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Pending Approval', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -51,7 +51,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-needs-followup', array(
+		register_post_status( 'wcb-needs-followup', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Needs follow-up', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -62,7 +62,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-approved', array(
+		register_post_status( 'wcb-approved', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Approved', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -73,7 +73,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-pending-payment', array(
+		register_post_status( 'wcb-pending-payment', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Payment Sent', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -84,7 +84,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-paid', array(
+		register_post_status( 'wcb-paid', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Paid', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -95,7 +95,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-failed', array(
+		register_post_status( 'wcb-failed', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Failed', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -106,7 +106,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-cancelled', array(
+		register_post_status( 'wcb-cancelled', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'label'       => esc_html_x( 'Cancelled', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -969,7 +969,7 @@ class WordCamp_Budgets {
 		update_post_meta( $post->ID, '_wcbrr_notes', $notes );
 		$this::notify_parties_of_new_note( $post, $new_note );
 
-		$this::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array(
+		$this::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'action' => 'note-added',
 		) );
 	}
@@ -1002,7 +1002,7 @@ class WordCamp_Budgets {
 
 		update_post_meta( $post->ID, '_wcbrr_notes_private', $notes );
 
-		$this::log( $post->ID, get_current_user_id(), __( 'Private note', 'wordcamporg' ), array(
+		$this::log( $post->ID, get_current_user_id(), __( 'Private note', 'wordcamporg' ), array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'action' => 'note-added',
 		) );
 	}

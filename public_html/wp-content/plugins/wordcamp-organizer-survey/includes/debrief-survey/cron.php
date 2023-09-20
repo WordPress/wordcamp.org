@@ -124,9 +124,9 @@ function is_time_to_send_email( $email_id ) {
 
 	$end_date = $wordcamp_post->meta['End Date (YYYY-mm-dd)'][0];
 
-	if ( ! isset( $end_date ) ) {
-		log( 'WordCamp missing end date', $email_id, $wordcamp_post );
-		return false;
+	if ( empty( $end_date ) ) {
+		// Some sites that are only 1-day events will only have the start date.
+		$end_date = $wordcamp_post->meta['Start Date (YYYY-mm-dd)'][0];
 	}
 
 	$date            = new \DateTime("@$end_date ");

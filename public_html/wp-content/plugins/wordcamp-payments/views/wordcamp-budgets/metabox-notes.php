@@ -23,22 +23,24 @@ defined( 'WPINC' ) or die();
 
 <?php endif; ?>
 
-<div>
-	<h3>
-		<label for="wcbrr_new_note">
-			<?php _e( 'Add a Note', 'wordcamporg' ); ?>
-		</label>
+<?php if ( current_user_can( 'view_wordcamp_payment_details', $post->ID ) ) : ?>
+	<div>
+		<h3>
+			<label for="wcbrr_new_note">
+				<?php _e( 'Add a Note', 'wordcamporg' ); ?>
+			</label>
 
-		<?php if ( current_user_can( 'manage_network' ) ) : ?>
-			<p class="description">(visible to organizers)</p>
-		<?php endif; ?>
-	</h3>
+			<?php if ( current_user_can( 'manage_network' ) ) : ?>
+				<p class="description">(visible to organizers)</p>
+			<?php endif; ?>
+		</h3>
 
-	<textarea id="wcbrr_new_note" name="wcbrr_new_note" class="large-text"></textarea>
+		<textarea id="wcbrr_new_note" name="wcbrr_new_note" class="large-text"></textarea>
 
-	<?php submit_button(
-		esc_html__( 'Add Note', 'wordcamporg' ),
-		'secondary',
-		'wcbrr_add_note'
-	); ?>
-</div>
+		<?php submit_button(
+			esc_html__( 'Add Note', 'wordcamporg' ),
+			'secondary',
+			'wcbrr_add_note'
+		); ?>
+	</div>
+<?php endif; ?>

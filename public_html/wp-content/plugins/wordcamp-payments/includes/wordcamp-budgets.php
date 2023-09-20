@@ -873,8 +873,6 @@ class WordCamp_Budgets {
 	 * Register meta boxes
 	 */
 	public function init_meta_boxes() {
-		// global $wcp_payment_request, $post;
-
 		add_meta_box(
 			'wcbrr_notes',
 			esc_html__( 'Notes', 'wordcamporg' ),
@@ -883,6 +881,17 @@ class WordCamp_Budgets {
 			'side',
 			'default'
 		);
+
+		if ( current_user_can( 'manage_network' ) ) {
+			add_meta_box(
+				'wcbrr_notes_private',
+				esc_html__( 'Private notes', 'wordcamporg' ),
+				array( $this, 'render_notes_private_metabox' ),
+				array( 'wcb_reimbursement', 'wcp_payment_request' ),
+				'side',
+				'default'
+			);
+		}
 	}
 
 	/**
@@ -899,6 +908,19 @@ class WordCamp_Budgets {
 	}
 
 	/**
+	 * Render the Private notes metabox
+	 *
+	 * @param WP_Post $post
+	 */
+	public function render_notes_private_metabox( $post ) {
+		wp_nonce_field( 'notes_private', 'notes_private_nonce' );
+
+		$existing_notes = get_post_meta( $post->ID, '_wcbrr_notes_private', true );
+
+		require_once dirname( __DIR__ ) . '/views/wordcamp-budgets/metabox-notes-private.php';
+	}
+
+	/**
 	 * Save the post's data
 	 *
 	 * @param int     $post_id
@@ -911,10 +933,15 @@ class WordCamp_Budgets {
 
 		check_admin_referer( str_replace( '_nonce', '', 'notes_nonce' ), 'notes_nonce' );
 		$this::validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
+
+		if ( current_user_can( 'manage_network' ) ) {
+			check_admin_referer( str_replace( '_nonce', '', 'notes_private_nonce' ), 'notes_private_nonce' );
+			$this::validate_and_save_notes_private( $post, $_POST['wcbrr_new_note_private'] );
+		}
 	}
 
 	/**
-	 * Validate and save expense data
+	 * Validate and save notes.
 	 *
 	 * @param WP_Post $post
 	 * @param string  $new_note_message
@@ -943,6 +970,39 @@ class WordCamp_Budgets {
 		$this::notify_parties_of_new_note( $post, $new_note );
 
 		$this::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array(
+			'action' => 'note-added',
+		) );
+	}
+
+	/**
+	 * Validate and save private notes.
+	 *
+	 * @param WP_Post $post
+	 * @param string  $new_note_message
+	 */
+	public function validate_and_save_notes_private( $post, $new_note_message ) {
+		$new_note_message = sanitize_text_field( wp_unslash( $new_note_message ) );
+
+		if ( empty( $new_note_message ) ) {
+			return;
+		}
+
+		$notes = get_post_meta( $post->ID, '_wcbrr_notes_private', true );
+		if ( ! is_array( $notes ) ) {
+			$notes = array();
+		}
+
+		$new_note = array(
+			'timestamp' => time(),
+			'author_id' => get_current_user_id(),
+			'message'   => $new_note_message,
+		);
+
+		$notes[] = $new_note;
+
+		update_post_meta( $post->ID, '_wcbrr_notes_private', $notes );
+
+		$this::log( $post->ID, get_current_user_id(), __( 'Private note', 'wordcamporg' ), array(
 			'action' => 'note-added',
 		) );
 	}

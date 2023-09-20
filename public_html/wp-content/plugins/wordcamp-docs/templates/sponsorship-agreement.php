@@ -3,80 +3,19 @@
  * Sponsorship Agreement Template
  */
 class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Template {
-	public function form_prefill_select( $data ) {
-		$sponsors = get_posts( array(
-			'post_type' 			=> 'wcb_sponsor',
-			'post_status'			=> 'publish',
-			'posts_per_page'	=> 500,
-		) );
-		?>
-		<style>
-		.wcorg-sponsorship-agreement-form label {
-			display: block;
-			clear: both;
-			margin-top: 12px;
-		}
-
-		.wcorg-sponsorship-agreement-form input,
-		.wcorg-sponsorship-agreement-form textarea,
-		.wcorg-sponsorship-agreement-form select {
-			width: 360px;
-		}
-
-		.wcorg-sponsorship-agreement-form textarea {
-			height: 120px;
-		}
-
-		.wcorg-sponsorship-agreement-form .description {
-			display: block;
-			clear: both;
-		}
-		</style>
-
-		<div class="wcorg-sponsorship-agreement-form">
-			<label><?php _e( 'Sponsor:', 'wordcamporg' ); ?></label>
-			<select name="sponsor_id">
-				<?php foreach ( $sponsors as $sponsor ) : ?>
-					<option value="<?php echo esc_attr( $sponsor->ID ) ?>"><?php echo esc_html( get_the_title( $sponsor ) ) ?></option>
-				<?php endforeach; ?>
-			</select>
-			<span class="description"><?php _e( 'Sponsorship details will be pre-filled with the data on sponsor post.', 'wordcamporg' ); ?></span>
-
-			<label><?php _e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
-			<textarea name="sponsorship_benefits"><?php echo esc_textarea( $data['sponsorship_benefits'] ); ?></textarea>
-			<span class="description"><?php _e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
-		</div>
-
-		<?php
-	}
-
 	public function form( $data ) {
-		$date_format = get_option( 'date_format' );
-
-		$sponsor_id  			= absint( $data['sponsor_id'] );
-		$sponsor_amount 	= get_post_meta( $sponsor_id, '_wcb_sponsor_amount', true );
-		$sponsor_currency	= get_post_meta( $sponsor_id, '_wcb_sponsor_currency', true );
-
-		$wordcamp    = get_wordcamp_post();
-		$start_date  = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? date( $date_format, $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) : '';
-		$end_date    = ! empty( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   ? date( $date_format, $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   : $start_date;
-
-		$number_formatter 	= new NumberFormatter( get_locale(), NumberFormatter::SPELLOUT );
-		$sponsorship_amount = $number_formatter->format( $sponsor_amount ) . " {$sponsor_currency}";
-
-		$number_formatter 			= new NumberFormatter( get_locale(), NumberFormatter::CURRENCY );
-		$sponsorship_amount_num = $number_formatter->formatCurrency( $sponsor_amount, $sponsor_currency );
-
 		$data = wp_parse_args( $data, array(
-			'sponsor_name'						=> get_the_title( $sponsor_id ),
-			'sponsor_rep_name'				=> get_post_meta( $sponsor_id, '_wcpt_sponsor_first_name', true ) . ' ' . get_post_meta( $sponsor_id, '_wcpt_sponsor_last_name', true ),
-			'sponsor_rep_title' 			=> '',
-			'agreement_date' 					=> wp_date( $date_format ),
-			'wordcamp_location' 			=> $wordcamp->meta['Location'][0],
-			'wordcamp_date' 					=> ( $start_date !== $end_date ) ? "{$start_date} - {$end_date}" : $start_date,
-			'sponsorship_amount'			=> $sponsorship_amount,
-			'sponsorship_amount_num'	=> $sponsorship_amount_num,
-			'sponsorship_benefits'		=> '',
+			'sponsor_name' => '',
+			'sponsor_rep_name' => '',
+			'sponsor_rep_title' => '',
+
+			'agreement_date' => '',
+			'wordcamp_location' => '',
+			'wordcamp_date' => '',
+
+			'sponsorship_amount' => '',
+			'sponsorship_amount_num' => '',
+			'sponsorship_benefits' => '',
 		) );
 		?>
 		<style>
@@ -89,7 +28,7 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		.wcorg-sponsorship-agreement-form input,
 		.wcorg-sponsorship-agreement-form textarea,
 		.wcorg-sponsorship-agreement-form select {
-			width: 360px;
+			width: 240px;
 		}
 
 		.wcorg-sponsorship-agreement-form textarea {
@@ -323,7 +262,6 @@ h2 {
 	public function sanitize( $input ) {
 		$output = array();
 		foreach ( array(
-			'sponsor_id',
 			'sponsor_name',
 			'sponsor_rep_name',
 			'sponsor_rep_title',

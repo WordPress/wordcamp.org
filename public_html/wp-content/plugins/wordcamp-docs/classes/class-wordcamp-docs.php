@@ -86,36 +86,20 @@ class WordCamp_Docs {
 
 		// Check selected template on any step.
 		$templates = self::get_templates();
-		$template_selected = sanitize_text_field( $_POST['wcdocs_template'] );
-		if ( ! array_key_exists( $template_selected, $templates ) )
+		$template = sanitize_text_field( $_POST['wcdocs_template'] );
+		if ( ! array_key_exists( $template, $templates ) )
 			return self::error( __( 'Selected template does not exist', 'wordcamporg' ) );
 
-		$template = $templates[ $template_selected ];
+		$template = $templates[ $template ];
 
 		switch ( $step ) {
 			case 1: // submitted step 1
 
-				if ( 'sponsorship-agreement' == $template_selected ) {
-					self::$step = 10;
-				} else {
-					// Nothing else to check on this step.
-					self::$step = 20;
-				}
-
+				// Nothing else to check on this step.
+				self::$step = 2;
 				break;
 
-			case 10; // submitted step 10
-				// Sanitize input
-				$data = $template->sanitize( $_POST );
-
-				if ( 'sponsorship-agreement' == $template_selected ) {
-					if ( 'wcb_sponsor' === get_post_type( $data['sponsor_id'] ) ) {
-						self::$step = 20;
-					}
-				}
-				break;
-
-			case 20: // submitted step 20
+			case 2: // submitted step 2
 
 				require_once( WORDCAMP_DOCS__PLUGIN_DIR . 'classes/class-wordcamp-docs-pdf-generator.php' );
 				$generator = new WordCamp_Docs_PDF_Generator;
@@ -182,29 +166,12 @@ class WordCamp_Docs {
 					</p>
 				</form>
 
-				<?php elseif ( self::$step == 10 ) : ?>
+			<?php elseif ( self::$step == 2 ) : ?>
 
 				<form method="POST">
-					<input type="hidden" name="wcdocs_submit" value="10" />
+					<input type="hidden" name="wcdocs_submit" value="2" />
 					<input type="hidden" name="wcdocs_template" value="<?php echo esc_attr( $_POST['wcdocs_template'] ); ?>">
-					<?php wp_nonce_field( 'wcdocs_step_10' ); ?>
-
-					<?php
-						$template = self::get_template( $_POST['wcdocs_template'] );
-						$template->form_prefill_select( $_POST );
-					?>
-
-					<p class="submit">
-						<input type="submit" class="button-primary" value="Next &rarr;">
-					</p>
-				</form>
-
-			<?php elseif ( self::$step == 20 ) : ?>
-
-				<form method="POST">
-					<input type="hidden" name="wcdocs_submit" value="20" />
-					<input type="hidden" name="wcdocs_template" value="<?php echo esc_attr( $_POST['wcdocs_template'] ); ?>">
-					<?php wp_nonce_field( 'wcdocs_step_20' ); ?>
+					<?php wp_nonce_field( 'wcdocs_step_2' ); ?>
 
 					<?php
 						$template = self::get_template( $_POST['wcdocs_template'] );

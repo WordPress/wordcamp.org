@@ -3,9 +3,9 @@
  * Allows event organizers to track which attendees showed up to the event.
  */
 class CampTix_Attendance extends CampTix_Addon {
-	public $secret    = '';
-	public $questions = array();
-  public $secret_expiry = '2 weeks';
+	public $secret        = '';
+	public $questions     = array();
+	public $secret_expiry = '2 weeks';
 
 	/**
 	 * Runs during CampTix init.
@@ -356,9 +356,9 @@ class CampTix_Attendance extends CampTix_Addon {
 		<label for="camptix-attendance-generate"><?php esc_html_e( 'Generate a new secret link (old links will expire)', 'wordcamporg' ); ?></label>
 		<p class="description">
 			<?php if ( empty( $this->secret_generated ) ) {
-				echo sprintf( esc_html__( "Link will expire automatically after two weeks from generating it.", 'wordcamporg' ), $this->secret_expiry );
+				printf( esc_html__( 'Link will expire automatically after two weeks from generating it.', 'wordcamporg' ), $this->secret_expiry );
 			} else {
-				echo sprintf( esc_html__( "Link will expire automatically on %s.", 'wordcamporg' ), wp_date( 'Y-m-d H:i:s', strtotime( "+{$this->secret_expiry}", strtotime( $this->secret_generated ) ) ) );
+				printf( esc_html__( 'Link will expire automatically on %s.', 'wordcamporg' ), wp_date( 'Y-m-d H:i:s', strtotime( "+{$this->secret_expiry}", strtotime( $this->secret_generated ) ) ) );
 			} ?>
 		</p>
 		<?php

@@ -5,6 +5,8 @@
 class CampTix_Attendance extends CampTix_Addon {
 	public $secret    = '';
 	public $questions = array();
+  public $secret_expiry = '2 weeks';
+
 	/**
 	 * Runs during CampTix init.
 	 */
@@ -23,6 +25,7 @@ class CampTix_Attendance extends CampTix_Addon {
 			return;
 
 		$this->secret = $camptix_options['attendance-secret'];
+		$this->secret_generated = $camptix_options['attendance-secret-generated'];
 
 		if ( isset( $camptix_options['attendance-questions'] ) ) {
 			$this->questions = $camptix_options['attendance-questions'];
@@ -30,6 +33,14 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		if ( empty( $camptix_options['attendance-enabled'] ) )
 			return;
+
+		// If secret has expired, trun the UI off, reset link and do not allow setup for UI use.
+		if ( strtotime( $this->secret_generated ) < strtotime( "-{$this->secret_expiry}" ) ) {
+			$camptix_options['attendance-enabled'] = 0;
+			$camptix_options['attendance-secret'] = '';
+			update_option( 'camptix_options', $camptix_options );
+			return;
+		}
 
 		add_filter( 'wp_ajax_camptix-attendance', array( $this, 'ajax_callback' ) );
 		add_filter( 'wp_ajax_nopriv_camptix-attendance', array( $this, 'ajax_callback' ) );
@@ -321,9 +332,7 @@ class CampTix_Attendance extends CampTix_Addon {
 		add_settings_section( 'general', esc_html__( 'Attendance UI', 'wordcamporg' ), array( $this, 'setup_controls_section' ), 'camptix_options' );
 
 		// Fields
-		$camptix->add_settings_field_helper( 'attendance-enabled', esc_html__( 'Enabled', 'wordcamporg' ), 'field_yesno', 'general',
-			esc_html__( "Don't forget to disable the UI after the event is over.", 'wordcamporg' )
-		);
+		$camptix->add_settings_field_helper( 'attendance-enabled', esc_html__( 'Enabled', 'wordcamporg' ), 'field_yesno', 'general' );
 
 		add_settings_field( 'attendance-questions', esc_html__( 'Questions', 'wordcamporg' ), array( $this, 'field_questions' ), 'camptix_options', 'general', esc_html__( 'Show these additional ticket questions in the UI.', 'wordcamporg' ) );
 
@@ -344,6 +353,13 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		<input id="camptix-attendance-generate" type="checkbox" name="camptix_options[attendance-generate]" value="1" />
 		<label for="camptix-attendance-generate"><?php esc_html_e( 'Generate a new secret link (old links will expire)', 'wordcamporg' ); ?></label>
+		<p class="description">
+			<?php if ( empty( $this->secret_generated ) ) {
+				echo sprintf( esc_html__( "Link will expire automatically after two weeks from generating it.", 'wordcamporg' ), $this->secret_expiry );
+			} else {
+				echo sprintf( esc_html__( "Link will expire automatically on %s.", 'wordcamporg' ), wp_date( 'Y-m-d H:i:s', strtotime( "+{$this->secret_expiry}", strtotime( $this->secret_generated ) ) ) );
+			} ?>
+		</p>
 		<?php
 	}
 
@@ -390,8 +406,10 @@ class CampTix_Attendance extends CampTix_Addon {
 		if ( isset( $input['attendance-enabled'] ) )
 			$output['attendance-enabled'] = (bool) $input['attendance-enabled'];
 
-		if ( ! empty( $input['attendance-generate'] ) )
+		if ( ! empty( $input['attendance-generate'] ) ) {
 			$output['attendance-secret'] = wp_generate_password( 32, false, false );
+			$output['attendance-secret-generated'] = wp_date( 'Y-m-d H:i:s' );
+		}
 
 		if ( ! empty( $input['attendance-questions'] ) ) {
 			$output['attendance-questions'] = array_map( 'intval', $input['attendance-questions'] );

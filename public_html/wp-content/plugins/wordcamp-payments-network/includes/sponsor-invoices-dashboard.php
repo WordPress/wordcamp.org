@@ -384,6 +384,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 		}
 	} elseif ( 'paid' === $new_status ) {
 		$status_message = "has been paid by $sponsor_name. Go ahead and publish them to your website!";
+		$attachment_message = "\nWe have sent an email of received payment to the sponsor as well.";
 	} else {
 		return;
 	}

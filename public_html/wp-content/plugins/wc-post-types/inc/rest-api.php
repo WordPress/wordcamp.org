@@ -739,7 +739,7 @@ function register_fav_sessions_email() {
 					'validate_callback' => function( $value, $request, $param ) {
 						$pages = get_posts( array(
 							'name'        => $value,
-							'post_type'	  => 'page',
+							'post_type'   => 'page',
 							'post_status' => 'publish',
 							'fields'      => 'ids',
 						) );

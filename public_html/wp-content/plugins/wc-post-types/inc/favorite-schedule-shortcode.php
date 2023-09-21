@@ -542,7 +542,7 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	// Page by slug existance validated in REST API.
 	$pages = get_posts( array(
 		'name'        => $page_slug,
-		'post_type'	  => 'page',
+		'post_type'   => 'page',
 		'post_status' => 'publish',
 		'fields'      => 'ids',
 	) );

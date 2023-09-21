@@ -30,6 +30,10 @@ add_action( 'transition_post_status', __NAMESPACE__ . '\transition_post_status',
 add_filter( 'map_meta_cap',        __NAMESPACE__ . '\modify_capabilities', 10, 4 );
 add_filter( 'display_post_states', __NAMESPACE__ . '\display_post_states', 10, 2 );
 
+// Columns.
+add_filter( 'manage_'. POST_TYPE .'_posts_columns',       __NAMESPACE__ . '\get_columns' );
+add_action( 'manage_'. POST_TYPE .'_posts_custom_column', __NAMESPACE__ . '\render_columns', 10, 2 );
+
 /**
  * Register the custom post type
  *
@@ -409,6 +413,64 @@ function display_post_states( $states, $post ) {
 	}
 
 	return $states;
+}
+
+/**
+ * Define columns for the Vendor Payments screen.
+ *
+ * @param array $_columns
+ * @return array
+ */
+function get_columns( $_columns ) {
+	$columns = array(
+		'cb'             => $_columns['cb'],
+		'author'         => esc_html__( 'Author' ),
+		'title'          => $_columns['title'],
+		'date'           => $_columns['date'],
+		'payment_amount' => esc_html__( 'Amount', 'wordcamporg' ),
+		'expenses'       => esc_html__( 'Expenses', 'wordcamporg' ),
+	);
+
+	return $columns;
+}
+
+/**
+ * Render custom columns on the Vendor Payments screen.
+ *
+ * @param string $column
+ * @param int    $post_id
+ */
+function render_columns( $column, $post_id ) {
+	switch ( $column ) {
+		case 'payment_amount':
+			$currency = get_post_meta( $post_id, '_wcbrr_currency', true );
+			if ( $currency && false === strpos( $currency, 'null' ) ) {
+				echo esc_html( $currency ) . ' ';
+			}
+
+			$total    = 0;
+			$expenses = get_post_meta( $post_id, '_wcbrr_expenses', true );
+			if ( is_array( $expenses ) ) {
+				foreach ( $expenses as $expense ) {
+					$total += $expense['_wcbrr_amount'];
+				}
+			}
+
+			echo esc_html( $total );
+			break;
+
+		case 'expenses':
+			$currency = get_post_meta( $post_id, '_wcbrr_currency', true );
+
+			$expenses = get_post_meta( $post_id, '_wcbrr_expenses', true );
+			if ( is_array( $expenses ) ) {
+				foreach ( $expenses as $expense ) {
+					echo esc_html( "{$expense['_wcbrr_description']} ({$expense['_wcbrr_amount']} {$currency})<br/>" );
+				}
+			}
+
+			break;
+	}
 }
 
 /**

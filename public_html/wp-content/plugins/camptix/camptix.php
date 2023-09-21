@@ -6076,9 +6076,7 @@ class CampTix_Plugin {
 						$edit_link = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
 						$first_name = get_post_meta( $attendee->ID, 'tix_first_name', true );
 						$last_name = get_post_meta( $attendee->ID, 'tix_last_name', true );
-
-						if ( $this->is_refundable( $attendee->ID ) )
-							$is_refundable = true;
+						$is_refundable = $this->is_refundable( $attendee->ID )
 					?>
 					<tr>
 						<td>
@@ -6111,8 +6109,12 @@ class CampTix_Plugin {
 
 			</tbody>
 		</table>
-		<?php if ( $is_refundable ) : ?>
-		<p><?php printf( __( "Change of plans? Made a mistake? Don't worry, you can %s.", 'wordcamporg' ), '<a href="' . esc_url( $this->get_refund_tickets_link( $access_token ) ) . '">' . __( 'request a refund', 'wordcamporg' ) . '</a>' ); ?></p>
+		<?php if ( $is_refundable ) :
+			if ( is_wp_error( $is_refundable ) ) : ?>
+				<p><?php echo esc_html( sprintf( __( 'Sorry, refund is not possible. %s', 'wordcamporg' ), $is_refundable->get_error_message() ) ) ?></p>
+			<?php else : ?>
+				<p><?php printf( __( "Change of plans? Made a mistake? Don't worry, you can %s.", 'wordcamporg' ), '<a href="' . esc_url( $this->get_refund_tickets_link( $access_token ) ) . '">' . __( 'request a refund', 'wordcamporg' ) . '</a>' ); ?></p>
+			<?php endif; ?>
 		<?php endif; ?>
 		</div><!-- #tix -->
 		<?php
@@ -6358,20 +6360,6 @@ class CampTix_Plugin {
 		// Clean things up before and after the shortcode.
 		$post->post_content = apply_filters( 'camptix_post_content_override', $this->shortcode_str, $post->post_content, $_GET['tix_action'] );
 
-		if ( ! $this->options['refunds_enabled'] || ! isset( $_REQUEST['tix_access_token'] ) || ! ctype_alnum( $_REQUEST['tix_access_token'] ) ) {
-			$this->error_flags['invalid_access_token'] = true;
-			$this->redirect_with_error_flags();
-			die();
-		}
-
-		$today = date( 'Y-m-d' );
-		$refunds_until = $this->options['refunds_date_end'];
-		if ( ! strtotime( $refunds_until ) || strtotime( $refunds_until ) < strtotime( $today ) ) {
-			$this->error_flags['cannot_refund'] = true;
-			$this->redirect_with_error_flags();
-			die();
-		}
-
 		$access_token = $_REQUEST['tix_access_token'];
 
 		// Let's get one attendee
@@ -6401,6 +6389,14 @@ class CampTix_Plugin {
 		$tickets = array();
 
 		foreach ( $attendees as $attendee ) {
+			$is_refundable = $this->is_refundable( $attendee->ID );
+			if ( is_wp_error( $is_refundable ) || ! $is_refundable ) {
+				$this->log( 'Tried refund, but transaction is not refundable', $attendee->ID );
+				$this->error_flags['cannot_refund'] = true;
+				$this->redirect_with_error_flags();
+				die();
+			}
+
 			$txn_id = get_post_meta( $attendee->ID, 'tix_transaction_id', true );
 			if ( $txn_id ) {
 				$transactions[ $txn_id ]                   = get_post_meta( $attendee->ID, 'tix_transaction_details', true );
@@ -6419,6 +6415,7 @@ class CampTix_Plugin {
 		}
 
 		if ( count( $transactions ) != 1 || $transactions[ $txn_id ]['payment_amount'] <= 0 ) {
+			$this->log( 'Tried refund, but tno ransaction or payment amount 0', $attendee->ID );
 			$this->error_flags['cannot_refund'] = true;
 			$this->redirect_with_error_flags();
 			die();
@@ -6426,6 +6423,7 @@ class CampTix_Plugin {
 
 		$transaction = array_shift( $transactions );
 		if ( ! $transaction['receipt_email'] || ! $transaction['transaction_id'] || ! $transaction['payment_amount'] ) {
+			$this->log( 'Tried refund, but problems with original transaction', $attendee->ID );
 			$this->error_flags['cannot_refund'] = true;
 			$this->redirect_with_error_flags();
 			die();
@@ -6445,6 +6443,7 @@ class CampTix_Plugin {
 
 				// Bail if a payment method does not exist.
 				if ( ! $payment_method_obj ) {
+					$this->log( 'Tried refund, but payment method does not exist', $attendee->ID );
 					$this->error_flags['cannot_refund'] = true;
 					$this->redirect_with_error_flags();
 					die();
@@ -6548,26 +6547,40 @@ class CampTix_Plugin {
 	 * Return true if an attendee_id is refundable.
 	 */
 	function is_refundable( $attendee_id ) {
-		if ( ! $this->options['refunds_enabled'] )
+		if ( ! $this->options['refunds_enabled'] ) {
 			return false;
+		}
 
-		$payment_method = get_post_meta( $attendee_id, 'tix_payment_method', true );
-		$payment_method_obj = $this->get_payment_method_by_id( $payment_method );
-		if ( ! $payment_method_obj || ! $payment_method_obj->supports_feature( 'refund-single' ) )
-			return false;
-
-		$today = date( 'Y-m-d' );
+		$today         = date( 'Y-m-d' );
 		$refunds_until = $this->options['refunds_date_end'];
 
-		if ( ! strtotime( $refunds_until ) )
+		if ( ! strtotime( $refunds_until ) ) {
 			return false;
+		}
 
-		if ( strtotime( $refunds_until ) < strtotime( $today ) )
+		if ( strtotime( $refunds_until ) < strtotime( $today ) ) {
 			return false;
+		}
 
-		$attendee = get_post( $attendee_id );
-		if ( $attendee->post_status == 'publish' && (float) get_post_meta( $attendee->ID, 'tix_order_total', true ) > 0 && get_post_meta( $attendee->ID, 'tix_transaction_id', true ) )
+		$payment_method     = get_post_meta( $attendee_id, 'tix_payment_method', true );
+		$payment_method_obj = $this->get_payment_method_by_id( $payment_method );
+
+		if ( ! $payment_method_obj || ! $payment_method_obj->supports_feature( 'refund-single' ) ) {
+			return false;
+		}
+
+		$attendee      = get_post( $attendee_id );
+		$payment_token = get_post_meta( $attendee->ID, 'tix_payment_token', true );
+		$is_refundable = $payment_method_obj->transaction_is_refundable( $payment_token );
+
+		if ( is_wp_error( $is_refundable ) ) {
+			var_dump( $is_refundable );
+			return $is_refundable;
+		}
+
+		if ( $attendee->post_status == 'publish' && (float) get_post_meta( $attendee->ID, 'tix_order_total', true ) > 0 && get_post_meta( $attendee->ID, 'tix_transaction_id', true ) ) {
 			return true;
+		}
 
 		return false;
 	}

@@ -16,6 +16,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	public $id          = 'paypal';
 	public $name        = 'PayPal';
 	public $description = 'PayPal Express Checkout';
+	protected $refund_expiry = 90; // days.
 
 	public $supported_currencies = array( 'AUD', 'CAD', 'EUR', 'GBP', 'JPY', 'USD', 'NZD', 'CHF', 'HKD', 'SGD', 'SEK',
 		'DKK', 'PLN', 'NOK', 'HUF', 'CZK', 'ILS', 'MXN', 'BRL', 'MYR', 'PHP', 'TWD', 'THB', 'TRY',
@@ -736,6 +737,30 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		$payload['PAYMENTREQUEST_0_CURRENCYCODE'] = $this->camptix_options['currency'];
 
 		return $payload;
+	}
+
+	/**
+	 * Check if the transaction is refundable.
+	 *
+	 * @param  string $payment_token
+	 *
+	 * @return bool|obj WP_Error or boolean false if not refundable
+	 */
+	public function transaction_is_refundable( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		if ( empty( $this->refund_expiry ) ) {
+			return false;
+		}
+
+		$txn_details = $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_details' );
+
+		if ( $txn_details['raw']['raw']['TIMESTAMP'] + ( $this->refund_expiry * DAY_IN_SECONDS ) < time() ) {
+			return new WP_Error('refund-expired', sprintf( __( 'PayPal only allows refund within %d days of payment.', 'camptix' ), $this->refund_expiry ) );
+		}
+
+		return true;
 	}
 
 	/**

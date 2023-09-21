@@ -217,6 +217,17 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	abstract function payment_checkout( $payment_token );
 
 	/**
+	 * Check if the transaction is refundable.
+	 *
+	 * @param  string $payment_token
+	 *
+	 * @return bool|obj WP_Error or boolean false if not refundable
+	 */
+	function transaction_is_refundable( $payment_token ) {
+		return true; // To maintain backwards compatibility, default to refundable.
+	}
+
+	/**
 	 * Handle the refund process
 	 *
 	 * @param string $payment_token

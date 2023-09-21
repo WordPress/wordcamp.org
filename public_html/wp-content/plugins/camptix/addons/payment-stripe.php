@@ -1,9 +1,10 @@
 <?php
 
 class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
-	public $id          = 'stripe';
-	public $name        = 'Credit Card (Stripe)';
-	public $description = 'Credit card processing, powered by Stripe.';
+	public $id               = 'stripe';
+	public $name             = 'Credit Card (Stripe)';
+	public $description      = 'Credit card processing, powered by Stripe.';
+	protected $refund_expiry = 90; // days.
 
 	/**
 	 * See https://support.stripe.com/questions/which-currencies-does-stripe-support.
@@ -502,6 +503,30 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			// Unfortunately there's no way to remove the following failure message, but at least ours will display first:
 			// A payment error has occurred, looks like chosen payment method is not responding. Please try again later.
 		}
+	}
+
+	/**
+	 * Check if the transaction is refundable.
+	 *
+	 * @param  string $payment_token
+	 *
+	 * @return bool|obj WP_Error or boolean false if not refundable
+	 */
+	public function transaction_is_refundable( $payment_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		if ( empty( $this->refund_expiry ) ) {
+			return false;
+		}
+
+		$txn_details = $camptix->get_post_meta_from_payment_token( $payment_token, 'tix_transaction_details' );
+
+		if ( $txn_details['raw']['charge']['created'] + ( $this->refund_expiry * DAY_IN_SECONDS ) < time() ) {
+			return new WP_Error('refund-expired', sprintf( __( 'Stripe only allows refund within %d days of payment.', 'camptix' ), $this->refund_expiry ) );
+		}
+
+		return true;
 	}
 
 	/**

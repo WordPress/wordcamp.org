@@ -356,9 +356,9 @@ class CampTix_Attendance extends CampTix_Addon {
 		<label for="camptix-attendance-generate"><?php esc_html_e( 'Generate a new secret link (old links will expire)', 'wordcamporg' ); ?></label>
 		<p class="description">
 			<?php if ( empty( $this->secret_generated ) ) {
-				echo esc_html( sprintf( _( 'Link will expire automatically after two weeks from generating it.', 'wordcamporg' ), $this->secret_expiry ) );
+				echo esc_html( sprintf( __( 'Link will expire automatically after two weeks from generating it.', 'wordcamporg' ), $this->secret_expiry ) );
 			} else {
-				echo esc_html( sprintf( _( 'Link will expire automatically on %s.', 'wordcamporg' ), wp_date( 'Y-m-d H:i:s', strtotime( "+{$this->secret_expiry}", strtotime( $this->secret_generated ) ) ) ) );
+				echo esc_html( sprintf( __( 'Link will expire automatically on %s.', 'wordcamporg' ), wp_date( 'Y-m-d H:i:s', strtotime( "+{$this->secret_expiry}", strtotime( $this->secret_generated ) ) ) ) );
 			} ?>
 		</p>
 		<?php

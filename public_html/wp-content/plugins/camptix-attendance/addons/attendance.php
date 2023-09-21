@@ -38,6 +38,7 @@ class CampTix_Attendance extends CampTix_Addon {
 		if ( strtotime( $this->secret_generated ) < strtotime( "-{$this->secret_expiry}" ) ) {
 			$camptix_options['attendance-enabled'] = 0;
 			$camptix_options['attendance-secret'] = '';
+			$camptix_options['attendance-secret-generated'] = '';
 			update_option( 'camptix_options', $camptix_options );
 			return;
 		}

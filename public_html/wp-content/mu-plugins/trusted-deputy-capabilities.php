@@ -3,7 +3,10 @@
 namespace WordCamp\Trusted_Deputy_Capabilities;
 
 /*
- * Allow trusted WordCamp Deputies to perform limited Super Admin functions
+ * Allow trusted WordCamp Deputies to perform limited Super Admin functions.
+ *
+ * "Super Deputy" and "Trusted Deputy" are legacy terms from pre-2023. The current term is "Program Manager".
+ * See https://make.wordpress.org/community/2023/06/06/updates-to-the-community-team-mentor-program/
  *
  * They should be able to:
  *  - Perform administrator-level functions on all sites

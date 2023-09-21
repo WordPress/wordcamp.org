@@ -62,6 +62,7 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 					'read'                       => true, // Access to wp-admin.
 					'wordcamp_manage_mentors'    => true,
 					'wordcamp_wrangle_wordcamps' => true,
+					'wordcamp_wrangle_meetups'   => true,
 				);
 				break;
 

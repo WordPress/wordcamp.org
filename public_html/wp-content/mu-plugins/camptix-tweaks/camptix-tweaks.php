@@ -12,7 +12,6 @@ add_action( 'camptix_admin_notices',                         __NAMESPACE__ . '\s
 add_filter( 'camptix_dashboard_paypal_credentials',          __NAMESPACE__ . '\paypal_credentials'                  );
 add_filter( 'camptix_paypal_predefined_accounts',            __NAMESPACE__ . '\paypal_credentials'                  );
 add_filter( 'camptix_stripe_predefined_accounts',            __NAMESPACE__ . '\stripe_credentials'                  );
-add_action( 'init',                                          __NAMESPACE__ . '\hide_empty_tickets'                  );
 add_action( 'wp_print_styles',                               __NAMESPACE__ . '\print_login_message_styles'          );
 add_filter( 'camptix_require_login_please_login_message',    __NAMESPACE__ . '\override_please_login_message'       );
 add_action( 'camptix_checkout_start',                        __NAMESPACE__ . '\check_ip_throttling'                 );
@@ -22,6 +21,18 @@ add_action( 'transition_post_status',                        __NAMESPACE__ . '\t
 add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 3 );
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
 add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
+
+/**
+ * Show empty tickets
+ *
+ * This provides a way for individual WordCamps to decide if they want to show sold-out tickets in the [tickets]
+ * shortcode output. This can help avoid confusion if the camp has several types of tickets (e.g., General
+ * Admission, Micro-sponsorship, etc) and the General Admission ticket sells out. If the General Admission ticket
+ * was hidden, some users may mistakenly think that the Micro-sponsorship ticket is the "normal" ticket, even
+ * though it costs several hundred dollars. Since we value keeping regular tickets accessible by as many people
+ * as possible, we don't want anyone getting the impression that WordCamps are expensive to attend.
+ */
+add_filter( 'camptix_hide_empty_tickets',                    '__return_false' );
 
 // Attendees
 add_filter( 'camptix_name_order',                            __NAMESPACE__ . '\set_name_order'                      );
@@ -204,29 +215,6 @@ function stripe_credentials( $credentials ) {
 	}
 
 	return $credentials;
-}
-
-/**
- * Show empty tickets
- *
- * This provides a way for individual WordCamps to decide if they want to show sold-out tickets in the [tickets]
- * shortcode output. This can help avoid confusion if the camp has several types of tickets (e.g., General
- * Admission, Micro-sponsorship, etc) and the General Admission ticket sells out. If the General Admission ticket
- * was hidden, some users may mistakenly think that the Micro-sponsorship ticket is the "normal" ticket, even
- * though it costs several hundred dollars. Since we value keeping regular tickets accessible by as many people
- * as possible, we don't want anyone getting the impression that WordCamps are expensive to attend.
- *
- * @todo change this to use feature-flags similar to the skip-feature flags
- */
-function hide_empty_tickets() {
-	$targeted_wordcamps_ids = array(
-		299, // San Francisco 2013
-		364, // San Francisco 2014
-	);
-
-	if ( in_array( get_current_blog_id(), $targeted_wordcamps_ids ) ) {
-		add_filter( 'camptix_hide_empty_tickets', '__return_false' );
-	}
 }
 
 /**

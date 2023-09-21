@@ -68,7 +68,6 @@ function add_email() {
 	);
 
 	if ( $email_id > 0 ) {
-		update_post_meta( $email_id, 'tix_email_recipients_backup', array() );
 		update_option( EMAIL_KEY_ID, $email_id );
 	}
 }

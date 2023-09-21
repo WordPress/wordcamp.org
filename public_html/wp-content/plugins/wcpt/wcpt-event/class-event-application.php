@@ -262,10 +262,10 @@ abstract class Event_Application {
 			'CC: '. EMAIL_CENTRAL_SUPPORT,
 		);
 
-		//translators: Name and city of the event. E.g. WordCamp New York.
+		//translators: 1: Name of the event. 2: City of the event.
 		$message = sprintf(
 			__(
-				"Thank you for applying to organize a %1\$s in %2\$s! We'll send you a follow-up e-mail once we've had a chance to review your application.",
+				"Thank you for applying to organize a %1$s in %2$s! We'll send you a follow-up e-mail once we've had a chance to review your application.",
 				'wordcamporg'
 			),
 			$this->get_event_label(),

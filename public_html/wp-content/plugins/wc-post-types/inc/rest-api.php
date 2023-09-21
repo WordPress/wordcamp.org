@@ -733,6 +733,27 @@ function register_fav_sessions_email() {
 						return implode( ',', array_filter( $session_ids, 'is_numeric' ) );
 					},
 				),
+
+				'page-slug'     => array(
+					'required'          => true,
+					'validate_callback' => function( $value, $request, $param ) {
+						$pages = get_posts( array(
+							'name'        => $value,
+							'post_type'	  => 'page',
+							'post_status' => 'publish',
+							'fields'      => 'ids',
+						) );
+
+						if ( empty( $pages ) ) {
+							return false;
+						}
+
+						return true;
+					},
+					'sanitize_callback' => function( $value, $request, $param ) {
+						return sanitize_title( $value );
+					},
+				),
 			),
 		)
 	);

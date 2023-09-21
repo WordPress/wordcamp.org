@@ -6574,7 +6574,6 @@ class CampTix_Plugin {
 		$is_refundable = $payment_method_obj->transaction_is_refundable( $payment_token );
 
 		if ( is_wp_error( $is_refundable ) ) {
-			var_dump( $is_refundable );
 			return $is_refundable;
 		}
 

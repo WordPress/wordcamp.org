@@ -22,13 +22,16 @@ class WordCamp_Forms_To_Drafts {
 	 * Constructor
 	 */
 	public function __construct() {
-		add_action( 'wp_print_styles',          array( $this, 'print_front_end_styles'      )        );
-		add_action( 'wp_enqueue_scripts',       array( $this, 'enqueue_inert_script'        )        );
-		add_filter( 'the_content',              array( $this, 'force_login_to_use_form'     ),  8    );
-		add_action( 'template_redirect',        array( $this, 'populate_form_based_on_user' ),  9    );
-		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_sponsors'           ), 10, 3 );
-		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_speakers'           ), 10, 3 );
-		add_action( 'grunion_pre_message_sent', array( $this, 'call_for_volunteers'         ), 10, 3 );
+		add_action( 'wp_print_styles',                    array( $this, 'print_front_end_styles'      )        );
+		add_action( 'wp_enqueue_scripts',                 array( $this, 'enqueue_inert_script'        )        );
+		add_filter( 'the_content',                        array( $this, 'force_login_to_use_form'     ),  8    );
+		add_action( 'template_redirect',                  array( $this, 'populate_form_based_on_user' ),  9    );
+		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_sponsors'           ), 10, 3 );
+		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_speakers'           ), 10, 3 );
+		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_volunteers'         ), 10, 3 );
+		add_filter( 'jetpack_contact_form_email_headers', array( $this, 'maybe_modify_email_headers'  ), 10, 4 );
+		add_filter( 'contact_form_subject',               array( $this, 'maybe_modify_email_subject'  ), 10, 2 );
+		add_filter( 'contact_form_message',               array( $this, 'maybe_modify_email_message'  ), 10, 2 );
 	}
 
 	/**
@@ -251,6 +254,17 @@ class WordCamp_Forms_To_Drafts {
 	}
 
 	/**
+	 * Help identify the form by key.
+	 *
+	 * @param  int $form_id
+	 *
+	 * @return string | false
+	 */
+	protected function get_form_key_by_id( $form_id ) {
+		return get_post_meta( $form_id, 'wcfd-key', true );
+	}
+
+	/**
 	 * Get a user's ID based on their username.
 	 *
 	 * @param string $username
@@ -413,6 +427,87 @@ class WordCamp_Forms_To_Drafts {
 			update_post_meta( $draft_id, '_wcpt_user_name', $volunteer_user->user_login ?? '' );
 			update_post_meta( $draft_id, '_wcb_volunteer_first_time', $first_time );
 		}
+	}
+
+	/**
+	 * Modify the email headers for cases where copy needs to be send for submitter.
+	 *
+	 * At least at the moment, Jetpack handles headers as a string.
+	 *
+	 * We can use $_POST['contact-form-id'] without nonce verification as at this point Jetpack has already taken care if it.
+	 *
+	 * @param string|array $headers        Email headers.
+	 * @param string       $comment_author Name of the author of the submitted feedback, if provided in form.
+	 * @param string       $reply_to_addr  Email of the author of the submitted feedback, if provided in form.
+	 * @param string|array $to             Array of valid email addresses, or single email address, where the form is sent.
+	 *
+	 * @return string|array                Email headers.
+	 */
+	public function maybe_modify_email_headers( $headers, $comment_author, $reply_to_addr, $to ) {
+		// Get the key from submitted data.
+		$form_key = $this->get_form_key_by_id( absint( $_POST['contact-form-id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		// Add speaker as a copy on the email.
+		if ( 'call-for-speakers' === $form_key ) {
+			$headers .= "Cc: {$reply_to_addr}\r\n";
+		}
+
+		return $headers;
+	}
+
+	/**
+	 * Modify the email subject for cases where more information is needed.
+	 *
+	 * We can use $_POST['contact-form-id'] without nonce verification as at this point Jetpack has already taken care if it.
+	 *
+	 * @param string $subject    Feedback's subject line.
+	 * @param array  $all_values Feedback's data from old fields.
+	 *
+	 * @return string            Email subject line.
+	 */
+	public function maybe_modify_email_subject( $subject, $all_values ) {
+		$form_key = $this->get_form_key_by_id( absint( $_POST['contact-form-id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// Add the site name and topic title on email subject.
+		if ( 'call-for-speakers' === $form_key ) {
+			$all_values = $this->get_unprefixed_grunion_form_values( $all_values );
+
+			/* translators: %1$s: site name; %2$s: topic title on submission; */
+			$subject = sprintf(
+				__( 'Your %1$s Call for Speakers submission: %2$s', 'wordcamporg' ),
+				get_bloginfo( 'name' ),
+				sanitize_text_field( $all_values['Topic Title'] )
+			);
+		}
+
+		return $subject;
+	}
+
+	/**
+	 * Modify the email message for cases where more information is needed.
+	 *
+	 * We can use $_POST['contact-form-id'] without nonce verification as at this point Jetpack has already taken care if it.
+	 *
+	 * @param  string $message       Feedback email message.
+	 * @param  array  $message_array Feedback email message as an array.
+	 *
+	 * @return string                Email message.
+	 */
+	public function maybe_modify_email_message( $message, $message_array ) {
+		$form_key = $this->get_form_key_by_id( absint( $_POST['contact-form-id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		// Modify the message to thank you and note about organizers getting back.
+		if ( 'call-for-speakers' === $form_key ) {
+			$wordcamp = get_wordcamp_post();
+
+			/* translators: %1$s: email address for organizing team; %2$s: original message; */
+			$message = sprintf(
+				__( 'Hello,<br><br>Thank you for submitting on Call for Speakers! Here is an copy of your submission.<br/><br/>Please do not respond to this email, organizers will update you on the process. If you have any questions, send an email to organisers %1$s.<br/>%2$s', 'wordcamporg' ),
+				$wordcamp->meta['E-mail Address'][0],
+				$message
+			);
+		}
+
+		return $message;
 	}
 
 	/**

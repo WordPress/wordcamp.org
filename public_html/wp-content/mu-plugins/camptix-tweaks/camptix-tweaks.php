@@ -25,12 +25,11 @@ add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\l
 /**
  * Show empty tickets
  *
- * This provides a way for individual WordCamps to decide if they want to show sold-out tickets in the [tickets]
- * shortcode output. This can help avoid confusion if the camp has several types of tickets (e.g., General
- * Admission, Micro-sponsorship, etc) and the General Admission ticket sells out. If the General Admission ticket
- * was hidden, some users may mistakenly think that the Micro-sponsorship ticket is the "normal" ticket, even
- * though it costs several hundred dollars. Since we value keeping regular tickets accessible by as many people
- * as possible, we don't want anyone getting the impression that WordCamps are expensive to attend.
+ * This helps to avoid confusion if the camp has several types of tickets (e.g., General Admission, Micro-sponsorship,
+ * etc) and the General Admission ticket sells out. If the General Admission ticket was hidden, some users may
+ * mistakenly think that the Micro-sponsorship ticket is the "normal" ticket, even though it costs several hundred
+ * dollars. Since we value keeping regular tickets accessible by as many people as possible, we don't want anyone getting
+ * the impression that WordCamps are expensive to attend.
  */
 add_filter( 'camptix_hide_empty_tickets',                    '__return_false' );
 

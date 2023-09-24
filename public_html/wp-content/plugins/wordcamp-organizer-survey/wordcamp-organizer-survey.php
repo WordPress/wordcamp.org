@@ -46,11 +46,6 @@ function get_feature_id() {
  * @return void
  */
 function load() {
-	// We only want admin panel on central, nothing else.
-	if ( WORDCAMP_ROOT_BLOG_ID === get_current_blog_id() ) {
-		require_once get_includes_path() . 'admin-page.php';
-	}
-
 	if ( is_wordcamp_type( 'next-gen' ) ) {
 		// Debrief Survey.
 		require_once get_includes_path() . 'debrief-survey/cron.php';

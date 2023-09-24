@@ -11,7 +11,6 @@ use CampTix_Plugin;
 
 use function WordCamp\OrganizerSurvey\{get_feature_id};
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\get_email_id as get_debrief_survey_email_id;
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\get_page_id as get_debrief_survey_page_id;
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -78,7 +77,7 @@ function get_feedback_details() {
 
 		$query = new \WP_Query( array(
 			'post_type'      => 'feedback',
-			'post_parent'    => get_debrief_survey_page_id(),
+			'post_parent'    => 'get_debrief_survey_page_id()',
 			'posts_per_page' => -1,
 		) );
 
@@ -90,7 +89,7 @@ function get_feedback_details() {
 			'title' => $blog_details->blogname,
 			'admin_url' => admin_url(),
 			'email_url' => get_edit_post_link( $email_id ),
-			'responses_url' => admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_debrief_survey_page_id() ) ),
+			'responses_url' => "admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_debrief_survey_page_id() ) )",
 			'sent' => $sent,
 			'responses' => $responses,
 		);

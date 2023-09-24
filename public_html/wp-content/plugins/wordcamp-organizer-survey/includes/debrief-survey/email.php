@@ -7,8 +7,6 @@ namespace WordCamp\OrganizerSurvey\DebriefSurvey\Email;
 
 defined( 'WPINC' ) || die();
 
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{get_survey_page_url};
-
 /**
  * Constants.
  */
@@ -31,7 +29,7 @@ function get_email_id() {
 function get_email_content() {
 	$wordcamp_name   = get_wordcamp_name();
 	$closing_date    = date_i18n( 'Y-m-d', strtotime('+2 weeks') );
-	$survey_page_url = get_survey_page_url();
+	$survey_page_url = 'get_survey_page'; // TODO.
 
 	$email  = "Hi [first_name],\r\n\r\n";
 	$email .= sprintf( "%s is over, thank you for lead organizing it! \r\n\r\n", esc_html( $wordcamp_name ) );

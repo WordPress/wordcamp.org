@@ -12,8 +12,6 @@
 
 namespace WordCamp\OrganizerSurvey;
 
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\add_page as add_debrief_survey_page;
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\delete_page as delete_debrief_survey_page;
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\add_email as add_debrief_survey_email;
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\delete_email as delete_debrief_survey_email;
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Cron\delete_temp_attendee as delete_debrief_survey_temp_attendee;
@@ -24,7 +22,6 @@ defined( 'WPINC' ) || die();
  * Local dependencies.
  */
 require_once get_includes_path() . 'debrief-survey/email.php';
-require_once get_includes_path() . 'debrief-survey/page.php';
 
 /**
  * Plugin deactivation hook.
@@ -69,7 +66,6 @@ function load() {
  */
 function activate_on_current_site() {
 	// Debrief Survey.
-	add_debrief_survey_page();
 	add_debrief_survey_email();
 }
 
@@ -110,7 +106,6 @@ function deactivate_on_network() {
  */
 function deactivate_on_current_site() {
 	// Debrief Survey.
-	delete_debrief_survey_page();
 	delete_debrief_survey_email();
 
 	if ( is_wordcamp_type( 'next-gen' ) ) {

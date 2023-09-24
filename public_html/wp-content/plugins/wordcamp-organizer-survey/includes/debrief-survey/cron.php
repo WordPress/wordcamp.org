@@ -7,7 +7,6 @@ defined( 'WPINC' ) || die();
 use CampTix_Plugin;
 
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{get_email_id, queue_survey_email};
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Page\{disable_page, publish_survey_page};
 
 /**
  * Constants.
@@ -20,7 +19,6 @@ const TEMP_ATTENDEE_ID   = 'organizer_debrief_survey_temp_attendee';
  */
 add_action( 'init', __NAMESPACE__ . '\schedule_jobs' );
 add_action( 'wc_organizer_debrief_survey_email', __NAMESPACE__ . '\queue_organizer_survey' );
-add_action( 'wc_organizer_disable_debrief_survey', __NAMESPACE__ . '\disable_organizer_survey' );
 
 /**
  * Logs a message to the CampTix email log.
@@ -146,13 +144,6 @@ function delete_temp_attendee() {
 }
 
 /**
- * Turns off the survey to avoid spam.
- */
-function disable_organizer_survey() {
-	disable_page();
-}
-
-/**
  * Associates recipients to email and changes its status to be picked up
  * by the camptix email cron job `tix_scheduled_every_ten_minutes`.
  */
@@ -172,12 +163,6 @@ function queue_organizer_survey() {
 		return;
 	}
 
-	$page_published = publish_survey_page();
-
-	if ( is_wp_error( $page_published ) ) {
-		log( 'Error publishing survey page:', $email_id, $page_published );
-	}
-
 	add_temp_attendee();
 	associate_attendee_to_email( $email_id );
 
@@ -187,11 +172,6 @@ function queue_organizer_survey() {
 		log( 'Failed updating email status', $email_id, $email_status );
 	} else {
 		log( 'Email status change to `pending`.', $email_id );
-	}
-
-	if ( ! wp_next_scheduled( 'wc_organizer_disable_debrief_survey' ) ) {
-		$next_time = strtotime( '+2 weeks' . wp_timezone_string() );
-		wp_schedule_single_event( $next_time, 'wc_organizer_disable_debrief_survey' );
 	}
 
 	// Remove the cron job that queues everything.

@@ -118,6 +118,8 @@ define( 'WORDCAMP_UTILITIES_DIR',  WP_CONTENT_DIR . '/mu-plugins/utilities' );
 define( 'EMAIL_DEVELOPER_NOTIFICATIONS', 'developers@example.test' );
 define( 'EMAIL_CENTRAL_SUPPORT',         'support@wordcamp.test' );
 
+define( 'ORGANIZER_SURVEY_ACCESS_TOKEN_KEY', 'wcorg_debrief_survey_email' );
+
 $trusted_deputies = array(
 	6, // contributorrole.
 );

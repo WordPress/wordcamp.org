@@ -22,6 +22,36 @@ function get_email_id() {
 }
 
 /**
+ * Return lead organizer email.
+ *
+ *  @return string
+ */
+function get_lead_organizer_email() {
+	$meta = get_wordcamp_post( get_current_blog_id() )->meta;
+	return $meta['Email Address'][0];
+}
+
+/**
+ * Return lead organizer email.
+ *
+ * @return string
+ */
+function get_lead_organizer_full_name() {
+	$meta = get_wordcamp_post( get_current_blog_id() )->meta;
+	return $meta['Organizer Name'][0];
+}
+
+/**
+ * Return a token to put into the survey URL.
+ *
+ * @return string
+ */
+function get_encryption_token() {
+	$lead_organizer_email = get_lead_organizer_email();
+	return hash_hmac( 'sha1', $lead_organizer_email, ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
+}
+
+/**
  * Returns content for the reminder email.
  *
  * @return string
@@ -29,7 +59,8 @@ function get_email_id() {
 function get_email_content() {
 	$wordcamp_name   = get_wordcamp_name();
 	$closing_date    = date_i18n( 'Y-m-d', strtotime('+2 weeks') );
-	$survey_page_url = 'get_survey_page'; // TODO.
+	$survey_page_url = 'https://central.wordcamp.test/organizer-survey-event-debrief/?t=' . get_encryption_token()
+					 . '?e=' . base64_encode( get_lead_organizer_email() );
 
 	$email  = "Hi [first_name],\r\n\r\n";
 	$email .= sprintf( "%s is over, thank you for lead organizing it! \r\n\r\n", esc_html( $wordcamp_name ) );

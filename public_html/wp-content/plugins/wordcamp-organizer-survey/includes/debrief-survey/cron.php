@@ -6,7 +6,7 @@ defined( 'WPINC' ) || die();
 
 use CampTix_Plugin;
 
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{get_email_id, queue_survey_email};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{get_email_id, queue_survey_email, get_lead_organizer_email, get_lead_organizer_full_name};
 
 /**
  * Constants.
@@ -61,10 +61,9 @@ function add_temp_attendee() {
 		) );
 
 		if ( $attendees_id ) {
-			$meta = get_wordcamp_post( get_current_blog_id() )->meta;
-			update_post_meta( $attendees_id, 'tix_email', $meta['Email Address'][0] );
-			update_post_meta( $attendees_id, 'tix_receipt_email', $meta['Email Address'][0] );
-			update_post_meta( $attendees_id, 'tix_first_name', $meta['Organizer Name'][0] );
+			update_post_meta( $attendees_id, 'tix_email', get_lead_organizer_email() );
+			update_post_meta( $attendees_id, 'tix_receipt_email', get_lead_organizer_email() );
+			update_post_meta( $attendees_id, 'tix_first_name', get_lead_organizer_full_name() );
 
 			update_option( TEMP_ATTENDEE_ID, $attendees_id );
 			log( 'Successfully added attendee:', get_email_id(), $attendees_id );

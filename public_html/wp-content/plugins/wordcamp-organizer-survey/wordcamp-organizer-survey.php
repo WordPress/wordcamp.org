@@ -14,6 +14,7 @@ namespace WordCamp\OrganizerSurvey;
 
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\add_email as add_debrief_survey_email;
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\delete_email as delete_debrief_survey_email;
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\get_encryption_token;
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Cron\delete_temp_attendee as delete_debrief_survey_temp_attendee;
 
 defined( 'WPINC' ) || die();
@@ -32,6 +33,7 @@ register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
  * Actions & hooks
  */
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
+add_action( 'template_redirect', __NAMESPACE__ . '\validate_token_on_debrief_survey' );
 
 /**
  * Get the ID of the survey feature.
@@ -138,4 +140,20 @@ function get_site_ids() {
  */
 function get_includes_path() {
 	return plugin_dir_path( __FILE__ ) . 'includes/';
+}
+
+/**
+ * Validate token on debrief survey page to check if it's an organizer visiting.
+ */
+function validate_token_on_debrief_survey() {
+	if ( is_page( 'organizer-survey-event-debrief' ) ) {
+		$token = $_GET['t'] ?? '';
+		$email = $_GET['e'] ?? '';
+
+		$expected_token = hash_hmac( 'sha1', base64_decode( $email ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
+
+		if ( $token !== $expected_token ) {
+			wp_die('Invalid access token.');
+		}
+	}
 }

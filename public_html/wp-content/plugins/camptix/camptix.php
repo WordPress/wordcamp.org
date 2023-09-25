@@ -234,7 +234,17 @@ class CampTix_Plugin {
 		$this->log( 'Executing e-mail job.', $email->ID, null, 'notify' );
 		$max = apply_filters( 'camptix_notify_recipients_batch_count', 200 ); // plugins can change this.
 
-		$recipients_data = $wpdb->get_results( $wpdb->prepare( "SELECT SQL_CALC_FOUND_ROWS meta_id, meta_value FROM $wpdb->postmeta WHERE $wpdb->postmeta.post_id = %d AND $wpdb->postmeta.meta_key = %s LIMIT %d;", $email->ID, 'tix_email_recipient_id', $max ) );
+		$recipients_data = $wpdb->get_results( $wpdb->prepare( "
+			SELECT SQL_CALC_FOUND_ROWS meta_id, meta_value
+			FROM $wpdb->postmeta
+			WHERE
+				$wpdb->postmeta.post_id = %d AND
+				$wpdb->postmeta.meta_key = %s
+			LIMIT %d;",
+			$email->ID,
+			'tix_email_recipient_id',
+			$max
+		) );
 		$total = $wpdb->get_var( "SELECT FOUND_ROWS();" );
 		$processed = 0;
 
@@ -270,7 +280,15 @@ class CampTix_Plugin {
 
 				foreach ( $attendees as $attendee_id ) {
 					$attendee_email = get_post_meta( $attendee_id, 'tix_email', true );
-					$count = $wpdb->query( $wpdb->prepare( "DELETE FROM $wpdb->postmeta WHERE post_id = %d AND meta_id = %d LIMIT 1;", $email->ID, $recipients[$attendee_id] ) );
+					$count = $wpdb->query( $wpdb->prepare( "
+						DELETE FROM $wpdb->postmeta
+						WHERE
+							post_id = %d AND
+							meta_id = %d
+						LIMIT 1;",
+						$email->ID,
+						$recipients[$attendee_id]
+					) );
 
 					if ( $count > 0 ) {
 

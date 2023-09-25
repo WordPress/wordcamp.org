@@ -1032,9 +1032,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// Show this error permanently, not just after updating.
 			$address = get_post_meta( $post->ID, self::get_address_key( $post->ID ), true );
 
-			// if ( $address && ! self::have_geocoded_location( $post->ID ) ) {
-			// 	$_REQUEST['wcpt_messages'] = empty( $_REQUEST['wcpt_messages'] ) ? '4' : $_REQUEST['wcpt_messages'] . ',4';
-			// }
+			if ( $address && ! self::have_geocoded_location( $post->ID ) ) {
+				$_REQUEST['wcpt_messages'] = empty( $_REQUEST['wcpt_messages'] ) ? '4' : $_REQUEST['wcpt_messages'] . ',4';
+			}
 
 			return array(
 				1 => array(

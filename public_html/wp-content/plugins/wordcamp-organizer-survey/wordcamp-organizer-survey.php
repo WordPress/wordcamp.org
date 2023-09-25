@@ -32,8 +32,8 @@ register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
  * Actions & hooks
  */
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
-add_action( 'template_redirect', __NAMESPACE__ . '\validate_token_on_debrief_survey' );
-add_filter( 'the_content', __NAMESPACE__ . '\modify_jetpack_contact_form' );
+// add_action( 'template_redirect', __NAMESPACE__ . '\validate_token_on_debrief_survey' );
+// add_filter( 'the_content', __NAMESPACE__ . '\modify_jetpack_contact_form' );.
 
 /**
  * Get the ID of the survey feature.

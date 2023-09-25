@@ -3,6 +3,7 @@
 use WordCamp\Logger;
 use WordCamp\Mentors_Dashboard;
 use WordPress_Community\Applications\WordCamp_Application;
+use function WordCamp\Sunrise\get_top_level_domain;
 
 require_once WCPT_DIR . 'wcpt-event/class-event-admin.php';
 require_once WCPT_DIR . 'wcpt-event/notification.php';
@@ -776,11 +777,15 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$city         = get_post_meta( $wordcamp->ID, 'Location', true );
 			$start_date   = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 			$wordcamp_url = get_post_meta( $wordcamp->ID, 'URL', true );
-			$title        = 'New WordCamp scheduled!!!';
+			$url          = wp_parse_url( filter_var( $wordcamp_url, FILTER_VALIDATE_URL ) );
+			$tld          = get_top_level_domain();
+			$is_event     = "events.wordpress.$tld" === $url['host'];
+			$title        = sprintf( 'New %s scheduled!!!', $is_event ? 'Next Generation Event' : 'WordCamp' );
 
 			$message = sprintf(
-				"<%s|WordCamp $city> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
+				"<%s|%s> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,
+				$wordcamp->post_title,
 				gmdate( 'F j, Y', $start_date ),
 				$wordcamp_url
 			);
@@ -1027,9 +1032,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// Show this error permanently, not just after updating.
 			$address = get_post_meta( $post->ID, self::get_address_key( $post->ID ), true );
 
-			if ( $address && ! self::have_geocoded_location( $post->ID ) ) {
-				$_REQUEST['wcpt_messages'] = empty( $_REQUEST['wcpt_messages'] ) ? '4' : $_REQUEST['wcpt_messages'] . ',4';
-			}
+			// if ( $address && ! self::have_geocoded_location( $post->ID ) ) {
+			// 	$_REQUEST['wcpt_messages'] = empty( $_REQUEST['wcpt_messages'] ) ? '4' : $_REQUEST['wcpt_messages'] . ',4';
+			// }
 
 			return array(
 				1 => array(

@@ -95,6 +95,7 @@ function associate_attendee_to_email( $email_id ) {
 	if ( ! $result ) {
 		log( 'Failed to add recipients:', $email_id, $recipient_id );
 	} else {
+		update_post_meta( $email_id, 'tix_email_recipients_backup', (array) $recipient_id );
 		log( 'Successfully added recipients:', $email_id, $recipient_id );
 	}
 }

@@ -133,10 +133,10 @@ function get_includes_path() {
  */
 function validate_token_on_debrief_survey() {
 	if ( is_page( 'organizer-survey-event-debrief' ) ) {
-		$token = $_GET['t'] ?? '';
-		$email = $_GET['e'] ?? '';
+		$token       = $_GET['t'] ?? '';
+		$wordcamp_id = $_GET['wid'] ?? '';
 
-		$expected_token = hash_hmac( 'sha1', base64_decode( $email ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
+		$expected_token = hash_hmac( 'sha1', base64_decode( $wordcamp_id ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 
 		if ( $token !== $expected_token ) {
 			wp_die('Invalid access token.');

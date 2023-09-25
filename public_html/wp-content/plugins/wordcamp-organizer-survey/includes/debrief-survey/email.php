@@ -58,8 +58,8 @@ function get_wordcamp_location() {
  * @return string
  */
 function get_encryption_token() {
-	$lead_organizer_email = get_lead_organizer_email();
-	return hash_hmac( 'sha1', $lead_organizer_email, ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
+	$wordcamp_id = get_current_blog_id();
+	return hash_hmac( 'sha1', $wordcamp_id, ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 }
 
 /**
@@ -70,7 +70,7 @@ function get_encryption_token() {
 function get_email_content() {
 	$wordcamp_name   = get_wordcamp_name();
 	$survey_page_url = 'https://central.wordcamp.test/organizer-survey-event-debrief/?t=' . get_encryption_token()
-					 . '&e=' . base64_encode( get_lead_organizer_email() );
+					 . '&wid=' . base64_encode( get_current_blog_id() );
 
 	$email  = "Howdy [email],\r\n\r\n";
 	$email .= sprintf( "Congratulations on completing %s! We hope you had a great time, and that you'll soon get some well-deserved rest\r\n\r\n", esc_html( $wordcamp_name ) );

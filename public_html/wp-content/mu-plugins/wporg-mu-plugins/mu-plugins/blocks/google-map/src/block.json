@@ -1,0 +1,46 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/google-map",
+	"title": "WordPress.org Google Map",
+	"icon": "admin-site-alt",
+	"category": "layout",
+	"description": "Displays a Google Map with markers and information windows.",
+	"textdomain": "wporg",
+	"attributes": {
+		"id": {
+			"type": "string",
+			"default": ""
+		},
+		"apiKey": {
+			"type": "string",
+			"default": ""
+		},
+		"markers": {
+			"type": "array",
+			"default": []
+		},
+		"showMap": {
+			"type": "boolean",
+			"default": true
+		},
+		"showList": {
+			"type": "boolean",
+			"default": true
+		},
+		"showSearch": {
+			"type": "boolean",
+			"default": true
+		},
+		"searchFields": {
+			"type": "array",
+			"default": [ "title", "location", "meetup" ]
+		}
+	},
+	"supports": {
+		"inserter": false
+	},
+	"editorScript": "file:./index.js",
+	"viewScript": "file:./front.js",
+	"style": "file:./style.css"
+}

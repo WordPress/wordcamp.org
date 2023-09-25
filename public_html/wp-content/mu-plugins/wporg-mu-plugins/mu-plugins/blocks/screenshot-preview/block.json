@@ -1,0 +1,10 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/screenshot-preview",
+	"title": "WordPress.org ScreenShot Preview",
+	"category": "widgets",
+	"icon": "plugin",
+	"description": "Show a preview of a website",
+	"textdomain": "wporg"
+}

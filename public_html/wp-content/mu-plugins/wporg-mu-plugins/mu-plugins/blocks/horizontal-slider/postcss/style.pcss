@@ -1,0 +1,98 @@
+.horizontal-slider-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.5rem 0;
+}
+
+.horizontal-slider-title {
+	font-size: 12px;
+	margin: 0;
+}
+
+.horizontal-slider-handle {
+	position: relative;
+	background: transparent;
+	border: 1px solid #d9d9d9;
+	width: 24px;
+	height: 24px;
+}
+
+.horizontal-slider-handle:active,
+.horizontal-slider-handle:focus {
+	background: #0073aa;
+	border-color: #0073aa;
+}
+
+.horizontal-slider-handle:active::after,
+.horizontal-slider-handle:focus::after {
+	border-left-color: #fff;
+	border-bottom-color: #fff;
+}
+
+.horizontal-slider-handle:first-child {
+	border-right: none;
+	border-radius: 1px 0 0 1px;
+}
+
+.horizontal-slider-handle:last-child {
+	border-radius: 0 1px 1px 0;
+}
+
+.horizontal-slider-handle::after {
+	content: "";
+	height: 6px;
+	width: 6px;
+	border-left: 1px solid #000;
+	border-bottom: 1px solid #000;
+	display: block;
+	position: absolute;
+	top: 8px;
+}
+
+.horizontal-slider-handle:first-child::after {
+	transform: rotate(45deg);
+	left: 9px;
+}
+
+.horizontal-slider-handle:last-child::after {
+	transform: rotate(-135deg);
+	left: 7px;
+}
+
+.horizontal-slider-handle:disabled {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+button[disabled]::after {
+	opacity: 0.5;
+}
+
+.horizontal-slider-wrapper {
+	display: flex;
+	scroll-snap-type: inline mandatory;
+	overflow-x: scroll;
+	overscroll-behavior: contain;
+	scrollbar-width: none;
+	gap: 12px;
+	padding-bottom: 24px;
+	padding-top: 6px;
+	list-style: none;
+
+	/* So item focus states are not clipped */
+	margin-left: -4px;
+	margin-right: -4px;
+	padding-left: 4px;
+	padding-right: 4px;
+}
+
+.horizontal-slider-wrapper::-webkit-scrollbar {
+	height: 0;
+}
+
+.horizontal-slider-wrapper > a {
+	position: relative;
+	scroll-snap-align: center;
+	flex: none;
+}

@@ -1,0 +1,35 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/global-header",
+	"title": "Global Header",
+	"category": "design",
+	"description": "Global header for all of WordPress.org",
+	"supports": {
+		"color": {
+			"background": true,
+			"link": false,
+			"text": true
+		},
+		"html": false,
+		"multiple": false,
+		"reusable": false,
+		"spacing": {
+			"margin": [ "top" ],
+			"padding": false,
+			"blockGap": false
+		},
+		"__experimentalBorder": {
+			"color": true,
+			"radius": false,
+			"style": true,
+			"width": true
+		}
+	},
+	"attributes": {},
+	"textdomain": "wporg",
+	"style": "wporg-global-header-footer",
+	"editorStyle": "wporg-global-header-footer",
+	"script": "wporg-global-header-script",
+	"editorScript": "file:./index.js"
+}

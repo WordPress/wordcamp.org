@@ -6,7 +6,12 @@ defined( 'WPINC' ) || die();
 
 use CampTix_Plugin;
 
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{get_email_id, queue_survey_email, get_lead_organizer_email, get_lead_organizer_full_name};
+use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\{
+	get_email_id,
+	queue_survey_email,
+	get_lead_organizer_email,
+	get_lead_organizer_full_name
+};
 
 /**
  * Constants.

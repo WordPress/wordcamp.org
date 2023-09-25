@@ -14,7 +14,6 @@ namespace WordCamp\OrganizerSurvey;
 
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\add_email as add_debrief_survey_email;
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\delete_email as delete_debrief_survey_email;
-use function WordCamp\OrganizerSurvey\DebriefSurvey\Email\get_encryption_token;
 use function WordCamp\OrganizerSurvey\DebriefSurvey\Cron\delete_temp_attendee as delete_debrief_survey_temp_attendee;
 
 defined( 'WPINC' ) || die();
@@ -51,19 +50,8 @@ function load() {
 	if ( is_wordcamp_type( 'next-gen' ) ) {
 		// Debrief Survey.
 		require_once get_includes_path() . 'debrief-survey/cron.php';
-
-		add_action( 'init', __NAMESPACE__ . '\activate_on_current_site' );
+		add_debrief_survey_email();
 	}
-}
-
-/**
- * The activation routine for a single site.
- *
- * @return void
- */
-function activate_on_current_site() {
-	// Debrief Survey.
-	add_debrief_survey_email();
 }
 
 /**
@@ -102,11 +90,9 @@ function deactivate_on_network() {
  * @return void
  */
 function deactivate_on_current_site() {
-	// Debrief Survey.
-	delete_debrief_survey_email();
-
 	if ( is_wordcamp_type( 'next-gen' ) ) {
-		// A temp attendee is only added in cron.
+		// Debrief Survey.
+		delete_debrief_survey_email();
 		delete_debrief_survey_temp_attendee();
 	}
 }

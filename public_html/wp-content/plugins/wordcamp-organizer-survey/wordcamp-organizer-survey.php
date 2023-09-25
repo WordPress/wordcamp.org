@@ -32,8 +32,8 @@ register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
  * Actions & hooks
  */
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
-// add_action( 'template_redirect', __NAMESPACE__ . '\validate_token_on_debrief_survey' );
-// add_filter( 'the_content', __NAMESPACE__ . '\modify_jetpack_contact_form' );.
+add_action( 'template_redirect', __NAMESPACE__ . '\validate_token_on_debrief_survey' );
+add_filter( 'the_content', __NAMESPACE__ . '\modify_jetpack_contact_form' );
 
 /**
  * Get the ID of the survey feature.
@@ -141,7 +141,8 @@ function validate_token_on_debrief_survey() {
 
 		$expected_token = hash_hmac( 'sha1', base64_decode( $wordcamp_id ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 
-		if ( $token !== $expected_token ) {
+		// Check if the request is a form submission. If not, then validate the token.
+		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && $token !== $expected_token ) {
 			wp_die('Invalid access token.');
 		} else {
 			$wordcamp_post_data = get_wordcamp_post(base64_decode( $wordcamp_id ));

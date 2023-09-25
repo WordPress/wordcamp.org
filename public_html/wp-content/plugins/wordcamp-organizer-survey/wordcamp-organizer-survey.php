@@ -164,6 +164,7 @@ function modify_jetpack_contact_form( $content ) {
 
 		$labels = $dom->getElementsByTagName('label');
 		foreach ( $labels as $label ) {
+			// phpcs:disable WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 			if ( 'What event did you organize?' === $label->nodeValue ) {
 				$input_id         = $label->getAttribute('for');
 				$event_name_field = $dom->getElementById($input_id);

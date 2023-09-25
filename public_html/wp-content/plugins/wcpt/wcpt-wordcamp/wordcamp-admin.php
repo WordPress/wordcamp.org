@@ -774,6 +774,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Not translating any string because they will be sent to slack.
+			$city         = get_post_meta( $wordcamp->ID, 'Location', true );
 			$start_date   = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 			$wordcamp_url = get_post_meta( $wordcamp->ID, 'URL', true );
 			$url          = wp_parse_url( filter_var( $wordcamp_url, FILTER_VALIDATE_URL ) );

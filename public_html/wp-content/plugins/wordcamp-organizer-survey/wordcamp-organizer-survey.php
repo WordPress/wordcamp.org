@@ -170,7 +170,6 @@ function modify_jetpack_contact_form( $content ) {
 				$input_id         = $label->getAttribute('for');
 				$event_name_field = $dom->getElementById($input_id);
 				$event_name_field->setAttribute('value', $wordcamp_post_data->post_title);
-				$event_name_field->setAttribute('disabled', 'disabled');
 			}
 		}
 		$content = $dom->saveHTML();

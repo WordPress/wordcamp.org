@@ -33,6 +33,7 @@ register_deactivation_hook( __FILE__, __NAMESPACE__ . '\deactivate' );
  */
 add_action( 'plugins_loaded', __NAMESPACE__ . '\load' );
 add_action( 'template_redirect', __NAMESPACE__ . '\validate_token_on_debrief_survey' );
+add_filter( 'the_content', __NAMESPACE__ . '\modify_jetpack_contact_form' );
 
 /**
  * Get the ID of the survey feature.
@@ -132,6 +133,8 @@ function get_includes_path() {
  * Validate token on debrief survey page to check if it's an organizer visiting.
  */
 function validate_token_on_debrief_survey() {
+	global $wordcamp_post_data;
+
 	if ( is_page( 'organizer-survey-event-debrief' ) ) {
 		$token       = $_GET['t'] ?? '';
 		$wordcamp_id = $_GET['wid'] ?? '';
@@ -140,6 +143,35 @@ function validate_token_on_debrief_survey() {
 
 		if ( $token !== $expected_token ) {
 			wp_die('Invalid access token.');
+		} else {
+			$wordcamp_post_data = get_wordcamp_post(base64_decode( $wordcamp_id ));
 		}
 	}
+}
+
+/**
+ * Modifies the Jetpack contact form content.
+ *
+ * @param string $content The original content of the post or page.
+ * @return string Modified content with the updated Jetpack contact form.
+ */
+function modify_jetpack_contact_form( $content ) {
+	global $wordcamp_post_data;
+
+	if ( is_page( 'organizer-survey-event-debrief' ) ) {
+		$dom = new \DOMDocument();
+		$dom->loadHTML($content, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+		$labels = $dom->getElementsByTagName('label');
+		foreach ( $labels as $label ) {
+			if ( 'What event did you organize?' === $label->nodeValue ) {
+				$input_id         = $label->getAttribute('for');
+				$event_name_field = $dom->getElementById($input_id);
+				$event_name_field->setAttribute('value', $wordcamp_post_data->post_title);
+				$event_name_field->setAttribute('disabled', 'disabled');
+			}
+		}
+		$content = $dom->saveHTML();
+	}
+	return $content;
 }

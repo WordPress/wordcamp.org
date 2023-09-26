@@ -88,7 +88,7 @@ function get_email_content() {
 	$email .= "<strong>Event Recording (if any)</strong>\r\n";
 	$email .= sprintf( "If you haven't yet done so, please review the submission guidelines before beginning to edit your videos (or before your videographers starts editing): %s\r\n\r\n", esc_url( 'http://blog.wordpress.tv/submission-guidelines/' ) );
 	$email .= sprintf( "To submit your video for publication to WordPress.tv, just upload them at this page: %s\r\n\r\n", esc_url( 'http://wordpress.tv/submit-video/' ) );
-	$email .= 'Our intrepid team of video moderators will review the videos and schedule them for publication. Our intrepid team of video moderators will review the videos and schedule them for publication. ';
+	$email .= 'Our intrepid team of video moderators will review the videos and schedule them for publication. ';
 	$email .= sprintf( "If your content is in a language other than English, please see if you can recruit someone from your community to join the WordPress TV moderators' team and review your videos: %s\r\n\r\n", esc_url( 'http://wordpress.tv/apply-to-be-a-wordpress-tv-moderator/' ) );
 
 	$email .= "<strong>Event Recap</strong>\r\n";

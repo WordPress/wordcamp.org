@@ -118,7 +118,7 @@ function is_time_to_send_email( $email_id ) {
 		return false;
 	}
 
-	if ( ! 'wcpt-closed' === $wordcamp_post->post_status ) {
+	if ( 'wcpt-closed' !== $wordcamp_post->post_status ) {
 		return false;
 	}
 

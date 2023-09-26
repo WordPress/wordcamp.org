@@ -5,6 +5,8 @@
 
 namespace WordCamp\OrganizerSurvey\DebriefSurvey\Email;
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -69,7 +71,8 @@ function get_verification_token() {
  */
 function get_email_content() {
 	$wordcamp_name   = get_wordcamp_name();
-	$survey_page_url = 'https://central.wordcamp.test/organizer-survey-event-debrief/?t=' . get_verification_token()
+	$tld             = get_top_level_domain();
+	$survey_page_url = "https://central.wordcamp.$tld/organizer-survey-event-debrief/?t=" . get_verification_token()
 					 . '&wid=' . get_current_blog_id();
 
 	$email  = "Howdy [email],\r\n\r\n";

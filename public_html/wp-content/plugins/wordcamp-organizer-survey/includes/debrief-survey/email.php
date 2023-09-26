@@ -59,7 +59,7 @@ function get_wordcamp_location() {
  */
 function get_verification_token() {
 	$wordcamp_id = get_current_blog_id();
-	return hash_hmac( 'sha1', $wordcamp_id, ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
+	return hash_hmac( 'sha256', $wordcamp_id, ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 }
 
 /**

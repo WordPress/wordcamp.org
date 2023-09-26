@@ -139,7 +139,7 @@ function validate_token_on_debrief_survey() {
 		$token       = $_GET['t'] ?? '';
 		$wordcamp_id = $_GET['wid'] ?? '';
 
-		$expected_token = hash_hmac( 'sha1', base64_decode( $wordcamp_id ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
+		$expected_token = hash_hmac( 'sha256', base64_decode( $wordcamp_id ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 
 		// Check if the request is a form submission. If not, then validate the token.
 		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && ! hash_equals( $expected_token, $token ) ) {

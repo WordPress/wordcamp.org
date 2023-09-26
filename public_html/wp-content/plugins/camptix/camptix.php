@@ -823,6 +823,9 @@ class CampTix_Plugin {
 				break;
 			case 'tix_total':
 				$recipients_backup = get_post_meta( $post_id, 'tix_email_recipients_backup', true );
+				if( empty( $recipients_backup ) ) {
+					$recipients_backup = [];
+				}
 				echo count( $recipients_backup );
 				break;
 		}

@@ -89,14 +89,15 @@ define( 'JETPACK_DEV_DEBUG', true );
  * environments, because generating the keys locally is safer than using the API (and exposing the keys to
  * your OS/browser if you copy/paste, etc).
  */
-define( 'AUTH_KEY',         'put your unique phrase here' );
-define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );
-define( 'LOGGED_IN_KEY',    'put your unique phrase here' );
-define( 'NONCE_KEY',        'put your unique phrase here' );
-define( 'AUTH_SALT',        'put your unique phrase here' );
-define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );
-define( 'LOGGED_IN_SALT',   'put your unique phrase here' );
-define( 'NONCE_SALT',       'put your unique phrase here' );
+define( 'AUTH_KEY',                          'put your unique phrase here' );
+define( 'SECURE_AUTH_KEY',                   'put your unique phrase here' );
+define( 'LOGGED_IN_KEY',                     'put your unique phrase here' );
+define( 'NONCE_KEY',                         'put your unique phrase here' );
+define( 'AUTH_SALT',                         'put your unique phrase here' );
+define( 'SECURE_AUTH_SALT',                  'put your unique phrase here' );
+define( 'LOGGED_IN_SALT',                    'put your unique phrase here' );
+define( 'NONCE_SALT',                        'put your unique phrase here' );
+define( 'ORGANIZER_SURVEY_ACCESS_TOKEN_KEY', 'put your unique phrase here' );
 
 
 /*

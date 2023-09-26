@@ -139,13 +139,13 @@ function validate_token_on_debrief_survey() {
 		$token       = $_GET['t'] ?? '';
 		$wordcamp_id = $_GET['wid'] ?? '';
 
-		$expected_token = hash_hmac( 'sha256', base64_decode( $wordcamp_id ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
+		$expected_token = hash_hmac( 'sha256', $wordcamp_id, ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 
 		// Check if the request is a form submission. If not, then validate the token.
 		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && ! hash_equals( $expected_token, $token ) ) {
 			wp_die('Invalid access token.');
 		} else {
-			$wordcamp_post_data = get_wordcamp_post(base64_decode( $wordcamp_id ));
+			$wordcamp_post_data = get_wordcamp_post( $wordcamp_id );
 		}
 	}
 }

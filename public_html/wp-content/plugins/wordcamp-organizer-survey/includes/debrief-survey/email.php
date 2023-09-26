@@ -70,7 +70,7 @@ function get_verification_token() {
 function get_email_content() {
 	$wordcamp_name   = get_wordcamp_name();
 	$survey_page_url = 'https://central.wordcamp.test/organizer-survey-event-debrief/?t=' . get_verification_token()
-					 . '&wid=' . base64_encode( get_current_blog_id() );
+					 . '&wid=' . get_current_blog_id();
 
 	$email  = "Howdy [email],\r\n\r\n";
 	$email .= sprintf( "Congratulations on completing %s! We hope you had a great time, and that you'll soon get some well-deserved rest\r\n\r\n", esc_html( $wordcamp_name ) );

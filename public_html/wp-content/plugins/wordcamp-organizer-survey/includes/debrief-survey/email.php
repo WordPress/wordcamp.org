@@ -57,7 +57,7 @@ function get_wordcamp_location() {
  *
  * @return string
  */
-function get_encryption_token() {
+function get_verification_token() {
 	$wordcamp_id = get_current_blog_id();
 	return hash_hmac( 'sha1', $wordcamp_id, ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 }
@@ -69,7 +69,7 @@ function get_encryption_token() {
  */
 function get_email_content() {
 	$wordcamp_name   = get_wordcamp_name();
-	$survey_page_url = 'https://central.wordcamp.test/organizer-survey-event-debrief/?t=' . get_encryption_token()
+	$survey_page_url = 'https://central.wordcamp.test/organizer-survey-event-debrief/?t=' . get_verification_token()
 					 . '&wid=' . base64_encode( get_current_blog_id() );
 
 	$email  = "Howdy [email],\r\n\r\n";

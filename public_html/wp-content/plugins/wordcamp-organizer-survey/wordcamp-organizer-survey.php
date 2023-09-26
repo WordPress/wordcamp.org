@@ -142,7 +142,7 @@ function validate_token_on_debrief_survey() {
 		$expected_token = hash_hmac( 'sha1', base64_decode( $wordcamp_id ), ORGANIZER_SURVEY_ACCESS_TOKEN_KEY );
 
 		// Check if the request is a form submission. If not, then validate the token.
-		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && $token !== $expected_token ) {
+		if ( 'POST' !== $_SERVER['REQUEST_METHOD'] && ! hash_equals( $expected_token, $token ) ) {
 			wp_die('Invalid access token.');
 		} else {
 			$wordcamp_post_data = get_wordcamp_post(base64_decode( $wordcamp_id ));

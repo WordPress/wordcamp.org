@@ -118,6 +118,10 @@ function is_time_to_send_email( $email_id ) {
 		return false;
 	}
 
+	if ( ! 'wcpt-closed' === $wordcamp_post->post_status ) {
+		return false;
+	}
+
 	$end_date = $wordcamp_post->meta['End Date (YYYY-mm-dd)'][0];
 
 	if ( empty( $end_date ) ) {

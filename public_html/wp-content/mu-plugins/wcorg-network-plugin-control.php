@@ -79,6 +79,7 @@ function _get_network_plugin_state_list( $state ) {
 			'wordcamp-wiki/bootstrap.php',
 			'wordcamp-qbo/wordcamp-qbo.php',
 			'wp-cldr/wp-cldr.php',
+			'tagregator/bootstrap.php',
 		),
 	);
 
@@ -89,10 +90,7 @@ function _get_network_plugin_state_list( $state ) {
 
 	$network_id = get_current_network_id();
 
-	if ( WORDCAMP_NETWORK_ID === $network_id ) {
-		$network_plugin_state['activated'][] = 'tagregator/bootstrap.php';
-	} elseif ( EVENTS_NETWORK_ID === $network_id ) {
-		$network_plugin_state['deactivated'][] = 'tagregator/bootstrap.php';
+	if ( EVENTS_NETWORK_ID === $network_id ) {
 		$network_plugin_state['activated'][]   = 'camptix-attendee-survey/camptix-attendee-survey.php';
 		$network_plugin_state['activated'][]   = 'wordcamp-organizer-survey/wordcamp-organizer-survey.php';
 	}

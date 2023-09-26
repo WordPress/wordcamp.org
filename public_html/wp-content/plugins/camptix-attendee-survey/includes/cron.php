@@ -131,7 +131,7 @@ function is_time_to_send_email( $email_id ) {
 
 	$send_date = $end_date + ( DAYS_AFTER_TO_SEND * DAY_IN_SECONDS );
 
-	return date( 'Y-m-d', $send_date ) === current_time( 'Y-m-d' );
+	return gmdate( 'Y-m-d', $send_date ) === current_time( 'Y-m-d', true );
 }
 
 /**

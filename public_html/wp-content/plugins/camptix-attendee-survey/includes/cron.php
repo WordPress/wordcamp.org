@@ -118,19 +118,20 @@ function is_time_to_send_email( $email_id ) {
 		return false;
 	}
 
+	if ( 'wcpt-closed' !== $wordcamp_post->post_status ) {
+		return false;
+	}
+
 	$end_date = $wordcamp_post->meta['End Date (YYYY-mm-dd)'][0];
 
-	if ( ! isset( $end_date ) ) {
+	if ( empty( $end_date ) ) {
 		log( 'WordCamp missing end date', $email_id, $wordcamp_post );
 		return false;
 	}
 
-	$date            = new \DateTime("@$end_date ");
-	$current_date    = new \DateTime();
-	$interval        = $current_date->diff($date);
-	$days_difference = $interval->days;
+	$send_date = $end_date + ( DAYS_AFTER_TO_SEND * DAY_IN_SECONDS );
 
-	return DAYS_AFTER_TO_SEND === $days_difference;
+	return gmdate( 'Y-m-d', $send_date ) === current_time( 'Y-m-d', true );
 }
 
 /**

@@ -2,6 +2,7 @@
 
 defined( 'WPINC' ) || die();
 use function WordCamp\Logger\log;
+use function WordCamp\Sunrise\get_top_level_domain;
 
 /*
  * Miscellaneous helper functions.
@@ -23,6 +24,19 @@ function is_wordcamp_type( $type ) {
 		default:
 			return false;
 	}
+}
+
+/**
+ * Return whether the url is for a Next-Gen site.
+ *
+ * @param string $url The Url to test.
+ *
+ * @return bool Returns true if the url matches events url structure.
+ */
+function is_event_url( $url ) {
+	$url = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
+	$tld = get_top_level_domain();
+	return "events.wordpress.$tld" === $url['host'];
 }
 
 /**

@@ -773,14 +773,15 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Not translating any string because they will be sent to slack.
-			$city         = get_post_meta( $wordcamp->ID, 'Location', true );
 			$start_date   = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 			$wordcamp_url = get_post_meta( $wordcamp->ID, 'URL', true );
-			$title        = 'New WordCamp scheduled!!!';
+			$is_event     = is_event_url( $wordcamp_url );
+			$title        = sprintf( 'New %s scheduled!!!', $is_event ? 'Next Generation Event' : 'WordCamp' );
 
 			$message = sprintf(
-				"<%s|WordCamp $city> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
+				"<%s|%s> has been scheduled for a start date of %s. :tada: :community: :WordPress:\n\n%s",
 				$wordcamp_url,
+				$wordcamp->post_title,
 				gmdate( 'F j, Y', $start_date ),
 				$wordcamp_url
 			);

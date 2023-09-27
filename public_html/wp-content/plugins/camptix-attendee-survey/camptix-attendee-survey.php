@@ -5,7 +5,7 @@
  * Description:     Send survey to WordCamp attendees.
  * Author:          WordCamp.org
  * Author URI:      https://wordcamp.org
- * Version:         1
+ * Version:         1.1.0
  *
  * @package         CampTix\AttendeeSurvey
  */

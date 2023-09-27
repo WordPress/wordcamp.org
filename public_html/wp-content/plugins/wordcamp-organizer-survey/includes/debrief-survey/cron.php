@@ -179,7 +179,4 @@ function queue_organizer_survey() {
 	} else {
 		log( 'Email status change to `pending`.', $email_id );
 	}
-
-	// Remove the cron job that queues everything.
-	wp_clear_scheduled_hook( 'wc_organizer_debrief_survey_email' );
 }

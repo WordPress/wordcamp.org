@@ -31,7 +31,7 @@ class WordCamp_Participation_Notifier {
 		// Sync with the wp.org username changes.
 		add_filter( 'update_post_meta',     array( $this, 'username_meta_update' ), 10, 4 );
 		add_filter( 'delete_post_meta',     array( $this, 'username_meta_delete' ), 10, 3 );
-		add_action( 'wp_after_insert_post', array( $this, 'maybe_notify_on_post_save' ) );
+		add_action( 'wp_after_insert_post', array( $this, 'maybe_notify_on_post_save' ), 10, 2 );
 
 		add_action( 'camptix_rl_buyer_completed_registration', array( $this, 'primary_attendee_registered' ), 10, 2 );
 		add_action( 'camptix_rl_registration_confirmed',       array( $this, 'additional_attendee_confirmed_registration' ), 10, 2 );
@@ -132,10 +132,8 @@ class WordCamp_Participation_Notifier {
 
 	/**
 	 * Add the organizer or speaker badge when notifiable post types are saved and User ID meta exists.
-	 *
-	 * @param  WP_Post $post The post object.
 	 */
-	public function maybe_notify_on_post_save( $post ) {
+	public function maybe_notify_on_post_save( int $post_id, WP_Post $post ): void {
 		if ( wp_is_post_revision( $post ) ) {
 			return;
 		}

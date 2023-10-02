@@ -2,7 +2,6 @@
 
 namespace WordCamp\Jetpack_Tweaks;
 use WP_Service_Worker_Caching_Routes, WP_Service_Worker_Scripts;
-use Grunion_Contact_Form;
 
 defined( 'WPINC' ) || die();
 
@@ -205,11 +204,8 @@ add_filter( 'jetpack_is_frontend', __NAMESPACE__ . '\workaround_is_frontend' );
  * @param int|null $post_id        Post ID.
  */
 function wrap_checkbox_radio_fieldset( $rendered_field, $field_label, $post_id ) {
-	// Get the current form style, if it's anything other than default, return early.
-	$class_name = Grunion_Contact_Form::$current_form->get_attribute( 'className' );
-	preg_match( '/is-style-([^\s]+)/i', $class_name, $matches );
-	$style = count( $matches ) >= 2 ? $matches[1] : 'default';
-	if ( 'default' !== $style ) {
+	// If the field uses "animated" or "notched" UI, return early.
+	if ( str_contains( $rendered_field, 'animated-label__label' ) || str_contains( $rendered_field, 'notched-label__label' ) ) {
 		return $rendered_field;
 	}
 
@@ -278,6 +274,3 @@ CSS;
 	wp_add_inline_style( 'grunion.css', $form_css );
 }
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\inject_css_for_fieldset' );
-
-// Default forms in Jetpack got switched in 12.2, and the fix for accessibility (wrap_checkbox_radio_fieldset) breaks when upgrading: to 12.2+.
-add_filter( 'jetpack_contact_form_use_package', '__return_false' );

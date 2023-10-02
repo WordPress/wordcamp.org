@@ -25,6 +25,7 @@ function manually_load_plugins() {
 	ms_upload_constants();
 
 	require_once dirname( dirname( __DIR__ ) ) . '/sunrise.php';
+	require_once dirname( dirname( __DIR__ ) ) . '/sunrise-events.php';
 
 	require_once dirname( __DIR__ ) . '/0-error-handling.php';
 	require_once dirname( __DIR__ ) . '/wordcamp/lets-encrypt-helper.php';

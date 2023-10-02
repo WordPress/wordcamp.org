@@ -55,6 +55,8 @@ const PATTERN_CITY_SLASH_YEAR_REQUEST_URI_WITH_DUPLICATE_DATE = '
 
 /*
  * Matches a URL path like '/vancouver/2023/diversity-day/`.
+ *
+ * These are used by the `events.wordpress.org` network.
  */
 const PATTERN_CITY_YEAR_TYPE_PATH = '
 	@ ^

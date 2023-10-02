@@ -2,12 +2,55 @@
 
 namespace WordCamp\Sunrise\Events;
 use WP_Network, WP_Site;
+use function WordCamp\Sunrise\{ get_top_level_domain };
 
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\PATTERN_CITY_YEAR_TYPE_PATH;
 
-set_network_and_site();
+main();
 
+
+/**
+ * Controller for this file.
+ */
+function main() {
+	// Redirecting would interfere with bin scripts, unit tests, etc.
+	if ( php_sapi_name() !== 'cli' ) {
+		$redirect_url = get_redirect_url( $_SERVER['REQUEST_URI'] );
+
+		if ( $redirect_url ) {
+			header( 'Location: ' . $redirect_url, true, 301 );
+			die();
+		}
+	}
+
+	set_network_and_site();
+}
+
+/**
+ * Get the URL to redirect to, if any.
+ */
+function get_redirect_url( string $request_uri ): string {
+	$domain       = 'events.wordpress.' . get_top_level_domain();
+	$old_full_url = sprintf(
+		'https://%s/%s',
+		$domain,
+		ltrim( $request_uri, '/' )
+	);
+
+	$renamed_sites = array(
+		'/uganda/2024/wordpress-showcase/' => '/masaka/2024/wordpress-showcase/',
+	);
+
+	foreach ( $renamed_sites as $old_site_path => $new_site_path ) {
+		if ( str_starts_with( $request_uri, $old_site_path ) ) {
+			$new_full_url = str_replace( $old_site_path, $new_site_path, $old_full_url );
+			return $new_full_url;
+		}
+	}
+
+	return '';
+}
 
 /**
  * Determine the current network and site.

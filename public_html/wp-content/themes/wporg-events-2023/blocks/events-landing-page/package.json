@@ -1,0 +1,13 @@
+{
+  "name": "events-landing-page",
+  "version": "0.0.1",
+  "description": "Gather events for the different landing pages, and pass them to the Google Map block to be displayed.",
+  "main": "index.js",
+  "scripts": {
+    "start": "wp-scripts start",
+    "build": "wp-scripts build"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^26.13.0"
+  }
+}

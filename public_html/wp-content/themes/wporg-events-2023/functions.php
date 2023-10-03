@@ -5,7 +5,7 @@ use WP;
 
 defined( 'WPINC' ) || die();
 
-require_once __DIR__ . '/inc/event-getters.php';
+require_once __DIR__ . '/blocks/events-landing-page/events-landing-page.php';
 
 add_filter( 'parse_request', __NAMESPACE__ . '\add_city_landing_page_query_vars' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );

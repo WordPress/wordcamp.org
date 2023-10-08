@@ -2123,16 +2123,16 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	font-weight: 400;
 }
 
+.report-form .field_wordcamp-id .select2-container {
+	width: 100% !important;
+}
+
 .report-results {
 	border-radius: 3px;
 	border: 1px #c6c6c6 solid;
 	font-family: monospace;
 	font-size: 13px;
 	padding: 0 1em 1em;
-}
-
-.report-form .field_wordcamp-id .select2-container {
-	width: 100% !important;
 }
 
 #content .report-results h3,

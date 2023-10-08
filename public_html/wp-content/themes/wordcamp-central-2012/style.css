@@ -2131,6 +2131,10 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	padding: 0 1em 1em;
 }
 
+.report-form .field_wordcamp-id .select2-container {
+	width: 100% !important;
+}
+
 #content .report-results h3,
 #content .report-results h4 {
 	margin: 1em 0 0.5em;

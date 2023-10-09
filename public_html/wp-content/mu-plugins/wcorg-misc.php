@@ -680,6 +680,23 @@ function wcorg_country_list_mods( $countries ) {
 add_filter( 'wcorg_get_countries', 'wcorg_country_list_mods' );
 
 /**
+ * Tell the site administrators to use the WordPress.org account information when adding new users.
+ */
+function wcorg_user_new_wporg_credentials_notice() {
+	global $pagenow;
+
+	if ( 'user-new.php' !== $pagenow ) {
+		return;
+	}
+	?>
+	<div class="notice notice-info">
+		<p><?php echo wp_kses_post( __( '<strong>Use WordPress.org accounts to add and invite users</strong>. You should use the same email address that user has registered to WordPress.org with.' ) ); ?></p>
+	</div>
+	<?php
+}
+add_action( 'admin_notices', 'wcorg_user_new_wporg_credentials_notice' );
+
+/**
  * Fix malformed URLs for the `mu-plugins-private` folder.
  *
  * If `plugins_url()` is called for a file in the `mu-plugins-private` directory, then the URL will contain the

@@ -72,6 +72,7 @@ class WordCamp_Docs_PDF_Generator {
 		$file = $this->get_tmp_folder( $filename );
 
 		$command = sprintf(
+			// Allowing local file access is safe because the inputs to `$source_file` should have been escaped.
 			'wkhtmltopdf --enable-local-file-access -d %d -T %s -R %s -B %s -L %s %s %s',
 			$dpi,
 			escapeshellarg( $margins[0] ),

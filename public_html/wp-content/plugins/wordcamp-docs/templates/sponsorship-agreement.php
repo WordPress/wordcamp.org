@@ -4,7 +4,7 @@
  */
 class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Template {
 	/**
-	 * Step 10. Select the sposnor post from which the form will be pre-filled.
+	 * Step 10. Select the sponsor post from which the form will be pre-filled.
 	 */
 	public function form_prefill_select( $data ) {
 		$sponsors = get_posts( array(
@@ -12,28 +12,30 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 			'post_status'    => 'publish',
 			'posts_per_page' => 500,
 		) );
+
 		?>
+
 		<style>
-		.wcorg-sponsorship-agreement-form label {
-			display: block;
-			clear: both;
-			margin-top: 12px;
-		}
+			.wcorg-sponsorship-agreement-form label {
+				display: block;
+				clear: both;
+				margin-top: 12px;
+			}
 
-		.wcorg-sponsorship-agreement-form input,
-		.wcorg-sponsorship-agreement-form textarea,
-		.wcorg-sponsorship-agreement-form select {
-			width: 360px;
-		}
+			.wcorg-sponsorship-agreement-form input,
+			.wcorg-sponsorship-agreement-form textarea,
+			.wcorg-sponsorship-agreement-form select {
+				width: 360px;
+			}
 
-		.wcorg-sponsorship-agreement-form textarea {
-			height: 120px;
-		}
+			.wcorg-sponsorship-agreement-form textarea {
+				height: 120px;
+			}
 
-		.wcorg-sponsorship-agreement-form .description {
-			display: block;
-			clear: both;
-		}
+			.wcorg-sponsorship-agreement-form .description {
+				display: block;
+				clear: both;
+			}
 		</style>
 
 		<div class="wcorg-sponsorship-agreement-form">

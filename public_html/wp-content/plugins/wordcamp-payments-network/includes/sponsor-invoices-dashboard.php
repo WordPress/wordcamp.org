@@ -353,6 +353,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 		return;
 	}
 
+	$wordcamp           = get_wordcamp_post();
 	$invoice            = get_post( $invoice_id );
 	$to                 = WordCamp_Budgets::get_requester_formatted_email( $invoice->post_author );
 	$subject            = "Invoice for {$invoice->post_title} $new_status";
@@ -362,6 +363,10 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 	$attachments        = array();
 	$attachment_message = '';
 	$invoice_filename   = false;
+
+	if ( $wordcamp->meta['E-mail Address'][0] !== $to ) {
+		$headers[] = "Cc: {$wordcamp->meta['E-mail Address'][0]}";
+	}
 
 	if ( 'approved' === $new_status ) {
 		$sponsor_id       = get_post_meta( $invoice_id, '_wcbsi_sponsor_id',           true );
@@ -526,9 +531,9 @@ function send_invoice_pending_reminder() {
 		$last_step_time      = $invoice_sent_at;
 		$wordcamp_post       = get_wordcamp_post();
 		$wordcamp_start_date = $wordcamp_post->meta['Start Date (YYYY-mm-dd)'][0] ?? false;
-		$wordcamp_lead_email = $wordcamp_post->meta['Email Address'][0]           ?? false;
+		$wordcamp_email      = $wordcamp_post->meta['E-mail Address'][0]          ?? false;
 
-		if ( empty( $wordcamp_post ) || ! $wordcamp_lead_email ) {
+		if ( empty( $wordcamp_post ) || ! $wordcamp_email ) {
 			// Maybe this is a central.wordcamp.org test sponsor invoice.
 			continue;
 		}
@@ -566,7 +571,7 @@ function send_invoice_pending_reminder() {
 			'step'    => $reminder_step,
 		);
 
-		send_invoice_pending_reminder_mail( $invoice_id, $wordcamp_lead_email );
+		send_invoice_pending_reminder_mail( $invoice_id, $wordcamp_email );
 
 		update_post_meta( $invoice_id, 'last_reminder_details', $current_reminder_details );
 	}

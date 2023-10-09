@@ -28,8 +28,27 @@ function disable_modules( $modules ) {
  * Determine which Jetpack modules should be automatically activated when new sites are created
  */
 function default_jetpack_modules( $modules ) {
-	$modules = array_diff( $modules, array( 'widget-visibility' ) );
-	array_push( $modules, 'contact-form', 'shortcodes', 'custom-css', 'subscriptions' );
+	// Disable some default modules.
+	$modules = array_diff(
+		$modules,
+		array(
+			'widget-visibility', // better performance without.
+			'sitemaps', // Core generates basic sitemaps.
+		)
+	);
+
+	// Add new default modules.
+	array_push(
+		$modules,
+		'contact-form',
+		'copy-post',
+		'custom-css',
+		'image-cdn',
+		'sharedaddy',
+		'shortcodes',
+		'subscriptions'
+	);
+
 	$modules = array_unique( $modules );
 
 	return $modules;

@@ -46,7 +46,7 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 			<span class="description"><?php esc_html_e( 'Sponsorship details will be pre-filled with the data on sponsor post.', 'wordcamporg' ); ?></span>
 
 			<label><?php esc_html_e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
-			<textarea name="sponsorship_benefits"><?php echo esc_textarea( $data['sponsorship_benefits'] ); ?></textarea>
+			<textarea name="sponsorship_benefits"><?php echo esc_textarea( $data['sponsorship_benefits'] ?? '' ); ?></textarea>
 			<span class="description"><?php esc_html_e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
 		</div>
 
@@ -336,7 +336,7 @@ h2 {
 			'sponsorship_amount',
 			'sponsorship_amount_num',
 		) as $field )
-			$output[ $field ] = sanitize_text_field( wp_strip_all_tags( $input[ $field ] ) );
+			$output[ $field ] = sanitize_text_field( wp_strip_all_tags( $input[ $field ] ?? '' ) );
 
 		$output['sponsorship_benefits'] = wp_strip_all_tags( $input['sponsorship_benefits'] );
 		return $output;

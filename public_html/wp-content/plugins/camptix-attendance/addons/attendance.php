@@ -3,9 +3,10 @@
  * Allows event organizers to track which attendees showed up to the event.
  */
 class CampTix_Attendance extends CampTix_Addon {
-	public $secret        = '';
-	public $questions     = array();
-	public $secret_expiry = '2 weeks';
+	public $secret           = '';
+	public $secret_generated = '';
+	public $questions        = array();
+	public $secret_expiry    = '2 weeks';
 
 	/**
 	 * Runs during CampTix init.
@@ -25,7 +26,7 @@ class CampTix_Attendance extends CampTix_Addon {
 			return;
 
 		$this->secret = $camptix_options['attendance-secret'];
-		$this->secret_generated = $camptix_options['attendance-secret-generated'];
+		$this->secret_generated = $camptix_options['attendance-secret-generated'] ?? '';
 
 		if ( isset( $camptix_options['attendance-questions'] ) ) {
 			$this->questions = $camptix_options['attendance-questions'];

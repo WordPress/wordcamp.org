@@ -88,7 +88,7 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 
 			restore_current_blog();
 			// Reset DB query log & object cache every 10 loops, to reduce memory usage.
-			if ( $i % 10 == 0 ) {
+			if ( 0 == $i % 10 ) {
 				self::reset_db_query_log();
 				self::reset_local_object_cache();
 			}
@@ -122,7 +122,7 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 		$wp_object_cache->cache          = array();
 
 		if ( method_exists( $wp_object_cache, '__remoteset' ) ) {
-			$wp_object_cache->__remoteset(); // important
+			$wp_object_cache->__remoteset();
 		}
 	}
 

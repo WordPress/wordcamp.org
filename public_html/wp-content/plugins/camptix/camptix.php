@@ -5750,6 +5750,11 @@ class CampTix_Plugin {
 							$price = $ticket->tix_price;
 							$discounted = '';
 
+							$row_class = '';
+							if( ! $ticket->tix_remaining ) {
+								$row_class = 'tix-sold-out';
+							}
+
 							$max = min( $ticket->tix_remaining, $max_tickets_per_order );
 							$selected = ( 1 == count( $this->tickets ) ) ? 1 : 0;
 							if ( isset( $this->tickets_selected[$ticket->ID] ) )
@@ -5764,7 +5769,7 @@ class CampTix_Plugin {
 								$price = $ticket->tix_discounted_price;
 							}
 							?>
-							<tr class="tix-ticket-<?php echo absint( $ticket->ID ); ?>">
+							<tr class="tix-ticket-<?php echo absint( $ticket->ID ); ?> <?php echo esc_attr( $row_class ); ?>">
 								<th class="tix-column-description" scope="row">
 									<label for="tix-qty-<?php echo absint( $ticket->ID ); ?>" class="tix-ticket-title">
 										<?php echo wp_kses_post( $ticket->post_title ); ?>
@@ -5789,11 +5794,15 @@ class CampTix_Plugin {
 									</td>
 								<?php endif; ?>
 								<td class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_quantity_row_classes', array( 'tix-column-quantity' ) ) ) ); ?>">
-									<select id="tix-qty-<?php echo absint( $ticket->ID ); ?>" name="tix_tickets_selected[<?php echo esc_attr( $ticket->ID ); ?>]">
-										<?php foreach ( range( 0, $max ) as $value ) : ?>
-											<option <?php selected( $selected, $value ); ?> value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $value ); ?></option>
-										<?php endforeach; ?>
-									</select>
+									<?php if( $ticket->tix_remaining ) : ?>
+										<select id="tix-qty-<?php echo absint( $ticket->ID ); ?>" name="tix_tickets_selected[<?php echo esc_attr( $ticket->ID ); ?>]">
+											<?php foreach ( range( 0, $max ) as $value ) : ?>
+												<option <?php selected( $selected, $value ); ?> value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $value ); ?></option>
+											<?php endforeach; ?>
+										</select>
+									<?php else :
+										esc_html_e( 'Sold out', 'camptix' );
+									endif; ?>
 								</td>
 							</tr>
 						<?php endforeach; ?>

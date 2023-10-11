@@ -93,7 +93,7 @@ function get_feedback_details() {
 			'responses_url' => admin_url( sprintf( 'edit.php?post_type=feedback&jetpack_form_parent_id=%s', get_page_id() ) ),
 			'sent' => $sent,
 			'responses' => $responses,
-			'rate' => 0 !== $sent ? ( $responses / $sent ) * 100 . '%' : '',
+			'rate' => 0 !== $sent ? ceil( ( $responses / $sent ) * 100 ) . '%' : '',
 		);
 
 		// Restore the original site context.

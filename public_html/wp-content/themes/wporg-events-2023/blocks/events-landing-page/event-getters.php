@@ -121,7 +121,7 @@ function get_all_upcoming_events( bool $force_refresh = false ): array {
 			status = "scheduled" AND
 			(
 				( "wordcamp" = type AND date_utc BETWEEN NOW() AND ADDDATE( NOW(), 180 ) ) OR
-				( "meetup" = type AND date_utc BETWEEN NOW() AND ADDDATE( NOW(), 60 ) )
+				( "meetup" = type AND date_utc BETWEEN NOW() AND ADDDATE( NOW(), 30 ) )
 			)
 		ORDER BY date_utc ASC
 		LIMIT 400'

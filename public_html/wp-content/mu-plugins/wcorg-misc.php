@@ -690,7 +690,7 @@ function wcorg_user_new_wporg_credentials_notice() {
 	}
 	?>
 	<div class="notice notice-info">
-		<p><?php echo wp_kses_post( __( '<strong>Use WordPress.org accounts to add and invite users</strong>. You should use the same email address that user has registered to WordPress.org with.' ) ); ?></p>
+		<p><?php echo wp_kses_post( __( '<strong>Use WordPress.org accounts to add and invite users</strong>. You should use the same email address that the user has registered on WordPress.org with.' ) ); ?></p>
 	</div>
 	<?php
 }

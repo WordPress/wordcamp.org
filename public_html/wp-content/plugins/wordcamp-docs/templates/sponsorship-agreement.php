@@ -45,7 +45,7 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 					<option value="<?php echo esc_attr( $sponsor->ID ); ?>"><?php echo esc_html( get_the_title( $sponsor ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
-			<span class="description"><?php esc_html_e( 'Sponsorship details will be pre-filled with the data on sponsor post.', 'wordcamporg' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Sponsorship details will be pre-filled with data on the sponsor post.', 'wordcamporg' ); ?></span>
 
 			<label><?php esc_html_e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
 			<textarea name="sponsorship_benefits"><?php echo esc_textarea( $data['sponsorship_benefits'] ?? '' ); ?></textarea>

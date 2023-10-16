@@ -355,6 +355,26 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 		),
 	);
 
+	// temporary to troubleshoot URL routing error.
+	// maybe the `$url` above has some clues about the request that are stripped out by redact/esc functions.
+	// see https://wordpress.slack.com/archives/GDDSW0WNS/p1697474288356909.
+	$fields = array(
+		array(
+			'title' => 'tmp raw HTTP_HOST / SERVER_NAME',
+			'value' => sprintf(
+				'host: %s, name: %s, redir: %s, qs: %s, uri: %s, sapi: %s, ip: %s',
+				$_SERVER['HTTP_HOST'],
+				$_SERVER['SERVER_NAME'],
+				$_SERVER['REDIRECT_URL'],
+				$_SERVER['QUERY_STRING'],
+				$_SERVER['REQUEST_URI'],
+				php_sapi_name(),
+				$_SERVER['REMOTE_ADDR']
+			),
+			'short' => false,
+		),
+	);
+
 	if ( ! str_contains( $err_msg, $file ) ) {
 		$fields[] = array(
 			'title' => 'File',

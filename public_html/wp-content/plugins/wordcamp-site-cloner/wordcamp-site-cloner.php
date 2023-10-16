@@ -168,8 +168,11 @@ function register_api_endpoints() {
  * @return array
  */
 function sites_endpoint() {
-	$sites        = array();
-	$cached_sites = get_site_option( WORDCAMP_SITES_OPTION_KEY, array() );
+	$sites = array();
+
+	// All networks share this option, but it's stored on the WordCamp network because Core doesn't provide a
+	// cross-network option.
+	$cached_sites = get_network_option( WORDCAMP_NETWORK_ID, WORDCAMP_SITES_OPTION_KEY, array() );
 
 	if ( $cached_sites ) {
 		unset( $cached_sites[ get_current_blog_id() ] );
@@ -194,7 +197,9 @@ function prime_wordcamp_sites() {
 		return;
 	}
 
-	update_site_option( WORDCAMP_SITES_OPTION_KEY, get_wordcamp_sites() );
+	// All networks share this option, but it's stored on the WordCamp network because Core doesn't provide a
+	// cross-network option.
+	update_network_option( WORDCAMP_NETWORK_ID, WORDCAMP_SITES_OPTION_KEY, get_wordcamp_sites() );
 }
 
 /**

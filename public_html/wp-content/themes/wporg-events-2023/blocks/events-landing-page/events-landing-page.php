@@ -48,5 +48,7 @@ function render_events_landing_page( array $block_attributes, string $content ):
 			return 'No events available';
 	}
 
+	$map_options['apiKey'] = 'production' === wp_get_environment_type() ? 'WORDCAMP_PROD_GOOGLE_MAPS_API_KEY' : 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY';
+
 	return do_blocks( '<!-- wp:wporg/google-map '. wp_json_encode( $map_options ) .' /-->' );
 }

@@ -165,7 +165,7 @@ function save_post( $post_id ) {
 	check_admin_referer( $nonce_action );
 
 	if ( isset( $_POST['tix_type'] ) ) {
-		$value = filter_input( INPUT_POST, 'tix_type', FILTER_SANITIZE_STRING );
+		$value = filter_input( INPUT_POST, 'tix_type', FILTER_UNSAFE_RAW );
 		update_post_meta( $post_id, META_KEY, $value );
 	}
 }

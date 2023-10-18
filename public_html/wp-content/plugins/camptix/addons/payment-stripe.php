@@ -558,7 +558,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$metadata = array(
-			'Refund reason' => filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_SANITIZE_STRING ),
+			'Refund reason' => filter_input( INPUT_POST, 'tix_refund_request_reason', FILTER_UNSAFE_RAW ),
 		);
 
 		// Create a new Idempotency token for the refund request.

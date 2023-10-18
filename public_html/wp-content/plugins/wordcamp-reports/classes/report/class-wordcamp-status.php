@@ -493,7 +493,7 @@ class WordCamp_Status extends Base_Status {
 		$start_date = filter_input( INPUT_POST, 'start-date' );
 		$end_date   = filter_input( INPUT_POST, 'end-date' );
 		$status     = filter_input( INPUT_POST, 'status' );
-		$fields     = filter_input( INPUT_POST, 'fields', FILTER_SANITIZE_STRING, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
+		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
 		$action     = filter_input( INPUT_POST, 'action' );
 		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );

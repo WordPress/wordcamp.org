@@ -215,7 +215,7 @@ add_action( 'admin_menu', __NAMESPACE__ . '\add_reports_page' );
  * @return void
  */
 function render_page() {
-	$report       = filter_input( INPUT_GET, 'report', FILTER_SANITIZE_STRING );
+	$report       = filter_input( INPUT_GET, 'report', FILTER_UNSAFE_RAW );
 	$report_class = get_report_class_by_slug( $report );
 
 	$reports_with_admin = array_filter(
@@ -255,7 +255,7 @@ function enqueue_admin_assets( $hook_suffix ) {
 		filemtime( get_assets_dir_path() . 'css/admin-common.css' )
 	);
 
-	$report       = filter_input( INPUT_GET, 'report', FILTER_SANITIZE_STRING );
+	$report       = filter_input( INPUT_GET, 'report', FILTER_UNSAFE_RAW );
 	$report_class = get_report_class_by_slug( $report );
 
 	if ( ! is_null( $report_class ) && method_exists( $report_class, 'enqueue_admin_assets' ) ) {

@@ -216,7 +216,7 @@ class Meetup_Status extends Base_Status {
 	}
 
 	/**
-	 * Get all Meetup posts which have status changed between given time fram
+	 * Get all Meetup posts which have status changed between given time frame.
 	 *
 	 * @return array
 	 */
@@ -224,17 +224,14 @@ class Meetup_Status extends Base_Status {
 		global $wpdb;
 		$meetup_post_type = WCPT_MEETUP_SLUG;
 		$meetup_post_objs = $wpdb->get_results(
-			$wpdb->prepare(
-				"
-			SELECT DISTINCT post_id
-			FROM {$wpdb->prefix}postmeta
-			WHERE 
-				meta_key LIKE '_status_change_log_$meetup_post_type%'
-			AND
-				meta_value >= %d
-			AND 
-				meta_value <= %d
-			",
+			$wpdb->prepare( "
+				SELECT DISTINCT post_id
+				FROM {$wpdb->prefix}postmeta
+				WHERE
+					meta_key LIKE %s AND
+					meta_value >= %d AND
+					meta_value <= %d",
+				sprintf( '_status_change_log_%s%%', $meetup_post_type ),
 				$this->range->start->getTimestamp(),
 				$this->range->end->getTimestamp()
 			)

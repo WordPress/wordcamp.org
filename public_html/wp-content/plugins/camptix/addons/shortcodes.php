@@ -225,6 +225,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 			$attr['orderby'] = 'title';
 		}
 
+		// ID of ticket types, not invididual tickets. i.e. from wp-admin/edit.php?post_type=tix_ticket.
 		if ( $attr['tickets'] ) {
 			$attr['tickets'] = array_map( 'intval', explode( ',', $attr['tickets'] ) );
 		}

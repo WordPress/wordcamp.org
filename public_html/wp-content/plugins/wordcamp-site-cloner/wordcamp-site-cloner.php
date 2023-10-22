@@ -193,7 +193,7 @@ function sites_endpoint() {
  */
 function prime_wordcamp_sites() {
 	// This only needs to run on a single site, then the whole network can use the cached result.
-	if ( ! is_main_site() ) {
+	if ( WORDCAMP_NETWORK_ID !== get_current_network_id() || ! is_main_site() ) {
 		return;
 	}
 

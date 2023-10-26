@@ -488,7 +488,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	border: 1px #c6c6c6 solid;
 	background: #f5f5f5;
 
-	font-size: 14px;
+	font-size: 16px;
 
 	box-shadow: none;
 	-webkit-box-shadow: none;
@@ -1915,6 +1915,15 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 
 /* !03c. Contact Form Styles */
 /* ------------------------------------- */
+
+#content .grunion-field-label span,
+#content .contact-form label span,
+#content .contact-form label {
+	/* Small, semi-opaque text is not accessible. */
+	font-size: 100%;
+	opacity: 1;
+	color: #373737;
+}
 
 #content div.wpcf7-response-output {
 	float: left;

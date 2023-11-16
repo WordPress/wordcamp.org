@@ -25,13 +25,6 @@ function register_blocks(): void {
  */
 function render_events_landing_page( array $block_attributes, string $content ): string {
 	switch ( $block_attributes['events'] ) {
-		case 'all-upcoming':
-			$map_options = array(
-				'id'      => 'all-upcoming-events',
-				'markers' => get_all_upcoming_events(),
-			);
-			break;
-
 		case 'city':
 			// Can't use `$wp->request` because Gutenberg calls this on `init`, before `parse_request`.
 			// @todo That was true when this was part of a pattern, but it isn't now that this is a block. We can

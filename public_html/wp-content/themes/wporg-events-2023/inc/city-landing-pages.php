@@ -1,14 +1,64 @@
 <?php
 
 namespace WordPressdotorg\Events_2023;
-use WP_Post, DateTimeZone, DateTime;
-use function WordPressdotorg\MU_Plugins\Google_Map_Event_Filters\get_latin1_results_with_prepared_query;
+use WP, WP_Post, DateTimeZone, DateTime;
+use WordPressdotorg\MU_Plugins\Google_Map_Event_Filters;
 
 defined( 'WPINC' ) || die();
 
+const FILTER_SLUG = 'city-landing-pages';
 
+add_filter( 'parse_request', __NAMESPACE__ . '\add_city_landing_page_query_vars' );
 add_action( 'init', __NAMESPACE__ . '\schedule_cron_jobs' );
+add_filter( 'google-map-event-filters-register-cron', __NAMESPACE__ .'\disable_event_filters_cron', 10, 2 );
+add_action( 'google_map_event_filters_' . FILTER_SLUG, __NAMESPACE__ .'\get_events' );
+add_action( 'google_map_event_filters_cache_key_parts', __NAMESPACE__ .'\add_landing_page_to_cache_key' );
 add_action( 'events_landing_prime_query_cache', __NAMESPACE__ . '\prime_query_cache' );
+
+
+/**
+ * Override the current query vars so that the city landing page loads instead.
+ */
+function add_city_landing_page_query_vars( WP $wp ): void {
+	if ( ! wp_using_themes() || ! is_main_query() || ! is_city_landing_page() ) {
+		return;
+	}
+
+	// This assumes there's a placeholder page in the database with this slug.
+	$wp->set_query_var( 'page', '' );
+	$wp->set_query_var( 'pagename', 'city-landing-page' );
+}
+
+/**
+ * Determine if the current request is for a city landing page.
+ *
+ * See `get_city_landing_sites()` for examples of request URIs.
+ */
+function is_city_landing_page(): bool {
+	global $wp, $wpdb;
+
+	// The landing page formats will always match the rewrite rule for pages, which sets `page` and `pagename`.
+	if ( empty( $wp->query_vars['page'] ) && empty( $wp->query_vars['pagename'] ) ) {
+		return false;
+	}
+
+	$city = explode( '/', $wp->request );
+	$city = $city[0] ?? false;
+
+	// Using this instead of `get_sites()` so that the search doesn't match false positives.
+	$sites = $wpdb->get_results( $wpdb->prepare( "
+		SELECT blog_id
+		FROM {$wpdb->blogs}
+		WHERE
+			site_id = %d AND
+			path REGEXP %s
+		LIMIT 1",
+		EVENTS_NETWORK_ID,
+		"^/$city/\d{4}/[a-z-]+/$"
+	) );
+
+	return ! empty( $sites );
+}
 
 /**
  * Schedule cron jobs.
@@ -25,12 +75,30 @@ function schedule_cron_jobs(): void {
  * Without this, users would have to wait for new results to be generated every time the cache expires. That could
  * make the front end very slow. This will refresh the cache before it expires, so that the front end can always
  * load cached results.
+ *
+ * These pages can't use the cache-priming cron provided by the Event Filters plugin, because it doesn't know how
+ * to handle them.
  */
 function prime_query_cache(): void {
 	$city_landing_uris = get_known_city_landing_request_uris();
 
+	// It won't know the "current" page in a cron context, so we'll pass it directly to `get_cache_key()` in the loop below.
+	remove_action( 'google_map_event_filters_cache_key_parts', __NAMESPACE__ .'\add_landing_page_to_cache_key' );
+
 	foreach ( $city_landing_uris as $request_uri ) {
-		get_city_landing_page_events( $request_uri, true );
+		// Must match the return value of the cache key that `Google_Map_Event_Filters\get_events()` generates during block rendering,
+		// including the `landing_page` item added by `add_landing_page_to_cache_key()`.
+		$parts = array(
+			'filter_slug'     => FILTER_SLUG,
+			'start_timestamp' => 0,
+			'end_timestamp'   => 0,
+			'landing_page'    => $request_uri
+		);
+
+		$cache_key = Google_Map_Event_Filters\get_cache_key( $parts );
+		$events    = get_city_landing_page_events( $request_uri, true );
+
+		set_transient( $cache_key, $events, DAY_IN_SECONDS );
 	}
 }
 
@@ -76,20 +144,11 @@ function get_known_city_landing_request_uris(): array {
  *
  * See `get_city_landing_sites()` for how request URIs map to events.
  */
-function get_city_landing_page_events( string $request_uri, bool $force_refresh = false ): array {
-	$limit     = 300;
-	$cache_key = 'event_landing_city_events_' . md5( $request_uri );
+function get_city_landing_page_events( string $request_uri ): array {
+	$limit = 300;
 
 	if ( empty( $request_uri ) || '/' === $request_uri ) {
 		return array();
-	}
-
-	if ( ! $force_refresh ) {
-		$cached_events = get_transient( $cache_key );
-
-		if ( $cached_events ) {
-			return $cached_events;
-		}
 	}
 
 	$sites = get_city_landing_sites( $request_uri, $limit );
@@ -129,24 +188,7 @@ function get_city_landing_page_events( string $request_uri, bool $force_refresh 
 
 	restore_current_blog();
 
-	// `prime_query_cache()` should update this hourly, but expire after a day just in case it doesn't find all the
-	// valid request URIs.
-	set_transient( $cache_key, $events, DAY_IN_SECONDS );
-
 	return $events;
-}
-
-/**
- * Standardize request URIs so they can be reliably used as cache keys.
- *
- * For example, `/rome`, `/rome/` and `/rome/?foo=bar` should all be `/rome/`.
- */
-function normalize_request_uri( $raw_uri, $query_string ) {
-	$clean_uri = str_replace( '?' . $query_string, '', $raw_uri );
-	$clean_uri = trailingslashit( $clean_uri );
-	$clean_uri = '/' . ltrim( $clean_uri, '/' );
-
-	return $clean_uri;
 }
 
 /**
@@ -223,4 +265,52 @@ function get_wordcamp_offset( WP_Post $wordcamp ): int {
 	);
 
 	return $wordcamp_timezone->getOffset( $wordcamp_datetime );
+}
+
+/**
+ * Disable the cron job that Google Map Event Filters registers.
+ *
+ * This plugin needs to run its own cron to prime the events cache, because the upstream one doesn't know how to handle city pages.
+ */
+function disable_event_filters_cron( bool $enabled, string $filter_slug ): bool {
+	if ( FILTER_SLUG === $filter_slug ) {
+		$enabled = false;
+	}
+
+	return $enabled;
+}
+
+/**
+ * Get the events for the current city landing page.
+ */
+function get_events( array $events ): array {
+	if ( is_city_landing_page() ) {
+		$events = get_city_landing_page_events( get_current_landing_page() );
+	}
+
+	return $events;
+}
+
+/**
+ * Get the path to the current landing page, with surrounding slashes.
+ */
+function get_current_landing_page(): string {
+	global $wp;
+
+	$page = '/' . $wp->request . '/';
+
+	return $page;
+}
+
+/**
+ * Adds the current landing page to the Event Filters cache key.
+ *
+ * Without this, all city pages would share the same cache key, and the wrong events would show up on most pages.
+ */
+function add_landing_page_to_cache_key( array $items ) : array {
+	if ( is_city_landing_page() && FILTER_SLUG === $items['filter_slug'] ) {
+		$items['landing_page'] = get_current_landing_page();
+	}
+
+	return $items;
 }

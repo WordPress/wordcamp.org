@@ -9,6 +9,7 @@ require_once __DIR__ . '/blocks/events-landing-page/events-landing-page.php';
 
 add_filter( 'parse_request', __NAMESPACE__ . '\add_city_landing_page_query_vars' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
+add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_site_navigation_menus' );
 
 /**
  * Override the current query vars so that the city landing page loads instead.
@@ -63,5 +64,23 @@ function enqueue_assets() {
 		get_stylesheet_uri(),
 		array( 'wporg-parent-2021-style', 'wporg-global-fonts' ),
 		filemtime( __DIR__ . '/style.css' )
+	);
+}
+
+/**
+ * Provide a list of local navigation menus.
+ */
+function add_site_navigation_menus( $menus ) {
+	return array(
+		'local-navigation' => array(
+			array(
+				'label' => __( 'All Events', 'wordcamporg' ),
+				'url' => '/upcoming-events/',
+			),
+			array(
+				'label' => __( 'Organize an Event', 'wordcamporg' ),
+				'url' => '/organize-an-event/',
+			),
+		),
 	);
 }

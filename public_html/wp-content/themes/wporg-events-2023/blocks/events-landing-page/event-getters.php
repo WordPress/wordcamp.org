@@ -1,7 +1,8 @@
 <?php
 
 namespace WordPressdotorg\Events_2023;
-use WP_Post, DateTimeZone, DateTime, hyperdb;
+use WP_Post, DateTimeZone, DateTime;
+use function WordPressdotorg\MU_Plugins\Google_Map_Event_Filters\get_latin1_results_with_prepared_query;
 
 defined( 'WPINC' ) || die();
 
@@ -26,8 +27,6 @@ function schedule_cron_jobs(): void {
  * load cached results.
  */
 function prime_query_cache(): void {
-	get_all_upcoming_events( true );
-
 	$city_landing_uris = get_known_city_landing_request_uris();
 
 	foreach ( $city_landing_uris as $request_uri ) {
@@ -71,78 +70,6 @@ function get_known_city_landing_request_uris(): array {
 	return array_keys( $city_landing_pages );
 }
 
-/**
- * Query a table that's encoded with the `latin1` charset.
- *
- * Unlike wordpress.org, wordcamp.org has a `DB_CHARSET` of `utf8mb4`, so that's what WPDB uses when querying
- * tables. w.org tables use `latin1`, so we need to switch to that when pulling from them. If you query it with
- * `utf8mb4`, you'll get Mojibake.
- *
- * @param string $prepared_query ⚠️ This must have already be ran through `$wpdb->prepare()` if needed.
- *
- * @return object|null
- */
-function get_latin1_results_with_prepared_query( string $prepared_query ) {
-	global $wpdb;
-
-	// Local environments don't always use HyperDB, but production does.
-	$db_handle = $wpdb instanceof hyperdb ? $wpdb->db_connect( $prepared_query ) : $wpdb->dbh;
-	$wpdb->set_charset( $db_handle, 'latin1', 'latin1_swedish_ci' );
-
-	// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- This function doesn't have the context to prepare it, the caller must.
-	$results = $wpdb->get_results( $prepared_query );
-
-	// Revert to the default charset to avoid affecting other queries.
-	$wpdb->set_charset( $db_handle, DB_CHARSET, DB_COLLATE );
-
-	return $results;
-}
-
-/**
- * Get a list of all upcoming events across all sites.
- */
-function get_all_upcoming_events( bool $force_refresh = false ): array {
-	$cache_key = 'event_landing_all_upcoming_events';
-
-	if ( ! $force_refresh ) {
-		$cached_events = get_transient( $cache_key );
-
-		if ( $cached_events ) {
-			return $cached_events;
-		}
-	}
-
-	$events = get_latin1_results_with_prepared_query( '
-		SELECT
-			id, `type`, title, url, meetup, location, latitude, longitude, date_utc,
-			date_utc_offset AS tz_offset
-		FROM `wporg_events`
-		WHERE
-			status = "scheduled" AND
-			(
-				( "wordcamp" = type AND date_utc BETWEEN NOW() AND ADDDATE( NOW(), 180 ) ) OR
-				( "meetup" = type AND date_utc BETWEEN NOW() AND ADDDATE( NOW(), 30 ) )
-			)
-		ORDER BY date_utc ASC
-		LIMIT 400'
-	);
-
-	foreach ( $events as $event ) {
-		// `capital_P_dangit()` won't work here because the current filter isn't `the_title` and there isn't a safelisted prefix before `$text`.
-		$event->title = str_replace( 'Wordpress', 'WordPress', $event->title );
-
-		// `date_utc` is a misnomer, the value is actually in the local timezone of the event. So, convert to a true Unix timestamp (UTC).
-		// Can't do this reliably in the query because MySQL converts it to the server timezone.
-		$event->timestamp = strtotime( $event->date_utc ) - $event->tz_offset;
-
-		unset( $event->date_utc );
-	}
-
-	// `prime_query_cache()` should update this hourly, but expire after a day just in case it doesn't.
-	set_transient( $cache_key, $events, DAY_IN_SECONDS );
-
-	return $events;
-}
 
 /**
  * Get events based on the given request URI.

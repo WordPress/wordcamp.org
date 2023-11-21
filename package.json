@@ -18,7 +18,8 @@
 		"public_html/wp-content/plugins/wc-post-types",
 		"public_html/wp-content/plugins/wcpt",
 		"public_html/wp-content/plugins/wordcamp-forms-to-drafts",
-		"public_html/wp-content/plugins/wordcamp-speaker-feedback"
+		"public_html/wp-content/plugins/wordcamp-speaker-feedback",
+		"public_html/wp-content/themes/wporg-events-2023"
 	],
 	"browserslist": [
 		"extends @wordpress/browserslist-config"

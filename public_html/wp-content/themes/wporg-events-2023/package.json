@@ -1,0 +1,19 @@
+{
+	"name": "wporg-events-2023",
+	"version": "0.0.1",
+	"description": "Description: Includes templates for the homepage, event archives, etc",
+	"license": "GPL-2.0-or-later",
+	"devDependencies": {
+		"cssnano": "^6.0.1",
+		"postcss": "^8.4.31",
+		"postcss-cli": "^10.1.0",
+		"postcss-import": "^15.1.0",
+		"postcss-preset-env": "^9.3.0"
+	},
+	"scripts": {
+		"watch": "npm run build -- --watch",
+		"build": "postcss postcss/style.pcss --output style.css",
+		"lint:js": "echo 'There is no JS, but this is required to make the `linter.yml` workflow pass. See https://github.com/yarnpkg/yarn/issues/6739, https://github.com/yarnpkg/yarn/issues/6894.'",
+		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'"
+	}
+}

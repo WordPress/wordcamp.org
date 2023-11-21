@@ -2,7 +2,7 @@
 
 namespace WordPressdotorg\Events_2023;
 use WP, WP_Post, DateTimeZone, DateTime;
-use WordPressdotorg\MU_Plugins\Google_Map_Event_Filters;
+use WordPressdotorg\MU_Plugins\Google_Map;
 
 defined( 'WPINC' ) || die();
 
@@ -95,7 +95,7 @@ function prime_query_cache(): void {
 			'landing_page'    => $request_uri
 		);
 
-		$cache_key = Google_Map_Event_Filters\get_cache_key( $parts );
+		$cache_key = Google_Map\get_cache_key( $parts );
 		$events    = get_city_landing_page_events( $request_uri, true );
 
 		set_transient( $cache_key, $events, DAY_IN_SECONDS );

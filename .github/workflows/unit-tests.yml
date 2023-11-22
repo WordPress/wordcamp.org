@@ -24,10 +24,10 @@ jobs:
         path: '**/node_modules'
         key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
-    - name: Use Node.js 12.x
+    - name: Use Node.js 16.x
       uses: actions/setup-node@v2-beta
       with:
-        node-version: 12.x
+        node-version: 16.x
 
     - name: Install dependencies
       # We don't need to build, since jest can interpret the source files.

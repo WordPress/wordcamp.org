@@ -26,10 +26,10 @@ jobs:
         path: '**/node_modules'
         key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
-    - name: Use Node.js 12.x
+    - name: Use Node.js 16.x
       uses: actions/setup-node@v2-beta
       with:
-        node-version: 12.x
+        node-version: 16.x
 
     - name: composer install
       run: |
@@ -47,4 +47,4 @@ jobs:
 
     - name: Lint PHP
       run: |
-        BASE_REF=${{ github.base_ref }} php .github/bin/phpcs-branch.php 
+        BASE_REF=${{ github.base_ref }} php .github/bin/phpcs-branch.php

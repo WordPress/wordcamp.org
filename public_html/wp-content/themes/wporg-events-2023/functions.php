@@ -5,9 +5,17 @@ defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/inc/city-landing-pages.php';
 
+add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_site_navigation_menus' );
 
+
+/**
+ * Register theme supports.
+ */
+function theme_support() {
+	add_editor_style( 'editor.css' );
+}
 
 /**
  * Enqueue scripts and styles.

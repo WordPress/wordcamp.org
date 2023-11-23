@@ -1,0 +1,18 @@
+.wp-site-blocks .is-layout-constrained > :where( :not( .alignleft ):not( .alignright ):not( .alignfull ) ),
+.is-root-container.is-layout-constrained > :where( :not( .alignleft ):not( .alignright ):not( .alignfull ) ),
+.edit-post-visual-editor__post-title-wrapper > :where(:not(.alignleft):not(.alignright):not(.alignfull)) {
+	/*
+	 * `--wp--style--global--content-size` gets set to `180px`, rather than the layout size from the parent's
+	 * `theme.json`. I'm assuming that's a bug somewhere, but haven't tracked it down. This is a hack to make the
+	 * content width usable until that bug is resolved.
+	 */
+	max-width: var( --wp--custom--layout--content-size ) !important;
+}
+
+.wp-site-blocks .is-layout-constrained,
+.wp-block-post-content-is-layout-constrained {
+	& .alignwide {
+		/* See note about about the `global` sizes. */
+		max-width: var( --wp--custom--layout--wide-size ) !important;
+	}
+}

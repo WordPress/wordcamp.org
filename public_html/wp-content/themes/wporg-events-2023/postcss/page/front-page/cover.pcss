@@ -3,11 +3,23 @@
 	max-height: 80vh;
 	gap: 0;
 
+	@media (--small-only) {
+		height: unset;
+
+		&.is-layout-flex {
+			display: block;
+		}
+	}
+
 	& .wporg-events__cover-stats {
 		gap: 0;
 	}
 
 	& .wp-block-wporg-google-map .wporg-google-map__container {
 		height: 430px;
+
+		@media (--small-only) {
+			height: 170px;
+		}
 	}
 }

@@ -1,0 +1,33 @@
+.wporg-marker-list__container {
+	padding-left: 0;
+}
+
+.wporg-marker-list-item {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-bottom: none;
+	padding: 20px;
+
+	@media (--small-only) {
+		display: block;
+	}
+
+	&:last-child {
+		border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+	}
+
+	& .wporg-marker-list-item__title {
+		flex: 0 0 60%;
+		--wp--preset--spacing--30: 0;
+	}
+
+	& .wporg-marker-list-item__location {
+		flex: 0 0 15%;
+	}
+
+	& .wporg-marker-list-item__date-time {
+		flex: 0 0 15%;
+	}
+}

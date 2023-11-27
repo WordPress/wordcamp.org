@@ -91,6 +91,12 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 				'meetup_tags',
 				Meetup_Application::POST_TYPE,
 				array(
+					'capabilities' => array(
+						'manage_terms' => 'wordcamp_wrangle_meetups',
+						'edit_terms'   => 'wordcamp_wrangle_meetups',
+						'delete_terms' => 'manage_network',
+						'assign_terms' => 'wordcamp_wrangle_meetups',
+					),
 					'hierarchical' => true,
 					'labels'       => array(
 						'name'          => __( 'Meetup Tags' ),

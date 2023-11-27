@@ -137,6 +137,7 @@ function get_user_nicenames_from_ids( $user_ids ) {
 
 	$user_query = new WP_User_Query(
 		array(
+			'blog_id' => 0, // All sites, see https://core.trac.wordpress.org/ticket/38851.
 			'include' => $user_ids,
 			'fields'  => array( 'user_nicename' ),
 		)

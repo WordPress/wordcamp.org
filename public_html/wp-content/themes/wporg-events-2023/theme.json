@@ -1,4 +1,29 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/theme.json",
-	"version": 2
+	"version": 2,
+	"settings": {
+		"custom": {
+			"heading": {
+				"level-1": {
+					"breakpoint": {
+						"small-only": {
+							"typography": {
+								"fontSize": "30px"
+							}
+						}
+					}
+				}
+			}
+		},
+
+		"typography": {
+			"fontSizes": [
+				{
+					"name": "Heading 1",
+					"size": "clamp( 30px, 4vw, 50px )",
+					"slug": "heading-1"
+				}
+			]
+		}
+	}
 }

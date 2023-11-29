@@ -1,7 +1,16 @@
 .wporg-events__contributors {
-	@media (--small-only) {
+
+	@media (--phone-tablet) {
 		&.is-layout-flex {
 			display: block;
 		}
+	}
+
+	& .is-style-links-list > li:first-child {
+		border-top: none;
+	}
+
+	& .is-style-links-list > li:last-child {
+		border-bottom: none;
 	}
 }

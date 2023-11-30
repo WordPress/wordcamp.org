@@ -1,16 +1,17 @@
 .wporg-events__contributors {
-
-	@media (--phone-tablet) {
-		&.is-layout-flex {
-			display: block;
-		}
-	}
-
-	& .is-style-links-list > li:first-child {
+	.is-style-links-list li:first-child {
 		border-top: none;
 	}
 
-	& .is-style-links-list > li:last-child {
+	.is-style-links-list li:last-child {
 		border-bottom: none;
+	}
+
+	.is-style-links-list li {
+		border-color:  var(--wp--preset--color--light-grey-1);
+
+		a {
+			color:  var(--wp--preset--color--charcoal-0);	
+		}
 	}
 }

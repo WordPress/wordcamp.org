@@ -24,7 +24,7 @@ function enqueue_assets() {
 	wp_enqueue_style(
 		'wporg-events-2023-style',
 		get_stylesheet_uri(),
-		array( 'wporg-parent-2021-style', 'wporg-global-fonts' ),
+		array( 'wporg-parent-2021-style', 'wporg-parent-block-styles', 'wporg-global-fonts' ),
 		filemtime( __DIR__ . '/style.css' )
 	);
 }

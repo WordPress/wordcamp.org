@@ -2,7 +2,7 @@
 <?php
 /**
  * Title: Front Page
- * Slug: wporg-events-2023/home-page-callout
+ * Slug: wporg-events-2023/community-callout
  * Inserter: no
  */
 

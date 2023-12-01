@@ -13,6 +13,19 @@
 						}
 					}
 				}
+			},
+			"button" : {
+				"typography": {
+					"lineHeight": "16px"
+				},
+				"spacing": {
+					"padding": {
+						"top": "17px",
+						"right": "32px",
+						"bottom": "17px",
+						"left": "32px"
+					}
+				}
 			}
 		},
 

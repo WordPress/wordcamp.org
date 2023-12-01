@@ -17,10 +17,12 @@
 				</figure>
 			</div>
 		</div>
+
 		<div class="tiled-gallery__row">
 			<div class="tiled-gallery__col">
 				<figure class="tiled-gallery__item"><img alt="" data-height="272" data-url="<?php echo esc_url( get_stylesheet_directory_uri() ); ?>/images/contributors-square1.png" data-width="298" src="<?php echo esc_url( get_stylesheet_directory_uri() ); ?>/images/contributors-square1.png" data-amp-layout="responsive" /></figure>
 			</div>
+
 			<div class="tiled-gallery__col">
 				<figure class="tiled-gallery__item">
 					<img alt="" data-height="272" data-url="<?php echo esc_url( get_stylesheet_directory_uri() ); ?>/images/contributors-square2.png" data-width="297" src="<?php echo esc_url( get_stylesheet_directory_uri() ); ?>/images/contributors-square2.png" data-amp-layout="responsive" />

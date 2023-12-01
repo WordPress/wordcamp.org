@@ -12,11 +12,11 @@
 		display: grid;
 		align-items: start;
 		gap: var(--wp--preset--spacing--20);
-    	grid-template-columns: 45% 1fr 1fr;
+		grid-template-columns: 45% 1fr 1fr;
 	}
 
 	@media (--xlarge) {
-		grid-template-columns: 50% 1fr 30%;
+		grid-template-columns: 50% 1fr 1fr;
 	}
 
 	@media (--huge) {
@@ -40,9 +40,8 @@
 	}
 
 	.wporg-marker-list-item__date-time {
-		display: block;
-
 		@media (--medium) {
+			display: block;
 			text-align: right;
 
 			.wporg-google-map__date {
@@ -60,7 +59,9 @@
 	}
 
 	.wporg-google-map__date-time-separator {
-		display: none;
+		@media (--medium) {
+			display: none;
+		}
 	}
 
 	@media (--wide) {

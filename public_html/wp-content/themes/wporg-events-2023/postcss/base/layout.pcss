@@ -1,9 +1,10 @@
-body { 
+body {
 	--wp--custom--layout--wide-size: 1600px;
 }
 
 .wp-site-blocks .is-layout-constrained > :where( :not( .alignleft ):not( .alignright ):not( .alignfull ) ),
 .is-root-container.is-layout-constrained > :where( :not( .alignleft ):not( .alignright ):not( .alignfull ) ),
+.block-editor-block-list__layout.is-root-container > :where(:not(.alignleft):not(.alignright):not(.alignfull)),
 .edit-post-visual-editor__post-title-wrapper > :where(:not(.alignleft):not(.alignright):not(.alignfull)) {
 	/*
 	 * `--wp--style--global--content-size` gets set to `180px`, rather than the layout size from the parent's

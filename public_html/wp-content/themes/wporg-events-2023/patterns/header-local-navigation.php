@@ -2,7 +2,7 @@
 
 /**
  * Title: Local Navigation
- * Slug: wporg-events-2023/local-navigation
+ * Slug: wporg-events-2023/header-local-navigation
  * Inserter: no
  *
  * This nav bar also has the site title, so it should be used on interior pages.

@@ -1,7 +1,7 @@
 <?php
 /**
  * Title: Events
- * Slug: wporg-events-2023/events
+ * Slug: wporg-events-2023/front-events
  * Inserter: no
  */
 

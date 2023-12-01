@@ -2,7 +2,7 @@
 
 /**
  * Title: Front Page: "Where Contributors Meet..." Gallery
- * Slug: wporg-events-2023/front-contributors-meet-gallery
+ * Slug: wporg-events-2023/front-contributors-gallery
  */
 
 ?>

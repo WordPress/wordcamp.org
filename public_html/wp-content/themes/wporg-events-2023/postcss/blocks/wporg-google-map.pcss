@@ -3,31 +3,76 @@
 }
 
 .wporg-marker-list-item {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
 	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-bottom: none;
-	padding: 20px;
+	padding: var(--wp--preset--spacing--20);
+	list-style: none;
 
-	@media (--small-only) {
-		display: block;
+	@media (--medium) {
+		display: grid;
+		align-items: start;
+		gap: var(--wp--preset--spacing--20);
+    	grid-template-columns: 45% 1fr 1fr;
+	}
+
+	@media (--xlarge) {
+		grid-template-columns: 50% 1fr 30%;
+	}
+
+	@media (--huge) {
+		grid-template-columns: 55% 1fr 1fr;
+	}
+
+	@media (--xhuge) {
+		grid-template-columns: 60% 1fr 1fr;
 	}
 
 	&:last-child {
 		border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 	}
 
-	& .wporg-marker-list-item__title {
-		flex: 0 0 60%;
+	.wporg-marker-list-item__title {
+		font-family: var(--wp--preset--font-family--inter);
+		font-size: var(--wp--preset--font-size--normal);
+		line-height: var(--wp--custom--body--typography--line-height);
+
 		--wp--preset--spacing--30: 0;
 	}
 
-	& .wporg-marker-list-item__location {
-		flex: 0 0 15%;
+	.wporg-marker-list-item__date-time {
+		display: block;
+
+		@media (--medium) {
+			text-align: right;
+
+			.wporg-google-map__date {
+				display: block;
+			}
+		}
+
+		@media (--huge) {
+			white-space: nowrap;
+
+			.wporg-google-map__date {
+				display: inline-block;
+			}
+		}
 	}
 
-	& .wporg-marker-list-item__date-time {
-		flex: 0 0 15%;
+	.wporg-google-map__date-time-separator {
+		display: none;
+	}
+
+	@media (--wide) {
+		.wporg-marker-list-item__date-time {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			justify-content: flex-end;
+		}
+
+		.wporg-google-map__date-time-separator {
+			display: inline-block;
+		}
 	}
 }

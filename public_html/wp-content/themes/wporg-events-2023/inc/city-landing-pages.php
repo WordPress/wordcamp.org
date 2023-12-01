@@ -92,7 +92,7 @@ function prime_query_cache(): void {
 			'filter_slug'     => FILTER_SLUG,
 			'start_timestamp' => 0,
 			'end_timestamp'   => 0,
-			'landing_page'    => $request_uri
+			'landing_page'    => $request_uri,
 		);
 
 		$cache_key = Google_Map\get_cache_key( $parts );
@@ -307,7 +307,7 @@ function get_current_landing_page(): string {
  *
  * Without this, all city pages would share the same cache key, and the wrong events would show up on most pages.
  */
-function add_landing_page_to_cache_key( array $items ) : array {
+function add_landing_page_to_cache_key( array $items ): array {
 	if ( is_city_landing_page() && FILTER_SLUG === $items['filter_slug'] ) {
 		$items['landing_page'] = get_current_landing_page();
 	}

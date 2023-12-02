@@ -8,6 +8,8 @@
 
 namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
 
+use function WordPressdotorg\MU_Plugins\Google_Map\{get_all_upcoming_events};
+
 add_action( 'init', __NAMESPACE__ . '\init' );
 
 /**
@@ -37,14 +39,24 @@ function init() {
  */
 function render( $attributes, $content, $block ) {
 
-	// Get all the filters that are currently applied.
-	$filters = get_applied_filter_list();
+	// Get all the events
+	$events = get_event_list();
 
-	// Get all the events with relevant filters
-	$events = get_event_list( $filters );
+	// Get all the filters that are currently applied.
+	$filtered_events = array_slice( filter_events( $events ), 0, 10);
 
 	// loop through events output markup using gutenberg blocks
-	$content = '';
+	$content = '<ul>';
+
+	foreach ( $filtered_events as $event ) {
+		$content .= '<li>';
+		$content .= '<div>' . $event->title . '</div>';
+		$content .= '<div>' . $event->location . '</div>';
+		$content .= '<div>' . $event->timestamp . '</div>';
+		$content .= '</li>';
+	}
+
+	$content .= '</ul>';
 
 	$wrapper_attributes = get_block_wrapper_attributes();
 	return sprintf(
@@ -61,14 +73,15 @@ function render( $attributes, $content, $block ) {
  *
  * @return array
  */
-function get_applied_filter_list( $include_search = true ) {
+function filter_events( $events ) {
 	global $wp_query;
 
-	$taxes = [
+	$taxes = array(
 		'map_type' => 'map_type',
-	];
+	);
 	$terms = array();
 
+	// Get the terms
 	foreach ( $taxes as $query_var => $taxonomy ) {
 
 		if ( ! isset( $wp_query->query[ $query_var ] ) ) {
@@ -81,22 +94,26 @@ function get_applied_filter_list( $include_search = true ) {
 		}
 	}
 
-	var_dump( $terms );
-	
-	// retrieve all the relevant filters from the query;
+	if ( empty( $terms ) ) {
+		return $events;
+	}
 
-	return array();
+	$filtered_events = array();
+	foreach ( $events as $event ) {
+		// Assuming each event has a 'type' property
+		if ( isset($event->type) && in_array($event->type, $terms) ) {
+			$filtered_events[] = $event;
+		}
+	}
+
+	return $filtered_events;
 }
 
 /**
  * Retrieves event list based on the filters.
- * 
+ *
  * @return array
  */
-function get_event_list( $filters ): array {
-	global $wpdb;
-
-	// Prepared statement for the query.
-
-	return array();
+function get_event_list(): array {
+	return get_all_upcoming_events();
 }

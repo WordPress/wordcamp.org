@@ -1,0 +1,20 @@
+<!-- wp:template-part {"slug":"header"} /-->
+
+<!-- wp:group {"tagName":"main","style":{"spacing":{"padding":{"right":"var:preset|spacing|edge-space","left":"var:preset|spacing|edge-space","bottom":"var:preset|spacing|edge-space"}}},"className":"entry-content","layout":{"type":"default"}} -->
+<main class="wp-block-group entry-content"
+	style="padding-right:var(--wp--preset--spacing--edge-space);padding-bottom:var(--wp--preset--spacing--edge-space);padding-left:var(--wp--preset--spacing--edge-space)">
+		<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"layout":{"type":"flex","flexWrap":"nowrap"}} -->
+			<div class="wp-block-group wporg-query-filters">
+				<!-- wp:wporg/query-filter {"key":"map_format"} /-->
+				<!-- wp:wporg/query-filter {"key":"map_type"} /-->
+				<!-- wp:wporg/query-filter {"key":"map_month"} /-->
+				<!-- wp:wporg/query-filter {"key":"map_country"} /-->
+			</div>
+		<!-- /wp:group -->
+
+<!-- wp:wporg/event-list /-->
+	
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer"} /-->

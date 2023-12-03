@@ -12,6 +12,7 @@
 		"postcss-preset-env": "^9.3.0"
 	},
 	"scripts": {
+		"build:block": "wp-scripts build",
 		"start": "npm run watch",
 		"watch": "npm run build -- --watch",
 		"build": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",

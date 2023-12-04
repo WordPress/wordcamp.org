@@ -62,7 +62,7 @@
 
 <!-- wp:column {"verticalAlignment":"bottom","className":"page-organize-content-image"} -->
 <div class="wp-block-column is-vertically-aligned-bottom page-organize-content-image"><!-- wp:image {"id":144,"scale":"cover","sizeSlug":"full","linkDestination":"none"} -->
-<figure class="wp-block-image size-full"><img src="https://events.wordpress.test/files/2023/12/Image-4.png" alt="" class="wp-image-144" style="object-fit:cover"/></figure>
+<figure class="wp-block-image size-full"><img src="<?php echo esc_url( get_stylesheet_directory_uri() ); ?>/images/community-team.png" alt="" class="wp-image-144" style="object-fit:cover"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns --></div>

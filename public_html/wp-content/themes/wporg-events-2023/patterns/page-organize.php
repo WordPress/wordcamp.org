@@ -60,8 +60,8 @@
 <!-- /wp:list --></div>
 <!-- /wp:column -->
 
-<!-- wp:column {"verticalAlignment":"bottom"} -->
-<div class="wp-block-column is-vertically-aligned-bottom"><!-- wp:image {"id":144,"scale":"cover","sizeSlug":"full","linkDestination":"none"} -->
+<!-- wp:column {"verticalAlignment":"bottom","className":"page-organize-content-image"} -->
+<div class="wp-block-column is-vertically-aligned-bottom page-organize-content-image"><!-- wp:image {"id":144,"scale":"cover","sizeSlug":"full","linkDestination":"none"} -->
 <figure class="wp-block-image size-full"><img src="https://events.wordpress.test/files/2023/12/Image-4.png" alt="" class="wp-image-144" style="object-fit:cover"/></figure>
 <!-- /wp:image --></div>
 <!-- /wp:column --></div>

@@ -8,6 +8,12 @@
 	"icon": "list-view",
 	"description": "List of WordPress Events",
 	"textdomain": "wporg",
+	"attributes": {
+		"events": {
+			"type": "string",
+			"default": "all-upcoming"
+		}
+	},
 	"supports": {
 		"align": true,
 		"color": {

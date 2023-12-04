@@ -13,6 +13,8 @@
 <h2 class="wp-block-heading has-inter-font-family has-medium-font-size" style="font-style:normal;font-weight:700">Upcoming events</h2>
 <!-- /wp:heading -->
 
+<!-- wp:pattern {"slug":"wporg-events-2023/event-list-filters"} /-->   
+
 <!-- wp:wporg/google-map {"id":"all-upcoming-list","apiKey":"WORDCAMP_DEV_GOOGLE_MAPS_API_KEY","filterSlug":"all-upcoming","showMap":false,"showSearch":false,"listDisplayLimit":10} /-->
 
 <!-- wp:buttons {"style":{"spacing":{"margin":{"top":"var:preset|spacing|40"}}}} -->

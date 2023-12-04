@@ -73,7 +73,7 @@ function get_map_type_options( array $options ): array {
 		'label' => $label,
 		'title' => __( 'Type', 'wporg' ),
 		'key' => 'map_type',
-		'action' => get_permalink(),
+		'action' => home_url( '/upcoming-events/' ),
 		'options' => array(
 			'meetup'   => 'Meetup',
 			'wordcamp' => 'WordCamp',
@@ -101,7 +101,7 @@ function get_format_type_options( array $options ): array {
 		'label' => $label,
 		'title' => __( 'Format', 'wporg' ),
 		'key' => 'format_type',
-		'action' => get_permalink(),
+		'action' => home_url( '/upcoming-events/' ),
 		'options' => array(
 			'meetup'   => 'Online',
 			'wordcamp' => 'In Person',

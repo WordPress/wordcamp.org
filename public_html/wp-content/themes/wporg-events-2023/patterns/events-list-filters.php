@@ -1,7 +1,7 @@
 <?php
 /**
- * Title: Events
- * Slug: wporg-events-2023/all-events
+ * Title: Front Page
+ * Slug: wporg-events-2023/event-list-filters
  * Inserter: no
  */
 
@@ -17,10 +17,9 @@
 
 		<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"layout":{"type":"flex","flexWrap":"nowrap"},"className":"wporg-query-filters"} -->
 		<div class="wp-block-group wporg-query-filters">
+			<!-- wp:wporg/query-filter {"key":"format_type"} /-->
 			<!-- wp:wporg/query-filter {"key":"map_type"} /-->
 		</div>
 		<!-- /wp:group -->
 	</div>
 	<!-- /wp:group -->
-
-    <!-- wp:wporg/event-list /-->

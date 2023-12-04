@@ -73,7 +73,7 @@
 <div class="wp-block-columns"><!-- wp:column {"width":"58%"} -->
 <div class="wp-block-column" style="flex-basis:58%"><!-- wp:group {"layout":{"type":"constrained"}} -->
 <div class="wp-block-group"><!-- wp:heading {"style":{"spacing":{"margin":{"bottom":"var:preset|spacing|30"}}},"fontSize":"heading-3"} -->
-<h3 class="wp-block-heading has-heading-3-font-size" style="margin-bottom:var(--wp--preset--spacing--30)">Frequently asked questions</h3>
+<h2 class="wp-block-heading has-heading-3-font-size" style="margin-bottom:var(--wp--preset--spacing--30)">Frequently asked questions</h2>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
@@ -81,7 +81,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":4,"style":{"spacing":{"margin":{"top":"var:preset|spacing|30"}},"typography":{"fontStyle":"normal","fontWeight":"700"}},"fontSize":"normal","fontFamily":"inter"} -->
-<h4 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">There's no meetup in my area. How do I start one?</h4>
+<h3 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">There's no meetup in my area. How do I start one?</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"var:preset|spacing|10"}}}} -->
@@ -101,7 +101,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":4,"style":{"spacing":{"margin":{"top":"var:preset|spacing|30"}},"typography":{"fontStyle":"normal","fontWeight":"700"}},"fontSize":"normal","fontFamily":"inter"} -->
-<h4 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">Do I need organizer experience to organize a meetup or another type of event?</h4>
+<h3 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">Do I need organizer experience to organize a meetup or another type of event?</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"var:preset|spacing|10"}}}} -->
@@ -109,7 +109,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":4,"style":{"spacing":{"margin":{"top":"var:preset|spacing|30"}},"typography":{"fontStyle":"normal","fontWeight":"700"}},"fontSize":"normal","fontFamily":"inter"} -->
-<h4 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">I already host a WordPress meetup. Can I transfer it into the WordPress Chapter Meetup program?</h4>
+<h3 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">I already host a WordPress meetup. Can I transfer it into the WordPress Chapter Meetup program?</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"var:preset|spacing|10"}}}} -->
@@ -121,7 +121,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":4,"style":{"spacing":{"margin":{"top":"var:preset|spacing|30"}},"typography":{"fontStyle":"normal","fontWeight":"700"}},"fontSize":"normal","fontFamily":"inter"} -->
-<h4 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">I have a meetup that's meeting regularly and would like to organize a larger event. What steps should I take?</h4>
+<h3 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">I have a meetup that's meeting regularly and would like to organize a larger event. What steps should I take?</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"var:preset|spacing|10"}}}} -->
@@ -137,7 +137,7 @@
 <!-- /wp:paragraph -->
 
 <!-- wp:heading {"level":4,"style":{"spacing":{"margin":{"top":"var:preset|spacing|30"}},"typography":{"fontStyle":"normal","fontWeight":"700"}},"fontSize":"normal","fontFamily":"inter"} -->
-<h4 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">I have additional questions. Where can I go for help?</h4>
+<h3 class="wp-block-heading has-inter-font-family has-normal-font-size" style="margin-top:var(--wp--preset--spacing--30);font-style:normal;font-weight:700">I have additional questions. Where can I go for help?</h3>
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"var:preset|spacing|10"}}}} -->

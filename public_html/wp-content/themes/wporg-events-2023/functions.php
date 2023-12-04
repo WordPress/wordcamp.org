@@ -11,8 +11,9 @@ require_once __DIR__ . '/src/event-list/index.php';
 add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_site_navigation_menus' );
-add_filter( 'wporg_query_filter_options_map_type', __NAMESPACE__ . '\get_map_type_options' );
+add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
+add_filter( 'wporg_query_filter_options_month', __NAMESPACE__ . '\get_month_options' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
 
 add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
@@ -55,13 +56,13 @@ function add_site_navigation_menus( $menus ) {
 }
 
 /**
- * Sets up our Query filter for map_type.
+ * Sets up our Query filter for event_type.
  *
  * @return array
  */
-function get_map_type_options( array $options ): array {
+function get_event_type_options( array $options ): array {
 	global $wp_query;
-	$selected = isset( $wp_query->query['map_type'] ) ? (array) $wp_query->query['map_type'] : array();
+	$selected = isset( $wp_query->query['event_type'] ) ? (array) $wp_query->query['event_type'] : array();
 	$count    = count( $selected );
 	$label    = sprintf(
 		/* translators: The dropdown label for filtering, %s is the selected term count. */
@@ -72,7 +73,7 @@ function get_map_type_options( array $options ): array {
 	return array(
 		'label' => $label,
 		'title' => __( 'Type', 'wporg' ),
-		'key' => 'map_type',
+		'key' => 'event_type',
 		'action' => home_url( '/upcoming-events/' ),
 		'options' => array(
 			'meetup'   => 'Meetup',
@@ -111,11 +112,40 @@ function get_format_type_options( array $options ): array {
 }
 
 /**
+ * Sets up our Query filter for month.
+ *
+ * @return array
+ */
+function get_month_options( array $options ): array {
+	global $wp_query;
+	$selected = isset( $wp_query->query['month'] ) ? (array) $wp_query->query['month'] : array();
+	$count    = count( $selected );
+	$label    = sprintf(
+		/* translators: The dropdown label for filtering, %s is the selected term count. */
+		_n( 'Month <span>%s</span>', 'Month <span>%s</span>', $count, 'wporg' ),
+		$count
+	);
+
+	return array(
+		'label' => $label,
+		'title' => __( 'Month', 'wporg' ),
+		'key' => 'month',
+		'action' => home_url( '/upcoming-events/' ),
+		'options' => array(
+			'01'   => 'January',
+			'02'   => 'February',
+		),
+		'selected' => $selected,
+	);
+}
+
+/**
  * Add in our custom query vars.
  */
 function add_query_vars( $query_vars ) {
-	$query_vars[] = 'map_type';
+	$query_vars[] = 'event_type';
 	$query_vars[] = 'format_type';
+	$query_vars[] = 'month';
 	return $query_vars;
 }
 
@@ -132,7 +162,7 @@ function add_query_vars( $query_vars ) {
 function inject_other_filters( $key ) {
 	global $wp_query;
 
-	$query_vars = array( 'map_type', 'format_type' );
+	$query_vars = array( 'event_type', 'format_type', 'month' );
 	foreach ( $query_vars as $query_var ) {
 		if ( ! isset( $wp_query->query[ $query_var ] ) ) {
 			continue;

@@ -17,8 +17,9 @@
 
 		<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"layout":{"type":"flex","flexWrap":"nowrap"},"className":"wporg-query-filters"} -->
 		<div class="wp-block-group wporg-query-filters">
-			<!-- wp:wporg/query-filter {"key":"format_type"} /-->
-			<!-- wp:wporg/query-filter {"key":"map_type"} /-->
+			<!-- wp:wporg/query-filter {"key":"format_type","multiple":false} /-->
+			<!-- wp:wporg/query-filter {"key":"event_type","multiple":false} /-->
+			<!-- wp:wporg/query-filter {"key":"month","multiple":false} /-->
 		</div>
 		<!-- /wp:group -->
 	</div>

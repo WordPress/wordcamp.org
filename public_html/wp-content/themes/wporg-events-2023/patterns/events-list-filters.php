@@ -1,6 +1,6 @@
 <?php
 /**
- * Title: Front Page
+ * Title: Events List Filters
  * Slug: wporg-events-2023/event-list-filters
  * Inserter: no
  */

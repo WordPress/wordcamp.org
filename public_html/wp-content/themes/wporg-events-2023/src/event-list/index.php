@@ -46,13 +46,13 @@ function render( $attributes, $content, $block ) {
 	$filtered_events = array_slice( filter_events( $events ), 0, 10);
 
 	// loop through events output markup using gutenberg blocks
-	$content = '<ul>';
+	$content = '<ul class="wporg-marker-list__container">';
 
 	foreach ( $filtered_events as $event ) {
-		$content .= '<li>';
-		$content .= '<div>' . $event->title . '</div>';
-		$content .= '<div>' . $event->location . '</div>';
-		$content .= '<div>' . $event->timestamp . '</div>';
+		$content .= '<li class="wporg-marker-list-item">';
+		$content .= '<h3 class="wporg-marker-list-item__title">' . $event->title . '</h3>';
+		$content .= '<div class="wporg-marker-list-item__location">' . $event->location . '</div>';
+		$content .= '<div class="wporg-marker-list-item__date-time">' . $event->timestamp . '</div>';
 		$content .= '</li>';
 	}
 

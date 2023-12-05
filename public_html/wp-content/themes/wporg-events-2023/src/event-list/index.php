@@ -38,8 +38,16 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
-	// Get all the events
-	$events = get_events( $attributes['events'], 0, 0 );
+	$facets = array(
+		'search' => get_query_var( 's' ) ?? '',
+		'type'   => get_query_var( 'event_type' ) ?? '',
+		'format' => get_query_var( 'format_type' ) ?? '',
+		'month'  => get_query_var( 'month' ) ?? '',
+	);
+	array_walk( $facets, 'sanitize_text_field' );
+	$facets = array_filter( $facets );
+
+	$events = get_events( $attributes['events'], 0, 0, $facets );
 
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, 10);

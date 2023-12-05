@@ -39,10 +39,11 @@ function init() {
  */
 function render( $attributes, $content, $block ) {
 	$facets = array(
-		'search' => sanitize_text_field( get_query_var( 's' ) ?? '' ),
-		'type'   => sanitize_text_field( get_query_var( 'event_type' ) ?? '' ),
-		'format' => sanitize_text_field( get_query_var( 'format_type' ) ?? '' ),
-		'month'  => absint( get_query_var( 'month' ) ?? 0 ),
+		'search'  => sanitize_text_field( get_query_var( 's' ) ?? '' ),
+		'type'    => sanitize_text_field( get_query_var( 'event_type' ) ?? '' ),
+		'format'  => sanitize_text_field( get_query_var( 'format_type' ) ?? '' ),
+		'month'   => absint( get_query_var( 'month' ) ?? 0 ),
+		'country' => sanitize_text_field( get_query_var( 'country' ) ?? '' ),
 	);
 
 	$events = get_events( $attributes['events'], 0, 0, $facets );

@@ -11,10 +11,10 @@ require_once __DIR__ . '/src/event-list/index.php';
 add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_site_navigation_menus' );
-add_filter( 'wporg_query_filter_options_country', __NAMESPACE__ . '\get_country_options' );
-add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
+add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
 add_filter( 'wporg_query_filter_options_month', __NAMESPACE__ . '\get_month_options' );
+add_filter( 'wporg_query_filter_options_country', __NAMESPACE__ . '\get_country_options' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
 
 add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
@@ -57,22 +57,28 @@ function add_site_navigation_menus( $menus ) {
 }
 
 /**
- * Sets up our Query filter for event_type.
+ * Sets up our Query filter for country.
  *
  * @return array
  */
 function get_country_options( array $options ): array {
 	global $wp_query;
 	$selected = isset( $wp_query->query['country'] ) ? (array) $wp_query->query['country'] : array();
+
+	$countries = wcorg_get_countries();
+
+	// Re-index to match the format expected by the query-filters block.
+	$countries = array_combine( array_keys( $countries ), array_column( $countries, 'name' ) );
+
+	// todo switch to combocontrolbox so can search this long list
+	// https://core.trac.wordpress.org/ticket/19867#comment:87
+
 	return array(
 		'label' => __( 'Country', 'wporg' ),
 		'title' => __( 'Country', 'wporg' ),
 		'key' => 'country',
 		'action' => home_url( '/upcoming/' ),
-		'options' => array(
-			'meetup'   => 'Meetup',
-			'wordcamp' => 'WordCamp',
-		),
+		'options' => $countries,
 		'selected' => $selected,
 	);
 }
@@ -166,9 +172,11 @@ function get_month_options( array $options ): array {
  * Add in our custom query vars.
  */
 function add_query_vars( $query_vars ) {
-	$query_vars[] = 'event_type';
 	$query_vars[] = 'format_type';
+	$query_vars[] = 'event_type';
 	$query_vars[] = 'month';
+	$query_vars[] = 'country';
+
 	return $query_vars;
 }
 
@@ -185,15 +193,19 @@ function add_query_vars( $query_vars ) {
 function inject_other_filters( $key ) {
 	global $wp_query;
 
-	$query_vars = array( 'event_type', 'format_type', 'month' );
+	$query_vars = array( 'event_type', 'format_type', 'month', 'country' );
+
 	foreach ( $query_vars as $query_var ) {
 		if ( ! isset( $wp_query->query[ $query_var ] ) ) {
 			continue;
 		}
+
 		if ( $key === $query_var ) {
 			continue;
 		}
+
 		$values = (array) $wp_query->query[ $query_var ];
+
 		foreach ( $values as $value ) {
 			printf( '<input type="hidden" name="%s[]" value="%s" />', esc_attr( $query_var ), esc_attr( $value ) );
 		}

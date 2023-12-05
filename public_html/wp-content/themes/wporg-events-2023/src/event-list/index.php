@@ -57,15 +57,17 @@ function render( $attributes, $content, $block ) {
 
 	foreach ( $filtered_events as $event ) {
 		$content .= '<li class="wporg-marker-list-item">';
-		$content .= '<h3 class="wporg-marker-list-item__title">' . $event->title . '</h3>';
-		$content .= '<div class="wporg-marker-list-item__location">' . $event->location . '</div>';
-		$content .= '<div class="wporg-marker-list-item__date-time">' . $event->timestamp . '</div>';
+		$content .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url( $event->url ) . ' ">' . esc_html( $event->title ) . '</a></h3>';
+		$content .= '<div class="wporg-marker-list-item__location">' . esc_html( $event->location ) . '</div>';
+		$content .= '<div class="wporg-marker-list-item__date-time">' . esc_html( $event->timestamp ) . '</div>';
 		$content .= '</li>';
 	}
 
 	$content .= '</ul>';
 
-	$wrapper_attributes = get_block_wrapper_attributes();
+	$wrapper_attributes = get_block_wrapper_attributes( array(
+		'class' => 'wp-block-wporg-google-map',
+	) );
 	return sprintf(
 		'<div %1$s>%2$s</div>',
 		$wrapper_attributes,

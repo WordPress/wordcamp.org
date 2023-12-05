@@ -7,21 +7,18 @@
 
 ?>
 
-<!-- wp:group {"align":"wide","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
-<div class="wp-block-group alignwide">
-		<!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"}} -->
-		<div class="wp-block-group">
-			<!-- wp:search {"showLabel":false,"placeholder":"<?php esc_html_e( 'Search events...', 'wporg' ); ?>","width":100,"widthUnit":"%","buttonText":"<?php esc_html_e( 'Search', 'wporg' ); ?>","buttonPosition":"button-inside","buttonUseIcon":true,"className":"is-style-secondary-search-control"} /-->
-		</div>
-		<!-- /wp:group -->
+<!-- wp:group {"align":"wide","style":{"spacing":{"margin":{"top":"var:preset|spacing|30","bottom":"var:preset|spacing|30"}}},"layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
+<div class="wp-block-group alignwide" style="margin-top:var(--wp--preset--spacing--30);margin-bottom:var(--wp--preset--spacing--30)"><!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"}} -->
+<div class="wp-block-group"><!-- wp:search {"showLabel":false,"placeholder":"Search events...","width":100,"widthUnit":"%","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"className":"is-style-secondary-search-control"} /--></div>
+<!-- /wp:group -->
 
-		<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"layout":{"type":"flex","flexWrap":"nowrap"},"className":"wporg-query-filters"} -->
-		<div class="wp-block-group wporg-query-filters">
-			<!-- wp:wporg/query-filter {"key":"format_type","multiple":false} /-->
-			<!-- wp:wporg/query-filter {"key":"event_type","multiple":false} /-->
-			<!-- wp:wporg/query-filter {"key":"month","multiple":false} /-->
-			<!-- wp:wporg/query-filter {"key":"country","multiple":false} /-->
-		</div>
-		<!-- /wp:group -->
-	</div>
-	<!-- /wp:group -->
+<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"className":"wporg-query-filters","layout":{"type":"flex","flexWrap":"nowrap"}} -->
+<div class="wp-block-group wporg-query-filters"><!-- wp:wporg/query-filter {"key":"format_type","multiple":false} /-->
+
+<!-- wp:wporg/query-filter {"key":"event_type","multiple":false} /-->
+
+<!-- wp:wporg/query-filter {"key":"month","multiple":false} /-->
+
+<!-- wp:wporg/query-filter {"key":"country","multiple":false} /--></div>
+<!-- /wp:group --></div>
+<!-- /wp:group -->

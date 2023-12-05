@@ -70,9 +70,6 @@ function get_country_options( array $options ): array {
 	// Re-index to match the format expected by the query-filters block.
 	$countries = array_combine( array_keys( $countries ), array_column( $countries, 'name' ) );
 
-	// todo switch to combocontrolbox so can search this long list
-	// https://core.trac.wordpress.org/ticket/19867#comment:87
-
 	return array(
 		'label' => __( 'Country', 'wporg' ),
 		'title' => __( 'Country', 'wporg' ),
@@ -154,16 +151,19 @@ function get_month_options( array $options ): array {
 		$count
 	);
 
+	$months = array();
+
+	for ( $i = 1; $i <= 12; $i++ ) {
+		$month = strtotime( "2023-$i-1" );
+		$months[ date( 'm', $month ) ] = date( 'F', $month );
+	}
+
 	return array(
 		'label' => $label,
 		'title' => __( 'Month', 'wporg' ),
 		'key' => 'month',
 		'action' => home_url( '/upcoming/' ),
-		'options' => array(
-			'01'   => 'January',
-			'02'   => 'February',
-			// todo show all months on search and past events template, but only next ~3 months on upcoming events?
-		),
+		'options' => $months,
 		'selected' => $selected,
 	);
 }

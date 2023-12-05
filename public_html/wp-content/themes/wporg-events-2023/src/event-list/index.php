@@ -8,7 +8,7 @@
 
 namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
 
-use function WordPressdotorg\MU_Plugins\Google_Map\{get_events,get_all_upcoming_events};
+use function WordPressdotorg\MU_Plugins\Google_Map\{get_events};
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -47,7 +47,7 @@ function render( $attributes, $content, $block ) {
 	array_walk( $facets, 'sanitize_text_field' );
 	$facets = array_filter( $facets );
 
-	$events = get_all_upcoming_events();
+	$events = get_events( $attributes['events'], 0, 0, $facets );
 
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, 10);

@@ -20,6 +20,7 @@
 			<!-- wp:wporg/query-filter {"key":"format_type","multiple":false} /-->
 			<!-- wp:wporg/query-filter {"key":"event_type","multiple":false} /-->
 			<!-- wp:wporg/query-filter {"key":"month","multiple":false} /-->
+			<!-- wp:wporg/query-filter {"key":"country","multiple":false} /-->
 		</div>
 		<!-- /wp:group -->
 	</div>

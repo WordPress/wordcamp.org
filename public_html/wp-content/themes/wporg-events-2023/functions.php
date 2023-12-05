@@ -11,6 +11,7 @@ require_once __DIR__ . '/src/event-list/index.php';
 add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_site_navigation_menus' );
+add_filter( 'wporg_query_filter_options_country', __NAMESPACE__ . '\get_country_options' );
 add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
 add_filter( 'wporg_query_filter_options_month', __NAMESPACE__ . '\get_month_options' );
@@ -52,6 +53,27 @@ function add_site_navigation_menus( $menus ) {
 				'url' => '/organize-events/',
 			),
 		),
+	);
+}
+
+/**
+ * Sets up our Query filter for event_type.
+ *
+ * @return array
+ */
+function get_country_options( array $options ): array {
+	global $wp_query;
+	$selected = isset( $wp_query->query['country'] ) ? (array) $wp_query->query['country'] : array();
+	return array(
+		'label' => __( 'Country', 'wporg' ),
+		'title' => __( 'Country', 'wporg' ),
+		'key' => 'country',
+		'action' => home_url( '/upcoming-events/' ),
+		'options' => array(
+			'meetup'   => 'Meetup',
+			'wordcamp' => 'WordCamp',
+		),
+		'selected' => $selected,
 	);
 }
 

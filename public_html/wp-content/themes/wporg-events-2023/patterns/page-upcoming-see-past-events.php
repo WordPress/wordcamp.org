@@ -7,8 +7,8 @@
 
 ?>
 
-<!-- wp:paragraph -->
-<p>
+<!-- wp:paragraph {"fontSize":"small"} -->
+<p class="has-small-font-size">
 	<a href="<?php echo esc_url( home_url( '/past-events/' ) ); ?>">
 		See past events
 	</a>

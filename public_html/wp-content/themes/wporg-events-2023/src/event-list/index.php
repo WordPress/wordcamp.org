@@ -7,7 +7,7 @@
  */
 
 namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
-
+use WP_Block;
 use function WordPressdotorg\MU_Plugins\Google_Map\{get_events};
 
 add_action( 'init', __NAMESPACE__ . '\init' );

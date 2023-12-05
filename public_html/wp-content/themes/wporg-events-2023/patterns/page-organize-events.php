@@ -165,7 +165,7 @@
 
 <!-- wp:buttons {"layout":{"type":"flex","justifyContent":"right","orientation":"horizontal"},"style":{"layout":{"selfStretch":"fill","flexSize":null}}} -->
 <div class="wp-block-buttons"><!-- wp:button {"className":"has-custom-width is-style-outline-on-dark"} -->
-<div class="wp-block-button has-custom-width is-style-outline-on-dark"><a class="wp-block-button__link wp-element-button" href="/upcoming-events/">Browse events</a></div>
+<div class="wp-block-button has-custom-width is-style-outline-on-dark"><a class="wp-block-button__link wp-element-button" href="/upcoming/">Browse events</a></div>
 <!-- /wp:button --></div>
 <!-- /wp:buttons --></div>
 <!-- /wp:group --></div>

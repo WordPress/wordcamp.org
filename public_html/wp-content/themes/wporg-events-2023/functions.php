@@ -45,11 +45,11 @@ function add_site_navigation_menus( $menus ) {
 	return array(
 		'local-navigation' => array(
 			array(
-				'label' => __( 'All Events', 'wordcamporg' ),
+				'label' => __( 'Upcoming events', 'wordcamporg' ),
 				'url' => '/upcoming/',
 			),
 			array(
-				'label' => __( 'Organize an Event', 'wordcamporg' ),
+				'label' => __( 'Organize an event', 'wordcamporg' ),
 				'url' => '/organize-events/',
 			),
 		),

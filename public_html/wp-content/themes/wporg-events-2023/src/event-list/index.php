@@ -52,18 +52,27 @@ function render( $attributes, $content, $block ) {
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, 10);
 
-	// loop through events output markup using gutenberg blocks.
-	$content = '<ul class="wporg-marker-list__container">';
-
+	// Group events by month year.
+	$grouped_events = array();
 	foreach ( $filtered_events as $event ) {
-		$content .= '<li class="wporg-marker-list-item">';
-		$content .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url( $event->url ) . ' ">' . esc_html( $event->title ) . '</a></h3>';
-		$content .= '<div class="wporg-marker-list-item__location">' . esc_html( $event->location ) . '</div>';
-		$content .= '<div class="wporg-marker-list-item__date-time" data-wc-events-list-timestamp="' . esc_html( $event->timestamp ) . '"></div>';
-		$content .= '</li>';
+		$event_month_year                      = gmdate('F Y', $event->timestamp);
+		$grouped_events[ $event_month_year ][] = $event;
 	}
 
-	$content .= '</ul>';
+	foreach ( $grouped_events as $month_year => $events ) {
+		$content .= "<h2 class='wporg-marker-list__container__title'>$month_year</h2>";
+		$content .= '<ul class="wporg-marker-list__container">';
+
+		foreach ( $events as $event ) {
+			$content .= '<li class="wporg-marker-list-item">';
+			$content .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url($event->url) . '">' . esc_html($event->title) . '</a></h3>';
+			$content .= '<div class="wporg-marker-list-item__location">' . esc_html($event->location) . '</div>';
+			$content .= '<div class="wporg-marker-list-item__date-time" data-wc-events-list-timestamp="' . esc_html( $event->timestamp ) . '"></div>';
+			$content .= '</li>';
+		}
+
+		$content .= '</ul>';
+	}
 
 	$wrapper_attributes = get_block_wrapper_attributes( array(
 		'class' => 'wp-block-wporg-google-map',

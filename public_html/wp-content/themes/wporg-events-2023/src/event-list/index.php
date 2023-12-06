@@ -52,7 +52,7 @@ function render( $attributes, $content, $block ) {
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, 10);
 
-	// loop through events output markup using gutenberg blocks
+	// loop through events output markup using gutenberg blocks.
 	$content = '<ul class="wporg-marker-list__container">';
 
 	foreach ( $filtered_events as $event ) {
@@ -78,11 +78,9 @@ function render( $attributes, $content, $block ) {
 /**
  * Get a list of the currently-applied filters.
  *
- * @param boolean $include_search Whether the result should include the search term.
- *
  * @return array
  */
-function filter_events( $events ) {
+function filter_events( array $events ): array {
 	global $wp_query;
 
 	$taxes = array(
@@ -90,7 +88,7 @@ function filter_events( $events ) {
 	);
 	$terms = array();
 
-	// Get the terms
+	// Get the terms.
 	foreach ( $taxes as $query_var => $taxonomy ) {
 
 		if ( ! isset( $wp_query->query[ $query_var ] ) ) {
@@ -109,7 +107,7 @@ function filter_events( $events ) {
 
 	$filtered_events = array();
 	foreach ( $events as $event ) {
-		// Assuming each event has a 'type' property
+		// Assuming each event has a 'type' property.
 		if ( isset($event->type) && in_array($event->type, $terms) ) {
 			$filtered_events[] = $event;
 		}

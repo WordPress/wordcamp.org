@@ -5,7 +5,7 @@ defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/inc/city-landing-pages.php';
 
-// Block files
+// Block files.
 require_once __DIR__ . '/src/event-list/index.php';
 
 add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
@@ -155,7 +155,7 @@ function get_month_options( array $options ): array {
 
 	for ( $i = 1; $i <= 12; $i++ ) {
 		$month = strtotime( "2023-$i-1" );
-		$months[ date( 'm', $month ) ] = date( 'F', $month );
+		$months[ gmdate( 'm', $month ) ] = gmdate( 'F', $month );
 	}
 
 	return array(

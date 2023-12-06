@@ -8,7 +8,7 @@
 
 namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
 use WP_Block;
-use function WordPressdotorg\MU_Plugins\Google_Map\{get_events};
+use function WordPressdotorg\MU_Plugins\Google_Map\{ get_events, schedule_filter_cron };
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -47,6 +47,7 @@ function render( $attributes, $content, $block ) {
 	);
 
 	$events = get_events( $attributes['events'], 0, 0, $facets );
+	schedule_filter_cron( $attributes['events'], 0, 0, $facets );
 
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, 10);

@@ -38,14 +38,7 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
-	$facets = array(
-		'search'  => sanitize_text_field( get_query_var( 's' ) ?? '' ),
-		'type'    => sanitize_text_field( get_query_var( 'event_type' ) ?? '' ),
-		'format'  => sanitize_text_field( get_query_var( 'format_type' ) ?? '' ),
-		'month'   => absint( get_query_var( 'month' ) ?? 0 ),
-		'country' => sanitize_text_field( get_query_var( 'country' ) ?? '' ),
-	);
-
+	$facets = get_clean_query_facets();
 	$events = get_events( $attributes['events'], 0, 0, $facets );
 	schedule_filter_cron( $attributes['events'], 0, 0, $facets );
 
@@ -73,6 +66,36 @@ function render( $attributes, $content, $block ) {
 		$wrapper_attributes,
 		do_blocks( $content )
 	);
+}
+
+/**
+ * Get the query var facts and sanitize them.
+ *
+ * The query-filters block will provide the values as strings in some cases, but arrays in others.
+ *
+ * This converts them to the keys that the Google Map block uses.
+ */
+function get_clean_query_facets(): array {
+	$search  = (array) get_query_var( 's' ) ?? array();
+	$search  = sanitize_text_field( $search[0] ?? '' );
+
+	$type    = (array) get_query_var( 'event_type' ) ?? array();
+	$type    = sanitize_text_field( $type[0] ?? '' );
+
+	$format  = (array) get_query_var( 'format_type' ) ?? array();
+	$format  = sanitize_text_field( $format[0] ?? '' );
+
+	$month   = (array) get_query_var( 'month' ) ?? array();
+	$month   = absint( $month[0] ?? 0 );
+
+	$country = (array) get_query_var( 'country' ) ?? array();
+	$country = sanitize_text_field( $country[0] ?? '' );
+
+	$facets = compact( 'search', 'type', 'format', 'month', 'country' );
+
+	array_filter( $facets ); // Remove empty.
+
+	return $facets;
 }
 
 /**

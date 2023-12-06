@@ -4,6 +4,7 @@
 	"description": "Description: Includes templates for the homepage, event archives, etc",
 	"license": "GPL-2.0-or-later",
 	"devDependencies": {
+		"@wordpress/scripts": "^26.18.0",
 		"cssnano": "^6.0.1",
 		"postcss": "^8.4.31",
 		"postcss-cli": "^10.1.0",
@@ -13,8 +14,9 @@
 	},
 	"scripts": {
 		"start": "npm run watch",
-		"watch": "npm run build -- --watch",
-		"build": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
+		"watch": "wp-scripts start & npm run build:css -- --watch",
+		"build": "wp-scripts build && npm run build:css",
+		"build:css": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
 		"lint:js": "echo 'There is no JS, but this is required to make the `linter.yml` workflow pass. See https://github.com/yarnpkg/yarn/issues/6739, https://github.com/yarnpkg/yarn/issues/6894.'",
 		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'"
 	}

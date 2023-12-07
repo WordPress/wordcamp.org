@@ -16,6 +16,7 @@ add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event
 add_filter( 'wporg_query_filter_options_month', __NAMESPACE__ . '\get_month_options' );
 add_filter( 'wporg_query_filter_options_country', __NAMESPACE__ . '\get_country_options' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
+add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\update_site_breadcrumbs' );
 
 add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
 
@@ -237,4 +238,27 @@ function inject_other_filters( $key ) {
 	if ( isset( $wp_query->query['s'] ) ) {
 		printf( '<input type="hidden" name="s" value="%s" />', esc_attr( $wp_query->query['s'] ) );
 	}
+}
+
+/**
+ * Update the breadcrumbs to the current page.
+ */
+function update_site_breadcrumbs( $breadcrumbs ) {
+	// Build up the breadcrumbs from scratch.
+	$breadcrumbs = array(
+		array(
+			'url' => home_url(),
+			'title' => __( 'Home', 'wporg' ),
+		),
+	);
+
+	if ( is_search() ) {
+		$breadcrumbs[] = array(
+			'url' => false,
+			'title' => __( 'Search results', 'wporg' ),
+		);
+		return $breadcrumbs;
+	}
+
+	return $breadcrumbs;
 }

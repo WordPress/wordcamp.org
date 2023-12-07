@@ -64,7 +64,7 @@ function render( $attributes, $content, $block ) {
 				'<time class="wporg-marker-list-item__date-time" date-time="%1$s" title="%1$s"><span class="wporg-google-map__date">%2$s</span><span class="wporg-google-map__time">%3$s</span></time>',
 				gmdate( 'c', esc_html( $event->timestamp ) ),
 				gmdate( 'l, M j', esc_html( $event->timestamp ) ),
-				esc_html( gmdate('H:i', $event->timestamp) . ' (UTC-0)' ),
+				esc_html( gmdate('H:i', $event->timestamp) . ' UTC' ),
 			);
 			$content .= '</li>';
 		}

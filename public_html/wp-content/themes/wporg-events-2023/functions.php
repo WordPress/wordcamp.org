@@ -118,6 +118,7 @@ function get_event_type_options( array $options ): array {
 		'options' => array(
 			'meetup'   => 'Meetup',
 			'wordcamp' => 'WordCamp',
+			'other'    => 'Other',
 		),
 		'selected' => $selected,
 	);

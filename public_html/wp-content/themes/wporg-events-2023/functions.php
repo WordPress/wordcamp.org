@@ -64,14 +64,24 @@ function add_site_navigation_menus( $menus ) {
 function get_country_options( array $options ): array {
 	global $wp_query;
 	$selected = isset( $wp_query->query['country'] ) ? (array) $wp_query->query['country'] : array();
+	$count    = count( $selected );
 
 	$countries = wcorg_get_countries();
 
 	// Re-index to match the format expected by the query-filters block.
 	$countries = array_combine( array_keys( $countries ), array_column( $countries, 'name' ) );
 
+	$label = __( 'Country', 'wporg' );
+	if ( $count > 0 ) {
+		$label = sprintf(
+			/* translators: The dropdown label for filtering, %s is the selected term count. */
+			_n( 'Country <span>%s</span>', 'Country <span>%s</span>', $count, 'wporg' ),
+			$count
+		);
+	}
+
 	return array(
-		'label' => __( 'Country', 'wporg' ),
+		'label' => $label,
 		'title' => __( 'Country', 'wporg' ),
 		'key' => 'country',
 		'action' => home_url( '/upcoming-events/' ),
@@ -89,11 +99,15 @@ function get_event_type_options( array $options ): array {
 	global $wp_query;
 	$selected = isset( $wp_query->query['event_type'] ) ? (array) $wp_query->query['event_type'] : array();
 	$count    = count( $selected );
-	$label    = sprintf(
-		/* translators: The dropdown label for filtering, %s is the selected term count. */
-		_n( 'Type <span>%s</span>', 'Type <span>%s</span>', $count, 'wporg' ),
-		$count
-	);
+
+	$label = __( 'Type', 'wporg' );
+	if ( $count > 0 ) {
+		$label = sprintf(
+			/* translators: The dropdown label for filtering, %s is the selected term count. */
+			_n( 'Type <span>%s</span>', 'Type <span>%s</span>', $count, 'wporg' ),
+			$count
+		);
+	}
 
 	return array(
 		'label' => $label,
@@ -117,11 +131,15 @@ function get_format_type_options( array $options ): array {
 	global $wp_query;
 	$selected = isset( $wp_query->query['format_type'] ) ? (array) $wp_query->query['format_type'] : array();
 	$count    = count( $selected );
-	$label    = sprintf(
-		/* translators: The dropdown label for filtering, %s is the selected term count. */
-		_n( 'Format <span>%s</span>', 'Format <span>%s</span>', $count, 'wporg' ),
-		$count
-	);
+
+	$label = __( 'Format', 'wporg' );
+	if ( $count > 0 ) {
+		$label = sprintf(
+			/* translators: The dropdown label for filtering, %s is the selected term count. */
+			_n( 'Format <span>%s</span>', 'Format <span>%s</span>', $count, 'wporg' ),
+			$count
+		);
+	}
 
 	return array(
 		'label' => $label,
@@ -145,11 +163,15 @@ function get_month_options( array $options ): array {
 	global $wp_query;
 	$selected = isset( $wp_query->query['month'] ) ? (array) $wp_query->query['month'] : array();
 	$count    = count( $selected );
-	$label    = sprintf(
-		/* translators: The dropdown label for filtering, %s is the selected term count. */
-		_n( 'Month <span>%s</span>', 'Month <span>%s</span>', $count, 'wporg' ),
-		$count
-	);
+
+	$label = __( 'Month', 'wporg' );
+	if ( $count > 0 ) {
+		$label = sprintf(
+			/* translators: The dropdown label for filtering, %s is the selected term count. */
+			_n( 'Month <span>%s</span>', 'Month <span>%s</span>', $count, 'wporg' ),
+			$count
+		);
+	}
 
 	$months = array();
 

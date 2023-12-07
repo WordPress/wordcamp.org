@@ -46,7 +46,7 @@ function add_site_navigation_menus( $menus ) {
 		'local-navigation' => array(
 			array(
 				'label' => __( 'Upcoming events', 'wordcamporg' ),
-				'url' => '/upcoming/',
+				'url' => '/upcoming-events/',
 			),
 			array(
 				'label' => __( 'Organize an event', 'wordcamporg' ),
@@ -74,7 +74,7 @@ function get_country_options( array $options ): array {
 		'label' => __( 'Country', 'wporg' ),
 		'title' => __( 'Country', 'wporg' ),
 		'key' => 'country',
-		'action' => home_url( '/upcoming/' ),
+		'action' => home_url( '/upcoming-events/' ),
 		'options' => $countries,
 		'selected' => $selected,
 	);
@@ -99,7 +99,7 @@ function get_event_type_options( array $options ): array {
 		'label' => $label,
 		'title' => __( 'Type', 'wporg' ),
 		'key' => 'event_type',
-		'action' => home_url( '/upcoming/' ),
+		'action' => home_url( '/upcoming-events/' ),
 		'options' => array(
 			'meetup'   => 'Meetup',
 			'wordcamp' => 'WordCamp',
@@ -127,7 +127,7 @@ function get_format_type_options( array $options ): array {
 		'label' => $label,
 		'title' => __( 'Format', 'wporg' ),
 		'key' => 'format_type',
-		'action' => home_url( '/upcoming/' ),
+		'action' => home_url( '/upcoming-events/' ),
 		'options' => array(
 			'online'    => 'Online',
 			'in-person' => 'In Person',
@@ -162,7 +162,7 @@ function get_month_options( array $options ): array {
 		'label' => $label,
 		'title' => __( 'Month', 'wporg' ),
 		'key' => 'month',
-		'action' => home_url( '/upcoming/' ),
+		'action' => home_url( '/upcoming-events/' ),
 		'options' => $months,
 		'selected' => $selected,
 	);

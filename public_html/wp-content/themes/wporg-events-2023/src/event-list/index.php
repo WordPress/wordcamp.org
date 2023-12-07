@@ -210,7 +210,7 @@ function get_no_result_view() {
 			wp_kses_post(
 			/* translators: %s is url of the event archives. */
 			__( 'View <a href="%s">upcoming events</a> or try a different search.', 'wporg' ) ),
-		esc_url( home_url( '/upcoming/' ) ) )
+		esc_url( home_url( '/upcoming-events/' ) ) )
 	);
 	$content .= '</div><!-- /wp:group -->';
 

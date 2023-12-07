@@ -61,7 +61,7 @@ function render( $attributes, $content, $block ) {
 			$content .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url($event->url) . '">' . esc_html($event->title) . '</a></h3>';
 			$content .= '<div class="wporg-marker-list-item__location">' . esc_html($event->location) . '</div>';
 			$content .= sprintf(
-				'<time class="wporg-marker-list-item__date-time" date-time="%1$s" title="%1$s"><span class="wporg-google-map__date">%2$s</span><span class="wporg-google-map__time">%3$s</span></p>',
+				'<time class="wporg-marker-list-item__date-time" date-time="%1$s" title="%1$s"><span class="wporg-google-map__date">%2$s</span><span class="wporg-google-map__time">%3$s</span></time>',
 				gmdate( 'c', esc_html( $event->timestamp ) ),
 				gmdate( 'l, M j', esc_html( $event->timestamp ) ),
 				esc_html( gmdate('H:i', $event->timestamp) . ' (UTC-0)' ),

@@ -13,6 +13,10 @@
 			"type": "string",
 			"default": "all-upcoming"
 		},
+		"groupByMonth": {
+			"type": "boolean",
+			"default": false
+		},
 		"limit": {
 			"type": "number",
 			"default": 100

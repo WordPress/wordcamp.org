@@ -15,7 +15,7 @@
 
 <!-- wp:pattern {"slug":"wporg-events-2023/event-list-filters"} /-->
 
-<!-- wp:wporg/google-map {"id":"all-upcoming-list","apiKey":"WORDCAMP_DEV_GOOGLE_MAPS_API_KEY","filterSlug":"all-upcoming","showMap":false,"showSearch":false,"listDisplayLimit":10} /-->
+<!-- wp:wporg/event-list {"limit": "10"} /-->
 
 <!-- wp:buttons {"style":{"spacing":{"margin":{"top":"var:preset|spacing|40"}}}} -->
 <div class="wp-block-buttons" style="margin-top:var(--wp--preset--spacing--40)"><!-- wp:button {"className":"is-style-outline"} -->

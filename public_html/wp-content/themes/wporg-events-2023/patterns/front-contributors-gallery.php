@@ -7,7 +7,7 @@
 
 ?>
 
-<!-- wp:jetpack/tiled-gallery {"columnWidths":[["65.48121","34.51879"]],"ids":[79,85,82],"style":{"layout":{"selfStretch":"fixed","flexSize":"50%"}}} -->
+<!-- wp:jetpack/tiled-gallery {"columnWidths":[["65.48121","34.51879"]],"ids":[79,85,82]} -->
 <div class="wp-block-jetpack-tiled-gallery aligncenter is-style-rectangular">
 	<div class="tiled-gallery__gallery">
 		<div class="tiled-gallery__row">

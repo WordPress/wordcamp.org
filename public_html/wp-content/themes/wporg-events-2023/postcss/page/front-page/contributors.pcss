@@ -1,7 +1,11 @@
 .wporg-events__contributors {
-
 	.wp-block-heading em {
 		display: block;
+	}
+
+	.wporg-events_contributors__heading,
+	.wporg-events_contributors__link-list {
+		text-wrap: nowrap;
 	}
 
 	.is-style-links-list li:first-child {
@@ -13,10 +17,17 @@
 	}
 
 	.is-style-links-list li {
-		border-color:  var(--wp--preset--color--light-grey-1);
+		border-color: var(--wp--preset--color--light-grey-1);
 
 		a {
-			color:  var(--wp--preset--color--charcoal-0);	
+			color: var(--wp--preset--color--charcoal-0);
+		}
+	}
+
+	@media screen and (min-width: 1170px) {
+		.wporg-events__contributors__image {
+			min-width: 565px;
+			align-self: flex-start;
 		}
 	}
 }

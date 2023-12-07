@@ -206,12 +206,11 @@ function get_no_result_view() {
 	);
 	$content .= sprintf(
 		'<!-- wp:paragraph {"align":"center"} --><p class="has-text-align-center">%s</p><!-- /wp:paragraph -->',
-		wp_kses_post(
+		sprintf(
+			wp_kses_post(
 			/* translators: %s is url of the event archives. */
-			__( 'View <a href="%s">all events</a> or try a different search.',
-			'wporg' )
-		),
-		esc_url( home_url( '/upcoming/' ) )
+			__( 'View <a href="%s">all events</a> or try a different search.', 'wporg' ) ),
+		esc_url( home_url( '/upcoming/' ) ) )
 	);
 	$content .= '</div><!-- /wp:group -->';
 

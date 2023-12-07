@@ -45,6 +45,13 @@ function render( $attributes, $content, $block ) {
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, (int) $attributes['limit'] );
 
+	// The results are not guaranteed to be in order, so sort them.
+	usort( $filtered_events,
+		function ( $a, $b ) {
+			return $a->timestamp - $b->timestamp;
+		}
+	);
+
 	if ( count( $filtered_events ) < 1 ) {
 		return get_no_result_view();
 	}

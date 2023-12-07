@@ -45,18 +45,27 @@ function render( $attributes, $content, $block ) {
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, 10);
 
-	// loop through events output markup using gutenberg blocks.
-	$content = '<ul class="wporg-marker-list__container">';
-
+	// Group events by month year.
+	$grouped_events = array();
 	foreach ( $filtered_events as $event ) {
-		$content .= '<li class="wporg-marker-list-item">';
-		$content .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url( $event->url ) . ' ">' . esc_html( $event->title ) . '</a></h3>';
-		$content .= '<div class="wporg-marker-list-item__location">' . esc_html( $event->location ) . '</div>';
-		$content .= '<div class="wporg-marker-list-item__date-time" data-wc-events-list-timestamp="' . esc_html( $event->timestamp ) . '"></div>';
-		$content .= '</li>';
+		$event_month_year                      = gmdate('F Y', esc_html( $event->timestamp) );
+		$grouped_events[ $event_month_year ][] = $event;
 	}
 
-	$content .= '</ul>';
+	foreach ( $grouped_events as $month_year => $events ) {
+		$content .= get_section_title( $month_year );
+		$content .= '<ul class="wporg-marker-list__container">';
+
+		foreach ( $events as $event ) {
+			$content .= '<li class="wporg-marker-list-item">';
+			$content .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url($event->url) . '">' . esc_html($event->title) . '</a></h3>';
+			$content .= '<div class="wporg-marker-list-item__location">' . esc_html($event->location) . '</div>';
+			$content .= '<div class="wporg-marker-list-item__date-time">' . gmdate( 'F j, Y', esc_html( $event->timestamp ) ) . '</div>';
+			$content .= '</li>';
+		}
+
+		$content .= '</ul>';
+	}
 
 	$wrapper_attributes = get_block_wrapper_attributes( array(
 		'class' => 'wp-block-wporg-google-map',
@@ -137,4 +146,22 @@ function filter_events( array $events ): array {
 	}
 
 	return $filtered_events;
+}
+
+/**
+ * Returns core heading block markup for the date groups.
+ *
+ * @param string $heading_text Heading text.
+ *
+ * @return string
+ */
+function get_section_title( $heading_text ) {
+	$block_markup  = '<!-- wp:heading {"style":{"elements":{"link":{"color":{"text":"var:preset|color|charcoal-1"}}},"typography":{"fontStyle":"normal","fontWeight":"700"},"spacing":{"margin":{"top":"var:preset|spacing|30","bottom":"var:preset|spacing|20"}}},"textColor":"charcoal-1","fontSize":"medium","fontFamily":"inter"} -->';
+	$block_markup .= sprintf(
+		'<h2 class="wp-block-heading has-charcoal-1-color has-text-color has-link-color has-inter-font-family has-medium-font-size" style="margin-top:var(--wp--preset--spacing--30);margin-bottom:var(--wp--preset--spacing--20);font-style:normal;font-weight:700">%s</h2>',
+		esc_html( $heading_text )
+	);
+	$block_markup .= '<!-- /wp:heading -->';
+
+	return $block_markup;
 }

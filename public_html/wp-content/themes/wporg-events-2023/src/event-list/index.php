@@ -57,10 +57,6 @@ function render( $attributes, $content, $block ) {
 		foreach ( $grouped_events as $month_year => $events ) {
 			$content .= get_section_title( $month_year );
 			$content .= get_list_markup( $events );
-
-			echo '<pre>';
-			print_r( $month_year );
-			echo '</pre>';
 		}
 	} else {
 		$content = get_list_markup( $filtered_events );

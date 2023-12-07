@@ -15,7 +15,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"style":{"layout":{"selfStretch":"fit","flexSize":null},"elements":{"link":{"color":{"text":"var:preset|color|charcoal-0"}}}},"textColor":"charcoal-0"} -->
-<p class="has-charcoal-0-color has-text-color has-link-color">All over the world contributors meet to share, learn, and collaborate for the WordPress project.</p>
+<p class="has-charcoal-0-color has-text-color has-link-color">All over the world contributors meet to share, learn, and collaborate on the WordPress project.</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:column -->
 

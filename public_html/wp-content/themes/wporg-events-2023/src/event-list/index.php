@@ -45,6 +45,10 @@ function render( $attributes, $content, $block ) {
 	// Get all the filters that are currently applied.
 	$filtered_events = array_slice( filter_events( $events ), 0, (int) $attributes['limit'] );
 
+	if ( count( $filtered_events ) < 1 ) {
+		return get_no_result_view();
+	}
+
 	if ( (bool) $attributes['groupByMonth'] ) {
 		// Group events by month year.
 		$grouped_events = array();
@@ -185,4 +189,31 @@ function get_section_title( $heading_text ) {
 	$block_markup .= '<!-- /wp:heading -->';
 
 	return $block_markup;
+}
+
+/**
+ * Returns a block driven view when no results are found.
+ *
+ * Ideally this would be a template part, but until we use WP_QUERY to get the events, we can't use template parts.
+ *
+ * @return string
+ */
+function get_no_result_view() {
+	$content = '<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50"}}},"layout":{"type":"constrained"}} -->';
+	$content .= '<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--50);padding-bottom:var(--wp--preset--spacing--50)">';
+	$content .= sprintf( '<!-- wp:heading {"textAlign":"center","level":1,"fontSize":"heading-2"} --><h1 class="wp-block-heading has-text-align-center has-heading-2-font-size">%s</h1><!-- /wp:heading -->',
+		esc_attr( 'No results found', 'wporg' )
+	);
+	$content .= sprintf(
+		'<!-- wp:paragraph {"align":"center"} --><p class="has-text-align-center">%s</p><!-- /wp:paragraph -->',
+		wp_kses_post(
+			/* translators: %s is url of the event archives. */
+			__( 'View <a href="%s">all events</a> or try a different search.',
+			'wporg' )
+		),
+		esc_url( home_url( '/upcoming/' ) )
+	);
+	$content .= '</div><!-- /wp:group -->';
+
+	return do_blocks( $content );
 }

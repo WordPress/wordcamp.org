@@ -43,7 +43,7 @@ function render( $attributes, $content, $block ) {
 	schedule_filter_cron( $attributes['events'], 0, 0, $facets );
 
 	// Get all the filters that are currently applied.
-	$filtered_events = array_slice( filter_events( $events ), 0, 10);
+	$filtered_events = array_slice( filter_events( $events ), 0, (int) $attributes['limit'] );
 
 	// Group events by month year.
 	$grouped_events = array();

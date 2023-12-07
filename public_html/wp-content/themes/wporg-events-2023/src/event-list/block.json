@@ -12,6 +12,10 @@
 		"events": {
 			"type": "string",
 			"default": "all-upcoming"
+		},
+		"limit": {
+			"type": "number",
+			"default": 100
 		}
 	},
 	"supports": {

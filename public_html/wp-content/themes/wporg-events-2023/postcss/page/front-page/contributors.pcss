@@ -3,6 +3,11 @@
 		display: block;
 	}
 
+	.wporg-events_contributors__heading,
+	.wporg-events_contributors__link-list {
+		text-wrap: nowrap;
+	}
+
 	.is-style-links-list li:first-child {
 		border-top: none;
 	}
@@ -19,7 +24,10 @@
 		}
 	}
 
-	.wp-block-jetpack-tiled-gallery {
-		min-width: 565px;
+	@media screen and (min-width: 1170px) {
+		.wporg-events__contributors__image {
+			min-width: 565px;
+			align-self: flex-start;
+		}
 	}
 }

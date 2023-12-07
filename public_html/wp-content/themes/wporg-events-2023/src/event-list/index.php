@@ -90,17 +90,17 @@ function render( $attributes, $content, $block ) {
  * This converts them to the keys that the Google Map block uses.
  */
 function get_clean_query_facets(): array {
-	$search = (array) get_query_var( 's' ) ?? array();
-	$search = sanitize_text_field( $search[0] ?? '' );
+	$search  = (array) get_query_var( 's' ) ?? array();
+	$search  = sanitize_text_field( $search[0] ?? '' );
 
-	$type = (array) get_query_var( 'event_type' ) ?? array();
-	$type = sanitize_text_field( $type[0] ?? '' );
+	$type    = (array) get_query_var( 'event_type' ) ?? array();
+	$type    = sanitize_text_field( $type[0] ?? '' );
 
-	$format = (array) get_query_var( 'format_type' ) ?? array();
-	$format = sanitize_text_field( $format[0] ?? '' );
+	$format  = (array) get_query_var( 'format_type' ) ?? array();
+	$format  = sanitize_text_field( $format[0] ?? '' );
 
-	$month = (array) get_query_var( 'month' ) ?? array();
-	$month = absint( $month[0] ?? 0 );
+	$month   = (array) get_query_var( 'month' ) ?? array();
+	$month   = absint( $month[0] ?? 0 );
 
 	$country = (array) get_query_var( 'country' ) ?? array();
 	$country = sanitize_text_field( $country[0] ?? '' );

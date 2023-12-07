@@ -486,7 +486,7 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Get a CSS file, @todo make it removable through an option.
+	 * Register front-end assets.
 	 */
 	function enqueue_scripts() {
 		wp_register_style(
@@ -508,9 +508,6 @@ class CampTix_Plugin {
 			'enterEmail' => __( 'Please enter the e-mail addresses in the forms above.', 'wordcamporg' ),
 			'ajaxURL'    => admin_url( 'admin-ajax.php' ),
 		) );
-
-		// Let's play by the rules and print this in the <head> section.
-		wp_enqueue_style( 'camptix' );
 	}
 
 	function admin_enqueue_scripts() {
@@ -5422,6 +5419,7 @@ class CampTix_Plugin {
 			return __( 'An error has occurred.', 'wordcamporg' );
 		}
 
+		wp_enqueue_style( 'camptix' );
 		wp_enqueue_script( 'camptix' ); // js in footer
 		return $this->shortcode_contents;
 	}

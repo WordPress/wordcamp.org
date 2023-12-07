@@ -20,7 +20,7 @@
 	<!-- /wp:list-item -->
 
 	<!-- wp:list-item {"fontSize":"medium"} -->
-	<li class="has-medium-font-size"><a href="https://meetup.com">Meetup.com</a> ↗</li>
+	<li class="has-medium-font-size"><a href="https://www.meetup.com/pro/wordpress">Meetup.com</a> ↗</li>
 	<!-- /wp:list-item -->
 
 	<!-- wp:list-item {"fontSize":"medium"} -->

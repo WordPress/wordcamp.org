@@ -66,11 +66,6 @@
 		}
 	}
 
-	.wporg-google-map__date-time-separator {
-		@media (--medium) {
-			display: none;
-		}
-	}
 
 	@media (--wide) {
 		.wporg-marker-list-item__date-time {
@@ -80,8 +75,21 @@
 			justify-content: flex-end;
 		}
 
-		.wporg-google-map__date-time-separator {
+		.wporg-google-map__date {
+			position: relative;
+		}
+
+		.wporg-google-map__date:after {
+		    content: '';
+			margin-top: -1px; /* vertical-middle doesn't subtract the size of the element */
+			margin-left: 8px;
+			margin-right: 8px;
+			height: 3px;
+			width: 3px;
+			border-radius: 3px;
+			background: var(--wp--preset--color--charcoal-5);
 			display: inline-block;
+			vertical-align: middle;
 		}
 	}
 }

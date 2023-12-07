@@ -60,7 +60,12 @@ function render( $attributes, $content, $block ) {
 			$content .= '<li class="wporg-marker-list-item">';
 			$content .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url($event->url) . '">' . esc_html($event->title) . '</a></h3>';
 			$content .= '<div class="wporg-marker-list-item__location">' . esc_html($event->location) . '</div>';
-			$content .= '<div class="wporg-marker-list-item__date-time">' . gmdate( 'F j, Y', esc_html( $event->timestamp ) ) . '</div>';
+			$content .= sprintf(
+				'<time class="wporg-marker-list-item__date-time" date-time="%1$s" title="%1$s"><span class="wporg-google-map__date">%2$s</span><span class="wporg-google-map__time">%3$s</span></p>',
+				gmdate( 'c', esc_html( $event->timestamp ) ),
+				gmdate( 'l, M j', esc_html( $event->timestamp ) ),
+				esc_html( gmdate('H:i', $event->timestamp) . ' (UTC-0)' ),
+			);
 			$content .= '</li>';
 		}
 
@@ -85,17 +90,17 @@ function render( $attributes, $content, $block ) {
  * This converts them to the keys that the Google Map block uses.
  */
 function get_clean_query_facets(): array {
-	$search  = (array) get_query_var( 's' ) ?? array();
-	$search  = sanitize_text_field( $search[0] ?? '' );
+	$search = (array) get_query_var( 's' ) ?? array();
+	$search = sanitize_text_field( $search[0] ?? '' );
 
-	$type    = (array) get_query_var( 'event_type' ) ?? array();
-	$type    = sanitize_text_field( $type[0] ?? '' );
+	$type = (array) get_query_var( 'event_type' ) ?? array();
+	$type = sanitize_text_field( $type[0] ?? '' );
 
-	$format  = (array) get_query_var( 'format_type' ) ?? array();
-	$format  = sanitize_text_field( $format[0] ?? '' );
+	$format = (array) get_query_var( 'format_type' ) ?? array();
+	$format = sanitize_text_field( $format[0] ?? '' );
 
-	$month   = (array) get_query_var( 'month' ) ?? array();
-	$month   = absint( $month[0] ?? 0 );
+	$month = (array) get_query_var( 'month' ) ?? array();
+	$month = absint( $month[0] ?? 0 );
 
 	$country = (array) get_query_var( 'country' ) ?? array();
 	$country = sanitize_text_field( $country[0] ?? '' );

@@ -31,15 +31,19 @@
 		}
 
 		.wp-block-columns .wp-block-column:last-child {
-			flex-basis: 66.665%  !important;
+			flex-basis: 66.665% !important;
 		}
 	}
 
-	& .wp-block-wporg-google-map .wporg-google-map__container {
+	& .wp-block-wporg-google-map {
 		height: 430px;
 
 		@media (--small-only) {
 			height: 246px;
+		}
+
+		& .wporg-google-map__container {
+			height: 100%;
 		}
 	}
 }

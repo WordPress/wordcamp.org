@@ -188,9 +188,9 @@ function filter_events( array $events ): array {
  * @return string
  */
 function get_section_title( $heading_text ) {
-	$block_markup  = '<!-- wp:heading {"style":{"elements":{"link":{"color":{"text":"var:preset|color|charcoal-1"}}},"typography":{"fontStyle":"normal","fontWeight":"700"},"spacing":{"margin":{"top":"var:preset|spacing|30","bottom":"var:preset|spacing|20"}}},"textColor":"charcoal-1","fontSize":"medium","fontFamily":"inter"} -->';
+	$block_markup  = '<!-- wp:heading {"style":{"elements":{"link":{"color":{"text":"var:preset|color|charcoal-1"}}},"typography":{"fontStyle":"normal","fontWeight":"700"},"spacing":{"margin":{"top":"var:preset|spacing|40","bottom":"var:preset|spacing|20"}}},"textColor":"charcoal-1","fontSize":"medium","fontFamily":"inter"} -->';
 	$block_markup .= sprintf(
-		'<h2 class="wp-block-heading has-charcoal-1-color has-text-color has-link-color has-inter-font-family has-medium-font-size" style="margin-top:var(--wp--preset--spacing--30);margin-bottom:var(--wp--preset--spacing--20);font-style:normal;font-weight:700">%s</h2>',
+		'<h2 class="wp-block-heading has-charcoal-1-color has-text-color has-link-color has-inter-font-family has-medium-font-size" style="margin-top:var(--wp--preset--spacing--40);margin-bottom:var(--wp--preset--spacing--20);font-style:normal;font-weight:700">%s</h2>',
 		esc_html( $heading_text )
 	);
 	$block_markup .= '<!-- /wp:heading -->';

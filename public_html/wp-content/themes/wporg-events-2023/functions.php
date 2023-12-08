@@ -51,7 +51,7 @@ function add_site_navigation_menus( $menus ) {
 			),
 			array(
 				'label' => __( 'Organize an event', 'wordcamporg' ),
-				'url' => '/organize-events/',
+				'url' => '/organize-an-events/',
 			),
 		),
 	);

@@ -10,6 +10,7 @@ require_once __DIR__ . '/src/event-list/index.php';
 
 add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
+add_action( 'wp_head', __NAMESPACE__ . '\add_social_meta_tags' );
 add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_site_navigation_menus' );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
 add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
@@ -37,6 +38,49 @@ function enqueue_assets() {
 		array( 'wporg-parent-2021-style', 'wporg-global-fonts' ),
 		filemtime( __DIR__ . '/style.css' )
 	);
+}
+
+/**
+ * Add meta tags for richer social media integrations.
+ */
+function add_social_meta_tags() {
+	$default_image = get_stylesheet_directory_uri() . '/images/social-image.png';
+	$site_title    = function_exists( '\WordPressdotorg\site_brand' ) ? \WordPressdotorg\site_brand() : 'WordPress.org';
+	$og_fields = array(
+		'og:title'       => wp_get_document_title(),
+		'og:description' => __( '[Replace with copy]', 'wporg' ),
+		'og:site_name'   => $site_title,
+		'og:type'        => 'website',
+		'og:url'         => home_url( '/' ),
+		'og:image'       => esc_url( $default_image ),
+	);
+
+	if ( is_tag() || is_category() ) {
+		$og_fields['og:url'] = esc_url( get_term_link( get_queried_object_id() ) );
+	} elseif ( is_single() ) {
+		$og_fields['og:description'] = strip_tags( get_the_excerpt() );
+		$og_fields['og:url']         = esc_url( get_permalink() );
+		$og_fields['og:image']       = esc_url( get_site_screenshot_src( get_post() ) );
+	}
+
+	printf( '<meta name="twitter:card" content="summary_large_image">' . "\n" );
+	printf( '<meta name="twitter:site" content="@WordPress">' . "\n" );
+	printf( '<meta name="twitter:image" content="%s" />' . "\n", esc_url( $og_fields['og:image'] ) );
+
+	foreach ( $og_fields as $property => $content ) {
+		printf(
+			'<meta property="%1$s" content="%2$s" />' . "\n",
+			esc_attr( $property ),
+			esc_attr( $content )
+		);
+	}
+
+	if ( isset( $og_fields['og:description'] ) ) {
+		printf(
+			'<meta name="description" content="%1$s" />' . "\n",
+			esc_attr( $og_fields['og:description'] )
+		);
+	}
 }
 
 /**

@@ -7,6 +7,7 @@
  */
 
 namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
+use WordPressdotorg\Events_2023;
 use WP_Block;
 use WordPressdotorg\MU_Plugins\Google_Map;
 
@@ -39,7 +40,7 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
-	$facets = get_clean_query_facets();
+	$facets = Events_2023\get_clean_query_facets();
 	$events = Google_Map\get_events( $attributes['events'], 0, 0, $facets );
 
 	// Get all the filters that are currently applied.
@@ -107,36 +108,6 @@ function get_list_markup( $events ) {
 	$block_markup .= '</ul>';
 
 	return $block_markup;
-}
-
-/**
- * Get the query var facts and sanitize them.
- *
- * The query-filters block will provide the values as strings in some cases, but arrays in others.
- *
- * This converts them to the keys that the Google Map block uses.
- */
-function get_clean_query_facets(): array {
-	$search  = (array) get_query_var( 's' ) ?? array();
-	$search  = sanitize_text_field( $search[0] ?? '' );
-
-	$type    = (array) get_query_var( 'event_type' ) ?? array();
-	$type    = sanitize_text_field( $type[0] ?? '' );
-
-	$format  = (array) get_query_var( 'format_type' ) ?? array();
-	$format  = sanitize_text_field( $format[0] ?? '' );
-
-	$month   = (array) get_query_var( 'month' ) ?? array();
-	$month   = absint( $month[0] ?? 0 );
-
-	$country = (array) get_query_var( 'country' ) ?? array();
-	$country = sanitize_text_field( $country[0] ?? '' );
-
-	$facets = compact( 'search', 'type', 'format', 'month', 'country' );
-
-	array_filter( $facets ); // Remove empty.
-
-	return $facets;
 }
 
 /**

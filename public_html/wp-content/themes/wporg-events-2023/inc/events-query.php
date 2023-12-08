@@ -1,18 +1,126 @@
 <?php
 
 namespace WordPressdotorg\Events_2023;
+use WP_Query, WP_Post, WP_Block;
+use WordPressdotorg\MU_Plugins\Google_Map;
 
 defined( 'WPINC' ) || die();
 
+// Misc.
+add_action( 'init', __NAMESPACE__ . '\register_post_types' );
+add_filter( 'posts_pre_query', __NAMESPACE__ . '\inject_events_into_query', 10, 2 );
+
+// Query filters.
 add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
+add_filter( 'wporg_query_total_label', __NAMESPACE__ . '\update_query_total_label', 10, 3 );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
 add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
 add_filter( 'wporg_query_filter_options_month', __NAMESPACE__ . '\get_month_options' );
 add_filter( 'wporg_query_filter_options_country', __NAMESPACE__ . '\get_country_options' );
 
 
-+/**
+/**
+ * Register custom post types.
+ */
+function register_post_types() {
+	$args = array(
+		'description'       => 'wporg events',
+		'public'            => true,
+		'show_ui'           => false,
+		'show_in_menu'      => false,
+		'show_in_nav_menus' => false,
+		'supports'          => array( 'title', 'custom-fields' ),
+		'has_archive'       => true,
+		'show_in_rest'      => true,
+	);
+
+	return register_post_type( 'wporg_events', $args );
+}
+
+/**
+ * Inject rows from the `wporg_events` database table into `WP_Query` SELECT results.
+ *
+ * This allow us to use blocks like `wp:query`, `wp:post-title`, `wporg/query-filters` etc in templates.
+ * Otherwise we'd have to write a custom block to display the data, and wouldn't be ablet to reuse existing
+ * blocks.
+ */
+function inject_events_into_query( $posts, WP_Query $query ) {
+	if ( 'wporg_events' !== $query->get( 'post_type' ) ) {
+		return $posts;
+	}
+
+	global $wp;
+
+	$posts  = array();
+	$facets = get_clean_query_facets();
+	$events = Google_Map\get_events( 'all-upcoming', 0, 0, $facets );
+
+	// Simulate an ID that won't collide with a real post.
+	// It can't be a negative number, because some Core functions pass the ID through `absint()`.
+	// It has to be numeric for a similar reason.
+	$newest_post = get_posts( array(
+		'post_type'      => 'any',
+		'post_status'    => 'any',
+		'posts_per_page' => 1,
+		'orderby'        => 'ID',
+		'order'          => 'DESC',
+		'fields'         => 'ids',
+	) );
+	$id_gap = $newest_post[0] + 10000;
+
+	foreach ( $events as $event ) {
+		$post = (object) array(
+			'ID'             => $id_gap + $event->id,
+			'post_title'     => $event->title,
+			'post_status'    => 'publish',
+			'post_name'      => 'wporg-event-' . $event->id,
+			'guid'           => $event->url,
+			'post_type'      => 'wporg_event',
+
+			// This makes Core create a new post object, rather than trying to get an instance.
+			// See https://github.com/WordPress/WordPress/blob/7926dbb4d5392c870ccbc3ec6019c002feed904c/wp-includes/post.php#L1030-L1033.
+			'filter' => 'raw',
+		);
+
+		$meta = array(
+			'location'  => array( ucfirst( $event->location ) ),
+			'timestamp' => array( $event->timestamp ),
+			'latitude'  => array( $event->latitude ),
+			'longitude' => array( $event->longitude ),
+			'meetup'    => array( $event->meetup ),
+			'type'      => array( $event->type ),
+			'tz_offset' => array( $event->tz_offset ),
+		);
+
+		$post_object = new WP_Post( $post );
+
+		wp_cache_add( $post->ID, $post_object, 'posts' );
+		wp_cache_add( $post->ID, $meta, 'post_meta' );
+
+		$posts[] = $post_object;
+	}
+
+	if ( $posts ) {
+		$query->post              = $posts[0];
+		$query->queried_object    = $posts[0];
+		$query->queried_object_id = $posts[0]->ID;
+	}
+
+	$query->posts                = $posts;
+	$query->found_posts          = count( $posts );
+	$query->post_count           = count( $posts );
+	$query->max_num_pages        = 1;
+	$query->is_archive           = true;
+	$query->is_post_type_archive = true;
+
+	// Update global `$post` etc.
+	$wp->register_globals();
+
+	return $posts;
+}
+
+/**
  * Get the query var facts and sanitize them.
  *
  * The query-filters block will provide the values as strings in some cases, but arrays in others.
@@ -87,6 +195,18 @@ function inject_other_filters( $key ) {
 	if ( isset( $wp_query->query['s'] ) ) {
 		printf( '<input type="hidden" name="s" value="%s" />', esc_attr( $wp_query->query['s'] ) );
 	}
+}
+
+/**
+ * Change the default "items" label to match the query content.
+ */
+function update_query_total_label( string $label, int $found_posts, WP_Block $block ): string {
+	if ( 'wporg_events' === $block->context['query']['postType'] ) {
+		/* translators: %s: the event count. */
+		$label = _n( '%s event', '%s events', $found_posts, 'wordcamporg' );
+	}
+
+	return $label;
 }
 
 /**

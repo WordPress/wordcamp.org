@@ -1,6 +1,7 @@
 <?php
 
 namespace WordPressdotorg\Events_2023;
+
 defined( 'WPINC' ) || die();
 
 require_once __DIR__ . '/inc/events-query.php';

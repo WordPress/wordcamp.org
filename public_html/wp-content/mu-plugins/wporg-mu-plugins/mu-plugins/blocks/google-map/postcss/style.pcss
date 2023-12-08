@@ -1,0 +1,90 @@
+/*
+ * These are foundational styles that provide a reasonable default for any theme.
+ */
+
+.wp-block-wporg-google-map {
+	& .wporg-marker-search__container {
+		display: flex;
+
+		/* Enqueuing the `wp-components` stylesheet add too much to the page load just for these styles, so they're duplicated here. */
+		& button.is-tertiary {
+			background: none;
+			border: none;
+		}
+
+		& .wporg-marker-search__icon {
+			width: 24px;
+			height: 24px;
+		}
+	}
+
+	& .wporg-google-map__container {
+		position: relative;
+		width: 100%;
+		max-width: 100%;
+		background-color: #aadaff;
+
+		/*
+		* This is a bit too opinionated, but it's required to prevent the map from collapsing. The theme can override it when needed.
+		* @link https://developers.google.com/maps/documentation/javascript/overview#Map_DOM_Elements
+		*/
+		height: clamp(200px, 50vh, 90vh);
+
+		@media screen and ( max-width: 385px ) {
+			width: 100vw;
+
+			/* Make sure there's enough room to scroll past it using mobile gestures. */
+			max-height: 90vh;
+		}
+
+		& .wporg-map-marker__title {
+			margin: 0;
+		}
+	}
+
+	& .wporg-marker-list__container {
+		& h3,
+		& p {
+			margin: 0;
+		}
+	}
+
+	& .wporg-marker-list-item__title a,
+	& .wporg-map-marker__url a {
+		text-decoration: none;
+
+		&::after {
+			content: "↗";
+			margin-left: 5px;
+			font-family: var(--wp--preset--font-family--inter);
+		}
+	}
+
+
+	& .wporg-marker-list-item__date-time,
+	& .wporg-map-marker__date-time {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	& .wporg-google-map__date-time-separator {
+		width: 3px;
+		height: 4px;
+		background-image: url(../images/separator-dot.svg);
+		background-repeat: no-repeat;
+	}
+}
+
+
+/*
+ * State of the Word 2023 block style
+ */
+
+.wp-block-wporg-google-map.is-style-sotw-2023 {
+	& .wporg-map-marker {
+		& a {
+			color: #ff2b2b;
+		}
+	}
+}

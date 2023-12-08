@@ -1,0 +1,28 @@
+.wp-block-wporg-site-breadcrumbs {
+	& a {
+		color: var(--wp--preset--color--charcoal-4);
+		text-decoration-line: none;
+
+		&:hover {
+			text-decoration-line: underline;
+		}
+	}
+
+	& > span {
+		display: inline-block;
+
+		&:not(:last-child) {
+
+			/* This ensures that the square separator is reliably centered. */
+			margin-top: 0;
+
+			&::after {
+				content: "/";
+				display: inline-block;
+				font-weight: 400;
+				margin: 0 var(--wp--preset--spacing--10);
+				color: var(--wp--preset--color--light-grey-1);
+			}
+		}
+	}
+}

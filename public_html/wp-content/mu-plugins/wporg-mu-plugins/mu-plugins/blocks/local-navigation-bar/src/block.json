@@ -1,0 +1,89 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/local-navigation-bar",
+	"title": "Local Navigation Bar",
+	"icon": "ellipsis",
+	"category": "layout",
+	"description": "A special block to handle the local navigation on pages in a section.",
+	"textdomain": "wporg",
+	"attributes": {
+		"align": {
+			"type": "string",
+			"default": "full"
+		},
+		"backgroundColor": {
+			"type": "string",
+			"default": "blueberry-1"
+		},
+		"layout": {
+			"type": "object",
+			"default": {
+				"type": "flex",
+				"flexWrap": "nowrap",
+				"justifyContent": "space-between"
+			}
+		},
+		"style": {
+			"type": "object",
+			"default": {
+				"spacing": {
+					"padding": {
+						"right": "var:preset|spacing|60",
+						"left": "var:preset|spacing|60",
+						"top": "16px",
+						"bottom": "16px"
+					}
+				},
+				"position": {
+					"type": "sticky"
+				}
+			}
+		},
+		"textColor": {
+			"type": "string",
+			"default": "white"
+		}
+	},
+	"supports": {
+		"align": true,
+		"color": {
+			"text": true,
+			"background": true,
+			"link": true
+		},
+		"position": {
+			"sticky": true
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true,
+			"__experimentalDefaultControls": {
+				"margin": true,
+				"padding": true
+			}
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true
+		},
+		"__experimentalBorder": {
+			"color": true,
+			"radius": true,
+			"style": true,
+			"width": true,
+			"__experimentalDefaultControls": {
+				"color": true,
+				"radius": true,
+				"style": true,
+				"width": true
+			}
+		},
+		"__experimentalLayout": true
+	},
+	"editorScript": "file:./index.js",
+	"viewScript": "file:./view.js",
+	"editorStyle": "file:./editor-style.css",
+	"style": "file:./style.css",
+	"render": "file:../render.php"
+}

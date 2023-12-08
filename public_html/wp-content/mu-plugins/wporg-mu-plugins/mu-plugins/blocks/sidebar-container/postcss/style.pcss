@@ -1,0 +1,66 @@
+.wp-block-wporg-sidebar-container .is-link-to-top {
+	display: none;
+
+	& a {
+		text-decoration-line: none;
+
+		&:hover {
+			text-decoration-line: underline;
+		}
+	}
+}
+
+/* Slot the search & table of contents into a floating sidebar on large screens. */
+@media (min-width: 1200px) {
+	.wp-block-wporg-sidebar-container {
+		--local--block-end-sidebar--width: 340px;
+
+		position: absolute;
+		top: calc(var(--wp-global-header-offset, 90px) + var(--wp--custom--local-navigation-bar--spacing--height, 60px));
+
+		/* Right offset should be "edge spacing" at minimum, otherwise calculate it to be centered. */
+		right: max(var(--wp--preset--spacing--edge-space), calc((100% - var(--wp--style--global--wide-size)) / 2));
+		width: var(--local--block-end-sidebar--width);
+		margin-top: var(--wp--custom--wporg-sidebar-container--spacing--margin--top);
+		margin-bottom: 0 !important;
+
+		&.is-fixed-sidebar {
+			position: fixed;
+			top: 0;
+
+			/* Make the space above the sidebar the same as the height of the local nav. */
+			margin-top: calc(var(--wp-admin--admin-bar--height, 0px) + var(--wp--custom--local-navigation-bar--spacing--height, 60px) * 2);
+		}
+
+		&.is-bottom-sidebar {
+			position: absolute;
+		}
+
+		&.is-fixed-sidebar .is-link-to-top,
+		&.is-bottom-sidebar .is-link-to-top {
+			display: block;
+			margin-top: 0;
+
+			& a {
+				color: var(--wp--preset--color--charcoal-4);
+			}
+		}
+
+		.wp-block-wporg-table-of-contents + .is-link-to-top {
+			border-top: 1px solid var(--wp--preset--color--light-grey-1);
+			padding-top: var(--wp--preset--spacing--20);
+		}
+	}
+}
+
+@media (min-width: 890px) {
+	/* stylelint-disable selector-id-pattern */
+	#wp--skip-link--target {
+		scroll-margin-top: var(--wp--custom--local-navigation-bar--spacing--height, 0);
+	}
+}
+
+/* Set up the custom properties. These can be overridden by settings in theme.json. */
+:where(body) {
+	--wp--custom--wporg-sidebar-container--spacing--margin--top: var(--wp--preset--spacing--edge-space);
+}

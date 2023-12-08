@@ -1,0 +1,203 @@
+/*
+ * ⚠️ Only values that are specific to the global header/footer (like layout, padding, etc) should be hardcoded in
+ * this file. Values that are shared across the entire theme (like typography, color palette, etc) should use the
+ * CSS variables from the `wporg-parent-2021` theme -- or from `wporg-news-2021` if
+ * https://github.com/WordPress/wporg-news-2021/issues/13 isn't done yet.
+ */
+
+/*
+ * Variables, mixins, etc
+ */
+
+/* Breakpoints should be synced with `wporg-parent-2021` (or `wporg-news-2021` until parent exists). */
+@custom-media --mobile-only (max-width: 889px);
+@custom-media --tablet (min-width: 890px);
+@custom-media --desktop (min-width: 1152px);
+@custom-media --desktop-wide (min-width: 1440px);
+
+/* Height breakpoint to toggle the short header on desktop screens. */
+@custom-media --short-screen (max-height: 800px) and (min-width: 890px);
+
+html {
+	--wp--custom--alignment--scroll-bar-width: 8px;
+
+	/* Offset from the top of the page which is covered by "stuck" items (admin bar & header). */
+	--wp-global-header-offset: calc(var(--wp-global-header-height, 0px) + var(--wp-admin--admin-bar--height, 0px));
+	margin-top: var(--wp-admin--admin-bar--height, 0);
+	height: unset; /* Let height use default browser height. */
+}
+
+/**
+ * Set up custom properties.
+ *
+ * Usually these values are provided by the `theme.json` in block themes, but to
+ * keep them consistent across themes, we define them here on the `.global-*`
+ * classes.
+ */
+
+.global-header,
+.global-header__alert-banner,
+.global-footer,
+#wpadminbar {
+	--wp--preset--font-family--eb-garamond: "EB Garamond", serif;
+	--wp--preset--font-family--inter: "Inter", sans-serif;
+	--wp--preset--font-size--small: 14px;
+	--wp--preset--font-size--normal: 16px;
+	--wp--preset--font-size--large: 20px;
+	--wp--custom--alignment--edge-spacing: clamp(24px, calc(100vw / 18), 80px);
+	--wp--custom--body--typography--line-height: 1.9;
+	--wp--custom--margin--vertical: 30px;
+	--wp--custom--margin--horizontal: 30px;
+	--wp--custom--form--padding: 10px;
+	--wp--custom--form--border--color: transparent;
+	--wp--custom--form--border--radius: 2px;
+	--wp--custom--form--border--style: solid;
+	--wp--custom--form--border--width: 1px;
+	--wp--custom--form--color--label: var(--wp--preset--color--white);
+	--wp--custom--form--color--background: var(--wp--preset--color--white);
+	--wp--custom--form--color--placeholder: var(--wp--preset--color--charcoal-4);
+	--wp--custom--form--color--box-shadow: none;
+	--wp--custom--form--typography--font-size: var(--wp--preset--font-size--small);
+	--wp--style--block-gap: 20px;
+
+	/*
+	 * This is a subset of the colors provided by `theme.json`, set here to prevent conflicts across other block
+	 * themes. The others should be added as needed. Once all sites are running child themes of
+	 * `wporg-parent-2021` this section can be removed.
+	 *
+	 * @link https://github.com/WordPress/wporg-parent-2021/#colors
+	 */
+	--wp--preset--color--charcoal-1: #1e1e1e;
+	--wp--preset--color--charcoal-2: #23282d;
+	--wp--preset--color--charcoal-3: #40464d; /* Used only in the admin bar. */
+	--wp--preset--color--charcoal-4: #656a71;
+	--wp--preset--color--nero: #1c2024; /* Only used in the header (hovers), not in the parent/child themes. */
+	--wp--preset--color--white: #fff;
+	--wp--preset--color--deep-blueberry: #213fd4;
+	--wp--preset--color--blueberry-1: #3858e9;
+	--wp--preset--color--blueberry-2: #7b90ff;
+	--wp--preset--color--blueberry-3: #c7d1ff;
+	--wp--preset--color--blueberry-4: #eff2ff;
+
+	--wp-global-header--background-color: var(--wp--preset--color--charcoal-2);
+	--wp-global-header--background-color--hover: var(--wp--preset--color--nero);
+	--wp-global-header--link-color: var(--wp--preset--color--white);
+
+	--wp-global-header--link-color--active: var(--wp--preset--color--blueberry-2);
+	--wp-global-header--text-color: var(--wp--preset--color--white);
+}
+
+.has-charcoal-0-color,
+.has-charcoal-1-color,
+.has-charcoal-2-color {
+	--wp-global-header--link-color: var(--wp--preset--color--charcoal-2);
+	--wp-global-header--link-color--active: var(--wp--preset--color--deep-blueberry);
+	--wp-global-header--text-color: var(--wp--preset--color--charcoal-2);
+
+	&.has-background[style*="background-color:"] {
+		--wp-global-header--background-color--hover: var(--wp--preset--color--light-grey-2);
+	}
+}
+
+.has-blueberry-1-background-color {
+	--wp-global-header--background-color: var(--wp--preset--color--blueberry-1);
+	--wp-global-header--background-color--hover: var(--wp--preset--color--deep-blueberry);
+	--wp-global-header--link-color--active: var(--wp--preset--color--white);
+}
+
+.has-charcoal-1-background-color {
+	--wp-global-header--background-color--hover: var(--wp--preset--color--charcoal-2);
+}
+
+.has-white-background-color {
+	--wp-global-header--background-color: var(--wp--preset--color--white);
+	--wp-global-header--background-color--hover: var(--wp--preset--color--light-grey-2);
+}
+
+/* @todo Add other colors based on .has-*-color, etc */
+
+/*
+ * Shared styles
+ */
+
+.wp-block-group.global-header,
+.wp-block-group.global-footer {
+	& svg,
+	& .wp-block-social-links .wp-social-link svg {
+		fill: var(--wp-global-header--text-color);
+	}
+}
+
+.wp-block-group.global-header {
+	& .wp-block-navigation__responsive-container-open[aria-expanded="true"] {
+		visibility: hidden; /* Not needed when expanded, and behaves unintuitively. */
+	}
+}
+
+.wp-block-group.global-header,
+.global-header__alert-banner,
+.wp-block-group.global-footer {
+	--active-menu-item-border-height: 4px;
+
+	background-color: var(--wp-global-header--background-color);
+	color: var(--wp-global-header--text-color);
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal);
+	line-height: var(--wp--custom--body--typography--line-height);
+
+	/* Smooth out the fonts. */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+
+	& * {
+		box-sizing: border-box;
+	}
+
+	& a {
+		text-decoration: none;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 0.15em;
+		color: var(--wp-global-header--link-color);
+
+		&:hover,
+		&:focus {
+			text-decoration-line: underline;
+			color: inherit;
+		}
+	}
+}
+
+.wp-block-group.global-header .global-header__navigation,
+.wp-block-group.global-header .global-header__search {
+	&:not(.has-background) .wp-block-navigation__responsive-container,
+	&:not(.has-background) .wp-block-navigation__submenu-container {
+		background-color: var(--wp-global-header--background-color--hover);
+		color: var(--wp-global-header--text-color);
+		font-size: 21px;
+
+		@media (--tablet) {
+			font-size: var(--wp--preset--font-size--small);
+		}
+	}
+}
+
+/*
+ * Override Gutenberg's block gap, because it doesn't make sense for a header/footer.
+ *
+ * @link https://github.com/WordPress/gutenberg/issues/34716
+ * @link https://github.com/WordPress/wporg-news-2021/pull/30
+ */
+
+[class*="wp-block-"].global-header,
+[class*="wp-block-"].global-footer,
+[class*="wp-block-"].global-header > * + *,
+[class*="wp-block-"].global-footer > * + *,
+.global-header [class*="wp-block-"] > * + *,
+.global-footer [class*="wp-block-"] > * + * {
+	margin-top: initial;
+}
+
+/* The scrollbar covers up part of the edge padding, so this offsets that. */
+.wp-block-group.global-header {
+	padding-right: var(--wp--custom--alignment--scroll-bar-width);
+}

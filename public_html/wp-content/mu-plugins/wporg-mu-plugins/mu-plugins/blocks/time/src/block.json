@@ -1,0 +1,26 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/time",
+	"title": "Time",
+	"icon": "calendar",
+	"category": "common",
+	"description": "Attempts to parse a time string like 'Tuesday, April 5th, at 15:00 UTC' relative to the post date, and creates a format that shows it in the viewer's local time zone.",
+	"textdomain": "wporg",
+	"editorScript": "file:./index.js",
+	"viewScript": "file:./view.js",
+	"attributes": {
+		"datetime": {
+			"type": "string",
+			"default": ""
+		},
+		"data-iso": {
+			"type": "string",
+			"default": ""
+		},
+		"style": {
+			"type": "string",
+			"default": ""
+		}
+	}
+}

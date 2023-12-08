@@ -36,8 +36,7 @@ function get_clean_query_facets(): array {
 	$country = sanitize_text_field( $country[0] ?? '' );
 
 	$facets = compact( 'search', 'type', 'format', 'month', 'country' );
-
-	array_filter( $facets ); // Remove empty.
+	$facets = array_filter( $facets ); // Remove empty.
 
 	return $facets;
 }

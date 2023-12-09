@@ -39,7 +39,7 @@ function init() {
  *
  * @return string Returns the block markup.
  */
-function render( $attributes, $content, $block ) {
+function render__remove_me_once_functionality_ported_to_new_render( $attributes, $content, $block ) {
 	$facets = Events_2023\get_clean_query_facets();
 	$events = Google_Map\get_events( $attributes['events'], 0, 0, $facets );
 
@@ -80,6 +80,50 @@ function render( $attributes, $content, $block ) {
 		$wrapper_attributes,
 		do_blocks( $content )
 	);
+}
+
+// add types
+function render( $attributes, $content, $block ) {
+	ob_start();
+
+	global $post;
+
+	$url = $post->guid;
+
+	?>
+
+	<li class="wporg-marker-list-item">
+		<h3 class="wporg-marker-list-item__title">
+			<a class="external-link" href="<?php echo esc_url( $url ); ?>">
+				<?php echo esc_html( $post->post_title ); ?>
+				<!-- wp:post-title {"isLink":true,"level":2,"style":{"typography":{"fontStyle":"normal","fontWeight":"400","lineHeight":"inherit"}},"fontSize":"normal","fontFamily":"inter"} /-->
+			</a>
+		</h3>
+
+		<div class="wporg-marker-list-item__location">
+				<!-- wp:wporg/post-meta {"key":"location"} /--></div>
+
+				<?php // todo have to create a block for this, and anything else that uses post context ?>
+				<time
+					class="wporg-marker-list-item__date-time"
+					date-time="gmdate( 'c', esc_html( $event->timestamp ) )"
+					title="gmdate( 'c', esc_html( $event->timestamp ) )"
+				>
+                       <span class="wporg-google-map__date">
+                               <!-- wp:wporg/post-meta {"key":"timestamp"} /-->
+                               <?php // gmdate( 'l, M j', esc_html( $event->timestamp ) ) ?>
+                       </span>
+
+					<span class="wporg-google-map__time">
+                               <!-- wp:wporg/post-meta {"key":"timestamp"} /-->
+                               <?php // esc_html( gmdate('H:i', $event->timestamp) . ' UTC' ) ?>
+                       </span>
+				</time>
+	</li>
+
+	<?php
+
+	return ob_get_clean();
 }
 
 /**

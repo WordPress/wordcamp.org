@@ -9,6 +9,11 @@
 	"description": "List of WordPress Events",
 	"textdomain": "wporg",
 	"usesContext": [ "postId", "postType", "queryId" ],
+	"providesContext": {
+		"queryId": "queryId",
+		"query": "query",
+		"postId": "postId"
+	},
 	"attributes": {
 		"events": {
 			"type": "string",

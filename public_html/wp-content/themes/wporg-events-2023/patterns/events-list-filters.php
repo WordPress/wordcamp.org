@@ -14,6 +14,8 @@
 		<!-- wp:search {"showLabel":false,"placeholder":"Search events...","width":100,"widthUnit":"%","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"className":"is-style-secondary-search-control"} /-->
 	</div> <!-- /wp:group -->
 
+	<!-- wp:wporg/query-total  /-->
+
 	<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"className":"wporg-query-filters","layout":{"type":"flex","flexWrap":"nowrap"}} -->
 	<div class="wp-block-group wporg-query-filters">
 		<!-- wp:wporg/query-filter {"key":"format_type","multiple":false} /-->
@@ -21,5 +23,4 @@
 		<!-- wp:wporg/query-filter {"key":"month","multiple":false} /-->
 		<!-- wp:wporg/query-filter {"key":"country","multiple":false} /-->
 	</div> <!-- /wp:group -->
-
 </div> <!-- /wp:group -->

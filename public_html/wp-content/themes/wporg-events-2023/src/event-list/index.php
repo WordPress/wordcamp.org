@@ -25,7 +25,7 @@ function init() {
 	register_block_type(
 		dirname( dirname( __DIR__ ) ) . '/build/event-list',
 		array(
-			'render_callback' => __NAMESPACE__ . '\render',
+			'render_callback' => __NAMESPACE__ . '\render'
 		)
 	);
 }

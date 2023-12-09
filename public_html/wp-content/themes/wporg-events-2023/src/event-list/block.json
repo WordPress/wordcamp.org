@@ -8,6 +8,7 @@
 	"icon": "list-view",
 	"description": "List of WordPress Events",
 	"textdomain": "wporg",
+	"usesContext": [ "postId", "postType", "queryId" ],
 	"attributes": {
 		"events": {
 			"type": "string",

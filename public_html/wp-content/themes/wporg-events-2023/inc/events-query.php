@@ -83,6 +83,8 @@ function inject_events_into_query( $posts, WP_Query $query ) {
 			'filter' => 'raw',
 		);
 
+		// add time block as a dependency, to make sure always enqueued
+
 		$meta = array(
 			'location'  => array( ucfirst( $event->location ) ),
 			'timestamp' => array( $event->timestamp ),
@@ -92,6 +94,8 @@ function inject_events_into_query( $posts, WP_Query $query ) {
 			'type'      => array( $event->type ),
 			'tz_offset' => array( $event->tz_offset ),
 		);
+
+		// need a permalink filter that returns the guid? probably
 
 		$post_object = new WP_Post( $post );
 

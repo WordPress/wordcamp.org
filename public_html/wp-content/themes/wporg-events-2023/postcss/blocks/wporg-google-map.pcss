@@ -7,6 +7,7 @@
 	border-bottom: none;
 	padding: var(--wp--preset--spacing--20);
 	list-style: none;
+	font-size: var(--wp--preset--font-size--small);
 
 	@media (--medium) {
 		display: grid;
@@ -17,6 +18,7 @@
 
 	@media (--xlarge) {
 		grid-template-columns: 50% 1fr 1fr;
+		font-size: var(--wp--preset--font-size--normal);
 	}
 
 	@media (--wide) {
@@ -38,13 +40,24 @@
 	.wporg-marker-list-item__title {
 		margin: 0;
 		font-family: var(--wp--preset--font-family--inter);
-		font-size: var(--wp--preset--font-size--normal);
+		font-size: var(--wp--preset--font-size--small);
 		line-height: var(--wp--custom--body--typography--line-height);
 		--wp--preset--spacing--30: 0;
 	}
 
+	@media (--xlarge) {
+		font-size: var(--wp--preset--font-size--normal);
+	}
+
 	.wporg-marker-list-item__title a {
 		text-decoration: none;
+	}
+
+	@media (--medium-small) {
+		.wporg-marker-list-item__location {
+			margin-top: 2px;
+			margin-bottom: -2px;
+		}
 	}
 
 	.wporg-marker-list-item__date-time {

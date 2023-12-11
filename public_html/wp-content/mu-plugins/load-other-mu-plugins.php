@@ -23,6 +23,8 @@ function wcorg_include_common_plugins() {
  */
 function wcorg_include_network_only_plugins() {
 	if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
+		$network_folder = 'events';
+
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins/pub-sync/loader.php';
 
 	} else {

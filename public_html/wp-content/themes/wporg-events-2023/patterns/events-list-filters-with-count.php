@@ -21,9 +21,9 @@
 	<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"className":"wporg-query-filters","layout":{"type":"flex","flexWrap":"nowrap"}} -->
 	<div class="wp-block-group wporg-query-filters">
 		<!-- wp:wporg/query-filter {"key":"format_type","multiple":false} /-->
-		<!-- wp:wporg/query-filter {"key":"event_type","multiple":false} /-->
-		<!-- wp:wporg/query-filter {"key":"month","multiple":false} /-->
-		<!-- wp:wporg/query-filter {"key":"country","multiple":false} /-->
+		<!-- wp:wporg/query-filter {"key":"event_type","multiple":true} /-->
+		<!-- wp:wporg/query-filter {"key":"month","multiple":true} /-->
+		<!-- wp:wporg/query-filter {"key":"country","multiple":true} /-->
 	</div> <!-- /wp:group -->
 
 </div> <!-- /wp:group -->

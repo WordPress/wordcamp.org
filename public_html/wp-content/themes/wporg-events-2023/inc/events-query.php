@@ -42,7 +42,7 @@ function register_post_types() {
  * Inject rows from the `wporg_events` database table into `WP_Query` SELECT results.
  *
  * This allow us to use blocks like `wp:query`, `wp:post-title`, `wporg/query-filters` etc in templates.
- * Otherwise we'd have to write a custom block to display the data, and wouldn't be ablet to reuse existing
+ * Otherwise we'd have to write a custom block to display the data, and wouldn't be able to reuse existing
  * blocks.
  */
 function inject_events_into_query( $posts, WP_Query $query ) {
@@ -131,19 +131,26 @@ function get_clean_query_facets(): array {
 	$search  = (array) get_query_var( 's' ) ?? array();
 	$search  = sanitize_text_field( $search[0] ?? '' );
 
-	$type    = (array) get_query_var( 'event_type' ) ?? array();
-	$type    = sanitize_text_field( $type[0] ?? '' );
+	$type = (array) get_query_var( 'event_type' ) ?? array();
+	$type = array_map( 'sanitize_text_field', $type );
 
 	$format  = (array) get_query_var( 'format_type' ) ?? array();
 	$format  = sanitize_text_field( $format[0] ?? '' );
 
-	$month   = (array) get_query_var( 'month' ) ?? array();
-	$month   = absint( $month[0] ?? 0 );
+	$month = (array) get_query_var( 'month' ) ?? array();
+	$month = array_map( 'absint', $month );
 
 	$country = (array) get_query_var( 'country' ) ?? array();
-	$country = sanitize_text_field( $country[0] ?? '' );
+	$country = array_map( 'sanitize_text_field', $country );
 
 	$facets = compact( 'search', 'type', 'format', 'month', 'country' );
+
+	foreach ( $facets as & $facet ) {
+		if ( is_array( $facet ) ) {
+			$facet = array_filter( $facet ); // Remove empty.
+		}
+	}
+
 	$facets = array_filter( $facets ); // Remove empty.
 
 	return $facets;

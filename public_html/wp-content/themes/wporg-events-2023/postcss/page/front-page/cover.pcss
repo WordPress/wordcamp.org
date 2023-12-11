@@ -1,68 +1,73 @@
 .wporg-events__cover {
 
-	.wp-block-columns .wp-block-column:first-child {
+	@media (--large) {
 		padding-left: var(--wp--preset--spacing--edge-space);
 		padding-right: var(--wp--preset--spacing--edge-space);
 	}
 
-	@media (--medium) {
-		.wp-block-columns {
-			flex-wrap: wrap !important;
+	.wp-block-columns {
 
-			.wp-block-column {
+		@media (--medium) {
+			flex-wrap: wrap !important;
+		}
+
+		@media (--large) {
+			flex-wrap: nowrap !important;
+		}
+
+		.wp-block-column {
+			&:first-child {
+				padding-left: var(--wp--preset--spacing--edge-space);
+				padding-right: var(--wp--preset--spacing--edge-space);
+
+				@media (--large) {
+					padding-left: 0;
+					padding-right: 0;
+
+					> p {
+						max-width: 460px;
+					}
+				}
+
+				@media (--huge) {
+					flex-basis: 33% !important;
+				}
+			}
+
+			&:last-child {
+
+				@media (--huge) {
+					flex-basis: 66.665% !important;
+				}
+			}
+
+			@media (--medium) {
 				flex-grow: 1 !important;
+			}
+
+			.wp-block-heading em {
+				display: block;
 			}
 		}
 	}
 
-	@media (--large) {
-		padding-left: var(--wp--preset--spacing--edge-space);
-		padding-right: var(--wp--preset--spacing--edge-space);
 
-		.wp-block-columns {
-			flex-wrap: nowrap !important;
-		}
-
-		.wp-block-columns .wp-block-column:first-child {
-			padding-left: 0;
-			padding-right: 0;
-		}
-
-		.wp-block-columns .wp-block-column:first-child > p {
-			max-width: 460px;
-		}
-	}
-
-	.wp-block-heading em {
-		display: block;
-	}
-
-	@media (--huge) {
-		.wp-block-columns .wp-block-column:first-child {
-			flex-basis: 33% !important;
-		}
-
-		.wp-block-columns .wp-block-column:last-child {
-			flex-basis: 66.665% !important;
-		}
-	}
-
-	& .wp-block-wporg-google-map {
+	.wp-block-wporg-google-map {
 		height: 430px;
 
 		@media (--small-only) {
 			height: 246px;
 		}
 
-		& .wporg-google-map__container {
+		.wporg-google-map__container {
 			height: 100%;
 		}
 	}
 }
 
+.wporg-events__stats .wp-block-columns {
 
-@media (--medium-small) {
-	.wporg-events__stats .wp-block-columns {
+	@media (--medium-small) {
 		gap: var(--wp--preset--spacing--10);
 	}
 }

@@ -58,7 +58,7 @@ function add_meta_description( $tags ) {
 }
 
 /**
- * Use the og:description and output an additiona name="description" for SEO.
+ * Use the og:description tag and output an additional meta description for SEO.
  *
  * Jetpack uses property="thing" as template for its Meta tags,
  * because it's built to output OG Tags. However, we we want to add a general tag here.

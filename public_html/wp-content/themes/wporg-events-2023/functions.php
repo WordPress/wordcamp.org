@@ -10,7 +10,6 @@ require_once __DIR__ . '/src/event-list/index.php';
 
 add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
-add_action( 'wp_head', __NAMESPACE__ . '\add_social_meta_tags' );
 add_filter( 'wporg_block_navigation_menus', __NAMESPACE__ . '\add_site_navigation_menus' );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
 add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
@@ -18,6 +17,9 @@ add_filter( 'wporg_query_filter_options_month', __NAMESPACE__ . '\get_month_opti
 add_filter( 'wporg_query_filter_options_country', __NAMESPACE__ . '\get_country_options' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
 add_filter( 'wporg_block_site_breadcrumbs', __NAMESPACE__ . '\update_site_breadcrumbs' );
+add_filter( 'jetpack_open_graph_image_default', __NAMESPACE__ . '\filter_social_media_image' );
+add_filter( 'jetpack_open_graph_tags', __NAMESPACE__ . '\add_meta_description' );
+add_filter( 'jetpack_open_graph_output', __NAMESPACE__ . '\add_generic_meta_description' );
 
 add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
 
@@ -41,38 +43,36 @@ function enqueue_assets() {
 }
 
 /**
- * Add meta tags for richer social media integrations.
+ * Replace the default social image.
  */
-function add_social_meta_tags() {
-	$default_image = get_stylesheet_directory_uri() . '/images/social-image.png';
-	$site_title    = function_exists( '\WordPressdotorg\site_brand' ) ? \WordPressdotorg\site_brand() : 'WordPress.org';
-	$og_fields = array(
-		'og:title'       => wp_get_document_title(),
-		'og:description' => __( '[Replace with copy]', 'wporg' ),
-		'og:site_name'   => $site_title,
-		'og:type'        => 'website',
-		'og:url'         => home_url( '/' ),
-		'og:image'       => esc_url( $default_image ),
-	);
+function filter_social_media_image() {
+	return get_stylesheet_directory_uri() . '/images/social-image.png';
+}
 
-	printf( '<meta name="twitter:card" content="summary_large_image">' . "\n" );
-	printf( '<meta name="twitter:site" content="@WordPress">' . "\n" );
-	printf( '<meta name="twitter:image" content="%s" />' . "\n", esc_url( $og_fields['og:image'] ) );
+/**
+ * Add the og:description via JetPack meta tags so it can be translated.
+ */
+function add_meta_description( $tags ) {
+	$tags['og:description'] = __( 'Find upcoming WordPress events near you and around the world. Join your local WordPress community at a meetup or WordCamp, or learn how to organize an event for your city.', 'wporg' );
+	return $tags;
+}
 
-	foreach ( $og_fields as $property => $content ) {
-		printf(
-			'<meta property="%1$s" content="%2$s" />' . "\n",
-			esc_attr( $property ),
-			esc_attr( $content )
-		);
+/**
+ * Use the og:description and output an additiona name="description" for SEO.
+ *
+ * Jetpack uses property="thing" as template for its Meta tags,
+ * because it's built to output OG Tags. However, we we want to add a general tag here.
+ *
+ * @filter jetpack_open_graph_output
+ * @uses str_replace
+ */
+function add_generic_meta_description( $og_tag ) {
+	if ( false !== strpos( $og_tag, 'property="og:description"' ) ) {
+		// Replace property="og:description" by name="description".
+		$og_tag .= str_replace( 'property="og:description"', 'name="description"', $og_tag );
 	}
 
-	if ( isset( $og_fields['og:description'] ) ) {
-		printf(
-			'<meta name="description" content="%1$s" />' . "\n",
-			esc_attr( $og_fields['og:description'] )
-		);
-	}
+	return $og_tag;
 }
 
 /**

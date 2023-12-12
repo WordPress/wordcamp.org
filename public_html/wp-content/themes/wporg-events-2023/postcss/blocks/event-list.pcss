@@ -1,0 +1,106 @@
+.wporg-marker-list__container {
+	padding-left: 0;
+
+	.wporg-marker-list-item {
+		border: 1px solid var(--wp--preset--color--light-grey-1);
+		border-bottom: none;
+		padding: var(--wp--preset--spacing--20);
+		list-style: none;
+		font-size: var(--wp--preset--font-size--small);
+
+		&:first-child {
+			border-radius: 2px 2px 0 0;
+		}
+
+		&:last-child {
+			border-radius: 0 0 2px 2px;
+			border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+		}
+
+		@media (--large) {
+			display: grid;
+			align-items: start;
+			gap: var(--wp--preset--spacing--20);
+			grid-template-columns: 45% 1fr 2fr;
+		}
+
+		@media (--xlarge) {
+			font-size: var(--wp--preset--font-size--normal);
+		}
+
+		@media (--wide) {
+			grid-template-columns: 45% 1fr 1.5fr;
+		}
+
+		@media (--huge) {
+			grid-template-columns: 55% 1fr 1fr;
+		}
+
+		@media (--xhuge) {
+			grid-template-columns: 60% 1fr 1fr;
+		}
+
+		.wporg-marker-list-item__title {
+			margin: 0;
+			font-family: var(--wp--preset--font-family--inter);
+			font-size: var(--wp--preset--font-size--small);
+			line-height: var(--wp--custom--body--typography--line-height);
+			--wp--preset--spacing--30: 0;
+
+			&.a {
+				text-decoration: none;
+			}
+
+			@media (--xlarge) {
+				font-size: var(--wp--preset--font-size--normal);
+			}
+		}
+
+		.wporg-marker-list-item__location {
+
+			@media (--medium-small) {
+				margin-top: 2px;
+				margin-bottom: -2px;
+			}
+
+			@media (--small) {
+				display: inline;
+			}
+		}
+
+		.wporg-marker-list-item__date-time {
+
+			@media (--small) {
+				display: inline-flex;
+				justify-content: flex-end;
+				white-space: nowrap;
+				align-items: center;
+			}
+
+			@media (--wide) {
+				display: flex;
+			}
+		}
+
+		.wporg-marker-list-item__location::after,
+		.wporg-google-map__date::after {
+			content: "";
+			margin-top: -1px; /* vertical-middle doesn't subtract the size of the element */
+			margin-left: 10px;
+			margin-right: 10px;
+			height: 3px;
+			width: 3px;
+			border-radius: 3px;
+			background: var(--wp--preset--color--charcoal-5);
+			display: inline-block;
+			vertical-align: middle;
+		}
+
+		.wporg-marker-list-item__location::after {
+
+			@media (--small-only), (--large) {
+				display: none;
+			}
+		}
+	}
+}

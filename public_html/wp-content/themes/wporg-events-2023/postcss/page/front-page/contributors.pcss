@@ -1,22 +1,25 @@
 .wporg-events__contributors {
-	.is-style-links-list li:first-child {
-		border-top: none;
-	}
+	.is-style-links-list {
+		li {
+			border-color: var(--wp--preset--color--light-grey-1);
 
-	.is-style-links-list li:last-child {
-		border-bottom: none;
-	}
+			a {
+				color: var(--wp--preset--color--charcoal-0);
+			}
 
-	.is-style-links-list li {
-		border-color: var(--wp--preset--color--light-grey-1);
+			&:first-child {
+				border-top: none;
+			}
 
-		a {
-			color: var(--wp--preset--color--charcoal-0);
+			&:last-child {
+				border-bottom: none;
+			}
 		}
 	}
 
-	@media screen and (min-width: 1170px) {
-		.wporg-events__contributors__image {
+	.wporg-events__contributors__image {
+
+		@media screen and (min-width: 1170px) {
 			min-width: 565px;
 			align-self: flex-start;
 		}

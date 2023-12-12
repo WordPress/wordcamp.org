@@ -53,7 +53,7 @@ function inject_events_into_query( $posts, WP_Query $query ) {
 	global $wp;
 
 	$posts  = array();
-	$facets = get_clean_query_facets();
+	$facets = get_query_var_facets();
 	$events = Google_Map\get_events( 'all-upcoming', 0, 0, $facets );
 
 	// Simulate an ID that won't collide with a real post.
@@ -121,37 +121,20 @@ function inject_events_into_query( $posts, WP_Query $query ) {
 }
 
 /**
- * Get the query var facts and sanitize them.
+ * Get facets from the query vars.
  *
  * The query-filters block will provide the values as strings in some cases, but arrays in others.
  *
- * This converts them to the keys that the Google Map block uses.
+ * This converts them to the keys that the Google Map block uses. The map block will sanitize/validate them.
  */
-function get_clean_query_facets(): array {
-	$search  = (array) get_query_var( 's' ) ?? array();
-	$search  = sanitize_text_field( $search[0] ?? '' );
-
-	$type = (array) get_query_var( 'event_type' ) ?? array();
-	$type = array_map( 'sanitize_text_field', $type );
-
-	$format  = (array) get_query_var( 'format_type' ) ?? array();
-	$format  = sanitize_text_field( $format[0] ?? '' );
-
-	$month = (array) get_query_var( 'month' ) ?? array();
-	$month = array_map( 'absint', $month );
-
-	$country = (array) get_query_var( 'country' ) ?? array();
-	$country = array_map( 'sanitize_text_field', $country );
-
-	$facets = compact( 'search', 'type', 'format', 'month', 'country' );
-
-	foreach ( $facets as & $facet ) {
-		if ( is_array( $facet ) ) {
-			$facet = array_filter( $facet ); // Remove empty.
-		}
-	}
-
-	$facets = array_filter( $facets ); // Remove empty.
+function get_query_var_facets(): array {
+	$facets = array(
+		'search'  => get_query_var( 's', '' ),
+		'type'    => get_query_var( 'event_type', array() ),
+		'format'  => get_query_var( 'format_type', array() ),
+		'month'   => get_query_var( 'month', array() ),
+		'country' => get_query_var( 'country', array() ),
+	);
 
 	return $facets;
 }

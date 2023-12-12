@@ -40,7 +40,7 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
-	$facets = Events_2023\get_clean_query_facets();
+	$facets = Events_2023\get_query_var_facets();
 	$events = Google_Map\get_events( $attributes['events'], 0, 0, $facets );
 
 	// Get all the filters that are currently applied.

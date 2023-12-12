@@ -141,7 +141,7 @@
 <!-- /wp:heading -->
 
 <!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"var:preset|spacing|10"}}}} -->
-<p style="margin-top:var(--wp--preset--spacing--10)"><a href="https://make.wordpress.org/community/">Make.wordpress.com/community</a> is the hub for all Community Team activities. There you can read recent posts, find all of the team's <a href="https://make.wordpress.org/community/handbook/">handbooks</a>, and learn more about different events and roles.</p>
+<p style="margin-top:var(--wp--preset--spacing--10)"><a href="https://make.wordpress.org/community/">Make.WordPress.org/community</a> is the hub for all Community Team activities. There you can read recent posts, find all of the team's <a href="https://make.wordpress.org/community/handbook/">handbooks</a>, and learn more about different events and roles.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->

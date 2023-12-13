@@ -5,7 +5,7 @@
 		padding-right: var(--wp--preset--spacing--edge-space);
 	}
 
-	.wp-block-columns {
+	& .wp-block-columns {
 
 		@media (--medium) {
 			flex-wrap: wrap !important;
@@ -15,7 +15,7 @@
 			flex-wrap: nowrap !important;
 		}
 
-		.wp-block-column {
+		& .wp-block-column {
 			&:first-child {
 				padding-left: var(--wp--preset--spacing--edge-space);
 				padding-right: var(--wp--preset--spacing--edge-space);
@@ -24,7 +24,7 @@
 					padding-left: 0;
 					padding-right: 0;
 
-					> p {
+					& > p {
 						max-width: 460px;
 					}
 				}
@@ -45,21 +45,21 @@
 				flex-grow: 1 !important;
 			}
 
-			.wp-block-heading em {
+			& .wp-block-heading em {
 				display: block;
 			}
 		}
 	}
 
 
-	.wp-block-wporg-google-map {
+	& .wp-block-wporg-google-map {
 		height: 430px;
 
 		@media (--small-only) {
 			height: 246px;
 		}
 
-		.wporg-google-map__container {
+		& .wporg-google-map__container {
 			height: 100%;
 		}
 	}

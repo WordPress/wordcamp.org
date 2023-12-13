@@ -1,7 +1,7 @@
 .wporg-marker-list__container {
 	padding-left: 0;
 
-	.wporg-marker-list-item {
+	& .wporg-marker-list-item {
 		border: 1px solid var(--wp--preset--color--light-grey-1);
 		border-bottom: none;
 		padding: var(--wp--preset--spacing--20);
@@ -32,14 +32,14 @@
 			grid-template-columns: 60% 1fr 1fr;
 		}
 
-		.wporg-marker-list-item__title {
+		& .wporg-marker-list-item__title {
 			margin: 0;
 			font-family: var(--wp--preset--font-family--inter);
 			font-size: var(--wp--preset--font-size--small);
 			line-height: var(--wp--custom--body--typography--line-height);
 			--wp--preset--spacing--30: 0;
 
-			a {
+			& a {
 				text-decoration: none;
 			}
 
@@ -48,7 +48,7 @@
 			}
 		}
 
-		.wporg-marker-list-item__location {
+		& .wporg-marker-list-item__location {
 
 			@media (--medium-small) {
 				margin-top: 2px;
@@ -60,7 +60,7 @@
 			}
 		}
 
-		.wporg-marker-list-item__date-time {
+		& .wporg-marker-list-item__date-time {
 
 			@media (--small) {
 				display: inline-flex;
@@ -74,8 +74,8 @@
 			}
 		}
 
-		.wporg-marker-list-item__location::after,
-		.wporg-google-map__date::after {
+		& .wporg-marker-list-item__location::after,
+		& .wporg-google-map__date::after {
 			content: "";
 			margin-top: -1px; /* vertical-middle doesn't subtract the size of the element */
 			margin-left: 10px;
@@ -88,7 +88,7 @@
 			vertical-align: middle;
 		}
 
-		.wporg-marker-list-item__location::after {
+		& .wporg-marker-list-item__location::after {
 
 			@media (--small-only), (--large) {
 				display: none;

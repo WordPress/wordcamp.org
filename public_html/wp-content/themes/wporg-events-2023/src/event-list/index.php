@@ -23,7 +23,7 @@ add_action( 'init', __NAMESPACE__ . '\init' );
  */
 function init() {
 	register_block_type(
-		dirname( dirname( __DIR__ ) ) . '/build/event-list',
+		dirname( __DIR__, 2 ) . '/build/event-list',
 		array(
 			'render_callback' => __NAMESPACE__ . '\render',
 		)

@@ -49,6 +49,9 @@
 		}
 
 		& .wporg-marker-list-item__location {
+			&::first-letter {
+			    text-transform: capitalize;
+			}
 
 			@media (--medium-small) {
 				margin-top: 2px;
@@ -95,4 +98,15 @@
 			}
 		}
 	}
+}
+
+body.home .wporg-marker-list__loading {
+	/* The final height could be anywhere between 50px and 750px, so split the difference in order to minimize the
+	 * amount of layout shift. */
+	height: 350px;
+}
+
+body.page-slug-upcoming-events .wporg-marker-list__loading {
+	/* Take up most of the viewport to avoid a large layout shift. We know this list will have a lot of entries. */
+	height: 90vh;
 }

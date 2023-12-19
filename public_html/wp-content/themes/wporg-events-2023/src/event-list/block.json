@@ -38,5 +38,6 @@
 			"lineHeight": true
 		}
 	},
-	"editorScript": "file:./index.js"
+	"editorScript": "file:./index.js",
+	"viewScript": [ "wp-a11y", "file:./view.js" ]
 }

@@ -7,6 +7,7 @@
  */
 
 namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
+
 use WordPressdotorg\Events_2023;
 use WP_Block;
 use WordPressdotorg\MU_Plugins\Google_Map;
@@ -57,24 +58,52 @@ function render( $attributes, $content, $block ) {
 		return get_no_result_view();
 	}
 
-	if ( (bool) $attributes['groupByMonth'] ) {
-		// Group events by month year.
-		$grouped_events = array();
-		foreach ( $filtered_events as $event ) {
-			$event_month_year                      = gmdate( 'F Y', esc_html( $event->timestamp ) );
-			$grouped_events[ $event_month_year ][] = $event;
-		}
+	// Prune to only the used properties, to reduce the size of the payload.
+	$filtered_events = array_map(
+		function ( $event ) {
+			return array(
+				'title'     => $event->title,
+				'url'       => $event->url,
+				'location'  => $event->location,
+				'timestamp' => $event->timestamp,
+			);
+		},
+		$filtered_events
+	);
 
-		$content = '';
-		foreach ( $grouped_events as $month_year => $events ) {
-			$content .= get_section_title( $month_year );
-			$content .= get_list_markup( $events );
-		}
-	} else {
-		$content = get_list_markup( $filtered_events );
-	}
+	$payload = array(
+		'events'       => $filtered_events,
+		'groupByMonth' => $attributes['groupByMonth'],
+	);
+
+	wp_add_inline_script(
+		// `generate_block_asset_handle()` includes the index if `viewScript` is an array, so this is fragile.
+		// There isn't a way to get it programmatically, though, so it just has to manually be kept in sync.
+		'wporg-event-list-view-script-2',
+		'globalEventsPayload = ' . wp_json_encode( $payload ) . ';',
+		'before'
+	);
+
+	ob_start();
+
+	?>
+
+	<p class="wporg-marker-list__loading">
+		Loading global events...
+		<img
+			src="<?php echo esc_url( includes_url( 'images/spinner-2x.gif' ) ); ?>"
+			width="20"
+			height="20"
+			alt=""
+		/>
+	</p>
+
+	<?php
+
+	$content = ob_get_clean();
 
 	$wrapper_attributes = get_block_wrapper_attributes();
+
 	return sprintf(
 		'<div %1$s>%2$s</div>',
 		$wrapper_attributes,
@@ -83,37 +112,7 @@ function render( $attributes, $content, $block ) {
 }
 
 /**
- * Returns the event-list markup.
- *
- * @param array $events Array of events.
- *
- * @return string
- */
-function get_list_markup( $events ) {
-	$block_markup = '<ul class="wporg-marker-list__container">';
-
-	foreach ( $events as $event ) {
-		$block_markup .= '<li class="wporg-marker-list-item">';
-		$block_markup .= '<h3 class="wporg-marker-list-item__title"><a class="external-link" href="' . esc_url( $event->url ) . '">' . esc_html( $event->title ) . '</a></h3>';
-		$block_markup .= '<div class="wporg-marker-list-item__location">' . ucfirst( esc_html( $event->location ) ). '</div>';
-		$block_markup .= sprintf(
-			'<time class="wporg-marker-list-item__date-time" date-time="%1$s" title="%1$s"><span class="wporg-google-map__date">%2$s</span><span class="wporg-google-map__time">%3$s</span></time>',
-			gmdate( 'c', esc_html( $event->timestamp ) ),
-			gmdate( 'l, M j', esc_html( $event->timestamp ) ),
-			esc_html( gmdate('H:i', $event->timestamp) . ' UTC' ),
-		);
-		$block_markup .= '</li>';
-	}
-
-	$block_markup .= '</ul>';
-
-	return $block_markup;
-}
-
-/**
  * Get a list of the currently-applied filters.
- *
- * @return array
  */
 function filter_events( array $events ): array {
 	global $wp_query;
@@ -143,30 +142,12 @@ function filter_events( array $events ): array {
 	$filtered_events = array();
 	foreach ( $events as $event ) {
 		// Assuming each event has a 'type' property.
-		if ( isset($event->type) && in_array($event->type, $terms) ) {
+		if ( isset( $event->type ) && in_array( $event->type, $terms ) ) {
 			$filtered_events[] = $event;
 		}
 	}
 
 	return $filtered_events;
-}
-
-/**
- * Returns core heading block markup for the date groups.
- *
- * @param string $heading_text Heading text.
- *
- * @return string
- */
-function get_section_title( $heading_text ) {
-	$block_markup  = '<!-- wp:heading {"style":{"elements":{"link":{"color":{"text":"var:preset|color|charcoal-1"}}},"typography":{"fontStyle":"normal","fontWeight":"700"},"spacing":{"margin":{"top":"var:preset|spacing|40","bottom":"var:preset|spacing|20"}}},"textColor":"charcoal-1","fontSize":"medium","fontFamily":"inter"} -->';
-	$block_markup .= sprintf(
-		'<h2 class="wp-block-heading has-charcoal-1-color has-text-color has-link-color has-inter-font-family has-medium-font-size" style="margin-top:var(--wp--preset--spacing--40);margin-bottom:var(--wp--preset--spacing--20);font-style:normal;font-weight:700">%s</h2>',
-		esc_html( $heading_text )
-	);
-	$block_markup .= '<!-- /wp:heading -->';
-
-	return $block_markup;
 }
 
 /**
@@ -186,9 +167,11 @@ function get_no_result_view() {
 		'<!-- wp:paragraph {"align":"center"} --><p class="has-text-align-center">%s</p><!-- /wp:paragraph -->',
 		sprintf(
 			wp_kses_post(
-			/* translators: %s is url of the event archives. */
-			__( 'View <a href="%s">upcoming events</a> or try a different search.', 'wporg' ) ),
-		esc_url( home_url( '/upcoming-events/' ) ) )
+				/* translators: %s is the URL of the event archives. */
+				__( 'View <a href="%s">upcoming events</a> or try a different search.', 'wporg' )
+			),
+			esc_url( home_url( '/upcoming-events/' ) )
+		)
 	);
 	$content .= '</div><!-- /wp:group -->';
 

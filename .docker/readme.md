@@ -111,6 +111,8 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
 
+1. Optional: Add API keys to the `Third party services` section of `wp-config.php` to enabled working on specific features that require them.
+
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash
     rm -rf .git/hooks
@@ -281,4 +283,4 @@ If the dev database needs to be updated to better reflect the state of productio
 * Make sure WP is running the latest branch, and the database schema has been updated.
 * Review each line of the diff to make sure there isn't anything sensitive in the database. Scrub anything that is. There are some suggested strategies for reviewing database file diffs [here](https://github.com/WordPress/meta-environment/wiki/Reviewing-PRs-with-database-changes).
 
-Then you can run `bash /var/scripts/database.sh clean-export`. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.
+Then you can run `bash /var/scripts/database.sh clean-export` inside the container. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.

@@ -61,13 +61,18 @@ function get_feedback_details() {
 		'post_type' => WCPT_POST_TYPE_ID,
 		'post_status' => 'wcpt-closed',
 		'posts_per_page' => -1,
+		'date_query'     => array(
+			array(
+				'after'     => '2023-09-01', // The feature doesn't exist before this date.
+				'inclusive' => true,
+			),
+		),
 	) );
 
 	$feedback_details = array();
 
 	foreach ( $wordcamps as $camp ) {
-		// It's a bit counter intuitive, but the site ID is the blog ID.
-		$blog_id = get_post_meta( $camp->ID, '_site_id', true );
+		$blog_id = get_wordcamp_site_id( $camp );
 
 		switch_to_blog( $blog_id );
 

@@ -14,7 +14,7 @@
 					}
 				}
 			},
-			"button" : {
+			"button": {
 				"typography": {
 					"lineHeight": "16px"
 				},

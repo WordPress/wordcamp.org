@@ -52,6 +52,8 @@ if ( ! class_exists( 'WCPT_Loader' ) ) :
 			require_once WCPT_DIR . 'wcpt-meetup/class-meetup-admin.php';
 			require_once WCPT_DIR . 'wcpt-event/class-event-admin.php'; // required for declined application cron to work.
 
+			require_once WCPT_DIR . 'wcpt-events/class-events-application.php';
+
 			// Require admin files.
 			if ( is_admin() || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
 				require_once WCPT_DIR . 'wcpt-admin.php';

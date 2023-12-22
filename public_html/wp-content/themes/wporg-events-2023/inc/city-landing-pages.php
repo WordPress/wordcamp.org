@@ -54,7 +54,7 @@ function is_city_landing_page(): bool {
 			path REGEXP %s
 		LIMIT 1",
 		EVENTS_NETWORK_ID,
-		"^/$city/\d{4}/[a-z-]+/$"
+		"^/$city/[0-9]{4}/[a-z-]+/$"
 	) );
 
 	return ! empty( $sites );

@@ -63,7 +63,7 @@ function get_feedback_details() {
 		'posts_per_page' => -1,
 		'date_query'     => array(
 			array(
-				'after'     => '2023-09-01', // The feature doesn't exist before this date.
+				'after'     => '2023-05-01', // The feature doesn't exist before this date.
 				'inclusive' => true,
 			),
 		),

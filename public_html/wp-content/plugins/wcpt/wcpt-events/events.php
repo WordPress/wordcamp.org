@@ -1,8 +1,9 @@
 <?php
 
-namespace WordPress_Events\Applications\Events;
+namespace WordPress_Community\Applications\Events;
 
 require_once WCPT_DIR . 'wcpt-events/class-events-application.php';
+use WordPress_Community\Applications\Events_Application;
 
 defined( 'WPINC' ) || die();
 

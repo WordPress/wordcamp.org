@@ -510,20 +510,20 @@ function get_canonical_year_url( $domain, $path ) {
 	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2023-06-20' ) ) {
-				return "https://europe.wordcamp.$tld/2023/";
+			if ( time() <= strtotime( '2024-06-20' ) ) {
+				return "https://europe.wordcamp.$tld/2024/";
 			}
 			break;
 
 		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2023-10-01' ) ) {
-				return "https://us.wordcamp.$tld/2023/";
+			if ( time() <= strtotime( '2024-09-25' ) ) {
+				return "https://us.wordcamp.$tld/2024/";
 			}
 			break;
 
 		case "asia.wordcamp.$tld":
-			if ( time() <= strtotime( '2023-02-20' ) ) {
-				return "https://asia.wordcamp.$tld/2023/";
+			if ( time() <= strtotime( '2024-03-15' ) ) {
+				return "https://asia.wordcamp.$tld/2024/";
 			}
 			break;
 	}

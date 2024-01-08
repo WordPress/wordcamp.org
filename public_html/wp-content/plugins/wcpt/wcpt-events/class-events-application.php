@@ -31,15 +31,15 @@ class Events_Application extends WordCamp_Application {
 		global $post;
 
 		wp_register_script(
-			'wordcamp-application',
-			plugins_url( 'javascript/applications/wordcamp.js', __DIR__ ),
+			'events-application',
+			plugins_url( 'javascript/applications/events.js', __DIR__ ),
 			array( 'jquery' ),
 			1,
 			true
 		);
 
 		if ( isset( $post->post_content ) && has_shortcode( $post->post_content, self::SHORTCODE_SLUG ) ) {
-			wp_enqueue_script( 'wordcamp-application' );
+			wp_enqueue_script( 'events-application' );
 		}
 	}
 

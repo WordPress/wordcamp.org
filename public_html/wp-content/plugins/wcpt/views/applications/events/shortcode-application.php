@@ -239,7 +239,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
                         </div>
 
                         <div class="PDF_QT100">
-                            <input value="" maxlength="500" name="where_find_online" class="large" type="text"
+                            <input value="" maxlength="500" name="q_where_find_online" class="large" type="text"
                                    title="Please share links to your online/social media presence"/>
                         </div>
                     </div>

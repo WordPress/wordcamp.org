@@ -10,6 +10,8 @@ wcorg_include_network_only_plugins();
  * Load mu-plugins that should run on all networks.
  */
 function wcorg_include_common_plugins() {
+	// Include the private `wporg-mu-plugins` from `dotorg.svn`. These are different than the
+	// ones included in `wcorg_include_network_only_plugins()`.
 	if ( file_exists( dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins.php' ) ) {
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins.php';
 	}
@@ -25,8 +27,9 @@ function wcorg_include_network_only_plugins() {
 	if ( EVENTS_NETWORK_ID === SITE_ID_CURRENT_SITE ) {
 		$network_folder = 'events';
 
+		// Include the public `wporg-mu-plugins` that are synced from Git to SVN. These are different than the
+		// ones included in `wcorg_include_common_plugins()`.
 		require_once dirname( __DIR__ ) . '/mu-plugins-private/wporg-mu-plugins/pub-sync/loader.php';
-
 	} else {
 		$network_folder = 'wordcamp';
 	}

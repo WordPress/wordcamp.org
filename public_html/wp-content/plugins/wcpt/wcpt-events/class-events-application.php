@@ -60,26 +60,37 @@ class Events_Application extends WordCamp_Application {
 	 * @return array
 	 */
 	public function get_default_application_values() {
-		// WordCamp uses an ID with questions. Not sure how are they used. Ask @corey.
 		$values = array(
-			'q_name'                => '',
-			'q_email'               => '',
-			'q_address_line_1'      => '',
-			'q_address_line_2'      => '',
-			'q_city'                => '',
-			'q_state'               => '',
-			'q_country'             => '',
-			'q_zip'                 => '',
-			'q_mtp_loc'             => '',
-			'q_already_a_meetup'    => '',
-			'q_existing_meetup_url' => '',
-			'q_introduction'        => '',
-			'q_socialmedia'         => '',
-			'q_reasons_plans'       => '',
-			'q_community_interest'  => '',
-			'q_wporg_username'      => '',
-			'q_wp_slack_username'   => '',
-			'q_anything_else'       => '',
+			'q_first_name'                => '',
+			'q_last_name'                 => '',
+			'q_email'                     => '',
+			'q_wporg_username'            => '',
+			'q_slack_username'            => '',
+			'q_add1'                      => '',
+			'q_add2'                      => '',
+			'q_city'                      => '',
+			'q_state'                     => '',
+			'q_country'                   => '',
+			'q_zip'                       => '',
+			'q_active_meetup'             => '',
+			'q_meetup_url'                => '',
+			'q_camps_been_to'             => '',
+			'q_role_in_meetup'            => '',
+			'q_where_find_online'         => '',
+			'q_wordcamp_location'         => '',
+			'q_wordcamp_date'             => '',
+			'q_in_person_online'          => '',
+			'q_describe_events'           => '',
+			'q_describe_goals'            => '',
+			'q_describe_event'            => '',
+			'q_describe_event_other'      => '',
+			'q_how_many_attendees'        => '',
+			'q_co_organizer_contact_info' => '',
+			'q_event_url'                 => '',
+			'q_venues_considering'        => '',
+			'q_estimated_cost'            => '',
+			'q_raise_money'               => '',
+			'q_anything_else'             => '',
 		);
 
 		return $values;
@@ -99,7 +110,7 @@ class Events_Application extends WordCamp_Application {
 
 		$post = array(
 			'post_type'   => self::get_event_type(),
-			'post_title'  => esc_html( $data['q_mtp_loc'] ),
+			'post_title'  => esc_html( $data['q_wordcamp_location'] ),
 			'post_status' => self::get_default_status(),
 			'post_author' => $wordcamp_user_id,
 		);
@@ -114,21 +125,20 @@ class Events_Application extends WordCamp_Application {
 		add_post_meta( $post_id, '_application_data', $data );
 
 		$organizer_address = <<<ADDRESS
-{$data['q_address_line_1']}
-{$data['q_address_line_2']}
+{$data['q_add1']}
+{$data['q_add2']}
 {$data['q_city']}, {$data['q_state']}, {$data['q_country']}
 {$data['q_zip']}
 ADDRESS;
 
-		add_post_meta( $post_id, 'Organizer Name', $data['q_name'] );
+		add_post_meta( $post_id, 'Organizer Name', $data['q_first_name'] . ' ' . $data['q_last_name'] );
 		add_post_meta( $post_id, 'Email', $data['q_email'] );
-		add_post_meta( $post_id, 'City', $data['q_mtp_loc'] );
+		add_post_meta( $post_id, 'City', $data['q_wordcamp_location'] );
 		add_post_meta( $post_id, 'Address', $organizer_address );
-		add_post_meta( $post_id, 'Meetup URL', $data['q_existing_meetup_url'] );
 		add_post_meta( $post_id, 'Primary organizer WordPress.org username', $data['q_wporg_username'] );
-		add_post_meta( $post_id, 'Slack', $data['q_wp_slack_username'] );
+		add_post_meta( $post_id, 'Slack', $data['q_slack_username'] );
 		add_post_meta( $post_id, 'Date Applied', time() );
-		add_post_meta( $post_id, 'Meetup Location', $data['q_mtp_loc'] );
+		add_post_meta( $post_id, 'Meetup Location', $data['q_wordcamp_location'] );
 
 		$status_log_id = add_post_meta(
 			$post_id,

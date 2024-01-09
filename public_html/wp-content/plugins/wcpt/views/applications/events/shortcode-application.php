@@ -120,7 +120,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 								<label for="q_city">City</label>
 								<br/>
 								<input type="text" maxlength="50" class="c" name="q_city" id="q_city"
-									   value=""/>
+									   value="" required/>
 							</div>
 
 							<div>
@@ -209,11 +209,12 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 					<div class="qContent">
 						<div class="qText">
                             Have you attended a WordPress Meetup, WordCamp, or other WordPress event? Please list one per line.
+                            <span class="PDF_mand">*</span>
 						</div>
 
 						<div class="PDF_QT200">
 							<textarea name="q_camps_been_to" class="small" rows="10" cols="40"
-									  title="Have you attended a WordPress Meetup, WordCamp, or other WordPress event? Please list one per line."></textarea>
+									  title="Have you attended a WordPress Meetup, WordCamp, or other WordPress event? Please list one per line." required></textarea>
 						</div>
 					</div>
 				</div>
@@ -222,12 +223,13 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
 					<div class="qContent">
 						<div class="qText">
-                            Have you organized a WordPress event (meetup, WordCamp, or other event)? [Required]
+                            Have you organized a WordPress event (meetup, WordCamp, or other event)?
+                            <span class="PDF_mand">*</span>
 						</div>
 
                         <div class="PDF_QT200">
 							<textarea name="q_role_in_meetup" class="small" rows="10" cols="40"
-                                      title="Have you organized a WordPress event (meetup, WordCamp, or other event)"></textarea>
+                                      title="Have you organized a WordPress event (meetup, WordCamp, or other event)" required></textarea>
                         </div>
 					</div>
 				</div>
@@ -279,7 +281,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
 						<div class="PDF_QT100">
 							<input value="" maxlength="500" name="q_wordcamp_date" class="large required" type="text"
-								   title="Event date(s)"/>
+								   title="Event date(s)" required/>
 						</div>
 					</div>
 				</div>
@@ -290,6 +292,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
                     <div class="qContent">
                         <div class="qText">
                             Is this event in-person or online?
+                            <span class="PDF_mand">*</span>
                         </div>
 
                         <div class="PDF_QT400">
@@ -330,7 +333,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
                         <div class="PDF_QT200">
 							<textarea name="q_describe_events" class="small required" rows="10" cols="40"
-                                      title="Please describe the event you would like to organize"></textarea>
+                                      title="Please describe the event you would like to organize" required></textarea>
                         </div>
                     </div>
                 </div>
@@ -346,7 +349,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
                         <div class="PDF_QT200">
 							<textarea name="q_describe_goals" class="small required" rows="10" cols="40"
-                                      title="What goals do you want to achieve with this event"></textarea>
+                                      title="What goals do you want to achieve with this event" required></textarea>
                         </div>
                     </div>
                 </div>
@@ -418,7 +421,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
                         <div class="PDF_QT100">
                             <input value="" maxlength="500" name="q_how_many_attendees" class="large required"
-                                   type="text" title="Approximate number of attendees"/>
+                                   type="text" title="Approximate number of attendees" required/>
                         </div>
                     </div>
                 </div>
@@ -477,7 +480,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
                         <div class="PDF_QT200">
 							<textarea name="q_estimated_cost" class="small required" rows="10" cols="40"
-                                      title="What is the estimated cost to organize your event?"></textarea>
+                                      title="What is the estimated cost to organize your event?" required></textarea>
                         </div>
                     </div>
                 </div>
@@ -487,11 +490,12 @@ function render_events_application_form( $countries, $prefilled_fields ) {
                     <div class="qContent">
                         <div class="qText">
                             Are you confident you can raise money from local sponsors? Please explain.
+                            <span class="PDF_mand">*</span>
                         </div>
 
                         <div class="PDF_QT200">
 							<textarea name="q_raise_money" class="small" rows="10" cols="40"
-                                      title="Are you confident you can raise money from local sponsors? Please explain."></textarea>
+                                      title="Are you confident you can raise money from local sponsors? Please explain." required></textarea>
                         </div>
                     </div>
                 </div>
@@ -515,10 +519,6 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 						<input type="submit" name="submit-application" value="Submit Application"/>
 					</div>
 				</div>
-
-			</div> <!-- PDF.pageInner -->
-		</div> <!-- PDF.pageOuter -->
-
 	</form>
 <?php
 }

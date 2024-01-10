@@ -500,5 +500,5 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 					</div>
 				</div>
 	</form>
-<?php
+    <?php
 }

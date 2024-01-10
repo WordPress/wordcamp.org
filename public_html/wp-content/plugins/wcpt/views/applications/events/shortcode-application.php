@@ -216,7 +216,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 				</div>
 
 				<div class="PDF_question" id="pd-question-9">
-                    <div class="qContent">
+					<div class="qContent">
 						<div class="qText">
 							Have you organized a WordPress event (meetup, WordCamp, or other event)?
 							<span class="PDF_mand">*</span>
@@ -280,7 +280,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 				</div>
 
 				<div class="PDF_question" id="pd-question-12">
-                    <div class="qContent">
+					<div class="qContent">
 						<div class="qText">
 							Is this event in-person or online?
 							<span class="PDF_mand">*</span>
@@ -500,5 +500,5 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 					</div>
 				</div>
 	</form>
-    <?php
+	<?php
 }

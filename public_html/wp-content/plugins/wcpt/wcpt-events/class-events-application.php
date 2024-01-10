@@ -27,19 +27,18 @@ class Events_Application extends WordCamp_Application {
 	/**
 	 * Enqueue scripts and stylesheets
 	 */
-	public function enqueue_assets() {
+	public function enqueue_asset() {
 		global $post;
 
-		wp_register_script(
+		wp_register_style(
 			'events-application',
-			plugins_url( 'javascript/applications/events.js', __DIR__ ),
-			array( 'jquery' ),
+			plugins_url( 'css/applications/events.css', __DIR__ ),
+			array( 'wp-community-applications', 'wordcamp-application' ),
 			1,
-			true
 		);
 
 		if ( isset( $post->post_content ) && has_shortcode( $post->post_content, self::SHORTCODE_SLUG ) ) {
-			wp_enqueue_script( 'events-application' );
+			wp_enqueue_style( 'events-application' );
 		}
 	}
 

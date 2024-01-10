@@ -109,7 +109,7 @@ class Events_Application extends WordCamp_Application {
 
 		$post = array(
 			'post_type'   => self::get_event_type(),
-			'post_title'  => esc_html( $data['q_wordcamp_location'] ),
+			'post_title'  => esc_html( $data['q_event_location'] ),
 			'post_status' => self::get_default_status(),
 			'post_author' => $wordcamp_user_id,
 		);
@@ -132,12 +132,12 @@ ADDRESS;
 
 		add_post_meta( $post_id, 'Organizer Name', $data['q_first_name'] . ' ' . $data['q_last_name'] );
 		add_post_meta( $post_id, 'Email', $data['q_email'] );
-		add_post_meta( $post_id, 'City', $data['q_wordcamp_location'] );
+		add_post_meta( $post_id, 'City', $data['q_event_location'] );
 		add_post_meta( $post_id, 'Address', $organizer_address );
 		add_post_meta( $post_id, 'Primary organizer WordPress.org username', $data['q_wporg_username'] );
 		add_post_meta( $post_id, 'Slack', $data['q_slack_username'] );
 		add_post_meta( $post_id, 'Date Applied', time() );
-		add_post_meta( $post_id, 'Meetup Location', $data['q_wordcamp_location'] );
+		add_post_meta( $post_id, 'Meetup Location', $data['q_event_location'] );
 
 		$status_log_id = add_post_meta(
 			$post_id,

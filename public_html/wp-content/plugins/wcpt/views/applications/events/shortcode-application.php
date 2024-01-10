@@ -264,7 +264,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 						</div>
 
 						<div class="PDF_QT100">
-							<input value="" maxlength="500" name="q_wordcamp_location" class="large required"
+							<input value="" maxlength="500" name="q_event_location" class="large required"
 								   type="text" title="Event city and country"
 								   required/>
 						</div>

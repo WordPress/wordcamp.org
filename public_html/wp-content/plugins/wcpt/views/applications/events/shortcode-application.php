@@ -280,7 +280,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 						</div>
 
 						<div class="PDF_QT100">
-							<input value="" maxlength="500" name="q_wordcamp_date" class="large required" type="text"
+							<input value="" maxlength="500" name="q_event_date" class="large required" type="text"
 								   title="Event date(s)" required/>
 						</div>
 					</div>

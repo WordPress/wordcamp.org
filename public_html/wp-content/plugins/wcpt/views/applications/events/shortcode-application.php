@@ -12,14 +12,15 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 	?>
 				<form id="event-application" method="post">
 
-                <div class="PDF_question" id="pd-question-10002">
-                    <div class="qContent">
-                        <div class="PDF_QT1900">
-                            <h2>Organizer Information</h2>
-                        </div>
-                    </div>
-                </div>
-                <div class="PDF_question" id="pd-question-1">
+				<div class="PDF_question" id="pd-question-10002">
+					<div class="qContent">
+						<div class="PDF_QT1900">
+							<h2>Organizer Information</h2>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-1">
 					<div class="qContent">
 						<div class="qText">
 							Please enter your name.
@@ -45,7 +46,6 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 				</div>
 
 				<div class="PDF_question" id="pd-question-2">
-
 					<div class="qContent">
 						<div class="qText">
 							Please enter your email address.
@@ -62,7 +62,6 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 				</div>
 
 				<div class="PDF_question" id="pd-question-3">
-
 					<div class="qContent">
 						<div class="qText">
 							What is your wordpress.org username?
@@ -155,61 +154,58 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 					</div>
 				</div>
 
-                <div class="PDF_question" id="pd-question-6">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            Is there a WordPress meetup in your community?
-                        </div>
-
-                        <div class="PDF_QT400">
-                            <ul>
-                                <li>
-                                    <input type="radio" name="q_active_meetup" value="Yes"
-                                           id="q_1865375"/>
-
-                                    <label for="q_1865375" value="1865375">
-                                        Yes </label>
-                                </li>
-                                <li>
-                                    <input type="radio" name="q_active_meetup" value="No"
-                                           id="q_1865376"/>
-
-                                    <label for="q_1865376" value="1865376">
-                                        No </label>
-                                </li>
-                                <li>
-                                    <input type="radio" name="q_active_meetup" value="I don't know"
-                                           id="q_1865377"/>
-
-                                    <label for="q_1865377" value="1865377">
-                                        I don't know </label>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="PDF_question" id="pd-question-7">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            What is the URL for the meetup group&#039;s website?
-                        </div>
-
-                        <div class="PDF_QT100">
-                            <input value="" maxlength="500" name="q_meetup_url" class="large" type="url"
-                                   title="What is the URL for the meetup group&#039;s website?"/>
-                        </div>
-                    </div>
-                </div>
-
-				<div class="PDF_question" id="pd-question-8">
-
+				<div class="PDF_question" id="pd-question-6">
 					<div class="qContent">
 						<div class="qText">
-                            Have you attended a WordPress Meetup, WordCamp, or other WordPress event? Please list one per line.
-                            <span class="PDF_mand">*</span>
+							Is there a WordPress meetup in your community?
+						</div>
+
+						<div class="PDF_QT400">
+							<ul>
+								<li>
+									<input type="radio" name="q_active_meetup" value="Yes"
+										   id="q_1865375"/>
+
+									<label for="q_1865375" value="1865375">
+										Yes </label>
+								</li>
+								<li>
+									<input type="radio" name="q_active_meetup" value="No"
+										   id="q_1865376"/>
+
+									<label for="q_1865376" value="1865376">
+										No </label>
+								</li>
+								<li>
+									<input type="radio" name="q_active_meetup" value="I don't know"
+										   id="q_1865377"/>
+
+									<label for="q_1865377" value="1865377">
+										I don't know </label>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-7">
+					<div class="qContent">
+						<div class="qText">
+							What is the URL for the meetup group&#039;s website?
+						</div>
+
+						<div class="PDF_QT100">
+							<input value="" maxlength="500" name="q_meetup_url" class="large" type="url"
+								   title="What is the URL for the meetup group&#039;s website?"/>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-8">
+					<div class="qContent">
+						<div class="qText">
+							Have you attended a WordPress Meetup, WordCamp, or other WordPress event? Please list one per line.
+							<span class="PDF_mand">*</span>
 						</div>
 
 						<div class="PDF_QT200">
@@ -220,32 +216,31 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 				</div>
 
 				<div class="PDF_question" id="pd-question-9">
-
-					<div class="qContent">
+                    <div class="qContent">
 						<div class="qText">
-                            Have you organized a WordPress event (meetup, WordCamp, or other event)?
-                            <span class="PDF_mand">*</span>
+							Have you organized a WordPress event (meetup, WordCamp, or other event)?
+							<span class="PDF_mand">*</span>
 						</div>
 
-                        <div class="PDF_QT200">
+						<div class="PDF_QT200">
 							<textarea name="q_role_in_meetup" class="small" rows="10" cols="40"
-                                      title="Have you organized a WordPress event (meetup, WordCamp, or other event)" required></textarea>
-                        </div>
+									  title="Have you organized a WordPress event (meetup, WordCamp, or other event)" required></textarea>
+						</div>
 					</div>
 				</div>
 
-                <div class="PDF_question">
-                    <div class="qContent">
-                        <div class="qText">
-                            Please share links to your online/social media presence (Instagram, Facebook, X, LinkedIn, personal/business website, etc.)
-                        </div>
+				<div class="PDF_question">
+					<div class="qContent">
+						<div class="qText">
+							Please share links to your online/social media presence (Instagram, Facebook, X, LinkedIn, personal/business website, etc.)
+						</div>
 
-                        <div class="PDF_QT100">
-                            <input value="" maxlength="500" name="q_where_find_online" class="large" type="text"
-                                   title="Please share links to your online/social media presence"/>
-                        </div>
-                    </div>
-                </div>
+						<div class="PDF_QT100">
+							<input value="" maxlength="500" name="q_where_find_online" class="large" type="text"
+								   title="Please share links to your online/social media presence"/>
+						</div>
+					</div>
+				</div>
 
 				<div class="PDF_question" id="pd-question-10002">
 					<div class="qContent">
@@ -256,10 +251,9 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 				</div>
 
 				<div class="PDF_question" id="pd-question-10">
-
 					<div class="qContent">
 						<div class="qText">
-                            Event city and country:
+							Event city and country:
 							<span class="PDF_mand">*</span>
 						</div>
 
@@ -272,11 +266,10 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 				</div>
 
 				<div class="PDF_question" id="pd-question-11">
-
 					<div class="qContent">
 						<div class="qText">
-                            Event date(s):
-                            <span class="PDF_mand">*</span>
+							Event date(s):
+							<span class="PDF_mand">*</span>
 						</div>
 
 						<div class="PDF_QT100">
@@ -286,151 +279,143 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 					</div>
 				</div>
 
-
-                <div class="PDF_question" id="pd-question-12">
-
+				<div class="PDF_question" id="pd-question-12">
                     <div class="qContent">
-                        <div class="qText">
-                            Is this event in-person or online?
-                            <span class="PDF_mand">*</span>
-                        </div>
+						<div class="qText">
+							Is this event in-person or online?
+							<span class="PDF_mand">*</span>
+						</div>
 
-                        <div class="PDF_QT400">
-                            <ul>
-                                <li>
-                                    <input type="radio" name="q_in_person_online"
-                                           value="It would be an in-person event" id="q_in_person_online_1" required/>
+						<div class="PDF_QT400">
+							<ul>
+								<li>
+									<input type="radio" name="q_in_person_online"
+										   value="It would be an in-person event" id="q_in_person_online_1" required/>
 
-                                    <label for="q_in_person_online_1">
-                                        In-person</label>
-                                </li>
-                                <li>
-                                    <input type="radio" name="q_in_person_online"
-                                           value="It would be an online event" id="q_in_person_online_2" />
+									<label for="q_in_person_online_1">
+										In-person</label>
+								</li>
+								<li>
+									<input type="radio" name="q_in_person_online"
+										   value="It would be an online event" id="q_in_person_online_2" />
 
-                                    <label for="q_in_person_online_2">
-                                        Online</label>
-                                </li>
-                                <li>
-                                    <input type="radio" name="q_in_person_online"
-                                           value="It would be both in-person and streamed online" id="q_in_person_online_3" />
+									<label for="q_in_person_online_2">
+										Online</label>
+								</li>
+								<li>
+									<input type="radio" name="q_in_person_online"
+										   value="It would be both in-person and streamed online" id="q_in_person_online_3" />
 
-                                    <label for="q_in_person_online_3">
-                                        Hybrid: It would be both in-person and streamed online </label>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+									<label for="q_in_person_online_3">
+										Hybrid: It would be both in-person and streamed online </label>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
 
-                <div class="PDF_question" id="pd-question-13">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            Please describe the event you would like to organize:
-                            <span class="PDF_mand">*</span>
-                        </div>
-
-                        <div class="PDF_QT200">
-							<textarea name="q_describe_events" class="small required" rows="10" cols="40"
-                                      title="Please describe the event you would like to organize" required></textarea>
-                        </div>
-                    </div>
-                </div>
-
-
-                <div class="PDF_question" id="pd-question-14">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            What goals do you want to achieve with this event?
-                            <span class="PDF_mand">*</span>
-                        </div>
-
-                        <div class="PDF_QT200">
-							<textarea name="q_describe_goals" class="small required" rows="10" cols="40"
-                                      title="What goals do you want to achieve with this event" required></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="PDF_question" id="pd-question-15">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            Which of the following describe this event? (Select all that apply)
-                        </div>
-
-                        <div class="PDF_QT400">
-                            <ul>
-                                <li>
-                                    <input type="checkbox" name="q_describe_event[]" id="q_1908777"
-                                           value="Activity focused"/>
-
-                                    <label for="q_1908777">Activity focused (training, recruiting, networking, contributing, conferencing, etc.)</label>
-                                </li>
-                                <li>
-                                    <input type="checkbox" name="q_describe_event[]" id="q_1908778"
-                                           value="Topic focused"/>
-
-                                    <label for="q_1908778">Topic focused (design, development, security, accessibility, SEO, agencies, marketing, etc.)</label>
-                                </li>
-                                <li>
-                                    <input type="checkbox" name="q_describe_event[]" id="q_1908779"
-                                           value="Identity focused"/>
-
-                                    <label for="q_1908779">Identity focused (WordPress for Students, WordPress for Women, BlackPress, etc.)</label>
-                                </li>
-                                <li>
-                                    <input type="checkbox" name="q_describe_event[]" id="q_1908831"
-                                           value="Job-status focused"/>
-
-                                    <label for="q_1908831">Job-status focused (job seekers, freelancers, business owners, etc)</label>
-                                </li>
-                                <li>
-                                    <input type="checkbox" name="q_describe_event[]" id="q_1908832"
-                                           value="For a specific expertise level"/>
-
-                                    <label for="q_1908832">For a specific expertise level (beginners, intermediate, advanced users)</label>
-                                </li>
-                                <li>
-                                    <input type="checkbox" name="q_describe_event[]" id="q_1908833"
-                                           value="Sustainable event"/>
-
-                                    <label for="q_1908833">Sustainable event (no swag, small/easy to organize, low budget, etc.)</label>
-                                </li>
-                                <li>
-                                    <label for="q_other">Other:</label>
-
-                                    <input type="text" class="other" name="q_describe_event_other"
-                                           id="q_other" value="" style="width: 75%"/>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-
-                <div class="PDF_question" id="pd-question-16">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            Approximate number of attendees:
-                            <span class="PDF_mand">*</span>
-                        </div>
-
-                        <div class="PDF_QT100">
-                            <input value="" maxlength="500" name="q_how_many_attendees" class="large required"
-                                   type="text" title="Approximate number of attendees" required/>
-                        </div>
-                    </div>
-                </div>
-
-				<div class="PDF_question" id="pd-question-17">
-
+				<div class="PDF_question" id="pd-question-13">
 					<div class="qContent">
 						<div class="qText">
-                            If you have co-organizers, please share their name(s), email address(es) and WordPress.org username(s)
+							Please describe the event you would like to organize:
+							<span class="PDF_mand">*</span>
+						</div>
+
+						<div class="PDF_QT200">
+							<textarea name="q_describe_events" class="small required" rows="10" cols="40"
+									  title="Please describe the event you would like to organize" required></textarea>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-14">
+					<div class="qContent">
+						<div class="qText">
+							What goals do you want to achieve with this event?
+							<span class="PDF_mand">*</span>
+						</div>
+
+						<div class="PDF_QT200">
+							<textarea name="q_describe_goals" class="small required" rows="10" cols="40"
+									  title="What goals do you want to achieve with this event" required></textarea>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-15">
+					<div class="qContent">
+						<div class="qText">
+							Which of the following describe this event? (Select all that apply)
+						</div>
+
+						<div class="PDF_QT400">
+							<ul>
+								<li>
+									<input type="checkbox" name="q_describe_event[]" id="q_1908777"
+										   value="Activity focused"/>
+
+									<label for="q_1908777">Activity focused (training, recruiting, networking, contributing, conferencing, etc.)</label>
+								</li>
+								<li>
+									<input type="checkbox" name="q_describe_event[]" id="q_1908778"
+										   value="Topic focused"/>
+
+									<label for="q_1908778">Topic focused (design, development, security, accessibility, SEO, agencies, marketing, etc.)</label>
+								</li>
+								<li>
+									<input type="checkbox" name="q_describe_event[]" id="q_1908779"
+										   value="Identity focused"/>
+
+									<label for="q_1908779">Identity focused (WordPress for Students, WordPress for Women, BlackPress, etc.)</label>
+								</li>
+								<li>
+									<input type="checkbox" name="q_describe_event[]" id="q_1908831"
+										   value="Job-status focused"/>
+
+									<label for="q_1908831">Job-status focused (job seekers, freelancers, business owners, etc)</label>
+								</li>
+								<li>
+									<input type="checkbox" name="q_describe_event[]" id="q_1908832"
+										   value="For a specific expertise level"/>
+
+									<label for="q_1908832">For a specific expertise level (beginners, intermediate, advanced users)</label>
+								</li>
+								<li>
+									<input type="checkbox" name="q_describe_event[]" id="q_1908833"
+										   value="Sustainable event"/>
+
+									<label for="q_1908833">Sustainable event (no swag, small/easy to organize, low budget, etc.)</label>
+								</li>
+								<li>
+									<label for="q_other">Other:</label>
+
+									<input type="text" class="other" name="q_describe_event_other"
+										   id="q_other" value="" style="width: 75%"/>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+
+				<div class="PDF_question" id="pd-question-16">
+					<div class="qContent">
+						<div class="qText">
+							Approximate number of attendees:
+							<span class="PDF_mand">*</span>
+						</div>
+
+						<div class="PDF_QT100">
+							<input value="" maxlength="500" name="q_how_many_attendees" class="large required"
+								   type="text" title="Approximate number of attendees" required/>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-17">
+					<div class="qContent">
+						<div class="qText">
+							If you have co-organizers, please share their name(s), email address(es) and WordPress.org username(s)
 						</div>
 
 						<div class="PDF_QT200">
@@ -440,27 +425,25 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 					</div>
 				</div>
 
-                <div class="PDF_question" id="pd-question-18">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            Your event URL will be: https://events.wordpress.org/[location]/[year]/[event-name]
-                            e.g. https://events.wordpress.org/narnia/2024/communityday
-                            What would you like to be the [event-name] at the end of your event URL?
-                        </div>
-
-                        <div class="PDF_QT100">
-                            <input value="" maxlength="500" name="q_event_url" class="large required"
-                                   type="text" title="Event URL endings"/>
-                        </div>
-                    </div>
-                </div>
-
-				<div class="PDF_question" id="pd-question-19">
-
+				<div class="PDF_question" id="pd-question-18">
 					<div class="qContent">
 						<div class="qText">
-                            If you have a potential venue (ideally donated), please share the URL and/or name.
+							Your event URL will be: https://events.wordpress.org/[location]/[year]/[event-name]
+							e.g. https://events.wordpress.org/narnia/2024/communityday
+							What would you like to be the [event-name] at the end of your event URL?
+						</div>
+
+						<div class="PDF_QT100">
+							<input value="" maxlength="500" name="q_event_url" class="large required"
+								   type="text" title="Event URL endings"/>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-19">
+					<div class="qContent">
+						<div class="qText">
+							If you have a potential venue (ideally donated), please share the URL and/or name.
 						</div>
 
 						<div class="PDF_QT200">
@@ -470,41 +453,38 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 					</div>
 				</div>
 
-                <div class="PDF_question" id="pd-question-20">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            What is the estimated cost to organize your event?
-                            <span class="PDF_mand">*</span>
-                        </div>
-
-                        <div class="PDF_QT200">
-							<textarea name="q_estimated_cost" class="small required" rows="10" cols="40"
-                                      title="What is the estimated cost to organize your event?" required></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="PDF_question" id="pd-question-21">
-
-                    <div class="qContent">
-                        <div class="qText">
-                            Are you confident you can raise money from local sponsors? Please explain.
-                            <span class="PDF_mand">*</span>
-                        </div>
-
-                        <div class="PDF_QT200">
-							<textarea name="q_raise_money" class="small" rows="10" cols="40"
-                                      title="Are you confident you can raise money from local sponsors? Please explain." required></textarea>
-                        </div>
-                    </div>
-                </div>
-
-				<div class="PDF_question" id="pd-question-22">
-
+				<div class="PDF_question" id="pd-question-20">
 					<div class="qContent">
 						<div class="qText">
-                            Is there anything else you would like to share?
+							What is the estimated cost to organize your event?
+							<span class="PDF_mand">*</span>
+						</div>
+
+						<div class="PDF_QT200">
+							<textarea name="q_estimated_cost" class="small required" rows="10" cols="40"
+									  title="What is the estimated cost to organize your event?" required></textarea>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-21">
+					<div class="qContent">
+						<div class="qText">
+							Are you confident you can raise money from local sponsors? Please explain.
+							<span class="PDF_mand">*</span>
+						</div>
+
+						<div class="PDF_QT200">
+							<textarea name="q_raise_money" class="small" rows="10" cols="40"
+									  title="Are you confident you can raise money from local sponsors? Please explain." required></textarea>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_question" id="pd-question-22">
+					<div class="qContent">
+						<div class="qText">
+							Is there anything else you would like to share?
 						</div>
 
 						<div class="PDF_QT200">

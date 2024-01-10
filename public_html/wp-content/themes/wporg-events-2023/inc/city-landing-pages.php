@@ -172,7 +172,7 @@ function get_city_landing_page_events( string $request_uri ): array {
 			continue;
 		}
 
-		$events[] = array(
+		$events[] = (object) array(
 			'id'        => $wordcamp->_site_id,
 			'title'     => get_wordcamp_name( $wordcamp->_site_id ),
 			'url'       => $wordcamp->{'URL'},
@@ -181,7 +181,7 @@ function get_city_landing_page_events( string $request_uri ): array {
 			'location'  => $wordcamp->{'Location'},
 			'latitude'  => $coordinates['latitude'],
 			'longitude' => $coordinates['longitude'],
-			'timestamp' => $wordcamp->{'Start Date (YYYY-mm-dd)'},
+			'date_utc'  => gmdate( 'Y-m-d H:i:s', $wordcamp->{'Start Date (YYYY-mm-dd)'} ),
 			'tz_offset' => get_wordcamp_offset( $wordcamp ),
 		);
 	}

@@ -141,7 +141,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 								<label for="q_country">Country</label>
 								<br/>
 
-								<select name="q_country" id="q_country">
+								<select name="q_country" id="q_country" required>
 									<option value=""></option>
 
 									<?php foreach ( $countries as $country ) : ?>
@@ -299,7 +299,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
                             <ul>
                                 <li>
                                     <input type="radio" name="q_in_person_online"
-                                           value="It would be an in-person event" id="q_in_person_online_1" />
+                                           value="It would be an in-person event" id="q_in_person_online_1" required/>
 
                                     <label for="q_in_person_online_1">
                                         In-person</label>

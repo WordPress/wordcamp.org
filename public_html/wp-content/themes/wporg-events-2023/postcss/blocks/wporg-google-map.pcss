@@ -1,13 +1,23 @@
-.wporg-map-marker__title {
-	font-family: var(--wp--preset--font-family--inter);
-	font-size: var(--wp--preset--font-size--normal);
-	font-weight: 600;
-}
+.wp-block-wporg-google-map {
+	.wporg-map-marker__title {
+		font-family: var(--wp--preset--font-family--inter);
+		font-size: var(--wp--preset--font-size--normal);
+		font-weight: 600;
+	}
 
-.wporg-map-marker__location {
-	margin-bottom: 2px;
-}
+	.wporg-map-marker__location {
+		margin-bottom: 2px;
+	}
 
-.wporg-map-marker__date-time {
-	margin-top: 0;
+	.wporg-map-marker__date-time {
+		margin-top: 0;
+	}
+
+	.wporg-marker-list-item__date-time {
+		gap: 0;
+
+		.wporg-google-map__date-time-separator {
+			display: none;
+		}
+	}
 }

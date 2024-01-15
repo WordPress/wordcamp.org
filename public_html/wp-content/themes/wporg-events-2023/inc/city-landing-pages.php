@@ -96,7 +96,7 @@ function prime_query_cache(): void {
 		);
 
 		$cache_key = Google_Map\get_cache_key( $parts );
-		$events    = get_city_landing_page_events( $request_uri, true );
+		$events    = get_city_landing_page_events( $request_uri );
 
 		set_transient( $cache_key, $events, DAY_IN_SECONDS );
 	}
@@ -181,7 +181,7 @@ function get_city_landing_page_events( string $request_uri ): array {
 			'location'  => $wordcamp->{'Location'},
 			'latitude'  => $coordinates['latitude'],
 			'longitude' => $coordinates['longitude'],
-			'date_utc'  => gmdate( 'Y-m-d H:i:s', $wordcamp->{'Start Date (YYYY-mm-dd)'} ),
+			'date_utc'  => gmdate( 'Y-m-d H:i:s', (int) $wordcamp->{'Start Date (YYYY-mm-dd)'} ),
 			'tz_offset' => get_wordcamp_offset( $wordcamp ),
 		);
 	}

@@ -97,6 +97,7 @@ function prime_query_cache(): void {
 
 		$cache_key = Google_Map\get_cache_key( $parts );
 		$events    = get_city_landing_page_events( $request_uri );
+		$events    = Google_Map\prepare_events( $events );
 
 		set_transient( $cache_key, $events, DAY_IN_SECONDS );
 	}

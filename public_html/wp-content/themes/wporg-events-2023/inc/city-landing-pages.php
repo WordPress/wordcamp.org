@@ -2,6 +2,7 @@
 
 namespace WordPressdotorg\Events_2023;
 use WP, WP_Post, DateTimeZone, DateTime;
+use WordCamp\Sunrise;
 use WordPressdotorg\MU_Plugins\Google_Map;
 
 defined( 'WPINC' ) || die();
@@ -39,6 +40,11 @@ function is_city_landing_page(): bool {
 
 	// The landing page formats will always match the rewrite rule for pages, which sets `page` and `pagename`.
 	if ( empty( $wp->query_vars['page'] ) && empty( $wp->query_vars['pagename'] ) ) {
+		return false;
+	}
+
+	// Landing pages are only at `/city/` and `/city/year|slug/`. The actual sites are at `/city/year/type/`.
+	if ( preg_match( Sunrise\PATTERN_CITY_YEAR_TYPE_PATH, '/' . $wp->request ) ) {
 		return false;
 	}
 

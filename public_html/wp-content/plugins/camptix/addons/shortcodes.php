@@ -154,6 +154,9 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	public function get_attendees_shortcode_content( $attr, $force_refresh = false ) {
 		global $camptix;
 
+		// Enqueue style
+		wp_enqueue_style( 'camptix' );
+
 		/**
 		 * Action: Fires just before the [camptix_attendees] shortcode is rendered.
 		 *

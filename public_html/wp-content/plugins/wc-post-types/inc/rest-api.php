@@ -205,9 +205,14 @@ function register_session_post_meta() {
 			'single'            => true,
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
 			'sanitize_callback' => function( $value ) {
-				if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $value, PHP_URL_HOST ) ) ) ) {
-					return $value;
+				if ( $value ) {
+					$host = wp_parse_url( $value, PHP_URL_HOST );
+
+					if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( $host ) ) ) {
+						return $value;
+					}
 				}
+
 				return '';
 			},
 		)

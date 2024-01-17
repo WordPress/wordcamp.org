@@ -268,6 +268,38 @@ function get_wordcamp_offset( WP_Post $wordcamp ): int {
 }
 
 /**
+ *
+ * Get the timestamp of the first session of a WordCamp.
+ *
+ * This is a true Unix timestamp in UTC, not the local event time.
+ */
+function get_first_session_utc_start_time( int $wordcamp_id ): int {
+	$site_id = get_post_meta( $wordcamp_id, '_site_id', true );
+
+	switch_to_blog( $site_id );
+
+	$sessions = get_posts( array(
+		'post_type'      => 'wcb_session',
+		'posts_per_page' => 1,
+		'meta_key'       => '_wcpt_session_time',
+		'orderby'        => 'meta_value_num',
+		'order'          => 'asc',
+	) );
+
+	if ( count( $sessions ) < 1 ) {
+		restore_current_blog();
+		return 0;
+	}
+
+	$session = $sessions[0];
+	$value   = absint( get_post_meta( $session->ID, '_wcpt_session_time', true ) );
+
+	restore_current_blog();
+
+	return $value;
+}
+
+/**
  * Get a <select> dropdown of `wordcamp` posts with a select2 UI.
  *
  * The calling plugin is responsible for validating and processing the form, this just outputs a single field.

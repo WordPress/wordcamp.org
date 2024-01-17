@@ -417,31 +417,15 @@ class WordCamp_Loader extends Event_Loader {
 			array(
 				'schema'       => array(
 					'type'        => 'string',
-					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin.', 'wordcamporg' ),
+					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin. This is a true Unix timestamp in UTC, not local time.', 'wordcamporg' ),
 				),
 				'get_callback' => function( $object, $field_name ) {
 					// Short out if the event is not scheduled.
 					if ( 'wcpt-scheduled' !== $object['status'] ) {
 						return 0;
 					}
-					$site_id = get_post_meta( $object['id'], '_site_id', true );
-					switch_to_blog( $site_id );
-					$sessions = get_posts( array(
-						'post_type'      => 'wcb_session',
-						'posts_per_page' => 1,
-						'meta_key'       => '_wcpt_session_time',
-						'orderby'        => 'meta_value_num',
-						'order'          => 'asc',
-					) );
-					if ( count( $sessions ) < 1 ) {
-						restore_current_blog();
-						return 0;
-					}
-					$session = $sessions[0];
-					$value = absint( get_post_meta( $session->ID, '_wcpt_session_time', true ) );
 
-					restore_current_blog();
-					return $value;
+					return get_first_session_utc_start_time( $object['id'] );
 				},
 			)
 		);

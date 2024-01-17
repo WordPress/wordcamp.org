@@ -255,26 +255,6 @@ function get_city_landing_sites( string $request_uri, int $limit ): array {
 }
 
 /**
- * Get a WordCamp's UTC offset in seconds.
- *
- * Forked from `official-wordpress-events`.
- */
-function get_wordcamp_offset( WP_Post $wordcamp ): int {
-	if ( ! $wordcamp->{'Event Timezone'} || ! $wordcamp->{'Start Date (YYYY-mm-dd)'} ) {
-		return 0;
-	}
-
-	$wordcamp_timezone = new DateTimeZone( $wordcamp->{'Event Timezone'} );
-
-	$wordcamp_datetime = new DateTime(
-		'@' . $wordcamp->{'Start Date (YYYY-mm-dd)'},
-		$wordcamp_timezone
-	);
-
-	return $wordcamp_timezone->getOffset( $wordcamp_datetime );
-}
-
-/**
  * Disable the cron job that Google Map Event Filters registers.
  *
  * This plugin needs to run its own cron to prime the events cache, because the upstream one doesn't know how to handle city pages.

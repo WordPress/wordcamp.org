@@ -244,6 +244,30 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
 }
 
 /**
+ * Get a WordCamp's UTC offset in seconds.
+ *
+ * Forked from `official-wordpress-events`.
+ */
+function get_wordcamp_offset( WP_Post $wordcamp ): int {
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+	if ( ! $wordcamp->{'Event Timezone'} || ! $wordcamp->{'Start Date (YYYY-mm-dd)'} ) {
+		return 0;
+	}
+
+	$wordcamp_timezone = new DateTimeZone( $wordcamp->{'Event Timezone'} );
+
+	$wordcamp_datetime = new DateTime(
+		'@' . $wordcamp->{'Start Date (YYYY-mm-dd)'},
+		$wordcamp_timezone
+	);
+
+	restore_current_blog();
+
+	return $wordcamp_timezone->getOffset( $wordcamp_datetime );
+}
+
+/**
  * Get a <select> dropdown of `wordcamp` posts with a select2 UI.
  *
  * The calling plugin is responsible for validating and processing the form, this just outputs a single field.

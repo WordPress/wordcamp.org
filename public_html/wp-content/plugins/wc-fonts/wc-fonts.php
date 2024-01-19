@@ -52,10 +52,8 @@ class WordCamp_Fonts_Plugin {
 			return;
 		}
 
-		if ( ! wp_is_block_theme() ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			printf( '<style>%s</style>', $this->options['google-web-fonts'] );
-		}
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<style>%s</style>', $this->options['google-web-fonts'] );
 	}
 
 	/**

@@ -117,6 +117,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
 							<div>
 								<label for="q_city">City</label>
+								<span class="PDF_mand">*</span>
 								<br/>
 								<input type="text" maxlength="50" class="c" name="q_city" id="q_city"
 									   value="" required/>

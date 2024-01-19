@@ -6649,6 +6649,58 @@ class CampTix_Plugin {
 	}
 
 	/**
+	 * Get all the tickets that are available for purchase.
+	 *
+	 * This excludes tickets that are sold out, or ones that will open for sale at a later date, or ones that are closed for sale.
+	 *
+	 * @return false|WP_Post[]
+	 */
+	public function get_active_tickets() {
+		if ( $this->options['archived'] ) {
+			return false;
+		}
+
+		$tickets = get_posts( array(
+			'post_type'      => 'tix_ticket',
+			'post_status'    => 'publish',
+			'posts_per_page' => - 1,
+		) );
+
+		foreach ( $tickets as $key => $ticket ) {
+			$valid     = $this->is_ticket_valid_for_purchase( $ticket->ID );
+			$remaining = $this->get_remaining_tickets( $ticket->ID, false );
+
+			if ( ! $valid || $remaining <= 0 ) {
+				unset( $tickets[ $key ] );
+			}
+		}
+
+		return $tickets;
+	}
+
+	/**
+	 * Get the ticket with the lowest price from the given array of tickets.
+	 *
+	 * @return false|WP_Post
+	 */
+	public function get_cheapest_ticket( array $tickets ) {
+		$cheapest = false;
+
+		foreach ( $tickets as $ticket ) {
+			if ( ! $cheapest ) {
+				$cheapest = $ticket;
+				continue;
+			}
+
+			if ( $ticket->tix_price < $cheapest->tix_price ) {
+				$cheapest = $ticket;
+			}
+		}
+
+		return $cheapest;
+	}
+
+	/**
 	 * Use this function to purge tickets page cache and update all counts.
 	 * It sets a flag, but actual flushing happens only once during shutdown.
 	 */

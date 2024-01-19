@@ -20,7 +20,7 @@ class WordCamp_Fonts_Plugin {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_core_fonts'       ) );
 
 		// Temporary workaround until we can use the core font library on WordCamp.org.
-		// See https://github.com/WordPress/gutenberg/pull/57697
+		// See https://github.com/WordPress/gutenberg/pull/57697.
 		add_filter( 'wp_theme_json_data_theme', array( $this, 'inject_fonts_theme_json' ) );
 	}
 
@@ -332,9 +332,9 @@ class WordCamp_Fonts_Plugin {
 		$fonts = _wp_array_get( $theme_data, array( 'settings', 'typography', 'fontFamilies', 'theme' ), array() );
 
 		// Add Krona One and Lora to WordCamp Europe sites.
-		// 1469: europe.wordcamp.org/2024
-		// 1511: wceutest24.wordcamp.org/2024
-		if ( in_array( get_current_blog_id(), [ 1469, 1511 ] ) ) {
+		// 1469: europe.wordcamp.org/2024.
+		// 1511: wceutest24.wordcamp.org/2024.
+		if ( in_array( get_current_blog_id(), array( 1469, 1511 ) ) ) {
 			$fonts[] = array(
 				'fontFace' => array(
 					array(

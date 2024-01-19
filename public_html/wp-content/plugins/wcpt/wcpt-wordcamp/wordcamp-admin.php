@@ -148,18 +148,20 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 *
 		 * @param int   $post_id              Post id.
 		 * @param array $original_meta_values Original meta values before save.
+		 * @param bool  $force_update         `true` to force an update even if the address hasn't changed.
 		 */
-		public function update_venue_address( $post_id, $original_meta_values ) {
-			if ( $this->get_event_type() !== get_post_type() ) {
+		public function update_venue_address( $post_id, $original_meta_values, $force_update = false ) {
+			if ( $this->get_event_type() !== get_post_type( $post_id ) ) {
 				return;
 			}
 
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
 			$address_key = self::get_address_key( $post_id );
 			$new_address = $_POST[ wcpt_key_to_str( $address_key, 'wcpt_' ) ];
+			$address_changed = empty( $original_meta_values[ $address_key ][0] ) || $new_address !== $original_meta_values[ $address_key ][0];
 
 			// No need to geocode if it hasn't changed.
-			if ( ! empty( $original_meta_values[ $address_key ][0] ) && $new_address === $original_meta_values[ $address_key ][0] ) {
+			if ( ! $address_changed && ! $force_update ) {
 				return;
 			}
 

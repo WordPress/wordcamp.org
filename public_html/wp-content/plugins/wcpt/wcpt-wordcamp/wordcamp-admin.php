@@ -261,6 +261,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 							case 'locality':
 							case 'administrative_area_level_1':
 							case 'postal_code':
+							case 'street_number':
+							case 'route':
 								$$type = $component->long_name;
 								break;
 
@@ -275,12 +277,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			$values = array(
-				'coordinates'  => $coordinates  ?? null,
-				'city'         => $locality     ?? null,
-				'state'        => $administrative_area_level_1 ?? null,
-				'country_code' => $country_code ?? null,
-				'country_name' => $country_name ?? null,
-				'zip'          => $postal_code  ?? null,
+				'coordinates'   => $coordinates ?? null,
+				'street_name'   => $route ?? null,
+				'street_number' => $street_number ?? null,
+				'city'          => $locality ?? null,
+				'state'         => $administrative_area_level_1 ?? null,
+				'country_code'  => $country_code ?? null,
+				'country_name'  => $country_name ?? null,
+				'zip'           => $postal_code ?? null,
 			);
 
 			return $values;
@@ -512,6 +516,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		public static function get_venue_address_meta_keys() {
 			return array(
 				'_venue_coordinates',
+				'_venue_street_name',
+				'_venue_street_number',
 				'_venue_city',
 				'_venue_state',
 				'_venue_country_code',
@@ -519,6 +525,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'_venue_zip',
 
 				'_host_coordinates',
+				'_host_street_name',
+				'_host_street_number',
 				'_host_city',
 				'_host_state',
 				'_host_country_code',

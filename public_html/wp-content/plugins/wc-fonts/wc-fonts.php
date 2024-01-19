@@ -18,6 +18,10 @@ class WordCamp_Fonts_Plugin {
 		add_action( 'wp_head',            array( $this, 'wp_head_google_web_fonts' ) );
 		add_action( 'wp_head',            array( $this, 'wp_head_font_awesome'     ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_core_fonts'       ) );
+
+		// Temporary workaround until we can use the core font library on WordCamp.org.
+		// See https://github.com/WordPress/gutenberg/pull/57697
+		add_filter( 'wp_theme_json_data_theme', array( $this, 'inject_fonts_theme_json' ) );
 	}
 
 	/**
@@ -310,6 +314,117 @@ class WordCamp_Fonts_Plugin {
 		$output['dashicons'] = isset( $input['dashicons'] ) && $input['dashicons'] ? true : false;
 
 		return $output;
+	}
+
+	/**
+	 * Inject the local fonts for WordCamps.
+	 *
+	 * @todo Remove this when Gutenberg 17.6 is rolled out to WordCamp.org.
+	 *
+	 * @param WP_Theme_JSON_Data $theme_json Class to access and update the underlying data.
+	 *
+	 * @return WP_Theme_JSON_Data The updated theme settings.
+	 */
+	public function inject_fonts_theme_json( $theme_json ) {
+		$theme_data = $theme_json->get_data();
+		if ( ! isset( $theme_data['settings'] ) ) {
+			return $theme_json;
+		}
+
+		$fonts = _wp_array_get( $theme_data, array( 'settings', 'typography', 'fontFamilies', 'theme' ), array() );
+
+		// Add Krona One and Lora to WordCamp Europe sites.
+		// 1469: europe.wordcamp.org/2024
+		// 1511: wceutest24.wordcamp.org/2024
+		if ( in_array( get_current_blog_id(), [ 1469, 1511 ] ) ) {
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Krona One',
+						'fontStyle' => 'normal',
+						'fontWeight' => '400',
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/krona-one/krona-one-400-normal.svg',
+						'src' => site_url( '/wp-content/fonts/krona-one_normal_400.ttf' ),
+					),
+				),
+				'fontFamily' => "'Krona One', sans-serif",
+				'name' => 'Krona One',
+				'preview' => 'https://s.w.org/images/fonts/16.7/previews/krona-one/krona-one.svg',
+				'slug' => 'krona-one',
+			);
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-700-normal.svg',
+						'src' => site_url( '/wp-content/fonts/lora_normal_700.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 600,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-600-normal.svg',
+						'src' => site_url( '/wp-content/fonts/lora_normal_600.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 500,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-500-normal.svg',
+						'src' => site_url( '/wp-content/fonts/lora_normal_500.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-400-normal.svg',
+						'src' => site_url( '/wp-content/fonts/lora_normal_400.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 700,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-700-italic.svg',
+						'src' => site_url( '/wp-content/fonts/lora_italic_700.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 600,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-600-italic.svg',
+						'src' => site_url( '/wp-content/fonts/lora_italic_600.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 500,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-500-italic.svg',
+						'src' => site_url( '/wp-content/fonts/lora_italic_500.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Lora',
+						'fontStyle' => 'italic',
+						'fontWeight' => 400,
+						'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora-400-italic.svg',
+						'src' => site_url( '/wp-content/fonts/lora_italic_400.ttf' ),
+					),
+				),
+				'fontFamily' => 'Lora',
+				'name' => 'Lora',
+				'preview' => 'https://s.w.org/images/fonts/16.7/previews/lora/lora.svg',
+				'slug' => 'lora',
+			);
+		}
+
+		// Build a new theme.json object.
+		$new_data = array(
+			'version' => 2,
+		);
+		_wp_array_set( $new_data, array( 'settings', 'typography', 'fontFamilies', 'theme' ), $fonts );
+
+		return $theme_json->update_with( $new_data );
 	}
 }
 

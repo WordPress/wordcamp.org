@@ -3,8 +3,6 @@
  * Plugin Name: WordCamp.org Fonts
  */
 
-require_once __DIR__ . '/wc-google-fonts-provider.php';
-
 class WordCamp_Fonts_Plugin {
 	protected $options;
 
@@ -20,7 +18,6 @@ class WordCamp_Fonts_Plugin {
 		add_action( 'wp_head',            array( $this, 'wp_head_google_web_fonts' ) );
 		add_action( 'wp_head',            array( $this, 'wp_head_font_awesome'     ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_core_fonts'       ) );
-		add_action( 'init',               array( $this, 'register_fonts_for_editor' ) );
 	}
 
 	/**
@@ -313,96 +310,6 @@ class WordCamp_Fonts_Plugin {
 		$output['dashicons'] = isset( $input['dashicons'] ) && $input['dashicons'] ? true : false;
 
 		return $output;
-	}
-
-	/**
-	 * Register the google fonts into WordPress so they can be used in the Site Editor.
-	 */
-	public function register_fonts_for_editor() {
-		if ( ! function_exists( 'wp_register_fonts' ) ) {
-			return;
-		}
-
-		if ( ! isset( $this->options['google-web-fonts'] ) || empty( $this->options['google-web-fonts'] ) ) {
-			return;
-		}
-
-		$lines = explode( "\n", $this->options['google-web-fonts'] );
-		$fonts = array();
-		foreach ( $lines as $line ) {
-			if ( preg_match( '#https?://fonts\.googleapis\.com/css2?\?family=[^\)\'"]+#', $line, $matches ) ) {
-				$url = $matches[0];
-				$query = explode( '&', wp_parse_url( $url, PHP_URL_QUERY ) );
-
-				// Multiple families can be added to one URL, so we need to loop over to parse them.
-				// We can't just use wp_parse_str because each `family` will overwrite the previous.
-				foreach ( $query as $family ) {
-					// Make sure we're working with a `family=` value and not `display=` or anything else.
-					if ( ! str_starts_with( $family, 'family=' ) ) {
-						continue;
-					}
-					$details = explode( ':', $family );
-					$name = str_replace( 'family=', '', $details[0] );
-					$styles = $details[1] ?? '';
-
-					$variations = array(
-						array(
-							'font-family' => urldecode( $name ),
-							'provider'    => 'wordcamp-google',
-						),
-					);
-
-					if ( str_contains( $styles, '@' ) ) {
-						$variations = array_map(
-							function( $var ) use ( $name ) {
-								$variation = array(
-									'font-family' => urldecode( $name ),
-									'provider'    => 'wordcamp-google',
-								);
-								if ( isset( $var['ital'] ) ) {
-									$variation['font-style']  = '0' === $var['ital'] ? 'normal' : 'italic';
-								}
-								if ( isset( $var['wght'] ) ) {
-									$variation['font-weight'] = str_replace( '..', ' ', $var['wght'] );
-								}
-								return $variation;
-							},
-							$this->parse_google_font_variations( $styles )
-						);
-					}
-
-					$fonts[ urldecode( $name ) ] = $variations;
-				}
-			}
-		}
-
-		wp_register_fonts( $fonts );
-		wp_enqueue_fonts( array_keys( $fonts ) );
-	}
-
-	/**
-	 * Parse the google font options.
-	 *
-	 * Converts the string in a google fonts URL into an array of variations.
-	 * For example, `ital,wght@0,700;1,700` should return:
-	 * [
-	 *   [ 'ital' => 0, 'wght' => '700' ],
-	 *   [ 'ital' => 1, 'wght' => '700' ],
-	 * ]
-	 */
-	public function parse_google_font_variations( $styles ) {
-		list( $props, $values ) = explode( '@', $styles );
-		$props = explode( ',', $props );
-		$values = explode( ';', $values );
-
-		$result = array();
-		foreach ( $values as $i => $value ) {
-			$style = explode( ',', $value );
-			foreach ( $props as $j => $prop ) {
-				$result[ $i ][ $prop ] = $style[ $j ];
-			}
-		}
-		return $result;
 	}
 }
 

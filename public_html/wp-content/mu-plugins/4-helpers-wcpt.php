@@ -252,6 +252,7 @@ function get_wordcamp_offset( WP_Post $wordcamp ): int {
 	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 	if ( ! $wordcamp->{'Event Timezone'} || ! $wordcamp->{'Start Date (YYYY-mm-dd)'} ) {
+		restore_current_blog();
 		return 0;
 	}
 

@@ -1,7 +1,7 @@
 <?php
 
 namespace WordPressdotorg\Events_2023;
-use WP, WP_Post, DateTimeZone, DateTime;
+use WP;
 use WordCamp\Sunrise;
 use WordPressdotorg\MU_Plugins\Google_Map;
 

@@ -13,6 +13,7 @@ add_filter( 'posts_pre_query', __NAMESPACE__ . '\inject_events_into_query', 10, 
 // Query filters.
 add_filter( 'query_vars', __NAMESPACE__ . '\add_query_vars' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
+add_filter( 'document_title_parts', __NAMESPACE__ . '\add_filters_to_page_title' );
 add_filter( 'wporg_query_total_label', __NAMESPACE__ . '\update_query_total_label', 10, 3 );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
 add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
@@ -185,6 +186,77 @@ function inject_other_filters( $key ) {
 	if ( isset( $wp_query->query['s'] ) ) {
 		printf( '<input type="hidden" name="s" value="%s" />', esc_attr( $wp_query->query['s'] ) );
 	}
+}
+
+/**
+ * Append facets to the page title.
+ *
+ * @param array $parts {
+ *     The document title parts.
+ *
+ *     @type string $title   Title of the viewed page.
+ *     @type string $page    Optional. Page number if paginated.
+ *     @type string $tagline Optional. Site description when on home page.
+ *     @type string $site    Optional. Site title when not on home page.
+ * }
+ */
+function add_filters_to_page_title( array $parts ): array {
+	$facets = get_query_var_facets();
+
+	// Search titles are handles by Core, and already include the query.
+	unset( $facets['search'] );
+
+	$facets      = array_filter( $facets ); // Remove empty.
+	$extra_terms = array();
+
+	foreach ( $facets as $facet => $values ) {
+		switch ( $facet ) {
+			case 'type':
+			case 'format':
+				$values = array_map(
+					function ( $name ) {
+						if ( 'wordcamp' === $name ) {
+							return 'WordCamp';
+						} else {
+							return ucwords( $name );
+						}
+					},
+					(array) $values
+				);
+
+				break;
+
+			case 'month':
+				$values = array_map(
+					function ( $month_number ) {
+						return gmdate( 'F', strtotime( "2024-$month_number-01" ) );
+					},
+					$values
+				);
+
+				break;
+
+			case 'country':
+				$countries = wcorg_get_countries();
+
+				$values = array_map(
+					function ( $country_code ) use ( $countries ) {
+						return $countries[ $country_code ]['name'];
+					},
+					$values
+				);
+
+				break;
+		}
+
+		$extra_terms = array_merge( $extra_terms, $values );
+	}
+
+	if ( $extra_terms ) {
+		$parts['title'] .= ' filtered by: ' . implode( ', ', $extra_terms );
+	}
+
+	return $parts;
 }
 
 /**

@@ -18,6 +18,12 @@ function add_event_data(): void {
 		return;
 	}
 
+	$coming_soon_settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+	if ( 'off' !== $coming_soon_settings['enabled'] ) {
+		return;
+	}
+
 	$wordcamp = get_wordcamp_post();
 
 	if ( ! $wordcamp ) {

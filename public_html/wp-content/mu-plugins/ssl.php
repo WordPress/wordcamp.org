@@ -24,8 +24,9 @@ add_action( 'init', function() {
  * but this is intentionally kept in place just to be safe.
  */
 function wcorg_force_ssl() {
-	if ( php_sapi_name() == 'cli' || is_ssl() )
+	if ( 'cli' === php_sapi_name() || is_ssl() || headers_sent() ) {
 		return;
+	}
 
 	// Our SSL certificate covers only *.wordcamp.org but year.city.wordcamp.org rediercts should still work.
 	// if ( ! preg_match( '#^(?:[^.]+\.)?wordcamp\.org$#i', $_SERVER['HTTP_HOST'] ) )

@@ -210,6 +210,8 @@ function add_filters_to_page_title( array $parts ): array {
 	$extra_terms = array();
 
 	foreach ( $facets as $facet => $values ) {
+		$values = (array) $values;
+
 		switch ( $facet ) {
 			case 'type':
 			case 'format':
@@ -221,7 +223,7 @@ function add_filters_to_page_title( array $parts ): array {
 							return ucwords( $name );
 						}
 					},
-					(array) $values
+					$values
 				);
 
 				break;

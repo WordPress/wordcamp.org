@@ -416,6 +416,11 @@ class WordCamp_Fonts_Plugin {
 			);
 		}
 
+		// Return early if no fonts have been added.
+		if ( empty( $fonts ) ) {
+			return $theme_json;
+		}
+
 		// Build a new theme.json object.
 		$new_data = array(
 			'version' => 2,

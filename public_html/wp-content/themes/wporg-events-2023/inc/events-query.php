@@ -241,6 +241,13 @@ function add_filters_to_page_title( array $parts ): array {
 			case 'country':
 				$countries = wcorg_get_countries();
 
+				$values = array_filter(
+					$values,
+					function ( $country_code ) use ( $countries ) {
+						return isset( $countries[ $country_code ] );
+					}
+				);
+
 				$values = array_map(
 					function ( $country_code ) use ( $countries ) {
 						return $countries[ $country_code ]['name'];

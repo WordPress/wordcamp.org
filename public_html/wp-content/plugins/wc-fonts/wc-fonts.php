@@ -415,6 +415,205 @@ class WordCamp_Fonts_Plugin {
 				'slug' => 'lora',
 			);
 		}
+		// Add Roboto, Roboto Slab, and Sansita to WordCamp Asia sites.
+		// 1450: europe.wordcamp.org/2024.
+		if ( in_array( get_current_blog_id(), array( 1450 ) ) ) {
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Black.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Bold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Medium.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Regular.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 300,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Light.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'normal',
+						'fontWeight' => 100,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Thin.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-BlackItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-BoldItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-MediumItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-Italic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 300,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-LightItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto',
+						'fontStyle' => 'italic',
+						'fontWeight' => 100,
+						'src' => site_url( '/wp-content/fonts/Roboto/Roboto-ThinItalic.ttf' ),
+					),
+				),
+				'fontFamily' => "'Roboto', sans-serif",
+				'name' => 'Roboto',
+				'slug' => 'roboto',
+			);
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Black.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 800,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-ExtraBold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Bold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-SemiBold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 500,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Medium.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Regular.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 300,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Light.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 300,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-ExtraLight.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Roboto Slab',
+						'fontStyle' => 'normal',
+						'fontWeight' => 100,
+						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-Thin.ttf' ),
+					),
+				),
+				'fontFamily' => "'Roboto Slab', serif",
+				'name' => 'Roboto Slab',
+				'slug' => 'roboto-slab',
+			);
+			$fonts[] = array(
+				'fontFace' => array(
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Black.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-ExtraBold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Bold.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'normal',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Regular.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 900,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-BlackItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 800,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-ExtraBoldItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 700,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-BoldItalic.ttf' ),
+					),
+					array(
+						'fontFamily' => 'Sansita',
+						'fontStyle' => 'italic',
+						'fontWeight' => 400,
+						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-Italic.ttf' ),
+					),
+				),
+				'fontFamily' => "'Sansita', sans-serif",
+				'name' => 'Sansita',
+				'slug' => 'sansita',
+			);
+		}
 
 		// Return early if no fonts have been added.
 		if ( empty( $fonts ) ) {

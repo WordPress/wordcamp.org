@@ -405,7 +405,7 @@ class WordCamp_Fonts_Plugin {
 			);
 		}
 		// Add Roboto, Roboto Slab, and Sansita to WordCamp Asia sites.
-		// 1450: europe.wordcamp.org/2024.
+		// 1450: asia.wordcamp.org/2024.
 		if ( in_array( get_current_blog_id(), array( 1450 ) ) ) {
 			$fonts[] = array(
 				'fontFace' => array(

@@ -509,7 +509,7 @@ class WordCamp_Fonts_Plugin {
 					array(
 						'fontFamily' => 'Roboto Slab',
 						'fontStyle' => 'normal',
-						'fontWeight' => 700,
+						'fontWeight' => 600,
 						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-SemiBold.ttf' ),
 					),
 					array(
@@ -533,7 +533,7 @@ class WordCamp_Fonts_Plugin {
 					array(
 						'fontFamily' => 'Roboto Slab',
 						'fontStyle' => 'normal',
-						'fontWeight' => 300,
+						'fontWeight' => 200,
 						'src' => site_url( '/wp-content/fonts/Roboto_Slab/RobotoSlab-ExtraLight.ttf' ),
 					),
 					array(
@@ -558,7 +558,7 @@ class WordCamp_Fonts_Plugin {
 					array(
 						'fontFamily' => 'Sansita',
 						'fontStyle' => 'normal',
-						'fontWeight' => 700,
+						'fontWeight' => 800,
 						'src' => site_url( '/wp-content/fonts/Sansita/Sansita-ExtraBold.ttf' ),
 					),
 					array(

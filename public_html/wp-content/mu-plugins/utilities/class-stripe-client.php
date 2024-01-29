@@ -30,6 +30,68 @@ class Stripe_Client {
 	}
 
 	/**
+	 * Create a new Session for a charge.
+	 *
+	 * @see https://stripe.com/docs/api/checkout/sessions/create
+	 *
+	 * @param array $args The arguements for the checkout session.
+	 * @return object
+	 */
+	public function create_session( $args ) {
+		$headers = array(
+			'Authorization'  => 'Bearer ' . $this->secret_key,
+			'Stripe-Version' => '2023-10-16'
+		);
+
+		$request_args = array(
+			'user-agent' => 'WordCamp.org :: ' . __CLASS__,
+			'body'       => $args,
+			'headers'    => $headers,
+		);
+
+		$response = wp_remote_post( self::API_URL . '/v1/checkout/sessions', $request_args );
+
+		if ( is_wp_error( $response ) ) {
+			Logger\log( 'response_error', compact( 'response' ) );
+			throw new Exception( $response->get_error_message() );
+		}
+
+		return json_decode( wp_remote_retrieve_body( $response ) );
+	}
+
+	/**
+	 * Retrieve the session for a charge.
+	 *
+	 * @see https://stripe.com/docs/api/checkout/sessions/retrieve
+	 *
+	 * @param string $session_id The session ID.
+	 * @return object
+	 */
+	public function retrieve_session( $session_id ) {
+		$headers = array(
+			'Authorization'  => 'Bearer ' . $this->secret_key,
+			'Stripe-Version' => '2023-10-16'
+		);
+
+		$request_args = array(
+			'user-agent' => 'WordCamp.org :: ' . __CLASS__,
+			'headers'    => $headers,
+		);
+
+		$response = wp_remote_get(
+			self::API_URL . '/v1/checkout/sessions/' . urlencode( $session_id ),
+			$request_args
+		);
+
+		if ( is_wp_error( $response ) ) {
+			Logger\log( 'response_error', compact( 'response' ) );
+			throw new Exception( $response->get_error_message() );
+		}
+
+		return json_decode( wp_remote_retrieve_body( $response ) );
+	}
+
+	/**
 	 * Charge the attendee for their ticket via Stripe's API
 	 *
 	 * @param array $body    Transaction data to send to Stripe API.

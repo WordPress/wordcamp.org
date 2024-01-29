@@ -141,6 +141,7 @@ get_header();
 			</script>
 
 		<?php elseif ( $data['step'] == STEP_PAYMENT_SUCCESS ) : ?>
+			<script>history.replaceState( {}, '', window.location.pathname );</script>
 
 			<p class="notice notice-success">
 				<strong><?php esc_html_e( 'Success!', 'wordcamporg' ); ?></strong>

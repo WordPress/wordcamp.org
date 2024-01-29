@@ -274,9 +274,13 @@ function _handle_post_data( &$data ) {
 					) )
 				) );
 
+				if ( ! empty( $session->error ) ) {
+					$data['errors'][] = $session->error->message;
+					return;
+				}
+
 				$data['session_secret'] = $session->client_secret;
 			} catch( Exception $e ) {
-
 			}
 
 			break;

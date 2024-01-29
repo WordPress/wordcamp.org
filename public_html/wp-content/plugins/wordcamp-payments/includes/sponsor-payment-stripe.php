@@ -41,7 +41,7 @@ function render() {
 		'errors'                 => array(),
 	);
 
-	$submitted = filter_input( INPUT_POST, 'sponsor_payment_submit' );
+	$submitted = $_REQUEST['sponsor_payment_submit'] ?? false;
 
 	if ( $submitted ) {
 		_handle_post_data( $data ); // $data passed by ref.
@@ -136,7 +136,7 @@ function get_wordcamp_query_options() {
  * @param array $data By-ref $data array that is passed to the view.
  */
 function _handle_post_data( &$data ) {
-	$step = filter_input( INPUT_POST, 'step' );
+	$step = $_REQUEST['step'] ?? 0;
 	$fsp  = new Form_Spam_Prevention( get_fsp_config() );
 
 	switch ( $step ) {
@@ -183,6 +183,9 @@ function _handle_post_data( &$data ) {
 						$data['errors'][] = 'Please provide a valid invoice ID.';
 						return;
 					}
+
+					$description = sprintf( 'WordCamp Sponsorship: %s', get_wordcamp_name( $wordcamp_site_id ) );
+
 					break;
 
 				case 'other':
@@ -225,7 +228,6 @@ function _handle_post_data( &$data ) {
 				return;
 			}
 
-			// Next step is to collect the card details via Stripe.
 			$data['step']    = STEP_PAYMENT_DETAILS;
 			$data['payment'] = array(
 				'payment_type'   => $payment_type,
@@ -243,19 +245,48 @@ function _handle_post_data( &$data ) {
 
 			// Add a WordCamp object for convenience.
 			$data['payment']['wordcamp_obj'] = get_post( $wordcamp_id );
+
+			$stripe = new Stripe_Client( $data['keys']['secret'] );
+			try {
+				$session = $stripe->create_session( array(
+					'ui_mode'    => 'embedded',
+					'mode'       => 'payment',
+					'return_url' => add_query_arg(
+						array(
+							'step'                   => STEP_PAYMENT_DETAILS,
+							'sponsor_payment_submit' => 1,
+							'session_id'             => '{CHECKOUT_SESSION_ID}',
+							'payment_data_json'      => urlencode( $data['payment_data_json'] ),
+							'payment_data_signature' => urlencode( $data['payment_data_signature'] ),
+						),
+						get_permalink()
+					),
+					'line_items' => array( array(
+						'price_data' => array(
+							'product_data' => array(
+								'name'        => 'WordPress Community Support, PBC',
+								'description' => $data['payment']['description'],
+							),
+							'unit_amount'  => $data['payment']['decimal_amount'],
+							'currency'     => $data['payment']['currency'],
+						),
+						'quantity' => 1,
+					) )
+				) );
+
+				$data['session_secret'] = $session->client_secret;
+			} catch( Exception $e ) {
+
+			}
+
 			break;
 
 		// The card details have been entered and Stripe has submitted our form.
 		case STEP_PAYMENT_DETAILS:
-			$stripe_token           = filter_input( INPUT_POST, 'stripeToken' );
-			$stripe_email           = filter_input( INPUT_POST, 'stripeEmail' );
-			$payment_data_json      = filter_input( INPUT_POST, 'payment_data_json' );
-			$payment_data_signature = filter_input( INPUT_POST, 'payment_data_signature' );
 
-			if ( ! $stripe_token ) {
-				$data['errors'][] = 'Stripe token not found.';
-				return;
-			}
+			$payment_data_json      = wp_unslash( $_REQUEST['payment_data_json'] ?? '' );
+			$payment_data_signature = wp_unslash( $_REQUEST['payment_data_signature'] ?? '' );
+			$session_id             = wp_unslash( $_REQUEST['session_id'] ?? '' );
 
 			if ( ! $payment_data_json || ! $payment_data_signature ) {
 				$data['errors'][] = 'Payment data is missing.';
@@ -268,44 +299,26 @@ function _handle_post_data( &$data ) {
 				return;
 			}
 
-			$payment_data = json_decode( wp_unslash( $payment_data_json ), true );
-
-			switch ( $payment_data['payment_type'] ) {
-				case 'invoice':
-					$wordcamp_obj     = get_post( $payment_data['wordcamp_id'] );
-					$wordcamp_site_id = get_wordcamp_site_id( $wordcamp_obj );
-
-					$description = sprintf( 'WordCamp Sponsorship: %s', get_wordcamp_name( $wordcamp_site_id ) );
-					$metadata    = array(
-						'invoice_id'       => $payment_data['invoice_id'],
-						'wordcamp_id'      => $payment_data['wordcamp_id'],
-						'wordcamp_site_id' => $wordcamp_site_id,
-						'wordcamp_url'     => set_url_scheme( esc_url_raw( get_blog_option( $wordcamp_site_id, 'home', '' ) ), 'https' ),
-					);
-					break;
-
-				case 'other':
-					$description = 'Other Payment';
-					$metadata    = array(
-						'description' => $payment_data['description'],
-					);
-					break;
+			// Fetch the Session.
+			try {
+				$stripe  = new Stripe_Client( $data['keys']['secret'] );
+				$session = $stripe->retrieve_session( $session_id );
+				if ( ! $session ) {
+					throw new Exception('Session missing');
+				}
+			} catch ( Exception $e ) {
+				$data['errors'][] = 'Session data is missing.';
+				return;
 			}
 
-			$body = array(
-				'amount'        => $payment_data['decimal_amount'],
-				'currency'      => $payment_data['currency'],
-				'source'        => $stripe_token,
-				'description'   => $description,
-				'metadata'      => $metadata,
-				'receipt_email' => $stripe_email,
-			);
+			// Payment failure, head back a step.
+			if ( 'open' === $session->status ) {
+				$data['step']                    = STEP_PAYMENT_DETAILS;
+				$data['payment']                 = json_decode( $payment_data_json, true );
+				$data['payment']['wordcamp_obj'] = get_post( $data['payment']['wordcamp_id'] );
+				$data['session_secret']          = $session->client_secret;
 
-			try {
-				$stripe = new Stripe_Client( $data['keys']['secret'] );
-				$charge = $stripe->charge( $body );
-			} catch ( Exception $exception ) {
-				$data['errors'][] = $exception->getMessage();
+				$fsp->add_score_to_ip_address( array( 1 ) );
 				return;
 			}
 

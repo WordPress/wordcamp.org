@@ -261,17 +261,19 @@ function _handle_post_data( &$data ) {
 						),
 						get_permalink()
 					),
-					'line_items' => array( array(
-						'price_data' => array(
-							'product_data' => array(
-								'name'        => 'WordPress Community Support, PBC',
-								'description' => $data['payment']['description'],
+					'line_items' => array(
+						array(
+							'quantity'   => 1,
+							'price_data' => array(
+								'product_data' => array(
+									'name'        => 'WordPress Community Support, PBC',
+									'description' => $data['payment']['description'],
+								),
+								'unit_amount'  => $data['payment']['decimal_amount'],
+								'currency'     => $data['payment']['currency'],
 							),
-							'unit_amount'  => $data['payment']['decimal_amount'],
-							'currency'     => $data['payment']['currency'],
 						),
-						'quantity' => 1,
-					) )
+					),
 				) );
 
 				if ( ! empty( $session->error ) ) {
@@ -280,14 +282,14 @@ function _handle_post_data( &$data ) {
 				}
 
 				$data['session_secret'] = $session->client_secret;
-			} catch( Exception $e ) {
+			} catch ( Exception $e ) {
+				// TODO: This is currently unhandled.
 			}
 
 			break;
 
 		// The card details have been entered and Stripe has submitted our form.
 		case STEP_PAYMENT_DETAILS:
-
 			$payment_data_json      = wp_unslash( $_REQUEST['payment_data_json'] ?? '' );
 			$payment_data_signature = wp_unslash( $_REQUEST['payment_data_signature'] ?? '' );
 			$session_id             = wp_unslash( $_REQUEST['session_id'] ?? '' );
@@ -307,10 +309,11 @@ function _handle_post_data( &$data ) {
 			try {
 				$stripe  = new Stripe_Client( $data['keys']['secret'] );
 				$session = $stripe->retrieve_session( $session_id );
-				if ( ! $session ) {
-					throw new Exception('Session missing');
-				}
 			} catch ( Exception $e ) {
+				// This is handled by the empty() check below.
+			}
+
+			if ( empty( $session ) ) {
 				$data['errors'][] = 'Session data is missing.';
 				return;
 			}

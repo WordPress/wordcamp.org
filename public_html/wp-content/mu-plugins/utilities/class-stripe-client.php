@@ -36,11 +36,13 @@ class Stripe_Client {
 	 *
 	 * @param array $args The arguements for the checkout session.
 	 * @return object
+	 *
+	 * @throws Exception
 	 */
 	public function create_session( $args ) {
 		$headers = array(
 			'Authorization'  => 'Bearer ' . $this->secret_key,
-			'Stripe-Version' => '2023-10-16'
+			'Stripe-Version' => '2023-10-16',
 		);
 
 		$request_args = array(
@@ -66,11 +68,13 @@ class Stripe_Client {
 	 *
 	 * @param string $session_id The session ID.
 	 * @return object
+	 *
+	 * @throws Exception
 	 */
 	public function retrieve_session( $session_id ) {
 		$headers = array(
 			'Authorization'  => 'Bearer ' . $this->secret_key,
-			'Stripe-Version' => '2023-10-16'
+			'Stripe-Version' => '2023-10-16',
 		);
 
 		$request_args = array(

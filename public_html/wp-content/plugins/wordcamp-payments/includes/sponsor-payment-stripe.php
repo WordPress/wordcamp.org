@@ -267,6 +267,7 @@ function _handle_post_data( &$data ) {
 							'price_data' => array(
 								'product_data' => array(
 									'name'        => 'WordPress Community Support, PBC',
+									// TODO: Old checkout uses "Event Sponsorship Payment" here instead of the description.
 									'description' => $data['payment']['description'],
 								),
 								'unit_amount'  => $data['payment']['decimal_amount'],
@@ -274,6 +275,12 @@ function _handle_post_data( &$data ) {
 							),
 						),
 					),
+					'metadata' => array(
+						'invoice_id'       => $data['payment']['invoice_id'],
+						'wordcamp_id'      => $data['payment']['wordcamp_id'],
+						'wordcamp_site_id' => $data['payment']['wordcamp_id'],
+						'wordcamp_url'     => set_url_scheme( esc_url_raw( get_blog_option( $data['payment']['wordcamp_id'], 'home', '' ) ), 'https' ),
+					)
 				) );
 
 				if ( ! empty( $session->error ) ) {

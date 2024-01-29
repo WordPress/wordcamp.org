@@ -149,7 +149,7 @@ get_header();
 			</p>
 
 			<ul>
-				<li><a href="<?php echo esc_url( add_query_arg( 'again', 1 ) ); ?>"><?php esc_html_e( 'Make another payment', 'wordcamporg' ); ?></a></li>
+				<li><a href="<?php echo esc_url( add_query_arg( 'again', 1, get_permalink() ) ); ?>"><?php esc_html_e( 'Make another payment', 'wordcamporg' ); ?></a></li>
 				<li><a href="<?php echo esc_url( home_url( '/' ) ); ?>"><?php esc_html_e( 'Go back to Central', 'wordcamporg' ); ?></a></li>
 			</ul>
 

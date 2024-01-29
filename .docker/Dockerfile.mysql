@@ -1,4 +1,4 @@
-FROM mysql:5.7-debian
+FROM mariadb:lts
 
 RUN apt-get update \
     && apt-get install -y \
@@ -6,8 +6,8 @@ RUN apt-get update \
         vim
 
 # Set default password
-ENV MYSQL_ROOT_PASSWORD=mysql
-ENV MYSQL_DATABASE=wordcamp_dev
+ENV MARIADB_ROOT_PASSWORD=mysql
+ENV MARIADB_DATABASE=wordcamp_dev
 
 ADD data/wordcamp_dev.sql /docker-entrypoint-initdb.d/data.sql
 

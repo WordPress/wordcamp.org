@@ -512,7 +512,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			$camptix->get_tickets_url()
 		);
 
-		$receipt_email = wp_unslash( $_POST['tix_stripe_receipt_email'] ?? '' );
+		$receipt_email = wp_unslash( $_REQUEST['tix_stripe_receipt_email'] ?? '' );
 		if ( ! $receipt_email && 1 === count( array_unique( wp_list_pluck( $_REQUEST['tix_attendee_info'], 'email' ) ) ) ) {
 			$receipt_email = end( $_REQUEST['tix_attendee_info'] )['email'];
 		}
@@ -538,10 +538,14 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		// Error has occured.
 		$camptix->log( 'Error during Stripe Checkout.', null, $session );
 
-		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, array(
-			'error_code' => is_wp_error( $session ) ? $session->get_error_code() : '',
-			'raw'        => $session,
-		) );
+		return $camptix->payment_result(
+			$payment_token,
+			CampTix_Plugin::PAYMENT_STATUS_FAILED,
+			array(
+				'error_code' => is_wp_error( $session ) ? $session->get_error_code() : '',
+				'raw'        => $session,
+			)
+		);
 	}
 
 	/**
@@ -825,7 +829,7 @@ class CampTix_Stripe_API_Client {
 	 * @return array|WP_Error
 	 */
 	public function create_session( $description, $items, $receipt_email, $return_url, $cancel_url, $metadata ) {
-		$line_items = [];
+		$line_items = array();
 		foreach ( $items as $item ) {
 			$line_item = array(
 				'quantity'     => $item['quantity'],
@@ -884,7 +888,7 @@ class CampTix_Stripe_API_Client {
 			array(
 				'session_id' => $session_id,
 				'expand'     => array(
-					'payment_intent'
+					'payment_intent',
 				),
 			),
 			'GET'

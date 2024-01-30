@@ -203,4 +203,26 @@ ADDRESS;
 
 		return true;
 	}
+
+	/**
+	 * Get lead organizer email if set.
+	 *
+	 * @return null|string
+	 */
+	public function get_organizer_email() {
+		if ( isset( $this->post ) && isset( $this->post->ID ) ) {
+			return get_post_meta( $this->post->ID, 'Email', true );
+		}
+	}
+
+	/**
+	 * Get meetup location if set
+	 *
+	 * @return null|string
+	 */
+	public function get_event_location() {
+		if ( isset( $this->post ) && isset( $this->post->ID ) ) {
+			return get_post_meta( $this->post->ID, 'City', true );
+		}
+	}
 }

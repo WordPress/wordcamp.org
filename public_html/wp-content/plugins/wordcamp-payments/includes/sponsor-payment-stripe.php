@@ -280,7 +280,7 @@ function _handle_post_data( &$data ) {
 						'wordcamp_id'      => $data['payment']['wordcamp_id'],
 						'wordcamp_site_id' => $data['payment']['wordcamp_id'],
 						'wordcamp_url'     => set_url_scheme( esc_url_raw( get_blog_option( $data['payment']['wordcamp_id'], 'home', '' ) ), 'https' ),
-					)
+					),
 				) );
 
 				if ( ! empty( $session->error ) ) {
@@ -321,7 +321,8 @@ function _handle_post_data( &$data ) {
 				$stripe  = new Stripe_Client( $data['keys']['secret'] );
 				$session = $stripe->retrieve_session( $session_id );
 			} catch ( Exception $e ) {
-				// This is handled by the empty() check below.
+				$data['errors'][] = 'Session data is missing.';
+				return;
 			}
 
 			if ( empty( $session ) ) {

@@ -324,7 +324,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * For Stripe we'll watch for some additional CampTix actions which may be
 	 * fired from Stripe either with a redirect (cancel and return)
 	 */
-	function template_redirect() {
+	public function template_redirect() {
 		if ( ! isset( $_REQUEST['tix_payment_method'] ) || 'stripe' != $_REQUEST['tix_payment_method'] ) {
 			return;
 		}
@@ -346,8 +346,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			 * delayed-settlement transfer payments are used (if they get enabled in the future).
 			 *
 			 * if ( 'payment_notify' == $_GET['tix_action'] ) {
-			 * 	// TODO
-			 * 	$this->payment_notify();
+			 *   $this->payment_notify();
 			 * }
 			 */
 		}
@@ -361,7 +360,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 *
 	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
 	 */
-	function payment_cancel() {
+	public function payment_cancel() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
@@ -390,7 +389,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 *
 	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
 	 */
-	function payment_return() {
+	public function payment_return() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
@@ -469,7 +468,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		if ( ! in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
-			wp_die( __( 'The selected currency is not supported by this payment method.', 'wordcamporg' ) );
+			wp_die( esc_html__( 'The selected currency is not supported by this payment method.', 'wordcamporg' ) );
 		}
 
 		$order = $this->get_order( $payment_token );
@@ -494,18 +493,24 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			$order_items[] = $item;
 		}
 
-		$return_url = add_query_arg( array(
-			'tix_action'         => 'payment_return',
-			'tix_payment_token'  => $payment_token,
-			'tix_payment_method' => 'stripe',
-			'tix_stripe_session' => '{CHECKOUT_SESSION_ID}',
-		), $camptix->get_tickets_url() );
+		$return_url = add_query_arg(
+			array(
+				'tix_action'         => 'payment_return',
+				'tix_payment_token'  => $payment_token,
+				'tix_payment_method' => 'stripe',
+				'tix_stripe_session' => '{CHECKOUT_SESSION_ID}',
+			),
+			$camptix->get_tickets_url()
+		);
 
-		$cancel_url = add_query_arg( array(
-			'tix_action'         => 'payment_cancel',
-			'tix_payment_token'  => $payment_token,
-			'tix_payment_method' => 'stripe',
-		), $camptix->get_tickets_url() );
+		$cancel_url = add_query_arg(
+			array(
+				'tix_action'         => 'payment_cancel',
+				'tix_payment_token'  => $payment_token,
+				'tix_payment_method' => 'stripe',
+			),
+			$camptix->get_tickets_url()
+		);
 
 		$receipt_email = wp_unslash( $_POST['tix_stripe_receipt_email'] ?? '' );
 		if ( ! $receipt_email && 1 === count( array_unique( wp_list_pluck( $_REQUEST['tix_attendee_info'], 'email' ) ) ) ) {
@@ -678,7 +683,7 @@ class CampTix_Stripe_API_Client {
 	/**
 	 * Get the API's endpoint URL for the given request type.
 	 *
-	 * @param string $request_type 'refund', 'create_session', 'get_session'
+	 * @param string $request_type 'refund', 'create_session', 'get_session'.
 	 *
 	 * @return string
 	 */
@@ -729,7 +734,7 @@ class CampTix_Stripe_API_Client {
 			'user-agent' => $this->user_agent,
 			'timeout'    => 30, // The default of 5 seconds can result in frequent timeouts.
 
-			'body' => $args ?: null,
+			'body' => $args ? $args : null,
 
 			'headers' => array(
 				'Authorization'   => 'Bearer ' . $this->api_secret_key,
@@ -822,19 +827,18 @@ class CampTix_Stripe_API_Client {
 	public function create_session( $description, $items, $receipt_email, $return_url, $cancel_url, $metadata ) {
 		$line_items = [];
 		foreach ( $items as $item ) {
-			$line_item = [
+			$line_item = array(
 				'quantity'     => $item['quantity'],
-				'price_data'   => [
-					'product_data' => [
+				'price_data'   => array(
+					'product_data' => array(
 						'name'        => $item['name'],
-						// 'description' => $item['description'] // cannot be empty.
-					],
+					),
 					'unit_amount' => $item['fractional_price'],
 					'currency'    => $this->currency,
-				],
-			];
+				),
+			);
 
-			if ( ! empty( $item['description' ] ) ) {
+			if ( ! empty( $item['description'] ) ) {
 				$line_item['price_data']['product_data']['description'] = $item['description'];
 			}
 
@@ -850,10 +854,10 @@ class CampTix_Stripe_API_Client {
 			'success_url'         => $return_url,
 			'cancel_url'          => $cancel_url,
 			'line_items'          => $line_items,
-			'payment_intent_data' => [
-				'description'          => $description, // Displayed in Stripe Dashboard
-				'statement_descriptor' => $statement_descriptor, // Displayed on purchasers statement
-			]
+			'payment_intent_data' => array(
+				'description'          => $description, // Displayed in Stripe Dashboard.
+				'statement_descriptor' => $statement_descriptor, // Displayed on purchasers statement.
+			),
 		);
 
 		if ( ! empty( $receipt_email ) && is_email( $receipt_email ) ) {
@@ -877,12 +881,14 @@ class CampTix_Stripe_API_Client {
 	public function get_session( $session_id ) {
 		return $this->send_request(
 			'get_session',
-			[
+			array(
 				'session_id' => $session_id,
-				'expand'     => [
+				'expand'     => array(
 					'payment_intent'
-				]
-			], 'GET' );
+				),
+			),
+			'GET'
+		);
 	}
 
 	/**

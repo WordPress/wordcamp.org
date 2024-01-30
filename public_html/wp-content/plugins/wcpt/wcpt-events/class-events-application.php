@@ -25,6 +25,15 @@ class Events_Application extends WordCamp_Application {
 	const SHORTCODE_SLUG = 'events-organizer-application';
 
 	/**
+	 * Return publicly displayed name of the event
+	 *
+	 * @return string
+	 */
+	public static function get_event_label() {
+		return __( 'WordPress event', 'wordcamporg' );
+	}
+
+	/**
 	 * Enqueue scripts and stylesheets
 	 */
 	public function enqueue_asset() {
@@ -193,5 +202,27 @@ ADDRESS;
 		$this->post = get_post( $post_id );
 
 		return true;
+	}
+
+	/**
+	 * Get lead organizer email if set.
+	 *
+	 * @return null|string
+	 */
+	public function get_organizer_email() {
+		if ( isset( $this->post ) && isset( $this->post->ID ) ) {
+			return get_post_meta( $this->post->ID, 'Email', true );
+		}
+	}
+
+	/**
+	 * Get meetup location if set
+	 *
+	 * @return null|string
+	 */
+	public function get_event_location() {
+		if ( isset( $this->post ) && isset( $this->post->ID ) ) {
+			return get_post_meta( $this->post->ID, 'City', true );
+		}
 	}
 }

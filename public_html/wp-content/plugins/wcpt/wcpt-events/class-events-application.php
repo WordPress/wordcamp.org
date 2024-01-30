@@ -25,6 +25,15 @@ class Events_Application extends WordCamp_Application {
 	const SHORTCODE_SLUG = 'events-organizer-application';
 
 	/**
+	 * Return publicly displayed name of the event
+	 *
+	 * @return string
+	 */
+	public static function get_event_label() {
+		return __( 'WordPress event', 'wordcamporg' );
+	}
+
+	/**
 	 * Enqueue scripts and stylesheets
 	 */
 	public function enqueue_asset() {

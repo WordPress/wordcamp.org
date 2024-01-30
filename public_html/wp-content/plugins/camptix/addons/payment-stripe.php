@@ -810,16 +810,16 @@ class CampTix_Stripe_API_Client {
 	/**
 	 * Create a checkout session on the Stripe API.
 	 *
-	 * @param string $statement_description The description of the payment for the card statement.
-	 * @param array  $items                 The line items for the payment.
-	 * @param string $receipt_email         The email of the user, if known.
-	 * @param string $return_url            The location to redirect to upon a success.
-	 * @param string $cancel_url            The location to redirect to upon a payment cancelation.
-	 * @param array  $metadata              Any Key-Value pairs to attach to the payment.
+	 * @param string $description   The description of the payment for the card statement.
+	 * @param array  $items         The line items for the payment.
+	 * @param string $receipt_email The email of the user, if known.
+	 * @param string $return_url    The location to redirect to upon a success.
+	 * @param string $cancel_url    The location to redirect to upon a payment cancelation.
+	 * @param array  $metadata      Any Key-Value pairs to attach to the payment.
 	 *
 	 * @return array|WP_Error
 	 */
-	public function create_session( $statement_description, $items, $receipt_email, $return_url, $cancel_url, $metadata ) {
+	public function create_session( $description, $items, $receipt_email, $return_url, $cancel_url, $metadata ) {
 		$line_items = [];
 		foreach ( $items as $item ) {
 			$line_item = [
@@ -841,14 +841,18 @@ class CampTix_Stripe_API_Client {
 			$line_items[] = $line_item;
 		}
 
+		$statement_descriptor = sanitize_text_field( $description );
+		$statement_descriptor = str_replace( array( '<', '>', '"', "'" ), '', $statement_descriptor );
+		$statement_descriptor = $this->trim_string( $statement_descriptor, 22 );
+
 		$args = array(
 			'mode'                => 'payment',
 			'success_url'         => $return_url,
 			'cancel_url'          => $cancel_url,
 			'line_items'          => $line_items,
 			'payment_intent_data' => [
-				'description'          => $statement_description, // Displayed in Stripe Dashboard
-				'statement_descriptor' => $statement_description, // Displayed on purchasers statement
+				'description'          => $description, // Displayed in Stripe Dashboard
+				'statement_descriptor' => $statement_descriptor, // Displayed on purchasers statement
 			]
 		);
 

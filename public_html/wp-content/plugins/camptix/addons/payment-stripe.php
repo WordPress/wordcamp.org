@@ -55,6 +55,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		);
 
 		add_action( 'camptix_form_attendee_info_before', array( $this, 'camptix_form_attendee_info_before' ), 10, 2 );
+		add_filter( 'tix_render_payment_options', array( $this, 'tix_render_payment_options' ), 20 );
 		add_filter( 'camptix_payment_result', array( $this, 'camptix_payment_result' ), 10, 3 );
 	}
 
@@ -104,53 +105,114 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$credentials = $this->get_api_credentials();
-
-		$item_summary = array();
+		$metadata    = array();
+		$order_items = array();
 		foreach ( $order['items'] as $item ) {
-			$item_summary[] = sprintf(
-				/* translators: 1: Name of ticket; 2: Quantity of ticket; */
-				__( '%1$s x %2$d', 'wordcamporg' ),
-				esc_js( $item['name'] ),
-				absint( $item['quantity'] )
-			);
-		}
+			$metadata[ $item['name'] ] = $item['quantity'];
 
-		/* translators: used between list items, there is a space after the comma */
-		$description = implode( __( ', ', 'wordcamporg' ), $item_summary );
+			// Stripe wants in decimal.
+			try {
+				$item['price'] = $this->get_fractional_unit_amount( $options['currency'], $item['price'] );
+			} catch ( Exception $exception ) {
+				$item['price'] = null;
+			}
+
+			$order_items[] = $item;
+		}
 
 		wp_enqueue_script(
 			'stripe-checkout',
-			'https://checkout.stripe.com/checkout.js',
+			'https://js.stripe.com/v3/',
 			array(),
 			false,
 			true
 		);
+		wp_register_style( 'stripe-checkout', false );
+		wp_enqueue_style( 'stripe-checkout' );
 
-		try {
-			$amount = $this->get_fractional_unit_amount( $options['currency'], $order['total'] );
-		} catch ( Exception $exception ) {
-			$amount = null;
-		}
-
-		/**
-		 * Filter: Modify the URL of the image used for the Stripe checkout overlay.
-		 *
-		 * By default, the Site Icon URL will be used for this image if one is available.
-		 *
-		 * @param string $checkout_image_url
-		 */
-		$checkout_image_url = apply_filters( 'camptix_stripe_checkout_image_url', get_site_icon_url() );
+		$receipt_email   = ! empty( $_POST['tix_stripe_receipt_email'] ) ? wp_unslash( $_POST['tix_stripe_receipt_email'] ) : '';
+		$return_url      = get_permalink();
+		$stripe          = new CampTix_Stripe_API_Client( '', $credentials['api_secret_key'] );
+		$payment_session = $stripe->create_session( $order_items, $receipt_email, $return_url, $metadata );
 
 		wp_localize_script( 'stripe-checkout', 'CampTixStripeData', array(
 			'public_key'    => $credentials['api_public_key'],
-			'name'          => $options['event_name'],
+			'session_id'    => $payment_session['client_secret'] ?? '',
+			/*'name'          => $options['event_name'],
 			'image'         => ( $checkout_image_url ) ? esc_url( $checkout_image_url ) : '',
 			'description'   => trim( $description ),
 			'amount'        => $amount,
 			'currency'      => $options['currency'],
 			'token'         => ! empty( $_POST['tix_stripe_token'] )         ? wp_unslash( $_POST['tix_stripe_token'] )         : '',
-			'receipt_email' => ! empty( $_POST['tix_stripe_receipt_email'] ) ? wp_unslash( $_POST['tix_stripe_receipt_email'] ) : '',
+			'receipt_email' => ! empty( $_POST['tix_stripe_receipt_email'] ) ? wp_unslash( $_POST['tix_stripe_receipt_email'] ) : '',*/
 		) );
+
+		wp_add_inline_script(
+			'stripe-checkout',
+			<<<JS
+				(async function( options ) {
+					const stripe   = Stripe( options.public_key );
+					const checkout = await stripe.initEmbeddedCheckout( {
+						clientSecret: options.session_id
+					} );
+
+					document.querySelector('.tix-checkout-button').addEventListener( 'click', function( event ) {
+						if ( ! document.querySelector('input[name="tix_payment_method"][value="stripe"]:checked') ) {
+							return;
+						}
+						event.preventDefault();
+
+						const dialogEl = document.querySelector( '#stripe-embedded-checkout' );
+
+						dialogEl.showModal();
+						document.querySelector( '#stripe-embedded-checkout button.close' ).addEventListener( 'click', function( event ) {
+							event.preventDefault();
+							dialogEl.close();
+						} );
+
+						checkout.mount('#stripe-embedded-checkout-content');
+					} );
+				} )(CampTixStripeData)
+			JS,
+			'after'
+		);
+		wp_add_inline_style(
+			'stripe-checkout',
+			<<<CSS
+				dialog#stripe-embedded-checkout {
+					width: 80%;
+					height: auto;
+				}
+				@media ( max-width: 768px ) {
+					dialog#stripe-embedded-checkout {
+						width: 100%;
+						height: 100%;
+					}
+				}
+				dialog#stripe-embedded-checkout::backdrop {
+					background-color: rgba(0, 0, 0, 0.7 );
+				}
+				dialog#stripe-embedded-checkout .controls {
+					position: absolute;
+					right: 0;
+					top: 0;
+				}
+				dialog#stripe-embedded-checkout .controls button {
+					position: sticky;
+				}
+			CSS
+		);
+	}
+
+	public function tix_render_payment_options( $html ) {
+		$html .= '<dialog id="stripe-embedded-checkout">
+			<div class="controls">
+				<button class="close" aria-label="close" formnovalidate>X</button>
+			</div>
+			<div id="stripe-embedded-checkout-content"></div>
+		</dialog>';
+
+		return $html;
 	}
 
 	/**
@@ -641,11 +703,11 @@ class CampTix_Stripe_API_Client {
 	/**
 	 * Get the API's endpoint URL for the given request type.
 	 *
-	 * @param string $request_type 'charge' or 'refund'.
+	 * @param string $request_type 'charge', 'refund', 'create_session', 'get_session'
 	 *
 	 * @return string
 	 */
-	protected function get_request_url( $request_type ) {
+	protected function get_request_url( $request_type, $args ) {
 		$request_url = '';
 
 		$api_base = 'https://api.stripe.com/';
@@ -656,6 +718,12 @@ class CampTix_Stripe_API_Client {
 				break;
 			case 'refund':
 				$request_url = $api_base . 'v1/refunds';
+				break;
+			case 'create_session':
+				$request_url = $api_base . '/v1/checkout/sessions';
+				break;
+			case 'get_session':
+				$request_url = $api_base . '/v1/checkout/sessions/' . ( $args['session_id'] ?? '' );
 				break;
 		}
 
@@ -670,8 +738,8 @@ class CampTix_Stripe_API_Client {
 	 *
 	 * @return array|WP_Error
 	 */
-	protected function send_request( $type, $args ) {
-		$request_url = $this->get_request_url( $type );
+	protected function send_request( $type, $args, $method = 'POST' ) {
+		$request_url = $this->get_request_url( $type, $args );
 
 		if ( ! $request_url ) {
 			return new WP_Error(
@@ -684,10 +752,11 @@ class CampTix_Stripe_API_Client {
 		}
 
 		$request_args = array(
+			'method'     => $method,
 			'user-agent' => $this->user_agent,
 			'timeout'    => 30, // The default of 5 seconds can result in frequent timeouts.
 
-			'body' => $args,
+			'body' => $args ?: null,
 
 			'headers' => array(
 				'Authorization'   => 'Bearer ' . $this->api_secret_key,
@@ -695,7 +764,7 @@ class CampTix_Stripe_API_Client {
 			),
 		);
 
-		$response = wp_remote_post( $request_url, $request_args );
+		$response = wp_remote_request( $request_url, $request_args );
 
 		if ( is_wp_error( $response ) ) {
 			return $response;
@@ -763,6 +832,53 @@ class CampTix_Stripe_API_Client {
 		);
 
 		return $error;
+	}
+
+	/**
+	 * Create a checkout session on the Stripe API.
+	 *
+	 * 
+	 */
+	public function create_session( $items, $receipt_email, $return_url, $metadata ) {
+		$line_items = [];
+		foreach ( $items as $item ) {
+			$line_items[] = [
+				'quantity'     => $item['quantity'],
+				'price_data'   => [
+					'product_data' => [
+						'name'        => $item['name'],
+						// 'description' => $item['description'] // cannot be empty.
+					],
+					'unit_amount'  => $item['price'],
+					'currency'     => $this->currency,
+				],
+			];
+
+		}
+
+		$args = array(
+			'ui_mode'    => 'embedded',
+			'mode'       => 'payment',
+			'line_items' => $line_items,
+		);
+
+		if ( ! empty( $receipt_email ) && is_email( $receipt_email ) ) {
+			$args['customer_email'] = $receipt_email;
+		}
+
+		if ( ! empty( $return_url ) ) {
+			$args['return_url'] = $return_url;
+		}
+
+		if ( is_array( $metadata ) && ! empty( $metadata ) ) {
+			$args['metadata'] = $this->clean_metadata( $metadata );
+		}
+
+		return $this->send_request( 'create_session', $args );
+	}
+
+	public function get_session( $session_id ) {
+		return $this->send_request( 'get_session', compact( 'session_id' ), 'GET' );
 	}
 
 	/**

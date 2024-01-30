@@ -284,13 +284,17 @@ function _handle_post_data( &$data ) {
 				) );
 
 				if ( ! empty( $session->error ) ) {
+					$data['step']     = STEP_SELECT_INVOICE;
 					$data['errors'][] = $session->error->message;
 					return;
 				}
 
 				$data['session_secret'] = $session->client_secret;
 			} catch ( Exception $e ) {
-				// TODO: This is currently unhandled.
+				// Reset back to the start.
+				$data['step']     = STEP_SELECT_INVOICE;
+				$data['errors'][] = 'Payment initialization failed.';
+				return;
 			}
 
 			break;

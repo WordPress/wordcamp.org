@@ -4978,7 +4978,8 @@ class CampTix_Plugin {
 			// Release a reservation.
 			if ( isset( $_POST['tix_reservation_release'] ) && is_array( $_POST['tix_reservation_release'] ) ) {
 				$release = $_POST['tix_reservation_release'];
-				$release_token = array_shift( array_keys( $release ) );
+				$release = array_keys( $release );
+				$release_token = array_shift( $release );
 
 				$reservations = $this->get_reservations( $post_id );
 				if ( isset( $reservations[$release_token] ) ) {
@@ -4990,7 +4991,8 @@ class CampTix_Plugin {
 			// Cancel a reservation: same as release, but decreases quantity.
 			if ( isset( $_POST['tix_reservation_cancel'] ) && is_array( $_POST['tix_reservation_cancel'] ) ) {
 				$cancel = $_POST['tix_reservation_cancel'];
-				$cancel_token = array_shift( array_keys( $cancel ) );
+				$cancel = array_keys( $cancel );
+				$cancel_token = array_shift( $cancel );
 
 				$reservations = $this->get_reservations( $post_id );
 				if ( isset( $reservations[$cancel_token] ) ) {
@@ -7035,9 +7037,9 @@ class CampTix_Plugin {
 		$receipt_email = false;
 		$payment_method = false;
 
-		if ( isset( $_POST['tix_payment_method'] ) && array_key_exists( $_POST['tix_payment_method'], $this->get_enabled_payment_methods() ) )
+		if ( isset( $_POST['tix_payment_method'] ) && array_key_exists( (string) $_POST['tix_payment_method'], $this->get_enabled_payment_methods() ) ) {
 			$payment_method = $_POST['tix_payment_method'];
-		elseif ( ! empty( $this->order['total'] ) && $this->order['total'] > 0 ) {
+		} elseif ( ! empty( $this->order['total'] ) && $this->order['total'] > 0 ) {
 			$this->error_flags['invalid_payment_method'] = true;
 		}
 

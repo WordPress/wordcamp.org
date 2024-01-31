@@ -819,10 +819,10 @@ Thanks for helping us with these details!",
 	 */
 	protected function sanitize_save_misc_fields( $post_id ) {
 		$post = get_post( $post_id );
-
 		// Status
 		if ( current_user_can( 'manage_network' ) ) {
-			$safe_value = strtotime( sanitize_text_field( $_POST['date_vendor_paid'] ) );
+			// phpcs:ignore WordPress.Security.NonceVerification -- Nonce is verified in `save_payment()`.
+			$safe_value = strtotime( sanitize_text_field( $_POST['date_vendor_paid'] ?? '' ) );
 			update_post_meta( $post_id, '_camppayments_date_vendor_paid', $safe_value );
 		}
 

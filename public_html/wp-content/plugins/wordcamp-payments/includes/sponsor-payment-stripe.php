@@ -282,7 +282,7 @@ function _handle_post_data( &$data ) {
 					),
 					'payment_intent_data' => array(
 						'description'          => 'Event Sponsorship Payment:' . $data['payment']['description'], // Displayed in Stripe Dashboard.
-						'statement_descriptor' => 'Event Sponsorship Payment', // Displayed on purchasers statement.
+						'statement_descriptor' => mb_strcut( 'Event Sponsorship Payment', 0, 22 ), // Displayed on purchasers statement.
 					),
 				) );
 

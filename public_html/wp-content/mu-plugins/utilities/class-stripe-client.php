@@ -40,8 +40,8 @@ class Stripe_Client {
 	 * @throws Exception
 	 */
 	public function create_session( $args ) {
-		$amount   = array_sum( wp_list_pluck( wp_list_pluck( $args['line_items'] ?? [], 'price_data' ), 'unit_amount' ) );
-		$currency = wp_list_pluck( wp_list_pluck( $args['line_items'] ?? [], 'price_data' ), 'currency' )[0] ?? '';
+		$amount   = array_sum( wp_list_pluck( wp_list_pluck( $args['line_items'] ?? array(), 'price_data' ), 'unit_amount' ) );
+		$currency = wp_list_pluck( wp_list_pluck( $args['line_items'] ?? array(), 'price_data' ), 'currency' )[0] ?? '';
 
 		/**
 		 * Stripe doesn't allow amounts larger than `AMOUNT_MAX`, even in currencies where that's the equivalent of less than $5k USD.

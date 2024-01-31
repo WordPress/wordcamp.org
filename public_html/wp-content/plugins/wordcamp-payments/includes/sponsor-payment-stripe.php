@@ -274,15 +274,15 @@ function _handle_post_data( &$data ) {
 							),
 						),
 					),
-					'metadata' => array(
-						'invoice_id'       => $data['payment']['invoice_id'],
-						'wordcamp_id'      => $data['payment']['wordcamp_id'],
-						'wordcamp_site_id' => $data['payment']['wordcamp_id'],
-						'wordcamp_url'     => set_url_scheme( esc_url_raw( get_blog_option( $data['payment']['wordcamp_id'], 'home', '' ) ), 'https' ),
-					),
 					'payment_intent_data' => array(
 						'description'          => 'Event Sponsorship Payment:' . $data['payment']['description'], // Displayed in Stripe Dashboard.
 						'statement_descriptor' => mb_strcut( 'Event Sponsorship Payment', 0, 22 ), // Displayed on purchasers statement.
+						'metadata'             => array(
+							'invoice_id'       => $data['payment']['invoice_id'],
+							'wordcamp_id'      => $data['payment']['wordcamp_id'],
+							'wordcamp_site_id' => $data['payment']['wordcamp_id'],
+							'wordcamp_url'     => set_url_scheme( esc_url_raw( get_blog_option( $data['payment']['wordcamp_id'], 'home', '' ) ), 'https' ),
+						),
 					),
 				) );
 

@@ -284,7 +284,9 @@ function sort_facets( array $facets ): array {
 	array_walk(
 		$facets,
 		function ( &$facet ) {
-			sort( $facet );
+			if ( is_array( $facet ) ) {
+				sort( $facet );
+			}
 		}
 	);
 

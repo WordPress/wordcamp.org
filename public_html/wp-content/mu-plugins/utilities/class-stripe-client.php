@@ -40,6 +40,26 @@ class Stripe_Client {
 	 * @throws Exception
 	 */
 	public function create_session( $args ) {
+		$amount   = array_sum( wp_list_pluck( wp_list_pluck( $args['line_items'] ?? [], 'price_data' ), 'unit_amount' ) );
+		$currency = end( wp_list_pluck( wp_list_pluck( $args['line_items'] ?? [], 'price_data' ), 'currency' ) );
+
+		/**
+		 * Stripe doesn't allow amounts larger than `AMOUNT_MAX`, even in currencies where that's the equivalent of less than $5k USD.
+		 *
+		 * The amount in the error message is converted back to the base unit, to avoid confusing the user.
+		 *
+		 * See https://stripe.com/docs/currencies#minimum-and-maximum-charge-amounts.
+		 */
+		if ( $amount > self::AMOUNT_MAX ) {
+			throw new Exception( sprintf(
+				// translators: Do _not_ translate "USD" to your locale; it is meant to stay as "USD" exactly.
+				__( "We're sorry, but we can't accept amounts larger than %s. Please send the equivalent in USD, or break it up into several smaller payments. Feel free to email <a href='mailto:%s'>%s</a> with any questions.", 'wordcamporg' ),
+				number_format( self::AMOUNT_MAX / self::get_fractional_unit_multiplier( $currency ), 2 ),
+				EMAIL_CENTRAL_SUPPORT,
+				EMAIL_CENTRAL_SUPPORT
+			) );
+		}
+
 		$headers = array(
 			'Authorization'  => 'Bearer ' . $this->secret_key,
 			'Stripe-Version' => '2023-10-16',
@@ -55,7 +75,11 @@ class Stripe_Client {
 
 		if ( is_wp_error( $response ) ) {
 			Logger\log( 'response_error', compact( 'response' ) );
-			throw new Exception( $response->get_error_message() );
+			throw new Exception( sprintf(
+				__( "We're sorry, but we encountered an error trying to process that transaction. Please email <a href='mailto:%s'>%s</a> for help.", 'wordcamporg' ),
+				EMAIL_CENTRAL_SUPPORT,
+				EMAIL_CENTRAL_SUPPORT
+			) );
 		}
 
 		return json_decode( wp_remote_retrieve_body( $response ) );
@@ -89,82 +113,6 @@ class Stripe_Client {
 
 		if ( is_wp_error( $response ) ) {
 			Logger\log( 'response_error', compact( 'response' ) );
-			throw new Exception( $response->get_error_message() );
-		}
-
-		return json_decode( wp_remote_retrieve_body( $response ) );
-	}
-
-	/**
-	 * Charge the attendee for their ticket via Stripe's API
-	 *
-	 * @param array $body    Transaction data to send to Stripe API.
-	 *                       See https://stripe.com/docs/api#create_charge for valid fields.
-	 *                       The `source` parameter is a card token from https://checkout.stripe.com/checkout.js.
-	 * @param array $headers Optionally add extra headers to the request, like `Idempotency-Key`.
-	 *
-	 * @return object
-	 *
-	 * @throws Exception
-	 */
-	public function charge( $body, $headers = array() ) {
-		if ( isset( $body['statement_descriptor'] ) ) {
-			$body['statement_descriptor'] = sanitize_text_field( $body['statement_descriptor'] );
-			$body['statement_descriptor'] = str_replace( array( '<', '>', '"', "'" ), '', $body['statement_descriptor'] );
-			$body['statement_descriptor'] = mb_substr( $body['statement_descriptor'], 0, 22 );
-		}
-
-		$headers = shortcode_atts( array(
-			'Authorization' => 'Bearer ' . $this->secret_key,
-		), $headers );
-
-		$request_args = array(
-			'user-agent' => 'WordCamp.org :: ' . __CLASS__,
-			'body'       => $body,
-			'headers'    => $headers,
-		);
-
-		/**
-		 * Stripe doesn't allow amounts larger than `AMOUNT_MAX`, even in currencies where that's the equivalent of less than $5k USD.
-		 *
-		 * The amount in the error message is converted back to the base unit, to avoid confusing the user.
-		 *
-		 * See https://botbot.me/freenode/stripe/msg/47523902/.
-		 * See https://stripe.com/docs/currencies#minimum-and-maximum-charge-amounts.
-		 */
-		if ( isset( $request_args['body']['amount'] ) && $request_args['body']['amount'] > self::AMOUNT_MAX ) {
-			throw new Exception( sprintf(
-				// translators: Do _not_ translate "USD" to your locale; it is meant to stay as "USD" exactly.
-				__( "We're sorry, but we can't accept amounts larger than %s. Please send the equivalent in USD, or break it up into several smaller payments. Feel free to email <a href='mailto:%s'>%s</a> with any questions.", 'wordcamporg' ),
-				number_format( self::AMOUNT_MAX / self::get_fractional_unit_multiplier( $request_args['body']['currency'] ), 2 ),
-				EMAIL_CENTRAL_SUPPORT,
-				EMAIL_CENTRAL_SUPPORT
-			) );
-		}
-
-		$response = wp_remote_post( self::API_URL . '/v1/charges', $request_args );
-
-		if ( is_wp_error( $response ) ) {
-			Logger\log( 'response_error', compact( 'response' ) );
-			throw new Exception( $response->get_error_message() );
-		}
-
-		$body = json_decode( wp_remote_retrieve_body( $response ) );
-
-		/*
-		 * Declined cards are the most common type of error, so informing the user that it was declined should
-		 * significantly cut down on support requests.
-		 */
-		if ( isset( $body->error->type ) && 'card_error' === $body->error->type ) {
-			throw new Exception( sprintf(
-				__( "We're sorry, but that card was declined by the issuer, please try another. You can also contact the card issuer to find out why they declined it, or email <a href='mailto:%s'>%s</a> with any other questions.", 'wordcamporg' ),
-				EMAIL_CENTRAL_SUPPORT,
-				EMAIL_CENTRAL_SUPPORT
-			) );
-		}
-
-		if ( empty( $body->id ) || empty( $body->paid ) || ! $body->paid ) {
-			Logger\log( 'unexpected_response_body', compact( 'response' ) );
 			throw new Exception( sprintf(
 				__( "We're sorry, but we encountered an error trying to process that transaction. Please email <a href='mailto:%s'>%s</a> for help.", 'wordcamporg' ),
 				EMAIL_CENTRAL_SUPPORT,
@@ -172,7 +120,7 @@ class Stripe_Client {
 			) );
 		}
 
-		return $body;
+		return json_decode( wp_remote_retrieve_body( $response ) );
 	}
 
 	/**

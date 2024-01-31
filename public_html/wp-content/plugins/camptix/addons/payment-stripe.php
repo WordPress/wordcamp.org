@@ -490,6 +490,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				$item['fractional_price'] = $item['price'];
 			}
 
+			// Prefix the Event name to the line item.
+			$item['name'] = $this->camptix_options['event_name'] . ': ' . $item['name'];
+
 			$order_items[] = $item;
 		}
 
@@ -855,6 +858,7 @@ class CampTix_Stripe_API_Client {
 
 		$args = array(
 			'mode'                => 'payment',
+			'submit_type'         => 'book',
 			'success_url'         => $return_url,
 			'cancel_url'          => $cancel_url,
 			'line_items'          => $line_items,

@@ -873,7 +873,7 @@ class CampTix_Stripe_API_Client {
 		}
 
 		if ( is_array( $metadata ) && ! empty( $metadata ) ) {
-			$args['metadata'] = $this->clean_metadata( $metadata );
+			$args['payment_intent_data']['metadata'] = $this->clean_metadata( $metadata );
 		}
 
 		return $this->send_request( 'create_session', $args );

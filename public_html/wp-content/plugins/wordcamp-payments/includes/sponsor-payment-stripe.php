@@ -296,13 +296,13 @@ function _handle_post_data( &$data ) {
 			} catch ( Exception $e ) {
 				// Reset back to the start.
 				$data['step']     = STEP_SELECT_INVOICE;
-				$data['errors'][] = 'Payment initialization failed.';
+				$data['errors'][] = $e->getMessage();
 				return;
 			}
 
 			break;
 
-		// The card details have been entered and Stripe has submitted our form.
+		// The payment has been taken.
 		case STEP_PAYMENT_DETAILS:
 			$payment_data_json      = wp_unslash( $_REQUEST['payment_data_json'] ?? '' );
 			$payment_data_signature = wp_unslash( $_REQUEST['payment_data_signature'] ?? '' );

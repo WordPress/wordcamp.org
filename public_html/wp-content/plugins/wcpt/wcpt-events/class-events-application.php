@@ -150,7 +150,7 @@ class Events_Application extends WordCamp_Application {
 	public function create_post( $data ) {
 		// Create the post.
 		$wordcamp_user_id = get_user_by( 'email', 'support@wordcamp.org' )->ID;
-		$statues = \WordCamp_Loader::get_post_statuses();
+		$statuses = \WordCamp_Loader::get_post_statuses();
 
 		$post = array(
 			'post_type'   => self::get_event_type(),

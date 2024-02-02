@@ -22,6 +22,14 @@ function maybe_add_latest_site_hints() {
 		return;
 	}
 
+	// Check to see if they simply differ by an identifier.
+	if (
+		str_contains( $latest_domain . get_site_url(), '-' ) &&
+		preg_replace( '/(\d{4})-[^/]+/', '$1', trailingslashit( get_site_url() ) ) === preg_replace( '/(\d{4})-[^/]+/', '$1', $latest_domain )
+	) {
+		return;
+	}
+
 	// Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 	add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );
 

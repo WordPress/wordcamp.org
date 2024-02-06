@@ -817,7 +817,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return $post_data;
 			}
 
-			$post = get_post( $post_data_raw['post_ID'] );
+			$post = get_post( $post_data_raw['ID'] );
 			if ( ! $post ) {
 				return $post_data;
 			}

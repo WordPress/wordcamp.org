@@ -20,6 +20,7 @@ class Database_TestCase extends WP_UnitTestCase {
 	protected static $slash_year_2016_site_id;
 	protected static $slash_year_2018_dev_site_id;
 	protected static $slash_year_2020_site_id;
+	protected static $slash_year_2020_dev_site_id;
 	protected static $yearless_site_id;
 	protected static $slash_year_with_yearless_site_id;
 
@@ -65,6 +66,12 @@ class Database_TestCase extends WP_UnitTestCase {
 			'network_id' => WORDCAMP_NETWORK_ID,
 		) );
 
+		self::$slash_year_2020_dev_site_id = $factory->blog->create( array(
+			'domain'     => 'vancouver.wordcamp.test',
+			'path'       => '/2020-developers/',
+			'network_id' => WORDCAMP_NETWORK_ID,
+		) );
+
 		// Sites like this are old edge cases from before a consistent structure was enforced.
 		self::$yearless_site_id = $factory->blog->create( array(
 			'domain'     => 'japan.wordcamp.test',
@@ -98,6 +105,7 @@ class Database_TestCase extends WP_UnitTestCase {
 		wp_delete_site( self::$slash_year_2016_site_id );
 		wp_delete_site( self::$slash_year_2018_dev_site_id );
 		wp_delete_site( self::$slash_year_2020_site_id );
+		wp_delete_site( self::$slash_year_2020_dev_site_id );
 
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", WORDCAMP_NETWORK_ID ) );
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->site}     WHERE id      = %d", WORDCAMP_NETWORK_ID ) );

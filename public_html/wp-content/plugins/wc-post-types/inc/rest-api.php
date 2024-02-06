@@ -613,6 +613,8 @@ function prepare_session_query_args( $args, $request ) {
 		$args['orderby']  = 'meta_value_num';
 	}
 
+	$args['post_status'] = array( 'publish', 'private' );
+
 	return $args;
 }
 

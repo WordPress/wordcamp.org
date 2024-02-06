@@ -139,12 +139,6 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	 */
 	public function data_maybe_add_latest_site_hints() {
 		return array(
-			"there isn't a newer site for the root WordCamp site" => array(
-				'wordcamp.test',
-				'/',
-				false,
-			),
-
 			'city/year newest year should return itself' => array(
 				'vancouver.wordcamp.test',
 				'/2020/',

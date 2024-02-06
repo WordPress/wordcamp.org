@@ -4,7 +4,7 @@ namespace WordCamp\Latest_Site_Hints\Tests;
 use WP_UnitTest_Factory;
 use WordCamp\Tests\Database_TestCase;
 
-use function WordCamp\Latest_Site_Hints\get_latest_home_url;
+use function WordCamp\Latest_Site_Hints\{ get_latest_home_url, maybe_add_latest_site_hints };
 
 defined( 'WPINC' ) || die();
 
@@ -107,4 +107,63 @@ class Test_WordCamp_SEO extends Database_TestCase {
 			),
 		);
 	}
+
+
+	/**
+	 * @covers WordCamp\Latest_Site_Hints\maybe_add_latest_site_hints
+	 *
+	 * @dataProvider data_maybe_add_latest_site_hints
+	 */
+	public function test_maybe_add_latest_site_hints( $domain, $path, $expected ) {
+
+		// Sanity Check
+		$this->assertFalse( has_filter( 'wp_head', 'WordCamp\Latest_Site_Hints\add_notification_styles' ) );
+
+		// Switch to blog
+		$site = get_site_by_path( $domain, $path );
+		$this->assertNotFalse( $site );
+		switch_to_blog( $site->ID );
+
+		// Initialize.
+		maybe_add_latest_site_hints();
+
+		// Verify expected.
+		$actual = has_filter( 'wp_head', 'WordCamp\Latest_Site_Hints\add_notification_styles' );
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_latest_home_url().
+	 *
+	 * @return array
+	 */
+	public function data_maybe_add_latest_site_hints() {
+		return array(
+			"there isn't a newer site for the root WordCamp site" => array(
+				'wordcamp.test',
+				'/',
+				false,
+			),
+
+			'city/year newest year should return itself' => array(
+				'vancouver.wordcamp.test',
+				'/2020/',
+				false,
+			),
+
+			'city/year newest year with identifier `-foo` should return itself' => array(
+				'vancouver.wordcamp.test',
+				'/2020-developers/',
+				false,
+			),
+
+			'city/year old year should return newest' => array(
+				'vancouver.wordcamp.test',
+				'/2018-developers/',
+				true,
+			),
+
+		);
+	}
+
 }

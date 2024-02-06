@@ -55,7 +55,7 @@ function canonical_link_past_home_pages_to_current_year() {
 	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
 
 	// Nothing to do. `wporg-seo` will still print the standard canonical link.
-	if ( ! $latest_domain || trailingslashit( get_site_url() ) === $latest_domain ) {
+	if ( ! $latest_domain ) {
 		return;
 	}
 
@@ -122,9 +122,7 @@ function show_notification_about_latest_site() {
 	global $current_blog;
 
 	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
-
-	// Check if there is newer site for the WordCamp.
-	if ( ! $latest_domain || $latest_domain === $current_blog->domain ) {
+	if ( ! $latest_domain ) {
 		return;
 	}
 

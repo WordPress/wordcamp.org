@@ -116,10 +116,10 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	 */
 	public function test_maybe_add_latest_site_hints( $domain, $path, $expected ) {
 
-		// Sanity Check
+		// Sanity Check.
 		$this->assertFalse( has_filter( 'wp_head', 'WordCamp\Latest_Site_Hints\add_notification_styles' ) );
 
-		// Switch to blog
+		// Switch to blog.
 		$site = get_site_by_path( $domain, $path );
 		$this->assertNotFalse( $site );
 		switch_to_blog( $site->ID );
@@ -157,12 +157,11 @@ class Test_WordCamp_SEO extends Database_TestCase {
 				true,
 			),
 
-			'city/year old year should return newest' => array(
+			'city/year old year should return newest2' => array(
 				'vancouver.wordcamp.test',
 				'/2018-developers/',
 				true,
 			),
 		);
 	}
-
 }

@@ -139,6 +139,7 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 
 							<div>
 								<label for="q_country">Country</label>
+								<span class="PDF_mand">*</span>
 								<br/>
 
 								<select name="q_country" id="q_country" required>

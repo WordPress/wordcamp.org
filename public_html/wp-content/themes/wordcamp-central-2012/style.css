@@ -1813,7 +1813,7 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 	font-size: 14px;
 	text-align: center;
 
-	width: 220px;
+	width: 219px;
 	margin: 22px 60px 0 0;
 }
 
@@ -1833,7 +1833,6 @@ li:after { content: "."; display: block; height: 0; clear: both; visibility: hid
 .single-wordcamp .wc-single-website img {
 	display: block;
 	margin: 0 auto 5px;
-	width: inherit;
 	border: 7px #fff solid;
 	box-sizing: border-box;
 	box-shadow: 0px 2px 5px #75888a;
@@ -3046,12 +3045,21 @@ h3#comments-title {
 		width: 100%;
 	}
 
+	#masthead {
+		width: 94%;
+	}
+
 	#footer {
 		margin-top: 30px;
 	}
 
 	#branding  {
 		overflow:hidden;
+	}
+
+	#site-title {
+		box-sizing: border-box;
+		width: 100%;
 	}
 
 	#content img {
@@ -3128,23 +3136,24 @@ h3#comments-title {
 		box-sizing: border-box;
 		margin-left: 0;
 		margin-bottom: 20px;
-		margin-right: 0;
 		width: 25%;
+	}
+
+
+	.single-wordcamp .wc-single-website {
+		margin-left: 20px;
+		margin-right: 20px;
+		max-width: 33%;
 	}
 
 	.single-wordcamp .wc-single-info {
 		padding-left: 25px;
 		padding-right: 25px;
-		width: 50%;
+		width: 100%;
 	}
 }
 
 @media screen and (max-width: 950px) {
-	#site-title {
-		box-sizing: border-box;
-		padding-left: 10px;
-	}
-
 	#access {
 		position: relative;
 		left: auto;
@@ -3230,8 +3239,8 @@ h3#comments-title {
 		overflow:hidden;
 	}
 
-	#site-title {
-		width: 100%;
+	#masthead {
+		width: 96%;
 	}
 
 	#container {
@@ -3376,11 +3385,8 @@ h3#comments-title {
 		width: 100%;
 	}
 
-	.single-wordcamp .wc-single-website {
-		width: 33%;
-	}
 	.single-wordcamp .wc-single-info {
-		width: 67%;
+		width: 100%;
 	}
 
 	.single-wordcamp .wc-single-past {
@@ -3508,6 +3514,16 @@ h3#comments-title {
 		width: 100%;
 	}
 
+	.single-wordcamp .wc-single-website {
+		margin-left: 0;
+		margin-right: 0;
+		max-width: 100%;
+	}
+
+	.single-wordcamp .wc-single-website img {
+		width: inherit;
+	}
+
 	.wc-single-past {
 		padding-left: 25px;
 		padding-right: 25px;
@@ -3541,6 +3557,10 @@ h3#comments-title {
 }
 
 @media screen and (max-width: 400px) {
+	#masthead {
+		width: 94%;
+	}
+
 	#site-title a {
 		background-size: contain;
 		width: 94%;

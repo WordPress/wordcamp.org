@@ -155,12 +155,17 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 *
 	 * @covers WCOR_Mailer::send_timed_emails
 	 */
-	public function test_timed_messages_sent( $send_when, $send_when_period, $send_when_days, $compare_date ) {
+	public function test_timed_messages_sent( $send_when, $send_when_period, $send_when_days, $compare_date, $wordcamp_post_status ) {
 		/** @var WCOR_Mailer $WCOR_Mailer */
 		global $WCOR_Mailer;
 
 		update_post_meta( self::$timed_reminder_post_id, 'wcor_send_when',  $send_when      );
 		update_post_meta( self::$timed_reminder_post_id, $send_when_period, $send_when_days );
+
+		wp_update_post( array(
+			'ID'          => self::$wordcamp_dayton_post_id,
+			'post_status' => $wordcamp_post_status,
+		) );
 
 		if ( in_array( $send_when, array( 'wcor_send_before', 'wcor_send_after' ) ) ) {
 			update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)', $compare_date );
@@ -174,14 +179,18 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 
 		do_action( 'wcor_send_timed_emails' );
 
-		$this->assert_mail_succeeded(
-			'sally.smith+trez@gmail.com',
-			"It's time to submit WordCamp Dayton reimbursement requests",
-			"Howdy Sally Smith, now's the perfect time to request reimbursement for any out of pocket expenses. You can do that at https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement.\n"
-		);
+		if ( 'wcor_send_after' === $send_when && 'wcpt-cancelled' === $wordcamp_post_status ) {
+			$this->assertSame( '', $wordcamp->wcor_sent_email_ids );
+		} else {
+			$this->assert_mail_succeeded(
+				'sally.smith+trez@gmail.com',
+				"It's time to submit WordCamp Dayton reimbursement requests",
+				"Howdy Sally Smith, now's the perfect time to request reimbursement for any out of pocket expenses. You can do that at https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement.\n"
+			);
 
-		$this->assertIsArray( $wordcamp->wcor_sent_email_ids );
-		$this->assertContains( self::$timed_reminder_post_id, $wordcamp->wcor_sent_email_ids );
+			$this->assertIsArray( $wordcamp->wcor_sent_email_ids );
+			$this->assertContains( self::$timed_reminder_post_id, $wordcamp->wcor_sent_email_ids );
+		}
 	}
 
 	/**
@@ -191,28 +200,40 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 */
 	public function data_timed_messages_sent() {
 		return array(
-			// Before the camp starts
+			// Before the camp starts.
 			array(
 				'wcor_send_before',
 				'wcor_send_days_before',
 				3,
 				strtotime( 'now + 3 days' ),
+				'wcpt-scheduled',
 			),
 
-			// After the camp ends
+			// After the camp ends.
 			array(
 				'wcor_send_after',
 				'wcor_send_days_after',
 				3,
-				strtotime( 'now - 3 days' )
+				strtotime( 'now - 3 days' ),
+				'wcpt-scheduled',
 			),
 
-			// After added to the pending schedule
+			// After the camp ends but it does not have public status.
+			array(
+				'wcor_send_after',
+				'wcor_send_days_after',
+				3,
+				strtotime( 'now - 3 days' ),
+				'wcpt-cancelled',
+			),
+
+			// After added to the pending schedule.
 			array(
 				'wcor_send_after_pending',
 				'wcor_send_days_after_pending',
 				3,
-				strtotime( 'now - 3 days' )
+				strtotime( 'now - 3 days' ),
+				'wcpt-scheduled',
 			),
 		);
 	}

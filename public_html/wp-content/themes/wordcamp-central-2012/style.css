@@ -2747,8 +2747,9 @@ h3#comments-title {
 }
 
 #content #respond textarea {
-	width: 98.8% !important;
-	height: 185px
+	width: 100% !important;
+	height: 185px;
+	box-sizing: border-box;
 }
 
 #content .comment #respond textarea {

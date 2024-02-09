@@ -523,23 +523,24 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
 		$session = $stripe->create_session( $this->camptix_options['event_name'], $order_items, $receipt_email, $return_url, $cancel_url, $metadata );
 
-		$camptix->log(
-			'Requesting Stripe checkout session',
-			$order['attendee_id'],
-			array(
-				'camptix_payment_token' => $payment_token,
-				'request_payload'       => compact( 'order_items', 'receipt_email' ),
-				'response'              => $session,
-			)
-		);
-
 		if ( ! is_wp_error( $session ) && ! empty( $session['url'] ) ) {
+			$camptix->log(
+				'Got Stripe checkout session.',
+				$order['attendee_id'],
+				array(
+					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ) ),
+					'camptix_payment_token' => $payment_token,
+					'request_payload'       => compact( 'order_items', 'receipt_email' ),
+					'response'              => $session,
+				)
+			);
+
 			wp_redirect( esc_url_raw( $session['url'] ) );
 			die();
 		}
 
 		// Error has occured.
-		$camptix->log( 'Error during Stripe Checkout.', null, $session );
+		$camptix->log( 'Error during Stripe Checkout.', $order['attendee_id'], $session );
 
 		return $camptix->payment_result(
 			$payment_token,

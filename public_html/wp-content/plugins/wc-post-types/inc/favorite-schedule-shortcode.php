@@ -442,10 +442,11 @@ function flip_sessions_subarrays( $sessions ) {
  *
  * @param string $wordcamp_name       WordCamp name to be used in the email.
  * @param array  $fav_sessions_lookup Mapping session _id -> 1 for favourite sessions.
+ * @param string $url_base            The URL for schedule page, into which favourite sessions parameter will be added.
  *
  * @return string                     Plain text body of the email.
  */
-function generate_email_body( $wordcamp_name, $fav_sessions_lookup ) {
+function generate_email_body( $wordcamp_name, $fav_sessions_lookup, $url_base ) {
 	$date_format                 = get_option( 'date_format' );
 	$tracks                      = get_schedule_tracks( 'all' );
 	$tracks_explicitly_specified = false; // include all tracks in the email.
@@ -479,6 +480,9 @@ function generate_email_body( $wordcamp_name, $fav_sessions_lookup ) {
 		$email_message .= generate_plaintext_fav_sessions( $sessions_for_current_day, $fav_sessions_lookup );
 		$email_message .= "\n\n";
 	}
+
+	$email_message .= esc_html__( 'Link to your favorite sessions on schedule', 'wordcamporg' );
+	$email_message .= ' ' . add_query_arg( 'fav-sessions', implode( ',', array_keys( $fav_sessions_lookup ) ), $url_base );
 
 	return $email_message;
 }
@@ -522,6 +526,7 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	// Input sanitized by REST controller.
 	$email_address = $params['email-address'];
 	$fav_sessions  = $params['session-list'];
+	$page_slug     = $params['page-slug'];
 
 	// Don't send the email if no sessions were marked as favourite.
 	if ( count( explode( ',', $fav_sessions ) ) === 0 ) {
@@ -534,6 +539,16 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 		);
 	}
 
+	// Page by slug existance validated in REST API.
+	$pages = get_posts( array(
+		'name'        => $page_slug,
+		'post_type'   => 'page',
+		'post_status' => 'publish',
+		'fields'      => 'ids',
+	) );
+
+	$url_base = get_the_permalink( $pages[0] );
+
 	$fav_sessions_lookup = array_fill_keys( explode( ',', $fav_sessions ), 1 );
 
 	$wordcamp_name = get_wordcamp_name();
@@ -542,7 +557,7 @@ function send_favourite_sessions_email( WP_REST_Request $request ) {
 	$headers[] = 'Content-Type: text/plain; charset=' . get_bloginfo( 'charset' );
 
 	$subject = sprintf( __( 'My favorite sessions for %s', 'wordcamporg' ), $wordcamp_name );
-	$message = generate_email_body( $wordcamp_name, $fav_sessions_lookup );
+	$message = generate_email_body( $wordcamp_name, $fav_sessions_lookup, $url_base );
 
 	if ( wp_mail( $email_address, $subject, $message, $headers ) ) {
 		return new WP_REST_Response(

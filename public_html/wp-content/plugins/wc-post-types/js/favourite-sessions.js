@@ -303,6 +303,7 @@ jQuery( document ).ready( function ( $ ) {
 		var data = {
 			'email-address': emailAddress,
 			'session-list': favSessions,
+			'page-slug': window.location.pathname.split('/').filter(n => n).pop(), // get last path = page slug
 		};
 
 		$.ajax( {

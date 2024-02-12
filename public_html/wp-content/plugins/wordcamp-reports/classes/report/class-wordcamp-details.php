@@ -130,6 +130,7 @@ class WordCamp_Details extends Base_Details {
 				'Speakers',
 				'Sponsors',
 				'Organizers',
+				'Tracker URL',
 			),
 			array_diff( $this->get_meta_keys(), array_keys( $this->get_public_data_fields() ) )
 		);
@@ -171,6 +172,7 @@ class WordCamp_Details extends Base_Details {
 			array(
 				'ID',
 				'Name',
+				'Tracker URL',
 			),
 			array_keys( WordCamp_Admin::meta_keys( 'wordcamp' ) ),
 			array(
@@ -395,6 +397,7 @@ class WordCamp_Details extends Base_Details {
 			'End Date (YYYY-mm-dd)'   => 'checked',
 			'Location'                => 'checked',
 			'URL'                     => 'checked',
+			'Tracker URL'             => 'checked',
 		);
 
 		include get_views_dir_path() . 'report/wordcamp-details.php';

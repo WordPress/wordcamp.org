@@ -75,8 +75,8 @@ function enable_block_templates() {
  *
  * @see wp_get_font_dir()
  *
- * @param array
- * @return array
+ * @param array $fonts_dir The fonts directory, expected to reference wp-content/fonts/$site/.
+ * @return array The uploads fonts directory, expected to reference wp-content/uploads/$site/fonts.
  */
 function fonts_in_uploads( $fonts_dir ) {
 

@@ -22,9 +22,6 @@ class WordCamp_Fonts_Plugin {
 		// Temporary workaround until we can use the core font library on WordCamp.org.
 		// See https://github.com/WordPress/gutenberg/pull/57697.
 		add_filter( 'wp_theme_json_data_theme', array( $this, 'inject_fonts_theme_json' ) );
-
-		// Store fonts in the WordCamp uploads.
-		add_filter( 'font_dir', array( $this, 'font_dir' ) );
 	}
 
 	/**
@@ -620,30 +617,6 @@ class WordCamp_Fonts_Plugin {
 
 		return $theme_json->update_with( $new_data );
 	}
-
-	/**
-	 * Store fonts in the Upload Directory.
-	 *
-	 * @see wp_get_font_dir()
-	 *
-	 * @param array
-	 * @return array
-	 */
-	public function font_dir( $fonts_dir ) {
-
-		// This is fragile, but wp_get_font_dir doesn't pass it's raw wp_upload_dir() value through.
-		remove_filter( 'upload_dir', 'wp_get_font_dir' );
-		$upload_dir = wp_upload_dir();
-		add_filter( 'upload_dir', 'wp_get_font_dir' );
-
-		$fonts_dir['basedir'] = $upload_dir['basedir'] . '/fonts';
-		$fonts_dir['baseurl'] = $upload_dir['baseurl'] . '/fonts';
-		$fonts_dir['path']    = $fonts_dir['basedir'];
-		$fonts_dir['url']     = $fonts_dir['baseurl'];
-
-		return $fonts_dir;
-	}
-
 }
 
 new WordCamp_Fonts_Plugin();

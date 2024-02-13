@@ -7,6 +7,7 @@ defined( 'WPINC' ) || die();
 add_filter( 'classic_editor_network_default_settings', __NAMESPACE__ . '\classic_editor_default_settings' );
 add_filter( 'classic_editor_enabled_editors_for_post_type', __NAMESPACE__ . '\disable_editors_by_post_type', 10, 2 );
 add_action( 'after_setup_theme', __NAMESPACE__ . '\enable_block_templates' );
+add_filter( 'font_dir', __NAMESPACE__ . '\fonts_in_uploads' );
 
 /**
  * Configure the default settings for the Classic Editor
@@ -67,4 +68,27 @@ function disable_editors_by_post_type( $editors, $post_type ) {
  */
 function enable_block_templates() {
 	add_theme_support( 'block-templates' );
+}
+
+/**
+ * Store fonts in the Upload Directory.
+ *
+ * @see wp_get_font_dir()
+ *
+ * @param array $fonts_dir The fonts directory, expected to reference wp-content/fonts/$site/.
+ * @return array The uploads fonts directory, expected to reference wp-content/uploads/$site/fonts.
+ */
+function fonts_in_uploads( $fonts_dir ) {
+
+	// This is fragile, but wp_get_font_dir doesn't pass it's raw wp_upload_dir() value through.
+	remove_filter( 'upload_dir', 'wp_get_font_dir' );
+	$upload_dir = wp_upload_dir();
+	add_filter( 'upload_dir', 'wp_get_font_dir' );
+
+	$fonts_dir['basedir'] = $upload_dir['basedir'] . '/fonts';
+	$fonts_dir['baseurl'] = $upload_dir['baseurl'] . '/fonts';
+	$fonts_dir['path']    = $fonts_dir['basedir'];
+	$fonts_dir['url']     = $fonts_dir['baseurl'];
+
+	return $fonts_dir;
 }

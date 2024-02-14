@@ -9,6 +9,7 @@ require_once __DIR__ . '/inc/city-landing-pages.php';
 
 // Block files.
 require_once __DIR__ . '/src/event-list/index.php';
+require_once __DIR__ . '/src/event-list-chips/index.php';
 
 add_action( 'after_setup_theme', __NAMESPACE__ . '\theme_support' );
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );

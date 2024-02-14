@@ -1,7 +1,7 @@
 <?php
 /**
- * Title: Events List Filters
- * Slug: wporg-events-2023/event-list-filters
+ * Title: Event List Filters
+ * Slug: wporg-events-2023/event-list-filters-with-nearby
  * Inserter: no
  */
 
@@ -13,6 +13,8 @@
 	<div class="wp-block-group wporg-events__filters__search">
 		<!-- wp:search {"showLabel":false,"placeholder":"Search events...","width":100,"widthUnit":"%","buttonText":"Search","buttonPosition":"button-inside","buttonUseIcon":true,"className":"is-style-secondary-search-control"} /-->
 	</div> <!-- /wp:group -->
+
+	<!-- wp:wporg/event-list-chips /-->
 
 	<!-- wp:group {"style":{"spacing":{"blockGap":"0"}},"className":"wporg-query-filters","layout":{"type":"flex","flexWrap":"nowrap"}} -->
 	<div class="wp-block-group wporg-query-filters">

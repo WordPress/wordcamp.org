@@ -157,7 +157,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 				true,
 			),
 
-			'city/year old year should return newest' => array(
+			'city/year old year should return newest 2018 plain' => array(
 				'vancouver.wordcamp.test',
 				'/2018-developers/',
 				true,

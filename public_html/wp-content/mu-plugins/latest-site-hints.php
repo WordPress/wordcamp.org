@@ -25,7 +25,7 @@ function maybe_add_latest_site_hints() {
 	// Check to see if they simply differ by an identifier.
 	if (
 		str_contains( $latest_domain . get_site_url(), '-' ) &&
-		preg_replace( '/(\d{4})-[^/]+/', '$1', trailingslashit( get_site_url() ) ) === preg_replace( '/(\d{4})-[^/]+/', '$1', $latest_domain )
+		preg_replace( '/(\d{4})-[^\/]+/', '$1', trailingslashit( get_site_url() ) ) === preg_replace( '/(\d{4})-[^\/]+/', '$1', $latest_domain )
 	) {
 		return;
 	}

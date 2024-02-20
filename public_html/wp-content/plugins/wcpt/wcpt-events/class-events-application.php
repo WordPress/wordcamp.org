@@ -149,14 +149,14 @@ class Events_Application extends WordCamp_Application {
 	 */
 	public function create_post( $data ) {
 		// Create the post.
-		$wordcamp_user_id = get_user_by( 'email', 'support@wordcamp.org' )->ID;
+		$user     = wcorg_get_user_by_canonical_names( $data['q_wporg_username'] );
 		$statuses = \WordCamp_Loader::get_post_statuses();
 
 		$post = array(
 			'post_type'   => self::get_event_type(),
 			'post_title'  => esc_html( $data['q_event_location'] ),
 			'post_status' => self::get_default_status(),
-			'post_author' => $wordcamp_user_id,
+			'post_author' => is_a( $user, 'WP_User' ) ? $user->ID : 7694169, // Set `wordcamp` as author if supplied username is not valid.
 		);
 
 		$post_id = wp_insert_post( $post, true );

@@ -192,7 +192,7 @@ add_filter( 'jetpack_is_frontend', __NAMESPACE__ . '\workaround_is_frontend' );
 /**
  * Extra processing to check if contact form submissions are spam.
  *
- * @param bool $is_spam The spam flag.
+ * @param bool  $is_spam The spam flag.
  * @param array $form Form values formatted for Akismet.
  *
  * @return bool

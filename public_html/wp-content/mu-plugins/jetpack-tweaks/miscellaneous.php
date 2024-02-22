@@ -188,3 +188,24 @@ function workaround_is_frontend( $is_frontend ) {
 	return $is_frontend;
 }
 add_filter( 'jetpack_is_frontend', __NAMESPACE__ . '\workaround_is_frontend' );
+
+/**
+ * Extra processing to check if contact form submissions are spam.
+ *
+ * @param bool  $is_spam The spam flag.
+ * @param array $form Form values formatted for Akismet.
+ *
+ * @return bool
+ */
+function extra_spam_checks( $is_spam, $form ) {
+	// Already found to be spam, short circuit.
+	if ( $is_spam ) {
+		return $is_spam;
+	}
+
+	// Check if the comment is only an email.
+	$email = isset( $form['comment_author_email'] ) ? $form['comment_author_email'] : '';
+	$msg = isset( $form['comment_content'] ) ? $form['comment_content'] : '';
+	return trim( $email ) === trim( $msg );
+}
+add_filter( 'jetpack_contact_form_is_spam', __NAMESPACE__ . '\extra_spam_checks', 10, 2 );

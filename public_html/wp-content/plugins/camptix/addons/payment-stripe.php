@@ -337,18 +337,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			if ( 'payment_return' == $_GET['tix_action'] ) {
 				$this->payment_return();
 			}
-
-			/*
-			 * TODO: We might need to add this, like with paypal, incase the transaction completes
-			 *       but the user never returns to WordCamp to finalise it.. or something...
-			 *
-			 * This would be extra helpful to auto-cancel disputed tickets, or where
-			 * delayed-settlement transfer payments are used (if they get enabled in the future).
-			 *
-			 * if ( 'payment_notify' == $_GET['tix_action'] ) {
-			 *   $this->payment_notify();
-			 * }
-			 */
 		}
 	}
 

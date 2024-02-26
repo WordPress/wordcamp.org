@@ -6989,6 +6989,7 @@ class CampTix_Plugin {
 		$max_loops = 500;
 
 		while ( $attendees = get_posts( array(
+			'fields' => 'ids',
 			'post_type' => 'tix_attendee',
 			'post_status' => 'draft',
 			'posts_per_page' => 100,
@@ -7009,9 +7010,19 @@ class CampTix_Plugin {
 			),
 		) ) ) {
 
-			foreach ( $attendees as $attendee ) {
-				$attendee->post_status = 'timeout';
-				wp_update_post( $attendee );
+			foreach ( $attendees as $attendee_id ) {
+				do_action( 'camptix_pre_attendee_timeout', $attendee_id );
+
+				// Check the post_status again, incase a filter has caused the post to change.
+				if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
+					continue;
+				}
+
+				wp_update_post( [
+					'ID'          => $attendee_id,
+					'post_status' => 'timeout',
+				] );
+
 				$processed++;
 			}
 

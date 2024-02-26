@@ -27,7 +27,7 @@ class CampTix_Network_Tools {
 		), get_site_option( 'camptix_nt_options', array() ) );
 		$this->options = $this->validate_options( $this->options );
 
-		if ( $this->options['db_version'] != $this->db_version ) {
+		if ( $this->options['db_version'] < $this->db_version ) {
 			$this->upgrade();
 			update_site_option( 'camptix_nt_options', $this->options );
 		}

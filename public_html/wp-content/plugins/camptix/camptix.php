@@ -7023,6 +7023,8 @@ class CampTix_Plugin {
 					'post_status' => 'timeout',
 				] );
 
+				$this->log( 'Attendee timeout', $attendee_id );
+
 				$processed++;
 			}
 

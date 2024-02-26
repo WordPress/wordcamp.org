@@ -7493,7 +7493,7 @@ class CampTix_Plugin {
 	 * @param string $payment_token The payment token.
 	 * @param int    $result        The payment status.
 	 * @param array  $data          The payment data.
-	 * @param bool   $interactie    Whether this is the browser (default) or a cron task.
+	 * @param bool   $interactive   Whether this is the browser (default) or a cron task.
 	 */
 	function payment_result( $payment_token, $result, $data = array(), $interactive = true ) {
 		if ( empty( $payment_token ) )

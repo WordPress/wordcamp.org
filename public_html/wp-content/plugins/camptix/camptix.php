@@ -7485,7 +7485,15 @@ class CampTix_Plugin {
 		return $enabled;
 	}
 
-	function payment_result( $payment_token, $result, $data = array() ) {
+	/**
+	 * Runs after the payment succeeds.
+	 *
+	 * @param string $payment_token The payment token.
+	 * @param int    $result        The payment status.
+	 * @param array  $data          The payment data.
+	 * @param bool   $interactie    Whether this is the browser (default) or a cron task.
+	 */
+	function payment_result( $payment_token, $result, $data = array(), $interactive = true ) {
 		if ( empty( $payment_token ) )
 			die( 'Do not call payment_result without a payment token.' );
 
@@ -7504,6 +7512,10 @@ class CampTix_Plugin {
 		) );
 
 		if ( ! $attendees ) {
+			if ( ! $interactive ) {
+				return false;
+			}
+
 			$this->log( 'Could not find attendees by payment token', null, $_POST );
 			die();
 		}
@@ -7590,6 +7602,10 @@ class CampTix_Plugin {
 
 		// If the status hasn't changed, there's nothing much we can do here.
 		if ( ! $status_changed ) {
+			if ( ! $interactive ) {
+				return false;
+			}
+
 			if ( in_array( $to_status, array( 'pending', 'publish' ) ) ) {
 				// Show the purchased tickets.
 				$access_token = get_post_meta( $attendees[0]->ID, 'tix_access_token', true );
@@ -7603,6 +7619,10 @@ class CampTix_Plugin {
 		// Send out the tickets and receipt if necessary.
 		$this->email_tickets( $payment_token, $from_status, $to_status );
 		do_action( 'camptix_payment_result', $payment_token, $result, $data );
+
+		if ( ! $interactive ) {
+			return true;
+		}
 
 		// Let's make a clean exit out of all of this.
 		switch ( $result ) :

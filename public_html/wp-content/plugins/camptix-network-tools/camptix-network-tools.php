@@ -12,7 +12,7 @@
 
 class CampTix_Network_Tools {
 	private $options;
-	private $db_version = 20131202;
+	private $db_version = 20240226;
 	const PLUGIN_URL    = 'http://wordpress.org/plugins/camptix-network-tools';
 
 	function __construct() {
@@ -27,7 +27,7 @@ class CampTix_Network_Tools {
 		), get_site_option( 'camptix_nt_options', array() ) );
 		$this->options = $this->validate_options( $this->options );
 
-		if ( $this->options['db_version'] != $this->db_version ) {
+		if ( $this->options['db_version'] < $this->db_version ) {
 			$this->upgrade();
 			update_site_option( 'camptix_nt_options', $this->options );
 		}
@@ -59,7 +59,8 @@ class CampTix_Network_Tools {
 			message text NOT NULL,
 			section varchar(32) DEFAULT 'general',
 			data mediumtext NOT NULL,
-			UNIQUE KEY id (id)
+			PRIMARY KEY (`id`),
+  			KEY `blog_object` (`blog_id`,`object_id`)
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';

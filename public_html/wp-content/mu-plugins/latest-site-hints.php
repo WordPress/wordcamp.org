@@ -23,7 +23,7 @@ function maybe_add_latest_site_hints() {
 	}
 
     // Allow the banner to be skipped if necessary.
-    if ( ! wcorg_skip_feature( 'latest-site-hint' ) ) {
+    if ( wcorg_skip_feature( 'latest-site-hint' ) ) {
         return;
     }
 

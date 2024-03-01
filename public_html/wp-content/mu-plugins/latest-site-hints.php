@@ -22,10 +22,10 @@ function maybe_add_latest_site_hints() {
 		return;
 	}
 
-    // Allow the banner to be skipped if necessary.
-    if ( wcorg_skip_feature( 'latest-site-hint' ) ) {
-        return;
-    }
+	// Allow the banner to be skipped if necessary.
+	if ( wcorg_skip_feature( 'latest-site-hint' ) ) {
+		return;
+	}
 
 	// Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 	add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );

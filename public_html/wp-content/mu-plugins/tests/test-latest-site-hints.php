@@ -35,13 +35,6 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	 * @dataProvider data_get_latest_home_url
 	 */
 	public function test_get_latest_home_url( $current_domain, $current_path, $expected ) {
-
-		// Force feature skip for latest-site-hint
-		if ( 'vancouver.wordcamp.test' == $current_domain && '/2016/' == $current_path ) {
-			$blog_id = get_blog_id_from_url( $current_domain, $current_path );
-			add_site_meta( $blog_id, 'wordcamp_skip_feature', 'latest-site-hint' );
-		}
-
 		$actual = get_latest_home_url( $current_domain, $current_path );
 
 		$this->assertSame( $expected, $actual );
@@ -87,12 +80,6 @@ class Test_WordCamp_SEO extends Database_TestCase {
 				'2019.seattle.wordcamp.test',
 				'/',
 				'http://2019.seattle.wordcamp.test/',
-			),
-
-			'city/year past year with flag set should return itself' => array(
-				'vancouver.wordcamp.test',
-				'/2016/',
-				'http://vancouver.wordcamp.test/2016/',
 			),
 
 			'city/year past year should return the newest year' => array(

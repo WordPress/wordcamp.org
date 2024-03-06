@@ -6989,6 +6989,7 @@ class CampTix_Plugin {
 		$max_loops = 500;
 
 		while ( $attendees = get_posts( array(
+			'fields' => 'ids',
 			'post_type' => 'tix_attendee',
 			'post_status' => 'draft',
 			'posts_per_page' => 100,
@@ -7009,9 +7010,21 @@ class CampTix_Plugin {
 			),
 		) ) ) {
 
-			foreach ( $attendees as $attendee ) {
-				$attendee->post_status = 'timeout';
-				wp_update_post( $attendee );
+			foreach ( $attendees as $attendee_id ) {
+				do_action( 'camptix_pre_attendee_timeout', $attendee_id );
+
+				// Check the post_status again, incase a filter has caused the post to change.
+				if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
+					continue;
+				}
+
+				wp_update_post( [
+					'ID'          => $attendee_id,
+					'post_status' => 'timeout',
+				] );
+
+				$this->log( 'Attendee timeout', $attendee_id );
+
 				$processed++;
 			}
 
@@ -7474,7 +7487,15 @@ class CampTix_Plugin {
 		return $enabled;
 	}
 
-	function payment_result( $payment_token, $result, $data = array() ) {
+	/**
+	 * Runs after the payment succeeds.
+	 *
+	 * @param string $payment_token The payment token.
+	 * @param int    $result        The payment status.
+	 * @param array  $data          The payment data.
+	 * @param bool   $interactive   Whether this is the browser (default) or a cron task.
+	 */
+	function payment_result( $payment_token, $result, $data = array(), $interactive = true ) {
 		if ( empty( $payment_token ) )
 			die( 'Do not call payment_result without a payment token.' );
 
@@ -7493,6 +7514,10 @@ class CampTix_Plugin {
 		) );
 
 		if ( ! $attendees ) {
+			if ( ! $interactive ) {
+				return false;
+			}
+
 			$this->log( 'Could not find attendees by payment token', null, $_POST );
 			die();
 		}
@@ -7579,6 +7604,10 @@ class CampTix_Plugin {
 
 		// If the status hasn't changed, there's nothing much we can do here.
 		if ( ! $status_changed ) {
+			if ( ! $interactive ) {
+				return false;
+			}
+
 			if ( in_array( $to_status, array( 'pending', 'publish' ) ) ) {
 				// Show the purchased tickets.
 				$access_token = get_post_meta( $attendees[0]->ID, 'tix_access_token', true );
@@ -7592,6 +7621,10 @@ class CampTix_Plugin {
 		// Send out the tickets and receipt if necessary.
 		$this->email_tickets( $payment_token, $from_status, $to_status );
 		do_action( 'camptix_payment_result', $payment_token, $result, $data );
+
+		if ( ! $interactive ) {
+			return true;
+		}
 
 		// Let's make a clean exit out of all of this.
 		switch ( $result ) :

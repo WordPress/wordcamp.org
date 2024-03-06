@@ -55,6 +55,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		);
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
+		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 	}
 
 	/**
@@ -337,18 +338,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			if ( 'payment_return' == $_GET['tix_action'] ) {
 				$this->payment_return();
 			}
-
-			/*
-			 * TODO: We might need to add this, like with paypal, incase the transaction completes
-			 *       but the user never returns to WordCamp to finalise it.. or something...
-			 *
-			 * This would be extra helpful to auto-cancel disputed tickets, or where
-			 * delayed-settlement transfer payments are used (if they get enabled in the future).
-			 *
-			 * if ( 'payment_notify' == $_GET['tix_action'] ) {
-			 *   $this->payment_notify();
-			 * }
-			 */
 		}
 	}
 
@@ -535,6 +524,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				)
 			);
 
+			update_user_meta( $order['attendee_id'], '_stripe_checkout_session_id', wp_slash( $session['id'] ) );
+
 			wp_redirect( esc_url_raw( $session['url'] ) );
 			die();
 		}
@@ -639,6 +630,47 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		);
 
 		return $result;
+	}
+
+	/**
+	 * Check if a stripe session timed out.
+	 */
+	public function pre_attendee_timeout( $attendee_id ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		// precheck the attendee is in draft.
+		if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
+			return;
+		}
+
+		$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
+		$payment_token     = get_post_meta( $attendee_id, 'tix_payment_token', true );
+		if ( ! $session_id || ! $payment_token ) {
+			return;
+		}
+
+		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+		$session = $stripe->get_session( $stripe_session_id );
+
+		if ( empty( $session['status'] ) ) {
+			return;
+		}
+
+		// Uh oh, we've hit timeout on a ticket, but the linked checkout session succeeded.
+		if ( 'succeeded' === $session['status'] && 'paid' === $session['payment_status'] ) {
+			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
+
+			$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
+			$payment_data   = array(
+				'transaction_id'      => $transaction_id,
+				'transaction_details' => array(
+					'raw' => $session,
+				),
+			);
+
+			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
+		}
 	}
 }
 

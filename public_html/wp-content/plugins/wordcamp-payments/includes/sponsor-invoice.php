@@ -329,6 +329,7 @@ function render_sponsor_invoice_metabox( $post ) {
 	$selected_class_id    = get_post_meta( $post->ID, '_wcbsi_qbo_class_id',    true );
 	$selected_currency    = get_post_meta( $post->ID, '_wcbsi_currency',        true );
 	$description          = get_post_meta( $post->ID, '_wcbsi_description',     true );
+	$internal_reference   = get_post_meta( $post->ID, '_wcbsi_internal_reference', true );
 	$amount               = get_post_meta( $post->ID, '_wcbsi_amount',          true );
 
 	if ( 'add' === $current_screen->action && isset( $_GET['sponsor_id'] ) ) {
@@ -445,7 +446,7 @@ function save_invoice( $post_id, $post ) {
 	}
 
 	// Sanitize and save the field values.
-	$fields = array( 'sponsor_id', 'qbo_class_id', 'currency', 'description', 'amount' );
+	$fields = array( 'sponsor_id', 'qbo_class_id', 'currency', 'description', 'internal_reference', 'amount' );
 
 	foreach ( $fields as $field ) {
 		$meta_key = "_wcbsi_$field";

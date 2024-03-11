@@ -4904,7 +4904,7 @@ class CampTix_Plugin {
 					continue;
 
 				if ( ! empty( $question['values'] ) )
-					$question_values = array_map( 'strip_tags', array_map( 'trim', explode( ',', $question['values'] ) ) );
+					$question_values = array_map( 'trim', array_map( 'strip_tags', explode( ',', $question['values'] ) ) );
 				else
 					$question_values = array();
 
@@ -6218,10 +6218,11 @@ class CampTix_Plugin {
 
 		if ( isset( $_POST['tix_attendee_save'] ) ) {
 			$errors = array();
-			$posted = stripslashes_deep( $_POST );
 
-			$new_ticket_info = $posted['tix_ticket_info'];
-			$new_ticket_info = array_map( 'trim', $new_ticket_info );
+			$new_ticket_info  = wp_unslash( $_POST['tix_ticket_info'] );
+			$$new_ticket_info = array_filter( $new_ticket_info, 'is_scalar' );
+			$new_ticket_info  = array_map( 'strip_tags', $new_ticket_info );
+			$new_ticket_info  = array_map( 'trim', $new_ticket_info );
 
 			// todo validate new attendee data here, maybe wrap data validation.
 			if ( empty( $new_ticket_info['first_name'] ) || empty( $new_ticket_info['last_name'] ) )
@@ -6233,8 +6234,15 @@ class CampTix_Plugin {
 			$new_answers = array();
 			foreach ( $questions as $question ) {
 				if ( isset( $_POST['tix_ticket_questions'][ $question->ID ] ) ) {
-					$answer = stripslashes_deep( $posted['tix_ticket_questions'][ $question->ID ] );
-					$answer = ( is_array( $answer ) ) ? array_map( 'strip_tags', $answer ) : strip_tags( $answer );
+					$answer = wp_unslash( $_POST['tix_ticket_questions'][ $question->ID ] );
+					if ( is_array( $answer ) ) {
+						$answer = array_filter( $answer, 'is_scalar' );
+						$answer = array_map( 'strip_tags', $answer );
+						$answer = array_map( 'trim', $answer );
+					} else {
+						$answer = is_scalar( $answer ) ? trim( strip_tags( $answer ) ) : '';
+					}
+
 					$new_answers[ $question->ID ] = $answer;
 				}
 
@@ -6255,7 +6263,7 @@ class CampTix_Plugin {
 				update_post_meta( $attendee->ID, 'tix_first_name', sanitize_text_field( $new_ticket_info['first_name'] ) );
 				update_post_meta( $attendee->ID, 'tix_last_name', sanitize_text_field( $new_ticket_info['last_name'] ) );
 				update_post_meta( $attendee->ID, 'tix_email', sanitize_email( $new_ticket_info['email'] ) );
-				update_post_meta( $attendee->ID, 'tix_questions', $new_answers );
+				update_post_meta( $attendee->ID, 'tix_questions', wp_slash( $new_answers ) );
 
 				do_action( 'camptix_form_edit_attendee_update_post_meta', $new_ticket_info, $attendee );
 
@@ -7065,8 +7073,9 @@ class CampTix_Plugin {
 		foreach( (array) $_POST['tix_attendee_info'] as $i => $attendee_info ) {
 			$attendee = new stdClass;
 
-			$attendee_info = array_filter( $attendee_info, 'is_scalar' );
-			$attendee_info = array_map( 'trim', $attendee_info );
+			$$attendee_info = wp_unslash( $$attendee_info );
+			$attendee_info  = array_filter( $attendee_info, 'is_scalar' );
+			$attendee_info  = array_map( 'trim', $attendee_info );
 
 			if ( ! isset( $attendee_info['ticket_id'] ) || ! array_key_exists( $attendee_info['ticket_id'], $this->tickets_selected ) ) {
 				$this->error_flags['no_ticket_id'] = true;
@@ -7096,13 +7105,13 @@ class CampTix_Plugin {
 
 				foreach ( $questions as $question ) {
 					if ( isset( $_POST['tix_attendee_questions'][ $i ][ $question->ID ] ) ) {
-						$answer = $_POST['tix_attendee_questions'][ $i ][ $question->ID ];
+						$answer = wp_unslash( $_POST['tix_attendee_questions'][ $i ][ $question->ID ] );
 						if ( is_array( $answer ) ) {
 							$answer = array_filter( $answer, 'is_scalar' );
-							$answer = array_map( 'trim', $answer );
 							$answer = array_map( 'strip_tags', $answer );
+							$answer = array_map( 'trim', $answer );
 						} else {
-							$answer = is_scalar( $answer ) ? strip_tags( $answer ) : '';
+							$answer = is_scalar( $answer ) ? trim( strip_tags( $answer ) ) : '';
 						}
 
 						$answers[ $question->ID ] = $answer;
@@ -7118,11 +7127,11 @@ class CampTix_Plugin {
 
 			// @todo make more checks here
 
-			$attendee->ticket_id = $ticket->ID;
+			$attendee->ticket_id  = $ticket->ID;
 			$attendee->first_name = $attendee_info['first_name'];
-			$attendee->last_name = $attendee_info['last_name'];
-			$attendee->email = $attendee_info['email'];
-			$attendee->answers = $answers;
+			$attendee->last_name  = $attendee_info['last_name'];
+			$attendee->email      = $attendee_info['email'];
+			$attendee->answers    = $answers;
 
 			$attendee = apply_filters( 'camptix_form_register_complete_attendee_object', $attendee, $attendee_info, $i );
 
@@ -7136,7 +7145,7 @@ class CampTix_Plugin {
 
 		// @todo maybe check if email is one of the attendees emails
 		if ( isset( $_POST['tix_receipt_email_js'] ) && is_email( $_POST['tix_receipt_email_js'] ) )
-			$receipt_email = $_POST['tix_receipt_email_js'];
+			$receipt_email = wp_unslash( $_POST['tix_receipt_email_js'] );
 
 		if ( ! is_email( $receipt_email ) )
 			$this->error_flags['no_receipt_email'] = true;
@@ -7184,7 +7193,7 @@ class CampTix_Plugin {
 				update_post_meta( $post_id, 'tix_last_name', $attendee->last_name );
 				update_post_meta( $post_id, 'tix_email', $attendee->email );
 				update_post_meta( $post_id, 'tix_tickets_selected', $this->tickets_selected );
-				update_post_meta( $post_id, 'tix_receipt_email', $receipt_email );
+				update_post_meta( $post_id, 'tix_receipt_email', wp_slash( $receipt_email ) );
 
 				do_action( 'camptix_checkout_update_post_meta', $post_id, $attendee );
 
@@ -7194,7 +7203,7 @@ class CampTix_Plugin {
 				update_post_meta( $post_id, 'tix_ticket_discounted_price', (float) $this->tickets[ $attendee->ticket_id ]->tix_discounted_price );
 
 				// @todo sanitize questions
-				update_post_meta( $post_id, 'tix_questions', $attendee->answers );
+				update_post_meta( $post_id, 'tix_questions', wp_slash( $attendee->answers ) );
 
 				if ( $this->coupon && in_array( $attendee->ticket_id, $this->coupon->tix_applies_to ) ) {
 					update_post_meta( $post_id, 'tix_coupon_id', $this->coupon->ID );

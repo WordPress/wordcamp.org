@@ -5285,7 +5285,7 @@ class CampTix_Plugin {
 			$this->order['coupon'] = sanitize_text_field( $_REQUEST['tix_coupon'] );
 
 		if ( isset( $_REQUEST['tix_reservation_id'], $_REQUEST['tix_reservation_token'] ) ) {
-			$this->order['reservation_id'] = $_REQUEST['tix_reservation_id'];
+			$this->order['reservation_id']    = $_REQUEST['tix_reservation_id'];
 			$this->order['reservation_token'] = $_REQUEST['tix_reservation_token'];
 		}
 
@@ -6882,11 +6882,16 @@ class CampTix_Plugin {
 	 * Return a coupon object by the coupon name (title).
 	 */
 	function get_coupon_by_code( $code ) {
-		$code = trim( $code );
-		if ( empty( $code ) )
+		if ( ! is_string( $code ) ) {
 			return false;
+		}
 
-		$coupon = get_page_by_title( trim( $code ), OBJECT, 'tix_coupon' );
+		$code = trim( $code );
+		if ( empty( $code ) ) {
+			return false;
+		}
+
+		$coupon = get_page_by_title( $code, OBJECT, 'tix_coupon' );
 		if ( $coupon && $coupon->post_type == 'tix_coupon' ) {
 			return $coupon;
 		}
@@ -7279,7 +7284,7 @@ class CampTix_Plugin {
 		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
 
 		// Let's check the coupon first.
-		if ( isset( $order['coupon'] ) && ! empty( $order['coupon'] ) ) {
+		if ( ! empty( $order['coupon'] ) ) {
 			$coupon = $this->get_coupon_by_code( $order['coupon'] );
 			if ( $coupon && $this->is_coupon_valid_for_use( $coupon->ID ) ) {
 				$coupon->tix_coupon_remaining = $this->get_remaining_coupons( $coupon->ID );

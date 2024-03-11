@@ -6220,7 +6220,7 @@ class CampTix_Plugin {
 			$errors = array();
 
 			$new_ticket_info  = wp_unslash( $_POST['tix_ticket_info'] );
-			$$new_ticket_info = array_filter( $new_ticket_info, 'is_scalar' );
+			$new_ticket_info = array_filter( $new_ticket_info, 'is_scalar' );
 			$new_ticket_info  = array_map( 'strip_tags', $new_ticket_info );
 			$new_ticket_info  = array_map( 'trim', $new_ticket_info );
 

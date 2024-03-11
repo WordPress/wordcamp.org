@@ -7065,6 +7065,9 @@ class CampTix_Plugin {
 		foreach( (array) $_POST['tix_attendee_info'] as $i => $attendee_info ) {
 			$attendee = new stdClass;
 
+			$attendee_info = array_filter( $attendee_info, 'is_scalar' );
+			$attendee_info = array_map( 'trim', $attendee_info );
+
 			if ( ! isset( $attendee_info['ticket_id'] ) || ! array_key_exists( $attendee_info['ticket_id'], $this->tickets_selected ) ) {
 				$this->error_flags['no_ticket_id'] = true;
 				continue;
@@ -7075,8 +7078,6 @@ class CampTix_Plugin {
 				$this->error_flags['tickets_excess'] = true;
 				continue;
 			}
-
-			$attendee_info = array_map( 'trim', $attendee_info );
 
 			$attendee_info['first_name'] = sanitize_text_field( $attendee_info['first_name'] );
 			$attendee_info['last_name'] = sanitize_text_field( $attendee_info['last_name'] );
@@ -7096,7 +7097,14 @@ class CampTix_Plugin {
 				foreach ( $questions as $question ) {
 					if ( isset( $_POST['tix_attendee_questions'][ $i ][ $question->ID ] ) ) {
 						$answer = $_POST['tix_attendee_questions'][ $i ][ $question->ID ];
-						$answer = ( is_array( $answer ) ) ? array_map( 'strip_tags', $answer ) : strip_tags( $answer );
+						if ( is_array( $answer ) ) {
+							$answer = array_filter( $answer, 'is_scalar' );
+							$answer = array_map( 'trim', $answer );
+							$answer = array_map( 'strip_tags', $answer );
+						} else {
+							$answer = is_scalar( $answer ) ? strip_tags( $answer ) : '';
+						}
+
 						$answers[ $question->ID ] = $answer;
 					}
 

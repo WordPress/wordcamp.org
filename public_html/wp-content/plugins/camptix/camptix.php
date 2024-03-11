@@ -7050,7 +7050,7 @@ class CampTix_Plugin {
 		$receipt_email = false;
 		$payment_method = false;
 
-		if ( isset( $_POST['tix_payment_method'] ) && array_key_exists( (string) $_POST['tix_payment_method'], $this->get_enabled_payment_methods() ) ) {
+		if ( isset( $_POST['tix_payment_method'] ) && is_string( $_POST['tix_payment_method'] ) && array_key_exists( $_POST['tix_payment_method'], $this->get_enabled_payment_methods() ) ) {
 			$payment_method = $_POST['tix_payment_method'];
 		} elseif ( ! empty( $this->order['total'] ) && $this->order['total'] > 0 ) {
 			$this->error_flags['invalid_payment_method'] = true;

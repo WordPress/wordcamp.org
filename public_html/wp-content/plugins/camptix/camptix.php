@@ -7073,9 +7073,10 @@ class CampTix_Plugin {
 		foreach( (array) $_POST['tix_attendee_info'] as $i => $attendee_info ) {
 			$attendee = new stdClass;
 
-			$$attendee_info = wp_unslash( $$attendee_info );
-			$attendee_info  = array_filter( $attendee_info, 'is_scalar' );
-			$attendee_info  = array_map( 'trim', $attendee_info );
+			$attendee_info = wp_unslash( $attendee_info );
+			$attendee_info = array_filter( $attendee_info, 'is_scalar' );
+			$attendee_info = array_map( 'strip_tags', $attendee_info );
+			$attendee_info = array_map( 'trim', $attendee_info );
 
 			if ( ! isset( $attendee_info['ticket_id'] ) || ! array_key_exists( $attendee_info['ticket_id'], $this->tickets_selected ) ) {
 				$this->error_flags['no_ticket_id'] = true;

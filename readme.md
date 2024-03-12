@@ -17,7 +17,7 @@ If you have a question about using your site, or contributing to the platform, p
 
 ### Bugs & Feature Requests
 
-We encourage community members and organizers to [open issues for bugs & feature requests.](https://github.com/WordPress/wordcamp.org/issues/new/choose) We go through and prioritize issues at least once a month. We also have a monthly meeting where we discuss current tickets, patches, and PRs. This usually happens on the third Thursday of the month, you can watch for announcements on the [make.wordpress.org/meta blog.](https://make.wordpress.org/meta/)
+We encourage community members and organizers to [open issues for bugs & feature requests.](https://github.com/WordPress/wordcamp.org/issues/new/choose) We go through and prioritize issues at regularly, if you feel something is urgent or high priority please feel free to ping us in the `#meta-wordcamp` channel.
 
 
 ## Security

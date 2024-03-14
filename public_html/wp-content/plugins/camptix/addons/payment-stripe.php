@@ -646,7 +646,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
 		$payment_token     = get_post_meta( $attendee_id, 'tix_payment_token', true );
-		if ( ! $session_id || ! $payment_token ) {
+		if ( ! $stripe_session_id || ! $payment_token ) {
 			return;
 		}
 

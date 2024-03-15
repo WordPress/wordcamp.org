@@ -20,7 +20,7 @@
 <!-- /wp:column -->
 
 <!-- wp:column {"width":"50%"} -->
-<div class="wp-block-column" style="flex-basis:50%"><!-- wp:wporg/google-map {"id":"all-upcoming-map","apiKey":"WORDCAMP_DEV_GOOGLE_MAPS_API_KEY","filterSlug":"all-upcoming","showList":false,"showSearch":false} /--></div>
+<div class="wp-block-column" style="flex-basis:50%"><!-- wp:wporg/google-map {"id":"all-upcoming-map","apiKey":"WORDCAMP_PROD_GOOGLE_MAPS_API_KEY","filterSlug":"all-upcoming","showList":false,"showSearch":false} /--></div>
 <!-- /wp:column --></div>
 <!-- /wp:columns --></div>
 <!-- /wp:group -->

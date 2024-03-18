@@ -362,6 +362,11 @@ add_filter( 'wordcamp_google_maps_api_key', function( $key, $scope = 'client' ) 
 	return $key;
 }, 10, 2 );
 
+// Google Maps API Key as used in the wporg/google-map block.
+add_filter( 'wporg_google_map_apikey', function() {
+	return apply_filters( 'wordcamp_google_maps_api_key', '' );
+} );
+
 /**
  * Disable admin pointers
  */

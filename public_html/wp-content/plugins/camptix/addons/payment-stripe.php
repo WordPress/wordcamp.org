@@ -992,11 +992,11 @@ class CampTix_Stripe_API_Client {
 				return $cleaned;
 			}
 
-			// Trim the key to 40 chars.
-			$key = $this->trim_string( $key, 40, '' );
-
 			// Remove unsupported characters from the key.
 			$key = str_replace( array( '[', ']' ), '', $key );
+			
+			// Trim the key to 40 chars.
+			$key = $this->trim_string( $key, 40, '' );
 
 			// Trim the val to 500 chars.
 			$val = $this->trim_string( $val );

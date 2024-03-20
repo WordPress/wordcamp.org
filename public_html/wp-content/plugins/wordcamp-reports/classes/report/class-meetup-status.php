@@ -308,7 +308,7 @@ class Meetup_Status extends Base_Status {
 		}
 
 		if ( ! empty( $params )  && isset( $params['range'] ) ) {
-			$report = new self( $params['range']->start, $params['range']->end, $params['status'], $params['options'] );
+			$report = new self( $params['range']->start, $params['range']->end, $status, $params['options'] );
 		}
 
 		include get_views_dir_path() . 'public/meetup-status.php';

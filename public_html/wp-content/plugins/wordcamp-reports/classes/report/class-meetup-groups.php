@@ -1,3 +1,4 @@
+
 <?php
 /**
  * Meetup Groups.
@@ -442,7 +443,7 @@ class Meetup_Groups extends Base {
 			$report = new self( $range->start ?? false, $range->end ?? false, $options );
 
 			if ( ! is_null( $error ) ) {
-				$report->merge_errors( $error, $report->error );
+				$report->merge_errors( $report->error, $error );
 			}
 		}
 

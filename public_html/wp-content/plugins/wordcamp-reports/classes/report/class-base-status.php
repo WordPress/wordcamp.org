@@ -154,6 +154,10 @@ abstract class Base_Status extends Base {
 			$period = absint( date( 'm' ) );
 		}
 
+		if ( $status && ! is_string( $status ) ) {
+			$status = null;
+		}
+
 		$report  = null;
 		$error   = null;;
 		$options = [];

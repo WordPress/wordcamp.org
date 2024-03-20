@@ -7094,16 +7094,19 @@ class CampTix_Plugin {
 				continue;
 			}
 
-			$attendee_info['first_name'] = sanitize_text_field( $attendee_info['first_name'] );
-			$attendee_info['last_name'] = sanitize_text_field( $attendee_info['last_name'] );
+			$attendee_info['first_name'] = sanitize_text_field( $attendee_info['first_name'] ?? '' );
+			$attendee_info['last_name']  = sanitize_text_field( $attendee_info['last_name'] ?? '' );
+			$attendee_info['email']      = sanitize_text_field( $attendee_info['email'] ?? '' );
 
 			$attendee_info = apply_filters( 'camptix_checkout_attendee_info', $attendee_info );
 
-			if ( empty( $attendee_info['first_name'] ) || empty( $attendee_info['last_name'] ) )
+			if ( empty( $attendee_info['first_name'] ) || empty( $attendee_info['last_name'] ) ) {
 				$this->error_flags['required_fields'] = true;
+			}
 
-			if ( ! is_email( $attendee_info['email'] ) )
+			if ( ! is_email( $attendee_info['email'] ) ) {
 				$this->error_flags['invalid_email'] = true;
+			}
 
 			$answers = array();
 			if ( isset( $_POST['tix_attendee_questions'][ $i ] ) ) {

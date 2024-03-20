@@ -632,10 +632,10 @@ class Meetup_Events extends Base {
 				'max_interval'   => new DateInterval( 'P1Y' ),
 			);
 
-			$report = new self( $range->start, $range->end, $options );
+			$report = new self( $range->start ?? false, $range->end ?? false, $options );
 
 			if ( ! is_null( $error ) ) {
-				$report->merge_errors( $error, $report->error );
+				$report->merge_errors( $report->error, $error );
 			}
 		}
 

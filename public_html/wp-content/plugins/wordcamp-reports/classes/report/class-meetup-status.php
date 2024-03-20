@@ -302,6 +302,11 @@ class Meetup_Status extends Base_Status {
 		$period = $params['period'];
 		$year   = $params['year'];
 		$status = $params['status'];
+
+		if ( $status && ! isset( $statuses[ $status ] ) ) {
+			$status = null;
+		}
+
 		if ( ! empty( $params )  && isset( $params['range'] ) ) {
 			$report = new self( $params['range']->start, $params['range']->end, $params['status'], $params['options'] );
 		}

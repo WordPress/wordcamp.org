@@ -294,8 +294,7 @@ class WordCamp_Post_Types_Plugin {
 			}
 
 			if ( ! $session_time ) {
-				$wordcamp_start_date = get_wordcamp_post()->meta['Start Date (YYYY-mm-dd)'][0];
-				$session_time        = ( isset( $wordcamp_start_date ) ) ? $wordcamp_start_date : 0;
+				$session_time = get_wordcamp_post()->meta['Start Date (YYYY-mm-dd)'][0] ?? 0;
 			}
 
 			$settings = array(

@@ -439,7 +439,7 @@ class Meetup_Groups extends Base {
 				'earliest_start' => new DateTime( '2015-01-01' ), // Chapter program started in 2015.
 			);
 
-			$report = new self( $range->start, $range->end, $options );
+			$report = new self( $range->start ?? false, $range->end ?? false, $options );
 
 			if ( ! is_null( $error ) ) {
 				$report->merge_errors( $error, $report->error );

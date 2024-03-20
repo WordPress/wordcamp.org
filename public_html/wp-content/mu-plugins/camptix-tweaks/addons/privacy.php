@@ -155,7 +155,7 @@ class Privacy_Field extends CampTix_Addon {
 	 * @return WP_Post
 	 */
 	public function populate_attendee_object( $attendee, $data ) {
-		$attendee->{ self::SLUG } = $data[ self::SLUG ];
+		$attendee->{ self::SLUG } = $data[ self::SLUG ] ?? null;
 
 		return $attendee;
 	}

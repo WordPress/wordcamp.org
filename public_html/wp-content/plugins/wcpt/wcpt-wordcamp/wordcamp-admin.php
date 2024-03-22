@@ -826,7 +826,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				$wcpt = get_post_type_object( WCPT_POST_TYPE_ID );
 
 				// Only WordCamp Wranglers can change WordCamp statuses.
-				if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+				if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) && ! wp_doing_cron() ) {
 					$post_data['post_status'] = $post->post_status;
 				}
 

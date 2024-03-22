@@ -5260,7 +5260,7 @@ class CampTix_Plugin {
 
 		// Populate selected tickets from $_POST!
 		if ( ! empty( $_REQUEST['tix_tickets_selected'] ) ) {
-			foreach ( $_REQUEST['tix_tickets_selected'] as $ticket_id => $count ) {
+			foreach ( (array) $_REQUEST['tix_tickets_selected'] as $ticket_id => $count ) {
 				if ( isset( $this->tickets[ $ticket_id ] ) && intval( $count ) > 0 ) {
 					$this->tickets_selected[ $ticket_id ] = intval( $count );
 				}

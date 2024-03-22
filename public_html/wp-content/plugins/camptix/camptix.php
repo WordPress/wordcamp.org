@@ -5169,8 +5169,9 @@ class CampTix_Plugin {
 		}
 
 		// Allow [camptix attr="value"] but not [camptix_attendees] etc.
-		if ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $post->post_content, $matches ) )
+		if ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $post->post_content, $matches ) ) {
 			return;
+		}
 
 		// Keep this in the case where we'd like to remove things around the shortcode.
 		$this->shortcode_str = $matches[0];
@@ -5182,8 +5183,9 @@ class CampTix_Plugin {
 			$_REQUEST['tix_tickets_selected'] = array( $_REQUEST['tix_single_ticket_purchase'] => 1 );
 		}
 
-		if ( isset( $_POST ) && ! empty( $_POST ) )
+		if ( isset( $_POST ) && ! empty( $_POST ) ) {
 			$this->form_data = stripslashes_deep( $_POST );
+		}
 
 		$this->tickets = array();
 		$this->tickets_selected = array();
@@ -5191,11 +5193,12 @@ class CampTix_Plugin {
 		$via_reservation = false;
 		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
 
-		if ( count( $this->get_enabled_payment_methods() ) < 1 )
+		if ( count( $this->get_enabled_payment_methods() ) < 1 ) {
 			$this->error_flags['no_payment_methods'] = true;
+		}
 
 		// Find the coupon.
-		if ( isset( $_REQUEST['tix_coupon'] ) && ! empty( $_REQUEST['tix_coupon'] ) ) {
+		if ( ! empty( $_REQUEST['tix_coupon'] ) ) {
 			$coupon = $this->get_coupon_by_code( $_REQUEST['tix_coupon'] );
 			if ( $coupon && $this->is_coupon_valid_for_use( $coupon->ID ) ) {
 				$coupon->tix_coupon_remaining = $this->get_remaining_coupons( $coupon->ID );
@@ -5256,7 +5259,7 @@ class CampTix_Plugin {
 		unset( $tickets, $ticket );
 
 		// Populate selected tickets from $_POST!
-		if ( isset( $_REQUEST['tix_tickets_selected'] ) ) {
+		if ( ! empty( $_REQUEST['tix_tickets_selected'] ) ) {
 			foreach ( $_REQUEST['tix_tickets_selected'] as $ticket_id => $count ) {
 				if ( isset( $this->tickets[ $ticket_id ] ) && intval( $count ) > 0 ) {
 					$this->tickets_selected[ $ticket_id ] = intval( $count );
@@ -5281,8 +5284,9 @@ class CampTix_Plugin {
 			}
 		}
 
-		if ( isset( $_REQUEST['tix_coupon'] ) )
+		if ( isset( $_REQUEST['tix_coupon'] ) ) {
 			$this->order['coupon'] = sanitize_text_field( $_REQUEST['tix_coupon'] );
+		}
 
 		if ( isset( $_REQUEST['tix_reservation_id'], $_REQUEST['tix_reservation_token'] ) ) {
 			$this->order['reservation_id']    = $_REQUEST['tix_reservation_id'];
@@ -5290,8 +5294,9 @@ class CampTix_Plugin {
 		}
 
 		// Check whether this is a valid order.
-		if ( ! empty( $this->order['items'] ) )
+		if ( ! empty( $this->order['items'] ) ) {
 			$this->verify_order( $this->order );
+		}
 
 		// Check selected tickets.
 		$tickets_excess = 0;
@@ -5312,22 +5317,26 @@ class CampTix_Plugin {
 				$tickets_excess += $count - $ticket->tix_remaining;
 
 				// Remove the ticket if count is 0.
-				if ( $this->tickets_selected[ $ticket_id ] < 1 )
+				if ( $this->tickets_selected[ $ticket_id ] < 1 ) {
 					unset( $this->tickets_selected[ $ticket_id ] );
+				}
 			}
 
 			// ref: #1002
-			if ( $ticket->tix_coupon_applied )
+			if ( $ticket->tix_coupon_applied ) {
 				$coupons_applied += $count;
+			}
 		}
 
 		$this->tickets_selected_count = 0;
-		foreach ( $this->tickets_selected as $ticket_id => $count )
+		foreach ( $this->tickets_selected as $ticket_id => $count ) {
 			$this->tickets_selected_count += $count;
+		}
 
 		// ref: #1001
-		if ( $tickets_excess > 0 )
+		if ( $tickets_excess > 0 ) {
 			$this->error_flags['tickets_excess'] = true;
+		}
 
 		// ref: #1002 @todo maybe strip the cheaper ones instead?
 		if ( $this->coupon && $coupons_applied > $this->coupon->tix_coupon_remaining ) {
@@ -5346,14 +5355,18 @@ class CampTix_Plugin {
 				}
 			}
 
-			if ( $extra > 0 )
+			if ( $extra > 0 ) {
 				$this->log( 'Something is terribly wrong, extra > 0 after stripping extra coupons', 0, null, 'critical' );
+			}
 		}
 
-		if ( isset( $_REQUEST['tix_tickets_selected'] ) ) {
+		if ( ! empty( $_REQUEST['tix_tickets_selected'] ) ) {
 			$this->error_flags['no_tickets_selected'] = true;
-			foreach ( $this->tickets_selected as $ticket_id => $count )
-				if ( $count > 0 ) unset( $this->error_flags['no_tickets_selected'] );
+			foreach ( $this->tickets_selected as $ticket_id => $count ) {
+				if ( $count > 0 ) {
+					unset( $this->error_flags['no_tickets_selected'] );
+				}
+			}
 		}
 
 		$this->did_template_redirect = true;

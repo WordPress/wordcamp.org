@@ -406,10 +406,10 @@ class WordCamp_Forms_To_Drafts {
 		) );
 
 		if ( $draft_id ) {
-			$first_time = strtolower( $all_values['Is this the first time you have volunteered at a WordPress event?'] ) ?? '';
+			$first_time = strtolower( $all_values['Is this the first time you have volunteered at a WordPress event?'] ?? '' );
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 
-			update_post_meta( $draft_id, '_wcb_volunteer_email', is_email( $all_values['Email'] ) ?? '' );
+			update_post_meta( $draft_id, '_wcb_volunteer_email', is_email( $all_values['Email'] ?? '' ) );
 			update_post_meta( $draft_id, '_wcpt_user_name', $volunteer_user->user_login ?? '' );
 			update_post_meta( $draft_id, '_wcb_volunteer_first_time', $first_time );
 		}
@@ -477,7 +477,7 @@ class WordCamp_Forms_To_Drafts {
 			// The following if condition can be removed once we make sure that no more error messages are appearing.
 			$first_time = '';
 			if ( isset( $speaker['Is this your first time being a speaker at a WordPress event?'] ) ) {
-				$first_time = strtolower( $speaker['Is this your first time being a speaker at a WordPress event?'] ) ?? '';
+				$first_time = strtolower( $speaker['Is this your first time being a speaker at a WordPress event?'] ?? '' );
 			}
 			$first_time = in_array( $first_time, array( 'yes', 'no', 'unsure' ), true ) ? $first_time : '';
 			update_post_meta( $speaker_id, '_wcb_speaker_email', $speaker['Email Address'] ?? '' );

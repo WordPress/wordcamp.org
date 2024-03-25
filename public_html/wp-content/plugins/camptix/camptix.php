@@ -6803,26 +6803,51 @@ class CampTix_Plugin {
 			$post = get_post( $post );
 		}
 
-		if ( ! $post ) return false;
-		if ( $post->post_type != 'tix_ticket' ) return false;
-		if ( $post->post_status != 'publish' ) return false;
+		if (
+			! $post ||
+			$post->post_type != 'tix_ticket' ||
+			$post->post_status != 'publish' 
+		) {
+			return false;
+		}
 
 		$via_reservation = false;
-		if ( isset( $this->reservation ) && $this->reservation )
+		if ( ! empty( $this->reservation ) ) {
 			$via_reservation = $this->reservation['token'];
+		}
 
-		if ( apply_filters( 'camptix_hide_empty_tickets', true ) && $this->get_remaining_tickets( $post->ID, $via_reservation ) < 1 ) return false;
+		if (
+			apply_filters( 'camptix_hide_empty_tickets', true ) &&
+			$this->get_remaining_tickets( $post->ID, $via_reservation ) < 1
+		) {
+			return false;
+		}
 
 		$start = get_post_meta( $post->ID, 'tix_start', true );
-		$end = get_post_meta( $post->ID, 'tix_end', true );
+		$end   = get_post_meta( $post->ID, 'tix_end', true );
 
 		// Not started yet
-		if ( ! empty( $start ) && strtotime( $start ) > time() )
+		if ( $start && strtotime( $start ) > time() ) {
 			return false;
+		}
 
 		// Already ended.
-		if ( ! empty( $end ) && strtotime( $end . ' +1 day' ) < time() )
+		if ( $end && strtotime( $end . ' +1 day' ) < time() ) {
 			return false;
+		}
+
+		$wordcamp = get_wordcamp_post();
+		$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
+
+		// Event is finalised.
+		if ( $wordcamp && 'wcpt-closed' === $wordcamp->post_status ) {
+			return false;
+		}
+
+		// Event ended yesterday according to WordCamp post.
+		if ( $end_date && time() > ( (int) $end_date + DAY_IN_SECONDS ) ) {
+			return false;
+		}
 
 		return true;
 	}

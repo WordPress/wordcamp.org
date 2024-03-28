@@ -616,9 +616,8 @@ function modify_default_options( $options ) {
 function modify_email_templates( $options ) {
 	$sponsors_string = get_global_sponsors_string();
 	$donation_string = get_donation_string();
-	$swag_string = get_swag_store_string();
 
-	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string\n\n$swag_string";
+	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string";
 
 	$templates_that_need_footers = array(
 		'email_template_single_purchase',
@@ -866,12 +865,11 @@ function modify_shortcode_contents( $shortcode_contents, $tix_action ) {
 
 			$sponsors_string = get_global_sponsors_string();
 			$donation_string = get_donation_string();
-			$swag_string = get_swag_store_string();
 
 			if ( false !== strpos( $shortcode_contents, $content_end ) ) {
 				$shortcode_contents = str_replace(
 					$content_end,
-					wpautop( "$sponsors_string\n\n$donation_string\n\n$swag_string" ) . $content_end,
+					wpautop( "$sponsors_string\n\n$donation_string" ) . $content_end,
 					$shortcode_contents
 				);
 			}

@@ -310,6 +310,7 @@ function mark_invoices_as_paid( $sent_invoices, $paid_invoices ) {
 		if ( in_array( (int) $invoice->_wcbsi_qbo_invoice_id, $paid_invoices, true ) ) {
 			update_invoice_status( $invoice->ID, 'paid' );
 			notify_organizer_status_changed( $invoice->ID, 'paid' );
+			notify_sponsor_invoice_paid( $invoice->ID );
 		}
 	}
 }
@@ -383,6 +384,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 		}
 	} elseif ( 'paid' === $new_status ) {
 		$status_message = "has been paid by $sponsor_name. Go ahead and publish them to your website!";
+		$attachment_message = "\nWe have sent an email of received payment to the sponsor as well.";
 	} else {
 		return;
 	}
@@ -406,6 +408,41 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 	if ( $invoice_filename ) {
 		unlink( $invoice_filename );
 	}
+}
+
+/**
+ * Send notification and thank you to sponsor when their invoice has been paid.
+ *
+ * @param  integer $invoice_id
+ */
+function notify_sponsor_invoice_paid( $invoice_id ) {
+	if ( POST_TYPE !== get_post_type( $invoice_id ) ) {
+		return;
+	}
+
+	$sponsor_id = get_post_meta( $invoice_id, '_wcbsi_sponsor_id', true );
+	$to         = is_email( get_post_meta( $sponsor_id, '_wcpt_sponsor_email_address', true ) );
+	if ( empty( $to ) ) {
+		return;
+	}
+
+	$sponsor_first_name = get_post_meta( $sponsor_id, '_wcpt_sponsor_first_name', true );
+	$wordcamp           = get_wordcamp_post();
+	$wordcamp_name      = get_bloginfo( 'name' );
+	$subject            = "Your payment for {$wordcamp_name} has been received";
+	$headers            = array(
+		"From: {$wordcamp_name} <support@wordcamp.org>",
+		"Reply-To: {$wordcamp->meta['E-mail Address'][0]}",
+	);
+
+	$message  = sprintf( __( 'Hi %s,', 'wordcamporg' ), $sponsor_first_name )  . "\r\n\r\n";
+	$message .= sprintf( __( 'The invoice for %s has been marked as paid. Thank you for supporting the event!', 'wordcamporg' ), $wordcamp_name ) . "\r\n\r\n";
+	$message .= __( 'We made the sponsor wrangler aware of this and they will contact you about next steps!', 'wordcamporg' ) . "\r\n\r\n";
+	$message .= __( 'If you have any questions, please reply to let us know.', 'wordcamporg' ) . "\r\n\r\n";
+	$message .= __( 'Best regards', 'wordcamporg' ) . "\r\n";
+	$message .= sprintf( __( '%s team' ), $wordcamp_name );
+
+	wp_mail( $to, $subject, $message, $headers );
 }
 
 /**

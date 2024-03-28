@@ -176,13 +176,13 @@ class Events_Application extends WordCamp_Application {
 ADDRESS;
 
 		add_post_meta( $post_id, 'Organizer Name', $data['q_first_name'] . ' ' . $data['q_last_name'] );
-		add_post_meta( $post_id, 'Email', $data['q_email'] );
+		add_post_meta( $post_id, 'Email Address', $data['q_email'] );
 		add_post_meta( $post_id, 'City', $data['q_event_location'] );
-		add_post_meta( $post_id, 'Address', $organizer_address );
-		add_post_meta( $post_id, 'Primary organizer WordPress.org username', $data['q_wporg_username'] );
+		add_post_meta( $post_id, 'Mailing Address', $organizer_address );
+		add_post_meta( $post_id, 'WordPress.org Username', $data['q_wporg_username'] );
 		add_post_meta( $post_id, 'Slack', $data['q_slack_username'] );
 		add_post_meta( $post_id, 'Date Applied', time() );
-		add_post_meta( $post_id, 'Meetup Location', $data['q_event_location'] );
+		add_post_meta( $post_id, 'Location', $data['q_event_location'] );
 
 		$status_log_id = add_post_meta(
 			$post_id,
@@ -211,7 +211,7 @@ ADDRESS;
 	 */
 	public function get_organizer_email() {
 		if ( isset( $this->post ) && isset( $this->post->ID ) ) {
-			return get_post_meta( $this->post->ID, 'Email', true );
+			return get_post_meta( $this->post->ID, 'Email Address', true );
 		}
 	}
 

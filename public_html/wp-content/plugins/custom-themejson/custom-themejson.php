@@ -7,15 +7,16 @@
  * Version:     0.1
  */
 
- namespace WordCamp\CustomThemeJSON;
+namespace WordCamp\CustomThemeJSON;
 
- defined( 'WPINC' ) || die();
+defined( 'WPINC' ) || die();
 
- if ( ! class_exists( '\WordCamp\CustomThemeJSON\ThemeJSON' ) ) {
-    require_once __DIR__ . '/inc/ThemeJSON.php';
+if ( ! class_exists( '\WordCamp\CustomThemeJSON\ThemeJSON' ) ) {
+	require_once __DIR__ . '/inc/ThemeJSON.php';
 
-    // Override the theme.json file with custom settings.
-    \WordCamp\CustomThemeJSON\ThemeJSON::override( __DIR__ . '/test/custom-theme.json');
- }
+	// Add the admin pages.
+	// \WordCamp\CustomThemeJSON\UserInterface::add_admin_pages();
 
-
+	// Override the theme.json file with custom settings.
+	\WordCamp\CustomThemeJSON\ThemeJSON::override( __DIR__ . '/test/custom-theme.json');
+}

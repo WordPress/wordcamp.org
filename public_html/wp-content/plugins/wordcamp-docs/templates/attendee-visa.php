@@ -11,7 +11,7 @@ class WordCamp_Docs_Template_Attendee_Visa implements WordCamp_Docs_Template {
 		$data = wp_parse_args( $data, array(
 			'attendee_first_name' => '',
 			'attendee_last_name' => '',
-			'country_of_residency' => '',
+			'passport_issuing_country' => '',
 			'passport_number' => '',
 
 			'wordcamp_name'       => $wordcamp->post_title          ?? '',
@@ -57,8 +57,8 @@ class WordCamp_Docs_Template_Attendee_Visa implements WordCamp_Docs_Template {
 			<label><?php _e( 'Attendee Last Name:', 'wordcamporg' ); ?></label>
 			<input name="attendee_last_name" value="<?php echo esc_attr( $data['attendee_last_name'] ); ?>" />
 
-			<label><?php _e( 'Country of Residency:', 'wordcamporg' ); ?></label>
-			<input name="country_of_residency" value="<?php echo esc_attr( $data['country_of_residency'] ); ?>" />
+			<label><?php _e( 'Passport Issuing Country:', 'wordcamporg' ); ?></label>
+			<input name="passport_issuing_country" value="<?php echo esc_attr( $data['passport_issuing_country'] ); ?>" />
 
 			<label><?php _e( 'Passport Number:', 'wordcamporg' ); ?></label>
 			<input name="passport_number" value="<?php echo esc_attr( $data['passport_number'] ); ?>" />
@@ -172,7 +172,7 @@ h2 {
 		<p>To Whom It May Concern:</p>
 
 		<p>This letter is to confirm that <?php echo esc_html( $data['attendee_first_name'] ); ?> <?php echo esc_html( $data['attendee_last_name'] ); ?>
-		<?php echo esc_html( $data['country_of_residency'] ); ?> passport number <?php echo esc_html( $data['passport_number'] ); ?>,
+		<?php echo esc_html( $data['passport_issuing_country'] ); ?> passport number <?php echo esc_html( $data['passport_number'] ); ?>,
 		has purchased a ticket to attend <?php echo esc_html( $data['wordcamp_name'] ); ?>, a community-organized event focusing on WordPress
 		development and technology.</p>
 
@@ -206,7 +206,7 @@ h2 {
 		foreach ( array(
 			'attendee_first_name',
 			'attendee_last_name',
-			'country_of_residency',
+			'passport_issuing_country',
 			'passport_number',
 			'wordcamp_name',
 			'wordcamp_location',

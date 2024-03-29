@@ -16,14 +16,17 @@ class ThemeJSON {
 	 * @param string $file_path The path to the theme.json file.
 	 */
 	public static function override( $file_path ) {
-		// Read the theme.json file
+		// Read the theme.json file.
 		if ( empty($file_path) ) {
 			return;
 		}
 		$custom_theme_json = json_decode(file_get_contents($file_path), true);
 
-		add_filter('wp_theme_json_data_theme', function ( $theme_json ) use ( $custom_theme_json ) {
-			return $theme_json->update_with( $custom_theme_json );
-		});
+		add_filter(
+			'wp_theme_json_data_theme',
+			function ( $theme_json ) use ( $custom_theme_json ) {
+				return $theme_json->update_with( $custom_theme_json );
+			}
+		);
 	}
 }

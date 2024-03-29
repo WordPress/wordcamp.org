@@ -51,34 +51,34 @@ class WordCamp_Docs_Template_Speaker_Visa implements WordCamp_Docs_Template {
 		</h2>
 
 		<div class="wcorg-docs-form">
-			<label><?php _e( 'Speaker First Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Speaker First Name:', 'wordcamporg' ); ?></label>
 			<input name="speaker_first_name" value="<?php echo esc_attr( $data['speaker_first_name'] ); ?>" />
 
-			<label><?php _e( 'Speaker Last Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Speaker Last Name:', 'wordcamporg' ); ?></label>
 			<input name="speaker_last_name" value="<?php echo esc_attr( $data['speaker_last_name'] ); ?>" />
 
-			<label><?php _e( 'Passport Issuing Country:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Passport Issuing Country:', 'wordcamporg' ); ?></label>
 			<input name="passport_issuing_country" value="<?php echo esc_attr( $data['passport_issuing_country'] ); ?>" />
 
-			<label><?php _e( 'Passport Number:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Passport Number:', 'wordcamporg' ); ?></label>
 			<input name="passport_number" value="<?php echo esc_attr( $data['passport_number'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Name:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_name" value="<?php echo esc_attr( $data['wordcamp_name'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Location:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Location:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_location" value="<?php echo esc_attr( $data['wordcamp_location'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Date Start:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Date Start:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_date_start" value="<?php echo esc_attr( $data['wordcamp_date_start'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Date End:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Date End:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_date_end" value="<?php echo esc_attr( $data['wordcamp_date_end'] ); ?>" />
 
-			<label><?php _e( 'Organizer Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Organizer Name:', 'wordcamporg' ); ?></label>
 			<input name="organizer_name" value="<?php echo esc_attr( $data['organizer_name'] ); ?>" />
 
-			<label><?php _e( 'Organizer Contacts:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Organizer Contacts:', 'wordcamporg' ); ?></label>
 			<textarea name="organizer_contacts"><?php echo esc_textarea( $data['organizer_contacts'] ); ?></textarea>
 			<span class="description"><?php _e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
 		</div>

@@ -1,0 +1,16 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/theme.json",
+	"version": 2,
+	"settings": {
+		"color": {
+			"palette": [
+				{
+					"name": "Test Color",
+					"slug": "test_color",
+					"color": "#101517"
+				}
+			],
+			"defaultPalette": true
+		}
+	}
+}

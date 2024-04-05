@@ -134,7 +134,7 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 
 			<label><?php esc_html_e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
 			<textarea name="sponsorship_benefits"><?php echo esc_textarea( $data['sponsorship_benefits'] ); ?></textarea>
-			<span class="description"><?php _e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
 		</div>
 
 		<?php

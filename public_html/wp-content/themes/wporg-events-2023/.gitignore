@@ -20,11 +20,3 @@ phpcs.xml.dist
 /src/wp-content/*
 /src/wp-content/themes/*
 /src/wp-content/mu-plugins/*
-
-# ...except the actual src of this project.
-!/src/wp-content/tests
-!/src/wp-content/themes
-!/src/wp-content/themes/wporg-main-2022
-!/src/wp-content/mu-plugins
-!/src/wp-content/mu-plugins/theme-switcher.php
-lighthouse.html

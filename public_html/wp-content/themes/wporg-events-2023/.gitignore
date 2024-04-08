@@ -17,6 +17,4 @@ wp-cli.local.yml
 phpcs.xml.dist
 
 # Ignore everything in src...
-/src/wp-content/*
-/src/wp-content/themes/*
-/src/wp-content/mu-plugins/*
+/wp-content

@@ -18,8 +18,7 @@
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"scripts": {
-		"start": "yarn run watch",
-		"watch": "wp-scripts start & yarn run build:css -- --watch",
+		"watch": "wp-scripts start & yarn run build:css --watch",
 		"build": "wp-scripts build && yarn run build:css",
 		"build:css": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
 		"lint:js": "wp-scripts lint-js 'src/**/*.js'",

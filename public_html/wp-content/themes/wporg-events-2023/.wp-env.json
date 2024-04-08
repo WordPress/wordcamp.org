@@ -13,17 +13,17 @@
 	},
 	"core": "WordPress/WordPress#master",
 	"plugins": [
-		"./src/wp-content/plugins/gutenberg",
-		"./src/wp-content/plugins/jetpack",
-		"./src/wp-content/plugins/wordpress-importer"
+		"./wp-content/plugins/gutenberg",
+		"./wp-content/plugins/jetpack",
+		"./wp-content/plugins/wordpress-importer"
 	],
 	"themes": [
 		"./",
-		"./src/wp-content/themes/wporg-parent-2021"
+		"./wp-content/themes/wporg-parent-2021"
 	],
     "mappings": {
 		"env": "./env",
-		"wp-content/mu-plugins": "./src/wp-content/mu-plugins",
+		"wp-content/mu-plugins": "./wp-content/mu-plugins",
 		"wp-content/mu-plugins/0-sandbox.php": "./env/0-sandbox.php",
 		"wp-cli.yml": "./wp-cli.yml"
 	}

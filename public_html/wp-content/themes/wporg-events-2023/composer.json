@@ -20,13 +20,13 @@
 	},
 	"extra": {
 		"installer-paths": {
-			"src/wp-content/mu-plugins/{$name}/": [
+			"wp-content/mu-plugins/{$name}/": [
 				"type:wordpress-muplugin"
 			],
-			"src/wp-content/plugins/{$name}/": [
+			"wp-content/plugins/{$name}/": [
 				"type:wordpress-plugin"
 			],
-			"src/wp-content/themes/{$name}/": [
+			"wp-content/themes/{$name}/": [
 				"type:wordpress-theme"
 			]
 		}

@@ -1,0 +1,30 @@
+{
+	"config": {
+		"WP_DEBUG": true,
+		"SCRIPT_DEBUG": true,
+		"WP_DEBUG_LOG": "/tmp/wp-errors.log",
+		"FS_METHOD": "direct",
+		"WP_ENVIRONMENT_TYPE": "local",
+		"JETPACK_DEV_DEBUG": true,
+		"WPORG_SANDBOXED": true,
+        "WORDCAMP_DEV_GOOGLE_MAPS_API_KEY": "",
+        "EVENTS_NETWORK_ID": 1,
+        "WORDCAMP_ROOT_BLOG_ID": 1
+	},
+	"core": "WordPress/WordPress#master",
+	"plugins": [
+		"./src/wp-content/plugins/gutenberg",
+		"./src/wp-content/plugins/jetpack",
+		"./src/wp-content/plugins/wordpress-importer"
+	],
+	"themes": [
+		"./",
+		"./src/wp-content/themes/wporg-parent-2021"
+	],
+    "mappings": {
+		"env": "./env",
+		"wp-content/mu-plugins": "./src/wp-content/mu-plugins",
+		"wp-content/mu-plugins/0-sandbox.php": "./env/0-sandbox.php",
+		"wp-cli.yml": "./wp-cli.yml"
+	}
+}

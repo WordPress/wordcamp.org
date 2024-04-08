@@ -5,6 +5,7 @@
 	"license": "GPL-2.0-or-later",
 	"devDependencies": {
 		"@wordpress/scripts": "^26.18.0",
+		"@wordpress/env": "5.8.0",
 		"cssnano": "^6.0.1",
 		"postcss": "^8.4.31",
 		"postcss-cli": "^10.1.0",
@@ -17,11 +18,13 @@
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"scripts": {
-		"start": "npm run watch",
-		"watch": "wp-scripts start & npm run build:css -- --watch",
-		"build": "wp-scripts build && npm run build:css",
+		"start": "yarn run watch",
+		"watch": "wp-scripts start & yarn run build:css -- --watch",
+		"build": "wp-scripts build && yarn run build:css",
 		"build:css": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
 		"lint:js": "wp-scripts lint-js 'src/**/*.js'",
-		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'"
+		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'",
+		"setup:wp": "wp-env run cli \"bash env/setup.sh\"",
+		"wp-env": "wp-env"	
 	}
 }

@@ -1,0 +1,30 @@
+/**/.DS_STORE
+/**/.idea
+/**/.svn
+/**/build
+/**/node_modules
+/vendor
+*.map
+backstop_data
+
+# Allow local environment overrides.
+.wp-env.override.json
+wp-cli.local.yml
+
+# Configs from wporg-repo-tools.
+.eslintrc.js
+.prettierrc.js
+phpcs.xml.dist
+
+# Ignore everything in src...
+/src/wp-content/*
+/src/wp-content/themes/*
+/src/wp-content/mu-plugins/*
+
+# ...except the actual src of this project.
+!/src/wp-content/tests
+!/src/wp-content/themes
+!/src/wp-content/themes/wporg-main-2022
+!/src/wp-content/mu-plugins
+!/src/wp-content/mu-plugins/theme-switcher.php
+lighthouse.html

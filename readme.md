@@ -7,8 +7,11 @@ The platform also includes tools for program volunteers and administrators to ma
 
 ## Setup
 
+### Central & Original WordCamp Sites
 Follow the instructions for [setting up a Docker environment](.docker/readme.md).
 
+### Next Generation Events Sites
+Follow the instructions for [setting up a local env with testing data](public_html/wp-content/themes/wporg-events-2023/README.md).
 
 ## Support
 

@@ -78,9 +78,5 @@ jobs:
       run: |
         bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest
 
-    - name: Install required plugins
-      run: |
-        svn export https://plugins.svn.wordpress.org/jetpack/trunk public_html/wp-content/plugins/jetpack
-
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

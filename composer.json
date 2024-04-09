@@ -20,13 +20,94 @@
 	},
 	"extra": {
 		"installer-paths": {
-			"public_html/wp-content/themes/{$name}": ["wporg/wporg-parent-2021"]
+			"public_html/wp-content/themes/{$name}": ["wporg/wporg-parent-2021"],
+			"public_html/wp-content/mu-plugins-private/{$name}/tmp": ["wporg/wporg-mu-plugins"],
+			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
+			"public_html/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
+			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
 		}
 	},
 	"repositories": [
 		{
 			"type": "vcs",
 			"url": "git@github.com:WordPress/wporg-parent-2021.git"
+		},
+		{
+			"type": "composer",
+			"url": "https://wpackagist.org/",
+			"only": [
+				"wpackagist-plugin/*",
+				"wpackagist-theme/*"
+			]
+		},
+		{
+			"type": "vcs",
+			"url": "https://github.com/WordPress/wporg-mu-plugins.git"
+		},
+		{
+			"type": "package",
+			"package": [
+				{
+					"name": "wordpress-plugin/bbpress",
+					"type": "wordpress-plugin",
+					"version": "2.6",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/bbpress/",
+						"reference": "branches/2.6/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/camptix-bd-payments",
+					"type": "wordpress-plugin",
+					"version": "1.2",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/bd-payments-camptix/",
+						"reference": "tags/1.2/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/camptix-mercadopago",
+					"type": "wordpress-plugin",
+					"version": "1.0.6",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/camptix-mercadopago/",
+						"reference": "tags/1.0.6/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/camptix-paystack",
+					"type": "wordpress-plugin",
+					"version": "1.0.0",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/tbz-camptix-paystack/",
+						"reference": "tags/1.0.0/"
+					}
+				},
+				{
+					"name": "wordpress-plugin/camptix-paynow",
+					"type": "wordpress-plugin",
+					"version": "1.0.4",
+					"source": {
+						"type": "svn",
+						"url": "https://plugins.svn.wordpress.org/gateway-camptix-paynow-payment/",
+						"reference": "tags/1.0.4/"
+					}
+				},
+				{
+					"name": "wordpress-meta/wporg-profiles-wp-activity-notifier",
+					"type": "wordpress-plugin",
+					"version": "1.1",
+					"source": {
+						"type": "svn",
+						"url": "https://meta.svn.wordpress.org/sites/trunk/wordpress.org/public_html/wp-content/plugins/",
+						"reference": "wporg-profiles-wp-activity-notifier/"
+					}
+				}
+			]
 		}
 	],
 	"require": {
@@ -41,7 +122,39 @@
 		"sirbrillig/phpcs-changed": "2.10.0",
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^1.0",
-		"composer/installers": "^2.2"
+		"composer/installers": "^2.2",
+		"wpackagist-plugin/akismet": "*",
+		"wordpress-plugin/bbpress": "2.6.*",
+		"wpackagist-plugin/campt-indian-payment-gateway": "*",
+		"wordpress-plugin/camptix-bd-payments": "1.2",
+		"wordpress-plugin/camptix-mercadopago": "1.0.6",
+		"wpackagist-plugin/camptix-pagseguro": "*",
+		"wpackagist-plugin/camptix-payfast-gateway": "*",
+		"wpackagist-plugin/camptix-trustcard": "*",
+		"wpackagist-plugin/camptix-trustpay": "*",
+		"wordpress-plugin/camptix-paystack": "1.0.0",
+		"wordpress-plugin/camptix-paynow": "1.0.4",
+		"wpackagist-plugin/classic-editor": "dev-trunk",
+		"wpackagist-plugin/custom-content-width": "*",
+		"wpackagist-plugin/edit-flow": "*",
+		"wpackagist-plugin/email-post-changes": "dev-trunk",
+		"wpackagist-plugin/gutenberg": "*",
+		"wpackagist-plugin/hyperdb": "dev-trunk",
+		"wpackagist-plugin/jetpack": "*",
+		"wpackagist-plugin/liveblog": "*",
+		"wpackagist-plugin/public-post-preview": "*",
+		"wpackagist-plugin/pwa": "*",
+		"wpackagist-plugin/supportflow": "dev-trunk",
+		"wpackagist-plugin/tagregator": "dev-trunk",
+		"wpackagist-plugin/wordpress-importer": "*",
+		"wpackagist-plugin/wp-cldr": "*",
+		"wpackagist-plugin/wp-super-cache": "*",
+		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
+		"wporg/wporg-mu-plugins": "dev-build",
+		"wpackagist-theme/p2": "*",
+		"wpackagist-theme/twentytwentytwo": "*",
+		"wpackagist-theme/twentytwentythree": "*",
+		"wpackagist-theme/twentytwentyfour": "*"
 	},
 	"scripts": {
 		"format": "phpcbf -p",
@@ -57,8 +170,12 @@
 		"_comment": "Below script names left in for back-compat",
 		"phpcs": "phpcs",
 		"phpcbf": "phpcbf -p",
-
 		"tw": "@test:watch",
-		"twg": "@test:watch:group"
+		"twg": "@test:watch:group",
+		"post-update-cmd": [
+			"rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync/*",
+			"mv public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/mu-plugins/* public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/"
+		]
 	}
 }

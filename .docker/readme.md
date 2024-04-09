@@ -19,16 +19,16 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
           ```
 
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.
-	```bash
+   	
+    _Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command below. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
+	
+    ```bash
 	cd .docker
 	brew install mkcert
 	brew install nss
 	mkcert -install
 	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
-
-	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
-
 1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
     ```bash
     cd ..
@@ -40,7 +40,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
 	```bash
-	cd .. # to the directory above public_html/
+	cd ../../ # to the directory above public_html/
 	composer install
 	```
 
@@ -124,6 +124,13 @@ Note: All of these commands are meant to be executed from project directory.
     ```
 
    Note that using `docker compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
+
+1.  To clean up unused Docker images and reclaim disk space, use:
+    ```bash
+    docker image prune -a -f
+    ```
+
+    Note that before running `docker image prune -a -f`, it's a good practice to check which images will be removed using the  command: `docker image prune -a`. This will list all the images that would be removed without actually deleting them. This allows you to verify that the command won't remove any images you still need.
 
 1. To open a shell inside the web container, use:
     ```bash

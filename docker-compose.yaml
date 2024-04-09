@@ -12,7 +12,6 @@ services:
             - ".docker/wp-cli.yml:/usr/src/public_html/wp-cli.yml"
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"
-            - ".docker/config/composer.json:/usr/src/composer.json"
         ports:
             - "80:80"
             - "443:443"

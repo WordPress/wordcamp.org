@@ -152,19 +152,9 @@
 		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
 		"wporg/wporg-mu-plugins": "dev-build",
 		"wpackagist-theme/p2": "*",
-		"wpackagist-theme/twentyten": "*",
-		"wpackagist-theme/twentyeleven": "*",
-		"wpackagist-theme/twentytwelve": "*",
-		"wpackagist-theme/twentythirteen": "*",
-		"wpackagist-theme/twentyfourteen": "*",
-		"wpackagist-theme/twentyfifteen": "*",
-		"wpackagist-theme/twentysixteen": "*",
-		"wpackagist-theme/twentyseventeen": "*",
-		"wpackagist-theme/twentynineteen": "*",
-		"wpackagist-theme/twentytwenty": "*",
-		"wpackagist-theme/twentytwentyone": "*",
 		"wpackagist-theme/twentytwentytwo": "*",
-		"wpackagist-theme/twentytwentythree": "*"
+		"wpackagist-theme/twentytwentythree": "*",
+		"wpackagist-theme/twentytwentyfour": "*"
 	},
 	"scripts": {
 		"format": "phpcbf -p",

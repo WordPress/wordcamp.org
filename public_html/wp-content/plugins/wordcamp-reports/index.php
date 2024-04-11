@@ -143,6 +143,7 @@ function get_report_classes() {
 		__NAMESPACE__ . '\Report\WordCamp_Counts',
 		__NAMESPACE__ . '\Report\Sponsor_Details',
 		__NAMESPACE__ . '\Report\WordCamp_Speaker_Feedback',
+		__NAMESPACE__ . '\Report\Meetup_Attendees',
 	);
 }
 

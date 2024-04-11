@@ -13,9 +13,10 @@
  * but this is intentionally kept in place just to be safe.
  */
 add_action( 'init', function() {
-        if ( ! is_ssl() )
+        if ( ! is_ssl() && ! defined( 'DONOTCACHEPAGE' ) ) {
                 define( 'DONOTCACHEPAGE', true );
-});
+	}
+} );
 
 /**
  * Force HTTPS on all WordCamp.org sites that support it.

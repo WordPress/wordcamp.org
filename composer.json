@@ -173,9 +173,9 @@
 		"tw": "@test:watch",
 		"twg": "@test:watch:group",
 		"post-update-cmd": [
-			"rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync/*",
-			"mv public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/mu-plugins/* public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
-			"rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/"
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync/*",
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || mv public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/mu-plugins/* public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/"
 		]
 	}
 }

@@ -826,7 +826,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				$wcpt = get_post_type_object( WCPT_POST_TYPE_ID );
 
 				// Only WordCamp Wranglers can change WordCamp statuses.
-				if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+				if ( is_user_logged_in() && ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 					$post_data['post_status'] = $post->post_status;
 				}
 
@@ -865,7 +865,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				foreach ( $required_needs_site_fields as $field ) {
 
 					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ];
+					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
 
 					if ( empty( $value ) || 'null' == $value ) {
 						$post_data['post_status']     = 'wcpt-needs-email';
@@ -879,7 +879,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			if ( 'wcpt-scheduled' == $post_data['post_status'] && isset( $post_data_raw['ID'] ) && absint( $post_data_raw['ID'] ) > $min_site_id ) {
 				foreach ( $required_scheduled_fields as $field ) {
 					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ];
+					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
 
 					if ( empty( $value ) || 'null' == $value ) {
 						$post_data['post_status']     = 'wcpt-needs-schedule';

@@ -1,5 +1,5 @@
 ---
-name: "✨ Feature request"
+name: "✨ Feature discussion / request / proposal"
 about: If you have an idea to improve an existing WordCamp feature, please let us
   know.
 title: ''
@@ -14,7 +14,7 @@ Look for a matching component in the labels. If no one's matching there or you'd
 
 **Description**
 
-Describe the **rationale & objective** for your feature request. 
+Describe the **rationale & objective** for your feature discussion/request/proposal. 
 
 For example:
 
@@ -41,7 +41,7 @@ You may have already considered various options and made assessments. Please bri
 
 **Acceptance Criteria**
 
-Provide a detailed explanation or definition of what constitutes fulfilling this feature request. If possible, outline it in bullet points.
+Provide a detailed explanation or definition of what constitutes fulfilling this feature discussion/request/proposal. If possible, outline it in bullet points.
 
 For example:
 

@@ -1,6 +1,9 @@
 ---
 name: "\U0001F41E Bug report"
 about: Let us know if something isn't working as you expect it to.
+title: ''
+labels: "[Type] Bug"
+assignees: ''
 
 ---
 
@@ -20,9 +23,9 @@ Steps to reproduce the behavior:
 
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
+**Screenshots / Screencasts**
 
-If applicable, add screenshots to help explain your problem.
+Please try to include screenshots or screencasts whenever possible to help people better understand the questions you are describing.
 
 **WordCamp**
 

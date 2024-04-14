@@ -1,6 +1,10 @@
 ---
 name: "✨ Feature request"
-about: If you have an idea to improve an existing WordCamp feature, please let us know.
+about: If you have an idea to improve an existing WordCamp feature, please let us
+  know.
+title: ''
+labels: ''
+assignees: ''
 
 ---
 

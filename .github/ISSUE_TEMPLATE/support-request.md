@@ -1,6 +1,9 @@
 ---
 name: "❓ Support Question"
 about: If you have a question please see our docs or try Slack.
+title: ''
+labels: ''
+assignees: ''
 
 ---
 

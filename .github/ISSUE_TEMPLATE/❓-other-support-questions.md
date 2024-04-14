@@ -1,5 +1,5 @@
 ---
-name: "❓ Other Support Questions"
+name: "❓ Other support questions"
 about: If you have a question please see our docs or try Slack.
 title: ''
 labels: ''

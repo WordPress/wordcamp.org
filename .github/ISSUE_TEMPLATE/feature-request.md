@@ -3,15 +3,67 @@ name: "✨ Feature request"
 about: If you have an idea to improve an existing WordCamp feature, please let us
   know.
 title: ''
-labels: ''
+labels: "[Type] Feature Request"
 assignees: ''
 
 ---
 
-Feature requests should be made on the Make Community P2, to ensure everyone can contribute to new ideas. Please follow this process for new features: https://make.wordpress.org/community/feature-requests-for-community-sites/
+**Components / Tools**
 
-If you have a problem, go back and select the Bug Report option.
+Look for a matching component in the labels. If no one's matching there or you'd like to explain more in detail, fill it in here. 
 
----------------
+**Description**
 
-If you've already made your feature proposal on the p2, you can summarize it here and make sure to include a link.
+Describe the **rationale & objective** for your feature request. 
+
+For example:
+
+What problems did you encounter (rationale), and what do you propose to solve/improve/enhance them (objective)?
+
+What opportunities do you see (rationale), and what do you propose to achieve them (objective)?
+
+**Screenshots / Screencasts**
+
+Add screenshots or screencasts to make your description more clear.
+
+**Stakeholders**
+
+Who are the stakeholders stand to benefit from implementing the features outlined in this ticket
+Facilitator, Community team, XXX Community, Event Organizers, etc.
+
+**How does this new feature contribute to the objectives** 
+
+Are there other more intuitive alternative solutions? 
+Is this a feature that people need? 
+Can it truly achieve your desired outcomes? 
+
+You may have already considered various options and made assessments. Please briefly explain.
+
+**Acceptance Criteria**
+
+Provide a detailed explanation or definition of what constitutes fulfilling this feature request. If possible, outline it in bullet points.
+
+For example:
+
+**1. Implement automated emails**
+
+- 1st automated email: sent 1 month before the event.
+
+- 2nd automated email: sent 2 weeks after the event.
+
+- 3rd automated email: (if the checkbox isn't checked) sent 4 weeks after the event.
+
+- 4th automated email: (if the checkbox isn't checked) sent 6 weeks after the event.
+
+There'd be at least 2 automated emails and at most 4.
+
+**2. Implement a new checkbox**
+
+Also need a new checkbox that, when checked, indicates the report has been received and stops any further automated emails.
+
+Place the checkbox in the WordCamp Information section, beneath the "Running money through WPCS PBC" checkbox.
+
+**Priority**
+
+What is the priority of this ticket for you? Assign a matching priority label.
+Provide further explanation if you have any.

@@ -448,7 +448,7 @@ class WordCamp_New_Site {
 
 		$lead_organizer = $this->get_user_or_current_user( $meta['WordPress.org Username'][0] );
 
-		switch_theme( 'twentytwenty' );
+		switch_theme( 'twentytwentyfour' );
 
 		$this->set_default_options( $wordcamp, $meta );
 		$this->create_post_stubs( $wordcamp, $meta, $lead_organizer );

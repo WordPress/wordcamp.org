@@ -423,6 +423,15 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
 					);
+
+					/*
+					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
+					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
+					 */
+					if ( current_user_can( 'manage_options' ) ) {
+						$retval['Transparency Report Received'] = 'checkbox';
+					}
+
 					break;
 
 				case 'all':
@@ -442,65 +451,79 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant Amount'   => 'number',
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
-
-						'Organizer Name'                   => 'text',
-						'WordPress.org Username'           => 'text',
-						'Email Address'                    => 'text', // Lead organizer.
-						'Telephone'                        => 'text',
-						'Mailing Address'                  => 'textarea',
-						'Sponsor Wrangler Name'            => 'text',
-						'Sponsor Wrangler E-mail Address'  => 'text',
-						'Budget Wrangler Name'             => 'text',
-						'Budget Wrangler E-mail Address'   => 'text',
-						'Venue Wrangler Name'              => 'text',
-						'Venue Wrangler E-mail Address'    => 'text',
-						'Speaker Wrangler Name'            => 'text',
-						'Speaker Wrangler E-mail Address'  => 'text',
-						'Food/Beverage Wrangler Name'      => 'text',
-						'Food/Beverage Wrangler E-mail Address' => 'text',
-						'Swag Wrangler Name'               => 'text',
-						'Swag Wrangler E-mail Address'     => 'text',
-						'Volunteer Wrangler Name'          => 'text',
-						'Volunteer Wrangler E-mail Address' => 'text',
-						'Printing Wrangler Name'           => 'text',
-						'Printing Wrangler E-mail Address' => 'text',
-						'Design Wrangler Name'             => 'text',
-						'Design Wrangler E-mail Address'   => 'text',
-						'Website Wrangler Name'            => 'text',
-						'Website Wrangler E-mail Address'  => 'text',
-						'Social Media/Publicity Wrangler Name' => 'text',
-						'Social Media/Publicity Wrangler E-mail Address' => 'text',
-						'A/V Wrangler Name'                => 'text',
-						'A/V Wrangler E-mail Address'      => 'text',
-						'Party Wrangler Name'              => 'text',
-						'Party Wrangler E-mail Address'    => 'text',
-						'Travel Wrangler Name'             => 'text',
-						'Travel Wrangler E-mail Address'   => 'text',
-						'Safety Wrangler Name'             => 'text',
-						'Safety Wrangler E-mail Address'   => 'text',
-						'Mentor WordPress.org User Name'   => 'text',
-						'Mentor Name'                      => 'text',
-						'Mentor E-mail Address'            => 'text',
-
-						'Virtual event only'               => 'checkbox',
-						'Streaming account to use'         => 'select-streaming',
-						'Host region'                      => 'textarea',
-						'Venue Name'                       => 'text',
-						'Physical Address'                 => 'textarea',
-						'Maximum Capacity'                 => 'text',
-						'Available Rooms'                  => 'text',
-						'Website URL'                      => 'text',
-						'Contact Information'              => 'textarea',
-						'Exhibition Space Available'       => 'checkbox',
-
-						'Contributor Day'                  => 'checkbox',
-						'Contributor Day Date (YYYY-mm-dd)' => 'date',
-						'Contributor Venue Name'           => 'text',
-						'Contributor Venue Address'        => 'textarea',
-						'Contributor Venue Capacity'       => 'text',
-						'Contributor Venue Website URL'    => 'text',
-						'Contributor Venue Contact Info'   => 'textarea',
 					);
+
+					/*
+					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
+					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
+					 */
+					if ( current_user_can( 'manage_options' ) ) {
+						$retval['Transparency Report Received'] = 'checkbox';
+					}
+
+					$retval = array_merge(
+						$retval,
+						array(
+							'Organizer Name'                   => 'text',
+							'WordPress.org Username'           => 'text',
+							'Email Address'                    => 'text', // Lead organizer.
+							'Telephone'                        => 'text',
+							'Mailing Address'                  => 'textarea',
+							'Sponsor Wrangler Name'            => 'text',
+							'Sponsor Wrangler E-mail Address'  => 'text',
+							'Budget Wrangler Name'             => 'text',
+							'Budget Wrangler E-mail Address'   => 'text',
+							'Venue Wrangler Name'              => 'text',
+							'Venue Wrangler E-mail Address'    => 'text',
+							'Speaker Wrangler Name'            => 'text',
+							'Speaker Wrangler E-mail Address'  => 'text',
+							'Food/Beverage Wrangler Name'      => 'text',
+							'Food/Beverage Wrangler E-mail Address' => 'text',
+							'Swag Wrangler Name'               => 'text',
+							'Swag Wrangler E-mail Address'     => 'text',
+							'Volunteer Wrangler Name'          => 'text',
+							'Volunteer Wrangler E-mail Address' => 'text',
+							'Printing Wrangler Name'           => 'text',
+							'Printing Wrangler E-mail Address' => 'text',
+							'Design Wrangler Name'             => 'text',
+							'Design Wrangler E-mail Address'   => 'text',
+							'Website Wrangler Name'            => 'text',
+							'Website Wrangler E-mail Address'  => 'text',
+							'Social Media/Publicity Wrangler Name' => 'text',
+							'Social Media/Publicity Wrangler E-mail Address' => 'text',
+							'A/V Wrangler Name'                => 'text',
+							'A/V Wrangler E-mail Address'      => 'text',
+							'Party Wrangler Name'              => 'text',
+							'Party Wrangler E-mail Address'    => 'text',
+							'Travel Wrangler Name'             => 'text',
+							'Travel Wrangler E-mail Address'   => 'text',
+							'Safety Wrangler Name'             => 'text',
+							'Safety Wrangler E-mail Address'   => 'text',
+							'Mentor WordPress.org User Name'   => 'text',
+							'Mentor Name'                      => 'text',
+							'Mentor E-mail Address'            => 'text',
+
+							'Virtual event only'               => 'checkbox',
+							'Streaming account to use'         => 'select-streaming',
+							'Host region'                      => 'textarea',
+							'Venue Name'                       => 'text',
+							'Physical Address'                 => 'textarea',
+							'Maximum Capacity'                 => 'text',
+							'Available Rooms'                  => 'text',
+							'Website URL'                      => 'text',
+							'Contact Information'              => 'textarea',
+							'Exhibition Space Available'       => 'checkbox',
+
+							'Contributor Day'                  => 'checkbox',
+							'Contributor Day Date (YYYY-mm-dd)' => 'date',
+							'Contributor Venue Name'           => 'text',
+							'Contributor Venue Address'        => 'textarea',
+							'Contributor Venue Capacity'       => 'text',
+							'Contributor Venue Website URL'    => 'text',
+							'Contributor Venue Contact Info'   => 'textarea',
+						)
+					);
+
 					break;
 
 			}

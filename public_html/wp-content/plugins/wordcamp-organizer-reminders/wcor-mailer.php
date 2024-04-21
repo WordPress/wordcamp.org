@@ -535,7 +535,7 @@ class WCOR_Mailer {
 			'meta_query'     => array(
 				array(
 					'key'     => 'wcor_send_when',
-					'value'   => array( 'wcor_send_before', 'wcor_send_after', 'wcor_send_after_pending' ),
+					'value'   => array( 'wcor_send_before', 'wcor_send_after', 'wcor_send_after_pending', 'wcor_send_after_and_no_report' ),
 					'compare' => 'IN'
 				),
 			),
@@ -622,6 +622,17 @@ class WCOR_Mailer {
 
 				if ( $days_after_pending && $timestamp_added_to_pending_schedule ) {
 					$execution_timestamp = $timestamp_added_to_pending_schedule + ( $days_after_pending * DAY_IN_SECONDS );
+
+					if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
+						$ready = true;
+					}
+				}
+			} elseif ( 'wcor_send_after_and_no_report' == $send_when ) {
+				$days_after_and_no_report = absint( get_post_meta( $email->ID, 'wcor_send_days_after_and_no_report', true ) );
+				$report_received          = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+
+				if ( $end_date && $days_after_and_no_report && ! $report_received ) {
+					$execution_timestamp = $end_date + ( $days_after_and_no_report * DAY_IN_SECONDS );
 
 					if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
 						$ready = true;

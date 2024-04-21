@@ -162,7 +162,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 		update_post_meta( self::$timed_reminder_post_id, 'wcor_send_when',  $send_when      );
 		update_post_meta( self::$timed_reminder_post_id, $send_when_period, $send_when_days );
 
-		if ( in_array( $send_when, array( 'wcor_send_before', 'wcor_send_after' ) ) ) {
+		if ( in_array( $send_when, array( 'wcor_send_before', 'wcor_send_after', 'wcor_send_after_and_no_report' ) ) ) {
 			update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)', $compare_date );
 		} elseif ( 'wcor_send_after_pending' === $send_when ) {
 			update_post_meta( self::$wordcamp_dayton_post_id, '_timestamp_added_to_planning_schedule', $compare_date );
@@ -211,6 +211,14 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			array(
 				'wcor_send_after_pending',
 				'wcor_send_days_after_pending',
+				3,
+				strtotime( 'now - 3 days' )
+			),
+
+			// After the camp ends and no transparency report is received
+			array(
+				'wcor_send_after_and_no_report',
+				'wcor_send_days_after_and_no_report',
 				3,
 				strtotime( 'now - 3 days' )
 			),

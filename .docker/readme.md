@@ -35,7 +35,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     cd public_html
     git clone git://core.git.wordpress.org/ mu
     cd mu
-    git checkout 6.4
+    git checkout 6.5
     ```
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)

@@ -6856,11 +6856,34 @@ class CampTix_Plugin {
 			$remaining -= $reserved_tickets;
 		}
 
+		// Can't have less than 0 remaining tickets.
+		$remaining = max( $remaining, 0 );
+
 		return apply_filters( 'camptix_get_remaining_tickets', $remaining, $post_id, $via_reservation, $quantity, $reservations );
 	}
 
+	/**
+	 * Fetch the number of purchased tickets for a ticket.
+	 *
+	 * @param int    $post_id         The ticket post ID
+	 * @param string $via_reservation Optional. The reservation token.
+	 * @return int
+	 */
 	function get_purchased_tickets_count( $post_id, $via_reservation = false ) {
-		$purchased = 0;
+		$apcu_key  = get_current_blog_id() . ':' . $post_id . ':' . ( $via_reservation ?: '' );
+		if ( function_exists( 'apcu_enabled' ) && apcu_enabled() ) {
+			do {
+				if ( isset( $fetch_success ) ) {
+					// If we failed to fetch the value, wait 50ms before trying again.
+					usleep( 50000 );
+				}
+				$purchased = (int) apcu_fetch( $apcu_key, $fetch_success );
+			} while ( ! $fetch_success && ! apcu_add( $apcu_key . ':lock', 1, 5 ) );
+
+			if ( $fetch_success ) {
+				return $purchased;
+			}
+		}
 
 		$meta_query = array( array(
 			'key' => 'tix_ticket_id',
@@ -6885,8 +6908,13 @@ class CampTix_Plugin {
 			'meta_query' => $meta_query,
 		) );
 
-		if ( $attendees->found_posts > 0 )
+		if ( $attendees->found_posts > 0 ) {
 			$purchased = $attendees->found_posts;
+		}
+
+		if ( function_exists( 'apcu_enabled' ) && apcu_enabled() ) {
+			apcu_store( $apcu_key, $purchased, 10 * MINUTE_IN_SECONDS );
+		}
 
 		return $purchased;
 	}
@@ -7177,7 +7205,7 @@ class CampTix_Plugin {
 			return $this->form_attendee_info();
 		}
 
-		$this->verify_order( $this->order );
+		$this->verify_order( $this->order, true /* reserve tickets */ );
 
 		$reservation_quantity = 0;
 		if ( isset( $this->reservation ) && $this->reservation )
@@ -7274,6 +7302,7 @@ class CampTix_Plugin {
 			 */
 			$result = $payment_method_obj->payment_checkout( $payment_token );
 			if ( self::PAYMENT_STATUS_FAILED == $result ) {
+				// TODO: Release ticket? Otherwise this will just be reserved until the cache timeout.
 				return $this->form_attendee_info();
 			}
 
@@ -7287,7 +7316,7 @@ class CampTix_Plugin {
 	/**
 	 * Verify an order
 	 */
-	function verify_order( &$order = array() ) {
+	function verify_order( &$order = array(), $reserve_tickets = false ) {
 		$tickets_objects = get_posts( array(
 			'post_type' => 'tix_ticket',
 			'post_status' => 'publish',
@@ -7385,6 +7414,22 @@ class CampTix_Plugin {
 			if ( $item['quantity'] > $max_tickets_per_order ) {
 				$item['quantity'] = min( $max_tickets_per_order, $ticket->tix_remaining );
 				$this->error_flag( 'tickets_excess' );
+			}
+
+			// Triple check - make sure we actually have a ticket to sell them.
+			if (
+				function_exists( 'apcu_enabled' ) && apcu_enabled() &&
+				$reserve_tickets &&
+				empty( $this->error_flags[ 'tickets_excess' ] ) &&
+				$item['quantity']
+			) {
+				// The key used in get_purchased_tickets(), loaded via call to get_remaining_tickets() above.
+				$apcu_key              = get_current_blog_id() . ':' . $ticket->ID . ':' . ( $via_reservation ?: '' );
+				$ticket->tix_remaining = apcu_dec( $apcu_key, $item['quantity'], $success );
+				if ( ! $success || $ticket->tix_remaining < 0 ) {
+					$item['quantity'] = max( 0, min( $ticket->tix_remaining, $ticket->tix_remaining ) );
+					$this->error_flag( 'tickets_excess' );
+				}
 			}
 
 			// Track coupons usage quantity.

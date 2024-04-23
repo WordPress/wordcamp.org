@@ -6838,8 +6838,8 @@ class CampTix_Plugin {
 	 */
 	function get_remaining_tickets( $post_id, $via_reservation = false ) {
 		$remaining = 0;
-		$apcu_key  = 'remaining_tickets:' . get_current_blog_id() . ':' . $post_id . ':' . ( $via_reservation ?: '' );
-		if ( function_exists( 'apcu_enabled' ) && apcu_enabled() ) {
+		$apcu_key  = 'remaining_tickets:' . get_current_blog_id() . ':' . $post_id;
+		if ( function_exists( 'apcu_enabled' ) && apcu_enabled() && ! $via_reservation ) {
 			do {
 				if ( isset( $fetch_success ) ) {
 					// If we failed to fetch the value, wait 50ms before trying again.
@@ -6874,7 +6874,7 @@ class CampTix_Plugin {
 		// Can't have less than 0 remaining tickets.
 		$remaining = max( $remaining, 0 );
 
-		if ( function_exists( 'apcu_enabled' ) && apcu_enabled() ) {
+		if ( function_exists( 'apcu_enabled' ) && apcu_enabled() && ! $via_reservation ) {
 			apcu_store( $apcu_key, $remaining, 10 * MINUTE_IN_SECONDS );
 		}
 
@@ -7422,10 +7422,11 @@ class CampTix_Plugin {
 				function_exists( 'apcu_enabled' ) && apcu_enabled() &&
 				$reserve_tickets &&
 				empty( $this->error_flags[ 'tickets_excess' ] ) &&
-				$item['quantity']
+				$item['quantity'] &&
+				! $via_reservation
 			) {
 				// The key used in get_remaining_tickets() above.
-				$apcu_key              = 'remaining_tickets:' . get_current_blog_id() . ':' . $ticket->ID . ':' . ( $via_reservation ?: '' );
+				$apcu_key              = 'remaining_tickets:' . get_current_blog_id() . ':' . $ticket->ID;
 				$ticket->tix_remaining = apcu_dec( $apcu_key, $item['quantity'], $success );
 				if ( ! $success || $ticket->tix_remaining < 0 ) {
 					$item['quantity'] = max( 0, min( $ticket->tix_remaining, $ticket->tix_remaining ) );

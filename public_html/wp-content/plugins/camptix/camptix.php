@@ -7201,12 +7201,12 @@ class CampTix_Plugin {
 		if ( ! is_email( $receipt_email ) )
 			$this->error_flags['no_receipt_email'] = true;
 
+		$this->verify_order( $this->order, true /* reserve tickets */ );
+		
 		// If there's at least one error, don't proceed with checkout.
 		if ( $this->error_flags ) {
 			return $this->form_attendee_info();
 		}
-
-		$this->verify_order( $this->order, true /* reserve tickets */ );
 
 		$reservation_quantity = 0;
 		if ( isset( $this->reservation ) && $this->reservation )

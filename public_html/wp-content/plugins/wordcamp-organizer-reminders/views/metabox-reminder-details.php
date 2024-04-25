@@ -144,6 +144,15 @@ defined( 'WPINC' ) || die();
 		</tr>
 
 		<tr>
+			<th><input id="wcor_send_after_and_no_report" name="wcor_send_when" type="radio" value="wcor_send_after_and_no_report" <?php checked( $post->wcor_send_when, 'wcor_send_after_and_no_report' ); ?>></th>
+			<td><label for="wcor_send_after_and_no_report">after the camp ends and no transparency report is received: </label></td>
+			<td>
+				<input id="wcor_send_days_after_and_no_report" name="wcor_send_days_after_and_no_report" type="text" class="small-text" value="<?php echo esc_attr( $post->wcor_send_days_after_and_no_report ); ?>" />
+				<label for="wcor_send_days_after_and_no_report">days</label>
+			</td>
+		</tr>
+
+		<tr>
 			<th><input id="wcor_send_trigger" name="wcor_send_when" type="radio" value="wcor_send_trigger" <?php checked( $post->wcor_send_when, 'wcor_send_trigger' ); ?>></th>
 			<td><label for="wcor_send_trigger">on a trigger: </label></td>
 			<td>

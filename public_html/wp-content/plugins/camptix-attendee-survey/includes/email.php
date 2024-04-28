@@ -34,29 +34,16 @@ function get_email_content() {
 	$survey_page_url = get_survey_page_url();
 
 	$email  = "Hi [first_name] [last_name],\r\n\r\n";
-	$email .= sprintf(
-		/* translators: %s: wordcamp name. */
-		__( "%s is over, thank you to everyone who joined us! \r\n\r\n", 'wordcamporg' ),
-		esc_html( $wordcamp_name )
-	);
-	$email .= __( "As a community-led event, feedback is really important to us. It helps us improve our events and to keep providing high quality content.\r\n\r\n", 'wordcamporg' );
-	$email .= sprintf(
-		__(
-			/* translators: Please leave %1$s and %2$s untranslated. They represent the opening and closing anchor tags, respectively. */
-			"Please take a moment to answer our %1\$spost-event survey%2\$s and help us to do amazing WordPress events!\r\n",
-			'wordcamporg'
-		),
-		'<a href="' . esc_url( $survey_page_url ) . '">',
-		'</a>'
-	);
-	$email .= __( "(If you can't open the link, copy and paste the following URL)\r\n", 'wordcamporg' );
+	$email .= sprintf( "%s is over, thank you to everyone who joined us! \r\n\r\n", esc_html( $wordcamp_name ) );
+	$email .= "As a community-led event, feedback is really important to us. It helps us improve our events and to keep providing high quality content.\r\n\r\n";
+	$email .= sprintf( "Please take a moment to answer our <a href='%s'>post-event survey</a> and help us to do amazing WordPress events!\r\n", esc_url( $survey_page_url ) );
+	$email .= "(If you can't open the link, copy and paste the following URL)\r\n";
 	$email .= $survey_page_url . "\r\n\r\n";
-	$email .= sprintf(
-		/* translators: %s: closing date. */
-		__( "Please complete the survey by %s.\r\n\r\n", 'wordcamporg' ),
-		$closing_date
-	);
-	$email .= __( "Please also note that all responses will be kept confidential, and we will not share your personal information with any third parties.\r\n\r\nThank you in advance, we really appreciate your time!\r\n\r\nBest regards,\r\nOrganising Team,\r\n", 'wordcamporg' );
+	$email .= sprintf( "Please complete the survey by %s.\r\n\r\n", $closing_date );
+	$email .= "Please also note that all responses will be kept confidential, and we will not share your personal information with any third parties.\r\n\r\n";
+	$email .= "Thank you in advance, we really appreciate your time!\r\n\r\n";
+	$email .= "Best regards,\r\n";
+	$email .= "Organising Team,\r\n";
 	$email .= esc_html( $wordcamp_name );
 
 	return $email;

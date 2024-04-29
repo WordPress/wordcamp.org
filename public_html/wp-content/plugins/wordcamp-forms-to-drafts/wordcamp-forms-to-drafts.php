@@ -1,5 +1,4 @@
 <?php
-
 /*
 Plugin Name: WordCamp Forms to Drafts
 Description: Convert form submissions into drafts for our custom post types.
@@ -22,16 +21,16 @@ class WordCamp_Forms_To_Drafts {
 	 * Constructor
 	 */
 	public function __construct() {
-		add_action( 'wp_print_styles',                    array( $this, 'print_front_end_styles'      )        );
-		add_action( 'wp_enqueue_scripts',                 array( $this, 'enqueue_inert_script'        )        );
-		add_filter( 'the_content',                        array( $this, 'force_login_to_use_form'     ),  8    );
-		add_action( 'template_redirect',                  array( $this, 'populate_form_based_on_user' ),  9    );
-		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_sponsors'           ), 10, 3 );
-		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_speakers'           ), 10, 3 );
-		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_volunteers'         ), 10, 3 );
-		add_filter( 'jetpack_contact_form_email_headers', array( $this, 'maybe_modify_email_headers'  ), 10, 4 );
-		add_filter( 'contact_form_subject',               array( $this, 'maybe_modify_email_subject'  ), 10, 2 );
-		add_filter( 'contact_form_message',               array( $this, 'maybe_modify_email_message'  ), 10, 2 );
+		add_action( 'wp_print_styles',                    array( $this, 'print_front_end_styles' ) );
+		add_action( 'wp_enqueue_scripts',                 array( $this, 'enqueue_inert_script' ) );
+		add_filter( 'the_content',                        array( $this, 'force_login_to_use_form' ), 8 );
+		add_action( 'template_redirect',                  array( $this, 'populate_form_based_on_user' ), 9 );
+		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_sponsors' ), 10, 3 );
+		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_speakers' ), 10, 3 );
+		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_volunteers' ), 10, 3 );
+		add_filter( 'jetpack_contact_form_email_headers', array( $this, 'maybe_modify_email_headers' ), 10, 4 );
+		add_filter( 'contact_form_subject',               array( $this, 'maybe_modify_email_subject' ), 10, 2 );
+		add_filter( 'contact_form_message',               array( $this, 'maybe_modify_email_message' ), 10, 2 );
 	}
 
 	/**

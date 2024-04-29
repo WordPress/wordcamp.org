@@ -639,16 +639,16 @@ class WCOR_Mailer {
 				if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
 					$ready = true;
 				}
-			} elseif ( 'wcor_send_after_and_no_report' == $send_when ) {
-				$days_after_and_no_report = absint( get_post_meta( $email->ID, 'wcor_send_days_after_and_no_report', true ) );
-				$report_received          = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+			}
+		} elseif ( 'wcor_send_after_and_no_report' == $send_when ) {
+			$days_after_and_no_report = absint( get_post_meta( $email->ID, 'wcor_send_days_after_and_no_report', true ) );
+			$report_received          = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
 
-				if ( $end_date && $days_after_and_no_report && ! $report_received ) {
-					$execution_timestamp = $end_date + ( $days_after_and_no_report * DAY_IN_SECONDS );
+			if ( $end_date && $days_after_and_no_report && ! $report_received ) {
+				$execution_timestamp = $end_date + ( $days_after_and_no_report * DAY_IN_SECONDS );
 
-					if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
-						$ready = true;
-					}
+				if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
+					$ready = true;
 				}
 			}
 		}

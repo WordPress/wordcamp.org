@@ -152,6 +152,7 @@
 		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
 		"wporg/wporg-mu-plugins": "dev-build",
 		"wpackagist-theme/p2": "*",
+		"wpackagist-theme/twentyten": "*",
 		"wpackagist-theme/twentytwentytwo": "*",
 		"wpackagist-theme/twentytwentythree": "*",
 		"wpackagist-theme/twentytwentyfour": "*"

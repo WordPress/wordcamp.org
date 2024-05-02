@@ -7,11 +7,11 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+### Describe the bug
 
 A clear and concise description of what the bug is.
 
-**To reproduce**
+### To reproduce
 
 Steps to reproduce the behavior:
 1. Go to '...'
@@ -19,25 +19,25 @@ Steps to reproduce the behavior:
 3. Scroll down to '....'
 4. See error
 
-**Expected behavior**
+### Expected behavior
 
 A clear and concise description of what you expected to happen.
 
-**Screenshots / Screencasts**
+### Screenshots / Screencasts
 
 Please try to include screenshots or screencasts whenever possible to help people better understand the questions you are describing.
 
-**WordCamp**
+### WordCamp
 
 If this is a problem on a specific WordCamp's site, list the site or page URL here.
 
-**System (please complete the following information):**
+### System (please complete the following information)
 
  - Device: [e.g. laptop, iPhone6]
  - OS: [e.g. iOS]
  - Browser [e.g. chrome, safari]
  - Version [e.g. 22]
 
-**Security Issues**
+### Security Issues
 
 To report a security issue, please visit the WordPress HackerOne program: https://hackerone.com/wordpress.

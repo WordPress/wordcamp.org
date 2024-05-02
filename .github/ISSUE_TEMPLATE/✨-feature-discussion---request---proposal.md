@@ -8,38 +8,39 @@ assignees: ''
 
 ---
 
-**Components / Tools**
+### Components / Tools
 
-Look for a matching component in the labels. If no one's matching there or you'd like to explain more in detail, fill it in here. 
+Choose labels for the matching components. If no one's matching, fill in here. 
 
-**Description**
+### Description
 
-Describe the **rationale & objective** for your feature discussion/request/proposal. 
+Describe the **rationale** for your feature discussion/request/proposal. 
 
 For example:
 
-What problems did you encounter (rationale), and what do you propose to solve/improve/enhance them (objective)?
+What problems did you encounter (rationale), and what do you propose to solve/improve/enhance them?
 
-What opportunities do you see (rationale), and what do you propose to achieve them (objective)?
+What opportunities do you see (rationale), and what do you propose to achieve them?
 
-**Screenshots / Screencasts**
+### Screenshots / Screencasts
 
 Add screenshots or screencasts to make your description more clear.
 
-**Stakeholders**
+### Stakeholders
 
 Who are the stakeholders stand to benefit from implementing the features outlined in this ticket
 Facilitator, Community team, XXX Community, Event Organizers, etc.
 
-**How does this new feature contribute to the objectives** 
+### How does this new feature contribute to the goals
 
-Are there other more intuitive alternative solutions? 
-Is this a feature that people need? 
-Can it truly achieve your desired outcomes? 
+**Think through it, what is the ultimate goal you hope this feature will achieve?** Explain.
+**Are there other more intuitive alternative solutions?** Explain.
+**Is this a feature that people need?** Explain.
+**Can it truly achieve your desired outcomes?** Explain.
 
-You may have already considered various options and made assessments. Please briefly explain.
+You may have already considered various other options and made assessments. Please briefly explain.
 
-**Acceptance Criteria**
+### Acceptance Criteria
 
 Provide a detailed explanation or definition of what constitutes fulfilling this feature discussion/request/proposal. If possible, outline it in bullet points.
 
@@ -63,7 +64,7 @@ Also need a new checkbox that, when checked, indicates the report has been recei
 
 Place the checkbox in the WordCamp Information section, beneath the "Running money through WPCS PBC" checkbox.
 
-**Priority**
+### Priority
 
 What is the priority of this ticket for you? Assign a matching priority label.
 Provide further explanation if you have any.

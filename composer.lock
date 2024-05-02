@@ -69,12 +69,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/WordPress/wporg-parent-2021.git",
-                "reference": "216da2209e16c70fd137ea7123a9cd5d48b89c0c"
+                "reference": "d4e52af3e755c15787293e1fd1e25054af225eec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WordPress/wporg-parent-2021/zipball/216da2209e16c70fd137ea7123a9cd5d48b89c0c",
-                "reference": "216da2209e16c70fd137ea7123a9cd5d48b89c0c",
+                "url": "https://api.github.com/repos/WordPress/wporg-parent-2021/zipball/d4e52af3e755c15787293e1fd1e25054af225eec",
+                "reference": "d4e52af3e755c15787293e1fd1e25054af225eec",
                 "shasum": ""
             },
             "type": "wordpress-theme",
@@ -82,7 +82,7 @@
                 "source": "https://github.com/WordPress/wporg-parent-2021/tree/build",
                 "issues": "https://github.com/WordPress/wporg-parent-2021/issues"
             },
-            "time": "2024-04-29T03:23:57+00:00"
+            "time": "2024-04-30T17:07:09+00:00"
         }
     ],
     "packages-dev": [
@@ -4753,12 +4753,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/WordPress/wporg-mu-plugins.git",
-                "reference": "b5ac3f6a598c26f2d3866d6547f9d48689c0d468"
+                "reference": "1c01971a816aba069a1c9e5d9c200ac2e20c8dc6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WordPress/wporg-mu-plugins/zipball/b5ac3f6a598c26f2d3866d6547f9d48689c0d468",
-                "reference": "b5ac3f6a598c26f2d3866d6547f9d48689c0d468",
+                "url": "https://api.github.com/repos/WordPress/wporg-mu-plugins/zipball/1c01971a816aba069a1c9e5d9c200ac2e20c8dc6",
+                "reference": "1c01971a816aba069a1c9e5d9c200ac2e20c8dc6",
                 "shasum": ""
             },
             "require": {
@@ -4799,7 +4799,7 @@
                 "source": "https://github.com/WordPress/wporg-mu-plugins/tree/build",
                 "issues": "https://github.com/WordPress/wporg-mu-plugins/issues"
             },
-            "time": "2024-04-26T16:22:14+00:00"
+            "time": "2024-04-30T16:50:57+00:00"
         },
         {
             "name": "yoast/phpunit-polyfills",

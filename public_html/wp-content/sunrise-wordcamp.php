@@ -354,6 +354,10 @@ function get_domain_redirects() {
 		// city.wordcamp.org/year redirects.
 		"india.wordcamp.$tld/2020" => "india.wordcamp.$tld/2021",
 
+		// Regional event typos
+		"eu.wordcamp.$tld"  => "europe.wordcamp.$tld",
+		"usa.wordcamp.$tld" => "us.wordcamp.$tld",
+
 		/*
 		 * External domains.
 		 *

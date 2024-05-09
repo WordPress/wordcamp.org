@@ -524,7 +524,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				)
 			);
 
-			update_user_meta( $order['attendee_id'], '_stripe_checkout_session_id', wp_slash( $session['id'] ) );
+			update_post_meta( $order['attendee_id'], '_stripe_checkout_session_id', wp_slash( $session['id'] ) );
 
 			wp_redirect( esc_url_raw( $session['url'] ) );
 			die();

@@ -108,33 +108,33 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		</style>
 
 		<div class="wcorg-sponsorship-agreement-form">
-			<label><?php _e( 'Sponsor Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsor Name:', 'wordcamporg' ); ?></label>
 			<input name="sponsor_name" value="<?php echo esc_attr( $data['sponsor_name'] ); ?>" />
 
-			<label><?php _e( 'Sponsor Representative Name:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsor Representative Name:', 'wordcamporg' ); ?></label>
 			<input name="sponsor_rep_name" value="<?php echo esc_attr( $data['sponsor_rep_name'] ); ?>" />
 
-			<label><?php _e( 'Sponsor Representative Title:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsor Representative Title:', 'wordcamporg' ); ?></label>
 			<input name="sponsor_rep_title" value="<?php echo esc_attr( $data['sponsor_rep_title'] ); ?>" />
 
-			<label><?php _e( 'Agreement Date:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Agreement Date:', 'wordcamporg' ); ?></label>
 			<input name="agreement_date" value="<?php echo esc_attr( $data['agreement_date'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Date:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Date:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_date" value="<?php echo esc_attr( $data['wordcamp_date'] ); ?>" />
 
-			<label><?php _e( 'WordCamp Location:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'WordCamp Location:', 'wordcamporg' ); ?></label>
 			<input name="wordcamp_location" value="<?php echo esc_attr( $data['wordcamp_location'] ); ?>" />
 
-			<label><?php _e( 'Sponsorship Amount (in words, including the currency):', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsorship Amount (in words, including the currency):', 'wordcamporg' ); ?></label>
 			<input name="sponsorship_amount" value="<?php echo esc_attr( $data['sponsorship_amount'] ); ?>" />
 
-			<label><?php _e( 'Sponsorship Amount (in numbers, including the currency symbol):', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsorship Amount (in numbers, including the currency symbol):', 'wordcamporg' ); ?></label>
 			<input name="sponsorship_amount_num" value="<?php echo esc_attr( $data['sponsorship_amount_num'] ); ?>" />
 
-			<label><?php _e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
+			<label><?php esc_html_e( 'Sponsorship Benefits:', 'wordcamporg' ); ?></label>
 			<textarea name="sponsorship_benefits"><?php echo esc_textarea( $data['sponsorship_benefits'] ); ?></textarea>
-			<span class="description"><?php _e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Use multiple lines.', 'wordcamporg' ); ?></span>
 		</div>
 
 		<?php

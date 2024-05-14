@@ -1,14 +1,381 @@
 /*
-Theme Name: WordPress.org Events 2023
-Theme URI: https://wordpress.org
-Author: the WordPress.org team
-Author URI: https://wordpress.org
-Description: WordPress.org Events 2023 is for events.wordpress.org
-Requires at least: 6.4
-Tested up to: 6.5
-Requires PHP: 7.0
-Version: 1.0
-License: GNU General Public License v2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
-Text Domain: wordcamporg
+ * Theme Name: Events.WordPress.org 2023
+ * Theme URI: https://wordpress.org
+ * Author: the WordPress.org team
+ * Author URI: https://wordpress.org
+ * Description: Includes templates for the homepage, event archives, etc.
+ * Requires at least: 6.4
+ * Tested up to: 6.5
+ * Requires PHP: 7.0
+ * Version: 1.0
+ * License: GNU General Public License v2 or later
+ * License URI: http://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: wordcamporg
+ * Template:    wporg-parent-2021
+ */
+
+/* Base */
+
+/*
+ * Adapted from upstream SASS files.
+ */
+
+/*
+ * Gutenberg
+ * @link https://github.com/WordPress/gutenberg/blob/trunk/packages/base-styles/_breakpoints.scss
+ */
+
+/* admin sidebar auto folds */
+
+/* adminbar goes big */
+
+/*
+ * wporg-parent-2021
+ * @link https://github.com/WordPress/wporg-parent-2021/blob/trunk/source/wp-content/themes/wporg-parent-2021/sass/base/_breakpoints.scss
+ */
+
+/*
+* Custom
 */
+
+body {
+	--wp--custom--layout--wide-size: 1600px;
+}
+
+:is(.wp-site-blocks .is-layout-constrained,.wp-block-post-content-is-layout-constrained) .alignwide {
+
+		/* See note about about the `global` sizes. */
+		max-width: var(--wp--custom--layout--wide-size) !important;
+	}
+
+.wporg-events__hidden {
+	display: none;
+}
+
+@media (max-width: 781px) {
+
+.wporg-events__community-callout .wp-block-group {
+		flex-direction: column;
+		align-items: flex-start;
+}
+	}
+
+/* Pages */
+
+.page-slug-organize-an-event .wp-block-post-title {
+	margin: 0 auto;
+	text-align: center;
+}
+
+@media (max-width: 781px) {
+
+.page-organize-content-image {
+		display: none;
+}
+	}
+
+body .is-layout-flex.page-upcoming-title-past-wrapper {
+	align-items: baseline;
+}
+
+.wporg-events__filters__no-count .wporg-events__filters__search {
+	flex: 1;
+}
+
+.wporg-events__filters__no-count .wporg-events__filters__search form {
+		flex: 1;
+		min-width: 240px;
+	}
+
+@media (min-width: 663px) {
+
+.wporg-events__filters__no-count .wporg-events__filters__search form {
+			max-width: 240px;
+	}
+		}
+
+.wporg-events__search .wporg-events__filters {
+	margin-top: 10px !important;
+}
+
+@media (min-width: 960px) {
+
+.wporg-events__cover {
+		padding-left: var(--wp--preset--spacing--edge-space);
+		padding-right: var(--wp--preset--spacing--edge-space);
+}
+	}
+
+@media (min-width: 782px) {
+
+.wporg-events__cover .wp-block-columns {
+			flex-wrap: wrap !important;
+	}
+		}
+
+@media (min-width: 960px) {
+
+.wporg-events__cover .wp-block-columns {
+			flex-wrap: nowrap !important;
+	}
+		}
+
+.wporg-events__cover .wp-block-columns .wp-block-column:first-child {
+				padding-left: var(--wp--preset--spacing--edge-space);
+				padding-right: var(--wp--preset--spacing--edge-space);
+			}
+
+@media (min-width: 960px) {
+
+.wporg-events__cover .wp-block-columns .wp-block-column:first-child {
+					padding-left: 0;
+					padding-right: 0;
+			}
+
+					.wporg-events__cover .wp-block-columns .wp-block-column:first-child > p {
+						max-width: 460px;
+					}
+				}
+
+@media (min-width: 1440px) {
+
+.wporg-events__cover .wp-block-columns .wp-block-column:first-child {
+					flex-basis: 33% !important;
+			}
+				}
+
+@media (min-width: 1440px) {
+
+.wporg-events__cover .wp-block-columns .wp-block-column:last-child {
+					flex-basis: 66.665% !important;
+			}
+				}
+
+@media (min-width: 782px) {
+
+.wporg-events__cover .wp-block-columns .wp-block-column {
+				flex-grow: 1 !important;
+		}
+			}
+
+.wporg-events__cover .wp-block-columns .wp-block-column .wp-block-heading em {
+				display: block;
+			}
+
+.wporg-events__cover .wp-block-wporg-google-map {
+		height: 430px;
+	}
+
+@media (max-width: 599px) {
+
+.wporg-events__cover .wp-block-wporg-google-map {
+			height: 246px;
+	}
+		}
+
+.wporg-events__cover .wp-block-wporg-google-map .wporg-google-map__container {
+			height: 100%;
+		}
+
+@media (max-width: 781px) {
+
+.wporg-events__stats .wp-block-columns {
+		gap: var(--wp--preset--spacing--10);
+}
+	}
+
+.wporg-events__contributors .is-style-links-list li {
+			border-color: var(--wp--preset--color--light-grey-1);
+		}
+
+.wporg-events__contributors .is-style-links-list li a {
+				color: var(--wp--preset--color--charcoal-0);
+			}
+
+.wporg-events__contributors .is-style-links-list li:first-child {
+				border-top: none;
+			}
+
+.wporg-events__contributors .is-style-links-list li:last-child {
+				border-bottom: none;
+			}
+
+@media screen and (min-width: 1170px) {
+
+.wporg-events__contributors .wporg-events__contributors__image {
+			min-width: 565px;
+			align-self: flex-start;
+	}
+		}
+
+/* Blocks */
+
+.wp-block-wporg-google-map .wporg-map-marker__title {
+		font-family: var(--wp--preset--font-family--inter);
+		font-size: var(--wp--preset--font-size--normal);
+		font-weight: 600;
+	}
+
+.wp-block-wporg-google-map .wporg-map-marker__location {
+		margin-bottom: 2px;
+	}
+
+.wp-block-wporg-google-map .wporg-map-marker__date-time {
+		margin-top: 0;
+	}
+
+.wp-block-wporg-google-map .wporg-marker-list-item__date-time {
+		gap: 0;
+	}
+
+.wp-block-wporg-google-map .wporg-marker-list-item__date-time .wporg-google-map__date-time-separator {
+			display: none;
+		}
+
+/* Until we move to multi-select we should show the count so users know there is a filter applied. */
+
+.wporg-query-filter__toggle.has-no-filter-applied span,
+.wporg-query-filter__toggle.is-single-select span {
+	display: inline-block;
+}
+
+@media (max-width: 889px) {
+
+.wporg-query-filters {
+		max-width: 100%;
+		overflow-x: scroll;
+}
+	}
+
+.wporg-marker-list__container {
+	padding-left: 0;
+}
+
+.wporg-marker-list__container .wporg-marker-list-item {
+		border: 1px solid var(--wp--preset--color--light-grey-1);
+		border-bottom: none;
+		padding: var(--wp--preset--spacing--20);
+		list-style: none;
+		font-size: var(--wp--preset--font-size--small);
+	}
+
+.wporg-marker-list__container .wporg-marker-list-item:first-child {
+			border-radius: 2px 2px 0 0;
+		}
+
+.wporg-marker-list__container .wporg-marker-list-item:last-child {
+			border-radius: 0 0 2px 2px;
+			border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+		}
+
+@media (min-width: 960px) {
+
+.wporg-marker-list__container .wporg-marker-list-item {
+			display: grid;
+			align-items: start;
+			gap: var(--wp--preset--spacing--20);
+			grid-template-columns: 45% 1fr 2fr;
+	}
+		}
+
+@media (min-width: 1080px) {
+
+.wporg-marker-list__container .wporg-marker-list-item {
+			font-size: var(--wp--preset--font-size--normal);
+	}
+		}
+
+@media (min-width: 1280px) {
+
+.wporg-marker-list__container .wporg-marker-list-item {
+			grid-template-columns: 60% 1fr 1fr;
+	}
+		}
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__title {
+			margin: 0;
+			font-family: var(--wp--preset--font-family--inter);
+			font-size: var(--wp--preset--font-size--small);
+			line-height: var(--wp--custom--body--typography--line-height);
+			--wp--preset--spacing--30: 0;
+		}
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__title a {
+				-webkit-text-decoration: none;
+				text-decoration: none;
+			}
+
+@media (min-width: 1080px) {
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__title {
+				font-size: var(--wp--preset--font-size--normal);
+		}
+			}
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::first-letter {
+			    text-transform: capitalize;
+			}
+
+@media (max-width: 781px) {
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+				margin-top: 2px;
+				margin-bottom: -2px;
+		}
+			}
+
+@media (min-width: 600px) {
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+				display: inline;
+		}
+			}
+
+@media (min-width: 600px) {
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__date-time {
+				display: inline-flex;
+				justify-content: flex-end;
+				white-space: nowrap;
+				align-items: center;
+		}
+			}
+
+@media (min-width: 1280px) {
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__date-time {
+				display: flex;
+		}
+			}
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::after,
+		.wporg-marker-list__container .wporg-marker-list-item .wporg-google-map__date::after {
+			content: "";
+			margin-top: -1px; /* vertical-middle doesn't subtract the size of the element */
+			margin-left: 10px;
+			margin-right: 10px;
+			height: 3px;
+			width: 3px;
+			border-radius: 3px;
+			background: var(--wp--preset--color--charcoal-5);
+			display: inline-block;
+			vertical-align: middle;
+		}
+
+@media (max-width: 599px),(min-width: 960px) {
+
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::after {
+				display: none;
+		}
+			}
+
+body.home .wporg-marker-list__loading {
+	/* The final height could be anywhere between 50px and 750px, so split the difference in order to minimize the
+	 * amount of layout shift. */
+	height: 350px;
+}
+
+body.page-slug-upcoming-events .wporg-marker-list__loading {
+	/* Take up most of the viewport to avoid a large layout shift. We know this list will have a lot of entries. */
+	height: 90vh;
+}

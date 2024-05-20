@@ -277,6 +277,7 @@ class WCP_Payment_Request {
 			'draft',
 			'wcb-incomplete',
 			'wcb-pending-approval',
+			'wcb-needs-followup',
 			'wcb-approved',
 			'wcb-pending-payment',
 			'wcb-paid',

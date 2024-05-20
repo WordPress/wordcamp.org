@@ -25,6 +25,7 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 			parent::__construct();
 			add_action( 'init', array( $this, 'register_meetup_taxonomy' ) );
 			add_action( 'set_object_terms', array( $this, 'log_meetup_tags' ), 10, 6 );
+			add_filter( 'rest_wp_meetup_collection_params', array( $this, 'set_rest_post_status_default' ) );
 		}
 
 		/**
@@ -53,16 +54,19 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 					'object_ids' => $event_id,
 					'term_taxonomy_id' => $tt_added_ids,
 					'fields' => 'names',
-				)
-				);
+				) );
 
 				$added_terms = $added_terms_query->get_terms();
 
-				add_post_meta( $event_id, '_tags_log', array(
-					'timestamp' => time(),
-					'user_id'   => get_current_user_id(),
-					'message'   => 'Tags added: ' . join( ', ', $added_terms ),
-				) );
+				add_post_meta(
+					$event_id,
+					'_tags_log',
+					array(
+						'timestamp' => time(),
+						'user_id'   => get_current_user_id(),
+						'message'   => 'Tags added: ' . join( ', ', $added_terms ),
+					)
+				);
 			}
 
 			if ( count( $tt_removed_ids ) > 0 ) {
@@ -71,14 +75,17 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 					'term_taxonomy_id' => $tt_removed_ids,
 					'fields'           => 'names',
 					'hide_empty'       => false,
-				)
-				) )->get_terms();
+				) ) )->get_terms();
 
-				add_post_meta( $event_id, '_tags_log', array(
-					'timestamp' => time(),
-					'user_id'   => get_current_user_id(),
-					'message'   => 'Tags removed: ' . join( ', ', $removed_terms ),
-				) );
+				add_post_meta(
+					$event_id,
+					'_tags_log',
+					array(
+						'timestamp' => time(),
+						'user_id'   => get_current_user_id(),
+						'message'   => 'Tags removed: ' . join( ', ', $removed_terms ),
+					)
+				);
 			}
 
 		}
@@ -111,13 +118,14 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 * Include files specific for meetup event
 		 */
 		public function includes() {
+			require_once WCPT_DIR . 'wcpt-meetup/class-wp-rest-meetups-controller.php';
 		}
 
 		/**
 		 * Register meetup custom post type
 		 */
 		public function register_post_types() {
-			// Meetup post type labels
+			// Meetup post type labels.
 			$wcpt_labels = array(
 				'name'               => __( 'Meetups', 'wordcamporg' ),
 				'singular_name'      => __( 'Meetup', 'wordcamporg' ),
@@ -147,9 +155,10 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 				'author',
 			);
 
-			// Register WordCamp post type
+			// Register meetup post type.
 			register_post_type(
-				Meetup_Application::POST_TYPE, array(
+				Meetup_Application::POST_TYPE,
+				array(
 					'labels'          => $wcpt_labels,
 					'rewrite'         => $wcpt_rewrite,
 					'supports'        => $wcpt_supports,
@@ -177,6 +186,7 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 					'menu_icon'       => 'dashicons-wordpress',
 					'show_in_rest'    => true,
 					'rest_base'       => 'meetups',
+					'rest_controller_class' => 'WordCamp_REST_Meetups_Controller',
 				)
 			);
 		}
@@ -197,6 +207,23 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 */
 		public static function get_public_post_statuses() {
 			return Meetup_Application::get_public_post_statuses();
+		}
+
+		/**
+		 * Change the default status used for the Meetup CPT in the v2 REST API.
+		 *
+		 * @hooked filter rest_wp_meetup_collection_params
+		 *
+		 * @param array $query_params
+		 *
+		 * @return array
+		 */
+		public function set_rest_post_status_default( $query_params ) {
+			if ( isset( $query_params['status'] ) ) {
+				$query_params['status']['default'] = self::get_public_post_statuses();
+			}
+
+			return $query_params;
 		}
 
 	}

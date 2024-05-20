@@ -1,15 +1,15 @@
 <?php
 
 /**
- * Class to access WordCamp CPT posts via the v2 REST API.
+ * Class to access Meetup CPT posts via the v2 REST API.
  *
  * @see WP_REST_Posts_Controller
  */
-class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
+class WordCamp_REST_Meetups_Controller extends WP_REST_Posts_Controller {
 	/**
-	 * Retrieves the WordCamp post's schema, conforming to JSON Schema.
+	 * Retrieves the Meetup post's schema, conforming to JSON Schema.
 	 *
-	 * WordCamp-specific modifications to the standard post schema.
+	 * Meetup-specific modifications to the standard post schema.
 	 *
 	 * @access public
 	 *
@@ -18,7 +18,7 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 	public function get_item_schema() {
 		$schema = parent::get_item_schema();
 
-		// Since there is more than one public post status, show it in REST response
+		// Since there is more than one public post status, show it in REST response.
 		if ( false === array_search( 'view', $schema['properties']['status']['context'] ) ) {
 			$schema['properties']['status']['context'][] = 'view';
 		}
@@ -31,7 +31,7 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 	 * user can query private statuses.
 	 *
 	 * Based on the method in WP_REST_Posts_Controller, but takes into account that
-	 * there are multiple public statuses for the WordCamp CPT.
+	 * there are multiple public statuses for the Meetup CPT.
 	 *
 	 * @access public
 	 *
@@ -43,28 +43,11 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 	public function sanitize_post_statuses( $statuses, $request, $parameter ) {
 		$statuses = wp_parse_slug_list( $statuses );
 
-		$public_statuses = WordCamp_Loader::get_public_post_statuses();
-
-		/*
-		 * Camps that are scheduled and then cancelled should still be available (though not included
-		 * by default). This allows Official WordPress Events to update their status, so that they'll be removed
-		 * from the Events Widget.
-		 */
-		$public_statuses[] = 'wcpt-cancelled';
-
-		/*
-		 * @todo This was originally added so that the Official Events plugin could update the status of postponed
-		 * camps, but it only covered the pre-planning status. There are other statuses that could be used during
-		 * postponement, so https://meta.trac.wordpress.org/changeset/9786/ was added to cover all the use cases.
-		 * Now that this is in the API, though, it shouldn't be removed, because that could break back-compat with
-		 * other possible clients. It can be removed in a future version, though, since there's no longer a known
-		 * need for it.
-		 */
-		$public_statuses[] = 'wcpt-pre-planning';
+		$public_statuses = Meetup_Loader::get_public_post_statuses();
 
 		foreach ( $statuses as $status ) {
 			if ( in_array( $status, $public_statuses ) ) {
-				continue;
+				  continue;
 			}
 
 			$post_type_obj = get_post_type_object( $this->post_type );
@@ -83,9 +66,9 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 	}
 
 	/**
-	 * Checks if user can read the WordCamp post.
+	 * Checks if user can read the Meetup post.
 	 *
-	 * First make our custom check against public WordCamp statuses and
+	 * First make our custom check against public Meetup statuses and
 	 * after that fallback to default WP_REST_Posts_Controller for assurance.
 	 *
 	 * @access public
@@ -94,10 +77,7 @@ class WordCamp_REST_WordCamps_Controller extends WP_REST_Posts_Controller {
 	 * @return bool Whether the post can be read.
 	 */
 	public function check_read_permission( $post ) {
-		$public_statuses = WordCamp_Loader::get_public_post_statuses();
-
-		// Camps that are scheduled and then cancelled should still be available (though not included by default).
-		$public_statuses[] = 'wcpt-cancelled';
+		$public_statuses = Meetup_Loader::get_public_post_statuses();
 
 		// If post status is not listed as public, it cannot be read.
 		if ( ! in_array( $post->post_status, $public_statuses ) ) {

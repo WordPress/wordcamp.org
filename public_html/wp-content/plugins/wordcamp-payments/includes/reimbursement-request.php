@@ -521,6 +521,9 @@ function save_request( $post_id, $post ) {
 	}
 
 	verify_metabox_nonces();
+
+	// phpcs:ignore is added because verify_metabox_nonces(); already checks that.
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
 
 	/*
@@ -753,10 +756,11 @@ function validate_and_save_expenses( $post_id, $expenses ) {
 function validate_and_save_notes( $post, $new_note_message ) {
 
 	// Save incomplete message.
-	if ( isset( $_POST['wcp_mark_incomplete_notes'] ) ) {
+	// phpcs:ignore is used because verify_metabox_nonces(); already checks that.
+	if ( isset( $_POST['wcp_mark_incomplete_notes'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$safe_value = '';
-		if ( $post->post_status == 'wcb-incomplete' ) {
-			$safe_value = wp_kses( $_POST['wcp_mark_incomplete_notes'], wp_kses_allowed_html( 'strip' ) );
+		if ( 'wcb-incomplete' == $post->post_status ) {
+			$safe_value = wp_kses( $_POST['wcp_mark_incomplete_notes'], wp_kses_allowed_html( 'strip' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		}
 
 		update_post_meta( $post->ID, '_wcp_incomplete_notes', $safe_value );
@@ -784,9 +788,14 @@ function validate_and_save_notes( $post, $new_note_message ) {
 	update_post_meta( $post->ID, '_wcbrr_notes', $notes );
 	notify_parties_of_new_note( $post, $new_note );
 
-	\WordCamp_Budgets::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array(
-		'action' => 'note-added',
-	) );
+	\WordCamp_Budgets::log(
+		$post->ID,
+		get_current_user_id(),
+		sprintf( 'Note: %s', $new_note_message ),
+		array(
+			'action' => 'note-added',
+		)
+	);
 }
 
 /**

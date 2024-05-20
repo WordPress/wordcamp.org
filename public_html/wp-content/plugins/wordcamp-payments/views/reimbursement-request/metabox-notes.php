@@ -1,33 +1,28 @@
 <?php
 
-namespace WordCamp\Budgets\Reimbursement_Requests;
-defined( 'WPINC' ) or die();
+if ( ! defined( 'WPINC' ) ) {
+	die();
+}
 
-?>
-
-<?php if ( empty ( $existing_notes ) ) : ?>
-
-	<?php _e( 'There are no notes yet.', 'wordcamporg' ); ?>
-
-<?php else : ?>
-
-	<?php foreach ( $existing_notes as $note ) : ?>
+if ( empty( $existing_notes ) ) :
+	esc_html_e( 'There are no private notes yet.', 'wordcamporg' );
+else :
+	foreach ( $existing_notes as $note ) : ?>
 		<div class="wcbrr-note">
 			<span class="wcbrr-note-meta">
-				<?php echo esc_html( date( 'Y-m-d', $note['timestamp'] ) ); ?>
-				<?php echo esc_html( \WordCamp_Budgets::get_requester_name( $note['author_id'] ) ); ?>:
+				<?php echo esc_html( gmdate( 'Y-m-d', $note['timestamp'] ) ); ?>
+				<?php echo esc_html( WordCamp_Budgets::get_requester_name( $note['author_id'] ) ); ?>:
 			</span>
 
 			<?php echo esc_html( $note['message'] ); ?>
 		</div>
-	<?php endforeach; ?>
-
-<?php endif; ?>
+	<?php endforeach;
+endif; ?>
 
 <div>
 	<h3>
 		<label for="wcbrr_new_note">
-			<?php _e( 'Add a Note', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Add a Note', 'wordcamporg' ); ?>
 		</label>
 
 		<?php if ( current_user_can( 'manage_network' ) ) : ?>

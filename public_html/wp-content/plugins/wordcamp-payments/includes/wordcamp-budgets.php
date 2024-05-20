@@ -19,8 +19,6 @@ class WordCamp_Budgets {
 		add_action( 'admin_enqueue_scripts',  array( $this, 'enqueue_common_assets' ),             11    );
 		add_filter( 'user_has_cap',           array( __CLASS__, 'user_can_view_payment_details' ), 10, 4 );
 		add_filter( 'default_title',          array( $this, 'set_default_payments_title' ),        10, 2 );
-		add_action( 'add_meta_boxes',         array( $this, 'init_meta_boxes' )                          );
-		add_action( 'save_post',              array( $this, 'save_request' ),                      10, 2 );
 	}
 
 	/**
@@ -29,7 +27,7 @@ class WordCamp_Budgets {
 	public static function register_post_statuses() {
 		// Uses core's draft status too.
 
-		register_post_status( 'wcb-incomplete', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-incomplete', array(
 			'label'       => esc_html_x( 'Incomplete', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -40,7 +38,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-pending-approval', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-pending-approval', array(
 			'label'       => esc_html_x( 'Pending Approval', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -51,7 +49,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-needs-followup', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-needs-followup', array(
 			'label'       => esc_html_x( 'Needs Follow-up', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -62,7 +60,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-approved', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-approved', array(
 			'label'       => esc_html_x( 'Approved', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -73,7 +71,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-pending-payment', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-pending-payment', array(
 			'label'       => esc_html_x( 'Payment Sent', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -84,7 +82,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-paid', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-paid', array(
 			'label'       => esc_html_x( 'Paid', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -95,7 +93,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-failed', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-failed', array(
 			'label'       => esc_html_x( 'Failed', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -106,7 +104,7 @@ class WordCamp_Budgets {
 			),
 		) );
 
-		register_post_status( 'wcb-cancelled', array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
+		register_post_status( 'wcb-cancelled', array(
 			'label'       => esc_html_x( 'Cancelled', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
@@ -867,187 +865,5 @@ class WordCamp_Budgets {
 		$log   = json_encode( $log );
 
 		update_post_meta( $post_id, '_wcp_log', wp_slash( $log ) );
-	}
-
-	/**
-	 * Register meta boxes
-	 */
-	public function init_meta_boxes() {
-		add_meta_box(
-			'wcbrr_notes',
-			esc_html__( 'Notes', 'wordcamporg' ),
-			array( $this, 'render_notes_metabox' ),
-			array( 'wcb_reimbursement', 'wcp_payment_request' ),
-			'side',
-			'default'
-		);
-
-		if ( current_user_can( 'manage_network' ) ) {
-			add_meta_box(
-				'wcbrr_notes_private',
-				esc_html__( 'Private notes', 'wordcamporg' ),
-				array( $this, 'render_notes_private_metabox' ),
-				array( 'wcb_reimbursement', 'wcp_payment_request' ),
-				'side',
-				'default'
-			);
-		}
-	}
-
-	/**
-	 * Render the Notes metabox
-	 *
-	 * @param WP_Post $post
-	 */
-	public function render_notes_metabox( $post ) {
-		wp_nonce_field( 'notes', 'notes_nonce' );
-
-		$existing_notes = get_post_meta( $post->ID, '_wcbrr_notes', true );
-
-		require_once dirname( __DIR__ ) . '/views/wordcamp-budgets/metabox-notes.php';
-	}
-
-	/**
-	 * Render the Private notes metabox
-	 *
-	 * @param WP_Post $post
-	 */
-	public function render_notes_private_metabox( $post ) {
-		wp_nonce_field( 'notes_private', 'notes_private_nonce' );
-
-		$existing_notes = get_post_meta( $post->ID, '_wcbrr_notes_private', true );
-
-		require_once dirname( __DIR__ ) . '/views/wordcamp-budgets/metabox-notes-private.php';
-	}
-
-	/**
-	 * Save the post's data
-	 *
-	 * @param int     $post_id
-	 * @param WP_Post $post
-	 */
-	public function save_request( $post_id, $post ) {
-		if ( empty( $_POST ) || ! empty( $_POST['wcpn-request-import'] ) ) {
-			return;
-		}
-
-		check_admin_referer( str_replace( '_nonce', '', 'notes_nonce' ), 'notes_nonce' );
-		$this::validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
-
-		if ( current_user_can( 'manage_network' ) ) {
-			check_admin_referer( str_replace( '_nonce', '', 'notes_private_nonce' ), 'notes_private_nonce' );
-			$this::validate_and_save_notes_private( $post, $_POST['wcbrr_new_note_private'] );
-		}
-	}
-
-	/**
-	 * Validate and save notes.
-	 *
-	 * @param WP_Post $post
-	 * @param string  $new_note_message
-	 */
-	public function validate_and_save_notes( $post, $new_note_message ) {
-		$new_note_message = sanitize_text_field( wp_unslash( $new_note_message ) );
-
-		if ( empty( $new_note_message ) ) {
-			return;
-		}
-
-		$notes = get_post_meta( $post->ID, '_wcbrr_notes', true );
-		if ( ! is_array( $notes ) ) {
-			$notes = array();
-		}
-
-		$new_note = array(
-			'timestamp' => time(),
-			'author_id' => get_current_user_id(),
-			'message'   => $new_note_message,
-		);
-
-		$notes[] = $new_note;
-
-		update_post_meta( $post->ID, '_wcbrr_notes', $notes );
-		$this::notify_parties_of_new_note( $post, $new_note );
-
-		$this::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
-			'action' => 'note-added',
-		) );
-	}
-
-	/**
-	 * Validate and save private notes.
-	 *
-	 * @param WP_Post $post
-	 * @param string  $new_note_message
-	 */
-	public function validate_and_save_notes_private( $post, $new_note_message ) {
-		$new_note_message = sanitize_text_field( wp_unslash( $new_note_message ) );
-
-		if ( empty( $new_note_message ) ) {
-			return;
-		}
-
-		$notes = get_post_meta( $post->ID, '_wcbrr_notes_private', true );
-		if ( ! is_array( $notes ) ) {
-			$notes = array();
-		}
-
-		$new_note = array(
-			'timestamp' => time(),
-			'author_id' => get_current_user_id(),
-			'message'   => $new_note_message,
-		);
-
-		$notes[] = $new_note;
-
-		update_post_meta( $post->ID, '_wcbrr_notes_private', $notes );
-
-		$this::log( $post->ID, get_current_user_id(), __( 'Private note', 'wordcamporg' ), array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
-			'action' => 'note-added',
-		) );
-	}
-
-	/**
-	 * Notify WordCamp Central or the request author when new notes are added
-	 *
-	 * @param WP_Post $request
-	 * @param array   $note
-	 */
-	public function notify_parties_of_new_note( $request, $note ) {
-		$note_author = get_user_by( 'id', $note['author_id'] );
-
-		if ( $note_author->has_cap( 'manage_network' ) ) {
-			$to             = $this::get_requester_formatted_email( $request->post_author );
-			$subject_prefix = sprintf( '[%s] ', get_wordcamp_name() );
-		} else {
-			$to             = 'support@wordcamp.org';
-			$subject_prefix = '';
-		}
-
-		if ( ! $to ) {
-			return;
-		}
-
-		$subject          = sprintf( '%sNew note on `%s`', $subject_prefix, sanitize_text_field( $request->post_title ) );
-		$note_author_name = $this::get_requester_name( $note['author_id'] );
-		$request_url      = admin_url( sprintf( 'post.php?post=%s&action=edit', $request->ID ) );
-		$headers          = array( 'Reply-To: support@wordcamp.org' );
-
-		$message = sprintf( '
-			%s has added the following note on the reimbursement request for %s:
-
-			%s
-
-			You can view the request and respond to their note at:
-
-			%s',
-			sanitize_text_field( $note_author_name ),
-			sanitize_text_field( $request->post_title ),
-			sanitize_text_field( $note['message'] ),
-			esc_url_raw( $request_url )
-		);
-		$message = str_replace( "\t", '', $message );
-
-		wp_mail( $to, $subject, $message, $headers );
 	}
 }

@@ -364,7 +364,7 @@ class Payment_Requests_Dashboard {
 			'paid'             => __( 'Paid', 'wordcamporg' ),
 			'cancelled-failed' => __( 'Cancelled/Failed', 'wordcamporg' ),
 			'incomplete'       => __( 'Incomplete', 'wordcamporg' ),
-			'needs-followup'   => __( 'Needs follow-up', 'wordcamporg' ),
+			'needs-followup'   => __( 'Needs Follow-up', 'wordcamporg' ),
 		);
 
 		foreach ( $sections as $section_key => $section_caption ) {

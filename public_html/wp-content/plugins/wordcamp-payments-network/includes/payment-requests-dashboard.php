@@ -333,7 +333,6 @@ class Payment_Requests_Dashboard {
 		$tabs = array(
 			'drafts',
 			'overdue',
-
 			'pending-approval',
 			'approved',
 			'pending-payment',

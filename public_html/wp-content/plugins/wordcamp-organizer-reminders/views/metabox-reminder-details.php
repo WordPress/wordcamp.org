@@ -15,7 +15,13 @@ defined( 'WPINC' ) || die();
 	<tbody>
 		<tr>
 			<th><input id="wcor_send_organizers" name="wcor_send_where[]" type="checkbox" value="wcor_send_organizers" <?php checked( in_array( 'wcor_send_organizers', $send_where ) ); ?>></th>
-			<td colspan="2"><label for="wcor_send_organizers">The organizing team</label> (typically <code>city@wordcamp.org</code>)</td>
+			<td colspan="2"><label for="wcor_send_organizers">The organizing team</label>
+			<br>
+			(Will send to 
+			1. <code>support@wordcamp.org</code>
+			2. If specified, the email address under WordCamp Information section on WordCamp edit page
+			3. If specified, the email address of the lead organizer)
+			</td>
 		</tr>
 
 		<tr>

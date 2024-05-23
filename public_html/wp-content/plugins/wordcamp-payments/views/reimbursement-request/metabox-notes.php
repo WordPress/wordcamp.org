@@ -1,23 +1,28 @@
 <?php
 
-if ( ! defined( 'WPINC' ) ) {
-	die();
-}
+namespace WordCamp\Budgets\Reimbursement_Requests;
+defined( 'WPINC' ) || die();
 
-if ( empty( $existing_notes ) ) :
-	esc_html_e( 'There are no private notes yet.', 'wordcamporg' );
-else :
-	foreach ( $existing_notes as $note ) : ?>
+?>
+
+<?php if ( empty( $existing_notes ) ) : ?>
+
+	<?php esc_html_e( 'There are no notes yet.', 'wordcamporg' ); ?>
+
+<?php else : ?>
+
+	<?php foreach ( $existing_notes as $note ) : ?>
 		<div class="wcbrr-note">
 			<span class="wcbrr-note-meta">
 				<?php echo esc_html( gmdate( 'Y-m-d', $note['timestamp'] ) ); ?>
-				<?php echo esc_html( WordCamp_Budgets::get_requester_name( $note['author_id'] ) ); ?>:
+				<?php echo esc_html( \WordCamp_Budgets::get_requester_name( $note['author_id'] ) ); ?>:
 			</span>
 
 			<?php echo esc_html( $note['message'] ); ?>
 		</div>
-	<?php endforeach;
-endif; ?>
+	<?php endforeach; ?>
+
+<?php endif; ?>
 
 <div>
 	<h3>

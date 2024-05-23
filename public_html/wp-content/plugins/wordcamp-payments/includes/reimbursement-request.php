@@ -521,7 +521,6 @@ function save_request( $post_id, $post ) {
 	}
 
 	verify_metabox_nonces();
-
 	// phpcs:ignore is added because verify_metabox_nonces(); already checks that.
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );

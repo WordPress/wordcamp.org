@@ -54,7 +54,7 @@ class Payment_Requests_List_Table extends WP_List_Table {
 		$order    = 'asc';
 
 		if ( 'overdue' == $view ) {
-			$where .= $wpdb->prepare( " AND `status` IN ( 'wcb-pending-approval', 'wcb-needs-followup' ) AND `due` > 0 AND `due` <= %d ", time() );
+			$where .= $wpdb->prepare( " AND `status` = 'wcb-pending-approval' AND `due` > 0 AND `due` <= %d ", time() );
 		} elseif ( 'pending-approval' == $view ) {
 			$where .= " AND `status` = 'wcb-pending-approval' ";
 		} elseif ( 'approved' == $view ) {

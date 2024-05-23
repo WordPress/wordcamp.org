@@ -155,7 +155,8 @@
 		"wpackagist-theme/twentyten": "*",
 		"wpackagist-theme/twentytwentytwo": "*",
 		"wpackagist-theme/twentytwentythree": "*",
-		"wpackagist-theme/twentytwentyfour": "*"
+		"wpackagist-theme/twentytwentyfour": "*",
+		"quickbooks/v3-php-sdk": "*"
 	},
 	"scripts": {
 		"format": "phpcbf -p",

@@ -50,12 +50,12 @@ class WordCamp_Budgets {
 		) );
 
 		register_post_status( 'wcb-needs-followup', array(
-			'label'       => esc_html_x( 'Needs follow-up', 'payment request', 'wordcamporg' ),
+			'label'       => esc_html_x( 'Needs Follow-up', 'payment request', 'wordcamporg' ),
 			'public'      => false,
 			'protected'   => true,
 			'label_count' => _nx_noop(
-				'Needs follow-up <span class="count">(%s)</span>',
-				'Needs follow-up <span class="count">(%s)</span>',
+				'Needs Follow-up <span class="count">(%s)</span>',
+				'Needs Follow-up <span class="count">(%s)</span>',
 				'wordcamporg'
 			),
 		) );

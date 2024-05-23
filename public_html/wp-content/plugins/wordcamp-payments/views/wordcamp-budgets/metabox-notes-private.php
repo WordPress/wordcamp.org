@@ -21,19 +21,15 @@ endif; ?>
 
 <div>
 	<h3>
-		<label for="wcbrr_new_note">
-			<?php esc_html_e( 'Add a Note', 'wordcamporg' ); ?>
+		<label for="wcbrr_new_note_private">
+			<?php esc_html_e( 'Add a private note', 'wordcamporg' ); ?>
 		</label>
-
-		<?php if ( current_user_can( 'manage_network' ) ) : ?>
-			<p class="description">(visible to organizers)</p>
-		<?php endif; ?>
 	</h3>
 
-	<textarea id="wcbrr_new_note" name="wcbrr_new_note" class="large-text"></textarea>
+	<textarea id="wcbrr_new_note_private" name="wcbrr_new_note_private" class="large-text"></textarea>
 
 	<?php submit_button(
-		esc_html__( 'Add Note', 'wordcamporg' ),
+		esc_html__( 'Add private note', 'wordcamporg' ),
 		'secondary',
 		'wcbrr_add_note'
 	); ?>

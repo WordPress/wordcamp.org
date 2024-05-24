@@ -493,6 +493,10 @@ class WordCamp_QBO {
 		 * for the first time, so we don't need any code to automatically activate them.
 		 */
 		if ( 'USD' != $currency_code ) {
+			/*
+			 * Fetch currency exchange rates from QBO.
+			 * No caching implemented since QBO updates rates every 4 hours and API calls are only triggered on invoice approval.
+			 */
 			$response = wp_remote_get(
 				sprintf(
 					'%s/v3/company/%d/exchangerate?sourcecurrencycode=%s',

@@ -513,14 +513,25 @@ class WordCamp_QBO {
 					),
 				)
 			);
+			Logger\log( 'remote_request', compact( 'currency_code', 'response' ) );
 
-			$body          = json_decode( wp_remote_retrieve_body( $response ), true );
-			$exchange_rate = $body['ExchangeRate']['Rate'];
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			} elseif ( 200 != wp_remote_retrieve_response_code( $response ) ) {
+				return new WP_Error( 'invalid_http_code', 'Invalid HTTP response code', $response );
+			} else {
+				$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
-			$payload['CurrencyRef'] = array(
+				if ( isset( $body['ExchangeRate']['Rate'] ) ) {
+					$exchange_rate = $body['ExchangeRate']['Rate'];
+				} else {
+					return new WP_Error( 'error', 'Could not extract exchange rate from the response.', $body );
+				}
+			}
+
+			$payload['CurrencyRef']  = array(
 				'value' => $currency_code,
 			);
-
 			$payload['ExchangeRate'] = $exchange_rate;
 		}
 

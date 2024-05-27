@@ -641,6 +641,12 @@ class WCOR_Mailer {
 				}
 			}
 		} elseif ( 'wcor_send_after_and_no_report' == $send_when ) {
+			$through_wpcs_pbc = get_post_meta( $wordcamp->ID, 'Running money through WPCS PBC', true );
+
+			if ( $through_wpcs_pbc ) {
+				return $ready;
+			}
+
 			$days_after_and_no_report = absint( get_post_meta( $email->ID, 'wcor_send_days_after_and_no_report', true ) );
 			$report_received          = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
 

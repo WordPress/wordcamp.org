@@ -17,10 +17,11 @@ defined( 'WPINC' ) || die();
 			<th><input id="wcor_send_organizers" name="wcor_send_where[]" type="checkbox" value="wcor_send_organizers" <?php checked( in_array( 'wcor_send_organizers', $send_where ) ); ?>></th>
 			<td colspan="2"><label for="wcor_send_organizers">The organizing team</label>
 			<br>
-			(Will send to 
+			<span>(Will send to 
 			1. <code>support@wordcamp.org</code>
 			2. If specified, the email address under WordCamp Information section on WordCamp edit page
 			3. If specified, the email address of the lead organizer)
+			</span>
 			</td>
 		</tr>
 
@@ -151,7 +152,11 @@ defined( 'WPINC' ) || die();
 
 		<tr>
 			<th><input id="wcor_send_after_and_no_report" name="wcor_send_when" type="radio" value="wcor_send_after_and_no_report" <?php checked( $post->wcor_send_when, 'wcor_send_after_and_no_report' ); ?>></th>
-			<td><label for="wcor_send_after_and_no_report">after the camp ends and no transparency report is received: </label></td>
+			<td>
+				<label for="wcor_send_after_and_no_report">after the camp ends and no transparency report is received: </label>
+				<br>
+				<span>(This will only be triggered when the 'Running money through WPCS PBC' is <strong>NOT</strong> checked)</span>
+			</td>
 			<td>
 				<input id="wcor_send_days_after_and_no_report" name="wcor_send_days_after_and_no_report" type="text" class="small-text" value="<?php echo esc_attr( $post->wcor_send_days_after_and_no_report ); ?>" />
 				<label for="wcor_send_days_after_and_no_report">days</label>

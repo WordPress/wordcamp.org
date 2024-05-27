@@ -493,9 +493,46 @@ class WordCamp_QBO {
 		 * for the first time, so we don't need any code to automatically activate them.
 		 */
 		if ( 'USD' != $currency_code ) {
-			$payload['CurrencyRef'] = array(
+			/*
+			 * Fetch currency exchange rates from QBO.
+			 * No caching implemented since QBO updates rates every 4 hours and API calls are only triggered on invoice approval.
+			 */
+			$response = wp_remote_get(
+				sprintf(
+					'%s/v3/company/%d/exchangerate?sourcecurrencycode=%s',
+					self::$api_base_url,
+					rawurlencode( $realm_id ),
+					$currency_code,
+				),
+				array(
+					'timeout' => self::REMOTE_REQUEST_TIMEOUT,
+					'headers' => array(
+						'Authorization' => $oauth_header,
+						'Accept'        => 'application/json',
+						'Content-Type'  => 'application/json',
+					),
+				)
+			);
+			Logger\log( 'remote_request', compact( 'currency_code', 'response' ) );
+
+			if ( is_wp_error( $response ) ) {
+				return $response;
+			} elseif ( 200 != wp_remote_retrieve_response_code( $response ) ) {
+				return new WP_Error( 'invalid_http_code', 'Invalid HTTP response code', $response );
+			} else {
+				$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+				if ( isset( $body['ExchangeRate']['Rate'] ) ) {
+					$exchange_rate = $body['ExchangeRate']['Rate'];
+				} else {
+					return new WP_Error( 'error', 'Could not extract exchange rate from the response.', $body );
+				}
+			}
+
+			$payload['CurrencyRef']  = array(
 				'value' => $currency_code,
 			);
+			$payload['ExchangeRate'] = $exchange_rate;
 		}
 
 		$request_url = sprintf(

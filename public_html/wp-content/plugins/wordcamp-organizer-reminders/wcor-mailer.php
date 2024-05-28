@@ -595,6 +595,15 @@ class WCOR_Mailer {
 			return $ready;
 		}
 
+		/**
+		 * Do not send emails if it's for transparency report and the camp is running money through WPCS PBC.
+		 */
+		$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
+		$through_wpcs_pbc    = get_post_meta( $wordcamp->ID, 'Running money through WPCS PBC', true );
+		if ( $transparency_report && $through_wpcs_pbc ) {
+			return $ready;
+		}
+
 		$send_when  = get_post_meta( $email->ID, 'wcor_send_when', true );
 		$start_date = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 		$end_date   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
@@ -622,19 +631,12 @@ class WCOR_Mailer {
 				return $ready;
 			}
 
-			$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
 			$days_after          = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+			$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
+
 			if ( $transparency_report ) {
-				$through_wpcs_pbc = get_post_meta( $wordcamp->ID, 'Running money through WPCS PBC', true );
-
-				/**
-				 * Do not send emails with "send X days after the camp ends" trigger if the camp is running money through WPCS PBC.
-				 */
-				if ( $through_wpcs_pbc ) {
-					return $ready;
-				}
-
 				$report_received = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+
 				if ( $end_date && $days_after && ! $report_received ) {
 					$execution_timestamp = $end_date + ( $days_after * DAY_IN_SECONDS );
 

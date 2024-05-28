@@ -634,21 +634,16 @@ class WCOR_Mailer {
 			$days_after          = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
 			$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
 
-			if ( $transparency_report ) {
-				$report_received = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+			if ( $end_date && $days_after ) {
+				$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
 
-				if ( $end_date && $days_after && ! $report_received ) {
-					$execution_timestamp = $end_date + ( $days_after * DAY_IN_SECONDS );
-
-					if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
-						$ready = true;
-					}
-				}
-			} else {
-				if ( $end_date && $days_after ) {
-					$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
-
-					if ( $send_date <= current_time( 'timestamp' ) ) {
+				if ( $send_date <= current_time( 'timestamp' ) ) {
+					if ( $transparency_report ) {
+						$report_received = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+						if ( ! $report_received ) {
+							$ready = true;
+						}
+					} else {
 						$ready = true;
 					}
 				}

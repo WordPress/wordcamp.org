@@ -124,8 +124,8 @@ defined( 'WPINC' ) || die();
 <table>
 	<tbody>
 		<tr>
-			<input id="wcor_transparency_report" name="wcor_transparency_report" type="checkbox" value="wcor_transparency_report" <?php checked( $post->wcor_transparency_report ); ?>>
-			<label for="wcor_transparency_report">For transparency report: triggered only when the 'Running money through WPCS PBC' is <strong>NOT</strong> checked</label>
+			<th><input id="wcor_transparency_report" name="wcor_transparency_report" type="checkbox" value="wcor_transparency_report" <?php checked( $post->wcor_transparency_report ); ?>></th>
+			<td><label for="wcor_transparency_report">For transparency report: triggered when <strong>NOT</strong> 'Running money through WPCS PBC'</label></td>
 		</tr>
 		
 		<tr>

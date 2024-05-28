@@ -124,6 +124,11 @@ defined( 'WPINC' ) || die();
 <table>
 	<tbody>
 		<tr>
+			<input id="wcor_transparency_report" name="wcor_transparency_report" type="checkbox" value="wcor_transparency_report" <?php checked( $post->wcor_transparency_report ); ?>>
+			<label for="wcor_transparency_report">For transparency report: triggered only when the 'Running money through WPCS PBC' is <strong>NOT</strong> checked</label>
+		</tr>
+		
+		<tr>
 			<th><input id="wcor_send_before" name="wcor_send_when" type="radio" value="wcor_send_before" <?php checked( $post->wcor_send_when, 'wcor_send_before' ); ?>></th>
 			<td><label for="wcor_send_before">before the camp starts: </label></td>
 			<td>

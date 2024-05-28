@@ -618,9 +618,31 @@ class WCOR_Mailer {
 			 * Do not send emails with "send X days after the camp ends" trigger if WordCamp didn't happen.
 			 * All WordCamps that happen, should have public status.
 			 */
-			if ( in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
-				$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+			if ( ! in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
+				return $ready;
+			}
 
+			$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
+			$days_after          = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+			if ( $transparency_report ) {
+				$through_wpcs_pbc = get_post_meta( $wordcamp->ID, 'Running money through WPCS PBC', true );
+
+				/**
+				 * Do not send emails with "send X days after the camp ends" trigger if the camp is running money through WPCS PBC.
+				 */
+				if ( $through_wpcs_pbc ) {
+					return $ready;
+				}
+
+				$report_received = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+				if ( $end_date && $days_after && ! $report_received ) {
+					$execution_timestamp = $end_date + ( $days_after * DAY_IN_SECONDS );
+
+					if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
+						$ready = true;
+					}
+				}
+			} else {
 				if ( $end_date && $days_after ) {
 					$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
 

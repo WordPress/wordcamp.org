@@ -631,8 +631,7 @@ class WCOR_Mailer {
 				return $ready;
 			}
 
-			$days_after          = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
-			$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
+			$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
 
 			if ( $end_date && $days_after ) {
 				$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );

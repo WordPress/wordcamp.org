@@ -169,13 +169,8 @@ function get_event_status( WP_Post $wordcamp ) {
 
 	if ( 'wcpt-cancelled' === $wordcamp->post_status ) {
 		$status = 'https://schema.org/EventCancelled';
-	} elseif ( in_array( $wordcamp->post_status, $active_statuses, true ) ) {
-		$status = 'https://schema.org/EventScheduled';
 	} else {
-		// There isn't an `eventStatus` for completed events, they only want to show ones that are upcoming.
-		// @link https://schema.org/EventStatusType
-		// @link https://developers.google.com/search/docs/appearance/structured-data/event#structured-data-type-definitions.
-		return false;
+		$status = 'https://schema.org/EventScheduled';
 	}
 
 	return $status;

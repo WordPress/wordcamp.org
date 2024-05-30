@@ -637,6 +637,9 @@ class WCOR_Mailer {
 				$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
 
 				if ( $send_date <= current_time( 'timestamp' ) ) {
+					/**
+					 * If this reminder is for transparency report, only send if the report hasn't been received yet.
+					 */
 					if ( $transparency_report ) {
 						$report_received = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
 						if ( ! $report_received ) {

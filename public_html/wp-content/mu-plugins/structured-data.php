@@ -165,12 +165,17 @@ function get_event_status( WP_Post $wordcamp ) {
 	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php';
 	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
 
-	$active_statuses = WordCamp_Loader::get_active_wordcamp_statuses();
+	$active_statuses = array_merge(
+		WordCamp_Loader::get_active_wordcamp_statuses(), // Pre-schedule + Scheduled
+		WordCamp_Loader::get_public_post_statuses() // Scheduled + Closed
+	);
 
 	if ( 'wcpt-cancelled' === $wordcamp->post_status ) {
 		$status = 'https://schema.org/EventCancelled';
-	} else {
+	} elseif ( in_array( $wordcamp->post_status, $active_statuses, true ) ) {
 		$status = 'https://schema.org/EventScheduled';
+	} else {
+		return false;
 	}
 
 	return $status;

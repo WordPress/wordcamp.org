@@ -166,8 +166,8 @@ function get_event_status( WP_Post $wordcamp ) {
 	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
 
 	$active_statuses = array_merge(
-		WordCamp_Loader::get_active_wordcamp_statuses(), // Pre-schedule + Scheduled
-		WordCamp_Loader::get_public_post_statuses() // Scheduled + Closed
+		WordCamp_Loader::get_active_wordcamp_statuses(), // Pre-schedule + Scheduled.
+		WordCamp_Loader::get_public_post_statuses() // Scheduled + Closed.
 	);
 
 	if ( 'wcpt-cancelled' === $wordcamp->post_status ) {

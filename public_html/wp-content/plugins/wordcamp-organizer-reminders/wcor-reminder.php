@@ -194,9 +194,14 @@ class WCOR_Reminder {
 		}
 
 		if ( isset( $new_meta['wcor_send_when'] ) ) {
-			if ( in_array( $new_meta['wcor_send_when'], array( 'wcor_send_before', 'wcor_send_after', 'wcor_send_after_pending', 'wcor_send_after_and_no_report', 'wcor_send_trigger' ) ) ) {
+			if ( in_array( $new_meta['wcor_send_when'], array( 'wcor_send_before', 'wcor_send_after', 'wcor_send_after_pending', 'wcor_send_trigger' ) ) ) {
 				update_post_meta( $post->ID, 'wcor_send_when', $new_meta['wcor_send_when'] );
 			}
+		}
+
+		delete_post_meta( $post->ID, 'wcor_transparency_report' );
+		if ( isset( $new_meta['wcor_transparency_report'] ) ) {
+			update_post_meta( $post->ID, 'wcor_transparency_report', sanitize_text_field( $new_meta['wcor_transparency_report'] ) );
 		}
 
 		if ( isset( $new_meta['wcor_send_days_before'] ) ) {
@@ -209,10 +214,6 @@ class WCOR_Reminder {
 
 		if ( isset( $new_meta['wcor_send_days_after_pending'] ) ) {
 			update_post_meta( $post->ID, 'wcor_send_days_after_pending', absint( $new_meta['wcor_send_days_after_pending'] ) );
-		}
-
-		if ( isset( $new_meta['wcor_send_days_after_and_no_report'] ) ) {
-			update_post_meta( $post->ID, 'wcor_send_days_after_and_no_report', absint( $new_meta['wcor_send_days_after_and_no_report'] ) );
 		}
 
 		if ( isset( $new_meta['wcor_which_trigger'] ) ) {

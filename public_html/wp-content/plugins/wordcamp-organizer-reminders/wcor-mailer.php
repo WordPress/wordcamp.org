@@ -535,7 +535,7 @@ class WCOR_Mailer {
 			'meta_query'     => array(
 				array(
 					'key'     => 'wcor_send_when',
-					'value'   => array( 'wcor_send_before', 'wcor_send_after', 'wcor_send_after_pending', 'wcor_send_after_and_no_report' ),
+					'value'   => array( 'wcor_send_before', 'wcor_send_after', 'wcor_send_after_pending' ),
 					'compare' => 'IN'
 				),
 			),
@@ -595,6 +595,15 @@ class WCOR_Mailer {
 			return $ready;
 		}
 
+		/**
+		 * Do not send emails if it's for transparency report and the camp is running money through WPCS PBC.
+		 */
+		$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
+		$through_wpcs_pbc    = get_post_meta( $wordcamp->ID, 'Running money through WPCS PBC', true );
+		if ( $transparency_report && $through_wpcs_pbc ) {
+			return $ready;
+		}
+
 		$send_when  = get_post_meta( $email->ID, 'wcor_send_when', true );
 		$start_date = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 		$end_date   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
@@ -618,13 +627,25 @@ class WCOR_Mailer {
 			 * Do not send emails with "send X days after the camp ends" trigger if WordCamp didn't happen.
 			 * All WordCamps that happen, should have public status.
 			 */
-			if ( in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
-				$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+			if ( ! in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
+				return $ready;
+			}
 
-				if ( $end_date && $days_after ) {
-					$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
+			$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
 
-					if ( $send_date <= current_time( 'timestamp' ) ) {
+			if ( $end_date && $days_after ) {
+				$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
+
+				if ( $send_date <= current_time( 'timestamp' ) ) {
+					/**
+					 * If this reminder is for transparency report, only send if the report hasn't been received yet.
+					 */
+					if ( $transparency_report ) {
+						$report_received = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+						if ( ! $report_received ) {
+							$ready = true;
+						}
+					} else {
 						$ready = true;
 					}
 				}
@@ -635,17 +656,6 @@ class WCOR_Mailer {
 
 			if ( $days_after_pending && $timestamp_added_to_pending_schedule ) {
 				$execution_timestamp = $timestamp_added_to_pending_schedule + ( $days_after_pending * DAY_IN_SECONDS );
-
-				if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
-					$ready = true;
-				}
-			}
-		} elseif ( 'wcor_send_after_and_no_report' == $send_when ) {
-			$days_after_and_no_report = absint( get_post_meta( $email->ID, 'wcor_send_days_after_and_no_report', true ) );
-			$report_received          = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
-
-			if ( $end_date && $days_after_and_no_report && ! $report_received ) {
-				$execution_timestamp = $end_date + ( $days_after_and_no_report * DAY_IN_SECONDS );
 
 				if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
 					$ready = true;

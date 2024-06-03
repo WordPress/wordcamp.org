@@ -201,7 +201,7 @@ class WCOR_Reminder {
 
 		delete_post_meta( $post->ID, 'wcor_transparency_report' );
 		if ( isset( $new_meta['wcor_transparency_report'] ) ) {
-			update_post_meta( $post->ID, 'wcor_transparency_report', $new_meta['wcor_transparency_report'] );
+			update_post_meta( $post->ID, 'wcor_transparency_report', sanitize_text_field( $new_meta['wcor_transparency_report'] ) );
 		}
 
 		if ( isset( $new_meta['wcor_send_days_before'] ) ) {

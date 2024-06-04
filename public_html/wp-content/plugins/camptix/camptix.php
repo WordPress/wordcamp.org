@@ -6937,7 +6937,7 @@ class CampTix_Plugin {
 		$attendees = new WP_Query( array(
 			'post_type' => 'tix_attendee',
 			'posts_per_page' => 1,
-			'post_status' => array( 'publish', 'pending' ),
+			'post_status' => array( 'publish', 'pending', 'draft' ),
 			'meta_query' => $meta_query,
 		) );
 

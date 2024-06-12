@@ -16,6 +16,7 @@ class WordCamp_Coming_Soon_Page {
 		add_filter( 'rest_request_before_callbacks', array( $this, 'disable_rest_endpoints'       ), 99, 3 );
 		add_action( 'admin_bar_menu',             array( $this, 'admin_bar_menu_item'             ), 1000  );
 		add_action( 'admin_head',                 array( $this, 'admin_bar_styling'               )        );
+		add_action( 'admin_footer',               array( $this, 'maybe_show_block_editor_notice'  )        );
 		add_action( 'wp_head',                    array( $this, 'admin_bar_styling'               )        );
 		add_action( 'admin_notices',              array( $this, 'block_new_post_admin_notice'     )        );
 		add_filter( 'get_post_metadata',          array( $this, 'jetpack_dont_email_post_to_subs' ), 10, 4 );
@@ -469,6 +470,17 @@ class WordCamp_Coming_Soon_Page {
 	}
 
 	/**
+	 * Get the message maybe shown in editor views.
+	 * NB! Block editor notices do not support HTML and all tags will be removed.
+	 */
+	public function get_notice_message() {
+		return sprintf(
+			__( '<a href="%s">Coming Soon mode</a> is enabled. <b>Published posts will be visible on RSS feed and WordPress.org profile feeds.</b> Site subscribers will not receive email notifications about published posts. Published posts will not be automatically cross-posted to social media accounts.', 'wordcamporg' ),
+			esc_url( $setting_url )
+		);
+	}
+
+	/**
 	 * Show a notice if Coming Soon is enabled.
 	 *
 	 * Explain to users why publishing is disabled when Coming Soon is enabled.
@@ -486,10 +498,7 @@ class WordCamp_Coming_Soon_Page {
 
 		if ( 'post' === trim( $screen->id ) ) {
 			$class   = 'notice notice-warning';
-			$message = sprintf(
-				__( '<a href="%s">Coming Soon mode</a> is enabled. Site subscribers will not receive email notifications about published posts. Published posts will not be automatically cross-posted to social media accounts.', 'wordcamporg' ),
-				esc_url( $setting_url )
-			);
+			$message = $this->get_notice_message();
 
 			if ( ! current_user_can( 'manage_options' ) ) {
 				$message = wp_strip_all_tags( $message );
@@ -498,6 +507,40 @@ class WordCamp_Coming_Soon_Page {
 			printf( '<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), wp_kses_data( $message ) );
 		}
 	}
+
+	/**
+	 * Show a notice if Coming Soon is enabled also in block editor.
+	 */
+	public function maybe_show_block_editor_notice() {
+		$settings = $GLOBALS['WCCSP_Settings']->get_settings();
+
+		if ( 'on' !== $settings['enabled'] ) {
+			return;
+		}
+
+		$screen = get_current_screen();
+		if ( 'post' !== trim( $screen->id ) ) {
+			return;
+		}
+
+		if ( ! $screen->is_block_editor() ) {
+			return;
+		}
+
+		$message = $this->get_notice_message(); ?>
+
+		<script type="text/javascript">
+			( function( wp ) {
+				wp.data.dispatch( 'core/notices' ).createNotice(
+					'warning',
+					'<?php echo esc_html( wp_strip_all_tags( $message ) ); ?>',
+					{
+						isDismissible: false,
+					}
+				);
+			} )( window.wp );
+		</script>
+	<?php }
 
 	/**
 	 * Disable sending of Jetpack emails when Coming Soon mode is on.

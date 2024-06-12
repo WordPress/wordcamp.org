@@ -3347,6 +3347,13 @@ class CampTix_Plugin {
 			}));
 
 
+			camptix.collections.segmentFields.add( new camptix.models.SegmentField({
+				caption: 'Attended the event',
+				option_value: 'attended',
+				type: null,
+				ops: [ 'Yes', 'No' ]
+			}));
+
 			// Add POST'ed conditions.
 			<?php if ( ! empty( $conditions ) ) : ?>
 				<?php foreach ( $conditions as $condition ) : ?>
@@ -3423,7 +3430,10 @@ class CampTix_Plugin {
 		);
 
 		foreach ( $conditions as $condition ) {
-			if ( empty( $condition['field'] ) || empty( $condition['op'] ) || ! isset( $condition['value'] ) )
+			if ( empty( $condition['field'] ) || empty( $condition['op'] ) )
+				continue;
+
+			if ( "attended" != $condition['field'] && ! isset( $condition['value'] ) )
 				continue;
 
 			// Purchased ticket.
@@ -3491,6 +3501,26 @@ class CampTix_Plugin {
 			// Conditions to be applied after the query has executed.
 			if ( preg_match( '#^tix-question-\d+$#', $condition['field'] ) ) {
 				$post_query_conditions[] = $condition;
+				continue;
+			}
+
+			// Attended the event
+			if ( 'attended' == $condition['field'] ) {
+				$meta_query = array(
+					'key' => 'tix_attended',
+					'value' => 1,
+				);
+				switch ( $condition['op'] ) {
+					case 'is':
+						$meta_query['compare'] = 'EXISTS';
+						break;
+					case 'is not':
+					default:
+						$meta_query['compare'] = 'NOT EXISTS';
+						break;
+				}
+				$empty_query = false;
+				$query['meta_query'][] = $meta_query;
 				continue;
 			}
 		}

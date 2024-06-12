@@ -2,16 +2,11 @@
  * WordPress dependencies
  */
 
+import { useBlockProps } from '@wordpress/block-editor';
 import { Disabled } from '@wordpress/components';
 import ServerSideRender from '@wordpress/server-side-render';
-import { useBlockProps } from '@wordpress/block-editor';
 
 export default function Edit( { attributes, name } ) {
-	// Global events are a more consistent preview of this block than nearby events, which may or may not have
-	// any results. This also avoids having to enqueue `view.js`.
-	attributes.events = 'all-upcoming';
-	attributes.limit = 10;
-
 	return (
 		<div { ...useBlockProps() }>
 			<Disabled>

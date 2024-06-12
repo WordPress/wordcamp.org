@@ -1,0 +1,15 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/event-list-chips",
+	"version": "0.1.0",
+	"title": "WordPress Events List Chips",
+	"category": "design",
+	"icon": "list-view",
+	"description": "Chips for filtering results from the wporg/event-list block",
+	"textdomain": "wporg",
+	"supports": {
+		"anchor": true
+	},
+	"editorScript": "file:./index.js"
+}

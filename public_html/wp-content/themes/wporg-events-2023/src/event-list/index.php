@@ -11,6 +11,7 @@ namespace WordPressdotorg\Theme\Events_2023\WordPress_Event_List;
 use WordPressdotorg\Events_2023;
 use WP_Block;
 use WordPressdotorg\MU_Plugins\Google_Map;
+use WP_Community_Events;
 
 add_action( 'init', __NAMESPACE__ . '\init' );
 
@@ -41,11 +42,34 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
+	if ( 'nearby' === $attributes['events'] ) {
+		$content = get_nearby_events_markup();
+	} else {
+		$content = get_global_events_markup( $attributes['events'], $attributes['limit'], $attributes['groupByMonth'] );
+	}
+
+	$extra_attributes = array(
+		'id' => $attributes['id'] ?? '',
+		'class' => 'wporg-event-list__filter-' . $attributes['events']
+	);
+	$wrapper_attributes = get_block_wrapper_attributes( $extra_attributes );
+
+	return sprintf(
+		'<div %1$s>%2$s</div>',
+		$wrapper_attributes,
+		do_blocks( $content )
+	);
+}
+
+/**
+ * Get markup for a list of global events.
+ */
+function get_global_events_markup( string $filter, int $limit, bool $group_by_month ): string {
 	$facets = Events_2023\get_query_var_facets();
-	$events = Google_Map\get_events( $attributes['events'], 0, 0, $facets );
+	$events = Google_Map\get_events( $filter, 0, 0, $facets );
 
 	// Get all the filters that are currently applied.
-	$filtered_events = array_slice( filter_events( $events ), 0, (int) $attributes['limit'] );
+	$filtered_events = array_slice( filter_events( $events ), 0, $limit );
 
 	// The results are not guaranteed to be in order, so sort them.
 	usort( $filtered_events,
@@ -73,7 +97,7 @@ function render( $attributes, $content, $block ) {
 
 	$payload = array(
 		'events'       => $filtered_events,
-		'groupByMonth' => $attributes['groupByMonth'],
+		'groupByMonth' => $group_by_month,
 	);
 
 	wp_add_inline_script(
@@ -84,12 +108,23 @@ function render( $attributes, $content, $block ) {
 		'before'
 	);
 
+	$content = wp_kses_post( get_loading_markup( 'Loading global events...' ) );
+	$content .= '<ul class="wporg-marker-list__container"></ul>';
+
+	return $content;
+}
+
+/**
+ * Get the markup for the loading indicator.
+ */
+function get_loading_markup( string $text ): string {
 	ob_start();
 
 	?>
 
 	<p class="wporg-marker-list__loading">
-		Loading global events...
+		<?php echo esc_html( $text ); ?>
+
 		<img
 			src="<?php echo esc_url( includes_url( 'images/spinner-2x.gif' ) ); ?>"
 			width="20"
@@ -100,15 +135,64 @@ function render( $attributes, $content, $block ) {
 
 	<?php
 
-	$content = ob_get_clean();
+	return ob_get_clean();
+}
 
-	$wrapper_attributes = get_block_wrapper_attributes();
+/**
+ * Get markup for a list of nearby events.
+ *
+ * The events themselves are populated by an XHR, to avoid blocking the TTFB with an external HTTP request. See `view.js`.
+ */
+function get_nearby_events_markup(): string {
+	ob_start();
 
-	return sprintf(
-		'<div %1$s>%2$s</div>',
-		$wrapper_attributes,
-		do_blocks( $content )
+	require_once ABSPATH . 'wp-admin/includes/class-wp-community-events.php';
+
+	$payload = array(
+		'ip'     => WP_Community_Events::get_unsafe_client_ip(),
+		'number' => 10,
 	);
+
+	if ( is_user_logged_in() ) {
+		$payload['locale'] = get_user_locale( get_current_user_id() );
+	}
+
+	wp_add_inline_script(
+		// See note `get_global_events_markup()` about keeping this in sync.
+		'wporg-event-list-view-script-2',
+		'localEventsPayload = ' . wp_json_encode( $payload ) . ';',
+		'before'
+	);
+
+	?>
+
+	<!-- wp:wporg/notice {"type":"warning","className":"wporg-marker-list__no-results wporg-events__hidden"} -->
+	<div class="wp-block-wporg-notice is-warning-notice wporg-marker-list__no-results wporg-events__hidden">
+		<p>
+			There are no events scheduled near you at the moment. You can <a href="<?php echo esc_url( home_url( 'upcoming-events/' ) ); ?>">browse global events</a>, or
+			<a href="https://make.wordpress.org/community/handbook/meetup-organizer/welcome/" class="external-link">learn how to organize an event in your area</a>.
+		</p>
+	</div>
+	<!-- /wp:wporg/notice -->
+
+	<!-- wp:wporg/notice {"type":"warning","className":"wporg-marker-list__not-many-results wporg-events__hidden"} -->
+	<div class="wp-block-wporg-notice is-warning-notice wporg-marker-list__not-many-results wporg-events__hidden">
+		<p>
+			Want more events?
+			<a href="https://make.wordpress.org/community/handbook/meetup-organizer/welcome/" class="external-link">
+				You can help organize the next one!
+			</a>
+		</p>
+	</div>
+	<!-- /wp:wporg/notice -->
+
+	<?php echo wp_kses_post( get_loading_markup( 'Loading nearby events...' ) ); ?>
+
+	<ul class="wporg-marker-list__container"></ul>
+
+	<?php
+
+	return ob_get_clean();
 }
 
 /**

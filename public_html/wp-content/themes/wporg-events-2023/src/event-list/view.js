@@ -1,8 +1,22 @@
-/* global globalEventsPayload */
+/* global localEventsPayload, globalEventsPayload */
 
 document.addEventListener( 'DOMContentLoaded', function() {
 	const speak = wp.a11y.speak;
-	const globalEventList = document.querySelector( '.wp-block-wporg-event-list' );
+	const nearbyEventList = document.getElementById( 'event-list-nearby' );
+	let globalEventList, chipsContainer, seeNearbyButton, seeGlobalButton, noEventsMessage, notManyEventsMessage;
+
+	// The front page has both local and global events, and chips to toggle between the two. Other pages just
+	// have global events.
+	if ( nearbyEventList ) {
+		chipsContainer = document.querySelector( '.wp-block-wporg-event-list-chips' );
+		globalEventList = document.getElementById( 'event-list-global' );
+		seeNearbyButton = document.getElementById( 'wporg-events__see-nearby' );
+		seeGlobalButton = document.getElementById( 'wporg-events__see-global' );
+		noEventsMessage = document.querySelector( '.wporg-marker-list__no-results' );
+		notManyEventsMessage = document.querySelector( '.wporg-marker-list__not-many-results' );
+	} else {
+		globalEventList = document.querySelector( '.wp-block-wporg-event-list' );
+	}
 
 	/**
 	 * Initialize the component.
@@ -15,6 +29,104 @@ document.addEventListener( 'DOMContentLoaded', function() {
 		}
 
 		renderGlobalEvents( globalEventsPayload.events, globalEventsPayload.groupByMonth );
+
+		if ( nearbyEventList ) {
+			fetchLocalEvents();
+
+			seeNearbyButton.addEventListener( 'click', showNearby );
+			seeGlobalButton.addEventListener( 'click', showGlobal );
+		}
+	}
+
+	/**
+	 * Show the nearby events list.
+	 */
+	function showNearby() {
+		// Show list of nearby events, and hide list of global events.
+		nearbyEventList.classList.remove( 'wporg-events__hidden' );
+		globalEventList.classList.add( 'wporg-events__hidden' );
+
+		// Show the "see global" chip, and hide the "see nearby" chip.
+		seeGlobalButton.classList.remove( 'wporg-events__hidden' );
+		seeNearbyButton.classList.add( 'wporg-events__hidden' );
+
+		speak( 'Showing nearby events.' );
+	}
+
+	/**
+	 * Show the global events list.
+	 */
+	function showGlobal() {
+		// Show list of global events, and hide list of nearby events.
+		nearbyEventList.classList.add( 'wporg-events__hidden' );
+		globalEventList.classList.remove( 'wporg-events__hidden' );
+
+		// Show the "see nearby" chip, and hide the "see global" chip.
+		seeGlobalButton.classList.add( 'wporg-events__hidden' );
+		seeNearbyButton.classList.remove( 'wporg-events__hidden' );
+
+		speak( 'Showing global events.' );
+	}
+
+	/**
+	 * Fetch upcoming events near the user.
+	 */
+	async function fetchLocalEvents() {
+		let results;
+
+		if ( window.Intl ) {
+			localEventsPayload.timezone = window.Intl.DateTimeFormat().resolvedOptions().timeZone;
+		}
+
+		const url = `https://api.wordpress.org/events/1.0/?${ new URLSearchParams( localEventsPayload ) }`;
+
+		const requestParams = {
+			method: 'GET',
+			credentials: 'omit',
+		};
+
+		const loadingElement = nearbyEventList.querySelector( '.wporg-marker-list__loading' );
+		const listContainer = nearbyEventList.querySelector( '.wporg-marker-list__container' );
+
+		try {
+			/*
+			 * This uses `fetch()` directly instead of `apiFetch()`, because the latter is only intended for
+			 * interacting with WP REST API endpoints, and there are lots of difficulties making it work with
+			 * other APIs.
+			 *
+			 * See https://github.com/WordPress/gutenberg/pull/15900#issuecomment-497139968.
+			 */
+			const response = await fetch( url, requestParams );
+			results = await response.json();
+
+			if ( results.events.length > 0 ) {
+				let markup = '';
+
+				for ( let i = 0; i < results.events.length; i++ ) {
+					// Make consistent with global event data structure.
+					results.events[ i ].timestamp = results.events[ i ].start_unix_timestamp;
+					results.events[ i ].location = results.events[ i ].location.location;
+
+					markup += renderEvent( results.events[ i ] );
+				}
+
+				listContainer.innerHTML = markup;
+
+				if ( results.events.length < 3 ) {
+					notManyEventsMessage.classList.remove( 'wporg-events__hidden' );
+				}
+			} else {
+				noEventsMessage.classList.remove( 'wporg-events__hidden' );
+			}
+		} catch ( error ) {
+			// eslint-disable-next-line no-console
+			console.error( error );
+
+			showGlobal();
+			chipsContainer.classList.add( 'wporg-events__hidden' );
+		} finally {
+			loadingElement.classList.add( 'wporg-events__hidden' );
+		}
 	}
 
 	/**

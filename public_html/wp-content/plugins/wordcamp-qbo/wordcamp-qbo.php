@@ -357,9 +357,15 @@ class WordCamp_QBO {
 		$class_id      = sanitize_text_field( $invoice_meta['_wcbsi_qbo_class_id'][0] );
 		$amount        = floatval( $invoice_meta['_wcbsi_amount'][0] );
 		$description   = trim( sanitize_text_field( $invoice_meta['_wcbsi_description'][0] ) );
+		$internal_reference = trim( sanitize_text_field( $invoice_meta['_wcbsi_internal_reference'][0] ?? '' ) );
+
+		if ( $internal_reference ) {
+			$internal_reference = "Sponsor's internal reference: $internal_reference\n\n";
+		}
 
 		$statement_memo = sprintf(
-			'WordCamp.org Invoice: %s',
+			"%sWordCamp.org Invoice: %s",
+			$internal_reference,
 			esc_url_raw( admin_url( sprintf( 'post.php?post=%s&action=edit', $invoice_id ) ) )
 		);
 
@@ -427,6 +433,7 @@ class WordCamp_QBO {
 		);
 
 		$payload = array(
+			// "Message on Statement" field in QBO.
 			'PrivateNote' => $statement_memo,
 
 			'CustomField' => array(
@@ -470,6 +477,7 @@ class WordCamp_QBO {
 				'value' => $customer_id,
 			),
 
+			// "Message on Invoice" field in QBO.
 			'CustomerMemo' => array(
 				'value' => $customer_memo,
 			),

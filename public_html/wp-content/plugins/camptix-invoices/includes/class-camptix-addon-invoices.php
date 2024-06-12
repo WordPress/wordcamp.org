@@ -65,17 +65,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			__( 'Activate invoice requests', 'wordcamporg' ),
 			'field_yesno',
 			'invoice',
-			// translators: %1$s is a date.
-			sprintf( __( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'wordcamporg' ), date( 'Y' ) )
-		);
-
-		$camptix->add_settings_field_helper(
-			'invoice-new-year-reset',
-			__( 'Yearly reset', 'wordcamporg' ),
-			'field_yesno',
-			'invoice',
-			// translators: %1$s is a date.
-			sprintf( __( 'Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)', 'wordcamporg' ), date( 'Y' ) )
+			__( 'Allow ticket buyers to ask for an invoice when purchasing their tickets.', 'wordcamporg' )
 		);
 
 		add_settings_field(
@@ -86,7 +76,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			'invoice',
 			array(
 				'id'    => 'invoice-date-format',
-				'value' => ! empty( $opt['invoice-date-format'] ) ? $opt['invoice-date-format'] : 'd F Y',
+				'value' => ! empty( $opt['invoice-date-format'] ) ? $opt['invoice-date-format'] : '',
 			)
 		);
 
@@ -95,8 +85,16 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			__( 'VAT number', 'wordcamporg' ),
 			'field_yesno',
 			'invoice',
-			// translators: %1$s is a date.
-			sprintf( __( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' ), date( 'Y' ) )
+			__( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' )
+		);
+
+		$camptix->add_settings_field_helper(
+			'invoice-new-year-reset',
+			__( 'Yearly reset', 'wordcamporg' ),
+			'field_yesno',
+			'invoice',
+			// translators: %1$s is a year.
+			sprintf( __( 'Invoice numbers are prefixed with the year, and will be reset on the 1st of January (e.g. %1$s-125)', 'wordcamporg' ), wp_date( 'Y' ) )
 		);
 
 		add_settings_field(
@@ -111,7 +109,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			)
 		);
 
-		$camptix->add_settings_field_helper( 'invoice-company', __( 'Company address', 'wordcamporg' ), 'field_textarea', 'invoice' );
+		if ( ! apply_filters( 'camptix_invoices_company_override', false ) ) {
+			$camptix->add_settings_field_helper( 'invoice-company', __( 'Company address', 'wordcamporg' ), 'field_textarea', 'invoice' );
+		}
+
 		$camptix->add_settings_field_helper( 'invoice-thankyou', __( 'Note below invoice total', 'wordcamporg' ), 'field_textarea', 'invoice' );
 	}
 
@@ -124,10 +125,12 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		$id          = $args['id'];
 		$value       = $args['value'];
+		$date_format = get_option( 'date_format' );
 		$description = sprintf(
 			// translators: %s is a date.
-			__( 'Date format to use on the invoice, as a PHP Date formatting string (default \'d F Y\' formats dates as %s)', 'wordcamporg' ),
-			date( 'd F Y' )
+			__( 'Date format to use on the invoice, as a PHP Date formatting string (default %1$s formats dates as %2$s)', 'wordcamporg' ),
+			$date_format,
+			wp_date( $date_format )
 		);
 
 		include CTX_INV_DIR . '/includes/views/date-format-field.php';
@@ -334,7 +337,12 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		if ( empty( $invoice_metas['email'] ) && is_email( $invoice_metas['email'] ) ) {
 			return false;
 		}//end if
+
 		$invoice_pdf = ctx_get_invoice( $invoice_id );
+		if ( empty( $invoice_pdf ) ) {
+			return false;
+		}
+
 		$attachments = array( $invoice_pdf );
 		$opt         = get_option( 'camptix_options' );
 
@@ -348,6 +356,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 				'Content-type: text/html; charset=UTF-8',
 			)
 		);
+
 		$message = array(
 			__( 'Hello,', 'wordcamporg' ),
 			// translators: event name.
@@ -359,6 +368,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			// translators: event name.
 			sprintf( __( 'The %s team', 'wordcamporg' ), sanitize_text_field( $opt['event_name'] ) ),
 		);
+
 		$message = implode( PHP_EOL, $message );
 		$message = '<p>' . nl2br( $message ) . '</p>';
 		wp_mail( $invoice_metas['email'], $subject, $message, $headers, $attachments );
@@ -372,8 +382,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	public static function create_invoice_document( $invoice_id ) {
 
 		$camptix_opts   = get_option( 'camptix_options' );
+		$date_format    = ! empty( $camptix_opts['invoice-date-format'] ) ? $camptix_opts['invoice-date-format'] : get_option( 'date_format' );
+
 		$invoice_number = get_post_meta( $invoice_id, 'invoice_number', true );
-		$invoice_date   = get_the_date( $camptix_opts['invoice-date-format'], $invoice_id );
+		$invoice_date   = get_the_date( $date_format, $invoice_id );
 		$invoice_metas  = get_post_meta( $invoice_id, 'invoice_metas', true );
 		$invoice_order  = get_post_meta( $invoice_id, 'original_order', true );
 
@@ -423,10 +435,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$invoice_order = get_post_meta( $invoice_id, 'original_order', true );
 
 		if ( empty( $invoice_metas['name'] ) ) {
-			return true;
-		}
-
-		if ( empty( $invoice_metas['address'] ) ) {
 			return true;
 		}
 
@@ -535,7 +543,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		if ( empty( $_POST['invoice-email'] )
 			|| empty( $_POST['invoice-name'] )
-			|| empty( $_POST['invoice-address'] )
 			|| ! is_email( wp_unslash( $_POST['invoice-email'] ) ) ) {
 
 			$camptix->error_flag( 'nope' );

@@ -33,10 +33,11 @@ function _get_network_plugin_state_list( $state ) {
 		'activated'   => array(
 			'akismet/akismet.php',
 			'bbpress-network-templates/bbpress-network-templates.php',
+			'camptix/camptix.php',
 			'camptix-admin-flags/camptix-admin-flags.php',
 			'camptix-attendance/camptix-attendance.php',
 			'camptix-badge-generator/bootstrap.php',
-			'camptix/camptix.php',
+			'camptix-invoices/camptix-invoices.php',
 			'camptix-network-tools/camptix-network-tools.php',
 			'classic-editor/classic-editor.php',
 			'custom-content-width/custom-content-width.php',
@@ -63,7 +64,6 @@ function _get_network_plugin_state_list( $state ) {
 		'deactivated' => array(
 			'bbpress/bbpress.php',
 			'campt-indian-payment-gateway/campt-indian-payment-gateway.php',
-			'camptix-invoices/camptix-invoices.php',
 			'camptix-mailchimp/camptix-mailchimp.php',
 			'camptix-mercadopago/camptix-mercadopago.php',
 			'camptix-pagseguro/camptix-pagseguro.php',

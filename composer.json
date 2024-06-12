@@ -1,4 +1,13 @@
 {
+	"#10": "",
+	"#11": "This file is only intended for use in local environments, it should _NEVER_ be run on remote sandboxes",
+	"#12": "or on production, because we cannot trust/verify the package contents are what they should be.",
+	"#13": "An attacker could inject malware at wpackgist.org and achieve arbitrary remote code execution.",
+	"#14": "See https://github.com/outlandishideas/wpackagist/issues/169",
+	"#15": "See https://github.com/WordPress/wordcamp.org/pull/152#discussion_r303567529",
+	"#16": "",
+
+
 	"name": "wordcamp/wordcamp.org",
 	"description": "",
 	"homepage": "https://wordcamp.org",
@@ -6,6 +15,7 @@
 	"support": {
 		"issues": "https://github.com/WordPress/wordcamp.org/issues"
 	},
+
 	"config": {
 		"platform": {
 			"php": "7.4"
@@ -18,6 +28,7 @@
 			"composer/installers": true
 		}
 	},
+
 	"extra": {
 		"installer-paths": {
 			"public_html/wp-content/themes/{$name}": ["wporg/wporg-parent-2021"],
@@ -27,6 +38,7 @@
 			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
 		}
 	},
+
 	"repositories": [
 		{
 			"type": "vcs",
@@ -110,10 +122,16 @@
 			]
 		}
 	],
+
 	"require": {
 		"adhocore/jwt": "^1.0",
 		"wporg/wporg-parent-2021": "dev-build"
 	},
+
+	"#20": "",
+	"#21": "These are only used in local environments. Production and remote sandboxes use `svn:external`s instead.",
+	"#22": "_WARNING_: Do _not_ install these on a remote sandbox or production, see the comment at the start of this file.",
+	"#23": "",
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
 		"wp-coding-standards/wpcs": "~3.0.0",

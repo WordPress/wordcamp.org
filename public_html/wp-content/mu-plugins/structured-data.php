@@ -165,16 +165,16 @@ function get_event_status( WP_Post $wordcamp ) {
 	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php';
 	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
 
-	$active_statuses = WordCamp_Loader::get_active_wordcamp_statuses();
+	$active_statuses = array_merge(
+		WordCamp_Loader::get_active_wordcamp_statuses(), // Pre-schedule + Scheduled.
+		WordCamp_Loader::get_public_post_statuses() // Scheduled + Closed.
+	);
 
 	if ( 'wcpt-cancelled' === $wordcamp->post_status ) {
 		$status = 'https://schema.org/EventCancelled';
 	} elseif ( in_array( $wordcamp->post_status, $active_statuses, true ) ) {
 		$status = 'https://schema.org/EventScheduled';
 	} else {
-		// There isn't an `eventStatus` for completed events, they only want to show ones that are upcoming.
-		// @link https://schema.org/EventStatusType
-		// @link https://developers.google.com/search/docs/appearance/structured-data/event#structured-data-type-definitions.
 		return false;
 	}
 

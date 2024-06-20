@@ -244,6 +244,7 @@ function get_custom_css_properties_safelist() {
 		array(
 			// "box-orient" is a non-standard property but is required for the line-clamp behavior to work. 
 			// See https://css-tricks.com/line-clampin/
+			'animation-timeline',
 			'-webkit-box-orient',
 			'-webkit-line-clamp',
 			'-webkit-text-fill-color',

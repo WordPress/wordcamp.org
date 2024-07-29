@@ -1,18 +1,10 @@
 /*
-Theme Name: Events.WordPress.org 2023
-Theme URI: https://wordpress.org
-Author: the WordPress.org team
-Author URI: https://wordpress.org
-Description: Includes templates for the homepage, event archives, etc.
-Requires at least: 6.4
-Tested up to: 6.5
-Requires PHP: 7.0
-Version: 1.0
-License: GNU General Public License v2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
-Text Domain: wordcamporg
-Template:    wporg-parent-2021
-*/
+ * Theme Name:  Events.WordPress.org 2023
+ * Description: Includes templates for the homepage, event archives, etc.
+ * License:     GNU General Public License v2 or later
+ * Text Domain: wporg
+ * Template:    wporg-parent-2021
+ */
 
 /* Base */
 
@@ -288,7 +280,7 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 @media (min-width: 1280px) {
 
 .wporg-marker-list__container .wporg-marker-list-item {
-			grid-template-columns: 60% 1fr 1fr;
+			grid-template-columns: 50% 1fr 1fr 1fr;
 	}
 		}
 
@@ -312,13 +304,14 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 		}
 			}
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::first-letter {
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__type::first-letter, .wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::first-letter {
 			    text-transform: capitalize;
 			}
 
 @media (max-width: 781px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__type,
+		.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
 				margin-top: 2px;
 				margin-bottom: -2px;
 		}
@@ -326,7 +319,8 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 
 @media (min-width: 600px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__type,
+		.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
 				display: inline;
 		}
 			}

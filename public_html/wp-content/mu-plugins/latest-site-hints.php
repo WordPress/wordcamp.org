@@ -127,9 +127,9 @@ function show_notification_about_latest_site() {
 
 	echo '<div class="wordcamp-latest-site-notify"><p>' .
 		wp_sprintf(
-				__('%1$s is over. Check out <a href="%2$s">the next edition</a>!', 'wordcamporg' ),
-				esc_html( get_blog_details( $current_blog->blog_id )->blogname ),
-				esc_url( $latest_domain )
+			__('%1$s is over. Check out <a href="%2$s">the next edition</a>!', 'wordcamporg' ),
+			esc_html( get_blog_details( $current_blog->blog_id )->blogname ),
+			esc_url( $latest_domain )
 		) .
 	'</p></div>';
 }

@@ -29,9 +29,9 @@ defined( 'WPINC' ) || die();
 			<span class="dashicons dashicons-yes" aria-hidden="true"></span>
 			<?php
 			printf(
-				'Connected to <strong>%1$s</strong>. Expires in <strong>%2$s</strong>.',
+				'Connected to <strong>%1$s</strong>. Expires on <strong>%2$s</strong>.',
 				wp_kses_data( $client->get_company_name() ),
-				wp_kses_data( $client->get_refresh_token_expiration() )
+				wp_kses_data( date( 'd M Y h:i', $client->get_refresh_token_expiration() ) )
 			);
 			?>
 		</p>

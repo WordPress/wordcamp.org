@@ -653,7 +653,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
 		$session = $stripe->get_session( $stripe_session_id );
 
-		if ( empty( $session['status'] ) ) {
+		if ( is_wp_error( $session ) || empty( $session['status'] ) ) {
 			return;
 		}
 

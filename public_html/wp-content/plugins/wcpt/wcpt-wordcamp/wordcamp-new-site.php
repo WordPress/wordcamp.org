@@ -76,7 +76,7 @@ class WordCamp_New_Site {
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
 
-				<?php else if ( $we_host_it ) : ?>
+				<?php elseif ( $we_host_it ) : ?>
 					<?php $checkbox_id = wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ); ?>
 
 					<label for="<?php echo esc_attr( $checkbox_id ); ?>">

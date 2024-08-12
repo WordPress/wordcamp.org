@@ -175,7 +175,7 @@ class WordCamp_New_Site {
 		if ( 'doaction.org' === $domain ) {
 			$can_have_external_domain = true;
 		}
-		
+
 		if ( $is_external_domain && $can_have_external_domain ) {
 			// Many old camps had external websites.
 			return true;

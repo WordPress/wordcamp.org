@@ -14,7 +14,7 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 				'USD', 10, 1000, // 10USD should be 1000
 			),
 			array(
-				'EUR', 10, 1000, // 10USD should be 1000
+				'EUR', 10, 1000, // 10EUR should be 1000
 			),
 			array(
 				'JPY', 10, 10, // 10 JPY should be 10

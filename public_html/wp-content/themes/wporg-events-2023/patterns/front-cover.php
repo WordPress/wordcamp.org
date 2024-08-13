@@ -30,7 +30,7 @@
 <div class="wp-block-columns alignwide"><!-- wp:column {"width":"33.34%","fontSize":"medium","fontFamily":"eb-garamond"} -->
 <div class="wp-block-column has-eb-garamond-font-family has-medium-font-size" style="flex-basis:33.34%"><!-- wp:group {"style":{"border":{"radius":"2px","width":"1px"},"spacing":{"padding":{"top":"var:preset|spacing|20","bottom":"var:preset|spacing|20","left":"var:preset|spacing|30"}}},"borderColor":"light-grey-1","layout":{"type":"constrained"}} -->
 <div class="wp-block-group has-border-color has-light-grey-1-border-color" style="border-width:1px;border-radius:2px;padding-top:var(--wp--preset--spacing--20);padding-bottom:var(--wp--preset--spacing--20);padding-left:var(--wp--preset--spacing--30)"><!-- wp:paragraph {"style":{"elements":{"link":{"color":{"text":"var:preset|color|charcoal-0"}}}},"textColor":"charcoal-0","fontSize":"heading-6"} -->
-<p class="has-charcoal-0-color has-text-color has-link-color has-heading-6-font-size">3,925 events this year</p>
+<p class="has-charcoal-0-color has-text-color has-link-color has-heading-6-font-size">4,099 events this year</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:group --></div>
 <!-- /wp:column -->
@@ -38,7 +38,7 @@
 <!-- wp:column {"width":"33.34%","fontSize":"medium","fontFamily":"eb-garamond"} -->
 <div class="wp-block-column has-eb-garamond-font-family has-medium-font-size" style="flex-basis:33.34%"><!-- wp:group {"style":{"border":{"radius":"2px","width":"1px"},"spacing":{"padding":{"top":"var:preset|spacing|20","bottom":"var:preset|spacing|20","left":"var:preset|spacing|30"}}},"borderColor":"light-grey-1","layout":{"type":"constrained"}} -->
 <div class="wp-block-group has-border-color has-light-grey-1-border-color" style="border-width:1px;border-radius:2px;padding-top:var(--wp--preset--spacing--20);padding-bottom:var(--wp--preset--spacing--20);padding-left:var(--wp--preset--spacing--30)"><!-- wp:paragraph {"style":{"layout":{"selfStretch":"fit","flexSize":null},"elements":{"link":{"color":{"text":"var:preset|color|charcoal-0"}}}},"textColor":"charcoal-0","fontSize":"heading-6"} -->
-<p class="has-charcoal-0-color has-text-color has-link-color has-heading-6-font-size">108 countries</p>
+<p class="has-charcoal-0-color has-text-color has-link-color has-heading-6-font-size">107 countries</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:group --></div>
 <!-- /wp:column -->
@@ -46,7 +46,7 @@
 <!-- wp:column {"width":"33.33%","fontSize":"medium","fontFamily":"eb-garamond"} -->
 <div class="wp-block-column has-eb-garamond-font-family has-medium-font-size" style="flex-basis:33.33%"><!-- wp:group {"style":{"border":{"radius":"2px","width":"1px"},"spacing":{"padding":{"left":"var:preset|spacing|30","top":"var:preset|spacing|20","bottom":"var:preset|spacing|20"}}},"borderColor":"light-grey-1","layout":{"type":"constrained"}} -->
 <div class="wp-block-group has-border-color has-light-grey-1-border-color" style="border-width:1px;border-radius:2px;padding-top:var(--wp--preset--spacing--20);padding-bottom:var(--wp--preset--spacing--20);padding-left:var(--wp--preset--spacing--30)"><!-- wp:paragraph {"style":{"layout":{"selfStretch":"fit","flexSize":null},"elements":{"link":{"color":{"text":"var:preset|color|charcoal-0"}}}},"textColor":"charcoal-0","fontSize":"heading-6"} -->
-<p class="has-charcoal-0-color has-text-color has-link-color has-heading-6-font-size">540,537 participants</p>
+<p class="has-charcoal-0-color has-text-color has-link-color has-heading-6-font-size">+500,000 participants</p>
 <!-- /wp:paragraph --></div>
 <!-- /wp:group --></div>
 <!-- /wp:column --></div>

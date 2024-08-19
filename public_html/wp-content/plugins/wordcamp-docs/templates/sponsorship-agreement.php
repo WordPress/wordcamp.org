@@ -9,7 +9,7 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 	public function form_prefill_select( $data ) {
 		$sponsors = get_posts( array(
 			'post_type'      => 'wcb_sponsor',
-			'post_status'    => 'publish',
+			'post_status'    => array( 'publish', 'draft' ),
 			'posts_per_page' => 500,
 		) );
 

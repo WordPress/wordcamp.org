@@ -7,20 +7,21 @@
  * Author URI: https://profiles.wordpress.org/ivankristianto/
  */
 
- namespace CampTix\Webhook;
+namespace CampTix\Webhook;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const BASE_DIR = __DIR__;
+const BASE_DIR  = __DIR__;
 const BASE_FILE = __FILE__;
 
-require_once( __DIR__ . '/addons/webhook.php' );
+require_once __DIR__ . '/addons/webhook.php';
 require_once __DIR__ . '/inc/integration.php';
 
 /**
  * Bootstrap the plugin.
+ *
  * @return void
  */
 function bootstrap() {

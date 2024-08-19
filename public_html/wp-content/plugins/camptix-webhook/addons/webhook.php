@@ -52,8 +52,9 @@ class CampTix_Webhook extends CampTix_Addon {
 	public function setup_controls( $section ) {
 		global $camptix;
 
-		if ( 'webhook-ui' != $section )
+		if ( 'webhook-ui' != $section ) {
 			return;
+		}
 
 		add_settings_section( 'general', esc_html__( 'Attendees Webhook', 'wordcamporg' ), array( $this, 'setup_controls_section' ), 'camptix_options' );
 
@@ -68,8 +69,9 @@ class CampTix_Webhook extends CampTix_Addon {
 	 * Runs whenever the CampTix option is updated.
 	 */
 	public function validate_options( $output, $input ) {
-		if ( isset( $input['webhook-enabled'] ) )
+		if ( isset( $input['webhook-enabled'] ) ) {
 			$output['webhook-enabled'] = (bool) $input['webhook-enabled'];
+		}
 
 		if ( ! empty( $input['webhook-url'] ) ) {
 			$output['webhook-url'] = sanitize_url( $input['webhook-url'] );
@@ -103,14 +105,14 @@ class CampTix_Webhook extends CampTix_Addon {
 	 * Use cron to trigger webhook 5 seconds after attendee is updated.
 	 * So this process won't block the main process. And prevents multiple triggers.
 	 *
-	 * @param int $post_id Attendee ID.
+	 * @param int     $post_id Attendee ID.
 	 * @param WP_Post $post Attendee Post Object.
 	 * @return void
 	 */
 	public function trigger_webhook_async( $post_id, $post ) {
 		// Trigger webhook asynchronously.
-		if ( ! wp_next_scheduled( 'camptix_webhook_trigger', [ $post_id ] ) ) {
-			wp_schedule_single_event( time() + 5, 'camptix_webhook_trigger', [ $post_id ] );
+		if ( ! wp_next_scheduled( 'camptix_webhook_trigger', array( $post_id ) ) ) {
+			wp_schedule_single_event( time() + 5, 'camptix_webhook_trigger', array( $post_id ) );
 		}
 	}
 
@@ -126,7 +128,7 @@ class CampTix_Webhook extends CampTix_Addon {
 
 		$camptix_options = $camptix->get_options();
 
-		$is_enabled = isset( $camptix_options['webhook-enabled'] ) ? $camptix_options['webhook-enabled'] : false;
+		$is_enabled  = isset( $camptix_options['webhook-enabled'] ) ? $camptix_options['webhook-enabled'] : false;
 		$webhook_url = isset( $camptix_options['webhook-url'] ) ? $camptix_options['webhook-url'] : '';
 
 		if ( ! $is_enabled ) {
@@ -146,7 +148,7 @@ class CampTix_Webhook extends CampTix_Addon {
 		$triggered_number = absint( get_post_meta( $post_id, 'tix_webhook_triggered_number', true ) );
 
 		// Get attendee data.
-		$attendee_data = [
+		$attendee_data = array(
 			'timestamp' => time(),
 			'status' => $post->post_status,
 			'is_new_entry' => $triggered_number === 0,
@@ -155,19 +157,19 @@ class CampTix_Webhook extends CampTix_Addon {
 			'tix_last_name' => get_post_meta( $post_id, 'tix_last_name', true ),
 			'tix_ticket_id' => get_post_meta( $post_id, 'tix_ticket_id', true ),
 			'tix_coupon' => get_post_meta( $post_id, 'tix_coupon', true ),
-		];
+		);
 
 		$attendee_data = apply_filters( 'camptix_webhook_attendee_data', $attendee_data, $post_id );
 
 		// Prepare webhook data.
 		$response = wp_remote_post(
 			$webhook_url,
-			[
+			array(
 				'body' => wp_json_encode( $attendee_data ),
-				'headers' => [
+				'headers' => array(
 					'Content-Type' => 'application/json',
-				],
-			]
+				),
+			)
 		);
 
 		update_post_meta( $post_id, 'tix_webhook_triggered_number', $triggered_number + 1 );
@@ -194,12 +196,12 @@ class CampTix_Webhook extends CampTix_Addon {
 		wp_enqueue_script(
 			'camptix-webhook-admin',
 			plugin_dir_url( Webhook\BASE_FILE ) . 'js/camptix-webhook-admin.js',
-			[],
+			array(),
 			'1.0',
-			[
+			array(
 				'strategy' => 'async',
 				'footer' => true,
-			]
+			)
 		);
 	}
 

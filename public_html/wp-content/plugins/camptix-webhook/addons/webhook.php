@@ -58,7 +58,7 @@ class CampTix_Webhook extends CampTix_Addon {
 
 		add_settings_section( 'general', esc_html__( 'Attendees Webhook', 'wordcamporg' ), array( $this, 'setup_controls_section' ), 'camptix_options' );
 
-		// Fields
+		// Fields.
 		$camptix->add_settings_field_helper( 'webhook-enabled', esc_html__( 'Enabled', 'wordcamporg' ), 'field_yesno', 'general' );
 		$camptix->add_settings_field_helper( 'webhook-url', esc_html__( 'Webhook URL', 'wordcamporg' ), 'field_text', 'general', esc_html__( 'Webhook URL including protocol such as https://', 'wordcamporg' ) );
 
@@ -151,7 +151,7 @@ class CampTix_Webhook extends CampTix_Addon {
 		$attendee_data = array(
 			'timestamp' => time(),
 			'status' => $post->post_status,
-			'is_new_entry' => $triggered_number === 0,
+			'is_new_entry' => 0 === $triggered_number,
 			'tix_email' => get_post_meta( $post_id, 'tix_email', true ),
 			'tix_first_name' => get_post_meta( $post_id, 'tix_first_name', true ),
 			'tix_last_name' => get_post_meta( $post_id, 'tix_last_name', true ),
@@ -189,7 +189,7 @@ class CampTix_Webhook extends CampTix_Addon {
 	 * @return void
 	 */
 	public function admin_enqueue_scripts( $hook ) {
-		if ( $hook !== 'tix_ticket_page_camptix_options' ) {
+		if ( 'tix_ticket_page_camptix_options' !== $hook ) {
 			return;
 		}
 

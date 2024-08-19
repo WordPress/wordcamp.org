@@ -3,8 +3,6 @@
  * Camptix Webhook Integration
  */
 
-namespace GG\RewriteRules\Rewrite;
-
 namespace CampTix\Webhook\Integration;
 
 /**
@@ -25,7 +23,7 @@ function bootstrap() {
  */
 function test_webhook_action() {
 
-	if ( ! isset( $_GET['test_webhook'] ) || $_GET['test_webhook'] !== '1' ) {
+	if ( ! isset( $_GET['test_webhook'] ) || '1' !== $_GET['test_webhook'] ) {
 		return;
 	}
 
@@ -89,7 +87,7 @@ function test_webhook_action() {
  */
 function add_attendees_admin_flag( $attendee_data, $post_id ): array {
 	// Post ID: -1 will invalid when getting post object. We use this to indicate that this is a test webhook.
-	if ( $post_id === -1 ) {
+	if ( -1 === $post_id ) {
 		$admin_flag                      = array( 'volunteer', 'speaker', 'organiser' );
 		$attendee_data['tix_admin_flag'] = $admin_flag[ array_rand( $admin_flag ) ];
 
@@ -118,7 +116,7 @@ function add_attendees_meta( $attendee_data, $post_id ): array {
 	);
 
 	// Post ID: -1 will invalid when getting post object. We use this to indicate that this is a test webhook.
-	if ( $post_id === -1 ) {
+	if ( -1 === $post_id ) {
 		$attendee_data['tix_accommodations']                = 'yes';
 		$attendee_data['tix_allergy']                       = 'no';
 		$attendee_data['tix_coupon']                        = 'test';
@@ -143,7 +141,7 @@ function add_attendees_meta( $attendee_data, $post_id ): array {
  */
 function add_attendees_questions_answered( $attendee_data, $post_id ): array {
 	// Post ID: -1 will invalid when getting post object. We use this to indicate that this is a test webhook.
-	if ( $post_id === -1 ) {
+	if ( -1 === $post_id ) {
 		$attendee_data['answered'] = 'N/A';
 
 		return $attendee_data;

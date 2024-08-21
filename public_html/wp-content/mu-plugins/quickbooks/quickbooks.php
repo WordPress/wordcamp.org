@@ -18,20 +18,20 @@ add_action( 'check_qbo_connection_action', __NAMESPACE__ . '\check_qbo_connectio
  * Setup hourly qbo connection task.
  */
 function check_qbo_connection_cron() {
-    if ( ! wp_next_scheduled( 'check_qbo_connection_action' ) ) {
-        wp_schedule_event( time(), 'hourly', 'check_qbo_connection_action' );
-    }
+	if ( ! wp_next_scheduled( 'check_qbo_connection_action' ) ) {
+		wp_schedule_event( time(), 'hourly', 'check_qbo_connection_action' );
+	}
 }
 
 /**
  * Monitors the Quickbooks connection, and sends message to Slack if not connected.
  */
 function check_qbo_connection() {
-    $client  = get_client();
+	$client  = get_client();
 
-    if ( ! $client->has_valid_token() && function_exists( 'slack_dm' ) ) {
-        slack_dm( "QBO token invalid. Visit <https://wordcamp.org/wp-admin/network/settings.php> to check connection.", 'dotorg' );
-    }
+	if ( ! $client->has_valid_token() && function_exists( 'slack_dm' ) ) {
+		slack_dm( 'QBO token invalid. Visit <https://wordcamp.org/wp-admin/network/settings.php> to check connection.', 'dotorg' );
+	}
 }
 
 /**

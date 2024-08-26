@@ -53,7 +53,7 @@ class WordCamp_New_Site {
 				$valid_url  = isset( $url['host'], $url['path'] );
 				$tld        = get_top_level_domain();
 				$network_id = $valid_url && "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
-				$we_host_it = ( 'doaction.org' !== $url['host'] );
+				$we_host_it = $valid_url && 'doaction.org' !== $url['host'];
 				?>
 
 				<?php if ( $valid_url && $we_host_it && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>

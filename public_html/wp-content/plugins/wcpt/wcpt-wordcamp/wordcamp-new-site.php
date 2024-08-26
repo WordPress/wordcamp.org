@@ -53,9 +53,10 @@ class WordCamp_New_Site {
 				$valid_url  = isset( $url['host'], $url['path'] );
 				$tld        = get_top_level_domain();
 				$network_id = $valid_url && "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+				$we_host_it = $valid_url && 'doaction.org' !== $url['host'];
 				?>
 
-				<?php if ( $valid_url && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>
+				<?php if ( $valid_url && $we_host_it && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>
 					<?php
 						$blog_details = get_blog_details(
 							array(
@@ -75,7 +76,7 @@ class WordCamp_New_Site {
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
 					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
 
-				<?php else : ?>
+				<?php elseif ( $we_host_it ) : ?>
 					<?php $checkbox_id = wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ); ?>
 
 					<label for="<?php echo esc_attr( $checkbox_id ); ?>">
@@ -169,6 +170,11 @@ class WordCamp_New_Site {
 		$external_domain_exceptions     = array( 169459 );
 		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld | events\.wordpress\.$tld @ix", $domain );
 		$can_have_external_domain       = $wordcamp_id <= $last_permitted_external_domain || in_array( $wordcamp_id, $external_domain_exceptions );
+
+		// DoAction is not hosted within the WordCamp infrastructure, so can have an external domain.
+		if ( 'doaction.org' === $domain ) {
+			$can_have_external_domain = true;
+		}
 
 		if ( $is_external_domain && $can_have_external_domain ) {
 			// Many old camps had external websites.

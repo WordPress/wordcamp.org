@@ -71,7 +71,8 @@ function canonical_link_past_home_pages_to_current_year() {
  */
 function add_notification_styles() { ?>
   <style type="text/css">
-		html:not(#specificity-hack) {
+		html:not(#specificity-hack),
+		.wordcamp-latest-site-notify-fixed-position-fix {
 			/* 44 = 10px x2 for padding, 24px for line height. */
 			margin-top: calc(44px + var(--wp-admin--admin-bar--height, 0px)) !important;
 		}
@@ -110,6 +111,23 @@ function add_notification_styles() { ?>
 			color: #72aee6;
 		}
   </style>
+  <script>
+      document.addEventListener("DOMContentLoaded", (event) => {
+          const fixedElements = document.querySelectorAll('nav, nav *'); // Select all elements
+          const fixedElementsArray = Array.from(fixedElements);
+
+          const fixedElementsWithPositionFixed = fixedElementsArray.filter(element => {
+              const computedStyle = getComputedStyle(element);
+              return computedStyle.position === 'fixed';
+          });
+
+          console.log(fixedElementsWithPositionFixed);
+
+          fixedElementsWithPositionFixed.forEach(element => {
+              element.classList.add('wordcamp-latest-site-notify-fixed-position-fix')
+          });
+      });
+  </script>
 <?php }
 
 /**

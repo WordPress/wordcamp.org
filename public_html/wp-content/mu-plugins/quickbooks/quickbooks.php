@@ -30,7 +30,7 @@ function check_qbo_connection() {
 	$client  = get_client();
 
 	if ( ! $client->has_valid_token() && function_exists( 'slack_dm' ) ) {
-		slack_dm( 'QBO token invalid. Visit <https://wordcamp.org/wp-admin/network/settings.php> to check connection.', 'dotorg' );
+		slack_dm( 'QBO token may be invalid. Visit <https://wordcamp.org/wp-admin/network/settings.php?page=quickbooks> to check connection.', 'wordcamp' );
 	}
 }
 

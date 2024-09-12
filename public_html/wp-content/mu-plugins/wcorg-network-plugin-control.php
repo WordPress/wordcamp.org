@@ -91,6 +91,7 @@ function _get_network_plugin_state_list( $state ) {
 	$network_id = get_current_network_id();
 
 	if ( EVENTS_NETWORK_ID === $network_id ) {
+		$network_plugin_state['activated'][]   = 'camptix-attendee-survey/camptix-attendee-survey.php';
 		$network_plugin_state['activated'][]   = 'wordcamp-organizer-survey/wordcamp-organizer-survey.php';
 	}
 

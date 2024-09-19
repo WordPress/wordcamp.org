@@ -232,7 +232,10 @@ function get_wordcamp_block_template( $post_type = '' ) {
 	// To allow php (i18n), we can overwrite the content property with output buffering.
 	ob_start();
 	include $template_file;
-	$template->content = _inject_theme_attribute_in_block_template_content( ob_get_clean() );
+	$template->content = traverse_and_serialize_blocks(
+		parse_blocks( ob_get_clean() ),
+		'_inject_theme_attribute_in_template_part_block'
+	);
 
 	return $template;
 }

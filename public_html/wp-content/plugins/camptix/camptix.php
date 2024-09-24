@@ -2772,7 +2772,12 @@ class CampTix_Plugin {
 				'csv' => 'text/csv',
 			);
 
-			$filename = sprintf( 'camptix-export-%s.%s', date( 'Y-m-d' ), $format );
+			// Get some useful info to use as filename, to avoid confusion.
+			$site_info = WP_Site::get_instance( get_current_blog_id() );
+			$domain    = str_replace( '.', '-', $site_info->domain );
+			$path      = str_replace( '/', '', $site_info->path );
+
+			$filename = sprintf( 'camptix-export-' . $domain . '-' . $path . '-%s.%s', date( 'Y-m-d' ), $format );
 
 			header( 'Content-Type: ' . $content_types[$format] );
 			header( 'Content-Disposition: attachment; filename="' . $filename . '"' );

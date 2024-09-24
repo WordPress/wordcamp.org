@@ -2735,7 +2735,6 @@ class CampTix_Plugin {
 							<select name="tix_export_to">
 								<option value="csv">CSV</option>
 								<option value="xml">XML</option>
-								<option disabled="disabled" value="pdf">PDF <?php _e( '(coming soon)', 'wordcamporg' ); ?></option>
 							</select>
 						</td>
 					</tr>

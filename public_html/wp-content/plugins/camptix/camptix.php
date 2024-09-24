@@ -5118,6 +5118,10 @@ class CampTix_Plugin {
 				update_post_meta( $post_id, 'tix_discount_price', $price );
 				delete_post_meta( $post_id, 'tix_discount_percent' );
 			} elseif ( $percent > 0 ) {
+				// Safeguard against percentages bigger than it is possible to discount against.
+				if ( $percent > 100 ) {
+					$percent = 100;
+				}
 				update_post_meta( $post_id, 'tix_discount_percent', $percent );
 				delete_post_meta( $post_id, 'tix_discount_price' );
 			} else {

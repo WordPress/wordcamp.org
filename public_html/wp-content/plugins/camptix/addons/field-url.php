@@ -75,7 +75,7 @@ class CampTix_Addon_URL_Field extends CampTix_Addon {
 					$label = substr( $label, 4 );
 				}
 
-				printf( '<a class="tix-field tix-attendee-url" href="%s">%s</a>', esc_url( $url ), esc_html( $label ) );
+				printf( '<a class="tix-field tix-attendee-url tix-%s" href="%s">%s</a>', esc_attr( $question->post_name ), esc_url( $url ), esc_html( $label ) );
 			}
 		}
 	}

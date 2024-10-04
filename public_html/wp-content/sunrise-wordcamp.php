@@ -636,8 +636,12 @@ function get_latest_site( string $domain ) {
 		SELECT `blog_id`, `domain`, `path`
 		FROM $wpdb->blogs
 		WHERE
-			( domain =    %s AND path != '/' ) OR -- Match city/year format.
-			( domain LIKE %s AND path  = '/' )    -- Match year.city format.
+  			( public AND NOT deleted ) -- Deleted sites should be skipped
+     			AND
+			(
+   				( domain =    %s AND path != '/' ) OR -- Match city/year format.
+				( domain LIKE %s AND path  = '/' )    -- Match year.city format.
+			)
 		ORDER BY path DESC, domain DESC
 		LIMIT 1;",
 		$domain,

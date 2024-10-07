@@ -57,8 +57,10 @@ add_action( 'camptix_tshirt_report_intro',                   __NAMESPACE__ . '\t
 add_filter( 'camptix_stripe_checkout_image_url',             __NAMESPACE__ . '\stripe_default_checkout_image_url'   );
 
 // Dashboard.
-add_action( 'restrict_manage_posts',                         __NAMESPACE__ . '\add_show_attendees_filter'           );
-add_filter( 'parse_query',                                   __NAMESPACE__ . '\apply_show_attendees_filter'         );
+add_action( 'restrict_manage_posts',                         __NAMESPACE__ . '\add_show_attendees_filter' );
+add_action( 'restrict_manage_posts',                         __NAMESPACE__ . '\add_show_ticket_type_filter' );
+
+add_filter( 'parse_query',                                   __NAMESPACE__ . '\apply_show_all_filters' );
 
 
 
@@ -1042,7 +1044,7 @@ function add_show_attendees_filter() {
  *
  * @param  WP_Query $query The WP_Query instance (passed by reference).
  */
-function apply_show_attendees_filter( $query ) {
+function apply_show_all_filters( $query ) {
 	if ( ! is_admin() ) {
 		return;
 	}
@@ -1055,21 +1057,51 @@ function apply_show_attendees_filter( $query ) {
 		return;
 	}
 
-	$filter = isset( $_GET['tix_show_attendees'] ) ? $_GET['tix_show_attendees'] : '';
+	$filter_attendee = isset( $_GET['tix_show_attendees'] ) ?? $_GET['tix_show_attendees'];
+	$filter_ticket   = isset( $_GET['tix_show_ticket_type'] ) ?? (int) $_GET['tix_show_ticket_type'];
 
-	if ( empty( $filter ) ) {
+	if ( empty( $filter_attendee ) && empty( $filter_ticket ) ) {
 		return;
 	}
 
-	switch ( $filter ) {
+	switch ( $filter_attendee ) {
 		case 'with-allergy':
-			$query->query_vars['meta_key'] = 'tix_allergy';
-			$query->query_vars['meta_value'] = 'yes';
+			$query->query_vars['meta_query'][] = ['key' => 'tix_allergy', 'value' => 'yes'];
 			break;
 
 		case 'with-accommodations':
-			$query->query_vars['meta_key'] = 'tix_accommodations';
-			$query->query_vars['meta_value'] = 'yes';
-			break;
+			$query->query_vars['meta_query'][] = ['key' => 'tix_accommodations', 'value' => 'yes'];
+            break;
 	}
+
+	if ( ! empty( $filter_ticket ) ) {
+		$query->query_vars['meta_query'][] = ['key' => 'tix_ticket_id', 'value' => $filter_ticket ];
+	}
+
+	// If both filters are set, we need to alter the meta query to join it.
+	if ( count( $query->query_vars['meta_query'] ) > 1 ) {
+		$query->query_vars['meta_query']['relation'] = 'AND';
+	}
+}
+
+/**
+ * Allow filter attendees listing by ticket type.
+ */
+function add_show_ticket_type_filter() {
+
+    if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
+        return;
+    }
+
+    $filter = isset( $_GET['tix_show_ticket_type'] ) ?? $_GET['tix_show_ticket_type'];
+
+    $all_tickets = get_posts( array( 'post_type' => 'tix_ticket' ) );
+    ?>
+        <select name="tix_show_ticket_type">
+            <option value=""><?php esc_html_e( 'All Tickets', 'wordcamporg' ); ?></option>
+            <?php foreach ( $all_tickets as $ticket ) : ?>
+                <option value="<?php echo esc_attr( $ticket->ID ); ?>" <?php selected( $filter, $ticket->ID ); ?>><?php echo esc_html( $ticket->post_title ); ?></option>
+            <?php endforeach; ?>
+        </select>
+    <?php
 }

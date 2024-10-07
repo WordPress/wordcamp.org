@@ -120,6 +120,10 @@
 		<exclude name="PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket" />
 		<exclude name="PEAR.Functions.FunctionCallSignature.CloseBracketLine" />
 
+		<!-- Exclude short array syntax as it is consistently already in the codebase :) -->
+		<exclude name="Generic.Arrays.DisallowShortArraySyntax"/>
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+
 		<!--
 		 ... In multidimensional arrays, items in the child arrays should be aligned, but the parent arrays should
 		 ... not be aligned, since they are not on neighboring lines.

@@ -1075,9 +1075,11 @@ function apply_show_all_filters( $query ) {
 	}
 
 	if ( ! empty( $filter_ticket ) ) {
-		$query->query_vars['meta_query'][] = ['key' => 'tix_ticket_id', 'value' => $filter_ticket ];
+		$query->query_vars['meta_query'][] = [
+			'key' => 'tix_ticket_id',
+			'value' => $filter_ticket
+		];
 	}
-
 	// If both filters are set, we need to alter the meta query to join it.
 	if ( count( $query->query_vars['meta_query'] ) > 1 ) {
 		$query->query_vars['meta_query']['relation'] = 'AND';
@@ -1089,19 +1091,19 @@ function apply_show_all_filters( $query ) {
  */
 function add_show_ticket_type_filter() {
 
-    if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
-        return;
-    }
+	if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
+		return;
+	}
 
-    $filter = isset( $_GET['tix_show_ticket_type'] ) ?? $_GET['tix_show_ticket_type'];
+	$filter = isset( $_GET['tix_show_ticket_type'] ) ?? $_GET['tix_show_ticket_type'];
 
-    $all_tickets = get_posts( array( 'post_type' => 'tix_ticket' ) );
-    ?>
-        <select name="tix_show_ticket_type">
-            <option value=""><?php esc_html_e( 'All Tickets', 'wordcamporg' ); ?></option>
-            <?php foreach ( $all_tickets as $ticket ) : ?>
-                <option value="<?php echo esc_attr( $ticket->ID ); ?>" <?php selected( $filter, $ticket->ID ); ?>><?php echo esc_html( $ticket->post_title ); ?></option>
-            <?php endforeach; ?>
-        </select>
-    <?php
+	$all_tickets = get_posts( array( 'post_type' => 'tix_ticket' ) );
+	?>
+		<select name="tix_show_ticket_type">
+			<option value=""><?php esc_html_e( 'All Tickets', 'wordcamporg' ); ?></option>
+			<?php foreach ( $all_tickets as $ticket ) : ?>
+				<option value="<?php echo esc_attr( $ticket->ID ); ?>" <?php selected( $filter, $ticket->ID ); ?>><?php echo esc_html( $ticket->post_title ); ?></option>
+			<?php endforeach; ?>
+		</select>
+	<?php
 }

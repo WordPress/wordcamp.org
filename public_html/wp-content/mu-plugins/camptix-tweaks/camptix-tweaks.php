@@ -1066,18 +1066,24 @@ function apply_show_all_filters( $query ) {
 
 	switch ( $filter_attendee ) {
 		case 'with-allergy':
-			$query->query_vars['meta_query'][] = ['key' => 'tix_allergy', 'value' => 'yes'];
+			$query->query_vars['meta_query'][] = [
+				'key' => 'tix_allergy',
+				'value' => 'yes',
+			];
 			break;
 
 		case 'with-accommodations':
-			$query->query_vars['meta_query'][] = ['key' => 'tix_accommodations', 'value' => 'yes'];
-            break;
+			$query->query_vars['meta_query'][] = [
+				'key' => 'tix_accommodations',
+				'value' => 'yes',
+			];
+			break;
 	}
 
 	if ( ! empty( $filter_ticket ) ) {
 		$query->query_vars['meta_query'][] = [
 			'key' => 'tix_ticket_id',
-			'value' => $filter_ticket
+			'value' => $filter_ticket,
 		];
 	}
 	// If both filters are set, we need to alter the meta query to join it.

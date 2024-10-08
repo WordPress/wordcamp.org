@@ -1057,8 +1057,8 @@ function apply_show_all_filters( $query ) {
 		return;
 	}
 
-	$filter_attendee = isset( $_GET['tix_show_attendees'] ) ?? $_GET['tix_show_attendees'];
-	$filter_ticket   = isset( $_GET['tix_show_ticket_type'] ) ?? (int) $_GET['tix_show_ticket_type'];
+	$filter_attendee = isset( $_GET['tix_show_attendees'] ) ? $_GET['tix_show_attendees'] : '';
+	$filter_ticket   = isset( $_GET['tix_show_ticket_type'] ) ? (int) $_GET['tix_show_ticket_type'] : '';
 
 	if ( empty( $filter_attendee ) && empty( $filter_ticket ) ) {
 		return;
@@ -1101,7 +1101,7 @@ function add_show_ticket_type_filter() {
 		return;
 	}
 
-	$filter = isset( $_GET['tix_show_ticket_type'] ) ?? $_GET['tix_show_ticket_type'];
+	$filter = isset( $_GET['tix_show_ticket_type'] ) ? $_GET['tix_show_ticket_type'] : '';
 
 	$all_tickets = get_posts( array( 'post_type' => 'tix_ticket' ) );
 	?>

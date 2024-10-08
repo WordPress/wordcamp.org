@@ -691,15 +691,7 @@ class CampTix_Plugin {
 				$ticket_id = intval( get_post_meta( $post_id, 'tix_ticket_id', true ) );
 				$ticket = get_post( $ticket_id );
 				if ( $ticket ) {
-					$attendees_url = get_admin_url( 0, '/edit.php?post_type=tix_attendee' );
-					$attendees_url = add_query_arg( 's', 'tix_ticket_id:' . intval( $ticket->ID ), $attendees_url );
-
-					// Don't drop the post_status query variable.
-					if ( get_query_var('post_status') ) {
-						$attendees_url = add_query_arg( 'post_status', get_query_var('post_status'), $attendees_url );
-					}
-
-					printf( '<a href="%s">%s</a>', esc_url( $attendees_url ), esc_html( $ticket->post_title ) );
+					echo esc_html( $ticket->post_title );
 				}
 				break;
 			case 'tix_email':

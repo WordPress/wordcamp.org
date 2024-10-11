@@ -31,7 +31,7 @@ function getTimezoneOffset( { offset = 0 } ) {
 	);
 }
 
-export default function ( { date, label, onChange } ) {
+export default function( { date, label, onChange } ) {
 	const settings = getSettings();
 	const is12HourTime = /a(?!\\)/i.test(
 		settings.formats.time
@@ -73,10 +73,10 @@ export default function ( { date, label, onChange } ) {
 					const _date = new TZDate( newDate, serverTimezone );
 
 					// XXX returns the timezone (ISO-8601 w/ Z), e.g. -08:00.
-					const tz = format( _date, 'XXX' );
+					const timezone = format( _date, 'XXX' );
 
 					// Now create a new date with the correct timezone.
-					const newDateTZ = new Date( newDate + tz );
+					const newDateTZ = new Date( newDate + timezone );
 
 					// Save value in seconds format for post meta.
 					const value = format( newDateTZ, 't' );

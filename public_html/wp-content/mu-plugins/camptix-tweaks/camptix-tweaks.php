@@ -529,16 +529,12 @@ function load_addons( $addons ) {
 	/** @var $camptix \CampTix_Plugin */
 	global $camptix;
 
-	$require_login_sites = apply_filters(
-		'camptix_extras_require_login_site_ids',
-		array(
-			206, // testing.wordcamp.org
-			364, // 2014.sf.wordcamp.org
-			447, // belohorizonte.wordcamp.org/2015
-		)
+	$skip_require_login = apply_filters(
+		'camptix_skip_require_login',
+		[]
 	);
 
-	if ( in_array( get_current_blog_id(), $require_login_sites, true ) ) {
+	if ( ! in_array( get_current_blog_id(), $skip_require_login, true ) ) {
 		/*
 		 * todo -- NOTE: when this is opened up for all camps, it will have to be enabled ONLY on WCSF14 and sites
 		 * that haven't opened tickets yet. Otherwise CampTix_Requre_login::hide_unconfirmed_attendees()

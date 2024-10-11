@@ -108,7 +108,7 @@ class CampTix_Network_Tools {
 
 		$rows       = array();
 		$table_name = $wpdb->base_prefix . 'camptix_log';
-		$entries    = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE blog_id = %d AND object_id = %d ORDER BY id DESC;", get_current_blog_id(), $post->ID ) );
+		$entries    = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $table_name WHERE blog_id = %d AND object_id = %d ORDER BY id DESC;", get_current_blog_id(), $post->ID ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		// Add entries as rows.
 		foreach ( $entries as $entry ) {

@@ -772,15 +772,15 @@ class CampTix_Require_Login extends CampTix_Addon {
 	public function hide_unconfirmed_attendees( $query_args ) {
 		$meta_query = array(
            		array(
-                		'key'     => 'tix_username',
-                		'value'   => self::UNCONFIRMED_USERNAME,
-                		'compare' => '!=',
-            		),
-            		'relation' => 'OR',
-            		array(
-                		'key' => 'tix_username',
-                		'compare' => 'NOT EXISTS',
-            		)
+				'key'     => 'tix_username',
+				'value'   => self::UNCONFIRMED_USERNAME,
+				'compare' => '!=',
+			),
+			'relation' => 'OR',
+			array(
+				'key' => 'tix_username',
+				'compare' => 'NOT EXISTS',
+			)
 		);
 
 		if ( isset( $query_args['meta_query'] ) ) {

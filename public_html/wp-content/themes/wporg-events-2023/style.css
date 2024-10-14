@@ -288,7 +288,7 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 @media (min-width: 1280px) {
 
 .wporg-marker-list__container .wporg-marker-list-item {
-			grid-template-columns: 60% 1fr 1fr;
+			grid-template-columns: 50% 1fr 1fr 1fr;
 	}
 		}
 
@@ -312,13 +312,14 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 		}
 			}
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::first-letter {
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__type::first-letter, .wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location::first-letter {
 			    text-transform: capitalize;
 			}
 
 @media (max-width: 781px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__type,
+		.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
 				margin-top: 2px;
 				margin-bottom: -2px;
 		}
@@ -326,7 +327,8 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 
 @media (min-width: 600px) {
 
-.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
+.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__type,
+		.wporg-marker-list__container .wporg-marker-list-item .wporg-marker-list-item__location {
 				display: inline;
 		}
 			}

@@ -258,7 +258,7 @@ function ctx_invoice_metabox_editable( $args ) {
 	$order              = get_post_meta( $args->ID, 'original_order', true );
 	$metas              = get_post_meta( $args->ID, 'invoice_metas', true );
 	$opt                = get_option( 'camptix_options' );
-	$invoice_vat_number = $opt['invoice-vat-number'];
+	$invoice_vat_number = $opt['invoice-vat-number'] ?? '';
 
 	if ( ! is_array( $order ) ) {
 		$order = array();
@@ -286,8 +286,8 @@ function ctx_invoice_metabox_sent( $args ) {
 	$order              = get_post_meta( $args->ID, 'original_order', true );
 	$metas              = get_post_meta( $args->ID, 'invoice_metas', true );
 	$opt                = get_option( 'camptix_options' );
-	$invoice_vat_number = $opt['invoice-vat-number'];
-	$txn_id             = isset( $metas['transaction_id'] ) ? $metas['transaction_id'] : '';
+	$invoice_vat_number = $opt['invoice-vat-number'] ?? '';
+	$txn_id             = $metas['transaction_id'] ?? '';
 
 	include CTX_INV_DIR . '/includes/views/sent-invoice-metabox.php';
 }

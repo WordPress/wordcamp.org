@@ -90,6 +90,16 @@ function register_tix_invoice() {
 }
 
 /**
+ * Define the default values for options.
+ */
+function ctx_default_options( $options ) {
+	$options['invoice-vat-number'] = '';
+
+	return $options;
+}
+add_filter( 'camptix_default_options', 'ctx_default_options' );
+
+/**
  * Register invoice CPT custom update messages.
  */
 function ctx_set_invoice_updated_messages( $messages ) {
@@ -254,10 +264,11 @@ add_action( 'add_meta_boxes_tix_invoice', 'ctx_register_invoice_metabox' );
  * @param object $args The args.
  */
 function ctx_invoice_metabox_editable( $args ) {
+	global $camptix;
 
 	$order              = get_post_meta( $args->ID, 'original_order', true );
 	$metas              = get_post_meta( $args->ID, 'invoice_metas', true );
-	$opt                = get_option( 'camptix_options' );
+	$opt                = $camptix->get_options();
 	$invoice_vat_number = $opt['invoice-vat-number'] ?? '';
 
 	if ( ! is_array( $order ) ) {
@@ -282,10 +293,11 @@ function ctx_invoice_metabox_editable( $args ) {
  * @param object $args The args.
  */
 function ctx_invoice_metabox_sent( $args ) {
+	global $camptix;
 
 	$order              = get_post_meta( $args->ID, 'original_order', true );
 	$metas              = get_post_meta( $args->ID, 'invoice_metas', true );
-	$opt                = get_option( 'camptix_options' );
+	$opt                = $camptix->get_options();
 	$invoice_vat_number = $opt['invoice-vat-number'] ?? '';
 	$txn_id             = $metas['transaction_id'] ?? '';
 

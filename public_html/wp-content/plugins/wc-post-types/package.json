@@ -12,17 +12,19 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+WC-Post-Types%22"
 	},
 	"devDependencies": {
+		"@date-fns/tz": "1.1.2",
 		"@wordpress/api-fetch": "6.2.0",
 		"@wordpress/components": "19.7.0",
 		"@wordpress/compose": "5.3.0",
 		"@wordpress/data": "6.5.0",
-		"@wordpress/date": "4.5.0",
+		"@wordpress/date": "4.58.0",
 		"@wordpress/edit-post": "6.2.0",
 		"@wordpress/element": "4.3.0",
 		"@wordpress/eslint-plugin": "11.1.0",
 		"@wordpress/i18n": "4.5.0",
 		"@wordpress/plugins": "4.3.0",
-		"@wordpress/scripts": "22.3.0"
+		"@wordpress/scripts": "22.3.0",
+		"date-fns": "4.1.0"
 	},
 	"eslintConfig": {
 		"extends": "../../../../.eslintrc.js",

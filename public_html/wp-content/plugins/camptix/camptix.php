@@ -7114,8 +7114,10 @@ class CampTix_Plugin {
 			if ( $current_loop++ >= $max_loops )
 				break;
 		}
-
-		$this->log( sprintf( 'Reviewed timeout payments and set %d attendees to timeout status.', $processed ) );
+		// Only log action message if we did something.
+		if ( $processed > 0 ) {
+			$this->log( sprintf( 'Reviewed timeout payments and set %d attendees to timeout status.', $processed ) );
+		}
 	}
 
 	/**

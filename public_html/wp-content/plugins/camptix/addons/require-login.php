@@ -14,9 +14,6 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function __construct() {
 		// Registration Information front-end screen
-		add_filter( 'camptix_register_button_classes',                array( $this, 'hide_register_form_elements' ) );
-		add_filter( 'camptix_coupon_link_classes',                    array( $this, 'hide_register_form_elements' ) );
-		add_filter( 'camptix_quantity_row_classes',                   array( $this, 'hide_register_form_elements' ) );
 		add_action( 'camptix_notices',                                array( $this, 'ticket_form_message' ), 8 );
 		add_filter( 'camptix_ask_questions',                          array( $this, 'hide_additional_attendee_questions_during_checkout' ), 10, 5 );
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'add_username_to_attendee_object' ), 10, 3 );
@@ -65,7 +62,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		if ( ! is_user_logged_in() && isset( $_REQUEST['tix_action'] ) ) {
-			wp_safe_redirect( wp_login_url( add_query_arg( $_REQUEST, $camptix->get_tickets_url() ) ) );
+			wp_safe_redirect( wp_login_url( $camptix->get_tickets_url() ) );
 			exit();
 		}
 		

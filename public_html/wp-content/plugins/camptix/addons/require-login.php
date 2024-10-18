@@ -62,7 +62,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		if ( ! is_user_logged_in() && isset( $_REQUEST['tix_action'] ) ) {
-			wp_safe_redirect( wp_login_url( $camptix->get_tickets_url() ) );
+			wp_safe_redirect( add_query_arg( 'wcname', get_bloginfo( 'name' ), wp_login_url( $camptix->get_tickets_url() ) ) );
 			exit();
 		}
 		

@@ -13,10 +13,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * Register hook callbacks
 	 */
 	public function __construct() {
-		// Registration Information front-end screen
-		add_filter( 'camptix_register_button_classes',                array( $this, 'hide_register_form_elements' ) );
-		add_filter( 'camptix_coupon_link_classes',                    array( $this, 'hide_register_form_elements' ) );
-		add_filter( 'camptix_quantity_row_classes',                   array( $this, 'hide_register_form_elements' ) );
+		// Registration Information front-end screen.
 		add_action( 'camptix_notices',                                array( $this, 'ticket_form_message' ), 8 );
 		add_filter( 'camptix_ask_questions',                          array( $this, 'hide_additional_attendee_questions_during_checkout' ), 10, 5 );
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'add_username_to_attendee_object' ), 10, 3 );
@@ -59,16 +56,37 @@ class CampTix_Require_Login extends CampTix_Addon {
 	public function block_unauthenticated_actions() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
-		// Bypass for payment webhook notifications.
-		if ( isset( $_REQUEST['tix_action'] ) && isset( $_REQUEST['tix_payment_token'] ) && $_REQUEST['tix_action'] == 'payment_notify' ) {
+		// Continue normal request, this is not a tickets page.
+		if ( ! isset( $_REQUEST['tix_action'] ) ) {
 			return;
 		}
 
-		if ( ! is_user_logged_in() && isset( $_REQUEST['tix_action'] ) ) {
-			wp_safe_redirect( wp_login_url( add_query_arg( $_REQUEST, $camptix->get_tickets_url() ) ) );
+		// Bypass for payment webhook notifications.
+		if ( 'payment_notify' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_payment_token'] ) ) {
+			return;
+		}
+
+		// Bypass for coupon validation- the `tix_coupon_submit` value is set when "Apply Coupon" button is clicked.
+		if ( 'attendee_info' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_coupon'], $_REQUEST['tix_coupon_submit'] ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			$args = array();
+			// If this was a registration, pass through the selected tickets and coupon.
+			if ( 'attendee_info' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_tickets_selected'] ) ) {
+				$args['tix_action'] = $_REQUEST['tix_action'];
+				$args['tix_tickets_selected'] = $_REQUEST['tix_tickets_selected'];
+				if ( isset( $_REQUEST['tix_coupon'] ) ) {
+					$args['tix_coupon'] = $_REQUEST['tix_coupon'];
+				}
+			}
+
+			$tickets_url = add_query_arg( $args, $camptix->get_tickets_url() );
+
+			wp_safe_redirect( add_query_arg( 'wcname', get_bloginfo( 'name' ), wp_login_url( $tickets_url ) ) );
 			exit();
 		}
-		
 	}
 
 	/**

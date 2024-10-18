@@ -59,11 +59,16 @@ class CampTix_Require_Login extends CampTix_Addon {
 	public function block_unauthenticated_actions() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
+		// Bypass for payment webhook notifications.
+		if ( isset( $_REQUEST['tix_action'] ) && isset( $_REQUEST['tix_payment_token'] ) && $_REQUEST['tix_action'] == 'payment_notify' ) {
+			return;
+		}
 
 		if ( ! is_user_logged_in() && isset( $_REQUEST['tix_action'] ) ) {
 			wp_safe_redirect( wp_login_url( add_query_arg( $_REQUEST, $camptix->get_tickets_url() ) ) );
 			exit();
 		}
+		
 	}
 
 	/**
@@ -771,7 +776,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function hide_unconfirmed_attendees( $query_args ) {
 		$meta_query = array(
-           		array(
+			array(
 				'key'     => 'tix_username',
 				'value'   => self::UNCONFIRMED_USERNAME,
 				'compare' => '!=',

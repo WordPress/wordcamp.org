@@ -147,7 +147,7 @@ var docCookies={getItem:function(e){return decodeURIComponent(document.cookie.re
 		if ( this.checked ) {
 			input_rows.each( function() {
 				$( this ).addClass( 'tix-hidden' );
-				$( this ).find( 'input' ).removeAttr( 'required' );
+				$( this ).find( 'input' ).removeAttr('required');
 			} );
 		} else {
 			input_rows.each( function() {

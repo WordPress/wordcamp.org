@@ -4352,24 +4352,6 @@
             "homepage": "https://wordpress.org/plugins/akismet/"
         },
         {
-            "name": "wpackagist-plugin/campt-indian-payment-gateway",
-            "version": "1.8",
-            "source": {
-                "type": "svn",
-                "url": "https://plugins.svn.wordpress.org/campt-indian-payment-gateway/",
-                "reference": "tags/1.8"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://downloads.wordpress.org/plugin/campt-indian-payment-gateway.1.8.zip"
-            },
-            "require": {
-                "composer/installers": "^1.0 || ^2.0"
-            },
-            "type": "wordpress-plugin",
-            "homepage": "https://wordpress.org/plugins/campt-indian-payment-gateway/"
-        },
-        {
             "name": "wpackagist-plugin/camptix-pagseguro",
             "version": "1.5.5",
             "source": {

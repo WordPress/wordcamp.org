@@ -84,35 +84,30 @@ jQuery(document).ready(function ($) {
 	$('.razorpay-container').css('z-index', '2147483543');
 
 	/**
-	 * On form submit prevent submission for Razorpay only.
+	 * On form submit prevent submission if the phone number is invalid.
 	 */
-	$form.on('submit', function (e) {
-	    
-	    var phone = $('.mobile').val();
-        phone = phone.replace(/[^0-9]/g,'');
+	$form.on( 'submit', function( event ) {
+		let phone = $( '.mobile', $form ).val();
+		phone = phone.replace( /[^0-9]/g, '' );
 
-        if(!($.isNumeric(phone))){
-            $('.message').text('Please Enter Only Numbers');
-            $('.message').css('color','red');
-            $('.mobile').val('');
-            $('.mobile').focus();
-            e.preventDefault();
-		return false;
-        }else
-        if (phone.length < 10 )
-        {
-            //alert('Phone number must be 10 digits.');
-            $('.message').text('Please Enter correct Mobile Number Or Number with STD Code');
-            $('.message').css('color','red');
-            $('.mobile').val('');
-            $('.mobile').focus();
-            //alert();
-            e.preventDefault();
+		if ( ! $.isNumeric( phone ) ) {
+			$( '.message', $form ).text( 'Please Enter Only Numbers' );
+			$( '.message', $form ).css( 'color', 'red' );
+			$( '.mobile', $form ).val( '' );
+			$( '.mobile', $form ).focus();
 
-		return false;
+			event.preventDefault();
+			return false;
+		} else if ( phone.length < 10 ) {
+			$( '.message', $form ).text( 'Please Enter correct Mobile Number Or Number with STD Code' );
+			$( '.message', $form ).css( 'color', 'red' );
+			$( '.mobile', $form ).val( '' );
+			$( '.mobile', $form ).focus();
 
-        } 
-     	return true;
-		// Bailout.
-	});
-});
+			event.preventDefault();
+			return false;
+		}
+
+		return true;
+	} );
+} );

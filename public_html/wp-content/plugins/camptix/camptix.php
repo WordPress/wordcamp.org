@@ -4007,6 +4007,19 @@ class CampTix_Plugin {
 					</div>
 
 					<div class="misc-pub-section">
+						<?php
+							$access_token = get_post_meta( $post->ID, 'tix_access_token', true );
+							$refund_link = $this->get_refund_tickets_link( $access_token );
+
+							$refunds_available_text = __( 'only for organizers', 'wordcamporg' );
+							if ( $this->options['refunds_enabled'] ) {
+								$refunds_available_text = __( 'for attendee', 'wordcamporg' );
+							}
+						?>
+						<span><a href="<?php echo esc_url( $refund_link ); ?>"><?php _e( 'Refund Request', 'wordcamporg' ); ?></a> (<?php echo $refunds_available_text ?>)</span>
+					</div>
+
+					<div class="misc-pub-section">
 						<div class="tix-pub-section-item">
 							<input id="tix_privacy_<?php esc_attr( $post->ID ); ?>" name="tix_privacy" type="checkbox" <?php checked( get_post_meta( $post->ID, 'tix_privacy', true ), 'private' ); ?> />
 							<label for="tix_privacy_<?php esc_attr( $post->ID ); ?>"><?php _e( 'Hide from public attendees list', 'wordcamporg' ); ?></label>
@@ -4697,6 +4710,12 @@ class CampTix_Plugin {
 
 		$rows[] = array( __( 'Edit Token', 'wordcamporg' ), sprintf( '<a href="%s">%s</a>', $this->get_edit_attendee_link( $post->ID, $edit_token ), $edit_token ) );
 		$rows[] = array( __( 'Access Token', 'wordcamporg' ), sprintf( '<a href="%s">%s</a>', $this->get_access_tickets_link( $access_token ), $access_token ) );
+
+		$refunds_available_text = __( 'only for organizers', 'wordcamporg' );
+		if ( $this->options['refunds_enabled'] ) {
+			$refunds_available_text = __( 'for attendee', 'wordcamporg' );
+		}
+		$rows[] = array( __( 'Refund Request', 'wordcamporg' ), sprintf( '<a href="%s">Link</a> %s', $this->get_refund_tickets_link( $access_token ), $refunds_available_text ) );
 
 		// Transaction
 		$rows[] = array( __( 'Transaction', 'wordcamporg' ), '' );
@@ -5410,7 +5429,7 @@ class CampTix_Plugin {
 				$this->shortcode_contents = $this->form_access_tickets();
 			} elseif ( 'edit_attendee' == $tix_action ) {
 				$this->shortcode_contents = $this->form_edit_attendee();
-			} elseif ( 'refund_request' == $tix_action && $this->options['refunds_enabled'] ) {
+			} elseif ( 'refund_request' == $tix_action && ( $this->options['refunds_enabled'] || current_user_can( $this->caps['manage_attendees'] ) ) ) {
 				$this->shortcode_contents = $this->form_refund_request();
 			} else {
 				// If we end up here, start over.
@@ -6440,7 +6459,13 @@ class CampTix_Plugin {
 		// Clean things up before and after the shortcode.
 		$post->post_content = apply_filters( 'camptix_post_content_override', $this->shortcode_str, $post->post_content, $_GET['tix_action'] );
 
-		if ( ! $this->options['refunds_enabled'] || ! isset( $_REQUEST['tix_access_token'] ) || ! ctype_alnum( $_REQUEST['tix_access_token'] ) ) {
+		if ( ! isset( $_REQUEST['tix_access_token'] ) || ! ctype_alnum( $_REQUEST['tix_access_token'] ) ) {
+			$this->error_flags['invalid_access_token'] = true;
+			$this->redirect_with_error_flags();
+			die();
+		}
+
+		if ( ! $this->options['refunds_enabled'] && ! current_user_can( $this->caps['manage_attendees'] ) ) {
 			$this->error_flags['invalid_access_token'] = true;
 			$this->redirect_with_error_flags();
 			die();
@@ -6500,21 +6525,27 @@ class CampTix_Plugin {
 				$tickets[$ticket_id] = 1;
 		}
 
-		if ( count( $transactions ) != 1 || $transactions[ $txn_id ]['payment_amount'] <= 0 ) {
-			$this->error_flags['cannot_refund'] = true;
-			$this->redirect_with_error_flags();
-			die();
-		}
+		if ( ! current_user_can( $this->caps['manage_attendees'] ) ) {
+			if ( count( $transactions ) != 1 || $transactions[ $txn_id ]['payment_amount'] <= 0 ) {
+				$this->error_flags['cannot_refund'] = true;
+				$this->redirect_with_error_flags();
+				die();
+			}
 
-		$transaction = array_shift( $transactions );
-		if ( ! $transaction['receipt_email'] || ! $transaction['transaction_id'] || ! $transaction['payment_amount'] ) {
-			$this->error_flags['cannot_refund'] = true;
-			$this->redirect_with_error_flags();
-			die();
+			$transaction = array_shift( $transactions );
+			if ( ! $transaction['receipt_email'] || ! $transaction['transaction_id'] || ! $transaction['payment_amount'] ) {
+				$this->error_flags['cannot_refund'] = true;
+				$this->redirect_with_error_flags();
+				die();
+			}
 		}
 
 		// Has a refund request been submitted?
 		$reason = '';
+		if ( current_user_can( $this->caps['manage_attendees'] ) ) {
+			$reason = wp_sprintf( __( 'In behalf of attendee by %s (%s)', 'wordcamporg' ), wp_get_current_user()->display_name, wp_get_current_user()->user_login );
+		}
+
 		if ( isset( $_POST['tix_refund_request_submit'] ) ) {
 			$reason = esc_html( $_POST['tix_refund_request_reason'] );
 			$check = isset( $_POST['tix_refund_request_confirmed'] ) ? $_POST['tix_refund_request_confirmed'] : false;
@@ -6522,22 +6553,34 @@ class CampTix_Plugin {
 			if ( ! $check ) {
 				$this->error( __( 'You have to agree to the terms to request a refund.', 'wordcamporg' ) );
 			} else {
+				// Allow organisers to refund tickets without transactions (i.e. free tickets)
+				if ( current_user_can( $this->caps['manage_attendees'] ) && empty( $transactions ) ) {
+					// Change status for all attendees within the same purchase.
+					foreach ( $attendees as $attendee ) {
+						$attendee->post_status = 'refund';
+						wp_update_post( $attendee );
+					}
 
-				$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
+					// Dumb result in order for checks below to pass, with this we avoid adding new check.
+					$result = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+				} else {
+					$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
 
-				// Bail if a payment method does not exist.
-				if ( ! $payment_method_obj ) {
-					$this->error_flags['cannot_refund'] = true;
-					$this->redirect_with_error_flags();
-					die();
+					// Bail if a payment method does not exist.
+					if ( ! $payment_method_obj ) {
+						$this->error_flags['cannot_refund'] = true;
+						$this->redirect_with_error_flags();
+						die();
+					}
+
+					/**
+					 * @todo: Better error messaging for misconfigured payment methods
+					 */
+
+					// Attempt to process the refund transaction
+					$result = $payment_method_obj->payment_refund( $transaction['payment_token'] );
 				}
 
-				/**
-				 * @todo: Better error messaging for misconfigured payment methods
-				 */
-
-				// Attempt to process the refund transaction
-				$result = $payment_method_obj->payment_refund( $transaction['payment_token'] );
 				$this->log( 'Individual refund request result.', $attendee->ID, $result, 'refund' );
 				if ( CampTix_Plugin::PAYMENT_STATUS_REFUNDED == $result ) {
 					foreach ( $attendees as $attendee ) {

@@ -1,0 +1,74 @@
+Index: camptix.php
+===================================================================
+--- camptix.php	(revision 4946)
++++ camptix.php	(working copy)
+@@ -5473,34 +5473,38 @@ class CampTix_Plugin {
+ 			}
+ 		}
+ 
+ 		if ( isset( $this->error_flags['invalid_coupon'] ) ) {
+ 			$this->error( __( 'Sorry, but the coupon you have entered seems to be invalid or expired.', 'wordcamporg' ) );
+ 		}
+ 
+ 		if ( isset( $this->error_flags['invalid_reservation'] ) ) {
+ 			$this->error( __( 'Sorry, but the reservation you are trying to use seems to be invalid or expired.', 'wordcamporg' ) );
+ 		}
+ 
+ 		if ( isset( $this->error_flags['attendee_info_missing'] ) ) {
+ 			$this->error( __( "It doesn't look like your form submitted any attendee information. Please try again.", 'wordcamporg' ) );
+ 		}
+ 
+-		if ( ! $available_tickets ) {
++		if ( ! $available_tickets && ! $this->is_wordcamp_closed() ) {
+ 			$this->notice( __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' ) );
+ 		}
+ 
++		if ( $this->is_wordcamp_closed() ) {
++			$this->notice( __( 'This event has completed.', 'wordcamporg' ) );
++		}
++
+ 		if ( $available_tickets && isset( $this->reservation ) && $this->reservation ) {
+ 			$this->info( __( 'You are using a reservation, cool!', 'wordcamporg' ) );
+ 		}
+ 
+ 		if ( ! isset( $_POST['tix_coupon_submit'], $_POST['tix_coupon'] ) || empty( $_POST['tix_coupon'] ) ) {
+ 			if ( isset( $this->error_flags['no_tickets_selected'] ) && isset( $_GET['tix_action'] ) && 'attendee_info' == $_GET['tix_action'] ) {
+ 				if ( isset( $_POST['tix_tickets_selected'] ) && array_sum( $_POST['tix_tickets_selected'] ) ) {
+ 					$this->error( __( "It looks like somebody bought the last ticket(s) before you could complete your purchase. If you'd like to try to buy a different ticket, please try again.", 'wordcamporg' ) );
+ 				} else {
+ 					$this->error( __( 'Please select at least one ticket.', 'wordcamporg' ) );
+ 				}
+ 			}
+ 		}
+ 
+ 		if ( isset( $_GET['tix_action'] ) && 'checkout' == $_GET['tix_action'] && isset( $this->error_flags['no_tickets_selected'] ) ) {
+@@ -8560,19 +8564,29 @@ class CampTix_Plugin {
+ 	 * for notify shortcodes, and receipt for e-mail templates, etc. You can also use it to
+ 	 * store your own stuff, but don't forget to cleanup when you're done.
+ 	 *
+ 	 * @param $key string The key to access/store the value with.
+ 	 * @param $value mixed An optional value when storing things.
+ 	 */
+ 	public function tmp( $key, $value = null ) {
+ 		if ( null !== $value )
+ 			$this->tmp[ $key ] = $value;
+ 
+ 		if ( isset( $this->tmp[ $key ] ) )
+ 			$value = $this->tmp[ $key ];
+ 
+ 		return $value;
+ 	}
++
++	/**
++	 * Return whether the wordcamp is closed.
++	 *
++	 * @return bool
++	 */
++	public function is_wordcamp_closed() {
++		$wordcamp = get_wordcamp_post();
++		return 'wcpt-closed' === $wordcamp->post_status;
++	}
+ }
+ 
+ // Initialize the $camptix global.
+ $GLOBALS['camptix'] = new CampTix_Plugin;

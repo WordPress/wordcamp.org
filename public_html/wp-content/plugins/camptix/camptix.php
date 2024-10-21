@@ -5485,8 +5485,12 @@ class CampTix_Plugin {
 			$this->error( __( "It doesn't look like your form submitted any attendee information. Please try again.", 'wordcamporg' ) );
 		}
 
-		if ( ! $available_tickets ) {
+		if ( ! $available_tickets && ! $this->is_wordcamp_closed() ) {
 			$this->notice( __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' ) );
+		}
+
+		if ( $this->is_wordcamp_closed() ) {
+			$this->notice( __( 'This event has completed.', 'wordcamporg' ) );
 		}
 
 		if ( $available_tickets && isset( $this->reservation ) && $this->reservation ) {
@@ -8571,6 +8575,16 @@ class CampTix_Plugin {
 			$value = $this->tmp[ $key ];
 
 		return $value;
+	}
+
+	/**
+	 * Return whether the wordcamp is closed.
+	 *
+	 * @return bool
+	 */
+	public function is_wordcamp_closed() {
+		$wordcamp = get_wordcamp_post();
+		return 'wcpt-closed' === $wordcamp->post_status;
 	}
 }
 

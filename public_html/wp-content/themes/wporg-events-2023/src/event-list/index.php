@@ -63,6 +63,7 @@ function render( $attributes, $content, $block ) {
 		function ( $event ) {
 			return array(
 				'title'     => $event->title,
+				'type'      => $event->type,
 				'url'       => $event->url,
 				'location'  => $event->location,
 				'timestamp' => $event->timestamp,

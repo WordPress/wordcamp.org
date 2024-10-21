@@ -178,7 +178,12 @@ class Camptix_Indian_Payments {
 			return;
 		}
 
-		wp_register_script( 'camptix-indian-payments-main-js', CAMPTIX_MULTI_URL . 'assets/js/camptix-multi-popup.js', array( 'jquery' ), false, CAMPTIX_INDIAN_PAYMENTS_VERSION );
+		wp_register_script(
+			'camptix-indian-payments-main-js',
+			plugins_url( 'assets/js/camptix-multi-popup.js', __FILE__ ),
+			array( 'jquery' ),
+			filemtime( __DIR__ . '/assets/js/camptix-multi-popup.js' ),
+		);
 		wp_enqueue_script( 'camptix-indian-payments-main-js' );
 
 		$data = apply_filters(

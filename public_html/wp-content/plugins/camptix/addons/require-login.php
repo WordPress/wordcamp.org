@@ -122,7 +122,6 @@ class CampTix_Require_Login extends CampTix_Addon {
 			return;
 		}
 
-
 		// Warn users that they will need to login to purchase a ticket
 		if ( ! is_user_logged_in() && ! $this->user_is_editing_ticket() ) {
 			$camptix->notice( apply_filters(

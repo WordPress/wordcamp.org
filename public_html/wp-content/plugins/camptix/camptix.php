@@ -6875,7 +6875,7 @@ class CampTix_Plugin {
 		$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
 
 		// Event is finalised.
-		if ( $wordcamp && 'wcpt-closed' === $wordcamp->post_status ) {
+		if ( $this->is_wordcamp_closed() ) {
 			return false;
 		}
 

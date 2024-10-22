@@ -218,6 +218,23 @@ class WordCamp_Counts extends Base {
 	}
 
 	/**
+	 * Simple method to check against URL field
+	 *
+	 * @param int $wordcamp_id ID for the wordcamp post type.
+	 *
+	 * @return bool
+	 */
+	public function is_a_wordcamp_url( $wordcamp_id ) {
+		$url = get_post_meta( $wordcamp_id, 'URL', true );
+
+		// doaction sites are tracked but break the validate wordcamp site check.
+		if ( false !== strpos( $url, 'doaction' ) ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * Query and parse the data for the report.
 	 *
 	 * @return array
@@ -246,6 +263,9 @@ class WordCamp_Counts extends Base {
 
 		foreach ( $wordcamp_ids as $wordcamp_id ) {
 			try {
+				if ( ! $this->is_a_wordcamp_url( $wordcamp_id ) ) {
+					continue;
+				}
 				$valid = validate_wordcamp_id( $wordcamp_id );
 
 				$data = array_merge( $data, $this->get_data_for_site( $valid->site_id, $valid->post_id ) );

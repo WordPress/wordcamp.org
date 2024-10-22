@@ -71,7 +71,11 @@ class CampTix_Require_Login extends CampTix_Addon {
 			return;
 		}
 
-		if ( ! is_user_logged_in() ) {
+		// Temporary: We don't want to block users from editing tickets.
+		// See: https://github.com/WordPress/wordcamp.org/issues/1393.
+		$user_is_editing_ticket = in_array( $_REQUEST['tix_action'], array( 'access_tickets', 'edit_attendee' ) );
+
+		if ( ! is_user_logged_in() && ! $user_is_editing_ticket ) {
 			$args = array();
 			// If this was a registration, pass through the selected tickets and coupon.
 			if ( 'attendee_info' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_tickets_selected'] ) ) {

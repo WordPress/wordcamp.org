@@ -218,7 +218,7 @@ class WordCamp_Counts extends Base {
 	}
 
 	/**
- 	 * Simple method to check against URL field
+	 * Simple method to check against URL field
 	 *
 	 * @param int $wordcamp_id ID for the wordcamp post type.
 	 *
@@ -233,7 +233,7 @@ class WordCamp_Counts extends Base {
 		}
 		return true;
 	}
-	
+
 	/**
 	 * Query and parse the data for the report.
 	 *

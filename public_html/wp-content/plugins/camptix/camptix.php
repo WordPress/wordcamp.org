@@ -8593,8 +8593,8 @@ class CampTix_Plugin {
 	* @return bool
 	*/
 	public function has_tickets_available() {
-		 return $this->number_available_tickets() > 0;
-   }
+		return $this->number_available_tickets() > 0;
+	}
 }
 
 // Initialize the $camptix global.

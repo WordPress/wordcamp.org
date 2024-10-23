@@ -8586,6 +8586,15 @@ class CampTix_Plugin {
 		$wordcamp = get_wordcamp_post();
 		return 'wcpt-closed' === $wordcamp->post_status;
 	}
+
+	/**
+	* Return whether there are available tickets.
+	*
+	* @return bool
+	*/
+	public function has_tickets_available() {
+		return $this->number_available_tickets() > 0;
+	}
 }
 
 // Initialize the $camptix global.

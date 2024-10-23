@@ -841,7 +841,6 @@ class CampTix_Require_Login extends CampTix_Addon {
 	protected function user_is_editing_ticket() {
 		return isset( $_REQUEST['tix_action'] ) && in_array( $_REQUEST['tix_action'], array( 'access_tickets', 'edit_attendee' ) );
 	}
-
 } // CampTix_Require_Login
 
 camptix_register_addon( 'CampTix_Require_Login' );

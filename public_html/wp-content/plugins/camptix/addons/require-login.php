@@ -73,9 +73,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		// Temporary: We don't want to block users from editing tickets.
 		// See: https://github.com/WordPress/wordcamp.org/issues/1393.
-		$user_is_editing_ticket = in_array( $_REQUEST['tix_action'], array( 'access_tickets', 'edit_attendee' ) );
-
-		if ( ! is_user_logged_in() && ! $user_is_editing_ticket ) {
+		if ( ! is_user_logged_in() && ! $this->user_is_editing_ticket() ) {
 			$args = array();
 			// If this was a registration, pass through the selected tickets and coupon.
 			if ( 'attendee_info' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_tickets_selected'] ) ) {
@@ -125,7 +123,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		// Warn users that they will need to login to purchase a ticket
-		if ( ! is_user_logged_in() && ! isset( $_REQUEST['tix_action'] ) ) {
+		if ( ! is_user_logged_in() && ! $this->user_is_editing_ticket() ) {
 			$camptix->notice( apply_filters(
 				'camptix_require_login_please_login_message',
 				sprintf(
@@ -834,6 +832,16 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		return $parameters;
 	}
+
+	/**
+	 * Checks if the user is performing actions that require ticket access.
+	 *
+	 * @return bool True if the user is editing or accessing a ticket, false otherwise.
+	 */
+	protected function user_is_editing_ticket() {
+		return isset( $_REQUEST['tix_action'] ) && in_array( $_REQUEST['tix_action'], array( 'access_tickets', 'edit_attendee' ) );
+	}
+
 } // CampTix_Require_Login
 
 camptix_register_addon( 'CampTix_Require_Login' );

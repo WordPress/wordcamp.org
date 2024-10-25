@@ -207,7 +207,7 @@ class Meetup_Application extends Event_Application {
 	 *
 	 * @param array $data
 	 *
-	 * @return bool|WP_Error
+	 * @return int|WP_Error
 	 */
 	public function create_post( $data ) {
 		// Create the post.
@@ -264,7 +264,7 @@ ADDRESS;
 
 		$this->post = get_post( $post_id );
 
-		return true;
+		return $post_id;
 	}
 
 	/**

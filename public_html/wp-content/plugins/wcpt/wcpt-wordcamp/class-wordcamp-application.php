@@ -186,7 +186,7 @@ class WordCamp_Application extends Event_Application {
 	 *
 	 * @param array $data
 	 *
-	 * @return bool|\WP_Error
+	 * @return int|\WP_Error
 	 */
 	public function create_post( $data ) {
 		// Create the post.
@@ -259,7 +259,7 @@ class WordCamp_Application extends Event_Application {
 		);
 
 		$this->post = get_post( $post_id );
-		return true;
+		return $post_id;
 	}
 
 	/**

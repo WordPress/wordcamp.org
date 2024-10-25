@@ -258,7 +258,7 @@ abstract class Event_Application {
 	 *
 	 * @param string $email_address
 	 * @param string $event_city
-     * @param int $application_post id of post created on WC Central.
+	 * @param int $application_post id of post created on WC Central.
 	 */
 	public function notify_applicant_application_received( $email_address, $event_city, $application_post ) {
 		//translators: Name of the event. E.g. WordCamp or meetup.

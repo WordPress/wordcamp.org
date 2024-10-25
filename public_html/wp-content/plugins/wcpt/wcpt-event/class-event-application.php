@@ -258,7 +258,7 @@ abstract class Event_Application {
 	 *
 	 * @param string $email_address
 	 * @param string $event_city
-	 * @param int $application_post id of post created on WC Central.
+	 * @param int    $application_post id of post created on WC Central.
 	 */
 	public function notify_applicant_application_received( $email_address, $event_city, $application_post ) {
 		//translators: Name of the event. E.g. WordCamp or meetup.
@@ -278,10 +278,10 @@ abstract class Event_Application {
 			sanitize_text_field( $event_city )
 		);
 		$message .= sprintf(
-				"---- Internal details for the Community Team ----\n\n
-				Name: %1\$s\n
-				Type: %2\$s\n
-				URL: : https://central.wordcamp.org/wp-admin/post.php?post=%3\$d&amp;action=edit",
+			"---- Internal details for the Community Team ----\n\n
+			Name: %1\$s\n
+			Type: %2\$s\n
+			URL: : https://central.wordcamp.org/wp-admin/post.php?post=%3\$d&amp;action=edit",
 			$this->get_event_label(),
 			sanitize_text_field( $event_city ),
 			absint( $application_post ),

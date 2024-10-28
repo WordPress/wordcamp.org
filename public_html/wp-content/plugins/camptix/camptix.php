@@ -7674,8 +7674,8 @@ class CampTix_Plugin {
 
 			if ( self::PAYMENT_STATUS_COMPLETED == $result ) {
 				$attendee->post_status = 'publish';
-				$this->log_ticket_purchase_on_user_profile( $attendee );
 				wp_update_post( $attendee );
+				$this->log_ticket_purchase_on_user_profile( $attendee );
 			}
 
 			if ( self::PAYMENT_STATUS_PENDING == $result ) {
@@ -7688,6 +7688,7 @@ class CampTix_Plugin {
 				wp_update_post( $attendee );
 				update_post_meta( $attendee->ID, 'tix_refund_transaction_id', $refund_transaction_id );
 				update_post_meta( $attendee->ID, 'tix_refund_transaction_details', $refund_transaction_details );
+				$this->update_ticket_status_on_user_profile( $attendee->ID, $attendee->post_status );
 				$this->log( sprintf( 'Refunded %s by user request in %s.', $transaction_id, $refund_transaction_id ), $attendee->ID, $data, 'refund' );
 			}
 
@@ -8624,17 +8625,19 @@ class CampTix_Plugin {
 			$total_price = $this->append_currency( (float) get_post_meta( $attendee->ID, 'tix_order_total', true ), false );
 			$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
 			$access_link = $this->get_access_tickets_link( $access_token );
+			$ticket_status = $attendee->post_status;
 
 			// Create a new purchase entry.
 			$new_purchase = array(
 				'id' => $attendee->ID,
-				'name' => get_wordcamp_name(),
+				'wordcamp_name' => get_wordcamp_name(),
 				'site_url' => site_url(),
 				'purchase_date' => $purchase_date,
 				'ticket_type' => $ticket_type,
 				'total_price' => $total_price,
 				'access_link' => $access_link,
 				'edit_link' => $edit_link,
+				'ticket_status' => $ticket_status,
 			);
 
 			// Add a refund link if the ticket is refundable.
@@ -8648,6 +8651,29 @@ class CampTix_Plugin {
 		}
 	}
 
+	/**
+	 * Update purchased ticket status on the user's profile.
+	 *
+	 * @param int $attendee_id The ID of the rufunded attendee.
+	 * @param string $ticket_status Ticket status.
+	 */
+	function update_ticket_status_on_user_profile( $attendee_id, $ticket_status ) {
+		$user_id = get_current_user_id();
+		$purchase_history = get_user_meta( $user_id, 'wordcamp_ticket_history', true );
+
+		// If there's no purchase history or it's not an array, nothing to udpate.
+		if ( ! is_array( $purchase_history ) || empty( $purchase_history ) ) {
+			return;
+		}
+
+		foreach ( $purchase_history as $index => $ticket ) {
+			if ( isset( $ticket['id'] ) && intval( $ticket['id'] ) === intval( $attendee_id ) ) {
+				$purchase_history[ $index ]['ticket_status'] = $ticket_status;
+				update_user_meta( $user_id, 'wordcamp_ticket_history', $purchase_history );
+				return;
+			}
+		}
+	}
 }
 
 // Initialize the $camptix global.

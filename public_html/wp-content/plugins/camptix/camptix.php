@@ -8619,10 +8619,10 @@ class CampTix_Plugin {
 			$ticket_id = intval( get_post_meta( $attendee->ID, 'tix_ticket_id', true ) );
 			$ticket = get_post( $ticket_id );
 			$ticket_type = $ticket->post_title;
+			$ticket_price = $this->append_currency( (float) get_post_meta( $attendee->ID, 'tix_ticket_price', true ), false );
 			$purchase_date = $attendee->post_date;
 			$edit_token = get_post_meta( $attendee->ID, 'tix_edit_token', true );
 			$edit_link = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
-			$total_price = $this->append_currency( (float) get_post_meta( $attendee->ID, 'tix_order_total', true ), false );
 			$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
 			$access_link = $this->get_access_tickets_link( $access_token );
 			$ticket_status = $attendee->post_status;
@@ -8634,7 +8634,7 @@ class CampTix_Plugin {
 				'site_url' => site_url(),
 				'purchase_date' => $purchase_date,
 				'ticket_type' => $ticket_type,
-				'total_price' => $total_price,
+				'ticket_price' => $ticket_price,
 				'access_link' => $access_link,
 				'edit_link' => $edit_link,
 				'ticket_status' => $ticket_status,

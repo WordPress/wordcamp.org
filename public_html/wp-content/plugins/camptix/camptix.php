@@ -7674,6 +7674,7 @@ class CampTix_Plugin {
 
 			if ( self::PAYMENT_STATUS_COMPLETED == $result ) {
 				$attendee->post_status = 'publish';
+				$this->log_ticket_purchase_on_user_profile( $attendee );
 				wp_update_post( $attendee );
 			}
 
@@ -8595,6 +8596,58 @@ class CampTix_Plugin {
 	public function has_tickets_available() {
 		return $this->number_available_tickets() > 0;
 	}
+
+	/**
+	 * Log the purchased ticket information on the user's profile.
+	 *
+	 * @param object $attendee The attendee object containing ticket information.
+	 */
+	function log_ticket_purchase_on_user_profile( $attendee ) {
+		$user_id = get_current_user_id();
+		$purchase_history = get_user_meta( $user_id, 'wordcamp_ticket_history', true );
+
+		// Initialize the purchase history as an empty array if it's not already an array.
+		if ( ! is_array( $purchase_history ) ) {
+			$purchase_history = array();
+		}
+
+		// Check if the current attendee's ID is already in the purchase history.
+		$existing_attendee_ids = array_column( $purchase_history, 'id' );
+		if ( ! in_array( $attendee->ID, $existing_attendee_ids ) ) {
+			// Gather ticket details to log the purchase.
+			$ticket_id = intval( get_post_meta( $attendee->ID, 'tix_ticket_id', true ) );
+			$ticket = get_post( $ticket_id );
+			$ticket_type = $ticket->post_title;
+			$purchase_date = esc_html( mysql2date( get_option( 'date_format' ), $attendee->post_date ) );
+			$edit_token = get_post_meta( $attendee->ID, 'tix_edit_token', true );
+			$edit_link = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
+			$total_price = $this->append_currency( (float) get_post_meta( $attendee->ID, 'tix_order_total', true ), false );
+			$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
+			$access_link = $this->get_access_tickets_link( $access_token );
+
+			// Create a new purchase entry.
+			$new_purchase = array(
+				'id' => $attendee->ID,
+				'name' => get_wordcamp_name(),
+				'site_url' => site_url(),
+				'purchase_date' => $purchase_date,
+				'ticket_type' => $ticket_type,
+				'total_price' => $total_price,
+				'access_link' => $access_link,
+				'edit_link' => $edit_link,
+			);
+
+			// Add a refund link if the ticket is refundable.
+			if ( $this->is_refundable( $attendee->ID ) ) {
+				$new_purchase['refund_link'] = esc_url( $this->get_refund_tickets_link( $access_token ) );
+			}
+
+			$purchase_history[] = $new_purchase;
+
+			update_user_meta( $user_id, 'wordcamp_ticket_history', $purchase_history );
+		}
+	}
+
 }
 
 // Initialize the $camptix global.

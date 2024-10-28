@@ -8619,7 +8619,7 @@ class CampTix_Plugin {
 			$ticket_id = intval( get_post_meta( $attendee->ID, 'tix_ticket_id', true ) );
 			$ticket = get_post( $ticket_id );
 			$ticket_type = $ticket->post_title;
-			$purchase_date = esc_html( mysql2date( get_option( 'date_format' ), $attendee->post_date ) );
+			$purchase_date = $attendee->post_date;
 			$edit_token = get_post_meta( $attendee->ID, 'tix_edit_token', true );
 			$edit_link = $this->get_edit_attendee_link( $attendee->ID, $edit_token );
 			$total_price = $this->append_currency( (float) get_post_meta( $attendee->ID, 'tix_order_total', true ), false );

@@ -281,7 +281,7 @@ abstract class Event_Application {
 			"---- Internal details for the Community Team ----\n\n
 			Name: %1\$s\n
 			Type: %2\$s\n
-			URL: : https://central.wordcamp.org/wp-admin/post.php?post=%3\$d&amp;action=edit",
+			URL: https://central.wordcamp.org/wp-admin/post.php?post=%3\$d&amp;action=edit",
 			$this->get_event_label(),
 			sanitize_text_field( $event_city ),
 			absint( $application_post ),

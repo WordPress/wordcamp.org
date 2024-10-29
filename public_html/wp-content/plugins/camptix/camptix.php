@@ -8584,6 +8584,10 @@ class CampTix_Plugin {
 	 */
 	public function is_wordcamp_closed() {
 		$wordcamp = get_wordcamp_post();
+		// get_wordcamp_post() returns false if no post exists, so avoid breaking by returning here since it is not explicitly closed.
+		if ( false === $wordcamp ) {
+			return false;
+		}
 		return 'wcpt-closed' === $wordcamp->post_status;
 	}
 

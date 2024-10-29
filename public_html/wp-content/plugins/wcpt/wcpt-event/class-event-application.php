@@ -278,16 +278,16 @@ abstract class Event_Application {
 			sanitize_text_field( $event_city )
 		);
 		$message .= sprintf(
-			"---- Internal details for the Community Team ----\n\n
+			"---- Internal details for the Community Team ----\n
 			Name: %1\$s\n
-			Type: %2\$s\n",
+			Type: %2\$s",
 			$this->get_event_label(),
 			sanitize_text_field( $event_city ),
 		);
 
 		if ( 0 !== $application_post ) {
 			$message .= sprintf(
-				'URL: https://central.wordcamp.org/wp-admin/post.php?post=%3\$d&amp;action=edit',
+				"\nURL: https://central.wordcamp.org/wp-admin/post.php?post=%1\$d&amp;action=edit",
 				absint( $application_post )
 			);
 		}

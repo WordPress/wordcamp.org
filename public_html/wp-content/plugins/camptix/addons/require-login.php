@@ -85,7 +85,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 				// Pass along all `tix_` information.
 				foreach ( $_REQUEST as $key => $value ) {
 					if ( strpos( $key, 'tix' ) === 0 ) {
-						$args[$key] = $value;
+						$args[ $key ] = $value;
 					}
 				}
 			}

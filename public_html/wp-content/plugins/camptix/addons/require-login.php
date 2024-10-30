@@ -436,7 +436,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 				if ( $unknown_attendee_info['email'] == get_post_meta( $attendee->ID, 'tix_email', true ) ) {
 					$template = 'email_template_multiple_purchase_unknown_attendee';
-				} elseif ( self::UNCONFIRMED_USERNAME == get_post_meta( $attendee->ID, 'tix_username', true ) ) {
+				} elseif ( $this->user_must_confirm_ticket( $attendee->ID ) ) {
 					$template = 'email_template_multiple_purchase_unconfirmed_attendee';
 				}
 
@@ -761,7 +761,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return string
 	 */
 	public function rename_save_attendee_info_label( $label, $attendee, $ticket, $questions ) {
-		if ( self::UNCONFIRMED_USERNAME == get_post_meta( $attendee->ID, 'tix_username', true ) ) {
+		if ( $this->user_must_confirm_ticket( $attendee->ID ) ) {
 			$label = __( 'Confirm Registration', 'wordcamporg' );
 		}
 

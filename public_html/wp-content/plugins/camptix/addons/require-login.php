@@ -71,16 +71,22 @@ class CampTix_Require_Login extends CampTix_Addon {
 			return;
 		}
 
-		// Temporary: We don't want to block users from editing tickets.
-		// See: https://github.com/WordPress/wordcamp.org/issues/1393.
-		if ( ! is_user_logged_in() && ! $this->user_is_editing_ticket() ) {
+		if ( ! is_user_logged_in() ) {
+
+			// Temporary: We don't want to block users from editing tickets unless they are unconfirmed.
+			// See: https://github.com/WordPress/wordcamp.org/issues/1393.
+			// See: https://github.com/WordPress/wordcamp.org/issues/1420.
+			if ( $this->user_is_editing_ticket() && ! $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ) ) {
+				return;
+			}
+
 			$args = array();
-			// If this was a registration, pass through the selected tickets and coupon.
-			if ( 'attendee_info' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_tickets_selected'] ) ) {
-				$args['tix_action'] = $_REQUEST['tix_action'];
-				$args['tix_tickets_selected'] = $_REQUEST['tix_tickets_selected'];
-				if ( isset( $_REQUEST['tix_coupon'] ) ) {
-					$args['tix_coupon'] = $_REQUEST['tix_coupon'];
+			if ( in_array( $_REQUEST['tix_action'], array( 'attendee_info', 'edit_attendee' ) ) ) {
+				// Pass along all `tix_` information.
+				foreach ( $_REQUEST as $key => $value ) {
+					if ( strpos( $key, 'tix' ) === 0 ) {
+						$args[$key] = $value;
+					}
 				}
 			}
 
@@ -148,7 +154,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		// Ask the attendee to confirm their registration
-		if ( isset( $_REQUEST['tix_action'] ) && 'edit_attendee' == $_REQUEST['tix_action'] && self::UNCONFIRMED_USERNAME == get_post_meta( $_REQUEST['tix_attendee_id'], 'tix_username', true ) ) {
+		if ( $this->user_is_editing_ticket() && $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ) ) {
 			$tickets_selected = array( get_post_meta( $_REQUEST['tix_attendee_id'], 'tix_ticket_id', true ) => 1 );  // mimic $_REQUEST['tix_tickets_selected']
 
 			if ( $this->tickets_have_questions( $tickets_selected ) ) {
@@ -840,6 +846,18 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	protected function user_is_editing_ticket() {
 		return isset( $_REQUEST['tix_action'] ) && in_array( $_REQUEST['tix_action'], array( 'access_tickets', 'edit_attendee' ) );
+	}
+
+	/**
+	 * Checks if the user associated with the given attendee ID must confirm their ticket.
+	 * Unconfirmed tickets exist when one user purchases multiple tickets.
+	 *
+	 * @param int $attendee_id The ID of the attendee. If null or invalid, the function returns false.
+	 *
+	 * @return bool True if the attendee must confirm their ticket, false otherwise.
+	 */
+	protected function user_must_confirm_ticket( $attendee_id ) {
+		return isset( $attendee_id ) && self::UNCONFIRMED_USERNAME == get_post_meta( $attendee_id, 'tix_username', true );
 	}
 } // CampTix_Require_Login
 

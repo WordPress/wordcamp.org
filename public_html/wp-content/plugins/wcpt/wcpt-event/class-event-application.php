@@ -281,8 +281,8 @@ abstract class Event_Application {
 			"---- Internal details for the Community Team ----\n
 			Name: %1\$s\n
 			Type: %2\$s",
-			$this->get_event_label(),
 			sanitize_text_field( $event_city ),
+			$this->get_event_label(),
 		);
 
 		if ( 0 !== $application_post ) {

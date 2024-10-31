@@ -2393,6 +2393,23 @@ class CampTix_Plugin {
 	}
 
 	/**
+	 *
+	 * Increments the stat used on the ticket form.
+	 *
+	 * @param $key
+	 * @return void
+	 */
+	function increment_ticket_form_stat( $key ) {
+		if ( $key !== 'tickets_form_unique_visitors' ) {
+			return;
+		}
+		$viewing_stat = get_option( 'camptix_ticket_form_stat', 0 );
+		$viewing_stat++;
+		update_option( 'camptix_ticket_form_stat', $viewing_stat, 'no' );
+		return;
+	}
+
+	/**
 	 * Increments a stats value.
 	 */
 	function increment_stats( $key, $step = 1 ) {
@@ -2482,7 +2499,7 @@ class CampTix_Plugin {
 
 		switch ( $_REQUEST['command'] ) {
 			case 'increment':
-				$this->increment_stats( $_REQUEST['stat'] );
+				$this->increment_ticket_form_stat( $_REQUEST['stat'] );
 				wp_send_json_success();
 				break;
 		}
@@ -2700,6 +2717,14 @@ class CampTix_Plugin {
 		$this->update_stats( 'subtotal', $totals->sub_total );
 		$this->update_stats( 'discounted', $totals->discounted );
 		$this->update_stats( 'revenue', $totals->revenue );
+
+		$this->update_stats_multi( [
+			'sold'       => $totals->sold,
+			'remaining'  => $totals->remaining,
+			'subtotal'   => $totals->sub_total,
+			'discounted' => $totals->discounted,
+			'revenue'    => $totals->revenue,
+		] );
 
 		$results = array(
 			'totals' => $totals,

@@ -80,21 +80,47 @@ class CampTix_Require_Login extends CampTix_Addon {
 				return;
 			}
 
-			$args = array();
-			if ( in_array( $_REQUEST['tix_action'], array( 'attendee_info', 'edit_attendee' ) ) ) {
-				// Pass along all `tix_` information.
-				foreach ( $_REQUEST as $key => $value ) {
-					if ( strpos( $key, 'tix' ) === 0 ) {
-						$args[ $key ] = $value;
-					}
-				}
-			}
-
+			$args = $this->get_sanitized_tix_parameters( $_REQUEST );
 			$tickets_url = add_query_arg( $args, $camptix->get_tickets_url() );
 
 			wp_safe_redirect( add_query_arg( 'wcname', get_bloginfo( 'name' ), wp_login_url( $tickets_url ) ) );
 			exit();
 		}
+	}
+
+	/**
+	 * Get sanitized ticket parameters from request array.
+	 *
+	 * @param array $request_data Array of request data to sanitize.
+	 * @return array Sanitized parameters.
+	 */
+	private function get_sanitized_tix_parameters( $request_data ) {
+		$allowed_parameters = array(
+			'tix_action'           => 'text',
+			'tix_tickets_selected' => 'int',
+			'tix_coupon'           => 'text',
+			'tix_attendee_id'      => 'int',
+			'tix_edit_token'       => 'text',
+			'tix_access_token'     => 'text',
+		);
+
+		$args = array();
+		foreach ( $allowed_parameters as $key => $type ) {
+			if ( isset( $request_data[ $key ] ) ) {
+				switch ( $type ) {
+					case 'int':
+						$args[ $key ] = absint( $request_data[ $key ] );
+						break;
+
+					case 'text':
+					default:
+						$args[ $key ] = sanitize_text_field( $request_data[ $key ] );
+						break;
+				}
+			}
+		}
+
+		return $args;
 	}
 
 	/**

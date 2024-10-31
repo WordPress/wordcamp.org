@@ -2718,14 +2718,6 @@ class CampTix_Plugin {
 		$this->update_stats( 'discounted', $totals->discounted );
 		$this->update_stats( 'revenue', $totals->revenue );
 
-		$this->update_stats_multi( [
-			'sold'       => $totals->sold,
-			'remaining'  => $totals->remaining,
-			'subtotal'   => $totals->sub_total,
-			'discounted' => $totals->discounted,
-			'revenue'    => $totals->revenue,
-		] );
-
 		$results = array(
 			'totals' => $totals,
 			'actual_total' => $actual_total,

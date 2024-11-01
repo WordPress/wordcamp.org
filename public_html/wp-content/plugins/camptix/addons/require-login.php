@@ -94,20 +94,40 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @param array $request_data Array of request data to sanitize.
 	 * @return array Sanitized parameters.
 	 */
-	private function get_sanitized_tix_parameters( $request_data ) {
+	private function get_sanitized_tix_parameters( array $request_data ): array {
 		$allowed_parameters = array(
-			'tix_action'           => 'text',
-			'tix_tickets_selected' => 'int',
-			'tix_coupon'           => 'text',
-			'tix_attendee_id'      => 'int',
-			'tix_edit_token'       => 'text',
-			'tix_access_token'     => 'text',
+			'tix_action'                 => 'text',
+			'tix_tickets_selected'       => 'array_int',
+			'tix_errors'                 => 'array_str',
+			'tix_coupon'                 => 'text',
+			'tix_attendee_id'            => 'int',
+			'tix_edit_token'             => 'text',
+			'tix_access_token'           => 'text',
+			'tix_reservation_id'         => 'text',
+			'tix_reservation_token'      => 'text',
+			'tix_single_ticket_purchase' => 'text',
 		);
 
 		$args = array();
 		foreach ( $allowed_parameters as $key => $type ) {
 			if ( isset( $request_data[ $key ] ) ) {
 				switch ( $type ) {
+					case 'array_int':
+						if ( is_array( $request_data[ $key ] ) ) {
+							$args[ $key ] = array_map( 'absint', $request_data[ $key ] );
+						} else {
+							$args[ $key ] = array( absint( $request_data[ $key ] ) );
+						}
+						break;
+
+					case 'array_str':
+						if ( is_array( $request_data[ $key ] ) ) {
+							$args[ $key ] = array_map( 'sanitize_text_field', $request_data[ $key ] );
+						} else {
+							$args[ $key ] = array( sanitize_text_field( $request_data[ $key ] ) );
+						}
+						break;
+
 					case 'int':
 						$args[ $key ] = absint( $request_data[ $key ] );
 						break;

@@ -937,46 +937,6 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Takes a ticket id and returns a sorted array of questions.
-	 *
-	 * @param int $ticket_id
-	 *
-	 * @return array
-	 */
-	function get_sorted_questions( $ticket_id ) {
-		$question_ids = (array) get_post_meta( $ticket_id, 'tix_question_id' );
-		$order = (array) get_post_meta( $ticket_id, 'tix_questions_order', true );
-
-		// Make sure we have at least some questions
-		if ( empty( $question_ids ) )
-			return array();
-
-		$questions = get_posts( array(
-			'post_type' => 'tix_question',
-			'post_status' => 'publish',
-			'posts_per_page' => -1,
-			'post__in' => $question_ids,
-		) );
-
-		$questions_with_keys = array();
-
-		foreach ( $questions as $question )
-			$questions_with_keys[ $question->ID ] = $question;
-
-		$questions = $questions_with_keys;
-		unset( $questions_with_keys );
-
-		$questions_sorted = array();
-		foreach ( $order as $question_id )
-			if ( isset( $questions[ $question_id ] ) )
-				$questions_sorted[] = $questions[ $question_id ];
-
-		unset( $questions );
-
-		return $questions_sorted;
-	}
-
-	/**
 	 * Fired during init, registers our new post types. $supports depends
 	 * on $this->debug, which if true, renders things like custom fields.
 	 */
@@ -4400,7 +4360,7 @@ class CampTix_Plugin {
 					</div>
 				</div>
 				<?php
-					$questions = $this->get_sorted_questions( get_the_ID() );
+					$questions = CampTix_Utility::get_sorted_questions( get_the_ID() );
 					$i = 0;
 				?>
 			</div>
@@ -4715,7 +4675,7 @@ class CampTix_Plugin {
 
 		// Questions
 		$rows[] = array( __( 'Questions', 'wordcamporg' ), '' );
-		$questions = $this->get_sorted_questions( $ticket_id );
+		$questions = CampTix_Utility::get_sorted_questions( $ticket_id );
 		$answers = get_post_meta( $post->ID, 'tix_questions', true );
 
 		foreach ( $questions as $question ) {
@@ -5862,7 +5822,7 @@ class CampTix_Plugin {
 
 						<?php
 							$ticket = $this->tickets[$ticket_id];
-							$questions = $this->get_sorted_questions( $ticket->ID );
+							$questions = CampTix_Utility::get_sorted_questions( $ticket->ID );
 							$this->form_data['tix_attendee_info'][ $i ]['ticket_id'] = intval( $ticket->ID );
 						?>
 						<input type="hidden" name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][ticket_id]" value="<?php echo intval( $ticket->ID ); ?>" />
@@ -6231,7 +6191,7 @@ class CampTix_Plugin {
 			$this->notice( __( 'Please note that the payment for this ticket is still pending.', 'wordcamporg' ) );
 
 		$ticket = get_post( $ticket_id );
-		$questions = $this->get_sorted_questions( $ticket->ID );
+		$questions = CampTix_Utility::get_sorted_questions( $ticket->ID );
 		$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
 
 		$ticket_info = array(
@@ -7162,7 +7122,7 @@ class CampTix_Plugin {
 
 			$answers = array();
 			if ( isset( $_POST['tix_attendee_questions'][ $i ] ) ) {
-				$questions = $this->get_sorted_questions( $ticket->ID );
+				$questions = CampTix_Utility::get_sorted_questions( $ticket->ID );
 
 				foreach ( $questions as $question ) {
 					if ( isset( $_POST['tix_attendee_questions'][ $i ][ $question->ID ] ) ) {

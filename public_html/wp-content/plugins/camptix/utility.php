@@ -49,4 +49,44 @@ class CampTix_Utility {
 
         return $formatted_amount;
     }
+
+    /**
+	 * Takes a ticket id and returns a sorted array of questions.
+	 *
+	 * @param int $ticket_id
+	 *
+	 * @return array
+	 */
+	public static function get_sorted_questions( $ticket_id ) {
+		$question_ids = (array) get_post_meta( $ticket_id, 'tix_question_id' );
+		$order = (array) get_post_meta( $ticket_id, 'tix_questions_order', true );
+
+		// Make sure we have at least some questions
+		if ( empty( $question_ids ) )
+			return array();
+
+		$questions = get_posts( array(
+			'post_type' => 'tix_question',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'post__in' => $question_ids,
+		) );
+
+		$questions_with_keys = array();
+
+		foreach ( $questions as $question )
+			$questions_with_keys[ $question->ID ] = $question;
+
+		$questions = $questions_with_keys;
+		unset( $questions_with_keys );
+
+		$questions_sorted = array();
+		foreach ( $order as $question_id )
+			if ( isset( $questions[ $question_id ] ) )
+				$questions_sorted[] = $questions[ $question_id ];
+
+		unset( $questions );
+
+		return $questions_sorted;
+	}
 }

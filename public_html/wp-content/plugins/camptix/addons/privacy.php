@@ -40,9 +40,6 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 	 * @return array
 	 */
 	public function attendee_personal_data_exporter( $email_address, $page ) {
-		/* @var CampTix_Plugin $camptix */
-		global $camptix;
-
 		$page = (int) $page;
 
 		$data_to_export = array();
@@ -127,7 +124,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 							}
 							break;
 						case 'questions':
-							$questions = $camptix->get_sorted_questions( $post->tix_ticket_id );
+							$questions = CampTix_Utility::get_sorted_questions( $post->tix_ticket_id );
 							$answers   = $post->tix_questions;
 
 							foreach ( $questions as $question ) {
@@ -327,7 +324,7 @@ class CampTix_Addon_Privacy extends CampTix_Addon {
 							update_post_meta( $post->ID, $key, $anonymized_value );
 							break;
 						case 'questions':
-							$questions = $camptix->get_sorted_questions( $post->tix_ticket_id );
+							$questions = CampTix_Utility::get_sorted_questions( $post->tix_ticket_id );
 							$answers   = $post->tix_questions;
 
 							$anonymized_answers = array();

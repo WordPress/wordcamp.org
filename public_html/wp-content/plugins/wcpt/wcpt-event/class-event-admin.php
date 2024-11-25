@@ -257,19 +257,6 @@ abstract class Event_Admin {
 	abstract public static function get_edit_capability();
 
 	/**
-	 * Filter: Set the locale to en_US.
-	 *
-	 * For some purposes, such as internal logging, strings that would normally be translated to the
-	 * current user's locale should be in English, so that other users who may not share the same
-	 * locale can read them.
-	 *
-	 * @return string
-	 */
-	public function set_locale_to_en_us() {
-		return 'en_US';
-	}
-
-	/**
 	 * Log when the post status changes
 	 *
 	 * @param string  $new_status New status.
@@ -286,7 +273,7 @@ abstract class Event_Admin {
 		}
 
 		// Ensure status labels are in English.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
 		$old_status = get_post_status_object( $old_status );
 		$new_status = get_post_status_object( $new_status );
@@ -308,7 +295,9 @@ abstract class Event_Admin {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 	}
 
 	/**

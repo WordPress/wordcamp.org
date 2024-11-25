@@ -76,7 +76,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 			// Temporary: We don't want to block users from editing tickets unless they are unconfirmed.
 			// See: https://github.com/WordPress/wordcamp.org/issues/1393.
 			// See: https://github.com/WordPress/wordcamp.org/issues/1420.
-			if ( $this->user_is_editing_ticket() && ! $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ) ) {
+			if ( $this->user_is_editing_ticket() && ! $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ?? null ) ) {
 				return;
 			}
 
@@ -200,7 +200,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		// Ask the attendee to confirm their registration
-		if ( $this->user_is_editing_ticket() && $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ) ) {
+		if ( $this->user_is_editing_ticket() && $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ?? null ) ) {
 			$tickets_selected = array( get_post_meta( $_REQUEST['tix_attendee_id'], 'tix_ticket_id', true ) => 1 );  // mimic $_REQUEST['tix_tickets_selected']
 
 			if ( $this->tickets_have_questions( $tickets_selected ) ) {

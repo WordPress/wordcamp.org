@@ -38,6 +38,7 @@ function process_badges() {
 
 	return sprintf( _n( '%s badge updated', '%s badges updated', $count, 'wordcamp' ), number_format_i18n( $count ) );
 }
+
 function menu_badges() {
 	if ( isset( $_GET['badge-submit'] ) && ( 1 == $_GET['badge-submit'] ) ) {
 		$output = process_badges();

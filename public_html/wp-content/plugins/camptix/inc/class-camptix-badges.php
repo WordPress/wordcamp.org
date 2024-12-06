@@ -1,0 +1,67 @@
+<?php
+
+namespace Camptix\Badges;
+
+use WordPressdotorg\Profiles;
+
+function process_badges() {
+
+	if ( ! current_user_can( 'manage_options' ) || wp_verify_nonce( 'badge-submission' ) ) {
+		return 'Invalid request';
+	}
+
+	$usernames = sanitize_text_field( $_POST['usernames'] );
+	$operation = sanitize_text_field( $_POST['operation'] );
+	$badge = sanitize_text_field( $_POST['badge_name'] );
+
+	$valid_operations = [ 'add', 'remove' ];
+	$valid_badges = [ 'wordcamp-volunteer' ];
+
+	if ( ! in_array( $operation, $valid_operations ) ) {
+		return 'Invalid badge operation used, valid commands are: ' . implode( ',', $valid_operations );
+	}
+
+	if ( ! in_array( $badge, $valid_badges ) ) {
+		return 'Invalid badge';
+	}
+
+	if ( empty( $usernames ) ) {
+		return 'You must supply a list of usernames';
+	}
+
+	$users = explode( "\n", $usernames );
+
+	Profiles\badge_api( $operation, $badge, $users );
+
+	// Badge_api doesn't return anything apart from a success message, so lets guess how many items were updated.
+	$count = count( $users );
+
+	return sprintf( _n( '%s badge updated', '%s badges updated', $count, 'wordcamp' ), number_format_i18n( $count ) );
+}
+function menu_badges() {
+	if ( isset( $_GET['badge-submit'] ) && ( 1 == $_GET['badge-submit'] ) ) {
+		$output = process_badges();
+		wp_admin_notice( $output );
+	}
+	?>
+	<div class="wrap"><h1>WordCamp Badge Management</h1></div>
+	<form method="post" action="<?php echo esc_url( add_query_arg( 'badge-submit', '1' ) ); ?>">
+		<div>
+			<select name="badge_name">
+				<option value="wordcamp-volunteer">WordCamp Volunteer</option>
+			</select>
+			<select name="operation">
+				<option value="add">Add</option>
+				<option value="remove">Remove</option>
+			</select>
+		</div>
+		<div class="wrap">
+			<textarea name="usernames" cols="50" rows="20" placeholder="Input usernames, 1 per row"></textarea>
+		</div>
+		<input type="hidden" name="action" value="badge_submission" />
+		<?php wp_nonce_field( 'badge-submission' ); ?>
+		<div><?php submit_button( "Submit" ); ?></div>
+	</form>
+	<?php
+
+}

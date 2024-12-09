@@ -52,6 +52,8 @@ function menu_badges() {
 		$output = process_badges();
 		wp_admin_notice( $output );
 	}
+
+	// If adding more badges, make sure to add them to the validation check in `process_badges`
 	?>
 	<div class="wrap"><h1>WordCamp Badge Management</h1></div>
 	<form method="post" action="<?php echo esc_url( add_query_arg( 'badge-submit', '1' ) ); ?>">

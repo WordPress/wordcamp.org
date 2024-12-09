@@ -4,9 +4,14 @@ namespace Camptix\Badges;
 
 use WordPressdotorg\Profiles;
 
+/**
+ * Process submission and returns appropriate message
+ *
+ * @return string
+ */
 function process_badges() {
 
-	if ( ! current_user_can( 'manage_options' ) || wp_verify_nonce( 'badge-submission' ) ) {
+	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( 'badge-submission' ) ) {
 		return 'Invalid request';
 	}
 
@@ -39,6 +44,9 @@ function process_badges() {
 	return sprintf( _n( '%s badge updated', '%s badges updated', $count, 'wordcamp' ), number_format_i18n( $count ) );
 }
 
+/**
+ * Outputs manage badge admin screen, and allows processing of submit.
+ */
 function menu_badges() {
 	if ( isset( $_GET['badge-submit'] ) && ( 1 == $_GET['badge-submit'] ) ) {
 		$output = process_badges();

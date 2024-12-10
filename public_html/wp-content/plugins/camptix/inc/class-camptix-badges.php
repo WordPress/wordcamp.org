@@ -12,7 +12,7 @@ use WordPressdotorg\Profiles;
 function process_badges() {
 
 	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( 'badge-submission' ) ) {
-		return __( 'Invalid request', 'wordcamporg' );;
+		return __( 'Invalid request', 'wordcamporg' );
 	}
 
 	$usernames = sanitize_text_field( $_POST['usernames'] );
@@ -31,7 +31,7 @@ function process_badges() {
 	}
 
 	if ( empty( $usernames ) ) {
-		return __( 'You must supply a list of usernames', 'wordcamporg' );;
+		return __( 'You must supply a list of usernames', 'wordcamporg' );
 	}
 
 	$users = explode( "\n", $usernames );
@@ -53,7 +53,7 @@ function menu_badges() {
 		wp_admin_notice( $output );
 	}
 
-	// If adding more badges, make sure to add them to the validation check in `process_badges`
+	// If adding more badges, make sure to add them to the validation check in `process_badges`.
 	?>
 	<div class="wrap"><h1><?php _e( 'WordCamp Badge Management', 'wordcamporg' ); ?> </h1></div>
 	<form method="post" action="<?php echo esc_url( add_query_arg( 'badge-submit', '1' ) ); ?>">
@@ -74,5 +74,4 @@ function menu_badges() {
 		<div><?php submit_button( __( 'Submit', 'wordcamporg' ) ); ?></div>
 	</form>
 	<?php
-
 }

@@ -9,6 +9,7 @@ License:     GPLv2 or later
 */
 
 use WordPressdotorg\Profiles;
+use WordCamp\Logger;
 
 /*
  * Requests will always fail when in local environments, unless the dev is proxied. Proxied devs could test
@@ -246,6 +247,7 @@ class WordCamp_Participation_Notifier {
 		);
 
 		if ( '0' === $count ) {
+			Logger\log( 'badge-removal', 'Badge removed for ' . $post->post_type . ': ' . $user_id );
 			Profiles\api( $this->get_post_association_payload( $post, 'remove', $user_id ) );
 		}
 	}

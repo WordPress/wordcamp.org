@@ -2033,6 +2033,7 @@ class CampTix_Plugin {
 	function admin_menu() {
 		add_submenu_page( 'edit.php?post_type=tix_ticket', __( 'Tools', 'wordcamporg' ), __( 'Tools', 'wordcamporg' ), $this->caps['manage_tools'], 'camptix_tools', array( $this, 'menu_tools' ) );
 		add_submenu_page( 'edit.php?post_type=tix_ticket', __( 'Setup', 'wordcamporg' ), __( 'Setup', 'wordcamporg' ), $this->caps['manage_options'], 'camptix_options', array( $this, 'menu_setup' ) );
+		add_submenu_page( 'edit.php?post_type=tix_ticket', __( 'Badges', 'wordcamporg' ), __( 'Badges', 'wordcamporg' ), $this->caps['manage_options'], 'camptix_badges', 'Camptix\Badges\menu_badges' );
 		remove_submenu_page( 'edit.php?post_type=tix_ticket', 'post-new.php?post_type=tix_ticket' );
 	}
 

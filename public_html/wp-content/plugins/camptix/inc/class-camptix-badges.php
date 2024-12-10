@@ -55,19 +55,19 @@ function menu_badges() {
 
 	// If adding more badges, make sure to add them to the validation check in `process_badges`.
 	?>
-	<div class="wrap"><h1><?php _e( 'WordCamp Badge Management', 'wordcamporg' ); ?> </h1></div>
+	<div class="wrap"><h1><?php esc_html_e( 'WordCamp Badge Management', 'wordcamporg' ); ?></h1></div>
 	<form method="post" action="<?php echo esc_url( add_query_arg( 'badge-submit', '1' ) ); ?>">
 		<div>
 			<select name="badge_name">
-				<option value="wordcamp-volunteer"><?php _e( 'WordCamp Volunteer', 'wordcamporg' ); ?></option>
+				<option value="wordcamp-volunteer"><?php esc_html_e( 'WordCamp Volunteer', 'wordcamporg' ); ?></option>
 			</select>
 			<select name="operation">
-				<option value="add"><?php _e( 'Add', 'wordcamporg' ); ?></option>
-				<option value="remove"><?php _e( 'Remove', 'wordcamporg' ); ?></option>
+				<option value="add"><?php esc_html_e( 'Add', 'wordcamporg' ); ?></option>
+				<option value="remove"><?php esc_html_e( 'Remove', 'wordcamporg' ); ?></option>
 			</select>
 		</div>
 		<div class="wrap">
-			<textarea name="usernames" cols="50" rows="20" placeholder="<?php _e( 'Input usernames, 1 per row', 'wordcamporg' ); ?>"></textarea>
+			<textarea name="usernames" cols="50" rows="20" placeholder="<?php esc_attr_e( 'Input usernames, 1 per row', 'wordcamporg' ); ?>"></textarea>
 		</div>
 		<input type="hidden" name="action" value="badge_submission" />
 		<?php wp_nonce_field( 'badge-submission' ); ?>

@@ -41,7 +41,7 @@ function process_badges() {
 	// Badge_api doesn't return anything apart from a success message, so lets guess how many items were updated.
 	$count = count( $users );
 
-	return sprintf( _n( '%s badge updated', '%s badges updated', $count, 'wordcamp' ), number_format_i18n( $count ) );
+	return sprintf( _n( '%s badge updated', '%s badges updated', $count, 'wordcamporg' ), number_format_i18n( $count ) );
 }
 
 /**

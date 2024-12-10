@@ -12,7 +12,7 @@ use WordPressdotorg\Profiles;
 function process_badges() {
 
 	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( 'badge-submission' ) ) {
-		return 'Invalid request';
+		return __( 'Invalid request', 'wordcamporg' );;
 	}
 
 	$usernames = sanitize_text_field( $_POST['usernames'] );
@@ -23,15 +23,15 @@ function process_badges() {
 	$valid_badges = [ 'wordcamp-volunteer' ];
 
 	if ( ! in_array( $operation, $valid_operations ) ) {
-		return 'Invalid badge operation used, valid commands are: ' . implode( ',', $valid_operations );
+		return sprintf( __( 'Invalid badge operation used, valid commands are: %s', 'wordcamporg' ), implode( ',', $valid_operations ) );
 	}
 
 	if ( ! in_array( $badge, $valid_badges ) ) {
-		return 'Invalid badge';
+		return __( 'Invalid badge', 'wordcamporg' );
 	}
 
 	if ( empty( $usernames ) ) {
-		return 'You must supply a list of usernames';
+		return __( 'You must supply a list of usernames', 'wordcamporg' );;
 	}
 
 	$users = explode( "\n", $usernames );
@@ -55,23 +55,23 @@ function menu_badges() {
 
 	// If adding more badges, make sure to add them to the validation check in `process_badges`
 	?>
-	<div class="wrap"><h1>WordCamp Badge Management</h1></div>
+	<div class="wrap"><h1><?php _e( 'WordCamp Badge Management', 'wordcamporg' ); ?> </h1></div>
 	<form method="post" action="<?php echo esc_url( add_query_arg( 'badge-submit', '1' ) ); ?>">
 		<div>
 			<select name="badge_name">
-				<option value="wordcamp-volunteer">WordCamp Volunteer</option>
+				<option value="wordcamp-volunteer"><?php _e( 'WordCamp Volunteer', 'wordcamporg' ); ?></option>
 			</select>
 			<select name="operation">
-				<option value="add">Add</option>
-				<option value="remove">Remove</option>
+				<option value="add"><?php _e( 'Add', 'wordcamporg' ); ?></option>
+				<option value="remove"><?php _e( 'Remove', 'wordcamporg' ); ?></option>
 			</select>
 		</div>
 		<div class="wrap">
-			<textarea name="usernames" cols="50" rows="20" placeholder="Input usernames, 1 per row"></textarea>
+			<textarea name="usernames" cols="50" rows="20" placeholder="<?php _e( 'Input usernames, 1 per row', 'wordcamporg' ); ?>"></textarea>
 		</div>
 		<input type="hidden" name="action" value="badge_submission" />
 		<?php wp_nonce_field( 'badge-submission' ); ?>
-		<div><?php submit_button( "Submit" ); ?></div>
+		<div><?php submit_button( __( 'Submit', 'wordcamporg' ) ); ?></div>
 	</form>
 	<?php
 

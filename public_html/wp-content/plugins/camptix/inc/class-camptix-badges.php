@@ -1,6 +1,6 @@
 <?php
 
-namespace Camptix\Badges;
+namespace Camptix\Profile_Badges;
 
 use WordPressdotorg\Profiles;
 
@@ -55,7 +55,10 @@ function menu_badges() {
 
 	// If adding more badges, make sure to add them to the validation check in `process_badges`.
 	?>
-	<div class="wrap"><h1><?php esc_html_e( 'WordCamp Badge Management', 'wordcamporg' ); ?></h1></div>
+	<div class="wrap">
+		<h1><?php esc_html_e( 'Profile Badge Management', 'wordcamporg' ); ?></h1>
+		<p><?php esc_html_e( 'This tool allows a limited number of badges to be managed on wordpress.org profiles', 'wordcamporg' ); ?></p>
+	</div>
 	<form method="post" action="<?php echo esc_url( add_query_arg( 'badge-submit', '1' ) ); ?>">
 		<div>
 			<select name="badge_name">

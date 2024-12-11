@@ -11,7 +11,7 @@ use WordPressdotorg\Profiles;
  */
 function process_badges() {
 
-	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( 'badge-submission' ) ) {
+	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'badge-submission' ) ) {
 		return __( 'Invalid request', 'wordcamporg' );
 	}
 

@@ -37,25 +37,6 @@
 
 <body <?php body_class(); ?>>
 
-<?php if ( date_create( 'now' ) <= date_create( '2017-12-04' ) ) : ?>
-	<section class="regional-camps-promo">
-		<a href="https://2017.us.wordcamp.org/tickets/">
-			<picture>
-				<source
-					srcset="
-						https://central.wordcamp.org/files/2017/11/wcc-wcus-2017.png,
-						https://central.wordcamp.org/files/2017/11/wcc-wcus-2017_2x.png 2x"
-					media="(min-width: 500px)" />
-				<source
-					srcset="https://central.wordcamp.org/files/2017/11/wcc-wcus-2017_mobile.png" />
-				<img
-					src="https://central.wordcamp.org/files/2017/11/wcc-wcus-2017.png"
-					alt="WordCamp US 2017 in Nashville banner" />
-			</picture>
-		</a>
-	</section>
-<?php endif; ?>
-
 <div id="header" class="group">
 	<div id="masthead" class="group">
 		<?php /*  Allow screen readers / text browsers to skip the navigation menu and get right to the good stuff */ ?>

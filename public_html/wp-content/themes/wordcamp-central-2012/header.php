@@ -68,8 +68,8 @@
 <div id="wc-hero-panel">
 	<div class="wc-hero-wrap group">
 		<div class="wc-hero-intro">
-			<h2>WordPress Events: connect, learn, and shape the future of the open web.</h2>
-			<p>WordCamps and WordPress Events are where innovation meets opportunity. They offer a platform to boost your career by connecting with a diverse community of users, professionals, and entrepreneurs. Together, we’re shaping the future of the open web.</p>
+			<h2>WordPress Events: connect, learn & shape the future of the open web.</h2>
+			<p>WordCamps and WordPress Events are where innovation meets opportunity. Boost your career by connecting with a diverse community of users, professionals, and entrepreneurs. Together, we’re shaping the future of the open web.</p>
 			<p class="wc-hero-actions">
 				<a href="<?php echo esc_url( home_url( '/about/' ) ); ?>" class="wc-hero-learnmore">Learn More</a> or
 				<a href="<?php echo esc_url( home_url( '/schedule/' ) ); ?>" class="wc-primary-button">Find a WordCamp</a>

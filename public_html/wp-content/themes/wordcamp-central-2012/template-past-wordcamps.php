@@ -79,7 +79,7 @@ get_header(); ?>
 
 				<a href="<?php echo esc_url( home_url( '/schedule/' ) ); ?>" class="wc-schedule-more">
 					<span class="arrow">&larr;</span>
-					Upcoming WordCamps
+					Upcoming WordCamps and WordPress Events
 				</a>
 
 				<?php endif; // wcpt_has_wordcamps ?>

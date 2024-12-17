@@ -1,7 +1,7 @@
 <ul class="about-stats clearfix">
 	<li>
 		<span class="about-stat-number"><?php echo esc_html( $map_stats['wordcamps'] ); ?></span>
-		<span class="about-stat-descriptor">WordCamps</span>
+		<span class="about-stat-descriptor">WordPress Events</span>
 	</li>
 
 	<li>

@@ -114,18 +114,19 @@ class Camptix_Admin extends CampTix_Plugin {
 			<h3 class="nav-tab-wrapper"><?php $this->menu_tools_tabs(); ?></h3>
 			<?php
 			$section = $this->get_tools_section();
-			if ( $section == 'summarize' )
+			if ( 'summarize' == $section ) {
 				$this->menu_tools_summarize();
-			elseif ( $section == 'revenue' )
+			} elseif ( 'revenue' == $section ) {
 				$this->menu_tools_revenue();
-			elseif ( $section == 'export' )
+			} elseif ( 'export' == $section  ) {
 				$this->menu_tools_export();
-			elseif ( $section == 'notify' )
+			} elseif ( 'notify' == $section  ) {
 				$this->menu_tools_notify();
-			elseif ( $section == 'refund' && ! $this->options['archived'] )
+			} elseif ( 'refund' == $section  && ! $this->options['archived'] ) {
 				$this->menu_tools_refund();
-			else
+			} else {
 				do_action( 'camptix_menu_tools_' . $section );
+			}
 			?>
 		</div>
 		<?php
@@ -440,7 +441,7 @@ class Camptix_Admin extends CampTix_Plugin {
 				if ( ! $this->beta_features_enabled ) {
 					break;
 				}
-				
+
 				add_settings_section( 'general', __( 'Beta Features', 'wordcamporg' ), array( $this, 'menu_setup_section_beta' ), 'camptix_options' );
 
 				$this->add_settings_field_helper( 'reservations_enabled', __( 'Enable Reservations', 'wordcamporg' ), 'field_yesno', false,

@@ -11,7 +11,7 @@ class Camptix_Admin extends CampTix_Plugin {
 	}
 
 	/**
-	 * runs on init action.
+	 * Runs on init action.
 	 */
 	public function init() {
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
@@ -42,17 +42,17 @@ class Camptix_Admin extends CampTix_Plugin {
 
 		// Make sure Coupons is selected when adding a new coupon.
 		if ( 'post-new.php' == $pagenow && 'tix_coupon' == $typenow ) {
-			$submenu_file = 'edit.php?post_type=tix_coupon';
+			add_filter( 'submenu_file', function () { return 'edit.php?post_type=tix_coupon'; } );
 		}
 
 		// Make sure Attendees is selected when adding a new attendee.
 		if ( 'post-new.php' == $pagenow && 'tix_attendee' == $typenow ) {
-			$submenu_file = 'edit.php?post_type=tix_attendee';
+			add_filter( 'submenu_file', function () { return 'edit.php?post_type=tix_attendee'; } );
 		}
 
 		// Make sure Tickets is selected when creating a new ticket.
 		if ( 'post-new.php' == $pagenow && 'tix_ticket' == $typenow ) {
-			$submenu_file = 'edit.php?post_type=tix_ticket';
+			add_filter( 'submenu_file', function () { return 'edit.php?post_type=tix_ticket'; } );
 		}
 	}
 
@@ -262,11 +262,11 @@ class Camptix_Admin extends CampTix_Plugin {
 
 			header( 'Content-Type: text/csv' );
 			header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-			header( "Cache-control: private" );
+			header( 'Cache-control: private' );
 			header( 'Pragma: private' );
-			header( "Expires: Mon, 26 Jul 1997 05:00:00 GMT" );
+			header( 'Expires: Mon, 26 Jul 1997 05:00:00 GMT' );
 
-			$stream = fopen( "php://output", 'w' );
+			$stream = fopen( 'php://output', 'w' );
 
 			$headers = array( $summary_title, __( 'Count', 'wordcamporg' ) );
 			fputcsv( $stream, self::esc_csv( $headers ) );
@@ -283,7 +283,7 @@ class Camptix_Admin extends CampTix_Plugin {
 	 * Helper function to create admin tables, give me a
 	 * $rows array and I'll do the rest.
 	 */
-	public function table( $rows, $classes='widefat' ) {
+	public function table( $rows, $classes = 'widefat' ) {
 
 		if ( ! is_array( $rows ) || ! isset( $rows[0] ) ) {
 			return;

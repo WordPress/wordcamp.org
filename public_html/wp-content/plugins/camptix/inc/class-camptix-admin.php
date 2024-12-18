@@ -169,7 +169,7 @@ class Camptix_Admin extends CampTix_Plugin {
 		) );
 
 		if ( current_user_can( $this->caps['refund_all'] ) && ! $this->options['archived'] && $this->options['refund_all_enabled'] ) {
-			$sections['refund'] = __( 'Refund', 'wordcamporg' );
+			$sections['refund'] = esc_html__( 'Refund', 'wordcamporg' );
 		}
 
 		foreach ( $sections as $section_key => $section_caption ) {
@@ -229,7 +229,7 @@ class Camptix_Admin extends CampTix_Plugin {
 			foreach ( $summary as $entry ) {
 				$rows[] = array(
 					esc_html( $summary_title )   => esc_html( $entry['label'] ),
-					__( 'Count', 'wordcamporg' ) => esc_html( $entry['count'] )
+					esc_html__( 'Count', 'wordcamporg' ) => esc_html( $entry['count'] )
 				);
 			}
 			// Render the widefat table.
@@ -323,15 +323,18 @@ class Camptix_Admin extends CampTix_Plugin {
 		<?php
 	}
 
+	/**
+	 * Menu Setup general section.
+	 */
 	public function admin_enqueue_scripts() {
 		global $wp_query;
 
-		if ( ! $wp_query->query_vars ) { // only on singular admin pages
+		if ( ! $wp_query->query_vars ) { // only on singular admin pages.
 			if ( 'tix_ticket' == get_post_type() || 'tix_coupon' == get_post_type() ) {
 			}
 		}
 
-		// Let's see whether to include admin.css and admin.js
+		// Let's see whether to include admin.css and admin.js.
 		if ( is_admin() ) {
 			$screen = get_current_screen();
 			$post_types = array( 'tix_ticket', 'tix_coupon', 'tix_email', 'tix_attendee' );
@@ -382,13 +385,16 @@ class Camptix_Admin extends CampTix_Plugin {
 	public function admin_init() {
 		register_setting( 'camptix_options', 'camptix_options', array( $this, 'validate_options' ) );
 
-		// Add settings fields
+		// Add settings fields.
 		$this->menu_setup_controls();
 
 		// Let's add some help tabs.
 		require_once dirname( __FILE__ ) . '/help.php';
 	}
 
+	/**
+	 * Menu Setup general section.
+	 */
 	public function menu_setup_controls() {
 		wp_enqueue_script( 'jquery-ui' );
 		$section = $this->get_setup_section();
@@ -402,7 +408,7 @@ class Camptix_Admin extends CampTix_Plugin {
 				$this->add_settings_field_helper( 'currency', __( 'Currency', 'wordcamporg' ), 'field_currency' );
 
 				$this->add_settings_field_helper( 'refunds_enabled', __( 'Enable Refunds', 'wordcamporg' ), 'field_enable_refunds', false,
-					__( "This will allows your customers to refund their tickets purchase by filling out a simple refund form.", 'wordcamporg' )
+					esc_html__( "This will allows your customers to refund their tickets purchase by filling out a simple refund form.", 'wordcamporg' )
 				);
 
 				break;
@@ -411,51 +417,66 @@ class Camptix_Admin extends CampTix_Plugin {
 					$payment_method_obj = $this->get_payment_method_by_id( $key );
 
 					add_settings_section( 'payment_' . $key, $payment_method_obj->name, array( $payment_method_obj, '_camptix_settings_section_callback' ), 'camptix_options' );
-					add_settings_field( 'payment_method_' . $key . '_enabled', __( 'Enabled', 'wordcamporg' ), array( $payment_method_obj, '_camptix_settings_enabled_callback' ), 'camptix_options', 'payment_' . $key, array(
-						'name' => "camptix_options[payment_methods][{$key}]",
-						'value' => isset( $this->options['payment_methods'][$key] ) ? (bool) $this->options['payment_methods'][ $key ] : false,
-					) );
+					add_settings_field(
+						'payment_method_' . $key . '_enabled',
+						__( 'Enabled', 'wordcamporg' ),
+						array( $payment_method_obj, '_camptix_settings_enabled_callback' ),
+						'camptix_options', 'payment_' . $key, array(
+							'name' => "camptix_options[payment_methods][{$key}]",
+							'value' => isset( $this->options[ 'payment_methods' ][$key] ) ? (bool) $this->options[ 'payment_methods' ][ $key ] : false,
+						)
+					);
 
 					$payment_method_obj->payment_settings_fields();
 				}
 				break;
 			case 'email-templates':
 				add_settings_section( 'general', __( 'E-mail Templates', 'wordcamporg' ), array( $this, 'menu_setup_section_email_templates' ), 'camptix_options' );
-				$this->add_settings_field_helper( 'email_template_single_purchase', __( 'Single purchase', 'wordcamporg' ), 'field_textarea' );
-				$this->add_settings_field_helper( 'email_template_multiple_purchase', __( 'Multiple purchase', 'wordcamporg' ), 'field_textarea' );
-				$this->add_settings_field_helper( 'email_template_multiple_purchase_receipt', __( 'Multiple purchase (receipt)', 'wordcamporg' ), 'field_textarea' );
-				$this->add_settings_field_helper( 'email_template_pending_succeeded', __( 'Pending Payment Succeeded', 'wordcamporg' ), 'field_textarea' );
-				$this->add_settings_field_helper( 'email_template_pending_failed', __( 'Pending Payment Failed', 'wordcamporg' ), 'field_textarea' );
-				$this->add_settings_field_helper( 'email_template_single_refund', __( 'Single Refund', 'wordcamporg' ), 'field_textarea' );
-				$this->add_settings_field_helper( 'email_template_multiple_refund', __( 'Multiple Refund', 'wordcamporg' ), 'field_textarea' );
+				$this->add_settings_field_helper( 'email_template_single_purchase', esc_html__( 'Single purchase', 'wordcamporg' ), 'field_textarea' );
+				$this->add_settings_field_helper( 'email_template_multiple_purchase', esc_html__( 'Multiple purchase', 'wordcamporg' ), 'field_textarea' );
+				$this->add_settings_field_helper( 'email_template_multiple_purchase_receipt', esc_html__( 'Multiple purchase (receipt)', 'wordcamporg' ), 'field_textarea' );
+				$this->add_settings_field_helper( 'email_template_pending_succeeded', esc_html__( 'Pending Payment Succeeded', 'wordcamporg' ), 'field_textarea' );
+				$this->add_settings_field_helper( 'email_template_pending_failed', esc_html__( 'Pending Payment Failed', 'wordcamporg' ), 'field_textarea' );
+				$this->add_settings_field_helper( 'email_template_single_refund', esc_html__( 'Single Refund', 'wordcamporg' ), 'field_textarea' );
+				$this->add_settings_field_helper( 'email_template_multiple_refund', esc_html__( 'Multiple Refund', 'wordcamporg' ), 'field_textarea' );
 
 				foreach ( apply_filters( 'camptix_custom_email_templates', array() ) as $key => $template ) {
 					$this->add_settings_field_helper( $key, $template['title'], $template['callback_method'] );
 				}
 
-				// Add a reset templates button
+				// Add a reset templates button.
 				add_action( 'camptix_setup_buttons', array( $this, 'setup_buttons_reset_templates' ) );
 				break;
 			case 'beta':
-
 				if ( ! $this->beta_features_enabled ) {
 					break;
 				}
 
-				add_settings_section( 'general', __( 'Beta Features', 'wordcamporg' ), array( $this, 'menu_setup_section_beta' ), 'camptix_options' );
+				add_settings_section( 'general', esc_html__( 'Beta Features', 'wordcamporg' ), array( $this, 'menu_setup_section_beta' ), 'camptix_options' );
 
-				$this->add_settings_field_helper( 'reservations_enabled', __( 'Enable Reservations', 'wordcamporg' ), 'field_yesno', false,
-					__( "Reservations is a way to make sure that a certain group of people, can always purchase their tickets, even if you sell out fast.", 'wordcamporg' )
+				$this->add_settings_field_helper(
+						'reservations_enabled',
+						esc_html__( 'Enable Reservations', 'wordcamporg' ),
+						'field_yesno',
+						false,
+						esc_html__( 'Reservations is a way to make sure that a certain group of people, can always purchase their tickets, even if you sell out fast.', 'wordcamporg' )
 				);
 
 				if ( current_user_can( $this->caps['refund_all'] ) ) {
-					$this->add_settings_field_helper( 'refund_all_enabled', __( 'Enable Refund All', 'wordcamporg' ), 'field_yesno', false,
-						__( "Allows to refund all purchased tickets by an admin via the Tools menu.", 'wordcamporg' )
+					$this->add_settings_field_helper(
+						'refund_all_enabled',
+						esc_html__( 'Enable Refund All', 'wordcamporg' ),
+						'field_yesno', false,
+						esc_html__( 'Allows to refund all purchased tickets by an admin via the Tools menu.', 'wordcamporg' )
 					);
 				}
 
-				$this->add_settings_field_helper( 'archived', __( 'Archived Event', 'wordcamporg' ), 'field_yesno', false,
-					__( "Archived events are read-only.", 'wordcamporg' )
+				$this->add_settings_field_helper(
+					'archived',
+					esc_html__( 'Archived Event', 'wordcamporg' ),
+					'field_yesno',
+					false,
+					esc_html__( 'Archived events are read-only.', 'wordcamporg' )
 				);
 				break;
 			default:
@@ -464,17 +485,23 @@ class Camptix_Admin extends CampTix_Plugin {
 		}
 	}
 
+	/**
+	 * Menu Setup Beta section.
+	 */
 	public function menu_setup_section_beta() {
-		echo '<p>' . __( 'Beta features are things that are being worked on in CampTix, but are not quite finished yet. You can try them out, but we do not recommend doing that in a live environment on a real event. If you have any kind of feedback on any of the beta features, please let us know.', 'wordcamporg' ) . '</p>';
+		echo '<p>' . esc_html__( 'Beta features are things that are being worked on in CampTix, but are not quite finished yet. You can try them out, but we do not recommend doing that in a live environment on a real event. If you have any kind of feedback on any of the beta features, please let us know.', 'wordcamporg' ) . '</p>';
 	}
 
+	/**
+	 * Menu Setup Email template section.
+	 */
 	public function menu_setup_section_email_templates() {
 		?>
 
 		<p><?php _e( 'Customize your confirmation e-mail templates.', 'wordcamporg' ); ?></p>
 
 		<p>
-			<?php _e( 'You can use the following shortcodes inside the message: [buyer_full_name], [first_name], [last_name], [email], [event_name], [ticket_url], and [receipt].', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'You can use the following shortcodes inside the message: [buyer_full_name], [first_name], [last_name], [email], [event_name], [ticket_url], and [receipt].', 'wordcamporg' ); ?>
 		</p>
 
 		<?php if ( self::html_mail_enabled() ) : ?>
@@ -489,9 +516,12 @@ class Camptix_Admin extends CampTix_Plugin {
 		<?php
 	}
 
+	/**
+	 * Menu Setup general section.
+	 */
 	public function menu_setup_section_general() {
-		echo '<p>' . __( 'General configuration.', 'wordcamporg' ) . '</p>';
+		echo '<p>' . esc_html__( 'General configuration.', 'wordcamporg' ) . '</p>';
 	}
 }
 
-new Camptix_Admin;
+new Camptix_Admin();

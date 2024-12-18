@@ -6,17 +6,9 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Clone the repo:
     ```bash
-    git clone git@github.com:WordPress/wordcamp.org.git wordcamp.test
+    git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
     cd wordcamp.test
     ```
-
-    If you get an error about "Permission denied (publickey)", you have two options:
-      - Make sure you have [a working SSH key](https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey#make-sure-you-have-a-key-that-is-being-used).
-      - Or use the HTTPS URL:
-          ```bash
-          git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
-          cd wordcamp.test
-          ```
 
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.
    	
@@ -35,7 +27,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     cd public_html
     git clone git://core.git.wordpress.org/ mu
     cd mu
-    git checkout 6.5
+    git checkout 6.7
     ```
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
@@ -205,7 +197,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
     docker compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
     ```
 
-    If you're still in the shell from the previous step, you can run `phpunit` directly.
+    If you're still in the shell from the previous step, you can run `phpunit` directly. You'll need to be in the `/app` directory to run the tests.
     ```bash
     phpunit
     ```

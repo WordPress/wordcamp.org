@@ -86,19 +86,18 @@ get_header(); ?>
 
 				<?php endif; // wcpt_has_wordcamps ?>
 
-				<h2>Keeping Track of Upcoming WordCamps</h2>
+				<h2>Stay Informed About Upcoming Events</h2>
 
-				<p>In addition to the list above, there are a few other ways you can keep track of upcoming WordCamps:</p>
+				<p>There are several ways to keep track of upcoming WordPress Events, including WordCamps, and stay connected with the vibrant WordPress community:</p>
 
 				<ul>
-					<li><strong>RSS Feed</strong> -- Learn <a href="https://central.wordcamp.org/news/2013/12/30/rss-feed-now-available-for-newly-announced-wordcamps/">how to subscribe via RSS</a>.</li>
-					<li><strong>ICS Calendar</strong> -- Add this URL as a remote calendar in your calendar application to subscribe: <?php echo esc_url( site_url( 'calendar.ics' ) ); ?></li>
-					<li>
-						<strong>JSON API</strong> --
-						This can be used by developers of mobile apps, websites, etc: <?php echo esc_url( get_rest_url( null, 'wp/v2/wordcamps' ) ); ?>.
-						If you'd like to include meetup events too, then you may want to use <a href="https://codex.wordpress.org/WordPress.org_API#Events">api.wordpress.org/events</a> instead.
+					<li><strong>Upcoming WordPress Events:</strong> Check out our <a href="https://events.wordpress.org/">landing page with all types of WordPress Events</a> and filter them by format, type, month and country.</li>
+					<li><strong>RSS Feed:</strong> <a href="https://central.wordcamp.org/news/2013/12/30/rss-feed-now-available-for-newly-announced-wordcamps/">Subscribe to our RSS feed</a> to get updates on new events and schedule changes directly in your feed reader.</li>
+					<li><strong>ICS Calendar:</strong> Add this URL to your calendar application to keep track of all upcoming events: <a href="https://central.wordcamp.org/calendar.ics"><?php echo esc_url( site_url( 'calendar.ics' ) ); ?></a></li>
+					<li><strong>JSON API:</strong> Developers can use our <a href="<?php echo esc_url( get_rest_url( null, 'wp/v2/wordcamps' ) ); ?>">JSON API</a> 	to integrate event information into mobile apps, websites, and more. For Meetup events and other WordPress community gatherings, consider using <a href="https://codex.wordpress.org/WordPress.org_API#Events">api.wordpress.org/events</a>.
 					</li>
 				</ul>
+				<p>Stay tuned and get ready to join us at an upcoming WordPress Event near you!</p>
 
 			</div><!-- #content -->
 		</div><!-- #container -->

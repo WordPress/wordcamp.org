@@ -658,7 +658,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		// Uh oh, we've hit timeout on a ticket, but the linked checkout session succeeded.
-		if ( 'succeeded' === $session['status'] && 'paid' === $session['payment_status'] ) {
+		if ( 'complete' === $session['status'] && 'paid' === $session['payment_status'] ) {
 			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
 
 			$transaction_id = $session['payment_intent']['latest_charge'] ?? '';

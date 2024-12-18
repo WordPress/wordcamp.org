@@ -37,25 +37,6 @@
 
 <body <?php body_class(); ?>>
 
-<?php if ( date_create( 'now' ) <= date_create( '2017-12-04' ) ) : ?>
-	<section class="regional-camps-promo">
-		<a href="https://2017.us.wordcamp.org/tickets/">
-			<picture>
-				<source
-					srcset="
-						https://central.wordcamp.org/files/2017/11/wcc-wcus-2017.png,
-						https://central.wordcamp.org/files/2017/11/wcc-wcus-2017_2x.png 2x"
-					media="(min-width: 500px)" />
-				<source
-					srcset="https://central.wordcamp.org/files/2017/11/wcc-wcus-2017_mobile.png" />
-				<img
-					src="https://central.wordcamp.org/files/2017/11/wcc-wcus-2017.png"
-					alt="WordCamp US 2017 in Nashville banner" />
-			</picture>
-		</a>
-	</section>
-<?php endif; ?>
-
 <div id="header" class="group">
 	<div id="masthead" class="group">
 		<?php /*  Allow screen readers / text browsers to skip the navigation menu and get right to the good stuff */ ?>
@@ -87,11 +68,8 @@
 <div id="wc-hero-panel">
 	<div class="wc-hero-wrap group">
 		<div class="wc-hero-intro">
-			<h2>WordCamp is a conference that focuses on everything WordPress.</h2>
-			<p>
-				WordCamps are informal, community-organized events that are put together by WordPress users like you.
-				Everyone from casual users to core developers participate, share ideas, and get to know each other.
-			</p>
+			<h2>WordPress Events: connect, learn & shape the future of the open web.</h2>
+			<p>WordCamps and WordPress Events are where innovation meets opportunity. Boost your career by connecting with a diverse community of users, professionals, and entrepreneurs. Together, we’re shaping the future of the open web.</p>
 			<p class="wc-hero-actions">
 				<a href="<?php echo esc_url( home_url( '/about/' ) ); ?>" class="wc-hero-learnmore">Learn More</a> or
 				<a href="<?php echo esc_url( home_url( '/schedule/' ) ); ?>" class="wc-primary-button">Find a WordCamp</a>

@@ -42,17 +42,23 @@ class Camptix_Admin extends CampTix_Plugin {
 
 		// Make sure Coupons is selected when adding a new coupon.
 		if ( 'post-new.php' == $pagenow && 'tix_coupon' == $typenow ) {
-			add_filter( 'submenu_file', function () { return 'edit.php?post_type=tix_coupon'; } );
+			add_filter( 'submenu_file', function () {
+				return 'edit.php?post_type=tix_coupon';
+			} );
 		}
 
 		// Make sure Attendees is selected when adding a new attendee.
 		if ( 'post-new.php' == $pagenow && 'tix_attendee' == $typenow ) {
-			add_filter( 'submenu_file', function () { return 'edit.php?post_type=tix_attendee'; } );
+			add_filter( 'submenu_file', function () {
+				return 'edit.php?post_type=tix_attendee';
+			} );
 		}
 
 		// Make sure Tickets is selected when creating a new ticket.
 		if ( 'post-new.php' == $pagenow && 'tix_ticket' == $typenow ) {
-			add_filter( 'submenu_file', function () { return 'edit.php?post_type=tix_ticket'; } );
+			add_filter( 'submenu_file', function () {
+				return 'edit.php?post_type=tix_ticket';
+			} );
 		}
 	}
 
@@ -62,7 +68,7 @@ class Camptix_Admin extends CampTix_Plugin {
 	public function menu_setup() {
 		?>
 		<div class="wrap">
-			<h1><?php _e( 'CampTix Setup', 'wordcamporg' ); ?></h1>
+			<h1><?php esc_html_e( 'CampTix Setup', 'wordcamporg' ); ?></h1>
 			<?php settings_errors(); ?>
 			<h3 class="nav-tab-wrapper"><?php $this->menu_setup_tabs(); ?></h3>
 			<form method="post" action="options.php" class="tix-setup-form">
@@ -109,7 +115,7 @@ class Camptix_Admin extends CampTix_Plugin {
 	public function menu_tools() {
 		?>
 		<div class="wrap">
-			<h1><?php _e( 'CampTix Tools', 'wordcamporg' ); ?></h1>
+			<h1><?php esc_html_e( 'CampTix Tools', 'wordcamporg' ); ?></h1>
 			<?php settings_errors(); ?>
 			<h3 class="nav-tab-wrapper"><?php $this->menu_tools_tabs(); ?></h3>
 			<?php
@@ -118,9 +124,9 @@ class Camptix_Admin extends CampTix_Plugin {
 				$this->menu_tools_summarize();
 			} elseif ( 'revenue' == $section ) {
 				$this->menu_tools_revenue();
-			} elseif ( 'export' == $section  ) {
+			} elseif ( 'export' == $section ) {
 				$this->menu_tools_export();
-			} elseif ( 'notify' == $section  ) {
+			} elseif ( 'notify' == $section ) {
 				$this->menu_tools_notify();
 			} elseif ( 'refund' == $section  && ! $this->options['archived'] ) {
 				$this->menu_tools_refund();
@@ -161,12 +167,14 @@ class Camptix_Admin extends CampTix_Plugin {
 	 */
 	public function menu_tools_tabs() {
 		$current_section = $this->get_tools_section();
-		$sections = apply_filters( 'camptix_menu_tools_tabs', array(
-			'summarize' => __( 'Summarize', 'wordcamporg' ),
-			'revenue' => __( 'Revenue', 'wordcamporg' ),
-			'export' => __( 'Export', 'wordcamporg' ),
-			'notify' => __( 'Notify', 'wordcamporg' ),
-		) );
+		$sections = apply_filters( 'camptix_menu_tools_tabs',
+			array(
+				'summarize' => __( 'Summarize', 'wordcamporg' ),
+				'revenue' => __( 'Revenue', 'wordcamporg' ),
+				'export' => __( 'Export', 'wordcamporg' ),
+				'notify' => __( 'Notify', 'wordcamporg' ),
+			)
+		);
 
 		if ( current_user_can( $this->caps['refund_all'] ) && ! $this->options['archived'] && $this->options['refund_all_enabled'] ) {
 			$sections['refund'] = esc_html__( 'Refund', 'wordcamporg' );
@@ -184,6 +192,7 @@ class Camptix_Admin extends CampTix_Plugin {
 	 * provides an export option, powered by the summarize_admin_init method,
 	 * hooked (almost) at admin_init, because of additional headers. Doesn't use
 	 * the Settings API so check for nonces/referrers and caps.
+	 *
 	 * @see summarize_admin_init()
 	 */
 	public function menu_tools_summarize() {
@@ -193,15 +202,16 @@ class Camptix_Admin extends CampTix_Plugin {
 			<table class="form-table">
 				<tbody>
 				<tr>
-					<th scope="row"><?php _e( 'Summarize by', 'wordcamporg' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Summarize by', 'wordcamporg' ); ?></th>
 					<td>
 						<select name="tix_summarize_by">
 							<?php foreach ( $this->get_available_summary_fields() as $value => $caption ) : ?>
 								<?php
-								if ( function_exists( 'mb_strlen' ) && function_exists( 'mb_substr' ) )
+								if ( function_exists( 'mb_strlen' ) && function_exists( 'mb_substr' ) ) {
 									$caption = mb_strlen( $caption ) > 30 ? mb_substr( $caption, 0, 30 ) . '...' : $caption;
-								else
+								} else {
 									$caption = strlen( $caption ) > 30 ? substr( $caption, 0, 30 ) . '...' : $caption;
+								}
 								?>
 								<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $value, $summarize_by ); ?>><?php echo esc_html( $caption ); ?></option>
 							<?php endforeach; ?>
@@ -229,14 +239,14 @@ class Camptix_Admin extends CampTix_Plugin {
 			foreach ( $summary as $entry ) {
 				$rows[] = array(
 					esc_html( $summary_title )   => esc_html( $entry['label'] ),
-					esc_html__( 'Count', 'wordcamporg' ) => esc_html( $entry['count'] )
+					esc_html__( 'Count', 'wordcamporg' ) => esc_html( $entry['count'] ),
 				);
 			}
 			// Render the widefat table.
 			$this->table( $rows, 'widefat tix-summarize' );
 			?>
 
-		<?php endif; // summarize_submit ?>
+		<?php endif; // summarize_submit. ?>
 		<?php
 	}
 
@@ -404,10 +414,22 @@ class Camptix_Admin extends CampTix_Plugin {
 		switch ( $section ) {
 			case 'general':
 				add_settings_section( 'general', __( 'General Configuration', 'wordcamporg' ), array( $this, 'menu_setup_section_general' ), 'camptix_options' );
-				$this->add_settings_field_helper( 'event_name', __( 'Event Name', 'wordcamporg' ), 'field_text' );
-				$this->add_settings_field_helper( 'currency', __( 'Currency', 'wordcamporg' ), 'field_currency' );
+				$this->add_settings_field_helper(
+					'event_name',
+					__( 'Event Name', 'wordcamporg' ),
+					'field_text'
+				);
+				$this->add_settings_field_helper(
+					'currency',
+					__( 'Currency', 'wordcamporg' ),
+					'field_currency'
+				);
 
-				$this->add_settings_field_helper( 'refunds_enabled', __( 'Enable Refunds', 'wordcamporg' ), 'field_enable_refunds', false,
+				$this->add_settings_field_helper(
+					'refunds_enabled',
+					__( 'Enable Refunds', 'wordcamporg' ),
+					'field_enable_refunds',
+					false,
 					esc_html__( "This will allows your customers to refund their tickets purchase by filling out a simple refund form.", 'wordcamporg' )
 				);
 
@@ -498,7 +520,7 @@ class Camptix_Admin extends CampTix_Plugin {
 	public function menu_setup_section_email_templates() {
 		?>
 
-		<p><?php _e( 'Customize your confirmation e-mail templates.', 'wordcamporg' ); ?></p>
+		<p><?php esc_html_e( 'Customize your confirmation e-mail templates.', 'wordcamporg' ); ?></p>
 
 		<p>
 			<?php esc_html_e( 'You can use the following shortcodes inside the message: [buyer_full_name], [first_name], [last_name], [email], [event_name], [ticket_url], and [receipt].', 'wordcamporg' ); ?>
@@ -507,7 +529,7 @@ class Camptix_Admin extends CampTix_Plugin {
 		<?php if ( self::html_mail_enabled() ) : ?>
 			<p>
 				<?php printf(
-					__( 'You can use the following HTML tags inside the message: %s.', 'wordcamporg' ),
+					esc_html__( 'You can use the following HTML tags inside the message: %s.', 'wordcamporg' ),
 					esc_html( self::get_allowed_html_mail_tags( 'display' ) )
 				); ?>
 			</p>

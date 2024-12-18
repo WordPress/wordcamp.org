@@ -445,9 +445,12 @@ class Camptix_Admin extends CampTix_Plugin {
 					add_settings_field(
 						'payment_method_' . $key . '_enabled',
 						__( 'Enabled', 'wordcamporg' ),
-						array( $payment_method_obj,
-						'_camptix_settings_enabled_callback' ),
-						'camptix_options', 'payment_' . $key,
+						array(
+							$payment_method_obj,
+							'_camptix_settings_enabled_callback',
+						),
+						'camptix_options',
+						'payment_' . $key,
 						array(
 							'name' => "camptix_options[payment_methods][{$key}]",
 							'value' => isset( $this->options['payment_methods'][ $key ] ) ? (bool) $this->options['payment_methods'][ $key ] : false,

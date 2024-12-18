@@ -207,21 +207,21 @@ class Camptix_Admin extends CampTix_Plugin {
 			if ( ! array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) {
 				return;
 			}
-			$fields = $this->get_available_summary_fields();
-			$summary = $this->get_summary( $summarize_by );
+			$fields        = $this->get_available_summary_fields();
+			$summary       = $this->get_summary( $summarize_by );
 			$summary_title = $fields[ $summarize_by ];
-			$alt = '';
+			$alt           = '';
 
 			$rows = array();
 			foreach ( $summary as $entry ) {
 				$rows[] = array(
-					esc_html( $summary_title )   => esc_html( $entry['label'] ),
+					esc_html( $summary_title )           => esc_html( $entry['label'] ),
 					esc_html__( 'Count', 'wordcamporg' ) => esc_html( $entry['count'] ),
 				);
 			}
 			// Render the widefat table.
 			$this->table( $rows, 'widefat tix-summarize' );
-		endif;
+		}
 		?>
 		<form method="post" action="<?php echo esc_url( add_query_arg( 'tix_summarize', 1 ) ); ?>">
 			<table class="form-table">

@@ -56,9 +56,11 @@ class Camptix_Admin extends CampTix_Plugin {
 
 		// Make sure Tickets is selected when creating a new ticket.
 		if ( 'post-new.php' == $pagenow && 'tix_ticket' == $typenow ) {
-			add_filter( 'submenu_file', function () {
-				return 'edit.php?post_type=tix_ticket';
-			} );
+			add_filter( 'submenu_file',
+				function () {
+					return 'edit.php?post_type=tix_ticket';
+				}
+			);
 		}
 	}
 
@@ -253,6 +255,7 @@ class Camptix_Admin extends CampTix_Plugin {
 	/**
 	 * Hooked at (almost) admin_init, fired if one requested a
 	 * Summarize export. Serves the download file.
+	 *
 	 * @see menu_tools_summarize()
 	 */
 	public function summarize_admin_init() {
@@ -262,13 +265,14 @@ class Camptix_Admin extends CampTix_Plugin {
 
 		if ( isset( $_POST['tix_export_summary'], $_POST['tix_summarize_by'] ) && check_admin_referer( 'tix_summarize' ) ) {
 			$summarize_by = $_POST['tix_summarize_by'];
-			if ( ! array_key_exists( $summarize_by, $this->get_available_summary_fields() ) )
+			if ( ! array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) {
 				return;
+			}
 
 			$fields = $this->get_available_summary_fields();
 			$summary = $this->get_summary( $summarize_by );
 			$summary_title = $fields[ $summarize_by ];
-			$filename = sprintf( 'camptix-summary-%s-%s.csv', sanitize_title_with_dashes( $summary_title ), date( 'Y-m-d' ) );
+			$filename = sprintf( 'camptix-summary-%s-%s.csv', sanitize_title_with_dashes( $summary_title ), gmdate( 'Y-m-d' ) );
 
 			header( 'Content-Type: text/csv' );
 			header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
@@ -317,10 +321,10 @@ class Camptix_Admin extends CampTix_Plugin {
 			<tbody>
 			<?php foreach ( $rows as $row ) : ?>
 				<?php
-				$alt = ( $alt == '' ) ? 'alternate' : '';
+				$alt = ( '' == $alt ) ? 'alternate' : '';
 				$values = array_values( $row );
 				?>
-				<tr class="<?php echo esc_attr( $alt ); ?> tix-row-<?php echo sanitize_title_with_dashes( array_shift( $values ) ); ?>">
+				<tr class="<?php echo esc_attr( $alt ); ?> tix-row-<?php echo esc_attr( sanitize_title_with_dashes( array_shift( $values ) ) ); ?>">
 					<?php foreach ( $row as $column => $value ) : ?>
 						<td class="tix-<?php echo esc_attr( sanitize_title_with_dashes( $column ) ); ?>">
 							<span><?php echo wp_kses( $value, 'post' ); ?></span>
@@ -338,11 +342,6 @@ class Camptix_Admin extends CampTix_Plugin {
 	 */
 	public function admin_enqueue_scripts() {
 		global $wp_query;
-
-		if ( ! $wp_query->query_vars ) { // only on singular admin pages.
-			if ( 'tix_ticket' == get_post_type() || 'tix_coupon' == get_post_type() ) {
-			}
-		}
 
 		// Let's see whether to include admin.css and admin.js.
 		if ( is_admin() ) {
@@ -399,7 +398,7 @@ class Camptix_Admin extends CampTix_Plugin {
 		$this->menu_setup_controls();
 
 		// Let's add some help tabs.
-		require_once dirname( __FILE__ ) . '/help.php';
+		require_once __DIR__ . '/help.php';
 	}
 
 	/**
@@ -430,7 +429,7 @@ class Camptix_Admin extends CampTix_Plugin {
 					__( 'Enable Refunds', 'wordcamporg' ),
 					'field_enable_refunds',
 					false,
-					esc_html__( "This will allows your customers to refund their tickets purchase by filling out a simple refund form.", 'wordcamporg' )
+					esc_html__( 'This will allows your customers to refund their tickets purchase by filling out a simple refund form.', 'wordcamporg' )
 				);
 
 				break;
@@ -443,9 +442,10 @@ class Camptix_Admin extends CampTix_Plugin {
 						'payment_method_' . $key . '_enabled',
 						__( 'Enabled', 'wordcamporg' ),
 						array( $payment_method_obj, '_camptix_settings_enabled_callback' ),
-						'camptix_options', 'payment_' . $key, array(
+						'camptix_options', 'payment_' . $key,
+						array(
 							'name' => "camptix_options[payment_methods][{$key}]",
-							'value' => isset( $this->options[ 'payment_methods' ][$key] ) ? (bool) $this->options[ 'payment_methods' ][ $key ] : false,
+							'value' => isset( $this->options['payment_methods'][$key] ) ? (bool) $this->options['payment_methods'][ $key ] : false,
 						)
 					);
 
@@ -477,18 +477,19 @@ class Camptix_Admin extends CampTix_Plugin {
 				add_settings_section( 'general', esc_html__( 'Beta Features', 'wordcamporg' ), array( $this, 'menu_setup_section_beta' ), 'camptix_options' );
 
 				$this->add_settings_field_helper(
-						'reservations_enabled',
-						esc_html__( 'Enable Reservations', 'wordcamporg' ),
-						'field_yesno',
-						false,
-						esc_html__( 'Reservations is a way to make sure that a certain group of people, can always purchase their tickets, even if you sell out fast.', 'wordcamporg' )
+					'reservations_enabled',
+					esc_html__( 'Enable Reservations', 'wordcamporg' ),
+					'field_yesno',
+					false,
+					esc_html__( 'Reservations is a way to make sure that a certain group of people, can always purchase their tickets, even if you sell out fast.', 'wordcamporg' )
 				);
 
 				if ( current_user_can( $this->caps['refund_all'] ) ) {
 					$this->add_settings_field_helper(
 						'refund_all_enabled',
 						esc_html__( 'Enable Refund All', 'wordcamporg' ),
-						'field_yesno', false,
+						'field_yesno',
+						false,
 						esc_html__( 'Allows to refund all purchased tickets by an admin via the Tools menu.', 'wordcamporg' )
 					);
 				}

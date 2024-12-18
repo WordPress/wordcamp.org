@@ -203,6 +203,21 @@ class Camptix_Admin extends CampTix_Plugin {
 	 */
 	public function menu_tools_summarize() {
 		$summarize_by = isset( $_POST['tix_summarize_by'] ) ? $_POST['tix_summarize_by'] : 'ticket';
+		if ( isset( $_POST['tix_summarize_submit'] ) && wp_verify_nonce( $_POST['_wp_nonce'], 'tix_summarize' ) && array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) :
+			$fields = $this->get_available_summary_fields();
+			$summary = $this->get_summary( $summarize_by );
+			$summary_title = $fields[ $summarize_by ];
+			$alt = '';
+
+			$rows = array();
+			foreach ( $summary as $entry ) {
+				$rows[] = array(
+					esc_html( $summary_title )   => esc_html( $entry['label'] ),
+					esc_html__( 'Count', 'wordcamporg' ) => esc_html( $entry['count'] ),
+				);
+			}
+			// Render the widefat table.
+			$this->table( $rows, 'widefat tix-summarize' );
 		?>
 		<form method="post" action="<?php echo esc_url( add_query_arg( 'tix_summarize', 1 ) ); ?>">
 			<table class="form-table">
@@ -233,26 +248,6 @@ class Camptix_Admin extends CampTix_Plugin {
 				<input type="submit" name="tix_export_summary" value="<?php esc_attr_e( 'Export Summary to CSV', 'wordcamporg' ); ?>" class="button" />
 			</p>
 		</form>
-
-		<?php if ( isset( $_POST['tix_summarize_submit'] ) && wp_verify_nonce( $_POST['_wp_nonce'], 'tix_summarize' ) && array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) : ?>
-			<?php
-			$fields = $this->get_available_summary_fields();
-			$summary = $this->get_summary( $summarize_by );
-			$summary_title = $fields[ $summarize_by ];
-			$alt = '';
-
-			$rows = array();
-			foreach ( $summary as $entry ) {
-				$rows[] = array(
-					esc_html( $summary_title )   => esc_html( $entry['label'] ),
-					esc_html__( 'Count', 'wordcamporg' ) => esc_html( $entry['count'] ),
-				);
-			}
-			// Render the widefat table.
-			$this->table( $rows, 'widefat tix-summarize' );
-			?>
-
-		<?php endif; // summarize_submit. ?>
 		<?php
 	}
 

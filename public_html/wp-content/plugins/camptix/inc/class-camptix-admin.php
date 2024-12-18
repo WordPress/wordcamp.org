@@ -202,8 +202,11 @@ class Camptix_Admin extends CampTix_Plugin {
 	 * @see summarize_admin_init()
 	 */
 	public function menu_tools_summarize() {
-		$summarize_by = isset( $_POST['tix_summarize_by'] ) ? $_POST['tix_summarize_by'] : 'ticket';
-		if ( isset( $_POST['tix_summarize_submit'] ) && wp_verify_nonce( $_POST['_wp_nonce'], 'tix_summarize' ) && array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) :
+		if ( isset( $_POST['tix_summarize_submit'] ) && wp_verify_nonce( $_POST['_wp_nonce'], 'tix_summarize' ) ) {
+			$summarize_by = isset( $_POST['tix_summarize_by'] ) ? $_POST['tix_summarize_by'] : 'ticket';
+			if ( ! array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) {
+				return;
+			}
 			$fields = $this->get_available_summary_fields();
 			$summary = $this->get_summary( $summarize_by );
 			$summary_title = $fields[ $summarize_by ];

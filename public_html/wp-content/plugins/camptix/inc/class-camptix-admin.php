@@ -234,7 +234,7 @@ class Camptix_Admin extends CampTix_Plugin {
 			</p>
 		</form>
 
-		<?php if ( isset( $_POST['tix_summarize_submit'] ) && check_admin_referer( 'tix_summarize' ) && array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) : ?>
+		<?php if ( isset( $_POST['tix_summarize_submit'] ) && wp_verify_nonce( $_POST['_wp_nonce'], 'tix_summarize' ) && array_key_exists( $summarize_by, $this->get_available_summary_fields() ) ) : ?>
 			<?php
 			$fields = $this->get_available_summary_fields();
 			$summary = $this->get_summary( $summarize_by );

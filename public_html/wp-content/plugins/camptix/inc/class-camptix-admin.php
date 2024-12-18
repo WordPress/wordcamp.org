@@ -42,16 +42,20 @@ class Camptix_Admin extends CampTix_Plugin {
 
 		// Make sure Coupons is selected when adding a new coupon.
 		if ( 'post-new.php' == $pagenow && 'tix_coupon' == $typenow ) {
-			add_filter( 'submenu_file', function () {
-				return 'edit.php?post_type=tix_coupon';
-			} );
+			add_filter( 'submenu_file',
+				function () {
+					return 'edit.php?post_type=tix_coupon';
+				}
+			);
 		}
 
 		// Make sure Attendees is selected when adding a new attendee.
 		if ( 'post-new.php' == $pagenow && 'tix_attendee' == $typenow ) {
-			add_filter( 'submenu_file', function () {
-				return 'edit.php?post_type=tix_attendee';
-			} );
+			add_filter( 'submenu_file',
+				function () {
+					return 'edit.php?post_type=tix_attendee';
+				}
+			);
 		}
 
 		// Make sure Tickets is selected when creating a new ticket.
@@ -441,11 +445,12 @@ class Camptix_Admin extends CampTix_Plugin {
 					add_settings_field(
 						'payment_method_' . $key . '_enabled',
 						__( 'Enabled', 'wordcamporg' ),
-						array( $payment_method_obj, '_camptix_settings_enabled_callback' ),
+						array( $payment_method_obj,
+						'_camptix_settings_enabled_callback' ),
 						'camptix_options', 'payment_' . $key,
 						array(
 							'name' => "camptix_options[payment_methods][{$key}]",
-							'value' => isset( $this->options['payment_methods'][$key] ) ? (bool) $this->options['payment_methods'][ $key ] : false,
+							'value' => isset( $this->options['payment_methods'][ $key ] ) ? (bool) $this->options['payment_methods'][ $key ] : false,
 						)
 					);
 

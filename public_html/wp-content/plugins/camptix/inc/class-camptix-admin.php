@@ -218,6 +218,7 @@ class Camptix_Admin extends CampTix_Plugin {
 			}
 			// Render the widefat table.
 			$this->table( $rows, 'widefat tix-summarize' );
+		endif;
 		?>
 		<form method="post" action="<?php echo esc_url( add_query_arg( 'tix_summarize', 1 ) ); ?>">
 			<table class="form-table">

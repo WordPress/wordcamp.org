@@ -1098,7 +1098,7 @@ function add_show_ticket_type_filter() {
 	// Set posts_per_page to -1 so we show them all.
 	$all_tickets = get_posts( array(
 		'post_type' => 'tix_ticket',
-		'posts_per_page' => -1 
+		'posts_per_page' => -1,
 	) );
 	?>
 		<select name="tix_show_ticket_type">

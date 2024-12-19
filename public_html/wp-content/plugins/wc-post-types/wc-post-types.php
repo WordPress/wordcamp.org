@@ -633,7 +633,7 @@ class WordCamp_Post_Types_Plugin {
 			return null;
 		}
 
-		$permalink = sprintf( 'http://profiles.wordpress.org/%s', strtolower( $user->user_nicename ) );
+		$permalink = sprintf( 'http://profiles.wordpress.org/%s/', strtolower( $user->user_nicename ) );
 		return esc_url_raw( $permalink );
 	}
 
@@ -1916,7 +1916,11 @@ class WordCamp_Post_Types_Plugin {
 				$wporg_user = get_user_by( 'id', $user_id );
 
 				if ( $wporg_user ) {
-					echo esc_html( $wporg_user->user_login );
+					printf(
+						'<a href="%s">%s</a>',
+						'https://profiles.wordpress.org/' . $wporg_user->user_nicename . '/',
+						esc_html( $wporg_user->user_login )
+					);
 				}
 
 				break;

@@ -1096,7 +1096,10 @@ function add_show_ticket_type_filter() {
 	$filter = isset( $_GET['tix_show_ticket_type'] ) ? $_GET['tix_show_ticket_type'] : '';
 
 	// Set posts_per_page to -1 so we show them all.
-	$all_tickets = get_posts( array( 'post_type' => 'tix_ticket', 'posts_per_page' => -1 ) );
+	$all_tickets = get_posts( array(
+		'post_type' => 'tix_ticket',
+		'posts_per_page' => -1 
+	) );
 	?>
 		<select name="tix_show_ticket_type">
 			<option value=""><?php esc_html_e( 'All Tickets', 'wordcamporg' ); ?></option>

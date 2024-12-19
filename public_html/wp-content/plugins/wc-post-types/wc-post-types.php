@@ -1918,7 +1918,7 @@ class WordCamp_Post_Types_Plugin {
 				if ( $wporg_user ) {
 					printf(
 						'<a href="%s">%s</a>',
-						'https://profiles.wordpress.org/' . $wporg_user->user_nicename . '/',
+						esc_url( 'https://profiles.wordpress.org/' . $wporg_user->user_nicename . '/' ),
 						esc_html( $wporg_user->user_login )
 					);
 				}

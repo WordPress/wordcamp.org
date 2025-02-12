@@ -74,13 +74,13 @@ jobs:
         php-version: ${{ matrix.php-version }}
         coverage: none
         tools: composer:v2
-      env:
-        COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Start mysql service
       run: sudo /etc/init.d/mysql start
 
     - name: Install dependencies
+      env:
+        COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         rm composer.lock || true
         composer install

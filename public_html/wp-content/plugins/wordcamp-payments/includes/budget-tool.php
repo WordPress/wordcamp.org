@@ -339,6 +339,11 @@ class WordCamp_Budget_Tool {
 			$view = 'prelim';
 		}
 
+		// Don't allow accessing a budget that's not yet available.
+		if ( ! isset( $budget[ $view ] ) ) {
+			$view = 'prelim';
+		}
+
 		if ( 'prelim' === $view && 'approved' === $budget['status'] ) {
 			$view = 'approved';
 		}

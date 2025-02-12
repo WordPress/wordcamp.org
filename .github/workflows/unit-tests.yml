@@ -73,7 +73,7 @@ jobs:
       with:
         php-version: ${{ matrix.php-version }}
         coverage: none
-        tools: composer:v1
+        tools: composer:v2
 
     - name: Start mysql service
       run: sudo /etc/init.d/mysql start

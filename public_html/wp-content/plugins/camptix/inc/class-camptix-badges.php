@@ -48,6 +48,7 @@ function process_badges() {
  * Outputs manage badge admin screen, and allows processing of submit.
  */
 function menu_badges() {
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	if ( ! empty( $_POST ) ) {
 		$output = process_badges();
 		wp_admin_notice( $output );

@@ -87,7 +87,7 @@ jobs:
 
     - name: DEBUG
       run: |
-        find /home/runner/work/wordcamp.org/wordcamp.org/public_html/wp-content/ -maxdepth 3 -type d
+        find /home/runner/work/wordcamp.org/wordcamp.org/public_html/wp-content/mu-plugins-private
 
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

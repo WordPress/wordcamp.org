@@ -474,7 +474,7 @@ class WordCamp_Forms_To_Drafts {
 			$subject = sprintf(
 				__( 'Your %1$s Call for Speakers submission: %2$s', 'wordcamporg' ),
 				get_bloginfo( 'name' ),
-				sanitize_text_field( $all_values['Topic Title'] )
+				sanitize_text_field( $all_values['Topic Title'] ?? '' )
 			);
 		}
 

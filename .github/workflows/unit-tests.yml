@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['7.4'] # 8.0 -- Add back to matrix when 8.0 is supported.
+        php-version: ['8.1']
 
     services:
       mysql:

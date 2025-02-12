@@ -85,5 +85,9 @@ jobs:
       run: |
         bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest
 
+    - name: DEBUG
+      run: |
+        find /home/runner/work/wordcamp.org/wordcamp.org/public_html/wp-content/ -maxdepth 3 -type d
+
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

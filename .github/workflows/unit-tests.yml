@@ -79,7 +79,9 @@ jobs:
       run: sudo /etc/init.d/mysql start
 
     - name: Install dependencies
-      run: composer install
+      run: |
+        rm composer.lock || true
+        composer install
 
     - name: Install WordPress
       run: |

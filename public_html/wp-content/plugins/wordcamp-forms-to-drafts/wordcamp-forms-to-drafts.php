@@ -271,6 +271,10 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int
 	 */
 	protected function get_user_id_from_username( $username ) {
+		if ( ! $username ) {
+			return 0;
+		}
+
 		$user = get_user_by( 'login', $username );
 
 		return empty( $user->ID ) ? 0 : $user->ID;
@@ -413,7 +417,7 @@ class WordCamp_Forms_To_Drafts {
 
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_volunteer',
-			'post_title'   => sanitize_text_field( $all_values['Name'] ),
+			'post_title'   => sanitize_text_field( $all_values['Name'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );

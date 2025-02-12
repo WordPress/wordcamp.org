@@ -11,7 +11,7 @@ use WordPressdotorg\Profiles;
  */
 function process_badges() {
 
-	if ( ! current_user_can( 'manage_options' ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'badge-submission' ) ) {
+	if ( ! current_user_can( 'manage_options' ) || empty( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'badge-submission' ) ) {
 		return __( 'Invalid request', 'wordcamporg' );
 	}
 
@@ -48,7 +48,7 @@ function process_badges() {
  * Outputs manage badge admin screen, and allows processing of submit.
  */
 function menu_badges() {
-	if ( isset( $_GET['badge-submit'] ) && ( 1 == $_GET['badge-submit'] ) ) {
+	if ( ! empty( $_POST ) ) {
 		$output = process_badges();
 		wp_admin_notice( $output );
 	}
@@ -59,7 +59,7 @@ function menu_badges() {
 		<h1><?php esc_html_e( 'Profile Badge Management', 'wordcamporg' ); ?></h1>
 		<p><?php esc_html_e( 'This tool allows a limited number of badges to be managed on wordpress.org profiles', 'wordcamporg' ); ?></p>
 	</div>
-	<form method="post" action="<?php echo esc_url( add_query_arg( 'badge-submit', '1' ) ); ?>">
+	<form method="post">
 		<div>
 			<select name="badge_name">
 				<option value="wordcamp-volunteer"><?php esc_html_e( 'WordCamp Volunteer', 'wordcamporg' ); ?></option>

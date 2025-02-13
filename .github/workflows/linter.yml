@@ -36,6 +36,15 @@ jobs:
       run: |
         sudo apt-get update && sudo apt-get install -y subversion
 
+    - name: Set PHP version
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        coverage: none
+        tools: composer:v2
+      env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: composer install
       run: |
         rm composer.lock || true

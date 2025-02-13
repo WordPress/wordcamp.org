@@ -38,6 +38,7 @@ jobs:
 
     - name: composer install
       run: |
+        rm composer.lock || true
         composer install
 
     - name: yarn install and build

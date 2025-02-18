@@ -1,7 +1,8 @@
 <?php
 
 namespace WordCamp\Organizer_Reminders\Tests;
-use WP_UnitTestCase, WP_UnitTest_Factory;
+use WordCamp\Tests\Database_TestCase;
+use WP_UnitTest_Factory;
 use WCOR_Reminder, WCOR_Mailer;
 
 defined( 'WPINC' ) || die();
@@ -13,7 +14,7 @@ defined( 'WPINC' ) || die();
  *
  * @group organizer-reminders
  */
-class Test_WCOR_Mailer extends WP_UnitTestCase {
+class Test_WCOR_Mailer extends Database_TestCase {
 	/**
 	 * @var int $triggered_reminder_post_id The ID of an Organizer Reminder post which is configured to be sent on a trigger.
 	 */

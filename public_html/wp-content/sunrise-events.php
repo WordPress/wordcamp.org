@@ -7,21 +7,19 @@ use function WordCamp\Sunrise\{ get_top_level_domain };
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\{ PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
 
-main();
-
+// Redirecting would interfere with bin scripts, unit tests, etc.
+if ( php_sapi_name() !== 'cli' ) {
+	main();
+}
 
 /**
  * Controller for this file.
  */
 function main() {
-	// Redirecting would interfere with bin scripts, unit tests, etc.
-	if ( php_sapi_name() !== 'cli' ) {
-		$redirect_url = get_redirect_url( $_SERVER['REQUEST_URI'] );
-
-		if ( $redirect_url ) {
-			header( 'Location: ' . $redirect_url, true, 301 );
-			die();
-		}
+	$redirect_url = get_redirect_url( $_SERVER['REQUEST_URI'] );
+	if ( $redirect_url ) {
+		header( 'Location: ' . $redirect_url, true, 301 );
+		die();
 	}
 
 	set_network_and_site();

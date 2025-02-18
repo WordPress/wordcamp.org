@@ -139,6 +139,5 @@ class Database_TestCase extends WP_UnitTestCase {
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", $network_id ) );
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->site}     WHERE id      = %d", $network_id ) );
 		}
-
 	}
 }

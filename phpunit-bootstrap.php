@@ -91,7 +91,7 @@ function normalize_site_data( $data ) {
 	// Filter the WPDB::update() call to include the `blog_id` field..
 	add_filter(
 		'query',
-		$callback = static function ( $query ) use ( $data, & $callback ) {
+		$callback = static function ( $query ) use ( $data, &$callback ) {
 			global $wpdb;
 
 			if ( str_starts_with( $query, "INSERT INTO `{$wpdb->blogs}`" ) ) {

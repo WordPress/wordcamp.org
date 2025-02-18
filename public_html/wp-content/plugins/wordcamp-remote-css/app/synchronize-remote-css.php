@@ -77,7 +77,9 @@ function fetch_unsafe_remote_css( $remote_css_url ) {
  */
 function sanitize_unsafe_css( $unsafe_css ) {
 	if ( ! class_exists( 'Jetpack_Custom_CSS_Enhancements' ) ) {
-		if ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
+		if ( version_compare( JETPACK__VERSION, '13.7.1', '>' ) ) {
+			return ''; // Custom CSS not included in Jetpack anymore.
+		} elseif ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
 			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
 		} else {
 			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';

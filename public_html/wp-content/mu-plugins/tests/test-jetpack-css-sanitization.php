@@ -15,7 +15,7 @@ defined( 'WPINC' ) || die();
  *
  * @package WordCamp\Tests
  */
-class Test_Jetpack_CSS_Sanitization extends WP_UnitTestCase {
+class Test_Jetpack_CSS_Sanitization extends Database_TestCase {
 
 	/**
 	 * Test that no selector characters are encoded.

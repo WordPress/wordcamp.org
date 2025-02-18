@@ -11,6 +11,7 @@
 
 
 namespace WordCamp\Sunrise\Events;
+use WordCamp\Tests\Database_TestCase;
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
@@ -19,7 +20,7 @@ defined( 'WPINC' ) || die();
  * @group sunrise
  * @group mu-plugins
  */
-class Test_Sunrise_Events extends WP_UnitTestCase {
+class Test_Sunrise_Events extends Database_TestCase {
 	/**
 	 * @covers WordCamp\Sunrise\get_redirect_url
 	 *

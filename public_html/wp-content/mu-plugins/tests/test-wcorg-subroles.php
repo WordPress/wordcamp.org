@@ -4,6 +4,7 @@ namespace WordCamp\Tests;
 
 use WP_UnitTestCase;
 use WordCamp\SubRoles;
+use WordCamp\Tests\Database_TestCase;
 
 defined( 'WPINC' ) || die();
 

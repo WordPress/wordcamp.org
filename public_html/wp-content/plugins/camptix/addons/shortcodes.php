@@ -213,6 +213,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 				'tickets'        => false,
 				'columns'        => 3,
 				'questions'      => '',
+				'size'           => 96, // Default size for the gravatar
 			),
 			$attr,
 			'camptix_attendees'
@@ -234,6 +235,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		}
 
 		$attr['posts_per_page'] = absint( $attr['posts_per_page'] );
+		$attr['size'] = absint( $attr['size'] );
 
 		return $attr;
 	}
@@ -316,7 +318,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 						$first = get_post_meta( $attendee_id, 'tix_first_name', true );
 						$last  = get_post_meta( $attendee_id, 'tix_last_name', true );
 
-						echo get_avatar( get_post_meta( $attendee_id, 'tix_email', true ) ); // phpcs:ignore
+						echo get_avatar( get_post_meta( $attendee_id, 'tix_email', true ), $attr['size'] ); // phpcs:ignore
 						?>
 
 						<div class="tix-field tix-attendee-name">

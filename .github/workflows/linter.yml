@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
     - public_html/**
+    - .github/workflows/**
   push:
     branches: [production]
     paths:

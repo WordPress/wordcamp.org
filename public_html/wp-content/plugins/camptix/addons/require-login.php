@@ -787,6 +787,11 @@ class CampTix_Require_Login extends CampTix_Addon {
 			return;
 		}
 
+		// If the user isn't logged in, we need to avoid changing the username, since wp_get_current_user sets this to 0.
+		if ( 0 == $current_user->ID ) {
+			return;
+		}
+
 		update_post_meta( $attendee->ID, 'tix_username', $current_user->user_login );
 
 		if ( self::UNCONFIRMED_USERNAME == $old_username ) {

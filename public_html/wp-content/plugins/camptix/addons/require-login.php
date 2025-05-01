@@ -614,7 +614,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * The buyer is no longer responsible for editing attendee info, but they are responsible
 	 * for ensuring that the unknown/unconfirmed attendees complete registration.
 	 *
-	 * @param string $edit_link_html
+	 * @param string  $edit_link_html
 	 * @param WP_Post $attendee
 	 *
 	 * @return string
@@ -644,7 +644,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$login_link  = wp_login_url( $tickets_url );
 
 		// If the ticket owner is known, add a hint to the url to prefill the login form.
-		if ( $attendee_username != self::UNCONFIRMED_USERNAME ) {
+		if ( self::UNCONFIRMED_USERNAME != $attendee_username ) {
 			$login_link = add_query_arg( 'user', urlencode( $attendee_username ), $login_link );
 		}
 
@@ -661,9 +661,9 @@ class CampTix_Require_Login extends CampTix_Addon {
 		// 5. The ticket is assigned to no-one, and the current user does not have a ticket (They can claim it)
 		// 6. The ticket is assigned to the current user.
 
-		$current_user_ticket  = ( $attendee_username == $current_user->user_login );
-		$assigned_to_someone  = ( $attendee_username != self::UNCONFIRMED_USERNAME );
-		$assigned_to_no_one   = ( $attendee_username == self::UNCONFIRMED_USERNAME || $is_unknown_attendee );
+		$current_user_ticket  = ( $current_user->user_login == $attendee_username );
+		$assigned_to_someone  = ( self::UNCONFIRMED_USERNAME != $attendee_username );
+		$assigned_to_no_one   = ( ( self::UNCONFIRMED_USERNAME == $attendee_username  ) || $is_unknown_attendee );
 		$this_user_has_ticket = is_user_logged_in() && ! $current_user_ticket && $this->get_ticket_of_user( $current_user );
 		$login_to_claim       = $assigned_to_no_one && ! is_user_logged_in();
 		$can_claim_ticket     = $assigned_to_no_one && is_user_logged_in() && ! $this_user_has_ticket;
@@ -672,13 +672,13 @@ class CampTix_Require_Login extends CampTix_Addon {
 		if ( $assigned_to_someone && ! $current_user_ticket ) {
 			$content .= '<br><a href="' . esc_url( $login_link ) . '">' . sprintf( __( 'Login as %s to edit information', 'wordcamporg' ), esc_html( $attendee_username ) ) . '</a>';
 
-		// 3 - NOOP, user already has a different ticket.
-		// 4 - Login to claim
+			// 3 - NOOP, user already has a different ticket.
+			// 4 - Login to claim
 		} elseif ( $login_to_claim ) {
 			$content .= '<br><a href="' . esc_url( $login_link ) . '">' . __( 'Login to edit information', 'wordcamporg' ) . '</a>';
 
-		// 5 - Claim the ticket, since you don't have one.
-		// 6 - Current user owns ticket, edit away.
+			// 5 - Claim the ticket, since you don't have one.
+			// 6 - Current user owns ticket, edit away.
 		} elseif ( $can_claim_ticket || $current_user_ticket ) {
 			$content .= '<br>' . $edit_link_html;
 		}

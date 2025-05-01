@@ -940,22 +940,6 @@ class CampTix_Require_Login extends CampTix_Addon {
 		return $query_args;
 	}
 
-	/*
-	 * Prevent unknown attendees from viewing private content.
-	 *
-	 * The name/email used for unknown attendees is revealed not secret, so anyone could use them to login to a
-	 * page with [camptix_private] content.
-	 */
-	public function prevent_unknown_attendees_viewing_private_content( $parameters ) {
-		$parameters['meta_query'][] = array(
-			'key'     => 'tix_email',
-			'value'   => self::UNKNOWN_ATTENDEE_EMAIL,
-			'compare' => '!='
-		);
-
-		return $parameters;
-	}
-
 	/**
 	 * Add the ability to filter camptix notify segments by confirmed status.
 	 *
@@ -993,15 +977,57 @@ class CampTix_Require_Login extends CampTix_Addon {
 	public function camptix_notify_segment_query( $query, $conditions ) {
 		foreach ( $conditions as $condition ) {
 			if ( 'ticket_status' == $condition['option_value'] ) {
-				$query['meta_query'][] = array(
-					'key'     => 'tix_username',
-					'value'   => self::UNCONFIRMED_USERNAME,
-					'compare' => ( 'confirmed' === $condition['value'] ? '=' : '!=' )
-				);
+				if ( 'unconfirmed' === $condition['value'] ) {
+					$query['meta_query'][] = array(
+						// All of these are unconfirmed.
+						'relation' => 'or',
+						// Unconfirmed username listed.
+						array(
+							'key' => 'tix_username',
+							'value' => self::UNCONFIRMED_USERNAME,
+							'compare' => '='
+						),
+						// Has no username linked.
+						array(
+							'key' => 'tix_username',
+							'compare' => 'NOT EXISTS',
+						),
+						// The email is the standard unknown attendee.
+						array(
+							'key' => 'tix_email',
+							'value' => $this->get_unknown_attendee_info()['email'],
+							'compare' => '='
+						)
+					);
+				} elseif ( 'confirmed' === $condition['value'] ) {
+					// Username is something other than the unconfirmed username.
+					$query['meta_query'][] = array(
+						'key' => 'tix_username',
+						'value' => self::UNCONFIRMED_USERNAME,
+						'compare' => '!='
+					);
+				}
+
 			}
 		}
 
 		return $query;
+	}
+
+	/*
+	 * Prevent unknown attendees from viewing private content.
+	 *
+	 * The name/email used for unknown attendees is revealed not secret, so anyone could use them to login to a
+	 * page with [camptix_private] content.
+	 */
+	public function prevent_unknown_attendees_viewing_private_content( $parameters ) {
+		$parameters['meta_query'][] = array(
+			'key'     => 'tix_email',
+			'value'   => self::UNKNOWN_ATTENDEE_EMAIL,
+			'compare' => '!='
+		);
+
+		return $parameters;
 	}
 
 	/**

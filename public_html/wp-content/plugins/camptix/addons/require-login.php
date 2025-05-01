@@ -609,7 +609,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	}
 
 	/**
-	 * Show the buyer the status of other tickets instead of an 'Edit Information' link.
+	 * Show the buyer the status of the ticket, and a login link, instead of an 'Edit Information' link.
 	 *
 	 * The buyer is no longer responsible for editing attendee info, but they are responsible
 	 * for ensuring that the unknown/unconfirmed attendees complete registration.
@@ -627,7 +627,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$unknown_attendee_info = $this->get_unknown_attendee_info();
 		$is_unknown_attendee   = ( get_post_meta( $attendee->ID, 'tix_email', true ) == $unknown_attendee_info['email'] );
 
-		// Display the ticket status for all other tickets.
+		// Display the ticket status.
 		if ( $is_unknown_attendee ) {
 			$content = _x( 'Status: Unknown', 'WordCamp ticket status.', 'wordcamporg' );
 		} elseif ( self::UNCONFIRMED_USERNAME == $attendee_username ) {
@@ -638,16 +638,13 @@ class CampTix_Require_Login extends CampTix_Addon {
 		// Use a non-breaking space to prevent the text from wrapping.
 		$content = str_replace( ' ', '&nbsp;', $content );
 
-		// Add a login link to simplify the edit experience.
-		// After logging in as the correct user, they'll come back to this page, where they should find an edit link.
-		// Note: This does not redirect them to the ticket, incase they login with the incorrect user.
-
-		$args = $this->get_sanitized_tix_parameters( $_REQUEST );
+		// Redirect back to this same overview, as they may not login with the correct username.
+		$args        = $this->get_sanitized_tix_parameters( $_REQUEST );
 		$tickets_url = add_query_arg( urlencode_deep( $args ), $camptix->get_tickets_url() );
+		$login_link  = wp_login_url( $tickets_url );
 
-		$login_link = wp_login_url( $tickets_url );
 		// If the ticket owner is known, add a hint to the url to prefill the login form.
-		if ( $attendee_username !== self::UNCONFIRMED_USERNAME ) {
+		if ( $attendee_username != self::UNCONFIRMED_USERNAME ) {
 			$login_link = add_query_arg( 'user', urlencode( $attendee_username ), $login_link );
 		}
 
@@ -665,7 +662,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		// 6. The ticket is assigned to the current user.
 
 		$current_user_ticket  = ( $attendee_username == $current_user->user_login );
-		$assigned_to_someone  = ( $attendee_username !== self::UNCONFIRMED_USERNAME );
+		$assigned_to_someone  = ( $attendee_username != self::UNCONFIRMED_USERNAME );
 		$assigned_to_no_one   = ( $attendee_username == self::UNCONFIRMED_USERNAME || $is_unknown_attendee );
 		$this_user_has_ticket = is_user_logged_in() && ! $current_user_ticket && $this->get_ticket_of_user( $current_user );
 		$login_to_claim       = $assigned_to_no_one && ! is_user_logged_in();

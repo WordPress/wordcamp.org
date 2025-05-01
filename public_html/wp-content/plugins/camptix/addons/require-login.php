@@ -632,6 +632,8 @@ class CampTix_Require_Login extends CampTix_Addon {
 		} else {
 			$content = _x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
 		}
+		// Use a non-breaking space to prevent the text from wrapping.
+		$content = str_replace( ' ', '&nbsp;', $content );
 
 		// Add a login link to simplify the edit experience.
 		// After logging in as the correct user, they'll come back to this page, where they should find an edit link.
@@ -664,7 +666,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$can_claim_ticket     = $assigned_to_no_one && is_user_logged_in() && ! $this_user_has_ticket;
 
 		// 1 & 2 - Login to edit this ticeket.
-		if ( $assigned_to_someone ) {
+		if ( $assigned_to_someone && ! $current_user_ticket ) {
 			$content .= '<br><a href="' . esc_url( $login_link ) . '">' . sprintf( __( 'Login as %s to edit information', 'wordcamporg' ), esc_html( $attendee_username ) ) . '</a>';
 
 		// 3 - NOOP, user already has a different ticket.

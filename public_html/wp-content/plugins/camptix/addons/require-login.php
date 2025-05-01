@@ -46,7 +46,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_filter( 'camptix_attendees_shortcode_query_args',         array( $this, 'hide_unconfirmed_attendees' ) );
 		add_filter( 'camptix_private_attendees_parameters',           array( $this, 'prevent_unknown_attendees_viewing_private_content' ) );
 
-		// Camptix Notify
+		// Camptix Notify.
 		add_filter( 'camptix_notify_segment_fields',                  array( $this, 'camptix_notify_segment_fields' ) );
 		add_filter( 'camptix_notify_segment_query',                   array( $this, 'camptix_notify_segment_query' ), 10, 2 );
 	}
@@ -961,7 +961,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 					'caption' => __( 'Unconfirmed', 'wordcamporg' ),
 					'value'   => 'unconfirmed',
 				],
-			]
+			],
 		];
 
 		return $segments;
@@ -997,7 +997,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 							'key' => 'tix_email',
 							'value' => $this->get_unknown_attendee_info()['email'],
 							'compare' => '='
-						)
+						),
 					);
 				} elseif ( 'confirmed' === $condition['value'] ) {
 					// Username is something other than the unconfirmed username.

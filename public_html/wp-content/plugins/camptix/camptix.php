@@ -3394,6 +3394,16 @@ class CampTix_Plugin {
 				?>
 			}));
 
+			<?php
+				// Allow other code to add additional segmentation fields.
+				$additional_segments = apply_filters( 'camptix_notify_segment_fields', array() );
+				foreach ( $additional_segments as $segment ) {
+					printf(
+						'camptix.collections.segmentFields.add( new camptix.models.SegmentField( %s ) );',
+						wp_json_encode( $segment )
+					);
+				}
+			?>
 
 			// Add POST'ed conditions.
 			<?php if ( ! empty( $conditions ) ) : ?>
@@ -3453,8 +3463,9 @@ class CampTix_Plugin {
 		$post_query_conditions = array();
 
 		$relation = strtolower( $relation );
-		if ( ! in_array( $relation, array( 'and', 'or' ) ) )
+		if ( ! in_array( $relation, array( 'and', 'or' ) ) ) {
 			return $segment;
+		}
 
 		$query = array(
 			'post_type' => 'tix_attendee',
@@ -3542,6 +3553,9 @@ class CampTix_Plugin {
 				continue;
 			}
 		}
+
+		// Allow others to filter the query as needed.
+		$query = apply_filters( 'camptix_notify_segment_query', $query, $conditions, $relation );
 
 		$post_query_segment = get_posts( $query );
 

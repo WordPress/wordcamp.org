@@ -667,7 +667,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		if ( $assigned_to_someone ) {
 			$content .= '<br><a href="' . esc_url( $login_link ) . '">' . sprintf( __( 'Login as %s to edit information', 'wordcamporg' ), esc_html( $attendee_username ) ) . '</a>';
 
-		// 3 - NOOP.
+		// 3 - NOOP, user already has a different ticket.
 		// 4 - Login to claim
 		} elseif ( $login_to_claim ) {
 			$content .= '<br><a href="' . esc_url( $login_link ) . '">' . __( 'Login to edit information', 'wordcamporg' ) . '</a>';

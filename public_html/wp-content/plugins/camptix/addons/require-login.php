@@ -663,7 +663,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		$current_user_ticket  = ( $current_user->user_login == $attendee_username );
 		$assigned_to_someone  = ( self::UNCONFIRMED_USERNAME != $attendee_username );
-		$assigned_to_no_one   = ( ( self::UNCONFIRMED_USERNAME == $attendee_username  ) || $is_unknown_attendee );
+		$assigned_to_no_one   = ( ( self::UNCONFIRMED_USERNAME == $attendee_username ) || $is_unknown_attendee );
 		$this_user_has_ticket = is_user_logged_in() && ! $current_user_ticket && $this->get_ticket_of_user( $current_user );
 		$login_to_claim       = $assigned_to_no_one && ! is_user_logged_in();
 		$can_claim_ticket     = $assigned_to_no_one && is_user_logged_in() && ! $this_user_has_ticket;

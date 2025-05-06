@@ -64,6 +64,10 @@ class Accommodations_Field extends CampTix_Addon {
 		add_filter( 'camptix_privacy_export_attendee_prop', array( $this, 'export_attendee_prop' ), 10, 4 );
 		add_filter( 'camptix_privacy_attendee_props_to_erase', array( $this, 'attendee_props_to_erase' ) );
 		add_action( 'camptix_privacy_erase_attendee_prop', array( $this, 'erase_attendee_prop' ), 10, 3 );
+
+		// E-mail template
+		add_filter( 'camptix_custom_email_templates', array( $this, 'register_custom_email_templates' ) );
+		add_filter( 'camptix_default_options', array( $this, 'custom_email_template_default_values' ) );
 	}
 
 	/**
@@ -508,6 +512,35 @@ class Accommodations_Field extends CampTix_Addon {
 			$anonymized_value = wp_privacy_anonymize_data( $type );
 			update_post_meta( $post->ID, $key, $anonymized_value );
 		}
+	}
+
+	/**
+	 * Add an e-mail template for accessibility accommodations.
+	 *
+	 * @param array $templates
+	 *
+	 * @return array
+	 */
+	public function register_custom_email_templates( $templates ) {
+		$templates['email_template_accessibility_accommodations'] = array(
+			'title'           => __( 'Accessibility Accommodations', 'wordcamporg' ),
+			'callback_method' => 'field_textarea',
+		);
+
+		return $templates;
+	}
+
+	/**
+	 * Add the default e-mail template text for accessibility accommodations.
+	 *
+	 * @param array $options
+	 *
+	 * @return array
+	 */
+	public function custom_email_template_default_values( $options ) {
+		$options['email_template_accessibility_accommodations'] = __( "Hey there!\n\nWhen you registered your ticket, you answered 'Yes' to the question 'Do you have any accessibility needs, such as a sign language interpreter or wheelchair access, to participate in WordCamp?' If you made the choice by mistake, you can edit the ticket information from:\n\n[ticket_url]\n\nIf you do require an accessibility accommodation, would you be able to provide additional detail and anything related that we should be informed of by replying to this email?", 'wordcamporg' );
+
+		return $options;
 	}
 }
 

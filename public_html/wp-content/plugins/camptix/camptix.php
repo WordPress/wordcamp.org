@@ -7849,11 +7849,13 @@ class CampTix_Plugin {
 		// Set the tmp receipt for shortcodes use.
 		$this->tmp( 'receipt', $receipt_content );
 
+		// Find the buyers name.
 		foreach ( $attendees as $attendee ) {
 			$attendee_email = $this->get_attendee_email( $attendee->ID );
 
-			if ( $attendee_email == $receipt_email ) {
+			if ( $attendee_email === $receipt_email ) {
 				$this->tmp( 'buyer_full_name', get_post_meta( $attendee->ID, 'tix_first_name', true ) . ' ' . get_post_meta( $attendee->ID, 'tix_last_name', true ) );
+				break;
 			}
 		}
 

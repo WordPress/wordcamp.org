@@ -64,6 +64,7 @@ class CampTix_Plugin {
 		do_action( 'camptix_pre_init' );
 
 		require_once( plugin_dir_path( __FILE__ ) . 'inc/class-camptix-currencies.php' );
+		require_once( plugin_dir_path( __FILE__ ) . 'utility.php' );
 
 		require( dirname( __FILE__ ) . '/inc/class-camptix-addon.php' );
 		require( dirname( __FILE__ ) . '/inc/class-camptix-payment-method.php' );
@@ -611,7 +612,7 @@ class CampTix_Plugin {
 	function manage_columns_ticket_action( $column, $post_id ) {
 		switch ( $column ) {
 			case 'tix_price':
-				echo esc_html( $this->append_currency( get_post_meta( $post_id, 'tix_price', true ) ) );
+				echo esc_html( CampTix_Utility::append_currency( get_post_meta( $post_id, 'tix_price', true ), $this->options ) );
 				break;
 			case 'tix_quantity':
 				echo intval( get_post_meta( $post_id, 'tix_quantity', true ) );
@@ -713,11 +714,11 @@ class CampTix_Plugin {
 				break;
 			case 'tix_order_total':
 				$order_total = (float) get_post_meta( $post_id, 'tix_order_total', true );
-				echo esc_html( $this->append_currency( $order_total ) );
+				echo esc_html( CampTix_Utility::append_currency( $order_total, $this->options ) );
 				break;
 			case 'tix_ticket_price':
 				$ticket_price = (float) get_post_meta( $post_id, 'tix_ticket_price', true );
-				echo esc_html( $this->append_currency( $ticket_price ) );
+				echo esc_html( CampTix_Utility::append_currency( $ticket_price, $this->options ) );
 				break;
 		}
 	}
@@ -759,7 +760,7 @@ class CampTix_Plugin {
 				$discount_price = (float) get_post_meta( $post_id, 'tix_discount_price', true );
 				$discount_percent = (int) get_post_meta( $post_id, 'tix_discount_percent', true );
 				if ( $discount_price > 0 ) {
-					echo esc_html( $this->append_currency( $discount_price ) );
+					echo esc_html( CampTix_Utility::append_currency( $discount_price, $this->options ) );
 				} elseif ( $discount_percent > 0 ) {
 					echo esc_html( $discount_percent . '%' );
 				}
@@ -934,46 +935,6 @@ class CampTix_Plugin {
 		) );
 
 		return $questions;
-	}
-
-	/**
-	 * Takes a ticket id and returns a sorted array of questions.
-	 *
-	 * @param int $ticket_id
-	 *
-	 * @return array
-	 */
-	function get_sorted_questions( $ticket_id ) {
-		$question_ids = (array) get_post_meta( $ticket_id, 'tix_question_id' );
-		$order = (array) get_post_meta( $ticket_id, 'tix_questions_order', true );
-
-		// Make sure we have at least some questions
-		if ( empty( $question_ids ) )
-			return array();
-
-		$questions = get_posts( array(
-			'post_type' => 'tix_question',
-			'post_status' => 'publish',
-			'posts_per_page' => -1,
-			'post__in' => $question_ids,
-		) );
-
-		$questions_with_keys = array();
-
-		foreach ( $questions as $question )
-			$questions_with_keys[ $question->ID ] = $question;
-
-		$questions = $questions_with_keys;
-		unset( $questions_with_keys );
-
-		$questions_sorted = array();
-		foreach ( $order as $question_id )
-			if ( isset( $questions[ $question_id ] ) )
-				$questions_sorted[] = $questions[ $question_id ];
-
-		unset( $questions );
-
-		return $questions_sorted;
 	}
 
 	/**
@@ -1915,7 +1876,7 @@ class CampTix_Plugin {
 				<?php foreach ( $currencies as $key => $currency ) : ?>
 					<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $key, $args['value'] ); ?>><?php
 						echo esc_html( $currency['label'] );
-						echo " (" . esc_html( $this->append_currency( 10000, true, $key ) ) . ")";
+						echo " (" . esc_html( CampTix_Utility::append_currency( 10000, true, $key ), $this->options ) . ")";
 					?></option>
 				<?php endforeach; ?>
 			</select>
@@ -1954,48 +1915,6 @@ class CampTix_Plugin {
 		}
 
 		return $a['label'] > $b['label'] ? 1 : -1;
-	}
-
-	/**
-	 * Give me a price and I'll format it according to the set currency for
-	 * display. Don't send my output anywhere but the screen, because I will
-	 * print &nbsp; and other things.
-	 */
-	function append_currency( $amount, $nbsp = true, $currency_key = false ) {
-		$amount = floatval( $amount );
-
-		$currencies = CampTix_Currency::get_currency_list();
-
-		if ( ! $currency_key ) {
-			if ( isset( $this->options['currency'] ) ) {
-				$currency_key = $this->options['currency'];
-			} else {
-				$currency_key = 'USD';
-			}
-		}
-
-		$currency = $currencies[ $currency_key ];
-
-		if ( ! isset( $currency['decimal_point'] ) ) {
-			$currency['decimal_point'] = 2;
-		}
-
-		if ( isset( $currency['locale'] ) ) {
-			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-			$formatted_amount = $formatter->format( $amount );
-		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
-			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
-		} else {
-			$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
-		}
-
-		$formatted_amount = apply_filters( 'tix_append_currency', $formatted_amount, $currency, $amount );
-
-		if ( $nbsp ) {
-			$formatted_amount = str_replace( ' ', '&nbsp;', $formatted_amount );
-		}
-
-		return $formatted_amount;
 	}
 
 	/*
@@ -2577,7 +2496,7 @@ class CampTix_Plugin {
 				'<div class="updated settings-error below-h2"><p>%s</p></div>',
 				sprintf(
 					__( '<strong>Woah!</strong> The revenue total does not match with the transactions total. The actual total is: <strong>%s</strong>. Something somewhere has gone wrong, please report this.', 'wordcamporg' ),
-					esc_html( $this->append_currency( $results['actual_total'] ) )
+					esc_html( CampTix_Utility::append_currency( $results['actual_total'], $this->options ) )
 				)
 			);
 		}
@@ -2699,18 +2618,18 @@ class CampTix_Plugin {
 				__( 'Ticket type', 'wordcamporg' ) => esc_html( $ticket->post_title ),
 				__( 'Sold', 'wordcamporg' ) => $ticket->tix_sold_count,
 				__( 'Remaining', 'wordcamporg' ) => $ticket->tix_remaining,
-				__( 'Sub-Total', 'wordcamporg' ) => $this->append_currency( $ticket->tix_sold_count * $ticket->tix_price ),
-				__( 'Discounted', 'wordcamporg' ) => $this->append_currency( $ticket->tix_discounted ),
-				__( 'Revenue', 'wordcamporg' ) => $this->append_currency( $ticket->tix_sold_count * $ticket->tix_price - $ticket->tix_discounted ),
+				__( 'Sub-Total', 'wordcamporg' ) => CampTix_Utility::append_currency( $ticket->tix_sold_count * $ticket->tix_price, $this->options ),
+				__( 'Discounted', 'wordcamporg' ) => CampTix_Utility::append_currency( $ticket->tix_discounted, $this->options ),
+				__( 'Revenue', 'wordcamporg' ) => CampTix_Utility::append_currency( $ticket->tix_sold_count * $ticket->tix_price - $ticket->tix_discounted, $this->options ),
 			);
 		}
 		$rows[] = array(
 			__( 'Ticket type', 'wordcamporg' ) => 'Total',
 			__( 'Sold', 'wordcamporg' ) => $totals->sold,
 			__( 'Remaining', 'wordcamporg' ) => $totals->remaining,
-			__( 'Sub-Total', 'wordcamporg' ) => $this->append_currency( $totals->sub_total ),
-			__( 'Discounted', 'wordcamporg' ) => $this->append_currency( $totals->discounted ),
-			__( 'Revenue', 'wordcamporg' ) => $this->append_currency( $totals->revenue ),
+			__( 'Sub-Total', 'wordcamporg' ) => CampTix_Utility::append_currency( $totals->sub_total, $this->options ),
+			__( 'Discounted', 'wordcamporg' ) => CampTix_Utility::append_currency( $totals->discounted, $this->options ),
+			__( 'Revenue', 'wordcamporg' ) => CampTix_Utility::append_currency( $totals->revenue, $this->options ),
 		);
 
 		// Update stats
@@ -4117,7 +4036,7 @@ class CampTix_Plugin {
 			<?php if ( $purchased <= 0 ) : ?>
 			<input type="text" name="tix_price" class="small-text" value="<?php echo esc_attr( number_format( (float) get_post_meta( get_the_ID(), 'tix_price', true ), $decimal_point, '.', '' ) ); ?>" autocomplete="off" /> <?php echo esc_html( $this->options['currency'] ); ?>
 			<?php else: ?>
-			<span><?php echo esc_html( $this->append_currency( get_post_meta( get_the_ID(), 'tix_price', true ) ) ); ?></span><br />
+			<span><?php echo esc_html( CampTix_Utility::append_currency( get_post_meta( get_the_ID(), 'tix_price', true ), $this->options ) ); ?></span><br />
 			<p class="description" style="margin-top: 10px;"><?php _e( 'You can not change the price because one or more tickets have already been purchased.', 'wordcamporg' ); ?></p>
 			<?php endif; ?>
 		</div>
@@ -4443,7 +4362,7 @@ class CampTix_Plugin {
 					</div>
 				</div>
 				<?php
-					$questions = $this->get_sorted_questions( get_the_ID() );
+					$questions = CampTix_Utility::get_sorted_questions( get_the_ID() );
 					$i = 0;
 				?>
 			</div>
@@ -4621,7 +4540,7 @@ class CampTix_Plugin {
 			<?php else: ?>
 				<span>
 				<?php if ( $discount_price ) : ?>
-					<?php echo esc_html( $this->append_currency( $discount_price ) ); ?>
+					<?php echo esc_html( CampTix_Utility::append_currency( $discount_price, $this->options ) ); ?>
 				<?php else : ?>
 					<?php echo esc_html( $discount_percent ); ?>%
 				<?php endif; ?>
@@ -4744,7 +4663,7 @@ class CampTix_Plugin {
 			$rows[] = array( __( 'Coupon', 'wordcamporg' ), sprintf( '<a href="%s">%s</a>', get_edit_post_link( $coupon->ID ), $coupon->post_title ) );
 		}
 
-		$rows[] = array( __( 'Order Total', 'wordcamporg' ), $this->append_currency( get_post_meta( $post->ID, 'tix_order_total', true ) ) );
+		$rows[] = array( __( 'Order Total', 'wordcamporg' ), CampTix_Utility::append_currency( get_post_meta( $post->ID, 'tix_order_total', true ), $this->options ) );
 
 		// Reservation
 		if ( $this->options['reservations_enabled'] ) {
@@ -4758,7 +4677,7 @@ class CampTix_Plugin {
 
 		// Questions
 		$rows[] = array( __( 'Questions', 'wordcamporg' ), '' );
-		$questions = $this->get_sorted_questions( $ticket_id );
+		$questions = CampTix_Utility::get_sorted_questions( $ticket_id );
 		$answers = get_post_meta( $post->ID, 'tix_questions', true );
 
 		foreach ( $questions as $question ) {
@@ -5283,7 +5202,7 @@ class CampTix_Plugin {
 
 				if ( $this->coupon->tix_discount_price > 0 ) {
 					$ticket->tix_discounted_price = number_format( $ticket->tix_price - $this->coupon->tix_discount_price, 2, '.', '' );
-					$ticket->tix_discounted_text = sprintf( __( 'Discounted %s', 'wordcamporg' ), $this->append_currency( $this->coupon->tix_discount_price ) );
+					$ticket->tix_discounted_text = sprintf( __( 'Discounted %s', 'wordcamporg' ), CampTix_Utility::append_currency( $this->coupon->tix_discount_price, $this->options ) );
 				} elseif ( $this->coupon->tix_discount_percent > 0 ) {
 					$ticket->tix_discounted_price = number_format( $ticket->tix_price - ( $ticket->tix_price * $this->coupon->tix_discount_percent / 100 ), 2, '.', '' );
 					$ticket->tix_discounted_text = sprintf( __( 'Discounted %s%%', 'wordcamporg' ), $this->coupon->tix_discount_percent );
@@ -5648,7 +5567,7 @@ class CampTix_Plugin {
 								</th>
 								<td class="tix-column-price">
 									<?php if ( $price > 0 ) : ?>
-										<?php echo esc_html( $this->append_currency( $price ) ); ?>
+										<?php echo esc_html( CampTix_Utility::append_currency( $price, $this->options ) ); ?>
 									<?php else : ?>
 										<?php _e( 'Free', 'wordcamporg' ); ?>
 									<?php endif; ?>
@@ -5681,7 +5600,7 @@ class CampTix_Plugin {
 										$discount_percent = (float) $this->coupon->tix_discount_percent;
 										$discount_text    = '0%';
 										if ( $discount_price > 0 ) {
-											$discount_text = $this->append_currency( $discount_price );
+											$discount_text = CampTix_Utility::append_currency( $discount_price, $this->options );
 										} elseif ( $discount_percent > 0 ) {
 											$discount_text = $discount_percent . '%';
 										}
@@ -5852,13 +5771,13 @@ class CampTix_Plugin {
 								</td>
 								<td class="tix-column-per-ticket">
 								<?php if ( $price > 0 ) : ?>
-									<?php echo esc_html( $this->append_currency( $price ) ); ?>
+									<?php echo esc_html( CampTix_Utility::append_currency( $price, $this->options ) ); ?>
 								<?php else : ?>
 									<?php _e( 'Free', 'wordcamporg' ); ?>
 								<?php endif; ?>
 								</td>
 								<td class="tix-column-quantity"><?php echo intval( $count ); ?></td>
-								<td class="tix-column-price"><?php echo esc_html( $this->append_currency( $price  * intval( $count ) ) ); ?></td>
+								<td class="tix-column-price"><?php echo esc_html( CampTix_Utility::append_currency( $price  * intval( $count ), $this->options ) ); ?></td>
 							</tr>
 						<?php endforeach; ?>
 						<tr class="tix-row-total">
@@ -5870,7 +5789,7 @@ class CampTix_Plugin {
 										$discount_text = '';
 
 										if ( $discount_price > 0 ) {
-											$discount_text = $this->append_currency( $discount_price );
+											$discount_text = CampTix_Utility::append_currency( $discount_price, $this->options );
 										} elseif ( $discount_percent > 0 ) {
 											$discount_text = $discount_percent . '%';
 										}
@@ -5891,7 +5810,7 @@ class CampTix_Plugin {
 							</td>
 							<td>
 								<span class="screen-reader-text"><?php esc_html_e( 'Total:', 'wordcamporg' ); ?></span>
-								<strong><?php echo esc_html( $this->append_currency( $total ) ); ?></strong>
+								<strong><?php echo esc_html( CampTix_Utility::append_currency( $total, $this->options ) ); ?></strong>
 							</td>
 						</tr>
 					</tbody>
@@ -5905,7 +5824,7 @@ class CampTix_Plugin {
 
 						<?php
 							$ticket = $this->tickets[$ticket_id];
-							$questions = $this->get_sorted_questions( $ticket->ID );
+							$questions = CampTix_Utility::get_sorted_questions( $ticket->ID );
 							$this->form_data['tix_attendee_info'][ $i ]['ticket_id'] = intval( $ticket->ID );
 						?>
 						<input type="hidden" name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][ticket_id]" value="<?php echo intval( $ticket->ID ); ?>" />
@@ -6274,7 +6193,7 @@ class CampTix_Plugin {
 			$this->notice( __( 'Please note that the payment for this ticket is still pending.', 'wordcamporg' ) );
 
 		$ticket = get_post( $ticket_id );
-		$questions = $this->get_sorted_questions( $ticket->ID );
+		$questions = CampTix_Utility::get_sorted_questions( $ticket->ID );
 		$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
 
 		$ticket_info = array(
@@ -7205,7 +7124,7 @@ class CampTix_Plugin {
 
 			$answers = array();
 			if ( isset( $_POST['tix_attendee_questions'][ $i ] ) ) {
-				$questions = $this->get_sorted_questions( $ticket->ID );
+				$questions = CampTix_Utility::get_sorted_questions( $ticket->ID );
 
 				foreach ( $questions as $question ) {
 					if ( isset( $_POST['tix_attendee_questions'][ $i ][ $question->ID ] ) ) {
@@ -7837,13 +7756,13 @@ class CampTix_Plugin {
 		$receipt_content = '';
 		foreach ( $order['items'] as $item ) {
 			$ticket = get_post( $item['id'] );
-			$receipt_content .= sprintf( "* %s (%s) x%d = %s\n", $ticket->post_title, $this->append_currency( $item['price'], false ), $item['quantity'], $this->append_currency( $item['price'] * $item['quantity'], false ) );
+			$receipt_content .= sprintf( "* %s (%s) x%d = %s\n", $ticket->post_title, CampTix_Utility::append_currency( $item['price'], $this->options, false ), $item['quantity'], CampTix_Utility::append_currency( $item['price'] * $item['quantity'], $this->options, false ) );
 		}
 
 		if ( isset( $order['coupon'] ) && $order['coupon'] )
 			$receipt_content .= sprintf( '* ' . __( 'Coupon used: %s', 'wordcamporg' ) . "\n", $order['coupon'] );
 
-		$receipt_content .= sprintf( "* " . __( 'Total: %s', 'wordcamporg' ), $this->append_currency( $order['total'], false ) );
+		$receipt_content .= sprintf( "* " . __( 'Total: %s', 'wordcamporg' ), CampTix_Utility::append_currency( $order['total'], $this->options, false ) );
 		$signature = apply_filters( 'camptix_ticket_email_signature', __( 'Let us know if you have any questions!', 'wordcamporg' ) );
 
 		// Set the tmp receipt for shortcodes use.

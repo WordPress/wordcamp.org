@@ -274,15 +274,13 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return bool
 	 */
 	protected function tickets_have_questions( $tickets_selected ) {
-		/** @var $camptix CampTix_Plugin */
-		global $camptix;
 		$has_questions = false;
 
 		foreach ( $tickets_selected as $ticket_id => $number_attendees_current_ticket ) {
 			$number_attendees_current_ticket = absint( $number_attendees_current_ticket );
 
 			if ( $number_attendees_current_ticket > 0 ) {
-				$questions = $camptix->get_sorted_questions( $ticket_id );
+				$questions = CampTix_Utility::get_sorted_questions( $ticket_id );
 
 				if ( count( $questions ) >= 1 ) {
 					$has_questions = true;

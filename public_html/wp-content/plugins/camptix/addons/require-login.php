@@ -745,13 +745,21 @@ class CampTix_Require_Login extends CampTix_Addon {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
+		// Check to see if user is a WordCamp admin, and if so, allow them to edit any attendee.
+		if ( current_user_can( 'edit_post', $attendee->ID ) ) {
+			return;
+		}
+
 		$current_user = wp_get_current_user();
 		$confirmed_usernames = $this->get_confirmed_usernames(
 			get_post_meta( $attendee->ID, 'tix_ticket_id', true ),
 			get_post_meta( $attendee->ID, 'tix_payment_token', true )
 		);
 
-		if ( $current_user->user_login != get_post_meta( $attendee->ID, 'tix_username', true ) && in_array( $current_user->user_login, $confirmed_usernames ) ) {
+		if (
+			$current_user->user_login != get_post_meta( $attendee->ID, 'tix_username', true ) &&
+			in_array( $current_user->user_login, $confirmed_usernames )
+		) {
 			$camptix->error_flag( 'require_login_edit_attendee_duplicate_username' );
 			$camptix->redirect_with_error_flags();
 		}
@@ -830,12 +838,19 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$current_user = wp_get_current_user();
 		$old_username = get_post_meta( $attendee->ID, 'tix_username', true );
 
-		if ( self::UNCONFIRMED_USERNAME != $old_username && $old_username != $current_user->user_login && current_user_can( 'manage_options' ) ) {
+		// If no changes, or no username known, nothing to do.
+		if (
+			$old_username === $current_user->user_login ||
+			! $current_user->user_login
+		) {
 			return;
 		}
 
-		// If the user isn't logged in, we need to avoid changing the username, since wp_get_current_user sets this to 0.
-		if ( 0 == $current_user->ID ) {
+		// If the user is an admin, don't even attempt to sync the username UNLESS the email matches.
+		if (
+			current_user_can( 'edit_post', $attendee->ID ) &&
+			$new_ticket_info['email'] != $current_user->user_email
+		) {
 			return;
 		}
 

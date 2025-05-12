@@ -19,7 +19,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'add_username_to_attendee_object' ), 10, 3 );
 		add_action( 'camptix_checkout_update_post_meta',              array( $this, 'save_checkout_username_meta' ), 10, 2 );
 		add_action( 'transition_post_status',                         array( $this, 'buyer_completed_registration' ), 10, 3 );
-		add_filter( 'camptix_email_tickets_template',                 array( $this, 'use_custom_email_templates' ), 10, 2 );
+		add_filter( 'camptix_email_tickets_template',                 array( $this, 'use_custom_email_templates' ), 5, 2 );
 		add_filter( 'camptix_get_attendee_email',                     array( $this, 'redirect_unknown_attendee_emails_to_buyer' ), 10, 2 );
 		add_action( 'camptix_attendee_form_before_input',             array( $this, 'inject_unknown_attendee_checkbox' ), 10, 3 );
 		add_filter( 'camptix_checkout_attendee_info',                 array( $this, 'add_unknown_attendee_info_stubs' ) );
@@ -32,7 +32,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_filter( 'camptix_attendee_report_extra_columns',          array( $this, 'get_attendee_report_extra_columns' ) );
 		add_filter( 'camptix_metabox_attendee_info_additional_rows',  array( $this, 'get_attendee_metabox_rows' ), 10, 2 );
 		add_filter( 'camptix_custom_email_templates',                 array( $this, 'register_custom_email_templates' ) );
-		add_filter( 'camptix_default_options',                        array( $this, 'custom_email_template_default_values' ) );
+		add_filter( 'camptix_options',                                array( $this, 'custom_email_template_option_values' ), 5 );
 
 		// Attendee Information front-end screen
 		add_action( 'camptix_form_edit_attendee_custom_error_flags',  array( $this, 'require_unique_usernames' ) );
@@ -455,10 +455,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 *
 	 * @return array
 	 */
-	public function custom_email_template_default_values( $options ) {
-		$options['email_template_multiple_purchase_receipt_unconfirmed_attendees'] = __( "Hi there!\n\nYou have purchased the following tickets:\n\n[receipt]\n\nYou can view and edit your order at any time before the event, by visiting the following link:\n\n[ticket_url]\n\nThe other attendees that you purchased tickets for will need to confirm their registration by visiting a link that was sent to them by e-mail.\n\nLet us know if you have any questions!", 'wordcamporg' );
-		$options['email_template_multiple_purchase_unconfirmed_attendee']          = __( "Hi there!\n\nA ticket to [event_name] has been purchased for you by [buyer_full_name].\n\nPlease visit the following page and fill in your information to complete your registration:\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
-		$options['email_template_multiple_purchase_unknown_attendee']              = __( "Hi there!\n\nThis e-mail is for the unknown attendee that you purchased a ticket for. When you decide who will be using the ticket, please forward the link below to them so that they can complete their registration.\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
+	public function custom_email_template_option_values( $options ) {
+		$options['email_template_multiple_purchase_receipt_unconfirmed_attendees'] ??= __( "Hi there!\n\nYou have purchased the following tickets:\n\n[receipt]\n\nYou can view and edit your order at any time before the event, by visiting the following link:\n\n[ticket_url]\n\nThe other attendees that you purchased tickets for will need to confirm their registration by visiting a link that was sent to them by e-mail.\n\nLet us know if you have any questions!", 'wordcamporg' );
+		$options['email_template_multiple_purchase_unconfirmed_attendee']          ??= __( "Hi there!\n\nA ticket to [event_name] has been purchased for you by [buyer_full_name].\n\nPlease visit the following page and fill in your information to complete your registration:\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
+		$options['email_template_multiple_purchase_unknown_attendee']              ??= __( "Hi there!\n\nThis e-mail is for the unknown attendee that you purchased a ticket for. When you decide who will be using the ticket, please forward the link below to them so that they can complete their registration.\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
 
 		return $options;
 	}

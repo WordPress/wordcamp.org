@@ -50,8 +50,8 @@ add_action( 'camptix_load_addons',                           __NAMESPACE__ . '\l
 add_filter( 'camptix_metabox_questions_default_fields_list', __NAMESPACE__ . '\modify_default_fields_list'          );
 add_filter( 'camptix_capabilities',                          __NAMESPACE__ . '\modify_capabilities'                 );
 add_filter( 'camptix_default_options',                       __NAMESPACE__ . '\modify_default_options'              );
-add_filter( 'camptix_options',                               __NAMESPACE__ . '\modify_email_templates'              );
-add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\switch_email_template'               );
+add_filter( 'camptix_options',                               __NAMESPACE__ . '\modify_email_templates',       20    );
+add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\switch_email_template',        20    );
 add_filter( 'camptix_html_message',                          __NAMESPACE__ . '\render_html_emails',           10, 2 );
 add_action( 'camptix_tshirt_report_intro',                   __NAMESPACE__ . '\tshirt_report_intro_message',  10, 3 );
 add_filter( 'camptix_stripe_checkout_image_url',             __NAMESPACE__ . '\stripe_default_checkout_image_url'   );
@@ -620,9 +620,15 @@ function modify_email_templates( $options ) {
 	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string";
 
 	$templates_that_need_footers = array(
+		// Regular templates.
 		'email_template_single_purchase',
 		'email_template_multiple_purchase',
 		'email_template_multiple_purchase_receipt',
+
+		// Require Login.
+		'email_template_multiple_purchase_receipt_unconfirmed_attendees',
+		'email_template_multiple_purchase_unknown_attendee',
+		'email_template_multiple_purchase_unconfirmed_attendee',
 	);
 
 	foreach ( $templates_that_need_footers as $template ) {
@@ -643,9 +649,15 @@ function modify_email_templates( $options ) {
  */
 function switch_email_template( $template_slug ) {
 	$templates_that_need_footers = array(
+		// Regular templates.
 		'email_template_single_purchase',
 		'email_template_multiple_purchase',
 		'email_template_multiple_purchase_receipt',
+
+		// Require Login.
+		'email_template_multiple_purchase_receipt_unconfirmed_attendees',
+		'email_template_multiple_purchase_unknown_attendee',
+		'email_template_multiple_purchase_unconfirmed_attendee',
 	);
 
 	if ( in_array( $template_slug, $templates_that_need_footers, true ) ) {

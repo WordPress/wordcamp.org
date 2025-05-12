@@ -6115,6 +6115,8 @@ class CampTix_Plugin {
 				),
 			),
 			'cache_results' => false,
+			'orderby' => 'ID',
+			'order' => 'ASC',
 		) );
 
 		if ( ! $attendees ) {
@@ -6153,6 +6155,8 @@ class CampTix_Plugin {
 					),
 				),
 				'cache_results' => false,
+				'orderby' => 'ID',
+				'order' => 'ASC',
 			) ) ) :
 
 				$attendee_ids = array();
@@ -7823,6 +7827,9 @@ class CampTix_Plugin {
 					'type' => 'CHAR',
 				),
 			),
+			// Ensure that the buyer is always first in the list.
+			'orderby' => 'ID',
+			'order'   => 'ASC',
 		) );
 
 		if ( ! $attendees )

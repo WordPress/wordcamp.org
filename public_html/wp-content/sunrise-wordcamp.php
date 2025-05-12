@@ -56,7 +56,35 @@ function main() {
 	}
 	*/
 
+	if ( handle_robots_txt_request( $domain, $path ) ) {
+		return;
+	}
+
 	redirect_to_site( $domain, $path );
+}
+
+/**
+ * Check if the current request is for a robots.txt file, and handle it if so.
+ *
+ * @param string $domain
+ * @param string $path
+ *
+ * @return bool Whether the request will be handled as a robots.txt request.
+ */
+function handle_robots_txt_request( $domain, $path ) {
+	if ( '/' !== $path || '/robots.txt' !== $_SERVER['REQUEST_URI'] ) {
+		return false;
+	}
+
+	$latest_site = get_latest_site( $domain );
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	set_network_and_site( $latest_site );
+
+	// Abort redirects
+	return true;
 }
 
 /**

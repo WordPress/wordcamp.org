@@ -632,6 +632,10 @@ function modify_email_templates( $options ) {
 	);
 
 	foreach ( $templates_that_need_footers as $template ) {
+		if ( ! isset( $options[ $template ] ) ) {
+			continue;
+		}
+
 		// We can't add the string to the original option or it will keep getting added over and over again
 		// whenever the email templates are customized and saved.
 		$options[ $template . '_with_footer' ] = $options[ $template ] . $email_footer_string;

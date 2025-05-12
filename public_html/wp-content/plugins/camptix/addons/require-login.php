@@ -757,7 +757,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		);
 
 		if (
-			$current_user->user_login != get_post_meta( $attendee->ID, 'tix_username', true ) &&
+			get_post_meta( $attendee->ID, 'tix_username', true ) != $current_user->user_login &&
 			in_array( $current_user->user_login, $confirmed_usernames )
 		) {
 			$camptix->error_flag( 'require_login_edit_attendee_duplicate_username' );

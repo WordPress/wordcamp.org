@@ -8454,7 +8454,14 @@ class CampTix_Plugin {
 	 * @return string
 	 */
 	public static function sanitize_format_html_message( $message ) {
-		return make_clickable( wpautop( wp_kses( $message, self::get_allowed_html_mail_tags() ) ) );
+		$message = wp_kses( $message, self::get_allowed_html_mail_tags() );
+		$message = wpautop( $message );
+		$message = make_clickable( $message );
+
+		// Convert the sponsor separator to an hr tag.
+		$message = str_replace( '<p>===</p>', '<hr/>', $message );
+
+		return $message;
 	}
 
 	/*

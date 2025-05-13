@@ -43,6 +43,10 @@
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->
+<li><a href="https://events.wordpress.org/campusconnect/">WordPress Campus Connect</a>↗</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
 <li><a href="https://make.wordpress.org/community/handbook/contributor-day/">Contributor Days↗</a></li>
 <!-- /wp:list-item -->
 
@@ -52,10 +56,6 @@
 
 <!-- wp:list-item -->
 <li><a href="https://doaction.org/">do_action charity hackathons↗</a></li>
-<!-- /wp:list-item -->
-
-<!-- wp:list-item -->
-<li><a href="https://events.wordpress.org/campusconnect/">WordPress Campus Connect</a>↗</li>
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->

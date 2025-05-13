@@ -20,15 +20,15 @@
 	<!-- /wp:list-item -->
 
 	<!-- wp:list-item {"fontSize":"medium"} -->
+	<li class="has-medium-font-size"><a href="https://events.wordpress.org/campusconnect/">WordPress Campus Connect</a> ↗</li>
+	<!-- /wp:list-item -->
+
+	<!-- wp:list-item {"fontSize":"medium"} -->
 	<li class="has-medium-font-size"><a href="https://www.meetup.com/pro/wordpress">Meetup.com</a> ↗</li>
 	<!-- /wp:list-item -->
 
 	<!-- wp:list-item {"fontSize":"medium"} -->
 	<li class="has-medium-font-size"><a href="https://doaction.org">Do_Action hackathons</a> ↗</li>
-	<!-- /wp:list-item -->
-
-	<!-- wp:list-item {"fontSize":"medium"} -->
-	<li class="has-medium-font-size"><a href="https://events.wordpress.org/campusconnect/">WordPress Campus Connect</a> ↗</li>
 	<!-- /wp:list-item -->
 
 	<!-- wp:list-item {"fontSize":"medium"} -->

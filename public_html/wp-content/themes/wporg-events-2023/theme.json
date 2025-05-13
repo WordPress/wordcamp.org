@@ -38,5 +38,12 @@
 				}
 			]
 		}
-	}
+	},
+	"customTemplates": [
+		{
+			"name": "template-featured-image-banner",
+			"title": "Featured Image Banner with Content",
+			"postTypes": [ "page" ]
+		}
+	]
 }

@@ -90,10 +90,13 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 	margin-top: 10px !important;
 }
 
+/* Ensure Contact form fields have an outline */
+
 .wp-block-jetpack-contact-form input[type="text"],
 	.wp-block-jetpack-contact-form input[type="email"],
 	.wp-block-jetpack-contact-form input[type="tel"],
-	.wp-block-jetpack-contact-form textarea {
+	.wp-block-jetpack-contact-form textarea,
+	.wp-block-jetpack-contact-form select {
 		outline: 1px solid var(--wp--preset--color--charcoal-5);
 	}
 

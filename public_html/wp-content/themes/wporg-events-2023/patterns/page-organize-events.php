@@ -55,6 +55,10 @@
 <!-- /wp:list-item -->
 
 <!-- wp:list-item -->
+<li><a href="https://events.wordpress.org/campusconnect/">WordPress Campus Connect</a>↗</li>
+<!-- /wp:list-item -->
+
+<!-- wp:list-item -->
 <li><a href="https://make.wordpress.org/community/handbook/community-deputy/other-event-formats/nextgen-wordpress-event/">Suggest a new type of event↗</a></li>
 <!-- /wp:list-item --></ul>
 <!-- /wp:list --></div>

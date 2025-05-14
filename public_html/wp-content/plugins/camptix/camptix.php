@@ -4550,10 +4550,10 @@ class CampTix_Plugin {
 										<?php echo esc_html( apply_filters( 'the_title', $question->post_title ) ); ?>
 
 										<input type="hidden" data-model-attribute="post_id" value="<?php echo absint( $question->ID ); ?>" />
-										<input type="hidden" data-model-attribute="type" value="<?php echo esc_attr( get_post_meta( $question->ID, 'tix_type', true ) ); ?>" />
+										<input type="hidden" data-model-attribute="type" value="<?php echo esc_attr( $question->tix_type ); ?>" />
 										<input type="hidden" data-model-attribute="question" value="<?php echo esc_attr( $question->post_title ); ?>" />
-										<input type="hidden" data-model-attribute="required" value="<?php echo intval( get_post_meta( $question->ID, 'tix_required', true ) ); ?>" />
-										<input type="hidden" data-model-attribute="values" value="<?php echo esc_attr( implode( ', ', (array) get_post_meta( $question->ID, 'tix_values', true ) ) ); ?>" />
+										<input type="hidden" data-model-attribute="required" value="<?php echo intval( $question->tix_required ); ?>" />
+										<input type="hidden" data-model-attribute="values" value="<?php echo esc_attr( implode( ', ', (array) $question->tix_values ?: [] ) ); ?>" />
 									</label>
 								</li>
 								<?php endforeach; ?>
@@ -4596,10 +4596,10 @@ class CampTix_Plugin {
 			<?php foreach ( $questions as $question ) : ?>
 				camptix.questions.add( new camptix.models.Question( {
 					post_id: <?php echo esc_js( $question->ID ); ?>,
-					type: '<?php echo esc_js( get_post_meta( $question->ID, 'tix_type', true ) ); ?>',
+					type: '<?php echo esc_js( $question->tix_type ); ?>',
 					question: '<?php echo esc_js( apply_filters( 'the_title', $question->post_title ) ); ?>',
-					required: <?php echo esc_js( (int) (bool) get_post_meta( $question->ID, 'tix_required', true ) ); ?>,
-					values: '<?php echo esc_js( implode( ', ', (array) get_post_meta( $question->ID, 'tix_values', true ) ) ); ?>'
+					required: <?php echo esc_js( (int) $question->tix_required ); ?>,
+					values: '<?php echo esc_js( implode( ', ', (array) $question->tix_values ?: [] ) ); ?>'
 				} ) );
 			<?php endforeach; ?>
 			}(jQuery));
@@ -6029,7 +6029,6 @@ class CampTix_Plugin {
 											$value      = isset( $this->form_data['tix_attendee_questions'][ $i ][ $question->ID ] ) ? $this->form_data['tix_attendee_questions'][ $i ][ $question->ID ] : '';
 											$type       = $question->tix_type;
 											$required   = $question->tix_required;
-											$values     = $question->tix_values;
 											$class_name = 'tix-row-question-' . $question->ID;
 										?>
 
@@ -6041,7 +6040,7 @@ class CampTix_Plugin {
 												</label>
 											</td>
 											<td class="tix-right">
-												<?php do_action( "camptix_question_field_{$type}", $name, $value, $question, $required, $values ); ?>
+												<?php do_action( "camptix_question_field_{$type}", $name, $value, $question, $required ); ?>
 											</td>
 										</tr>
 									<?php endforeach; ?>
@@ -6342,7 +6341,7 @@ class CampTix_Plugin {
 
 				// @todo maybe check $user_values against $type and $question_values
 
-				if ( (bool) get_post_meta( $question->ID, 'tix_required', true ) && empty( $new_answers[ $question->ID ] ) ) {
+				if ( $question->tix_required && empty( $new_answers[ $question->ID ] ) ) {
 					$errors[] = __( 'Please fill in all required fields.', 'wordcamporg' );
 				}
 			}
@@ -6448,8 +6447,8 @@ class CampTix_Plugin {
 								<?php
 									$name       = sprintf( 'tix_ticket_questions[%d]', $question->ID );
 									$value      = isset( $answers[ $question->ID ] ) ? $answers[ $question->ID ] : '';
-									$type       = get_post_meta( $question->ID, 'tix_type', true );
-									$required   = get_post_meta( $question->ID, 'tix_required', true );
+									$type       = $question->tix_type;
+									$required   = $question->tix_required;
 									$class_name = 'tix-row-question-' . $question->ID;
 								?>
 
@@ -7247,7 +7246,7 @@ class CampTix_Plugin {
 						$answers[ $question->ID ] = $answer;
 					}
 
-					if ( (bool) get_post_meta( $question->ID, 'tix_required', true ) && empty( $answers[ $question->ID ] ) ) {
+					if ( $question->tix_required && empty( $answers[ $question->ID ] ) ) {
 						$this->error_flags['required_fields'] = true;
 						break;
 					}

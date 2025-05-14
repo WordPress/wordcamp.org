@@ -38,7 +38,7 @@ class Allergy_Field extends CampTix_Addon {
 
 		// Ask the question.
 		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
-		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 20 ); // 20 = allergy, 30 = accessibility, 40 = this, 50 = CoC
+		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 20 ); // 20 = allergy, 30 = accessibility, 40 = first time, 50 = CoC
 		add_filter( 'camptix_get_attendee_answers', array( $this, 'populate_attendee_answer' ), 10, 2 );
 
 		// Save the answer as post meta.
@@ -59,7 +59,6 @@ class Allergy_Field extends CampTix_Addon {
 		add_filter( 'camptix_privacy_attendee_props_to_erase', array( $this, 'attendee_props_to_erase' ) );
 		add_action( 'camptix_privacy_erase_attendee_prop', array( $this, 'erase_attendee_prop' ), 10, 3 );
 	}
-
 
 	/**
 	 * Add the question to the list of questions.

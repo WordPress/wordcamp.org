@@ -20,31 +20,31 @@ class Code_Of_Conduct_Field extends CampTix_Addon {
 	 * Hook into WordPress and Camptix.
 	 */
 	public function camptix_init() {
-		// Registration field
-		add_action( 'camptix_attendee_form_after_questions', array( $this, 'render_registration_field' ), 15, 2 );
-		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ) );
-		add_action( 'camptix_form_attendee_info_errors', array( $this, 'add_registration_field_validation_error' ) );
-		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'populate_attendee_object' ), 10, 2 );
+
+		// Ask the question.
+		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
+		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 50 ); // 20 = allergy, 30 = accessibility, 40 = first time, 50 = CoC
+		add_filter( 'camptix_get_attendee_answers', array( $this, 'populate_attendee_answer' ), 10, 2 );
+
+		// Save the answer as post meta.
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
 
-		// Metabox
-		add_filter( 'camptix_metabox_attendee_info_additional_rows', array( $this, 'add_metabox_row' ), 15, 2 );
+		// Registration field
+		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ) );
+		add_action( 'camptix_form_attendee_info_errors', array( $this, 'add_registration_field_validation_error' ) );
 	}
 
 	/**
-	 * Render the new field for the registration form during checkout.
+	 * Add the question to the list of questions.
 	 *
-	 * @param array $form_data
-	 * @param int   $i
+	 * @param array $questions
+	 *
+	 * @return array
 	 */
-	public function render_registration_field( $form_data, $i ) {
-		$current_data = $form_data['tix_attendee_info'][ $i ] ?? array();
-
-		$current_data = wp_parse_args( $current_data, array(
-			self::SLUG => false,
-		) );
-
-		$current_data[ self::SLUG ] = wp_validate_boolean( $current_data[ self::SLUG ] );
+	function add_question( $questions, $ticket_id ) {
+		if ( apply_filters( 'camptix_coc_should_skip', false ) ) {
+			return $questions;
+		}
 
 		$coc_url = $this->maybe_get_coc_url();
 		$question = __( 'Do you agree to follow the event Code of Conduct?', 'wordcamporg' );
@@ -56,25 +56,62 @@ class Code_Of_Conduct_Field extends CampTix_Addon {
 			);
 		}
 
-		?>
+		$questions[ self::SLUG ] = (object) array(
+			// Immitate a WP_Post with metadata..
+			'ID' 	       => self::SLUG,
+			'post_title'   => apply_filters( 'camptix_coc_question_text', $question, $ticket_id ),
+			'tix_type'     => 'checkbox',
+			'tix_required' => true,
+			'tix_values'   => [
+				'yes' => _x( 'Yes', 'ticket registration option', 'wordcamporg' ),
+			],
+		);
 
-		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
-			<td class="tix-required tix-left">
-				<?php echo wp_kses_post( $question ); ?>
-				<span aria-hidden="true" class="tix-required-star">*</span>
-			</td>
+		return $questions;
+	}
 
-			<td class="tix-right">
-				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( strip_tags( $question ) ); ?>">
-					<label>
-						<input name="tix_attendee_info[<?php echo esc_attr( $i ); ?>][<?php echo esc_attr( self::SLUG ); ?>]" type="checkbox" <?php checked( $current_data[ self::SLUG ] ); ?> required />
-						<?php echo esc_html_x( 'Yes', 'ticket registration option', 'wordcamporg' ); ?>
-					</label>
-				</fieldset>
-			</td>
-		</tr>
+	/**
+	 * Add the new field to the questions order.
+	 *
+	 * @param array $order
+	 *
+	 * @return array
+	 */
+	function add_question_order( $order ) {
+		$order[] = self::SLUG;
 
-		<?php
+		return $order;
+	}
+
+	/**
+	 * Save the value of the new field to the attendee post upon completion of checkout.
+	 *
+	 * @param int     $post_id
+	 * @param WP_Post $attendee
+	 *
+	 * @return bool|int
+	 */
+	public function save_registration_field( $post_id, $attendee ) {
+		return update_post_meta( $post_id, 'tix_' . self::SLUG, $attendee->{ self::SLUG } );
+	}
+
+	/**
+	 * Retrieve the stored value of the new field for use when displaying the attendee info.
+	 *
+	 * Back-compat only, for where the field was stored outside of the question answers.
+	 *
+	 * @param array   $ticket_info
+	 * @param WP_Post $attendee
+	 *
+	 * @return array
+	 */
+	public function populate_attendee_answer( $ticket_info, $attendee ) {
+		$attendee = get_post( $attendee );
+		$value    = get_post_meta( $attendee->ID, 'tix_' . self::SLUG, true );
+
+		$ticket_info[ self::SLUG ] ??= $this->options[ $value ] ?? '';
+
+		return $ticket_info;
 	}
 
 	/**
@@ -109,72 +146,6 @@ class Code_Of_Conduct_Field extends CampTix_Addon {
 		if ( isset( $error_flags[ self::SLUG . '_unchecked' ] ) ) {
 			$camptix->error( __( 'You must agree to follow the event Code of Conduct to obtain a ticket.', 'wordcamporg' ) );
 		}
-	}
-
-	/**
-	 * Add the value of the new field to the attendee object during checkout processing.
-	 *
-	 * @param WP_Post $attendee
-	 * @param array   $data
-	 *
-	 * @return WP_Post
-	 */
-	public function populate_attendee_object( $attendee, $data ) {
-		$attendee->{ self::SLUG } = $data[ self::SLUG ];
-
-		return $attendee;
-	}
-
-	/**
-	 * Save the value of the new field to the attendee post upon completion of checkout.
-	 *
-	 * @param int     $post_id
-	 * @param WP_Post $attendee
-	 *
-	 * @return bool|int
-	 */
-	public function save_registration_field( $post_id, $attendee ) {
-		return update_post_meta( $post_id, 'tix_' . self::SLUG, $attendee->{ self::SLUG } );
-	}
-
-	/**
-	 * Add a row to the Attendee Info metabox table for the new field and value.
-	 *
-	 * @param array   $rows
-	 * @param WP_Post $post
-	 *
-	 * @return mixed
-	 */
-	public function add_metabox_row( $rows, $post ) {
-		$value = get_post_meta( $post->ID, 'tix_' . self::SLUG, true ) ? _x( 'Yes', 'ticket registration option', 'wordcamporg' ) : '';
-		$new_row = array( __( 'Do you agree to follow the event Code of Conduct?', 'wordcamporg' ), esc_html( $value ) );
-
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
-
-		$ticket_row = array_filter( $rows, function( $row ) {
-			if ( 'Ticket' === $row[0] ) {
-				return true;
-			}
-
-			return false;
-		} );
-
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
-
-		if ( ! empty( $ticket_row ) ) {
-			$ticket_row_key = key( $ticket_row );
-			$row_indexes    = array_keys( $rows );
-			$position       = array_search( $ticket_row_key, $row_indexes );
-
-			$slice = array_slice( $rows, $position );
-
-			array_unshift( $slice, $new_row );
-			array_splice( $rows, $position, count( $rows ), $slice );
-		} else {
-			$rows[] = $new_row;
-		}
-
-		return $rows;
 	}
 
 	/**

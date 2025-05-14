@@ -977,6 +977,11 @@ class CampTix_Plugin {
 
 		unset( $questions );
 
+		/**
+		 * Filter the sorted questions.
+		 */
+		$questions_sorted = apply_filters( 'camptix_ticket_questions', $questions_sorted, $ticket_id );
+
 		return $questions_sorted;
 	}
 

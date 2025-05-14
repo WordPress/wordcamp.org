@@ -4383,7 +4383,7 @@ class CampTix_Plugin {
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
-			aria-label="<?php echo esc_attr( apply_filters( 'the_title', $question->post_title ) ); ?>"
+			aria-label="<?php echo esc_attr( strip_tags( apply_filters( 'the_title', $question->post_title ) ) ); ?>"
 		>
 		<?php if ( $values ) : ?>
 			<?php foreach ( (array) $values as $question_value ) : ?>
@@ -4423,12 +4423,12 @@ class CampTix_Plugin {
 	/**
 	 * A radio input for questions.
 	 */
-	function question_field_radio( $name, $user_value, $question, $required = false ) {
+	function question_field_radio( $name, $user_value, $question, $required = false  ) {
 		$values = $question->tix_values ?: [];
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
-			aria-label="<?php echo esc_attr( apply_filters( 'the_title', $question->post_title ) ); ?>"
+			aria-label="<?php echo esc_attr( strip_tags( apply_filters( 'the_title', $question->post_title ) ) ); ?>"
 		>
 			<?php foreach ( (array) $values as $question_value ) : ?>
 				<label>
@@ -6030,12 +6030,25 @@ class CampTix_Plugin {
 											$type       = $question->tix_type;
 											$required   = $question->tix_required;
 											$class_name = 'tix-row-question-' . $question->ID;
+
+											// Questions can have minimal HTML in the question.
+											$question_text = apply_filters( 'the_title', $question->post_title );
+											$question_text = make_clickable( $question_text );
+											$question_text = wp_kses(
+												$question_text,
+												array(
+													'a' => array(
+														'href'   => array(),
+														'target' => array(),
+													),
+												)
+											);
 										?>
 
 										<tr class="<?php echo esc_attr( $class_name ); ?>">
 											<td class="<?php if ( $required ) echo 'tix-required'; ?> tix-left">
 												<label for="<?php echo in_array( $type, array( 'radio', 'checkbox' ) ) ? '' : $this->get_field_id( $name ); ?>">
-													<?php echo make_clickable( esc_html( apply_filters( 'the_title', $question->post_title ) ) ); ?>
+													<?php echo $question_text; ?>
 													<?php if ( $required ) echo ' <span aria-hidden="true" class="tix-required-star">*</span>'; ?>
 												</label>
 											</td>
@@ -6450,17 +6463,30 @@ class CampTix_Plugin {
 									$type       = $question->tix_type;
 									$required   = $question->tix_required;
 									$class_name = 'tix-row-question-' . $question->ID;
+
+									// Questions can have minimal HTML in the question.
+									$question_text = apply_filters( 'the_title', $question->post_title );
+									$question_text = make_clickable( $question_text );
+									$question_text = wp_kses(
+										$question_text,
+										array(
+											'a' => array(
+												'href'   => array(),
+												'target' => array(),
+											),
+										)
+									);
 								?>
 
 								<tr class="<?php echo esc_attr( $class_name ); ?>">
 									<td class="<?php if ( $required ) echo 'tix-required'; ?> tix-left">
 										<label for="<?php echo in_array( $type, array( 'radio', 'checkbox' ) ) ? '' : $this->get_field_id( $name ); ?>">
-											<?php echo esc_html( apply_filters( 'the_title', $question->post_title ) ); ?>
+											<?php echo $question_text; ?>
 											<?php if ( $required ) echo ' <span aria-hidden="true" class="tix-required-star">*</span>'; ?>
 										</label>
 									</td>
 									<td class="tix-right">
-										<?php do_action( "camptix_question_field_{$type}", $name, $value, $question ); ?>
+										<?php do_action( "camptix_question_field_{$type}", $name, $value, $question, $required ); ?>
 									</td>
 								</tr>
 							<?php endforeach; ?>

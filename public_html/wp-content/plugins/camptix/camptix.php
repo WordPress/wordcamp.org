@@ -948,8 +948,9 @@ class CampTix_Plugin {
 		$order = (array) get_post_meta( $ticket_id, 'tix_questions_order', true );
 
 		// Make sure we have at least some questions
-		if ( empty( $question_ids ) )
+		if ( empty( $question_ids ) ) {
 			return array();
+		}
 
 		$questions = get_posts( array(
 			'post_type' => 'tix_question',
@@ -960,16 +961,19 @@ class CampTix_Plugin {
 
 		$questions_with_keys = array();
 
-		foreach ( $questions as $question )
+		foreach ( $questions as $question ) {
 			$questions_with_keys[ $question->ID ] = $question;
+		}
 
 		$questions = $questions_with_keys;
 		unset( $questions_with_keys );
 
 		$questions_sorted = array();
-		foreach ( $order as $question_id )
-			if ( isset( $questions[ $question_id ] ) )
+		foreach ( $order as $question_id ) {
+			if ( isset( $questions[ $question_id ] ) ) {
 				$questions_sorted[] = $questions[ $question_id ];
+			}
+		}
 
 		unset( $questions );
 

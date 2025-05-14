@@ -36,20 +36,16 @@ class Allergy_Field extends CampTix_Addon {
 			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
 		);
 
-		// Registration field
-		add_action( 'camptix_attendee_form_after_questions', array( $this, 'render_registration_field' ), 11, 2 );
-		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ), 11 );
-		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'populate_attendee_object' ), 10, 2 );
+		// Ask the question.
+		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
+		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 20 ); // 20 = allergy, 30 = accessibility, 40 = this, 50 = CoC
+		add_filter( 'camptix_get_attendee_answers', array( $this, 'populate_attendee_answer' ), 10, 2 );
+
+		// Save the answer as post meta.
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
+
+		// Email notifications
 		add_action( 'camptix_ticket_emailed', array( $this, 'after_email_receipt' ) );
-
-		// Edit info field
-		add_filter( 'camptix_form_edit_attendee_ticket_info', array( $this, 'populate_ticket_info_array' ), 10, 2 );
-		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'validate_save_ticket_info_field' ), 10, 2 );
-		add_action( 'camptix_form_edit_attendee_after_questions', array( $this, 'render_ticket_info_field' ), 11 );
-
-		// Metabox
-		add_filter( 'camptix_metabox_attendee_info_additional_rows', array( $this, 'add_metabox_row' ), 11, 2 );
 
 		// Reporting
 		add_filter( 'camptix_summary_fields', array( $this, 'add_summary_field' ) );
@@ -64,114 +60,42 @@ class Allergy_Field extends CampTix_Addon {
 		add_action( 'camptix_privacy_erase_attendee_prop', array( $this, 'erase_attendee_prop' ), 10, 3 );
 	}
 
-	/**
-	 * Render the field, used on both Registration and when editing an existing ticket.
-	 *
-	 * @param string $name
-	 * @param string $value
-	 * @param int    $ticket_id
-	 */
-	public function render_field( $name, $value, $ticket_id ) {
-		if ( apply_filters( 'camptix_allergy_should_skip', false ) ) {
-			return;
-		}
-
-		$question = apply_filters( 'camptix_allergy_question_text', $this->question, $ticket_id );
-		?>
-
-		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
-			<td class="tix-required tix-left">
-				<?php echo esc_html( $question ); ?>
-				<span aria-hidden="true" class="tix-required-star">*</span>
-			</td>
-
-			<td class="tix-right">
-				<fieldset class="tix-screen-reader-fieldset" aria-label="<?php echo esc_attr( $question ); ?>">
-					<label>
-						<input
-							name="<?php echo esc_attr( $name ); ?>"
-							type="radio"
-							value="yes"
-							<?php checked( 'yes', $value ); ?>
-							required
-						/>
-						<?php echo esc_html( $this->options['yes'] ); ?>
-					</label>
-					<br />
-					<label>
-						<input
-							name="<?php echo esc_attr( $name ); ?>"
-							type="radio"
-							value="no"
-							<?php checked( 'no', $value ); ?>
-							required
-						/>
-						<?php echo esc_html( $this->options['no'] ); ?>
-					</label>
-				</fieldset>
-			</td>
-		</tr>
-
-		<?php
-	}
 
 	/**
-	 * Render the new field for the registration form during checkout.
+	 * Add the question to the list of questions.
 	 *
-	 * @param array $form_data
-	 * @param int   $i
-	 */
-	public function render_registration_field( $form_data, $i ) {
-		$current_data = ( isset( $form_data['tix_attendee_info'][ $i ] ) )
-			? $form_data['tix_attendee_info'][ $i ]
-			: array();
-
-		$current_data = wp_parse_args( $current_data, array( self::SLUG => '' ) );
-
-		$this->render_field(
-			sprintf( 'tix_attendee_info[%d][%s]', $i, self::SLUG ),
-			$current_data[ self::SLUG ],
-			$current_data['ticket_id']
-		);
-	}
-
-	/**
-	 * Validate the value of the new field submitted to the registration form during checkout.
-	 *
-	 * @param array $data
+	 * @param array $questions
 	 *
 	 * @return array
 	 */
-	public function validate_registration_field( $data ) {
-		/* @var CampTix_Plugin $camptix */
-		global $camptix;
-
-		$skip_question = apply_filters( 'camptix_allergy_should_skip', false );
-		if ( $skip_question ) {
-			return $data;
+	function add_question( $questions, $ticket_id ) {
+		if ( apply_filters( 'camptix_allergy_should_skip', false ) ) {
+			return $questions;
 		}
 
-		if ( ! isset( $data[ self::SLUG ] ) || empty( $data[ self::SLUG ] ) ) {
-			$camptix->error_flags['required_fields'] = true;
-		} else {
-			$data[ self::SLUG ] = ( 'yes' === $data[ self::SLUG ] ) ? 'yes' : 'no';
-		}
+		$questions[ self::SLUG ] = (object) array(
+			// Immitate a WP_Post with metadata..
+			'ID' 	       => self::SLUG,
+			'post_title'   => apply_filters( 'camptix_allergy_question_text', $this->question, $ticket_id ),
+			'tix_type'     => 'radio',
+			'tix_required' => true,
+			'tix_values'   => $this->options,
+		);
 
-		return $data;
+		return $questions;
 	}
 
 	/**
-	 * Add the value of the new field to the attendee object during checkout processing.
+	 * Add the new field to the questions order.
 	 *
-	 * @param WP_Post $attendee
-	 * @param array   $data
+	 * @param array $order
 	 *
-	 * @return WP_Post
+	 * @return array
 	 */
-	public function populate_attendee_object( $attendee, $data ) {
-		$attendee->{ self::SLUG } = isset( $data[ self::SLUG ] ) ? $data[ self::SLUG ] : 'no';
+	function add_question_order( $order ) {
+		$order[] = self::SLUG;
 
-		return $attendee;
+		return $order;
 	}
 
 	/**
@@ -187,6 +111,25 @@ class Allergy_Field extends CampTix_Addon {
 	}
 
 	/**
+	 * Retrieve the stored value of the new field for use when displaying the attendee info.
+	 *
+	 * Back-compat only, for where the field was stored outside of the question answers.
+	 *
+	 * @param array   $ticket_info
+	 * @param WP_Post $attendee
+	 *
+	 * @return array
+	 */
+	public function populate_attendee_answer( $ticket_info, $attendee ) {
+		$attendee = get_post( $attendee );
+		$value    = get_post_meta( $attendee->ID, 'tix_' . self::SLUG, true );
+
+		$ticket_info[ self::SLUG ] ??= $this->options[ $value ] ?? '';
+
+		return $ticket_info;
+	}
+
+	/**
 	 * Initialize email notifications after the ticket receipt email has been sent.
 	 *
 	 * @param int $attendee_id
@@ -198,98 +141,6 @@ class Allergy_Field extends CampTix_Addon {
 		if ( $attendee instanceof WP_Post && 'tix_attendee' === $attendee->post_type ) {
 			$this->maybe_send_notification_email( $value, $attendee );
 		}
-	}
-
-	/**
-	 * Retrieve the stored value of the new field for use on the Edit Info form.
-	 *
-	 * @param array   $ticket_info
-	 * @param WP_Post $attendee
-	 *
-	 * @return array
-	 */
-	public function populate_ticket_info_array( $ticket_info, $attendee ) {
-		$ticket_info[ self::SLUG ] = get_post_meta( $attendee->ID, 'tix_' . self::SLUG, true );
-
-		return $ticket_info;
-	}
-
-	/**
-	 * Update the stored value of the new field if it was changed in the Edit Info form.
-	 *
-	 * @param array   $data
-	 * @param WP_Post $attendee
-	 *
-	 * @return bool|int
-	 */
-	public function validate_save_ticket_info_field( $data, $attendee ) {
-		$value = ( isset( $data[ self::SLUG ] ) && 'yes' === $data[ self::SLUG ] ) ? 'yes' : 'no';
-
-		$this->maybe_send_notification_email( $value, $attendee );
-
-		return update_post_meta( $attendee->ID, 'tix_' . self::SLUG, $value );
-	}
-
-	/**
-	 * Render the new field for the Edit Info form.
-	 *
-	 * @param array $ticket_info
-	 */
-	public function render_ticket_info_field( $ticket_info ) {
-		$current_data = wp_parse_args( $ticket_info, array( self::SLUG => 'no' ) );
-
-		$this->render_field(
-			sprintf( 'tix_ticket_info[%s]', self::SLUG ),
-			$current_data[ self::SLUG ],
-			$current_data['ticket_id']
-		);
-	}
-
-	/**
-	 * Add a row to the Attendee Info metabox table for the new field and value.
-	 *
-	 * @param array   $rows
-	 * @param WP_Post $post
-	 *
-	 * @return mixed
-	 */
-	public function add_metabox_row( $rows, $post ) {
-		$value = get_post_meta( $post->ID, 'tix_' . self::SLUG, true );
-		if ( $value && isset( $this->options[ $value ] ) ) {
-			$value = $this->options[ $value ];
-		}
-		$question = apply_filters( 'camptix_allergy_question_text', $this->question, $post->tix_ticket_id );
-		$new_row = array( $question, esc_html( $value ) );
-
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
-
-		$ticket_row = array_filter(
-			$rows,
-			function( $row ) {
-				if ( 'Ticket' === $row[0] ) {
-					return true;
-				}
-
-				return false;
-			}
-		);
-
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
-
-		if ( ! empty( $ticket_row ) ) {
-			$ticket_row_key = key( $ticket_row );
-			$row_indexes    = array_keys( $rows );
-			$position       = array_search( $ticket_row_key, $row_indexes );
-
-			$slice = array_slice( $rows, $position );
-
-			array_unshift( $slice, $new_row );
-			array_splice( $rows, $position, count( $rows ), $slice );
-		} else {
-			$rows[] = $new_row;
-		}
-
-		return $rows;
 	}
 
 	/**
@@ -318,14 +169,16 @@ class Allergy_Field extends CampTix_Addon {
 		}
 
 		$current_wordcamp = get_wordcamp_post();
-		$wordcamp_name    = get_wordcamp_name( get_wordcamp_site_id( $current_wordcamp ) );
+		$wordcamp_name    = get_wordcamp_name();
 		$post_type_object = get_post_type_object( $attendee->post_type );
 		$attendee_link    = add_query_arg( 'action', 'edit', admin_url( sprintf( $post_type_object->_edit_link, $attendee->ID ) ) );
 		$handbook_link    = 'https://make.wordpress.org/community/handbook/wordcamp-organizer/planning-details/selling-tickets/life-threatening-allergies/';
 		$recipients       = array(
-			$current_wordcamp->meta['Email Address'][0], // Lead organizer
-			$current_wordcamp->meta['E-mail Address'][0], // City address
+			$current_wordcamp->meta['Email Address'][0] ?? '', // Lead organizer
+			$current_wordcamp->meta['E-mail Address'][0] ?? '', // City address
 		);
+
+		$recipients = array_unique( array_filter( $recipients ) );
 
 		foreach ( $recipients as $recipient ) {
 			$subject = sprintf(
@@ -363,15 +216,6 @@ class Allergy_Field extends CampTix_Addon {
 		);
 
 		update_post_meta( $attendee->ID, '_tix_notify_' . self::SLUG, true );
-	}
-
-	/**
-	 * Filter: Set the locale to en_US.
-	 *
-	 * @return string
-	 */
-	public function set_locale_to_en_US() {
-		return 'en_US';
 	}
 
 	/**

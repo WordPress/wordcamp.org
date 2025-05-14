@@ -2,10 +2,10 @@
 
 namespace WordCamp\CampTix_Tweaks;
 
-defined( 'WPINC' ) || die();
-
 use CampTix_Addon;
 use WP_Post;
+
+defined( 'WPINC' ) || die();
 
 /**
  * Add an required attendee field asking if they've attended a WordCamp before.

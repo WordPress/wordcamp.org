@@ -4394,6 +4394,7 @@ class CampTix_Plugin {
 						name="<?php echo esc_attr( $name ); ?>[<?php echo esc_attr( sanitize_title_with_dashes( $question_value ) ); ?>]"
 						type="checkbox"
 						value="<?php echo esc_attr( $question_value ); ?>"
+						<?php if ( $required ) echo 'required'; ?>
 					/>
 					<?php echo esc_html( $question_value ); ?>
 				</label><br />

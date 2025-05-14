@@ -525,7 +525,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		global $camptix;
 
 		// This first attendee can't be unknown
-		if ( empty( $form_data['tix_tickets_selected'] ) || $this->current_row_is_buyer( $form_data['tix_tickets_selected'], $ticket, $i ) ) {
+		if ( $this->current_row_is_buyer( $form_data['tix_tickets_selected'] ?? [], $ticket, $i ) ) {
 			return;
 		}
 

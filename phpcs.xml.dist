@@ -192,5 +192,8 @@
 	<rule ref="WordPress-Extra">
 		<!-- I think it's better to have all the `use` statements come right after the namespace line. -->
 		<exclude name="PSR2.Namespaces.NamespaceDeclaration.BlankLineAfter" />
+
+		<!-- We're going to see more of ?? (which this doesn't cover), might as well allow ?: when suitable. -->
+		<exclude name="Universal.Operators.DisallowShortTernary" />
 	</rule>
 </ruleset>

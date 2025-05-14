@@ -6458,7 +6458,7 @@ class CampTix_Plugin {
 						<?php if ( apply_filters( 'camptix_ask_questions', true, array( (int) $ticket_id => 1 ), (int) $ticket_id, 1, $questions ) ) : ?>
 							<?php foreach ( $questions as $question ) : ?>
 								<?php
-									$name       = sprintf( 'tix_ticket_questions[%d]', $question->ID );
+									$name       = sprintf( 'tix_ticket_questions[%s]', $question->ID );
 									$value      = isset( $answers[ $question->ID ] ) ? $answers[ $question->ID ] : '';
 									$type       = $question->tix_type;
 									$required   = $question->tix_required;

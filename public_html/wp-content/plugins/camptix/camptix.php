@@ -4360,7 +4360,7 @@ class CampTix_Plugin {
 	 * A drop-down select for a question.
 	 */
 	function question_field_select( $name, $user_value, $question, $required = false ) {
-		$values = get_post_meta( $question->ID, 'tix_values', true );
+		$values = $question->tix_values ?: [];
 		?>
 		<select
 			id="<?php echo esc_attr( $this->get_field_id( $name ) ); ?>"
@@ -4378,7 +4378,7 @@ class CampTix_Plugin {
 	 * A single or multiple checkbox for a question.
 	 */
 	function question_field_checkbox( $name, $user_value, $question, $required = false ) {
-		$values = get_post_meta( $question->ID, 'tix_values', true );
+		$values         = $question->tix_values ?: [];
 		$user_value_esc = array_map( 'esc_attr', (array) $user_value );
 		?>
 		<fieldset
@@ -4424,7 +4424,7 @@ class CampTix_Plugin {
 	 * A radio input for questions.
 	 */
 	function question_field_radio( $name, $user_value, $question, $required = false ) {
-		$values = get_post_meta( $question->ID, 'tix_values', true );
+		$values = $question->tix_values ?: [];
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
@@ -6027,8 +6027,9 @@ class CampTix_Plugin {
 										<?php
 											$name       = sprintf( 'tix_attendee_questions[%d][%s]', $i, $question->ID );
 											$value      = isset( $this->form_data['tix_attendee_questions'][ $i ][ $question->ID ] ) ? $this->form_data['tix_attendee_questions'][ $i ][ $question->ID ] : '';
-											$type       = get_post_meta( $question->ID, 'tix_type', true );
-											$required   = get_post_meta( $question->ID, 'tix_required', true );
+											$type       = $question->tix_type;
+											$required   = $question->tix_required;
+											$values     = $question->tix_values;
 											$class_name = 'tix-row-question-' . $question->ID;
 										?>
 
@@ -6040,7 +6041,7 @@ class CampTix_Plugin {
 												</label>
 											</td>
 											<td class="tix-right">
-												<?php do_action( "camptix_question_field_{$type}", $name, $value, $question, $required ); ?>
+												<?php do_action( "camptix_question_field_{$type}", $name, $value, $question, $required, $values ); ?>
 											</td>
 										</tr>
 									<?php endforeach; ?>

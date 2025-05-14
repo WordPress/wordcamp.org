@@ -959,6 +959,23 @@ class CampTix_Plugin {
 			'post__in' => $question_ids,
 		) );
 
+		/**
+		 * Filter the questions for a ticket.
+		 *
+		 * @var array $questions
+		 * @var int $ticket_id
+		 */
+		$questions = apply_filters( 'camptix_ticket_questions', $questions, $ticket_id );
+
+		/**
+		 * Filter the question sort order.
+		 *
+		 * @var array $order
+		 * @var int $ticket_id
+		 * @var array $questions
+		 */
+		$order = apply_filters( 'camptix_ticket_questions_order', $order, $ticket_id, $questions );
+
 		$questions_with_keys = array();
 
 		foreach ( $questions as $question ) {
@@ -976,11 +993,6 @@ class CampTix_Plugin {
 		}
 
 		unset( $questions );
-
-		/**
-		 * Filter the sorted questions.
-		 */
-		$questions_sorted = apply_filters( 'camptix_ticket_questions', $questions_sorted, $ticket_id );
 
 		return $questions_sorted;
 	}

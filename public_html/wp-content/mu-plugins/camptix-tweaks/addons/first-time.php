@@ -33,6 +33,10 @@ class First_Time_Field extends CampTix_Addon {
 			'unsure'  => _x( "I don't know", 'answer to question during ticket registration', 'wordcamporg' ),
 		);
 
+		// Ask the question.
+		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
+		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 40 ); // 20 = allergy, 30 = accessibility, 40 = this, 50 = CoC
+
 		// Registration field.
 		add_action( 'camptix_attendee_form_after_questions', array( $this, 'render_registration_field' ), 12, 2 );
 		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ), 11 );
@@ -58,6 +62,43 @@ class First_Time_Field extends CampTix_Addon {
 		add_filter( 'camptix_privacy_export_attendee_prop', array( $this, 'export_attendee_prop' ), 10, 4 );
 		add_filter( 'camptix_privacy_attendee_props_to_erase', array( $this, 'attendee_props_to_erase' ) );
 		add_action( 'camptix_privacy_erase_attendee_prop', array( $this, 'erase_attendee_prop' ), 10, 3 );
+	}
+
+	/**
+	 * Add the question to the list of questions.
+	 *
+	 * @param array $questions
+	 *
+	 * @return array
+	 */
+	function add_question( $questions, $ticket_id ) {
+		if ( apply_filters( 'camptix_first_time_should_skip', false ) ) {
+			return $questions;
+		}
+
+		$questions[ self::SLUG ] = (object) array(
+			// Immitate a WP_Post with metadata..
+			'ID' 	       => self::SLUG,
+			'post_title'   => apply_filters( 'camptix_first_time_question_text', $this->question, $ticket_id ),
+			'tix_type'     => 'radio',
+			'tix_required' => true,
+			'tix_values'   => $this->options,
+		);
+
+		return $questions;
+	}
+
+	/**
+	 * Add the new field to the questions order.
+	 *
+	 * @param array $order
+	 *
+	 * @return array
+	 */
+	function add_question_order( $order ) {
+		$order[] = self::SLUG;
+
+		return $order;
 	}
 
 	/**

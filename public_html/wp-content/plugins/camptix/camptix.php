@@ -478,7 +478,7 @@ class CampTix_Plugin {
 			return;
 
 		$key = substr( $summarize_by, 6 );
-		$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
+		$answers = $this->get_attendee_answers( $attendee->ID );
 
 		if ( isset( $answers[ $key ] ) && ! empty( $answers[ $key ] ) )
 			$this->increment_summary( $summary, $answers[ $key ] );
@@ -1540,7 +1540,7 @@ class CampTix_Plugin {
 			) ) ) {
 				foreach ( $attendees as $attendee ) {
 					$new_answers = array();
-					$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
+					$answers     = $camtix->get_attendee_answers( $attendee->ID );
 
 					// Just in case the upgrade script runs more than once
 					$answers_backup = (array) get_post_meta( $attendee->ID, 'tix_questions_backup', true );
@@ -2904,7 +2904,7 @@ class CampTix_Plugin {
 					'payment_method' => $this->get_payment_method_name_by_attendee_id( $attendee_id ),
 				);
 
-				$answers = (array) get_post_meta( $attendee_id, 'tix_questions', true );
+				$answers = $camptix->get_attendee_answers( $attendee_id );
 
 				foreach ( $questions as $question ) {
 
@@ -3555,9 +3555,9 @@ class CampTix_Plugin {
 			// These conditions further filter the query.
 			foreach ( $post_query_conditions as $condition ) {
 				if ( preg_match( '#^tix-question-(\d+)$#', $condition['field'], $matches ) ) {
-					$question_id = $matches[1];
-					$answers = get_post_meta( $attendee_id, 'tix_questions', true );
-					$question = get_post( $question_id );
+					$question_id   = $matches[1];
+					$answers       = $this->get_attendee_answers( $attendee_id );
+					$question      = get_post( $question_id );
 					$question_type = get_post_meta( $question->ID, 'tix_type', true );
 
 					// Make sure the question is valid.
@@ -4778,9 +4778,9 @@ class CampTix_Plugin {
 		}
 
 		// Questions
-		$rows[] = array( __( 'Questions', 'wordcamporg' ), '' );
+		$rows[]    = array( __( 'Questions', 'wordcamporg' ), '' );
 		$questions = $this->get_sorted_questions( $ticket_id );
-		$answers = get_post_meta( $post->ID, 'tix_questions', true );
+		$answers   = $this->get_attendee_answers( $post->ID );
 
 		foreach ( $questions as $question ) {
 			if ( isset( $answers[ $question->ID ] ) ) {
@@ -6298,9 +6298,9 @@ class CampTix_Plugin {
 		if ( $attendee->post_status == 'pending' )
 			$this->notice( __( 'Please note that the payment for this ticket is still pending.', 'wordcamporg' ) );
 
-		$ticket = get_post( $ticket_id );
+		$ticket    = get_post( $ticket_id );
 		$questions = $this->get_sorted_questions( $ticket->ID );
-		$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
+		$answers   = $this->get_attendee_answers( $attendee->ID );
 
 		$ticket_info = array(
 			'first_name' => get_post_meta( $attendee->ID, 'tix_first_name', true ),
@@ -8035,6 +8035,21 @@ class CampTix_Plugin {
 	 */
 	public function get_attendee_email( $attendee_id ) {
 		return apply_filters( 'camptix_get_attendee_email', get_post_meta( $attendee_id, 'tix_email', true ), $attendee_id );
+	}
+
+	/**
+	 * Get the attendee's question answers.
+	 *
+	 * @param int $attendee_id
+	 * @return array
+	 */
+	public function get_attendee_answers( $attendee_id ) {
+		$answers = get_post_meta( $attendee_id, 'tix_questions', true );
+		if ( ! is_array( $answers ) ) {
+			$answers = array();
+		}
+
+		return apply_filters( 'camptix_get_attendee_answers', $answers, $attendee_id );
 	}
 
 	public function email_attendee_ticket_multiple_template( $attendee ) {

@@ -4380,10 +4380,11 @@ class CampTix_Plugin {
 	function question_field_checkbox( $name, $user_value, $question, $required = false ) {
 		$values         = $question->tix_values ?: [];
 		$user_value_esc = array_map( 'esc_attr', (array) $user_value );
+		$a11y_label     = $question->a11y_label ?: strip_tags( apply_filters( 'the_title', $question->post_title ) );
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
-			aria-label="<?php echo esc_attr( strip_tags( apply_filters( 'the_title', $question->post_title ) ) ); ?>"
+			aria-label="<?php echo esc_attr( $a11y_label ); ?>"
 		>
 		<?php if ( $values ) : ?>
 			<?php foreach ( (array) $values as $question_value ) : ?>
@@ -4424,11 +4425,12 @@ class CampTix_Plugin {
 	 * A radio input for questions.
 	 */
 	function question_field_radio( $name, $user_value, $question, $required = false  ) {
-		$values = $question->tix_values ?: [];
+		$values     = $question->tix_values ?: [];
+		$a11y_label = $question->a11y_label ?: strip_tags( apply_filters( 'the_title', $question->post_title ) );
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
-			aria-label="<?php echo esc_attr( strip_tags( apply_filters( 'the_title', $question->post_title ) ) ); ?>"
+			aria-label="<?php echo esc_attr( $a11y_label ); ?>"
 		>
 			<?php foreach ( (array) $values as $question_value ) : ?>
 				<label>

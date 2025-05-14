@@ -83,7 +83,7 @@ function handle_robots_txt_request( $domain, $path ) {
 
 	set_network_and_site( $latest_site );
 
-	// Abort redirects
+	// Abort redirects.
 	return true;
 }
 

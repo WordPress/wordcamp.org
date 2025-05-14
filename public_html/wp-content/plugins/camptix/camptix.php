@@ -922,9 +922,9 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Get all questions. Returns an assoc array where the key is a
-	 * sanitized questions (as stored in the database) and the value is
-	 * the question array.
+	 * Get all questions.
+	 *
+	 * @return WP_Post[] The list of questions as a WP_Post object.
 	 */
 	function get_all_questions() {
 		$questions = get_posts( array(

@@ -6374,7 +6374,7 @@ class CampTix_Plugin {
 				update_post_meta( $attendee->ID, 'tix_email', sanitize_email( $new_ticket_info['email'] ) );
 				update_post_meta( $attendee->ID, 'tix_questions', wp_slash( $new_answers ) );
 
-				do_action( 'camptix_form_edit_attendee_update_post_meta', $new_ticket_info, $attendee );
+				do_action( 'camptix_form_edit_attendee_update_post_meta', $new_ticket_info, $attendee, $new_answers );
 
 				wp_update_post( $attendee ); // triggers save_attendee
 

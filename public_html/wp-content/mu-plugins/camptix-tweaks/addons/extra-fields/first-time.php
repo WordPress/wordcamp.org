@@ -18,7 +18,7 @@ class First_Time_Field extends Extra_Fields {
 	public $question_order = 20;
 
 	/**
-	 * Hook into WordPress and CampTix.
+	 * Setup the question & options.
 	 */
 	public function init() {
 		$this->label    = __( 'First Time Attending', 'wordcamporg' );
@@ -30,19 +30,6 @@ class First_Time_Field extends Extra_Fields {
 			// Sometimes people buy tickets for others, and they may not know.
 			'unsure'  => _x( "I don't know", 'answer to question during ticket registration', 'wordcamporg' ),
 		);
-	}
-
-	/**
-	 * Include the new field in the personal data eraser.
-	 *
-	 * @param array $props
-	 *
-	 * @return array
-	 */
-	public function attendee_props_to_erase( $props ) {
-		$props[ 'tix_' . self::SLUG ] = 'camptix_yesnounsure';
-
-		return $props;
 	}
 }
 

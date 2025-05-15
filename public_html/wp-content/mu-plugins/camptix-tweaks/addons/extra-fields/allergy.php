@@ -22,7 +22,7 @@ class Allergy_Field extends Extra_Fields {
 	public $question_order = 20;
 
 	/**
-	 * Hook into WordPress and Camptix.
+	 * Setup the question & options.
 	 */
 	public function init() {
 		$this->label    = __( 'Severe allergy', 'wordcamporg' );

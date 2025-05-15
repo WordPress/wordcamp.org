@@ -19,12 +19,11 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 	public $question_order = 100;
 	public $type           = 'checkbox';
 
-	// No need to summarize this field, since it's just a yes checkbox.
 	public $enable_summary      = false;
 	public $enable_export_erase = false;
 
 	/**
-	 * Hook into WordPress and Camptix.
+	 * Setup the question & options.
 	 */
 	public function init() {
 		$this->label    = __( 'Code of Conduct', 'wordcamporg' );

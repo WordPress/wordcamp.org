@@ -24,7 +24,7 @@ class Accommodations_Field extends Extra_Fields {
 	public $question_order = 30;
 
 	/**
-	 * Hook into WordPress and Camptix.
+	 * Setup the question & options.
 	 */
 	public function init() {
 		$this->label    = __( 'Accessibility needs', 'wordcamporg' );

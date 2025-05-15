@@ -19,11 +19,10 @@ class Privacy_Field extends Extra_Fields {
 	public $options = array();
 	public $a11y_label;
 
-	// No need to summarize this field.
-	public $enable_summary = false;
+	$enable_summary = false;
 
 	/**
-	 * Hook into WordPress and Camptix.
+	 * Setup the question & options.
 	 */
 	public function init() {
 		$this->a11y_label = __( 'Do you want to be listed on the public Attendees page?', 'wordcamporg' );
@@ -74,19 +73,6 @@ class Privacy_Field extends Extra_Fields {
 	}
 
 	/**
-	 * Update the stored value of the new field if it was changed in the Edit Info form.
-	 *
-	 * @param array   $ticket_info
-	 * @param WP_Post $attendee
-	 * @param array   $answers
-	 *
-	 * @return bool|int
-	 */
-	public function edit_attendee_data( $ticket_info, $attendee, $answers ) {
-		return $this->save_registration_field( $attendee->ID, (object) compact( 'answers' ) );
-	}
-
-	/**
 	 * Retrieve the stored value of the new field for use when displaying the attendee info.
 	 *
 	 * Back-compat only, for where the field was stored outside of the question answers.
@@ -97,11 +83,9 @@ class Privacy_Field extends Extra_Fields {
 	 * @return array
 	 */
 	public function populate_attendee_answer( $ticket_info, $attendee ) {
-		$attendee = get_post( $attendee );
-		$value    = get_post_meta( $attendee->ID, 'tix_' . self::SLUG, true );
-		$value    = ( 'private' === $value ) ? 'no' : 'yes';
+		$ticket_info = parent::populate_attendee_answer( $ticket_info, $attendee );
 
-		$ticket_info[ self::SLUG ] ??= $this->options[ $value ] ?? '';
+		$ticket_info[ self::SLUG ] = in_array( $ticket_info[ self::SLUG ], [ 'private', 'no' ] ) ? 'no' : 'yes';
 
 		return $ticket_info;
 	}

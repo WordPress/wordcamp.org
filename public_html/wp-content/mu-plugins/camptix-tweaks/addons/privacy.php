@@ -52,6 +52,7 @@ class Privacy_Field extends CampTix_Addon {
 
 		// Save the answer as post meta.
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
+		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'edit_attendee_data' ), 10, 3 );
 
 		// Delete cached attendees lists when an attendee privacy setting changes.
 		add_action( 'added_post_meta', array( $this, 'invalidate_attendees_cache' ), 10, 3 );
@@ -114,6 +115,18 @@ class Privacy_Field extends CampTix_Addon {
 		return $result;
 	}
 
+	/**
+	 * Update the stored value of the new field if it was changed in the Edit Info form.
+	 *
+	 * @param array   $ticket_info
+	 * @param WP_Post $attendee
+	 * @param array   $answers
+	 *
+	 * @return bool|int
+	 */
+	public function edit_attendee_data( $ticket_info, $attendee, $answers ) {
+		return $this->save_registration_field( $attendee->ID, (object) compact( 'answers' ) );
+	}
 
 	/**
 	 * Retrieve the stored value of the new field for use when displaying the attendee info.

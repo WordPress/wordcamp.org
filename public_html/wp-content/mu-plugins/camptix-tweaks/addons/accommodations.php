@@ -40,11 +40,12 @@ class Accommodations_Field extends CampTix_Addon {
 
 		// Ask the question.
 		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
-		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 30 ); // 20 = allergy, 30 = accessibility, 40 = first time, 50 = CoC
+		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 30 );
 		add_filter( 'camptix_get_attendee_answers', array( $this, 'populate_attendee_answer' ), 10, 2 );
 
 		// Save the answer as post meta.
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
+		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'edit_attendee_data' ), 10, 3 );
 
 		// Notifications.
 		add_action( 'camptix_ticket_emailed', array( $this, 'after_email_receipt' ) );
@@ -109,6 +110,19 @@ class Accommodations_Field extends CampTix_Addon {
 	 */
 	public function save_registration_field( $post_id, $attendee ) {
 		return update_post_meta( $post_id, 'tix_' . self::SLUG, $attendee->{ self::SLUG } );
+	}
+
+	/**
+	 * Update the stored value of the new field if it was changed in the Edit Info form.
+	 *
+	 * @param array   $ticket_info
+	 * @param WP_Post $attendee
+	 * @param array   $answers
+	 *
+	 * @return bool|int
+	 */
+	public function edit_attendee_data( $ticket_info, $attendee, $answers ) {
+		return $this->save_registration_field( $attendee->ID, (object) compact( 'answers' ) );
 	}
 
 	/**

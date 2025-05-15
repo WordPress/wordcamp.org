@@ -16,9 +16,6 @@ defined( 'WPINC' ) || die();
 class Allergy_Field extends Extra_Fields {
 	const SLUG = 'allergy';
 
-	public $label          = '';
-	public $question       = '';
-	public $options        = array();
 	public $question_order = 20;
 
 	/**

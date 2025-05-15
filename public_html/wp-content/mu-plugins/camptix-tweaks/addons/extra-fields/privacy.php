@@ -15,10 +15,7 @@ defined( 'WPINC' ) || die();
 class Privacy_Field extends Extra_Fields {
 	const SLUG = 'privacy';
 
-	public $question = '';
-	public $options = array();
-	public $a11y_label;
-
+	public $question_order = 11;
 	public $enable_summary = false;
 
 	/**

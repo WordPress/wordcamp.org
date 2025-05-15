@@ -13,12 +13,8 @@ defined( 'WPINC' ) || die();
 class Code_Of_Conduct_Field extends Extra_Fields {
 	const SLUG = 'coc';
 
-	public $label          = '';
-	public $question       = '';
-	public $options        = array();
-	public $question_order = 100;
-	public $type           = 'checkbox';
-
+	public $question_order      = 100;
+	public $type                = 'checkbox';
 	public $enable_summary      = false;
 	public $enable_export_erase = false;
 

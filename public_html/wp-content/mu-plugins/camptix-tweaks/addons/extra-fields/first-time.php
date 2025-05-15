@@ -10,7 +10,7 @@ class First_Time_Field extends Extra_Fields {
 	const SLUG = 'first_time_attending_wp_event';
 
 	protected $filter_slug = 'first_time';
-	public $question_order = 20;
+	public $question_order = 40;
 
 	/**
 	 * Setup the question & options.

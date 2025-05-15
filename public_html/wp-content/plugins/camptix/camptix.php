@@ -4380,7 +4380,7 @@ class CampTix_Plugin {
 	function question_field_checkbox( $name, $user_value, $question, $required = false ) {
 		$values         = $question->tix_values ?: [];
 		$user_value_esc = array_map( 'esc_attr', (array) $user_value );
-		$a11y_label     = $question->a11y_label ?: strip_tags( apply_filters( 'the_title', $question->post_title ) );
+		$a11y_label     = $question->a11y_label ?? strip_tags( apply_filters( 'the_title', $question->post_title ) );
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
@@ -4427,7 +4427,7 @@ class CampTix_Plugin {
 	 */
 	function question_field_radio( $name, $user_value, $question, $required = false  ) {
 		$values     = $question->tix_values ?: [];
-		$a11y_label = $question->a11y_label ?: strip_tags( apply_filters( 'the_title', $question->post_title ) );
+		$a11y_label = $question->a11y_label ?? strip_tags( apply_filters( 'the_title', $question->post_title ) );
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"

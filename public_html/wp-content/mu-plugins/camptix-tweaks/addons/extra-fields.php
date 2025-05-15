@@ -74,14 +74,14 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 *
 	 * @return array
 	 */
-	function add_question( $questions, $ticket_id ) {
+	public function add_question( $questions, $ticket_id ) {
 		if ( apply_filters( "camptix_{$this->filter_slug}_should_skip", false ) ) {
 			return $questions;
 		}
 
 		$questions[ static::SLUG ] = (object) array(
 			// Immitate a WP_Post with metadata..
-			'ID' 	       => static::SLUG,
+			'ID'           => static::SLUG,
 			'post_title'   => apply_filters( "camptix_{$this->filter_slug}_question_text", $this->question, $ticket_id ),
 			'a11y_label'   => $this->a11y_label,
 			'tix_type'     => $this->type,
@@ -99,7 +99,7 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 *
 	 * @return array
 	 */
-	function add_question_order( $order ) {
+	public function add_question_order( $order ) {
 		$order[] = static::SLUG;
 
 		return $order;

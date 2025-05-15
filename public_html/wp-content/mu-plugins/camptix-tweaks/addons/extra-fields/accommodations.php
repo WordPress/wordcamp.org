@@ -93,8 +93,8 @@ class Accommodations_Field extends Extra_Fields {
 		$attendee_link    = add_query_arg( 'action', 'edit', admin_url( sprintf( $post_type_object->_edit_link, $attendee->ID ) ) );
 		$handbook_link    = 'https://make.wordpress.org/community/handbook/wordcamp-organizer/first-steps/inclusive-and-welcoming-events/#requests-for-special-accommodations';
 		$recipients       = array(
-			$current_wordcamp->meta['Email Address'][0] ?? '', // Lead organizer
-			$current_wordcamp->meta['E-mail Address'][0] ?? '', // City address
+			$current_wordcamp->meta['Email Address'][0] ?? '', // Lead organizer.
+			$current_wordcamp->meta['E-mail Address'][0] ?? '', // City address.
 		);
 
 		$recipients = array_filter( array_unique( $recipients ) );

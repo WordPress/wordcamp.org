@@ -1,7 +1,7 @@
 <?php
 namespace WordCamp\CampTix_Tweaks;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 /**
  * Class Code_Of_Conduct_Field.

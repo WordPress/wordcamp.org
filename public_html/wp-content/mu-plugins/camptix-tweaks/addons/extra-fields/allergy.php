@@ -91,8 +91,8 @@ class Allergy_Field extends Extra_Fields {
 		$attendee_link    = add_query_arg( 'action', 'edit', admin_url( sprintf( $post_type_object->_edit_link, $attendee->ID ) ) );
 		$handbook_link    = 'https://make.wordpress.org/community/handbook/wordcamp-organizer/planning-details/selling-tickets/life-threatening-allergies/';
 		$recipients       = array(
-			$current_wordcamp->meta['Email Address'][0] ?? '', // Lead organizer
-			$current_wordcamp->meta['E-mail Address'][0] ?? '', // City address
+			$current_wordcamp->meta['Email Address'][0] ?? '', // Lead organizer.
+			$current_wordcamp->meta['E-mail Address'][0] ?? '', // City address.
 		);
 
 		$recipients = array_unique( array_filter( $recipients ) );

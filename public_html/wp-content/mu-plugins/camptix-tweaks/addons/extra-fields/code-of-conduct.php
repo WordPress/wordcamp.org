@@ -26,7 +26,6 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 	 * Setup the question & options.
 	 */
 	public function init() {
-		$this->label    = __( 'Code of Conduct', 'wordcamporg' );
 		$this->question = __( 'Do you agree to follow the event Code of Conduct?', 'wordcamporg' );
 		$coc_url = $this->maybe_get_coc_url();
 		if ( $coc_url ) {

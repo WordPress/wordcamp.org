@@ -25,9 +25,9 @@ class Allergy_Field extends Extra_Fields {
 	 * Setup the question & options.
 	 */
 	public function init() {
-		$this->label    = __( 'Severe allergy', 'wordcamporg' );
-		$this->question = __( 'Do you have a severe allergy that would affect your experience at WordCamp?', 'wordcamporg' );
-		$this->options  = array(
+		$this->column_label = __( 'Severe allergy', 'wordcamporg' );
+		$this->question     = __( 'Do you have a severe allergy that would affect your experience at WordCamp?', 'wordcamporg' );
+		$this->options      = array(
 			'yes' => _x( 'Yes (we will contact you)', 'ticket registration option', 'wordcamporg' ),
 			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
 		);

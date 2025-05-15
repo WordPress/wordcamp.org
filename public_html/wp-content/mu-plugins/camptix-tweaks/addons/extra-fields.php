@@ -8,18 +8,89 @@ defined( 'WPINC' ) || die();
  * Abstraction class for extra fields.
  */
 abstract class Extra_Fields extends CampTix_Addon {
-	const SLUG             = '';
+	/**
+	 * The slug for the field.
+	 *
+	 * This is used to store the value in post meta, and to identify the field in the summary table.
+	 *
+	 * @var string
+	 */
+	const SLUG = '';
+
+	/**
+	 * The slug for the field, used in filter names.
+	 *
+	 * If not specified, will default to the value of `static::SLUG`.
+	 *
+	 * @var string
+	 */
 	protected $filter_slug = '';
 
-	public $label          = '';
-	public $a11y_label     = null;
-	public $question       = '';
-	public $type           = 'radio';
-	public $options        = array();
-	public $required       = true;
+	/**
+	 * The label for the column in the summary table.
+	 *
+	 * @var string
+	 */
+	public $column_label = '';
+
+	/**
+	 * The label for the field in the ticket form.
+	 *
+	 * Only required if the question contains complex HTML.
+	 *
+	 * @var string
+	 */
+	public $a11y_label = null;
+
+	/**
+	 * The question to ask.
+	 *
+	 * @var string
+	 */
+	public $question = '';
+
+	/**
+	 * The type of field to display.
+	 *
+	 * @var string
+	 */
+	public $type = 'radio';
+
+	/**
+	 * The options for the field, if limited choice.
+	 *
+	 * @var array
+	 */
+	public $options = array();
+
+	/**
+	 * Whether the field is required.
+	 *
+	 * @var bool
+	 */
+	public $required = true;
+
+	/**
+	 * The order in which the field should be displayed.
+	 *
+	 * Uses WordPress Hook priority system, lower number = higher priority.
+	 *
+	 * @var int
+	 */
 	public $question_order = 10;
 
-	public $enable_summary      = true;
+	/**
+	 * Whether to enable the field to be summarised by.
+	 *
+	 * @var bool
+	 */
+	public $enable_summary = true;
+
+	/**
+	 * Whether to enable the field to be exported & erased.
+	 *
+	 * @var bool
+	 */
 	public $enable_export_erase = true;
 
 	/**
@@ -51,7 +122,7 @@ abstract class Extra_Fields extends CampTix_Addon {
 		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'edit_attendee_data' ), 10, 3 );
 
 		// Reporting.
-		if ( $this->enable_summary ) {
+		if ( $this->enable_summary && $this->column_label ) {
 			add_filter( 'camptix_summary_fields', array( $this, 'add_summary_field' ) );
 			add_action( 'camptix_summarize_by_' . static::SLUG, array( $this, 'summarize' ), 10, 2 );
 			add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'add_export_column' ) );
@@ -157,7 +228,7 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 * @return array
 	 */
 	public function add_summary_field( $fields ) {
-		$fields[ static::SLUG ] = $this->label;
+		$fields[ static::SLUG ] = $this->column_label;
 
 		return $fields;
 	}
@@ -189,7 +260,7 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 * @return array
 	 */
 	public function add_export_column( $columns ) {
-		$columns[ static::SLUG ] = $this->label;
+		$columns[ static::SLUG ] = $this->column_label;
 
 		return $columns;
 	}

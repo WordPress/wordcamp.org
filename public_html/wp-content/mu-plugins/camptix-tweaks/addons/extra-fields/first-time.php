@@ -21,9 +21,9 @@ class First_Time_Field extends Extra_Fields {
 	 * Setup the question & options.
 	 */
 	public function init() {
-		$this->label    = __( 'First Time Attending', 'wordcamporg' );
-		$this->question = __( 'Will this be your first time attending a WordPress event?', 'wordcamporg' );
-		$this->options  = array(
+		$this->column_label = __( 'First Time Attending', 'wordcamporg' );
+		$this->question     = __( 'Will this be your first time attending a WordPress event?', 'wordcamporg' );
+		$this->options      = array(
 			'yes' => _x( 'Yes', 'answer to question during ticket registration', 'wordcamporg' ),
 			'no'  => _x( 'No', 'answer to question during ticket registration', 'wordcamporg' ),
 

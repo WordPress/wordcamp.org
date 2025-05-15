@@ -185,7 +185,15 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 * @return bool|int
 	 */
 	public function save_registration_field( $post_id, $attendee ) {
-		return update_post_meta( $post_id, 'tix_' . static::SLUG, $attendee->{ static::SLUG } );
+		$answer = $attendee->answers[ static::SLUG ];
+		$key    = array_search( $answer, $this->options, true );
+
+		// For back-compat, we store the option key rather than the option value.
+		if ( $key ) {
+			$answer = $key;
+		}
+
+		return update_post_meta( $post_id, 'tix_' . static::SLUG, $answer );
 	}
 
 	/**
@@ -215,7 +223,7 @@ abstract class Extra_Fields extends CampTix_Addon {
 		$attendee = get_post( $attendee );
 		$value    = get_post_meta( $attendee->ID, 'tix_' . static::SLUG, true );
 
-		$ticket_info[ static::SLUG ] ??= $this->options[ $value ] ?? '';
+		$ticket_info[ static::SLUG ] ??= $this->options[ $value ] ?? $value;
 
 		return $ticket_info;
 	}

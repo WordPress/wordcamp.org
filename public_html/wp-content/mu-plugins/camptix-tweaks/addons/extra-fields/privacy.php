@@ -60,10 +60,12 @@ class Privacy_Field extends Extra_Fields {
 	 * @return bool|int
 	 */
 	public function save_registration_field( $post_id, $attendee ) {
-		if ( true === wp_validate_boolean( $attendee->{ self::SLUG } ) ) {
-			$result = delete_post_meta( $post_id, 'tix_' . self::SLUG );
-		} else {
+		if ( in_array( $attendee->answers[ self::SLUG ], [ 'no', $this->options['no'] ] ) ) {
+			// Privacy; No = "do NOT show" = set as private.
 			$result = update_post_meta( $post_id, 'tix_' . self::SLUG, 'private' );
+		} else {
+			// Privacy: Yes = "Show me on attendees page" = delete the meta.
+			$result = delete_post_meta( $post_id, 'tix_' . self::SLUG );
 		}
 
 		return $result;
@@ -82,7 +84,7 @@ class Privacy_Field extends Extra_Fields {
 	public function populate_attendee_answer( $ticket_info, $attendee ) {
 		$ticket_info = parent::populate_attendee_answer( $ticket_info, $attendee );
 
-		$ticket_info[ self::SLUG ] = in_array( $ticket_info[ self::SLUG ], [ 'private', 'no' ] ) ? 'no' : 'yes';
+		$ticket_info[ self::SLUG ] = in_array( $ticket_info[ self::SLUG ], [ 'private', 'no' ] ) ? $this->options['no'] : $this->options['yes'];
 
 		return $ticket_info;
 	}

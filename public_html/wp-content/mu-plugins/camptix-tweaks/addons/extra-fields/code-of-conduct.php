@@ -32,8 +32,32 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 			);
 		}
 
-		// Empty options = Only a single YES required checkbox.
-		$this->options = array();
+		$this->options = array(
+			'yes' => _x( 'Yes', 'ticket registration option', 'wordcamporg' ),
+		);
+	}
+
+	/**
+	 * Save the value of the new field to the attendee post upon completion of checkout.
+	 *
+	 * @param int     $post_id
+	 * @param WP_Post $attendee
+	 */
+	public function save_registration_field( $post_id, $attendee ) {
+		// For back-compat, we only store a value of '1'.
+		return update_post_meta( $post_id, 'tix_' . static::SLUG, 1 );
+	}
+
+	/**
+	 * All tickets are required to have the Code of Conduct checkbox set.
+	 *
+	 * @param array $ticket_info
+	 * @param int   $attendee
+	 */
+	public function populate_attendee_answer( $ticket_info, $attendee ) {
+		$ticket_info[ static::SLUG ] = __( 'Yes', 'wordcamporg' );
+
+		return $ticket_info;
 	}
 
 	/**

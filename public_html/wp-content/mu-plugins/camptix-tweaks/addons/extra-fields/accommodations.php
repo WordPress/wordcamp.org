@@ -1,11 +1,11 @@
 <?php
-
 namespace WordCamp\CampTix_Tweaks;
-defined( 'WPINC' ) || die();
 
-use CampTix_Plugin, CampTix_Addon;
+use CampTix_Plugin;
 use WP_Post;
 use PHPMailer;
+
+defined( 'WPINC' ) || die();
 
 /**
  * Class Accommodations_Field.
@@ -16,7 +16,7 @@ use PHPMailer;
  *
  * @package WordCamp\CampTix_Tweaks
  */
-class Accommodations_Field extends CampTix_Addon {
+class Accommodations_Field extends Extra_Field {
 	const SLUG = 'accommodations';
 
 	public $label = '';

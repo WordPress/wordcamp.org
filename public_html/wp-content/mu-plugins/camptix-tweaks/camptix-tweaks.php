@@ -549,12 +549,14 @@ function load_addons( $addons ) {
  */
 function load_custom_addons() {
 	// Extra fields.
-	require_once __DIR__ . '/addons/allergy.php';
-	require_once __DIR__ . '/addons/accommodations.php';
-	require_once __DIR__ . '/addons/code-of-conduct.php';
-	require_once __DIR__ . '/addons/first-time.php';
+	require_once __DIR__ . '/addons/extra-fields.php';
+	require_once __DIR__ . '/addons/extra-fields/allergy.php';
+	require_once __DIR__ . '/addons/extra-fields/accommodations.php';
+	require_once __DIR__ . '/addons/extra-fields/code-of-conduct.php';
+	require_once __DIR__ . '/addons/extra-fields/first-time.php';
+	require_once __DIR__ . '/addons/extra-fields/privacy.php';
+
 	require_once __DIR__ . '/addons/health-advisory.php';
-	require_once __DIR__ . '/addons/privacy.php';
 
 	// Miscellaneous.
 	require_once __DIR__ . '/addons/spam-prevention.php';

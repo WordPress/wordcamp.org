@@ -1,60 +1,51 @@
 <?php
-
 namespace WordCamp\CampTix_Tweaks;
+
+use WP_Post;
+
 defined( 'WPINC' ) || die();
 
-use CampTix_Plugin, CampTix_Addon;
-use WP_Post;
-use PHPMailer;
-
 /**
- * Class Allergy_Field.
- *
- * Add a non-optional attendee field indicating if they have a severe allergy.
- *
- * @package WordCamp\CampTix_Tweaks
+ * Add an required attendee field asking if they've attended a WordCamp before.
  */
-class Allergy_Field extends CampTix_Addon {
-	const SLUG = 'allergy';
+class First_Time_Field extends Extra_Field {
+	const SLUG = 'first_time_attending_wp_event';
 
-	public $label = '';
-
+	public $label    = '';
 	public $question = '';
-
-	public $options = array();
+	public $options  = array();
 
 	/**
-	 * Hook into WordPress and Camptix.
+	 * Hook into WordPress and CampTix.
 	 */
 	public function camptix_init() {
-		$this->label = __( 'Severe allergy', 'wordcamporg' );
-
-		$this->question = __( 'Do you have a severe allergy that would affect your experience at WordCamp?', 'wordcamporg' );
+		$this->label    = __( 'First Time Attending', 'wordcamporg' );
+		$this->question = __( 'Will this be your first time attending a WordPress event?', 'wordcamporg' );
 
 		$this->options = array(
-			'yes' => _x( 'Yes (we will contact you)', 'ticket registration option', 'wordcamporg' ),
-			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
+			'yes' => _x( 'Yes', 'answer to question during ticket registration', 'wordcamporg' ),
+			'no'  => _x( 'No', 'answer to question during ticket registration', 'wordcamporg' ),
+
+			// Sometimes people buy tickets for others, and they may not know.
+			'unsure'  => _x( "I don't know", 'answer to question during ticket registration', 'wordcamporg' ),
 		);
 
 		// Ask the question.
 		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
-		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 20 );
+		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 40 );
 		add_filter( 'camptix_get_attendee_answers', array( $this, 'populate_attendee_answer' ), 10, 2 );
 
 		// Save the answer as post meta.
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
 		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'edit_attendee_data' ), 10, 3 );
 
-		// Email notifications
-		add_action( 'camptix_ticket_emailed', array( $this, 'after_email_receipt' ) );
-
-		// Reporting
+		// Reporting.
 		add_filter( 'camptix_summary_fields', array( $this, 'add_summary_field' ) );
 		add_action( 'camptix_summarize_by_' . self::SLUG, array( $this, 'summarize' ), 10, 2 );
 		add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'add_export_column' ) );
 		add_filter( 'camptix_attendee_report_column_value_' . self::SLUG, array( $this, 'add_export_column_value' ), 10, 2 );
 
-		// Privacy
+		// Privacy.
 		add_filter( 'camptix_privacy_attendee_props_to_export', array( $this, 'attendee_props_to_export' ) );
 		add_filter( 'camptix_privacy_export_attendee_prop', array( $this, 'export_attendee_prop' ), 10, 4 );
 		add_filter( 'camptix_privacy_attendee_props_to_erase', array( $this, 'attendee_props_to_erase' ) );
@@ -69,14 +60,14 @@ class Allergy_Field extends CampTix_Addon {
 	 * @return array
 	 */
 	function add_question( $questions, $ticket_id ) {
-		if ( apply_filters( 'camptix_allergy_should_skip', false ) ) {
+		if ( apply_filters( 'camptix_first_time_should_skip', false ) ) {
 			return $questions;
 		}
 
 		$questions[ self::SLUG ] = (object) array(
 			// Immitate a WP_Post with metadata..
 			'ID' 	       => self::SLUG,
-			'post_title'   => apply_filters( 'camptix_allergy_question_text', $this->question, $ticket_id ),
+			'post_title'   => apply_filters( 'camptix_first_time_question_text', $this->question, $ticket_id ),
 			'tix_type'     => 'radio',
 			'tix_required' => true,
 			'tix_values'   => $this->options,
@@ -140,95 +131,6 @@ class Allergy_Field extends CampTix_Addon {
 		$ticket_info[ self::SLUG ] ??= $this->options[ $value ] ?? '';
 
 		return $ticket_info;
-	}
-
-	/**
-	 * Initialize email notifications after the ticket receipt email has been sent.
-	 *
-	 * @param int $attendee_id
-	 */
-	public function after_email_receipt( $attendee_id ) {
-		$attendee = get_post( $attendee_id );
-		$value    = get_post_meta( $attendee_id, 'tix_' . self::SLUG, true );
-
-		if ( $attendee instanceof WP_Post && 'tix_attendee' === $attendee->post_type ) {
-			$this->maybe_send_notification_email( $value, $attendee );
-		}
-	}
-
-	/**
-	 * Send a notification if it hasn't been sent already.
-	 *
-	 * @param string  $value
-	 * @param WP_Post $attendee
-	 */
-	protected function maybe_send_notification_email( $value, $attendee ) {
-		// Only send notifications for 'yes' answers.
-		if ( 'yes' !== $value ) {
-			return;
-		}
-
-		$already_sent = get_post_meta( $attendee->ID, '_tix_notify_' . self::SLUG, true );
-
-		// Only send the notification once.
-		if ( $already_sent ) {
-			return;
-		}
-
-		global $phpmailer;
-		if ( $phpmailer instanceof PHPMailer ) {
-			// Clear out any lingering content from a previously sent message.
-			$phpmailer = new PHPMailer( true ); // phpcs:disable WordPress.WP.GlobalVariablesOverride
-		}
-
-		$current_wordcamp = get_wordcamp_post();
-		$wordcamp_name    = get_wordcamp_name();
-		$post_type_object = get_post_type_object( $attendee->post_type );
-		$attendee_link    = add_query_arg( 'action', 'edit', admin_url( sprintf( $post_type_object->_edit_link, $attendee->ID ) ) );
-		$handbook_link    = 'https://make.wordpress.org/community/handbook/wordcamp-organizer/planning-details/selling-tickets/life-threatening-allergies/';
-		$recipients       = array(
-			$current_wordcamp->meta['Email Address'][0] ?? '', // Lead organizer
-			$current_wordcamp->meta['E-mail Address'][0] ?? '', // City address
-		);
-
-		$recipients = array_unique( array_filter( $recipients ) );
-
-		foreach ( $recipients as $recipient ) {
-			$subject = sprintf(
-				/* translators: Email subject line. The %s placeholder is the name of a WordCamp. */
-				wp_strip_all_tags( __( 'An attendee who has a severe allergy has registered for %s', 'wordcamporg' ) ),
-				$wordcamp_name
-			);
-
-			$message_line_1 = wp_strip_all_tags( __( 'The following attendee has indicated that they have a severe allergy. Please note that this information is confidential.', 'wordcamporg' ) );
-
-			$message_line_2 = wp_strip_all_tags( __( 'Please follow the procedure outlined in the WordCamp Organizer Handbook to ensure the health and safety of this event\'s attendees.', 'wordcamporg' ) );
-
-			$message = sprintf(
-				"%s\n\n%s\n\n%s\n\n%s",
-				$message_line_1,
-				esc_url_raw( $attendee_link ), // Link to attendee post's Edit screen.
-				$message_line_2,
-				$handbook_link // Link to page in WordCamp Organizer Handbook.
-			);
-
-			wp_mail( $recipient, $subject, $message );
-		}
-
-		/**
-		 * Action: Fires when a notification is sent about a WordCamp attendee with a severe allergy.
-		 *
-		 * @param array $details Contains information about the WordCamp and the attendee.
-		 */
-		do_action(
-			'camptix_tweaks_allergy_notification',
-			array(
-				'wordcamp' => $current_wordcamp,
-				'attendee' => $attendee,
-			)
-		);
-
-		update_post_meta( $attendee->ID, '_tix_notify_' . self::SLUG, true );
 	}
 
 	/**
@@ -344,7 +246,7 @@ class Allergy_Field extends CampTix_Addon {
 	 * @return array
 	 */
 	public function attendee_props_to_erase( $props ) {
-		$props[ 'tix_' . self::SLUG ] = 'camptix_yesno';
+		$props[ 'tix_' . self::SLUG ] = 'camptix_yesnounsure';
 
 		return $props;
 	}
@@ -364,4 +266,4 @@ class Allergy_Field extends CampTix_Addon {
 	}
 }
 
-camptix_register_addon( __NAMESPACE__ . '\Allergy_Field' );
+camptix_register_addon( __NAMESPACE__ . '\First_Time_Field' );

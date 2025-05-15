@@ -1,10 +1,10 @@
 <?php
-
 namespace WordCamp\CampTix_Tweaks;
-defined( 'WPINC' ) or die();
 
 use CampTix_Plugin, CampTix_Addon;
 use WP_Post;
+
+defined( 'WPINC' ) or die();
 
 /**
  * Class Code_Of_Conduct_Field.
@@ -13,7 +13,7 @@ use WP_Post;
  *
  * @package WordCamp\CampTix_Tweaks
  */
-class Code_Of_Conduct_Field extends CampTix_Addon {
+class Code_Of_Conduct_Field extends Extra_Field {
 	const SLUG = 'coc';
 
 	/**

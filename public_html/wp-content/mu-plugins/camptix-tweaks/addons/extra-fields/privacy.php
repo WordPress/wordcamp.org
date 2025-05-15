@@ -1,10 +1,10 @@
 <?php
-
 namespace WordCamp\CampTix_Tweaks;
-defined( 'WPINC' ) or die();
 
-use CampTix_Plugin, CampTix_Addon;
+use CampTix_Plugin;
 use WP_Post;
+
+defined( 'WPINC' ) || die();
 
 /**
  * Class Privacy_Field.
@@ -13,7 +13,7 @@ use WP_Post;
  *
  * @package WordCamp\CampTix_Tweaks
  */
-class Privacy_Field extends CampTix_Addon {
+class Privacy_Field extends Extra_Field {
 	const SLUG = 'privacy';
 
 	public $question = '';

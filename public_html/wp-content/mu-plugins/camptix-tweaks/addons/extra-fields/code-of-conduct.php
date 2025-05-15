@@ -20,7 +20,7 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 	public $type           = 'checkbox';
 
 	// No need to summarize this field, since it's just a yes checkbox.
-	public $enable_summary = false;
+	public $enable_summary      = false;
 	public $enable_export_erase = false;
 
 	/**
@@ -40,44 +40,6 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 
 		// Empty options = Only a single YES required checkbox.
 		$this->options = array();
-
-		// Registration field
-		add_filter( 'camptix_checkout_attendee_info', array( $this, 'validate_registration_field' ) );
-		add_action( 'camptix_form_attendee_info_errors', array( $this, 'add_registration_field_validation_error' ) );
-	}
-
-	/**
-	 * Validate the value of the new field submitted to the registration form during checkout.
-	 *
-	 * @param array $data
-	 *
-	 * @return array
-	 */
-	public function validate_registration_field( $data ) {
-		/* @var CampTix_Plugin $camptix */
-		global $camptix;
-
-		$data[ self::SLUG ] = wp_validate_boolean( $data[ self::SLUG ] ?? false );
-
-		if ( true !== $data[ self::SLUG ] ) {
-			$camptix->error_flags[ self::SLUG . '_unchecked' ] = true;
-		}
-
-		return $data;
-	}
-
-	/**
-	 * Add a validation message when the checkbox isn't checked.
-	 *
-	 * @param array $error_flags
-	 */
-	public function add_registration_field_validation_error( $error_flags ) {
-		/* @var CampTix_Plugin $camptix */
-		global $camptix;
-
-		if ( isset( $error_flags[ self::SLUG . '_unchecked' ] ) ) {
-			$camptix->error( __( 'You must agree to follow the event Code of Conduct to obtain a ticket.', 'wordcamporg' ) );
-		}
 	}
 
 	/**

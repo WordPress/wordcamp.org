@@ -13,7 +13,7 @@ defined( 'WPINC' ) || die();
  *
  * @package WordCamp\CampTix_Tweaks
  */
-class Privacy_Field extends Extra_Field {
+class Privacy_Field extends Extra_Fields {
 	const SLUG = 'privacy';
 
 	public $question = '';
@@ -23,8 +23,11 @@ class Privacy_Field extends Extra_Field {
 	/**
 	 * Hook into WordPress and Camptix.
 	 */
-	public function camptix_init() {
-		if ( $attendees_url = $this->maybe_get_attendees_url() ) {
+	public function init() {
+		$this->a11y_label = __( 'Do you want to be listed on the public Attendees page?', 'wordcamporg' );
+
+		$attendees_url = $this->maybe_get_attendees_url();
+		if ( $attendees_url ) {
 			$this->question = sprintf(
 				/* translators: 1: placeholder for URL to Attendees page; 2: placeholder for URL to privacy policy page. */
 				__( 'Do you want to be listed on the public <a href="%1$s" target="_blank">Attendees page</a>? <a href="%2$s" target="_blank">Learn more.</a>', 'wordcamporg' ),
@@ -38,63 +41,16 @@ class Privacy_Field extends Extra_Field {
 				esc_url( get_privacy_policy_url() )
 			);
 		}
-		$this->a11y_label = __( 'Do you want to be listed on the public Attendees page?', 'wordcamporg' );
 
 		$this->options = array(
 			'yes' => _x( 'Yes', 'ticket registration option', 'wordcamporg' ),
 			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
 		);
 
-		// Ask the question.
-		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
-		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 10 );
-		add_filter( 'camptix_get_attendee_answers', array( $this, 'populate_attendee_answer' ), 10, 2 );
-
-		// Save the answer as post meta.
-		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
-		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'edit_attendee_data' ), 10, 3 );
-
 		// Delete cached attendees lists when an attendee privacy setting changes.
 		add_action( 'added_post_meta', array( $this, 'invalidate_attendees_cache' ), 10, 3 );
 		add_action( 'updated_post_meta', array( $this, 'invalidate_attendees_cache' ), 10, 3 );
 		add_action( 'deleted_post_meta', array( $this, 'invalidate_attendees_cache' ), 10, 3 );
-	}
-
-	/**
-	 * Add the question to the list of questions.
-	 *
-	 * @param array $questions
-	 *
-	 * @return array
-	 */
-	function add_question( $questions, $ticket_id ) {
-		if ( apply_filters( 'camptix_first_time_should_skip', false ) ) {
-			return $questions;
-		}
-
-		$questions[ self::SLUG ] = (object) array(
-			// Immitate a WP_Post with metadata..
-			'ID' 	       => self::SLUG,
-			'post_title'   => apply_filters( 'camptix_first_time_question_text', $this->question, $ticket_id ),
-			'tix_type'     => 'radio',
-			'tix_required' => true,
-			'tix_values'   => $this->options,
-		);
-
-		return $questions;
-	}
-
-	/**
-	 * Add the new field to the questions order.
-	 *
-	 * @param array $order
-	 *
-	 * @return array
-	 */
-	function add_question_order( $order ) {
-		$order[] = self::SLUG;
-
-		return $order;
 	}
 
 	/**

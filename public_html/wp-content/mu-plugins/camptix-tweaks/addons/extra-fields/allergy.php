@@ -14,36 +14,24 @@ defined( 'WPINC' ) || die();
  *
  * @package WordCamp\CampTix_Tweaks
  */
-class Allergy_Field extends Extra_Field {
+class Allergy_Field extends Extra_Fields {
 	const SLUG = 'allergy';
 
-	public $label = '';
-
-	public $question = '';
-
-	public $options = array();
+	public $label          = '';
+	public $question       = '';
+	public $options        = array();
+	public $question_order = 20;
 
 	/**
 	 * Hook into WordPress and Camptix.
 	 */
-	public function camptix_init() {
-		$this->label = __( 'Severe allergy', 'wordcamporg' );
-
+	public function init() {
+		$this->label    = __( 'Severe allergy', 'wordcamporg' );
 		$this->question = __( 'Do you have a severe allergy that would affect your experience at WordCamp?', 'wordcamporg' );
-
-		$this->options = array(
+		$this->options  = array(
 			'yes' => _x( 'Yes (we will contact you)', 'ticket registration option', 'wordcamporg' ),
 			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
 		);
-
-		// Ask the question.
-		add_filter( 'camptix_ticket_questions', array( $this, 'add_question' ), 10, 2 );
-		add_filter( 'camptix_ticket_questions_order', array( $this, 'add_question_order' ), 20 );
-		add_filter( 'camptix_get_attendee_answers', array( $this, 'populate_attendee_answer' ), 10, 2 );
-
-		// Save the answer as post meta.
-		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_registration_field' ), 10, 2 );
-		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'edit_attendee_data' ), 10, 3 );
 
 		// Email notifications
 		add_action( 'camptix_ticket_emailed', array( $this, 'after_email_receipt' ) );
@@ -59,87 +47,6 @@ class Allergy_Field extends Extra_Field {
 		add_filter( 'camptix_privacy_export_attendee_prop', array( $this, 'export_attendee_prop' ), 10, 4 );
 		add_filter( 'camptix_privacy_attendee_props_to_erase', array( $this, 'attendee_props_to_erase' ) );
 		add_action( 'camptix_privacy_erase_attendee_prop', array( $this, 'erase_attendee_prop' ), 10, 3 );
-	}
-
-	/**
-	 * Add the question to the list of questions.
-	 *
-	 * @param array $questions
-	 *
-	 * @return array
-	 */
-	function add_question( $questions, $ticket_id ) {
-		if ( apply_filters( 'camptix_allergy_should_skip', false ) ) {
-			return $questions;
-		}
-
-		$questions[ self::SLUG ] = (object) array(
-			// Immitate a WP_Post with metadata..
-			'ID' 	       => self::SLUG,
-			'post_title'   => apply_filters( 'camptix_allergy_question_text', $this->question, $ticket_id ),
-			'tix_type'     => 'radio',
-			'tix_required' => true,
-			'tix_values'   => $this->options,
-		);
-
-		return $questions;
-	}
-
-	/**
-	 * Add the new field to the questions order.
-	 *
-	 * @param array $order
-	 *
-	 * @return array
-	 */
-	function add_question_order( $order ) {
-		$order[] = self::SLUG;
-
-		return $order;
-	}
-
-	/**
-	 * Save the value of the new field to the attendee post upon completion of checkout.
-	 *
-	 * @param int     $post_id
-	 * @param WP_Post $attendee
-	 *
-	 * @return bool|int
-	 */
-	public function save_registration_field( $post_id, $attendee ) {
-		return update_post_meta( $post_id, 'tix_' . self::SLUG, $attendee->{ self::SLUG } );
-	}
-
-	/**
-	 * Update the stored value of the new field if it was changed in the Edit Info form.
-	 *
-	 * @param array   $ticket_info
-	 * @param WP_Post $attendee
-	 * @param array   $answers
-	 *
-	 * @return bool|int
-	 */
-	public function edit_attendee_data( $ticket_info, $attendee, $answers ) {
-		return $this->save_registration_field( $attendee->ID, (object) compact( 'answers' ) );
-	}
-
-	/**
-	 * Retrieve the stored value of the new field for use when displaying the attendee info.
-	 *
-	 * Back-compat only, for where the field was stored outside of the question answers.
-	 *
-	 * @param array   $ticket_info
-	 * @param WP_Post $attendee
-	 *
-	 * @return array
-	 */
-	public function populate_attendee_answer( $ticket_info, $attendee ) {
-		$attendee = get_post( $attendee );
-		$value    = get_post_meta( $attendee->ID, 'tix_' . self::SLUG, true );
-
-		$ticket_info[ self::SLUG ] ??= $this->options[ $value ] ?? '';
-
-		return $ticket_info;
 	}
 
 	/**

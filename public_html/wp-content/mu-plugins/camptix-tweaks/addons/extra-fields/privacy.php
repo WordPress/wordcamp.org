@@ -19,7 +19,7 @@ class Privacy_Field extends Extra_Fields {
 	public $options = array();
 	public $a11y_label;
 
-	$enable_summary = false;
+	public $enable_summary = false;
 
 	/**
 	 * Setup the question & options.

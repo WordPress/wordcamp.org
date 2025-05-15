@@ -32,8 +32,11 @@ class Allergy_Field extends Extra_Fields {
 			'no'  => _x( 'No', 'ticket registration option', 'wordcamporg' ),
 		);
 
-		// Email notifications
+		// Notifications - During registration.
 		add_action( 'camptix_ticket_emailed', array( $this, 'after_email_receipt' ) );
+
+		// Notifications - During edit.
+		add_action( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'after_attendee_edit' ), 20, 2 );
 	}
 
 	/**
@@ -48,6 +51,13 @@ class Allergy_Field extends Extra_Fields {
 		if ( $attendee instanceof WP_Post && 'tix_attendee' === $attendee->post_type ) {
 			$this->maybe_send_notification_email( $value, $attendee );
 		}
+	}
+
+	/**
+	 * Detect if the attendee has later flagged an accessibility need.
+	 */
+	public function after_attendee_edit( $ticket_info, $attendee ) {
+		$this->after_email_receipt( $attendee->ID );
 	}
 
 	/**

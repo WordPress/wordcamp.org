@@ -1,7 +1,6 @@
 <?php
 namespace WordCamp\CampTix_Tweaks;
 
-use CampTix_Plugin;
 use WP_Post;
 
 defined( 'WPINC' ) || die();
@@ -19,6 +18,9 @@ class Privacy_Field extends Extra_Fields {
 	public $question = '';
 	public $options = array();
 	public $a11y_label;
+
+	// No need to summarize this field.
+	public $enable_summary = false;
 
 	/**
 	 * Hook into WordPress and Camptix.

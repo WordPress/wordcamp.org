@@ -1,9 +1,6 @@
 <?php
 namespace WordCamp\CampTix_Tweaks;
 
-use CampTix_Plugin;
-use WP_Post;
-
 defined( 'WPINC' ) or die();
 
 /**
@@ -21,6 +18,10 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 	public $options        = array();
 	public $question_order = 100;
 	public $type           = 'checkbox';
+
+	// No need to summarize this field, since it's just a yes checkbox.
+	public $enable_summary = false;
+	public $enable_export_erase = false;
 
 	/**
 	 * Hook into WordPress and Camptix.

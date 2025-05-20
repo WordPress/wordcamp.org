@@ -40,8 +40,8 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 	/**
 	 * Save the value of the field to the attendee postmeta for back-compat.
 	 *
-	 * @param int     $post_id
-	 * @param WP_Post $attendee
+	 * @param int    $post_id
+	 * @param string $answer
 	 */
 	public function save_field( $post_id, $answer ) {
 		// For back-compat, we only store a value of '1'.

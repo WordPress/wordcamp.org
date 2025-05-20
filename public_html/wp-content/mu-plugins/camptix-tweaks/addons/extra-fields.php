@@ -208,8 +208,8 @@ abstract class Extra_Fields extends CampTix_Addon {
 	/**
 	 * Save the value of the field to the attendee postmeta for back-compat.
 	 *
-	 * @param int   $post_id
-	 * @param mixed $answer
+	 * @param int    $post_id
+	 * @param string $answer
 	 */
 	public function save_field( $post_id, $answer ) {
 		$key = array_search( $answer, $this->options, true );

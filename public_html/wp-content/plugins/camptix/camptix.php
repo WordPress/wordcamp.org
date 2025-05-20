@@ -8173,7 +8173,12 @@ class CampTix_Plugin {
 
 		$printed = array();
 		$allowed_html = array_merge(
-			array( 'p' => array( 'id' => true ) ),
+			array(
+				'p' => array( 'id' => true ),
+				'ul' => true,
+				'ol' => true,
+				'li' => true,
+			),
 			wp_kses_allowed_html( 'data' )
 		);
 

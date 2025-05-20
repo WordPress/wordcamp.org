@@ -4482,7 +4482,7 @@ class CampTix_Plugin {
 				</span>
 
 				<!-- Forms will go here -->
-				<div id="tix-question-form">
+				<div id="tix-question-form" class="wp-clearfix">
 				</div>
 			</div>
 

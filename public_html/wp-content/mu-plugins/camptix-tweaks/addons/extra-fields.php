@@ -109,7 +109,7 @@ abstract class Extra_Fields extends CampTix_Addon {
 			return;
 		}
 
-		// If not overriden, use the slug as the filter.
+		// If not overriden, use the slug in the filters.
 		$this->filter_slug ??= static::SLUG;
 
 		// Ask the question.
@@ -185,15 +185,11 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 * @return bool|int
 	 */
 	public function save_registration_field( $post_id, $attendee ) {
-		$answer = $attendee->answers[ static::SLUG ];
-		$key    = array_search( $answer, $this->options, true );
-
-		// For back-compat, we store the option key rather than the option value.
-		if ( $key ) {
-			$answer = $key;
+		if ( ! isset( $attendee->answers[ static::SLUG ] ) ) {
+			return false;
 		}
 
-		return update_post_meta( $post_id, 'tix_' . static::SLUG, $answer );
+		return $this->save_field( $post_id, $attendee->answers[ static::SLUG ] );
 	}
 
 	/**
@@ -206,7 +202,24 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 * @return bool|int
 	 */
 	public function edit_attendee_data( $ticket_info, $attendee, $answers ) {
-		return $this->save_registration_field( $attendee->ID, (object) compact( 'answers' ) );
+		return $this->save_field( $attendee->ID, $answers[ static::SLUG ] );
+	}
+
+	/**
+	 * Save the value of the field to the attendee postmeta for back-compat.
+	 *
+	 * @param int   $post_id
+	 * @param mixed $answer
+	 */
+	public function save_field( $post_id, $answer ) {
+		$key = array_search( $answer, $this->options, true );
+
+		// For back-compat, we store the option key rather than the option value.
+		if ( $key ) {
+			$answer = $key;
+		}
+
+		return update_post_meta( $post_id, 'tix_' . static::SLUG, $answer );
 	}
 
 	/**

@@ -52,15 +52,13 @@ class Privacy_Field extends Extra_Fields {
 	}
 
 	/**
-	 * Save the value of the new field to the attendee post upon completion of checkout.
+	 * Save the value of the field to the attendee postmeta for back-compat.
 	 *
-	 * @param int     $post_id
-	 * @param WP_Post $attendee
-	 *
-	 * @return bool|int
+	 * @param int   $post_id
+	 * @param mixed $answer
 	 */
-	public function save_registration_field( $post_id, $attendee ) {
-		if ( in_array( $attendee->answers[ self::SLUG ], [ 'no', $this->options['no'] ] ) ) {
+	public function save_field( $post_id, $answer ) {
+		if ( in_array( $answer, [ 'no', $this->options['no'] ] ) ) {
 			// Privacy; No = "do NOT show" = set as private.
 			$result = update_post_meta( $post_id, 'tix_' . self::SLUG, 'private' );
 		} else {

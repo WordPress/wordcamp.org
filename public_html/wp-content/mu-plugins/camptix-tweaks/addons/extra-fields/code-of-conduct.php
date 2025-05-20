@@ -38,12 +38,12 @@ class Code_Of_Conduct_Field extends Extra_Fields {
 	}
 
 	/**
-	 * Save the value of the new field to the attendee post upon completion of checkout.
+	 * Save the value of the field to the attendee postmeta for back-compat.
 	 *
 	 * @param int     $post_id
 	 * @param WP_Post $attendee
 	 */
-	public function save_registration_field( $post_id, $attendee ) {
+	public function save_field( $post_id, $answer ) {
 		// For back-compat, we only store a value of '1'.
 		return update_post_meta( $post_id, 'tix_' . static::SLUG, 1 );
 	}

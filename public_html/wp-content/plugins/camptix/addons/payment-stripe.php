@@ -891,7 +891,7 @@ class CampTix_Stripe_API_Client {
 
 		$args = array(
 			'mode'                => 'payment',
-			'submit_type'         => 'book',
+			'submit_type'         => 'pay',
 			'success_url'         => $return_url,
 			'cancel_url'          => $cancel_url,
 			'line_items'          => $line_items,

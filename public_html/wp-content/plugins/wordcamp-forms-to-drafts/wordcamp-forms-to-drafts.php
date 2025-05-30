@@ -502,9 +502,10 @@ class WordCamp_Forms_To_Drafts {
 		if ( 'call-for-speakers' === $form_key ) {
 			$wordcamp = get_wordcamp_post();
 
-			/* translators: %1$s: email address for organizing team; %2$s: original message; */
+			/* translators: %1$s: WordCamp name; %2$s: email address for organizing team; %3$s: original message. */
 			$message = sprintf(
-				__( 'Hello,<br><br>Thank you for submitting on Call for Speakers! Here is an copy of your submission.<br/><br/>Please do not respond to this email, organizers will update you on the process. If you have any questions, send an email to organisers %1$s.<br/>%2$s', 'wordcamporg' ),
+				__( 'Hello,<br/><br/>Thank you for your interest in speaking at %1$s! We have received your submission, and a copy is included below for your records.<br/><br/>Please do not reply to this email, as it is automatically generated. If you have any questions, send an email to %2$s.<br/>%3$s', 'wordcamporg' ),
+				get_wordcamp_name(),
 				$wordcamp->meta['E-mail Address'][0],
 				$message
 			);

@@ -131,24 +131,4 @@ function get_domain_network_id( string $domain ): int {
 	}
 }
 
-/**
- * Get the Network Admin URL for a given network + path.
- */
-function get_site_network_url( int $network_id, string $path ): string {
-	$tld = get_top_level_domain();
-	$url = network_admin_url( $path );
-
-	$hostname = "wordcamp.$tld";
-	if ( $network_id === CAMPUS_NETWORK_ID ) {
-		$hostname = "campus.wordpress.$tld";
-	} elseif ( $network_id === EVENTS_NETWORK_ID ) {
-		$hostname = "events.wordpress.$tld";
-	}
-
-	$url = preg_replace( '^https?://[^/]+', "https://{$hostname}", $url );
-
-	return $url;
-}
-
-
 load_network_sunrise();

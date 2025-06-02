@@ -1,5 +1,7 @@
 <?php
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_YEAR_DOT_CITY_DOMAIN_PATH };
 
 defined( 'WPINC' ) || die();
@@ -447,4 +449,27 @@ function is_wordcamp_virtual( $wordcamp ) {
 	restore_current_blog();
 
 	return $is_virtual;
+}
+
+/**
+ * Get the Network Admin URL for a given network + path.
+ *
+ * @param int    $network_id The ID of the network.
+ * @param string $path       The path to append to the URL.
+ * @return string The full URL for the network admin.
+ */
+function get_network_specific_network_url( int $network_id, string $path ): string {
+	$tld = get_top_level_domain();
+	$url = network_admin_url( $path );
+
+	$hostname = "wordcamp.$tld";
+	if ( $network_id === CAMPUS_NETWORK_ID ) {
+		$hostname = "campus.wordpress.$tld";
+	} elseif ( $network_id === EVENTS_NETWORK_ID ) {
+		$hostname = "events.wordpress.$tld";
+	}
+
+	$url = preg_replace( '^https?://[^/]+', "https://{$hostname}", $url );
+
+	return $url;
 }

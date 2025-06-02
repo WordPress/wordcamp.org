@@ -5,7 +5,7 @@
 
 use \WordCamp\Logger;
 
-use function WordCamp\Sunrise\{ get_top_level_domain, get_domain_network_id };
+use function WordCamp\Sunrise\get_top_level_domain;
 
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
@@ -64,7 +64,7 @@ class WordCamp_New_Site {
 							),
 							true
 						);
-						$edit_url     = add_query_arg( 'id', $blog_details->blog_id, get_site_network_url( $network_id, 'site-info.php' ) );
+						$edit_url     = add_query_arg( 'id', $blog_details->blog_id, get_network_specific_network_url( $network_id, 'site-info.php' ) );
 					?>
 
 					<a target="_blank" href="<?php echo esc_url( $edit_url ); ?>">Edit</a> |

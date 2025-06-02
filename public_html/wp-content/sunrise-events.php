@@ -55,9 +55,10 @@ function get_redirect_url( string $request_uri ): string {
 /**
  * Determine the current network and site.
  *
- * This is needed to achieve the `events.wordpress.org/{year}/{event-type}{city}` URL structure.
- *
- * This also supports the `campus.wordpress.org/{city}` URL structure.
+ * This is needed to achieve the various URL structures we use, including:
+ *  - `events.wordpress.org/{city}/{year}/{event-type}`
+ *  - `events.wordpress.org/campusconnect/{year}/{city}`
+ *  - `campus.wordpress.org/{city}`
  *
  * @see https://paulund.co.uk/wordpress-multisite-with-nested-folder-paths
  *

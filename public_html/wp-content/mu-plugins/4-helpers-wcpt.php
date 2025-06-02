@@ -147,7 +147,8 @@ function get_wordcamp_name( $site_id = 0 ) {
 /**
  * Extract pieces from a WordCamp.org URL
  *
- * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead
+ * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead.
+ * @todo Update this to handle events.wordpress.org, campusconnect, & campus.wordpress.org.
  *
  * @param string $site_url The root URL for the site, without any query string. It can include the site path
  *                         -- e.g., `https://narnia.wordcamp.org/2020` -- but should not include a post slug,

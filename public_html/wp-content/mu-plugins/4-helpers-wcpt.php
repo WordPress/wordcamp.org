@@ -464,9 +464,9 @@ function get_network_specific_network_url( int $network_id, string $path ): stri
 	$url = network_admin_url( $path );
 
 	$hostname = "wordcamp.$tld";
-	if ( $network_id === CAMPUS_NETWORK_ID ) {
+	if ( CAMPUS_NETWORK_ID === $network_id ) {
 		$hostname = "campus.wordpress.$tld";
-	} elseif ( $network_id === EVENTS_NETWORK_ID ) {
+	} elseif ( EVENTS_NETWORK_ID === $network_id ) {
 		$hostname = "events.wordpress.$tld";
 	}
 

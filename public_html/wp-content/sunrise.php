@@ -119,7 +119,7 @@ function get_top_level_domain() {
 function get_domain_network_id( string $domain ): int {
 	$tld = get_top_level_domain();
 
-	switch( $domain ) {
+	switch ( $domain ) {
 		case "campus.wordpress.{$tld}":
 			return CAMPUS_NETWORK_ID;
 

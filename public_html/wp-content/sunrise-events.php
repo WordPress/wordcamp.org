@@ -97,7 +97,6 @@ function set_network_and_site() {
 		if ( ! $current_blog ) {
 			$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );
 		}
-
 	} else {
 		$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );
 	}

@@ -5,7 +5,7 @@ use WP_Network, WP_Site;
 use function WordCamp\Sunrise\{ get_top_level_domain };
 
 defined( 'WPINC' ) || die();
-use const WordCamp\Sunrise\PATTERN_CITY_YEAR_TYPE_PATH;
+use const WordCamp\Sunrise\{ PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
 
 main();
 
@@ -57,6 +57,8 @@ function get_redirect_url( string $request_uri ): string {
  *
  * This is needed to achieve the `events.wordpress.org/{year}/{event-type}{city}` URL structure.
  *
+ * This also supports the `campus.wordpress.org/{city}` URL structure.
+ *
  * @see https://paulund.co.uk/wordpress-multisite-with-nested-folder-paths
  *
  * phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- WP is designed in a way that requires this.
@@ -78,6 +80,15 @@ function set_network_and_site() {
 		list( $path ) = explode( '?', $path );
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 3 );
+
+	} elseif ( 1 === preg_match( PATTERN_CITY_PATH, $path ) ) {
+		if ( is_admin() ) {
+			$path = preg_replace( '#(.*)/wp-admin/.*#', '$1/', $path );
+		}
+
+		list( $path ) = explode( '?', $path );
+
+		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 2 );
 
 	} else {
 		$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );

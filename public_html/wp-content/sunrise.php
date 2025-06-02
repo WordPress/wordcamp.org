@@ -70,6 +70,19 @@ const PATTERN_CITY_YEAR_TYPE_PATH = '
 	@ix
 ';
 
+/*
+ * Matches a URL path like '/vancouver/`.
+ *
+ * These are used by the `campus.wordpress.org` network.
+ */
+const PATTERN_CITY_PATH = '
+	@ ^
+	/
+	( [\w-]+ )    # Capture the city.
+	/?
+	@ix
+';
+
 /**
  * Load the sunrise file for the current network.
  */

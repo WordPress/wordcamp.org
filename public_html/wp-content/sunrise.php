@@ -88,6 +88,8 @@ const PATTERN_CITY_PATH = '
  */
 function load_network_sunrise() {
 	switch ( SITE_ID_CURRENT_SITE ) {
+		case CAMPUS_NETWORK_ID:
+			// Intentional Fall through. Load Events plugins for now.
 		case EVENTS_NETWORK_ID:
 			require __DIR__ . '/sunrise-events.php';
 			break;
@@ -106,6 +108,46 @@ function load_network_sunrise() {
  */
 function get_top_level_domain() {
 	return 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
+}
+
+/**
+ * Get the Network ID for a given domain.
+ *
+ * @param string $domain The domain to check.
+ * @return int The Network ID.
+ */
+function get_domain_network_id( string $domain ): int {
+	$tld = get_top_level_domain();
+
+	switch( $domain ) {
+		case "campus.wordpress.{$tld}":
+			return CAMPUS_NETWORK_ID;
+
+		case "events.wordpress.{$tld}":
+			return EVENTS_NETWORK_ID;
+
+		default:
+			return WORDCAMP_NETWORK_ID;
+	}
+}
+
+/**
+ * Get the Network Admin URL for a given network + path.
+ */
+function get_site_network_url( int $network_id, string $path ): string {
+	$tld = get_top_level_domain();
+	$url = network_admin_url( $path );
+
+	$hostname = "wordcamp.$tld";
+	if ( $network_id === CAMPUS_NETWORK_ID ) {
+		$hostname = "campus.wordpress.$tld";
+	} elseif ( $network_id === EVENTS_NETWORK_ID ) {
+		$hostname = "events.wordpress.$tld";
+	}
+
+	$url = preg_replace( '^https?://[^/]+', "https://{$hostname}", $url );
+
+	return $url;
 }
 
 

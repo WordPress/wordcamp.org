@@ -5,7 +5,7 @@
 
 use \WordCamp\Logger;
 
-use function WordCamp\Sunrise\get_top_level_domain;
+use function WordCamp\Sunrise\{ get_top_level_domain, get_domain_network_id };
 
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
@@ -51,8 +51,7 @@ class WordCamp_New_Site {
 				$url        = trailingslashit( get_post_meta( $post_id, $key, true ) );
 				$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
 				$valid_url  = isset( $url['host'], $url['path'] );
-				$tld        = get_top_level_domain();
-				$network_id = $valid_url && "events.wordpress.$tld" === $url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+				$network_id = $valid_url ? get_domain_network_id( $url['host'] ) : false;
 				$we_host_it = $valid_url && 'doaction.org' !== $url['host'];
 				?>
 
@@ -65,11 +64,7 @@ class WordCamp_New_Site {
 							),
 							true
 						);
-						$edit_url     = add_query_arg( 'id', $blog_details->blog_id, network_admin_url( 'site-info.php' ) );
-
-					if ( "events.wordpress.$tld" === $url['host'] ) {
-						$edit_url = str_replace( '://wordcamp.', '://events.wordpress.', $edit_url );
-					}
+						$edit_url     = add_query_arg( 'id', $blog_details->blog_id, get_site_network_url( $network_id, 'site-info.php' ) );
 					?>
 
 					<a target="_blank" href="<?php echo esc_url( $edit_url ); ?>">Edit</a> |
@@ -144,8 +139,7 @@ class WordCamp_New_Site {
 		update_post_meta( $wordcamp_id, $key, esc_url( $url ) );
 
 		// If this site exists make sure we update the _site_id mapping.
-		$tld              = get_top_level_domain();
-		$network_id       = "events.wordpress.$tld" === $parsed_url['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID;
+		$network_id       = get_domain_network_id( $parsed_url['host'] );
 		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], $network_id );
 
 		if ( $existing_site_id ) {
@@ -168,7 +162,7 @@ class WordCamp_New_Site {
 		$tld                            = get_top_level_domain();
 		$last_permitted_external_domain = 2341;
 		$external_domain_exceptions     = array( 169459 );
-		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld | events\.wordpress\.$tld @ix", $domain );
+		$is_external_domain             = ! preg_match( "@ \.wordcamp\.$tld | \.buddycamp\.$tld | events\.wordpress\.$tld | campus\.wordpress\.$tld @ix", $domain );
 		$can_have_external_domain       = $wordcamp_id <= $last_permitted_external_domain || in_array( $wordcamp_id, $external_domain_exceptions );
 
 		// DoAction is not hosted within the WordCamp infrastructure, so can have an external domain.
@@ -250,14 +244,12 @@ class WordCamp_New_Site {
 			$blog_name .= wp_date( ' Y', $wordcamp->{'Start Date (YYYY-mm-dd)'} );
 		}
 
-		$tld = get_top_level_domain();
-
 		$this->new_site_id = wp_insert_site( array(
-			'network_id' => "events.wordpress.$tld" === $url_components['host'] ? EVENTS_NETWORK_ID : WORDCAMP_NETWORK_ID,
-			'domain'  => $url_components['host'],
-			'path'    => $path,
-			'title'   => $blog_name,
-			'user_id' => $lead_organizer->ID,
+			'network_id' => get_domain_network_id( $url_components['host'] ),
+			'domain'     => $url_components['host'],
+			'path'       => $path,
+			'title'      => $blog_name,
+			'user_id'    => $lead_organizer->ID,
 		) );
 
 		if ( is_int( $this->new_site_id ) ) {

@@ -69,7 +69,7 @@ function set_network_and_site() {
 	global $current_site, $current_blog, $blog_id, $site_id, $domain, $path, $public;
 
 	// Originally WP referred to networks as "sites" and sites as "blogs".
-	$current_site = WP_Network::get_instance( EVENTS_NETWORK_ID );
+	$current_site = WP_Network::get_instance( SITE_ID_CURRENT_SITE );
 	$site_id      = $current_site->id;
 	$path         = stripslashes( $_SERVER['REQUEST_URI'] );
 
@@ -82,7 +82,10 @@ function set_network_and_site() {
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 3 );
 
-	} elseif ( 1 === preg_match( PATTERN_CITY_PATH, $path ) ) {
+	} elseif (
+		CAMPUS_NETWORK_ID === $site_id &&
+		1 === preg_match( PATTERN_CITY_PATH, $path )
+	) {
 		if ( is_admin() ) {
 			$path = preg_replace( '#(.*)/wp-admin/.*#', '$1/', $path );
 		}
@@ -90,6 +93,10 @@ function set_network_and_site() {
 		list( $path ) = explode( '?', $path );
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 2 );
+
+		if ( ! $current_blog ) {
+			$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );
+		}
 
 	} else {
 		$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );

@@ -7,7 +7,7 @@ use \WordCamp\Logger;
 
 use function WordCamp\Sunrise\get_top_level_domain;
 
-use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
+use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
 
 class WordCamp_New_Site {
 	protected $new_site_id;
@@ -36,6 +36,15 @@ class WordCamp_New_Site {
 	public function render_site_url_field( $key, $field_type, $object_name ) {
 		global $post_id;
 
+		$event_subtype = get_post( $post_id )->event_subtype ?: 'wordcamp';
+
+		$placeholder = 'https://city.wordcamp.org/' . wp_date( 'Y' ) . '/';
+		if ( 'other' === $event_subtype ) {
+			$placeholder = 'https://events.wordpress.org/city/' . wp_date( 'Y' ) . '/type/';
+		} elseif ( 'campusconnect' === $event_subtype ) {
+			$placeholder = 'https://events.wordpress.org/campusconnect/' . wp_date( 'Y' ) . '/city/';
+		}
+
 		if ( 'URL' == $key && 'wc-url' == $field_type ) : ?>
 			<input
 				type="text"
@@ -43,7 +52,7 @@ class WordCamp_New_Site {
 				name="<?php echo esc_attr( $object_name ); ?>"
 				id="<?php echo esc_attr( $object_name ); ?>"
 				value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
-				placeholder="https://city.wordcamp.org/<?php echo esc_attr( wp_date( 'Y' ) ); ?>/"
+				placeholder="<?php echo esc_attr( $placeholder ); ?>"
 			/>
 
 			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
@@ -177,6 +186,8 @@ class WordCamp_New_Site {
 
 		if ( "events.wordpress.$tld" === $domain ) {
 			$match = preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $path );
+		} elseif ( "campus.wordpress.$tld" === $domain ) {
+			$match = preg_match( PATTERN_CITY_PATH, $path );
 		} else {
 			$match = preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $domain . $path );
 		}

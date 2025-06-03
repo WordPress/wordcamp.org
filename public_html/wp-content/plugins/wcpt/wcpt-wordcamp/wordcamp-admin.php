@@ -1139,6 +1139,20 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * Return a list of valid Event Subtypes.
+		 *
+		 * @return array
+		 */
+		public function get_event_subtypes() {
+			return array(
+				'wordcamp'      => __( 'WordCamp', 'wordcamporg' ),
+				'doaction'      => __( 'DoAction', 'wordcamporg' ),
+				'campusconnect' => __( 'Campus Connect', 'wordcamporg' ),
+				'other'         => __( 'Other Event', 'wordcamporg' ),
+			);
+		}
+
+		/**
 		 * Schedule cron jobs
 		 */
 		public function schedule_cron_jobs() {

@@ -58,7 +58,7 @@ function get_redirect_url( string $request_uri ): string {
  * This is needed to achieve the various URL structures we use, including:
  *  - `events.wordpress.org/{city}/{year}/{event-type}`
  *  - `events.wordpress.org/campusconnect/{year}/{city}`
- *  - `campus.wordpress.org/{city}`
+ *  - `campus.wordpress.org/{university-city}`
  *
  * @see https://paulund.co.uk/wordpress-multisite-with-nested-folder-paths
  *
@@ -93,10 +93,17 @@ function set_network_and_site() {
 		list( $path ) = explode( '?', $path );
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 2 );
-
 		if ( ! $current_blog ) {
-			$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );
+			// If the request doesn't match a site, redirect to the campus connect page.
+			header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
+			exit;
 		}
+
+	} elseif ( CAMPUS_NETWORK_ID === $site_id ) {
+		// If the request doesn't match a site, redirect to the campus connect page.
+		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
+		exit;
+
 	} else {
 		$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );
 	}

@@ -13,7 +13,9 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 			$mentorUserName = $( '#wcpt_mentor_wordpress_org_user_name' ),
 			hasContributor = $( '#wcpt_contributor_day' ),
 			$virtualEventCheckbox = $( '#wcpt_virtual_event_only' ),
-			$streamingSelection = $( '.field__type-select-streaming' );
+			$streamingSelection = $( '.field__type-select-streaming' ),
+			$wcUrlFields = $('input.field-wc-url-input'),
+			$secondarySiteWrap = $( 'input[name*="wcpt_secondary_site"]' ).parent();
 
 		// Sponsor region
 		createSiteCheckbox.change( self.toggleSponsorRegionRequired );
@@ -46,6 +48,26 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 			}
 		} );
 		$streamingSelection.find( 'select' ).trigger( 'change' );
+
+		// If the value has changed, mark it as dirty and disable the checkbox.
+		$wcUrlFields.on( 'change', function() {
+			var $this = $(this),
+			    origValue = $this.data( 'orig-value' ),
+			    newValue = $this.val();
+
+			$this.toggleClass( 'has-changed', origValue !== newValue );
+			$this.parent().find( 'input.has-changed + label input[type=checkbox]:checked' ).prop('checked', false );
+		} );
+
+		// Allow adding additional secondary sites fields.
+		$secondarySiteWrap.find( 'a.add' ).on( 'click', function( event ) {
+			event.preventDefault();
+			var inputNumber = $secondarySiteWrap.find( 'input[type=text]' ).length;
+			var $newField = $secondarySiteWrap.find( 'input[type=text][name*="0"]' ).first().clone();
+			$newField.val( '' );
+			$newField.attr( 'name', $newField.attr( 'name' ).replace( /0/g, inputNumber ) );
+			$newField.insertBefore( $( this ) ).focus();
+		} );
 	};
 
 	/**

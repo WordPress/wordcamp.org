@@ -470,7 +470,7 @@ function get_network_specific_network_url( int $network_id, string $path ): stri
 		$hostname = "events.wordpress.$tld";
 	}
 
-	$url = preg_replace( '^https?://[^/]+', "https://{$hostname}", $url );
+	$url = preg_replace( '!^https?://[^/]+!i', "https://{$hostname}", $url );
 
 	return $url;
 }

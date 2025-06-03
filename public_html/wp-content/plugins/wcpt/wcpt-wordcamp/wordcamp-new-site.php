@@ -5,7 +5,7 @@
 
 use \WordCamp\Logger;
 
-use function WordCamp\Sunrise\get_top_level_domain;
+use function WordCamp\Sunrise\{ get_top_level_domain, get_domain_network_id };
 
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
 

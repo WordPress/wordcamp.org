@@ -63,9 +63,9 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 		$secondarySiteWrap.find( 'a.add' ).on( 'click', function( event ) {
 			event.preventDefault();
 			var inputNumber = $secondarySiteWrap.find( 'input[type=text]' ).length;
-			var $newField = $secondarySiteWrap.find( 'input[type=text][name*="0"]' ).first().clone();
+			var $newField = $secondarySiteWrap.find( 'input[type=text]' ).first().clone();
 			$newField.val( '' );
-			$newField.attr( 'name', $newField.attr( 'name' ).replace( /0/g, inputNumber ) );
+			$newField.attr( 'name', $newField.attr( 'name' ).replace( /\[.+\]/g, '[]' ) );
 			$newField.insertBefore( $( this ) ).focus();
 		} );
 	};

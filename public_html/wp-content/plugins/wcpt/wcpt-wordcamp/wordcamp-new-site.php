@@ -232,7 +232,6 @@ class WordCamp_New_Site {
 			foreach ( array_diff( $existing_stored_values, $existing_site_ids ) as $old_site_id ) {
 				delete_post_meta( $wordcamp_id, $site_id_meta_key, absint( $old_site_id ) );
 			}
-
 		} else {
 			$url = $validate_url( $url );
 

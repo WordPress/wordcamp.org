@@ -77,7 +77,6 @@ class WordCamp_New_Site {
 			// Render the 'Add another' link.
 			echo '<a class="add" style="display: block; cursor: pointer">+ Add</a>';
 		}
-
 	}
 
 	/**
@@ -180,7 +179,7 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		$validate_url = static function( $url ) {
+		$validate_url = static function ( $url ) {
 			$url = str_starts_with( $url, 'http' ) ? $url : 'http://' . $url;
 			$url = set_url_scheme( esc_url_raw( $url ), 'https' );
 
@@ -199,7 +198,7 @@ class WordCamp_New_Site {
 
 			return esc_url( $url );
 		};
-		$find_existing_site = static function( $url ) {
+		$find_existing_site = static function ( $url ) {
 			if ( ! $url ) {
 				return false;
 			}
@@ -346,6 +345,7 @@ class WordCamp_New_Site {
 				$url_keys[ wcpt_key_to_str( $url ) ] = $url;
 			}
 
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 			foreach ( $_POST[ wcpt_key_to_str( 'create-site-in-network-wcpt_secondary_site', 'wcpt_' ) ] as $url => $value ) {
 				$url = $url_keys[ $url ] ?? ( $secondary_urls[ $url ] ?? '' );
 				if ( 'on' === strtolower( $value ) && $url ) {

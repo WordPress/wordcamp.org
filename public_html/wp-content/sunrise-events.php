@@ -98,7 +98,6 @@ function set_network_and_site() {
 			header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
 			exit;
 		}
-
 	} elseif ( CAMPUS_NETWORK_ID === $site_id ) {
 		// If the request doesn't match a site, redirect to the campus connect page.
 		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );

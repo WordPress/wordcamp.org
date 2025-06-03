@@ -22,7 +22,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 			<div id="misc-publishing-actions">
 			<div class="misc-pub-section misc-pub-post-status">
 					<label>
-						<?php echo $label; ?> Type:
+						<?php echo esc_html( $label ); ?> Type:
 
 						<?php if ( current_user_can( $edit_capability ) ) : ?>
 
@@ -52,7 +52,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 				</div>
 				<div class="misc-pub-section misc-pub-post-status">
 					<label>
-						<?php echo $label; ?> Status:
+						<?php echo esc_html( $label ); ?> Status:
 
 						<?php if ( current_user_can( $edit_capability ) ) : ?>
 

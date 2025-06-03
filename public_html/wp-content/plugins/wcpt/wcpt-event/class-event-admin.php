@@ -973,5 +973,12 @@ abstract class Event_Admin {
 		endforeach;
 	}
 
-	abstract function get_event_subtypes();
+	/**
+	 * Returns the list of Event Subtypes.
+	 *
+	 * This is generally 'WordCamp', 'DoAction', 'Other Event', 'Campus Connect', etc.
+	 *
+	 * @return array
+	 */
+	abstract public function get_event_subtypes();
 }

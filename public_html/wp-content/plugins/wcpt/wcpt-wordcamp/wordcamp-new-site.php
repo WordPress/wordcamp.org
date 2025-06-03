@@ -18,10 +18,10 @@ class WordCamp_New_Site {
 	public function __construct() {
 		$this->new_site_id = false;
 
-		add_action( 'wcpt_metabox_value',     array( $this, 'render_site_url_field' ), 10, 3 );
-		add_action( 'wcpt_metabox_save',      array( $this, 'save_site_url_field'   ), 10, 3 );
-		add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_create_new_site' ), 10, 1 );
-		add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_push_mes'        ), 10, 1 );
+		add_action( 'wcpt_metabox_value',     array( $this, 'render_site_url_field'  ), 10, 3 );
+		add_action( 'wcpt_metabox_save',      array( $this, 'save_site_url_field'    ), 10, 3 );
+		add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_create_new_sites' ), 10, 1 );
+		add_action( 'wcpt_metabox_save_done', array( $this, 'maybe_push_mes'         ), 10, 1 );
 	}
 
 	/**
@@ -36,67 +36,88 @@ class WordCamp_New_Site {
 	public function render_site_url_field( $key, $field_type, $object_name ) {
 		global $post_id;
 
-		$event_subtype = get_post( $post_id )->event_subtype ?: 'wordcamp';
-
-		$placeholder = 'https://city.wordcamp.org/' . wp_date( 'Y' ) . '/';
-		if ( 'other' === $event_subtype ) {
-			$placeholder = 'https://events.wordpress.org/city/' . wp_date( 'Y' ) . '/type/';
-		} elseif ( 'campusconnect' === $event_subtype ) {
-			$placeholder = 'https://events.wordpress.org/campusconnect/' . wp_date( 'Y' ) . '/city/';
+		if (
+			'wc-url' != $field_type ||
+			! in_array( $key, array( 'URL', 'Secondary Site' ) )
+		) {
+			return;
 		}
 
-		if ( 'URL' == $key && 'wc-url' == $field_type ) : ?>
-			<input
-				type="text"
-				size="36"
-				name="<?php echo esc_attr( $object_name ); ?>"
-				id="<?php echo esc_attr( $object_name ); ?>"
-				value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
-				placeholder="<?php echo esc_attr( $placeholder ); ?>"
-			/>
+		$is_primary_site = ( 'URL' === $key );
 
-			<?php if ( current_user_can( 'manage_sites' ) ) : ?>
-				<?php
-				$url        = trailingslashit( get_post_meta( $post_id, $key, true ) );
-				$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
-				$valid_url  = isset( $url['host'], $url['path'] );
-				$network_id = $valid_url ? get_domain_network_id( $url['host'] ) : false;
-				$we_host_it = $valid_url && 'doaction.org' !== $url['host'];
-				?>
+		$event_subtype = get_post( $post_id )->event_subtype ?: 'wordcamp';
 
-				<?php if ( $valid_url && $we_host_it && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>
-					<?php
-						$blog_details = get_blog_details(
-							array(
-								'domain' => $url['host'],
-								'path'   => $url['path'],
-							),
-							true
-						);
-						$edit_url     = add_query_arg( 'id', $blog_details->blog_id, get_network_specific_network_url( $network_id, 'site-info.php' ) );
-					?>
+		if ( $is_primary_site ) {
+			$placeholder = 'https://city.wordcamp.org/' . wp_date( 'Y' ) . '/';
+			if ( 'other' === $event_subtype ) {
+				$placeholder = 'https://events.wordpress.org/city/' . wp_date( 'Y' ) . '/type/';
+			} elseif ( 'campusconnect' === $event_subtype ) {
+				$placeholder = 'https://events.wordpress.org/campusconnect/' . wp_date( 'Y' ) . '/city/';
+			}
+		} else {
+			$placeholder = 'https://city.wordcamp.org/' . wp_date( 'Y' ) . '-locale/';
+			if ( 'other' === $event_subtype ) {
+				$placeholder = 'https://events.wordpress.org/city/' . wp_date( 'Y' ) . '/type/';
+			} elseif ( 'campusconnect' === $event_subtype ) {
+				$placeholder = 'https://campus.wordpress.org/city-or-university/';
+			}
+		}
 
-					<a target="_blank" href="<?php echo esc_url( $edit_url ); ?>">Edit</a> |
-					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
-					<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
+		?>
+		<input
+			type="text"
+			size="36"
+			name="<?php echo esc_attr( $object_name ); ?>"
+			id="<?php echo esc_attr( $object_name ); ?>"
+			value="<?php echo esc_attr( get_post_meta( $post_id, $key, true ) ); ?>"
+			placeholder="<?php echo esc_attr( $placeholder ); ?>"
+		/>
 
-				<?php elseif ( $we_host_it ) : ?>
-					<?php $checkbox_id = wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ); ?>
+		<?php
+		if ( ! current_user_can( 'manage_sites' ) ) {
+			return;
+		}
 
-					<label for="<?php echo esc_attr( $checkbox_id ); ?>">
-						<input id="<?php echo esc_attr( $checkbox_id ); ?>" type="checkbox" name="<?php echo esc_attr( $checkbox_id ); ?>" />
-						Create site in network
-					</label>
-				<?php endif; // Domain exists. ?>
+		// Add the checkbox to create the site, if applicable.
 
-				<?php if ( $valid_url && ! self::url_matches_expected_format( $url['host'], $url['path'], $post_id ) ) : ?>
-					<br /><br />
+		$url        = trailingslashit( get_post_meta( $post_id, $key, true ) );
+		$url        = wp_parse_url( filter_var( $url, FILTER_VALIDATE_URL ) );
+		$valid_url  = isset( $url['host'], $url['path'] );
+		$network_id = $valid_url ? get_domain_network_id( $url['host'] ) : false;
+		$we_host_it = $valid_url && 'doaction.org' !== $url['host'];
+		?>
 
-					<span class="notice notice-large notice-warning">
-						Warning: This URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code> or <code>events.wordpress.org/city/year/type/</code>.
-					</span>
-				<?php endif; ?>
-			<?php endif; // User can manage sites. ?>
+		<?php if ( $valid_url && $we_host_it && domain_exists( $url['host'], $url['path'], $network_id ) ) : ?>
+			<?php
+				$blog_details = get_blog_details(
+					array(
+						'domain' => $url['host'],
+						'path'   => $url['path'],
+					),
+					true
+				);
+				$edit_url     = add_query_arg( 'id', $blog_details->blog_id, get_network_specific_network_url( $network_id, 'site-info.php' ) );
+			?>
+
+			<a target="_blank" href="<?php echo esc_url( $edit_url ); ?>">Edit</a> |
+			<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>/wp-admin/">Dashboard</a> |
+			<a target="_blank" href="<?php echo esc_url( $blog_details->siteurl ); ?>">Visit</a>
+
+		<?php elseif ( $we_host_it ) : ?>
+			<?php $checkbox_id = wcpt_key_to_str( 'create-site-in-network' . ( ! $is_primary_site ? '-secondary' : '' ), 'wcpt_' ); ?>
+
+			<label for="<?php echo esc_attr( $checkbox_id ); ?>">
+				<input id="<?php echo esc_attr( $checkbox_id ); ?>" type="checkbox" name="<?php echo esc_attr( $checkbox_id ); ?>" />
+				Create site in network
+			</label>
+		<?php endif; // Domain exists. ?>
+
+		<?php if ( $valid_url && ! self::url_matches_expected_format( $url['host'], $url['path'], $post_id ) ) : ?>
+			<br /><br />
+
+			<span class="notice notice-large notice-warning">
+				Warning: This URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code> or <code>events.wordpress.org/city/year/type/</code>.
+			</span>
 		<?php endif;
 	}
 
@@ -111,21 +132,23 @@ class WordCamp_New_Site {
 		global $switched;
 
 		// No updating if the blog has been switched.
-		if ( $switched || 1 !== did_action( 'wcpt_metabox_save' ) ) {
+		if ( $switched || did_action( 'wcpt_metabox_save_done' ) > 1 ) {
 			return;
 		}
 
-		$field_name = wcpt_key_to_str( $key, 'wcpt_' );
+		$is_primary_site  = ( 'URL' === $key );
+		$field_name       = wcpt_key_to_str( $key, 'wcpt_' );
+		$site_id_meta_key = $is_primary_site ? '_site_id' : '_secondary_site_id';
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
-		if ( 'URL' !== $key || 'wc-url' !== $field_type || ! isset( $_POST[ $field_name ] ) ) {
+		if ( ! in_array( $key, array( 'URL', 'Secondary Site' ) ) || 'wc-url' !== $field_type || ! isset( $_POST[ $field_name ] ) ) {
 			return;
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
 		if ( empty( $_POST[ $field_name ] ) ) {
-			delete_post_meta( $wordcamp_id, 'URL' );
-			delete_post_meta( $wordcamp_id, '_site_id' );
+			delete_post_meta( $wordcamp_id, $key );
+			delete_post_meta( $wordcamp_id, $site_id_meta_key );
 			return;
 		}
 
@@ -152,9 +175,9 @@ class WordCamp_New_Site {
 		$existing_site_id = domain_exists( $parsed_url['host'], $parsed_url['path'], $network_id );
 
 		if ( $existing_site_id ) {
-			update_post_meta( $wordcamp_id, '_site_id', absint( $existing_site_id ) );
+			update_post_meta( $wordcamp_id, $site_id_meta_key, absint( $existing_site_id ) );
 		} else {
-			delete_post_meta( $wordcamp_id, '_site_id' );
+			delete_post_meta( $wordcamp_id, $site_id_meta_key );
 		}
 	}
 
@@ -200,7 +223,7 @@ class WordCamp_New_Site {
 	 *
 	 * @param int $wordcamp_id
 	 */
-	public function maybe_create_new_site( $wordcamp_id ) {
+	public function maybe_create_new_sites( $wordcamp_id ) {
 		$wordcamp = get_post( $wordcamp_id );
 
 		if ( ! $wordcamp instanceof WP_Post || WCPT_POST_TYPE_ID !== $wordcamp->post_type ) {
@@ -233,12 +256,31 @@ class WordCamp_New_Site {
 			return;
 		}
 
+		// Two different fields can be used to create a site, depending on whether it's the primary or secondary site.
+
 		$url = get_post_meta( $wordcamp_id, 'URL', true );
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
-		if ( ! isset( $_POST[ wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ) ] ) || empty( $url ) ) {
-			Logger\log( 'return_no_request_or_url', compact( 'wordcamp_id', 'url' ) );
-			return;
+		if ( $url && isset( $_POST[ wcpt_key_to_str( 'create-site-in-network', 'wcpt_' ) ] ) ) {
+			$this->_maybe_create_site( $wordcamp, '_site_id', $url );
 		}
+
+		$secondary_url = get_post_meta( $wordcamp_id, 'Secondary Site', true );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- see note at top of file
+		if ( $secondary_url && isset( $_POST[ wcpt_key_to_str( 'create-site-in-network-secondary', 'wcpt_' ) ] ) ) {
+			$this->_maybe_create_site( $wordcamp, '_secondary_site_id', $secondary_url );
+		}
+	}
+
+	/**
+	 * Maybe create a new site in the network.
+	 *
+	 * @param WP_Post $wordcamp         The WordCamp post object.
+	 * @param string  $site_id_meta_key The meta key to use for the site id.
+	 * @param string  $url              The URL to create the site at.
+	 * @return void
+	 */
+	protected function _maybe_create_site( $wordcamp, $site_id_meta_key, $url ) {
+		$wordcamp_id = $wordcamp->ID;
 
 		$url_components = wp_parse_url( $url );
 		if ( ! $url_components || empty( $url_components['scheme'] ) || empty( $url_components['host'] ) ) {
@@ -265,7 +307,7 @@ class WordCamp_New_Site {
 
 		if ( is_int( $this->new_site_id ) ) {
 			// `_site_id` is used in other plugins to map the `wordcamp` post to it's corresponding site.
-			update_post_meta( $wordcamp_id, '_site_id', $this->new_site_id );
+			update_post_meta( $wordcamp_id, $site_id_meta_key, $this->new_site_id );
 			do_action( 'wcor_wordcamp_site_created', $wordcamp_id );
 
 			add_post_meta(

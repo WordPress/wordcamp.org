@@ -413,6 +413,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
+						'Secondary Site'                    => 'wc-url', // Any "secondary" site for an event, ie. Second language site or a private team site.
 						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
@@ -442,6 +443,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
+						'Secondary Site'                    => 'wc-url', // Any "secondary" site for an event, ie. Second language site or a private team site.
 						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',

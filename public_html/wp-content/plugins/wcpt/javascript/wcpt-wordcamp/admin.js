@@ -72,7 +72,7 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	/**
 	 * Toggle whether the Sponsor Region field is required or not.
 	 *
-	 * \WordCamp_New_Site::maybe_create_new_site() requires it to be set to create a new site.
+	 * \WordCamp_New_Site::maybe_create_new_sites() requires it to be set to create a new site.
 	 *
 	 * @param {object} event
 	 */

@@ -46,20 +46,21 @@ class WordCamp_New_Site {
 		$is_primary_site = ( 'URL' === $key );
 
 		$event_subtype = get_post( $post_id )->event_subtype ?: 'wordcamp';
+		$city          = sanitize_title_with_dashes( get_post( $post_id )->Location ?: 'city' );
 
 		if ( $is_primary_site ) {
-			$placeholder = 'https://city.wordcamp.org/' . wp_date( 'Y' ) . '/';
+			$placeholder = 'https://' . $city . '.wordcamp.org/' . wp_date( 'Y' ) . '/';
 			if ( 'other' === $event_subtype ) {
 				$placeholder = 'https://events.wordpress.org/city/' . wp_date( 'Y' ) . '/type/';
 			} elseif ( 'campusconnect' === $event_subtype ) {
-				$placeholder = 'https://events.wordpress.org/campusconnect/' . wp_date( 'Y' ) . '/city/';
+				$placeholder = 'https://events.wordpress.org/campusconnect/' . wp_date( 'Y' ) . '/' . $city . '/';
 			}
 		} else {
-			$placeholder = 'https://city.wordcamp.org/' . wp_date( 'Y' ) . '-locale/';
+			$placeholder = 'https://' . $city . '.wordcamp.org/' . wp_date( 'Y' ) . '-locale/';
 			if ( 'other' === $event_subtype ) {
-				$placeholder = 'https://events.wordpress.org/city/' . wp_date( 'Y' ) . '/type/';
+				$placeholder = 'https://events.wordpress.org/' . $city . '/' . wp_date( 'Y' ) . '/type/';
 			} elseif ( 'campusconnect' === $event_subtype ) {
-				$placeholder = 'https://campus.wordpress.org/city-or-university/';
+				$placeholder = 'https://campus.wordpress.org/' . $city . '/';
 			}
 		}
 

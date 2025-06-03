@@ -450,9 +450,19 @@ class WordCamp_Forms_To_Drafts {
 		// Get the key from submitted data.
 		$form_key = $this->get_form_key_by_id( absint( $_POST['contact-form-id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
-		// Add speaker as a copy on the email.
+		// Update headers on call for speakers responses.
 		if ( 'call-for-speakers' === $form_key ) {
+			// Add speaker as a copy on the email.
 			$headers .= "Cc: {$reply_to_addr}\r\n";
+
+			$wordcamp = get_wordcamp_post();
+			$reply_to_header = sprintf(
+				'Reply-To: %s <%s>',
+				get_wordcamp_name(),
+				$wordcamp->meta['E-mail Address'][0]
+			);
+			// Swap out the current reply-to for the WordCamp's real email.
+			$headers = preg_replace( '/Reply-To: .*/', $reply_to_header, $headers);
 		}
 
 		return $headers;
@@ -504,7 +514,7 @@ class WordCamp_Forms_To_Drafts {
 
 			/* translators: %1$s: WordCamp name; %2$s: email address for organizing team; %3$s: original message. */
 			$message = sprintf(
-				__( 'Hello,<br/><br/>Thank you for your interest in speaking at %1$s! We have received your submission, and a copy is included below for your records.<br/><br/>Please do not reply to this email, as it is automatically generated. If you have any questions, send an email to %2$s.<br/>%3$s', 'wordcamporg' ),
+				__( 'Hello,<br/><br/>Thank you for your interest in speaking at %1$s! We have received your submission, and a copy is included below for your records.<br/><br/>If you have any questions, send an email to %2$s.<br/>%3$s', 'wordcamporg' ),
 				get_wordcamp_name(),
 				$wordcamp->meta['E-mail Address'][0],
 				$message

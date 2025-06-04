@@ -101,7 +101,7 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	self.toggleSponsorRegionRequired = function( event ) {
 		var sponsorRegion = $( '#wcpt_multi-event_sponsor_region' );
 
-		if ( $( this ).is( ':checked' ) ) {
+		if ( $( '.create-site-checkbox:checked' ) ) {
 			sponsorRegion.prop( 'required', true );
 		} else {
 			sponsorRegion.prop( 'required', false );

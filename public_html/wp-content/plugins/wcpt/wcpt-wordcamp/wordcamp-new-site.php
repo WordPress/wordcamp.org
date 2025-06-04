@@ -135,7 +135,7 @@ class WordCamp_New_Site {
 			<?php $checkbox_id = wcpt_key_to_str( 'create-site-in-network-' . $object_name, 'wcpt_' ); ?>
 
 			<label for="<?php echo esc_attr( $checkbox_id ); ?>">
-				<input id="<?php echo esc_attr( $checkbox_id ); ?>" type="checkbox" name="<?php echo esc_attr( $checkbox_id ); ?>" />
+				<input id="<?php echo esc_attr( $checkbox_id ); ?>" class="create-site-checkbox" type="checkbox" name="<?php echo esc_attr( $checkbox_id ); ?>" />
 				Create site in network
 			</label>
 		<?php endif; // Domain exists. ?>

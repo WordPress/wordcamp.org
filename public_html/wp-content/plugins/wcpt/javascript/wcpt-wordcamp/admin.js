@@ -9,7 +9,7 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 	 * Initialize
 	 */
 	self.initialize = function() {
-		var createSiteCheckbox = $( '#wcpt_create-site-in-network' ),
+		var createSiteCheckboxes = $( '.create-site-checkbox' ),
 			$mentorUserName = $( '#wcpt_mentor_wordpress_org_user_name' ),
 			hasContributor = $( '#wcpt_contributor_day' ),
 			$virtualEventCheckbox = $( '#wcpt_virtual_event_only' ),
@@ -18,8 +18,8 @@ window.wordCampPostType.WcptWordCamp = ( function( $ ) {
 			$secondarySiteWrap = $( 'input[name*="wcpt_secondary_site"]' ).parent();
 
 		// Sponsor region
-		createSiteCheckbox.change( self.toggleSponsorRegionRequired );
-		createSiteCheckbox.trigger( 'change' );
+		createSiteCheckboxes.change( self.toggleSponsorRegionRequired );
+		createSiteCheckboxes.trigger( 'change' );
 
 		// Contributor day info
 		hasContributor.change( self.toggleContributorInfo );

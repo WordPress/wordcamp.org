@@ -1,7 +1,21 @@
 <?php
 
 namespace WordCamp\Budgets\Sponsor_Invoices;
+use WordCamp_Budgets;
+
 defined( 'WPINC' ) or die();
+
+/**
+ * @var array  $available_sponsors
+ * @var array  $available_classes
+ * @var array  $available_currencies
+ * @var string $selected_sponsor_id
+ * @var string $selected_class_id
+ * @var string $selected_currency
+ * @var string $description
+ * @var string $internal_reference
+ * @var string $amount
+ */
 
 ?>
 
@@ -100,6 +114,27 @@ defined( 'WPINC' ) or die();
 		/>
 
 		<?php \WordCamp_Budgets::render_form_field_required_indicator(); ?>
+	</li>
+
+	<li>
+		<label for="_wcbsi_internal_reference">
+			<?php _e( "Sponsor's internal reference number:", 'wordcamporg' ); ?>
+		</label>
+
+		<div class="wcb-form-input-wrapper">
+			<input
+				type="text"
+				class="regular-text"
+				id="_wcbsi_internal_reference"
+				name="_wcbsi_internal_reference"
+				value="<?php echo esc_attr( $internal_reference ); ?>"
+				maxlength="75"
+			/>
+
+			<p class="description">
+				<?php _e( 'This is only necessary if the sponsor has asked you to include something specific on the invoice, like a PO or SCON number.', 'wordcamporg' ); ?>
+			</p>
+		</div>
 	</li>
 
 	<li>

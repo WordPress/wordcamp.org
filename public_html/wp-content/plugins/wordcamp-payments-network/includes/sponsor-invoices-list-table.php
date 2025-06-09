@@ -132,6 +132,7 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 	 */
 	protected function column_approve_invoice( $index_row ) {
 		$nonce = wp_create_nonce( "wcbdsi-approve-invoice-{$index_row->blog_id}-{$index_row->invoice_id}" );
+		$special_instructions = self::sponsor_has_special_instructions( $index_row->sponsor_name );
 
 		?>
 
@@ -144,9 +145,38 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			Approve
 		</button>
 
-		<div class="wcbd-inline-notice hidden"><div> <?php // Populated dynamically ?>
+		<div class="wcbd-inline-notice hidden"></div> <?php // Populated dynamically ?>
+
+		<?php if ( $special_instructions ) : ?>
+			<p>
+				⚠️This sponsor has special payment instructions. Please <a href="https://make.wordpress.org/community/wordcamp-budgets-dashboard/#special-instructions">refer to the handbook</a> for details before approving.
+			</p>
+		<?php endif; ?>
 
 		<?php
+	}
+
+	/**
+	 * Determine if the sponsor has special invoicing instructions based on their name.
+	 *
+	 * This needs to be a fuzzy match, because the sponsor name is entered by the organizers, and may not be
+	 * consistent.
+	 */
+	protected static function sponsor_has_special_instructions( string $sponsor_name ) : bool {
+		$special_sponsors = array(
+			'GoDaddy',
+			'Google',
+			'WP Engine',
+			'WPEngine',
+		);
+
+		foreach ( $special_sponsors as $needle ) {
+			if ( false !== stripos( $sponsor_name, $needle ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

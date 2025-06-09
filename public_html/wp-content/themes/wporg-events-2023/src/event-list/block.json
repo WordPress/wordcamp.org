@@ -24,6 +24,7 @@
 	},
 	"supports": {
 		"align": true,
+		"anchor": true,
 		"color": {
 			"background": true,
 			"text": true

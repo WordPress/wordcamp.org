@@ -13,9 +13,10 @@
 <h2 class="wp-block-heading has-inter-font-family has-medium-font-size" style="font-style:normal;font-weight:700">Upcoming events</h2>
 <!-- /wp:heading -->
 
-<!-- wp:pattern {"slug":"wporg-events-2023/event-list-filters"} /-->
+<!-- wp:pattern {"slug":"wporg-events-2023/event-list-filters-with-nearby"} /-->
 
-<!-- wp:wporg/event-list {"limit": "10"} /-->
+<!-- wp:wporg/event-list {"events":"nearby","id":"event-list-nearby","limit": "10"} /-->
+<!-- wp:wporg/event-list {"events":"all-upcoming","id":"event-list-global","className":"wporg-events__hidden","limit": "10"} /-->
 
 <!-- wp:buttons {"style":{"spacing":{"margin":{"top":"var:preset|spacing|30"}}}} -->
 <div class="wp-block-buttons" style="margin-top:var(--wp--preset--spacing--30)"><!-- wp:button {"className":"is-style-outline"} -->

@@ -108,8 +108,8 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		global $wpdb;
 
-		// get the attende ID by the qrcode
-		$attendee_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM `{$wpdb->prefix}postmeta` WHERE `meta_key` = 'tix_access_token' AND md5(meta_value) = %s", $qrcode ) );
+		// get the attende ID by the qrcode (the last 16 digits of the md5 hash of the access token)
+		$attendee_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM `{$wpdb->prefix}postmeta` WHERE `meta_key` = 'tix_access_token' AND md5(meta_value) LIKE '%%%s'", $qrcode ) );
 
 		if ( empty( $attendee_id ) ) {
 			return wp_send_json_error( 'user not found' );

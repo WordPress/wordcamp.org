@@ -635,13 +635,12 @@ jQuery(document).ready(function($){
 				html5QrcodeScanner.pause();
 			}
 
-			let c = document.getElementById('qr-reader').getBoundingClientRect();
+			let qrReader = document.getElementById('qr-reader');
 
 			let qrbox = {
-				width: c.width * 0.7,
-				height: c.width * 0.7,
-			};
-			console.log(c, qrbox);
+				width: qrReader.width * 0.7,
+				height: qrReader.width * 0.7,
+			};			
 
 			html5QrcodeScanner = new Html5QrcodeScanner(
 				'qr-reader',

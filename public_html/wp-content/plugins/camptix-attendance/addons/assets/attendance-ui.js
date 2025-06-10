@@ -595,7 +595,7 @@ jQuery(document).ready(function($){
 
 			function onScanSuccess(decodedText) {
 				if (lastScan === decodedText) {
-					return;
+					//return;
 				}
 
 				lastScan = decodedText;
@@ -622,17 +622,22 @@ jQuery(document).ready(function($){
 						}.bind(that)
 					)
 					.fail(function (res) {
-						console.log('fail', res);
+						console.error(res);
 						window._camptixAttendanceSounds.blm();
+
+						// let the sound play before showing the alert
+						setTimeout(function () {
+							alert('Error: ' + res);
+						}, 100);
+
 					})
 					.always(() => {
 						window._camptixAttendanceSounds.beep();
 						setTimeout(() => {
-							//html5QrcodeScanner.resume();
-							that.refresh();
+							html5QrcodeScanner.resume();
 							window._camptixAttendanceSounds.bob();
+							//that.refresh();
 						}, 3000);
-						html5QrcodeScanner.resume();
 					});
 
 				html5QrcodeScanner.pause();

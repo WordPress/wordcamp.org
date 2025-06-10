@@ -117,9 +117,9 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		$attendee = get_post( $attendee_id );
 
-		if ( empty( $attendee ) ) {
+		if ( ! $attendee || 'tix_attendee' != $attendee->post_type || 'publish' != $attendee->post_status )
 			return wp_send_json_error( 'user not found' );
-		}
+		
 		return wp_send_json_success( array( $this->_make_object( $attendee ) ) );
 	}
 

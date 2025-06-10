@@ -646,9 +646,9 @@ jQuery(document).ready(function($){
 			let qrReader = document.getElementById('qr-scanner').getBoundingClientRect();
 
 			let qrbox = {
-				width: qrReader.width * 0.7,
-				height: qrReader.width * 0.7,
-			};			
+				width: Math.max(qrReader.width * 0.9, 50),
+				height: Math.max(qrReader.height * 0.9, 50),
+			};
 
 			html5QrcodeScanner = new Html5QrcodeScanner(
 				'qr-scanner',

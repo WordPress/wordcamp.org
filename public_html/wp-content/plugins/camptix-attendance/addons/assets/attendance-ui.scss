@@ -426,34 +426,60 @@ li.item {
 	}
 }
 
-#attendees-list-wrapper .qr-scanner {
-	display: none;
-	z-index: 400;
+.qr-scanner-wrap {
+	_display: none;
+	z-index: 299;
 	position: absolute;
 	bottom: 1em;
 	right: 1em;
-	height: auto;
-	width: 90vw;
 	width: calc(100% - 2em);
+	aspect-ratio: 4/3;
 	max-width: 480px;
+	background: #ccc;
 
-	#qr-reader {
-		min-height: 200px;
+	#qr-scanner {
+		height: 100%;
 	}
-	#qr-reader__dashboard_section {
+	#qr-scanner__dashboard {
 		_display: none;
 		position: absolute;
 		background: #fff;
 		bottom: 0;
+
+		button{
+			height: 50px;
+			display: block;
+			width: calc(100% - 2em);
+			margin:1em;
+			line-height: 50px;
+			font-size: 16px;
+			background: #333;
+			color: white;
+			text-decoration: none;
+			-webkit-appearance: none;
+		}
+		#html5-qrcode-anchor-scan-type-change{
+			display: none !important;
+		}
 	}
-	.qr-scanner:hover #qr-reader__dashboard_section {
+	&:hover #qr-scanner__dashboard {
 		display: block;
 	}
-	.qr-scanner-active #attendees-list-wrapper .qr-scanner {
-		display: block;
+	
+}
+@media screen and (max-width: 480px) {
+	.qr-scanner-wrap {
+		position: fixed;
+		inset:1em;
+		width: calc(100% - 2em);
+		height: calc(100% - 2em);
+		margin: 0;
 	}
 }
 
+.qr-scanner-active .qr-scanner-wrap {
+	display: block;
+}
 
 /** Animations, courtesy of https://github.com/lukehaas/css-loaders **/
 

@@ -90,7 +90,7 @@ $camptix_options = $camptix->get_options();
 					<span>Loading...</span>
 				</li>
 			</ul>
-			<div class="qr-scanner"><div id="qr-reader"></div></div>
+			<div class="qr-scanner-wrap"><div id="qr-scanner"></div></div>
 		</div>
 	</script>
 

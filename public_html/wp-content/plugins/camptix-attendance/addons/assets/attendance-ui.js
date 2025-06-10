@@ -635,7 +635,7 @@ jQuery(document).ready(function($){
 				html5QrcodeScanner.pause();
 			}
 
-			let qrReader = document.getElementById('qr-reader');
+			let qrReader = document.getElementById('qr-scanner').getBoundingClientRect();
 
 			let qrbox = {
 				width: qrReader.width * 0.7,
@@ -643,8 +643,8 @@ jQuery(document).ready(function($){
 			};			
 
 			html5QrcodeScanner = new Html5QrcodeScanner(
-				'qr-reader',
-				{ fps: 1, qrbox: qrbox },
+				'qr-scanner',
+				{ fps: 10, qrbox: qrbox, aspectRatio:qrbox.width/qrbox.height },
 				false
 			);
 			html5QrcodeScanner.render(onScanSuccess);

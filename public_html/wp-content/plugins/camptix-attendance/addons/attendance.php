@@ -63,10 +63,11 @@ class CampTix_Attendance extends CampTix_Addon {
 		global $camptix;
 
 		wp_register_script( 'html5-qr-scanner', plugins_url( '/assets/html5-qrcode.min.js', __FILE__ ), array());
+		wp_register_script( 'camptix-attendance-ui-sounds', plugins_url( '/assets/attendance-ui-sounds.js', __FILE__ ), array());
 
 		wp_enqueue_script( 'jquery-fastbutton', plugins_url( '/assets/jquery.fastbutton.js', __FILE__ ), array( 'jquery' ) );
 		wp_enqueue_style( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.css', __FILE__ ), array( 'dashicons' ) );
-		wp_enqueue_script( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.js', __FILE__ ), array( 'backbone', 'jquery', 'wp-util', 'jquery-fastbutton', 'html5-qr-scanner' ) );
+		wp_enqueue_script( 'camptix-attendance-ui', plugins_url( '/assets/attendance-ui.js', __FILE__ ), array( 'backbone', 'jquery', 'wp-util', 'jquery-fastbutton', 'camptix-attendance-ui-sounds', 'html5-qr-scanner' ) );
 
 		$camptix->tmp( 'attendance_tickets', $this->get_tickets() );
 		return dirname( __FILE__ ) . '/attendance-ui.php';

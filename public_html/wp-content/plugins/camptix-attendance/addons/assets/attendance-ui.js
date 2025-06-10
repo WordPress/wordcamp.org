@@ -623,11 +623,14 @@ jQuery(document).ready(function($){
 					)
 					.fail(function (res) {
 						console.log('fail', res);
+						window._camptixAttendanceSounds.blm();
 					})
 					.always(() => {
+						window._camptixAttendanceSounds.beep();
 						setTimeout(() => {
 							//html5QrcodeScanner.resume();
 							that.refresh();
+							window._camptixAttendanceSounds.bob();
 						}, 3000);
 						html5QrcodeScanner.resume();
 					});

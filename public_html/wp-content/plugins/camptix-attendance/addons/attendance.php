@@ -105,7 +105,7 @@ class CampTix_Attendance extends CampTix_Addon {
 		$qrcode = sanitize_text_field( $_GET['qrcode'] );
 
 		if ( ! preg_match( '/^[0-9a-f]{16}$/', $qrcode ) ) {
-			//return wp_send_json_error( 'invalid qrcode format' );
+			return wp_send_json_error( 'invalid qrcode format' );
 		}
 
 		global $wpdb;

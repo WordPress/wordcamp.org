@@ -423,7 +423,6 @@ jQuery(document).ready(function($){
 			this.render();
 
 			this.$header = this.$el.find('header');
-			this.$qrscanner = this.$el.find('.qr-scanner');
 			this.$menu = this.$header.find('.menu');
 
 			this.scroll = _.chain( this.scroll ).bind( this ).value();

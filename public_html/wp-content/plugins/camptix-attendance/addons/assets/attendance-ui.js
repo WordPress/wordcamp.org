@@ -587,13 +587,13 @@ jQuery(document).ready(function($){
 			this.$el.toggleClass('qr-scanner-active');
 			this.$menu.removeClass('dropdown');
 
-			var that = this;
+			let that = this;
 
 			let html5QrcodeScanner;
 			let lastScan;
 			let toggleView;
 
-			function onScanSuccess(decodedText, decodedResult) {
+			function onScanSuccess(decodedText) {
 				if (lastScan === decodedText) {
 					return;
 				}

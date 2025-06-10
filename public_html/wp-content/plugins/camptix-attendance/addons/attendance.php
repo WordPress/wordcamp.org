@@ -395,13 +395,7 @@ class CampTix_Attendance extends CampTix_Addon {
 		// Fields
 		$camptix->add_settings_field_helper( 'attendance-enabled', esc_html__( 'Enabled', 'wordcamporg' ), 'field_yesno', 'general' );
 
-		$camptix->add_settings_field_helper(
-			'attendance-qr-enabled',
-			esc_html__( 'QR Code Scanning', 'wordcamporg' ),
-			'field_yesno',
-			'general',
-			esc_html__( 'Enable QR code scanning?', 'wordcamporg' )
-		);
+		$camptix->add_settings_field_helper( 'attendance-qr-enabled', esc_html__( 'QR Code Scanning', 'wordcamporg' ), 'field_yesno', 'general' );
 
 		add_settings_field( 'attendance-questions', esc_html__( 'Questions', 'wordcamporg' ), array( $this, 'field_questions' ), 'camptix_options', 'general', esc_html__( 'Show these additional ticket questions in the UI.', 'wordcamporg' ) );
 

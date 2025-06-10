@@ -401,13 +401,9 @@ jQuery(document).ready(function($){
 			'click .submenu .sort': 'sortView',
 			'click .submenu .refresh': 'refresh',
 			'click .submenu .qr': 'qr',
-			'click .submenu .filter': 'filterView',
-			'click #html5-qrcode-button-camera-permission': 'alert',
+			'click .submenu .filter': 'filterView',			
 		},
 
-		alert: function () {
-			alert('asd');
-		},
 		/**
 		 * Initialize the application.
 		 */

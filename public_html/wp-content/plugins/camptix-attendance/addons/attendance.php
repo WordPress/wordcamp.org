@@ -111,15 +111,11 @@ class CampTix_Attendance extends CampTix_Addon {
 		global $wpdb;
 
 		// get the attende ID by the qrcode
-		// this is maybe resource intensive for larger events allthough we don't had any WordCamp > 3000 tickets so I guess we're fine
 		$attendee_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM `{$wpdb->prefix}postmeta` WHERE `meta_key` = 'tix_access_token' AND md5(meta_value) = %s", $qrcode ) );
 
 		if ( empty( $attendee_id ) ) {
 			return wp_send_json_error( 'user not found' );
-		}
-		// if ( ! $attendee || 'tix_attendee' != $attendee->post_type || 'publish' != $attendee->post_status ) {
-		//  return wp_send_json_error( 'user not found' );
-		// }
+		}	
 
 		$attendee = get_post( $attendee_id );
 

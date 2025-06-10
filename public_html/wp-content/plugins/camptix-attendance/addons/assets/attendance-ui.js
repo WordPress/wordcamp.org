@@ -441,8 +441,9 @@ jQuery(document).ready(function($){
 				_camptixAttendanceQRScanning !== undefined &&
 				_camptixAttendanceQRScanning
 			) {
+				this.qr();
 			}
-			this.qr();
+			
 		},
 
 		/**

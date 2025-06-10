@@ -298,14 +298,14 @@ class CampTix_Attendance extends CampTix_Addon {
 	 */
 	public function _filter_query_search( $search ) {
 		add_filter( 'posts_clauses', function( $clauses ) use ( $search ) {
-			global $wpdb;
+				global $wpdb;
 
-			$search = $wpdb->esc_like( wp_unslash( $search ) );
+				$search = $wpdb->esc_like( wp_unslash( $search ) );
 
-			$clauses['join'] .= "
-				INNER JOIN $wpdb->postmeta tix_first_name ON ( ID = tix_first_name.post_id AND tix_first_name.meta_key = 'tix_first_name' )
-				INNER JOIN $wpdb->postmeta tix_last_name ON ( ID = tix_last_name.post_id AND tix_last_name.meta_key = 'tix_last_name' )
-			";
+				$clauses['join'] .= "
+					INNER JOIN $wpdb->postmeta tix_first_name ON ( ID = tix_first_name.post_id AND tix_first_name.meta_key = 'tix_first_name' )
+					INNER JOIN $wpdb->postmeta tix_last_name ON ( ID = tix_last_name.post_id AND tix_last_name.meta_key = 'tix_last_name' )
+				";
 
 				$where = $wpdb->prepare(
 					"
@@ -314,7 +314,7 @@ class CampTix_Attendance extends CampTix_Addon {
 					tix_last_name.meta_value LIKE '%%%s%%' OR
 					CONCAT( tix_first_name.meta_value, ' ', tix_last_name.meta_value ) LIKE '%%%s%%'
 				)
-			",
+				",
 					$search,
 					$search,
 					$search
@@ -324,7 +324,7 @@ class CampTix_Attendance extends CampTix_Addon {
 				if ( preg_match( '!^[0-9a-f]{16}$!i', $search ) ) {
 					$clauses['join'] .= "
 					INNER JOIN $wpdb->postmeta tix_access_token ON ( ID = tix_access_token.post_id AND tix_access_token.meta_key = 'tix_access_token' )
-				";
+					";
 
 					$where = '(' .
 						$where .

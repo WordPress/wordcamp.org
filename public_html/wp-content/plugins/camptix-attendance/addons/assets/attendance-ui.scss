@@ -426,6 +426,35 @@ li.item {
 	}
 }
 
+#attendees-list-wrapper .qr-scanner {
+	display: none;
+	z-index: 400;
+	position: absolute;
+	bottom: 1em;
+	right: 1em;
+	height: auto;
+	width: 90vw;
+	width: calc(100% - 2em);
+	max-width: 480px;
+
+	#qr-reader {
+		min-height: 200px;
+	}
+	#qr-reader__dashboard_section {
+		_display: none;
+		position: absolute;
+		background: #fff;
+		bottom: 0;
+	}
+	.qr-scanner:hover #qr-reader__dashboard_section {
+		display: block;
+	}
+	.qr-scanner-active #attendees-list-wrapper .qr-scanner {
+		display: block;
+	}
+}
+
+
 /** Animations, courtesy of https://github.com/lukehaas/css-loaders **/
 
 @-webkit-keyframes load1 {

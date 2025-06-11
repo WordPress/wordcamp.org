@@ -627,7 +627,11 @@ jQuery(document).ready(function($){
 
 						// let the sound play before showing the alert
 						setTimeout(function () {
-							alert('Error: ' + res);
+							if (typeof res === 'string') {
+								alert(res);
+							} else {
+								alert('[' + res.status + '] ' + res.statusText);
+							}
 						}, 100);
 
 					})

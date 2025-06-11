@@ -30,7 +30,7 @@ header {
 	color: white;
 	padding-left: 16px;
 
-	z-index: 100;
+	z-index: 300;
 }
 
 header h1,
@@ -427,7 +427,7 @@ li.item {
 }
 
 .qr-scanner-wrap {
-	_display: none;
+	display: none;
 	z-index: 299;
 	position: absolute;
 	bottom: 1em;
@@ -440,8 +440,15 @@ li.item {
 	#qr-scanner {
 		height: 100%;
 	}
+	#qr-scanner__scan_region{		
+		display: flex;
+		align-self: center;
+		justify-content: center;
+		position: absolute;
+		inset: 0;
+	}
 	#qr-scanner__dashboard {
-		_display: none;
+		display: none;
 		position: absolute;
 		background: #fff;
 		bottom: 0;
@@ -457,6 +464,7 @@ li.item {
 			color: white;
 			text-decoration: none;
 			-webkit-appearance: none;
+			cursor: pointer;
 		}
 		#html5-qrcode-anchor-scan-type-change{
 			display: none !important;
@@ -470,10 +478,13 @@ li.item {
 @media screen and (max-width: 480px) {
 	.qr-scanner-wrap {
 		position: fixed;
-		inset:1em;
+		inset:60px 1em 1em;
 		width: calc(100% - 2em);
-		height: calc(100% - 2em);
+		height: calc(100% - 2em - 60px);
 		margin: 0;
+		#qr-scanner__dashboard {
+			display: block;
+		}
 	}
 }
 

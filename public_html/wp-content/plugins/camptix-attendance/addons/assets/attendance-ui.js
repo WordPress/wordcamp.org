@@ -649,16 +649,14 @@ jQuery(document).ready(function($){
 
 			let qrReader = document.getElementById('qr-scanner').getBoundingClientRect();
 
+			let smallerSide = Math.min(qrReader.width, qrReader.height);
+
 			let qrbox = {
-				width: Math.max(qrReader.width * 0.9, 50),
-				height: Math.max(qrReader.height * 0.9, 50),
+				width: Math.max(smallerSide * 0.9, 50),
+				height: Math.max(smallerSide * 0.9, 50),
 			};
 
-			html5QrcodeScanner = new Html5QrcodeScanner(
-				'qr-scanner',
-				{ fps: 10, qrbox: qrbox, aspectRatio:qrbox.width/qrbox.height },
-				false
-			);
+			html5QrcodeScanner = new Html5QrcodeScanner('qr-scanner', { fps: 10, qrbox: qrbox }, false);
 			html5QrcodeScanner.render(onScanSuccess);
 
 			return false;

@@ -104,7 +104,7 @@ class CampTix_Attendance extends CampTix_Addon {
 		$qrcode = sanitize_text_field( $_GET['qrcode'] );
 
 		if ( ! preg_match( '/^[0-9a-f]{16}$/', $qrcode ) ) {
-			return wp_send_json_error( 'invalid qrcode format' );
+			return wp_send_json_error( __( 'This is not a valid QR code', 'camptix-attendance' ) );
 		}
 
 		global $wpdb;
@@ -113,13 +113,13 @@ class CampTix_Attendance extends CampTix_Addon {
 		$attendee_id = $wpdb->get_var( $wpdb->prepare( "SELECT post_id FROM `{$wpdb->prefix}postmeta` WHERE `meta_key` = 'tix_access_token' AND md5(meta_value) LIKE '%%%s'", $qrcode ) );
 
 		if ( empty( $attendee_id ) ) {
-			return wp_send_json_error( 'user not found' );
+			return wp_send_json_error( __( 'User not found', 'camptix-attendance' ) );
 		}	
 
 		$attendee = get_post( $attendee_id );
 
 		if ( ! $attendee || 'tix_attendee' != $attendee->post_type || 'publish' != $attendee->post_status )
-			return wp_send_json_error( 'user not found' );
+			return wp_send_json_error( __( 'User not found', 'camptix-attendance' ) );
 		
 		return wp_send_json_success( array( $this->_make_object( $attendee ) ) );
 	}

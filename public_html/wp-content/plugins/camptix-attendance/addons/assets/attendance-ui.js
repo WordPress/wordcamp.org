@@ -592,13 +592,15 @@ jQuery(document).ready(function($){
 			let html5QrcodeScanner;
 			let lastScan;
 			let toggleView;
+			let lastScanTimeout;
 
 			function onScanSuccess(decodedText) {
 				if (lastScan === decodedText) {
-					//return;
+					return;
 				}
 
 				lastScan = decodedText;
+				lastScanTimeout && clearTimeout(lastScanTimeout);
 
 				if (toggleView) toggleView.close();
 				let method = 'read';
@@ -623,6 +625,7 @@ jQuery(document).ready(function($){
 					)
 					.fail(function (res) {
 						console.error(res);
+						// play the sound to indicate that the scan is bad
 						window._camptixAttendanceSounds.blm();
 
 						// let the sound play before showing the alert
@@ -632,16 +635,27 @@ jQuery(document).ready(function($){
 							} else {
 								alert('[' + res.status + '] ' + res.statusText);
 							}
+							lastScan = null;
+							html5QrcodeScanner.resume();
 						}, 100);
 
 					})
-					.always(() => {
+					.then(() => {
+						// play the sound to indicate that the scan is good
 						window._camptixAttendanceSounds.beep();
 						setTimeout(() => {
-							html5QrcodeScanner.resume();
-							window._camptixAttendanceSounds.bob();
+							html5QrcodeScanner.resume();							
+							//lastScan = null;
 							//that.refresh();
 						}, 3000);
+					})
+					.always(() => {
+						lastScanTimeout = setTimeout(() => {
+							// clear last scan to allow for new scan
+							lastScan = null;
+							// play the sound to indicate that the scan is over
+							//window._camptixAttendanceSounds.bob();
+						}, 15000);
 					});
 
 				html5QrcodeScanner.pause();

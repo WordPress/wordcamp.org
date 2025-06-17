@@ -180,7 +180,7 @@ class Meetup_Events extends Base {
 		// Filter options: https://www.meetup.com/api/schema/#ProNetworkEventsFilter.
 		$query = '
 			query ( $cursor: String ) {
-	            proNetworkByUrlname( urlname: "WordPress" ) {
+	            proNetwork( urlname: "WordPress" ) {
 					eventsSearch(
 						input: { first: 200, after: $cursor },
 						filter: {
@@ -199,8 +199,8 @@ class Meetup_Events extends Base {
 								dateTime
 								status
 								timeStatus
-								isOnline
-								group { proJoinDate name city country latitude longitude }
+								eventType
+								group { proJoinDate name city country lat lon }
 								venue { city country lat lng }
 							}
 						}
@@ -216,7 +216,7 @@ class Meetup_Events extends Base {
 			return array();
 		}
 
-		$events = array_column( $results['proNetworkByUrlname']['eventsSearch']['edges'], 'node' );
+		$events = array_column( $results['proNetwork']['eventsSearch']['edges'], 'node' );
 
 		$data = array();
 		foreach ( $events as $event ) {
@@ -233,6 +233,9 @@ class Meetup_Events extends Base {
 				continue;
 			}
 
+			// isOnline
+			$is_online = ( 'ONLINE' === $event['eventType'] );
+			
 			$data[] = array(
 				'id'           => $event['id'],
 				'link'         => $event['eventUrl'],
@@ -243,8 +246,8 @@ class Meetup_Events extends Base {
 				'group'        => $event['group']['name'],
 				'city'         => ! empty( $event['venue']['city'] ) ? $event['venue']['city'] : $event['group']['city'],
 				'l10n_country' => $meetup->localised_country_name( ! empty( $event['venue']['country'] ) ? $event['venue']['country'] : $event['group']['country'] ),
-				'latitude'     => ( ! $event['isOnline'] && ! empty( $event['venue']['lat'] ) ) ? $event['venue']['lat'] : $event['group']['latitude'],
-				'longitude'    => ( ! $event['isOnline'] && ! empty( $event['venue']['lng'] ) ) ? $event['venue']['lng'] : $event['group']['longitude'],
+				'latitude'     => ( ! $is_online && ! empty( $event['venue']['lat'] ) ) ? $event['venue']['lat'] : $event['group']['lat'],
+				'longitude'    => ( ! $is_online && ! empty( $event['venue']['lng'] ) ) ? $event['venue']['lng'] : $event['group']['lon'],
 			);
 		}
 

@@ -70,7 +70,7 @@ registerBlockVariation( 'core/query', {
 		[ 'core/query-pagination' ],
 	],
 	// Omit `order` in favor of our custom OrderControl.
-	allowedControls: [ 'inherit', 'taxQuery', 'search' ],
+	allowedControls: [ 'inherit', 'taxQuery', 'search', 'postCount', 'offset', 'pages' ],
 	scope: [ 'inserter' ],
 } );
 

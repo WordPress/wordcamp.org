@@ -1763,44 +1763,20 @@ class WordCamp_Post_Types_Plugin {
 			'wcb_organizer_team',
 			'wcb_organizer',
 			array(
-				'labels'       => $labels,
-				'rewrite'      => array( 'slug' => 'team' ),
-				'query_var'    => 'team',
-				'hierarchical' => true,
-				'public'       => true,
-				'show_ui'      => true,
-				'show_in_rest' => true,
-				'rest_base'    => 'organizer_team',
+				'labels'            => $labels,
+				'rewrite'           => array( 'slug' => 'team' ),
+				'query_var'         => 'team',
+				'hierarchical'      => true,
+				'public'            => true,
+				'show_ui'           => true,
+				'show_in_rest'      => true,
+				'show_admin_column' => true,
+				'rest_base'         => 'organizer_team',
 			)
 		);
 
-		// Labels for volunteer teams.
-		$labels = array(
-			'name'          => __( 'Teams',         'wordcamporg' ),
-			'singular_name' => __( 'Team',          'wordcamporg' ),
-			'search_items'  => __( 'Search Teams',  'wordcamporg' ),
-			'popular_items' => __( 'Popular Teams', 'wordcamporg' ),
-			'all_items'     => __( 'All Teams',     'wordcamporg' ),
-			'edit_item'     => __( 'Edit Team',     'wordcamporg' ),
-			'update_item'   => __( 'Update Team',   'wordcamporg' ),
-			'add_new_item'  => __( 'Add Team',      'wordcamporg' ),
-			'new_item_name' => __( 'New Team',      'wordcamporg' ),
-		);
-
-		// Register volunteer teams taxonomy.
-		register_taxonomy(
-			'wcb_volunteer_team',
-			'wcb_volunteer',
-			array(
-				'labels'       => $labels,
-				'rewrite'      => array( 'slug' => 'team' ),
-				'query_var'    => 'team',
-				'hierarchical' => true,
-				'public'       => true,
-				'show_ui'      => true,
-				'show_in_rest' => true,
-			)
-		);
+		// Register organizer teams on Volunteers too.
+		register_taxonomy_for_object_type( 'wcb_organizer_team', 'wcb_volunteer' );
 
 		// Labels for speaker groups.
 		$labels = array(

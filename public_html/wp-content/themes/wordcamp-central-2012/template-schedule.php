@@ -31,16 +31,23 @@ get_header(); ?>
 							'orderby'        => 'meta_value',
 							'order'          => 'ASC',
 							'meta_query'     => array(
-								'relation' => 'OR',
 								array(
-									'key'     => 'Start Date (YYYY-mm-dd)',
-									'value'   => strtotime( '-2 days' ),
-									'compare' => '>',
+									'relation' => 'OR',
+									array(
+										'key'     => 'Start Date (YYYY-mm-dd)',
+										'value'   => strtotime( '-2 days' ),
+										'compare' => '>',
+									),
+									array(
+										'key'     => 'End Date (YYYY-mm-dd)',
+										'value'   => strtotime( 'today' ),
+										'compare' => '>',
+									),
 								),
+								'relation' => 'AND',
 								array(
-									'key'     => 'End Date (YYYY-mm-dd)',
-									'value'   => strtotime( 'today' ),
-									'compare' => '>',
+									'key'     => 'Hide from Event Feeds',
+									'compare' => 'NOT EXISTS',
 								),
 							)
 						) )

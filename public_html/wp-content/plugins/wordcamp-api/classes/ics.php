@@ -66,8 +66,7 @@ class WordCamp_API_ICS {
 				),
 				array(
 					'key'        => 'Hide from Event Feeds',
-					'compare'    => '!=',
-					'value'      => '1',
+					'compare'    => 'NOT EXISTS',
 				),
 			)
 		) );

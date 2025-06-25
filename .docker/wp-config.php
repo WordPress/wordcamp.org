@@ -42,7 +42,7 @@ const WORDCAMP_NETWORK_ID   = 1;
 const WORDCAMP_ROOT_BLOG_ID = 5;
 const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
-const CAMPUS_NETWORK_ID     = 9999;
+const CAMPUS_NETWORK_ID     = 3;
 
 switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 	case 'events.wordpress.test':

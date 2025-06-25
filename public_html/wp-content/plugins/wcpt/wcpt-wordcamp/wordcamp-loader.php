@@ -383,6 +383,7 @@ class WordCamp_Loader extends Event_Loader {
 			'Available Rooms',
 			'Website URL',
 			'Exhibition Space Available',
+			'Hide from Event Feeds',
 		);
 
 		return array_merge(

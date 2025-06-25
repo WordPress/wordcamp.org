@@ -58,11 +58,18 @@ class WordCamp_API_ICS {
 			'meta_key'       => 'Start Date (YYYY-mm-dd)',
 			'orderby'        => 'meta_value',
 			'order'          => 'ASC',
-			'meta_query'     => array( array(
-				'key'        => 'Start Date (YYYY-mm-dd)',
-				'value'      => strtotime( '-15 days' ),
-				'compare'    => '>'
-			) )
+			'meta_query'     => array(
+				array(
+					'key'        => 'Start Date (YYYY-mm-dd)',
+					'value'      => strtotime( '-15 days' ),
+					'compare'    => '>',
+				),
+				array(
+					'key'        => 'Hide from Event Feeds',
+					'compare'    => '!=',
+					'value'      => '1',
+				),
+			)
 		) );
 
 		while ( $query->have_posts() ) {

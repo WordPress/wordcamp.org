@@ -423,14 +423,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant Amount'   => 'number',
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
+						'Transparency Report Received'      => 'checkbox',
+						'Hide from Event Feeds'             => 'checkbox',
 					);
 
 					/*
 					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
 					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
 					 */
-					if ( current_user_can( 'manage_options' ) ) {
-						$retval['Transparency Report Received'] = 'checkbox';
+					if ( ! current_user_can( 'manage_options' ) ) {
+						unset( $retval['Transparency Report Received'] );
 					}
 
 					break;
@@ -453,14 +455,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant Amount'   => 'number',
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
+						'Transparency Report Received'      => 'checkbox',
+						'Hide from Event Feeds'             => 'checkbox',
 					);
 
 					/*
 					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
 					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
 					 */
-					if ( current_user_can( 'manage_options' ) ) {
-						$retval['Transparency Report Received'] = 'checkbox';
+					if ( ! current_user_can( 'manage_options' ) ) {
+						unset( $retval['Transparency Report Received'] );
 					}
 
 					$retval = array_merge(
@@ -1258,6 +1262,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'WordCamp Hashtag'                => 'Should begin with #. Ex. #wcus',
 		'Global Sponsorship Grant Amount' => 'No commas, thousands separators or currency symbols. Ex. 1234.56',
 		'Global Sponsorship Grant'        => 'Deprecated.',
+		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {

@@ -764,6 +764,9 @@ abstract class Event_Admin {
 								<?php echo esc_attr( $readonly ); ?>
 							/>
 						</label>
+						<?php if ( ! empty( $messages[ $key ] ) ) : ?>
+							<span class="description"><?php echo esc_html( $messages[ $key ] ); ?></span>
+						<?php endif; ?>
 					</p>
 
 				<?php else : ?>

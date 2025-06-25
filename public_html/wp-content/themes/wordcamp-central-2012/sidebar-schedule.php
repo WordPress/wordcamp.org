@@ -21,7 +21,7 @@
 						array(
 							'key'        => 'Start Date (YYYY-mm-dd)',
 							'value'      => 1,
-							'compare'    => '>', // Only with dates
+							'compare'    => '>', // Only with dates.
 						),
 						'relation' => 'AND',
 						array(

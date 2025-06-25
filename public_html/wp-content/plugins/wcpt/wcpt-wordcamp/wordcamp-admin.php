@@ -424,7 +424,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
 						'Transparency Report Received'      => 'checkbox',
-						'Hide from Event Feeds'             => 'checkbox',
+						'Hide from Event Feeds'             => 'checkbox-delete-on-unset',
 					);
 
 					/*
@@ -456,7 +456,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
 						'Transparency Report Received'      => 'checkbox',
-						'Hide from Event Feeds'             => 'checkbox',
+						'Hide from Event Feeds'             => 'checkbox-delete-on-unset',
 					);
 
 					/*

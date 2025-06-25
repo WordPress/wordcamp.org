@@ -523,6 +523,15 @@ abstract class Event_Admin {
 					update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
 					break;
 
+				case 'checkbox-delete-on-unset':
+					// If the checkbox is not set, delete the meta.
+					if ( empty( $values[ $key ] ) || 'on' !== $values[ $key ] ) {
+						delete_post_meta( $post_id, $key );
+					} else {
+						update_post_meta( $post_id, $key, true );
+					}
+					break;
+
 				case 'checkbox':
 					if ( ! empty( $values[ $key ] ) && 'on' == $values[ $key ] ) {
 						update_post_meta( $post_id, $key, true );
@@ -751,7 +760,7 @@ abstract class Event_Admin {
 			?>
 
 			<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
-				<?php if ( 'checkbox' == $value ) : ?>
+				<?php if ( 'checkbox' == $value || 'checkbox-delete-on-unset' == $value ) : ?>
 
 					<p>
 						<label>

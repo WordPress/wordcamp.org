@@ -68,7 +68,7 @@ class WordCamp_API_ICS {
 					'key'        => 'Hide from Event Feeds',
 					'compare'    => 'NOT EXISTS',
 				),
-			)
+			),
 		) );
 
 		while ( $query->have_posts() ) {

@@ -39,14 +39,14 @@ get_header(); ?>
 								array(
 									'key'        => 'Start Date (YYYY-mm-dd)',
 									'value'      => strtotime( '-2 days' ),
-									'compare'    => '<'
+									'compare'    => '<',
 								),
 								'relation' => 'AND',
 								array(
 									'key'     => 'Hide from Event Feeds',
 									'compare' => 'NOT EXISTS',
 								),
-							)
+							),
 						) )
 					) :
 						global $wcpt_template;

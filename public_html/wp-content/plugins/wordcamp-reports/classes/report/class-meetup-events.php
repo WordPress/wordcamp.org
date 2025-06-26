@@ -243,10 +243,11 @@ class Meetup_Events extends Base {
 				'description'  => $event['description'],
 				'time'         => $event_time,
 				'group'        => $event['group']['name'],
-				'city'         => ! empty( $event['venue']['city'] ) ? $event['venue']['city'] : $event['group']['city'],
-				'l10n_country' => $meetup->localised_country_name( ! empty( $event['venue']['country'] ) ? $event['venue']['country'] : $event['group']['country'] ),
-				'latitude'     => ( ! $is_online && ! empty( $event['venue']['lat'] ) ) ? $event['venue']['lat'] : $event['group']['lat'],
-				'longitude'    => ( ! $is_online && ! empty( $event['venue']['lon'] ) ) ? $event['venue']['lon'] : $event['group']['lon'],
+				// TODO: Hybrid events have multiple venues, which is not handled here.
+				'city'         => ! empty( $event['venues'][0]['city'] ) ? $event['venues'][0]['city'] : $event['group']['city'],
+				'l10n_country' => $meetup->localised_country_name( ! empty( $event['venues'][0]['country'] ) ? $event['venues'][0]['country'] : $event['group']['country'] ),
+				'latitude'     => ( ! $is_online && ! empty( $event['venues'][0]['lat'] ) ) ? $event['venues'][0]['lat'] : $event['group']['lat'],
+				'longitude'    => ( ! $is_online && ! empty( $event['venues'][0]['lon'] ) ) ? $event['venues'][0]['lon'] : $event['group']['lon'],
 			);
 		}
 

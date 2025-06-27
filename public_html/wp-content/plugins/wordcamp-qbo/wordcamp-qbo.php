@@ -247,8 +247,7 @@ class WordCamp_QBO {
 		$realm_id     = self::qbo_client()->get_realm_id();
 
 		$args = array(
-			'query'        => 'SELECT * FROM Class MAXRESULTS 1000',
-			'minorversion' => 4,
+			'query' => 'SELECT * FROM Class MAXRESULTS 1000',
 		);
 
 		$request_url = esc_url_raw( sprintf(

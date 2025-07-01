@@ -79,7 +79,7 @@ function get_custom_statuses() {
 	return array(
 		'wcbsi_submitted'     => array(
 			'label'       => esc_html__( 'Submitted', 'wordcamporg' ),
-			'label_count' => _nx_noop(
+			'label_count' => _n_noop(
 				'Submitted <span class="count">(%s)</span>',
 				'Submitted <span class="count">(%s)</span>',
 				'wordcamporg'
@@ -87,7 +87,7 @@ function get_custom_statuses() {
 		),
 		'wcbsi_approved'      => array(
 			'label'       => esc_html__( 'Sent', 'wordcamporg' ),
-			'label_count' => _nx_noop(
+			'label_count' => _n_noop(
 				'Sent <span class="count">(%s)</span>',
 				'Sent <span class="count">(%s)</span>',
 				'wordcamporg'
@@ -95,7 +95,7 @@ function get_custom_statuses() {
 		),
 		'wcbsi_paid'          => array(
 			'label'       => esc_html__( 'Paid', 'wordcamporg' ),
-			'label_count' => _nx_noop(
+			'label_count' => _n_noop(
 				'Paid <span class="count">(%s)</span>',
 				'Paid <span class="count">(%s)</span>',
 				'wordcamporg'
@@ -103,7 +103,7 @@ function get_custom_statuses() {
 		),
 		'wcbsi_uncollectible' => array(
 			'label'       => esc_html__( 'Uncollectible', 'wordcamporg' ),
-			'label_count' => _nx_noop(
+			'label_count' => _n_noop(
 				'Uncollectible <span class="count">(%s)</span>',
 				'Uncollectible <span class="count">(%s)</span>',
 				'wordcamporg'
@@ -111,7 +111,7 @@ function get_custom_statuses() {
 		),
 		'wcbsi_refunded'      => array(
 			'label'       => esc_html__( 'Refunded', 'wordcamporg' ),
-			'label_count' => _nx_noop(
+			'label_count' => _n_noop(
 				'Refunded <span class="count">(%s)</span>',
 				'Refunded <span class="count">(%s)</span>',
 				'wordcamporg'

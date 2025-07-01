@@ -33,7 +33,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Incomplete', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Incomplete <span class="count">(%s)</span>',
 					'Incomplete <span class="count">(%s)</span>',
 					'wordcamporg'
@@ -47,7 +47,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Pending Approval', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Pending Approval <span class="count">(%s)</span>',
 					'Pending Approval <span class="count">(%s)</span>',
 					'wordcamporg'
@@ -61,7 +61,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Needs Follow-up', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Needs Follow-up <span class="count">(%s)</span>',
 					'Needs Follow-up <span class="count">(%s)</span>',
 					'wordcamporg'
@@ -75,7 +75,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Approved', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Approved <span class="count">(%s)</span>',
 					'Approved <span class="count">(%s)</span>',
 					'wordcamporg'
@@ -89,7 +89,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Payment Sent', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Payment Sent <span class="count">(%s)</span>',
 					'Payment Sent <span class="count">(%s)</span>',
 					'wordcamporg'
@@ -103,7 +103,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Paid', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Paid <span class="count">(%s)</span>',
 					'Paid <span class="count">(%s)</span>',
 					'wordcamporg'
@@ -117,7 +117,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Failed', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Failed <span class="count">(%s)</span>',
 					'Failed <span class="count">(%s)</span>',
 					'wordcamporg'
@@ -131,7 +131,7 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Cancelled', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _nx_noop(
+				'label_count' => _n_noop(
 					'Cancelled <span class="count">(%s)</span>',
 					'Cancelled <span class="count">(%s)</span>',
 					'wordcamporg'

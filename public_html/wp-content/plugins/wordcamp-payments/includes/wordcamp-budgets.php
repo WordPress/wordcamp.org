@@ -33,9 +33,10 @@ class WordCamp_Budgets {
 				'label'       => esc_html_x( 'Incomplete', 'payment request', 'wordcamporg' ),
 				'public'      => false,
 				'protected'   => true,
-				'label_count' => _n_noop(
+				'label_count' => _nx_noop(
 					'Incomplete <span class="count">(%s)</span>',
 					'Incomplete <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)

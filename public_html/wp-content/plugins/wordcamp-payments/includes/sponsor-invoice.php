@@ -87,7 +87,7 @@ function get_custom_statuses() {
 			),
 		),
 		'wcbsi_approved'      => array(
-			'label'       => esc_html_x( 'Sent', 'wordcamporg' ),
+			'label'       => esc_html_x( 'Sent', 'sponsor invoice status', 'wordcamporg' ),
 			'label_count' => _nx_noop(
 				'Sent <span class="count">(%s)</span>',
 				'Sent <span class="count">(%s)</span>',

@@ -2406,12 +2406,23 @@ class CampTix_Plugin {
 
 	/**
 	 * Updates a stats value.
+  	 *
+    	 * @param $data array|string A Key => Value set of stats to update. Or if $value is passed, the string key.
+      	 * @param $value mixed Optional. If $data is a string key, this is the value. Ignored if Array is passed to $data.
 	 */
-	function update_stats( $key, $value ) {
+	function update_stats( $data, $value = null ) {
+		// Back-compat for update_stats( $key, $value );
+		if ( ! is_array( $data ) ) {
+			$data = array( $data => $value );
+		}
+
 		$stats = get_option( 'camptix_stats', array() );
-		$stats[ $key ] = $value;
+
+		foreach ( $data as $key => $value ) {
+			$stats[ $key ] = $value;
+		}
+
 		update_option( 'camptix_stats', $stats );
-		return;
 	}
 
 	/**
@@ -2734,17 +2745,19 @@ class CampTix_Plugin {
 		);
 
 		// Update stats
-		$this->update_stats( 'sold', $totals->sold );
-		$this->update_stats( 'remaining', $totals->remaining );
-		$this->update_stats( 'subtotal', $totals->sub_total );
-		$this->update_stats( 'discounted', $totals->discounted );
-		$this->update_stats( 'revenue', $totals->revenue );
+		$this->update_stats( array(
+			'sold'       => $totals->sold,
+			'remaining'  => $totals->remaining,
+			'subtotal'   => $totals->sub_total,
+			'discounted' => $totals->discounted,
+			'revenue'    => $totals->revenue
+		) );
 
 		$results = array(
-			'totals' => $totals,
+			'totals'       => $totals,
 			'actual_total' => $actual_total,
-			'rows' => $rows,
-			'run_time' => number_format( microtime( true ) - $start_time, 3 ),
+			'rows'         => $rows,
+			'run_time'     => number_format( microtime( true ) - $start_time, 3 ),
 		);
 
 		$this->log( sprintf( 'Revenue report data generated in %s seconds', $results['run_time'] ) );

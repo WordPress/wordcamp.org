@@ -106,7 +106,7 @@ function get_custom_statuses() {
 		),
 		'wcbsi_uncollectible' => array(
 			'label'       => esc_html_x( 'Uncollectible', 'sponsor invoice status', 'wordcamporg' ),
-			'label_count' => _n_noop(
+			'label_count' => _nx_noop(
 				'Uncollectible <span class="count">(%s)</span>',
 				'Uncollectible <span class="count">(%s)</span>',
 				'sponsor invoice status',
@@ -115,7 +115,7 @@ function get_custom_statuses() {
 		),
 		'wcbsi_refunded'      => array(
 			'label'       => esc_html_x( 'Refunded', 'sponsor invoice status', 'wordcamporg' ),
-			'label_count' => _n_noop(
+			'label_count' => _nx_noop(
 				'Refunded <span class="count">(%s)</span>',
 				'Refunded <span class="count">(%s)</span>',
 				'sponsor invoice status',

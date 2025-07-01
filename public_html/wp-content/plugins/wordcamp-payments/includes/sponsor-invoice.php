@@ -78,19 +78,19 @@ function register_post_type() {
 function get_custom_statuses() {
 	return array(
 		'wcbsi_submitted'     => array(
-			'label'       => esc_html_x( 'Submitted', 'sponsor invoice status', 'wordcamporg' ),
+			'label'       => esc_html_x( 'Submitted for processing', 'sponsor invoice status', 'wordcamporg' ),
 			'label_count' => _nx_noop(
-				'Submitted <span class="count">(%s)</span>',
-				'Submitted <span class="count">(%s)</span>',
+				'Submitted for processing <span class="count">(%s)</span>',
+				'Submitted for processing <span class="count">(%s)</span>',
 				'sponsor invoice status',
 				'wordcamporg'
 			),
 		),
 		'wcbsi_approved'      => array(
-			'label'       => esc_html_x( 'Sent', 'sponsor invoice status', 'wordcamporg' ),
+			'label'       => esc_html_x( 'Invoice sent to sponsor', 'sponsor invoice status', 'wordcamporg' ),
 			'label_count' => _nx_noop(
-				'Sent <span class="count">(%s)</span>',
-				'Sent <span class="count">(%s)</span>',
+				'Invoice sent to sponsor <span class="count">(%s)</span>',
+				'Invoices sent to sponsor <span class="count">(%s)</span>',
 				'sponsor invoice status',
 				'wordcamporg'
 			),

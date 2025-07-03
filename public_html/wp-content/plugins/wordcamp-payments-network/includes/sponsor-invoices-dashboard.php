@@ -196,9 +196,11 @@ function upgrade_database() {
 			currency       varchar( 3  )             NOT NULL default '',
 			due_date       int( 11 )        unsigned NOT NULL default '0',
 			amount         numeric( 10, 2 ) unsigned NOT NULL default '0',
+			last_modified  datetime                  NOT NULL default '0000-00-00 00:00:00',
 
 			PRIMARY KEY (blog_id, invoice_id),
 			KEY status (status)
+			KEY last_modified (last_modified)
 		)
 		DEFAULT CHARACTER SET {$wpdb->charset}
 		COLLATE {$wpdb->collate};
@@ -501,9 +503,10 @@ function update_index_row( $invoice_id, $invoice ) {
 		'currency'       => get_post_meta( $invoice_id, '_wcbsi_currency',    true ),
 		'due_date'       => 0,  // todo remove this field from index.
 		'amount'         => get_post_meta( $invoice_id, '_wcbsi_amount',      true ),
+		'last_modified'  => strtotime( $invoice->post_modified_gmt ) > 0 ? $invoice->post_modified_gmt : current_time( 'mysql' ),
 	);
 
-	$formats = array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f' );
+	$formats = array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f', '%s' );
 
 	$wpdb->replace( get_index_table_name(), $index_row, $formats );
 }

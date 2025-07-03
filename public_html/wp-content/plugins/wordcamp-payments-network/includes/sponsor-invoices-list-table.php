@@ -22,6 +22,8 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			$columns['approve_invoice'] = 'Approve';
 		}
 
+		$columns['modified'] = 'Modified';
+
 		return $columns;
 	}
 
@@ -57,7 +59,7 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			SELECT *
 			FROM %i
 			WHERE status = %s
-			ORDER BY blog_id, invoice_id ASC
+			ORDER BY last_modified DESC
 			LIMIT %d
 			OFFSET %d",
 			$table_name,
@@ -80,6 +82,32 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			'total_pages' => ceil( $total_items / $limit ),
 			'per_page'    => $limit,
 		) );
+	}
+
+	/**
+	 * Dender the value for the Modified column.
+	 */
+	protected function column_modified( $index_row ) {
+		$modified = strtotime( $index_row->last_modified );
+
+		if ( ! $modified || $modified < 0 ) {
+			return $index_row->last_modified;
+		}
+
+		// In the last month, show a human-readable time difference.
+		if ( $modified >= time() - MONTH_IN_SECONDS ) {
+			return sprintf(
+				'<span title="%s">%s</span>',
+				esc_attr( gmdate( 'Y-m-d H:i:s\Z', $modified ) ),
+				human_time_diff( $modified ) . ' ago'
+			);
+		}
+
+		return sprintf(
+			'<span title="%s">%s</span>',
+			esc_attr( human_time_diff( $modified ) . ' ago' ),
+			gmdate( 'Y-m-d', $modified ),
+		);
 	}
 
 	/**

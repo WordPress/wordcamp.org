@@ -84,6 +84,9 @@
 	<file>.</file>
 	<arg name="extensions" value="php" />
 
+	<!-- WordCamp runs recent versions of WordPress. -->
+	<config name="minimum_wp_version" value="6.8"/>
+
 	<rule ref="WordPress-Core">
 		<!-- I don't see anything wrong with this :) -->
 		<exclude name="Squiz.PHP.EmbeddedPhp.ContentAfterOpen" />

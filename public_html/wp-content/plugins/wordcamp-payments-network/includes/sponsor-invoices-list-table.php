@@ -55,13 +55,8 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		$limit      = 30;
 		$offset     = $limit * ( $paged - 1 );
 
-		$this->items = $wpdb->get_results( $wpdb->prepare( "
-			SELECT *
-			FROM %i
-			WHERE status = %s
-			ORDER BY last_modified DESC
-			LIMIT %d
-			OFFSET %d",
+		$this->items = $wpdb->get_results( $wpdb->prepare(
+			'SELECT * FROM %i WHERE status = %s ORDER BY last_modified DESC LIMIT %d OFFSET %d',
 			$table_name,
 			$status,
 			$limit,
@@ -69,10 +64,8 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		) );
 
 		// A second query is faster than using SQL_CALC_FOUND_ROWS during the first query
-		$total_items = $wpdb->get_var( $wpdb->prepare( "
-			SELECT count(blog_id)
-			FROM %i
-			WHERE status = %s",
+		$total_items = $wpdb->get_var( $wpdb->prepare(
+			'SELECT count(blog_id) FROM %i WHERE status = %s',
 			$table_name,
 			$status
 		) );

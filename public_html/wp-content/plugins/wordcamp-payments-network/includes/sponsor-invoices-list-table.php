@@ -18,6 +18,7 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		);
 
 		if ( 'submitted' === get_current_section() ) {
+			$columns['vetting_status']  = 'Status';
 			$columns['approve_invoice'] = 'Approve';
 		}
 
@@ -54,11 +55,12 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 
 		$this->items = $wpdb->get_results( $wpdb->prepare( "
 			SELECT *
-			FROM $table_name
+			FROM %i
 			WHERE status = %s
 			ORDER BY blog_id, invoice_id ASC
 			LIMIT %d
 			OFFSET %d",
+			$table_name,
 			$status,
 			$limit,
 			$offset
@@ -67,8 +69,9 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		// A second query is faster than using SQL_CALC_FOUND_ROWS during the first query
 		$total_items = $wpdb->get_var( $wpdb->prepare( "
 			SELECT count(blog_id)
-			FROM $table_name
+			FROM %i
 			WHERE status = %s",
+			$table_name,
 			$status
 		) );
 
@@ -123,6 +126,36 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			\WordCamp\Budgets_Dashboard\format_amount( $index_row->amount, $index_row->currency ),
 			array( 'br' => array() )
 		);
+	}
+
+	/**
+	 * Render the value for the Status column.
+	 *
+	 * @param object $index_row
+	 */
+	protected function column_vetting_status( $index_row ) {
+		$statuses = [
+			'needs-vetting'   => 'Needs vetting',
+			'needs-approval'  => 'Needs approval',
+			'needs-follow-up' => 'Needs follow up',
+		];
+		?>
+		<select
+			class="wcbdsi-vetting-status"
+			name="wcbdsi-vetting-status"
+			data-site-id="<?php echo esc_attr( $index_row->blog_id ); ?>"
+			data-invoice-id="<?php echo esc_attr( $index_row->invoice_id ); ?>"
+			data-nonce="<?php echo esc_attr( wp_create_nonce( "wcbdsi-vetting-status-{$index_row->blog_id}-{$index_row->invoice_id}" ) ); ?>"
+		>
+			<?php foreach ( $statuses as $value => $label ) : ?>
+				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $index_row->vetting_status ?: 'needs-vetting', $value ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<span class="spinner"></span>
+		<div class="wcbd-inline-notice hidden"><div><?php // Populated dynamically ?></div></div>
+		<?php
 	}
 
 	/**

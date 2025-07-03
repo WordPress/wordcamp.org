@@ -175,7 +175,7 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			<?php endforeach; ?>
 		</select>
 		<span class="spinner"></span>
-		<div class="wcbd-inline-notice hidden"><div><?php // Populated dynamically ?></div></div>
+		<div class="wcbd-inline-notice hidden"></div>
 		<?php
 	}
 
@@ -198,7 +198,7 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			Approve
 		</button>
 
-		<div class="wcbd-inline-notice hidden"><div> <?php // Populated dynamically ?>
+		<div class="wcbd-inline-notice hidden"></div>
 
 		<?php
 	}

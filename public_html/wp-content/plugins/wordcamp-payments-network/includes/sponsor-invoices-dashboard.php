@@ -162,7 +162,7 @@ function enqueue_scripts() {
 		'wcbd-sponsor-invoices',
 		plugins_url( 'javascript/sponsor-invoices.js', __DIR__ ),
 		array( 'jquery', 'underscore' ),
-		filemtime( __DIR__ . '/javascript/sponsor-invoices.js' ),
+		filemtime( dirname( __DIR__ ) . '/javascript/sponsor-invoices.js' ),
 		true
 	);
 }

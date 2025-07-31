@@ -976,7 +976,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function camptix_notify_segment_query( $query, $conditions ) {
 		foreach ( $conditions as $condition ) {
-			if ( 'ticket_status' == $condition['option_value'] ) {
+			if ( 'ticket_status' === $condition['field'] ) {
 				if ( 'unconfirmed' === $condition['value'] ) {
 					$query['meta_query'][] = array(
 						// All of these are unconfirmed.
@@ -985,7 +985,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 						array(
 							'key' => 'tix_username',
 							'value' => self::UNCONFIRMED_USERNAME,
-							'compare' => '='
+							'compare' => '=',
 						),
 						// Has no username linked.
 						array(
@@ -996,7 +996,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 						array(
 							'key' => 'tix_email',
 							'value' => $this->get_unknown_attendee_info()['email'],
-							'compare' => '='
+							'compare' => '=',
 						),
 					);
 				} elseif ( 'confirmed' === $condition['value'] ) {
@@ -1004,10 +1004,9 @@ class CampTix_Require_Login extends CampTix_Addon {
 					$query['meta_query'][] = array(
 						'key' => 'tix_username',
 						'value' => self::UNCONFIRMED_USERNAME,
-						'compare' => '!='
+						'compare' => '!=',
 					);
 				}
-
 			}
 		}
 

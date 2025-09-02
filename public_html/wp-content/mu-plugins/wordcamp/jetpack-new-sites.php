@@ -7,14 +7,12 @@ defined( 'WPINC' ) or die();
 
 
 add_filter( 'pre_update_site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites', 10, 2 );
-add_action( 'wp_initialize_site',                              __NAMESPACE__ . '\schedule_connect_new_site', 11 );
-add_action( 'wcorg_connect_new_site',                          __NAMESPACE__ . '\wcorg_connect_new_site', 10, 2 );
+add_action( 'wp_initialize_site',                              __NAMESPACE__ . '\wp_initialize_site', 11 );
+add_action( 'wcorg_connect_new_site',                          __NAMESPACE__ . '\cron_auto_connect_jetpack_site', 10, 2 );
 
 /**
- * Never automatically connect new sites to WordPress.com.
- *
- * Sites don't have SSL certificates when they're first created, so any attempt to connect to WordPress.com would
- * fail. Instead, connecting is attempted after the SSL has been installed. See wcorg_connect_new_site_email().
+ * Don't automatically connect new sites to WordPress.com.
+ * We'll handle this ourselves.
  *
  * @param array $new_value
  * @param array $old_value
@@ -28,26 +26,79 @@ function auto_connect_new_sites( $new_value, $old_value ) {
 }
 
 /**
- * Schedule an email asking to connect Jetpack to WordPress.com
+ * When a new site is created, try to connect it to Jetpack.
  *
- * @param WP_Site $new_site
+ * @param WP_Site $new_site The new site object.
+ * @return void
  */
-function schedule_connect_new_site( $new_site ) {
-	wp_schedule_single_event(
-		/*
-		 * Jetpack can't be connected until the domain's SSL certificate is installed.
-		 *
-		 * The daemon that polls our `domains-dehydrated` endpoint for new domains runs every 10 seconds.
-		 * When it detects a new domain, it calls Dehydrated, which needs a little bit of time to order,
-		 * verify, and install the new certificate, and then gracefully reload nginx config.
-		 *
-		 * The UX benefits of connecting quickly drops off sharply after ~3 seconds, so we might as
-		 * well wait a bit longer, in order to improve reliability.
-		 */
-		time() + MINUTE_IN_SECONDS,
-		'wcorg_connect_new_site_email',
-		array( $new_site->blog_id, get_current_user_id() )
-	);
+function wp_initialize_site( WP_Site $new_site ) {
+	cron_auto_connect_jetpack_site( $new_site->id, 0 );
+}
+
+/**
+ * Try to connect a new site to Jetpack.
+ *
+ * This runs as a cron-task, but also interactively.
+ *
+ * @param int $site_id The site ID to connect.
+ * @param int $retries The number of retries so far.
+ * @return void
+ */
+function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
+	switch_to_blog( $site_id );
+
+	// Bail if Jetpack is already active
+	if ( \Jetpack::is_active() ) {
+		restore_current_blog();
+		return;
+	}
+
+	/*
+	 * Check to see if SSL is setup for the site, by making a HEAD to self.
+	 * NOTE: This uses site_url() without a trailing /, to ensure we hit the sunrise redirect.
+	 */
+	$site_is_accessible = wp_remote_head( site_url(), array( 'timeout' => 1 ) );
+
+	$connected = false;
+
+	if ( ! is_wp_error( $site_is_accessible ) ) {
+		// We need to run as a network admin to do the subsiteregister.
+		$current_user = get_current_user_id();
+		wp_set_current_user( get_user_by( 'login', 'wordcamp' )->id );
+
+		$jetpack_connection_result = false;
+
+		$jetpack_network = \Jetpack_Network::init();
+		// Wrap it in a callable check, as this is reaching deeper into Jetpack than reasonable.
+		if ( is_callable( array( $jetpack_network, 'do_subsiteregister' ) ) ) {
+			$jetpack_connection_result = $jetpack_network->do_subsiteregister( $site_id );
+
+			// Log this for debugging later.
+			if ( is_wp_error( $jetpack_connection_result ) ) {
+				trigger_error( 'Jetpack subsiteregister failed for site ' . $site_id . ': ' . $jetpack_connection_result->get_error_message(), E_USER_WARNING );
+			}
+		}
+
+		// Restore the current user.
+		wp_set_current_user( $current_user );
+
+		$connected = ( true === $jetpack_connection_result ) || \Jetpack::is_active();
+	}
+
+	// If connection failed, we'll retry a few times, then send an email to support.
+	// After 10 retries, we'll send the email to support.
+	if ( ! $connected ) {
+		$retries++;
+		if ( $retries <= 10 ) {
+			// Give SSL some time to get setup.
+			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'wcorg_connect_new_site', [ $site_id, $retries ] );
+		} else {
+			// Send the email to support.
+			wcorg_connect_new_site_email( $site_id );
+		}
+	}
+
+	restore_current_blog();
 }
 
 /**
@@ -56,9 +107,8 @@ function schedule_connect_new_site( $new_site ) {
  * Runs during wp-cron.php.
  *
  * @param int $blog_id The blog_id to connect.
- * @param int $user_id The user ID who created the new site.
  */
-function wcorg_connect_new_site_email( $blog_id, $user_id ) {
+function wcorg_connect_new_site_email( $blog_id ) {
 	$original_blog_id = get_current_blog_id();
 
 	switch_to_blog( $blog_id );

@@ -2,7 +2,7 @@
 
 namespace WordCamp\Jetpack_Tweaks;
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 add_filter( 'pre_update_site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites', 10, 2 );
 

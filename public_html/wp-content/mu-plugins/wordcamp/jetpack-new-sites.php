@@ -73,7 +73,7 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 
 		// Log this for debugging later.
 		if ( is_wp_error( $jetpack_connection_result ) ) {
-			// phpcs:ignore WordPress.Security.OutputNotEscaped -- This is an error message, not user output.
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- This is an error message, not user output.
 			trigger_error( 'Jetpack subsiteregister failed for ' . site_url() . ': ' . $jetpack_connection_result->get_error_message(), E_USER_WARNING );
 		}
 

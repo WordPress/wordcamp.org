@@ -55,7 +55,7 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 
 	/*
 	 * Check to see if SSL is setup for the site, by making a HEAD to self.
-	 * NOTE: This uses site_url() without a trailing /, to ensure we hit the sunrise redirect.
+	 * NOTE: This uses site_url() without a trailing /, to ensure we hit the sunrise redirect, as we only care about SSL state.
 	 */
 	$site_is_accessible = wp_remote_head( site_url(), array( 'timeout' => 1 ) );
 

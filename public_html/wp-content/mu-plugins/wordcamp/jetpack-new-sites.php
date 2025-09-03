@@ -1,10 +1,10 @@
 <?php
 
 namespace WordCamp\Jetpack_Tweaks;
-use WP_Site;
+use WP_Site, WP_Error;
+use Jetpack, Jetpack_Network;
 
 defined( 'WPINC' ) or die();
-
 
 add_filter( 'pre_update_site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites', 10, 2 );
 add_action( 'wp_initialize_site',                              __NAMESPACE__ . '\wp_initialize_site', 11 );
@@ -48,7 +48,7 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 	switch_to_blog( $site_id );
 
 	// Bail if Jetpack is already active
-	if ( \Jetpack::is_active() ) {
+	if ( Jetpack::is_active() ) {
 		restore_current_blog();
 		return;
 	}
@@ -66,8 +66,8 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 		$current_user = get_current_user_id();
 		wp_set_current_user( get_user_by( 'login', 'wordcamp' )->id );
 
-		$jetpack_network           = \Jetpack_Network::init();
-		$jetpack_connection_result = new \WP_Error( 'not_callable', 'Jetpack_Network::do_subsiteregister() not callable.' );
+		$jetpack_network           = Jetpack_Network::init();
+		$jetpack_connection_result = new WP_Error( 'not_callable', 'Jetpack_Network::do_subsiteregister() not callable.' );
 		// Wrap it in a callable check, as this is reaching deeper into Jetpack than reasonable.
 		if ( is_callable( array( $jetpack_network, 'do_subsiteregister' ) ) ) {
 			$jetpack_connection_result = $jetpack_network->do_subsiteregister( $site_id );
@@ -81,7 +81,7 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 		// Restore the current user.
 		wp_set_current_user( $current_user );
 
-		$connected = ( true === $jetpack_connection_result ) || \Jetpack::is_active();
+		$connected = ( true === $jetpack_connection_result ) || Jetpack::is_active();
 	}
 
 	// If connection failed, we'll retry a few times, then send an email to support.
@@ -113,7 +113,7 @@ function wcorg_connect_new_site_email( $blog_id ) {
 	switch_to_blog( $blog_id );
 
 	// Bail if Jetpack is already active
-	if ( \Jetpack::is_active() ) {
+	if ( Jetpack::is_active() ) {
 		restore_current_blog();
 		return;
 	}
@@ -141,7 +141,7 @@ function wcorg_connect_new_site_email( $blog_id ) {
 function get_wcorg_jetpack_email( $blog_id ) {
 
 	$domain = get_site_url( $blog_id );
-	$jetpack_net_admin = \Jetpack_Network::init();
+	$jetpack_net_admin = Jetpack_Network::init();
 	$jetpack_link = $jetpack_net_admin->get_url( array(
 		'name' => 'subsiteregister',
 		'site_id' => $blog_id,

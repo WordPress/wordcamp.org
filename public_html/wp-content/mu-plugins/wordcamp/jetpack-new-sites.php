@@ -64,7 +64,15 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 	if ( ! is_wp_error( $site_is_accessible ) ) {
 		// We need to run as a network admin to do the subsiteregister.
 		$current_user = get_current_user_id();
-		wp_set_current_user( get_user_by( 'login', 'wordcamp' )->id );
+		wp_set_current_user( get_user_by( 'login', 'wordcamp' )->ID );
+
+		// Pretend that the user can perform all Jetpack caps. This is needed during crons (non-proxied).
+		add_filter( 'map_meta_cap', $map_meta_cap = static function( $caps, $cap ) {
+			if ( str_starts_with( $cap, 'jetpack_' ) ) {
+				$caps = array( 'exist' );
+			}
+			return $caps;
+		}, 10, 2 );
 
 		$jetpack_network           = Jetpack_Network::init();
 		$jetpack_connection_result = new WP_Error( 'not_callable', 'Jetpack_Network::do_subsiteregister() not callable.' );
@@ -79,6 +87,7 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 		}
 
 		// Restore the current user.
+		remove_filter( 'map_meta_cap', $map_meta_cap );
 		wp_set_current_user( $current_user );
 
 		$connected = ( true === $jetpack_connection_result ) || Jetpack::is_active();

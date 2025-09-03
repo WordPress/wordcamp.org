@@ -90,7 +90,7 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 		remove_filter( 'map_meta_cap', $map_meta_cap );
 		wp_set_current_user( $current_user );
 
-		$connected = ( true === $jetpack_connection_result ) || Jetpack::is_active();
+		$connected = Jetpack::is_active();
 	}
 
 	// If connection failed, we'll retry a few times, then send an email to support.

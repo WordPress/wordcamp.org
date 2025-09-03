@@ -47,21 +47,10 @@ function wp_initialize_site( WP_Site $new_site ) {
 function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 	switch_to_blog( $site_id );
 
-	// Bail if Jetpack is already active
-	if ( Jetpack::is_active() ) {
-		restore_current_blog();
-		return;
-	}
+	$connected          = Jetpack::is_active();
+	$site_is_accessible = $connected || ! is_wp_error( wp_remote_head( site_url(), array( 'timeout' => 1 ) ) );
 
-	/*
-	 * Check to see if SSL is setup for the site, by making a HEAD to self.
-	 * NOTE: This uses site_url() without a trailing /, to ensure we hit the sunrise redirect, as we only care about SSL state.
-	 */
-	$site_is_accessible = wp_remote_head( site_url(), array( 'timeout' => 1 ) );
-
-	$connected = false;
-
-	if ( ! is_wp_error( $site_is_accessible ) ) {
+	if ( ! $connected && $site_is_accessible ) {
 		// We need to run as a network admin to do the subsiteregister.
 		$current_user = get_current_user_id();
 		wp_set_current_user( get_user_by( 'login', 'wordcamp' )->ID );
@@ -116,16 +105,14 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
  * @param int $blog_id The blog_id to connect.
  */
 function wcorg_connect_new_site_email( $blog_id ) {
-	$original_blog_id = get_current_blog_id();
-
 	switch_to_blog( $blog_id );
+	$jetpack_is_active = Jetpack::is_active();
+	restore_current_blog();
 
 	// Bail if Jetpack is already active
-	if ( Jetpack::is_active() ) {
-		restore_current_blog();
+	if ( $jetpack_is_active ) {
 		return;
 	}
-	restore_current_blog();
 
 	$domain = get_site_url( $blog_id );
 

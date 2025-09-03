@@ -94,12 +94,11 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 	}
 
 	// If connection failed, we'll retry a few times, then send an email to support.
-	// After 10 retries, we'll send the email to support.
 	if ( ! $connected ) {
 		$retries++;
 		if ( $retries <= 10 ) {
-			// Give SSL some time to get setup.
-			wp_schedule_single_event( time() + MINUTE_IN_SECONDS, 'wcorg_connect_new_site', [ $site_id, $retries ] );
+			// Give SSL some time to get setup, with incremental back-offs (final attempt is made ~30mins after first attempt).
+			wp_schedule_single_event( time() + ( $retries / 2 ) * MINUTE_IN_SECONDS, 'wcorg_connect_new_site', [ $site_id, $retries ] );
 		} else {
 			// Send the email to support.
 			wcorg_connect_new_site_email( $site_id );

@@ -66,17 +66,16 @@ function cron_auto_connect_jetpack_site( $site_id, $retries = 0 ) {
 		$current_user = get_current_user_id();
 		wp_set_current_user( get_user_by( 'login', 'wordcamp' )->id );
 
-		$jetpack_connection_result = false;
-
-		$jetpack_network = \Jetpack_Network::init();
+		$jetpack_network           = \Jetpack_Network::init();
+		$jetpack_connection_result = new \WP_Error( 'not_callable', 'Jetpack_Network::do_subsiteregister() not callable.' );
 		// Wrap it in a callable check, as this is reaching deeper into Jetpack than reasonable.
 		if ( is_callable( array( $jetpack_network, 'do_subsiteregister' ) ) ) {
 			$jetpack_connection_result = $jetpack_network->do_subsiteregister( $site_id );
+		}
 
-			// Log this for debugging later.
-			if ( is_wp_error( $jetpack_connection_result ) ) {
-				trigger_error( 'Jetpack subsiteregister failed for site ' . $site_id . ': ' . $jetpack_connection_result->get_error_message(), E_USER_WARNING );
-			}
+		// Log this for debugging later.
+		if ( is_wp_error( $jetpack_connection_result ) ) {
+			trigger_error( 'Jetpack subsiteregister failed for ' . site_url(). ': ' . $jetpack_connection_result->get_error_message(), E_USER_WARNING );
 		}
 
 		// Restore the current user.

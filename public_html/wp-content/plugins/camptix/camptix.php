@@ -5516,8 +5516,8 @@ class CampTix_Plugin {
 	 */
 	function shortcode_callback( $atts ) {
 		if ( ! $this->did_template_redirect ) {
-			$this->log( 'Something is seriously wrong, did_template_redirect is false.', 0, null, 'critical' );
-			return __( 'An error has occurred.', 'wordcamporg' );
+			// In Block Themes the shortcode rendering happens before template_redirect.
+			return '';
 		}
 
 		wp_enqueue_style( 'camptix' );

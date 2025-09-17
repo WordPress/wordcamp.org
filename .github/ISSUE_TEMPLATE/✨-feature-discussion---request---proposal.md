@@ -26,6 +26,8 @@ What opportunities do you see (rationale), and what do you propose to achieve th
 
 Add screenshots or screencasts to make your description more clear.
 
+Please ensure that you don't include any private details in your screenshot (Ticket holder names, Email addresses, transaction identifiers, etc). You can blank out any details in your editor prior to uploading it. Names that are public (organisers, public profile names) are OK.
+
 ### Stakeholders
 
 Who are the stakeholders stand to benefit from implementing the features outlined in this ticket

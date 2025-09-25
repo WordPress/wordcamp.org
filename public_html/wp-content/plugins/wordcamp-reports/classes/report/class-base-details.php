@@ -171,10 +171,11 @@ abstract class Base_Details extends Base {
 		$meta_keys   = $this->get_meta_keys();
 
 		$row = [
-			'ID'      => $event->ID,
-			'Name'    => $event->post_title,
-			'Created' => get_the_date( 'Y-m-d', $event->ID ),
-			'Status'  => $event->post_status,
+			'ID'          => $event->ID,
+			'Tracker URL' => get_edit_post_link( $event->ID ),
+			'Name'        => $event->post_title,
+			'Created'     => get_the_date( 'Y-m-d', $event->ID ),
+			'Status'      => $event->post_status,
 		];
 
 		foreach ( $meta_keys as $key ) {

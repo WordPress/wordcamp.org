@@ -146,7 +146,7 @@ class WordCamp_Loader extends Event_Loader {
 	 * Save the date that the camp was moved on to the official schedule
 	 *
 	 * It's stored in the `menu_order` field because the purpose of storing it is so we can sort the archives
-	 * by this timestamp. See WordCamp_Loader::query_public_statuses_on_archives().
+	 * by this timestamp. See WordCamp_Loader::query_public_statuses().
 	 *
 	 * Sorting by meta fields would be significantly slower, and the `menu_order` field is a good candidate for
 	 * re-purposing because it makes semantic sense and isn't being used.

@@ -54,6 +54,8 @@ class WordCamp_New_Site {
 				$placeholder = 'https://events.wordpress.org/city/' . wp_date( 'Y' ) . '/type/';
 			} elseif ( 'campusconnect' === $event_subtype ) {
 				$placeholder = 'https://events.wordpress.org/campusconnect/' . wp_date( 'Y' ) . '/' . $city . '/';
+			} elseif ( 'student-club' === $event_subtype ) {
+				$placeholder = 'https://campus.wordpress.org/' . $city . '/';
 			}
 		} else {
 			$placeholder = 'https://' . $city . '.wordcamp.org/' . wp_date( 'Y' ) . '-locale/';

@@ -1154,6 +1154,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'wordcamp'      => __( 'WordCamp', 'wordcamporg' ),
 				'doaction'      => __( 'DoAction', 'wordcamporg' ),
 				'campusconnect' => __( 'Campus Connect', 'wordcamporg' ),
+				'student-club'  => __( 'Student Club', 'wordcamporg' ),
 				'other'         => __( 'Other Event', 'wordcamporg' ),
 			);
 		}

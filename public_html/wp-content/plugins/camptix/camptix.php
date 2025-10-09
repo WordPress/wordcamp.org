@@ -8368,6 +8368,7 @@ class CampTix_Plugin {
 			return;
 		}
 
+		add_filter( 'wp_mail_from', array( $this, 'set_mail_from' ) );
 		add_filter( 'wp_mail_from_name', array( $this, 'set_mail_from_name' ) );
 
 		if ( is_email( get_option( 'admin_email' ) ) ) {
@@ -8380,6 +8381,9 @@ class CampTix_Plugin {
 		remove_action( 'phpmailer_init', array( $this, 'maybe_send_html_email' ) );
 		$log_message = $results ? sprintf( 'Sent e-mail to %s.', $to ) : sprintf( 'E-mail to %s failed to send.', $to );
 		$this->log( $log_message, null, $message_data, 'email' );
+
+		remove_filter( 'wp_mail_from', array( $this, 'set_mail_from' ) );
+		remove_filter( 'wp_mail_from_name', array( $this, 'set_mail_from_name' ) );
 
 		do_action( 'camptix_wp_mail_finish' );
 		return $results;
@@ -8397,6 +8401,18 @@ class CampTix_Plugin {
 	 */
 	public function set_mail_from_name( $name ) {
 		return $this->options['event_name'];
+	}
+
+	/**
+	 * Change the default email sender address from wordpress@ to noreply@.
+	 *
+	 * This is mainly to avoid some rogue spam filters that are overeager.
+	 *
+	 * @param string $email
+	 * @return string
+	 */
+	public function set_mail_from( $email ) {
+		return preg_replace( '/^wordpress@/', 'noreply@', $email );
 	}
 
 	/**

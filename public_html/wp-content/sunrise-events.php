@@ -96,7 +96,7 @@ function set_network_and_site() {
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 2 );
 	} else {
-		$current_blog = WP_Site::get_instance( BLOG_ID_CURRENT_SITE ); // The Root site constant defined in wp-config.php
+		$current_blog = WP_Site::get_instance( BLOG_ID_CURRENT_SITE ); // The Root site constant defined in wp-config.php.
 	}
 
 	if ( ! $current_blog ) {

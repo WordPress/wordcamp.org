@@ -52,7 +52,7 @@ switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
 		define( 'SUBDOMAIN_INSTALL',     false );
 		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test/campusconnect/' );
-		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'campus.wordpress.test' );
 		break;
 
 	case 'events.wordpress.test':

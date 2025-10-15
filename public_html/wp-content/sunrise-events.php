@@ -111,6 +111,9 @@ function set_network_and_site() {
 	$public  = $current_blog->public;
 }
 
+/**
+ * Handle any redirects needed on the Events & Campus networks.
+ */
 function do_redirects() {
 	global $blog_id, $site_id;
 

@@ -94,6 +94,26 @@ function _get_network_plugin_state_list( $state ) {
 		$network_plugin_state['activated'][]   = 'wordcamp-organizer-survey/wordcamp-organizer-survey.php';
 	}
 
+	if ( CAMPUS_NETWORK_ID === $network_id ) {
+		// These plugins are intended to be deactivated, but are defined as active above.
+		$network_plugin_state['deactivated'][] = 'camptix-admin-flags/camptix-admin-flags.php';
+		$network_plugin_state['deactivated'][] = 'camptix-attendance/camptix-attendance.php';
+		$network_plugin_state['deactivated'][] = 'camptix-badge-generator/bootstrap.php';
+		$network_plugin_state['deactivated'][] = 'camptix/camptix.php';
+		$network_plugin_state['deactivated'][] = 'classic-editor/classic-editor.php';
+		$network_plugin_state['deactivated'][] = 'wordcamp-payments/bootstrap.php';
+		$network_plugin_state['deactivated'][] = 'wordcamp-payments-network/bootstrap.php';
+		$network_plugin_state['deactivated'][] = 'wordcamp-docs/wordcamp-docs.php';
+		$network_plugin_state['deactivated'][] = 'wordcamp-forms-to-drafts/wordcamp-forms-to-drafts.php';
+		$network_plugin_state['deactivated'][] = 'wordcamp-remote-css/bootstrap.php';
+		$network_plugin_state['deactivated'][] = 'wordcamp-site-cloner/wordcamp-site-cloner.php';
+		$network_plugin_state['deactivated'][] = 'wordcamp-speaker-feedback/wordcamp-speaker-feedback.php';
+		$network_plugin_state['deactivated'][] = 'wc-post-types/wc-post-types.php';
+
+		// Remove the deactivated plugins.
+		$network_plugin_state['activated'] = array_diff( $network_plugin_state['activated'], $network_plugin_state['deactivated'] );
+	}
+
 	return $network_plugin_state[ $state ];
 }
 

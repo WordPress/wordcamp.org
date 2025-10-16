@@ -172,7 +172,7 @@ defined( 'WPINC' ) || die();
 </table>
 
 <h4>For which type of events?</h4>
-<table>
+<table id="event-type-selection">
 	<tbody>
 		<tr>
 			<?php
@@ -194,12 +194,22 @@ defined( 'WPINC' ) || die();
 			<script>
 				( function( $ ) {
 					/* Enforce 'All for no selections. */
-					$( 'input[name="wcor_event_subtypes[]"]' ).on( 'change', function() {
+					$( '#event-type-selection input[name="wcor_event_subtypes[]"]' ).on( 'change', function() {
+						if ( this.value == 'all' && this.checked ) {
+							$( 'input[name="wcor_event_subtypes[]"]:not([value="all"])' ).prop( 'checked', false );
+							return;
+						}
+
 						const multipleChecked = $( 'input[name="wcor_event_subtypes[]"]:not([value="all"]):checked' ).length > 0;
 						$( 'input[name="wcor_event_subtypes[]"][value="all"]' ).prop( 'checked', ! multipleChecked );
 					} ).change();
 				} )( jQuery );
 			</script>
+			<style>
+				#event-type-selection td > label {
+					padding-right: 1em;
+				}
+			</style>
 		</tr>
 	</tbody>
 </table>

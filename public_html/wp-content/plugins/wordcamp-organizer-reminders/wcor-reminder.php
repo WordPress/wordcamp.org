@@ -247,6 +247,17 @@ class WCOR_Reminder {
 				update_post_meta( $post->ID, 'wcor_which_trigger', $new_meta['wcor_which_trigger'] );
 			}
 		}
+
+		if ( isset( $new_meta['wcor_event_subtypes'] ) ) {
+			// Remove 'all', we it's the default.
+			if ( ( $key = array_search( 'all', $new_meta['wcor_event_subtypes'] ) ) !== false ) {
+				unset( $new_meta['wcor_event_subtypes'][ $key ] );
+			}
+
+			$new_meta['wcor_event_subtypes'] = array_filter( $new_meta['wcor_event_subtypes'] );
+
+			update_post_meta( $post->ID, 'wcor_event_subtypes', $new_meta['wcor_event_subtypes'] );
+		}
 	}
 
 	/**

@@ -185,7 +185,7 @@ defined( 'WPINC' ) || die();
 			</label></td>
 			<?php
 			foreach ( $subtypes as $subtype_id => $subtype_name ) :
-			?>
+				?>
 				<td><label>
 					<input type="checkbox" name="wcor_event_subtypes[]" value="<?php echo esc_attr( $subtype_id ); ?>" <?php checked( in_array( $subtype_id, $selected_subtypes ) ); ?> />
 					<?php echo esc_html( $subtype_name ); ?>

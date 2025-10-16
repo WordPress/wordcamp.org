@@ -102,13 +102,13 @@ class WCOR_Reminder {
 			if ( $sent ) {
 				?>
 				<div class="updated">
-					<p><?php printf( __( 'The e-mail was sent successfully to the recipient(s) for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
+					<p><?php printf( esc_html__( 'The e-mail was sent successfully to the recipient(s) for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
 				</div>
 				<?php
 			} else {
 				?>
 				<div class="error">
-					<p><?php printf( __( 'There was an error sending the e-mail for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
+					<p><?php printf( esc_html__( 'There was an error sending the e-mail for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
 				</div>
 				<?php
 			}
@@ -250,8 +250,9 @@ class WCOR_Reminder {
 
 		if ( isset( $new_meta['wcor_event_subtypes'] ) ) {
 			// Remove 'all', we it's the default.
-			if ( ( $key = array_search( 'all', $new_meta['wcor_event_subtypes'] ) ) !== false ) {
-				unset( $new_meta['wcor_event_subtypes'][ $key ] );
+			$all_key = array_search( 'all', $new_meta['wcor_event_subtypes'] );
+			if ( $all_key !== false ) {
+				unset( $new_meta['wcor_event_subtypes'][ $all_key ] );
 			}
 
 			$new_meta['wcor_event_subtypes'] = array_filter( $new_meta['wcor_event_subtypes'] );

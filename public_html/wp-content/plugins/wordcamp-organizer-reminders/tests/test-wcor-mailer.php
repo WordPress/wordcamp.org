@@ -25,9 +25,19 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	protected static $timed_reminder_post_id;
 
 	/**
+	 * @var int $not_for_wordcamp_post_id The ID of an Organizer Reminder post which is not configured to be sent for WordCamps.
+	 */
+	protected static $not_for_wordcamp_post_id;
+
+	/**
 	 * @var int $wordcamp_dayton_post_id The ID of a WordCamp post for Dayton, Ohio, USA.
 	 */
 	protected static $wordcamp_dayton_post_id;
+
+	/**
+	 * @var int $other_event_post_id The ID of a non-WordCamp event post.
+	 */
+	protected static $other_event_post_id;
 
 	/**
 	 * Set up the mocked PHPMailer instance before each test method.
@@ -69,6 +79,16 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 
 		update_post_meta( self::$timed_reminder_post_id, 'wcor_send_where', 'wcor_send_budget_wrangler' );
 
+		self::$not_for_wordcamp_post_id = $factory->post->create(
+			array(
+				'post_type'    => WCOR_Reminder::AUTOMATED_POST_TYPE_SLUG,
+				'post_title'   => 'This reminder is not for WordCamps',
+				'post_content' => 'So it should not be sent to WordCamp.',
+			)
+		);
+
+		update_post_meta( self::$not_for_wordcamp_post_id, 'wcor_event_subtypes', [ 'other' ] );
+
 		self::$wordcamp_dayton_post_id = $factory->post->create(
 			array(
 				'post_type'  => WCPT_POST_TYPE_ID,
@@ -83,6 +103,17 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Physical Address',               '3640 Colonel Glenn Hwy, Dayton, OH, US' );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler Name',           'Sally Smith'                            );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler E-mail Address', 'sally.smith+trez@gmail.com'             );
+
+		self::$other_event_post_id = $factory->post->create(
+			array(
+				'post_type'  => WCPT_POST_TYPE_ID,
+				'post_title' => 'Some Other Event',
+			)
+		);
+
+		update_post_meta( self::$other_event_post_id, 'E-mail Address', 'other@wordcamp.org' );
+		update_post_meta( self::$other_event_post_id, 'event_subtype',  'other'              );
+
 	}
 
 	/**
@@ -258,4 +289,39 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			$result
 		);
 	}
+
+	/**
+	 * Test that event subtype is respected when sending reminders.
+	 *
+	 * @covers WCOR_Mailer::applies_to_wordcamp
+	 */
+	public function test_not_sent_to_non_wordcamp() {
+		/** @var WCOR_Mailer $WCOR_Mailer */
+		global $WCOR_Mailer;
+
+		$message  = get_post( self::$not_for_wordcamp_post_id );
+		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
+		$other    = get_post( self::$other_event_post_id );
+
+		// Test that WordCamp doesn't send.
+		$result = $WCOR_Mailer->send_manual_email( $message, $wordcamp );
+
+		// Verify the email wasn't sent.
+		$this->assertFalse( $result );
+		$this->assertSame( 0, did_action( 'wp_mail_failed' ) );
+		$this->assertSame( 0, did_action( 'wp_mail_succeeded' ) );
+
+		// Test that it sends to Other event.
+		$result = $WCOR_Mailer->send_manual_email( $message, $other );
+
+		$this->assertTrue( $result );
+
+		$this->assert_mail_succeeded(
+			'other@wordcamp.org',
+			'This reminder is not for WordCamps',
+			'So it should not be sent to WordCamp.',
+			$result
+		);
+	}
+
 }

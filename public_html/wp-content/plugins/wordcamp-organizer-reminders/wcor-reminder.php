@@ -16,6 +16,7 @@ class WCOR_Reminder {
 		add_action( 'init',                              array( $this, 'register_post_type' ) );
 		add_action( 'admin_init',                        array( $this, 'add_meta_boxes' ) );
 		add_action( 'admin_menu',                        array( $this, 'register_menu_pages' ) );
+		add_action( 'admin_notices',                     array( $this, 'admin_notices' ) );
 		add_action( 'save_post_' . self::AUTOMATED_POST_TYPE_SLUG, array( $this, 'save_post' ), 10, 2 );
 	}
 
@@ -87,6 +88,31 @@ class WCOR_Reminder {
 			self::AUTOMATED_POST_TYPE_SLUG,
 			'side'
 		);
+	}
+
+	/**
+	 * Renders admin notices
+	 */
+	public function admin_notices() {
+		if ( isset( $_COOKIE['wcor_manual_email_sent'] ) ) {
+			list( $sent, $event ) = explode( ':', $_COOKIE['wcor_manual_email_sent'] );
+			setcookie( 'wcor_manual_email_sent', '', time() - HOUR_IN_SECONDS );
+
+			$wordcamp = get_post( $event );
+			if ( $sent ) {
+				?>
+				<div class="updated">
+					<p><?php printf( __( 'The e-mail was sent successfully to the recipient(s) for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
+				</div>
+				<?php
+			} else {
+				?>
+				<div class="error">
+					<p><?php printf( __( 'There was an error sending the e-mail for %s.', 'wordcamporg' ), esc_html( $wordcamp->post_title ) ); ?></p>
+				</div>
+				<?php
+			}
+		}
 	}
 
 	/**
@@ -244,6 +270,8 @@ class WCOR_Reminder {
 		}
 
 		$wordcamp = get_post( $form_values['wcor_manually_send_wordcamp'] );
-		$WCOR_Mailer->send_manual_email( $email, $wordcamp );
+		$sent = $WCOR_Mailer->send_manual_email( $email, $wordcamp );
+
+		setcookie( 'wcor_manual_email_sent', "{$sent}:{$wordcamp->ID}", time() + MINUTE_IN_SECONDS );
 	}
 }

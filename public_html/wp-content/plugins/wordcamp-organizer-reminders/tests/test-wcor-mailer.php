@@ -113,7 +113,6 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 
 		update_post_meta( self::$other_event_post_id, 'E-mail Address', 'other@wordcamp.org' );
 		update_post_meta( self::$other_event_post_id, 'event_subtype',  'other'              );
-
 	}
 
 	/**
@@ -323,5 +322,4 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			$result
 		);
 	}
-
 }

@@ -190,6 +190,7 @@ class WCOR_Mailer {
 			'[wordcamp_hashtag]',
 			'[wordcamp_anticipated_attendees]',
 			'[multi_event_sponsor_region]',
+			'[event_type]',
 
 			// The organizing team
 			'[organizer_name]',
@@ -242,6 +243,10 @@ class WCOR_Mailer {
 			'[session_feedback_list_url]',
 		);
 
+		// Extract the Event Type name.
+		$event_subtype_name = empty( $wordcamp_meta['event_subtype'] ) ? 'N/A' : $wordcamp_meta['event_subtype'][0];
+		$event_subtype_name = $wordcamp_admin->get_event_subtypes()[ $event_subtype_name ] ?? $event_subtype_name;
+
 		$replace = array(
 			// The WordCamp
 			$wordcamp->post_title,
@@ -254,6 +259,7 @@ class WCOR_Mailer {
 			empty( $wordcamp_meta['WordCamp Hashtag'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/hashtag/' . $wordcamp_meta['WordCamp Hashtag'][0] ),
 			empty( $wordcamp_meta['Number of Anticipated Attendees'][0] ) ? '' : absint( $wordcamp_meta['Number of Anticipated Attendees'][0] ),
 			empty( $wordcamp_meta['Multi-Event Sponsor Region'][0] ) ? '' : get_term( $wordcamp_meta['Multi-Event Sponsor Region'][0], MES_Region::TAXONOMY_SLUG )->name,
+			$event_subtype_name,
 
 			// The organizing team
 			$wordcamp_meta['Organizer Name'][0] ?? '',

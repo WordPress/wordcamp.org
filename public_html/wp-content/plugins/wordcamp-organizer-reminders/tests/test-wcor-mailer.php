@@ -88,6 +88,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 			)
 		);
 
+		update_post_meta( self::$not_for_wordcamp_post_id, 'wcor_send_where', 'wcor_send_organizers' );
 		update_post_meta( self::$not_for_wordcamp_post_id, 'wcor_event_subtypes', [ 'other' ] );
 
 		self::$wordcamp_dayton_post_id = $factory->post->create(
@@ -320,7 +321,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		$this->assert_mail_succeeded(
 			'other@wordcamp.org',
 			'This reminder is not for WordCamps',
-			'So it should not be sent to WordCamp.',
+			"So it should not be sent to WordCamp.\n",
 			$result
 		);
 	}

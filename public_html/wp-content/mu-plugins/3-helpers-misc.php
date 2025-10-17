@@ -157,10 +157,7 @@ function wcorg_skip_feature( $flag, $blog_id = null ) {
 		$blog_id = get_current_blog_id();
 	}
 
-	$flags = get_site_meta( $blog_id, 'wordcamp_skip_feature' );
-	if ( ! $flags ) {
-		$flags = [];
-	}
+	$flags = get_site_meta( $blog_id, 'wordcamp_skip_feature' ) ?: [];
 
 	return in_array( $flag, $flags, true );
 }

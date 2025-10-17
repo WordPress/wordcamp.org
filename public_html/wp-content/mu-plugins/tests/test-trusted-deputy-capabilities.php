@@ -55,7 +55,7 @@ class Test_Trusted_Deputy_Capabilities extends Database_TestCase {
 	/**
 	 * Setup shared fixtures before any tests are run.
 	 */
-	public static function wpSetUpBeforeClass( $factory ) : void {
+	public static function wpSetUpBeforeClass( $factory ): void {
 		global $trusted_deputies;
 
 		parent::wpSetUpBeforeClass( $factory );

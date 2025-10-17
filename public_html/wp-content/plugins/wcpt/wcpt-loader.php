@@ -56,7 +56,7 @@ if ( ! class_exists( 'WCPT_Loader' ) ) :
 			require_once WCPT_DIR . 'wcpt-events/events.php';
 
 			// Require admin files.
-			if ( is_admin() || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
+			if ( is_admin() || ( defined( 'DOING_CRON' ) && DOING_CRON ) && ! class_exists( 'WP_UnitTestCase' ) ) {
 				require_once WCPT_DIR . 'wcpt-admin.php';
 				require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php';
 				require_once WCPT_DIR . 'wcpt-wordcamp/privacy.php';
@@ -69,7 +69,7 @@ if ( ! class_exists( 'WCPT_Loader' ) ) :
 		 */
 		public function core_admin() {
 			// Quick admin check.
-			if ( ! is_admin() && ( ! defined( 'DOING_CRON' ) || ! DOING_CRON ) ) {
+			if ( ! is_admin() && ( ! defined( 'DOING_CRON' ) || ! DOING_CRON ) && ! class_exists( 'WP_UnitTestCase' ) ) {
 				return;
 			}
 

@@ -49,6 +49,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				2
 			); // after enforce_post_status.
 
+			// Filters - Subtype filtering on the WordCamp list table.
+			add_filter( 'views_edit-wordcamp', array( $this, 'alter_views' ) );
+			add_action( 'parse_query', array( $this, 'filter_by_subtype' ) );
+
 			// Cron jobs.
 			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ), 11 );
 			add_action( 'wcpt_close_wordcamps_after_event', array( $this, 'close_wordcamps_after_event' ) );
@@ -1207,6 +1211,119 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					)
 				);
 			}
+		}
+
+		/**
+		 * Add a dropdown to filter by Event Subtype.
+		 *
+		 * This is hacked in by abusing the `views` filter for the wordcamp PT.
+		 */
+		public function alter_views( $views ) {
+			global $wp_list_table;
+
+			// For low-privilege users, just return the unmodified views.
+			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+				return $views;
+			}
+
+			$current_subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );
+
+			// If we're currently filtering to a type, regenerate the Views, as the counts and available statii need updating.
+			if ( $current_subtype ) {
+				static $filtering = false;
+				if ( $filtering ) {
+					return $views;
+				}
+				$filtering = true;
+
+				// Filter wp_count_posts()
+				add_filter( 'wp_count_posts', $cb = function( $counts ) use( $current_subtype ) {
+					global $wpdb;
+
+					// NOTE: This skips the $permission checks, as these are not sensitive statii
+
+					$results = (array) $wpdb->get_results(
+						$wpdb->prepare(
+							"SELECT post_status, COUNT( * ) AS num_posts
+							FROM {$wpdb->posts}
+								JOIN {$wpdb->postmeta} ON ( {$wpdb->posts}.ID = {$wpdb->postmeta}.post_id AND {$wpdb->postmeta}.meta_key = 'event_subtype' AND {$wpdb->postmeta}.meta_value = %s )
+							WHERE post_type = %s
+							GROUP BY post_status",
+							$current_subtype,
+							WCPT_POST_TYPE_ID
+						)
+					);
+
+					$counts = array_fill_keys( array_keys( (array) $counts ), 0 );
+
+					foreach ( $results as $row ) {
+						$counts[ $row->post_status ] = $row->num_posts;
+					}
+
+					return (object) $counts;
+				} );
+
+				$views = $wp_list_table->get_views();
+
+				remove_filter( 'wp_count_posts', $cb );
+
+				$filtering = false;
+			}
+
+			$base_url = admin_url( 'edit.php?post_type=' . WCPT_POST_TYPE_ID );
+			if ( isset( $_GET['post_status'] ) ) {
+				$base_url = add_query_arg( 'post_status', sanitize_text_field( wp_unslash( $_GET['post_status'] ) ), $base_url );
+			}
+			?>
+			<ul class="subsubsub" style="float: none">
+				<li class="all">
+					<a href="<?php echo esc_url( $base_url ); ?>" <?php if ( ! $current_subtype ) { echo 'class="current"'; } ?>>All Events</a>
+				</li>
+				<?php foreach ( $this->get_event_subtypes() as $subtype_key => $subtype_label ) : ?>
+					<li class="<?php echo esc_attr( $subtype_key ); ?>">
+						| <a href="<?php echo esc_url( add_query_arg( 'type', $subtype_key, $base_url ) ); ?>"  <?php if ( $current_subtype === $subtype_key ) { echo 'class="current"'; } ?>>
+							<?php echo esc_html( $subtype_label ); ?>
+						</a>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<?php
+
+			if ( $current_subtype ) {
+				foreach ( $views as $key => &$html ) {
+					$html = str_replace( 'post_type=wordcamp', 'post_type=wordcamp&#038;type=' . $current_subtype, $html );
+				}
+
+				// Remove the "Mine" filter, as this isn't compatible with subtype filtering.. and isn't relevant usually for wranglers.
+				unset( $views['mine'] );
+			}
+
+			return $views;
+		}
+
+		/**
+		 * Filter the WordCamp list by Event Subtype.
+		 */
+		function filter_by_subtype( $query ) {
+			if (
+				! $query->is_main_query() ||
+				WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ||
+				empty( $_REQUEST['type'] )
+			) {
+				return;
+			}
+
+			$type = sanitize_text_field( wp_unslash( $_REQUEST['type'] ) );
+
+			$meta_query = $query->get( 'meta_query' ) ?: []; 
+
+			$meta_query[] = array(
+				'key'     => 'event_subtype',
+				'value'   => $type,
+				'compare' => '=',
+			);
+
+			$query->set( 'meta_query', $meta_query );
 		}
 	}
 endif; // class_exists check.

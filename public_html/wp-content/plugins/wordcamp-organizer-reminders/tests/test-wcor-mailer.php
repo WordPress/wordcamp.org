@@ -1,8 +1,9 @@
 <?php
 
 namespace WordCamp\Organizer_Reminders\Tests;
-use WP_UnitTestCase, WP_UnitTest_Factory;
+use WP_UnitTest_Factory;
 use WCOR_Reminder, WCOR_Mailer;
+use WordCamp\Tests\Database_TestCase;
 
 defined( 'WPINC' ) || die();
 
@@ -13,7 +14,7 @@ defined( 'WPINC' ) || die();
  *
  * @group organizer-reminders
  */
-class Test_WCOR_Mailer extends WP_UnitTestCase {
+class Test_WCOR_Mailer extends Database_TestCase {
 	/**
 	 * @var int $triggered_reminder_post_id The ID of an Organizer Reminder post which is configured to be sent on a trigger.
 	 */
@@ -53,6 +54,8 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 * @param WP_UnitTest_Factory $factory The base factory object.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
+		parent::wpSetUpBeforeClass( $factory );
+
 		/*
 		 * Reminders must be created _before_ WordCamps, to avoid triggering the early return in
 		 * `timed_email_is_ready_to_send()`. To test that early return, you can modify the

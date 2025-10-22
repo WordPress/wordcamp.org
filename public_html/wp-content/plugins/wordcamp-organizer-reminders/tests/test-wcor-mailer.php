@@ -1,7 +1,6 @@
 <?php
 
 namespace WordCamp\Organizer_Reminders\Tests;
-use WordCamp\Tests\Database_TestCase;
 use WP_UnitTest_Factory;
 use WCOR_Reminder, WCOR_Mailer;
 
@@ -14,7 +13,7 @@ defined( 'WPINC' ) || die();
  *
  * @group organizer-reminders
  */
-class Test_WCOR_Mailer extends Database_TestCase {
+class Test_WCOR_Mailer extends \WP_UnitTestCase {
 	/**
 	 * @var int $triggered_reminder_post_id The ID of an Organizer Reminder post which is configured to be sent on a trigger.
 	 */
@@ -137,6 +136,9 @@ class Test_WCOR_Mailer extends Database_TestCase {
 	 */
 	protected function assert_mail_succeeded( $to, $subject, $body, $result = true ) {
 		$mailer                 = tests_retrieve_phpmailer_instance();
+
+		$this->assertNotFalse( $mailer->get_sent(), 'No email was sent.' );
+
 		$normalized_actual_body = str_replace( "\r\n", "\n", $mailer->get_sent()->body );
 
 		$this->assertSame( true, $result );
@@ -203,6 +205,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		if ( in_array( $send_when, array( 'wcor_send_before', 'wcor_send_after' ) ) ) {
 			update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)', $compare_date );
 		} elseif ( 'wcor_send_after_pending' === $send_when ) {
+			update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)', $compare_date );
 			update_post_meta( self::$wordcamp_dayton_post_id, '_timestamp_added_to_planning_schedule', $compare_date );
 		}
 

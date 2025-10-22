@@ -16,11 +16,13 @@ services:
     depends_on:
       - "phpunit_db"
   phpunit_db:
-    image: "mariadb:10.2"
+    image: "mariadb:12.0"
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
-      MYSQL_DATABASE: "wordpress_test"
-      MYSQL_ROOT_PASSWORD: ""
+      MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: 1
+      MARIADB_DATABASE: "wordpress_test"
+    volumes:
+     - testsuite-db:/var/lib/mysql/
 
 volumes:
   testsuite: {}
+  testsuite-db: {}

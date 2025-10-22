@@ -79,6 +79,7 @@
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>./public_html/mu/*</exclude-pattern>
+	<exclude-pattern>./public_html/wp-content/plugins/wordcamp-remote-css/jetpack-custom-css-module/*</exclude-pattern>
 
 	<!-- Scan all (php) files in the current folder and subfolders -->
 	<file>.</file>

@@ -139,7 +139,7 @@
 		"wpackagist-plugin/email-post-changes": "dev-trunk",
 		"wpackagist-plugin/gutenberg": "*",
 		"wpackagist-plugin/hyperdb": "dev-trunk",
-		"wpackagist-plugin/jetpack": "13.7.1",
+		"wpackagist-plugin/jetpack": "*",
 		"wpackagist-plugin/liveblog": "*",
 		"wpackagist-plugin/public-post-preview": "*",
 		"wpackagist-plugin/pwa": "*",

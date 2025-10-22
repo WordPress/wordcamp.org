@@ -418,7 +418,7 @@ class csstidy { // phpcs:ignore
 	 */
 	public function _add_token( $type, $data, $do = false ) { // phpcs:ignore PSR2.Methods.MethodDeclaration.Underscore
 		if ( $this->get_cfg( 'preserve_css' ) || $do ) {
-			$this->tokens[] = array( $type, ( COMMENT === $type ) ? $data : trim( $data ) );
+			$this->tokens[] = array( $type, ( COMMENT === $type ) ? $data : trim( $data ?? '' ) );
 		}
 	}
 
@@ -1187,7 +1187,7 @@ class csstidy { // phpcs:ignore
 	 * @version 1.0
 	 */
 	public static function is_important( &$value ) {
-		return ( ! strcasecmp( substr( str_replace( $GLOBALS['csstidy']['whitespace'], '', $value ), -10, 10 ), '!important' ) );
+		return ( ! strcasecmp( substr( str_replace( $GLOBALS['csstidy']['whitespace'], '', $value ?? '' ), -10, 10 ), '!important' ) );
 	}
 
 	/**

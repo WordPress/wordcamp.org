@@ -288,8 +288,8 @@ abstract class Event_Admin {
 		// Ensure status labels are in English.
 		add_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
 
-		$old_status = get_post_status_object( $old_status );
-		$new_status = get_post_status_object( $new_status );
+		$old_status_obj = get_post_status_object( $old_status );
+		$new_status_obj = get_post_status_object( $new_status );
 
 		$log_id = add_post_meta(
 			$post->ID,
@@ -297,7 +297,7 @@ abstract class Event_Admin {
 			array(
 				'timestamp' => time(),
 				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( '%s &rarr; %s', $old_status->label, $new_status->label ),
+				'message'   => sprintf( '%s &rarr; %s', $old_status_obj->label ?? $old_status, $new_status_obj->label ?? $new_status ),
 			)
 		);
 

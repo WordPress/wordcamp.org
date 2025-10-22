@@ -25,9 +25,3 @@ if ( is_admin() ) {
 if ( ! is_admin() || defined( 'DOING_AJAX' ) ) {
 	require_once __DIR__ . '/app/output-cached-css.php';
 }
-
-// Load Jetpack Custom CSS module (from v13.7.1)
-add_action( 'plugins_loaded', function() {
-	require_once __DIR__ . '/jetpack-custom-css-module/custom-css/preprocessors.php';
-	require_once __DIR__ . '/jetpack-custom-css-module/custom-css.php';
-} );

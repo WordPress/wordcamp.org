@@ -2,7 +2,6 @@
 
 namespace WordCamp\Trusted_Deputy_Capabilities\Tests;
 
-use WordCamp\Tests\Database_TestCase;
 use WP_UnitTestCase, WP_UnitTest_Factory;
 use function WordCamp\Trusted_Deputy_Capabilities\{ is_deputy };
 
@@ -12,7 +11,7 @@ defined( 'WPINC' ) || die();
  * @group mu-plugins
  * @group trusted-deputies
  */
-class Test_Trusted_Deputy_Capabilities extends Database_TestCase {
+class Test_Trusted_Deputy_Capabilities extends WP_UnitTestCase {
 	/**
 	 * Note: `wporg_remove_super_caps()` denies `import` to non-Super Admins if the domain isn't wordcamp.org,
 	 * which results in a false-negative on sandboxes with alternate domain names.
@@ -55,10 +54,8 @@ class Test_Trusted_Deputy_Capabilities extends Database_TestCase {
 	/**
 	 * Setup shared fixtures before any tests are run.
 	 */
-	public static function wpSetUpBeforeClass( $factory ): void {
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ): void {
 		global $trusted_deputies;
-
-		parent::wpSetUpBeforeClass( $factory );
 
 		self::$subscriber_id = self::factory()->user->create( array(
 			'role' => 'subscriber',

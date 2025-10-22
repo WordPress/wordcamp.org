@@ -4,7 +4,6 @@ namespace WordCamp\Tests;
 
 use WP_UnitTestCase;
 use WordCamp\SubRoles;
-use WordCamp\Tests\Database_TestCase;
 
 defined( 'WPINC' ) || die();
 
@@ -16,7 +15,7 @@ defined( 'WPINC' ) || die();
  *
  * @package WordCamp\Tests
  */
-class Test_SubRoles extends Database_TestCase {
+class Test_SubRoles extends WP_UnitTestCase {
 	/**
 	 * Reset global state between tests, for isolation.
 	 */

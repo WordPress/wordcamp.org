@@ -752,6 +752,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$tickets_proposed  = absint( get_post_meta( $post_id, 'Number of Anticipated Attendees', true ) );
 					$tickets_capacity  = ( $tickets_sold + ( $stats['remaining'] ?? 0 ) ) ?: $tickets_proposed;
 
+					if ( ! $tickets_sold && ! $tickets_capacity && ! $tickets_proposed ) {
+						return;
+					}
+
 					printf(
 						/* translators: 1: number of tickets sold, 2: total ticket capacity */
 						'<a href="%s">%s</a>',

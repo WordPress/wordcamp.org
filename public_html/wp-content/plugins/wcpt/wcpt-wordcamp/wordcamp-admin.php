@@ -59,6 +59,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_venue_address' ), 10, 2 );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ) );
 
+			add_action( 'parse_query', array( $this, 'default_sortby' ), 9 );
 			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
 		}
 
@@ -652,12 +653,45 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * Set default sortby to event date when viewing certain statuses.
+		 */
+		public function default_sortby( $query ) {
+			$sortby = $_GET['orderby'] ?? '';
+			$status = $_GET['post_status'] ?? '';
+			if (
+				! is_admin() ||
+				! $query->is_main_query() ||
+				$sortby ||
+				WCPT_POST_TYPE_ID !== $query->get( 'post_type' )
+			) {
+				return;
+			}
+
+			// Mark anything between 'Approved for pre-planning' to 'Scheduled' as sorting by soonest.
+			$all_status = array_keys( WordCamp_Loader::get_post_statuses() );
+			$soon_status = array_slice(
+				$all_status,
+				array_search( 'wcpt-approved-pre-pl', $all_status, true ),
+				array_search( 'wcpt-scheduled', $all_status, true ) - array_search( 'wcpt-approved-pre-pl', $all_status, true ) + 1
+			);
+
+			if ( in_array( $status, $soon_status, true ) ) {
+				$query->set( 'orderby', 'wcpt_date' );
+				$query->set( 'order', 'ASC' );
+
+				// Set in the global to ensure the UI matches the query.
+				$_GET['orderby'] = 'wcpt_date';
+				$_GET['order']   = 'ASC';
+			}
+		}
+
+		/**
 		 * Customize the orderby behavior for sortable columns.
 		 *
 		 * @param WP_Query $query The current WP_Query instance.
 		 */
 		public function sort_by_event_date( $query ) {
-			$sortby = $_GET['orderby'] ?? '';
+			$orderby = $query->get( 'orderby' );
 			if (
 				! is_admin() ||
 				! $query->is_main_query() ||
@@ -666,14 +700,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return;
 			}
 
-			if ( 'wcpt_date' === $sortby ) {
-				$sortby = array(
+			if ( 'wcpt_date' === $orderby ) {
+				$orderby = array(
 					'key' => 'Start Date (YYYY-mm-dd)',
 					'compare' => 'DATE',
 				);
 				$meta_query = $query->get( 'meta_query' ) ?: [];
 
-				$meta_query['wcpt_date'] = $sortby;
+				$meta_query['wcpt_date'] = $orderby;
 
 				$query->set( 'meta_query', $meta_query );
 				$query->set( 'orderby', 'wcpt_date' );

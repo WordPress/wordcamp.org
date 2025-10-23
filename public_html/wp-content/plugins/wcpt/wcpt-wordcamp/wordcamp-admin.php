@@ -633,6 +633,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'wcpt_organizer' => __( 'Organizer', 'wordcamporg' ),
 				'wcpt_mentor'    => __( 'Mentor', 'wordcamporg' ),
 				'wcpt_venue'     => __( 'Venue',     'wordcamporg' ),
+				'wcpt_tickets'   => __( 'Tickets',   'wordcamporg' ),
 				'date'           => __( 'Status',    'wordcamporg' ),
 			);
 			return $columns;
@@ -736,6 +737,41 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'wcpt_venue':
 					echo esc_html( wcpt_get_wordcamp_venue_name() ? wcpt_get_wordcamp_venue_name() : __( 'No Venue', 'wordcamporg' ) );
+					break;
+
+				case 'wcpt_tickets':
+
+					// Fetch the Camptix Stats option from the WordCamp site, if it's created.
+					$site_id = get_wordcamp_site_id( get_post( $post_id ) );
+					if ( ! $site_id ) {
+						return;
+					}
+					$admin_url = get_admin_url( $site_id, 'edit.php?post_type=tix_ticket' );
+
+					$stats             = get_blog_option( $site_id, 'camptix_stats', array() );
+					$tickets_sold      = $stats['sold'] ?? 0;
+					$tickets_proposed  = absint( get_post_meta( $post_id, 'Number of Anticipated Attendees', true ) );
+					$tickets_capacity  = ( $tickets_sold + ( $stats['remaining'] ?? 0 ) ) ?: $tickets_proposed;
+
+					printf(
+						/* translators: 1: number of tickets sold, 2: total ticket capacity */
+						'<a href="%s">' . _x( '%s of %s', 'Tickets sold of capacity', 'wordcamporg' ) . '</a>',
+						esc_url( $admin_url ),
+						number_format_i18n( $tickets_sold ),
+						number_format_i18n( $tickets_capacity )
+					);
+					if ( $tickets_sold ) {
+						echo '<br>' . number_format_i18n( $tickets_sold / $tickets_capacity * 100 ) . '%';
+					}
+					if ( $tickets_proposed ) {
+						echo '<br>';
+						printf(
+							/* translators: %s is the number of expected tickets. */
+							_x( '%s expected', 'Tickets expected', 'wordcamporg' ),
+							number_format_i18n( $tickets_proposed )
+						);
+					}
+
 					break;
 			}
 		}

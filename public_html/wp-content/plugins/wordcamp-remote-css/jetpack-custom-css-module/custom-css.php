@@ -1,5 +1,6 @@
 <?php
 namespace WordCamp\RemoteCSS\Jetpack_CSS_Module;
+use csstidy, csstidy_optimise;
 
 /**
  * Sanitize CSS using Jetpack's Custom CSS Enhancements.
@@ -7,7 +8,11 @@ namespace WordCamp\RemoteCSS\Jetpack_CSS_Module;
  *
  * NOTE: preprocessor support removed.
  */
-function sanitize_css( $unsafe_css ) {
+function sanitize_css( $css ) {
+
+	$args = array(
+		'force' => true
+	);
 
 	$warnings = array();
 
@@ -71,7 +76,7 @@ if ( ! function_exists( 'safecss_class' ) ) :
 	 */
 	function safecss_class() {
 		// Wrapped so we don't need the parent class just to load the plugin.
-		if ( class_exists( 'safecss' ) ) {
+		if ( class_exists( __NAMESPACE__ . '\safecss' ) ) {
 			return;
 		}
 

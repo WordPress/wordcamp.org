@@ -58,21 +58,4 @@ defined( 'WPINC' ) or die();
 		</label>
 	</div>
 
-	<div class="wcsc-filter">
-		<label for="wcsc-filter-css_preprocessor">
-			<span class="customize-control-title">
-				<?php esc_html_e( 'CSS Preprocessor', 'wordcamporg' ); ?>
-			</span>
-
-			<div class="customize-control-content">
-				<select id="wcsc-filter-css_preprocessor" data-filter="css_preprocessor">
-					<option value="">Any</option>
-
-					<# _.each( data.preprocessorOptions, function( preprocessorOption ) { #>
-						<option value="{{preprocessorOption}}">{{preprocessorOption}}</option>
-					<# }); #>
-				</select>
-			</div>
-		</label>
-	</div>
 </script>

@@ -282,15 +282,12 @@ function get_filtered_wordcamp_sites( $wordcamps ) {
 		 * cloning it.
 		 */
 		if ( ! coming_soon_plugin_enabled() ) {
-			$preprocessor = isset( $theme_mods['jetpack_custom_css']['preprocessor'] ) ? $theme_mods['jetpack_custom_css']['preprocessor'] : 'none';
-
 			$sites[ $site_id ] = array(
 				'site_id'          => $site_id,
 				'name'             => get_wordcamp_name(),
 				'theme_slug'       => get_stylesheet(),
 				'screenshot_url'   => get_screenshot_url( $site_url ),
 				'year'             => gmdate( 'Y', $start_date ),
-				'css_preprocessor' => $preprocessor,
 			);
 		}
 

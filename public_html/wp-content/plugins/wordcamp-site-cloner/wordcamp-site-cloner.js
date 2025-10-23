@@ -32,8 +32,7 @@
 	wcsc.models.SearchFilter = Backbone.Model.extend( {
 		's'                : '',
 		'theme_slug'       : '',
-		'year'             : '',
-		'css_preprocessor' : ''
+		'year'             : ''
 	} );
 
 	// Top level view for the Site Cloner Control
@@ -314,14 +313,12 @@
 
 			data.themeOptions        = wcsc.settings.themes;
 			data.yearOptions         = _.uniq( this.parent.collection.pluck( 'year' ) ).sort();
-			data.preprocessorOptions = _.uniq( this.parent.collection.pluck( 'css_preprocessor' ) ).sort();
 
 			this.$el.html( this.html( data ) );
 
 			this.$searchInput        = $( '#wcsc-filter-search-input' );
 			this.$themeFilter        = $( '#wcsc-filter-theme_slug' );
 			this.$yearFilter         = $( '#wcsc-filter-year' );
-			this.$preprocessorFilter = $( '#wcsc-filter-css_preprocessor' );
 		},
 
 		search : function( event ) {
@@ -355,7 +352,6 @@
 			this.$searchInput.val(        this.model.get( 's'                ) );
 			this.$themeFilter.val(        this.model.get( 'theme_slug'       ) );
 			this.$yearFilter.val(         this.model.get( 'year'             ) );
-			this.$preprocessorFilter.val( this.model.get( 'css_preprocessor' ) );
 
 			this.model.trigger( 'change', this.model );
 		}

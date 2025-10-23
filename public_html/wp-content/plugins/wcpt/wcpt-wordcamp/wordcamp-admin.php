@@ -655,11 +655,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'wcpt_date':
 					// Has a start date.
-					$start = wcpt_get_wordcamp_start_date();
+					$start = wcpt_get_wordcamp_start_date( $post_id, 'Y-m-d' );
 					if ( $start ) {
-
 						// Has an end date.
-						$end = wcpt_get_wordcamp_end_date();
+						$end = wcpt_get_wordcamp_end_date( $post_id, 'Y-m-d' );
 						if ( $end ) {
 							$string_date = sprintf( __( 'Start: %1$s<br />End: %2$s', 'wordcamporg' ), $start, $end );
 							// No end date.

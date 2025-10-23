@@ -2421,13 +2421,15 @@ class CampTix_Plugin {
 			$data = array( $data => $value );
 		}
 
+		// Fetch directly from the database to avoid some race conditions.
+		wp_cache_delete( 'camptix_stats', 'options' );
 		$stats = get_option( 'camptix_stats', array() );
 
 		foreach ( $data as $key => $value ) {
 			$stats[ $key ] = $value;
 		}
 
-		update_option( 'camptix_stats', $stats );
+		update_option( 'camptix_stats', $stats, false /* do not autoload */ );
 	}
 
 	/**
@@ -2451,13 +2453,16 @@ class CampTix_Plugin {
 	 * Increments a stats value.
 	 */
 	function increment_stats( $key, $step = 1 ) {
+		// Fetch directly from the database to avoid some race conditions.
+		wp_cache_delete( 'camptix_stats', 'options' );
 		$stats = get_option( 'camptix_stats', array() );
-		if ( ! isset( $stats[ $key ] ) )
-			$stats[ $key ] = 0;
 
+		$stats[ $key ] ??= 0;
 		$stats[ $key ] += $step;
-		update_option( 'camptix_stats', $stats );
-		return;
+
+		update_option( 'camptix_stats', $stats, false /* do not autoload */ );
+
+		return $stats[ $key ];
 	}
 
 	/**
@@ -2465,10 +2470,8 @@ class CampTix_Plugin {
 	 */
 	function get_stats( $key ) {
 		$stats = get_option( 'camptix_stats', array() );
-		if ( isset( $stats[ $key ] ) )
-			return $stats[ $key ];
 
-		return 0;
+		return $stats[ $key ] ?? 0;
 	}
 
 	/**
@@ -2500,7 +2503,10 @@ class CampTix_Plugin {
 
 			if ( $multiplier != 0 ) {
 				$this->increment_stats( 'sold', 1 * $multiplier );
-				$this->increment_stats( 'remaining', -1 * $multiplier );
+				$new_value = $this->increment_stats( 'remaining', -1 * $multiplier );
+				if ( $new_value < 0 ) {
+					$this->update_stats( 'remaining', 0 );
+				}
 
 				$price = (float) get_post_meta( $post->ID, 'tix_ticket_price', true );
 				$discounted_price = (float) get_post_meta( $post->ID, 'tix_ticket_discounted_price', true );

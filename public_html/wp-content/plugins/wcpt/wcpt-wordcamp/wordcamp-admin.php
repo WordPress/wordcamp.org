@@ -754,10 +754,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 					printf(
 						/* translators: 1: number of tickets sold, 2: total ticket capacity */
-						'<a href="%s">' . esc_html_x( '%1$s of %2$s', 'Tickets sold of capacity', 'wordcamporg' ) . '</a>',
+						'<a href="%s">%s</a>',
 						esc_url( $admin_url ),
-						number_format_i18n( $tickets_sold ),
-						number_format_i18n( $tickets_capacity )
+						esc_html(
+							sprintf(
+								/* translators: 1: number of tickets sold, 2: total ticket capacity */
+								_x( '%1$s of %2$s', 'Tickets sold of capacity', 'wordcamporg' ),
+								number_format_i18n( $tickets_sold ),
+								number_format_i18n( $tickets_capacity )
+							)
+						)
 					);
 					if ( $tickets_sold ) {
 						echo '<br>' . number_format_i18n( $tickets_sold / $tickets_capacity * 100 ) . '%';

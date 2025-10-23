@@ -89,7 +89,7 @@ function sanitize_unsafe_css( $unsafe_css ) {
 		) );
 	}
 
-	$safe_css = sanitize_css( $unsafe_css, array( 'force' => true ) );
+	$safe_css = sanitize_css( $unsafe_css );
 
 	/*
 	 * It's expected for `csstidy_optimize_subvalue` to not run on some inputs, but `csstidy_optimize_postparse`

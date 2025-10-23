@@ -2,8 +2,8 @@
 
 namespace WordCamp\RemoteCSS;
 use WordCamp\Logger;
-use Jetpack_Custom_CSS_Enhancements;
 use Exception;
+use function WordCamp\RemoteCSS\Jetpack_CSS_Module\sanitize_css;
 
 defined( 'WPINC' ) || die();
 
@@ -76,10 +76,7 @@ function fetch_unsafe_remote_css( $remote_css_url ) {
  * @throws Exception
  */
 function sanitize_unsafe_css( $unsafe_css ) {
-	if ( ! class_exists( 'Jetpack_Custom_CSS_Enhancements' ) ) {
-		require_once dirname( __DIR__ ) . '/jetpack-custom-css-module/custom-css/preprocessors.php';
-		require_once dirname( __DIR__ ) . '/jetpack-custom-css-module/custom-css.php';
-	}
+	require_once dirname( __DIR__ ) . '/jetpack-custom-css-module/custom-css.php';
 
 	$parser_rules_setup          = has_filter( 'csstidy_optimize_postparse', 'WordCamp\Jetpack_Tweaks\sanitize_csstidy_parsed_rules' );
 	$subvalue_sanitization_setup = has_filter( 'csstidy_optimize_subvalue',  'WordCamp\Jetpack_Tweaks\sanitize_csstidy_subvalues'    );
@@ -92,7 +89,7 @@ function sanitize_unsafe_css( $unsafe_css ) {
 		) );
 	}
 
-	$safe_css = Jetpack_Custom_CSS_Enhancements::sanitize_css( $unsafe_css, array( 'force' => true ) );
+	$safe_css = sanitize_css( $unsafe_css, array( 'force' => true ) );
 
 	/*
 	 * It's expected for `csstidy_optimize_subvalue` to not run on some inputs, but `csstidy_optimize_postparse`

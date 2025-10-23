@@ -668,7 +668,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			if ( 'wcpt_date' === $sortby ) {
 				$sortby = array(
 					'key' => 'Start Date (YYYY-mm-dd)',
-					'compare' => 'DATE'
+					'compare' => 'DATE',
 				);
 				$meta_query = $query->get( 'meta_query' ) ?: [];
 

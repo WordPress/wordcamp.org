@@ -49,7 +49,7 @@ abstract class Event_Admin {
 		);
 
 		add_filter(
-			$filter = 'manage_edit-' . $this->get_event_type() . '_sortable_columns',
+			'manage_edit-' . $this->get_event_type() . '_sortable_columns',
 			array(
 				$this,
 				'sortable_columns',

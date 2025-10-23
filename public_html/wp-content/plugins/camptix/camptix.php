@@ -2411,9 +2411,9 @@ class CampTix_Plugin {
 
 	/**
 	 * Updates a stats value.
-  	 *
-    	 * @param $data array|string A Key => Value set of stats to update. Or if $value is passed, the string key.
-      	 * @param $value mixed Optional. If $data is a string key, this is the value. Ignored if Array is passed to $data.
+	 *
+	 * @param $data array|string A Key => Value set of stats to update. Or if $value is passed, the string key.
+	 * @param $value mixed Optional. If $data is a string key, this is the value. Ignored if Array is passed to $data.
 	 */
 	function update_stats( $data, $value = null ) {
 		// Back-compat for update_stats( $key, $value );

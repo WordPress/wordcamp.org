@@ -47,6 +47,15 @@ abstract class Event_Admin {
 				'column_headers',
 			)
 		);
+
+		add_filter(
+			$filter = 'manage_edit-' . $this->get_event_type() . '_sortable_columns',
+			array(
+				$this,
+				'sortable_columns',
+			)
+		);
+
 		// Forum column headers.
 		add_filter( 'display_post_states', array( $this, 'display_post_states' ), 10, 2 );
 
@@ -141,6 +150,15 @@ abstract class Event_Admin {
 	 * @param array $columns List of columns.
 	 */
 	abstract public function column_headers( $columns );
+
+	/**
+	 * Customize the sortable columns
+	 *
+	 * @param array $columns List of columns.
+	 */
+	public function sortable_columns( $columns ) {
+		return $columns;
+	}
 
 	/**
 	 * Get a list of streaming services.

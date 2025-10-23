@@ -58,6 +58,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'wcpt_close_wordcamps_after_event', array( $this, 'close_wordcamps_after_event' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_venue_address' ), 10, 2 );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ) );
+
+			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
 		}
 
 		/**
@@ -634,6 +636,47 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'date'           => __( 'Status',    'wordcamporg' ),
 			);
 			return $columns;
+		}
+
+		/**
+		 * Customize the sortable columns
+		 *
+		 * @param array $columns List of columns.
+		 * @return array $columns
+		 */
+		public function sortable_columns( $columns ) {
+			$columns['wcpt_date'] = 'wcpt_date';
+
+			return $columns;
+		}
+
+		/**
+		 * Customize the orderby behavior for sortable columns.
+		 *
+		 * @param WP_Query $query The current WP_Query instance.
+		 */
+		public function sort_by_event_date( $query ) {
+			$sortby = $_GET['orderby'] ?? '';
+			if (
+				! is_admin() ||
+				! $query->is_main_query() ||
+				WCPT_POST_TYPE_ID !== $query->get( 'post_type' )
+			) {
+				return;
+			}
+
+			if ( 'wcpt_date' === $sortby ) {
+				$sortby = array(
+					'key' => 'Start Date (YYYY-mm-dd)',
+					'compare' => 'DATE'
+				);
+				$meta_query = $query->get( 'meta_query' ) ?: [];
+
+				$meta_query['wcpt_date'] = $sortby;
+
+				$query->set( 'meta_query', $meta_query );
+				$query->set( 'orderby', 'wcpt_date' );
+			}
 		}
 
 		/**

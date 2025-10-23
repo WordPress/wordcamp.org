@@ -646,6 +646,11 @@ class CampTix_Plugin {
 					printf( __( '%1$s &mdash; %2$s', 'wordcamporg' ), esc_html( $start ), esc_html( $end ) );
 				}
 
+				// If the tickets are not available, denote that on the tickets overview.
+				if ( ! $this->is_ticket_valid_for_purchase( $post_id ) ) {
+					echo '<br><em>' . __( 'Not available for purchase', 'wordcamporg' ) . '</em>';
+				}
+
 				break;
 		}
 	}

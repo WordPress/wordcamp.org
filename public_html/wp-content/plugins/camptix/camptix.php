@@ -648,7 +648,7 @@ class CampTix_Plugin {
 
 				// If the tickets are not available, denote that on the tickets overview.
 				if ( ! $this->is_ticket_valid_for_purchase( $post_id ) ) {
-					echo '<br><em>' . __( 'Not available for purchase', 'wordcamporg' ) . '</em>';
+					echo '<br><em>' . esc_html__( 'Not available for purchase', 'wordcamporg' ) . '</em>';
 				}
 
 				break;

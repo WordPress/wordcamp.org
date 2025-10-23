@@ -740,7 +740,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					break;
 
 				case 'wcpt_tickets':
-
 					// Fetch the Camptix Stats option from the WordCamp site, if it's created.
 					$site_id = get_wordcamp_site_id( get_post( $post_id ) );
 					if ( ! $site_id ) {
@@ -755,7 +754,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 					printf(
 						/* translators: 1: number of tickets sold, 2: total ticket capacity */
-						'<a href="%s">' . _x( '%s of %s', 'Tickets sold of capacity', 'wordcamporg' ) . '</a>',
+						'<a href="%s">' . esc_html_x( '%1$s of %2$s', 'Tickets sold of capacity', 'wordcamporg' ) . '</a>',
 						esc_url( $admin_url ),
 						number_format_i18n( $tickets_sold ),
 						number_format_i18n( $tickets_capacity )
@@ -767,7 +766,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						echo '<br>';
 						printf(
 							/* translators: %s is the number of expected tickets. */
-							_x( '%s expected', 'Tickets expected', 'wordcamporg' ),
+							esc_html_x( '%s expected', 'Tickets expected', 'wordcamporg' ),
 							number_format_i18n( $tickets_proposed )
 						);
 					}

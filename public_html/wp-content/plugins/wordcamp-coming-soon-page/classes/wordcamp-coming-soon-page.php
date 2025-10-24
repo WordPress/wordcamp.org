@@ -40,9 +40,7 @@ class WordCamp_Coming_Soon_Page {
 	 * @return bool
 	 */
 	public function is_coming_soon_preview() {
-		global $wp_customize;
-
-		return isset( $_GET['wccsp-preview'] ) && $wp_customize->is_preview();
+		return isset( $_GET['wccsp-preview'] ) && is_customize_preview();
 	}
 
 	/**

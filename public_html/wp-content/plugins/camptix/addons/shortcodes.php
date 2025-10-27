@@ -473,9 +473,8 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					}
 					$count++;
 					update_post_meta( $attendee->ID, 'tix_private_form_submit_count', $count );
-					add_post_meta( $attendee->ID, 'tix_private_form_submit_entry', $_SERVER );
-					add_post_meta( $attendee->ID, 'tix_private_form_submit_ip', @$_SERVER['REMOTE_ADDR'] );
-					$this->log( sprintf( 'Viewing private content using %s', @$_SERVER['REMOTE_ADDR'] ), $attendee->ID, $_SERVER );
+					add_post_meta( $attendee->ID, 'tix_private_form_submit_ip', @$_SERVER['REMOTE_ADDR'] ?? '' );
+					$this->log( sprintf( 'Viewing private content using %s', $_SERVER['REMOTE_ADDR'] ?? '' ), $attendee->ID );
 				}
 			} else {
 				$this->log( __( 'The information you have entered is incorrect. Please try again.', 'wordcamporg' ) );

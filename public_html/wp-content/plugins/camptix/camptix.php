@@ -7391,7 +7391,6 @@ class CampTix_Plugin {
 
 		$log_data = array(
 			'post' => $_POST,
-			'server' => $_SERVER,
 		);
 
 		$access_token = md5( 'tix-access-token' . print_r( $_POST, true ) . time() . rand( 1, 9999 ) );

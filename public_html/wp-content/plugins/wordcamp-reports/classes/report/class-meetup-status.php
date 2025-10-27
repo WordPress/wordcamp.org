@@ -181,7 +181,7 @@ class Meetup_Status extends Base_Status {
 		$data         = array();
 
 		// Ensure status labels can match status log messages.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
 		foreach ( $meetup_posts as $meetup ) {
 			$logs = $this->sort_logs( get_post_meta( $meetup->ID, '_status_change' ) );
@@ -219,7 +219,9 @@ class Meetup_Status extends Base_Status {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 
 		$data = $this->filter_data_fields( $data );
 		$this->maybe_cache_data( $data );

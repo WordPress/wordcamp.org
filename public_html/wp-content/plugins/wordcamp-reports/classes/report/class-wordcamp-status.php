@@ -142,19 +142,6 @@ class WordCamp_Status extends Base_Status {
 	}
 
 	/**
-	 * Filter: Set the locale to en_US.
-	 *
-	 * Some translated strings in the wcpt plugin are used here for comparison and matching. To ensure
-	 * that the matching happens correctly, we need need to prevent these strings from being converted
-	 * to a different locale.
-	 *
-	 * @return string
-	 */
-	public function set_locale_to_en_US() {
-		return 'en_US';
-	}
-
-	/**
 	 * Generate a cache key.
 	 *
 	 * @return string

@@ -112,8 +112,10 @@ function get_site_ids() {
 			FROM $wpdb->blogs AS b
 			LEFT OUTER JOIN $wpdb->blogmeta AS m
 			ON b.blog_id = m.blog_id AND m.meta_value = %s
+   			WHERE b.site_id = %d
 			",
-			get_feature_id()
+			get_feature_id(),
+			get_current_network_id()
 		)
 	);
 

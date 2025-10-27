@@ -49,11 +49,18 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				2
 			); // after enforce_post_status.
 
+			// Filters - Subtype filtering on the WordCamp list table.
+			add_filter( 'views_edit-wordcamp', array( $this, 'alter_views' ) );
+			add_action( 'parse_query', array( $this, 'filter_by_subtype' ) );
+
 			// Cron jobs.
 			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ), 11 );
 			add_action( 'wcpt_close_wordcamps_after_event', array( $this, 'close_wordcamps_after_event' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_venue_address' ), 10, 2 );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ) );
+
+			add_action( 'parse_query', array( $this, 'default_sortby' ), 9 );
+			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
 		}
 
 		/**
@@ -413,6 +420,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
+						'Secondary Site'                    => 'wc-url', // Any "secondary" site for an event, ie. Second language site or a private team site.
 						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
@@ -422,14 +430,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant Amount'   => 'number',
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
+						'Transparency Report Received'      => 'checkbox',
+						'Hide from Event Feeds'             => 'checkbox-delete-on-unset',
 					);
 
 					/*
 					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
 					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
 					 */
-					if ( current_user_can( 'manage_options' ) ) {
-						$retval['Transparency Report Received'] = 'checkbox';
+					if ( ! current_user_can( 'manage_options' ) ) {
+						unset( $retval['Transparency Report Received'] );
 					}
 
 					break;
@@ -442,6 +452,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Event Timezone'                    => 'select-timezone',
 						'Location'                          => 'text',
 						'URL'                               => 'wc-url',
+						'Secondary Site'                    => 'wc-url', // Any "secondary" site for an event, ie. Second language site or a private team site.
 						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
@@ -451,14 +462,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Global Sponsorship Grant Amount'   => 'number',
 						'Global Sponsorship Grant'          => 'text',
 						'Running money through WPCS PBC'    => 'checkbox',
+						'Transparency Report Received'      => 'checkbox',
+						'Hide from Event Feeds'             => 'checkbox-delete-on-unset',
 					);
 
 					/*
 					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
 					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
 					 */
-					if ( current_user_can( 'manage_options' ) ) {
-						$retval['Transparency Report Received'] = 'checkbox';
+					if ( ! current_user_can( 'manage_options' ) ) {
+						unset( $retval['Transparency Report Received'] );
 					}
 
 					$retval = array_merge(
@@ -621,9 +634,84 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'wcpt_organizer' => __( 'Organizer', 'wordcamporg' ),
 				'wcpt_mentor'    => __( 'Mentor', 'wordcamporg' ),
 				'wcpt_venue'     => __( 'Venue',     'wordcamporg' ),
+				'wcpt_tickets'   => __( 'Tickets',   'wordcamporg' ),
 				'date'           => __( 'Status',    'wordcamporg' ),
 			);
 			return $columns;
+		}
+
+		/**
+		 * Customize the sortable columns
+		 *
+		 * @param array $columns List of columns.
+		 * @return array $columns
+		 */
+		public function sortable_columns( $columns ) {
+			$columns['wcpt_date'] = 'wcpt_date';
+
+			return $columns;
+		}
+
+		/**
+		 * Set default sortby to event date when viewing certain statuses.
+		 */
+		public function default_sortby( $query ) {
+			$sortby = $_GET['orderby'] ?? '';
+			$status = $_GET['post_status'] ?? '';
+			if (
+				! is_admin() ||
+				! $query->is_main_query() ||
+				$sortby ||
+				WCPT_POST_TYPE_ID !== $query->get( 'post_type' )
+			) {
+				return;
+			}
+
+			// Mark anything between 'Approved for pre-planning' to 'Scheduled' as sorting by soonest.
+			$all_status = array_keys( WordCamp_Loader::get_post_statuses() );
+			$soon_status = array_slice(
+				$all_status,
+				array_search( 'wcpt-approved-pre-pl', $all_status, true ),
+				array_search( 'wcpt-scheduled', $all_status, true ) - array_search( 'wcpt-approved-pre-pl', $all_status, true ) + 1
+			);
+
+			if ( in_array( $status, $soon_status, true ) ) {
+				$query->set( 'orderby', 'wcpt_date' );
+				$query->set( 'order', 'ASC' );
+
+				// Set in the global to ensure the UI matches the query.
+				$_GET['orderby'] = 'wcpt_date';
+				$_GET['order']   = 'ASC';
+			}
+		}
+
+		/**
+		 * Customize the orderby behavior for sortable columns.
+		 *
+		 * @param WP_Query $query The current WP_Query instance.
+		 */
+		public function sort_by_event_date( $query ) {
+			$orderby = $query->get( 'orderby' );
+			if (
+				! is_admin() ||
+				! $query->is_main_query() ||
+				WCPT_POST_TYPE_ID !== $query->get( 'post_type' )
+			) {
+				return;
+			}
+
+			if ( 'wcpt_date' === $orderby ) {
+				$orderby = array(
+					'key' => 'Start Date (YYYY-mm-dd)',
+					'compare' => 'DATE',
+				);
+				$meta_query = $query->get( 'meta_query' ) ?: [];
+
+				$meta_query['wcpt_date'] = $orderby;
+
+				$query->set( 'meta_query', $meta_query );
+				$query->set( 'orderby', 'wcpt_date' );
+			}
 		}
 
 		/**
@@ -645,11 +733,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'wcpt_date':
 					// Has a start date.
-					$start = wcpt_get_wordcamp_start_date();
+					$start = wcpt_get_wordcamp_start_date( $post_id, 'Y-m-d' );
 					if ( $start ) {
-
 						// Has an end date.
-						$end = wcpt_get_wordcamp_end_date();
+						$end = wcpt_get_wordcamp_end_date( $post_id, 'Y-m-d' );
 						if ( $end ) {
 							$string_date = sprintf( __( 'Start: %1$s<br />End: %2$s', 'wordcamporg' ), $start, $end );
 							// No end date.
@@ -684,6 +771,50 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'wcpt_venue':
 					echo esc_html( wcpt_get_wordcamp_venue_name() ? wcpt_get_wordcamp_venue_name() : __( 'No Venue', 'wordcamporg' ) );
+					break;
+
+				case 'wcpt_tickets':
+					// Fetch the Camptix Stats option from the WordCamp site, if it's created.
+					$site_id = get_wordcamp_site_id( get_post( $post_id ) );
+					if ( ! $site_id ) {
+						return;
+					}
+					$admin_url = get_admin_url( $site_id, 'edit.php?post_type=tix_ticket' );
+
+					$stats             = get_blog_option( $site_id, 'camptix_stats', array() );
+					$tickets_sold      = $stats['sold'] ?? 0;
+					$tickets_proposed  = absint( get_post_meta( $post_id, 'Number of Anticipated Attendees', true ) );
+					$tickets_capacity  = ( $tickets_sold + ( $stats['remaining'] ?? 0 ) ) ?: $tickets_proposed;
+
+					if ( ! $tickets_sold && ! $tickets_capacity && ! $tickets_proposed ) {
+						return;
+					}
+
+					printf(
+						/* translators: 1: number of tickets sold, 2: total ticket capacity */
+						'<a href="%s">%s</a>',
+						esc_url( $admin_url ),
+						esc_html(
+							sprintf(
+								/* translators: 1: number of tickets sold, 2: total ticket capacity */
+								_x( '%1$s of %2$s', 'Tickets sold of capacity', 'wordcamporg' ),
+								number_format_i18n( $tickets_sold ),
+								number_format_i18n( $tickets_capacity )
+							)
+						)
+					);
+					if ( $tickets_sold && $tickets_capacity ) {
+						echo '<br>' . number_format_i18n( $tickets_sold / $tickets_capacity * 100 ) . '%';
+					}
+					if ( $tickets_proposed ) {
+						echo '<br>';
+						printf(
+							/* translators: %s is the number of expected tickets. */
+							esc_html_x( '%s expected', 'Tickets expected', 'wordcamporg' ),
+							number_format_i18n( $tickets_proposed )
+						);
+					}
+
 					break;
 			}
 		}
@@ -1139,6 +1270,21 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * Return a list of valid Event Subtypes.
+		 *
+		 * @return array
+		 */
+		public function get_event_subtypes() {
+			return array(
+				'wordcamp'      => __( 'WordCamp', 'wordcamporg' ),
+				'doaction'      => __( 'DoAction', 'wordcamporg' ),
+				'campusconnect' => __( 'Campus Connect', 'wordcamporg' ),
+				'student-club'  => __( 'Student Club', 'wordcamporg' ),
+				'other'         => __( 'Other Event', 'wordcamporg' ),
+			);
+		}
+
+		/**
 		 * Schedule cron jobs
 		 */
 		public function schedule_cron_jobs() {
@@ -1186,6 +1332,124 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					)
 				);
 			}
+		}
+
+		/**
+		 * Add a dropdown to filter by Event Subtype.
+		 *
+		 * This is hacked in by abusing the `views` filter for the wordcamp PT.
+		 */
+		public function alter_views( $views ) {
+			global $wp_list_table;
+
+			// For low-privilege users, just return the unmodified views.
+			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+				return $views;
+			}
+
+			$current_subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );
+
+			// If we're currently filtering to a type, regenerate the Views, as the counts and available statii need updating.
+			if ( $current_subtype ) {
+				static $filtering = false;
+				if ( $filtering ) {
+					return $views;
+				}
+				$filtering = true;
+
+				add_filter(
+					'wp_count_posts',
+					$cb = function ( $counts ) use( $current_subtype ) {
+						global $wpdb;
+
+						// NOTE: This skips the $permission checks, as these are not sensitive statii.
+
+						$results = (array) $wpdb->get_results(
+							$wpdb->prepare(
+								"SELECT post_status, COUNT( * ) AS num_posts
+								FROM {$wpdb->posts}
+									JOIN {$wpdb->postmeta} ON ( {$wpdb->posts}.ID = {$wpdb->postmeta}.post_id AND {$wpdb->postmeta}.meta_key = 'event_subtype' AND {$wpdb->postmeta}.meta_value = %s )
+								WHERE post_type = %s
+								GROUP BY post_status",
+								$current_subtype,
+								WCPT_POST_TYPE_ID
+							)
+						);
+
+						$counts = array_fill_keys( array_keys( (array) $counts ), 0 );
+
+						foreach ( $results as $row ) {
+							$counts[ $row->post_status ] = $row->num_posts;
+						}
+
+						return (object) $counts;
+					}
+				);
+
+				$views = $wp_list_table->get_views();
+
+				remove_filter( 'wp_count_posts', $cb );
+
+				$filtering = false;
+			}
+
+			$base_url = admin_url( 'edit.php?post_type=' . WCPT_POST_TYPE_ID );
+			if ( isset( $_GET['post_status'] ) ) {
+				$base_url = add_query_arg( 'post_status', sanitize_text_field( wp_unslash( $_GET['post_status'] ) ), $base_url );
+			}
+			?>
+			<ul class="subsubsub" style="float: none">
+				<li class="all">
+					<a href="<?php echo esc_url( $base_url ); ?>" <?php if ( ! $current_subtype ) echo 'class="current"'; ?>>All Events</a>
+				</li>
+				<?php foreach ( $this->get_event_subtypes() as $subtype_key => $subtype_label ) : ?>
+					<li class="<?php echo esc_attr( $subtype_key ); ?>">
+						| <a href="<?php echo esc_url( add_query_arg( 'type', $subtype_key, $base_url ) ); ?>"  <?php if ( $current_subtype === $subtype_key ) echo 'class="current"'; ?>>
+							<?php echo esc_html( $subtype_label ); ?>
+						</a>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+			<?php
+
+			if ( $current_subtype ) {
+				foreach ( $views as $key => &$html ) {
+					$html = str_replace( 'post_type=wordcamp', 'post_type=wordcamp&#038;type=' . $current_subtype, $html );
+
+					// Replace the Label too, e.g., "WordCamp (10)" becomes "DoAction (10)". Only applies to the views list.
+					$html = str_replace( 'WordCamp', $this->get_event_subtypes()[ $current_subtype ], $html );
+				}
+
+				// Remove the "Mine" filter, as this isn't compatible with subtype filtering.. and isn't relevant usually for wranglers.
+				unset( $views['mine'] );
+			}
+
+			return $views;
+		}
+
+		/**
+		 * Filter the WordCamp list by Event Subtype.
+		 */
+		public function filter_by_subtype( $query ) {
+			if (
+				! $query->is_main_query() ||
+				WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ||
+				empty( $_REQUEST['type'] )
+			) {
+				return;
+			}
+
+			$type = sanitize_text_field( wp_unslash( $_REQUEST['type'] ) );
+
+			$meta_query = $query->get( 'meta_query' ) ?: [];
+
+			$meta_query[] = array(
+				'key'     => 'event_subtype',
+				'value'   => $type,
+				'compare' => '=',
+			);
+
+			$query->set( 'meta_query', $meta_query );
 		}
 	}
 endif; // class_exists check.
@@ -1242,6 +1506,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'WordCamp Hashtag'                => 'Should begin with #. Ex. #wcus',
 		'Global Sponsorship Grant Amount' => 'No commas, thousands separators or currency symbols. Ex. 1234.56',
 		'Global Sponsorship Grant'        => 'Deprecated.',
+		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {

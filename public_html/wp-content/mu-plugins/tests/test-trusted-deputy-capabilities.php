@@ -54,7 +54,7 @@ class Test_Trusted_Deputy_Capabilities extends WP_UnitTestCase {
 	/**
 	 * Setup shared fixtures before any tests are run.
 	 */
-	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) : void {
+	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ): void {
 		global $trusted_deputies;
 
 		self::$subscriber_id = self::factory()->user->create( array(

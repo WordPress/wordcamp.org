@@ -698,6 +698,17 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		}
 
 		/**
+		 * Return a list of valid Event Subtypes.
+		 *
+		 * @return array
+		 */
+		public function get_event_subtypes() {
+			return array(
+				'wp_meetup' => __( 'WordPress Meetup', 'wordcamporg' ),
+			);
+		}
+
+		/**
 		 * Schedule cron job for updating data from meetup API
 		 */
 		public function schedule_cron_jobs() {

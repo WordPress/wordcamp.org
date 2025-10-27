@@ -180,15 +180,17 @@ class Meetup_Events extends Base {
 		// Filter options: https://www.meetup.com/api/schema/#ProNetworkEventsFilter.
 		$query = '
 			query ( $cursor: String ) {
-	            proNetworkByUrlname( urlname: "WordPress" ) {
+				proNetwork( urlname: "WordPress" ) {
 					eventsSearch(
-						input: { first: 200, after: $cursor },
-						filter: {
-							eventDateMin: "' . esc_attr( $this->range->start->format('c') ) . '",
-							eventDateMax: "' . esc_attr( $this->range->end->format('c') ) . '"
+						input: {
+							first: 200,
+							after: $cursor,
+							filter: {
+								eventDateMin: "' . esc_attr( $this->range->start->format('c') ) . '",
+								eventDateMax: "' . esc_attr( $this->range->end->format('c') ) . '"
+							}
 						}
 					) {
-						count
 						' . $meetup->pagination . '
 						edges {
 							node {
@@ -198,10 +200,9 @@ class Meetup_Events extends Base {
 								description
 								dateTime
 								status
-								timeStatus
-								isOnline
-								group { proJoinDate name city country latitude longitude }
-								venue { city country lat lng }
+								eventType
+								group { proJoinDate name city country lat lon }
+								venues { city country lat lon }
 							}
 						}
 					}
@@ -216,7 +217,7 @@ class Meetup_Events extends Base {
 			return array();
 		}
 
-		$events = array_column( $results['proNetworkByUrlname']['eventsSearch']['edges'], 'node' );
+		$events = array_column( $results['proNetwork']['eventsSearch']['edges'], 'node' );
 
 		$data = array();
 		foreach ( $events as $event ) {
@@ -233,18 +234,20 @@ class Meetup_Events extends Base {
 				continue;
 			}
 
+			$is_online = ( 'ONLINE' === ( $event['eventType'] ?? '' ) );
+
 			$data[] = array(
 				'id'           => $event['id'],
 				'link'         => $event['eventUrl'],
 				'name'         => $event['title'],
 				'description'  => $event['description'],
 				'time'         => $event_time,
-				'status'       => $event['timeStatus'],
 				'group'        => $event['group']['name'],
-				'city'         => ! empty( $event['venue']['city'] ) ? $event['venue']['city'] : $event['group']['city'],
-				'l10n_country' => $meetup->localised_country_name( ! empty( $event['venue']['country'] ) ? $event['venue']['country'] : $event['group']['country'] ),
-				'latitude'     => ( ! $event['isOnline'] && ! empty( $event['venue']['lat'] ) ) ? $event['venue']['lat'] : $event['group']['latitude'],
-				'longitude'    => ( ! $event['isOnline'] && ! empty( $event['venue']['lng'] ) ) ? $event['venue']['lng'] : $event['group']['longitude'],
+				// TODO: Hybrid events have multiple venues, which is not handled here.
+				'city'         => ! empty( $event['venues'][0]['city'] ) ? $event['venues'][0]['city'] : $event['group']['city'],
+				'l10n_country' => $meetup->localised_country_name( ! empty( $event['venues'][0]['country'] ) ? $event['venues'][0]['country'] : $event['group']['country'] ),
+				'latitude'     => ( ! $is_online && ! empty( $event['venues'][0]['lat'] ) ) ? $event['venues'][0]['lat'] : $event['group']['lat'],
+				'longitude'    => ( ! $is_online && ! empty( $event['venues'][0]['lon'] ) ) ? $event['venues'][0]['lon'] : $event['group']['lon'],
 			);
 		}
 

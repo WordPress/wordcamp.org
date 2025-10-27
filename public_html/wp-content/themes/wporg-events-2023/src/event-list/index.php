@@ -45,18 +45,26 @@ function render( $attributes, $content, $block ) {
 	$events = Google_Map\get_events( $attributes['events'], 0, 0, $facets );
 
 	// Get all the filters that are currently applied.
-	$filtered_events = array_slice( filter_events( $events ), 0, (int) $attributes['limit'] );
-
-	// The results are not guaranteed to be in order, so sort them.
-	usort( $filtered_events,
-		function ( $a, $b ) {
-			return $a->timestamp - $b->timestamp;
-		}
-	);
+	$filtered_events = filter_events( $events );
 
 	if ( count( $filtered_events ) < 1 ) {
 		return get_no_result_view();
 	}
+
+	// The results are not guaranteed to be in order, so sort them.
+	$order = strtoupper( $attributes['order'] ?? 'ASC' );
+	usort( $filtered_events,
+		function ( $a, $b ) use( $order ) {
+			if ( 'ASC' === $order ) {
+				return $a->timestamp - $b->timestamp;
+			} else {
+				return $b->timestamp - $a->timestamp;
+			}
+		}
+	);
+
+	// Limit the length of the results, as requested.
+	$filtered_events = array_slice( $filtered_events, 0, (int) $attributes['limit'] );
 
 	// Prune to only the used properties, to reduce the size of the payload.
 	$filtered_events = array_map(

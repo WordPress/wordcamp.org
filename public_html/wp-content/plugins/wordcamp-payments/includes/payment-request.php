@@ -83,7 +83,7 @@ class WCP_Payment_Request {
 			'paid',
 			array(
 				'label'              => esc_html_x( 'Paid', 'post', 'wordcamporg' ),
-				'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'wordcamporg' ),
+				'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 				'public'             => true,
 				'publicly_queryable' => false,
 			)
@@ -93,7 +93,7 @@ class WCP_Payment_Request {
 			'unpaid',
 			array(
 				'label'              => esc_html_x( 'Unpaid', 'post', 'wordcamporg' ),
-				'label_count'        => _nx_noop( 'Unpaid <span class="count">(%s)</span>', 'Unpaid <span class="count">(%s)</span>', 'wordcamporg' ),
+				'label_count'        => _nx_noop( 'Unpaid <span class="count">(%s)</span>', 'Unpaid <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 				'public'             => true,
 				'publicly_queryable' => false,
 			)
@@ -103,7 +103,7 @@ class WCP_Payment_Request {
 			'incomplete',
 			array(
 				'label'              => esc_html_x( 'Incomplete', 'post', 'wordcamporg' ),
-				'label_count'        => _nx_noop( 'Incomplete <span class="count">(%s)</span>', 'Incomplete <span class="count">(%s)</span>', 'wordcamporg' ),
+				'label_count'        => _nx_noop( 'Incomplete <span class="count">(%s)</span>', 'Incomplete <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 				'public'             => true,
 				'publicly_queryable' => false,
 			)

@@ -170,3 +170,46 @@ defined( 'WPINC' ) || die();
 		</tr>
 	</tbody>
 </table>
+
+<h4>For which type of events?</h4>
+<table id="event-type-selection">
+	<tbody>
+		<tr>
+			<?php
+			$selected_subtypes = get_post_meta( $post->ID, 'wcor_event_subtypes', true ) ?: [ 'all' ];
+			$subtypes = $GLOBALS['wordcamp_admin']->get_event_subtypes();
+			?>
+			<td><label>
+				<input type="checkbox" name="wcor_event_subtypes[]" value="all" <?php checked( in_array( 'all', $selected_subtypes ) ); ?> />
+				All
+			</label></td>
+			<?php
+			foreach ( $subtypes as $subtype_id => $subtype_name ) :
+				?>
+				<td><label>
+					<input type="checkbox" name="wcor_event_subtypes[]" value="<?php echo esc_attr( $subtype_id ); ?>" <?php checked( in_array( $subtype_id, $selected_subtypes ) ); ?> />
+					<?php echo esc_html( $subtype_name ); ?>
+				</label></td>
+			<?php endforeach; ?>
+			<script>
+				( function( $ ) {
+					/* Enforce 'All for no selections. */
+					$( '#event-type-selection input[name="wcor_event_subtypes[]"]' ).on( 'change', function() {
+						if ( this.value == 'all' && this.checked ) {
+							$( 'input[name="wcor_event_subtypes[]"]:not([value="all"])' ).prop( 'checked', false );
+							return;
+						}
+
+						const multipleChecked = $( 'input[name="wcor_event_subtypes[]"]:not([value="all"]):checked' ).length > 0;
+						$( 'input[name="wcor_event_subtypes[]"][value="all"]' ).prop( 'checked', ! multipleChecked );
+					} ).change();
+				} )( jQuery );
+			</script>
+			<style>
+				#event-type-selection td > label {
+					padding-right: 1em;
+				}
+			</style>
+		</tr>
+	</tbody>
+</table>

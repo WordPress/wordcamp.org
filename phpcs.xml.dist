@@ -79,10 +79,14 @@
 	<exclude-pattern>*/vendor/*</exclude-pattern>
 	<exclude-pattern>*/node_modules/*</exclude-pattern>
 	<exclude-pattern>./public_html/mu/*</exclude-pattern>
+	<exclude-pattern>./public_html/wp-content/plugins/wordcamp-remote-css/jetpack-custom-css-module/*</exclude-pattern>
 
 	<!-- Scan all (php) files in the current folder and subfolders -->
 	<file>.</file>
 	<arg name="extensions" value="php" />
+
+	<!-- WordCamp runs recent versions of WordPress. -->
+	<config name="minimum_wp_version" value="6.8"/>
 
 	<rule ref="WordPress-Core">
 		<!-- I don't see anything wrong with this :) -->
@@ -192,5 +196,8 @@
 	<rule ref="WordPress-Extra">
 		<!-- I think it's better to have all the `use` statements come right after the namespace line. -->
 		<exclude name="PSR2.Namespaces.NamespaceDeclaration.BlankLineAfter" />
+
+		<!-- We're going to see more of ?? (which this doesn't cover), might as well allow ?: when suitable. -->
+		<exclude name="Universal.Operators.DisallowShortTernary" />
 	</rule>
 </ruleset>

@@ -56,7 +56,35 @@ function main() {
 	}
 	*/
 
+	if ( handle_robots_txt_request( $domain, $path ) ) {
+		return;
+	}
+
 	redirect_to_site( $domain, $path );
+}
+
+/**
+ * Check if the current request is for a robots.txt file, and handle it if so.
+ *
+ * @param string $domain
+ * @param string $path
+ *
+ * @return bool Whether the request will be handled as a robots.txt request.
+ */
+function handle_robots_txt_request( $domain, $path ) {
+	if ( '/' !== $path || '/robots.txt' !== $_SERVER['REQUEST_URI'] ) {
+		return false;
+	}
+
+	$latest_site = get_latest_site( $domain );
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	set_network_and_site( $latest_site );
+
+	// Abort redirects.
+	return true;
 }
 
 /**
@@ -603,14 +631,14 @@ function get_canonical_year_url( $domain, $path ) {
 	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2024-06-20' ) ) {
-				return "https://europe.wordcamp.$tld/2024/";
+			if ( time() <= strtotime( '2025-06-21' ) ) {
+				return "https://europe.wordcamp.$tld/2025/";
 			}
 			break;
 
 		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2024-09-25' ) ) {
-				return "https://us.wordcamp.$tld/2024/";
+			if ( time() <= strtotime( '2025-09-15' ) ) {
+				return "https://us.wordcamp.$tld/2025/";
 			}
 			break;
 

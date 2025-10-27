@@ -1,5 +1,7 @@
 <?php
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_YEAR_DOT_CITY_DOMAIN_PATH };
 
 defined( 'WPINC' ) || die();
@@ -145,7 +147,8 @@ function get_wordcamp_name( $site_id = 0 ) {
 /**
  * Extract pieces from a WordCamp.org URL
  *
- * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead
+ * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead.
+ * @todo Update this to handle events.wordpress.org, campusconnect, & campus.wordpress.org.
  *
  * @param string $site_url The root URL for the site, without any query string. It can include the site path
  *                         -- e.g., `https://narnia.wordcamp.org/2020` -- but should not include a post slug,
@@ -447,4 +450,27 @@ function is_wordcamp_virtual( $wordcamp ) {
 	restore_current_blog();
 
 	return $is_virtual;
+}
+
+/**
+ * Get the Network Admin URL for a given network + path.
+ *
+ * @param int    $network_id The ID of the network.
+ * @param string $path       The path to append to the URL.
+ * @return string The full URL for the network admin.
+ */
+function get_network_specific_network_url( int $network_id, string $path ): string {
+	$tld = get_top_level_domain();
+	$url = network_admin_url( $path );
+
+	$hostname = "wordcamp.$tld";
+	if ( CAMPUS_NETWORK_ID === $network_id ) {
+		$hostname = "campus.wordpress.$tld";
+	} elseif ( EVENTS_NETWORK_ID === $network_id ) {
+		$hostname = "events.wordpress.$tld";
+	}
+
+	$url = preg_replace( '!^https?://[^/]+!i', "https://{$hostname}", $url );
+
+	return $url;
 }

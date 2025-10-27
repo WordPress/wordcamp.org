@@ -36,6 +36,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Incomplete <span class="count">(%s)</span>',
 					'Incomplete <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)
@@ -50,6 +51,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Pending Approval <span class="count">(%s)</span>',
 					'Pending Approval <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)
@@ -64,6 +66,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Needs Follow-up <span class="count">(%s)</span>',
 					'Needs Follow-up <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)
@@ -78,6 +81,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Approved <span class="count">(%s)</span>',
 					'Approved <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)
@@ -92,6 +96,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Payment Sent <span class="count">(%s)</span>',
 					'Payment Sent <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)
@@ -106,6 +111,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Paid <span class="count">(%s)</span>',
 					'Paid <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)
@@ -120,6 +126,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Failed <span class="count">(%s)</span>',
 					'Failed <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)
@@ -134,6 +141,7 @@ class WordCamp_Budgets {
 				'label_count' => _nx_noop(
 					'Cancelled <span class="count">(%s)</span>',
 					'Cancelled <span class="count">(%s)</span>',
+					'payment request',
 					'wordcamporg'
 				),
 			)

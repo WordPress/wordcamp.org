@@ -354,7 +354,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		global $camptix;
 
 		$camptix->log( sprintf( 'Running payment_cancel. Request data attached.' ), null, $_REQUEST );
-		$camptix->log( sprintf( 'Running payment_cancel. Server data attached.'  ), null, $_SERVER );
 
 		$payment_token = $_REQUEST['tix_payment_token'] ?? '';
 
@@ -891,7 +890,7 @@ class CampTix_Stripe_API_Client {
 
 		$args = array(
 			'mode'                => 'payment',
-			'submit_type'         => 'book',
+			'submit_type'         => 'pay',
 			'success_url'         => $return_url,
 			'cancel_url'          => $cancel_url,
 			'line_items'          => $line_items,

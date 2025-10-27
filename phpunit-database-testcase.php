@@ -3,7 +3,6 @@
 namespace WordCamp\Tests;
 use WP_UnitTestCase, WP_UnitTest_Factory;
 
-
 /**
  * Provides a mock WordCamp.org network of sites to test against.
  *
@@ -15,6 +14,8 @@ use WP_UnitTestCase, WP_UnitTest_Factory;
  */
 class Database_TestCase extends WP_UnitTestCase {
 	protected static $central_site_id;
+	protected static $events_root_site_id;
+	protected static $wordcamp_root_site_id;
 	protected static $year_dot_2018_site_id;
 	protected static $year_dot_2019_site_id;
 	protected static $slash_year_2016_site_id;
@@ -29,6 +30,39 @@ class Database_TestCase extends WP_UnitTestCase {
 	 * @param WP_UnitTest_Factory $factory
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
+		ms_upload_constants();
+
+		global $wpdb;
+		// Reset the sites table, so the IDs are predictable. WordPress doesn't respect network_id=1.
+		$wpdb->query( "TRUNCATE TABLE $wpdb->site" );
+		$wpdb->query( "TRUNCATE TABLE $wpdb->sitemeta" );
+
+		$factory->network->create( array(
+			'domain'           => 'wordcamp.test',
+			'path'              => '/',
+			'subdomain_install' => true,
+			'network_id'        => WORDCAMP_NETWORK_ID,
+		) );
+		$factory->network->create( array(
+			'domain'     => 'events.wordpress.test',
+			'path'       => '/',
+			'network_id' => EVENTS_NETWORK_ID,
+		) );
+
+		self::$wordcamp_root_site_id = $factory->blog->create( array(
+			'domain'     => 'wordcamp.test',
+			'path'       => '/',
+			'blog_id'    => WORDCAMP_ROOT_BLOG_ID,
+			'network_id' => WORDCAMP_NETWORK_ID,
+		) );
+
+		self::$events_root_site_id = $factory->blog->create( array(
+			'domain'     => 'events.wordpress.test',
+			'path'       => '/',
+			'blog_id'    => EVENTS_ROOT_BLOG_ID,
+			'network_id' => EVENTS_NETWORK_ID,
+		) );
+
 		self::$central_site_id = $factory->blog->create( array(
 			'domain'     => 'central.wordcamp.test',
 			'path'       => '/',
@@ -93,13 +127,17 @@ class Database_TestCase extends WP_UnitTestCase {
 		global $wpdb;
 
 		wp_delete_site( self::$central_site_id );
+		wp_delete_site( self::$wordcamp_root_site_id );
+		wp_delete_site( self::$events_root_site_id );
 		wp_delete_site( self::$year_dot_2018_site_id );
 		wp_delete_site( self::$year_dot_2019_site_id );
 		wp_delete_site( self::$slash_year_2016_site_id );
 		wp_delete_site( self::$slash_year_2018_dev_site_id );
 		wp_delete_site( self::$slash_year_2020_site_id );
 
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", WORDCAMP_NETWORK_ID ) );
-		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->site}     WHERE id      = %d", WORDCAMP_NETWORK_ID ) );
+		foreach ( [ WORDCAMP_NETWORK_ID, EVENTS_NETWORK_ID ] as $network_id ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->sitemeta} WHERE site_id = %d", $network_id ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->site}     WHERE id      = %d", $network_id ) );
+		}
 	}
 }

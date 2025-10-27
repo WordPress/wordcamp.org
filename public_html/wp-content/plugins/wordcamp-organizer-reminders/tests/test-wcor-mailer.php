@@ -1,8 +1,9 @@
 <?php
 
 namespace WordCamp\Organizer_Reminders\Tests;
-use WP_UnitTestCase, WP_UnitTest_Factory;
+use WP_UnitTest_Factory;
 use WCOR_Reminder, WCOR_Mailer;
+use WordCamp\Tests\Database_TestCase;
 
 defined( 'WPINC' ) || die();
 
@@ -13,7 +14,7 @@ defined( 'WPINC' ) || die();
  *
  * @group organizer-reminders
  */
-class Test_WCOR_Mailer extends WP_UnitTestCase {
+class Test_WCOR_Mailer extends Database_TestCase {
 	/**
 	 * @var int $triggered_reminder_post_id The ID of an Organizer Reminder post which is configured to be sent on a trigger.
 	 */
@@ -25,9 +26,19 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	protected static $timed_reminder_post_id;
 
 	/**
+	 * @var int $not_for_wordcamp_post_id The ID of an Organizer Reminder post which is not configured to be sent for WordCamps.
+	 */
+	protected static $not_for_wordcamp_post_id;
+
+	/**
 	 * @var int $wordcamp_dayton_post_id The ID of a WordCamp post for Dayton, Ohio, USA.
 	 */
 	protected static $wordcamp_dayton_post_id;
+
+	/**
+	 * @var int $other_event_post_id The ID of a non-WordCamp event post.
+	 */
+	protected static $other_event_post_id;
 
 	/**
 	 * Set up the mocked PHPMailer instance before each test method.
@@ -43,6 +54,8 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 * @param WP_UnitTest_Factory $factory The base factory object.
 	 */
 	public static function wpSetUpBeforeClass( $factory ) {
+		parent::wpSetUpBeforeClass( $factory );
+
 		/*
 		 * Reminders must be created _before_ WordCamps, to avoid triggering the early return in
 		 * `timed_email_is_ready_to_send()`. To test that early return, you can modify the
@@ -69,6 +82,17 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 
 		update_post_meta( self::$timed_reminder_post_id, 'wcor_send_where', 'wcor_send_budget_wrangler' );
 
+		self::$not_for_wordcamp_post_id = $factory->post->create(
+			array(
+				'post_type'    => WCOR_Reminder::AUTOMATED_POST_TYPE_SLUG,
+				'post_title'   => 'This reminder is not for WordCamps',
+				'post_content' => 'So it should not be sent to WordCamp.',
+			)
+		);
+
+		update_post_meta( self::$not_for_wordcamp_post_id, 'wcor_send_where', 'wcor_send_organizers' );
+		update_post_meta( self::$not_for_wordcamp_post_id, 'wcor_event_subtypes', [ 'other' ] );
+
 		self::$wordcamp_dayton_post_id = $factory->post->create(
 			array(
 				'post_type'  => WCPT_POST_TYPE_ID,
@@ -81,8 +105,19 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 		update_post_meta( self::$wordcamp_dayton_post_id, 'E-mail Address',                 'dayton@wordcamp.org'                    );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'WordPress.org Username',         'janedoe'                                );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Physical Address',               '3640 Colonel Glenn Hwy, Dayton, OH, US' );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)',        strtotime( 'Jan 1st, 2019' )             );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler Name',           'Sally Smith'                            );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler E-mail Address', 'sally.smith+trez@gmail.com'             );
+
+		self::$other_event_post_id = $factory->post->create(
+			array(
+				'post_type'  => WCPT_POST_TYPE_ID,
+				'post_title' => 'Some Other Event',
+			)
+		);
+
+		update_post_meta( self::$other_event_post_id, 'E-mail Address', 'other@wordcamp.org' );
+		update_post_meta( self::$other_event_post_id, 'event_subtype',  'other'              );
 	}
 
 	/**
@@ -104,6 +139,9 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 	 */
 	protected function assert_mail_succeeded( $to, $subject, $body, $result = true ) {
 		$mailer                 = tests_retrieve_phpmailer_instance();
+
+		$this->assertNotFalse( $mailer->get_sent(), 'No email was sent.' );
+
 		$normalized_actual_body = str_replace( "\r\n", "\n", $mailer->get_sent()->body );
 
 		$this->assertSame( true, $result );
@@ -170,6 +208,7 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 		if ( in_array( $send_when, array( 'wcor_send_before', 'wcor_send_after' ) ) ) {
 			update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)', $compare_date );
 		} elseif ( 'wcor_send_after_pending' === $send_when ) {
+			update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)', $compare_date );
 			update_post_meta( self::$wordcamp_dayton_post_id, '_timestamp_added_to_planning_schedule', $compare_date );
 		}
 
@@ -255,6 +294,40 @@ class Test_WCOR_Mailer extends WP_UnitTestCase {
 			'dayton@wordcamp.org',
 			'WordCamp Dayton has been added to the final schedule',
 			"Huzzah! A new WordCamp is coming soon to Dayton, Ohio, USA! The lead organizer is janedoe, and the venue is at:\n\n3640 Colonel Glenn Hwy, Dayton, OH, US\n",
+			$result
+		);
+	}
+
+	/**
+	 * Test that event subtype is respected when sending reminders.
+	 *
+	 * @covers WCOR_Mailer::applies_to_wordcamp
+	 */
+	public function test_not_sent_to_non_wordcamp() {
+		/** @var WCOR_Mailer $WCOR_Mailer */
+		global $WCOR_Mailer;
+
+		$message  = get_post( self::$not_for_wordcamp_post_id );
+		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
+		$other    = get_post( self::$other_event_post_id );
+
+		// Test that WordCamp doesn't send.
+		$result = $WCOR_Mailer->send_manual_email( $message, $wordcamp );
+
+		// Verify the email wasn't sent.
+		$this->assertFalse( $result );
+		$this->assertSame( 0, did_action( 'wp_mail_failed' ) );
+		$this->assertSame( 0, did_action( 'wp_mail_succeeded' ) );
+
+		// Test that it sends to Other event.
+		$result = $WCOR_Mailer->send_manual_email( $message, $other );
+
+		$this->assertTrue( $result );
+
+		$this->assert_mail_succeeded(
+			'other@wordcamp.org',
+			'This reminder is not for WordCamps',
+			"So it should not be sent to WordCamp.\n",
 			$result
 		);
 	}

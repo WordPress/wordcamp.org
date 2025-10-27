@@ -50,8 +50,8 @@ add_action( 'camptix_load_addons',                           __NAMESPACE__ . '\l
 add_filter( 'camptix_metabox_questions_default_fields_list', __NAMESPACE__ . '\modify_default_fields_list'          );
 add_filter( 'camptix_capabilities',                          __NAMESPACE__ . '\modify_capabilities'                 );
 add_filter( 'camptix_default_options',                       __NAMESPACE__ . '\modify_default_options'              );
-add_filter( 'camptix_options',                               __NAMESPACE__ . '\modify_email_templates'              );
-add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\switch_email_template'               );
+add_filter( 'camptix_options',                               __NAMESPACE__ . '\modify_email_templates',       20    );
+add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\switch_email_template',        20    );
 add_filter( 'camptix_html_message',                          __NAMESPACE__ . '\render_html_emails',           10, 2 );
 add_action( 'camptix_tshirt_report_intro',                   __NAMESPACE__ . '\tshirt_report_intro_message',  10, 3 );
 add_filter( 'camptix_stripe_checkout_image_url',             __NAMESPACE__ . '\stripe_default_checkout_image_url'   );
@@ -549,12 +549,14 @@ function load_addons( $addons ) {
  */
 function load_custom_addons() {
 	// Extra fields.
-	require_once __DIR__ . '/addons/allergy.php';
-	require_once __DIR__ . '/addons/accommodations.php';
-	require_once __DIR__ . '/addons/code-of-conduct.php';
-	require_once __DIR__ . '/addons/first-time.php';
+	require_once __DIR__ . '/addons/extra-fields.php';
+	require_once __DIR__ . '/addons/extra-fields/allergy.php';
+	require_once __DIR__ . '/addons/extra-fields/accommodations.php';
+	require_once __DIR__ . '/addons/extra-fields/code-of-conduct.php';
+	require_once __DIR__ . '/addons/extra-fields/first-time.php';
+	require_once __DIR__ . '/addons/extra-fields/privacy.php';
+
 	require_once __DIR__ . '/addons/health-advisory.php';
-	require_once __DIR__ . '/addons/privacy.php';
 
 	// Miscellaneous.
 	require_once __DIR__ . '/addons/spam-prevention.php';
@@ -620,12 +622,22 @@ function modify_email_templates( $options ) {
 	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string";
 
 	$templates_that_need_footers = array(
+		// Regular templates.
 		'email_template_single_purchase',
 		'email_template_multiple_purchase',
 		'email_template_multiple_purchase_receipt',
+
+		// Require Login.
+		'email_template_multiple_purchase_receipt_unconfirmed_attendees',
+		'email_template_multiple_purchase_unknown_attendee',
+		'email_template_multiple_purchase_unconfirmed_attendee',
 	);
 
 	foreach ( $templates_that_need_footers as $template ) {
+		if ( ! isset( $options[ $template ] ) ) {
+			continue;
+		}
+
 		// We can't add the string to the original option or it will keep getting added over and over again
 		// whenever the email templates are customized and saved.
 		$options[ $template . '_with_footer' ] = $options[ $template ] . $email_footer_string;
@@ -643,9 +655,15 @@ function modify_email_templates( $options ) {
  */
 function switch_email_template( $template_slug ) {
 	$templates_that_need_footers = array(
+		// Regular templates.
 		'email_template_single_purchase',
 		'email_template_multiple_purchase',
 		'email_template_multiple_purchase_receipt',
+
+		// Require Login.
+		'email_template_multiple_purchase_receipt_unconfirmed_attendees',
+		'email_template_multiple_purchase_unknown_attendee',
+		'email_template_multiple_purchase_unconfirmed_attendee',
 	);
 
 	if ( in_array( $template_slug, $templates_that_need_footers, true ) ) {
@@ -1095,7 +1113,11 @@ function add_show_ticket_type_filter() {
 
 	$filter = isset( $_GET['tix_show_ticket_type'] ) ? $_GET['tix_show_ticket_type'] : '';
 
-	$all_tickets = get_posts( array( 'post_type' => 'tix_ticket' ) );
+	// Set posts_per_page to -1 so we show them all.
+	$all_tickets = get_posts( array(
+		'post_type' => 'tix_ticket',
+		'posts_per_page' => -1,
+	) );
 	?>
 		<select name="tix_show_ticket_type">
 			<option value=""><?php esc_html_e( 'All Tickets', 'wordcamporg' ); ?></option>

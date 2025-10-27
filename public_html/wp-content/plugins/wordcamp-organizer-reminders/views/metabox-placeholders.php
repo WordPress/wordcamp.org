@@ -15,6 +15,7 @@
 	<li>[wordcamp_hashtag]</li>
 	<li>[wordcamp_anticipated_attendees]</li>
 	<li>[multi_event_sponsor_region]</li>
+	<li>[event_type]</li>
 </ul>
 
 <h5>The organizing team:</h5>

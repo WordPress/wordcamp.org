@@ -10,10 +10,11 @@ use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
-const LATEST_DATABASE_VERSION = 3;
+const LATEST_DATABASE_VERSION = 4;
 
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );
+	add_action( 'wp_ajax_wcbdsi_vetting_status', __NAMESPACE__ . '\handle_vetting_request'       );
 } elseif ( is_network_admin() ) {
 	add_action( 'network_admin_menu', __NAMESPACE__ . '\register_submenu_page' );
 	add_action( 'init',               __NAMESPACE__ . '\upgrade_database'      );
@@ -161,7 +162,7 @@ function enqueue_scripts() {
 		'wcbd-sponsor-invoices',
 		plugins_url( 'javascript/sponsor-invoices.js', __DIR__ ),
 		array( 'jquery', 'underscore' ),
-		1,
+		filemtime( dirname( __DIR__ ) . '/javascript/sponsor-invoices.js' ),
 		true
 	);
 }
@@ -188,15 +189,18 @@ function upgrade_database() {
 			qbo_invoice_id int( 11 )        unsigned NOT NULL default '0',
 			invoice_title  varchar( 75 )             NOT NULL default '',
 			status         varchar( 30 )             NOT NULL default '',
+			vetting_status varchar( 30 )             NOT NULL default '',
 			wordcamp_name  varchar( 75 )             NOT NULL default '',
 			sponsor_name   varchar( 75 )             NOT NULL default '',
 			description    varchar( 75 )             NOT NULL default '',
 			currency       varchar( 3  )             NOT NULL default '',
 			due_date       int( 11 )        unsigned NOT NULL default '0',
 			amount         numeric( 10, 2 ) unsigned NOT NULL default '0',
+			last_modified  datetime                  NOT NULL default '0000-00-00 00:00:00',
 
 			PRIMARY KEY (blog_id, invoice_id),
 			KEY status (status)
+			KEY last_modified (last_modified)
 		)
 		DEFAULT CHARACTER SET {$wpdb->charset}
 		COLLATE {$wpdb->collate};
@@ -261,6 +265,38 @@ function handle_approve_invoice_request() {
 	} else {
 		wp_send_json_error( $result );
 	}
+}
+
+/**
+ * Handle an AJAX request to update the vetting status of an invoice.
+ *
+ * @return void
+ */
+function handle_vetting_request() {
+	$required_parameters = array( 'nonce', 'site_id', 'invoice_id', 'vetting_status' );
+
+	foreach ( $required_parameters as $parameter ) {
+		if ( empty( $_REQUEST[ $parameter ] ) ) {
+			wp_send_json_error( array( 'error' => 'Required parameters not set.' ) );
+		}
+	}
+
+	$site_id          = absint( $_REQUEST['site_id'] );
+	$invoice_id       = absint( $_REQUEST['invoice_id'] );
+	$vetting_status   = sanitize_text_field( $_REQUEST['vetting_status'] );
+
+	if ( ! wp_verify_nonce( $_REQUEST['nonce'], "wcbdsi-vetting-status-$site_id-$invoice_id" ) || ! current_user_can( 'manage_network' ) ) {
+		wp_send_json_error( array( 'error' => 'Permission denied.' ) );
+	}
+
+	switch_to_blog( $site_id );
+
+	update_post_meta( $invoice_id, '_wcbsi_vetting_status', wp_slash( $vetting_status ) );
+	update_index_row( $invoice_id, get_post( $invoice_id ) );
+
+	restore_current_blog();
+
+	wp_send_json_success();
 }
 
 /**
@@ -403,7 +439,7 @@ function notify_organizer_status_changed( $invoice_id, $new_status ) {
 
 	wp_mail( $to, $subject, $message, $headers, $attachments );
 
-	if ( $invoice_filename ) {
+	if ( $invoice_filename && ! is_wp_error( $invoice_filename ) ) {
 		unlink( $invoice_filename );
 	}
 }
@@ -460,15 +496,17 @@ function update_index_row( $invoice_id, $invoice ) {
 		'qbo_invoice_id' => get_post_meta( $invoice_id, '_wcbsi_qbo_invoice_id', true ),
 		'invoice_title'  => substr( $invoice->post_title, 0, 75 ),
 		'status'         => $invoice->post_status,
+		'vetting_status' => get_post_meta( $invoice_id, '_wcbsi_vetting_status', true ),
 		'wordcamp_name'  => get_wordcamp_name(),
 		'sponsor_name'   => substr( get_sponsor_name( $invoice_id ), 0, 75 ),
 		'description'    => get_post_meta( $invoice_id, '_wcbsi_description', true ),
 		'currency'       => get_post_meta( $invoice_id, '_wcbsi_currency',    true ),
 		'due_date'       => 0,  // todo remove this field from index.
 		'amount'         => get_post_meta( $invoice_id, '_wcbsi_amount',      true ),
+		'last_modified'  => strtotime( $invoice->post_modified_gmt ) > 0 ? $invoice->post_modified_gmt : current_time( 'mysql' ),
 	);
 
-	$formats = array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f' );
+	$formats = array( '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%f', '%s' );
 
 	$wpdb->replace( get_index_table_name(), $index_row, $formats );
 }

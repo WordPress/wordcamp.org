@@ -70,11 +70,26 @@ const PATTERN_CITY_YEAR_TYPE_PATH = '
 	@ix
 ';
 
+/*
+ * Matches a URL path like '/vancouver/`.
+ *
+ * These are used by the `campus.wordpress.org` network.
+ */
+const PATTERN_CITY_PATH = '
+	@ ^
+	/
+	( [\w-]+ )    # Capture the city.
+	/?
+	@ix
+';
+
 /**
  * Load the sunrise file for the current network.
  */
 function load_network_sunrise() {
 	switch ( SITE_ID_CURRENT_SITE ) {
+		case CAMPUS_NETWORK_ID:
+			// Intentional Fall through. Load Events plugins for now.
 		case EVENTS_NETWORK_ID:
 			require __DIR__ . '/sunrise-events.php';
 			break;
@@ -95,5 +110,25 @@ function get_top_level_domain() {
 	return 'local' === WORDCAMP_ENVIRONMENT ? 'test' : 'org';
 }
 
+/**
+ * Get the Network ID for a given domain.
+ *
+ * @param string $domain The domain to check.
+ * @return int The Network ID.
+ */
+function get_domain_network_id( string $domain ): int {
+	$tld = get_top_level_domain();
+
+	switch ( $domain ) {
+		case "campus.wordpress.{$tld}":
+			return CAMPUS_NETWORK_ID;
+
+		case "events.wordpress.{$tld}":
+			return EVENTS_NETWORK_ID;
+
+		default:
+			return WORDCAMP_NETWORK_ID;
+	}
+}
 
 load_network_sunrise();

@@ -101,7 +101,6 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		global $camptix;
 
 		$this->log( sprintf( 'Running payment_return. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_return. Server data attached.' ), null, $_SERVER );
 
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
@@ -128,8 +127,14 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		}
 		$attendee = reset( $attendees );
 
+		$payment_data = array(
+			'transaction_id'      => $_REQUEST['payment_id'],
+			'transaction_details' => $_REQUEST,
+		);
+		unset( $payment_data['transaction_details']['tix_action'], $payment_data['transaction_details']['tix_payment_method'] );
+
 		if ( 'draft' == $attendee->post_status ) {
-			return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING );
+			return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
 		} else {
 			$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
 			$url          = add_query_arg( array(
@@ -147,7 +152,6 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		global $camptix;
 
 		$this->log( sprintf( 'Running payment_notify. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_notify. Server data attached.' ), null, $_SERVER );
 
 		//Basic PHP script to handle Instamojo RAP webhook.
 		$instamojo_salt  = $this->options['Instamojo-salt'];
@@ -162,19 +166,26 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		} else {
 			uksort( $data, 'strcasecmp' );
 		}
+
+		$payment_data = array(
+			'transaction_id'      => $data['payment_id'],
+			'transaction_details' => $data,
+		);
+		unset( $payment_data['transaction_details']['tix_action'], $payment_data['transaction_details']['tix_payment_method'] );
+
 		// You can get the 'salt' from Instamojo's developers page(make sure to log in first): https://www.instamojo.com/developers
 		// Pass the 'salt' without <>
 		$mac_calculated = hash_hmac( "sha1", implode( "|", $data ), $instamojo_salt );
 		if ( $mac_provided == $mac_calculated ) {
 			if ( $data['status'] == "Credit" ) {
 				// Payment was successful, mark it as successful in your database.
-				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED);	
+				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );	
 			} else {
 				// Payment was unsuccessful, mark it as failed in your database.
-				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_FAILED);
+				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
 			}
 		} else {
-			$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_PENDING);
+			$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
 		}
 		
 	}
@@ -307,7 +318,7 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 			$long_url = $json_decode->payment_request->longurl;
 			header( 'Location:' . $long_url );
 		} else {
-			echo __( 'Invalid Insatmojo Access Key & Token', 'campt-indian-payment-gateway' );
+			echo __( 'Invalid Instamojo Access Key & Token', 'campt-indian-payment-gateway' );
 			return;
 		}
 
@@ -323,7 +334,6 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		global $camptix;
 
 		$this->log( sprintf( 'Running payment_cancel. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_cancel. Server data attached.' ), null, $_SERVER );
 
 		$payment_token = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
 
@@ -334,5 +344,3 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
 	}
 }
-
-?>

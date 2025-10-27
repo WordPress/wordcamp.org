@@ -157,7 +157,7 @@ function wcorg_skip_feature( $flag, $blog_id = null ) {
 		$blog_id = get_current_blog_id();
 	}
 
-	$flags = get_site_meta( $blog_id, 'wordcamp_skip_feature' );
+	$flags = get_site_meta( $blog_id, 'wordcamp_skip_feature' ) ?: [];
 
 	return in_array( $flag, $flags, true );
 }
@@ -347,41 +347,6 @@ function wcorg_required_indicator() {
 	</span>
 
 	<?php
-}
-
-/**
- * Get the URL of Jetpack's Custom CSS file.
- *
- * Core normally just prints the CSS inline, but Jetpack enqueues it if it's longer than 2k characters. Jetpack
- * doesn't provide a function to access the URL, though, and duplicating the logic in `Jetpack_Custom_CSS_Enhancements::wp_custom_css_cb()`
- * wouldn't be resilient or future-proof. So, we have to jump through some hoops to get it safely.
- *
- * @return bool|string
- */
-function wcorg_get_custom_css_url() {
-	/*
-	 * This has side-effects because `add_hooks()` is called immediately, but it doesn't seem problematic because
-	 * it gets loaded on every front/back-end page anyway.
-	 */
-	if ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
-		require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
-	} else {
-		require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
-	}
-	
-	ob_start();
-	Jetpack_Custom_CSS_Enhancements::wp_custom_css_cb();
-	$markup = ob_get_clean();
-
-	if ( ! $markup ) {
-		return false;
-	}
-
-	$dom = new DOMDocument();
-	$dom->loadHTML( $markup );
-	$element = $dom->getElementById( 'wp-custom-css' );
-
-	return $element instanceof DOMElement ? $element->getAttribute( 'href' ) : false;
 }
 
 /**

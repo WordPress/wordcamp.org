@@ -27,6 +27,8 @@ A clear and concise description of what you expected to happen.
 
 Please try to include screenshots or screencasts whenever possible to help people better understand the questions you are describing.
 
+Please ensure that you don't include any private details in your screenshot (Ticket holder names, Email addresses, transaction identifiers, etc). You can blank out any details in your editor prior to uploading it. Names that are public (organisers, public profile names) are OK.
+
 ### WordCamp
 
 If this is a problem on a specific WordCamp's site, list the site or page URL here.

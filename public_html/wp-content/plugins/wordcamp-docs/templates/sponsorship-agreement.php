@@ -67,17 +67,17 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		$end_date   = ! empty( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   ? gmdate( $date_format, $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   : $start_date;
 
 		$number_formatter   = new NumberFormatter( get_locale(), NumberFormatter::SPELLOUT );
-		$sponsorship_amount = $number_formatter->format( $sponsor_amount ) . " {$sponsor_currency}";
+		$sponsorship_amount = $number_formatter->format( (float) $sponsor_amount ) . " {$sponsor_currency}";
 
 		$number_formatter       = new NumberFormatter( get_locale(), NumberFormatter::CURRENCY );
-		$sponsorship_amount_num = $number_formatter->formatCurrency( $sponsor_amount, $sponsor_currency );
+		$sponsorship_amount_num = $number_formatter->formatCurrency( (float) $sponsor_amount, $sponsor_currency );
 
 		$data = wp_parse_args( $data, array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'sponsor_name'            => get_the_title( $sponsor_id ),
 			'sponsor_rep_name'        => get_post_meta( $sponsor_id, '_wcpt_sponsor_first_name', true ) . ' ' . get_post_meta( $sponsor_id, '_wcpt_sponsor_last_name', true ),
 			'sponsor_rep_title'       => '',
 			'agreement_date'          => wp_date( $date_format ),
-			'wordcamp_location'       => $wordcamp->meta['Location'][0],
+			'wordcamp_location'       => $wordcamp->meta['Location'][0] ?? '',
 			'wordcamp_date'           => ( $start_date !== $end_date ) ? "{$start_date} - {$end_date}" : $start_date,
 			'sponsorship_amount'      => $sponsorship_amount,
 			'sponsorship_amount_num'  => $sponsorship_amount_num,

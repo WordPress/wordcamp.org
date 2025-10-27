@@ -113,7 +113,9 @@ function get_customizer_section_url() {
  * @return bool
  */
 function is_customizer_request() {
-	return isset( $GLOBALS['wp_customize'] );
+	global $wp_customize;
+
+	return ( $wp_customize instanceof WP_Customize_Manager );
 }
 
 /**
@@ -169,10 +171,7 @@ function print_customizer_styles() {
  * @return bool
  */
 function is_badges_preview() {
-	/** @global WP_Customize_Manager $wp_customize */
-	global $wp_customize;
-
-	return isset( $_GET['camptix-badges'] ) && $wp_customize->is_preview();
+	return isset( $_GET['camptix-badges'] ) && is_customize_preview();
 }
 
 /**
@@ -231,7 +230,6 @@ function remove_all_previewer_styles() {
 	remove_all_actions( 'wp_print_styles' );
 
 	remove_action( 'wp_head', 'wp_custom_css_cb', 101 );
-	remove_action( 'wp_head', array( 'Jetpack_Custom_CSS_Enhancements', 'wp_custom_css_cb' ), 101 );
 }
 
 /**

@@ -30,3 +30,14 @@ body .is-layout-flex.page-upcoming-title-past-wrapper {
 .wporg-events__search .wporg-events__filters {
 	margin-top: 10px !important;
 }
+
+/* Ensure Contact form fields have an outline */
+.wp-block-jetpack-contact-form {
+	input[type="text"],
+	input[type="email"],
+	input[type="tel"],
+	textarea,
+	select {
+		outline: 1px solid var(--wp--preset--color--charcoal-5);
+	}
+}

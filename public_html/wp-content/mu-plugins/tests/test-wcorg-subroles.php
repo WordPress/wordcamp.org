@@ -15,7 +15,7 @@ defined( 'WPINC' ) || die();
  *
  * @package WordCamp\Tests
  */
-class Test_SubRoles extends WP_UnitTestCase {
+class Test_SubRoles extends Database_TestCase {
 	/**
 	 * Reset global state between tests, for isolation.
 	 */

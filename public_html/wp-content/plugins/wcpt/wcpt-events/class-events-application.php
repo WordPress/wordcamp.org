@@ -148,6 +148,8 @@ class Events_Application extends WordCamp_Application {
 	 * @return int|WP_Error
 	 */
 	public function create_post( $data ) {
+		$wordcamp_user_id = get_user_by( 'email', 'support@wordcamp.org' )->ID;
+
 		// Create the post.
 		$user     = wcorg_get_user_by_canonical_names( $data['q_wporg_username'] );
 		$statuses = \WordCamp_Loader::get_post_statuses();
@@ -156,7 +158,7 @@ class Events_Application extends WordCamp_Application {
 			'post_type'   => self::get_event_type(),
 			'post_title'  => esc_html( $data['q_event_location'] ),
 			'post_status' => self::get_default_status(),
-			'post_author' => is_a( $user, 'WP_User' ) ? $user->ID : 7694169, // Set `wordcamp` as author if supplied username is not valid.
+			'post_author' => is_a( $user, 'WP_User' ) ? $user->ID : $wordcamp_user_id, // Set `wordcamp` as author if supplied username is not valid.
 		);
 
 		$post_id = wp_insert_post( $post, true );

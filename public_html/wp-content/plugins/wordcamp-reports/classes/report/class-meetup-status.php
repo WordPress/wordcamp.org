@@ -107,7 +107,7 @@ class Meetup_Status extends Base_Status {
 	 * @param string $status
 	 * @param array  $options
 	 */
-	public function __construct( $start_date, $end_date, $status = '', array $options = array() ) {
+	public function __construct( $start_date, $end_date, $status = 'any', array $options = array() ) {
 
 		parent::__construct( $options );
 
@@ -119,7 +119,19 @@ class Meetup_Status extends Base_Status {
 				$e->getMessage()
 			);
 		}
-		$this->status = $status;
+
+		if ( $status && 'any' !== $status ) {
+			$statuses = \Meetup_Admin::get_post_statuses();
+
+			if ( isset( $statuses[ $status ] ) ) {
+				$this->status = $status;
+			} else {
+				$this->error->add(
+					self::$slug . '-status-error',
+					'Invalid status provided.'
+				);
+			}
+		}
 	}
 
 	/**
@@ -302,10 +314,6 @@ class Meetup_Status extends Base_Status {
 		$period = $params['period'];
 		$year   = $params['year'];
 		$status = $params['status'];
-
-		if ( $status && ! isset( $statuses[ $status ] ) ) {
-			$status = null;
-		}
 
 		if ( ! empty( $params )  && isset( $params['range'] ) ) {
 			$report = new self( $params['range']->start, $params['range']->end, $status, $params['options'] );

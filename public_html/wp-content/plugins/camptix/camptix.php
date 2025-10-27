@@ -67,6 +67,7 @@ class CampTix_Plugin {
 
 		require( dirname( __FILE__ ) . '/inc/class-camptix-addon.php' );
 		require( dirname( __FILE__ ) . '/inc/class-camptix-payment-method.php' );
+		require( dirname( __FILE__ ) . '/inc/class-camptix-badges.php' );
 
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			require_once( dirname( __FILE__ ) . '/inc/class-wp-cli-commands.php' );
@@ -142,6 +143,7 @@ class CampTix_Plugin {
 		add_action( 'transition_post_status', array( $this, 'transition_post_status' ), 10, 3 );
 		add_action( 'wp_ajax_camptix_client_stats', array( $this, 'process_client_stats' ) );
 		add_action( 'wp_ajax_nopriv_camptix_client_stats', array( $this, 'process_client_stats' ) );
+		add_action( 'edit_post_tix_attendee', array( $this, 'cron_camptix_stats_ticket_validation' ) );
 
 		// Notices, errors and infos, all in one.
 		add_action( 'camptix_notices', array( $this, 'do_notices' ) );
@@ -188,6 +190,7 @@ class CampTix_Plugin {
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'process_refund_all' ) );
 
 		add_action( 'tix_scheduled_daily', array( $this, 'review_timeout_payments' ) );
+		add_action( 'tix_scheduled_daily', array( $this, 'cron_camptix_stats_ticket_validation' ) );
 
 		if ( ! wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) )
 			wp_schedule_event( time(), '10-mins', 'tix_scheduled_every_ten_minutes' );
@@ -477,7 +480,7 @@ class CampTix_Plugin {
 			return;
 
 		$key = substr( $summarize_by, 6 );
-		$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
+		$answers = $this->get_attendee_answers( $attendee->ID );
 
 		if ( isset( $answers[ $key ] ) && ! empty( $answers[ $key ] ) )
 			$this->increment_summary( $summary, $answers[ $key ] );
@@ -643,6 +646,11 @@ class CampTix_Plugin {
 				} else {
 					// translators: 1: "from" date, 2: "to" date
 					printf( __( '%1$s &mdash; %2$s', 'wordcamporg' ), esc_html( $start ), esc_html( $end ) );
+				}
+
+				// If the tickets are not available, denote that on the tickets overview.
+				if ( ! $this->is_ticket_valid_for_purchase( $post_id ) ) {
+					echo '<br><em>' . esc_html__( 'Not available for purchase', 'wordcamporg' ) . '</em>';
 				}
 
 				break;
@@ -921,9 +929,9 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Get all questions. Returns an assoc array where the key is a
-	 * sanitized questions (as stored in the database) and the value is
-	 * the question array.
+	 * Get all questions.
+	 *
+	 * @return WP_Post[] The list of questions as a WP_Post object.
 	 */
 	function get_all_questions() {
 		$questions = get_posts( array(
@@ -943,32 +951,52 @@ class CampTix_Plugin {
 	 * @return array
 	 */
 	function get_sorted_questions( $ticket_id ) {
+		$questions    = array();
 		$question_ids = (array) get_post_meta( $ticket_id, 'tix_question_id' );
-		$order = (array) get_post_meta( $ticket_id, 'tix_questions_order', true );
+		$order        = (array) get_post_meta( $ticket_id, 'tix_questions_order', true );
 
-		// Make sure we have at least some questions
-		if ( empty( $question_ids ) )
-			return array();
+		// They might not have any custom ticket questions.
+		if ( $question_ids ) {
+			$questions = get_posts( array(
+				'post_type' => 'tix_question',
+				'post_status' => 'publish',
+				'posts_per_page' => -1,
+				'post__in' => $question_ids,
+			) );
+		}
 
-		$questions = get_posts( array(
-			'post_type' => 'tix_question',
-			'post_status' => 'publish',
-			'posts_per_page' => -1,
-			'post__in' => $question_ids,
-		) );
+		/**
+		 * Filter the questions for a ticket.
+		 *
+		 * @var array $questions
+		 * @var int $ticket_id
+		 */
+		$questions = apply_filters( 'camptix_ticket_questions', $questions, $ticket_id );
+
+		/**
+		 * Filter the question sort order.
+		 *
+		 * @var array $order
+		 * @var int $ticket_id
+		 * @var array $questions
+		 */
+		$order = apply_filters( 'camptix_ticket_questions_order', $order, $ticket_id, $questions );
 
 		$questions_with_keys = array();
 
-		foreach ( $questions as $question )
+		foreach ( $questions as $question ) {
 			$questions_with_keys[ $question->ID ] = $question;
+		}
 
 		$questions = $questions_with_keys;
 		unset( $questions_with_keys );
 
 		$questions_sorted = array();
-		foreach ( $order as $question_id )
-			if ( isset( $questions[ $question_id ] ) )
+		foreach ( $order as $question_id ) {
+			if ( isset( $questions[ $question_id ] ) ) {
 				$questions_sorted[] = $questions[ $question_id ];
+			}
+		}
 
 		unset( $questions );
 
@@ -1518,7 +1546,7 @@ class CampTix_Plugin {
 			) ) ) {
 				foreach ( $attendees as $attendee ) {
 					$new_answers = array();
-					$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
+					$answers     = $this->get_attendee_answers( $attendee->ID );
 
 					// Just in case the upgrade script runs more than once
 					$answers_backup = (array) get_post_meta( $attendee->ID, 'tix_questions_backup', true );
@@ -2032,6 +2060,7 @@ class CampTix_Plugin {
 	function admin_menu() {
 		add_submenu_page( 'edit.php?post_type=tix_ticket', __( 'Tools', 'wordcamporg' ), __( 'Tools', 'wordcamporg' ), $this->caps['manage_tools'], 'camptix_tools', array( $this, 'menu_tools' ) );
 		add_submenu_page( 'edit.php?post_type=tix_ticket', __( 'Setup', 'wordcamporg' ), __( 'Setup', 'wordcamporg' ), $this->caps['manage_options'], 'camptix_options', array( $this, 'menu_setup' ) );
+		add_submenu_page( 'edit.php?post_type=tix_ticket', __( 'Profile Badges', 'wordcamporg' ), __( 'Profile Badges', 'wordcamporg' ), $this->caps['manage_options'], 'camptix_badges', 'Camptix\Profile_Badges\menu_badges' );
 		remove_submenu_page( 'edit.php?post_type=tix_ticket', 'post-new.php?post_type=tix_ticket' );
 	}
 
@@ -2384,12 +2413,25 @@ class CampTix_Plugin {
 
 	/**
 	 * Updates a stats value.
+	 *
+	 * @param $data array|string A Key => Value set of stats to update. Or if $value is passed, the string key.
+	 * @param $value mixed Optional. If $data is a string key, this is the value. Ignored if Array is passed to $data.
 	 */
-	function update_stats( $key, $value ) {
+	function update_stats( $data, $value = null ) {
+		// Back-compat for update_stats( $key, $value );
+		if ( ! is_array( $data ) ) {
+			$data = array( $data => $value );
+		}
+
+		// Fetch directly from the database to avoid some race conditions.
+		wp_cache_delete( 'camptix_stats', 'options' );
 		$stats = get_option( 'camptix_stats', array() );
-		$stats[ $key ] = $value;
-		update_option( 'camptix_stats', $stats );
-		return;
+
+		foreach ( $data as $key => $value ) {
+			$stats[ $key ] = $value;
+		}
+
+		update_option( 'camptix_stats', $stats, false /* do not autoload */ );
 	}
 
 	/**
@@ -2413,13 +2455,16 @@ class CampTix_Plugin {
 	 * Increments a stats value.
 	 */
 	function increment_stats( $key, $step = 1 ) {
+		// Fetch directly from the database to avoid some race conditions.
+		wp_cache_delete( 'camptix_stats', 'options' );
 		$stats = get_option( 'camptix_stats', array() );
-		if ( ! isset( $stats[ $key ] ) )
-			$stats[ $key ] = 0;
 
+		$stats[ $key ] ??= 0;
 		$stats[ $key ] += $step;
-		update_option( 'camptix_stats', $stats );
-		return;
+
+		update_option( 'camptix_stats', $stats, false /* do not autoload */ );
+
+		return $stats[ $key ];
 	}
 
 	/**
@@ -2427,10 +2472,8 @@ class CampTix_Plugin {
 	 */
 	function get_stats( $key ) {
 		$stats = get_option( 'camptix_stats', array() );
-		if ( isset( $stats[ $key ] ) )
-			return $stats[ $key ];
 
-		return 0;
+		return $stats[ $key ] ?? 0;
 	}
 
 	/**
@@ -2462,7 +2505,10 @@ class CampTix_Plugin {
 
 			if ( $multiplier != 0 ) {
 				$this->increment_stats( 'sold', 1 * $multiplier );
-				$this->increment_stats( 'remaining', -1 * $multiplier );
+				$new_value = $this->increment_stats( 'remaining', -1 * $multiplier );
+				if ( $new_value < 0 ) {
+					$this->update_stats( 'remaining', 0 );
+				}
 
 				$price = (float) get_post_meta( $post->ID, 'tix_ticket_price', true );
 				$discounted_price = (float) get_post_meta( $post->ID, 'tix_ticket_discounted_price', true );
@@ -2477,6 +2523,41 @@ class CampTix_Plugin {
 			}
 		}
 	}
+
+	/**
+	 * Daily cron to ensure that the camtix_stats data is correct.
+	 *
+	 * This is hooked onto both a daily cron, and the tix_ticket update hook.
+	 */
+	public function cron_camptix_stats_ticket_validation() {
+		if ( $this->is_wordcamp_closed() ) {
+			return;
+		}
+
+		// Recalculate number of sold tickets.
+		$sold_count = (int) wp_count_posts( 'tix_attendee' )->publish ?? 0;
+
+		// Recalculate the number of remaining tickets.
+		$remaining_count = 0;
+		$tickets = get_posts( array(
+			'post_type'      => 'tix_ticket',
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		) );
+
+		foreach ( $tickets as $ticket_id ) {
+			if ( $this->is_ticket_valid_for_purchase( $ticket_id ) ) {
+				$remaining_count += $this->get_remaining_tickets( $ticket_id );
+			}
+		}
+
+		$this->update_stats( array(
+			'sold'      => $sold_count,
+			'remaining' => $remaining_count,
+		) );
+	}
+
 
 	/**
 	 * Handle AJAX requests for client-side stats
@@ -2712,17 +2793,19 @@ class CampTix_Plugin {
 		);
 
 		// Update stats
-		$this->update_stats( 'sold', $totals->sold );
-		$this->update_stats( 'remaining', $totals->remaining );
-		$this->update_stats( 'subtotal', $totals->sub_total );
-		$this->update_stats( 'discounted', $totals->discounted );
-		$this->update_stats( 'revenue', $totals->revenue );
+		$this->update_stats( array(
+			'sold'       => $totals->sold,
+			'remaining'  => $totals->remaining,
+			'subtotal'   => $totals->sub_total,
+			'discounted' => $totals->discounted,
+			'revenue'    => $totals->revenue
+		) );
 
 		$results = array(
-			'totals' => $totals,
+			'totals'       => $totals,
 			'actual_total' => $actual_total,
-			'rows' => $rows,
-			'run_time' => number_format( microtime( true ) - $start_time, 3 ),
+			'rows'         => $rows,
+			'run_time'     => number_format( microtime( true ) - $start_time, 3 ),
 		);
 
 		$this->log( sprintf( 'Revenue report data generated in %s seconds', $results['run_time'] ) );
@@ -2881,7 +2964,7 @@ class CampTix_Plugin {
 					'payment_method' => $this->get_payment_method_name_by_attendee_id( $attendee_id ),
 				);
 
-				$answers = (array) get_post_meta( $attendee_id, 'tix_questions', true );
+				$answers = $this->get_attendee_answers( $attendee_id );
 
 				foreach ( $questions as $question ) {
 
@@ -3532,9 +3615,9 @@ class CampTix_Plugin {
 			// These conditions further filter the query.
 			foreach ( $post_query_conditions as $condition ) {
 				if ( preg_match( '#^tix-question-(\d+)$#', $condition['field'], $matches ) ) {
-					$question_id = $matches[1];
-					$answers = get_post_meta( $attendee_id, 'tix_questions', true );
-					$question = get_post( $question_id );
+					$question_id   = $matches[1];
+					$answers       = $this->get_attendee_answers( $attendee_id );
+					$question      = get_post( $question_id );
 					$question_type = get_post_meta( $question->ID, 'tix_type', true );
 
 					// Make sure the question is valid.
@@ -4337,7 +4420,7 @@ class CampTix_Plugin {
 	 * A drop-down select for a question.
 	 */
 	function question_field_select( $name, $user_value, $question, $required = false ) {
-		$values = get_post_meta( $question->ID, 'tix_values', true );
+		$values = $question->tix_values ?: [];
 		?>
 		<select
 			id="<?php echo esc_attr( $this->get_field_id( $name ) ); ?>"
@@ -4355,12 +4438,23 @@ class CampTix_Plugin {
 	 * A single or multiple checkbox for a question.
 	 */
 	function question_field_checkbox( $name, $user_value, $question, $required = false ) {
-		$values = get_post_meta( $question->ID, 'tix_values', true );
+		$values         = $question->tix_values ?: [];
 		$user_value_esc = array_map( 'esc_attr', (array) $user_value );
+		$a11y_label     = $question->a11y_label ?? strip_tags( apply_filters( 'the_title', $question->post_title ) );
+
+		/*
+		 * HTML doesn't support setting the required attribute on a group of checkboxes.
+		 * Rely upon serverside form validation instead if there are multiple.
+		 *
+		 * @see https://www.w3.org/Bugs/Public/show_bug.cgi?id=9160#c1
+		 */
+		if ( $required && count( $values ) > 1 ) {
+			$required = false;
+		}
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
-			aria-label="<?php echo esc_attr( apply_filters( 'the_title', $question->post_title ) ); ?>"
+			aria-label="<?php echo esc_attr( $a11y_label ); ?>"
 		>
 		<?php if ( $values ) : ?>
 			<?php foreach ( (array) $values as $question_value ) : ?>
@@ -4370,6 +4464,7 @@ class CampTix_Plugin {
 						name="<?php echo esc_attr( $name ); ?>[<?php echo esc_attr( sanitize_title_with_dashes( $question_value ) ); ?>]"
 						type="checkbox"
 						value="<?php echo esc_attr( $question_value ); ?>"
+						<?php if ( $required ) echo 'required'; ?>
 					/>
 					<?php echo esc_html( $question_value ); ?>
 				</label><br />
@@ -4400,12 +4495,13 @@ class CampTix_Plugin {
 	/**
 	 * A radio input for questions.
 	 */
-	function question_field_radio( $name, $user_value, $question, $required = false ) {
-		$values = get_post_meta( $question->ID, 'tix_values', true );
+	function question_field_radio( $name, $user_value, $question, $required = false  ) {
+		$values     = $question->tix_values ?: [];
+		$a11y_label = $question->a11y_label ?? strip_tags( apply_filters( 'the_title', $question->post_title ) );
 		?>
 		<fieldset
 			class="tix-screen-reader-fieldset"
-			aria-label="<?php echo esc_attr( apply_filters( 'the_title', $question->post_title ) ); ?>"
+			aria-label="<?php echo esc_attr( $a11y_label ); ?>"
 		>
 			<?php foreach ( (array) $values as $question_value ) : ?>
 				<label>
@@ -4456,7 +4552,7 @@ class CampTix_Plugin {
 				</span>
 
 				<!-- Forms will go here -->
-				<div id="tix-question-form">
+				<div id="tix-question-form" class="wp-clearfix">
 				</div>
 			</div>
 
@@ -4527,10 +4623,10 @@ class CampTix_Plugin {
 										<?php echo esc_html( apply_filters( 'the_title', $question->post_title ) ); ?>
 
 										<input type="hidden" data-model-attribute="post_id" value="<?php echo absint( $question->ID ); ?>" />
-										<input type="hidden" data-model-attribute="type" value="<?php echo esc_attr( get_post_meta( $question->ID, 'tix_type', true ) ); ?>" />
+										<input type="hidden" data-model-attribute="type" value="<?php echo esc_attr( $question->tix_type ); ?>" />
 										<input type="hidden" data-model-attribute="question" value="<?php echo esc_attr( $question->post_title ); ?>" />
-										<input type="hidden" data-model-attribute="required" value="<?php echo intval( get_post_meta( $question->ID, 'tix_required', true ) ); ?>" />
-										<input type="hidden" data-model-attribute="values" value="<?php echo esc_attr( implode( ', ', (array) get_post_meta( $question->ID, 'tix_values', true ) ) ); ?>" />
+										<input type="hidden" data-model-attribute="required" value="<?php echo intval( $question->tix_required ); ?>" />
+										<input type="hidden" data-model-attribute="values" value="<?php echo esc_attr( implode( ', ', (array) $question->tix_values ?: [] ) ); ?>" />
 									</label>
 								</li>
 								<?php endforeach; ?>
@@ -4573,10 +4669,10 @@ class CampTix_Plugin {
 			<?php foreach ( $questions as $question ) : ?>
 				camptix.questions.add( new camptix.models.Question( {
 					post_id: <?php echo esc_js( $question->ID ); ?>,
-					type: '<?php echo esc_js( get_post_meta( $question->ID, 'tix_type', true ) ); ?>',
+					type: '<?php echo esc_js( $question->tix_type ); ?>',
 					question: '<?php echo esc_js( apply_filters( 'the_title', $question->post_title ) ); ?>',
-					required: <?php echo esc_js( (int) (bool) get_post_meta( $question->ID, 'tix_required', true ) ); ?>,
-					values: '<?php echo esc_js( implode( ', ', (array) get_post_meta( $question->ID, 'tix_values', true ) ) ); ?>'
+					required: <?php echo esc_js( (int) $question->tix_required ); ?>,
+					values: '<?php echo esc_js( implode( ', ', (array) $question->tix_values ?: [] ) ); ?>'
 				} ) );
 			<?php endforeach; ?>
 			}(jQuery));
@@ -4755,9 +4851,9 @@ class CampTix_Plugin {
 		}
 
 		// Questions
-		$rows[] = array( __( 'Questions', 'wordcamporg' ), '' );
+		$rows[]    = array( __( 'Questions', 'wordcamporg' ), '' );
 		$questions = $this->get_sorted_questions( $ticket_id );
-		$answers = get_post_meta( $post->ID, 'tix_questions', true );
+		$answers   = $this->get_attendee_answers( $post->ID );
 
 		foreach ( $questions as $question ) {
 			if ( isset( $answers[ $question->ID ] ) ) {
@@ -6004,15 +6100,28 @@ class CampTix_Plugin {
 										<?php
 											$name       = sprintf( 'tix_attendee_questions[%d][%s]', $i, $question->ID );
 											$value      = isset( $this->form_data['tix_attendee_questions'][ $i ][ $question->ID ] ) ? $this->form_data['tix_attendee_questions'][ $i ][ $question->ID ] : '';
-											$type       = get_post_meta( $question->ID, 'tix_type', true );
-											$required   = get_post_meta( $question->ID, 'tix_required', true );
+											$type       = $question->tix_type;
+											$required   = $question->tix_required;
 											$class_name = 'tix-row-question-' . $question->ID;
+
+											// Questions can have minimal HTML in the question.
+											$question_text = apply_filters( 'the_title', $question->post_title );
+											$question_text = make_clickable( $question_text );
+											$question_text = wp_kses(
+												$question_text,
+												array(
+													'a' => array(
+														'href'   => array(),
+														'target' => array(),
+													),
+												)
+											);
 										?>
 
 										<tr class="<?php echo esc_attr( $class_name ); ?>">
 											<td class="<?php if ( $required ) echo 'tix-required'; ?> tix-left">
 												<label for="<?php echo in_array( $type, array( 'radio', 'checkbox' ) ) ? '' : $this->get_field_id( $name ); ?>">
-													<?php echo make_clickable( esc_html( apply_filters( 'the_title', $question->post_title ) ) ); ?>
+													<?php echo $question_text; ?>
 													<?php if ( $required ) echo ' <span aria-hidden="true" class="tix-required-star">*</span>'; ?>
 												</label>
 											</td>
@@ -6113,6 +6222,8 @@ class CampTix_Plugin {
 				),
 			),
 			'cache_results' => false,
+			'orderby' => 'ID',
+			'order' => 'ASC',
 		) );
 
 		if ( ! $attendees ) {
@@ -6151,6 +6262,8 @@ class CampTix_Plugin {
 					),
 				),
 				'cache_results' => false,
+				'orderby' => 'ID',
+				'order' => 'ASC',
 			) ) ) :
 
 				$attendee_ids = array();
@@ -6271,9 +6384,9 @@ class CampTix_Plugin {
 		if ( $attendee->post_status == 'pending' )
 			$this->notice( __( 'Please note that the payment for this ticket is still pending.', 'wordcamporg' ) );
 
-		$ticket = get_post( $ticket_id );
+		$ticket    = get_post( $ticket_id );
 		$questions = $this->get_sorted_questions( $ticket->ID );
-		$answers = (array) get_post_meta( $attendee->ID, 'tix_questions', true );
+		$answers   = $this->get_attendee_answers( $attendee->ID );
 
 		$ticket_info = array(
 			'first_name' => get_post_meta( $attendee->ID, 'tix_first_name', true ),
@@ -6314,7 +6427,7 @@ class CampTix_Plugin {
 
 				// @todo maybe check $user_values against $type and $question_values
 
-				if ( (bool) get_post_meta( $question->ID, 'tix_required', true ) && empty( $new_answers[ $question->ID ] ) ) {
+				if ( $question->tix_required && empty( $new_answers[ $question->ID ] ) ) {
 					$errors[] = __( 'Please fill in all required fields.', 'wordcamporg' );
 				}
 			}
@@ -6331,7 +6444,7 @@ class CampTix_Plugin {
 				update_post_meta( $attendee->ID, 'tix_email', sanitize_email( $new_ticket_info['email'] ) );
 				update_post_meta( $attendee->ID, 'tix_questions', wp_slash( $new_answers ) );
 
-				do_action( 'camptix_form_edit_attendee_update_post_meta', $new_ticket_info, $attendee );
+				do_action( 'camptix_form_edit_attendee_update_post_meta', $new_ticket_info, $attendee, $new_answers );
 
 				wp_update_post( $attendee ); // triggers save_attendee
 
@@ -6418,22 +6531,35 @@ class CampTix_Plugin {
 						<?php if ( apply_filters( 'camptix_ask_questions', true, array( (int) $ticket_id => 1 ), (int) $ticket_id, 1, $questions ) ) : ?>
 							<?php foreach ( $questions as $question ) : ?>
 								<?php
-									$name       = sprintf( 'tix_ticket_questions[%d]', $question->ID );
+									$name       = sprintf( 'tix_ticket_questions[%s]', $question->ID );
 									$value      = isset( $answers[ $question->ID ] ) ? $answers[ $question->ID ] : '';
-									$type       = get_post_meta( $question->ID, 'tix_type', true );
-									$required   = get_post_meta( $question->ID, 'tix_required', true );
+									$type       = $question->tix_type;
+									$required   = $question->tix_required;
 									$class_name = 'tix-row-question-' . $question->ID;
+
+									// Questions can have minimal HTML in the question.
+									$question_text = apply_filters( 'the_title', $question->post_title );
+									$question_text = make_clickable( $question_text );
+									$question_text = wp_kses(
+										$question_text,
+										array(
+											'a' => array(
+												'href'   => array(),
+												'target' => array(),
+											),
+										)
+									);
 								?>
 
 								<tr class="<?php echo esc_attr( $class_name ); ?>">
 									<td class="<?php if ( $required ) echo 'tix-required'; ?> tix-left">
 										<label for="<?php echo in_array( $type, array( 'radio', 'checkbox' ) ) ? '' : $this->get_field_id( $name ); ?>">
-											<?php echo esc_html( apply_filters( 'the_title', $question->post_title ) ); ?>
+											<?php echo $question_text; ?>
 											<?php if ( $required ) echo ' <span aria-hidden="true" class="tix-required-star">*</span>'; ?>
 										</label>
 									</td>
 									<td class="tix-right">
-										<?php do_action( "camptix_question_field_{$type}", $name, $value, $question ); ?>
+										<?php do_action( "camptix_question_field_{$type}", $name, $value, $question, $required ); ?>
 									</td>
 								</tr>
 							<?php endforeach; ?>
@@ -7219,7 +7345,7 @@ class CampTix_Plugin {
 						$answers[ $question->ID ] = $answer;
 					}
 
-					if ( (bool) get_post_meta( $question->ID, 'tix_required', true ) && empty( $answers[ $question->ID ] ) ) {
+					if ( $question->tix_required && empty( $answers[ $question->ID ] ) ) {
 						$this->error_flags['required_fields'] = true;
 						break;
 					}
@@ -7265,7 +7391,6 @@ class CampTix_Plugin {
 
 		$log_data = array(
 			'post' => $_POST,
-			'server' => $_SERVER,
 		);
 
 		$access_token = md5( 'tix-access-token' . print_r( $_POST, true ) . time() . rand( 1, 9999 ) );
@@ -7821,6 +7946,9 @@ class CampTix_Plugin {
 					'type' => 'CHAR',
 				),
 			),
+			// Ensure that the buyer is always first in the list.
+			'orderby' => 'ID',
+			'order'   => 'ASC',
 		) );
 
 		if ( ! $attendees )
@@ -7847,11 +7975,13 @@ class CampTix_Plugin {
 		// Set the tmp receipt for shortcodes use.
 		$this->tmp( 'receipt', $receipt_content );
 
+		// Find the buyers name.
 		foreach ( $attendees as $attendee ) {
 			$attendee_email = $this->get_attendee_email( $attendee->ID );
 
 			if ( $attendee_email == $receipt_email ) {
 				$this->tmp( 'buyer_full_name', get_post_meta( $attendee->ID, 'tix_first_name', true ) . ' ' . get_post_meta( $attendee->ID, 'tix_last_name', true ) );
+				break;
 			}
 		}
 
@@ -8003,6 +8133,21 @@ class CampTix_Plugin {
 	 */
 	public function get_attendee_email( $attendee_id ) {
 		return apply_filters( 'camptix_get_attendee_email', get_post_meta( $attendee_id, 'tix_email', true ), $attendee_id );
+	}
+
+	/**
+	 * Get the attendee's question answers.
+	 *
+	 * @param int $attendee_id
+	 * @return array
+	 */
+	public function get_attendee_answers( $attendee_id ) {
+		$answers = get_post_meta( $attendee_id, 'tix_questions', true );
+		if ( ! is_array( $answers ) ) {
+			$answers = array();
+		}
+
+		return apply_filters( 'camptix_get_attendee_answers', $answers, $attendee_id );
 	}
 
 	public function email_attendee_ticket_multiple_template( $attendee ) {
@@ -8270,6 +8415,7 @@ class CampTix_Plugin {
 			return;
 		}
 
+		add_filter( 'wp_mail_from', array( $this, 'set_mail_from' ) );
 		add_filter( 'wp_mail_from_name', array( $this, 'set_mail_from_name' ) );
 
 		if ( is_email( get_option( 'admin_email' ) ) ) {
@@ -8282,6 +8428,9 @@ class CampTix_Plugin {
 		remove_action( 'phpmailer_init', array( $this, 'maybe_send_html_email' ) );
 		$log_message = $results ? sprintf( 'Sent e-mail to %s.', $to ) : sprintf( 'E-mail to %s failed to send.', $to );
 		$this->log( $log_message, null, $message_data, 'email' );
+
+		remove_filter( 'wp_mail_from', array( $this, 'set_mail_from' ) );
+		remove_filter( 'wp_mail_from_name', array( $this, 'set_mail_from_name' ) );
 
 		do_action( 'camptix_wp_mail_finish' );
 		return $results;
@@ -8299,6 +8448,18 @@ class CampTix_Plugin {
 	 */
 	public function set_mail_from_name( $name ) {
 		return $this->options['event_name'];
+	}
+
+	/**
+	 * Change the default email sender address from wordpress@ to noreply@.
+	 *
+	 * This is mainly to avoid some rogue spam filters that are overeager.
+	 *
+	 * @param string $email
+	 * @return string
+	 */
+	public function set_mail_from( $email ) {
+		return preg_replace( '/^wordpress@/', 'noreply@', $email );
 	}
 
 	/**
@@ -8452,7 +8613,14 @@ class CampTix_Plugin {
 	 * @return string
 	 */
 	public static function sanitize_format_html_message( $message ) {
-		return make_clickable( wpautop( wp_kses( $message, self::get_allowed_html_mail_tags() ) ) );
+		$message = wp_kses( $message, self::get_allowed_html_mail_tags() );
+		$message = wpautop( $message );
+		$message = make_clickable( $message );
+
+		// Convert the sponsor separator to an hr tag.
+		$message = str_replace( '<p>===</p>', '<hr/>', $message );
+
+		return $message;
 	}
 
 	/*

@@ -98,7 +98,7 @@ function register_post_statuses() {
 		'wcbrr_submitted',
 		array(
 			'label'              => esc_html_x( 'Submitted', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -108,7 +108,7 @@ function register_post_statuses() {
 		'wcbrr_info_requested',
 		array(
 			'label'              => esc_html_x( 'Information Requested', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Information Requested <span class="count">(%s)</span>', 'Information Requested <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Information Requested <span class="count">(%s)</span>', 'Information Requested <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -118,7 +118,7 @@ function register_post_statuses() {
 		'wcbrr_rejected',
 		array(
 			'label'              => esc_html_x( 'Rejected', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -128,7 +128,7 @@ function register_post_statuses() {
 		'wcbrr_in_process',
 		array(
 			'label'              => esc_html_x( 'Payment in Process', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Payment in Process <span class="count">(%s)</span>', 'Payment in Process <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Payment in Process <span class="count">(%s)</span>', 'Payment in Process <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -138,7 +138,7 @@ function register_post_statuses() {
 		'wcbrr_paid',
 		array(
 			'label'              => esc_html_x( 'Paid', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)

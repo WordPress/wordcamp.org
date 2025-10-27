@@ -47,6 +47,15 @@ abstract class Event_Admin {
 				'column_headers',
 			)
 		);
+
+		add_filter(
+			'manage_edit-' . $this->get_event_type() . '_sortable_columns',
+			array(
+				$this,
+				'sortable_columns',
+			)
+		);
+
 		// Forum column headers.
 		add_filter( 'display_post_states', array( $this, 'display_post_states' ), 10, 2 );
 
@@ -141,6 +150,15 @@ abstract class Event_Admin {
 	 * @param array $columns List of columns.
 	 */
 	abstract public function column_headers( $columns );
+
+	/**
+	 * Customize the sortable columns
+	 *
+	 * @param array $columns List of columns.
+	 */
+	public function sortable_columns( $columns ) {
+		return $columns;
+	}
 
 	/**
 	 * Get a list of streaming services.
@@ -275,8 +293,8 @@ abstract class Event_Admin {
 		// Ensure status labels are in English.
 		$locale_switched = switch_to_locale( 'en_US' );
 
-		$old_status = get_post_status_object( $old_status );
-		$new_status = get_post_status_object( $new_status );
+		$old_status_obj = get_post_status_object( $old_status );
+		$new_status_obj = get_post_status_object( $new_status );
 
 		$log_id = add_post_meta(
 			$post->ID,
@@ -284,7 +302,7 @@ abstract class Event_Admin {
 			array(
 				'timestamp' => time(),
 				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( '%s &rarr; %s', $old_status->label, $new_status->label ),
+				'message'   => sprintf( '%s &rarr; %s', $old_status_obj->label ?? $old_status, $new_status_obj->label ?? $new_status ),
 			)
 		);
 
@@ -461,6 +479,12 @@ abstract class Event_Admin {
 			}
 		}
 
+		// Save the Event Subtype.
+		if ( isset( $_POST['event_subtype'] ) && current_user_can( $this->get_edit_capability() ) ) {
+			$event_subtype = sanitize_text_field( wp_unslash( $_POST['event_subtype'] ) );
+			update_post_meta( $post_id, 'event_subtype', $event_subtype );
+		}
+
 		$meta_keys        = $this->meta_keys();
 		$orig_meta_values = get_post_meta( $post_id );
 		$is_virtual_event = WordCamp_admin::is_virtual_event( $post_id );
@@ -504,6 +528,15 @@ abstract class Event_Admin {
 
 				case 'number':
 					update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					break;
+
+				case 'checkbox-delete-on-unset':
+					// If the checkbox is not set, delete the meta.
+					if ( empty( $values[ $key ] ) || 'on' !== $values[ $key ] ) {
+						delete_post_meta( $post_id, $key );
+					} else {
+						update_post_meta( $post_id, $key, true );
+					}
 					break;
 
 				case 'checkbox':
@@ -734,7 +767,7 @@ abstract class Event_Admin {
 			?>
 
 			<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
-				<?php if ( 'checkbox' == $value ) : ?>
+				<?php if ( 'checkbox' == $value || 'checkbox-delete-on-unset' == $value ) : ?>
 
 					<p>
 						<label>
@@ -747,6 +780,9 @@ abstract class Event_Admin {
 								<?php echo esc_attr( $readonly ); ?>
 							/>
 						</label>
+						<?php if ( ! empty( $messages[ $key ] ) ) : ?>
+							<span class="description"><?php echo esc_html( $messages[ $key ] ); ?></span>
+						<?php endif; ?>
 					</p>
 
 				<?php else : ?>
@@ -956,5 +992,12 @@ abstract class Event_Admin {
 		endforeach;
 	}
 
-
+	/**
+	 * Returns the list of Event Subtypes.
+	 *
+	 * This is generally 'WordCamp', 'DoAction', 'Other Event', 'Campus Connect', etc.
+	 *
+	 * @return array
+	 */
+	abstract public function get_event_subtypes();
 }

@@ -35,11 +35,18 @@ get_header(); ?>
 							'meta_key'       => 'Start Date (YYYY-mm-dd)',
 							'orderby'        => 'meta_value',
 							'order'          => 'DESC',
-							'meta_query'     => array( array(
-								'key'        => 'Start Date (YYYY-mm-dd)',
-								'value'      => strtotime( '-2 days' ),
-								'compare'    => '<'
-							) )
+							'meta_query'     => array(
+								array(
+									'key'        => 'Start Date (YYYY-mm-dd)',
+									'value'      => strtotime( '-2 days' ),
+									'compare'    => '<',
+								),
+								'relation' => 'AND',
+								array(
+									'key'     => 'Hide from Event Feeds',
+									'compare' => 'NOT EXISTS',
+								),
+							),
 						) )
 					) :
 						global $wcpt_template;
@@ -79,7 +86,7 @@ get_header(); ?>
 
 				<a href="<?php echo esc_url( home_url( '/schedule/' ) ); ?>" class="wc-schedule-more">
 					<span class="arrow">&larr;</span>
-					Upcoming WordCamps
+					Upcoming WordCamps and WordPress Events
 				</a>
 
 				<?php endif; // wcpt_has_wordcamps ?>

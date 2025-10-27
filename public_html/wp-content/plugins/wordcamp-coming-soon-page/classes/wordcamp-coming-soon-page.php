@@ -40,9 +40,7 @@ class WordCamp_Coming_Soon_Page {
 	 * @return bool
 	 */
 	public function is_coming_soon_preview() {
-		global $wp_customize;
-
-		return isset( $_GET['wccsp-preview'] ) && $wp_customize->is_preview();
+		return isset( $_GET['wccsp-preview'] ) && is_customize_preview();
 	}
 
 	/**
@@ -85,9 +83,8 @@ class WordCamp_Coming_Soon_Page {
 			wp_dequeue_style( $stylesheet );
 		}
 
-		// Core and Jetpack's Custom CSS module both output Custom CSS, so they both need to be disabled.
+		// Core Custom CSS module outputs Custom CSS, so they both need to be disabled.
 		remove_action( 'wp_head', 'wp_custom_css_cb', 101 );
-		remove_action( 'wp_head', array( 'Jetpack_Custom_CSS_Enhancements', 'wp_custom_css_cb' ), 101 );
 	}
 
 	/**

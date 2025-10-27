@@ -271,6 +271,10 @@ class WordCamp_Forms_To_Drafts {
 	 * @return int
 	 */
 	protected function get_user_id_from_username( $username ) {
+		if ( ! $username ) {
+			return 0;
+		}
+
 		$user = get_user_by( 'login', $username );
 
 		return empty( $user->ID ) ? 0 : $user->ID;
@@ -413,7 +417,7 @@ class WordCamp_Forms_To_Drafts {
 
 		$draft_id = wp_insert_post( array(
 			'post_type'    => 'wcb_volunteer',
-			'post_title'   => sanitize_text_field( $all_values['Name'] ),
+			'post_title'   => sanitize_text_field( $all_values['Name'] ?? '' ),
 			'post_status'  => 'draft',
 			'post_author'  => $this->get_user_id_from_username( 'wordcamp' ),
 		) );
@@ -446,9 +450,19 @@ class WordCamp_Forms_To_Drafts {
 		// Get the key from submitted data.
 		$form_key = $this->get_form_key_by_id( absint( $_POST['contact-form-id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
-		// Add speaker as a copy on the email.
+		// Update headers on call for speakers responses.
 		if ( 'call-for-speakers' === $form_key ) {
+			// Add speaker as a copy on the email.
 			$headers .= "Cc: {$reply_to_addr}\r\n";
+
+			$wordcamp = get_wordcamp_post();
+			$reply_to_header = sprintf(
+				'Reply-To: %s <%s>',
+				get_wordcamp_name(),
+				$wordcamp->meta['E-mail Address'][0]
+			);
+			// Swap out the current reply-to for the WordCamp's real email.
+			$headers = preg_replace( '/Reply-To: .*/', $reply_to_header, $headers);
 		}
 
 		return $headers;
@@ -474,7 +488,7 @@ class WordCamp_Forms_To_Drafts {
 			$subject = sprintf(
 				__( 'Your %1$s Call for Speakers submission: %2$s', 'wordcamporg' ),
 				get_bloginfo( 'name' ),
-				sanitize_text_field( $all_values['Topic Title'] )
+				sanitize_text_field( $all_values['Topic Title'] ?? '' )
 			);
 		}
 
@@ -498,9 +512,10 @@ class WordCamp_Forms_To_Drafts {
 		if ( 'call-for-speakers' === $form_key ) {
 			$wordcamp = get_wordcamp_post();
 
-			/* translators: %1$s: email address for organizing team; %2$s: original message; */
+			/* translators: %1$s: WordCamp name; %2$s: email address for organizing team; %3$s: original message. */
 			$message = sprintf(
-				__( 'Hello,<br><br>Thank you for submitting on Call for Speakers! Here is an copy of your submission.<br/><br/>Please do not respond to this email, organizers will update you on the process. If you have any questions, send an email to organisers %1$s.<br/>%2$s', 'wordcamporg' ),
+				__( 'Hello,<br/><br/>Thank you for your interest in speaking at %1$s! We have received your submission, and a copy is included below for your records.<br/><br/>If you have any questions, send an email to %2$s.<br/>%3$s', 'wordcamporg' ),
+				get_wordcamp_name(),
 				$wordcamp->meta['E-mail Address'][0],
 				$message
 			);

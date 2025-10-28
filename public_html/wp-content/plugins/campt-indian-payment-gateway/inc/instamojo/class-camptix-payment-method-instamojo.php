@@ -205,7 +205,7 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 			// Else, fall back to the status of the transaction in the webhook.
 			if ( $data['status'] == "Credit" ) {
 				// Payment was successful, mark it as successful in your database.
-				return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );	
+				return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );
 			} else {
 				// Payment was unsuccessful, mark it as failed in your database.
 				return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
@@ -213,7 +213,6 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		} else {
 			return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
 		}
-		
 	}
 
 	public function payment_checkout( $payment_token ) {
@@ -356,7 +355,7 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 	 * Runs when the user cancels their payment during checkout at Instamojo.
 	 * his will simply tell CampTix to put the created attendee drafts into to Cancelled state.
 	 */
-	function payment_cancel() {
+	public function payment_cancel() {
 		global $camptix;
 
 		$this->log( sprintf( 'Running payment_cancel. Request data attached.' ), null, $_REQUEST );
@@ -376,7 +375,7 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 	 * @param string $payment_request_id Payment Request ID.
 	 * @return object|false
 	 */
-	function get_payment_request( $payment_request_id ) {
+	public function get_payment_request( $payment_request_id ) {
 		$url = 'https://' . ( $this->options['sandbox'] ? 'test' : 'www' ) . '.instamojo.com/api/1.1/payment-requests/' . $payment_request_id . '/';
 		$response = wp_remote_get(
 			$url,

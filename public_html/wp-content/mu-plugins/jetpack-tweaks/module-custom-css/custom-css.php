@@ -1,6 +1,4 @@
 <?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName
-namespace WordCamp\Jetpack_Tweaks\Custom_CSS\Module;
-use Jetpack_Custom_CSS_Enhancements;
 
 /**
  * Module Name: Custom CSS

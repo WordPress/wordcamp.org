@@ -177,15 +177,38 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		// Pass the 'salt' without <>
 		$mac_calculated = hash_hmac( "sha1", implode( "|", $data ), $instamojo_salt );
 		if ( $mac_provided == $mac_calculated ) {
+
+			// Request is valid, but this might be a webhook for a timed out payment / failed payment, where one has actually passed.
+			// Check the payment request to see what other statuses are.
+			$request = get_payment_request( $data['payment_request_id'] );
+			if ( $request && 'Completed' === $request->status ) {
+				// Look for a Credit transaction, and just succeed on that.
+				foreach ( $request->payments as $payment ) {
+					if ( 'Credit' === $payment->status ) {
+						return $this->payment_result(
+							$_REQUEST['tix_payment_token'],
+							CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
+							array(
+								'transaction_id'      => $payment->payment_id,
+								'transaction_details' => $payment,
+								'payment_request'     => $request,
+							)
+						);
+					}
+				}
+			}
+
+			// Else, fall back to the status of the transaction in the webhook.
+
 			if ( $data['status'] == "Credit" ) {
 				// Payment was successful, mark it as successful in your database.
-				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );	
+				return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );	
 			} else {
 				// Payment was unsuccessful, mark it as failed in your database.
-				$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
+				return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
 			}
 		} else {
-			$this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
+			return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
 		}
 		
 	}
@@ -342,5 +365,29 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 		}
 		// Set the associated attendees to cancelled.
 		return $this->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED );
+	}
+
+	/**
+	 * Get payment request details from Instamojo.
+	 *
+	 * @param string $payment_request_id Payment Request ID.
+	 * @return object|false
+	 */
+	function get_payment_request( $payment_request_id ) {
+		$url = 'https://' . ( $this->options['sandbox'] ? 'test' : 'www' ) . '.instamojo.com/api/1.1/payment-requests/' . $payment_request_id . '/';
+		$response = wp_remote_get(
+			$url,
+			array(
+				'timeout' => 60,
+				'headers' => array(
+					'Accept'       => 'application/json',
+					'Content-Type' => 'application/json;charset=UTF-8',
+					'X-Api-Key'    => $this->options['Instamojo-Api-Key'],
+					'X-Auth-Token' => $this->options['Instamojo-Auth-Token'],
+				),
+			)
+		);
+
+		return json_decode( wp_remote_retrieve_body( $response ) )->payment_request ?? false;
 	}
 }

@@ -181,6 +181,10 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 			// Request is valid, but this might be a webhook for a timed out payment / failed payment, where one has actually passed.
 			// Check the payment request to see what other statuses are.
 			$request = get_payment_request( $data['payment_request_id'] );
+			if ( $request ) {
+				$payment_data['payment_request'] = $request;
+			}
+
 			if ( $request && 'Completed' === $request->status ) {
 				// Look for a Credit transaction, and just succeed on that.
 				foreach ( $request->payments as $payment ) {
@@ -199,7 +203,6 @@ class CampTix_Payment_Method_Instamojo extends CampTix_Payment_Method {
 			}
 
 			// Else, fall back to the status of the transaction in the webhook.
-
 			if ( $data['status'] == "Credit" ) {
 				// Payment was successful, mark it as successful in your database.
 				return $this->payment_result( $_REQUEST['tix_payment_token'], CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );	

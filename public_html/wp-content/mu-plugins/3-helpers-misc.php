@@ -362,7 +362,7 @@ function wcorg_get_custom_css_url() {
 	if ( ! class_exists( 'Jetpack_Custom_CSS_Enhancements'  ) ) {
 		return false;
 	}
-	
+
 	ob_start();
 	Jetpack_Custom_CSS_Enhancements::wp_custom_css_cb();
 	$markup = ob_get_clean();

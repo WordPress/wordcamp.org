@@ -41,7 +41,7 @@ class WCB_Structure extends WCB_Loader {
 
 		$grid = wcb_get_option('grid');
 
-		// Don't output CSS if Jetpack Custom CSS/RemoteCSS is set to 'replace' mode
+		// Don't output CSS if Jetpack Custom CSS/RemoteCSS is set to 'replace' mode.
 		if ( class_exists( 'Jetpack_Custom_CSS_Enhancements' ) && Jetpack_Custom_CSS_Enhancements::skip_stylesheet() ) {
 			return;
 		}

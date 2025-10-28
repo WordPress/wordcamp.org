@@ -83,8 +83,9 @@ class WordCamp_Coming_Soon_Page {
 			wp_dequeue_style( $stylesheet );
 		}
 
-		// Core Custom CSS module outputs Custom CSS, so they both need to be disabled.
+		// Core and Jetpack's Custom CSS module both output Custom CSS, so they both need to be disabled.
 		remove_action( 'wp_head', 'wp_custom_css_cb', 101 );
+		remove_action( 'wp_head', array( 'Jetpack_Custom_CSS_Enhancements', 'wp_custom_css_cb' ), 101 );
 	}
 
 	/**

@@ -115,6 +115,7 @@ class Source_Site_ID_Setting extends \WP_Customize_Setting {
 	protected function update( $source_site_id ) {
 		switch_to_blog( $source_site_id );
 
+		$source_site_theme_mods = get_theme_mod( 'jetpack_custom_css' );
 		$source_site_css = '';
 
 		// Add Remote CSS first
@@ -137,18 +138,30 @@ class Source_Site_ID_Setting extends \WP_Customize_Setting {
 		 * `post_content_filtered`.
 		 */
 		if ( $custom_css_post = wp_get_custom_css_post() ) {
+			if ( empty( $source_site_theme_mods['preprocessor'] ) ) {
+				$custom_css = $custom_css_post->post_content;
+			} else {
+				$custom_css = $custom_css_post->post_content_filtered;
+			}
+
 			$source_site_css .= sprintf(
 				"/* %s */\n%s\n\n",
 				sprintf(
 					esc_html__( 'Custom CSS from %s', 'wordcamporg' ),
 					parse_url( home_url(), PHP_URL_HOST )
 				),
-				$custom_css_post->post_content
+				$custom_css
 			);
 		}
 
 		restore_current_blog();
 
+		/*
+		 * The vanilla CSS will be sanitized by Jetpack and our custom sanitization during `update_custom_css_data`.
+		 * The theme mods need to be set _first_, so that the Jetpack knows whether or not a preprocessor should
+		 * be used.
+		 */
+		set_theme_mod( 'jetpack_custom_css', $source_site_theme_mods );
 		wp_update_custom_css_post( $source_site_css );
 	}
 }

@@ -247,20 +247,11 @@ function add_discovery_notice( $wp_customize ) {
 	require_once dirname( __DIR__ ) . '/views/template-discovery-notice.php';
 	$description = ob_get_clean();
 
-	$wp_customize->add_section(
-		'wcrss_discovery_section',
-		array(
-			'title'      => __( 'Remote CSS', 'wordcamporg' ),
-			'capability' => 'switch_themes',
-			'priority'   => 512,
-		)
-	);
-
 	$wp_customize->add_control(
 		'wcrss_discovery',
 		array(
 			'priority'    => 1,
-			'section'     => 'wcrss_discovery_section',
+			'section'     => 'custom_css',
 			'settings'    => array(),
 			'description' => $description,
 			'input_attrs' => array(

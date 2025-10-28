@@ -42,13 +42,7 @@ class WCB_Structure extends WCB_Loader {
 		$grid = wcb_get_option('grid');
 
 		// Don't output CSS if Jetpack Custom CSS/RemoteCSS is set to 'replace' mode
-		if ( version_compare( JETPACK__VERSION, '11.6', '<' ) ) {
-			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css-4.7.php';
-		} else {
-			require_once JETPACK__PLUGIN_DIR . '/modules/custom-css/custom-css.php';
-		}
-
-		if ( Jetpack_Custom_CSS_Enhancements::skip_stylesheet() ) {
+		if ( class_exists( 'Jetpack_Custom_CSS_Enhancements' ) && Jetpack_Custom_CSS_Enhancements::skip_stylesheet() ) {
 			return;
 		}
 

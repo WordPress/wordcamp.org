@@ -67,6 +67,20 @@ function register_caching_routes( WP_Service_Worker_Scripts $scripts ) {
 	);
 
 	/*
+	 * Cache custom CSS (from customizer).
+	 * If we don't have a URL, that's probably because the custom CSS is empty or short enough to be printed
+	 * inline instead of enqueued. In that case, the cached pages will have it printed from the `wp_head()`
+	 * call anyway.
+	 */
+	$custom_css_url = wcorg_get_custom_css_url();
+	if ( $custom_css_url ) {
+		$scripts->caching_routes()->register(
+			preg_quote( '/?'. untrailingslashit( wp_parse_url( $custom_css_url, PHP_URL_QUERY ) ), '/' ),
+			$asset_cache_strategy_args
+		);
+	}
+
+	/*
 	 * Cache remote CSS endpoint, if Remote CSS has been set up.
 	 */
 	if ( \WordCamp\RemoteCSS\is_configured() ) {

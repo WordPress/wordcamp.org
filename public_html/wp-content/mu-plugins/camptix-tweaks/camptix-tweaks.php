@@ -609,7 +609,7 @@ function modify_default_options( $options ) {
 }
 
 /**
- * Set Camptix Invoices company address based on paymenth methods enabled.
+ * Set Camptix Invoices company address based on payment methods enabled.
  *
  * @param  array $options Camptix options.
  *

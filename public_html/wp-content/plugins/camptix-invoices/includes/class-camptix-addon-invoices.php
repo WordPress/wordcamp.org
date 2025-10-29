@@ -334,7 +334,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	 */
 	public static function send_invoice( $invoice_id ) {
 		$invoice_metas = get_post_meta( $invoice_id, 'invoice_metas', true );
-		if ( empty( $invoice_metas['email'] ) && is_email( $invoice_metas['email'] ) ) {
+		if ( empty( $invoice_metas['email'] ) || ! is_email( $invoice_metas['email'] ) ) {
 			return false;
 		}//end if
 

@@ -304,7 +304,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 				),
 			),
 			'fields'         => 'ids',
-			// First attendee with this payment token
+			// First attendee with this payment token.
 			'orderby'        => 'ID',
 			'order'          => 'ASC',
 		) );

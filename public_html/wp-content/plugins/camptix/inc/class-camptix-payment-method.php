@@ -303,13 +303,17 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 					'type'    => 'CHAR',
 				),
 			),
+			'fields'         => 'ids',
+			// First attendee with this payment token
+			'orderby'        => 'ID',
+			'order'          => 'ASC',
 		) );
 
 		if ( ! $attendees ) {
 			return array();
 		}
 
-		return $this->get_order_by_attendee_id( $attendees[0]->ID );
+		return $this->get_order_by_attendee_id( $attendees[0] );
 	}
 
 	/**

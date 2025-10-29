@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
     - public_html/**
+    - .github/workflows/**
   push:
     branches: [production]
     paths:
@@ -17,22 +18,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v4
       with:
         path: '**/node_modules'
         key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
-    - name: Use Node.js 12.x
+    - name: Use Node.js 16.x
       uses: actions/setup-node@v2-beta
       with:
-        node-version: 12.x
+        node-version: 16.x
+
+    - name: Install SVN
+      run: |
+        sudo rm -f /var/lib/man-db/auto-update # https://github.com/actions/runner-images/issues/10977
+        sudo apt-get update && sudo apt-get install -y subversion
+
+    - name: Set PHP version
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        coverage: none
+        tools: composer:v2
+      env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: composer install
       run: |
+        rm composer.lock || true
         composer install
 
     - name: yarn install and build
@@ -47,4 +63,4 @@ jobs:
 
     - name: Lint PHP
       run: |
-        BASE_REF=${{ github.base_ref }} php .github/bin/phpcs-branch.php 
+        BASE_REF=${{ github.base_ref }} php .github/bin/phpcs-branch.php

@@ -1321,6 +1321,49 @@ function render_wordcamp_application_form( $countries, $prefilled_fields ) {
 
 				<div class="PDF_questionDivide" id="pd-divider-29"></div>
 
+				<div class="PDF_question" id="pd-question-36">
+					<div class="qNumber">
+						Q.36
+					</div>
+
+					<div class="qContent">
+						<div class="qText">
+							Are you planning to hold a Contributor Day?
+						</div>
+
+						<div class="PDF_QT400">
+							<ul>
+								<li>
+									<input type="radio" name="q_contributor_day"
+										value="Yes, before session day(s)" id="q_contributor_day_1" />
+
+									<label for="q_contributor_day_1">Yes, before session day(s)</label>
+								</li>
+								<li>
+									<input type="radio" name="q_contributor_day"
+										value="Yes, during session day(s)" id="q_contributor_day_2" />
+
+									<label for="q_contributor_day_2">Yes, during session day(s)</label>
+								</li>
+								<li>
+									<input type="radio" name="q_contributor_day"
+										value="Yes, after session day(s)" id="q_contributor_day_3" />
+
+									<label for="q_contributor_day_3">Yes, after session day(s)</label>
+								</li>
+								<li>
+									<input type="radio" name="q_contributor_day"
+										value="No" id="q_contributor_day_4" />
+
+									<label for="q_contributor_day_4">No</label>
+								</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				<div class="PDF_questionDivide" id="pd-divider-36"></div>
+
 				<div class="PDF_question" id="pd-question-35">
 					<div class="qNumber">
 						Q.35

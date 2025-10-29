@@ -1,0 +1,27 @@
+{
+	"name": "wporg-flagship-landing",
+	"version": "0.0.1",
+	"description": "Description: Landing page for flagship WordCamps",
+	"license": "GPL-2.0-or-later",
+	"devDependencies": {
+		"@wordpress/scripts": "^26.18.0",
+		"cssnano": "^6.0.1",
+		"postcss": "^8.4.31",
+		"postcss-cli": "^10.1.0",
+		"postcss-custom-media": "^10.0.2",
+		"postcss-import": "^15.1.0",
+		"postcss-preset-env": "^9.3.0"
+	},
+	"eslintConfig": {
+		"extends": "../../../../.eslintrc.js"
+	},
+	"prettier": "../../../../.prettierrc.js",
+	"scripts": {
+		"start": "npm run watch",
+		"watch": "wp-scripts start & npm run build:css -- --watch",
+		"build": "wp-scripts build && npm run build:css",
+		"build:css": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
+		"lint:js": "wp-scripts lint-js 'src/**/*.js'",
+		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'"
+	}
+}

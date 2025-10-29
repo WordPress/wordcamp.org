@@ -30,6 +30,10 @@ add_action( 'transition_post_status', __NAMESPACE__ . '\transition_post_status',
 add_filter( 'map_meta_cap',        __NAMESPACE__ . '\modify_capabilities', 10, 4 );
 add_filter( 'display_post_states', __NAMESPACE__ . '\display_post_states', 10, 2 );
 
+// Columns.
+add_filter( 'manage_'. POST_TYPE .'_posts_columns',       __NAMESPACE__ . '\get_columns' );
+add_action( 'manage_'. POST_TYPE .'_posts_custom_column', __NAMESPACE__ . '\render_columns', 10, 2 );
+
 /**
  * Register the custom post type
  *
@@ -75,6 +79,7 @@ function get_post_statuses() {
 		'draft',
 		'wcb-incomplete',
 		'wcb-pending-approval',
+		'wcb-needs-followup',
 		'wcb-approved',
 		'wcb-pending-payment',
 		'wcb-paid',
@@ -93,7 +98,7 @@ function register_post_statuses() {
 		'wcbrr_submitted',
 		array(
 			'label'              => esc_html_x( 'Submitted', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -103,7 +108,7 @@ function register_post_statuses() {
 		'wcbrr_info_requested',
 		array(
 			'label'              => esc_html_x( 'Information Requested', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Information Requested <span class="count">(%s)</span>', 'Information Requested <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Information Requested <span class="count">(%s)</span>', 'Information Requested <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -113,7 +118,7 @@ function register_post_statuses() {
 		'wcbrr_rejected',
 		array(
 			'label'              => esc_html_x( 'Rejected', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -123,7 +128,7 @@ function register_post_statuses() {
 		'wcbrr_in_process',
 		array(
 			'label'              => esc_html_x( 'Payment in Process', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Payment in Process <span class="count">(%s)</span>', 'Payment in Process <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Payment in Process <span class="count">(%s)</span>', 'Payment in Process <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -133,7 +138,7 @@ function register_post_statuses() {
 		'wcbrr_paid',
 		array(
 			'label'              => esc_html_x( 'Paid', 'post', 'wordcamporg' ),
-			'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'wordcamporg' ),
+			'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 			'public'             => true,
 			'publicly_queryable' => false,
 		)
@@ -412,6 +417,64 @@ function display_post_states( $states, $post ) {
 }
 
 /**
+ * Define columns for the Vendor Payments screen.
+ *
+ * @param array $_columns
+ * @return array
+ */
+function get_columns( $_columns ) {
+	$columns = array(
+		'cb'             => $_columns['cb'],
+		'author'         => esc_html__( 'Author' ),
+		'title'          => $_columns['title'],
+		'date'           => $_columns['date'],
+		'payment_amount' => esc_html__( 'Amount', 'wordcamporg' ),
+		'expenses'       => esc_html__( 'Expenses', 'wordcamporg' ),
+	);
+
+	return $columns;
+}
+
+/**
+ * Render custom columns on the Vendor Payments screen.
+ *
+ * @param string $column
+ * @param int    $post_id
+ */
+function render_columns( $column, $post_id ) {
+	switch ( $column ) {
+		case 'payment_amount':
+			$currency = get_post_meta( $post_id, '_wcbrr_currency', true );
+			if ( $currency && false === strpos( $currency, 'null' ) ) {
+				echo esc_html( $currency ) . ' ';
+			}
+
+			$total    = 0;
+			$expenses = get_post_meta( $post_id, '_wcbrr_expenses', true );
+			if ( is_array( $expenses ) ) {
+				foreach ( $expenses as $expense ) {
+					$total += $expense['_wcbrr_amount'];
+				}
+			}
+
+			echo esc_html( $total );
+			break;
+
+		case 'expenses':
+			$currency = get_post_meta( $post_id, '_wcbrr_currency', true );
+
+			$expenses = get_post_meta( $post_id, '_wcbrr_expenses', true );
+			if ( is_array( $expenses ) ) {
+				foreach ( $expenses as $expense ) {
+					echo esc_html( "{$expense['_wcbrr_description']} ({$expense['_wcbrr_amount']} {$currency})<br/>" );
+				}
+			}
+
+			break;
+	}
+}
+
+/**
  * Set the status when reimbursements are submitted.
  *
  * @param array $post_data
@@ -458,6 +521,8 @@ function save_request( $post_id, $post ) {
 	}
 
 	verify_metabox_nonces();
+	// phpcs:ignore is added because verify_metabox_nonces(); already checks that.
+	// phpcs:ignore WordPress.Security.NonceVerification.Missing
 	validate_and_save_notes( $post, $_POST['wcbrr_new_note'] );
 
 	/*
@@ -690,10 +755,11 @@ function validate_and_save_expenses( $post_id, $expenses ) {
 function validate_and_save_notes( $post, $new_note_message ) {
 
 	// Save incomplete message.
-	if ( isset( $_POST['wcp_mark_incomplete_notes'] ) ) {
+	// phpcs:ignore is used because verify_metabox_nonces(); already checks that.
+	if ( isset( $_POST['wcp_mark_incomplete_notes'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$safe_value = '';
-		if ( $post->post_status == 'wcb-incomplete' ) {
-			$safe_value = wp_kses( $_POST['wcp_mark_incomplete_notes'], wp_kses_allowed_html( 'strip' ) );
+		if ( 'wcb-incomplete' == $post->post_status ) {
+			$safe_value = wp_kses( $_POST['wcp_mark_incomplete_notes'], wp_kses_allowed_html( 'strip' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		}
 
 		update_post_meta( $post->ID, '_wcp_incomplete_notes', $safe_value );
@@ -721,9 +787,14 @@ function validate_and_save_notes( $post, $new_note_message ) {
 	update_post_meta( $post->ID, '_wcbrr_notes', $notes );
 	notify_parties_of_new_note( $post, $new_note );
 
-	\WordCamp_Budgets::log( $post->ID, get_current_user_id(), sprintf( 'Note: %s', $new_note_message ), array(
-		'action' => 'note-added',
-	) );
+	\WordCamp_Budgets::log(
+		$post->ID,
+		get_current_user_id(),
+		sprintf( 'Note: %s', $new_note_message ),
+		array(
+			'action' => 'note-added',
+		)
+	);
 }
 
 /**

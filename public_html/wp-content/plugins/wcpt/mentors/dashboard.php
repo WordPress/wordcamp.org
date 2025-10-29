@@ -239,6 +239,7 @@ function set_usernames( $raw_usernames ) {
 		}
 	}
 
+	natcasesort( $official_usernames );
 	update_site_option( USERNAMES_KEY, $official_usernames );
 }
 
@@ -393,7 +394,12 @@ function get_all_mentor_data() {
 		$data = array_merge( $data, get_mentor_data( $username ) );
 	}
 
-	ksort( $data );
+	uasort(
+		$data,
+		function( $a, $b ) {
+			return strnatcasecmp( $a['name'], $b['name'] );
+		}
+	);
 
 	set_site_transient( MENTORS_CACHE_KEY, $data, DAY_IN_SECONDS );
 

@@ -47,6 +47,15 @@ abstract class Event_Admin {
 				'column_headers',
 			)
 		);
+
+		add_filter(
+			'manage_edit-' . $this->get_event_type() . '_sortable_columns',
+			array(
+				$this,
+				'sortable_columns',
+			)
+		);
+
 		// Forum column headers.
 		add_filter( 'display_post_states', array( $this, 'display_post_states' ), 10, 2 );
 
@@ -64,7 +73,6 @@ abstract class Event_Admin {
 		add_action( 'admin_notices', array( $this, 'print_admin_notices' ) );
 
 		add_action( 'send_decline_notification_action',  'Event_Admin::send_decline_notification', 10, 3 );
-
 	}
 
 	/**
@@ -144,6 +152,15 @@ abstract class Event_Admin {
 	abstract public function column_headers( $columns );
 
 	/**
+	 * Customize the sortable columns
+	 *
+	 * @param array $columns List of columns.
+	 */
+	public function sortable_columns( $columns ) {
+		return $columns;
+	}
+
+	/**
 	 * Get a list of streaming services.
 	 *
 	 * The individual event types can override this if different event types need different streaming accounts,
@@ -182,10 +199,6 @@ abstract class Event_Admin {
 			return;
 		}
 
-		if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
-			return;
-		}
-
 		add_meta_box(
 			'wcpt_log',
 			'Log',
@@ -202,10 +215,6 @@ abstract class Event_Admin {
 	 */
 	public function add_note_metabox() {
 		if ( ! current_user_can( $this->get_edit_capability() ) ) {
-			return;
-		}
-
-		if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 			return;
 		}
 
@@ -266,19 +275,6 @@ abstract class Event_Admin {
 	abstract public static function get_edit_capability();
 
 	/**
-	 * Filter: Set the locale to en_US.
-	 *
-	 * For some purposes, such as internal logging, strings that would normally be translated to the
-	 * current user's locale should be in English, so that other users who may not share the same
-	 * locale can read them.
-	 *
-	 * @return string
-	 */
-	public function set_locale_to_en_us() {
-		return 'en_US';
-	}
-
-	/**
 	 * Log when the post status changes
 	 *
 	 * @param string  $new_status New status.
@@ -295,10 +291,10 @@ abstract class Event_Admin {
 		}
 
 		// Ensure status labels are in English.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
-		$old_status = get_post_status_object( $old_status );
-		$new_status = get_post_status_object( $new_status );
+		$old_status_obj = get_post_status_object( $old_status );
+		$new_status_obj = get_post_status_object( $new_status );
 
 		$log_id = add_post_meta(
 			$post->ID,
@@ -306,7 +302,7 @@ abstract class Event_Admin {
 			array(
 				'timestamp' => time(),
 				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( '%s &rarr; %s', $old_status->label, $new_status->label ),
+				'message'   => sprintf( '%s &rarr; %s', $old_status_obj->label ?? $old_status, $new_status_obj->label ?? $new_status ),
 			)
 		);
 
@@ -317,7 +313,9 @@ abstract class Event_Admin {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 	}
 
 	/**
@@ -481,6 +479,12 @@ abstract class Event_Admin {
 			}
 		}
 
+		// Save the Event Subtype.
+		if ( isset( $_POST['event_subtype'] ) && current_user_can( $this->get_edit_capability() ) ) {
+			$event_subtype = sanitize_text_field( wp_unslash( $_POST['event_subtype'] ) );
+			update_post_meta( $post_id, 'event_subtype', $event_subtype );
+		}
+
 		$meta_keys        = $this->meta_keys();
 		$orig_meta_values = get_post_meta( $post_id );
 		$is_virtual_event = WordCamp_admin::is_virtual_event( $post_id );
@@ -524,6 +528,15 @@ abstract class Event_Admin {
 
 				case 'number':
 					update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
+					break;
+
+				case 'checkbox-delete-on-unset':
+					// If the checkbox is not set, delete the meta.
+					if ( empty( $values[ $key ] ) || 'on' !== $values[ $key ] ) {
+						delete_post_meta( $post_id, $key );
+					} else {
+						update_post_meta( $post_id, $key, true );
+					}
 					break;
 
 				case 'checkbox':
@@ -754,7 +767,7 @@ abstract class Event_Admin {
 			?>
 
 			<div class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>">
-				<?php if ( 'checkbox' == $value ) : ?>
+				<?php if ( 'checkbox' == $value || 'checkbox-delete-on-unset' == $value ) : ?>
 
 					<p>
 						<label>
@@ -767,6 +780,9 @@ abstract class Event_Admin {
 								<?php echo esc_attr( $readonly ); ?>
 							/>
 						</label>
+						<?php if ( ! empty( $messages[ $key ] ) ) : ?>
+							<span class="description"><?php echo esc_html( $messages[ $key ] ); ?></span>
+						<?php endif; ?>
 					</p>
 
 				<?php else : ?>
@@ -976,5 +992,12 @@ abstract class Event_Admin {
 		endforeach;
 	}
 
-
+	/**
+	 * Returns the list of Event Subtypes.
+	 *
+	 * This is generally 'WordCamp', 'DoAction', 'Other Event', 'Campus Connect', etc.
+	 *
+	 * @return array
+	 */
+	abstract public function get_event_subtypes();
 }

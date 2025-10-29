@@ -74,9 +74,10 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 			'order'   => 'DESC',
 		) );
 
+		$i = 0;
 		foreach ( $sites as $site_id ) {
 			switch_to_blog( $site_id );
-
+			$i++;
 			$sizes = $this->get_aggregated_sizes();
 
 			if ( ! empty( $sizes ) ) {
@@ -86,8 +87,11 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 			}
 
 			restore_current_blog();
-			// Reset DB query log each time, to reduce memory usage.
-			self::reset_db_query_log();
+			// Reset DB query log & object cache every 10 loops, to reduce memory usage.
+			if ( 0 == $i % 10 ) {
+				self::reset_db_query_log();
+				self::reset_local_object_cache();
+			}
 		}
 
 		update_site_option( 'tix_aggregated_tshirt_sizes', $sizes_by_site );
@@ -102,6 +106,26 @@ class CampTix_Addon_Tshirt_Field extends CampTix_Addon {
 
 		$wpdb->queries = array();
 	}
+
+	/**
+	 * Reset local WordPress object cache.
+	 */
+	public function reset_local_object_cache() {
+		global $wp_object_cache;
+
+		if ( ! is_object( $wp_object_cache ) ) {
+			return;
+		}
+
+		$wp_object_cache->group_ops      = array();
+		$wp_object_cache->memcache_debug = array();
+		$wp_object_cache->cache          = array();
+
+		if ( method_exists( $wp_object_cache, '__remoteset' ) ) {
+			$wp_object_cache->__remoteset();
+		}
+	}
+
 
 	/**
 	 * Get the counts for each shirt size that attendees selected

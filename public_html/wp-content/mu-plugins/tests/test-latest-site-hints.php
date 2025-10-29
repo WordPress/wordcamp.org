@@ -53,7 +53,13 @@ class Test_WordCamp_SEO extends Database_TestCase {
 				false,
 			),
 
-			"there isn't a newer site for the root site" => array(
+			"there isn't a newer site for the root WordCamp site" => array(
+				'wordcamp.test',
+				'/',
+				false,
+			),
+
+			"there isn't a newer site for the root Events site" => array(
 				'wordcamp.test',
 				'/',
 				false,
@@ -92,6 +98,12 @@ class Test_WordCamp_SEO extends Database_TestCase {
 				'vancouver.wordcamp.test',
 				'/2020/',
 				'http://vancouver.wordcamp.test/2020/',
+			),
+
+			'nextgen event should return latest' => array(
+				'events.wordpress.test',
+				'/rome/2023/training/',
+				'http://events.wordpress.test/rome/2024/training/',
 			),
 		);
 	}

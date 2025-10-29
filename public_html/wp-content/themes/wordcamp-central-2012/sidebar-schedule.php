@@ -5,11 +5,9 @@
 ?>
 
 		<div id="primary" class="wc-planned" role="complementary">
-			<h3>Planned WordCamps</h3>
+			<h3>Planned WordCamps or WordPress Events</h3>
 
-			<p>
-				These WordCamps are in the early stages of planning, but don't have a date yet. When their dates are confirmed, they'll be added to the schedule of approved WordCamps.
-			</p>
+			<p>These WordCamps and WordPress Events are in the early stages of planning and don’t yet have confirmed dates. Once their schedules are finalized, they will be added to our comprehensive list of approved events.</p>
 
 			<?php
 				// Get the upcoming approved (published) WordCamps *with dates*
@@ -19,11 +17,18 @@
 					'meta_key'       => 'Start Date (YYYY-mm-dd)',
 					'orderby'        => 'meta_value',
 					'order'          => 'ASC',
-					'meta_query'     => array( array(
-						'key'        => 'Start Date (YYYY-mm-dd)',
-						'value'      => 1,
-						'compare'    => '>' // Only with dates
-					) )
+					'meta_query'     => array(
+						array(
+							'key'        => 'Start Date (YYYY-mm-dd)',
+							'value'      => 1,
+							'compare'    => '>', // Only with dates.
+						),
+						'relation' => 'AND',
+						array(
+							'key'     => 'Hide from Event Feeds',
+							'compare' => 'NOT EXISTS',
+						),
+					),
 				);
 			?>
 
@@ -77,11 +82,10 @@
 
 				<?php endwhile; // wcpt_wordcamps ?>
 
-				<li>
-					Don&#8217;t see your city on the list, but yearning for a local WordCamp? Check out what it takes to <a href="/become-an-organizer/">become an organizer</a>!
-				</li>
-
 			</ul>
+			<h3>Looking for a WordCamp or WordPress Event in Your City?</h3>
+
+			<p>If you don&#8217;t see your city listed but are excited about the prospect of hosting a local WordCamp or WordPress Event, why not get involved? <a href="https://central.wordcamp.org/become-an-organizer/">Discover what it takes to become an organizer</a> and bring a WordCamp or other WordPress event to your area!</p>
 
 			<?php endif; // wcpt_has_wordcamps / function_exists ?>
 

@@ -130,6 +130,7 @@ class WordCamp_Counts extends Base {
 		'post_id'     => 0,
 		'type'        => '',
 		'gender'      => '',
+		'first_time'  => '',
 	);
 
 	/**
@@ -217,6 +218,23 @@ class WordCamp_Counts extends Base {
 	}
 
 	/**
+	 * Simple method to check against URL field
+	 *
+	 * @param int $wordcamp_id ID for the wordcamp post type.
+	 *
+	 * @return bool
+	 */
+	public function is_a_wordcamp_url( $wordcamp_id ) {
+		$url = get_post_meta( $wordcamp_id, 'URL', true );
+
+		// doaction sites are tracked but break the validate wordcamp site check.
+		if ( false !== strpos( $url, 'doaction' ) ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * Query and parse the data for the report.
 	 *
 	 * @return array
@@ -245,6 +263,9 @@ class WordCamp_Counts extends Base {
 
 		foreach ( $wordcamp_ids as $wordcamp_id ) {
 			try {
+				if ( ! $this->is_a_wordcamp_url( $wordcamp_id ) ) {
+					continue;
+				}
 				$valid = validate_wordcamp_id( $wordcamp_id );
 
 				$data = array_merge( $data, $this->get_data_for_site( $valid->site_id, $valid->post_id ) );
@@ -276,6 +297,12 @@ class WordCamp_Counts extends Base {
 	public function compile_report_data( array $data ) {
 		$wordcamps = $this->prepare_data_for_display( $this->get_wordcamps() );
 
+		$first_time_template = array(
+			'yes'  => 0,
+			'no'    => 0,
+			'unsure' => 0,
+		);
+
 		$compiled_data = array(
 			'wordcamps' => array(),
 			'totals'    => array(
@@ -284,12 +311,22 @@ class WordCamp_Counts extends Base {
 				'session'   => 0,
 				'speaker'   => 0,
 				'sponsor'   => 0,
+				'volunteer' => 0,
 			),
 			'uniques'   => array(
 				'attendee'  => array(),
 				'organizer' => array(),
 				'speaker'   => array(),
 				'sponsor'   => array(),
+				'volunteer'   => array(),
+			),
+			'first_times' => array(
+				'attendee'  => $first_time_template,
+				'organizer' => $first_time_template,
+				'session'   => $first_time_template,
+				'speaker'   => $first_time_template,
+				'sponsor'   => $first_time_template,
+				'volunteer' => $first_time_template,
 			),
 		);
 
@@ -300,6 +337,15 @@ class WordCamp_Counts extends Base {
 				'session'   => 0,
 				'speaker'   => 0,
 				'sponsor'   => 0,
+				'volunteer'   => 0,
+			),
+			'first_times' => array(
+				'attendee'  => $first_time_template,
+				'organizer' => $first_time_template,
+				'session'   => $first_time_template,
+				'speaker'   => $first_time_template,
+				'sponsor'   => $first_time_template,
+				'volunteer' => $first_time_template,
 			),
 		);
 
@@ -314,6 +360,7 @@ class WordCamp_Counts extends Base {
 				'attendee'  => $gender_template,
 				'organizer' => $gender_template,
 				'speaker'   => $gender_template,
+				'volunteer'   => $gender_template,
 			);
 		}
 
@@ -331,9 +378,14 @@ class WordCamp_Counts extends Base {
 
 			$type       = $item['type'];
 			$identifier = $item['identifier'];
+			$first_time = $item['first_time'];
 
 			$compiled_data['wordcamps'][ $wordcamp_id ]['totals'][ $type ] ++;
 			$compiled_data['totals'][ $type ] ++;
+			if ( isset( $wordcamp_template['first_times'][ $type ] ) ) {
+				$compiled_data['wordcamps'][ $wordcamp_id ]['first_times'][ $type ][ $first_time ] ++;
+				$compiled_data['first_times'][ $type ][ $first_time ] ++;
+			}
 			if ( isset( $compiled_data['uniques'][ $type ] ) ) {
 				$compiled_data['uniques'][ $type ][] = $identifier;
 			}
@@ -462,6 +514,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $attendee->ID,
 				'type'        => 'attendee',
 				'identifier'  => $attendee->tix_email,
+				'first_time'  => $attendee->tix_first_time_attending_wp_event,
 			);
 
 			if ( $this->include_gender ) {
@@ -486,6 +539,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $organizer->ID,
 				'type'        => 'organizer',
 				'identifier'  => $organizer->_wcpt_user_id,
+				'first_time'  => $organizer->_wcb_organizer_first_time,
 			);
 
 			if ( $this->include_gender ) {
@@ -540,6 +594,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $speaker->ID,
 				'type'        => 'speaker',
 				'identifier'  => $speaker->_wcb_speaker_email,
+				'first_time'  => $speaker->_wcb_speaker_first_time,
 			);
 
 			if ( $this->include_gender ) {
@@ -564,6 +619,7 @@ class WordCamp_Counts extends Base {
 				'post_id'     => $sponsor->ID,
 				'type'        => 'sponsor',
 				'identifier'  => $this->get_sponsor_identifier( $sponsor->_wcpt_sponsor_website ),
+				'first_time'  => $sponsor->_wcb_sponsor_first_time,
 			);
 
 			if ( $this->include_gender ) {
@@ -573,6 +629,31 @@ class WordCamp_Counts extends Base {
 			$site_data[] = $data;
 
 			clean_post_cache( $sponsor );
+		}
+
+		$volunteers = new WP_Query( array(
+			'posts_per_page' => -1,
+			'post_type'      => 'wcb_volunteer',
+			'post_status'    => 'publish',
+		) );
+
+		foreach ( $volunteers->posts as $volunteer ) {
+			$data = array(
+				'wordcamp_id' => $wordcamp_id,
+				'site_id'     => $site_id,
+				'post_id'     => $volunteer->ID,
+				'type'        => 'volunteer',
+				'identifier'  => $volunteer->_wcpt_user_name,
+				'first_time'  => $volunteer->_wcb_volunteer_first_time,
+			);
+
+			if ( $this->include_gender ) {
+				$data['first_name'] = explode( ' ', $volunteer->post_title )[0];
+			}
+
+			$site_data[] = $data;
+
+			clean_post_cache( $volunteer );
 		}
 
 		restore_current_blog();

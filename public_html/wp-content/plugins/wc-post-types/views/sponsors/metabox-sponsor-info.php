@@ -1,4 +1,9 @@
 <?php
+/** Metabox view */
+
+/** @var string $amount */
+/** @var string $available_currencies */
+/** @var string $currency */
 /** @var string $company_name */
 /** @var string $website */
 /** @var string $first_name */
@@ -13,8 +18,59 @@
 /** @var string $state */
 /** @var string $zip_code */
 /** @var string $country */
+/** @var string $first_time */
 /** @var array $available_countries */
 ?>
+<ul class="wcpt-form">
+	<li class="wcpt-form-header">
+		<?php esc_html_e( 'Sponsorship', 'wordcamporg' ); ?>
+	</li>
+
+	<li>
+		<label for="_wcb_sponsor_amount">
+			<?php esc_html_e( 'Amount:', 'wordcamporg' ); ?>
+		</label>
+
+		<input
+			type="number"
+			class="regular-text"
+			id="_wcb_sponsor_amount"
+			name="_wcb_sponsor_amount"
+			value="<?php echo esc_attr( $amount ); ?>"
+			step="any"
+			min="0"
+			required
+		/>
+
+		<?php wcorg_required_indicator(); ?>
+
+		<span class="description"><?php esc_html_e( 'No commas, thousands separators or currency symbols. Ex. 1234.56', 'wordcamporg' ); ?></span>
+	</li>
+
+	<li>
+		<label for="_wcb_sponsor_currency">
+			<?php esc_html_e( 'Currency:', 'wordcamporg' ); ?>
+		</label>
+
+		<select
+			id="_wcb_sponsor_currency"
+			name="_wcb_sponsor_currency"
+			class="select-currency"
+		>
+			<?php foreach ( $available_currencies as $symbol => $name ) : ?>
+				<option
+					value="<?php echo esc_attr( $symbol ); ?>"
+					<?php selected( $symbol, $currency ); ?>
+				>
+					<?php echo ( $symbol ) ? esc_html( $name . ' (' . $symbol . ')' ) : ''; ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+
+		<?php wcorg_required_indicator(); ?>
+	</li>
+</ul>
+
 <ul class="wcpt-form">
 	<li class="wcpt-form-header">
 		<?php _e( 'Contact Information', 'wordcamporg' ); ?>
@@ -275,6 +331,49 @@
 		/>
 
 		<?php wcorg_required_indicator(); ?>
+	</li>
+</ul>
+
+<ul class="wcpt-form">
+	<li class="wcpt-form-header">
+		<?php esc_html_e( 'Is this their first time being a sponsor at a WordPress event?', 'wordcamporg' ); ?>
+	</li>
+
+	<li>
+		<label for="_wcb_sponsor_first_time_yes">
+			<?php esc_html_e( 'Yes', 'wordcamporg' ); ?>
+		</label>
+		<input
+			type="radio"
+			id="_wcb_sponsor_first_time_yes"
+			name="_wcb_sponsor_first_time"
+			value="yes"
+			<?php checked( $first_time, 'yes' ); ?>
+		/>
+	</li>
+	<li>
+		<label for="_wcb_sponsor_first_time_no">
+			<?php esc_html_e( 'No', 'wordcamporg' ); ?>
+		</label>
+		<input
+			type="radio"
+			id="_wcb_sponsor_first_time_no"
+			name="_wcb_sponsor_first_time"
+			value="no"
+			<?php checked( $first_time, 'no' ); ?>
+		/>
+	</li>
+	<li>
+		<label for="_wcb_sponsor_first_time_unsure">
+			<?php esc_html_e( 'I don\'t know', 'wordcamporg' ); ?>
+		</label>
+		<input
+			type="radio"
+			id="_wcb_sponsor_first_time_unsure"
+			name="_wcb_sponsor_first_time"
+			value="unsure"
+			<?php checked( $first_time, 'unsure' ); ?>
+		/>
 	</li>
 </ul>
 

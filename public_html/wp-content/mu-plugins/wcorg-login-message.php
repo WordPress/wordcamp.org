@@ -125,3 +125,18 @@ function wcorg_get_wporg_login_url( $locale, $path = 'root' ) {
 
 	return $url;
 }
+
+// Prevent password resets, since they need to be done on w.org.
+add_filter( 'allow_password_reset', '__return_false' );
+add_filter( 'show_password_fields', '__return_false' );
+
+/**
+ * Redirect users to WordPress.org to reset their passwords.
+ *
+ * Otherwise, there's nothing to indicate where they can reset it.
+ */
+function wcorg_reset_passwords_at_wporg() {
+	wp_redirect( 'https://login.wordpress.org/lostpassword/' );
+	die();
+}
+add_action( 'login_form_lostpassword', 'wcorg_reset_passwords_at_wporg' );

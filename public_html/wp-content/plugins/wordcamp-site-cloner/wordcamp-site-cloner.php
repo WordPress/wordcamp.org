@@ -168,8 +168,11 @@ function register_api_endpoints() {
  * @return array
  */
 function sites_endpoint() {
-	$sites        = array();
-	$cached_sites = get_site_option( WORDCAMP_SITES_OPTION_KEY, array() );
+	$sites = array();
+
+	// All networks share this option, but it's stored on the WordCamp network because Core doesn't provide a
+	// cross-network option.
+	$cached_sites = get_network_option( WORDCAMP_NETWORK_ID, WORDCAMP_SITES_OPTION_KEY, array() );
 
 	if ( $cached_sites ) {
 		unset( $cached_sites[ get_current_blog_id() ] );
@@ -190,11 +193,13 @@ function sites_endpoint() {
  */
 function prime_wordcamp_sites() {
 	// This only needs to run on a single site, then the whole network can use the cached result.
-	if ( ! is_main_site() ) {
+	if ( WORDCAMP_NETWORK_ID !== get_current_network_id() || ! is_main_site() ) {
 		return;
 	}
 
-	update_site_option( WORDCAMP_SITES_OPTION_KEY, get_wordcamp_sites() );
+	// All networks share this option, but it's stored on the WordCamp network because Core doesn't provide a
+	// cross-network option.
+	update_network_option( WORDCAMP_NETWORK_ID, WORDCAMP_SITES_OPTION_KEY, get_wordcamp_sites() );
 }
 
 /**
@@ -217,6 +222,10 @@ function get_wordcamp_sites() {
 
 	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordcamp.org.
 
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php';
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
+
+	// Cancelled camps are often restarted in future years, especially after COVID.
 	$cloneable_post_statuses = array_merge(
 		WordCamp_Loader::get_public_post_statuses(),
 		array( 'wcpt-cancelled' )

@@ -1,5 +1,7 @@
 <?php
 
+use function WordCamp\Sunrise\get_top_level_domain;
+
 use const WordCamp\Sunrise\{ PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_YEAR_DOT_CITY_DOMAIN_PATH };
 
 defined( 'WPINC' ) || die();
@@ -20,6 +22,9 @@ defined( 'WPINC' ) || die();
  * @return array
  */
 function get_wordcamps( $args = array() ) {
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-event/class-event-loader.php';
+	require_once WP_PLUGIN_DIR . '/wcpt/wcpt-wordcamp/wordcamp-loader.php';
+
 	$args = wp_parse_args(
 		$args,
 		array(
@@ -142,7 +147,8 @@ function get_wordcamp_name( $site_id = 0 ) {
 /**
  * Extract pieces from a WordCamp.org URL
  *
- * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead
+ * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead.
+ * @todo Update this to handle events.wordpress.org, campusconnect, & campus.wordpress.org.
  *
  * @param string $site_url The root URL for the site, without any query string. It can include the site path
  *                         -- e.g., `https://narnia.wordcamp.org/2020` -- but should not include a post slug,
@@ -238,6 +244,63 @@ function wcorg_get_wordcamp_duration( WP_Post $wordcamp ) {
 	$duration_days = ceil( ( $duration_raw + 1 ) / DAY_IN_SECONDS );
 
 	return absint( $duration_days );
+}
+
+/**
+ * Get a WordCamp's UTC offset in seconds.
+ *
+ * Forked from `official-wordpress-events`.
+ */
+function get_wordcamp_offset( WP_Post $wordcamp ): int {
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
+	if ( ! $wordcamp->{'Event Timezone'} || ! $wordcamp->{'Start Date (YYYY-mm-dd)'} ) {
+		restore_current_blog();
+		return 0;
+	}
+
+	$wordcamp_timezone = new DateTimeZone( $wordcamp->{'Event Timezone'} );
+
+	$wordcamp_datetime = new DateTime(
+		'@' . $wordcamp->{'Start Date (YYYY-mm-dd)'},
+		$wordcamp_timezone
+	);
+
+	restore_current_blog();
+
+	return $wordcamp_timezone->getOffset( $wordcamp_datetime );
+}
+
+/**
+ *
+ * Get the timestamp of the first session of a WordCamp.
+ *
+ * This is a true Unix timestamp in UTC, not the local event time.
+ */
+function get_first_session_utc_start_time( int $wordcamp_id ): int {
+	$site_id = get_post_meta( $wordcamp_id, '_site_id', true );
+
+	switch_to_blog( $site_id );
+
+	$sessions = get_posts( array(
+		'post_type'      => 'wcb_session',
+		'posts_per_page' => 1,
+		'meta_key'       => '_wcpt_session_time',
+		'orderby'        => 'meta_value_num',
+		'order'          => 'asc',
+	) );
+
+	if ( count( $sessions ) < 1 ) {
+		restore_current_blog();
+		return 0;
+	}
+
+	$session = $sessions[0];
+	$value   = absint( get_post_meta( $session->ID, '_wcpt_session_time', true ) );
+
+	restore_current_blog();
+
+	return $value;
 }
 
 /**
@@ -387,4 +450,27 @@ function is_wordcamp_virtual( $wordcamp ) {
 	restore_current_blog();
 
 	return $is_virtual;
+}
+
+/**
+ * Get the Network Admin URL for a given network + path.
+ *
+ * @param int    $network_id The ID of the network.
+ * @param string $path       The path to append to the URL.
+ * @return string The full URL for the network admin.
+ */
+function get_network_specific_network_url( int $network_id, string $path ): string {
+	$tld = get_top_level_domain();
+	$url = network_admin_url( $path );
+
+	$hostname = "wordcamp.$tld";
+	if ( CAMPUS_NETWORK_ID === $network_id ) {
+		$hostname = "campus.wordpress.$tld";
+	} elseif ( EVENTS_NETWORK_ID === $network_id ) {
+		$hostname = "events.wordpress.$tld";
+	}
+
+	$url = preg_replace( '!^https?://[^/]+!i', "https://{$hostname}", $url );
+
+	return $url;
 }

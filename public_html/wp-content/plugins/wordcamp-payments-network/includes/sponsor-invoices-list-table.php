@@ -18,8 +18,11 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		);
 
 		if ( 'submitted' === get_current_section() ) {
+			$columns['vetting_status']  = 'Status';
 			$columns['approve_invoice'] = 'Approve';
 		}
+
+		$columns['modified'] = 'Modified';
 
 		return $columns;
 	}
@@ -52,23 +55,18 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		$limit      = 30;
 		$offset     = $limit * ( $paged - 1 );
 
-		$this->items = $wpdb->get_results( $wpdb->prepare( "
-			SELECT *
-			FROM $table_name
-			WHERE status = %s
-			ORDER BY blog_id, invoice_id ASC
-			LIMIT %d
-			OFFSET %d",
+		$this->items = $wpdb->get_results( $wpdb->prepare(
+			'SELECT * FROM %i WHERE status = %s ORDER BY last_modified DESC LIMIT %d OFFSET %d',
+			$table_name,
 			$status,
 			$limit,
 			$offset
 		) );
 
 		// A second query is faster than using SQL_CALC_FOUND_ROWS during the first query
-		$total_items = $wpdb->get_var( $wpdb->prepare( "
-			SELECT count(blog_id)
-			FROM $table_name
-			WHERE status = %s",
+		$total_items = $wpdb->get_var( $wpdb->prepare(
+			'SELECT count(blog_id) FROM %i WHERE status = %s',
+			$table_name,
 			$status
 		) );
 
@@ -77,6 +75,32 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 			'total_pages' => ceil( $total_items / $limit ),
 			'per_page'    => $limit,
 		) );
+	}
+
+	/**
+	 * Dender the value for the Modified column.
+	 */
+	protected function column_modified( $index_row ) {
+		$modified = strtotime( $index_row->last_modified );
+
+		if ( ! $modified || $modified < 0 ) {
+			return $index_row->last_modified;
+		}
+
+		// In the last month, show a human-readable time difference.
+		if ( $modified >= time() - MONTH_IN_SECONDS ) {
+			return sprintf(
+				'<span title="%s">%s</span>',
+				esc_attr( gmdate( 'Y-m-d H:i:s\Z', $modified ) ),
+				human_time_diff( $modified ) . ' ago'
+			);
+		}
+
+		return sprintf(
+			'<span title="%s">%s</span>',
+			esc_attr( human_time_diff( $modified ) . ' ago' ),
+			gmdate( 'Y-m-d', $modified ),
+		);
 	}
 
 	/**
@@ -126,6 +150,40 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 	}
 
 	/**
+	 * Render the value for the Status column.
+	 *
+	 * @param object $index_row
+	 */
+	protected function column_vetting_status( $index_row ) {
+		$statuses = [
+			'needs-vetting'   => 'Needs vetting',
+			'needs-approval'  => 'Needs approval',
+			'needs-follow-up' => 'Needs follow up',
+		];
+
+		ob_start();
+		?>
+		<select
+			class="wcbdsi-vetting-status"
+			name="wcbdsi-vetting-status"
+			data-site-id="<?php echo esc_attr( $index_row->blog_id ); ?>"
+			data-invoice-id="<?php echo esc_attr( $index_row->invoice_id ); ?>"
+			data-nonce="<?php echo esc_attr( wp_create_nonce( "wcbdsi-vetting-status-{$index_row->blog_id}-{$index_row->invoice_id}" ) ); ?>"
+		>
+			<?php foreach ( $statuses as $value => $label ) : ?>
+				<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $index_row->vetting_status ?: 'needs-vetting', $value ); ?>>
+					<?php echo esc_html( $label ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<span class="spinner"></span>
+		<div class="wcbd-inline-notice hidden"></div>
+		<?php
+
+		return ob_get_clean();
+	}
+
+	/**
 	 * Render the value for the Approve column
 	 *
 	 * @param object $index_row
@@ -133,20 +191,23 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 	protected function column_approve_invoice( $index_row ) {
 		$nonce = wp_create_nonce( "wcbdsi-approve-invoice-{$index_row->blog_id}-{$index_row->invoice_id}" );
 
-		?>
+		ob_start();
 
+		?>
 		<button
 			class="wcbdsi-approve-invoice button-secondary"
-			data-site-id="<?php echo esc_attr( $index_row->blog_id    ); ?>"
+			data-site-id="<?php echo esc_attr( $index_row->blog_id ); ?>"
 			data-invoice-id="<?php echo esc_attr( $index_row->invoice_id ); ?>"
-			data-nonce="<?php echo esc_attr( $nonce                 ); ?>"
+			data-nonce="<?php echo esc_attr( $nonce ); ?>"
 		>
 			Approve
 		</button>
 
-		<div class="wcbd-inline-notice hidden"><div> <?php // Populated dynamically ?>
+		<div class="wcbd-inline-notice hidden"></div>
 
 		<?php
+
+		return ob_get_clean();
 	}
 
 	/**
@@ -156,6 +217,6 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 	 * @param string $column_name
 	 */
 	protected function column_default( $index_row, $column_name ) {
-		echo esc_html( $index_row->$column_name );
+		return esc_html( $index_row->$column_name );
 	}
 }

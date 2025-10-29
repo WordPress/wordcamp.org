@@ -46,6 +46,7 @@ function render( $attributes, $content, $block ) {
 		'meta_value'     => $post_ID,
 		'orderby'        => 'title',
 		'order'          => 'asc',
+		'post_status'    => array( 'publish', 'private' ),
 	);
 
 	$sessions = get_posts( $session_args );

@@ -190,6 +190,7 @@ class WCOR_Mailer {
 			'[wordcamp_hashtag]',
 			'[wordcamp_anticipated_attendees]',
 			'[multi_event_sponsor_region]',
+			'[event_type]',
 
 			// The organizing team
 			'[organizer_name]',
@@ -242,6 +243,10 @@ class WCOR_Mailer {
 			'[session_feedback_list_url]',
 		);
 
+		// Extract the Event Type name.
+		$event_subtype_name = empty( $wordcamp_meta['event_subtype'] ) ? 'N/A' : $wordcamp_meta['event_subtype'][0];
+		$event_subtype_name = $wordcamp_admin->get_event_subtypes()[ $event_subtype_name ] ?? $event_subtype_name;
+
 		$replace = array(
 			// The WordCamp
 			$wordcamp->post_title,
@@ -254,6 +259,7 @@ class WCOR_Mailer {
 			empty( $wordcamp_meta['WordCamp Hashtag'][0] ) ? 'N/A' : esc_url( 'https://twitter.com/hashtag/' . $wordcamp_meta['WordCamp Hashtag'][0] ),
 			empty( $wordcamp_meta['Number of Anticipated Attendees'][0] ) ? '' : absint( $wordcamp_meta['Number of Anticipated Attendees'][0] ),
 			empty( $wordcamp_meta['Multi-Event Sponsor Region'][0] ) ? '' : get_term( $wordcamp_meta['Multi-Event Sponsor Region'][0], MES_Region::TAXONOMY_SLUG )->name,
+			$event_subtype_name,
 
 			// The organizing team
 			$wordcamp_meta['Organizer Name'][0] ?? '',
@@ -501,6 +507,10 @@ class WCOR_Mailer {
 	public function send_manual_email( $email, $wordcamp ) {
 		$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
 
+		if ( ! $this->applies_to_wordcamp( $wordcamp, $email ) ) {
+			return false;
+		}
+
 		return $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp );
 	}
 
@@ -548,14 +558,22 @@ class WCOR_Mailer {
 			}
 
 			foreach ( $reminder_emails as $email ) {
+				if ( ! $this->timed_email_is_ready_to_send( $wordcamp, $email, $sent_email_ids ) ) {
+					continue;
+				}
+
+				if ( ! $this->applies_to_wordcamp( $wordcamp, $email ) ) {
+					continue;
+				}
+
 				$recipient = $this->get_recipients( $wordcamp->ID, $email->ID );
 
-				if ( $this->timed_email_is_ready_to_send( $wordcamp, $email, $sent_email_ids ) ) {
-					if ( $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
-						$sent_email_ids[] = $email->ID;
-						update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );
-					}
+				if ( ! $this->mail( $recipient, $email->post_title, $email->post_content, array(), $email, $wordcamp ) ) {
+					continue;
 				}
+
+				$sent_email_ids[] = $email->ID;
+				update_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', $sent_email_ids );
 			}
 		}
 	}
@@ -587,6 +605,19 @@ class WCOR_Mailer {
 			return $ready;
 		}
 
+		if ( in_array( $email->ID, $sent_email_ids ) ) {
+			return $ready;
+		}
+
+		/**
+		 * Do not send emails if it's for transparency report and the camp is running money through WPCS PBC.
+		 */
+		$transparency_report = get_post_meta( $email->ID, 'wcor_transparency_report', true );
+		$through_wpcs_pbc    = get_post_meta( $wordcamp->ID, 'Running money through WPCS PBC', true );
+		if ( $transparency_report && $through_wpcs_pbc ) {
+			return $ready;
+		}
+
 		$send_when  = get_post_meta( $email->ID, 'wcor_send_when', true );
 		$start_date = get_post_meta( $wordcamp->ID, 'Start Date (YYYY-mm-dd)', true );
 		$end_date   = get_post_meta( $wordcamp->ID, 'End Date (YYYY-mm-dd)', true );
@@ -595,42 +626,84 @@ class WCOR_Mailer {
 			$end_date = $start_date;
 		}
 
-		if ( ! in_array( $email->ID, $sent_email_ids ) ) {
-			if ( 'wcor_send_before' == $send_when ) {
-				$days_before = absint( get_post_meta( $email->ID, 'wcor_send_days_before', true ) );
+		if ( 'wcor_send_before' == $send_when ) {
+			$days_before = absint( get_post_meta( $email->ID, 'wcor_send_days_before', true ) );
 
-				if ( $start_date && $days_before ) {
-					$send_date = $start_date - ( $days_before * DAY_IN_SECONDS );
+			if ( $start_date && $days_before ) {
+				$send_date = $start_date - ( $days_before * DAY_IN_SECONDS );
 
-					if ( $send_date <= current_time( 'timestamp' ) ) {
+				if ( $send_date <= current_time( 'timestamp' ) ) {
+					$ready = true;
+				}
+			}
+		} elseif ( 'wcor_send_after' == $send_when ) {
+			/**
+			 * Do not send emails with "send X days after the camp ends" trigger if WordCamp didn't happen.
+			 * All WordCamps that happen, should have public status.
+			 */
+			if ( ! in_array( $wordcamp->post_status, WordCamp_Loader::get_public_post_statuses() ) ) {
+				return $ready;
+			}
+
+			$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+
+			if ( $end_date && $days_after ) {
+				$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
+
+				if ( $send_date <= current_time( 'timestamp' ) ) {
+					/**
+					 * If this reminder is for transparency report, only send if the report hasn't been received yet.
+					 */
+					if ( $transparency_report ) {
+						$report_received = get_post_meta( $wordcamp->ID, 'Transparency Report Received', true );
+						if ( ! $report_received ) {
+							$ready = true;
+						}
+					} else {
 						$ready = true;
 					}
 				}
-			} elseif ( 'wcor_send_after' == $send_when ) {
-				$days_after = absint( get_post_meta( $email->ID, 'wcor_send_days_after', true ) );
+			}
+		} elseif ( 'wcor_send_after_pending' == $send_when ) {
+			$days_after_pending                  = absint( get_post_meta( $email->ID, 'wcor_send_days_after_pending', true ) );
+			$timestamp_added_to_pending_schedule = absint( get_post_meta( $wordcamp->ID, '_timestamp_added_to_planning_schedule', true ) );
 
-				if ( $end_date && $days_after ) {
-					$send_date = $end_date + ( $days_after * DAY_IN_SECONDS );
+			if ( $days_after_pending && $timestamp_added_to_pending_schedule ) {
+				$execution_timestamp = $timestamp_added_to_pending_schedule + ( $days_after_pending * DAY_IN_SECONDS );
 
-					if ( $send_date <= current_time( 'timestamp' ) ) {
-						$ready = true;
-					}
-				}
-			} elseif ( 'wcor_send_after_pending' == $send_when ) {
-				$days_after_pending                  = absint( get_post_meta( $email->ID, 'wcor_send_days_after_pending', true ) );
-				$timestamp_added_to_pending_schedule = absint( get_post_meta( $wordcamp->ID, '_timestamp_added_to_planning_schedule', true ) );
-
-				if ( $days_after_pending && $timestamp_added_to_pending_schedule ) {
-					$execution_timestamp = $timestamp_added_to_pending_schedule + ( $days_after_pending * DAY_IN_SECONDS );
-
-					if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
-						$ready = true;
-					}
+				if ( $execution_timestamp <= current_time( 'timestamp' ) ) {
+					$ready = true;
 				}
 			}
 		}
 
 		return $ready;
+	}
+
+
+	/**
+	 * Determines if an email applies to a given WordCamp.
+	 *
+	 * @param WP_Post $wordcamp
+	 * @param WP_Post $email
+	 * @return bool
+	 */
+	protected function applies_to_wordcamp( $wordcamp, $email ) {
+		$restricted_event_types = get_post_meta( $email->ID, 'wcor_event_subtypes', true ) ?: [];
+
+		// If the email has no restrictions, it applies to all WordCamps.
+		if ( ! $restricted_event_types || in_array( 'all', $restricted_event_types ) ) {
+			return true;
+		}
+
+		// Get the WordCamp subtype, and see if it applies.
+		$wordcamp_event_subtype = get_post_meta( $wordcamp->ID, 'event_subtype', true ) ?: 'none';
+
+		if ( in_array( $wordcamp_event_subtype, $restricted_event_types ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**

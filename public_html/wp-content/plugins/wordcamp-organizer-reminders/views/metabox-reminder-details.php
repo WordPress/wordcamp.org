@@ -15,7 +15,14 @@ defined( 'WPINC' ) || die();
 	<tbody>
 		<tr>
 			<th><input id="wcor_send_organizers" name="wcor_send_where[]" type="checkbox" value="wcor_send_organizers" <?php checked( in_array( 'wcor_send_organizers', $send_where ) ); ?>></th>
-			<td colspan="2"><label for="wcor_send_organizers">The organizing team</label> (typically <code>city@wordcamp.org</code>)</td>
+			<td colspan="2"><label for="wcor_send_organizers">The organizing team</label>
+			<br>
+			<span>(Will send to 
+			1. <code>support@wordcamp.org</code>
+			2. If specified, the email address under WordCamp Information section on WordCamp edit page
+			3. If specified, the email address of the lead organizer)
+			</span>
+			</td>
 		</tr>
 
 		<tr>
@@ -117,6 +124,11 @@ defined( 'WPINC' ) || die();
 <table>
 	<tbody>
 		<tr>
+			<th><input id="wcor_transparency_report" name="wcor_transparency_report" type="checkbox" value="wcor_transparency_report" <?php checked( $post->wcor_transparency_report, 'wcor_transparency_report' ); ?>></th>
+			<td><label for="wcor_transparency_report">For transparency report - triggered when <strong>NOT</strong> 'Running money through WPCS PBC'</label></td>
+		</tr>
+		
+		<tr>
 			<th><input id="wcor_send_before" name="wcor_send_when" type="radio" value="wcor_send_before" <?php checked( $post->wcor_send_when, 'wcor_send_before' ); ?>></th>
 			<td><label for="wcor_send_before">before the camp starts: </label></td>
 			<td>
@@ -155,6 +167,49 @@ defined( 'WPINC' ) || die();
 					<?php endforeach; ?>
 				</select>
 			</td>
+		</tr>
+	</tbody>
+</table>
+
+<h4>For which type of events?</h4>
+<table id="event-type-selection">
+	<tbody>
+		<tr>
+			<?php
+			$selected_subtypes = get_post_meta( $post->ID, 'wcor_event_subtypes', true ) ?: [ 'all' ];
+			$subtypes = $GLOBALS['wordcamp_admin']->get_event_subtypes();
+			?>
+			<td><label>
+				<input type="checkbox" name="wcor_event_subtypes[]" value="all" <?php checked( in_array( 'all', $selected_subtypes ) ); ?> />
+				All
+			</label></td>
+			<?php
+			foreach ( $subtypes as $subtype_id => $subtype_name ) :
+				?>
+				<td><label>
+					<input type="checkbox" name="wcor_event_subtypes[]" value="<?php echo esc_attr( $subtype_id ); ?>" <?php checked( in_array( $subtype_id, $selected_subtypes ) ); ?> />
+					<?php echo esc_html( $subtype_name ); ?>
+				</label></td>
+			<?php endforeach; ?>
+			<script>
+				( function( $ ) {
+					/* Enforce 'All for no selections. */
+					$( '#event-type-selection input[name="wcor_event_subtypes[]"]' ).on( 'change', function() {
+						if ( this.value == 'all' && this.checked ) {
+							$( 'input[name="wcor_event_subtypes[]"]:not([value="all"])' ).prop( 'checked', false );
+							return;
+						}
+
+						const multipleChecked = $( 'input[name="wcor_event_subtypes[]"]:not([value="all"]):checked' ).length > 0;
+						$( 'input[name="wcor_event_subtypes[]"][value="all"]' ).prop( 'checked', ! multipleChecked );
+					} ).change();
+				} )( jQuery );
+			</script>
+			<style>
+				#event-type-selection td > label {
+					padding-right: 1em;
+				}
+			</style>
 		</tr>
 	</tbody>
 </table>

@@ -36,7 +36,7 @@
 	</table>
 
 	<?php foreach ( $meetups as $meetup ) : ?>
-		<p><strong class="active-camp"><?php echo esc_html( $meetup['name'] ); ?></strong> &ndash; <?php echo esc_html( $statuses[ $meetup['latest_status'] ] ); ?></p>
+		<p><strong class="active-camp"><?php echo esc_html( $meetup['name'] ); ?></strong> &ndash; <?php echo esc_html( $statuses[ $meetup['latest_status'] ] ?? 'Unknown' ); ?></p>
 		<ul class="status-log ul-disc">
 			<?php foreach ( $meetup['logs'] as $log ) : ?>
 				<li><?php

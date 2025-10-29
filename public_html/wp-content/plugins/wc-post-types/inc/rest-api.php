@@ -44,6 +44,21 @@ function register_sponsor_post_meta() {
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
+	register_post_meta(
+		'wcb_sponsor',
+		'_wcb_sponsor_first_time',
+		array(
+			'type'              => 'string',
+			'show_in_rest'      => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
+			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_first_time_value',
+		)
+	);
 }
 
 /**
@@ -71,7 +86,7 @@ function register_speaker_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
+				'prepare_callback' => function ( $value, $request, $args ) {
 					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
 					if ( $user_id ) {
 						$wporg_user = get_userdata( $user_id );
@@ -82,7 +97,7 @@ function register_speaker_post_meta() {
 					return $value;
 				},
 			),
-			'sanitize_callback' => function( $value ) {
+			'sanitize_callback' => function ( $value ) {
 				$wporg_user = wcorg_get_user_by_canonical_names( $value );
 				if ( ! $wporg_user ) {
 					return '';
@@ -106,6 +121,21 @@ function register_speaker_post_meta() {
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
 		)
 	);
+	register_post_meta(
+		'wcb_speaker',
+		'_wcb_speaker_first_time',
+		array(
+			'type'              => 'string',
+			'show_in_rest'      => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
+			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_first_time_value',
+		)
+	);
 }
 
 /**
@@ -119,7 +149,7 @@ function register_session_post_meta() {
 		'_wcpt_session_time',
 		array(
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
+				'prepare_callback' => function ( $value, $request, $args ) {
 					if ( $request->get_param( 'wc_session_utc' ) ) {
 						$datetime = date_create( wp_date( 'Y-m-d\TH:i:s\Z', $value ) );
 						return $datetime->getTimestamp();
@@ -150,7 +180,7 @@ function register_session_post_meta() {
 			'show_in_rest'      => true,
 			'single'            => true,
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
-			'sanitize_callback' => function( $value ) {
+			'sanitize_callback' => function ( $value ) {
 				if ( 'custom' === $value ) {
 					return $value;
 				}
@@ -174,10 +204,15 @@ function register_session_post_meta() {
 			'show_in_rest'      => true,
 			'single'            => true,
 			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
-			'sanitize_callback' => function( $value ) {
-				if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( wp_parse_url( $value, PHP_URL_HOST ) ) ) ) {
-					return $value;
+			'sanitize_callback' => function ( $value ) {
+				if ( $value ) {
+					$host = wp_parse_url( $value, PHP_URL_HOST );
+
+					if ( 'wordpress.tv' === str_replace( 'www.', '', strtolower( $host ) ) ) {
+						return $value;
+					}
 				}
+
 				return '';
 			},
 		)
@@ -219,7 +254,7 @@ function register_organizer_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
+				'prepare_callback' => function ( $value, $request, $args ) {
 					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
 					if ( $user_id ) {
 						$wporg_user = get_userdata( $user_id );
@@ -230,7 +265,7 @@ function register_organizer_post_meta() {
 					return $value;
 				},
 			),
-			'sanitize_callback' => function( $value ) {
+			'sanitize_callback' => function ( $value ) {
 				$wporg_user = wcorg_get_user_by_canonical_names( $value );
 				if ( ! $wporg_user ) {
 					return '';
@@ -238,6 +273,21 @@ function register_organizer_post_meta() {
 				return $wporg_user->user_login;
 			},
 			'auth_callback' => __NAMESPACE__ . '\meta_auth_callback',
+		)
+	);
+	register_post_meta(
+		'wcb_organizer',
+		'_wcb_organizer_first_time',
+		array(
+			'type'              => 'string',
+			'show_in_rest'      => array(
+				'schema' => array(
+					'context' => array( 'edit' ),
+				),
+			),
+			'single'            => true,
+			'auth_callback'     => __NAMESPACE__ . '\meta_auth_callback',
+			'sanitize_callback' => __NAMESPACE__ . '\sanitize_first_time_value',
 		)
 	);
 }
@@ -268,7 +318,7 @@ function register_volunteer_post_meta() {
 			'type'              => 'string',
 			'single'            => true,
 			'show_in_rest' => array(
-				'prepare_callback' => function( $value, $request, $args ) {
+				'prepare_callback' => function ( $value, $request, $args ) {
 					$user_id = get_post_meta( get_the_ID(), '_wcpt_user_id', true );
 					if ( $user_id ) {
 						$wporg_user = get_userdata( $user_id );
@@ -279,7 +329,7 @@ function register_volunteer_post_meta() {
 					return $value;
 				},
 			),
-			'sanitize_callback' => function( $value ) {
+			'sanitize_callback' => function ( $value ) {
 				$wporg_user = wcorg_get_user_by_canonical_names( $value );
 				if ( ! $wporg_user ) {
 					return '';
@@ -350,7 +400,7 @@ function register_user_validation_route() {
 			'permission_callback' => '__return_true',
 			'args'                => array(
 				'username' => array(
-					'validate_callback' => function( $value ) {
+					'validate_callback' => function ( $value ) {
 						$wporg_user = wcorg_get_user_by_canonical_names( $value );
 						return (bool) $wporg_user;
 					},
@@ -457,7 +507,7 @@ function register_additional_rest_fields() {
 		'wcb_session',
 		'session_speakers',
 		array(
-			'get_callback' => function( $post ) {
+			'get_callback' => function ( $post ) {
 				$speaker_ids = get_post_meta( $post['id'], '_wcpt_speaker_id', false );
 				$speakers = array();
 
@@ -505,7 +555,7 @@ function register_additional_rest_fields() {
 		'wcb_session',
 		'session_cats_rendered',
 		array(
-			'get_callback' => function( $post ) {
+			'get_callback' => function ( $post ) {
 				$terms = get_terms( 'wcb_session_category', array( 'object_ids' => $post['id'] ) );
 				if ( $terms ) {
 					return implode( ', ', wp_list_pluck( $terms, 'name' ) );
@@ -562,6 +612,8 @@ function prepare_session_query_args( $args, $request ) {
 		$args['meta_key'] = '_wcpt_session_time';
 		$args['orderby']  = 'meta_value_num';
 	}
+
+	$args['post_status'] = array( 'publish', 'private' );
 
 	return $args;
 }
@@ -658,17 +710,17 @@ function register_fav_sessions_email() {
 			'args'                => array(
 				'email-address' => array(
 					'required'          => true,
-					'validate_callback' => function( $value, $request, $param ) {
+					'validate_callback' => function ( $value, $request, $param ) {
 						return is_email( $value );
 					},
-					'sanitize_callback' => function( $value, $request, $param ) {
+					'sanitize_callback' => function ( $value, $request, $param ) {
 						return sanitize_email( $value );
 					},
 				),
 
 				'session-list'  => array(
 					'required'          => true,
-					'validate_callback' => function( $value, $request, $param ) {
+					'validate_callback' => function ( $value, $request, $param ) {
 						$session_ids = explode( ',', $value );
 						$session_count = count( $session_ids );
 						for ( $i = 0; $i < $session_count; $i++ ) {
@@ -678,9 +730,30 @@ function register_fav_sessions_email() {
 						}
 						return true;
 					},
-					'sanitize_callback' => function( $value, $request, $param ) {
+					'sanitize_callback' => function ( $value, $request, $param ) {
 						$session_ids = explode( ',', $value );
 						return implode( ',', array_filter( $session_ids, 'is_numeric' ) );
+					},
+				),
+
+				'page-slug'     => array(
+					'required'          => true,
+					'validate_callback' => function ( $value, $request, $param ) {
+						$pages = get_posts( array(
+							'name'        => $value,
+							'post_type'   => 'page',
+							'post_status' => 'publish',
+							'fields'      => 'ids',
+						) );
+
+						if ( empty( $pages ) ) {
+							return false;
+						}
+
+						return true;
+					},
+					'sanitize_callback' => function ( $value, $request, $param ) {
+						return sanitize_title( $value );
 					},
 				),
 			),
@@ -769,4 +842,21 @@ function add_larger_avatar_sizes( $sizes ) {
 	$sizes[] = 512;
 
 	return $sizes;
+}
+
+/**
+ * Sanitize the 'first_time' meta value before storing it.
+ *
+ * @param string $value The unsanitized meta value.
+ *
+ * @return string The sanitized meta value.
+ */
+function sanitize_first_time_value( $value ) {
+	$allowed_values = array( 'yes', 'no', 'unsure' );
+
+	if ( in_array( $value, $allowed_values, true ) ) {
+		return $value;
+	} else {
+		return 'unsure';
+	}
 }

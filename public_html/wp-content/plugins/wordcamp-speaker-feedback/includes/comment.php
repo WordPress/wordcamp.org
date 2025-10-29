@@ -249,7 +249,12 @@ function get_feedback( array $post__in = array(), array $status = array( 'hold',
 	$comments = get_comments( $args );
 
 	// This makes loading meta values for comments much faster.
-	wp_queue_comments_for_comment_meta_lazyload( $comments );
+	if ( function_exists( 'wp_lazyload_comment_meta' ) ) {
+		$comment_ids = wp_list_pluck( $comments, 'comment_ID' );
+		wp_lazyload_comment_meta( $comment_ids );
+	} else {
+		wp_queue_comments_for_comment_meta_lazyload( $comments );
+	}
 
 	$comments = array_map( __NAMESPACE__ . '\get_feedback_comment', $comments );
 

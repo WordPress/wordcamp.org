@@ -100,6 +100,19 @@ class WordCamp_Loader extends Event_Loader {
 			'show_ui'               => true,
 			'can_export'            => true,
 			'capability_type'       => WCPT_POST_TYPE_ID,
+			'capabilities'          => array(
+				// `read` and `edit_posts` are intentionally allowed, so organizers can edit their own posts (but not others').
+				'create_posts'           => 'wordcamp_wrangle_wordcamps',
+				'delete_posts'           => 'wordcamp_wrangle_wordcamps',
+				'delete_others_posts'    => 'wordcamp_wrangle_wordcamps',
+				'delete_private_posts'   => 'wordcamp_wrangle_wordcamps',
+				'delete_published_posts' => 'wordcamp_wrangle_wordcamps',
+				'edit_others_posts'      => 'wordcamp_wrangle_wordcamps',
+				'edit_private_posts'     => 'wordcamp_wrangle_wordcamps',
+				'edit_published_posts'   => 'wordcamp_wrangle_wordcamps',
+				'publish_posts'          => 'wordcamp_wrangle_wordcamps',
+				'read_private_posts'     => 'wordcamp_wrangle_wordcamps',
+			),
 			'map_meta_cap'          => true,
 			'hierarchical'          => false,
 			'has_archive'           => true,
@@ -174,7 +187,6 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-needs-email'     => _x( 'Needs E-mail Address',                        'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-site'      => _x( 'Needs Site',                                  'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-polldaddy' => _x( 'Needs Crowdsignal Account',                   'wordcamp status', 'wordcamporg' ),
-			'wcpt-needs-mentor'    => _x( 'Needs Mentor',                                'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-pre-plann' => _x( 'Needs to be Added to Pre-Planning Schedule',  'wordcamp status', 'wordcamporg' ),
 			'wcpt-pre-planning'    => _x( 'In Pre-Planning',                             'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-budget-re' => _x( 'Needs Budget Review',                         'wordcamp status', 'wordcamporg' ),
@@ -224,7 +236,8 @@ class WordCamp_Loader extends Event_Loader {
 		return array_merge(
 			array( 'wcpt-needs-pre-plann' ),
 			self::get_pre_planning_post_statuses(),
-			self::get_public_post_statuses()
+			self::get_public_post_statuses(),
+			self::get_active_wordcamp_statuses()
 		);
 	}
 
@@ -240,7 +253,6 @@ class WordCamp_Loader extends Event_Loader {
 				'wcpt-needs-email',
 				'wcpt-needs-site',
 				'wcpt-needs-polldaddy',
-				'wcpt-needs-mentor',
 				'wcpt-needs-pre-plann',
 			),
 			self::get_pre_planning_post_statuses(),
@@ -303,7 +315,7 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	public static function get_valid_status_transitions( $status ) {
 		$transitions = array(
-			'wcpt-needs-vetting'   => array( 'wcpt-needs-orientati', 'wcpt-more-info-reque' ),
+			'wcpt-needs-vetting'   => array( 'wcpt-needs-orientati', 'wcpt-more-info-reque', 'wcpt-rejected' ),
 			'wcpt-needs-orientati' => array( 'wcpt-needs-vetting', 'wcpt-interview-sched' ),
 			'wcpt-more-info-reque' => array(),  // Allowed from any status, see below
 			'wcpt-interview-sched' => array( 'wcpt-needs-orientati', 'wcpt-approved-pre-pl' ),
@@ -312,9 +324,8 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-approved-pre-pl' => array( 'wcpt-interview-sched', 'wcpt-needs-email' ),
 			'wcpt-needs-email'     => array( 'wcpt-approved-pre-pl', 'wcpt-needs-site' ),
 			'wcpt-needs-site'      => array( 'wcpt-needs-email', 'wcpt-needs-polldaddy' ),
-			'wcpt-needs-polldaddy' => array( 'wcpt-needs-site', 'wcpt-needs-mentor' ),
-			'wcpt-needs-mentor'    => array( 'wcpt-needs-polldaddy', 'wcpt-needs-pre-plann' ),
-			'wcpt-needs-pre-plann' => array( 'wcpt-needs-mentor', 'wcpt-pre-planning' ),
+			'wcpt-needs-polldaddy' => array( 'wcpt-needs-site', 'wcpt-needs-pre-plann' ),
+			'wcpt-needs-pre-plann' => array( 'wcpt-needs-polldaddy', 'wcpt-pre-planning' ),
 			'wcpt-pre-planning'    => array( 'wcpt-needs-pre-plann', 'wcpt-needs-budget-re' ),
 			'wcpt-needs-budget-re' => array( 'wcpt-pre-planning', 'wcpt-budget-rev-sche' ),
 			'wcpt-budget-rev-sche' => array( 'wcpt-needs-budget-re', 'wcpt-needs-contract' ),
@@ -363,6 +374,7 @@ class WordCamp_Loader extends Event_Loader {
 			'Number of Anticipated Attendees',
 			'Organizer Name',
 			'WordPress.org Username',
+			'A/V Wrangler Name',
 			'Virtual event only',
 			'Host region',
 			'Venue Name',
@@ -371,6 +383,7 @@ class WordCamp_Loader extends Event_Loader {
 			'Available Rooms',
 			'Website URL',
 			'Exhibition Space Available',
+			'Hide from Event Feeds',
 		);
 
 		return array_merge(
@@ -405,31 +418,15 @@ class WordCamp_Loader extends Event_Loader {
 			array(
 				'schema'       => array(
 					'type'        => 'string',
-					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin.', 'wordcamporg' ),
+					'description' => __( 'The start time of the first session of WordCamp, when WordCamp content will begin. This is a true Unix timestamp in UTC, not local time.', 'wordcamporg' ),
 				),
 				'get_callback' => function( $object, $field_name ) {
 					// Short out if the event is not scheduled.
 					if ( 'wcpt-scheduled' !== $object['status'] ) {
 						return 0;
 					}
-					$site_id = get_post_meta( $object['id'], '_site_id', true );
-					switch_to_blog( $site_id );
-					$sessions = get_posts( array(
-						'post_type'      => 'wcb_session',
-						'posts_per_page' => 1,
-						'meta_key'       => '_wcpt_session_time',
-						'orderby'        => 'meta_value_num',
-						'order'          => 'asc',
-					) );
-					if ( count( $sessions ) < 1 ) {
-						restore_current_blog();
-						return 0;
-					}
-					$session = $sessions[0];
-					$value = absint( get_post_meta( $session->ID, '_wcpt_session_time', true ) );
 
-					restore_current_blog();
-					return $value;
+					return get_first_session_utc_start_time( $object['id'] );
 				},
 			)
 		);

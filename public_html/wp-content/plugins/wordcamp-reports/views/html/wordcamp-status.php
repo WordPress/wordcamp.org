@@ -38,7 +38,7 @@ use DateTime;
 	</table>
 
 	<?php foreach ( $active_camps as $active_camp ) : ?>
-		<p><strong class="active-camp"><?php echo esc_html( $active_camp['name'] ); ?></strong> &ndash; <?php echo esc_html( $statuses[ $active_camp['latest_status'] ] ); ?></p>
+		<p><strong class="active-camp"><?php echo esc_html( $active_camp['name'] ); ?></strong> &ndash; <?php echo esc_html( $statuses[ $active_camp['latest_status'] ] ?? '' ); ?></p>
 		<ul class="status-log ul-disc">
 			<?php foreach ( $active_camp['logs'] as $log ) : ?>
 				<li><?php

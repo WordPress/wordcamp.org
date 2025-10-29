@@ -106,11 +106,11 @@ function create_event_status_attachment( $message, $event_id, $title ) {
 function get_props_for_event( $event_id ) {
 	$user_ids = array();
 
-	$status_change_logs = get_post_meta( $event_id, '_status_change' ) ?? array();
+	$status_change_logs = get_post_meta( $event_id, '_status_change' );
 
 	$user_ids = array_merge( $user_ids, wp_list_pluck( $status_change_logs, 'user_id' ) );
 
-	$notes = get_post_meta( $event_id, '_note' ) ?? array();
+	$notes = get_post_meta( $event_id, '_note' );
 
 	$user_ids = array_merge( $user_ids, wp_list_pluck( $notes, 'user_id' ) );
 
@@ -137,6 +137,7 @@ function get_user_nicenames_from_ids( $user_ids ) {
 
 	$user_query = new WP_User_Query(
 		array(
+			'blog_id' => 0, // All sites, see https://core.trac.wordpress.org/ticket/38851.
 			'include' => $user_ids,
 			'fields'  => array( 'user_nicename' ),
 		)

@@ -42,7 +42,7 @@ function render_cookie_banner() {
 	global $wp_widget_factory;
 
 	/** @var Jetpack_EU_Cookie_Law_Widget $cookie_law_widget */
-	$cookie_law_widget = $wp_widget_factory->widgets['Jetpack_EU_Cookie_Law_Widget'];
+	$cookie_law_widget = $wp_widget_factory->widgets['Jetpack_EU_Cookie_Law_Widget'] ?? false;
 
 	if ( ! is_callable( array( $cookie_law_widget, 'enqueue_frontend_scripts' ) ) ) {
 		Logger\log( 'cookie_law_widget_missing' );

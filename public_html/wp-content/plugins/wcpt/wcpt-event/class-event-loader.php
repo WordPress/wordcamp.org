@@ -17,6 +17,9 @@ abstract class Event_Loader {
 		add_action( 'plugins_loaded', array( $this, 'includes' ) );
 		add_action( 'init', array( $this, 'register_post_types' ) );
 		add_action( 'init', array( $this, 'register_post_statuses' ) );
+		// Re-register them when the locale changes, to have localised statuses.
+		add_action( 'change_locale', array( $this, 'register_post_types' ) );
+		add_action( 'change_locale', array( $this, 'register_post_statuses' ) );
 		add_filter( 'pre_get_posts', array( $this, 'query_public_statuses_on_archives' ) );
 		add_filter( 'cron_schedules', array( $this, 'add_weekly_cron_interval' ) );
 	}

@@ -423,9 +423,9 @@ class Client {
 			// The `getRefreshTokenExpiresAt` doc block says it returns an integer, but it's actually a
 			// formatted date string.
 			$token   = $this->get_current_token();
-			$expires = strtotime( $token->getRefreshTokenExpiresAt() );
 
-			return human_time_diff( time(), $expires );
+			// return in timestamp format, so we monitor and output it.
+			return strtotime( $token->getRefreshTokenExpiresAt() );
 		} catch ( Exception | SdkException $exception ) {
 			$this->add_error_from_exception( $exception );
 

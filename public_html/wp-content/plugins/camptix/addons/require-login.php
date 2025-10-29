@@ -13,16 +13,13 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * Register hook callbacks
 	 */
 	public function __construct() {
-		// Registration Information front-end screen
-		add_filter( 'camptix_register_button_classes',                array( $this, 'hide_register_form_elements' ) );
-		add_filter( 'camptix_coupon_link_classes',                    array( $this, 'hide_register_form_elements' ) );
-		add_filter( 'camptix_quantity_row_classes',                   array( $this, 'hide_register_form_elements' ) );
+		// Registration Information front-end screen.
 		add_action( 'camptix_notices',                                array( $this, 'ticket_form_message' ), 8 );
 		add_filter( 'camptix_ask_questions',                          array( $this, 'hide_additional_attendee_questions_during_checkout' ), 10, 5 );
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'add_username_to_attendee_object' ), 10, 3 );
 		add_action( 'camptix_checkout_update_post_meta',              array( $this, 'save_checkout_username_meta' ), 10, 2 );
 		add_action( 'transition_post_status',                         array( $this, 'buyer_completed_registration' ), 10, 3 );
-		add_filter( 'camptix_email_tickets_template',                 array( $this, 'use_custom_email_templates' ), 10, 2 );
+		add_filter( 'camptix_email_tickets_template',                 array( $this, 'use_custom_email_templates' ), 5, 2 );
 		add_filter( 'camptix_get_attendee_email',                     array( $this, 'redirect_unknown_attendee_emails_to_buyer' ), 10, 2 );
 		add_action( 'camptix_attendee_form_before_input',             array( $this, 'inject_unknown_attendee_checkbox' ), 10, 3 );
 		add_filter( 'camptix_checkout_attendee_info',                 array( $this, 'add_unknown_attendee_info_stubs' ) );
@@ -35,7 +32,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_filter( 'camptix_attendee_report_extra_columns',          array( $this, 'get_attendee_report_extra_columns' ) );
 		add_filter( 'camptix_metabox_attendee_info_additional_rows',  array( $this, 'get_attendee_metabox_rows' ), 10, 2 );
 		add_filter( 'camptix_custom_email_templates',                 array( $this, 'register_custom_email_templates' ) );
-		add_filter( 'camptix_default_options',                        array( $this, 'custom_email_template_default_values' ) );
+		add_filter( 'camptix_options',                                array( $this, 'custom_email_template_option_values' ), 5 );
 
 		// Attendee Information front-end screen
 		add_action( 'camptix_form_edit_attendee_custom_error_flags',  array( $this, 'require_unique_usernames' ) );
@@ -59,11 +56,91 @@ class CampTix_Require_Login extends CampTix_Addon {
 	public function block_unauthenticated_actions() {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
+		// Continue normal request, this is not a tickets page.
+		if ( ! isset( $_REQUEST['tix_action'] ) ) {
+			return;
+		}
 
-		if ( ! is_user_logged_in() && isset( $_REQUEST['tix_action'] ) ) {
-			wp_safe_redirect( wp_login_url( add_query_arg( $_REQUEST, $camptix->get_tickets_url() ) ) );
+		// Bypass for payment webhook notifications.
+		if ( 'payment_notify' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_payment_token'] ) ) {
+			return;
+		}
+
+		// Bypass for coupon validation- the `tix_coupon_submit` value is set when "Apply Coupon" button is clicked.
+		if ( 'attendee_info' === $_REQUEST['tix_action'] && isset( $_REQUEST['tix_coupon'], $_REQUEST['tix_coupon_submit'] ) ) {
+			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+
+			// Temporary: We don't want to block users from editing tickets unless they are unconfirmed.
+			// See: https://github.com/WordPress/wordcamp.org/issues/1393.
+			// See: https://github.com/WordPress/wordcamp.org/issues/1420.
+			if ( $this->user_is_editing_ticket() && ! $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ?? null ) ) {
+				return;
+			}
+
+			$args = $this->get_sanitized_tix_parameters( $_REQUEST );
+			$tickets_url = add_query_arg( urlencode_deep( $args ), $camptix->get_tickets_url() );
+
+			wp_safe_redirect( add_query_arg( 'wcname', urlencode( get_bloginfo( 'name' ) ), wp_login_url( $tickets_url ) ) );
 			exit();
 		}
+	}
+
+	/**
+	 * Get sanitized ticket parameters from request array.
+	 *
+	 * @param array $request_data Array of request data to sanitize.
+	 * @return array Sanitized parameters.
+	 */
+	private function get_sanitized_tix_parameters( array $request_data ): array {
+		$allowed_parameters = array(
+			'tix_action'                 => 'text',
+			'tix_tickets_selected'       => 'array_int',
+			'tix_errors'                 => 'array_str',
+			'tix_coupon'                 => 'text',
+			'tix_attendee_id'            => 'int',
+			'tix_edit_token'             => 'text',
+			'tix_access_token'           => 'text',
+			'tix_reservation_id'         => 'text',
+			'tix_reservation_token'      => 'text',
+			'tix_single_ticket_purchase' => 'text',
+		);
+
+		$args = array();
+		foreach ( $allowed_parameters as $key => $type ) {
+			if ( isset( $request_data[ $key ] ) ) {
+				switch ( $type ) {
+					case 'array_int':
+						if ( is_array( $request_data[ $key ] ) ) {
+							$args[ $key ] = array_map( 'absint', $request_data[ $key ] );
+						} else {
+							$args[ $key ] = array( absint( $request_data[ $key ] ) );
+						}
+						break;
+
+					case 'array_str':
+						if ( is_array( $request_data[ $key ] ) ) {
+							$args[ $key ] = array_map( 'sanitize_text_field', $request_data[ $key ] );
+						} else {
+							$args[ $key ] = array( sanitize_text_field( $request_data[ $key ] ) );
+						}
+						break;
+
+					case 'int':
+						$args[ $key ] = absint( $request_data[ $key ] );
+						break;
+
+					case 'text':
+					default:
+						$args[ $key ] = sanitize_text_field( $request_data[ $key ] );
+						break;
+				}
+			}
+		}
+
+		return $args;
 	}
 
 	/**
@@ -98,12 +175,12 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		// Warn users that they will need to login to purchase a ticket
-		if ( ! is_user_logged_in() ) {
+		if ( ! is_user_logged_in() && $camptix->has_tickets_available() && ! $this->user_is_editing_ticket() ) {
 			$camptix->notice( apply_filters(
 				'camptix_require_login_please_login_message',
 				sprintf(
 					__( 'Please <a href="%1$s">log in</a> or <a href="%2$s">create an account</a> to purchase your tickets.', 'wordcamporg' ),
-					wp_login_url( add_query_arg( $_REQUEST, $this->get_redirect_return_url() ) ),
+					wp_login_url( add_query_arg( urlencode_deep( $_REQUEST ), $this->get_redirect_return_url() ) ),
 					wp_registration_url()
 				)
 			) );
@@ -123,7 +200,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		// Ask the attendee to confirm their registration
-		if ( isset( $_REQUEST['tix_action'] ) && 'edit_attendee' == $_REQUEST['tix_action'] && self::UNCONFIRMED_USERNAME == get_post_meta( $_REQUEST['tix_attendee_id'], 'tix_username', true ) ) {
+		if ( $this->user_is_editing_ticket() && $this->user_must_confirm_ticket( $_REQUEST['tix_attendee_id'] ?? null ) ) {
 			$tickets_selected = array( get_post_meta( $_REQUEST['tix_attendee_id'], 'tix_ticket_id', true ) => 1 );  // mimic $_REQUEST['tix_tickets_selected']
 
 			if ( $this->tickets_have_questions( $tickets_selected ) ) {
@@ -378,10 +455,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 *
 	 * @return array
 	 */
-	public function custom_email_template_default_values( $options ) {
-		$options['email_template_multiple_purchase_receipt_unconfirmed_attendees'] = __( "Hi there!\n\nYou have purchased the following tickets:\n\n[receipt]\n\nYou can view and edit your order at any time before the event, by visiting the following link:\n\n[ticket_url]\n\nThe other attendees that you purchased tickets for will need to confirm their registration by visiting a link that was sent to them by e-mail.\n\nLet us know if you have any questions!", 'wordcamporg' );
-		$options['email_template_multiple_purchase_unconfirmed_attendee']          = __( "Hi there!\n\nA ticket to [event_name] has been purchased for you by [buyer_full_name].\n\nPlease visit the following page and fill in your information to complete your registration:\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
-		$options['email_template_multiple_purchase_unknown_attendee']              = __( "Hi there!\n\nThis e-mail is for the unknown attendee that you purchased a ticket for. When you decide who will be using the ticket, please forward the link below to them so that they can complete their registration.\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
+	public function custom_email_template_option_values( $options ) {
+		$options['email_template_multiple_purchase_receipt_unconfirmed_attendees'] ??= __( "Hi there!\n\nYou have purchased the following tickets:\n\n[receipt]\n\nYou can view and edit your order at any time before the event, by visiting the following link:\n\n[ticket_url]\n\nThe other attendees that you purchased tickets for will need to confirm their registration by visiting a link that was sent to them by e-mail.\n\nLet us know if you have any questions!", 'wordcamporg' );
+		$options['email_template_multiple_purchase_unconfirmed_attendee']          ??= __( "Hi there!\n\nA ticket to [event_name] has been purchased for you by [buyer_full_name].\n\nPlease visit the following page and fill in your information to complete your registration:\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
+		$options['email_template_multiple_purchase_unknown_attendee']              ??= __( "Hi there!\n\nThis e-mail is for the unknown attendee that you purchased a ticket for. When you decide who will be using the ticket, please forward the link below to them so that they can complete their registration.\n\n[ticket_url]\n\nLet us know if you have any questions!", 'wordcamporg' );
 
 		return $options;
 	}
@@ -405,7 +482,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 				if ( $unknown_attendee_info['email'] == get_post_meta( $attendee->ID, 'tix_email', true ) ) {
 					$template = 'email_template_multiple_purchase_unknown_attendee';
-				} elseif ( self::UNCONFIRMED_USERNAME == get_post_meta( $attendee->ID, 'tix_username', true ) ) {
+				} elseif ( $this->user_must_confirm_ticket( $attendee->ID ) ) {
 					$template = 'email_template_multiple_purchase_unconfirmed_attendee';
 				}
 
@@ -448,7 +525,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 		global $camptix;
 
 		// This first attendee can't be unknown
-		if ( empty( $form_data['tix_tickets_selected'] ) || $this->current_row_is_buyer( $form_data['tix_tickets_selected'], $ticket, $i ) ) {
+		if ( $this->current_row_is_buyer( $form_data['tix_tickets_selected'] ?? [], $ticket, $i ) ) {
 			return;
 		}
 
@@ -532,31 +609,78 @@ class CampTix_Require_Login extends CampTix_Addon {
 	}
 
 	/**
-	 * Show the buyer the status of other tickets instead of an 'Edit Information' link.
+	 * Show the buyer the status of the ticket, and a login link, instead of an 'Edit Information' link.
 	 *
 	 * The buyer is no longer responsible for editing attendee info, but they are responsible
 	 * for ensuring that the unknown/unconfirmed attendees complete registration.
 	 *
-	 * @param string $content
+	 * @param string  $edit_link_html
 	 * @param WP_Post $attendee
 	 *
 	 * @return string
 	 */
-	public function show_buyer_attendee_status_instead_of_edit_link( $content, $attendee ) {
+	public function show_buyer_attendee_status_instead_of_edit_link( $edit_link_html, $attendee ) {
+		global $camptix;
+
 		$current_user          = wp_get_current_user();
 		$attendee_username     = get_post_meta( $attendee->ID, 'tix_username', true );
 		$unknown_attendee_info = $this->get_unknown_attendee_info();
+		$is_unknown_attendee   = ( get_post_meta( $attendee->ID, 'tix_email', true ) == $unknown_attendee_info['email'] );
 
-		if ( $attendee_username != $current_user->user_login ) {
-			$content = 'Status: ';
+		// Display the ticket status.
+		if ( $is_unknown_attendee ) {
+			$content = _x( 'Status: Unknown', 'WordCamp ticket status.', 'wordcamporg' );
+		} elseif ( self::UNCONFIRMED_USERNAME == $attendee_username ) {
+			$content = _x( 'Status: Unconfirmed', 'WordCamp ticket status.', 'wordcamporg' );
+		} else {
+			$content = _x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
+		}
+		// Use a non-breaking space to prevent the text from wrapping.
+		$content = str_replace( ' ', '&nbsp;', $content );
 
-			if ( get_post_meta( $attendee->ID, 'tix_email', true ) == $unknown_attendee_info['email'] ) {
-				$content .= 'Unknown';
-			} elseif ( self::UNCONFIRMED_USERNAME == $attendee_username ) {
-				$content .= 'Unconfirmed';
-			} else {
-				$content .= 'Confirmed';
-			}
+		// Redirect back to this same overview, as they may not login with the correct username.
+		$args        = $this->get_sanitized_tix_parameters( $_REQUEST );
+		$tickets_url = add_query_arg( urlencode_deep( $args ), $camptix->get_tickets_url() );
+		$login_link  = wp_login_url( $tickets_url );
+
+		// If the ticket owner is known, add a hint to the url to prefill the login form.
+		if ( self::UNCONFIRMED_USERNAME != $attendee_username ) {
+			$login_link = add_query_arg( 'user', urlencode( $attendee_username ), $login_link );
+		}
+
+		// If the user is currently logged in, they'll need to logout first to login.
+		if ( is_user_logged_in() ) {
+			$login_link = wp_logout_url( $login_link );
+		}
+
+		// Several states:
+		// 1. The ticket is assigned to someone, but they are not logged in.
+		// 2. The ticket is assigned to someone other than the current user.
+		// 3. The ticket is assigned to no-one, but the current user has a ticket already. DO NOTHING.
+		// 4. The ticket is assigned to no-one, but the current user is not logged in.
+		// 5. The ticket is assigned to no-one, and the current user does not have a ticket (They can claim it)
+		// 6. The ticket is assigned to the current user.
+
+		$current_user_ticket  = ( $current_user->user_login == $attendee_username );
+		$assigned_to_someone  = ( self::UNCONFIRMED_USERNAME != $attendee_username );
+		$assigned_to_no_one   = ( ( self::UNCONFIRMED_USERNAME == $attendee_username ) || $is_unknown_attendee );
+		$this_user_has_ticket = is_user_logged_in() && ! $current_user_ticket && $this->get_ticket_of_user( $current_user );
+		$login_to_claim       = $assigned_to_no_one && ! is_user_logged_in();
+		$can_claim_ticket     = $assigned_to_no_one && is_user_logged_in() && ! $this_user_has_ticket;
+
+		// 1 & 2 - Login to edit this ticeket.
+		if ( $assigned_to_someone && ! $current_user_ticket ) {
+			$content .= '<br><a href="' . esc_url( $login_link ) . '">' . sprintf( __( 'Login as %s to edit information', 'wordcamporg' ), esc_html( $attendee_username ) ) . '</a>';
+
+			// 3 - NOOP, user already has a different ticket.
+			// 4 - Login to claim
+		} elseif ( $login_to_claim ) {
+			$content .= '<br><a href="' . esc_url( $login_link ) . '">' . __( 'Login to edit information', 'wordcamporg' ) . '</a>';
+
+			// 5 - Claim the ticket, since you don't have one.
+			// 6 - Current user owns ticket, edit away.
+		} elseif ( $can_claim_ticket || $current_user_ticket ) {
+			$content .= '<br>' . $edit_link_html;
 		}
 
 		return $content;
@@ -621,13 +745,21 @@ class CampTix_Require_Login extends CampTix_Addon {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
+		// Check to see if user is a WordCamp admin, and if so, allow them to edit any attendee.
+		if ( current_user_can( 'edit_post', $attendee->ID ) ) {
+			return;
+		}
+
 		$current_user = wp_get_current_user();
 		$confirmed_usernames = $this->get_confirmed_usernames(
 			get_post_meta( $attendee->ID, 'tix_ticket_id', true ),
 			get_post_meta( $attendee->ID, 'tix_payment_token', true )
 		);
 
-		if ( $current_user->user_login != get_post_meta( $attendee->ID, 'tix_username', true ) && in_array( $current_user->user_login, $confirmed_usernames ) ) {
+		if (
+			get_post_meta( $attendee->ID, 'tix_username', true ) != $current_user->user_login &&
+			in_array( $current_user->user_login, $confirmed_usernames )
+		) {
 			$camptix->error_flag( 'require_login_edit_attendee_duplicate_username' );
 			$camptix->redirect_with_error_flags();
 		}
@@ -706,7 +838,19 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$current_user = wp_get_current_user();
 		$old_username = get_post_meta( $attendee->ID, 'tix_username', true );
 
-		if ( self::UNCONFIRMED_USERNAME != $old_username && $old_username != $current_user->user_login && current_user_can( 'manage_options' ) ) {
+		// If no changes, or no username known, nothing to do.
+		if (
+			$old_username === $current_user->user_login ||
+			! $current_user->user_login
+		) {
+			return;
+		}
+
+		// If the user is an admin, don't even attempt to sync the username UNLESS the email matches.
+		if (
+			current_user_can( 'edit_post', $attendee->ID ) &&
+			$new_ticket_info['email'] != $current_user->user_email
+		) {
 			return;
 		}
 
@@ -730,7 +874,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return string
 	 */
 	public function rename_save_attendee_info_label( $label, $attendee, $ticket, $questions ) {
-		if ( self::UNCONFIRMED_USERNAME == get_post_meta( $attendee->ID, 'tix_username', true ) ) {
+		if ( $this->user_must_confirm_ticket( $attendee->ID ) ) {
 			$label = __( 'Confirm Registration', 'wordcamporg' );
 		}
 
@@ -771,9 +915,16 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function hide_unconfirmed_attendees( $query_args ) {
 		$meta_query = array(
-			'key'     => 'tix_username',
-			'value'   => self::UNCONFIRMED_USERNAME,
-			'compare' => '!='
+			array(
+				'key'     => 'tix_username',
+				'value'   => self::UNCONFIRMED_USERNAME,
+				'compare' => '!=',
+			),
+			'relation' => 'OR',
+			array(
+				'key' => 'tix_username',
+				'compare' => 'NOT EXISTS',
+			)
 		);
 
 		if ( isset( $query_args['meta_query'] ) ) {
@@ -799,6 +950,53 @@ class CampTix_Require_Login extends CampTix_Addon {
 		);
 
 		return $parameters;
+	}
+
+	/**
+	 * Checks if the user is performing actions that require ticket access.
+	 *
+	 * @return bool True if the user is editing or accessing a ticket, false otherwise.
+	 */
+	protected function user_is_editing_ticket() {
+		return isset( $_REQUEST['tix_action'] ) && in_array( $_REQUEST['tix_action'], array( 'access_tickets', 'edit_attendee' ) );
+	}
+
+	/**
+	 * Checks if the user associated with the given attendee ID must confirm their ticket.
+	 * Unconfirmed tickets exist when one user purchases multiple tickets.
+	 *
+	 * @param int $attendee_id The ID of the attendee. If null or invalid, the function returns false.
+	 *
+	 * @return bool True if the attendee must confirm their ticket, false otherwise.
+	 */
+	protected function user_must_confirm_ticket( $attendee_id ) {
+		return isset( $attendee_id ) && self::UNCONFIRMED_USERNAME == get_post_meta( $attendee_id, 'tix_username', true );
+	}
+
+	/**
+	 * Retrieve the ticket associated with the given user.
+	 *
+	 * @param WP_User $user The user object for whom to retrieve the ticket.
+	 * @return bool|WP_Post The ticket post object if found, false otherwise.
+	 */
+	protected function get_ticket_of_user( WP_User $user ) {
+		if ( empty( $user->user_login ) ) {
+			return false;
+		}
+
+		$ticket = get_posts( array(
+			'posts_per_page' => 1,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'meta_query'     => array(
+				array(
+					'key'   => 'tix_username',
+					'value' => $user->user_login,
+				),
+			),
+		) );
+
+		return $ticket ? reset( $ticket ) : false;
 	}
 } // CampTix_Require_Login
 

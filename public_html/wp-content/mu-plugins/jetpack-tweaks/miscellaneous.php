@@ -2,12 +2,11 @@
 
 namespace WordCamp\Jetpack_Tweaks;
 use WP_Service_Worker_Caching_Routes, WP_Service_Worker_Scripts;
-use Grunion_Contact_Form;
 
 defined( 'WPINC' ) || die();
 
 // Allow Photon to fetch images that are served via HTTPS.
-add_filter( 'jetpack_photon_reject_https',    '__return_false' );
+add_filter( 'jetpack_photon_reject_https', '__return_false' );
 
 /**
  * Filter the post types Jetpack has access to, and can synchronize with WordPress.com.
@@ -191,93 +190,22 @@ function workaround_is_frontend( $is_frontend ) {
 add_filter( 'jetpack_is_frontend', __NAMESPACE__ . '\workaround_is_frontend' );
 
 /**
- * Filter the contact form HTML to replace the wrapper with a fieldset & legend
- * for radio & multi-checkbox fields. This is necessary for screen reader users
- * to understand the form questions.
+ * Extra processing to check if contact form submissions are spam.
  *
- * The single checkbox field is okay as-is.
+ * @param bool  $is_spam The spam flag.
+ * @param array $form Form values formatted for Akismet.
  *
- * Upstream issue: https://github.com/Automattic/jetpack/issues/16685.
- * When that is fixed, this & `inject_css_for_fieldset` can be removed.
- *
- * @param string   $rendered_field Contact Form HTML output.
- * @param string   $field_label    Field label.
- * @param int|null $post_id        Post ID.
+ * @return bool
  */
-function wrap_checkbox_radio_fieldset( $rendered_field, $field_label, $post_id ) {
-	// Get the current form style, if it's anything other than default, return early.
-	$class_name = Grunion_Contact_Form::$current_form->get_attribute( 'className' );
-	preg_match( '/is-style-([^\s]+)/i', $class_name, $matches );
-	$style = count( $matches ) >= 2 ? $matches[1] : 'default';
-	if ( 'default' !== $style ) {
-		return $rendered_field;
+function extra_spam_checks( $is_spam, $form ) {
+	// Already found to be spam, short circuit.
+	if ( $is_spam ) {
+		return $is_spam;
 	}
 
-	if (
-		str_contains( $rendered_field, 'grunion-checkbox-multiple-options' ) ||
-		str_contains( $rendered_field, 'grunion-radio-options' )
-	) {
-		// remove any whitespace so the offsets below work.
-		$rendered_field = trim( $rendered_field );
-		// replace wrapper div.
-		$rendered_field = substr_replace( $rendered_field, '<fieldset ', 0, 5 );
-		$rendered_field = substr_replace( $rendered_field, '</fieldset> ', -6, 6 );
-		// replace only the first label, others are for the options.
-		$rendered_field = preg_replace( '/<label/', '<legend', $rendered_field, 1);
-		$rendered_field = preg_replace( '/<\/label>/', '</legend>', $rendered_field, 1);
-		// Pull out the legend text so we can create a separate visual element.
-		// See https://adrianroselli.com/2022/07/use-legend-and-fieldset.html.
-		if ( preg_match( '/<legend[^>]*>(.*)<\/legend>/i', $rendered_field, $matches ) ) {
-			$visible_label = sprintf(
-				'<div class="grunion-field-label" aria-hidden="true">%s</div>',
-				$matches[1]
-			);
-			$rendered_field = str_replace( $matches[0], $matches[0] . $visible_label, $rendered_field );
-		}
-	}
-	return $rendered_field;
+	// Check if the comment is only an email.
+	$email = isset( $form['comment_author_email'] ) ? $form['comment_author_email'] : '';
+	$msg = isset( $form['comment_content'] ) ? $form['comment_content'] : '';
+	return trim( $email ) === trim( $msg );
 }
-add_filter( 'grunion_contact_form_field_html', __NAMESPACE__ . '\wrap_checkbox_radio_fieldset', 10, 3 );
-
-/**
- * Add styles for the injected fieldset & legend.
- *
- * This resets the spacing around the fieldset, and styles the legend to match the label.
- *
- * See https://github.com/Automattic/jetpack/blob/trunk/projects/plugins/jetpack/modules/contact-form/css/grunion.css.
- */
-function inject_css_for_fieldset() {
-	$form_css = <<<CSS
-:where(.contact-form) fieldset {
-	border: none;
-	padding: 0;
-}
-:where(.contact-form) legend {
-	position: absolute;
-	overflow: hidden;
-	clip: rect(0 0 0 0); 
-	clip-path: inset(50%);
-	width: 1px;
-	height: 1px;
-	white-space: nowrap; 
-}
-.grunion-field-label {
-	margin-bottom: 0.25em;
-	float: none;
-	font-weight: bold;
-	display: block;
-}
-.grunion-field-label span {
-	font-size: 85%;
-	margin-left: 0.25em;
-	font-weight: normal;
-	opacity: 0.45;
-}
-CSS;
-
-	wp_add_inline_style( 'grunion.css', $form_css );
-}
-add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\inject_css_for_fieldset' );
-
-// Default forms in Jetpack got switched in 12.2, and the fix for accessibility (wrap_checkbox_radio_fieldset) breaks when upgrading: to 12.2+.
-add_filter( 'jetpack_contact_form_use_package', '__return_false' );
+add_filter( 'jetpack_contact_form_is_spam', __NAMESPACE__ . '\extra_spam_checks', 10, 2 );

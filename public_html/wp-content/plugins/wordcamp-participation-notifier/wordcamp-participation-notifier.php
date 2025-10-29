@@ -177,7 +177,13 @@ class WordCamp_Participation_Notifier {
 		$published_activity_key = $this->get_published_activity_key( $post );
 
 		if ( ! get_user_meta( $user_id, $published_activity_key ) ) {
-			Profiles\api( $this->get_post_activity_payload( $post, $user_id, $activity_type ) );
+			$payload = $this->get_post_activity_payload( $post, $user_id, $activity_type );
+
+			if ( ! $payload ) {
+				return;
+			}
+
+			Profiles\api( $payload );
 			update_user_meta( $user_id, $published_activity_key, true );
 		}
 	}

@@ -15,7 +15,7 @@
 		<?php endforeach; ?>
 	<?php else : ?>
 		<option value="<?php echo esc_attr( $selected_region ); ?>" selected>
-			<?php echo esc_html( get_term( $selected_region, MES_Region::TAXONOMY_SLUG )->name ); ?>
+			<?php echo esc_html( get_term( $selected_region, MES_Region::TAXONOMY_SLUG )->name ?? '' ); ?>
 		</option>
 	<?php endif; ?>
 </select>

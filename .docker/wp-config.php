@@ -42,14 +42,25 @@ const WORDCAMP_NETWORK_ID   = 1;
 const WORDCAMP_ROOT_BLOG_ID = 5;
 const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
+const CAMPUS_NETWORK_ID     = 3;
+const CAMPUS_ROOT_BLOG_ID   = 47;
 
-switch ( $_SERVER['HTTP_HOST'] ) {
+switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
+	case 'campus.wordpress.test':
+		define( 'SITE_ID_CURRENT_SITE',  CAMPUS_NETWORK_ID );
+		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
+		define( 'DOMAIN_CURRENT_SITE',   'campus.wordpress.test' );
+		define( 'SUBDOMAIN_INSTALL',     false );
+		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test/campusconnect/' );
+		define( 'CLI_HOSTNAME_OVERRIDE', 'campus.wordpress.test' );
+		break;
+
 	case 'events.wordpress.test':
 		define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
 		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
 		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
 		define( 'SUBDOMAIN_INSTALL',     false );
-		define( 'NOBLOGREDIRECT',        'https://events.wordpress.test' );
+		// NOBLOGREDIRECT is intentionally omitted so that the 404 template works.
 		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
 		break;
 
@@ -89,14 +100,15 @@ define( 'JETPACK_DEV_DEBUG', true );
  * environments, because generating the keys locally is safer than using the API (and exposing the keys to
  * your OS/browser if you copy/paste, etc).
  */
-define( 'AUTH_KEY',         'put your unique phrase here' );
-define( 'SECURE_AUTH_KEY',  'put your unique phrase here' );
-define( 'LOGGED_IN_KEY',    'put your unique phrase here' );
-define( 'NONCE_KEY',        'put your unique phrase here' );
-define( 'AUTH_SALT',        'put your unique phrase here' );
-define( 'SECURE_AUTH_SALT', 'put your unique phrase here' );
-define( 'LOGGED_IN_SALT',   'put your unique phrase here' );
-define( 'NONCE_SALT',       'put your unique phrase here' );
+define( 'AUTH_KEY',                          'put your unique phrase here' );
+define( 'SECURE_AUTH_KEY',                   'put your unique phrase here' );
+define( 'LOGGED_IN_KEY',                     'put your unique phrase here' );
+define( 'NONCE_KEY',                         'put your unique phrase here' );
+define( 'AUTH_SALT',                         'put your unique phrase here' );
+define( 'SECURE_AUTH_SALT',                  'put your unique phrase here' );
+define( 'LOGGED_IN_SALT',                    'put your unique phrase here' );
+define( 'NONCE_SALT',                        'put your unique phrase here' );
+define( 'ORGANIZER_SURVEY_ACCESS_TOKEN_KEY', 'put your unique phrase here' );
 
 
 /*
@@ -119,9 +131,18 @@ define( 'EMAIL_DEVELOPER_NOTIFICATIONS', 'developers@example.test' );
 define( 'EMAIL_CENTRAL_SUPPORT',         'support@wordcamp.test' );
 
 $trusted_deputies = array(
-	3, // role-tester.
+	6, // contributorrole.
 );
 
+$wcorg_subroles = array(
+	// contributorrole.
+	6 => array(
+		'wordcamp_wrangler',
+		'meetup_wrangler',
+		'mentor_manager',
+		'report_viewer',
+	),
+);
 
 /*
  * Third party services
@@ -168,6 +189,7 @@ define( 'WORDCAMP_PAYMENT_STRIPE_SECRET',           '' );
 define( 'WORDCAMP_PAYMENT_STRIPE_PUBLISHABLE_LIVE', '' );
 define( 'WORDCAMP_PAYMENT_STRIPE_SECRET_LIVE',      '' );
 
+define( 'WORDCAMP_PROD_GOOGLE_MAPS_API_KEY', '' );
 define( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY', '' );
 
 define( 'MEETUP_API_BASE_URL', 'https://api.meetup.com/' );

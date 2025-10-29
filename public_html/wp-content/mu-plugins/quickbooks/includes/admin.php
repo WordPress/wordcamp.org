@@ -161,8 +161,10 @@ function allow_intuit_domain_redirect( $allowed_domains, $domain ) {
 function maybe_show_disconnection_warning() {
 	global $pagenow, $plugin_page;
 
+	// Most contributors won't need to connect to QBO, or be able to. It's very important to warn on production,
+	// though.
 	if (
-		! current_user_can( OAUTH_CAP )
+		'local' === wp_get_environment_type()
 		|| 'settings_page_quickbooks' === get_plugin_page_hook( $plugin_page, $pagenow )
 	) {
 		return;
@@ -178,7 +180,7 @@ function maybe_show_disconnection_warning() {
 		$client->error->add(
 			'disconnected',
 			sprintf(
-				'WordCamp is disconnected from QuickBooks. <a href="%s">Learn more.</a>',
+				'WordCamp is disconnected from QuickBooks. Please ask a developer to <a href="%s">connect it.</a>',
 				esc_url( add_query_arg( 'page', 'quickbooks', network_admin_url( 'settings.php' ) ) )
 			)
 		);

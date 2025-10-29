@@ -284,6 +284,15 @@ class Ticket_Revenue extends Date_Range {
 		$query  = $wpdb->prepare( $sql, $where_values );
 		$events = $wpdb->get_results( $query, ARRAY_A );
 
+		// Some sites that have past log entries may have been deleted. That shouldn't happen often in production,
+		// but it can be common in local environments.
+		$events = array_filter(
+			$events,
+			function ( $event ) {
+				return (bool) get_site( $event['blog_id'] );
+			}
+		);
+
 		return $events;
 	}
 
@@ -411,11 +420,14 @@ class Ticket_Revenue extends Date_Range {
 				) );
 			}
 
-			if ( ! in_array( $currency, $currencies, true ) ) {
+			if ( ! isset( $data_groups[ $method ]['gross_revenue_by_currency'][ $currency ] ) ) {
 				$data_groups[ $method ]['gross_revenue_by_currency'][ $currency ]   = 0;
 				$data_groups[ $method ]['discounts_by_currency'][ $currency ]       = 0;
 				$data_groups[ $method ]['amount_refunded_by_currency'][ $currency ] = 0;
 				$data_groups[ $method ]['net_revenue_by_currency'][ $currency ]     = 0;
+			}
+
+			if ( ! isset( $data_groups['total']['gross_revenue_by_currency'][ $currency ] ) ) {
 				$data_groups['total']['gross_revenue_by_currency'][ $currency ]     = 0;
 				$data_groups['total']['discounts_by_currency'][ $currency ]         = 0;
 				$data_groups['total']['amount_refunded_by_currency'][ $currency ]   = 0;

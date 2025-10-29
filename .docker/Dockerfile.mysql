@@ -1,9 +1,8 @@
-FROM mysql:5.7-debian
+FROM mysql:8.4
 
-RUN apt-get update \
-    && apt-get install -y \
-        nano \
-        vim
+RUN microdnf install -y \
+      nano \
+      vim
 
 # Set default password
 ENV MYSQL_ROOT_PASSWORD=mysql

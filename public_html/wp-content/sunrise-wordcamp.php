@@ -1,6 +1,9 @@
 <?php
 
 namespace WordCamp\Sunrise;
+use WP_Network, WP_Site;
+use WordCamp_Loader;
+
 defined( 'WPINC' ) || die();
 
 // phpcs:disable WordPress.WP.AlternativeFunctions.parse_url_parse_url -- It's not available this early.
@@ -44,6 +47,110 @@ function main() {
 		'path'   => $path
 	) = guess_requested_domain_path();
 
+	/*
+	 * @todo enable this when design is implemented.
+	if ( is_flagship_landing_url( $domain, $path ) ) {
+		if ( setup_flagship_landing_site( $domain ) ) {
+			return;
+		}
+	}
+	*/
+
+	if ( handle_robots_txt_request( $domain, $path ) ) {
+		return;
+	}
+
+	redirect_to_site( $domain, $path );
+}
+
+/**
+ * Check if the current request is for a robots.txt file, and handle it if so.
+ *
+ * @param string $domain
+ * @param string $path
+ *
+ * @return bool Whether the request will be handled as a robots.txt request.
+ */
+function handle_robots_txt_request( $domain, $path ) {
+	if ( '/' !== $path || '/robots.txt' !== $_SERVER['REQUEST_URI'] ) {
+		return false;
+	}
+
+	$latest_site = get_latest_site( $domain );
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	set_network_and_site( $latest_site );
+
+	// Abort redirects.
+	return true;
+}
+
+/**
+ * Show the flagship landing page.
+ */
+function setup_flagship_landing_site( string $domain ): bool {
+	$latest_site = get_latest_site( $domain );
+
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	set_network_and_site( $latest_site );
+
+	remove_action( 'template_redirect', 'redirect_canonical' );
+
+	add_filter(
+		'template',
+		function (): string {
+			return 'wporg-parent-2021';
+		}
+	);
+
+	add_filter(
+		'stylesheet',
+		function (): string {
+			return 'wporg-flagship-landing';
+		}
+	);
+
+	add_filter(
+		'option_wccsp_settings',
+		function ( array $settings ): array {
+			$settings['enabled'] = 'off';
+
+			return $settings;
+		}
+	);
+
+	return true;
+}
+
+/**
+ * Set the current network and site when given a site.
+ *
+ * phpcs:disable WordPress.WP.GlobalVariablesOverride.Prohibited -- WP is designed in a way that requires this.
+ * Setting these vars is what `sunrise.php` is designed to do.
+ */
+function set_network_and_site( object $site ) {
+	global $current_site, $current_blog, $blog_id, $site_id, $domain, $path, $public;
+
+	// Originally WP referred to networks as "sites" and sites as "blogs".
+	$current_site = WP_Network::get_instance( WORDCAMP_NETWORK_ID );
+	$site_id      = $current_site->id;
+	$path         = stripslashes( $_SERVER['REQUEST_URI'] );
+	$current_blog = WP_Site::get_instance( $site->blog_id );
+
+	$blog_id = $current_blog->id;
+	$domain  = $current_blog->domain;
+	$public  = $current_blog->public;
+}
+
+/**
+ * Redirect requests to the correct site.
+ */
+function redirect_to_site( string $domain, string $path ): void {
 	add_action( 'template_redirect', __NAMESPACE__ . '\redirect_duplicate_year_permalinks_to_post_slug' );
 
 	$status_code = 301;
@@ -129,6 +236,20 @@ function guess_requested_domain_path() {
 		'domain' => $domain,
 		'path'   => $site_path,
 	);
+}
+
+/**
+ * Check if the given domain/path is a flagship landing page.
+ */
+function is_flagship_landing_url( string $domain, string $path ): bool {
+	$flagship_events    = array( 'asia', 'centroamerica', 'europe', 'us' );
+	$third_level_domain = explode( '.', $domain )[0];
+
+	if ( in_array( $third_level_domain, $flagship_events ) && '/' === $path ) {
+		return true;
+	}
+
+	return false;
 }
 
 /**
@@ -510,37 +631,52 @@ function get_canonical_year_url( $domain, $path ) {
 	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2023-06-20' ) ) {
-				return "https://europe.wordcamp.$tld/2023/";
+			if ( time() <= strtotime( '2025-06-21' ) ) {
+				return "https://europe.wordcamp.$tld/2025/";
 			}
 			break;
 
 		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2023-10-01' ) ) {
-				return "https://us.wordcamp.$tld/2023/";
+			if ( time() <= strtotime( '2025-09-15' ) ) {
+				return "https://us.wordcamp.$tld/2025/";
 			}
 			break;
 
 		case "asia.wordcamp.$tld":
-			if ( time() <= strtotime( '2023-02-20' ) ) {
-				return "https://asia.wordcamp.$tld/2023/";
+			if ( time() <= strtotime( '2024-03-15' ) ) {
+				return "https://asia.wordcamp.$tld/2024/";
 			}
 			break;
 	}
 
+	$latest = get_latest_site( $domain );
+
+	return $latest ? 'https://' . $latest->domain . $latest->path : false;
+}
+
+/**
+ * Get the latest site for a given city.
+ */
+function get_latest_site( string $domain ) {
+	global $wpdb;
+
 	$latest = $wpdb->get_row( $wpdb->prepare( "
-		SELECT `domain`, `path`
+		SELECT `blog_id`, `domain`, `path`
 		FROM $wpdb->blogs
 		WHERE
-			( domain =    %s AND path != '/' ) OR -- Match city/year format.
-			( domain LIKE %s AND path  = '/' )    -- Match year.city format.
+  			( public AND NOT deleted ) -- Deleted sites should be skipped
+     			AND
+			(
+   				( domain =    %s AND path != '/' ) OR -- Match city/year format.
+				( domain LIKE %s AND path  = '/' )    -- Match year.city format.
+			)
 		ORDER BY path DESC, domain DESC
 		LIMIT 1;",
 		$domain,
 		"%.{$domain}"
 	) );
 
-	return $latest ? 'https://' . $latest->domain . $latest->path : false;
+	return $latest;
 }
 
 /**

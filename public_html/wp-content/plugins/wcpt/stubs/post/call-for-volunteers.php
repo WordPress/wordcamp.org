@@ -21,7 +21,7 @@
 
 <!-- wp:jetpack/field-text {"label":"Number of Hours Available","required":true} /-->
 
-<!-- wp:jetpack/field-radio {"label":"Is this the first time you have volunteered at a WordPress event?","requiredText":"(required)","options":["Yes","No","Unsure"],"id":"first-time-volunteer"} /-->
+<!-- wp:jetpack/field-radio {"label":"Is this the first time you have volunteered at a WordPress event?","options":["Yes","No","Unsure"],"id":"first-time-volunteer"} /-->
 
 <!-- wp:jetpack/field-textarea {"label":"Questions / Comments"} /-->
 <!-- /wp:jetpack/contact-form -->

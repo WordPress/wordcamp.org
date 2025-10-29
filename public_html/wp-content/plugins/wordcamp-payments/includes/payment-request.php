@@ -83,7 +83,7 @@ class WCP_Payment_Request {
 			'paid',
 			array(
 				'label'              => esc_html_x( 'Paid', 'post', 'wordcamporg' ),
-				'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'wordcamporg' ),
+				'label_count'        => _nx_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 				'public'             => true,
 				'publicly_queryable' => false,
 			)
@@ -93,7 +93,7 @@ class WCP_Payment_Request {
 			'unpaid',
 			array(
 				'label'              => esc_html_x( 'Unpaid', 'post', 'wordcamporg' ),
-				'label_count'        => _nx_noop( 'Unpaid <span class="count">(%s)</span>', 'Unpaid <span class="count">(%s)</span>', 'wordcamporg' ),
+				'label_count'        => _nx_noop( 'Unpaid <span class="count">(%s)</span>', 'Unpaid <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 				'public'             => true,
 				'publicly_queryable' => false,
 			)
@@ -103,7 +103,7 @@ class WCP_Payment_Request {
 			'incomplete',
 			array(
 				'label'              => esc_html_x( 'Incomplete', 'post', 'wordcamporg' ),
-				'label_count'        => _nx_noop( 'Incomplete <span class="count">(%s)</span>', 'Incomplete <span class="count">(%s)</span>', 'wordcamporg' ),
+				'label_count'        => _nx_noop( 'Incomplete <span class="count">(%s)</span>', 'Incomplete <span class="count">(%s)</span>', 'post', 'wordcamporg' ),
 				'public'             => true,
 				'publicly_queryable' => false,
 			)
@@ -277,6 +277,7 @@ class WCP_Payment_Request {
 			'draft',
 			'wcb-incomplete',
 			'wcb-pending-approval',
+			'wcb-needs-followup',
 			'wcb-approved',
 			'wcb-pending-payment',
 			'wcb-paid',
@@ -332,7 +333,8 @@ class WCP_Payment_Request {
 			$box['args']['show_vendor_requested_payment_method'] = true;
 		}
 
-		$selected_payment_method = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_method", true );
+		$selected_payment_method          = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_method", true );
+		$selected_payment_receipt_country = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_payment_receipt_country_iso3166", true );
 
 		require_once dirname( __DIR__ ) . '/views/payment-request/metabox-payment.php';
 	}
@@ -415,7 +417,7 @@ class WCP_Payment_Request {
 	 * @param string  $name
 	 * @param bool    $required
 	 */
-	protected function render_radio_input( $post, $label, $name, $required = true ) {
+	protected function render_radio_input( $post, $label, $name, $required = true, $is_visible = true ) {
 		$selected = get_post_meta( $post->ID, "_{$this->meta_key_prefix}_" . $name, true );
 		$options  = $this->get_field_value( $name, $post );
 
@@ -818,10 +820,10 @@ Thanks for helping us with these details!",
 	 */
 	protected function sanitize_save_misc_fields( $post_id ) {
 		$post = get_post( $post_id );
-
 		// Status
 		if ( current_user_can( 'manage_network' ) ) {
-			$safe_value = strtotime( sanitize_text_field( $_POST['date_vendor_paid'] ) );
+			// phpcs:ignore WordPress.Security.NonceVerification -- Nonce is verified in `save_payment()`.
+			$safe_value = strtotime( sanitize_text_field( $_POST['date_vendor_paid'] ?? '' ) );
 			update_post_meta( $post_id, '_camppayments_date_vendor_paid', $safe_value );
 		}
 

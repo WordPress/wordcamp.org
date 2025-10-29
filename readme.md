@@ -7,22 +7,19 @@ The platform also includes tools for program volunteers and administrators to ma
 
 ## Setup
 
-There are two primary ways to setup this repo for local development.
+### Central & WordCamp Sites
+Follow the instructions for [setting up a Docker environment](.docker/readme.md).
 
-1. [Using VVV for installing as WordCamp.org as a part of WordPress.org meta network.](https://github.com/WordPress/meta-environment/blob/master/docs/install.md)
+### Next Generation Event Sites
+Follow the instructions for [setting up a local env with testing data](public_html/wp-content/themes/wporg-events-2023/README.md).
 
-1. [Using Docker for a standalone WordCamp.org installation.](.docker/readme.md)
+## Project Board
 
+Please check the [Project Board](https://github.com/orgs/WordPress/projects/101/views/4) for monitoring and tracking issues, PRs, and feature progress.
 
-## Support
+## Handbook
 
-If you have a question about using your site, or contributing to the platform, please email [support@wordcamp.org](mailto:support@wordcamp.org) or join the `#meta-wordcamp` channel in [the official WordPress Slack workspace](https://make.wordpress.org/chat/).
-
-
-### Bugs & Feature Requests
-
-We encourage community members and organizers to [open issues for bugs & feature requests.](https://github.com/WordPress/wordcamp.org/issues/new/choose) We go through and prioritize issues at least once a month. We also have a monthly meeting where we discuss current tickets, patches, and PRs. This usually happens on the third Thursday of the month, you can watch for announcements on the [make.wordpress.org/meta blog.](https://make.wordpress.org/meta/)
-
+Please refer to our [WordCamp handbook](https://make.wordpress.org/meta/handbook/about/projects/wordcamp-org/) for the Bug Fixes & Feature Requests & Support workflow.
 
 ## Security
 
@@ -31,4 +28,4 @@ Please report security vulnerabilities via [our HackerOne bounty program](https:
 
 ## License
 
-All code is licensed under the [GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) or later, unless otherwise stated.
+All code is licensed under the [GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) or later unless otherwise stated.

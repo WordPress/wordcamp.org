@@ -10,7 +10,16 @@ class WordCamp_Post_Types_Plugin_Back_Compat {
 	protected $template   = '';
 
 	function __construct() {
+		// This must run before `WordCamp_Post_Types_Plugin::init()` so that `wcpt_back_compat_init` is registered
+		// before it's needed. This can't run before `init` because `gutenberg_get_theme_preview_path()` calls
+		// `wp_get_current_user()`, which isn't registered earlier.
+		add_action( 'init', array( $this, 'init' ), 5 );
+	}
 
+	/**
+	 * Substitute the old shortcodes on older sites.
+	 */
+	public function init() {
 		// Array of themes that should work with this class.
 		$compat_themes = array(
 			'wordcamp-base',

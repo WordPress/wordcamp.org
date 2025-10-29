@@ -1,0 +1,47 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 2,
+	"name": "wporg/event-list",
+	"version": "0.1.0",
+	"title": "WordPress Events List",
+	"category": "design",
+	"icon": "list-view",
+	"description": "List of WordPress Events",
+	"textdomain": "wporg",
+	"attributes": {
+		"events": {
+			"type": "string",
+			"default": "all-upcoming"
+		},
+		"groupByMonth": {
+			"type": "boolean",
+			"default": false
+		},
+		"limit": {
+			"type": "number",
+			"default": 100
+		},
+		"order": {
+			"enum": [ "asc", "desc" ],
+			"default": "asc"
+		}
+	},
+	"supports": {
+		"align": true,
+		"color": {
+			"background": true,
+			"text": true
+		},
+		"spacing": {
+			"margin": [ "top", "bottom" ],
+			"padding": true,
+			"blockGap": false
+		},
+		"typography": {
+			"fontSize": true,
+			"lineHeight": true
+		}
+	},
+	"editorScript": "file:./index.js",
+	"viewScript": [ "wp-a11y", "file:./view.js" ]
+}

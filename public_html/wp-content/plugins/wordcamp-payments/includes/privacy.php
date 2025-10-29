@@ -365,9 +365,10 @@ function get_meta_fields_mapping( $post_type ) {
 		$mapping_fields = array_merge(
 			$mapping_fields,
 			array(
-				$prefix . 'name_of_payer'               => __( 'Payer Name', 'wordcamporg' ),
-				$prefix . 'currency'                    => __( 'Currency', 'wordcamporg' ),
-				$prefix . 'payment_method'              => __( 'Payment Method', 'wordcamporg' ),
+				$prefix . 'name_of_payer'                   => __( 'Payer Name', 'wordcamporg' ),
+				$prefix . 'currency'                        => __( 'Currency', 'wordcamporg' ),
+				$prefix . 'payment_method'                  => __( 'Payment Method', 'wordcamporg' ),
+				$prefix . 'payment_receipt_country_iso3166' => __( 'Country for payment receipt', 'wordcamporg' ),
 
 				// Payment Method - Direct Deposit.
 				$prefix . 'ach_bank_name'               => __( 'Bank Name', 'wordcamporg' ),

@@ -153,6 +153,7 @@ class WordCamp_Application extends Event_Application {
 			'q_4236565_slack_username'                   => '',
 			'where_find_online'                          => '',
 			'q_1079098_anything_else'                    => '',
+			'q_contributor_day'                          => '',
 
 			// Bonus.
 			'q_1079112_best_describes_you'               => '',
@@ -185,7 +186,7 @@ class WordCamp_Application extends Event_Application {
 	 *
 	 * @param array $data
 	 *
-	 * @return bool|\WP_Error
+	 * @return int|\WP_Error
 	 */
 	public function create_post( $data ) {
 		// Create the post.
@@ -239,6 +240,10 @@ class WordCamp_Application extends Event_Application {
 			)
 		);
 
+		if ( false !== strpos( $data['q_contributor_day'], 'Yes' ) ) {
+			add_post_meta( $post_id, 'Contributor Day', true );
+		}
+
 		if ( 'It would be an online event' === $data['q_in_person_online'] ) {
 			add_post_meta( $post_id, 'Virtual event only', true );
 		}
@@ -254,7 +259,7 @@ class WordCamp_Application extends Event_Application {
 		);
 
 		$this->post = get_post( $post_id );
-		return true;
+		return $post_id;
 	}
 
 	/**

@@ -59,6 +59,7 @@ function speaker_personal_data_exporter( $email_address, $page ) {
 		'post_content'       => __( 'Speaker Bio', 'wordcamporg' ),
 		'_wcb_speaker_email' => __( 'Gravatar Email', 'wordcamporg' ),
 		'_wcpt_user_id'      => __( 'WordPress.org Username', 'wordcamporg' ),
+		'_wcb_speaker_first_time' => __( 'First Time Speaker', 'wordcamporg' ),
 	);
 
 	return _personal_data_exporter( 'wcb_speaker', $props_to_export, $email_address, $page );
@@ -79,6 +80,7 @@ function sponsor_personal_data_exporter( $email_address, $page ) {
 		'_wcpt_sponsor_last_name'     => __( 'Last Name', 'wordcamporg' ),
 		'_wcpt_sponsor_email_address' => __( 'Email Address', 'wordcamporg' ),
 		'_wcpt_sponsor_phone_number'  => __( 'Phone Number', 'wordcamporg' ),
+		'_wcb_sponsor_first_time'     => __( 'First Time Sponsor', 'wordcamporg' ),
 	);
 
 	return _personal_data_exporter( 'wcb_sponsor', $props_to_export, $email_address, $page );
@@ -96,6 +98,7 @@ function organizer_personal_data_exporter( $email_address, $page ) {
 	$props_to_export = array(
 		'post_title'    => __( 'Organizer Name', 'wordcamporg' ),
 		'_wcpt_user_id' => __( 'WordPress.org Username', 'wordcamporg' ),
+		'_wcb_organizer_first_time' => __( 'First Time Organizer', 'wordcamporg' ),
 	);
 
 	return _personal_data_exporter( 'wcb_organizer', $props_to_export, $email_address, $page );

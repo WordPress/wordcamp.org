@@ -77,7 +77,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @return string
 		 */
 		public static function get_edit_capability() {
-			return 'wordcamp_wrangle_wordcamps';
+			return 'wordcamp_wrangle_meetups';
 		}
 
 		/**
@@ -142,7 +142,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			switch ( $column ) {
 				case 'organizer':
-					echo esc_html( get_post_meta( $post_id, 'Organizer Name', true ) . '<' . get_post_meta( $post_id, 'Email', true ) . '>' );
+					echo esc_html( get_post_meta( $post_id, 'Organizer Name', true ) );
 					break;
 				case 'meetup.com_url':
 					$this->print_clickable_link( get_post_meta( $post_id, 'Meetup URL', true ) );
@@ -694,6 +694,17 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Meetup URL',
 				'Meetup Location (From meetup.com)',
 				'Last meetup on',
+			);
+		}
+
+		/**
+		 * Return a list of valid Event Subtypes.
+		 *
+		 * @return array
+		 */
+		public function get_event_subtypes() {
+			return array(
+				'wp_meetup' => __( 'WordPress Meetup', 'wordcamporg' ),
 			);
 		}
 

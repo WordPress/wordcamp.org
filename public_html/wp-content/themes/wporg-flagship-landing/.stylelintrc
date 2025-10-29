@@ -1,0 +1,18 @@
+{
+	"extends": "@wordpress/stylelint-config",
+	"rules": {
+		"max-line-length": null,
+		"no-duplicate-selectors": null,
+		"no-descending-specificity": null,
+		"rule-empty-line-before": [
+			"always-multi-line",
+			{
+				"except": [
+					"first-nested",
+					"after-single-line-comment"
+				]
+			}
+		],
+		"selector-class-pattern": null
+	}
+}

@@ -12,7 +12,6 @@ add_action( 'camptix_admin_notices',                         __NAMESPACE__ . '\s
 add_filter( 'camptix_dashboard_paypal_credentials',          __NAMESPACE__ . '\paypal_credentials'                  );
 add_filter( 'camptix_paypal_predefined_accounts',            __NAMESPACE__ . '\paypal_credentials'                  );
 add_filter( 'camptix_stripe_predefined_accounts',            __NAMESPACE__ . '\stripe_credentials'                  );
-add_action( 'init',                                          __NAMESPACE__ . '\hide_empty_tickets'                  );
 add_action( 'wp_print_styles',                               __NAMESPACE__ . '\print_login_message_styles'          );
 add_filter( 'camptix_require_login_please_login_message',    __NAMESPACE__ . '\override_please_login_message'       );
 add_action( 'camptix_checkout_start',                        __NAMESPACE__ . '\check_ip_throttling'                 );
@@ -22,6 +21,17 @@ add_action( 'transition_post_status',                        __NAMESPACE__ . '\t
 add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 3 );
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
 add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
+
+/**
+ * Show empty tickets
+ *
+ * This helps to avoid confusion if the camp has several types of tickets (e.g., General Admission, Micro-sponsorship,
+ * etc) and the General Admission ticket sells out. If the General Admission ticket was hidden, some users may
+ * mistakenly think that the Micro-sponsorship ticket is the "normal" ticket, even though it costs several hundred
+ * dollars. Since we value keeping regular tickets accessible by as many people as possible, we don't want anyone getting
+ * the impression that WordCamps are expensive to attend.
+ */
+add_filter( 'camptix_hide_empty_tickets',                    '__return_false' );
 
 // Attendees
 add_filter( 'camptix_name_order',                            __NAMESPACE__ . '\set_name_order'                      );
@@ -41,11 +51,19 @@ add_filter( 'camptix_metabox_questions_default_fields_list', __NAMESPACE__ . '\m
 add_filter( 'camptix_capabilities',                          __NAMESPACE__ . '\modify_capabilities'                 );
 add_filter( 'camptix_default_options',                       __NAMESPACE__ . '\modify_default_options'              );
 add_filter( 'camptix_options',                               __NAMESPACE__ . '\handle_invoices_company'             );
-add_filter( 'camptix_options',                               __NAMESPACE__ . '\modify_email_templates'              );
-add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\switch_email_template'               );
+add_filter( 'camptix_options',                               __NAMESPACE__ . '\modify_email_templates',       20    );
+add_filter( 'camptix_email_tickets_template',                __NAMESPACE__ . '\switch_email_template',        20    );
 add_filter( 'camptix_html_message',                          __NAMESPACE__ . '\render_html_emails',           10, 2 );
 add_action( 'camptix_tshirt_report_intro',                   __NAMESPACE__ . '\tshirt_report_intro_message',  10, 3 );
 add_filter( 'camptix_stripe_checkout_image_url',             __NAMESPACE__ . '\stripe_default_checkout_image_url'   );
+
+// Dashboard.
+add_action( 'restrict_manage_posts',                         __NAMESPACE__ . '\add_show_attendees_filter' );
+add_action( 'restrict_manage_posts',                         __NAMESPACE__ . '\add_show_ticket_type_filter' );
+
+add_filter( 'parse_query',                                   __NAMESPACE__ . '\apply_show_all_filters' );
+
+
 
 // Prefix for Form_Spam_Prevention class.
 define( 'WC_CAMPTIX_FSP_PREFIX', 'wc-camptix-fsp-prefix' );
@@ -205,29 +223,6 @@ function stripe_credentials( $credentials ) {
 	}
 
 	return $credentials;
-}
-
-/**
- * Show empty tickets
- *
- * This provides a way for individual WordCamps to decide if they want to show sold-out tickets in the [tickets]
- * shortcode output. This can help avoid confusion if the camp has several types of tickets (e.g., General
- * Admission, Micro-sponsorship, etc) and the General Admission ticket sells out. If the General Admission ticket
- * was hidden, some users may mistakenly think that the Micro-sponsorship ticket is the "normal" ticket, even
- * though it costs several hundred dollars. Since we value keeping regular tickets accessible by as many people
- * as possible, we don't want anyone getting the impression that WordCamps are expensive to attend.
- *
- * @todo change this to use feature-flags similar to the skip-feature flags
- */
-function hide_empty_tickets() {
-	$targeted_wordcamps_ids = array(
-		299, // San Francisco 2013
-		364, // San Francisco 2014
-	);
-
-	if ( in_array( get_current_blog_id(), $targeted_wordcamps_ids ) ) {
-		add_filter( 'camptix_hide_empty_tickets', '__return_false' );
-	}
 }
 
 /**
@@ -535,21 +530,13 @@ function load_addons( $addons ) {
 	/** @var $camptix \CampTix_Plugin */
 	global $camptix;
 
-	$require_login_sites = apply_filters(
-		'camptix_extras_require_login_site_ids',
-		array(
-			206, // testing.wordcamp.org
-			364, // 2014.sf.wordcamp.org
-			447, // belohorizonte.wordcamp.org/2015
-		)
+	$skip_require_login = apply_filters(
+		'camptix_skip_require_login',
+		[]
 	);
 
-	if ( in_array( get_current_blog_id(), $require_login_sites, true ) ) {
-		/*
-		 * todo -- NOTE: when this is opened up for all camps, it will have to be enabled ONLY on WCSF14 and sites
-		 * that haven't opened tickets yet. Otherwise CampTix_Requre_login::hide_unconfirmed_attendees()
-		 * will break pre-existing [attendee] pages.
-		 */
+	// Enable for all WordCamp sites, apart from those being skipped above.
+	if ( ! in_array( get_current_blog_id(), $skip_require_login, true ) ) {
 		$addons['require-login'] = $camptix->get_default_addon_path( 'require-login.php' );
 	}
 
@@ -563,12 +550,14 @@ function load_addons( $addons ) {
  */
 function load_custom_addons() {
 	// Extra fields.
-	require_once __DIR__ . '/addons/allergy.php';
-	require_once __DIR__ . '/addons/accommodations.php';
-	require_once __DIR__ . '/addons/code-of-conduct.php';
-	require_once __DIR__ . '/addons/first-time.php';
+	require_once __DIR__ . '/addons/extra-fields.php';
+	require_once __DIR__ . '/addons/extra-fields/allergy.php';
+	require_once __DIR__ . '/addons/extra-fields/accommodations.php';
+	require_once __DIR__ . '/addons/extra-fields/code-of-conduct.php';
+	require_once __DIR__ . '/addons/extra-fields/first-time.php';
+	require_once __DIR__ . '/addons/extra-fields/privacy.php';
+
 	require_once __DIR__ . '/addons/health-advisory.php';
-	require_once __DIR__ . '/addons/privacy.php';
 
 	// Miscellaneous.
 	require_once __DIR__ . '/addons/spam-prevention.php';
@@ -591,7 +580,7 @@ function load_custom_addons() {
  * @return string
  */
 function modify_default_fields_list( $default_fields ) {
-	return __( 'Top three fields: First name, last name, e-mail address.<br />Bottom four fields: Attendee list opt-out, life-threatening allergy, accessibility needs, Code of Conduct agreement.', 'wordcamporg' );
+	return __( 'Top three fields: First name, last name, e-mail address.<br />Bottom four fields: Attendee list opt-out, severe allergy, accessibility needs, Code of Conduct agreement.', 'wordcamporg' );
 }
 
 /**
@@ -726,17 +715,26 @@ function show_invoices_company_notice() {
 function modify_email_templates( $options ) {
 	$sponsors_string = get_global_sponsors_string();
 	$donation_string = get_donation_string();
-	$swag_string = get_swag_store_string();
 
-	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string\n\n$swag_string";
+	$email_footer_string = "\n\n===\n\n$sponsors_string\n\n$donation_string";
 
 	$templates_that_need_footers = array(
+		// Regular templates.
 		'email_template_single_purchase',
 		'email_template_multiple_purchase',
 		'email_template_multiple_purchase_receipt',
+
+		// Require Login.
+		'email_template_multiple_purchase_receipt_unconfirmed_attendees',
+		'email_template_multiple_purchase_unknown_attendee',
+		'email_template_multiple_purchase_unconfirmed_attendee',
 	);
 
 	foreach ( $templates_that_need_footers as $template ) {
+		if ( ! isset( $options[ $template ] ) ) {
+			continue;
+		}
+
 		// We can't add the string to the original option or it will keep getting added over and over again
 		// whenever the email templates are customized and saved.
 		$options[ $template . '_with_footer' ] = $options[ $template ] . $email_footer_string;
@@ -754,9 +752,15 @@ function modify_email_templates( $options ) {
  */
 function switch_email_template( $template_slug ) {
 	$templates_that_need_footers = array(
+		// Regular templates.
 		'email_template_single_purchase',
 		'email_template_multiple_purchase',
 		'email_template_multiple_purchase_receipt',
+
+		// Require Login.
+		'email_template_multiple_purchase_receipt_unconfirmed_attendees',
+		'email_template_multiple_purchase_unknown_attendee',
+		'email_template_multiple_purchase_unconfirmed_attendee',
 	);
 
 	if ( in_array( $template_slug, $templates_that_need_footers, true ) ) {
@@ -772,7 +776,7 @@ function switch_email_template( $template_slug ) {
  * @return string
  */
 function get_global_sponsors_string() {
-	switch_to_blog( BLOG_ID_CURRENT_SITE ); // central.wordpress.org
+	switch_to_blog( WORDCAMP_ROOT_BLOG_ID ); // central.wordcamp.org.
 
 	$posts = get_posts( array(
 		'post_type'      => 'mes',
@@ -802,7 +806,7 @@ function get_global_sponsors_string() {
 		$last_sponsor
 	);
 
-	$intro = __( 'WordPress Global Community Sponsors help fund WordCamps and meetups around the world.', 'wordcamporg' );
+	$intro = __( 'WordPress Global Community Sponsors help fund WordPress events around the world.', 'wordcamporg' );
 
 	$thank_you = sprintf(
 		/* translators: %1$s: list of sponsor names; %2$s: URL; */
@@ -868,7 +872,7 @@ function get_sponsorship_region_description_from_id( $region_id ) {
 		}
 
 		if ( ! $region_description ) {
-			switch_to_blog( BLOG_ID_CURRENT_SITE );
+			switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 			$region = get_term( $region_id, 'mes-regions' );
 
@@ -895,7 +899,7 @@ function get_sponsorship_level_name_from_id( $level_id ) {
 	$level_name = '';
 
 	if ( $level_id ) {
-		switch_to_blog( BLOG_ID_CURRENT_SITE );
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
 
 		$level_name = get_the_title( $level_id );
 
@@ -976,12 +980,11 @@ function modify_shortcode_contents( $shortcode_contents, $tix_action ) {
 
 			$sponsors_string = get_global_sponsors_string();
 			$donation_string = get_donation_string();
-			$swag_string = get_swag_store_string();
 
 			if ( false !== strpos( $shortcode_contents, $content_end ) ) {
 				$shortcode_contents = str_replace(
 					$content_end,
-					wpautop( "$sponsors_string\n\n$donation_string\n\n$swag_string" ) . $content_end,
+					wpautop( "$sponsors_string\n\n$donation_string" ) . $content_end,
 					$shortcode_contents
 				);
 			}
@@ -1120,3 +1123,104 @@ function limit_one_ticket_per_order( $max ) {
 	return $max;
 }
 
+/**
+ * Add filter to attendees listing (edit.php) on dashboard.
+ */
+function add_show_attendees_filter() {
+	if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
+		return;
+	}
+
+	$filter = isset( $_GET['tix_show_attendees'] ) ? $_GET['tix_show_attendees'] : '';
+
+	$filters = array(
+		'with-allergy'        => __( 'Attendees with severe allergy', 'wordcamporg' ),
+		'with-accommodations' => __( 'Attendees with accessibility needs', 'wordcamporg' ),
+	); ?>
+
+	<select name="tix_show_attendees">
+		<option value=""><?php esc_html_e( 'All attendees', 'wordcamporg' ); ?></option>
+		<?php foreach ( $filters as $value => $label ) : ?>
+			<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $filter, $value ); ?>><?php echo esc_html( $label ); ?></option>
+		<?php endforeach; ?>
+	</select>
+<?php }
+
+/**
+ * Maybe filter attendees listing (edit.php) on dashboard.
+ *
+ * @param  WP_Query $query The WP_Query instance (passed by reference).
+ */
+function apply_show_all_filters( $query ) {
+	if ( ! is_admin() ) {
+		return;
+	}
+
+	if ( ! $query->is_main_query() ) {
+		return;
+	}
+
+	if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
+		return;
+	}
+
+	$filter_attendee = isset( $_GET['tix_show_attendees'] ) ? $_GET['tix_show_attendees'] : '';
+	$filter_ticket   = isset( $_GET['tix_show_ticket_type'] ) ? (int) $_GET['tix_show_ticket_type'] : '';
+
+	if ( empty( $filter_attendee ) && empty( $filter_ticket ) ) {
+		return;
+	}
+
+	switch ( $filter_attendee ) {
+		case 'with-allergy':
+			$query->query_vars['meta_query'][] = [
+				'key' => 'tix_allergy',
+				'value' => 'yes',
+			];
+			break;
+
+		case 'with-accommodations':
+			$query->query_vars['meta_query'][] = [
+				'key' => 'tix_accommodations',
+				'value' => 'yes',
+			];
+			break;
+	}
+
+	if ( ! empty( $filter_ticket ) ) {
+		$query->query_vars['meta_query'][] = [
+			'key' => 'tix_ticket_id',
+			'value' => $filter_ticket,
+		];
+	}
+	// If both filters are set, we need to alter the meta query to join it.
+	if ( count( $query->query_vars['meta_query'] ) > 1 ) {
+		$query->query_vars['meta_query']['relation'] = 'AND';
+	}
+}
+
+/**
+ * Allow filter attendees listing by ticket type.
+ */
+function add_show_ticket_type_filter() {
+
+	if ( 'edit-tix_attendee' !== get_current_screen()->id ) {
+		return;
+	}
+
+	$filter = isset( $_GET['tix_show_ticket_type'] ) ? $_GET['tix_show_ticket_type'] : '';
+
+	// Set posts_per_page to -1 so we show them all.
+	$all_tickets = get_posts( array(
+		'post_type' => 'tix_ticket',
+		'posts_per_page' => -1,
+	) );
+	?>
+		<select name="tix_show_ticket_type">
+			<option value=""><?php esc_html_e( 'All Tickets', 'wordcamporg' ); ?></option>
+			<?php foreach ( $all_tickets as $ticket ) : ?>
+				<option value="<?php echo esc_attr( $ticket->ID ); ?>" <?php selected( $filter, $ticket->ID ); ?>><?php echo esc_html( $ticket->post_title ); ?></option>
+			<?php endforeach; ?>
+		</select>
+	<?php
+}

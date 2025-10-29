@@ -1,0 +1,77 @@
+# Copyright (C) 2017 CampTix Indian Payments
+# This file is distributed under the same license as the CampTix Indian Payments package.
+msgid ""
+msgstr ""
+"Project-Id-Version: CampTix-Indian-Payments\n"
+"Report-Msgid-Bugs-To: https://github.com/wpindiaorg/camptix-indian-payments/issues/new\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2017-MO-DA HO:MI+ZONE\n"
+"Language-Team: wpindiaorg <wpindiaorg@gmail.com>\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __;_e;_n:1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;esc_attr__;esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c;_n_noop:1,2;_nx_noop:3c,1,2;__ngettext_noop:1,2\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: *.js\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: camptix-indian-payment.php:119
+msgid "Indian Rupees"
+msgstr ""
+
+#: camptix-indian-payment.php:170
+msgid "Please fill in all required fields."
+msgstr ""
+
+#: inc/class-camptix-payment-methods.php:89, inc/class-camptix-payment-methods.php:156, inc/class-camptix-payment-methods.php:179, inc/class-camptix-payment-methods.php:245
+msgid "Phone Number"
+msgstr ""
+
+#: inc/instamojo/class-camptix-payment-method-instamojo.php:133
+msgid "Instamojo-Api-Key"
+msgstr ""
+
+#: inc/instamojo/class-camptix-payment-method-instamojo.php:135
+msgid "Instamojo-Auth-Token"
+msgstr ""
+
+#: inc/instamojo/class-camptix-payment-method-instamojo.php:137
+msgid "Instamojo-salt"
+msgstr ""
+
+#: inc/instamojo/class-camptix-payment-method-instamojo.php:143, inc/razorpay/class-camptix-payment-method-razorpay.php:535
+msgid "Sandbox Mode"
+msgstr ""
+
+#: inc/instamojo/class-camptix-payment-method-instamojo.php:145
+msgid "The Test Mode is a way to test payments. Any amount debited from your account should be re-credited within Five (5) working days."
+msgstr ""
+
+#: inc/instamojo/class-camptix-payment-method-instamojo.php:473
+msgid "The selected currency is not supported by this payment method."
+msgstr ""
+
+#: inc/razorpay/class-camptix-payment-method-razorpay.php:475
+msgid "Razorpay Popup Title"
+msgstr ""
+
+#: inc/razorpay/class-camptix-payment-method-razorpay.php:487
+msgid "Live Key ID"
+msgstr ""
+
+#: inc/razorpay/class-camptix-payment-method-razorpay.php:499
+msgid "Live Key Secret"
+msgstr ""
+
+#: inc/razorpay/class-camptix-payment-method-razorpay.php:511
+msgid "Test Key ID"
+msgstr ""
+
+#: inc/razorpay/class-camptix-payment-method-razorpay.php:523
+msgid "Test Key Secret"
+msgstr ""
+
+#: inc/razorpay/class-camptix-payment-method-razorpay.php:539
+msgid "The RazorPay Sandbox is a way to test payments without using real accounts and transactions. When enabled it will use sandbox merchant details instead of the ones defined above."
+msgstr ""

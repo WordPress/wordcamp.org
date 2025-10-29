@@ -21,13 +21,11 @@ function manually_load_plugins() {
 	define( 'DISALLOW_FILE_MODS',       true );
 	define( 'DISALLOW_FILE_EDIT',       true );
 
-	// Needed for checking subrole capabilities. The ID is 1 because there's only one site in the test instance.
-	define( 'BLOG_ID_CURRENT_SITE', 1 );
-
 	// This isn't called by default when running tests because it's a `SHORTINIT` context.
 	ms_upload_constants();
 
 	require_once dirname( dirname( __DIR__ ) ) . '/sunrise.php';
+	require_once dirname( dirname( __DIR__ ) ) . '/sunrise-events.php';
 
 	require_once dirname( __DIR__ ) . '/0-error-handling.php';
 	require_once dirname( __DIR__ ) . '/wordcamp/lets-encrypt-helper.php';

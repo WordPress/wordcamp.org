@@ -50,23 +50,43 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
 		<p style="max-width: 800px;"><?php esc_html_e( 'Welcome to your working budget. Feel free to play around with numbers here. They will not affect your approved budget.', 'wordcamporg' ); ?></p>
     <?php endif; ?>
 
-    <div class="left">
-        <h2><?php esc_html_e( 'Event Data', 'wordcamporg' ); ?></h2>
-        <table class="wcb-budget-container">
-            <tbody>
-                <tr class="wcb-group-header">
-                    <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
-                    <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
-                </tr>
-                <tr class="wcb-meta-placeholder" style="display: none;">
-                    <td colspan="2"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="right">
-        <h2><?php esc_html_e( 'Summary', 'wordcamporg' ); ?></h2>
-        <div class="wcb-summary-placeholder"></div>
+    <div class="first-section">
+        <div>
+            <h2><?php esc_html_e( 'Event Data', 'wordcamporg' ); ?></h2>
+            <table class="wcb-budget-container">
+                <tbody>
+                    <tr class="wcb-group-header">
+                        <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
+                        <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
+                    </tr>
+                    <tr class="wcb-meta-placeholder" style="display: none;">
+                        <td colspan="2"></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2><?php esc_html_e( 'Attendees', 'wordcamporg' ); ?></h2>
+            <table class="wcb-budget-container wcb-budget-attendees">
+                <tbody>
+                    <tr class="wcb-group-header">
+                        <th style="width: 50%;"><?php esc_html_e( 'Name',  'wordcamporg' ); ?></th>
+                        <th style="width: 50%;"><?php esc_html_e( 'Value', 'wordcamporg' ); ?></th>
+                    </tr>
+                    <tr class="wcb-attendees-placeholder" style="display: none;">
+                        <td colspan="2"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2><?php esc_html_e( 'Summary', 'wordcamporg' ); ?></h2>
+            <div class="wcb-summary-placeholder"></div>
+        </div>
     </div>
 
     <div class="clear"></div>
@@ -158,16 +178,14 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             <td class="amount <# if (data.variance_raw < 0) { #>wcb-negative<# } #>">{{data.variance}}</td>
         </tr>
         <tr>
-            <td><?php esc_html_e( 'Cost Per Person Per Day', 'wordcamporg' ); ?></td>
+            <td>
+                <?php 
+                    is_wordcamp_type('next-gen') ? 
+                        esc_html_e( 'Cost Per Person', 'wordcamporg' ) :
+                        esc_html_e( 'Cost Per Person Per Day', 'wordcamporg' )
+                ?>
+            </td>
             <td class="amount">{{data.per_person}}</td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
         </tr>
         <tr>
             <td></td>
@@ -181,7 +199,19 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
 </script>
 <script type="text/template" id="wcb-tmpl-entry">
     <# if (data.type == 'meta') { #>
-        <td>{{wcb.metaLabels[data.name]}}</td>
+        <td>
+            <# if (wcb.metaDropdown?.[data.name]) { #>
+                <select class="name">
+					<# _.each( wcb.metaDropdown, function( value, key ) { #>
+						<option value="{{key}}" <# if( key === data.name ) { #> selected <# } #> >
+							{{value}}
+						</option>
+					<# }); #>
+                </select>
+            <# } else { #>
+                {{wcb.metaLabels[data.name]}}
+            <# } #>
+        </td>
 
         <# if (wcb.editable) { #>
             <td class="editable">
@@ -189,31 +219,31 @@ wcb.editable = <?php echo json_encode( $editable ); ?>;
             <# if (data.name == 'currency') { #>
                 <select class="value">
 					<option value="">
-						<?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
+                        <?php _e( '-- Select a Currency --', 'wordcamporg' ); ?>
 					</option>
 
-					<option value=""></option>
+                    <option value=""></option>
 
-					<# _.each( wcb.currencies, function( value, key ) { #>
-						<option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
-							{{value}}
-
-							<# if ( key ) { #>
-								({{key}})
-							<# } #>
-						</option>
-					<# }); #>
+                    <# _.each( wcb.currencies, function( value, key ) { #>
+                        <option value="{{key}}" <# if( key === data.value ) { #> selected <# } #> >
+                            {{value}}
+                            
+                            <# if ( key ) { #>
+                                ({{key}})
+                            <# } #>
+                        </option>
+                    <# }); #>
                 </select>
             <# } else { #>
-                <input class="value" type="text" value="{{data.value}}" />
+                <input class="value" type="text" value="{{data.value}}" placeholder="{{data.placeholder}}"/>
             <# } #>
             </td>
         <# } else { #>
             <td>
                 <# if (data.name == 'currency') { #>
-                <div class="value">{{data.value}} - {{wcb.currencies[data.value]}}</div>
+                    <div class="value">{{data.value}} - {{wcb.currencies[data.value]}}</div>
                 <# } else { #>
-                <div class="value">{{data.value}}</div>
+                    <div class="value">{{data.value}}</div>
                 <# } #>
             </td>
         <# } #>

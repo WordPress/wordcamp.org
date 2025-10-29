@@ -6,40 +6,33 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Clone the repo:
     ```bash
-    git clone git@github.com:WordPress/wordcamp.org.git wordcamp.test
+    git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
     cd wordcamp.test
     ```
 
-    If you get an error about "Permission denied (publickey)", you have two options:
-      - Make sure you have [a working SSH key](https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey#make-sure-you-have-a-key-that-is-being-used).
-      - Or use the HTTPS URL:
-          ```bash
-          git clone https://github.com/WordPress/wordcamp.org.git wordcamp.test
-          cd wordcamp.test
-          ```
-
 1. Generate and trust the SSL certificates, so you get a green bar and can adequately test service workers.
-	```bash
+   	
+    _Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command below. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
+	
+    ```bash
 	cd .docker
 	brew install mkcert
 	brew install nss
 	mkcert -install
 	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
-
-	_Using zsh? You may see `zsh: no matches found: *.wordcamp.test` running the final cert command above. Try prefixing the final command with `noglob`, i.e. `noglob mkcert -cert-file ...`_
-
 1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
     ```bash
+    cd ..
     cd public_html
     git clone git://core.git.wordpress.org/ mu
     cd mu
-    git checkout 6.2
+    git checkout 6.7
     ```
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
 	```bash
-	cd .. # to the directory above public_html/
+	cd ../../ # to the directory above public_html/
 	composer install
 	```
 
@@ -55,15 +48,6 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     docker compose build --pull
     docker compose up
 	```
-
-    _Using an Apple ARM64 chip? You may see `failed to solve: rpc error: code = Unknown desc =...` after running either of commands above. Try adding `platform: linux/amd64` to both `wordcamp.test` and `wordcamp.db` in `docker-compose.yaml`. This will instruct Docker to create an image based on the `linux/amd64` architecture instead of `linux/arm64`, i.e._
-    ```
-    build:
-        context: .docker
-        dockerfile: Dockerfile.php-fpm
-    platform: linux/amd64
-    ```
-
 
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
 
@@ -101,6 +85,8 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
 
+1. Optional: Add API keys to the `Third party services` section of `wp-config.php` to enabled working on specific features that require them.
+
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash
     rm -rf .git/hooks
@@ -130,6 +116,13 @@ Note: All of these commands are meant to be executed from project directory.
     ```
 
    Note that using `docker compose down` instead will cause the re-provisioning of 3rd-party plugins and themes the next time the containers are started up.
+
+1.  To clean up unused Docker images and reclaim disk space, use:
+    ```bash
+    docker image prune -a -f
+    ```
+
+    Note that before running `docker image prune -a -f`, it's a good practice to check which images will be removed using the  command: `docker image prune -a`. This will list all the images that would be removed without actually deleting them. This allows you to verify that the command won't remove any images you still need.
 
 1. To open a shell inside the web container, use:
     ```bash
@@ -204,7 +197,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
     docker compose -f docker-compose.phpunit.yml exec phpunit_wp phpunit
     ```
 
-    If you're still in the shell from the previous step, you can run `phpunit` directly.
+    If you're still in the shell from the previous step, you can run `phpunit` directly. You'll need to be in the `/app` directory to run the tests.
     ```bash
     phpunit
     ```
@@ -271,4 +264,4 @@ If the dev database needs to be updated to better reflect the state of productio
 * Make sure WP is running the latest branch, and the database schema has been updated.
 * Review each line of the diff to make sure there isn't anything sensitive in the database. Scrub anything that is. There are some suggested strategies for reviewing database file diffs [here](https://github.com/WordPress/meta-environment/wiki/Reviewing-PRs-with-database-changes).
 
-Then you can run `bash /var/scripts/database.sh clean-export`. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.
+Then you can run `bash /var/scripts/database.sh clean-export` inside the container. It will automatically strip all post revisions, trashed posts, and transients from the database before dumping it into the **wordcamp_dev.sql** provision file.

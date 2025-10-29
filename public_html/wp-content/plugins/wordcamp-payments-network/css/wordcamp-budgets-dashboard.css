@@ -52,6 +52,13 @@
 	margin-left: 24px;
 }
 
+/* Do not float the spinner to the right, it'll wrap. */
+.column-vetting_status {
+	white-space: nowrap;
+}
+.column-vetting_status .spinner {
+	float: unset;
+}
 
 /*
  * Export

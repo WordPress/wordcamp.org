@@ -27,82 +27,125 @@ class WordCamp_Budgets {
 	public static function register_post_statuses() {
 		// Uses core's draft status too.
 
-		register_post_status( 'wcb-incomplete', array(
-			'label'       => esc_html_x( 'Incomplete', 'payment request', 'wordcamporg' ),
-			'public'      => false,
-			'protected'   => true,
-			'label_count' => _nx_noop(
-				'Incomplete <span class="count">(%s)</span>',
-				'Incomplete <span class="count">(%s)</span>',
-				'wordcamporg'
-			),
-		) );
+		register_post_status(
+			'wcb-incomplete',
+			array(
+				'label'       => esc_html_x( 'Incomplete', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Incomplete <span class="count">(%s)</span>',
+					'Incomplete <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
 
-		register_post_status( 'wcb-pending-approval', array(
-			'label'       => esc_html_x( 'Pending Approval', 'payment request', 'wordcamporg' ),
-			'public'      => false,
-			'protected'   => true,
-			'label_count' => _nx_noop(
-				'Pending Approval <span class="count">(%s)</span>',
-				'Pending Approval <span class="count">(%s)</span>',
-				'wordcamporg'
-			),
-		) );
+		register_post_status(
+			'wcb-pending-approval',
+			array(
+				'label'       => esc_html_x( 'Pending Approval', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Pending Approval <span class="count">(%s)</span>',
+					'Pending Approval <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
 
-		register_post_status( 'wcb-approved', array(
-			'label'       => esc_html_x( 'Approved', 'payment request', 'wordcamporg' ),
-			'public'      => false,
-			'protected'   => true,
-			'label_count' => _nx_noop(
-				'Approved <span class="count">(%s)</span>',
-				'Approved <span class="count">(%s)</span>',
-				'wordcamporg'
-			),
-		) );
+		register_post_status(
+			'wcb-needs-followup',
+			array(
+				'label'       => esc_html_x( 'Needs Follow-up', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Needs Follow-up <span class="count">(%s)</span>',
+					'Needs Follow-up <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
 
-		register_post_status( 'wcb-pending-payment', array(
-			'label'       => esc_html_x( 'Payment Sent', 'payment request', 'wordcamporg' ),
-			'public'      => false,
-			'protected'   => true,
-			'label_count' => _nx_noop(
-				'Payment Sent <span class="count">(%s)</span>',
-				'Payment Sent <span class="count">(%s)</span>',
-				'wordcamporg'
-			),
-		) );
+		register_post_status(
+			'wcb-approved',
+			array(
+				'label'       => esc_html_x( 'Approved', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Approved <span class="count">(%s)</span>',
+					'Approved <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
 
-		register_post_status( 'wcb-paid', array(
-			'label'       => esc_html_x( 'Paid', 'payment request', 'wordcamporg' ),
-			'public'      => false,
-			'protected'   => true,
-			'label_count' => _nx_noop(
-				'Paid <span class="count">(%s)</span>',
-				'Paid <span class="count">(%s)</span>',
-				'wordcamporg'
-			),
-		) );
+		register_post_status(
+			'wcb-pending-payment',
+			array(
+				'label'       => esc_html_x( 'Payment Sent', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Payment Sent <span class="count">(%s)</span>',
+					'Payment Sent <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
 
-		register_post_status( 'wcb-failed', array(
-			'label'       => esc_html_x( 'Failed', 'payment request', 'wordcamporg' ),
-			'public'      => false,
-			'protected'   => true,
-			'label_count' => _nx_noop(
-				'Failed <span class="count">(%s)</span>',
-				'Failed <span class="count">(%s)</span>',
-				'wordcamporg'
-			),
-		) );
+		register_post_status(
+			'wcb-paid',
+			array(
+				'label'       => esc_html_x( 'Paid', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Paid <span class="count">(%s)</span>',
+					'Paid <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
 
-		register_post_status( 'wcb-cancelled', array(
-			'label'       => esc_html_x( 'Cancelled', 'payment request', 'wordcamporg' ),
-			'public'      => false,
-			'protected'   => true,
-			'label_count' => _nx_noop(
-				'Cancelled <span class="count">(%s)</span>',
-				'Cancelled <span class="count">(%s)</span>',
-				'wordcamporg'
-			),
-		) );
+		register_post_status(
+			'wcb-failed',
+			array(
+				'label'       => esc_html_x( 'Failed', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Failed <span class="count">(%s)</span>',
+					'Failed <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
+
+		register_post_status(
+			'wcb-cancelled',
+			array(
+				'label'       => esc_html_x( 'Cancelled', 'payment request', 'wordcamporg' ),
+				'public'      => false,
+				'protected'   => true,
+				'label_count' => _nx_noop(
+					'Cancelled <span class="count">(%s)</span>',
+					'Cancelled <span class="count">(%s)</span>',
+					'payment request',
+					'wordcamporg'
+				),
+			)
+		);
 	}
 
 	/**
@@ -312,6 +355,7 @@ class WordCamp_Budgets {
 				 */
 				case 'vendor_country_iso3166':
 				case 'bank_country_iso3166':
+				case 'payment_receipt_country_iso3166':
 				case 'interm_bank_country_iso3166':
 				case 'beneficiary_country_iso3166':
 				case 'check_country':
@@ -376,6 +420,7 @@ class WordCamp_Budgets {
 			'bank_state',
 			'bank_zip_code',
 			'bank_country_iso3166',
+			'payment_receipt_country_iso3166',
 			'bank_bic',
 			'interm_bank_name',
 			'interm_bank_street_address',
@@ -579,11 +624,12 @@ class WordCamp_Budgets {
 	 * @return array
 	 */
 	public static function get_payment_categories() {
-		return array(
+		$categories = array(
 			// Changes here may need to be synchronized with `_get_default_budget()`.
 			'after-party'     => esc_html__( 'After Party',                    'wordcamporg' ),
 			'audio-visual'    => esc_html__( 'Audio Visual',                   'wordcamporg' ),
 			'camera-shipping' => esc_html__( 'Camera Shipping',                'wordcamporg' ),
+			'comped-tickets'  => esc_html__( 'Complimentary Tickets',          'wordcamporg' ),
 			'food-beverages'  => esc_html__( 'Food & Beverage',                'wordcamporg' ),
 			'office-supplies' => esc_html__( 'Office Supplies',                'wordcamporg' ),
 			'signage-badges'  => esc_html__( 'Signage & Badges',               'wordcamporg' ),
@@ -592,6 +638,12 @@ class WordCamp_Budgets {
 			'venue'           => esc_html__( 'Venue',                          'wordcamporg' ),
 			'other'           => esc_html__( 'Other',                          'wordcamporg' ), // This one is intentionally last, regardless of alphabetical order
 		);
+
+		if ( is_wordcamp_type('next-gen') ) {
+			unset($categories['speaker-event'], $categories['after-party'], $categories['camera-shipping']);
+		}
+
+		return $categories;
 	}
 
 	/**

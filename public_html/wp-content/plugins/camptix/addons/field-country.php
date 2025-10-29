@@ -38,6 +38,10 @@ class CampTix_Addon_Country_Field extends CampTix_Addon {
 			name="<?php echo esc_attr( $name ); ?>"
 			<?php if ( $required ) echo 'required'; ?>
 		>
+			<option value="" disabled <?php selected( '', $user_value ); ?>>
+				-- <?php esc_html_e( 'Select', 'wordcamporg' ); ?> --
+			</option>
+
 			<?php foreach ( $countries as $country ) : ?>
 				<option value="<?php echo esc_attr( $country ); ?>" <?php selected( $country, $user_value ); ?>>
 					<?php echo esc_html( $country ); ?>

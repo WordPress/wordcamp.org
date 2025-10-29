@@ -1,8 +1,6 @@
 <?php
-
 namespace WordCamp\CampTix_Tweaks;
-use CampTix_Plugin, CampTix_Addon;
-use WP_Post;
+use CampTix_Addon;
 
 defined( 'WPINC' ) || die();
 
@@ -21,25 +19,23 @@ class Health_Advisory_Field extends CampTix_Addon {
 		}
 
 		// Registration field.
-		add_action( 'camptix_attendee_form_after_questions', array( $this, 'render_registration_field' ), 15, 2 );
-
+		add_action( 'camptix_form_attendee_after_registration_information', array( $this, 'render_registration_notice' ), 15 );
 	}
 
 	/**
-	 * Render the new field for the registration form during checkout.
-	 *
-	 * @param array $form_data
-	 * @param int   $i
+	 * Render the advisory for the registration form during checkout.
 	 */
-	public function render_registration_field( $form_data, $i ) {
+	public function render_registration_notice() {
 		?>
 
-		<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
-			<td class="tix-required tix-left" colspan="2">
-				<p><?php esc_html_e( 'We invite you to help us make WordCamps a welcome and safe experience for everyone. When planning to attend WordCamp, we recommend that you stay at home if you are sick, or have recently come in contact with someone who is ill.', 'wordcamporg' ); ?></p>
-				<p><?php esc_html_e( 'If you see another attendee wearing a sticker requesting that people wear a mask near them, please do wear a mask while within 6 feet (2 meters) of them or keep your distance.', 'wordcamporg' ); ?></p>
-			</td>
-		</tr>
+		<table class="tix_tickets_table tix-attendee-form">
+			<tr class="tix-row-<?php echo esc_attr( self::SLUG ); ?>">
+				<td class="tix-required tix-left" colspan="2">
+					<p><?php esc_html_e( 'We invite you to help us make WordCamps a welcome and safe experience for everyone. When planning to attend WordCamp, we recommend that you stay at home if you are sick, or have recently come in contact with someone who is ill.', 'wordcamporg' ); ?></p>
+					<p><?php esc_html_e( 'If you see another attendee wearing a sticker requesting that people wear a mask near them, please do wear a mask while within 6 feet (2 meters) of them or keep your distance.', 'wordcamporg' ); ?></p>
+				</td>
+			</tr>
+		</table>
 
 		<?php
 	}

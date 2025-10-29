@@ -5,6 +5,7 @@
 .docker/database
 .docker/wordcamp*.pem
 .docker/test_suite
+docker-compose.override.yaml
 
 
 #
@@ -55,7 +56,6 @@ public_html/wp-content/plugins/user-switching/
 public_html/wp-content/plugins/akismet
 public_html/wp-content/plugins/bbpress
 public_html/wp-content/plugins/buddypress
-public_html/wp-content/plugins/campt-indian-payment-gateway
 public_html/wp-content/plugins/camptix-bd-payments/
 public_html/wp-content/plugins/camptix-kdcpay-gateway
 public_html/wp-content/plugins/camptix-mercadopago
@@ -70,12 +70,14 @@ public_html/wp-content/plugins/classic-editor
 public_html/wp-content/plugins/custom-content-width
 public_html/wp-content/plugins/email-post-changes
 public_html/wp-content/plugins/edit-flow/
+public_html/wp-content/plugins/gatherpress/
 public_html/wp-content/plugins/gutenberg/
 public_html/wp-content/plugins/hyperdb/
 public_html/wp-content/plugins/json-rest-api/
 public_html/wp-content/plugins/jetpack
-public_html/wp-content/plugins/lang-attribute
+public_html/wp-content/plugins/lang-attribute-blocks
 public_html/wp-content/plugins/liveblog
+public_html/wp-content/plugins/nepali-payments-for-camptix
 public_html/wp-content/plugins/polldaddy
 public_html/wp-content/plugins/public-post-preview/
 public_html/wp-content/plugins/pwa/
@@ -95,16 +97,10 @@ public_html/wp-content/plugins/wporg-two-factor
 # Themes
 #
 public_html/wp-content/themes/p2
-public_html/wp-content/themes/twentyten
-public_html/wp-content/themes/twentyeleven
-public_html/wp-content/themes/twentytwelve
-public_html/wp-content/themes/twentythirteen
-public_html/wp-content/themes/twentyfourteen
-public_html/wp-content/themes/twentyfifteen
-public_html/wp-content/themes/twentysixteen
-public_html/wp-content/themes/twentyseventeen
-public_html/wp-content/themes/twentynineteen
-public_html/wp-content/themes/twentytwenty
-public_html/wp-content/themes/twentytwentyone
-public_html/wp-content/themes/twentytwentytwo
-public_html/wp-content/themes/twentytwentythree
+public_html/wp-content/themes/twenty*
+public_html/wp-content/themes/wporg-parent-2021
+public_html/wp-content/themes/wporg-events-2023/style.css
+public_html/wp-content/themes/wporg-events-2023/editor.css
+public_html/wp-content/themes/wporg-flagship-landing/style.css
+public_html/wp-content/themes/wporg-flagship-landing/editor.css
+public_html/wp-content/fonts

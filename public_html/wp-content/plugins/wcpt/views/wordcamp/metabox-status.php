@@ -12,14 +12,47 @@ defined( 'WPINC' ) || die();
  */
 function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_capability ) {
 	$wcpt = get_post_type_object( $event_type );
+
+	$event_subtype  = $post->event_subtype ?: $event_type;
+	$event_subtypes = $event_admin->get_event_subtypes();
 	?>
 
 	<div id="submitpost" class="wcb submitbox">
 		<div id="minor-publishing">
 			<div id="misc-publishing-actions">
+			<div class="misc-pub-section misc-pub-post-status">
+					<label>
+						<?php echo esc_html( $label ); ?> Type:
+
+						<?php if ( current_user_can( $edit_capability ) ) : ?>
+
+							<span id="post-status-display">
+							<select name="event_subtype">
+								<?php
+								foreach ( $event_subtypes as $key => $event_subtype_label ) {
+									printf(
+										'<option %s value="%s">%s</option>',
+										selected( $event_subtype, $key, false ),
+										esc_attr( $key ),
+										esc_html( $event_subtype_label )
+									);
+								}
+								?>
+							</select>
+						</span>
+
+						<?php else : ?>
+
+							<span id="post-status-display">
+							<?php echo esc_html( $event_subtypes[ $event_subtype ] ); ?>
+						</span>
+
+						<?php endif; ?>
+					</label>
+				</div>
 				<div class="misc-pub-section misc-pub-post-status">
 					<label>
-						<?php echo $label; ?> Status:
+						<?php echo esc_html( $label ); ?> Status:
 
 						<?php if ( current_user_can( $edit_capability ) ) : ?>
 
@@ -27,7 +60,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 							<select name="post_status">
 								<?php $transitions = $event_admin->get_valid_status_transitions( $post->post_status );
 								?>
-								<?php foreach ( $event_admin->get_post_statuses() as $key => $label ) : ?>
+								<?php foreach ( $event_admin->get_post_statuses() as $key => $post_status_label ) : ?>
 									<?php $status = get_post_status_object( $key ); ?>
 									<option value="<?php echo esc_attr( $status->name ); ?>" <?php
 									if ( $post->post_status == $status->name ) {

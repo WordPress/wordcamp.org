@@ -6469,7 +6469,7 @@ class CampTix_Plugin {
 						wp_update_post( $attendee );
 					}
 
-					// Dumb result in order for checks below to pass, with this we avoid adding new check.
+					// Mock successful result to allow standard validation flow for free ticket refunds.
 					$result = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
 				} else {
 					$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );

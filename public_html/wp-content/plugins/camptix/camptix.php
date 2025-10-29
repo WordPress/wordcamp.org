@@ -6451,7 +6451,7 @@ class CampTix_Plugin {
 		// Has a refund request been submitted?
 		$reason = '';
 		if ( current_user_can( $this->caps['manage_attendees'] ) ) {
-			$reason = wp_sprintf( __( 'In behalf of attendee by %s (%s)', 'wordcamporg' ), wp_get_current_user()->display_name, wp_get_current_user()->user_login );
+			$reason = wp_sprintf( __( 'On behalf of attendee by %s (%s)', 'wordcamporg' ), wp_get_current_user()->display_name, wp_get_current_user()->user_login );
 		}
 
 		if ( isset( $_POST['tix_refund_request_submit'] ) ) {

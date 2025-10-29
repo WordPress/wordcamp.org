@@ -6461,7 +6461,7 @@ class CampTix_Plugin {
 			if ( ! $check ) {
 				$this->error( __( 'You have to agree to the terms to request a refund.', 'wordcamporg' ) );
 			} else {
-				// Allow organisers to refund tickets without transactions (i.e. free tickets)
+				// Allow organizers to refund tickets without transactions (i.e. free tickets)
 				if ( current_user_can( $this->caps['manage_attendees'] ) && empty( $transactions ) ) {
 					// Change status for all attendees within the same purchase.
 					foreach ( $attendees as $attendee ) {

@@ -398,6 +398,9 @@ class WordCamp_Details extends Base_Details {
 			'Location'                => 'checked',
 			'URL'                     => 'checked',
 		);
+		foreach ( $_REQUEST['fields'] ?? array() as $field ) {
+			$field_defaults[ $field ] = 'checked';
+		}
 
 		$report = false;
 		$input  = static::get_report_inputs();

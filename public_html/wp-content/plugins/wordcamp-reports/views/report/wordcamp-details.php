@@ -21,11 +21,11 @@ use WordCamp\Reports\Report;
 		<?php echo esc_html( Report\WordCamp_Details::$name ); ?>
 	</h1>
 
-	<?php echo wpautop( wp_kses_post( Report\WordCamp_Details::$description ) ); ?>
+	<?php echo wp_kses_post( wpautop( Report\WordCamp_Details::$description ) ); ?>
 
 	<h4>Methodology</h4>
 
-	<?php echo wpautop( wp_kses_post( Report\WordCamp_Details::$methodology ) ); ?>
+	<?php echo wp_kses_post( wpautop( Report\WordCamp_Details::$methodology ) ); ?>
 
 	<form method="post" action="">
 		<input type="hidden" name="action" value="run-report" />
@@ -44,7 +44,7 @@ use WordCamp\Reports\Report;
 			</tbody>
 		</table>
 
-		<?php Report\WordCamp_Details::render_available_fields( 'private', $field_defaults ) ?>
+		<?php Report\WordCamp_Details::render_available_fields( 'private', $field_defaults ); ?>
 
 		<input type="submit" name="action" class="button button-primary" value="Show Results" formaction="#report-data-table">
 		<input type="submit" name="action" class="button button-secondary" value="Export CSV">

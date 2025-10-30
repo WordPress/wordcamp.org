@@ -6409,7 +6409,8 @@ class CampTix_Plugin {
 		$tickets = array();
 
 		foreach ( $attendees as $attendee ) {
-			$txn_id = get_post_meta( $attendee->ID, 'tix_transaction_id', true );
+			$tix_payment_token = get_post_meta( $attendee->ID, 'tix_payment_token', true );
+			$txn_id            = get_post_meta( $attendee->ID, 'tix_transaction_id', true );
 			if ( $txn_id ) {
 				$transaction                   = get_post_meta( $attendee->ID, 'tix_transaction_details', true );
 				$transaction['transaction_id'] = $txn_id;
@@ -6462,19 +6463,15 @@ class CampTix_Plugin {
 			} else {
 				// Allow organizers to refund tickets without transactions (i.e. free tickets)
 				if ( current_user_can( $this->caps['manage_attendees'] ) && empty( $transactions ) ) {
-					// Change status for all attendees within the same purchase.
-					foreach ( $attendees as $attendee ) {
-						$attendee->post_status = 'refund';
-						wp_update_post( $attendee );
-					}
-
-					// Mock successful result to allow standard validation flow for free ticket refunds.
-					$result = CampTix_Plugin::PAYMENT_STATUS_REFUNDED;
+					$result = $this->payment_result(
+						$tix_payment_token,
+						CampTix_Plugin::PAYMENT_STATUS_REFUNDED
+					);
 				} else {
 					$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
 
-					// Bail if a payment method does not exist.
-					if ( ! $payment_method_obj ) {
+					// Bail if a payment method does not exist, or doesn't support refunds.
+					if ( ! $payment_method_obj || empty( $payment_method_obj->supported_features['refund-single'] ) ) {
 						$this->error_flags['cannot_refund'] = true;
 						$this->redirect_with_error_flags();
 						die();

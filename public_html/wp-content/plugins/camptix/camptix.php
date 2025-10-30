@@ -6403,6 +6403,7 @@ class CampTix_Plugin {
 		}
 
 		$transactions = array();
+		$transaction  = false;
 		$is_refundable = false;
 		$order_total = 0;
 		$tickets = array();
@@ -6410,29 +6411,29 @@ class CampTix_Plugin {
 		foreach ( $attendees as $attendee ) {
 			$txn_id = get_post_meta( $attendee->ID, 'tix_transaction_id', true );
 			if ( $txn_id ) {
-				$transactions[ $txn_id ]                   = get_post_meta( $attendee->ID, 'tix_transaction_details', true );
-				$transactions[ $txn_id ]['transaction_id'] = $txn_id;
-				$transactions[ $txn_id ]['payment_amount'] = get_post_meta( $attendee->ID, 'tix_order_total', true );
-				$transactions[ $txn_id ]['receipt_email']  = get_post_meta( $attendee->ID, 'tix_receipt_email', true );
-				$transactions[ $txn_id ]['payment_method'] = get_post_meta( $attendee->ID, 'tix_payment_method', true );
-				$transactions[ $txn_id ]['payment_token']  = get_post_meta( $attendee->ID, 'tix_payment_token', true );
+				$transaction                   = get_post_meta( $attendee->ID, 'tix_transaction_details', true );
+				$transaction['transaction_id'] = $txn_id;
+				$transaction['payment_amount'] = get_post_meta( $attendee->ID, 'tix_order_total', true );
+				$transaction['receipt_email']  = get_post_meta( $attendee->ID, 'tix_receipt_email', true );
+				$transaction['payment_method'] = get_post_meta( $attendee->ID, 'tix_payment_method', true );
+				$transaction['payment_token']  = get_post_meta( $attendee->ID, 'tix_payment_token', true );
+
+				$transactions[ $txn_id ] = $transaction;
 			}
+
 			$ticket_id = get_post_meta( $attendee->ID, 'tix_ticket_id', true );
 
-			if ( isset( $tickets[$ticket_id] ) )
-				$tickets[$ticket_id]++;
-			else
-				$tickets[$ticket_id] = 1;
+			$tickets[ $ticket_id ] ??= 0;
+			$tickets[ $ticket_id ]++;
 		}
 
 		if ( ! current_user_can( $this->caps['manage_attendees'] ) ) {
-			if ( count( $transactions ) != 1 || $transactions[ $txn_id ]['payment_amount'] <= 0 ) {
+			if ( count( $transactions ) != 1 || $transaction['payment_amount'] <= 0 ) {
 				$this->error_flags['cannot_refund'] = true;
 				$this->redirect_with_error_flags();
 				die();
 			}
 
-			$transaction = array_shift( $transactions );
 			if ( ! $transaction['receipt_email'] || ! $transaction['transaction_id'] || ! $transaction['payment_amount'] ) {
 				$this->error_flags['cannot_refund'] = true;
 				$this->redirect_with_error_flags();
@@ -6519,11 +6520,11 @@ class CampTix_Plugin {
 						</tr>
 						<tr>
 							<td class="tix-left"><?php _e( 'E-mail', 'wordcamporg' ); ?></td>
-							<td class="tix-right"><?php echo esc_html( $transaction['receipt_email'] ); ?></td>
+							<td class="tix-right"><?php echo esc_html( $transaction['receipt_email'] ?? '' ); ?></td>
 						</tr>
 						<tr>
 							<td class="tix-left"><?php _e( 'Original Payment', 'wordcamporg' ); ?></td>
-							<td class="tix-right"><?php printf( "%s %s", esc_html( $this->options['currency'] ), esc_html( $transaction['payment_amount'] ) ); ?></td>
+							<td class="tix-right"><?php printf( "%s %s", esc_html( $this->options['currency'] ), esc_html( $transaction['payment_amount'] ?? 0 ) ); ?></td>
 						</tr>
 						<tr>
 							<td class="tix-left"><?php _e( 'Purchased Tickets', 'wordcamporg' ); ?></td>
@@ -6534,12 +6535,20 @@ class CampTix_Plugin {
 							</td>
 						</tr>
 						<tr>
+							<td class="tix-left"><?php _e( 'Attendee', 'wordcamporg' ); ?></td>
+							<td class="tix-right">
+								<?php foreach ( $attendees as $attendee ) : ?>
+									<?php echo esc_html( sprintf( "%s %s (%s)", $attendee->tix_first_name, $attendee->tix_last_name, $this->get_ticket_title( $ticket_id ) ) ); ?><br />
+								<?php endforeach; ?>
+							</td>
+						</tr>
+						<tr>
 							<td class="tix-left"><?php _e( 'Refund Amount', 'wordcamporg' ); ?></td>
-							<td class="tix-right"><?php printf( "%s %s", esc_html( $this->options['currency'] ), esc_html( $transaction['payment_amount'] ) ); ?></td>
+							<td class="tix-right"><?php printf( "%s %s", esc_html( $this->options['currency'] ), esc_html( $transaction['payment_amount'] ?? 0 ) ); ?></td>
 						</tr>
 						<tr>
 							<td class="tix-left"><?php _e( 'Refund Reason', 'wordcamporg' ); ?></td>
-							<td class="tix-right"><textarea name="tix_refund_request_reason"><?php echo esc_textarea( $reason ); ?></textarea></td>
+							<td class="tix-right"><textarea name="tix_refund_request_reason" style="width:100%"><?php echo esc_textarea( $reason ); ?></textarea></td>
 						</tr>
 
 					</tbody>

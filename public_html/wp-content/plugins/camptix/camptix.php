@@ -6409,6 +6409,7 @@ class CampTix_Plugin {
 		$tickets = array();
 
 		foreach ( $attendees as $attendee ) {
+			$attendee_email  ??= get_post_meta( $attendee->ID, 'tix_email', true );
 			$tix_payment_token = get_post_meta( $attendee->ID, 'tix_payment_token', true );
 			$txn_id            = get_post_meta( $attendee->ID, 'tix_transaction_id', true );
 			if ( $txn_id ) {
@@ -6465,7 +6466,13 @@ class CampTix_Plugin {
 				if ( current_user_can( $this->caps['manage_attendees'] ) && empty( $transactions ) ) {
 					$result = $this->payment_result(
 						$tix_payment_token,
-						CampTix_Plugin::PAYMENT_STATUS_REFUNDED
+						CampTix_Plugin::PAYMENT_STATUS_REFUNDED,
+						array(
+							'refund_transaction_id'      => 'no-transaction',
+							'refund_transaction_details' => array(
+								'No payment transaction to refund.',
+							)
+						)
 					);
 				} else {
 					$payment_method_obj = $this->get_payment_method_by_id( $transaction['payment_method'] );
@@ -6517,7 +6524,7 @@ class CampTix_Plugin {
 						</tr>
 						<tr>
 							<td class="tix-left"><?php _e( 'E-mail', 'wordcamporg' ); ?></td>
-							<td class="tix-right"><?php echo esc_html( $transaction['receipt_email'] ?? '' ); ?></td>
+							<td class="tix-right"><?php echo esc_html( $transaction['receipt_email'] ?? $attendee_email ); ?></td>
 						</tr>
 						<tr>
 							<td class="tix-left"><?php _e( 'Original Payment', 'wordcamporg' ); ?></td>

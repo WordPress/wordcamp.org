@@ -175,7 +175,7 @@ abstract class Base_Details extends Base {
 			'Name'        => $event->post_title,
 			'Created'     => get_the_date( 'Y-m-d', $event->ID ),
 			'Status'      => $event->post_status,
-			'Tracker URL' => get_permalink( $event->ID ),
+			'Tracker URL' => get_edit_post_link( $event, 'raw' ),
 		];
 
 		foreach ( $meta_keys as $key ) {

@@ -10,6 +10,8 @@ use WordCamp\Reports;
 use WordCamp\Reports\Report;
 
 /** @var array $field_defaults */
+/** @var string $start_date */
+/** @var string $end_date */
 ?>
 
 <div class="wrap">
@@ -33,17 +35,24 @@ use WordCamp\Reports\Report;
 			<tbody>
 			<tr>
 				<th scope="row"><label for="start-date">Start Date (optional)</label></th>
-				<td><input type="date" id="start-date" name="start-date" value="" /></td>
+				<td><input type="date" id="start-date" name="start-date" value="<?php echo esc_attr( $start_date ); ?>" /></td>
 			</tr>
 			<tr>
 				<th scope="row"><label for="end-date">End Date (optional)</label></th>
-				<td><input type="date" id="end-date" name="end-date" value="" /></td>
+				<td><input type="date" id="end-date" name="end-date" value="<?php echo esc_attr( $end_date ); ?>" /></td>
 			</tr>
 			</tbody>
 		</table>
 
 		<?php Report\WordCamp_Details::render_available_fields( 'private', $field_defaults ) ?>
 
-		<?php submit_button( 'Export CSV', 'primary', 'action', false ); ?>
+		<input type="submit" name="action" class="button button-primary" value="Show Results" formaction="#report-data-table">
+		<input type="submit" name="action" class="button button-secondary" value="Export CSV">
 	</form>
+
+	<?php if ( $report instanceof Report\WordCamp_Details ) : ?>
+		<div class="report-results">
+			<?php $report->render_html(); ?>
+		</div>
+	<?php endif; ?>
 </div>

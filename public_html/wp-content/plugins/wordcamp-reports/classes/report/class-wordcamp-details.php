@@ -399,34 +399,53 @@ class WordCamp_Details extends Base_Details {
 			'URL'                     => 'checked',
 		);
 
+		$report = false;
+		$input  = static::get_report_inputs();
+		if (
+			! empty( $input ) &&
+			'Show Results' === $input['action'] &&
+			wp_verify_nonce( $input['nonce'], 'run-report' ) &&
+			current_user_can( CAPABILITY )
+		) {
+			$options = array(
+				'fields' => $input['fields'] ?? [],
+				'public' => false,
+			);
+
+			$report = new static( $input['range'], null, $input['include_counts'], $options );
+		}
+
+		$start_date = $input['start_date'] ?? '';
+		$end_date   = $input['end_date']   ?? '';
+
 		include get_views_dir_path() . 'report/wordcamp-details.php';
 	}
 
 	/**
-	 * Export the report data to a file.
+	 * Render an HTML version of the report output.
 	 *
 	 * @return void
 	 */
-	public static function export_to_file() {
+	public function render_html() {
+		if ( ! empty( $this->error->get_error_messages() ) ) {
+			$this->render_error_html();
+			return;
+		}
+
+		$data = $this->prepare_data_for_display( $this->compile_report_data( $this->get_data() ) );
+
+		include get_views_dir_path() . 'html/data-table.php';
+	}
+
+	/**
+	 * Fetch the input parameters for the report.
+	 */
+	public static function get_report_inputs() {
 		$start_date = filter_input( INPUT_POST, 'start-date' );
 		$end_date   = filter_input( INPUT_POST, 'end-date' );
 		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$action     = filter_input( INPUT_POST, 'action' );
 		$nonce      = filter_input( INPUT_POST, static::$slug . '-nonce' );
-
-		$report = null;
-
-		if ( 'Export CSV' !== $action ) {
-			return;
-		}
-
-		if ( ! wp_verify_nonce( $nonce, 'run-report' ) ) {
-			return;
-		}
-
-		if ( ! current_user_can( CAPABILITY ) ) {
-			return;
-		}
 
 		$error = null;
 		$range = null;
@@ -450,7 +469,7 @@ class WordCamp_Details extends Base_Details {
 		}
 
 		$include_counts = false;
-		if ( ! empty( array_intersect( $fields, array( 'Tickets', 'Speakers', 'Sponsors', 'Organizers' ) ) ) ) {
+		if ( $fields && ! empty( array_intersect( $fields, array( 'Tickets', 'Speakers', 'Sponsors', 'Organizers' ) ) ) ) {
 			$include_counts = true;
 		}
 
@@ -458,12 +477,31 @@ class WordCamp_Details extends Base_Details {
 		// so add it in here.
 		$fields[] = 'Name';
 
+		return compact( 'action', 'nonce', 'range', 'start_date', 'end_date', 'fields', 'include_counts', 'error' );
+	}
+
+	/**
+	 * Export the report data to a file.
+	 *
+	 * @return void
+	 */
+	public static function export_to_file() {
+		$input = static::get_report_inputs();
+		if (
+			empty( $input ) ||
+			'Export CSV' !== $input['action'] ||
+			! wp_verify_nonce( $input['nonce'], 'run-report' ) ||
+			! current_user_can( CAPABILITY )
+		) {
+			return;
+		}
+
 		$options = array(
-			'fields' => $fields,
+			'fields' => $input['fields'],
 			'public' => false,
 		);
 
-		$report = new self( $range, null, $include_counts, $options );
+		$report = new static( $input['range'], null, $input['include_counts'], $options );
 
 		static::export_to_file_common( $report );
 	}

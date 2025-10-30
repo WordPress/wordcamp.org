@@ -147,7 +147,7 @@ class WordCamp_Details extends Base_Details {
 					$this->event_ids[] = validate_wordcamp_id( $wordcamp_id, array( 'require_site' => false ) )->post_id;
 				} catch ( Exception $e ) {
 					$this->error->add(
-						self::$slug . '-wordcamp-id-error',
+						static::$slug . '-wordcamp-id-error',
 						$e->getMessage()
 					);
 
@@ -313,7 +313,7 @@ class WordCamp_Details extends Base_Details {
 	 * @return Base_Details
 	 */
 	public static function create_shadow_report_obj( $context ) {
-		return new self( null, null, false, array( 'public' => 'public' === $context ) );
+		return new static( null, null, false, array( 'public' => 'public' === $context ) );
 	}
 
 	/**
@@ -323,8 +323,8 @@ class WordCamp_Details extends Base_Details {
 	 * @param array  $field_defaults
 	 */
 	public static function render_available_fields( $context = 'public', array $field_defaults = array() ) {
-		$shadow_report = self::create_shadow_report_obj( $context );
-		self::render_available_fields_in_report( $shadow_report, $context, $field_defaults );
+		$shadow_report = static::create_shadow_report_obj( $context );
+		static::render_available_fields_in_report( $shadow_report, $context, $field_defaults );
 	}
 
 	/**
@@ -410,7 +410,7 @@ class WordCamp_Details extends Base_Details {
 		$end_date   = filter_input( INPUT_POST, 'end-date' );
 		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$nonce      = filter_input( INPUT_POST, static::$slug . '-nonce' );
 
 		$report = null;
 
@@ -441,7 +441,7 @@ class WordCamp_Details extends Base_Details {
 				);
 			} catch ( Exception $e ) {
 				$error = new WP_Error(
-					self::$slug . '-date-range-error',
+					static::$slug . '-date-range-error',
 					$e->getMessage()
 				);
 			}
@@ -463,7 +463,7 @@ class WordCamp_Details extends Base_Details {
 
 		$report = new self( $range, null, $include_counts, $options );
 
-		self::export_to_file_common( $report );
+		static::export_to_file_common( $report );
 	}
 
 }

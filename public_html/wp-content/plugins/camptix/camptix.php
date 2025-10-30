@@ -6542,7 +6542,7 @@ class CampTix_Plugin {
 							<td class="tix-left"><?php _e( 'Attendee', 'wordcamporg' ); ?></td>
 							<td class="tix-right">
 								<?php foreach ( $attendees as $attendee ) : ?>
-									<?php echo esc_html( sprintf( "%s %s (%s)", $attendee->tix_first_name, $attendee->tix_last_name, $this->get_ticket_title( $ticket_id ) ) ); ?><br />
+									<?php echo esc_html( sprintf( "%s %s", $attendee->tix_first_name, $attendee->tix_last_name ) ); ?><br />
 								<?php endforeach; ?>
 							</td>
 						</tr>

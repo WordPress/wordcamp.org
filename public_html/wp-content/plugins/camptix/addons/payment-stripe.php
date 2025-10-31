@@ -643,9 +643,46 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			return;
 		}
 
-		$stripe_session_id = get_post_meta( $attendee_id, '_stripe_checkout_session_id', true );
-		$payment_token     = get_post_meta( $attendee_id, 'tix_payment_token', true );
-		if ( ! $stripe_session_id || ! $payment_token ) {
+		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
+		if ( ! $payment_token ) {
+			return;
+		}
+
+		$payment = $this->get_payment( $payment_token );
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_COMPLETED === $payment['status'] ) {
+			// Payment already completed, no need to check further.
+			return;
+		}
+
+		if ( CampTix_Plugin::PAYMENT_STATUS_COMPLETED === $payment['status'] ) {
+			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
+
+			$payment_data   = array(
+				'transaction_id'      => $payment['transaction_id'],
+				'transaction_details' => array(
+					'raw' => $payment['transaction_details'],
+				),
+			);
+
+			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
+		}
+	}
+
+	/**
+	 * Get payment details from Stripe.
+	 *
+	 * @param string $payment_token
+	 * @return array|false See parent method.
+	 */
+	public function get_payment( $payment_token ) {
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			return false;
+		}
+
+		$stripe_session_id = get_post_meta( $order['attendee_id'], '_stripe_checkout_session_id', true );
+		if ( ! $stripe_session_id || ! $order ) {
 			return;
 		}
 
@@ -653,23 +690,31 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$session = $stripe->get_session( $stripe_session_id );
 
 		if ( is_wp_error( $session ) || empty( $session['status'] ) ) {
-			return;
+			return false;
 		}
 
-		// Uh oh, we've hit timeout on a ticket, but the linked checkout session succeeded.
-		if ( 'complete' === $session['status'] && 'paid' === $session['payment_status'] ) {
-			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
-
-			$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
-			$payment_data   = array(
-				'transaction_id'      => $transaction_id,
-				'transaction_details' => array(
-					'raw' => $session,
-				),
+		if ( 'complete' === $session['status'] ) {
+			return array(
+				'status'              => CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
+				'transaction_id'      => $session['payment_intent']['latest_charge'] ?? '',
+				'transaction_details' => $session,
 			);
-
-			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
+		} elseif ( 'open' === $session['status'] ) {
+			return array(
+				'status'              => CampTix_Plugin::PAYMENT_STATUS_PENDING,
+				'transaction_details' => $session,
+			);
+		} elseif ( 'expired' === $session['status'] ) {
+			return array(
+				'status'              => CampTix_Plugin::PAYMENT_STATUS_TIMEOUT,
+				'transaction_details' => $session,
+			);
 		}
+
+		// TODO: Handle the payment having been refunded.
+
+		// Unknown.
+		return false;
 	}
 }
 

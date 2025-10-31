@@ -92,6 +92,7 @@ class WordCamp_Docs_Template_Attendee_Visa implements WordCamp_Docs_Template {
 <html>
 <head>
 <meta charset="UTF-8">
+<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by wkhtmltopdf, so additional libraries are included directly. ?>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700" rel="stylesheet" type="text/css" />
 <style type="text/css">
 body {

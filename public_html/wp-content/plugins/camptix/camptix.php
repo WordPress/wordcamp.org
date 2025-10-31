@@ -2359,8 +2359,12 @@ class CampTix_Plugin {
 					$date = mysql2date( 'l', $attendee->post_date );
 					$this->increment_summary( $summary, $date );
                 } elseif ( $summarize_by == 'purchase_week' ) {
-					$date = mysql2date( 'W', $attendee->post_date );
-					$this->increment_summary( $summary, $date );
+					$week = mysql2date( 'W', $attendee->post_date );
+					$year = mysql2date( 'Y', $attendee->post_date );
+					$datetime = new \DateTime();
+					$datetime->setISODate( $year, $week );
+					$label = sprintf( "Week $year-$week (starting %s)", $datetime->format('M j Y') );
+					$this->increment_summary( $summary, $label );
 				} elseif ( $summarize_by == 'coupon' ) {
 					$coupon = get_post_meta( $attendee->ID, 'tix_coupon', true );
 					if ( ! $coupon )

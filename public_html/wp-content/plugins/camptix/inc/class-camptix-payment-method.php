@@ -17,6 +17,13 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	public $camptix_options;
 
 	/**
+	 * The period of time (in seconds) after which a pending payment is considered timed out.
+	 *
+	 * @var int
+	 */
+	public $payment_timeout_period = 86400; // 24 hours in seconds.
+
+	/**
 	 * Constructor
 	 */
 	function __construct() {
@@ -215,6 +222,30 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
 	 */
 	abstract function payment_checkout( $payment_token );
+
+	/**
+	 * Provide the current status of a payment.
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
+	 */
+	function get_payment_status( $payment_token ) {
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			// If we can't find the order, return FAILED.
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+		}
+
+		// For back-compat, we'll return TIMEOUT or PENDING based on the order date and the defined timeout period (Default of 24 hours).
+		$order_date   = strtotime( $order['attendees'][0]->post_date );
+		$time_elapsed = time() - strtotime( $order_date );
+		if ( $time_elapsed > $this->payment_timeout_period ) {
+			return CampTix_Plugin::PAYMENT_STATUS_TIMEOUT;
+		}
+
+		return CampTix_Plugin::PAYMENT_STATUS_PENDING;
+	}
 
 	/**
 	 * Handle the refund process

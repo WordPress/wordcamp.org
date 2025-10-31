@@ -79,7 +79,6 @@ class CampusConnect_Details extends WordCamp_Details {
 			array(
 				'Start Date (YYYY-mm-dd)',
 				'End Date (YYYY-mm-dd)',
-				'Series?',
 				'Status',
 				'Name',
 				'Organizer Name',
@@ -92,20 +91,6 @@ class CampusConnect_Details extends WordCamp_Details {
 				'URL',
 			),
 			parent::get_field_order()
-		);
-	}
-
-	/**
-	 * Return fields that can be viewed in private context.
-	 *
-	 * @return array
-	 */
-	public function get_private_data_fields() {
-		return array_merge(
-			array(
-				'Series?',
-			),
-			parent::get_private_data_fields()
 		);
 	}
 
@@ -130,20 +115,6 @@ class CampusConnect_Details extends WordCamp_Details {
 		} );
 
 		return $data;
-	}
-
-	/**
-	 * Get the values of all the relevant post meta keys for a Event post.
-	 *
-	 * @param \WP_Post $event
-	 *
-	 * @return array
-	 */
-	public function fill_data_row( $event ) {
-		$row = parent::fill_data_row( $event );
-		$row['Series?'] = ''; // TODO
-
-		return $row;
 	}
 
 	/**
@@ -200,7 +171,6 @@ class CampusConnect_Details extends WordCamp_Details {
 		$field_defaults = array(
 			'Start Date (YYYY-mm-dd)'         => 'checked',
 			'End Date (YYYY-mm-dd)'           => 'checked',
-			'Series?'                         => 'checked',
 			'Status'                          => 'checked',
 			'Name'                            => 'checked',
 			'Organizer Name'                  => 'checked',

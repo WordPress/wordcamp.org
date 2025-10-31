@@ -7748,6 +7748,16 @@ class CampTix_Plugin {
 		if ( empty( $payment_token ) )
 			die( 'Do not call payment_result without a payment token.' );
 
+		// Back-compat for some payment gateways.
+		if ( is_scalar( $data ) ) {
+			_doing_it_wrong( 'Camptix::payment_result', 'Passing a scalar as $data is deprecated. Please pass an array with at least the transaction_id key.', '20251101' );
+			$data = array(
+				'transaction_id'      => $data,
+				'transaction_details' => $_REQUEST,
+			);
+			unset( $data['transaction_details']['tix_action'], $data['transaction_details']['tix_payment_token'], $data['transaction_details']['tix_payment_method'] );
+		}
+
 		$attendees = get_posts( array(
 			'posts_per_page' => -1,
 			'post_type' => 'tix_attendee',

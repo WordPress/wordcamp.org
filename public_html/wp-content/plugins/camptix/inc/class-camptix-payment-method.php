@@ -231,6 +231,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
 	 */
 	function get_payment_status( $payment_token ) {
+		_doing_it_wrong( __METHOD__, 'get_payment_status() not implemented in payment module.', '20251101' );
 		$order = $this->get_order( $payment_token );
 		if ( ! $order ) {
 			// If we can't find the order, return FAILED.
@@ -257,6 +258,8 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	function payment_refund( $payment_token ) {
 		/** @var $camptix Camptix_Plugin  */
 		global $camptix;
+
+		_doing_it_wrong( __METHOD__, 'payment_refund() not implemented in payment module.', '20251101' );
 
 		$refund_data = array();
 		$camptix->log( __FUNCTION__ . ' not implemented in payment module.', 0, null, 'refund' );

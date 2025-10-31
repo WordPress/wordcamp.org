@@ -17,11 +17,11 @@ defined('WPINC') || die();
 <head>
 	<meta charset="UTF-8">
 	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by wkhtmltopdf, so additional libraries are included directly. ?>
-	<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css"/>
+	<link href="https://fonts.googleapis.com/css2?family=Open+Sans:300,600,700&family=Noto+Sans+KR:300,600,700&family=Noto+Sans+SC:300,600,700" rel="stylesheet" type="text/css"/>
 	<style type="text/css">
 		#camptix-invoice-page {
 			margin: 5em;
-			font-family: 'Open Sans', sans-serif;
+			font-family: 'Noto Sans KR', 'Noto Sans SC', 'Open Sans', sans-serif;
 			font-size: 14px;
 			font-weight: 300;
 			color: #222;

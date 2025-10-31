@@ -228,24 +228,40 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 *
 	 * @param string $payment_token
 	 *
-	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
+	 * @return array {
+	 *   @type int $status A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED
+	 *   @type ?string $transaction_id The transaction ID from the payment gateway, or null if not available
+	 *   @type ?array $transaction_details Additional details about the transaction from the payment gateway, or null if not available
+	 * }
 	 */
-	function get_payment_status( $payment_token ) {
-		_doing_it_wrong( __METHOD__, 'get_payment_status() not implemented in payment module.', '20251101' );
+	function get_payment( $payment_token ) {
+		_doing_it_wrong( __METHOD__, 'get_payment() not implemented in payment module.', '20251101' );
 		$order = $this->get_order( $payment_token );
 		if ( ! $order ) {
 			// If we can't find the order, return FAILED.
-			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+			return array(
+				'status' => CampTix_Plugin::PAYMENT_STATUS_FAILED,
+				'transaction_id' => null,
+				'transaction_details' => null
+			);
 		}
 
 		// For back-compat, we'll return TIMEOUT or PENDING based on the order date and the defined timeout period (Default of 24 hours).
 		$order_date   = strtotime( $order['attendees'][0]->post_date );
 		$time_elapsed = time() - strtotime( $order_date );
 		if ( $time_elapsed > $this->payment_timeout_period ) {
-			return CampTix_Plugin::PAYMENT_STATUS_TIMEOUT;
+			return array(
+				'status'              => CampTix_Plugin::PAYMENT_STATUS_TIMEOUT,
+				'transaction_id'      => null,
+				'transaction_details' => null
+			);
 		}
 
-		return CampTix_Plugin::PAYMENT_STATUS_PENDING;
+		return array(
+			'status'              => CampTix_Plugin::PAYMENT_STATUS_PENDING,
+			'transaction_id'      => null,
+			'transaction_details' => null
+		);
 	}
 
 	/**

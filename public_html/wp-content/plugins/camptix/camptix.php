@@ -192,10 +192,17 @@ class CampTix_Plugin {
 		add_action( 'tix_scheduled_two_hours', array( $this, 'review_timeout_payments' ) );
 		add_action( 'tix_scheduled_daily', array( $this, 'cron_camptix_stats_ticket_validation' ) );
 
-		if ( ! wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) )
-			wp_schedule_event( time(), '10-mins', 'tix_scheduled_every_ten_minutes' );
+		// No need for ticketing schedules on an archived event.
+		if ( $this->options['archived'] ) {
+			wp_clear_scheduled_hook( 'tix_scheduled_every_ten_minutes' );
+			wp_clear_scheduled_hook( 'tix_scheduled_two_hours' );
+			wp_clear_scheduled_hook( 'tix_scheduled_daily' );
+			return;
+		}
 
-		// wp_clear_scheduled_hook( 'tix_scheduled_hourly' );
+		if ( ! wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) ) {
+			wp_schedule_event( time(), '10-mins', 'tix_scheduled_every_ten_minutes' );
+		}
 		if ( ! wp_next_scheduled( 'tix_scheduled_daily' ) ) {
 			wp_schedule_event( time(), 'daily', 'tix_scheduled_daily' );
 		}

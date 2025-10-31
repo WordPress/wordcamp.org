@@ -7217,12 +7217,14 @@ class CampTix_Plugin {
 		$processed = 0;
 		$current_loop = 1;
 		$max_loops = 500;
+		$seen_ids = [];
 
 		while ( $attendees = get_posts( array(
 			'fields' => 'ids',
 			'post_type' => 'tix_attendee',
 			'post_status' => 'draft',
 			'posts_per_page' => 100,
+			'post__not_in' => $seen_ids,
 			'cache_results' => false,
 			'meta_query' => array(
 				array(
@@ -7241,6 +7243,34 @@ class CampTix_Plugin {
 		) ) ) {
 
 			foreach ( $attendees as $attendee_id ) {
+				$seen_ids[] = $attendee_id;
+
+				// If the payment method supports fetching payment status, check that before we do anything.
+				$payment_method     = get_post_meta( $attendee_id, 'tix_payment_method', true );
+				$payment_method_obj = $this->get_payment_method_by_id( $payment_method );
+				$tix_payment_token  = get_post_meta( $attendee_id, 'tix_payment_token', true );
+				if ( $payment_method_obj && $tix_payment_token ) {
+					$payment = $payment_method_obj->get_payment( $tix_payment_token );
+
+					if ( $payment && CampTix_Plugin::PAYMENT_STATUS_COMPLETED === $payment['status'] ) {
+						// Mark as published instead of timing out.
+						$this->payment_result(
+							$tix_payment_token,
+							$payment['status'],
+							$payment,
+							false /* not interactive, do not die/redirect. */
+						);
+
+						continue;
+					} elseif ( $payment && CampTix_Plugin::PAYMENT_STATUS_PENDING === $payment['status'] ) {
+						// Leave as draft, still pending.
+						continue;
+					}
+				}
+
+				/**
+				 * Allow plugins to hook in before an attendee is timed out.
+				 */
 				do_action( 'camptix_pre_attendee_timeout', $attendee_id );
 
 				// Check the post_status again, incase a filter has caused the post to change.

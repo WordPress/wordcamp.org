@@ -55,7 +55,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		);
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
-		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 	}
 
 	/**
@@ -629,44 +628,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		);
 
 		return $result;
-	}
-
-	/**
-	 * Check if a stripe session timed out.
-	 */
-	public function pre_attendee_timeout( $attendee_id ) {
-		/** @var CampTix_Plugin $camptix */
-		global $camptix;
-
-		// precheck the attendee is in draft.
-		if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
-			return;
-		}
-
-		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
-		if ( ! $payment_token ) {
-			return;
-		}
-
-		$payment = $this->get_payment( $payment_token );
-
-		if ( CampTix_Plugin::PAYMENT_STATUS_COMPLETED === $payment['status'] ) {
-			// Payment already completed, no need to check further.
-			return;
-		}
-
-		if ( CampTix_Plugin::PAYMENT_STATUS_COMPLETED === $payment['status'] ) {
-			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
-
-			$payment_data   = array(
-				'transaction_id'      => $payment['transaction_id'],
-				'transaction_details' => array(
-					'raw' => $payment['transaction_details'],
-				),
-			);
-
-			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
-		}
 	}
 
 	/**

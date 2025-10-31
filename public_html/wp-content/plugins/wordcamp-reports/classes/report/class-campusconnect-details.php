@@ -151,7 +151,7 @@ class CampusConnect_Details extends WordCamp_Details {
 					'key'     => 'event_subtype',
 					'value'   => 'campusconnect',
 					'compare' => '=',
-				)
+				),
 			),
 		);
 
@@ -221,5 +221,4 @@ class CampusConnect_Details extends WordCamp_Details {
 
 		include get_views_dir_path() . 'report/campusconnect-details.php';
 	}
-
 }

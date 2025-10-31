@@ -2399,7 +2399,7 @@ class CampTix_Plugin {
 			'purchase_time' => __( 'Purchase time', 'wordcamporg' ),
 			'purchase_datetime' => __( 'Purchase date and time', 'wordcamporg' ),
 			'purchase_dayofweek' => __( 'Purchase day of week', 'wordcamporg' ),
-            'purchase_week' => __( 'Purchase week', 'wordcamporg' ),
+			'purchase_week' => __( 'Purchase week', 'wordcamporg' ),
 		) );
 	}
 

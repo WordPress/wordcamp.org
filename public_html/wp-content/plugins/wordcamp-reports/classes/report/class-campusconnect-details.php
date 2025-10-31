@@ -88,6 +88,7 @@ class CampusConnect_Details extends WordCamp_Details {
 				'Number of Anticipated Attendees',
 				'Tracker URL',
 				'URL',
+				'ID',
 			),
 			parent::get_field_order()
 		);
@@ -179,6 +180,7 @@ class CampusConnect_Details extends WordCamp_Details {
 			'Number of Anticipated Attendees' => 'checked',
 			'Tracker URL'                     => 'checked',
 			'URL'                             => 'checked',
+			'ID'                              => 'checked',
 		);
 		foreach ( $_REQUEST['fields'] ?? array() as $field ) {
 			$field_defaults[ $field ] = 'checked';

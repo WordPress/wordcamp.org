@@ -82,7 +82,7 @@ class CampusConnect_Details extends WordCamp_Details {
 				'Status',
 				'Name',
 				'Organizer Name',
-				'_venue_name',
+				'Venue Name',
 				'_venue_city',
 				'_venue_country_name',
 				'Number of Anticipated Attendees',
@@ -104,14 +104,28 @@ class CampusConnect_Details extends WordCamp_Details {
 	public function prepare_data_for_display( array $data ) {
 		$data = parent::prepare_data_for_display( $data );
 
-		array_walk( $data, function( &$row ) {
+		$rename = array(
+			'Venue Name'         => 'Institution Name',
+			'_venue_city'         => 'City',
+			'_venue_country_name' => 'Country',
+		);
+
+		array_walk( $data, function( &$row ) use ( $rename ) {
+			$new_row = [];
 			foreach ( $row as $key => $value ) {
 				switch ( $key ) {
 					case 'Status':
-						$row[ $key ] = trim( str_replace( 'WordCamp', '', $row[ $key ] ) );
+						$value = trim( str_replace( 'WordCamp', '', $value ) );
 						break;
 				}
+
+				// Rename some columns.
+				$key = $rename[ $key ] ?? $key;
+
+				$new_row[ $key ] = $value;
 			}
+
+			$row = $new_row;
 		} );
 
 		return $data;
@@ -174,7 +188,7 @@ class CampusConnect_Details extends WordCamp_Details {
 			'Status'                          => 'checked',
 			'Name'                            => 'checked',
 			'Organizer Name'                  => 'checked',
-			'_venue_name'                     => 'checked',
+			'Venue Name'                      => 'checked',
 			'_venue_city'                     => 'checked',
 			'_venue_country_name'             => 'checked',
 			'Number of Anticipated Attendees' => 'checked',

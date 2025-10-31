@@ -7245,7 +7245,7 @@ class CampTix_Plugin {
 				array(
 					'key' => 'tix_timestamp',
 					'compare' => '<',
-					'value' => time() - 60 * 60 * 24, // 24 hours ago
+					'value' => time() - ( 2 * HOUR_IN_SECONDS ),
 					'type' => 'NUMERIC',
 				),
 				array(
@@ -7279,6 +7279,12 @@ class CampTix_Plugin {
 						continue;
 					} elseif ( $payment && CampTix_Plugin::PAYMENT_STATUS_PENDING === $payment['status'] ) {
 						// Leave as draft, still pending.
+						continue;
+					}
+				} else {
+					// If no payment method or token, minimum of 24hrs must pass..
+					$order_date = get_post_meta( $attendee_id, 'tix_timestamp', true );
+					if ( ( time() - $order_date ) < DAY_IN_SECONDS ) {
 						continue;
 					}
 				}

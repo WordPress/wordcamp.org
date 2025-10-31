@@ -92,12 +92,12 @@ class WordCamp_Docs_Template_Speaker_Visa implements WordCamp_Docs_Template {
 <html>
 <head>
 <meta charset="UTF-8">
-<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css" />
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:300,600,700&family=Noto+Sans+KR:300,600,700&family=Noto+Sans+SC:300,600,700" rel="stylesheet" type="text/css" />
 <style type="text/css">
 body {
 	margin: 0;
 	padding: 0;
-	font-family: 'Open Sans', sans-serif;
+	font-family: 'Noto Sans KR', 'Noto Sans SC', 'Open Sans', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
 	font-weight: 300;
@@ -109,7 +109,7 @@ p {
 }
 
 h1, h2, h3, h4, div, p, span, table {
-	font-family: 'Open Sans', sans-serif;
+	font-family: 'Noto Sans KR', 'Noto Sans SC', 'Open Sans', sans-serif;
 }
 
 strong {
@@ -124,7 +124,7 @@ table {
 	border: none;
 	border-collapse: collapse;
 
-	font-family: 'Open Sans', sans-serif;
+	font-family: 'Noto Sans KR', 'Noto Sans SC', 'Open Sans', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
 	font-weight: 300;

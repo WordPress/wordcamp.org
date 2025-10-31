@@ -189,15 +189,19 @@ class CampTix_Plugin {
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'send_emails_batch' ) );
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'process_refund_all' ) );
 
-		add_action( 'tix_scheduled_daily', array( $this, 'review_timeout_payments' ) );
+		add_action( 'tix_scheduled_two_hours', array( $this, 'review_timeout_payments' ) );
 		add_action( 'tix_scheduled_daily', array( $this, 'cron_camptix_stats_ticket_validation' ) );
 
 		if ( ! wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) )
 			wp_schedule_event( time(), '10-mins', 'tix_scheduled_every_ten_minutes' );
 
 		// wp_clear_scheduled_hook( 'tix_scheduled_hourly' );
-		if ( ! wp_next_scheduled( 'tix_scheduled_daily' ) )
+		if ( ! wp_next_scheduled( 'tix_scheduled_daily' ) ) {
 			wp_schedule_event( time(), 'daily', 'tix_scheduled_daily' );
+		}
+		if ( ! wp_next_scheduled( 'tix_scheduled_two_hours' ) ) {
+			wp_schedule_event( time(), 'two-hours', 'tix_scheduled_two_hours' );
+		}
 	}
 
 	/**
@@ -207,6 +211,10 @@ class CampTix_Plugin {
 		$schedules['10-mins'] = array(
 			'interval' => 60 * 10,
 			'display' => __( 'Once every 10 minutes', 'wordcamporg' ),
+		);
+		$schedules['two-hours'] = array(
+			'interval' => 2 * HOUR_IN_SECONDS,
+			'display' => 'Every 2 hours',
 		);
 		return $schedules;
 	}

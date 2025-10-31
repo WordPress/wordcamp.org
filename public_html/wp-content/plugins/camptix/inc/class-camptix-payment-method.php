@@ -292,7 +292,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		}
 
 		$attendees = get_posts( array(
-			'posts_per_page' => 1,
+			'posts_per_page' => -1,
 			'post_type'      => 'tix_attendee',
 			'post_status'    => 'any',
 			'meta_query'     => array(
@@ -304,27 +304,26 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 				),
 			),
 		) );
-
 		if ( ! $attendees ) {
 			return array();
 		}
 
-		return $this->get_order_by_attendee_id( $attendees[0]->ID );
-	}
-
-	/**
-	 * Get the order for the given attendee
-	 *
-	 * @param int $attendee_id
-	 *
-	 * @return array
-	 */
-	function get_order_by_attendee_id( $attendee_id ) {
-		$order = (array) get_post_meta( $attendee_id, 'tix_order', true );
-
-		if ( $order ) {
-			$order['attendee_id'] = $attendee_id;
+		$order = false;
+		foreach ( $attendees as $attendee ) {
+			$order = (array) get_post_meta( $attendee->ID, 'tix_order', true );
+			if ( $order ) {
+				break;
+			}
 		}
+		if ( ! $order ) {
+			return array();
+		}
+
+		// "last" attendee added, ie. not always the purchaser.
+		$order['attendee_id'] = $attendees[0]->ID;
+
+		// All attendees.
+		$order['attendees'] = $attendees;
 
 		return $order;
 	}

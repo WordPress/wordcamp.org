@@ -247,7 +247,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		}
 
 		// For back-compat, we'll return TIMEOUT or PENDING based on the order date and the defined timeout period (Default of 24 hours).
-		$order_date   = strtotime( $order['attendees'][0]->post_date );
+		$order_date   = strtotime( $order['attendees'][0]->tix_timestamp );
 		$time_elapsed = time() - strtotime( $order_date );
 		if ( $time_elapsed > $this->payment_timeout_period ) {
 			return array(

@@ -189,7 +189,8 @@ class CampTix_Plugin {
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'send_emails_batch' ) );
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'process_refund_all' ) );
 
-		add_action( 'tix_scheduled_two_hours', array( $this, 'review_timeout_payments' ) );
+		add_action( 'tix_scheduled_two_hours', array( $this, 'check_payment_status_for_draft_tickets' ) );
+
 		add_action( 'tix_scheduled_daily', array( $this, 'cron_camptix_stats_ticket_validation' ) );
 
 		// No need for ticketing schedules on an archived event.
@@ -7218,12 +7219,13 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Review Timeout Payments
+	 * Review Draft attendee payments.
 	 *
-	 * This routine looks up old draft attendee posts and puts
-	 * their status into Timeout.
+	 * This routine looks up old draft attendee posts and either:
+	 *  - Marks the attendee as paid.
+	 *  - Puts their ticket into timeout status.
 	 */
-	function review_timeout_payments() {
+	function check_payment_status_for_draft_tickets() {
 
 		// Nothing to do for archived sites.
 		if ( $this->options['archived'] )

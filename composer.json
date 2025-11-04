@@ -112,7 +112,8 @@
 	],
 	"require": {
 		"adhocore/jwt": "^1.0",
-		"wporg/wporg-parent-2021": "dev-build"
+		"wporg/wporg-parent-2021": "dev-build",
+		"dompdf/dompdf": "*"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",

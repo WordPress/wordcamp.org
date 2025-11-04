@@ -92,7 +92,7 @@ class WordCamp_Docs_Template_Speaker_Visa extends WordCamp_Docs_Template {
 <html>
 <head>
 <meta charset="UTF-8">
-<?php echo $this->get_suggested_font_header_html(); ?>
+<?php $this->font_header_html(); ?>
 <style type="text/css">
 body {
 	margin: 0;

@@ -45,7 +45,7 @@ abstract class WordCamp_Docs_Template {
 	abstract public function get_assets();
 
 	/**
-	 * Return suggested font header HTML to be included in the PDF templates.
+	 * Output default font header HTML to be included in the PDF templates.
 	 *
 	 * Fonts included (weights: 300-700):
 	 *  - Noto Sans
@@ -55,8 +55,9 @@ abstract class WordCamp_Docs_Template {
 	 *
 	 * @return string HTML link and style tags for including suggested fonts.
 	 */
-	public static function get_suggested_font_header_html() {
-		return '
+	public static function font_header_html() {
+		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet, WordPress.Security.EscapeOutput.OutputNotEscaped
+		?>
 		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Noto+Sans:wght@300..700" rel="stylesheet" type="text/css"/>
 		<style type="text/css">
 		@page {
@@ -65,6 +66,6 @@ abstract class WordCamp_Docs_Template {
 			font-family: "Noto Sans", "Noto Sans SC", "Noto Sans KR", "Noto Sans Arabic", sans-serif;
 		}
 		</style>
-		';
+		<?php
 	}
 }

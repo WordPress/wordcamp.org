@@ -16,7 +16,7 @@ defined('WPINC') || die();
 <html>
 <head>
 	<meta charset="UTF-8">
-	<?php echo WordCamp_Docs_Template::get_suggested_font_header_html(); ?>
+	<?php WordCamp_Docs_Template::font_header_html(); ?>
 	<style type="text/css">
 		#camptix-invoice-page {
 			margin: 5em;

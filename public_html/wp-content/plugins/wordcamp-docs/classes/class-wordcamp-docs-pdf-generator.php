@@ -71,6 +71,8 @@ class WordCamp_Docs_PDF_Generator {
 		}
 
 		$dompdf = new Dompdf( [
+			'dpi'                  => 300,
+
 			'isHtml5ParserEnabled' => true,
 			'isJavascriptEnabled'  => false,
 			'isPhpEnabled'         => false,

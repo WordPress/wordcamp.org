@@ -16,12 +16,10 @@ defined('WPINC') || die();
 <html>
 <head>
 	<meta charset="UTF-8">
-	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by wkhtmltopdf, so additional libraries are included directly. ?>
-	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..700&family=Noto+Sans+JP:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Noto+Sans:ital,wght@0,300..700;1,300..700" rel="stylesheet" type="text/css"/>
+	<?php echo WordCamp_Docs_Template::get_suggested_font_header_html(); ?>
 	<style type="text/css">
 		#camptix-invoice-page {
 			margin: 5em;
-			font-family: 'Noto Sans', 'Noto Sans SC', 'Noto Sans KR', 'Noto Sans Arabic', 'Noto Sans Devanagari', sans-serif;
 			font-size: 14px;
 			font-weight: 300;
 			color: #222;

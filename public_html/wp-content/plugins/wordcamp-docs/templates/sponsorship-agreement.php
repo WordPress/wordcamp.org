@@ -2,7 +2,7 @@
 /**
  * Sponsorship Agreement Template
  */
-class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Template {
+class WordCamp_Docs_Template_Sponsorship_Agreement extends WordCamp_Docs_Template {
 	/**
 	 * Step 10. Select the sponsor post from which the form will be pre-filled.
 	 */

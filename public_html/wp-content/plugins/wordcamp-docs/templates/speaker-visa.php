@@ -2,7 +2,7 @@
 /**
  * Speaker Visa Template
  */
-class WordCamp_Docs_Template_Speaker_Visa implements WordCamp_Docs_Template {
+class WordCamp_Docs_Template_Speaker_Visa extends WordCamp_Docs_Template {
 	public function form( $data ) {
 		$wordcamp    = get_wordcamp_post();
 		$start_date  = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? date( 'j F Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) : '';

@@ -47,11 +47,17 @@ abstract class WordCamp_Docs_Template {
 	/**
 	 * Return suggested font header HTML to be included in the PDF templates.
 	 *
+	 * Fonts included (weights: 300-700):
+	 *  - Noto Sans
+	 *  - Noto Sans SC
+	 *  - Noto Sans KR
+	 *  - Noto Sans Arabic
+	 *
 	 * @return string HTML link and style tags for including suggested fonts.
 	 */
 	public static function get_suggested_font_header_html() {
 		return '
-		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..700&family=Noto+Sans+JP:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Noto+Sans:ital,wght@0,300..700;1,300..700" rel="stylesheet" type="text/css"/>
+		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Noto+Sans:wght@300..700" rel="stylesheet" type="text/css"/>
 		<style type="text/css">
 		@page {
 			font-family: "Noto Sans", "Noto Sans SC", "Noto Sans KR", "Noto Sans Arabic", sans-serif;

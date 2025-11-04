@@ -92,13 +92,11 @@ class WordCamp_Docs_Template_Speaker_Visa extends WordCamp_Docs_Template {
 <html>
 <head>
 <meta charset="UTF-8">
-<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by wkhtmltopdf, so additional libraries are included directly. ?>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..700&family=Noto+Sans+JP:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Noto+Sans:ital,wght@0,300..700;1,300..700" rel="stylesheet" type="text/css"/>
+<?php echo $this->get_suggested_font_header_html(); ?>
 <style type="text/css">
 body {
 	margin: 0;
 	padding: 0;
-	font-family: 'Noto Sans', 'Noto Sans SC', 'Noto Sans KR', 'Noto Sans Arabic', 'Noto Sans Devanagari', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
 	font-weight: 300;
@@ -107,10 +105,6 @@ body {
 
 p {
 	margin: 0 0 1.5em;
-}
-
-h1, h2, h3, h4, div, p, span, table {
-	font-family: 'Noto Sans KR', 'Noto Sans SC', 'Open Sans', sans-serif;
 }
 
 strong {
@@ -125,7 +119,6 @@ table {
 	border: none;
 	border-collapse: collapse;
 
-	font-family: 'Noto Sans KR', 'Noto Sans SC', 'Open Sans', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
 	font-weight: 300;

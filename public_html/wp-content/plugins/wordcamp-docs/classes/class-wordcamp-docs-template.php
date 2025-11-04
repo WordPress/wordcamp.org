@@ -60,6 +60,8 @@ abstract class WordCamp_Docs_Template {
 		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Noto+Sans:wght@300..700" rel="stylesheet" type="text/css"/>
 		<style type="text/css">
 		@page {
+			size: a4;
+
 			font-family: "Noto Sans", "Noto Sans SC", "Noto Sans KR", "Noto Sans Arabic", sans-serif;
 		}
 		</style>

@@ -13,7 +13,10 @@ defined( 'WPINC' ) || die();
 			<tr>
 				<th style="width:20%;"><p><b><?php echo esc_html( $question_hr ); ?></b></p></th>
 				<th>
-					<?php echo make_clickable( nl2br( esc_html( $answer ) ) ); ?>
+					<?php
+					// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped - This is as escaped as it needs to be.
+					echo make_clickable( nl2br( esc_html( $answer ) ) );
+					?>
 				</th>
 			</tr>
 		<?php endforeach; ?>

@@ -1,4 +1,7 @@
 <?php
+/**
+ * Plugin Name: Jetpack Form to WPCC WCPT Application Integration
+ */
 namespace WordPress_Community\Applications\JetpackIntegration;
 use WordPress_Community\Applications\WordCamp_Application;
 
@@ -29,7 +32,6 @@ function grunion_after_feedback_post_inserted( $post_id, $fields, $is_spam, $ent
 		default:
 			return;
 	}
-
 }
 
 /**
@@ -104,7 +106,7 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 		)
 	);
 
-	$edit_link = add_query_arg( 
+	$edit_link = add_query_arg(
 		[
 			'post'   => $post_id,
 			'action' => 'edit',
@@ -115,13 +117,12 @@ function create_campus_connect_tracker( $post_id, $fields, $is_spam, $entry_valu
 	restore_current_blog();
 
 	// Suffix the edit url to the contact form.
-	add_filter( 'contact_form_message', function( $message ) use ( $edit_link ) {
-		$message .= "<br><strong>Internal details for the Community Team</strong><br>";
-		$message .= "<br><strong>Tracker URL:</strong> " . $edit_link;
+	add_filter( 'contact_form_message', function ( $message ) use ( $edit_link ) {
+		$message .= '<br><strong>Internal details for the Community Team</strong><br>';
+		$message .= '<br><strong>Tracker URL:</strong> ' . $edit_link;
 
 		return $message;
 	} );
-
 }
 
 /**

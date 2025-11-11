@@ -319,9 +319,9 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-interview-sched' => array( 'wcpt-needs-orientati', 'wcpt-approved-pre-pl' ),
 			'wcpt-rejected'        => array(),
 			'wcpt-cancelled'       => array(),  // Allowed from any status, see below
-			'wcpt-approved-pre-pl' => array( 'wcpt-interview-sched', 'wcpt-needs-email' ),
+			'wcpt-approved-pre-pl' => array( 'wcpt-interview-sched', 'wcpt-needs-email', 'wcpt-needs-site' ),
 			'wcpt-needs-email'     => array( 'wcpt-approved-pre-pl', 'wcpt-needs-site' ),
-			'wcpt-needs-site'      => array( 'wcpt-needs-email', 'wcpt-needs-polldaddy' ),
+			'wcpt-needs-site'      => array( 'wcpt-needs-email', 'wcpt-needs-polldaddy', 'wcpt-needs-pre-plann' ),
 			'wcpt-needs-polldaddy' => array( 'wcpt-needs-site', 'wcpt-needs-pre-plann' ),
 			'wcpt-needs-pre-plann' => array( 'wcpt-needs-polldaddy', 'wcpt-pre-planning' ),
 			'wcpt-pre-planning'    => array( 'wcpt-needs-pre-plann', 'wcpt-needs-budget-re' ),

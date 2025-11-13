@@ -12,7 +12,7 @@
 namespace WordCamp\Bin\PHPCS_Changed;
 
 function run_phpcs( $file, $bin_dir ) {
-	exec( "$bin_dir/phpcs $file -nq", $output, $exec_exit_status );
+	exec( "$bin_dir/phpcs $file -snq", $output, $exec_exit_status );
 	echo implode( "\n", $output );
 	return $exec_exit_status;
 }
@@ -20,8 +20,8 @@ function run_phpcs( $file, $bin_dir ) {
 function run_phpcs_changed( $file, $git, $base_branch, $bin_dir ) {
 	$name = basename( $file );
 	exec( "$git diff $base_branch $file > $name.diff" );
-	exec( "$git show $base_branch:$file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -nq > $name.orig.phpcs" );
-	exec( "cat $file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -nq > $name.phpcs" );
+	exec( "$git show $base_branch:$file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -snq > $name.orig.phpcs" );
+	exec( "cat $file | $bin_dir/phpcs --standard=./phpcs.xml.dist --report=json -snq > $name.phpcs" );
 
 	$cmd = "$bin_dir/phpcs-changed --diff $name.diff --phpcs-orig $name.orig.phpcs --phpcs-new $name.phpcs";
 	exec( $cmd, $output, $exec_exit_status );

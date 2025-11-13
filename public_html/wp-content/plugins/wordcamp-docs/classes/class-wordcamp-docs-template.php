@@ -52,8 +52,6 @@ abstract class WordCamp_Docs_Template {
 	 *  - Noto Sans SC
 	 *  - Noto Sans KR
 	 *  - Noto Sans Arabic
-	 *
-	 * @return string HTML link and style tags for including suggested fonts.
 	 */
 	public static function font_header_html() {
 		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet, WordPress.Security.EscapeOutput.OutputNotEscaped

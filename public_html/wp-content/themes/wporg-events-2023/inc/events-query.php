@@ -358,7 +358,7 @@ function feed_parse_query( $wp_query ) {
 	// Body should be prefixed with Location & Time. RSS Dates can't be in the future.
 	add_filter( 'the_content_feed', function ( $content ) {
 		$event = get_post();
-		$time  = date( 'F j, Y g:ia', strtotime( $event->post_date ) );
+		$time  = gmdate( 'F j, Y g:ia', strtotime( $event->post_date ) ); // This is not in UTC, but the timestamps is.
 
 		$prefix = sprintf(
 			'<p><strong>Location:</strong> %s<br/><strong>Time:</strong> %s</p>',

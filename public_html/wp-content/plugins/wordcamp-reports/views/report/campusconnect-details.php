@@ -3,7 +3,7 @@
  * @package WordCamp\Reports
  */
 
-namespace WordCamp\Reports\Views\Report\WordCamp_Details;
+namespace WordCamp\Reports\Views\Report\CampusConnect_Details;
 defined( 'WPINC' ) || die();
 
 use WordCamp\Reports;
@@ -16,20 +16,20 @@ use WordCamp\Reports\Report;
 
 <div class="wrap">
 	<h1>
-		<a href="<?php echo esc_attr( Reports\get_page_url() ); ?>">WordCamp Reports</a>
+		<a href="<?php echo esc_attr( Reports\get_page_url() ); ?>">CampusConnect Reports</a>
 		&raquo;
-		<?php echo esc_html( Report\WordCamp_Details::$name ); ?>
+		<?php echo esc_html( Report\CampusConnect_Details::$name ); ?>
 	</h1>
 
-	<?php echo wp_kses_post( wpautop( Report\WordCamp_Details::$description ) ); ?>
+	<?php echo wp_kses_post( wpautop( Report\CampusConnect_Details::$description ) ); ?>
 
 	<h4>Methodology</h4>
 
-	<?php echo wp_kses_post( wpautop( Report\WordCamp_Details::$methodology ) ); ?>
+	<?php echo wp_kses_post( wpautop( Report\CampusConnect_Details::$methodology ) ); ?>
 
 	<form method="post" action="">
 		<input type="hidden" name="action" value="run-report" />
-		<?php wp_nonce_field( 'run-report', Report\WordCamp_Details::$slug . '-nonce' ); ?>
+		<?php wp_nonce_field( 'run-report', Report\CampusConnect_Details::$slug . '-nonce' ); ?>
 
 		<table class="form-table">
 			<tbody>
@@ -44,13 +44,13 @@ use WordCamp\Reports\Report;
 			</tbody>
 		</table>
 
-		<?php Report\WordCamp_Details::render_available_fields( 'private', $field_defaults ); ?>
+		<?php Report\CampusConnect_Details::render_available_fields( 'private', $field_defaults ); ?>
 
 		<input type="submit" name="action" class="button button-primary" value="Show Results" formaction="#report-data-table">
 		<input type="submit" name="action" class="button button-secondary" value="Export CSV">
 	</form>
 
-	<?php if ( $report instanceof Report\WordCamp_Details ) : ?>
+	<?php if ( $report instanceof Report\CampusConnect_Details ) : ?>
 		<div class="report-results">
 			<?php $report->render_html(); ?>
 		</div>

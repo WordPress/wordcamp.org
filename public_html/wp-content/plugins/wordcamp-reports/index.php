@@ -143,6 +143,7 @@ function get_report_classes() {
 		__NAMESPACE__ . '\Report\WordCamp_Counts',
 		__NAMESPACE__ . '\Report\Sponsor_Details',
 		__NAMESPACE__ . '\Report\WordCamp_Speaker_Feedback',
+		__NAMESPACE__ . '\Report\CampusConnect_Details',
 	);
 }
 
@@ -161,6 +162,10 @@ function get_report_groups( $classes = array() ) {
 		),
 		'wordcamp' => array(
 			'label'   => 'WordCamps',
+			'classes' => array(),
+		),
+		'campus-connect' => array(
+			'label'   => 'Campus Connect',
 			'classes' => array(),
 		),
 		'meetup'   => array(

@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'CTX_INV_VER', '1.0.1' );
 define( 'CTX_INV_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
-define( 'CTX_INV_DIR', untrailingslashit( dirname( __FILE__ ) ) );
+define( 'CTX_INV_DIR', untrailingslashit( __DIR__ ) );
 define( 'CTX_INV_ADMIN_URL', CTX_INV_URL . '/admin' );
 
 /**

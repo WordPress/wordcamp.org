@@ -56,7 +56,7 @@ abstract class WordCamp_Docs_Template {
 	public static function font_header_html() {
 		// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet, WordPress.Security.EscapeOutput.OutputNotEscaped
 		?>
-		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..700&family=Noto+Sans+KR:wght@300..700&family=Noto+Sans+SC:wght@300..700&family=Noto+Sans:wght@300..700" rel="stylesheet" type="text/css"/>
+		<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@300..600&family=Noto+Sans+KR:wght@300..600&family=Noto+Sans+SC:wght@300..600&family=Noto+Sans:wght@300..600" rel="stylesheet" type="text/css"/>
 		<style type="text/css">
 		@page {
 			size: a4;

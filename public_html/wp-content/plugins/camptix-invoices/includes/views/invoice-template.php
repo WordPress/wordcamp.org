@@ -21,12 +21,7 @@ defined('WPINC') || die();
 		#camptix-invoice-page {
 			margin: 5em;
 			font-size: 14px;
-			font-weight: 300;
 			color: #222;
-		}
-
-		#camptix-invoice-page strong {
-			font-weight: 700;
 		}
 
 		#camptix-invoice-page p {
@@ -115,10 +110,6 @@ defined('WPINC') || die();
 			padding: 3em 0;
 		}
 
-		#camptix-invoice-page .camptix-invoice-payment-status p {
-			font-weight: 700;
-		}
-
 	</style>
 </head>
 <body>
@@ -202,7 +193,7 @@ defined('WPINC') || die();
 	</div>
 	<div class="camptix-invoice-payment-status">
 		<p>
-			<?php esc_html_e( 'Paid in full.', 'wordcamporg' ); ?>
+			<strong><?php esc_html_e( 'Paid in full.', 'wordcamporg' ); ?></strong>
 		</p>
 	</div>
 	<div class="camptix-invoice-note">

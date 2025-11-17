@@ -75,6 +75,12 @@ class WordCamp_Docs_PDF_Generator {
 			'isPhpEnabled'         => false,
 			'isRemoteEnabled'      => true,
 
+			'httpContext'          => stream_context_create( [
+				'http' => [
+					'user_agent' => 'WordCamp Docs PDF Generator; ' . home_url( '/' ),
+				],
+			] ),
+
 			'fontCache'            => $font_dir,
 			'fontDir'              => $font_dir,
 			'chroot'               => [
@@ -146,7 +152,7 @@ class WordCamp_Docs_PDF_Generator {
 	 * @return string Full path to the font cache folder.
 	 */
 	public function get_font_cache_folder() {
-		$font_dir = $this->tmp_folder_base . '/wc-docs-font-cache/';
+		$font_dir = trailingslashit( $this->tmp_folder_base ) . 'wc-docs-font-cache/';
 
 		if ( ! is_dir( $font_dir ) ) {
 			mkdir( $font_dir, 0777, true );

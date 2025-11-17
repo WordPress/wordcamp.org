@@ -65,10 +65,7 @@ class WordCamp_Docs_PDF_Generator {
 			}
 		}
 
-		$font_dir = $this->tmp_folder_base . '/wc-docs-font-cache/';
-		if ( ! is_dir( $font_dir ) ) {
-			mkdir( $font_dir, 0777, true );
-		}
+		$font_dir = $this->get_font_cache_folder();
 
 		$dompdf = new Dompdf( [
 			'dpi'                  => 120,
@@ -141,6 +138,21 @@ class WordCamp_Docs_PDF_Generator {
 		file_put_contents( $path, $data );
 
 		return $path;
+	}
+
+	/**
+	 * Returns the path to the shared font cache folder.
+	 *
+	 * @return string Full path to the font cache folder.
+	 */
+	public function get_font_cache_folder() {
+		$font_dir = $this->tmp_folder_base . '/wc-docs-font-cache/';
+
+		if ( ! is_dir( $font_dir ) ) {
+			mkdir( $font_dir, 0777, true );
+		}
+
+		return $font_dir;
 	}
 
 	/**

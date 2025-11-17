@@ -25,7 +25,6 @@ function ctx_load_docs_pdf_generator() {
 	}//end if
 	require_once WORDCAMP_DOCS__PLUGIN_DIR . 'classes/class-wordcamp-docs-pdf-generator.php';
 }
-add_action( 'init', 'ctx_load_docs_pdf_generator' );
 
 /**
  * Load invoice addon.

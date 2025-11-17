@@ -370,6 +370,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	 * @param int $invoice_id The invoice ID.
 	 */
 	public static function create_invoice_document( $invoice_id ) {
+		ctx_load_docs_pdf_generator();
+		if ( ! class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
+			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
+		}
 
 		$camptix_opts   = get_option( 'camptix_options' );
 		$invoice_number = get_post_meta( $invoice_id, 'invoice_number', true );
@@ -387,10 +391,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		ob_start();
 		include $template;
 		$invoice_content = ob_get_clean();
-
-		if ( ! class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
-			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
-		}
 
 		$filename = get_post_meta( $invoice_id, 'invoice_document', true );
 		if ( empty( $filename ) ) {

@@ -10,6 +10,7 @@ defined( 'WPINC' ) || die();
 // This intentionally doesn't have the starting/ending delimiters and flags, so that it can be used with
 // `add_rewrite_rule()`.
 const FILTERED_URL_PATTERN       = '([\w-]+)/filtered/(.+)';
+const FILTERED_URL_PATTERN_FEED  = FILTERED_URL_PATTERN . '/feed/?';
 const PRETTY_URL_VALUE_DELIMITER = '-';
 
 // Misc.
@@ -206,7 +207,7 @@ function add_rewrite_rules(): void {
 	// predictable. Instead, this just matches all the facets into a single var, and they'll be parsed out of that
 	// into individual facets later.
 	// @see set_query_vars_from_pretty_url().
-	add_rewrite_rule( FILTERED_URL_PATTERN . '/feed/?', 'index.php?pagename=$matches[1]&event_facets=$matches[2]&feed=feed', 'top' );
+	add_rewrite_rule( FILTERED_URL_PATTERN_FEED, 'index.php?pagename=$matches[1]&event_facets=$matches[2]&feed=feed', 'top' );
 	add_rewrite_rule( FILTERED_URL_PATTERN, 'index.php?pagename=$matches[1]&event_facets=$matches[2]', 'top' );
 }
 

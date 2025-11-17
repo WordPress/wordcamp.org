@@ -60,8 +60,18 @@ abstract class WordCamp_Docs_Template {
 		<style type="text/css">
 		@page {
 			size: a4;
+			margin: 10mm;
 
 			font-family: "Noto Sans", "Noto Sans SC", "Noto Sans KR", "Noto Sans Arabic", sans-serif;
+		}
+
+		<?php /* Define default font weights to match the imported fonts */ ?>
+		body {
+			font-weight: 300;
+			line-height: 1;
+		}
+		strong {
+			font-weight: 600;
 		}
 		</style>
 		<?php

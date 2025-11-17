@@ -98,35 +98,11 @@ body {
 	margin: 0;
 	padding: 0;
 	font-size: 15px;
-	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 
 p {
 	margin: 0 0 1.5em;
-}
-
-strong {
-	font-weight: 600;
-}
-
-table {
-	table-layout: fixed;
-	width: 100%;
-	margin: 0;
-	padding: 0;
-	border: none;
-	border-collapse: collapse;
-
-	font-size: 15px;
-	line-height: 1.5;
-	font-weight: 300;
-	color: #444;
-}
-
-h2 {
-	font-size: 18px;
 }
 
 .wrap {

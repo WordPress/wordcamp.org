@@ -152,17 +152,11 @@ body {
 	margin: 0;
 	padding: 0;
 	font-size: 15px;
-	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 
 p {
 	margin: 0 0 1.5em;
-}
-
-strong {
-	font-weight: 600;
 }
 
 table {
@@ -175,7 +169,6 @@ table {
 
 	font-size: 15px;
 	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 

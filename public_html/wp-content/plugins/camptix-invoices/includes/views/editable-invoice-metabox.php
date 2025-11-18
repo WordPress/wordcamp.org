@@ -60,6 +60,36 @@ defined( 'WPINC' ) || die();
 				name="order[total]"
 				id="order[total]"
 			/>
+			<script>
+				(function() {
+					var itemsTable = document.querySelector('table.widefat tbody');
+					var totalInput = document.getElementById('order[total]');
+
+					function calculateTotal() {
+						var rows = itemsTable.querySelectorAll('tr');
+						var total = 0;
+						rows.forEach(function(row) {
+							var priceInput = row.querySelector('input[name*="[price]"]');
+							var qtyInput = row.querySelector('input[name*="[quantity]"]');
+							var price = parseFloat(priceInput && priceInput.value.replace(',', '.') || 0);
+							var qty = parseFloat(qtyInput && qtyInput.value.replace(',', '.') || 0);
+							if (!isNaN(price) && !isNaN(qty)) {
+								total += price * qty;
+							}
+						});
+						totalInput.value = total.toFixed(2);
+					}
+
+					itemsTable.addEventListener('input', function(e) {
+						if (
+							e.target.matches('input[name*="[price]"]') ||
+							e.target.matches('input[name*="[quantity]"]')
+						) {
+							calculateTotal();
+						}
+					});
+				})();
+			</script>
 		</td>
 	</tr>
 	<tr>

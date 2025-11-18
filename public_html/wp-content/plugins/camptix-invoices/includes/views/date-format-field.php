@@ -13,6 +13,6 @@ defined( 'WPINC' ) || die();
 	<?php echo esc_html( $description ); ?>
 	<br />
 	<a href="<?php esc_attr__( 'https://wordpress.org/support/article/formatting-date-and-time/', 'wordcamporg' ); ?>">
-		<?php echo esc_html__( 'Documentation on date and time formatting', 'wordcamporg' ); ?>
+		<?php esc_html_e( 'Documentation on date and time formatting', 'wordcamporg' ); ?>
 	</a>
 </p>

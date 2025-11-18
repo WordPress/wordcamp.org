@@ -10,7 +10,7 @@ defined( 'WPINC' ) || die();
 
 	<input type="checkbox" value="1" name="camptix-need-invoice" id="camptix-need-invoice"/>
 	<label for="camptix-need-invoice">
-		<?php echo esc_html__( 'I need an invoice', 'wordcamporg' ); ?>
+		<?php esc_html_e( 'I need an invoice', 'wordcamporg' ); ?>
 	</label>
 
 	<table class="camptix-invoice-details tix_tickets_table tix_invoice_table">
@@ -19,7 +19,7 @@ defined( 'WPINC' ) || die();
 			<tr>
 				<td class="tix-left">
 					<label for="invoice-email">
-						<?php echo esc_html__( 'Recipient email', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
+						<?php esc_html_e( 'Recipient email', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
 					</label>
 				</td>
 				<td class="tix-right">
@@ -30,7 +30,7 @@ defined( 'WPINC' ) || die();
 			<tr>
 				<td class="tix-left">
 					<label for="invoice-name">
-						<?php echo esc_html__( 'Recipient name or organisation', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
+						<?php esc_html_e( 'Recipient name or organisation', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
 					</label>
 				</td>
 				<td class="tix-right">
@@ -41,7 +41,7 @@ defined( 'WPINC' ) || die();
 			<tr>
 				<td class="tix-left">
 					<label for="invoice-address">
-						<?php echo esc_html__( 'Recipient street address', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
+						<?php esc_html_e( 'Recipient street address', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
 					</label>
 				</td>
 				<td class="tix-right">
@@ -53,7 +53,7 @@ defined( 'WPINC' ) || die();
 				<tr>
 					<td class="tix-left">
 						<label for="invoice-vat-number">
-							<?php echo esc_html__( 'VAT number', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
+							<?php esc_html_e( 'VAT number', 'wordcamporg' ); ?><span class="tix-required-star">*</span>
 						</label>
 					</td>
 					<td class="tix-right">

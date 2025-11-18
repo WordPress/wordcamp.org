@@ -8,14 +8,14 @@ defined( 'WPINC' ) || die();
 
 ?>
 
-<h3><?php echo esc_html__( 'Order details', 'wordcamporg' ); ?></h3>
+<h3><?php esc_html_e( 'Order details', 'wordcamporg' ); ?></h3>
 
 <table class="widefat">
 	<thead>
 		<tr>
-			<th><?php echo esc_html__( 'Title', 'wordcamporg' ); ?></th>
-			<th><?php echo esc_html__( 'Unit price', 'wordcamporg' ); ?></th>
-			<th><?php echo esc_html__( 'Quantity', 'wordcamporg' ); ?></th>
+			<th><?php esc_html_e( 'Title', 'wordcamporg' ); ?></th>
+			<th><?php esc_html_e( 'Unit price', 'wordcamporg' ); ?></th>
+			<th><?php esc_html_e( 'Quantity', 'wordcamporg' ); ?></th>
 		</tr>
 	</thead>
 
@@ -49,7 +49,7 @@ defined( 'WPINC' ) || die();
 <table class="form-table">
 	<tr>
 		<th scope="row">
-			<label for="order[total]"><?php echo esc_html__( 'Total amount', 'wordcamporg' ); ?></label>
+			<label for="order[total]"><?php esc_html_e( 'Total amount', 'wordcamporg' ); ?></label>
 		</th>
 		<td>
 			<input
@@ -64,7 +64,7 @@ defined( 'WPINC' ) || die();
 	</tr>
 	<tr>
 		<th scope="row">
-			<label for="invoice_metas[name]"><?php echo esc_html__( 'Customer', 'wordcamporg' ); ?> •</label>
+			<label for="invoice_metas[name]"><?php esc_html_e( 'Customer', 'wordcamporg' ); ?> •</label>
 		</th>
 		<td>
 			<input
@@ -79,7 +79,7 @@ defined( 'WPINC' ) || die();
 	</tr>
 	<tr>
 		<th scope="row">
-			<label for="invoice_metas[email]"><?php echo esc_html__( 'Contact email', 'wordcamporg' ); ?></label>
+			<label for="invoice_metas[email]"><?php esc_html_e( 'Contact email', 'wordcamporg' ); ?></label>
 		</th>
 		<td>
 			<input
@@ -93,7 +93,7 @@ defined( 'WPINC' ) || die();
 	</tr>
 	<tr>
 		<th scope="row">
-			<label for="invoice_metas[address]"><?php echo esc_html__( 'Customer Address', 'wordcamporg' ); ?> •</label>
+			<label for="invoice_metas[address]"><?php esc_html_e( 'Customer Address', 'wordcamporg' ); ?> •</label>
 		</th>
 		<td>
 			<textarea
@@ -110,7 +110,7 @@ defined( 'WPINC' ) || die();
 	<?php if ( ! empty( $invoice_vat_number ) ) : ?>
 		<tr>
 			<th scope="row">
-				<label for="invoice_metas[vat-number]"><?php echo esc_html__( 'VAT number', 'wordcamporg' ); ?></label>
+				<label for="invoice_metas[vat-number]"><?php esc_html_e( 'VAT number', 'wordcamporg' ); ?></label>
 			</th>
 			<td>
 				<input

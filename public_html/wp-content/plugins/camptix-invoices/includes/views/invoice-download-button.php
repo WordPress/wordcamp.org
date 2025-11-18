@@ -9,7 +9,7 @@ defined( 'WPINC' ) || die();
 
 <div class="misc-pub-section">
 	<p>
-		<?php echo esc_html__( 'Invoice number', 'wordcamporg' ); ?> <strong><?php echo esc_html( $invoice_number ); ?></strong>
+		<?php esc_html_e( 'Invoice number', 'wordcamporg' ); ?> <strong><?php echo esc_html( $invoice_number ); ?></strong>
 	</p>
 	<?php if ( ! empty( $invoice_url ) ) { ?>
 		<a
@@ -17,7 +17,7 @@ defined( 'WPINC' ) || die();
 			class="button button-secondary"
 			target="_blank"
 		>
-			<?php echo esc_html__( 'Download invoice', 'wordcamporg' ); ?>
+			<?php esc_html_e( 'Download invoice', 'wordcamporg' ); ?>
 		</a>
 	<?php } ?>
 </div>

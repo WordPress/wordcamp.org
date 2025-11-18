@@ -9,14 +9,14 @@ defined( 'WPINC' ) || die();
 
 ?>
 
-<h3><?php echo esc_html__( 'Order details', 'wordcamporg' ); ?></h3>
+<h3><?php esc_html_e( 'Order details', 'wordcamporg' ); ?></h3>
 
 <table class="widefat">
 	<thead>
 		<tr>
-			<th><?php echo esc_html__( 'Title', 'wordcamporg' ); ?></th>
-			<th><?php echo esc_html__( 'Unit price', 'wordcamporg' ); ?></th>
-			<th><?php echo esc_html__( 'Quantity', 'wordcamporg' ); ?></th>
+			<th><?php esc_html_e( 'Title', 'wordcamporg' ); ?></th>
+			<th><?php esc_html_e( 'Unit price', 'wordcamporg' ); ?></th>
+			<th><?php esc_html_e( 'Quantity', 'wordcamporg' ); ?></th>
 		</tr>
 	</thead>
 
@@ -37,29 +37,29 @@ defined( 'WPINC' ) || die();
 
 <table class="form-table">
 	<tr>
-		<th scope="row"><?php echo esc_html__( 'Total amount', 'wordcamporg' ); ?></th>
+		<th scope="row"><?php esc_html_e( 'Total amount', 'wordcamporg' ); ?></th>
 		<td><?php echo esc_html( number_format_i18n( $order['total'], 2 ) ); ?></td>
 	</tr>
 	<tr>
-		<th scope="row"><?php echo esc_html__( 'Customer', 'wordcamporg' ); ?></th>
+		<th scope="row"><?php esc_html_e( 'Customer', 'wordcamporg' ); ?></th>
 		<td><?php echo esc_html( $metas['name'] ); ?><td>
 	</tr>
 	<tr>
-		<th scope="row"><?php echo esc_html__( 'Contact email', 'wordcamporg' ); ?></th>
+		<th scope="row"><?php esc_html_e( 'Contact email', 'wordcamporg' ); ?></th>
 		<td><?php echo esc_html( $metas['email'] ); ?><td>
 	</tr>
 	<tr>
-		<th scope="row"><?php echo esc_html__( 'Customer Address', 'wordcamporg' ); ?></th>
+		<th scope="row"><?php esc_html_e( 'Customer Address', 'wordcamporg' ); ?></th>
 		<td><?php echo wp_kses( nl2br( $metas['address'] ), array( 'br' => true ) ); ?><td>
 	</tr>
 	<tr>
-		<th scope="row"><?php echo esc_html__( 'Transaction ID', 'wordcamporg' ); ?></th>
+		<th scope="row"><?php esc_html_e( 'Transaction ID', 'wordcamporg' ); ?></th>
 		<td><?php echo esc_html( $txn_id ); ?><td>
 	</tr>
 
 	<?php if ( ! empty( $invoice_vat_number ) ) : ?>
 		<tr>
-			<th scope="row"><?php echo esc_html__( 'VAT number', 'wordcamporg' ); ?></th>
+			<th scope="row"><?php esc_html_e( 'VAT number', 'wordcamporg' ); ?></th>
 			<td><?php echo esc_html( $metas['vat-number'] ); ?><td>
 		</tr>
 	<?php endif; ?>

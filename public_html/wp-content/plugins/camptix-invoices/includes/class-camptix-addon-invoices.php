@@ -99,6 +99,19 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			sprintf( __( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' ), date( 'Y' ) )
 		);
 
+		add_settings_field(
+			'invoice-vat-percent',
+			__( 'VAT percentage included in total.', 'wordcamporg' ),
+			array( __CLASS__, 'type_vat_percent_callback' ),
+			'camptix_options',
+			'invoice',
+			array(
+				'id'          => 'invoice-vat-percent',
+				'value'       => ! empty( $opt['invoice-vat-percent'] ) ? $opt['invoice-vat-percent'] : 0,
+				'description' => __( 'VAT percentage included in the total price of the order. Set to 0% if no VAT is being collected.', 'wordcamporg' ),
+			)
+		);
+
 		$camptix->add_settings_field_helper(
 			'invoice-heading',
 			__( 'Invoice Heading', 'wordcamporg' ),
@@ -144,7 +157,7 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	/**
 	 * Input type file.
 	 *
-	 * @param object $args Arguments.
+	 * @param array $args Arguments.
 	 */
 	public static function type_file_callback( $args ) {
 		wp_enqueue_media();
@@ -165,6 +178,19 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	}
 
 	/**
+	 * Percentage input field.
+	 *
+	 * @param array $args Arguments.
+	 */
+	public static function type_vat_percent_callback( $args ) {
+		$id          = $args['id'];
+		$value       = $args['value'];
+		$description = $args['description'];
+
+		include CTX_INV_DIR . '/includes/views/vat-percent-field.php';
+	}
+
+	/**
 	 * Validate our custom options.
 	 *
 	 * @param object $output Output options.
@@ -182,6 +208,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 		if ( isset( $input['invoice-vat-number'] ) ) {
 			$output['invoice-vat-number'] = (int) $input['invoice-vat-number'];
+		}//end if
+		if ( isset( $input['invoice-vat-percent'] ) ) {
+			$output['invoice-vat-percent'] = (float) str_replace( '%', '', $input['invoice-vat-percent'] );
 		}//end if
 		if ( isset( $input['invoice-heading'] ) ) {
 			$output['invoice-heading'] = sanitize_text_field( $input['invoice-heading'] );

@@ -162,17 +162,29 @@ defined('WPINC') || die();
 		</p>
 	</div>
 	<div class="camptix-invoice-order">
+		<?php
+		$vat_rate = (float) ( $camptix_opts['invoice-vat-percent'] ?? 0 );
+		$show_vat = (
+			! empty( $invoice_metas['vat-number'] ) ||
+			! empty( $camptix_opts['invoice-vat-number'] ) ||
+			$vat_rate
+		);
+		?>
 		<table>
 			<colgroup>
 				<col style="width: 48%"/>
 				<col style="width: 8%"/>
-				<col style="width: 22%"/>
+				<col/>
+				<?php if ( $vat_rate ) { ?><col/><?php } ?>
 				<col style="width: 22%"/>
 			</colgroup>
 			<tr>
 				<th class="text-left"><?php echo esc_html( $camptix_opts['event_name'] ); ?></th>
 				<th class="text-center"><?php esc_html_e( 'Qty', 'wordcamporg' ); ?></th>
 				<th class="text-right"><?php esc_html_e( 'Unit Price', 'wordcamporg' ); ?></th>
+				<?php if ( $vat_rate ) : ?>
+					<th class="text-right"><?php esc_html_e( 'VAT', 'wordcamporg' ); ?></th>
+				<?php endif; ?>
 				<th class="text-right"><?php esc_html_e( 'Total Price', 'wordcamporg'); ?></th>
 			</tr>
 				<?php foreach ( $invoice_order['items'] as $item ) : ?>
@@ -180,8 +192,21 @@ defined('WPINC') || die();
 						<td class="text-left"><?php echo esc_html( $item['name'] ); ?></td>
 						<td class="text-center"><?php echo esc_html( $item['quantity'] ); ?></td>
 						<td class="text-right">
-							<?php echo esc_html( CampTix_Addon_Invoices::format_currency( $item['price'], $camptix_opts['currency'] ) ); ?>
+							<?php
+							$unit_price = $item['price'];
+							if ( $vat_rate ) {
+								$unit_price = $item['price'] / ( 1 + ( $vat_rate / 100 ) );
+							}
+							echo esc_html( CampTix_Addon_Invoices::format_currency( $unit_price, $camptix_opts['currency'] ) ); ?>
 						</td>
+						<?php if ( $vat_rate ) : ?>
+						<td class="text-right">
+							<?php
+							$vat_amount = ( $item['price'] ) - ( ( $item['price'] ) / ( 1 + ( $vat_rate / 100 ) ) );
+							echo esc_html( CampTix_Addon_Invoices::format_currency( $vat_amount, $camptix_opts['currency'] ) );
+							?>
+						</td>
+						<?php endif; ?>
 
 						<td class="text-right">
 							<?php echo esc_html( CampTix_Addon_Invoices::format_currency( $item['price'] * $item['quantity'], $camptix_opts['currency'] ) ); ?>
@@ -189,17 +214,28 @@ defined('WPINC') || die();
 					</tr>
 				<?php endforeach ?>
 
-			<?php if ( ! empty( $invoice_metas['vat-number'] ) || ! empty( $camptix_opts['invoice-vat-number'] ) ) : ?>
+			<?php if ( $show_vat ) : ?>
 				<tr>
-					<td class="text-right" colspan="3"><?php esc_html_e('VAT', 'wordcamporg'); ?></td>
+					<td class="text-right" colspan="<?php echo $vat_rate ? 4 : 3 ?>">
+						<?php esc_html_e('VAT', 'wordcamporg'); ?>
+					</td>
 					<td class="text-right">
-						<?php echo esc_html( CampTix_Addon_Invoices::format_currency( 0, $camptix_opts['currency'] ) ); ?>
+						<?php
+						$vat_amount = 0;
+						if ( $vat_rate ) {
+							$vat_amount = $invoice_order['total'] - ( $invoice_order['total'] / ( 1 + ( $vat_rate / 100 ) ) );
+						}
+
+						echo esc_html( CampTix_Addon_Invoices::format_currency( $vat_amount, $camptix_opts['currency'] ) );
+						?>
 					</td>
 				</tr>
 			<?php endif; // VAT field. ?>
 
 			<tr>
-				<td class="text-right" colspan="3"><?php esc_html_e( 'TOTAL', 'wordcamporg' ); ?></td>
+				<td class="text-right" colspan="<?php echo $vat_rate ? 4 : 3 ?>">
+					<?php $vat_rate ? esc_html_e( 'TOTAL including VAT', 'wordcamporg' ) : esc_html_e( 'TOTAL', 'wordcamporg' ); ?>
+				</td>
 				<td class="text-right">
 					<?php echo esc_html( CampTix_Addon_Invoices::format_currency( $invoice_order['total'], $camptix_opts['currency'] ) ); ?>
 				</td>

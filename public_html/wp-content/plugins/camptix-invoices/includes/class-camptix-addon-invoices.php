@@ -412,11 +412,13 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$upload_dir    = wp_upload_dir();
 		$tmp_path      = $pdf_generator->generate_pdf_from_string( $invoice_content, $filename );
 
-		if ( ! empty( $upload_dir['basedir'] ) ) {
-			$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
-			if ( ! file_exists( $invoices_dirname ) ) {
-				wp_mkdir_p( $invoices_dirname );
-			}
+		if ( empty( $upload_dir['basedir'] ) || ! is_writable( $upload_dir['basedir'] ) ) {
+			return;
+		}
+
+		$invoices_dirname = $upload_dir['basedir'] . '/camptix-invoices';
+		if ( ! file_exists( $invoices_dirname ) ) {
+			wp_mkdir_p( $invoices_dirname );
 		}
 
 		rename( $tmp_path, $invoices_dirname . '/' . $filename );

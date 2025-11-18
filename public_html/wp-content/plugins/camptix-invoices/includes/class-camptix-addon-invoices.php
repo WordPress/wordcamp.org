@@ -99,6 +99,14 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			sprintf( __( 'Add a "VAT Number" field to the invoice request form', 'wordcamporg' ), date( 'Y' ) )
 		);
 
+		$camptix->add_settings_field_helper(
+			'invoice-heading',
+			__( 'Invoice Heading', 'wordcamporg' ),
+			'field_text',
+			'invoice',
+			__( 'Heading to display at the top of the invoice. Leave blank to not display.', 'wordcamporg' )
+		);
+
 		add_settings_field(
 			'invoice-logo',
 			__( 'Logo', 'wordcamporg' ),
@@ -174,6 +182,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 		if ( isset( $input['invoice-vat-number'] ) ) {
 			$output['invoice-vat-number'] = (int) $input['invoice-vat-number'];
+		}//end if
+		if ( isset( $input['invoice-heading'] ) ) {
+			$output['invoice-heading'] = sanitize_text_field( $input['invoice-heading'] );
 		}//end if
 		if ( isset( $input['invoice-logo'] ) ) {
 			$output['invoice-logo'] = (int) $input['invoice-logo'];

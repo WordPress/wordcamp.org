@@ -25,9 +25,11 @@ defined('WPINC') || die();
 			font-size: 14px;
 			font-weight: 300;
 			color: #222;
+			padding-top: 3em;
 		}
 
-		#camptix-invoice-page strong {
+		#camptix-invoice-page strong,
+		#camptix-invoice-page h1 {
 			font-weight: 700;
 		}
 
@@ -52,7 +54,6 @@ defined('WPINC') || die();
 		#camptix-invoice-page .camptix-invoice-logo-holder {
 			display: block;
 			margin: 3em 0;
-			padding-top: 3em;
 		}
 
 		#camptix-invoice-page .camptix-invoice-logo-holder img {
@@ -125,6 +126,9 @@ defined('WPINC') || die();
 </head>
 <body>
 <div id="camptix-invoice-page">
+	<?php if ( ! empty( $camptix_opts['invoice-heading'] ) ) : ?>
+		<h1><?php echo esc_html( $camptix_opts['invoice-heading'] ); ?></h1>
+	<?php endif; ?>
 	<div class="camptix-invoice-logo-holder">
 		<img src="<?php echo esc_url($logo); ?>">
 	</div>

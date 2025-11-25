@@ -400,6 +400,20 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		// Fetch the Payment details.
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
 		$session = $stripe->get_session( $stripe_session );
+		if ( is_wp_error( $session ) ) {
+			// Try again.
+			$session = $stripe->get_session( $stripe_session );
+		}
+
+		if ( is_wp_error( $session ) ) {
+			$payment_data = array(
+				'error' => 'Error during Payment return, failed to fetch session twice.',
+				'data' => $session,
+			);
+			$camptix->log( 'Error during post-stripe return.', $order['attendee_id'], $session );
+
+			wp_die( 'A temporary issue has occured with the Payment gateway. Your purchase has been processed.' );
+		}
 
 		if ( empty( $session['status'] ) ) {
 			$camptix->log( "Dying because couldn't get Payment status", $order['attendee_id'], compact( 'payment_token', 'payment_session' ) );
@@ -516,7 +530,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				'Got Stripe checkout session.',
 				$order['attendee_id'],
 				array(
-					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ) ),
+					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ?? '' ) ),
 					'camptix_payment_token' => $payment_token,
 					'request_payload'       => compact( 'order_items', 'receipt_email' ),
 					'response'              => $session,

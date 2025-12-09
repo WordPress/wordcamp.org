@@ -138,7 +138,6 @@
 		"wpackagist-plugin/edit-flow": "*",
 		"wpackagist-plugin/email-post-changes": "dev-trunk",
 		"wpackagist-plugin/gutenberg": "*",
-		"wpackagist-plugin/hyperdb": "dev-trunk",
 		"wpackagist-plugin/jetpack": "*",
 		"wpackagist-plugin/liveblog": "*",
 		"wpackagist-plugin/public-post-preview": "*",

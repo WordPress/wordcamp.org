@@ -182,6 +182,8 @@ function upgrade_database() {
 	$table_name = get_index_table_name();
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
+	$charset_collate = $wpdb->get_charset_collate();
+
 	$schema = "
 		CREATE TABLE $table_name (
 			blog_id        int( 11 )        unsigned NOT NULL default '0',
@@ -202,8 +204,7 @@ function upgrade_database() {
 			KEY status (status)
 			KEY last_modified (last_modified)
 		)
-		DEFAULT CHARACTER SET {$wpdb->charset}
-		COLLATE {$wpdb->collate};
+		$charset_collate
 	";
 
 	dbDelta( $schema );

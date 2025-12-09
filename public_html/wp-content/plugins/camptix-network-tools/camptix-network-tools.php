@@ -42,13 +42,7 @@ class CampTix_Network_Tools {
 	function upgrade() {
 		global $wpdb;
 
-		$charset_collate = '';
-		if ( ! empty( $wpdb->charset ) ) {
-			$charset_collate = "DEFAULT CHARACTER SET $wpdb->charset";
-		}
-		if ( ! empty( $wpdb->collate ) ) {
-			$charset_collate .= " COLLATE $wpdb->collate";
-		}
+		$charset_collate = $wpdb->get_charset_collate();
 
 		$table_name = $wpdb->base_prefix . 'camptix_log';
 		$sql        = "CREATE TABLE $table_name (

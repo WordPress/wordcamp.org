@@ -26,7 +26,7 @@ define( 'DB_USER',     'root'         );
 define( 'DB_PASSWORD', 'mysql'        );
 define( 'DB_HOST',     'wordcamp.db'  );
 
-// Force utf8mb4
+// Force utf8mb4.
 define( 'DB_CHARSET', 'utf8mb4' );
 define( 'DB_COLLATE', 'utf8mb4_general_ci' );
 

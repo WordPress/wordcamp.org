@@ -60,7 +60,7 @@ class Payment_Requests_Dashboard {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		$charset_collate = $wpdb->get_charset_collate();
-		$sql             = sprintf( "CREATE TABLE %i (
+		$sql             = sprintf( "CREATE TABLE %s (
 			id int(11) unsigned NOT NULL auto_increment,
 			blog_id int(11) unsigned NOT NULL default '0',
 			post_id int(11) unsigned NOT NULL default '0',
@@ -76,7 +76,7 @@ class Payment_Requests_Dashboard {
 			KEY blog_post_id (blog_id, post_id),
 			KEY due (due),
 			KEY status (status)
-		) $charset_collate;", self::get_table_name() );
+		) %s;", self::get_table_name(), $charset_collate );
 
 		dbDelta( $sql );
 

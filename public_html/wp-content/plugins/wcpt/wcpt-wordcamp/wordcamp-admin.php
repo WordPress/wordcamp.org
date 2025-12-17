@@ -1360,6 +1360,22 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'post_status' => 'wcpt-closed',
 					)
 				);
+
+				// If the 'Actual Attendees' field isn't yet set, set it to the camptix sales.
+				$actual_attendees = get_post_meta( $wordcamp->ID, 'Actual Attendees', true );
+				if ( empty( $actual_attendees ) ) {
+					$site_id = get_wordcamp_site_id( $wordcamp );
+					if ( $site_id ) {
+						// Use attendees checked in, falling back to tickets sold.
+						$camptix_stats      = get_blog_option( $site_id, 'camptix_stats', array() );
+						$attendees_attended = $camptix_stats['attended'] ?? ( $camptix_stats['sold'] ?? 0 );
+
+						// Assume sales were not through Camptix if less than 10 tickets total.
+						if ( $attendees_attended >= 10 ) {
+							update_post_meta( $wordcamp->ID, 'Actual Attendees', $attendees_attended );
+						}
+					}
+				}
 			}
 		}
 

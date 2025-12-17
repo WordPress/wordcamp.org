@@ -1368,7 +1368,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					if ( $site_id ) {
 						// Use attendees checked in, falling back to tickets sold.
 						$camptix_stats      = get_blog_option( $site_id, 'camptix_stats', array() );
-						$attendees_attended = $camptix_stats['attended'] ?? ( $camptix_stats['sold'] ?? 0 );
+						$attendees_attended = ( $camptix_stats['attended'] ?? 0 ) ?: ( $camptix_stats['sold'] ?? 0 );
 
 						// Assume sales were not through Camptix if less than 10 tickets total.
 						if ( $attendees_attended >= 10 ) {

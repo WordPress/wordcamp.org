@@ -496,7 +496,7 @@ abstract class Event_Admin {
 				if ( is_array( $_POST[ $post_value ] ) ) {
 					$values[ $key ] = array_filter(
 						array_map( 'esc_attr', wp_unslash( $_POST[ $post_value ] ) ),
-						static function( $value ) {
+						static function ( $value ) {
 							return ! is_null( $value ) && '' !== $value;
 						}
 					);

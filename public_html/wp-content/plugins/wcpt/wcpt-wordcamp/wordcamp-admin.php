@@ -425,6 +425,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
+						'Actual Attendees'                  => 'text',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',
@@ -432,14 +433,27 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Running money through WPCS PBC'    => 'checkbox',
 						'Transparency Report Received'      => 'checkbox',
 						'Hide from Event Feeds'             => 'checkbox-delete-on-unset',
+						'Series Event'                      => 'checkbox', // Campus Connect.
 					);
 
 					/*
 					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
 					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
+					 *
+					 * Same for 'Series Event'.
 					 */
 					if ( ! current_user_can( 'manage_options' ) ) {
 						unset( $retval['Transparency Report Received'] );
+						unset( $retval['Series Event'] );
+					}
+
+					/*
+					 * The "Actual Attendees" field is only able to be set after the event is concluded.
+					 *
+					 * get_post() allows this to target the editor, allowing for report export.
+					 */
+					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
+						unset( $retval['Actual Attendees'] );
 					}
 
 					break;
@@ -457,6 +471,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
+						'Actual Attendees'                  => 'text',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',
@@ -464,14 +479,27 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Running money through WPCS PBC'    => 'checkbox',
 						'Transparency Report Received'      => 'checkbox',
 						'Hide from Event Feeds'             => 'checkbox-delete-on-unset',
+						'Series Event'                      => 'checkbox', // Campus Connect.
 					);
 
 					/*
 					 * The "Transparency Report Received" checkbox can only be checked or unchecked when the current user is admin or super admin.
 					 * See https://github.com/WordPress/wordcamp.org/issues/1280#issuecomment-2058571557.
+					 *
+					 * Same for 'Series Event'.
 					 */
 					if ( ! current_user_can( 'manage_options' ) ) {
 						unset( $retval['Transparency Report Received'] );
+						unset( $retval['Series Event'] );
+					}
+
+					/*
+					 * The "Actual Attendees" field is only able to be set after the event is concluded.
+					 *
+					 * get_post() allows this to target the editor, allowing for report export.
+					 */
+					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
+						unset( $retval['Actual Attendees'] );
 					}
 
 					$retval = array_merge(
@@ -1157,6 +1185,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$protected_fields,
 					array(
 						'Multi-Event Sponsor Region',
+						'Series Event',
 					)
 				);
 			}
@@ -1504,9 +1533,11 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'Mailing Address'                 => 'Shipping address.',
 		'Twitter'                         => 'Should begin with @. Ex. @wordpress',
 		'WordCamp Hashtag'                => 'Should begin with #. Ex. #wcus',
+		'Actual Attendees'                => 'Number of attendees who actually attended the event.',
 		'Global Sponsorship Grant Amount' => 'No commas, thousands separators or currency symbols. Ex. 1234.56',
 		'Global Sponsorship Grant'        => 'Deprecated.',
 		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
+		'Series Event'                    => '(Campus Connect only) Event is part of a multi-venue or multi-session series (e.g., workshops held across several campuses)',
 	);
 
 	if ( 'wcpt_venue_info' === $metabox ) {

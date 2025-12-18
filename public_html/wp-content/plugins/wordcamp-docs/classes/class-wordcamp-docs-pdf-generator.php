@@ -1,6 +1,8 @@
 <?php
+use Dompdf\Dompdf;
+
 /**
- * Helper class to generate PDFs from HTML strings or files using wkhtmltopdf.
+ * Helper class to generate PDFs from HTML strings or files.
  *
  * Thanks to Viper007Bond ( http://www.viper007bond.com )
  */
@@ -53,8 +55,6 @@ class WordCamp_Docs_PDF_Generator {
 	 * @param  string $filename    Filename of the PDF, including the extension.
 	 * @param array   $args        Optional. An associative array of additional parameters.
 	 *                             assets:  optional array of full paths to local assets (images for example).
-	 *                             dpi:     optional integer to be passed directly to wkhtmltopdf.
-	 *                             margins: optional array of 4 integers specifying PDF margins. Top, right, bottom, left.
 	 *
 	 * @return string The path to the generated PDF.
 	 */
@@ -65,33 +65,46 @@ class WordCamp_Docs_PDF_Generator {
 			}
 		}
 
-		$dpi = ( ! empty( $args['dpi'] ) ) ? absint( $args['dpi'] ) : 300;
+		$font_dir = $this->get_font_cache_folder();
 
-		$margins = ( ! empty( $args['margins'] ) && is_array( $args['margins'] ) && 4 == count( $args['margins'] ) ) ? $args['margins'] : array( 0, 0, 0, 0 );
+		$dompdf = new Dompdf( [
+			'dpi'                  => 120,
 
-		$file = $this->get_tmp_folder( $filename );
+			'isHtml5ParserEnabled' => true,
+			'isJavascriptEnabled'  => false,
+			'isPhpEnabled'         => false,
+			'isRemoteEnabled'      => true,
 
-		$command = sprintf(
-			// Allowing local file access is safe because the inputs to `$source_file` should have been escaped.
-			'wkhtmltopdf --enable-local-file-access -d %d -T %s -R %s -B %s -L %s %s %s',
-			$dpi,
-			escapeshellarg( $margins[0] ),
-			escapeshellarg( $margins[1] ),
-			escapeshellarg( $margins[2] ),
-			escapeshellarg( $margins[3] ),
-			escapeshellarg( $source_file ),
-			escapeshellarg( $file )
-		);
+			'httpContext'          => stream_context_create( [
+				'http' => [
+					'user_agent' => 'WordCamp Docs PDF Generator; ' . home_url( '/' ),
+				],
+			] ),
 
-		exec( $command );
+			'fontCache'            => $font_dir,
+			'fontDir'              => $font_dir,
+			'chroot'               => [
+				// Just to be explicit, only paths under the docs generator base path are allowed.
+				$this->working_folder_name,
+				$font_dir,
+				$this->get_tmp_folder(),
+			],
+			'tempDir'              => $this->get_tmp_folder(),
+		] );
 
-		return $file;
+		$dompdf->loadHtmlFile( $source_file );
+
+		$dompdf->render();
+
+		$this->write_file( $filename, $dompdf->output() );
+
+		return $this->get_tmp_folder( $filename );
 	}
 
 	/**
 	 * Serves a file from the tmp folder up to the browser.
 	 * Does NOT exit when finished so that you can still call
-	 * A8C_PDF_Generator::delete_tmp_folder() when you're all done.
+	 * WordCamp_PDF_Generator::delete_tmp_folder() when you're all done.
 	 *
 	 * @param string $filename The filename within this instance's temporary folder to serve up.
 	 * @param bool $download Whether to prompt downloading or serve it natively within the browser.
@@ -126,15 +139,26 @@ class WordCamp_Docs_PDF_Generator {
 	 * @return string The full path to the newly created file.
 	 */
 	public function write_file( $filename, $data ) {
-		if ( ! is_dir( $this->get_tmp_folder() ) ) {
-			mkdir( $this->get_tmp_folder() );
-		}
-
 		$path = $this->get_tmp_folder( $filename );
 
 		file_put_contents( $path, $data );
 
 		return $path;
+	}
+
+	/**
+	 * Returns the path to the shared font cache folder.
+	 *
+	 * @return string Full path to the font cache folder.
+	 */
+	public function get_font_cache_folder() {
+		$font_dir = trailingslashit( $this->tmp_folder_base ) . 'wc-docs-font-cache/';
+
+		if ( ! is_dir( $font_dir ) ) {
+			mkdir( $font_dir, 0777, true );
+		}
+
+		return $font_dir;
 	}
 
 	/**
@@ -146,7 +170,13 @@ class WordCamp_Docs_PDF_Generator {
 	 * @return string Full path to the temporary folder or file.
 	 */
 	public function get_tmp_folder( $filename = '' ) {
-		return trailingslashit( $this->tmp_folder_base ) . $this->working_folder_name . '/' . $filename;
+		$path = trailingslashit( $this->tmp_folder_base ) . $this->working_folder_name . '/';
+
+		if ( ! is_dir( $path ) ) {
+			mkdir( $path, 0777, true );
+		}
+
+		return $path . $filename;
 	}
 
 	/**

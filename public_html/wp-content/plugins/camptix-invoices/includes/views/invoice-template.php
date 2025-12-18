@@ -16,19 +16,12 @@ defined('WPINC') || die();
 <html>
 <head>
 	<meta charset="UTF-8">
-	<?php // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- This is rendered by wkhtmltopdf, so additional libraries are included directly. ?>
-	<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css"/>
+	<?php WordCamp_Docs_Template::font_header_html(); ?>
 	<style type="text/css">
 		#camptix-invoice-page {
 			margin: 5em;
-			font-family: 'Open Sans', sans-serif;
 			font-size: 14px;
-			font-weight: 300;
 			color: #222;
-		}
-
-		#camptix-invoice-page strong {
-			font-weight: 700;
 		}
 
 		#camptix-invoice-page p {
@@ -117,10 +110,6 @@ defined('WPINC') || die();
 			padding: 3em 0;
 		}
 
-		#camptix-invoice-page .camptix-invoice-payment-status p {
-			font-weight: 700;
-		}
-
 	</style>
 </head>
 <body>
@@ -204,7 +193,7 @@ defined('WPINC') || die();
 	</div>
 	<div class="camptix-invoice-payment-status">
 		<p>
-			<?php esc_html_e( 'Paid in full.', 'wordcamporg' ); ?>
+			<strong><?php esc_html_e( 'Paid in full.', 'wordcamporg' ); ?></strong>
 		</p>
 	</div>
 	<div class="camptix-invoice-note">

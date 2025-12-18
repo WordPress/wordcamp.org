@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 define( 'CTX_INV_VER', '1.0.1' );
 define( 'CTX_INV_URL', untrailingslashit( plugin_dir_url( __FILE__ ) ) );
-define( 'CTX_INV_DIR', untrailingslashit( dirname( __FILE__ ) ) );
+define( 'CTX_INV_DIR', untrailingslashit( __DIR__ ) );
 define( 'CTX_INV_ADMIN_URL', CTX_INV_URL . '/admin' );
 
 /**
@@ -25,7 +25,6 @@ function ctx_load_docs_pdf_generator() {
 	}//end if
 	require_once WORDCAMP_DOCS__PLUGIN_DIR . 'classes/class-wordcamp-docs-pdf-generator.php';
 }
-add_action( 'init', 'ctx_load_docs_pdf_generator' );
 
 /**
  * Load invoice addon.

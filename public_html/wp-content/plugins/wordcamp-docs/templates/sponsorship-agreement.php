@@ -2,7 +2,7 @@
 /**
  * Sponsorship Agreement Template
  */
-class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Template {
+class WordCamp_Docs_Template_Sponsorship_Agreement extends WordCamp_Docs_Template {
 	/**
 	 * Step 10. Select the sponsor post from which the form will be pre-filled.
 	 */
@@ -146,28 +146,17 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 <html>
 <head>
 <meta charset="UTF-8">
-<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css" />
+<?php $this->font_header_html(); ?>
 <style type="text/css">
 body {
 	margin: 0;
 	padding: 0;
-	font-family: 'Open Sans', sans-serif;
 	font-size: 15px;
-	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 
 p {
 	margin: 0 0 1.5em;
-}
-
-h1, h2, h3, h4, div, p, span, table {
-	font-family: 'Open Sans', sans-serif;
-}
-
-strong {
-	font-weight: 600;
 }
 
 table {
@@ -178,10 +167,8 @@ table {
 	border: none;
 	border-collapse: collapse;
 
-	font-family: 'Open Sans', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 

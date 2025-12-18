@@ -370,6 +370,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 	 * @param int $invoice_id The invoice ID.
 	 */
 	public static function create_invoice_document( $invoice_id ) {
+		ctx_load_docs_pdf_generator();
+		if ( ! class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
+			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
+		}
 
 		$camptix_opts   = get_option( 'camptix_options' );
 		$invoice_number = get_post_meta( $invoice_id, 'invoice_number', true );
@@ -377,9 +381,9 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		$invoice_metas  = get_post_meta( $invoice_id, 'invoice_metas', true );
 		$invoice_order  = get_post_meta( $invoice_id, 'original_order', true );
 
-		$logo = CTX_INV_DIR . '/admin/images/wp-community-support.png';
+		$logo = CTX_INV_ADMIN_URL . '/images/wp-community-support.png';
 		if ( ! empty( $camptix_opts['invoice-logo'] ) ) {
-			$logo = get_attached_file( $camptix_opts['invoice-logo'] );
+			$logo = wp_get_attachment_url( $camptix_opts['invoice-logo'] );
 		}
 
 		$template = locate_template( 'invoice-template.php' ) ? locate_template( 'invoice-template.php' ) : CTX_INV_DIR . '/includes/views/invoice-template.php';
@@ -387,10 +391,6 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		ob_start();
 		include $template;
 		$invoice_content = ob_get_clean();
-
-		if ( ! class_exists( 'WordCamp_Docs_PDF_Generator' ) ) {
-			wp_die( esc_html__( 'WordCamp_Docs_PDF_Generator is missing', 'wordcamporg' ) );
-		}
 
 		$filename = get_post_meta( $invoice_id, 'invoice_document', true );
 		if ( empty( $filename ) ) {

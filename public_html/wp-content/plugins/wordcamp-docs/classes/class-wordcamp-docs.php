@@ -126,7 +126,6 @@ class WordCamp_Docs {
 					sanitize_file_name( $template->get_filename() ),
 					array(
 						'assets' => $template->get_assets(),
-						'margins' => array( 10, 10, 10, 10 ),
 					) );
 
 				$generator->serve_pdf_to_browser( $template->get_filename(), true );

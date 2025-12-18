@@ -2,7 +2,7 @@
 /**
  * Speaker Visa Template
  */
-class WordCamp_Docs_Template_Speaker_Visa implements WordCamp_Docs_Template {
+class WordCamp_Docs_Template_Speaker_Visa extends WordCamp_Docs_Template {
 	public function form( $data ) {
 		$wordcamp    = get_wordcamp_post();
 		$start_date  = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? date( 'j F Y', $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) : '';
@@ -92,47 +92,17 @@ class WordCamp_Docs_Template_Speaker_Visa implements WordCamp_Docs_Template {
 <html>
 <head>
 <meta charset="UTF-8">
-<link href="http://fonts.googleapis.com/css?family=Open+Sans:300,600,700" rel="stylesheet" type="text/css" />
+<?php $this->font_header_html(); ?>
 <style type="text/css">
 body {
 	margin: 0;
 	padding: 0;
-	font-family: 'Open Sans', sans-serif;
 	font-size: 15px;
-	line-height: 1.5;
-	font-weight: 300;
 	color: #444;
 }
 
 p {
 	margin: 0 0 1.5em;
-}
-
-h1, h2, h3, h4, div, p, span, table {
-	font-family: 'Open Sans', sans-serif;
-}
-
-strong {
-	font-weight: 600;
-}
-
-table {
-	table-layout: fixed;
-	width: 100%;
-	margin: 0;
-	padding: 0;
-	border: none;
-	border-collapse: collapse;
-
-	font-family: 'Open Sans', sans-serif;
-	font-size: 15px;
-	line-height: 1.5;
-	font-weight: 300;
-	color: #444;
-}
-
-h2 {
-	font-size: 18px;
 }
 
 .wrap {

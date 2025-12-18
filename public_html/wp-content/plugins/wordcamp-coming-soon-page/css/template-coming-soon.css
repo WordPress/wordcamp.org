@@ -248,3 +248,10 @@ label {
 	width: auto;
 	text-shadow: none;
 }
+
+/* Hide Jetpack contact form field warnings after successful submission */
+.wccsp-contact-form-success .warning,
+.wccsp-contact-form-success .is-error,
+.wccsp-contact-form-success .contact-form__warning {
+	display: none;
+}

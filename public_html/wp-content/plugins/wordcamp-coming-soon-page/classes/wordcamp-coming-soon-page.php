@@ -365,6 +365,15 @@ class WordCamp_Coming_Soon_Page {
 			}
 
 			if ( $contact_form_content ) {
+				// If the form was successfully submitted, wrap it so
+				// Coming Soon styles can suppress post-submit warnings.
+				if ( false !== strpos( $contact_form_content, 'Your message has been sent' ) ) {
+					$contact_form_content = sprintf(
+						'<div class="wccsp-contact-form-success">%s</div>',
+						$contact_form_content
+					);
+				}
+
 				break;
 			}
 		}

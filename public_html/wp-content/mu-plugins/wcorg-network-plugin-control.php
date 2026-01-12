@@ -91,7 +91,7 @@ function _get_network_plugin_state_list( $state ) {
 	$network_id = get_current_network_id();
 
 	if ( EVENTS_NETWORK_ID === $network_id ) {
-		$network_plugin_state['activated'][]   = 'wordcamp-organizer-survey/wordcamp-organizer-survey.php';
+		// Any Events specific plugins expected to be network activated.
 	}
 
 	if ( CAMPUS_NETWORK_ID === $network_id ) {

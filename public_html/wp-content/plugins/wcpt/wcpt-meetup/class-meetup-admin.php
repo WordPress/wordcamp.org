@@ -371,8 +371,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			$event_hosts = array();
 			if ( isset( $group_leads ) && is_array( $group_leads ) ) {
 				foreach ( $group_leads as $event_host ) {
-					if ( WCPT_WORDPRESS_MEETUP_ID === $event_host['id'] ) {
-						// Skip WordPress admin user.
+					// Skip WordPress admin user.
+					if ( WCPT_WORDPRESS_MEETUP_ID === (int) $event_host['id'] ) {
 						continue;
 					}
 					$event_hosts[] = array(
@@ -423,8 +423,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			);
 
 			$original_organizers_list = $this->get_organizer_list(
-				$original_data['Primary organizer WordPress.org username'][0],
-				$original_data['Co-Organizers usernames (seperated by comma)'][0]
+				$original_data['Primary organizer WordPress.org username'][0] ?? '',
+				$original_data['Co-Organizers usernames (seperated by comma)'][0] ?? ''
 			);
 
 			$new_organizers = array_diff( $organizers_list, $original_organizers_list );

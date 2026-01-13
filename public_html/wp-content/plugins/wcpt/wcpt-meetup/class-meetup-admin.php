@@ -624,6 +624,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Primary organizer WordPress.org username'     => 'text',
 				'Co-Organizers usernames (seperated by comma)' => 'text',
 				'Meetup Location (From meetup.com)'            => 'text',
+				'Meetup members count'                         => 'text',
 				'Meetup group created on'                      => 'date',
 				'Number of past meetups'                       => 'text',
 				'Last meetup on'                               => 'date',

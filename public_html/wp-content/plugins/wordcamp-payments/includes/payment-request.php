@@ -1074,7 +1074,7 @@ Thanks for helping us with these details!",
 			restore_current_blog();
 
 			if ( ! empty( $row ) ) {
-				( $report, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '\', "\n" );
+				fputcsv( $report, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '\', "\n" );
 			}
 		}
 
@@ -1107,7 +1107,7 @@ Thanks for helping us with these details!",
 		ob_start();
 
 		// File Header
-		( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], date( 'm/d/Y' ), date( 'Hi' ) ) ), ',', '|', '\', "\n" );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], date( 'm/d/Y' ), date( 'Hi' ) ) ), ',', '|', '\', "\n" );
 
 		$total = 0;
 		$count = 0;

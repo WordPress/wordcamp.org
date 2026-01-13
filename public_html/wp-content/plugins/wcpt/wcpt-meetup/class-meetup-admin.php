@@ -333,13 +333,13 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		public static function update_meetup_data( $post_id ) {
 
 			$meetup_url = get_post_meta( $post_id, 'Meetup URL', true );
+			$meetup_path = wp_parse_url( $meetup_url, PHP_URL_PATH );
 
-			$parsed_url = wp_parse_url( $meetup_url, -1 );
-
-			if ( ! $parsed_url ) {
+			if ( ! $meetup_path ) {
 				return new WP_Error( 'invalid-url', __('Provided Meetup URL is not a valid URL.', 'wordcamporg' ) );
 			}
-			$url_path_segments = explode( '/', rtrim( $parsed_url['path'], '/' ) );
+
+			$url_path_segments = explode( '/', rtrim( $meetup_path, '/' ) );
 			$slug              = array_pop( $url_path_segments );
 			$mtp_client        = new WordPressdotorg\MU_Plugins\Utilities\Meetup_Client();
 

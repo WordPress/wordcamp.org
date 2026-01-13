@@ -786,7 +786,11 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 			$query = new WP_Query(
 				array(
 					'post_type'      => self::get_event_type(),
-					'post_status'    => 'wcpt-mtp-active',
+					'post_status'    => [
+						'wcpt-mtp-active',
+						'wcpt-mtp-dormant',
+						'wcpt-mtp-nds-nw-ow',
+					],
 					'fields'         => 'ids',
 					'posts_per_page' => - 1,
 				)

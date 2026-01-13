@@ -416,6 +416,25 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				}
 			}
 
+			// Update the meetup URL if it has changed, ignore case and trailing slash changes.
+			if ( $group_details['link'] && strtolower( trailingslashit( $group_details['link'] ) ) !== strtolower( trailingslashit( $meetup_url ) ) ) {
+				update_post_meta( $post_id, 'Meetup URL', $group_details['link'] );
+
+				add_post_meta(
+					$post_id,
+					'_note',
+					array(
+						'timestamp' => time(),
+						'user_id'   => 0,
+						'message'   => sprintf(
+							'Meetup URL updated from %s to %s via Meetup.com API sync.',
+							$meetup_url,
+							$group_details['link']
+						),
+					)
+				);
+			}
+
 			update_post_meta( $post_id, 'Meetup Co-organizer names', $event_hosts );
 			update_post_meta( $post_id, 'Meetup Location (From meetup.com)', $group_details['localized_location'] );
 			update_post_meta( $post_id, 'Meetup Coordinates', "{$group_details['lat']},{$group_details['lon']}" );

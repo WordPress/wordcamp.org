@@ -950,7 +950,7 @@ function _generate_payment_report_default( $args ) {
 	ob_start();
 	$report = fopen( 'php://output', 'w' );
 
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( $column_headings ), ',', '"', '\', "\n" );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( $column_headings ), ',', '"', '\\', "\n" );
 
 	foreach ( $args['data'] as $entry ) {
 		switch_to_blog( $entry->blog_id );
@@ -1023,12 +1023,12 @@ function _generate_payment_report_default( $args ) {
 		restore_current_blog();
 
 		if ( ! empty( $row ) ) {
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '\', "\n" );
+			fputcsv( $report, Utilities\Export_CSV::esc_csv( $row ), ',', '"', '\\', "\n" );
 		}
 
 		// Break out expenses into individual line items
 		foreach ( $expenses as $expense ) {
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( _generate_payment_report_default_line_items( $expense, $row ) ), ',', '"', '\', "\n" );
+			fputcsv( $report, Utilities\Export_CSV::esc_csv( _generate_payment_report_default_line_items( $expense, $row ) ), ',', '"', '\\', "\n" );
 		}
 	}
 
@@ -1090,7 +1090,7 @@ function _generate_payment_report_jpm_checks( $args ) {
 	ob_start();
 
 	// File Header
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], date( 'm/d/Y' ), date( 'Hi' ) ) ), ',', '|', '\', "\n" );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], date( 'm/d/Y' ), date( 'Hi' ) ) ), ',', '|', '\\', "\n" );
 
 	$total = 0;
 	$count = 0;
@@ -1158,7 +1158,7 @@ function _generate_payment_report_jpm_checks( $args ) {
 			$start + $count, // must be globally unique?
 			$options['contact_email'],
 			$options['contact_phone'],
-		) ), ',', '|', '\', "\n" );
+		) ), ',', '|', '\\', "\n" );
 
 		// Payee Name Record
 		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
@@ -1166,17 +1166,17 @@ function _generate_payment_report_jpm_checks( $args ) {
 			substr( $payable_to, 0, 35 ),
 			'',
 			sprintf( '%d-%d', $entry->blog_id, $entry->request_id ),
-		) ), ',', '|', '\', "\n" );
+		) ), ',', '|', '\\', "\n" );
 
 		// Payee Address Record
 		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
 			'PYEADD',
 			substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_street_address', true ) ), 0, 35 ),
 			'',
-		) ), ',', '|', '\', "\n" );
+		) ), ',', '|', '\\', "\n" );
 
 		// Additional Payee Address Record
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'ADDPYE', '', '' ) ), ',', '|', '\', "\n" );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'ADDPYE', '', '' ) ), ',', '|', '\\', "\n" );
 
 		// Payee Postal Record
 		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
@@ -1185,20 +1185,20 @@ function _generate_payment_report_jpm_checks( $args ) {
 			substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_state',    true ) ), 0, 35 ),
 			substr( WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_check_zip_code', true ) ), 0, 10 ),
 			substr( $vendor_country_code, 0, 3 ),
-		) ), ',', '|', '\', "\n" );
+		) ), ',', '|', '\\', "\n" );
 
 		// Payment Description
 		fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
 			'PYTDES',
 			substr( $description, 0, 122 ),
-		) ), ',', '|', '\', "\n" );
+		) ), ',', '|', '\\', "\n" );
 
 		restore_current_blog();
 		$count++;
 	}
 
 	// File Trailer
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILTRL', $count * 6 + 2 ) ), ',', '|', '\', "\n" );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILTRL', $count * 6 + 2 ) ), ',', '|', '\\', "\n" );
 
 	// Subtract 1 because counter stores the _last_ check number, not the _next_ check number.
 	update_site_option( '_wcb_jpm_checks_counter', $start + $count - 1 );
@@ -1619,12 +1619,12 @@ function _generate_payment_report_jpm_wires( $args ) {
 		// Use for debugging.
 		// print_r( $row );
 
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ), ',', '"', '\', "\n" );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ), ',', '"', '\\', "\n" );
 		restore_current_blog();
 	}
 
 	// JPM Trailer
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ), ',', '"', '\', "\n" );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ), ',', '"', '\\', "\n" );
 
 	fclose( $report );
 	$results = ob_get_clean();

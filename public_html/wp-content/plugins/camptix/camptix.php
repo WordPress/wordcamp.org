@@ -2293,9 +2293,9 @@ class CampTix_Plugin {
 			$stream = fopen( "php://output", 'w' );
 
 			$headers = array( $summary_title, __( 'Count', 'wordcamporg' ) );
-			fputcsv( $stream, self::esc_csv( $headers ), ',', '"', '\', "\n" );
+			fputcsv( $stream, self::esc_csv( $headers ), ',', '"', '\\', "\n" );
 			foreach ( $summary as $entry ) {
-				fputcsv( $stream, self::esc_csv( $entry ), ',', '"', '\', "\n" );
+				fputcsv( $stream, self::esc_csv( $entry ), ',', '"', '\\', "\n" );
 			}
 
 			fclose( $stream );
@@ -2925,7 +2925,7 @@ class CampTix_Plugin {
 		if ( 'csv' == $format ) {
 			ob_start();
 			$report = fopen( "php://output", 'w' );
-			fputcsv( $report, self::esc_csv( $columns ), ',', '"', '\', "\n" );
+			fputcsv( $report, self::esc_csv( $columns ), ',', '"', '\\', "\n" );
 		}
 
 		if ( 'xml' == $format )
@@ -2998,7 +2998,7 @@ class CampTix_Plugin {
 					$clean_line[$key] = isset( $line[$key] ) ? $line[$key] : '';
 
 				if ( 'csv' == $format ) {
-					fputcsv( $report, self::esc_csv( $clean_line ), ',', '"', '\', "\n" );
+					fputcsv( $report, self::esc_csv( $clean_line ), ',', '"', '\\', "\n" );
 				}
 
 				if ( 'xml' == $format ) {

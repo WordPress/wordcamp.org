@@ -331,6 +331,11 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 		 * @return array|WP_Error
 		 */
 		public static function update_meetup_data( $post_id ) {
+			// Used to prevent a self loop when updating post status to canceled.
+			static $self_loop_prevent = false;
+			if ( $self_loop_prevent ) {
+				return;
+			}
 
 			$meetup_url = get_post_meta( $post_id, 'Meetup URL', true );
 			$meetup_path = wp_parse_url( $meetup_url, PHP_URL_PATH );
@@ -353,8 +358,37 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				return new WP_Error( 'invalid-response', __( 'Received invalid response from Meetup API.', 'wordcamporg' ) );
 			}
 
+			// If the group doesn't exist, mark it as canceled. Note: This is different from removed-from-chapter.
+			if ( false === $group_details ) {
+				// Only mark active groups as removed.
+				if ( ! in_array( get_post( $post_id )->post_status, [ 'wcpt-mtp-active', 'wcpt-mtp-dormant', 'wcpt-mtp-nds-nw-ow' ] ) ) {
+					return;
+				}
+
+				add_post_meta(
+					$post_id,
+					'_note',
+					array(
+						'timestamp' => time(),
+						'user_id'   => 0,
+						'message'   => 'Meetup no longer exists per Meetup.com API sync.',
+					)
+				);
+
+				$self_loop_prevent = true;
+
+				wp_update_post( array(
+					'ID'          => $post_id,
+					'post_status' => 'wcpt-mtp-canceled',
+				) );
+
+				$self_loop_prevent = false;
+
+				return;
+			}
+
 			$group_leads = $mtp_client->get_group_members(
-				$slug,
+				$group_details['urlname'],
 				array(
 					'role' => 'leads',
 				)

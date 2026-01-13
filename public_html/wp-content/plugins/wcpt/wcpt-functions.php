@@ -80,7 +80,7 @@ function wcpt_get_log_entries( $event_id ) {
 function process_raw_entries( $raw_entries, $entry_type ) {
 	$entries = array();
 	foreach ( $raw_entries as $entry ) {
-		$user = get_user_by( 'id', $entry['user_id'] );
+		$user = get_user_by( 'id', $entry['user_id'] ?? 0 );
 
 		if ( $user ) {
 			$entry['user_display_name'] = $user->display_name;

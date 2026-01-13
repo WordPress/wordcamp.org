@@ -110,6 +110,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				// These fields are updated by Meetup API and will be overwritten even if manually changed.
 				'Meetup Co-organizer names',
 				'Meetup Location (From meetup.com)',
+				'Meetup Coordinates',
 				'Meetup members count',
 				'Meetup group created on',
 				'Number of past meetups',
@@ -383,6 +384,9 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 
 			update_post_meta( $post_id, 'Meetup Co-organizer names', $event_hosts );
 			update_post_meta( $post_id, 'Meetup Location (From meetup.com)', $group_details['localized_location'] );
+			update_post_meta( $post_id, 'Meetup Coordinates', "{$group_details['lat']},{$group_details['lon']}" );
+			update_post_meta( $post_id, '_lat', $group_details['lat'] );
+			update_post_meta( $post_id, '_lon', $group_details['lon'] );
 			update_post_meta( $post_id, 'Meetup members count', $group_details['members'] );
 			update_post_meta( $post_id, 'Meetup group created on', $group_details['created'] );
 
@@ -624,6 +628,8 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Primary organizer WordPress.org username'     => 'text',
 				'Co-Organizers usernames (seperated by comma)' => 'text',
 				'Meetup Location (From meetup.com)'            => 'text',
+				'Meetup Coordinates'                           => 'text',
+				'Meetup members count'                         => 'text',
 				'Meetup group created on'                      => 'date',
 				'Number of past meetups'                       => 'text',
 				'Last meetup on'                               => 'date',

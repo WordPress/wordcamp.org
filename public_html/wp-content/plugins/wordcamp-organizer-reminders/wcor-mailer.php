@@ -64,6 +64,7 @@ class WCOR_Mailer {
 		);
 
 		add_action( 'wcor_send_timed_emails', array( $this, 'send_timed_emails' ) );
+		add_action( 'phpmailer_init', array( $this, 'maybe_send_html_email' ) );
 
 		foreach ( $this->triggers as $trigger_id => $trigger ) {
 			foreach( $trigger['actions'] as $action ) {
@@ -120,8 +121,17 @@ class WCOR_Mailer {
 		$status  = true;
 		$subject = $this->replace_placeholders( $wordcamp, $email, $subject );
 		$body    = $this->replace_placeholders( $wordcamp, $email, $body );
+		
+		// Sanitize subject (no HTML allowed)
 		$subject = html_entity_decode( strip_tags( $subject ), ENT_QUOTES, 'UTF-8' );
-		$body    = html_entity_decode( strip_tags( $body ), ENT_QUOTES, 'UTF-8' );
+		
+		// Sanitize and format body with allowed HTML tags
+		$body = wp_kses_post( $body );
+		$body = wpautop( $body );
+		$body = make_clickable( $body );
+		
+		// Mark that we're sending an organizer reminder email
+		add_filter( 'wcor_sending_email', '__return_true' );
 
 		$headers = array_merge( $headers, array(
 			'From: WordCamp Central <support@wordcamp.org>',
@@ -143,8 +153,43 @@ class WCOR_Mailer {
 				log( 'Message failed to send', compact( 'email', 'wordcamp' ) );
 			}
 		}
+		
+		// Remove the filter after sending
+		remove_filter( 'wcor_sending_email', '__return_true' );
 
 		return $status;
+	}
+
+	/**
+	 * Send the message as HTML with plain-text fallback
+	 *
+	 * This hooks into PHPMailer to set up multipart emails with both HTML and plain-text versions.
+	 * The plain-text version includes all URLs for accessibility.
+	 *
+	 * @param PHPMailer $phpmailer
+	 */
+	public function maybe_send_html_email( $phpmailer ) {
+		// Only process emails sent by this plugin
+		if ( ! apply_filters( 'wcor_sending_email', false ) ) {
+			return;
+		}
+
+		// Skip if the body is empty or doesn't contain HTML
+		if ( empty( $phpmailer->Body ) || strip_tags( $phpmailer->Body ) === $phpmailer->Body ) {
+			return;
+		}
+
+		// Set the HTML body and create plain-text alternative
+		$html_body = $phpmailer->Body;
+		
+		// Create plain-text version with URLs preserved
+		$plain_text_body = wp_strip_all_tags( $html_body );
+		
+		// Setting AltBody automatically triggers multipart content-type
+		$phpmailer->AltBody    = $plain_text_body;
+		$phpmailer->Body       = $html_body;
+		$phpmailer->CharSet    = 'UTF-8';
+		$phpmailer->Encoding   = 'quoted-printable';
 	}
 
 	/**

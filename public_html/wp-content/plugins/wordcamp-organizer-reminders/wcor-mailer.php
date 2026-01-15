@@ -185,8 +185,9 @@ class WCOR_Mailer {
 		// Create plain-text version with URLs preserved
 		$plain_text_body = wp_strip_all_tags( $html_body );
 		
-		// Setting AltBody automatically triggers multipart content-type
-		$phpmailer->AltBody    = $plain_text_body;
+		// Configure PHPMailer for HTML email with plain-text fallback
+		$phpmailer->isHTML( true );
+		$phpmailer->AltBody    = $plain_text_body; // setting AltBody automatically triggers multipart content-type
 		$phpmailer->Body       = $html_body;
 		$phpmailer->CharSet    = 'UTF-8';
 		$phpmailer->Encoding   = 'quoted-printable';

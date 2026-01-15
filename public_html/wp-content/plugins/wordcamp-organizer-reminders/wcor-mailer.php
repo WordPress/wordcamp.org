@@ -121,15 +121,15 @@ class WCOR_Mailer {
 		$status  = true;
 		$subject = $this->replace_placeholders( $wordcamp, $email, $subject );
 		$body    = $this->replace_placeholders( $wordcamp, $email, $body );
-		
+
 		// Sanitize subject (no HTML allowed)
 		$subject = html_entity_decode( strip_tags( $subject ), ENT_QUOTES, 'UTF-8' );
-		
+
 		// Sanitize and format body with allowed HTML tags
 		$body = wp_kses_post( $body );
 		$body = wpautop( $body );
 		$body = make_clickable( $body );
-		
+
 		// Mark that we're sending an organizer reminder email
 		add_filter( 'wcor_sending_email', '__return_true' );
 
@@ -153,7 +153,7 @@ class WCOR_Mailer {
 				log( 'Message failed to send', compact( 'email', 'wordcamp' ) );
 			}
 		}
-		
+
 		// Remove the filter after sending
 		remove_filter( 'wcor_sending_email', '__return_true' );
 
@@ -178,11 +178,11 @@ class WCOR_Mailer {
 		if ( empty( $phpmailer->Body ) ) {
 			return;
 		}
-		
+
 		// Use msgHTML() to automatically set HTML body and create plain-text alternative
 		// This method handles all HTML-related headers and creates AltBody automatically
 		$phpmailer->msgHTML( $phpmailer->Body );
-		
+
 		// Set character encoding
 		$phpmailer->CharSet = 'UTF-8';
 		$phpmailer->Encoding = 'quoted-printable';

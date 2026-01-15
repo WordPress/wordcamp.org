@@ -365,7 +365,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		// Verify HTML tags are preserved
 		$this->assertStringContainsString( '<a href="https://make.wordpress.org/community/">link</a>', $body );
 		$this->assertStringContainsString( '<strong>bold text</strong>', $body );
-		
+
 		// Verify wpautop added paragraph tags
 		$this->assertStringContainsString( '<p>', $body );
 	}
@@ -440,7 +440,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		// Verify plain text version has no HTML tags
 		$this->assertStringNotContainsString( '<a', $alt_body );
 		$this->assertStringNotContainsString( '<p>', $alt_body );
-		
+
 		// Verify content is still present
 		$this->assertStringContainsString( 'Visit', $alt_body );
 		$this->assertStringContainsString( 'WordCamp Central', $alt_body );

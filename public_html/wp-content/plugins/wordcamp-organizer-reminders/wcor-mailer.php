@@ -178,12 +178,10 @@ class WCOR_Mailer {
 		if ( empty( $phpmailer->Body ) ) {
 			return;
 		}
-
-		$html_body = $phpmailer->Body;
 		
 		// Use msgHTML() to automatically set HTML body and create plain-text alternative
 		// This method handles all HTML-related headers and creates AltBody automatically
-		$phpmailer->msgHTML( $html_body );
+		$phpmailer->msgHTML( $phpmailer->Body );
 		
 		// Set character encoding
 		$phpmailer->CharSet = 'UTF-8';

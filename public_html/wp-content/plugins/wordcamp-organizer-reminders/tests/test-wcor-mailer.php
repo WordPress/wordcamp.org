@@ -224,7 +224,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 			$this->assert_mail_succeeded(
 				'sally.smith+trez@gmail.com',
 				"It's time to submit WordCamp Dayton reimbursement requests",
-				"<p>Howdy Sally Smith, now&#8217;s the perfect time to request reimbursement for any out of pocket expenses. You can do that at <a href=\"https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement\" rel=\"nofollow\">https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement</a>.</p>\n"
+				'<p>Howdy Sally Smith, now\'s the perfect time to request reimbursement for any out of pocket expenses. You can do that at <a href="https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement" rel="nofollow">https://2019.dayton.wordcamp.org/wp-admin/edit.php?post_type=wcb_reimbursement</a>.</p>' . "\n"
 			);
 
 			$this->assertIsArray( $wordcamp->wcor_sent_email_ids );

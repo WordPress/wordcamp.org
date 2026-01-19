@@ -164,7 +164,7 @@ class WCOR_Mailer {
 	 * Send the message as HTML with plain-text fallback
 	 *
 	 * This hooks into PHPMailer to set up multipart emails with both HTML and plain-text versions.
-	 * Uses msgHTML() to automatically configure HTML emails and generate plain-text alternative.
+	 * The plain-text version includes URLs in markdown-style format for accessibility.
 	 *
 	 * @param \PHPMailer\PHPMailer\PHPMailer $phpmailer
 	 */
@@ -179,11 +179,23 @@ class WCOR_Mailer {
 			return;
 		}
 
-		// Use msgHTML() to automatically set HTML body and create plain-text alternative
-		// This method handles all HTML-related headers and creates AltBody automatically
-		$phpmailer->msgHTML( $phpmailer->Body );
+		$html_body = $phpmailer->Body;
 
-		// Set character encoding
+		// Create plain-text version with URLs preserved in markdown-style format
+		// Convert <a href="URL">text</a> to [text](URL) for better readability
+		$plain_text = preg_replace(
+			'/<a\s+(?:[^>]*?\s+)?href=(["\'])(.*?)\1[^>]*>(.*?)<\/a>/i',
+			'[$3]($2)',
+			$html_body
+		);
+
+		// Strip remaining HTML tags
+		$plain_text = wp_strip_all_tags( $plain_text );
+
+		// Configure PHPMailer for HTML email
+		$phpmailer->isHTML( true );
+		$phpmailer->Body = $html_body;
+		$phpmailer->AltBody = $plain_text;
 		$phpmailer->CharSet = 'UTF-8';
 		$phpmailer->Encoding = 'quoted-printable';
 	}

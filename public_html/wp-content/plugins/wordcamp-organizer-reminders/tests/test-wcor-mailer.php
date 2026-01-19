@@ -444,5 +444,9 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		// Verify content is still present
 		$this->assertStringContainsString( 'Visit', $alt_body );
 		$this->assertStringContainsString( 'WordCamp Central', $alt_body );
+
+		// Verify the URL is preserved in markdown-style format [text](URL)
+		$this->assertStringContainsString( 'https://central.wordcamp.org/', $alt_body );
+		$this->assertStringContainsString( '[WordCamp Central](https://central.wordcamp.org/)', $alt_body );
 	}
 }

@@ -153,11 +153,12 @@ class CampTix_Network_Tools {
 
 		$table_name = $wpdb->base_prefix . 'camptix_log';
 		$wpdb->insert( $table_name, array(
-			'blog_id' => $blog_id,
+			'timestamp' => current_time( 'mysql' ),
+			'blog_id'   => $blog_id,
 			'object_id' => $post_id,
-			'message' => $message,
-			'data' => $data,
-			'section' => $section,
+			'message'   => $message,
+			'section'   => $section,
+			'data'      => $data,
 		) );
 		$camptix->tmp( 'last_log_id', $wpdb->insert_id );
 

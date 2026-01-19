@@ -12,7 +12,7 @@
 
 class CampTix_Network_Tools {
 	private $options;
-	private $db_version = 20240226;
+	private $db_version = 20260119;
 	const PLUGIN_URL    = 'http://wordpress.org/plugins/camptix-network-tools';
 
 	function __construct() {
@@ -54,6 +54,7 @@ class CampTix_Network_Tools {
 			section varchar(32) DEFAULT 'general',
 			data mediumtext NOT NULL,
 			PRIMARY KEY (`id`),
+			KEY `timestamp` (`timestamp`)
   			KEY `blog_object` (`blog_id`,`object_id`)
 		) $charset_collate;";
 

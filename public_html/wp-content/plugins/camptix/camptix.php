@@ -2820,7 +2820,6 @@ class CampTix_Plugin {
 			'run_time'     => number_format( microtime( true ) - $start_time, 3 ),
 		);
 
-		$this->log( sprintf( 'Revenue report data generated in %s seconds', $results['run_time'] ) );
 		return $results;
 	}
 

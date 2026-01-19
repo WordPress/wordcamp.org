@@ -93,7 +93,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	/**
 	 * Synchronize a single attendee model.
 	 *
-	 * Sets are removes the attended flag for a given camptix_id.
+	 * Sets or removes the attended flag for a given camptix_id.
 	 */
 	public function _ajax_sync_model() {
 		global $camptix;

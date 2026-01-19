@@ -248,10 +248,9 @@ class Ticket_Revenue extends Date_Range {
 		$where_values = array();
 		$where        = '';
 
-		$where_clause[] = 'UNIX_TIMESTAMP( timestamp ) BETWEEN ' .
-						  $this->start_date->getTimestamp() .
-						  ' AND ' .
-						  $this->end_date->getTimestamp();
+		$where_clause[] = '`timestamp` BETWEEN %s AND %s';
+		$where_values[] = gmdate( 'Y-m-d H:i:s', $this->start_date->getTimestamp() );
+		$where_values[] = gmdate( 'Y-m-d H:i:s', $this->end_date->getTimestamp() );
 
 		if ( ! empty( $message_filter ) ) {
 			$like_clause = array();

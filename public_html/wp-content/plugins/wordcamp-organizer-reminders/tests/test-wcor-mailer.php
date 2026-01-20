@@ -339,8 +339,8 @@ class Test_WCOR_Mailer extends Database_TestCase {
 	 * @covers WCOR_Mailer::maybe_send_html_email
 	 */
 	public function test_html_content_preserved() {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		/** @var WCOR_Mailer $WCOR_Mailer */
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		global $WCOR_Mailer;
 
 		$html_reminder_id = self::factory()->post->create(
@@ -378,8 +378,8 @@ class Test_WCOR_Mailer extends Database_TestCase {
 	 * @covers WCOR_Mailer::mail
 	 */
 	public function test_html_sanitization() {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		/** @var WCOR_Mailer $WCOR_Mailer */
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		global $WCOR_Mailer;
 
 		$dangerous_reminder_id = self::factory()->post->create(
@@ -420,8 +420,8 @@ class Test_WCOR_Mailer extends Database_TestCase {
 	 * @covers WCOR_Mailer::maybe_send_html_email
 	 */
 	public function test_plain_text_fallback() {
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		/** @var WCOR_Mailer $WCOR_Mailer */
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		global $WCOR_Mailer;
 
 		$html_reminder_id = self::factory()->post->create(
@@ -443,12 +443,18 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		$this->assertTrue( $result );
 		$this->assertNotFalse( $mailer->get_sent(), 'No email was sent.' );
 
-		// Check that AltBody (plain-text version) exists.
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		$this->assertNotEmpty( $mailer->get_sent()->AltBody );
+		// Get the MIME body which contains both HTML and plain-text parts.
+		$mime_body = str_replace( "\r\n", "\n", $mailer->get_sent()->body );
 
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
-		$alt_body = str_replace( "\r\n", "\n", $mailer->get_sent()->AltBody );
+		// Verify this is a multipart email.
+		$this->assertStringContainsString( 'Content-Type: multipart/alternative', $mime_body );
+
+		// Extract the plain-text part from the MIME body.
+		// Look for the plain text section between Content-Type: text/plain and the next boundary.
+		preg_match( '/Content-Type: text\/plain.*?\n\n(.*?)\n--/s', $mime_body, $matches );
+		$this->assertNotEmpty( $matches, 'Plain-text part not found in MIME body.' );
+		
+		$alt_body = isset( $matches[1] ) ? trim( $matches[1] ) : '';
 
 		// Verify plain text version has no HTML tags.
 		$this->assertStringNotContainsString( '<a', $alt_body );

@@ -1107,7 +1107,7 @@ Thanks for helping us with these details!",
 		ob_start();
 
 		// File Header
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], date( 'm/d/Y' ), date( 'Hi' ) ) ), ',', '|', '\\', "\n" );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'FILHDR', 'PWS', $options['pws_customer_id'], gmdate( 'm/d/Y' ), gmdate( 'Hi' ) ) ), ',', '|', '\\', "\n" );
 
 		$total = 0;
 		$count = 0;
@@ -1154,50 +1154,85 @@ Thanks for helping us with these details!",
 			}
 
 			// Payment Header
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-				'PMTHDR',
-				'USPS',
-				'QKCHECKS',
-				date( 'm/d/Y' ),
-				number_format( $amount, 2, '.', '' ),
-				$options['account_number'],
-				$start + $count, // must be globally unique?
-				$options['contact_email'],
-				$options['contact_phone'],
-			) ), ',', '|', '\\', "\n" );
+			fputcsv(
+				$report,
+				Utilities\Export_CSV::esc_csv( array(
+					'PMTHDR',
+					'USPS',
+					'QKCHECKS',
+					gmdate( 'm/d/Y' ),
+					number_format( $amount, 2, '.', '' ),
+					$options['account_number'],
+					$start + $count, // must be globally unique?
+					$options['contact_email'],
+					$options['contact_phone'],
+				) ),
+				',',
+				'|',
+				'\\',
+				"\n"
+			);
 
 			// Payee Name Record
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-				'PAYENM',
-				substr( $payable_to, 0, 35 ),
-				'',
-				sprintf( '%d-%d', $entry->blog_id, $entry->post_id ),
-			) ), ',', '|', '\\', "\n" );
+			fputcsv(
+				$report,
+				Utilities\Export_CSV::esc_csv( array(
+					'PAYENM',
+					substr( $payable_to, 0, 35 ),
+					'',
+					sprintf( '%d-%d', $entry->blog_id, $entry->post_id ),
+				) ),
+				',',
+				'|',
+				'\\',
+				"\n"
+			);
 
 			// Payee Address Record
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-				'PYEADD',
-				substr( get_post_meta( $post->ID, '_camppayments_vendor_street_address', true ), 0, 35 ),
-				'',
-			) ), ',', '|', '\\', "\n" );
+			fputcsv(
+				$report,
+				Utilities\Export_CSV::esc_csv( array(
+					'PYEADD',
+					substr( get_post_meta( $post->ID, '_camppayments_vendor_street_address', true ), 0, 35 ),
+					'',
+				) ),
+				',',
+				'|',
+				'\\',
+				"\n"
+			);
 
 			// Additional Payee Address Record
 			fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'ADDPYE', '', '' ) ), ',', '|', '\\', "\n" );
 
 			// Payee Postal Record
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-				'PYEPOS',
-				substr( get_post_meta( $post->ID, '_camppayments_vendor_city', true ), 0, 35 ),
-				substr( get_post_meta( $post->ID, '_camppayments_vendor_state', true ), 0, 35 ),
-				substr( get_post_meta( $post->ID, '_camppayments_vendor_zip_code', true ), 0, 10 ),
-				substr( $vendor_country_code, 0, 3 ),
-			) ), ',', '|', '\\', "\n" );
+			fputcsv(
+				$report,
+				Utilities\Export_CSV::esc_csv( array(
+					'PYEPOS',
+					substr( get_post_meta( $post->ID, '_camppayments_vendor_city', true ), 0, 35 ),
+					substr( get_post_meta( $post->ID, '_camppayments_vendor_state', true ), 0, 35 ),
+					substr( get_post_meta( $post->ID, '_camppayments_vendor_zip_code', true ), 0, 10 ),
+					substr( $vendor_country_code, 0, 3 ),
+				) ),
+				',',
+				'|',
+				'\\',
+				"\n"
+			);
 
 			// Payment Description
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( array(
-				'PYTDES',
-				substr( $description, 0, 122 ),
-			) ), ',', '|', '\\', "\n" );
+			fputcsv(
+				$report,
+				Utilities\Export_CSV::esc_csv( array(
+					'PYTDES',
+					substr( $description, 0, 122 ),
+				) ),
+				',',
+				'|',
+				'\\',
+				"\n"
+			);
 
 			restore_current_blog();
 			$count++;

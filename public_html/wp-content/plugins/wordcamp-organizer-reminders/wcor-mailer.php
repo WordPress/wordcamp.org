@@ -175,10 +175,12 @@ class WCOR_Mailer {
 		}
 
 		// Skip if the body is empty.
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		if ( empty( $phpmailer->Body ) ) {
 			return;
 		}
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$html_body = $phpmailer->Body;
 
 		// Create plain-text version with URLs preserved in markdown-style format.
@@ -194,7 +196,9 @@ class WCOR_Mailer {
 
 		// Configure PHPMailer for HTML email.
 		$phpmailer->isHTML( true );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$phpmailer->Body = $html_body;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$phpmailer->AltBody = $plain_text;
 	}
 

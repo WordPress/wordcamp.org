@@ -436,6 +436,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 
 		$message  = get_post( $html_reminder_id );
 		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		$result   = $WCOR_Mailer->send_manual_email( $message, $wordcamp );
 
 		$mailer = tests_retrieve_phpmailer_instance();
@@ -443,9 +444,11 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		$this->assertNotFalse( $mailer->get_sent(), 'No email was sent.' );
 
 		// Check that AltBody (plain-text version) exists.
-		$this->assertNotEmpty( $mailer->get_sent()->alt_body );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$this->assertNotEmpty( $mailer->get_sent()->AltBody );
 
-		$alt_body = str_replace( "\r\n", "\n", $mailer->get_sent()->alt_body );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$alt_body = str_replace( "\r\n", "\n", $mailer->get_sent()->AltBody );
 
 		// Verify plain text version has no HTML tags.
 		$this->assertStringNotContainsString( '<a', $alt_body );

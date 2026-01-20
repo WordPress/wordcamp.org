@@ -2293,9 +2293,9 @@ class CampTix_Plugin {
 			$stream = fopen( "php://output", 'w' );
 
 			$headers = array( $summary_title, __( 'Count', 'wordcamporg' ) );
-			fputcsv( $stream, self::esc_csv( $headers ) );
+			fputcsv( $stream, self::esc_csv( $headers ), ',', '"', '\\', "\n" );
 			foreach ( $summary as $entry ) {
-				fputcsv( $stream, self::esc_csv( $entry ), ',', '"' );
+				fputcsv( $stream, self::esc_csv( $entry ), ',', '"', '\\', "\n" );
 			}
 
 			fclose( $stream );
@@ -2925,7 +2925,7 @@ class CampTix_Plugin {
 		if ( 'csv' == $format ) {
 			ob_start();
 			$report = fopen( "php://output", 'w' );
-			fputcsv( $report, self::esc_csv( $columns ) );
+			fputcsv( $report, self::esc_csv( $columns ), ',', '"', '\\', "\n" );
 		}
 
 		if ( 'xml' == $format )
@@ -2998,7 +2998,7 @@ class CampTix_Plugin {
 					$clean_line[$key] = isset( $line[$key] ) ? $line[$key] : '';
 
 				if ( 'csv' == $format ) {
-					fputcsv( $report, self::esc_csv( $clean_line ) );
+					fputcsv( $report, self::esc_csv( $clean_line ), ',', '"', '\\', "\n" );
 				}
 
 				if ( 'xml' == $format ) {
@@ -4723,7 +4723,7 @@ class CampTix_Plugin {
 		$quantity = intval( get_post_meta( $post->ID, 'tix_coupon_quantity', true ) );
 		$used = intval( $this->get_used_coupons_count( $post->ID ) );
 		$applies_to = (array) get_post_meta( $post->ID, 'tix_applies_to' );
-		$bypass_max_tickets_per_order = (boolean) get_post_meta( $post->ID, 'tix_bypass_max_tickets_per_order', true );
+		$bypass_max_tickets_per_order = (bool) get_post_meta( $post->ID, 'tix_bypass_max_tickets_per_order', true );
 
 		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
 		$max_tickets_per_order_after_bypass = apply_filters( 'camptix_max_tickets_per_order_after_coupon_bypass', $max_tickets_per_order * 3, $max_tickets_per_order );

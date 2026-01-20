@@ -78,7 +78,6 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		E_USER_WARNING,
 		E_NOTICE,
 		E_USER_NOTICE,
-		E_STRICT,
 		E_DEPRECATED,
 		E_USER_DEPRECATED,
 	);

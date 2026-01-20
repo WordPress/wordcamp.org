@@ -44,6 +44,8 @@ class CampTix_Attendance extends CampTix_Addon {
 			return;
 		}
 
+		add_action( 'tix_scheduled_daily', array( $this, 'cron_stats_update_attended_count' ) );
+
 		add_filter( 'wp_ajax_camptix-attendance', array( $this, 'ajax_callback' ) );
 		add_filter( 'wp_ajax_nopriv_camptix-attendance', array( $this, 'ajax_callback' ) );
 
@@ -91,9 +93,10 @@ class CampTix_Attendance extends CampTix_Addon {
 	/**
 	 * Synchronize a single attendee model.
 	 *
-	 * Sets are removes the attended flag for a given camptix_id.
+	 * Sets or removes the attended flag for a given camptix_id.
 	 */
 	public function _ajax_sync_model() {
+		global $camptix;
 		if ( empty( $_REQUEST['camptix_id'] ) )
 			return;
 
@@ -105,9 +108,11 @@ class CampTix_Attendance extends CampTix_Addon {
 
 		if ( isset( $_REQUEST['camptix_set_attendance'] ) ) {
 			if ( 'true' == $_REQUEST['camptix_set_attendance'] ) {
+				$camptix->increment_stats( 'attended', 1 );
 				$this->log( 'Marked attendee as attended.', $attendee->ID );
 				update_post_meta( $attendee->ID, 'tix_attended', true );
 			} else {
+				$camptix->increment_stats( 'attended', -1 );
 				$this->log( 'Marked attendee as did not attended.', $attendee->ID );
 				delete_post_meta( $attendee->ID, 'tix_attended' );
 			}
@@ -438,6 +443,40 @@ class CampTix_Attendance extends CampTix_Addon {
 		) );
 
 		return $this->tickets;
+	}
+
+	/**
+	 * Get attended count.
+	 *
+	 * @return int Number of attendees marked as attended.
+	 */
+	public function get_attended_count() {
+		$attended_query = new WP_Query( array(
+			'post_type'      => 'tix_attendee',
+			'post_status'    => 'publish',
+			'meta_key'       => 'tix_attended',
+			'meta_value'     => '1',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+		) );
+
+		return $attended_query->found_posts;
+	}
+
+	/**
+	 * Cron job to update attended count in stats.
+	 */
+	public function cron_stats_update_attended_count() {
+		global $camptix;
+
+		$attended_count = $this->get_attended_count();
+		if ( ! $attended_count ) {
+			$attended_count = 0;
+		}
+
+		$camptix->update_stats( array(
+			'attended' => $attended_count,
+		) );
 	}
 
 	/**

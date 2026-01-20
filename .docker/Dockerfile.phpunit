@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.4-fpm
 
 # Run some Debian packages installation.
 ENV PACKAGES="curl git mariadb-client subversion wget zlib1g-dev libzip-dev"

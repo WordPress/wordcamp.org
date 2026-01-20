@@ -491,7 +491,19 @@ abstract class Event_Admin {
 
 		foreach ( $meta_keys as $key => $value ) {
 			$post_value     = wcpt_key_to_str( $key, 'wcpt_' );
-			$values[ $key ] = isset( $_POST[ $post_value ] ) ? esc_attr( $_POST[ $post_value ] ) : '';
+			$values[ $key ] = '';
+			if ( isset( $_POST[ $post_value ] ) ) {
+				if ( is_array( $_POST[ $post_value ] ) ) {
+					$values[ $key ] = array_filter(
+						array_map( 'esc_attr', wp_unslash( $_POST[ $post_value ] ) ),
+						static function ( $value ) {
+							return ! is_null( $value ) && '' !== $value;
+						}
+					);
+				} else {
+					$values[ $key ] = esc_attr( wp_unslash( $_POST[ $post_value ] ) );
+				}
+			}
 
 			// Don't update protected fields.
 			if ( $this->is_protected_field( $key ) ) {

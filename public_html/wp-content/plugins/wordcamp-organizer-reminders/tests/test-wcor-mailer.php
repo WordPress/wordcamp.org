@@ -383,7 +383,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 			array(
 				'post_type'    => WCOR_Reminder::AUTOMATED_POST_TYPE_SLUG,
 				'post_title'   => 'Sanitization Test',
-				'post_content' => 'This has a <script>alert("xss")</script> and an <iframe src="evil.com"></iframe> which should be removed.',
+				'post_content' => 'This has a <table><tr><td>table</td></tr></table> and <code>code tags</code> and <pre>preformatted text</pre> which should be removed.',
 			)
 		);
 
@@ -399,10 +399,15 @@ class Test_WCOR_Mailer extends Database_TestCase {
 
 		$body = str_replace( "\r\n", "\n", $mailer->get_sent()->body );
 
-		// Verify dangerous tags are removed
-		$this->assertStringNotContainsString( '<script>', $body );
-		$this->assertStringNotContainsString( '<iframe>', $body );
-		$this->assertStringNotContainsString( 'alert("xss")', $body );
+		// Verify email-unsafe tags are removed.
+		$this->assertStringNotContainsString( '<table>', $body );
+		$this->assertStringNotContainsString( '<code>', $body );
+		$this->assertStringNotContainsString( '<pre>', $body );
+		
+		// Verify content is still present.
+		$this->assertStringContainsString( 'table', $body );
+		$this->assertStringContainsString( 'code tags', $body );
+		$this->assertStringContainsString( 'preformatted text', $body );
 	}
 
 	/**

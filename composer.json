@@ -112,6 +112,7 @@
 	],
 	"require": {
 		"adhocore/jwt": "^1.0",
+		"scssphp/scssphp": "^2.1.0",
 		"wporg/wporg-parent-2021": "dev-build"
 	},
 	"require-dev": {

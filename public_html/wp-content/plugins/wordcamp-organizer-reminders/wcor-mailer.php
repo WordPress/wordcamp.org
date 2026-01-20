@@ -196,8 +196,6 @@ class WCOR_Mailer {
 		$phpmailer->isHTML( true );
 		$phpmailer->Body = $html_body;
 		$phpmailer->AltBody = $plain_text;
-		$phpmailer->CharSet = 'UTF-8';
-		$phpmailer->Encoding = 'quoted-printable';
 	}
 
 	/**

@@ -122,15 +122,15 @@ class WCOR_Mailer {
 		$subject = $this->replace_placeholders( $wordcamp, $email, $subject );
 		$body    = $this->replace_placeholders( $wordcamp, $email, $body );
 
-		// Sanitize subject (no HTML allowed)
+		// Sanitize subject (no HTML allowed).
 		$subject = html_entity_decode( strip_tags( $subject ), ENT_QUOTES, 'UTF-8' );
 
-		// Sanitize and format body with allowed HTML tags
-		$body = wp_kses_post( $body );
+		// Sanitize body with email-safe HTML tags only.
+		$body = wp_kses( $body, $this->get_allowed_html_tags() );
 		$body = wpautop( $body );
 		$body = make_clickable( $body );
 
-		// Mark that we're sending an organizer reminder email
+		// Mark that we're sending an organizer reminder email.
 		add_filter( 'wcor_sending_email', '__return_true' );
 
 		$headers = array_merge( $headers, array(
@@ -154,7 +154,7 @@ class WCOR_Mailer {
 			}
 		}
 
-		// Remove the filter after sending
+		// Remove the filter after sending.
 		remove_filter( 'wcor_sending_email', '__return_true' );
 
 		return $status;
@@ -169,33 +169,92 @@ class WCOR_Mailer {
 	 * @param \PHPMailer\PHPMailer\PHPMailer $phpmailer
 	 */
 	public function maybe_send_html_email( $phpmailer ) {
-		// Only process emails sent by this plugin
+		// Only process emails sent by this plugin.
 		if ( ! apply_filters( 'wcor_sending_email', false ) ) {
 			return;
 		}
 
-		// Skip if the body is empty
+		// Skip if the body is empty.
 		if ( empty( $phpmailer->Body ) ) {
 			return;
 		}
 
 		$html_body = $phpmailer->Body;
 
-		// Create plain-text version with URLs preserved in markdown-style format
-		// Convert <a href="URL">text</a> to [text](URL) for better readability
+		// Create plain-text version with URLs preserved in markdown-style format.
+		// Convert <a href="URL">text</a> to [text](URL) for better readability.
 		$plain_text = preg_replace(
 			'/<a\s+(?:[^>]*?\s+)?href=(["\'])(.*?)\1[^>]*>(.*?)<\/a>/i',
 			'[$3]($2)',
 			$html_body
 		);
 
-		// Strip remaining HTML tags
+		// Strip remaining HTML tags.
 		$plain_text = wp_strip_all_tags( $plain_text );
 
-		// Configure PHPMailer for HTML email
+		// Configure PHPMailer for HTML email.
 		$phpmailer->isHTML( true );
 		$phpmailer->Body = $html_body;
 		$phpmailer->AltBody = $plain_text;
+	}
+
+	/**
+	 * Get the list of HTML tags allowed in e-mails
+	 *
+	 * This filters out email-unsafe tags while preserving formatting and links.
+	 *
+	 * @return array Allowed HTML tags formatted for wp_kses().
+	 */
+	protected function get_allowed_html_tags() {
+		$tags = array(
+			'a' => array(
+				'href' => true,
+				'title' => true,
+			),
+			'b' => array(),
+			'blockquote' => array(),
+			'br' => array(),
+			'div' => array(
+				'align' => true,
+			),
+			'em' => array(),
+			'h1' => array(
+				'align' => true,
+			),
+			'h2' => array(
+				'align' => true,
+			),
+			'h3' => array(
+				'align' => true,
+			),
+			'h4' => array(
+				'align' => true,
+			),
+			'h5' => array(
+				'align' => true,
+			),
+			'h6' => array(
+				'align' => true,
+			),
+			'hr' => array(),
+			'i' => array(),
+			'img' => array(
+				'alt' => true,
+				'src' => true,
+				'width' => true,
+				'height' => true,
+			),
+			'li' => array(),
+			'ol' => array(),
+			'p' => array(
+				'align' => true,
+			),
+			'span' => array(),
+			'strong' => array(),
+			'ul' => array(),
+		);
+
+		return $tags;
 	}
 
 	/**

@@ -1445,7 +1445,7 @@ Thanks for helping us with these details!",
 		$report = fopen( 'php://output', 'w' );
 
 		// JPM Header
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ), ',', '|', '\\', "\n" );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'HEADER', gmdate( 'YmdHis' ), '1' ) ), ',', '"', '\\', "\n" );
 
 		$total = 0;
 		$count = 0;
@@ -1644,12 +1644,12 @@ Thanks for helping us with these details!",
 			// Use for debugging.
 			// print_r( $row );
 
-			fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ), ',', '|', '\\', "\n" );
+			fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ), ',', '"', '\\', "\n" );
 			restore_current_blog();
 		}
 
 		// JPM Trailer
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ), ',', '|', '\\', "\n" );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ), ',', '"', '\\', "\n" );
 
 		fclose( $report );
 		$results = ob_get_clean();

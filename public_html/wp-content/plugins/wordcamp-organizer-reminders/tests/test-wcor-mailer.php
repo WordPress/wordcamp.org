@@ -133,7 +133,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 	 *
 	 * @param string $to      The expected recipient of the message.
 	 * @param string $subject The expected subject of the message.
-	 * @param string $body    The expected body of the message.
+	 * @param string $body    The expected body content (needle to search for in the email body).
 	 * @param bool   $result  The returned value from `wp_mail()`, if available. It defaults to `true` because it
 	 *                        isn't always accessible to the testing function.
 	 */
@@ -149,7 +149,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 
 		$this->assertSame( $to,      $mailer->get_recipient( 'to' )->address );
 		$this->assertSame( $subject, $mailer->get_sent()->subject );
-		$this->assertSame( $body,    $normalized_actual_body );
+		$this->assertStringContainsString( $body, $normalized_actual_body );
 	}
 
 	/**

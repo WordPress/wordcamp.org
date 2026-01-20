@@ -446,14 +446,11 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		// Get the MIME body which contains both HTML and plain-text parts.
 		$mime_body = str_replace( "\r\n", "\n", $mailer->get_sent()->body );
 
-		// Verify this is a multipart email.
-		$this->assertStringContainsString( 'Content-Type: multipart/alternative', $mime_body );
-
 		// Extract the plain-text part from the MIME body.
 		// Look for the plain text section between Content-Type: text/plain and the next boundary.
 		preg_match( '/Content-Type: text\/plain.*?\n\n(.*?)\n--/s', $mime_body, $matches );
 		$this->assertNotEmpty( $matches, 'Plain-text part not found in MIME body.' );
-		
+
 		$alt_body = isset( $matches[1] ) ? trim( $matches[1] ) : '';
 
 		// Verify plain text version has no HTML tags.

@@ -1654,12 +1654,12 @@ function _generate_payment_report_jpm_wires( $args ) {
 		// Use for debugging.
 		// print_r( $row );
 
-		fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ), ',', '"', '\\', "\n" );
+		fputcsv( $report, Utilities\Export_CSV::esc_csv( array_values( $row ) ), ',', '|', '\\', "\n" );
 		restore_current_blog();
 	}
 
 	// JPM Trailer
-	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ), ',', '"', '\\', "\n" );
+	fputcsv( $report, Utilities\Export_CSV::esc_csv( array( 'TRAILER', $count, $total ) ), ',', '|', '\\', "\n" );
 
 	fclose( $report );
 	$results = ob_get_clean();

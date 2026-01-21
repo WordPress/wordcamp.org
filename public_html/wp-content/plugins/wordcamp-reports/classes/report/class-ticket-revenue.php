@@ -256,8 +256,8 @@ class Ticket_Revenue extends Date_Range {
 			$like_clause = array();
 
 			foreach ( $message_filter as $string ) {
-				$like_clause[]  = 'message LIKE \'%%%s%%\'';
-				$where_values[] = $string;
+				$like_clause[]  = 'message LIKE %s';
+				$where_values[] = $string . '%';
 			}
 
 			$where_clause[] = '( ' . implode( ' OR ', $like_clause ) . ' )';

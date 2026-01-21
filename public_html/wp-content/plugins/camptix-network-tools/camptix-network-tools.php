@@ -12,7 +12,7 @@
 
 class CampTix_Network_Tools {
 	private $options;
-	private $db_version = 20260119;
+	private $db_version = 20260121;
 	const PLUGIN_URL    = 'http://wordpress.org/plugins/camptix-network-tools';
 
 	function __construct() {
@@ -56,6 +56,7 @@ class CampTix_Network_Tools {
 			PRIMARY KEY (`id`),
 			KEY `timestamp` (`timestamp`)
   			KEY `blog_object` (`blog_id`,`object_id`)
+			KEY `message_prefix` (`message`(8))
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';

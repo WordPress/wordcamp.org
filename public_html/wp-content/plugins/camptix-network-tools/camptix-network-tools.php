@@ -54,8 +54,8 @@ class CampTix_Network_Tools {
 			section varchar(32) DEFAULT 'general',
 			data mediumtext NOT NULL,
 			PRIMARY KEY (`id`),
-			KEY `timestamp` (`timestamp`)
-  			KEY `blog_object` (`blog_id`,`object_id`)
+			KEY `timestamp` (`timestamp`),
+			KEY `blog_object` (`blog_id`,`object_id`),
 			KEY `message_prefix` (`message`(8))
 		) $charset_collate;";
 

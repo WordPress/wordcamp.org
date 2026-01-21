@@ -25,6 +25,7 @@ class WordCamp_Forms_To_Drafts {
 		add_action( 'wp_enqueue_scripts',                 array( $this, 'enqueue_inert_script' ) );
 		add_filter( 'the_content',                        array( $this, 'force_login_to_use_form' ), 8 );
 		add_action( 'template_redirect',                  array( $this, 'populate_form_based_on_user' ), 9 );
+		add_Action( 'jetpack_contact_form_is_spam',       array( $this, 'prevent_form_submission' ) );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_sponsors' ), 10, 3 );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_speakers' ), 10, 3 );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_volunteers' ), 10, 3 );
@@ -187,6 +188,29 @@ class WordCamp_Forms_To_Drafts {
 
 				break;
 		}
+	}
+
+	/**
+	 * Mark form submissions as spam if user is not logged in and form requires login.
+	 *
+	 * NOTE: This accepts submissions and marks as spam, it does not inform the submitter.
+	 */
+	public function prevent_form_submission( $is_spam ) {
+		global $post;
+
+		// Already marked as spam, no form known, or user is already logged in..
+		if ( $is_spam || empty( $_POST['contact-form-id'] ) || is_user_logged_in() ) {
+			return $is_spam;
+		}
+
+		$form_id = get_post_meta( absint( $_POST['contact-form-id'] ), 'wcfd-key', true );
+
+		if ( $this->form_requires_login( $form_id ) ) {
+			// String not shown, this is internal only.
+			return new WP_Error( 'spam', 'Submission requires login, user not logged in.' );
+		}
+
+		return $is_spam;
 	}
 
 	/**

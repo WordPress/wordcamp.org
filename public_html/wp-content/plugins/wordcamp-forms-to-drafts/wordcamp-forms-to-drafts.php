@@ -198,12 +198,15 @@ class WordCamp_Forms_To_Drafts {
 	public function prevent_form_submission( $is_spam ) {
 		global $post;
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$contact_form_post_id = absint( $_POST['contact-form-id'] ?? 0 );
+
 		// Already marked as spam, no form known, or user is already logged in..
-		if ( $is_spam || empty( $_POST['contact-form-id'] ) || is_user_logged_in() ) {
+		if ( $is_spam || ! $contact_form_post_id || is_user_logged_in() ) {
 			return $is_spam;
 		}
 
-		$form_id = get_post_meta( absint( $_POST['contact-form-id'] ), 'wcfd-key', true );
+		$form_id = get_post_meta( $contact_form_post_id, 'wcfd-key', true );
 
 		if ( $this->form_requires_login( $form_id ) ) {
 			// String not shown, this is internal only.

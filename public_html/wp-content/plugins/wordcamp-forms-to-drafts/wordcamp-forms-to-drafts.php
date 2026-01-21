@@ -78,8 +78,7 @@ class WordCamp_Forms_To_Drafts {
 	 * @return string
 	 */
 	public function force_login_to_use_form( $content ) {
-		$form_id              = $this->get_current_form_id();
-		$please_login_message = '';
+		$form_id = $this->get_current_form_id();
 
 		if ( ! $this->form_requires_login( $form_id ) ) {
 			return $content;

@@ -85,6 +85,20 @@ class WordCamp_Forms_To_Drafts {
 			return $content;
 		}
 
+		$please_login_message = $this->get_please_login_message( $form_id );
+
+		return $this->inject_disabled_form_elements( $content, $please_login_message );
+	}
+
+	/**
+	 * Get the login message to show to users who need to log in to use the form.
+	 *
+	 * @param string $form_id The form id.
+	 * @return string
+	 */
+	protected function get_please_login_message( $form_id ) {
+		$please_login_message = '';
+
 		switch ( $form_id ) {
 			case 'call-for-speakers':
 				$please_login_message = sprintf(
@@ -94,7 +108,7 @@ class WordCamp_Forms_To_Drafts {
 				break;
 		}
 
-		return $this->inject_disabled_form_elements( $content, $please_login_message );
+		return $please_login_message;
 	}
 
 	/**
@@ -209,8 +223,8 @@ class WordCamp_Forms_To_Drafts {
 		$form_id = get_post_meta( $contact_form_post_id, 'wcfd-key', true );
 
 		if ( $this->form_requires_login( $form_id ) ) {
-			// String not shown, this is internal only.
-			return new WP_Error( 'spam', 'Submission requires login, user not logged in.' );
+			// String not shown when logged out.
+			return new WP_Error( 'spam', $this->get_please_login_message( $form_id ) );
 		}
 
 		return $is_spam;

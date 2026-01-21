@@ -363,6 +363,11 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
+			return;
+		}
+
 		$all_values              = $this->get_unprefixed_grunion_form_values( $all_values );
 		$sponsor_to_form_key_map = array(
 			'_wcpt_sponsor_website' => 'Website',
@@ -405,6 +410,11 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
+			return;
+		}
+
 		global $current_user;
 
 		$all_values      = $this->get_unprefixed_grunion_form_values( $all_values );
@@ -441,6 +451,11 @@ class WordCamp_Forms_To_Drafts {
 	 */
 	public function call_for_volunteers( $submission_id, $all_values, $extra_values ) {
 		if ( 'call-for-volunteers' != $this->get_form_key( $submission_id ) ) {
+			return;
+		}
+
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
 			return;
 		}
 

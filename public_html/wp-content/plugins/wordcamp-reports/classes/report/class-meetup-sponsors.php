@@ -219,6 +219,8 @@ class Meetup_Sponsors extends Base {
 			],
 			'a' => [
 				'href'   => true,
+				'rel'    => true,
+				'target' => true,
 			],
 		];
 

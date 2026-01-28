@@ -15,7 +15,6 @@ if ( ! empty( $data ) && is_array( $data ) ) {
 		return esc_html( $value );
 	};
 
-
 	echo '<table class=" widefat fixed striped" id="report-data-table">';
 	echo '<thead><tr>';
 	foreach ( array_keys( reset( $data ) ) as $header ) {

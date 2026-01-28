@@ -3,6 +3,7 @@ namespace WordCamp\Reports\Views\HTML\Data_Table;
 defined( 'WPINC' ) || die();
 
 /** @var array $data */
+/** @var array? $safe_html */
 
 if ( ! empty( $data ) && is_array( $data ) ) {
 

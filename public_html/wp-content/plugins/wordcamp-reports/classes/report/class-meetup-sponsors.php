@@ -9,12 +9,9 @@ namespace WordCamp\Reports\Report;
 defined( 'WPINC' ) || die();
 
 use Exception;
-use DateTime, DateTimeInterface, DateInterval;
 use WP_Error;
 use const WordCamp\Reports\CAPABILITY;
 use function WordCamp\Reports\get_views_dir_path;
-use function WordCamp\Reports\Validation\validate_date_range;
-use function WordCamp\Reports\Time\{year_array, quarter_array, month_array, convert_time_period_to_date_range};
 use WordPressdotorg\MU_Plugins\Utilities\{ Meetup_Client, Export_CSV };
 
 /**

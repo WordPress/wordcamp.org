@@ -3,7 +3,7 @@ namespace WordCamp\Reports\Views\HTML\Grouped_Data_Table;
 defined( 'WPINC' ) || die();
 
 /** @var array $groups */
-/** @var array $safe_html */
+/** @var array? $safe_html */
 
 if ( ! empty( $groups ) && is_array( $groups ) ) {
 

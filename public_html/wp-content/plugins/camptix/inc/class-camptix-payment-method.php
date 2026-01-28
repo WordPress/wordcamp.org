@@ -17,6 +17,13 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	public $camptix_options;
 
 	/**
+	 * The period of time (in seconds) after which a pending payment is considered timed out.
+	 *
+	 * @var int
+	 */
+	public $payment_timeout_period = 86400; // 24 hours in seconds.
+
+	/**
 	 * Constructor
 	 */
 	function __construct() {
@@ -217,6 +224,47 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	abstract function payment_checkout( $payment_token );
 
 	/**
+	 * Provide the current status of a payment.
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return array {
+	 *   @type int $status A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED
+	 *   @type ?string $transaction_id The transaction ID from the payment gateway, or null if not available
+	 *   @type ?array $transaction_details Additional details about the transaction from the payment gateway, or null if not available
+	 * }
+	 */
+	function get_payment( $payment_token ) {
+		_doing_it_wrong( __METHOD__, 'get_payment() not implemented in payment module.', '20251101' );
+		$order = $this->get_order( $payment_token );
+		if ( ! $order ) {
+			// If we can't find the order, return FAILED.
+			return array(
+				'status' => CampTix_Plugin::PAYMENT_STATUS_FAILED,
+				'transaction_id' => null,
+				'transaction_details' => null
+			);
+		}
+
+		// For back-compat, we'll return TIMEOUT or PENDING based on the order date and the defined timeout period (Default of 24 hours).
+		$order_date   = strtotime( $order['attendees'][0]->tix_timestamp );
+		$time_elapsed = time() - strtotime( $order_date );
+		if ( $time_elapsed > $this->payment_timeout_period ) {
+			return array(
+				'status'              => CampTix_Plugin::PAYMENT_STATUS_TIMEOUT,
+				'transaction_id'      => null,
+				'transaction_details' => null
+			);
+		}
+
+		return array(
+			'status'              => CampTix_Plugin::PAYMENT_STATUS_PENDING,
+			'transaction_id'      => null,
+			'transaction_details' => null
+		);
+	}
+
+	/**
 	 * Handle the refund process
 	 *
 	 * @param string $payment_token
@@ -226,6 +274,8 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	function payment_refund( $payment_token ) {
 		/** @var $camptix Camptix_Plugin  */
 		global $camptix;
+
+		_doing_it_wrong( __METHOD__, 'payment_refund() not implemented in payment module.', '20251101' );
 
 		$refund_data = array();
 		$camptix->log( __FUNCTION__ . ' not implemented in payment module.', 0, null, 'refund' );
@@ -292,7 +342,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 		}
 
 		$attendees = get_posts( array(
-			'posts_per_page' => 1,
+			'posts_per_page' => -1,
 			'post_type'      => 'tix_attendee',
 			'post_status'    => 'any',
 			'meta_query'     => array(
@@ -304,27 +354,26 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 				),
 			),
 		) );
-
 		if ( ! $attendees ) {
 			return array();
 		}
 
-		return $this->get_order_by_attendee_id( $attendees[0]->ID );
-	}
-
-	/**
-	 * Get the order for the given attendee
-	 *
-	 * @param int $attendee_id
-	 *
-	 * @return array
-	 */
-	function get_order_by_attendee_id( $attendee_id ) {
-		$order = (array) get_post_meta( $attendee_id, 'tix_order', true );
-
-		if ( $order ) {
-			$order['attendee_id'] = $attendee_id;
+		$order = false;
+		foreach ( $attendees as $attendee ) {
+			$order = (array) get_post_meta( $attendee->ID, 'tix_order', true );
+			if ( $order ) {
+				break;
+			}
 		}
+		if ( ! $order ) {
+			return array();
+		}
+
+		// "last" attendee added, ie. not always the purchaser.
+		$order['attendee_id'] = $attendees[0]->ID;
+
+		// All attendees.
+		$order['attendees'] = $attendees;
 
 		return $order;
 	}

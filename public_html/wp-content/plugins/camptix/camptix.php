@@ -189,15 +189,27 @@ class CampTix_Plugin {
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'send_emails_batch' ) );
 		add_action( 'tix_scheduled_every_ten_minutes', array( $this, 'process_refund_all' ) );
 
-		add_action( 'tix_scheduled_daily', array( $this, 'review_timeout_payments' ) );
+		add_action( 'tix_scheduled_two_hours', array( $this, 'check_payment_status_for_draft_tickets' ) );
+
 		add_action( 'tix_scheduled_daily', array( $this, 'cron_camptix_stats_ticket_validation' ) );
 
-		if ( ! wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) )
-			wp_schedule_event( time(), '10-mins', 'tix_scheduled_every_ten_minutes' );
+		// No need for ticketing schedules on an archived event.
+		if ( $this->options['archived'] ) {
+			wp_clear_scheduled_hook( 'tix_scheduled_every_ten_minutes' );
+			wp_clear_scheduled_hook( 'tix_scheduled_two_hours' );
+			wp_clear_scheduled_hook( 'tix_scheduled_daily' );
+			return;
+		}
 
-		// wp_clear_scheduled_hook( 'tix_scheduled_hourly' );
-		if ( ! wp_next_scheduled( 'tix_scheduled_daily' ) )
+		if ( ! wp_next_scheduled( 'tix_scheduled_every_ten_minutes' ) ) {
+			wp_schedule_event( time(), '10-mins', 'tix_scheduled_every_ten_minutes' );
+		}
+		if ( ! wp_next_scheduled( 'tix_scheduled_daily' ) ) {
 			wp_schedule_event( time(), 'daily', 'tix_scheduled_daily' );
+		}
+		if ( ! wp_next_scheduled( 'tix_scheduled_two_hours' ) ) {
+			wp_schedule_event( time(), 'two-hours', 'tix_scheduled_two_hours' );
+		}
 	}
 
 	/**
@@ -207,6 +219,10 @@ class CampTix_Plugin {
 		$schedules['10-mins'] = array(
 			'interval' => 60 * 10,
 			'display' => __( 'Once every 10 minutes', 'wordcamporg' ),
+		);
+		$schedules['two-hours'] = array(
+			'interval' => 2 * HOUR_IN_SECONDS,
+			'display' => 'Every 2 hours',
 		);
 		return $schedules;
 	}
@@ -7277,12 +7293,13 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Review Timeout Payments
+	 * Review Draft attendee payments.
 	 *
-	 * This routine looks up old draft attendee posts and puts
-	 * their status into Timeout.
+	 * This routine looks up old draft attendee posts and either:
+	 *  - Marks the attendee as paid.
+	 *  - Puts their ticket into timeout status.
 	 */
-	function review_timeout_payments() {
+	function check_payment_status_for_draft_tickets() {
 
 		// Nothing to do for archived sites.
 		if ( $this->options['archived'] )
@@ -7291,18 +7308,20 @@ class CampTix_Plugin {
 		$processed = 0;
 		$current_loop = 1;
 		$max_loops = 500;
+		$seen_ids = [];
 
 		while ( $attendees = get_posts( array(
 			'fields' => 'ids',
 			'post_type' => 'tix_attendee',
 			'post_status' => 'draft',
 			'posts_per_page' => 100,
+			'post__not_in' => $seen_ids,
 			'cache_results' => false,
 			'meta_query' => array(
 				array(
 					'key' => 'tix_timestamp',
 					'compare' => '<',
-					'value' => time() - 60 * 60 * 24, // 24 hours ago
+					'value' => time() - ( 2 * HOUR_IN_SECONDS ),
 					'type' => 'NUMERIC',
 				),
 				array(
@@ -7315,6 +7334,40 @@ class CampTix_Plugin {
 		) ) ) {
 
 			foreach ( $attendees as $attendee_id ) {
+				$seen_ids[] = $attendee_id;
+
+				// If the payment method supports fetching payment status, check that before we do anything.
+				$payment_method     = get_post_meta( $attendee_id, 'tix_payment_method', true );
+				$payment_method_obj = $this->get_payment_method_by_id( $payment_method );
+				$tix_payment_token  = get_post_meta( $attendee_id, 'tix_payment_token', true );
+				if ( $payment_method_obj && $tix_payment_token ) {
+					$payment = $payment_method_obj->get_payment( $tix_payment_token );
+
+					if ( $payment && CampTix_Plugin::PAYMENT_STATUS_COMPLETED === $payment['status'] ) {
+						// Mark as published instead of timing out.
+						$this->payment_result(
+							$tix_payment_token,
+							$payment['status'],
+							$payment,
+							false /* not interactive, do not die/redirect. */
+						);
+
+						continue;
+					} elseif ( $payment && CampTix_Plugin::PAYMENT_STATUS_PENDING === $payment['status'] ) {
+						// Leave as draft, still pending.
+						continue;
+					}
+				} else {
+					// If no payment method or token, minimum of 24hrs must pass..
+					$order_date = get_post_meta( $attendee_id, 'tix_timestamp', true );
+					if ( ( time() - $order_date ) < DAY_IN_SECONDS ) {
+						continue;
+					}
+				}
+
+				/**
+				 * Allow plugins to hook in before an attendee is timed out.
+				 */
 				do_action( 'camptix_pre_attendee_timeout', $attendee_id );
 
 				// Check the post_status again, incase a filter has caused the post to change.
@@ -7821,6 +7874,16 @@ class CampTix_Plugin {
 	function payment_result( $payment_token, $result, $data = array(), $interactive = true ) {
 		if ( empty( $payment_token ) )
 			die( 'Do not call payment_result without a payment token.' );
+
+		// Back-compat for some payment gateways.
+		if ( is_scalar( $data ) ) {
+			_doing_it_wrong( 'Camptix::payment_result', 'Passing a scalar as $data is deprecated. Please pass an array with at least the transaction_id key.', '20251101' );
+			$data = array(
+				'transaction_id'      => $data,
+				'transaction_details' => $_REQUEST,
+			);
+			unset( $data['transaction_details']['tix_action'], $data['transaction_details']['tix_payment_token'], $data['transaction_details']['tix_payment_method'] );
+		}
 
 		$attendees = get_posts( array(
 			'posts_per_page' => -1,

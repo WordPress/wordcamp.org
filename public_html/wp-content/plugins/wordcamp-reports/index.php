@@ -140,6 +140,7 @@ function get_report_classes() {
 		__NAMESPACE__ . '\Report\WordCamp_Payment_Methods',
 		__NAMESPACE__ . '\Report\Meetup_Status',
 		__NAMESPACE__ . '\Report\Meetup_Details',
+		__NAMESPACE__ . '\Report\Meetup_Sponsors',
 		__NAMESPACE__ . '\Report\WordCamp_Counts',
 		__NAMESPACE__ . '\Report\Sponsor_Details',
 		__NAMESPACE__ . '\Report\WordCamp_Speaker_Feedback',

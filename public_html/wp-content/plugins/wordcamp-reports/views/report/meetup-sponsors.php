@@ -9,7 +9,6 @@ defined( 'WPINC' ) || die();
 use WordCamp\Reports;
 use WordCamp\Reports\Report;
 
-/** @var array $field_defaults */
 ?>
 
 <div class="wrap">

@@ -15,7 +15,7 @@ use function WordCamp\Reports\get_views_dir_path;
 use WordPressdotorg\MU_Plugins\Utilities\{ Meetup_Client, Export_CSV };
 
 /**
- * Class Meetup_Events
+ * Class Meetup_Sponsors
  *
  * @package WordCamp\Reports\Report
  */

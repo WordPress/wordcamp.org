@@ -19,11 +19,17 @@ use WordCamp\Reports\Report;
 		<?php echo esc_html( Report\Meetup_Sponsors::$name ); ?>
 	</h1>
 
-	<?php echo wpautop( wp_kses_post( Report\Meetup_Sponsors::$description ) ); ?>
+	<?php
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	echo wpautop( wp_kses_post( Report\Meetup_Sponsors::$description ) );
+	?>
 
 	<h4>Methodology</h4>
 
-	<?php echo wpautop( wp_kses_post( Report\Meetup_Sponsors::$methodology ) ); ?>
+	<?php
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	echo wpautop( wp_kses_post( Report\Meetup_Sponsors::$methodology ) );
+	?>
 
 	<form method="post" action="">
 		<input type="hidden" name="action" value="run-report" />
@@ -31,7 +37,7 @@ use WordCamp\Reports\Report;
 
 		<p>
 			<label>
-				<input type="checkbox" name="include-network" value="1" <?php checked( !empty( $plus_network ) ); ?>>
+				<input type="checkbox" name="include-network" value="1" <?php checked( ! empty( $plus_network ) ); ?>>
 				Include Network-level Sponsors
 			</label>
 		</p>

@@ -134,16 +134,19 @@ class Meetup_Sponsors extends Base {
 				'group_url'  => $group['link'],
 				'city'       => $group['city'],
 				'country'    => $meetup->localised_country_name( $group['country'] ),
-				'sponsors'  => array_map( function( $sponsor_edge ) {
-					$sponsor = $sponsor_edge['node'];
-					return [
-						'id'          => $sponsor['id'],
-						'name'        => $sponsor['name'],
-						'url'         => $sponsor['url'],
-						'description' => $sponsor['description'],
-						'logo_url'    => $sponsor['logoPhoto']['standardUrl'] ?? '',
-					];
-				}, $group['sponsors']['edges'] ),
+				'sponsors'  => array_map(
+					function ( $sponsor_edge ) {
+						$sponsor = $sponsor_edge['node'];
+						return [
+							'id'          => $sponsor['id'],
+							'name'        => $sponsor['name'],
+							'url'         => $sponsor['url'],
+							'description' => $sponsor['description'],
+							'logo_url'    => $sponsor['logoPhoto']['standardUrl'] ?? '',
+						];
+					},
+					$group['sponsors']['edges']
+				),
 			];
 		}
 
@@ -210,13 +213,13 @@ class Meetup_Sponsors extends Base {
 		$safe_html = [
 			'p' => [],
 			'img' => [
-				'src'    => [],
-				'alt'    => [],
-				'style'  => [],
+				'src'    => true,
+				'alt'    => true,
+				'style'  => true,
 			],
 			'a' => [
-				'href'   => [],
-			]
+				'href'   => true,
+			],
 		];
 
 		include get_views_dir_path() . 'html/grouped-data-table.php';
@@ -328,5 +331,4 @@ class Meetup_Sponsors extends Base {
 	protected function get_cache_key() {
 		return parent::get_cache_key() . '_' . md5( serialize( $this->options ) );
 	}
-
 }

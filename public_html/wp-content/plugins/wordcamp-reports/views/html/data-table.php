@@ -19,6 +19,7 @@ if ( ! empty( $data ) && is_array( $data ) ) {
 	echo '<table class=" widefat fixed striped" id="report-data-table">';
 	echo '<thead><tr>';
 	foreach ( array_keys( reset( $data ) ) as $header ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<th>' . $escape( $header ) . '</th>';
 	}
 	echo '</tr></thead>';

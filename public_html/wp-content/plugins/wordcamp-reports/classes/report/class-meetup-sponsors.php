@@ -104,7 +104,7 @@ class Meetup_Sponsors extends Base {
 											logoPhoto {
 												standardUrl
 											}
-										} 
+										}
 									}
 								}
 							}

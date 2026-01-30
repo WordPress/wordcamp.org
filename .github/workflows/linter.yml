@@ -11,6 +11,10 @@ on:
     paths:
     - public_html/**
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: All

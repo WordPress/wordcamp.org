@@ -125,8 +125,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				'PLN', 'QAR', 'RON', 'RSD', 'RUB', 'SAR', 'SBD', 'SCR', 'SEK', 'SGD', 'SHP', 'SLL',
 				'SOS', 'SRD', 'STD', 'SZL', 'THB', 'TJS', 'TOP', 'TRY', 'TTD', 'TWD',
 				'TZS', 'UAH', 'USD', 'UYU', 'UZS', 'WST', 'XCD', 'YER', 'ZAR', 'ZMW',
-				// See https://docs.stripe.com/currencies#special-cases
-				// ZERO decimal currencies which MUST be passed with a 100x multiplier
+				// Zero-decimal currencies which MUST be passed with a 100x multiplier.
+				// (See https://docs.stripe.com/currencies#special-cases).
 				'ISK', 'UGX',
 			),
 		);

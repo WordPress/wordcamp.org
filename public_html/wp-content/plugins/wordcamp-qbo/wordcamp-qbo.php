@@ -404,7 +404,7 @@ class WordCamp_QBO {
 			IBAN: GB12CHAS60924276907354
 			SWIFT BIC: CHASGB2L
 
-			For other Payment options, including Credit Card, please see:
+			For other payment options, including Credit Card, please see:
 			https://central.wordcamp.org/sponsorship-payment-options/
 			';
 		} else {
@@ -429,7 +429,7 @@ class WordCamp_QBO {
 
 			Please remit checks (USD only) to: WordPress Community Support, PBC, P.O. Box 101768, Pasadena, CA 91189-1768
 
-			For other Payment options, including Credit Card and EUR Payments, please see:
+			For other payment options, including Credit Card and EUR-specific instructions, please see:
 			https://central.wordcamp.org/sponsorship-payment-options/
 			';
 		}

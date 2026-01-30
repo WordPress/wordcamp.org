@@ -408,7 +408,7 @@ class WordCamp_QBO {
 			https://central.wordcamp.org/sponsorship-payment-options/
 			';
 		} else {
-			// Non-EUR payments
+			// Non-EUR payments.
 			$payment_instructions = '
 			Please include the invoice number in the memo field when making your payment.
 

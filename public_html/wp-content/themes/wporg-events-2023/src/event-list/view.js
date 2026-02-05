@@ -17,7 +17,7 @@ document.addEventListener( 'DOMContentLoaded', function() {
 			const listContainer = document.querySelector( `#wp-block-wporg-event-list-${ id }` );
 			if ( ! listContainer ) {
 				// eslint-disable-next-line no-console
-				console.error( 'Missing container for global events with id ' + id );
+				console.error( `Missing container for global events with id ${ id }` );
 				continue;
 			}
 

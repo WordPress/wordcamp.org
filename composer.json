@@ -116,7 +116,6 @@
 		"composer/installers": "^2.2",
 		"wpackagist-plugin/akismet": "*",
 		"wordpress-plugin/bbpress": "2.6.*",
-		"wordpress-plugin/camptix-bd-payments": "1.2",
 		"wordpress-plugin/camptix-mercadopago": "1.0.6",
 		"wpackagist-plugin/camptix-pagseguro": "*",
 		"wpackagist-plugin/camptix-payfast-gateway": "*",

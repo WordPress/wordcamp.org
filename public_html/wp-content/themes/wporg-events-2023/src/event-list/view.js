@@ -13,7 +13,7 @@ document.addEventListener( 'DOMContentLoaded', function() {
 			return;
 		}
 
-		for ( var id in globalEventsPayload ) {
+		for ( let id in globalEventsPayload ) {
 			const listContainer = document.querySelector( `#wp-block-wporg-event-list-${ id }` );
 			if ( ! listContainer ) {
 				// eslint-disable-next-line no-console
@@ -23,8 +23,8 @@ document.addEventListener( 'DOMContentLoaded', function() {
 
 			renderGlobalEvents(
 				listContainer,
-				globalEventsPayload[id].events,
-				globalEventsPayload[id].groupByMonth
+				globalEventsPayload[ id ].events,
+				globalEventsPayload[ id ].groupByMonth
 			);
 		}
 	}

@@ -13,7 +13,7 @@ document.addEventListener( 'DOMContentLoaded', function() {
 			return;
 		}
 
-		for ( let id in globalEventsPayload ) {
+		for ( const id in globalEventsPayload ) {
 			const listContainer = document.querySelector( `#wp-block-wporg-event-list-${ id }` );
 			if ( ! listContainer ) {
 				// eslint-disable-next-line no-console

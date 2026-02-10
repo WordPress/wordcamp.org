@@ -470,4 +470,16 @@ class WordCamp_Loader extends Event_Loader {
 		$vars[] = 'wcorg-wordcamp-info';
 		return $vars;
 	}
+
+	/**
+	 * Get searchable post meta keys for WordCamp events.
+	 *
+	 * Returns the list of meta keys that should be searchable in the tracker.
+	 * Uses the public meta keys as they represent data shown in the UI.
+	 *
+	 * @return array List of meta keys to search.
+	 */
+	public static function get_searchable_meta_keys() {
+		return self::get_public_meta_keys();
+	}
 }

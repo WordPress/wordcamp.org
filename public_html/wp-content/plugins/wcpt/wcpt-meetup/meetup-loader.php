@@ -226,6 +226,19 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 			return $query_params;
 		}
 
+		/**
+		 * Get searchable post meta keys for Meetup events.
+		 *
+		 * Returns the list of meta keys that should be searchable in the tracker.
+		 * Uses the public meta keys as they represent data shown in the UI.
+		 *
+		 * @return array List of meta keys to search.
+		 */
+		public static function get_searchable_meta_keys() {
+			require_once __DIR__ . '/class-meetup-admin.php';
+			return Meetup_Admin::get_public_meta_keys();
+		}
+
 	}
 
 endif;

@@ -250,9 +250,15 @@ abstract class Event_Loader {
 			return $groupby;
 		}
 
-		// Group by post ID to avoid duplicates.
+		// Ensure grouping by post ID to avoid duplicates.
+		$post_id_group = "{$wpdb->posts}.ID";
+
+		// If groupby is empty, set it to post ID.
 		if ( empty( $groupby ) ) {
-			$groupby = "{$wpdb->posts}.ID";
+			$groupby = $post_id_group;
+		} elseif ( strpos( $groupby, $post_id_group ) === false ) {
+			// If groupby exists but doesn't include post ID, append it.
+			$groupby .= ", {$post_id_group}";
 		}
 
 		return $groupby;

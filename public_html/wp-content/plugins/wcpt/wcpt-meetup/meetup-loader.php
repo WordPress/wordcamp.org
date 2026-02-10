@@ -119,7 +119,6 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 */
 		public function includes() {
 			require_once WCPT_DIR . 'wcpt-meetup/class-wp-rest-meetups-controller.php';
-			require_once WCPT_DIR . 'wcpt-meetup/class-meetup-admin.php';
 		}
 
 		/**
@@ -236,6 +235,10 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		 * @return array List of meta keys to search.
 		 */
 		public static function get_searchable_meta_keys() {
+			// Lazy load Meetup_Admin only when needed.
+			if ( ! class_exists( 'Meetup_Admin' ) ) {
+				require_once WCPT_DIR . 'wcpt-meetup/class-meetup-admin.php';
+			}
 			return Meetup_Admin::get_public_meta_keys();
 		}
 

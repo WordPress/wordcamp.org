@@ -169,11 +169,12 @@ abstract class Event_Loader {
 
 		// Build meta search conditions.
 		$meta_search = array();
+		$like_term   = '%' . $wpdb->esc_like( $search_term ) . '%';
 		foreach ( $searchable_keys as $meta_key ) {
 			$meta_search[] = $wpdb->prepare(
 				'(pm.meta_key = %s AND pm.meta_value LIKE %s)',
 				$meta_key,
-				'%' . $wpdb->esc_like( $search_term ) . '%'
+				$like_term
 			);
 		}
 
@@ -208,6 +209,11 @@ abstract class Event_Loader {
 
 		$searchable_keys = static::get_searchable_meta_keys();
 		if ( empty( $searchable_keys ) ) {
+			return $join;
+		}
+
+		// Check if the join already exists to prevent duplicates.
+		if ( strpos( $join, "{$wpdb->postmeta} AS pm" ) !== false ) {
 			return $join;
 		}
 

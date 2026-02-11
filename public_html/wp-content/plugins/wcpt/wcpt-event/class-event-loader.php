@@ -185,22 +185,14 @@ abstract class Event_Loader {
 			$prepare_args
 		);
 
-		// WordPress $search format from WP_Query::parse_search() is:
-		// " AND (((post_title LIKE ...) OR (post_content LIKE ...))) AND (post_password = '')".
-		//
-		// The first AND group contains the content-matching conditions. We inject our
-		// meta OR inside that group only, preserving subsequent AND conditions like
-		// the post_password check as separate top-level constraints.
-		//
-		// The inner search terms are each wrapped in (), then doubled-wrapped: (((...) OR (...))).
-		// We match the closing ")) " or "))\n" to find the boundary, and insert before the
-		// outermost ")" of that group.
-		$search = preg_replace(
-			'/\)\)\)/',
-			')) OR ' . $meta_search . ')',
-			$search,
-			1
-		);
+		// WordPress $search is " AND (...) AND (post_password = '') ...", but other plugins
+		// may have already modified its structure. Rather than parsing the internals, we
+		// strip the leading AND, wrap the entire original search in an OR with our meta
+		// condition, re-add the AND, and then re-apply the post_password restriction so
+		// it remains enforced for meta-matched results too.
+		$search = preg_replace( '/^\s*AND\s+/i', '', $search, 1 );
+		$search = " AND ({$search} OR {$meta_search})"
+			. " AND ({$wpdb->posts}.post_password = '')";
 
 		return $search;
 	}

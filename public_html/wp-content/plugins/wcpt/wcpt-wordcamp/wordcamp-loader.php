@@ -474,12 +474,22 @@ class WordCamp_Loader extends Event_Loader {
 	/**
 	 * Get searchable post meta keys for WordCamp events.
 	 *
-	 * Returns the list of meta keys that should be searchable in the tracker.
-	 * Uses the public meta keys as they represent data shown in the UI.
+	 * Returns a limited list of meta keys that are useful for searching.
+	 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
 	 *
 	 * @return array List of meta keys to search.
 	 */
 	public static function get_searchable_meta_keys() {
-		return self::get_public_meta_keys();
+		return array(
+			'Organizer Name',
+			'WordPress.org Username',
+			'Location',
+			'Venue Name',
+			'Physical Address',
+			'Host region',
+			'A/V Wrangler Name',
+			'Event Timezone',
+			'WordCamp Hashtag',
+		);
 	}
 }

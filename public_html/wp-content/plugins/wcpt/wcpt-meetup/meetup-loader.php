@@ -229,17 +229,29 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 		/**
 		 * Get searchable post meta keys for Meetup events.
 		 *
-		 * Returns the list of meta keys that should be searchable in the tracker.
-		 * Uses the public meta keys as they represent data shown in the UI.
+		 * Returns a limited list of meta keys that are useful for searching.
+		 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
 		 *
 		 * @return array List of meta keys to search.
 		 */
 		public static function get_searchable_meta_keys() {
-			// Lazy load Meetup_Admin only when needed.
-			if ( ! class_exists( 'Meetup_Admin' ) ) {
-				require_once WCPT_DIR . 'wcpt-meetup/class-meetup-admin.php';
-			}
-			return Meetup_Admin::get_public_meta_keys();
+			return array(
+				'Organizer Name',
+				'Meetup Co-organizer names',
+				'Primary organizer WordPress.org username',
+				'Co-Organizers usernames (seperated by comma)',
+				'Meetup Location (From meetup.com)',
+				'Meetup Location',
+				'Who contacted (Wordpress.org username)',
+				'Vetted by (Wordpress.org username)',
+				'Oriented by (Wordpress.org username)',
+				'Joined chapter by (Wordpress.org username)',
+				'Region',
+				'Slack',
+				'Organizer description',
+				'Address',
+				'Extra Comments',
+			);
 		}
 
 	}

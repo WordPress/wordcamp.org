@@ -168,18 +168,15 @@ abstract class Event_Loader {
 		}
 
 		// Build meta search conditions.
-		$meta_search = array();
-		$like_term   = '%' . $wpdb->esc_like( $search_term ) . '%';
-		foreach ( $searchable_keys as $meta_key ) {
-			$meta_search[] = $wpdb->prepare(
-				'(pm.meta_key = %s AND pm.meta_value LIKE %s)',
-				$meta_key,
-				$like_term
-			);
-		}
+		$like_term              = '%' . $wpdb->esc_like( $search_term ) . '%';
+		$meta_keys_placeholders = implode( ', ', array_fill( 0, count( $searchable_keys ), '%s' ) );
+		$meta_search            = $wpdb->prepare(
+			"(pm.meta_key IN ({$meta_keys_placeholders}) AND pm.meta_value LIKE %s)",
+			array_merge( $searchable_keys, array( $like_term ) )
+		);
 
 		if ( ! empty( $meta_search ) ) {
-			$search .= ' OR (' . implode( ' OR ', $meta_search ) . ')';
+			$search = '( (' . $search . ') OR ' . $meta_search . ' )';
 		}
 
 		return $search;

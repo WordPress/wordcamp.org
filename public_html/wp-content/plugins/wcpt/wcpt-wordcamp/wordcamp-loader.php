@@ -498,7 +498,7 @@ class WordCamp_Loader extends Event_Loader {
 	 *
 	 * @return string
 	 */
-	public static function get_event_type() {
+	public static function post_type() {
 		return WCPT_POST_TYPE_ID;
 	}
 }

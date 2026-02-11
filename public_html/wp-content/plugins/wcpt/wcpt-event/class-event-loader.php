@@ -79,7 +79,7 @@ abstract class Event_Loader {
 	 *
 	 * @return string
 	 */
-	abstract public static function get_event_type();
+	abstract public static function post_type();
 
 	/**
 	 * Only query the public post statuses on WordCamp archives and feeds
@@ -155,7 +155,7 @@ abstract class Event_Loader {
 
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || $post_type !== static::get_event_type() ) {
+		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
 			return $search;
 		}
 
@@ -202,7 +202,7 @@ abstract class Event_Loader {
 
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || $post_type !== static::get_event_type() ) {
+		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
 			return $join;
 		}
 
@@ -240,7 +240,7 @@ abstract class Event_Loader {
 
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || $post_type !== static::get_event_type() ) {
+		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
 			return $groupby;
 		}
 

@@ -164,15 +164,12 @@ abstract class Event_Loader {
 			return $search;
 		}
 
-		$searchable_keys = static::get_searchable_meta_keys();
-		if ( empty( $searchable_keys ) ) {
-			return $search;
-		}
-
 		$search_term = $query->get( 's' );
 		if ( empty( $search_term ) ) {
 			return $search;
 		}
+
+		$searchable_keys = static::get_searchable_meta_keys();
 
 		// Build meta search conditions.
 		$like_term              = '%' . $wpdb->esc_like( $search_term ) . '%';
@@ -182,12 +179,36 @@ abstract class Event_Loader {
 			array_merge( $searchable_keys, array( $like_term ) )
 		);
 
-		// WordPress search SQL format: AND ((...search conditions...)) [AND (...)]
-		// We need to wrap the original conditions and our meta search together.
-		// Strip the leading AND from original search, wrap both, then add AND back.
-		if ( ! empty( $meta_search ) ) {
-			$search = preg_replace( '/^\s*AND\s*/i', '', $search );
-			$search = " AND (({$search}) OR {$meta_search})";
+		// WordPress $search format from WP_Query::parse_search() is:
+		//   " AND (((post_title LIKE ...) OR (post_content LIKE ...))) AND (post_password = '')"
+		//
+		// The first AND group contains the content-matching conditions. We need to add our
+		// meta OR inside that first group only, preserving subsequent AND conditions like
+		// the post_password check as separate top-level conditions.
+		//
+		// Find the position after the first AND group by counting balanced parentheses.
+		$first_paren = strpos( $search, '(' );
+		if ( false === $first_paren ) {
+			return $search;
+		}
+
+		$depth = 0;
+		$end   = false;
+		for ( $i = $first_paren; $i < strlen( $search ); $i++ ) {
+			if ( '(' === $search[ $i ] ) {
+				$depth++;
+			} elseif ( ')' === $search[ $i ] ) {
+				$depth--;
+				if ( 0 === $depth ) {
+					$end = $i;
+					break;
+				}
+			}
+		}
+
+		if ( false !== $end ) {
+			// Insert " OR {meta_search}" before the closing paren of the first group.
+			$search = substr( $search, 0, $end ) . " OR {$meta_search}" . substr( $search, $end );
 		}
 
 		return $search;
@@ -215,17 +236,11 @@ abstract class Event_Loader {
 			return $join;
 		}
 
-		$searchable_keys = static::get_searchable_meta_keys();
-		if ( empty( $searchable_keys ) ) {
-			return $join;
-		}
-
 		// Check if the join already exists to prevent duplicates.
 		if ( strpos( $join, "{$wpdb->postmeta} AS pm" ) !== false ) {
 			return $join;
 		}
 
-		// Add LEFT JOIN to postmeta table.
 		$join .= " LEFT JOIN {$wpdb->postmeta} AS pm ON {$wpdb->posts}.ID = pm.post_id";
 
 		return $join;
@@ -253,19 +268,12 @@ abstract class Event_Loader {
 			return $groupby;
 		}
 
-		$searchable_keys = static::get_searchable_meta_keys();
-		if ( empty( $searchable_keys ) ) {
-			return $groupby;
-		}
-
-		// Ensure grouping by post ID to avoid duplicates.
+		// Ensure grouping by post ID to avoid duplicates from the postmeta JOIN.
 		$post_id_group = "{$wpdb->posts}.ID";
 
-		// If groupby is empty, set it to post ID.
 		if ( empty( $groupby ) ) {
 			$groupby = $post_id_group;
 		} elseif ( strpos( $groupby, $post_id_group ) === false ) {
-			// If groupby exists but doesn't include post ID, append it.
 			$groupby .= ", {$post_id_group}";
 		}
 

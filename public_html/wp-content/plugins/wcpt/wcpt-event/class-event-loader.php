@@ -182,8 +182,11 @@ abstract class Event_Loader {
 			array_merge( $searchable_keys, array( $like_term ) )
 		);
 
+		// WordPress search SQL format: AND ((...search conditions...)) [AND (...)]
+		// We add our meta search with OR to the existing search.
+		// To maintain proper SQL structure, we wrap in AND ( original OR meta_search ).
 		if ( ! empty( $meta_search ) ) {
-			$search = '( (' . $search . ') OR ' . $meta_search . ' )';
+			$search = " AND (({$search}) OR {$meta_search})";
 		}
 
 		return $search;

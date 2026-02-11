@@ -159,7 +159,7 @@ abstract class Event_Loader {
 
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
+		if ( empty( $post_type ) || static::post_type() !== $post_type ) {
 			return $search;
 		}
 
@@ -176,11 +176,13 @@ abstract class Event_Loader {
 		$searchable_keys = static::get_searchable_meta_keys();
 
 		// Build meta search conditions.
-		$like_term              = '%' . $wpdb->esc_like( $search_term ) . '%';
-		$meta_keys_placeholders = implode( ', ', array_fill( 0, count( $searchable_keys ), '%s' ) );
-		$meta_search            = $wpdb->prepare(
-			"(pm.meta_key IN ({$meta_keys_placeholders}) AND pm.meta_value LIKE %s)",
-			array_merge( $searchable_keys, array( $like_term ) )
+		$like_term   = '%' . $wpdb->esc_like( $search_term ) . '%';
+		$prepare_args = array_merge( $searchable_keys, array( $like_term ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- All placeholders are generated and filled dynamically.
+		$meta_search = $wpdb->prepare(
+			'(pm.meta_key IN (' . implode( ', ', array_fill( 0, count( $searchable_keys ), '%s' ) ) . ') AND pm.meta_value LIKE %s)',
+			$prepare_args
 		);
 
 		// WordPress $search format from WP_Query::parse_search() is:
@@ -211,8 +213,8 @@ abstract class Event_Loader {
 		}
 
 		if ( false !== $end ) {
-			// Insert " OR {meta_search}" before the closing paren of the first group.
-			$search = substr( $search, 0, $end ) . " OR {$meta_search}" . substr( $search, $end );
+			// Insert the meta search OR before the closing paren of the first group.
+			$search = substr( $search, 0, $end ) . ' OR ' . $meta_search . substr( $search, $end );
 		}
 
 		return $search;
@@ -235,7 +237,7 @@ abstract class Event_Loader {
 
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
+		if ( empty( $post_type ) || static::post_type() !== $post_type ) {
 			return $join;
 		}
 
@@ -271,7 +273,7 @@ abstract class Event_Loader {
 
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
+		if ( empty( $post_type ) || static::post_type() !== $post_type ) {
 			return $groupby;
 		}
 

@@ -76,7 +76,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 	 * Test that search query includes postmeta when searching WordCamp posts
 	 */
 	public function test_search_query_includes_postmeta_join() {
-		// Create a WordCamp post
+		// Create a WordCamp post.
 		$post_id = $this->factory->post->create(
 			array(
 				'post_type'   => WCPT_POST_TYPE_ID,
@@ -85,10 +85,10 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Add organizer name meta
+		// Add organizer name meta.
 		update_post_meta( $post_id, 'Organizer Name', 'John Doe' );
 
-		// Perform search for the organizer name
+		// Perform search for the organizer name.
 		$query = new \WP_Query(
 			array(
 				'post_type' => WCPT_POST_TYPE_ID,
@@ -96,7 +96,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Verify the post is found
+		// Verify the post is found.
 		$this->assertSame( 1, $query->found_posts, 'Search should find post by organizer name' );
 		$this->assertSame( $post_id, $query->posts[0]->ID );
 	}
@@ -105,7 +105,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 	 * Test that search query finds posts by Location meta
 	 */
 	public function test_search_query_finds_by_location() {
-		// Create a WordCamp post
+		// Create a WordCamp post.
 		$post_id = $this->factory->post->create(
 			array(
 				'post_type'   => WCPT_POST_TYPE_ID,
@@ -114,10 +114,10 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Add Location meta
+		// Add Location meta.
 		update_post_meta( $post_id, 'Location', 'San Francisco, CA, USA' );
 
-		// Perform search for part of the location
+		// Perform search for part of the location.
 		$query = new \WP_Query(
 			array(
 				'post_type' => WCPT_POST_TYPE_ID,
@@ -125,7 +125,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Verify the post is found
+		// Verify the post is found.
 		$this->assertSame( 1, $query->found_posts, 'Search should find post by Location' );
 		$this->assertSame( $post_id, $query->posts[0]->ID );
 	}
@@ -134,7 +134,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 	 * Test that search still finds posts by post_title (original behavior)
 	 */
 	public function test_search_query_still_finds_by_title() {
-		// Create a WordCamp post
+		// Create a WordCamp post.
 		$post_id = $this->factory->post->create(
 			array(
 				'post_type'   => WCPT_POST_TYPE_ID,
@@ -143,7 +143,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Perform search for title
+		// Perform search for title.
 		$query = new \WP_Query(
 			array(
 				'post_type' => WCPT_POST_TYPE_ID,
@@ -151,7 +151,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Verify the post is found
+		// Verify the post is found.
 		$this->assertSame( 1, $query->found_posts, 'Search should still find post by title' );
 		$this->assertSame( $post_id, $query->posts[0]->ID );
 	}
@@ -160,7 +160,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 	 * Test that search doesn't affect non-event post types
 	 */
 	public function test_search_does_not_affect_regular_posts() {
-		// Create a regular post
+		// Create a regular post.
 		$post_id = $this->factory->post->create(
 			array(
 				'post_type'   => 'post',
@@ -169,10 +169,10 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Add some meta that matches our search
+		// Add some meta that matches our search.
 		update_post_meta( $post_id, 'Organizer Name', 'Jane Smith' );
 
-		// Perform search on regular posts
+		// Perform search on regular posts.
 		$query = new \WP_Query(
 			array(
 				'post_type' => 'post',
@@ -180,7 +180,7 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Regular posts should not be found by meta (original behavior)
+		// Regular posts should not be found by meta.
 		$this->assertSame( 0, $query->found_posts, 'Regular posts should not be found by meta search' );
 	}
 }

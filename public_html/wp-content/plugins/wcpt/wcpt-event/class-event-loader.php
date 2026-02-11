@@ -153,6 +153,10 @@ abstract class Event_Loader {
 	public function extend_search_to_postmeta( $search, $query ) {
 		global $wpdb;
 
+		if ( ! is_admin() ) {
+			return $search;
+		}
+
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
 		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
@@ -225,6 +229,10 @@ abstract class Event_Loader {
 	public function search_postmeta_join( $join, $query ) {
 		global $wpdb;
 
+		if ( ! is_admin() ) {
+			return $join;
+		}
+
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
 		if ( empty( $post_type ) || $post_type !== static::post_type() ) {
@@ -256,6 +264,10 @@ abstract class Event_Loader {
 	 */
 	public function search_postmeta_groupby( $groupby, $query ) {
 		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $groupby;
+		}
 
 		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );

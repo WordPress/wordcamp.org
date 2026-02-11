@@ -254,6 +254,15 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 			);
 		}
 
+		/**
+		 * Get the post type ID for Meetup events.
+		 *
+		 * @return string
+		 */
+		public static function get_event_type() {
+			return WCPT_MEETUP_SLUG;
+		}
+
 	}
 
 endif;

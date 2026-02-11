@@ -75,6 +75,13 @@ abstract class Event_Loader {
 	abstract public static function get_public_post_statuses();
 
 	/**
+	 * Get the post type ID for this event type.
+	 *
+	 * @return string
+	 */
+	abstract public static function get_event_type();
+
+	/**
 	 * Only query the public post statuses on WordCamp archives and feeds
 	 *
 	 * By default, any public post statuses are queried when the `post_status` parameter is not explicitly passed
@@ -146,9 +153,9 @@ abstract class Event_Loader {
 	public function extend_search_to_postmeta( $search, $query ) {
 		global $wpdb;
 
-		// Only extend search for our event post types.
+		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || ! in_array( $post_type, array( WCPT_POST_TYPE_ID, WCPT_MEETUP_SLUG ), true ) ) {
+		if ( empty( $post_type ) || $post_type !== static::get_event_type() ) {
 			return $search;
 		}
 
@@ -193,9 +200,9 @@ abstract class Event_Loader {
 	public function search_postmeta_join( $join, $query ) {
 		global $wpdb;
 
-		// Only extend search for our event post types.
+		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || ! in_array( $post_type, array( WCPT_POST_TYPE_ID, WCPT_MEETUP_SLUG ), true ) ) {
+		if ( empty( $post_type ) || $post_type !== static::get_event_type() ) {
 			return $join;
 		}
 
@@ -231,9 +238,9 @@ abstract class Event_Loader {
 	public function search_postmeta_groupby( $groupby, $query ) {
 		global $wpdb;
 
-		// Only extend search for our event post types.
+		// Only extend search for this specific event post type.
 		$post_type = $query->get( 'post_type' );
-		if ( empty( $post_type ) || ! in_array( $post_type, array( WCPT_POST_TYPE_ID, WCPT_MEETUP_SLUG ), true ) ) {
+		if ( empty( $post_type ) || $post_type !== static::get_event_type() ) {
 			return $groupby;
 		}
 

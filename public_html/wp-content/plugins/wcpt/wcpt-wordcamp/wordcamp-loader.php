@@ -492,4 +492,13 @@ class WordCamp_Loader extends Event_Loader {
 			'WordCamp Hashtag',
 		);
 	}
+
+	/**
+	 * Get the post type ID for WordCamp events.
+	 *
+	 * @return string
+	 */
+	public static function get_event_type() {
+		return WCPT_POST_TYPE_ID;
+	}
 }

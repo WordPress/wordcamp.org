@@ -185,14 +185,11 @@ abstract class Event_Loader {
 			$prepare_args
 		);
 
-		// WordPress $search is " AND (...) AND (post_password = '') ...", but other plugins
-		// may have already modified its structure. Rather than parsing the internals, we
-		// strip the leading AND, wrap the entire original search in an OR with our meta
-		// condition, re-add the AND, and then re-apply the post_password restriction so
-		// it remains enforced for meta-matched results too.
+		// Strip the leading AND, wrap the original search conditions in an OR with
+		// our meta condition, and re-add the leading AND. This is safe in admin
+		// context where post_password checks are not present.
 		$search = preg_replace( '/^\s*AND\s+/i', '', $search, 1 );
-		$search = " AND ({$search} OR {$meta_search})"
-			. " AND ({$wpdb->posts}.post_password = '')";
+		$search = " AND ({$search} OR {$meta_search})";
 
 		return $search;
 	}

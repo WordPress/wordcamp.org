@@ -34,9 +34,17 @@ class Test_Event_Search extends WP_UnitTestCase {
 	/**
 	 * @covers WordCamp_Loader::get_searchable_meta_keys
 	 */
-	public function test_wordcamp_searchable_meta_keys_includes_url() {
+	public function test_wordcamp_searchable_meta_keys_includes_location() {
 		$keys = WordCamp_Loader::get_searchable_meta_keys();
-		$this->assertContains( 'URL', $keys );
+		$this->assertContains( 'Location', $keys );
+	}
+
+	/**
+	 * @covers WordCamp_Loader::get_searchable_meta_keys
+	 */
+	public function test_wordcamp_searchable_meta_keys_excludes_urls() {
+		$keys = WordCamp_Loader::get_searchable_meta_keys();
+		$this->assertNotContains( 'URL', $keys, 'URL field should not be searchable for performance' );
 	}
 
 	/**
@@ -51,9 +59,17 @@ class Test_Event_Search extends WP_UnitTestCase {
 	/**
 	 * @covers Meetup_Loader::get_searchable_meta_keys
 	 */
-	public function test_meetup_searchable_meta_keys_includes_meetup_url() {
+	public function test_meetup_searchable_meta_keys_includes_organizer_name() {
 		$keys = Meetup_Loader::get_searchable_meta_keys();
-		$this->assertContains( 'Meetup URL', $keys );
+		$this->assertContains( 'Organizer Name', $keys );
+	}
+
+	/**
+	 * @covers Meetup_Loader::get_searchable_meta_keys
+	 */
+	public function test_meetup_searchable_meta_keys_excludes_urls() {
+		$keys = Meetup_Loader::get_searchable_meta_keys();
+		$this->assertNotContains( 'Meetup URL', $keys, 'Meetup URL field should not be searchable for performance' );
 	}
 
 	/**
@@ -86,9 +102,9 @@ class Test_Event_Search extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that search query finds posts by URL meta
+	 * Test that search query finds posts by Location meta
 	 */
-	public function test_search_query_finds_by_url() {
+	public function test_search_query_finds_by_location() {
 		// Create a WordCamp post
 		$post_id = $this->factory->post->create(
 			array(
@@ -98,19 +114,19 @@ class Test_Event_Search extends WP_UnitTestCase {
 			)
 		);
 
-		// Add URL meta
-		update_post_meta( $post_id, 'URL', 'https://example.wordcamp.org' );
+		// Add Location meta
+		update_post_meta( $post_id, 'Location', 'San Francisco, CA, USA' );
 
-		// Perform search for part of the URL
+		// Perform search for part of the location
 		$query = new \WP_Query(
 			array(
 				'post_type' => WCPT_POST_TYPE_ID,
-				's'         => 'example.wordcamp',
+				's'         => 'San Francisco',
 			)
 		);
 
 		// Verify the post is found
-		$this->assertSame( 1, $query->found_posts, 'Search should find post by URL' );
+		$this->assertSame( 1, $query->found_posts, 'Search should find post by Location' );
 		$this->assertSame( $post_id, $query->posts[0]->ID );
 	}
 

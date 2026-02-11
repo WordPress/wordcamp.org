@@ -226,43 +226,6 @@ if ( ! class_exists( 'Meetup_Loader' ) ) :
 			return $query_params;
 		}
 
-		/**
-		 * Get searchable post meta keys for Meetup events.
-		 *
-		 * Returns a limited list of meta keys that are useful for searching.
-		 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
-		 *
-		 * @return array List of meta keys to search.
-		 */
-		public static function get_searchable_meta_keys() {
-			return array(
-				'Organizer Name',
-				'Meetup Co-organizer names',
-				'Primary organizer WordPress.org username',
-				'Co-Organizers usernames (seperated by comma)',
-				'Meetup Location (From meetup.com)',
-				'Meetup Location',
-				'Who contacted (Wordpress.org username)',
-				'Vetted by (Wordpress.org username)',
-				'Oriented by (Wordpress.org username)',
-				'Joined chapter by (Wordpress.org username)',
-				'Region',
-				'Slack',
-				'Organizer description',
-				'Address',
-				'Extra Comments',
-			);
-		}
-
-		/**
-		 * Get the post type ID for Meetup events.
-		 *
-		 * @return string
-		 */
-		public static function post_type() {
-			return WCPT_MEETUP_SLUG;
-		}
-
 	}
 
 endif;

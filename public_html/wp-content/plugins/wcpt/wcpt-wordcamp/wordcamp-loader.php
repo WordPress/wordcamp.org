@@ -470,35 +470,4 @@ class WordCamp_Loader extends Event_Loader {
 		$vars[] = 'wcorg-wordcamp-info';
 		return $vars;
 	}
-
-	/**
-	 * Get searchable post meta keys for WordCamp events.
-	 *
-	 * Returns a limited list of meta keys that are useful for searching.
-	 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
-	 *
-	 * @return array List of meta keys to search.
-	 */
-	public static function get_searchable_meta_keys() {
-		return array(
-			'Organizer Name',
-			'WordPress.org Username',
-			'Location',
-			'Venue Name',
-			'Physical Address',
-			'Host region',
-			'A/V Wrangler Name',
-			'Event Timezone',
-			'WordCamp Hashtag',
-		);
-	}
-
-	/**
-	 * Get the post type ID for WordCamp events.
-	 *
-	 * @return string
-	 */
-	public static function post_type() {
-		return WCPT_POST_TYPE_ID;
-	}
 }

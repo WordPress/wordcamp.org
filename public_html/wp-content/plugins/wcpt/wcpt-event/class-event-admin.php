@@ -73,6 +73,11 @@ abstract class Event_Admin {
 		add_action( 'admin_notices', array( $this, 'print_admin_notices' ) );
 
 		add_action( 'send_decline_notification_action',  'Event_Admin::send_decline_notification', 10, 3 );
+
+		// Search filters for post meta.
+		add_filter( 'posts_search', array( $this, 'extend_search_to_postmeta' ), 10, 2 );
+		add_filter( 'posts_join', array( $this, 'search_postmeta_join' ), 10, 2 );
+		add_filter( 'posts_groupby', array( $this, 'search_postmeta_groupby' ), 10, 2 );
 	}
 
 	/**
@@ -1007,4 +1012,140 @@ abstract class Event_Admin {
 	 * @return array
 	 */
 	abstract public function get_event_subtypes();
+
+	/**
+	 * Get searchable post meta keys for this event type.
+	 *
+	 * Returns a limited list of meta keys that are useful for searching.
+	 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
+	 *
+	 * @return array List of meta keys to search.
+	 */
+	abstract public static function get_searchable_meta_keys();
+
+	/**
+	 * Extend search to include post meta fields.
+	 *
+	 * @param string   $search The search SQL.
+	 * @param WP_Query $query  The WP_Query instance.
+	 *
+	 * @return string Modified search SQL.
+	 */
+	public function extend_search_to_postmeta( $search, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $search;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $search;
+		}
+
+		// Only extend search when there's a search term.
+		if ( empty( $search ) || ! $query->is_search() ) {
+			return $search;
+		}
+
+		$search_term = $query->get( 's' );
+		if ( empty( $search_term ) ) {
+			return $search;
+		}
+
+		$searchable_keys = static::get_searchable_meta_keys();
+
+		// Build meta search conditions.
+		$like_term    = '%' . $wpdb->esc_like( $search_term ) . '%';
+		$prepare_args = array_merge( $searchable_keys, array( $like_term ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- All placeholders are generated and filled dynamically.
+		$meta_search = $wpdb->prepare(
+			'(pm.meta_key IN (' . implode( ', ', array_fill( 0, count( $searchable_keys ), '%s' ) ) . ') AND pm.meta_value LIKE %s)',
+			$prepare_args
+		);
+
+		// Strip the leading AND, wrap the original search conditions in an OR with
+		// our meta condition, and re-add the leading AND. This is safe in admin
+		// context where post_password checks are not present.
+		$search = preg_replace( '/^\s*AND\s+/i', '', $search, 1 );
+		$search = " AND ({$search} OR {$meta_search})";
+
+		return $search;
+	}
+
+	/**
+	 * Join postmeta table for search queries.
+	 *
+	 * @param string   $join  The JOIN clause.
+	 * @param WP_Query $query The WP_Query instance.
+	 *
+	 * @return string Modified JOIN clause.
+	 */
+	public function search_postmeta_join( $join, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $join;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $join;
+		}
+
+		// Only join when there's a search term.
+		if ( ! $query->is_search() || empty( $query->get( 's' ) ) ) {
+			return $join;
+		}
+
+		// Check if the join already exists to prevent duplicates.
+		if ( strpos( $join, "{$wpdb->postmeta} AS pm" ) !== false ) {
+			return $join;
+		}
+
+		$join .= " LEFT JOIN {$wpdb->postmeta} AS pm ON {$wpdb->posts}.ID = pm.post_id";
+
+		return $join;
+	}
+
+	/**
+	 * Group results to avoid duplicates from postmeta joins.
+	 *
+	 * @param string   $groupby The GROUP BY clause.
+	 * @param WP_Query $query   The WP_Query instance.
+	 *
+	 * @return string Modified GROUP BY clause.
+	 */
+	public function search_postmeta_groupby( $groupby, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $groupby;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $groupby;
+		}
+
+		// Only group when there's a search term.
+		if ( ! $query->is_search() || empty( $query->get( 's' ) ) ) {
+			return $groupby;
+		}
+
+		// Ensure grouping by post ID to avoid duplicates from the postmeta JOIN.
+		$post_id_group = "{$wpdb->posts}.ID";
+
+		if ( empty( $groupby ) ) {
+			$groupby = $post_id_group;
+		} elseif ( strpos( $groupby, $post_id_group ) === false ) {
+			$groupby .= ", {$post_id_group}";
+		}
+
+		return $groupby;
+	}
 }

@@ -183,9 +183,10 @@ abstract class Event_Loader {
 		);
 
 		// WordPress search SQL format: AND ((...search conditions...)) [AND (...)]
-		// We add our meta search with OR to the existing search.
-		// To maintain proper SQL structure, we wrap in AND ( original OR meta_search ).
+		// We need to wrap the original conditions and our meta search together.
+		// Strip the leading AND from original search, wrap both, then add AND back.
 		if ( ! empty( $meta_search ) ) {
+			$search = preg_replace( '/^\s*AND\s*/i', '', $search );
 			$search = " AND (({$search}) OR {$meta_search})";
 		}
 

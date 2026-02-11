@@ -188,35 +188,19 @@ abstract class Event_Loader {
 		// WordPress $search format from WP_Query::parse_search() is:
 		// " AND (((post_title LIKE ...) OR (post_content LIKE ...))) AND (post_password = '')".
 		//
-		// The first AND group contains the content-matching conditions. We need to add our
-		// meta OR inside that first group only, preserving subsequent AND conditions like
-		// the post_password check as separate top-level conditions.
+		// The first AND group contains the content-matching conditions. We inject our
+		// meta OR inside that group only, preserving subsequent AND conditions like
+		// the post_password check as separate top-level constraints.
 		//
-		// Find the position after the first AND group by counting balanced parentheses.
-		$first_paren = strpos( $search, '(' );
-		if ( false === $first_paren ) {
-			return $search;
-		}
-
-		$depth         = 0;
-		$end           = false;
-		$search_length = strlen( $search );
-		for ( $i = $first_paren; $i < $search_length; $i++ ) {
-			if ( '(' === $search[ $i ] ) {
-				$depth++;
-			} elseif ( ')' === $search[ $i ] ) {
-				$depth--;
-				if ( 0 === $depth ) {
-					$end = $i;
-					break;
-				}
-			}
-		}
-
-		if ( false !== $end ) {
-			// Insert the meta search OR before the closing paren of the first group.
-			$search = substr( $search, 0, $end ) . ' OR ' . $meta_search . substr( $search, $end );
-		}
+		// The inner search terms are each wrapped in (), then doubled-wrapped: (((...) OR (...))).
+		// We match the closing ")) " or "))\n" to find the boundary, and insert before the
+		// outermost ")" of that group.
+		$search = preg_replace(
+			'/\)\)\)/',
+			')) OR ' . $meta_search . ')',
+			$search,
+			1
+		);
 
 		return $search;
 	}

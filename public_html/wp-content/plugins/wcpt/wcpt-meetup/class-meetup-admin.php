@@ -71,8 +71,6 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Vetted by (Wordpress.org username)',
 				'Oriented by (Wordpress.org username)',
 				'Joined chapter by (Wordpress.org username)',
-				'Region',
-				'Slack',
 				'Organizer description',
 				'Address',
 				'Extra Comments',

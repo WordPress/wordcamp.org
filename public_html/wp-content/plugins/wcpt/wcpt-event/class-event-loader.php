@@ -186,7 +186,7 @@ abstract class Event_Loader {
 		);
 
 		// WordPress $search format from WP_Query::parse_search() is:
-		//   " AND (((post_title LIKE ...) OR (post_content LIKE ...))) AND (post_password = '')"
+		// " AND (((post_title LIKE ...) OR (post_content LIKE ...))) AND (post_password = '')".
 		//
 		// The first AND group contains the content-matching conditions. We need to add our
 		// meta OR inside that first group only, preserving subsequent AND conditions like
@@ -198,9 +198,10 @@ abstract class Event_Loader {
 			return $search;
 		}
 
-		$depth = 0;
-		$end   = false;
-		for ( $i = $first_paren; $i < strlen( $search ); $i++ ) {
+		$depth         = 0;
+		$end           = false;
+		$search_length = strlen( $search );
+		for ( $i = $first_paren; $i < $search_length; $i++ ) {
 			if ( '(' === $search[ $i ] ) {
 				$depth++;
 			} elseif ( ')' === $search[ $i ] ) {

@@ -2,8 +2,8 @@
 
 namespace WordCamp\WCPT\Tests;
 use WP_UnitTestCase;
-use WordCamp_Loader;
-use Meetup_Loader;
+use WordCamp_Admin;
+use Meetup_Admin;
 
 defined( 'WPINC' ) || die();
 
@@ -15,60 +15,60 @@ defined( 'WPINC' ) || die();
 class Test_Event_Search extends WP_UnitTestCase {
 
 	/**
-	 * @covers WordCamp_Loader::get_searchable_meta_keys
+	 * @covers WordCamp_Admin::get_searchable_meta_keys
 	 */
 	public function test_wordcamp_searchable_meta_keys_returns_array() {
-		$keys = WordCamp_Loader::get_searchable_meta_keys();
+		$keys = WordCamp_Admin::get_searchable_meta_keys();
 		$this->assertIsArray( $keys );
 		$this->assertNotEmpty( $keys );
 	}
 
 	/**
-	 * @covers WordCamp_Loader::get_searchable_meta_keys
+	 * @covers WordCamp_Admin::get_searchable_meta_keys
 	 */
 	public function test_wordcamp_searchable_meta_keys_includes_organizer_name() {
-		$keys = WordCamp_Loader::get_searchable_meta_keys();
+		$keys = WordCamp_Admin::get_searchable_meta_keys();
 		$this->assertContains( 'Organizer Name', $keys );
 	}
 
 	/**
-	 * @covers WordCamp_Loader::get_searchable_meta_keys
+	 * @covers WordCamp_Admin::get_searchable_meta_keys
 	 */
 	public function test_wordcamp_searchable_meta_keys_includes_location() {
-		$keys = WordCamp_Loader::get_searchable_meta_keys();
+		$keys = WordCamp_Admin::get_searchable_meta_keys();
 		$this->assertContains( 'Location', $keys );
 	}
 
 	/**
-	 * @covers WordCamp_Loader::get_searchable_meta_keys
+	 * @covers WordCamp_Admin::get_searchable_meta_keys
 	 */
 	public function test_wordcamp_searchable_meta_keys_excludes_urls() {
-		$keys = WordCamp_Loader::get_searchable_meta_keys();
+		$keys = WordCamp_Admin::get_searchable_meta_keys();
 		$this->assertNotContains( 'URL', $keys, 'URL field should not be searchable for performance' );
 	}
 
 	/**
-	 * @covers Meetup_Loader::get_searchable_meta_keys
+	 * @covers Meetup_Admin::get_searchable_meta_keys
 	 */
 	public function test_meetup_searchable_meta_keys_returns_array() {
-		$keys = Meetup_Loader::get_searchable_meta_keys();
+		$keys = Meetup_Admin::get_searchable_meta_keys();
 		$this->assertIsArray( $keys );
 		$this->assertNotEmpty( $keys );
 	}
 
 	/**
-	 * @covers Meetup_Loader::get_searchable_meta_keys
+	 * @covers Meetup_Admin::get_searchable_meta_keys
 	 */
 	public function test_meetup_searchable_meta_keys_includes_organizer_name() {
-		$keys = Meetup_Loader::get_searchable_meta_keys();
+		$keys = Meetup_Admin::get_searchable_meta_keys();
 		$this->assertContains( 'Organizer Name', $keys );
 	}
 
 	/**
-	 * @covers Meetup_Loader::get_searchable_meta_keys
+	 * @covers Meetup_Admin::get_searchable_meta_keys
 	 */
 	public function test_meetup_searchable_meta_keys_excludes_urls() {
-		$keys = Meetup_Loader::get_searchable_meta_keys();
+		$keys = Meetup_Admin::get_searchable_meta_keys();
 		$this->assertNotContains( 'Meetup URL', $keys, 'Meetup URL field should not be searchable for performance' );
 	}
 

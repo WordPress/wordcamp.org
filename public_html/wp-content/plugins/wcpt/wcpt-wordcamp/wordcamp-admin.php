@@ -1161,13 +1161,18 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			// Check if End Date has passed.
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-			$end_date_value = $_POST['wcpt_end_date_yyyy_mm_dd'] ?? '';
+			$end_date_value = isset( $_POST['wcpt_end_date_yyyy_mm_dd'] ) ? sanitize_text_field( wp_unslash( $_POST['wcpt_end_date_yyyy_mm_dd'] ) ) : '';
 			if ( empty( $end_date_value ) ) {
 				$end_date_value = get_post_meta( $post_data_raw['ID'], 'End Date (YYYY-mm-dd)', true );
 			}
 
 			$end_date_passed = true;
 			if ( ! empty( $end_date_value ) ) {
+				// $end_date_value could be a timestamp from get_post_meta or a string from $_POST.
+				if ( ! is_numeric( $end_date_value ) ) {
+					$end_date_value = strtotime( $end_date_value );
+				}
+
 				$end_date_at_midnight = strtotime( '23:59', $end_date_value );
 				if ( $end_date_at_midnight > time() ) {
 					$end_date_passed = false;

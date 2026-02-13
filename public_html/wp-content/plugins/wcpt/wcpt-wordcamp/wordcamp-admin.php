@@ -1104,13 +1104,28 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				}
 			}
 
+			// Closed - require Actual Attendees.
+			if ( 'wcpt-closed' == $post_data['post_status'] && isset( $post_data_raw['ID'] ) ) {
+				$required_closed_fields = $this->get_required_fields( 'closed', $post_data_raw['ID'] );
+				foreach ( $required_closed_fields as $field ) {
+					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
+
+					if ( empty( $value ) || 'null' == $value ) {
+						$post_data['post_status']     = get_post_status( $post_data_raw['ID'] );
+						$this->active_admin_notices[] = 5;
+						break;
+					}
+				}
+			}
+
 			return $post_data;
 		}
 
 		/**
 		 * Get a list of fields required to move to a certain post status
 		 *
-		 * @param string $status 'needs-site' | 'scheduled' | 'any'.
+		 * @param string $status 'needs-site' | 'scheduled' | 'closed' | 'any'.
 		 *
 		 * @return array
 		 */
@@ -1151,6 +1166,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'scheduled':
 					$required_fields = $scheduled;
+					break;
+
+				case 'closed':
+					$required_fields = array( 'Actual Attendees' );
 					break;
 
 				case 'any':
@@ -1281,6 +1300,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					'notice' => sprintf(
 						__( 'The %s could not be geocoded, which prevents the camp from showing up in the Events Widget. Please tweak the address so that Google Maps can parse it.', 'wordcamporg' ),
 						self::get_address_key( $post->ID )
+					),
+				),
+
+				5 => array(
+					'type'   => 'error',
+					'notice' => sprintf(
+						__( 'This WordCamp cannot be marked as closed until all of its required metadata is filled in: %s.', 'wordcamporg' ),
+						implode( ', ', $this->get_required_fields( 'closed', $post->ID ) )
 					),
 				),
 			);

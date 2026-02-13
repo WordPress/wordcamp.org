@@ -100,6 +100,9 @@ class Test_SubRoles extends WP_UnitTestCase {
 		$post_id = self::factory()->post->create( array(
 			'post_type' => WCPT_POST_TYPE_ID,
 		) );
+
+		$this->assertFalse( user_can( $mentor->ID, 'edit_post', $post_id ) );
+
 		update_post_meta( $post_id, 'Mentor WordPress.org User Name', 'test_mentor' );
 
 		$this->assertTrue( user_can( $mentor->ID, 'edit_post', $post_id ) );

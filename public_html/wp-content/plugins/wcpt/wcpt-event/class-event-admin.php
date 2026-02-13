@@ -549,20 +549,16 @@ abstract class Event_Admin {
 
 				case 'attendee_count':
 					// Validate attendee count is a positive integer.
-					// Allow empty values for backward compatibility, but convert non-empty values to positive integers.
+					// Preserve existing data if new value is invalid - don't delete valuable historical data.
 					if ( ! empty( $values[ $key ] ) ) {
 						$attendee_value = absint( $values[ $key ] );
-						// Only save if the value is a positive integer (greater than 0).
+						// Only update if the value is a positive integer (greater than 0).
 						if ( $attendee_value > 0 ) {
 							update_post_meta( $post_id, $key, $attendee_value );
-						} else {
-							// If invalid, keep the field empty rather than saving 0.
-							delete_post_meta( $post_id, $key );
 						}
-					} else {
-						// Empty value - delete the meta.
-						delete_post_meta( $post_id, $key );
+						// If invalid (converts to 0), don't update - preserve existing value.
 					}
+					// If empty, don't update - preserve existing value.
 					break;
 
 				case 'checkbox-delete-on-unset':

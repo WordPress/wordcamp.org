@@ -202,6 +202,11 @@ function redirect_to_site( string $domain, string $path ): void {
 		}
 	}
 
+	// Check if this URL was previously used by a site that has since been renamed.
+	if ( ! $redirect ) {
+		$redirect = get_renamed_site_url( $domain, $path );
+	}
+
 	if ( ! $redirect ) {
 		return;
 	}
@@ -677,6 +682,43 @@ function get_latest_site( string $domain ) {
 	) );
 
 	return $latest;
+}
+
+/**
+ * Check if this URL was previously used by a site that has since been renamed.
+ *
+ * When a site's domain or path is changed (e.g., narnia.wordcamp.org/2026 to
+ * somewhere.wordcamp.org/2026), the old URL is stored in blogmeta. This function
+ * queries that data to redirect old URLs to the current location.
+ *
+ * @param string $domain The requested domain.
+ * @param string $path   The requested path.
+ *
+ * @return string|false The new URL to redirect to, or false if no match.
+ */
+function get_renamed_site_url( string $domain, string $path ): string|false {
+	global $wpdb;
+
+	$old_home_url = 'https://' . $domain . trailingslashit( $path );
+
+	$blog_id = $wpdb->get_var( $wpdb->prepare(
+		"SELECT blog_id FROM {$wpdb->blogmeta}
+		WHERE meta_key = 'old_home_url' AND meta_value = %s
+		LIMIT 1",
+		$old_home_url
+	) );
+
+	if ( ! $blog_id ) {
+		return false;
+	}
+
+	$site = get_site( $blog_id );
+
+	if ( ! $site || $site->deleted || ! $site->public ) {
+		return false;
+	}
+
+	return 'https://' . $site->domain . $site->path;
 }
 
 /**

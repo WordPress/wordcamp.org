@@ -107,6 +107,15 @@ function set_network_and_site() {
 			exit;
 		}
 
+		// Check if this URL was previously used by a site that has since been renamed.
+		$renamed_url = get_renamed_site_url( $path );
+
+		if ( $renamed_url ) {
+			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site (renamed site)' );
+			header( 'Location: ' . $renamed_url, true, 301 );
+			exit;
+		}
+
 		// Otherwise, redirect to the campus connect page.
 		header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
 		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
@@ -163,6 +172,46 @@ function get_latest_event_url( string $request_path ) {
 	}
 
 	return 'https://' . $latest_site->domain . $latest_site->path;
+}
+
+/**
+ * Check if this URL was previously used by an event site that has since been renamed.
+ *
+ * When a site's path is changed, the old URL is stored in blogmeta by the
+ * site-url-history mu-plugin. This queries that data to redirect old URLs.
+ *
+ * @param string $request_path The request URI path.
+ *
+ * @return string|false The new URL to redirect to, or false if no match.
+ */
+function get_renamed_site_url( string $request_path ) {
+	global $wpdb;
+
+	$old_home_url = 'https://' . DOMAIN_CURRENT_SITE . trailingslashit( $request_path );
+
+	$blog_id = $wpdb->get_var( $wpdb->prepare(
+		"SELECT blog_id FROM {$wpdb->blogmeta}
+		WHERE meta_key = 'old_home_url' AND meta_value = %s
+		LIMIT 1",
+		$old_home_url
+	) );
+
+	if ( ! $blog_id ) {
+		return false;
+	}
+
+	$site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT domain, path FROM {$wpdb->blogs}
+		WHERE blog_id = %d AND public = 1 AND deleted = 0
+		LIMIT 1",
+		$blog_id
+	) );
+
+	if ( ! $site ) {
+		return false;
+	}
+
+	return 'https://' . $site->domain . $site->path;
 }
 
 /**

@@ -1416,7 +1416,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			$notice = __( 'This WordCamp cannot be closed. ', 'wordcamporg' );
-			$notice .= implode( '. ', $errors ) . '.';
+			$notice .= rtrim( implode( '. ', $errors ), '.' ) . '.';
 
 			return $notice;
 		}

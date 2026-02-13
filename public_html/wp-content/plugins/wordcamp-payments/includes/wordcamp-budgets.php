@@ -330,7 +330,6 @@ class WordCamp_Budgets {
 				case 'ach_routing_number':
 				case 'ach_account_number':
 				case 'ach_account_holder_name':
-
 				case 'sepa_account_name':
 				case 'sepa_bic':
 				case 'sepa_iban':
@@ -932,6 +931,7 @@ class WordCamp_Budgets {
 		$debtor_iban    = apply_filters( 'wcb_sepa_debtor_iban', '' );
 
 		$dom = new DOMDocument( '1.0', 'UTF-8' );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMDocument native property.
 		$dom->formatOutput = true;
 
 		$root = $dom->createElementNS( 'urn:iso:std:iso:20022:tech:xsd:pain.001.003.03', 'Document' );

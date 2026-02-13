@@ -650,9 +650,9 @@ function _generate_payment_report_sepa( $args ) {
 		)
 	);
 
-	if ( $args['post_type'] == 'wcp_payment_request' ) {
+	if ( 'wcp_payment_request' === $args['post_type'] ) {
 		return WCP_Payment_Request::_generate_payment_report_sepa( $args );
-	} elseif ( $args['post_type'] == 'wcb_reimbursement' ) {
+	} elseif ( 'wcb_reimbursement' === $args['post_type'] ) {
 		return Reimbursement_Requests\_generate_payment_report_sepa( $args );
 	}
 }

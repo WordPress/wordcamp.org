@@ -1677,11 +1677,14 @@ function _generate_payment_report_jpm_wires( $args ) {
  * @return string
  */
 function _generate_payment_report_sepa( $args ) {
-	$args = wp_parse_args( $args, array(
-		'data'      => array(),
-		'status'    => '',
-		'post_type' => '',
-	) );
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
 
 	$payments = array();
 
@@ -1689,13 +1692,13 @@ function _generate_payment_report_sepa( $args ) {
 		switch_to_blog( $entry->blog_id );
 		$post = get_post( $entry->request_id );
 
-		if ( $args['status'] && $post->post_status != $args['status'] ) {
+		if ( $args['status'] && $args['status'] !== $post->post_status ) {
 			restore_current_blog();
 			continue;
-		} elseif ( $post->post_type != POST_TYPE ) {
+		} elseif ( POST_TYPE !== $post->post_type ) {
 			restore_current_blog();
 			continue;
-		} elseif ( get_post_meta( $post->ID, '_wcbrr_payment_method', true ) != 'EUR SEPA Transfer' ) {
+		} elseif ( 'EUR SEPA Transfer' !== get_post_meta( $post->ID, '_wcbrr_payment_method', true ) ) {
 			restore_current_blog();
 			continue;
 		}

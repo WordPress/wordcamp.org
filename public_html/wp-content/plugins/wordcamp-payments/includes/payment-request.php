@@ -1667,11 +1667,14 @@ Thanks for helping us with these details!",
 	 * @return string
 	 */
 	public static function _generate_payment_report_sepa( $args ) {
-		$args = wp_parse_args( $args, array(
-			'data'      => array(),
-			'status'    => '',
-			'post_type' => '',
-		) );
+		$args = wp_parse_args(
+			$args,
+			array(
+				'data'      => array(),
+				'status'    => '',
+				'post_type' => '',
+			)
+		);
 
 		$payments = array();
 
@@ -1679,13 +1682,13 @@ Thanks for helping us with these details!",
 			switch_to_blog( $entry->blog_id );
 			$post = get_post( $entry->post_id );
 
-			if ( $args['status'] && $post->post_status != $args['status'] ) {
+			if ( $args['status'] && $args['status'] !== $post->post_status ) {
 				restore_current_blog();
 				continue;
-			} elseif ( $post->post_type != self::POST_TYPE ) {
+			} elseif ( self::POST_TYPE !== $post->post_type ) {
 				restore_current_blog();
 				continue;
-			} elseif ( get_post_meta( $post->ID, '_camppayments_payment_method', true ) != 'EUR SEPA Transfer' ) {
+			} elseif ( 'EUR SEPA Transfer' !== get_post_meta( $post->ID, '_camppayments_payment_method', true ) ) {
 				restore_current_blog();
 				continue;
 			}

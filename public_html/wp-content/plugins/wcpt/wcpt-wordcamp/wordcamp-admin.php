@@ -1152,9 +1152,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			foreach ( $required_closed_fields as $field ) {
 				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-				$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
+				$value = isset( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ? sanitize_text_field( wp_unslash( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ) : '';
 
-				if ( empty( $value ) || 'null' == $value ) {
+				if ( empty( $value ) || 'null' === $value ) {
 					$missing_fields[] = $field;
 				}
 			}
@@ -1173,7 +1173,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$end_date_value = strtotime( $end_date_value );
 				}
 
-				$end_date_at_midnight = strtotime( '23:59', $end_date_value );
+				$end_date_at_midnight = strtotime( '23:59:59', $end_date_value );
 				if ( $end_date_at_midnight > time() ) {
 					$end_date_passed = false;
 				}
@@ -1421,7 +1421,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			$notice = __( 'This WordCamp cannot be closed. ', 'wordcamporg' );
-			$notice .= rtrim( implode( '. ', $errors ), '.' ) . '.';
+			$notice .= implode( '. ', $errors ) . '.';
 
 			return $notice;
 		}

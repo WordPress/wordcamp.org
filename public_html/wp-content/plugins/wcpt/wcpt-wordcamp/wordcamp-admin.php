@@ -1153,40 +1153,13 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				}
 			}
 
-			// Check if End Date has passed.
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have been done in `metabox_save`.
-			$end_date_value = isset( $_POST['wcpt_end_date_yyyy_mm_dd'] ) ? sanitize_text_field( wp_unslash( $_POST['wcpt_end_date_yyyy_mm_dd'] ) ) : '';
-			if ( empty( $end_date_value ) ) {
-				$end_date_value = get_post_meta( $post_data_raw['ID'], 'End Date (YYYY-mm-dd)', true );
-			}
-
-			$end_date_passed = true;
-			if ( ! empty( $end_date_value ) ) {
-				// $end_date_value could be a timestamp from get_post_meta or a string from $_POST.
-				if ( ! is_numeric( $end_date_value ) ) {
-					$end_date_value = strtotime( $end_date_value );
-				}
-
-				$end_date_at_midnight = strtotime( '23:59:59', $end_date_value );
-				if ( $end_date_at_midnight > time() ) {
-					$end_date_passed = false;
-				}
-			}
-
 			// If there are validation errors, prevent the status change.
-			if ( ! empty( $missing_fields ) || ! $end_date_passed ) {
+			if ( ! empty( $missing_fields ) ) {
 				$post_data['post_status']     = $old_status;
 				$this->active_admin_notices[] = 5;
 
 				// Store missing fields for the error message.
-				if ( ! empty( $missing_fields ) ) {
-					set_transient( 'wcpt_missing_fields_' . $post_data_raw['ID'], $missing_fields, 60 );
-				}
-
-				// Store end date status for the error message.
-				if ( ! $end_date_passed ) {
-					set_transient( 'wcpt_end_date_not_passed_' . $post_data_raw['ID'], true, 60 );
-				}
+				set_transient( 'wcpt_missing_fields_' . $post_data_raw['ID'], $missing_fields, 60 );
 			}
 
 			return $post_data;
@@ -1412,31 +1385,18 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @return string
 		 */
 		private function get_close_validation_notice( $post_id ) {
-			$missing_fields      = get_transient( 'wcpt_missing_fields_' . $post_id );
-			$end_date_not_passed = get_transient( 'wcpt_end_date_not_passed_' . $post_id );
-			$errors              = array();
+			$missing_fields = get_transient( 'wcpt_missing_fields_' . $post_id );
 
 			if ( ! empty( $missing_fields ) ) {
-				$errors[] = sprintf(
-					__( 'The following required fields must be filled in: %s.', 'wordcamporg' ),
+				delete_transient( 'wcpt_missing_fields_' . $post_id );
+				
+				return sprintf(
+					__( 'This WordCamp cannot be closed. The following required fields must be filled in: %s.', 'wordcamporg' ),
 					implode( ', ', $missing_fields )
 				);
-				delete_transient( 'wcpt_missing_fields_' . $post_id );
 			}
 
-			if ( $end_date_not_passed ) {
-				$errors[] = __( 'The End Date must have passed before closing the event.', 'wordcamporg' );
-				delete_transient( 'wcpt_end_date_not_passed_' . $post_id );
-			}
-
-			if ( empty( $errors ) ) {
-				return __( 'This WordCamp cannot be closed at this time.', 'wordcamporg' );
-			}
-
-			$notice = __( 'This WordCamp cannot be closed. ', 'wordcamporg' );
-			$notice .= implode( ' ', $errors );
-
-			return $notice;
+			return __( 'This WordCamp cannot be closed at this time.', 'wordcamporg' );
 		}
 
 		/**
@@ -1803,6 +1763,12 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 	global $post_id;
 
 	$required_fields = WordCamp_Admin::get_required_fields( 'any', $post_id );
+	$protected_fields = WordCamp_Admin::get_protected_fields();
+	
+	// Add "Actual Attendees" to required fields when it's not protected (editable).
+	if ( ! in_array( 'Actual Attendees', $protected_fields, true ) && isset( $meta_keys['Actual Attendees'] ) ) {
+		$required_fields[] = 'Actual Attendees';
+	}
 
 	// @todo When you refactor meta_keys() to support changing labels -- see note in meta_keys() -- also make it support these notes.
 	$messages = array(
@@ -1818,9 +1784,17 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'Series Event'                    => '(Campus Connect only) Event is part of a multi-venue or multi-session series (e.g., workshops held across several campuses)',
 	);
 
-	// Add CampTix ticket sales information to the Actual Attendees field message.
+	// Update the Actual Attendees field message based on whether it's protected and CampTix data.
 	$post = get_post( $post_id );
 	if ( $post && isset( $meta_keys['Actual Attendees'] ) ) {
+		$is_protected = in_array( 'Actual Attendees', $protected_fields, true );
+		
+		if ( $is_protected ) {
+			// Field is readonly - show message that it can't be set until after event concludes
+			$messages['Actual Attendees'] = 'This field cannot be set until after the event concludes.';
+		}
+		
+		// Add CampTix ticket sales information regardless of protected status
 		$site_id = get_wordcamp_site_id( $post );
 		if ( $site_id ) {
 			$camptix_stats      = get_blog_option( $site_id, 'camptix_stats', array() );
@@ -1833,7 +1807,12 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 					$attendees_attended,
 					$tickets_sold
 				);
-				$messages['Actual Attendees'] = 'Number of attendees who actually attended the event. ' . $camptix_info;
+				
+				if ( $is_protected ) {
+					$messages['Actual Attendees'] .= ' ' . $camptix_info;
+				} else {
+					$messages['Actual Attendees'] = 'Number of attendees who actually attended the event. ' . $camptix_info;
+				}
 			}
 		}
 	}

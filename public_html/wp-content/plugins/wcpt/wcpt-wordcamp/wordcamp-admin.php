@@ -49,16 +49,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				2
 			); // after enforce_post_status.
 
-			add_filter(
-				'wp_insert_post_data',
-				array(
-					$this,
-					'require_complete_meta_to_close_wordcamp',
-				),
-				12,
-				2
-			); // after require_complete_meta_to_publish_wordcamp.
-
 			// Filters - Subtype filtering on the WordCamp list table.
 			add_filter( 'views_edit-wordcamp', array( $this, 'alter_views' ) );
 			add_action( 'parse_query', array( $this, 'filter_by_subtype' ) );
@@ -1082,35 +1072,58 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// The ID of the last site that was created before this rule went into effect, so that we don't apply the rule retroactively.
 			$min_site_id = apply_filters( 'wcpt_require_complete_meta_min_site_id', '2416297' );
 
-			$required_needs_site_fields = $this->get_required_fields( 'needs-site', $post_data_raw['ID'] );
-			$required_scheduled_fields  = $this->get_required_fields( 'scheduled', $post_data_raw['ID'] );
-
 			// Needs Site.
 			if ( 'wcpt-needs-site' == $post_data['post_status'] && absint( $post_data_raw['ID'] ) > $min_site_id ) {
-				foreach ( $required_needs_site_fields as $field ) {
-
-					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
-
-					if ( empty( $value ) || 'null' == $value ) {
-						$post_data['post_status']     = 'wcpt-needs-email';
-						$this->active_admin_notices[] = 1;
-						break;
-					}
-				}
+				$post_data = $this->validate_required_fields_for_status(
+					$post_data,
+					$post_data_raw,
+					'needs-site',
+					'wcpt-needs-email',
+					1
+				);
 			}
 
 			// Scheduled.
 			if ( 'wcpt-scheduled' == $post_data['post_status'] && isset( $post_data_raw['ID'] ) && absint( $post_data_raw['ID'] ) > $min_site_id ) {
-				foreach ( $required_scheduled_fields as $field ) {
-					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
+				$post_data = $this->validate_required_fields_for_status(
+					$post_data,
+					$post_data_raw,
+					'scheduled',
+					'wcpt-needs-schedule',
+					3
+				);
+			}
 
-					if ( empty( $value ) || 'null' == $value ) {
-						$post_data['post_status']     = 'wcpt-needs-schedule';
-						$this->active_admin_notices[] = 3;
-						break;
-					}
+			// Closed.
+			if ( 'wcpt-closed' == $post_data['post_status'] ) {
+				$post_data = $this->validate_closed_status( $post_data, $post_data_raw );
+			}
+
+			return $post_data;
+		}
+
+		/**
+		 * Validate required fields for a specific status transition
+		 *
+		 * @param array  $post_data     Sanitized post data.
+		 * @param array  $post_data_raw Raw post data.
+		 * @param string $status_type   Status type for get_required_fields() ('needs-site', 'scheduled', 'closed').
+		 * @param string $fallback_status Status to revert to if validation fails.
+		 * @param int    $notice_id     Admin notice ID to trigger.
+		 *
+		 * @return array Modified post data.
+		 */
+		private function validate_required_fields_for_status( $post_data, $post_data_raw, $status_type, $fallback_status, $notice_id ) {
+			$required_fields = $this->get_required_fields( $status_type, $post_data_raw['ID'] );
+
+			foreach ( $required_fields as $field ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have been done in `metabox_save`.
+				$value = isset( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ? sanitize_text_field( wp_unslash( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ) : '';
+
+				if ( empty( $value ) || 'null' === $value ) {
+					$post_data['post_status']     = $fallback_status;
+					$this->active_admin_notices[] = $notice_id;
+					break;
 				}
 			}
 
@@ -1118,20 +1131,15 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Prevent WordCamps from being closed without required metadata
+		 * Validate closed status transition with additional End Date check
 		 *
 		 * @param array $post_data     Sanitized post data.
 		 * @param array $post_data_raw Raw post data.
 		 *
-		 * @return array
+		 * @return array Modified post data.
 		 */
-		public function require_complete_meta_to_close_wordcamp( $post_data, $post_data_raw ) {
-			if ( WCPT_POST_TYPE_ID != $post_data['post_type'] || empty( $post_data_raw['ID'] ) ) {
-				return $post_data;
-			}
-
-			// Only apply validation when trying to transition to closed status.
-			if ( 'wcpt-closed' != $post_data['post_status'] ) {
+		private function validate_closed_status( $post_data, $post_data_raw ) {
+			if ( empty( $post_data_raw['ID'] ) ) {
 				return $post_data;
 			}
 

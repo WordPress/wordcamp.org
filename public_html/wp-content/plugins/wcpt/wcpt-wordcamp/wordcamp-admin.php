@@ -457,8 +457,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
-						'Number of Anticipated Attendees'   => 'attendee_count',
-						'Actual Attendees'                  => 'attendee_count',
+						'Number of Anticipated Attendees'   => 'text',
+						'Actual Attendees'                  => 'number',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',
@@ -503,8 +503,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'E-mail Address'                    => 'text', // The entire organizing team.
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
-						'Number of Anticipated Attendees'   => 'attendee_count',
-						'Actual Attendees'                  => 'attendee_count',
+						'Number of Anticipated Attendees'   => 'text',
+						'Actual Attendees'                  => 'number',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',

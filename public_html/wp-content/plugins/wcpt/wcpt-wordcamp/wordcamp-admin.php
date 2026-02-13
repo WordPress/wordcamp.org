@@ -61,6 +61,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			add_action( 'parse_query', array( $this, 'default_sortby' ), 9 );
 			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
+
+			// "Mine (Mentoring)" query filter on the WordCamp list table.
+			add_action( 'pre_get_posts', array( $this, 'filter_mentoring_view' ) );
 		}
 
 		/**
@@ -458,7 +461,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
-						'Actual Attendees'                  => 'text',
+						'Actual Attendees'                  => 'number',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',
@@ -495,7 +498,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
-						'Actual Attendees'                  => 'text',
+						'Actual Attendees'                  => 'number',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',
@@ -1562,16 +1565,63 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Add a dropdown to filter by Event Subtype.
+		 * Add a dropdown to filter by Event Subtype, and a "Mine (Mentoring)" view.
 		 *
 		 * This is hacked in by abusing the `views` filter for the wordcamp PT.
 		 */
 		public function alter_views( $views ) {
 			global $wp_list_table;
 
-			// For low-privilege users, just return the unmodified views.
+			// For low-privilege users, return without extra views.
 			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 				return $views;
+			}
+
+			// Add the "Mine (Mentoring)" view right after the "Mine" view.
+			$current_user = wp_get_current_user();
+
+			if ( $current_user && $current_user->exists() ) {
+				$count = new WP_Query( array(
+					'post_type'      => WCPT_POST_TYPE_ID,
+					'meta_key'       => 'Mentor WordPress.org User Name',
+					'meta_value'     => $current_user->user_login,
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+					'no_found_rows'  => false,
+				) );
+
+				$class = '';
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only used for highlighting the active tab.
+				if ( isset( $_GET['mentoring'] ) ) {
+					$class = 'current';
+				}
+
+				$url = add_query_arg(
+					array(
+						'post_type' => WCPT_POST_TYPE_ID,
+						'mentoring' => $current_user->user_login,
+					),
+					admin_url( 'edit.php' )
+				);
+
+				$mentoring_view = sprintf(
+					'<a href="%s" class="%s">%s <span class="count">(%d)</span></a>',
+					esc_url( $url ),
+					esc_attr( $class ),
+					__( 'Mine (Mentoring)', 'wordcamporg' ),
+					$count->found_posts
+				);
+
+				// Insert after the "Mine" view if it exists, otherwise append.
+				$mine_pos = array_search( 'mine', array_keys( $views ), true );
+
+				if ( false !== $mine_pos ) {
+					$views = array_slice( $views, 0, $mine_pos + 1, true )
+						+ array( 'mentoring' => $mentoring_view )
+						+ array_slice( $views, $mine_pos + 1, null, true );
+				} else {
+					$views['mentoring'] = $mentoring_view;
+				}
 			}
 
 			$current_subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );
@@ -1652,6 +1702,35 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			return $views;
+		}
+
+		/**
+		 * Filter the WordCamp list query when the "Mine (Mentoring)" view is active.
+		 *
+		 * @param WP_Query $query The query to filter.
+		 */
+		public function filter_mentoring_view( $query ) {
+			if ( ! is_admin() || ! $query->is_main_query() ) {
+				return;
+			}
+
+			if ( WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ) {
+				return;
+			}
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filter for list table view.
+			if ( ! isset( $_GET['mentoring'] ) ) {
+				return;
+			}
+
+			$current_user = wp_get_current_user();
+
+			$meta_query   = $query->get( 'meta_query' ) ?: [];
+			$meta_query[] = array(
+				'key'   => 'Mentor WordPress.org User Name',
+				'value' => $current_user->user_login,
+			);
+			$query->set( 'meta_query', $meta_query );
 		}
 
 		/**

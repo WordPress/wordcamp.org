@@ -1579,12 +1579,12 @@ function _generate_payment_report_jpm_wires( $args ) {
 			'73-blank' => '',
 
 			'74-ref-text' => 'Reimbursement',
-			'75-internal-ref' => '',
-			'76-on-behalf-of' => '',
+			'75-internal-ref' => substr( sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->request_id ), 0, 16 ),
+			'76-on-behalf-of' => 'WordPress Community Support',
 
-			'77-detial-1' => '',
-			'78-detial-2' => '',
-			'79-detial-3' => '',
+			'77-detail-1' => 'Reimbursement',
+			'78-detail-2' => '',
+			'79-detail-3' => '',
 			'80-detail-4' => '',
 
 			'81-blank' => '',

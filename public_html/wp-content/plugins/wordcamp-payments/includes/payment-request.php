@@ -1568,13 +1568,13 @@ Thanks for helping us with these details!",
 				'72-blank' => '',
 				'73-blank' => '',
 
-				'74-ref-text' => substr( get_post_meta( $post->ID, '_camppayments_invoice_number', true ), 0, 16 ),
-				'75-internal-ref' => '',
-				'76-on-behalf-of' => '',
+				'74-ref-text' => '', // US Wires only.
+				'75-internal-ref' => substr( sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->post_id ), 0, 16 ),
+				'76-on-behalf-of' => 'WordPress Community Support',
 
-				'77-detial-1' => '',
-				'78-detial-2' => '',
-				'79-detial-3' => '',
+				'77-detail-1' => substr( get_post_meta( $post->ID, '_camppayments_invoice_number', true ), 0, 16 ),
+				'78-detail-2' => '',
+				'79-detail-3' => '',
 				'80-detail-4' => '',
 
 				'81-blank' => '',

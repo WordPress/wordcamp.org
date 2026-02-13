@@ -12,6 +12,7 @@ if ( 'cli' !== php_sapi_name() ) {
 function manually_load_plugins() {
 	require_once dirname( dirname( dirname( __DIR__ ) ) ) . '/sunrise.php';
 	require_once dirname( __DIR__ ) . '/wcpt-wordcamp/wordcamp-new-site.php';
+	require_once dirname( __DIR__ ) . '/wcpt-wordcamp/wordcamp-admin.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugins' );

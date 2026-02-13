@@ -114,6 +114,18 @@
 				<?php $this->render_country_input( $post, esc_html__( 'Beneficiary’s Country',           'wordcamporg' ), 'beneficiary_country_iso3166' ); ?>
 			</table>
 		</div>
+
+		<div id="payment_method_other_fields" class="form-table payment_method_fields <?php echo 'Other' == $selected_payment_method ? 'active' : 'hidden'; ?>">
+			<table>
+				<?php $this->render_textarea_input(
+					$post,
+					esc_html__( 'Payment Details', 'wordcamporg' ),
+					'other_payment_method_note',
+					esc_html__( 'Describe the preferred payment method and any relevant details (e.g., PayPal address, credit card portal URL, etc.)', 'wordcamporg' ),
+					true
+				); ?>
+			</table>
+		</div>
 	</fieldset>
 
 	<p class="wcb-form-required">

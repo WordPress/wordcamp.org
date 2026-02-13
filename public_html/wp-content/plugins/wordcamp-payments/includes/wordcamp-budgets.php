@@ -288,6 +288,8 @@ class WordCamp_Budgets {
 			$methods['Credit Card'] = __( 'Credit Card', 'wordcamporg' );
 		}
 
+		$methods['Other'] = __( 'Other', 'wordcamporg' );
+
 		return $methods;
 	}
 
@@ -366,6 +368,10 @@ class WordCamp_Budgets {
 				case 'sepa_bic':
 				case 'sepa_iban':
 					$safe_value = sanitize_text_field( $unsafe_value );
+					break;
+
+				case 'other_payment_method_note':
+					$safe_value = sanitize_textarea_field( $unsafe_value );
 					break;
 
 				case 'ach_account_type':

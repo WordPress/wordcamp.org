@@ -1764,7 +1764,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 
 	$required_fields = WordCamp_Admin::get_required_fields( 'any', $post_id );
 	$protected_fields = WordCamp_Admin::get_protected_fields();
-	
+
 	// Add "Actual Attendees" to required fields when it's not protected (editable).
 	if ( ! in_array( 'Actual Attendees', $protected_fields, true ) && isset( $meta_keys['Actual Attendees'] ) ) {
 		$required_fields[] = 'Actual Attendees';
@@ -1788,12 +1788,12 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 	$post = get_post( $post_id );
 	if ( $post && isset( $meta_keys['Actual Attendees'] ) ) {
 		$is_protected = in_array( 'Actual Attendees', $protected_fields, true );
-		
+
 		if ( $is_protected ) {
 			// Field is readonly - show message that it can't be set until after event concludes
 			$messages['Actual Attendees'] = 'This field cannot be set until after the event concludes.';
 		}
-		
+
 		// Add CampTix ticket sales information regardless of protected status
 		$site_id = get_wordcamp_site_id( $post );
 		if ( $site_id ) {

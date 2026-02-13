@@ -26,10 +26,40 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Create a WordCamp post with the given status, bypassing transition hooks
+	 * that would otherwise fail due to missing Slack notification dependencies.
+	 *
+	 * @param string $status The desired post status.
+	 *
+	 * @return int Post ID.
+	 */
+	private function create_wordcamp( $status = 'draft' ) {
+		global $wpdb;
+
+		// Create with draft status to avoid triggering transition hooks.
+		$post_id = self::factory()->post->create( array(
+			'post_type'   => WCPT_POST_TYPE_ID,
+			'post_status' => 'draft',
+		) );
+
+		// Set the desired status directly in the database to avoid triggering hooks.
+		if ( 'draft' !== $status ) {
+			$wpdb->update(
+				$wpdb->posts,
+				array( 'post_status' => $status ),
+				array( 'ID' => $post_id )
+			);
+			clean_post_cache( $post_id );
+		}
+
+		return $post_id;
+	}
+
+	/**
 	 * @covers WordCamp_Admin::get_required_fields
 	 */
 	public function test_get_required_fields_closed_includes_actual_attendees() {
-		$post_id = self::factory()->post->create( array( 'post_type' => WCPT_POST_TYPE_ID ) );
+		$post_id = $this->create_wordcamp();
 
 		$fields = WordCamp_Admin::get_required_fields( 'closed', $post_id );
 
@@ -40,7 +70,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::get_required_fields
 	 */
 	public function test_get_required_fields_closed_does_not_include_scheduled_fields() {
-		$post_id = self::factory()->post->create( array( 'post_type' => WCPT_POST_TYPE_ID ) );
+		$post_id = $this->create_wordcamp();
 
 		$fields = WordCamp_Admin::get_required_fields( 'closed', $post_id );
 
@@ -54,10 +84,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_closing_blocked_without_actual_attendees() {
-		$post_id = self::factory()->post->create( array(
-			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'wcpt-scheduled',
-		) );
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
 
 		// Simulate no Actual Attendees in POST data.
 		$_POST = array();
@@ -83,10 +110,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_closing_allowed_with_actual_attendees() {
-		$post_id = self::factory()->post->create( array(
-			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'wcpt-scheduled',
-		) );
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
 
 		// Simulate Actual Attendees in POST data.
 		$_POST = array(
@@ -113,10 +137,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_resaving_closed_wordcamp_allowed() {
-		$post_id = self::factory()->post->create( array(
-			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'wcpt-closed',
-		) );
+		$post_id = $this->create_wordcamp( 'wcpt-closed' );
 
 		// Simulate no Actual Attendees in POST data (e.g. field wasn't re-submitted).
 		$_POST = array();
@@ -161,10 +182,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::get_protected_fields
 	 */
 	public function test_actual_attendees_protected_before_end_date() {
-		$post_id = self::factory()->post->create( array(
-			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'wcpt-scheduled',
-		) );
+		$post_id = $this->create_wordcamp();
 
 		// Set end date to the future.
 		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '+30 days' ) );
@@ -186,10 +204,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::get_protected_fields
 	 */
 	public function test_actual_attendees_not_protected_after_end_date() {
-		$post_id = self::factory()->post->create( array(
-			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'wcpt-scheduled',
-		) );
+		$post_id = $this->create_wordcamp();
 
 		// Set end date to the past.
 		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '-30 days' ) );
@@ -211,10 +226,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::get_protected_fields
 	 */
 	public function test_actual_attendees_uses_start_date_when_no_end_date() {
-		$post_id = self::factory()->post->create( array(
-			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'wcpt-scheduled',
-		) );
+		$post_id = $this->create_wordcamp();
 
 		// Set only start date in the future, no end date.
 		update_post_meta( $post_id, 'Start Date (YYYY-mm-dd)', strtotime( '+30 days' ) );
@@ -235,10 +247,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 	 * @covers WordCamp_Admin::require_complete_meta_to_publish_wordcamp
 	 */
 	public function test_closing_stores_missing_fields_transient() {
-		$post_id = self::factory()->post->create( array(
-			'post_type'   => WCPT_POST_TYPE_ID,
-			'post_status' => 'wcpt-scheduled',
-		) );
+		$post_id = $this->create_wordcamp( 'wcpt-scheduled' );
 
 		$_POST = array();
 

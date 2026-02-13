@@ -95,7 +95,7 @@ class WordCamp_Application extends Event_Application {
 		}
 
 		// Validate attendee count is a positive integer.
-		if ( ! empty( $safe_data['q_1046007_how_many_attendees'] ) ) {
+		if ( isset( $safe_data['q_1046007_how_many_attendees'] ) && '' !== $safe_data['q_1046007_how_many_attendees'] ) {
 			$attendees = absint( $safe_data['q_1046007_how_many_attendees'] );
 			if ( $attendees <= 0 ) {
 				return new \WP_Error( 'invalid_attendees', "Please click on your browser's Back button, and enter a valid number for the expected number of attendees." );

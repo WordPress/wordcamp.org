@@ -131,4 +131,48 @@ function get_domain_network_id( string $domain ): int {
 	}
 }
 
+/**
+ * Look up the current URL for a site that was previously at the given domain/path.
+ *
+ * When a site's domain or path is changed, the old URL is stored in `blogmeta`
+ * by the `site-url-history` mu-plugin. This queries that data so the caller can
+ * redirect old URLs to the current location.
+ *
+ * @param string $domain The requested domain.
+ * @param string $path   The requested path.
+ *
+ * @return string|false The new URL to redirect to, or false if no match.
+ */
+function get_renamed_site_url( string $domain, string $path ) {
+	global $wpdb;
+
+	$old_home_url = 'https://' . $domain . trailingslashit( $path );
+
+	// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
+	$blog_id = $wpdb->get_var( $wpdb->prepare(
+		"SELECT blog_id FROM {$wpdb->blogmeta}
+		WHERE meta_key = 'old_home_url' AND meta_value = %s
+		LIMIT 1",
+		$old_home_url
+	) );
+
+	if ( ! $blog_id ) {
+		return false;
+	}
+
+	$site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT domain, path FROM {$wpdb->blogs}
+		WHERE blog_id = %d AND public = 1 AND deleted = 0
+		LIMIT 1",
+		$blog_id
+	) );
+	// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+	if ( ! $site ) {
+		return false;
+	}
+
+	return 'https://' . $site->domain . $site->path;
+}
+
 load_network_sunrise();

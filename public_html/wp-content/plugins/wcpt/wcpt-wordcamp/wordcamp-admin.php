@@ -1423,7 +1423,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		public function alter_views( $views ) {
 			global $wp_list_table;
 
-			// Add the "Mine (Mentoring)" view for all users.
+			// For low-privilege users, return without extra views.
+			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+				return $views;
+			}
+
+			// Add the "Mine (Mentoring)" view.
 			$current_user = wp_get_current_user();
 
 			if ( $current_user && $current_user->exists() ) {
@@ -1457,11 +1462,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					__( 'Mine (Mentoring)', 'wordcamporg' ),
 					$count->found_posts
 				);
-			}
-
-			// For low-privilege users, return without the subtype dropdown.
-			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
-				return $views;
 			}
 
 			$current_subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );

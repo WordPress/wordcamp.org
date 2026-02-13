@@ -31,11 +31,14 @@ class Test_SubRoles extends Database_TestCase {
 		}
 
 		if ( ! post_type_exists( WCPT_POST_TYPE_ID ) ) {
-			register_post_type( WCPT_POST_TYPE_ID, array(
-				'public'          => true,
-				'capability_type' => WCPT_POST_TYPE_ID,
-				'map_meta_cap'    => true,
-			) );
+			register_post_type(
+				WCPT_POST_TYPE_ID,
+				array(
+					'public'          => true,
+					'capability_type' => WCPT_POST_TYPE_ID,
+					'map_meta_cap'    => true,
+				)
+			);
 		}
 	}
 

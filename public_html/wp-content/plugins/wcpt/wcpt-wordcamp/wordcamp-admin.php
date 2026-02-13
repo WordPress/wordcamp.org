@@ -1151,7 +1151,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$missing_fields         = array();
 
 			foreach ( $required_closed_fields as $field ) {
-				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have been done in `metabox_save`.
 				$value = isset( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ? sanitize_text_field( wp_unslash( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ) : '';
 
 				if ( empty( $value ) || 'null' === $value ) {
@@ -1160,7 +1160,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			// Check if End Date has passed.
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have been done in `metabox_save`.
 			$end_date_value = isset( $_POST['wcpt_end_date_yyyy_mm_dd'] ) ? sanitize_text_field( wp_unslash( $_POST['wcpt_end_date_yyyy_mm_dd'] ) ) : '';
 			if ( empty( $end_date_value ) ) {
 				$end_date_value = get_post_meta( $post_data_raw['ID'], 'End Date (YYYY-mm-dd)', true );

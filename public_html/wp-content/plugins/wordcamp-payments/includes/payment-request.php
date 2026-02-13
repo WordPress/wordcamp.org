@@ -1568,7 +1568,7 @@ Thanks for helping us with these details!",
 				'72-blank' => '',
 				'73-blank' => '',
 
-				'74-ref-text' => '', // US Wires only
+				'74-ref-text' => '', // US Wires only.
 				'75-internal-ref' => substr( sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->post_id ), 0, 16 ),
 				'76-on-behalf-of' => 'WordPress Community Support',
 

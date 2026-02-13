@@ -106,6 +106,14 @@
 				<?php $this->render_country_input( $post, esc_html__( 'Beneficiary’s Country',           'wordcamporg' ), 'beneficiary_country_iso3166' ); ?>
 			</table>
 		</div>
+
+		<div id="payment_method_eur-sepa-transfer_fields" class="form-table payment_method_fields <?php echo 'EUR SEPA Transfer' == $selected_payment_method ? 'active' : 'hidden'; ?>">
+			<table>
+				<?php $this->render_text_input( $post, esc_html__( 'Account Name', 'wordcamporg' ), 'sepa_account_name' ); ?>
+				<?php $this->render_text_input( $post, esc_html__( 'BIC',          'wordcamporg' ), 'sepa_bic'          ); ?>
+				<?php $this->render_text_input( $post, esc_html__( 'IBAN',         'wordcamporg' ), 'sepa_iban'         ); ?>
+			</table>
+		</div>
 	</fieldset>
 
 	<p class="wcb-form-required">

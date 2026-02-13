@@ -1658,4 +1658,52 @@ Thanks for helping us with these details!",
 		$results = remove_accents( $results );
 		return $results;
 	}
+
+	/**
+	 * SEPA Credit Transfer – ISO 20022 XML (pain.001.003.03)
+	 *
+	 * @param array $args
+	 *
+	 * @return string
+	 */
+	public static function _generate_payment_report_sepa( $args ) {
+		$args = wp_parse_args( $args, array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		) );
+
+		$payments = array();
+
+		foreach ( $args['data'] as $entry ) {
+			switch_to_blog( $entry->blog_id );
+			$post = get_post( $entry->post_id );
+
+			if ( $args['status'] && $post->post_status != $args['status'] ) {
+				restore_current_blog();
+				continue;
+			} elseif ( $post->post_type != self::POST_TYPE ) {
+				restore_current_blog();
+				continue;
+			} elseif ( get_post_meta( $post->ID, '_camppayments_payment_method', true ) != 'EUR SEPA Transfer' ) {
+				restore_current_blog();
+				continue;
+			}
+
+			$amount = round( floatval( get_post_meta( $post->ID, '_camppayments_payment_amount', true ) ), 2 );
+
+			$payments[] = array(
+				'amount'       => $amount,
+				'account_name' => WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_sepa_account_name', true ) ),
+				'bic'          => WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_sepa_bic', true ) ),
+				'iban'         => preg_replace( '#\s#', '', WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_sepa_iban', true ) ) ),
+				'reference'    => sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->post_id ),
+				'invoice'      => get_post_meta( $post->ID, '_camppayments_invoice_number', true ),
+			);
+
+			restore_current_blog();
+		}
+
+		return WordCamp_Budgets::generate_sepa_xml( $payments );
+	}
 }

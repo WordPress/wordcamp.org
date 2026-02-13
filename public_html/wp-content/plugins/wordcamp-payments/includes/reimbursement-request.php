@@ -1668,3 +1668,58 @@ function _generate_payment_report_jpm_wires( $args ) {
 	$results = remove_accents( $results );
 	return $results;
 }
+
+/**
+ * SEPA Credit Transfer – ISO 20022 XML (pain.001.003.03)
+ *
+ * @param array $args
+ *
+ * @return string
+ */
+function _generate_payment_report_sepa( $args ) {
+	$args = wp_parse_args( $args, array(
+		'data'      => array(),
+		'status'    => '',
+		'post_type' => '',
+	) );
+
+	$payments = array();
+
+	foreach ( $args['data'] as $entry ) {
+		switch_to_blog( $entry->blog_id );
+		$post = get_post( $entry->request_id );
+
+		if ( $args['status'] && $post->post_status != $args['status'] ) {
+			restore_current_blog();
+			continue;
+		} elseif ( $post->post_type != POST_TYPE ) {
+			restore_current_blog();
+			continue;
+		} elseif ( get_post_meta( $post->ID, '_wcbrr_payment_method', true ) != 'EUR SEPA Transfer' ) {
+			restore_current_blog();
+			continue;
+		}
+
+		$amount   = 0;
+		$expenses = get_post_meta( $post->ID, '_wcbrr_expenses', true );
+		foreach ( $expenses as $expense ) {
+			if ( ! empty( $expense['_wcbrr_amount'] ) ) {
+				$amount += floatval( $expense['_wcbrr_amount'] );
+			}
+		}
+		$amount = round( $amount, 2 );
+
+		$payments[] = array(
+			'amount'       => $amount,
+			'account_name' => \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_account_name', true ) ),
+			'bic'          => \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_bic', true ) ),
+			'iban'         => preg_replace( '#\s#', '', \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_iban', true ) ) ),
+			'reference'    => sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->request_id ),
+			'invoice'      => '',
+		);
+
+		restore_current_blog();
+	}
+
+	return \WordCamp_Budgets::generate_sepa_xml( $payments );
+}

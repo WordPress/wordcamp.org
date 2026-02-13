@@ -353,7 +353,9 @@ add_filter( 'wordcamp_google_maps_api_key', function( $key, $scope = 'client' ) 
 
 		case 'development':
 		default:
-			if ( defined( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY' ) ) {
+			if ( 'server' === $scope && defined( 'WORDCAMP_DEV_GOOGLE_MAPS_SERVER_API_KEY') ) {
+				$key = WORDCAMP_DEV_GOOGLE_MAPS_SERVER_API_KEY;
+			} elseif ( defined( 'WORDCAMP_DEV_GOOGLE_MAPS_API_KEY' ) ) {
 				$key = WORDCAMP_DEV_GOOGLE_MAPS_API_KEY;
 			}
 			break;
@@ -489,7 +491,8 @@ function wcorg_let_admins_activate_some_plugins( $required_capabilities, $reques
 		'camptix-trustcard/camptix-trustcard.php',
 		'camptix-trustpay/camptix-trustpay.php',
 		'edit-flow/edit_flow.php',
-		'lang-attribute/lang-attribute.php',
+		'knit-pay/knit-pay.php',
+		'lang-attribute-blocks/lang-attribute-blocks.php',
 		'liveblog/liveblog.php',
 		'public-post-preview/public-post-preview.php',
 		'pwa/pwa.php',

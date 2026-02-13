@@ -47,6 +47,15 @@ abstract class Event_Admin {
 				'column_headers',
 			)
 		);
+
+		add_filter(
+			'manage_edit-' . $this->get_event_type() . '_sortable_columns',
+			array(
+				$this,
+				'sortable_columns',
+			)
+		);
+
 		// Forum column headers.
 		add_filter( 'display_post_states', array( $this, 'display_post_states' ), 10, 2 );
 
@@ -64,6 +73,11 @@ abstract class Event_Admin {
 		add_action( 'admin_notices', array( $this, 'print_admin_notices' ) );
 
 		add_action( 'send_decline_notification_action',  'Event_Admin::send_decline_notification', 10, 3 );
+
+		// Search filters for post meta.
+		add_filter( 'posts_search', array( $this, 'extend_search_to_postmeta' ), 10, 2 );
+		add_filter( 'posts_join', array( $this, 'search_postmeta_join' ), 10, 2 );
+		add_filter( 'posts_groupby', array( $this, 'search_postmeta_groupby' ), 10, 2 );
 	}
 
 	/**
@@ -141,6 +155,15 @@ abstract class Event_Admin {
 	 * @param array $columns List of columns.
 	 */
 	abstract public function column_headers( $columns );
+
+	/**
+	 * Customize the sortable columns
+	 *
+	 * @param array $columns List of columns.
+	 */
+	public function sortable_columns( $columns ) {
+		return $columns;
+	}
 
 	/**
 	 * Get a list of streaming services.
@@ -257,19 +280,6 @@ abstract class Event_Admin {
 	abstract public static function get_edit_capability();
 
 	/**
-	 * Filter: Set the locale to en_US.
-	 *
-	 * For some purposes, such as internal logging, strings that would normally be translated to the
-	 * current user's locale should be in English, so that other users who may not share the same
-	 * locale can read them.
-	 *
-	 * @return string
-	 */
-	public function set_locale_to_en_us() {
-		return 'en_US';
-	}
-
-	/**
 	 * Log when the post status changes
 	 *
 	 * @param string  $new_status New status.
@@ -286,10 +296,10 @@ abstract class Event_Admin {
 		}
 
 		// Ensure status labels are in English.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
-		$old_status = get_post_status_object( $old_status );
-		$new_status = get_post_status_object( $new_status );
+		$old_status_obj = get_post_status_object( $old_status );
+		$new_status_obj = get_post_status_object( $new_status );
 
 		$log_id = add_post_meta(
 			$post->ID,
@@ -297,7 +307,7 @@ abstract class Event_Admin {
 			array(
 				'timestamp' => time(),
 				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( '%s &rarr; %s', $old_status->label, $new_status->label ),
+				'message'   => sprintf( '%s &rarr; %s', $old_status_obj->label ?? $old_status, $new_status_obj->label ?? $new_status ),
 			)
 		);
 
@@ -308,7 +318,9 @@ abstract class Event_Admin {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_us' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 	}
 
 	/**
@@ -484,7 +496,19 @@ abstract class Event_Admin {
 
 		foreach ( $meta_keys as $key => $value ) {
 			$post_value     = wcpt_key_to_str( $key, 'wcpt_' );
-			$values[ $key ] = isset( $_POST[ $post_value ] ) ? esc_attr( $_POST[ $post_value ] ) : '';
+			$values[ $key ] = '';
+			if ( isset( $_POST[ $post_value ] ) ) {
+				if ( is_array( $_POST[ $post_value ] ) ) {
+					$values[ $key ] = array_filter(
+						array_map( 'esc_attr', wp_unslash( $_POST[ $post_value ] ) ),
+						static function ( $value ) {
+							return ! is_null( $value ) && '' !== $value;
+						}
+					);
+				} else {
+					$values[ $key ] = esc_attr( wp_unslash( $_POST[ $post_value ] ) );
+				}
+			}
 
 			// Don't update protected fields.
 			if ( $this->is_protected_field( $key ) ) {
@@ -968,12 +992,7 @@ abstract class Event_Admin {
 						?>
 
 						<?php if ( ! empty( $messages[ $key ] ) ) : ?>
-							<?php
-							if ( 'textarea' == $value ) {
-								echo '<br />';
-							}
-							?>
-
+							<br>
 							<span class="description"><?php echo esc_html( $messages[ $key ] ); ?></span>
 						<?php endif; ?>
 					</p>
@@ -993,4 +1012,140 @@ abstract class Event_Admin {
 	 * @return array
 	 */
 	abstract public function get_event_subtypes();
+
+	/**
+	 * Get searchable post meta keys for this event type.
+	 *
+	 * Returns a limited list of meta keys that are useful for searching.
+	 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
+	 *
+	 * @return array List of meta keys to search.
+	 */
+	abstract public static function get_searchable_meta_keys();
+
+	/**
+	 * Extend search to include post meta fields.
+	 *
+	 * @param string   $search The search SQL.
+	 * @param WP_Query $query  The WP_Query instance.
+	 *
+	 * @return string Modified search SQL.
+	 */
+	public function extend_search_to_postmeta( $search, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $search;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $search;
+		}
+
+		// Only extend search when there's a search term.
+		if ( empty( $search ) || ! $query->is_search() ) {
+			return $search;
+		}
+
+		$search_term = $query->get( 's' );
+		if ( empty( $search_term ) ) {
+			return $search;
+		}
+
+		$searchable_keys = static::get_searchable_meta_keys();
+
+		// Build meta search conditions.
+		$like_term    = '%' . $wpdb->esc_like( $search_term ) . '%';
+		$prepare_args = array_merge( $searchable_keys, array( $like_term ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- All placeholders are generated and filled dynamically.
+		$meta_search = $wpdb->prepare(
+			'(pm.meta_key IN (' . implode( ', ', array_fill( 0, count( $searchable_keys ), '%s' ) ) . ') AND pm.meta_value LIKE %s)',
+			$prepare_args
+		);
+
+		// Strip the leading AND, wrap the original search conditions in an OR with
+		// our meta condition, and re-add the leading AND. This is safe in admin
+		// context where post_password checks are not present.
+		$search = preg_replace( '/^\s*AND\s+/i', '', $search, 1 );
+		$search = " AND ({$search} OR {$meta_search})";
+
+		return $search;
+	}
+
+	/**
+	 * Join postmeta table for search queries.
+	 *
+	 * @param string   $join  The JOIN clause.
+	 * @param WP_Query $query The WP_Query instance.
+	 *
+	 * @return string Modified JOIN clause.
+	 */
+	public function search_postmeta_join( $join, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $join;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $join;
+		}
+
+		// Only join when there's a search term.
+		if ( ! $query->is_search() || empty( $query->get( 's' ) ) ) {
+			return $join;
+		}
+
+		// Check if the join already exists to prevent duplicates.
+		if ( strpos( $join, "{$wpdb->postmeta} AS pm" ) !== false ) {
+			return $join;
+		}
+
+		$join .= " LEFT JOIN {$wpdb->postmeta} AS pm ON {$wpdb->posts}.ID = pm.post_id";
+
+		return $join;
+	}
+
+	/**
+	 * Group results to avoid duplicates from postmeta joins.
+	 *
+	 * @param string   $groupby The GROUP BY clause.
+	 * @param WP_Query $query   The WP_Query instance.
+	 *
+	 * @return string Modified GROUP BY clause.
+	 */
+	public function search_postmeta_groupby( $groupby, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $groupby;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $groupby;
+		}
+
+		// Only group when there's a search term.
+		if ( ! $query->is_search() || empty( $query->get( 's' ) ) ) {
+			return $groupby;
+		}
+
+		// Ensure grouping by post ID to avoid duplicates from the postmeta JOIN.
+		$post_id_group = "{$wpdb->posts}.ID";
+
+		if ( empty( $groupby ) ) {
+			$groupby = $post_id_group;
+		} elseif ( strpos( $groupby, $post_id_group ) === false ) {
+			$groupby .= ", {$post_id_group}";
+		}
+
+		return $groupby;
+	}
 }

@@ -126,7 +126,12 @@ function show_notification_about_latest_site() {
 	}
 
 	echo '<div class="wordcamp-latest-site-notify"><p>' .
-		wp_sprintf( '%s is over. Check out <a href="%s">the next edition</a>!', esc_html( get_blog_details( $current_blog->blog_id )->blogname ), esc_url( $latest_domain ) ) .
+		wp_kses_post( wp_sprintf(
+			// translators: %1$s is the name of the WordCamp, %2$s is the URL of the next edition.
+			__( '%1$s is over. Check out <a href="%2$s">the next edition</a>!', 'wordcamporg' ),
+			esc_html( get_blog_details( $current_blog->blog_id )->blogname ),
+			esc_url( $latest_domain )
+		) ) .
 	'</p></div>';
 }
 

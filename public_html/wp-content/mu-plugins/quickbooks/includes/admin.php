@@ -165,7 +165,7 @@ function maybe_show_disconnection_warning() {
 	// though.
 	if (
 		'local' === wp_get_environment_type()
-		|| 'settings_page_quickbooks' === get_plugin_page_hook( $plugin_page, $pagenow )
+		|| 'settings_page_quickbooks' === get_plugin_page_hook( $plugin_page ?? '', $pagenow )
 	) {
 		return;
 	}

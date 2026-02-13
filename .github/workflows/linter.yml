@@ -11,6 +11,10 @@ on:
     paths:
     - public_html/**
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: All
@@ -34,10 +38,21 @@ jobs:
 
     - name: Install SVN
       run: |
+        sudo rm -f /var/lib/man-db/auto-update # https://github.com/actions/runner-images/issues/10977
         sudo apt-get update && sudo apt-get install -y subversion
+
+    - name: Set PHP version
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        coverage: none
+        tools: composer:v2
+      env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: composer install
       run: |
+        rm composer.lock || true
         composer install
 
     - name: yarn install and build

@@ -2,7 +2,6 @@
 
 document.addEventListener( 'DOMContentLoaded', function() {
 	const speak = wp.a11y.speak;
-	const globalEventList = document.querySelector( '.wp-block-wporg-event-list' );
 
 	/**
 	 * Initialize the component.
@@ -14,17 +13,31 @@ document.addEventListener( 'DOMContentLoaded', function() {
 			return;
 		}
 
-		renderGlobalEvents( globalEventsPayload.events, globalEventsPayload.groupByMonth );
+		for ( const id in globalEventsPayload ) {
+			const listContainer = document.querySelector( `#wp-block-wporg-event-list-${ id }` );
+			if ( ! listContainer ) {
+				// eslint-disable-next-line no-console
+				console.error( `Missing container for global events with id ${ id }` );
+				continue;
+			}
+
+			renderGlobalEvents(
+				listContainer,
+				globalEventsPayload[ id ].events,
+				globalEventsPayload[ id ].groupByMonth
+			);
+		}
 	}
 
 	/**
 	 * Render global events
 	 *
+	 * @param {Object}  container
 	 * @param {Array}   events
 	 * @param {boolean} groupByMonth
 	 */
-	function renderGlobalEvents( events, groupByMonth ) {
-		const loadingElement = globalEventList.querySelector( '.wporg-marker-list__loading' );
+	function renderGlobalEvents( container, events, groupByMonth ) {
+		const loadingElement = container.querySelector( '.wporg-marker-list__loading' );
 		const groupedEvents = {};
 		let markup = '';
 
@@ -46,7 +59,7 @@ document.addEventListener( 'DOMContentLoaded', function() {
 			markup = renderEventList( events );
 		}
 
-		globalEventList.innerHTML = markup;
+		container.innerHTML = markup;
 
 		loadingElement.classList.add( 'wporg-events__hidden' );
 		speak( 'Global events loaded.' );

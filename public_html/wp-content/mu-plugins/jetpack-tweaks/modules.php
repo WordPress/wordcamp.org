@@ -6,7 +6,7 @@ defined( 'WPINC' ) || die();
 
 add_filter( 'jetpack_get_available_modules', __NAMESPACE__ . '\disable_modules' );
 add_filter( 'jetpack_get_default_modules', __NAMESPACE__ . '\default_jetpack_modules' );
-
+add_filter( 'jetpack_get_module', __NAMESPACE__ . '\force_load_subscriptions_module', 10, 2 );
 
 /**
  * Disable Jetpack Modules which are not applicable to WordCamp.org.
@@ -52,4 +52,15 @@ function default_jetpack_modules( $modules ) {
 	$modules = array_unique( $modules );
 
 	return $modules;
+}
+
+/**
+ * Force load the Subscriptions module, even without a user connection.
+ */
+function force_load_subscriptions_module( $module, $module_slug ) {
+	if ( 'subscriptions' === $module_slug ) {
+		$module['requires_user_connection'] = false;
+	}
+
+	return $module;
 }

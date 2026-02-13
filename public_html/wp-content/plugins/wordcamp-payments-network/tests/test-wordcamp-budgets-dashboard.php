@@ -107,7 +107,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 
 				'expected' => <<<EOD
 					HEADER,date,1
-					P,WIRES,,,N,USD,500.00,,,,,,,ACCT,987654,"Jane Beneficiary","9876 Beneficiary St",,"Benficiaryville New Bennieswick ",,Test,,,SWIFT,123456,"A Bank","1234 Bank St",,"Bankersville New Bankswick 12345",US,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Invoice 1234",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,OUR,,,wcb-site_id-blog_id
+					P,WIRES,,,N,USD,500.00,,,,,,,ACCT,987654,"Jane Beneficiary","9876 Beneficiary St",,"Benficiaryville New Bennieswick ",,Test,,,SWIFT,123456,"A Bank","1234 Bank St",,"Bankersville New Bankswick 12345",US,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,wcb-site_id-blog_id,"WordPress Community Support","Invoice 1234",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,OUR,,,wcb-site_id-blog_id
 					TRAILER,1,500
 
 					EOD

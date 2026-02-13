@@ -78,7 +78,6 @@ function handle_error( $err_no, $err_msg, $file, $line ) {
 		E_USER_WARNING,
 		E_NOTICE,
 		E_USER_NOTICE,
-		E_STRICT,
 		E_DEPRECATED,
 		E_USER_DEPRECATED,
 	);
@@ -166,7 +165,6 @@ function is_third_party_file( $file ) {
 		WP_PLUGIN_DIR . '/edit-flow/',
 		WP_PLUGIN_DIR . '/email-post-changes/',
 		// Gutenberg isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
-		WP_PLUGIN_DIR . '/hyperdb/',
 		// Jetpack isn't included here, because `send_error_to_slack()` will pipe it to a separate channel.
 		WP_PLUGIN_DIR . '/liveblog/',
 		WP_PLUGIN_DIR . '/public-post-preview/',

@@ -41,6 +41,8 @@ function init() {
  * @return string Returns the block markup.
  */
 function render( $attributes, $content, $block ) {
+	$attributes['id'] ??= wp_unique_id('events');
+
 	$facets = Events_2023\get_query_var_facets();
 	$events = Google_Map\get_events( $attributes['events'], 0, 0, $facets );
 
@@ -88,7 +90,12 @@ function render( $attributes, $content, $block ) {
 		// `generate_block_asset_handle()` includes the index if `viewScript` is an array, so this is fragile.
 		// There isn't a way to get it programmatically, though, so it just has to manually be kept in sync.
 		'wporg-event-list-view-script-2',
-		'globalEventsPayload = ' . wp_json_encode( $payload ) . ';',
+		sprintf(
+			'var globalEventsPayload = globalEventsPayload || {};
+			globalEventsPayload["%s"] = %s;',
+			$attributes['id'],
+			wp_json_encode( $payload )
+		),
 		'before'
 	);
 
@@ -97,7 +104,7 @@ function render( $attributes, $content, $block ) {
 	?>
 
 	<p class="wporg-marker-list__loading">
-		Loading global events...
+		Loading events...
 		<img
 			src="<?php echo esc_url( includes_url( 'images/spinner-2x.gif' ) ); ?>"
 			width="20"
@@ -110,7 +117,9 @@ function render( $attributes, $content, $block ) {
 
 	$content = ob_get_clean();
 
-	$wrapper_attributes = get_block_wrapper_attributes();
+	$wrapper_attributes = get_block_wrapper_attributes( array(
+		'id' => 'wp-block-wporg-event-list-' . $attributes['id'],
+	) );
 
 	return sprintf(
 		'<div %1$s>%2$s</div>',

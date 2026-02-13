@@ -25,6 +25,7 @@ class WordCamp_Forms_To_Drafts {
 		add_action( 'wp_enqueue_scripts',                 array( $this, 'enqueue_inert_script' ) );
 		add_filter( 'the_content',                        array( $this, 'force_login_to_use_form' ), 8 );
 		add_action( 'template_redirect',                  array( $this, 'populate_form_based_on_user' ), 9 );
+		add_Action( 'jetpack_contact_form_is_spam',       array( $this, 'prevent_form_submission' ) );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_sponsors' ), 10, 3 );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_speakers' ), 10, 3 );
 		add_action( 'grunion_pre_message_sent',           array( $this, 'call_for_volunteers' ), 10, 3 );
@@ -77,12 +78,25 @@ class WordCamp_Forms_To_Drafts {
 	 * @return string
 	 */
 	public function force_login_to_use_form( $content ) {
-		$form_id              = $this->get_current_form_id();
-		$please_login_message = '';
+		$form_id = $this->get_current_form_id();
 
 		if ( ! $this->form_requires_login( $form_id ) ) {
 			return $content;
 		}
+
+		$please_login_message = $this->get_please_login_message( $form_id );
+
+		return $this->inject_disabled_form_elements( $content, $please_login_message );
+	}
+
+	/**
+	 * Get the login message to show to users who need to log in to use the form.
+	 *
+	 * @param string $form_id The form id.
+	 * @return string
+	 */
+	protected function get_please_login_message( $form_id ) {
+		$please_login_message = '';
 
 		switch ( $form_id ) {
 			case 'call-for-speakers':
@@ -93,7 +107,7 @@ class WordCamp_Forms_To_Drafts {
 				break;
 		}
 
-		return $this->inject_disabled_form_elements( $content, $please_login_message );
+		return $please_login_message;
 	}
 
 	/**
@@ -187,6 +201,32 @@ class WordCamp_Forms_To_Drafts {
 
 				break;
 		}
+	}
+
+	/**
+	 * Mark form submissions as spam if user is not logged in and form requires login.
+	 *
+	 * NOTE: This accepts submissions and marks as spam, it does not inform the submitter.
+	 */
+	public function prevent_form_submission( $is_spam ) {
+		global $post;
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$contact_form_post_id = absint( $_POST['contact-form-id'] ?? 0 );
+
+		// Already marked as spam, no form known, or user is already logged in..
+		if ( $is_spam || ! $contact_form_post_id || is_user_logged_in() ) {
+			return $is_spam;
+		}
+
+		$form_id = get_post_meta( $contact_form_post_id, 'wcfd-key', true );
+
+		if ( $this->form_requires_login( $form_id ) ) {
+			// String not shown when logged out.
+			return new WP_Error( 'spam', $this->get_please_login_message( $form_id ) );
+		}
+
+		return $is_spam;
 	}
 
 	/**
@@ -322,6 +362,11 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
+			return;
+		}
+
 		$all_values              = $this->get_unprefixed_grunion_form_values( $all_values );
 		$sponsor_to_form_key_map = array(
 			'_wcpt_sponsor_website' => 'Website',
@@ -364,6 +409,11 @@ class WordCamp_Forms_To_Drafts {
 			return;
 		}
 
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
+			return;
+		}
+
 		global $current_user;
 
 		$all_values      = $this->get_unprefixed_grunion_form_values( $all_values );
@@ -400,6 +450,11 @@ class WordCamp_Forms_To_Drafts {
 	 */
 	public function call_for_volunteers( $submission_id, $all_values, $extra_values ) {
 		if ( 'call-for-volunteers' != $this->get_form_key( $submission_id ) ) {
+			return;
+		}
+
+		// Don't process spam submissions.
+		if ( 'spam' === get_post_status( $submission_id ) ) {
 			return;
 		}
 

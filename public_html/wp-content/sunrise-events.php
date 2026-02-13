@@ -7,24 +7,24 @@ use function WordCamp\Sunrise\{ get_top_level_domain };
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\{ PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
 
-main();
-
+// Redirecting would interfere with bin scripts, unit tests, etc.
+if ( php_sapi_name() !== 'cli' ) {
+	main();
+}
 
 /**
  * Controller for this file.
  */
 function main() {
-	// Redirecting would interfere with bin scripts, unit tests, etc.
-	if ( php_sapi_name() !== 'cli' ) {
-		$redirect_url = get_redirect_url( $_SERVER['REQUEST_URI'] );
-
-		if ( $redirect_url ) {
-			header( 'Location: ' . $redirect_url, true, 301 );
-			die();
-		}
+	$redirect_url = get_redirect_url( $_SERVER['REQUEST_URI'] );
+	if ( $redirect_url ) {
+		header( 'Location: ' . $redirect_url, true, 301 );
+		die();
 	}
 
 	set_network_and_site();
+
+	do_redirects();
 }
 
 /**
@@ -93,21 +93,32 @@ function set_network_and_site() {
 		list( $path ) = explode( '?', $path );
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 2 );
-		if ( ! $current_blog ) {
-			// If the request doesn't match a site, redirect to the campus connect page.
-			header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
-			exit;
-		}
-	} elseif ( CAMPUS_NETWORK_ID === $site_id ) {
+	} else {
+		$current_blog = WP_Site::get_instance( BLOG_ID_CURRENT_SITE ); // The Root site constant defined in wp-config.php.
+	}
+
+	if ( ! $current_blog ) {
 		// If the request doesn't match a site, redirect to the campus connect page.
+		header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
 		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
 		exit;
-
-	} else {
-		$current_blog = WP_Site::get_instance( EVENTS_ROOT_BLOG_ID );
 	}
 
 	$blog_id = $current_blog->id;
 	$domain  = $current_blog->domain;
 	$public  = $current_blog->public;
+}
+
+/**
+ * Handle any redirects needed on the Events & Campus networks.
+ */
+function do_redirects() {
+	global $blog_id, $site_id;
+
+	// campus.wordpress.org should redirect to the landing page.
+	if ( CAMPUS_NETWORK_ID === $site_id && CAMPUS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() ) {
+		header( 'X-Redirect-By: Events/Sunrise::do_redirects' );
+		header( 'Location: https://events.wordpress.org/campusconnect/', true, 302 );
+		exit;
+	}
 }

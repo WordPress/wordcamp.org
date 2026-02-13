@@ -142,19 +142,6 @@ class WordCamp_Status extends Base_Status {
 	}
 
 	/**
-	 * Filter: Set the locale to en_US.
-	 *
-	 * Some translated strings in the wcpt plugin are used here for comparison and matching. To ensure
-	 * that the matching happens correctly, we need need to prevent these strings from being converted
-	 * to a different locale.
-	 *
-	 * @return string
-	 */
-	public function set_locale_to_en_US() {
-		return 'en_US';
-	}
-
-	/**
 	 * Generate a cache key.
 	 *
 	 * @return string
@@ -199,7 +186,7 @@ class WordCamp_Status extends Base_Status {
 		}
 
 		// Ensure status labels can match status log messages.
-		add_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		$locale_switched = switch_to_locale( 'en_US' );
 
 		$wordcamp_posts = $this->get_wordcamp_posts();
 		$statuses       = WordCamp_Loader::get_post_statuses();
@@ -266,7 +253,9 @@ class WordCamp_Status extends Base_Status {
 		}
 
 		// Remove the temporary locale change.
-		remove_filter( 'locale', array( $this, 'set_locale_to_en_US' ) );
+		if ( $locale_switched ) {
+			restore_previous_locale();
+		}
 
 		$data = $this->filter_data_fields( $data );
 		$this->maybe_cache_data( $data );

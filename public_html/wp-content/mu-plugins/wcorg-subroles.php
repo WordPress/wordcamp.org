@@ -172,9 +172,10 @@ function map_subrole_caps( $primitive_caps, $meta_cap, $user_id, $args ) {
 				}
 
 				// Mentors can edit their mentee WordCamp posts.
-				if ( $post ) {
+				if ( $post && $current_user ) {
 					$mentor = wcorg_get_user_by_canonical_names( $post->{'Mentor WordPress.org User Name'} );
-					if ( $mentor && get_current_user_id() === $mentor->ID ) {
+
+					if ( $mentor && $current_user->ID === $mentor->ID ) {
 						// Note: `edit_posts` is only granted to users with at least Contributor-level access.
 						// This mapping is intentional and assumes mentors already have contributor+ access.
 						$required_caps[] = 'edit_posts';

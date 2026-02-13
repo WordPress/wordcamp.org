@@ -480,15 +480,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						unset( $retval['Series Event'] );
 					}
 
-					/*
-					 * The "Actual Attendees" field is only able to be set after the event is concluded.
-					 *
-					 * get_post() allows this to target the editor, allowing for report export.
-					 */
-					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
-						unset( $retval['Actual Attendees'] );
-					}
-
 					break;
 
 				case 'all':
@@ -526,14 +517,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						unset( $retval['Series Event'] );
 					}
 
-					/*
-					 * The "Actual Attendees" field is only able to be set after the event is concluded.
-					 *
-					 * get_post() allows this to target the editor, allowing for report export.
-					 */
-					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
-						unset( $retval['Actual Attendees'] );
-					}
 
 					$retval = array_merge(
 						$retval,
@@ -1330,6 +1313,25 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				);
 			}
 
+			// Protect "Actual Attendees" field until the event has ended.
+			$post = get_post();
+			if ( $post && WCPT_POST_TYPE_ID === $post->post_type ) {
+				$end_date = get_post_meta( $post->ID, 'End Date (YYYY-mm-dd)', true );
+				
+				// If no end date is set, use the start date.
+				if ( empty( $end_date ) ) {
+					$end_date = get_post_meta( $post->ID, 'Start Date (YYYY-mm-dd)', true );
+				}
+
+				// If we have an end date and it hasn't passed yet, protect the field.
+				if ( ! empty( $end_date ) ) {
+					$end_date_at_midnight = strtotime( '23:59:59', $end_date );
+					if ( $end_date_at_midnight > time() ) {
+						$protected_fields[] = 'Actual Attendees';
+					}
+				}
+			}
+
 			return $protected_fields;
 		}
 
@@ -1736,6 +1738,26 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
 		'Series Event'                    => '(Campus Connect only) Event is part of a multi-venue or multi-session series (e.g., workshops held across several campuses)',
 	);
+
+	// Add CampTix ticket sales information to the Actual Attendees field message.
+	$post = get_post( $post_id );
+	if ( $post && isset( $meta_keys['Actual Attendees'] ) ) {
+		$site_id = get_wordcamp_site_id( $post );
+		if ( $site_id ) {
+			$camptix_stats      = get_blog_option( $site_id, 'camptix_stats', array() );
+			$attendees_attended = $camptix_stats['attended'] ?? 0;
+			$tickets_sold       = $camptix_stats['sold'] ?? 0;
+
+			if ( $attendees_attended > 0 || $tickets_sold > 0 ) {
+				$camptix_info = sprintf(
+					'CampTix: %d attended, %d sold.',
+					$attendees_attended,
+					$tickets_sold
+				);
+				$messages['Actual Attendees'] = 'Number of attendees who actually attended the event. ' . $camptix_info;
+			}
+		}
+	}
 
 	if ( 'wcpt_venue_info' === $metabox ) {
 		$address_instructions = 'Please include the city, state/province and country.';

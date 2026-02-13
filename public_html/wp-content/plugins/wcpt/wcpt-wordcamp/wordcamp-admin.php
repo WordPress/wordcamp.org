@@ -520,7 +520,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						unset( $retval['Series Event'] );
 					}
 
-
 					$retval = array_merge(
 						$retval,
 						array(
@@ -1293,7 +1292,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$post = get_post();
 			if ( $post && WCPT_POST_TYPE_ID === $post->post_type ) {
 				$end_date = get_post_meta( $post->ID, 'End Date (YYYY-mm-dd)', true );
-				
+
 				// If no end date is set, use the start date.
 				if ( empty( $end_date ) ) {
 					$end_date = get_post_meta( $post->ID, 'Start Date (YYYY-mm-dd)', true );
@@ -1389,7 +1388,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			if ( ! empty( $missing_fields ) ) {
 				delete_transient( 'wcpt_missing_fields_' . $post_id );
-				
+
 				return sprintf(
 					__( 'This WordCamp cannot be closed. The following required fields must be filled in: %s.', 'wordcamporg' ),
 					implode( ', ', $missing_fields )
@@ -1790,11 +1789,11 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		$is_protected = in_array( 'Actual Attendees', $protected_fields, true );
 
 		if ( $is_protected ) {
-			// Field is readonly - show message that it can't be set until after event concludes
+			// Field is readonly - show message that it can't be set until after event concludes.
 			$messages['Actual Attendees'] = 'This field cannot be set until after the event concludes.';
 		}
 
-		// Add CampTix ticket sales information regardless of protected status
+		// Add CampTix ticket sales information regardless of protected status.
 		$site_id = get_wordcamp_site_id( $post );
 		if ( $site_id ) {
 			$camptix_stats      = get_blog_option( $site_id, 'camptix_stats', array() );
@@ -1807,7 +1806,7 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 					$attendees_attended,
 					$tickets_sold
 				);
-				
+
 				if ( $is_protected ) {
 					$messages['Actual Attendees'] .= ' ' . $camptix_info;
 				} else {

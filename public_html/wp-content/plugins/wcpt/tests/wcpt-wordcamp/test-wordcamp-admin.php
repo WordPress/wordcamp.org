@@ -188,6 +188,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '+30 days' ) );
 
 		// get_protected_fields() uses get_post() which relies on the global $post.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required to set context for get_protected_fields().
 		$GLOBALS['post'] = get_post( $post_id );
 
 		$protected = WordCamp_Admin::get_protected_fields();
@@ -210,6 +211,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', strtotime( '-30 days' ) );
 
 		// get_protected_fields() uses get_post() which relies on the global $post.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required to set context for get_protected_fields().
 		$GLOBALS['post'] = get_post( $post_id );
 
 		$protected = WordCamp_Admin::get_protected_fields();
@@ -231,6 +233,7 @@ class Test_WordCamp_Admin extends WP_UnitTestCase {
 		// Set only start date in the future, no end date.
 		update_post_meta( $post_id, 'Start Date (YYYY-mm-dd)', strtotime( '+30 days' ) );
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Required to set context for get_protected_fields().
 		$GLOBALS['post'] = get_post( $post_id );
 
 		$protected = WordCamp_Admin::get_protected_fields();

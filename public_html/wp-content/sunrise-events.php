@@ -98,7 +98,16 @@ function set_network_and_site() {
 	}
 
 	if ( ! $current_blog ) {
-		// If the request doesn't match a site, redirect to the campus connect page.
+		// If the request doesn't match a site, try to redirect to the latest year for the same city/type.
+		$latest_url = get_latest_event_url( $path );
+
+		if ( $latest_url ) {
+			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site (latest year)' );
+			header( 'Location: ' . $latest_url, true, 301 );
+			exit;
+		}
+
+		// Otherwise, redirect to the campus connect page.
 		header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
 		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
 		exit;
@@ -107,6 +116,53 @@ function set_network_and_site() {
 	$blog_id = $current_blog->id;
 	$domain  = $current_blog->domain;
 	$public  = $current_blog->public;
+}
+
+/**
+ * Get the URL of the latest event site matching the same city and type.
+ *
+ * When an event site is renamed (e.g., year changed from 2025 to 2026),
+ * the old URL should redirect to the latest year's site for the same city/type.
+ *
+ * @param string $request_path The request URI path.
+ *
+ * @return string|false The URL to redirect to, or false if no match found.
+ */
+function get_latest_event_url( string $request_path ) {
+	global $wpdb;
+
+	if ( ! preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $request_path, $matches ) ) {
+		return false;
+	}
+
+	$city = $matches[1];
+	$type = $matches[3];
+
+	$latest_site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT `domain`, `path`
+		FROM `$wpdb->blogs`
+		WHERE
+			`domain` = %s AND
+			`path` LIKE %s AND
+			`public` = 1 AND
+			`deleted` = 0
+		ORDER BY `path` DESC
+		LIMIT 1",
+		DOMAIN_CURRENT_SITE,
+		"/$city/%/$type/"
+	) );
+
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	// Don't redirect to the exact same path that was requested.
+	$requested_path = rtrim( $request_path, '/' ) . '/';
+	if ( $latest_site->path === $requested_path ) {
+		return false;
+	}
+
+	return 'https://' . $latest_site->domain . $latest_site->path;
 }
 
 /**

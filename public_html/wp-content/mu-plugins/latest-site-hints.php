@@ -180,6 +180,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 			AND p.post_status = 'wcpt-cancelled'
 		)";
 
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $not_cancelled_sq is a subquery built from trusted $wpdb table names.
 	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $current_domain . $current_path ) ) {
 		// Remove the year prefix.
 		$city_domain = substr(
@@ -227,6 +228,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 			$current_domain,
 			$latest_path
 		);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	} else {
 		return false;

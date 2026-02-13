@@ -664,6 +664,7 @@ function get_latest_site( string $domain ) {
 
 	$central_prefix = $wpdb->base_prefix . ( 1 === WORDCAMP_ROOT_BLOG_ID ? '' : WORDCAMP_ROOT_BLOG_ID . '_' );
 
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names from trusted $wpdb properties and prefixes.
 	$latest = $wpdb->get_row( $wpdb->prepare( "
 		SELECT `blog_id`, `domain`, `path`
 		FROM $wpdb->blogs
@@ -688,6 +689,7 @@ function get_latest_site( string $domain ) {
 		$domain,
 		"%.{$domain}"
 	) );
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 	return $latest;
 }

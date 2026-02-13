@@ -49,6 +49,16 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				2
 			); // after enforce_post_status.
 
+			add_filter(
+				'wp_insert_post_data',
+				array(
+					$this,
+					'require_complete_meta_to_close_wordcamp',
+				),
+				12,
+				2
+			); // after require_complete_meta_to_publish_wordcamp.
+
 			// Filters - Subtype filtering on the WordCamp list table.
 			add_filter( 'views_edit-wordcamp', array( $this, 'alter_views' ) );
 			add_action( 'parse_query', array( $this, 'filter_by_subtype' ) );
@@ -1108,9 +1118,85 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * Prevent WordCamps from being closed without required metadata
+		 *
+		 * @param array $post_data     Sanitized post data.
+		 * @param array $post_data_raw Raw post data.
+		 *
+		 * @return array
+		 */
+		public function require_complete_meta_to_close_wordcamp( $post_data, $post_data_raw ) {
+			if ( WCPT_POST_TYPE_ID != $post_data['post_type'] || empty( $post_data_raw['ID'] ) ) {
+				return $post_data;
+			}
+
+			// Only apply validation when trying to transition to closed status.
+			if ( 'wcpt-closed' != $post_data['post_status'] ) {
+				return $post_data;
+			}
+
+			$post = get_post( $post_data_raw['ID'] );
+			if ( ! $post ) {
+				return $post_data;
+			}
+
+			// Get the old status to check if this is an actual transition.
+			$old_status = $post->post_status;
+			if ( 'wcpt-closed' === $old_status ) {
+				// Already closed, allow saving other changes.
+				return $post_data;
+			}
+
+			$required_closed_fields = $this->get_required_fields( 'closed', $post_data_raw['ID'] );
+			$missing_fields         = array();
+
+			foreach ( $required_closed_fields as $field ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+				$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
+
+				if ( empty( $value ) || 'null' == $value ) {
+					$missing_fields[] = $field;
+				}
+			}
+
+			// Check if End Date has passed.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
+			$end_date_value = $_POST['wcpt_end_date_yyyy_mm_dd'] ?? '';
+			if ( empty( $end_date_value ) ) {
+				$end_date_value = get_post_meta( $post_data_raw['ID'], 'End Date (YYYY-mm-dd)', true );
+			}
+
+			$end_date_passed = true;
+			if ( ! empty( $end_date_value ) ) {
+				$end_date_at_midnight = strtotime( '23:59', $end_date_value );
+				if ( $end_date_at_midnight > time() ) {
+					$end_date_passed = false;
+				}
+			}
+
+			// If there are validation errors, prevent the status change.
+			if ( ! empty( $missing_fields ) || ! $end_date_passed ) {
+				$post_data['post_status']     = $old_status;
+				$this->active_admin_notices[] = 5;
+
+				// Store missing fields for the error message.
+				if ( ! empty( $missing_fields ) ) {
+					set_transient( 'wcpt_missing_fields_' . $post_data_raw['ID'], $missing_fields, 60 );
+				}
+
+				// Store end date status for the error message.
+				if ( ! $end_date_passed ) {
+					set_transient( 'wcpt_end_date_not_passed_' . $post_data_raw['ID'], true, 60 );
+				}
+			}
+
+			return $post_data;
+		}
+
+		/**
 		 * Get a list of fields required to move to a certain post status
 		 *
-		 * @param string $status 'needs-site' | 'scheduled' | 'any'.
+		 * @param string $status 'needs-site' | 'scheduled' | 'closed' | 'any'.
 		 *
 		 * @return array
 		 */
@@ -1144,6 +1230,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// Required because the Events Widget needs a physical address in order to show events.
 			$scheduled[] = self::get_address_key( $post_id );
 
+			$closed = array(
+				'Actual Attendees',
+			);
+
 			switch ( $status ) {
 				case 'needs-site':
 					$required_fields = $needs_site;
@@ -1151,6 +1241,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'scheduled':
 					$required_fields = $scheduled;
+					break;
+
+				case 'closed':
+					$required_fields = $closed;
 					break;
 
 				case 'any':
@@ -1283,8 +1377,48 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						self::get_address_key( $post->ID )
 					),
 				),
+
+				5 => array(
+					'type'   => 'error',
+					'notice' => $this->get_close_validation_notice( $post->ID ),
+				),
 			);
 
+		}
+
+		/**
+		 * Get the validation notice for closing a WordCamp
+		 *
+		 * @param int $post_id The post ID.
+		 *
+		 * @return string
+		 */
+		private function get_close_validation_notice( $post_id ) {
+			$missing_fields      = get_transient( 'wcpt_missing_fields_' . $post_id );
+			$end_date_not_passed = get_transient( 'wcpt_end_date_not_passed_' . $post_id );
+			$errors              = array();
+
+			if ( ! empty( $missing_fields ) ) {
+				$errors[] = sprintf(
+					__( 'The following required fields must be filled in: %s', 'wordcamporg' ),
+					implode( ', ', $missing_fields )
+				);
+				delete_transient( 'wcpt_missing_fields_' . $post_id );
+			}
+
+			if ( $end_date_not_passed ) {
+				$errors[] = __( 'The End Date must have passed before closing the event', 'wordcamporg' );
+				delete_transient( 'wcpt_end_date_not_passed_' . $post_id );
+			}
+
+			if ( empty( $errors ) ) {
+				return __( 'This WordCamp cannot be closed at this time.', 'wordcamporg' );
+			}
+
+			$notice = __( 'This WordCamp cannot be closed. ', 'wordcamporg' );
+			$notice .= implode( '. ', $errors ) . '.';
+
+			return $notice;
 		}
 
 		/**

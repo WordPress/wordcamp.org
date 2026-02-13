@@ -168,6 +168,18 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		return false;
 	}
 
+	$central_prefix   = $wpdb->base_prefix . ( 1 === WORDCAMP_ROOT_BLOG_ID ? '' : WORDCAMP_ROOT_BLOG_ID . '_' );
+	$not_cancelled_sq = "
+		AND NOT EXISTS (
+			SELECT 1
+			FROM {$central_prefix}postmeta pm
+			JOIN {$central_prefix}posts p ON p.ID = pm.post_id
+			WHERE pm.meta_key = '_site_id'
+			AND pm.meta_value = $wpdb->blogs.blog_id
+			AND p.post_type = 'wordcamp'
+			AND p.post_status = 'wcpt-cancelled'
+		)";
+
 	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $current_domain . $current_path ) ) {
 		// Remove the year prefix.
 		$city_domain = substr(
@@ -181,6 +193,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 			WHERE
 				`domain` LIKE %s AND
 				SUBSTR( domain, 1, 4 ) REGEXP '^-?[0-9]+$' -- exclude secondary language domains like 2013-fr.ottawa.wordcamp.org
+				$not_cancelled_sq
 			ORDER BY `domain` DESC
 			LIMIT 1",
 			'%.' . $city_domain
@@ -191,6 +204,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 			SELECT `domain`, `path`
 			FROM `$wpdb->blogs`
 			WHERE `domain` = %s
+				$not_cancelled_sq
 			ORDER BY `domain`, `path` DESC
 			LIMIT 1",
 			$current_domain
@@ -207,6 +221,7 @@ function get_latest_home_url( $current_domain, $current_path ) {
 			WHERE
 				`domain` = %s AND
 				`path` LIKE %s
+				$not_cancelled_sq
 			ORDER BY `path` DESC
 			LIMIT 1",
 			$current_domain,

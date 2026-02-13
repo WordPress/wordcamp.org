@@ -186,7 +186,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	 * @covers WCP_Payment_Request::_generate_payment_report_sepa
 	 * @covers WordCamp_Budgets::generate_sepa_xml
 	 */
-	public function test_generate_sepa_payment_report() : void {
+	public function test_generate_sepa_payment_report(): void {
 		$args = array(
 			'status'     => 'wcb-approved',
 			'start_date' => strtotime( '3 days ago' ),
@@ -229,7 +229,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	 * @covers WordCamp\Budgets_Dashboard\generate_payment_report
 	 * @covers WordCamp\Budgets_Dashboard\_generate_payment_report_sepa
 	 */
-	public function test_generate_sepa_report_no_matching_posts() : void {
+	public function test_generate_sepa_report_no_matching_posts(): void {
 		$args = array(
 			'status'     => 'wcb-approved',
 			'start_date' => strtotime( '8 days ago' ),
@@ -254,13 +254,19 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	 *
 	 * @covers WordCamp_Budgets::generate_sepa_xml
 	 */
-	public function test_generate_sepa_xml_format() : void {
-		add_filter( 'wcb_sepa_debtor_bic', function () {
-			return 'TESTBIC123';
-		} );
-		add_filter( 'wcb_sepa_debtor_iban', function () {
-			return 'DE00000000000000000000';
-		} );
+	public function test_generate_sepa_xml_format(): void {
+		add_filter(
+			'wcb_sepa_debtor_bic',
+			function () {
+				return 'TESTBIC123';
+			}
+		);
+		add_filter(
+			'wcb_sepa_debtor_iban',
+			function () {
+				return 'DE00000000000000000000';
+			}
+		);
 
 		$payments = array(
 			array(
@@ -287,8 +293,11 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		$dom = new \DOMDocument();
 		$this->assertTrue( $dom->loadXML( $xml ), 'Output should be valid XML.' );
 
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMDocument native properties.
 		$root = $dom->documentElement;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$this->assertSame( 'Document', $root->localName );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
 		$this->assertSame( 'urn:iso:std:iso:20022:tech:xsd:pain.001.003.03', $root->namespaceURI );
 
 		// Verify header counts.
@@ -329,7 +338,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	 *
 	 * @covers WordCamp_Budgets::generate_sepa_xml
 	 */
-	public function test_generate_sepa_xml_empty_payments() : void {
+	public function test_generate_sepa_xml_empty_payments(): void {
 		$this->assertSame( '', WordCamp_Budgets::generate_sepa_xml( array() ) );
 	}
 }

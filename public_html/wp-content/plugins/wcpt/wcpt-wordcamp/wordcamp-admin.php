@@ -431,7 +431,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Maximum Capacity'           => 'text',
 						'Available Rooms'            => 'text',
 						'Website URL'                => 'text',
-						'Contact Information'        => 'textarea',
+						'Contact Email Address'      => 'text',
 						'Exhibition Space Available' => 'checkbox',
 					);
 					break;
@@ -588,7 +588,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 							'Maximum Capacity'                 => 'text',
 							'Available Rooms'                  => 'text',
 							'Website URL'                      => 'text',
-							'Contact Information'              => 'textarea',
+							'Contact Email Address'            => 'text',
 							'Exhibition Space Available'       => 'checkbox',
 
 							'Contributor Day'                  => 'checkbox',
@@ -1143,6 +1143,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				'Budget Wrangler Name',
 				'Budget Wrangler E-mail Address',
 			);
+
+			// Venue.
+			$scheduled[] = 'Contact Email Address';
 
 			// Required because the Events Widget needs a physical address in order to show events.
 			$scheduled[] = self::get_address_key( $post_id );

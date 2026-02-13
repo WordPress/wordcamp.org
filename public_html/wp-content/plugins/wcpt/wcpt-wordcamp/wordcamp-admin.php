@@ -54,6 +54,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'wcpt_close_wordcamps_after_event', array( $this, 'close_wordcamps_after_event' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_venue_address' ), 10, 2 );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ) );
+
+			// "Mine (Mentoring)" view on the WordCamp list table.
+			add_filter( 'views_edit-' . WCPT_POST_TYPE_ID, array( $this, 'add_mentoring_view' ) );
+			add_action( 'pre_get_posts', array( $this, 'filter_mentoring_view' ) );
 		}
 
 		/**
@@ -1206,6 +1210,79 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					)
 				);
 			}
+		}
+
+		/**
+		 * Add "Mine (Mentoring)" view link to the WordCamp list table.
+		 *
+		 * @param array $views Existing views.
+		 *
+		 * @return array Modified views.
+		 */
+		public function add_mentoring_view( $views ) {
+			$current_user = wp_get_current_user();
+
+			if ( ! $current_user || ! $current_user->exists() ) {
+				return $views;
+			}
+
+			$count = new WP_Query( array(
+				'post_type'      => WCPT_POST_TYPE_ID,
+				'meta_key'       => 'Mentor WordPress.org User Name',
+				'meta_value'     => $current_user->user_login,
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'no_found_rows'  => false,
+			) );
+
+			$class = '';
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only used for highlighting the active tab.
+			if ( isset( $_GET['mentoring'] ) ) {
+				$class = 'current';
+			}
+
+			$url = add_query_arg(
+				array(
+					'post_type' => WCPT_POST_TYPE_ID,
+					'mentoring' => $current_user->user_login,
+				),
+				admin_url( 'edit.php' )
+			);
+
+			$views['mentoring'] = sprintf(
+				'<a href="%s" class="%s">%s <span class="count">(%d)</span></a>',
+				esc_url( $url ),
+				esc_attr( $class ),
+				__( 'Mine (Mentoring)', 'wordcamporg' ),
+				$count->found_posts
+			);
+
+			return $views;
+		}
+
+		/**
+		 * Filter the WordCamp list query when the "Mine (Mentoring)" view is active.
+		 *
+		 * @param WP_Query $query The query to filter.
+		 */
+		public function filter_mentoring_view( $query ) {
+			if ( ! is_admin() || ! $query->is_main_query() ) {
+				return;
+			}
+
+			if ( WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ) {
+				return;
+			}
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filter for list table view.
+			if ( ! isset( $_GET['mentoring'] ) ) {
+				return;
+			}
+
+			$current_user = wp_get_current_user();
+
+			$query->set( 'meta_key', 'Mentor WordPress.org User Name' );
+			$query->set( 'meta_value', $current_user->user_login );
 		}
 	}
 endif; // class_exists check.

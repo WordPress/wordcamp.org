@@ -1428,7 +1428,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return $views;
 			}
 
-			// Add the "Mine (Mentoring)" view.
+			// Add the "Mine (Mentoring)" view right after the "Mine" view.
 			$current_user = wp_get_current_user();
 
 			if ( $current_user && $current_user->exists() ) {
@@ -1455,13 +1455,24 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					admin_url( 'edit.php' )
 				);
 
-				$views['mentoring'] = sprintf(
+				$mentoring_view = sprintf(
 					'<a href="%s" class="%s">%s <span class="count">(%d)</span></a>',
 					esc_url( $url ),
 					esc_attr( $class ),
 					__( 'Mine (Mentoring)', 'wordcamporg' ),
 					$count->found_posts
 				);
+
+				// Insert after the "Mine" view if it exists, otherwise append.
+				$mine_pos = array_search( 'mine', array_keys( $views ), true );
+
+				if ( false !== $mine_pos ) {
+					$views = array_slice( $views, 0, $mine_pos + 1, true )
+						+ array( 'mentoring' => $mentoring_view )
+						+ array_slice( $views, $mine_pos + 1, null, true );
+				} else {
+					$views['mentoring'] = $mentoring_view;
+				}
 			}
 
 			$current_subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );

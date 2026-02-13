@@ -547,6 +547,12 @@ abstract class Event_Admin {
 					update_post_meta( $post_id, $key, floatval( $values[ $key ] ) );
 					break;
 
+				case 'attendee_count':
+					// Validate attendee count is a positive integer.
+					$attendee_value = absint( $values[ $key ] );
+					update_post_meta( $post_id, $key, $attendee_value );
+					break;
+
 				case 'checkbox-delete-on-unset':
 					// If the checkbox is not set, delete the meta.
 					if ( empty( $values[ $key ] ) || 'on' !== $values[ $key ] ) {

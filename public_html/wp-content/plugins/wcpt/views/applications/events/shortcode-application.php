@@ -408,8 +408,8 @@ function render_events_application_form( $countries, $prefilled_fields ) {
 						</div>
 
 						<div class="PDF_QT100">
-							<input value="" maxlength="500" name="q_how_many_attendees" class="large required"
-								   type="text" title="Approximate number of attendees" required/>
+							<input value="" name="q_how_many_attendees" class="large required"
+								   type="number" min="1" step="1" title="Approximate number of attendees" required/>
 						</div>
 					</div>
 				</div>

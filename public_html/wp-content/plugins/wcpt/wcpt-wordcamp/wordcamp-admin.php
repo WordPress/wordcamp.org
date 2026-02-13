@@ -1405,14 +1405,14 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			if ( ! empty( $missing_fields ) ) {
 				$errors[] = sprintf(
-					__( 'The following required fields must be filled in: %s', 'wordcamporg' ),
+					__( 'The following required fields must be filled in: %s.', 'wordcamporg' ),
 					implode( ', ', $missing_fields )
 				);
 				delete_transient( 'wcpt_missing_fields_' . $post_id );
 			}
 
 			if ( $end_date_not_passed ) {
-				$errors[] = __( 'The End Date must have passed before closing the event', 'wordcamporg' );
+				$errors[] = __( 'The End Date must have passed before closing the event.', 'wordcamporg' );
 				delete_transient( 'wcpt_end_date_not_passed_' . $post_id );
 			}
 
@@ -1421,7 +1421,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			$notice = __( 'This WordCamp cannot be closed. ', 'wordcamporg' );
-			$notice .= implode( '. ', $errors ) . '.';
+			$notice .= implode( ' ', $errors );
 
 			return $notice;
 		}

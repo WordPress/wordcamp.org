@@ -129,7 +129,7 @@ jQuery( document ).ready( function( $ ) {
 		toggleSepaAvailability : function() {
 			var currency = $( '#_wcbrr_currency' ).val(),
 				country  = $( '#payment_receipt_country_iso3166' ).val(),
-				sepaContainer = $( '#payment_method_eur-sepa-transfer_container' );
+				sepaContainer = $( '#payment_method_sepa_transfer_container' );
 
 			if ( 'EUR' === currency && sepaCountries.indexOf( country ) !== -1 ) {
 				sepaContainer.show();
@@ -137,9 +137,9 @@ jQuery( document ).ready( function( $ ) {
 				sepaContainer.hide();
 
 				// If SEPA was selected, deselect it.
-				if ( $( '#payment_method_eur-sepa-transfer' ).prop( 'checked' ) ) {
-					$( '#payment_method_eur-sepa-transfer' ).prop( 'checked', false );
-					$( '#payment_method_eur-sepa-transfer_fields' ).removeClass( 'active' ).addClass( 'hidden' );
+				if ( $( '#payment_method_sepa_transfer' ).prop( 'checked' ) ) {
+					$( '#payment_method_sepa_transfer' ).prop( 'checked', false );
+					$( '#payment_method_sepa_transfer_fields' ).removeClass( 'active' ).addClass( 'hidden' );
 				}
 			}
 		}

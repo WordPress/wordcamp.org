@@ -107,7 +107,7 @@
 			</table>
 		</div>
 
-		<div id="payment_method_eur-sepa-transfer_fields" class="form-table payment_method_fields <?php echo 'EUR SEPA Transfer' == $selected_payment_method ? 'active' : 'hidden'; ?>">
+		<div id="payment_method_sepa_transfer_fields" class="form-table payment_method_fields <?php echo 'sepa_transfer' == $selected_payment_method ? 'active' : 'hidden'; ?>">
 			<table>
 				<?php $this->render_text_input( $post, esc_html__( 'Account Name', 'wordcamporg' ), 'sepa_account_name' ); ?>
 				<?php $this->render_text_input( $post, esc_html__( 'BIC',          'wordcamporg' ), 'sepa_bic'          ); ?>

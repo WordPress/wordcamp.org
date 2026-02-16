@@ -267,20 +267,52 @@ class WordCamp_Budgets {
 	}
 
 	/**
-	 * Get a list of valid payment methods
+	 * Get payment methods as slug => label pairs.
 	 *
-	 * @param $post_type
+	 * Existing payment method slugs retain their original string values
+	 * for backward compatibility with stored post meta.
 	 *
-	 * @return array
+	 * @param string $post_type
+	 *
+	 * @return array Associative array of slug => translated label.
 	 */
-	public static function get_valid_payment_methods( $post_type ) {
-		$methods = array( 'Direct Deposit', 'Check', 'Wire', 'EUR SEPA Transfer' );
+	public static function get_payment_methods( $post_type ) {
+		$methods = array(
+			'Direct Deposit' => __( 'Direct Deposit', 'wordcamporg' ),
+			'Check'          => __( 'Check', 'wordcamporg' ),
+			'Wire'           => __( 'Wire', 'wordcamporg' ),
+			'sepa_transfer'  => __( 'EUR SEPA Transfer', 'wordcamporg' ),
+		);
 
 		if ( WCP_Payment_Request::POST_TYPE === $post_type ) {
-			$methods[] = 'Credit Card';
+			$methods['Credit Card'] = __( 'Credit Card', 'wordcamporg' );
 		}
 
 		return $methods;
+	}
+
+	/**
+	 * Get the translated label for a payment method slug.
+	 *
+	 * @param string $slug Payment method slug.
+	 *
+	 * @return string Translated label, or the slug itself if not found.
+	 */
+	public static function get_payment_method_label( $slug ) {
+		$methods = self::get_payment_methods( WCP_Payment_Request::POST_TYPE );
+
+		return isset( $methods[ $slug ] ) ? $methods[ $slug ] : $slug;
+	}
+
+	/**
+	 * Get a list of valid payment method slugs.
+	 *
+	 * @param string $post_type
+	 *
+	 * @return array List of payment method slugs.
+	 */
+	public static function get_valid_payment_methods( $post_type ) {
+		return array_keys( self::get_payment_methods( $post_type ) );
 	}
 
 	/**

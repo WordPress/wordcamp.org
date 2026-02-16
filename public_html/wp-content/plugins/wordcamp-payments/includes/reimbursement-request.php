@@ -1698,7 +1698,7 @@ function _generate_payment_report_sepa( $args ) {
 		} elseif ( POST_TYPE !== $post->post_type ) {
 			restore_current_blog();
 			continue;
-		} elseif ( 'EUR SEPA Transfer' !== get_post_meta( $post->ID, '_wcbrr_payment_method', true ) ) {
+		} elseif ( 'sepa_transfer' !== get_post_meta( $post->ID, '_wcbrr_payment_method', true ) ) {
 			restore_current_blog();
 			continue;
 		}

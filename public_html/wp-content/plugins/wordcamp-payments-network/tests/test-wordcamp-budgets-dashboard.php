@@ -67,7 +67,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				'_camppayments_due_by'           => strtotime( 'Next Tuesday' ),
 				'_camppayments_payment_amount'   => '250',
 				'_camppayments_currency'         => 'EUR',
-				'_camppayments_payment_method'   => 'EUR SEPA Transfer',
+				'_camppayments_payment_method'   => 'sepa_transfer',
 				'_camppayments_invoice_number'   => 'SEPA-INV-001',
 				'_camppayments_payment_category' => 'venue',
 

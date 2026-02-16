@@ -510,7 +510,7 @@ class WCP_Payment_Request {
 				break;
 
 			case 'payment_method':
-				$value = WordCamp_Budgets::get_valid_payment_methods( $post->post_type );
+				$value = WordCamp_Budgets::get_payment_methods( $post->post_type );
 				break;
 
 			case 'general_notes':
@@ -528,7 +528,10 @@ class WCP_Payment_Request {
 				break;
 
 			case 'ach_account_type':
-				$value = array( 'Personal', 'Company' );
+				$value = array(
+					'Personal' => __( 'Personal', 'wordcamporg' ),
+					'Company'  => __( 'Company', 'wordcamporg' ),
+				);
 				break;
 
 			default:
@@ -1688,7 +1691,7 @@ Thanks for helping us with these details!",
 			} elseif ( self::POST_TYPE !== $post->post_type ) {
 				restore_current_blog();
 				continue;
-			} elseif ( 'EUR SEPA Transfer' !== get_post_meta( $post->ID, '_camppayments_payment_method', true ) ) {
+			} elseif ( 'sepa_transfer' !== get_post_meta( $post->ID, '_camppayments_payment_method', true ) ) {
 				restore_current_blog();
 				continue;
 			}

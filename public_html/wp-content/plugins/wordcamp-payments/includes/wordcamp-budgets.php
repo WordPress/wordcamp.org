@@ -280,7 +280,7 @@ class WordCamp_Budgets {
 		$methods = array(
 			'Direct Deposit' => __( 'Direct Deposit', 'wordcamporg' ),
 			'Check'          => __( 'Check', 'wordcamporg' ),
-			'sepa_transfer'  => __( 'EUR SEPA Transfer', 'wordcamporg' ),
+			'sepa_transfer'  => __( 'Euro SEPA Transfer', 'wordcamporg' ),
 			'Wire'           => __( 'Wire', 'wordcamporg' ),
 		);
 

@@ -124,7 +124,7 @@ jQuery( document ).ready( function( $ ) {
 		},
 
 		/**
-		 * Show/hide the EUR SEPA Transfer option based on currency and country
+		 * Show/hide the Euro SEPA Transfer option based on currency and country
 		 */
 		toggleSepaAvailability : function() {
 			var currency = $( '#_wcbrr_currency' ).val(),

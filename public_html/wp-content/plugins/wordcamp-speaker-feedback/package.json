@@ -12,8 +12,7 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Speaker+Feedback%22"
 	},
 	"devDependencies": {
-		"@wordpress/eslint-plugin": "11.1.0",
-		"@wordpress/scripts": "22.3.0",
+		"@wordpress/scripts": "26.18.0",
 		"sass": "1.49.9"
 	},
 	"browserslist": [

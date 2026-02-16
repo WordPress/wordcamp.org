@@ -4,7 +4,7 @@
 	"license": "GPL-2.0+",
 	"dependencies": {
 		"@wordpress/element": "4.3.0",
-		"@wordpress/scripts": "22.3.0",
+		"@wordpress/scripts": "26.18.0",
 		"prop-types": "15.8.1"
 	},
 	"eslintConfig": {

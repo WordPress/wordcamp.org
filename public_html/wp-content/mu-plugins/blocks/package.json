@@ -25,11 +25,10 @@
 		"@wordpress/data": "6.5.0",
 		"@wordpress/date": "4.5.0",
 		"@wordpress/element": "4.3.0",
-		"@wordpress/eslint-plugin": "11.1.0",
 		"@wordpress/html-entities": "3.5.0",
 		"@wordpress/i18n": "4.5.0",
 		"@wordpress/icons": "8.1.0",
-		"@wordpress/scripts": "22.3.0",
+		"@wordpress/scripts": "26.18.0",
 		"@wordpress/server-side-render": "^3.3.0",
 		"@wordpress/url": "3.6.0",
 		"lodash": "4.17.21",
@@ -46,13 +45,6 @@
 		"globals": {
 			"WordCampBlocks": "readonly"
 		}
-	},
-	"jest": {
-		"preset": "@wordpress/jest-preset-default",
-		"rootDir": "../../../../",
-		"roots": [
-			"<rootDir>/public_html/wp-content/mu-plugins/blocks"
-		]
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"stylelint": {

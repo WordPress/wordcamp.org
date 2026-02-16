@@ -20,10 +20,9 @@
 		"@wordpress/date": "4.58.0",
 		"@wordpress/edit-post": "6.2.0",
 		"@wordpress/element": "4.3.0",
-		"@wordpress/eslint-plugin": "11.1.0",
 		"@wordpress/i18n": "4.5.0",
 		"@wordpress/plugins": "4.3.0",
-		"@wordpress/scripts": "22.3.0",
+		"@wordpress/scripts": "26.18.0",
 		"date-fns": "4.1.0"
 	},
 	"eslintConfig": {

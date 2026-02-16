@@ -1,5 +1,7 @@
 /**
  * Handle any frontend activity for the Speaker Feedback forms.
+ *
+ * @param {Object} $ jQuery
  */
 
 ( function( $ ) {

@@ -288,7 +288,7 @@ function groupSessionsByTrack( ungroupedSessions ) {
  */
 function renderOverlappingSessionsWarning( overlappingSessions ) {
 	if ( overlappingSessions.length <= 0 ) {
-		return;
+		return null;
 	}
 
 	return (

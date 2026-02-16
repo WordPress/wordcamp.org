@@ -71,7 +71,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				'_camppayments_invoice_number'   => 'SEPA-INV-001',
 				'_camppayments_payment_category' => 'venue',
 
-				'_camppayments_sepa_account_name' => WCP_Encryption::encrypt( 'Hans Muster' ),
+				'_camppayments_sepa_account_name' => WCP_Encryption::encrypt( 'Account Name Here' ),
 				'_camppayments_sepa_bic'          => WCP_Encryption::encrypt( 'DEUTDEDBFRA' ),
 				'_camppayments_sepa_iban'         => WCP_Encryption::encrypt( 'DE89370400440532013000' ),
 			),
@@ -212,7 +212,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		$this->assertStringContainsString( '<ChrgBr>SLEV</ChrgBr>', $actual );
 
 		// Verify payment data.
-		$this->assertStringContainsString( '<Nm>Hans Muster</Nm>', $actual );
+		$this->assertStringContainsString( '<Nm>Account Name Here</Nm>', $actual );
 		$this->assertStringContainsString( '<IBAN>DE89370400440532013000</IBAN>', $actual );
 		$this->assertStringContainsString( '<BIC>DEUTDEDBFRA</BIC>', $actual );
 		$this->assertStringContainsString( '<InstdAmt Ccy="EUR">250.00</InstdAmt>', $actual );

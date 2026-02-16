@@ -131,7 +131,7 @@ jQuery( document ).ready( function( $ ) {
 				country  = $( '#payment_receipt_country_iso3166' ).val(),
 				sepaContainer = $( '#payment_method_sepa_transfer_container' );
 
-			if ( 'EUR' === currency && sepaCountries.indexOf( country ) !== -1 ) {
+			if ( 'EUR' === currency && ( ! country || sepaCountries.indexOf( country ) !== -1 ) ) {
 				sepaContainer.show();
 			} else {
 				sepaContainer.hide();

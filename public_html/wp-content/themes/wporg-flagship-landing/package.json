@@ -4,7 +4,11 @@
 	"description": "Description: Landing page for flagship WordCamps",
 	"license": "GPL-2.0-or-later",
 	"devDependencies": {
+		"@wordpress/block-editor": "15.12.0",
+		"@wordpress/blocks": "15.12.0",
+		"@wordpress/components": "32.1.0",
 		"@wordpress/scripts": "^31.4.0",
+		"@wordpress/server-side-render": "6.15.0",
 		"cssnano": "^7.1.2",
 		"postcss": "^8.5.3",
 		"postcss-cli": "^11.0.1",

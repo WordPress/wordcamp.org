@@ -11,8 +11,8 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D%20WC-Post-Types%22"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "26.18.0",
-		"wicg-inert": "3.1.1"
+		"@wordpress/scripts": "31.4.0",
+		"wicg-inert": "3.1.3"
 	},
 	"eslintConfig": {
 		"extends": "../../../../.eslintrc.js"

@@ -140,8 +140,10 @@ export function listify( array ) {
 	let list = [];
 
 	/* translators: used between list items, there is a space after the comma */
+	// eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
 	const separator = __( ', ', 'wordcamporg' );
 	/* translators: preceding the last item in a list, there are spaces on both sides */
+	// eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
 	const conjunction = __( ' and ', 'wordcamporg' );
 
 	if ( ! Array.isArray( array ) ) {

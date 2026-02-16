@@ -14,7 +14,7 @@
 		"packages-update": "wp-scripts packages-update"
 	},
 	"devDependencies": {
-		"@wordpress/icons": "8.1.0",
-		"@wordpress/scripts": "26.18.0"
+		"@wordpress/icons": "11.6.0",
+		"@wordpress/scripts": "31.4.0"
 	}
 }

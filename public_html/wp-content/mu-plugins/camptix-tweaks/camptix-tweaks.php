@@ -19,6 +19,7 @@ add_action( 'camptix_form_start_errors',                     __NAMESPACE__ . '\a
 add_filter( 'camptix_form_attendee_info_errors',             __NAMESPACE__ . '\show_throttle_notice'                );
 add_action( 'transition_post_status',                        __NAMESPACE__ . '\ticket_sales_opened',          10, 3 );
 add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 3 );
+add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\clear_page_cache_on_payment',  10, 2 );
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
 add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
 
@@ -364,6 +365,35 @@ function track_payment_results( $payment_token, $result, $data ) {
 	$request_url    = sprintf( 'https://%s/g.gif?v=wpcom-no-pv&x_wcorg-tickets=%s', $request_domain, $stat_key );
 	$request_args   = array( 'blocking' => false );
 	$request_result = wp_remote_get( esc_url_raw( $request_url ), $request_args );
+}
+
+/**
+ * Clear the WP Super Cache page cache after a successful ticket purchase.
+ *
+ * Ticket availability numbers shown on the [camptix] shortcode page can become stale
+ * if the cache is not cleared after a purchase. This ensures logged-out visitors see
+ * up-to-date ticket counts.
+ *
+ * @param string $payment_token
+ * @param int    $result
+ */
+function clear_page_cache_on_payment( $payment_token, $result ) {
+	/** @var CampTix_Plugin $camptix */
+	global $camptix;
+
+	$successful = array(
+		$camptix::PAYMENT_STATUS_COMPLETED,
+		$camptix::PAYMENT_STATUS_PENDING,
+		$camptix::PAYMENT_STATUS_REFUNDED,
+	);
+
+	if ( ! in_array( $result, $successful, true ) ) {
+		return;
+	}
+
+	if ( function_exists( 'wp_cache_clear_cache' ) ) {
+		wp_cache_clear_cache( get_current_blog_id() );
+	}
 }
 
 /**

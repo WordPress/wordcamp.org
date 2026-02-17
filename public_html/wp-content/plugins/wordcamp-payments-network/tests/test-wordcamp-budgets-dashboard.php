@@ -4,6 +4,7 @@ namespace WordCamp\Budgets_Dashboard\Tests;
 
 use Payment_Requests_Dashboard;
 use WCP_Encryption;
+use WordCamp_Budgets;
 use WP_UnitTestCase;
 use function WordCamp\Budgets_Dashboard\{ generate_payment_report };
 
@@ -53,6 +54,26 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				'_camppayments_beneficiary_zip_code'        => WCP_Encryption::encrypt( '98765' ),
 				'_camppayments_beneficiary_country_iso3166' => WCP_Encryption::encrypt( 'Test' ),
 				'_camppayments_beneficiary_account_number'  => WCP_Encryption::encrypt( '987654' ),
+			),
+		) );
+
+		$factory->post->create( array(
+			'post_type'   => 'wcp_payment_request',
+			'post_status' => 'wcb-approved',
+
+			'meta_input' => array(
+				'_wcb_updated_timestamp'         => strtotime( 'Yesterday 10am' ),
+				'_camppayments_description'      => 'SEPA Test Request',
+				'_camppayments_due_by'           => strtotime( 'Next Tuesday' ),
+				'_camppayments_payment_amount'   => '250',
+				'_camppayments_currency'         => 'EUR',
+				'_camppayments_payment_method'   => 'sepa_transfer',
+				'_camppayments_invoice_number'   => 'SEPA-INV-001',
+				'_camppayments_payment_category' => 'venue',
+
+				'_camppayments_sepa_account_name' => WCP_Encryption::encrypt( 'Account Name Here' ),
+				'_camppayments_sepa_bic'          => WCP_Encryption::encrypt( 'DEUTDEDBFRA' ),
+				'_camppayments_sepa_iban'         => WCP_Encryption::encrypt( 'DE89370400440532013000' ),
 			),
 		) );
 
@@ -157,5 +178,167 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		);
 
 		return $cases;
+	}
+
+	/**
+	 * @covers WordCamp\Budgets_Dashboard\generate_payment_report
+	 * @covers WordCamp\Budgets_Dashboard\_generate_payment_report_sepa
+	 * @covers WCP_Payment_Request::_generate_payment_report_sepa
+	 * @covers WordCamp_Budgets::generate_sepa_xml
+	 */
+	public function test_generate_sepa_payment_report(): void {
+		$args = array(
+			'status'     => 'wcb-approved',
+			'start_date' => strtotime( '3 days ago' ),
+			'end_date'   => time(),
+			'post_type'  => 'wcp_payment_request',
+
+			'export_type' => array(
+				'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
+				'mime_type' => 'application/xml',
+				'callback'  => 'WordCamp\Budgets_Dashboard\_generate_payment_report_sepa',
+				'filename'  => 'wordcamp-payments-%s-%s-sepa.xml',
+			),
+		);
+
+		$actual = generate_payment_report( $args );
+
+		$this->assertIsString( $actual, 'SEPA report should return a string.' );
+		$this->assertStringContainsString( '<?xml version="1.0" encoding="UTF-8"?>', $actual );
+		$this->assertStringContainsString( 'pain.001.003.03', $actual );
+		$this->assertStringContainsString( '<CstmrCdtTrfInitn>', $actual );
+		$this->assertStringContainsString( '<PmtMtd>TRF</PmtMtd>', $actual );
+		$this->assertStringContainsString( '<Cd>SEPA</Cd>', $actual );
+		$this->assertStringContainsString( '<ChrgBr>SLEV</ChrgBr>', $actual );
+
+		// Verify payment data.
+		$this->assertStringContainsString( '<Nm>Account Name Here</Nm>', $actual );
+		$this->assertStringContainsString( '<IBAN>DE89370400440532013000</IBAN>', $actual );
+		$this->assertStringContainsString( '<BIC>DEUTDEDBFRA</BIC>', $actual );
+		$this->assertStringContainsString( '<InstdAmt Ccy="EUR">250.00</InstdAmt>', $actual );
+		$this->assertStringContainsString( '<Ustrd>SEPA-INV-001</Ustrd>', $actual );
+
+		// Verify counts.
+		$this->assertStringContainsString( '<NbOfTxs>1</NbOfTxs>', $actual );
+		$this->assertStringContainsString( '<CtrlSum>250.00</CtrlSum>', $actual );
+	}
+
+	/**
+	 * SEPA export with no matching posts should return an empty string.
+	 *
+	 * @covers WordCamp\Budgets_Dashboard\generate_payment_report
+	 * @covers WordCamp\Budgets_Dashboard\_generate_payment_report_sepa
+	 */
+	public function test_generate_sepa_report_no_matching_posts(): void {
+		$args = array(
+			'status'     => 'wcb-approved',
+			'start_date' => strtotime( '8 days ago' ),
+			'end_date'   => strtotime( '5 days ago' ),
+			'post_type'  => 'wcp_payment_request',
+
+			'export_type' => array(
+				'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
+				'mime_type' => 'application/xml',
+				'callback'  => 'WordCamp\Budgets_Dashboard\_generate_payment_report_sepa',
+				'filename'  => 'wordcamp-payments-%s-%s-sepa.xml',
+			),
+		);
+
+		$actual = generate_payment_report( $args );
+
+		$this->assertSame( '', $actual, 'SEPA report with no matching posts should return an empty string.' );
+	}
+
+	/**
+	 * Test generate_sepa_xml() output format directly.
+	 *
+	 * @covers WordCamp_Budgets::generate_sepa_xml
+	 */
+	public function test_generate_sepa_xml_format(): void {
+		add_filter(
+			'wcb_sepa_debtor_bic',
+			function () {
+				return 'TESTBIC123';
+			}
+		);
+		add_filter(
+			'wcb_sepa_debtor_iban',
+			function () {
+				return 'DE00000000000000000000';
+			}
+		);
+
+		$payments = array(
+			array(
+				'amount'       => 100.50,
+				'account_name' => 'Alice',
+				'bic'          => 'ALICEBIC',
+				'iban'         => 'DE11111111111111111111',
+				'reference'    => 'wcb-1-100',
+				'invoice'      => 'INV-100',
+			),
+			array(
+				'amount'       => 200.00,
+				'account_name' => 'Bob',
+				'bic'          => '',
+				'iban'         => 'DE22222222222222222222',
+				'reference'    => 'wcb-1-200',
+				'invoice'      => '',
+			),
+		);
+
+		$xml = WordCamp_Budgets::generate_sepa_xml( $payments );
+
+		// Validate XML structure.
+		$dom = new \DOMDocument();
+		$this->assertTrue( $dom->loadXML( $xml ), 'Output should be valid XML.' );
+
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMDocument native properties.
+		$root = $dom->documentElement;
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$this->assertSame( 'Document', $root->localName );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+		$this->assertSame( 'urn:iso:std:iso:20022:tech:xsd:pain.001.003.03', $root->namespaceURI );
+
+		// Verify header counts.
+		$this->assertStringContainsString( '<NbOfTxs>2</NbOfTxs>', $xml );
+		$this->assertStringContainsString( '<CtrlSum>300.50</CtrlSum>', $xml );
+
+		// Verify debtor info from filters.
+		$this->assertStringContainsString( '<Nm>WordPress Community Support PBC</Nm>', $xml );
+		$this->assertStringContainsString( '<IBAN>DE00000000000000000000</IBAN>', $xml );
+		$this->assertStringContainsString( '<BIC>TESTBIC123</BIC>', $xml );
+
+		// Verify first payment.
+		$this->assertStringContainsString( '<Nm>Alice</Nm>', $xml );
+		$this->assertStringContainsString( '<IBAN>DE11111111111111111111</IBAN>', $xml );
+		$this->assertStringContainsString( '<BIC>ALICEBIC</BIC>', $xml );
+		$this->assertStringContainsString( '<InstdAmt Ccy="EUR">100.50</InstdAmt>', $xml );
+		$this->assertStringContainsString( '<Ustrd>INV-100</Ustrd>', $xml );
+		$this->assertStringContainsString( '<EndToEndId>wcb-1-100</EndToEndId>', $xml );
+
+		// Verify second payment (no BIC, no invoice).
+		$this->assertStringContainsString( '<Nm>Bob</Nm>', $xml );
+		$this->assertStringContainsString( '<IBAN>DE22222222222222222222</IBAN>', $xml );
+		$this->assertStringContainsString( '<InstdAmt Ccy="EUR">200.00</InstdAmt>', $xml );
+		$this->assertStringContainsString( '<EndToEndId>wcb-1-200</EndToEndId>', $xml );
+
+		// Bob has no BIC, so CdtrAgt should not appear for that transaction.
+		// Bob has no invoice, so RmtInf should not appear for that transaction.
+		// Count occurrences: Alice has BIC, Bob doesn't - so only 1 CdtrAgt (besides the debtor).
+		$this->assertSame( 1, substr_count( $xml, '<BIC>ALICEBIC</BIC>' ) );
+
+		// Clean up filters.
+		remove_all_filters( 'wcb_sepa_debtor_bic' );
+		remove_all_filters( 'wcb_sepa_debtor_iban' );
+	}
+
+	/**
+	 * Test generate_sepa_xml() with empty payments returns empty string.
+	 *
+	 * @covers WordCamp_Budgets::generate_sepa_xml
+	 */
+	public function test_generate_sepa_xml_empty_payments(): void {
+		$this->assertSame( '', WordCamp_Budgets::generate_sepa_xml( array() ) );
 	}
 }

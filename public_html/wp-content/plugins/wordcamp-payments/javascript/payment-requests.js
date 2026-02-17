@@ -3,6 +3,15 @@ jQuery( document ).ready( function( $ ) {
 	'use strict';
 
 	var wcb = window.WordCampBudgets;
+
+	// SEPA zone country codes (ISO 3166-1 alpha-2).
+	var sepaCountries = [
+		'AT', 'BE', 'BG', 'CH', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES',
+		'FI', 'FR', 'GB', 'GI', 'GR', 'HR', 'HU', 'IE', 'IS', 'IT',
+		'LI', 'LT', 'LU', 'LV', 'MC', 'MT', 'NL', 'NO', 'PL', 'PT',
+		'RO', 'SE', 'SI', 'SK', 'SM', 'VA'
+	];
+
 	var app = wcb.PaymentRequests = {
 
 		/**
@@ -56,7 +65,12 @@ jQuery( document ).ready( function( $ ) {
 				}
 
 				$('#row-payment-method').show();
+				app.toggleSepaAvailability();
 			}).trigger('change');
+
+			$('#currency').on('change', function() {
+				app.toggleSepaAvailability();
+			});
 		},
 
 		/**
@@ -79,6 +93,27 @@ jQuery( document ).ready( function( $ ) {
 				// todo make the transition smoother
 			} catch ( exception ) {
 				wcb.log( exception );
+			}
+		},
+
+		/**
+		 * Show/hide the Euro SEPA Transfer option based on currency and country
+		 */
+		toggleSepaAvailability : function() {
+			var currency = $( '#currency' ).val(),
+				country  = $( '#payment_receipt_country_iso3166' ).val(),
+				sepaContainer = $( '#payment_method_sepa_transfer_container' );
+
+			if ( 'EUR' === currency && ( ! country || sepaCountries.indexOf( country ) !== -1 ) ) {
+				sepaContainer.show();
+			} else {
+				sepaContainer.hide();
+
+				// If SEPA was selected, deselect it.
+				if ( $( '#payment_method_sepa_transfer' ).prop( 'checked' ) ) {
+					$( '#payment_method_sepa_transfer' ).prop( 'checked', false );
+					$( '#payment_method_sepa_transfer_fields' ).removeClass( 'active' ).addClass( 'hidden' );
+				}
 			}
 		}
 	};

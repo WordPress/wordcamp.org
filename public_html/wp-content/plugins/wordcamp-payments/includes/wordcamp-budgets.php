@@ -267,20 +267,54 @@ class WordCamp_Budgets {
 	}
 
 	/**
-	 * Get a list of valid payment methods
+	 * Get payment methods as slug => label pairs.
 	 *
-	 * @param $post_type
+	 * Existing payment method slugs retain their original string values
+	 * for backward compatibility with stored post meta.
 	 *
-	 * @return array
+	 * @param string $post_type
+	 *
+	 * @return array Associative array of slug => translated label.
 	 */
-	public static function get_valid_payment_methods( $post_type ) {
-		$methods = array( 'Direct Deposit', 'Check', 'Wire' );
+	public static function get_payment_methods( $post_type ) {
+		$methods = array(
+			'Direct Deposit' => __( 'Direct Deposit', 'wordcamporg' ),
+			'Check'          => __( 'Check', 'wordcamporg' ),
+			'sepa_transfer'  => __( 'Euro SEPA Transfer', 'wordcamporg' ),
+			'Wire'           => __( 'Wire', 'wordcamporg' ),
+		);
 
 		if ( WCP_Payment_Request::POST_TYPE === $post_type ) {
-			$methods[] = 'Credit Card';
+			$methods['Credit Card'] = __( 'Credit Card', 'wordcamporg' );
 		}
 
+		$methods['Other'] = __( 'Other', 'wordcamporg' );
+
 		return $methods;
+	}
+
+	/**
+	 * Get the translated label for a payment method slug.
+	 *
+	 * @param string $slug Payment method slug.
+	 *
+	 * @return string Translated label, or the slug itself if not found.
+	 */
+	public static function get_payment_method_label( $slug ) {
+		$methods = self::get_payment_methods( WCP_Payment_Request::POST_TYPE );
+
+		return isset( $methods[ $slug ] ) ? $methods[ $slug ] : $slug;
+	}
+
+	/**
+	 * Get a list of valid payment method slugs.
+	 *
+	 * @param string $post_type
+	 *
+	 * @return array List of payment method slugs.
+	 */
+	public static function get_valid_payment_methods( $post_type ) {
+		return array_keys( self::get_payment_methods( $post_type ) );
 	}
 
 	/**
@@ -330,7 +364,14 @@ class WordCamp_Budgets {
 				case 'ach_routing_number':
 				case 'ach_account_number':
 				case 'ach_account_holder_name':
+				case 'sepa_account_name':
+				case 'sepa_bic':
+				case 'sepa_iban':
 					$safe_value = sanitize_text_field( $unsafe_value );
+					break;
+
+				case 'other_payment_method_note':
+					$safe_value = sanitize_textarea_field( $unsafe_value );
 					break;
 
 				case 'ach_account_type':
@@ -434,6 +475,9 @@ class WordCamp_Budgets {
 			'ach_routing_number',
 			'ach_account_number',
 			'ach_account_holder_name',
+			'sepa_account_name',
+			'sepa_bic',
+			'sepa_iban',
 		);
 	}
 
@@ -897,5 +941,133 @@ class WordCamp_Budgets {
 		$log   = json_encode( $log );
 
 		update_post_meta( $post_id, '_wcp_log', wp_slash( $log ) );
+	}
+
+	/**
+	 * Generate a SEPA Credit Transfer XML file (pain.001.003.03).
+	 *
+	 * @param array $payments Array of payment arrays with keys: amount, account_name, bic, iban, reference, invoice.
+	 *
+	 * @return string XML content.
+	 */
+	public static function generate_sepa_xml( $payments ) {
+		if ( empty( $payments ) ) {
+			return '';
+		}
+
+		$message_id    = 'WCORG-' . gmdate( 'YmdHis' ) . '-' . wp_rand( 1000, 9999 );
+		$total_amount  = 0;
+		$payment_count = count( $payments );
+
+		foreach ( $payments as $payment ) {
+			$total_amount += $payment['amount'];
+		}
+
+		$initiator_name = 'WordPress Community Support PBC';
+		$debtor_name    = $initiator_name;
+		$debtor_bic     = apply_filters( 'wcb_sepa_debtor_bic', '' );
+		$debtor_iban    = apply_filters( 'wcb_sepa_debtor_iban', '' );
+
+		$dom = new DOMDocument( '1.0', 'UTF-8' );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMDocument native property.
+		$dom->formatOutput = true;
+
+		$root = $dom->createElementNS( 'urn:iso:std:iso:20022:tech:xsd:pain.001.003.03', 'Document' );
+		$dom->appendChild( $root );
+
+		$cst_trf_init = $dom->createElement( 'CstmrCdtTrfInitn' );
+		$root->appendChild( $cst_trf_init );
+
+		// Group Header.
+		$grp_hdr = $dom->createElement( 'GrpHdr' );
+		$cst_trf_init->appendChild( $grp_hdr );
+
+		$grp_hdr->appendChild( $dom->createElement( 'MsgId', $message_id ) );
+		$grp_hdr->appendChild( $dom->createElement( 'CreDtTm', gmdate( 'Y-m-d\TH:i:s\Z' ) ) );
+		$grp_hdr->appendChild( $dom->createElement( 'NbOfTxs', $payment_count ) );
+		$grp_hdr->appendChild( $dom->createElement( 'CtrlSum', number_format( $total_amount, 2, '.', '' ) ) );
+
+		$init_pty = $dom->createElement( 'InitgPty' );
+		$init_pty->appendChild( $dom->createElement( 'Nm', $initiator_name ) );
+		$grp_hdr->appendChild( $init_pty );
+
+		// Payment Information.
+		$pmt_inf = $dom->createElement( 'PmtInf' );
+		$cst_trf_init->appendChild( $pmt_inf );
+
+		$pmt_inf->appendChild( $dom->createElement( 'PmtInfId', $message_id . '-1' ) );
+		$pmt_inf->appendChild( $dom->createElement( 'PmtMtd', 'TRF' ) );
+		$pmt_inf->appendChild( $dom->createElement( 'NbOfTxs', $payment_count ) );
+		$pmt_inf->appendChild( $dom->createElement( 'CtrlSum', number_format( $total_amount, 2, '.', '' ) ) );
+
+		$pmt_tp_inf = $dom->createElement( 'PmtTpInf' );
+		$svc_lvl    = $dom->createElement( 'SvcLvl' );
+		$svc_lvl->appendChild( $dom->createElement( 'Cd', 'SEPA' ) );
+		$pmt_tp_inf->appendChild( $svc_lvl );
+		$pmt_inf->appendChild( $pmt_tp_inf );
+
+		$pmt_inf->appendChild( $dom->createElement( 'ReqdExctnDt', gmdate( 'Y-m-d' ) ) );
+
+		$dbtr = $dom->createElement( 'Dbtr' );
+		$dbtr->appendChild( $dom->createElement( 'Nm', $debtor_name ) );
+		$pmt_inf->appendChild( $dbtr );
+
+		$dbtr_acct = $dom->createElement( 'DbtrAcct' );
+		$dbtr_id   = $dom->createElement( 'Id' );
+		$dbtr_id->appendChild( $dom->createElement( 'IBAN', $debtor_iban ) );
+		$dbtr_acct->appendChild( $dbtr_id );
+		$pmt_inf->appendChild( $dbtr_acct );
+
+		$dbtr_agt     = $dom->createElement( 'DbtrAgt' );
+		$fin_instn_id = $dom->createElement( 'FinInstnId' );
+		$fin_instn_id->appendChild( $dom->createElement( 'BIC', $debtor_bic ) );
+		$dbtr_agt->appendChild( $fin_instn_id );
+		$pmt_inf->appendChild( $dbtr_agt );
+
+		$pmt_inf->appendChild( $dom->createElement( 'ChrgBr', 'SLEV' ) );
+
+		// Individual transactions.
+		foreach ( $payments as $payment ) {
+			$tx = $dom->createElement( 'CdtTrfTxInf' );
+
+			$pmt_id   = $dom->createElement( 'PmtId' );
+			$end_to_end = substr( $payment['reference'], 0, 35 );
+			$pmt_id->appendChild( $dom->createElement( 'EndToEndId', $end_to_end ) );
+			$tx->appendChild( $pmt_id );
+
+			$amt     = $dom->createElement( 'Amt' );
+			$instd   = $dom->createElement( 'InstdAmt', number_format( $payment['amount'], 2, '.', '' ) );
+			$instd->setAttribute( 'Ccy', 'EUR' );
+			$amt->appendChild( $instd );
+			$tx->appendChild( $amt );
+
+			if ( ! empty( $payment['bic'] ) ) {
+				$cdtr_agt     = $dom->createElement( 'CdtrAgt' );
+				$cdtr_fin_id  = $dom->createElement( 'FinInstnId' );
+				$cdtr_fin_id->appendChild( $dom->createElement( 'BIC', $payment['bic'] ) );
+				$cdtr_agt->appendChild( $cdtr_fin_id );
+				$tx->appendChild( $cdtr_agt );
+			}
+
+			$cdtr = $dom->createElement( 'Cdtr' );
+			$cdtr->appendChild( $dom->createElement( 'Nm', substr( $payment['account_name'], 0, 70 ) ) );
+			$tx->appendChild( $cdtr );
+
+			$cdtr_acct = $dom->createElement( 'CdtrAcct' );
+			$cdtr_id   = $dom->createElement( 'Id' );
+			$cdtr_id->appendChild( $dom->createElement( 'IBAN', $payment['iban'] ) );
+			$cdtr_acct->appendChild( $cdtr_id );
+			$tx->appendChild( $cdtr_acct );
+
+			if ( ! empty( $payment['invoice'] ) ) {
+				$rmt_inf = $dom->createElement( 'RmtInf' );
+				$rmt_inf->appendChild( $dom->createElement( 'Ustrd', substr( $payment['invoice'], 0, 140 ) ) );
+				$tx->appendChild( $rmt_inf );
+			}
+
+			$pmt_inf->appendChild( $tx );
+		}
+
+		return $dom->saveXML();
 	}
 }

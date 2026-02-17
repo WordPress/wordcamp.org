@@ -9,6 +9,7 @@ jQuery( document ).ready( function( $ ) {
 		init : function () {
 			try {
 				app.registerEventHandlers();
+				app.setupSepaValidation();
 			} catch ( exception ) {
 				app.log( exception );
 			}
@@ -148,6 +149,86 @@ jQuery( document ).ready( function( $ ) {
 			} catch( exception ) {
 				app.log( exception );
 			}
+		},
+
+		/**
+		 * Validate an IBAN value.
+		 *
+		 * Checks format (2-letter country + 2 digits + up to 30 alphanumeric)
+		 * and verifies the MOD-97 checksum per ISO 13616.
+		 *
+		 * @param {string} iban
+		 * @return {boolean}
+		 */
+		isValidIban : function( iban ) {
+			iban = iban.replace( /\s/g, '' ).toUpperCase();
+
+			if ( ! /^[A-Z]{2}\d{2}[A-Z0-9]{4,30}$/.test( iban ) ) {
+				return false;
+			}
+
+			// Move first 4 chars to end and convert letters to numbers (A=10, B=11, etc.).
+			var rearranged = iban.slice( 4 ) + iban.slice( 0, 4 );
+			var numericStr = '';
+
+			for ( var i = 0; i < rearranged.length; i++ ) {
+				var code = rearranged.charCodeAt( i );
+
+				if ( code >= 65 && code <= 90 ) {
+					numericStr += ( code - 55 ).toString();
+				} else {
+					numericStr += rearranged[ i ];
+				}
+			}
+
+			// MOD-97 on a large number string.
+			var remainder = 0;
+
+			for ( var j = 0; j < numericStr.length; j++ ) {
+				remainder = ( remainder * 10 + parseInt( numericStr[ j ], 10 ) ) % 97;
+			}
+
+			return remainder === 1;
+		},
+
+		/**
+		 * Validate a BIC/SWIFT code.
+		 *
+		 * Format: 4 letters (bank) + 2 letters (country) + 2 alphanumeric (location)
+		 * + optional 3 alphanumeric (branch).
+		 *
+		 * @param {string} bic
+		 * @return {boolean}
+		 */
+		isValidBic : function( bic ) {
+			return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test( bic.replace( /\s/g, '' ).toUpperCase() );
+		},
+
+		/**
+		 * Attach blur validation to SEPA IBAN and BIC fields.
+		 */
+		setupSepaValidation : function() {
+			$( '#sepa_iban' ).on( 'blur', function() {
+				var val = $( this ).val().trim();
+
+				if ( val && ! app.isValidIban( val ) ) {
+					this.setCustomValidity( 'Please enter a valid IBAN.' );
+					this.reportValidity();
+				} else {
+					this.setCustomValidity( '' );
+				}
+			} );
+
+			$( '#sepa_bic' ).on( 'blur', function() {
+				var val = $( this ).val().trim();
+
+				if ( val && ! app.isValidBic( val ) ) {
+					this.setCustomValidity( 'Please enter a valid BIC/SWIFT code (8 or 11 characters).' );
+					this.reportValidity();
+				} else {
+					this.setCustomValidity( '' );
+				}
+			} );
 		},
 
 		/**

@@ -16,6 +16,7 @@ WordPress Multisite application powering WordCamp.org. The codebase lives under 
 - **`@wordpress/scripts` 26.18.0** across all workspaces (provides webpack, eslint, jest, stylelint)
 - Line length: 115 characters (enforced by eslint, stylelint, and prettier)
 - Text domain: `wordcamporg`
+- Short array syntax (`[]`) is used throughout, not `array()`
 
 ### Workspaces
 
@@ -56,9 +57,18 @@ yarn workspace wordcamp-blocks run test  # Run Jest tests (only workspace with J
 - Prettier: root `.prettierrc.js` extends `@wordpress/scripts/config/.prettierrc.js`
 - Each workspace references the root configs via relative paths (e.g. `"extends": "../../../../.eslintrc.js"`)
 
+### ESLint Specifics
+
+Key rule overrides in `.eslintrc.js` to be aware of:
+- `id-length`: minimum 3 chars (exceptions: `__`, `_n`, `_x`, `id`, `a`, `b`, `i`, `$`)
+- `camelcase`: off (REST API properties use snake_case)
+- `sort-imports`: member sorting enforced, declaration sorting ignored (to allow External/WordPress/Internal grouping)
+- `object-shorthand`: `consistent-as-needed`
+- `react/no-multi-comp`: one component per file (stateless exceptions allowed)
+
 ## PHP
 
-- **PHP 8.1+** minimum
+- **PHP 8.1+** minimum — modern PHP syntax is preferred (named arguments, match expressions, null-safe operator, readonly properties, etc.)
 - **Composer** with vendor dir at `public_html/wp-content/mu-plugins/vendor`
 - **PHPUnit 9** with WordPress test suite integration (multisite enabled)
 - **WPCS** (WordPress Coding Standards) via phpcs
@@ -70,6 +80,10 @@ composer install               # Install PHP dependencies
 composer lint                  # Run phpcs
 composer format                # Run phpcbf auto-fixer
 composer test                  # Run PHPUnit
+composer test -- --filter=test_function_name       # Run a single test
+composer test -- --testsuite="CampTix"             # Run a specific test suite
+composer test:watch            # Watch mode (requires tty)
+composer phpcs-changed         # Lint only changed lines vs production (what CI runs)
 ```
 
 ### PHPUnit Test Suites
@@ -79,9 +93,20 @@ Defined in `phpunit.xml.dist`, bootstrapped by `phpunit-bootstrap.php`:
 - WordCamp Post Types (`wc-post-types`), WordCamp Post Type (`wcpt`)
 - WordCamp Remote CSS, WordCamp Speaker Feedback
 
+Test files must be prefixed with `test-` (e.g. `test-something.php`). The bootstrap sets up a multisite environment with specific blog/network IDs defined as constants (`WORDCAMP_NETWORK_ID`, `WORDCAMP_ROOT_BLOG_ID`, etc.).
+
 ### CI Linting (PHP)
 
-The linter workflow runs `phpcs-changed` via `.github/bin/phpcs-branch.php`, which only reports violations on changed lines relative to `production`. New files are linted in full.
+The linter workflow runs `phpcs-changed` via `.github/bin/phpcs-branch.php`, which only reports violations on changed lines relative to `production`. New files are linted in full. This means existing code may have violations that won't trigger CI failures unless you modify those lines.
+
+### PHPCS Specifics
+
+Key rule exclusions in `phpcs.xml.dist` to be aware of:
+- Short ternary (`?:`) is allowed
+- `trigger_error()` and `print_r()` are allowed
+- Precision alignment is allowed (for readable code alignment)
+- Short array syntax (`[]`) is preferred over `array()`
+- No prefix requirements for globals (impractical for this codebase)
 
 ## CI (GitHub Actions)
 

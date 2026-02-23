@@ -148,25 +148,18 @@ function get_renamed_site_url( string $domain, string $path ) {
 
 	$old_home_url = 'https://' . $domain . trailingslashit( $path );
 
-	// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
-	$blog_id = $wpdb->get_var( $wpdb->prepare(
-		"SELECT blog_id FROM {$wpdb->blogmeta}
-		WHERE meta_key = 'old_home_url' AND meta_value = %s
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
+	$site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT b.domain, b.path
+		FROM {$wpdb->blogmeta} bm
+		JOIN {$wpdb->blogs} b ON b.blog_id = bm.blog_id
+		WHERE bm.meta_key = 'old_home_url'
+			AND bm.meta_value = %s
+			AND b.public = 1
+			AND b.deleted = 0
 		LIMIT 1",
 		$old_home_url
 	) );
-
-	if ( ! $blog_id ) {
-		return false;
-	}
-
-	$site = $wpdb->get_row( $wpdb->prepare(
-		"SELECT domain, path FROM {$wpdb->blogs}
-		WHERE blog_id = %d AND public = 1 AND deleted = 0
-		LIMIT 1",
-		$blog_id
-	) );
-	// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 	if ( ! $site ) {
 		return false;

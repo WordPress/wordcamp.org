@@ -138,7 +138,7 @@ class Test_Sunrise_Events_Database extends Database_TestCase {
 	 * @dataProvider data_get_latest_event_url
 	 */
 	public function test_get_latest_event_url( $request_path, $expected ) {
-		$actual = get_latest_event_url( $request_path, 'events.wordpress.test' );
+		$actual = get_latest_event_url( $request_path, get_network( EVENTS_NETWORK_ID )->domain );
 
 		$this->assertSame( $expected, $actual );
 	}

@@ -18,6 +18,7 @@ use WordCamp\Tests\Database_TestCase;
 use function WordCamp\Sunrise\{
 	get_canonical_year_url, get_post_slug_url_without_duplicate_dates, guess_requested_domain_path,
 	get_corrected_root_relative_url, get_city_slash_year_url, domain_redirects, root_redirects,
+	get_renamed_site_url,
 };
 
 defined( 'WPINC' ) || die();
@@ -668,6 +669,44 @@ class Test_Sunrise extends Database_TestCase {
 				'/',
 				'/2020/2019/save-the-date-for-wordcamp-vancouver-2020/',
 				false,
+			),
+		);
+	}
+
+	/**
+	 * @covers WordCamp\Sunrise\get_renamed_site_url
+	 *
+	 * @dataProvider data_get_renamed_site_url
+	 */
+	public function test_get_renamed_site_url( $domain, $path, $expected ) {
+		$actual = get_renamed_site_url( $domain, $path );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_renamed_site_url().
+	 *
+	 * @return array
+	 */
+	public function data_get_renamed_site_url() {
+		return array(
+			'old WordCamp URL redirects to current site' => array(
+				'vancouver.wordcamp.test',
+				'/2019/',
+				'https://vancouver.wordcamp.test/2020/',
+			),
+
+			'unknown URL returns false' => array(
+				'narnia.wordcamp.test',
+				'/2025/',
+				false,
+			),
+
+			'old Events URL redirects to current site' => array(
+				'events.wordpress.test',
+				'/rome/2023/training/',
+				'https://events.wordpress.test/rome/2024/training/',
 			),
 		);
 	}

@@ -54,4 +54,74 @@ class Test_Sunrise_Events extends WP_UnitTestCase {
 			),
 		);
 	}
+
+	/**
+	 * @covers WordCamp\Site_URL_History\store_old_url_on_rename
+	 */
+	public function test_store_old_url_on_rename_saves_meta() {
+		$site_id = self::factory()->blog->create( array(
+			'domain'     => 'events.wordpress.test',
+			'path'       => '/testcity/2025/meetup/',
+			'network_id' => EVENTS_NETWORK_ID,
+		) );
+
+		// Simulate a path rename.
+		wp_update_site( $site_id, array( 'path' => '/testcity/2026/meetup/' ) );
+
+		$old_urls = get_site_meta( $site_id, 'old_home_url' );
+
+		$this->assertContains( 'https://events.wordpress.test/testcity/2025/meetup/', $old_urls );
+
+		wp_delete_site( $site_id );
+	}
+
+	/**
+	 * @covers WordCamp\Site_URL_History\store_old_url_on_rename
+	 */
+	public function test_store_old_url_on_rename_skips_when_unchanged() {
+		$site_id = self::factory()->blog->create( array(
+			'domain'     => 'events.wordpress.test',
+			'path'       => '/testcity/2025/workshop/',
+			'network_id' => EVENTS_NETWORK_ID,
+		) );
+
+		// Update something other than domain/path.
+		wp_update_site( $site_id, array( 'public' => 0 ) );
+
+		$old_urls = get_site_meta( $site_id, 'old_home_url' );
+
+		$this->assertEmpty( $old_urls );
+
+		wp_delete_site( $site_id );
+	}
+
+	/**
+	 * @covers WordCamp\Site_URL_History\store_old_url_on_rename
+	 */
+	public function test_store_old_url_on_rename_no_duplicates() {
+		$site_id = self::factory()->blog->create( array(
+			'domain'     => 'events.wordpress.test',
+			'path'       => '/testcity/2025/conference/',
+			'network_id' => EVENTS_NETWORK_ID,
+		) );
+
+		// Rename, then rename back, then rename again to trigger duplicate attempt.
+		wp_update_site( $site_id, array( 'path' => '/testcity/2026/conference/' ) );
+		wp_update_site( $site_id, array( 'path' => '/testcity/2025/conference/' ) );
+		wp_update_site( $site_id, array( 'path' => '/testcity/2026/conference/' ) );
+
+		$old_urls = get_site_meta( $site_id, 'old_home_url' );
+		$original_count = count(
+			array_filter(
+				$old_urls,
+				function ( $url ) {
+					return 'https://events.wordpress.test/testcity/2025/conference/' === $url;
+				}
+			)
+		);
+
+		$this->assertSame( 1, $original_count );
+
+		wp_delete_site( $site_id );
+	}
 }

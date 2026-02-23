@@ -120,10 +120,14 @@ function set_network_and_site() {
 			exit;
 		}
 
-		// Otherwise, redirect to the campus connect page.
-		header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
-		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
-		exit;
+		if ( defined( 'NOBLOGREDIRECT' ) ) {
+			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
+			header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
+			exit;
+		}
+
+		// No redirect available; fall back to the root site and let WordPress handle the 404.
+		$current_blog = WP_Site::get_instance( BLOG_ID_CURRENT_SITE );
 	}
 
 	$blog_id = $current_blog->id;

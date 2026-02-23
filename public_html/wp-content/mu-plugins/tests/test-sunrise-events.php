@@ -12,6 +12,7 @@
 
 namespace WordCamp\Sunrise\Events;
 use WP_UnitTestCase;
+use WordCamp\Tests\Database_TestCase;
 
 defined( 'WPINC' ) || die();
 
@@ -123,5 +124,51 @@ class Test_Sunrise_Events extends WP_UnitTestCase {
 		$this->assertSame( 1, $original_count );
 
 		wp_delete_site( $site_id );
+	}
+}
+
+/**
+ * @group sunrise
+ * @group mu-plugins
+ */
+class Test_Sunrise_Events_Database extends Database_TestCase {
+	/**
+	 * @covers WordCamp\Sunrise\Events\get_latest_event_url
+	 *
+	 * @dataProvider data_get_latest_event_url
+	 */
+	public function test_get_latest_event_url( $request_path, $expected ) {
+		$actual = get_latest_event_url( $request_path );
+
+		$this->assertSame( $expected, $actual );
+	}
+
+	/**
+	 * Test cases for test_get_latest_event_url().
+	 *
+	 * @return array
+	 */
+	public function data_get_latest_event_url() {
+		return array(
+			'old year redirects to latest year' => array(
+				'/rome/2023/training/',
+				'https://events.wordpress.test/rome/2024/training/',
+			),
+
+			'current year does not redirect' => array(
+				'/rome/2024/training/',
+				false,
+			),
+
+			'unknown city returns false' => array(
+				'/narnia/2023/meetup/',
+				false,
+			),
+
+			'non-matching path returns false' => array(
+				'/some-page/',
+				false,
+			),
+		);
 	}
 }

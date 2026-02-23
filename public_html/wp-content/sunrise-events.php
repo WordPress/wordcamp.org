@@ -107,6 +107,15 @@ function set_network_and_site() {
 			exit;
 		}
 
+		// Try to redirect to the latest year for the same city/type.
+		$latest_url = get_latest_event_url( $path );
+
+		if ( $latest_url ) {
+			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site (latest year)' );
+			header( 'Location: ' . $latest_url, true, 301 );
+			exit;
+		}
+
 		// Otherwise, redirect to the campus connect page.
 		header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
 		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
@@ -116,6 +125,54 @@ function set_network_and_site() {
 	$blog_id = $current_blog->id;
 	$domain  = $current_blog->domain;
 	$public  = $current_blog->public;
+}
+
+/**
+ * Get the URL of the latest event site matching the same city and type.
+ *
+ * For example, `/vancouver/2023/diversity-day/` redirects to `/vancouver/2025/diversity-day/`
+ * if 2025 is the latest year with that city/type combination.
+ *
+ * @param string $request_path The request URI path.
+ *
+ * @return string|false The URL to redirect to, or false if no match found.
+ */
+function get_latest_event_url( string $request_path ) {
+	global $wpdb;
+
+	if ( ! preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $request_path, $matches ) ) {
+		return false;
+	}
+
+	$city = $matches[1];
+	$type = $matches[3];
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
+	$latest_site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT `domain`, `path`
+		FROM `$wpdb->blogs`
+		WHERE
+			`domain` = %s AND
+			`path` LIKE %s AND
+			`public` = 1 AND
+			`deleted` = 0
+		ORDER BY `path` DESC
+		LIMIT 1",
+		DOMAIN_CURRENT_SITE,
+		$wpdb->esc_like( "/$city/" ) . '%/' . $wpdb->esc_like( "$type/" )
+	) );
+
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	// Don't redirect to the exact same path that was requested.
+	$requested_path = rtrim( $request_path, '/' ) . '/';
+	if ( $latest_site->path === $requested_path ) {
+		return false;
+	}
+
+	return 'https://' . $latest_site->domain . $latest_site->path;
 }
 
 /**

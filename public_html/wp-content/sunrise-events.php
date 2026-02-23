@@ -82,6 +82,10 @@ function set_network_and_site() {
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 3 );
 
+		if ( $current_blog && '/' === $current_blog->path ) {
+			// We found the root site, not a matching site.
+			$current_blog = false;
+		}
 	} elseif (
 		CAMPUS_NETWORK_ID === $site_id &&
 		1 === preg_match( PATTERN_CITY_PATH, $path )

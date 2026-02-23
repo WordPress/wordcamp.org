@@ -131,7 +131,7 @@ class Test_Sunrise_Events extends Database_TestCase {
 	 * @dataProvider data_get_latest_event_url
 	 */
 	public function test_get_latest_event_url( $request_path, $expected ) {
-		$actual = get_latest_event_url( $request_path, get_network( EVENTS_NETWORK_ID )->domain );
+		$actual = get_latest_event_url( $request_path );
 
 		$this->assertSame( $expected, $actual );
 	}

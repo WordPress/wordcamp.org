@@ -108,7 +108,7 @@ function set_network_and_site() {
 		}
 
 		// Try to redirect to the latest year for the same city/type.
-		$latest_url = get_latest_event_url( $path, DOMAIN_CURRENT_SITE );
+		$latest_url = get_latest_event_url( $path );
 
 		if ( $latest_url ) {
 			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site (latest year)' );
@@ -137,15 +137,16 @@ function set_network_and_site() {
  *
  * @return string|false The URL to redirect to, or false if no match found.
  */
-function get_latest_event_url( string $request_path, string $domain ) {
+function get_latest_event_url( string $request_path ) {
 	global $wpdb;
 
 	if ( ! preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $request_path, $matches ) ) {
 		return false;
 	}
 
-	$city = $matches[1];
-	$type = $matches[3];
+	$city   = $matches[1];
+	$type   = $matches[3];
+	$domain = defined( 'DOMAIN_CURRENT_SITE' ) ? DOMAIN_CURRENT_SITE : get_network( EVENTS_NETWORK_ID )->domain;
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
 	$latest_site = $wpdb->get_row( $wpdb->prepare(

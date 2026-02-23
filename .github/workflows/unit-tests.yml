@@ -7,12 +7,14 @@ on:
     - public_html/**
     - .github/workflows/**
     - phpunit.*
+    - composer.json
   push:
     branches: [production]
     paths:
     - public_html/**
     - .github/workflows/**
     - phpunit.*
+    - composer.json
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

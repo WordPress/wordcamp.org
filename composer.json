@@ -33,20 +33,21 @@
 			"url": "git@github.com:WordPress/wporg-parent-2021.git"
 		},
 		{
-			"type": "composer",
-			"url": "https://wpackagist.org/",
-			"only": [
-				"wpackagist-plugin/*",
-				"wpackagist-theme/*"
-			]
-		},
-		{
 			"type": "vcs",
 			"url": "https://github.com/WordPress/wporg-mu-plugins.git"
 		},
 		{
 			"type": "package",
 			"package": [
+				{
+					"name": "wordpress-plugin/akismet",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/akismet.latest-stable.zip"
+					}
+				},
 				{
 					"name": "wordpress-plugin/bbpress",
 					"type": "wordpress-plugin",
@@ -58,43 +59,165 @@
 					}
 				},
 				{
-					"name": "wordpress-plugin/camptix-bd-payments",
+					"name": "wordpress-plugin/classic-editor",
 					"type": "wordpress-plugin",
-					"version": "1.2",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/bd-payments-camptix/",
-						"reference": "tags/1.2/"
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/classic-editor.latest-stable.zip"
 					}
 				},
 				{
-					"name": "wordpress-plugin/camptix-mercadopago",
+					"name": "wordpress-plugin/custom-content-width",
 					"type": "wordpress-plugin",
-					"version": "1.0.6",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/camptix-mercadopago/",
-						"reference": "tags/1.0.6/"
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/custom-content-width.latest-stable.zip"
 					}
 				},
 				{
-					"name": "wordpress-plugin/camptix-paystack",
+					"name": "wordpress-plugin/edit-flow",
 					"type": "wordpress-plugin",
-					"version": "1.0.0",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/tbz-camptix-paystack/",
-						"reference": "tags/1.0.0/"
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/edit-flow.latest-stable.zip"
 					}
 				},
 				{
-					"name": "wordpress-plugin/camptix-paynow",
+					"name": "wordpress-plugin/email-post-changes",
 					"type": "wordpress-plugin",
-					"version": "1.0.4",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/gateway-camptix-paynow-payment/",
-						"reference": "tags/1.0.4/"
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/email-post-changes.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/gutenberg",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/gutenberg.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/jetpack",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/jetpack.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/liveblog",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/liveblog.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/public-post-preview",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/public-post-preview.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/pwa",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/pwa.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/tagregator",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/tagregator.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/wordpress-importer",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/wordpress-importer.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/wp-cldr",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/wp-cldr.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-plugin/wp-super-cache",
+					"type": "wordpress-plugin",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/plugin/wp-super-cache.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-theme/p2",
+					"type": "wordpress-theme",
+					"version": "1.5.8",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/theme/p2.1.5.8.zip"
+					}
+				},
+				{
+					"name": "wordpress-theme/twentyten",
+					"type": "wordpress-theme",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/theme/twentyten.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-theme/twentytwentytwo",
+					"type": "wordpress-theme",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/theme/twentytwentytwo.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-theme/twentytwentythree",
+					"type": "wordpress-theme",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/theme/twentytwentythree.latest-stable.zip"
+					}
+				},
+				{
+					"name": "wordpress-theme/twentytwentyfour",
+					"type": "wordpress-theme",
+					"version": "999",
+					"dist": {
+						"type": "zip",
+						"url": "https://downloads.wordpress.org/theme/twentytwentyfour.latest-stable.zip"
 					}
 				},
 				{
@@ -124,37 +247,28 @@
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^4.0",
 		"composer/installers": "^2.2",
-		"wpackagist-plugin/akismet": "*",
-		"wordpress-plugin/bbpress": "2.6.*",
-		"wordpress-plugin/camptix-bd-payments": "1.2",
-		"wordpress-plugin/camptix-mercadopago": "1.0.6",
-		"wpackagist-plugin/camptix-pagseguro": "*",
-		"wpackagist-plugin/camptix-payfast-gateway": "*",
-		"wpackagist-plugin/camptix-trustcard": "*",
-		"wpackagist-plugin/camptix-trustpay": "*",
-		"wordpress-plugin/camptix-paystack": "1.0.0",
-		"wordpress-plugin/camptix-paynow": "1.0.4",
-		"wpackagist-plugin/classic-editor": "dev-trunk",
-		"wpackagist-plugin/custom-content-width": "*",
-		"wpackagist-plugin/edit-flow": "*",
-		"wpackagist-plugin/email-post-changes": "dev-trunk",
-		"wpackagist-plugin/gutenberg": "*",
-		"wpackagist-plugin/jetpack": "*",
-		"wpackagist-plugin/liveblog": "*",
-		"wpackagist-plugin/public-post-preview": "*",
-		"wpackagist-plugin/pwa": "*",
-		"wpackagist-plugin/supportflow": "dev-trunk",
-		"wpackagist-plugin/tagregator": "dev-trunk",
-		"wpackagist-plugin/wordpress-importer": "*",
-		"wpackagist-plugin/wp-cldr": "*",
-		"wpackagist-plugin/wp-super-cache": "*",
-		"wordpress-meta/wporg-profiles-wp-activity-notifier": "1.1",
+		"wordpress-plugin/akismet": "*",
+		"wordpress-plugin/bbpress": "*",
+		"wordpress-plugin/classic-editor": "*",
+		"wordpress-plugin/custom-content-width": "*",
+		"wordpress-plugin/edit-flow": "*",
+		"wordpress-plugin/email-post-changes": "*",
+		"wordpress-plugin/gutenberg": "*",
+		"wordpress-plugin/jetpack": "*",
+		"wordpress-plugin/liveblog": "*",
+		"wordpress-plugin/public-post-preview": "*",
+		"wordpress-plugin/pwa": "*",
+		"wordpress-plugin/tagregator": "*",
+		"wordpress-plugin/wordpress-importer": "*",
+		"wordpress-plugin/wp-cldr": "*",
+		"wordpress-plugin/wp-super-cache": "*",
+		"wordpress-meta/wporg-profiles-wp-activity-notifier": "*",
 		"wporg/wporg-mu-plugins": "dev-build",
-		"wpackagist-theme/p2": "*",
-		"wpackagist-theme/twentyten": "*",
-		"wpackagist-theme/twentytwentytwo": "*",
-		"wpackagist-theme/twentytwentythree": "*",
-		"wpackagist-theme/twentytwentyfour": "*",
+		"wordpress-theme/p2": "*",
+		"wordpress-theme/twentyten": "*",
+		"wordpress-theme/twentytwentytwo": "*",
+		"wordpress-theme/twentytwentythree": "*",
+		"wordpress-theme/twentytwentyfour": "*",
 		"quickbooks/v3-php-sdk": "*"
 	},
 	"scripts": {

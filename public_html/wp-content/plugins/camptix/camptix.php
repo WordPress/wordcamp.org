@@ -6625,18 +6625,20 @@ class CampTix_Plugin {
 			die();
 		}
 
-		if ( ! $this->options['refunds_enabled'] && ! current_user_can( $this->caps['manage_attendees'] ) ) {
-			$this->error_flags['invalid_access_token'] = true;
-			$this->redirect_with_error_flags();
-			die();
-		}
+		// If the user can't manage attendees, then we'll check that refunds are enabled, and they're within the refund window.
+		if ( ! current_user_can( $this->caps['manage_attendees'] ) ) {
+			if ( ! $this->options['refunds_enabled'] ) {
+				$this->error_flags['invalid_access_token'] = true;
+				$this->redirect_with_error_flags();
+				die();
+			}
 
-		$today = date( 'Y-m-d' );
-		$refunds_until = $this->options['refunds_date_end'];
-		if ( ! strtotime( $refunds_until ) || strtotime( $refunds_until ) < strtotime( $today ) ) {
-			$this->error_flags['cannot_refund'] = true;
-			$this->redirect_with_error_flags();
-			die();
+			$refunds_until = $this->options['refunds_date_end'];
+			if ( ! strtotime( $refunds_until ) || strtotime( $refunds_until ) < time() ) {
+				$this->error_flags['cannot_refund'] = true;
+				$this->redirect_with_error_flags();
+				die();
+			}
 		}
 
 		$access_token = $_REQUEST['tix_access_token'];

@@ -9,6 +9,8 @@
  */
 
 class CampTix_Addon_Shortcodes extends CampTix_Addon {
+	private $did_shortcode_private_template_redirect;
+
 	/**
 	 * Runs during camptix_init, @see CampTix_Addon
 	 */

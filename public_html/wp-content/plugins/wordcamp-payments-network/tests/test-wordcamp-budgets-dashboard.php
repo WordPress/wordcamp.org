@@ -197,7 +197,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
 				'mime_type' => 'application/xml',
 				'callback'  => 'WordCamp\Budgets_Dashboard\_generate_payment_report_sepa',
-				'filename'  => 'wordcamp-payments-%s-%s-sepa.xml',
+				'filename'  => 'WordCampPayments%s%sSEPA.xml',
 			),
 		);
 
@@ -240,7 +240,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 				'label'     => 'SEPA Credit Transfer (ISO 20022 XML)',
 				'mime_type' => 'application/xml',
 				'callback'  => 'WordCamp\Budgets_Dashboard\_generate_payment_report_sepa',
-				'filename'  => 'wordcamp-payments-%s-%s-sepa.xml',
+				'filename'  => 'WordCampPayments%s%sSEPA.xml',
 			),
 		);
 

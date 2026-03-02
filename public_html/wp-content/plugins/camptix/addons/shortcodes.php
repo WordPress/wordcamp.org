@@ -9,7 +9,7 @@
  */
 
 class CampTix_Addon_Shortcodes extends CampTix_Addon {
-	private $did_shortcode_private_template_redirect;
+	protected bool $did_shortcode_private_template_redirect = false;
 
 	/**
 	 * Runs during camptix_init, @see CampTix_Addon
@@ -429,7 +429,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 		global $camptix;
 
 		// Indicates this function did run, nothing more.
-		$this->did_shortcode_private_template_redirect = 1;
+		$this->did_shortcode_private_template_redirect = true;
 
 		if ( isset( $_POST['tix_private_shortcode_submit'] ) ) {
 			$email = isset( $_POST['tix_email'] ) ? trim( stripslashes( $_POST['tix_email'] ) ) : '';
@@ -496,7 +496,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	public function shortcode_private( $atts, $content ) {
 		global $camptix;
 
-		if ( ! isset( $this->did_shortcode_private_template_redirect ) ) {
+		if ( ! $this->did_shortcode_private_template_redirect ) {
 			return __( 'An error has occurred.', 'wordcamporg' );
 		}
 

@@ -132,6 +132,7 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 		$this->current_index_row = $item;
 
 		switch_to_blog( $item->blog_id );
+		restore_previous_locale();
 
 		$request = get_post( $item->request_id );
 		parent::single_row( $request );

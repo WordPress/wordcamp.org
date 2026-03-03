@@ -387,9 +387,14 @@ class WCP_Payment_Request {
 	 * @param string  $name
 	 * @param bool    $required
 	 */
-	protected function render_select_input( $post, $label, $name, $required = true ) {
+	protected function render_select_input( $post, $label, $name, $required = true, $default = '' ) {
 		$selected = get_post_meta( $post->ID, '_camppayments_' . $name, true );
-		$options  = $this->get_field_value( $name, $post );
+
+		if ( empty( $selected ) && '' !== $default ) {
+			$selected = $default;
+		}
+
+		$options = $this->get_field_value( $name, $post );
 
 		require dirname( __DIR__ ) . '/views/payment-request/input-select.php';
 	}

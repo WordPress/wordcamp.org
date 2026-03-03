@@ -340,16 +340,7 @@ function render_sponsor_invoice_metabox( $post ) {
 	$amount               = get_post_meta( $post->ID, '_wcbsi_amount',          true );
 
 	if ( 'add' === $current_screen->action && isset( $_GET['sponsor_id'] ) ) {
-		$sponsor_id          = absint( $_GET['sponsor_id'] );
-		$selected_sponsor_id = $sponsor_id;
-
-		if ( empty( $amount ) ) {
-			$amount = get_post_meta( $sponsor_id, '_wcb_sponsor_amount', true );
-		}
-
-		if ( empty( $selected_currency ) ) {
-			$selected_currency = get_post_meta( $sponsor_id, '_wcb_sponsor_currency', true );
-		}
+		$selected_sponsor_id = absint( $_GET['sponsor_id'] );
 	}
 
 	if ( empty( $selected_currency ) ) {

@@ -163,7 +163,8 @@ jQuery( document ).ready( function( $ ) {
 		isValidIban : function( iban ) {
 			iban = iban.replace( /\s/g, '' ).toUpperCase();
 
-			if ( ! /^[A-Z]{2}\d{2}[A-Z0-9]{4,30}$/.test( iban ) ) {
+			// Minimum IBAN length is 15 (Norway), maximum is 34.
+			if ( ! /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test( iban ) ) {
 				return false;
 			}
 
@@ -208,11 +209,13 @@ jQuery( document ).ready( function( $ ) {
 		 * Attach blur validation to SEPA IBAN and BIC fields.
 		 */
 		setupSepaValidation : function() {
+			$( '#sepa_iban' ).attr( 'minlength', 15 );
+
 			$( '#sepa_iban' ).on( 'blur', function() {
 				var val = $( this ).val().trim();
 
 				if ( val && ! app.isValidIban( val ) ) {
-					this.setCustomValidity( 'Please enter a valid IBAN.' );
+					this.setCustomValidity( 'Please enter a valid IBAN (minimum 15 characters).' );
 					this.reportValidity();
 				} else {
 					this.setCustomValidity( '' );

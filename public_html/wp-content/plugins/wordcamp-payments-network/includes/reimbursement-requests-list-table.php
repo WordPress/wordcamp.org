@@ -149,6 +149,10 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 	protected function column_date_requested( $post ) {
 		$timestamp = strtotime( $post->post_date_gmt );
 
+		if ( ! $timestamp || $timestamp < 0 ) {
+			return '';
+		}
+
 		if ( $timestamp >= time() - MONTH_IN_SECONDS ) {
 			return sprintf(
 				'<span title="%s">%s</span>',

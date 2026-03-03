@@ -348,7 +348,7 @@ function render_general_information_metabox( $post ) {
 	$other_reason      = get_post_meta( $post->ID, '_wcbrr_reason_other',   true );
 	$date_paid         = get_post_meta( $post->ID, '_wcbrr_date_paid',      true );
 
-	if ( empty ( $name_of_payer ) ) {
+	if ( empty( $name_of_payer ) ) {
 		$name_of_payer = \WordCamp_Budgets::get_requester_name( $post->post_author );
 	}
 

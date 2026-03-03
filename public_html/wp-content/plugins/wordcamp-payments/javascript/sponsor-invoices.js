@@ -43,7 +43,7 @@ jQuery( document ).ready( function( $ ) {
 					return;
 				}
 
-				if ( info.amount && ! $( '#_wcbsi_amount' ).val() ) {
+				if ( info.amount ) {
 					$( '#_wcbsi_amount' ).val( info.amount );
 				}
 

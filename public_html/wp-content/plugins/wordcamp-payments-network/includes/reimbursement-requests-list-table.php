@@ -129,8 +129,6 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 	 * @param object $item
 	 */
 	public function single_row( $item ) {
-		$this->current_index_row = $item;
-
 		switch_to_blog( $item->blog_id );
 		restore_previous_locale();
 
@@ -143,14 +141,14 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 	/**
 	 * Render the value for the Requested column.
 	 *
-	 * Uses the index row's date_requested directly, no blog switch needed.
+	 * Note: Runs in a switch_to_blog() context.
 	 *
 	 * @param \WP_Post $post
 	 *
 	 * @return string
 	 */
 	protected function column_date_requested( $post ) {
-		$timestamp = $this->current_index_row->date_requested;
+		$timestamp = strtotime( $post->post_date_gmt );
 
 		if ( $timestamp >= time() - MONTH_IN_SECONDS ) {
 			return sprintf(

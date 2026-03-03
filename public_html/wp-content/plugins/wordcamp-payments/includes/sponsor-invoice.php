@@ -240,6 +240,9 @@ function prepare_sponsor_data( $sponsor_id = null ) {
 			$data[ $sponsor->ID ]['data_attributes'][ $data_key ] = $value;
 		}
 
+		$data[ $sponsor->ID ]['data_attributes']['amount']   = $meta_values['_wcb_sponsor_amount'][0] ?? '';
+		$data[ $sponsor->ID ]['data_attributes']['currency'] = $meta_values['_wcb_sponsor_currency'][0] ?? '';
+
 		$complete = required_fields_complete( $data[ $sponsor->ID ]['data_attributes'], $required_fields );
 		$data[ $sponsor->ID ]['data_attributes']['required-fields-complete'] = $complete ? 'true' : 'false';
 	}

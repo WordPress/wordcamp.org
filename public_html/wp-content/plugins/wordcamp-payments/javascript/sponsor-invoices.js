@@ -41,8 +41,17 @@ jQuery( document ).ready( function( $ ) {
 				if ( $.isEmptyObject( info ) ) {
 					infoContainer.html( '' );
 					return;
+				}
 
-				} else if ( info.requiredFieldsComplete ) {
+				if ( info.amount && ! $( '#_wcbsi_amount' ).val() ) {
+					$( '#_wcbsi_amount' ).val( info.amount );
+				}
+
+				if ( info.currency && ! $( '#_wcbsi_currency' ).val() ) {
+					$( '#_wcbsi_currency' ).val( info.currency ).trigger( 'change' );
+				}
+
+				if ( info.requiredFieldsComplete ) {
 					// todo add info.hasOwnProperty() check
 					infoTemplate = wp.template( 'wcbsi-sponsor-information' );
 

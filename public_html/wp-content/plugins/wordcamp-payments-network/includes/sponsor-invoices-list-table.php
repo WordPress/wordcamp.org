@@ -32,9 +32,8 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 	 */
 	protected function get_sortable_columns() {
 		return array(
-			'wordcamp_name' => array( 'wordcamp_name', false ),
-			'amount'        => array( 'amount', false ),
-			'modified'      => array( 'last_modified', true, '', '', true ),
+			'amount'   => array( 'amount', false ),
+			'modified' => array( 'last_modified', true, '', '', true ),
 		);
 	}
 
@@ -65,7 +64,7 @@ class Sponsor_Invoices_List_Table extends \WP_List_Table {
 		$paged         = isset( $_REQUEST['paged'] ) ? absint( $_REQUEST['paged'] ) : 1;
 		$limit         = 30;
 		$offset        = $limit * ( $paged - 1 );
-		$valid_orderby = array( 'wordcamp_name', 'amount', 'last_modified' );
+		$valid_orderby = array( 'amount', 'last_modified' );
 
 		$orderby = isset( $_REQUEST['orderby'] ) && in_array( $_REQUEST['orderby'], $valid_orderby, true )
 			? $_REQUEST['orderby']

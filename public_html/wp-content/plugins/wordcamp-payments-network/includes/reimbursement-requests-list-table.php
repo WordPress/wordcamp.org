@@ -34,7 +34,6 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 	 */
 	protected function get_sortable_columns() {
 		return array(
-			'wordcamp_name'  => array( 'wordcamp_name', false ),
 			'amount'         => array( 'amount', false ),
 			'date_requested' => array( 'date_requested', true, '', '', true ),
 		);
@@ -68,7 +67,7 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 		$limit         = 30;
 		$offset        = $limit * ( $paged - 1 );
 		$search        = '';
-		$valid_orderby = array( 'wordcamp_name', 'amount', 'date_requested' );
+		$valid_orderby = array( 'amount', 'date_requested' );
 
 		$orderby = isset( $_REQUEST['orderby'] ) && in_array( $_REQUEST['orderby'], $valid_orderby, true )
 			? $_REQUEST['orderby']

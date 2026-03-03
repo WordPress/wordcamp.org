@@ -47,7 +47,7 @@ jQuery( document ).ready( function( $ ) {
 					$( '#_wcbsi_amount' ).val( info.amount );
 				}
 
-				if ( info.currency && ! $( '#_wcbsi_currency' ).val() ) {
+				if ( info.currency ) {
 					$( '#_wcbsi_currency' ).val( info.currency ).trigger( 'change' );
 				}
 

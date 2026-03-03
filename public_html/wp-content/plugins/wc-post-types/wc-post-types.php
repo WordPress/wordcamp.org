@@ -1239,6 +1239,11 @@ class WordCamp_Post_Types_Plugin {
 		$country         = get_post_meta( $sponsor->ID, '_wcpt_sponsor_country',         true );
 		$first_time      = get_post_meta( $sponsor->ID, '_wcb_sponsor_first_time',       true );
 
+		if ( empty( $currency ) ) {
+			$camptix_options = get_option( 'camptix_options', array() );
+			$currency        = $camptix_options['currency'] ?? '';
+		}
+
 		if ( $state === $this->get_sponsor_info_state_default_value() ) {
 			$state = '';
 		}

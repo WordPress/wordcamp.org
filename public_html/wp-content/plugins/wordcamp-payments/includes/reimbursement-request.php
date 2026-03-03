@@ -344,15 +344,14 @@ function render_general_information_metabox( $post ) {
 
 	$name_of_payer     = get_post_meta( $post->ID, '_wcbrr_name_of_payer',  true );
 	$selected_currency = get_post_meta( $post->ID, '_wcbrr_currency',       true );
+	$selected_reason   = get_post_meta( $post->ID, '_wcbrr_reason',         true );
+	$other_reason      = get_post_meta( $post->ID, '_wcbrr_reason_other',   true );
+	$date_paid         = get_post_meta( $post->ID, '_wcbrr_date_paid',      true );
 
 	if ( empty( $selected_currency ) ) {
 		$camptix_options   = get_option( 'camptix_options', array() );
 		$selected_currency = $camptix_options['currency'] ?? '';
 	}
-
-	$selected_reason   = get_post_meta( $post->ID, '_wcbrr_reason',         true );
-	$other_reason      = get_post_meta( $post->ID, '_wcbrr_reason_other',   true );
-	$date_paid         = get_post_meta( $post->ID, '_wcbrr_date_paid',      true );
 
 	if ( empty ( $name_of_payer ) ) {
 		$name_of_payer = \WordCamp_Budgets::get_requester_name( $post->post_author );

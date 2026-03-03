@@ -333,14 +333,13 @@ function render_sponsor_invoice_metabox( $post ) {
 	$selected_sponsor_id  = get_post_meta( $post->ID, '_wcbsi_sponsor_id',      true );
 	$selected_class_id    = get_post_meta( $post->ID, '_wcbsi_qbo_class_id',    true );
 	$selected_currency    = get_post_meta( $post->ID, '_wcbsi_currency',        true );
+	$description          = get_post_meta( $post->ID, '_wcbsi_description',     true );
+	$amount               = get_post_meta( $post->ID, '_wcbsi_amount',          true );
 
 	if ( empty( $selected_currency ) ) {
 		$camptix_options   = get_option( 'camptix_options', array() );
 		$selected_currency = $camptix_options['currency'] ?? '';
 	}
-
-	$description          = get_post_meta( $post->ID, '_wcbsi_description',     true );
-	$amount               = get_post_meta( $post->ID, '_wcbsi_amount',          true );
 
 	if ( 'add' === $current_screen->action && isset( $_GET['sponsor_id'] ) ) {
 		$selected_sponsor_id = absint( $_GET['sponsor_id'] );

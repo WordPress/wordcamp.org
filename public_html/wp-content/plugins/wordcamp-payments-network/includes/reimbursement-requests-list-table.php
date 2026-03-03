@@ -150,6 +150,10 @@ class Reimbursement_Requests_List_Table extends WP_List_Table {
 		$timestamp = strtotime( $post->post_date_gmt );
 
 		if ( ! $timestamp || $timestamp < 0 ) {
+			$timestamp = strtotime( $post->post_date );
+		}
+
+		if ( ! $timestamp || $timestamp < 0 ) {
 			return '';
 		}
 

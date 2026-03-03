@@ -339,11 +339,6 @@ function render_sponsor_invoice_metabox( $post ) {
 	$description          = get_post_meta( $post->ID, '_wcbsi_description',     true );
 	$amount               = get_post_meta( $post->ID, '_wcbsi_amount',          true );
 
-	if ( empty( $selected_currency ) ) {
-		$camptix_options   = get_option( 'camptix_options', array() );
-		$selected_currency = $camptix_options['currency'] ?? '';
-	}
-
 	if ( 'add' === $current_screen->action && isset( $_GET['sponsor_id'] ) ) {
 		$sponsor_id          = absint( $_GET['sponsor_id'] );
 		$selected_sponsor_id = $sponsor_id;
@@ -355,6 +350,11 @@ function render_sponsor_invoice_metabox( $post ) {
 		if ( empty( $selected_currency ) ) {
 			$selected_currency = get_post_meta( $sponsor_id, '_wcb_sponsor_currency', true );
 		}
+	}
+
+	if ( empty( $selected_currency ) ) {
+		$camptix_options   = get_option( 'camptix_options', array() );
+		$selected_currency = $camptix_options['currency'] ?? '';
 	}
 
 	require_once dirname( __DIR__ ) . '/views/sponsor-invoice/metabox-general.php';

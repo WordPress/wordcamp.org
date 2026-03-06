@@ -364,7 +364,7 @@ class WCOR_Mailer {
 			'[venue_contact_info]',
 			'[venue_exhibition_space_message]',
 
-			// Mentor
+			// Mentor.
 			'[mentor_name]',
 			'[mentor_email]',
 
@@ -437,7 +437,7 @@ class WCOR_Mailer {
 			empty( $wordcamp_meta['Contact Information'][0] ) ? 'N/A' : $wordcamp_meta['Contact Information'][0],
 			empty( $wordcamp_meta['Exhibition Space Available'][0] ) ? 'This event has no exhibition space.' : 'This event might have exhibition space available, please check with the organizers for more information.',
 
-			// Mentor
+			// Mentor.
 			$wordcamp_meta['Mentor Name'][0] ?? '',
 			$wordcamp_meta['Mentor E-mail Address'][0] ?? '',
 

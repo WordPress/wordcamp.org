@@ -341,7 +341,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 	 * @covers WCOR_Mailer::send_trigger_mentor_assigned_or_changed
 	 */
 	public function test_mentor_trigger_sends_to_mentor() {
-		/** @var WCOR_Mailer $WCOR_Mailer */
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
 		global $WCOR_Mailer;
 
 		$mentor_reminder_id = self::factory()->post->create(

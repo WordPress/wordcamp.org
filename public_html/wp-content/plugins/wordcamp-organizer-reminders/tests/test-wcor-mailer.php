@@ -363,7 +363,7 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		$this->assert_mail_succeeded(
 			'jane.mentor@example.com',
 			'You have been assigned as mentor for WordCamp Dayton',
-			'Hi Jane Mentor, you have been assigned as mentor. Your email on file is jane.mentor@example.com.'
+			'Hi Jane Mentor, you have been assigned as mentor. Your email on file is <a href="mailto:jane.mentor@example.com">jane.mentor@example.com</a>.'
 		);
 	}
 

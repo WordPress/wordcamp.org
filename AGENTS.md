@@ -95,6 +95,18 @@ docker compose -f docker-compose.phpunit.yml stop
 - Do not duplicate tests — only test things that make a difference to the application.
 - Test files live alongside their plugin code in a `tests/` directory.
 
+## Pull Request Requirements
+
+PRs should include:
+
+- **Summary:** Bullet points describing what changed and why.
+- **Fixes/issue reference:** Link to the GitHub issue if applicable (e.g. `Fixes #1234`).
+- **Changes table** (for larger PRs): A table mapping files to what changed in each.
+- **Screenshots** (for UI changes): Descriptions or images showing the visual changes.
+- **Test plan:** A checklist of manual testing steps a reviewer can follow to verify the changes.
+
+Keep the title short (under 70 characters). Use the body for detail.
+
 ## Coding Standards
 
 - Follow WordPress Coding Standards (PHPCS enforced in CI).

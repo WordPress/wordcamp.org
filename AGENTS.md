@@ -30,6 +30,14 @@ public_html/
 
 The project uses Docker for local development. Full setup instructions are in `.docker/readme.md`.
 
+### Prerequisites
+
+- Docker installed and running
+- WordPress core cloned into `public_html/mu` (check out latest version branch, e.g. `6.9`)
+- PHP dependencies installed: `composer install` (from project root)
+- JS dependencies: `nvm use 20 && yarn && yarn workspaces run build`
+- SSL certs generated in `.docker/` (see `.docker/readme.md` step 3)
+
 ### Quick Start
 
 ```bash

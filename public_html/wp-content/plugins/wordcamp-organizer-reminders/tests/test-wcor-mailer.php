@@ -108,6 +108,9 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)',        strtotime( 'Jan 1st, 2019' )             );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler Name',           'Sally Smith'                            );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler E-mail Address', 'sally.smith+trez@gmail.com'             );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor WordPress.org User Name', 'mentorjane'                             );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor Name',                    'Jane Mentor'                            );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor E-mail Address',          'jane.mentor@example.com'                );
 
 		self::$other_event_post_id = $factory->post->create(
 			array(
@@ -329,6 +332,38 @@ class Test_WCOR_Mailer extends Database_TestCase {
 			'This reminder is not for WordCamps',
 			"<p>So it should not be sent to WordCamp.</p>\n",
 			$result
+		);
+	}
+
+	/**
+	 * Test that mentor-triggered reminders are sent to the mentor.
+	 *
+	 * @covers WCOR_Mailer::send_trigger_mentor_assigned_or_changed
+	 */
+	public function test_mentor_trigger_sends_to_mentor() {
+		/** @var WCOR_Mailer $WCOR_Mailer */
+		global $WCOR_Mailer;
+
+		$mentor_reminder_id = self::factory()->post->create(
+			array(
+				'post_type'    => WCOR_Reminder::AUTOMATED_POST_TYPE_SLUG,
+				'post_title'   => 'You have been assigned as mentor for [wordcamp_name]',
+				'post_content' => 'Hi [mentor_name], you have been assigned as mentor. Your email on file is [mentor_email].',
+			)
+		);
+
+		update_post_meta( $mentor_reminder_id, 'wcor_send_when',      'wcor_send_trigger'                );
+		update_post_meta( $mentor_reminder_id, 'wcor_which_trigger',  'wcor_mentor_assigned_or_changed'  );
+		update_post_meta( $mentor_reminder_id, 'wcor_send_where',     'wcor_send_mentor'                 );
+
+		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
+
+		do_action( 'wcor_mentor_assigned_or_changed', $wordcamp );
+
+		$this->assert_mail_succeeded(
+			'jane.mentor@example.com',
+			'You have been assigned as mentor for WordCamp Dayton',
+			'Hi Jane Mentor, you have been assigned as mentor. Your email on file is jane.mentor@example.com.'
 		);
 	}
 

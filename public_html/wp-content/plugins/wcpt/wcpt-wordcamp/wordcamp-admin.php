@@ -57,7 +57,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ), 11 );
 			add_action( 'wcpt_close_wordcamps_after_event', array( $this, 'close_wordcamps_after_event' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_venue_address' ), 10, 2 );
-			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ) );
+			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ), 10, 2 );
 
 			add_action( 'parse_query', array( $this, 'default_sortby' ), 9 );
 			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
@@ -169,11 +169,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Update mentor username.
+		 * Update mentor username, and fire the mentor assigned/changed trigger if the mentor has changed.
 		 *
-		 * @param int $post_id
+		 * @param int   $post_id
+		 * @param array $original_meta_values Original meta values before save.
 		 */
-		public function update_mentor( $post_id ) {
+		public function update_mentor( $post_id, $original_meta_values = array() ) {
 			if ( $this->get_event_type() !== get_post_type() ) {
 				return;
 			}
@@ -182,6 +183,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ];
 
 			$this->add_mentor( get_post( $post_id ), $username );
+
+			$old_username = $original_meta_values['Mentor WordPress.org User Name'][0] ?? '';
+
+			if ( ! empty( $username ) && $username !== $old_username ) {
+				do_action( 'wcor_mentor_assigned_or_changed', get_post( $post_id ) );
+			}
 		}
 
 		/**

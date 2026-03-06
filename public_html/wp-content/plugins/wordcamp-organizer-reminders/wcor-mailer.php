@@ -63,8 +63,9 @@ class WCOR_Mailer {
 			),
 
 			'wcor_mentor_assigned_or_changed' => array(
-				'name'     => 'When Mentor is assigned / changed',
-				'actions'  => array(
+				'name'       => 'When Mentor is assigned / changed',
+				'repeatable' => true,
+				'actions'    => array(
 					array(
 						'name'       => 'wcor_mentor_assigned_or_changed',
 						'callback'   => 'send_trigger_mentor_assigned_or_changed',
@@ -970,13 +971,14 @@ class WCOR_Mailer {
 	protected function send_triggered_emails( $wordcamp, $trigger ) {
 		$sent_email_ids = (array) get_post_meta( $wordcamp->ID, 'wcor_sent_email_ids', true );
 		$emails         = $this->get_triggered_posts( $trigger );
+		$is_repeatable  = ! empty( $this->triggers[ $trigger ]['repeatable'] );
 
 		foreach( $emails as $email ) {
 			if ( ! $this->applies_to_wordcamp( $wordcamp, $email ) ) {
 				continue;
 			}
 
-			if ( in_array( $email->ID, $sent_email_ids ) ) {
+			if ( ! $is_repeatable && in_array( $email->ID, $sent_email_ids ) ) {
 				continue;
 			}
 

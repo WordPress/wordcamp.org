@@ -91,7 +91,7 @@ docker compose -f docker-compose.phpunit.yml stop
 
 ### Test Guidelines
 
-- Prefer integration tests over unit tests. WordPress.org primarily uses integration tests.
+- Use both unit tests and integration tests where appropriate.
 - Do not duplicate tests — only test things that make a difference to the application.
 - Test files live alongside their plugin code in a `tests/` directory.
 

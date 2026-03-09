@@ -5,7 +5,7 @@
  */
 class WordCamp_Budgets {
 	public const VERSION                       = '0.1.4';
-	public const PAYMENT_INFO_RETENTION_PERIOD = 7; // days
+	public const PAYMENT_INFO_RETENTION_PERIOD = 7; // Days.
 
 	public const VIEWER_CAP = 'publish_posts';
 	public const ADMIN_CAP  = 'manage_options';

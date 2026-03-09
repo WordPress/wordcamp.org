@@ -88,6 +88,10 @@
 	<!-- WordCamp runs recent versions of WordPress. -->
 	<config name="minimum_wp_version" value="6.8"/>
 
+	<!-- Check for PHP cross-version compatibility. -->
+	<config name="testVersion" value="8.4-"/>
+	<rule ref="PHPCompatibilityWP"/>
+
 	<rule ref="WordPress-Core">
 		<!-- I don't see anything wrong with this :) -->
 		<exclude name="Squiz.PHP.EmbeddedPhp.ContentAfterOpen" />

@@ -444,11 +444,11 @@ class WordCamp_Details extends Base_Details {
 	 * Fetch the input parameters for the report.
 	 */
 	public static function get_report_inputs() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
+		$start_date = sanitize_text_field( wp_unslash( $_POST['start-date'] ?? '' ) );
+		$end_date   = sanitize_text_field( wp_unslash( $_POST['end-date'] ?? '' ) );
 		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, static::$slug . '-nonce' );
+		$action     = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$nonce      = wp_unslash( $_POST[ static::$slug . '-nonce' ] ?? '' );
 
 		$error = null;
 		$range = null;

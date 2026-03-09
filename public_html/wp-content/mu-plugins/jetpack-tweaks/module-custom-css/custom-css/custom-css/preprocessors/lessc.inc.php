@@ -46,6 +46,12 @@ class lessc {
 	protected $registeredVars = array();
 	protected $preserveComments = false;
 
+	protected $env = null;
+	protected $scope = null;
+	protected $formatter = null;
+	protected $_parseFile = null;
+	protected $formatterName = null;
+
 	public $vPrefix = '@'; // prefix of abstract properties
 	public $mPrefix = '$'; // prefix of abstract blocks
 	public $parentSelector = '&';
@@ -2276,6 +2282,15 @@ class lessc {
 class lessc_parser {
 	static protected $nextBlockId = 0; // used to uniquely identify blocks
 
+	public $eatWhiteDefault = true;
+	public $lessc;
+	public $sourceName = null;
+	public $writeComments = false;
+	public $count = 0;
+	public $line = 1;
+	public $buffer = '';
+	public $seenComments = array();
+
 	static protected $precedence = array(
 		'=<' => 0,
 		'>=' => 0,
@@ -3661,6 +3676,7 @@ class lessc_parser {
 
 class lessc_formatter_classic {
 	public $indentChar = "  ";
+	public $indentLevel = 0;
 
 	public $break = "\n";
 	public $open = " {";

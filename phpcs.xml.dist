@@ -199,5 +199,9 @@
 
 		<!-- We're going to see more of ?? (which this doesn't cover), might as well allow ?: when suitable. -->
 		<exclude name="Universal.Operators.DisallowShortTernary" />
+
+		<!-- Nonce verification is handled at a higher level in many cases, or is intentionally absent (e.g., read-only requests). -->
+		<exclude name="WordPress.Security.NonceVerification.Missing" />
+		<exclude name="WordPress.Security.NonceVerification.Recommended" />
 	</rule>
 </ruleset>

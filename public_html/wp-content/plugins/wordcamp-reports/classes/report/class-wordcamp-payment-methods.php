@@ -302,11 +302,11 @@ class WordCamp_Payment_Methods extends Date_Range {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date  = sanitize_text_field( wp_unslash( $_POST['start-date'] ?? '' ) );
-		$end_date    = sanitize_text_field( wp_unslash( $_POST['end-date'] ?? '' ) );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
 		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
 		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;

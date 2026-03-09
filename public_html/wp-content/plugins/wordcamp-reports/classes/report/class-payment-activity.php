@@ -555,11 +555,11 @@ class Payment_Activity extends Date_Range {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date  = sanitize_text_field( wp_unslash( $_POST['start-date'] ?? '' ) );
-		$end_date    = sanitize_text_field( wp_unslash( $_POST['end-date'] ?? '' ) );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
 		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
 		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
@@ -593,11 +593,11 @@ class Payment_Activity extends Date_Range {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date  = sanitize_text_field( wp_unslash( $_POST['start-date'] ?? '' ) );
-		$end_date    = sanitize_text_field( wp_unslash( $_POST['end-date'] ?? '' ) );
+		$start_date  = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date    = wp_unslash( $_POST['end-date'] ?? '' );
 		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 		$refresh     = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action      = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
 		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
@@ -681,9 +681,9 @@ class Payment_Activity extends Date_Range {
 	public static function render_public_page() {
 		// Apparently 'year' is a reserved URL parameter on the front end, so we prepend 'report-'.
 		$year        = filter_input( INPUT_GET, 'report-year', FILTER_VALIDATE_INT );
-		$period      = sanitize_text_field( wp_unslash( $_GET['period'] ?? '' ) );
+		$period      = wp_unslash( $_GET['period'] ?? '' );
 		$wordcamp_id = absint( $_GET['wordcamp-id'] ?? 0 );
-		$action      = sanitize_text_field( wp_unslash( $_GET['action'] ?? '' ) );
+		$action      = wp_unslash( $_GET['action'] ?? '' );
 
 		$years    = self::year_array( absint( date( 'Y' ) ), 2015 );
 		$quarters = self::quarter_array();

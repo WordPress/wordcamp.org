@@ -235,7 +235,7 @@ class Meetup_Sponsors extends Base {
 	public static function render_admin_page() {
 		$refresh      = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
 		$plus_network = filter_input( INPUT_POST, 'include-network', FILTER_VALIDATE_BOOLEAN );
-		$action       = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action       = wp_unslash( $_POST['action'] ?? '' );
 		$nonce        = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
@@ -268,7 +268,7 @@ class Meetup_Sponsors extends Base {
 	public static function export_to_file() {
 		$refresh      = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
 		$plus_network = filter_input( INPUT_POST, 'include-network', FILTER_VALIDATE_BOOLEAN );
-		$action       = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action       = wp_unslash( $_POST['action'] ?? '' );
 		$nonce        = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;

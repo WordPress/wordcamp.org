@@ -296,10 +296,10 @@ class Meetup_Groups extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date = sanitize_text_field( wp_unslash( $_POST['start-date'] ?? '' ) );
-		$end_date   = sanitize_text_field( wp_unslash( $_POST['end-date'] ?? '' ) );
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
 		$nonce      = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
@@ -328,10 +328,10 @@ class Meetup_Groups extends Base {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date = sanitize_text_field( wp_unslash( $_POST['start-date'] ?? '' ) );
-		$end_date   = sanitize_text_field( wp_unslash( $_POST['end-date'] ?? '' ) );
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
 		$nonce      = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
@@ -406,8 +406,8 @@ class Meetup_Groups extends Base {
 	public static function render_public_page() {
 		// Apparently 'year' is a reserved URL parameter on the front end, so we prepend 'report-'.
 		$year   = filter_input( INPUT_GET, 'report-year', FILTER_VALIDATE_INT );
-		$period = sanitize_text_field( wp_unslash( $_GET['period'] ?? '' ) );
-		$action = sanitize_text_field( wp_unslash( $_GET['action'] ?? '' ) );
+		$period = wp_unslash( $_GET['period'] ?? '' );
+		$action = wp_unslash( $_GET['action'] ?? '' );
 
 		$years    = year_array( absint( date( 'Y' ) ), 2015 );
 		$quarters = quarter_array();

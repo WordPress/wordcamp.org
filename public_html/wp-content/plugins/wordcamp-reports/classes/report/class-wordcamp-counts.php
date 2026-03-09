@@ -752,12 +752,12 @@ class WordCamp_Counts extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date     = sanitize_text_field( wp_unslash( $_POST['start-date'] ?? '' ) );
-		$end_date       = sanitize_text_field( wp_unslash( $_POST['end-date'] ?? '' ) );
+		$start_date     = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date       = wp_unslash( $_POST['end-date'] ?? '' );
 		$statuses       = filter_input( INPUT_POST, 'statuses', FILTER_DEFAULT, FILTER_REQUIRE_ARRAY ) ?: array();
 		$include_gender = filter_input( INPUT_POST, 'include-gender', FILTER_VALIDATE_BOOLEAN );
 		$refresh        = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action         = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action         = wp_unslash( $_POST['action'] ?? '' );
 		$nonce          = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$all_statuses = WordCamp_Loader::get_post_statuses();

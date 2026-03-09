@@ -70,9 +70,9 @@ function handle_form_post() {
 		return;
 	}
 
-	$cmd = sanitize_text_field( wp_unslash( $_POST['cmd'] ?? '' ) );
+	$cmd = wp_unslash( $_POST['cmd'] ?? '' );
 	if ( ! $cmd ) {
-		$cmd = sanitize_text_field( wp_unslash( $_GET['cmd'] ?? '' ) );
+		$cmd = wp_unslash( $_GET['cmd'] ?? '' );
 	}
 
 	$nonce = wp_unslash( $_POST[ PLUGIN_PREFIX . '_oauth_' . $cmd ] ?? '' );

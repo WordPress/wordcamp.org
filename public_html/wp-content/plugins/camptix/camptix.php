@@ -1806,7 +1806,7 @@ class CampTix_Plugin {
 	 */
 	public function admin_notice_supported_currencies() {
 		global $pagenow;
-		$page = sanitize_text_field( wp_unslash( $_GET['page'] ?? '' ) );
+		$page = wp_unslash( $_GET['page'] ?? '' );
 
 		if ( 'edit.php' !== $pagenow || 'camptix_options' !== $page ) {
 			return;

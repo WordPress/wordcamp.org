@@ -331,7 +331,7 @@ class Sponsor_Details extends Base {
 	 */
 	public static function export_to_file() {
 		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
-		$action      = sanitize_text_field( wp_unslash( $_POST['action'] ?? '' ) );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
 		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;

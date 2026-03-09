@@ -792,7 +792,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @param int    $post_id
 		 */
 		public function column_data( $column, $post_id ) {
-			$post_type = sanitize_text_field( wp_unslash( $_GET['post_type'] ?? '' ) );
+			$post_type = wp_unslash( $_GET['post_type'] ?? '' );
 			if ( WCPT_POST_TYPE_ID !== $post_type ) {
 				return $column;
 			}

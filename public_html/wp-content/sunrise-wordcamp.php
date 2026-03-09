@@ -567,7 +567,7 @@ function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer
 	 */
 	$referer_site_path = $referer_matches[4];
 
-	if ( (int) filter_var( $referer_site_path, FILTER_SANITIZE_NUMBER_INT ) >= 2021 ) {
+	if ( (int) $referer_site_path >= 2021 ) {
 		return false;
 	}
 

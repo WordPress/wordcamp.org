@@ -1806,7 +1806,7 @@ class CampTix_Plugin {
 	 */
 	public function admin_notice_supported_currencies() {
 		global $pagenow;
-		$page = filter_input( INPUT_GET, 'page' );
+		$page = sanitize_text_field( wp_unslash( $_GET['page'] ?? '' ) );
 
 		if ( 'edit.php' !== $pagenow || 'camptix_options' !== $page ) {
 			return;
@@ -5527,7 +5527,7 @@ class CampTix_Plugin {
 
 		$this->did_template_redirect = true;
 
-		$tix_action = filter_input( INPUT_GET, 'tix_action' );
+		$tix_action = sanitize_text_field( wp_unslash( $_GET['tix_action'] ?? '' ) );
 
 		if ( isset( $this->error_flags['no_payment_methods'] ) ) {
 			// Don't go past the start form if no payment methods are enabled.

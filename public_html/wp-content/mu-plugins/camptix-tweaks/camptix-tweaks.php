@@ -594,7 +594,7 @@ function load_custom_addons() {
 
 	// Payment options.
 	if (
-		in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true ) &&
+		in_array( sanitize_text_field( wp_unslash( $_GET['tix_action'] ?? '' ) ), array( 'attendee_info', 'checkout' ), true ) &&
 		! wcorg_skip_feature( 'camptix_payment_options' )
 	) {
 		require_once __DIR__ . '/addons/class-payment-options.php';

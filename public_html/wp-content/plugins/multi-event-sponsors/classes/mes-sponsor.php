@@ -400,7 +400,7 @@ class MES_Sponsor {
 			}
 		}
 
-		$sponsor_agreement = filter_input( INPUT_POST, '_wcpt_sponsor_agreement', FILTER_SANITIZE_NUMBER_INT );
+		$sponsor_agreement = absint( $_POST['_wcpt_sponsor_agreement'] ?? 0 );
 		if ( $sponsor_agreement ) {
 			update_post_meta( $post_id, 'mes_sponsor_agreement', $sponsor_agreement );
 		}

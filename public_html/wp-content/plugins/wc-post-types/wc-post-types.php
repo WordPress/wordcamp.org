@@ -1367,7 +1367,7 @@ class WordCamp_Post_Types_Plugin {
 			return;
 		}
 
-		if ( wp_verify_nonce( filter_input( INPUT_POST, 'wcpt-meta-sponsor-info' ), 'edit-sponsor-info' ) ) {
+		if ( wp_verify_nonce( wp_unslash( $_POST['wcpt-meta-sponsor-info'] ?? '' ), 'edit-sponsor-info' ) ) {
 			$text_values_wcpt = array(
 				'company_name',
 				'first_name',
@@ -1391,22 +1391,22 @@ class WordCamp_Post_Types_Plugin {
 			);
 
 			foreach ( $text_values_wcpt as $id ) {
-				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcpt_sponsor_' . $id ) );
+				$values[ $id ] = sanitize_text_field( wp_unslash( $_POST[ '_wcpt_sponsor_' . $id ] ?? '' ) );
 			}
 
 			foreach ( $text_values_wcb as $id ) {
-				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcb_sponsor_' . $id ) );
+				$values[ $id ] = sanitize_text_field( wp_unslash( $_POST[ '_wcb_sponsor_' . $id ] ?? '' ) );
 			}
 
 			if ( empty( $values['state'] ) ) {
 				$values['state'] = $this->get_sponsor_info_state_default_value();
 			}
 
-			$values['website'] = esc_url_raw( filter_input( INPUT_POST, '_wcpt_sponsor_website' ) );
+			$values['website'] = esc_url_raw( wp_unslash( $_POST['_wcpt_sponsor_website'] ?? '' ) );
 			// TODO: maybe only allows links to home page, depending on outcome of http://make.wordpress.org/community/2013/12/31/irs-rules-for-corporate-sponsorship-of-wordcamp/ .
 			$values['first_name'] = ucfirst( $values['first_name'] );
 			$values['last_name']  = ucfirst( $values['last_name'] );
-			$values['agreement']  = filter_input( INPUT_POST, '_wcpt_sponsor_agreement', FILTER_SANITIZE_NUMBER_INT );
+			$values['agreement']  = absint( $_POST['_wcpt_sponsor_agreement'] ?? 0 );
 
 			foreach ( $values as $id => $value ) {
 				$meta_key = in_array($id, $text_values_wcb, true)

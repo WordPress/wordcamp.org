@@ -75,7 +75,7 @@ class Meetup_Details extends Base_Details {
 	 *     @type array $fields        Not implemented yet.
 	 * }
 	 */
-	public function __construct( Date_Range $date_range = null, $meetup_ids = null, array $options = array() ) {
+	public function __construct( ?Date_Range $date_range = null, $meetup_ids = null, array $options = array() ) {
 		// Report-specific options.
 		$options = wp_parse_args( $options,
 			array(

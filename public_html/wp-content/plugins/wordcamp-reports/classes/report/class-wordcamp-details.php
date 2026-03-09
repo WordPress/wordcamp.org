@@ -89,7 +89,7 @@ class WordCamp_Details extends Base_Details {
 	 *     @type array $fields        Not implemented yet.
 	 * }
 	 */
-	public function __construct( Date_Range $date_range = null, array $wordcamp_ids = null, $include_counts = false, array $options = array() ) {
+	public function __construct( ?Date_Range $date_range = null, ?array $wordcamp_ids = null, $include_counts = false, array $options = array() ) {
 		// Report-specific options.
 
 		parent::__construct( $date_range, $wordcamp_ids, $options );

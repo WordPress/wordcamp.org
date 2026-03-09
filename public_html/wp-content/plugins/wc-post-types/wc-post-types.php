@@ -28,7 +28,7 @@ use function WordCamp\Blocks\has_block_with_attrs;
 class WordCamp_Post_Types_Plugin {
 	protected $wcpt_permalinks;
 
-	const SESSION_DEFAULT_DURATION = 50 * MINUTE_IN_SECONDS;
+	public const SESSION_DEFAULT_DURATION = 50 * MINUTE_IN_SECONDS;
 
 	/**
 	 * Fired when plugin file is loaded.

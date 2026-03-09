@@ -8,7 +8,7 @@ use WordPressdotorg\MU_Plugins\Utilities;
 class WCP_Payment_Request {
 	var $meta_key_prefix = 'camppayments'; // Dirty hack so that Payment Method metabox rendering can be reused by other modules
 
-	const POST_TYPE = 'wcp_payment_request';
+	public const POST_TYPE = 'wcp_payment_request';
 
 	// @see https://core.trac.wordpress.org/ticket/19074
 	public static $transition_post_status = array();

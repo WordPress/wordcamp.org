@@ -11,7 +11,7 @@ class WordCamp_Application extends Event_Application {
 
 	public $post;
 
-	const SHORTCODE_SLUG = 'wordcamp-organizer-application';
+	public const SHORTCODE_SLUG = 'wordcamp-organizer-application';
 
 	/**
 	 * Return publicly displayed name of the event

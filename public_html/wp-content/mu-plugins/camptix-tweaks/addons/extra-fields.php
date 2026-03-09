@@ -15,7 +15,7 @@ abstract class Extra_Fields extends CampTix_Addon {
 	 *
 	 * @var string
 	 */
-	const SLUG = '';
+	public const SLUG = '';
 
 	/**
 	 * The slug for the field, used in filter names.

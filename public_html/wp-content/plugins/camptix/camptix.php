@@ -48,13 +48,13 @@ class CampTix_Plugin {
 	// Allow others to use this.
 	public $filter_post_meta = false;
 
-	const PAYMENT_STATUS_CANCELLED = 1;
-	const PAYMENT_STATUS_COMPLETED = 2;
-	const PAYMENT_STATUS_PENDING = 3;
-	const PAYMENT_STATUS_FAILED = 4;
-	const PAYMENT_STATUS_TIMEOUT = 5;
-	const PAYMENT_STATUS_REFUNDED = 6;
-	const PAYMENT_STATUS_REFUND_FAILED = 7;
+	public const PAYMENT_STATUS_CANCELLED = 1;
+	public const PAYMENT_STATUS_COMPLETED = 2;
+	public const PAYMENT_STATUS_PENDING = 3;
+	public const PAYMENT_STATUS_FAILED = 4;
+	public const PAYMENT_STATUS_TIMEOUT = 5;
+	public const PAYMENT_STATUS_REFUNDED = 6;
+	public const PAYMENT_STATUS_REFUND_FAILED = 7;
 
 	/**
 	 * Fired as soon as this file is loaded, don't do anything

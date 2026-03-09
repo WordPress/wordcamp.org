@@ -12,7 +12,7 @@
  */
 
 class MES_Sponsor {
-	const POST_TYPE_SLUG = 'mes';
+	public const POST_TYPE_SLUG = 'mes';
 
 	/**
 	 * Constructor

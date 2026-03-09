@@ -6,8 +6,8 @@
  */
 
 class WCOR_Reminder {
-	const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
-	const REQUIRED_CAPABILITY      = 'manage_options';
+	public const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
+	public const REQUIRED_CAPABILITY      = 'manage_options';
 
 	/**
 	 * Constructor

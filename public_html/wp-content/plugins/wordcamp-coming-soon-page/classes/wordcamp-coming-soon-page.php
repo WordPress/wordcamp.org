@@ -2,7 +2,7 @@
 
 class WordCamp_Coming_Soon_Page {
 	protected $override_theme_template;
-	const VERSION = '0.2';
+	public const VERSION = '0.2';
 
 	/**
 	 * Constructor

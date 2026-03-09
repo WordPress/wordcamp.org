@@ -29,7 +29,7 @@ class WordCamp_Counts extends Base {
 	 *
 	 * @var float
 	 */
-	const GENDER_PROBABILITY_THRESHOLD = 0.9;
+	public const GENDER_PROBABILITY_THRESHOLD = 0.9;
 
 	/**
 	 * Report name.

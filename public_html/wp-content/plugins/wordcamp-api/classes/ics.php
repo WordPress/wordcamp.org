@@ -2,7 +2,7 @@
 
 class WordCamp_API_ICS {
 	public $ttl = 1; // seconds to live
-	const CLRF = "\r\n";
+	public const CLRF = "\r\n";
 
 	function __construct() {
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );

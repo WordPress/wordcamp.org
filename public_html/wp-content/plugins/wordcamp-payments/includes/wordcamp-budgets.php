@@ -4,11 +4,11 @@
  * Main class to provide functionality common to all other classes
  */
 class WordCamp_Budgets {
-	const VERSION                       = '0.1.4';
-	const PAYMENT_INFO_RETENTION_PERIOD = 7; // days
+	public const VERSION                       = '0.1.4';
+	public const PAYMENT_INFO_RETENTION_PERIOD = 7; // days
 
-	const VIEWER_CAP = 'publish_posts';
-	const ADMIN_CAP  = 'manage_options';
+	public const VIEWER_CAP = 'publish_posts';
+	public const ADMIN_CAP  = 'manage_options';
 
 	/**
 	 * Constructor

@@ -5,7 +5,7 @@
  */
 
 class Multi_Event_Sponsors {
-	const VERSION = '0.1';
+	public const VERSION = '0.1';
 
 	/**
 	 * Constructor

@@ -1,12 +1,12 @@
 <?php
 
-defined( 'WPINC' ) or die();
+defined( 'WPINC' ) || die();
 
 /**
  * Tests for CampTix_Plugin admin-related functionality.
  *
  * These integration tests cover ticket validation, coupon management,
- * stats tracking, revenue calculations, and save logic — the core
+ * stats tracking, revenue calculations, and save logic -- the core
  * admin methods that will be extracted into dedicated addon files.
  *
  * @covers CampTix_Plugin
@@ -39,22 +39,33 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	 */
 	protected static $attendees = array();
 
+	/**
+	 * Set up shared fixtures before any tests run.
+	 *
+	 * @param WP_UnitTest_Factory $factory Test factory.
+	 */
 	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
 		self::$camptix = $GLOBALS['camptix'];
 
 		// Ensure options are initialised via the public API.
-		update_option( 'camptix_options', array_merge(
-			self::$camptix->get_default_options(),
-			array(
-				'refunds_enabled'  => false,
-				'refunds_date_end' => '',
+		update_option(
+			'camptix_options',
+			array_merge(
+				self::$camptix->get_default_options(),
+				array(
+					'refunds_enabled'  => false,
+					'refunds_date_end' => '',
+				)
 			)
-		) );
+		);
 
 		// Force re-read of options on next access.
 		self::$camptix->init();
 	}
 
+	/**
+	 * Clean up after each test.
+	 */
 	public function tear_down() {
 		// Clean up posts created in individual tests.
 		foreach ( array_merge( self::$tickets, self::$coupons, self::$attendees ) as $post_id ) {
@@ -67,14 +78,11 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		parent::tear_down();
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Helper methods
-	 * -------------------------------------------------------------------------
-	 */
-
 	/**
 	 * Create a ticket post with metadata.
+	 *
+	 * @param array $args Optional ticket arguments.
+	 * @return int Post ID.
 	 */
 	protected function create_ticket( $args = array() ) {
 		$defaults = array(
@@ -84,7 +92,7 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'start'    => '',
 			'end'      => '',
 		);
-		$args = wp_parse_args( $args, $defaults );
+		$args     = wp_parse_args( $args, $defaults );
 
 		$post_id = wp_insert_post( array(
 			'post_type'   => 'tix_ticket',
@@ -104,6 +112,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 	/**
 	 * Create a coupon post with metadata.
+	 *
+	 * @param array $args Optional coupon arguments.
+	 * @return int Post ID.
 	 */
 	protected function create_coupon( $args = array() ) {
 		$defaults = array(
@@ -114,7 +125,7 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'start'          => '',
 			'end'            => '',
 		);
-		$args = wp_parse_args( $args, $defaults );
+		$args     = wp_parse_args( $args, $defaults );
 
 		$post_id = wp_insert_post( array(
 			'post_type'   => 'tix_coupon',
@@ -139,6 +150,10 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 	/**
 	 * Create an attendee post linked to a ticket.
+	 *
+	 * @param int   $ticket_id Ticket post ID.
+	 * @param array $args      Optional attendee arguments.
+	 * @return int Post ID.
 	 */
 	protected function create_attendee( $ticket_id, $args = array() ) {
 		$defaults = array(
@@ -151,7 +166,7 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'payment_method'   => '',
 			'reservation'      => '',
 		);
-		$args = wp_parse_args( $args, $defaults );
+		$args     = wp_parse_args( $args, $defaults );
 
 		$post_id = wp_insert_post( array(
 			'post_type'   => 'tix_attendee',
@@ -184,14 +199,16 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 	/**
 	 * Set up the $_POST and nonce for simulating a save_post admin action.
+	 *
+	 * @param int $post_id Post ID to simulate saving.
 	 */
 	protected function simulate_admin_save( $post_id ) {
 		$admin_user = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		wp_set_current_user( $admin_user );
 		set_current_screen( 'edit' );
 
-		$_POST['action']   = 'editpost';
-		$_POST['_wpnonce'] = wp_create_nonce( 'update-post_' . $post_id );
+		$_POST['action']      = 'editpost';
+		$_POST['_wpnonce']    = wp_create_nonce( 'update-post_' . $post_id );
 		$_REQUEST['_wpnonce'] = $_POST['_wpnonce'];
 	}
 
@@ -203,37 +220,40 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$_REQUEST = array();
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Ticket validation: is_ticket_valid_for_display()
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify a valid ticket is accepted for display.
 	 */
-
 	public function test_ticket_valid_for_display_with_valid_ticket() {
 		$ticket_id = $this->create_ticket();
 		$this->assertTrue( self::$camptix->is_ticket_valid_for_display( $ticket_id ) );
 	}
 
+	/**
+	 * Verify a non-ticket post is rejected for display.
+	 */
 	public function test_ticket_valid_for_display_with_non_ticket_post() {
 		$page_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
 		$this->assertFalse( self::$camptix->is_ticket_valid_for_display( $page_id ) );
 	}
 
+	/**
+	 * Verify an invalid post ID is rejected for display.
+	 */
 	public function test_ticket_valid_for_display_with_invalid_id() {
 		$this->assertFalse( self::$camptix->is_ticket_valid_for_display( 999999 ) );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Ticket inventory: get_remaining_tickets() & get_purchased_tickets_count()
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify remaining tickets equals quantity when no attendees exist.
 	 */
-
 	public function test_remaining_tickets_full_inventory() {
 		$ticket_id = $this->create_ticket( array( 'quantity' => 50 ) );
 		$this->assertSame( 50, self::$camptix->get_remaining_tickets( $ticket_id ) );
 	}
 
+	/**
+	 * Verify remaining tickets decreases with published attendees.
+	 */
 	public function test_remaining_tickets_decreases_with_published_attendees() {
 		$ticket_id = $this->create_ticket( array( 'quantity' => 10 ) );
 		$this->create_attendee( $ticket_id );
@@ -242,6 +262,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 8, self::$camptix->get_remaining_tickets( $ticket_id ) );
 	}
 
+	/**
+	 * Verify pending attendees count toward purchased tickets.
+	 */
 	public function test_remaining_tickets_counts_pending_attendees() {
 		$ticket_id = $this->create_ticket( array( 'quantity' => 10 ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'pending' ) );
@@ -249,6 +272,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 9, self::$camptix->get_remaining_tickets( $ticket_id ) );
 	}
 
+	/**
+	 * Verify draft attendees do not count toward purchased tickets.
+	 */
 	public function test_remaining_tickets_ignores_draft_attendees() {
 		$ticket_id = $this->create_ticket( array( 'quantity' => 10 ) );
 		$this->create_attendee( $ticket_id, array( 'status' => 'draft' ) );
@@ -256,11 +282,17 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 10, self::$camptix->get_remaining_tickets( $ticket_id ) );
 	}
 
+	/**
+	 * Verify purchased count is zero when no attendees exist.
+	 */
 	public function test_purchased_tickets_count_with_no_attendees() {
 		$ticket_id = $this->create_ticket();
 		$this->assertSame( 0, self::$camptix->get_purchased_tickets_count( $ticket_id ) );
 	}
 
+	/**
+	 * Verify only publish and pending attendees count as purchased.
+	 */
 	public function test_purchased_tickets_count_with_mixed_statuses() {
 		$ticket_id = $this->create_ticket();
 		$this->create_attendee( $ticket_id, array( 'status' => 'publish' ) );
@@ -271,6 +303,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 2, self::$camptix->get_purchased_tickets_count( $ticket_id ) );
 	}
 
+	/**
+	 * Verify purchased count can be filtered by reservation token.
+	 */
 	public function test_purchased_tickets_count_filters_by_reservation() {
 		$ticket_id = $this->create_ticket();
 		$this->create_attendee( $ticket_id, array( 'reservation' => 'res_abc' ) );
@@ -282,13 +317,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 1, self::$camptix->get_purchased_tickets_count( $ticket_id, 'res_xyz' ) );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Coupon management
-	 * -------------------------------------------------------------------------
-	 */
-
 	/**
+	 * Verify get_coupon_by_code returns the correct coupon post.
+	 *
 	 * @expectedDeprecated get_page_by_title
 	 */
 	public function test_get_coupon_by_code_returns_coupon() {
@@ -300,26 +331,40 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Verify get_coupon_by_code returns false for nonexistent codes.
+	 *
 	 * @expectedDeprecated get_page_by_title
 	 */
 	public function test_get_coupon_by_code_returns_false_for_nonexistent() {
 		$this->assertFalse( self::$camptix->get_coupon_by_code( 'DOESNOTEXIST' ) );
 	}
 
+	/**
+	 * Verify get_coupon_by_code rejects empty string input.
+	 */
 	public function test_get_coupon_by_code_rejects_empty_string() {
 		$this->assertFalse( self::$camptix->get_coupon_by_code( '' ) );
 	}
 
+	/**
+	 * Verify get_coupon_by_code rejects whitespace-only input.
+	 */
 	public function test_get_coupon_by_code_rejects_whitespace() {
 		$this->assertFalse( self::$camptix->get_coupon_by_code( '   ' ) );
 	}
 
+	/**
+	 * Verify get_coupon_by_code rejects non-string input types.
+	 */
 	public function test_get_coupon_by_code_rejects_non_string() {
 		$this->assertFalse( self::$camptix->get_coupon_by_code( 12345 ) );
 		$this->assertFalse( self::$camptix->get_coupon_by_code( null ) );
 		$this->assertFalse( self::$camptix->get_coupon_by_code( array( 'code' ) ) );
 	}
 
+	/**
+	 * Verify a valid coupon with remaining quantity is accepted.
+	 */
 	public function test_coupon_valid_for_use_with_valid_coupon() {
 		$coupon_id = $this->create_coupon( array(
 			'quantity'       => 10,
@@ -329,6 +374,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
 	}
 
+	/**
+	 * Verify a draft coupon is rejected.
+	 */
 	public function test_coupon_invalid_when_draft() {
 		$coupon_id = $this->create_coupon( array( 'discount_price' => 5.00 ) );
 		wp_update_post( array(
@@ -339,6 +387,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
 	}
 
+	/**
+	 * Verify a coupon is rejected when all uses are exhausted.
+	 */
 	public function test_coupon_invalid_when_all_used() {
 		$ticket_id = $this->create_ticket();
 		$coupon_id = $this->create_coupon( array(
@@ -346,12 +397,15 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'discount_price' => 5.00,
 		) );
 
-		// Create one attendee with this coupon — exhausts the supply.
+		// Create one attendee with this coupon -- exhausts the supply.
 		$this->create_attendee( $ticket_id, array( 'coupon_id' => $coupon_id ) );
 
 		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
 	}
 
+	/**
+	 * Verify a coupon is rejected before its start date.
+	 */
 	public function test_coupon_invalid_before_start_date() {
 		$coupon_id = $this->create_coupon( array(
 			'discount_price' => 5.00,
@@ -361,6 +415,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
 	}
 
+	/**
+	 * Verify a coupon is rejected after its end date.
+	 */
 	public function test_coupon_invalid_after_end_date() {
 		$coupon_id = $this->create_coupon( array(
 			'discount_price' => 5.00,
@@ -370,16 +427,21 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertFalse( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
 	}
 
+	/**
+	 * Verify a coupon is valid on its end date due to the +1 day grace period.
+	 */
 	public function test_coupon_valid_on_end_date() {
-		// Coupons have a +1 day grace period on the end date.
 		$coupon_id = $this->create_coupon( array(
 			'discount_price' => 5.00,
-			'end'            => gmdate( 'Y-m-d' ), // Today.
+			'end'            => gmdate( 'Y-m-d' ),
 		) );
 
 		$this->assertTrue( self::$camptix->is_coupon_valid_for_use( $coupon_id ) );
 	}
 
+	/**
+	 * Verify remaining coupons calculation after some are used.
+	 */
 	public function test_remaining_coupons_calculation() {
 		$ticket_id = $this->create_ticket();
 		$coupon_id = $this->create_coupon( array(
@@ -393,6 +455,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 3, self::$camptix->get_remaining_coupons( $coupon_id ) );
 	}
 
+	/**
+	 * Verify used coupons count excludes draft attendees.
+	 */
 	public function test_used_coupons_count() {
 		$ticket_id = $this->create_ticket();
 		$coupon_id = $this->create_coupon( array(
@@ -401,19 +466,28 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		) );
 
 		$this->create_attendee( $ticket_id, array( 'coupon_id' => $coupon_id ) );
-		$this->create_attendee( $ticket_id, array(
-			'coupon_id' => $coupon_id,
-			'status'    => 'pending',
-		) );
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'coupon_id' => $coupon_id,
+				'status'    => 'pending',
+			)
+		);
 		// Draft attendee should not count.
-		$this->create_attendee( $ticket_id, array(
-			'coupon_id' => $coupon_id,
-			'status'    => 'draft',
-		) );
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'coupon_id' => $coupon_id,
+				'status'    => 'draft',
+			)
+		);
 
 		$this->assertSame( 2, self::$camptix->get_used_coupons_count( $coupon_id ) );
 	}
 
+	/**
+	 * Verify have_coupons returns true when valid coupons exist.
+	 */
 	public function test_have_coupons_returns_true_when_valid_coupon_exists() {
 		$this->create_coupon( array(
 			'quantity'       => 5,
@@ -423,21 +497,24 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertTrue( self::$camptix->have_coupons() );
 	}
 
+	/**
+	 * Verify have_coupons returns false when no coupons exist.
+	 */
 	public function test_have_coupons_returns_false_when_no_coupons() {
 		$this->assertFalse( self::$camptix->have_coupons() );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Stats tracking
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify update_stats sets a single stat key.
 	 */
-
 	public function test_update_stats_with_single_key() {
 		self::$camptix->update_stats( 'test_sold', 42 );
 		$this->assertSame( 42, self::$camptix->get_stats( 'test_sold' ) );
 	}
 
+	/**
+	 * Verify update_stats sets multiple stat keys from an array.
+	 */
 	public function test_update_stats_with_array() {
 		self::$camptix->update_stats( array(
 			'test_sold'      => 10,
@@ -448,10 +525,16 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 90, self::$camptix->get_stats( 'test_remaining' ) );
 	}
 
+	/**
+	 * Verify get_stats returns zero for a missing key.
+	 */
 	public function test_get_stats_returns_zero_for_missing_key() {
 		$this->assertSame( 0, self::$camptix->get_stats( 'nonexistent_key_xyz' ) );
 	}
 
+	/**
+	 * Verify increment_stats adds to an existing stat value.
+	 */
 	public function test_increment_stats() {
 		self::$camptix->update_stats( 'test_inc', 5 );
 		$result = self::$camptix->increment_stats( 'test_inc', 3 );
@@ -460,6 +543,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 8, self::$camptix->get_stats( 'test_inc' ) );
 	}
 
+	/**
+	 * Verify increment_stats supports negative step values.
+	 */
 	public function test_increment_stats_with_negative_step() {
 		self::$camptix->update_stats( 'test_dec', 10 );
 		$result = self::$camptix->increment_stats( 'test_dec', -3 );
@@ -467,24 +553,27 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 7, $result );
 	}
 
+	/**
+	 * Verify increment_stats initialises a missing key to the step value.
+	 */
 	public function test_increment_stats_initialises_missing_key() {
 		$result = self::$camptix->increment_stats( 'test_new_key_' . wp_rand(), 1 );
 		$this->assertSame( 1, $result );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Status transition stats: transition_post_status()
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify publishing an attendee increments sold count and revenue.
 	 */
-
 	public function test_transition_publish_increments_sold() {
 		$ticket_id   = $this->create_ticket( array( 'price' => 20.00 ) );
-		$attendee_id = $this->create_attendee( $ticket_id, array(
-			'status'           => 'draft',
-			'ticket_price'     => 20.00,
-			'discounted_price' => 20.00,
-		) );
+		$attendee_id = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'           => 'draft',
+				'ticket_price'     => 20.00,
+				'discounted_price' => 20.00,
+			)
+		);
 
 		self::$camptix->update_stats( 'sold', 0 );
 		self::$camptix->update_stats( 'revenue', 0 );
@@ -496,12 +585,18 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 20.0, (float) self::$camptix->get_stats( 'revenue' ) );
 	}
 
+	/**
+	 * Verify unpublishing an attendee decrements sold count and revenue.
+	 */
 	public function test_transition_unpublish_decrements_sold() {
 		$ticket_id   = $this->create_ticket( array( 'price' => 15.00 ) );
-		$attendee_id = $this->create_attendee( $ticket_id, array(
-			'ticket_price'     => 15.00,
-			'discounted_price' => 15.00,
-		) );
+		$attendee_id = $this->create_attendee(
+			$ticket_id,
+			array(
+				'ticket_price'     => 15.00,
+				'discounted_price' => 15.00,
+			)
+		);
 
 		self::$camptix->update_stats( 'sold', 5 );
 		self::$camptix->update_stats( 'revenue', 75.0 );
@@ -513,6 +608,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 60.0, (float) self::$camptix->get_stats( 'revenue' ) );
 	}
 
+	/**
+	 * Verify transitioning to the same status does not change stats.
+	 */
 	public function test_transition_same_status_is_noop() {
 		$ticket_id   = $this->create_ticket();
 		$attendee_id = $this->create_attendee( $ticket_id );
@@ -525,6 +623,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 5, self::$camptix->get_stats( 'sold' ) );
 	}
 
+	/**
+	 * Verify pending-to-publish transition does not change stats.
+	 */
 	public function test_transition_pending_to_publish_is_noop() {
 		// Both are "active" statuses, no stats change expected.
 		$ticket_id   = $this->create_ticket();
@@ -539,6 +640,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 3, self::$camptix->get_stats( 'sold' ) );
 	}
 
+	/**
+	 * Verify transition ignores non-attendee post types.
+	 */
 	public function test_transition_ignores_non_attendee_posts() {
 		$page_id = self::factory()->post->create( array( 'post_type' => 'page' ) );
 
@@ -550,13 +654,19 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 5, self::$camptix->get_stats( 'sold' ) );
 	}
 
+	/**
+	 * Verify transition tracks discount amounts correctly.
+	 */
 	public function test_transition_tracks_discount() {
 		$ticket_id   = $this->create_ticket( array( 'price' => 50.00 ) );
-		$attendee_id = $this->create_attendee( $ticket_id, array(
-			'status'           => 'draft',
-			'ticket_price'     => 50.00,
-			'discounted_price' => 35.00,
-		) );
+		$attendee_id = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'           => 'draft',
+				'ticket_price'     => 50.00,
+				'discounted_price' => 35.00,
+			)
+		);
 
 		self::$camptix->update_stats( 'subtotal', 0 );
 		self::$camptix->update_stats( 'discounted', 0 );
@@ -570,6 +680,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 35.0, (float) self::$camptix->get_stats( 'revenue' ) );
 	}
 
+	/**
+	 * Verify remaining stat does not go below zero.
+	 */
 	public function test_transition_remaining_does_not_go_below_zero() {
 		$ticket_id   = $this->create_ticket();
 		$attendee_id = $this->create_attendee( $ticket_id, array( 'status' => 'draft' ) );
@@ -582,22 +695,21 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 0, self::$camptix->get_stats( 'remaining' ) );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Options validation: validate_options()
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify validate_options sanitises HTML from event name.
 	 */
-
 	public function test_validate_options_sanitises_event_name() {
 		$result = self::$camptix->validate_options( array(
 			'event_name' => '<b>WordCamp</b> Test',
 		) );
 
-		// sanitize_text_field + strip_tags removes HTML.
 		$this->assertStringNotContainsString( '<b>', $result['event_name'] );
 		$this->assertStringContainsString( 'WordCamp', $result['event_name'] );
 	}
 
+	/**
+	 * Verify validate_options rejects an invalid currency code.
+	 */
 	public function test_validate_options_rejects_invalid_currency() {
 		$result = self::$camptix->validate_options( array(
 			'currency' => 'INVALID',
@@ -607,16 +719,21 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertNotSame( 'INVALID', $result['currency'] );
 	}
 
+	/**
+	 * Verify refunds date is not saved when refunds are disabled.
+	 */
 	public function test_validate_options_refunds_date_requires_enabled() {
 		$result = self::$camptix->validate_options( array(
 			'refunds_enabled'  => false,
 			'refunds_date_end' => '2026-12-31',
 		) );
 
-		// Date should not be saved when refunds are disabled.
 		$this->assertNotSame( '2026-12-31', $result['refunds_date_end'] ?? '' );
 	}
 
+	/**
+	 * Verify refunds date is saved when refunds are enabled.
+	 */
 	public function test_validate_options_refunds_date_saved_when_enabled() {
 		$result = self::$camptix->validate_options( array(
 			'refunds_enabled'  => true,
@@ -626,6 +743,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( '2026-12-31', $result['refunds_date_end'] );
 	}
 
+	/**
+	 * Verify refunds_enabled is cast to boolean.
+	 */
 	public function test_validate_options_refunds_enabled_as_bool() {
 		$result = self::$camptix->validate_options( array(
 			'refunds_enabled' => 1,
@@ -634,12 +754,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertTrue( $result['refunds_enabled'] );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Revenue report: generate_revenue_report_data()
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify revenue report with no tickets returns zero totals.
 	 */
-
 	public function test_revenue_report_with_no_tickets() {
 		if ( ! class_exists( 'NumberFormatter' ) ) {
 			$this->markTestSkipped( 'intl extension required for currency formatting.' );
@@ -652,6 +769,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertEquals( 0, $results['totals']->revenue );
 	}
 
+	/**
+	 * Verify revenue report counts sold and remaining tickets.
+	 */
 	public function test_revenue_report_counts_sold_and_remaining() {
 		if ( ! class_exists( 'NumberFormatter' ) ) {
 			$this->markTestSkipped( 'intl extension required for currency formatting.' );
@@ -662,18 +782,24 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 			'quantity' => 10,
 		) );
 
-		$this->create_attendee( $ticket_id, array(
-			'ticket_price'     => 30.00,
-			'discounted_price' => 30.00,
-			'order_total'      => 30.00,
-			'transaction_id'   => 'txn_001',
-		) );
-		$this->create_attendee( $ticket_id, array(
-			'ticket_price'     => 30.00,
-			'discounted_price' => 30.00,
-			'order_total'      => 30.00,
-			'transaction_id'   => 'txn_002',
-		) );
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'ticket_price'     => 30.00,
+				'discounted_price' => 30.00,
+				'order_total'      => 30.00,
+				'transaction_id'   => 'txn_001',
+			)
+		);
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'ticket_price'     => 30.00,
+				'discounted_price' => 30.00,
+				'order_total'      => 30.00,
+				'transaction_id'   => 'txn_002',
+			)
+		);
 
 		$results = self::$camptix->generate_revenue_report_data();
 
@@ -683,25 +809,34 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertEquals( 60.0, $results['totals']->revenue );
 	}
 
+	/**
+	 * Verify revenue report applies fixed discount correctly.
+	 */
 	public function test_revenue_report_applies_fixed_discount() {
 		if ( ! class_exists( 'NumberFormatter' ) ) {
 			$this->markTestSkipped( 'intl extension required for currency formatting.' );
 		}
 
-		$ticket_id = $this->create_ticket( array( 'price' => 50.00, 'quantity' => 10 ) );
+		$ticket_id = $this->create_ticket( array(
+			'price'    => 50.00,
+			'quantity' => 10,
+		) );
 		$coupon_id = $this->create_coupon( array(
 			'code'           => 'FLAT10',
 			'discount_price' => 10.00,
 			'quantity'       => 10,
 		) );
 
-		$this->create_attendee( $ticket_id, array(
-			'ticket_price'     => 50.00,
-			'discounted_price' => 40.00,
-			'order_total'      => 40.00,
-			'transaction_id'   => 'txn_d1',
-			'coupon_id'        => $coupon_id,
-		) );
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'ticket_price'     => 50.00,
+				'discounted_price' => 40.00,
+				'order_total'      => 40.00,
+				'transaction_id'   => 'txn_d1',
+				'coupon_id'        => $coupon_id,
+			)
+		);
 
 		$results = self::$camptix->generate_revenue_report_data();
 
@@ -711,25 +846,34 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertEquals( 40.0, $results['totals']->revenue );
 	}
 
+	/**
+	 * Verify revenue report applies percentage discount correctly.
+	 */
 	public function test_revenue_report_applies_percentage_discount() {
 		if ( ! class_exists( 'NumberFormatter' ) ) {
 			$this->markTestSkipped( 'intl extension required for currency formatting.' );
 		}
 
-		$ticket_id = $this->create_ticket( array( 'price' => 100.00, 'quantity' => 10 ) );
+		$ticket_id = $this->create_ticket( array(
+			'price'    => 100.00,
+			'quantity' => 10,
+		) );
 		$coupon_id = $this->create_coupon( array(
 			'code'         => 'HALF',
 			'discount_pct' => 50,
 			'quantity'     => 10,
 		) );
 
-		$this->create_attendee( $ticket_id, array(
-			'ticket_price'     => 100.00,
-			'discounted_price' => 50.00,
-			'order_total'      => 50.00,
-			'transaction_id'   => 'txn_p1',
-			'coupon_id'        => $coupon_id,
-		) );
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'ticket_price'     => 100.00,
+				'discounted_price' => 50.00,
+				'order_total'      => 50.00,
+				'transaction_id'   => 'txn_p1',
+				'coupon_id'        => $coupon_id,
+			)
+		);
 
 		$results = self::$camptix->generate_revenue_report_data();
 
@@ -738,25 +882,34 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertEquals( 50.0, $results['totals']->revenue );
 	}
 
+	/**
+	 * Verify revenue report caps discount at ticket price.
+	 */
 	public function test_revenue_report_caps_discount_at_ticket_price() {
 		if ( ! class_exists( 'NumberFormatter' ) ) {
 			$this->markTestSkipped( 'intl extension required for currency formatting.' );
 		}
 
-		$ticket_id = $this->create_ticket( array( 'price' => 20.00, 'quantity' => 10 ) );
+		$ticket_id = $this->create_ticket( array(
+			'price'    => 20.00,
+			'quantity' => 10,
+		) );
 		$coupon_id = $this->create_coupon( array(
 			'code'           => 'BIGOFF',
-			'discount_price' => 50.00, // More than the ticket price.
+			'discount_price' => 50.00,
 			'quantity'       => 10,
 		) );
 
-		$this->create_attendee( $ticket_id, array(
-			'ticket_price'     => 20.00,
-			'discounted_price' => 0.00,
-			'order_total'      => 0.00,
-			'transaction_id'   => 'txn_cap',
-			'coupon_id'        => $coupon_id,
-		) );
+		$this->create_attendee(
+			$ticket_id,
+			array(
+				'ticket_price'     => 20.00,
+				'discounted_price' => 0.00,
+				'order_total'      => 0.00,
+				'transaction_id'   => 'txn_cap',
+				'coupon_id'        => $coupon_id,
+			)
+		);
 
 		$results = self::$camptix->generate_revenue_report_data();
 
@@ -765,12 +918,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertEquals( 0.0, $results['totals']->revenue );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Increment summary helper
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify increment_summary creates a new summary entry.
 	 */
-
 	public function test_increment_summary_creates_new_entry() {
 		$summary = array();
 		self::$camptix->increment_summary( $summary, 'WordPress' );
@@ -781,6 +931,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 'WordPress', $summary[ $key ]['label'] );
 	}
 
+	/**
+	 * Verify increment_summary increments count for existing entries.
+	 */
 	public function test_increment_summary_increments_existing() {
 		$summary = array();
 		self::$camptix->increment_summary( $summary, 'WordPress' );
@@ -790,6 +943,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 2, $summary[ $key ]['count'] );
 	}
 
+	/**
+	 * Verify increment_summary joins array labels with commas.
+	 */
 	public function test_increment_summary_joins_array_labels() {
 		$summary = array();
 		self::$camptix->increment_summary( $summary, array( 'Option A', 'Option B' ) );
@@ -799,12 +955,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertSame( 'Option A, Option B', $summary[ $key ]['label'] );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Coupon save logic: save_coupon_post() discount priority
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify save_coupon_post gives price priority over percent.
 	 */
-
 	public function test_save_coupon_price_priority_over_percent() {
 		$coupon_id = $this->create_coupon( array( 'code' => 'PRIO' ) );
 		$this->simulate_admin_save( $coupon_id );
@@ -814,13 +967,16 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 		self::$camptix->save_coupon_post( $coupon_id );
 
-		// Price takes priority — percent should be removed.
+		// Price takes priority -- percent should be removed.
 		$this->assertEquals( 15.0, (float) get_post_meta( $coupon_id, 'tix_discount_price', true ) );
 		$this->assertEmpty( get_post_meta( $coupon_id, 'tix_discount_percent', true ) );
 
 		$this->cleanup_post_data();
 	}
 
+	/**
+	 * Verify save_coupon_post caps percent discount at 100.
+	 */
 	public function test_save_coupon_percent_capped_at_100() {
 		$coupon_id = $this->create_coupon( array( 'code' => 'CAP' ) );
 		$this->simulate_admin_save( $coupon_id );
@@ -835,6 +991,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->cleanup_post_data();
 	}
 
+	/**
+	 * Verify save_coupon_post validates date format and rejects invalid dates.
+	 */
 	public function test_save_coupon_date_validates_format() {
 		$coupon_id = $this->create_coupon( array( 'code' => 'DATES' ) );
 		$this->simulate_admin_save( $coupon_id );
@@ -850,12 +1009,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->cleanup_post_data();
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Ticket save logic: save_ticket_post() date validation
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify save_ticket_post validates date format and rejects invalid dates.
 	 */
-
 	public function test_save_ticket_date_validation() {
 		$ticket_id = $this->create_ticket();
 		$this->simulate_admin_save( $ticket_id );
@@ -872,6 +1028,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->cleanup_post_data();
 	}
 
+	/**
+	 * Verify save_ticket_post stores price as float and quantity as int.
+	 */
 	public function test_save_ticket_price_stored_as_float() {
 		$ticket_id = $this->create_ticket();
 		$this->simulate_admin_save( $ticket_id );
@@ -887,12 +1046,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->cleanup_post_data();
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * Beta features
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify get_beta_features returns expected feature keys.
 	 */
-
 	public function test_get_beta_features_returns_expected_keys() {
 		$features = self::$camptix->get_beta_features();
 
@@ -901,12 +1057,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertContains( 'archived', $features );
 	}
 
-	/*
-	 * -------------------------------------------------------------------------
-	 * WordCamp closed state
-	 * -------------------------------------------------------------------------
+	/**
+	 * Verify is_wordcamp_closed returns false when no WordCamp post exists.
 	 */
-
 	public function test_is_wordcamp_closed_returns_false_when_no_wordcamp_post() {
 		// In test environment there is no wordcamp post by default.
 		$this->assertFalse( self::$camptix->is_wordcamp_closed() );

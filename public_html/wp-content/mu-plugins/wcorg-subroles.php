@@ -55,7 +55,6 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 *
 			 * - Access and use the WordCamp Mentors Dashboard screen on Central.
 			 * - Edit `wordcamp` posts on Central.
-			 * - Use "WordCamp Post" link in Admin Bar on all sites (sse `add_wcpt_cross_link()`)
 			 */
 			case 'mentor_manager':
 				$newcaps = array(
@@ -70,7 +69,6 @@ function add_subrole_caps( $allcaps, $caps, $args, $user ) {
 			 * WordCamp Wrangler
 			 *
 			 * - Edit `wordcamp` posts on Central.
-			 * - Use "WordCamp Post" link in Admin Bar on all sites (sse `add_wcpt_cross_link()`)
 			 */
 			case 'wordcamp_wrangler':
 				$newcaps = array(

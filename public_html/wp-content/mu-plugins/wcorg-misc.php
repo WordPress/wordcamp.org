@@ -576,26 +576,21 @@ add_action( 'network_admin_notices', 'wcorg_network_updates_notifier' );
  * Add a 'WordCamp Post' link to the admin bar menu on camp sites.
  *
  * This provides an easy way to pull up the WCPT post that corresponds to the camp site you're currently on.
- * The link is shown to any user who has permission to edit the specific WordCamp tracker post on the central site.
  */
 function add_wcpt_cross_link( WP_Admin_Bar $wp_admin_bar ) {
+	if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+		return;
+	}
+
 	$wordcamp = get_wordcamp_post();
 
 	if ( ! $wordcamp ) {
 		return;
 	}
 
-	switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
-	$can_edit = current_user_can( 'edit_post', $wordcamp->ID );
-	restore_current_blog();
-
-	if ( ! $can_edit ) {
-		return;
-	}
-
 	$wp_admin_bar->add_node(
 		array(
-			'parent' => 'site-name',
+			'parent' => 'edit',
 			'id'     => 'wordcamp-post',
 			'title'  => __( 'WordCamp Post', 'wordcamporg' ),
 

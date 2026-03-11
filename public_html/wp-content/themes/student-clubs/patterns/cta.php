@@ -4,6 +4,7 @@
  * Slug: student-clubs/cta
  * Categories: 
  */
+
 ?>
 <!-- wp:cover {"url":"http://campus-connect-theme-v1.local/wp-content/uploads/2026/02/bg-1-1024x239.png","dimRatio":10,"isUserOverlayColor":true,"sizeSlug":"large","style":{"spacing":{"blockGap":"0","margin":{"top":"0","bottom":"0"},"padding":{"right":"var:preset|spacing|40","left":"var:preset|spacing|40","top":"var:preset|spacing|80","bottom":"var:preset|spacing|80"}},"border":{"radius":{"topLeft":"8px","topRight":"8px","bottomLeft":"8px","bottomRight":"8px"}},"dimensions":{"aspectRatio":"auto"}}} -->
 <div class="wp-block-cover" style="border-top-left-radius:8px;border-top-right-radius:8px;border-bottom-left-radius:8px;border-bottom-right-radius:8px;margin-top:0;margin-bottom:0;padding-top:var(--wp--preset--spacing--80);padding-right:var(--wp--preset--spacing--40);padding-bottom:var(--wp--preset--spacing--80);padding-left:var(--wp--preset--spacing--40)"><img class="wp-block-cover__image-background  size-large" alt="" src="http://campus-connect-theme-v1.local/wp-content/uploads/2026/02/bg-1-1024x239.png" data-object-fit="cover"/><span aria-hidden="true" class="wp-block-cover__background has-background-dim-10 has-background-dim"></span><div class="wp-block-cover__inner-container"><!-- wp:group {"style":{"spacing":{"blockGap":"24px","padding":{"top":"0","bottom":"0","left":"0","right":"0"}},"border":{"radius":{"topLeft":"16px","topRight":"16px","bottomLeft":"16px","bottomRight":"16px"}}},"layout":{"type":"flex","orientation":"vertical","justifyContent":"center"}} -->

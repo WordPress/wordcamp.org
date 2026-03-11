@@ -4,6 +4,7 @@
  * Slug: student-clubs/sponsors
  * Inserter: no
  */
+
 ?>
 <!-- wp:group {"style":{"spacing":{"blockGap":"16px"}},"layout":{"type":"grid","columnCount":null,"minimumColumnWidth":"20rem"}} -->
 <div class="wp-block-group"><!-- wp:group {"metadata":{"name":"card"},"style":{"spacing":{"blockGap":"0px","padding":{"right":"var:preset|spacing|40","left":"var:preset|spacing|40","top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"},"margin":{"top":"0","bottom":"0"}},"border":{"width":"1px","color":"#e0e0e0","radius":{"topLeft":"8px","topRight":"8px","bottomLeft":"8px","bottomRight":"8px"}},"dimensions":{"minHeight":"0%"}},"backgroundColor":"custom-white-background","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"center"}} -->

@@ -4,6 +4,7 @@
  * Slug: student-clubs/contribute-section
  * Inserter: no
  */
+
 ?>
 <!-- wp:group {"metadata":{"name":"contribute"},"style":{"spacing":{"padding":{"right":"var:preset|spacing|40","left":"var:preset|spacing|40","top":"6rem","bottom":"6rem"},"blockGap":"var:preset|spacing|70"}},"backgroundColor":"custom-blueberry-2","layout":{"type":"constrained"}} -->
 <div class="wp-block-group has-custom-blueberry-2-background-color has-background" style="padding-top:6rem;padding-right:var(--wp--preset--spacing--40);padding-bottom:6rem;padding-left:var(--wp--preset--spacing--40)"><!-- wp:group {"layout":{"type":"constrained","wideSize":"500px","contentSize":"450px"}} -->

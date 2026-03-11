@@ -4,6 +4,7 @@
  * Slug: campus-connect/cta-2
  * Inserter: no
  */
+
 ?>
 <!-- wp:group {"metadata":{"name":"cta"},"style":{"spacing":{"padding":{"right":"var:preset|spacing|40","left":"var:preset|spacing|40","top":"6rem","bottom":"6rem"}}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group" style="padding-top:6rem;padding-right:var(--wp--preset--spacing--40);padding-bottom:6rem;padding-left:var(--wp--preset--spacing--40)"><!-- wp:cover {"url":"<?php echo esc_url( get_template_directory_uri() ); ?>/assets/images/bg-1-1024x239.png","dimRatio":0,"isUserOverlayColor":true,"focalPoint":{"x":0.51000000000000001,"y":0.53000000000000003},"sizeSlug":"large","style":{"spacing":{"blockGap":"0","margin":{"top":"0","bottom":"0"},"padding":{"right":"var:preset|spacing|40","left":"var:preset|spacing|40","top":"var:preset|spacing|70","bottom":"var:preset|spacing|70"}},"border":{"radius":{"topLeft":"8px","topRight":"8px","bottomLeft":"8px","bottomRight":"8px"}},"dimensions":{"aspectRatio":"auto"}}} -->

@@ -4,6 +4,7 @@
  * Slug: student-clubs/team-2
  * Inserter: no
  */
+
 ?>
 <!-- wp:columns {"style":{"spacing":{"blockGap":{"top":"24px","left":"24px"}}}} -->
 <div class="wp-block-columns"><!-- wp:column {"width":"33.33%","style":{"spacing":{"blockGap":"0px"},"border":{"radius":{"topLeft":"8px","topRight":"8px","bottomLeft":"8px","bottomRight":"8px"}}}} -->

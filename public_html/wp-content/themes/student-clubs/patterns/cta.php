@@ -2,7 +2,7 @@
 /**
  * Title: cta
  * Slug: student-clubs/cta
- * Categories: 
+ * Categories:
  */
 
 ?>

@@ -2,7 +2,7 @@
 /**
  * Title: cta
  * Slug: campus-connect/cta
- * Categories: 
+ * Categories:
  */
 
 ?>

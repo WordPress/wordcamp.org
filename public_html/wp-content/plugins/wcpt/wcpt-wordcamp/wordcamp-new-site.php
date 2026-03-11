@@ -587,7 +587,14 @@ class WordCamp_New_Site {
 
 		$lead_organizer = $this->get_user_or_current_user( $meta['WordPress.org Username'][0] );
 
-		switch_theme( 'twentytwentyfour' );
+		$event_subtype = $wordcamp->event_subtype ?: 'wordcamp';
+		if ( 'campusconnect' === $event_subtype ) {
+			switch_theme( 'campus-connect' );
+		} elseif ( 'student-club' === $event_subtype ) {
+			switch_theme( 'student-clubs' );
+		} else {
+			switch_theme( 'twentytwentyfour' );
+		}
 
 		$this->set_default_options( $wordcamp, $meta );
 		$this->create_post_stubs( $wordcamp, $meta, $lead_organizer );

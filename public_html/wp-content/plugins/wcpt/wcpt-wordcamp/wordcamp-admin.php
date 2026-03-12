@@ -433,7 +433,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Host region'                 => 'textarea',
 
 						// In-person
-						'Venue Name'                 => 'text',
+						'Venue Name'                 => 'textarea',
 						'Physical Address'           => 'textarea',
 						'Maximum Capacity'           => 'text',
 						'Available Rooms'            => 'text',
@@ -590,7 +590,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 							'Virtual event only'               => 'checkbox',
 							'Streaming account to use'         => 'select-streaming',
 							'Host region'                      => 'textarea',
-							'Venue Name'                       => 'text',
+							'Venue Name'                       => 'textarea',
 							'Physical Address'                 => 'textarea',
 							'Maximum Capacity'                 => 'text',
 							'Available Rooms'                  => 'text',

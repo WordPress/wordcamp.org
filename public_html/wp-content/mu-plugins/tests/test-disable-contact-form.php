@@ -123,6 +123,7 @@ class Test_Disable_Contact_Form extends Database_TestCase {
 
 		switch_to_blog( $blog_id );
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentional for test setup.
 		$current_blog = get_site( $blog_id );
 	}
 
@@ -134,6 +135,7 @@ class Test_Disable_Contact_Form extends Database_TestCase {
 
 		restore_current_blog();
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Intentional for test teardown.
 		$current_blog = get_site( get_current_blog_id() );
 	}
 

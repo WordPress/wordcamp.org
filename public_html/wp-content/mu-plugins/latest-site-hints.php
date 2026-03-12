@@ -7,6 +7,7 @@ use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLA
 defined( 'WPINC' ) || die();
 
 add_action( 'wp', __NAMESPACE__ . '\maybe_add_latest_site_hints' );
+add_filter( 'jetpack_contact_form_html', __NAMESPACE__ . '\maybe_disable_contact_form' );
 
 /**
  * If user or bot visits WordCamp site that has newer site for the same city,
@@ -133,6 +134,80 @@ function show_notification_about_latest_site() {
 			esc_url( $latest_domain )
 		) ) .
 	'</p></div>';
+}
+
+/**
+ * Check if contact forms should be disabled on this site.
+ *
+ * Forms are disabled when:
+ * 1. There's a newer event site for this city, OR
+ * 2. The event ended more than 18 months ago.
+ *
+ * This reduces spam sent to organizers of past events.
+ *
+ * See https://github.com/WordPress/wordcamp.org/issues/1468
+ *
+ * @param string $html The contact form HTML.
+ *
+ * @return string The original form HTML or a replacement message.
+ */
+function maybe_disable_contact_form( $html ) {
+	global $current_blog;
+
+	$wordcamp = get_wordcamp_post();
+	$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
+
+	// Check if the event is still ongoing.
+	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
+		return $html;
+	}
+
+	$has_newer_site  = false;
+	$expired_by_time = false;
+
+	// Check if there's a newer site for this city.
+	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
+	if ( $latest_domain && trailingslashit( get_site_url() ) !== $latest_domain ) {
+		$has_newer_site = true;
+	}
+
+	// Check if the event ended more than 18 months ago.
+	if ( $end_date && time() > ( (int) $end_date + 18 * MONTH_IN_SECONDS ) ) {
+		$expired_by_time = true;
+	}
+
+	if ( ! $has_newer_site && ! $expired_by_time ) {
+		return $html;
+	}
+
+	$event_name = esc_html( get_blog_details( $current_blog->blog_id )->blogname );
+
+	if ( $has_newer_site ) {
+		$message = wp_kses_post( sprintf(
+			// translators: %1$s is the event name, %2$s is the URL of the latest edition.
+			__( '<strong>%1$s</strong> is over. Please visit <a href="%2$s">the next edition</a> for more details and to get in touch.', 'wordcamporg' ),
+			$event_name,
+			esc_url( $latest_domain )
+		) );
+	} else {
+		$message = wp_kses_post( sprintf(
+			// translators: %s is the event name.
+			__( '<strong>%s</strong> is over and this contact form is no longer active.', 'wordcamporg' ),
+			$event_name
+		) );
+	}
+
+	$coc_message = wp_kses_post( sprintf(
+		// translators: %s is the mailto link for incident reports.
+		__( 'If you have a <a href="https://make.wordpress.org/handbook/community-code-of-conduct">Code of Conduct</a> concern, you can report it to the <a href="mailto:%s">WordPress Incident Response Team</a>.', 'wordcamporg' ),
+		'reports@wordpress.org'
+	) );
+
+	return sprintf(
+		'<div class="wordcamp-contact-form-disabled"><p>%s</p><p>%s</p></div>',
+		$message,
+		$coc_message
+	);
 }
 
 /**

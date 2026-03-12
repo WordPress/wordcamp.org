@@ -711,7 +711,7 @@ function register_fav_sessions_email() {
 				'email-address' => array(
 					'required'          => true,
 					'validate_callback' => function ( $value, $request, $param ) {
-						return is_email( $value );
+						return is_email( trim( $value ) );
 					},
 					'sanitize_callback' => function ( $value, $request, $param ) {
 						return sanitize_email( $value );

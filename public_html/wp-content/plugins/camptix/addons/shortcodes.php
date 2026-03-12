@@ -286,14 +286,33 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 								'paged'          => $paged,
 								'order'          => $attr['order'],
 								'orderby'        => $attr['orderby'],
-								'fields'         => 'ids', // ! no post objects
-								'cache_results'  => false,
+								'fields'           => 'ids', // ! no post objects
+								'cache_results'    => false,
+								'suppress_filters' => false, // Required for posts_orderby filter.
 							),
 							$query_args
 						),
 						$attr
 					);
-					$attendees     = get_posts( $attendee_args );
+
+					// Use a Unicode 5.2 collation for locale-aware sorting when ordering by title.
+					$collate_filter = null;
+					if ( 'title' === $attr['orderby'] ) {
+						$collate_filter = function( $orderby ) {
+							return str_replace(
+								'.post_title ',
+								'.post_title COLLATE utf8mb4_unicode_520_ci ',
+								$orderby
+							);
+						};
+						add_filter( 'posts_orderby', $collate_filter );
+					}
+
+					$attendees = get_posts( $attendee_args );
+
+					if ( $collate_filter ) {
+						remove_filter( 'posts_orderby', $collate_filter );
+					}
 
 					if ( ! is_array( $attendees ) || count( $attendees ) < 1 ) {
 						break; // life saver!

@@ -7,10 +7,10 @@ defined( 'WPINC' ) || die();
 // Preserve field values after failed server-side validation.
 // phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce is verified by CampTix core before rendering.
 $need_invoice    = ! empty( $_POST['camptix-need-invoice'] );
-$saved_email     = isset( $_POST['invoice-email'] ) ? sanitize_email( wp_unslash( $_POST['invoice-email'] ) ) : '';
-$saved_name      = isset( $_POST['invoice-name'] ) ? sanitize_text_field( wp_unslash( $_POST['invoice-name'] ) ) : '';
-$saved_address   = isset( $_POST['invoice-address'] ) ? sanitize_textarea_field( wp_unslash( $_POST['invoice-address'] ) ) : '';
-$saved_vat       = isset( $_POST['invoice-vat-number'] ) ? sanitize_text_field( wp_unslash( $_POST['invoice-vat-number'] ) ) : '';
+$saved_email     = sanitize_email( wp_unslash( $_POST['invoice-email'] ?? '' ) );
+$saved_name      = sanitize_text_field( wp_unslash( $_POST['invoice-name'] ?? '' ) );
+$saved_address   = sanitize_textarea_field( wp_unslash( $_POST['invoice-address'] ?? '' ) );
+$saved_vat       = sanitize_text_field( wp_unslash( $_POST['invoice-vat-number'] ?? '' ) );
 // phpcs:enable WordPress.Security.NonceVerification.Missing
 
 ?>

@@ -53,6 +53,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		$original_blog = $current_blog;
 
 		// Set current blog to a past site (2018 seattle has a newer 2019 site).
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
 		$current_blog = get_site( self::$year_dot_2018_site_id );
 		switch_to_blog( self::$year_dot_2018_site_id );
 
@@ -69,6 +70,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		remove_filter( 'comments_open', '__return_false' );
 		remove_filter( 'pings_open', '__return_false' );
 		restore_current_blog();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
 		$current_blog = $original_blog;
 	}
 
@@ -84,6 +86,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 		$original_blog = $current_blog;
 
 		// Set current blog to the latest site (2019 seattle is the newest).
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
 		$current_blog = get_site( self::$year_dot_2019_site_id );
 		switch_to_blog( self::$year_dot_2019_site_id );
 
@@ -98,6 +101,7 @@ class Test_WordCamp_SEO extends Database_TestCase {
 
 		// Clean up.
 		restore_current_blog();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
 		$current_blog = $original_blog;
 	}
 

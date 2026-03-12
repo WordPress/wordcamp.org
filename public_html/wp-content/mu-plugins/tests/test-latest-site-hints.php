@@ -62,8 +62,8 @@ class Test_WordCamp_SEO extends Database_TestCase {
 
 		maybe_add_latest_site_hints();
 
-		$this->assertFalse( apply_filters( 'comments_open', true ), 'Comments should be closed on past sites.' );
-		$this->assertFalse( apply_filters( 'pings_open', true ), 'Pings should be closed on past sites.' );
+		$this->assertNotFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should be registered on past sites.' );
+		$this->assertNotFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should be registered on past sites.' );
 
 		// Clean up.
 		remove_filter( 'comments_open', '__return_false' );
@@ -93,8 +93,8 @@ class Test_WordCamp_SEO extends Database_TestCase {
 
 		maybe_add_latest_site_hints();
 
-		$this->assertTrue( apply_filters( 'comments_open', true ), 'Comments should remain open on the latest site.' );
-		$this->assertTrue( apply_filters( 'pings_open', true ), 'Pings should remain open on the latest site.' );
+		$this->assertFalse( has_filter( 'comments_open', '__return_false' ), 'comments_open filter should not be registered on the latest site.' );
+		$this->assertFalse( has_filter( 'pings_open', '__return_false' ), 'pings_open filter should not be registered on the latest site.' );
 
 		// Clean up.
 		restore_current_blog();

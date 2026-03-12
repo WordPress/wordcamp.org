@@ -71,9 +71,9 @@ function canonical_link_past_home_pages_to_current_year() {
  */
 function add_notification_styles() { ?>
   <style type="text/css">
-		html:not(#specificity-hack) {
+		body {
 			/* 44 = 10px x2 for padding, 24px for line height. */
-			margin-top: calc(44px + var(--wp-admin--admin-bar--height, 0px)) !important;
+			margin-top: 44px !important;
 		}
 
 		.wordcamp-latest-site-notify {

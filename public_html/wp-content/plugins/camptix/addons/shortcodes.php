@@ -298,7 +298,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 					// Use a Unicode 5.2 collation for locale-aware sorting when ordering by title.
 					$collate_filter = null;
 					if ( 'title' === $attr['orderby'] ) {
-						$collate_filter = function( $orderby ) {
+						$collate_filter = function ( $orderby ) {
 							return str_replace(
 								'.post_title ',
 								'.post_title COLLATE utf8mb4_unicode_520_ci ',

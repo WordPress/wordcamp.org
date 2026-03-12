@@ -381,10 +381,14 @@ class WordCamp_Participation_Notifier {
 			return false;
 		}
 
+		$event_start = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] )
+			? (int) $wordcamp->meta['Start Date (YYYY-mm-dd)'][0]
+			: strtotime( $post->post_date_gmt );
+
 		$activity = array(
 			'action'        => 'wporg_handle_activity',
 			'source'        => 'wordcamp',
-			'timestamp'     => strtotime( $post->post_modified_gmt ),
+			'timestamp'     => $event_start,
 			'user'          => $user_id,
 			'wordcamp_id'   => get_current_blog_id(),
 			'wordcamp_name' => get_wordcamp_name(),

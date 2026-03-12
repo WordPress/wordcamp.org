@@ -9,7 +9,6 @@ import { TZDate } from '@date-fns/tz';
  */
 import { getSettings } from '@wordpress/date';
 import { BaseControl, TimePicker } from '@wordpress/components';
-import { sprintf } from '@wordpress/i18n';
 
 const TIMEZONELESS_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
@@ -23,12 +22,11 @@ const TIMEZONELESS_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
  * @return {string}
  */
 function getTimezoneOffset( { offset = 0 } ) {
-	return sprintf(
-		'%1$s%2$02d:%3$02d',
-		Number( offset ) < 0 ? '-' : '+',
-		Math.floor( Math.abs( offset ) ),
-		( Math.abs( offset ) % 1 ) * 60
-	);
+	const num = Number( offset );
+	const sign = num < 0 ? '-' : '+';
+	const hours = String( Math.floor( Math.abs( num ) ) ).padStart( 2, '0' );
+	const minutes = String( ( Math.abs( num ) % 1 ) * 60 ).padStart( 2, '0' );
+	return `${ sign }${ hours }:${ minutes }`;
 }
 
 export default function( { date, label, onChange } ) {

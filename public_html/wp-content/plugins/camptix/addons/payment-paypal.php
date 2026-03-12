@@ -1000,7 +1000,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 *
 	 * @return int One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants
 	 */
-	function payment_refund( $payment_token, $refund_amount = 0 ) {
+	public function payment_refund( $payment_token, $refund_amount = 0 ) {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 
@@ -1039,7 +1039,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 		return $camptix->payment_result( $payment_token, $result['status'], $refund_data );
 	}
 
-	/*
+	/**
 	 * Sends a request to PayPal to refund a transaction
 	 *
 	 * @param string    $payment_token
@@ -1048,7 +1048,7 @@ class CampTix_Payment_Method_PayPal extends CampTix_Payment_Method {
 	 *
 	 * @return array
 	 */
-	function send_refund_request( $payment_token, $refund_amount = 0 ) {
+	public function send_refund_request( $payment_token, $refund_amount = 0 ) {
 		/** @var $camptix CampTix_Plugin */
 		global $camptix;
 

@@ -225,7 +225,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	 *
 	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
 	 */
-	function payment_refund( $payment_token, $refund_amount = 0 ) {
+	public function payment_refund( $payment_token, $refund_amount = 0 ) {
 		/** @var $camptix Camptix_Plugin  */
 		global $camptix;
 

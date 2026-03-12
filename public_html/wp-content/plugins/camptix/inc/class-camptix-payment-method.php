@@ -219,11 +219,13 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	/**
 	 * Handle the refund process
 	 *
-	 * @param string $payment_token
+	 * @param string    $payment_token
+	 * @param float|int $refund_amount Optional. The amount to refund in the base currency unit (e.g. dollars).
+	 *                                 If 0 or not provided, a full refund is issued.
 	 *
 	 * @return int A payment status, e.g., PAYMENT_STATUS_CANCELLED, PAYMENT_STATUS_COMPLETED, etc
 	 */
-	function payment_refund( $payment_token ) {
+	function payment_refund( $payment_token, $refund_amount = 0 ) {
 		/** @var $camptix Camptix_Plugin  */
 		global $camptix;
 

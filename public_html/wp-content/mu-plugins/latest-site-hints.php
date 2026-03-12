@@ -165,15 +165,21 @@ function maybe_disable_contact_form( $html ) {
 	$has_newer_site  = false;
 	$expired_by_time = false;
 
+	// Check if the event ended more than 18 months ago.
+	if ( $end_date && time() > ( (int) $end_date + 18 * MONTH_IN_SECONDS ) ) {
+		$expired_by_time = true;
+	}
+
+	// Optimization: skip the newer-site database query during the first 3 months,
+	// since a new edition is unlikely to exist that soon.
+	if ( ! $expired_by_time && $end_date && time() < ( (int) $end_date + 3 * MONTH_IN_SECONDS ) ) {
+		return $html;
+	}
+
 	// Check if there's a newer site for this city.
 	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
 	if ( $latest_domain && trailingslashit( get_site_url() ) !== $latest_domain ) {
 		$has_newer_site = true;
-	}
-
-	// Check if the event ended more than 18 months ago.
-	if ( $end_date && time() > ( (int) $end_date + 18 * MONTH_IN_SECONDS ) ) {
-		$expired_by_time = true;
 	}
 
 	if ( ! $has_newer_site && ! $expired_by_time ) {

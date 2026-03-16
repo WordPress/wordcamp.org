@@ -45,6 +45,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_action( 'template_redirect',                              array( $this, 'block_unauthenticated_actions' ), 7 );    // before CampTix_Plugin->template_redirect()
 		add_filter( 'camptix_attendees_shortcode_query_args',         array( $this, 'hide_unconfirmed_attendees' ) );
 		add_filter( 'camptix_private_attendees_parameters',           array( $this, 'prevent_unknown_attendees_viewing_private_content' ) );
+
+		// Camptix Notify.
+		add_filter( 'camptix_notify_segment_fields',                  array( $this, 'camptix_notify_segment_fields' ) );
+		add_filter( 'camptix_notify_segment_query',                   array( $this, 'camptix_notify_segment_query' ), 10, 2 );
 	}
 
 	/**
@@ -934,6 +938,79 @@ class CampTix_Require_Login extends CampTix_Addon {
 		}
 
 		return $query_args;
+	}
+
+	/**
+	 * Add the ability to filter camptix notify segments by confirmed status.
+	 *
+	 * @param array $segments
+	 * @return array
+	 */
+	public function camptix_notify_segment_fields( $segments ) {
+		$segments[] = [
+			'caption'      => 'Ticket Status',
+			'option_value' => 'ticket_status',
+			'type'         => 'select',
+			'ops'          => [ 'is' ],
+			'values'       => [
+				[
+					'caption' => __( 'Confirmed', 'wordcamporg' ),
+					'value'   => 'confirmed',
+				],
+				[
+					'caption' => __( 'Unconfirmed', 'wordcamporg' ),
+					'value'   => 'unconfirmed',
+				],
+			],
+		];
+
+		return $segments;
+	}
+
+	/**
+	 * Add the ability to filter camptix notify segments by confirmed status.
+	 *
+	 * @param array $query      The posts query arguments.
+	 * @param array $conditions The conditions to filter by.
+	 * @return array
+	 */
+	public function camptix_notify_segment_query( $query, $conditions ) {
+		foreach ( $conditions as $condition ) {
+			if ( 'ticket_status' === $condition['field'] ) {
+				if ( 'unconfirmed' === $condition['value'] ) {
+					$query['meta_query'][] = array(
+						// All of these are unconfirmed.
+						'relation' => 'or',
+						// Unconfirmed username listed.
+						array(
+							'key' => 'tix_username',
+							'value' => self::UNCONFIRMED_USERNAME,
+							'compare' => '=',
+						),
+						// Has no username linked.
+						array(
+							'key' => 'tix_username',
+							'compare' => 'NOT EXISTS',
+						),
+						// The email is the standard unknown attendee.
+						array(
+							'key' => 'tix_email',
+							'value' => $this->get_unknown_attendee_info()['email'],
+							'compare' => '=',
+						),
+					);
+				} elseif ( 'confirmed' === $condition['value'] ) {
+					// Username is something other than the unconfirmed username.
+					$query['meta_query'][] = array(
+						'key' => 'tix_username',
+						'value' => self::UNCONFIRMED_USERNAME,
+						'compare' => '!=',
+					);
+				}
+			}
+		}
+
+		return $query;
 	}
 
 	/*

@@ -1,4 +1,4 @@
-<?php
+	<?php
 
 use WordPressdotorg\MU_Plugins\Utilities\Export_CSV;
 
@@ -119,7 +119,27 @@ class WordCamp_Budget_Tool {
 			$link             = esc_url_raw( add_query_arg( 'page', 'wordcamp-budget', admin_url( 'admin.php' ) ) );
 
 			$content = "A budget approval request has been submitted for {$domain} by {$user->user_login}:\n\n{$link}\n\nYours, Mr. Budget Tool";
-			wp_mail( 'support@wordcamp.org', 'Budget Approval Requested: ' . $domain, $content );
+wp_mail( 'support@wordcamp.org', 'Budget Approval Requested: ' . $domain, $content );
+// Get event name for subject line
+$event_title = '';
+if ( ! empty( $event_id ) ) {
+	$event_title = get_the_title( $event_id );
+}
+
+// Fallback if title not found
+if ( empty( $event_title ) ) {
+	$event_title = ucfirst( $domain ); // old behaviour
+}
+// Final subject line
+$subject = sprintf(
+	'Budget Approval Requested: %s (%s)',
+	$event_title,
+	$domain
+);
+
+wp_mail( 'support@wordcamp.org', $subject, $content );
+
+wp_mail( 'support@wordcamp.org', $subject, $content );
 
 		} elseif ( 'draft' === $budget['status'] && ! empty( $_POST['wcb-budget-request-review'] ) ) {
 			// Save draft and request review.

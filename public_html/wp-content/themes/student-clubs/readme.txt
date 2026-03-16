@@ -14,7 +14,7 @@ Student Club is a modern block based WordPress theme designed for university clu
 
 == Changelog ==
 
-= 1.0.0 =
+= 1.0.1 =
 * Initial release
 
 
@@ -43,29 +43,6 @@ Inter
 Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
 Source: https://rsms.me/
 License: This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org
-
-== Images ==
-
-Image: campus-placeholder.jpg
-Source: https://openverse.org/image/973494a7-212a-42f3-b355-6e0a6837600f
-Author: Wonderlane
-License: CC0 1.0
-
-Image: students-placeholder.jpg
-Source: https://www.flickr.com/photos/46907600@N02/5042817526
-License: Public Domain Mark 1.0
-
-Image: team-placeholder.jpg
-Source: https://www.flickr.com/photos/psdesire/39593051701
-License: CC0 1.0
-
-Image: placeholder.jpg
-Source: https://www.flickr.com/photos/40124183@N02/6330129969
-License: Public Domain Mark 1.0
-
-Image: hero-image-2.jpg
-Source: https://www.flickr.com/photos/dcoetzee/5979941958/
-License: CC0 1.0
 
 == Assets ==
 Phosphor Icons

@@ -73,7 +73,7 @@ class CampTix_Plugin {
 	 * but payment methods and addons may still call them on the plugin instance.
 	 */
 	public function __call( $name, $arguments ) {
-		$admin_setup_methods = array( 'field_text', 'field_textarea', 'field_checkbox', 'field_yesno', 'field_enable_refunds', 'field_currency' );
+		$admin_setup_methods = array( 'field_text', 'field_textarea', 'field_checkbox', 'field_yesno', 'field_enable_refunds', 'field_currency', 'add_settings_field_helper' );
 
 		if ( in_array( $name, $admin_setup_methods, true ) ) {
 			return call_user_func_array( array( $this->admin_setup, $name ), $arguments );
@@ -7303,7 +7303,7 @@ class CampTix_Plugin {
 	 *
 	 * @return bool
 	 */
-	protected static function html_mail_enabled() {
+	public static function html_mail_enabled() {
 		global $phpmailer;
 		$enabled = false;
 

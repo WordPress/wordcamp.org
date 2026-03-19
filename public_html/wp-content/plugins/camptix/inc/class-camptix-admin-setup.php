@@ -277,7 +277,7 @@ class CampTix_Admin_Setup {
 			<div class="notice notice-warning">
 				<?php
 				echo wpautop( sprintf(
-					__( 'The <a href="%1$s">currently selected currency</a> is not supported by any of the <a href="%2$s">enabled payment methods</a>.' ),
+					__( 'The <a href="%1$s">currently selected currency</a> is not supported by any of the <a href="%2$s">enabled payment methods</a>.', 'wordcamporg' ),
 					esc_url( add_query_arg( 'tix_section', 'general', $base_url ) ),
 					esc_url( add_query_arg( 'tix_section', 'payment', $base_url ) )
 				) );
@@ -315,7 +315,7 @@ class CampTix_Admin_Setup {
 				'value' => ''
 			),
 			$args
-		)
+		);
 
 		?>
 

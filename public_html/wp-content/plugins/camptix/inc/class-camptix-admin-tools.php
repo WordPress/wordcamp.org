@@ -343,7 +343,7 @@ class CampTix_Admin_Tools {
 				$errors[] = __( 'At least one segment condition must be defined.', 'wordcamporg' );
 
 			if ( empty( $_POST['tix-notify-segment-match'] ) )
-				$error[] = __( 'Please select a segment match mode' );
+				$errors[] = __( 'Please select a segment match mode' );
 
 			$conditions = json_decode( $_POST['tix-notify-segment-query'], true );
 			if ( ! is_array( $conditions ) || count( $conditions ) < 1 )
@@ -352,7 +352,7 @@ class CampTix_Admin_Tools {
 			$recipients = $this->plugin->get_segment( $_POST['tix-notify-segment-match'], $conditions );
 
 			if ( count( $recipients ) < 1 ) {
-				$errors[] = __( 'The selected segment does not match any recipients. Please try a again.', 'wordcamporg' );
+				$errors[] = __( 'The selected segment does not match any recipients. Please try again.', 'wordcamporg' );
 			}
 
 			// If everything went well.
@@ -813,7 +813,7 @@ class CampTix_Admin_Tools {
 			'orderby' => 'ID',
 			'fields' => 'ids',
 			'order' => 'ASC',
-			'cache_results' => 'false',
+			'cache_results' => false,
 		) ) ) {
 
 			// Mark attendee for refund

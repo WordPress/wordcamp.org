@@ -67,6 +67,22 @@ class CampTix_Plugin {
 	public const PAYMENT_STATUS_REFUND_FAILED = 7;
 
 	/**
+	 * Forward field_* method calls to admin_setup for backward compatibility.
+	 *
+	 * These methods were moved from CampTix_Plugin to CampTix_Admin_Setup,
+	 * but payment methods and addons may still call them on the plugin instance.
+	 */
+	public function __call( $name, $arguments ) {
+		$admin_setup_methods = array( 'field_text', 'field_textarea', 'field_checkbox', 'field_yesno', 'field_enable_refunds', 'field_currency' );
+
+		if ( in_array( $name, $admin_setup_methods, true ) ) {
+			return call_user_func_array( array( $this->admin_setup, $name ), $arguments );
+		}
+
+		trigger_error( sprintf( 'Call to undefined method %s::%s()', __CLASS__, $name ), E_USER_ERROR );
+	}
+
+	/**
 	 * Fired as soon as this file is loaded, don't do anything
 	 * but filters and actions here.
 	 */

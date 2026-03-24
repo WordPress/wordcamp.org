@@ -4,6 +4,7 @@
  * Slug: campus-connect/activities
  * Inserter: no
  */
+
 ?>
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 

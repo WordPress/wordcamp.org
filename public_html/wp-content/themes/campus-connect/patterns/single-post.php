@@ -4,6 +4,7 @@
  * Slug: campus-connect/single-post
  * Inserter: no
  */
+
 ?>
 <!-- wp:template-part {"slug":"header","area":"header"} /-->
 

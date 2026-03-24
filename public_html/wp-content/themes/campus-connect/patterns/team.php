@@ -4,6 +4,7 @@
  * Slug: campus-connect/team
  * Inserter: no
  */
+
 ?>
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 

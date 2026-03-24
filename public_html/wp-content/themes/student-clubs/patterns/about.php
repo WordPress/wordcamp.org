@@ -4,6 +4,7 @@
  * Slug: student-clubs/about
  * Inserter: no
  */
+
 ?>
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 

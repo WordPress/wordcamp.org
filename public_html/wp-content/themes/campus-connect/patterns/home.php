@@ -4,6 +4,7 @@
  * Slug: campus-connect/home
  * Inserter: no
  */
+
 ?>
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 

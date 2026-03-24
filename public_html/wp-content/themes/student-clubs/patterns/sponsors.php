@@ -4,6 +4,7 @@
  * Slug: student-clubs/sponsors
  * Inserter: no
  */
+
 ?>
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 

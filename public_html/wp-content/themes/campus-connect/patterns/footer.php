@@ -4,6 +4,7 @@
  * Slug: campus-connect/footer
  * Inserter: no
  */
+
 ?>
 <!-- wp:group {"align":"full","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"1rem","right":"1rem"},"margin":{"top":"0","bottom":"0"},"blockGap":"0"},"elements":{"link":{"color":{"text":"var:preset|color|custom-grey-1-1"}}}},"backgroundColor":"custom-charcoal-1","textColor":"custom-grey-1-1","layout":{"type":"constrained","justifyContent":"center"}} -->
 <div class="wp-block-group alignfull has-custom-grey-1-1-color has-custom-charcoal-1-background-color has-text-color has-background has-link-color" style="margin-top:0;margin-bottom:0;padding-top:var(--wp--preset--spacing--70);padding-right:1rem;padding-bottom:var(--wp--preset--spacing--70);padding-left:1rem"><!-- wp:group {"align":"wide","layout":{"type":"constrained","contentSize":"1280px","wideSize":"1280px"}} -->

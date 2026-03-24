@@ -76,7 +76,7 @@
 			<directory suffix=".php">./public_html/wp-content/plugins/wc-post-types</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wcpt</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-coming-soon-page</directory>
-						<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-organizer-reminders</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-payments-network/</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-remote-css</directory>

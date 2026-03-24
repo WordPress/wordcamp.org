@@ -67,6 +67,12 @@
 				./public_html/wp-content/plugins/wordcamp-coming-soon-page/tests/
 			</directory>
 		</testsuite>
+
+		<testsuite name="Events Theme">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/themes/wporg-events-2023/tests/
+			</directory>
+		</testsuite>
 	</testsuites>
 
 	<coverage cacheDirectory=".phpunit/coverage-cache">

@@ -127,7 +127,7 @@ class WCOR_Mailer {
 	 */
 	protected function mail( $to, $subject, $body, $headers, $email, $wordcamp ) {
 		if ( ! $this->validate_email_addresses( $to ) ) {
-			log( 'Message not sent because of invalid recipients.', compact( 'email', 'wordcamp' ) );
+			log( 'Message not sent because of invalid recipients.', compact( 'to', 'email', 'wordcamp' ) );
 			return false;
 		}
 
@@ -620,9 +620,12 @@ class WCOR_Mailer {
 			} else {
 				$recipients[] = sanitize_email( get_post_meta( $wordcamp_id, 'E-mail Address', true ) ); // Team address.
 			}
+
+			// Also send to the lead organizer's personal email address ("Email" = Lead organizer email, "E-mail" = team email).
+			$recipients[] = get_post_meta( $wordcamp_id, 'Email Address', true );
 		}
 
-		$recipients = array_unique( $recipients );
+		$recipients = array_unique( array_filter( $recipients ) );
 		return $recipients;
 	}
 

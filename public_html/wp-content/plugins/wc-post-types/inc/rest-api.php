@@ -400,7 +400,11 @@ function register_user_validation_route() {
 			'permission_callback' => '__return_true',
 			'args'                => array(
 				'username' => array(
+					'type'              => 'string',
 					'validate_callback' => function ( $value ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						$wporg_user = wcorg_get_user_by_canonical_names( $value );
 						return (bool) $wporg_user;
 					},
@@ -710,7 +714,11 @@ function register_fav_sessions_email() {
 			'args'                => array(
 				'email-address' => array(
 					'required'          => true,
+					'type'              => 'string',
 					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						return is_email( trim( $value ) );
 					},
 					'sanitize_callback' => function ( $value, $request, $param ) {
@@ -720,7 +728,11 @@ function register_fav_sessions_email() {
 
 				'session-list'  => array(
 					'required'          => true,
+					'type'              => 'string',
 					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						$session_ids = explode( ',', $value );
 						$session_count = count( $session_ids );
 						for ( $i = 0; $i < $session_count; $i++ ) {
@@ -738,7 +750,11 @@ function register_fav_sessions_email() {
 
 				'page-slug'     => array(
 					'required'          => true,
+					'type'              => 'string',
 					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						$pages = get_posts( array(
 							'name'        => $value,
 							'post_type'   => 'page',

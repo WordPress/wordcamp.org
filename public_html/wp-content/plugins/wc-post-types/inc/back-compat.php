@@ -8,6 +8,7 @@
 class WordCamp_Post_Types_Plugin_Back_Compat {
 	protected $stylesheet = '';
 	protected $template   = '';
+	protected $wcpt;
 
 	function __construct() {
 		// This must run before `WordCamp_Post_Types_Plugin::init()` so that `wcpt_back_compat_init` is registered
@@ -58,7 +59,7 @@ class WordCamp_Post_Types_Plugin_Back_Compat {
 		global $wcpt_plugin;
 
 		// Keep a link to the main plugin object.
-		$this->wcpt =& $wcpt_plugin;
+		$this->wcpt = $wcpt_plugin;
 
 		add_filter( 'wcb_entry_meta', array( $this, 'wcb_session_entry_meta' ) );
 

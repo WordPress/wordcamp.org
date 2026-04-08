@@ -55,8 +55,10 @@ function _get_network_plugin_state_list( $state ) {
 			'wordcamp-speaker-feedback/wordcamp-speaker-feedback.php',
 			'wc-fonts/wc-fonts.php',
 			'wc-post-types/wc-post-types.php',
+			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
 			'wordcamp-qbo-client/wordcamp-qbo-client.php',
 			'wordpress-importer/wordpress-importer.php',
+			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
 			'wp-super-cache/wp-cache.php',
 		),
 		'deactivated' => array(
@@ -82,22 +84,14 @@ function _get_network_plugin_state_list( $state ) {
 		),
 	);
 
-	if ( 'local' !== wp_get_environment_type() ) {
-		$network_plugin_state['activated'][] = 'wordcamp-participation-notifier/wordcamp-participation-notifier.php';
-		$network_plugin_state['activated'][] = 'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php';
-	}
-
 	$network_id = get_current_network_id();
 
 	if ( EVENTS_NETWORK_ID === $network_id ) {
 		// Any Events specific plugins expected to be network activated.
+		// At present, we're using the standard WordCamp.org plugins.
 	}
 
 	if ( GROUPS_NETWORK_ID === $network_id ) {
-		// The groups network is intentionally minimal: every plugin in the
-		// shared `activated` list above should be deactivated, and only
-		// GatherPress is network-activated. This keeps `/group/<slug>/`
-		// subsites isolated from the events network's plugin set.
 		$network_plugin_state['deactivated'] = array_merge(
 			$network_plugin_state['deactivated'],
 			$network_plugin_state['activated']
@@ -108,34 +102,56 @@ function _get_network_plugin_state_list( $state ) {
 			'gutenberg/gutenberg.php',
 			'jetpack/jetpack.php',
 			'two-factor/two-factor.php',
-			'two-factor-provider-webauthn/two-factor-provider-webauthn.php',
+			'two-factor-provider-webauthn/index.php',
 			'wporg-two-factor/wporg-two-factor.php',
+			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
+			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
+			'wp-super-cache/wp-cache.php',
 		);
 
-		if ( 'local' !== wp_get_environment_type() ) {
-			$network_plugin_state['activated'][] = 'wordcamp-participation-notifier/wordcamp-participation-notifier.php';
-			$network_plugin_state['activated'][] = 'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php';
-		}
+		$network_plugin_state['deactivated'] = array_diff( $network_plugin_state['deactivated'], $network_plugin_state['activated'] );
 	}
 
 	if ( CAMPUS_NETWORK_ID === $network_id ) {
-		// These plugins are intended to be deactivated, but are defined as active above.
-		$network_plugin_state['deactivated'][] = 'camptix-admin-flags/camptix-admin-flags.php';
-		$network_plugin_state['deactivated'][] = 'camptix-attendance/camptix-attendance.php';
-		$network_plugin_state['deactivated'][] = 'camptix-badge-generator/bootstrap.php';
-		$network_plugin_state['deactivated'][] = 'camptix/camptix.php';
-		$network_plugin_state['deactivated'][] = 'classic-editor/classic-editor.php';
-		$network_plugin_state['deactivated'][] = 'wordcamp-payments/bootstrap.php';
-		$network_plugin_state['deactivated'][] = 'wordcamp-payments-network/bootstrap.php';
-		$network_plugin_state['deactivated'][] = 'wordcamp-docs/wordcamp-docs.php';
-		$network_plugin_state['deactivated'][] = 'wordcamp-forms-to-drafts/wordcamp-forms-to-drafts.php';
-		$network_plugin_state['deactivated'][] = 'wordcamp-remote-css/bootstrap.php';
-		$network_plugin_state['deactivated'][] = 'wordcamp-site-cloner/wordcamp-site-cloner.php';
-		$network_plugin_state['deactivated'][] = 'wordcamp-speaker-feedback/wordcamp-speaker-feedback.php';
-		$network_plugin_state['deactivated'][] = 'wc-post-types/wc-post-types.php';
+		$network_plugin_state['deactivated'] = array_merge(
+			$network_plugin_state['deactivated'],
+			$network_plugin_state['activated']
+		);
+		$network_plugin_state['activated']   = array(
+			'akismet/akismet.php',
+			'bbpress-network-templates/bbpress-network-templates.php',
+			'camptix-network-tools/camptix-network-tools.php',
+			'custom-content-width/custom-content-width.php',
+			'email-post-changes/email-post-changes.php',
+			'email-post-changes-specific-post/email-post-changes-specific-post.php',
+			'gutenberg/gutenberg.php',
+			'jetpack/jetpack.php',
+			'jquery-ui-css/jquery-ui-css.php',
+			'wordcamp-coming-soon-page/bootstrap.php',
+			'wordcamp-dashboard-widgets/wordcamp-dashboard-widgets.php',
+			'wc-fonts/wc-fonts.php',
+			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
+			'wordcamp-qbo-client/wordcamp-qbo-client.php',
+			'wordpress-importer/wordpress-importer.php',
+			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
+			'wp-super-cache/wp-cache.php',
+		);
 
-		// Remove the deactivated plugins.
-		$network_plugin_state['activated'] = array_diff( $network_plugin_state['activated'], $network_plugin_state['deactivated'] );
+		$network_plugin_state['deactivated'] = array_diff( $network_plugin_state['deactivated'], $network_plugin_state['activated'] );
+	}
+
+	// When local, certain things are expected to be disabled.
+	if ( 'local' === wp_get_environment_type() ) {
+		$not_local_plugins = array(
+			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
+			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
+		);
+		$network_plugin_state['deactivated'] = array_merge(
+			$network_plugin_state['deactivated'],
+			$not_local_plugins
+		);
+
+		$network_plugin_state['activated'] = array_diff( $network_plugin_state['activated'], $not_local_plugins );
 	}
 
 	return $network_plugin_state[ $state ];

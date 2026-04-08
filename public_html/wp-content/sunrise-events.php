@@ -87,8 +87,8 @@ function set_network_and_site() {
 			$current_blog = false;
 		}
 	} elseif (
-		CAMPUS_NETWORK_ID === $site_id &&
-		1 === preg_match( PATTERN_CITY_PATH, $path )
+		EVENTS_NETWORK_ID === $site_id &&
+		1 === preg_match( PATTERN_GROUP_PATH, $path )
 	) {
 		if ( is_admin() ) {
 			$path = preg_replace( '#(.*)/wp-admin/.*#', '$1/', $path );
@@ -97,9 +97,16 @@ function set_network_and_site() {
 		list( $path ) = explode( '?', $path );
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 2 );
+
+		if ( $current_blog && '/' === $current_blog->path ) {
+			// We found the root site, not a matching group site. Falling
+			// through lets the not-found chain (renamed-url → latest-event
+			// → NOBLOGREDIRECT) handle unknown `/group/<slug>/` paths.
+			$current_blog = false;
+		}
 	} elseif (
-		EVENTS_NETWORK_ID === $site_id &&
-		1 === preg_match( PATTERN_GROUP_PATH, $path )
+		CAMPUS_NETWORK_ID === $site_id &&
+		1 === preg_match( PATTERN_CITY_PATH, $path )
 	) {
 		if ( is_admin() ) {
 			$path = preg_replace( '#(.*)/wp-admin/.*#', '$1/', $path );

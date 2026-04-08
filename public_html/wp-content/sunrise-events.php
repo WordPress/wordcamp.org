@@ -5,7 +5,7 @@ use WP_Network, WP_Site;
 use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url };
 
 defined( 'WPINC' ) || die();
-use const WordCamp\Sunrise\{ PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
+use const WordCamp\Sunrise\{ PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH, PATTERN_GROUP_PATH };
 
 // Redirecting would interfere with bin scripts, unit tests, etc.
 if ( php_sapi_name() !== 'cli' ) {
@@ -89,6 +89,17 @@ function set_network_and_site() {
 	} elseif (
 		CAMPUS_NETWORK_ID === $site_id &&
 		1 === preg_match( PATTERN_CITY_PATH, $path )
+	) {
+		if ( is_admin() ) {
+			$path = preg_replace( '#(.*)/wp-admin/.*#', '$1/', $path );
+		}
+
+		list( $path ) = explode( '?', $path );
+
+		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 2 );
+	} elseif (
+		EVENTS_NETWORK_ID === $site_id &&
+		1 === preg_match( PATTERN_GROUP_PATH, $path )
 	) {
 		if ( is_admin() ) {
 			$path = preg_replace( '#(.*)/wp-admin/.*#', '$1/', $path );

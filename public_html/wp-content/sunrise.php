@@ -83,6 +83,19 @@ const PATTERN_CITY_PATH = '
 	@ix
 ';
 
+/*
+ * Matches a URL path like `/group/sunshine-coast-qld/`.
+ *
+ * These are used by the `events.wordpress.org` network.
+ */
+const PATTERN_GROUP_PATH = '
+	@ ^
+	/ group /
+	( [\w-]+ )    # Capture the group slug.
+	/?
+	@ix
+';
+
 /**
  * Load the sunrise file for the current network.
  */

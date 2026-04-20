@@ -53,6 +53,31 @@ add_filter(
 );
 
 /**
+ * Override the default Gravatar type for RSVP avatars.
+ *
+ * GatherPress hardcodes 'mystery' as the default and bakes it into the
+ * URL via get_avatar_url(). This filter runs after (priority 20) and
+ * rewrites the d= parameter in the already-built URL.
+ */
+add_filter(
+	'get_avatar_data',
+	static function ( array $args ): array {
+		$default = get_option( 'avatar_default', 'wavatar' );
+
+		if ( ! empty( $args['url'] ) && str_contains( $args['url'], 'd=mm' ) ) {
+			$args['url'] = str_replace( 'd=mm', 'd=' . rawurlencode( $default ), $args['url'] );
+		}
+
+		if ( isset( $args['default'] ) && 'mystery' === $args['default'] ) {
+			$args['default'] = $default;
+		}
+
+		return $args;
+	},
+	20
+);
+
+/**
  * Require login to post comments (Discussion section) on group sites.
  */
 add_filter(
@@ -80,229 +105,3 @@ add_filter(
 	10,
 	2
 );
-
-/**
- * Inject default inner blocks into the gatherpress/rsvp block when it
- * renders from a theme template with no inner blocks.
- *
- * The rsvp block stores per-status inner block templates in a
- * `serializedInnerBlocks` attribute. When inserted via the editor the JS
- * populates all five statuses; theme templates only carry the visible
- * inner blocks, so the other statuses are empty. This filter fills in the
- * missing templates so every RSVP status renders correctly.
- */
-add_filter(
-	'render_block_data',
-	static function ( array $block ): array {
-		if ( 'gatherpress/rsvp' !== ( $block['blockName'] ?? '' ) ) {
-			return $block;
-		}
-
-		$serialized = $block['attrs']['serializedInnerBlocks'] ?? '[]';
-		$decoded    = json_decode( $serialized, true );
-
-		// If already populated with multiple statuses, leave it alone.
-		if ( is_array( $decoded ) && count( $decoded ) > 1 ) {
-			return $block;
-		}
-
-		// If the block has no inner blocks (self-closing in the template),
-		// parse in the no_status template as its inner blocks and provide
-		// a proper wrapper div so transform_block_content() can extract it.
-		if ( empty( $block['innerBlocks'] ) ) {
-			$block['innerBlocks']  = parse_blocks( get_rsvp_no_status_markup() );
-			$block['innerHTML']    = '<div class="wp-block-gatherpress-rsvp"></div>';
-			$block['innerContent'] = array( '<div class="wp-block-gatherpress-rsvp">', null, '</div>' );
-		}
-
-		// Provide serialized templates for every status.
-		$block['attrs']['serializedInnerBlocks'] = wp_json_encode(
-			array(
-				'attending'     => get_rsvp_attending_markup(),
-				'not_attending' => get_rsvp_not_attending_markup(),
-				'waiting_list'  => get_rsvp_not_attending_markup(),
-				'past'          => get_rsvp_past_markup(),
-			)
-		);
-
-		return $block;
-	}
-);
-
-/**
- * Block markup for the "no_status" RSVP state (user has not RSVPed yet).
- *
- * Shows an RSVP button. Logged-in users get the Attend modal; logged-out
- * users get the Login Required modal.
- */
-function get_rsvp_no_status_markup(): string {
-	return '<!-- wp:gatherpress/modal-manager -->
-<div class="wp-block-gatherpress-modal-manager">
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
-<div class="wp-block-buttons">
-<!-- wp:button {"tagName":"button","width":100,"className":"gatherpress-modal--trigger-open"} -->
-<div class="wp-block-button has-custom-width wp-block-button__width-100 gatherpress-modal--trigger-open"><button class="wp-block-button__link wp-element-button">RSVP</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->
-
-<!-- wp:gatherpress/modal {"className":"gatherpress-modal--type-rsvp"} -->
-<div aria-hidden="true" aria-label="Modal" aria-modal="true" role="dialog" tabindex="-1" class="wp-block-gatherpress-modal gatherpress-modal--type-rsvp">
-<!-- wp:gatherpress/modal-content -->
-<div class="wp-block-gatherpress-modal-content">
-<!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"0"},"padding":{"top":"0"}}}} -->
-<p style="margin-top:0;padding-top:0"><strong>RSVP to this event</strong></p>
-<!-- /wp:paragraph -->
-<!-- wp:paragraph -->
-<p>To confirm your attendance, click the <strong>Attend</strong> button below.</p>
-<!-- /wp:paragraph -->
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"flex-start"},"style":{"spacing":{"margin":{"bottom":"0"},"padding":{"bottom":"0"}}}} -->
-<div class="wp-block-buttons" style="margin-bottom:0;padding-bottom:0">
-<!-- wp:button {"tagName":"button","className":"gatherpress-rsvp--trigger-update"} -->
-<div class="wp-block-button gatherpress-rsvp--trigger-update"><button class="wp-block-button__link wp-element-button">Attend</button></div>
-<!-- /wp:button -->
-<!-- wp:button {"tagName":"button","className":"is-style-outline gatherpress-modal--trigger-close"} -->
-<div class="wp-block-button is-style-outline gatherpress-modal--trigger-close"><button class="wp-block-button__link wp-element-button">Close</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->
-</div>
-<!-- /wp:gatherpress/modal-content -->
-</div>
-<!-- /wp:gatherpress/modal -->
-
-<!-- wp:gatherpress/modal {"className":"gatherpress-modal--login"} -->
-<div aria-hidden="true" aria-label="Modal" aria-modal="true" role="dialog" tabindex="-1" class="wp-block-gatherpress-modal gatherpress-modal--login">
-<!-- wp:gatherpress/modal-content -->
-<div class="wp-block-gatherpress-modal-content">
-<!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"0"},"padding":{"top":"0"}}}} -->
-<p style="margin-top:0;padding-top:0"><strong>Login Required</strong></p>
-<!-- /wp:paragraph -->
-<!-- wp:paragraph {"className":"gatherpress--has-login-url"} -->
-<p class="gatherpress--has-login-url">Please <a href="#gatherpress-login-url">log in</a> to RSVP to this event.</p>
-<!-- /wp:paragraph -->
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"flex-start"},"style":{"spacing":{"margin":{"bottom":"0"},"padding":{"bottom":"0"}}}} -->
-<div class="wp-block-buttons" style="margin-bottom:0;padding-bottom:0">
-<!-- wp:button {"tagName":"button","className":"gatherpress-modal--trigger-close"} -->
-<div class="wp-block-button gatherpress-modal--trigger-close"><button class="wp-block-button__link wp-element-button">Close</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->
-</div>
-<!-- /wp:gatherpress/modal-content -->
-</div>
-<!-- /wp:gatherpress/modal -->
-</div>
-<!-- /wp:gatherpress/modal-manager -->';
-}
-
-/**
- * Block markup for the "attending" RSVP state.
- */
-function get_rsvp_attending_markup(): string {
-	return '<!-- wp:gatherpress/modal-manager {"style":{"spacing":{"blockGap":"var:preset|spacing|40"}}} -->
-<div class="wp-block-gatherpress-modal-manager">
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
-<div class="wp-block-buttons">
-<!-- wp:button {"tagName":"button","width":100,"className":"gatherpress-modal--trigger-open"} -->
-<div class="wp-block-button has-custom-width wp-block-button__width-100 gatherpress-modal--trigger-open"><button class="wp-block-button__link wp-element-button">Edit RSVP</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->
-<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20"}},"layout":{"type":"flex","flexWrap":"nowrap"}} -->
-<div class="wp-block-group">
-<!-- wp:gatherpress/icon {"icon":"yes-alt","iconSize":24} /-->
-<!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"0"},"padding":{"top":"0"}}}} -->
-<p style="margin-top:0;padding-top:0"><strong>Attending</strong></p>
-<!-- /wp:paragraph -->
-</div>
-<!-- /wp:group -->
-<!-- wp:gatherpress/modal {"className":"gatherpress-modal--type-rsvp"} -->
-<div aria-hidden="true" aria-label="Modal" aria-modal="true" role="dialog" tabindex="-1" class="wp-block-gatherpress-modal gatherpress-modal--type-rsvp">
-<!-- wp:gatherpress/modal-content -->
-<div class="wp-block-gatherpress-modal-content">
-<!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"0"},"padding":{"top":"0"}}}} -->
-<p style="margin-top:0;padding-top:0"><strong>You are attending</strong></p>
-<!-- /wp:paragraph -->
-<!-- wp:paragraph -->
-<p>To change your attendance status, click <strong>Not Attending</strong> below.</p>
-<!-- /wp:paragraph -->
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"flex-start"},"style":{"spacing":{"margin":{"bottom":"0"},"padding":{"bottom":"0"}}}} -->
-<div class="wp-block-buttons" style="margin-bottom:0;padding-bottom:0">
-<!-- wp:button {"tagName":"button","className":"gatherpress-rsvp--trigger-update"} -->
-<div class="wp-block-button gatherpress-rsvp--trigger-update"><button class="wp-block-button__link wp-element-button">Not Attending</button></div>
-<!-- /wp:button -->
-<!-- wp:button {"tagName":"button","className":"is-style-outline gatherpress-modal--trigger-close"} -->
-<div class="wp-block-button is-style-outline gatherpress-modal--trigger-close"><button class="wp-block-button__link wp-element-button">Close</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->
-</div>
-<!-- /wp:gatherpress/modal-content -->
-</div>
-<!-- /wp:gatherpress/modal -->
-</div>
-<!-- /wp:gatherpress/modal-manager -->';
-}
-
-/**
- * Block markup for the "not_attending" / "waiting_list" RSVP states.
- */
-function get_rsvp_not_attending_markup(): string {
-	return '<!-- wp:gatherpress/modal-manager {"style":{"spacing":{"blockGap":"var:preset|spacing|40"}}} -->
-<div class="wp-block-gatherpress-modal-manager">
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
-<div class="wp-block-buttons">
-<!-- wp:button {"tagName":"button","width":100,"className":"gatherpress-modal--trigger-open"} -->
-<div class="wp-block-button has-custom-width wp-block-button__width-100 gatherpress-modal--trigger-open"><button class="wp-block-button__link wp-element-button">Edit RSVP</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->
-<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20"}},"layout":{"type":"flex","flexWrap":"nowrap"}} -->
-<div class="wp-block-group">
-<!-- wp:gatherpress/icon {"icon":"dismiss","iconSize":24} /-->
-<!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"0"},"padding":{"top":"0"}}}} -->
-<p style="margin-top:0;padding-top:0"><strong>Not Attending</strong></p>
-<!-- /wp:paragraph -->
-</div>
-<!-- /wp:group -->
-<!-- wp:gatherpress/modal {"className":"gatherpress-modal--type-rsvp"} -->
-<div aria-hidden="true" aria-label="Modal" aria-modal="true" role="dialog" tabindex="-1" class="wp-block-gatherpress-modal gatherpress-modal--type-rsvp">
-<!-- wp:gatherpress/modal-content -->
-<div class="wp-block-gatherpress-modal-content">
-<!-- wp:paragraph {"style":{"spacing":{"margin":{"top":"0"},"padding":{"top":"0"}}}} -->
-<p style="margin-top:0;padding-top:0"><strong>Not attending</strong></p>
-<!-- /wp:paragraph -->
-<!-- wp:paragraph -->
-<p>Changed your mind? Click <strong>Attend</strong> below.</p>
-<!-- /wp:paragraph -->
-<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"flex-start"},"style":{"spacing":{"margin":{"bottom":"0"},"padding":{"bottom":"0"}}}} -->
-<div class="wp-block-buttons" style="margin-bottom:0;padding-bottom:0">
-<!-- wp:button {"tagName":"button","className":"gatherpress-rsvp--trigger-update"} -->
-<div class="wp-block-button gatherpress-rsvp--trigger-update"><button class="wp-block-button__link wp-element-button">Attend</button></div>
-<!-- /wp:button -->
-<!-- wp:button {"tagName":"button","className":"is-style-outline gatherpress-modal--trigger-close"} -->
-<div class="wp-block-button is-style-outline gatherpress-modal--trigger-close"><button class="wp-block-button__link wp-element-button">Close</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->
-</div>
-<!-- /wp:gatherpress/modal-content -->
-</div>
-<!-- /wp:gatherpress/modal -->
-</div>
-<!-- /wp:gatherpress/modal-manager -->';
-}
-
-/**
- * Block markup for the "past" RSVP state.
- */
-function get_rsvp_past_markup(): string {
-	return '<!-- wp:buttons {"layout":{"type":"flex","justifyContent":"center"}} -->
-<div class="wp-block-buttons">
-<!-- wp:button {"tagName":"button","width":100,"className":"gatherpress--is-disabled"} -->
-<div class="wp-block-button has-custom-width wp-block-button__width-100 gatherpress--is-disabled"><button class="wp-block-button__link wp-element-button">Past Event</button></div>
-<!-- /wp:button -->
-</div>
-<!-- /wp:buttons -->';
-}

@@ -82,26 +82,6 @@
    Single event layout
    ========================================================================== */
 
-/* ----------  RSVP modal overrides  ---------- */
-
-.wp-block-gatherpress-modal {
-	z-index: 100 !important;
-}
-
-.groups-site-event-info-card .wp-block-gatherpress-modal-content {
-	background: var(--wp--preset--color--white);
-	color: var(--wp--preset--color--charcoal-1);
-	border-radius: 8px;
-	padding: 32px;
-	max-width: 400px;
-	text-align: center;
-	box-shadow: 0 8px 32px rgba(30, 30, 30, 0.2);
-}
-
-.groups-site-event-info-card .wp-block-gatherpress-modal-content .wp-block-buttons {
-	justify-content: center;
-}
-
 /* ----------  Date header row  ---------- */
 
 .groups-site-event-date-header .wp-block-gatherpress-add-to-calendar .wp-block-gatherpress-dropdown__trigger {
@@ -121,38 +101,6 @@
 	margin: 0;
 }
 
-.groups-site-event-info-card .wp-block-heading {
-	color: var(--wp--preset--color--charcoal-3);
-	font-family: var(--wp--preset--font-family--inter);
-	font-size: var(--wp--preset--font-size--extra-small);
-	font-weight: 600;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-}
-
-/* "Join Us" heading uses the serif font at a larger size. */
-.groups-site-event-info-card > .wp-block-heading.has-heading-5-font-size {
-	font-family: var(--wp--preset--font-family--eb-garamond);
-	font-size: var(--wp--preset--font-size--heading-5);
-	letter-spacing: normal;
-	text-transform: none;
-	color: var(--wp--preset--color--charcoal-0);
-}
-
-/* Avatar stack — overlap avatars to form a compact row. */
-.groups-site-event-info-card .is-style-avatar-stack [data-id] {
-	margin-left: -10px;
-}
-
-.groups-site-event-info-card .is-style-avatar-stack [data-id]:first-child {
-	margin-left: 0;
-}
-
-.groups-site-event-info-card .wp-block-avatar img {
-	border-radius: 9999px !important;
-	border: 2px solid var(--wp--preset--color--white);
-	box-shadow: 0 1px 2px rgba(30, 30, 30, 0.08);
-}
 
 /* ==========================================================================
    Event card grid — used by both the front-page upcoming list (compact)
@@ -504,79 +452,6 @@
 .wp-block-query-pagination-numbers .page-numbers.current {
 	color: var(--wp--preset--color--blueberry-1);
 	font-weight: 600;
-}
-
-/* ==========================================================================
-   GatherPress RSVP-response (attendees) — circular avatars, names hidden
-   by default, full details revealed on hover.
-   ========================================================================== */
-
-.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses {
-	display: flex !important;
-	flex-wrap: wrap;
-	gap: 12px;
-	align-items: flex-start;
-	grid-template-columns: none !important;
-}
-
-.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses > [data-id^="rsvp-"] {
-	flex: 0 0 auto;
-	max-width: 56px;
-	text-align: center;
-	transition: max-width 0.25s ease;
-}
-
-/* Avatar images become circles regardless of how core/avatar renders them. */
-.wp-block-gatherpress-rsvp-response .wp-block-avatar img,
-.wp-block-gatherpress-rsvp-response .wp-block-avatar a {
-	border-radius: 9999px !important;
-	display: block;
-	width: 48px;
-	height: 48px;
-	overflow: hidden;
-	box-shadow: 0 1px 2px rgba(30, 30, 30, 0.08);
-	border: 2px solid var(--wp--preset--color--white);
-}
-
-/* Hide every non-avatar element inside an attendee tile by default — we
-   re-show them when the parent grid is hovered. We *don't* fully `display:
-   none` them (the GatherPress JS reads layout dimensions from the DOM and
-   would choke), so collapse via max-height + opacity instead. */
-.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses > [data-id^="rsvp-"] > *:not(.wp-block-avatar):not(:first-child),
-.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses > [data-id^="rsvp-"] .wp-block-group > *:not(.wp-block-avatar) {
-	max-height: 0;
-	opacity: 0;
-	margin: 0;
-	overflow: hidden;
-	pointer-events: none;
-	transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
-}
-
-/* Hover the row → reveal everyone's full details together. */
-.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses:hover > [data-id^="rsvp-"] {
-	max-width: 160px;
-}
-
-.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses:hover > [data-id^="rsvp-"] > *:not(.wp-block-avatar):not(:first-child),
-.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses:hover > [data-id^="rsvp-"] .wp-block-group > *:not(.wp-block-avatar) {
-	max-height: 80px;
-	opacity: 1;
-	margin-top: 6px;
-	pointer-events: auto;
-}
-
-/* Touch devices have no hover — fall back to always showing names. */
-@media (hover: none) {
-	.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses > [data-id^="rsvp-"] {
-		max-width: 160px;
-	}
-
-	.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses > [data-id^="rsvp-"] > *:not(.wp-block-avatar):not(:first-child),
-	.wp-block-gatherpress-rsvp-response .gatherpress--rsvp-responses > [data-id^="rsvp-"] .wp-block-group > *:not(.wp-block-avatar) {
-		max-height: 80px;
-		opacity: 1;
-		margin-top: 6px;
-	}
 }
 
 /* ==========================================================================

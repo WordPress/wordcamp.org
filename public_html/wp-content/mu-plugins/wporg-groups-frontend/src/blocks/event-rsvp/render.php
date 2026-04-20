@@ -8,7 +8,9 @@
 use GatherPress\Core\Event;
 use GatherPress\Core\Rsvp;
 
-$event_post_id = $block->context['postId'] ?? get_the_ID();
+$event_post_id = ! empty( $block->context['postId'] )
+	? (int) $block->context['postId']
+	: ( get_the_ID() ?: get_queried_object_id() );
 
 if ( ! $event_post_id || ! post_type_supports( (string) get_post_type( $event_post_id ), 'gatherpress-rsvp' ) ) {
 	return;
@@ -104,7 +106,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php endif; ?>
 		</div>
 
-		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
+		<span class="wporg-event-rsvp__count">
 			<?php
 			echo esc_html(
 				sprintf(
@@ -121,8 +123,6 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<button
 			class="wporg-event-rsvp__button wp-element-button<?php echo 'attending' === $current_status ? ' is-attending' : ''; ?>"
 			data-wp-on--click="actions.handleRsvpButton"
-			data-wp-text="state.rsvpButtonLabel"
-			data-wp-class--is-attending="state.isAttending"
 			data-wp-bind--disabled="context.rsvpLoading"
 		>
 			<?php
@@ -152,7 +152,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	>
 		<div class="wporg-event-rsvp__modal-content">
 			<div class="wporg-event-rsvp__modal-header">
-				<h2 class="wporg-event-rsvp__modal-title" data-wp-text="state.modalTitle">
+				<h2 class="wporg-event-rsvp__modal-title">
 					<?php
 					echo esc_html(
 						sprintf(
@@ -174,7 +174,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php if ( ! $is_past ) : ?>
 				<div class="wporg-event-rsvp__modal-action">
 					<?php if ( $is_login ) : ?>
-						<p class="wporg-event-rsvp__modal-status" data-wp-text="state.statusText">
+						<p class="wporg-event-rsvp__modal-status">
 							<?php
 							if ( 'attending' === $current_status ) {
 								esc_html_e( 'You are attending this event.', 'wporg-groups' );
@@ -186,9 +186,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<button
 							class="wporg-event-rsvp__modal-rsvp-btn wp-element-button"
 							data-wp-on--click="actions.toggleRsvp"
-							data-wp-text="state.modalRsvpLabel"
-							data-wp-class--is-attending="state.isAttending"
-							data-wp-bind--disabled="context.rsvpLoading"
+											data-wp-bind--disabled="context.rsvpLoading"
 						>
 							<?php
 							if ( 'attending' === $current_status ) {

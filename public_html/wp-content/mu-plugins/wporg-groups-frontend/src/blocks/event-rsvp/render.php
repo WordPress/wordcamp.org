@@ -8,23 +8,26 @@
 use GatherPress\Core\Event;
 use GatherPress\Core\Rsvp;
 
-$post_id = $block->context['postId'] ?? get_the_ID();
+$event_post_id = $block->context['postId'] ?? get_the_ID();
 
-if ( ! $post_id || ! post_type_supports( (string) get_post_type( $post_id ), 'gatherpress-rsvp' ) ) {
+if ( ! $event_post_id || ! post_type_supports( (string) get_post_type( $event_post_id ), 'gatherpress-rsvp' ) ) {
 	return;
 }
 
-if ( ! is_preview() && 'publish' !== get_post_status( $post_id ) ) {
+if ( ! is_preview() && 'publish' !== get_post_status( $event_post_id ) ) {
 	return;
 }
 
-$event    = new Event( $post_id );
-$rsvp     = new Rsvp( $post_id );
+$event    = new Event( $event_post_id );
+$rsvp     = new Rsvp( $event_post_id );
 $is_past  = $event->has_event_past();
 $is_login = is_user_logged_in();
 
 $responses = $rsvp->responses();
-$attending = $responses['attending'] ?? array( 'records' => array(), 'count' => 0 );
+$attending = $responses['attending'] ?? array(
+	'records' => array(),
+	'count'   => 0,
+);
 $records   = $attending['records'] ?? array();
 $count     = (int) ( $attending['count'] ?? 0 );
 
@@ -56,13 +59,13 @@ $visible_count  = min( count( $attendees ), $max_avatars );
 $overflow_count = max( 0, $count - $max_avatars );
 
 $context = array(
-	'postId'            => (int) $post_id,
+	'postId'            => (int) $event_post_id,
 	'isLoggedIn'        => $is_login,
 	'isPastEvent'       => $is_past,
 	'currentUserStatus' => $current_status,
 	'attendingCount'    => $count,
-	'eventTitle'        => get_the_title( $post_id ),
-	'loginUrl'          => wp_login_url( get_permalink( $post_id ) ),
+	'eventTitle'        => get_the_title( $event_post_id ),
+	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
 	'attendees'         => $attendees,
 	'modalOpen'         => false,
@@ -103,10 +106,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
 			<?php
-			printf(
-				/* translators: %d: number of attendees */
-				_n( '%d going', '%d going', $count, 'wporg-groups' ),
-				$count
+			echo esc_html(
+				sprintf(
+					/* translators: %d: number of attendees */
+					_n( '%d going', '%d going', $count, 'wporg-groups' ),
+					$count
+				)
 			);
 			?>
 		</span>
@@ -149,11 +154,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<div class="wporg-event-rsvp__modal-header">
 				<h2 class="wporg-event-rsvp__modal-title" data-wp-text="state.modalTitle">
 					<?php
-					printf(
-						/* translators: 1: attendee count, 2: event title */
-						esc_html__( '%1$d Attending %2$s', 'wporg-groups' ),
-						$count,
-						get_the_title( $post_id )
+					echo esc_html(
+						sprintf(
+							/* translators: 1: attendee count, 2: event title */
+							__( '%1$d Attending %2$s', 'wporg-groups' ),
+							$count,
+							get_the_title( $event_post_id )
+						)
 					);
 					?>
 				</h2>
@@ -200,7 +207,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									__( '<a href="%s">Log in</a> to RSVP to this event.', 'wporg-groups' ),
 									array( 'a' => array( 'href' => array() ) )
 								),
-								esc_url( wp_login_url( get_permalink( $post_id ) ) )
+								esc_url( wp_login_url( get_permalink( $event_post_id ) ) )
 							);
 							?>
 						</p>

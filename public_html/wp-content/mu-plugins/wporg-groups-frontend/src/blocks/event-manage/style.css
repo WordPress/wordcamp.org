@@ -193,9 +193,17 @@
 	padding: 12px 16px;
 }
 
-.wporg-groups-event-modal__editor .block-editor-block-toolbar {
+.wporg-groups-event-modal__editor-toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 1;
 	background: #fff;
 	border-bottom: 1px solid #e0e0e0;
+	min-height: 40px;
+}
+
+.wporg-groups-event-modal__editor-toolbar .block-editor-block-toolbar {
+	border: none;
 }
 
 .wporg-groups-event-modal__editor ul,

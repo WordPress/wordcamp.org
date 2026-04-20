@@ -35,6 +35,7 @@ import {
 import {
 	BlockEditorProvider,
 	BlockList,
+	BlockToolbar,
 	WritingFlow,
 	ObserveTyping,
 	BlockTools,
@@ -111,6 +112,11 @@ const NS =
 						hasFixedToolbar: true,
 					},
 				},
+				h(
+					'div',
+					{ className: 'wporg-groups-event-modal__editor-toolbar' },
+					h( BlockToolbar, { hideDragHandle: true } )
+				),
 				h(
 					BlockTools,
 					{},

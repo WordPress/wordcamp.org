@@ -110,7 +110,6 @@ const NS =
 						hasFixedToolbar: true,
 					},
 				},
-				h( SelectFirstBlock ),
 				h(
 					'div',
 					{ className: 'wporg-groups-event-modal__editor-toolbar' },

@@ -5,24 +5,29 @@
 /* === Trigger buttons === */
 
 .wporg-event-manage__button {
-	background: none;
-	border: none;
-	padding: 0;
-	font: inherit;
 	font-size: 14px;
 	cursor: pointer;
-	text-decoration: underline;
+}
+
+.wporg-event-manage__button--edit {
+	background: transparent;
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9);
+	color: var(--wp--preset--color--charcoal-1, #1e1e1e);
+}
+
+.wporg-event-manage__button--edit:hover {
+	border-color: var(--wp--preset--color--blueberry-1, #3858e9);
 	color: var(--wp--preset--color--blueberry-1, #3858e9);
 }
 
-.wporg-event-manage__button:hover {
-	color: var(--wp--preset--color--deep-blueberry, #213fd4);
-}
-
-/* === Modal styles === */
+/* === Modal — override wp-components Modal defaults === */
 
 .wporg-groups-event-modal .components-modal__content {
 	padding: 24px 32px 32px;
+}
+
+.wporg-groups-event-modal {
+	max-height: 90vh !important;
 }
 
 .wporg-groups-event-modal__form {
@@ -31,17 +36,29 @@
 	gap: 20px;
 }
 
+/* === Field layout === */
+
 .wporg-groups-event-modal__field {
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
 }
 
+.wporg-groups-event-modal__field > label,
 .wporg-groups-event-modal__field > .components-base-control__label {
 	font-weight: 600;
 	font-size: 11px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
+	color: #1e1e1e;
+}
+
+/* Constrain text inputs to not fill the entire modal width. */
+.wporg-groups-event-modal__field input[type="text"],
+.wporg-groups-event-modal__field input[type="date"],
+.wporg-groups-event-modal__field input[type="time"],
+.wporg-groups-event-modal__field select {
+	max-width: 400px;
 }
 
 .wporg-groups-event-modal__row {
@@ -50,11 +67,19 @@
 	gap: 16px;
 }
 
+.wporg-groups-event-modal__row input[type="date"],
+.wporg-groups-event-modal__row input[type="time"] {
+	max-width: none;
+	width: 100%;
+}
+
 @media (max-width: 600px) {
 	.wporg-groups-event-modal__row {
 		grid-template-columns: 1fr;
 	}
 }
+
+/* === Featured image === */
 
 .wporg-groups-event-modal__featured {
 	display: flex;
@@ -83,6 +108,8 @@
 	flex-wrap: wrap;
 }
 
+/* === Venue === */
+
 .wporg-groups-event-modal__new-venue {
 	display: flex;
 	flex-direction: column;
@@ -94,12 +121,20 @@
 	margin-top: 8px;
 }
 
+.wporg-groups-event-modal__new-venue input[type="text"] {
+	max-width: none;
+}
+
+/* === Loading === */
+
 .wporg-groups-event-modal__loading {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	padding: 48px;
 }
+
+/* === Actions footer === */
 
 .wporg-groups-event-modal__actions {
 	display: flex;
@@ -128,6 +163,8 @@
 	color: #d63638;
 }
 
+/* === Draft picker === */
+
 .wporg-groups-event-modal__draft-picker {
 	padding: 12px 14px;
 	border: 1px dashed #c3c4c7;
@@ -135,9 +172,8 @@
 	background: #f6f7f7;
 }
 
-/* Inline block-editor canvas — give it a sensible default height and a
-   light frame so it reads as an editable surface rather than blending into
-   the modal background. */
+/* === Inline block editor === */
+
 .wporg-groups-event-modal__editor {
 	border: 1px solid #d9d9d9;
 	border-radius: 2px;
@@ -145,23 +181,23 @@
 	max-height: 360px;
 	overflow-y: auto;
 	background: #fff;
+	isolation: isolate;
+}
+
+.wporg-groups-event-modal__editor:focus-within {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 1px #3858e9;
 }
 
 .wporg-groups-event-modal__editor .block-editor-block-list__layout {
 	padding: 12px 16px;
 }
 
-/* The default block toolbar can sit on top of the modal content; nudge its
-   stacking context inside our scroll container. */
 .wporg-groups-event-modal__editor .block-editor-block-toolbar {
 	background: #fff;
 	border-bottom: 1px solid #e0e0e0;
 }
 
-/* The block library's CSS reset strips the default browser bullet/number
-   markers + padding from `ul` / `ol` so themes can supply their own.
-   Inside the inline editor we want list blocks to look like list blocks
-   regardless of the host theme. */
 .wporg-groups-event-modal__editor ul,
 .wporg-groups-event-modal__editor ol {
 	padding-inline-start: 1.5em;
@@ -186,4 +222,9 @@
 
 .wporg-groups-event-modal__editor li {
 	margin-block: 0.35em;
+}
+
+/* Prevent modal body scroll leak when editor is focused. */
+.wporg-groups-event-modal .components-modal__content {
+	overscroll-behavior: contain;
 }

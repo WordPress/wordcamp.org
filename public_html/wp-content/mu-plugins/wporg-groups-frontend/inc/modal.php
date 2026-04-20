@@ -24,13 +24,11 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_event
  */
 function bootstrap(): void {
 	add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_supplementary_assets' );
+	add_filter( 'render_block_wporg/event-manage', __NAMESPACE__ . '\localize_block_script', 10, 2 );
 }
 
 /**
  * Enqueue media library and component styles needed by the event modal.
- *
- * Only loads for users who can manage events. The block's viewScript
- * handles the main JS and its wp-* dependencies automatically.
  */
 function enqueue_supplementary_assets(): void {
 	if ( ! current_user_can_manage_events() ) {
@@ -39,6 +37,21 @@ function enqueue_supplementary_assets(): void {
 
 	wp_enqueue_media();
 	wp_enqueue_style( 'wp-components' );
+	wp_enqueue_style( 'wp-block-editor' );
+}
+
+/**
+ * Attach localized config when the block renders.
+ *
+ * @param string $content Block HTML.
+ * @return string Unmodified block HTML.
+ */
+function localize_block_script( string $content ): string {
+	static $done = false;
+	if ( $done ) {
+		return $content;
+	}
+	$done = true;
 
 	wp_localize_script(
 		'wporg-event-manage-view-script',
@@ -47,4 +60,6 @@ function enqueue_supplementary_assets(): void {
 			'restNamespace' => 'wporg-groups/v1',
 		)
 	);
+
+	return $content;
 }

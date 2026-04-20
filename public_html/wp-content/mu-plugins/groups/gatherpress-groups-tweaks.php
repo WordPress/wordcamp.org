@@ -88,6 +88,22 @@ add_filter(
 );
 
 /**
+ * Prevent GatherPress from 404-ing the event archive.
+ *
+ * GatherPress expects a WordPress page with the event rewrite slug to be
+ * configured as an archive page. Without it, handle_event_archive_redirect()
+ * sets a 404. We use a block theme template instead, so remove the redirect.
+ */
+add_action(
+	'template_redirect',
+	static function (): void {
+		$setup = \GatherPress\Core\Event_Setup::get_instance();
+		remove_action( 'template_redirect', array( $setup, 'handle_event_archive_redirect' ) );
+	},
+	1
+);
+
+/**
  * Make the gatherpress_venue post type non-public so it has no front-end
  * archive or singular URLs. Venues are only used as metadata on events.
  */

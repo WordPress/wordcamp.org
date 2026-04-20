@@ -196,7 +196,7 @@
 	],
 	"customTemplates": [
 		{ "name": "single-event",  "title": "Single Event",  "postTypes": [ "gatherpress_event" ] },
-		{ "name": "archive-event", "title": "Event Archive", "postTypes": [ "gatherpress_event" ] },
+		{ "name": "archive-gatherpress_event", "title": "Event Archive", "postTypes": [ "gatherpress_event" ] },
 		{ "name": "single-venue",  "title": "Single Venue",  "postTypes": [ "gatherpress_venue" ] }
 	]
 }

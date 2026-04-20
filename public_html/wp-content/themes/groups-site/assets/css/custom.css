@@ -88,6 +88,18 @@
 	font-size: var(--wp--preset--font-size--small);
 }
 
+/* ----------  Venue extras (description + access) ---------- */
+
+.wporg-venue-extra {
+	margin-top: 12px;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-3);
+}
+
+.wporg-venue-extra p {
+	margin: 6px 0 0;
+}
+
 /* ----------  Event info card  ---------- */
 
 .groups-site-event-info-card {

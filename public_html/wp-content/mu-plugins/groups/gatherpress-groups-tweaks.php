@@ -104,6 +104,75 @@ add_action(
 );
 
 /**
+ * Append venue description and access requirements to the venue block output.
+ *
+ * GatherPress venue blocks only render address, phone, and website. This
+ * filter adds the venue post content (description) and the
+ * accessRequirements field from the venue information meta.
+ */
+add_filter(
+	'render_block_gatherpress/venue',
+	static function ( string $content ): string {
+		if ( ! is_singular( 'gatherpress_event' ) ) {
+			return $content;
+		}
+
+		$event_id = get_the_ID();
+		if ( ! $event_id ) {
+			return $content;
+		}
+
+		$event = new \GatherPress\Core\Event( $event_id );
+		$venue = $event->get_venue_information();
+
+		if ( empty( $venue['name'] ) ) {
+			return $content;
+		}
+
+		$venue_posts = get_posts(
+			array(
+				'post_type'   => 'gatherpress_venue',
+				'name'        => sanitize_title( $venue['name'] ),
+				'numberposts' => 1,
+				'fields'      => 'ids',
+			)
+		);
+
+		if ( empty( $venue_posts ) ) {
+			return $content;
+		}
+
+		$venue_id    = $venue_posts[0];
+		$venue_desc  = get_post_field( 'post_content', $venue_id );
+		$venue_info  = get_post_meta( $venue_id, 'gatherpress_venue_information', true );
+		$info        = $venue_info ? json_decode( $venue_info, true ) : array();
+		$access      = $info['accessRequirements'] ?? '';
+
+		$extra = '';
+
+		if ( $venue_desc ) {
+			$plain = wp_strip_all_tags( do_blocks( $venue_desc ) );
+			$plain = trim( $plain );
+			if ( $plain ) {
+				$extra .= '<p class="wporg-venue-description">' . esc_html( $plain ) . '</p>';
+			}
+		}
+
+		if ( $access ) {
+			$extra .= '<p class="wporg-venue-access"><strong>'
+				. esc_html__( 'Access:', 'wporg-groups' ) . '</strong> '
+				. esc_html( $access ) . '</p>';
+		}
+
+		if ( $extra ) {
+			$content .= '<div class="wporg-venue-extra">' . $extra . '</div>';
+		}
+
+		return $content;
+	}
+);
+
+/**
  * Make the gatherpress_venue post type non-public so it has no front-end
  * archive or singular URLs. Venues are only used as metadata on events.
  */

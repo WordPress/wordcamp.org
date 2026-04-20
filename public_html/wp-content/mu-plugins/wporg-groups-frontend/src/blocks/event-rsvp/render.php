@@ -57,8 +57,9 @@ foreach ( $records as $record ) {
 }
 
 $max_avatars    = 12;
-$visible_count  = min( count( $attendees ), $max_avatars );
 $overflow_count = max( 0, $count - $max_avatars );
+$event_title    = get_the_title( $event_post_id );
+$is_attending   = 'attending' === $current_status;
 
 $context = array(
 	'postId'            => (int) $event_post_id,
@@ -66,11 +67,39 @@ $context = array(
 	'isPastEvent'       => $is_past,
 	'currentUserStatus' => $current_status,
 	'attendingCount'    => $count,
-	'eventTitle'        => get_the_title( $event_post_id ),
+	'eventTitle'        => $event_title,
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
+);
+
+// Register server-side state so Interactivity API directives can evaluate
+// derived getters during SSR.
+wp_interactivity_state(
+	'wporg/event-rsvp',
+	array(
+		'isAttending'    => $is_attending,
+		'countLabel'     => sprintf(
+			_n( '%d going', '%d going', $count, 'wporg-groups' ),
+			$count
+		),
+		'modalTitle'     => sprintf(
+			/* translators: 1: attendee count, 2: event title */
+			__( '%1$d Attending %2$s', 'wporg-groups' ),
+			$count,
+			$event_title
+		),
+		'rsvpButtonLabel' => $is_attending
+			? "\u{2713} " . __( 'Attending', 'wporg-groups' )
+			: __( 'RSVP', 'wporg-groups' ),
+		'statusText'     => $is_attending
+			? __( 'You are attending this event.', 'wporg-groups' )
+			: __( 'You have not RSVPed to this event.', 'wporg-groups' ),
+		'modalRsvpLabel' => $is_attending
+			? __( 'Cancel RSVP', 'wporg-groups' )
+			: __( 'Attend', 'wporg-groups' ),
+	)
 );
 
 $wrapper_attributes = get_block_wrapper_attributes(
@@ -105,11 +134,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php endif; ?>
 		</div>
 
-		<span class="wporg-event-rsvp__count">
+		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
 			<?php
 			echo esc_html(
 				sprintf(
-					/* translators: %d: number of attendees */
 					_n( '%d going', '%d going', $count, 'wporg-groups' ),
 					$count
 				)
@@ -120,14 +148,14 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 	<?php if ( ! $is_past ) : ?>
 		<button
-			class="wporg-event-rsvp__button wp-element-button<?php echo 'attending' === $current_status ? ' is-attending' : ''; ?>"
+			class="wporg-event-rsvp__button wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
 			data-wp-on--click="actions.handleRsvpButton"
+			data-wp-text="state.rsvpButtonLabel"
+			data-wp-class--is-attending="state.isAttending"
 			data-wp-bind--disabled="context.rsvpLoading"
 		>
 			<?php
-			if ( ! $is_login ) {
-				esc_html_e( 'RSVP', 'wporg-groups' );
-			} elseif ( 'attending' === $current_status ) {
+			if ( $is_attending ) {
 				echo "\u{2713} " . esc_html__( 'Attending', 'wporg-groups' );
 			} else {
 				esc_html_e( 'RSVP', 'wporg-groups' );
@@ -151,14 +179,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	>
 		<div class="wporg-event-rsvp__modal-content">
 			<div class="wporg-event-rsvp__modal-header">
-				<h2 class="wporg-event-rsvp__modal-title">
+				<h2 class="wporg-event-rsvp__modal-title" data-wp-text="state.modalTitle">
 					<?php
 					echo esc_html(
 						sprintf(
-							/* translators: 1: attendee count, 2: event title */
 							__( '%1$d Attending %2$s', 'wporg-groups' ),
 							$count,
-							get_the_title( $event_post_id )
+							$event_title
 						)
 					);
 					?>
@@ -173,9 +200,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php if ( ! $is_past ) : ?>
 				<div class="wporg-event-rsvp__modal-action">
 					<?php if ( $is_login ) : ?>
-						<p class="wporg-event-rsvp__modal-status">
+						<p class="wporg-event-rsvp__modal-status" data-wp-text="state.statusText">
 							<?php
-							if ( 'attending' === $current_status ) {
+							if ( $is_attending ) {
 								esc_html_e( 'You are attending this event.', 'wporg-groups' );
 							} else {
 								esc_html_e( 'You have not RSVPed to this event.', 'wporg-groups' );
@@ -183,12 +210,14 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							?>
 						</p>
 						<button
-							class="wporg-event-rsvp__modal-rsvp-btn wp-element-button"
+							class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
 							data-wp-on--click="actions.toggleRsvp"
-											data-wp-bind--disabled="context.rsvpLoading"
+							data-wp-text="state.modalRsvpLabel"
+							data-wp-class--is-attending="state.isAttending"
+							data-wp-bind--disabled="context.rsvpLoading"
 						>
 							<?php
-							if ( 'attending' === $current_status ) {
+							if ( $is_attending ) {
 								esc_html_e( 'Cancel RSVP', 'wporg-groups' );
 							} else {
 								esc_html_e( 'Attend', 'wporg-groups' );
@@ -199,8 +228,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<p class="wporg-event-rsvp__modal-status">
 							<?php
 							printf(
-								/* translators: %s: login URL */
 								wp_kses(
+									/* translators: %s: login URL */
 									__( '<a href="%s">Log in</a> to RSVP to this event.', 'wporg-groups' ),
 									array( 'a' => array( 'href' => array() ) )
 								),

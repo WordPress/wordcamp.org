@@ -2,8 +2,7 @@
  * Event RSVP block — Interactivity API store.
  *
  * Handles the avatar-stack click → full-screen modal, RSVP toggling,
- * and attendee list display. Works without a build step by importing
- * directly from the WordPress-provided import map.
+ * and attendee list display.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -12,7 +11,7 @@ import { store, getContext, getElement } from '@wordpress/interactivity';
 
 let cachedNonce = null;
 
-store( 'wporg/event-rsvp', {
+const { state } = store( 'wporg/event-rsvp', {
 	state: {
 		get isAttending() {
 			return getContext().currentUserStatus === 'attending';
@@ -140,15 +139,13 @@ async function doToggleRsvp( ctx ) {
 	ctx.attendingCount += newStatus === 'attending' ? 1 : -1;
 	ctx.rsvpLoading = true;
 
-	updateUI( ctx );
-
 	try {
 		const data = await sendRsvp( ctx, newStatus );
 
 		if ( data && data.success ) {
 			ctx.currentUserStatus = data.status;
 			ctx.attendingCount = data.responses.attending.count;
-			await refreshAttendees( ctx );
+			refreshAttendees( ctx );
 		} else {
 			ctx.currentUserStatus = oldStatus;
 			ctx.attendingCount = oldCount;
@@ -158,45 +155,6 @@ async function doToggleRsvp( ctx ) {
 		ctx.attendingCount = oldCount;
 	} finally {
 		ctx.rsvpLoading = false;
-		updateUI( ctx );
-	}
-}
-
-function updateUI( ctx ) {
-	const isAttending = ctx.currentUserStatus === 'attending';
-	const count = ctx.attendingCount;
-	const countText = count === 1 ? '1 going' : count + ' going';
-
-	// Update count labels.
-	document.querySelectorAll( '.wporg-event-rsvp__count' ).forEach( ( el ) => {
-		el.textContent = countText;
-	} );
-
-	// Update modal title.
-	const title = document.querySelector( '.wporg-event-rsvp__modal-title' );
-	if ( title ) {
-		title.textContent = count + ' Attending ' + ctx.eventTitle;
-	}
-
-	// Update sidebar RSVP button.
-	const sidebarBtn = document.querySelector( '.wporg-event-rsvp__button' );
-	if ( sidebarBtn ) {
-		sidebarBtn.textContent = isAttending ? '\u2713 Attending' : 'RSVP';
-		sidebarBtn.classList.toggle( 'is-attending', isAttending );
-	}
-
-	// Update modal status text and button.
-	const statusEl = document.querySelector( '.wporg-event-rsvp__modal-status' );
-	if ( statusEl ) {
-		statusEl.textContent = isAttending
-			? 'You are attending this event.'
-			: 'You have not RSVPed to this event.';
-	}
-
-	const modalBtn = document.querySelector( '.wporg-event-rsvp__modal-rsvp-btn' );
-	if ( modalBtn ) {
-		modalBtn.textContent = isAttending ? 'Cancel RSVP' : 'Attend';
-		modalBtn.classList.toggle( 'is-attending', isAttending );
 	}
 }
 
@@ -274,7 +232,6 @@ async function refreshAttendees( ctx ) {
 						.join( '' )
 				: '<p class="wporg-event-rsvp__empty">No attendees yet. Be the first to RSVP!</p>';
 
-			// Update avatar stack.
 			const avatars = document.querySelector(
 				'.wporg-event-rsvp__avatars'
 			);
@@ -305,7 +262,7 @@ async function refreshAttendees( ctx ) {
 			}
 		}
 	} catch {
-		// Silently fail — the optimistic UI update already happened.
+		// The optimistic context update already reflects the new state.
 	}
 }
 

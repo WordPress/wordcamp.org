@@ -21,6 +21,7 @@
 		"inserter": false
 	},
 	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
 	"viewScript": "file:./view.js",
 	"style": "file:./style-index.css"
 }

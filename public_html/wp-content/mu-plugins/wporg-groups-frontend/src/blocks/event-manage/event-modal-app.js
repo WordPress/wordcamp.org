@@ -585,6 +585,18 @@ const NS =
 			onClose();
 		};
 
+		useEffect( () => {
+			const onEscape = ( ev ) => {
+				if ( ev.key === 'Escape' ) {
+					ev.stopPropagation();
+					ev.preventDefault();
+					handleClose();
+				}
+			};
+			document.addEventListener( 'keydown', onEscape, true );
+			return () => document.removeEventListener( 'keydown', onEscape, true );
+		} );
+
 		const showDraftPicker = ! isEdit && drafts.length > 0;
 
 		const autosaveLabel = ( () => {
@@ -613,12 +625,6 @@ const NS =
 					? __( 'Edit event', 'wporg-groups-frontend' )
 					: __( 'Create event', 'wporg-groups-frontend' ),
 				onRequestClose: handleClose,
-				onKeyDown: ( ev ) => {
-					if ( ev.key === 'Escape' ) {
-						ev.stopPropagation();
-						handleClose();
-					}
-				},
 				className: 'wporg-groups-event-modal',
 				size: 'large',
 				shouldCloseOnClickOutside: false,

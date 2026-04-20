@@ -63,8 +63,9 @@
 
 .wporg-groups-event-modal__row {
 	display: grid;
-	grid-template-columns: 2fr 1fr 1fr;
+	grid-template-columns: 2fr 1fr 1.5fr;
 	gap: 16px;
+	align-items: start;
 }
 
 .wporg-groups-event-modal__row input[type="date"],
@@ -204,6 +205,11 @@
 
 .wporg-groups-event-modal__editor-toolbar .block-editor-block-toolbar {
 	border: none;
+}
+
+.wporg-groups-event-modal__editor-toolbar .block-editor-block-toolbar__slot:empty,
+.wporg-groups-event-modal__editor-toolbar .components-toolbar-group:has(> .block-editor-block-toolbar__slot:empty) {
+	display: none;
 }
 
 .wporg-groups-event-modal__editor ul,

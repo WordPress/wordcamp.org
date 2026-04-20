@@ -197,15 +197,28 @@ function event_comment_form_defaults( $defaults ) {
 	$defaults['comment_notes_before'] = '';
 	$defaults['comment_notes_after']  = '';
 	$defaults['logged_in_as']         = '';
-	$defaults['label_submit']         = __( 'Post reply', 'groups-site' );
+	$defaults['label_submit']         = __( 'Post comment', 'groups-site' );
 	$defaults['class_submit']         = 'submit wp-element-button';
 
 	$defaults['comment_field'] = sprintf(
 		'<p class="comment-form-comment"><label class="screen-reader-text" for="comment">%1$s</label><textarea id="comment" name="comment" cols="45" rows="3" maxlength="65525" required placeholder="%2$s"></textarea></p>',
-		esc_html__( 'Reply', 'groups-site' ),
-		esc_attr__( 'Add a reply&hellip;', 'groups-site' )
+		esc_html__( 'Comment', 'groups-site' ),
+		esc_attr__( 'Add a comment&hellip;', 'groups-site' )
 	);
 
 	return $defaults;
 }
 add_filter( 'comment_form_defaults', __NAMESPACE__ . '\event_comment_form_defaults' );
+
+/**
+ * Change "Reply" link text to "Reply" (keeping it, but ensuring the cancel
+ * text also says the right thing). Override the default "Leave a Reply" title.
+ */
+function event_comment_reply_link_args( $args ) {
+	if ( is_singular( 'gatherpress_event' ) ) {
+		$args['reply_text']  = __( 'Reply', 'groups-site' );
+		$args['login_text']  = __( 'Log in to comment', 'groups-site' );
+	}
+	return $args;
+}
+add_filter( 'comment_reply_link_args', __NAMESPACE__ . '\event_comment_reply_link_args' );

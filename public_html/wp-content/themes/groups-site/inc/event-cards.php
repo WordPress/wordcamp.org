@@ -21,6 +21,7 @@
 namespace WordCamp\Groups\Site\Event_Cards;
 
 use GatherPress\Core\Event;
+use GatherPress\Core\Rsvp;
 use WP_Query;
 
 defined( 'ABSPATH' ) || exit;
@@ -158,6 +159,7 @@ function render_event_cards( WP_Query $query, array $opts = array() ): void {
 	<?php
 	foreach ( $query->posts as $post_id ) :
 		$event     = new Event( $post_id );
+		$rsvp      = new Rsvp( $post_id );
 		$permalink = get_permalink( $post_id );
 		$thumb     = get_the_post_thumbnail_url( $post_id, 'large' );
 		$title     = get_the_title( $post_id );
@@ -165,6 +167,8 @@ function render_event_cards( WP_Query $query, array $opts = array() ): void {
 		$excerpt   = extract_card_excerpt( $post_id, (int) $opts['excerpt_words'] );
 		$venue     = $event->get_venue_information();
 		$venue_lbl = $venue['name'] ?? '';
+		$responses = $rsvp->responses();
+		$attending = (int) ( $responses['attending']['count'] ?? 0 );
 		?>
 		<a class="groups-site-event-card" href="<?php echo esc_url( $permalink ); ?>">
 			<?php if ( $thumb ) : ?>
@@ -178,6 +182,19 @@ function render_event_cards( WP_Query $query, array $opts = array() ): void {
 				<h3 class="groups-site-event-card__title"><?php echo esc_html( $title ); ?></h3>
 				<?php if ( $excerpt ) : ?>
 					<p class="groups-site-event-card__excerpt"><?php echo esc_html( $excerpt ); ?></p>
+				<?php endif; ?>
+				<?php if ( $attending > 0 ) : ?>
+					<p class="groups-site-event-card__rsvp">
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %s: formatted attendee count */
+								_n( '%s going', '%s going', $attending, 'wporg-groups' ),
+								number_format_i18n( $attending )
+							)
+						);
+						?>
+					</p>
 				<?php endif; ?>
 				<?php if ( $venue_lbl ) : ?>
 					<p class="groups-site-event-card__venue">

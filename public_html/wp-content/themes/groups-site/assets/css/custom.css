@@ -222,9 +222,17 @@
 	line-height: 1.6;
 }
 
-.groups-site-event-card__venue {
+.groups-site-event-card__rsvp {
 	margin: auto 0 0;
 	padding-top: 12px;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-event-card__venue {
+	margin: 0;
+	padding-top: 4px;
 	display: flex;
 	align-items: center;
 	gap: 6px;

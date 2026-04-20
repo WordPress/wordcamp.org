@@ -86,8 +86,8 @@ wp_interactivity_state(
 		),
 		'modalTitle'     => sprintf(
 			/* translators: 1: attendee count, 2: event title */
-			__( '%1$d Attending %2$s', 'wporg-groups' ),
-			$count,
+			__( '%1$s Attending %2$s', 'wporg-groups' ),
+			number_format_i18n( $count ),
 			$event_title
 		),
 		'rsvpButtonLabel' => $is_attending
@@ -138,8 +138,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php
 			echo esc_html(
 				sprintf(
-					_n( '%d going', '%d going', $count, 'wporg-groups' ),
-					$count
+					_n( '%s going', '%s going', $count, 'wporg-groups' ),
+					number_format_i18n( $count )
 				)
 			);
 			?>

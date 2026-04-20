@@ -10,7 +10,8 @@
 	"usesContext": [ "postId" ],
 	"supports": {
 		"html": false,
-		"interactivity": true
+		"interactivity": true,
+		"inserter": false
 	},
 	"render": "file:./render.php",
 	"editorScript": "file:./index.js",

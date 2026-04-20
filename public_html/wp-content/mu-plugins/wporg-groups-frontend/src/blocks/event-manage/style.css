@@ -10,14 +10,15 @@
 }
 
 .wporg-event-manage__button--edit {
-	background: transparent;
-	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9);
-	color: var(--wp--preset--color--charcoal-1, #1e1e1e);
+	background: transparent !important;
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
+	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
 }
 
 .wporg-event-manage__button--edit:hover {
-	border-color: var(--wp--preset--color--blueberry-1, #3858e9);
-	color: var(--wp--preset--color--blueberry-1, #3858e9);
+	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
+	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
+	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
 }
 
 /* === Modal — override wp-components Modal defaults === */
@@ -246,13 +247,26 @@
 /* === Venue editor overlay === */
 
 .wporg-groups-venue-editor {
-	position: absolute;
+	position: fixed;
 	inset: 0;
-	z-index: 2;
+	z-index: 100001;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 40px 20px;
+}
+
+.wporg-groups-venue-editor__inner {
 	background: #fff;
+	border-radius: 8px;
+	width: 100%;
+	max-width: 520px;
+	max-height: calc(100vh - 80px);
+	overflow-y: auto;
+	box-shadow: 0 16px 48px rgba(30, 30, 30, 0.2);
 	display: flex;
 	flex-direction: column;
-	overflow-y: auto;
 }
 
 .wporg-groups-venue-editor__header {

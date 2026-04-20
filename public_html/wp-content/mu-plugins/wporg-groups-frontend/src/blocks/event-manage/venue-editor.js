@@ -116,67 +116,83 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 		setShowSuggestions( false );
 	};
 
-	// Leaflet map.
-	useEffect( () => {
-		if ( ! latitude || ! longitude || ! mapRef.current ) {
-			return;
-		}
-
-		let cancelled = false;
-
-		import( 'leaflet' ).then( ( L ) => {
-			if ( cancelled ) {
+	// Leaflet map — use a callback ref so the map initializes as soon as
+	// the DOM element mounts, even if latitude/longitude were set in the
+	// same render cycle.
+	const mapCallbackRef = useCallback(
+		( node ) => {
+			mapRef.current = node;
+			if ( ! node ) {
 				return;
-			}
-
-			// Load Leaflet CSS if not already present.
-			if ( ! document.querySelector( 'link[href*="leaflet.css"]' ) ) {
-				const link = document.createElement( 'link' );
-				link.rel = 'stylesheet';
-				link.href =
-					'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-				document.head.appendChild( link );
 			}
 
 			const lat = parseFloat( latitude );
 			const lng = parseFloat( longitude );
-
-			if ( mapInstanceRef.current ) {
-				mapInstanceRef.current.setView( [ lat, lng ], 15 );
-				if ( markerRef.current ) {
-					markerRef.current.setLatLng( [ lat, lng ] );
-				}
+			if ( isNaN( lat ) || isNaN( lng ) ) {
 				return;
 			}
 
-			const map = L.map( mapRef.current ).setView( [ lat, lng ], 15 );
-			L.tileLayer(
-				'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-				{
-					attribution: '&copy; OpenStreetMap contributors',
-					maxZoom: 19,
+			import( 'leaflet' ).then( ( L ) => {
+				if ( ! mapRef.current ) {
+					return;
 				}
-			).addTo( map );
 
-			const marker = L.marker( [ lat, lng ], {
-				draggable: true,
-			} ).addTo( map );
+				if ( ! document.querySelector( 'link[href*="leaflet.css"]' ) ) {
+					const link = document.createElement( 'link' );
+					link.rel = 'stylesheet';
+					link.href =
+						'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+					document.head.appendChild( link );
+				}
 
-			marker.on( 'dragend', () => {
-				const pos = marker.getLatLng();
-				setLatitude( String( pos.lat.toFixed( 6 ) ) );
-				setLongitude( String( pos.lng.toFixed( 6 ) ) );
+				if ( mapInstanceRef.current ) {
+					mapInstanceRef.current.setView( [ lat, lng ], 15 );
+					if ( markerRef.current ) {
+						markerRef.current.setLatLng( [ lat, lng ] );
+					}
+					return;
+				}
+
+				const map = L.map( mapRef.current ).setView( [ lat, lng ], 15 );
+				L.tileLayer(
+					'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+					{
+						attribution: '&copy; OpenStreetMap contributors',
+						maxZoom: 19,
+					}
+				).addTo( map );
+
+				const marker = L.marker( [ lat, lng ], {
+					draggable: true,
+				} ).addTo( map );
+
+				marker.on( 'dragend', () => {
+					const pos = marker.getLatLng();
+					setLatitude( String( pos.lat.toFixed( 6 ) ) );
+					setLongitude( String( pos.lng.toFixed( 6 ) ) );
+				} );
+
+				mapInstanceRef.current = map;
+				markerRef.current = marker;
+
+				setTimeout( () => map.invalidateSize(), 200 );
 			} );
+		},
+		[ latitude, longitude ]
+	);
 
-			mapInstanceRef.current = map;
-			markerRef.current = marker;
-
-			setTimeout( () => map.invalidateSize(), 100 );
-		} );
-
-		return () => {
-			cancelled = true;
-		};
+	// Update existing map when coordinates change (after geocode selection).
+	useEffect( () => {
+		if ( ! mapInstanceRef.current || ! markerRef.current ) {
+			return;
+		}
+		const lat = parseFloat( latitude );
+		const lng = parseFloat( longitude );
+		if ( isNaN( lat ) || isNaN( lng ) ) {
+			return;
+		}
+		mapInstanceRef.current.setView( [ lat, lng ], 15 );
+		markerRef.current.setLatLng( [ lat, lng ] );
 	}, [ latitude, longitude ] );
 
 	// Cleanup map on unmount.
@@ -214,6 +230,8 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 			status: 'publish',
 			meta: {
 				gatherpress_venue_information: venueInfo,
+				gatherpress_venue_map_show: !! ( latitude && longitude ),
+				gatherpress_venue_map_zoom: 15,
 			},
 		};
 
@@ -259,10 +277,12 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 		return h(
 			'div',
 			{ className: 'wporg-groups-venue-editor' },
-			h(
-				'div',
-				{ className: 'wporg-groups-venue-editor__loading' },
-				h( Spinner )
+			h( 'div', { className: 'wporg-groups-venue-editor__inner' },
+				h(
+					'div',
+					{ className: 'wporg-groups-venue-editor__loading' },
+					h( Spinner )
+				)
 			)
 		);
 	}
@@ -270,6 +290,9 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 	return h(
 		'div',
 		{ className: 'wporg-groups-venue-editor' },
+		h(
+		'div',
+		{ className: 'wporg-groups-venue-editor__inner' },
 		h(
 			'div',
 			{ className: 'wporg-groups-venue-editor__header' },
@@ -365,7 +388,7 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 				longitude &&
 				h( 'div', {
 					className: 'wporg-groups-venue-editor__map',
-					ref: mapRef,
+					ref: mapCallbackRef,
 				} ),
 			h( TextareaControl, {
 				label: __( 'Description', 'wporg-groups-frontend' ),
@@ -418,6 +441,7 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 						: __( 'Create venue', 'wporg-groups-frontend' )
 				)
 			)
+		)
 		)
 	);
 }

@@ -18,7 +18,7 @@ $event_post_id = ! empty( $block->context['postId'] )
 	? (int) $block->context['postId']
 	: ( get_the_ID() ?: get_queried_object_id() );
 
-$mode = $attributes['mode'] ?? 'auto';
+$block_mode = $attributes['mode'] ?? 'auto';
 
 $is_single_event = $event_post_id
 	&& 'gatherpress_event' === get_post_type( $event_post_id )
@@ -27,9 +27,9 @@ $is_single_event = $event_post_id
 $show_edit   = false;
 $show_create = false;
 
-if ( 'edit' === $mode ) {
+if ( 'edit' === $block_mode ) {
 	$show_edit = true;
-} elseif ( 'create' === $mode ) {
+} elseif ( 'create' === $block_mode ) {
 	$show_create = true;
 } elseif ( $is_single_event ) {
 	$show_edit = true;

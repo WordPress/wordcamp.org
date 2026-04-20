@@ -140,6 +140,8 @@ async function doToggleRsvp( ctx ) {
 	ctx.attendingCount += newStatus === 'attending' ? 1 : -1;
 	ctx.rsvpLoading = true;
 
+	updateUI( ctx );
+
 	try {
 		const data = await sendRsvp( ctx, newStatus );
 
@@ -156,6 +158,45 @@ async function doToggleRsvp( ctx ) {
 		ctx.attendingCount = oldCount;
 	} finally {
 		ctx.rsvpLoading = false;
+		updateUI( ctx );
+	}
+}
+
+function updateUI( ctx ) {
+	const isAttending = ctx.currentUserStatus === 'attending';
+	const count = ctx.attendingCount;
+	const countText = count === 1 ? '1 going' : count + ' going';
+
+	// Update count labels.
+	document.querySelectorAll( '.wporg-event-rsvp__count' ).forEach( ( el ) => {
+		el.textContent = countText;
+	} );
+
+	// Update modal title.
+	const title = document.querySelector( '.wporg-event-rsvp__modal-title' );
+	if ( title ) {
+		title.textContent = count + ' Attending ' + ctx.eventTitle;
+	}
+
+	// Update sidebar RSVP button.
+	const sidebarBtn = document.querySelector( '.wporg-event-rsvp__button' );
+	if ( sidebarBtn ) {
+		sidebarBtn.textContent = isAttending ? '\u2713 Attending' : 'RSVP';
+		sidebarBtn.classList.toggle( 'is-attending', isAttending );
+	}
+
+	// Update modal status text and button.
+	const statusEl = document.querySelector( '.wporg-event-rsvp__modal-status' );
+	if ( statusEl ) {
+		statusEl.textContent = isAttending
+			? 'You are attending this event.'
+			: 'You have not RSVPed to this event.';
+	}
+
+	const modalBtn = document.querySelector( '.wporg-event-rsvp__modal-rsvp-btn' );
+	if ( modalBtn ) {
+		modalBtn.textContent = isAttending ? 'Cancel RSVP' : 'Attend';
+		modalBtn.classList.toggle( 'is-attending', isAttending );
 	}
 }
 

@@ -69,7 +69,6 @@ $context = array(
 	'eventTitle'        => get_the_title( $event_post_id ),
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
-	'attendees'         => $attendees,
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
 );

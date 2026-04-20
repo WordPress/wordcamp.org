@@ -242,3 +242,101 @@
 .wporg-groups-event-modal .components-modal__content {
 	overscroll-behavior: contain;
 }
+
+/* === Venue editor overlay === */
+
+.wporg-groups-venue-editor {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+}
+
+.wporg-groups-venue-editor__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 24px 0;
+	flex-shrink: 0;
+}
+
+.wporg-groups-venue-editor__header h2 {
+	margin: 0 !important;
+	padding: 0 !important;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.wporg-groups-venue-editor__close {
+	flex-shrink: 0;
+}
+
+.wporg-groups-venue-editor__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px;
+	flex: 1;
+}
+
+.wporg-groups-venue-editor__form {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 16px 24px 24px;
+	flex: 1;
+}
+
+.wporg-groups-venue-editor__field {
+	position: relative;
+}
+
+.wporg-groups-venue-editor__suggestions {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	background: #fff;
+	border: 1px solid #d9d9d9;
+	border-top: none;
+	border-radius: 0 0 2px 2px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.wporg-groups-venue-editor__suggestions li {
+	padding: 8px 12px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.wporg-groups-venue-editor__suggestions li:hover,
+.wporg-groups-venue-editor__suggestions li:focus {
+	background: #f0f0f0;
+}
+
+.wporg-groups-venue-editor__map {
+	height: 250px;
+	border-radius: 4px;
+	border: 1px solid #d9d9d9;
+}
+
+.wporg-groups-venue-editor__actions {
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+	margin-top: 8px;
+}
+
+.wporg-groups-event-modal__edit-venue {
+	font-size: 12px;
+	margin-top: 4px;
+}

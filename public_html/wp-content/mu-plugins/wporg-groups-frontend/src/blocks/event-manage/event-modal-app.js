@@ -45,6 +45,7 @@ import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { useSelect, useDispatch } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
+import VenueEditor from './venue-editor';
 
 const NS =
 	( window.wporgGroupsEventModal &&
@@ -293,8 +294,7 @@ const NS =
 		);
 	}
 
-	function VenueField( { venues, venueId, onSelectExisting, newVenueName, newVenueAddress, onChangeNewVenue } ) {
-		const isAddingNew = venueId === '__new__';
+	function VenueField( { venues, venueId, onSelectExisting, onOpenVenueEditor } ) {
 		const options = [
 			{ label: __( '— Select a venue —', 'wporg-groups-frontend' ), value: '' },
 		].concat(
@@ -306,33 +306,30 @@ const NS =
 			{ label: __( '+ Add a new venue', 'wporg-groups-frontend' ), value: '__new__' },
 		] );
 
+		const handleChange = ( v ) => {
+			if ( v === '__new__' ) {
+				onOpenVenueEditor( 0 );
+			} else {
+				onSelectExisting( v );
+			}
+		};
+
 		return h(
-			Fragment,
-			{},
+			'div',
+			{ className: 'wporg-groups-event-modal__field' },
 			h( SelectControl, {
 				label: __( 'Venue', 'wporg-groups-frontend' ),
-				value: isAddingNew ? '__new__' : ( venueId ? String( venueId ) : '' ),
+				value: venueId ? String( venueId ) : '',
 				options: options,
-				onChange: onSelectExisting,
+				onChange: handleChange,
 				__nextHasNoMarginBottom: true,
 			} ),
-			isAddingNew &&
-				h(
-					'div',
-					{ className: 'wporg-groups-event-modal__new-venue' },
-					h( TextControl, {
-						label: __( 'New venue name', 'wporg-groups-frontend' ),
-						value: newVenueName,
-						onChange: ( v ) => onChangeNewVenue( 'name', v ),
-						__nextHasNoMarginBottom: true,
-					} ),
-					h( TextControl, {
-						label: __( 'New venue address', 'wporg-groups-frontend' ),
-						value: newVenueAddress,
-						onChange: ( v ) => onChangeNewVenue( 'address', v ),
-						__nextHasNoMarginBottom: true,
-					} )
-				)
+			venueId && venueId !== '__new__' &&
+				h( Button, {
+					variant: 'link',
+					onClick: () => onOpenVenueEditor( parseInt( venueId, 10 ) ),
+					className: 'wporg-groups-event-modal__edit-venue',
+				}, __( 'Edit venue', 'wporg-groups-frontend' ) )
 		);
 	}
 
@@ -374,6 +371,8 @@ const NS =
 		const [ draftId, setDraftId ] = useState( 0 );
 		const [ autosaveStatus, setAutosaveStatus ] = useState( '' );
 		const [ autosaveTime, setAutosaveTime ] = useState( null );
+		const [ venueEditorOpen, setVenueEditorOpen ] = useState( false );
+		const [ venueEditorId, setVenueEditorId ] = useState( 0 );
 
 		// Dirty tracking — set on any user input. Drives autosave + the
 		// close-confirmation prompt.
@@ -732,11 +731,14 @@ const NS =
 					h( VenueField, {
 						venues: venues,
 						venueId: form.venue_select,
-						onSelectExisting: ( v ) => updateField( 'venue_select', v ),
-						newVenueName: form.new_venue_name,
-						newVenueAddress: form.new_venue_address,
-						onChangeNewVenue: ( field, v ) =>
-							updateField( field === 'name' ? 'new_venue_name' : 'new_venue_address', v ),
+						onSelectExisting: ( v ) => {
+							updateField( 'venue_select', v );
+							markDirty();
+						},
+						onOpenVenueEditor: ( id ) => {
+							setVenueEditorId( id );
+							setVenueEditorOpen( true );
+						},
 					} ),
 
 					h(
@@ -762,7 +764,25 @@ const NS =
 								: __( 'Create event', 'wporg-groups-frontend' )
 						)
 					)
-				)
+				),
+				venueEditorOpen && h( VenueEditor, {
+					venueId: venueEditorId,
+					onSave: ( saved ) => {
+						setVenueEditorOpen( false );
+						updateField( 'venue_select', String( saved.id ) );
+						setVenues( ( prev ) => {
+							const exists = prev.find( ( v ) => v.id === saved.id );
+							if ( exists ) {
+								return prev.map( ( v ) =>
+									v.id === saved.id ? { ...v, name: saved.name } : v
+								);
+							}
+							return [ ...prev, { id: saved.id, name: saved.name } ];
+						} );
+						markDirty();
+					},
+					onCancel: () => setVenueEditorOpen( false ),
+				} )
 		);
 	}
 

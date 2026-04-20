@@ -43,6 +43,7 @@ import {
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
+import { useSelect, useDispatch } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 
 const NS =
@@ -82,12 +83,30 @@ const NS =
 	 * breaking the slash inserter (parent re-renders were tearing down the
 	 * editor's internal state on every input event).
 	 */
+	function SelectFirstBlock() {
+		const { selectBlock } = useDispatch( 'core/block-editor' );
+		const firstBlockId = useSelect(
+			( select ) => {
+				const ids = select( 'core/block-editor' ).getBlockOrder();
+				return ids.length ? ids[ 0 ] : null;
+			},
+			[]
+		);
+		const didSelect = useRef( false );
+
+		useEffect( () => {
+			if ( firstBlockId && ! didSelect.current ) {
+				didSelect.current = true;
+				selectBlock( firstBlockId );
+			}
+		}, [ firstBlockId, selectBlock ] );
+
+		return null;
+	}
+
 	function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
 		const [ blocks, setBlocks ] = useState( () => parse( initialValue || '' ) );
 
-		// Keep the imperative getter pointed at the latest block state.
-		// `useEffect` on `[ blocks ]` would also work but assigning during
-		// render is cheap and avoids one extra effect run per keystroke.
 		if ( getValueRef ) {
 			getValueRef.current = () => serialize( blocks );
 		}
@@ -112,6 +131,7 @@ const NS =
 						hasFixedToolbar: true,
 					},
 				},
+				h( SelectFirstBlock ),
 				h(
 					'div',
 					{ className: 'wporg-groups-event-modal__editor-toolbar' },
@@ -593,6 +613,12 @@ const NS =
 					? __( 'Edit event', 'wporg-groups-frontend' )
 					: __( 'Create event', 'wporg-groups-frontend' ),
 				onRequestClose: handleClose,
+				onKeyDown: ( ev ) => {
+					if ( ev.key === 'Escape' ) {
+						ev.stopPropagation();
+						handleClose();
+					}
+				},
 				className: 'wporg-groups-event-modal',
 				size: 'large',
 				shouldCloseOnClickOutside: false,

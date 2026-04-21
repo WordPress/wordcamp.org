@@ -1,4 +1,4 @@
-FROM mariadb:11.4
+FROM mariadb:lts
 
 RUN apt-get update && \
     apt-get install -yq --no-install-recommends nano vim && \

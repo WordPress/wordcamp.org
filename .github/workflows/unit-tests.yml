@@ -59,7 +59,7 @@ jobs:
 
     services:
       mariadb:
-        image: mariadb:11.4
+        image: mariadb:lts
         env:
           MARIADB_ROOT_PASSWORD: root
           MARIADB_DATABASE: wcorg_test

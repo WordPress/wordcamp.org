@@ -35,7 +35,11 @@ const { state } = store( 'wporg/event-rsvp', {
 			if ( ctx.currentUserStatus === 'attending' ) {
 				return '\u2713 Attending';
 			}
-			return 'RSVP';
+			return ctx.isMember ? 'RSVP' : 'Join & RSVP';
+		},
+
+		get isMember() {
+			return getContext().isMember;
 		},
 
 		get statusText() {
@@ -128,6 +132,29 @@ async function doToggleRsvp( ctx ) {
 
 	if ( ctx.isPastEvent || ctx.rsvpLoading ) {
 		return;
+	}
+
+	// Join group first if not a member.
+	if ( ! ctx.isMember && ctx.joinApi ) {
+		ctx.rsvpLoading = true;
+		try {
+			const nonce = await getNonce( ctx.apiBase );
+			const joinResp = await fetch( ctx.joinApi, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'X-WP-Nonce': nonce },
+			} );
+			const joinData = await joinResp.json();
+			if ( joinData.success ) {
+				ctx.isMember = true;
+			} else {
+				ctx.rsvpLoading = false;
+				return;
+			}
+		} catch {
+			ctx.rsvpLoading = false;
+			return;
+		}
 	}
 
 	const newStatus =

@@ -22,8 +22,9 @@ if ( ! is_preview() && 'publish' !== get_post_status( $event_post_id ) ) {
 
 $event    = new Event( $event_post_id );
 $rsvp     = new Rsvp( $event_post_id );
-$is_past  = $event->has_event_past();
-$is_login = is_user_logged_in();
+$is_past   = $event->has_event_past();
+$is_login  = is_user_logged_in();
+$is_member = $is_login && is_user_member_of_blog();
 
 $responses = $rsvp->responses();
 $attending = $responses['attending'] ?? array(
@@ -64,12 +65,14 @@ $is_attending   = 'attending' === $current_status;
 $context = array(
 	'postId'            => (int) $event_post_id,
 	'isLoggedIn'        => $is_login,
+	'isMember'          => $is_member,
 	'isPastEvent'       => $is_past,
 	'currentUserStatus' => $current_status,
 	'attendingCount'    => $count,
 	'eventTitle'        => $event_title,
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
+	'joinApi'           => rest_url( 'wporg-groups/v1/members/join' ),
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
 );
@@ -90,9 +93,10 @@ wp_interactivity_state(
 			number_format_i18n( $count ),
 			$event_title
 		),
+		'isMember'        => $is_member,
 		'rsvpButtonLabel' => $is_attending
 			? "\u{2713} " . __( 'Attending', 'wporg-groups' )
-			: __( 'RSVP', 'wporg-groups' ),
+			: ( $is_member ? __( 'RSVP', 'wporg-groups' ) : __( 'Join & RSVP', 'wporg-groups' ) ),
 		'statusText'     => $is_attending
 			? __( 'You are attending this event.', 'wporg-groups' )
 			: __( 'You have not RSVPed to this event.', 'wporg-groups' ),
@@ -157,8 +161,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php
 			if ( $is_attending ) {
 				echo "\u{2713} " . esc_html__( 'Attending', 'wporg-groups' );
-			} else {
+			} elseif ( $is_member ) {
 				esc_html_e( 'RSVP', 'wporg-groups' );
+			} else {
+				esc_html_e( 'Join & RSVP', 'wporg-groups' );
 			}
 			?>
 		</button>

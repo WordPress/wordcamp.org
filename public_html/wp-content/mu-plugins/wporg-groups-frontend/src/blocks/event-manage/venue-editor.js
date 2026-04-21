@@ -28,7 +28,7 @@ import { __ } from '@wordpress/i18n';
 
 const PHOTON_API = 'https://photon.komoot.io/api/';
 
-export default function VenueEditor( { venueId, onSave, onCancel } ) {
+export default function VenueEditor( { venueId, onSave, onCancel, inline } ) {
 	const [ loading, setLoading ] = useState( !! venueId );
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
@@ -273,10 +273,12 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 			document.removeEventListener( 'keydown', onEscape, true );
 	}, [ onCancel ] );
 
+	const wrapperClass = inline ? 'wporg-groups-venue-editor--inline' : 'wporg-groups-venue-editor';
+
 	if ( loading ) {
 		return h(
 			'div',
-			{ className: 'wporg-groups-venue-editor' },
+			{ className: wrapperClass },
 			h( 'div', { className: 'wporg-groups-venue-editor__inner' },
 				h(
 					'div',
@@ -289,7 +291,7 @@ export default function VenueEditor( { venueId, onSave, onCancel } ) {
 
 	return h(
 		'div',
-		{ className: 'wporg-groups-venue-editor' },
+		{ className: wrapperClass },
 		h(
 		'div',
 		{ className: 'wporg-groups-venue-editor__inner' },

@@ -39,6 +39,7 @@ export default function VenuesTab() {
 	if ( editingId !== null ) {
 		return h( VenueEditor, {
 			venueId: editingId,
+			inline: true,
 			onSave: ( saved ) => {
 				setEditingId( null );
 				setVenues( ( prev ) => {

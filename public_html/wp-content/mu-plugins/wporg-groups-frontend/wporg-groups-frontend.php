@@ -36,9 +36,12 @@ function bootstrap(): void {
 	Modal\bootstrap();
 	Blocks\bootstrap();
 
-	add_action( 'rest_api_init', function () {
-		$controller = new Members\Members_Controller();
-		$controller->register_routes();
-	} );
+	add_action(
+		'rest_api_init',
+		function () {
+			$controller = new Members\Members_Controller();
+			$controller->register_routes();
+		}
+	);
 }
 add_action( 'plugins_loaded', __NAMESPACE__ . '\bootstrap' );

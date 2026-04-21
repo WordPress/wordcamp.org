@@ -289,19 +289,23 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 
 	useEffect( () => {
 		if ( editingId !== null ) return;
-		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=50&_fields=id,title,meta,status&orderby=date&order=desc' } )
+		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&_fields=id,title,meta,status&orderby=date&order=desc' } )
 			.then( ( data ) => {
-				setEvents( data.map( ( e ) => ( {
-					id: e.id,
-					title: e.title.rendered,
-					status: e.status,
-				} ) ) );
+				setEvents( data.map( ( e ) => {
+					const dtStart = e.meta?.gatherpress_datetime_start || '';
+					return {
+						id: e.id,
+						title: e.title.rendered,
+						status: e.status,
+						dateStart: dtStart,
+						isPast: dtStart ? new Date( dtStart ) < new Date() : false,
+					};
+				} ) );
 				setLoading( false );
 			} )
 			.catch( () => setLoading( false ) );
 	}, [ editingId ] );
 
-	// Show form when editing or creating.
 	if ( editingId !== null ) {
 		return h( EventForm, {
 			eventId: editingId === 0 ? 0 : editingId,
@@ -314,25 +318,103 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 		return h( 'div', { className: 'wporg-settings-tab__loading' }, h( Spinner ) );
 	}
 
+	const [ cloning, setCloning ] = useState( false );
+
+	const cloneEvent = async ( sourceId ) => {
+		setCloning( true );
+		try {
+			const params = `?event_id=${ sourceId }`;
+			const res = await apiFetch( { path: `/${ NS }/event-form-data${ params }` } );
+			// Create a draft with the source data but a new date.
+			const result = await apiFetch( {
+				path: `/${ NS }/draft`,
+				method: 'POST',
+				data: {
+					title: res.fields.title + ' ' + __( '(copy)', 'wporg-groups-frontend' ),
+					description: res.fields.description || '',
+					date: '',
+					time_start: res.fields.time_start || '',
+					time_end: res.fields.time_end || '',
+				},
+			} );
+			if ( result.id ) {
+				setEditingId( result.id );
+			}
+		} catch {
+			// Silently fail.
+		} finally {
+			setCloning( false );
+		}
+	};
+
+	const drafts = events.filter( ( e ) => e.status === 'draft' );
+	const upcoming = events.filter( ( e ) => ! e.isPast && e.status !== 'draft' );
+	const past = events.filter( ( e ) => e.isPast && e.status !== 'draft' );
+
+	const renderEventItem = ( event, showClone ) =>
+		h( 'div', {
+			key: event.id,
+			className: 'wporg-settings-tab__list-item',
+			onClick: () => setEditingId( event.id ),
+			role: 'button',
+			tabIndex: 0,
+			onKeyDown: ( ev ) => { if ( ev.key === 'Enter' ) setEditingId( event.id ); },
+		},
+			h( 'div', { className: 'wporg-settings-tab__list-item-info' },
+				h( 'strong', {}, event.title ),
+				h( 'span', {},
+					event.dateStart ? formatEventDate( event.dateStart ) : '',
+					event.status === 'draft' ? ( event.dateStart ? ' — ' : '' ) + __( 'Draft', 'wporg-groups-frontend' ) : ''
+				)
+			),
+			showClone && h( 'div', { className: 'wporg-settings-tab__list-item-actions',
+				onClick: ( ev ) => ev.stopPropagation() },
+				h( Button, {
+					variant: 'tertiary', isSmall: true,
+					onClick: () => cloneEvent( event.id ),
+					disabled: cloning,
+				}, __( 'Clone', 'wporg-groups-frontend' ) )
+			)
+		);
+
 	return h( 'div', { className: 'wporg-settings-tab' },
 		h( 'div', { className: 'wporg-settings-tab__header' },
 			h( 'p', {}, __( 'Manage your group events.', 'wporg-groups-frontend' ) ),
 			h( Button, { variant: 'primary', onClick: () => setEditingId( 0 ) },
 				__( '+ Create event', 'wporg-groups-frontend' ) )
 		),
-		events.length === 0
-			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No events yet.', 'wporg-groups-frontend' ) )
-			: h( 'div', { className: 'wporg-settings-tab__list' },
-				events.map( ( event ) =>
-					h( 'div', { key: event.id, className: 'wporg-settings-tab__list-item' },
-						h( 'div', { className: 'wporg-settings-tab__list-item-info' },
-							h( 'strong', {}, event.title ),
-							h( 'span', {}, event.status === 'draft' ? __( 'Draft', 'wporg-groups-frontend' ) : '' )
-						),
-						h( Button, { variant: 'secondary', isSmall: true, onClick: () => setEditingId( event.id ) },
-							__( 'Edit', 'wporg-groups-frontend' ) )
-					)
-				)
-			)
+
+		drafts.length > 0 && h( 'h3', { className: 'wporg-settings-tab__section-title' },
+			__( 'Drafts', 'wporg-groups-frontend' ) ),
+		drafts.length > 0 && h( 'div', { className: 'wporg-settings-tab__list' },
+			drafts.map( ( e ) => renderEventItem( e, false ) ) ),
+
+		h( 'h3', { className: 'wporg-settings-tab__section-title' },
+			__( 'Upcoming', 'wporg-groups-frontend' ) ),
+		upcoming.length === 0
+			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No upcoming events.', 'wporg-groups-frontend' ) )
+			: h( 'div', { className: 'wporg-settings-tab__list' }, upcoming.map( ( e ) => renderEventItem( e, true ) ) ),
+
+		h( 'h3', { className: 'wporg-settings-tab__section-title' },
+			__( 'Past', 'wporg-groups-frontend' ) ),
+		past.length === 0
+			? h( 'p', { className: 'wporg-settings-tab__empty' }, __( 'No past events.', 'wporg-groups-frontend' ) )
+			: h( 'div', { className: 'wporg-settings-tab__list' }, past.map( ( e ) => renderEventItem( e, true ) ) )
 	);
+}
+
+function formatEventDate( dateStr ) {
+	try {
+		const d = new Date( dateStr );
+		return d.toLocaleDateString( undefined, {
+			weekday: 'short',
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit',
+		} );
+	} catch {
+		return dateStr;
+	}
 }

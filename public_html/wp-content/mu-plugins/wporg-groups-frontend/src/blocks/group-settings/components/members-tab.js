@@ -26,6 +26,7 @@ const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wporg-groups-frontend' ), value: 'subscriber' },
 	{ label: __( 'Event Organiser', 'wporg-groups-frontend' ), value: 'author' },
 	{ label: __( 'Organiser', 'wporg-groups-frontend' ), value: 'editor' },
+	{ label: __( 'Organiser', 'wporg-groups-frontend' ), value: 'administrator' },
 ];
 
 const PER_PAGE = 20;

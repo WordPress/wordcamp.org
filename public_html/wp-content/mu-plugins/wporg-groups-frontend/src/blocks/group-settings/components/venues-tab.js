@@ -84,21 +84,19 @@ export default function VenuesTab() {
 					venues.map( ( venue ) =>
 						h(
 							'div',
-							{ key: venue.id, className: 'wporg-settings-tab__list-item' },
+							{
+								key: venue.id,
+								className: 'wporg-settings-tab__list-item',
+								onClick: () => setEditingId( venue.id ),
+								role: 'button',
+								tabIndex: 0,
+								onKeyDown: ( ev ) => { if ( ev.key === 'Enter' ) setEditingId( venue.id ); },
+							},
 							h(
 								'div',
 								{ className: 'wporg-settings-tab__list-item-info' },
 								h( 'strong', {}, venue.name ),
 								venue.address && h( 'span', {}, venue.address )
-							),
-							h(
-								Button,
-								{
-									variant: 'secondary',
-									isSmall: true,
-									onClick: () => setEditingId( venue.id ),
-								},
-								__( 'Edit', 'wporg-groups-frontend' )
 							)
 						)
 					)

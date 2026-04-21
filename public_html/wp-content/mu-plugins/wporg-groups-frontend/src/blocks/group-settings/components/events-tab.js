@@ -286,9 +286,11 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	const [ events, setEvents ] = useState( [] );
 	const [ loading, setLoading ] = useState( true );
 	const [ editingId, setEditingId ] = useState( initialEventId || null );
+	const [ refreshKey, setRefreshKey ] = useState( 0 );
 
 	useEffect( () => {
 		if ( editingId !== null ) return;
+		setLoading( true );
 		apiFetch( { path: '/wp/v2/gatherpress_events?per_page=100&_fields=id,title,meta,status&orderby=date&order=desc' } )
 			.then( ( data ) => {
 				setEvents( data.map( ( e ) => {
@@ -304,13 +306,18 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 				setLoading( false );
 			} )
 			.catch( () => setLoading( false ) );
-	}, [ editingId ] );
+	}, [ refreshKey ] ); // eslint-disable-line react-hooks/exhaustive-deps
+
+	const backToList = () => {
+		setEditingId( null );
+		setRefreshKey( ( k ) => k + 1 );
+	};
 
 	if ( editingId !== null ) {
 		return h( EventForm, {
 			eventId: editingId === 0 ? 0 : editingId,
-			onDone: () => setEditingId( null ),
-			onCancel: () => setEditingId( null ),
+			onDone: backToList,
+			onCancel: backToList,
 		} );
 	}
 

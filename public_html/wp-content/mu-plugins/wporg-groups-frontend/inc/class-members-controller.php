@@ -147,7 +147,8 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			$data[] = $this->prepare_member( $user );
 		}
 
-		$total = count_users()['total_users'] ?? count( $users );
+		$all_count = count_users();
+		$total     = $all_count['total_users'] ?? count( $users );
 
 		$response = rest_ensure_response( $data );
 		$response->header( 'X-WP-Total', $total );
@@ -273,14 +274,13 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$role_label = self::ROLE_LABELS[ $role ] ?? 'Member';
 
 		return array(
-			'id'         => $user->ID,
-			'name'       => $user->display_name,
-			'avatar'     => get_avatar_url( $user->ID, array( 'size' => 128 ) ),
-			'profile'    => sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename ),
-			'bio'        => wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" ),
-			'role'       => $role,
-			'roleLabel'  => $role_label,
-			'registered' => $user->user_registered,
+			'id'        => $user->ID,
+			'name'      => $user->display_name,
+			'avatar'    => get_avatar_url( $user->ID, array( 'size' => 128 ) ),
+			'profile'   => sprintf( 'https://profiles.wordpress.org/%s/', $user->user_nicename ),
+			'bio'       => wp_trim_words( get_the_author_meta( 'description', $user->ID ), 20, "\u{2026}" ),
+			'role'      => $role,
+			'roleLabel' => $role_label,
 		);
 	}
 
@@ -345,9 +345,6 @@ class Members_Controller extends \WP_REST_Users_Controller {
 					'type' => 'string',
 				),
 				'roleLabel'  => array(
-					'type' => 'string',
-				),
-				'registered' => array(
 					'type' => 'string',
 				),
 			),

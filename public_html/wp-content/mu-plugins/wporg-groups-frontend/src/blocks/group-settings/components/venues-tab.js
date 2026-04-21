@@ -24,13 +24,17 @@ export default function VenuesTab() {
 	useEffect( () => {
 		apiFetch( { path: '/wp/v2/gatherpress_venues?per_page=100&_fields=id,title,meta' } )
 			.then( ( data ) => {
-				setVenues( data.map( ( v ) => ( {
-					id: v.id,
-					name: v.title.rendered,
-					address: v.meta?.gatherpress_venue_information
-						? JSON.parse( v.meta.gatherpress_venue_information ).fullAddress || ''
-						: '',
-				} ) ) );
+				setVenues( data.map( ( v ) => {
+					let address = '';
+					if ( v.meta?.gatherpress_venue_information ) {
+						try {
+							address = JSON.parse( v.meta.gatherpress_venue_information ).fullAddress || '';
+						} catch ( e ) {
+							address = '';
+						}
+					}
+					return { id: v.id, name: v.title.rendered, address };
+				} ) );
 				setLoading( false );
 			} )
 			.catch( () => setLoading( false ) );

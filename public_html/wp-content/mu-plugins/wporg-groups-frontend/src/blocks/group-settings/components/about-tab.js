@@ -25,6 +25,7 @@ export default function AboutTab() {
 	const [ loading, setLoading ] = useState( true );
 	const [ saving, setSaving ] = useState( false );
 	const [ notice, setNotice ] = useState( '' );
+	const [ noticeType, setNoticeType ] = useState( 'success' );
 	const [ form, setForm ] = useState( {
 		blogname: '',
 		blogdescription: '',
@@ -54,8 +55,10 @@ export default function AboutTab() {
 					description: form.blogdescription,
 				},
 			} );
+			setNoticeType( 'success' );
 			setNotice( __( 'Settings saved.', 'wporg-groups-frontend' ) );
 		} catch ( err ) {
+			setNoticeType( 'error' );
 			setNotice( err.message || __( 'Could not save settings.', 'wporg-groups-frontend' ) );
 		} finally {
 			setSaving( false );
@@ -73,7 +76,7 @@ export default function AboutTab() {
 			h(
 				Notice,
 				{
-					status: 'success',
+					status: noticeType,
 					isDismissible: true,
 					onDismiss: () => setNotice( '' ),
 				},

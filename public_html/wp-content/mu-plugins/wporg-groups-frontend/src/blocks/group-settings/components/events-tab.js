@@ -287,6 +287,7 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	const [ loading, setLoading ] = useState( true );
 	const [ editingId, setEditingId ] = useState( initialEventId || null );
 	const [ refreshKey, setRefreshKey ] = useState( 0 );
+	const [ cloning, setCloning ] = useState( false );
 
 	useEffect( () => {
 		if ( editingId !== null ) return;
@@ -324,8 +325,6 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 	if ( loading ) {
 		return h( 'div', { className: 'wporg-settings-tab__loading' }, h( Spinner ) );
 	}
-
-	const [ cloning, setCloning ] = useState( false );
 
 	const cloneEvent = async ( sourceId ) => {
 		setCloning( true );

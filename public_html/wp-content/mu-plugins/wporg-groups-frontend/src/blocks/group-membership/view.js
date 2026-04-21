@@ -110,9 +110,6 @@ async function getNonce() {
 	if ( cachedNonce ) {
 		return cachedNonce;
 	}
-	const resp = await fetch( '/wp-json/', { credentials: 'same-origin' } );
-	// WP sets X-WP-Nonce in response headers when logged in, but we need
-	// to get it from wp.apiFetch or the wpApiSettings global.
 	if ( window.wpApiSettings?.nonce ) {
 		cachedNonce = window.wpApiSettings.nonce;
 		return cachedNonce;

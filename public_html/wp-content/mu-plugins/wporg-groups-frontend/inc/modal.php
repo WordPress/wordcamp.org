@@ -47,7 +47,7 @@ function enqueue_supplementary_assets(): void {
  * @param string $content Block HTML.
  * @return string Unmodified block HTML.
  */
-function localize_block_script( string $content ): string {
+function localize_block_script( string $content, array $block = array() ): string {
 	static $done = false;
 	if ( $done ) {
 		return $content;

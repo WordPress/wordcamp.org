@@ -108,10 +108,13 @@ add_filter( 'get_pages', __NAMESPACE__ . '\filter_nav_page_list' );
  * Inject the theme's custom GatherPress templates into the template hierarchy.
  *
  * The templates are registered via `customTemplates` in `theme.json` so they're
- * pickable in the editor, but `customTemplates` doesn't auto-apply them. These
- * filters prepend the matching template slug to the hierarchy so a fresh
+ * pickable in the editor, but `customTemplates` doesn't auto-apply them. This
+ * filter prepends the matching template slug to the hierarchy so a fresh
  * `gatherpress_event` / `gatherpress_venue` post picks up `single-event` /
- * `archive-event` / `single-venue` without anyone having to set it by hand.
+ * `single-venue` without anyone having to set it by hand.
+ *
+ * Note: the archive template uses the standard slug `archive-gatherpress_event`
+ * which WordPress resolves automatically for block themes.
  */
 function single_template_hierarchy( $templates ) {
 	$post_type = get_post_type();

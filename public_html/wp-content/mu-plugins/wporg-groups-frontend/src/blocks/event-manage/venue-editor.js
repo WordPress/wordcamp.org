@@ -56,9 +56,14 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline } ) {
 			.then( ( venue ) => {
 				setName( venue.title.raw || venue.title.rendered || '' );
 				setDescription( venue.content?.raw || '' );
-				const info = venue.meta?.gatherpress_venue_information
-					? JSON.parse( venue.meta.gatherpress_venue_information )
-					: {};
+				let info = {};
+				if ( venue.meta?.gatherpress_venue_information ) {
+					try {
+						info = JSON.parse( venue.meta.gatherpress_venue_information );
+					} catch ( e ) {
+						info = {};
+					}
+				}
 				setFullAddress( info.fullAddress || '' );
 				setWebsite( info.website || '' );
 				setLatitude( info.latitude || '' );

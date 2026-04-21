@@ -7,37 +7,38 @@
  * @package WordCamp\Groups\Frontend
  */
 
-import { createElement, render } from '@wordpress/element';
+import { createElement } from '@wordpress/element';
+import { createRoot } from '@wordpress/element';
 import SettingsApp from './components/settings-app';
 
 ( function () {
-	const root = document.getElementById( 'wporg-group-settings-root' );
-	if ( ! root ) {
+	const container = document.getElementById( 'wporg-group-settings-root' );
+	if ( ! container ) {
 		return;
 	}
 
-	let mounted = false;
+	let root = null;
 
 	function openSettings( initialTab, eventId ) {
-		if ( mounted ) {
+		if ( root ) {
 			return;
 		}
-		mounted = true;
 
-		render(
+		root = createRoot( container );
+		root.render(
 			createElement( SettingsApp, {
 				initialTab: initialTab || 'events',
 				eventId: eventId || 0,
 				onClose: () => {
-					render( null, root );
-					mounted = false;
+					if ( root ) {
+						root.unmount();
+						root = null;
+					}
 				},
-			} ),
-			root
+			} )
 		);
 	}
 
-	// Listen for any trigger button clicks.
 	document.addEventListener( 'click', ( ev ) => {
 		const trigger = ev.target.closest( '[data-wporg-settings-open]' );
 		if ( ! trigger ) {

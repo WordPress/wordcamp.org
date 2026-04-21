@@ -332,16 +332,16 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 			const params = `?event_id=${ sourceId }`;
 			const res = await apiFetch( { path: `/${ NS }/event-form-data${ params }` } );
 			// Create a draft with the source data but a new date.
+			const draftData = {
+				title: res.fields.title + ' ' + __( '(copy)', 'wporg-groups-frontend' ),
+				description: res.fields.description || '',
+				time_start: res.fields.time_start || '',
+				time_end: res.fields.time_end || '',
+			};
 			const result = await apiFetch( {
 				path: `/${ NS }/draft`,
 				method: 'POST',
-				data: {
-					title: res.fields.title + ' ' + __( '(copy)', 'wporg-groups-frontend' ),
-					description: res.fields.description || '',
-					date: '',
-					time_start: res.fields.time_start || '',
-					time_end: res.fields.time_end || '',
-				},
+				data: draftData,
 			} );
 			if ( result.id ) {
 				setEditingId( result.id );

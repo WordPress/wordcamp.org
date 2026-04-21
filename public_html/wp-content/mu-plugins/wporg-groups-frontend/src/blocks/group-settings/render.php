@@ -54,5 +54,5 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		</button>
 	<?php endif; ?>
 
-	<div id="wporg-group-settings-root"></div>
+	<div id="wporg-group-settings-root" data-site-name="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"></div>
 </div>

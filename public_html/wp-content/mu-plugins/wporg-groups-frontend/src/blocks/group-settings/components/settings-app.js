@@ -30,7 +30,7 @@ const TABS = [
 	{ name: 'about', title: __( 'About', 'wporg-groups-frontend' ) },
 ];
 
-export default function SettingsApp( { onClose, initialTab, eventId } ) {
+export default function SettingsApp( { onClose, initialTab, eventId, siteName } ) {
 	const [ activeTab, setActiveTab ] = useState( initialTab || 'events' );
 
 	// Global escape handler — prompt before closing if needed.
@@ -69,7 +69,7 @@ export default function SettingsApp( { onClose, initialTab, eventId } ) {
 	return h(
 		Modal,
 		{
-			title: __( 'Group Settings', 'wporg-groups-frontend' ),
+			title: siteName || __( 'Group Settings', 'wporg-groups-frontend' ),
 			onRequestClose: onClose,
 			className: 'wporg-group-settings-modal',
 			isFullScreen: true,

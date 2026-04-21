@@ -28,7 +28,7 @@ import { __ } from '@wordpress/i18n';
 
 const PHOTON_API = 'https://photon.komoot.io/api/';
 
-export default function VenueEditor( { venueId, onSave, onCancel, inline } ) {
+export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHeader } ) {
 	const [ loading, setLoading ] = useState( !! venueId );
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
@@ -300,7 +300,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline } ) {
 		h(
 		'div',
 		{ className: 'wporg-groups-venue-editor__inner' },
-		h(
+		! hideHeader && h(
 			'div',
 			{ className: 'wporg-groups-venue-editor__header' },
 			h(

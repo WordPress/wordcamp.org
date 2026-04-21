@@ -41,9 +41,15 @@ export default function VenuesTab() {
 	}, [] );
 
 	if ( editingId !== null ) {
-		return h( VenueEditor, {
+		return h( 'div', { className: 'wporg-settings-tab' },
+			h( 'div', { className: 'wporg-event-form__header' },
+				h( Button, { variant: 'tertiary', onClick: () => setEditingId( null ), icon: 'arrow-left-alt2' },
+					__( 'Back to venues', 'wporg-groups-frontend' ) )
+			),
+			h( VenueEditor, {
 			venueId: editingId,
 			inline: true,
+			hideHeader: true,
 			onSave: ( saved ) => {
 				setEditingId( null );
 				setVenues( ( prev ) => {
@@ -57,7 +63,8 @@ export default function VenuesTab() {
 				} );
 			},
 			onCancel: () => setEditingId( null ),
-		} );
+		} )
+		);
 	}
 
 	if ( loading ) {

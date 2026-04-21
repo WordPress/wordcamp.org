@@ -22,10 +22,8 @@ import SettingsApp from './components/settings-app';
 		return;
 	}
 
-	/**
-	 * Top-level component that manages open/close state.
-	 * This ensures hooks are called inside a proper React component tree.
-	 */
+	const siteName = root.dataset.siteName || '';
+
 	function SettingsRoot() {
 		const [ isOpen, setIsOpen ] = useState( false );
 		const [ initialTab, setInitialTab ] = useState( '' );
@@ -64,6 +62,7 @@ import SettingsApp from './components/settings-app';
 		return h( SettingsApp, {
 			initialTab: initialTab || 'events',
 			eventId,
+			siteName,
 			onClose: () => setIsOpen( false ),
 		} );
 	}

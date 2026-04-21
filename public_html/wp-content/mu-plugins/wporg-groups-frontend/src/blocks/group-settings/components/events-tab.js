@@ -337,6 +337,8 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 				description: res.fields.description || '',
 				time_start: res.fields.time_start || '',
 				time_end: res.fields.time_end || '',
+				venue_id: res.fields.venue_id || 0,
+				featured_image_id: res.fields.featured_image_id || 0,
 			};
 			const result = await apiFetch( {
 				path: `/${ NS }/draft`,

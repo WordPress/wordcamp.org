@@ -444,6 +444,12 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		assign_venue_to_event( $saved_id, $venue_id );
 	}
 
+	// Featured image.
+	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
+	if ( $featured_image_id > 0 && 'attachment' === get_post_type( $featured_image_id ) ) {
+		set_post_thumbnail( $saved_id, $featured_image_id );
+	}
+
 	return new WP_REST_Response(
 		array(
 			'id'           => $saved_id,

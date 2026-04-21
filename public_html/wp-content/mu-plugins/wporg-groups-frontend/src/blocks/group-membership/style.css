@@ -1,0 +1,46 @@
+/**
+ * Group Membership block styles.
+ */
+
+.wporg-group-membership {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.wporg-group-membership__badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 6px 14px;
+	font-size: 13px;
+	font-weight: 600;
+	color: #1a1919;
+	background: #e2ffed;
+	border: 1px solid #33f078;
+	border-radius: 100px;
+}
+
+.wporg-group-membership__join {
+	font-size: 14px;
+}
+
+.wporg-group-membership__leave {
+	background: none;
+	border: none;
+	padding: 0;
+	font-size: 12px;
+	color: #656a71;
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.wporg-group-membership__leave:hover {
+	color: #d63638;
+}
+
+.wporg-group-membership__count {
+	font-size: 13px;
+	color: #656a71;
+}

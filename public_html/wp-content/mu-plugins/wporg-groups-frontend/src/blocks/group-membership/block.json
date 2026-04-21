@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/group-membership",
+	"version": "1.0.0",
+	"title": "Group Membership",
+	"category": "widgets",
+	"icon": "groups",
+	"description": "Displays a join/leave button for group membership.",
+	"supports": {
+		"html": false,
+		"interactivity": true,
+		"inserter": false
+	},
+	"render": "file:./render.php",
+	"viewScriptModule": "file:./view.js",
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css"
+}

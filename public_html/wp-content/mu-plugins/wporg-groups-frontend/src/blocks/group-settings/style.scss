@@ -1,0 +1,322 @@
+/**
+ * Group Settings block styles.
+ *
+ * Uses SCSS for nesting and maintainability.
+ */
+
+// === Trigger button ===
+
+.wporg-group-settings-block {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+
+	&__trigger {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 6px 14px;
+		background: none;
+		border: 1px solid #d9d9d9;
+		border-radius: 2px;
+		font-size: 13px;
+		color: #656a71;
+		cursor: pointer;
+
+		.dashicons {
+			font-size: 16px;
+			width: 16px;
+			height: 16px;
+		}
+
+		&:hover {
+			border-color: #3858e9;
+			color: #3858e9;
+		}
+
+		&--setup {
+			background: #3858e9;
+			border-color: #3858e9;
+			color: #fff;
+			font-weight: 600;
+			padding: 10px 20px;
+
+			&:hover {
+				background: #213fd4;
+				border-color: #213fd4;
+				color: #fff;
+			}
+		}
+	}
+
+	&__edit {
+		background: transparent !important;
+		border: 1px solid #d9d9d9 !important;
+		color: #40464d !important;
+		font-size: 14px;
+
+		&:hover {
+			border-color: #3858e9 !important;
+			color: #3858e9 !important;
+			background: #eff2ff !important;
+		}
+	}
+}
+
+// === Full-screen modal ===
+
+.wporg-group-settings-modal {
+	.components-modal__content {
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	// Tab panel fills the available space.
+	&__tabs {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+
+		.components-tab-panel__tabs {
+			border-bottom: 1px solid #e0e0e0;
+			padding: 0 24px;
+			flex-shrink: 0;
+		}
+
+		.components-tab-panel__tab-content {
+			flex: 1;
+			overflow-y: auto;
+			padding: 24px;
+		}
+	}
+}
+
+// === Shared tab styles ===
+
+.wporg-settings-tab {
+	max-width: 640px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+
+	&__loading {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 48px;
+	}
+
+	&__header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+
+		p {
+			margin: 0;
+			color: #656a71;
+		}
+	}
+
+	&__actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 12px;
+		margin-top: 8px;
+	}
+
+	&__empty {
+		color: #656a71;
+		font-style: italic;
+	}
+
+	&__list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	&__list-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 16px;
+		padding: 12px 16px;
+		border: 1px solid #d9d9d9;
+		border-radius: 2px;
+
+		&-info {
+			display: flex;
+			flex-direction: column;
+			gap: 2px;
+
+			span {
+				font-size: 13px;
+				color: #656a71;
+			}
+		}
+	}
+}
+
+// === Event form (inside events tab) ===
+
+.wporg-event-form {
+	max-width: 640px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+
+	&__field {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+
+	&__label {
+		font-weight: 600;
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: #1e1e1e;
+	}
+
+	&__row {
+		display: grid;
+		grid-template-columns: 2fr 1fr 1.5fr;
+		gap: 16px;
+		align-items: start;
+
+		@media (max-width: 600px) {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	&__editor {
+		border: 1px solid #d9d9d9;
+		border-radius: 2px;
+		min-height: 200px;
+		max-height: 360px;
+		overflow-y: auto;
+		background: #fff;
+		isolation: isolate;
+
+		&:focus-within {
+			border-color: #3858e9;
+			box-shadow: 0 0 0 1px #3858e9;
+		}
+
+		.block-editor-block-list__layout {
+			padding: 12px 16px;
+		}
+
+		ul, ol { padding-inline-start: 1.5em; margin-block: 1em; }
+		ul { list-style: disc outside; }
+		ol { list-style: decimal outside; }
+		li { margin-block: 0.35em; }
+	}
+
+	&__editor-toolbar {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background: #fff;
+		border-bottom: 1px solid #e0e0e0;
+		min-height: 40px;
+
+		.block-editor-block-toolbar {
+			border: none;
+		}
+
+		.block-editor-block-toolbar__slot:empty,
+		.components-toolbar-group:has(> .block-editor-block-toolbar__slot:empty) {
+			display: none;
+		}
+	}
+
+	&__featured {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+
+		&-preview {
+			display: flex;
+			align-items: center;
+			gap: 14px;
+
+			img {
+				max-width: 160px;
+				max-height: 100px;
+				object-fit: cover;
+				border-radius: 2px;
+				border: 1px solid #d9d9d9;
+			}
+		}
+
+		&-actions {
+			display: flex;
+			gap: 8px;
+			flex-wrap: wrap;
+		}
+	}
+
+	&__edit-venue {
+		font-size: 12px;
+		margin-top: 4px;
+	}
+
+	&__actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 12px;
+		margin-top: 8px;
+	}
+}
+
+// === Members tab ===
+
+.wporg-members-tab {
+	&__list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	&__item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 8px 12px;
+		border: 1px solid #d9d9d9;
+		border-radius: 2px;
+	}
+
+	&__avatar {
+		width: 40px;
+		height: 40px;
+		border-radius: 9999px;
+		object-fit: cover;
+		flex: 0 0 auto;
+	}
+
+	&__info {
+		flex: 1;
+		min-width: 0;
+	}
+
+	&__name {
+		font-weight: 600;
+		font-size: 14px;
+	}
+
+	&__role-select {
+		width: 160px;
+		flex: 0 0 auto;
+
+		select {
+			min-height: 32px;
+		}
+	}
+}

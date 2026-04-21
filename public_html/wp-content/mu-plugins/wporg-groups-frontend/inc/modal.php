@@ -25,6 +25,7 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_event
 function bootstrap(): void {
 	add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_supplementary_assets' );
 	add_filter( 'render_block_wporg/event-manage', __NAMESPACE__ . '\localize_block_script', 10, 2 );
+	add_filter( 'render_block_wporg/group-settings', __NAMESPACE__ . '\localize_block_script', 10, 2 );
 }
 
 /**
@@ -53,13 +54,10 @@ function localize_block_script( string $content ): string {
 	}
 	$done = true;
 
-	wp_localize_script(
-		'wporg-event-manage-view-script',
-		'wporgGroupsEventModal',
-		array(
-			'restNamespace' => 'wporg-groups/v1',
-		)
-	);
+	// Localize for both old (event-manage) and new (group-settings) blocks.
+	$config = array( 'restNamespace' => 'wporg-groups/v1' );
+	wp_localize_script( 'wporg-event-manage-view-script', 'wporgGroupsEventModal', $config );
+	wp_localize_script( 'wporg-group-settings-view-script', 'wporgGroupsEventModal', $config );
 
 	return $content;
 }

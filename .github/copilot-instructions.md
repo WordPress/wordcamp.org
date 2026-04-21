@@ -62,5 +62,5 @@ These were encountered during onboarding validation and should be expected in fr
 ## Practical scope guidance
 
 - If changes are limited to one workspace, prefer `yarn workspace <name> run <script>` where available.
-- If PHP deps cannot be installed due auth constraints, complete JS-only/doc-only tasks and explicitly report which PHP validations were blocked.
+- If PHP deps cannot be installed due to auth constraints, complete JS-only/doc-only tasks and explicitly report which PHP validations were blocked.
 - Avoid broad unrelated refactors; this repository is large and multi-component.

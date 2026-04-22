@@ -11,7 +11,7 @@ import { Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
 export default function DesignTab() {
-	const editorUrl = '/wp-admin/site-editor.php';
+	const editorUrl = window.wporgGroupsEventModal?.siteEditorUrl || '/wp-admin/site-editor.php';
 
 	return h(
 		'div',

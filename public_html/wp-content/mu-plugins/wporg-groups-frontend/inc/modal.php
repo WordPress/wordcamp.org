@@ -55,7 +55,10 @@ function localize_block_script( string $content, array $block = array() ): strin
 	$done = true;
 
 	// Localize for both old (event-manage) and new (group-settings) blocks.
-	$config = array( 'restNamespace' => 'wporg-groups/v1' );
+	$config = array(
+		'restNamespace' => 'wporg-groups/v1',
+		'siteEditorUrl' => admin_url( 'site-editor.php' ),
+	);
 	wp_localize_script( 'wporg-event-manage-view-script', 'wporgGroupsEventModal', $config );
 	wp_localize_script( 'wporg-group-settings-view-script', 'wporgGroupsEventModal', $config );
 

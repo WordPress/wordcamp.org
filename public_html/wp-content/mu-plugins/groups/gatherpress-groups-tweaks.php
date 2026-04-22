@@ -233,6 +233,35 @@ add_action(
 );
 
 /**
+ * Register event speakers post meta.
+ *
+ * Stores an array of user IDs who are speaking at the event.
+ */
+add_action(
+	'init',
+	static function (): void {
+		register_post_meta(
+			'gatherpress_event',
+			'_event_speakers',
+			array(
+				'type'          => 'array',
+				'single'        => true,
+				'default'       => array(),
+				'show_in_rest'  => array(
+					'schema' => array(
+						'type'  => 'array',
+						'items' => array( 'type' => 'integer' ),
+					),
+				),
+				'auth_callback' => static function () {
+					return current_user_can( 'edit_posts' );
+				},
+			)
+		);
+	}
+);
+
+/**
  * Rewrite the search block form action on the events archive to submit
  * to the archive URL instead of the default search URL, so search results
  * stay scoped to events.

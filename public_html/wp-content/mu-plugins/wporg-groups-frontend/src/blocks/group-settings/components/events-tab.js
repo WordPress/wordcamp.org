@@ -18,6 +18,7 @@ import {
 	Spinner,
 	Notice,
 	TextControl,
+	FormTokenField,
 	SelectControl,
 } from '@wordpress/components';
 import {
@@ -180,6 +181,8 @@ function EventForm( { eventId, onDone, onCancel } ) {
 	const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
 	const [ venues, setVenues ] = useState( [] );
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
+	const [ speakers, setSpeakers ] = useState( [] );
+	const [ memberOptions, setMemberOptions ] = useState( [] );
 	const descRef = useRef( { current: () => '' } );
 
 	const updateField = ( field, value ) => setForm( ( prev ) => ( { ...prev, [ field ]: value } ) );
@@ -199,7 +202,21 @@ function EventForm( { eventId, onDone, onCancel } ) {
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( { id: res.fields.featured_image_id || 0, url: res.fields.featured_image_url || '' } );
 				setVenues( res.venues || [] );
-				setLoading( false );
+
+				// Load speakers for this event and member list for autocomplete.
+				Promise.all( [
+					eventId
+						? apiFetch( { path: `/wp/v2/gatherpress_events/${ eventId }?_fields=meta` } )
+							.then( ( ev ) => ev.meta?._event_speakers || [] )
+							.catch( () => [] )
+						: Promise.resolve( [] ),
+					apiFetch( { path: '/wporg-groups/v1/members?per_page=200' } )
+						.catch( () => [] ),
+				] ).then( ( [ speakerIds, members ] ) => {
+					setSpeakers( speakerIds );
+					setMemberOptions( members );
+					setLoading( false );
+				} );
 			} )
 			.catch( () => { setError( __( 'Could not load form data.', 'wporg-groups-frontend' ) ); setLoading( false ); } );
 	}, [ eventId ] );
@@ -240,6 +257,16 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					featured_image_id: featuredImage.id,
 				},
 			} );
+
+			// Save speakers meta.
+			if ( result.id ) {
+				await apiFetch( {
+					path: `/wp/v2/gatherpress_events/${ result.id }`,
+					method: 'POST',
+					data: { meta: { _event_speakers: speakers } },
+				} ).catch( () => {} );
+			}
+
 			if ( result.permalink ) {
 				window.location.href = result.permalink;
 			} else {
@@ -272,6 +299,25 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			onSelect: ( v ) => updateField( 'venue_select', v ),
 			onOpenEditor: ( id ) => setVenueEditorId( id ),
 		} ),
+		h( 'div', { className: 'wporg-event-form__field' },
+			h( FormTokenField, {
+				label: __( 'Speakers', 'wporg-groups-frontend' ),
+				value: speakers.map( ( id ) => {
+					const member = memberOptions.find( ( m ) => m.id === id );
+					return member ? member.name : String( id );
+				} ),
+				suggestions: memberOptions.map( ( m ) => m.name ),
+				onChange: ( tokens ) => {
+					const ids = tokens.map( ( token ) => {
+						const member = memberOptions.find( ( m ) => m.name === token );
+						return member ? member.id : null;
+					} ).filter( Boolean );
+					setSpeakers( ids );
+				},
+				__experimentalExpandOnFocus: true,
+				__nextHasNoMarginBottom: true,
+			} )
+		),
 		h( 'div', { className: 'wporg-event-form__actions' },
 			h( Button, { variant: 'tertiary', onClick: onCancel, disabled: saving }, __( 'Cancel', 'wporg-groups-frontend' ) ),
 			h( Button, { variant: 'primary', type: 'submit', isBusy: saving, disabled: saving },

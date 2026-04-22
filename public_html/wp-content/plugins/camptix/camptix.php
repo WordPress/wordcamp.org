@@ -58,7 +58,7 @@ class CampTix_Plugin {
 	protected $order;
 	protected $tickets_url;
 	protected $flush_tickets_page;
-	protected $removed_shortcodes = array();
+	public $removed_shortcodes = array();
 
 	// Allow others to use this.
 	public $filter_post_meta = false;

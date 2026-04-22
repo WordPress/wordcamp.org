@@ -1,13 +1,19 @@
 import { registerBlockType } from '@wordpress/blocks';
-import { __ } from '@wordpress/i18n';
+import ServerSideRender from '@wordpress/server-side-render';
+import { useBlockProps } from '@wordpress/block-editor';
 import metadata from './block.json';
 
 registerBlockType( metadata.name, {
-	edit: () => {
+	edit: ( { context } ) => {
+		const blockProps = useBlockProps();
 		return wp.element.createElement(
 			'span',
-			{ className: 'wp-block-wporg-event-venue-name' },
-			__( 'Venue name', 'wporg-groups-frontend' )
+			blockProps,
+			wp.element.createElement( ServerSideRender, {
+				block: metadata.name,
+				attributes: {},
+				urlQueryArgs: { post_id: context.postId },
+			} )
 		);
 	},
 	save: () => null,

@@ -9,6 +9,15 @@
  */
 
 /* ==========================================================================
+   Editor overrides — prevent the block editor layout styles from
+   interfering with themed link appearance.
+   ========================================================================== */
+
+.block-editor-block-list__layout .wp-block-site-title a {
+	text-decoration: none !important;
+}
+
+/* ==========================================================================
    Base / accessibility
    ========================================================================== */
 

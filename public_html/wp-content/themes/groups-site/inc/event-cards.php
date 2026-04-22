@@ -30,10 +30,10 @@ defined( 'ABSPATH' ) || exit;
  * Format an event's start/end datetimes as a short, card-friendly label.
  *
  * Examples:
- *   - Same day, same am/pm:   "April 13th, 6&ndash;8pm"
- *   - Same day, mixed am/pm:  "April 13th, 11am&ndash;1pm"
- *   - Same day, with minutes: "April 13th, 6:30&ndash;8pm"
- *   - Multi-day:              "April 13th &ndash; April 14th"
+ *   - Same day, same am/pm:   "April 13th, 6–8pm"
+ *   - Same day, mixed am/pm:  "April 13th, 11am–1pm"
+ *   - Same day, with minutes: "April 13th, 6:30–8pm"
+ *   - Multi-day:              "April 13th – April 14th"
  *
  * Reads the local-timezone meta keys (`gatherpress_datetime_start` /
  * `gatherpress_datetime_end`) directly rather than going through the
@@ -69,7 +69,7 @@ function format_card_datetime( Event $event ): string {
 	$end_date   = $fmt_date( (int) $em[1], (int) $em[2], (int) $em[3] );
 
 	if ( $start_date !== $end_date ) {
-		return sprintf( '%s &ndash; %s', $start_date, $end_date );
+		return sprintf( '%s – %s', $start_date, $end_date );
 	}
 
 	$fmt_time = static function ( int $hour24, int $minute ): array {
@@ -86,10 +86,10 @@ function format_card_datetime( Event $event ): string {
 	[ $end_label, $end_meridiem ]     = $fmt_time( (int) $em[4], (int) $em[5] );
 
 	if ( $start_meridiem === $end_meridiem ) {
-		return sprintf( '%s, %s&ndash;%s%s', $start_date, $start_label, $end_label, $end_meridiem );
+		return sprintf( '%s, %s–%s%s', $start_date, $start_label, $end_label, $end_meridiem );
 	}
 
-	return sprintf( '%s, %s%s&ndash;%s%s', $start_date, $start_label, $start_meridiem, $end_label, $end_meridiem );
+	return sprintf( '%s, %s%s–%s%s', $start_date, $start_label, $start_meridiem, $end_label, $end_meridiem );
 }
 
 /**
@@ -115,7 +115,7 @@ function extract_card_excerpt( int $post_id, int $word_limit = 22 ): string {
 		$raw = trim( implode( ' ', array_filter( $paragraphs ) ) );
 	}
 
-	return $raw ? wp_trim_words( $raw, $word_limit, '&hellip;' ) : '';
+	return $raw ? wp_trim_words( $raw, $word_limit, '…' ) : '';
 }
 
 /**

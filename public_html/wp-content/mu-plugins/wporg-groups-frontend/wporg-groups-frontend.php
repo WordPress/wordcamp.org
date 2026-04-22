@@ -21,6 +21,10 @@ require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 
+// Register blocks unconditionally so the Site Editor recognises them
+// even before GatherPress is fully loaded.
+Blocks\bootstrap();
+
 /**
  * Bootstrap the plugin.
  *
@@ -34,7 +38,6 @@ function bootstrap(): void {
 
 	REST\bootstrap();
 	Modal\bootstrap();
-	Blocks\bootstrap();
 
 	add_action(
 		'rest_api_init',

@@ -54,6 +54,11 @@ class CampTix_Plugin {
 	protected $did_template_redirect;
 	protected $did_checkout;
 	protected $shortcode_contents;
+	protected $shortcode_str;
+	protected $order;
+	protected $tickets_url;
+	protected $flush_tickets_page;
+	public $removed_shortcodes = array();
 
 	// Allow others to use this.
 	public $filter_post_meta = false;

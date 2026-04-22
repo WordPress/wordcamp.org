@@ -68,8 +68,8 @@ $now = current_time( 'mysql', true );
 $upcoming_events = array();
 
 foreach ( $attending_ids as $eid ) {
-	$post = get_post( $eid );
-	if ( ! $post || 'publish' !== $post->post_status ) {
+	$event_post = get_post( $eid );
+	if ( ! $event_post || 'publish' !== $event_post->post_status ) {
 		continue;
 	}
 
@@ -80,7 +80,7 @@ foreach ( $attending_ids as $eid ) {
 	$dt = $wpdb->get_var( $wpdb->prepare( "SELECT datetime_end_gmt FROM {$table} WHERE post_id = %d", $eid ) );
 
 	if ( $dt && $dt >= $now ) {
-		$upcoming_events[] = $post;
+		$upcoming_events[] = $event_post;
 	}
 }
 
@@ -97,9 +97,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		<?php esc_html_e( 'My upcoming events', 'wporg-groups-frontend' ); ?>
 	</h3>
 	<div class="wporg-my-events__list">
-		<?php foreach ( $upcoming_events as $post ) :
-			$event = new \GatherPress\Core\Event( $post->ID );
-			$start = get_post_meta( $post->ID, 'gatherpress_datetime_start', true );
+		<?php foreach ( $upcoming_events as $event_post ) :
+			$event = new \GatherPress\Core\Event( $event_post->ID );
+			$start = get_post_meta( $event_post->ID, 'gatherpress_datetime_start', true );
 			$date_label = '';
 			if ( $start ) {
 				try {
@@ -110,9 +110,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				}
 			}
 			?>
-			<a class="wporg-my-events__item" href="<?php echo esc_url( get_permalink( $post->ID ) ); ?>">
+			<a class="wporg-my-events__item" href="<?php echo esc_url( get_permalink( $event_post->ID ) ); ?>">
 				<span class="wporg-my-events__date"><?php echo esc_html( $date_label ); ?></span>
-				<span class="wporg-my-events__title"><?php echo esc_html( get_the_title( $post->ID ) ); ?></span>
+				<span class="wporg-my-events__title"><?php echo esc_html( get_the_title( $event_post->ID ) ); ?></span>
 			</a>
 		<?php endforeach; ?>
 	</div>

@@ -88,6 +88,28 @@ add_filter(
 );
 
 /**
+ * Grant edit_theme_options to editors so they can use the Site Editor
+ * to customise their group site appearance (templates, colors, etc.).
+ */
+add_filter(
+	'user_has_cap',
+	static function ( array $allcaps, array $caps, array $args, $user ): array {
+		if ( ! in_array( 'edit_theme_options', $caps, true ) ) {
+			return $allcaps;
+		}
+
+		// Grant to editors (group organisers).
+		if ( ! empty( $allcaps['edit_others_posts'] ) ) {
+			$allcaps['edit_theme_options'] = true;
+		}
+
+		return $allcaps;
+	},
+	10,
+	4
+);
+
+/**
  * Prevent GatherPress from 404-ing the event archive.
  *
  * GatherPress expects a WordPress page with the event rewrite slug to be

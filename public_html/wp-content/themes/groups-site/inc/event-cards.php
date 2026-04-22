@@ -198,7 +198,7 @@ function render_event_cards( WP_Query $query, array $opts = array() ): void {
 				<?php endif; ?>
 				<?php if ( $venue_lbl ) : ?>
 					<p class="groups-site-event-card__venue">
-						<svg class="groups-site-event-card__icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+						<span class="dashicons dashicons-location groups-site-event-card__icon" aria-hidden="true"></span>
 						<?php echo esc_html( $venue_lbl ); ?>
 					</p>
 				<?php endif; ?>

@@ -188,6 +188,62 @@ add_action(
 				2
 			);
 		}
+
+		// Filter to past events only.
+		if ( $query->get( 'gatherpress_past_only' ) ) {
+			add_filter(
+				'posts_where',
+				static function ( string $where, \WP_Query $q ) use ( $query ): string {
+					if ( $q !== $query ) {
+						return $where;
+					}
+					$now = current_time( 'mysql', true );
+					$where .= " AND gp_events.datetime_end_gmt < '{$now}'";
+					return $where;
+				},
+				10,
+				2
+			);
+		}
+	}
+);
+
+/**
+ * Register query filter options for event archive filtering.
+ */
+add_filter(
+	'wporg_query_filter_options_event_time',
+	static function (): array {
+		$current = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+
+		$selected = array();
+		if ( $current && 'upcoming' !== $current ) {
+			$selected[] = $current;
+		}
+
+		return array(
+			'label'    => __( 'Time', 'wporg-groups' ),
+			'title'    => __( 'Filter by time', 'wporg-groups' ),
+			'key'      => 'event_time',
+			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
+			'options'  => array(
+				'upcoming' => __( 'Upcoming', 'wporg-groups' ),
+				'past'     => __( 'Past', 'wporg-groups' ),
+				'all'      => __( 'All events', 'wporg-groups' ),
+			),
+			'selected' => $selected,
+		);
+	}
+);
+
+/**
+ * Add event_time as an allowed query var.
+ */
+add_filter(
+	'query_vars',
+	static function ( array $vars ): array {
+		$vars[] = 'event_time';
+		return $vars;
 	}
 );
 
@@ -196,14 +252,32 @@ add_action(
  *
  * When a core/query block queries gatherpress_event post type, add our
  * custom ordering parameter so the pre_get_posts filter picks it up.
+ * Respects the event_time filter parameter (upcoming/past/all).
  */
 add_filter(
 	'query_loop_block_query_vars',
 	static function ( array $query_vars ): array {
-		if ( isset( $query_vars['post_type'] ) && 'gatherpress_event' === $query_vars['post_type'] ) {
+		if ( ! isset( $query_vars['post_type'] ) || 'gatherpress_event' !== $query_vars['post_type'] ) {
+			return $query_vars;
+		}
+
+		$time_filter = isset( $_GET['event_time'] ) ? sanitize_text_field( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+
+		if ( 'past' === $time_filter ) {
+			$query_vars['gatherpress_event_order'] = 'past';
+			$query_vars['gatherpress_past_only']   = true;
+		} elseif ( 'all' === $time_filter ) {
 			$query_vars['gatherpress_event_order'] = 'upcoming';
+		} else {
+			$query_vars['gatherpress_event_order']    = 'upcoming';
 			$query_vars['gatherpress_upcoming_only'] = true;
 		}
+
+		// Pass through search if present.
+		if ( ! empty( $_GET['s'] ) ) {
+			$query_vars['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) );
+		}
+
 		return $query_vars;
 	}
 );

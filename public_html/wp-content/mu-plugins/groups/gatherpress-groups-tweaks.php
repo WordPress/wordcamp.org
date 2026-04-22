@@ -209,6 +209,60 @@ add_action(
 );
 
 /**
+ * When searching on the events archive, keep the archive template active
+ * instead of switching to the search template. WordPress treats ?s= as a
+ * search query which loads search.html — we want to stay on the archive
+ * so the Query Loop handles the filtering.
+ */
+add_action(
+	'pre_get_posts',
+	static function ( \WP_Query $query ): void {
+		if ( ! $query->is_main_query() || is_admin() ) {
+			return;
+		}
+
+		// If this is a search on the events archive path, force it back to archive.
+		if ( $query->is_search() && isset( $_GET['event_time'] ) ) {
+			$query->is_search          = false;
+			$query->is_archive         = true;
+			$query->is_post_type_archive = true;
+			$query->set( 'post_type', 'gatherpress_event' );
+		}
+	},
+	1
+);
+
+/**
+ * Rewrite the search block form action on the events archive to submit
+ * to the archive URL instead of the default search URL, so search results
+ * stay scoped to events.
+ */
+add_filter(
+	'render_block_core/search',
+	static function ( string $content ): string {
+		if ( ! is_post_type_archive( 'gatherpress_event' ) ) {
+			return $content;
+		}
+
+		$archive_url = get_post_type_archive_link( 'gatherpress_event' );
+		$content     = preg_replace(
+			'/action="[^"]*"/',
+			'action="' . esc_url( $archive_url ) . '"',
+			$content
+		);
+
+		// Add hidden field to default to "all" time when searching.
+		$content = str_replace(
+			'</form>',
+			'<input type="hidden" name="event_time" value="all" /></form>',
+			$content
+		);
+
+		return $content;
+	}
+);
+
+/**
  * Register query filter options for event archive filtering.
  */
 add_filter(

@@ -51,41 +51,6 @@
 }
 
 
-/* ==========================================================================
-   Front-page hero
-   ========================================================================== */
-
-.groups-site-hero {
-	position: relative;
-	overflow: hidden;
-	background-image:
-		linear-gradient(
-			to right,
-			var(--wp--preset--color--blueberry-4) 0%,
-			var(--wp--preset--color--blueberry-4) 45%,
-			transparent 70%
-		),
-		url('https://events.wordpress.org/wp-content/themes/wporg-events-2023/images/community-team.png');
-	background-position: right center;
-	background-size: cover;
-	background-repeat: no-repeat;
-}
-
-.groups-site-hero h1,
-.groups-site-hero .wp-block-site-title {
-	text-wrap: balance;
-}
-
-.groups-site-hero .wp-block-button.is-style-outline .wp-element-button:hover {
-	color: var(--wp--preset--color--white) !important;
-	border-color: var(--wp--preset--color--deep-blueberry);
-}
-
-@media (max-width: 781px) {
-	.groups-site-hero {
-		background-image: none;
-	}
-}
 
 /* ==========================================================================
    Single event layout

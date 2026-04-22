@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/event-rsvp-count",
+	"version": "1.0.0",
+	"title": "Event RSVP Count",
+	"category": "widgets",
+	"icon": "groups",
+	"description": "Displays the number of attendees for an event.",
+	"usesContext": [ "postId", "postType" ],
+	"supports": {
+		"html": false,
+		"color": { "text": true },
+		"typography": { "fontSize": true },
+		"spacing": { "margin": true }
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js"
+}

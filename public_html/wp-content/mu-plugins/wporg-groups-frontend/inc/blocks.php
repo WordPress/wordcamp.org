@@ -25,4 +25,6 @@ function register_blocks(): void {
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-settings' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-membership' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-members' );
+	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/event-rsvp-count' );
+	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/event-venue-name' );
 }

@@ -19,7 +19,7 @@
 		<!-- wp:site-title {"level":1,"fontSize":"heading-1","style":{"spacing":{"margin":{"bottom":"var:preset|spacing|30"}},"typography":{"lineHeight":"1.05"}}} /-->
 
 		<!-- wp:paragraph {"fontSize":"large","textColor":"charcoal-3","style":{"spacing":{"margin":{"bottom":"var:preset|spacing|40"}}}} -->
-		<p class="has-charcoal-3-color has-text-color has-large-font-size" style="margin-bottom:var(--wp--preset--spacing--40)">Connect with fellow WordPress enthusiasts. Join us for local meetups, workshops, and hands-on learning &mdash; all skill levels welcome.</p>
+		<p class="has-charcoal-3-color has-text-color has-large-font-size" style="margin-bottom:var(--wp--preset--spacing--40)">Connect with fellow WordPress enthusiasts. Join us for local meetups, workshops, and hands-on learning — all skill levels welcome.</p>
 		<!-- /wp:paragraph -->
 
 		<!-- wp:buttons {"layout":{"type":"flex","flexWrap":"wrap"}} -->
@@ -58,15 +58,38 @@
 			</div>
 			<!-- /wp:group -->
 
-			<!-- wp:pattern {"slug":"groups-site/view-all-events-link"} /-->
+			<!-- wp:paragraph {"fontSize":"small"} -->
+			<p class="has-small-font-size"><a href="/event/">View all events →</a></p>
+			<!-- /wp:paragraph -->
 		</div>
 		<!-- /wp:group -->
 
-		<!-- wp:group {"align":"wide"} -->
-		<div class="wp-block-group alignwide">
-			<!-- wp:pattern {"slug":"groups-site/upcoming-events-cards"} /-->
+		<!-- wp:query {"query":{"postType":"gatherpress_event","perPage":3,"offset":0,"order":"desc","orderBy":"date"},"align":"wide"} -->
+		<div class="wp-block-query alignwide">
+			<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+				<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20"},"border":{"width":"1px","color":"var:preset|color|light-grey-1","radius":"4px"}},"layout":{"type":"constrained"}} -->
+				<div class="wp-block-group has-border-color" style="border-color:var(--wp--preset--color--light-grey-1);border-width:1px;border-radius:4px">
+					<!-- wp:post-featured-image {"aspectRatio":"16/9","style":{"border":{"radius":{"topLeft":"3px","topRight":"3px","bottomLeft":"0px","bottomRight":"0px"}}}} /-->
+					<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|30","right":"var:preset|spacing|30","bottom":"var:preset|spacing|30","left":"var:preset|spacing|30"},"blockGap":"var:preset|spacing|10"}},"layout":{"type":"constrained"}} -->
+					<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--30);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--30);padding-left:var(--wp--preset--spacing--30)">
+						<!-- wp:gatherpress/event-date {"displayType":"start","startDateFormat":"M j, Y","showTimezone":"no","fontSize":"small","textColor":"blueberry-1","style":{"typography":{"fontWeight":"600","textTransform":"uppercase","letterSpacing":"0.04em"}}} /-->
+						<!-- wp:post-title {"level":3,"isLink":true,"fontSize":"heading-5","style":{"spacing":{"margin":{"top":"0"}},"typography":{"lineHeight":"1.3"}}} /-->
+						<!-- wp:post-excerpt {"moreText":"","excerptLength":18,"fontSize":"small","textColor":"charcoal-3"} /-->
+						<!-- wp:wporg/event-rsvp-count {"fontSize":"small","textColor":"charcoal-4","style":{"typography":{"fontWeight":"600"}}} /-->
+						<!-- wp:wporg/event-venue-name {"fontSize":"small","textColor":"charcoal-4"} /-->
+					</div>
+					<!-- /wp:group -->
+				</div>
+				<!-- /wp:group -->
+			<!-- /wp:post-template -->
+
+			<!-- wp:query-no-results -->
+				<!-- wp:paragraph {"textColor":"charcoal-4"} -->
+				<p class="has-charcoal-4-color has-text-color">No upcoming events yet. Check back soon!</p>
+				<!-- /wp:paragraph -->
+			<!-- /wp:query-no-results -->
 		</div>
-		<!-- /wp:group -->
+		<!-- /wp:query -->
 	</div>
 	<!-- /wp:group -->
 

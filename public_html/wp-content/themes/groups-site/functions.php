@@ -35,7 +35,7 @@ function enqueue_assets() {
 	wp_enqueue_style(
 		'groups-site-custom',
 		get_theme_file_uri( 'assets/css/custom.css' ),
-		array( 'wporg-parent-2021-style', 'wporg-global-fonts' ),
+		array(),
 		filemtime( get_theme_file_path( 'assets/css/custom.css' ) )
 	);
 

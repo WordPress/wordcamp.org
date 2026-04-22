@@ -35,7 +35,10 @@ function enqueue_assets() {
 	wp_enqueue_style(
 		'groups-site-custom',
 		get_theme_file_uri( 'assets/css/custom.css' ),
-		array(),
+		array_filter( array(
+			wp_style_is( 'wporg-parent-2021-style', 'registered' ) ? 'wporg-parent-2021-style' : '',
+			wp_style_is( 'wporg-global-fonts', 'registered' ) ? 'wporg-global-fonts' : '',
+		) ),
 		filemtime( get_theme_file_path( 'assets/css/custom.css' ) )
 	);
 

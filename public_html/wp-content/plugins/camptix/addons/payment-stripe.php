@@ -57,10 +57,16 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 
-		// Use specific name for INR as we support UPI via Stripe.
-		if ( 'INR' === $this->camptix_options['currency'] ?? '' ) {
-			$this->name = 'Credit Card or UPI (Stripe)';
-			$this->description = 'Credit card and UPI processing, powered by Stripe.';
+		// Use specific name for EUR/INR as we support some local payment methods via Stripe.
+		switch ( $this->camptix_options['currency'] ?? '' ) {
+			case 'INR':
+				$this->name = 'Credit Card or UPI (Stripe)';
+				$this->description = 'Credit card and UPI processing, powered by Stripe.';
+				break;
+			case 'EUR':
+				$this->name = 'Credit Card or banking (Stripe)';
+				$this->description = 'Credit card, iDEAL, Bancontact, and EPS, powered by Stripe.';
+				break;
 		}
 	}
 

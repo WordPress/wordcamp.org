@@ -11,15 +11,13 @@ iframe {
 	height: auto;
 }
 
-.groups-site-event-hero img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	display: block;
-}
+/* ==========================================================================
+   Mobile (up to 781px)
+   ========================================================================== */
 
-/* Up to 781px (mobile + small tablet): collapse the event two-column layout. */
 @media (max-width: 781px) {
+
+	/* Single event: collapse two-column layout to stacked. */
 	.groups-site-event-layout {
 		flex-direction: column !important;
 	}
@@ -27,10 +25,71 @@ iframe {
 	.groups-site-event-layout .wp-block-column {
 		flex-basis: 100% !important;
 	}
+
+	/* Date header: let text wrap. */
+	.groups-site-event-date-header {
+		gap: 12px !important;
+	}
+
+	/* Query Loop event cards: single column. */
+	.wp-block-post-template.is-layout-grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Archive filters: stack search and filter vertically. */
+	.wporg-query-filters {
+		width: 100%;
+	}
+
+	/* Members grid: single column on small phones. */
+	.wporg-group-members__grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Group membership block: wrap and center. */
+	.wporg-group-membership {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	/* RSVP modal: full screen. */
+	.wporg-event-rsvp__modal {
+		padding: 0 !important;
+	}
+
+	.wporg-event-rsvp__modal-content {
+		border-radius: 0 !important;
+		max-width: none !important;
+		max-height: none !important;
+		height: 100% !important;
+	}
+
+	/* Cover block hero: reduce padding. */
+	.wp-block-cover.alignfull {
+		min-height: auto !important;
+	}
 }
 
-/* Desktop: stick the event sidebar info card to the top while scrolling. */
+/* ==========================================================================
+   Small tablet (481-781px): two-column grids
+   ========================================================================== */
+
+@media (min-width: 481px) and (max-width: 781px) {
+	.wp-block-post-template.is-layout-grid {
+		grid-template-columns: 1fr 1fr !important;
+	}
+
+	.wporg-group-members__grid {
+		grid-template-columns: 1fr 1fr !important;
+	}
+}
+
+/* ==========================================================================
+   Desktop (1024px+)
+   ========================================================================== */
+
 @media (min-width: 1024px) {
+	/* Stick the event sidebar info card to the top while scrolling. */
 	.groups-site-event-sidebar .groups-site-event-info-card {
 		position: sticky;
 		top: 96px;

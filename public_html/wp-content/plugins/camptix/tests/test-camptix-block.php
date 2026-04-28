@@ -58,7 +58,11 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	 */
 	protected static function set_protected_property( $name, $value ) {
 		$reflection = new ReflectionProperty( get_class( self::$camptix ), $name );
-		$reflection->setAccessible( true );
+
+		if ( PHP_VERSION_ID < 80100 ) {
+			$reflection->setAccessible( true );
+		}
+
 		$reflection->setValue( self::$camptix, $value );
 	}
 
@@ -70,7 +74,10 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	 */
 	protected static function get_protected_property( $name ) {
 		$reflection = new ReflectionProperty( get_class( self::$camptix ), $name );
-		$reflection->setAccessible( true );
+
+		if ( PHP_VERSION_ID < 80100 ) {
+			$reflection->setAccessible( true );
+		}
 
 		return $reflection->getValue( self::$camptix );
 	}
@@ -85,7 +92,10 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	 */
 	protected static function call_protected_method( $name, array $args = array() ) {
 		$reflection = new ReflectionMethod( get_class( self::$camptix ), $name );
-		$reflection->setAccessible( true );
+
+		if ( PHP_VERSION_ID < 80100 ) {
+			$reflection->setAccessible( true );
+		}
 
 		return $reflection->invokeArgs( self::$camptix, $args );
 	}
@@ -160,7 +170,7 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	protected function run_template_redirect_for_page( $page_id ) {
 		$original_post = isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
 
-		$this->go_to( get_permalink( $page_id ) );
+		$this->go_to( add_query_arg( 'page_id', $page_id, home_url( '/' ) ) );
 
 		$GLOBALS['post'] = get_post( $page_id );
 		setup_postdata( $GLOBALS['post'] );

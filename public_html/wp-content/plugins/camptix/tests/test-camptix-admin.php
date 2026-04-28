@@ -1058,6 +1058,55 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Verify timeout review respects hooks that delay an attendee timestamp.
+	 */
+	public function test_review_timeout_payments_respects_delayed_timestamp_after_hook() {
+		$ticket_id   = $this->create_ticket();
+		$attendee_id = $this->create_attendee( $ticket_id, array(
+			'status'         => 'draft',
+			'payment_method' => 'stripe',
+		) );
+
+		update_post_meta( $attendee_id, 'tix_timestamp', time() - 2 * DAY_IN_SECONDS );
+
+		$delay_timeout = static function( $timeout_attendee_id ) use ( $attendee_id ) {
+			if ( $attendee_id === $timeout_attendee_id ) {
+				update_post_meta( $attendee_id, 'tix_timestamp', time() );
+			}
+		};
+
+		add_action( 'camptix_pre_attendee_timeout', $delay_timeout );
+		self::$camptix->review_timeout_payments();
+		remove_action( 'camptix_pre_attendee_timeout', $delay_timeout );
+
+		$this->assertSame( 'draft', get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * Verify timeout review only includes Stripe attendees when sweeping pending payments.
+	 */
+	public function test_review_timeout_payments_only_sweeps_pending_stripe_attendees() {
+		$ticket_id = $this->create_ticket();
+
+		$paypal_attendee_id = $this->create_attendee( $ticket_id, array(
+			'status'         => 'pending',
+			'payment_method' => 'paypal',
+		) );
+		$stripe_attendee_id = $this->create_attendee( $ticket_id, array(
+			'status'         => 'pending',
+			'payment_method' => 'stripe',
+		) );
+
+		update_post_meta( $paypal_attendee_id, 'tix_timestamp', time() - 2 * DAY_IN_SECONDS );
+		update_post_meta( $stripe_attendee_id, 'tix_timestamp', time() - 2 * DAY_IN_SECONDS );
+
+		self::$camptix->review_timeout_payments();
+
+		$this->assertSame( 'pending', get_post_status( $paypal_attendee_id ) );
+		$this->assertSame( 'timeout', get_post_status( $stripe_attendee_id ) );
+	}
+
+	/**
 	 * Verify is_wordcamp_closed returns false when no WordCamp post exists.
 	 */
 	public function test_is_wordcamp_closed_returns_false_when_no_wordcamp_post() {

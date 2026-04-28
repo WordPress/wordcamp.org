@@ -712,11 +712,15 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		if ( empty( $session['status'] ) ) {
+			$camptix->log( 'Stripe session lookup did not return a status during timeout review, delaying timeout.', $attendee_id, $session );
+			$this->delay_attendee_timeout( $attendee_id );
 			return;
 		}
 
+		$payment_status = $session['payment_status'] ?? '';
+
 		// Scenario 1: The checkout session completed and payment is confirmed.
-		if ( 'complete' === $session['status'] && 'paid' === $session['payment_status'] ) {
+		if ( 'complete' === $session['status'] && 'paid' === $payment_status ) {
 			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
 
 			$payment_data = $this->get_payment_data_for_session( $session );
@@ -727,14 +731,15 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		// Scenario 2: The checkout session completed but payment is still pending.
 		// This happens with delayed payment methods like boleto, OXXO, etc.
-		if ( 'complete' === $session['status'] && 'unpaid' === $session['payment_status'] ) {
-			$payment_intent_status = $session['payment_intent']['status'] ?? '';
+		if ( 'complete' === $session['status'] && 'unpaid' === $payment_status ) {
+			$payment_intent        = $session['payment_intent'] ?? array();
+			$payment_intent_status = is_array( $payment_intent ) ? ( $payment_intent['status'] ?? '' ) : '';
 
 			// Only delay timeout if the payment is still in a pending state.
 			if ( in_array( $payment_intent_status, array( 'requires_action', 'processing' ), true ) ) {
 				$log_data = array(
 					'payment_intent_status' => $payment_intent_status,
-					'payment_status'        => $session['payment_status'],
+					'payment_status'        => $payment_status,
 				);
 				$camptix->log( 'Stripe payment still pending, delaying timeout.', $attendee_id, $log_data );
 
@@ -767,11 +772,11 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @param int $attendee_id The attendee post ID.
 	 */
 	protected function delay_attendee_timeout( $attendee_id ) {
-		$original_timestamp = get_post_meta( $attendee_id, 'tix_timestamp_original', true );
+		$original_timestamp = absint( get_post_meta( $attendee_id, 'tix_timestamp_original', true ) );
 
 		// Store the original timestamp if not already saved.
 		if ( ! $original_timestamp ) {
-			$original_timestamp = get_post_meta( $attendee_id, 'tix_timestamp', true );
+			$original_timestamp = absint( get_post_meta( $attendee_id, 'tix_timestamp', true ) );
 			update_post_meta( $attendee_id, 'tix_timestamp_original', $original_timestamp );
 		}
 

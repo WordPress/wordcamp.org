@@ -364,10 +364,37 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		$camptix->log( sprintf( 'Running payment_cancel. Request data attached.' ), null, $_REQUEST );
 
-		$payment_token = $_REQUEST['tix_payment_token'] ?? '';
+		$payment_token  = wp_unslash( $_REQUEST['tix_payment_token'] ?? '' );
+		$stripe_session = wp_unslash( $_REQUEST['tix_stripe_session'] ?? '' );
 
 		if ( ! $payment_token ) {
 			wp_die( 'empty token' );
+		}
+
+		$order = $this->get_order( $payment_token );
+		if ( $order ) {
+			if ( ! $stripe_session || '{CHECKOUT_SESSION_ID}' === $stripe_session ) {
+				$stripe_session = get_post_meta( $order['attendee_id'], '_stripe_checkout_session_id', true );
+			}
+
+			if ( $stripe_session ) {
+				$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+				$session = $stripe->get_session( $stripe_session );
+
+				if ( ! is_wp_error( $session ) && ! empty( $session['status'] ) && 'complete' === $session['status'] ) {
+					$payment_data = $this->get_payment_data_for_session( $session );
+
+					if ( 'unpaid' === $session['payment_status'] ) {
+						$camptix->log( 'False alarm on Stripe payment_cancel. Payment is pending.', $order['attendee_id'], $session );
+						return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
+					}
+
+					if ( 'paid' === $session['payment_status'] ) {
+						$camptix->log( 'False alarm on Stripe payment_cancel. Payment is complete.', $order['attendee_id'], $session );
+						return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );
+					}
+				}
+			}
 		}
 
 		// Set the associated attendees to cancelled.
@@ -425,19 +452,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
 		}
 
-		// Technically there can be multiple charges (ie. partial payments / installments) but we don't have that enabled.
-		$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
-
-		/**
-		 * Note that when returning a successful payment, CampTix will be
-		 * expecting the transaction_id and transaction_details array keys.
-		 */
-		$payment_data = array(
-			'transaction_id'      => $transaction_id,
-			'transaction_details' => array(
-				'raw' => $session,
-			),
-		);
+		$payment_data = $this->get_payment_data_for_session( $session );
 
 		// Delayed payment methods (boleto, OXXO, etc.) complete the session but payment is still pending.
 		if ( 'complete' === $session['status'] && 'unpaid' === $session['payment_status'] ) {
@@ -514,6 +529,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				'tix_action'         => 'payment_cancel',
 				'tix_payment_token'  => $payment_token,
 				'tix_payment_method' => 'stripe',
+				'tix_stripe_session' => '{CHECKOUT_SESSION_ID}',
 			),
 			$camptix->get_tickets_url()
 		);
@@ -680,13 +696,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		if ( 'complete' === $session['status'] && 'paid' === $session['payment_status'] ) {
 			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
 
-			$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
-			$payment_data   = array(
-				'transaction_id'      => $transaction_id,
-				'transaction_details' => array(
-					'raw' => $session,
-				),
-			);
+			$payment_data = $this->get_payment_data_for_session( $session );
 
 			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
 			return;
@@ -753,6 +763,29 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		// Push the timestamp forward to now, so the 24-hour timeout resets.
 		update_post_meta( $attendee_id, 'tix_timestamp', time() );
+	}
+
+	/**
+	 * Get the payment data CampTix stores for a Stripe checkout session.
+	 *
+	 * @param array $session The Stripe checkout session.
+	 *
+	 * @return array
+	 */
+	protected function get_payment_data_for_session( $session ) {
+		// Technically there can be multiple charges (ie. partial payments / installments) but we don't have that enabled.
+		$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
+
+		/**
+		 * Note that when returning a successful payment, CampTix will be
+		 * expecting the transaction_id and transaction_details array keys.
+		 */
+		return array(
+			'transaction_id'      => $transaction_id,
+			'transaction_details' => array(
+				'raw' => $session,
+			),
+		);
 	}
 }
 

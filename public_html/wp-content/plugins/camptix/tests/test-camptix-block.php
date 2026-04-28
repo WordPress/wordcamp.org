@@ -98,6 +98,46 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Helper: render the start form with a configured maxTicketsPerOrder attribute.
+	 *
+	 * @param int $max_tickets_per_order Max tickets per order block attribute value.
+	 * @return array Ticket ID and rendered form output.
+	 */
+	protected function render_form_start_for_max_tickets_per_order( $max_tickets_per_order ) {
+		$ticket_id = $this->create_ticket( 'Test Ticket', 10.00 );
+
+		$ticket                          = get_post( $ticket_id );
+		$ticket->tix_price               = 10.00;
+		$ticket->tix_remaining           = 50;
+		$ticket->tix_coupon_applied      = false;
+		$ticket->tix_discounted_price    = 10.00;
+
+		self::set_protected_property( 'tickets', array( $ticket_id => $ticket ) );
+		self::$camptix->block_attributes = array(
+			'maxTicketsPerOrder' => $max_tickets_per_order,
+		);
+
+		return array( $ticket_id, self::$camptix->form_start() );
+	}
+
+	/**
+	 * Helper: get the highest quantity option value for a ticket.
+	 *
+	 * @param string $output    Rendered form output.
+	 * @param int    $ticket_id Ticket ID.
+	 * @return int Highest quantity option value.
+	 */
+	protected function get_max_quantity_option_value( $output, $ticket_id ) {
+		$select_pattern = sprintf( '#<select[^>]+id="tix-qty-%d"[^>]*>(.*?)</select>#s', $ticket_id );
+		$this->assertSame( 1, preg_match( $select_pattern, $output, $select_match ) );
+
+		preg_match_all( '/<option[^>]*value="(\d+)"/', $select_match[1], $option_matches );
+		$this->assertNotEmpty( $option_matches[1] );
+
+		return max( array_map( 'intval', $option_matches[1] ) );
+	}
+
+	/**
 	 * Test that template_redirect detects a block in page content.
 	 */
 	public function test_block_detection_sets_block_attributes() {
@@ -249,29 +289,27 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	 * Test that maxTicketsPerOrder block attribute affects form_start output.
 	 */
 	public function test_max_tickets_per_order_attribute() {
-		$ticket_id = $this->create_ticket( 'Test Ticket', 10.00 );
+		list( $ticket_id, $output ) = $this->render_form_start_for_max_tickets_per_order( 3 );
 
-		$ticket               = get_post( $ticket_id );
-		$ticket->tix_price    = 10.00;
-		$ticket->tix_remaining = 50;
-		$ticket->tix_coupon_applied    = false;
-		$ticket->tix_discounted_price  = 10.00;
+		$this->assertEquals( 3, $this->get_max_quantity_option_value( $output, $ticket_id ) );
+	}
 
-		self::set_protected_property( 'tickets', array( $ticket_id => $ticket ) );
-		self::$camptix->block_attributes = array(
-			'maxTicketsPerOrder' => 3,
-		);
+	/**
+	 * Test that maxTicketsPerOrder block attribute is clamped to its lower limit.
+	 */
+	public function test_max_tickets_per_order_attribute_lower_limit() {
+		list( $ticket_id, $output ) = $this->render_form_start_for_max_tickets_per_order( -5 );
 
-		$output = self::$camptix->form_start();
+		$this->assertEquals( 1, $this->get_max_quantity_option_value( $output, $ticket_id ) );
+	}
 
-		// The quantity select should have options 0-3 (4 options), not 0-10.
-		// Count option elements for this ticket.
-		preg_match_all( '/<option[^>]*value="(\d+)"/', $output, $matches );
+	/**
+	 * Test that maxTicketsPerOrder block attribute is clamped to its upper limit.
+	 */
+	public function test_max_tickets_per_order_attribute_upper_limit() {
+		list( $ticket_id, $output ) = $this->render_form_start_for_max_tickets_per_order( 999 );
 
-		if ( ! empty( $matches[1] ) ) {
-			$max_value = max( array_map( 'intval', $matches[1] ) );
-			$this->assertEquals( 3, $max_value, 'Max ticket quantity should be 3' );
-		}
+		$this->assertEquals( 10, $this->get_max_quantity_option_value( $output, $ticket_id ) );
 	}
 
 	/**

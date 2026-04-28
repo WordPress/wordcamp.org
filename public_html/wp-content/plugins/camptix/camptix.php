@@ -5350,9 +5350,7 @@ class CampTix_Plugin {
 		$coupon_used_count = 0;
 		$via_reservation = false;
 
-		$default_max = ! empty( $this->block_attributes['maxTicketsPerOrder'] )
-			? (int) $this->block_attributes['maxTicketsPerOrder']
-			: 10;
+		$default_max = max( 1, min( 10, (int) ( $this->block_attributes['maxTicketsPerOrder'] ?? 10 ) ) );
 		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', $default_max );
 
 		// Auto-apply coupon from block attributes.
@@ -5723,9 +5721,7 @@ class CampTix_Plugin {
 	 */
 	function form_start() {
 		$available_tickets = 0;
-		$default_max = ! empty( $this->block_attributes['maxTicketsPerOrder'] )
-			? (int) $this->block_attributes['maxTicketsPerOrder']
-			: 10;
+		$default_max = max( 1, min( 10, (int) ( $this->block_attributes['maxTicketsPerOrder'] ?? 10 ) ) );
 		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', $default_max );
 
 		foreach ( $this->tickets as $ticket ) {

@@ -364,10 +364,48 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		$camptix->log( sprintf( 'Running payment_cancel. Request data attached.' ), null, $_REQUEST );
 
-		$payment_token = $_REQUEST['tix_payment_token'] ?? '';
+		$payment_token  = wp_unslash( $_REQUEST['tix_payment_token'] ?? '' );
+		$stripe_session = wp_unslash( $_REQUEST['tix_stripe_session'] ?? '' );
 
 		if ( ! $payment_token ) {
 			wp_die( 'empty token' );
+		}
+
+		$order = $this->get_order( $payment_token );
+		if ( $order ) {
+			if ( ! $stripe_session || '{CHECKOUT_SESSION_ID}' === $stripe_session ) {
+				$stripe_session = get_post_meta( $order['attendee_id'], '_stripe_checkout_session_id', true );
+			}
+
+			if ( $stripe_session ) {
+				$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
+				$session = $this->get_session_with_retry( $stripe, $stripe_session );
+
+				if ( is_wp_error( $session ) ) {
+					$camptix->log( 'Error during Stripe payment_cancel, failed to fetch session twice.', $order['attendee_id'], $session );
+					wp_die( 'A temporary issue has occurred with the payment gateway. The order was not cancelled; please try again in a few minutes.' );
+				}
+
+				if ( empty( $session['status'] ) ) {
+					$camptix->log( "Dying because couldn't get Payment status during Stripe payment_cancel", $order['attendee_id'], compact( 'payment_token', 'stripe_session' ) );
+					wp_die( 'could not find payment details' );
+				}
+
+				if ( 'complete' === $session['status'] ) {
+					$payment_data = $this->get_payment_data_for_session( $session );
+					$payment_status = $session['payment_status'] ?? '';
+
+					if ( 'unpaid' === $payment_status ) {
+						$camptix->log( 'False alarm on Stripe payment_cancel. Payment is pending.', $order['attendee_id'], $session );
+						return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
+					}
+
+					if ( 'paid' === $payment_status ) {
+						$camptix->log( 'False alarm on Stripe payment_cancel. Payment is complete.', $order['attendee_id'], $session );
+						return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );
+					}
+				}
+			}
 		}
 
 		// Set the associated attendees to cancelled.
@@ -408,7 +446,12 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		// Fetch the Payment details.
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->get_session( $stripe_session );
+		$session = $this->get_session_with_retry( $stripe, $stripe_session );
+
+		if ( is_wp_error( $session ) ) {
+			$camptix->log( 'Error during post-stripe return, failed to fetch session twice.', $order['attendee_id'], $session );
+			wp_die( 'A temporary issue has occurred with the payment gateway. Your purchase may have been processed; please try again in a few minutes.' );
+		}
 
 		if ( empty( $session['status'] ) ) {
 			$camptix->log( "Dying because couldn't get Payment status", $order['attendee_id'], compact( 'payment_token', 'payment_session' ) );
@@ -425,21 +468,16 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
 		}
 
-		// Success! (status can only be open, or completed)
-		// Technically there can be multiple charges (ie. partial payments / installments) but we don't have that enabled.
-		$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
+		$payment_data = $this->get_payment_data_for_session( $session );
+		$payment_status = $session['payment_status'] ?? '';
 
-		/**
-		 * Note that when returning a successful payment, CampTix will be
-		 * expecting the transaction_id and transaction_details array keys.
-		 */
-		$payment_data = array(
-			'transaction_id'      => $transaction_id,
-			'transaction_details' => array(
-				'raw' => $session,
-			),
-		);
+		// Delayed payment methods (boleto, OXXO, etc.) complete the session but payment is still pending.
+		if ( 'complete' === $session['status'] && 'unpaid' === $payment_status ) {
+			$camptix->log( 'Stripe checkout complete, payment pending (delayed payment method).', $order['attendee_id'], $session );
+			return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
+		}
 
+		// Success! Payment is confirmed.
 		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );
 	}
 
@@ -508,6 +546,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				'tix_action'         => 'payment_cancel',
 				'tix_payment_token'  => $payment_token,
 				'tix_payment_method' => 'stripe',
+				'tix_stripe_session' => '{CHECKOUT_SESSION_ID}',
 			),
 			$camptix->get_tickets_url()
 		);
@@ -525,7 +564,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				'Got Stripe checkout session.',
 				$order['attendee_id'],
 				array(
-					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ) ),
+					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ?? '' ) ),
 					'camptix_payment_token' => $payment_token,
 					'request_payload'       => compact( 'order_items', 'receipt_email' ),
 					'response'              => $session,
@@ -641,14 +680,19 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Check if a stripe session timed out.
+	 * Check if a Stripe session should be timed out, or if the timeout should be delayed.
+	 *
+	 * Handles three scenarios:
+	 * 1. The payment completed successfully -- mark the attendee as paid.
+	 * 2. The payment is still pending (delayed payment methods like boleto) -- delay the timeout.
+	 * 3. The session is still open and not expired -- delay the timeout.
 	 */
 	public function pre_attendee_timeout( $attendee_id ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		// precheck the attendee is in draft.
-		if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
+		// Only process attendees that are still awaiting payment.
+		if ( ! in_array( get_post_field( 'post_status', $attendee_id ), array( 'draft', 'pending' ), true ) ) {
 			return;
 		}
 
@@ -659,26 +703,136 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->get_session( $stripe_session_id );
+		$session = $this->get_session_with_retry( $stripe, $stripe_session_id );
 
-		if ( is_wp_error( $session ) || empty( $session['status'] ) ) {
+		if ( is_wp_error( $session ) ) {
+			$camptix->log( 'Stripe session lookup failed during timeout review, delaying timeout.', $attendee_id, $session );
+			$this->delay_attendee_timeout( $attendee_id );
 			return;
 		}
 
-		// Uh oh, we've hit timeout on a ticket, but the linked checkout session succeeded.
-		if ( 'complete' === $session['status'] && 'paid' === $session['payment_status'] ) {
+		if ( empty( $session['status'] ) ) {
+			$camptix->log( 'Stripe session lookup did not return a status during timeout review, delaying timeout.', $attendee_id, $session );
+			$this->delay_attendee_timeout( $attendee_id );
+			return;
+		}
+
+		$payment_status = $session['payment_status'] ?? '';
+
+		// Scenario 1: The checkout session completed and payment is confirmed.
+		if ( 'complete' === $session['status'] && 'paid' === $payment_status ) {
 			$camptix->log( 'Stripe checkout timed out, but order succeeded.', $attendee_id, $session );
 
-			$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
-			$payment_data   = array(
-				'transaction_id'      => $transaction_id,
-				'transaction_details' => array(
-					'raw' => $session,
-				),
-			);
+			$payment_data = $this->get_payment_data_for_session( $session );
 
 			$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data, false /* non-interactive */ );
+			return;
 		}
+
+		// Scenario 2: The checkout session completed but payment is still pending.
+		// This happens with delayed payment methods like boleto, OXXO, etc.
+		if ( 'complete' === $session['status'] && 'unpaid' === $payment_status ) {
+			$payment_intent        = $session['payment_intent'] ?? array();
+			$payment_intent_status = is_array( $payment_intent ) ? ( $payment_intent['status'] ?? '' ) : '';
+
+			// Only delay timeout if the payment is still in a pending state.
+			if ( in_array( $payment_intent_status, array( 'requires_action', 'processing' ), true ) ) {
+				$log_data = array(
+					'payment_intent_status' => $payment_intent_status,
+					'payment_status'        => $payment_status,
+				);
+				$camptix->log( 'Stripe payment still pending, delaying timeout.', $attendee_id, $log_data );
+
+				$this->delay_attendee_timeout( $attendee_id );
+				return;
+			}
+		}
+
+		// Scenario 3: The checkout session is still open and has not expired per Stripe.
+		if ( 'open' === $session['status'] ) {
+			$expires_at = $session['expires_at'] ?? 0;
+
+			if ( $expires_at > time() ) {
+				$log_data = array( 'expires_at' => $expires_at );
+				$camptix->log( 'Stripe session still open, delaying timeout.', $attendee_id, $log_data );
+
+				$this->delay_attendee_timeout( $attendee_id );
+				return;
+			}
+		}
+	}
+
+	/**
+	 * Delay an attendee's timeout by resetting its timestamp.
+	 *
+	 * This pushes the attendee's timestamp forward so that the timeout review
+	 * will not pick it up again until the next cycle. A maximum age limit of
+	 * 7 days from the original purchase prevents indefinite delays.
+	 *
+	 * @param int $attendee_id The attendee post ID.
+	 */
+	protected function delay_attendee_timeout( $attendee_id ) {
+		$original_timestamp = absint( get_post_meta( $attendee_id, 'tix_timestamp_original', true ) );
+
+		// Store the original timestamp if not already saved.
+		if ( ! $original_timestamp ) {
+			$original_timestamp = absint( get_post_meta( $attendee_id, 'tix_timestamp', true ) );
+			update_post_meta( $attendee_id, 'tix_timestamp_original', $original_timestamp );
+		}
+
+		// Do not delay beyond 7 days from the original purchase.
+		$max_age = 7 * DAY_IN_SECONDS;
+		if ( ( time() - $original_timestamp ) >= $max_age ) {
+			/** @var CampTix_Plugin $camptix */
+			global $camptix;
+			$camptix->log( 'Stripe payment pending too long, allowing timeout.', $attendee_id );
+			return;
+		}
+
+		// Push the timestamp forward to now, so the 24-hour timeout resets.
+		update_post_meta( $attendee_id, 'tix_timestamp', time() );
+	}
+
+	/**
+	 * Retrieve a Stripe checkout session, retrying once on transient API errors.
+	 *
+	 * @param CampTix_Stripe_API_Client $stripe         The Stripe API client.
+	 * @param string                    $stripe_session The Stripe checkout session ID.
+	 *
+	 * @return array|WP_Error
+	 */
+	protected function get_session_with_retry( $stripe, $stripe_session ) {
+		$session = $stripe->get_session( $stripe_session );
+
+		if ( is_wp_error( $session ) ) {
+			$session = $stripe->get_session( $stripe_session );
+		}
+
+		return $session;
+	}
+
+	/**
+	 * Get the payment data CampTix stores for a Stripe checkout session.
+	 *
+	 * @param array $session The Stripe checkout session.
+	 *
+	 * @return array
+	 */
+	protected function get_payment_data_for_session( $session ) {
+		// Technically there can be multiple charges (ie. partial payments / installments) but we don't have that enabled.
+		$payment_intent = $session['payment_intent'] ?? array();
+		$transaction_id = is_array( $payment_intent ) ? ( $payment_intent['latest_charge'] ?? '' ) : '';
+
+		/**
+		 * Note that when returning a successful payment, CampTix will be
+		 * expecting the transaction_id and transaction_details array keys.
+		 */
+		return array(
+			'transaction_id'      => $transaction_id,
+			'transaction_details' => array(
+				'raw' => $session,
+			),
+		);
 	}
 }
 

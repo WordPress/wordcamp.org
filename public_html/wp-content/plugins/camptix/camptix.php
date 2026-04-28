@@ -6034,50 +6034,83 @@ class CampTix_Plugin {
 		$processed = 0;
 		$current_loop = 1;
 		$max_loops = 500;
-
-		while ( $attendees = get_posts( array(
-			'fields' => 'ids',
-			'post_type' => 'tix_attendee',
-			'post_status' => 'draft',
-			'posts_per_page' => 100,
-			'cache_results' => false,
-			'meta_query' => array(
-				array(
-					'key' => 'tix_timestamp',
-					'compare' => '<',
-					'value' => time() - 60 * 60 * 24, // 24 hours ago
-					'type' => 'NUMERIC',
-				),
-				array(
-					'key' => 'tix_timestamp',
-					'compare' => '>',
-					'value' => 0,
-					'type' => 'NUMERIC',
+		$timeout_timestamp = time() - 60 * 60 * 24; // 24 hours ago.
+		$timestamp_meta_query = array(
+			array(
+				'key' => 'tix_timestamp',
+				'compare' => '<',
+				'value' => $timeout_timestamp,
+				'type' => 'NUMERIC',
+			),
+			array(
+				'key' => 'tix_timestamp',
+				'compare' => '>',
+				'value' => 0,
+				'type' => 'NUMERIC',
+			),
+		);
+		$timeout_queries = array(
+			array(
+				'post_status' => 'draft',
+				'meta_query'  => $timestamp_meta_query,
+			),
+			array(
+				'post_status' => 'pending',
+				'meta_query'  => array_merge(
+					$timestamp_meta_query,
+					array(
+						array(
+							'key'     => 'tix_payment_method',
+							'compare' => '=',
+							'value'   => 'stripe',
+							'type'    => 'CHAR',
+						),
+					)
 				),
 			),
-		) ) ) {
+		);
 
-			foreach ( $attendees as $attendee_id ) {
-				do_action( 'camptix_pre_attendee_timeout', $attendee_id );
+		foreach ( $timeout_queries as $timeout_query ) {
+			$query_args = array_merge(
+				array(
+					'fields'         => 'ids',
+					'post_type'      => 'tix_attendee',
+					'posts_per_page' => 100,
+					'cache_results'  => false,
+				),
+				$timeout_query
+			);
 
-				// Check the post_status again, incase a filter has caused the post to change.
-				if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
-					continue;
+			while ( $attendees = get_posts( $query_args ) ) {
+
+				foreach ( $attendees as $attendee_id ) {
+					do_action( 'camptix_pre_attendee_timeout', $attendee_id );
+
+					// Check the post_status again, in case a hook has caused the post to change.
+					if ( ! in_array( get_post_field( 'post_status', $attendee_id ), array( 'draft', 'pending' ), true ) ) {
+						continue;
+					}
+
+					// Check the timestamp again, in case a hook has delayed the timeout.
+					$attendee_timestamp = absint( get_post_meta( $attendee_id, 'tix_timestamp', true ) );
+					if ( ! $attendee_timestamp || $attendee_timestamp >= $timeout_timestamp ) {
+						continue;
+					}
+
+					wp_update_post( [
+						'ID'          => $attendee_id,
+						'post_status' => 'timeout',
+					] );
+
+					$this->log( 'Attendee timeout', $attendee_id );
+
+					$processed++;
 				}
 
-				wp_update_post( [
-					'ID'          => $attendee_id,
-					'post_status' => 'timeout',
-				] );
-
-				$this->log( 'Attendee timeout', $attendee_id );
-
-				$processed++;
+				// Just in case we get stuck in here
+				if ( $current_loop++ >= $max_loops )
+					break 2;
 			}
-
-			// Just in case we get stuck in here
-			if ( $current_loop++ >= $max_loops )
-				break;
 		}
 		// Only log action message if we did something.
 		if ( $processed > 0 ) {

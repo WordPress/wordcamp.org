@@ -41,9 +41,17 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		}
 		$this->post_ids = array();
 
-		// Reset block attributes.
+		// Reset CampTix request state.
 		self::$camptix->block_attributes = array();
+		self::$camptix->error_flags      = array();
+		self::set_protected_property( 'errors', array() );
+		self::set_protected_property( 'infos', array() );
+		self::set_protected_property( 'notices', array() );
 		self::set_protected_property( 'tickets', array() );
+		self::set_protected_property( 'tickets_selected', array() );
+		self::set_protected_property( 'tickets_selected_count', 0 );
+		self::set_protected_property( 'coupon', null );
+		self::set_protected_property( 'reservation', null );
 		self::set_protected_property( 'did_template_redirect', false );
 		self::set_protected_property( 'shortcode_contents', '' );
 

@@ -1062,14 +1062,17 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	 */
 	public function test_review_timeout_payments_respects_delayed_timestamp_after_hook() {
 		$ticket_id   = $this->create_ticket();
-		$attendee_id = $this->create_attendee( $ticket_id, array(
-			'status'         => 'draft',
-			'payment_method' => 'stripe',
-		) );
+		$attendee_id = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'         => 'draft',
+				'payment_method' => 'stripe',
+			)
+		);
 
 		update_post_meta( $attendee_id, 'tix_timestamp', time() - 2 * DAY_IN_SECONDS );
 
-		$delay_timeout = static function( $timeout_attendee_id ) use ( $attendee_id ) {
+		$delay_timeout = static function ( $timeout_attendee_id ) use ( $attendee_id ) {
 			if ( $attendee_id === $timeout_attendee_id ) {
 				update_post_meta( $attendee_id, 'tix_timestamp', time() );
 			}
@@ -1088,14 +1091,20 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	public function test_review_timeout_payments_only_sweeps_pending_stripe_attendees() {
 		$ticket_id = $this->create_ticket();
 
-		$paypal_attendee_id = $this->create_attendee( $ticket_id, array(
-			'status'         => 'pending',
-			'payment_method' => 'paypal',
-		) );
-		$stripe_attendee_id = $this->create_attendee( $ticket_id, array(
-			'status'         => 'pending',
-			'payment_method' => 'stripe',
-		) );
+		$paypal_attendee_id = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'         => 'pending',
+				'payment_method' => 'paypal',
+			)
+		);
+		$stripe_attendee_id = $this->create_attendee(
+			$ticket_id,
+			array(
+				'status'         => 'pending',
+				'payment_method' => 'stripe',
+			)
+		);
 
 		update_post_meta( $paypal_attendee_id, 'tix_timestamp', time() - 2 * DAY_IN_SECONDS );
 		update_post_meta( $stripe_attendee_id, 'tix_timestamp', time() - 2 * DAY_IN_SECONDS );

@@ -5,6 +5,7 @@
 	"category": "wordcamp",
 	"description": "Display a ticket purchase form for this event.",
 	"textdomain": "wordcamporg",
+	"postTypes": [ "page" ],
 	"attributes": {
 		"ticketIds": {
 			"type": "array",

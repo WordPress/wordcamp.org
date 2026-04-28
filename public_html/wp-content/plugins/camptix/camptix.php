@@ -5428,10 +5428,21 @@ class CampTix_Plugin {
 
 		// Filter tickets to only those specified by the block.
 		if ( ! empty( $this->block_attributes['ticketIds'] ) ) {
-			$this->tickets = array_intersect_key(
-				$this->tickets,
-				array_flip( $this->block_attributes['ticketIds'] )
+			$ticket_ids = array_unique(
+				array_filter(
+					array_map(
+						'absint',
+						array_filter( (array) $this->block_attributes['ticketIds'], 'is_scalar' )
+					)
+				)
 			);
+
+			if ( ! empty( $ticket_ids ) ) {
+				$this->tickets = array_intersect_key(
+					$this->tickets,
+					array_flip( $ticket_ids )
+				);
+			}
 		}
 
 		// Apply block attribute for remaining tickets visibility.
@@ -5449,8 +5460,12 @@ class CampTix_Plugin {
 		}
 
 		// Apply block attribute for sold-out ticket visibility.
-		if ( isset( $this->block_attributes['showSoldOut'] ) && true === $this->block_attributes['showSoldOut'] ) {
-			add_filter( 'camptix_hide_empty_tickets', '__return_false' );
+		if ( isset( $this->block_attributes['showSoldOut'] ) ) {
+			if ( true === $this->block_attributes['showSoldOut'] ) {
+				add_filter( 'camptix_hide_empty_tickets', '__return_false' );
+			} elseif ( false === $this->block_attributes['showSoldOut'] ) {
+				add_filter( 'camptix_hide_empty_tickets', '__return_true' );
+			}
 		}
 
 		unset( $tickets, $ticket );
@@ -5818,6 +5833,8 @@ class CampTix_Plugin {
 
 		do_action( 'camptix_form_start_errors', $redirected_error_flags );
 
+		$show_remaining_tickets = apply_filters( 'camptix_show_remaining_tickets', true );
+
 		ob_start();
 		?>
 		<div id="tix">
@@ -5835,7 +5852,7 @@ class CampTix_Plugin {
 						<tr>
 							<th scope="col" class="tix-column-description"><?php _e( 'Description', 'wordcamporg' ); ?></th>
 							<th scope="col" class="tix-column-price"><?php _e( 'Price', 'wordcamporg' ); ?></th>
-							<?php if ( apply_filters( 'camptix_show_remaining_tickets', true ) ) : ?>
+							<?php if ( $show_remaining_tickets ) : ?>
 								<th scope="col" class="tix-column-remaining"><?php _e( 'Remaining', 'wordcamporg' ); ?></th>
 							<?php endif; ?>
 							<th scope="col" class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_quantity_row_classes', array( 'tix-column-quantity' ) ) ) ); ?>">
@@ -5895,7 +5912,7 @@ class CampTix_Plugin {
 										<?php _e( 'Free', 'wordcamporg' ); ?>
 									<?php endif; ?>
 								</td>
-								<?php if ( apply_filters( 'camptix_show_remaining_tickets', true ) ) : ?>
+								<?php if ( $show_remaining_tickets ) : ?>
 									<td class="tix-column-remaining">
 										<?php echo esc_html( apply_filters( 'camptix_form_start_tix_remaining', $ticket->tix_remaining, $ticket ) ); ?>
 									</td>
@@ -5915,7 +5932,7 @@ class CampTix_Plugin {
 						<?php endforeach; ?>
 						<?php if ( $this->have_coupons() ) : ?>
 							<tr class="tix-row-coupon">
-								<td colspan="4" style="text-align: right;">
+								<td colspan="<?php echo esc_attr( $show_remaining_tickets ? 4 : 3 ); ?>" style="text-align: right;">
 									<?php if ( $this->coupon ) : ?>
 										<input type="hidden" name="tix_coupon" value="<?php echo esc_attr( $this->coupon->post_title ); ?>" />
 										<?php

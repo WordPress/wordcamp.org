@@ -44,6 +44,8 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		// Reset block attributes.
 		self::$camptix->block_attributes = array();
 		self::set_protected_property( 'tickets', array() );
+		self::set_protected_property( 'did_template_redirect', false );
+		self::set_protected_property( 'shortcode_contents', '' );
 
 		parent::tear_down();
 	}
@@ -58,6 +60,19 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		$reflection = new ReflectionProperty( get_class( self::$camptix ), $name );
 		$reflection->setAccessible( true );
 		$reflection->setValue( self::$camptix, $value );
+	}
+
+	/**
+	 * Helper: get a protected property on the CampTix instance via reflection.
+	 *
+	 * @param string $name Property name.
+	 * @return mixed Property value.
+	 */
+	protected static function get_protected_property( $name ) {
+		$reflection = new ReflectionProperty( get_class( self::$camptix ), $name );
+		$reflection->setAccessible( true );
+
+		return $reflection->getValue( self::$camptix );
 	}
 
 	/**
@@ -138,6 +153,26 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Helper: run the CampTix template_redirect flow for a page.
+	 *
+	 * @param int $page_id Page ID.
+	 */
+	protected function run_template_redirect_for_page( $page_id ) {
+		$original_post = isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
+
+		$this->go_to( get_permalink( $page_id ) );
+
+		$GLOBALS['post'] = get_post( $page_id );
+		setup_postdata( $GLOBALS['post'] );
+
+		self::set_protected_property( 'did_template_redirect', false );
+		self::$camptix->template_redirect();
+
+		wp_reset_postdata();
+		$GLOBALS['post'] = $original_post;
+	}
+
+	/**
 	 * Test that template_redirect detects a block in page content.
 	 */
 	public function test_block_detection_sets_block_attributes() {
@@ -151,12 +186,10 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		) );
 		$this->post_ids[] = $page_id;
 
-		$post        = get_post( $page_id );
-		$block       = self::call_protected_method( 'get_camptix_block', array( $post->post_content ) );
-		$block_attrs = $block['attrs'];
+		$this->run_template_redirect_for_page( $page_id );
 
-		$this->assertArrayHasKey( 'ticketIds', $block_attrs );
-		$this->assertContains( $ticket_id, $block_attrs['ticketIds'] );
+		$this->assertArrayHasKey( 'ticketIds', self::$camptix->block_attributes );
+		$this->assertContains( $ticket_id, self::$camptix->block_attributes['ticketIds'] );
 	}
 
 	/**
@@ -235,24 +268,33 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		$ticket_b = $this->create_ticket( 'Ticket B', 20.00 );
 		$ticket_c = $this->create_ticket( 'Ticket C', 30.00 );
 
-		// Simulate block attributes filtering to only ticket A and C.
-		$all_tickets = array(
-			$ticket_a => get_post( $ticket_a ),
-			$ticket_b => get_post( $ticket_b ),
-			$ticket_c => get_post( $ticket_c ),
+		$attributes = array(
+			'ticketIds' => array(
+				$ticket_a,
+				'not-a-ticket',
+				array( 'bad' ),
+				$ticket_c,
+				0,
+				$ticket_a,
+			),
 		);
 
-		$block_attributes = array( 'ticketIds' => array( $ticket_a, $ticket_c ) );
+		$page_id = wp_insert_post( array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Tickets',
+			'post_content' => '<!-- wp:wordcamp/camptix ' . wp_json_encode( $attributes ) . ' /-->',
+		) );
+		$this->post_ids[] = $page_id;
 
-		$filtered = array_intersect_key(
-			$all_tickets,
-			array_flip( $block_attributes['ticketIds'] )
-		);
+		$this->run_template_redirect_for_page( $page_id );
 
-		$this->assertCount( 2, $filtered );
-		$this->assertArrayHasKey( $ticket_a, $filtered );
-		$this->assertArrayHasKey( $ticket_c, $filtered );
-		$this->assertArrayNotHasKey( $ticket_b, $filtered );
+		$filtered_tickets = self::get_protected_property( 'tickets' );
+
+		$this->assertCount( 2, $filtered_tickets );
+		$this->assertArrayHasKey( $ticket_a, $filtered_tickets );
+		$this->assertArrayHasKey( $ticket_c, $filtered_tickets );
+		$this->assertArrayNotHasKey( $ticket_b, $filtered_tickets );
 	}
 
 	/**

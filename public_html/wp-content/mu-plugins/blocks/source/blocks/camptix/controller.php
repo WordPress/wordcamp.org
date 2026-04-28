@@ -51,6 +51,13 @@ function render( $attributes, $content, $block ) {
  * @return array
  */
 function add_script_data( array $data ) {
+	if (
+		! is_admin() ||
+		( function_exists( 'wp_should_load_block_editor_scripts_and_styles' ) && ! wp_should_load_block_editor_scripts_and_styles() )
+	) {
+		return $data;
+	}
+
 	$tickets     = array();
 	$ticket_posts = get_posts( array(
 		'post_type'      => 'tix_ticket',

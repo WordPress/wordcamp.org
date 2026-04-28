@@ -5743,16 +5743,14 @@ class CampTix_Plugin {
 		}
 
 		if ( ! $available_tickets && ! $this->is_wordcamp_closed() ) {
-			$no_tickets_msg = ! empty( $this->block_attributes['noTicketsMessage'] )
-				? $this->block_attributes['noTicketsMessage']
-				: __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' );
+			$no_tickets_msg = ( $this->block_attributes['noTicketsMessage'] ?? '' )
+				?: __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' );
 			$this->notice( $no_tickets_msg );
 		}
 
 		if ( $this->is_wordcamp_closed() ) {
-			$event_closed_msg = ! empty( $this->block_attributes['eventClosedMessage'] )
-				? $this->block_attributes['eventClosedMessage']
-				: __( 'This event has completed.', 'wordcamporg' );
+			$event_closed_msg = ( $this->block_attributes['eventClosedMessage'] ?? '' )
+				?: __( 'This event has completed.', 'wordcamporg' );
 			$this->notice( $event_closed_msg );
 		}
 

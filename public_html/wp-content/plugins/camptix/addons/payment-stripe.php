@@ -379,17 +379,28 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 			if ( $stripe_session ) {
 				$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-				$session = $stripe->get_session( $stripe_session );
+				$session = $this->get_session_with_retry( $stripe, $stripe_session );
 
-				if ( ! is_wp_error( $session ) && ! empty( $session['status'] ) && 'complete' === $session['status'] ) {
+				if ( is_wp_error( $session ) ) {
+					$camptix->log( 'Error during Stripe payment_cancel, failed to fetch session twice.', $order['attendee_id'], $session );
+					wp_die( 'A temporary issue has occurred with the payment gateway. The order was not cancelled; please try again in a few minutes.' );
+				}
+
+				if ( empty( $session['status'] ) ) {
+					$camptix->log( "Dying because couldn't get Payment status during Stripe payment_cancel", $order['attendee_id'], compact( 'payment_token', 'stripe_session' ) );
+					wp_die( 'could not find payment details' );
+				}
+
+				if ( 'complete' === $session['status'] ) {
 					$payment_data = $this->get_payment_data_for_session( $session );
+					$payment_status = $session['payment_status'] ?? '';
 
-					if ( 'unpaid' === $session['payment_status'] ) {
+					if ( 'unpaid' === $payment_status ) {
 						$camptix->log( 'False alarm on Stripe payment_cancel. Payment is pending.', $order['attendee_id'], $session );
 						return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
 					}
 
-					if ( 'paid' === $session['payment_status'] ) {
+					if ( 'paid' === $payment_status ) {
 						$camptix->log( 'False alarm on Stripe payment_cancel. Payment is complete.', $order['attendee_id'], $session );
 						return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );
 					}
@@ -435,7 +446,12 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		// Fetch the Payment details.
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->get_session( $stripe_session );
+		$session = $this->get_session_with_retry( $stripe, $stripe_session );
+
+		if ( is_wp_error( $session ) ) {
+			$camptix->log( 'Error during post-stripe return, failed to fetch session twice.', $order['attendee_id'], $session );
+			wp_die( 'A temporary issue has occurred with the payment gateway. Your purchase may have been processed; please try again in a few minutes.' );
+		}
 
 		if ( empty( $session['status'] ) ) {
 			$camptix->log( "Dying because couldn't get Payment status", $order['attendee_id'], compact( 'payment_token', 'payment_session' ) );
@@ -453,9 +469,10 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$payment_data = $this->get_payment_data_for_session( $session );
+		$payment_status = $session['payment_status'] ?? '';
 
 		// Delayed payment methods (boleto, OXXO, etc.) complete the session but payment is still pending.
-		if ( 'complete' === $session['status'] && 'unpaid' === $session['payment_status'] ) {
+		if ( 'complete' === $session['status'] && 'unpaid' === $payment_status ) {
 			$camptix->log( 'Stripe checkout complete, payment pending (delayed payment method).', $order['attendee_id'], $session );
 			return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_PENDING, $payment_data );
 		}
@@ -547,7 +564,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				'Got Stripe checkout session.',
 				$order['attendee_id'],
 				array(
-					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ) ),
+					'stripe_payment_logs'   => esc_url( 'https://dashboard.stripe.com/payments/' . urlencode( $session['payment_intent'] ?? '' ) ),
 					'camptix_payment_token' => $payment_token,
 					'request_payload'       => compact( 'order_items', 'receipt_email' ),
 					'response'              => $session,
@@ -686,9 +703,15 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
-		$session = $stripe->get_session( $stripe_session_id );
+		$session = $this->get_session_with_retry( $stripe, $stripe_session_id );
 
-		if ( is_wp_error( $session ) || empty( $session['status'] ) ) {
+		if ( is_wp_error( $session ) ) {
+			$camptix->log( 'Stripe session lookup failed during timeout review, delaying timeout.', $attendee_id, $session );
+			$this->delay_attendee_timeout( $attendee_id );
+			return;
+		}
+
+		if ( empty( $session['status'] ) ) {
 			return;
 		}
 
@@ -766,6 +789,24 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
+	 * Retrieve a Stripe checkout session, retrying once on transient API errors.
+	 *
+	 * @param CampTix_Stripe_API_Client $stripe         The Stripe API client.
+	 * @param string                    $stripe_session The Stripe checkout session ID.
+	 *
+	 * @return array|WP_Error
+	 */
+	protected function get_session_with_retry( $stripe, $stripe_session ) {
+		$session = $stripe->get_session( $stripe_session );
+
+		if ( is_wp_error( $session ) ) {
+			$session = $stripe->get_session( $stripe_session );
+		}
+
+		return $session;
+	}
+
+	/**
 	 * Get the payment data CampTix stores for a Stripe checkout session.
 	 *
 	 * @param array $session The Stripe checkout session.
@@ -774,7 +815,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 */
 	protected function get_payment_data_for_session( $session ) {
 		// Technically there can be multiple charges (ie. partial payments / installments) but we don't have that enabled.
-		$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
+		$payment_intent = $session['payment_intent'] ?? array();
+		$transaction_id = is_array( $payment_intent ) ? ( $payment_intent['latest_charge'] ?? '' ) : '';
 
 		/**
 		 * Note that when returning a successful payment, CampTix will be

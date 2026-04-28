@@ -89,7 +89,7 @@ function show_sandbox_mode_warning() {
 	}
 
 	$camptix_post_type      = in_array( $current_screen->post_type, $post_types );
-	$camptix_shortcode_page = isset( $post->post_content ) && has_shortcode( $post->post_content, 'camptix' );
+	$camptix_shortcode_page = is_camptix_tickets_page( $post );
 
 	if ( $camptix_post_type || $camptix_shortcode_page ) {
 		$sandboxed = is_sandboxed();
@@ -149,6 +149,21 @@ function is_sandboxed() {
 	}
 
 	return $is_sandboxed;
+}
+
+/**
+ * Determine whether a post contains the CampTix ticket form.
+ *
+ * @param WP_Post|null $post Post to check.
+ *
+ * @return bool
+ */
+function is_camptix_tickets_page( $post ) {
+	if ( ! $post instanceof WP_Post ) {
+		return false;
+	}
+
+	return has_shortcode( $post->post_content, 'camptix' ) || has_block( 'wordcamp/camptix', $post->post_content );
 }
 
 /**
@@ -231,7 +246,7 @@ function stripe_credentials( $credentials ) {
 function print_login_message_styles() {
 	global $post;
 
-	if ( $post && has_shortcode( $post->post_content, 'camptix' ) ) {
+	if ( is_camptix_tickets_page( $post ) ) {
 		wcorg_login_css();
 	}
 }
@@ -306,7 +321,7 @@ function add_form_start_error_messages( $errors ) {
  * @param \WP_Post $tickets_page
  */
 function ticket_sales_opened( $new_status, $old_status, $tickets_page ) {
-	if ( 'publish' != $new_status || 'publish' == $old_status || ! has_shortcode( $tickets_page->post_content, 'camptix' ) ) {
+	if ( 'publish' != $new_status || 'publish' == $old_status || ! is_camptix_tickets_page( $tickets_page ) ) {
 		return;
 	}
 
@@ -370,7 +385,7 @@ function track_payment_results( $payment_token, $result, $data ) {
 /**
  * Clear the WP Super Cache page cache after a successful ticket purchase.
  *
- * Ticket availability numbers shown on the [camptix] shortcode page can become stale
+ * Ticket availability numbers shown on the ticket form page can become stale
  * if the cache is not cleared after a purchase. This ensures logged-out visitors see
  * up-to-date ticket counts.
  *

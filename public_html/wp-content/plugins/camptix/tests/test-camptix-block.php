@@ -7,6 +7,7 @@ defined( 'WPINC' ) || die();
  *
  * @covers CampTix_Plugin::template_redirect
  * @covers CampTix_Plugin::form_start
+ * @covers CampTix_Plugin::get_tickets_post_id
  */
 class Test_CampTix_Block extends WP_UnitTestCase {
 
@@ -60,6 +61,21 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Helper: call a protected method on the CampTix instance via reflection.
+	 *
+	 * @param string $name Method name.
+	 * @param array  $args Method arguments.
+	 *
+	 * @return mixed
+	 */
+	protected static function call_protected_method( $name, array $args = array() ) {
+		$reflection = new ReflectionMethod( get_class( self::$camptix ), $name );
+		$reflection->setAccessible( true );
+
+		return $reflection->invokeArgs( self::$camptix, $args );
+	}
+
+	/**
 	 * Helper: create a ticket.
 	 *
 	 * @param string $title Ticket title.
@@ -95,20 +111,80 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		) );
 		$this->post_ids[] = $page_id;
 
-		// Parse the block attributes as template_redirect would.
-		$post   = get_post( $page_id );
-		$blocks = parse_blocks( $post->post_content );
-
-		$block_attrs = array();
-		foreach ( $blocks as $block ) {
-			if ( 'wordcamp/camptix' === $block['blockName'] ) {
-				$block_attrs = $block['attrs'];
-				break;
-			}
-		}
+		$post        = get_post( $page_id );
+		$block       = self::call_protected_method( 'get_camptix_block', array( $post->post_content ) );
+		$block_attrs = $block['attrs'];
 
 		$this->assertArrayHasKey( 'ticketIds', $block_attrs );
 		$this->assertContains( $ticket_id, $block_attrs['ticketIds'] );
+	}
+
+	/**
+	 * Test that nested CampTix blocks are detected.
+	 */
+	public function test_nested_block_detection_sets_block_attributes() {
+		$content = '<!-- wp:group --><div class="wp-block-group">'
+			. '<!-- wp:wordcamp/camptix {"maxTicketsPerOrder":3} /-->'
+			. '</div><!-- /wp:group -->';
+		$block = self::call_protected_method( 'get_camptix_block', array( $content ) );
+
+		$this->assertTrue( is_array( $block ) );
+		$this->assertSame( 3, $block['attrs']['maxTicketsPerOrder'] );
+	}
+
+	/**
+	 * Test that get_tickets_post_id finds a page with the CampTix block.
+	 */
+	public function test_get_tickets_post_id_finds_block_page() {
+		$page_id = wp_insert_post( array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Tickets',
+			'post_content' => '<!-- wp:wordcamp/camptix /-->',
+		) );
+		$this->post_ids[] = $page_id;
+
+		$this->assertSame( $page_id, self::$camptix->get_tickets_post_id() );
+	}
+
+	/**
+	 * Test that get_tickets_post_id finds a nested CampTix block.
+	 */
+	public function test_get_tickets_post_id_finds_nested_block_page() {
+		$page_id = wp_insert_post( array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Tickets',
+			'post_content' => '<!-- wp:group --><div class="wp-block-group">'
+				. '<!-- wp:wordcamp/camptix /-->'
+				. '</div><!-- /wp:group -->',
+		) );
+		$this->post_ids[] = $page_id;
+
+		$this->assertSame( $page_id, self::$camptix->get_tickets_post_id() );
+	}
+
+	/**
+	 * Test that get_tickets_post_id ignores other CampTix shortcodes.
+	 */
+	public function test_get_tickets_post_id_ignores_attendees_shortcode() {
+		$attendees_page_id = wp_insert_post( array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Attendees',
+			'post_content' => '[camptix_attendees]',
+		) );
+		$this->post_ids[] = $attendees_page_id;
+
+		$tickets_page_id = wp_insert_post( array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Tickets',
+			'post_content' => '<!-- wp:wordcamp/camptix /-->',
+		) );
+		$this->post_ids[] = $tickets_page_id;
+
+		$this->assertSame( $tickets_page_id, self::$camptix->get_tickets_post_id() );
 	}
 
 	/**
@@ -242,10 +318,8 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	 */
 	public function test_shortcode_still_detected() {
 		$content = '[camptix]';
-		$this->assertNotFalse( stristr( $content, '[camptix' ) );
 
-		preg_match( '#\[camptix(\s[^\]]+)?\]#', $content, $matches );
-		$this->assertNotEmpty( $matches );
-		$this->assertEquals( '[camptix]', $matches[0] );
+		$this->assertEquals( '[camptix]', self::call_protected_method( 'get_camptix_shortcode_string', array( $content ) ) );
+		$this->assertFalse( self::call_protected_method( 'get_camptix_shortcode_string', array( '[camptix_attendees]' ) ) );
 	}
 }

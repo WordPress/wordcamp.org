@@ -5316,27 +5316,22 @@ class CampTix_Plugin {
 	function template_redirect() {
 		global $post;
 
-		$has_shortcode = is_page() && $post instanceof WP_Post && stristr( $post->post_content, '[camptix' );
-		$has_block     = is_page() && $post instanceof WP_Post && stristr( $post->post_content, 'wp:wordcamp/camptix' );
-
-		if ( ! $has_shortcode && ! $has_block ) {
+		if ( ! is_page() || ! $post instanceof WP_Post ) {
 			return;
 		}
 
-		if ( $has_block ) {
-			$blocks = parse_blocks( $post->post_content );
-			foreach ( $blocks as $block ) {
-				if ( 'wordcamp/camptix' === $block['blockName'] ) {
-					$this->block_attributes = $block['attrs'];
-					$this->shortcode_str = '[camptix]';
-					break;
-				}
-			}
-		} elseif ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $post->post_content, $matches ) ) {
-			return;
-		} else {
+		$block         = $this->get_camptix_block( $post->post_content );
+		$shortcode_str = $this->get_camptix_shortcode_string( $post->post_content );
+
+		if ( $block ) {
+			$this->block_attributes = $block['attrs'];
+			$this->shortcode_str    = '[camptix]';
+		} elseif ( $shortcode_str ) {
+			$this->block_attributes = array();
 			// Keep this in the case where we'd like to remove things around the shortcode.
-			$this->shortcode_str = $matches[0];
+			$this->shortcode_str = $shortcode_str;
+		} else {
+			return;
 		}
 
 		$this->error_flags = array();
@@ -5612,6 +5607,77 @@ class CampTix_Plugin {
 		$this->shortcode_contents = apply_filters( 'camptix_shortcode_contents', $this->shortcode_contents, $tix_action );
 
 		return $this->shortcode_contents;
+	}
+
+	/**
+	 * Find the first CampTix block in post content.
+	 *
+	 * @param string $content Post content.
+	 *
+	 * @return array|false Block data if found. False otherwise.
+	 */
+	protected function get_camptix_block( $content ) {
+		if ( ! has_block( 'wordcamp/camptix', $content ) ) {
+			return false;
+		}
+
+		return $this->find_camptix_block( parse_blocks( $content ) );
+	}
+
+	/**
+	 * Recursively find the first CampTix block in parsed blocks.
+	 *
+	 * @param array $blocks Parsed block list.
+	 *
+	 * @return array|false Block data if found. False otherwise.
+	 */
+	protected function find_camptix_block( array $blocks ) {
+		foreach ( $blocks as $block ) {
+			if ( 'wordcamp/camptix' === $block['blockName'] ) {
+				return $block;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$inner_block = $this->find_camptix_block( $block['innerBlocks'] );
+
+				if ( $inner_block ) {
+					return $inner_block;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Find the CampTix shortcode string in post content.
+	 *
+	 * @param string $content Post content.
+	 *
+	 * @return string|false Shortcode string if found. False otherwise.
+	 */
+	protected function get_camptix_shortcode_string( $content ) {
+		if ( false === stristr( $content, '[camptix' ) ) {
+			return false;
+		}
+
+		// Allow [camptix attr="value"] but not [camptix_attendees] etc.
+		if ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $content, $matches ) ) {
+			return false;
+		}
+
+		return $matches[0];
+	}
+
+	/**
+	 * Determine if post content contains a CampTix ticket form.
+	 *
+	 * @param string $content Post content.
+	 *
+	 * @return bool Whether the post content contains the shortcode or block.
+	 */
+	protected function has_camptix_ticket_form( $content ) {
+		return (bool) $this->get_camptix_shortcode_string( $content ) || (bool) $this->get_camptix_block( $content );
 	}
 
 	/**
@@ -6954,7 +7020,7 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Looks for the [camptix] page and returns the page's id.
+	 * Looks for the ticket form page and returns the page's id.
 	 */
 	function get_tickets_post_id() {
 		$params = apply_filters( 'camptix_get_tickets_post_id_params', array(
@@ -6967,15 +7033,20 @@ class CampTix_Plugin {
 		) );
 		$posts = get_posts( $params );
 
+		$block_params      = $params;
+		$block_params['s'] = 'wp:wordcamp/camptix';
+
+		foreach ( get_posts( $block_params ) as $post ) {
+			$posts[ $post->ID ] = $post;
+		}
+
 		if ( ! $posts )
 			return false;
 
 		foreach ( $posts as $post ) {
-
-			$matches = array();
-			// Allow [camptix attr="value"] but not [camptix_attendees] etc.
-			if ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $post->post_content, $matches ) )
+			if ( ! $this->has_camptix_ticket_form( $post->post_content ) ) {
 				continue;
+			}
 
 			return $post->ID;
 		}

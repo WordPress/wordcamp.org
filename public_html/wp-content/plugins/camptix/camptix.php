@@ -113,6 +113,7 @@ class CampTix_Plugin {
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'init', array( $this, 'schedule_events' ), 9 );
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
+		add_action( 'switch_blog', array( $this, 'reload_options' ) );
 	}
 
 	/**
@@ -1305,6 +1306,20 @@ class CampTix_Plugin {
 		}
 
 		return $options;
+	}
+
+	/**
+	 * Reload request-scoped options after switching sites in a multisite request.
+	 *
+	 * CampTix caches options for the current request, but centralized webhooks need
+	 * to switch into the site where the ticket order lives before processing it.
+	 */
+	function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
+		$this->tmp = array();
+
+		unset( $this->options, $this->tickets_url );
+
+		$this->options = $this->get_options();
 	}
 
 	/*

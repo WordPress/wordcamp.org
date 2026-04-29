@@ -91,6 +91,18 @@
 	color: var(--wp--preset--color--blueberry-1);
 }
 
+/* Venue map: constrain to sidebar card width. */
+.groups-site-event-info-card .wp-block-gatherpress-venue-map {
+	max-width: 100%;
+	overflow: hidden;
+	border-radius: 4px;
+}
+
+.groups-site-event-info-card .wp-block-gatherpress-venue-map iframe,
+.groups-site-event-info-card .wp-block-gatherpress-venue-map .leaflet-container {
+	max-width: 100%;
+}
+
 /* ==========================================================================
    Single event layout
    ========================================================================== */

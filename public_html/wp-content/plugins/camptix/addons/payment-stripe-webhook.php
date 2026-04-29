@@ -112,7 +112,7 @@ trait CampTix_Payment_Method_Stripe_Webhook {
 			);
 		}
 
-		$webhook_session = $event['data']['object'] ?? array();
+		$webhook_session = $event['data']['object'] ?? false;
 		if ( ! is_array( $webhook_session ) ) {
 			return new WP_Error(
 				'camptix_stripe_webhook_missing_session',

@@ -1315,6 +1315,10 @@ class CampTix_Plugin {
 	 * to switch into the site where the ticket order lives before processing it.
 	 */
 	function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
+		if ( doing_filter( 'camptix_options' ) ) {
+			return;
+		}
+
 		$this->tmp = array();
 
 		unset( $this->options, $this->tickets_url );

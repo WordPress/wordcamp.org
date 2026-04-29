@@ -60,7 +60,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
-		add_action( 'switch_blog', array( $this, 'reload_options' ) );
+
+		// Run after CampTix_Plugin::reload_options() refreshes the switched site's options.
+		add_action( 'switch_blog', array( $this, 'reload_options' ), 11 );
 
 		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
@@ -364,6 +366,10 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	public function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
+
+		if ( doing_filter( 'camptix_options' ) ) {
+			return;
+		}
 
 		$this->camptix_options = $camptix->get_options();
 		$this->options         = array_merge(

@@ -9,8 +9,8 @@ namespace WordCamp\Groups\Frontend\Defaults;
 
 defined( 'WPINC' ) || die();
 
-use GatherPress\Core\Event;
-use GatherPress\Core\Venue;
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Venue\Venue;
 
 /**
  * Build the default field values for the create-event form.

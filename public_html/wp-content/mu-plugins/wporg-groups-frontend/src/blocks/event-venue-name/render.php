@@ -7,11 +7,11 @@
  * @package WordCamp\Groups\Frontend
  */
 
-use GatherPress\Core\Event;
+use GatherPress\Core\Event\Event;
 
 $event_post_id = $block->context['postId'] ?? get_the_ID();
 
-if ( ! $event_post_id || ! class_exists( '\GatherPress\Core\Event' ) ) {
+if ( ! $event_post_id || ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
 	return;
 }
 

@@ -375,7 +375,7 @@ add_filter(
 add_action(
 	'template_redirect',
 	static function (): void {
-		$setup = \GatherPress\Core\Event_Setup::get_instance();
+		$setup = \GatherPress\Core\Event\Setup::get_instance();
 		remove_action( 'template_redirect', array( $setup, 'handle_event_archive_redirect' ) );
 	},
 	1
@@ -400,7 +400,7 @@ add_filter(
 			return $content;
 		}
 
-		$event = new \GatherPress\Core\Event( $event_id );
+		$event = new \GatherPress\Core\Event\Event( $event_id );
 		$venue = $event->get_venue_information();
 
 		if ( empty( $venue['name'] ) ) {

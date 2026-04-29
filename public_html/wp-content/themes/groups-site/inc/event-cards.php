@@ -20,8 +20,8 @@
 
 namespace WordCamp\Groups\Site\Event_Cards;
 
-use GatherPress\Core\Event;
-use GatherPress\Core\Rsvp;
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Rsvp;
 use WP_Query;
 
 defined( 'ABSPATH' ) || exit;

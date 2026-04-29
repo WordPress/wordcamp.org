@@ -98,7 +98,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	</h3>
 	<div class="wporg-my-events__list">
 		<?php foreach ( $upcoming_events as $event_post ) :
-			$event = new \GatherPress\Core\Event( $event_post->ID );
+			$event = new \GatherPress\Core\Event\Event( $event_post->ID );
 			$start = get_post_meta( $event_post->ID, 'gatherpress_datetime_start', true );
 			$date_label = '';
 			if ( $start ) {

@@ -7,7 +7,7 @@
  * @package WordCamp\Groups\Frontend
  */
 
-use GatherPress\Core\Rsvp;
+use GatherPress\Core\Rsvp\Rsvp;
 
 $event_post_id = $block->context['postId'] ?? get_the_ID();
 

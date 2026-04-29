@@ -14,7 +14,7 @@
 
 namespace WordCamp\Groups\Site\Patterns\ArchiveUpcomingEventsCards;
 
-use GatherPress\Core\Event_Query;
+use GatherPress\Core\Blocks\Event_Query;
 use function WordCamp\Groups\Site\Event_Cards\render_event_cards;
 
 defined( 'ABSPATH' ) || exit;

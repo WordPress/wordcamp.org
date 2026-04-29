@@ -5,8 +5,8 @@
  * @package WordCamp\Groups\Frontend
  */
 
-use GatherPress\Core\Event;
-use GatherPress\Core\Rsvp;
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Rsvp;
 
 $event_post_id = ! empty( $block->context['postId'] )
 	? (int) $block->context['postId']

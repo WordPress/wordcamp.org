@@ -32,7 +32,7 @@ Blocks\bootstrap();
  * GatherPress there's no event post type and no work to do.
  */
 function bootstrap(): void {
-	if ( ! class_exists( '\GatherPress\Core\Event' ) ) {
+	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
 		return;
 	}
 

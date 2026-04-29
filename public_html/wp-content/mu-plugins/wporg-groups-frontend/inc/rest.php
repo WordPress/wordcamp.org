@@ -24,8 +24,8 @@ namespace WordCamp\Groups\Frontend\REST;
 
 defined( 'WPINC' ) || die();
 
-use GatherPress\Core\Event;
-use GatherPress\Core\Venue;
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Venue\Venue;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;

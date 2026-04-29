@@ -80,6 +80,12 @@
 	text-decoration: none;
 }
 
+/* Ensure the featured image doesn't create a stacking context above the link overlay. */
+.wp-block-post-template .wp-block-post-featured-image {
+	position: relative;
+	z-index: 0;
+}
+
 .wp-block-post-template .wp-block-post-title a:hover {
 	text-decoration: none;
 	color: var(--wp--preset--color--blueberry-1);

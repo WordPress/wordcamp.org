@@ -53,6 +53,39 @@
 
 
 /* ==========================================================================
+   Query Loop event cards — make the entire card clickable via the
+   post-title link and add hover state.
+   ========================================================================== */
+
+.wp-block-post-template .wp-block-group.has-border-color {
+	position: relative;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.wp-block-post-template .wp-block-group.has-border-color:hover {
+	border-color: var(--wp--preset--color--blueberry-1) !important;
+	box-shadow: 0 8px 24px -8px rgba(56, 88, 233, 0.18);
+	transform: translateY(-2px);
+}
+
+/* Stretch the post-title link over the entire card. */
+.wp-block-post-template .wp-block-post-title a::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+}
+
+.wp-block-post-template .wp-block-post-title a {
+	text-decoration: none;
+}
+
+.wp-block-post-template .wp-block-post-title a:hover {
+	text-decoration: none;
+	color: var(--wp--preset--color--blueberry-1);
+}
+
+/* ==========================================================================
    Single event layout
    ========================================================================== */
 

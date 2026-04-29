@@ -56,19 +56,12 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 			.then( ( venue ) => {
 				setName( venue.title.raw || venue.title.rendered || '' );
 				setDescription( venue.content?.raw || '' );
-				let info = {};
-				if ( venue.meta?.gatherpress_venue_information ) {
-					try {
-						info = JSON.parse( venue.meta.gatherpress_venue_information );
-					} catch ( e ) {
-						info = {};
-					}
-				}
-				setFullAddress( info.fullAddress || '' );
-				setWebsite( info.website || '' );
-				setLatitude( info.latitude || '' );
-				setLongitude( info.longitude || '' );
-				setAccessRequirements( info.accessRequirements || '' );
+				const meta = venue.meta || {};
+				setFullAddress( meta.gatherpress_address || '' );
+				setWebsite( meta.gatherpress_website || '' );
+				setLatitude( meta.gatherpress_latitude || '' );
+				setLongitude( meta.gatherpress_longitude || '' );
+				setAccessRequirements( meta.gatherpress_access_requirements || '' );
 				setLoading( false );
 			} )
 			.catch( () => {
@@ -220,23 +213,18 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 		setSaving( true );
 		setError( '' );
 
-		const venueInfo = JSON.stringify( {
-			fullAddress,
-			phoneNumber: '',
-			website,
-			latitude,
-			longitude,
-			accessRequirements,
-		} );
-
 		const body = {
 			title: name,
 			content: description,
 			status: 'publish',
 			meta: {
-				gatherpress_venue_information: venueInfo,
-				gatherpress_venue_map_show: !! ( latitude && longitude ),
-				gatherpress_venue_map_zoom: 15,
+				gatherpress_address: fullAddress,
+				gatherpress_phone: '',
+				gatherpress_website: website,
+				gatherpress_latitude: latitude,
+				gatherpress_longitude: longitude,
+				gatherpress_map_show: !! ( latitude && longitude ),
+				gatherpress_map_zoom: 15,
 			},
 		};
 

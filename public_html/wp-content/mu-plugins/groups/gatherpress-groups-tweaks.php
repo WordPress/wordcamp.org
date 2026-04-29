@@ -422,9 +422,7 @@ add_filter(
 
 		$venue_id    = $venue_posts[0];
 		$venue_desc  = get_post_field( 'post_content', $venue_id );
-		$venue_info  = get_post_meta( $venue_id, 'gatherpress_venue_information', true );
-		$info        = $venue_info ? json_decode( $venue_info, true ) : array();
-		$access      = $info['accessRequirements'] ?? '';
+		$access      = get_post_meta( $venue_id, 'gatherpress_access_requirements', true );
 
 		$extra = '';
 

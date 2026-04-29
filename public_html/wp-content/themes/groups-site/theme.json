@@ -76,7 +76,7 @@
 			"units": [ "px", "em", "rem", "vh", "vw", "%" ]
 		},
 		"layout": {
-			"contentSize": "680px",
+			"contentSize": "1160px",
 			"wideSize": "1160px"
 		},
 		"custom": {

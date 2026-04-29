@@ -54,8 +54,7 @@ trait CampTix_Payment_Method_Stripe_Webhook {
 			return $error;
 		}
 
-		$tolerance = (int) apply_filters( 'camptix_stripe_webhook_signature_tolerance', 5 * MINUTE_IN_SECONDS );
-		if ( $tolerance > 0 && abs( time() - $timestamp ) > $tolerance ) {
+		if ( abs( time() - $timestamp ) > 5 * MINUTE_IN_SECONDS ) {
 			return $error;
 		}
 

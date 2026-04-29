@@ -61,6 +61,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 		add_action( 'switch_blog', array( $this, 'reload_options' ) );
+
+		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
 
 		// Use specific name for INR as we support UPI via Stripe.

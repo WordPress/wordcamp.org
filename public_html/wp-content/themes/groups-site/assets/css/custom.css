@@ -80,10 +80,15 @@
 	text-decoration: none;
 }
 
-/* Ensure the featured image doesn't create a stacking context above the link overlay. */
-.wp-block-post-template .wp-block-post-featured-image {
+/* Ensure nothing inside the card blocks the title link overlay. */
+.wp-block-post-template .wp-block-group.has-border-color > *:not(.wp-block-post-title) {
 	position: relative;
 	z-index: 0;
+}
+
+/* Make the card show a pointer cursor everywhere. */
+.wp-block-post-template .wp-block-group.has-border-color {
+	cursor: pointer;
 }
 
 .wp-block-post-template .wp-block-post-title a:hover {

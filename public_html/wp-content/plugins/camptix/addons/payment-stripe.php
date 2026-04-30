@@ -46,23 +46,10 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @see CampTix_Addon
 	 */
 	public function camptix_init() {
-		$this->options = array_merge(
-			array(
-				'api_predef'          => '',
-				'api_secret_key'      => '',
-				'api_public_key'      => '',
-				'api_test_secret_key' => '',
-				'api_test_public_key' => '',
-				'sandbox'             => true,
-			),
-			$this->get_payment_options()
-		);
+		$this->options = $this->get_stripe_options();
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
-
-		// Run after CampTix_Plugin::reload_options() refreshes the switched site's options.
-		add_action( 'switch_blog', array( $this, 'reload_options' ), 11 );
 
 		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
 		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
@@ -75,11 +62,34 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
+	 * Read the Stripe payment options for the current site.
+	 *
+	 * Always loaded fresh so that callers running after `switch_to_blog()` (such
+	 * as the centralized webhook) see the switched-to site's credentials without
+	 * relying on a cached `$this->options` snapshot.
+	 *
+	 * @return array
+	 */
+	protected function get_stripe_options() {
+		return array_merge(
+			array(
+				'api_predef'          => '',
+				'api_secret_key'      => '',
+				'api_public_key'      => '',
+				'api_test_secret_key' => '',
+				'api_test_public_key' => '',
+				'sandbox'             => true,
+			),
+			$this->get_payment_options()
+		);
+	}
+
+	/**
 	 * Get the credentials for the API account.
 	 *
-	 * If a standard account is setup, this will just use the value that's
-	 * already in $this->options. If a predefined account is setup, though, it
-	 * will use those instead.
+	 * Reads the latest Stripe options at call time so this returns the correct
+	 * credentials for the current site after a `switch_to_blog()`. If a
+	 * predefined account is configured, those credentials are used instead.
 	 *
 	 * SECURITY WARNING: This must be called on the fly, and saved in a local
 	 * variable instead of $this->options. Storing the predef credentials in
@@ -95,7 +105,8 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @return array
 	 */
 	public function get_api_credentials() {
-		$options = array_merge( $this->options, $this->get_predefined_account( $this->options['api_predef'] ) );
+		$options = $this->get_stripe_options();
+		$options = array_merge( $options, $this->get_predefined_account( $options['api_predef'] ) );
 
 		$prefix = 'api_';
 		if ( true === $options['sandbox'] ) {
@@ -358,31 +369,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				$this->payment_return();
 			}
 		}
-	}
-
-	/**
-	 * Refresh Stripe options after switching blogs.
-	 */
-	public function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
-		/** @var CampTix_Plugin $camptix */
-		global $camptix;
-
-		if ( doing_filter( 'camptix_options' ) ) {
-			return;
-		}
-
-		$this->camptix_options = $camptix->get_options();
-		$this->options         = array_merge(
-			array(
-				'api_predef'          => '',
-				'api_secret_key'      => '',
-				'api_public_key'      => '',
-				'api_test_secret_key' => '',
-				'api_test_public_key' => '',
-				'sandbox'             => true,
-			),
-			$this->get_payment_options()
-		);
 	}
 
 	/**

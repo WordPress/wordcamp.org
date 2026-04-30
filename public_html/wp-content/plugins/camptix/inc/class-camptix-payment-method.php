@@ -364,18 +364,25 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 	}
 
 	/**
-	 * Get this payment method's options
+	 * Get this payment method's options.
+	 *
+	 * Reads the latest CampTix options at call time so this returns the values
+	 * for the current site after a `switch_to_blog()`, instead of relying on a
+	 * cached `$this->camptix_options` snapshot from when the addon was loaded.
 	 *
 	 * @return array
 	 */
 	function get_payment_options() {
-		$payment_options = array();
-		$option_key      = "payment_options_{$this->id}";
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
 
-		if ( isset( $this->camptix_options[ $option_key ] ) ) {
-			$payment_options = (array) $this->camptix_options[ $option_key ];
+		$option_key      = "payment_options_{$this->id}";
+		$camptix_options = $camptix->get_options();
+
+		if ( isset( $camptix_options[ $option_key ] ) ) {
+			return (array) $camptix_options[ $option_key ];
 		}
 
-		return $payment_options;
+		return array();
 	}
 }

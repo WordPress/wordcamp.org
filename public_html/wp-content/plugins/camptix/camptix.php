@@ -15,6 +15,7 @@
 
 class CampTix_Plugin {
 	protected $options;
+	protected $options_blog_id;
 	protected $notices;
 	protected $errors;
 	protected $infos;
@@ -113,16 +114,27 @@ class CampTix_Plugin {
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'init', array( $this, 'schedule_events' ), 9 );
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
-		add_action( 'switch_blog', array( $this, 'reload_options' ) );
 	}
 
 	/**
 	 * Fired during init, doh!
 	 */
 	function init() {
-		$this->options = $this->get_options();
 		$this->debug = (bool) apply_filters( 'camptix_debug', false );
 		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
+
+		// Disable beta features unless explicitly enabled. Registered before the
+		// first get_options() call so it also applies whenever options are
+		// re-fetched after a blog switch.
+		if ( ! $this->beta_features_enabled ) {
+			add_filter( 'camptix_options', array( $this, '_disable_beta_features' ) );
+		}
+
+		// Invalidate any cached options populated during addon loading (before the
+		// beta-features filter was registered) so the filter applies.
+		$this->options         = null;
+		$this->options_blog_id = null;
+		$this->options         = $this->get_options();
 		$this->tmp = array();
 
 		// Capability mapping.
@@ -135,11 +147,6 @@ class CampTix_Plugin {
 			'delete_attendees' => 'manage_options',
 			'refund_all'       => 'manage_options',
 		) );
-
-		// Explicitly disable all beta features if beta features is off.
-		if ( ! $this->beta_features_enabled )
-			foreach ( $this->get_beta_features() as $beta_feature )
-				$this->options[$beta_feature] = false;
 
 		// The following three are just different kinds (colors) of user feedback.
 		// Don't use directly, instead use $this->notice / error / info methods.
@@ -1281,12 +1288,28 @@ class CampTix_Plugin {
 
 	/**
 	 * Returns an array of options stored in the database, or a set of defaults.
+	 *
+	 * The result is cached per-blog so multisite requests that `switch_to_blog()`
+	 * (such as the centralized Stripe webhook) load the correct site's options at
+	 * call time without needing to listen for `switch_blog`.
 	 */
 	function get_options() {
+		$current_blog_id = get_current_blog_id();
 
-		// Allow other plugins to get CampTix options.
-		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) )
+		// Reuse the cached copy when it already matches the current blog.
+		if (
+			is_array( $this->options ) && ! empty( $this->options )
+			&& $this->options_blog_id === $current_blog_id
+		) {
 			return $this->options;
+		}
+
+		// Avoid reentrancy when `apply_filters( 'camptix_options' )` triggers
+		// another call to this method (e.g. from a filter callback that reads
+		// CampTix options).
+		if ( doing_filter( 'camptix_options' ) ) {
+			return is_array( $this->options ) ? $this->options : array();
+		}
 
 		$default_options = $this->get_default_options();
 		$options = array_merge( $default_options, get_option( 'camptix_options', array() ) );
@@ -1305,25 +1328,10 @@ class CampTix_Plugin {
 			$this->upgrade( $options['version'] );
 		}
 
+		$this->options         = $options;
+		$this->options_blog_id = $current_blog_id;
+
 		return $options;
-	}
-
-	/**
-	 * Reload request-scoped options after switching sites in a multisite request.
-	 *
-	 * CampTix caches options for the current request, but centralized webhooks need
-	 * to switch into the site where the ticket order lives before processing it.
-	 */
-	function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
-		if ( doing_filter( 'camptix_options' ) ) {
-			return;
-		}
-
-		$this->tmp = array();
-
-		unset( $this->options, $this->tickets_url );
-
-		$this->options = $this->get_options();
 	}
 
 	/*
@@ -1613,6 +1621,19 @@ class CampTix_Plugin {
 			'refund_all_enabled',
 			'archived',
 		);
+	}
+
+	/**
+	 * Force-disable beta features in the loaded options.
+	 *
+	 * Hooked into `camptix_options` so it applies on every option load,
+	 * including blog-aware re-fetches after `switch_to_blog()`.
+	 */
+	function _disable_beta_features( $options ) {
+		foreach ( $this->get_beta_features() as $beta_feature ) {
+			$options[ $beta_feature ] = false;
+		}
+		return $options;
 	}
 
 	/**

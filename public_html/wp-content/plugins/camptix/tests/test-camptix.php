@@ -56,4 +56,42 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 
 		$this->assertSame( $expected_output, CampTix_Plugin::esc_csv( $test_input ) );
 	}
+
+	/**
+	 * Options should reflect the current site after `switch_to_blog()`,
+	 * so multisite callers like the centralized Stripe webhook can read
+	 * the switched-to site's settings without manually reloading them.
+	 *
+	 * @covers CampTix_Plugin::get_options
+	 * @group  ms-required
+	 */
+	public function test_get_options_is_blog_aware() {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Multisite is required for this test.' );
+		}
+
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$other_blog_id = self::factory()->blog->create();
+
+		// Seed a distinct option directly on the secondary site, before any
+		// code on that site has loaded CampTix options.
+		switch_to_blog( $other_blog_id );
+		update_option( 'camptix_options', array(
+			'event_name' => 'Secondary Event',
+			'version'    => $camptix->version,
+		) );
+		restore_current_blog();
+
+		switch_to_blog( $other_blog_id );
+		$secondary_options = $camptix->get_options();
+		$this->assertSame( 'Secondary Event', $secondary_options['event_name'] );
+		restore_current_blog();
+
+		// After restoring, the cached copy should be invalidated and re-fetched
+		// for the primary site, which has its own (different) event name.
+		$primary_options = $camptix->get_options();
+		$this->assertNotSame( 'Secondary Event', $primary_options['event_name'] );
+	}
 }

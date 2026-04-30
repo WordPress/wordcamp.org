@@ -77,11 +77,12 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 
 		// Seed a distinct option directly on the secondary site, before any
 		// code on that site has loaded CampTix options.
-		switch_to_blog( $other_blog_id );
-		update_option( 'camptix_options', array(
+		$secondary_seed = array(
 			'event_name' => 'Secondary Event',
 			'version'    => $camptix->version,
-		) );
+		);
+		switch_to_blog( $other_blog_id );
+		update_option( 'camptix_options', $secondary_seed );
 		restore_current_blog();
 
 		switch_to_blog( $other_blog_id );

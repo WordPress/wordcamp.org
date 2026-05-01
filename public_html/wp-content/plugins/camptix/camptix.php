@@ -135,11 +135,6 @@ class CampTix_Plugin {
 			'refund_all'       => 'manage_options',
 		) );
 
-		// Explicitly disable all beta features if beta features is off.
-		if ( ! $this->beta_features_enabled )
-			foreach ( $this->get_beta_features() as $beta_feature )
-				$this->options[$beta_feature] = false;
-
 		// The following three are just different kinds (colors) of user feedback.
 		// Don't use directly, instead use $this->notice / error / info methods.
 		$this->infos = array();

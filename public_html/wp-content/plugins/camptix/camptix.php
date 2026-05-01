@@ -119,13 +119,9 @@ class CampTix_Plugin {
 	 * Fired during init, doh!
 	 */
 	function init() {
-		$this->debug                 = (bool) apply_filters( 'camptix_debug', false );
-		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
-
-		// Load options after `beta_features_enabled` is known so the
-		// beta-features kill-switch in load_options() applies on the first
-		// load and on every subsequent reload (e.g. after switch_to_blog).
 		$this->load_options();
+		$this->debug = (bool) apply_filters( 'camptix_debug', false );
+		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
 		$this->tmp = array();
 
 		// Capability mapping.
@@ -138,6 +134,11 @@ class CampTix_Plugin {
 			'delete_attendees' => 'manage_options',
 			'refund_all'       => 'manage_options',
 		) );
+
+		// Explicitly disable all beta features if beta features is off.
+		if ( ! $this->beta_features_enabled )
+			foreach ( $this->get_beta_features() as $beta_feature )
+				$this->options[$beta_feature] = false;
 
 		// The following three are just different kinds (colors) of user feedback.
 		// Don't use directly, instead use $this->notice / error / info methods.
@@ -1319,15 +1320,6 @@ class CampTix_Plugin {
 		// Let's see if we need to run an upgrade scenario.
 		if ( apply_filters( 'camptix_enable_automatic_upgrades', true ) && $options['version'] < $this->version ) {
 			$this->upgrade( $options['version'] );
-		}
-
-		// Explicitly disable all beta features if beta features is off. Done
-		// here (rather than once in init()) so reloads on a different site
-		// keep the kill-switch in effect.
-		if ( isset( $this->beta_features_enabled ) && ! $this->beta_features_enabled ) {
-			foreach ( $this->get_beta_features() as $beta_feature ) {
-				$options[ $beta_feature ] = false;
-			}
 		}
 
 		$this->options = $options;

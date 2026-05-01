@@ -145,19 +145,22 @@ trait CampTix_Payment_Method_Stripe_Webhook {
 
 		switch_to_blog( $site_id );
 
-		// Load this site's options at call time. Many CampTix code paths
-		// (notably payment_result() and email_tickets()) read `$camptix->options`
-		// directly rather than going through get_options(), so the cache must
-		// be primed for the switched-to site before they run.
-		$camptix->get_options();
+		// Load this site's options. CampTix and the Stripe addon both cache
+		// options on the request, and many code paths read those caches
+		// directly (notably `$camptix->options` in payment_result() and
+		// email_tickets()). Refreshing both caches here keeps those reads
+		// pointing at the switched-to site.
+		$camptix->load_options();
+		$this->load_options();
 
 		$response = $this->process_webhook_session_for_current_site( $event, $stripe_session_id, $payment_token );
 
 		restore_current_blog();
 
-		// Re-prime the cache for the original site so any later reads in this
-		// request (e.g. shutdown handlers) don't see the webhook's site data.
-		$camptix->get_options();
+		// Restore the caches to the original site for any later code in this
+		// request that reads the cached options directly.
+		$camptix->load_options();
+		$this->load_options();
 
 		return $response;
 	}

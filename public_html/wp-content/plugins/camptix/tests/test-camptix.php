@@ -58,14 +58,15 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Options should reflect the current site after `switch_to_blog()`,
-	 * so multisite callers like the centralized Stripe webhook can read
-	 * the switched-to site's settings without manually reloading them.
+	 * `load_options()` should refresh `$camptix->options` for the current
+	 * site, so multisite callers (like the centralized Stripe webhook) can
+	 * pull in the switched-to site's settings before code that reads
+	 * `$camptix->options` directly runs.
 	 *
-	 * @covers CampTix_Plugin::get_options
+	 * @covers CampTix_Plugin::load_options
 	 * @group  ms-required
 	 */
-	public function test_get_options_is_blog_aware() {
+	public function test_load_options_refreshes_cache_for_current_site() {
 		if ( ! is_multisite() ) {
 			$this->markTestSkipped( 'Multisite is required for this test.' );
 		}
@@ -75,8 +76,7 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 
 		$other_blog_id = self::factory()->blog->create();
 
-		// Seed a distinct option directly on the secondary site, before any
-		// code on that site has loaded CampTix options.
+		// Seed a distinct option directly on the secondary site.
 		$secondary_seed = array(
 			'event_name' => 'Secondary Event',
 			'version'    => $camptix->version,
@@ -85,14 +85,16 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		update_option( 'camptix_options', $secondary_seed );
 		restore_current_blog();
 
+		// Capture the primary site's event name before switching.
+		$primary_event_name = $camptix->get_options()['event_name'];
+
 		switch_to_blog( $other_blog_id );
-		$secondary_options = $camptix->get_options();
-		$this->assertSame( 'Secondary Event', $secondary_options['event_name'] );
+		$camptix->load_options();
+		$this->assertSame( 'Secondary Event', $camptix->get_options()['event_name'] );
 		restore_current_blog();
 
-		// After restoring, the cached copy should be invalidated and re-fetched
-		// for the primary site, which has its own (different) event name.
-		$primary_options = $camptix->get_options();
-		$this->assertNotSame( 'Secondary Event', $primary_options['event_name'] );
+		// Reload back into the primary site's options.
+		$camptix->load_options();
+		$this->assertSame( $primary_event_name, $camptix->get_options()['event_name'] );
 	}
 }

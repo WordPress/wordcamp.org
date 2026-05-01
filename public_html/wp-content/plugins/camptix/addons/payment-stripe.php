@@ -46,7 +46,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @see CampTix_Addon
 	 */
 	public function camptix_init() {
-		$this->options = $this->get_stripe_options();
+		$this->load_options();
 
 		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
@@ -62,16 +62,16 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
-	 * Read the Stripe payment options for the current site.
+	 * Refresh `$this->camptix_options` and `$this->options` for the current site.
 	 *
-	 * Always loaded fresh so that callers running after `switch_to_blog()` (such
-	 * as the centralized webhook) see the switched-to site's credentials without
-	 * relying on a cached `$this->options` snapshot.
-	 *
-	 * @return array
+	 * Called from `camptix_init()` to populate the cache, and again from the
+	 * centralized webhook handler after `switch_to_blog()` to refresh the
+	 * cache for the switched-to site.
 	 */
-	protected function get_stripe_options() {
-		return array_merge(
+	public function load_options() {
+		parent::load_options();
+
+		$this->options = array_merge(
 			array(
 				'api_predef'          => '',
 				'api_secret_key'      => '',
@@ -87,9 +87,9 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	/**
 	 * Get the credentials for the API account.
 	 *
-	 * Reads the latest Stripe options at call time so this returns the correct
-	 * credentials for the current site after a `switch_to_blog()`. If a
-	 * predefined account is configured, those credentials are used instead.
+	 * If a standard account is setup, this will just use the value that's
+	 * already in $this->options. If a predefined account is setup, though, it
+	 * will use those instead.
 	 *
 	 * SECURITY WARNING: This must be called on the fly, and saved in a local
 	 * variable instead of $this->options. Storing the predef credentials in
@@ -105,8 +105,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @return array
 	 */
 	public function get_api_credentials() {
-		$options = $this->get_stripe_options();
-		$options = array_merge( $options, $this->get_predefined_account( $options['api_predef'] ) );
+		$options = array_merge( $this->options, $this->get_predefined_account( $this->options['api_predef'] ) );
 
 		$prefix = 'api_';
 		if ( true === $options['sandbox'] ) {

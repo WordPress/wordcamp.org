@@ -15,7 +15,6 @@
 
 class CampTix_Plugin {
 	protected $options;
-	protected $options_blog_id;
 	protected $notices;
 	protected $errors;
 	protected $infos;
@@ -120,21 +119,9 @@ class CampTix_Plugin {
 	 * Fired during init, doh!
 	 */
 	function init() {
+		$this->load_options();
 		$this->debug = (bool) apply_filters( 'camptix_debug', false );
 		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
-
-		// Disable beta features unless explicitly enabled. Registered before the
-		// first get_options() call so it also applies whenever options are
-		// re-fetched after a blog switch.
-		if ( ! $this->beta_features_enabled ) {
-			add_filter( 'camptix_options', array( $this, '_disable_beta_features' ) );
-		}
-
-		// Invalidate any cached options populated during addon loading (before the
-		// beta-features filter was registered) so the filter applies.
-		$this->options         = null;
-		$this->options_blog_id = null;
-		$this->options         = $this->get_options();
 		$this->tmp = array();
 
 		// Capability mapping.
@@ -147,6 +134,11 @@ class CampTix_Plugin {
 			'delete_attendees' => 'manage_options',
 			'refund_all'       => 'manage_options',
 		) );
+
+		// Explicitly disable all beta features if beta features is off.
+		if ( ! $this->beta_features_enabled )
+			foreach ( $this->get_beta_features() as $beta_feature )
+				$this->options[$beta_feature] = false;
 
 		// The following three are just different kinds (colors) of user feedback.
 		// Don't use directly, instead use $this->notice / error / info methods.
@@ -1289,30 +1281,32 @@ class CampTix_Plugin {
 	/**
 	 * Returns an array of options stored in the database, or a set of defaults.
 	 *
-	 * The result is cached per-blog so multisite requests that `switch_to_blog()`
-	 * (such as the centralized Stripe webhook) load the correct site's options at
-	 * call time without needing to listen for `switch_blog`.
+	 * The result is cached in `$this->options` after the first call. Multisite
+	 * callers (such as the centralized Stripe webhook) should call
+	 * `load_options()` after `switch_to_blog()` to refresh the cache for the
+	 * switched-to site.
 	 */
 	function get_options() {
-		$current_blog_id = get_current_blog_id();
-
-		// Reuse the cached copy when it already matches the current blog.
-		if (
-			is_array( $this->options ) && ! empty( $this->options )
-			&& $this->options_blog_id === $current_blog_id
-		) {
+		// Allow other plugins to get CampTix options.
+		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) ) {
 			return $this->options;
 		}
 
-		// Avoid reentrancy when `apply_filters( 'camptix_options' )` triggers
-		// another call to this method (e.g. from a filter callback that reads
-		// CampTix options).
-		if ( doing_filter( 'camptix_options' ) ) {
-			return is_array( $this->options ) ? $this->options : array();
-		}
+		return $this->load_options();
+	}
 
+	/**
+	 * Load the current site's CampTix options into `$this->options`.
+	 *
+	 * Called once during `init()`. Multisite callers can call this again after
+	 * `switch_to_blog()` to refresh `$this->options` (and any internal CampTix
+	 * code that reads it directly) for the switched-to site.
+	 *
+	 * @return array The freshly loaded options.
+	 */
+	function load_options() {
 		$default_options = $this->get_default_options();
-		$options = array_merge( $default_options, get_option( 'camptix_options', array() ) );
+		$options         = array_merge( $default_options, get_option( 'camptix_options', array() ) );
 
 		// Allow plugins to hi-jack or read the options.
 		$options = apply_filters( 'camptix_options', $options );
@@ -1328,8 +1322,7 @@ class CampTix_Plugin {
 			$this->upgrade( $options['version'] );
 		}
 
-		$this->options         = $options;
-		$this->options_blog_id = $current_blog_id;
+		$this->options = $options;
 
 		return $options;
 	}
@@ -1621,19 +1614,6 @@ class CampTix_Plugin {
 			'refund_all_enabled',
 			'archived',
 		);
-	}
-
-	/**
-	 * Force-disable beta features in the loaded options.
-	 *
-	 * Hooked into `camptix_options` so it applies on every option load,
-	 * including blog-aware re-fetches after `switch_to_blog()`.
-	 */
-	function _disable_beta_features( $options ) {
-		foreach ( $this->get_beta_features() as $beta_feature ) {
-			$options[ $beta_feature ] = false;
-		}
-		return $options;
 	}
 
 	/**

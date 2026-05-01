@@ -25,7 +25,6 @@ class CampTix_Plugin {
 
 	public $error_flags;
 	public $debug;
-	public $beta_features_enabled;
 	public $version     = 20180709;
 	public $css_version = 20180709;
 	public $js_version  = 20180709;
@@ -121,7 +120,6 @@ class CampTix_Plugin {
 	function init() {
 		$this->load_options();
 		$this->debug = (bool) apply_filters( 'camptix_debug', false );
-		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
 		$this->tmp = array();
 
 		// Capability mapping.

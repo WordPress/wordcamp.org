@@ -27,7 +27,7 @@ add_filter( 'map_meta_cap', __NAMESPACE__ . '\protect_user', 10, 4 );
  * Returns 0 if the user doesn't exist (e.g. on a network where it hasn't been created),
  * so callers can short-circuit without breaking site creation or cap checks.
  */
-function get_user_id() : int {
+function get_user_id(): int {
 	static $user_id = null;
 
 	if ( null === $user_id ) {

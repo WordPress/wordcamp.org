@@ -4,9 +4,10 @@
  *
  * - Adds the `wordcamp` user as an administrator on every newly created site, so
  *   support always has direct access without having to flip super-admin powers.
- * - Prevents non-super-admins from editing, deleting, removing, or promoting the
- *   `wordcamp` user from a site, so changes to it don't cause unintended side
- *   effects across the network.
+ * - Prevents non-super-admins from removing the `wordcamp` user from a site or
+ *   changing its role there, so changes to it don't cause unintended side
+ *   effects across the network. (`edit_user` / `delete_user` are already blocked
+ *   for non-super-admins by core's multisite cap mapping.)
  *
  * @package WordCamp\WordCampUser
  */
@@ -54,7 +55,10 @@ function add_to_new_site( $site ) {
 }
 
 /**
- * Block non-super-admins from editing, deleting, removing, or promoting the `wordcamp` user.
+ * Block non-super-admins from removing the `wordcamp` user from a site or changing its role.
+ *
+ * `edit_user` and `delete_user` are already restricted to super-admins by core's
+ * multisite cap mapping, so they don't need to be re-blocked here.
  *
  * @param string[] $required_caps Primitive caps the actor must have.
  * @param string   $cap           The meta cap being mapped.
@@ -64,7 +68,7 @@ function add_to_new_site( $site ) {
  * @return string[]
  */
 function protect_user( $required_caps, $cap, $acting_user, $args ) {
-	$protected = array( 'edit_user', 'delete_user', 'remove_user', 'promote_user' );
+	$protected = array( 'remove_user', 'promote_user' );
 
 	if ( ! in_array( $cap, $protected, true ) ) {
 		return $required_caps;

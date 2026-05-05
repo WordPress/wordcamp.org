@@ -6,8 +6,7 @@
  *   support always has direct access without having to flip super-admin powers.
  * - Prevents non-super-admins from removing the `wordcamp` user from a site or
  *   changing its role there, so changes to it don't cause unintended side
- *   effects across the network. (`edit_user` / `delete_user` are already blocked
- *   for non-super-admins by core's multisite cap mapping.)
+ *   effects across the network.
  *
  * @package WordCamp\WordCampUser
  */

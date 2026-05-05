@@ -150,7 +150,7 @@ function schedule_retry() {
  */
 function log_failure( $stage, $detail ) {
 	trigger_error(
-		sprintf( '[jetpack-new-sites] %s failed for blog %d: %s', $stage, get_current_blog_id(), $detail ),
+		esc_html( sprintf( '[jetpack-new-sites] %s failed for blog %d: %s', $stage, get_current_blog_id(), $detail ) ),
 		E_USER_WARNING
 	);
 }

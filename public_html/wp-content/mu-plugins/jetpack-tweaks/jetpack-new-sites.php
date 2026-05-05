@@ -70,6 +70,7 @@ function run_partner_provision() {
 	}
 
 	if ( ! class_exists( Jetpack_Provision::class ) ) {
+		log_failure( 'class_missing', 'Jetpack_Provision is not loadable; will retry in an hour.' );
 		schedule_retry();
 		return;
 	}
@@ -89,12 +90,13 @@ function run_partner_provision() {
 		return;
 	}
 
+	$previous_user = get_current_user_id();
 	wp_set_current_user( $wordcamp->ID );
 	$result = Jetpack_Provision::partner_provision(
 		$access_token,
 		array( 'plan' => WORDCAMP_JETPACK_START_PARTNER_PLAN )
 	);
-	wp_set_current_user( 0 );
+	wp_set_current_user( $previous_user );
 
 	if ( is_wp_error( $result ) ) {
 		log_failure( 'provision', $result->get_error_code() . ': ' . $result->get_error_message() );

@@ -66,20 +66,24 @@ class WordCamp_Docs_Template_Sponsorship_Agreement implements WordCamp_Docs_Temp
 		$start_date = ! empty( $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) ? gmdate( $date_format, $wordcamp->meta['Start Date (YYYY-mm-dd)'][0] ) : '';
 		$end_date   = ! empty( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   ? gmdate( $date_format, $wordcamp->meta['End Date (YYYY-mm-dd)'][0] )   : $start_date;
 
-		// PHP 8.4+ throws ValueError for unknown locales; fall back to a plain number on failure.
+		// PHP 8.4+ throws ValueError for unknown locales; format()/formatCurrency() can also return false.
+		$formatted = false;
 		try {
-			$number_formatter   = new NumberFormatter( get_locale(), NumberFormatter::SPELLOUT );
-			$sponsorship_amount = $number_formatter->format( (float) $sponsor_amount ) . " {$sponsor_currency}";
+			$number_formatter = new NumberFormatter( get_locale(), NumberFormatter::SPELLOUT );
+			$formatted        = $number_formatter->format( (float) $sponsor_amount );
 		} catch ( \Throwable $e ) {
-			$sponsorship_amount = ( (float) $sponsor_amount ) . " {$sponsor_currency}";
+			$formatted = false;
 		}
+		$sponsorship_amount = ( false !== $formatted ? $formatted : (float) $sponsor_amount ) . " {$sponsor_currency}";
 
+		$formatted = false;
 		try {
-			$number_formatter       = new NumberFormatter( get_locale(), NumberFormatter::CURRENCY );
-			$sponsorship_amount_num = $number_formatter->formatCurrency( (float) $sponsor_amount, $sponsor_currency );
+			$number_formatter = new NumberFormatter( get_locale(), NumberFormatter::CURRENCY );
+			$formatted        = $number_formatter->formatCurrency( (float) $sponsor_amount, $sponsor_currency );
 		} catch ( \Throwable $e ) {
-			$sponsorship_amount_num = ( (float) $sponsor_amount ) . " {$sponsor_currency}";
+			$formatted = false;
 		}
+		$sponsorship_amount_num = false !== $formatted ? $formatted : ( (float) $sponsor_amount ) . " {$sponsor_currency}";
 
 		$data = wp_parse_args( $data, array( // phpcs:ignore PEAR.Functions.FunctionCallSignature.MultipleArguments
 			'sponsor_name'            => get_the_title( $sponsor_id ),

@@ -1663,16 +1663,18 @@ class CampTix_Plugin {
 			$currency['decimal_point'] = 2;
 		}
 
+		// PHP 8.4+ throws ValueError when NumberFormatter is given an unknown locale; format() can also return false.
+		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) ) {
 			try {
 				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
 				$formatted_amount = $formatter->format( $amount );
 			} catch ( \Throwable $e ) {
-				// PHP 8.4+ throws ValueError for unknown locales; fall through to the format/default path.
+				$formatted_amount = false;
 			}
 		}
 
-		if ( ! isset( $formatted_amount ) ) {
+		if ( false === $formatted_amount ) {
 			if ( isset( $currency['format'] ) && $currency['format'] ) {
 				$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
 			} else {

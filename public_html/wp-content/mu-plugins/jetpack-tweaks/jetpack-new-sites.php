@@ -1,37 +1,14 @@
 <?php
 
 namespace WordCamp\Jetpack_Tweaks;
+use Jetpack;
 use Jetpack_Provision;
 use Automattic\Jetpack\Current_Plan;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites' );
-add_filter( 'default_site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites' );
-
 add_action( 'wp_initialize_site', __NAMESPACE__ . '\schedule_partner_provision', 100, 1 );
 add_action( 'wordcamp_jetpack_partner_provision', __NAMESPACE__ . '\run_partner_provision' );
-
-/**
- * Automatically connect new sites to WordPress.com.
- * All sites at present have SSL on their primary domain, so we can safely auto-connect.
- *
- * If this ever changes, see https://github.com/WordPress/wordcamp.org/pull/1515.
- *
- * @param array $value
- *
- * @return array
- */
-function auto_connect_new_sites( $value ) {
-	if ( ! $value ) {
-		$value = array();
-	}
-
-	$value['auto-connect'] = 1;
-	$value['sub-site-connection-override'] = 0;
-
-	return $value;
-}
 
 /**
  * Queue a one-off cron event on the newly created site to provision the partner Jetpack plan.
@@ -46,6 +23,13 @@ function schedule_partner_provision( $site ) {
 
 /**
  * Cron handler: provision the partner Jetpack plan for the current site, retrying hourly on failure.
+ *
+ * `Jetpack_Provision::partner_provision()` handles the full connection lifecycle when called against
+ * a previously unconnected site: it registers the site (creating the blog token), attaches the current
+ * user as connection owner, and applies the plan. If the site is already connected without a connection
+ * owner — an "orphan" state that can occur when something else triggers Jetpack registration first —
+ * wpcom returns `auth_required` instead of an access token, leaving the plan unset. Detect and clear
+ * that state with a full disconnect so partner_provision can re-register cleanly.
  */
 function run_partner_provision() {
 	if ( ! in_array( wp_get_environment_type(), array( 'production', 'staging' ), true ) ) {
@@ -92,16 +76,43 @@ function run_partner_provision() {
 
 	$previous_user = get_current_user_id();
 	wp_set_current_user( $wordcamp->ID );
+
+	if ( has_orphan_connection() ) {
+		Jetpack::connection()->disconnect_site( true, true );
+		log_failure( 'orphan disconnect', 'Cleared site connection without owner before re-provisioning.' );
+	}
+
 	$result = Jetpack_Provision::partner_provision(
 		$access_token,
-		array( 'plan' => WORDCAMP_JETPACK_START_PARTNER_PLAN )
+		array(
+			'plan'           => WORDCAMP_JETPACK_START_PARTNER_PLAN,
+			'force_register' => 1,
+		)
 	);
 	wp_set_current_user( $previous_user );
 
 	if ( is_wp_error( $result ) ) {
 		log_failure( 'provision', $result->get_error_code() . ': ' . $result->get_error_message() );
 		schedule_retry();
+		return;
 	}
+
+	// A non-WP_Error response with `auth_required` means wpcom didn't auto-authorize the user, so the
+	// plan won't be applied and `authorize_user()` was never reached. Treat as failure and retry.
+	if ( is_object( $result ) && ! empty( $result->auth_required ) ) {
+		log_failure( 'provision', 'wpcom returned auth_required; user not authorized as connection owner.' );
+		schedule_retry();
+	}
+}
+
+/**
+ * Check whether Jetpack is connected at the site level but has no connection owner.
+ *
+ * @return bool
+ */
+function has_orphan_connection() {
+	$connection = Jetpack::connection();
+	return $connection->is_connected() && ! $connection->has_connected_owner();
 }
 
 /**

@@ -7,8 +7,37 @@ use Automattic\Jetpack\Current_Plan;
 
 defined( 'WPINC' ) || die();
 
+add_filter( 'site_option_jetpack-network-settings',           __NAMESPACE__ . '\disable_jetpack_auto_connect' );
+add_filter( 'default_site_option_jetpack-network-settings',   __NAMESPACE__ . '\disable_jetpack_auto_connect' );
+add_filter( 'pre_update_site_option_jetpack-network-settings', __NAMESPACE__ . '\disable_jetpack_auto_connect' );
+
 add_action( 'wp_initialize_site', __NAMESPACE__ . '\schedule_partner_provision', 100, 1 );
 add_action( 'wordcamp_jetpack_partner_provision', __NAMESPACE__ . '\run_partner_provision' );
+
+/**
+ * Force-disable Jetpack's network-level auto-connect, and prevent sub-sites from overriding it.
+ *
+ * Auto-connect creates a Jetpack connection without a connection owner (an "orphan" state) when it
+ * fires before our `wordcamp_jetpack_partner_provision` cron runs. wpcom then refuses to authorize
+ * the wordcamp user against that pre-existing connection, so the partner plan never applies. By
+ * forcing `auto-connect=0` and locking sub-site overrides off, our partner_provision call becomes
+ * the only path that creates Jetpack connections — guaranteeing the wordcamp user is always the
+ * connection owner.
+ *
+ * @param array $value Existing or incoming option value.
+ *
+ * @return array
+ */
+function disable_jetpack_auto_connect( $value ) {
+	if ( ! is_array( $value ) ) {
+		$value = array();
+	}
+
+	$value['auto-connect']                 = 0;
+	$value['sub-site-connection-override'] = 0;
+
+	return $value;
+}
 
 /**
  * Queue a one-off cron event on the newly created site to provision the partner Jetpack plan.

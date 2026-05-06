@@ -1663,13 +1663,23 @@ class CampTix_Plugin {
 			$currency['decimal_point'] = 2;
 		}
 
+		// PHP 8.4+ throws ValueError when NumberFormatter is given an unknown locale; format() can also return false.
+		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) ) {
-			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-			$formatted_amount = $formatter->format( $amount );
-		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
-			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
-		} else {
-			$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			try {
+				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
+				$formatted_amount = $formatter->format( $amount );
+			} catch ( \Throwable $e ) {
+				$formatted_amount = false;
+			}
+		}
+
+		if ( false === $formatted_amount ) {
+			if ( isset( $currency['format'] ) && $currency['format'] ) {
+				$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
+			} else {
+				$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			}
 		}
 
 		$formatted_amount = apply_filters( 'tix_append_currency', $formatted_amount, $currency, $amount );

@@ -43,7 +43,6 @@ add_action( 'admin_notices',                                 __NAMESPACE__ . '\a
 add_filter( 'wp_privacy_personal_data_erasers',              __NAMESPACE__ . '\modify_erasers',                  99 );
 
 // Miscellaneous
-add_filter( 'camptix_beta_features_enabled',                 '__return_true' );
 add_action( 'camptix_nt_file_log',                           '__return_false' );
 add_action( 'init',                                          __NAMESPACE__ . '\camptix_debug',                    9 ); // CampTix does this at 10.
 add_filter( 'camptix_default_addons',                        __NAMESPACE__ . '\load_addons'                         );

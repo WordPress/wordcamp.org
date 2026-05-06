@@ -25,7 +25,6 @@ class CampTix_Plugin {
 
 	public $error_flags;
 	public $debug;
-	public $beta_features_enabled;
 	public $version     = 20180709;
 	public $css_version = 20180709;
 	public $js_version  = 20180709;
@@ -113,16 +112,14 @@ class CampTix_Plugin {
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'init', array( $this, 'schedule_events' ), 9 );
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
-		add_action( 'switch_blog', array( $this, 'reload_options' ) );
 	}
 
 	/**
 	 * Fired during init, doh!
 	 */
 	function init() {
-		$this->options = $this->get_options();
+		$this->load_options();
 		$this->debug = (bool) apply_filters( 'camptix_debug', false );
-		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
 		$this->tmp = array();
 
 		// Capability mapping.
@@ -135,11 +132,6 @@ class CampTix_Plugin {
 			'delete_attendees' => 'manage_options',
 			'refund_all'       => 'manage_options',
 		) );
-
-		// Explicitly disable all beta features if beta features is off.
-		if ( ! $this->beta_features_enabled )
-			foreach ( $this->get_beta_features() as $beta_feature )
-				$this->options[$beta_feature] = false;
 
 		// The following three are just different kinds (colors) of user feedback.
 		// Don't use directly, instead use $this->notice / error / info methods.
@@ -1281,15 +1273,33 @@ class CampTix_Plugin {
 
 	/**
 	 * Returns an array of options stored in the database, or a set of defaults.
+	 *
+	 * The result is cached in `$this->options` after the first call. Multisite
+	 * callers (such as the centralized Stripe webhook) should call
+	 * `load_options()` after `switch_to_blog()` to refresh the cache for the
+	 * switched-to site.
 	 */
 	function get_options() {
-
 		// Allow other plugins to get CampTix options.
-		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) )
+		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) ) {
 			return $this->options;
+		}
 
+		return $this->load_options();
+	}
+
+	/**
+	 * Load the current site's CampTix options into `$this->options`.
+	 *
+	 * Called once during `init()`. Multisite callers can call this again after
+	 * `switch_to_blog()` to refresh `$this->options` (and any internal CampTix
+	 * code that reads it directly) for the switched-to site.
+	 *
+	 * @return array The freshly loaded options.
+	 */
+	function load_options() {
 		$default_options = $this->get_default_options();
-		$options = array_merge( $default_options, get_option( 'camptix_options', array() ) );
+		$options         = array_merge( $default_options, get_option( 'camptix_options', array() ) );
 
 		// Allow plugins to hi-jack or read the options.
 		$options = apply_filters( 'camptix_options', $options );
@@ -1305,25 +1315,9 @@ class CampTix_Plugin {
 			$this->upgrade( $options['version'] );
 		}
 
+		$this->options = $options;
+
 		return $options;
-	}
-
-	/**
-	 * Reload request-scoped options after switching sites in a multisite request.
-	 *
-	 * CampTix caches options for the current request, but centralized webhooks need
-	 * to switch into the site where the ticket order lives before processing it.
-	 */
-	function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
-		if ( doing_filter( 'camptix_options' ) ) {
-			return;
-		}
-
-		$this->tmp = array();
-
-		unset( $this->options, $this->tickets_url );
-
-		$this->options = $this->get_options();
 	}
 
 	/*

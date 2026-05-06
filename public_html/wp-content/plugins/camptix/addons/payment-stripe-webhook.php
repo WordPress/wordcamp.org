@@ -140,9 +140,27 @@ trait CampTix_Payment_Method_Stripe_Webhook {
 			);
 		}
 
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
 		switch_to_blog( $site_id );
+
+		// Load this site's options. CampTix and the Stripe addon both cache
+		// options on the request, and many code paths read those caches
+		// directly (notably `$camptix->options` in payment_result() and
+		// email_tickets()). Refreshing both caches here keeps those reads
+		// pointing at the switched-to site.
+		$camptix->load_options();
+		$this->load_options();
+
 		$response = $this->process_webhook_session_for_current_site( $event, $stripe_session_id, $payment_token );
+
 		restore_current_blog();
+
+		// Restore the caches to the original site for any later code in this
+		// request that reads the cached options directly.
+		$camptix->load_options();
+		$this->load_options();
 
 		return $response;
 	}

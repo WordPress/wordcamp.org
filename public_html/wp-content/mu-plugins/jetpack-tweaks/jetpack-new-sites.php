@@ -6,28 +6,33 @@ use Automattic\Jetpack\Current_Plan;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites' );
-add_filter( 'default_site_option_jetpack-network-settings', __NAMESPACE__ . '\auto_connect_new_sites' );
+add_filter( 'site_option_jetpack-network-settings',           __NAMESPACE__ . '\disable_jetpack_auto_connect' );
+add_filter( 'default_site_option_jetpack-network-settings',   __NAMESPACE__ . '\disable_jetpack_auto_connect' );
+add_filter( 'pre_update_site_option_jetpack-network-settings', __NAMESPACE__ . '\disable_jetpack_auto_connect' );
 
 add_action( 'wp_initialize_site', __NAMESPACE__ . '\schedule_partner_provision', 100, 1 );
 add_action( 'wordcamp_jetpack_partner_provision', __NAMESPACE__ . '\run_partner_provision' );
 
 /**
- * Automatically connect new sites to WordPress.com.
- * All sites at present have SSL on their primary domain, so we can safely auto-connect.
+ * Force-disable Jetpack's network-level auto-connect, and prevent sub-sites from overriding it.
  *
- * If this ever changes, see https://github.com/WordPress/wordcamp.org/pull/1515.
+ * Auto-connect creates a Jetpack connection without a connection owner (an "orphan" state) when it
+ * fires before our `wordcamp_jetpack_partner_provision` cron runs. wpcom then refuses to authorize
+ * the wordcamp user against that pre-existing connection, so the partner plan never applies. By
+ * forcing `auto-connect=0` and locking sub-site overrides off, our partner_provision call becomes
+ * the only path that creates Jetpack connections — guaranteeing the wordcamp user is always the
+ * connection owner.
  *
- * @param array $value
+ * @param array $value Existing or incoming option value.
  *
  * @return array
  */
-function auto_connect_new_sites( $value ) {
-	if ( ! $value ) {
+function disable_jetpack_auto_connect( $value ) {
+	if ( ! is_array( $value ) ) {
 		$value = array();
 	}
 
-	$value['auto-connect'] = 1;
+	$value['auto-connect']                 = 0;
 	$value['sub-site-connection-override'] = 0;
 
 	return $value;
@@ -46,6 +51,10 @@ function schedule_partner_provision( $site ) {
 
 /**
  * Cron handler: provision the partner Jetpack plan for the current site, retrying hourly on failure.
+ *
+ * Passes `wpcom_user_id` so wpcom attaches that account as the connection owner directly, instead
+ * of trying to auto-authorize via the local user's email (which fails when the email isn't backed
+ * by a verified wpcom account and produces an `auth_required` response with no access token).
  */
 function run_partner_provision() {
 	if ( ! in_array( wp_get_environment_type(), array( 'production', 'staging' ), true ) ) {
@@ -55,7 +64,8 @@ function run_partner_provision() {
 	if (
 		! defined( 'WORDCAMP_JETPACK_START_PARTNER_ID' ) ||
 		! defined( 'WORDCAMP_JETPACK_START_PARTNER_SECRET' ) ||
-		! defined( 'WORDCAMP_JETPACK_START_PARTNER_PLAN' )
+		! defined( 'WORDCAMP_JETPACK_START_PARTNER_PLAN' ) ||
+		! defined( 'WORDCAMP_JETPACK_WPCOM_USER_ID' )
 	) {
 		return;
 	}
@@ -92,14 +102,27 @@ function run_partner_provision() {
 
 	$previous_user = get_current_user_id();
 	wp_set_current_user( $wordcamp->ID );
+
 	$result = Jetpack_Provision::partner_provision(
 		$access_token,
-		array( 'plan' => WORDCAMP_JETPACK_START_PARTNER_PLAN )
+		array(
+			'plan'           => WORDCAMP_JETPACK_START_PARTNER_PLAN,
+			'force_register' => 1,
+			'wpcom_user_id'  => WORDCAMP_JETPACK_WPCOM_USER_ID,
+		)
 	);
 	wp_set_current_user( $previous_user );
 
 	if ( is_wp_error( $result ) ) {
 		log_failure( 'provision', $result->get_error_code() . ': ' . $result->get_error_message() );
+		schedule_retry();
+		return;
+	}
+
+	// A non-WP_Error response with `auth_required` means wpcom didn't auto-authorize the user, so the
+	// plan won't be applied and `authorize_user()` was never reached. Treat as failure and retry.
+	if ( is_object( $result ) && ! empty( $result->auth_required ) ) {
+		log_failure( 'provision', 'wpcom returned auth_required; user not authorized as connection owner.' );
 		schedule_retry();
 	}
 }

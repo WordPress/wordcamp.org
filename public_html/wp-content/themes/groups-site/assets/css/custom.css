@@ -80,12 +80,6 @@
 	text-decoration: none;
 }
 
-/* The ::after overlay catches clicks. Ensure the card itself gets
-   pointer cursor, and the overlay is the only interactive target. */
-.wp-block-post-template .wp-block-post-title {
-	position: relative;
-	z-index: 2;
-}
 
 /* Make the card show a pointer cursor everywhere. */
 .wp-block-post-template .wp-block-group.has-border-color {

@@ -218,13 +218,39 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 
 		$metas = get_post_meta( $attendees[0]->ID, 'invoice_metas', true );
-		if ( $metas ) {
-			$order      = get_post_meta( $attendees[0]->ID, 'tix_order', true );
-			$invoice_id = self::create_invoice( $attendees[0], $order, $metas );
-			if ( ! is_wp_error( $invoice_id ) && ! empty( $invoice_id ) ) {
-				self::send_invoice( $invoice_id );
-			}//end if
-		}//end if
+		if ( ! $metas ) {
+			return;
+		}
+
+		// Bail if we've already created an invoice for this transaction.
+		// payment_result() can fire camptix_payment_result more than once for the
+		// same payment_token (centralized Stripe webhook + interactive return).
+		$txn_id = get_post_meta( $attendees[0]->ID, 'tix_transaction_id', true );
+		if ( $txn_id ) {
+			$existing = get_posts(
+				array(
+					'post_type'      => 'tix_invoice',
+					'post_status'    => 'any',
+					'posts_per_page' => 1,
+					'fields'         => 'ids',
+					'meta_query'     => array( // @codingStandardsIgnoreLine
+						array(
+							'key'   => 'transaction_id',
+							'value' => $txn_id,
+						),
+					),
+				)
+			);
+			if ( $existing ) {
+				return;
+			}
+		}
+
+		$order      = get_post_meta( $attendees[0]->ID, 'tix_order', true );
+		$invoice_id = self::create_invoice( $attendees[0], $order, $metas );
+		if ( ! is_wp_error( $invoice_id ) && ! empty( $invoice_id ) ) {
+			self::send_invoice( $invoice_id );
+		}
 	}
 
 	/**

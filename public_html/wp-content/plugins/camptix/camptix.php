@@ -6691,6 +6691,13 @@ class CampTix_Plugin {
 		$from_status = $attendees_status;
 		$to_status = $attendees[0]->post_status;
 
+		// Fire the result action on every call, not just on status transitions.
+		// Webhooks and interactive returns can both invoke payment_result() for
+		// the same payment_token; whichever runs second sees $status_changed === false.
+		// Listeners (e.g. CampTix_Addon_Invoices::maybe_create_invoice) must be
+		// idempotent — see the matching guard there.
+		do_action( 'camptix_payment_result', $payment_token, $result, $data );
+
 		// If the status hasn't changed, there's nothing much we can do here.
 		if ( ! $status_changed ) {
 			if ( ! $interactive ) {
@@ -6709,7 +6716,6 @@ class CampTix_Plugin {
 
 		// Send out the tickets and receipt if necessary.
 		$this->email_tickets( $payment_token, $from_status, $to_status );
-		do_action( 'camptix_payment_result', $payment_token, $result, $data );
 
 		if ( ! $interactive ) {
 			return true;

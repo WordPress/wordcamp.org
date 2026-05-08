@@ -50,6 +50,22 @@ function enqueue_assets() {
 	);
 }
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
+
+/**
+ * Remove the featured image link from keyboard tab order in event card grids.
+ *
+ * The title link already provides keyboard access to the event. A second
+ * focusable link on the image is redundant and slows tab navigation.
+ */
+add_filter(
+	'render_block_core/post-featured-image',
+	static function ( string $content ): string {
+		if ( ! is_singular() ) {
+			$content = str_replace( '<a href=', '<a tabindex="-1" href=', $content );
+		}
+		return $content;
+	}
+);
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**

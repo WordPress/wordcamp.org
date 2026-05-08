@@ -80,15 +80,11 @@
 	text-decoration: none;
 }
 
-/* Let clicks pass through all card content to the title link overlay. */
-.wp-block-post-template .wp-block-group.has-border-color > *,
-.wp-block-post-template .wp-block-group.has-border-color > * * {
-	pointer-events: none;
-}
-
-/* Re-enable pointer events on the title link itself. */
-.wp-block-post-template .wp-block-post-title a {
-	pointer-events: auto;
+/* The ::after overlay catches clicks. Ensure the card itself gets
+   pointer cursor, and the overlay is the only interactive target. */
+.wp-block-post-template .wp-block-post-title {
+	position: relative;
+	z-index: 2;
 }
 
 /* Make the card show a pointer cursor everywhere. */

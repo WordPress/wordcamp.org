@@ -89,7 +89,6 @@ class SSLCommerz extends CampTix_Payment_Method {
 			wp_die( esc_html__( 'The selected currency is not supported by this payment method.', 'bd-payments-camptix' ) );
 		}
 
-		$url   = $this->options['sandbox'] ? 'https://sandbox.sslcommerz.com' : 'https://securepay.sslcommerz.com';
 		$order = $this->get_order( $payment_token );
 
 		$return_url = add_query_arg(
@@ -629,7 +628,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 			$data['key'],
 			$data['store_id'],
 			$data['sessionkey'],
-			$session['val_id'],
+			$data['val_id'],
 			$data['value_a'],
 			$data['value_b'],
 			$data['value_c'],

@@ -4225,13 +4225,11 @@ class CampTix_Plugin {
 			}
 		}
 
-		// Apply block attribute for sold-out ticket visibility.
-		if ( isset( $this->block_attributes['showSoldOut'] ) ) {
-			if ( true === $this->block_attributes['showSoldOut'] ) {
-				add_filter( 'camptix_hide_empty_tickets', '__return_false' );
-			} elseif ( false === $this->block_attributes['showSoldOut'] ) {
-				add_filter( 'camptix_hide_empty_tickets', '__return_true' );
-			}
+		// Apply block attribute for sold-out ticket visibility. The `camptix_hide_empty_tickets`
+		// filter defaults to `false` (show sold-out tickets), so only the hide-them path needs
+		// an explicit filter — the show-them path is already the default.
+		if ( isset( $this->block_attributes['showSoldOut'] ) && false === $this->block_attributes['showSoldOut'] ) {
+			add_filter( 'camptix_hide_empty_tickets', '__return_true' );
 		}
 
 		unset( $tickets, $ticket );
@@ -5977,7 +5975,7 @@ class CampTix_Plugin {
 		}
 
 		if (
-			apply_filters( 'camptix_hide_empty_tickets', true ) &&
+			apply_filters( 'camptix_hide_empty_tickets', false ) &&
 			$this->get_remaining_tickets( $post->ID, $via_reservation ) < 1
 		) {
 			return false;

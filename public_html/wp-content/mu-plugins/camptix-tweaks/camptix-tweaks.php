@@ -23,17 +23,6 @@ add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\c
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
 add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
 
-/**
- * Show empty tickets
- *
- * This helps to avoid confusion if the camp has several types of tickets (e.g., General Admission, Micro-sponsorship,
- * etc) and the General Admission ticket sells out. If the General Admission ticket was hidden, some users may
- * mistakenly think that the Micro-sponsorship ticket is the "normal" ticket, even though it costs several hundred
- * dollars. Since we value keeping regular tickets accessible by as many people as possible, we don't want anyone getting
- * the impression that WordCamps are expensive to attend.
- */
-add_filter( 'camptix_hide_empty_tickets',                    '__return_false' );
-
 // Attendees
 add_filter( 'camptix_name_order',                            __NAMESPACE__ . '\set_name_order'                      );
 add_action( 'camptix_form_edit_attendee_custom_error_flags', __NAMESPACE__ . '\disable_attendee_edits'              );

@@ -6646,8 +6646,22 @@ class CampTix_Plugin {
 			update_post_meta( $attendee->ID, 'tix_transaction_details', $transaction_details );
 
 			if ( self::PAYMENT_STATUS_CANCELLED == $result ) {
-				$attendee->post_status = 'cancel';
-				wp_update_post( $attendee );
+				// A user-initiated cancel (e.g. clicking "Cancel" on the gateway's hosted
+				// checkout) can race with the gateway's webhook. If the webhook has already
+				// reported the payment as complete/pending/refunded, the charge stayed with
+				// the gateway and the attendee is the rightful ticket holder — refuse to
+				// downgrade. PAYMENT_STATUS_COMPLETED still transitions cancel → publish,
+				// so a webhook that arrives after a cancel still wins.
+				if ( in_array( $attendee->post_status, array( 'publish', 'pending', 'refund' ), true ) ) {
+					$this->log(
+						sprintf( 'Refusing to cancel attendee in %s status; payment was already processed.', $attendee->post_status ),
+						$attendee->ID,
+						$data
+					);
+				} else {
+					$attendee->post_status = 'cancel';
+					wp_update_post( $attendee );
+				}
 			}
 
 			if ( self::PAYMENT_STATUS_FAILED == $result ) {

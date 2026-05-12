@@ -97,4 +97,101 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		$camptix->load_options();
 		$this->assertSame( $primary_event_name, $camptix->get_options()['event_name'] );
 	}
+
+	/**
+	 * Create a tix_attendee post in the given status with a payment token attached.
+	 *
+	 * @param string $payment_token Payment token shared by the order.
+	 * @param string $status        Initial post_status (draft, pending, publish, cancel, refund, failed).
+	 *
+	 * @return int Attendee ID.
+	 */
+	protected function create_attendee( $payment_token, $status ) {
+		$attendee_id = wp_insert_post( array(
+			'post_type'   => 'tix_attendee',
+			'post_status' => $status,
+			'post_title'  => 'Test Attendee',
+		) );
+
+		update_post_meta( $attendee_id, 'tix_payment_token', $payment_token );
+
+		return $attendee_id;
+	}
+
+	/**
+	 * A user-initiated cancel that arrives after the gateway's webhook published the
+	 * order must not roll the attendee back to 'cancel' — the charge has been taken
+	 * and the attendee is entitled to their ticket.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_payment_result_does_not_cancel_published_attendee() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_already_published';
+		$attendee_id   = $this->create_attendee( $payment_token, 'publish' );
+
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED, array(), false );
+
+		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * Same protection applies when the gateway has reported the payment as pending
+	 * (async confirmation in progress) or refunded — both are post-payment states
+	 * that a user-initiated cancel must not downgrade.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 * @testWith ["pending"]
+	 *           ["refund"]
+	 */
+	public function test_payment_result_does_not_cancel_post_payment_attendee( $status ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_' . $status;
+		$attendee_id   = $this->create_attendee( $payment_token, $status );
+
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED, array(), false );
+
+		$this->assertSame( $status, get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * The normal pre-payment cancel — user hits "Cancel" before the gateway captures
+	 * payment — must still flip the draft attendee to 'cancel'.
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_payment_result_cancels_draft_attendee() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_draft';
+		$attendee_id   = $this->create_attendee( $payment_token, 'draft' );
+
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_CANCELLED, array(), false );
+
+		$this->assertSame( 'cancel', get_post_status( $attendee_id ) );
+	}
+
+	/**
+	 * A late-arriving webhook reporting payment completion must be able to recover an
+	 * attendee that was previously cancelled (e.g. by a stale redirect-cancel that
+	 * landed before this fix, or a race we can't fully prevent).
+	 *
+	 * @covers CampTix_Plugin::payment_result
+	 */
+	public function test_payment_result_publishes_previously_cancelled_attendee() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$payment_token = 'tok_recover';
+		$attendee_id   = $this->create_attendee( $payment_token, 'cancel' );
+
+		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, array(), false );
+
+		$this->assertSame( 'publish', get_post_status( $attendee_id ) );
+	}
 }

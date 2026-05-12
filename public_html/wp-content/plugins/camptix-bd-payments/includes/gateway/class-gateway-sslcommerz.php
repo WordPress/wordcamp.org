@@ -171,7 +171,8 @@ class SSLCommerz extends CampTix_Payment_Method {
 
 		$response = $this->api( 'POST', '/gwprocess/v3/api.php', $args );
 
-		$gateway_page_url = $response->{'GatewayPageURL'} ?? '';
+		$response_data    = (array) $response;
+		$gateway_page_url = $response_data['GatewayPageURL'] ?? '';
 
 		if ( ! empty( $gateway_page_url ) ) {
 

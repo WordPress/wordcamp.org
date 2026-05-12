@@ -1,4 +1,5 @@
 <?php
+// phpcs:ignoreFile -- Imported upstream code.
 /**
  * Plugin Name: Camptix BD Payments
  * Description: Bangladeshi payment gateways for CampTix

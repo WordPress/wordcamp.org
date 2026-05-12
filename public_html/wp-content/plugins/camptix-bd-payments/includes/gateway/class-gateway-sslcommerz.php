@@ -1,4 +1,5 @@
 <?php
+// phpcs:ignoreFile -- Imported upstream code.
 namespace CamptixBD\Gateway;
 use CampTix_Plugin, CampTix_Payment_Method;
 

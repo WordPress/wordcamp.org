@@ -1,4 +1,5 @@
 <?php
+// phpcs:ignoreFile -- Imported upstream code.
 namespace CamptixBD;
 
 // Exit if accessed directly

@@ -5799,12 +5799,14 @@ class CampTix_Plugin {
 			'update_post_term_cache' => false,
 			'update_post_meta_cache' => false,
 		) );
-		$posts = get_posts( $params );
-
 		$block_params      = $params;
 		$block_params['s'] = 'wp:wordcamp/camptix';
 
-		foreach ( get_posts( $block_params ) as $post ) {
+		// Key both result sets by post ID before merging so that numeric indexes
+		// from get_posts() can't collide and overwrite each other when a block
+		// page's ID happens to match an existing index from the shortcode search.
+		$posts = array();
+		foreach ( array_merge( get_posts( $params ), get_posts( $block_params ) ) as $post ) {
 			$posts[ $post->ID ] = $post;
 		}
 

@@ -1,6 +1,10 @@
 <?php
 
+require_once __DIR__ . '/payment-stripe-webhook.php';
+
 class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
+	use CampTix_Payment_Method_Stripe_Webhook;
+
 	public $id          = 'stripe';
 	public $name        = 'Credit Card (Stripe)';
 	public $description = 'Credit card processing, powered by Stripe.';
@@ -42,6 +46,31 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @see CampTix_Addon
 	 */
 	public function camptix_init() {
+		$this->load_options();
+
+		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
+		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
+
+		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
+		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+
+		// Use specific name for INR as we support UPI via Stripe.
+		if ( 'INR' === ( $this->camptix_options['currency'] ?? '' ) ) {
+			$this->name = 'Credit Card or UPI (Stripe)';
+			$this->description = 'Credit card and UPI processing, powered by Stripe.';
+		}
+	}
+
+	/**
+	 * Refresh `$this->camptix_options` and `$this->options` for the current site.
+	 *
+	 * Called from `camptix_init()` to populate the cache, and again from the
+	 * centralized webhook handler after `switch_to_blog()` to refresh the
+	 * cache for the switched-to site.
+	 */
+	public function load_options() {
+		parent::load_options();
+
 		$this->options = array_merge(
 			array(
 				'api_predef'          => '',
@@ -53,15 +82,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			),
 			$this->get_payment_options()
 		);
-
-		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
-		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
-
-		// Use specific name for INR as we support UPI via Stripe.
-		if ( 'INR' === $this->camptix_options['currency'] ?? '' ) {
-			$this->name = 'Credit Card or UPI (Stripe)';
-			$this->description = 'Credit card and UPI processing, powered by Stripe.';
-		}
 	}
 
 	/**
@@ -351,6 +371,142 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	}
 
 	/**
+	 * Get the payment data CampTix stores for a Stripe Checkout Session.
+	 *
+	 * @param array $session                   The Stripe Checkout Session.
+	 * @param array $transaction_details_extra Extra transaction details to store.
+	 *
+	 * @return array
+	 */
+	protected function get_payment_data_for_session( $session, $transaction_details_extra = array() ) {
+		$payment_intent = $session['payment_intent'] ?? array();
+		$transaction_id = is_array( $payment_intent ) ? ( $payment_intent['latest_charge'] ?? '' ) : '';
+		$details        = array_merge(
+			array(
+				'raw' => $session,
+			),
+			$transaction_details_extra
+		);
+
+		return array(
+			'transaction_id'      => $transaction_id,
+			'transaction_details' => $details,
+		);
+	}
+
+	/**
+	 * Process a fetched Stripe Checkout Session through the normal return flow.
+	 *
+	 * @param string $payment_token             CampTix payment token.
+	 * @param array  $session                   Stripe Checkout Session.
+	 * @param array  $order                     CampTix order data.
+	 * @param bool   $interactive               Whether this request can redirect/die.
+	 * @param array  $transaction_details_extra Extra transaction details to store.
+	 *
+	 * @return int|bool
+	 */
+	protected function process_payment_return_session( $payment_token, $session, $order, $interactive = true, $transaction_details_extra = array() ) {
+		/** @var $camptix CampTix_Plugin */
+		global $camptix;
+
+		$session_status = $session['status'] ?? '';
+		$payment_status = $session['payment_status'] ?? '';
+		$payment_intent = $session['payment_intent'] ?? array();
+		$intent_status  = is_array( $payment_intent ) ? ( $payment_intent['status'] ?? '' ) : '';
+
+		if ( ! $session_status ) {
+			$camptix->log( "Dying because couldn't get Payment status", $order['attendee_id'], compact( 'payment_token', 'session' ) );
+
+			if ( $interactive ) {
+				wp_die( 'could not find payment details' );
+			}
+
+			return false;
+		}
+
+		if ( 'expired' === $session_status ) {
+			return $camptix->payment_result(
+				$payment_token,
+				CampTix_Plugin::PAYMENT_STATUS_TIMEOUT,
+				$this->get_payment_data_for_session( $session, $transaction_details_extra ),
+				$interactive
+			);
+		}
+
+		if ( 'open' === $session_status || in_array( $intent_status, array( 'canceled', 'requires_payment_method' ), true ) ) {
+			return $this->process_payment_failed_session(
+				$payment_token,
+				$session,
+				$interactive,
+				array_merge(
+					array(
+						'error' => 'Error during Payment checkout',
+					),
+					$transaction_details_extra
+				),
+				$order['attendee_id']
+			);
+		}
+
+		if (
+			'complete' === $session_status &&
+			in_array( $payment_status, array( 'paid', 'no_payment_required' ), true )
+		) {
+			return $camptix->payment_result(
+				$payment_token,
+				CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
+				$this->get_payment_data_for_session( $session, $transaction_details_extra ),
+				$interactive
+			);
+		}
+
+		if (
+			( 'complete' === $session_status && 'unpaid' === $payment_status ) ||
+			in_array( $intent_status, array( 'processing', 'requires_action', 'requires_capture', 'requires_confirmation' ), true )
+		) {
+			return $camptix->payment_result(
+				$payment_token,
+				CampTix_Plugin::PAYMENT_STATUS_PENDING,
+				$this->get_payment_data_for_session( $session, $transaction_details_extra ),
+				$interactive
+			);
+		}
+
+		$camptix->log( "Dying because couldn't determine Payment status", $order['attendee_id'], compact( 'payment_token', 'session' ) );
+
+		if ( $interactive ) {
+			wp_die( 'could not determine payment status' );
+		}
+
+		return false;
+	}
+
+	/**
+	 * Process a fetched Stripe Checkout Session as a failed payment.
+	 *
+	 * @param string $payment_token             CampTix payment token.
+	 * @param array  $session                   Stripe Checkout Session.
+	 * @param bool   $interactive               Whether this request can redirect/die.
+	 * @param array  $transaction_details_extra Extra transaction details to store.
+	 * @param int    $attendee_id               The attendee ID to log against.
+	 *
+	 * @return int|bool
+	 */
+	protected function process_payment_failed_session( $payment_token, $session, $interactive = true, $transaction_details_extra = array(), $attendee_id = null ) {
+		/** @var $camptix CampTix_Plugin */
+		global $camptix;
+
+		$camptix->log( 'Error during post-stripe checkout.', $attendee_id, $session );
+
+		return $camptix->payment_result(
+			$payment_token,
+			CampTix_Plugin::PAYMENT_STATUS_FAILED,
+			$this->get_payment_data_for_session( $session, $transaction_details_extra ),
+			$interactive
+		);
+	}
+
+	/**
 	 * Handle a canceled payment
 	 *
 	 * Runs when the user cancels their payment during checkout at Stripe.
@@ -410,37 +566,7 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$stripe  = new CampTix_Stripe_API_Client( $payment_token, $this->get_api_credentials()['api_secret_key'] );
 		$session = $stripe->get_session( $stripe_session );
 
-		if ( empty( $session['status'] ) ) {
-			$camptix->log( "Dying because couldn't get Payment status", $order['attendee_id'], compact( 'payment_token', 'payment_session' ) );
-			wp_die( 'could not find payment details' );
-		}
-
-		// Hmm.. Not finalised.
-		if ( 'open' === $session['status'] ) {
-			$payment_data = array(
-				'error' => 'Error during Payment checkout',
-				'data' => $session,
-			);
-			$camptix->log( 'Error during post-stripe checkout.', $order['attendee_id'], $session );
-			return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
-		}
-
-		// Success! (status can only be open, or completed)
-		// Technically there can be multiple charges (ie. partial payments / installments) but we don't have that enabled.
-		$transaction_id = $session['payment_intent']['latest_charge'] ?? '';
-
-		/**
-		 * Note that when returning a successful payment, CampTix will be
-		 * expecting the transaction_id and transaction_details array keys.
-		 */
-		$payment_data = array(
-			'transaction_id'      => $transaction_id,
-			'transaction_details' => array(
-				'raw' => $session,
-			),
-		);
-
-		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );
+		return $this->process_payment_return_session( $payment_token, $session, $order );
 	}
 
 	/**
@@ -902,6 +1028,7 @@ class CampTix_Stripe_API_Client {
 			'submit_type'         => 'pay',
 			'success_url'         => $return_url,
 			'cancel_url'          => $cancel_url,
+			'client_reference_id' => get_current_blog_id() . ':' . $this->payment_token,
 			'line_items'          => $line_items,
 			'payment_intent_data' => array(
 				'description'          => $description, // Displayed in Stripe Dashboard.

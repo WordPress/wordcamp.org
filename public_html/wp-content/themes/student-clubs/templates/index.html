@@ -1,15 +1,17 @@
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 
-<!-- wp:group {"metadata":{"name":"content"},"style":{"spacing":{"padding":{"right":"var:preset|spacing|40","left":"var:preset|spacing|40","top":"5rem","bottom":"5rem"},"blockGap":"var:preset|spacing|70"},"dimensions":{"minHeight":"100vh"}},"layout":{"type":"constrained","justifyContent":"center"}} -->
-<div class="wp-block-group" style="min-height:100vh;padding-top:5rem;padding-right:var(--wp--preset--spacing--40);padding-bottom:5rem;padding-left:var(--wp--preset--spacing--40)"><!-- wp:group {"style":{"spacing":{"blockGap":"16px"},"dimensions":{"minHeight":"0px"},"layout":{"selfStretch":"fit","flexSize":""}},"layout":{"type":"constrained","contentSize":"900px"}} -->
-<div class="wp-block-group" style="min-height:0px"><!-- wp:heading {"textAlign":"left","level":1,"fontSize":"x-large"} -->
-<h1 class="wp-block-heading has-text-align-left has-x-large-font-size">Title</h1>
-<!-- /wp:heading -->
+<!-- wp:group {"tagName":"main","style":{"spacing":{"margin":{"top":"0","bottom":"0"},"padding":{"top":"6rem","bottom":"6rem","left":"var:preset|spacing|40","right":"var:preset|spacing|40"}},"dimensions":{"minHeight":"80vh"}},"layout":{"type":"constrained"}} -->
+<main class="wp-block-group" style="min-height:80vh;margin-top:0;margin-bottom:0;padding-top:6rem;padding-right:var(--wp--preset--spacing--40);padding-bottom:6rem;padding-left:var(--wp--preset--spacing--40)"><!-- wp:query {"queryId":17,"query":{"perPage":5,"pages":0,"offset":0,"postType":"post","order":"desc","orderBy":"date","author":"","search":"","exclude":[],"sticky":"","inherit":false,"parents":[],"format":[]},"metadata":{"categories":["posts"],"patternName":"core/query-grid-posts","name":"Grid"}} -->
+<div class="wp-block-query"><!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+<!-- wp:group {"style":{"spacing":{"padding":{"top":"30px","right":"30px","bottom":"30px","left":"30px"}}},"layout":{"inherit":false}} -->
+<div class="wp-block-group" style="padding-top:30px;padding-right:30px;padding-bottom:30px;padding-left:30px"><!-- wp:post-title /-->
 
-<!-- wp:paragraph {"align":"left","style":{"typography":{"lineHeight":1.6000000000000001}},"fontSize":"medium"} -->
-<p class="has-text-align-left has-medium-font-size" style="line-height:1.6">Lorem ipsun</p>
-<!-- /wp:paragraph --></div>
-<!-- /wp:group --></div>
+<!-- wp:post-excerpt /-->
+
+<!-- wp:post-date {"metadata":{"bindings":{"datetime":{"source":"core/post-data","args":{"field":"date"}}}}} /--></div>
+<!-- /wp:group -->
+<!-- /wp:post-template --></div>
+<!-- /wp:query --></main>
 <!-- /wp:group -->
 
 <!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->

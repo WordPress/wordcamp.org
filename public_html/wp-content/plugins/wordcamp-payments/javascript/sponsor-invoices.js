@@ -43,11 +43,11 @@ jQuery( document ).ready( function( $ ) {
 					return;
 				}
 
-				if ( info.amount ) {
+				if ( info.amount && ! $( '#_wcbsi_amount' ).val() ) {
 					$( '#_wcbsi_amount' ).val( info.amount );
 				}
 
-				if ( info.currency ) {
+				if ( info.currency && ! $( '#_wcbsi_currency' ).val() ) {
 					$( '#_wcbsi_currency' ).val( info.currency ).trigger( 'change' );
 				}
 

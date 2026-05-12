@@ -25,6 +25,7 @@ add_action( 'rest_api_init', __NAMESPACE__ . '\register_additional_rest_fields' 
 add_filter( 'rest_wcb_session_query', __NAMESPACE__ . '\prepare_session_query_args', 10, 2 );
 add_filter( 'rest_wcb_session_collection_params', __NAMESPACE__ . '\add_session_collection_params', 10, 2 );
 add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_email' );
+add_action( 'rest_api_init', __NAMESPACE__ . '\register_fav_sessions_user_meta_routes' );
 add_filter( 'rest_prepare_wcb_speaker', __NAMESPACE__ . '\link_speaker_to_sessions', 10, 2 );
 add_filter( 'rest_prepare_wcb_session', __NAMESPACE__ . '\link_session_to_speakers', 10, 2 );
 add_filter( 'rest_avatar_sizes', __NAMESPACE__ . '\add_larger_avatar_sizes' );
@@ -400,7 +401,11 @@ function register_user_validation_route() {
 			'permission_callback' => '__return_true',
 			'args'                => array(
 				'username' => array(
+					'type'              => 'string',
 					'validate_callback' => function ( $value ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						$wporg_user = wcorg_get_user_by_canonical_names( $value );
 						return (bool) $wporg_user;
 					},
@@ -710,8 +715,12 @@ function register_fav_sessions_email() {
 			'args'                => array(
 				'email-address' => array(
 					'required'          => true,
+					'type'              => 'string',
 					'validate_callback' => function ( $value, $request, $param ) {
-						return is_email( $value );
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
+						return is_email( trim( $value ) );
 					},
 					'sanitize_callback' => function ( $value, $request, $param ) {
 						return sanitize_email( $value );
@@ -720,7 +729,11 @@ function register_fav_sessions_email() {
 
 				'session-list'  => array(
 					'required'          => true,
+					'type'              => 'string',
 					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						$session_ids = explode( ',', $value );
 						$session_count = count( $session_ids );
 						for ( $i = 0; $i < $session_count; $i++ ) {
@@ -738,7 +751,11 @@ function register_fav_sessions_email() {
 
 				'page-slug'     => array(
 					'required'          => true,
+					'type'              => 'string',
 					'validate_callback' => function ( $value, $request, $param ) {
+						if ( ! is_string( $value ) ) {
+							return false;
+						}
 						$pages = get_posts( array(
 							'name'        => $value,
 							'post_type'   => 'page',
@@ -842,6 +859,106 @@ function add_larger_avatar_sizes( $sizes ) {
 	$sizes[] = 512;
 
 	return $sizes;
+}
+
+/**
+ * Register REST API routes for saving/retrieving favourite sessions in user meta.
+ *
+ * This stores favourite sessions per-site in user meta, allowing users to access
+ * their favourites across devices when logged in.
+ *
+ * @return void
+ */
+function register_fav_sessions_user_meta_routes() {
+	register_rest_route(
+		'wc-post-types/v1',
+		'/fav-sessions/',
+		array(
+			array(
+				'methods'             => WP_Rest_Server::READABLE,
+				'callback'            => __NAMESPACE__ . '\get_fav_sessions_user_meta',
+				'permission_callback' => 'is_user_logged_in',
+			),
+			array(
+				'methods'             => WP_Rest_Server::CREATABLE,
+				'callback'            => __NAMESPACE__ . '\save_fav_sessions_user_meta',
+				'permission_callback' => 'is_user_logged_in',
+				'args'                => array(
+					'session_ids' => array(
+						'required'          => true,
+						'validate_callback' => function ( $value ) {
+							if ( ! is_array( $value ) ) {
+								return false;
+							}
+
+							foreach ( $value as $id ) {
+								if ( ! is_numeric( $id ) ) {
+									return false;
+								}
+							}
+
+							return true;
+						},
+						'sanitize_callback' => function ( $value ) {
+							return array_map( 'absint', $value );
+						},
+					),
+				),
+			),
+		)
+	);
+}
+
+/**
+ * Get favourite sessions from user meta for the current site.
+ *
+ * @return \WP_REST_Response
+ */
+function get_fav_sessions_user_meta() {
+	$user_id     = get_current_user_id();
+	$meta_key    = get_fav_sessions_meta_key();
+	$session_ids = get_user_meta( $user_id, $meta_key, true );
+
+	if ( ! is_array( $session_ids ) ) {
+		$session_ids = array();
+	}
+
+	return new \WP_REST_Response(
+		array( 'session_ids' => array_map( 'absint', $session_ids ) ),
+		200
+	);
+}
+
+/**
+ * Save favourite sessions to user meta for the current site.
+ *
+ * @param \WP_REST_Request $request REST API Request object.
+ *
+ * @return \WP_REST_Response
+ */
+function save_fav_sessions_user_meta( \WP_REST_Request $request ) {
+	$user_id     = get_current_user_id();
+	$meta_key    = get_fav_sessions_meta_key();
+	$session_ids = $request->get_param( 'session_ids' );
+
+	update_user_meta( $user_id, $meta_key, $session_ids );
+
+	return new \WP_REST_Response(
+		array( 'session_ids' => $session_ids ),
+		200
+	);
+}
+
+/**
+ * Get the user meta key for storing favourite sessions.
+ *
+ * Uses the current blog ID to scope favourites per-site, since each
+ * WordCamp site has its own set of sessions.
+ *
+ * @return string
+ */
+function get_fav_sessions_meta_key() {
+	return 'wc_favourite_sessions_' . get_current_blog_id();
 }
 
 /**

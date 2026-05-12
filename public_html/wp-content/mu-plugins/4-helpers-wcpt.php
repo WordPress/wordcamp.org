@@ -145,6 +145,16 @@ function get_wordcamp_name( $site_id = 0 ) {
 
 
 /**
+ * Get the event-specific email address, if it exists.
+ *
+ * @return string|false
+ */
+function get_wordcamp_email( $site_id = 0 ) {
+	return get_wordcamp_post( $site_id )->meta['E-mail Address'][0] ?? false;
+}
+
+
+/**
  * Extract pieces from a WordCamp.org URL
  *
  * @todo find other code that's doing this same task in an ad-hoc manner, and convert it to use this instead.

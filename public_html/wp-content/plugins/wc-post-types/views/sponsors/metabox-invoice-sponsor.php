@@ -17,7 +17,10 @@
 
 				<li>
 					<a href="<?php echo esc_url( get_edit_post_link( $invoice->ID ) ); ?>">
-						<?php echo _draft_or_post_title( $invoice->post_title ); ?>
+						<?php
+						// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- _draft_or_post_title() returns esc_html().
+						echo _draft_or_post_title( $invoice );
+						?>
 					</a>
 				</li>
 

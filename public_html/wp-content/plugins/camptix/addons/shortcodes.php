@@ -10,6 +10,7 @@
 
 class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	protected bool $did_shortcode_private_template_redirect = false;
+	protected bool $update_last_modified = false;
 
 	/**
 	 * Runs during camptix_init, @see CampTix_Addon
@@ -72,7 +73,7 @@ class CampTix_Addon_Shortcodes extends CampTix_Addon {
 	public function shutdown() {
 		global $camptix;
 
-		if ( ! isset( $this->update_last_modified ) || ! $this->update_last_modified ) {
+		if ( ! $this->update_last_modified ) {
 			return;
 		}
 

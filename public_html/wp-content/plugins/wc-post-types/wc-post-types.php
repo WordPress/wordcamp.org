@@ -1241,6 +1241,13 @@ class WordCamp_Post_Types_Plugin {
 			return $value;
 		}
 
+		// Block themes handle featured images via templates, so organizers can
+		// control whether the image appears. The avatar is also not auto-injected
+		// on block themes, so there is no duplication issue.
+		if ( wp_is_block_theme() ) {
+			return $value;
+		}
+
 		$post_types = array( 'wcb_speaker', 'wcb_organizer' );
 		if ( in_array( get_post_type( $object_id ), $post_types, true ) ) {
 			return false;

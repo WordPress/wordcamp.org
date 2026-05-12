@@ -59,7 +59,6 @@ class CampTix_BD_Gateways {
 		camptix_register_addon( '\CamptixBD\Gateway\SSLCommerz' );
 		camptix_register_addon( '\CamptixBD\Phone_Field' );
 	}
-
 }
 
 new CampTix_BD_Gateways();

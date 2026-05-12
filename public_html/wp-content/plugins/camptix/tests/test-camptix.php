@@ -99,7 +99,24 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 	}
 
 	/**
-	 * Create a tix_attendee post in the given status with a payment token attached.
+	 * Attendee IDs created during a test, cleaned up in tear_down.
+	 *
+	 * @var int[]
+	 */
+	protected $attendee_ids = array();
+
+	public function tear_down() {
+		foreach ( $this->attendee_ids as $id ) {
+			wp_delete_post( $id, true );
+		}
+		$this->attendee_ids = array();
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Create a tix_attendee post in the given status with the metadata
+	 * payment_result() and email_tickets() expect to read.
 	 *
 	 * @param string $payment_token Payment token shared by the order.
 	 * @param string $status        Initial post_status (draft, pending, publish, cancel, refund, failed).
@@ -114,6 +131,13 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		) );
 
 		update_post_meta( $attendee_id, 'tix_payment_token', $payment_token );
+		// email_tickets() is invoked on every successful status transition and
+		// iterates $order['items'], so seed a minimal but valid order shape.
+		update_post_meta( $attendee_id, 'tix_order', array( 'items' => array(), 'total' => 0 ) );
+		update_post_meta( $attendee_id, 'tix_access_token', 'access_' . $attendee_id );
+		update_post_meta( $attendee_id, 'tix_receipt_email', 'receipt@example.test' );
+
+		$this->attendee_ids[] = $attendee_id;
 
 		return $attendee_id;
 	}

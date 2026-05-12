@@ -1,5 +1,4 @@
 <?php
-// phpcs:ignoreFile -- Imported upstream code.
 /**
  * Plugin Name: Camptix BD Payments
  * Description: Bangladeshi payment gateways for CampTix
@@ -22,9 +21,9 @@ class CampTix_BD_Gateways {
 	/**
 	 * [__construct description]
 	 */
-	function __construct() {
+	public function __construct() {
 		add_action( 'plugins_loaded', [ $this, 'init_plugin' ] );
-		add_action( 'camptix_load_addons', [ $this, 'load_addons'] );
+		add_action( 'camptix_load_addons', [ $this, 'load_addons' ] );
 		add_filter( 'camptix_currencies', [ $this, 'add_currency' ] );
 	}
 

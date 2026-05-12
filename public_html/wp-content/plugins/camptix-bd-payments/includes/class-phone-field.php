@@ -1,8 +1,7 @@
 <?php
-// phpcs:ignoreFile -- Imported upstream code.
 namespace CamptixBD;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -25,9 +24,9 @@ class Phone_Field {
 		add_filter( 'camptix_form_register_complete_attendee_object', array( $this, 'add_attendee_info' ), 10, 3 );
 		add_action( 'camptix_checkout_update_post_meta', array( $this, 'save_attendee_info' ), 10, 2 );
 		add_filter( 'camptix_metabox_attendee_info_additional_rows', array( $this, 'show_attendee_info' ), 10, 2 );
-		add_filter( 'camptix_form_edit_attendee_additional_info', array( $this, 'add_fields_edit_attendee_info', ), 10, 1 );
+		add_filter( 'camptix_form_edit_attendee_additional_info', array( $this, 'add_fields_edit_attendee_info' ), 10, 1 );
 		add_filter( 'camptix_form_edit_attendee_update_post_meta', array( $this, 'save_edited_attendee_info' ), 10, 2 );
-		add_filter( 'camptix_form_edit_attendee_custom_error_flags', array( $this, 'edit_attendee_info_Form_error', ), 10, 1 );
+		add_filter( 'camptix_form_edit_attendee_custom_error_flags', array( $this, 'edit_attendee_info_form_error' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'export_attendee_data_column' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_column_value', array( $this, 'export_attendee_data_value' ), 10, 3 );
 	}
@@ -35,11 +34,11 @@ class Phone_Field {
 	/**
 	 * Add phone field
 	 *
-	 * @param $form_data
-	 * @param $current_count
-	 * @param $tickets_selected_count
+	 * @param array $form_data              Form data.
+	 * @param int   $current_count          Current attendee index.
+	 * @param int   $tickets_selected_count Number of selected tickets.
 	 *
-	 * @return string
+	 * @return void
 	 */
 	public function add_fields( $form_data, $current_count, $tickets_selected_count ) {
 		?>
@@ -61,9 +60,9 @@ class Phone_Field {
 	/**
 	 * Add extra attendee information
 	 *
-	 * @param $attendee
-	 * @param $attendee_info
-	 * @param $current_count
+	 * @param object $attendee      Attendee object.
+	 * @param array  $attendee_info Attendee info.
+	 * @param int    $current_count Current attendee index.
 	 *
 	 * @return mixed
 	 */
@@ -80,8 +79,8 @@ class Phone_Field {
 	/**
 	 * Save extra attendee information
 	 *
-	 * @param $attendee_id
-	 * @param $attendee
+	 * @param int    $attendee_id Attendee post ID.
+	 * @param object $attendee    Attendee object.
 	 */
 	public function save_attendee_info( $attendee_id, $attendee ) {
 		// Phone.
@@ -93,14 +92,16 @@ class Phone_Field {
 	/**
 	 * Show extra attendee information
 	 *
-	 * @param $rows
-	 * @param $attendee
+	 * @param array  $rows     Existing attendee info rows.
+	 * @param object $attendee Attendee post object.
 	 *
 	 * @return array
 	 */
 	public function show_attendee_info( $rows, $attendee ) {
 		// Phone.
-		if ( $attendee_phone = get_post_meta( $attendee->ID, 'tix_phone', true ) ) {
+		$attendee_phone = get_post_meta( $attendee->ID, 'tix_phone', true );
+
+		if ( $attendee_phone ) {
 			$rows[] = array(
 				__( 'Phone Number', 'bd-payments-camptix' ),
 				$attendee_phone,
@@ -114,11 +115,9 @@ class Phone_Field {
 	 * Show extra attendee information
 	 *
 	 * @since 1.0
-	 * access public
+	 * @param object $attendee Attendee post object.
 	 *
-	 * @param $attendee
-	 *
-	 * @return array
+	 * @return void
 	 */
 	public function add_fields_edit_attendee_info( $attendee ) {
 		?>
@@ -139,13 +138,11 @@ class Phone_Field {
 	 * Set custom error for edit attendee information form
 	 *
 	 * @since 1.0
-	 * access public
+	 * @param object $attendee Attendee post object.
 	 *
-	 * @param $attendee
-	 *
-	 * @return array
+	 * @return object
 	 */
-	public function edit_attendee_info_Form_error( $attendee ) {
+	public function edit_attendee_info_form_error( $attendee ) {
 		/* @var  CampTix_Plugin $camptix */
 		global $camptix;
 
@@ -156,14 +153,16 @@ class Phone_Field {
 				$_POST['tix_ticket_info']['phone'] = get_post_meta( $attendee->ID, 'tix_phone', true );
 			}
 		}
+
+		return $attendee;
 	}
 
 
 	/**
 	 * Save edited attendee information
 	 *
-	 * @param $new_ticket_info
-	 * @param $attendee
+	 * @param array  $new_ticket_info Updated ticket info.
+	 * @param object $attendee        Attendee post object.
 	 *
 	 * @return array
 	 */
@@ -172,6 +171,8 @@ class Phone_Field {
 		if ( array_key_exists( 'phone', $new_ticket_info ) ) {
 			update_post_meta( $attendee->ID, 'tix_phone', sanitize_text_field( $new_ticket_info['phone'] ) );
 		}
+
+		return $new_ticket_info;
 	}
 
 
@@ -191,9 +192,9 @@ class Phone_Field {
 	/**
 	 * Add column to export extra attendee information
 	 *
-	 * @param $value
-	 * @param $column_name
-	 * @param $attendee
+	 * @param mixed  $value       Column value.
+	 * @param string $column_name Column name.
+	 * @param object $attendee    Attendee post object.
 	 *
 	 * @return mixed
 	 */

@@ -1,9 +1,8 @@
 <?php
-// phpcs:ignoreFile -- Imported upstream code.
 namespace CamptixBD\Gateway;
 use CampTix_Plugin, CampTix_Payment_Method;
 
-// Exit if accessed directly
+// Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -18,17 +17,25 @@ class SSLCommerz extends CampTix_Payment_Method {
 	public $description          = 'SSLCommerz payment gateway for Bangladesh.';
 	public $supported_currencies = [ 'BDT' ];
 
-	function camptix_init() {
-		$this->options = array_merge( [
-			'merchant_id'    => '',
-			'store_password' => '',
-			'sandbox'        => true,
-		], $this->get_payment_options() );
+	/**
+	 * Initialize gateway options and hooks.
+	 *
+	 * @return void
+	 */
+	public function camptix_init() {
+		$this->options = array_merge(
+			[
+				'merchant_id'    => '',
+				'store_password' => '',
+				'sandbox'        => true,
+			],
+			$this->get_payment_options()
+		);
 
 		if ( $this->gateway_enabled() ) {
 			add_filter( 'camptix_form_register_complete_attendee_object', [ $this, 'add_attendee_info' ], 10, 3 );
 			add_action( 'template_redirect', [ $this, 'template_redirect' ] );
-			add_action( 'template_redirect', [ $this, 'early_template_redirect' ], 5 ); // Before CampTix_Require_Login::block_unauthenticated_actions
+			add_action( 'template_redirect', [ $this, 'early_template_redirect' ], 5 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
 
 			// Catch any attendee timeouts that actually paid.
 			add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
@@ -64,7 +71,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 *
 	 * @param  string $payment_token
 	 *
-	 * @return void
+	 * @return false|string|void
 	 */
 	public function payment_checkout( $payment_token ) {
 		global $camptix;
@@ -74,35 +81,47 @@ class SSLCommerz extends CampTix_Payment_Method {
 		}
 
 		if ( ! in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
-			wp_die( __( 'The selected currency is not supported by this payment method.', 'bd-payments-camptix' ) );
+			wp_die( esc_html__( 'The selected currency is not supported by this payment method.', 'bd-payments-camptix' ) );
 		}
 
 		$url   = $this->options['sandbox'] ? 'https://sandbox.sslcommerz.com' : 'https://securepay.sslcommerz.com';
 		$order = $this->get_order( $payment_token );
 
-		$return_url = add_query_arg( array(
-			'tix_action'         => 'payment_return',
-			'tix_payment_token'  => $payment_token,
-			'tix_payment_method' => $this->id,
-		), $camptix->get_tickets_url() );
+		$return_url = add_query_arg(
+			array(
+				'tix_action'         => 'payment_return',
+				'tix_payment_token'  => $payment_token,
+				'tix_payment_method' => $this->id,
+			),
+			$camptix->get_tickets_url()
+		);
 
-		$cancel_url = add_query_arg( array(
-			'tix_action'         => 'payment_cancel',
-			'tix_payment_token'  => $payment_token,
-			'tix_payment_method' => $this->id,
-		), $camptix->get_tickets_url() );
+		$cancel_url = add_query_arg(
+			array(
+				'tix_action'         => 'payment_cancel',
+				'tix_payment_token'  => $payment_token,
+				'tix_payment_method' => $this->id,
+			),
+			$camptix->get_tickets_url()
+		);
 
-		$notify_url = add_query_arg( array(
-			'tix_action'         => 'payment_notify',
-			'tix_payment_token'  => $payment_token,
-			'tix_payment_method' => $this->id,
-		), $camptix->get_tickets_url() );
+		$notify_url = add_query_arg(
+			array(
+				'tix_action'         => 'payment_notify',
+				'tix_payment_token'  => $payment_token,
+				'tix_payment_method' => $this->id,
+			),
+			$camptix->get_tickets_url()
+		);
 
-		$fail_url = add_query_arg( array(
-			'tix_action'         => 'payment_failed',
-			'tix_payment_token'  => $payment_token,
-			'tix_payment_method' => $this->id,
-		), $camptix->get_tickets_url() );
+		$fail_url = add_query_arg(
+			array(
+				'tix_action'         => 'payment_failed',
+				'tix_payment_token'  => $payment_token,
+				'tix_payment_method' => $this->id,
+			),
+			$camptix->get_tickets_url()
+		);
 
 		$attendees = get_posts(
 			[
@@ -118,15 +137,15 @@ class SSLCommerz extends CampTix_Payment_Method {
 			]
 		);
 
-		// take the first attendee as the customer because
-		// we need the name and phone number for the gateway
+		// Take the first attendee as the customer because
+		// we need the name and phone number for the gateway.
 		$attendee = reset( $attendees );
 		$email = $attendee->tix_email;
 		$name  = $attendee->tix_first_name . ' ' . $attendee->tix_last_name;
 		$phone = $attendee->tix_phone;
 
-		// build the payment description wth the event name and
-		// ticket names with quantity
+		// Build the payment description wth the event name and
+		// ticket names with quantity.
 		$description = $camptix->email_template_shortcode_event_name([]);
 
 		foreach ( $order['items'] as $ticket ) {
@@ -152,14 +171,16 @@ class SSLCommerz extends CampTix_Payment_Method {
 
 		$response = $this->api( 'POST', '/gwprocess/v3/api.php', $args );
 
-		if ( ! empty( $response->GatewayPageURL ) ) {
+		$gateway_page_url = $response->{'GatewayPageURL'} ?? '';
+
+		if ( ! empty( $gateway_page_url ) ) {
 
 			// Store the sessionkey for future reference (timeout).
 			if ( ! empty( $response->sessionkey ) ) {
 				update_post_meta( $attendee->ID, '_sslcommerz_session_key', $response->sessionkey );
 			}
 
-			wp_redirect( $response->GatewayPageURL );
+			wp_redirect( $gateway_page_url );
 			exit;
 		}
 
@@ -171,7 +192,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 *
 	 * @return void
 	 */
-	function payment_settings_fields() {
+	public function payment_settings_fields() {
 		$this->add_settings_field_helper( 'merchant_id', __( 'Store ID', 'bd-payments-camptix' ), [ $this, 'field_text' ] );
 		$this->add_settings_field_helper( 'store_password', __( 'Store Password', 'bd-payments-camptix' ), [ $this, 'field_text' ] );
 		$this->add_settings_field_helper( 'sandbox', __( 'Sandbox Mode',  'bd-payments-camptix' ), [ $this, 'field_yesno' ] );
@@ -184,7 +205,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 *
 	 * @return array
 	 */
-	function validate_options( $input ) {
+	public function validate_options( $input ) {
 		$output = $this->options;
 
 		if ( isset( $input['merchant_id'] ) ) {
@@ -220,7 +241,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 * NOTE: payment_notify IPN is not covered here, as it's an unauthenticated server-to-server request, and
 	 * thus not blocked by Require Login.
 	 */
-	function early_template_redirect() {
+	public function early_template_redirect() {
 		/*
 		 * Undo the POST => Cookie behaviour on the redirect.
 		 * Read the next section first.
@@ -266,11 +287,16 @@ class SSLCommerz extends CampTix_Payment_Method {
 			setcookie( $this->id . '_postdata', $cookie_data, time() + 300, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
 		}
 
-		wp_safe_redirect( add_query_arg( [
-			'tix_action'         => $_REQUEST['tix_action'] ?? '',
-			'tix_payment_token'  => $_REQUEST['tix_payment_token'] ?? '',
-			'tix_payment_method' => $this->id,
-		], $GLOBALS['camptix']->get_tickets_url() ) );
+		wp_safe_redirect(
+			add_query_arg(
+				[
+					'tix_action'         => $_REQUEST['tix_action'] ?? '',
+					'tix_payment_token'  => $_REQUEST['tix_payment_token'] ?? '',
+					'tix_payment_method' => $this->id,
+				],
+				$GLOBALS['camptix']->get_tickets_url()
+			)
+		);
 
 		die();
 	}
@@ -280,8 +306,8 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 *
 	 * @return void
 	 */
-	function template_redirect() {
-		if ( $this->id != ( $_REQUEST['tix_payment_method'] ?? '' ) ) {
+	public function template_redirect() {
+		if ( ( $_REQUEST['tix_payment_method'] ?? '' ) !== $this->id ) {
 			return;
 		}
 
@@ -305,7 +331,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 *
 	 * @return mixed
 	 */
-	function payment_notify() {
+	public function payment_notify() {
 		global $camptix;
 
 		$payment_token  = trim( $_REQUEST['tix_payment_token'] ?? '' );
@@ -339,7 +365,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	/**
 	 * Cancel the payment
 	 *
-	 * @return void
+	 * @return mixed
 	 */
 	public function payment_cancel() {
 		global $camptix;
@@ -362,7 +388,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	/**
 	 * Fail the payment
 	 *
-	 * @return void
+	 * @return mixed
 	 */
 	public function payment_failed() {
 		global $camptix;
@@ -385,26 +411,31 @@ class SSLCommerz extends CampTix_Payment_Method {
 	/**
 	 * Verify the transaction
 	 *
-	 * @param  string $payment_token
+	 * @param string $val_id        The validation ID.
+	 * @param string $payment_token The payment token.
 	 *
 	 * @return boolean
 	 */
 	public function verify_transaction( $val_id, $payment_token ) {
 		global $camptix;
 
-		$response = $this->api( 'GET', '/validator/api/validationserverAPI.php', [
-			'val_id'       => $val_id,
-			'store_id'     => $this->options['merchant_id'],
-			'store_passwd' => $this->options['store_password'],
-			'format'       => 'json'
-		] );
+		$response = $this->api(
+			'GET',
+			'/validator/api/validationserverAPI.php',
+			[
+				'val_id'       => $val_id,
+				'store_id'     => $this->options['merchant_id'],
+				'store_passwd' => $this->options['store_password'],
+				'format'       => 'json',
+			]
+		);
 		if ( ! $response ) {
 			return false;
 		}
 
 		$order = $this->get_order( $payment_token );
 
-		if ( in_array( $response->status, ['VALID', 'VALIDATED'] ) && $order['total'] == $response->amount ) {
+		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ] ) && $order['total'] == $response->amount ) {
 			return true;
 		}
 
@@ -433,11 +464,15 @@ class SSLCommerz extends CampTix_Payment_Method {
 			return;
 		}
 
-		$response = $this->api( 'GET', '/validator/api/merchantTransIDvalidationAPI.php', [
-			'sessionkey'   => $session_key,
-			'store_id'     => $this->options['merchant_id'],
-			'store_passwd' => $this->options['store_password'],
-		] );
+		$response = $this->api(
+			'GET',
+			'/validator/api/merchantTransIDvalidationAPI.php',
+			[
+				'sessionkey'   => $session_key,
+				'store_id'     => $this->options['merchant_id'],
+				'store_passwd' => $this->options['store_password'],
+			]
+		);
 		if ( ! $response ) {
 			return;
 		}
@@ -467,16 +502,15 @@ class SSLCommerz extends CampTix_Payment_Method {
 			$payment_data,
 			false /* non-interactive */
 		);
-
 	}
 
 
 	/**
 	 * Make an API call
 	 *
-	 * @param  string $method   HTTP method (GET | POST)
-	 * @param  string $endpoint API endpoint
-	 * @param  array  $body     Request body
+	 * @param  string $method   HTTP method (GET | POST).
+	 * @param  string $endpoint API endpoint.
+	 * @param  array  $body     Request body.
 	 *
 	 * @return false|object
 	 */
@@ -527,15 +561,15 @@ class SSLCommerz extends CampTix_Payment_Method {
 		if ( ! empty( $pre_define_key ) ) {
 			foreach ( $pre_define_key as $value ) {
 				if ( isset( $data[ $value ] ) ) {
-					$new_data[ $value ] = $data[$value];
+					$new_data[ $value ] = $data[ $value ];
 				}
 			}
 		}
 
-		// ADD MD5 OF STORE PASSWORD
+		// Add MD5 of store password.
 		$new_data['store_passwd'] = md5( $store_passwd );
 
-		// SORT THE KEY AS BEFORE
+		// Sort the key as before.
 		ksort( $new_data );
 
 		$hash_string = '';
@@ -563,9 +597,15 @@ class SSLCommerz extends CampTix_Payment_Method {
 			$data['pass'], // Present in sandbox mode, not production :phew:.
 			$data['key'],
 			$data['store_id'],
-			$data['sessionkey'], $session['val_id'],
-			$data['value_a'], $data['value_b'], $data['value_c'], $data['value_d'],
-			$data['verify_sign'], $data['verify_sign_sha2'], $data['verify_key']
+			$data['sessionkey'],
+			$session['val_id'],
+			$data['value_a'],
+			$data['value_b'],
+			$data['value_c'],
+			$data['value_d'],
+			$data['verify_sign'],
+			$data['verify_sign_sha2'],
+			$data['verify_key']
 		);
 
 		return $data;

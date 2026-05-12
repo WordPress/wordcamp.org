@@ -1,4 +1,4 @@
-# CampTix Bangldeshi Payments
+# CampTix Bangladeshi Payments
 
 CampTix Bangladeshi Payment Gateway Solution for Camptix Plugin. Allow visitors to purchase tickets to your online or offline event using Camptix Bangladeshi payment gateway, directly from your WordPress or WordCamp website.
 

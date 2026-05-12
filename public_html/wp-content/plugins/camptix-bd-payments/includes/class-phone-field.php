@@ -68,8 +68,12 @@ class Phone_Field {
 	 */
 	public function add_attendee_info( $attendee, $attendee_info, $current_count ) {
 		// Phone.
-		if ( ! empty( $_POST['tix_attendee_info'][ $current_count ]['phone'] ) ) {
-			$attendee->phone = trim( $_POST['tix_attendee_info'][ $current_count ]['phone'] );
+		if ( ! empty( $attendee_info['phone'] ) ) {
+			$phone = sanitize_text_field( $attendee_info['phone'] );
+
+			if ( '' !== $phone ) {
+				$attendee->phone = $phone;
+			}
 		}
 
 		return $attendee;
@@ -180,9 +184,9 @@ class Phone_Field {
 	 * @return array
 	 */
 	public function export_attendee_data_column( $extra_columns ) {
-		return array(
-			'phone' => __( 'Phone Number', 'bd-payments-camptix' ),
-		);
+		$extra_columns['phone'] = __( 'Phone Number', 'bd-payments-camptix' );
+
+		return $extra_columns;
 	}
 
 	/**

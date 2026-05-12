@@ -59,8 +59,13 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 * @param [type] $current_count
 	 */
 	public function add_attendee_info( $attendee, $attendee_info, $current_count ) {
-		if ( ! empty( $_POST['tix_attendee_info'][ $current_count ]['phone'] ) ) {
-			$attendee->phone = trim( $_POST['tix_attendee_info'][ $current_count ]['phone'] );
+		if ( ! empty( $attendee_info['phone'] ) ) {
+			$phone = preg_replace( '/[^0-9+\-\(\)\s]/', '', (string) $attendee_info['phone'] );
+			$phone = trim( preg_replace( '/\s+/', ' ', $phone ) );
+
+			if ( '' !== $phone ) {
+				$attendee->phone = $phone;
+			}
 		}
 
 		return $attendee;

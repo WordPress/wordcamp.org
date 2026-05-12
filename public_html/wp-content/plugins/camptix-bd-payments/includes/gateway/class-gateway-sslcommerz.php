@@ -48,7 +48,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 * @return boolean
 	 */
 	public function gateway_enabled() {
-		return isset( $this->camptix_options['payment_methods'][ $this->id ] );
+		return ! empty( $this->camptix_options['payment_methods'][ $this->id ] );
 	}
 
 	/**
@@ -189,7 +189,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 			exit;
 		}
 
-		return __( 'Something went wrong with creating the payment session.', 'bd-payments-camptix' );
+		return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 	}
 
 	/**

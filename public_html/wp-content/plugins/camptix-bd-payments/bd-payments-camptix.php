@@ -24,7 +24,6 @@ class CampTix_BD_Gateways {
 	public function __construct() {
 		add_action( 'plugins_loaded', [ $this, 'init_plugin' ] );
 		add_action( 'camptix_load_addons', [ $this, 'load_addons' ] );
-		add_filter( 'camptix_currencies', [ $this, 'add_currency' ] );
 	}
 
 	/**
@@ -61,22 +60,6 @@ class CampTix_BD_Gateways {
 		camptix_register_addon( '\CamptixBD\Phone_Field' );
 	}
 
-	/**
-	 * Add BDT currency
-	 *
-	 * @param array $currencies
-	 *
-	 * @return array
-	 */
-	public function add_currency( $currencies ) {
-		$currencies['BDT'] = [
-			'label'         => __( 'Taka', 'bd-payments-camptix' ),
-			'format'        => 'BDT %s',
-			'decimal_point' => 2,
-		];
-
-		return $currencies;
-	}
 }
 
 new CampTix_BD_Gateways();

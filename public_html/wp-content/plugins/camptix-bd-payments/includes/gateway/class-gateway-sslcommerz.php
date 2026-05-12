@@ -350,6 +350,17 @@ class SSLCommerz extends CampTix_Payment_Method {
 
 		if ( $this->ipn_hash_varify( $this->options['store_password'], $transaction_data ) ) {
 
+			// Bind the signed POST body to the URL-supplied payment_token. The IPN signature
+			// only covers fields named in verify_key, which does not include tix_payment_token,
+			// so without this check an attacker could replay a single signed payload against
+			// any other order of equal price by changing only the URL's tix_payment_token.
+			$signed_tran_id = $transaction_data['tran_id'] ?? '';
+			if ( ! hash_equals( (string) $payment_token, (string) $signed_tran_id ) ) {
+				$payment_data['transaction_details']['TRAN_ID_MISMATCH'] = 'Signed tran_id does not match the URL payment_token';
+
+				return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
+			}
+
 			if ( $this->verify_transaction( $val_id, $payment_token ) ) {
 				return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $payment_data );
 			} else {
@@ -434,6 +445,13 @@ class SSLCommerz extends CampTix_Payment_Method {
 			return false;
 		}
 
+		// The validator API call only knows about val_id; nothing ties it to $payment_token
+		// unless we cross-check the returned tran_id ourselves. Without this, a valid val_id
+		// from one transaction could be presented for a different equal-priced order.
+		if ( ! hash_equals( (string) $payment_token, (string) ( $response->tran_id ?? '' ) ) ) {
+			return false;
+		}
+
 		$order = $this->get_order( $payment_token );
 
 		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ] ) && $order['total'] == $response->amount ) {
@@ -480,6 +498,13 @@ class SSLCommerz extends CampTix_Payment_Method {
 
 		// If the transaction wasn't successful, bail out.
 		if ( ! in_array( $response->status, [ 'VALID', 'VALIDATED' ] ) ) {
+			return;
+		}
+
+		// Bind the validator response to this attendee's payment_token. The session_key was
+		// stored against this attendee, so the response should be for the same transaction —
+		// but cross-checking tran_id makes that an assertion rather than an assumption.
+		if ( ! hash_equals( (string) $payment_token, (string) ( $response->tran_id ?? '' ) ) ) {
 			return;
 		}
 

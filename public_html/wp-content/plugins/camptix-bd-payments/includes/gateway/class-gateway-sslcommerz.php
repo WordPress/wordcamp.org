@@ -144,7 +144,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 		$name  = $attendee->tix_first_name . ' ' . $attendee->tix_last_name;
 		$phone = $attendee->tix_phone;
 
-		// Build the payment description wth the event name and
+		// Build the payment description with the event name and
 		// ticket names with quantity.
 		$description = $camptix->email_template_shortcode_event_name([]);
 

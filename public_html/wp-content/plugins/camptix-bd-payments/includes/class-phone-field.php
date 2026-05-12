@@ -140,7 +140,7 @@ class Phone_Field {
 	 * @since 1.0
 	 * @param object $attendee Attendee post object.
 	 *
-	 * @return object
+	 * @return void
 	 */
 	public function edit_attendee_info_form_error( $attendee ) {
 		/* @var  CampTix_Plugin $camptix */
@@ -154,7 +154,6 @@ class Phone_Field {
 			}
 		}
 
-		return $attendee;
 	}
 
 
@@ -164,7 +163,7 @@ class Phone_Field {
 	 * @param array  $new_ticket_info Updated ticket info.
 	 * @param object $attendee        Attendee post object.
 	 *
-	 * @return array
+	 * @return void
 	 */
 	public function save_edited_attendee_info( $new_ticket_info, $attendee ) {
 		// Phone.
@@ -172,7 +171,6 @@ class Phone_Field {
 			update_post_meta( $attendee->ID, 'tix_phone', sanitize_text_field( $new_ticket_info['phone'] ) );
 		}
 
-		return $new_ticket_info;
 	}
 
 

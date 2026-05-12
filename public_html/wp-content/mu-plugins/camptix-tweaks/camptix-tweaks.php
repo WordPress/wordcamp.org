@@ -18,7 +18,7 @@ add_action( 'camptix_checkout_start',                        __NAMESPACE__ . '\c
 add_action( 'camptix_form_start_errors',                     __NAMESPACE__ . '\add_form_start_error_messages'       );
 add_filter( 'camptix_form_attendee_info_errors',             __NAMESPACE__ . '\show_throttle_notice'                );
 add_action( 'transition_post_status',                        __NAMESPACE__ . '\ticket_sales_opened',          10, 3 );
-add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 3 );
+add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 4 );
 add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\clear_page_cache_on_payment',  10, 2 );
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
 add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
@@ -331,8 +331,16 @@ function ticket_sales_opened( $new_status, $old_status, $tickets_page ) {
  * @param string $payment_token
  * @param int    $result
  * @param array  $data
+ * @param bool   $status_changed Whether this call transitioned the attendee status.
+ *                               camptix_payment_result fires on every payment_result()
+ *                               invocation; ignore non-transitions so the centralized
+ *                               Stripe webhook + interactive return don't double-count.
  */
-function track_payment_results( $payment_token, $result, $data ) {
+function track_payment_results( $payment_token, $result, $data, $status_changed = true ) {
+	if ( ! $status_changed ) {
+		return;
+	}
+
 	if ( is_sandboxed() ) {
 		return;
 	}

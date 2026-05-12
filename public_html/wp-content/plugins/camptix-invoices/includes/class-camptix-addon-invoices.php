@@ -222,35 +222,30 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			return;
 		}
 
-		// Bail if we've already created an invoice for this transaction.
-		// payment_result() can fire camptix_payment_result more than once for the
-		// same payment_token (centralized Stripe webhook + interactive return).
-		$txn_id = get_post_meta( $attendees[0]->ID, 'tix_transaction_id', true );
-		if ( $txn_id ) {
-			$existing = get_posts(
-				array(
-					'post_type'      => 'tix_invoice',
-					'post_status'    => 'any',
-					'posts_per_page' => 1,
-					'fields'         => 'ids',
-					'meta_query'     => array( // @codingStandardsIgnoreLine
-						array(
-							'key'   => 'transaction_id',
-							'value' => $txn_id,
-						),
-					),
-				)
-			);
-			if ( $existing ) {
-				return;
-			}
+		// Race-safe idempotency guard: payment_result() can fire camptix_payment_result
+		// more than once for the same payment_token (centralized Stripe webhook + interactive
+		// return run within ~1-2 seconds of each other). add_post_meta() with $unique=true
+		// is rejected by WordPress if the key already exists for this post, so only the first
+		// caller successfully claims invoice creation; concurrent callers bail. Keyed on the
+		// attendee rather than on tix_transaction_id so that no-transaction purchases
+		// (100% coupon, Stripe payment_status=no_payment_required) are also covered.
+		if ( get_post_meta( $attendees[0]->ID, '_invoice_id', true ) ) {
+			return;
+		}
+		if ( ! add_post_meta( $attendees[0]->ID, '_invoice_id', 0, true ) ) {
+			return;
 		}
 
 		$order      = get_post_meta( $attendees[0]->ID, 'tix_order', true );
 		$invoice_id = self::create_invoice( $attendees[0], $order, $metas );
-		if ( ! is_wp_error( $invoice_id ) && ! empty( $invoice_id ) ) {
-			self::send_invoice( $invoice_id );
+		if ( is_wp_error( $invoice_id ) || empty( $invoice_id ) ) {
+			// Release the lock so a later call can retry.
+			delete_post_meta( $attendees[0]->ID, '_invoice_id' );
+			return;
 		}
+
+		update_post_meta( $attendees[0]->ID, '_invoice_id', $invoice_id );
+		self::send_invoice( $invoice_id );
 	}
 
 	/**

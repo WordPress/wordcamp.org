@@ -4190,7 +4190,11 @@ class CampTix_Plugin {
 			$this->tickets[$ticket->ID] = $ticket;
 		}
 
-		// Filter tickets to only those specified by the block.
+		// Filter tickets to only those specified by the block. If every value
+		// sanitizes to 0/invalid (e.g. the referenced tickets have all been
+		// deleted), this intentionally narrows to zero tickets rather than
+		// silently falling back to "show all" — the editor explicitly opted
+		// into a selection.
 		if ( ! empty( $this->block_attributes['ticketIds'] ) ) {
 			$ticket_ids = array_unique(
 				array_filter(
@@ -4201,12 +4205,10 @@ class CampTix_Plugin {
 				)
 			);
 
-			if ( ! empty( $ticket_ids ) ) {
-				$this->tickets = array_intersect_key(
-					$this->tickets,
-					array_flip( $ticket_ids )
-				);
-			}
+			$this->tickets = array_intersect_key(
+				$this->tickets,
+				array_flip( $ticket_ids )
+			);
 		}
 
 		// Apply block attribute for remaining tickets visibility.

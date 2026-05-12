@@ -316,6 +316,31 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that an explicit selection containing only invalid IDs narrows to zero
+	 * tickets rather than silently falling back to showing all of them.
+	 */
+	public function test_ticket_filtering_with_only_invalid_ids_shows_none() {
+		$ticket_a = $this->create_ticket( 'Ticket A', 10.00 );
+		$ticket_b = $this->create_ticket( 'Ticket B', 20.00 );
+
+		$attributes = array(
+			'ticketIds' => array( 0, 'not-a-ticket', array( 'bad' ) ),
+		);
+
+		$page_id = wp_insert_post( array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Tickets',
+			'post_content' => '<!-- wp:wordcamp/camptix ' . wp_json_encode( $attributes ) . ' /-->',
+		) );
+		$this->post_ids[] = $page_id;
+
+		$this->run_template_redirect_for_page( $page_id );
+
+		$this->assertSame( array(), self::get_protected_property( 'tickets' ) );
+	}
+
+	/**
 	 * Test that custom noTicketsMessage is used when set.
 	 */
 	public function test_custom_no_tickets_message() {

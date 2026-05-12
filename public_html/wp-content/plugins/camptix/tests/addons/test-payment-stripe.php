@@ -1,6 +1,10 @@
 <?php
 defined( 'WPINC' ) || die();
 
+if ( ! defined( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET' ) ) {
+	define( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET', 'whsec_test_secret' );
+}
+
 /**
  * @covers CampTix_Payment_Method_Stripe
  */
@@ -45,5 +49,32 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 		} catch ( Exception $e ) {
 			$this->assertEquals( 'Unknown currency multiplier for DUMMY.', $e->getMessage() );
 		}
+	}
+
+	/**
+	 * @covers CampTix_Payment_Method_Stripe::rest_stripe_webhook_permissions_check
+	 */
+	public function test_rest_stripe_webhook_permissions_check() {
+		$client    = new CampTix_Payment_Method_Stripe();
+		$payload   = wp_json_encode( array( 'id' => 'evt_test' ) );
+		$timestamp = time();
+		$signature = hash_hmac(
+			'sha256',
+			$timestamp . '.' . $payload,
+			WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET
+		);
+		$request   = new WP_REST_Request( 'POST', '/camptix/v1/stripe-webhook' );
+
+		$request->set_body( $payload );
+		$request->set_header( 'stripe-signature', 't=' . $timestamp . ',v1=' . $signature );
+
+		$this->assertTrue( $client->rest_stripe_webhook_permissions_check( $request ) );
+
+		$request->set_header( 'stripe-signature', 't=' . $timestamp . ',v1=invalid' );
+
+		$result = $client->rest_stripe_webhook_permissions_check( $request );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'camptix_stripe_webhook_invalid_signature', $result->get_error_code() );
 	}
 }

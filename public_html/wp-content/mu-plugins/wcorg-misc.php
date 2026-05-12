@@ -69,6 +69,18 @@ add_filter( 'pre_option_blog_public', 'wcorg_enforce_public_blog_option' );
 add_filter( 'pre_update_option_blog_public', 'wcorg_enforce_public_blog_option' );
 
 /**
+ * Disable attachment pages on all sites.
+ *
+ * WordPress 6.4+ disables attachment pages on new installs, but legacy sites still have them enabled.
+ * This forces them off for all sites, which causes WordPress core to 301 redirect attachment page
+ * requests to the attachment file URL.
+ *
+ * See https://github.com/WordPress/wordcamp.org/issues/1333
+ * See https://make.wordpress.org/core/2023/10/16/changes-to-attachment-pages/
+ */
+add_filter( 'pre_option_wp_attachment_pages_enabled', '__return_zero' );
+
+/**
  * We want to let organizers use shortcodes inside Text widgets.
  */
 add_filter( 'widget_text', 'do_shortcode' );

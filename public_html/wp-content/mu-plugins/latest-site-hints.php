@@ -33,6 +33,10 @@ function maybe_add_latest_site_hints() {
 	// Add a banner with a link to the latest WordCamp.
 	add_action( 'wp_head', __NAMESPACE__ . '\add_notification_styles' );
 	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_about_latest_site' );
+
+	// Close comments on past sites to prevent spam.
+	add_filter( 'comments_open', '__return_false' );
+	add_filter( 'pings_open', '__return_false' );
 }
 
 /**

@@ -85,6 +85,10 @@ function add_site_navigation_menus( $menus ) {
 				'label' => __( 'Organize an event', 'wordcamporg' ),
 				'url' => '/organize-an-event/',
 			),
+			array(
+				'label' => __( 'Sponsor Events', 'wordcamporg' ),
+				'url' => '/sponsor/',
+			),
 		),
 	);
 }

@@ -35,6 +35,7 @@ RUN docker-php-ext-install -j "$(nproc)" \
 # Add PHP configurations.
 COPY config/opcache-recommended.ini /usr/local/etc/php/conf.d/opcache-recommended.ini
 COPY config/error-logging.ini /usr/local/etc/php/conf.d/error-logging.ini
+COPY config/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
 # Install SSL certificate.
 COPY wordcamp.test.pem     /etc/ssl/certs/wordcamp.test.pem

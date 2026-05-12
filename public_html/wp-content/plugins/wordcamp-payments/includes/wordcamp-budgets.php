@@ -205,10 +205,10 @@ class WordCamp_Budgets {
 
 	/**
 	 * Enqueue scripts and stylesheets common to all modules
+	 *
+	 * @todo setup grunt to concat/minify js
 	 */
 	public function enqueue_common_assets() {
-		// todo setup grunt to concat/minify js
-
 		wp_enqueue_script(
 			'wordcamp-budgets',
 			plugins_url( 'javascript/wordcamp-budgets.js', __DIR__ ),
@@ -221,7 +221,7 @@ class WordCamp_Budgets {
 			'wcb-attached-files',
 			plugins_url( 'javascript/attached-files.js', __DIR__ ),
 			array( 'wordcamp-budgets', 'backbone', 'wp-util' ),
-			1,
+			filemtime( WORDCAMP_PAYMENTS_PATH . '/javascript/attached-files.js' ),
 			true
 		);
 
@@ -231,6 +231,7 @@ class WordCamp_Budgets {
 			array(
 				'uploadModalTitle'  => esc_html__( 'Attach Supporting Documentation', 'wordcamporg' ),
 				'uploadModalButton' => esc_html__( 'Attach Files', 'wordcamporg' ),
+				'fileAlreadyAttached' => esc_html__( 'That file is already attached to another request. Please upload a fresh copy of the file to this request instead.', 'wordcamporg' ),
 			)
 		);
 
@@ -247,7 +248,7 @@ class WordCamp_Budgets {
 			'wordcamp-budgets',
 			plugins_url( 'css/wordcamp-budgets.css', __DIR__ ),
 			$soft_deps,
-			7
+			filemtime( WORDCAMP_PAYMENTS_PATH . '/css/wordcamp-budgets.css' ),
 		);
 	}
 

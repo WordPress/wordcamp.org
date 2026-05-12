@@ -44,6 +44,8 @@ const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
 const CAMPUS_NETWORK_ID     = 3;
 const CAMPUS_ROOT_BLOG_ID   = 47;
+const GROUPS_NETWORK_ID     = 4;
+const GROUPS_ROOT_BLOG_ID   = 52;
 
 switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 	case 'campus.wordpress.test':
@@ -56,12 +58,28 @@ switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 		break;
 
 	case 'events.wordpress.test':
-		define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
-		define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
-		define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
-		define( 'SUBDOMAIN_INSTALL',     false );
-		// NOBLOGREDIRECT is intentionally omitted so that the 404 template works.
-		define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		// `/group/*` URLs live on a dedicated network (`GROUPS_NETWORK_ID`)
+		// so the groups network can have its own active plugins (e.g.
+		// GatherPress) without affecting the main events network. The host
+		// header is the same for both networks, so we branch on the request
+		// path here — at the very top of the request — to set the right
+		// network constants before WordPress (and sunrise) start resolving
+		// the current site.
+		if ( str_starts_with( $_SERVER['REQUEST_URI'] ?? '', '/group/' ) ) {
+			define( 'SITE_ID_CURRENT_SITE',  GROUPS_NETWORK_ID );
+			define( 'BLOG_ID_CURRENT_SITE',  GROUPS_ROOT_BLOG_ID );
+			define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
+			define( 'PATH_CURRENT_SITE',     '/group/' );
+			define( 'SUBDOMAIN_INSTALL',     false );
+			define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		} else {
+			define( 'SITE_ID_CURRENT_SITE',  EVENTS_NETWORK_ID );
+			define( 'BLOG_ID_CURRENT_SITE',  EVENTS_ROOT_BLOG_ID );
+			define( 'DOMAIN_CURRENT_SITE',   'events.wordpress.test' );
+			define( 'SUBDOMAIN_INSTALL',     false );
+			// NOBLOGREDIRECT is intentionally omitted so that the 404 template works.
+			define( 'CLI_HOSTNAME_OVERRIDE', 'events.wordpress.test' );
+		}
 		break;
 
 	case 'wordcamp.test':
@@ -78,7 +96,7 @@ switch ( strtolower( $_SERVER['HTTP_HOST'] ) ) {
 
 define( 'MULTISITE',         true );
 define( 'SUNRISE',           true );
-define( 'PATH_CURRENT_SITE', '/' );
+defined( 'PATH_CURRENT_SITE' ) || define( 'PATH_CURRENT_SITE', '/' );
 
 
 /*

@@ -611,5 +611,4 @@ class SSLCommerz extends CampTix_Payment_Method {
 
 		return $data;
 	}
-
 }

@@ -153,7 +153,6 @@ class Phone_Field {
 				$_POST['tix_ticket_info']['phone'] = get_post_meta( $attendee->ID, 'tix_phone', true );
 			}
 		}
-
 	}
 
 
@@ -170,7 +169,6 @@ class Phone_Field {
 		if ( array_key_exists( 'phone', $new_ticket_info ) ) {
 			update_post_meta( $attendee->ID, 'tix_phone', sanitize_text_field( $new_ticket_info['phone'] ) );
 		}
-
 	}
 
 

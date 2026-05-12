@@ -124,5 +124,4 @@ abstract class Event_Loader {
 
 		return $schedules;
 	}
-
 }

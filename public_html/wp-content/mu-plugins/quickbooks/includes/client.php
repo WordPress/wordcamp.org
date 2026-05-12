@@ -329,8 +329,8 @@ class Client {
 	 * @return void
 	 */
 	public function maybe_exchange_code_for_token() {
-		$authorization_code = filter_input( INPUT_GET, 'code' );
-		$realm_id           = filter_input( INPUT_GET, 'realmId' );
+		$authorization_code = wp_unslash( $_GET['code'] ?? '' );
+		$realm_id           = wp_unslash( $_GET['realmId'] ?? '' );
 
 		if ( ! $this->has_valid_token() && $authorization_code && $realm_id ) {
 			try {

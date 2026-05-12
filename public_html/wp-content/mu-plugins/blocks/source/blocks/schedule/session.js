@@ -304,7 +304,7 @@ function renderFavoriteButton( title ) {
 			<a href="#" role="button" className="fav-session-button" aria-pressed="false">
 				<span className="screen-reader-text">
 					{ sprintf(
-						// translators: Title of the session that will be favorites when clicking the button.
+						// translators: %s: Title of the session that will be favorited when clicking the button.
 						__( 'Favorite session: %s', 'wordcamporg' ),
 						decodeEntities( stripTags( title ) )
 					) }

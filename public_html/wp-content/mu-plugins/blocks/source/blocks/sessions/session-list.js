@@ -80,6 +80,7 @@ function SessionCategory( { session } ) {
 
 	if ( session.session_category.length ) {
 		/* translators: used between list items, there is a space after the comma */
+		// eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
 		const separator = __( ', ', 'wordcamporg' );
 		const categories = terms
 			.filter( ( term ) => {

@@ -22,7 +22,7 @@ use WP_Error, WP_Post;
 class Events_Application extends WordCamp_Application {
 	public $post;
 
-	const SHORTCODE_SLUG = 'events-organizer-application';
+	public const SHORTCODE_SLUG = 'events-organizer-application';
 
 	/**
 	 * Return publicly displayed name of the event

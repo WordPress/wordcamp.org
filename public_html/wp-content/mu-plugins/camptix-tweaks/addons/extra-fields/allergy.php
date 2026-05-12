@@ -14,7 +14,7 @@ defined( 'WPINC' ) || die();
  * @package WordCamp\CampTix_Tweaks
  */
 class Allergy_Field extends Extra_Fields {
-	const SLUG = 'allergy';
+	public const SLUG = 'allergy';
 
 	public $question_order = 30;
 

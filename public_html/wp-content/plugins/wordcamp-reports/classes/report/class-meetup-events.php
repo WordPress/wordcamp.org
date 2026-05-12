@@ -472,12 +472,12 @@ class Meetup_Events extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date   = filter_input( INPUT_POST, 'start-date' );
-		$end_date     = filter_input( INPUT_POST, 'end-date' );
-		$search_query = sanitize_text_field( filter_input( INPUT_POST, 'search-query' ) );
+		$start_date   = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date     = wp_unslash( $_POST['end-date'] ?? '' );
+		$search_query = wp_unslash( $_POST['search-query'] ?? '' );
 		$refresh      = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action       = filter_input( INPUT_POST, 'action' );
-		$nonce        = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action       = wp_unslash( $_POST['action'] ?? '' );
+		$nonce        = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 
@@ -517,12 +517,12 @@ class Meetup_Events extends Base {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$start_date   = filter_input( INPUT_POST, 'start-date' );
-		$end_date     = filter_input( INPUT_POST, 'end-date' );
-		$search_query = sanitize_text_field( filter_input( INPUT_POST, 'search-query' ) );
+		$start_date   = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date     = wp_unslash( $_POST['end-date'] ?? '' );
+		$search_query = wp_unslash( $_POST['search-query'] ?? '' );
 		$refresh      = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action       = filter_input( INPUT_POST, 'action' );
-		$nonce        = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action       = wp_unslash( $_POST['action'] ?? '' );
+		$nonce        = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 
@@ -601,8 +601,8 @@ class Meetup_Events extends Base {
 	public static function render_public_page() {
 		// Apparently 'year' is a reserved URL parameter on the front end, so we prepend 'report-'.
 		$year   = filter_input( INPUT_GET, 'report-year', FILTER_VALIDATE_INT );
-		$period = filter_input( INPUT_GET, 'period' );
-		$action = filter_input( INPUT_GET, 'action' );
+		$period = wp_unslash( $_GET['period'] ?? '' );
+		$action = wp_unslash( $_GET['action'] ?? '' );
 
 		$years    = year_array( absint( date( 'Y' ) ), 2015 );
 		$quarters = quarter_array();

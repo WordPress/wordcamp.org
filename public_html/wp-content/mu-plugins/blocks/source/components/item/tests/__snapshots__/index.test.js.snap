@@ -3,7 +3,7 @@
 exports[`ItemTitle should render a heading tag of level 1. 1`] = `
 <h1
   className="wordcamp-block__item-title"
-  style={Object {}}
+  style={{}}
 >
   Example Title
 </h1>
@@ -12,7 +12,7 @@ exports[`ItemTitle should render a heading tag of level 1. 1`] = `
 exports[`ItemTitle should render a heading tag with a custom class. 1`] = `
 <h3
   className="wordcamp-block__item-title my-test-heading"
-  style={Object {}}
+  style={{}}
 >
   Example Title
 </h3>
@@ -22,7 +22,7 @@ exports[`ItemTitle should render a heading tag with a link, custom class name, h
 <h1
   className="wordcamp-block__item-title my-test-heading"
   style={
-    Object {
+    {
       "textAlign": "right",
     }
   }
@@ -40,7 +40,7 @@ exports[`ItemTitle should render a heading tag with a link, custom class name, h
 exports[`ItemTitle should render a heading tag with a link. 1`] = `
 <h3
   className="wordcamp-block__item-title"
-  style={Object {}}
+  style={{}}
 >
   <a
     href="https://wordpress.org"
@@ -56,7 +56,7 @@ exports[`ItemTitle should render a heading tag with a set alignment. 1`] = `
 <h3
   className="wordcamp-block__item-title"
   style={
-    Object {
+    {
       "textAlign": "right",
     }
   }
@@ -68,7 +68,7 @@ exports[`ItemTitle should render a heading tag with a set alignment. 1`] = `
 exports[`ItemTitle should render a heading tag with the default level. 1`] = `
 <h3
   className="wordcamp-block__item-title"
-  style={Object {}}
+  style={{}}
 >
   Example Title
 </h3>

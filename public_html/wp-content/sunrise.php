@@ -83,11 +83,28 @@ const PATTERN_CITY_PATH = '
 	@ix
 ';
 
+/*
+ * Matches a URL path like `/group/sunshine-coast-qld/`.
+ *
+ * These are used by the `events.wordpress.org` network.
+ */
+const PATTERN_GROUP_PATH = '
+	@ ^
+	/ group /
+	( [\w-]+ )    # Capture the group slug.
+	/?
+	@ix
+';
+
 /**
  * Load the sunrise file for the current network.
  */
 function load_network_sunrise() {
 	switch ( SITE_ID_CURRENT_SITE ) {
+		case GROUPS_NETWORK_ID:
+			require __DIR__ . '/sunrise-groups.php';
+			break;
+
 		case CAMPUS_NETWORK_ID:
 			// Intentional Fall through. Load Events plugins for now.
 		case EVENTS_NETWORK_ID:
@@ -111,12 +128,23 @@ function get_top_level_domain() {
 }
 
 /**
- * Get the Network ID for a given domain.
+ * Get the Network ID for a given domain (and optionally a request path).
+ *
+ * The events and groups networks share a hostname (`events.wordpress.org`),
+ * so for that host the request path is also needed to disambiguate. Anything
+ * under `/group/` routes to the groups network; everything else routes to the
+ * events network. For the other hosts the path argument is ignored.
+ *
+ * The path is optional so existing callers that only have a hostname (e.g.
+ * `wcpt-wordcamp/wordcamp-new-site.php` creating a new WordCamp site) keep
+ * working without changes.
  *
  * @param string $domain The domain to check.
+ * @param string $path   Optional. The request path, used to disambiguate the
+ *                       events/groups networks on shared `events.wordpress.org`.
  * @return int The Network ID.
  */
-function get_domain_network_id( string $domain ): int {
+function get_domain_network_id( string $domain, string $path = '' ): int {
 	$tld = get_top_level_domain();
 
 	switch ( $domain ) {
@@ -124,11 +152,51 @@ function get_domain_network_id( string $domain ): int {
 			return CAMPUS_NETWORK_ID;
 
 		case "events.wordpress.{$tld}":
+			if ( '' !== $path && 1 === preg_match( PATTERN_GROUP_PATH, $path ) ) {
+				return GROUPS_NETWORK_ID;
+			}
 			return EVENTS_NETWORK_ID;
 
 		default:
 			return WORDCAMP_NETWORK_ID;
 	}
+}
+
+/**
+ * Look up the current URL for a site that was previously at the given domain/path.
+ *
+ * When a site's domain or path is changed, the old URL is stored in `blogmeta`
+ * by the `site-url-history` mu-plugin. This queries that data so the caller can
+ * redirect old URLs to the current location.
+ *
+ * @param string $domain The requested domain.
+ * @param string $path   The requested path.
+ *
+ * @return string|false The new URL to redirect to, or false if no match.
+ */
+function get_renamed_site_url( string $domain, string $path ) {
+	global $wpdb;
+
+	$old_home_url = 'https://' . $domain . trailingslashit( $path );
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
+	$site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT b.domain, b.path
+		FROM {$wpdb->blogmeta} bm
+		JOIN {$wpdb->blogs} b ON b.blog_id = bm.blog_id
+		WHERE bm.meta_key = 'old_home_url'
+			AND bm.meta_value = %s
+			AND b.public = 1
+			AND b.deleted = 0
+		LIMIT 1",
+		$old_home_url
+	) );
+
+	if ( ! $site ) {
+		return false;
+	}
+
+	return 'https://' . $site->domain . $site->path;
 }
 
 load_network_sunrise();

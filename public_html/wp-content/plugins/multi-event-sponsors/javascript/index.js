@@ -48,7 +48,7 @@ function PushToActiveCamps( { adminUrl } ) {
 		>
 			<p>
 				{ sprintf(
-					// translators: Title of the post
+					// translators: %s: Title of the post.
 					__( 'This will copy the title/content/etc of this post to all of its corresponding %s posts on active WordCamp sites (except regional camps).', 'wordcamporg' ),
 					decodeEntities( stripTags( sourcePost.title ) )
 				) }
@@ -140,6 +140,7 @@ function Result( { result } ) {
 				<p>
 					{ success
 						? _x( 'Success!', 'admin notice', 'wordcamporg' )
+						// eslint-disable-next-line @wordpress/i18n-no-flanking-whitespace
 						: _x( 'Error: ', 'admin notice', 'wordcamporg' ) + error
 					}
 				</p>

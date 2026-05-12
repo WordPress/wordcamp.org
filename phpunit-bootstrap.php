@@ -11,6 +11,8 @@ const EVENTS_NETWORK_ID     = 2;
 const EVENTS_ROOT_BLOG_ID   = 47;
 const CAMPUS_NETWORK_ID     = 3;
 const CAMPUS_ROOT_BLOG_ID   = 47;
+const GROUPS_NETWORK_ID     = 4;
+const GROUPS_ROOT_BLOG_ID   = 52;
 const SITE_ID_CURRENT_SITE  = WORDCAMP_NETWORK_ID;
 const BLOG_ID_CURRENT_SITE  = WORDCAMP_ROOT_BLOG_ID;
 
@@ -52,6 +54,7 @@ require_once( WP_PLUGIN_DIR . '/wordcamp-remote-css/tests/bootstrap.php' );
 require_once WP_PLUGIN_DIR . '/wordcamp-speaker-feedback/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-payments-network/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/tests/bootstrap.php';
+require_once WP_PLUGIN_DIR . '/wordcamp-coming-soon-page/tests/bootstrap.php';
 
 /*
  * This has to be the last plugin bootstrapper, because it includes the Core test bootstrapper, which would

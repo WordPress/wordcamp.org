@@ -206,21 +206,28 @@ class WCCSP_Customizer {
 	 * @return boolean           Status of the field validity.
 	 */
 	public function maybe_prevent_disable( $validity, $value ) {
-		// Short circuit when the value is on.
-		if ( 'on' === $value ) {
-			return $validity;
-		}
+		$status = $this->get_status();
 
 		// Short circuit when deputy is changing the value.
 		if ( current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 			return $validity;
 		}
 
-		// If WordCamp is not added to schedule, field is not valid.
-		if ( 'wcpt-scheduled' !== $this->get_status() ) {
-			return new WP_Error( 'wcpt-not-in-schedule', __( 'The Coming Soon page can not be turned off because WordCamp is not yet published in the schedule.' ) );
+		// Prevent enabling Coming Soon on closed events.
+		if ( 'on' === $value && 'wcpt-closed' === $status ) {
+			return new WP_Error( 'wcpt-closed', __( 'The Coming Soon page can not be enabled because this event is closed.', 'wordcamporg' ) );
 		}
 
-		return $validity;
+		// Allow toggling for scheduled or closed events.
+		if ( 'on' === $value ) {
+			return $validity;
+		}
+
+		// Allow disabling for scheduled or closed events.
+		if ( in_array( $status, array( 'wcpt-scheduled', 'wcpt-closed' ), true ) ) {
+			return $validity;
+		}
+
+		return new WP_Error( 'wcpt-not-in-schedule', __( 'The Coming Soon page can not be turned off because WordCamp is not yet published in the schedule.', 'wordcamporg' ) );
 	}
 }

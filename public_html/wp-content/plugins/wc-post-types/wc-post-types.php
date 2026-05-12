@@ -28,7 +28,7 @@ use function WordCamp\Blocks\has_block_with_attrs;
 class WordCamp_Post_Types_Plugin {
 	protected $wcpt_permalinks;
 
-	const SESSION_DEFAULT_DURATION = 50 * MINUTE_IN_SECONDS;
+	public const SESSION_DEFAULT_DURATION = 50 * MINUTE_IN_SECONDS;
 
 	/**
 	 * Fired when plugin file is loaded.
@@ -83,6 +83,7 @@ class WordCamp_Post_Types_Plugin {
 		add_filter( 'dashboard_glance_items', array( $this, 'glance_items' ) );
 		add_filter( 'option_default_comment_status', array( $this, 'default_comment_ping_status' ) );
 		add_filter( 'option_default_ping_status', array( $this, 'default_comment_ping_status' ) );
+		add_filter( 'get_terms', array( $this, 'order_sponsor_levels' ), 10, 4 );
 
 		// Needs to run before WordCamp\Blocks\register_assets.
 		add_action( 'init', array( $this, 'rest_init' ), 8 );
@@ -222,6 +223,50 @@ class WordCamp_Post_Types_Plugin {
 		}
 
 		return array_merge( $ordered_terms, array_values( $terms ) );
+	}
+
+	/**
+	 * Reorder wcb_sponsor_level terms based on the saved custom order.
+	 *
+	 * @param array         $terms      Array of found terms.
+	 * @param array|null    $taxonomies Array of taxonomy names.
+	 * @param array         $args       Term query args.
+	 * @param WP_Term_Query $term_query The WP_Term_Query instance.
+	 *
+	 * @return array
+	 */
+	public function order_sponsor_levels( $terms, $taxonomies, $args, $term_query ) {
+		if ( empty( $terms ) || ! is_array( $taxonomies ) || ! in_array( 'wcb_sponsor_level', $taxonomies, true ) ) {
+			return $terms;
+		}
+
+		// Only reorder when fetching solely wcb_sponsor_level terms.
+		if ( count( $taxonomies ) !== 1 ) {
+			return $terms;
+		}
+
+		$option = get_option( 'wcb_sponsor_level_order' );
+
+		if ( empty( $option ) || ! is_array( $option ) ) {
+			return $terms;
+		}
+
+		$order_map = array_flip( $option );
+
+		usort(
+			$terms,
+			function ( $a, $b ) use ( $order_map ) {
+				$a_id = is_object( $a ) ? $a->term_id : $a;
+				$b_id = is_object( $b ) ? $b->term_id : $b;
+
+				$a_pos = $order_map[ $a_id ] ?? PHP_INT_MAX;
+				$b_pos = $order_map[ $b_id ] ?? PHP_INT_MAX;
+
+				return $a_pos - $b_pos;
+			}
+		);
+
+		return $terms;
 	}
 
 	/**
@@ -1239,6 +1284,11 @@ class WordCamp_Post_Types_Plugin {
 		$country         = get_post_meta( $sponsor->ID, '_wcpt_sponsor_country',         true );
 		$first_time      = get_post_meta( $sponsor->ID, '_wcb_sponsor_first_time',       true );
 
+		if ( empty( $currency ) ) {
+			$camptix_options = get_option( 'camptix_options', array() );
+			$currency        = $camptix_options['currency'] ?? '';
+		}
+
 		if ( $state === $this->get_sponsor_info_state_default_value() ) {
 			$state = '';
 		}
@@ -1362,7 +1412,7 @@ class WordCamp_Post_Types_Plugin {
 			return;
 		}
 
-		if ( wp_verify_nonce( filter_input( INPUT_POST, 'wcpt-meta-sponsor-info' ), 'edit-sponsor-info' ) ) {
+		if ( wp_verify_nonce( wp_unslash( $_POST['wcpt-meta-sponsor-info'] ?? '' ), 'edit-sponsor-info' ) ) {
 			$text_values_wcpt = array(
 				'company_name',
 				'first_name',
@@ -1386,22 +1436,22 @@ class WordCamp_Post_Types_Plugin {
 			);
 
 			foreach ( $text_values_wcpt as $id ) {
-				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcpt_sponsor_' . $id ) );
+				$values[ $id ] = sanitize_text_field( wp_unslash( $_POST[ '_wcpt_sponsor_' . $id ] ?? '' ) );
 			}
 
 			foreach ( $text_values_wcb as $id ) {
-				$values[ $id ] = sanitize_text_field( filter_input( INPUT_POST, '_wcb_sponsor_' . $id ) );
+				$values[ $id ] = sanitize_text_field( wp_unslash( $_POST[ '_wcb_sponsor_' . $id ] ?? '' ) );
 			}
 
 			if ( empty( $values['state'] ) ) {
 				$values['state'] = $this->get_sponsor_info_state_default_value();
 			}
 
-			$values['website'] = esc_url_raw( filter_input( INPUT_POST, '_wcpt_sponsor_website' ) );
+			$values['website'] = esc_url_raw( wp_unslash( $_POST['_wcpt_sponsor_website'] ?? '' ) );
 			// TODO: maybe only allows links to home page, depending on outcome of http://make.wordpress.org/community/2013/12/31/irs-rules-for-corporate-sponsorship-of-wordcamp/ .
 			$values['first_name'] = ucfirst( $values['first_name'] );
 			$values['last_name']  = ucfirst( $values['last_name'] );
-			$values['agreement']  = filter_input( INPUT_POST, '_wcpt_sponsor_agreement', FILTER_SANITIZE_NUMBER_INT );
+			$values['agreement']  = absint( $_POST['_wcpt_sponsor_agreement'] ?? 0 );
 
 			foreach ( $values as $id => $value ) {
 				$meta_key = in_array($id, $text_values_wcb, true)
@@ -1479,7 +1529,7 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'speaker',
 					'with_front' => true,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'comments', 'custom-fields', 'thumbnail' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'comments', 'custom-fields', 'thumbnail', 'shortlinks' ),
 				'menu_position'   => 20,
 				'public'          => true,
 				'show_ui'         => true,
@@ -1520,7 +1570,7 @@ class WordCamp_Post_Types_Plugin {
 					'with_front' => false,
 					'ep_mask'    => EP_SESSIONS,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'thumbnail', 'custom-fields' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'author', 'revisions', 'thumbnail', 'custom-fields', 'shortlinks' ),
 				'menu_position'   => 21,
 				'public'          => true,
 				'show_ui'         => true,
@@ -1560,7 +1610,7 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'sponsor',
 					'with_front' => false,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'thumbnail', 'custom-fields' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'thumbnail', 'custom-fields', 'shortlinks' ),
 				'menu_position'   => 21,
 				'public'          => true,
 				'show_ui'         => true,
@@ -1600,7 +1650,7 @@ class WordCamp_Post_Types_Plugin {
 					'slug'       => 'organizer',
 					'with_front' => false,
 				),
-				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail' ),
+				'supports'        => array( 'title', 'editor', 'excerpt', 'revisions', 'custom-fields', 'thumbnail', 'shortlinks' ),
 				'menu_position'   => 22,
 				'public'          => true,
 				'show_ui'         => true,

@@ -75,7 +75,7 @@ class Meetup_Details extends Base_Details {
 	 *     @type array $fields        Not implemented yet.
 	 * }
 	 */
-	public function __construct( Date_Range $date_range = null, $meetup_ids = null, array $options = array() ) {
+	public function __construct( ?Date_Range $date_range = null, $meetup_ids = null, array $options = array() ) {
 		// Report-specific options.
 		$options = wp_parse_args( $options,
 			array(
@@ -236,8 +236,8 @@ class Meetup_Details extends Base_Details {
 	public static function export_to_file() {
 
 		$fields = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
-		$action = filter_input( INPUT_POST, 'action' );
-		$nonce  = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action = wp_unslash( $_POST['action'] ?? '' );
+		$nonce  = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 

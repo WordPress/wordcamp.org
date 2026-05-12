@@ -22,6 +22,10 @@
 		"public_html/wp-content/themes/wporg-events-2023",
 		"public_html/wp-content/themes/wporg-flagship-landing"
 	],
+	"devDependencies": {
+		"@wordpress/eslint-plugin": "24.1.0",
+		"@wordpress/jest-preset-default": "12.39.0"
+	},
 	"browserslist": [
 		"extends @wordpress/browserslist-config"
 	]

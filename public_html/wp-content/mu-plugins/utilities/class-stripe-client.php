@@ -16,8 +16,8 @@ defined( 'WPINC' ) || die();
  * TODO Refactor this to use the API_Client base class.
  */
 class Stripe_Client {
-	const API_URL = 'https://api.stripe.com';
-	const AMOUNT_MAX = 99999999;
+	public const API_URL = 'https://api.stripe.com';
+	public const AMOUNT_MAX = 99999999;
 	protected $secret_key;
 
 	/**

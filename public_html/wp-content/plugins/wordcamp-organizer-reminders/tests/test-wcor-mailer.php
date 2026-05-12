@@ -108,6 +108,9 @@ class Test_WCOR_Mailer extends Database_TestCase {
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Start Date (YYYY-mm-dd)',        strtotime( 'Jan 1st, 2019' )             );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler Name',           'Sally Smith'                            );
 		update_post_meta( self::$wordcamp_dayton_post_id, 'Budget Wrangler E-mail Address', 'sally.smith+trez@gmail.com'             );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor WordPress.org User Name', 'mentorjane'                             );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor Name',                    'Jane Mentor'                            );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor E-mail Address',          'jane.mentor@example.com'                );
 
 		self::$other_event_post_id = $factory->post->create(
 			array(
@@ -330,6 +333,81 @@ class Test_WCOR_Mailer extends Database_TestCase {
 			"<p>So it should not be sent to WordCamp.</p>\n",
 			$result
 		);
+	}
+
+	/**
+	 * Test that mentor-triggered reminders are sent to the mentor.
+	 *
+	 * @covers WCOR_Mailer::send_trigger_mentor_assigned_or_changed
+	 */
+	public function test_mentor_trigger_sends_to_mentor() {
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase
+		global $WCOR_Mailer;
+
+		$mentor_reminder_id = self::factory()->post->create(
+			array(
+				'post_type'    => WCOR_Reminder::AUTOMATED_POST_TYPE_SLUG,
+				'post_title'   => 'You have been assigned as mentor for [wordcamp_name]',
+				'post_content' => 'Hi [mentor_name], you have been assigned as mentor. Your email on file is [mentor_email].',
+			)
+		);
+
+		update_post_meta( $mentor_reminder_id, 'wcor_send_when',      'wcor_send_trigger'                );
+		update_post_meta( $mentor_reminder_id, 'wcor_which_trigger',  'wcor_mentor_assigned_or_changed'  );
+		update_post_meta( $mentor_reminder_id, 'wcor_send_where',     'wcor_send_mentor'                 );
+
+		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
+
+		do_action( 'wcor_mentor_assigned_or_changed', $wordcamp );
+
+		$this->assert_mail_succeeded(
+			'jane.mentor@example.com',
+			'You have been assigned as mentor for WordCamp Dayton',
+			'Hi Jane Mentor, you have been assigned as mentor. Your email on file is <a href="mailto:jane.mentor@example.com">jane.mentor@example.com</a>.'
+		);
+	}
+
+	/**
+	 * Test that repeatable triggers can send emails multiple times.
+	 *
+	 * @covers WCOR_Mailer::send_triggered_emails
+	 */
+	public function test_repeatable_trigger_sends_multiple_times() {
+		$mentor_reminder_id = self::factory()->post->create(
+			array(
+				'post_type'    => WCOR_Reminder::AUTOMATED_POST_TYPE_SLUG,
+				'post_title'   => 'Mentor changed for [wordcamp_name]',
+				'post_content' => 'Hi [mentor_name], you are now the mentor.',
+			)
+		);
+
+		update_post_meta( $mentor_reminder_id, 'wcor_send_when',      'wcor_send_trigger'               );
+		update_post_meta( $mentor_reminder_id, 'wcor_which_trigger',  'wcor_mentor_assigned_or_changed' );
+		update_post_meta( $mentor_reminder_id, 'wcor_send_where',     'wcor_send_mentor'                );
+
+		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
+
+		// First send.
+		do_action( 'wcor_mentor_assigned_or_changed', $wordcamp );
+
+		$mailer = tests_retrieve_phpmailer_instance();
+		$this->assertNotFalse( $mailer->get_sent(), 'First email was not sent.' );
+
+		// Reset mailer and change mentor.
+		reset_phpmailer_instance();
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor Name',          'New Mentor'              );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor E-mail Address', 'new.mentor@example.com' );
+
+		// Second send — should still work despite the email ID being in wcor_sent_email_ids.
+		do_action( 'wcor_mentor_assigned_or_changed', $wordcamp );
+
+		$mailer = tests_retrieve_phpmailer_instance();
+		$this->assertNotFalse( $mailer->get_sent(), 'Second email was not sent — repeatable trigger blocked.' );
+		$this->assertSame( 'new.mentor@example.com', $mailer->get_recipient( 'to' )->address );
+
+		// Restore original mentor data.
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor Name',           'Jane Mentor'             );
+		update_post_meta( self::$wordcamp_dayton_post_id, 'Mentor E-mail Address', 'jane.mentor@example.com' );
 	}
 
 	/**

@@ -202,6 +202,11 @@ function redirect_to_site( string $domain, string $path ): void {
 		}
 	}
 
+	// Check if this URL was previously used by a site that has since been renamed.
+	if ( ! $redirect ) {
+		$redirect = get_renamed_site_url( $domain, $path );
+	}
+
 	if ( ! $redirect ) {
 		return;
 	}
@@ -562,7 +567,7 @@ function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer
 	 */
 	$referer_site_path = $referer_matches[4];
 
-	if ( (int) filter_var( $referer_site_path, FILTER_SANITIZE_NUMBER_INT ) >= 2021 ) {
+	if ( (int) trim( $referer_site_path, '/' ) >= 2021 ) {
 		return false;
 	}
 
@@ -631,20 +636,20 @@ function get_canonical_year_url( $domain, $path ) {
 	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
 	switch ( $domain ) {
 		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2025-06-21' ) ) {
-				return "https://europe.wordcamp.$tld/2025/";
+			if ( time() <= strtotime( '2026-06-20' ) ) {
+				return "https://europe.wordcamp.$tld/2026/";
 			}
 			break;
 
 		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2025-09-15' ) ) {
-				return "https://us.wordcamp.$tld/2025/";
+			if ( time() <= strtotime( '2026-09-02' ) ) {
+				return "https://us.wordcamp.$tld/2026/";
 			}
 			break;
 
 		case "asia.wordcamp.$tld":
-			if ( time() <= strtotime( '2024-03-15' ) ) {
-				return "https://asia.wordcamp.$tld/2024/";
+			if ( time() <= strtotime( '2026-04-25' ) ) {
+				return "https://asia.wordcamp.$tld/2026/";
 			}
 			break;
 	}

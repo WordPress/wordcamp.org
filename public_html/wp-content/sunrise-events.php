@@ -2,7 +2,7 @@
 
 namespace WordCamp\Sunrise\Events;
 use WP_Network, WP_Site;
-use function WordCamp\Sunrise\{ get_top_level_domain };
+use function WordCamp\Sunrise\{ get_top_level_domain, get_renamed_site_url };
 
 defined( 'WPINC' ) || die();
 use const WordCamp\Sunrise\{ PATTERN_CITY_YEAR_TYPE_PATH, PATTERN_CITY_PATH };
@@ -82,6 +82,10 @@ function set_network_and_site() {
 
 		$current_blog = get_site_by_path( DOMAIN_CURRENT_SITE, $path, 3 );
 
+		if ( $current_blog && '/' === $current_blog->path ) {
+			// We found the root site, not a matching site.
+			$current_blog = false;
+		}
 	} elseif (
 		CAMPUS_NETWORK_ID === $site_id &&
 		1 === preg_match( PATTERN_CITY_PATH, $path )
@@ -98,15 +102,86 @@ function set_network_and_site() {
 	}
 
 	if ( ! $current_blog ) {
-		// If the request doesn't match a site, redirect to the campus connect page.
-		header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
-		header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
-		exit;
+		// Check if this URL was previously used by a site that has since been renamed.
+		$renamed_url = get_renamed_site_url( DOMAIN_CURRENT_SITE, $path );
+
+		if ( $renamed_url ) {
+			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site (renamed site)' );
+			header( 'Location: ' . $renamed_url, true, 301 );
+			exit;
+		}
+
+		// Try to redirect to the latest year for the same city/type.
+		$latest_url = get_latest_event_url( $path );
+
+		if ( $latest_url ) {
+			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site (latest year)' );
+			header( 'Location: ' . $latest_url, true, 301 );
+			exit;
+		}
+
+		if ( defined( 'NOBLOGREDIRECT' ) ) {
+			header( 'X-Redirect-By: Events/Sunrise::set_network_and_site' );
+			header( 'Location: ' . NOBLOGREDIRECT, true, 302 );
+			exit;
+		}
+
+		// No redirect available; fall back to the root site and let WordPress handle the 404.
+		$current_blog = WP_Site::get_instance( BLOG_ID_CURRENT_SITE );
 	}
 
 	$blog_id = $current_blog->id;
 	$domain  = $current_blog->domain;
 	$public  = $current_blog->public;
+}
+
+/**
+ * Get the URL of the latest event site matching the same city and type.
+ *
+ * For example, `/vancouver/2023/diversity-day/` redirects to `/vancouver/2025/diversity-day/`
+ * if 2025 is the latest year with that city/type combination.
+ *
+ * @param string $request_path The request URI path.
+ *
+ * @return string|false The URL to redirect to, or false if no match found.
+ */
+function get_latest_event_url( string $request_path ) {
+	global $wpdb;
+
+	if ( ! preg_match( PATTERN_CITY_YEAR_TYPE_PATH, $request_path, $matches ) ) {
+		return false;
+	}
+
+	$city   = $matches[1];
+	$type   = $matches[3];
+	$domain = defined( 'DOMAIN_CURRENT_SITE' ) ? DOMAIN_CURRENT_SITE : get_network( EVENTS_NETWORK_ID )->domain;
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Sunrise runs before caching is available.
+	$latest_site = $wpdb->get_row( $wpdb->prepare(
+		"SELECT `domain`, `path`
+		FROM `$wpdb->blogs`
+		WHERE
+			`domain` = %s AND
+			`path` LIKE %s AND
+			`public` = 1 AND
+			`deleted` = 0
+		ORDER BY `path` DESC
+		LIMIT 1",
+		$domain,
+		$wpdb->esc_like( "/$city/" ) . '%/' . $wpdb->esc_like( "$type/" )
+	) );
+
+	if ( ! $latest_site ) {
+		return false;
+	}
+
+	// Don't redirect to the exact same path that was requested.
+	$requested_path = rtrim( $request_path, '/' ) . '/';
+	if ( $latest_site->path === $requested_path ) {
+		return false;
+	}
+
+	return 'https://' . $latest_site->domain . $latest_site->path;
 }
 
 /**

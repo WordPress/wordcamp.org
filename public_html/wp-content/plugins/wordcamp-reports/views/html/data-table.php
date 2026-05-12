@@ -6,9 +6,10 @@ defined( 'WPINC' ) || die();
 /** @var array? $safe_html */
 
 if ( ! empty( $data ) && is_array( $data ) ) {
+	$safe_html ??= false;
 
 	$escape = static function ( $value ) use ( $safe_html ) {
-		if ( isset( $safe_html ) ) {
+		if ( $safe_html ) {
 			return wp_kses( $value, $safe_html );
 		}
 

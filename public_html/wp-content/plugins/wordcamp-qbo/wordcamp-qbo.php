@@ -9,7 +9,7 @@ use WordCamp\Quickbooks;
 use WordCamp\Logger;
 
 class WordCamp_QBO {
-	const REMOTE_REQUEST_TIMEOUT = 45; // seconds
+	public const REMOTE_REQUEST_TIMEOUT = 45; // Seconds.
 
 	private static $hmac_key;
 	private static $sandbox_mode;

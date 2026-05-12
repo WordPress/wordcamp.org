@@ -19,6 +19,7 @@ add_action( 'camptix_form_start_errors',                     __NAMESPACE__ . '\a
 add_filter( 'camptix_form_attendee_info_errors',             __NAMESPACE__ . '\show_throttle_notice'                );
 add_action( 'transition_post_status',                        __NAMESPACE__ . '\ticket_sales_opened',          10, 3 );
 add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\track_payment_results',        10, 3 );
+add_action( 'camptix_payment_result',                        __NAMESPACE__ . '\clear_page_cache_on_payment',  10, 2 );
 add_filter( 'camptix_shortcode_contents',                    __NAMESPACE__ . '\modify_shortcode_contents',    10, 2 );
 add_filter( 'camptix_max_tickets_per_order',                 __NAMESPACE__ . '\limit_one_ticket_per_order'          );
 
@@ -42,7 +43,6 @@ add_action( 'admin_notices',                                 __NAMESPACE__ . '\a
 add_filter( 'wp_privacy_personal_data_erasers',              __NAMESPACE__ . '\modify_erasers',                  99 );
 
 // Miscellaneous
-add_filter( 'camptix_beta_features_enabled',                 '__return_true' );
 add_action( 'camptix_nt_file_log',                           '__return_false' );
 add_action( 'init',                                          __NAMESPACE__ . '\camptix_debug',                    9 ); // CampTix does this at 10.
 add_filter( 'camptix_default_addons',                        __NAMESPACE__ . '\load_addons'                         );
@@ -367,6 +367,35 @@ function track_payment_results( $payment_token, $result, $data ) {
 }
 
 /**
+ * Clear the WP Super Cache page cache after a successful ticket purchase.
+ *
+ * Ticket availability numbers shown on the [camptix] shortcode page can become stale
+ * if the cache is not cleared after a purchase. This ensures logged-out visitors see
+ * up-to-date ticket counts.
+ *
+ * @param string $payment_token
+ * @param int    $result
+ */
+function clear_page_cache_on_payment( $payment_token, $result ) {
+	/** @var CampTix_Plugin $camptix */
+	global $camptix;
+
+	$successful = array(
+		$camptix::PAYMENT_STATUS_COMPLETED,
+		$camptix::PAYMENT_STATUS_PENDING,
+		$camptix::PAYMENT_STATUS_REFUNDED,
+	);
+
+	if ( ! in_array( $result, $successful, true ) ) {
+		return;
+	}
+
+	if ( function_exists( 'wp_cache_clear_cache' ) ) {
+		wp_cache_clear_cache( get_current_blog_id() );
+	}
+}
+
+/**
  * Assign the template with no sidebar to the Attendees page
  *
  * @param \WP_Post $attendees_page
@@ -564,7 +593,7 @@ function load_custom_addons() {
 
 	// Payment options.
 	if (
-		in_array( filter_input( INPUT_GET, 'tix_action' ), array( 'attendee_info', 'checkout' ), true ) &&
+		in_array( sanitize_text_field( wp_unslash( $_GET['tix_action'] ?? '' ) ), array( 'attendee_info', 'checkout' ), true ) &&
 		! wcorg_skip_feature( 'camptix_payment_options' )
 	) {
 		require_once __DIR__ . '/addons/class-payment-options.php';

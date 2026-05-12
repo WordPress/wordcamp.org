@@ -57,10 +57,13 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'plugins_loaded', array( $this, 'schedule_cron_jobs' ), 11 );
 			add_action( 'wcpt_close_wordcamps_after_event', array( $this, 'close_wordcamps_after_event' ) );
 			add_action( 'wcpt_metabox_save_done', array( $this, 'update_venue_address' ), 10, 2 );
-			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ) );
+			add_action( 'wcpt_metabox_save_done', array( $this, 'update_mentor' ), 10, 2 );
 
 			add_action( 'parse_query', array( $this, 'default_sortby' ), 9 );
 			add_action( 'parse_query', array( $this, 'sort_by_event_date' ) );
+
+			// "Mine (Mentoring)" query filter on the WordCamp list table.
+			add_action( 'pre_get_posts', array( $this, 'filter_mentoring_view' ) );
 		}
 
 		/**
@@ -122,6 +125,39 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
+		 * Get searchable post meta keys for WordCamp events.
+		 *
+		 * Returns a limited list of meta keys that are useful for searching.
+		 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
+		 *
+		 * @return array List of meta keys to search.
+		 */
+		public static function get_searchable_meta_keys() {
+			return array(
+				'Organizer Name',
+				'WordPress.org Username',
+				'Location',
+				'Venue Name',
+				'Physical Address',
+				'Sponsor Wrangler Name',
+				'Budget Wrangler Name',
+				'Venue Wrangler Name',
+				'Speaker Wrangler Name',
+				'Food/Beverage Wrangler Name',
+				'Swag Wrangler Name',
+				'Volunteer Wrangler Name',
+				'Printing Wrangler Name',
+				'Design Wrangler Name',
+				'Website Wrangler Name',
+				'Social Media/Publicity Wrangler Name',
+				'A/V Wrangler Name',
+				'Party Wrangler Name',
+				'Travel Wrangler Name',
+				'Safety Wrangler Name',
+			);
+		}
+
+		/**
 		 * Check if a field is readonly.
 		 *
 		 * @param string $key
@@ -133,11 +169,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Update mentor username.
+		 * Update mentor username, and fire the mentor assigned/changed trigger if the mentor has changed.
 		 *
-		 * @param int $post_id
+		 * @param int   $post_id
+		 * @param array $original_meta_values Original meta values before save.
 		 */
-		public function update_mentor( $post_id ) {
+		public function update_mentor( $post_id, $original_meta_values = array() ) {
 			if ( $this->get_event_type() !== get_post_type() ) {
 				return;
 			}
@@ -146,6 +183,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			$username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ];
 
 			$this->add_mentor( get_post( $post_id ), $username );
+
+			$old_username = $original_meta_values['Mentor WordPress.org User Name'][0] ?? '';
+
+			if ( ! empty( $username ) && $username !== $old_username ) {
+				do_action( 'wcor_mentor_assigned_or_changed', get_post( $post_id ) );
+			}
 		}
 
 		/**
@@ -425,7 +468,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
-						'Actual Attendees'                  => 'text',
+						'Actual Attendees'                  => 'number',
+						'Language'                          => 'select-locale',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',
@@ -471,7 +515,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						'Twitter'                           => 'text',
 						'WordCamp Hashtag'                  => 'text',
 						'Number of Anticipated Attendees'   => 'text',
-						'Actual Attendees'                  => 'text',
+						'Actual Attendees'                  => 'number',
+						'Language'                          => 'select-locale',
 						'Multi-Event Sponsor Region'        => 'mes-dropdown',
 						'Global Sponsorship Grant Currency' => 'select-currency',
 						'Global Sponsorship Grant Amount'   => 'number',
@@ -749,7 +794,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @param int    $post_id
 		 */
 		public function column_data( $column, $post_id ) {
-			$post_type = filter_input( INPUT_GET, 'post_type' );
+			$post_type = wp_unslash( $_GET['post_type'] ?? '' );
 			if ( WCPT_POST_TYPE_ID !== $post_type ) {
 				return $column;
 			}
@@ -1380,16 +1425,63 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Add a dropdown to filter by Event Subtype.
+		 * Add a dropdown to filter by Event Subtype, and a "Mine (Mentoring)" view.
 		 *
 		 * This is hacked in by abusing the `views` filter for the wordcamp PT.
 		 */
 		public function alter_views( $views ) {
 			global $wp_list_table;
 
-			// For low-privilege users, just return the unmodified views.
+			// For low-privilege users, return without extra views.
 			if ( ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
 				return $views;
+			}
+
+			// Add the "Mine (Mentoring)" view right after the "Mine" view.
+			$current_user = wp_get_current_user();
+
+			if ( $current_user && $current_user->exists() ) {
+				$count = new WP_Query( array(
+					'post_type'      => WCPT_POST_TYPE_ID,
+					'meta_key'       => 'Mentor WordPress.org User Name',
+					'meta_value'     => $current_user->user_login,
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+					'no_found_rows'  => false,
+				) );
+
+				$class = '';
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only used for highlighting the active tab.
+				if ( isset( $_GET['mentoring'] ) ) {
+					$class = 'current';
+				}
+
+				$url = add_query_arg(
+					array(
+						'post_type' => WCPT_POST_TYPE_ID,
+						'mentoring' => $current_user->user_login,
+					),
+					admin_url( 'edit.php' )
+				);
+
+				$mentoring_view = sprintf(
+					'<a href="%s" class="%s">%s <span class="count">(%d)</span></a>',
+					esc_url( $url ),
+					esc_attr( $class ),
+					__( 'Mine (Mentoring)', 'wordcamporg' ),
+					$count->found_posts
+				);
+
+				// Insert after the "Mine" view if it exists, otherwise append.
+				$mine_pos = array_search( 'mine', array_keys( $views ), true );
+
+				if ( false !== $mine_pos ) {
+					$views = array_slice( $views, 0, $mine_pos + 1, true )
+						+ array( 'mentoring' => $mentoring_view )
+						+ array_slice( $views, $mine_pos + 1, null, true );
+				} else {
+					$views['mentoring'] = $mentoring_view;
+				}
 			}
 
 			$current_subtype = sanitize_text_field( wp_unslash( $_GET['type'] ?? '' ) );
@@ -1470,6 +1562,35 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			return $views;
+		}
+
+		/**
+		 * Filter the WordCamp list query when the "Mine (Mentoring)" view is active.
+		 *
+		 * @param WP_Query $query The query to filter.
+		 */
+		public function filter_mentoring_view( $query ) {
+			if ( ! is_admin() || ! $query->is_main_query() ) {
+				return;
+			}
+
+			if ( WCPT_POST_TYPE_ID !== $query->get( 'post_type' ) ) {
+				return;
+			}
+
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filter for list table view.
+			if ( ! isset( $_GET['mentoring'] ) ) {
+				return;
+			}
+
+			$current_user = wp_get_current_user();
+
+			$meta_query   = $query->get( 'meta_query' ) ?: [];
+			$meta_query[] = array(
+				'key'   => 'Mentor WordPress.org User Name',
+				'value' => $current_user->user_login,
+			);
+			$query->set( 'meta_query', $meta_query );
 		}
 
 		/**

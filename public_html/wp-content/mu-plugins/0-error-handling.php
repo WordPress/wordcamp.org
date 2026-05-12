@@ -338,7 +338,6 @@ function send_error_to_slack( $err_no, $err_msg, $file, $line, $occurrences = 0 
 			break;
 		case E_NOTICE:
 		case E_USER_NOTICE:
-		case E_STRICT:
 		case E_DEPRECATED:
 		case E_USER_DEPRECATED:
 			$color = '#ffff00'; // Yellow.

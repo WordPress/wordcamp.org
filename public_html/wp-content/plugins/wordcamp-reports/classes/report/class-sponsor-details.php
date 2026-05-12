@@ -319,7 +319,7 @@ class Sponsor_Details extends Base {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
 
 		include get_views_dir_path() . 'report/sponsor-details.php';
 	}
@@ -330,9 +330,9 @@ class Sponsor_Details extends Base {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$wordcamp_id = filter_input( INPUT_POST, 'wordcamp-id' );
-		$action      = filter_input( INPUT_POST, 'action' );
-		$nonce       = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$wordcamp_id = absint( $_POST['wordcamp-id'] ?? 0 );
+		$action      = wp_unslash( $_POST['action'] ?? '' );
+		$nonce       = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 
 		$report = null;
 

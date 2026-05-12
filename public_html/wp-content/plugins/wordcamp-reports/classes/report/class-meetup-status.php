@@ -330,12 +330,12 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function render_admin_page() {
-		$start_date = filter_input( INPUT_POST, 'start-date' );
-		$end_date   = filter_input( INPUT_POST, 'end-date' );
-		$status     = filter_input( INPUT_POST, 'status' );
+		$start_date = wp_unslash( $_POST['start-date'] ?? '' );
+		$end_date   = wp_unslash( $_POST['end-date'] ?? '' );
+		$status     = wp_unslash( $_POST['status'] ?? '' );
 		$refresh    = filter_input( INPUT_POST, 'refresh', FILTER_VALIDATE_BOOLEAN );
-		$action     = filter_input( INPUT_POST, 'action' );
-		$nonce      = filter_input( INPUT_POST, self::$slug . '-nonce' );
+		$action     = wp_unslash( $_POST['action'] ?? '' );
+		$nonce      = wp_unslash( $_POST[ self::$slug . '-nonce' ] ?? '' );
 		$fields     = filter_input( INPUT_POST, 'fields', FILTER_UNSAFE_RAW, array( 'flags' => FILTER_REQUIRE_ARRAY ) );
 		$statuses   = Meetup_Application::get_post_statuses();
 
@@ -407,8 +407,8 @@ class Meetup_Status extends Base_Status {
 	 * @return void
 	 */
 	public static function export_to_file() {
-		$action = filter_input( INPUT_POST, 'action' );
-		$report = filter_input( INPUT_GET, 'report' );
+		$action = wp_unslash( $_POST['action'] ?? '' );
+		$report = wp_unslash( $_GET['report'] ?? '' );
 		if ( $report !== self::$slug ) {
 			return;
 		}

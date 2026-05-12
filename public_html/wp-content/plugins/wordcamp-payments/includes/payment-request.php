@@ -8,7 +8,7 @@ use WordPressdotorg\MU_Plugins\Utilities;
 class WCP_Payment_Request {
 	var $meta_key_prefix = 'camppayments'; // Dirty hack so that Payment Method metabox rendering can be reused by other modules
 
-	const POST_TYPE = 'wcp_payment_request';
+	public const POST_TYPE = 'wcp_payment_request';
 
 	// @see https://core.trac.wordpress.org/ticket/19074
 	public static $transition_post_status = array();
@@ -387,9 +387,14 @@ class WCP_Payment_Request {
 	 * @param string  $name
 	 * @param bool    $required
 	 */
-	protected function render_select_input( $post, $label, $name, $required = true ) {
+	protected function render_select_input( $post, $label, $name, $required = true, $default = '' ) {
 		$selected = get_post_meta( $post->ID, '_camppayments_' . $name, true );
-		$options  = $this->get_field_value( $name, $post );
+
+		if ( empty( $selected ) && '' !== $default ) {
+			$selected = $default;
+		}
+
+		$options = $this->get_field_value( $name, $post );
 
 		require dirname( __DIR__ ) . '/views/payment-request/input-select.php';
 	}
@@ -451,7 +456,7 @@ class WCP_Payment_Request {
 	 * @param bool    $readonly
 	 * @param bool    $required
 	 */
-	protected function render_text_input( $post, $label, $name, $description = '', $variant = 'text', $row_classes = array(), $readonly = false, $required = true ) {
+	protected function render_text_input( $post, $label, $name, $description = '', $variant = 'text', $row_classes = array(), $readonly = false, $required = true, $placeholder = '' ) {
 		$value = $this->get_field_value( $name, $post );
 		array_walk( $row_classes, 'sanitize_html_class' );
 		$row_classes = implode( ' ', $row_classes );
@@ -510,7 +515,7 @@ class WCP_Payment_Request {
 				break;
 
 			case 'payment_method':
-				$value = WordCamp_Budgets::get_valid_payment_methods( $post->post_type );
+				$value = WordCamp_Budgets::get_payment_methods( $post->post_type );
 				break;
 
 			case 'general_notes':
@@ -528,7 +533,10 @@ class WCP_Payment_Request {
 				break;
 
 			case 'ach_account_type':
-				$value = array( 'Personal', 'Company' );
+				$value = array(
+					'Personal' => __( 'Personal', 'wordcamporg' ),
+					'Company'  => __( 'Company', 'wordcamporg' ),
+				);
 				break;
 
 			default:
@@ -1568,13 +1576,13 @@ Thanks for helping us with these details!",
 				'72-blank' => '',
 				'73-blank' => '',
 
-				'74-ref-text' => substr( get_post_meta( $post->ID, '_camppayments_invoice_number', true ), 0, 16 ),
-				'75-internal-ref' => '',
-				'76-on-behalf-of' => '',
+				'74-ref-text' => '', // US Wires only.
+				'75-internal-ref' => substr( sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->post_id ), 0, 16 ),
+				'76-on-behalf-of' => 'WordPress Community Support',
 
-				'77-detial-1' => '',
-				'78-detial-2' => '',
-				'79-detial-3' => '',
+				'77-detail-1' => substr( get_post_meta( $post->ID, '_camppayments_invoice_number', true ), 0, 16 ),
+				'78-detail-2' => '',
+				'79-detail-3' => '',
 				'80-detail-4' => '',
 
 				'81-blank' => '',
@@ -1657,5 +1665,56 @@ Thanks for helping us with these details!",
 		// JPM chokes on accents and non-latin characters.
 		$results = remove_accents( $results );
 		return $results;
+	}
+
+	/**
+	 * SEPA Credit Transfer – ISO 20022 XML (pain.001.003.03)
+	 *
+	 * @param array $args
+	 *
+	 * @return string
+	 */
+	public static function _generate_payment_report_sepa( $args ) {
+		$args = wp_parse_args(
+			$args,
+			array(
+				'data'      => array(),
+				'status'    => '',
+				'post_type' => '',
+			)
+		);
+
+		$payments = array();
+
+		foreach ( $args['data'] as $entry ) {
+			switch_to_blog( $entry->blog_id );
+			$post = get_post( $entry->post_id );
+
+			if ( $args['status'] && $args['status'] !== $post->post_status ) {
+				restore_current_blog();
+				continue;
+			} elseif ( self::POST_TYPE !== $post->post_type ) {
+				restore_current_blog();
+				continue;
+			} elseif ( 'sepa_transfer' !== get_post_meta( $post->ID, '_camppayments_payment_method', true ) ) {
+				restore_current_blog();
+				continue;
+			}
+
+			$amount = round( floatval( get_post_meta( $post->ID, '_camppayments_payment_amount', true ) ), 2 );
+
+			$payments[] = array(
+				'amount'       => $amount,
+				'account_name' => WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_sepa_account_name', true ) ),
+				'bic'          => WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_sepa_bic', true ) ),
+				'iban'         => preg_replace( '#\s#', '', WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_camppayments_sepa_iban', true ) ) ),
+				'reference'    => sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->post_id ),
+				'invoice'      => get_post_meta( $post->ID, '_camppayments_invoice_number', true ),
+			);
+
+			restore_current_blog();
+		}
+
+		return WordCamp_Budgets::generate_sepa_xml( $payments );
 	}
 }

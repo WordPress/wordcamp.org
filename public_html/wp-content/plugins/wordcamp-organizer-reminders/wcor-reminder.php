@@ -6,8 +6,8 @@
  */
 
 class WCOR_Reminder {
-	const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
-	const REQUIRED_CAPABILITY      = 'manage_options';
+	public const AUTOMATED_POST_TYPE_SLUG = 'organizer-reminder';
+	public const REQUIRED_CAPABILITY      = 'manage_options';
 
 	/**
 	 * Constructor
@@ -204,7 +204,7 @@ class WCOR_Reminder {
 	 * @param array $new_meta
 	 */
 	protected function save_post_meta( $post, $new_meta ) {
-		$send_where_whitelist = array( 'wcor_send_organizers', 'wcor_send_sponsor_wrangler', 'wcor_send_budget_wrangler', 'wcor_send_venue_wrangler', 'wcor_send_speaker_wrangler', 'wcor_send_food_wrangler', 'wcor_send_swag_wrangler', 'wcor_send_volunteer_wrangler', 'wcor_send_printing_wrangler', 'wcor_send_design_wrangler', 'wcor_send_website_wrangler', 'wcor_send_social_wrangler', 'wcor_send_a_v_wrangler', 'wcor_send_party_wrangler', 'wcor_send_travel_wrangler', 'wcor_send_safety_wrangler', 'wcor_send_mes', 'wcor_send_camera_wrangler', 'wcor_send_custom' );
+		$send_where_whitelist = array( 'wcor_send_organizers', 'wcor_send_sponsor_wrangler', 'wcor_send_budget_wrangler', 'wcor_send_venue_wrangler', 'wcor_send_speaker_wrangler', 'wcor_send_food_wrangler', 'wcor_send_swag_wrangler', 'wcor_send_volunteer_wrangler', 'wcor_send_printing_wrangler', 'wcor_send_design_wrangler', 'wcor_send_website_wrangler', 'wcor_send_social_wrangler', 'wcor_send_a_v_wrangler', 'wcor_send_party_wrangler', 'wcor_send_travel_wrangler', 'wcor_send_safety_wrangler', 'wcor_send_mes', 'wcor_send_camera_wrangler', 'wcor_send_mentor', 'wcor_send_custom' );
 
 		delete_post_meta( $post->ID, 'wcor_send_where' );
 		if ( isset( $new_meta['wcor_send_where'] ) ) {

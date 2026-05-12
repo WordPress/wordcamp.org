@@ -20,7 +20,7 @@ class HeadingToolbar extends Component {
 	createLevelControl( targetLevel, selectedLevel, onChange ) {
 		return {
 			icon: <HeadingLevelIcon level={ targetLevel } />,
-			// translators: %s: heading level e.g: "1", "2", "3"
+			// translators: %d: heading level e.g: "1", "2", "3"
 			title: sprintf( __( 'Heading %d', 'wordcamporg' ), targetLevel ),
 			isActive: targetLevel === selectedLevel,
 			onClick: () => onChange( targetLevel ),

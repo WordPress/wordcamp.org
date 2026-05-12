@@ -27,9 +27,9 @@ class Meetup_Application extends Event_Application {
 	 */
 	public $post;
 
-	const SHORTCODE_SLUG = 'meetup-organizer-application';
+	public const SHORTCODE_SLUG = 'meetup-organizer-application';
 
-	const POST_TYPE = 'wp_meetup';
+	public const POST_TYPE = 'wp_meetup';
 
 	/**
 	 * User facing string of event type.

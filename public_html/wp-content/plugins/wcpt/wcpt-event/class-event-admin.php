@@ -73,6 +73,15 @@ abstract class Event_Admin {
 		add_action( 'admin_notices', array( $this, 'print_admin_notices' ) );
 
 		add_action( 'send_decline_notification_action',  'Event_Admin::send_decline_notification', 10, 3 );
+
+		// Search filters for post meta.
+		add_filter( 'posts_search', array( $this, 'extend_search_to_postmeta' ), 10, 2 );
+		add_filter( 'posts_join', array( $this, 'search_postmeta_join' ), 10, 2 );
+		add_filter( 'posts_groupby', array( $this, 'search_postmeta_groupby' ), 10, 2 );
+
+		// Language filter on the admin list table.
+		add_action( 'restrict_manage_posts', array( $this, 'add_language_filter_dropdown' ) );
+		add_action( 'parse_query', array( $this, 'filter_by_language' ) );
 	}
 
 	/**
@@ -581,6 +590,21 @@ abstract class Event_Admin {
 					update_post_meta( $post_id, $key, $new_value );
 					break;
 
+				case 'select-locale':
+					$allowed_locales = array_keys( self::get_locale_options() );
+					$new_value       = array();
+
+					if ( is_array( $values[ $key ] ) ) {
+						foreach ( $values[ $key ] as $locale ) {
+							if ( in_array( $locale, $allowed_locales, true ) ) {
+								$new_value[] = $locale;
+							}
+						}
+					}
+
+					update_post_meta( $post_id, $key, $new_value );
+					break;
+
 				case 'select-streaming':
 					$allowed_values = array_keys( self::get_streaming_services() );
 					$key_other      = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
@@ -948,6 +972,33 @@ abstract class Event_Admin {
 									)
 								);
 								break;
+							case 'select-locale':
+								$selected_locales = get_post_meta( $post_id, $key, true );
+								$locales          = self::get_locale_options();
+
+								if ( ! is_array( $selected_locales ) ) {
+									$selected_locales = array();
+								}
+								?>
+
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>[]"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									multiple
+									style="height: auto; min-height: 120px;"
+								>
+									<?php foreach ( $locales as $locale_code => $locale_name ) : ?>
+										<option
+											value="<?php echo esc_attr( $locale_code ); ?>"
+											<?php selected( in_array( $locale_code, $selected_locales, true ) ); ?>
+										>
+											<?php echo esc_html( $locale_name ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+
+								<?php
+								break;
 							case 'select-streaming':
 								$selected = get_post_meta( $post_id, $key, true );
 								$options  = self::get_streaming_services();
@@ -1007,4 +1058,235 @@ abstract class Event_Admin {
 	 * @return array
 	 */
 	abstract public function get_event_subtypes();
+
+	/**
+	 * Get searchable post meta keys for this event type.
+	 *
+	 * Returns a limited list of meta keys that are useful for searching.
+	 * Focuses on names, locations, and text fields while excluding URLs, dates, and numeric fields.
+	 *
+	 * @return array List of meta keys to search.
+	 */
+	abstract public static function get_searchable_meta_keys();
+
+	/**
+	 * Extend search to include post meta fields.
+	 *
+	 * @param string   $search The search SQL.
+	 * @param WP_Query $query  The WP_Query instance.
+	 *
+	 * @return string Modified search SQL.
+	 */
+	public function extend_search_to_postmeta( $search, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $search;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $search;
+		}
+
+		// Only extend search when there's a search term.
+		if ( empty( $search ) || ! $query->is_search() ) {
+			return $search;
+		}
+
+		$search_term = $query->get( 's' );
+		if ( empty( $search_term ) ) {
+			return $search;
+		}
+
+		$searchable_keys = static::get_searchable_meta_keys();
+
+		// Build meta search conditions.
+		$like_term    = '%' . $wpdb->esc_like( $search_term ) . '%';
+		$prepare_args = array_merge( $searchable_keys, array( $like_term ) );
+
+		// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- All placeholders are generated and filled dynamically.
+		$meta_search = $wpdb->prepare(
+			'(pm.meta_key IN (' . implode( ', ', array_fill( 0, count( $searchable_keys ), '%s' ) ) . ') AND pm.meta_value LIKE %s)',
+			$prepare_args
+		);
+
+		// Strip the leading AND, wrap the original search conditions in an OR with
+		// our meta condition, and re-add the leading AND. This is safe in admin
+		// context where post_password checks are not present.
+		$search = preg_replace( '/^\s*AND\s+/i', '', $search, 1 );
+		$search = " AND ({$search} OR {$meta_search})";
+
+		return $search;
+	}
+
+	/**
+	 * Join postmeta table for search queries.
+	 *
+	 * @param string   $join  The JOIN clause.
+	 * @param WP_Query $query The WP_Query instance.
+	 *
+	 * @return string Modified JOIN clause.
+	 */
+	public function search_postmeta_join( $join, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $join;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $join;
+		}
+
+		// Only join when there's a search term.
+		if ( ! $query->is_search() || empty( $query->get( 's' ) ) ) {
+			return $join;
+		}
+
+		// Check if the join already exists to prevent duplicates.
+		if ( strpos( $join, "{$wpdb->postmeta} AS pm" ) !== false ) {
+			return $join;
+		}
+
+		$join .= " LEFT JOIN {$wpdb->postmeta} AS pm ON {$wpdb->posts}.ID = pm.post_id";
+
+		return $join;
+	}
+
+	/**
+	 * Group results to avoid duplicates from postmeta joins.
+	 *
+	 * @param string   $groupby The GROUP BY clause.
+	 * @param WP_Query $query   The WP_Query instance.
+	 *
+	 * @return string Modified GROUP BY clause.
+	 */
+	public function search_postmeta_groupby( $groupby, $query ) {
+		global $wpdb;
+
+		if ( ! is_admin() ) {
+			return $groupby;
+		}
+
+		// Only extend search for this specific event post type.
+		$post_type = $query->get( 'post_type' );
+		if ( empty( $post_type ) || $this->get_event_type() !== $post_type ) {
+			return $groupby;
+		}
+
+		// Only group when there's a search term.
+		if ( ! $query->is_search() || empty( $query->get( 's' ) ) ) {
+			return $groupby;
+		}
+
+		// Ensure grouping by post ID to avoid duplicates from the postmeta JOIN.
+		$post_id_group = "{$wpdb->posts}.ID";
+
+		if ( empty( $groupby ) ) {
+			$groupby = $post_id_group;
+		} elseif ( strpos( $groupby, $post_id_group ) === false ) {
+			$groupby .= ", {$post_id_group}";
+		}
+
+		return $groupby;
+	}
+
+	/**
+	 * Get available locale options for the Language field.
+	 *
+	 * Uses GlotPress locales if available, otherwise falls back to
+	 * wp_get_available_translations().
+	 *
+	 * @return array Associative array of locale code => display name.
+	 */
+	public static function get_locale_options() {
+		if ( defined( 'GLOTPRESS_LOCALES_PATH' ) && file_exists( GLOTPRESS_LOCALES_PATH ) ) {
+			require_once GLOTPRESS_LOCALES_PATH;
+
+			$locales = GP_Locales::locales();
+			$options = array();
+
+			foreach ( $locales as $locale ) {
+				if ( ! empty( $locale->wp_locale ) ) {
+					$options[ $locale->wp_locale ] = $locale->english_name;
+				}
+			}
+
+			asort( $options );
+
+			return $options;
+		}
+
+		// Fallback: use WordPress available translations.
+		if ( ! function_exists( 'wp_get_available_translations' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+		}
+
+		$translations = wp_get_available_translations();
+		$options      = array( 'en_US' => 'English (United States)' );
+
+		foreach ( $translations as $locale => $data ) {
+			$options[ $locale ] = $data['english_name'];
+		}
+
+		asort( $options );
+
+		return $options;
+	}
+
+	/**
+	 * Add a Language filter dropdown to the admin list table.
+	 *
+	 * @param string $post_type The current post type.
+	 */
+	public function add_language_filter_dropdown( $post_type ) {
+		if ( $this->get_event_type() !== $post_type ) {
+			return;
+		}
+
+		$locales  = self::get_locale_options();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filter for list table.
+		$selected = isset( $_GET['language'] ) ? sanitize_text_field( wp_unslash( $_GET['language'] ) ) : '';
+
+		?>
+		<select name="language" id="filter-by-language">
+			<option value=""><?php esc_html_e( 'All Languages', 'wordcamporg' ); ?></option>
+			<?php foreach ( $locales as $locale_code => $locale_name ) : ?>
+				<option value="<?php echo esc_attr( $locale_code ); ?>" <?php selected( $selected, $locale_code ); ?>>
+					<?php echo esc_html( $locale_name ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Filter the admin list by Language.
+	 *
+	 * @param WP_Query $query The current query.
+	 */
+	public function filter_by_language( $query ) {
+		if (
+			! $query->is_main_query() ||
+			$this->get_event_type() !== $query->get( 'post_type' ) ||
+			empty( $_REQUEST['language'] )
+		) {
+			return;
+		}
+
+		$language = sanitize_text_field( wp_unslash( $_REQUEST['language'] ) );
+
+		$meta_query   = $query->get( 'meta_query' ) ?: array();
+		$meta_query[] = array(
+			'key'     => 'Language',
+			'value'   => $language,
+			'compare' => 'LIKE',
+		);
+
+		$query->set( 'meta_query', $meta_query );
+	}
 }

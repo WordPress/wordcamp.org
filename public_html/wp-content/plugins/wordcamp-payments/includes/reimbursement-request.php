@@ -348,8 +348,13 @@ function render_general_information_metabox( $post ) {
 	$other_reason      = get_post_meta( $post->ID, '_wcbrr_reason_other',   true );
 	$date_paid         = get_post_meta( $post->ID, '_wcbrr_date_paid',      true );
 
-	if ( empty ( $name_of_payer ) ) {
+	if ( empty( $name_of_payer ) ) {
 		$name_of_payer = \WordCamp_Budgets::get_requester_name( $post->post_author );
+	}
+
+	if ( empty( $selected_currency ) ) {
+		$camptix_options   = get_option( 'camptix_options', array() );
+		$selected_currency = $camptix_options['currency'] ?? '';
 	}
 
 	wp_localize_script( 'wcb-attached-files', 'wcbAttachedFiles', $files );
@@ -1579,12 +1584,12 @@ function _generate_payment_report_jpm_wires( $args ) {
 			'73-blank' => '',
 
 			'74-ref-text' => 'Reimbursement',
-			'75-internal-ref' => '',
-			'76-on-behalf-of' => '',
+			'75-internal-ref' => substr( sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->request_id ), 0, 16 ),
+			'76-on-behalf-of' => 'WordPress Community Support',
 
-			'77-detial-1' => '',
-			'78-detial-2' => '',
-			'79-detial-3' => '',
+			'77-detail-1' => 'Reimbursement',
+			'78-detail-2' => '',
+			'79-detail-3' => '',
 			'80-detail-4' => '',
 
 			'81-blank' => '',
@@ -1667,4 +1672,62 @@ function _generate_payment_report_jpm_wires( $args ) {
 	// JPM chokes on accents and non-latin characters.
 	$results = remove_accents( $results );
 	return $results;
+}
+
+/**
+ * SEPA Credit Transfer – ISO 20022 XML (pain.001.003.03)
+ *
+ * @param array $args
+ *
+ * @return string
+ */
+function _generate_payment_report_sepa( $args ) {
+	$args = wp_parse_args(
+		$args,
+		array(
+			'data'      => array(),
+			'status'    => '',
+			'post_type' => '',
+		)
+	);
+
+	$payments = array();
+
+	foreach ( $args['data'] as $entry ) {
+		switch_to_blog( $entry->blog_id );
+		$post = get_post( $entry->request_id );
+
+		if ( $args['status'] && $args['status'] !== $post->post_status ) {
+			restore_current_blog();
+			continue;
+		} elseif ( POST_TYPE !== $post->post_type ) {
+			restore_current_blog();
+			continue;
+		} elseif ( 'sepa_transfer' !== get_post_meta( $post->ID, '_wcbrr_payment_method', true ) ) {
+			restore_current_blog();
+			continue;
+		}
+
+		$amount   = 0;
+		$expenses = get_post_meta( $post->ID, '_wcbrr_expenses', true );
+		foreach ( $expenses as $expense ) {
+			if ( ! empty( $expense['_wcbrr_amount'] ) ) {
+				$amount += floatval( $expense['_wcbrr_amount'] );
+			}
+		}
+		$amount = round( $amount, 2 );
+
+		$payments[] = array(
+			'amount'       => $amount,
+			'account_name' => \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_account_name', true ) ),
+			'bic'          => \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_bic', true ) ),
+			'iban'         => preg_replace( '#\s#', '', \WCP_Encryption::maybe_decrypt( get_post_meta( $post->ID, '_wcbrr_sepa_iban', true ) ) ),
+			'reference'    => sprintf( 'wcb-%d-%d', $entry->blog_id, $entry->request_id ),
+			'invoice'      => '',
+		);
+
+		restore_current_blog();
+	}
+
+	return \WordCamp_Budgets::generate_sepa_xml( $payments );
 }

@@ -35,7 +35,7 @@
 CI-specific PHP steps (for full parity) also include:
 
 - Install SVN package before composer on fresh runners.
-- Install WordPress test suite: `bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest`
+- Install WordPress test suite: `bash .docker/bin/install-wp-tests.sh wcorg_test root root "127.0.0.1:${DB_PORT}" latest true` (where `DB_PORT` is the mapped MariaDB service port)
 - Run PHPUnit directly: `./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist`
 - For changed-lines PHPCS in CI style: `BASE_REF=<base-branch> php .github/bin/phpcs-branch.php`
 
@@ -73,8 +73,8 @@ These were encountered during onboarding validation and should be expected in fr
 
 ### CI-style PHP test sequence (what Copilot should follow)
 
-1. **MySQL** — a MySQL 5.7 instance must be available. In CI this is a service container:
-   - database: `wcorg_test`, root password: `root`, host: `127.0.0.1`, port: `3306`
+1. **MariaDB** — a MariaDB LTS instance must be available. In CI this is a service container (`mariadb:lts`):
+   - database: `wcorg_test`, root password: `root`, host: `127.0.0.1`, port: mapped dynamically (read from `job.services.mariadb.ports['3306']` in GitHub Actions)
 2. **SVN** — required before composer install on bare runners:
    ```bash
    sudo apt-get install -y subversion
@@ -83,9 +83,9 @@ These were encountered during onboarding validation and should be expected in fr
    ```bash
    composer install
    ```
-4. **WordPress test suite** — installs the test bootstrap into `/tmp/wp/`:
+4. **WordPress test suite** — installs the test bootstrap into `/tmp/wp/` (`true` skips DB creation, which the service container already handled; `${DB_PORT}` is the mapped MariaDB port):
    ```bash
-   bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest
+   bash .docker/bin/install-wp-tests.sh wcorg_test root root "127.0.0.1:${DB_PORT}" latest true
    ```
 5. **PHPUnit**:
    ```bash

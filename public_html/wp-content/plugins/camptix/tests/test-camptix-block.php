@@ -395,6 +395,8 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 
 	/**
 	 * Test that auto-coupon is injected into REQUEST when block attribute is set.
+	 *
+	 * @expectedDeprecated get_page_by_title
 	 */
 	public function test_auto_coupon_injection() {
 		unset( $_REQUEST['tix_coupon'] );
@@ -410,6 +412,8 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 
 	/**
 	 * Test that manual coupon takes precedence over block auto-coupon.
+	 *
+	 * @expectedDeprecated get_page_by_title
 	 */
 	public function test_manual_coupon_overrides_auto_coupon() {
 		$_REQUEST['tix_coupon'] = 'MANUAL';

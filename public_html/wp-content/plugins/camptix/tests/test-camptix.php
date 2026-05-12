@@ -105,6 +105,9 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 	 */
 	protected $attendee_ids = array();
 
+	/**
+	 * Delete any attendees created during the test so they don't leak into siblings.
+	 */
 	public function tear_down() {
 		foreach ( $this->attendee_ids as $id ) {
 			wp_delete_post( $id, true );
@@ -133,7 +136,10 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 		update_post_meta( $attendee_id, 'tix_payment_token', $payment_token );
 		// email_tickets() is invoked on every successful status transition and
 		// iterates $order['items'], so seed a minimal but valid order shape.
-		update_post_meta( $attendee_id, 'tix_order', array( 'items' => array(), 'total' => 0 ) );
+		update_post_meta( $attendee_id, 'tix_order', array(
+			'items' => array(),
+			'total' => 0,
+		) );
 		update_post_meta( $attendee_id, 'tix_access_token', 'access_' . $attendee_id );
 		update_post_meta( $attendee_id, 'tix_receipt_email', 'receipt@example.test' );
 

@@ -373,22 +373,38 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Helper: create a page containing the CampTix block with the given attributes.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return int Page ID.
+	 */
+	protected function create_block_page( array $attributes = array() ) {
+		$attrs_json = empty( $attributes ) ? '' : ' ' . wp_json_encode( $attributes );
+
+		$page_id = wp_insert_post( array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'Tickets',
+			'post_content' => '<!-- wp:wordcamp/camptix' . $attrs_json . ' /-->',
+		) );
+
+		$this->post_ids[] = $page_id;
+
+		return $page_id;
+	}
+
+	/**
 	 * Test that auto-coupon is injected into REQUEST when block attribute is set.
 	 */
 	public function test_auto_coupon_injection() {
-		// Ensure no manual coupon is set.
 		unset( $_REQUEST['tix_coupon'] );
 
-		$block_attributes = array( 'coupon' => 'EARLYBIRD' );
+		$page_id = $this->create_block_page( array( 'coupon' => 'EARLYBIRD' ) );
 
-		// Simulate the auto-coupon logic from template_redirect.
-		if ( empty( $_REQUEST['tix_coupon'] ) && ! empty( $block_attributes['coupon'] ) ) {
-			$_REQUEST['tix_coupon'] = sanitize_text_field( $block_attributes['coupon'] );
-		}
+		$this->run_template_redirect_for_page( $page_id );
 
-		$this->assertEquals( 'EARLYBIRD', $_REQUEST['tix_coupon'] );
+		$this->assertSame( 'EARLYBIRD', $_REQUEST['tix_coupon'] );
 
-		// Clean up.
 		unset( $_REQUEST['tix_coupon'] );
 	}
 
@@ -398,16 +414,12 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 	public function test_manual_coupon_overrides_auto_coupon() {
 		$_REQUEST['tix_coupon'] = 'MANUAL';
 
-		$block_attributes = array( 'coupon' => 'EARLYBIRD' );
+		$page_id = $this->create_block_page( array( 'coupon' => 'EARLYBIRD' ) );
 
-		// Simulate the auto-coupon logic from template_redirect.
-		if ( empty( $_REQUEST['tix_coupon'] ) && ! empty( $block_attributes['coupon'] ) ) {
-			$_REQUEST['tix_coupon'] = sanitize_text_field( $block_attributes['coupon'] );
-		}
+		$this->run_template_redirect_for_page( $page_id );
 
-		$this->assertEquals( 'MANUAL', $_REQUEST['tix_coupon'] );
+		$this->assertSame( 'MANUAL', $_REQUEST['tix_coupon'] );
 
-		// Clean up.
 		unset( $_REQUEST['tix_coupon'] );
 	}
 

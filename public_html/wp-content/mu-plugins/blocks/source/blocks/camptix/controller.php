@@ -33,13 +33,8 @@ function render( $attributes, $content, $block ) {
 	wp_enqueue_style( 'camptix' );
 	wp_enqueue_script( 'camptix' );
 
-	/** @var CampTix_Plugin $camptix */
-	global $camptix;
-
-	if ( isset( $camptix ) && ! empty( $camptix->shortcode_contents ) ) {
-		return $camptix->shortcode_contents;
-	}
-
+	// `shortcode_callback()` returns the already-rendered $shortcode_contents that
+	// `template_redirect()` produced, so this does not re-run the purchase flow.
 	return do_shortcode( '[camptix]' );
 }
 

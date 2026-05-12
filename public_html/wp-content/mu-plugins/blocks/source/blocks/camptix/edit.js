@@ -20,7 +20,7 @@ const blockData = window.WordCampBlocks?.camptix || {};
 export default function CamptixEdit( { attributes, setAttributes } ) {
 	const {
 		ticketIds, maxTicketsPerOrder, coupon, noTicketsMessage, eventClosedMessage,
-		showRemainingTickets, showCouponField, showSoldOut,
+		showRemainingTickets, showCouponField,
 	} = attributes;
 	const blockProps = useBlockProps();
 	const allTickets = blockData.tickets || [];
@@ -77,15 +77,6 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 						help={ showRemainingTickets
 							? __( 'A "Remaining" column is shown in the ticket table.', 'wordcamporg' )
 							: __( 'The "Remaining" column is hidden.', 'wordcamporg' )
-						}
-					/>
-					<ToggleControl
-						label={ __( 'Show sold-out tickets', 'wordcamporg' ) }
-						checked={ showSoldOut }
-						onChange={ () => setAttributes( { showSoldOut: ! showSoldOut } ) }
-						help={ showSoldOut
-							? __( 'Sold-out tickets are visible with a "Sold out" label.', 'wordcamporg' )
-							: __( 'Sold-out tickets are hidden from the list.', 'wordcamporg' )
 						}
 					/>
 					<SelectControl

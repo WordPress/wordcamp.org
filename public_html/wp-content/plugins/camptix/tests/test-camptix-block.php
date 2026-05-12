@@ -55,8 +55,6 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		self::set_protected_property( 'did_template_redirect', false );
 		self::set_protected_property( 'shortcode_contents', '' );
 
-		remove_filter( 'camptix_hide_empty_tickets', '__return_true' );
-
 		parent::tear_down();
 	}
 
@@ -340,29 +338,6 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		$this->run_template_redirect_for_page( $page_id );
 
 		$this->assertSame( array(), self::get_protected_property( 'tickets' ) );
-	}
-
-	/**
-	 * The `camptix_hide_empty_tickets` filter now defaults to `false`, so a block with no
-	 * explicit attribute should leave sold-out tickets visible without registering any filter.
-	 */
-	public function test_show_sold_out_is_default_when_attribute_absent() {
-		$page_id = $this->create_block_page();
-
-		$this->run_template_redirect_for_page( $page_id );
-
-		$this->assertFalse( apply_filters( 'camptix_hide_empty_tickets', false ) );
-	}
-
-	/**
-	 * Explicit `showSoldOut: false` must flip the filter to `true` so sold-out tickets are hidden.
-	 */
-	public function test_show_sold_out_false_hides_sold_out_tickets() {
-		$page_id = $this->create_block_page( array( 'showSoldOut' => false ) );
-
-		$this->run_template_redirect_for_page( $page_id );
-
-		$this->assertTrue( apply_filters( 'camptix_hide_empty_tickets', false ) );
 	}
 
 	/**

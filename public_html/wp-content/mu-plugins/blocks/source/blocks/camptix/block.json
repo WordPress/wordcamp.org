@@ -38,10 +38,6 @@
 			"type": "string",
 			"default": "auto",
 			"enum": [ "auto", "show", "hide" ]
-		},
-		"showSoldOut": {
-			"type": "boolean",
-			"default": true
 		}
 	},
 	"supports": {

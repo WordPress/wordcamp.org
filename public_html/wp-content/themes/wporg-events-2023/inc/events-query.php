@@ -360,9 +360,11 @@ function inject_filters_into_search_form( string $block_content ): string {
 		}
 	}
 
-	// Update the form action to stay on the events page rather than going to
-	// the default WordPress search results page.
-	$action_url    = build_form_action_url();
+	// Update the form action to stay on an events listing rather than going to
+	// the default WordPress search results page. Use the search-specific helper
+	// here because build_form_action_url() returns home_url() when is_search()
+	// is true, which would bump subsequent searches off the events network.
+	$action_url    = build_search_form_action_url();
 	$block_content = preg_replace(
 		'/action="[^"]*"/',
 		'action="' . esc_url( $action_url ) . '"',
@@ -482,6 +484,24 @@ function build_form_action_url(): string {
 	}
 
 	return $url;
+}
+
+/**
+ * Build the `action` URL for the Search block on event listing pages.
+ *
+ * This must never resolve to `home_url()` — even on search results pages — or
+ * subsequent searches would post to the network root and drop the user off the
+ * events listing entirely. Always land on an events listing instead.
+ */
+function build_search_form_action_url(): string {
+	if ( ! is_search() && ! is_front_page() ) {
+		$url = get_permalink();
+		if ( $url ) {
+			return $url;
+		}
+	}
+
+	return home_url( 'upcoming-events' );
 }
 
 /**

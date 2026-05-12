@@ -8,8 +8,6 @@ defined( 'WPINC' ) || die();
 
 /**
  * @group wporg-events-2023
- *
- * @coversDefaultClass \WordPressdotorg\Events_2023
  */
 class Test_Events_Query extends WP_UnitTestCase {
 
@@ -37,7 +35,7 @@ class Test_Events_Query extends WP_UnitTestCase {
 	/**
 	 * Test that hidden inputs are injected when active filters exist.
 	 *
-	 * @covers ::inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
 	 */
 	public function test_injects_hidden_inputs_for_active_filters(): void {
 		set_query_var( 'event_type', array( 'meetup' ) );
@@ -58,7 +56,7 @@ class Test_Events_Query extends WP_UnitTestCase {
 	/**
 	 * Test that multiple values for a single filter produce multiple hidden inputs.
 	 *
-	 * @covers ::inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
 	 */
 	public function test_injects_multiple_values_for_same_filter(): void {
 		set_query_var( 'event_type', array( 'meetup', 'wordcamp' ) );
@@ -78,7 +76,7 @@ class Test_Events_Query extends WP_UnitTestCase {
 	/**
 	 * Test that hidden inputs are placed before the closing form tag.
 	 *
-	 * @covers ::inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
 	 */
 	public function test_hidden_inputs_placed_before_closing_form_tag(): void {
 		set_query_var( 'event_type', array( 'meetup' ) );
@@ -94,7 +92,7 @@ class Test_Events_Query extends WP_UnitTestCase {
 	/**
 	 * Test that form HTML has no hidden inputs when no filters are active.
 	 *
-	 * @covers ::inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
 	 */
 	public function test_no_hidden_inputs_when_no_filters_active(): void {
 		$result = \WordPressdotorg\Events_2023\inject_filters_into_search_form( $this->sample_form );
@@ -103,11 +101,13 @@ class Test_Events_Query extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Test that the form action URL is updated.
+	 * On a regular events listing page, the form action should be rewritten to that page's
+	 * permalink so the search submission stays on the same listing.
 	 *
-	 * @covers ::inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\build_search_form_action_url
 	 */
-	public function test_form_action_url_is_updated(): void {
+	public function test_form_action_url_targets_current_listing_page(): void {
 		$post_id = self::factory()->post->create( array(
 			'post_title'  => 'Upcoming Events',
 			'post_status' => 'publish',
@@ -117,16 +117,36 @@ class Test_Events_Query extends WP_UnitTestCase {
 
 		$result = \WordPressdotorg\Events_2023\inject_filters_into_search_form( $this->sample_form );
 
-		// The action should no longer be the original example.org URL.
-		$this->assertStringNotContainsString( 'action="http://example.org/"', $result );
-		// It should contain an action attribute with a URL pointing to the post.
-		$this->assertMatchesRegularExpression( '/action="https?:\/\/[^"]+?"/', $result );
+		$this->assertStringContainsString(
+			sprintf( 'action="%s"', esc_attr( esc_url( get_permalink( $post_id ) ) ) ),
+			$result
+		);
+	}
+
+	/**
+	 * Regression: on a search results page (where build_form_action_url() would return
+	 * home_url() and bump the user off the events network), the search form must still
+	 * target the events listing so subsequent searches stay scoped to events.
+	 *
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\build_search_form_action_url
+	 */
+	public function test_form_action_url_on_search_page_targets_events_listing(): void {
+		$this->go_to( home_url( '?s=test' ) );
+		$this->assertTrue( is_search(), 'Test prerequisite: is_search() must be true.' );
+
+		$result = \WordPressdotorg\Events_2023\inject_filters_into_search_form( $this->sample_form );
+
+		$this->assertStringContainsString(
+			sprintf( 'action="%s"', esc_attr( esc_url( home_url( 'upcoming-events' ) ) ) ),
+			$result
+		);
 	}
 
 	/**
 	 * Test that empty filter values are not injected.
 	 *
-	 * @covers ::inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
 	 */
 	public function test_empty_filter_values_are_not_injected(): void {
 		set_query_var( 'event_type', array( '' ) );
@@ -140,7 +160,7 @@ class Test_Events_Query extends WP_UnitTestCase {
 	/**
 	 * Test that filter values are properly escaped in HTML output.
 	 *
-	 * @covers ::inject_filters_into_search_form
+	 * @covers \WordPressdotorg\Events_2023\inject_filters_into_search_form
 	 */
 	public function test_filter_values_are_escaped(): void {
 		set_query_var( 'event_type', array( '<script>alert(1)</script>' ) );

@@ -63,7 +63,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
     docker compose up -d
     ```
 
-	_Note: This will create `.docker/database` directory which will contain MySQL files to persist data across docker restarts._
+	_Note: This will create `.docker/mariadb-database` directory which will contain MariaDB files to persist data across docker restarts._
 
     _Note: You won't be able to test in your browser just yet, so continue with the next steps._
 
@@ -83,7 +83,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 	If your browser warns you about the self-signed certificates, then the CA certificate is not properly installed. For Chrome, [manually add the CA cert to Keychain Access](https://deliciousbrains.com/ssl-certificate-authority-for-local-https-development/). For Firefox, import it to `Preferences > Certificates > Advanced > Authorities`.
 
-1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/database`. To start with different database, delete `.docker/database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
+1. By default, docker will start with data defined in `.docker/data/wordcamp_dev.sql` and changes to data will be persisted across runs in `.docker/mariadb-database`. To start with different database, delete `.docker/mariadb-database` directory and replace the `.docker/data/wordcamp_dev.sql` file and run `docker compose up --build -d` again.
 
 1. Optional: Add API keys to the `Third party services` section of `wp-config.php` to enabled working on specific features that require them.
 
@@ -131,13 +131,13 @@ Note: All of these commands are meant to be executed from project directory.
 
     `wordcamp.test` is the name of docker service running `nginx` and `php`. `bash` is the name of command that we want to execute. This particular command will give us shell access inside the Docker.
 
-    Similarly, for the MySQL container, you can use:
+    Similarly, for the MariaDB container, you can use:
 
     ```bash
     docker compose exec wordcamp.db bash
     ```
 
-    `wordcamp.db` is the name of docker service running MySQL server.
+    `wordcamp.db` is the name of docker service running MariaDB server.
 
 1. To view `nginx` and `php-logs` use:
     ```bash
@@ -150,15 +150,15 @@ Note: All of these commands are meant to be executed from project directory.
 
     `wordcamp.test` is the name of the Docker service which is running `nginx` and `php`
 
-    Similarly, to view MySQL server logs, use:
+    Similarly, to view MariaDB server logs, use:
 
     ```bash
     docker compose logs -f --tail=100 wordcamp.db
     ```
 
-    Note that this does not show MySQL queries made by application, these are just server logs.
+    Note that this does not show database queries made by application, these are just server logs.
 
-    `wordcamp.db` is the name of Docker service which is running MySQL server.
+    `wordcamp.db` is the name of Docker service which is running MariaDB server.
 
 
 Once the Docker instance has started, you can visit [2014.seattle.wordcamp.test](https://2014.seattle.wordcamp.test) to view a sample WordCamp site. WordCamp central would be [central.wordcamp.test](https://central.wordcamp.test). You can also visit [localhost:1080](localhost:1080) to view the MailCatcher dashboard.
@@ -177,7 +177,7 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
     ```
     phpunit_wp_1  | […] NOTICE: ready to handle connections
     …
-    phpunit_db_1  | […] [Note] mysqld: ready for connections.
+    phpunit_db_1  | […] [Note] mariadbd: ready for connections.
     ```
 
 2. The first time you run this, you'll need to install the tests (future runs can skip this step). First, open a shell inside the web container:

@@ -3,6 +3,7 @@
 #
 .docker/data/*.bkp
 .docker/database
+.docker/mariadb-database
 .docker/wordcamp*.pem
 .docker/test_suite
 docker-compose.override.yaml

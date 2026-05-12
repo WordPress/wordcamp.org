@@ -58,15 +58,18 @@ jobs:
         php-version: ['8.1', '8.4', '8.5']
 
     services:
-      mysql:
-        image: mysql:5.7
+      mariadb:
+        image: mariadb:lts
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: false
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wcorg_test
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wcorg_test
         ports:
           - 3306/tcp
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
     - uses: actions/checkout@v4
@@ -85,17 +88,16 @@ jobs:
       env:
           COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Start mysql service
-      run: sudo /etc/init.d/mysql start
-
     - name: Install dependencies
       run: |
         rm composer.lock || true
         composer install
 
     - name: Install WordPress
+      env:
+        DB_PORT: ${{ job.services.mariadb.ports['3306'] }}
       run: |
-        bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest
+        bash .docker/bin/install-wp-tests.sh wcorg_test root root "127.0.0.1:${DB_PORT}" latest true
 
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

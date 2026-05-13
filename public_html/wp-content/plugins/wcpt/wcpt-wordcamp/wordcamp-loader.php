@@ -405,7 +405,7 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-needs-more-info' => array( 'wcpt-needs-action', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled' ),
 			'wcpt-approved-pre-pl' => array( 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled' ),
 			'wcpt-scheduled'       => array( 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled' ),
-			'wcpt-closed'          => array(),
+			'wcpt-closed'          => array( 'wcpt-rejected', 'wcpt-cancelled' ),
 			'wcpt-rejected'        => $all,  // Declined can go to any CC status.
 			'wcpt-cancelled'       => $all,  // Cancelled can go to any CC status.
 		);

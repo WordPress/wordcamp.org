@@ -178,6 +178,8 @@ class WordCamp_Loader extends Event_Loader {
 	public static function get_post_statuses() {
 		return array(
 			'wcpt-needs-vetting'   => _x( 'Needs Vetting',                               'wordcamp status', 'wordcamporg' ),
+			'wcpt-needs-action'    => _x( 'Needs Action',                                'wordcamp status', 'wordcamporg' ),
+			'wcpt-needs-more-info' => _x( 'Needs More Info',                             'wordcamp status', 'wordcamporg' ),
 			'wcpt-needs-orientati' => _x( 'Needs Orientation/Interview',                 'wordcamp status', 'wordcamporg' ),
 			'wcpt-more-info-reque' => _x( 'On Hold',                                     'wordcamp status', 'wordcamporg' ),
 			'wcpt-interview-sched' => _x( 'Interview/Orientation Scheduled',             'wordcamp status', 'wordcamporg' ),
@@ -248,6 +250,8 @@ class WordCamp_Loader extends Event_Loader {
 	public static function get_active_wordcamp_statuses() {
 		return array_merge(
 			array(
+				'wcpt-needs-action',
+				'wcpt-needs-more-info',
 				'wcpt-approved-pre-pl',
 				'wcpt-needs-email',
 				'wcpt-needs-site',
@@ -281,6 +285,8 @@ class WordCamp_Loader extends Event_Loader {
 	public static function map_statuses_to_milestones() {
 		$milestones = array(
 			'wcpt-needs-vetting'   => 'Application received',
+			'wcpt-needs-action'    => 'Application vetted',
+			'wcpt-needs-more-info' => 'Application vetted',
 			'wcpt-needs-orientati' => 'Application vetted',
 			'wcpt-more-info-reque' => 'Application vetted',
 			'wcpt-interview-sched' => 'Interview scheduled',
@@ -346,6 +352,65 @@ class WordCamp_Loader extends Event_Loader {
 		}
 
 		if ( empty( $transitions[ $status ] ) ) {
+			return array( 'wcpt-needs-vetting' );
+		}
+
+		return $transitions[ $status ];
+	}
+
+	/**
+	 * Get the eight statuses available for Campus Connect events.
+	 *
+	 * These replace the full WordCamp status list for entries where
+	 * `Event Subtype` equals `campusconnect`, keeping the workflow simple.
+	 *
+	 * @return array Associative array of slug => label.
+	 */
+	public static function get_campus_connect_statuses() {
+		$all  = self::get_post_statuses();
+		$keys = array(
+			'wcpt-needs-vetting',
+			'wcpt-needs-action',
+			'wcpt-needs-more-info',
+			'wcpt-approved-pre-pl',
+			'wcpt-rejected',
+			'wcpt-cancelled',
+			'wcpt-scheduled',
+			'wcpt-closed',
+		);
+
+		$statuses = array_intersect_key( $all, array_flip( $keys ) );
+
+		// Campus Connect uses a shorter label for this status.
+		$statuses['wcpt-approved-pre-pl'] = _x( 'Approved For Pre-Planning', 'wordcamp status', 'wordcamporg' );
+
+		return $statuses;
+	}
+
+	/**
+	 * Get the valid status transitions for Campus Connect events.
+	 *
+	 * Only entries where `Event Subtype` equals `campusconnect` use this
+	 * simplified transition map.
+	 *
+	 * @param string $status Current status slug.
+	 * @return array Array of valid next-status slugs.
+	 */
+	public static function get_campus_connect_status_transitions( $status ) {
+		$all = array_keys( self::get_campus_connect_statuses() );
+
+		$transitions = array(
+			'wcpt-needs-vetting'   => array( 'wcpt-needs-action', 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-needs-action'    => array( 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-needs-more-info' => array( 'wcpt-needs-action', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-approved-pre-pl' => array( 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-scheduled'       => array( 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-closed'          => array(),
+			'wcpt-rejected'        => $all,  // Declined can go to any CC status.
+			'wcpt-cancelled'       => $all,  // Cancelled can go to any CC status.
+		);
+
+		if ( ! isset( $transitions[ $status ] ) ) {
 			return array( 'wcpt-needs-vetting' );
 		}
 

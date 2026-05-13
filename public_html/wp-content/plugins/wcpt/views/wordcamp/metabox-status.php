@@ -69,7 +69,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 										echo ' disabled ';
 									}
 									?>>
-										<?php echo esc_html( $status->label ); ?>
+										<?php echo esc_html( $post_status_label ); ?>
 									</option>
 								<?php endforeach; ?>
 							</select>
@@ -79,8 +79,9 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 
 							<span id="post-status-display">
 							<?php
-								$status = get_post_status_object( $post->post_status );
-								echo esc_html( $status->label );
+								$all_statuses    = $event_admin->get_post_statuses();
+								$current_label   = $all_statuses[ $post->post_status ] ?? get_post_status_object( $post->post_status )->label;
+								echo esc_html( $current_label );
 							?>
 						</span>
 

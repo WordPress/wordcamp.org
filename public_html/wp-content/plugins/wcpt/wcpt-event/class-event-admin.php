@@ -302,16 +302,13 @@ abstract class Event_Admin {
 		// Ensure status labels are in English.
 		$locale_switched = switch_to_locale( 'en_US' );
 
-		$old_status_obj = get_post_status_object( $old_status );
-		$new_status_obj = get_post_status_object( $new_status );
-
 		$log_id = add_post_meta(
 			$post->ID,
 			'_status_change',
 			array(
 				'timestamp' => time(),
 				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( '%s &rarr; %s', $old_status_obj->label ?? $old_status, $new_status_obj->label ?? $new_status ),
+				'message'   => sprintf( '%s &rarr; %s', $this->get_status_label( $old_status, $post ), $this->get_status_label( $new_status, $post ) ),
 			)
 		);
 
@@ -325,6 +322,21 @@ abstract class Event_Admin {
 		if ( $locale_switched ) {
 			restore_previous_locale();
 		}
+	}
+
+	/**
+	 * Return the human-readable label for a post status slug, for use in log messages.
+	 *
+	 * Subclasses can override this to return event-subtype-specific labels
+	 * (e.g. Campus Connect uses a different label for `wcpt-approved-pre-pl`).
+	 *
+	 * @param string  $status The post status slug.
+	 * @param WP_Post $post   The post being transitioned.
+	 * @return string Human-readable label, or the raw slug if no label is found.
+	 */
+	protected function get_status_label( $status, $post ) {
+		$status_obj = get_post_status_object( $status );
+		return $status_obj->label ?? $status;
 	}
 
 	/**

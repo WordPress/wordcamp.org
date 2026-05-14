@@ -244,8 +244,10 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 			return $result;
 		}
 
-		// 3. Log the transition (WordCamp_Admin::log_status_changes() is not
-		//    available outside the admin context, so we write the entry directly).
+		/*
+		 * 3. Log the transition (WordCamp_Admin::log_status_changes() is not
+		 *    available outside the admin context, so we write the entry directly).
+		 */
 		$this->log_status_transition( $post_id, $old_status, 'wcpt-needs-action' );
 
 		return rest_ensure_response(

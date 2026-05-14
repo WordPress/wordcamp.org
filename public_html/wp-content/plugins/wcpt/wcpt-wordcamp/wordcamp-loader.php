@@ -25,6 +25,7 @@ class WordCamp_Loader extends Event_Loader {
 		add_filter( 'query_vars',                      array( $this, 'query_vars'                        ) );
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
 		add_action( 'rest_api_init',                   array( $this, 'register_rest_public_fields'       ) );
+		add_action( 'rest_api_init',                   array( $this, 'register_vetting_rest_routes'      ) );
 		add_action( 'init',                            array( $this, 'register_post_capabilities' ) );
 	}
 
@@ -38,6 +39,7 @@ class WordCamp_Loader extends Event_Loader {
 	function includes() {
 		// Load the files
 		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-wordcamps-controller.php';
+		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-vetting-controller.php';
 		require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-template.php';
 
 		// Quick admin check and load if needed
@@ -428,6 +430,16 @@ class WordCamp_Loader extends Event_Loader {
 				},
 			)
 		);
+	}
+
+	/**
+	 * Register the Campus Connect vetting REST endpoints.
+	 *
+	 * @hooked action rest_api_init
+	 */
+	public function register_vetting_rest_routes() {
+		$controller = new WordCamp_REST_Vetting_Controller();
+		$controller->register_routes();
 	}
 
 	/**

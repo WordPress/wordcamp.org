@@ -7206,7 +7206,7 @@ class CampTix_Plugin {
 		}
 
 		$coupon = get_post( (int) $matches[1] );
-		if ( ! $coupon || 'tix_coupon' !== $coupon->post_type ) {
+		if ( ! $coupon || 'tix_coupon' !== $coupon->post_type || 'publish' !== $coupon->post_status ) {
 			return;
 		}
 

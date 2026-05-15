@@ -375,6 +375,10 @@ body.post-type-tix_attendee table.posts td.attended div.spinner {
 	margin-top: 16px;
 }
 
+/* Buyer-friendly status pill in attendee reports and metabox (issue #1721). */
+.tix-status-pill { display: inline-block; padding: 0 0.4em; background: #f0f0f1; border-radius: 3px; font-weight: 600; }
+.tix-status-raw { margin-left: 0.4em; color: #646970; font-size: 0.85em; }
+
 /**
  * === RTL Styles ===
  * Should always be at the EOF, since they need to override
@@ -402,6 +406,4 @@ body.post-type-tix_attendee table.posts td.attended div.spinner {
 .rtl #tix_coupon_options .misc-pub-section span.left,
 .rtl #tix_coupon_availability .misc-pub-section span.left { float: right; }
 
-/* Buyer-friendly status pill in attendee reports and metabox (issue #1721). */
-.tix-status-pill { display: inline-block; padding: 0 0.4em; background: #f0f0f1; border-radius: 3px; font-weight: 600; }
-.tix-status-raw { margin-left: 0.4em; color: #646970; font-size: 0.85em; }
+.rtl .tix-status-raw { margin-left: 0; margin-right: 0.4em; }

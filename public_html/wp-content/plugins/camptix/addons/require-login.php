@@ -394,7 +394,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 */
 	public function get_attendee_username_meta( $data, $attendee ) {
 		$username = get_post_meta( $attendee->ID, 'tix_username', true );
-		return $this->format_admin_username_display( $username, $attendee->ID );
+		return $this->format_admin_username_display( $username, $attendee->ID, 'text' );
 	}
 
 	/**
@@ -1040,9 +1040,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 *
 	 * @param string $username    Stored username (may be UNCONFIRMED_USERNAME).
 	 * @param int    $attendee_id Attendee post ID, used to detect Unknown tickets.
-	 * @return string Escaped HTML.
+	 * @param string $context     'html' for admin UI (default), 'text' for CSV/XML exports.
+	 * @return string Escaped HTML when $context is 'html', plain text otherwise.
 	 */
-	protected function format_admin_username_display( $username, $attendee_id ) {
+	protected function format_admin_username_display( $username, $attendee_id, $context = 'html' ) {
 		$unknown_email = $this->get_unknown_attendee_info()['email'];
 		$is_unknown    = ( get_post_meta( $attendee_id, 'tix_email', true ) == $unknown_email );
 
@@ -1051,14 +1052,19 @@ class CampTix_Require_Login extends CampTix_Addon {
 		} elseif ( self::UNCONFIRMED_USERNAME == $username ) {
 			$label = _x( 'Awaiting attendee', 'WordCamp ticket status.', 'wordcamporg' );
 		} else {
-			return esc_html( $username );
+			return ( 'html' == $context ) ? esc_html( $username ) : $username;
 		}
 
-		return sprintf(
-			'<span class="tix-status-pill">%1$s</span> <code class="tix-status-raw">%2$s</code>',
-			esc_html( $label ),
-			esc_html( $username )
-		);
+		if ( 'html' == $context ) {
+			return sprintf(
+				'<span class="tix-status-pill">%1$s</span> <code class="tix-status-raw">%2$s</code>',
+				esc_html( $label ),
+				esc_html( $username )
+			);
+		}
+
+		/* translators: 1: friendly status label, 2: raw stored username placeholder. */
+		return sprintf( _x( '%1$s (%2$s)', 'CampTix attendee export username column.', 'wordcamporg' ), $label, $username );
 	}
 
 	/**
@@ -1134,6 +1140,14 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$failed        = 0;
 		$unknown_email = $this->get_unknown_attendee_info()['email'];
 
+		// email_attendee_ticket_multiple_template() runs do_shortcode() on an email template
+		// and expects only the email-template shortcodes to be registered. Replicate the
+		// remove/restore dance that the core send paths use (see CampTix_Plugin::email_attendees).
+		global $shortcode_tags;
+		$saved_shortcode_tags = $shortcode_tags;
+		remove_all_shortcodes();
+		do_action( 'camptix_init_email_templates_shortcodes' );
+
 		foreach ( $attendees as $attendee ) {
 			$username       = get_post_meta( $attendee->ID, 'tix_username', true );
 			$email          = get_post_meta( $attendee->ID, 'tix_email', true );
@@ -1162,6 +1176,8 @@ class CampTix_Require_Login extends CampTix_Addon {
 				$failed++;
 			}
 		}
+
+		$shortcode_tags = $saved_shortcode_tags;
 
 		set_transient(
 			'camptix_rl_resend_summary_' . $access_token,
@@ -1254,7 +1270,7 @@ class CampTix_Require_Login extends CampTix_Addon {
 			<input type="hidden" name="tix_access_token" value="<?php echo esc_attr( $access_token ); ?>">
 			<?php wp_nonce_field( 'tix_resend_claim_links_' . $access_token, 'tix_resend_nonce' ); ?>
 			<p class="tix-resend-claim-links__help">
-				<?php esc_html_e( 'Lost the ticket emails? Re-send the claim link for every ticket in this order that is still awaiting an attendee.', 'wordcamporg' ); ?>
+				<?php esc_html_e( 'Lost the ticket emails? Re-send the claim link for every ticket in this order that has not been claimed or assigned yet.', 'wordcamporg' ); ?>
 			</p>
 			<p>
 				<button type="submit" name="tix_resend_claim_links" value="1" class="tix-resend-claim-links__button">

@@ -202,12 +202,15 @@ window.CampTixUtilities = CampTixUtilities;
 		}
 		var copiedLabel = btn.getAttribute( 'data-copied-label' ) || 'Copied!';
 		var promptLabel = btn.getAttribute( 'data-prompt-label' ) || 'Copy this link:';
-		var done        = function() {
-			var prev = btn.textContent;
+		// Capture the button's original label once so rapid clicks don't restore "Copied!".
+		if ( ! btn.hasAttribute( 'data-original-label' ) ) {
+			btn.setAttribute( 'data-original-label', btn.textContent );
+		}
+		var done = function() {
 			btn.textContent = copiedLabel;
 			btn.classList.add( 'is-copied' );
 			setTimeout( function() {
-				btn.textContent = prev;
+				btn.textContent = btn.getAttribute( 'data-original-label' );
 				btn.classList.remove( 'is-copied' );
 			}, 2000 );
 		};

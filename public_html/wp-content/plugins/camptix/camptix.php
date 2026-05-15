@@ -178,6 +178,7 @@ class CampTix_Plugin {
 		add_action( 'camptix_notices', array( $this, 'do_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_errors' ) );
+		add_action( 'admin_notices', array( $this, 'maybe_notice_coupon_search' ) );
 		$this->add_resend_notices();
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -7180,6 +7181,50 @@ class CampTix_Plugin {
 				);
 			}
 		}
+	}
+
+	/**
+	 * Render a friendly notice on the Attendees list when the search query is
+	 * the internal `tix_coupon_id:<ID>` filter used by the Coupon column and
+	 * the Coupons "Used" count. Display-only — the underlying search is
+	 * unchanged.
+	 */
+	function maybe_notice_coupon_search() {
+		global $pagenow;
+
+		if ( 'edit.php' !== $pagenow ) {
+			return;
+		}
+
+		if ( empty( $_GET['post_type'] ) || 'tix_attendee' !== $_GET['post_type'] ) {
+			return;
+		}
+
+		$search = isset( $_GET['s'] ) ? wp_unslash( $_GET['s'] ) : '';
+		if ( ! preg_match( '/^tix_coupon_id:(\d+)$/', $search, $matches ) ) {
+			return;
+		}
+
+		$coupon = get_post( (int) $matches[1] );
+		if ( ! $coupon || 'tix_coupon' !== $coupon->post_type ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-info"><p>%s</p></div>',
+			wp_kses(
+				sprintf(
+					/* translators: 1: coupon code/title, 2: URL to edit the coupon. */
+					__( 'Showing attendees who used coupon: <strong>%1$s</strong> (<a href="%2$s">edit coupon</a>).', 'wordcamporg' ),
+					esc_html( $coupon->post_title ),
+					esc_url( get_edit_post_link( $coupon->ID ) )
+				),
+				array(
+					'strong' => array(),
+					'a'      => array( 'href' => array() ),
+				)
+			)
+		);
 	}
 
 	/**

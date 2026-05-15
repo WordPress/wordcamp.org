@@ -45,6 +45,10 @@ class CampTix_Require_Login extends CampTix_Addon {
 		add_action( 'template_redirect',                              array( $this, 'block_unauthenticated_actions' ), 7 );    // before CampTix_Plugin->template_redirect()
 		add_filter( 'camptix_attendees_shortcode_query_args',         array( $this, 'hide_unconfirmed_attendees' ) );
 		add_filter( 'camptix_private_attendees_parameters',           array( $this, 'prevent_unknown_attendees_viewing_private_content' ) );
+
+		// Buyer-side claim-link recovery (issue #1721).
+		add_action( 'template_redirect',                              array( $this, 'process_resend_claim_links' ), 8 );
+		add_action( 'camptix_notices',                                array( $this, 'render_resend_claim_links_ui' ), 9 );
 	}
 
 	/**
@@ -389,7 +393,8 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return string
 	 */
 	public function get_attendee_username_meta( $data, $attendee ) {
-		return get_post_meta( $attendee->ID, 'tix_username', true );
+		$username = get_post_meta( $attendee->ID, 'tix_username', true );
+		return $this->format_admin_username_display( $username, $attendee->ID );
 	}
 
 	/**
@@ -424,7 +429,11 @@ class CampTix_Require_Login extends CampTix_Addon {
 	 * @return array
 	 */
 	public function get_attendee_metabox_rows( $rows, $post ) {
-		$rows[] = array( __( 'Username', 'wordcamporg' ), esc_html( get_post_meta( $post->ID, 'tix_username', true ) ) );
+		$username = get_post_meta( $post->ID, 'tix_username', true );
+		$rows[]   = array(
+			__( 'Username', 'wordcamporg' ),
+			$this->format_admin_username_display( $username, $post->ID ),
+		);
 
 		return $rows;
 	}
@@ -627,16 +636,26 @@ class CampTix_Require_Login extends CampTix_Addon {
 		$unknown_attendee_info = $this->get_unknown_attendee_info();
 		$is_unknown_attendee   = ( get_post_meta( $attendee->ID, 'tix_email', true ) == $unknown_attendee_info['email'] );
 
-		// Display the ticket status.
+		// Display the ticket status using buyer-friendly labels (issue #1721).
 		if ( $is_unknown_attendee ) {
-			$content = _x( 'Status: Unknown', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = _x( 'Status: Awaiting assignment', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_help = __( 'This ticket is fully paid for. It has not been assigned to a specific attendee yet — forward the claim link to whoever will use it.', 'wordcamporg' );
 		} elseif ( self::UNCONFIRMED_USERNAME == $attendee_username ) {
-			$content = _x( 'Status: Unconfirmed', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = _x( 'Status: Awaiting attendee', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_help = __( 'This ticket is fully paid for. The attendee has not yet logged in with their WordPress.org account to claim it.', 'wordcamporg' );
 		} else {
-			$content = _x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_text = _x( 'Status: Confirmed', 'WordCamp ticket status.', 'wordcamporg' );
+			$status_help = '';
 		}
-		// Use a non-breaking space to prevent the text from wrapping.
-		$content = str_replace( ' ', '&nbsp;', $content );
+
+		// Use a non-breaking space to prevent the status text from wrapping.
+		$content = str_replace( ' ', '&nbsp;', $status_text );
+
+		// Append a help tooltip for non-confirmed cases so buyers see at a glance that
+		// the status is not a payment issue.
+		if ( $status_help ) {
+			$content .= ' <span class="tix-status-help" tabindex="0" aria-label="' . esc_attr( $status_help ) . '" title="' . esc_attr( $status_help ) . '">' . esc_html_x( '(?)', 'CampTix help icon', 'wordcamporg' ) . '</span>';
+		}
 
 		// Redirect back to this same overview, as they may not login with the correct username.
 		$args        = $this->get_sanitized_tix_parameters( $_REQUEST );
@@ -681,6 +700,22 @@ class CampTix_Require_Login extends CampTix_Addon {
 			// 6 - Current user owns ticket, edit away.
 		} elseif ( $can_claim_ticket || $current_user_ticket ) {
 			$content .= '<br>' . $edit_link_html;
+		}
+
+		// Per-row "Copy claim link" control for unclaimed tickets (issue #1721).
+		if ( $is_unknown_attendee || self::UNCONFIRMED_USERNAME == $attendee_username ) {
+			$edit_token = get_post_meta( $attendee->ID, 'tix_edit_token', true );
+			if ( $edit_token ) {
+				$claim_url = $camptix->get_edit_attendee_link( $attendee->ID, $edit_token );
+				$content  .= sprintf(
+					'<br><button type="button" class="tix-copy-claim-link" data-claim-url="%1$s" data-copied-label="%2$s" data-prompt-label="%3$s" aria-label="%4$s">%5$s</button>',
+					esc_url( $claim_url ),
+					esc_attr__( 'Copied!', 'wordcamporg' ),
+					esc_attr__( 'Copy this link:', 'wordcamporg' ),
+					esc_attr__( "Copy this attendee's claim link to your clipboard", 'wordcamporg' ),
+					esc_html__( 'Copy claim link', 'wordcamporg' )
+				);
+			}
 		}
 
 		return $content;
@@ -998,6 +1033,296 @@ class CampTix_Require_Login extends CampTix_Addon {
 
 		return $ticket ? reset( $ticket ) : false;
 	}
+
+	/**
+	 * Render the username field for admin views, with a friendly label for
+	 * unclaimed/unknown tickets while keeping the raw value visible (issue #1721).
+	 *
+	 * @param string $username    Stored username (may be UNCONFIRMED_USERNAME).
+	 * @param int    $attendee_id Attendee post ID, used to detect Unknown tickets.
+	 * @return string Escaped HTML.
+	 */
+	protected function format_admin_username_display( $username, $attendee_id ) {
+		$unknown_email = $this->get_unknown_attendee_info()['email'];
+		$is_unknown    = ( get_post_meta( $attendee_id, 'tix_email', true ) == $unknown_email );
+
+		if ( $is_unknown ) {
+			$label = _x( 'Awaiting assignment', 'WordCamp ticket status.', 'wordcamporg' );
+		} elseif ( self::UNCONFIRMED_USERNAME == $username ) {
+			$label = _x( 'Awaiting attendee', 'WordCamp ticket status.', 'wordcamporg' );
+		} else {
+			return esc_html( $username );
+		}
+
+		return sprintf(
+			'<span class="tix-status-pill">%1$s</span> <code class="tix-status-raw">%2$s</code>',
+			esc_html( $label ),
+			esc_html( $username )
+		);
+	}
+
+	/**
+	 * Mask an email address for display in buyer-facing confirmation notices.
+	 *
+	 * Example: jane.doe@example.com → j***@e****.com
+	 *
+	 * @param string $email
+	 * @return string
+	 */
+	protected function mask_email_for_notice( $email ) {
+		if ( ! is_email( $email ) ) {
+			return '';
+		}
+
+		list( $local, $domain ) = explode( '@', $email, 2 );
+		$tld_pos = strrpos( $domain, '.' );
+		if ( false === $tld_pos ) {
+			return '';
+		}
+
+		$domain_name = substr( $domain, 0, $tld_pos );
+		$tld         = substr( $domain, $tld_pos );
+
+		return mb_substr( $local, 0, 1 ) . '***@' . mb_substr( $domain_name, 0, 1 ) . '****' . $tld;
+	}
+
+	/**
+	 * Process the "Email me my claim links" form submission (issue #1721).
+	 *
+	 * Hooked on template_redirect (priority 8, after block_unauthenticated_actions
+	 * at 7 and before CampTix shortcode rendering). Walks every attendee on the
+	 * access-token order, re-sends the appropriate multiple-purchase template to
+	 * each Unconfirmed/Unknown ticket, and rate-limits to one resend per ticket
+	 * per hour. Stores a transient with the result summary for the follow-up GET
+	 * request to render via camptix_notices.
+	 */
+	public function process_resend_claim_links() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		if ( empty( $_POST['tix_resend_claim_links'] ) ) {
+			return;
+		}
+
+		$access_token = isset( $_POST['tix_access_token'] ) ? sanitize_text_field( wp_unslash( $_POST['tix_access_token'] ) ) : '';
+		if ( ! $access_token || ! ctype_alnum( $access_token ) ) {
+			return;
+		}
+
+		$nonce = isset( $_POST['tix_resend_nonce'] ) ? wp_unslash( $_POST['tix_resend_nonce'] ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'tix_resend_claim_links_' . $access_token ) ) {
+			return;
+		}
+
+		$attendees = get_posts( array(
+			'posts_per_page' => 200,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => array( 'publish', 'pending' ),
+			'meta_query'     => array(
+				array(
+					'key'     => 'tix_access_token',
+					'value'   => $access_token,
+					'compare' => '=',
+					'type'    => 'CHAR',
+				),
+			),
+			'cache_results'  => false,
+		) );
+
+		$sent          = array();
+		$throttled     = 0;
+		$failed        = 0;
+		$unknown_email = $this->get_unknown_attendee_info()['email'];
+
+		foreach ( $attendees as $attendee ) {
+			$username       = get_post_meta( $attendee->ID, 'tix_username', true );
+			$email          = get_post_meta( $attendee->ID, 'tix_email', true );
+			$is_unknown     = ( $email == $unknown_email );
+			$is_unconfirmed = ( self::UNCONFIRMED_USERNAME == $username );
+
+			if ( ! $is_unknown && ! $is_unconfirmed ) {
+				continue;
+			}
+
+			$throttle_key = 'camptix_rl_resend_' . $attendee->ID;
+			if ( get_transient( $throttle_key ) ) {
+				$throttled++;
+				continue;
+			}
+
+			// Reuse CampTix's existing send pipeline — runs through use_custom_email_templates()
+			// which already picks the unknown/unconfirmed variant and redirects unknown-attendee
+			// mail to the buyer.
+			$result = $camptix->email_attendee_ticket_multiple_template( $attendee );
+
+			if ( $result ) {
+				set_transient( $throttle_key, time(), HOUR_IN_SECONDS );
+				$sent[] = $this->mask_email_for_notice( $camptix->get_attendee_email( $attendee->ID ) );
+			} else {
+				$failed++;
+			}
+		}
+
+		set_transient(
+			'camptix_rl_resend_summary_' . $access_token,
+			array(
+				'sent'      => $sent,
+				'throttled' => $throttled,
+				'failed'    => $failed,
+			),
+			MINUTE_IN_SECONDS * 5
+		);
+
+		$redirect = add_query_arg(
+			array(
+				'tix_action'       => 'access_tickets',
+				'tix_access_token' => $access_token,
+				'tix_resend_done'  => 1,
+			),
+			$camptix->get_tickets_url()
+		) . '#tix';
+
+		wp_safe_redirect( esc_url_raw( $redirect ) );
+		die();
+	}
+
+	/**
+	 * Render the "Email me my claim links" form and any post-resend notices on
+	 * the ticket overview page (issue #1721).
+	 *
+	 * Hooked on camptix_notices. Active only when viewing the access_tickets
+	 * screen with a valid access token AND the order has at least one
+	 * Unconfirmed/Unknown ticket.
+	 */
+	public function render_resend_claim_links_ui() {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$tix_action   = isset( $_GET['tix_action'] ) ? sanitize_text_field( wp_unslash( $_GET['tix_action'] ) ) : '';
+		$access_token = isset( $_GET['tix_access_token'] ) ? sanitize_text_field( wp_unslash( $_GET['tix_access_token'] ) ) : '';
+
+		if ( 'access_tickets' !== $tix_action || ! $access_token || ! ctype_alnum( $access_token ) ) {
+			return;
+		}
+
+		if ( ! empty( $_GET['tix_resend_done'] ) ) {
+			$this->render_resend_summary_notice( $access_token );
+		}
+
+		$unclaimed = get_posts( array(
+			'posts_per_page' => 1,
+			'post_type'      => 'tix_attendee',
+			'post_status'    => array( 'publish', 'pending' ),
+			'fields'         => 'ids',
+			'meta_query'     => array(
+				'relation' => 'AND',
+				array(
+					'key'     => 'tix_access_token',
+					'value'   => $access_token,
+					'compare' => '=',
+				),
+				array(
+					'relation' => 'OR',
+					array(
+						'key'   => 'tix_username',
+						'value' => self::UNCONFIRMED_USERNAME,
+					),
+					array(
+						'key'   => 'tix_email',
+						'value' => $this->get_unknown_attendee_info()['email'],
+					),
+				),
+			),
+			'cache_results'  => false,
+		) );
+
+		if ( empty( $unclaimed ) ) {
+			return;
+		}
+
+		// Keep tix_action + token in the form URL so that if the handler returns early
+		// (bad nonce, etc.) the buyer lands back on access_tickets, not the purchase form.
+		$action_url = add_query_arg(
+			array(
+				'tix_action'       => 'access_tickets',
+				'tix_access_token' => $access_token,
+			),
+			$camptix->get_tickets_url()
+		);
+		?>
+		<form method="post" action="<?php echo esc_url( $action_url ); ?>#tix" class="tix-resend-claim-links">
+			<input type="hidden" name="tix_access_token" value="<?php echo esc_attr( $access_token ); ?>">
+			<?php wp_nonce_field( 'tix_resend_claim_links_' . $access_token, 'tix_resend_nonce' ); ?>
+			<p class="tix-resend-claim-links__help">
+				<?php esc_html_e( 'Lost the ticket emails? Re-send the claim link for every ticket in this order that is still awaiting an attendee.', 'wordcamporg' ); ?>
+			</p>
+			<p>
+				<button type="submit" name="tix_resend_claim_links" value="1" class="tix-resend-claim-links__button">
+					<?php esc_html_e( 'Email me my claim links', 'wordcamporg' ); ?>
+				</button>
+			</p>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Render the result notice after a resend submission.
+	 *
+	 * @param string $access_token
+	 */
+	protected function render_resend_summary_notice( $access_token ) {
+		/** @var CampTix_Plugin $camptix */
+		global $camptix;
+
+		$summary = get_transient( 'camptix_rl_resend_summary_' . $access_token );
+		if ( ! $summary ) {
+			return;
+		}
+		delete_transient( 'camptix_rl_resend_summary_' . $access_token );
+
+		$sent_count = count( $summary['sent'] );
+
+		if ( $sent_count > 0 ) {
+			$camptix->notice( sprintf(
+				/* translators: 1) count of emails sent, 2) comma-separated masked addresses */
+				_n(
+					'Re-sent %1$d claim email to: %2$s. Please allow a few minutes for delivery and check your spam folder.',
+					'Re-sent %1$d claim emails to: %2$s. Please allow a few minutes for delivery and check your spam folder.',
+					$sent_count,
+					'wordcamporg'
+				),
+				$sent_count,
+				implode( ', ', array_map( 'esc_html', $summary['sent'] ) )
+			) );
+		}
+
+		if ( $summary['throttled'] > 0 ) {
+			$camptix->notice( sprintf(
+				/* translators: %d: count of tickets skipped due to rate-limit */
+				_n(
+					'%d ticket was re-sent within the last hour and was skipped — check your inbox and spam folder before re-trying.',
+					'%d tickets were re-sent within the last hour and were skipped — check your inbox and spam folder before re-trying.',
+					$summary['throttled'],
+					'wordcamporg'
+				),
+				$summary['throttled']
+			) );
+		}
+
+		if ( $summary['failed'] > 0 ) {
+			$camptix->error( sprintf(
+				/* translators: %d: count of tickets that failed to send */
+				_n(
+					'%d claim email could not be sent. Please contact the event organisers.',
+					'%d claim emails could not be sent. Please contact the event organisers.',
+					$summary['failed'],
+					'wordcamporg'
+				),
+				$summary['failed']
+			) );
+		}
+	}
+
 } // CampTix_Require_Login
 
 camptix_register_addon( 'CampTix_Require_Login' );

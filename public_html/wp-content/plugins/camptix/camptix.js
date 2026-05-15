@@ -185,3 +185,39 @@ var CampTixUtilities = new function() {
 	}
 };
 window.CampTixUtilities = CampTixUtilities;
+
+/**
+ * Claim-link copy button (issue #1721).
+ *
+ * Translated strings come from data-copied-label and data-prompt-label
+ * attributes set in PHP.
+ */
+(function($){
+	$( document ).on( 'click', '.tix-copy-claim-link', function( e ) {
+		e.preventDefault();
+		var btn         = this;
+		var url         = btn.getAttribute( 'data-claim-url' );
+		if ( ! url ) {
+			return;
+		}
+		var copiedLabel = btn.getAttribute( 'data-copied-label' ) || 'Copied!';
+		var promptLabel = btn.getAttribute( 'data-prompt-label' ) || 'Copy this link:';
+		var done        = function() {
+			var prev = btn.textContent;
+			btn.textContent = copiedLabel;
+			btn.classList.add( 'is-copied' );
+			setTimeout( function() {
+				btn.textContent = prev;
+				btn.classList.remove( 'is-copied' );
+			}, 2000 );
+		};
+
+		if ( navigator.clipboard && navigator.clipboard.writeText ) {
+			navigator.clipboard.writeText( url ).then( done, function() {
+				window.prompt( promptLabel, url );
+			} );
+		} else {
+			window.prompt( promptLabel, url );
+		}
+	} );
+}(jQuery));

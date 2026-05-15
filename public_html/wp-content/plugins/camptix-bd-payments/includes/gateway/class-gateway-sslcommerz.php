@@ -16,6 +16,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	public $name                 = 'SSLCommerz';
 	public $description          = 'SSLCommerz payment gateway for Bangladesh.';
 	public $supported_currencies = [ 'BDT' ];
+	public $options;
 
 	/**
 	 * Initialize gateway options and hooks.

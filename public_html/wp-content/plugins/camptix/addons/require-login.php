@@ -1322,7 +1322,6 @@ class CampTix_Require_Login extends CampTix_Addon {
 			) );
 		}
 	}
-
 } // CampTix_Require_Login
 
 camptix_register_addon( 'CampTix_Require_Login' );

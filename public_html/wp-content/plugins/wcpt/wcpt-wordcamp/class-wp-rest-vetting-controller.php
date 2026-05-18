@@ -45,6 +45,23 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 					'methods'             => WP_REST_Server::READABLE,
 					'callback'            => array( $this, 'get_queue' ),
 					'permission_callback' => array( $this, 'check_permission' ),
+					'args'                => array(
+						'page'     => array(
+							'type'              => 'integer',
+							'default'           => 1,
+							'minimum'           => 1,
+							'sanitize_callback' => 'absint',
+							'description'       => __( 'Page of results to return.', 'wordcamporg' ),
+						),
+						'per_page' => array(
+							'type'              => 'integer',
+							'default'           => 20,
+							'minimum'           => 1,
+							'maximum'           => 100,
+							'sanitize_callback' => 'absint',
+							'description'       => __( 'Number of items per page (max 100).', 'wordcamporg' ),
+						),
+					),
 				),
 			)
 		);
@@ -68,9 +85,10 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 	 *
 	 * Mirrors the capability check in WordCamp_Admin::enforce_post_status().
 	 *
+	 * @param WP_REST_Request $request Full request details.
 	 * @return true|WP_Error
 	 */
-	public function check_permission() {
+	public function check_permission( WP_REST_Request $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- $request is part of the required WP_REST_Controller signature.
 		if ( ! is_user_logged_in() ) {
 			return new WP_Error(
 				'rest_not_logged_in',
@@ -91,21 +109,27 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 	}
 
 	/**
-	 * Return all Campus Connect posts that are pending vetting.
+	 * Return Campus Connect posts that are pending vetting, with pagination.
 	 *
 	 * Results are ordered oldest-first so the agent processes them in submission order.
+	 * Pagination is exposed via `page` / `per_page` query args and the standard
+	 * `X-WP-Total` / `X-WP-TotalPages` response headers.
 	 *
 	 * @param WP_REST_Request $request Full request details.
 	 * @return WP_REST_Response
 	 */
 	public function get_queue( $request ) {
-		$posts = get_posts(
+		$page     = (int) $request->get_param( 'page' );
+		$per_page = (int) $request->get_param( 'per_page' );
+
+		$query = new WP_Query(
 			array(
 				'post_type'      => WCPT_POST_TYPE_ID,
 				'post_status'    => 'wcpt-needs-vetting',
 				'meta_key'       => 'event_subtype',
 				'meta_value'     => 'campusconnect',
-				'posts_per_page' => 100,
+				'posts_per_page' => $per_page,
+				'paged'          => $page,
 				'orderby'        => 'date',
 				'order'          => 'ASC',
 			)
@@ -113,12 +137,19 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 
 		$items = array_map(
 			function ( $post ) use ( $request ) {
-				return $this->prepare_item_for_response( $post, $request );
+				return $this->prepare_queue_item( $post, $request );
 			},
-			$posts
+			$query->posts
 		);
 
-		return rest_ensure_response( $items );
+		$total       = (int) $query->found_posts;
+		$total_pages = (int) $query->max_num_pages;
+
+		$response = rest_ensure_response( $items );
+		$response->header( 'X-WP-Total', $total );
+		$response->header( 'X-WP-TotalPages', $total_pages );
+
+		return $response;
 	}
 
 	/**
@@ -128,11 +159,15 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 	 * text), admin edit URL, and a `meta` object with the key organizer fields
 	 * the vetting agent needs to evaluate.
 	 *
+	 * Named `prepare_queue_item` (not `prepare_item_for_response`) to avoid
+	 * accidentally overriding the WP_REST_Controller base-class method, which has
+	 * a different signature and semantics.
+	 *
 	 * @param WP_Post         $post    The wordcamp post.
 	 * @param WP_REST_Request $request Full request details.
 	 * @return array
 	 */
-	public function prepare_item_for_response( $post, $request ) {
+	public function prepare_queue_item( $post, $request ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- $request is available for future callers / subclasses.
 		$meta_fields = array(
 			'Organizer Name',
 			'WordPress.org Username',
@@ -182,11 +217,12 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 	/**
 	 * Attach a vetting note and advance the post to "Needs Action".
 	 *
-	 * Validates that the post exists, is a Campus Connect entry, and is currently
-	 * in "Needs Vetting". On success it:
+	 * Validates that the post exists, is a Campus Connect entry, has a non-empty
+	 * note, and is currently in "Needs Vetting". On success it:
 	 *   1. Writes the note via wcpt_add_private_note().
-	 *   2. Changes the status to wcpt-needs-action via wp_update_post().
-	 *   3. Writes a status-change log entry (since WordCamp_Admin is not loaded
+	 *   2. Re-fetches the post to detect any concurrent status change (optimistic lock).
+	 *   3. Changes the status to wcpt-needs-action via wp_update_post().
+	 *   4. Writes a status-change log entry (since WordCamp_Admin is not loaded
 	 *      in the REST context, this cannot rely on the transition_post_status hook).
 	 *
 	 * @param WP_REST_Request $request Full request details.
@@ -214,6 +250,14 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 			);
 		}
 
+		if ( '' === $note ) {
+			return new WP_Error(
+				'wcpt_vetting_empty_note',
+				__( 'A vetting note is required.', 'wordcamporg' ),
+				array( 'status' => 400 )
+			);
+		}
+
 		if ( 'wcpt-needs-vetting' !== $post->post_status ) {
 			return new WP_Error(
 				'wcpt_vetting_wrong_status',
@@ -226,10 +270,29 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 			);
 		}
 
-		// 1. Attach the vetting note.
-		wcpt_add_private_note( $post_id, $note, get_current_user_id() );
+		// 1. Attach the vetting note first so it is always paired with the transition.
+		$note_id = wcpt_add_private_note( $post_id, $note, get_current_user_id() );
 
-		// 2. Advance the status.
+		if ( ! $note_id ) {
+			return new WP_Error(
+				'wcpt_vetting_note_failed',
+				__( 'Could not save the vetting note. Status was not changed.', 'wordcamporg' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		// 2. Reload the post to guard against a concurrent status change (optimistic concurrency check).
+		$post = get_post( $post_id );
+
+		if ( ! $post || 'wcpt-needs-vetting' !== $post->post_status ) {
+			return new WP_Error(
+				'wcpt_vetting_concurrent_update',
+				__( 'The application status changed while this request was being processed. Please reload and try again.', 'wordcamporg' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		// 3. Advance the status.
 		$old_status = $post->post_status;
 
 		$result = wp_update_post(
@@ -245,7 +308,7 @@ class WordCamp_REST_Vetting_Controller extends WP_REST_Controller {
 		}
 
 		/*
-		 * 3. Log the transition (WordCamp_Admin::log_status_changes() is not
+		 * 4. Log the transition (WordCamp_Admin::log_status_changes() is not
 		 *    available outside the admin context, so we write the entry directly).
 		 */
 		$this->log_status_transition( $post_id, $old_status, 'wcpt-needs-action' );

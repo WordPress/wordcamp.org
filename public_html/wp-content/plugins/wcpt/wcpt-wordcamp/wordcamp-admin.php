@@ -1064,6 +1064,23 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				if ( ! in_array( $post_data['post_status'], $statuses ) ) {
 					$post_data['post_status'] = $statuses[0];
 				}
+
+				/*
+				 * Prevent Campus Connect-only statuses from being applied to non-CC posts.
+				 * This guards against direct REST or programmatic updates that bypass the UI.
+				 * Read the submitted subtype first (it hasn't been persisted yet at this hook),
+				 * falling back to the stored meta value.
+				 */
+				$cc_only_statuses = array( 'wcpt-needs-action', 'wcpt-needs-more-info' );
+				if ( in_array( $post_data['post_status'], $cc_only_statuses, true ) ) {
+					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce checked in metabox_save.
+					$submitted_subtype = isset( $_POST['event_subtype'] ) ? sanitize_text_field( wp_unslash( $_POST['event_subtype'] ) ) : '';
+					$event_subtype     = $submitted_subtype ?: get_post_meta( absint( $post_data_raw['ID'] ), 'event_subtype', true );
+
+					if ( 'campusconnect' !== $event_subtype ) {
+						$post_data['post_status'] = $post->post_status;
+					}
+				}
 			}
 
 			return $post_data;
@@ -1086,6 +1103,18 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 			$required_needs_site_fields = $this->get_required_fields( 'needs-site', $post_data_raw['ID'] );
 			$required_scheduled_fields  = $this->get_required_fields( 'scheduled', $post_data_raw['ID'] );
+
+			/*
+			 * Resolve the event subtype once, before any field loops.
+			 *
+			 * The subtype meta is not yet persisted at this hook (wp_insert_post_data fires
+			 * before meta is saved), so read the submitted value from $_POST first and fall
+			 * back to stored meta only if the request did not include the field.
+			 *
+			 * phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce checked in metabox_save.
+			 */
+			$submitted_subtype = isset( $_POST['event_subtype'] ) ? sanitize_text_field( wp_unslash( $_POST['event_subtype'] ) ) : '';
+			$event_subtype     = $submitted_subtype ?: get_post_meta( absint( $post_data_raw['ID'] ), 'event_subtype', true );
 
 			// Needs Site.
 			if ( 'wcpt-needs-site' == $post_data['post_status'] && absint( $post_data_raw['ID'] ) > $min_site_id ) {
@@ -1111,7 +1140,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					if ( empty( $value ) || 'null' == $value ) {
 						// Campus Connect posts revert to Approved For Pre-Planning on failure;
 						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
-						if ( 'campusconnect' === get_post_meta( absint( $post_data_raw['ID'] ), 'event_subtype', true ) ) {
+						if ( 'campusconnect' === $event_subtype ) {
 							$post_data['post_status'] = 'wcpt-approved-pre-pl';
 						} else {
 							$post_data['post_status'] = 'wcpt-needs-schedule';

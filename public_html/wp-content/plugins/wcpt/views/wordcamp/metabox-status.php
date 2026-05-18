@@ -58,9 +58,28 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 
 							<span id="post-status-display">
 							<select name="post_status">
-								<?php $transitions = $event_admin->get_valid_status_transitions( $post->post_status );
+								<?php
+								$available_statuses = $event_admin->get_post_statuses();
+								$transitions        = $event_admin->get_valid_status_transitions( $post->post_status );
+
+								/*
+								 * If the post's current status is not in the available list (e.g. a non-CC
+								 * post whose subtype was changed after it reached a CC-only status, or a CC
+								 * post grandfathered into a pre-CC status), inject it as a disabled selected
+								 * option so the metabox always reflects reality and saving does not silently
+								 * mutate the status.
+								 */
+								if ( ! array_key_exists( $post->post_status, $available_statuses ) ) {
+									$current_status_obj = get_post_status_object( $post->post_status );
+									$current_label      = $current_status_obj ? $current_status_obj->label : $post->post_status;
+									printf(
+										'<option value="%s" selected disabled>%s</option>',
+										esc_attr( $post->post_status ),
+										esc_html( $current_label ) . ' ' . esc_html__( '(current)', 'wordcamporg' )
+									);
+								}
 								?>
-								<?php foreach ( $event_admin->get_post_statuses() as $key => $post_status_label ) : ?>
+								<?php foreach ( $available_statuses as $key => $post_status_label ) : ?>
 									<?php $status = get_post_status_object( $key ); ?>
 									<option value="<?php echo esc_attr( $status->name ); ?>" <?php
 									if ( $post->post_status == $status->name ) {
@@ -79,8 +98,8 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 
 							<span id="post-status-display">
 							<?php
-								$all_statuses    = $event_admin->get_post_statuses();
-								$current_label   = $all_statuses[ $post->post_status ] ?? get_post_status_object( $post->post_status )->label;
+								$all_statuses  = $event_admin->get_post_statuses();
+								$current_label = $all_statuses[ $post->post_status ] ?? get_post_status_object( $post->post_status )->label;
 								echo esc_html( $current_label );
 							?>
 						</span>

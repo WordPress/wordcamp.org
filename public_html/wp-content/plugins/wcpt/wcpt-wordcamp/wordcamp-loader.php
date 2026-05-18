@@ -364,7 +364,7 @@ class WordCamp_Loader extends Event_Loader {
 	 * Get the eight statuses available for Campus Connect events.
 	 *
 	 * These replace the full WordCamp status list for entries where
-	 * `Event Subtype` equals `campusconnect`, keeping the workflow simple.
+	 * `event_subtype` equals `campusconnect`, keeping the workflow simple.
 	 *
 	 * @return array Associative array of slug => label.
 	 */

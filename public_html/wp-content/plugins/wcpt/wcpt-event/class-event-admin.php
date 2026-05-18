@@ -334,9 +334,9 @@ abstract class Event_Admin {
 	 * @param WP_Post $post   The post being transitioned.
 	 * @return string Human-readable label, or the raw slug if no label is found.
 	 */
-	protected function get_status_label( $status, $post ) {
+	protected function get_status_label( $status, $post ) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- $post is available for subclass overrides.
 		$status_obj = get_post_status_object( $status );
-		return $status_obj->label ?? $status;
+		return $status_obj ? $status_obj->label : $status;
 	}
 
 	/**

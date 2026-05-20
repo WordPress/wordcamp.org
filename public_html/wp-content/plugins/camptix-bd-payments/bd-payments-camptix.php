@@ -2,9 +2,7 @@
 /**
  * Plugin Name: Camptix BD Payments
  * Description: Bangladeshi payment gateways for CampTix
- * Plugin URI: https://github.com/tareq1988/camptix-bd-payments
- * Author: Tareq Hasan
- * Author URI: https://tareq.co
+ * Author: Tareq Hasan & Nazmul Hosen
  * Version: 1.3
  * License: GPL2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -47,6 +45,7 @@ class CampTix_BD_Gateways {
 		}
 
 		require_once __DIR__ . '/includes/class-phone-field.php';
+		require_once __DIR__ . '/includes/gateway/class-gateway-base.php';
 		require_once __DIR__ . '/includes/gateway/class-gateway-sslcommerz.php';
 	}
 

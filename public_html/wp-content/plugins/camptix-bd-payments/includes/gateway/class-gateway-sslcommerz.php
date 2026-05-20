@@ -1,8 +1,8 @@
 <?php
 namespace CamptixBD\Gateway;
-use CampTix_Plugin, CampTix_Payment_Method;
 
-// Exit if accessed directly.
+use CampTix_Plugin;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * SSLCommerz gateway
  */
-class SSLCommerz extends CampTix_Payment_Method {
+class SSLCommerz extends Base_Gateway {
 
 	public $id                   = 'sslcommerz';
 	public $name                 = 'SSLCommerz';
@@ -41,15 +41,6 @@ class SSLCommerz extends CampTix_Payment_Method {
 			// Catch any attendee timeouts that actually paid.
 			add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 		}
-	}
-
-	/**
-	 * Check if the gateway is enabled
-	 *
-	 * @return boolean
-	 */
-	public function gateway_enabled() {
-		return ! empty( $this->camptix_options['payment_methods'][ $this->id ] );
 	}
 
 	/**
@@ -621,11 +612,13 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 * @return array The sanitized transaction data for logging.
 	 */
 	protected function prepare_transaction_for_log( $data ) {
+		$data = parent::prepare_transaction_for_log( $data );
+
 		// Remove falsey stuff.
 		$data = array_filter( $data );
 
 		unset(
-			$data['pass'], // Present in sandbox mode, not production :phew:.
+			$data['pass'],
 			$data['key'],
 			$data['store_id'],
 			$data['sessionkey'],

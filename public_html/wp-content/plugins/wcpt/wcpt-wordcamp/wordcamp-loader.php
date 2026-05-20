@@ -25,7 +25,6 @@ class WordCamp_Loader extends Event_Loader {
 		add_filter( 'query_vars',                      array( $this, 'query_vars'                        ) );
 		add_filter( 'rest_wordcamp_collection_params', array( $this, 'set_rest_post_status_default'      ) );
 		add_action( 'rest_api_init',                   array( $this, 'register_rest_public_fields'       ) );
-		add_action( 'rest_api_init',                   array( $this, 'register_vetting_rest_routes' ) );
 		add_action( 'init',                            array( $this, 'register_post_capabilities' ) );
 	}
 
@@ -39,8 +38,24 @@ class WordCamp_Loader extends Event_Loader {
 	function includes() {
 		// Load the files
 		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-wordcamps-controller.php';
-		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-vetting-controller.php';
 		require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-template.php';
+
+		// MCP vetting abilities.
+		// Load the plugin-scoped Composer autoloader (provides class autoloading for
+		// the wordpress/mcp-adapter package), then bootstrap McpAdapter directly.
+		// We call McpAdapter::instance() rather than loading the adapter's plugin file
+		// because that file's internal Autoloader expects a nested vendor/ tree that
+		// does not exist when the package is installed as a Composer dependency.
+		$autoload = WCPT_DIR . 'vendor/autoload.php';
+		if ( file_exists( $autoload ) ) {
+			require_once $autoload;
+			if ( ! defined( 'WP_MCP_DIR' ) ) {
+				define( 'WP_MCP_DIR', WCPT_DIR . 'vendor/wordpress/mcp-adapter/' );
+			}
+			\WP\MCP\Core\McpAdapter::instance();
+		}
+		require_once WCPT_DIR . 'wcpt-wordcamp/class-wcpt-vetting-abilities.php';
+		WCPT_Vetting_Abilities::init();
 
 		// Quick admin check and load if needed
 		if ( is_admin() ) {
@@ -433,13 +448,24 @@ class WordCamp_Loader extends Event_Loader {
 	}
 
 	/**
-	 * Register the Campus Connect vetting REST endpoints.
+	 * Get status labels for Campus Connect posts.
 	 *
-	 * @hooked action rest_api_init
+	 * Used by WCPT_Vetting_Abilities (and formerly the REST vetting controller) when
+	 * writing status-transition log entries. Includes the two CC-exclusive statuses
+	 * that do not appear in get_post_statuses() (which covers regular WordCamps only).
+	 *
+	 * @return array Associative array of status slug => human-readable label.
 	 */
-	public function register_vetting_rest_routes() {
-		$controller = new WordCamp_REST_Vetting_Controller();
-		$controller->register_routes();
+	public static function get_campus_connect_statuses() {
+		return array(
+			'wcpt-needs-vetting'   => _x( 'Needs Vetting',   'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-action'    => _x( 'Needs Action',    'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-more-info' => _x( 'Needs More Info', 'campus connect status', 'wordcamporg' ),
+			'wcpt-more-info-reque' => _x( 'On Hold',         'campus connect status', 'wordcamporg' ),
+			'wcpt-rejected'        => _x( 'Declined',        'campus connect status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Cancelled',       'campus connect status', 'wordcamporg' ),
+			'wcpt-approved-pre-pl' => _x( 'Approved For Pre-Planning', 'campus connect status', 'wordcamporg' ),
+		);
 	}
 
 	/**

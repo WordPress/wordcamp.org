@@ -1,0 +1,16 @@
+{
+    "name": "wordcamp/wcpt",
+    "description": "WordCamp Post Type plugin",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Rocío Valdivia",
+            "email": "rocvaltor@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "wordpress/mcp-adapter": "dev-trunk"
+    }
+}

@@ -266,7 +266,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 			if (
 				is_array( $transaction_data ) &&
 				'GET' === $_SERVER['REQUEST_METHOD'] &&
-				$this->ipn_hash_varify( $this->options['store_password'], $transaction_data )
+				$this->ipn_hash_verify( $this->options['store_password'], $transaction_data )
 			) {
 				// Merge the POST data into the request so that payment_notify() can use it.
 				$_REQUEST = array_merge( $_REQUEST, $transaction_data );
@@ -281,14 +281,14 @@ class SSLCommerz extends CampTix_Payment_Method {
 		if (
 			'POST' !== $_SERVER['REQUEST_METHOD'] ||
 			! isset( $_REQUEST['tix_action'], $_REQUEST['tix_payment_method'] ) ||
-			$this->id != $_REQUEST['tix_payment_method'] ||
+			$this->id !== $_REQUEST['tix_payment_method'] ||
 			! in_array( $_REQUEST['tix_action'], [ 'payment_return', 'payment_failed', 'payment_cancel' ] )
 		) {
 			return;
 		}
 
 		// Set a temporary cookie with the POST'd transaction data, which we'll use on the GET request.
-		if ( $this->ipn_hash_varify( $this->options['store_password'], $_POST ) ) {
+		if ( $this->ipn_hash_verify( $this->options['store_password'], $_POST ) ) {
 			$cookie_data = json_encode( $_POST );
 			setcookie( $this->id . '_postdata', $cookie_data, time() + 300, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
 		}
@@ -296,15 +296,15 @@ class SSLCommerz extends CampTix_Payment_Method {
 		wp_safe_redirect(
 			add_query_arg(
 				[
-					'tix_action'         => $_REQUEST['tix_action'] ?? '',
-					'tix_payment_token'  => $_REQUEST['tix_payment_token'] ?? '',
+					'tix_action'         => sanitize_text_field( $_REQUEST['tix_action'] ?? '' ),
+					'tix_payment_token'  => sanitize_text_field( $_REQUEST['tix_payment_token'] ?? '' ),
 					'tix_payment_method' => $this->id,
 				],
 				$GLOBALS['camptix']->get_tickets_url()
 			)
 		);
 
-		die();
+		wp_die();
 	}
 
 	/**
@@ -317,7 +317,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 			return;
 		}
 
-		switch ( $_GET['tix_action'] ?? '' ) {
+		switch ( sanitize_text_field( $_GET['tix_action'] ?? '' ) ) {
 			case 'payment_return':
 				// Payment return is handled as a notification, so fall through to that case.
 			case 'payment_notify':
@@ -340,9 +340,9 @@ class SSLCommerz extends CampTix_Payment_Method {
 	public function payment_notify() {
 		global $camptix;
 
-		$payment_token  = trim( $_REQUEST['tix_payment_token'] ?? '' );
-		$transaction_id = $_REQUEST['tran_id'] ?? '';
-		$val_id         = $_REQUEST['val_id'] ?? '';
+		$payment_token  = sanitize_text_field( trim( $_REQUEST['tix_payment_token'] ?? '' ) );
+		$transaction_id = sanitize_text_field( $_REQUEST['tran_id'] ?? '' );
+		$val_id         = sanitize_text_field( $_REQUEST['val_id'] ?? '' );
 
 		// The payment transaction data is always in the POST data.
 		$transaction_data = $_POST;
@@ -353,7 +353,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 			'transaction_details' => $this->prepare_transaction_for_log( $transaction_data ),
 		];
 
-		if ( $this->ipn_hash_varify( $this->options['store_password'], $transaction_data ) ) {
+		if ( $this->ipn_hash_verify( $this->options['store_password'], $transaction_data ) ) {
 
 			// Bind the signed POST body to the URL-supplied payment_token. The IPN signature
 			// only covers fields named in verify_key, which does not include tix_payment_token,
@@ -387,12 +387,12 @@ class SSLCommerz extends CampTix_Payment_Method {
 	public function payment_cancel() {
 		global $camptix;
 
-		$payment_token = trim( $_REQUEST['tix_payment_token'] ?? '' );
+		$payment_token = sanitize_text_field( trim( $_REQUEST['tix_payment_token'] ?? '' ) );
 		if ( ! $payment_token ) {
 			return $camptix->error( 'empty token' );
 		}
 
-		$transaction_id      = $_REQUEST['tran_id'] ?? '';
+		$transaction_id      = sanitize_text_field( $_REQUEST['tran_id'] ?? '' );
 		$transaction_details = $this->prepare_transaction_for_log( $_POST );
 
 		return $camptix->payment_result(
@@ -410,12 +410,12 @@ class SSLCommerz extends CampTix_Payment_Method {
 	public function payment_failed() {
 		global $camptix;
 
-		$payment_token = trim( $_REQUEST['tix_payment_token'] ?? '' );
+		$payment_token = sanitize_text_field( trim( $_REQUEST['tix_payment_token'] ?? '' ) );
 		if ( ! $payment_token ) {
 			return $camptix->error( 'empty token' );
 		}
 
-		$transaction_id      = $_REQUEST['tran_id'] ?? '';
+		$transaction_id      = sanitize_text_field( $_REQUEST['tran_id'] ?? '' );
 		$transaction_details = $this->prepare_transaction_for_log( $_POST );
 
 		return $camptix->payment_result(
@@ -459,7 +459,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 
 		$order = $this->get_order( $payment_token );
 
-		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ] ) && $order['total'] == $response->amount ) {
+		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ] ) && (float) $order['total'] === (float) $response->amount ) {
 			return true;
 		}
 
@@ -581,7 +581,7 @@ class SSLCommerz extends CampTix_Payment_Method {
 	 *
 	 * @return boolean
 	 */
-	protected function ipn_hash_varify( $store_passwd, $data ) {
+	protected function ipn_hash_verify( $store_passwd, $data ) {
 		if ( ! isset( $data['verify_sign'], $data['verify_key'] ) ) {
 			return false;
 		}

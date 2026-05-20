@@ -29,6 +29,7 @@ class Phone_Field {
 		add_filter( 'camptix_form_edit_attendee_custom_error_flags', array( $this, 'edit_attendee_info_form_error' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'export_attendee_data_column' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_column_value', array( $this, 'export_attendee_data_value' ), 10, 3 );
+		add_filter( 'camptix_form_register_custom_error_flags', array( $this, 'validate_phone_on_register' ), 10, 1 );
 	}
 
 	/**
@@ -153,12 +154,69 @@ class Phone_Field {
 		// Phone.
 		if ( isset( $_POST['tix_attendee_save'] ) ) {
 			if ( empty( $_POST['tix_ticket_info']['phone'] ) ) {
-				// $camptix->error( __( 'Please fill in all required fields.', 'camptix-indian-payments' ) );
 				$_POST['tix_ticket_info']['phone'] = get_post_meta( $attendee->ID, 'tix_phone', true );
+			} else {
+				$_POST['tix_ticket_info']['phone'] = sanitize_text_field( $_POST['tix_ticket_info']['phone'] );
 			}
 		}
 	}
 
+
+	/**
+	 * Validate phone number during registration
+	 *
+	 * @param array $error_flags Current error flags.
+	 *
+	 * @return array
+	 */
+	public function validate_phone_on_register( $error_flags ) {
+		$attendee_info = $_POST['tix_attendee_info'] ?? array();
+
+		foreach ( (array) $attendee_info as $info ) {
+			$phone = sanitize_text_field( $info['phone'] ?? '' );
+
+			if ( empty( $phone ) ) {
+				$error_flags['tix_phone_missing'] = true;
+			} elseif ( ! $this->is_valid_bd_phone( $phone ) ) {
+				$error_flags['tix_phone_invalid'] = true;
+			}
+		}
+
+		return $error_flags;
+	}
+
+	/**
+	 * Validate Bangladeshi phone number format
+	 *
+	 * Accepts:
+	 * - 01XXXXXXXXX (11 digits, local format)
+	 * - +8801XXXXXXXXX (14 digits, international)
+	 * - 8801XXXXXXXXX (13 digits, international without +)
+	 *
+	 * @param string $phone Phone number to validate.
+	 *
+	 * @return bool
+	 */
+	private function is_valid_bd_phone( $phone ) {
+		$cleaned = preg_replace( '/[\s\-\(\)]/', '', $phone );
+
+		// Local format: 01XXXXXXXXX (11 digits)
+		if ( preg_match( '/^01[3-9]\d{8}$/', $cleaned ) ) {
+			return true;
+		}
+
+		// International format: +8801XXXXXXXXX (14 chars)
+		if ( preg_match( '/^\+8801[3-9]\d{8}$/', $cleaned ) ) {
+			return true;
+		}
+
+		// International without +: 8801XXXXXXXXX (13 digits)
+		if ( preg_match( '/^8801[3-9]\d{8}$/', $cleaned ) ) {
+			return true;
+		}
+
+		return false;
+	}
 
 	/**
 	 * Save edited attendee information

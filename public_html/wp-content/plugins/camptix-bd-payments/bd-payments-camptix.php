@@ -47,6 +47,7 @@ class CampTix_BD_Gateways {
 		require_once __DIR__ . '/includes/class-phone-field.php';
 		require_once __DIR__ . '/includes/gateway/class-gateway-base.php';
 		require_once __DIR__ . '/includes/gateway/class-gateway-sslcommerz.php';
+		require_once __DIR__ . '/includes/gateway/class-gateway-surjopay.php';
 	}
 
 	/**
@@ -56,6 +57,7 @@ class CampTix_BD_Gateways {
 	 */
 	public function load_addons() {
 		camptix_register_addon( '\CamptixBD\Gateway\SSLCommerz' );
+		camptix_register_addon( '\CamptixBD\Gateway\SurjoPay' );
 		camptix_register_addon( '\CamptixBD\Phone_Field' );
 	}
 }

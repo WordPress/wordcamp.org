@@ -6646,8 +6646,22 @@ class CampTix_Plugin {
 			update_post_meta( $attendee->ID, 'tix_transaction_details', $transaction_details );
 
 			if ( self::PAYMENT_STATUS_CANCELLED == $result ) {
-				$attendee->post_status = 'cancel';
-				wp_update_post( $attendee );
+				// A user-initiated cancel (e.g. clicking "Cancel" on the gateway's hosted
+				// checkout) can race with the gateway's webhook. If the webhook has already
+				// reported the payment as complete/pending/refunded, the charge stayed with
+				// the gateway and the attendee is the rightful ticket holder — refuse to
+				// downgrade. PAYMENT_STATUS_COMPLETED still transitions cancel → publish,
+				// so a webhook that arrives after a cancel still wins.
+				if ( in_array( $attendee->post_status, array( 'publish', 'pending', 'refund' ), true ) ) {
+					$this->log(
+						sprintf( 'Refusing to cancel attendee in %s status; payment was already processed.', $attendee->post_status ),
+						$attendee->ID,
+						$data
+					);
+				} else {
+					$attendee->post_status = 'cancel';
+					wp_update_post( $attendee );
+				}
 			}
 
 			if ( self::PAYMENT_STATUS_FAILED == $result ) {
@@ -6691,6 +6705,29 @@ class CampTix_Plugin {
 		$from_status = $attendees_status;
 		$to_status = $attendees[0]->post_status;
 
+		/**
+		 * Fires after a payment result has been recorded for an attendee group.
+		 *
+		 * This action fires on every payment_result() call, not just on status transitions.
+		 * Webhooks and interactive returns can both invoke payment_result() for the same
+		 * payment_token; whichever runs second sees $status_changed === false. Listeners
+		 * that should only run when the attendee status actually transitioned can check the
+		 * $status_changed argument; idempotent listeners (e.g. one that creates an invoice)
+		 * can run on every call and use their own dedup guard to avoid double-processing.
+		 *
+		 * @param string $payment_token  The payment token whose attendees were updated.
+		 * @param int    $result         The new payment status — one of the
+		 *                               CampTix_Plugin::PAYMENT_STATUS_* constants.
+		 * @param array  $data           Gateway-supplied payment data. May include
+		 *                               transaction_id, transaction_details, error_code,
+		 *                               refund_transaction_id, refund_transaction_details.
+		 * @param bool   $status_changed Whether this call actually transitioned the
+		 *                               attendee post_status. False for repeat calls that
+		 *                               re-report the same status (e.g. a duplicate
+		 *                               webhook arriving after the interactive return).
+		 */
+		do_action( 'camptix_payment_result', $payment_token, $result, $data, $status_changed );
+
 		// If the status hasn't changed, there's nothing much we can do here.
 		if ( ! $status_changed ) {
 			if ( ! $interactive ) {
@@ -6709,7 +6746,6 @@ class CampTix_Plugin {
 
 		// Send out the tickets and receipt if necessary.
 		$this->email_tickets( $payment_token, $from_status, $to_status );
-		do_action( 'camptix_payment_result', $payment_token, $result, $data );
 
 		if ( ! $interactive ) {
 			return true;

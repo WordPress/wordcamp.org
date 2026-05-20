@@ -22,10 +22,10 @@ services:
     wordcamp.db:
         build:
             context: .docker
-            dockerfile: Dockerfile.mysql
+            dockerfile: Dockerfile.mariadb
         volumes:
-            - ".docker/database:/var/lib/mysql"
+            - ".docker/mariadb-database:/var/lib/mysql"
             - ".docker/bin:/var/scripts"
         ports:
-            # todo document that 3307 to avoid conflicts w/ host mysql server?
+            # todo document that 3307 to avoid conflicts w/ host mariadb/mysql server?
             - "3307:3306"

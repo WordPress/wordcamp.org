@@ -74,6 +74,18 @@ class WCOR_Mailer {
 					),
 				),
 			),
+
+			'wcor_cc_approved_for_pre_planning' => array(
+				'name'    => 'Campus Connect application approved for pre-planning',
+				'actions' => array(
+					array(
+						'name'       => 'wcpt_cc_approved_for_pre_planning',
+						'callback'   => 'send_trigger_cc_approved_for_pre_planning',
+						'priority'   => 10,
+						'parameters' => 1,
+					),
+				),
+			),
 		);
 
 		add_action( 'wcor_send_timed_emails', array( $this, 'send_timed_emails' ) );
@@ -910,6 +922,20 @@ class WCOR_Mailer {
 	 */
 	public function send_trigger_approved_for_pre_planning( $wordcamp ) {
 		$this->send_triggered_emails( $wordcamp, 'wcor_approved_for_pre_planning' );
+	}
+
+	/**
+	 * Sends e-mails hooked to the wcor_cc_approved_for_pre_planning trigger.
+	 *
+	 * This fires when a Campus Connect application transitions to wcpt-approved-pre-pl
+	 * status. A dedicated action is used (rather than reusing wcpt_approved_for_pre_planning)
+	 * so that CC approvals do not trigger the non-CC hooks that listen on that action
+	 * (e.g. add_organizer_to_central, mark_date_added_to_planning_schedule).
+	 *
+	 * @param WP_Post $wordcamp The Campus Connect post that was approved.
+	 */
+	public function send_trigger_cc_approved_for_pre_planning( $wordcamp ) {
+		$this->send_triggered_emails( $wordcamp, 'wcor_cc_approved_for_pre_planning' );
 	}
 
 	/**

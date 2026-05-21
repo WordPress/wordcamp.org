@@ -40,6 +40,23 @@ class WordCamp_Loader extends Event_Loader {
 		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-wordcamps-controller.php';
 		require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-template.php';
 
+		// MCP vetting abilities.
+		// Load the plugin-scoped Composer autoloader (provides class autoloading for
+		// the wordpress/mcp-adapter package), then bootstrap McpAdapter directly.
+		// We call McpAdapter::instance() rather than loading the adapter's plugin file
+		// because that file's internal Autoloader expects a nested vendor/ tree that
+		// does not exist when the package is installed as a Composer dependency.
+		$autoload = WCPT_DIR . 'vendor/autoload.php';
+		if ( file_exists( $autoload ) ) {
+			require_once $autoload;
+			if ( ! defined( 'WP_MCP_DIR' ) ) {
+				define( 'WP_MCP_DIR', WCPT_DIR . 'vendor/wordpress/mcp-adapter/' );
+			}
+			\WP\MCP\Core\McpAdapter::instance();
+		}
+		require_once WCPT_DIR . 'wcpt-wordcamp/class-wcpt-vetting-abilities.php';
+		WCPT_Vetting_Abilities::init();
+
 		// Quick admin check and load if needed
 		if ( is_admin() ) {
 			require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php';

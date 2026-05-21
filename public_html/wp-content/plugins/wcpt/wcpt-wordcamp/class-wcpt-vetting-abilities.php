@@ -176,8 +176,8 @@ class WCPT_Vetting_Abilities {
 				self::ABILITY_GET_QUEUE,
 				self::ABILITY_PROCESS,
 			),
-			array(), // resources
-			array()  // prompts
+			array(), // Resources.
+			array()  // Prompts.
 		);
 	}
 
@@ -269,7 +269,7 @@ class WCPT_Vetting_Abilities {
 	 *
 	 * @param array $input Validated input: post_id (int), note (string).
 	 * @return array
-	 * @throws RuntimeException On validation or write failure.
+	 * @throws \RuntimeException On validation or write failure.
 	 */
 	public static function execute_process_application( array $input ) {
 		$post_id = absint( $input['post_id'] );
@@ -280,21 +280,21 @@ class WCPT_Vetting_Abilities {
 
 		if ( ! $post || WCPT_POST_TYPE_ID !== $post->post_type ) {
 			throw new \RuntimeException(
-				__( 'Post not found.', 'wordcamporg' ),
+				esc_html__( 'Post not found.', 'wordcamporg' ),
 				404
 			);
 		}
 
 		if ( 'campusconnect' !== get_post_meta( $post_id, 'event_subtype', true ) ) {
 			throw new \RuntimeException(
-				__( 'This post is not a Campus Connect application.', 'wordcamporg' ),
+				esc_html__( 'This post is not a Campus Connect application.', 'wordcamporg' ),
 				400
 			);
 		}
 
 		if ( '' === $note ) {
 			throw new \RuntimeException(
-				__( 'A vetting note is required.', 'wordcamporg' ),
+				esc_html__( 'A vetting note is required.', 'wordcamporg' ),
 				400
 			);
 		}
@@ -303,8 +303,8 @@ class WCPT_Vetting_Abilities {
 			throw new \RuntimeException(
 				sprintf(
 					/* translators: %s: current post status slug */
-					__( 'Expected status wcpt-needs-vetting, got %s.', 'wordcamporg' ),
-					$post->post_status
+					esc_html__( 'Expected status wcpt-needs-vetting, got %s.', 'wordcamporg' ),
+					esc_html( $post->post_status )
 				),
 				409
 			);
@@ -315,7 +315,7 @@ class WCPT_Vetting_Abilities {
 
 		if ( ! $note_id ) {
 			throw new \RuntimeException(
-				__( 'Could not save the vetting note. Status was not changed.', 'wordcamporg' ),
+				esc_html__( 'Could not save the vetting note. Status was not changed.', 'wordcamporg' ),
 				500
 			);
 		}
@@ -324,7 +324,7 @@ class WCPT_Vetting_Abilities {
 		$post = get_post( $post_id );
 		if ( ! $post || 'wcpt-needs-vetting' !== $post->post_status ) {
 			throw new \RuntimeException(
-				__( 'The application status changed while this request was being processed. Please reload and try again.', 'wordcamporg' ),
+				esc_html__( 'The application status changed while this request was being processed. Please reload and try again.', 'wordcamporg' ),
 				409
 			);
 		}
@@ -340,7 +340,7 @@ class WCPT_Vetting_Abilities {
 		);
 
 		if ( is_wp_error( $result ) ) {
-			throw new \RuntimeException( $result->get_error_message(), 500 );
+			throw new \RuntimeException( esc_html( $result->get_error_message() ), 500 );
 		}
 
 		// ── 4. Log the transition ────────────────────────────────────────────

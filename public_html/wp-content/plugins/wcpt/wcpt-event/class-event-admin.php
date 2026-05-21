@@ -305,6 +305,17 @@ abstract class Event_Admin {
 		return $obj ? $obj->label : $status;
 	}
 
+	/**
+	 * Log a status transition for a post.
+	 *
+	 * Fires on the `transition_post_status` hook. Records a `_status_change`
+	 * meta entry with a human-readable "old → new" label pair and a secondary
+	 * indexed key so callers can filter the log by post type.
+	 *
+	 * @param string  $new_status The new post status slug.
+	 * @param string  $old_status The previous post status slug.
+	 * @param WP_Post $post       The post whose status changed.
+	 */
 	public function log_status_changes( $new_status, $old_status, $post ) {
 		if ( $new_status === $old_status || 'auto-draft' === $new_status ) {
 			return;

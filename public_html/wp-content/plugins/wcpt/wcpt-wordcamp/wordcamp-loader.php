@@ -439,8 +439,8 @@ class WordCamp_Loader extends Event_Loader {
 	 * Get status labels for Campus Connect posts.
 	 *
 	 * Used by WCPT_Vetting_Abilities (and formerly the REST vetting controller) when
-	 * writing status-transition log entries. Includes the two CC-exclusive statuses
-	 * that do not appear in get_post_statuses() (which covers regular WordCamps only).
+	 * writing status-transition log entries for Campus Connect posts. This provides
+	 * the Campus Connect label set used for those log entries.
 	 *
 	 * @return array Associative array of status slug => human-readable label.
 	 */

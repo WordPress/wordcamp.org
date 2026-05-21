@@ -36,6 +36,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'transition_post_status', array( $this, 'trigger_schedule_actions' ), 10, 3 );
 			add_action( 'wcpt_approved_for_pre_planning', array( $this, 'add_organizer_to_central' ), 10 );
 			add_action( 'wcpt_approved_for_pre_planning', array( $this, 'mark_date_added_to_planning_schedule' ), 10 );
+			add_action( 'wcpt_cc_approved_for_pre_planning', array( $this, 'handle_cc_approved_for_pre_planning' ), 10 );
 
 			add_filter( 'wp_insert_post_data', array( $this, 'enforce_post_status' ), 10, 2 );
 
@@ -952,6 +953,31 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 
 		/**
+		 * Handle a Campus Connect application being approved for pre-planning.
+		 *
+		 * Fires on wcpt_cc_approved_for_pre_planning (see trigger_schedule_actions()).
+		 * Writes a permanent audit note to the post log and queues a one-time admin
+		 * notice so the wrangler sees confirmation on the next page load.
+		 *
+		 * @param WP_Post $post The Campus Connect post that was approved.
+		 */
+		public function handle_cc_approved_for_pre_planning( WP_Post $post ) {
+			// Audit log note — same text as the admin notice, stored permanently with a timestamp.
+			add_post_meta(
+				$post->ID,
+				'_note',
+				array(
+					'timestamp' => time(),
+					'user_id'   => get_current_user_id(),
+					'message'   => __( 'Application approved for pre-planning. Organizer notification email queued.', 'wordcamporg' ),
+				)
+			);
+
+			// Queue the one-time admin notice that will display after the save redirect.
+			$this->active_admin_notices[] = 5;
+		}
+
+		/**
 		 * Add the lead organizer to Central when a WordCamp application is accepted.
 		 *
 		 * Adding the lead organizer to Central allows them to enter all the `wordcamp`
@@ -1298,6 +1324,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						__( 'The %s could not be geocoded, which prevents the camp from showing up in the Events Widget. Please tweak the address so that Google Maps can parse it.', 'wordcamporg' ),
 						self::get_address_key( $post->ID )
 					),
+				),
+
+				5 => array(
+					'type'   => 'updated',
+					'notice' => __( 'This Campus Connect application has been approved for pre-planning. An organizer notification email has been queued and a note has been added to the log.', 'wordcamporg' ),
 				),
 			);
 

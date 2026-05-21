@@ -290,6 +290,21 @@ abstract class Event_Admin {
 	 * @param string  $old_status Old status.
 	 * @param WP_Post $post       Current Post.
 	 */
+	/**
+	 * Return the human-readable label for a post status slug.
+	 *
+	 * Subclasses may override this to return subtype-specific labels
+	 * (e.g. WordCamp_Admin returns CC-specific labels for Campus Connect posts).
+	 *
+	 * @param string  $status Post status slug.
+	 * @param WP_Post $post   The post being transitioned.
+	 * @return string Human-readable label.
+	 */
+	protected function get_status_label( $status, $post ) {
+		$obj = get_post_status_object( $status );
+		return $obj ? $obj->label : $status;
+	}
+
 	public function log_status_changes( $new_status, $old_status, $post ) {
 		if ( $new_status === $old_status || 'auto-draft' === $new_status ) {
 			return;
@@ -302,16 +317,13 @@ abstract class Event_Admin {
 		// Ensure status labels are in English.
 		$locale_switched = switch_to_locale( 'en_US' );
 
-		$old_status_obj = get_post_status_object( $old_status );
-		$new_status_obj = get_post_status_object( $new_status );
-
 		$log_id = add_post_meta(
 			$post->ID,
 			'_status_change',
 			array(
 				'timestamp' => time(),
 				'user_id'   => get_current_user_id(),
-				'message'   => sprintf( '%s &rarr; %s', $old_status_obj->label ?? $old_status, $new_status_obj->label ?? $new_status ),
+				'message'   => sprintf( '%s &rarr; %s', $this->get_status_label( $old_status, $post ), $this->get_status_label( $new_status, $post ) ),
 			)
 		);
 

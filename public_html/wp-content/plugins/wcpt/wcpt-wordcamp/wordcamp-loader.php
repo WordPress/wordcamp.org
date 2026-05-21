@@ -212,6 +212,11 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-needs-schedule'  => _x( 'Needs to be Added to Official Schedule',      'wordcamp status', 'wordcamporg' ),
 			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',                          'wordcamp status', 'wordcamporg' ),
 			'wcpt-closed'          => _x( 'WordCamp Closed',                             'wordcamp status', 'wordcamporg' ),
+			// CC-exclusive statuses. Hidden from non-CC dropdowns by WordCamp_Admin::get_post_statuses(),
+			// but registered here so register_post_statuses() in Event_Loader can call register_post_status()
+			// for them and WordPress recognises them as valid post statuses.
+			'wcpt-needs-action'    => _x( 'Needs Action',    'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-more-info' => _x( 'Needs More Info', 'campus connect status', 'wordcamporg' ),
 		);
 	}
 
@@ -458,14 +463,56 @@ class WordCamp_Loader extends Event_Loader {
 	 */
 	public static function get_campus_connect_statuses() {
 		return array(
-			'wcpt-needs-vetting'   => _x( 'Needs Vetting',   'campus connect status', 'wordcamporg' ),
-			'wcpt-needs-action'    => _x( 'Needs Action',    'campus connect status', 'wordcamporg' ),
-			'wcpt-needs-more-info' => _x( 'Needs More Info', 'campus connect status', 'wordcamporg' ),
-			'wcpt-more-info-reque' => _x( 'On Hold',         'campus connect status', 'wordcamporg' ),
-			'wcpt-rejected'        => _x( 'Declined',        'campus connect status', 'wordcamporg' ),
-			'wcpt-cancelled'       => _x( 'Cancelled',       'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-vetting'   => _x( 'Needs Vetting',             'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-action'    => _x( 'Needs Action',              'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-orientati' => _x( 'Needs Orientation',         'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-more-info' => _x( 'Needs More Info',           'campus connect status', 'wordcamporg' ),
+			'wcpt-more-info-reque' => _x( 'On Hold',                   'campus connect status', 'wordcamporg' ),
 			'wcpt-approved-pre-pl' => _x( 'Approved For Pre-Planning', 'campus connect status', 'wordcamporg' ),
+			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',        'campus connect status', 'wordcamporg' ),
+			'wcpt-closed'          => _x( 'WordCamp Closed',           'campus connect status', 'wordcamporg' ),
+			'wcpt-rejected'        => _x( 'Declined',                  'campus connect status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Cancelled',                 'campus connect status', 'wordcamporg' ),
 		);
+	}
+
+	/**
+	 * Return valid status transitions for a Campus Connect post.
+	 *
+	 * Transition map (definitive spec):
+	 *   Needs Vetting        → Needs Action, Needs More Info, Approved For Pre-Planning,
+	 *                          Declined, Cancelled, On Hold
+	 *   Needs Action         → Needs Orientation, Needs More Info, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, Declined, Cancelled, On Hold
+	 *   Needs Orientation    → Needs More Info, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, Declined, Cancelled, On Hold
+	 *   Needs More Info      → Needs Action, Approved For Pre-Planning,
+	 *                          Declined, Cancelled, On Hold
+	 *   Approved For Pre-Planning → WordCamp Scheduled, Declined, Cancelled, On Hold
+	 *   WordCamp Scheduled   → WordCamp Closed, Declined, Cancelled, On Hold
+	 *   WordCamp Closed      → Declined, Cancelled, On Hold
+	 *   Declined / Cancelled / On Hold → any CC status
+	 *
+	 * @param string $status Current status slug.
+	 * @return array Array of valid next-status slugs.
+	 */
+	public static function get_campus_connect_status_transitions( $status ) {
+		$all_cc = array_keys( self::get_campus_connect_statuses() );
+
+		$transitions = array(
+			'wcpt-needs-vetting'   => array( 'wcpt-needs-action', 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-needs-action'    => array( 'wcpt-needs-orientati', 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-needs-orientati' => array( 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-needs-more-info' => array( 'wcpt-needs-action', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-approved-pre-pl' => array( 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-scheduled'       => array( 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-closed'          => array( 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-rejected'        => $all_cc,
+			'wcpt-cancelled'       => $all_cc,
+			'wcpt-more-info-reque' => $all_cc,
+		);
+
+		return $transitions[ $status ] ?? array( 'wcpt-needs-vetting' );
 	}
 
 	/**

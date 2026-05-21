@@ -928,9 +928,10 @@ class WCOR_Mailer {
 	 * Sends e-mails hooked to the wcor_cc_approved_for_pre_planning trigger.
 	 *
 	 * This fires when a Campus Connect application transitions to wcpt-approved-pre-pl
-	 * status. A dedicated action is used (rather than reusing wcpt_approved_for_pre_planning)
-	 * so that CC approvals do not trigger the non-CC hooks that listen on that action
-	 * (e.g. add_organizer_to_central, mark_date_added_to_planning_schedule).
+	 * status. A dedicated action is used for the wcor_cc_approved_for_pre_planning trigger
+	 * rather than reusing wcpt_approved_for_pre_planning, so that CC approvals do not
+	 * trigger the non-CC hooks that listen on that action (e.g. add_organizer_to_central,
+	 * mark_date_added_to_planning_schedule).
 	 *
 	 * @param WP_Post $wordcamp The Campus Connect post that was approved.
 	 */

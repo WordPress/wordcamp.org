@@ -4,8 +4,8 @@
 
 1. If you didn't run `npm install` when setting up this repo, run it now to install all dependencies.
 2. `cd` into this directory.
-2. Run `npm run build` to generate the built files.
-3. Run `npm run start` while developing to continuously watch the files, this will automatically re-build the files when the source changes.
+3. Run `npm run build` to generate the built files.
+4. Run `npm run start` while developing to continuously watch the files, this will automatically re-build the files when the source changes.
 
 
 ## Scripts

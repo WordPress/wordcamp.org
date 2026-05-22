@@ -530,25 +530,31 @@ class SSLCommerz extends Base_Gateway {
 	/**
 	 * Make an API call
 	 *
-	 * @param  string $method   HTTP method (GET | POST).
-	 * @param  string $endpoint API endpoint.
-	 * @param  array  $body     Request body.
+	 * @param string $method  HTTP method (GET | POST).
+	 * @param string $url     Full API URL (endpoint path will be appended to base).
+	 * @param array  $args    Request body for POST, or query args for GET.
+	 * @param array  $headers Additional headers.
 	 *
 	 * @return false|object
 	 */
-	protected function api( $method = 'GET', $endpoint = '/', $body = [] ) {
+	protected function api( $method, $url, $args = [], $headers = [] ) {
 		global $camptix;
 
-		$url = $this->options['sandbox'] ? 'https://sandbox.sslcommerz.com' : 'https://securepay.sslcommerz.com';
-		$url = $url . $endpoint;
+		$base_url = $this->options['sandbox'] ? 'https://sandbox.sslcommerz.com' : 'https://securepay.sslcommerz.com';
+		$full_url = $base_url . $url;
 
-		$args = [
+		$request_args = [
 			'method'  => strtoupper( $method ),
 			'timeout' => 30,
-			'body'    => $body,
 		];
 
-		$response = wp_remote_request( $url, $args );
+		if ( 'POST' === strtoupper( $method ) ) {
+			$request_args['body'] = $args;
+		} elseif ( ! empty( $args ) ) {
+			$full_url = add_query_arg( $args, $full_url );
+		}
+
+		$response = wp_remote_request( $full_url, $request_args );
 
 		if ( is_wp_error( $response ) ) {
 			$camptix->log( 'SSLCommerz API error: ' . $response->get_error_message() );

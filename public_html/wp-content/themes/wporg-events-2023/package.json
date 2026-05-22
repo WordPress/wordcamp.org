@@ -22,8 +22,8 @@
 	},
 	"prettier": "../../../../.prettierrc.js",
 	"scripts": {
-		"watch": "wp-scripts start & yarn run build:css --watch",
-		"build": "wp-scripts build && yarn run build:css",
+		"watch": "wp-scripts start & npm run build:css -- --watch",
+		"build": "wp-scripts build && npm run build:css",
 		"build:css": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
 		"lint:js": "wp-scripts lint-js 'src/**/*.js'",
 		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'",

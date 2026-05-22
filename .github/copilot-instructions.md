@@ -3,7 +3,7 @@
 ## Repository shape
 
 - Main app code is under `public_html/wp-content/` (plugins, mu-plugins, themes).
-- PHP dependencies are managed at repo root by `composer.json`.
+- PHP dependencies are managed at repo root by `composer.json`. **Minimum PHP version is 8.3**; CI tests against 8.3, 8.4, and 8.5.
 - JavaScript uses Yarn workspaces from repo root (`package.json` + `yarn.lock`).
 - CI definitions to mirror are:
   - `.github/workflows/linter.yml`

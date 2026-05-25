@@ -284,13 +284,6 @@ abstract class Event_Admin {
 	abstract public static function get_edit_capability();
 
 	/**
-	 * Log when the post status changes
-	 *
-	 * @param string  $new_status New status.
-	 * @param string  $old_status Old status.
-	 * @param WP_Post $post       Current Post.
-	 */
-	/**
 	 * Return the human-readable label for a post status slug.
 	 *
 	 * Subclasses may override this to return subtype-specific labels

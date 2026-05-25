@@ -436,11 +436,14 @@ class WordCamp_Loader extends Event_Loader {
 	}
 
 	/**
-	 * Get status labels for Campus Connect posts.
+	 * Get the canonical Campus Connect status list (slug => label).
 	 *
-	 * Used by WCPT_Vetting_Abilities (and formerly the REST vetting controller) when
-	 * writing status-transition log entries for Campus Connect posts. This provides
-	 * the Campus Connect label set used for those log entries.
+	 * This is the authoritative set of the ten statuses available to Campus Connect
+	 * posts. It is the source for the CC status dropdown (via
+	 * WordCamp_Admin::get_post_statuses()) and for the CC-specific labels used in
+	 * status-change log entries. Note that wcpt-needs-action and wcpt-needs-more-info
+	 * are also registered globally in get_post_statuses() above, so WordPress treats
+	 * them as valid post statuses for every subtype.
 	 *
 	 * @return array Associative array of status slug => human-readable label.
 	 */
@@ -495,7 +498,10 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => $all_cc,
 		);
 
-		return $transitions[ $status ] ?? array( 'wcpt-needs-vetting' );
+		// For an unexpected/mid-transition status, allow no transitions rather than
+		// defaulting to a real status: the metabox keeps the current status selectable
+		// (as a disabled option) so it is never silently mutated.
+		return $transitions[ $status ] ?? array();
 	}
 
 	/**

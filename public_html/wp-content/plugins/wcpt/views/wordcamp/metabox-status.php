@@ -58,9 +58,11 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 
 							<span id="post-status-display">
 							<select name="post_status">
-								<?php $transitions = $event_admin->get_valid_status_transitions( $post->post_status );
+								<?php
+								$transitions   = $event_admin->get_valid_status_transitions( $post->post_status );
+								$post_statuses = $event_admin->get_post_statuses();
 								?>
-								<?php foreach ( $event_admin->get_post_statuses() as $key => $post_status_label ) : ?>
+								<?php foreach ( $post_statuses as $key => $post_status_label ) : ?>
 									<option value="<?php echo esc_attr( $key ); ?>" <?php
 									if ( $post->post_status === $key ) {
 										selected( true );
@@ -74,7 +76,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 								<?php
 								// If the current status is not in the list (e.g. a mid-transition state),
 								// inject it as a disabled option so saving never silently mutates the status.
-								if ( ! array_key_exists( $post->post_status, $event_admin->get_post_statuses() ) ) :
+								if ( ! array_key_exists( $post->post_status, $post_statuses ) ) :
 									$current_obj = get_post_status_object( $post->post_status );
 									$current_label = $current_obj ? $current_obj->label : $post->post_status;
 									?>

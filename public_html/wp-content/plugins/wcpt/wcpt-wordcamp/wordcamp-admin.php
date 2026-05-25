@@ -962,14 +962,15 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		 * @param WP_Post $post The Campus Connect post that was approved.
 		 */
 		public function handle_cc_approved_for_pre_planning( WP_Post $post ) {
-			// Audit log note — same text as the admin notice, stored permanently with a timestamp.
+			// Audit log note — a permanent, timestamped record of the approval. The admin
+			// notice below is its transient, on-screen counterpart (similar, not identical, text).
 			add_post_meta(
 				$post->ID,
 				'_note',
 				array(
 					'timestamp' => time(),
 					'user_id'   => get_current_user_id(),
-					'message'   => __( 'Application approved for pre-planning. Organizer notification email queued.', 'wordcamporg' ),
+					'message'   => __( 'Application approved for pre-planning. Organizer notification email triggered.', 'wordcamporg' ),
 				)
 			);
 
@@ -1328,7 +1329,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				5 => array(
 					'type'   => 'updated',
-					'notice' => __( 'This Campus Connect application has been approved for pre-planning. An organizer notification email has been queued and a note has been added to the log.', 'wordcamporg' ),
+					'notice' => __( 'This Campus Connect application has been approved for pre-planning. The organizer notification email has been triggered and a note has been added to the log.', 'wordcamporg' ),
 				),
 			);
 

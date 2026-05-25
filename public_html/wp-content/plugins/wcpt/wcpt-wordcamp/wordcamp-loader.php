@@ -40,22 +40,22 @@ class WordCamp_Loader extends Event_Loader {
 		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-wordcamps-controller.php';
 		require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-template.php';
 
-		// MCP vetting abilities.
-		// Load the plugin-scoped Composer autoloader (provides class autoloading for
-		// the wordpress/mcp-adapter package), then bootstrap McpAdapter directly.
-		// We call McpAdapter::instance() rather than loading the adapter's plugin file
-		// because that file's internal Autoloader expects a nested vendor/ tree that
-		// does not exist when the package is installed as a Composer dependency.
-		$autoload = WCPT_DIR . 'vendor/autoload.php';
-		if ( file_exists( $autoload ) ) {
-			require_once $autoload;
-			if ( ! defined( 'WP_MCP_DIR' ) ) {
-				define( 'WP_MCP_DIR', WCPT_DIR . 'vendor/wordpress/mcp-adapter/' );
-			}
-			\WP\MCP\Core\McpAdapter::instance();
-		}
+		// MCP vetting abilities (REST, admin, and WP-CLI only).
+		//
+		// The wordpress/mcp-adapter classes are provided by the root Composer
+		// autoloader, which mu-plugins/load-other-mu-plugins.php loads on every
+		// request, so there is nothing to require here. The MCP server is only
+		// reached over the REST transport, and ability discovery only matters in
+		// the admin and to WP-CLI, so the bootstrap is skipped on front-end requests.
 		require_once WCPT_DIR . 'wcpt-wordcamp/class-wcpt-vetting-abilities.php';
-		WCPT_Vetting_Abilities::init();
+
+		$is_rest_request = ( defined( 'REST_REQUEST' ) && REST_REQUEST )
+			|| ( ! empty( $_SERVER['REQUEST_URI'] )
+				&& false !== strpos( wp_unslash( $_SERVER['REQUEST_URI'] ), '/' . rest_get_url_prefix() . '/' ) );
+
+		if ( is_admin() || $is_rest_request || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			WCPT_Vetting_Abilities::init();
+		}
 
 		// Quick admin check and load if needed
 		if ( is_admin() ) {

@@ -7,17 +7,17 @@ use WP\MCP\Core\McpAdapter;
  * Registers Campus Connect vetting Abilities and exposes them via a dedicated
  * MCP server (wcpt-vetting).
  *
- * Replaces the custom REST vetting controller from PR #1720. External agents
- * (wpcc_auto_agent.py and the GPL/trademark checker) connect to the MCP server
- * at /wp-json/mcp/wcpt-vetting and call these abilities via the standard
- * execute-ability tool instead of raw REST endpoints.
+ * The external vetting agent connects to the MCP server at
+ * /wp-json/mcp/wcpt-vetting and calls these abilities via the standard
+ * execute-ability tool rather than bespoke REST endpoints.
  *
  * Requires:
- *   - WordPress 6.9+ (Abilities API in core).
- *   - wordpress/mcp-adapter package (installed via wcpt/vendor/).
+ *   - WordPress 7.0+ (Abilities API in core).
+ *   - wordpress/mcp-adapter package (declared in the root composer.json and
+ *     autoloaded via the mu-plugins Composer autoloader).
  *
  * Authentication: WordPress Application Password for a user holding the
- * `wordcamp_wrangle_wordcamps` capability (same as the former REST controller).
+ * `wordcamp_wrangle_wordcamps` capability.
  *
  * @package WordCamp\WCPT
  */
@@ -51,10 +51,15 @@ class WCPT_Vetting_Abilities {
 	 * on mcp_adapter_init. Both hooks fire on init (priority 10+).
 	 */
 	public static function init() {
-		// Guard: MCP adapter package must be loaded.
+		// Guard: the wordpress/mcp-adapter package must be available (provided by the
+		// root Composer autoloader). If it is not installed yet, do nothing.
 		if ( ! class_exists( McpAdapter::class ) ) {
 			return;
 		}
+
+		// Boot the adapter singleton. It defers server creation to rest_api_init, so
+		// this registers nothing heavy outside of REST requests.
+		McpAdapter::instance();
 
 		add_action( 'wp_abilities_api_categories_init', array( __CLASS__, 'register_category' ) );
 		add_action( 'wp_abilities_api_init',            array( __CLASS__, 'register_abilities' ) );

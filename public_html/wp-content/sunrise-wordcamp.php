@@ -598,7 +598,6 @@ function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer
 function get_canonical_year_url( $domain, $path ) {
 	global $wpdb;
 
-	$tld       = get_top_level_domain();
 	$cache_key = 'current_blog_' . $domain;
 
 	/**
@@ -633,30 +632,56 @@ function get_canonical_year_url( $domain, $path ) {
 	}
 
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
-	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
-	switch ( $domain ) {
-		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2026-06-20' ) ) {
-				return "https://europe.wordcamp.$tld/2026/";
-			}
-			break;
+	$flagship_url = get_flagship_canonical_url( $domain );
 
-		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2026-09-02' ) ) {
-				return "https://us.wordcamp.$tld/2026/";
-			}
-			break;
-
-		case "asia.wordcamp.$tld":
-			if ( time() <= strtotime( '2026-04-25' ) ) {
-				return "https://asia.wordcamp.$tld/2026/";
-			}
-			break;
+	if ( $flagship_url ) {
+		return $flagship_url;
 	}
 
 	$latest = get_latest_site( $domain );
 
 	return $latest ? 'https://' . $latest->domain . $latest->path : false;
+}
+
+/**
+ * Get the canonical URL for a flagship city whose next site is created before the current edition is over.
+ *
+ * The sites for next year's flagship camps -- and sometimes a placeholder for the year after that -- are
+ * often created well before the current edition is over. Until then, both the canonical redirect and the
+ * "latest site" banner should stay on the listed path rather than advancing to an event that hasn't
+ * happened yet. The dates are maintained here, in one place, for both callers to share.
+ *
+ * See also `get_canonical_year_url()` and `WordCamp\Latest_Site_Hints\get_latest_home_url()`.
+ *
+ * @param string $domain
+ *
+ * @return string|false The canonical URL, or false if the domain has no active special case.
+ */
+function get_flagship_canonical_url( $domain ) {
+	$tld = get_top_level_domain();
+
+	$upcoming = array(
+		"europe.wordcamp.$tld" => array(
+			'until' => '2026-06-20',
+			'path'  => '/2026/',
+		),
+		"us.wordcamp.$tld"     => array(
+			'until' => '2026-09-02',
+			'path'  => '/2026/',
+		),
+		"asia.wordcamp.$tld"   => array(
+			'until' => '2026-04-25',
+			'path'  => '/2026/',
+		),
+	);
+
+	$flagship = $upcoming[ $domain ] ?? null;
+
+	if ( $flagship && time() <= strtotime( $flagship['until'] ) ) {
+		return "https://{$domain}{$flagship['path']}";
+	}
+
+	return false;
 }
 
 /**

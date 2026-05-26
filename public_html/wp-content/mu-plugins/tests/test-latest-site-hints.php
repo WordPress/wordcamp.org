@@ -106,6 +106,70 @@ class Test_WordCamp_SEO extends Database_TestCase {
 	}
 
 	/**
+	 * @covers WordCamp\Latest_Site_Hints\get_latest_home_url
+	 * @covers WordCamp\Latest_Site_Hints\get_current_edition
+	 *
+	 * While a real edition is current, the banner should skip a newer, not-yet-scheduled placeholder site.
+	 *
+	 * Uses a dedicated city so the per-request static cache in `get_latest_home_url()` can't collide with
+	 * the other cases (which reuse the shared fixture domains).
+	 */
+	public function test_skips_unscheduled_placeholder_site() {
+		$current     = self::factory()->blog->create( array(
+			'domain'     => 'skiptest.wordcamp.test',
+			'path'       => '/2025/',
+			'network_id' => WORDCAMP_NETWORK_ID,
+		) );
+		$placeholder = self::factory()->blog->create( array(
+			'domain'     => 'skiptest.wordcamp.test',
+			'path'       => '/2026/',
+			'network_id' => WORDCAMP_NETWORK_ID,
+		) );
+
+		// 2025 is upcoming / only just finished; 2026 is an empty placeholder with no schedule meta.
+		update_site_meta( $current, '_wc_event_end', strtotime( '+2 weeks' ) );
+
+		$this->assertSame(
+			'http://skiptest.wordcamp.test/2025/',
+			get_latest_home_url( 'skiptest.wordcamp.test', '/2025/' )
+		);
+
+		wp_delete_site( $current );
+		wp_delete_site( $placeholder );
+	}
+
+	/**
+	 * @covers WordCamp\Latest_Site_Hints\get_latest_home_url
+	 * @covers WordCamp\Latest_Site_Hints\get_current_edition
+	 *
+	 * Once the latest real edition is well in the past, the banner should fall through to the newest site,
+	 * even if that's an unscheduled placeholder.
+	 */
+	public function test_falls_through_to_newest_when_edition_long_over() {
+		$old         = self::factory()->blog->create( array(
+			'domain'     => 'overtest.wordcamp.test',
+			'path'       => '/2020/',
+			'network_id' => WORDCAMP_NETWORK_ID,
+		) );
+		$placeholder = self::factory()->blog->create( array(
+			'domain'     => 'overtest.wordcamp.test',
+			'path'       => '/2099/',
+			'network_id' => WORDCAMP_NETWORK_ID,
+		) );
+
+		// 2020 finished well over a month ago; 2099 is still an unscheduled placeholder.
+		update_site_meta( $old, '_wc_event_end', strtotime( '2020-08-01' ) );
+
+		$this->assertSame(
+			'http://overtest.wordcamp.test/2099/',
+			get_latest_home_url( 'overtest.wordcamp.test', '/2020/' )
+		);
+
+		wp_delete_site( $old );
+		wp_delete_site( $placeholder );
+	}
+
+	/**
 	 * Test cases for test_get_latest_home_url().
 	 *
 	 * @return array

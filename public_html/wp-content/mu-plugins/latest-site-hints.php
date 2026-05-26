@@ -1,7 +1,6 @@
 <?php
 
 namespace WordCamp\Latest_Site_Hints;
-use function WordCamp\Sunrise\get_flagship_canonical_url;
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 defined( 'WPINC' ) || die();
@@ -154,10 +153,33 @@ function show_notification_about_latest_site() {
  * @return bool|string
  */
 function get_latest_home_url( $current_domain, $current_path ) {
-	global $wpdb;
+	/*
+	 * `maybe_add_latest_site_hints()`, `canonical_link_past_home_pages_to_current_year()`, and
+	 * `show_notification_about_latest_site()` each call this during the same request, so memoize the result
+	 * to avoid repeating the database work.
+	 */
+	static $cache = array();
+	$cache_key = $current_domain . '|' . $current_path;
 
-	$wordcamp = get_wordcamp_post();
-	$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
+	if ( ! array_key_exists( $cache_key, $cache ) ) {
+		$cache[ $cache_key ] = determine_latest_home_url( $current_domain, $current_path );
+	}
+
+	return $cache[ $cache_key ];
+}
+
+/**
+ * Resolve the home URL of the most recent relevant event in a city.
+ *
+ * See `get_latest_home_url()`, which memoizes this.
+ *
+ * @param string $current_domain
+ * @param string $current_path
+ *
+ * @return bool|string
+ */
+function determine_latest_home_url( $current_domain, $current_path ) {
+	global $wpdb;
 
 	/**
 	 * In rare cases, the site for next year's camp will be created before this year's camp is over. When that
@@ -166,23 +188,21 @@ function get_latest_home_url( $current_domain, $current_path ) {
 	 * This won't prevent the link from being added to past years, but that edge case isn't significant enough
 	 * to warrant the extra complexity.
 	 *
-	 * See also `WordCamp\Sunrise\get_canonical_year_url()`.
+	 * The current site's end date is mirrored to blogmeta by `WordCamp\Schedule_Meta`. See also
+	 * `WordCamp\Sunrise\get_canonical_year_url()`.
 	 */
-	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
+	$current_end_date = absint( get_site_meta( get_current_blog_id(), '_wc_event_end', true ) );
+
+	if ( $current_end_date && time() < $current_end_date + DAY_IN_SECONDS ) {
 		return false;
 	}
 
 	/*
-	 * Flagship camps create next year's site (and sometimes the one after) before the current edition is
-	 * over, so the query below would otherwise link to an event that hasn't happened yet. Until then, stay
-	 * on the current edition. The shared list of dates lives with the redirect logic in sunrise.
+	 * Each candidate query joins the `_wc_event_end` blogmeta written by `WordCamp\Schedule_Meta`, which is
+	 * present only for live, scheduled editions. Candidates are ordered newest-first and capped, then we pick
+	 * the current edition (see `get_current_edition()`) so the banner skips empty placeholder sites for a
+	 * future edition while a real one is still upcoming or only recently finished.
 	 */
-	$flagship_url = get_flagship_canonical_url( $current_domain );
-
-	if ( $flagship_url ) {
-		return $flagship_url;
-	}
-
 	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $current_domain . $current_path ) ) {
 		// Remove the year prefix.
 		$city_domain = substr(
@@ -191,23 +211,32 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		);
 
 		$query = $wpdb->prepare( "
-			SELECT `domain`, `path`
-			FROM `$wpdb->blogs`
+			SELECT blog.domain, blog.path, event_end.meta_value AS event_end
+			FROM `$wpdb->blogs` AS blog
+			LEFT JOIN `$wpdb->blogmeta` AS event_end
+				ON event_end.blog_id = blog.blog_id
+				AND event_end.meta_key = '_wc_event_end'
 			WHERE
-				`domain` LIKE %s AND
-				SUBSTR( domain, 1, 4 ) REGEXP '^-?[0-9]+$' -- exclude secondary language domains like 2013-fr.ottawa.wordcamp.org
-			ORDER BY `domain` DESC
-			LIMIT 1",
+				( blog.public AND NOT blog.deleted ) AND -- don't send visitors to sites that shouldn't receive traffic
+				blog.domain LIKE %s AND
+				SUBSTR( blog.domain, 1, 4 ) REGEXP '^-?[0-9]+$' -- exclude secondary language domains like 2013-fr.ottawa.wordcamp.org
+			ORDER BY blog.domain DESC
+			LIMIT 10",
 			'%.' . $city_domain
 		);
 
 	} elseif ( preg_match( PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, $current_domain . $current_path ) ) {
 		$query = $wpdb->prepare( "
-			SELECT `domain`, `path`
-			FROM `$wpdb->blogs`
-			WHERE `domain` = %s
-			ORDER BY `domain`, `path` DESC
-			LIMIT 1",
+			SELECT blog.domain, blog.path, event_end.meta_value AS event_end
+			FROM `$wpdb->blogs` AS blog
+			LEFT JOIN `$wpdb->blogmeta` AS event_end
+				ON event_end.blog_id = blog.blog_id
+				AND event_end.meta_key = '_wc_event_end'
+			WHERE
+				( blog.public AND NOT blog.deleted ) AND -- don't send visitors to sites that shouldn't receive traffic
+				blog.domain = %s
+			ORDER BY blog.domain, blog.path DESC
+			LIMIT 10",
 			$current_domain
 		);
 
@@ -217,13 +246,17 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		$latest_path = "/$city/%%/$type/";
 
 		$query = $wpdb->prepare( "
-			SELECT `domain`, `path`
-			FROM `$wpdb->blogs`
+			SELECT blog.domain, blog.path, event_end.meta_value AS event_end
+			FROM `$wpdb->blogs` AS blog
+			LEFT JOIN `$wpdb->blogmeta` AS event_end
+				ON event_end.blog_id = blog.blog_id
+				AND event_end.meta_key = '_wc_event_end'
 			WHERE
-				`domain` = %s AND
-				`path` LIKE %s
-			ORDER BY `path` DESC
-			LIMIT 1",
+				( blog.public AND NOT blog.deleted ) AND -- don't send visitors to sites that shouldn't receive traffic
+				blog.domain = %s AND
+				blog.path LIKE %s
+			ORDER BY blog.path DESC
+			LIMIT 10",
 			$current_domain,
 			$latest_path
 		);
@@ -232,11 +265,37 @@ function get_latest_home_url( $current_domain, $current_path ) {
 		return false;
 	}
 
-  $latest_site = $wpdb->get_results( $query ); // phpcs:ignore -- Prepared above.
+	$candidate_sites = $wpdb->get_results( $query ); // phpcs:ignore -- Prepared above.
 
-	if ( ! $latest_site ) {
+	if ( ! $candidate_sites ) {
 		return false;
 	}
 
-	return set_url_scheme( trailingslashit( '//' . $latest_site[0]->domain . $latest_site[0]->path ) );
+	$latest_site = get_current_edition( $candidate_sites );
+
+	return set_url_scheme( trailingslashit( '//' . $latest_site->domain . $latest_site->path ) );
+}
+
+/**
+ * Pick the edition a visitor should be sent to from a newest-first list of a city's sites.
+ *
+ * Returns the newest edition that's upcoming or only finished within the last month -- skipping any newer,
+ * not-yet-scheduled placeholder sites in front of it -- and otherwise the newest site, placeholder or not.
+ * This mirrors `WordCamp\Sunrise\get_current_edition_site()`, but operates on already-fetched rows.
+ *
+ * @param object[] $candidate_sites Rows with `domain`, `path`, and an `event_end` timestamp (empty for
+ *                                   unscheduled placeholders), ordered newest-first.
+ *
+ * @return object The chosen site row.
+ */
+function get_current_edition( array $candidate_sites ) {
+	foreach ( $candidate_sites as $site ) {
+		$event_end = absint( $site->event_end );
+
+		if ( $event_end && time() <= $event_end + MONTH_IN_SECONDS ) {
+			return $site;
+		}
+	}
+
+	return $candidate_sites[0];
 }

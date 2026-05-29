@@ -663,7 +663,7 @@ class WordCamp_Fonts_Plugin {
 			return $data;
 		}
 
-		$normalized_theme_fonts = $this->get_normalized_theme_font_families(
+		$normalized_theme_fonts = $this->normalize_theme_font_families(
 			$incoming_theme_fonts,
 			$saved_theme_fonts
 		);
@@ -690,7 +690,7 @@ class WordCamp_Fonts_Plugin {
 	 *
 	 * @return array
 	 */
-	public function get_normalized_theme_font_families(
+	public function normalize_theme_font_families(
 		array $incoming_theme_fonts,
 		array $saved_theme_fonts
 	) {
@@ -708,6 +708,8 @@ class WordCamp_Fonts_Plugin {
 			return $incoming_theme_fonts;
 		}
 
+		// A stale Font Library save swaps one theme-font set for another instead of
+		// adding to or removing from the previously saved set. Keep only shared fonts.
 		return array_values(
 			array_filter(
 				$incoming_theme_fonts,

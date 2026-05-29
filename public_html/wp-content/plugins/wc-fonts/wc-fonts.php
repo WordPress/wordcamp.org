@@ -13,6 +13,12 @@ class WordCamp_Fonts_Plugin {
 		add_action( 'init',       array( $this, 'init'       ) );
 		add_action( 'admin_init', array( $this, 'admin_init' ) );
 		add_action( 'admin_menu', array( $this, 'admin_menu' ) );
+		add_filter(
+			'wp_insert_post_data',
+			array( $this, 'normalize_theme_font_library_saves' ),
+			10,
+			4
+		);
 
 		add_action( 'wp_head',            array( $this, 'wp_head_typekit'          ), 102 ); // After safecss_style.
 		add_action( 'wp_head',            array( $this, 'wp_head_google_web_fonts' ) );
@@ -616,6 +622,123 @@ class WordCamp_Fonts_Plugin {
 		_wp_array_set( $new_data, array( 'settings', 'typography', 'fontFamilies', 'theme' ), $fonts );
 
 		return $theme_json->update_with( $new_data );
+	}
+
+	/**
+	 * Normalize Font Library saves for theme fonts.
+	 *
+	 * Gutenberg saves theme font activation through the `wp_global_styles` post.
+	 * On WordCamp sites, repeated saves can submit an out-of-date set of active
+	 * theme fonts, which reintroduces fonts that were just deactivated. When the
+	 * saved and incoming font sets are neither a subset nor a superset of each
+	 * other, keep only the fonts that exist in both sets so prior deactivations
+	 * persist.
+	 *
+	 * @param array $data                Sanitized post data.
+	 * @param array $postarr             Sanitized post data.
+	 * @param array $_unsanitized_postarr Un-sanitized post data.
+	 * @param bool  $update              Whether this is an existing post being updated.
+	 *
+	 * @return array
+	 */
+	public function normalize_theme_font_library_saves( $data, $postarr, $_unsanitized_postarr, $update ) {
+		if ( ! $update || 'wp_global_styles' !== $data['post_type'] ) {
+			return $data;
+		}
+
+		$incoming_config = json_decode( wp_unslash( $data['post_content'] ), true );
+		$saved_config    = json_decode(
+			get_post_field( 'post_content', $postarr['ID'] ),
+			true
+		);
+
+		if ( ! is_array( $incoming_config ) || ! is_array( $saved_config ) ) {
+			return $data;
+		}
+
+		$incoming_theme_fonts = _wp_array_get( $incoming_config, array( 'settings', 'typography', 'fontFamilies', 'theme' ) );
+		$saved_theme_fonts    = _wp_array_get( $saved_config, array( 'settings', 'typography', 'fontFamilies', 'theme' ) );
+
+		if ( ! is_array( $incoming_theme_fonts ) || ! is_array( $saved_theme_fonts ) ) {
+			return $data;
+		}
+
+		$normalized_theme_fonts = $this->get_normalized_theme_font_families(
+			$incoming_theme_fonts,
+			$saved_theme_fonts
+		);
+
+		if ( $normalized_theme_fonts === $incoming_theme_fonts ) {
+			return $data;
+		}
+
+		_wp_array_set(
+			$incoming_config,
+			array( 'settings', 'typography', 'fontFamilies', 'theme' ),
+			$normalized_theme_fonts
+		);
+		$data['post_content'] = wp_slash( wp_json_encode( $incoming_config ) );
+
+		return $data;
+	}
+
+	/**
+	 * Keep previously deactivated theme fonts from being reintroduced by a stale save.
+	 *
+	 * @param array $incoming_theme_fonts Incoming theme font families.
+	 * @param array $saved_theme_fonts    Saved theme font families.
+	 *
+	 * @return array
+	 */
+	public function get_normalized_theme_font_families(
+		array $incoming_theme_fonts,
+		array $saved_theme_fonts
+	) {
+		$incoming_slugs = $this->get_font_family_slugs( $incoming_theme_fonts );
+		$saved_slugs    = $this->get_font_family_slugs( $saved_theme_fonts );
+
+		if ( empty( $incoming_slugs ) || empty( $saved_slugs ) ) {
+			return $incoming_theme_fonts;
+		}
+
+		$incoming_not_saved = array_diff( $incoming_slugs, $saved_slugs );
+		$saved_not_incoming = array_diff( $saved_slugs, $incoming_slugs );
+
+		if ( empty( $incoming_not_saved ) || empty( $saved_not_incoming ) ) {
+			return $incoming_theme_fonts;
+		}
+
+		return array_values(
+			array_filter(
+				$incoming_theme_fonts,
+				static function ( $font_family ) use ( $saved_slugs ) {
+					return (
+						isset( $font_family['slug'] ) &&
+						in_array( $font_family['slug'], $saved_slugs, true )
+					);
+				}
+			)
+		);
+	}
+
+	/**
+	 * Get the available font family slugs.
+	 *
+	 * @param array $font_families Font families.
+	 *
+	 * @return array
+	 */
+	protected function get_font_family_slugs( array $font_families ) {
+		return array_values(
+			array_filter(
+				array_map(
+					static function ( $font_family ) {
+						return isset( $font_family['slug'] ) ? $font_family['slug'] : '';
+					},
+					$font_families
+				)
+			)
+		);
 	}
 }
 

@@ -636,7 +636,7 @@ class WordCamp_Fonts_Plugin {
 	 *
 	 * @param array $data                Sanitized post data.
 	 * @param array $postarr             Sanitized post data.
-	 * @param array $_unsanitized_postarr Un-sanitized post data.
+	 * @param array $_unsanitized_postarr Unsanitized post data.
 	 * @param bool  $update              Whether this is an existing post being updated.
 	 *
 	 * @return array

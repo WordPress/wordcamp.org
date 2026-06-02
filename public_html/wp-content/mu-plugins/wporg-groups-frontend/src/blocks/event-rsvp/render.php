@@ -84,25 +84,25 @@ wp_interactivity_state(
 	array(
 		'isAttending'    => $is_attending,
 		'countLabel'     => sprintf(
-			_n( '%d going', '%d going', $count, 'wporg-groups' ),
+			_n( '%d going', '%d going', $count, 'wporg-groups-frontend' ),
 			$count
 		),
 		'modalTitle'     => sprintf(
 			/* translators: 1: attendee count, 2: event title */
-			__( '%1$s Attending %2$s', 'wporg-groups' ),
+			__( '%1$s Attending %2$s', 'wporg-groups-frontend' ),
 			number_format_i18n( $count ),
 			$event_title
 		),
 		'isMember'        => $is_member,
 		'rsvpButtonLabel' => $is_attending
-			? "\u{2713} " . __( 'Attending', 'wporg-groups' )
-			: ( $is_member ? __( 'RSVP', 'wporg-groups' ) : __( 'Join & RSVP', 'wporg-groups' ) ),
+			? "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' )
+			: ( $is_member ? __( 'RSVP', 'wporg-groups-frontend' ) : __( 'Join & RSVP', 'wporg-groups-frontend' ) ),
 		'statusText'     => $is_attending
-			? __( 'You are attending this event.', 'wporg-groups' )
-			: __( 'You have not RSVPed to this event.', 'wporg-groups' ),
+			? __( 'You are attending this event.', 'wporg-groups-frontend' )
+			: __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
 		'modalRsvpLabel' => $is_attending
-			? __( 'Cancel RSVP', 'wporg-groups' )
-			: __( 'Attend', 'wporg-groups' ),
+			? __( 'Cancel RSVP', 'wporg-groups-frontend' )
+			: __( 'Attend', 'wporg-groups-frontend' ),
 	)
 );
 
@@ -120,7 +120,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		data-wp-on--keydown="actions.handleSummaryKeydown"
 		role="button"
 		tabindex="0"
-		aria-label="<?php esc_attr_e( 'View attendees', 'wporg-groups' ); ?>">
+		aria-label="<?php esc_attr_e( 'View attendees', 'wporg-groups-frontend' ); ?>">
 
 		<div class="wporg-event-rsvp__avatars">
 			<?php foreach ( array_slice( $attendees, 0, $max_avatars ) as $attendee ) : ?>
@@ -142,7 +142,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<?php
 			echo esc_html(
 				sprintf(
-					_n( '%s going', '%s going', $count, 'wporg-groups' ),
+					_n( '%s going', '%s going', $count, 'wporg-groups-frontend' ),
 					number_format_i18n( $count )
 				)
 			);
@@ -160,17 +160,17 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		>
 			<?php
 			if ( $is_attending ) {
-				echo "\u{2713} " . esc_html__( 'Attending', 'wporg-groups' );
+				echo "\u{2713} " . esc_html__( 'Attending', 'wporg-groups-frontend' );
 			} elseif ( $is_member ) {
-				esc_html_e( 'RSVP', 'wporg-groups' );
+				esc_html_e( 'RSVP', 'wporg-groups-frontend' );
 			} else {
-				esc_html_e( 'Join & RSVP', 'wporg-groups' );
+				esc_html_e( 'Join & RSVP', 'wporg-groups-frontend' );
 			}
 			?>
 		</button>
 	<?php else : ?>
 		<button class="wporg-event-rsvp__button wp-element-button is-past" disabled>
-			<?php esc_html_e( 'Past Event', 'wporg-groups' ); ?>
+			<?php esc_html_e( 'Past Event', 'wporg-groups-frontend' ); ?>
 		</button>
 	<?php endif; ?>
 
@@ -181,7 +181,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		data-wp-on-window--keydown="actions.handleEscape"
 		role="dialog"
 		aria-modal="true"
-		aria-label="<?php esc_attr_e( 'Event attendees', 'wporg-groups' ); ?>"
+		aria-label="<?php esc_attr_e( 'Event attendees', 'wporg-groups-frontend' ); ?>"
 	>
 		<div class="wporg-event-rsvp__modal-content">
 			<div class="wporg-event-rsvp__modal-header">
@@ -189,7 +189,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					<?php
 					echo esc_html(
 						sprintf(
-							__( '%1$d Attending %2$s', 'wporg-groups' ),
+							__( '%1$d Attending %2$s', 'wporg-groups-frontend' ),
 							$count,
 							$event_title
 						)
@@ -199,7 +199,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<button
 					class="wporg-event-rsvp__modal-close"
 					data-wp-on--click="actions.closeModal"
-					aria-label="<?php esc_attr_e( 'Close', 'wporg-groups' ); ?>"
+					aria-label="<?php esc_attr_e( 'Close', 'wporg-groups-frontend' ); ?>"
 				>&times;</button>
 			</div>
 
@@ -209,9 +209,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						<p class="wporg-event-rsvp__modal-status" data-wp-text="state.statusText">
 							<?php
 							if ( $is_attending ) {
-								esc_html_e( 'You are attending this event.', 'wporg-groups' );
+								esc_html_e( 'You are attending this event.', 'wporg-groups-frontend' );
 							} else {
-								esc_html_e( 'You have not RSVPed to this event.', 'wporg-groups' );
+								esc_html_e( 'You have not RSVPed to this event.', 'wporg-groups-frontend' );
 							}
 							?>
 						</p>
@@ -224,9 +224,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						>
 							<?php
 							if ( $is_attending ) {
-								esc_html_e( 'Cancel RSVP', 'wporg-groups' );
+								esc_html_e( 'Cancel RSVP', 'wporg-groups-frontend' );
 							} else {
-								esc_html_e( 'Attend', 'wporg-groups' );
+								esc_html_e( 'Attend', 'wporg-groups-frontend' );
 							}
 							?>
 						</button>
@@ -236,7 +236,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							printf(
 								wp_kses(
 									/* translators: %s: login URL */
-									__( '<a href="%s">Log in</a> to RSVP to this event.', 'wporg-groups' ),
+									__( '<a href="%s">Log in</a> to RSVP to this event.', 'wporg-groups-frontend' ),
 									array( 'a' => array( 'href' => array() ) )
 								),
 								esc_url( wp_login_url( get_permalink( $event_post_id ) ) )
@@ -267,7 +267,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					</a>
 				<?php endforeach; ?>
 				<?php if ( empty( $attendees ) ) : ?>
-					<p class="wporg-event-rsvp__empty"><?php esc_html_e( 'No attendees yet. Be the first to RSVP!', 'wporg-groups' ); ?></p>
+					<p class="wporg-event-rsvp__empty"><?php esc_html_e( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ); ?></p>
 				<?php endif; ?>
 			</div>
 		</div>

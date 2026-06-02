@@ -52,7 +52,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			class="wporg-event-manage__button wporg-event-manage__button--edit wp-element-button"
 			data-wporg-groups-modal="edit"
 			data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-		>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups' ); ?></button>
+		>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
 	<?php endif; ?>
 
 	<?php if ( $show_create ) : ?>
@@ -60,7 +60,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			type="button"
 			class="wporg-event-manage__button wporg-event-manage__button--create wp-element-button"
 			data-wporg-groups-modal="create"
-		>+ <?php esc_html_e( 'Create event', 'wporg-groups' ); ?></button>
+		>+ <?php esc_html_e( 'Create event', 'wporg-groups-frontend' ); ?></button>
 	<?php endif; ?>
 
 	<div id="wporg-groups-event-modal-root"></div>

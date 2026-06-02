@@ -20,9 +20,9 @@
 				{ "slug": "blueberry-2",    "color": "#9fb1ff", "name": "Blueberry 2" },
 				{ "slug": "blueberry-3",    "color": "#c7d1ff", "name": "Blueberry 3" },
 				{ "slug": "blueberry-4",    "color": "#eff2ff", "name": "Blueberry 4" },
-				{ "slug": "pomegrade-1",    "color": "#e26f56", "name": "Pomegrade" },
-				{ "slug": "pomegrade-2",    "color": "#ffb7a7", "name": "Pomegrade 2" },
-				{ "slug": "pomegrade-3",    "color": "#ffe9de", "name": "Pomegrade 3" },
+				{ "slug": "pomegranate-1",  "color": "#e26f56", "name": "Pomegranate" },
+				{ "slug": "pomegranate-2",  "color": "#ffb7a7", "name": "Pomegranate 2" },
+				{ "slug": "pomegranate-3",  "color": "#ffe9de", "name": "Pomegranate 3" },
 				{ "slug": "acid-green-1",   "color": "#33f078", "name": "Acid Green" },
 				{ "slug": "acid-green-3",   "color": "#e2ffed", "name": "Acid Green 3" }
 			]

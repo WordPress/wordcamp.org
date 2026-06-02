@@ -189,7 +189,7 @@ function render_event_cards( WP_Query $query, array $opts = array() ): void {
 						echo esc_html(
 							sprintf(
 								/* translators: %s: formatted attendee count */
-								_n( '%s going', '%s going', $attending, 'wporg-groups' ),
+								_n( '%s going', '%s going', $attending, 'groups-site' ),
 								number_format_i18n( $attending )
 							)
 						);

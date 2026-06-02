@@ -12,6 +12,59 @@ namespace WordCamp\Groups\GatherPress_Tweaks;
 defined( 'WPINC' ) || die();
 
 /**
+ * Check whether the current request URI is the GatherPress event archive.
+ *
+ * @return bool
+ */
+function is_event_archive_request_uri(): bool {
+	if ( empty( $_SERVER['REQUEST_URI'] ) ) {
+		return false;
+	}
+
+	$archive_url = get_post_type_archive_link( 'gatherpress_event' );
+	if ( ! $archive_url ) {
+		return false;
+	}
+
+	$archive_path = wp_parse_url( $archive_url, PHP_URL_PATH );
+	$request_uri  = esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+	$request_path = wp_parse_url( $request_uri, PHP_URL_PATH );
+
+	if ( ! $archive_path || ! $request_path ) {
+		return false;
+	}
+
+	return trailingslashit( $archive_path ) === trailingslashit( $request_path );
+}
+
+/**
+ * Resolve the GatherPress venue post assigned to an event.
+ *
+ * @param int $event_id Event post ID.
+ * @return int Venue post ID, or 0 when no venue post can be resolved.
+ */
+function get_event_venue_post_id( int $event_id ): int {
+	$terms = wp_get_object_terms(
+		$event_id,
+		\GatherPress\Core\Venue\Venue::TAXONOMY,
+		array( 'fields' => 'all' )
+	);
+
+	if ( is_wp_error( $terms ) || empty( $terms ) ) {
+		return 0;
+	}
+
+	$venue_slug = ltrim( $terms[0]->slug, '_' );
+	if ( '' === $venue_slug ) {
+		return 0;
+	}
+
+	$venue_post = get_page_by_path( $venue_slug, OBJECT, \GatherPress\Core\Venue\Venue::POST_TYPE );
+
+	return $venue_post ? (int) $venue_post->ID : 0;
+}
+
+/**
  * Disable the "Show Timezone" GatherPress setting so event date blocks
  * never append "GMT+0000" or similar suffixes.
  *
@@ -180,8 +233,10 @@ add_action(
 					if ( $q !== $query ) {
 						return $where;
 					}
+					global $wpdb;
+
 					$now = current_time( 'mysql', true );
-					$where .= " AND gp_events.datetime_end_gmt >= '{$now}'";
+					$where .= $wpdb->prepare( ' AND gp_events.datetime_end_gmt >= %s', $now );
 					return $where;
 				},
 				10,
@@ -197,8 +252,10 @@ add_action(
 					if ( $q !== $query ) {
 						return $where;
 					}
+					global $wpdb;
+
 					$now = current_time( 'mysql', true );
-					$where .= " AND gp_events.datetime_end_gmt < '{$now}'";
+					$where .= $wpdb->prepare( ' AND gp_events.datetime_end_gmt < %s', $now );
 					return $where;
 				},
 				10,
@@ -221,10 +278,14 @@ add_action(
 			return;
 		}
 
+		$post_type          = $query->get( 'post_type' );
+		$is_event_post_type = 'gatherpress_event' === $post_type
+			|| ( is_array( $post_type ) && in_array( 'gatherpress_event', $post_type, true ) );
+
 		// If this is a search on the events archive path, force it back to archive.
-		if ( $query->is_search() && isset( $_GET['event_time'] ) ) {
-			$query->is_search          = false;
-			$query->is_archive         = true;
+		if ( $query->is_search() && ( isset( $_GET['event_time'] ) || $is_event_post_type || is_event_archive_request_uri() ) ) {
+			$query->is_search            = false;
+			$query->is_archive           = true;
 			$query->is_post_type_archive = true;
 			$query->set( 'post_type', 'gatherpress_event' );
 		}
@@ -400,27 +461,11 @@ add_filter(
 			return $content;
 		}
 
-		$event = new \GatherPress\Core\Event\Event( $event_id );
-		$venue = $event->get_venue_information();
-
-		if ( empty( $venue['name'] ) ) {
+		$venue_id = get_event_venue_post_id( $event_id );
+		if ( ! $venue_id ) {
 			return $content;
 		}
 
-		$venue_posts = get_posts(
-			array(
-				'post_type'   => 'gatherpress_venue',
-				'name'        => sanitize_title( $venue['name'] ),
-				'numberposts' => 1,
-				'fields'      => 'ids',
-			)
-		);
-
-		if ( empty( $venue_posts ) ) {
-			return $content;
-		}
-
-		$venue_id    = $venue_posts[0];
 		$venue_desc  = get_post_field( 'post_content', $venue_id );
 		$access      = get_post_meta( $venue_id, 'gatherpress_access_requirements', true );
 

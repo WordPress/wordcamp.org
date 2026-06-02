@@ -12,6 +12,7 @@
 import {
 	createElement as h,
 	render,
+	useEffect,
 	useState,
 } from '@wordpress/element';
 import SettingsApp from './components/settings-app';
@@ -30,27 +31,40 @@ import SettingsApp from './components/settings-app';
 		const [ initialTab, setInitialTab ] = useState( '' );
 		const [ eventId, setEventId ] = useState( 0 );
 
-		// Listen for trigger clicks via a global handler that sets state.
-		if ( ! window.__wporgSettingsOpen ) {
-			document.addEventListener( 'click', ( ev ) => {
-				const trigger = ev.target.closest( '[data-wporg-settings-open]' );
+		useEffect( () => {
+			const previousOpen = window.__wporgSettingsOpen;
+			const openSettings = ( tab, evId ) => {
+				setInitialTab( tab );
+				setEventId( evId );
+				setIsOpen( true );
+			};
+			const handleClick = ( ev ) => {
+				const target = ev.target instanceof Element ? ev.target : null;
+				const trigger = target?.closest( '[data-wporg-settings-open]' );
 				if ( ! trigger ) {
 					return;
 				}
 				ev.preventDefault();
-				window.__wporgSettingsOpen(
+				openSettings(
 					trigger.dataset.wporgSettingsOpen || '',
 					parseInt( trigger.dataset.wporgSettingsEventId || '0', 10 )
 				);
-			} );
-		}
+			};
 
-		// Update the global handler to point to this component instance.
-		window.__wporgSettingsOpen = ( tab, evId ) => {
-			setInitialTab( tab );
-			setEventId( evId );
-			setIsOpen( true );
-		};
+			window.__wporgSettingsOpen = openSettings;
+			document.addEventListener( 'click', handleClick );
+
+			return () => {
+				document.removeEventListener( 'click', handleClick );
+				if ( window.__wporgSettingsOpen === openSettings ) {
+					if ( previousOpen ) {
+						window.__wporgSettingsOpen = previousOpen;
+					} else {
+						delete window.__wporgSettingsOpen;
+					}
+				}
+			};
+		}, [] );
 
 		if ( ! isOpen ) {
 			return null;

@@ -25,7 +25,6 @@ class CampTix_Plugin {
 
 	public $error_flags;
 	public $debug;
-	public $beta_features_enabled;
 	public $version     = 20180709;
 	public $css_version = 20180709;
 	public $js_version  = 20180709;
@@ -54,6 +53,11 @@ class CampTix_Plugin {
 	protected $did_template_redirect;
 	protected $did_checkout;
 	protected $shortcode_contents;
+	protected $shortcode_str;
+	protected $order;
+	protected $tickets_url;
+	protected $flush_tickets_page;
+	public $removed_shortcodes = array();
 
 	// Allow others to use this.
 	public $filter_post_meta = false;
@@ -114,9 +118,8 @@ class CampTix_Plugin {
 	 * Fired during init, doh!
 	 */
 	function init() {
-		$this->options = $this->get_options();
+		$this->load_options();
 		$this->debug = (bool) apply_filters( 'camptix_debug', false );
-		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
 		$this->tmp = array();
 
 		// Capability mapping.
@@ -129,11 +132,6 @@ class CampTix_Plugin {
 			'delete_attendees' => 'manage_options',
 			'refund_all'       => 'manage_options',
 		) );
-
-		// Explicitly disable all beta features if beta features is off.
-		if ( ! $this->beta_features_enabled )
-			foreach ( $this->get_beta_features() as $beta_feature )
-				$this->options[$beta_feature] = false;
 
 		// The following three are just different kinds (colors) of user feedback.
 		// Don't use directly, instead use $this->notice / error / info methods.
@@ -1275,15 +1273,33 @@ class CampTix_Plugin {
 
 	/**
 	 * Returns an array of options stored in the database, or a set of defaults.
+	 *
+	 * The result is cached in `$this->options` after the first call. Multisite
+	 * callers (such as the centralized Stripe webhook) should call
+	 * `load_options()` after `switch_to_blog()` to refresh the cache for the
+	 * switched-to site.
 	 */
 	function get_options() {
-
 		// Allow other plugins to get CampTix options.
-		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) )
+		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) ) {
 			return $this->options;
+		}
 
+		return $this->load_options();
+	}
+
+	/**
+	 * Load the current site's CampTix options into `$this->options`.
+	 *
+	 * Called once during `init()`. Multisite callers can call this again after
+	 * `switch_to_blog()` to refresh `$this->options` (and any internal CampTix
+	 * code that reads it directly) for the switched-to site.
+	 *
+	 * @return array The freshly loaded options.
+	 */
+	function load_options() {
 		$default_options = $this->get_default_options();
-		$options = array_merge( $default_options, get_option( 'camptix_options', array() ) );
+		$options         = array_merge( $default_options, get_option( 'camptix_options', array() ) );
 
 		// Allow plugins to hi-jack or read the options.
 		$options = apply_filters( 'camptix_options', $options );
@@ -1298,6 +1314,8 @@ class CampTix_Plugin {
 		if ( apply_filters( 'camptix_enable_automatic_upgrades', true ) && $options['version'] < $this->version ) {
 			$this->upgrade( $options['version'] );
 		}
+
+		$this->options = $options;
 
 		return $options;
 	}
@@ -1645,13 +1663,23 @@ class CampTix_Plugin {
 			$currency['decimal_point'] = 2;
 		}
 
+		// PHP 8.4+ throws ValueError when NumberFormatter is given an unknown locale; format() can also return false.
+		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) ) {
-			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-			$formatted_amount = $formatter->format( $amount );
-		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
-			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
-		} else {
-			$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			try {
+				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
+				$formatted_amount = $formatter->format( $amount );
+			} catch ( \Throwable $e ) {
+				$formatted_amount = false;
+			}
+		}
+
+		if ( false === $formatted_amount ) {
+			if ( isset( $currency['format'] ) && $currency['format'] ) {
+				$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
+			} else {
+				$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			}
 		}
 
 		$formatted_amount = apply_filters( 'tix_append_currency', $formatted_amount, $currency, $amount );
@@ -6618,8 +6646,22 @@ class CampTix_Plugin {
 			update_post_meta( $attendee->ID, 'tix_transaction_details', $transaction_details );
 
 			if ( self::PAYMENT_STATUS_CANCELLED == $result ) {
-				$attendee->post_status = 'cancel';
-				wp_update_post( $attendee );
+				// A user-initiated cancel (e.g. clicking "Cancel" on the gateway's hosted
+				// checkout) can race with the gateway's webhook. If the webhook has already
+				// reported the payment as complete/pending/refunded, the charge stayed with
+				// the gateway and the attendee is the rightful ticket holder — refuse to
+				// downgrade. PAYMENT_STATUS_COMPLETED still transitions cancel → publish,
+				// so a webhook that arrives after a cancel still wins.
+				if ( in_array( $attendee->post_status, array( 'publish', 'pending', 'refund' ), true ) ) {
+					$this->log(
+						sprintf( 'Refusing to cancel attendee in %s status; payment was already processed.', $attendee->post_status ),
+						$attendee->ID,
+						$data
+					);
+				} else {
+					$attendee->post_status = 'cancel';
+					wp_update_post( $attendee );
+				}
 			}
 
 			if ( self::PAYMENT_STATUS_FAILED == $result ) {
@@ -6663,6 +6705,29 @@ class CampTix_Plugin {
 		$from_status = $attendees_status;
 		$to_status = $attendees[0]->post_status;
 
+		/**
+		 * Fires after a payment result has been recorded for an attendee group.
+		 *
+		 * This action fires on every payment_result() call, not just on status transitions.
+		 * Webhooks and interactive returns can both invoke payment_result() for the same
+		 * payment_token; whichever runs second sees $status_changed === false. Listeners
+		 * that should only run when the attendee status actually transitioned can check the
+		 * $status_changed argument; idempotent listeners (e.g. one that creates an invoice)
+		 * can run on every call and use their own dedup guard to avoid double-processing.
+		 *
+		 * @param string $payment_token  The payment token whose attendees were updated.
+		 * @param int    $result         The new payment status — one of the
+		 *                               CampTix_Plugin::PAYMENT_STATUS_* constants.
+		 * @param array  $data           Gateway-supplied payment data. May include
+		 *                               transaction_id, transaction_details, error_code,
+		 *                               refund_transaction_id, refund_transaction_details.
+		 * @param bool   $status_changed Whether this call actually transitioned the
+		 *                               attendee post_status. False for repeat calls that
+		 *                               re-report the same status (e.g. a duplicate
+		 *                               webhook arriving after the interactive return).
+		 */
+		do_action( 'camptix_payment_result', $payment_token, $result, $data, $status_changed );
+
 		// If the status hasn't changed, there's nothing much we can do here.
 		if ( ! $status_changed ) {
 			if ( ! $interactive ) {
@@ -6681,7 +6746,6 @@ class CampTix_Plugin {
 
 		// Send out the tickets and receipt if necessary.
 		$this->email_tickets( $payment_token, $from_status, $to_status );
-		do_action( 'camptix_payment_result', $payment_token, $result, $data );
 
 		if ( ! $interactive ) {
 			return true;

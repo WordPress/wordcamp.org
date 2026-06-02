@@ -78,6 +78,10 @@ abstract class Event_Admin {
 		add_filter( 'posts_search', array( $this, 'extend_search_to_postmeta' ), 10, 2 );
 		add_filter( 'posts_join', array( $this, 'search_postmeta_join' ), 10, 2 );
 		add_filter( 'posts_groupby', array( $this, 'search_postmeta_groupby' ), 10, 2 );
+
+		// Language filter on the admin list table.
+		add_action( 'restrict_manage_posts', array( $this, 'add_language_filter_dropdown' ) );
+		add_action( 'parse_query', array( $this, 'filter_by_language' ) );
 	}
 
 	/**
@@ -586,6 +590,21 @@ abstract class Event_Admin {
 					update_post_meta( $post_id, $key, $new_value );
 					break;
 
+				case 'select-locale':
+					$allowed_locales = array_keys( self::get_locale_options() );
+					$new_value       = array();
+
+					if ( is_array( $values[ $key ] ) ) {
+						foreach ( $values[ $key ] as $locale ) {
+							if ( in_array( $locale, $allowed_locales, true ) ) {
+								$new_value[] = $locale;
+							}
+						}
+					}
+
+					update_post_meta( $post_id, $key, $new_value );
+					break;
+
 				case 'select-streaming':
 					$allowed_values = array_keys( self::get_streaming_services() );
 					$key_other      = wcpt_key_to_str( $key, 'wcpt_' ) . '-other';
@@ -953,6 +972,33 @@ abstract class Event_Admin {
 									)
 								);
 								break;
+							case 'select-locale':
+								$selected_locales = get_post_meta( $post_id, $key, true );
+								$locales          = self::get_locale_options();
+
+								if ( ! is_array( $selected_locales ) ) {
+									$selected_locales = array();
+								}
+								?>
+
+								<select
+									name="<?php echo esc_attr( $object_name ); ?>[]"
+									id="<?php echo esc_attr( $object_name ); ?>"
+									multiple
+									style="height: auto; min-height: 120px;"
+								>
+									<?php foreach ( $locales as $locale_code => $locale_name ) : ?>
+										<option
+											value="<?php echo esc_attr( $locale_code ); ?>"
+											<?php selected( in_array( $locale_code, $selected_locales, true ) ); ?>
+										>
+											<?php echo esc_html( $locale_name ); ?>
+										</option>
+									<?php endforeach; ?>
+								</select>
+
+								<?php
+								break;
 							case 'select-streaming':
 								$selected = get_post_meta( $post_id, $key, true );
 								$options  = self::get_streaming_services();
@@ -1147,5 +1193,100 @@ abstract class Event_Admin {
 		}
 
 		return $groupby;
+	}
+
+	/**
+	 * Get available locale options for the Language field.
+	 *
+	 * Uses GlotPress locales if available, otherwise falls back to
+	 * wp_get_available_translations().
+	 *
+	 * @return array Associative array of locale code => display name.
+	 */
+	public static function get_locale_options() {
+		if ( defined( 'GLOTPRESS_LOCALES_PATH' ) && file_exists( GLOTPRESS_LOCALES_PATH ) ) {
+			require_once GLOTPRESS_LOCALES_PATH;
+
+			$locales = GP_Locales::locales();
+			$options = array();
+
+			foreach ( $locales as $locale ) {
+				if ( ! empty( $locale->wp_locale ) ) {
+					$options[ $locale->wp_locale ] = $locale->english_name;
+				}
+			}
+
+			asort( $options );
+
+			return $options;
+		}
+
+		// Fallback: use WordPress available translations.
+		if ( ! function_exists( 'wp_get_available_translations' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/translation-install.php';
+		}
+
+		$translations = wp_get_available_translations();
+		$options      = array( 'en_US' => 'English (United States)' );
+
+		foreach ( $translations as $locale => $data ) {
+			$options[ $locale ] = $data['english_name'];
+		}
+
+		asort( $options );
+
+		return $options;
+	}
+
+	/**
+	 * Add a Language filter dropdown to the admin list table.
+	 *
+	 * @param string $post_type The current post type.
+	 */
+	public function add_language_filter_dropdown( $post_type ) {
+		if ( $this->get_event_type() !== $post_type ) {
+			return;
+		}
+
+		$locales  = self::get_locale_options();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only filter for list table.
+		$selected = isset( $_GET['language'] ) ? sanitize_text_field( wp_unslash( $_GET['language'] ) ) : '';
+
+		?>
+		<select name="language" id="filter-by-language">
+			<option value=""><?php esc_html_e( 'All Languages', 'wordcamporg' ); ?></option>
+			<?php foreach ( $locales as $locale_code => $locale_name ) : ?>
+				<option value="<?php echo esc_attr( $locale_code ); ?>" <?php selected( $selected, $locale_code ); ?>>
+					<?php echo esc_html( $locale_name ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Filter the admin list by Language.
+	 *
+	 * @param WP_Query $query The current query.
+	 */
+	public function filter_by_language( $query ) {
+		if (
+			! $query->is_main_query() ||
+			$this->get_event_type() !== $query->get( 'post_type' ) ||
+			empty( $_REQUEST['language'] )
+		) {
+			return;
+		}
+
+		$language = sanitize_text_field( wp_unslash( $_REQUEST['language'] ) );
+
+		$meta_query   = $query->get( 'meta_query' ) ?: array();
+		$meta_query[] = array(
+			'key'     => 'Language',
+			'value'   => $language,
+			'compare' => 'LIKE',
+		);
+
+		$query->set( 'meta_query', $meta_query );
 	}
 }

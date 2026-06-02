@@ -14,7 +14,7 @@ Campus Connect is a modern block based WordPress theme built for educational com
 
 == Changelog ==
 
-= 1.0.0 =
+= 1.0.1 =
 * Initial release
 
 
@@ -34,5 +34,38 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 
-Campus Connect is based on Campus Connect v1 (), (C) , [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)
+== Fonts ==
+
+Inter
+Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+Source: https://rsms.me/
+License: This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org
+
+== Assets ==
+Phosphor Icons
+Source: https://phosphoricons.com/
+License: MIT License
+
+== Images ==
+
+Image: campus-placeholder.jpg
+Source: https://openverse.org/image/973494a7-212a-42f3-b355-6e0a6837600f
+Author: Wonderlane
+License: CC0 1.0
+
+Image: students-placeholder.jpg
+Author: US Embassy
+Source: https://www.flickr.com/photos/46907600@N02/5042817526
+License: Public Domain Mark 1.0
+
+Image: team-placeholder.jpg
+Author: PSDESIRE
+Source: https://www.flickr.com/photos/psdesire/39593051701
+License: CC0 1.0
+
+Image: placeholder.jpg
+Author: renalteix
+Source: https://www.flickr.com/photos/40124183@N02/6330129969
+License: Public Domain Mark 1.0
+
 

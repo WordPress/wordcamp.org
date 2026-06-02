@@ -598,7 +598,6 @@ function get_corrected_root_relative_url( $domain, $path, $request_uri, $referer
 function get_canonical_year_url( $domain, $path ) {
 	global $wpdb;
 
-	$tld       = get_top_level_domain();
 	$cache_key = 'current_blog_' . $domain;
 
 	/**
@@ -633,25 +632,10 @@ function get_canonical_year_url( $domain, $path ) {
 	}
 
 	// Special cases where the redirect shouldn't go to next year's camp until this year's camp is over.
-	// See also `WordCamp\Sunrise\Latest_Site_Hints\get_latest_home_url()`.
-	switch ( $domain ) {
-		case "europe.wordcamp.$tld":
-			if ( time() <= strtotime( '2025-06-21' ) ) {
-				return "https://europe.wordcamp.$tld/2025/";
-			}
-			break;
+	$flagship_url = get_flagship_canonical_url( $domain );
 
-		case "us.wordcamp.$tld":
-			if ( time() <= strtotime( '2025-09-15' ) ) {
-				return "https://us.wordcamp.$tld/2025/";
-			}
-			break;
-
-		case "asia.wordcamp.$tld":
-			if ( time() <= strtotime( '2024-03-15' ) ) {
-				return "https://asia.wordcamp.$tld/2024/";
-			}
-			break;
+	if ( $flagship_url ) {
+		return $flagship_url;
 	}
 
 	$latest = get_latest_site( $domain );

@@ -1,7 +1,7 @@
 <?php
 
 namespace WordCamp\Latest_Site_Hints;
-use function WordCamp\Sunrise\get_top_level_domain;
+use function WordCamp\Sunrise\get_flagship_canonical_url;
 use const WordCamp\Sunrise\{ PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, PATTERN_CITY_SLASH_YEAR_DOMAIN_PATH, PATTERN_CITY_YEAR_TYPE_PATH };
 
 defined( 'WPINC' ) || die();
@@ -34,6 +34,10 @@ function maybe_add_latest_site_hints() {
 	// Add a banner with a link to the latest WordCamp.
 	add_action( 'wp_head', __NAMESPACE__ . '\add_notification_styles' );
 	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_about_latest_site' );
+
+	// Close comments on past sites to prevent spam.
+	add_filter( 'comments_open', '__return_false' );
+	add_filter( 'pings_open', '__return_false' );
 }
 
 /**
@@ -247,6 +251,17 @@ function get_latest_home_url( $current_domain, $current_path ) {
 	 */
 	if ( $end_date && time() < ( (int) $end_date + DAY_IN_SECONDS ) ) {
 		return false;
+	}
+
+	/*
+	 * Flagship camps create next year's site (and sometimes the one after) before the current edition is
+	 * over, so the query below would otherwise link to an event that hasn't happened yet. Until then, stay
+	 * on the current edition. The shared list of dates lives with the redirect logic in sunrise.
+	 */
+	$flagship_url = get_flagship_canonical_url( $current_domain );
+
+	if ( $flagship_url ) {
+		return $flagship_url;
 	}
 
 	if ( preg_match( PATTERN_YEAR_DOT_CITY_DOMAIN_PATH, $current_domain . $current_path ) ) {

@@ -89,7 +89,7 @@
 	<config name="minimum_wp_version" value="6.8"/>
 
 	<!-- Check for PHP cross-version compatibility. -->
-	<config name="testVersion" value="8.4-"/>
+	<config name="testVersion" value="8.3-"/>
 	<rule ref="PHPCompatibilityWP"/>
 
 	<rule ref="WordPress-Core">

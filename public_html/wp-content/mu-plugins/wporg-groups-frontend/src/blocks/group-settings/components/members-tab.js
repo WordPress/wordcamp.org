@@ -26,13 +26,13 @@ const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wporg-groups-frontend' ), value: 'subscriber' },
 	{ label: __( 'Event Organiser', 'wporg-groups-frontend' ), value: 'author' },
 	{ label: __( 'Organiser', 'wporg-groups-frontend' ), value: 'editor' },
-	{ label: __( 'Organiser', 'wporg-groups-frontend' ), value: 'administrator' },
 ];
 
 const PER_PAGE = 20;
 const API_PER_PAGE = 250;
+const ASSIGNABLE_ROLES = ROLE_OPTIONS.map( ( option ) => option.value );
 
-export default function MembersTab() {
+export default function MembersTab( { canManageRoles = false } ) {
 	const [ allMembers, setAllMembers ] = useState( [] );
 	const [ loading, setLoading ] = useState( true );
 	const [ notice, setNotice ] = useState( '' );
@@ -89,20 +89,16 @@ export default function MembersTab() {
 	const updateRole = useCallback( async ( userId, newRole ) => {
 		setNotice( '' );
 		try {
-			await apiFetch( {
-				path: `/wp/v2/users/${ userId }`,
+			const updatedMember = await apiFetch( {
+				path: `/wporg-groups/v1/members/${ userId }/role`,
 				method: 'POST',
-				data: { roles: [ newRole ] },
+				data: { role: newRole },
 			} );
 
 			setAllMembers( ( prev ) =>
 				prev.map( ( m ) =>
 					m.id === userId
-						? {
-								...m,
-								role: newRole,
-								roleLabel: ROLE_OPTIONS.find( ( o ) => o.value === newRole )?.label || 'Member',
-							}
+						? updatedMember
 						: m
 				)
 			);
@@ -152,8 +148,10 @@ export default function MembersTab() {
 		h(
 			'div',
 			{ className: 'wporg-members-tab__list' },
-			pageMembers.map( ( member ) =>
-				h(
+			pageMembers.map( ( member ) => {
+				const canEditRole = canManageRoles && ASSIGNABLE_ROLES.includes( member.role );
+
+				return h(
 					'div',
 					{ key: member.id, className: 'wporg-members-tab__item' },
 					h( 'img', {
@@ -166,15 +164,19 @@ export default function MembersTab() {
 					h( 'div', { className: 'wporg-members-tab__info' },
 						h( 'span', { className: 'wporg-members-tab__name' }, member.name )
 					),
-					h( SelectControl, {
-						value: member.role,
-						options: ROLE_OPTIONS,
-						onChange: ( val ) => updateRole( member.id, val ),
-						__nextHasNoMarginBottom: true,
-						className: 'wporg-members-tab__role-select',
-					} )
-				)
-			)
+					canEditRole
+						? h( SelectControl, {
+							value: member.role,
+							options: ROLE_OPTIONS,
+							onChange: ( val ) => updateRole( member.id, val ),
+							__nextHasNoMarginBottom: true,
+							className: 'wporg-members-tab__role-select',
+						} )
+						: h( 'span', { className: 'wporg-members-tab__role-readonly' },
+							member.roleLabel || __( 'Organiser', 'wporg-groups-frontend' )
+						)
+				);
+			} )
 		),
 		totalPages > 1 &&
 			h(

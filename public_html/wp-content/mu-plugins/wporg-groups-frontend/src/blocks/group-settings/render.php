@@ -25,7 +25,8 @@ $is_single_event = $event_post_id
 
 // Check if this is a new group with incomplete setup.
 $has_description = ! empty( get_option( 'blogdescription' ) );
-$needs_setup     = ! $has_description;
+$needs_setup      = ! $has_description;
+$can_manage_roles = current_user_can( 'promote_users' );
 
 $wrapper_attributes = get_block_wrapper_attributes(
 	array( 'class' => 'wporg-group-settings-block' )
@@ -54,5 +55,9 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		</button>
 	<?php endif; ?>
 
-	<div id="wporg-group-settings-root" data-site-name="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"></div>
+	<div
+		id="wporg-group-settings-root"
+		data-site-name="<?php echo esc_attr( get_bloginfo( 'name' ) ); ?>"
+		data-can-manage-roles="<?php echo esc_attr( $can_manage_roles ? 'true' : 'false' ); ?>"
+	></div>
 </div>

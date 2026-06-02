@@ -30,7 +30,13 @@ const TABS = [
 	{ name: 'about', title: __( 'About', 'wporg-groups-frontend' ) },
 ];
 
-export default function SettingsApp( { onClose, initialTab, eventId, siteName } ) {
+export default function SettingsApp( {
+	onClose,
+	initialTab,
+	eventId,
+	siteName,
+	canManageRoles,
+} ) {
 	const [ activeTab, setActiveTab ] = useState( initialTab || 'events' );
 
 	// Global escape handler — prompt before closing if needed.
@@ -54,7 +60,7 @@ export default function SettingsApp( { onClose, initialTab, eventId, siteName } 
 				case 'venues':
 					return h( VenuesTab );
 				case 'members':
-					return h( MembersTab );
+					return h( MembersTab, { canManageRoles } );
 				case 'design':
 					return h( DesignTab );
 				case 'about':
@@ -63,7 +69,7 @@ export default function SettingsApp( { onClose, initialTab, eventId, siteName } 
 					return null;
 			}
 		},
-		[ eventId, onClose ]
+		[ eventId, onClose, canManageRoles ]
 	);
 
 	return h(

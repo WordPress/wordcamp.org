@@ -23,6 +23,7 @@ import SettingsApp from './components/settings-app';
 	}
 
 	const siteName = root.dataset.siteName || '';
+	const canManageRoles = root.dataset.canManageRoles === 'true';
 
 	function SettingsRoot() {
 		const [ isOpen, setIsOpen ] = useState( false );
@@ -63,6 +64,7 @@ import SettingsApp from './components/settings-app';
 			initialTab: initialTab || 'events',
 			eventId,
 			siteName,
+			canManageRoles,
 			onClose: () => setIsOpen( false ),
 		} );
 	}

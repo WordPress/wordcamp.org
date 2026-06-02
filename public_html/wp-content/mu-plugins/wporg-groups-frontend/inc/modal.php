@@ -45,22 +45,32 @@ function enqueue_supplementary_assets(): void {
  * Attach localized config when the block renders.
  *
  * @param string $content Block HTML.
+ * @param array  $block   Parsed block data.
  * @return string Unmodified block HTML.
  */
-function localize_block_script( string $content, array $block = array() ): string {
-	static $done = false;
-	if ( $done ) {
+function localize_block_script( string $content, array $block ): string {
+	static $localized_handles = array();
+
+	$handles = array(
+		'wporg/event-manage'   => 'wporg-event-manage-view-script',
+		'wporg/group-settings' => 'wporg-group-settings-view-script',
+	);
+
+	$block_name = (string) ( $block['blockName'] ?? '' );
+	$handle     = $handles[ $block_name ] ?? '';
+
+	if ( ! $handle || ! empty( $localized_handles[ $handle ] ) ) {
 		return $content;
 	}
-	$done = true;
 
-	// Localize for both old (event-manage) and new (group-settings) blocks.
 	$config = array(
 		'restNamespace' => 'wporg-groups/v1',
 		'siteEditorUrl' => admin_url( 'site-editor.php' ),
 	);
-	wp_localize_script( 'wporg-event-manage-view-script', 'wporgGroupsEventModal', $config );
-	wp_localize_script( 'wporg-group-settings-view-script', 'wporgGroupsEventModal', $config );
+
+	if ( wp_localize_script( $handle, 'wporgGroupsEventModal', $config ) ) {
+		$localized_handles[ $handle ] = true;
+	}
 
 	return $content;
 }

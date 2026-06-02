@@ -5,7 +5,6 @@
  */
 
 import { store, getContext } from '@wordpress/interactivity';
-import { __, _n, sprintf } from '@wordpress/i18n';
 
 store( 'wporg/group-membership', {
 	state: {
@@ -14,15 +13,11 @@ store( 'wporg/group-membership', {
 			if ( ctx.loading ) {
 				return '\u2026';
 			}
-			return ctx.isMember ? ctx.roleLabel : __( 'Join this group', 'wporg-groups-frontend' );
+			return ctx.isMember ? ctx.roleLabel : ctx.joinLabel;
 		},
 
 		get countLabel() {
-			const count = getContext().memberCount;
-			return sprintf(
-				_n( '%d member', '%d members', count, 'wporg-groups-frontend' ),
-				count
-			);
+			return getContext().countLabel;
 		},
 
 		get isMember() {
@@ -60,7 +55,7 @@ store( 'wporg/group-membership', {
 
 				if ( data.success ) {
 					ctx.isMember = true;
-					ctx.roleLabel = 'Member';
+					ctx.roleLabel = ctx.memberLabel;
 					ctx.memberCount = data.memberCount;
 					// Reload to get the full member UI server-rendered.
 					window.location.reload();
@@ -79,7 +74,7 @@ store( 'wporg/group-membership', {
 				return;
 			}
 
-			if ( ! window.confirm( __( 'Leave this group?', 'wporg-groups-frontend' ) ) ) {
+			if ( ! window.confirm( ctx.leaveConfirm ) ) {
 				return;
 			}
 

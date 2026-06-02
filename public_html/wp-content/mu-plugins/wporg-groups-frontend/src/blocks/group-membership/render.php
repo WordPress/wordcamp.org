@@ -29,17 +29,25 @@ $member_count    = $user_count['total_users'] ?? 0;
 $join_api        = rest_url( 'wporg-groups/v1/members/join' );
 $leave_api       = rest_url( 'wporg-groups/v1/members/leave' );
 $login_url       = wp_login_url( get_permalink() ?: home_url() );
+$count_label     = sprintf(
+	_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
+	number_format_i18n( $member_count )
+);
 
 $context = array(
-	'isLoggedIn'  => $is_logged_in,
-	'isMember'    => $is_member,
-	'isOrganiser' => $is_organiser,
-	'roleLabel'   => $role_label,
-	'memberCount' => $member_count,
-	'joinApi'     => $join_api,
-	'leaveApi'    => $leave_api,
-	'loginUrl'    => $login_url,
-	'loading'     => false,
+	'isLoggedIn'    => $is_logged_in,
+	'isMember'      => $is_member,
+	'isOrganiser'   => $is_organiser,
+	'roleLabel'     => $role_label,
+	'memberCount'   => $member_count,
+	'memberLabel'   => __( 'Member', 'wporg-groups-frontend' ),
+	'joinLabel'     => __( 'Join this group', 'wporg-groups-frontend' ),
+	'countLabel'    => $count_label,
+	'leaveConfirm' => __( 'Leave this group?', 'wporg-groups-frontend' ),
+	'joinApi'       => $join_api,
+	'leaveApi'      => $leave_api,
+	'loginUrl'      => $login_url,
+	'loading'       => false,
 );
 
 wp_interactivity_state(
@@ -48,10 +56,7 @@ wp_interactivity_state(
 		'buttonLabel'  => $is_member ? $role_label : __( 'Join this group', 'wporg-groups-frontend' ),
 		'isMember'     => $is_member,
 		'memberCount'  => $member_count,
-		'countLabel'   => sprintf(
-			_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
-			number_format_i18n( $member_count )
-		),
+		'countLabel'   => $count_label,
 	)
 );
 

@@ -35,7 +35,7 @@ class SSLCommerz extends Base_Gateway {
 
 		if ( $this->gateway_enabled() ) {
 			add_filter( 'camptix_form_register_complete_attendee_object', [ $this, 'add_attendee_info' ], 10, 3 );
-			add_action( 'template_redirect', [ $this, 'template_redirect' ] );
+			add_action( 'template_redirect', [ $this, 'template_redirect' ], 6 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
 			add_action( 'template_redirect', [ $this, 'early_template_redirect' ], 5 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
 
 			// Catch any attendee timeouts that actually paid.
@@ -77,11 +77,14 @@ class SSLCommerz extends Base_Gateway {
 			return false;
 		}
 
-		if ( ! in_array( $this->camptix_options['currency'], $this->supported_currencies ) ) {
+		if ( ! $this->verify_currency( 'BDT' ) ) {
 			wp_die( esc_html__( 'The selected currency is not supported by this payment method.', 'bd-payments-camptix' ) );
 		}
 
 		$order = $this->get_order( $payment_token );
+		if ( empty( $order ) || empty( $order['items'] ) ) {
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+		}
 
 		$return_url = add_query_arg(
 			array(
@@ -119,26 +122,18 @@ class SSLCommerz extends Base_Gateway {
 			$camptix->get_tickets_url()
 		);
 
-		$attendees = get_posts(
-			[
-				'post_type'   => 'tix_attendee',
-				'post_status' => 'any',
-				'meta_query'  => [
-					[
-						'key'     => 'tix_payment_token',
-						'compare' => '=',
-						'value'   => $payment_token,
-					],
-				],
-			]
-		);
+		$attendees = $this->get_attendees_by_payment_token( $payment_token );
+		if ( empty( $attendees ) ) {
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+		}
 
 		// Take the first attendee as the customer because
 		// we need the name and phone number for the gateway.
 		$attendee = reset( $attendees );
-		$email = $attendee->tix_email;
-		$name  = $attendee->tix_first_name . ' ' . $attendee->tix_last_name;
-		$phone = $attendee->tix_phone;
+		$customer = $this->get_attendee_customer_info( $attendee->ID );
+		$email    = $customer['email'];
+		$name     = $customer['name'];
+		$phone    = $customer['phone'];
 
 		// Build the payment description with the event name and
 		// ticket names with quantity.
@@ -148,24 +143,37 @@ class SSLCommerz extends Base_Gateway {
 			$description .= ' | ' . $ticket['name'] . ' x' . $ticket['quantity'];
 		}
 
+		$product_name = CampTix_Plugin::substr_bytes( $description, 0, 255 );
+		$num_of_item  = array_sum( wp_list_pluck( $order['items'], 'quantity' ) );
+
 		$args = [
-			'store_id'     => $this->options['merchant_id'],
-			'tran_id'      => $payment_token,
-			'success_url'  => $return_url,
-			'fail_url'     => $fail_url,
-			'emi_option'   => 0,
-			'cancel_url'   => $cancel_url,
-			'ipn_url'      => $notify_url,
-			'total_amount' => $order['total'],
-			'currency'     => $this->camptix_options['currency'],
-			'store_passwd' => $this->options['store_password'],
-			'desc'         => $description,
-			'cus_name'     => $name,
-			'cus_email'    => $email,
-			'cus_phone'    => $phone,
+			'store_id'         => $this->options['merchant_id'],
+			'tran_id'          => $payment_token,
+			'success_url'      => $return_url,
+			'fail_url'         => $fail_url,
+			'emi_option'       => 0,
+			'cancel_url'       => $cancel_url,
+			'ipn_url'          => $notify_url,
+			'total_amount'     => $order['total'],
+			'currency'         => $this->camptix_options['currency'],
+			'store_passwd'     => $this->options['store_password'],
+			'desc'             => $description,
+			'cus_name'         => $name,
+			'cus_email'        => $email,
+			'cus_phone'        => $phone,
+			'cus_add1'         => 'Dhaka',
+			'cus_city'         => 'Dhaka',
+			'cus_state'        => 'Dhaka',
+			'cus_postcode'     => '1209',
+			'cus_country'      => 'Bangladesh',
+			'shipping_method'  => 'NO',
+			'num_of_item'      => $num_of_item,
+			'product_name'     => $product_name,
+			'product_category' => 'event ticket',
+			'product_profile'  => 'non-physical-goods',
 		];
 
-		$response = $this->api( 'POST', '/gwprocess/v3/api.php', $args );
+		$response = $this->api( 'POST', '/gwprocess/v4/api.php', $args );
 
 		$response_data    = (array) $response;
 		$gateway_page_url = $response_data['GatewayPageURL'] ?? '';
@@ -273,14 +281,14 @@ class SSLCommerz extends Base_Gateway {
 			'POST' !== $_SERVER['REQUEST_METHOD'] ||
 			! isset( $_REQUEST['tix_action'], $_REQUEST['tix_payment_method'] ) ||
 			$this->id !== $_REQUEST['tix_payment_method'] ||
-			! in_array( $_REQUEST['tix_action'], [ 'payment_return', 'payment_failed', 'payment_cancel' ] )
+			! in_array( $_REQUEST['tix_action'], [ 'payment_return', 'payment_failed', 'payment_cancel' ], true )
 		) {
 			return;
 		}
 
 		// Set a temporary cookie with the POST'd transaction data, which we'll use on the GET request.
 		if ( $this->ipn_hash_verify( $this->options['store_password'], $_POST ) ) {
-			$cookie_data = json_encode( $_POST );
+			$cookie_data = wp_json_encode( $_POST );
 			setcookie( $this->id . '_postdata', $cookie_data, time() + 300, COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true );
 		}
 
@@ -295,7 +303,7 @@ class SSLCommerz extends Base_Gateway {
 			)
 		);
 
-		wp_die();
+		exit;
 	}
 
 	/**
@@ -354,7 +362,8 @@ class SSLCommerz extends Base_Gateway {
 			if ( ! hash_equals( (string) $payment_token, (string) $signed_tran_id ) ) {
 				$payment_data['transaction_details']['TRAN_ID_MISMATCH'] = 'Signed tran_id does not match the URL payment_token';
 
-				return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
+				$camptix->log( 'SSLCommerz transaction ID mismatch.', null, $payment_data );
+				return false;
 			}
 
 			if ( $this->verify_transaction( $val_id, $payment_token ) ) {
@@ -367,7 +376,8 @@ class SSLCommerz extends Base_Gateway {
 			}
 		}
 
-		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
+		$camptix->log( 'SSLCommerz IPN hash verification failed.', null, $payment_data );
+		return false;
 	}
 
 	/**
@@ -450,7 +460,7 @@ class SSLCommerz extends Base_Gateway {
 
 		$order = $this->get_order( $payment_token );
 
-		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ] ) && (float) $order['total'] === (float) $response->amount ) {
+		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ], true ) && (float) $order['total'] === (float) $response->amount ) {
 			return true;
 		}
 
@@ -493,7 +503,7 @@ class SSLCommerz extends Base_Gateway {
 		}
 
 		// If the transaction wasn't successful, bail out.
-		if ( ! in_array( $response->status, [ 'VALID', 'VALIDATED' ] ) ) {
+		if ( ! in_array( $response->status, [ 'VALID', 'VALIDATED' ], true ) ) {
 			return;
 		}
 
@@ -506,7 +516,7 @@ class SSLCommerz extends Base_Gateway {
 
 		// If the order totals don't match, bail out.
 		$order = $this->get_order( $payment_token );
-		if ( $order['total'] != $response->amount ) {
+		if ( (float) $order['total'] !== (float) $response->amount ) {
 			return;
 		}
 

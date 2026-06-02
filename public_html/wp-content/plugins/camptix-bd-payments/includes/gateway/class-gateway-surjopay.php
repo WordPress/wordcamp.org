@@ -20,6 +20,9 @@ class SurjoPay extends Base_Gateway {
 	public $description          = 'Surjo Pay payment gateway for Bangladesh.';
 	public $supported_currencies = array( 'BDT' );
 
+	/** @var array Gateway options */
+	protected $options = array();
+
 	/** @var string API base URL */
 	private $api_endpoint;
 
@@ -49,8 +52,9 @@ class SurjoPay extends Base_Gateway {
 			return;
 		}
 
-		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
-		add_action( 'early_template_redirect', array( $this, 'early_template_redirect' ) );
+		add_action( 'template_redirect', array( $this, 'early_template_redirect' ), 5 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
+		add_action( 'template_redirect', array( $this, 'template_redirect' ), 6 ); // Before CampTix_Require_Login::block_unauthenticated_actions.
+		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
 	}
 
 	/**
@@ -61,7 +65,7 @@ class SurjoPay extends Base_Gateway {
 
 		$this->api_endpoint = $is_sandbox
 			? 'https://sandbox.shurjopayment.com'
-			: ( $this->options['api_endpoint'] ?? '' );
+			: untrailingslashit( $this->options['api_endpoint'] ?? '' );
 
 		$this->url_auth     = $this->api_endpoint . '/api/get_token';
 		$this->url_checkout = $this->api_endpoint . '/api/secret-pay';
@@ -77,15 +81,19 @@ class SurjoPay extends Base_Gateway {
 		$username = $this->options['username'] ?? '';
 		$password = $this->options['password'] ?? '';
 
-		if ( empty( $username ) || empty( $password ) ) {
+		if ( empty( $this->api_endpoint ) || empty( $username ) || empty( $password ) ) {
 			$this->log( 'Surjo Pay: Missing credentials' );
 			return false;
 		}
 
-		$response = $this->api( 'POST', $this->url_auth, array(
-			'username' => $username,
-			'password' => $password,
-		) );
+		$response = $this->api(
+			'POST',
+			$this->url_auth,
+			array(
+				'username' => $username,
+				'password' => $password,
+			)
+		);
 
 		if ( ! $response ) {
 			$this->log( 'Surjo Pay: Authentication failed' );
@@ -112,20 +120,26 @@ class SurjoPay extends Base_Gateway {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		if ( ! $this->verify_currency( $payment_token, 'BDT' ) ) {
-			return;
+		if ( ! $this->verify_currency( 'BDT' ) ) {
+			wp_die( esc_html__( 'The selected currency is not supported by this payment method.', 'bd-payments-camptix' ) );
 		}
 
 		$order = $this->get_order( $payment_token );
-		if ( ! $order || empty( $order['total'] ) ) {
+		if ( ! $order || empty( $order['items'] ) || empty( $order['total'] ) ) {
 			$camptix->error( 'Invalid order.' );
-			return;
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+		}
+
+		$attendees = $this->get_attendees_by_payment_token( $payment_token );
+		if ( empty( $attendees ) ) {
+			$camptix->error( 'Invalid order.' );
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
 		// Authenticate with shurjoPay.
 		if ( ! $this->authenticate() ) {
 			$camptix->error( 'Payment gateway authentication failed.' );
-			return;
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
 		// Generate a unique order ID with prefix.
@@ -136,32 +150,43 @@ class SurjoPay extends Base_Gateway {
 		$urls = $this->build_callback_urls( $payment_token );
 
 		// Build the payment request payload.
-		$payload = $this->build_checkout_payload( $order, $order_id, $urls );
+		$customer = $this->get_attendee_customer_info( $attendees[0]->ID );
+		$payload  = $this->build_checkout_payload( $order, $order_id, $urls, $customer );
 
 		// Call shurjoPay checkout API.
-		$response = $this->api( 'POST', $this->url_checkout, $payload, array(
-			'Authorization' => 'Bearer ' . $this->sp_token,
-		) );
+		$response = $this->api(
+			'POST',
+			$this->url_checkout,
+			$payload,
+			array(
+				'Authorization' => 'Bearer ' . $this->sp_token,
+			)
+		);
 
 		if ( ! $response ) {
 			$camptix->error( 'Payment gateway request failed.' );
-			return;
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
 		if ( empty( $response->checkout_url ) ) {
 			$this->log( 'Surjo Pay: No checkout URL in response', null, (array) $response );
 			$camptix->error( 'Payment gateway returned an invalid response.' );
-			return;
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
-		// Store order_id for timeout recovery.
-		update_post_meta( $order['post_id'], 'tix_surjopay_order_id', $order_id );
+		// Store order_id for return validation and timeout recovery.
+		foreach ( $attendees as $attendee ) {
+			update_post_meta( $attendee->ID, 'tix_surjopay_order_id', $order_id );
+		}
 
 		// Log the checkout attempt.
 		$this->log(
 			sprintf( 'Redirecting to Surjo Pay for order %s', $order_id ),
-			$order['post_id'],
-			array( 'order_id' => $order_id, 'amount' => $order['total'] )
+			$attendees[0]->ID,
+			array(
+				'order_id' => $order_id,
+				'amount'   => $order['total'],
+			)
 		);
 
 		wp_redirect( $response->checkout_url );
@@ -177,14 +202,14 @@ class SurjoPay extends Base_Gateway {
 	 *
 	 * @return array
 	 */
-	private function build_checkout_payload( $order, $order_id, $urls ) {
-		// Get customer info from the first attendee.
-		$first_item = $order['items'][0] ?? array();
-		$attendee   = $first_item['attendee'] ?? null;
+	private function build_checkout_payload( $order, $order_id, $urls, $customer ) {
+		$name  = $customer['name'] ?? '';
+		$email = $customer['email'] ?? '';
+		$phone = $customer['phone'] ?? '';
 
-		$name    = $attendee ? trim( $attendee->first_name . ' ' . $attendee->last_name ) : '';
-		$email   = $attendee ? $attendee->email : '';
-		$phone   = $attendee ? ( get_post_meta( $attendee->ID, 'tix_phone', true ) ?: '01700000000' ) : '01700000000';
+		if ( empty( $phone ) ) {
+			$phone = '01700000000';
+		}
 
 		return array(
 			'token'                => $this->sp_token,
@@ -218,10 +243,10 @@ class SurjoPay extends Base_Gateway {
 	 */
 	public function early_template_redirect() {
 		if (
-			'POST' !== $_SERVER['REQUEST_METHOD'] ||
-			! isset( $_REQUEST['tix_action'], $_REQUEST['tix_payment_method'] ) ||
-			$this->id !== $_REQUEST['tix_payment_method'] ||
-			! in_array( $_REQUEST['tix_action'], array( 'payment_return', 'payment_cancel' ) )
+				'POST' !== $_SERVER['REQUEST_METHOD'] ||
+				! isset( $_REQUEST['tix_action'], $_REQUEST['tix_payment_method'] ) ||
+				$this->id !== $_REQUEST['tix_payment_method'] ||
+				! in_array( $_REQUEST['tix_action'], array( 'payment_return', 'payment_cancel' ), true )
 		) {
 			return;
 		}
@@ -238,7 +263,7 @@ class SurjoPay extends Base_Gateway {
 			)
 		);
 
-		wp_die();
+		exit;
 	}
 
 	/**
@@ -278,6 +303,15 @@ class SurjoPay extends Base_Gateway {
 			return;
 		}
 
+		if ( ! $this->payment_token_matches_order_id( $payment_token, $order_id ) ) {
+			$this->log(
+				sprintf( 'Surjo Pay: Refusing return for mismatched order %s', $order_id ),
+				null,
+				array( 'order_id' => $order_id )
+			);
+			return;
+		}
+
 		// Authenticate to get a fresh token for verification.
 		if ( ! $this->authenticate() ) {
 			$camptix->error( 'Payment verification authentication failed.' );
@@ -309,7 +343,12 @@ class SurjoPay extends Base_Gateway {
 			$camptix->payment_result(
 				$payment_token,
 				CampTix_Plugin::PAYMENT_STATUS_FAILED,
-				array( 'transaction_details' => array( 'order_id' => $order_id, 'reason' => 'verification_failed' ) )
+				array(
+					'transaction_details' => array(
+						'order_id' => $order_id,
+						'reason'   => 'verification_failed',
+					),
+				)
 			);
 		}
 	}
@@ -324,6 +363,15 @@ class SurjoPay extends Base_Gateway {
 		$order_id      = sanitize_text_field( trim( $_REQUEST['order_id'] ?? '' ) );
 
 		if ( ! $payment_token ) {
+			return;
+		}
+
+		if ( $order_id && ! $this->payment_token_matches_order_id( $payment_token, $order_id ) ) {
+			$this->log(
+				sprintf( 'Surjo Pay: Refusing cancel for mismatched order %s', $order_id ),
+				null,
+				array( 'order_id' => $order_id )
+			);
 			return;
 		}
 
@@ -348,11 +396,16 @@ class SurjoPay extends Base_Gateway {
 	 * @return object|false Verification response on success, false on failure.
 	 */
 	private function verify_payment( $order_id ) {
-		$response = $this->api( 'POST', $this->url_verify, array(
-			'order_id' => $order_id,
-		), array(
-			'Authorization' => 'Bearer ' . $this->sp_token,
-		) );
+		$response = $this->api(
+			'POST',
+			$this->url_verify,
+			array(
+				'order_id' => $order_id,
+			),
+			array(
+				'Authorization' => 'Bearer ' . $this->sp_token,
+			)
+		);
 
 		if ( ! $response || ! is_array( $response ) || empty( $response[0] ) ) {
 			return false;
@@ -360,10 +413,24 @@ class SurjoPay extends Base_Gateway {
 
 		$payment = $response[0];
 
-		// sp_code == '1000' means success.
-		if ( (string) $payment->sp_code !== '1000' ) {
+		if (
+			isset( $payment->order_id ) &&
+			! hash_equals( (string) $order_id, (string) $payment->order_id )
+		) {
 			$this->log(
-				sprintf( 'Surjo Pay: Verification returned sp_code %s', $payment->sp_code ),
+				sprintf( 'Surjo Pay: Verification order mismatch for order %s', $order_id ),
+				null,
+				(array) $payment
+			);
+			return false;
+		}
+
+		// sp_code == '1000' means success.
+		$sp_code = $payment->sp_code ?? '';
+
+		if ( '1000' !== (string) $sp_code ) {
+			$this->log(
+				sprintf( 'Surjo Pay: Verification returned sp_code %s', $sp_code ),
 				null,
 				(array) $payment
 			);
@@ -397,9 +464,36 @@ class SurjoPay extends Base_Gateway {
 			$GLOBALS['camptix']->payment_result(
 				$payment_token,
 				CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
-				array( 'transaction_details' => $verified )
+				array( 'transaction_details' => $verified ),
+				false
 			);
 		}
+	}
+
+	/**
+	 * Verify that a shurjoPay order belongs to the CampTix payment token.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 * @param string $order_id      shurjoPay order ID.
+	 *
+	 * @return bool
+	 */
+	private function payment_token_matches_order_id( $payment_token, $order_id ) {
+		$attendees = $this->get_attendees_by_payment_token( $payment_token );
+
+		if ( empty( $attendees ) ) {
+			return false;
+		}
+
+		foreach ( $attendees as $attendee ) {
+			$saved_order_id = get_post_meta( $attendee->ID, 'tix_surjopay_order_id', true );
+
+			if ( hash_equals( (string) $saved_order_id, (string) $order_id ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -467,11 +561,11 @@ class SurjoPay extends Base_Gateway {
 	public function validate_options( $input ) {
 		$output = $this->get_payment_options();
 
-		$output['username']      = sanitize_text_field( $input['username'] ?? '' );
-		$output['password']      = sanitize_text_field( $input['password'] ?? '' );
-		$output['prefix']        = sanitize_text_field( $input['prefix'] ?? 'WC' );
-		$output['api_endpoint']  = esc_url_raw( $input['api_endpoint'] ?? '' );
-		$output['sandbox']       = absint( $input['sandbox'] ?? 0 );
+		$output['username']     = sanitize_text_field( $input['username'] ?? '' );
+		$output['password']     = sanitize_text_field( $input['password'] ?? '' );
+		$output['prefix']       = sanitize_text_field( $input['prefix'] ?? 'WC' );
+		$output['api_endpoint'] = esc_url_raw( $input['api_endpoint'] ?? '' );
+		$output['sandbox']      = absint( $input['sandbox'] ?? 0 );
 
 		return $output;
 	}

@@ -85,6 +85,63 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	}
 
 	/**
+	 * Verify that the current CampTix currency can be used by this gateway.
+	 *
+	 * @param string $currency Expected currency code.
+	 *
+	 * @return bool
+	 */
+	protected function verify_currency( $currency ) {
+		return in_array( $currency, $this->supported_currencies, true )
+			&& ( $this->camptix_options['currency'] ?? '' ) === $currency;
+	}
+
+	/**
+	 * Get all attendees for a CampTix payment token.
+	 *
+	 * @param string $payment_token CampTix payment token.
+	 *
+	 * @return array
+	 */
+	protected function get_attendees_by_payment_token( $payment_token ) {
+		return get_posts(
+			array(
+				'posts_per_page' => -1,
+				'post_type'      => 'tix_attendee',
+				'post_status'    => 'any',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'meta_query'     => array(
+					array(
+						'key'     => 'tix_payment_token',
+						'compare' => '=',
+						'value'   => $payment_token,
+						'type'    => 'CHAR',
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Read gateway customer fields from attendee post meta.
+	 *
+	 * @param int $attendee_id Attendee post ID.
+	 *
+	 * @return array
+	 */
+	protected function get_attendee_customer_info( $attendee_id ) {
+		$first_name = get_post_meta( $attendee_id, 'tix_first_name', true );
+		$last_name  = get_post_meta( $attendee_id, 'tix_last_name', true );
+
+		return array(
+			'name'  => trim( $first_name . ' ' . $last_name ),
+			'email' => get_post_meta( $attendee_id, 'tix_email', true ),
+			'phone' => get_post_meta( $attendee_id, 'tix_phone', true ),
+		);
+	}
+
+	/**
 	 * Make an HTTP API request
 	 *
 	 * @param string $method  HTTP method (GET, POST).

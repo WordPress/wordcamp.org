@@ -35,12 +35,10 @@ use GatherPress\Core\Venue\Venue;
  * }
  */
 function get_default_event_data(): array {
-	$default_date = wp_date( 'Y-m-d', strtotime( '+7 days' ) );
-
 	$defaults = array(
 		'title'       => '',
 		'description' => '',
-		'date'        => $default_date,
+		'date'        => wp_date( 'Y-m-d', strtotime( '+7 days' ) ),
 		'time_start'  => '18:00',
 		'time_end'    => '20:00',
 		'venue_id'    => 0,

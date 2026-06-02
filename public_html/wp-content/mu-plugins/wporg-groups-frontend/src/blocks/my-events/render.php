@@ -27,37 +27,35 @@ if ( empty( $rsvp_comments ) ) {
 	return;
 }
 
-// Get unique event post IDs.
-$event_ids = array_unique(
-	array_map(
-		function ( $comment ) {
-			return (int) $comment->comment_post_ID;
-		},
-		$rsvp_comments
-	)
+$comment_event_ids = array();
+foreach ( $rsvp_comments as $comment ) {
+	$comment_event_ids[ (int) $comment->comment_ID ] = (int) $comment->comment_post_ID;
+}
+
+$rsvp_terms = wp_get_object_terms(
+	array_keys( $comment_event_ids ),
+	'_gatherpress_rsvp_status',
+	array( 'fields' => 'all_with_object_id' )
 );
 
-// Filter to only attending RSVPs.
-$attending_ids = array();
-foreach ( $event_ids as $eid ) {
-	$terms = wp_get_object_terms(
-		get_comments(
-			array(
-				'user_id' => $user_id,
-				'post_id' => $eid,
-				'type'    => 'gatherpress_rsvp',
-				'number'  => 1,
-				'fields'  => 'ids',
-			)
-		),
-		'_gatherpress_rsvp_status',
-		array( 'fields' => 'slugs' )
-	);
+if ( is_wp_error( $rsvp_terms ) ) {
+	return;
+}
 
-	if ( ! is_wp_error( $terms ) && in_array( 'attending', $terms, true ) ) {
-		$attending_ids[] = $eid;
+// Filter to only attending RSVPs without re-querying per event.
+$attending_ids = array();
+foreach ( $rsvp_terms as $term ) {
+	if ( 'attending' !== $term->slug ) {
+		continue;
+	}
+
+	$event_id = $comment_event_ids[ (int) $term->object_id ] ?? 0;
+	if ( $event_id ) {
+		$attending_ids[ $event_id ] = $event_id;
 	}
 }
+
+$attending_ids = array_values( $attending_ids );
 
 if ( empty( $attending_ids ) ) {
 	return;
@@ -65,24 +63,30 @@ if ( empty( $attending_ids ) ) {
 
 // Get event posts, filter to upcoming only.
 $now = current_time( 'mysql', true );
-$upcoming_events = array();
+global $wpdb;
 
-foreach ( $attending_ids as $eid ) {
-	$event_post = get_post( $eid );
-	if ( ! $event_post || 'publish' !== $event_post->post_status ) {
-		continue;
-	}
+$table        = $wpdb->prefix . 'gatherpress_events';
+$placeholders = implode( ', ', array_fill( 0, count( $attending_ids ), '%d' ) );
+$query_args   = array_merge( $attending_ids, array( $now ) );
 
-	// Check if event is upcoming via GatherPress events table.
-	global $wpdb;
-	$table = $wpdb->prefix . 'gatherpress_events';
-	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-	$dt = $wpdb->get_var( $wpdb->prepare( "SELECT datetime_end_gmt FROM {$table} WHERE post_id = %d", $eid ) );
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and placeholders are generated locally.
+$upcoming_ids = $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$table} WHERE post_id IN ( {$placeholders} ) AND datetime_end_gmt >= %s", $query_args ) );
+$upcoming_ids = array_map( 'intval', $upcoming_ids );
+$upcoming_ids = array_values( array_intersect( $attending_ids, $upcoming_ids ) );
 
-	if ( $dt && $dt >= $now ) {
-		$upcoming_events[] = $event_post;
-	}
+if ( empty( $upcoming_ids ) ) {
+	return;
 }
+
+$upcoming_events = get_posts(
+	array(
+		'post_type'      => 'gatherpress_event',
+		'post_status'    => 'publish',
+		'post__in'       => $upcoming_ids,
+		'orderby'        => 'post__in',
+		'posts_per_page' => count( $upcoming_ids ),
+	)
+);
 
 if ( empty( $upcoming_events ) ) {
 	return;

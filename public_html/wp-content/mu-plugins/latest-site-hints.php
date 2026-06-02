@@ -159,6 +159,12 @@ function maybe_disable_contact_form( $html ) {
 	global $current_blog;
 
 	$wordcamp = get_wordcamp_post();
+
+	// Fail open on sites without an associated WordCamp post (e.g. Central), since this filter runs on every form render.
+	if ( ! $wordcamp ) {
+		return $html;
+	}
+
 	$end_date = absint( $wordcamp->meta['End Date (YYYY-mm-dd)'][0] ?? 0 );
 
 	// Check if the event is still ongoing.
@@ -174,13 +180,7 @@ function maybe_disable_contact_form( $html ) {
 		$expired_by_time = true;
 	}
 
-	// Optimization: skip the newer-site database query during the first 3 months,
-	// since a new edition is unlikely to exist that soon.
-	if ( ! $expired_by_time && $end_date && time() < ( (int) $end_date + 3 * MONTH_IN_SECONDS ) ) {
-		return $html;
-	}
-
-	// Check if there's a newer site for this city.
+	// Check if there's a newer site for this city. The result is cached, so this is cheap on repeat requests.
 	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
 	if ( $latest_domain && trailingslashit( get_site_url() ) !== $latest_domain ) {
 		$has_newer_site = true;

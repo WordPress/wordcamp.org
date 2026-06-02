@@ -242,4 +242,33 @@ class Test_Disable_Contact_Form extends Database_TestCase {
 
 		$this->restore_blog_with_globals();
 	}
+
+	/**
+	 * Test that the 18-month expiry alone disables the form, with no newer site involved.
+	 *
+	 * The Japan yearless site has no newer edition via domain pattern matching, so giving it an
+	 * end date more than 18 months ago exercises the `expired_by_time` path in isolation.
+	 *
+	 * @covers WordCamp\Latest_Site_Hints\maybe_disable_contact_form
+	 */
+	public function test_expired_by_time_without_newer_site_disables_form() {
+		$post_id = self::$wordcamp_post_ids[ self::$yearless_site_id ];
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		update_post_meta( $post_id, 'End Date (YYYY-mm-dd)', time() - ( 19 * MONTH_IN_SECONDS ) );
+		restore_current_blog();
+
+		$this->switch_to_blog_with_globals( self::$yearless_site_id );
+
+		$result = maybe_disable_contact_form( self::$sample_form_html );
+
+		$this->assertStringContainsString( 'wordcamp-contact-form-disabled', $result );
+		$this->assertStringNotContainsString( '<form', $result );
+
+		$this->restore_blog_with_globals();
+
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+		delete_post_meta( $post_id, 'End Date (YYYY-mm-dd)' );
+		restore_current_blog();
+	}
 }

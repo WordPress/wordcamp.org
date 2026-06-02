@@ -28,8 +28,8 @@ if ( empty( $rsvp_comments ) ) {
 }
 
 $comment_event_ids = array();
-foreach ( $rsvp_comments as $comment ) {
-	$comment_event_ids[ (int) $comment->comment_ID ] = (int) $comment->comment_post_ID;
+foreach ( $rsvp_comments as $rsvp_comment ) {
+	$comment_event_ids[ (int) $rsvp_comment->comment_ID ] = (int) $rsvp_comment->comment_post_ID;
 }
 
 $rsvp_terms = wp_get_object_terms(
@@ -44,12 +44,12 @@ if ( is_wp_error( $rsvp_terms ) ) {
 
 // Filter to only attending RSVPs without re-querying per event.
 $attending_ids = array();
-foreach ( $rsvp_terms as $term ) {
-	if ( 'attending' !== $term->slug ) {
+foreach ( $rsvp_terms as $rsvp_term ) {
+	if ( 'attending' !== $rsvp_term->slug ) {
 		continue;
 	}
 
-	$event_id = $comment_event_ids[ (int) $term->object_id ] ?? 0;
+	$event_id = $comment_event_ids[ (int) $rsvp_term->object_id ] ?? 0;
 	if ( $event_id ) {
 		$attending_ids[ $event_id ] = $event_id;
 	}

@@ -50,12 +50,6 @@ A payment gateway addon for the [CampTix](http://github.com/developer-developer/
 4. Enter your credentials
 5. Toggle sandbox mode for testing
 
-**Sandbox credentials:**
-- Username: `sp_sandbox`
-- Password: `pyyk97hu&6u6`
-- Prefix: `NOK`
-- API: `https://sandbox.shurjopayment.com`
-
 ## Changelog
 
 **1.4 - 20th May 2026**

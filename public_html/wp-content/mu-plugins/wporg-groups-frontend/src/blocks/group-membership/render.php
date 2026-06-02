@@ -24,7 +24,8 @@ if ( $is_member ) {
 }
 
 $is_organiser    = in_array( $user_role, array( 'administrator', 'editor' ), true );
-$member_count    = count_users()['total_users'] ?? 0;
+$user_count      = count_users( 'time', get_current_blog_id() );
+$member_count    = $user_count['total_users'] ?? 0;
 $join_api        = rest_url( 'wporg-groups/v1/members/join' );
 $leave_api       = rest_url( 'wporg-groups/v1/members/leave' );
 $login_url       = wp_login_url( get_permalink() ?: home_url() );

@@ -156,8 +156,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			$data[] = $this->prepare_member( $user );
 		}
 
-		$all_count = count_users();
-		$total     = $all_count['total_users'] ?? count( $users );
+		$total = $this->get_site_member_count();
 
 		$response = rest_ensure_response( $data );
 		$response->header( 'X-WP-Total', $total );
@@ -211,7 +210,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			return $result;
 		}
 
-		$total = count_users()['total_users'] ?? 0;
+		$total = $this->get_site_member_count();
 
 		return rest_ensure_response(
 			array(
@@ -380,5 +379,16 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 */
 	public function validate_page( $param ): bool {
 		return (int) $param >= 1;
+	}
+
+	/**
+	 * Get the current site's member count.
+	 *
+	 * @return int
+	 */
+	private function get_site_member_count(): int {
+		$count = count_users( 'time', get_current_blog_id() );
+
+		return (int) ( $count['total_users'] ?? 0 );
 	}
 }

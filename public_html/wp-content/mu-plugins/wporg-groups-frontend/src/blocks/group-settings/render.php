@@ -24,8 +24,14 @@ $is_single_event = $event_post_id
 	&& is_singular( 'gatherpress_event' );
 
 // Check if this is a new group with incomplete setup.
-$has_description = ! empty( get_option( 'blogdescription' ) );
-$needs_setup      = ! $has_description;
+$description          = trim( (string) get_option( 'blogdescription', '' ) );
+$default_descriptions = array_unique(
+	array(
+		'Just another WordPress site',
+		__( 'Just another WordPress site', 'default' ),
+	)
+);
+$needs_setup          = '' === $description || in_array( $description, $default_descriptions, true );
 $can_manage_roles = current_user_can( 'promote_users' );
 
 $wrapper_attributes = get_block_wrapper_attributes(

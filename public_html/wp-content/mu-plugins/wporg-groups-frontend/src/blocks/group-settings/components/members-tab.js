@@ -20,7 +20,7 @@ import {
 	Notice,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 
 const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wporg-groups-frontend' ), value: 'subscriber' },
@@ -194,7 +194,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 				),
 				h( 'span', {},
 					/* translators: 1: current page, 2: total pages */
-					page + ' / ' + totalPages
+					sprintf( __( '%1$d / %2$d', 'wporg-groups-frontend' ), page, totalPages )
 				),
 				h(
 					Button,

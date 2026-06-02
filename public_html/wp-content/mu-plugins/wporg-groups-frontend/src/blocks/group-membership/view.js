@@ -5,6 +5,7 @@
  */
 
 import { store, getContext } from '@wordpress/interactivity';
+import { __, _n, sprintf } from '@wordpress/i18n';
 
 store( 'wporg/group-membership', {
 	state: {
@@ -13,12 +14,15 @@ store( 'wporg/group-membership', {
 			if ( ctx.loading ) {
 				return '\u2026';
 			}
-			return ctx.isMember ? ctx.roleLabel : 'Join this group';
+			return ctx.isMember ? ctx.roleLabel : __( 'Join this group', 'wporg-groups-frontend' );
 		},
 
 		get countLabel() {
 			const count = getContext().memberCount;
-			return count === 1 ? '1 member' : count + ' members';
+			return sprintf(
+				_n( '%d member', '%d members', count, 'wporg-groups-frontend' ),
+				count
+			);
 		},
 
 		get isMember() {
@@ -75,7 +79,7 @@ store( 'wporg/group-membership', {
 				return;
 			}
 
-			if ( ! window.confirm( 'Leave this group?' ) ) {
+			if ( ! window.confirm( __( 'Leave this group?', 'wporg-groups-frontend' ) ) ) {
 				return;
 			}
 

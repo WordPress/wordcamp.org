@@ -32,10 +32,6 @@ import SettingsApp from './components/settings-app';
 
 		// Listen for trigger clicks via a global handler that sets state.
 		if ( ! window.__wporgSettingsOpen ) {
-			window.__wporgSettingsOpen = ( tab, evId ) => {
-				// This will be replaced by the latest component instance.
-			};
-
 			document.addEventListener( 'click', ( ev ) => {
 				const trigger = ev.target.closest( '[data-wporg-settings-open]' );
 				if ( ! trigger ) {

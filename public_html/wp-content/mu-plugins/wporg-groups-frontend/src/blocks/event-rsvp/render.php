@@ -61,6 +61,12 @@ $max_avatars    = 12;
 $overflow_count = max( 0, $count - $max_avatars );
 $event_title    = get_the_title( $event_post_id );
 $is_attending   = 'attending' === $current_status;
+$modal_title    = sprintf(
+	/* translators: 1: attendee count, 2: event title */
+	_n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', $count, 'wporg-groups-frontend' ),
+	number_format_i18n( $count ),
+	$event_title
+);
 
 $context = array(
 	'postId'            => (int) $event_post_id,
@@ -87,12 +93,7 @@ wp_interactivity_state(
 			_n( '%d going', '%d going', $count, 'wporg-groups-frontend' ),
 			$count
 		),
-		'modalTitle'     => sprintf(
-			/* translators: 1: attendee count, 2: event title */
-			__( '%1$s Attending %2$s', 'wporg-groups-frontend' ),
-			number_format_i18n( $count ),
-			$event_title
-		),
+		'modalTitle'     => $modal_title,
 		'isMember'        => $is_member,
 		'rsvpButtonLabel' => $is_attending
 			? "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' )
@@ -187,13 +188,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			<div class="wporg-event-rsvp__modal-header">
 				<h2 class="wporg-event-rsvp__modal-title" data-wp-text="state.modalTitle">
 					<?php
-					echo esc_html(
-						sprintf(
-							__( '%1$d Attending %2$s', 'wporg-groups-frontend' ),
-							$count,
-							$event_title
-						)
-					);
+					echo esc_html( $modal_title );
 					?>
 				</h2>
 				<button

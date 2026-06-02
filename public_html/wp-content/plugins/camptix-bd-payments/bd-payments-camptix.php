@@ -3,7 +3,7 @@
  * Plugin Name: Camptix BD Payments
  * Description: Bangladeshi payment gateways for CampTix
  * Author: Tareq Hasan & Nazmul Hosen
- * Version: 1.3
+ * Version: 1.4
  * License: GPL2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: bd-payments-camptix

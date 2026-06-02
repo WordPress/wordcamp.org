@@ -52,7 +52,7 @@ A payment gateway addon for the [CampTix](http://github.com/developer-developer/
 
 ## Changelog
 
-**1.4 - 20th May 2026**
+**1.4 - 2 jun 2026**
 - Added Surjo Pay (shurjoPay) payment gateway
 - Added shared Base_Gateway class for common gateway logic
 - Added ticket inventory hold system (drafts count as held tickets)

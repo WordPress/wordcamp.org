@@ -24,6 +24,13 @@ defined( 'WPINC' ) || die();
 class Members_Controller extends \WP_REST_Users_Controller {
 
 	/**
+	 * Maximum public collection page size.
+	 *
+	 * @var int
+	 */
+	const MAX_PER_PAGE = 250;
+
+	/**
 	 * Role label mapping.
 	 *
 	 * @var array<string, string>
@@ -61,10 +68,12 @@ class Members_Controller extends \WP_REST_Users_Controller {
 						'per_page' => array(
 							'default'           => 100,
 							'sanitize_callback' => 'absint',
+							'validate_callback' => array( $this, 'validate_per_page' ),
 						),
 						'page'     => array(
 							'default'           => 1,
 							'sanitize_callback' => 'absint',
+							'validate_callback' => array( $this, 'validate_page' ),
 						),
 					),
 				),
@@ -126,8 +135,8 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 * @return \WP_REST_Response
 	 */
 	public function get_items( $request ) {
-		$per_page = (int) $request->get_param( 'per_page' );
-		$page     = (int) $request->get_param( 'page' );
+		$per_page = min( self::MAX_PER_PAGE, max( 1, (int) $request->get_param( 'per_page' ) ) );
+		$page     = max( 1, (int) $request->get_param( 'page' ) );
 
 		$users = get_users(
 			array(
@@ -152,7 +161,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 
 		$response = rest_ensure_response( $data );
 		$response->header( 'X-WP-Total', $total );
-		$response->header( 'X-WP-TotalPages', ceil( $total / $per_page ) );
+		$response->header( 'X-WP-TotalPages', (int) ceil( $total / $per_page ) );
 
 		return $response;
 	}
@@ -349,5 +358,27 @@ class Members_Controller extends \WP_REST_Users_Controller {
 				),
 			),
 		);
+	}
+
+	/**
+	 * Validate the public collection page size.
+	 *
+	 * @param mixed $param Request parameter.
+	 * @return bool
+	 */
+	public function validate_per_page( $param ): bool {
+		$value = (int) $param;
+
+		return $value >= 1 && $value <= self::MAX_PER_PAGE;
+	}
+
+	/**
+	 * Validate the public collection page number.
+	 *
+	 * @param mixed $param Request parameter.
+	 * @return bool
+	 */
+	public function validate_page( $param ): bool {
+		return (int) $param >= 1;
 	}
 }

@@ -30,6 +30,7 @@ const ROLE_OPTIONS = [
 ];
 
 const PER_PAGE = 20;
+const API_PER_PAGE = 250;
 
 export default function MembersTab() {
 	const [ allMembers, setAllMembers ] = useState( [] );
@@ -39,12 +40,50 @@ export default function MembersTab() {
 	const [ page, setPage ] = useState( 1 );
 
 	useEffect( () => {
-		apiFetch( { path: '/wporg-groups/v1/members?per_page=500' } )
-			.then( ( data ) => {
-				setAllMembers( data );
-				setLoading( false );
-			} )
-			.catch( () => setLoading( false ) );
+		let isMounted = true;
+
+		const fetchPage = async ( pageNumber ) => {
+			const response = await apiFetch( {
+				path: `/wporg-groups/v1/members?per_page=${ API_PER_PAGE }&page=${ pageNumber }`,
+				parse: false,
+			} );
+			const data = await response.json();
+
+			return {
+				data,
+				totalPages: Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1,
+			};
+		};
+
+		const fetchMembers = async () => {
+			try {
+				const firstPage = await fetchPage( 1 );
+				const members = [ ...firstPage.data ];
+
+				for ( let pageNumber = 2; pageNumber <= firstPage.totalPages; pageNumber++ ) {
+					const pageData = await fetchPage( pageNumber );
+					members.push( ...pageData.data );
+				}
+
+				if ( isMounted ) {
+					setAllMembers( members );
+				}
+			} catch ( err ) {
+				if ( isMounted ) {
+					setNotice( err.message || __( 'Could not load members.', 'wporg-groups-frontend' ) );
+				}
+			} finally {
+				if ( isMounted ) {
+					setLoading( false );
+				}
+			}
+		};
+
+		fetchMembers();
+
+		return () => {
+			isMounted = false;
+		};
 	}, [] );
 
 	const updateRole = useCallback( async ( userId, newRole ) => {

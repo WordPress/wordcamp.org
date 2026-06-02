@@ -50,6 +50,7 @@ function enqueue_assets() {
 	);
 }
 add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
+add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
  * Remove the featured image link from keyboard tab order in event card grids.
@@ -59,14 +60,17 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
  */
 add_filter(
 	'render_block_core/post-featured-image',
-	static function ( string $content ): string {
-		if ( ! is_singular() ) {
+	static function ( string $content, array $block ): string {
+		$post_type = $block['context']['postType'] ?? get_post_type();
+
+		if ( ! is_singular() && 'gatherpress_event' === $post_type ) {
 			$content = str_replace( '<a href=', '<a tabindex="-1" href=', $content );
 		}
 		return $content;
-	}
+	},
+	10,
+	2
 );
-add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
  * Register a block pattern category for the theme.

@@ -39,12 +39,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<h3 class="wporg-event-speakers__heading">
 		<?php
-		echo esc_html(
-			sprintf(
-				_n( 'Speaker', 'Speakers', count( $speakers ), 'wporg-groups-frontend' ),
-				count( $speakers )
-			)
-		);
+		echo esc_html( _n( 'Speaker', 'Speakers', count( $speakers ), 'wporg-groups-frontend' ) );
 		?>
 	</h3>
 	<div class="wporg-event-speakers__list">

@@ -15,7 +15,8 @@
  *   POST /event/{id}
  *        Updates an existing gatherpress_event.
  *
- * All routes require the `current_user_can_manage_events()` capability.
+ * All routes require the `current_user_can_manage_events()` capability,
+ * plus post-specific capabilities when operating on an existing event.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -48,17 +49,6 @@ function bootstrap(): void {
 }
 
 /**
- * Capability check used by every endpoint.
- *
- * The REST request is authenticated via cookies + nonce (the JS app sends
- * the standard `X-WP-Nonce` header through `wp.apiFetch`), so by the time
- * this callback fires WordPress already knows who the user is.
- */
-function permission_callback(): bool {
-	return current_user_can_manage_events();
-}
-
-/**
  * Register all routes for this namespace.
  */
 function register_routes(): void {
@@ -68,7 +58,7 @@ function register_routes(): void {
 		array(
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => __NAMESPACE__ . '\get_event_form_data',
-			'permission_callback' => __NAMESPACE__ . '\permission_callback',
+			'permission_callback' => __NAMESPACE__ . '\event_form_data_permissions_check',
 			'args'                => array(
 				'event_id' => array(
 					'type'              => 'integer',
@@ -85,7 +75,7 @@ function register_routes(): void {
 		array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => __NAMESPACE__ . '\create_event',
-			'permission_callback' => __NAMESPACE__ . '\permission_callback',
+			'permission_callback' => __NAMESPACE__ . '\create_event_permissions_check',
 			'args'                => event_args_schema(),
 		)
 	);
@@ -96,7 +86,7 @@ function register_routes(): void {
 		array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => __NAMESPACE__ . '\update_event',
-			'permission_callback' => __NAMESPACE__ . '\permission_callback',
+			'permission_callback' => __NAMESPACE__ . '\publish_existing_event_permissions_check',
 			'args'                => array(
 				'id' => array(
 					'type'              => 'integer',
@@ -124,7 +114,7 @@ function register_routes(): void {
 		array(
 			'methods'             => WP_REST_Server::READABLE,
 			'callback'            => __NAMESPACE__ . '\list_drafts',
-			'permission_callback' => __NAMESPACE__ . '\permission_callback',
+			'permission_callback' => __NAMESPACE__ . '\manage_events_permissions_check',
 		)
 	);
 
@@ -134,7 +124,7 @@ function register_routes(): void {
 		array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => __NAMESPACE__ . '\save_draft',
-			'permission_callback' => __NAMESPACE__ . '\permission_callback',
+			'permission_callback' => __NAMESPACE__ . '\save_draft_permissions_check',
 			'args'                => draft_args_schema(),
 		)
 	);
@@ -145,7 +135,7 @@ function register_routes(): void {
 		array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => __NAMESPACE__ . '\save_draft',
-			'permission_callback' => __NAMESPACE__ . '\permission_callback',
+			'permission_callback' => __NAMESPACE__ . '\save_draft_permissions_check',
 			'args'                => array(
 				'id' => array(
 					'type'              => 'integer',
@@ -166,7 +156,7 @@ function register_routes(): void {
 		array(
 			'methods'             => WP_REST_Server::CREATABLE,
 			'callback'            => __NAMESPACE__ . '\publish_draft',
-			'permission_callback' => __NAMESPACE__ . '\permission_callback',
+			'permission_callback' => __NAMESPACE__ . '\publish_existing_event_permissions_check',
 			'args'                => array(
 				'id' => array(
 					'type'              => 'integer',
@@ -179,6 +169,105 @@ function register_routes(): void {
 			) + event_args_schema(),
 		)
 	);
+}
+
+/**
+ * Capability check for routes that only need the site-level organizer gate.
+ *
+ * The REST request is authenticated via cookies + nonce (the JS app sends
+ * the standard `X-WP-Nonce` header through `wp.apiFetch`), so by the time
+ * this callback fires WordPress already knows who the user is.
+ */
+function manage_events_permissions_check(): bool {
+	return current_user_can_manage_events();
+}
+
+/**
+ * Capability check for reading form defaults or an existing event.
+ */
+function event_form_data_permissions_check( WP_REST_Request $request ): bool {
+	if ( ! current_user_can_manage_events() ) {
+		return false;
+	}
+
+	$event_id = (int) $request->get_param( 'event_id' );
+	if ( $event_id > 0 ) {
+		return current_user_can_edit_event( $event_id );
+	}
+
+	return current_user_can_create_event();
+}
+
+/**
+ * Capability check for creating and immediately publishing an event.
+ */
+function create_event_permissions_check(): bool {
+	return current_user_can_manage_events()
+		&& current_user_can_create_event()
+		&& current_user_can_publish_event();
+}
+
+/**
+ * Capability check for saving an event draft.
+ */
+function save_draft_permissions_check( WP_REST_Request $request ): bool {
+	if ( ! current_user_can_manage_events() ) {
+		return false;
+	}
+
+	$draft_id = (int) $request->get_param( 'id' );
+	if ( $draft_id > 0 ) {
+		return current_user_can_edit_event( $draft_id );
+	}
+
+	return current_user_can_create_event();
+}
+
+/**
+ * Capability check for updating an existing event into a published state.
+ */
+function publish_existing_event_permissions_check( WP_REST_Request $request ): bool {
+	$event_id = (int) $request->get_param( 'id' );
+
+	return current_user_can_manage_events()
+		&& $event_id > 0
+		&& current_user_can_edit_event( $event_id )
+		&& current_user_can_publish_event( $event_id );
+}
+
+/**
+ * Whether the current user can create a GatherPress event on this site.
+ */
+function current_user_can_create_event(): bool {
+	$post_type_object = get_post_type_object( Event::POST_TYPE );
+	$capability       = $post_type_object->cap->create_posts ?? 'edit_posts';
+
+	return current_user_can( $capability );
+}
+
+/**
+ * Whether the current user can edit a specific GatherPress event.
+ */
+function current_user_can_edit_event( int $event_id ): bool {
+	$post = get_post( $event_id );
+
+	return $post
+		&& Event::POST_TYPE === $post->post_type
+		&& current_user_can( 'edit_post', $event_id );
+}
+
+/**
+ * Whether the current user can publish GatherPress events.
+ */
+function current_user_can_publish_event( int $event_id = 0 ): bool {
+	if ( $event_id > 0 ) {
+		return current_user_can( 'publish_post', $event_id );
+	}
+
+	$post_type_object = get_post_type_object( Event::POST_TYPE );
+	$capability       = $post_type_object->cap->publish_posts ?? 'publish_posts';
+
+	return current_user_can( $capability );
 }
 
 /**
@@ -347,8 +436,7 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
  * GET /drafts — list every gatherpress_event currently in draft status.
  *
  * Returns lightweight summaries (id, title, last-modified, scheduled date)
- * so the modal's draft picker can render a list without one fetch per
- * draft. Group-scoped — any organizer on this site sees the same set.
+ * so the modal's draft picker can render a list without one fetch per draft.
  */
 function list_drafts(): WP_REST_Response {
 	$drafts = get_posts(
@@ -359,6 +447,15 @@ function list_drafts(): WP_REST_Response {
 			'orderby'       => 'modified',
 			'order'         => 'DESC',
 			'no_found_rows' => true,
+		)
+	);
+
+	$drafts = array_values(
+		array_filter(
+			$drafts,
+			static function ( $post ) {
+				return current_user_can_edit_event( (int) $post->ID );
+			}
 		)
 	);
 

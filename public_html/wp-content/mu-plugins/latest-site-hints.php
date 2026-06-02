@@ -190,26 +190,27 @@ function maybe_disable_contact_form( $html ) {
 		return $html;
 	}
 
-	$event_name = esc_html( get_blog_details( $current_blog->blog_id )->blogname );
+	$event_name = '<strong>' . esc_html( get_blog_details( $current_blog->blog_id )->blogname ) . '</strong>';
 
 	if ( $has_newer_site ) {
 		$message = wp_kses_post( sprintf(
 			// translators: %1$s is the event name, %2$s is the URL of the latest edition.
-			__( '<strong>%1$s</strong> is over. Please visit <a href="%2$s">the next edition</a> for more details and to get in touch.', 'wordcamporg' ),
+			__( '%1$s is over. Please visit <a href="%2$s">the next edition</a> for more details and to get in touch.', 'wordcamporg' ),
 			$event_name,
 			esc_url( $latest_domain )
 		) );
 	} else {
 		$message = wp_kses_post( sprintf(
-			// translators: %s is the event name.
-			__( '<strong>%s</strong> is over and this contact form is no longer active.', 'wordcamporg' ),
-			$event_name
+			// translators: %1$s is the event name, %2$s is the URL to contact WordCamp Central.
+			__( '%1$s has concluded, so this contact form is no longer monitored. If you need to get in touch, please <a href="%2$s">contact WordCamp Central</a>.', 'wordcamporg' ),
+			$event_name,
+			esc_url( 'https://central.wordcamp.org/contact-us/' )
 		) );
 	}
 
 	$coc_message = wp_kses_post( sprintf(
 		// translators: %s is the mailto link for incident reports.
-		__( 'If you have a <a href="https://make.wordpress.org/handbook/community-code-of-conduct">Code of Conduct</a> concern, you can report it to the <a href="mailto:%s">WordPress Incident Response Team</a>.', 'wordcamporg' ),
+		__( 'If you have a <a href="https://make.wordpress.org/handbook/community-code-of-conduct/">Code of Conduct</a> concern, you can report it to the <a href="mailto:%s">WordPress Incident Response Team</a>.', 'wordcamporg' ),
 		'reports@wordpress.org'
 	) );
 
@@ -223,11 +224,9 @@ function maybe_disable_contact_form( $html ) {
 /**
  * Get the home URL of the most recent event in a given city.
  *
- * For WordCamps, this is just the most recent WordCamp in the city. For NextGen events, it's the most recent event in that city with the same type.
- *
- * For example:
- * - `narnia.wordcamp.org/2023/` -> `narnia.wordcamp.org/2024/`
- * - `events.wordpress.org/narnia/2023/training/` -> `events.wordpress.org/narnia/2024/training/`
+ * This is a cached wrapper around `query_latest_home_url()`. The result is stored in a per-site transient for an
+ * hour, since the underlying queries run on most front-end requests but the answer only changes when a new edition's
+ * site is created.
  *
  * @param string $current_domain
  * @param string $current_path
@@ -235,6 +234,38 @@ function maybe_disable_contact_form( $html ) {
  * @return bool|string
  */
 function get_latest_home_url( $current_domain, $current_path ) {
+	$cache_key = 'latest_home_url_' . md5( $current_domain . $current_path );
+	$cached    = get_transient( $cache_key );
+
+	// Transients can't distinguish a cached `false` from a cache miss, so a negative result is stored as 'none'.
+	if ( false !== $cached ) {
+		return 'none' === $cached ? false : $cached;
+	}
+
+	$latest_home_url = query_latest_home_url( $current_domain, $current_path );
+
+	set_transient( $cache_key, $latest_home_url ?: 'none', HOUR_IN_SECONDS );
+
+	return $latest_home_url;
+}
+
+/**
+ * Query the home URL of the most recent event in a given city.
+ *
+ * For WordCamps, this is just the most recent WordCamp in the city. For NextGen events, it's the most recent event in that city with the same type.
+ *
+ * For example:
+ * - `narnia.wordcamp.org/2023/` -> `narnia.wordcamp.org/2024/`
+ * - `events.wordpress.org/narnia/2023/training/` -> `events.wordpress.org/narnia/2024/training/`
+ *
+ * Use the cached `get_latest_home_url()` wrapper instead of calling this directly.
+ *
+ * @param string $current_domain
+ * @param string $current_path
+ *
+ * @return bool|string
+ */
+function query_latest_home_url( $current_domain, $current_path ) {
 	global $wpdb;
 
 	$wordcamp = get_wordcamp_post();

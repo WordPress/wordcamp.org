@@ -157,7 +157,12 @@ function render_event_cards( WP_Query $query, array $opts = array() ): void {
 	?>
 	<div class="<?php echo esc_attr( $wrap_classes ); ?>">
 	<?php
-	foreach ( $query->posts as $post_id ) :
+	foreach ( $query->posts as $event_post ) :
+		$post_id = $event_post instanceof \WP_Post ? (int) $event_post->ID : (int) $event_post;
+		if ( ! $post_id ) {
+			continue;
+		}
+
 		$event     = new Event( $post_id );
 		$rsvp      = new Rsvp( $post_id );
 		$permalink = get_permalink( $post_id );

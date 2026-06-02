@@ -86,6 +86,10 @@ class Members_Controller extends \WP_REST_Users_Controller {
 							'sanitize_callback' => 'absint',
 							'validate_callback' => array( $this, 'validate_page' ),
 						),
+						'search'   => array(
+							'default'           => '',
+							'sanitize_callback' => 'sanitize_text_field',
+						),
 					),
 				),
 				'schema' => array( $this, 'get_public_item_schema' ),
@@ -175,16 +179,24 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	public function get_items( $request ) {
 		$per_page = min( self::MAX_PER_PAGE, max( 1, (int) $request->get_param( 'per_page' ) ) );
 		$page     = max( 1, (int) $request->get_param( 'page' ) );
+		$search   = trim( (string) $request->get_param( 'search' ) );
 
-		$users = get_users(
-			array(
-				'blog_id' => get_current_blog_id(),
-				'number'  => $per_page,
-				'paged'   => $page,
-				'orderby' => 'display_name',
-				'order'   => 'ASC',
-			)
+		$query_args = array(
+			'blog_id'     => get_current_blog_id(),
+			'number'      => $per_page,
+			'paged'       => $page,
+			'orderby'     => 'display_name',
+			'order'       => 'ASC',
+			'count_total' => true,
 		);
+
+		if ( '' !== $search ) {
+			$query_args['search']         = '*' . $search . '*';
+			$query_args['search_columns'] = array( 'display_name', 'user_login', 'user_nicename' );
+		}
+
+		$query = new \WP_User_Query( $query_args );
+		$users = $query->get_results();
 
 		// Sort: organisers first, then event organisers, then members.
 		usort( $users, array( $this, 'sort_by_role' ) );
@@ -194,7 +206,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			$data[] = $this->prepare_member( $user );
 		}
 
-		$total = $this->get_site_member_count();
+		$total = (int) $query->get_total();
 
 		$response = rest_ensure_response( $data );
 		$response->header( 'X-WP-Total', $total );

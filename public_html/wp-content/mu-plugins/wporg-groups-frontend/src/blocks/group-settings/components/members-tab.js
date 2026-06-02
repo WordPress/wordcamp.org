@@ -29,11 +29,12 @@ const ROLE_OPTIONS = [
 ];
 
 const PER_PAGE = 20;
-const API_PER_PAGE = 250;
 const ASSIGNABLE_ROLES = ROLE_OPTIONS.map( ( option ) => option.value );
 
 export default function MembersTab( { canManageRoles = false } ) {
-	const [ allMembers, setAllMembers ] = useState( [] );
+	const [ members, setMembers ] = useState( [] );
+	const [ total, setTotal ] = useState( 0 );
+	const [ totalPages, setTotalPages ] = useState( 1 );
 	const [ loading, setLoading ] = useState( true );
 	const [ notice, setNotice ] = useState( '' );
 	const [ search, setSearch ] = useState( '' );
@@ -42,49 +43,49 @@ export default function MembersTab( { canManageRoles = false } ) {
 	useEffect( () => {
 		let isMounted = true;
 
-		const fetchPage = async ( pageNumber ) => {
+		const fetchMembers = async () => {
+			const params = new URLSearchParams( {
+				per_page: String( PER_PAGE ),
+				page: String( page ),
+			} );
+
+			if ( search.trim() ) {
+				params.set( 'search', search.trim() );
+			}
+
+			setLoading( true );
+			setNotice( '' );
+
 			const response = await apiFetch( {
-				path: `/wporg-groups/v1/members?per_page=${ API_PER_PAGE }&page=${ pageNumber }`,
+				path: `/wporg-groups/v1/members?${ params.toString() }`,
 				parse: false,
 			} );
 			const data = await response.json();
 
-			return {
-				data,
-				totalPages: Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1,
-			};
-		};
-
-		const fetchMembers = async () => {
-			try {
-				const firstPage = await fetchPage( 1 );
-				const members = [ ...firstPage.data ];
-
-				for ( let pageNumber = 2; pageNumber <= firstPage.totalPages; pageNumber++ ) {
-					const pageData = await fetchPage( pageNumber );
-					members.push( ...pageData.data );
-				}
-
-				if ( isMounted ) {
-					setAllMembers( members );
-				}
-			} catch ( err ) {
-				if ( isMounted ) {
-					setNotice( err.message || __( 'Could not load members.', 'wporg-groups-frontend' ) );
-				}
-			} finally {
-				if ( isMounted ) {
-					setLoading( false );
-				}
+			if ( ! isMounted ) {
+				return;
 			}
+
+			setMembers( data );
+			setTotal( Number( response.headers.get( 'X-WP-Total' ) ) || data.length );
+			setTotalPages( Math.max( 1, Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1 ) );
+			setLoading( false );
 		};
 
-		fetchMembers();
+		fetchMembers().catch( ( err ) => {
+			if ( isMounted ) {
+				setMembers( [] );
+				setTotal( 0 );
+				setTotalPages( 1 );
+				setNotice( err.message || __( 'Could not load members.', 'wporg-groups-frontend' ) );
+				setLoading( false );
+			}
+		} );
 
 		return () => {
 			isMounted = false;
 		};
-	}, [] );
+	}, [ page, search ] );
 
 	const updateRole = useCallback( async ( userId, newRole ) => {
 		setNotice( '' );
@@ -95,7 +96,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 				data: { role: newRole },
 			} );
 
-			setAllMembers( ( prev ) =>
+			setMembers( ( prev ) =>
 				prev.map( ( m ) =>
 					m.id === userId
 						? updatedMember
@@ -108,19 +109,10 @@ export default function MembersTab( { canManageRoles = false } ) {
 		}
 	}, [] );
 
-	// Filter by search.
-	const filtered = search
-		? allMembers.filter( ( m ) =>
-				m.name.toLowerCase().includes( search.toLowerCase() )
-			)
-		: allMembers;
-
-	// Paginate.
-	const totalPages = Math.ceil( filtered.length / PER_PAGE );
-	const pageMembers = filtered.slice( ( page - 1 ) * PER_PAGE, page * PER_PAGE );
-
-	// Reset page when search changes.
-	useEffect( () => setPage( 1 ), [ search ] );
+	const onSearchChange = useCallback( ( value ) => {
+		setSearch( value );
+		setPage( 1 );
+	}, [] );
 
 	if ( loading ) {
 		return h( 'div', { className: 'wporg-settings-tab__loading' }, h( Spinner ) );
@@ -136,19 +128,19 @@ export default function MembersTab( { canManageRoles = false } ) {
 			{ className: 'wporg-members-tab__controls' },
 			h( SearchControl, {
 				value: search,
-				onChange: setSearch,
+				onChange: onSearchChange,
 				placeholder: __( 'Search members\u2026', 'wporg-groups-frontend' ),
 				className: 'wporg-members-tab__search',
 				__nextHasNoMarginBottom: true,
 			} ),
 			h( 'span', { className: 'wporg-members-tab__count' },
-				filtered.length + ' ' + ( filtered.length === 1 ? __( 'member', 'wporg-groups-frontend' ) : __( 'members', 'wporg-groups-frontend' ) )
+				total.toLocaleString() + ' ' + ( total === 1 ? __( 'member', 'wporg-groups-frontend' ) : __( 'members', 'wporg-groups-frontend' ) )
 			),
 		),
 		h(
 			'div',
 			{ className: 'wporg-members-tab__list' },
-			pageMembers.map( ( member ) => {
+			members.map( ( member ) => {
 				const canEditRole = canManageRoles && ASSIGNABLE_ROLES.includes( member.role );
 
 				return h(
@@ -188,7 +180,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 						variant: 'secondary',
 						isSmall: true,
 						disabled: page <= 1,
-						onClick: () => setPage( page - 1 ),
+						onClick: () => setPage( ( currentPage ) => Math.max( 1, currentPage - 1 ) ),
 					},
 					__( 'Previous', 'wporg-groups-frontend' )
 				),
@@ -201,7 +193,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 						variant: 'secondary',
 						isSmall: true,
 						disabled: page >= totalPages,
-						onClick: () => setPage( page + 1 ),
+						onClick: () => setPage( ( currentPage ) => Math.min( totalPages, currentPage + 1 ) ),
 					},
 					__( 'Next', 'wporg-groups-frontend' )
 				)

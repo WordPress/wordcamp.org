@@ -200,17 +200,17 @@ class Phone_Field {
 	private function is_valid_bd_phone( $phone ) {
 		$cleaned = preg_replace( '/[\s\-\(\)]/', '', $phone );
 
-		// Local format: 01XXXXXXXXX (11 digits)
+		// Local format: 01XXXXXXXXX (11 digits).
 		if ( preg_match( '/^01[3-9]\d{8}$/', $cleaned ) ) {
 			return true;
 		}
 
-		// International format: +8801XXXXXXXXX (14 chars)
+		// International format: +8801XXXXXXXXX (14 chars).
 		if ( preg_match( '/^\+8801[3-9]\d{8}$/', $cleaned ) ) {
 			return true;
 		}
 
-		// International without +: 8801XXXXXXXXX (13 digits)
+		// International without +: 8801XXXXXXXXX (13 digits).
 		if ( preg_match( '/^8801[3-9]\d{8}$/', $cleaned ) ) {
 			return true;
 		}

@@ -29,7 +29,7 @@ defined( 'ABSPATH' ) || exit;
 function camptix_bd_hold_draft_tickets( $remaining, $post_id, $via_reservation, $quantity, $reservations ) {
 	$draft_count = camptix_bd_get_draft_attendee_count( $post_id, $via_reservation );
 
-	return max( 0, $remaining - $draft_count );
+	return $remaining - $draft_count;
 }
 add_filter( 'camptix_get_remaining_tickets', 'camptix_bd_hold_draft_tickets', 10, 5 );
 
@@ -57,17 +57,14 @@ function camptix_bd_get_draft_attendee_count( $ticket_id, $via_reservation = fal
 	}
 
 	$query = new WP_Query( array(
-		'post_type'              => 'tix_attendee',
-		'post_status'            => 'draft',
-		'posts_per_page'         => -1,
-		'meta_query'             => $meta_query,
-		'fields'                 => 'ids',
-		'no_found_rows'          => true,  // Skip COUNT(*) query — we only need the count of posts returned.
-		'update_post_meta_cache' => false, // Not needed when fetching IDs only.
-		'update_post_term_cache' => false, // Not needed when fetching IDs only.
+		'post_type'      => 'tix_attendee',
+		'post_status'    => 'draft',
+		'posts_per_page' => -1,
+		'meta_query'     => $meta_query,
+		'fields'         => 'ids',
 	) );
 
-	return count( $query->posts );
+	return $query->found_posts;
 }
 
 /**

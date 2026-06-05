@@ -363,7 +363,7 @@ class SSLCommerz extends Base_Gateway {
 				$payment_data['transaction_details']['TRAN_ID_MISMATCH'] = 'Signed tran_id does not match the URL payment_token';
 
 				$camptix->log( 'SSLCommerz transaction ID mismatch.', null, $payment_data );
-				return false;
+				return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
 			}
 
 			if ( $this->verify_transaction( $val_id, $payment_token ) ) {
@@ -377,7 +377,7 @@ class SSLCommerz extends Base_Gateway {
 		}
 
 		$camptix->log( 'SSLCommerz IPN hash verification failed.', null, $payment_data );
-		return false;
+		return $camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_FAILED, $payment_data );
 	}
 
 	/**

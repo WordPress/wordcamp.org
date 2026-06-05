@@ -142,9 +142,9 @@ class SurjoPay extends Base_Gateway {
 			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
-		// Generate a unique order ID with prefix.
+		// Generate a cryptographically secure unique order ID with prefix.
 		$prefix   = $this->options['prefix'] ?? 'WC';
-		$order_id = $prefix . uniqid();
+		$order_id = $prefix . bin2hex( random_bytes( 8 ) );
 
 		// Build callback URLs.
 		$urls = $this->build_callback_urls( $payment_token );
@@ -152,6 +152,12 @@ class SurjoPay extends Base_Gateway {
 		// Build the payment request payload.
 		$customer = $this->get_attendee_customer_info( $attendees[0]->ID );
 		$payload  = $this->build_checkout_payload( $order, $order_id, $urls, $customer );
+
+		// build_checkout_payload returns an empty array if required fields (e.g. phone) are missing.
+		if ( empty( $payload ) ) {
+			$camptix->error( __( 'A valid phone number is required to complete payment. Please update your registration.', 'bd-payments-camptix' ) );
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+		}
 
 		// Call shurjoPay checkout API.
 		$response = $this->api(
@@ -189,7 +195,16 @@ class SurjoPay extends Base_Gateway {
 			)
 		);
 
-		wp_redirect( $response->checkout_url );
+		// Validate the checkout URL host is a known shurjoPay domain before redirecting.
+		$checkout_url = esc_url_raw( $response->checkout_url );
+		$host         = wp_parse_url( $checkout_url, PHP_URL_HOST );
+		if ( ! $host || ! str_ends_with( $host, 'shurjopayment.com' ) ) {
+			$this->log( 'Surjo Pay: Unexpected redirect host.', null, array( 'url' => $checkout_url ) );
+			$camptix->error( 'Payment gateway returned an invalid redirect URL.' );
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+		}
+
+		wp_redirect( $checkout_url );
 		exit;
 	}
 
@@ -207,8 +222,9 @@ class SurjoPay extends Base_Gateway {
 		$email = $customer['email'] ?? '';
 		$phone = $customer['phone'] ?? '';
 
+		// Phone is required — the phone field addon enforces this, but double-check here.
 		if ( empty( $phone ) ) {
-			$phone = '01700000000';
+			return array();
 		}
 
 		return array(

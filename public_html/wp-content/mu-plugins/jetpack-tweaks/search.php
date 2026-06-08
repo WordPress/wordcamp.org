@@ -4,39 +4,42 @@ namespace WordCamp\Jetpack_Tweaks\Search;
 
 defined( 'WPINC' ) || die();
 
-add_filter( 'option_instant_search_enabled',         __NAMESPACE__ . '\disable_instant_search_overlay' );
-add_filter( 'default_option_instant_search_enabled', __NAMESPACE__ . '\disable_instant_search_overlay' );
+/**
+ * Per-site flag recording that we've already applied the "instant search off by default"
+ * adjustment, so we never override an organizer who later opts back in.
+ */
+const DEFAULT_APPLIED_FLAG = 'wordcamp_instant_search_default_applied';
+
+add_action( 'init', __NAMESPACE__ . '\disable_provisioned_instant_search' );
 
 /**
- * Disable the Jetpack Search instant-search overlay by default on WordCamp sites.
+ * Disable the Jetpack Search instant-search overlay once, after provisioning forces it on.
  *
- * WordCamp sites are auto-provisioned with a Jetpack Complete plan, which activates Jetpack
- * Search and auto-enables the instant-search "live results" overlay. That overlay renders
- * broken on WordCamp themes (it overflows the viewport and overlaps site content), so we
- * force the `instant_search_enabled` option off here. With instant search reported as off,
- * Jetpack automatically falls back to its classic search experience, so search keeps working
- * without the broken overlay.
+ * WordCamp sites are auto-provisioned with a Jetpack Complete plan. As part of that, WordPress.com
+ * calls Jetpack's plan-activation endpoint, which enables Jetpack Search *and* its instant-search
+ * "live results" overlay by default (it writes `instant_search_enabled = true`). That overlay
+ * renders broken on WordCamp themes -- it overflows the viewport and overlaps site content (#1742).
  *
- * Filtering the stored option (rather than only `default_option_*`) is required because the
- * provisioning flow writes `instant_search_enabled = true` to the database, so the default
- * alone would never apply on existing sites.
+ * Rather than permanently forcing the option off (which would stop organizers from turning the
+ * overlay on themselves), we flip it off a single time -- the first time we observe it enabled --
+ * and then record a per-site flag and leave the option alone forever after. The Search module stays
+ * active, so Jetpack falls back to its classic search experience. Because the admin UI saves through
+ * a different endpoint, an organizer can opt back in from Jetpack's search settings and have it stick.
  *
- * A site can opt back in by returning true from the `wordcamp_enable_jetpack_instant_search`
- * filter.
- *
- * @param mixed $value The stored (or default) option value.
- *
- * @return mixed `false` to disable instant search, or the original value when opted in.
+ * Provisioning enables instant search asynchronously (a separate WordPress.com request), so we react
+ * to the resulting option state on a later request rather than trying to hook the activation itself.
+ * This also self-heals sites that were already provisioned before this code shipped.
  */
-function disable_instant_search_overlay( $value ) {
-	/**
-	 * Allow a site to re-enable the Jetpack instant-search overlay.
-	 *
-	 * @param bool $enabled Whether the instant-search overlay should be enabled. Default false.
-	 */
-	if ( apply_filters( 'wordcamp_enable_jetpack_instant_search', false ) ) {
-		return $value;
+function disable_provisioned_instant_search() {
+	if ( get_option( DEFAULT_APPLIED_FLAG ) ) {
+		return;
 	}
 
-	return false;
+	// Not forced on (yet). Leave the flag unset so we still catch it once provisioning enables it.
+	if ( ! get_option( 'instant_search_enabled' ) ) {
+		return;
+	}
+
+	update_option( 'instant_search_enabled', false );
+	update_option( DEFAULT_APPLIED_FLAG, true );
 }

@@ -36,11 +36,11 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	composer install
 	```
 
-1. Install 3rd-party JS packages and build the CSS & JS needed for some projects. You'll need [node](https://nodejs.org/) & [yarn](https://yarnpkg.com/). Optionally you can use [nvm](https://github.com/nvm-sh/nvm) to keep your node version up to date. Running the following will install and build all of the projects in one step (omit `nvm` command if you're not using it).
+1. Install 3rd-party JS packages and build the CSS & JS needed for some projects. You'll need [node](https://nodejs.org/) & npm (bundled with Node). Optionally you can use [nvm](https://github.com/nvm-sh/nvm) to keep your node version up to date. Running the following will install and build all of the projects in one step (omit `nvm` command if you're not using it).
     ```bash
     nvm install && nvm use
-    yarn
-    yarn workspaces run build
+    npm install
+    npm run build --workspaces --if-present
     ```
 
 1. Build and boot the Docker environment.

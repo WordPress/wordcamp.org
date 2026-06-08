@@ -66,7 +66,7 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 								// add it so saving never silently mutates the status.
 								if ( ! array_key_exists( $post->post_status, $post_statuses ) ) {
 									$current_obj                         = get_post_status_object( $post->post_status );
-									$post_statuses[ $post->post_status ] = $current_obj ? $current_obj->label : $post->post_status;
+									$post_statuses[ $post->post_status ] = $current_obj->label ?? $post->post_status;
 								}
 								?>
 								<?php foreach ( $post_statuses as $key => $post_status_label ) : ?>

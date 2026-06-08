@@ -30,6 +30,7 @@ class Phone_Field {
 		add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'export_attendee_data_column' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_column_value', array( $this, 'export_attendee_data_value' ), 10, 3 );
 		add_filter( 'camptix_form_register_custom_error_flags', array( $this, 'validate_phone_on_register' ), 10, 1 );
+		add_action( 'camptix_form_attendee_info_errors', array( $this, 'render_phone_errors' ), 10, 1 );
 	}
 
 	/**
@@ -170,6 +171,10 @@ class Phone_Field {
 	 * @return array
 	 */
 	public function validate_phone_on_register( $error_flags ) {
+		if ( ! $this->selected_gateway_requires_phone() ) {
+			return $error_flags;
+		}
+
 		$attendee_info = $_POST['tix_attendee_info'] ?? array();
 
 		foreach ( (array) $attendee_info as $info ) {
@@ -183,6 +188,46 @@ class Phone_Field {
 		}
 
 		return $error_flags;
+	}
+
+	/**
+	 * Render phone validation errors on the attendee info form.
+	 *
+	 * @param array $error_flags Current error flags.
+	 *
+	 * @return void
+	 */
+	public function render_phone_errors( $error_flags ) {
+		global $camptix;
+
+		if ( isset( $error_flags['tix_phone_missing'] ) ) {
+			$camptix->error( __( 'Please enter a phone number for Bangladeshi payment processing.', 'bd-payments-camptix' ) );
+		}
+
+		if ( isset( $error_flags['tix_phone_invalid'] ) ) {
+			$camptix->error( __( 'Please enter a valid Bangladeshi phone number.', 'bd-payments-camptix' ) );
+		}
+	}
+
+	/**
+	 * Check if the selected checkout gateway needs a Bangladeshi phone number.
+	 *
+	 * @return bool
+	 */
+	private function selected_gateway_requires_phone() {
+		global $camptix;
+
+		$payment_method = sanitize_text_field( $_POST['tix_payment_method'] ?? '' );
+
+		if ( ! in_array( $payment_method, array( 'sslcommerz', 'surjopay' ), true ) ) {
+			return false;
+		}
+
+		if ( isset( $camptix->order['total'] ) && (float) $camptix->order['total'] <= 0 ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

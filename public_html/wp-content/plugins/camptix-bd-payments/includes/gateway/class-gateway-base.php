@@ -44,6 +44,7 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	 */
 	protected function prepare_transaction_for_log( $data ) {
 		$sensitive_keys = [
+			'authorization',
 			'store_passwd',
 			'store_password',
 			'password',
@@ -52,16 +53,63 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 			'card_cvv',
 			'pin',
 			'token',
+			'sp_token',
 			'cus_phone',
+			'customer_phone',
+			'shipping_phone_number',
 		];
 
-		foreach ( $sensitive_keys as $key ) {
-			if ( isset( $data[ $key ] ) ) {
+		foreach ( $data as $key => $value ) {
+			if ( in_array( strtolower( (string) $key ), $sensitive_keys, true ) ) {
 				$data[ $key ] = '[redacted]';
+			} elseif ( is_array( $value ) ) {
+				$data[ $key ] = $this->prepare_transaction_for_log( $value );
+			} elseif ( is_object( $value ) ) {
+				$data[ $key ] = (object) $this->prepare_transaction_for_log( (array) $value );
 			}
 		}
 
 		return $data;
+	}
+
+	/**
+	 * Check that a redirect URL uses HTTPS and belongs to an allowed host.
+	 *
+	 * @param string $url           Redirect URL.
+	 * @param array  $allowed_hosts Exact hostnames whose subdomains are also allowed.
+	 *
+	 * @return bool
+	 */
+	protected function is_allowed_https_host( $url, $allowed_hosts ) {
+		$scheme = wp_parse_url( $url, PHP_URL_SCHEME );
+		$host   = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+
+		if ( 'https' !== $scheme || ! $host ) {
+			return false;
+		}
+
+		foreach ( $allowed_hosts as $allowed_host ) {
+			$allowed_host = strtolower( $allowed_host );
+
+			if ( $allowed_host === $host || str_ends_with( $host, '.' . $allowed_host ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Render a password input for gateway secrets.
+	 *
+	 * @param array $args Field arguments from the Settings API.
+	 *
+	 * @return void
+	 */
+	public function field_password( $args ) {
+		?>
+		<input type="password" name="<?php echo esc_attr( $args['name'] ); ?>" value="<?php echo esc_attr( $args['value'] ); ?>" class="regular-text" autocomplete="new-password" />
+		<?php
 	}
 
 	/**
@@ -178,7 +226,10 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 		$body = wp_remote_retrieve_body( $response );
 
 		if ( $code < 200 || $code >= 300 ) {
-			$this->log( sprintf( 'API request returned HTTP %d: %s', $code, $body ) );
+			$decoded_body = json_decode( $body, true );
+			$log_body     = is_array( $decoded_body ) ? $this->prepare_transaction_for_log( $decoded_body ) : array( 'body_length' => strlen( $body ) );
+
+			$this->log( sprintf( 'API request returned HTTP %d', $code ), null, $log_body );
 			return false;
 		}
 

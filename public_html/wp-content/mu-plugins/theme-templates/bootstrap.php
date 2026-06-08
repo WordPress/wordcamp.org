@@ -34,7 +34,7 @@ add_filter( 'get_block_template', __NAMESPACE__ . '\inject_template', 10, 3 );
  * @return string
  */
 function inject_offline_template( $template_path ) {
-	if ( did_action( 'wp' ) && function_exists( 'is_offline' ) && ( \is_offline() || \is_500() ) ) {
+	if ( function_exists( 'is_offline' ) && ( \is_offline() || \is_500() ) ) {
 		$template_path = __DIR__ . '/templates/offline.php';
 	}
 

@@ -176,9 +176,14 @@ class SSLCommerz extends Base_Gateway {
 		$response = $this->api( 'POST', '/gwprocess/v4/api.php', $args );
 
 		$response_data    = (array) $response;
-		$gateway_page_url = $response_data['GatewayPageURL'] ?? '';
+		$status           = strtoupper( (string) ( $response_data['status'] ?? '' ) );
+		$gateway_page_url = esc_url_raw( $response_data['GatewayPageURL'] ?? '' );
 
-		if ( ! empty( $gateway_page_url ) ) {
+		if ( 'SUCCESS' === $status && ! empty( $gateway_page_url ) ) {
+			if ( ! $this->is_allowed_https_host( $gateway_page_url, array( 'sandbox.sslcommerz.com', 'securepay.sslcommerz.com' ) ) ) {
+				$camptix->log( 'SSLCommerz unexpected redirect host.', null, array( 'url' => $gateway_page_url ) );
+				return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+			}
 
 			// Store the sessionkey for future reference (timeout).
 			if ( ! empty( $response->sessionkey ) ) {
@@ -188,6 +193,8 @@ class SSLCommerz extends Base_Gateway {
 			wp_redirect( $gateway_page_url );
 			exit;
 		}
+
+		$camptix->log( 'SSLCommerz session initiation failed.', null, $this->prepare_transaction_for_log( $response_data ) );
 
 		return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 	}
@@ -199,7 +206,7 @@ class SSLCommerz extends Base_Gateway {
 	 */
 	public function payment_settings_fields() {
 		$this->add_settings_field_helper( 'merchant_id', __( 'Store ID', 'bd-payments-camptix' ), [ $this, 'field_text' ] );
-		$this->add_settings_field_helper( 'store_password', __( 'Store Password', 'bd-payments-camptix' ), [ $this, 'field_text' ] );
+		$this->add_settings_field_helper( 'store_password', __( 'Store Password', 'bd-payments-camptix' ), [ $this, 'field_password' ] );
 		$this->add_settings_field_helper( 'sandbox', __( 'Sandbox Mode',  'bd-payments-camptix' ), [ $this, 'field_yesno' ] );
 	}
 
@@ -460,7 +467,7 @@ class SSLCommerz extends Base_Gateway {
 
 		$order = $this->get_order( $payment_token );
 
-		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ], true ) && (float) $order['total'] === (float) $response->amount ) {
+		if ( in_array( $response->status, [ 'VALID', 'VALIDATED' ], true ) && $this->sslcommerz_response_matches_order( $response, $order ) ) {
 			return true;
 		}
 
@@ -514,9 +521,9 @@ class SSLCommerz extends Base_Gateway {
 			return;
 		}
 
-		// If the order totals don't match, bail out.
+		// If the order details don't match, bail out.
 		$order = $this->get_order( $payment_token );
-		if ( (float) $order['total'] !== (float) $response->amount ) {
+		if ( ! $this->sslcommerz_response_matches_order( $response, $order ) ) {
 			return;
 		}
 
@@ -578,6 +585,41 @@ class SSLCommerz extends Base_Gateway {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Validate that the SSLCommerz response matches the local CampTix order.
+	 *
+	 * @param object $response SSLCommerz validation response.
+	 * @param array  $order    Local CampTix order.
+	 *
+	 * @return bool
+	 */
+	private function sslcommerz_response_matches_order( $response, $order ) {
+		if ( empty( $order['total'] ) ) {
+			return false;
+		}
+
+		$response_amount = $response->currency_amount ?? $response->amount ?? null;
+		if ( null === $response_amount ) {
+			return false;
+		}
+
+		$expected_amount = (int) round( (float) $order['total'] * 100 );
+		$actual_amount   = (int) round( (float) $response_amount * 100 );
+		if ( $expected_amount !== $actual_amount ) {
+			return false;
+		}
+
+		if ( 'BDT' !== strtoupper( (string) ( $response->currency_type ?? '' ) ) ) {
+			return false;
+		}
+
+		if ( 'BDT' !== strtoupper( (string) ( $response->currency ?? '' ) ) ) {
+			return false;
+		}
+
+		return true;
 	}
 
 	/**

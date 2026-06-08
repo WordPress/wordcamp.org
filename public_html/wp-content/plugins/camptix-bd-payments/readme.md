@@ -20,9 +20,7 @@ A payment gateway addon for the [CampTix](http://github.com/developer-developer/
 ### Features
 
 - **Multiple Gateways** - SSLCommerz and Surjo Pay support
-- **Phone Field** - Required phone number on attendee registration with BD format validation
-- **Ticket Hold System** - Prevents overselling by counting draft attendees as "held" during checkout
-- **Auto-Release** - Abandoned drafts are released after 5 minutes
+- **Phone Field** - Bangladeshi phone validation when SSLCommerz or Surjo Pay is selected
 - **Timeout Recovery** - Paid orders are recovered even if the attendee times out
 - **CSV Export** - Phone numbers included in attendee CSV export
 - **Sandbox Mode** - Test with sandbox credentials before going live
@@ -45,7 +43,7 @@ A payment gateway addon for the [CampTix](http://github.com/developer-developer/
 ### Surjo Pay
 
 1. Register at [Surjo Pay](https://shurjopay.com.bd/)
-2. Get your username, password, and API endpoint after onboarding
+2. Get your username and password after onboarding
 3. Enable Surjo Pay in Tickets > Setup > Payment
 4. Enter your credentials
 5. Toggle sandbox mode for testing
@@ -55,12 +53,10 @@ A payment gateway addon for the [CampTix](http://github.com/developer-developer/
 **1.4 - 2 jun 2026**
 - Added Surjo Pay (shurjoPay) payment gateway
 - Added shared Base_Gateway class for common gateway logic
-- Added ticket inventory hold system (drafts count as held tickets)
-- Added 5-minute auto-release for abandoned checkouts
 - Security: sanitized all $_REQUEST inputs in gateways
 - Security: strict comparisons for payment method checks
 - Security: renamed ipn_hash_varify to ipn_hash_verify
-- Phone field: added BD phone format validation (+880/01XX)
+- Phone field: added BD phone format validation (+880/01XX) for selected Bangladeshi gateways
 - Phone field: added sanitization in edit form
 - Replaced die() with wp_die()
 

@@ -7,6 +7,7 @@ class CampTix_Attendance extends CampTix_Addon {
 	public $secret_generated = '';
 	public $questions        = array();
 	public $secret_expiry    = '2 weeks';
+	public $tickets;
 
 	/**
 	 * Runs during CampTix init.

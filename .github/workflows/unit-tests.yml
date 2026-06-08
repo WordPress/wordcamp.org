@@ -29,23 +29,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: actions/cache@v4
-      with:
-        path: '**/node_modules'
-        key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-
     - name: Use Node.js 20.x
       uses: actions/setup-node@v4
       with:
         node-version: 20.x
+        cache: npm
 
     - name: Install dependencies
       # We don't need to build, since jest can interpret the source files.
-      run: yarn
+      run: npm ci
 
     # Run the Blocks unit tests. If/when other workspaces get tests, those would be added here.
     - name: Running the tests
-      run: yarn workspace wordcamp-blocks run test
+      run: npm run test --workspace=wordcamp-blocks
 
   unit-php:
     name: PHP Tests
@@ -55,18 +51,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php-version: ['8.1', '8.4', '8.5']
+        php-version: ['8.3', '8.4', '8.5']
 
     services:
-      mysql:
-        image: mysql:5.7
+      mariadb:
+        image: mariadb:lts
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: false
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wcorg_test
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wcorg_test
         ports:
           - 3306/tcp
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
     - uses: actions/checkout@v4
@@ -85,17 +84,16 @@ jobs:
       env:
           COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Start mysql service
-      run: sudo /etc/init.d/mysql start
-
     - name: Install dependencies
       run: |
         rm composer.lock || true
         composer install
 
     - name: Install WordPress
+      env:
+        DB_PORT: ${{ job.services.mariadb.ports['3306'] }}
       run: |
-        bash .docker/bin/install-wp-tests.sh wcorg_test root root 127.0.0.1 latest
+        bash .docker/bin/install-wp-tests.sh wcorg_test root root "127.0.0.1:${DB_PORT}" latest true
 
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

@@ -7,6 +7,8 @@ defined( 'WPINC' ) || die();
 add_filter( 'jetpack_get_available_modules', __NAMESPACE__ . '\disable_modules' );
 add_filter( 'jetpack_get_default_modules', __NAMESPACE__ . '\default_jetpack_modules' );
 add_filter( 'jetpack_get_module', __NAMESPACE__ . '\force_load_subscriptions_module', 10, 2 );
+add_filter( 'my_jetpack_red_bubble_notification_slugs', __NAMESPACE__ . '\disable_install_nags', 200 );
+add_filter( 'jetpack_start_enable_sso', '__return_false' );
 
 /**
  * Disable Jetpack Modules which are not applicable to WordCamp.org.
@@ -63,4 +65,13 @@ function force_load_subscriptions_module( $module, $module_slug ) {
 	}
 
 	return $module;
+}
+
+/**
+ * Disable the install-plugin nags.
+ */
+function disable_install_nags( $slugs ) {
+	unset( $slugs['jetpack_complete--plugins_needing_installed_activated'] );
+
+	return $slugs;
 }

@@ -678,6 +678,7 @@ if ( ! class_exists( 'Meetup_Admin' ) ) :
 				'Date closed'           => 'date',
 				'Slack'                 => 'text',
 				'Region'                => 'text',
+				'Language'              => 'select-locale',
 				'Address'               => 'textarea',
 				'Extra Comments'        => 'textarea',
 			);

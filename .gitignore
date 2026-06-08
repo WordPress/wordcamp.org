@@ -3,6 +3,7 @@
 #
 .docker/data/*.bkp
 .docker/database
+.docker/mariadb-database
 .docker/wordcamp*.pem
 .docker/test_suite
 docker-compose.override.yaml
@@ -34,13 +35,6 @@ public_html/wp-content/themes-private/
 public_html/wp-content/upgrade/
 public_html/wp-content/uploads/
 public_html/wp-content/debug.log
-
-
-#
-# Tracked in `yarn.lock`
-#
-package-lock.json
-public_html/wp-content/plugins/wc-post-types/package-lock.json
 
 
 #

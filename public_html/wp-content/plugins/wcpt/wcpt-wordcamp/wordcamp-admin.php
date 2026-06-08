@@ -1068,7 +1068,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				// Block CC-exclusive statuses from being applied to non-Campus-Connect posts.
 				$submitted_subtype = isset( $_POST['event_subtype'] ) ? sanitize_text_field( wp_unslash( $_POST['event_subtype'] ) ) : '';
 				$event_subtype     = $submitted_subtype ?: get_post_meta( absint( $post_data_raw['ID'] ), 'event_subtype', true );
-				$cc_exclusive      = array( 'wcpt-needs-action', 'wcpt-needs-more-info' );
+				$cc_exclusive      = array( 'wcpt-needs-action' );
 				if ( 'campusconnect' !== $event_subtype && in_array( $post_data['post_status'], $cc_exclusive, true ) ) {
 					$post_data['post_status'] = $post->post_status;
 				}
@@ -1345,9 +1345,9 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		/**
 		 * Get list of all available post statuses.
 		 *
-		 * For Campus Connect posts, returns the ten CC-specific statuses.
-		 * For all other subtypes, returns the full global list minus the two
-		 * CC-exclusive statuses (wcpt-needs-action, wcpt-needs-more-info).
+		 * For Campus Connect posts, returns the nine CC-specific statuses.
+		 * For all other subtypes, returns the full global list minus the
+		 * CC-exclusive status (wcpt-needs-action).
 		 *
 		 * @return array Associative array of status slug => label.
 		 */
@@ -1357,7 +1357,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			}
 
 			$statuses = WordCamp_Loader::get_post_statuses();
-			unset( $statuses['wcpt-needs-action'], $statuses['wcpt-needs-more-info'] );
+			unset( $statuses['wcpt-needs-action'] );
 
 			return $statuses;
 		}

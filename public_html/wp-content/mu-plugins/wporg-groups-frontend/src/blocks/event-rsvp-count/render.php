@@ -11,7 +11,7 @@ use GatherPress\Core\Rsvp\Rsvp;
 
 $event_post_id = $block->context['postId'] ?? get_the_ID();
 
-if ( ! $event_post_id || ! class_exists( '\GatherPress\Core\Rsvp' ) ) {
+if ( ! $event_post_id || ! class_exists( Rsvp::class ) ) {
 	return;
 }
 

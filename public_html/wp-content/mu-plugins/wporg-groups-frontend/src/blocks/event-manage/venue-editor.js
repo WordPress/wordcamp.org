@@ -14,7 +14,6 @@ import {
 	useEffect,
 	useRef,
 	useCallback,
-	Fragment,
 } from '@wordpress/element';
 import {
 	TextControl,
@@ -130,10 +129,12 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 				return;
 			}
 
-			import( 'leaflet' ).then( ( L ) => {
+			import( 'leaflet' ).then( ( module ) => {
 				if ( ! mapRef.current ) {
 					return;
 				}
+
+				const L = module.default || module;
 
 				if ( mapInstanceRef.current ) {
 					mapInstanceRef.current.setView( [ lat, lng ], 15 );
@@ -211,8 +212,8 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 			status: 'publish',
 			meta: {
 				gatherpress_address: fullAddress,
-				gatherpress_phone: '',
 				gatherpress_website: website,
+				gatherpress_access_requirements: accessRequirements,
 				gatherpress_latitude: latitude,
 				gatherpress_longitude: longitude,
 				gatherpress_map_show: !! ( latitude && longitude ),

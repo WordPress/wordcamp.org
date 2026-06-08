@@ -19,23 +19,33 @@ const { state } = store( 'wporg/event-rsvp', {
 
 		get countLabel() {
 			const count = getContext().attendingCount;
-			return count === 1 ? '1 going' : count + ' going';
+			return formatLabel(
+				label( 1 === count ? 'countSingular' : 'countPlural' ),
+				[ formatNumber( count ) ]
+			);
 		},
 
 		get modalTitle() {
 			const ctx = getContext();
-			return ctx.attendingCount + ' Attending ' + ctx.eventTitle;
+			return formatLabel(
+				label(
+					1 === ctx.attendingCount
+						? 'modalTitleSingular'
+						: 'modalTitlePlural'
+				),
+				[ formatNumber( ctx.attendingCount ), ctx.eventTitle ]
+			);
 		},
 
 		get rsvpButtonLabel() {
 			const ctx = getContext();
 			if ( ctx.rsvpLoading ) {
-				return '\u2026';
+				return label( 'loading' );
 			}
 			if ( ctx.currentUserStatus === 'attending' ) {
-				return '\u2713 Attending';
+				return label( 'attending' );
 			}
-			return ctx.isMember ? 'RSVP' : 'Join & RSVP';
+			return ctx.isMember ? label( 'rsvp' ) : label( 'joinRsvp' );
 		},
 
 		get isMember() {
@@ -45,20 +55,20 @@ const { state } = store( 'wporg/event-rsvp', {
 		get statusText() {
 			const ctx = getContext();
 			if ( ctx.currentUserStatus === 'attending' ) {
-				return 'You are attending this event.';
+				return label( 'statusAttending' );
 			}
-			return 'You have not RSVPed to this event.';
+			return label( 'statusNotAttending' );
 		},
 
 		get modalRsvpLabel() {
 			const ctx = getContext();
 			if ( ctx.rsvpLoading ) {
-				return '\u2026';
+				return label( 'loading' );
 			}
 			if ( ctx.currentUserStatus === 'attending' ) {
-				return 'Cancel RSVP';
+				return label( 'cancelRsvp' );
 			}
-			return 'Attend';
+			return label( 'attend' );
 		},
 	},
 
@@ -257,7 +267,9 @@ async function refreshAttendees( ctx ) {
 								'</div></a>'
 						)
 						.join( '' )
-				: '<p class="wporg-event-rsvp__empty">No attendees yet. Be the first to RSVP!</p>';
+				: '<p class="wporg-event-rsvp__empty">' +
+					escHtml( labelFromContext( ctx, 'emptyAttendees' ) ) +
+					'</p>';
 
 			const avatars = document.querySelector(
 				'.wporg-event-rsvp__avatars'
@@ -291,6 +303,27 @@ async function refreshAttendees( ctx ) {
 	} catch {
 		// The optimistic context update already reflects the new state.
 	}
+}
+
+function label( key ) {
+	return labelFromContext( getContext(), key );
+}
+
+function labelFromContext( ctx, key ) {
+	return ctx.labels?.[ key ] || '';
+}
+
+function formatNumber( value ) {
+	return Number( value || 0 ).toLocaleString();
+}
+
+function formatLabel( format, values ) {
+	let index = 0;
+
+	return String( format ).replace( /%(\d+\$)?s/g, ( match, position ) => {
+		const valueIndex = position ? parseInt( position, 10 ) - 1 : index++;
+		return values[ valueIndex ] ?? '';
+	} );
 }
 
 function escHtml( str ) {

@@ -67,6 +67,25 @@ $modal_title    = sprintf(
 	number_format_i18n( $count ),
 	$event_title
 );
+$rsvp_labels    = array(
+	/* translators: %s: attendee count. */
+	'countSingular'      => _n( '%s going', '%s going', 1, 'wporg-groups-frontend' ),
+	/* translators: %s: attendee count. */
+	'countPlural'        => _n( '%s going', '%s going', 2, 'wporg-groups-frontend' ),
+	/* translators: 1: attendee count, 2: event title. */
+	'modalTitleSingular' => _n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', 1, 'wporg-groups-frontend' ),
+	/* translators: 1: attendee count, 2: event title. */
+	'modalTitlePlural'   => _n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', 2, 'wporg-groups-frontend' ),
+	'loading'            => "\u{2026}",
+	'attending'          => "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' ),
+	'rsvp'               => __( 'RSVP', 'wporg-groups-frontend' ),
+	'joinRsvp'           => __( 'Join & RSVP', 'wporg-groups-frontend' ),
+	'statusAttending'    => __( 'You are attending this event.', 'wporg-groups-frontend' ),
+	'statusNotAttending' => __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
+	'cancelRsvp'         => __( 'Cancel RSVP', 'wporg-groups-frontend' ),
+	'attend'             => __( 'Attend', 'wporg-groups-frontend' ),
+	'emptyAttendees'     => __( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ),
+);
 
 $context = array(
 	'postId'            => (int) $event_post_id,
@@ -81,6 +100,7 @@ $context = array(
 	'joinApi'           => rest_url( 'wporg-groups/v1/members/join' ),
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
+	'labels'            => $rsvp_labels,
 );
 
 // Register server-side state so Interactivity API directives can evaluate
@@ -90,8 +110,9 @@ wp_interactivity_state(
 	array(
 		'isAttending'    => $is_attending,
 		'countLabel'     => sprintf(
-			_n( '%d going', '%d going', $count, 'wporg-groups-frontend' ),
-			$count
+			/* translators: %s: attendee count. */
+			_n( '%s going', '%s going', $count, 'wporg-groups-frontend' ),
+			number_format_i18n( $count )
 		),
 		'modalTitle'     => $modal_title,
 		'isMember'        => $is_member,

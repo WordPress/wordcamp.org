@@ -95,7 +95,12 @@ export default function VenuesTab() {
 								onClick: () => setEditingId( venue.id ),
 								role: 'button',
 								tabIndex: 0,
-								onKeyDown: ( ev ) => { if ( ev.key === 'Enter' ) setEditingId( venue.id ); },
+								onKeyDown: ( ev ) => {
+									if ( ev.key === 'Enter' || ev.key === ' ' ) {
+										ev.preventDefault();
+										setEditingId( venue.id );
+									}
+								},
 							},
 							h(
 								'div',

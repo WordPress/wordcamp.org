@@ -19,6 +19,16 @@ class SSLCommerz extends Base_Gateway {
 	public $options;
 
 	/**
+	 * Whether this request has SSLCommerz-signed transaction data restored from
+	 * the temporary POST cookie. Only browser-return actions (payment_return,
+	 * payment_failed, payment_cancel) require this; IPN (payment_notify) verifies
+	 * its own hash independently.
+	 *
+	 * @var bool
+	 */
+	private $has_validated_gateway_data = false;
+
+	/**
 	 * Initialize gateway options and hooks.
 	 *
 	 * @return void
@@ -277,6 +287,10 @@ class SSLCommerz extends Base_Gateway {
 				// Merge the POST data into the request so that payment_notify() can use it.
 				$_REQUEST = array_merge( $_REQUEST, $transaction_data );
 				$_POST    = array_merge( $_POST, $transaction_data );
+
+				// Mark the request as carrying validated gateway data so template_redirect()
+				// knows it is safe to dispatch browser-return actions.
+				$this->has_validated_gateway_data = true;
 			}
 
 			// Clear the temporary cookie.
@@ -323,7 +337,21 @@ class SSLCommerz extends Base_Gateway {
 			return;
 		}
 
-		switch ( sanitize_text_field( $_GET['tix_action'] ?? '' ) ) {
+		$action = sanitize_text_field( $_GET['tix_action'] ?? '' );
+
+		// Browser-return actions (payment_return, payment_failed, payment_cancel) must
+		// only run when the request carries validated SSLCommerz-signed data restored
+		// from the temporary cookie set by early_template_redirect(). Without this
+		// guard anyone could trigger the cancel/fail path with a crafted GET request.
+		// IPN (payment_notify) performs its own hash verification and is not gated here.
+		if (
+			in_array( $action, array( 'payment_return', 'payment_failed', 'payment_cancel' ), true ) &&
+			! $this->has_validated_gateway_data
+		) {
+			return;
+		}
+
+		switch ( $action ) {
 			case 'payment_return':
 				// Payment return is handled as a notification, so fall through to that case.
 			case 'payment_notify':

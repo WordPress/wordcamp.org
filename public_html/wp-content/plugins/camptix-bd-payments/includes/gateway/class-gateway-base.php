@@ -112,16 +112,6 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 		<?php
 	}
 
-	/**
-	 * Sanitize a payment request value
-	 *
-	 * @param mixed $value Value to sanitize.
-	 *
-	 * @return string
-	 */
-	protected function sanitize_payment_value( $value ) {
-		return sanitize_text_field( trim( (string) $value ) );
-	}
 
 	/**
 	 * Check if the gateway is enabled
@@ -147,28 +137,18 @@ abstract class Base_Gateway extends CampTix_Payment_Method {
 	/**
 	 * Get all attendees for a CampTix payment token.
 	 *
+	 * Delegates to CampTix core's get_attendees_from_payment_token() instead of
+	 * issuing a custom WP_Query, so attendee lookup stays in sync with any future
+	 * changes CampTix core makes to that query (caching, post-status filters, etc.).
+	 *
 	 * @param string $payment_token CampTix payment token.
 	 *
 	 * @return array
 	 */
 	protected function get_attendees_by_payment_token( $payment_token ) {
-		return get_posts(
-			array(
-				'posts_per_page' => -1,
-				'post_type'      => 'tix_attendee',
-				'post_status'    => 'any',
-				'orderby'        => 'ID',
-				'order'          => 'ASC',
-				'meta_query'     => array(
-					array(
-						'key'     => 'tix_payment_token',
-						'compare' => '=',
-						'value'   => $payment_token,
-						'type'    => 'CHAR',
-					),
-				),
-			)
-		);
+		global $camptix;
+
+		return $camptix->get_attendees_from_payment_token( $payment_token );
 	}
 
 	/**

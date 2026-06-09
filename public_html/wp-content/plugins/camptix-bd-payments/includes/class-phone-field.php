@@ -29,7 +29,7 @@ class Phone_Field {
 		add_filter( 'camptix_form_edit_attendee_custom_error_flags', array( $this, 'edit_attendee_info_form_error' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'export_attendee_data_column' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_column_value', array( $this, 'export_attendee_data_value' ), 10, 3 );
-		add_filter( 'camptix_form_register_custom_error_flags', array( $this, 'validate_phone_on_register' ), 10, 1 );
+		add_action( 'camptix_checkout_start', array( $this, 'validate_phone_on_checkout' ), 10, 2 );
 		add_action( 'camptix_form_attendee_info_errors', array( $this, 'render_phone_errors' ), 10, 1 );
 	}
 
@@ -164,34 +164,40 @@ class Phone_Field {
 
 
 	/**
-	 * Validate phone number during registration
+	 * Validate phone number during checkout.
 	 *
-	 * @param array $error_flags Current error flags.
+	 * Fires on the `camptix_checkout_start` action, which passes the submitted
+	 * attendee info and the current order. Errors are flagged via CampTix's own
+	 * error_flag() API so they surface in `camptix_form_attendee_info_errors`.
 	 *
-	 * @return array
+	 * @param array $attendee_info Submitted attendee information.
+	 * @param array $order         Current CampTix order.
+	 *
+	 * @return void
 	 */
-	public function validate_phone_on_register( $error_flags ) {
-		if ( ! $this->selected_gateway_requires_phone() ) {
-			return $error_flags;
-		}
+	public function validate_phone_on_checkout( $attendee_info, $order ) {
+		global $camptix;
 
-		$attendee_info = $_POST['tix_attendee_info'] ?? array();
+		if ( ! $this->selected_gateway_requires_phone( $order ) ) {
+			return;
+		}
 
 		foreach ( (array) $attendee_info as $info ) {
 			$phone = sanitize_text_field( $info['phone'] ?? '' );
 
 			if ( empty( $phone ) ) {
-				$error_flags['tix_phone_missing'] = true;
+				$camptix->error_flag( 'tix_phone_missing' );
 			} elseif ( ! $this->is_valid_bd_phone( $phone ) ) {
-				$error_flags['tix_phone_invalid'] = true;
+				$camptix->error_flag( 'tix_phone_invalid' );
 			}
 		}
-
-		return $error_flags;
 	}
 
 	/**
 	 * Render phone validation errors on the attendee info form.
+	 *
+	 * Fires on the `camptix_form_attendee_info_errors` action. CampTix passes
+	 * the current error_flags array so we can output the appropriate messages.
 	 *
 	 * @param array $error_flags Current error flags.
 	 *
@@ -212,22 +218,18 @@ class Phone_Field {
 	/**
 	 * Check if the selected checkout gateway needs a Bangladeshi phone number.
 	 *
+	 * @param array $order Current CampTix order passed from camptix_checkout_start.
+	 *
 	 * @return bool
 	 */
-	private function selected_gateway_requires_phone() {
-		global $camptix;
-
+	private function selected_gateway_requires_phone( $order ) {
 		$payment_method = sanitize_text_field( $_POST['tix_payment_method'] ?? '' );
 
 		if ( ! in_array( $payment_method, array( 'sslcommerz', 'surjopay' ), true ) ) {
 			return false;
 		}
 
-		if ( isset( $camptix->order['total'] ) && (float) $camptix->order['total'] <= 0 ) {
-			return false;
-		}
-
-		return true;
+		return ! empty( $order['total'] ) && (float) $order['total'] > 0;
 	}
 
 	/**

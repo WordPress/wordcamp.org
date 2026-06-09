@@ -360,7 +360,7 @@ class SurjoPay extends Base_Gateway {
 			$camptix->payment_result(
 				$payment_token,
 				CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
-				array( 'transaction_details' => $verified )
+				array( 'transaction_details' => $this->prepare_surjopay_transaction_details( $verified ) )
 			);
 		} else {
 			$this->log(
@@ -450,7 +450,7 @@ class SurjoPay extends Base_Gateway {
 			$this->log(
 				sprintf( 'Surjo Pay: Verification order mismatch for order %s', $order_id ),
 				null,
-				(array) $payment
+				$this->prepare_transaction_for_log( (array) $payment )
 			);
 			return false;
 		}
@@ -462,7 +462,7 @@ class SurjoPay extends Base_Gateway {
 			$this->log(
 				sprintf( 'Surjo Pay: Verification returned sp_code %s', $sp_code ),
 				null,
-				(array) $payment
+				$this->prepare_transaction_for_log( (array) $payment )
 			);
 			return false;
 		}
@@ -477,6 +477,45 @@ class SurjoPay extends Base_Gateway {
 		}
 
 		return $payment;
+	}
+
+	/**
+	 * Prepare a shurjoPay verification response for transaction storage.
+	 *
+	 * The raw verification response can contain sensitive customer details and
+	 * internal API tokens. This method allowlists only the fields that are safe
+	 * to persist in post meta / CampTix logs, then runs the result through the
+	 * base class redactor to strip any remaining sensitive keys.
+	 *
+	 * @param object|array $payment Verification response from shurjoPay.
+	 *
+	 * @return array
+	 */
+	private function prepare_surjopay_transaction_details( $payment ) {
+		$payment = (array) $payment;
+
+		$allowed_keys = array(
+			'order_id',
+			'customer_order_id',
+			'sp_code',
+			'sp_massage',
+			'bank_status',
+			'currency',
+			'amount',
+			'payable_amount',
+			'discount_amount',
+			'disc_percent',
+			'received_amount',
+			'recived_amount',
+			'invoice_no',
+			'method',
+			'date_time',
+		);
+
+		return array_intersect_key(
+			$this->prepare_transaction_for_log( $payment ),
+			array_flip( $allowed_keys )
+		);
 	}
 
 	/**
@@ -506,7 +545,7 @@ class SurjoPay extends Base_Gateway {
 			$GLOBALS['camptix']->payment_result(
 				$payment_token,
 				CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
-				array( 'transaction_details' => $verified ),
+				array( 'transaction_details' => $this->prepare_surjopay_transaction_details( $verified ) ),
 				false
 			);
 		}

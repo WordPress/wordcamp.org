@@ -491,15 +491,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						unset( $retval['Series Event'] );
 					}
 
-					/*
-					 * The "Actual Attendees" field is only able to be set after the event is concluded.
-					 *
-					 * get_post() allows this to target the editor, allowing for report export.
-					 */
-					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
-						unset( $retval['Actual Attendees'] );
-					}
-
 					break;
 
 				case 'all':
@@ -536,15 +527,6 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					if ( ! current_user_can( 'manage_options' ) ) {
 						unset( $retval['Transparency Report Received'] );
 						unset( $retval['Series Event'] );
-					}
-
-					/*
-					 * The "Actual Attendees" field is only able to be set after the event is concluded.
-					 *
-					 * get_post() allows this to target the editor, allowing for report export.
-					 */
-					if ( get_post() && get_post_status() !== 'wcpt-closed' ) {
-						unset( $retval['Actual Attendees'] );
 					}
 
 					$retval = array_merge(
@@ -1084,36 +1066,108 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// The ID of the last site that was created before this rule went into effect, so that we don't apply the rule retroactively.
 			$min_site_id = apply_filters( 'wcpt_require_complete_meta_min_site_id', '2416297' );
 
-			$required_needs_site_fields = $this->get_required_fields( 'needs-site', $post_data_raw['ID'] );
-			$required_scheduled_fields  = $this->get_required_fields( 'scheduled', $post_data_raw['ID'] );
-
 			// Needs Site.
 			if ( 'wcpt-needs-site' == $post_data['post_status'] && absint( $post_data_raw['ID'] ) > $min_site_id ) {
-				foreach ( $required_needs_site_fields as $field ) {
-
-					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
-
-					if ( empty( $value ) || 'null' == $value ) {
-						$post_data['post_status']     = 'wcpt-needs-email';
-						$this->active_admin_notices[] = 1;
-						break;
-					}
-				}
+				$post_data = $this->validate_required_fields_for_status(
+					$post_data,
+					$post_data_raw,
+					'needs-site',
+					'wcpt-needs-email',
+					1
+				);
 			}
 
 			// Scheduled.
 			if ( 'wcpt-scheduled' == $post_data['post_status'] && isset( $post_data_raw['ID'] ) && absint( $post_data_raw['ID'] ) > $min_site_id ) {
-				foreach ( $required_scheduled_fields as $field ) {
-					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have done in `metabox_save`.
-					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
+				$post_data = $this->validate_required_fields_for_status(
+					$post_data,
+					$post_data_raw,
+					'scheduled',
+					'wcpt-needs-schedule',
+					3
+				);
+			}
 
-					if ( empty( $value ) || 'null' == $value ) {
-						$post_data['post_status']     = 'wcpt-needs-schedule';
-						$this->active_admin_notices[] = 3;
-						break;
-					}
+			// Closed.
+			if ( 'wcpt-closed' == $post_data['post_status'] ) {
+				$post_data = $this->validate_closed_status( $post_data, $post_data_raw );
+			}
+
+			return $post_data;
+		}
+
+		/**
+		 * Validate required fields for a specific status transition
+		 *
+		 * @param array  $post_data     Sanitized post data.
+		 * @param array  $post_data_raw Raw post data.
+		 * @param string $status_type   Status type for get_required_fields() ('needs-site', 'scheduled', 'closed').
+		 * @param string $fallback_status Status to revert to if validation fails.
+		 * @param int    $notice_id     Admin notice ID to trigger.
+		 *
+		 * @return array Modified post data.
+		 */
+		private function validate_required_fields_for_status( $post_data, $post_data_raw, $status_type, $fallback_status, $notice_id ) {
+			$required_fields = $this->get_required_fields( $status_type, $post_data_raw['ID'] );
+
+			foreach ( $required_fields as $field ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have been done in `metabox_save`.
+				$value = isset( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ? sanitize_text_field( wp_unslash( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ) : '';
+
+				if ( empty( $value ) || 'null' === $value ) {
+					$post_data['post_status']     = $fallback_status;
+					$this->active_admin_notices[] = $notice_id;
+					break;
 				}
+			}
+
+			return $post_data;
+		}
+
+		/**
+		 * Validate closed status transition with additional End Date check
+		 *
+		 * @param array $post_data     Sanitized post data.
+		 * @param array $post_data_raw Raw post data.
+		 *
+		 * @return array Modified post data.
+		 */
+		private function validate_closed_status( $post_data, $post_data_raw ) {
+			if ( empty( $post_data_raw['ID'] ) ) {
+				return $post_data;
+			}
+
+			$post = get_post( $post_data_raw['ID'] );
+			if ( ! $post ) {
+				return $post_data;
+			}
+
+			// Get the old status to check if this is an actual transition.
+			$old_status = $post->post_status;
+			if ( 'wcpt-closed' === $old_status ) {
+				// Already closed, allow saving other changes.
+				return $post_data;
+			}
+
+			$required_closed_fields = $this->get_required_fields( 'closed', $post_data_raw['ID'] );
+			$missing_fields         = array();
+
+			foreach ( $required_closed_fields as $field ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce check would have been done in `metabox_save`.
+				$value = isset( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ? sanitize_text_field( wp_unslash( $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ) ) : '';
+
+				if ( empty( $value ) || 'null' === $value ) {
+					$missing_fields[] = $field;
+				}
+			}
+
+			// If there are validation errors, prevent the status change.
+			if ( ! empty( $missing_fields ) ) {
+				$post_data['post_status']     = $old_status;
+				$this->active_admin_notices[] = 5;
+
+				// Store missing fields for the error message.
+				set_transient( 'wcpt_missing_fields_' . $post_data_raw['ID'], $missing_fields, 60 );
 			}
 
 			return $post_data;
@@ -1122,7 +1176,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		/**
 		 * Get a list of fields required to move to a certain post status
 		 *
-		 * @param string $status 'needs-site' | 'scheduled' | 'any'.
+		 * @param string $status 'needs-site' | 'scheduled' | 'closed' | 'any'.
 		 *
 		 * @return array
 		 */
@@ -1156,6 +1210,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			// Required because the Events Widget needs a physical address in order to show events.
 			$scheduled[] = self::get_address_key( $post_id );
 
+			$closed = array(
+				'Actual Attendees',
+			);
+
 			switch ( $status ) {
 				case 'needs-site':
 					$required_fields = $needs_site;
@@ -1163,6 +1221,10 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				case 'scheduled':
 					$required_fields = $scheduled;
+					break;
+
+				case 'closed':
+					$required_fields = $closed;
 					break;
 
 				case 'any':
@@ -1235,6 +1297,25 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				);
 			}
 
+			// Protect "Actual Attendees" field until the event has ended.
+			$post = get_post();
+			if ( $post && WCPT_POST_TYPE_ID === $post->post_type ) {
+				$end_date = get_post_meta( $post->ID, 'End Date (YYYY-mm-dd)', true );
+
+				// If no end date is set, use the start date.
+				if ( empty( $end_date ) ) {
+					$end_date = get_post_meta( $post->ID, 'Start Date (YYYY-mm-dd)', true );
+				}
+
+				// If we have an end date and it hasn't passed yet, protect the field.
+				if ( ! empty( $end_date ) ) {
+					$end_date_at_midnight = strtotime( '23:59:59', $end_date );
+					if ( $end_date_at_midnight > time() ) {
+						$protected_fields[] = 'Actual Attendees';
+					}
+				}
+			}
+
 			return $protected_fields;
 		}
 
@@ -1295,8 +1376,35 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 						self::get_address_key( $post->ID )
 					),
 				),
+
+				5 => array(
+					'type'   => 'error',
+					'notice' => $this->get_close_validation_notice( $post->ID ),
+				),
 			);
 
+		}
+
+		/**
+		 * Get the validation notice for closing a WordCamp
+		 *
+		 * @param int $post_id The post ID.
+		 *
+		 * @return string
+		 */
+		private function get_close_validation_notice( $post_id ) {
+			$missing_fields = get_transient( 'wcpt_missing_fields_' . $post_id );
+
+			if ( ! empty( $missing_fields ) ) {
+				delete_transient( 'wcpt_missing_fields_' . $post_id );
+
+				return sprintf(
+					__( 'This WordCamp cannot be closed. The following required fields must be filled in: %s.', 'wordcamporg' ),
+					implode( ', ', $missing_fields )
+				);
+			}
+
+			return __( 'This WordCamp cannot be closed at this time.', 'wordcamporg' );
 		}
 
 		/**
@@ -1663,6 +1771,12 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 	global $post_id;
 
 	$required_fields = WordCamp_Admin::get_required_fields( 'any', $post_id );
+	$protected_fields = WordCamp_Admin::get_protected_fields();
+
+	// Add "Actual Attendees" to required fields when it's not protected (editable).
+	if ( ! in_array( 'Actual Attendees', $protected_fields, true ) && isset( $meta_keys['Actual Attendees'] ) ) {
+		$required_fields[] = 'Actual Attendees';
+	}
 
 	// @todo When you refactor meta_keys() to support changing labels -- see note in meta_keys() -- also make it support these notes.
 	$messages = array(
@@ -1677,6 +1791,39 @@ function wcpt_metabox( $meta_keys, $metabox ) {
 		'Hide from Event Feeds'           => 'Do not show in the public schedule and dashboard feeds, the site is still publicly accessible.',
 		'Series Event'                    => '(Campus Connect only) Event is part of a multi-venue or multi-session series (e.g., workshops held across several campuses)',
 	);
+
+	// Update the Actual Attendees field message based on whether it's protected and CampTix data.
+	$post = get_post( $post_id );
+	if ( $post && isset( $meta_keys['Actual Attendees'] ) ) {
+		$is_protected = in_array( 'Actual Attendees', $protected_fields, true );
+
+		if ( $is_protected ) {
+			// Field is readonly - show message that it can't be set until after event concludes.
+			$messages['Actual Attendees'] = 'This field cannot be set until after the event concludes.';
+		}
+
+		// Add CampTix ticket sales information regardless of protected status.
+		$site_id = get_wordcamp_site_id( $post );
+		if ( $site_id ) {
+			$camptix_stats      = get_blog_option( $site_id, 'camptix_stats', array() );
+			$attendees_attended = $camptix_stats['attended'] ?? 0;
+			$tickets_sold       = $camptix_stats['sold'] ?? 0;
+
+			if ( $attendees_attended > 0 || $tickets_sold > 0 ) {
+				$camptix_info = sprintf(
+					'CampTix: %d attended, %d sold.',
+					$attendees_attended,
+					$tickets_sold
+				);
+
+				if ( $is_protected ) {
+					$messages['Actual Attendees'] .= ' ' . $camptix_info;
+				} else {
+					$messages['Actual Attendees'] = 'Number of attendees who actually attended the event. ' . $camptix_info;
+				}
+			}
+		}
+	}
 
 	if ( 'wcpt_venue_info' === $metabox ) {
 		$address_instructions = 'Please include the city, state/province and country.';

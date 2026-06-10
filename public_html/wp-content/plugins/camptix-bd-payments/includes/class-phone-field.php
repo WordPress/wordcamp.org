@@ -29,6 +29,8 @@ class Phone_Field {
 		add_filter( 'camptix_form_edit_attendee_custom_error_flags', array( $this, 'edit_attendee_info_form_error' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_extra_columns', array( $this, 'export_attendee_data_column' ), 10, 1 );
 		add_filter( 'camptix_attendee_report_column_value', array( $this, 'export_attendee_data_value' ), 10, 3 );
+		add_action( 'camptix_checkout_start', array( $this, 'validate_phone_on_checkout' ), 10, 2 );
+		add_action( 'camptix_form_attendee_info_errors', array( $this, 'render_phone_errors' ), 10, 1 );
 	}
 
 	/**
@@ -153,12 +155,115 @@ class Phone_Field {
 		// Phone.
 		if ( isset( $_POST['tix_attendee_save'] ) ) {
 			if ( empty( $_POST['tix_ticket_info']['phone'] ) ) {
-				// $camptix->error( __( 'Please fill in all required fields.', 'camptix-indian-payments' ) );
 				$_POST['tix_ticket_info']['phone'] = get_post_meta( $attendee->ID, 'tix_phone', true );
+			} else {
+				$_POST['tix_ticket_info']['phone'] = sanitize_text_field( $_POST['tix_ticket_info']['phone'] );
 			}
 		}
 	}
 
+
+	/**
+	 * Validate phone number during checkout.
+	 *
+	 * Fires on the `camptix_checkout_start` action, which passes the submitted
+	 * attendee info and the current order. Errors are flagged via CampTix's own
+	 * error_flag() API so they surface in `camptix_form_attendee_info_errors`.
+	 *
+	 * @param array $attendee_info Submitted attendee information.
+	 * @param array $order         Current CampTix order.
+	 *
+	 * @return void
+	 */
+	public function validate_phone_on_checkout( $attendee_info, $order ) {
+		global $camptix;
+
+		if ( ! $this->selected_gateway_requires_phone( $order ) ) {
+			return;
+		}
+
+		foreach ( (array) $attendee_info as $info ) {
+			$phone = sanitize_text_field( $info['phone'] ?? '' );
+
+			if ( empty( $phone ) ) {
+				$camptix->error_flag( 'tix_phone_missing' );
+			} elseif ( ! $this->is_valid_bd_phone( $phone ) ) {
+				$camptix->error_flag( 'tix_phone_invalid' );
+			}
+		}
+	}
+
+	/**
+	 * Render phone validation errors on the attendee info form.
+	 *
+	 * Fires on the `camptix_form_attendee_info_errors` action. CampTix passes
+	 * the current error_flags array so we can output the appropriate messages.
+	 *
+	 * @param array $error_flags Current error flags.
+	 *
+	 * @return void
+	 */
+	public function render_phone_errors( $error_flags ) {
+		global $camptix;
+
+		if ( isset( $error_flags['tix_phone_missing'] ) ) {
+			$camptix->error( __( 'Please enter a phone number for Bangladeshi payment processing.', 'bd-payments-camptix' ) );
+		}
+
+		if ( isset( $error_flags['tix_phone_invalid'] ) ) {
+			$camptix->error( __( 'Please enter a valid Bangladeshi phone number.', 'bd-payments-camptix' ) );
+		}
+	}
+
+	/**
+	 * Check if the selected checkout gateway needs a Bangladeshi phone number.
+	 *
+	 * @param array $order Current CampTix order passed from camptix_checkout_start.
+	 *
+	 * @return bool
+	 */
+	private function selected_gateway_requires_phone( $order ) {
+		$payment_method = sanitize_text_field( $_POST['tix_payment_method'] ?? '' );
+
+		if ( ! in_array( $payment_method, array( 'sslcommerz', 'surjopay' ), true ) ) {
+			return false;
+		}
+
+		return ! empty( $order['total'] ) && (float) $order['total'] > 0;
+	}
+
+	/**
+	 * Validate Bangladeshi phone number format
+	 *
+	 * Accepts:
+	 * - 01XXXXXXXXX (11 digits, local format)
+	 * - +8801XXXXXXXXX (14 digits, international)
+	 * - 8801XXXXXXXXX (13 digits, international without +)
+	 *
+	 * @param string $phone Phone number to validate.
+	 *
+	 * @return bool
+	 */
+	private function is_valid_bd_phone( $phone ) {
+		$cleaned = preg_replace( '/[\s\-\(\)]/', '', $phone );
+
+		// Local format: 01XXXXXXXXX (11 digits).
+		if ( preg_match( '/^01[3-9]\d{8}$/', $cleaned ) ) {
+			return true;
+		}
+
+		// International format: +8801XXXXXXXXX (14 chars).
+		if ( preg_match( '/^\+8801[3-9]\d{8}$/', $cleaned ) ) {
+			return true;
+		}
+
+		// International without +: 8801XXXXXXXXX (13 digits).
+		if ( preg_match( '/^8801[3-9]\d{8}$/', $cleaned ) ) {
+			return true;
+		}
+
+		return false;
+	}
 
 	/**
 	 * Save edited attendee information

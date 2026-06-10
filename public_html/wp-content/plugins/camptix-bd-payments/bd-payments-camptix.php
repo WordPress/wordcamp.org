@@ -2,10 +2,8 @@
 /**
  * Plugin Name: Camptix BD Payments
  * Description: Bangladeshi payment gateways for CampTix
- * Plugin URI: https://github.com/tareq1988/camptix-bd-payments
- * Author: Tareq Hasan
- * Author URI: https://tareq.co
- * Version: 1.3
+ * Author: Tareq Hasan & Nazmul Hosen
+ * Version: 1.4
  * License: GPL2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: bd-payments-camptix
@@ -24,6 +22,7 @@ class CampTix_BD_Gateways {
 	public function __construct() {
 		add_action( 'plugins_loaded', [ $this, 'init_plugin' ] );
 		add_action( 'camptix_load_addons', [ $this, 'load_addons' ] );
+		add_filter( 'camptix_supported_currencies', [ $this, 'add_supported_currencies' ] );
 	}
 
 	/**
@@ -47,7 +46,9 @@ class CampTix_BD_Gateways {
 		}
 
 		require_once __DIR__ . '/includes/class-phone-field.php';
+		require_once __DIR__ . '/includes/gateway/class-gateway-base.php';
 		require_once __DIR__ . '/includes/gateway/class-gateway-sslcommerz.php';
+		require_once __DIR__ . '/includes/gateway/class-gateway-surjopay.php';
 	}
 
 	/**
@@ -57,7 +58,25 @@ class CampTix_BD_Gateways {
 	 */
 	public function load_addons() {
 		camptix_register_addon( '\CamptixBD\Gateway\SSLCommerz' );
+		camptix_register_addon( '\CamptixBD\Gateway\SurjoPay' );
 		camptix_register_addon( '\CamptixBD\Phone_Field' );
+	}
+
+	/**
+	 * Add Bangladeshi payment currencies while the plugin is active.
+	 *
+	 * CampTix normally only exposes currencies for enabled payment methods. That
+	 * creates a setup deadlock for BDT-only gateways, because the payment methods
+	 * cannot be enabled while the current currency is USD.
+	 *
+	 * @param array $currencies Supported currency codes.
+	 *
+	 * @return array
+	 */
+	public function add_supported_currencies( $currencies ) {
+		$currencies[] = 'BDT';
+
+		return array_unique( $currencies );
 	}
 }
 

@@ -45,7 +45,15 @@ class SurjoPay extends Base_Gateway {
 	 * Initialize hooks when gateway is enabled
 	 */
 	public function camptix_init() {
-		$this->options = $this->get_payment_options();
+		$this->options = array_merge(
+			[
+				'username' => '',
+				'password' => '',
+				'prefix'   => 'WC',
+				'sandbox'  => true,
+			],
+			$this->get_payment_options()
+		);
 		$this->setup_api_urls();
 
 		if ( ! $this->gateway_enabled() ) {

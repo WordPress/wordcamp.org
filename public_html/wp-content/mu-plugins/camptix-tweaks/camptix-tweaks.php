@@ -577,6 +577,7 @@ function load_addons( $addons ) {
 	}
 
 	$addons['track-attendance'] = $camptix->get_default_addon_path( 'track-attendance.php' );
+	$addons['qr-check-in']      = $camptix->get_default_addon_path( 'qr-check-in.php' );
 
 	return $addons;
 }

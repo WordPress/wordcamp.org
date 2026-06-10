@@ -236,7 +236,8 @@
 	"require": {
 		"adhocore/jwt": "^1.0",
 		"scssphp/scssphp": "^2.1.0",
-		"wporg/wporg-parent-2021": "dev-build"
+		"wporg/wporg-parent-2021": "dev-build",
+		"chillerlan/php-qrcode": "^5"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",

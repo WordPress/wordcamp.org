@@ -76,7 +76,7 @@ function redact_keys( & $data ) {
 	);
 
 	$redacted_keys_fuzzy = array(
-		'password', 'nonce', 'apikey', 'api_key', 'secret',
+		'password', 'nonce', 'apikey', 'api_key', 'secret', 'jwt',
 	);
 
 	// Normalize to avoid human error.

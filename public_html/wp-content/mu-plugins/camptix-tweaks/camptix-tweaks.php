@@ -151,6 +151,10 @@ function is_camptix_tickets_page( $post ) {
 		return false;
 	}
 
+	if ( false === strpos( $post->post_content, 'camptix' ) ) {
+		return false;
+	}
+
 	return has_shortcode( $post->post_content, 'camptix' ) || has_block( 'wordcamp/camptix', $post->post_content );
 }
 

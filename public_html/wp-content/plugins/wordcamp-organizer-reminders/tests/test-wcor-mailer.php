@@ -183,6 +183,30 @@ class Test_WCOR_Mailer extends Database_TestCase {
 	}
 
 	/**
+	 * Test that the Campus Connect "Needs Orientation" trigger sends its reminder.
+	 *
+	 * @covers WCOR_Mailer::send_trigger_cc_needs_orientation
+	 */
+	public function test_cc_needs_orientation_trigger_message_sent() {
+		update_post_meta( self::$triggered_reminder_post_id, 'wcor_which_trigger', 'wcor_cc_needs_orientation' );
+
+		$wordcamp = get_post( self::$wordcamp_dayton_post_id );
+
+		$this->assertSame( '', $wordcamp->wcor_sent_email_ids );
+
+		do_action( 'wcpt_cc_needs_orientation', $wordcamp );
+
+		$this->assert_mail_succeeded(
+			'dayton@wordcamp.org',
+			'WordCamp Dayton has been added to the final schedule',
+			"<p>Huzzah! A new WordCamp is coming soon to Dayton, Ohio, USA! The lead organizer is janedoe, and the venue is at:</p>\n<p>3640 Colonel Glenn Hwy, Dayton, OH, US</p>\n"
+		);
+
+		$this->assertIsArray( $wordcamp->wcor_sent_email_ids );
+		$this->assertContains( self::$triggered_reminder_post_id, $wordcamp->wcor_sent_email_ids );
+	}
+
+	/**
 	 * Test that timed messages are sent.
 	 *
 	 * @dataProvider data_timed_messages_sent

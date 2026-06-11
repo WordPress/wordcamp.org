@@ -941,9 +941,13 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				do_action( 'wcpt_approved_for_pre_planning', $post );
 			} elseif ( 'wcpt-needs-schedule' == $old_status && 'wcpt-scheduled' == $new_status ) {
 				do_action( 'wcpt_added_to_final_schedule', $post );
+			} elseif ( 'wcpt-needs-orientati' === $new_status
+				&& 'campusconnect' === get_post_meta( $post->ID, 'event_subtype', true ) ) {
+				// Fires when a Campus Connect application transitions to Needs Orientation.
+				// Uses a dedicated action to avoid triggering the non-CC hooks that listen
+				// to wcpt_approved_for_pre_planning (e.g. add_organizer_to_central).
+				do_action( 'wcpt_cc_needs_orientation', $post );
 			}
-
-			// todo add new triggers - which ones?
 		}
 
 

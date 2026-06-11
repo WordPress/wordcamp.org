@@ -75,7 +75,14 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		self::$coupons   = array();
 		self::$attendees = array();
 
-		unset( $_GET['post_type'], $_GET['s'], $_GET['tix_coupon_id'] );
+		unset(
+			$_GET['post_type'],
+			$_GET['s'],
+			$_GET['tix_coupon_id'],
+			$_REQUEST['post_type'],
+			$_REQUEST['s'],
+			$_REQUEST['tix_coupon_id']
+		);
 
 		parent::tear_down();
 	}
@@ -462,36 +469,39 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Verify old coupon search URLs are rewritten to the coupon filter.
+	 * Verify old coupon search args are rewritten to the coupon filter.
 	 */
-	public function test_old_coupon_search_redirect_url_uses_coupon_filter() {
+	public function test_old_coupon_search_query_args_are_rewritten_to_coupon_filter() {
 		$coupon_id = $this->create_coupon( array( 'code' => 'EARLYBIRD' ) );
 
-		$_GET['post_type'] = 'tix_attendee';
-		$_GET['s']         = 'tix_coupon_id:' . $coupon_id;
+		$_GET['post_type']     = 'tix_attendee';
+		$_GET['s']             = 'tix_coupon_id:' . $coupon_id;
+		$_REQUEST['post_type'] = $_GET['post_type'];
+		$_REQUEST['s']         = $_GET['s'];
 
-		$redirect_url = self::$camptix->get_old_attendee_coupon_search_redirect_url(
-			'/wp-admin/edit.php?post_type=tix_attendee&s=tix_coupon_id%3A' . $coupon_id . '&paged=2'
-		);
+		self::$camptix->rewrite_old_attendee_coupon_search_query_args();
 
-		$this->assertStringContainsString( 'post_type=tix_attendee', $redirect_url );
-		$this->assertStringContainsString( 'tix_coupon_id=' . $coupon_id, $redirect_url );
-		$this->assertStringContainsString( 'paged=2', $redirect_url );
-		$this->assertStringNotContainsString( '&s=', $redirect_url );
+		$this->assertSame( (string) $coupon_id, $_GET['tix_coupon_id'] );
+		$this->assertSame( (string) $coupon_id, $_REQUEST['tix_coupon_id'] );
+		$this->assertArrayNotHasKey( 's', $_GET );
+		$this->assertArrayNotHasKey( 's', $_REQUEST );
 	}
 
 	/**
-	 * Verify malformed old coupon search values are ignored.
+	 * Verify malformed old coupon search values are not rewritten.
 	 */
-	public function test_old_coupon_search_redirect_url_ignores_malformed_search() {
-		$_GET['post_type'] = 'tix_attendee';
-		$_GET['s']         = array( 'tix_coupon_id:123' );
+	public function test_old_coupon_search_query_args_ignore_malformed_search() {
+		$_GET['post_type']     = 'tix_attendee';
+		$_GET['s']             = array( 'tix_coupon_id:123' );
+		$_REQUEST['post_type'] = $_GET['post_type'];
+		$_REQUEST['s']         = $_GET['s'];
 
-		$this->assertFalse(
-			self::$camptix->get_old_attendee_coupon_search_redirect_url(
-				'/wp-admin/edit.php?post_type=tix_attendee&s[]=tix_coupon_id%3A123'
-			)
-		);
+		self::$camptix->rewrite_old_attendee_coupon_search_query_args();
+
+		$this->assertArrayNotHasKey( 'tix_coupon_id', $_GET );
+		$this->assertArrayNotHasKey( 'tix_coupon_id', $_REQUEST );
+		$this->assertSame( array( 'tix_coupon_id:123' ), $_GET['s'] );
+		$this->assertSame( array( 'tix_coupon_id:123' ), $_REQUEST['s'] );
 	}
 
 	/**

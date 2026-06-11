@@ -23,9 +23,10 @@
 		"public_html/wp-content/themes/wporg-flagship-landing"
 	],
 	"devDependencies": {
-		"@wordpress/eslint-plugin": "24.1.0",
+		"@wordpress/eslint-plugin": "25.4.0",
 		"@wordpress/jest-preset-default": "12.48.0",
-		"@wordpress/prettier-config": "4.48.0"
+		"@wordpress/prettier-config": "4.48.0",
+		"eslint": "10.4.1"
 	},
 	"browserslist": [
 		"extends @wordpress/browserslist-config"

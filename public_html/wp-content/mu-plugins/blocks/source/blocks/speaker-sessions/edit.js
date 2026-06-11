@@ -24,34 +24,37 @@ import { getSessionDetails, sortSessionByTime } from '../sessions/utils';
 
 export default function ( { attributes, setAttributes, context: { postId } } ) {
 	const { hasSessionDetails, isLink, textAlign } = attributes;
-	const sessions = useSelect( ( select ) => {
-		if ( ! postId ) {
-			return [
-				{
-					id: 1,
-					title: { rendered: 'Session Name' },
-					link: '#',
-					session_date_time: {
-						date: 'November 1, 2023',
-						time: '10:15 am',
+	const sessions = useSelect(
+		( select ) => {
+			if ( ! postId ) {
+				return [
+					{
+						id: 1,
+						title: { rendered: 'Session Name' },
+						link: '#',
+						session_date_time: {
+							date: 'November 1, 2023',
+							time: '10:15 am',
+						},
+						session_track: [],
 					},
-					session_track: [],
-				},
-			];
-		}
+				];
+			}
 
-		const { getEntityRecords } = select( coreStore );
-		const _sessions =
-			getEntityRecords( 'postType', 'wcb_session', {
-				wc_meta_key: '_wcpt_speaker_id',
-				wc_meta_value: postId,
-				_embed: true,
-			} ) || [];
+			const { getEntityRecords } = select( coreStore );
+			const _sessions =
+				getEntityRecords( 'postType', 'wcb_session', {
+					wc_meta_key: '_wcpt_speaker_id',
+					wc_meta_value: postId,
+					_embed: true,
+				} ) || [];
 
-		_sessions.sort( sortSessionByTime );
+			_sessions.sort( sortSessionByTime );
 
-		return _sessions;
-	}, [] );
+			return _sessions;
+		},
+		[ postId ]
+	);
 
 	const blockProps = useBlockProps( {
 		className: classnames( {

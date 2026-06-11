@@ -60,7 +60,7 @@ export default function PostAvatarEdit( {
 			} );
 			return image?.source_url || '';
 		},
-		[ featuredImage ]
+		[ featuredImage, size, urls ]
 	);
 
 	if ( ! url ) {

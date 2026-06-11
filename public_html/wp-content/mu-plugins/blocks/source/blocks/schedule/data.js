@@ -35,7 +35,7 @@ export function useScheduleData( attributes ) {
 
 	const scheduleData = useSelect(
 		( select ) => fetchScheduleData( select, editorContext ),
-		[ attributes.__isStylesPreview ]
+		[ editorContext ]
 	);
 
 	scheduleData.loading = false;

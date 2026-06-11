@@ -357,7 +357,7 @@ abstract class CampTix_Payment_Method extends CampTix_Addon {
 			'payment_' . $this->id,
 			array(
 				'name' => $this->settings_field_name_attr( $option_name ),
-				'value' => $this->options[ $option_name ],
+				'value' => $this->options[ $option_name ] ?? '',
 				'description' => $description,
 			)
 		);

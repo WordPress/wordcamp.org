@@ -972,35 +972,18 @@ class CampTix_Plugin {
 	 * @return int Coupon post ID when applicable, otherwise 0.
 	 */
 	function get_old_attendee_coupon_search_filter_id() {
-		if ( empty( $_GET['post_type'] ) || ! isset( $_GET['s'] ) ) {
-			return 0;
-		}
+		$search = $_GET['s'] ?? '';
 
-		$post_type = wp_unslash( $_GET['post_type'] );
-		if ( ! is_scalar( $post_type ) || 'tix_attendee' !== (string) $post_type ) {
-			return 0;
-		}
-
-		$search = wp_unslash( $_GET['s'] );
-		if ( ! is_scalar( $search ) ) {
-			return 0;
-		}
-
-		if ( ! preg_match( '/^tix_coupon_id:(\d+)$/', (string) $search, $matches ) ) {
+		if (
+			'tix_attendee' !== ( $_GET['post_type'] ?? '' ) ||
+			! is_scalar( $search ) ||
+			! preg_match( '/^tix_coupon_id:(\d+)$/', (string) $search, $matches )
+		) {
 			return 0;
 		}
 
 		$coupon_id = absint( $matches[1] );
-		if ( ! $coupon_id ) {
-			return 0;
-		}
-
-		$coupon = get_post( $coupon_id );
-		if ( ! $coupon || 'tix_coupon' !== $coupon->post_type ) {
-			return 0;
-		}
-
-		return $coupon_id;
+		return 'tix_coupon' === get_post_type( $coupon_id ) ? $coupon_id : 0;
 	}
 
 	/**

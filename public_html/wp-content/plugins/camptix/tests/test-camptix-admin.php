@@ -422,7 +422,10 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$output = ob_get_clean();
 
 		$this->assertStringContainsString( 'name="tix_coupon_id"', $output );
-		$this->assertStringContainsString( 'value="' . $coupon_id . '" selected=', $output );
+		$this->assertMatchesRegularExpression(
+			'/<option[^>]+value="' . preg_quote( (string) $coupon_id, '/' ) . '"[^>]+selected=[\'"]selected[\'"]/',
+			$output
+		);
 		$this->assertStringContainsString( 'EARLYBIRD', $output );
 	}
 

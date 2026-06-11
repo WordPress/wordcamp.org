@@ -50,6 +50,8 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		self::set_protected_property( 'tickets', array() );
 		self::set_protected_property( 'tickets_selected', array() );
 		self::set_protected_property( 'tickets_selected_count', 0 );
+		self::set_protected_property( 'form_data', array() );
+		self::set_protected_property( 'order', array() );
 		self::set_protected_property( 'coupon', null );
 		self::set_protected_property( 'reservation', null );
 		self::set_protected_property( 'did_template_redirect', false );
@@ -395,6 +397,95 @@ class Test_CampTix_Block extends WP_UnitTestCase {
 		list( $ticket_id, $output ) = $this->render_form_start_for_max_tickets_per_order( 999 );
 
 		$this->assertEquals( 10, $this->get_max_quantity_option_value( $output, $ticket_id ) );
+	}
+
+	/**
+	 * Test that verify_order applies the block-specific maxTicketsPerOrder value.
+	 */
+	public function test_verify_order_uses_block_max_tickets_per_order() {
+		$ticket_id = $this->create_ticket( 'Test Ticket', 10.00 );
+
+		self::$camptix->block_attributes = array(
+			'maxTicketsPerOrder' => 2,
+		);
+
+		$order = array(
+			'items' => array(
+				array(
+					'id'          => $ticket_id,
+					'name'        => 'Test Ticket',
+					'description' => '',
+					'quantity'    => 5,
+					'price'       => 10.00,
+				),
+			),
+			'total' => 50.00,
+		);
+
+		self::$camptix->verify_order( $order );
+
+		$this->assertArrayHasKey( 'tickets_excess', self::$camptix->error_flags );
+		$this->assertSame( 2, $order['items'][0]['quantity'] );
+		$this->assertSame( 20.00, $order['total'] );
+	}
+
+	/**
+	 * Test that checkout rejects attendee rows that exceed selected quantities.
+	 */
+	public function test_checkout_rejects_extra_attendee_rows() {
+		$ticket_id = $this->create_ticket( 'Test Ticket', 0.00 );
+
+		$ticket                       = get_post( $ticket_id );
+		$ticket->tix_price            = 0.00;
+		$ticket->tix_remaining        = 50;
+		$ticket->tix_coupon_applied   = false;
+		$ticket->tix_discounted_price = 0.00;
+
+		self::set_protected_property( 'tickets', array( $ticket_id => $ticket ) );
+		self::set_protected_property( 'tickets_selected', array( $ticket_id => 1 ) );
+		self::set_protected_property(
+			'order',
+			array(
+				'items' => array(
+					array(
+						'id'          => $ticket_id,
+						'name'        => 'Test Ticket',
+						'description' => '',
+						'quantity'    => 1,
+						'price'       => 0.00,
+					),
+				),
+				'total' => 0.00,
+			)
+		);
+
+		$_GET['tix_action'] = 'checkout';
+		$_POST              = array(
+			'tix_attendee_info' => array(
+				1 => array(
+					'ticket_id'  => $ticket_id,
+					'first_name' => 'Ada',
+					'last_name'  => 'Lovelace',
+					'email'      => 'ada@example.test',
+				),
+				2 => array(
+					'ticket_id'  => $ticket_id,
+					'first_name' => 'Grace',
+					'last_name'  => 'Hopper',
+					'email'      => 'grace@example.test',
+				),
+			),
+			'tix_receipt_email' => 1,
+		);
+		self::set_protected_property( 'form_data', $_POST );
+
+		$output = self::$camptix->form_checkout();
+
+		$this->assertArrayHasKey( 'attendee_info_mismatch', self::$camptix->error_flags );
+		$this->assertStringContainsString( 'The attendee information submitted does not match the selected tickets.', $output );
+
+		$_GET  = array();
+		$_POST = array();
 	}
 
 	/**

@@ -17,6 +17,16 @@ import {
 
 const blockData = window.WordCampBlocks?.camptix || {};
 
+function clampMaxTicketsPerOrder( value ) {
+	const parsedValue = Number( value );
+
+	if ( ! Number.isFinite( parsedValue ) ) {
+		return 10;
+	}
+
+	return Math.max( 1, Math.min( 10, Math.trunc( parsedValue ) ) );
+}
+
 export default function CamptixEdit( { attributes, setAttributes } ) {
 	const {
 		ticketIds, maxTicketsPerOrder, coupon, noTicketsMessage, eventClosedMessage,
@@ -25,9 +35,11 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 	const blockProps = useBlockProps();
 	const allTickets = blockData.tickets || [];
 	const hasCoupons = blockData.hasCoupons || false;
+	const selectedTicketIds = Array.isArray( ticketIds ) ? ticketIds : [];
+	const previewMaxTicketsPerOrder = clampMaxTicketsPerOrder( maxTicketsPerOrder );
 
-	const displayTickets = ticketIds.length > 0
-		? allTickets.filter( ( ticket ) => ticketIds.includes( ticket.id ) )
+	const displayTickets = selectedTicketIds.length > 0
+		? allTickets.filter( ( ticket ) => selectedTicketIds.includes( ticket.id ) )
 		: allTickets;
 
 	/**
@@ -38,9 +50,9 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 	 */
 	function toggleTicket( id, checked ) {
 		if ( checked ) {
-			setAttributes( { ticketIds: [ ...ticketIds, id ] } );
+			setAttributes( { ticketIds: [ ...selectedTicketIds, id ] } );
 		} else {
-			setAttributes( { ticketIds: ticketIds.filter( ( ticketId ) => ticketId !== id ) } );
+			setAttributes( { ticketIds: selectedTicketIds.filter( ( ticketId ) => ticketId !== id ) } );
 		}
 	}
 
@@ -56,7 +68,7 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 							<CheckboxControl
 								key={ ticket.id }
 								label={ `${ ticket.title } (${ ticket.formattedPrice })` }
-								checked={ ticketIds.includes( ticket.id ) }
+								checked={ selectedTicketIds.includes( ticket.id ) }
 								onChange={ ( checked ) => toggleTicket( ticket.id, checked ) }
 							/>
 						) ) }
@@ -65,8 +77,8 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 				<PanelBody title={ __( 'Settings', 'wordcamporg' ) }>
 					<RangeControl
 						label={ __( 'Max tickets per order', 'wordcamporg' ) }
-						value={ maxTicketsPerOrder }
-						onChange={ ( value ) => setAttributes( { maxTicketsPerOrder: value } ) }
+						value={ previewMaxTicketsPerOrder }
+						onChange={ ( value ) => setAttributes( { maxTicketsPerOrder: clampMaxTicketsPerOrder( value ) } ) }
 						min={ 1 }
 						max={ 10 }
 					/>
@@ -145,7 +157,7 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 										) }
 										<td>
 											<select disabled>
-												{ [ ...Array( maxTicketsPerOrder + 1 ).keys() ].map( ( i ) => (
+												{ [ ...Array( previewMaxTicketsPerOrder + 1 ).keys() ].map( ( i ) => (
 													<option key={ i } value={ i }>{ i }</option>
 												) ) }
 											</select>

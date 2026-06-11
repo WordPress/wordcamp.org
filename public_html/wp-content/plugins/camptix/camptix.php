@@ -4114,8 +4114,7 @@ class CampTix_Plugin {
 		$coupon_used_count = 0;
 		$via_reservation = false;
 
-		$default_max = max( 1, min( 10, (int) ( $this->block_attributes['maxTicketsPerOrder'] ?? 10 ) ) );
-		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', $default_max );
+		$max_tickets_per_order = $this->get_max_tickets_per_order();
 
 		// Auto-apply coupon from block attributes.
 		if ( empty( $_REQUEST['tix_coupon'] ) && ! empty( $this->block_attributes['coupon'] ) ) {
@@ -4451,6 +4450,17 @@ class CampTix_Plugin {
 	}
 
 	/**
+	 * Get the maximum number of tickets allowed per order.
+	 *
+	 * @return int Maximum tickets per order.
+	 */
+	protected function get_max_tickets_per_order() {
+		$default_max = max( 1, min( 10, (int) ( $this->block_attributes['maxTicketsPerOrder'] ?? 10 ) ) );
+
+		return apply_filters( 'camptix_max_tickets_per_order', $default_max );
+	}
+
+	/**
 	 * Set the reservation members if we have a valid request
 	 */
 	protected function maybe_set_reservation() {
@@ -4493,8 +4503,7 @@ class CampTix_Plugin {
 	 */
 	function form_start() {
 		$available_tickets = 0;
-		$default_max = max( 1, min( 10, (int) ( $this->block_attributes['maxTicketsPerOrder'] ?? 10 ) ) );
-		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', $default_max );
+		$max_tickets_per_order = $this->get_max_tickets_per_order();
 
 		foreach ( $this->tickets as $ticket ) {
 			if ( $this->is_ticket_valid_for_purchase( $ticket->ID ) ) {
@@ -4512,6 +4521,10 @@ class CampTix_Plugin {
 
 		if ( isset( $this->error_flags['attendee_info_missing'] ) ) {
 			$this->error( __( "It doesn't look like your form submitted any attendee information. Please try again.", 'wordcamporg' ) );
+		}
+
+		if ( isset( $this->error_flags['attendee_info_mismatch'] ) ) {
+			$this->error( __( 'The attendee information submitted does not match the selected tickets. Please review your order and try again.', 'wordcamporg' ) );
 		}
 
 		if ( ! $available_tickets && ! $this->is_wordcamp_closed() ) {
@@ -6273,6 +6286,8 @@ class CampTix_Plugin {
 		}
 
 		do_action( 'camptix_checkout_start', $_POST['tix_attendee_info'], $this->order );
+		$attendee_ticket_counts = array_fill_keys( array_keys( $this->tickets_selected ), 0 );
+
 		foreach( (array) $_POST['tix_attendee_info'] as $i => $attendee_info ) {
 			$attendee = new stdClass;
 
@@ -6281,12 +6296,22 @@ class CampTix_Plugin {
 			$attendee_info = array_map( 'strip_tags', $attendee_info );
 			$attendee_info = array_map( 'trim', $attendee_info );
 
-			if ( ! isset( $attendee_info['ticket_id'] ) || ! array_key_exists( $attendee_info['ticket_id'], $this->tickets_selected ) ) {
+			$ticket_id = isset( $attendee_info['ticket_id'] ) ? absint( $attendee_info['ticket_id'] ) : 0;
+
+			if ( ! $ticket_id || ! array_key_exists( $ticket_id, $this->tickets_selected ) ) {
 				$this->error_flags['no_ticket_id'] = true;
 				continue;
 			}
 
-			$ticket = $this->tickets[ $attendee_info['ticket_id'] ];
+			$attendee_info['ticket_id'] = $ticket_id;
+			$attendee_ticket_counts[ $ticket_id ]++;
+
+			if ( $attendee_ticket_counts[ $ticket_id ] > $this->tickets_selected[ $ticket_id ] ) {
+				$this->error_flags['attendee_info_mismatch'] = true;
+				continue;
+			}
+
+			$ticket = $this->tickets[ $ticket_id ];
 			if ( ! $this->is_ticket_valid_for_purchase( $ticket->ID ) ) {
 				$this->error_flags['tickets_excess'] = true;
 				continue;
@@ -6350,6 +6375,13 @@ class CampTix_Plugin {
 			unset( $attendee, $answers, $questions, $ticket );
 		}
 
+		foreach ( $this->tickets_selected as $ticket_id => $selected_count ) {
+			if ( $attendee_ticket_counts[ $ticket_id ] !== (int) $selected_count ) {
+				$this->error_flags['attendee_info_mismatch'] = true;
+				break;
+			}
+		}
+
 		// @todo maybe check if email is one of the attendees emails
 		if ( isset( $_POST['tix_receipt_email_js'] ) && is_email( $_POST['tix_receipt_email_js'] ) )
 			$receipt_email = wp_unslash( $_POST['tix_receipt_email_js'] );
@@ -6363,6 +6395,10 @@ class CampTix_Plugin {
 		}
 
 		$this->verify_order( $this->order );
+
+		if ( $this->error_flags ) {
+			return $this->form_attendee_info();
+		}
 
 		$reservation_quantity = 0;
 		if ( isset( $this->reservation ) && $this->reservation )
@@ -6481,7 +6517,7 @@ class CampTix_Plugin {
 		$coupon = null;
 		$reservation = null;
 		$via_reservation = false;
-		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
+		$max_tickets_per_order = $this->get_max_tickets_per_order();
 
 		// Let's check the coupon first.
 		if ( ! empty( $order['coupon'] ) ) {

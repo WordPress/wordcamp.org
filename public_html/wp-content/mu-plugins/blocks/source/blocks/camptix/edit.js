@@ -78,7 +78,9 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 					<RangeControl
 						label={ __( 'Max tickets per order', 'wordcamporg' ) }
 						value={ previewMaxTicketsPerOrder }
-						onChange={ ( value ) => setAttributes( { maxTicketsPerOrder: clampMaxTicketsPerOrder( value ) } ) }
+						onChange={ ( value ) => setAttributes( {
+							maxTicketsPerOrder: clampMaxTicketsPerOrder( value ),
+						} ) }
 						min={ 1 }
 						max={ 10 }
 					/>
@@ -157,7 +159,9 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 										) }
 										<td>
 											<select disabled>
-												{ [ ...Array( previewMaxTicketsPerOrder + 1 ).keys() ].map( ( i ) => (
+												{ [ ...Array(
+													previewMaxTicketsPerOrder + 1
+												).keys() ].map( ( i ) => (
 													<option key={ i } value={ i }>{ i }</option>
 												) ) }
 											</select>

@@ -75,6 +75,8 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		self::$coupons   = array();
 		self::$attendees = array();
 
+		unset( $_GET['post_type'], $_GET['s'], $_GET['tix_coupon_id'] );
+
 		parent::tear_down();
 	}
 
@@ -184,6 +186,11 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		}
 		if ( ! empty( $args['coupon_id'] ) ) {
 			update_post_meta( $post_id, 'tix_coupon_id', $args['coupon_id'] );
+
+			$coupon = get_post( $args['coupon_id'] );
+			if ( $coupon ) {
+				update_post_meta( $post_id, 'tix_coupon', $coupon->post_title );
+			}
 		}
 		if ( ! empty( $args['payment_method'] ) ) {
 			update_post_meta( $post_id, 'tix_payment_method', $args['payment_method'] );
@@ -360,6 +367,131 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		$this->assertFalse( self::$camptix->get_coupon_by_code( 12345 ) );
 		$this->assertFalse( self::$camptix->get_coupon_by_code( null ) );
 		$this->assertFalse( self::$camptix->get_coupon_by_code( array( 'code' ) ) );
+	}
+
+	/**
+	 * Verify attendee coupon column links to the coupon filter.
+	 */
+	public function test_attendee_coupon_column_links_to_coupon_filter() {
+		$ticket_id   = $this->create_ticket();
+		$coupon_id   = $this->create_coupon( array( 'code' => 'EARLYBIRD' ) );
+		$attendee_id = $this->create_attendee( $ticket_id, array( 'coupon_id' => $coupon_id ) );
+
+		ob_start();
+		self::$camptix->manage_columns_attendee_action( 'tix_coupon', $attendee_id );
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'tix_coupon_id=' . $coupon_id, $output );
+		$this->assertStringNotContainsString( 's=', $output );
+	}
+
+	/**
+	 * Verify coupon used column links to the coupon filter.
+	 */
+	public function test_coupon_used_column_links_to_coupon_filter() {
+		$ticket_id = $this->create_ticket();
+		$coupon_id = $this->create_coupon( array( 'code' => 'EARLYBIRD' ) );
+		$this->create_attendee( $ticket_id, array( 'coupon_id' => $coupon_id ) );
+
+		ob_start();
+		self::$camptix->manage_columns_coupon_action( 'tix_used', $coupon_id );
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'tix_coupon_id=' . $coupon_id, $output );
+		$this->assertStringNotContainsString( 's=', $output );
+	}
+
+	/**
+	 * Verify the attendee coupon filter dropdown renders coupon names.
+	 */
+	public function test_attendee_coupon_filter_dropdown_renders_coupon_names() {
+		$coupon_id = $this->create_coupon( array( 'code' => 'EARLYBIRD' ) );
+		$_GET['tix_coupon_id'] = (string) $coupon_id;
+
+		set_current_screen( 'edit-tix_attendee' );
+
+		ob_start();
+		self::$camptix->restrict_manage_attendees_by_coupon();
+		$output = ob_get_clean();
+
+		$this->assertStringContainsString( 'name="tix_coupon_id"', $output );
+		$this->assertStringContainsString( 'value="' . $coupon_id . '" selected=', $output );
+		$this->assertStringContainsString( 'EARLYBIRD', $output );
+	}
+
+	/**
+	 * Verify the attendee coupon filter adds a coupon meta query.
+	 */
+	public function test_attendee_coupon_filter_adds_meta_query() {
+		$coupon_id = $this->create_coupon( array( 'code' => 'EARLYBIRD' ) );
+		$_GET['tix_coupon_id'] = (string) $coupon_id;
+
+		$query = new WP_Query();
+		$query->set( 'post_type', 'tix_attendee' );
+
+		set_current_screen( 'edit-tix_attendee' );
+
+		$previous_wp_the_query   = isset( $GLOBALS['wp_the_query'] ) ? $GLOBALS['wp_the_query'] : null;
+		$GLOBALS['wp_the_query'] = $query;
+		self::$camptix->pre_get_posts( $query );
+		$GLOBALS['wp_the_query'] = $previous_wp_the_query;
+
+		$meta_query = $query->get( 'meta_query' );
+		$this->assertSame( 'tix_coupon_id', $meta_query[0]['key'] );
+		$this->assertSame( $coupon_id, $meta_query[0]['value'] );
+		$this->assertSame( '=', $meta_query[0]['compare'] );
+	}
+
+	/**
+	 * Verify malformed coupon filter values are ignored.
+	 */
+	public function test_attendee_coupon_filter_ignores_malformed_value() {
+		$_GET['tix_coupon_id'] = array( 'not-a-coupon' );
+
+		$query = new WP_Query();
+		$query->set( 'post_type', 'tix_attendee' );
+
+		set_current_screen( 'edit-tix_attendee' );
+
+		$previous_wp_the_query   = isset( $GLOBALS['wp_the_query'] ) ? $GLOBALS['wp_the_query'] : null;
+		$GLOBALS['wp_the_query'] = $query;
+		self::$camptix->pre_get_posts( $query );
+		$GLOBALS['wp_the_query'] = $previous_wp_the_query;
+
+		$this->assertEmpty( $query->get( 'meta_query' ) );
+	}
+
+	/**
+	 * Verify old coupon search URLs are rewritten to the coupon filter.
+	 */
+	public function test_old_coupon_search_redirect_url_uses_coupon_filter() {
+		$coupon_id = $this->create_coupon( array( 'code' => 'EARLYBIRD' ) );
+
+		$_GET['post_type'] = 'tix_attendee';
+		$_GET['s']         = 'tix_coupon_id:' . $coupon_id;
+
+		$redirect_url = self::$camptix->get_old_attendee_coupon_search_redirect_url(
+			'/wp-admin/edit.php?post_type=tix_attendee&s=tix_coupon_id%3A' . $coupon_id . '&paged=2'
+		);
+
+		$this->assertStringContainsString( 'post_type=tix_attendee', $redirect_url );
+		$this->assertStringContainsString( 'tix_coupon_id=' . $coupon_id, $redirect_url );
+		$this->assertStringContainsString( 'paged=2', $redirect_url );
+		$this->assertStringNotContainsString( '&s=', $redirect_url );
+	}
+
+	/**
+	 * Verify malformed old coupon search values are ignored.
+	 */
+	public function test_old_coupon_search_redirect_url_ignores_malformed_search() {
+		$_GET['post_type'] = 'tix_attendee';
+		$_GET['s']         = array( 'tix_coupon_id:123' );
+
+		$this->assertFalse(
+			self::$camptix->get_old_attendee_coupon_search_redirect_url(
+				'/wp-admin/edit.php?post_type=tix_attendee&s[]=tix_coupon_id%3A123'
+			)
+		);
 	}
 
 	/**

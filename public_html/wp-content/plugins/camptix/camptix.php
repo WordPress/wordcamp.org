@@ -167,6 +167,8 @@ class CampTix_Plugin {
 
 		// Handle query extras for attendees, tickets, etc.
 		add_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
+		add_action( 'restrict_manage_posts', array( $this, 'restrict_manage_attendees_by_coupon' ) );
+		add_action( 'load-edit.php', array( $this, 'redirect_old_attendee_coupon_search' ) );
 
 		// Used to update stats
 		add_action( 'transition_post_status', array( $this, 'transition_post_status' ), 10, 3 );
@@ -178,7 +180,6 @@ class CampTix_Plugin {
 		add_action( 'camptix_notices', array( $this, 'do_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_notices' ) );
 		add_action( 'admin_notices', array( $this, 'do_admin_errors' ) );
-		add_action( 'admin_notices', array( $this, 'maybe_notice_coupon_search' ) );
 		$this->add_resend_notices();
 
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
@@ -697,7 +698,7 @@ class CampTix_Plugin {
 				if ( $coupon_id ) {
 					$coupon = get_post_meta( $post_id, 'tix_coupon', true );
 					$attendees_url = get_admin_url( 0, '/edit.php?post_type=tix_attendee' );
-					$attendees_url = add_query_arg( 's', 'tix_coupon_id:' . intval( $coupon_id ), $attendees_url );
+					$attendees_url = add_query_arg( 'tix_coupon_id', intval( $coupon_id ), $attendees_url );
 					printf( '<a href="%s">%s</a>', esc_url( $attendees_url ), esc_html( $coupon ) );
 				}
 				break;
@@ -743,7 +744,7 @@ class CampTix_Plugin {
 				break;
 			case 'tix_used':
 				$attendees_url = get_admin_url( 0, '/edit.php?post_type=tix_attendee' );
-				$attendees_url = add_query_arg( 's', 'tix_coupon_id:' . intval( $post_id ), $attendees_url );
+				$attendees_url = add_query_arg( 'tix_coupon_id', intval( $post_id ), $attendees_url );
 				printf( '<a href="%s">%d</a>', esc_url( $attendees_url ), absint( $this->get_used_coupons_count( $post_id ) ) );
 				break;
 			case 'tix_remaining':
@@ -861,6 +862,27 @@ class CampTix_Plugin {
 		if ( ! $query->is_main_query() )
 			return;
 
+		$coupon_id = $this->get_attendee_coupon_filter_id();
+		if ( is_admin() && $coupon_id && $query->get('post_type') == 'tix_attendee' ) {
+			$coupon = get_post( $coupon_id );
+
+			if ( $coupon && 'tix_coupon' == $coupon->post_type ) {
+				$meta_query = $query->get( 'meta_query' );
+				if ( ! is_array( $meta_query ) ) {
+					$meta_query = array();
+				}
+
+				$meta_query[] = array(
+					'key' => 'tix_coupon_id',
+					'value' => $coupon_id,
+					'compare' => '=',
+					'type' => 'CHAR',
+				);
+
+				$query->set( 'meta_query', $meta_query );
+			}
+		}
+
 		// Allow ordering by the purchased ticket id.
 		if ( $query->get('orderby') == 'tix_ticket_id' && $query->get('post_type') == 'tix_attendee' ) {
 			$meta_query = array(
@@ -886,6 +908,107 @@ class CampTix_Plugin {
 
 			$query->set( 'meta_query', $meta_query );
 		}
+	}
+
+	/**
+	 * Render a coupon filter dropdown on the Attendees list table.
+	 */
+	public function restrict_manage_attendees_by_coupon() {
+		$screen = get_current_screen();
+		if ( ! $screen || 'edit-tix_attendee' !== $screen->id ) {
+			return;
+		}
+
+		$coupons = $this->get_all_coupons();
+		if ( empty( $coupons ) ) {
+			return;
+		}
+
+		$selected_coupon_id = $this->get_attendee_coupon_filter_id();
+		?>
+		<select name="tix_coupon_id" id="filter-by-tix-coupon">
+			<option value=""><?php esc_html_e( 'All coupons', 'wordcamporg' ); ?></option>
+			<?php foreach ( $coupons as $coupon ) : ?>
+				<option value="<?php echo esc_attr( $coupon->ID ); ?>" <?php selected( $selected_coupon_id, $coupon->ID ); ?>>
+					<?php echo esc_html( $coupon->post_title ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Return the coupon ID selected in the Attendees list table filter.
+	 *
+	 * @return int Selected coupon post ID, or 0 when absent or malformed.
+	 */
+	function get_attendee_coupon_filter_id() {
+		if ( empty( $_GET['tix_coupon_id'] ) ) {
+			return 0;
+		}
+
+		$coupon_id = wp_unslash( $_GET['tix_coupon_id'] );
+		if ( ! is_scalar( $coupon_id ) ) {
+			return 0;
+		}
+
+		return absint( $coupon_id );
+	}
+
+	/**
+	 * Redirect old attendee coupon search URLs to the coupon filter parameter.
+	 */
+	function redirect_old_attendee_coupon_search() {
+		$redirect_url = $this->get_old_attendee_coupon_search_redirect_url();
+		if ( ! $redirect_url ) {
+			return;
+		}
+
+		wp_safe_redirect( $redirect_url );
+		exit;
+	}
+
+	/**
+	 * Return a new attendee list URL for old tix_coupon_id:<ID> searches.
+	 *
+	 * @param string|null $request_uri Optional request URI. Defaults to the current request.
+	 *
+	 * @return string|false Redirect URL when applicable, otherwise false.
+	 */
+	function get_old_attendee_coupon_search_redirect_url( $request_uri = null ) {
+		if ( empty( $_GET['post_type'] ) || 'tix_attendee' !== $_GET['post_type'] || ! isset( $_GET['s'] ) ) {
+			return false;
+		}
+
+		$search = wp_unslash( $_GET['s'] );
+		if ( ! is_scalar( $search ) ) {
+			return false;
+		}
+
+		if ( ! preg_match( '/^tix_coupon_id:(\d+)$/', (string) $search, $matches ) ) {
+			return false;
+		}
+
+		$coupon_id = absint( $matches[1] );
+		if ( ! $coupon_id ) {
+			return false;
+		}
+
+		$coupon = get_post( $coupon_id );
+		if ( ! $coupon || 'tix_coupon' !== $coupon->post_type ) {
+			return false;
+		}
+
+		if ( null === $request_uri ) {
+			$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		}
+
+		if ( empty( $request_uri ) || ! is_scalar( $request_uri ) ) {
+			return false;
+		}
+
+		$redirect_url = remove_query_arg( 's', (string) $request_uri );
+		return add_query_arg( 'tix_coupon_id', $coupon_id, $redirect_url );
 	}
 
 	/**
@@ -7181,50 +7304,6 @@ class CampTix_Plugin {
 				);
 			}
 		}
-	}
-
-	/**
-	 * Render a friendly notice on the Attendees list when the search query is
-	 * the internal `tix_coupon_id:<ID>` filter used by the Coupon column and
-	 * the Coupons "Used" count. Display-only — the underlying search is
-	 * unchanged.
-	 */
-	function maybe_notice_coupon_search() {
-		global $pagenow;
-
-		if ( 'edit.php' !== $pagenow ) {
-			return;
-		}
-
-		if ( empty( $_GET['post_type'] ) || 'tix_attendee' !== $_GET['post_type'] ) {
-			return;
-		}
-
-		$search = isset( $_GET['s'] ) ? wp_unslash( $_GET['s'] ) : '';
-		if ( ! preg_match( '/^tix_coupon_id:(\d+)$/', $search, $matches ) ) {
-			return;
-		}
-
-		$coupon = get_post( (int) $matches[1] );
-		if ( ! $coupon || 'tix_coupon' !== $coupon->post_type || 'publish' !== $coupon->post_status ) {
-			return;
-		}
-
-		printf(
-			'<div class="notice notice-info"><p>%s</p></div>',
-			wp_kses(
-				sprintf(
-					/* translators: 1: coupon code/title, 2: URL to edit the coupon. */
-					__( 'Showing attendees who used coupon: <strong>%1$s</strong> (<a href="%2$s">edit coupon</a>).', 'wordcamporg' ),
-					esc_html( $coupon->post_title ),
-					esc_url( get_edit_post_link( $coupon->ID ) )
-				),
-				array(
-					'strong' => array(),
-					'a'      => array( 'href' => array() ),
-				)
-			)
-		);
 	}
 
 	/**

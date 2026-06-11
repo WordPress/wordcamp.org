@@ -1,14 +1,14 @@
-@use "schedule-layout" as *;
+@use "schedule-layout" as layout;
 
 .wordcamp-schedule__time-slot-header,
 .editor-styles-wrapper h3.wordcamp-schedule__time-slot-header,
 .wordcamp-schedule__session {
 	padding: 14px;
 	font-size: 14px;
-	border: 1px solid $color__grid-border;
+	border: 1px solid layout.$color__grid-border;
 	border-top: none;
 
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		position: relative;
 		z-index: 5;
 
@@ -22,7 +22,7 @@
 		 * https://stackoverflow.com/a/43686894/450127
 		 */
 		border: none;
-		box-shadow: 0 0 1px 1px $color__grid-border;
+		box-shadow: 0 0 1px 1px layout.$color__grid-border;
 		margin-bottom: 0;
 	}
 
@@ -35,7 +35,7 @@
 	min-width: 100px;
 	text-align: center;
 	border-bottom: none;
-	background-color: $color__grid-border;
+	background-color: layout.$color__grid-border;
 
 	/* Vertically align the text inside this cell */
 	display: flex;
@@ -45,12 +45,12 @@
 	&.is-empty {
 		display: none; /* Empty time slots are only useful on the grid layout. */
 
-		@include breakpoint-grid-layout {
+		@include layout.breakpoint-grid-layout {
 			display: flex;
 		}
 	}
 
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		grid-column: times;
 		background-color: transparent;
 	}
@@ -61,7 +61,7 @@
 	font-weight: 400;
 	margin: 2em 0 0 0;
 
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		margin-top: 0;
 	}
 }

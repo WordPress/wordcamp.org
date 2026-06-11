@@ -1,4 +1,4 @@
-@use "schedule-layout" as *;
+@use "schedule-layout" as layout;
 
 /*
  * todo
@@ -38,7 +38,7 @@
 .wordcamp-schedule__day {
 	background-color: #fbfbfc;
 
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		display: grid;
 		grid-gap: 1px;
 	}
@@ -73,7 +73,7 @@
 	 * maybe need to switch back to ::after and then use z-index?
 	 * see https://make.wordpress.org/community/2018/10/26/wordcamp-block-schedule/#comment-26821
 	 */
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		display: block;
 		position: sticky;
 		top: 0; /* Remove the gap above in Firefox and maybe other browsers. */
@@ -86,6 +86,6 @@
 		 */
 		margin: 0 -1px 0 -1px;
 		padding: 10px 5px 5px;
-		background-color: rgba(251, 251, 252, 0.92); /* Same as $color__grid-border, but with opacity */
+		background-color: rgba(251, 251, 252, 0.92); /* Same as the grid border color, but with opacity */
 	}
 }

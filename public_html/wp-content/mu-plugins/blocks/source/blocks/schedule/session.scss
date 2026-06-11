@@ -1,4 +1,4 @@
-@use "schedule-layout" as *;
+@use "schedule-layout" as layout;
 
 %overlapping-session {
 	border: 2px solid #cb423b;
@@ -6,7 +6,7 @@
 
 .wordcamp-schedule__session {
 
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		margin: 0;
 
 		&.is-overlapping-another-session {
@@ -86,7 +86,7 @@ dl.wordcamp-schedule__session-category,
 
 .wordcamp-schedule__session-tracks {
 
-	@include breakpoint-grid-layout {
+	@include layout.breakpoint-grid-layout {
 		display: none; /* Once the column headers are visible, this is no longer needed. */
 	}
 }

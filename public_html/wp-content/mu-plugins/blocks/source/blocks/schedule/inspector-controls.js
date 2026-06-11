@@ -59,6 +59,8 @@ export default function ScheduleInspectorControls( {
 		),
 		{
 			a: (
+				// This is populated by createInterpolateElement().
+				// eslint-disable-next-line jsx-a11y/anchor-has-content
 				<a
 					href={ `${ WordCampBlocks.schedule.adminUrl }options-general.php` }
 				/>
@@ -245,6 +247,8 @@ function ChooseSpecificTracks( {
 		),
 		{
 			a: (
+				// This is populated by createInterpolateElement().
+				// eslint-disable-next-line jsx-a11y/anchor-has-content
 				<a
 					href={
 						'/wp-admin/edit-tags.php?taxonomy=wcb_track&post_type=wcb_session'

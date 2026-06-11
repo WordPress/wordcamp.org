@@ -180,15 +180,15 @@
 
 	const notificationButtons = document.querySelectorAll( '.speaker-feedback__notifications input' );
 	if ( notificationButtons.length ) {
-		notificationButtons.forEach( function ( el ) {
-			el.addEventListener( 'click', onNotificationClick, true );
+		notificationButtons.forEach( function ( button ) {
+			button.addEventListener( 'click', onNotificationClick, true );
 		} );
 	}
 
 	const helpfulButtons = document.querySelectorAll( '.speaker-feedback__helpful input' );
 	if ( helpfulButtons.length ) {
-		helpfulButtons.forEach( function ( el ) {
-			el.addEventListener( 'click', onHelpfulClick, true );
+		helpfulButtons.forEach( function ( button ) {
+			button.addEventListener( 'click', onHelpfulClick, true );
 		} );
 	}
 

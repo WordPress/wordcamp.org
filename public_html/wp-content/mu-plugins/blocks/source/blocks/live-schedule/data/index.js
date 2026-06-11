@@ -123,8 +123,8 @@ export function getCurrentSessions( { sessions, tracks } ) {
 
 			// `index` will be -1 if nothing found.
 			if ( index < 0 ) {
-				// If nothing is found for "now", see if anything is coming up next by looking for the earliest thing
-				// that's later than now.
+				// If nothing is found for "now", see if anything is coming up next by looking for the
+				// earliest thing that's later than now.
 				nextIndex = findLastIndex( sessionsInTrack, ( { meta } ) => {
 					const startTimestamp = meta._wcpt_session_time * 1000;
 					return startTimestamp > nowTimestamp;

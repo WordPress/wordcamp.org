@@ -14,10 +14,7 @@ import {
 	InspectorControls,
 	useBlockProps,
 } from '@wordpress/block-editor';
-import {
-	dateI18n,
-	__experimentalGetSettings as getDateSettings,
-} from '@wordpress/date';
+import { dateI18n, getSettings as getDateSettings } from '@wordpress/date';
 import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
 import { useEntityProp } from '@wordpress/core-data';
 

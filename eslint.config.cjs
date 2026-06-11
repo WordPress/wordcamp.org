@@ -48,7 +48,7 @@ module.exports = [
 				'error',
 				{
 					min: 3,
-					exceptions: [ '__', '_n', '_x', 'id', 'a', 'b', 'i', '$' ],
+					exceptions: [ '__', '_n', '_x', 'id', 'a', 'b', 'i', 'q1', 'q2', 'q3', '$' ],
 				},
 			],
 			'jsdoc/require-returns-description': 'off',

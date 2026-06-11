@@ -55,12 +55,15 @@ export function AvatarImage( { className, name, size, url, imageLink } ) {
 	const getSizedURL = ( avatar_url, avatar_size ) => {
 		// 's' is the name of the parameter used by Gravatar.
 
-		return addQueryArgs( avatar_url, { s: avatar_size } );
+		return addQueryArgs( avatar_url, { s: avatar_size } ); // eslint-disable-line id-length
 	};
 
-	/* translators: %s is the person's name. */
 	const alt = name
-		? sprintf( __( 'Avatar of %s', 'wordcamporg' ), name )
+		? sprintf(
+				/* translators: %s: The person's name. */
+				__( 'Avatar of %s', 'wordcamporg' ),
+				name
+		  )
 		: '';
 
 	let image = (

@@ -1,4 +1,4 @@
-$color__grid-border: #e0e5e9;
+@use "schedule-layout" as *;
 
 /*
  * todo
@@ -16,45 +16,6 @@ $color__grid-border: #e0e5e9;
  * in TwentyTwenty, some .wordcamp-schedule__time-slot-header cells are about 10px more narrow than they should
  * be, exposing a gap between them and their neighboring cell.
  */
-
-/*
- * This tries to only enhance to the grid layout when there's enough space, but there's no practical way to
- * determine that reliably across all themes, number of tracks, etc. The `Single Column Layout` block style
- * gives organizers a different option when the breakpoints here don't work for them.
- */
-@mixin breakpoint-grid-layout() {
-	.wordcamp-schedule:not(.is-style-single-column-layout) & {
-
-		@supports ( display: grid ) {
-
-			/* Front end. */
-			body:not(.block-editor-page) & {
-
-				@media screen and (min-width: 550px) {
-					@content;
-				}
-			}
-
-			/*
-			 * Back end.
-			 *
-			 * The editor area is very narrow because of `#adminmenu` and `.edit-post-sidebar`, so this needs to be
-			 * unusually high.
-			 *
-			 * todo maybe need a way to let the editor know that they're seeing the mobile view, but if they
-			 * preview front end they can see grid view like a notice-warning that is `display:none` on the grid
-			 * view.
-			 */
-
-			body.block-editor-page & {
-
-				@media screen and (min-width: 1025px) {
-					@content;
-				}
-			}
-		}
-	}
-}
 
 .wp-block[data-type="wordcamp/schedule"] .editor-block-list__block-edit {
 	padding-left: 1em;

@@ -85,8 +85,12 @@ module.exports = [
 	},
 	{
 		files: [
-			'public_html/wp-content/mu-plugins/blocks/**/*.js',
-			'source/**/*.js',
+			'public_html/wp-content/mu-plugins/blocks/source/blocks/schedule/data.js',
+			'public_html/wp-content/mu-plugins/blocks/source/blocks/schedule/inspector-controls.js',
+			'public_html/wp-content/mu-plugins/blocks/source/blocks/schedule/utils/date.js',
+			'source/blocks/schedule/data.js',
+			'source/blocks/schedule/inspector-controls.js',
+			'source/blocks/schedule/utils/date.js',
 		],
 		languageOptions: {
 			globals: {
@@ -96,30 +100,34 @@ module.exports = [
 	},
 	{
 		files: [
-			'public_html/wp-content/plugins/wc-post-types/**/*.js',
-			'js/src/**/*.js',
+			'public_html/wp-content/plugins/wc-post-types/js/src/session/panel-info/index.js',
+			'js/src/session/panel-info/index.js',
 		],
 		languageOptions: {
 			globals: {
-				WCPT_Session_Defaults: 'writable',
+				WCPT_Session_Defaults: 'readonly',
 			},
 		},
 	},
 	{
 		files: [
-			'public_html/wp-content/plugins/wcpt/**/*.js',
-			'javascript/tracker/**/*.js',
+			'public_html/wp-content/plugins/wcpt/javascript/tracker/source/tracker.js',
+			'public_html/wp-content/plugins/wcpt/javascript/tracker/source/stores/table-store.js',
+			'javascript/tracker/source/tracker.js',
+			'javascript/tracker/source/stores/table-store.js',
 		],
 		languageOptions: {
 			globals: {
-				wpcApplicationTracker: 'writable',
+				wpcApplicationTracker: 'readonly',
 			},
 		},
 	},
 	{
 		files: [
-			'public_html/wp-content/plugins/wordcamp-speaker-feedback/assets/js/**/*.js',
-			'assets/js/**/*.js',
+			'public_html/wp-content/plugins/wordcamp-speaker-feedback/assets/js/admin.js',
+			'public_html/wp-content/plugins/wordcamp-speaker-feedback/assets/js/script.js',
+			'assets/js/admin.js',
+			'assets/js/script.js',
 		],
 		languageOptions: {
 			globals: {

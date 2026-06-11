@@ -18,28 +18,6 @@
 	"browserslist": [
 		"extends @wordpress/browserslist-config"
 	],
-	"eslintConfig": {
-		"extends": "plugin:@wordpress/eslint-plugin/es5",
-		"root": true,
-		"rules": {
-			"vars-on-top": "off",
-			"wrap-iife": "off"
-		},
-		"globals": {
-			"window": true,
-			"document": true,
-			"wp": "readonly",
-			"jQuery": "readonly",
-			"lodash": "readonly",
-			"SpeakerFeedbackData": "readonly"
-		},
-		"env": {
-			"browser": true
-		}
-	},
-	"eslintIgnore": [
-		"*.min.js"
-	],
 	"stylelint": {
 		"extends": "../../../../.stylelintrc"
 	},

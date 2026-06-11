@@ -2,9 +2,6 @@
 	"name": "multi-event-sponsors",
 	"version": "0.1.0",
 	"license": "GPL-2.0-or-later",
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
-	},
 	"scripts": {
 		"build": "wp-scripts build javascript/index.js --output-path=build",
 		"start": "wp-scripts start javascript/index.js --output-path=build --hot",

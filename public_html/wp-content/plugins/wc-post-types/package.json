@@ -25,12 +25,6 @@
 		"@wordpress/scripts": "32.4.0",
 		"date-fns": "4.4.0"
 	},
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js",
-		"globals": {
-			"WCPT_Session_Defaults": "true"
-		}
-	},
 	"prettier": "../../../../.prettierrc.js",
 	"stylelint": {
 		"extends": "../../../../.stylelintrc"

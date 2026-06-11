@@ -42,12 +42,6 @@
 			"@wordpress/babel-preset-default"
 		]
 	},
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js",
-		"globals": {
-			"WordCampBlocks": "readonly"
-		}
-	},
 	"prettier": "../../../../.prettierrc.js",
 	"stylelint": {
 		"extends": "../../../../.stylelintrc"

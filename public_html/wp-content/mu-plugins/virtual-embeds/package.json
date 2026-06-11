@@ -20,9 +20,6 @@
 		"@wordpress/scripts": "32.4.0",
 		"@wordpress/url": "4.48.0"
 	},
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
-	},
 	"prettier": "../../../../.prettierrc.js",
 	"stylelint": {
 		"extends": "../../../../.stylelintrc"

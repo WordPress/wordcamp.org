@@ -12,8 +12,8 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D+Speaker+Feedback%22"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "31.4.0",
-		"sass": "1.97.3"
+		"@wordpress/scripts": "31.8.0",
+		"sass": "1.100.0"
 	},
 	"browserslist": [
 		"extends @wordpress/browserslist-config"

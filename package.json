@@ -24,7 +24,8 @@
 	],
 	"devDependencies": {
 		"@wordpress/eslint-plugin": "24.1.0",
-		"@wordpress/jest-preset-default": "12.39.0"
+		"@wordpress/jest-preset-default": "12.48.0",
+		"@wordpress/prettier-config": "4.48.0"
 	},
 	"browserslist": [
 		"extends @wordpress/browserslist-config"

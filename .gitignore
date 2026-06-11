@@ -3,6 +3,7 @@
 #
 .docker/data/*.bkp
 .docker/database
+.docker/mariadb-database
 .docker/wordcamp*.pem
 .docker/test_suite
 docker-compose.override.yaml
@@ -37,13 +38,6 @@ public_html/wp-content/debug.log
 
 
 #
-# Tracked in `yarn.lock`
-#
-package-lock.json
-public_html/wp-content/plugins/wc-post-types/package-lock.json
-
-
-#
 # Dev tools
 #
 public_html/wp-content/plugins/query-monitor/
@@ -56,7 +50,6 @@ public_html/wp-content/plugins/user-switching/
 public_html/wp-content/plugins/akismet
 public_html/wp-content/plugins/bbpress
 public_html/wp-content/plugins/buddypress
-public_html/wp-content/plugins/camptix-bd-payments/
 public_html/wp-content/plugins/camptix-kdcpay-gateway
 public_html/wp-content/plugins/camptix-mercadopago
 public_html/wp-content/plugins/camptix-network-tools

@@ -92,10 +92,6 @@ class CampTix_Admin_Setup {
 				add_action( 'camptix_setup_buttons', array( $this, 'setup_buttons_reset_templates' ) );
 				break;
 			case 'beta':
-
-				if ( ! $this->plugin->beta_features_enabled )
-					break;
-
 				add_settings_section( 'general', __( 'Beta Features', 'wordcamporg' ), array( $this, 'menu_setup_section_beta' ), 'camptix_options' );
 
 				$this->add_settings_field_helper( 'reservations_enabled', __( 'Enable Reservations', 'wordcamporg' ), 'field_yesno', false,
@@ -187,11 +183,10 @@ class CampTix_Admin_Setup {
 		if ( isset( $input['refunds_date_end'], $input['refunds_enabled'] ) && (bool) $input['refunds_enabled'] && strtotime( $input['refunds_date_end'] ) )
 			$output['refunds_date_end'] = $input['refunds_date_end'];
 
-		$yesno_fields = array( 'refunds_enabled' );
-
-		// Beta features checkboxes
-		if ( $this->plugin->beta_features_enabled )
-			$yesno_fields = array_merge( $yesno_fields, $this->plugin->get_beta_features() );
+		$yesno_fields = array_merge(
+			array( 'refunds_enabled' ),
+			$this->plugin->get_beta_features()
+		);
 
 		foreach ( $yesno_fields as $field )
 			if ( isset( $input[ $field ] ) )
@@ -457,13 +452,11 @@ class CampTix_Admin_Setup {
 	function menu_setup_tabs() {
 		$current_section = $this->get_setup_section();
 		$sections = array(
-			'general' => __( 'General', 'wordcamporg' ),
-			'payment' => __( 'Payment', 'wordcamporg' ),
+			'general'         => __( 'General', 'wordcamporg' ),
+			'payment'         => __( 'Payment', 'wordcamporg' ),
 			'email-templates' => __( 'E-mail Templates', 'wordcamporg' ),
+			'beta'            => __( 'Beta', 'wordcamporg' ),
 		);
-
-		if ( $this->plugin->beta_features_enabled )
-			$sections['beta'] = __( 'Beta', 'wordcamporg' );
 
 		$sections = apply_filters( 'camptix_setup_sections', $sections );
 

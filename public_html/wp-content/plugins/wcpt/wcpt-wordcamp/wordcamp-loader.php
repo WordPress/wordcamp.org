@@ -215,8 +215,7 @@ class WordCamp_Loader extends Event_Loader {
 			// CC-exclusive statuses. Hidden from non-CC dropdowns by WordCamp_Admin::get_post_statuses(),
 			// but registered here so register_post_statuses() in Event_Loader can call register_post_status()
 			// for them and WordPress recognises them as valid post statuses.
-			'wcpt-needs-action'    => _x( 'Needs Action',    'campus connect status', 'wordcamporg' ),
-			'wcpt-needs-more-info' => _x( 'Needs More Info', 'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-action'    => _x( 'Needs Action', 'campus connect status', 'wordcamporg' ),
 		);
 	}
 
@@ -453,11 +452,14 @@ class WordCamp_Loader extends Event_Loader {
 	}
 
 	/**
-	 * Get status labels for Campus Connect posts.
+	 * Get the canonical Campus Connect status list (slug => label).
 	 *
-	 * Used by WCPT_Vetting_Abilities (and formerly the REST vetting controller) when
-	 * writing status-transition log entries. Includes the two CC-exclusive statuses
-	 * that do not appear in get_post_statuses() (which covers regular WordCamps only).
+	 * This is the authoritative set of the nine statuses available to Campus Connect
+	 * posts. It is the source for the CC status dropdown (via
+	 * WordCamp_Admin::get_post_statuses()) and for the CC-specific labels used in
+	 * status-change log entries. Note that wcpt-needs-action is also registered
+	 * globally in get_post_statuses() above, so WordPress treats it as a valid post
+	 * status for every subtype.
 	 *
 	 * @return array Associative array of status slug => human-readable label.
 	 */
@@ -466,7 +468,6 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-needs-vetting'   => _x( 'Needs Vetting',             'campus connect status', 'wordcamporg' ),
 			'wcpt-needs-action'    => _x( 'Needs Action',              'campus connect status', 'wordcamporg' ),
 			'wcpt-needs-orientati' => _x( 'Needs Orientation',         'campus connect status', 'wordcamporg' ),
-			'wcpt-needs-more-info' => _x( 'Needs More Info',           'campus connect status', 'wordcamporg' ),
 			'wcpt-more-info-reque' => _x( 'On Hold',                   'campus connect status', 'wordcamporg' ),
 			'wcpt-approved-pre-pl' => _x( 'Approved For Pre-Planning', 'campus connect status', 'wordcamporg' ),
 			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',        'campus connect status', 'wordcamporg' ),
@@ -480,14 +481,12 @@ class WordCamp_Loader extends Event_Loader {
 	 * Return valid status transitions for a Campus Connect post.
 	 *
 	 * Transition map (definitive spec):
-	 *   Needs Vetting        → Needs Action, Needs More Info, Approved For Pre-Planning,
-	 *                          Declined, Cancelled, On Hold
-	 *   Needs Action         → Needs Orientation, Needs More Info, Approved For Pre-Planning,
-	 *                          WordCamp Scheduled, Declined, Cancelled, On Hold
-	 *   Needs Orientation    → Needs More Info, Approved For Pre-Planning,
-	 *                          WordCamp Scheduled, Declined, Cancelled, On Hold
-	 *   Needs More Info      → Needs Action, Approved For Pre-Planning,
-	 *                          Declined, Cancelled, On Hold
+	 *   Needs Vetting        → Needs Action, On Hold, Approved For Pre-Planning,
+	 *                          Declined, Cancelled
+	 *   Needs Action         → Needs Orientation, On Hold, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, Declined, Cancelled
+	 *   Needs Orientation    → On Hold, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, Declined, Cancelled
 	 *   Approved For Pre-Planning → WordCamp Scheduled, Declined, Cancelled, On Hold
 	 *   WordCamp Scheduled   → WordCamp Closed, Declined, Cancelled, On Hold
 	 *   WordCamp Closed      → Declined, Cancelled, On Hold
@@ -500,10 +499,9 @@ class WordCamp_Loader extends Event_Loader {
 		$all_cc = array_keys( self::get_campus_connect_statuses() );
 
 		$transitions = array(
-			'wcpt-needs-vetting'   => array( 'wcpt-needs-action', 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
-			'wcpt-needs-action'    => array( 'wcpt-needs-orientati', 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
-			'wcpt-needs-orientati' => array( 'wcpt-needs-more-info', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
-			'wcpt-needs-more-info' => array( 'wcpt-needs-action', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-needs-vetting'   => array( 'wcpt-needs-action', 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-needs-action'    => array( 'wcpt-needs-orientati', 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-needs-orientati' => array( 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled' ),
 			'wcpt-approved-pre-pl' => array( 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
 			'wcpt-scheduled'       => array( 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
 			'wcpt-closed'          => array( 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
@@ -512,7 +510,10 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-more-info-reque' => $all_cc,
 		);
 
-		return $transitions[ $status ] ?? array( 'wcpt-needs-vetting' );
+		// For an unexpected/mid-transition status, allow no transitions rather than
+		// defaulting to a real status: the metabox keeps the current status selectable
+		// (as a disabled option) so it is never silently mutated.
+		return $transitions[ $status ] ?? array();
 	}
 
 	/**

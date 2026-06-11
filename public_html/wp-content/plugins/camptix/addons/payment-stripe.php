@@ -46,6 +46,31 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 	 * @see CampTix_Addon
 	 */
 	public function camptix_init() {
+		$this->load_options();
+
+		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
+		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
+
+		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
+		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
+
+		// Use specific name for INR as we support UPI via Stripe.
+		if ( 'INR' === ( $this->camptix_options['currency'] ?? '' ) ) {
+			$this->name = 'Credit Card or UPI (Stripe)';
+			$this->description = 'Credit card and UPI processing, powered by Stripe.';
+		}
+	}
+
+	/**
+	 * Refresh `$this->camptix_options` and `$this->options` for the current site.
+	 *
+	 * Called from `camptix_init()` to populate the cache, and again from the
+	 * centralized webhook handler after `switch_to_blog()` to refresh the
+	 * cache for the switched-to site.
+	 */
+	public function load_options() {
+		parent::load_options();
+
 		$this->options = array_merge(
 			array(
 				'api_predef'          => '',
@@ -57,21 +82,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			),
 			$this->get_payment_options()
 		);
-
-		add_action( 'template_redirect', array( $this, 'template_redirect' ) );
-		add_action( 'camptix_pre_attendee_timeout', array( $this, 'pre_attendee_timeout' ) );
-
-		// Run after CampTix_Plugin::reload_options() refreshes the switched site's options.
-		add_action( 'switch_blog', array( $this, 'reload_options' ), 11 );
-
-		// register_rest_routes() is provided by CampTix_Payment_Method_Stripe_Webhook.
-		add_action( 'rest_api_init', array( $this, 'register_rest_routes' ) );
-
-		// Use specific name for INR as we support UPI via Stripe.
-		if ( 'INR' === ( $this->camptix_options['currency'] ?? '' ) ) {
-			$this->name = 'Credit Card or UPI (Stripe)';
-			$this->description = 'Credit card and UPI processing, powered by Stripe.';
-		}
 	}
 
 	/**
@@ -358,31 +368,6 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 				$this->payment_return();
 			}
 		}
-	}
-
-	/**
-	 * Refresh Stripe options after switching blogs.
-	 */
-	public function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
-		/** @var CampTix_Plugin $camptix */
-		global $camptix;
-
-		if ( doing_filter( 'camptix_options' ) ) {
-			return;
-		}
-
-		$this->camptix_options = $camptix->get_options();
-		$this->options         = array_merge(
-			array(
-				'api_predef'          => '',
-				'api_secret_key'      => '',
-				'api_public_key'      => '',
-				'api_test_secret_key' => '',
-				'api_test_public_key' => '',
-				'sandbox'             => true,
-			),
-			$this->get_payment_options()
-		);
 	}
 
 	/**

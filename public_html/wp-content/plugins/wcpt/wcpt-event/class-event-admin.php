@@ -284,13 +284,6 @@ abstract class Event_Admin {
 	abstract public static function get_edit_capability();
 
 	/**
-	 * Log when the post status changes
-	 *
-	 * @param string  $new_status New status.
-	 * @param string  $old_status Old status.
-	 * @param WP_Post $post       Current Post.
-	 */
-	/**
 	 * Return the human-readable label for a post status slug.
 	 *
 	 * Subclasses may override this to return subtype-specific labels
@@ -301,8 +294,7 @@ abstract class Event_Admin {
 	 * @return string Human-readable label.
 	 */
 	protected function get_status_label( $status, $post ) {
-		$obj = get_post_status_object( $status );
-		return $obj ? $obj->label : $status;
+		return get_post_status_object( $status )->label ?? $status;
 	}
 
 	/**
@@ -325,7 +317,8 @@ abstract class Event_Admin {
 			return;
 		}
 
-		// Ensure status labels are in English.
+		// Ensure status labels are in English. Event_Loader re-registers post
+		// statuses on `change_locale`, so status objects get English labels here.
 		$locale_switched = switch_to_locale( 'en_US' );
 
 		$log_id = add_post_meta(

@@ -140,20 +140,6 @@ function _get_network_plugin_state_list( $state ) {
 		$network_plugin_state['deactivated'] = array_diff( $network_plugin_state['deactivated'], $network_plugin_state['activated'] );
 	}
 
-	// When local, certain things are expected to be disabled.
-	if ( 'local' === wp_get_environment_type() ) {
-		$not_local_plugins = array(
-			'wordcamp-participation-notifier/wordcamp-participation-notifier.php',
-			'wporg-profiles-wp-activity-notifier/wporg-profiles-wp-activity-notifier.php',
-		);
-		$network_plugin_state['deactivated'] = array_merge(
-			$network_plugin_state['deactivated'],
-			$not_local_plugins
-		);
-
-		$network_plugin_state['activated'] = array_diff( $network_plugin_state['activated'], $not_local_plugins );
-	}
-
 	return $network_plugin_state[ $state ];
 }
 
@@ -191,6 +177,11 @@ function network_plugin_actions( $actions, $plugin_file ) {
  */
 function network_plugin_notifier() {
 	if ( ! is_super_admin() ) {
+		return;
+	}
+
+	// Local environments typically only run a subset of plugins, so these mismatches are expected and noisy.
+	if ( 'local' === wp_get_environment_type() ) {
 		return;
 	}
 

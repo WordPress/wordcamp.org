@@ -62,7 +62,6 @@ module.exports = [
 					ignoreTemplateLiterals: true,
 				},
 			],
-			'object-shorthand': [ 'error', 'consistent-as-needed' ],
 			'prefer-const': [
 				'error',
 				{

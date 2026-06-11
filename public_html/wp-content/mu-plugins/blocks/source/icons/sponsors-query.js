@@ -4,11 +4,17 @@
 import { Icon } from '@wordpress/icons';
 import { Path, SVG } from '@wordpress/primitives';
 
-export default function() {
+export default function () {
 	return (
 		<Icon
 			icon={
-				<SVG width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<SVG
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					xmlns="http://www.w3.org/2000/svg"
+				>
 					<Path
 						d="M9.213 15.101a2 2 0 0 1 3.574 0c1.957-1.179 3.41-2.756 4.284-4.348 1.104-2.036 1.26-4.064.276-5.28-.888-1.09-2.044-1.505-3.217-1.471-1.173.034-2.311.532-3.13 1.234-.82-.702-1.959-1.2-3.132-1.234-1.172-.034-2.328.38-3.217 1.47-.983 1.217-.827 3.245.294 5.28.86 1.594 2.31 3.17 4.268 4.35Z"
 						fill="#000"

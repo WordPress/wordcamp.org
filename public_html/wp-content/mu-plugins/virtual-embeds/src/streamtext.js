@@ -53,7 +53,9 @@ export const settings = {
 		}
 
 		return (
-			<div className={ classes.join( ' ' ) }>{ channel ? '[streamtext event="' + channel + '"]' : '' }</div>
+			<div className={ classes.join( ' ' ) }>
+				{ channel ? '[streamtext event="' + channel + '"]' : '' }
+			</div>
 		);
 	},
 };

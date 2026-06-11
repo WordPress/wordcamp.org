@@ -8,9 +8,9 @@
  * See https://core.trac.wordpress.org/browser/trunk/src/js/_enqueues/admin/edit-comments.js?rev=47233#L349
  */
 
-jQuery( document ).ready( function( $ ) {
+jQuery( document ).ready( function ( $ ) {
 	// The `.load()` function can't load into itself, so we need to wrap the views with a container.
-	var $container = $( '<div>' ).html( $( '.subsubsub' ).get( 0 ).outerHTML );
+	const $container = $( '<div>' ).html( $( '.subsubsub' ).get( 0 ).outerHTML );
 	$( '.subsubsub' ).replaceWith( $container );
 
 	function loadTopCounts() {

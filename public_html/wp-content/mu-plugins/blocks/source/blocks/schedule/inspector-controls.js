@@ -2,7 +2,11 @@
  * WordPress dependencies
  */
 import { InspectorControls } from '@wordpress/block-editor';
-import { CheckboxControl, PanelBody, ToggleControl } from '@wordpress/components';
+import {
+	CheckboxControl,
+	PanelBody,
+	ToggleControl,
+} from '@wordpress/components';
 import { date, format } from '@wordpress/date';
 import { createInterpolateElement } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
@@ -54,29 +58,46 @@ export default function ScheduleInspectorControls( {
 			'wordcamporg'
 		),
 		{
-			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
-			a: <a href={ `${ WordCampBlocks.schedule.adminUrl }options-general.php` } />,
+			a: (
+				<a
+					href={ `${ WordCampBlocks.schedule.adminUrl }options-general.php` }
+				/>
+			),
 		}
 	);
 
 	return (
 		<InspectorControls>
-			<PanelBody title={ __( 'Display Settings', 'wordcamporg' ) } initialOpen={ true }>
+			<PanelBody
+				title={ __( 'Display Settings', 'wordcamporg' ) }
+				initialOpen={ true }
+			>
 				<ToggleControl
 					label={ __( 'Show categories', 'wordcamporg' ) }
 					checked={ showCategories }
-					onChange={ ( value ) => setAttributes( { showCategories: value } ) }
+					onChange={ ( value ) =>
+						setAttributes( { showCategories: value } )
+					}
 				/>
 
 				<ToggleControl
 					label={ __( "Use visitor's timezone", 'wordcamporg' ) }
-					help={ useClientTimezone ? clientTimezoneHelpText : siteTimezoneHelpText }
+					help={
+						useClientTimezone
+							? clientTimezoneHelpText
+							: siteTimezoneHelpText
+					}
 					checked={ useClientTimezone }
-					onChange={ ( value ) => setAttributes( { useClientTimezone: value } ) }
+					onChange={ ( value ) =>
+						setAttributes( { useClientTimezone: value } )
+					}
 				/>
 			</PanelBody>
 
-			<PanelBody title={ __( 'Filters', 'wordcamporg' ) } initialOpen={ true }>
+			<PanelBody
+				title={ __( 'Filters', 'wordcamporg' ) }
+				initialOpen={ true }
+			>
 				<ChooseSpecificDays
 					chooseSpecificDays={ chooseSpecificDays }
 					displayedDays={ displayedDays }
@@ -106,7 +127,11 @@ function getDisplayedDays( sessions ) {
 	let uniqueDays = sessions.reduce( ( accumulatingDays, session ) => {
 		if ( session.derived.startTime ) {
 			accumulatingDays[
-				date( DATE_SLUG_FORMAT, session.derived.startTime, SITE_TIMEZONE )
+				date(
+					DATE_SLUG_FORMAT,
+					session.derived.startTime,
+					SITE_TIMEZONE
+				)
 			] = true;
 		}
 
@@ -129,9 +154,18 @@ function getDisplayedDays( sessions ) {
  * @param {Function} props.setAttributes
  * @return {Element}
  */
-function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, dateFormat, setAttributes } ) {
+function ChooseSpecificDays( {
+	chooseSpecificDays,
+	displayedDays,
+	chosenDays,
+	dateFormat,
+	setAttributes,
+} ) {
 	const pleaseAssignDates = createInterpolateElement(
-		__( "There aren't any days to display. Please assign dates to <a>your sessions</a>.", 'wordcamporg' ),
+		__(
+			"There aren't any days to display. Please assign dates to <a>your sessions</a>.",
+			'wordcamporg'
+		),
 		{
 			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
 			a: <a href={ '/wp-admin/edit.php?post_type=wcb_session' } />,
@@ -145,7 +179,9 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
 					<ToggleControl
 						label={ __( 'Choose specific days', 'wordcamporg' ) }
 						checked={ chooseSpecificDays }
-						onChange={ ( enabled ) => setAttributes( { chooseSpecificDays: enabled } ) }
+						onChange={ ( enabled ) =>
+							setAttributes( { chooseSpecificDays: enabled } )
+						}
 					/>
 				</legend>
 
@@ -166,7 +202,9 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
 								onChange={ ( isChecked ) => {
 									const newDays = isChecked
 										? [ ...chosenDays, day ]
-										: chosenDays.filter( ( i ) => day !== i );
+										: chosenDays.filter(
+												( i ) => day !== i
+										  );
 
 									setAttributes( { chosenDays: newDays } );
 								} }
@@ -194,12 +232,25 @@ function ChooseSpecificDays( { chooseSpecificDays, displayedDays, chosenDays, da
  * @param {Function} props.setAttributes
  * @return {Element}
  */
-function ChooseSpecificTracks( { chooseSpecificTracks, allTracks, chosenTrackIds, setAttributes } ) {
+function ChooseSpecificTracks( {
+	chooseSpecificTracks,
+	allTracks,
+	chosenTrackIds,
+	setAttributes,
+} ) {
 	const pleaseAssignTracks = createInterpolateElement(
-		__( "There aren't any tracks to display, but you can <a>create some</a>.", 'wordcamporg' ),
+		__(
+			"There aren't any tracks to display, but you can <a>create some</a>.",
+			'wordcamporg'
+		),
 		{
-			// eslint-disable-next-line jsx-a11y/anchor-has-content -- See 21441-gutenberg
-			a: <a href={ '/wp-admin/edit-tags.php?taxonomy=wcb_track&post_type=wcb_session' } />,
+			a: (
+				<a
+					href={
+						'/wp-admin/edit-tags.php?taxonomy=wcb_track&post_type=wcb_session'
+					}
+				/>
+			),
 		}
 	);
 
@@ -216,7 +267,9 @@ function ChooseSpecificTracks( { chooseSpecificTracks, allTracks, chosenTrackIds
 					<ToggleControl
 						label={ __( 'Choose specific tracks', 'wordcamporg' ) }
 						checked={ chooseSpecificTracks }
-						onChange={ ( enabled ) => setAttributes( { chooseSpecificTracks: enabled } ) }
+						onChange={ ( enabled ) =>
+							setAttributes( { chooseSpecificTracks: enabled } )
+						}
 						help={ allTracks.length > 0 ? tracksArrangedAlpha : '' }
 					/>
 				</legend>
@@ -233,14 +286,20 @@ function ChooseSpecificTracks( { chooseSpecificTracks, allTracks, chosenTrackIds
 						return (
 							<CheckboxControl
 								key={ track.id }
-								label={ decodeEntities( stripTags( track.name ) ) }
+								label={ decodeEntities(
+									stripTags( track.name )
+								) }
 								checked={ chosenTrackIds.includes( track.id ) }
 								onChange={ ( isChecked ) => {
 									const newTracks = isChecked
 										? [ ...chosenTrackIds, track.id ]
-										: chosenTrackIds.filter( ( id ) => track.id !== id );
+										: chosenTrackIds.filter(
+												( id ) => track.id !== id
+										  );
 
-									setAttributes( { chosenTrackIds: newTracks } );
+									setAttributes( {
+										chosenTrackIds: newTracks,
+									} );
 								} }
 							/>
 						);

@@ -50,7 +50,12 @@ export function useScheduleData( attributes ) {
 	// Prepare the data so it's more convenient to work with.
 	if ( ! scheduleData.loading ) {
 		const { allCategories, allSessions, allTracks } = scheduleData;
-		const derivedSessions = getDerivedSessions( allSessions, allCategories, allTracks, attributes );
+		const derivedSessions = getDerivedSessions(
+			allSessions,
+			allCategories,
+			allTracks,
+			attributes
+		);
 
 		scheduleData.allSessions = derivedSessions.allSessions;
 		scheduleData.chosenSessions = derivedSessions.chosenSessions;
@@ -116,7 +121,11 @@ const fetchScheduleData = ( select, editorContext ) => {
 
 	const allSessions = getEntities( 'postType', 'wcb_session', sessionArgs );
 	const allTracks = getEntities( 'taxonomy', 'wcb_track', trackArgs );
-	const allCategories = getEntities( 'taxonomy', 'wcb_session_category', categoryArgs );
+	const allCategories = getEntities(
+		'taxonomy',
+		'wcb_session_category',
+		categoryArgs
+	);
 	const settings = getSiteSettings();
 
 	return { allSessions, allTracks, allCategories, settings };
@@ -143,7 +152,7 @@ function getExampleData() {
 	 * `_wcpt_session_time` must not be the same day as any real sessions, or the grid for the actual block will
 	 * collapse when the preview is shown.
 	 */
-	const todayNextYear = ( todayZeroHour.valueOf() / 1000 ) + yearInSeconds;
+	const todayNextYear = todayZeroHour.valueOf() / 1000 + yearInSeconds;
 
 	return {
 		allSessions: [
@@ -157,16 +166,12 @@ function getExampleData() {
 				},
 
 				meta: {
-					_wcpt_session_time: todayNextYear + ( 2 * hourInSeconds ),
+					_wcpt_session_time: todayNextYear + 2 * hourInSeconds,
 					_wcpt_session_duration: 1800,
 					_wcpt_session_type: 'custom',
 				},
 
-				session_track: [
-					38,
-					748,
-					46,
-				],
+				session_track: [ 38, 748, 46 ],
 
 				session_category: [],
 				session_speakers: [],
@@ -187,10 +192,7 @@ function getExampleData() {
 					_wcpt_session_type: 'session',
 				},
 
-				session_track: [
-					38,
-					748,
-				],
+				session_track: [ 38, 748 ],
 
 				session_category: [],
 				session_speakers: [],
@@ -206,14 +208,12 @@ function getExampleData() {
 				},
 
 				meta: {
-					_wcpt_session_time: todayNextYear + ( hourInSeconds / 2 ),
+					_wcpt_session_time: todayNextYear + hourInSeconds / 2,
 					_wcpt_session_duration: 5400,
 					_wcpt_session_type: 'session',
 				},
 
-				session_track: [
-					46,
-				],
+				session_track: [ 46 ],
 
 				session_category: [],
 				session_speakers: [],
@@ -234,9 +234,7 @@ function getExampleData() {
 					_wcpt_session_type: 'session',
 				},
 
-				session_track: [
-					46,
-				],
+				session_track: [ 46 ],
 
 				session_category: [],
 				session_speakers: [],
@@ -257,9 +255,7 @@ function getExampleData() {
 					_wcpt_session_type: 'session',
 				},
 
-				session_track: [
-					748,
-				],
+				session_track: [ 748 ],
 
 				session_category: [],
 				session_speakers: [],
@@ -280,9 +276,7 @@ function getExampleData() {
 					_wcpt_session_type: 'session',
 				},
 
-				session_track: [
-					38,
-				],
+				session_track: [ 38 ],
 
 				session_category: [],
 				session_speakers: [],
@@ -335,8 +329,18 @@ function getExampleData() {
  * @param {Object} attributes
  * @return {Object}
  */
-export function getDerivedSessions( allSessions, allCategories, allTracks, attributes ) {
-	const { chooseSpecificDays, chooseSpecificTracks, chosenDays, chosenTrackIds } = attributes;
+export function getDerivedSessions(
+	allSessions,
+	allCategories,
+	allTracks,
+	attributes
+) {
+	const {
+		chooseSpecificDays,
+		chooseSpecificTracks,
+		chosenDays,
+		chosenTrackIds,
+	} = attributes;
 
 	allSessions = deriveSessionStartEndTimes( allSessions, attributes );
 	allSessions = deriveSessionTerms( allSessions, allCategories, allTracks );
@@ -344,11 +348,17 @@ export function getDerivedSessions( allSessions, allCategories, allTracks, attri
 	let chosenSessions = Array.from( allSessions );
 
 	if ( chooseSpecificDays ) {
-		chosenSessions = filterSessionsByChosenDays( chosenSessions, chosenDays );
+		chosenSessions = filterSessionsByChosenDays(
+			chosenSessions,
+			chosenDays
+		);
 	}
 
 	if ( chooseSpecificTracks ) {
-		chosenSessions = filterSessionsByChosenTracks( chosenSessions, chosenTrackIds );
+		chosenSessions = filterSessionsByChosenTracks(
+			chosenSessions,
+			chosenTrackIds
+		);
 	}
 
 	return { allSessions, chosenSessions };
@@ -363,10 +373,12 @@ export function getDerivedSessions( allSessions, allCategories, allTracks, attri
  */
 function deriveSessionStartEndTimes( sessions, attributes ) {
 	return sessions.map( ( session ) => {
-		const durationInMs = parseInt( session.meta._wcpt_session_duration ) * 1000; // Convert to milliseconds.
+		const durationInMs =
+			parseInt( session.meta._wcpt_session_duration ) * 1000; // Convert to milliseconds.
 
 		session.derived = session.derived || {};
-		session.derived.startTime = parseInt( session.meta._wcpt_session_time ) * 1000;
+		session.derived.startTime =
+			parseInt( session.meta._wcpt_session_time ) * 1000;
 		session.derived.endTime = session.derived.startTime + durationInMs;
 		session.derived.timezone = getTimezone( attributes );
 
@@ -416,8 +428,8 @@ function deriveSessionTerms( allSessions, allCategories, allTracks ) {
 			session.derived.assignedTracks[ 0 ] = implicitTrack;
 		}
 
-		session.derived.assignedCategories = allCategories.filter( ( category ) =>
-			session.session_category.includes( category.id )
+		session.derived.assignedCategories = allCategories.filter(
+			( category ) => session.session_category.includes( category.id )
 		);
 
 		return session;
@@ -453,7 +465,11 @@ function filterSessionsByChosenDays( sessions, chosenDays ) {
 	}
 
 	return sessions.filter( ( session ) => {
-		const day = date( DATE_SLUG_FORMAT, session.derived.startTime, SITE_TIMEZONE );
+		const day = date(
+			DATE_SLUG_FORMAT,
+			session.derived.startTime,
+			SITE_TIMEZONE
+		);
 		return chosenDays.includes( day );
 	} );
 }
@@ -476,8 +492,8 @@ function filterSessionsByChosenTracks( sessions, chosenTrackIds ) {
 			( track ) => track.id
 		);
 
-		const intersection = chosenTrackIds.filter(
-			( trackID ) => assignedTrackIds.includes( trackID )
+		const intersection = chosenTrackIds.filter( ( trackID ) =>
+			assignedTrackIds.includes( trackID )
 		);
 
 		return intersection.length > 0;

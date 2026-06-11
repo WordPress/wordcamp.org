@@ -8,12 +8,24 @@ import { uniq } from 'lodash';
  * WordPress dependencies
  */
 import { __, _x } from '@wordpress/i18n';
-import { AlignmentControl, BlockControls, InspectorControls, useBlockProps } from '@wordpress/block-editor';
-import { dateI18n, __experimentalGetSettings as getDateSettings } from '@wordpress/date'; // eslint-disable-line @wordpress/no-unsafe-wp-apis
+import {
+	AlignmentControl,
+	BlockControls,
+	InspectorControls,
+	useBlockProps,
+} from '@wordpress/block-editor';
+import {
+	dateI18n,
+	__experimentalGetSettings as getDateSettings,
+} from '@wordpress/date';
 import { PanelBody, SelectControl, ToggleControl } from '@wordpress/components';
 import { useEntityProp } from '@wordpress/core-data';
 
-export default function Edit( { attributes, setAttributes, context: { postId, postType } } ) {
+export default function Edit( {
+	attributes,
+	setAttributes,
+	context: { postId, postType },
+} ) {
 	const { format, showTimezone, textAlign } = attributes;
 	const [ meta = {} ] = useEntityProp( 'postType', postType, 'meta', postId );
 	const date = meta._wcpt_session_time * 1000; // Convert from s to ms.
@@ -38,7 +50,8 @@ export default function Edit( { attributes, setAttributes, context: { postId, po
 		} ),
 	} );
 
-	const displayFormat = ( format || defaultFormat ) + ( showTimezone ? ' T' : '' );
+	const displayFormat =
+		( format || defaultFormat ) + ( showTimezone ? ' T' : '' );
 
 	return (
 		<>
@@ -48,12 +61,16 @@ export default function Edit( { attributes, setAttributes, context: { postId, po
 						label={ __( 'Date Format', 'wordcamporg' ) }
 						value={ format || defaultFormat }
 						options={ formatOptions }
-						onChange={ ( value ) => setAttributes( { format: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { format: value } )
+						}
 					/>
 					<ToggleControl
 						label={ __( 'Show Timezone', 'wordcamporg' ) }
 						checked={ showTimezone }
-						onChange={ () => setAttributes( { showTimezone: ! showTimezone } ) }
+						onChange={ () =>
+							setAttributes( { showTimezone: ! showTimezone } )
+						}
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -66,7 +83,9 @@ export default function Edit( { attributes, setAttributes, context: { postId, po
 				/>
 			</BlockControls>
 			<div { ...blockProps }>
-				<time dateTime={ dateI18n( 'c', date ) }>{ dateI18n( displayFormat, date || new Date() ) }</time>
+				<time dateTime={ dateI18n( 'c', date ) }>
+					{ dateI18n( displayFormat, date || new Date() ) }
+				</time>
 			</div>
 		</>
 	);

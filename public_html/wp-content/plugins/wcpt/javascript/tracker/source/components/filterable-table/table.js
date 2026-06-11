@@ -9,7 +9,14 @@ import PropTypes from 'prop-types';
 import TableHeader from './header';
 import TableRow from './row';
 
-function Table( { columns = {}, rows = [], customRender, handleSortEvent, sortField, sortOrder = 'asc' } ) {
+function Table( {
+	columns = {},
+	rows = [],
+	customRender,
+	handleSortEvent,
+	sortField,
+	sortOrder = 'asc',
+} ) {
 	return (
 		<table className="filterable-table fixed striped">
 			<TableHeader
@@ -22,7 +29,12 @@ function Table( { columns = {}, rows = [], customRender, handleSortEvent, sortFi
 			<tbody>
 				{ rows.map( ( row, index ) => {
 					return (
-						<TableRow columns={ columns } row={ row } key={ index } customRender={ customRender } />
+						<TableRow
+							columns={ columns }
+							row={ row }
+							key={ index }
+							customRender={ customRender }
+						/>
 					);
 				} ) }
 			</tbody>

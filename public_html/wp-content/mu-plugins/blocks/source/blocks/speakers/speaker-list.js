@@ -48,37 +48,56 @@ function SpeakerSessions( { speaker, tracks } ) {
 
 			<ul className="wordcamp-speakers__sessions-list">
 				{ sessions.map( ( session ) => (
-					<li key={ session.id } className="wordcamp-speakers__sessions-list-item">
+					<li
+						key={ session.id }
+						className="wordcamp-speakers__sessions-list-item"
+					>
 						<a
 							className="wordcamp-speakers__session-link"
 							href={ session.link }
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							{ session.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ) }
+							{ session.title.rendered.trim() ||
+								__( '(Untitled)', 'wordcamporg' ) }
 						</a>
 						<span className="wordcamp-speakers__session-info">
-							{ session.session_track.length && Array.isArray( tracks )
+							{ session.session_track.length &&
+							Array.isArray( tracks )
 								? arrayTokenReplace(
-									/* translators: 1: A date; 2: A time; 3: A location; */
-									tokenSplit( __( '%1$s at %2$s in %3$s', 'wordcamporg' ) ),
-									[
-										session.session_date_time.date,
-										session.session_date_time.time,
-										get(
-											tracks.find( ( value ) => {
-												const [ firstTrackId ] = session.session_track;
-												return parseInt( value.id ) === firstTrackId;
-											} ),
-											'name'
+										/* translators: 1: A date; 2: A time; 3: A location; */
+										tokenSplit(
+											__(
+												'%1$s at %2$s in %3$s',
+												'wordcamporg'
+											)
 										),
-									]
-								)
+										[
+											session.session_date_time.date,
+											session.session_date_time.time,
+											get(
+												tracks.find( ( value ) => {
+													const [ firstTrackId ] =
+														session.session_track;
+													return (
+														parseInt( value.id ) ===
+														firstTrackId
+													);
+												} ),
+												'name'
+											),
+										]
+								  )
 								: arrayTokenReplace(
-									/* translators: 1: A date; 2: A time; */
-									tokenSplit( __( '%1$s at %2$s', 'wordcamporg' ) ),
-									[ session.session_date_time.date, session.session_date_time.time ]
-								) }
+										/* translators: 1: A date; 2: A time; */
+										tokenSplit(
+											__( '%1$s at %2$s', 'wordcamporg' )
+										),
+										[
+											session.session_date_time.date,
+											session.session_date_time.time,
+										]
+								  ) }
 						</span>
 					</li>
 				) ) }
@@ -136,7 +155,14 @@ class SpeakerList extends Component {
 	render() {
 		const { attributes, entities } = this.props;
 		const { wcb_track: tracks } = entities;
-		const { avatar_align, avatar_size, content, headingAlign, show_avatars, show_session } = attributes;
+		const {
+			avatar_align,
+			avatar_size,
+			content,
+			headingAlign,
+			show_avatars,
+			show_session,
+		} = attributes;
 
 		const posts = this.getFilteredPosts();
 		const isLoading = ! Array.isArray( posts );
@@ -149,7 +175,10 @@ class SpeakerList extends Component {
 		return (
 			<PostList attributes={ attributes } className="wordcamp-speakers">
 				{ posts.map( ( post ) => (
-					<div key={ post.slug } className={ `wordcamp-speakers__post slug-${ post.slug }` }>
+					<div
+						key={ post.slug }
+						className={ `wordcamp-speakers__post slug-${ post.slug }` }
+					>
 						<ItemTitle
 							className="wordcamp-speakers__title"
 							align={ headingAlign }
@@ -171,11 +200,20 @@ class SpeakerList extends Component {
 						{ 'none' !== content && (
 							<DangerousItemHTMLContent
 								className={ `wordcamp-speakers__content is-${ content }` }
-								content={ 'full' === content ? post.content.rendered.trim() : post.excerpt.rendered.trim() }
+								content={
+									'full' === content
+										? post.content.rendered.trim()
+										: post.excerpt.rendered.trim()
+								}
 							/>
 						) }
 
-						{ true === show_session && <SpeakerSessions speaker={ post } tracks={ tracks } /> }
+						{ true === show_session && (
+							<SpeakerSessions
+								speaker={ post }
+								tracks={ tracks }
+							/>
+						) }
 					</div>
 				) ) }
 			</PostList>

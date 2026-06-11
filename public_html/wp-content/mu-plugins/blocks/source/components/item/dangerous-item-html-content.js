@@ -35,7 +35,9 @@ function DangerousItemHTMLContent( { className, content, link, linkText } ) {
 		<div className={ classnames( classes ) }>
 			<Disabled>
 				<RawHTML children={ content } />
-				{ link && <ItemPermalink link={ link } linkText={ linkText } /> }
+				{ link && (
+					<ItemPermalink link={ link } linkText={ linkText } />
+				) }
 			</Disabled>
 		</div>
 	);

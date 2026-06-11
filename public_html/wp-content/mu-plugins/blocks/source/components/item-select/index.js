@@ -52,7 +52,9 @@ function getNewAttributes( selectedOptions ) {
 
 		attributes = {
 			mode: chosen,
-			item_ids: selectedOptions.map( ( item ) => item.split( ':' )[ 1 ] * 1 ),
+			item_ids: selectedOptions.map(
+				( item ) => item.split( ':' )[ 1 ] * 1
+			),
 		};
 	} else {
 		attributes = {
@@ -64,12 +66,26 @@ function getNewAttributes( selectedOptions ) {
 	return attributes;
 }
 
-export function ItemSelect( { className, label, help, submitLabel, onChange, options, isLoading, value } ) {
+export function ItemSelect( {
+	className,
+	label,
+	help,
+	submitLabel,
+	onChange,
+	options,
+	isLoading,
+	value,
+} ) {
 	const instanceId = useInstanceId( ItemSelect );
 	const [ selectedOptions, setSelectedOptions ] = useState( null );
-	const currentValue = selectedOptions || value.map( ( item ) => item.type + ':' + item.value );
+	const currentValue =
+		selectedOptions ||
+		value.map( ( item ) => item.type + ':' + item.value );
 	const id = `wordcamp-item-select-control-${ instanceId }`;
-	const length = options.reduce( ( acc = 0, group ) => acc + group.options.length, 0 );
+	const length = options.reduce(
+		( acc = 0, group ) => acc + group.options.length,
+		0
+	);
 
 	if ( isLoading ) {
 		return null;
@@ -78,7 +94,10 @@ export function ItemSelect( { className, label, help, submitLabel, onChange, opt
 	return (
 		<div className="wordcamp-item-select">
 			<SelectControl
-				className={ classnames( 'wordcamp-item-select__select', className ) }
+				className={ classnames(
+					'wordcamp-item-select__select',
+					className
+				) }
 				id={ id }
 				label={ label }
 				help={ help }
@@ -97,7 +116,10 @@ export function ItemSelect( { className, label, help, submitLabel, onChange, opt
 							<option
 								key={ `item-${ i }-${ key }` }
 								value={ item.type + ':' + item.value }
-								disabled={ isOptionDisabled( item, selectedOptions ) }
+								disabled={ isOptionDisabled(
+									item,
+									selectedOptions
+								) }
 							>
 								{ decodeEntities( item.label ) }
 							</option>
@@ -108,7 +130,9 @@ export function ItemSelect( { className, label, help, submitLabel, onChange, opt
 			<Button
 				className="wordcamp-item-select__button"
 				variant="secondary"
-				onClick={ () => onChange( getNewAttributes( selectedOptions ) ) }
+				onClick={ () =>
+					onChange( getNewAttributes( selectedOptions ) )
+				}
 			>
 				{ submitLabel || __( 'Select', 'wordcamporg' ) }
 			</Button>

@@ -29,7 +29,7 @@ function getTimezoneOffset( { offset = 0 } ) {
 	return `${ sign }${ hours }:${ minutes }`;
 }
 
-export default function( { date, label, onChange } ) {
+export default function ( { date, label, onChange } ) {
 	const settings = getSettings();
 	const is12HourTime = /a(?!\\)/i.test(
 		settings.formats.time

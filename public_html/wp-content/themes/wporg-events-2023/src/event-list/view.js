@@ -1,6 +1,6 @@
 /* global globalEventsPayload */
 
-document.addEventListener( 'DOMContentLoaded', function() {
+document.addEventListener( 'DOMContentLoaded', function () {
 	const speak = wp.a11y.speak;
 
 	/**
@@ -14,10 +14,14 @@ document.addEventListener( 'DOMContentLoaded', function() {
 		}
 
 		for ( const id in globalEventsPayload ) {
-			const listContainer = document.querySelector( `#wp-block-wporg-event-list-${ id }` );
+			const listContainer = document.querySelector(
+				`#wp-block-wporg-event-list-${ id }`
+			);
 			if ( ! listContainer ) {
 				// eslint-disable-next-line no-console
-				console.error( `Missing container for global events with id ${ id }` );
+				console.error(
+					`Missing container for global events with id ${ id }`
+				);
 				continue;
 			}
 
@@ -37,22 +41,29 @@ document.addEventListener( 'DOMContentLoaded', function() {
 	 * @param {boolean} groupByMonth
 	 */
 	function renderGlobalEvents( container, events, groupByMonth ) {
-		const loadingElement = container.querySelector( '.wporg-marker-list__loading' );
+		const loadingElement = container.querySelector(
+			'.wporg-marker-list__loading'
+		);
 		const groupedEvents = {};
 		let markup = '';
 
 		if ( groupByMonth ) {
 			for ( let i = 0; i < events.length; i++ ) {
-				const eventMonthYear = new Date( events[ i ].timestamp * 1000 ).toLocaleDateString( [], {
+				const eventMonthYear = new Date(
+					events[ i ].timestamp * 1000
+				).toLocaleDateString( [], {
 					year: 'numeric',
 					month: 'long',
 				} );
 
-				groupedEvents[ eventMonthYear ] = groupedEvents[ eventMonthYear ] || [];
+				groupedEvents[ eventMonthYear ] =
+					groupedEvents[ eventMonthYear ] || [];
 				groupedEvents[ eventMonthYear ].push( events[ i ] );
 			}
 
-			for ( const [ month, eventGroup ] of Object.entries( groupedEvents ) ) {
+			for ( const [ month, eventGroup ] of Object.entries(
+				groupedEvents
+			) ) {
 				markup += renderEventGroup( eventGroup, month );
 			}
 		} else {

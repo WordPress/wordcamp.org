@@ -54,12 +54,14 @@ export const avatarSizePresets = [
 export function AvatarImage( { className, name, size, url, imageLink } ) {
 	const getSizedURL = ( avatar_url, avatar_size ) => {
 		// 's' is the name of the parameter used by Gravatar.
-		// eslint-disable-next-line id-length
+
 		return addQueryArgs( avatar_url, { s: avatar_size } );
 	};
 
 	/* translators: %s is the person's name. */
-	const alt = name ? sprintf( __( 'Avatar of %s', 'wordcamporg' ), name ) : '';
+	const alt = name
+		? sprintf( __( 'Avatar of %s', 'wordcamporg' ), name )
+		: '';
 
 	let image = (
 		<img
@@ -86,7 +88,12 @@ export function AvatarImage( { className, name, size, url, imageLink } ) {
 	}
 
 	image = (
-		<div className={ classnames( 'wordcamp-image__avatar-container', className ) }>
+		<div
+			className={ classnames(
+				'wordcamp-image__avatar-container',
+				className
+			) }
+		>
 			{ image }
 		</div>
 	);

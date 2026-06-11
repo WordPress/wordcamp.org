@@ -36,7 +36,8 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 			add_action( 'transition_post_status', array( $this, 'trigger_schedule_actions' ), 10, 3 );
 			add_action( 'wcpt_approved_for_pre_planning', array( $this, 'add_organizer_to_central' ), 10 );
 			add_action( 'wcpt_approved_for_pre_planning', array( $this, 'mark_date_added_to_planning_schedule' ), 10 );
-			add_action( 'wcpt_cc_approved_for_pre_planning', array( $this, 'handle_cc_approved_for_pre_planning' ), 10 );
+			// Priority 11 so the organizer email (sent by WCOR_Mailer at 10) goes out first.
+			add_action( 'wcpt_cc_needs_orientation', array( $this, 'handle_cc_needs_orientation' ), 11 );
 
 			add_filter( 'wp_insert_post_data', array( $this, 'enforce_post_status' ), 10, 2 );
 
@@ -948,27 +949,22 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				// Uses a dedicated action to avoid triggering the non-CC hooks that listen
 				// to wcpt_approved_for_pre_planning (e.g. add_organizer_to_central).
 				do_action( 'wcpt_cc_needs_orientation', $post );
-			} elseif ( 'wcpt-approved-pre-pl' === $new_status
-				&& 'campusconnect' === get_post_meta( $post->ID, 'event_subtype', true ) ) {
-				// Fires when a Campus Connect application is approved for pre-planning.
-				// Uses a dedicated action to avoid triggering the non-CC hooks that listen
-				// to wcpt_approved_for_pre_planning (e.g. add_organizer_to_central).
-				do_action( 'wcpt_cc_approved_for_pre_planning', $post );
 			}
 		}
 
 
 		/**
-		 * Handle a Campus Connect application being approved for pre-planning.
+		 * Handle a Campus Connect application transitioning to Needs Orientation.
 		 *
-		 * Fires on wcpt_cc_approved_for_pre_planning (see trigger_schedule_actions()).
+		 * Fires on wcpt_cc_needs_orientation (see trigger_schedule_actions()), after
+		 * WCOR_Mailer has triggered the organizer notification email on the same action.
 		 * Writes a permanent audit note to the post log and queues a one-time admin
 		 * notice so the wrangler sees confirmation on the next page load.
 		 *
-		 * @param WP_Post $post The Campus Connect post that was approved.
+		 * @param WP_Post $post The Campus Connect post that needs orientation.
 		 */
-		public function handle_cc_approved_for_pre_planning( WP_Post $post ) {
-			// Audit log note — a permanent, timestamped record of the approval. The admin
+		public function handle_cc_needs_orientation( WP_Post $post ) {
+			// Audit log note — a permanent, timestamped record of the transition. The admin
 			// notice below is its transient, on-screen counterpart (similar, not identical, text).
 			add_post_meta(
 				$post->ID,
@@ -976,7 +972,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				array(
 					'timestamp' => time(),
 					'user_id'   => get_current_user_id(),
-					'message'   => __( 'Application approved for pre-planning.', 'wordcamporg' ),
+					'message'   => __( 'Application moved to Needs Orientation. Organizer notification email triggered.', 'wordcamporg' ),
 				)
 			);
 
@@ -1344,7 +1340,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				5 => array(
 					'type'   => 'updated',
-					'notice' => __( 'This Campus Connect application has been approved for pre-planning. A note has been added to the log.', 'wordcamporg' ),
+					'notice' => __( 'This Campus Connect application has been moved to Needs Orientation. The organizer notification email has been triggered and a note has been added to the log.', 'wordcamporg' ),
 				),
 			);
 

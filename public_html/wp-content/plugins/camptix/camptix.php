@@ -873,10 +873,10 @@ class CampTix_Plugin {
 				}
 
 				$meta_query[] = array(
-					'key' => 'tix_coupon_id',
-					'value' => $coupon_id,
+					'key'     => 'tix_coupon_id',
+					'value'   => $coupon_id,
 					'compare' => '=',
-					'type' => 'CHAR',
+					'type'    => 'CHAR',
 				);
 
 				$query->set( 'meta_query', $meta_query );

@@ -40,6 +40,23 @@ class WordCamp_Loader extends Event_Loader {
 		require_once WCPT_DIR . 'wcpt-wordcamp/class-wp-rest-wordcamps-controller.php';
 		require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-template.php';
 
+		// MCP vetting abilities (REST, admin, and WP-CLI only).
+		//
+		// The wordpress/mcp-adapter classes are provided by the root Composer
+		// autoloader, which mu-plugins/load-other-mu-plugins.php loads on every
+		// request, so there is nothing to require here. The MCP server is only
+		// reached over the REST transport, and ability discovery only matters in
+		// the admin and to WP-CLI, so the bootstrap is skipped on front-end requests.
+		require_once WCPT_DIR . 'wcpt-wordcamp/class-wcpt-vetting-abilities.php';
+
+		$is_rest_request = ( defined( 'REST_REQUEST' ) && REST_REQUEST )
+			|| ( ! empty( $_SERVER['REQUEST_URI'] )
+				&& false !== strpos( wp_unslash( $_SERVER['REQUEST_URI'] ), '/' . rest_get_url_prefix() . '/' ) );
+
+		if ( is_admin() || $is_rest_request || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			WCPT_Vetting_Abilities::init();
+		}
+
 		// Quick admin check and load if needed
 		if ( is_admin() ) {
 			require_once WCPT_DIR . 'wcpt-wordcamp/wordcamp-admin.php';
@@ -195,6 +212,10 @@ class WordCamp_Loader extends Event_Loader {
 			'wcpt-needs-schedule'  => _x( 'Needs to be Added to Official Schedule',      'wordcamp status', 'wordcamporg' ),
 			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',                          'wordcamp status', 'wordcamporg' ),
 			'wcpt-closed'          => _x( 'WordCamp Closed',                             'wordcamp status', 'wordcamporg' ),
+			// CC-exclusive statuses. Hidden from non-CC dropdowns by WordCamp_Admin::get_post_statuses(),
+			// but registered here so register_post_statuses() in Event_Loader can call register_post_status()
+			// for them and WordPress recognises them as valid post statuses.
+			'wcpt-needs-action'    => _x( 'Needs Action', 'campus connect status', 'wordcamporg' ),
 		);
 	}
 
@@ -428,6 +449,71 @@ class WordCamp_Loader extends Event_Loader {
 				},
 			)
 		);
+	}
+
+	/**
+	 * Get the canonical Campus Connect status list (slug => label).
+	 *
+	 * This is the authoritative set of the nine statuses available to Campus Connect
+	 * posts. It is the source for the CC status dropdown (via
+	 * WordCamp_Admin::get_post_statuses()) and for the CC-specific labels used in
+	 * status-change log entries. Note that wcpt-needs-action is also registered
+	 * globally in get_post_statuses() above, so WordPress treats it as a valid post
+	 * status for every subtype.
+	 *
+	 * @return array Associative array of status slug => human-readable label.
+	 */
+	public static function get_campus_connect_statuses() {
+		return array(
+			'wcpt-needs-vetting'   => _x( 'Needs Vetting',             'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-action'    => _x( 'Needs Action',              'campus connect status', 'wordcamporg' ),
+			'wcpt-needs-orientati' => _x( 'Needs Orientation',         'campus connect status', 'wordcamporg' ),
+			'wcpt-more-info-reque' => _x( 'On Hold',                   'campus connect status', 'wordcamporg' ),
+			'wcpt-approved-pre-pl' => _x( 'Approved For Pre-Planning', 'campus connect status', 'wordcamporg' ),
+			'wcpt-scheduled'       => _x( 'WordCamp Scheduled',        'campus connect status', 'wordcamporg' ),
+			'wcpt-closed'          => _x( 'WordCamp Closed',           'campus connect status', 'wordcamporg' ),
+			'wcpt-rejected'        => _x( 'Declined',                  'campus connect status', 'wordcamporg' ),
+			'wcpt-cancelled'       => _x( 'Cancelled',                 'campus connect status', 'wordcamporg' ),
+		);
+	}
+
+	/**
+	 * Return valid status transitions for a Campus Connect post.
+	 *
+	 * Transition map (definitive spec):
+	 *   Needs Vetting        → Needs Action, On Hold, Approved For Pre-Planning,
+	 *                          Declined, Cancelled
+	 *   Needs Action         → Needs Orientation, On Hold, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, Declined, Cancelled
+	 *   Needs Orientation    → On Hold, Approved For Pre-Planning,
+	 *                          WordCamp Scheduled, Declined, Cancelled
+	 *   Approved For Pre-Planning → WordCamp Scheduled, Declined, Cancelled, On Hold
+	 *   WordCamp Scheduled   → WordCamp Closed, Declined, Cancelled, On Hold
+	 *   WordCamp Closed      → Declined, Cancelled, On Hold
+	 *   Declined / Cancelled / On Hold → any CC status
+	 *
+	 * @param string $status Current status slug.
+	 * @return array Array of valid next-status slugs.
+	 */
+	public static function get_campus_connect_status_transitions( $status ) {
+		$all_cc = array_keys( self::get_campus_connect_statuses() );
+
+		$transitions = array(
+			'wcpt-needs-vetting'   => array( 'wcpt-needs-action', 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-needs-action'    => array( 'wcpt-needs-orientati', 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-needs-orientati' => array( 'wcpt-more-info-reque', 'wcpt-approved-pre-pl', 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled' ),
+			'wcpt-approved-pre-pl' => array( 'wcpt-scheduled', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-scheduled'       => array( 'wcpt-closed', 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-closed'          => array( 'wcpt-rejected', 'wcpt-cancelled', 'wcpt-more-info-reque' ),
+			'wcpt-rejected'        => $all_cc,
+			'wcpt-cancelled'       => $all_cc,
+			'wcpt-more-info-reque' => $all_cc,
+		);
+
+		// For an unexpected/mid-transition status, allow no transitions rather than
+		// defaulting to a real status: the metabox keeps the current status selectable
+		// (as a disabled option) so it is never silently mutated.
+		return $transitions[ $status ] ?? array();
 	}
 
 	/**

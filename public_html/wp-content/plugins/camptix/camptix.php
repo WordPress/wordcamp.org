@@ -25,7 +25,6 @@ class CampTix_Plugin {
 
 	public $error_flags;
 	public $debug;
-	public $beta_features_enabled;
 	public $version     = 20180709;
 	public $css_version = 20180709;
 	public $js_version  = 20180709;
@@ -113,16 +112,14 @@ class CampTix_Plugin {
 		add_action( 'init', array( $this, 'init' ) );
 		add_action( 'init', array( $this, 'schedule_events' ), 9 );
 		add_action( 'shutdown', array( $this, 'shutdown' ) );
-		add_action( 'switch_blog', array( $this, 'reload_options' ) );
 	}
 
 	/**
 	 * Fired during init, doh!
 	 */
 	function init() {
-		$this->options = $this->get_options();
+		$this->load_options();
 		$this->debug = (bool) apply_filters( 'camptix_debug', false );
-		$this->beta_features_enabled = (bool) apply_filters( 'camptix_beta_features_enabled', false );
 		$this->tmp = array();
 
 		// Capability mapping.
@@ -135,11 +132,6 @@ class CampTix_Plugin {
 			'delete_attendees' => 'manage_options',
 			'refund_all'       => 'manage_options',
 		) );
-
-		// Explicitly disable all beta features if beta features is off.
-		if ( ! $this->beta_features_enabled )
-			foreach ( $this->get_beta_features() as $beta_feature )
-				$this->options[$beta_feature] = false;
 
 		// The following three are just different kinds (colors) of user feedback.
 		// Don't use directly, instead use $this->notice / error / info methods.
@@ -175,6 +167,8 @@ class CampTix_Plugin {
 
 		// Handle query extras for attendees, tickets, etc.
 		add_action( 'pre_get_posts', array( $this, 'pre_get_posts' ) );
+		add_action( 'restrict_manage_posts', array( $this, 'restrict_manage_attendees_by_coupon' ) );
+		add_action( 'load-edit.php', array( $this, 'rewrite_old_attendee_coupon_search_query_args' ) );
 
 		// Used to update stats
 		add_action( 'transition_post_status', array( $this, 'transition_post_status' ), 10, 3 );
@@ -704,7 +698,7 @@ class CampTix_Plugin {
 				if ( $coupon_id ) {
 					$coupon = get_post_meta( $post_id, 'tix_coupon', true );
 					$attendees_url = get_admin_url( 0, '/edit.php?post_type=tix_attendee' );
-					$attendees_url = add_query_arg( 's', 'tix_coupon_id:' . intval( $coupon_id ), $attendees_url );
+					$attendees_url = add_query_arg( 'tix_coupon_id', intval( $coupon_id ), $attendees_url );
 					printf( '<a href="%s">%s</a>', esc_url( $attendees_url ), esc_html( $coupon ) );
 				}
 				break;
@@ -750,7 +744,7 @@ class CampTix_Plugin {
 				break;
 			case 'tix_used':
 				$attendees_url = get_admin_url( 0, '/edit.php?post_type=tix_attendee' );
-				$attendees_url = add_query_arg( 's', 'tix_coupon_id:' . intval( $post_id ), $attendees_url );
+				$attendees_url = add_query_arg( 'tix_coupon_id', intval( $post_id ), $attendees_url );
 				printf( '<a href="%s">%d</a>', esc_url( $attendees_url ), absint( $this->get_used_coupons_count( $post_id ) ) );
 				break;
 			case 'tix_remaining':
@@ -868,6 +862,27 @@ class CampTix_Plugin {
 		if ( ! $query->is_main_query() )
 			return;
 
+		$coupon_id = $this->get_attendee_coupon_filter_id();
+		if ( is_admin() && $coupon_id && $query->get('post_type') == 'tix_attendee' ) {
+			$coupon = get_post( $coupon_id );
+
+			if ( $coupon && 'tix_coupon' == $coupon->post_type ) {
+				$meta_query = $query->get( 'meta_query' );
+				if ( ! is_array( $meta_query ) ) {
+					$meta_query = array();
+				}
+
+				$meta_query[] = array(
+					'key'     => 'tix_coupon_id',
+					'value'   => $coupon_id,
+					'compare' => '=',
+					'type'    => 'CHAR',
+				);
+
+				$query->set( 'meta_query', $meta_query );
+			}
+		}
+
 		// Allow ordering by the purchased ticket id.
 		if ( $query->get('orderby') == 'tix_ticket_id' && $query->get('post_type') == 'tix_attendee' ) {
 			$meta_query = array(
@@ -893,6 +908,82 @@ class CampTix_Plugin {
 
 			$query->set( 'meta_query', $meta_query );
 		}
+	}
+
+	/**
+	 * Render a coupon filter dropdown on the Attendees list table.
+	 */
+	public function restrict_manage_attendees_by_coupon() {
+		$screen = get_current_screen();
+		if ( ! $screen || 'edit-tix_attendee' !== $screen->id ) {
+			return;
+		}
+
+		$coupons = $this->get_all_coupons();
+		if ( empty( $coupons ) ) {
+			return;
+		}
+
+		$selected_coupon_id = $this->get_attendee_coupon_filter_id();
+		?>
+		<select name="tix_coupon_id" id="filter-by-tix-coupon">
+			<option value=""><?php esc_html_e( 'All coupons', 'wordcamporg' ); ?></option>
+			<?php foreach ( $coupons as $coupon ) : ?>
+				<option value="<?php echo esc_attr( $coupon->ID ); ?>" <?php selected( $selected_coupon_id, $coupon->ID ); ?>>
+					<?php echo esc_html( $coupon->post_title ); ?>
+				</option>
+			<?php endforeach; ?>
+		</select>
+		<?php
+	}
+
+	/**
+	 * Return the coupon ID selected in the Attendees list table filter.
+	 *
+	 * @return int Selected coupon post ID, or 0 when absent or malformed.
+	 */
+	function get_attendee_coupon_filter_id() {
+		$coupon_id = $_GET['tix_coupon_id'] ?? 0;
+		if ( ! is_scalar( $coupon_id ) ) {
+			return 0;
+		}
+
+		return absint( $coupon_id );
+	}
+
+	/**
+	 * Rewrite old attendee coupon search URLs to the coupon filter parameter.
+	 */
+	function rewrite_old_attendee_coupon_search_query_args() {
+		$coupon_id = $this->get_old_attendee_coupon_search_filter_id();
+		if ( ! $coupon_id ) {
+			return;
+		}
+
+		$_GET['tix_coupon_id']     = (string) $coupon_id;
+		$_REQUEST['tix_coupon_id'] = (string) $coupon_id;
+
+		unset( $_GET['s'], $_REQUEST['s'] );
+	}
+
+	/**
+	 * Return the coupon ID from old tix_coupon_id:<ID> attendee searches.
+	 *
+	 * @return int Coupon post ID when applicable, otherwise 0.
+	 */
+	function get_old_attendee_coupon_search_filter_id() {
+		$search = $_GET['s'] ?? '';
+
+		if (
+			'tix_attendee' !== ( $_GET['post_type'] ?? '' ) ||
+			! is_scalar( $search ) ||
+			! preg_match( '/^tix_coupon_id:(\d+)$/', (string) $search, $matches )
+		) {
+			return 0;
+		}
+
+		$coupon_id = absint( $matches[1] );
+		return 'tix_coupon' === get_post_type( $coupon_id ) ? $coupon_id : 0;
 	}
 
 	/**
@@ -1281,15 +1372,33 @@ class CampTix_Plugin {
 
 	/**
 	 * Returns an array of options stored in the database, or a set of defaults.
+	 *
+	 * The result is cached in `$this->options` after the first call. Multisite
+	 * callers (such as the centralized Stripe webhook) should call
+	 * `load_options()` after `switch_to_blog()` to refresh the cache for the
+	 * switched-to site.
 	 */
 	function get_options() {
-
 		// Allow other plugins to get CampTix options.
-		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) )
+		if ( isset( $this->options ) && is_array( $this->options ) && ! empty( $this->options ) ) {
 			return $this->options;
+		}
 
+		return $this->load_options();
+	}
+
+	/**
+	 * Load the current site's CampTix options into `$this->options`.
+	 *
+	 * Called once during `init()`. Multisite callers can call this again after
+	 * `switch_to_blog()` to refresh `$this->options` (and any internal CampTix
+	 * code that reads it directly) for the switched-to site.
+	 *
+	 * @return array The freshly loaded options.
+	 */
+	function load_options() {
 		$default_options = $this->get_default_options();
-		$options = array_merge( $default_options, get_option( 'camptix_options', array() ) );
+		$options         = array_merge( $default_options, get_option( 'camptix_options', array() ) );
 
 		// Allow plugins to hi-jack or read the options.
 		$options = apply_filters( 'camptix_options', $options );
@@ -1305,25 +1414,9 @@ class CampTix_Plugin {
 			$this->upgrade( $options['version'] );
 		}
 
+		$this->options = $options;
+
 		return $options;
-	}
-
-	/**
-	 * Reload request-scoped options after switching sites in a multisite request.
-	 *
-	 * CampTix caches options for the current request, but centralized webhooks need
-	 * to switch into the site where the ticket order lives before processing it.
-	 */
-	function reload_options( $new_blog_id = null, $prev_blog_id = null, $context = null ) {
-		if ( doing_filter( 'camptix_options' ) ) {
-			return;
-		}
-
-		$this->tmp = array();
-
-		unset( $this->options, $this->tickets_url );
-
-		$this->options = $this->get_options();
 	}
 
 	/*
@@ -1669,13 +1762,23 @@ class CampTix_Plugin {
 			$currency['decimal_point'] = 2;
 		}
 
+		// PHP 8.4+ throws ValueError when NumberFormatter is given an unknown locale; format() can also return false.
+		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) ) {
-			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-			$formatted_amount = $formatter->format( $amount );
-		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
-			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
-		} else {
-			$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			try {
+				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
+				$formatted_amount = $formatter->format( $amount );
+			} catch ( \Throwable $e ) {
+				$formatted_amount = false;
+			}
+		}
+
+		if ( false === $formatted_amount ) {
+			if ( isset( $currency['format'] ) && $currency['format'] ) {
+				$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
+			} else {
+				$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			}
 		}
 
 		$formatted_amount = apply_filters( 'tix_append_currency', $formatted_amount, $currency, $amount );
@@ -6642,8 +6745,22 @@ class CampTix_Plugin {
 			update_post_meta( $attendee->ID, 'tix_transaction_details', $transaction_details );
 
 			if ( self::PAYMENT_STATUS_CANCELLED == $result ) {
-				$attendee->post_status = 'cancel';
-				wp_update_post( $attendee );
+				// A user-initiated cancel (e.g. clicking "Cancel" on the gateway's hosted
+				// checkout) can race with the gateway's webhook. If the webhook has already
+				// reported the payment as complete/pending/refunded, the charge stayed with
+				// the gateway and the attendee is the rightful ticket holder — refuse to
+				// downgrade. PAYMENT_STATUS_COMPLETED still transitions cancel → publish,
+				// so a webhook that arrives after a cancel still wins.
+				if ( in_array( $attendee->post_status, array( 'publish', 'pending', 'refund' ), true ) ) {
+					$this->log(
+						sprintf( 'Refusing to cancel attendee in %s status; payment was already processed.', $attendee->post_status ),
+						$attendee->ID,
+						$data
+					);
+				} else {
+					$attendee->post_status = 'cancel';
+					wp_update_post( $attendee );
+				}
 			}
 
 			if ( self::PAYMENT_STATUS_FAILED == $result ) {
@@ -6687,6 +6804,29 @@ class CampTix_Plugin {
 		$from_status = $attendees_status;
 		$to_status = $attendees[0]->post_status;
 
+		/**
+		 * Fires after a payment result has been recorded for an attendee group.
+		 *
+		 * This action fires on every payment_result() call, not just on status transitions.
+		 * Webhooks and interactive returns can both invoke payment_result() for the same
+		 * payment_token; whichever runs second sees $status_changed === false. Listeners
+		 * that should only run when the attendee status actually transitioned can check the
+		 * $status_changed argument; idempotent listeners (e.g. one that creates an invoice)
+		 * can run on every call and use their own dedup guard to avoid double-processing.
+		 *
+		 * @param string $payment_token  The payment token whose attendees were updated.
+		 * @param int    $result         The new payment status — one of the
+		 *                               CampTix_Plugin::PAYMENT_STATUS_* constants.
+		 * @param array  $data           Gateway-supplied payment data. May include
+		 *                               transaction_id, transaction_details, error_code,
+		 *                               refund_transaction_id, refund_transaction_details.
+		 * @param bool   $status_changed Whether this call actually transitioned the
+		 *                               attendee post_status. False for repeat calls that
+		 *                               re-report the same status (e.g. a duplicate
+		 *                               webhook arriving after the interactive return).
+		 */
+		do_action( 'camptix_payment_result', $payment_token, $result, $data, $status_changed );
+
 		// If the status hasn't changed, there's nothing much we can do here.
 		if ( ! $status_changed ) {
 			if ( ! $interactive ) {
@@ -6705,7 +6845,6 @@ class CampTix_Plugin {
 
 		// Send out the tickets and receipt if necessary.
 		$this->email_tickets( $payment_token, $from_status, $to_status );
-		do_action( 'camptix_payment_result', $payment_token, $result, $data );
 
 		if ( ! $interactive ) {
 			return true;

@@ -218,13 +218,34 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		}//end if
 
 		$metas = get_post_meta( $attendees[0]->ID, 'invoice_metas', true );
-		if ( $metas ) {
-			$order      = get_post_meta( $attendees[0]->ID, 'tix_order', true );
-			$invoice_id = self::create_invoice( $attendees[0], $order, $metas );
-			if ( ! is_wp_error( $invoice_id ) && ! empty( $invoice_id ) ) {
-				self::send_invoice( $invoice_id );
-			}//end if
-		}//end if
+		if ( ! $metas ) {
+			return;
+		}
+
+		// Race-safe idempotency guard: payment_result() can fire camptix_payment_result
+		// more than once for the same payment_token (centralized Stripe webhook + interactive
+		// return run within ~1-2 seconds of each other). add_post_meta() with $unique=true
+		// is rejected by WordPress if the key already exists for this post, so only the first
+		// caller successfully claims invoice creation; concurrent callers bail. Keyed on the
+		// attendee rather than on tix_transaction_id so that no-transaction purchases
+		// (100% coupon, Stripe payment_status=no_payment_required) are also covered.
+		if ( get_post_meta( $attendees[0]->ID, '_invoice_id', true ) ) {
+			return;
+		}
+		if ( ! add_post_meta( $attendees[0]->ID, '_invoice_id', 0, true ) ) {
+			return;
+		}
+
+		$order      = get_post_meta( $attendees[0]->ID, 'tix_order', true );
+		$invoice_id = self::create_invoice( $attendees[0], $order, $metas );
+		if ( is_wp_error( $invoice_id ) || empty( $invoice_id ) ) {
+			// Release the lock so a later call can retry.
+			delete_post_meta( $attendees[0]->ID, '_invoice_id' );
+			return;
+		}
+
+		update_post_meta( $attendees[0]->ID, '_invoice_id', $invoice_id );
+		self::send_invoice( $invoice_id );
 	}
 
 	/**
@@ -481,13 +502,23 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 
 		$currency = $camptix_currencies[ $currency_key ];
 
+		// PHP 8.4+ throws ValueError when NumberFormatter is given an unknown locale; format() can also return false.
+		$formatted_amount = false;
 		if ( isset( $currency['locale'] ) === true ) {
-			$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-			$formatted_amount = $formatter->format( $amount );
-		} elseif ( isset( $currency['format'] ) && $currency['format'] ) {
-			$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
-		} else {
-			$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			try {
+				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
+				$formatted_amount = $formatter->format( $amount );
+			} catch ( \Throwable $e ) {
+				$formatted_amount = false;
+			}
+		}
+
+		if ( false === $formatted_amount ) {
+			if ( isset( $currency['format'] ) && $currency['format'] ) {
+				$formatted_amount = sprintf( $currency['format'], number_format( $amount, $currency['decimal_point'] ) );
+			} else {
+				$formatted_amount = $currency_key . ' ' . number_format( $amount, $currency['decimal_point'] );
+			}
 		}
 
 		return $formatted_amount;

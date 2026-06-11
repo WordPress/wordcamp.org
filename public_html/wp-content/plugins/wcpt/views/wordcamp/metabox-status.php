@@ -58,18 +58,27 @@ function render_event_metabox( $event_admin, $post, $event_type, $label, $edit_c
 
 							<span id="post-status-display">
 							<select name="post_status">
-								<?php $transitions = $event_admin->get_valid_status_transitions( $post->post_status );
+								<?php
+								$transitions   = $event_admin->get_valid_status_transitions( $post->post_status );
+								$post_statuses = $event_admin->get_post_statuses();
+
+								// If the current status is not in the list (e.g. a mid-transition state),
+								// add it so saving never silently mutates the status.
+								if ( ! array_key_exists( $post->post_status, $post_statuses ) ) {
+									$current_obj                         = get_post_status_object( $post->post_status );
+									$post_statuses[ $post->post_status ] = $current_obj->label ?? $post->post_status;
+								}
 								?>
-								<?php foreach ( $event_admin->get_post_statuses() as $key => $post_status_label ) : ?>
-									<?php $status = get_post_status_object( $key ); ?>
-									<option value="<?php echo esc_attr( $status->name ); ?>" <?php
-									if ( $post->post_status == $status->name ) {
-										selected( true );
-									} elseif ( ! in_array( $status->name, $transitions ) ) {
-										echo ' disabled ';
-									}
+								<?php foreach ( $post_statuses as $key => $post_status_label ) : ?>
+									<?php
+									$is_current = $post->post_status === $key;
+									$disabled   = ! $is_current && ! in_array( $key, $transitions, true );
+									?>
+									<option value="<?php echo esc_attr( $key ); ?>" <?php
+									selected( $is_current );
+									disabled( $disabled );
 									?>>
-										<?php echo esc_html( $status->label ); ?>
+										<?php echo esc_html( $post_status_label ); ?>
 									</option>
 								<?php endforeach; ?>
 							</select>

@@ -942,6 +942,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				do_action( 'wcpt_approved_for_pre_planning', $post );
 			} elseif ( 'wcpt-needs-schedule' == $old_status && 'wcpt-scheduled' == $new_status ) {
 				do_action( 'wcpt_added_to_final_schedule', $post );
+			} elseif ( 'wcpt-needs-orientati' === $new_status
+				&& 'campusconnect' === get_post_meta( $post->ID, 'event_subtype', true ) ) {
+				// Fires when a Campus Connect application transitions to Needs Orientation.
+				// Uses a dedicated action to avoid triggering the non-CC hooks that listen
+				// to wcpt_approved_for_pre_planning (e.g. add_organizer_to_central).
+				do_action( 'wcpt_cc_needs_orientation', $post );
 			} elseif ( 'wcpt-approved-pre-pl' === $new_status
 				&& 'campusconnect' === get_post_meta( $post->ID, 'event_subtype', true ) ) {
 				// Fires when a Campus Connect application is approved for pre-planning.
@@ -970,7 +976,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				array(
 					'timestamp' => time(),
 					'user_id'   => get_current_user_id(),
-					'message'   => __( 'Application approved for pre-planning. Organizer notification email triggered.', 'wordcamporg' ),
+					'message'   => __( 'Application approved for pre-planning.', 'wordcamporg' ),
 				)
 			);
 
@@ -1088,12 +1094,17 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$post_data['post_status'] = $post->post_status;
 				}
 
-				// Enforce a valid status.
+				// Enforce a valid status. Include all global statuses plus CC-exclusive ones.
 				$statuses = array_keys( WordCamp_Loader::get_post_statuses() );
-				$statuses = array_merge( $statuses, array( 'trash' ) );
+				$statuses[] = 'trash';
 
-				if ( ! in_array( $post_data['post_status'], $statuses ) ) {
+				if ( ! in_array( $post_data['post_status'], $statuses, true ) ) {
 					$post_data['post_status'] = $statuses[0];
+				}
+
+				// Block CC-exclusive statuses from being applied to non-Campus-Connect posts.
+				if ( 'wcpt-needs-action' === $post_data['post_status'] && ! self::is_campus_connect_post_for_save( $post_data_raw['ID'] ) ) {
+					$post_data['post_status'] = $post->post_status;
 				}
 			}
 
@@ -1140,7 +1151,11 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 					$value = $_POST[ wcpt_key_to_str( $field, 'wcpt_' ) ] ?? '';
 
 					if ( empty( $value ) || 'null' == $value ) {
-						$post_data['post_status']     = 'wcpt-needs-schedule';
+						// Campus Connect posts revert to Approved For Pre-Planning on validation failure;
+						// non-CC posts use the standard Needs to be Added to Official Schedule fallback.
+						$post_data['post_status']     = self::is_campus_connect_post_for_save( $post_data_raw['ID'] )
+							? 'wcpt-approved-pre-pl'
+							: 'wcpt-needs-schedule';
 						$this->active_admin_notices[] = 3;
 						break;
 					}
@@ -1329,7 +1344,7 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 
 				5 => array(
 					'type'   => 'updated',
-					'notice' => __( 'This Campus Connect application has been approved for pre-planning. The organizer notification email has been triggered and a note has been added to the log.', 'wordcamporg' ),
+					'notice' => __( 'This Campus Connect application has been approved for pre-planning. A note has been added to the log.', 'wordcamporg' ),
 				),
 			);
 
@@ -1351,23 +1366,95 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 		}
 
 		/**
-		 * Get list of valid status transitions from given status
+		 * Get list of valid status transitions from given status.
+		 *
+		 * For Campus Connect posts, returns the CC-specific transition map.
 		 *
 		 * @param string $status
-		 *
 		 * @return array
 		 */
 		public static function get_valid_status_transitions( $status ) {
+			if ( self::is_campus_connect_post() ) {
+				return WordCamp_Loader::get_campus_connect_status_transitions( $status );
+			}
+
 			return WordCamp_Loader::get_valid_status_transitions( $status );
 		}
 
 		/**
 		 * Get list of all available post statuses.
 		 *
-		 * @return array
+		 * For Campus Connect posts, returns the nine CC-specific statuses.
+		 * For all other subtypes, returns the full global list minus the
+		 * CC-exclusive status (wcpt-needs-action).
+		 *
+		 * @return array Associative array of status slug => label.
 		 */
 		public static function get_post_statuses() {
-			return WordCamp_Loader::get_post_statuses();
+			if ( self::is_campus_connect_post() ) {
+				return WordCamp_Loader::get_campus_connect_statuses();
+			}
+
+			$statuses = WordCamp_Loader::get_post_statuses();
+			unset( $statuses['wcpt-needs-action'] );
+
+			return $statuses;
+		}
+
+		/**
+		 * Return the human-readable label for a post status slug.
+		 *
+		 * For Campus Connect posts, returns CC-specific labels (e.g. "Approved For Pre-Planning"
+		 * instead of the global "Approved for Pre-Planning Pending Agreement").
+		 *
+		 * @param string  $status Post status slug.
+		 * @param WP_Post $post   The post being transitioned.
+		 * @return string Human-readable label.
+		 */
+		protected function get_status_label( $status, $post ) {
+			if ( 'campusconnect' === get_post_meta( $post->ID, 'event_subtype', true ) ) {
+				$cc_statuses = WordCamp_Loader::get_campus_connect_statuses();
+
+				return $cc_statuses[ $status ] ?? parent::get_status_label( $status, $post );
+			}
+
+			return parent::get_status_label( $status, $post );
+		}
+
+		/**
+		 * Check whether the post currently being edited is a Campus Connect event.
+		 *
+		 * Reads `event_subtype` post meta (stored as lowercase with underscore by
+		 * class-event-admin.php via update_post_meta). Falls back to the `post` query
+		 * variable on admin edit screens where get_the_ID() is not yet populated.
+		 *
+		 * @return bool
+		 */
+		protected static function is_campus_connect_post() {
+			$post_id = get_the_ID();
+
+			// Fallback for admin edit screens where get_the_ID() may not be set yet.
+			if ( ! $post_id ) {
+				$post_id = absint( wp_unslash( $_GET['post'] ?? 0 ) );
+			}
+
+			return $post_id && 'campusconnect' === get_post_meta( $post_id, 'event_subtype', true );
+		}
+
+		/**
+		 * Check whether a post being saved is a Campus Connect event.
+		 *
+		 * Uses the submitted subtype when present so direct POSTs are validated
+		 * against the value being saved, then falls back to stored post meta.
+		 *
+		 * @param int $post_id Post ID.
+		 * @return bool
+		 */
+		protected static function is_campus_connect_post_for_save( $post_id ) {
+			$submitted_subtype = sanitize_text_field( wp_unslash( $_POST['event_subtype'] ?? '' ) );
+			$event_subtype     = $submitted_subtype ?: get_post_meta( absint( $post_id ), 'event_subtype', true );
+
+			return 'campusconnect' === $event_subtype;
 		}
 
 		/**

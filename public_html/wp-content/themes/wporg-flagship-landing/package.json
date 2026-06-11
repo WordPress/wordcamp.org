@@ -25,7 +25,7 @@
 		"watch": "wp-scripts start & npm run build:css -- --watch",
 		"build": "wp-scripts build && npm run build:css",
 		"build:css": "postcss postcss/style.pcss postcss/editor.pcss --dir . --ext css",
-		"lint:js": "wp-scripts lint-js 'src/**/*.js'",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs 'src/**/*.js'",
 		"lint:css": "wp-scripts lint-style 'postcss/*.pcss'"
 	}
 }

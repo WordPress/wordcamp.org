@@ -47,7 +47,7 @@
 		"start": "sass assets/scss:assets/build --watch --source-map-embed",
 		"build": "sass assets/scss:assets/build --style=compressed",
 		"format:js": "echo \"No formatting.\"",
-		"lint:js": "wp-scripts lint-js assets/js/*.js",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs assets/js/*.js",
 		"lint:css": "wp-scripts lint-style 'assets/scss/*.scss'"
 	}
 }

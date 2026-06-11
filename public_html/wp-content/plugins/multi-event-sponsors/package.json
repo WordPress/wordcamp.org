@@ -9,7 +9,7 @@
 		"build": "wp-scripts build javascript/index.js --output-path=build",
 		"start": "wp-scripts start javascript/index.js --output-path=build --hot",
 		"lint:css": "wp-scripts lint-style css",
-		"lint:js": "wp-scripts lint-js javascript",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs javascript",
 		"format:js": "wp-scripts format javascript --config=../../../../.prettierrc.js",
 		"packages-update": "wp-scripts packages-update"
 	},

@@ -56,9 +56,9 @@ class SSLCommerz extends Base_Gateway {
 	/**
 	 * If the phone number is passed, add this to the attendee object
 	 *
-	 * @param [type] $attendee
-	 * @param [type] $attendee_info
-	 * @param [type] $current_count
+	 * @param object $attendee
+	 * @param array  $attendee_info
+	 * @param int    $current_count
 	 */
 	public function add_attendee_info( $attendee, $attendee_info, $current_count ) {
 		if ( ! empty( $attendee_info['phone'] ) ) {
@@ -96,13 +96,51 @@ class SSLCommerz extends Base_Gateway {
 			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
+		/**
+		 * SSLCommerz Live enforces a minimum transaction amount configured in the
+		 * merchant account. The default minimum is 10 BDT — amounts below this are
+		 * rejected with "Transaction amount is not allowed as per admin configuration!".
+		 *
+		 * Filters the minimum allowed amount so it can be adjusted without code changes
+		 * if the merchant account configuration changes.
+		 *
+		 * @param float $min_amount Minimum amount in BDT.
+		 */
+		$min_amount = (float) apply_filters( 'camptix_sslcommerz_min_amount', 10.0 );
+		if ( ! $this->options['sandbox'] && (float) $order['total'] < $min_amount ) {
+			$camptix->log(
+				'SSLCommerz payment rejected: order total is below the Live minimum transaction amount.',
+				null,
+				[
+					'order_total' => $order['total'],
+					'min_amount'  => $min_amount,
+				]
+			);
+			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
+		}
+
+		/**
+		 * Filters the base URL used for SSLCommerz callback and IPN URLs.
+		 *
+		 * In local development environments where the site URL is not publicly
+		 * reachable (e.g., a *.test domain), you can hook this filter to substitute
+		 * a tunnel URL (ngrok, Cloudflare Tunnel, etc.) so that SSLCommerz's live
+		 * servers can reach the callback and IPN endpoints.
+		 *
+		 * @param string $base_url The tickets page URL.
+		 */
+		$callback_base_url = apply_filters(
+			'camptix_sslcommerz_callback_base_url',
+			$camptix->get_tickets_url()
+		);
+
 		$return_url = add_query_arg(
 			array(
 				'tix_action'         => 'payment_return',
 				'tix_payment_token'  => $payment_token,
 				'tix_payment_method' => $this->id,
 			),
-			$camptix->get_tickets_url()
+			$callback_base_url
 		);
 
 		$cancel_url = add_query_arg(
@@ -111,7 +149,7 @@ class SSLCommerz extends Base_Gateway {
 				'tix_payment_token'  => $payment_token,
 				'tix_payment_method' => $this->id,
 			),
-			$camptix->get_tickets_url()
+			$callback_base_url
 		);
 
 		$notify_url = add_query_arg(
@@ -120,7 +158,7 @@ class SSLCommerz extends Base_Gateway {
 				'tix_payment_token'  => $payment_token,
 				'tix_payment_method' => $this->id,
 			),
-			$camptix->get_tickets_url()
+			$callback_base_url
 		);
 
 		$fail_url = add_query_arg(
@@ -129,7 +167,7 @@ class SSLCommerz extends Base_Gateway {
 				'tix_payment_token'  => $payment_token,
 				'tix_payment_method' => $this->id,
 			),
-			$camptix->get_tickets_url()
+			$callback_base_url
 		);
 
 		$attendees = $this->get_attendees_by_payment_token( $payment_token );
@@ -137,16 +175,12 @@ class SSLCommerz extends Base_Gateway {
 			return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 		}
 
-		// Take the first attendee as the customer because
-		// we need the name and phone number for the gateway.
 		$attendee = reset( $attendees );
 		$customer = $this->get_attendee_customer_info( $attendee->ID );
 		$email    = $customer['email'];
 		$name     = $customer['name'];
 		$phone    = $customer['phone'];
 
-		// Build the payment description with the event name and
-		// ticket names with quantity.
 		$description = $camptix->email_template_shortcode_event_name([]);
 
 		foreach ( $order['items'] as $ticket ) {
@@ -183,14 +217,39 @@ class SSLCommerz extends Base_Gateway {
 			'product_profile'  => 'non-physical-goods',
 		];
 
+		$camptix->log(
+			'SSLCommerz payment initiation payload.',
+			null,
+			array_merge(
+				array_diff_key( $args, array_flip( [ 'store_passwd' ] ) ),
+				[
+					'sandbox'  => $this->options['sandbox'],
+					'base_url' => $this->options['sandbox']
+								? 'https://sandbox.sslcommerz.com'
+								: 'https://securepay.sslcommerz.com',
+				]
+			)
+		);
+
 		$response = $this->api( 'POST', '/gwprocess/v4/api.php', $args );
 
 		$response_data    = (array) $response;
 		$status           = strtoupper( (string) ( $response_data['status'] ?? '' ) );
 		$gateway_page_url = esc_url_raw( $response_data['GatewayPageURL'] ?? '' );
 
+		$camptix->log(
+			'SSLCommerz payment initiation response.',
+			null,
+			[
+				'status'         => $status,
+				'failedreason'   => $response_data['failedreason'] ?? '',
+				'GatewayPageURL' => $gateway_page_url,
+				'sessionkey_set' => ! empty( $response->sessionkey ),
+			]
+		);
+
 		if ( 'SUCCESS' === $status && ! empty( $gateway_page_url ) ) {
-			if ( ! $this->is_allowed_https_host( $gateway_page_url, array( 'sandbox.sslcommerz.com', 'securepay.sslcommerz.com' ) ) ) {
+			if ( ! $this->is_allowed_https_host( $gateway_page_url, array( 'sslcommerz.com' ) ) ) {
 				$camptix->log( 'SSLCommerz unexpected redirect host.', null, array( 'url' => $gateway_page_url ) );
 				return CampTix_Plugin::PAYMENT_STATUS_FAILED;
 			}
@@ -264,14 +323,6 @@ class SSLCommerz extends Base_Gateway {
 	 * thus not blocked by Require Login.
 	 */
 	public function early_template_redirect() {
-		/*
-		 * Undo the POST => Cookie behaviour on the redirect.
-		 * Read the next section first.
-		 *
-		 * If the request has the returned POST data in the temporary cookie, extract it and merge it into the request.
-		 *
-		 * See early_template_redirect() for more details.
-		 */
 		if (
 			empty( $_POST ) &&
 			isset( $_COOKIE[ $this->id . '_postdata' ] )
@@ -377,6 +428,18 @@ class SSLCommerz extends Base_Gateway {
 		$payment_token  = sanitize_text_field( trim( $_REQUEST['tix_payment_token'] ?? '' ) );
 		$transaction_id = sanitize_text_field( $_REQUEST['tran_id'] ?? '' );
 		$val_id         = sanitize_text_field( $_REQUEST['val_id'] ?? '' );
+
+		$camptix->log(
+			'SSLCommerz payment_notify received.',
+			null,
+			[
+				'payment_token'  => $payment_token,
+				'transaction_id' => $transaction_id,
+				'val_id'         => $val_id,
+				'request_method' => $_SERVER['REQUEST_METHOD'] ?? '',
+				'source'         => $this->has_validated_gateway_data ? 'browser-cookie' : 'direct-ipn',
+			]
+		);
 
 		// The payment transaction data is always in the POST data.
 		$transaction_data = $_POST;
@@ -512,12 +575,10 @@ class SSLCommerz extends Base_Gateway {
 		/** @var CampTix_Plugin $camptix */
 		global $camptix;
 
-		// precheck the attendee is in draft.
 		if ( 'draft' !== get_post_field( 'post_status', $attendee_id ) ) {
 			return;
 		}
 
-		// Get the session ID.
 		$session_key   = get_post_meta( $attendee_id, '_sslcommerz_session_key', true );
 		$payment_token = get_post_meta( $attendee_id, 'tix_payment_token', true );
 		if ( ! $session_key || ! $payment_token ) {
@@ -537,7 +598,6 @@ class SSLCommerz extends Base_Gateway {
 			return;
 		}
 
-		// If the transaction wasn't successful, bail out.
 		if ( ! in_array( $response->status, [ 'VALID', 'VALIDATED' ], true ) ) {
 			return;
 		}
@@ -555,7 +615,6 @@ class SSLCommerz extends Base_Gateway {
 			return;
 		}
 
-		// Order was successful, mark as paid.
 		$camptix->log( 'SSLCommerz checkout timed out, but order succeeded.', $attendee_id, $response );
 
 		$payment_data = [
@@ -599,7 +658,17 @@ class SSLCommerz extends Base_Gateway {
 			$full_url = add_query_arg( $args, $full_url );
 		}
 
-		$response = wp_remote_request( $full_url, $request_args );
+		$response  = wp_remote_request( $full_url, $request_args );
+		$http_code = is_wp_error( $response ) ? 0 : wp_remote_retrieve_response_code( $response );
+
+		$camptix->log(
+			sprintf( 'SSLCommerz API %s %s → HTTP %d.', $method, $url, $http_code ),
+			null,
+			[
+				'full_url' => $full_url,
+				'sandbox'  => $this->options['sandbox'],
+			]
+		);
 
 		if ( is_wp_error( $response ) ) {
 			$camptix->log( 'SSLCommerz API error: ' . $response->get_error_message() );
@@ -674,10 +743,8 @@ class SSLCommerz extends Base_Gateway {
 			}
 		}
 
-		// Add MD5 of store password.
 		$new_data['store_passwd'] = md5( $store_passwd );
 
-		// Sort the key as before.
 		ksort( $new_data );
 
 		$hash_string = '';
@@ -688,7 +755,22 @@ class SSLCommerz extends Base_Gateway {
 		$hash_string = rtrim( $hash_string, '&' );
 		$hash_string = md5( $hash_string );
 
-		return hash_equals( $hash_string, $data['verify_sign'] );
+		$result = hash_equals( $hash_string, $data['verify_sign'] );
+
+		if ( ! $result ) {
+			global $camptix;
+			$camptix->log(
+				'SSLCommerz IPN hash mismatch.',
+				null,
+				[
+					'verify_key'  => $data['verify_key'] ?? '',
+					'keys_hashed' => array_keys( $new_data ),
+					'has_sign'    => isset( $data['verify_sign'] ),
+				]
+			);
+		}
+
+		return $result;
 	}
 
 	/**

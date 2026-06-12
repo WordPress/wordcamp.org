@@ -366,6 +366,25 @@ class CampTix_QR_Check_In extends CampTix_Addon {
 	}
 
 	/**
+	 * Load the bundled QR rendering library when it is not already autoloadable.
+	 *
+	 * WordCamp.org deploys do not run `composer install`, so chillerlan/php-qrcode is vendored
+	 * alongside this addon (see addons/qr-lib/) and loaded on demand. If the dependency is already
+	 * provided by the global Composer autoloader, the bundled copy is left untouched.
+	 */
+	protected function maybe_load_qr_library() {
+		if ( class_exists( '\chillerlan\QRCode\QRCode' ) ) {
+			return;
+		}
+
+		$autoload = __DIR__ . '/qr-lib/vendor/autoload.php';
+
+		if ( is_readable( $autoload ) ) {
+			require_once $autoload;
+		}
+	}
+
+	/**
 	 * Render QR code bytes for the given content.
 	 *
 	 * Uses chillerlan/php-qrcode (GD PNG, or SVG markup when GD is missing). Returns false when the
@@ -376,6 +395,8 @@ class CampTix_QR_Check_In extends CampTix_Addon {
 	 * @return string|false
 	 */
 	protected function render_qr_bytes( $content, &$mime ) {
+		$this->maybe_load_qr_library();
+
 		if ( ! class_exists( '\chillerlan\QRCode\QRCode' ) ) {
 			$this->log( 'QR code library is not installed; cannot render QR image.' );
 			return false;

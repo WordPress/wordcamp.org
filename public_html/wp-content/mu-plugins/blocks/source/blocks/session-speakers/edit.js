@@ -17,9 +17,19 @@ import {
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { useEntityProp } from '@wordpress/core-data';
 
-export default function( { attributes, setAttributes, context: { postId, postType }, isSelected } ) {
+export default function ( {
+	attributes,
+	setAttributes,
+	context: { postId, postType },
+	isSelected,
+} ) {
 	const { byline, isLink, textAlign } = attributes;
-	const [ speakers = [] ] = useEntityProp( 'postType', postType, 'session_speakers', postId );
+	const [ speakers = [] ] = useEntityProp(
+		'postType',
+		postType,
+		'session_speakers',
+		postId
+	);
 
 	const blockProps = useBlockProps( {
 		className: classnames( {
@@ -51,15 +61,23 @@ export default function( { attributes, setAttributes, context: { postId, postTyp
 					<RichText
 						className="wp-block-wordcamp-session-speakers__byline"
 						multiline={ false }
-						aria-label={ __( 'Session speaker byline text', 'wordcamporg' ) }
+						aria-label={ __(
+							'Session speaker byline text',
+							'wordcamporg'
+						) }
 						placeholder={ __( 'Presented by', 'wordcamporg' ) }
 						value={ byline }
-						onChange={ ( value ) => setAttributes( { byline: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { byline: value } )
+						}
 					/>
 				) }
 				{ postType && postId ? (
 					speakers.map( ( { id, name, link } ) => (
-						<span key={ id } className="wp-block-wordcamp-session-speakers__name">
+						<span
+							key={ id }
+							className="wp-block-wordcamp-session-speakers__name"
+						>
 							{ isLink ? <a href={ link }>{ name }</a> : name }
 						</span>
 					) )

@@ -35,22 +35,37 @@ class Edit extends Component {
 		let output;
 
 		switch ( mode ) {
-			case 'all' :
+			case 'all':
 				output = (
-					<SponsorList attributes={ attributes } entities={ entities } />
+					<SponsorList
+						attributes={ attributes }
+						entities={ entities }
+					/>
 				);
 				break;
 
-			case 'wcb_sponsor' :
-			case 'wcb_sponsor_level' :
+			case 'wcb_sponsor':
+			case 'wcb_sponsor_level':
 				output = (
 					<EditAppender
-						content={ <SponsorList attributes={ attributes } entities={ entities } /> }
+						content={
+							<SponsorList
+								attributes={ attributes }
+								entities={ entities }
+							/>
+						}
 						appender={
 							isSelected && (
-								<Placeholder className="wordcamp__edit-placeholder" icon={ ICON } label={ LABEL }>
+								<Placeholder
+									className="wordcamp__edit-placeholder"
+									icon={ ICON }
+									label={ LABEL }
+								>
 									<SponsorSelect
-										label={ getOptionLabel( mode, options.mode ) }
+										label={ getOptionLabel(
+											mode,
+											options.mode
+										) }
 										attributes={ attributes }
 										entities={ entities }
 										icon={ ICON }
@@ -63,7 +78,7 @@ class Edit extends Component {
 				);
 				break;
 
-			default :
+			default:
 				output = (
 					<Placeholder
 						className="wordcamp__edit-placeholder has-no-mode"
@@ -83,7 +98,10 @@ class Edit extends Component {
 
 						<div className="wordcamp__edit-mode-option">
 							<SponsorSelect
-								label={ __( 'Choose specific sponsors or levels', 'wordcamporg' ) }
+								label={ __(
+									'Choose specific sponsors or levels',
+									'wordcamporg'
+								) }
 								attributes={ attributes }
 								entities={ entities }
 								icon={ ICON }

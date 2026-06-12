@@ -9,7 +9,7 @@ import { get } from 'lodash';
 import { decodeEntities } from '@wordpress/html-entities';
 const { stripTags } = wp.sanitize;
 
-export default function( { headingLevel = 3, session, track } ) {
+export default function ( { headingLevel = 3, session, track } ) {
 	if ( ! session ) {
 		return null;
 	}
@@ -21,7 +21,11 @@ export default function( { headingLevel = 3, session, track } ) {
 	const categories = get( session, 'session_cats_rendered', '' );
 	const type = get( session, 'meta._wcpt_session_type', '' );
 	const time = parseInt( session.meta._wcpt_session_time ) * 1000;
-	const date = new Date( time ).toLocaleTimeString( [], { timeZoneName: 'short', hour: 'numeric', minute: '2-digit' } );
+	const date = new Date( time ).toLocaleTimeString( [], {
+		timeZoneName: 'short',
+		hour: 'numeric',
+		minute: '2-digit',
+	} );
 
 	const speakers = get( session, 'session_speakers', [] );
 	const validSpeakers = speakers.filter( ( speaker ) => !! speaker.id );
@@ -31,28 +35,40 @@ export default function( { headingLevel = 3, session, track } ) {
 	return (
 		<div className={ `wordcamp-live-schedule__session type-${ type }` }>
 			{ !! track.slug && (
-				<span className={ `wordcamp-live-schedule__session-track track-${ track.slug }` }>
+				<span
+					className={ `wordcamp-live-schedule__session-track track-${ track.slug }` }
+				>
 					{ track.name }
 				</span>
 			) }
 
 			<div className="wordcamp-live-schedule__session-details">
 				<Heading className="wordcamp-live-schedule__session-title">
-					{ !! link ? <a href={ link }>{ cleanTitle }</a> : cleanTitle }
+					{ !! link ? (
+						<a href={ link }>{ cleanTitle }</a>
+					) : (
+						cleanTitle
+					) }
 				</Heading>
 
-				<span className="wordcamp-live-schedule__session-time">{ date }</span>
+				<span className="wordcamp-live-schedule__session-time">
+					{ date }
+				</span>
 
 				<span className="wordcamp-live-schedule__session-speaker">
 					{ !! validSpeakers.length &&
-						validSpeakers.map( ( { id, name, link: speakerLink } ) => (
-							<a key={ id } href={ speakerLink }>
-								{ decodeEntities( stripTags( name ) ) }
-							</a>
-						) ) }
+						validSpeakers.map(
+							( { id, name, link: speakerLink } ) => (
+								<a key={ id } href={ speakerLink }>
+									{ decodeEntities( stripTags( name ) ) }
+								</a>
+							)
+						) }
 				</span>
 
-				<span className="wordcamp-live-schedule__session-cats">{ categories }</span>
+				<span className="wordcamp-live-schedule__session-cats">
+					{ categories }
+				</span>
 			</div>
 		</div>
 	);

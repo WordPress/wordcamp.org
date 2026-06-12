@@ -53,7 +53,10 @@ registerBlockVariation( 'core/query', {
 					'core/group',
 					{ layout: { type: 'flex', flexWrap: 'wrap' } },
 					[
-						[ 'core/paragraph', { content: __( 'Tracks:', 'wordcamporg' ) } ],
+						[
+							'core/paragraph',
+							{ content: __( 'Tracks:', 'wordcamporg' ) },
+						],
 						[ 'core/post-terms', { term: 'wcb_track' } ],
 					],
 				],
@@ -61,7 +64,10 @@ registerBlockVariation( 'core/query', {
 					'core/group',
 					{ layout: { type: 'flex', flexWrap: 'wrap' } },
 					[
-						[ 'core/paragraph', { content: __( 'Time:', 'wordcamporg' ) } ],
+						[
+							'core/paragraph',
+							{ content: __( 'Time:', 'wordcamporg' ) },
+						],
 						[ 'wordcamp/session-date' ],
 					],
 				],
@@ -70,7 +76,14 @@ registerBlockVariation( 'core/query', {
 		[ 'core/query-pagination' ],
 	],
 	// Omit `order` in favor of our custom OrderControl.
-	allowedControls: [ 'inherit', 'taxQuery', 'search', 'postCount', 'offset', 'pages' ],
+	allowedControls: [
+		'inherit',
+		'taxQuery',
+		'search',
+		'postCount',
+		'offset',
+		'pages',
+	],
 	scope: [ 'inserter' ],
 } );
 
@@ -90,14 +103,19 @@ const sessionQueryOrder = createHigherOrderComponent(
 		}
 
 		const { order, orderBy } = query;
-		const updateQuery = ( newQuery ) => setAttributes( { query: { ...query, ...newQuery } } );
+		const updateQuery = ( newQuery ) =>
+			setAttributes( { query: { ...query, ...newQuery } } );
 
 		return (
 			<>
 				<BlockEdit key="edit" { ...props } />
 				<InspectorControls>
 					<PanelBody title={ __( 'Order by', 'wordcamporg' ) }>
-						<OrderControl order={ order } orderBy={ orderBy } onChange={ updateQuery } />
+						<OrderControl
+							order={ order }
+							orderBy={ orderBy }
+							onChange={ updateQuery }
+						/>
 					</PanelBody>
 				</InspectorControls>
 			</>

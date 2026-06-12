@@ -21,14 +21,20 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 		switch ( entityType ) {
 			case 'post':
 				parsedItem = {
-					label: item.title.rendered.trim() || __( '(Untitled)', 'wordcamporg' ),
+					label:
+						item.title.rendered.trim() ||
+						__( '(Untitled)', 'wordcamporg' ),
 					value: item.id,
-					type: type,
+					type,
 					details: item.details,
 				};
 
-				parsedItem.avatar = get( item, 'avatar_urls[\'24\']', '' );
-				parsedItem.image = get( item, '_embedded[\'wp:featuredmedia\'][0].media_details.sizes.thumbnail.source_url', '' );
+				parsedItem.avatar = get( item, "avatar_urls['24']", '' );
+				parsedItem.image = get(
+					item,
+					"_embedded['wp:featuredmedia'][0].media_details.sizes.thumbnail.source_url",
+					''
+				);
 
 				break;
 
@@ -36,7 +42,7 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 				parsedItem = {
 					label: item.name || __( '(Untitled)', 'wordcamporg' ),
 					value: item.id,
-					type: type,
+					type,
 					count: item.count,
 				};
 				break;
@@ -46,7 +52,7 @@ const buildOptionGroup = ( entityType, type, label, items ) => {
 	} );
 
 	return {
-		label: label,
+		label,
 		options: items,
 	};
 };
@@ -74,9 +80,13 @@ export const buildOptions = createSelector(
 			}
 
 			if ( Array.isArray( items ) && items.length ) {
-				const sortedItems = filterEntities( items, { sort: orderby + '_asc' } );
+				const sortedItems = filterEntities( items, {
+					sort: orderby + '_asc',
+				} );
 
-				options.push( buildOptionGroup( entityType, type, label, sortedItems ) );
+				options.push(
+					buildOptionGroup( entityType, type, label, sortedItems )
+				);
 			}
 		} );
 

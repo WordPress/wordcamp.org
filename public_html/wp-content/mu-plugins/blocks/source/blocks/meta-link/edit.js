@@ -17,7 +17,11 @@ import {
 import { Notice } from '@wordpress/components';
 import { useEntityProp } from '@wordpress/core-data';
 
-export default function Edit( { attributes, setAttributes, context: { postId, postType } } ) {
+export default function Edit( {
+	attributes,
+	setAttributes,
+	context: { postId, postType },
+} ) {
 	const { key, text, textAlign } = attributes;
 	const [ meta = {} ] = useEntityProp( 'postType', postType, 'meta', postId );
 	const url = meta[ key ] || '';

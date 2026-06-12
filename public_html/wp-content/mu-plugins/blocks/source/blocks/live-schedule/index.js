@@ -20,9 +20,9 @@ const icon = 'excerpt-view';
 export const NAME = 'wordcamp/live-schedule';
 
 export const SETTINGS = {
-	title: title,
+	title,
 	description: __( 'Display a live schedule interface.', 'wordcamporg' ),
-	icon: icon,
+	icon,
 	category: 'wordcamp',
 	supports: {
 		align: [ 'wide', 'full' ],
@@ -54,12 +54,16 @@ export const SETTINGS = {
 					<TextControl
 						label={ __( 'Current session header:', 'wordcamporg' ) }
 						value={ attributes.now }
-						onChange={ ( value ) => setAttributes( { now: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { now: value } )
+						}
 					/>
 					<TextControl
 						label={ __( 'Next session header:', 'wordcamporg' ) }
 						value={ attributes.next }
-						onChange={ ( value ) => setAttributes( { next: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { next: value } )
+						}
 					/>
 					<p>{ __( 'Level', 'wordcamporg' ) }</p>
 					<HeadingToolbar
@@ -67,7 +71,9 @@ export const SETTINGS = {
 						minLevel={ 1 }
 						maxLevel={ 7 }
 						selectedLevel={ attributes.level }
-						onChange={ ( newLevel ) => setAttributes( { level: newLevel } ) }
+						onChange={ ( newLevel ) =>
+							setAttributes( { level: newLevel } )
+						}
 					/>
 				</PanelBody>
 			</InspectorControls>

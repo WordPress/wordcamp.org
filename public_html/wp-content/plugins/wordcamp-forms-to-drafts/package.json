@@ -11,11 +11,8 @@
 		"url": "https://github.com/WordPress/wordcamp.org/issues?q=label%3A%22%5BComponent%5D%20WC-Post-Types%22"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "31.4.0",
+		"@wordpress/scripts": "32.4.0",
 		"wicg-inert": "3.1.3"
-	},
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
 	},
 	"stylelint": {
 		"extends": "../../../../.stylelintrc"
@@ -24,7 +21,7 @@
 		"start": "wp-scripts start ./src/inert.js --output-filename inert.js",
 		"build": "wp-scripts build ./src/inert.js --output-filename inert.js",
 		"format:js": "echo \"No formatting.\"",
-		"lint:js": "wp-scripts lint-js src",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs src",
 		"lint:css": "wp-scripts lint-style *.css"
 	}
 }

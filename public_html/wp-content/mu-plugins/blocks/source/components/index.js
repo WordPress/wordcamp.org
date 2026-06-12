@@ -7,7 +7,12 @@ export { default as GridInspectorPanel } from './grid-inspector-panel';
 export { default as HeadingToolbar } from './heading-toolbar';
 
 // Item selector components
-export { buildOptions, getOptionLabel, ItemSelect, Option } from './item-select';
+export {
+	buildOptions,
+	getOptionLabel,
+	ItemSelect,
+	Option,
+} from './item-select';
 
 // Content components
 export { default as PostList } from './post-list';
@@ -17,5 +22,8 @@ export { DangerousItemHTMLContent, ItemPermalink, ItemTitle } from './item';
 
 // Image components
 export { avatarSizePresets, AvatarImage } from './image/avatar';
-export { featuredImageSizePresets, FeaturedImage } from './image/featured-image';
+export {
+	featuredImageSizePresets,
+	FeaturedImage,
+} from './image/featured-image';
 export { default as ImageInspectorPanel } from './image/inspector-controls';

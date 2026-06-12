@@ -42,17 +42,19 @@ export function ScheduleGrid( { sessions } ) {
 
 	const groupedSessions = groupSessionsByDate( sessions );
 
-	Object.keys( groupedSessions ).sort().forEach( ( day ) => {
-		const sessionsGroup = groupedSessions[ day ];
+	Object.keys( groupedSessions )
+		.sort()
+		.forEach( ( day ) => {
+			const sessionsGroup = groupedSessions[ day ];
 
-		scheduleDays.push(
-			<ScheduleDay
-				key={ day }
-				localDate={ day }
-				sessions={ sessionsGroup }
-			/>
-		);
-	} );
+			scheduleDays.push(
+				<ScheduleDay
+					key={ day }
+					localDate={ day }
+					sessions={ sessionsGroup }
+				/>
+			);
+		} );
 
 	return (
 		<div className={ `wordcamp-schedule ${ attributes.className || '' }` }>
@@ -77,7 +79,11 @@ function groupSessionsByDate( sessions ) {
 			return groups;
 		}
 
-		const day = date( 'Y-m-d', session.derived.startTime, session.derived.timezone );
+		const day = date(
+			'Y-m-d',
+			session.derived.startTime,
+			session.derived.timezone
+		);
 
 		if ( day ) {
 			groups[ day ] = groups[ day ] || [];
@@ -97,12 +103,20 @@ function groupSessionsByDate( sessions ) {
  * @return {Element}
  */
 function ScheduleDay( { localDate, sessions } ) {
-	const { attributes, allTracks, renderEnvironment, settings } = useContext( ScheduleGridContext );
+	const { attributes, allTracks, renderEnvironment, settings } =
+		useContext( ScheduleGridContext );
 	const { chooseSpecificTracks, chosenTrackIds } = attributes;
 
-	const displayedTracks = getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTrackIds );
+	const displayedTracks = getDisplayedTracks(
+		sessions,
+		allTracks,
+		chooseSpecificTracks,
+		chosenTrackIds
+	);
 	const formattedDate = format( DATE_SLUG_FORMAT, localDate );
-	const formattedTrackIds = chooseSpecificTracks ? displayedTracks.map( ( track ) => track.id ).join( '-' ) : 'all';
+	const formattedTrackIds = chooseSpecificTracks
+		? displayedTracks.map( ( track ) => track.id ).join( '-' )
+		: 'all';
 
 	/*
 	 * The ID must be unique across blocks, because otherwise the corresponding `grid-template-rows` and
@@ -126,8 +140,12 @@ function ScheduleDay( { localDate, sessions } ) {
 	const sectionId = `wordcamp-schedule__day-${ formattedDate }-tracks-${ formattedTrackIds }`;
 
 	const startEndTimes = sessions.reduce( ( accumulatingTimes, session ) => {
-		accumulatingTimes.push( date( 'dHi', session.derived.startTime, session.derived.timezone ) );
-		accumulatingTimes.push( date( 'dHi', session.derived.endTime, session.derived.timezone ) );
+		accumulatingTimes.push(
+			date( 'dHi', session.derived.startTime, session.derived.timezone )
+		);
+		accumulatingTimes.push(
+			date( 'dHi', session.derived.endTime, session.derived.timezone )
+		);
 
 		return accumulatingTimes;
 	}, [] );
@@ -138,19 +156,21 @@ function ScheduleDay( { localDate, sessions } ) {
 		<>
 			{ /* Style tags outside of `<body>` are valid since HTML 5.2. */ }
 			<style>
-				{ renderDynamicGridStyles( sectionId, displayedTracks, startEndTimes ) }
+				{ renderDynamicGridStyles(
+					sectionId,
+					displayedTracks,
+					startEndTimes
+				) }
 			</style>
 
 			<h2 className="wordcamp-schedule__date">
 				{ format( settings.date_format, localDate ) }
 			</h2>
 
-			{ 'editor' === renderEnvironment && renderOverlappingSessionsWarning( overlappingSessions ) }
+			{ 'editor' === renderEnvironment &&
+				renderOverlappingSessionsWarning( overlappingSessions ) }
 
-			<section
-				id={ sectionId }
-				className="wordcamp-schedule__day"
-			>
+			<section id={ sectionId } className="wordcamp-schedule__day">
 				<GridColumnHeaders displayedTracks={ displayedTracks } />
 
 				<Sessions
@@ -175,7 +195,12 @@ function ScheduleDay( { localDate, sessions } ) {
  * @param {Array}   chosenTrackIds
  * @return {Array}
  */
-function getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTrackIds ) {
+function getDisplayedTracks(
+	sessions,
+	allTracks,
+	chooseSpecificTracks,
+	chosenTrackIds
+) {
 	let displayedTracksIds;
 
 	if ( chooseSpecificTracks && chosenTrackIds.length ) {
@@ -193,8 +218,8 @@ function getDisplayedTracks( sessions, allTracks, chooseSpecificTracks, chosenTr
 		displayedTracksIds = Array.from( uniqueTrackIds );
 	}
 
-	const displayedTracks = allTracks.filter(
-		( track ) => displayedTracksIds.includes( track.id )
+	const displayedTracks = allTracks.filter( ( track ) =>
+		displayedTracksIds.includes( track.id )
 	);
 
 	if ( displayedTracksIds.includes( implicitTrack.id ) ) {
@@ -231,10 +256,15 @@ function getOverlappingSessions( ungroupedSessions ) {
 		const loopCount = sessions.length - 1;
 
 		for ( let iteration = 0; iteration < loopCount; iteration++ ) {
-			if ( sessions[ iteration ].derived.endTime > sessions[ iteration + 1 ].derived.startTime ) {
+			if (
+				sessions[ iteration ].derived.endTime >
+				sessions[ iteration + 1 ].derived.startTime
+			) {
 				// Insert them indexed by ID, in order to avoid duplicates.
-				overlappingSessions[ sessions[ iteration ].id ] = sessions[ iteration ];
-				overlappingSessions[ sessions[ iteration + 1 ].id ] = sessions[ iteration + 1 ];
+				overlappingSessions[ sessions[ iteration ].id ] =
+					sessions[ iteration ];
+				overlappingSessions[ sessions[ iteration + 1 ].id ] =
+					sessions[ iteration + 1 ];
 			}
 		}
 	} );
@@ -294,15 +324,24 @@ function renderOverlappingSessionsWarning( overlappingSessions ) {
 	return (
 		<div className="notice notice-error day-has-overlapping-sessions">
 			<p>
-				{ __( "The following sessions overlap another session in the same track. Please adjust the times so that they don't overlap.", 'wordcamporg' ) }
+				{ __(
+					"The following sessions overlap another session in the same track. Please adjust the times so that they don't overlap.",
+					'wordcamporg'
+				) }
 			</p>
 
 			<ul>
 				{ overlappingSessions.map( ( overlappingSession ) => {
 					return (
 						<li key={ overlappingSession.id }>
-							<a href={ `/wp-admin/post.php?post=${ overlappingSession.id }&action=edit` }>
-								{ decodeEntities( stripTags( overlappingSession.title.rendered ) ) }
+							<a
+								href={ `/wp-admin/post.php?post=${ overlappingSession.id }&action=edit` }
+							>
+								{ decodeEntities(
+									stripTags(
+										overlappingSession.title.rendered
+									)
+								) }
 							</a>
 						</li>
 					);
@@ -386,7 +425,7 @@ function renderGridTemplateRows( startEndTimes ) {
 	startEndTimes.sort(); // Put them in chronological order.
 
 	const timeList = startEndTimes.reduce( ( accumulatingTimes, time ) => {
-		return accumulatingTimes += `[time-${ time }] auto `;
+		return ( accumulatingTimes += `[time-${ time }] auto ` );
 	}, '' );
 
 	const templateRows = `
@@ -444,7 +483,9 @@ function GridColumnHeaders( { displayedTracks } ) {
 					key={ track.id }
 					className={ `wordcamp-schedule__column-header is-column-track-${ track.slug }` }
 					aria-hidden="true" // See note above about aria-hidden.
-					style={ { gridColumn: `wordcamp-schedule-track-${ track.id }` } }
+					style={ {
+						gridColumn: `wordcamp-schedule-track-${ track.id }`,
+					} }
 				>
 					{ decodeEntities( stripTags( track.name ) ) }
 				</span>

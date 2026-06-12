@@ -15,6 +15,7 @@
 	var scanner   = null;
 	var scanning  = false;
 	var busy      = false;
+	var inFlight  = false;
 	var lastText  = '';
 	var lastAt    = 0;
 
@@ -112,6 +113,12 @@
 	}
 
 	function submit( token ) {
+		if ( inFlight ) {
+			// A check-in request is already running; ignore duplicate taps/scans so a second
+			// response can't race or overwrite the first (e.g. flip a real success to "already").
+			return;
+		}
+
 		// Pause first so an unrecognized code shows its result once and waits for "Scan next
 		// attendee" instead of re-firing every few seconds while it stays in frame.
 		busy = true;
@@ -122,6 +129,7 @@
 			return;
 		}
 
+		inFlight = true;
 		setStatus( strings.sending || '' );
 
 		var data = new FormData();
@@ -134,14 +142,35 @@
 			credentials: 'same-origin',
 			body: data
 		} ).then( function ( response ) {
+			// A logged-out/expired session makes admin-ajax answer HTTP 400 with a bare "0"/"-1"
+			// body: valid JSON, but not a wp_send_json envelope. Treat any non-2xx as an error so
+			// the organizer sees a real message instead of a blank "invalid" panel.
+			if ( ! response.ok ) {
+				inFlight = false;
+				var expired = ( 400 === response.status || 403 === response.status );
+				showResult( {
+					status: 'error',
+					message: ( expired && strings.sessionExpired ) ? strings.sessionExpired : ( strings.networkError || '' ),
+					name: ''
+				} );
+				return null;
+			}
 			return response.json();
 		} ).then( function ( json ) {
-			var payload = ( json && json.data ) ? json.data : {};
+			if ( null === json ) {
+				return; // A non-OK response was already handled above.
+			}
+			inFlight = false;
+			var payload = ( json && typeof json === 'object' && json.data ) ? json.data : {};
 			if ( ! payload.status ) {
 				payload.status = ( json && json.success ) ? 'success' : 'invalid';
 			}
+			if ( ! payload.message && 'success' !== payload.status ) {
+				payload.message = strings.networkError || '';
+			}
 			showResult( payload );
 		} ).catch( function () {
+			inFlight = false;
 			showResult( { status: 'error', message: strings.networkError || '', name: '' } );
 		} );
 	}
@@ -225,6 +254,9 @@
 	}
 
 	function submitManual() {
+		if ( inFlight ) {
+			return; // Don't fire a second check-in while one is already running.
+		}
 		busy     = false;
 		lastText = '';
 		submit( extractToken( els.manual.value ) );

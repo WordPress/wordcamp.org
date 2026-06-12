@@ -492,13 +492,14 @@ class CampTix_QR_Check_In extends CampTix_Addon {
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 				'nonce'   => wp_create_nonce( self::NONCE_CHECKIN ),
 				'strings' => array(
-					'starting'     => __( 'Starting camera...', 'wordcamporg' ),
-					'scanning'     => __( 'Point the camera at an attendee QR code.', 'wordcamporg' ),
-					'sending'      => __( 'Checking in...', 'wordcamporg' ),
-					'noCamera'     => __( 'No camera available. Use manual entry below.', 'wordcamporg' ),
-					'cameraDenied' => __( 'Camera permission was denied. Use manual entry below.', 'wordcamporg' ),
-					'networkError' => __( 'Network error. Please try again.', 'wordcamporg' ),
-					'invalidCode'  => __( 'That is not a valid check-in code.', 'wordcamporg' ),
+					'starting'       => __( 'Starting camera...', 'wordcamporg' ),
+					'scanning'       => __( 'Point the camera at an attendee QR code.', 'wordcamporg' ),
+					'sending'        => __( 'Checking in...', 'wordcamporg' ),
+					'noCamera'       => __( 'No camera available. Use manual entry below.', 'wordcamporg' ),
+					'cameraDenied'   => __( 'Camera permission was denied. Use manual entry below.', 'wordcamporg' ),
+					'networkError'   => __( 'Network error. Please try again.', 'wordcamporg' ),
+					'invalidCode'    => __( 'That is not a valid check-in code.', 'wordcamporg' ),
+					'sessionExpired' => __( 'Your session expired. Reload this page and log in again.', 'wordcamporg' ),
 				),
 			)
 		);

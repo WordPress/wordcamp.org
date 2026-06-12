@@ -83,9 +83,13 @@ class Test_CampTix_QR_Check_In extends \WP_UnitTestCase {
 	public function test_token_with_tampered_signature_is_rejected() {
 		$token = $this->addon->sign_token( 7 );
 
-		$last     = substr( $token, -1 );
-		$swapped  = ( 'A' === $last ) ? 'B' : 'A';
-		$tampered = substr( $token, 0, -1 ) . $swapped;
+		// Flip the first character of the signature segment (right after the "."). Its full 6 bits
+		// feed the first decoded byte, so the signature is guaranteed to change. Flipping the *last*
+		// character instead only toggles low padding bits that base64_decode() discards, so ~1 in 16
+		// tokens decoded identically and the test failed at random.
+		$dot                  = strpos( $token, '.' );
+		$tampered             = $token;
+		$tampered[ $dot + 1 ] = ( 'A' === $token[ $dot + 1 ] ) ? 'B' : 'A';
 
 		$this->assertNotSame( $token, $tampered );
 		$this->assertSame( 0, $this->addon->verify_token( $tampered ) );

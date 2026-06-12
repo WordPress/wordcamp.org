@@ -72,6 +72,9 @@ class CampTix_QR_Check_In extends CampTix_Addon {
 		// Scanner check-in write (logged-in only; not registered for nopriv on purpose).
 		add_action( 'wp_ajax_tix_qr_checkin', array( $this, 'ajax_checkin' ) );
 
+		// Admin-bar shortcut to the scanner for organizers (only when the scanner is enabled).
+		add_action( 'admin_bar_menu', array( $this, 'add_admin_bar_link' ), 100 );
+
 		// Per-attendee "Send QR code": list-table column + edit-screen button + AJAX.
 		add_filter( 'manage_tix_attendee_posts_columns', array( $this, 'add_qr_column' ) );
 		add_action( 'manage_tix_attendee_posts_custom_column', array( $this, 'render_qr_column' ), 10, 2 );
@@ -233,6 +236,42 @@ class CampTix_QR_Check_In extends CampTix_Addon {
 	 */
 	public function get_scanner_url() {
 		return add_query_arg( 'tix_action', self::ACTION_SCANNER, home_url( '/' ) );
+	}
+
+	/**
+	 * Add a "Check-In Scanner" shortcut to the admin bar for organizers.
+	 *
+	 * Shown only when the scanner is enabled and the current user can manage attendees, so the
+	 * link is one tap away on a phone the organizer is already logged in on.
+	 *
+	 * @param WP_Admin_Bar $wp_admin_bar Admin bar instance.
+	 */
+	public function add_admin_bar_link( $wp_admin_bar ) {
+		global $camptix;
+
+		if ( ! is_object( $camptix ) || empty( $camptix->caps['manage_attendees'] ) ) {
+			return;
+		}
+
+		if ( ! current_user_can( $camptix->caps['manage_attendees'] ) ) {
+			return;
+		}
+
+		$options = $camptix->get_options();
+		if ( empty( $options['qr-checkin-scanner-enabled'] ) ) {
+			return;
+		}
+
+		$wp_admin_bar->add_node(
+			array(
+				'id'    => 'tix-qr-scanner',
+				'title' => esc_html__( 'Check-In Scanner', 'wordcamporg' ),
+				'href'  => esc_url( $this->get_scanner_url() ),
+				'meta'  => array(
+					'title' => esc_attr__( 'Open the live-camera attendee check-in scanner', 'wordcamporg' ),
+				),
+			)
+		);
 	}
 
 	/*
@@ -1067,12 +1106,24 @@ class CampTix_QR_Check_In extends CampTix_Addon {
 	}
 
 	/**
-	 * Read-only scanner URL + an option to rotate the signing secret.
+	 * Read-only scanner URL, a button to open it, and an option to rotate the signing secret.
 	 */
 	public function field_scanner_url() {
+		global $camptix;
+		$options = $camptix->get_options();
+		$enabled = ! empty( $options['qr-checkin-scanner-enabled'] );
+		$url     = $this->get_scanner_url();
 		?>
-		<input type="text" class="large-text" readonly value="<?php echo esc_url( $this->get_scanner_url() ); ?>" onclick="this.select();" />
+		<input type="text" class="large-text" readonly value="<?php echo esc_url( $url ); ?>" onclick="this.select();" />
 		<p class="description"><?php esc_html_e( 'Open this link on a phone while logged in to scan attendee QR codes.', 'wordcamporg' ); ?></p>
+
+		<p>
+			<?php if ( $enabled ) : ?>
+				<a href="<?php echo esc_url( $url ); ?>" class="button" target="_blank" rel="noopener"><?php esc_html_e( 'Open scanner', 'wordcamporg' ); ?></a>
+			<?php else : ?>
+				<span class="description"><?php esc_html_e( 'Turn the scanner on above and save changes to open it.', 'wordcamporg' ); ?></span>
+			<?php endif; ?>
+		</p>
 
 		<p>
 			<label>

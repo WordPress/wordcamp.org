@@ -29,18 +29,27 @@ function clampMaxTicketsPerOrder( value ) {
 
 export default function CamptixEdit( { attributes, setAttributes } ) {
 	const {
-		ticketIds, maxTicketsPerOrder, coupon, noTicketsMessage, eventClosedMessage,
-		showRemainingTickets, showCouponField,
+		ticketIds,
+		maxTicketsPerOrder,
+		coupon,
+		noTicketsMessage,
+		eventClosedMessage,
+		showRemainingTickets,
+		showCouponField,
 	} = attributes;
 	const blockProps = useBlockProps();
 	const allTickets = blockData.tickets || [];
 	const hasCoupons = blockData.hasCoupons || false;
 	const selectedTicketIds = Array.isArray( ticketIds ) ? ticketIds : [];
-	const previewMaxTicketsPerOrder = clampMaxTicketsPerOrder( maxTicketsPerOrder );
+	const previewMaxTicketsPerOrder =
+		clampMaxTicketsPerOrder( maxTicketsPerOrder );
 
-	const displayTickets = selectedTicketIds.length > 0
-		? allTickets.filter( ( ticket ) => selectedTicketIds.includes( ticket.id ) )
-		: allTickets;
+	const displayTickets =
+		selectedTicketIds.length > 0
+			? allTickets.filter( ( ticket ) =>
+					selectedTicketIds.includes( ticket.id )
+			  )
+			: allTickets;
 
 	/**
 	 * Toggle a ticket ID in the ticketIds array.
@@ -52,7 +61,11 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 		if ( checked ) {
 			setAttributes( { ticketIds: [ ...selectedTicketIds, id ] } );
 		} else {
-			setAttributes( { ticketIds: selectedTicketIds.filter( ( ticketId ) => ticketId !== id ) } );
+			setAttributes( {
+				ticketIds: selectedTicketIds.filter(
+					( ticketId ) => ticketId !== id
+				),
+			} );
 		}
 	}
 
@@ -60,16 +73,25 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 		<>
 			<InspectorControls>
 				{ allTickets.length > 0 && (
-					<PanelBody title={ __( 'Ticket Selection', 'wordcamporg' ) }>
+					<PanelBody
+						title={ __( 'Ticket Selection', 'wordcamporg' ) }
+					>
 						<p className="components-base-control__help">
-							{ __( 'Select specific tickets to display. Leave all unchecked to show all tickets.', 'wordcamporg' ) }
+							{ __(
+								'Select specific tickets to display. Leave all unchecked to show all tickets.',
+								'wordcamporg'
+							) }
 						</p>
 						{ allTickets.map( ( ticket ) => (
 							<CheckboxControl
 								key={ ticket.id }
 								label={ `${ ticket.title } (${ ticket.formattedPrice })` }
-								checked={ selectedTicketIds.includes( ticket.id ) }
-								onChange={ ( checked ) => toggleTicket( ticket.id, checked ) }
+								checked={ selectedTicketIds.includes(
+									ticket.id
+								) }
+								onChange={ ( checked ) =>
+									toggleTicket( ticket.id, checked )
+								}
 							/>
 						) ) }
 					</PanelBody>
@@ -78,55 +100,107 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 					<RangeControl
 						label={ __( 'Max tickets per order', 'wordcamporg' ) }
 						value={ previewMaxTicketsPerOrder }
-						onChange={ ( value ) => setAttributes( {
-							maxTicketsPerOrder: clampMaxTicketsPerOrder( value ),
-						} ) }
+						onChange={ ( value ) =>
+							setAttributes( {
+								maxTicketsPerOrder:
+									clampMaxTicketsPerOrder( value ),
+							} )
+						}
 						min={ 1 }
 						max={ 10 }
 					/>
 					<ToggleControl
 						label={ __( 'Show remaining tickets', 'wordcamporg' ) }
 						checked={ showRemainingTickets }
-						onChange={ () => setAttributes( { showRemainingTickets: ! showRemainingTickets } ) }
-						help={ showRemainingTickets
-							? __( 'A "Remaining" column is shown in the ticket table.', 'wordcamporg' )
-							: __( 'The "Remaining" column is hidden.', 'wordcamporg' )
+						onChange={ () =>
+							setAttributes( {
+								showRemainingTickets: ! showRemainingTickets,
+							} )
+						}
+						help={
+							showRemainingTickets
+								? __(
+										'A "Remaining" column is shown in the ticket table.',
+										'wordcamporg'
+								  )
+								: __(
+										'The "Remaining" column is hidden.',
+										'wordcamporg'
+								  )
 						}
 					/>
 					<SelectControl
 						label={ __( 'Coupon field', 'wordcamporg' ) }
 						value={ showCouponField }
 						options={ [
-							{ label: __( 'Auto (show when coupons exist)', 'wordcamporg' ), value: 'auto' },
-							{ label: __( 'Always show', 'wordcamporg' ), value: 'show' },
-							{ label: __( 'Always hide', 'wordcamporg' ), value: 'hide' },
+							{
+								label: __(
+									'Auto (show when coupons exist)',
+									'wordcamporg'
+								),
+								value: 'auto',
+							},
+							{
+								label: __( 'Always show', 'wordcamporg' ),
+								value: 'show',
+							},
+							{
+								label: __( 'Always hide', 'wordcamporg' ),
+								value: 'hide',
+							},
 						] }
-						onChange={ ( value ) => setAttributes( { showCouponField: value } ) }
+						onChange={ ( value ) =>
+							setAttributes( { showCouponField: value } )
+						}
 						help={
 							'auto' === showCouponField && ! hasCoupons
-								? __( 'No active coupons exist — the field will be hidden on the frontend.', 'wordcamporg' )
+								? __(
+										'No active coupons exist — the field will be hidden on the frontend.',
+										'wordcamporg'
+								  )
 								: undefined
 						}
 					/>
 					<TextControl
 						label={ __( 'Auto-apply coupon code', 'wordcamporg' ) }
 						value={ coupon }
-						onChange={ ( value ) => setAttributes( { coupon: value } ) }
-						help={ __( 'Automatically apply this coupon when the page loads.', 'wordcamporg' ) }
+						onChange={ ( value ) =>
+							setAttributes( { coupon: value } )
+						}
+						help={ __(
+							'Automatically apply this coupon when the page loads.',
+							'wordcamporg'
+						) }
 					/>
 				</PanelBody>
-				<PanelBody title={ __( 'Custom Messages', 'wordcamporg' ) } initialOpen={ false }>
+				<PanelBody
+					title={ __( 'Custom Messages', 'wordcamporg' ) }
+					initialOpen={ false }
+				>
 					<TextareaControl
-						label={ __( '"No tickets available" message', 'wordcamporg' ) }
+						label={ __(
+							'"No tickets available" message',
+							'wordcamporg'
+						) }
 						value={ noTicketsMessage }
-						onChange={ ( value ) => setAttributes( { noTicketsMessage: value } ) }
-						placeholder={ __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' ) }
+						onChange={ ( value ) =>
+							setAttributes( { noTicketsMessage: value } )
+						}
+						placeholder={ __(
+							'Sorry, but there are currently no tickets for sale. Please try again later.',
+							'wordcamporg'
+						) }
 					/>
 					<TextareaControl
 						label={ __( '"Event closed" message', 'wordcamporg' ) }
 						value={ eventClosedMessage }
-						onChange={ ( value ) => setAttributes( { eventClosedMessage: value } ) }
-						placeholder={ __( 'This event has completed.', 'wordcamporg' ) }
+						onChange={ ( value ) =>
+							setAttributes( { eventClosedMessage: value } )
+						}
+						placeholder={ __(
+							'This event has completed.',
+							'wordcamporg'
+						) }
 					/>
 				</PanelBody>
 			</InspectorControls>
@@ -134,7 +208,10 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 				{ displayTickets.length === 0 ? (
 					<Placeholder
 						label={ __( 'Tickets', 'wordcamporg' ) }
-						instructions={ __( 'No tickets have been created yet. Add tickets to see a preview here.', 'wordcamporg' ) }
+						instructions={ __(
+							'No tickets have been created yet. Add tickets to see a preview here.',
+							'wordcamporg'
+						) }
 					/>
 				) : (
 					<Disabled>
@@ -144,7 +221,9 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 									<th>{ __( 'Ticket', 'wordcamporg' ) }</th>
 									<th>{ __( 'Price', 'wordcamporg' ) }</th>
 									{ showRemainingTickets && (
-										<th>{ __( 'Remaining', 'wordcamporg' ) }</th>
+										<th>
+											{ __( 'Remaining', 'wordcamporg' ) }
+										</th>
 									) }
 									<th>{ __( 'Quantity', 'wordcamporg' ) }</th>
 								</tr>
@@ -154,15 +233,21 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 									<tr key={ ticket.id }>
 										<td>{ ticket.title }</td>
 										<td>{ ticket.formattedPrice }</td>
-										{ showRemainingTickets && (
-											<td>—</td>
-										) }
+										{ showRemainingTickets && <td>—</td> }
 										<td>
 											<select disabled>
-												{ [ ...Array(
-													previewMaxTicketsPerOrder + 1
-												).keys() ].map( ( i ) => (
-													<option key={ i } value={ i }>{ i }</option>
+												{ [
+													...Array(
+														previewMaxTicketsPerOrder +
+															1
+													).keys(),
+												].map( ( i ) => (
+													<option
+														key={ i }
+														value={ i }
+													>
+														{ i }
+													</option>
 												) ) }
 											</select>
 										</td>
@@ -172,7 +257,8 @@ export default function CamptixEdit( { attributes, setAttributes } ) {
 						</table>
 						{ coupon && (
 							<p className="tix-coupon-preview">
-								{ __( 'Coupon:', 'wordcamporg' ) } <strong>{ coupon }</strong>
+								{ __( 'Coupon:', 'wordcamporg' ) }{ ' ' }
+								<strong>{ coupon }</strong>
 							</p>
 						) }
 					</Disabled>

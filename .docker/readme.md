@@ -21,13 +21,11 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	mkcert -install
 	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
-1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
+1. Clone the development (trunk) version of WordPress into the **public_html/mu** directory. WordCamp.org runs against trunk, so there is no release branch to pin — the `WordPress/WordPress` mirror's default branch tracks it.
     ```bash
     cd ..
     cd public_html
-    git clone git://core.git.wordpress.org/ mu
-    cd mu
-    git checkout 6.9
+    git clone https://github.com/WordPress/WordPress.git mu
     ```
 
 1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)

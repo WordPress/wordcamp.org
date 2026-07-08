@@ -22,6 +22,10 @@
 		"public_html/wp-content/themes/wporg-events-2023",
 		"public_html/wp-content/themes/wporg-flagship-landing"
 	],
+	"scripts": {
+		"setup": "composer install && npm ci && npm run build --workspaces --if-present",
+		"build": "npm run build --workspaces --if-present"
+	},
 	"devDependencies": {
 		"@wordpress/eslint-plugin": "25.4.0",
 		"@wordpress/jest-preset-default": "12.48.0",

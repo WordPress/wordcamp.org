@@ -126,7 +126,8 @@ function add_notification_styles() { ?>
  * margin has to make room for it. CSS can't measure the rendered banner, so the reserved space
  * is an estimate: one line of text on wide screens, two on small ones where the text wraps.
  */
-function add_notification_overlay_styles() { ?>
+function add_notification_overlay_styles() {
+	?>
 	<style type="text/css">
 		html:not(#specificity-hack) {
 			/* 44 = 10px x2 for padding, 24px for line height. */

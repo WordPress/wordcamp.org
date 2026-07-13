@@ -30,8 +30,11 @@ function maybe_add_latest_site_hints() {
 	// Hook in before `WordPressdotorg\SEO\Canonical::rel_canonical_link()`, so that callback can be removed.
 	add_action( 'wp_head', __NAMESPACE__ . '\canonical_link_past_home_pages_to_current_year', 9 );
 
-	// Add a banner with a link to the latest WordCamp.
+	// Add a banner with a link to the latest WordCamp. It prints at `wp_body_open` so it sits in
+	// the normal document flow; `wp_footer` is only a fallback for themes that never call
+	// `wp_body_open()`.
 	add_action( 'wp_head', __NAMESPACE__ . '\add_notification_styles' );
+	add_action( 'wp_body_open', __NAMESPACE__ . '\show_notification_about_latest_site' );
 	add_action( 'wp_footer', __NAMESPACE__ . '\show_notification_about_latest_site' );
 
 	// Close comments on past sites to prevent spam.
@@ -72,30 +75,30 @@ function canonical_link_past_home_pages_to_current_year() {
 
 /**
  * Simple styles for the notification.
+ *
+ * The banner sits in the normal document flow at the top of the page, so layout reserves exactly
+ * as much room as the text needs no matter how many lines it wraps to, and `position: sticky`
+ * keeps it pinned while scrolling.
  */
 function add_notification_styles() { ?>
   <style type="text/css">
-		html:not(#specificity-hack) {
-			/* 44 = 10px x2 for padding, 24px for line height. */
-			margin-top: calc(44px + var(--wp-admin--admin-bar--height, 0px)) !important;
-		}
-
 		.wordcamp-latest-site-notify {
+			box-sizing: border-box;
 			background: #1d2327;
 			text-align: center;
 			padding: 10px 20px;
 			font-size: 16px;
 			line-height: 1.5;
-			position: fixed;
+			position: sticky;
 			top: var(--wp-admin--admin-bar--height, 0);
-			left: 0;
 			width: 100%;
 			z-index: 99998;
 		}
 
 		@media screen and (max-width: 600px) {
 			.wordcamp-latest-site-notify {
-				position: absolute;
+				/* Scroll away with the page instead of permanently taking up small-screen space. */
+				position: static;
 			}
 		}
 
@@ -117,10 +120,50 @@ function add_notification_styles() { ?>
 <?php }
 
 /**
+ * Overlay styles for themes that never call `wp_body_open()`.
+ *
+ * The banner prints at `wp_footer` instead, so it has to overlay the viewport and the `html`
+ * margin has to make room for it. CSS can't measure the rendered banner, so the reserved space
+ * is an estimate: one line of text on wide screens, two on small ones where the text wraps.
+ */
+function add_notification_overlay_styles() { ?>
+	<style type="text/css">
+		html:not(#specificity-hack) {
+			/* 44 = 10px x2 for padding, 24px for line height. */
+			margin-top: calc(44px + var(--wp-admin--admin-bar--height, 0px)) !important;
+		}
+
+		.wordcamp-latest-site-notify--overlay {
+			position: fixed;
+			top: var(--wp-admin--admin-bar--height, 0);
+			left: 0;
+		}
+
+		@media screen and (max-width: 600px) {
+			html:not(#specificity-hack) {
+				/* 68 = padding plus two 24px lines, since the text usually wraps here. */
+				margin-top: calc(68px + var(--wp-admin--admin-bar--height, 0px)) !important;
+			}
+
+			.wordcamp-latest-site-notify--overlay {
+				position: absolute;
+			}
+		}
+	</style>
+<?php }
+
+/**
  * Show the actual notification containing link to latest site to user.
  */
 function show_notification_about_latest_site() {
 	global $current_blog;
+
+	$is_overlay = 'wp_footer' === current_action();
+
+	// The banner was already printed in the normal document flow at `wp_body_open`.
+	if ( $is_overlay && did_action( 'wp_body_open' ) ) {
+		return;
+	}
 
 	$latest_domain = get_latest_home_url( $current_blog->domain, $current_blog->path );
 
@@ -129,7 +172,11 @@ function show_notification_about_latest_site() {
 		return;
 	}
 
-	echo '<div class="wordcamp-latest-site-notify"><p>' .
+	if ( $is_overlay ) {
+		add_notification_overlay_styles();
+	}
+
+	echo '<div class="wordcamp-latest-site-notify' . ( $is_overlay ? ' wordcamp-latest-site-notify--overlay' : '' ) . '"><p>' .
 		wp_kses_post( wp_sprintf(
 			// translators: %1$s is the name of the WordCamp, %2$s is the URL of the next edition.
 			__( '%1$s is over. Check out <a href="%2$s">the next edition</a>!', 'wordcamporg' ),

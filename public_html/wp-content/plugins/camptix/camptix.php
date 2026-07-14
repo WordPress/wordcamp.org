@@ -1767,7 +1767,10 @@ class CampTix_Plugin {
 		if ( isset( $currency['locale'] ) ) {
 			try {
 				$formatter        = new NumberFormatter( $currency['locale'], NumberFormatter::CURRENCY );
-				$formatted_amount = $formatter->format( $amount );
+				// Use formatCurrency() with the explicit ISO code so the symbol always matches
+				// the configured currency, rather than format(), which would fall back to the
+				// locale's default currency (e.g. rendering EUR as "$" on an en_US site).
+				$formatted_amount = $formatter->formatCurrency( $amount, $currency_key );
 			} catch ( \Throwable $e ) {
 				$formatted_amount = false;
 			}

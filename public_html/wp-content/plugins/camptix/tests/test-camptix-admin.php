@@ -1209,4 +1209,60 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		// In test environment there is no wordcamp post by default.
 		$this->assertFalse( self::$camptix->is_wordcamp_closed() );
 	}
+
+	/**
+	 * Verify EUR amounts place the euro sign per the site locale.
+	 *
+	 * For a French locale the euro sign should follow the amount (e.g. "40,00 €"),
+	 * not precede it. The exact string depends on the installed ICU version, so this
+	 * asserts the relative position of the digits and the symbol rather than an exact
+	 * match.
+	 */
+	public function test_append_currency_eur_places_symbol_after_amount_for_french_locale() {
+		if ( ! class_exists( 'NumberFormatter' ) ) {
+			$this->markTestSkipped( 'intl extension required for currency formatting.' );
+		}
+
+		$locale_filter = static function () {
+			return 'fr_FR';
+		};
+		add_filter( 'locale', $locale_filter );
+
+		$formatted = self::$camptix->append_currency( 40, false, 'EUR' );
+
+		remove_filter( 'locale', $locale_filter );
+
+		$euro_pos = strpos( $formatted, '€' );
+		preg_match( '/\d/', $formatted, $matches, PREG_OFFSET_CAPTURE );
+		$digit_pos = isset( $matches[0] ) ? $matches[0][1] : false;
+
+		$this->assertNotFalse( $euro_pos, "Formatted EUR amount should contain the euro sign, got: {$formatted}" );
+		$this->assertNotFalse( $digit_pos, "Formatted EUR amount should contain digits, got: {$formatted}" );
+		$this->assertGreaterThan( $digit_pos, $euro_pos, "Euro sign should follow the amount for fr_FR, got: {$formatted}" );
+	}
+
+	/**
+	 * Verify EUR always renders with the euro sign, even on an English locale.
+	 *
+	 * NumberFormatter::format() would fall back to the locale's default currency
+	 * (USD for en_US), rendering a euro price with a dollar sign. formatCurrency()
+	 * with the explicit ISO code prevents that regression.
+	 */
+	public function test_append_currency_eur_uses_euro_symbol_on_english_locale() {
+		if ( ! class_exists( 'NumberFormatter' ) ) {
+			$this->markTestSkipped( 'intl extension required for currency formatting.' );
+		}
+
+		$locale_filter = static function () {
+			return 'en_US';
+		};
+		add_filter( 'locale', $locale_filter );
+
+		$formatted = self::$camptix->append_currency( 40, false, 'EUR' );
+
+		remove_filter( 'locale', $locale_filter );
+
+		$this->assertStringContainsString( '€', $formatted, "EUR must render with the euro sign, got: {$formatted}" );
+		$this->assertStringNotContainsString( '$', $formatted, "EUR must not render with a dollar sign, got: {$formatted}" );
+	}
 }

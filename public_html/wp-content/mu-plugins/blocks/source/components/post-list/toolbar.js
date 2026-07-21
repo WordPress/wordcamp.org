@@ -24,9 +24,9 @@ function LayoutToolbar( { layout, options, setAttributes } ) {
 		const isActive = layout === option.value;
 
 		return {
-			icon: icon,
+			icon,
 			title: option.label,
-			isActive: isActive,
+			isActive,
 			onClick: () => {
 				setAttributes( { layout: option.value } );
 			},

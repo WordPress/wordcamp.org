@@ -13,8 +13,14 @@ import SessionDuration from './duration';
 import usePostMeta from '../../components/hooks/use-post-meta';
 
 export default function SessionSettings() {
-	const [ time, setStartTime ] = usePostMeta( '_wcpt_session_time', WCPT_Session_Defaults.time );
-	const [ duration, setDuration ] = usePostMeta( '_wcpt_session_duration', WCPT_Session_Defaults.duration );
+	const [ time, setStartTime ] = usePostMeta(
+		'_wcpt_session_time',
+		WCPT_Session_Defaults.time
+	);
+	const [ duration, setDuration ] = usePostMeta(
+		'_wcpt_session_duration',
+		WCPT_Session_Defaults.duration
+	);
 	const [ slides, setSlides ] = usePostMeta( '_wcpt_session_slides', '' );
 	const [ type, setType ] = usePostMeta( '_wcpt_session_type', '' );
 	const [ video, setVideo ] = usePostMeta( '_wcpt_session_video', '' );
@@ -37,8 +43,14 @@ export default function SessionSettings() {
 				label={ __( 'Session Type', 'wordcamporg' ) }
 				value={ type }
 				options={ [
-					{ label: __( 'Regular Session', 'wordcamporg' ), value: 'session' },
-					{ label: __( 'Break, Lunch, etc.', 'wordcamporg' ), value: 'custom' },
+					{
+						label: __( 'Regular Session', 'wordcamporg' ),
+						value: 'session',
+					},
+					{
+						label: __( 'Break, Lunch, etc.', 'wordcamporg' ),
+						value: 'custom',
+					},
 				] }
 				onChange={ setType }
 			/>

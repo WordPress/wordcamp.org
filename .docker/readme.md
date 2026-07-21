@@ -21,33 +21,25 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 	mkcert -install
 	mkcert -cert-file wordcamp.test.pem -key-file wordcamp.test.key.pem wordcamp.test *.wordcamp.test events.wordpress.test
 	```
-1. Clone WordPress into the **public_html/mu** directory and check out the latest version's branch.
+1. Clone the development (trunk) version of WordPress into the **public_html/mu** directory. WordCamp.org runs against trunk, so there is no release branch to pin — the `WordPress/WordPress` mirror's default branch tracks it.
     ```bash
     cd ..
     cd public_html
-    git clone git://core.git.wordpress.org/ mu
-    cd mu
-    git checkout 6.9
+    git clone https://github.com/WordPress/WordPress.git mu
     ```
 
-1. Install 3rd-party PHP packages used on WordCamp.org. For this, you must have [Composer](https://getcomposer.org/doc/00-intro.md) installed. Once it is, change back to the root directory of the project where the main **composer.json** file is located. (Not the one in .docker/config.)
-	```bash
-	cd ../../ # to the directory above public_html/
-	composer install
-	```
-
-1. Install 3rd-party JS packages and build the CSS & JS needed for some projects. You'll need [node](https://nodejs.org/) & npm (bundled with Node). Optionally you can use [nvm](https://github.com/nvm-sh/nvm) to keep your node version up to date. Running the following will install and build all of the projects in one step (omit `nvm` command if you're not using it).
+1. Install the PHP & JS dependencies and build the bundled projects. You'll need [Composer](https://getcomposer.org/doc/00-intro.md), [node](https://nodejs.org/) & npm (bundled with Node), and optionally [nvm](https://github.com/nvm-sh/nvm). From the project root:
     ```bash
-    nvm install && nvm use
-    npm install
-    npm run build --workspaces --if-present
+    nvm install && nvm use   # optional, if you use nvm
+    npm run setup
     ```
+
+    `npm run setup` runs `composer install`, then `npm ci`, then builds every workspace project — one command in place of the separate Composer and npm steps.
 
 1. Build and boot the Docker environment.
     ```bash
-    docker compose build --pull
-    docker compose up
-	```
+    docker compose up --build
+    ```
 
     This will provision the Docker containers and install 3rd-party plugins and themes used on WordCamp.org, if necessary. It could take some time depending upon the speed of your Internet connection. At the end of the process, you should see a message like this:
 
@@ -89,8 +81,7 @@ Follow these steps to setup a local WordCamp.org environment using [Docker](http
 
 1. Optional: Install Git hooks to automate code inspections during pre-commit:
     ```bash
-    rm -rf .git/hooks
-    ln -s .githooks .git/hooks
+    git config core.hooksPath .githooks
     ```
 
 
@@ -180,17 +171,13 @@ We have separate containers for PHPUnit, a web server & database, to keep the te
     phpunit_db_1  | […] [Note] mariadbd: ready for connections.
     ```
 
-2. The first time you run this, you'll need to install the tests (future runs can skip this step). First, open a shell inside the web container:
+2. The WordPress test framework installs **automatically** the first time you start the container above — watch for `Installing the WordPress test suite...`. The download occasionally times out; if it does, restart with `docker compose -f docker-compose.phpunit.yml up`, or install it manually from inside the container:
     ```bash
-    docker compose -f docker-compose.phpunit.yml exec phpunit_wp bash
+    docker compose -f docker-compose.phpunit.yml exec phpunit_wp \
+        /var/scripts/install-wp-tests.sh wordpress_test root '' phpunit_db latest true
     ```
 
-    Then run the install script. It will download WordPress & the unit test framework (this skips installing a database, since that is set up as part of the docker process).
-    ```bash
-    /var/scripts/install-wp-tests.sh wordpress_test root '' phpunit_db latest true
-    ```
-
-    Sometimes the download will time out. If that happens, you can delete `/tmp/wp` from the container, and re-run the install script. The test files will be added to the `.docker/test_suite` folder, which is ignored by git.
+    The test files are written to the `.docker/test_suite` folder, which is ignored by git.
 
 3. Now you can run `phpunit`. From the project folder on your machine:
     ```bash

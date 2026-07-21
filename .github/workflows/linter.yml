@@ -46,14 +46,38 @@ jobs:
       env:
           COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Get Composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Composer downloads
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: composer-${{ runner.os }}-${{ hashFiles('composer.json') }}
+        restore-keys: |
+          composer-${{ runner.os }}-
+
     - name: composer install
+      # The lock file is removed so that the latest wporg-mu-plugins dev-build is always installed.
       run: |
         rm composer.lock || true
         composer install
 
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          public_html/wp-content/**/node_modules
+        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+
     - name: npm install and build
       run: |
-        npm ci
+        if [ "${{ steps.node-modules-cache.outputs.cache-hit }}" != 'true' ]; then
+          npm ci --no-audit --no-fund
+        fi
         npm run build --workspaces --if-present
 
     - name: Lint JavaScript and Styles

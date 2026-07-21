@@ -1,7 +1,11 @@
 /**
  * WordPress dependencies
  */
-import { Component, createInterpolateElement, render } from '@wordpress/element';
+import {
+	Component,
+	createInterpolateElement,
+	render,
+} from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 const getPropsFallback = () => ( {
@@ -46,9 +50,16 @@ class FrontBlockCrashBoundary extends Component {
 
 		if ( hasError ) {
 			content = createInterpolateElement(
-				__( 'There was an error trying to render this content, please try another browser or device. If that doesn\'t work, please <a>contact us</a>.', 'wordcamporg' ),
+				__(
+					"There was an error trying to render this content, please try another browser or device. If that doesn't work, please <a>contact us</a>.",
+					'wordcamporg'
+				),
 				{
-					a: <a href={ 'https://central.wordcamp.org/contact-us/' } >#21441-gutenberg</a>,
+					a: (
+						<a href={ 'https://central.wordcamp.org/contact-us/' }>
+							#21441-gutenberg
+						</a>
+					),
 				}
 			);
 		} else {
@@ -78,9 +89,7 @@ export default ( selector, Block, getProps = getPropsFallback ) => {
 			element.classList.remove( 'is-loading' );
 
 			render(
-				<FrontBlockCrashBoundary
-					block={ <Block { ...props } /> }
-				/>,
+				<FrontBlockCrashBoundary block={ <Block { ...props } /> } />,
 				element
 			);
 		} );

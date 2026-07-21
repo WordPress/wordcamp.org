@@ -2,27 +2,24 @@
 	"name": "multi-event-sponsors",
 	"version": "0.1.0",
 	"license": "GPL-2.0-or-later",
-	"eslintConfig": {
-		"extends": "../../../../.eslintrc.js"
-	},
 	"scripts": {
 		"build": "wp-scripts build javascript/index.js --output-path=build",
 		"start": "wp-scripts start javascript/index.js --output-path=build --hot",
 		"lint:css": "wp-scripts lint-style css",
-		"lint:js": "wp-scripts lint-js javascript",
+		"lint:js": "wp-scripts lint-js --config=../../../../eslint.config.cjs javascript",
 		"format:js": "wp-scripts format javascript --config=../../../../.prettierrc.js",
 		"packages-update": "wp-scripts packages-update"
 	},
 	"devDependencies": {
-		"@wordpress/api-fetch": "7.39.0",
-		"@wordpress/components": "32.1.0",
-		"@wordpress/data": "10.39.0",
-		"@wordpress/edit-post": "8.39.0",
-		"@wordpress/element": "6.39.0",
-		"@wordpress/html-entities": "4.39.0",
-		"@wordpress/i18n": "6.12.0",
-		"@wordpress/icons": "11.6.0",
-		"@wordpress/plugins": "7.39.0",
-		"@wordpress/scripts": "31.4.0"
+		"@wordpress/api-fetch": "7.48.0",
+		"@wordpress/components": "35.0.0",
+		"@wordpress/data": "10.48.0",
+		"@wordpress/edit-post": "8.48.0",
+		"@wordpress/element": "8.0.0",
+		"@wordpress/html-entities": "4.48.0",
+		"@wordpress/i18n": "6.21.0",
+		"@wordpress/icons": "14.0.0",
+		"@wordpress/plugins": "7.48.0",
+		"@wordpress/scripts": "32.4.0"
 	}
 }

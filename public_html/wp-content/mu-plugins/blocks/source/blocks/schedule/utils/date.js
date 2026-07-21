@@ -6,5 +6,7 @@
  * @return {string}
  */
 export function getTimezone( { useClientTimezone = false } = {} ) {
-	return useClientTimezone ? Intl.DateTimeFormat().resolvedOptions().timeZone : WordCampBlocks.schedule.timezone;
+	return useClientTimezone
+		? Intl.DateTimeFormat().resolvedOptions().timeZone
+		: WordCampBlocks.schedule.timezone;
 }

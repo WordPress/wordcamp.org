@@ -37,7 +37,9 @@ class LivePosts extends Component {
 			<ServerSideRender
 				block="core/latest-posts"
 				attributes={ attributes }
-				LoadingResponsePlaceholder={ () => ( <p>{ __( 'Loading', 'wordcamporg' ) }</p> ) }
+				LoadingResponsePlaceholder={ () => (
+					<p>{ __( 'Loading', 'wordcamporg' ) }</p>
+				) }
 			/>
 		);
 	}
@@ -52,4 +54,8 @@ const getAttributesFromData = ( element ) => {
 	return { attributes: parsedAttributes };
 };
 
-renderFrontend( '.wp-block-latest-posts.has-live-update', LivePosts, getAttributesFromData );
+renderFrontend(
+	'.wp-block-latest-posts.has-live-update',
+	LivePosts,
+	getAttributesFromData
+);

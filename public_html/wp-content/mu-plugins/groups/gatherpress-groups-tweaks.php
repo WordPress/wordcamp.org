@@ -366,14 +366,14 @@ add_filter(
 		}
 
 		return array(
-			'label'    => __( 'Time', 'wporg-groups' ),
-			'title'    => __( 'Filter by time', 'wporg-groups' ),
+			'label'    => __( 'Time', 'wporg-groups-frontend' ),
+			'title'    => __( 'Filter by time', 'wporg-groups-frontend' ),
 			'key'      => 'event_time',
 			'action'   => get_post_type_archive_link( 'gatherpress_event' ),
 			'options'  => array(
-				'upcoming' => __( 'Upcoming', 'wporg-groups' ),
-				'past'     => __( 'Past', 'wporg-groups' ),
-				'all'      => __( 'All events', 'wporg-groups' ),
+				'upcoming' => __( 'Upcoming', 'wporg-groups-frontend' ),
+				'past'     => __( 'Past', 'wporg-groups-frontend' ),
+				'all'      => __( 'All events', 'wporg-groups-frontend' ),
 			),
 			'selected' => $selected,
 		);
@@ -481,7 +481,7 @@ add_filter(
 
 		if ( $access ) {
 			$extra .= '<p class="wporg-venue-access"><strong>'
-				. esc_html__( 'Access:', 'wporg-groups' ) . '</strong> '
+				. esc_html__( 'Access:', 'wporg-groups-frontend' ) . '</strong> '
 				. esc_html( $access ) . '</p>';
 		}
 

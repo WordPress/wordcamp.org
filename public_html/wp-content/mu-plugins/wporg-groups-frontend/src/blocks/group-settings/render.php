@@ -9,9 +9,9 @@
  * @package WordCamp\Groups\Frontend
  */
 
-use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
+use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 
-if ( ! current_user_can_manage_events() ) {
+if ( ! current_user_can_manage_group_settings() ) {
 	return;
 }
 

@@ -9,6 +9,7 @@
  */
 
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
+use function WordCamp\Groups\Frontend\REST\current_user_can_edit_event;
 
 if ( ! current_user_can_manage_events() ) {
 	return;
@@ -35,6 +36,10 @@ if ( 'edit' === $block_mode ) {
 	$show_edit = true;
 } else {
 	$show_create = true;
+}
+
+if ( $show_edit && ( ! $event_post_id || ! current_user_can_edit_event( $event_post_id ) ) ) {
+	$show_edit = false;
 }
 
 if ( ! $show_edit && ! $show_create ) {

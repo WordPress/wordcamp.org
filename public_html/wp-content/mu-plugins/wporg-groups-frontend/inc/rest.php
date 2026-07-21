@@ -523,7 +523,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 			array(
 				'post_id'        => $saved_id,
 				'datetime_start' => sprintf( '%s %s:00', $date, $time_start ),
-				'datetime_end'   => sprintf( '%s %s:00', $date, $time_end ),
+				'datetime_end'   => sprintf( '%s %s:00', resolve_event_end_date( $date, $time_start, $time_end ), $time_end ),
 				'timezone'       => wp_timezone_string(),
 			)
 		);
@@ -590,6 +590,25 @@ function update_event( WP_REST_Request $request ) {
 }
 
 /**
+ * Resolve the calendar date an event's end time falls on.
+ *
+ * The form only collects one date plus separate start/end times, so an
+ * end time earlier than the start time means the event crosses midnight
+ * — e.g. 22:00 to 01:00 ends the day after `$date`. `persist_event()`
+ * rejects `time_start === time_end` as a zero-length event before
+ * calling this; `save_draft()` allows it through (drafts are saved
+ * permissively), in which case it is treated as a full 24-hour rollover
+ * rather than a same-day, zero-length span.
+ */
+function resolve_event_end_date( string $date, string $time_start, string $time_end ): string {
+	if ( $time_end > $time_start ) {
+		return $date;
+	}
+
+	return gmdate( 'Y-m-d', strtotime( $date . ' +1 day' ) );
+}
+
+/**
  * Shared create/update path. Persists post + datetimes + venue assignment
  * and returns the saved event's id and permalink so the JS app can
  * navigate to it.
@@ -610,7 +629,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	if ( '' === trim( $fields['title'] ) ) {
 		return new WP_Error( 'wporg_groups_missing_title', 'Title is required.', array( 'status' => 400 ) );
 	}
-	if ( $fields['time_start'] >= $fields['time_end'] ) {
+	if ( $fields['time_start'] === $fields['time_end'] ) {
 		return new WP_Error( 'wporg_groups_bad_time_range', 'End time must be after start time.', array( 'status' => 400 ) );
 	}
 
@@ -636,7 +655,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	// Datetimes — pass through GatherPress's own writer.
 	$timezone = wp_timezone_string();
 	$start    = sprintf( '%s %s:00', $fields['date'], $fields['time_start'] );
-	$end      = sprintf( '%s %s:00', $fields['date'], $fields['time_end'] );
+	$end      = sprintf( '%s %s:00', resolve_event_end_date( $fields['date'], $fields['time_start'], $fields['time_end'] ), $fields['time_end'] );
 
 	$event = new Event( $saved_id );
 	$event->save_datetimes(

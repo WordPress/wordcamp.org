@@ -163,6 +163,36 @@ add_filter(
 );
 
 /**
+ * Grant promote_users to editors so "Organisers" can actually change
+ * member roles via the group settings Members tab.
+ *
+ * Core only grants promote_users to administrators, so without this the
+ * REST role-update endpoint (Members_Controller::update_member_role)
+ * rejects every editor even though the UI labels editor and administrator
+ * as the same "Organiser" tier. This does not open up wp-admin: editors
+ * still lack list_users, so wp-admin/users.php remains inaccessible to
+ * them regardless. Role-assignment ceilings (never administrator, never
+ * an existing admin account) are still enforced by
+ * Members_Controller::update_member_role() itself.
+ */
+add_filter(
+	'user_has_cap',
+	static function ( array $allcaps, array $caps, array $args, $user ): array {
+		if ( ! in_array( 'promote_users', $caps, true ) ) {
+			return $allcaps;
+		}
+
+		if ( ! empty( $allcaps['edit_others_posts'] ) ) {
+			$allcaps['promote_users'] = true;
+		}
+
+		return $allcaps;
+	},
+	10,
+	4
+);
+
+/**
  * Support ordering event queries by event datetime.
  *
  * When a Query Loop block sets `orderBy=event_date`, this filter joins

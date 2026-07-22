@@ -1,0 +1,83 @@
+/**
+ * Group Members block styles.
+ */
+
+.wporg-group-members__heading {
+	font-size: 24px;
+	font-weight: 600;
+	margin: 0 0 24px !important;
+	padding: 0 !important;
+}
+
+.wporg-group-members__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 16px;
+}
+
+.wporg-group-members__card {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 16px;
+	border: 1px solid #d9d9d9;
+	border-radius: 4px;
+	text-decoration: none;
+	color: inherit;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wporg-group-members__card:hover {
+	border-color: #3858e9;
+	box-shadow: 0 2px 8px rgba(56, 88, 233, 0.1);
+	text-decoration: none;
+}
+
+.wporg-group-members__avatar {
+	width: 64px;
+	height: 64px;
+	border-radius: 9999px;
+	object-fit: cover;
+	flex: 0 0 auto;
+}
+
+.wporg-group-members__info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.wporg-group-members__name {
+	font-size: 15px;
+	font-weight: 600;
+	color: #1a1919;
+}
+
+.wporg-group-members__role {
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #656a71;
+}
+
+.wporg-group-members__role--administrator,
+.wporg-group-members__role--editor {
+	color: #3858e9;
+}
+
+.wporg-group-members__role--author {
+	color: #008a20;
+}
+
+.wporg-group-members__bio {
+	font-size: 13px;
+	color: #656a71;
+	line-height: 1.4;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}

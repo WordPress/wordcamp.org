@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/event-venue-name",
+	"version": "1.0.0",
+	"title": "Event Venue Name",
+	"category": "widgets",
+	"icon": "location",
+	"description": "Displays the venue name for an event.",
+	"usesContext": [ "postId", "postType" ],
+	"supports": {
+		"html": false,
+		"color": { "text": true },
+		"typography": { "fontSize": true },
+		"spacing": { "margin": true }
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js"
+}

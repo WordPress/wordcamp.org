@@ -485,6 +485,16 @@ add_action(
 add_filter(
 	'render_block_gatherpress/venue',
 	static function ( string $content ): string {
+		// Venue posts store their content with a nested `wp:gatherpress/venue`
+		// wrapper (GatherPress's default seeded content). Calling `do_blocks()`
+		// on that content re-triggers this filter → infinite recursion → OOM.
+		// Guard with a static flag so we only ever run the filter body once
+		// per outermost render.
+		static $rendering = false;
+		if ( $rendering ) {
+			return $content;
+		}
+
 		if ( ! is_singular( 'gatherpress_event' ) ) {
 			return $content;
 		}
@@ -505,8 +515,10 @@ add_filter(
 		$extra = '';
 
 		if ( $venue_desc ) {
-			$plain = wp_strip_all_tags( do_blocks( $venue_desc ) );
-			$plain = trim( $plain );
+			$rendering = true;
+			$plain     = wp_strip_all_tags( do_blocks( $venue_desc ) );
+			$rendering = false;
+			$plain     = trim( $plain );
 			if ( $plain ) {
 				$extra .= '<p class="wporg-venue-description">' . esc_html( $plain ) . '</p>';
 			}

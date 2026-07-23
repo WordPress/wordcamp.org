@@ -481,6 +481,15 @@ add_action(
  * GatherPress venue blocks only render address, phone, and website. This
  * filter adds the venue post content (description) and the
  * accessRequirements field from the venue information meta.
+ *
+ * Priority 20: GatherPress\Core\Blocks\Venue::render_block() hooks this same
+ * filter at the default priority 10 and rebuilds $content from scratch
+ * (ignoring whatever was passed in), discarding anything appended by a
+ * same-priority callback registered earlier. Because mu-plugins load before
+ * regular plugins, our default-priority add_filter() call was always first
+ * in the queue, so GatherPress's callback ran after us and silently dropped
+ * this append. Running after it (priority 20) is the only way our content
+ * survives.
  */
 add_filter(
 	'render_block_gatherpress/venue',
@@ -535,7 +544,8 @@ add_filter(
 		}
 
 		return $content;
-	}
+	},
+	20
 );
 
 /**

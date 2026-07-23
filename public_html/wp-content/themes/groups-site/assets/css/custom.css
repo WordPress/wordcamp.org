@@ -1,0 +1,516 @@
+/**
+ * Custom styles for the WordPress Group theme.
+ *
+ * Component-level overrides that complement theme.json. Uses the wporg
+ * Blueberry/Charcoal palette so this theme reads as part of the
+ * wordpress.org family.
+ *
+ * @package WordCamp\Groups\Site
+ */
+
+/* ==========================================================================
+   Editor overrides — prevent the block editor layout styles from
+   interfering with themed link appearance.
+   ========================================================================== */
+
+.block-editor-block-list__layout .wp-block-site-title a {
+	text-decoration: none !important;
+}
+
+/* ==========================================================================
+   Base / accessibility
+   ========================================================================== */
+
+*:focus-visible {
+	outline: 2px solid var(--wp--preset--color--blueberry-1);
+	outline-offset: 2px;
+}
+
+.skip-link {
+	position: absolute;
+	top: -100px;
+	left: 8px;
+	z-index: 999;
+	padding: 8px 16px;
+	background: var(--wp--preset--color--blueberry-1);
+	color: var(--wp--preset--color--white);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	text-decoration: none;
+	border-radius: 2px;
+}
+
+.skip-link:focus {
+	position: fixed;
+	top: 8px;
+	z-index: 999;
+	clip: auto;
+	clip-path: none;
+	width: auto;
+	height: auto;
+}
+
+
+
+/* ==========================================================================
+   Query Loop event cards — make the entire card clickable via the
+   post-title link and add hover state.
+   ========================================================================== */
+
+.wp-block-post-template .wp-block-group.has-border-color {
+	position: relative;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.wp-block-post-template .wp-block-group.has-border-color:hover {
+	border-color: var(--wp--preset--color--blueberry-1) !important;
+	box-shadow: 0 8px 24px -8px rgba(56, 88, 233, 0.18);
+	transform: translateY(-2px);
+}
+
+/* Stretch the post-title link over the entire card. */
+.wp-block-post-template .wp-block-post-title a::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+}
+
+.wp-block-post-template .wp-block-post-title a {
+	text-decoration: none;
+}
+
+
+/* Make the card show a pointer cursor everywhere. */
+.wp-block-post-template .wp-block-group.has-border-color {
+	cursor: pointer;
+}
+
+.wp-block-post-template .wp-block-post-title a:hover {
+	text-decoration: none;
+	color: var(--wp--preset--color--blueberry-1);
+}
+
+/* Venue map: constrain to sidebar card width. */
+.groups-site-event-info-card .wp-block-gatherpress-venue-map {
+	max-width: 100%;
+	overflow: hidden;
+	border-radius: 4px;
+}
+
+.groups-site-event-info-card .wp-block-gatherpress-venue-map iframe,
+.groups-site-event-info-card .wp-block-gatherpress-venue-map .leaflet-container {
+	max-width: 100%;
+}
+
+/* ==========================================================================
+   Single event layout
+   ========================================================================== */
+
+/* ----------  Date header row  ---------- */
+
+.groups-site-event-date-header .wp-block-gatherpress-add-to-calendar .wp-block-gatherpress-dropdown__trigger {
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* ----------  Venue extras (description + access) ---------- */
+
+.wporg-venue-extra {
+	margin-top: 12px;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-3);
+}
+
+.wporg-venue-extra p {
+	margin: 6px 0 0;
+}
+
+/* ----------  Event info card  ---------- */
+
+.groups-site-event-info-card {
+	box-shadow: 0 1px 2px rgba(30, 30, 30, 0.04),
+		0 2px 8px rgba(30, 30, 30, 0.04);
+}
+
+.groups-site-event-info-card hr.wp-block-separator {
+	border-color: var(--wp--preset--color--light-grey-1) !important;
+	opacity: 1;
+	margin: 0;
+}
+
+
+/* ==========================================================================
+   Event card grid — used by both the front-page upcoming list (compact)
+   and the events archive (expanded). The compact / expanded variants
+   share the same per-card markup; the differences are in column count,
+   gap, padding, and excerpt line-clamp.
+   ========================================================================== */
+
+.groups-site-event-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 28px;
+}
+
+.groups-site-event-cards--past .groups-site-event-card {
+	opacity: 0.85;
+}
+
+.groups-site-event-cards--past .groups-site-event-card .groups-site-event-card__date {
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-event-card {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+	color: inherit;
+	text-decoration: none;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease,
+		transform 0.18s ease;
+}
+
+.groups-site-event-card:hover,
+.groups-site-event-card:focus-visible {
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 18px 36px -16px rgba(56, 88, 233, 0.22),
+		0 4px 12px rgba(30, 30, 30, 0.04);
+	transform: translateY(-2px);
+}
+
+.groups-site-event-card__media {
+	aspect-ratio: 16 / 9;
+	background-color: var(--wp--preset--color--blueberry-4);
+	background-position: center;
+	background-size: cover;
+	background-repeat: no-repeat;
+	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.groups-site-event-card__media--placeholder {
+	background-image: linear-gradient(
+			135deg,
+			var(--wp--preset--color--blueberry-4),
+			var(--wp--preset--color--blueberry-3)
+		),
+		linear-gradient(45deg, transparent 48%, rgba(255, 255, 255, 0.4) 48% 52%, transparent 52%);
+	background-blend-mode: normal, overlay;
+	background-size: 100% 100%, 24px 24px;
+}
+
+.groups-site-event-card__body {
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	flex: 1;
+}
+
+.groups-site-event-cards--expanded .groups-site-event-card__body {
+	padding: 32px;
+	gap: 12px;
+}
+
+.groups-site-event-card__date {
+	margin: 0 0 4px;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--blueberry-1);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.groups-site-event-card__title {
+	margin: 0;
+	font-family: var(--wp--preset--font-family--eb-garamond);
+	font-size: var(--wp--preset--font-size--heading-5);
+	font-weight: 500;
+	line-height: 1.2;
+	color: var(--wp--preset--color--charcoal-1);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.groups-site-event-card:hover .groups-site-event-card__title,
+.groups-site-event-card:focus-visible .groups-site-event-card__title {
+	color: var(--wp--preset--color--blueberry-1);
+}
+
+.groups-site-event-card__excerpt {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-3);
+	line-height: 1.55;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.groups-site-event-cards--expanded .groups-site-event-card__excerpt {
+	font-size: var(--wp--preset--font-size--normal);
+	-webkit-line-clamp: 6;
+	line-height: 1.6;
+}
+
+.groups-site-event-card__rsvp {
+	margin: auto 0 0;
+	padding-top: 12px;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-event-card__venue {
+	margin: 0;
+	padding-top: 4px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.groups-site-event-card__icon {
+	flex-shrink: 0;
+	color: var(--wp--preset--color--blueberry-1);
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+/* ==========================================================================
+   Search block
+   ========================================================================== */
+
+.wp-block-search__input {
+	border-color: var(--wp--preset--color--charcoal-5) !important;
+	border-radius: 2px !important;
+}
+
+.wp-block-search__input:focus {
+	border-color: var(--wp--preset--color--blueberry-1) !important;
+	outline: none;
+	box-shadow: 0 0 0 3px var(--wp--preset--color--blueberry-3);
+}
+
+.wp-block-search__button {
+	background: var(--wp--preset--color--blueberry-1) !important;
+	border: none !important;
+	color: var(--wp--preset--color--white) !important;
+	border-radius: 0 2px 2px 0 !important;
+}
+
+.wp-block-search__button:hover {
+	background: var(--wp--preset--color--deep-blueberry) !important;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.groups-site-footer a {
+	text-decoration: none;
+}
+
+.groups-site-footer a:hover {
+	text-decoration: underline;
+}
+
+/* ==========================================================================
+   Single-event comment form — meetup-style "Leave a reply" composer
+   ========================================================================== */
+
+.wp-block-post-comments-form,
+.groups-site-comment-form {
+	margin-top: 24px;
+}
+
+/* Suppress the auto "Leave a Reply" heading and any logged-in-as boilerplate
+   that core might re-inject despite our comment_form_defaults filter. */
+.wp-block-post-comments-form .comment-reply-title,
+.wp-block-post-comments-form #reply-title,
+.wp-block-post-comments-form .logged-in-as,
+.wp-block-post-comments-form .comment-notes,
+.wp-block-post-comments-form .form-allowed-tags {
+	display: none !important;
+}
+
+.wp-block-post-comments-form .comment-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px;
+	background: var(--wp--preset--color--light-grey-2);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+}
+
+.wp-block-post-comments-form .comment-form-comment {
+	margin: 0;
+}
+
+.wp-block-post-comments-form .comment-form-comment label {
+	position: absolute;
+	clip: rect(1px, 1px, 1px, 1px);
+	clip-path: inset(50%);
+	height: 1px;
+	width: 1px;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.wp-block-post-comments-form textarea#comment {
+	width: 100%;
+	min-height: 88px;
+	padding: 12px 14px;
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal);
+	line-height: 1.5;
+	color: var(--wp--preset--color--charcoal-1);
+	box-sizing: border-box;
+	resize: vertical;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wp-block-post-comments-form textarea#comment::placeholder {
+	color: var(--wp--preset--color--charcoal-4);
+}
+
+.wp-block-post-comments-form textarea#comment:focus {
+	outline: none;
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 0 0 3px var(--wp--preset--color--blueberry-3);
+}
+
+/* Hide the author/email/url fields that core injects for guests — keep the
+   composer minimal. Logged-out users still see the "you must be logged in"
+   notice from core in place of the textarea. */
+.wp-block-post-comments-form .comment-form-author,
+.wp-block-post-comments-form .comment-form-email,
+.wp-block-post-comments-form .comment-form-url,
+.wp-block-post-comments-form .comment-form-cookies-consent {
+	display: none;
+}
+
+.wp-block-post-comments-form .form-submit {
+	margin: 0;
+	display: flex;
+	justify-content: flex-end;
+}
+
+.wp-block-post-comments-form .form-submit .submit {
+	background: var(--wp--preset--color--blueberry-1);
+	color: var(--wp--preset--color--white);
+	border: none;
+	border-radius: 2px;
+	padding: 10px 22px;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+.wp-block-post-comments-form .form-submit .submit:hover,
+.wp-block-post-comments-form .form-submit .submit:focus-visible {
+	background: var(--wp--preset--color--deep-blueberry);
+}
+
+/* Comment list — read like a chat thread, not a blog comment list. */
+.wp-block-comments .wp-block-comment-template {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 24px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.wp-block-comments .wp-block-comment-template > li {
+	padding: 16px;
+	background: var(--wp--preset--color--light-grey-2);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+}
+
+/* ==========================================================================
+   Core list block — restore the markers + padding that get stripped by
+   the upstream block library reset. Block themes intentionally remove the
+   browser default `ul/ol` padding so they can be overridden via theme.json,
+   but that leaves bullets/numbers visually unattached without padding.
+   ========================================================================== */
+
+.entry-content ul,
+.entry-content ol,
+.wp-block-post-content ul,
+.wp-block-post-content ol {
+	padding-inline-start: 1.5em;
+	margin-block: 1em;
+}
+
+.entry-content ul,
+.wp-block-post-content ul {
+	list-style: disc outside;
+}
+
+.entry-content ol,
+.wp-block-post-content ol {
+	list-style: decimal outside;
+}
+
+.entry-content li,
+.wp-block-post-content li {
+	margin-block: 0.35em;
+}
+
+.entry-content ul ul,
+.wp-block-post-content ul ul {
+	list-style: circle outside;
+}
+
+.entry-content ul ul ul,
+.wp-block-post-content ul ul ul {
+	list-style: square outside;
+}
+
+/* ==========================================================================
+   Pagination
+   ========================================================================== */
+
+.wp-block-query-pagination-numbers .page-numbers {
+	color: var(--wp--preset--color--charcoal-3);
+	text-decoration: none;
+	padding: 4px 8px;
+}
+
+.wp-block-query-pagination-numbers .page-numbers:hover {
+	color: var(--wp--preset--color--blueberry-1);
+}
+
+.wp-block-query-pagination-numbers .page-numbers.current {
+	color: var(--wp--preset--color--blueberry-1);
+	font-weight: 600;
+}
+
+/* ==========================================================================
+   Reduced motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+	}
+}

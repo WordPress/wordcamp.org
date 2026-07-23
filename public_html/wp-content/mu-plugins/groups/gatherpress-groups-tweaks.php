@@ -466,6 +466,9 @@ add_filter(
 add_action(
 	'template_redirect',
 	static function (): void {
+		if ( ! class_exists( '\GatherPress\Core\Event\Setup' ) ) {
+			return;
+		}
 		$setup = \GatherPress\Core\Event\Setup::get_instance();
 		remove_action( 'template_redirect', array( $setup, 'handle_event_archive_redirect' ) );
 	},

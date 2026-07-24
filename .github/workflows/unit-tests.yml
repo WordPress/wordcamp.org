@@ -120,5 +120,14 @@ jobs:
       run: |
         bash .docker/bin/install-wp-tests.sh wcorg_test root root "127.0.0.1:${DB_PORT}" latest true
 
+    - name: Install GatherPress
+      # Pinned to the same release used by local dev (see the
+      # groups-gatherpress-compat-test skill). GatherPress is gitignored/
+      # third-party; the WordCamp Groups PHPUnit suite needs it present.
+      run: |
+        curl -sL "https://github.com/GatherPress/gatherpress/releases/download/0.34.0-alpha.2/gatherpress.0.34.0-alpha.2.zip" -o /tmp/gatherpress.zip
+        unzip -q -o /tmp/gatherpress.zip -d public_html/wp-content/plugins/
+        rm -f /tmp/gatherpress.zip
+
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

@@ -10,7 +10,7 @@ namespace WordCamp\Groups\Frontend\Defaults;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
-use GatherPress\Core\Venue\Venue;
+use GatherPress\Core\Venue\Setup as Venue_Setup;
 
 /**
  * Build the default field values for the create-event form.
@@ -173,28 +173,11 @@ function extract_description_blocks( int $event_id ): string {
 /**
  * Resolve the gatherpress_venue post ID assigned to a given event.
  *
- * GatherPress stores venue assignments as terms in the `_gatherpress_venue`
- * taxonomy whose slug is `_{venue-post-slug}` — see
- * `Venue::get_venue_term_slug()`. This function reverses that mapping back to
- * a venue post ID, returning 0 if the event has no venue or the venue post no
- * longer exists.
+ * Delegates to GatherPress's own `Venue\Setup::get_venue_post_from_event_post_id()`
+ * rather than reversing the `_gatherpress_venue` taxonomy term slug ourselves.
  */
 function get_event_venue_post_id( int $event_id ): int {
-	$terms = wp_get_object_terms( $event_id, Venue::TAXONOMY, array( 'fields' => 'all' ) );
-
-	if ( is_wp_error( $terms ) || empty( $terms ) ) {
-		return 0;
-	}
-
-	$term = $terms[0];
-
-	// Term slug is `_{venue-post-slug}`. Strip the leading underscore.
-	$venue_slug = ltrim( $term->slug, '_' );
-	if ( '' === $venue_slug ) {
-		return 0;
-	}
-
-	$venue_post = get_page_by_path( $venue_slug, OBJECT, Venue::POST_TYPE );
+	$venue_post = Venue_Setup::get_instance()->get_venue_post_from_event_post_id( $event_id );
 
 	return $venue_post ? (int) $venue_post->ID : 0;
 }

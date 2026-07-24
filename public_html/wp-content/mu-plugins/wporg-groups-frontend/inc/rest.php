@@ -736,6 +736,13 @@ function build_post_content( int $event_id, string $description ): string {
 
 /**
  * Find a venue post ID for the submission, creating one inline if needed.
+ *
+ * The address is stored via the `gatherpress_address` post meta (not
+ * `post_content`) so GatherPress's own async geocode handler — hooked on
+ * `added_post_meta`/`updated_post_meta` for that key — picks it up and
+ * populates `gatherpress_latitude`/`gatherpress_longitude`. Writing the
+ * address straight into `post_content` bypasses that pipeline entirely and
+ * leaves the venue with no coordinates, breaking map rendering.
  */
 function resolve_venue_id( array $fields ): int {
 	if ( $fields['venue_id'] > 0 && Venue::POST_TYPE === get_post_type( $fields['venue_id'] ) ) {
@@ -748,45 +755,39 @@ function resolve_venue_id( array $fields ): int {
 
 	$venue_post_id = wp_insert_post(
 		array(
-			'post_type'    => Venue::POST_TYPE,
-			'post_status'  => 'publish',
-			'post_title'   => $fields['new_venue_name'],
-			'post_content' => $fields['new_venue_address'],
+			'post_type'   => Venue::POST_TYPE,
+			'post_status' => 'publish',
+			'post_title'  => $fields['new_venue_name'],
 		),
 		true
 	);
 
-	return ( is_wp_error( $venue_post_id ) || ! $venue_post_id ) ? 0 : (int) $venue_post_id;
+	if ( is_wp_error( $venue_post_id ) || ! $venue_post_id ) {
+		return 0;
+	}
+
+	if ( '' !== $fields['new_venue_address'] ) {
+		update_post_meta( $venue_post_id, 'gatherpress_address', $fields['new_venue_address'] );
+	}
+
+	return (int) $venue_post_id;
 }
 
 /**
  * Assign a venue to an event by setting the `_gatherpress_venue` term whose
  * slug matches the venue post.
+ *
+ * The venue post type declares `gatherpress-shadow-source` support, so
+ * `Shadow_Source::add_term()` already creates/maintains that term on
+ * `save_post` — no need to insert it ourselves here.
  */
 function assign_venue_to_event( int $event_id, int $venue_post_id ): void {
-	$venue_post = get_post( $venue_post_id );
-	if ( ! $venue_post ) {
-		return;
-	}
-
-	$term_slug = '_' . $venue_post->post_name;
-	$term      = get_term_by( 'slug', $term_slug, Venue::TAXONOMY );
+	$venue = new Venue( $venue_post_id );
+	$term  = $venue->get_term();
 
 	if ( ! $term ) {
-		$inserted = wp_insert_term(
-			$venue_post->post_title,
-			Venue::TAXONOMY,
-			array( 'slug' => $term_slug )
-		);
-		if ( is_wp_error( $inserted ) ) {
-			return;
-		}
-		$term = get_term( (int) $inserted['term_id'], Venue::TAXONOMY );
-	}
-
-	if ( ! $term || is_wp_error( $term ) ) {
 		return;
 	}
 
-	wp_set_object_terms( $event_id, array( (int) $term->term_id ), Venue::TAXONOMY, false );
+	wp_set_object_terms( $event_id, array( $term->term_id ), $venue->get_taxonomy(), false );
 }

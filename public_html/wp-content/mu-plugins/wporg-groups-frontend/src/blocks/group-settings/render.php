@@ -32,7 +32,11 @@ $default_descriptions = array_unique(
 	)
 );
 $needs_setup          = '' === $description || in_array( $description, $default_descriptions, true );
-$can_manage_roles = current_user_can( 'promote_users' );
+// Matches the same capability the REST endpoint checks
+// (Members_Controller::update_member_role_permissions_check) — not core's
+// `promote_users`, which we deliberately don't grant to editors (it's a
+// real, unscoped capability core also uses for wp-admin user management).
+$can_manage_roles = current_user_can_manage_group_settings();
 
 $wrapper_attributes = get_block_wrapper_attributes(
 	array( 'class' => 'wporg-group-settings-block' )

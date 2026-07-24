@@ -345,7 +345,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 			);
 		}
 
-		if ( ! current_user_can( 'promote_user', $user_id ) ) {
+		if ( ! \WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings() ) {
 			return new \WP_Error(
 				'rest_cannot_edit_roles',
 				__( 'Sorry, you are not allowed to edit roles of this user.', 'wporg-groups-frontend' ),

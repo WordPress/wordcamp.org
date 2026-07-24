@@ -14,8 +14,16 @@ $users = get_users(
 		'blog_id' => get_current_blog_id(),
 		'orderby' => 'display_name',
 		'order'   => 'ASC',
+		// Bound the worst case for large groups — mirrors the REST
+		// endpoint's own cap (Members_Controller::MAX_PER_PAGE) rather
+		// than loading every member of the site unconditionally.
+		'number'  => Members_Controller::MAX_PER_PAGE,
 	)
 );
+
+// Prime the usermeta cache for all of them in one query instead of one
+// `get_the_author_meta( 'description', ... )` call per user below.
+update_meta_cache( 'user', wp_list_pluck( $users, 'ID' ) );
 
 // Sort: organisers first, then event organisers, then members.
 $weights = array(

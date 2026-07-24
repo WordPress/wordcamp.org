@@ -163,7 +163,8 @@ function register_routes(): void {
 					'required'          => true,
 					'sanitize_callback' => 'absint',
 					'validate_callback' => static function ( $param ) {
-						return Event::POST_TYPE === get_post_type( (int) $param );
+						$post = get_post( (int) $param );
+						return $post && Event::POST_TYPE === $post->post_type && 'draft' === $post->post_status;
 					},
 				),
 			) + event_args_schema(),
@@ -268,6 +269,19 @@ function current_user_can_publish_event( int $event_id = 0 ): bool {
 	$capability       = $post_type_object->cap->publish_posts ?? 'publish_posts';
 
 	return current_user_can( $capability );
+}
+
+/**
+ * Whether the current user may use an attachment as an event's featured
+ * image. Mirrors core's own visibility rules for attachments (public/
+ * inherited attachments readable by anyone, private ones only by their
+ * owner or users with `read_private_posts`) so a group organiser can't
+ * point their event at another user's private/unattached media just by
+ * guessing its ID.
+ */
+function current_user_can_use_attachment( int $attachment_id ): bool {
+	return 'attachment' === get_post_type( $attachment_id )
+		&& current_user_can( 'read_post', $attachment_id );
 }
 
 /**
@@ -543,7 +557,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
-	if ( $featured_image_id > 0 && 'attachment' === get_post_type( $featured_image_id ) ) {
+	if ( $featured_image_id > 0 && current_user_can_use_attachment( $featured_image_id ) ) {
 		set_post_thumbnail( $saved_id, $featured_image_id );
 	}
 
@@ -673,10 +687,9 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		assign_venue_to_event( $saved_id, $venue_id );
 	}
 
-	// Featured image — accept any attachment that exists. The JS picker
-	// returns ids it just pulled from the same media library, so any
-	// extra ownership/capability check would just block the happy path.
-	if ( $fields['featured_image_id'] > 0 && 'attachment' === get_post_type( $fields['featured_image_id'] ) ) {
+	// Featured image — only if the current user is actually allowed to see
+	// it (public/inherited attachments, or their own private uploads).
+	if ( $fields['featured_image_id'] > 0 && current_user_can_use_attachment( $fields['featured_image_id'] ) ) {
 		set_post_thumbnail( $saved_id, $fields['featured_image_id'] );
 	} elseif ( 0 === $fields['featured_image_id'] && $event_id > 0 ) {
 		// Explicit clear on edit.

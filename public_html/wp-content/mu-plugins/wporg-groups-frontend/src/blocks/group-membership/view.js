@@ -48,10 +48,14 @@ store( 'wporg/group-membership', {
 				const resp = await fetch( ctx.joinApi, {
 					method: 'POST',
 					credentials: 'same-origin',
-					headers: { 'X-WP-Nonce': await getNonce() },
+					headers: { 'X-WP-Nonce': ctx.nonce },
 				} );
 
 				const data = await resp.json();
+
+				if ( ! resp.ok ) {
+					throw new Error( data?.message || resp.statusText );
+				}
 
 				if ( data.success ) {
 					ctx.isMember = true;
@@ -60,8 +64,9 @@ store( 'wporg/group-membership', {
 					// Reload to get the full member UI server-rendered.
 					window.location.reload();
 				}
-			} catch {
-				// Silently fail.
+			} catch ( error ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Group join failed:', error );
 			} finally {
 				ctx.loading = false;
 			}
@@ -84,44 +89,26 @@ store( 'wporg/group-membership', {
 				const resp = await fetch( ctx.leaveApi, {
 					method: 'DELETE',
 					credentials: 'same-origin',
-					headers: { 'X-WP-Nonce': await getNonce() },
+					headers: { 'X-WP-Nonce': ctx.nonce },
 				} );
 
 				const data = await resp.json();
+
+				if ( ! resp.ok ) {
+					throw new Error( data?.message || resp.statusText );
+				}
 
 				if ( data.success ) {
 					ctx.isMember = false;
 					ctx.memberCount = Math.max( 0, ctx.memberCount - 1 );
 					window.location.reload();
 				}
-			} catch {
-				// Silently fail.
+			} catch ( error ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Group leave failed:', error );
 			} finally {
 				ctx.loading = false;
 			}
 		},
 	},
 } );
-
-let cachedNonce = null;
-
-async function getNonce() {
-	if ( cachedNonce ) {
-		return cachedNonce;
-	}
-	if ( window.wpApiSettings?.nonce ) {
-		cachedNonce = window.wpApiSettings.nonce;
-		return cachedNonce;
-	}
-	// Fallback: use the GatherPress nonce endpoint.
-	const apiBase = window.GatherPress?.urls?.eventApiUrl;
-	if ( apiBase ) {
-		const nonceResp = await fetch( apiBase + '/nonce', {
-			credentials: 'same-origin',
-		} );
-		const nonceData = await nonceResp.json();
-		cachedNonce = nonceData.nonce;
-		return cachedNonce;
-	}
-	return '';
-}

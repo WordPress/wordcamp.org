@@ -21,7 +21,12 @@ defined( 'WPINC' ) || die();
  */
 class Test_Groups_GatherPress_Off_Guard extends WP_UnitTestCase {
 
+	/**
+	 * The main plugin file's bootstrap() must stay guarded on GatherPress
+	 * being loaded.
+	 */
 	public function test_frontend_plugin_bootstrap_is_guarded() {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a local plugin file, not a remote URL.
 		$source = file_get_contents(
 			dirname( __DIR__ ) . '/wporg-groups-frontend.php'
 		);
@@ -33,7 +38,12 @@ class Test_Groups_GatherPress_Off_Guard extends WP_UnitTestCase {
 		);
 	}
 
+	/**
+	 * `gatherpress-groups-tweaks.php` must stay guarded on its
+	 * GatherPress-dependent code path.
+	 */
 	public function test_groups_tweaks_is_guarded() {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a local plugin file, not a remote URL.
 		$source = file_get_contents(
 			dirname( __DIR__, 2 ) . '/groups/gatherpress-groups-tweaks.php'
 		);

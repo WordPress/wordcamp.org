@@ -11,6 +11,10 @@ require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-
  */
 class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
+	/**
+	 * Groups-network sites should never show a timezone suffix or offer
+	 * anonymous RSVP, regardless of GatherPress's own defaults.
+	 */
 	public function test_gatherpress_settings_overridden() {
 		$settings = get_option( 'gatherpress_settings' );
 
@@ -18,6 +22,9 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertSame( 0, $settings['enable_anonymous_rsvp'] );
 	}
 
+	/**
+	 * Login is required to comment on the groups network.
+	 */
 	public function test_comment_registration_required_on_groups_network() {
 		$this->assertSame( '1', get_option( 'comment_registration' ) );
 	}
@@ -34,6 +41,9 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$this->assertTrue( user_can( $editor_id, 'edit_theme_options' ) );
 	}
 
+	/**
+	 * The `edit_theme_options` grant is scoped to editors only.
+	 */
 	public function test_subscriber_does_not_have_edit_theme_options() {
 		$subscriber_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 

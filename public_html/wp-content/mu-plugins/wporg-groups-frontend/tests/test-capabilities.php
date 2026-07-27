@@ -14,6 +14,9 @@ require_once __DIR__ . '/class-groups-testcase.php';
  */
 class Test_Groups_Capabilities extends Groups_TestCase {
 
+	/**
+	 * Data provider for test_current_user_can_manage_events_by_role().
+	 */
 	public function data_manage_events_roles(): array {
 		return array(
 			'administrator manages events' => array( 'administrator', true ),
@@ -34,12 +37,18 @@ class Test_Groups_Capabilities extends Groups_TestCase {
 		$this->assertSame( $expected, current_user_can_manage_events() );
 	}
 
+	/**
+	 * Logged-out visitors can never manage events.
+	 */
 	public function test_current_user_can_manage_events_false_when_logged_out() {
 		wp_set_current_user( 0 );
 
 		$this->assertFalse( current_user_can_manage_events() );
 	}
 
+	/**
+	 * Data provider for test_current_user_can_manage_group_settings_by_role().
+	 */
 	public function data_manage_group_settings_roles(): array {
 		return array(
 			'administrator manages settings' => array( 'administrator', true ),

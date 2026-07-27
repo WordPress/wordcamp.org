@@ -21,6 +21,9 @@ require_once __DIR__ . '/class-groups-testcase.php';
  */
 class Test_Groups_REST extends Groups_TestCase {
 
+	/**
+	 * Builds a POST /event request with the given params.
+	 */
 	private function event_request( array $params ): WP_REST_Request {
 		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event' );
 		foreach ( $params as $key => $value ) {
@@ -29,6 +32,9 @@ class Test_Groups_REST extends Groups_TestCase {
 		return $request;
 	}
 
+	/**
+	 * A minimal valid set of event params, for tests to override from.
+	 */
 	private function base_event_params(): array {
 		return array(
 			'title'      => 'Test Event',
@@ -38,6 +44,9 @@ class Test_Groups_REST extends Groups_TestCase {
 		);
 	}
 
+	/**
+	 * An editor (Organiser) can create and publish an event in one request.
+	 */
 	public function test_create_event_as_editor() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );
@@ -51,6 +60,9 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( 'publish', get_post_status( $data['id'] ) );
 	}
 
+	/**
+	 * An event whose end time equals its start time is rejected.
+	 */
 	public function test_zero_length_event_rejected() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );
@@ -88,6 +100,9 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( '2026-08-21 01:00:00', $end );
 	}
 
+	/**
+	 * IDOR check: an author cannot edit another author's event.
+	 */
 	public function test_author_cannot_edit_another_authors_event() {
 		$author_a = self::factory()->user->create( array( 'role' => 'author' ) );
 		$author_b = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -106,6 +121,9 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( 'Test Event', get_the_title( $event_id ), 'The original title must be untouched.' );
 	}
 
+	/**
+	 * An author can edit an event they created.
+	 */
 	public function test_author_can_edit_own_event() {
 		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		wp_set_current_user( $author_id );
@@ -123,11 +141,15 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( 'Updated Title', get_the_title( $event_id ) );
 	}
 
+	/**
+	 * A new venue's address is written to gatherpress_address meta, not
+	 * post_content, so GatherPress's own geocode handler can pick it up.
+	 */
 	public function test_venue_address_written_to_meta_not_post_content() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );
 
-		$params                       = $this->base_event_params();
+		$params                      = $this->base_event_params();
 		$params['new_venue_name']    = 'Test Venue ' . uniqid();
 		$params['new_venue_address'] = '123 Example St, Testville';
 
@@ -149,15 +171,18 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( $params['new_venue_address'], get_post_meta( $venue_post_id, 'gatherpress_address', true ) );
 		$this->assertStringNotContainsString( $params['new_venue_address'], (string) get_post_field( 'post_content', $venue_post_id ) );
 
-		$venue    = new \GatherPress\Core\Venue\Venue( $venue_post_id );
-		$term     = $venue->get_term();
+		$venue = new \GatherPress\Core\Venue\Venue( $venue_post_id );
+		$term  = $venue->get_term();
 		$this->assertNotNull( $term, 'assign_venue_to_event() should resolve a shadow taxonomy term for the venue.' );
 		$this->assertTrue( has_term( $term->term_id, $venue->get_taxonomy(), $event_id ) );
 	}
 
+	/**
+	 * A user can't set another user's private attachment as a featured image.
+	 */
 	public function test_featured_image_rejects_unreadable_attachment() {
-		$owner_id      = self::factory()->user->create( array( 'role' => 'author' ) );
-		$other_author  = self::factory()->user->create( array( 'role' => 'author' ) );
+		$owner_id     = self::factory()->user->create( array( 'role' => 'author' ) );
+		$other_author = self::factory()->user->create( array( 'role' => 'author' ) );
 
 		wp_set_current_user( $owner_id );
 		$private_attachment_id = self::factory()->attachment->create_object(
@@ -171,6 +196,9 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertFalse( current_user_can_use_attachment( $private_attachment_id ) );
 	}
 
+	/**
+	 * Save → list → update → publish should transition post_status correctly.
+	 */
 	public function test_draft_save_list_update_publish_flow() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );
@@ -179,13 +207,13 @@ class Test_Groups_REST extends Groups_TestCase {
 		$save_request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
 		$save_request->set_param( 'title', 'Draft Test' );
 		$save_response = save_draft( $save_request );
-		$draft_id       = $save_response->get_data()['id'];
+		$draft_id      = $save_response->get_data()['id'];
 
 		$this->assertSame( 'draft', get_post_status( $draft_id ) );
 
 		// List drafts.
 		$list_response = list_drafts();
-		$listed_ids     = wp_list_pluck( $list_response->get_data(), 'id' );
+		$listed_ids    = wp_list_pluck( $list_response->get_data(), 'id' );
 		$this->assertContains( $draft_id, $listed_ids );
 
 		// Update with full details.

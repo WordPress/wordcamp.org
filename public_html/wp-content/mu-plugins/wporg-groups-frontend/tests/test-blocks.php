@@ -31,7 +31,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	 * duplicates core functionality again, this test should fail.
 	 */
 	public function test_exactly_the_expected_wporg_blocks_are_registered() {
-		$registered = array_keys( \WP_Block_Type_Registry::get_instance()->get_all_registered() );
+		$registered   = array_keys( \WP_Block_Type_Registry::get_instance()->get_all_registered() );
 		$wporg_blocks = array_values(
 			array_filter(
 				$registered,

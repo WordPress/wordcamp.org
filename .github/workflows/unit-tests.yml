@@ -129,5 +129,19 @@ jobs:
         unzip -q -o /tmp/gatherpress.zip -d public_html/wp-content/plugins/
         rm -f /tmp/gatherpress.zip
 
+    - name: Use Node.js 20.x
+      # The WordCamp Groups PHPUnit suite asserts on registered block types,
+      # which register_block_type_from_metadata() silently no-ops for if
+      # build/blocks/ doesn't exist yet.
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: npm
+
+    - name: Build the groups frontend blocks
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build --workspace=public_html/wp-content/mu-plugins/wporg-groups-frontend
+
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

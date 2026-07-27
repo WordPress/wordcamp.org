@@ -43,6 +43,9 @@ abstract class Groups_TestCase extends Database_TestCase {
 		);
 	}
 
+	/**
+	 * Tears down the groups-network fixture created in wpSetUpBeforeClass().
+	 */
 	public static function wpTearDownAfterClass() {
 		global $wpdb;
 
@@ -54,6 +57,9 @@ abstract class Groups_TestCase extends Database_TestCase {
 		parent::wpTearDownAfterClass();
 	}
 
+	/**
+	 * Switches to the groups-network fixture site before each test.
+	 */
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -71,6 +77,9 @@ abstract class Groups_TestCase extends Database_TestCase {
 		}
 	}
 
+	/**
+	 * Restores the previously-current blog after each test.
+	 */
 	protected function tearDown(): void {
 		restore_current_blog();
 		parent::tearDown();

@@ -163,7 +163,8 @@ function register_routes(): void {
 					'required'          => true,
 					'sanitize_callback' => 'absint',
 					'validate_callback' => static function ( $param ) {
-						return Event::POST_TYPE === get_post_type( (int) $param );
+						$post = get_post( (int) $param );
+						return $post && Event::POST_TYPE === $post->post_type && 'draft' === $post->post_status;
 					},
 				),
 			) + event_args_schema(),
@@ -268,6 +269,19 @@ function current_user_can_publish_event( int $event_id = 0 ): bool {
 	$capability       = $post_type_object->cap->publish_posts ?? 'publish_posts';
 
 	return current_user_can( $capability );
+}
+
+/**
+ * Whether the current user may use an attachment as an event's featured
+ * image. Mirrors core's own visibility rules for attachments (public/
+ * inherited attachments readable by anyone, private ones only by their
+ * owner or users with `read_private_posts`) so a group organiser can't
+ * point their event at another user's private/unattached media just by
+ * guessing its ID.
+ */
+function current_user_can_use_attachment( int $attachment_id ): bool {
+	return 'attachment' === get_post_type( $attachment_id )
+		&& current_user_can( 'read_post', $attachment_id );
 }
 
 /**
@@ -543,7 +557,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
-	if ( $featured_image_id > 0 && 'attachment' === get_post_type( $featured_image_id ) ) {
+	if ( $featured_image_id > 0 && current_user_can_use_attachment( $featured_image_id ) ) {
 		set_post_thumbnail( $saved_id, $featured_image_id );
 	}
 
@@ -673,10 +687,9 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		assign_venue_to_event( $saved_id, $venue_id );
 	}
 
-	// Featured image — accept any attachment that exists. The JS picker
-	// returns ids it just pulled from the same media library, so any
-	// extra ownership/capability check would just block the happy path.
-	if ( $fields['featured_image_id'] > 0 && 'attachment' === get_post_type( $fields['featured_image_id'] ) ) {
+	// Featured image — only if the current user is actually allowed to see
+	// it (public/inherited attachments, or their own private uploads).
+	if ( $fields['featured_image_id'] > 0 && current_user_can_use_attachment( $fields['featured_image_id'] ) ) {
 		set_post_thumbnail( $saved_id, $fields['featured_image_id'] );
 	} elseif ( 0 === $fields['featured_image_id'] && $event_id > 0 ) {
 		// Explicit clear on edit.
@@ -723,6 +736,13 @@ function build_post_content( int $event_id, string $description ): string {
 
 /**
  * Find a venue post ID for the submission, creating one inline if needed.
+ *
+ * The address is stored via the `gatherpress_address` post meta (not
+ * `post_content`) so GatherPress's own async geocode handler — hooked on
+ * `added_post_meta`/`updated_post_meta` for that key — picks it up and
+ * populates `gatherpress_latitude`/`gatherpress_longitude`. Writing the
+ * address straight into `post_content` bypasses that pipeline entirely and
+ * leaves the venue with no coordinates, breaking map rendering.
  */
 function resolve_venue_id( array $fields ): int {
 	if ( $fields['venue_id'] > 0 && Venue::POST_TYPE === get_post_type( $fields['venue_id'] ) ) {
@@ -735,45 +755,39 @@ function resolve_venue_id( array $fields ): int {
 
 	$venue_post_id = wp_insert_post(
 		array(
-			'post_type'    => Venue::POST_TYPE,
-			'post_status'  => 'publish',
-			'post_title'   => $fields['new_venue_name'],
-			'post_content' => $fields['new_venue_address'],
+			'post_type'   => Venue::POST_TYPE,
+			'post_status' => 'publish',
+			'post_title'  => $fields['new_venue_name'],
 		),
 		true
 	);
 
-	return ( is_wp_error( $venue_post_id ) || ! $venue_post_id ) ? 0 : (int) $venue_post_id;
+	if ( is_wp_error( $venue_post_id ) || ! $venue_post_id ) {
+		return 0;
+	}
+
+	if ( '' !== $fields['new_venue_address'] ) {
+		update_post_meta( $venue_post_id, 'gatherpress_address', $fields['new_venue_address'] );
+	}
+
+	return (int) $venue_post_id;
 }
 
 /**
  * Assign a venue to an event by setting the `_gatherpress_venue` term whose
  * slug matches the venue post.
+ *
+ * The venue post type declares `gatherpress-shadow-source` support, so
+ * `Shadow_Source::add_term()` already creates/maintains that term on
+ * `save_post` — no need to insert it ourselves here.
  */
 function assign_venue_to_event( int $event_id, int $venue_post_id ): void {
-	$venue_post = get_post( $venue_post_id );
-	if ( ! $venue_post ) {
-		return;
-	}
-
-	$term_slug = '_' . $venue_post->post_name;
-	$term      = get_term_by( 'slug', $term_slug, Venue::TAXONOMY );
+	$venue = new Venue( $venue_post_id );
+	$term  = $venue->get_term();
 
 	if ( ! $term ) {
-		$inserted = wp_insert_term(
-			$venue_post->post_title,
-			Venue::TAXONOMY,
-			array( 'slug' => $term_slug )
-		);
-		if ( is_wp_error( $inserted ) ) {
-			return;
-		}
-		$term = get_term( (int) $inserted['term_id'], Venue::TAXONOMY );
-	}
-
-	if ( ! $term || is_wp_error( $term ) ) {
 		return;
 	}
 
-	wp_set_object_terms( $event_id, array( (int) $term->term_id ), Venue::TAXONOMY, false );
+	wp_set_object_terms( $event_id, array( $term->term_id ), $venue->get_taxonomy(), false );
 }

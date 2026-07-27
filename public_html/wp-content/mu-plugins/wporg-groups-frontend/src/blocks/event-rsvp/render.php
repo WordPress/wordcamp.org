@@ -40,6 +40,14 @@ if ( $is_login ) {
 	$current_status = $user_rsvp['status'] ?? 'no_status';
 }
 
+// Prime the usermeta cache for every attendee in one query — the modal
+// below lists all of them (not just the visible avatars), so without this
+// each attendee's bio is otherwise a separate DB round trip.
+$attendee_user_ids = array_filter( wp_list_pluck( $records, 'userId' ) );
+if ( $attendee_user_ids ) {
+	update_meta_cache( 'user', $attendee_user_ids );
+}
+
 $attendees = array();
 foreach ( $records as $record ) {
 	$bio = '';

@@ -163,36 +163,6 @@ add_filter(
 );
 
 /**
- * Grant promote_users to editors so "Organisers" can actually change
- * member roles via the group settings Members tab.
- *
- * Core only grants promote_users to administrators, so without this the
- * REST role-update endpoint (Members_Controller::update_member_role)
- * rejects every editor even though the UI labels editor and administrator
- * as the same "Organiser" tier. This does not open up wp-admin: editors
- * still lack list_users, so wp-admin/users.php remains inaccessible to
- * them regardless. Role-assignment ceilings (never administrator, never
- * an existing admin account) are still enforced by
- * Members_Controller::update_member_role() itself.
- */
-add_filter(
-	'user_has_cap',
-	static function ( array $allcaps, array $caps, array $args, $user ): array {
-		if ( ! in_array( 'promote_users', $caps, true ) ) {
-			return $allcaps;
-		}
-
-		if ( ! empty( $allcaps['edit_others_posts'] ) ) {
-			$allcaps['promote_users'] = true;
-		}
-
-		return $allcaps;
-	},
-	10,
-	4
-);
-
-/**
  * Support ordering event queries by event datetime.
  *
  * When a Query Loop block sets `orderBy=event_date`, this filter joins
@@ -466,6 +436,9 @@ add_filter(
 add_action(
 	'template_redirect',
 	static function (): void {
+		if ( ! class_exists( '\GatherPress\Core\Event\Setup' ) ) {
+			return;
+		}
 		$setup = \GatherPress\Core\Event\Setup::get_instance();
 		remove_action( 'template_redirect', array( $setup, 'handle_event_archive_redirect' ) );
 	},
@@ -478,10 +451,29 @@ add_action(
  * GatherPress venue blocks only render address, phone, and website. This
  * filter adds the venue post content (description) and the
  * accessRequirements field from the venue information meta.
+ *
+ * Priority 20: GatherPress\Core\Blocks\Venue::render_block() hooks this same
+ * filter at the default priority 10 and rebuilds $content from scratch
+ * (ignoring whatever was passed in), discarding anything appended by a
+ * same-priority callback registered earlier. Because mu-plugins load before
+ * regular plugins, our default-priority add_filter() call was always first
+ * in the queue, so GatherPress's callback ran after us and silently dropped
+ * this append. Running after it (priority 20) is the only way our content
+ * survives.
  */
 add_filter(
 	'render_block_gatherpress/venue',
 	static function ( string $content ): string {
+		// Venue posts store their content with a nested `wp:gatherpress/venue`
+		// wrapper (GatherPress's default seeded content). Calling `do_blocks()`
+		// on that content re-triggers this filter → infinite recursion → OOM.
+		// Guard with a static flag so we only ever run the filter body once
+		// per outermost render.
+		static $rendering = false;
+		if ( $rendering ) {
+			return $content;
+		}
+
 		if ( ! is_singular( 'gatherpress_event' ) ) {
 			return $content;
 		}
@@ -502,8 +494,10 @@ add_filter(
 		$extra = '';
 
 		if ( $venue_desc ) {
-			$plain = wp_strip_all_tags( do_blocks( $venue_desc ) );
-			$plain = trim( $plain );
+			$rendering = true;
+			$plain     = wp_strip_all_tags( do_blocks( $venue_desc ) );
+			$rendering = false;
+			$plain     = trim( $plain );
 			if ( $plain ) {
 				$extra .= '<p class="wporg-venue-description">' . esc_html( $plain ) . '</p>';
 			}
@@ -520,7 +514,8 @@ add_filter(
 		}
 
 		return $content;
-	}
+	},
+	20
 );
 
 /**

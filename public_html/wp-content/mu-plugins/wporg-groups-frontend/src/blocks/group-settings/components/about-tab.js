@@ -32,7 +32,7 @@ export default function AboutTab() {
 	} );
 
 	useEffect( () => {
-		apiFetch( { path: '/wp/v2/settings' } )
+		apiFetch( { path: '/wporg-groups/v1/group-info' } )
 			.then( ( data ) => {
 				setForm( {
 					blogname: data.title || '',
@@ -40,7 +40,16 @@ export default function AboutTab() {
 				} );
 				setLoading( false );
 			} )
-			.catch( () => setLoading( false ) );
+			.catch( ( err ) => {
+				// Don't leave the fields silently blank: a failed load looks
+				// identical to an empty group name otherwise.
+				setNoticeType( 'error' );
+				setNotice(
+					err.message ||
+						__( 'Could not load group settings.', 'wporg-groups-frontend' )
+				);
+				setLoading( false );
+			} );
 	}, [] );
 
 	const handleSave = async () => {
@@ -48,7 +57,7 @@ export default function AboutTab() {
 		setNotice( '' );
 		try {
 			await apiFetch( {
-				path: '/wp/v2/settings',
+				path: '/wporg-groups/v1/group-info',
 				method: 'POST',
 				data: {
 					title: form.blogname,

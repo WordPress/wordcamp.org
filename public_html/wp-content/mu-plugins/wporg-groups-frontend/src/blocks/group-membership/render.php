@@ -29,6 +29,8 @@ $member_count    = $user_count['total_users'] ?? 0;
 $join_api        = rest_url( 'wporg-groups/v1/members/join' );
 $leave_api       = rest_url( 'wporg-groups/v1/members/leave' );
 $login_url       = wp_login_url( get_permalink() ?: home_url() );
+// Only logged-in visitors can join or leave, and only their markup should carry a nonce.
+$rest_nonce      = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
 $count_label     = sprintf(
 	_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
 	number_format_i18n( $member_count )
@@ -47,6 +49,7 @@ $context = array(
 	'joinApi'       => $join_api,
 	'leaveApi'      => $leave_api,
 	'loginUrl'      => $login_url,
+	'nonce'         => $rest_nonce,
 	'loading'       => false,
 );
 

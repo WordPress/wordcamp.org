@@ -1,0 +1,356 @@
+/**
+ * WPorg Groups Frontend — event manage block + modal styles.
+ */
+
+/* === Trigger buttons === */
+
+.wporg-event-manage__button {
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.wporg-event-manage__button--edit {
+	background: transparent !important;
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
+	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
+}
+
+.wporg-event-manage__button--edit:hover {
+	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
+	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
+	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
+}
+
+/* === Modal — override wp-components Modal defaults === */
+
+.wporg-groups-event-modal .components-modal__content {
+	padding: 24px 32px 32px;
+}
+
+.wporg-groups-event-modal {
+	max-height: 90vh !important;
+}
+
+.wporg-groups-event-modal__form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+/* === Field layout === */
+
+.wporg-groups-event-modal__field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.wporg-groups-event-modal__field > label,
+.wporg-groups-event-modal__field > .components-base-control__label {
+	font-weight: 600;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #1e1e1e;
+}
+
+/* Constrain text inputs to not fill the entire modal width. */
+.wporg-groups-event-modal__field input[type="text"],
+.wporg-groups-event-modal__field input[type="date"],
+.wporg-groups-event-modal__field input[type="time"],
+.wporg-groups-event-modal__field select {
+	max-width: 400px;
+}
+
+.wporg-groups-event-modal__row {
+	display: grid;
+	grid-template-columns: 2fr 1fr 1.5fr;
+	gap: 16px;
+	align-items: start;
+}
+
+.wporg-groups-event-modal__row input[type="date"],
+.wporg-groups-event-modal__row input[type="time"] {
+	max-width: none;
+	width: 100%;
+}
+
+@media (max-width: 600px) {
+	.wporg-groups-event-modal__row {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* === Featured image === */
+
+.wporg-groups-event-modal__featured {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.wporg-groups-event-modal__featured-preview {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.wporg-groups-event-modal__featured-preview img {
+	max-width: 160px;
+	max-height: 100px;
+	object-fit: cover;
+	border-radius: 2px;
+	border: 1px solid #d9d9d9;
+	background: #f6f6f6;
+}
+
+.wporg-groups-event-modal__featured-actions {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+/* === Venue === */
+
+.wporg-groups-event-modal__new-venue {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px;
+	border: 1px solid #d9d9d9;
+	border-radius: 2px;
+	background: #f6f6f6;
+	margin-top: 8px;
+}
+
+.wporg-groups-event-modal__new-venue input[type="text"] {
+	max-width: none;
+}
+
+/* === Loading === */
+
+.wporg-groups-event-modal__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px;
+}
+
+/* === Actions footer === */
+
+.wporg-groups-event-modal__actions {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	justify-content: flex-end;
+	margin-top: 8px;
+}
+
+.wporg-groups-event-modal__autosave {
+	margin-right: auto;
+	font-size: 12px;
+	color: #757575;
+	min-height: 1em;
+}
+
+.wporg-groups-event-modal__autosave--saving {
+	color: #2271b1;
+}
+
+.wporg-groups-event-modal__autosave--saved {
+	color: #008a20;
+}
+
+.wporg-groups-event-modal__autosave--error {
+	color: #d63638;
+}
+
+/* === Draft picker === */
+
+.wporg-groups-event-modal__draft-picker {
+	padding: 12px 14px;
+	border: 1px dashed #c3c4c7;
+	border-radius: 2px;
+	background: #f6f7f7;
+}
+
+/* === Inline block editor === */
+
+.wporg-groups-event-modal__editor {
+	border: 1px solid #d9d9d9;
+	border-radius: 2px;
+	min-height: 200px;
+	max-height: 360px;
+	overflow-y: auto;
+	background: #fff;
+	isolation: isolate;
+}
+
+.wporg-groups-event-modal__editor:focus-within {
+	border-color: #3858e9;
+	box-shadow: 0 0 0 1px #3858e9;
+}
+
+.wporg-groups-event-modal__editor .block-editor-block-list__layout {
+	padding: 12px 16px;
+}
+
+.wporg-groups-event-modal__editor-toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: #fff;
+	border-bottom: 1px solid #e0e0e0;
+	min-height: 40px;
+}
+
+.wporg-groups-event-modal__editor-toolbar .block-editor-block-toolbar {
+	border: none;
+}
+
+.wporg-groups-event-modal__editor-toolbar .block-editor-block-toolbar__slot:empty,
+.wporg-groups-event-modal__editor-toolbar .components-toolbar-group:has(> .block-editor-block-toolbar__slot:empty) {
+	display: none;
+}
+
+.wporg-groups-event-modal__editor ul,
+.wporg-groups-event-modal__editor ol {
+	padding-inline-start: 1.5em;
+	margin-block: 1em;
+}
+
+.wporg-groups-event-modal__editor ul {
+	list-style: disc outside;
+}
+
+.wporg-groups-event-modal__editor ol {
+	list-style: decimal outside;
+}
+
+.wporg-groups-event-modal__editor ul ul {
+	list-style: circle outside;
+}
+
+.wporg-groups-event-modal__editor ul ul ul {
+	list-style: square outside;
+}
+
+.wporg-groups-event-modal__editor li {
+	margin-block: 0.35em;
+}
+
+/* Prevent modal body scroll leak when editor is focused. */
+.wporg-groups-event-modal .components-modal__content {
+	overscroll-behavior: contain;
+}
+
+/* === Venue editor overlay === */
+
+.wporg-groups-venue-editor {
+	position: fixed;
+	inset: 0;
+	z-index: 100001;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 40px 20px;
+}
+
+.wporg-groups-venue-editor__inner {
+	background: #fff;
+	border-radius: 8px;
+	width: 100%;
+	max-width: 520px;
+	max-height: calc(100vh - 80px);
+	overflow-y: auto;
+	box-shadow: 0 16px 48px rgba(30, 30, 30, 0.2);
+	display: flex;
+	flex-direction: column;
+}
+
+.wporg-groups-venue-editor__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 24px 0;
+	flex-shrink: 0;
+}
+
+.wporg-groups-venue-editor__header h2 {
+	margin: 0 !important;
+	padding: 0 !important;
+	font-size: 18px;
+	font-weight: 600;
+}
+
+.wporg-groups-venue-editor__close {
+	flex-shrink: 0;
+}
+
+.wporg-groups-venue-editor__loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 48px;
+	flex: 1;
+}
+
+.wporg-groups-venue-editor__form {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 16px 24px 24px;
+	flex: 1;
+}
+
+.wporg-groups-venue-editor__field {
+	position: relative;
+}
+
+.wporg-groups-venue-editor__suggestions {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 10;
+	background: #fff;
+	border: 1px solid #d9d9d9;
+	border-top: none;
+	border-radius: 0 0 2px 2px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	max-height: 200px;
+	overflow-y: auto;
+}
+
+.wporg-groups-venue-editor__suggestions li {
+	padding: 8px 12px;
+	cursor: pointer;
+	font-size: 14px;
+}
+
+.wporg-groups-venue-editor__suggestions li:hover,
+.wporg-groups-venue-editor__suggestions li:focus {
+	background: #f0f0f0;
+}
+
+.wporg-groups-venue-editor__map {
+	height: 250px;
+	border-radius: 4px;
+	border: 1px solid #d9d9d9;
+}
+
+.wporg-groups-venue-editor__actions {
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+	margin-top: 8px;
+}
+
+.wporg-groups-event-modal__edit-venue {
+	font-size: 12px;
+	margin-top: 4px;
+}

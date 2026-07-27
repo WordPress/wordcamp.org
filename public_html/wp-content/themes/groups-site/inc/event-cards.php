@@ -136,7 +136,11 @@ function extract_card_excerpt( int $post_id, int $word_limit = 22 ): string {
  *                        visual styling.
  */
 function render_event_cards( WP_Query $query, array $opts = array() ): void {
-	if ( ! $query->have_posts() ) {
+	// Defense in depth: callers only ever query gatherpress_event posts,
+	// which don't exist as a registered post type without GatherPress, so
+	// $query->have_posts() is already empty in that case in practice — but
+	// don't rely on that alone for a hard dependency on GatherPress classes.
+	if ( ! class_exists( Event::class ) || ! $query->have_posts() ) {
 		return;
 	}
 

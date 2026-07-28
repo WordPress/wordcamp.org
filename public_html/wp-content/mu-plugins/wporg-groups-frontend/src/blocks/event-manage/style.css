@@ -59,6 +59,19 @@
 	gap: 12px;
 }
 
+.wporg-groups-message-modal__recipients {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px;
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9);
+}
+
+.wporg-groups-message-modal__recipients legend {
+	padding: 0 4px;
+	font-weight: 600;
+}
+
 /* === Modal — override wp-components Modal defaults === */
 
 .wporg-groups-event-modal .components-modal__content {

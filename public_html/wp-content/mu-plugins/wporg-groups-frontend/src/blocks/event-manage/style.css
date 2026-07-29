@@ -4,6 +4,12 @@
 
 /* === Trigger buttons === */
 
+.wporg-event-manage {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
 .wporg-event-manage__button {
 	font-size: 14px;
 	cursor: pointer;
@@ -19,6 +25,38 @@
 	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
 	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
 	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
+}
+
+.wporg-event-manage__button--message {
+	background: transparent !important;
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
+	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
+}
+
+.wporg-event-manage__button--message:hover {
+	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
+	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
+	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
+}
+
+/* === Message members modal === */
+
+.wporg-groups-message-modal .components-modal__content {
+	padding: 24px 32px 32px;
+}
+
+.wporg-groups-message-modal__form,
+.wporg-groups-message-modal__success {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+	min-width: min(520px, 75vw);
+}
+
+.wporg-groups-message-modal__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
 }
 
 /* === Modal — override wp-components Modal defaults === */
@@ -125,6 +163,22 @@
 
 .wporg-groups-event-modal__new-venue input[type="text"] {
 	max-width: none;
+}
+
+/* === Online event === */
+
+.wporg-groups-event-modal__online-event {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 14px;
+	border: 1px solid #d9d9d9;
+	border-radius: 2px;
+	background: #f6f6f6;
+}
+
+.wporg-groups-event-modal__online-event input[type="url"] {
+	max-width: 600px;
 }
 
 /* === Loading === */

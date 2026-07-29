@@ -291,6 +291,20 @@
 		margin-top: 4px;
 	}
 
+	&__online-event {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 14px;
+		border: 1px solid #d9d9d9;
+		border-radius: 2px;
+		background: #f6f6f6;
+
+		input[type="url"] {
+			max-width: 600px;
+		}
+	}
+
 	&__actions {
 		display: flex;
 		justify-content: flex-end;

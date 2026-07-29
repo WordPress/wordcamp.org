@@ -33,6 +33,7 @@ namespace WordCamp\Groups\Frontend\REST;
 defined( 'WPINC' ) || die();
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Venue\Setup as Venue_Setup;
 use GatherPress\Core\Venue\Venue;
 use WP_Error;
 use WP_REST_Request;
@@ -429,6 +430,18 @@ function event_args_schema(): array {
 			'default'           => 0,
 			'sanitize_callback' => 'absint',
 		),
+		'is_online'         => array(
+			'type'              => 'boolean',
+			'required'          => false,
+			'default'           => false,
+			'sanitize_callback' => 'rest_sanitize_boolean',
+		),
+		'online_event_link' => array(
+			'type'              => 'string',
+			'required'          => false,
+			'default'           => '',
+			'sanitize_callback' => 'esc_url_raw',
+		),
 		'new_venue_name'    => array(
 			'type'              => 'string',
 			'required'          => false,
@@ -484,6 +497,17 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 		}
 
 		$fields['venue_id'] = get_event_venue_post_id( $event_id );
+
+		$venue_taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
+		$venue_terms    = get_the_terms( $event_id, $venue_taxonomy );
+
+		$fields['is_online']         = is_array( $venue_terms )
+			&& in_array( 'online-event', wp_list_pluck( $venue_terms, 'slug' ), true );
+		$fields['online_event_link'] = (string) get_post_meta(
+			$event_id,
+			'gatherpress_online_event_link',
+			true
+		);
 
 		$thumb_id = (int) get_post_thumbnail_id( $event_id );
 		if ( $thumb_id ) {
@@ -628,7 +652,7 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		);
 	}
 
-	// Venue — same path as the publish flow.
+	// Physical and online venues — same path as the publish flow.
 	$venue_id = resolve_venue_id(
 		array(
 			'venue_id'          => (int) $request->get_param( 'venue_id' ),
@@ -636,9 +660,16 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 			'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		)
 	);
-	if ( $venue_id > 0 ) {
-		assign_venue_to_event( $saved_id, $venue_id );
-	}
+	sync_event_venue_terms(
+		$saved_id,
+		$venue_id,
+		(bool) $request->get_param( 'is_online' )
+	);
+	sync_online_event_link(
+		$saved_id,
+		(bool) $request->get_param( 'is_online' ),
+		(string) $request->get_param( 'online_event_link' )
+	);
 
 	// Featured image.
 	$featured_image_id = (int) $request->get_param( 'featured_image_id' );
@@ -720,6 +751,8 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		'time_start'        => (string) $request->get_param( 'time_start' ),
 		'time_end'          => (string) $request->get_param( 'time_end' ),
 		'venue_id'          => (int) $request->get_param( 'venue_id' ),
+		'is_online'         => (bool) $request->get_param( 'is_online' ),
+		'online_event_link' => (string) $request->get_param( 'online_event_link' ),
 		'new_venue_name'    => (string) $request->get_param( 'new_venue_name' ),
 		'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		'featured_image_id' => (int) $request->get_param( 'featured_image_id' ),
@@ -730,6 +763,13 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	}
 	if ( $fields['time_start'] === $fields['time_end'] ) {
 		return new WP_Error( 'wporg_groups_bad_time_range', 'End time must be after start time.', array( 'status' => 400 ) );
+	}
+	if ( $fields['is_online'] && '' === $fields['online_event_link'] ) {
+		return new WP_Error(
+			'wporg_groups_missing_online_event_link',
+			'Online event link is required for online events.',
+			array( 'status' => 400 )
+		);
 	}
 
 	$post_args = array(
@@ -766,11 +806,10 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		)
 	);
 
-	// Venue.
+	// Physical and online venues.
 	$venue_id = resolve_venue_id( $fields );
-	if ( $venue_id > 0 ) {
-		assign_venue_to_event( $saved_id, $venue_id );
-	}
+	sync_event_venue_terms( $saved_id, $venue_id, $fields['is_online'] );
+	sync_online_event_link( $saved_id, $fields['is_online'], $fields['online_event_link'] );
 
 	// Featured image — only if the current user is actually allowed to see
 	// it (public/inherited attachments, or their own private uploads).
@@ -859,20 +898,54 @@ function resolve_venue_id( array $fields ): int {
 }
 
 /**
- * Assign a venue to an event by setting the `_gatherpress_venue` term whose
- * slug matches the venue post.
+ * Synchronize an event's physical venue and online-event terms.
  *
- * The venue post type declares `gatherpress-shadow-source` support, so
- * `Shadow_Source::add_term()` already creates/maintains that term on
- * `save_post` — no need to insert it ourselves here.
+ * GatherPress models hybrid events by assigning both a physical venue's
+ * shadow term and the `online-event` sentinel term. Replacing the full term
+ * set here also clears a previously selected physical venue when an event is
+ * changed to online-only.
+ *
+ * @param int  $event_id     Event post ID.
+ * @param int  $venue_post_id Physical venue post ID, or zero for none.
+ * @param bool $is_online    Whether to assign the online-event term.
  */
-function assign_venue_to_event( int $event_id, int $venue_post_id ): void {
-	$venue = new Venue( $venue_post_id );
-	$term  = $venue->get_term();
+function sync_event_venue_terms( int $event_id, int $venue_post_id, bool $is_online ): void {
+	$taxonomy = Venue_Setup::get_instance()->taxonomy_for_event_post_type( Event::POST_TYPE );
+	$term_ids = array();
 
-	if ( ! $term ) {
+	if ( $venue_post_id > 0 ) {
+		$venue = new Venue( $venue_post_id );
+		$term  = $venue->get_term();
+
+		if ( $term ) {
+			$term_ids[] = (int) $term->term_id;
+		}
+	}
+
+	if ( $is_online ) {
+		$online_term = term_exists( 'online-event', $taxonomy );
+		if ( is_array( $online_term ) ) {
+			$term_ids[] = (int) $online_term['term_id'];
+		} elseif ( is_numeric( $online_term ) ) {
+			$term_ids[] = (int) $online_term;
+		}
+	}
+
+	wp_set_object_terms( $event_id, $term_ids, $taxonomy, false );
+}
+
+/**
+ * Synchronize the online meeting link with the event's online state.
+ *
+ * @param int    $event_id         Event post ID.
+ * @param bool   $is_online        Whether the event is online.
+ * @param string $online_event_link Online meeting URL.
+ */
+function sync_online_event_link( int $event_id, bool $is_online, string $online_event_link ): void {
+	if ( $is_online && '' !== $online_event_link ) {
+		update_post_meta( $event_id, 'gatherpress_online_event_link', esc_url_raw( $online_event_link ) );
 		return;
 	}
 
-	wp_set_object_terms( $event_id, array( $term->term_id ), $venue->get_taxonomy(), false );
+	delete_post_meta( $event_id, 'gatherpress_online_event_link' );
 }

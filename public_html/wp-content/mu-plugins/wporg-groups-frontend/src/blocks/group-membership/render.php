@@ -23,15 +23,20 @@ if ( $is_member ) {
 	$role_label = $labels[ $user_role ] ?? __( 'Member', 'wporg-groups-frontend' );
 }
 
-$is_organiser    = in_array( $user_role, array( 'administrator', 'editor' ), true );
-$user_count      = count_users( 'time', get_current_blog_id() );
-$member_count    = $user_count['total_users'] ?? 0;
-$join_api        = rest_url( 'wporg-groups/v1/members/join' );
-$leave_api       = rest_url( 'wporg-groups/v1/members/leave' );
-$login_url       = wp_login_url( get_permalink() ?: home_url() );
 // Only logged-in visitors can join or leave, and only their markup should carry a nonce.
-$rest_nonce      = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
-$count_label     = sprintf(
+$rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
+
+$is_organiser        = in_array( $user_role, array( 'administrator', 'editor' ), true );
+$user_count          = count_users( 'time', get_current_blog_id() );
+$member_count        = $user_count['total_users'] ?? 0;
+$join_api            = rest_url( 'wporg-groups/v1/members/join' );
+$leave_api           = rest_url( 'wporg-groups/v1/members/leave' );
+$preference_api      = rest_url( 'wporg-groups/v1/members/notification-preference' );
+$login_url           = wp_login_url( get_permalink() ?: home_url() );
+$notification_opt_in = $is_member
+	? \GatherPress\Core\User::get_instance()->has_event_updates_opt_in( get_current_user_id() )
+	: false;
+$count_label         = sprintf(
 	_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
 	number_format_i18n( $member_count )
 );
@@ -48,9 +53,17 @@ $context = array(
 	'leaveConfirm' => __( 'Leave this group?', 'wporg-groups-frontend' ),
 	'joinApi'       => $join_api,
 	'leaveApi'      => $leave_api,
+	'preferenceApi' => $preference_api,
+	'restNonce'     => $rest_nonce,
 	'loginUrl'      => $login_url,
-	'nonce'         => $rest_nonce,
 	'loading'       => false,
+	'notificationOptIn'     => $notification_opt_in,
+	'preferenceSaving'      => false,
+	'preferenceMessage'     => '',
+	'preferenceNoticeSuccess' => false,
+	'preferenceNoticeError'   => false,
+	'preferenceSavedLabel'  => __( 'Email preference saved.', 'wporg-groups-frontend' ),
+	'preferenceErrorLabel'  => __( 'The email preference could not be saved. Please try again.', 'wporg-groups-frontend' ),
 );
 
 wp_interactivity_state(
@@ -102,4 +115,30 @@ $wrapper_attributes = get_block_wrapper_attributes(
 		);
 		?>
 	</span>
+
+	<?php if ( $is_member ) : ?>
+		<div class="wporg-group-membership__preference">
+			<label>
+				<input
+					type="checkbox"
+					<?php checked( $notification_opt_in ); ?>
+					data-wp-on--change="actions.updateNotificationPreference"
+					data-wp-bind--checked="context.notificationOptIn"
+					data-wp-bind--disabled="context.preferenceSaving"
+				/>
+				<span><?php esc_html_e( 'Email me updates and information about events from organisers.', 'wporg-groups-frontend' ); ?></span>
+			</label>
+			<span class="wporg-group-membership__preference-help">
+				<?php esc_html_e( 'This preference applies to all your groups.', 'wporg-groups-frontend' ); ?>
+			</span>
+			<span
+				class="wporg-group-membership__preference-status"
+				role="status"
+				aria-live="polite"
+				data-wp-text="context.preferenceMessage"
+				data-wp-class--is-success="context.preferenceNoticeSuccess"
+				data-wp-class--is-error="context.preferenceNoticeError"
+			></span>
+		</div>
+	<?php endif; ?>
 </div>

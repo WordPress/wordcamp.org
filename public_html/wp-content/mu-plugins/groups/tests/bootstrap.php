@@ -12,12 +12,15 @@ if ( 'cli' !== php_sapi_name() ) {
  * GatherPress is gitignored/third-party (not a composer dependency), so it's
  * only present if the phpunit environment installed it first — see
  * `.docker/bin/install-test-suite.sh` / `.github/workflows/unit-tests.yml`.
+ *
+ * @throws \RuntimeException If GatherPress isn't installed.
  */
 function manually_load_plugin() {
 	$gatherpress_file = WP_PLUGIN_DIR . '/gatherpress/gatherpress.php';
 
 	if ( ! file_exists( $gatherpress_file ) ) {
 		throw new \RuntimeException(
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception message for developers.
 			"GatherPress is required by this suite but was not found at {$gatherpress_file}. Run `.docker/bin/install-test-suite.sh` (see also `.github/workflows/unit-tests.yml`) first."
 		);
 	}

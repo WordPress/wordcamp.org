@@ -27,6 +27,24 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set PHP version
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        coverage: none
+        tools: composer:v2
+      env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install PHP dependencies
+      # wporg-mu-plugins (installed via composer, then moved into place by a
+      # post-install script — see composer.json's installer-paths) is loaded
+      # unconditionally by load-other-mu-plugins.php; without it every
+      # request, including wp-cli, fatals.
+      run: |
+        rm composer.lock || true
+        composer install
+
     - name: Use Node.js 20.x
       uses: actions/setup-node@v4
       with:

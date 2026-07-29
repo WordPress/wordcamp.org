@@ -2,7 +2,10 @@
 /**
  * Server-side rendering for the wporg/my-events block.
  *
- * Shows the current logged-in user their upcoming RSVPed events.
+ * Shows the current logged-in user their upcoming events: events they've
+ * RSVPed "attending" to, unioned with events they organize (are the
+ * post author of). Creating an event does not itself create an RSVP, so
+ * both sources are needed for organizers to see events they're running.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -23,41 +26,51 @@ $rsvp_comments = get_comments(
 	)
 );
 
-if ( empty( $rsvp_comments ) ) {
-	return;
-}
-
 $comment_event_ids = array();
 foreach ( $rsvp_comments as $rsvp_comment ) {
 	$comment_event_ids[ (int) $rsvp_comment->comment_ID ] = (int) $rsvp_comment->comment_post_ID;
 }
 
-$rsvp_terms = wp_get_object_terms(
-	array_keys( $comment_event_ids ),
-	'_gatherpress_rsvp_status',
-	array( 'fields' => 'all_with_object_id' )
+$attending_ids = array();
+
+if ( ! empty( $comment_event_ids ) ) {
+	$rsvp_terms = wp_get_object_terms(
+		array_keys( $comment_event_ids ),
+		'_gatherpress_rsvp_status',
+		array( 'fields' => 'all_with_object_id' )
+	);
+
+	if ( is_wp_error( $rsvp_terms ) ) {
+		return;
+	}
+
+	// Filter to only attending RSVPs without re-querying per event.
+	foreach ( $rsvp_terms as $rsvp_term ) {
+		if ( 'attending' !== $rsvp_term->slug ) {
+			continue;
+		}
+
+		$event_id = $comment_event_ids[ (int) $rsvp_term->object_id ] ?? 0;
+		if ( $event_id ) {
+			$attending_ids[ $event_id ] = $event_id;
+		}
+	}
+}
+
+// Find events this user organizes (is the author of).
+$organized_ids = get_posts(
+	array(
+		'post_type'      => 'gatherpress_event',
+		'post_status'    => 'publish',
+		'author'         => $user_id,
+		'fields'         => 'ids',
+		'posts_per_page' => 100,
+	)
 );
 
-if ( is_wp_error( $rsvp_terms ) ) {
-	return;
-}
+$my_event_ids = array_values( array_unique( array_merge( $attending_ids, $organized_ids ) ) );
 
-// Filter to only attending RSVPs without re-querying per event.
-$attending_ids = array();
-foreach ( $rsvp_terms as $rsvp_term ) {
-	if ( 'attending' !== $rsvp_term->slug ) {
-		continue;
-	}
-
-	$event_id = $comment_event_ids[ (int) $rsvp_term->object_id ] ?? 0;
-	if ( $event_id ) {
-		$attending_ids[ $event_id ] = $event_id;
-	}
-}
-
-$attending_ids = array_values( $attending_ids );
-
-if ( empty( $attending_ids ) ) {
+if ( empty( $my_event_ids ) ) {
 	return;
 }
 
@@ -66,13 +79,12 @@ $now = current_time( 'mysql', true );
 global $wpdb;
 
 $table        = $wpdb->prefix . 'gatherpress_events';
-$placeholders = implode( ', ', array_fill( 0, count( $attending_ids ), '%d' ) );
-$query_args   = array_merge( $attending_ids, array( $now ) );
+$placeholders = implode( ', ', array_fill( 0, count( $my_event_ids ), '%d' ) );
+$query_args   = array_merge( $my_event_ids, array( $now ) );
 
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and placeholders are generated locally.
-$upcoming_ids = $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$table} WHERE post_id IN ( {$placeholders} ) AND datetime_end_gmt >= %s", $query_args ) );
+$upcoming_ids = $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$table} WHERE post_id IN ( {$placeholders} ) AND datetime_end_gmt >= %s ORDER BY datetime_start_gmt ASC", $query_args ) );
 $upcoming_ids = array_map( 'intval', $upcoming_ids );
-$upcoming_ids = array_values( array_intersect( $attending_ids, $upcoming_ids ) );
 
 if ( empty( $upcoming_ids ) ) {
 	return;

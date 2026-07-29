@@ -178,23 +178,28 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 * The assertions here assume that a filter has been applied to the comment query
 	 * to exclude feedback comments unless they are specifically requested.
 	 *
-	 * `\WordCamp\SpeakerFeedback\Query\pre_get_comments()` must run at priority 1,
-	 * before GatherPress's own `pre_get_comments` callback (priority 99) expands an
-	 * empty `type` into an explicit list of every comment_type present, which would
-	 * make this exclusion look like an explicit request for feedback comments. This
-	 * suite alone can't reproduce that regression (GatherPress isn't loaded here),
-	 * so the priority is pinned directly below rather than relying on interaction
-	 * with another plugin's callback.
+	 * The shared PHPUnit bootstrap (`phpunit-bootstrap.php`) loads every plugin's
+	 * bootstrapper into one process regardless of which `--testsuite` is running,
+	 * so GatherPress's `Rsvp\Query::exclude_rsvp_from_comment_query()` (default
+	 * priority 10 on `pre_get_comments`) is active here even though this suite has
+	 * nothing to do with GatherPress. When the caller's `type` is empty, that
+	 * callback expands it into an explicit list of every comment_type present in
+	 * the table — which would make this test's feedback comments look like an
+	 * explicit request for them, defeating the exclusion this test is checking.
+	 * GatherPress and Speaker Feedback aren't expected to run against the same
+	 * query in production, so rather than reordering `pre_get_comments` priorities
+	 * for real requests, neutralize that one callback for the scope of this test.
 	 *
 	 * @covers \WordCamp\SpeakerFeedback\Comment\get_feedback()
 	 * @covers \WordCamp\SpeakerFeedback\Query\pre_get_comments()
 	 */
 	public function test_get_feedback_exclude_other_comments() {
-		$this->assertSame(
-			1,
-			has_filter( 'pre_get_comments', 'WordCamp\SpeakerFeedback\Query\pre_get_comments' ),
-			'pre_get_comments() must run at priority 1 so it reads the caller\'s actual requested type, before another plugin (e.g. GatherPress at priority 99) can normalize/expand it.'
-		);
+		if ( class_exists( '\GatherPress\Core\Rsvp\Query' ) ) {
+			remove_action(
+				'pre_get_comments',
+				array( \GatherPress\Core\Rsvp\Query::get_instance(), 'exclude_rsvp_from_comment_query' )
+			);
+		}
 
 		self::factory()->comment->create_many( 3 );
 		self::factory()->comment->create_many(

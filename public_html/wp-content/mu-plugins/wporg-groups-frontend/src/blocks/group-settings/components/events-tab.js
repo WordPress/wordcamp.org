@@ -20,6 +20,7 @@ import {
 	TextControl,
 	FormTokenField,
 	SelectControl,
+	ToggleControl,
 } from '@wordpress/components';
 import {
 	BlockEditorProvider,
@@ -176,7 +177,15 @@ function EventForm( { eventId, onDone, onCancel } ) {
 	const [ loading, setLoading ] = useState( true );
 	const [ saving, setSaving ] = useState( false );
 	const [ error, setError ] = useState( '' );
-	const [ form, setForm ] = useState( { title: '', date: '', time_start: '', time_end: '', venue_select: '' } );
+	const [ form, setForm ] = useState( {
+		title: '',
+		date: '',
+		time_start: '',
+		time_end: '',
+		venue_select: '',
+		is_online: false,
+		online_event_link: '',
+	} );
 	const [ initialDescription, setInitialDescription ] = useState( '' );
 	const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
 	const [ venues, setVenues ] = useState( [] );
@@ -198,6 +207,8 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					time_start: res.fields.time_start || '',
 					time_end: res.fields.time_end || '',
 					venue_select: res.fields.venue_id ? String( res.fields.venue_id ) : '',
+					is_online: !! res.fields.is_online,
+					online_event_link: res.fields.online_event_link || '',
 				} );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( { id: res.fields.featured_image_id || 0, url: res.fields.featured_image_url || '' } );
@@ -254,6 +265,8 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					title: form.title, description, date: form.date,
 					time_start: form.time_start, time_end: form.time_end,
 					venue_id: parseInt( form.venue_select, 10 ) || 0,
+					is_online: form.is_online,
+					online_event_link: form.is_online ? form.online_event_link : '',
 					featured_image_id: featuredImage.id,
 				},
 			} );
@@ -299,6 +312,23 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			onSelect: ( v ) => updateField( 'venue_select', v ),
 			onOpenEditor: ( id ) => setVenueEditorId( id ),
 		} ),
+		h( 'div', { className: 'wporg-event-form__online-event' },
+			h( ToggleControl, {
+				label: __( 'This is an online event', 'wporg-groups-frontend' ),
+				checked: form.is_online,
+				onChange: ( value ) => updateField( 'is_online', value ),
+				__nextHasNoMarginBottom: true,
+			} ),
+			form.is_online && h( TextControl, {
+				label: __( 'Online event link', 'wporg-groups-frontend' ),
+				type: 'url',
+				value: form.online_event_link,
+				onChange: ( value ) => updateField( 'online_event_link', value ),
+				placeholder: 'https://',
+				required: true,
+				__nextHasNoMarginBottom: true,
+			} )
+		),
 		h( 'div', { className: 'wporg-event-form__field' },
 			h( FormTokenField, {
 				label: __( 'Speakers', 'wporg-groups-frontend' ),
@@ -384,6 +414,8 @@ export default function EventsTab( { eventId: initialEventId, onClose } ) {
 				time_start: res.fields.time_start || '',
 				time_end: res.fields.time_end || '',
 				venue_id: res.fields.venue_id || 0,
+				is_online: !! res.fields.is_online,
+				online_event_link: res.fields.online_event_link || '',
 				featured_image_id: res.fields.featured_image_id || 0,
 			};
 			const result = await apiFetch( {

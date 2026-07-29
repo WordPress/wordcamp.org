@@ -45,6 +45,7 @@ import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from './venue-editor';
+import MessageMembersModal from './message-members-modal';
 
 const NS =
 	( window.wporgGroupsEventModal &&
@@ -789,6 +790,13 @@ const NS =
 
 		if ( ! state.open ) {
 			return null;
+		}
+
+		if ( state.mode === 'message-all' ) {
+			return h( MessageMembersModal, {
+				eventId: state.eventId,
+				onClose: () => setState( { open: false, mode: 'create', eventId: 0 } ),
+			} );
 		}
 
 		return h( EventModal, {

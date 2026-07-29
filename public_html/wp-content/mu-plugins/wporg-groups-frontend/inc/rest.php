@@ -242,10 +242,20 @@ function get_group_info(): WP_REST_Response {
  *
  * Only the fields present in the request are written, so a client can send
  * one without clobbering the other.
+ *
+ * @return WP_Error|WP_REST_Response
  */
-function update_group_info( WP_REST_Request $request ): WP_REST_Response {
+function update_group_info( WP_REST_Request $request ) {
 	$title       = $request->get_param( 'title' );
 	$description = $request->get_param( 'description' );
+
+	// An empty group name is not recoverable from this UI: the next load
+	// returns the blank value, so there is nothing left to restore it from.
+	// Checked after sanitization, because `sanitize_text_field()` can empty
+	// an input that was not empty when it was sent.
+	if ( null !== $title && '' === trim( $title ) ) {
+		return new WP_Error( 'wporg_groups_empty_group_name', 'Group name is required.', array( 'status' => 400 ) );
+	}
 
 	if ( null !== $title ) {
 		update_option( 'blogname', $title );

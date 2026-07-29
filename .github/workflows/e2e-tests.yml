@@ -27,6 +27,12 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install SVN
+      # A composer dependency uses --prefer-source, which needs svn on PATH.
+      run: |
+        sudo rm -f /var/lib/man-db/auto-update # https://github.com/actions/runner-images/issues/10977
+        sudo apt-get update && sudo apt-get install -y subversion
+
     - name: Set PHP version
       uses: shivammathur/setup-php@v2
       with:

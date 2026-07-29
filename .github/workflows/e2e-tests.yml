@@ -129,6 +129,23 @@ jobs:
         create_user eventorganiser1 author
         create_user member1 subscriber
 
+    - name: Create required pages
+      # `page-members.html` (public_html/wp-content/themes/groups-site/templates/)
+      # is a block-theme template keyed on the page slug — it ignores
+      # post_content entirely, but only applies once a published Page with
+      # that slug actually exists. Not part of the wordcamp_dev.sql fixture.
+      run: |
+        SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
+        create_page() {
+          if docker compose exec -T wordcamp.test wp post list --post_type=page --name="$1" --field=ID --url="$SITE_URL" | grep -q .; then
+            echo "Page '$1' already exists."
+            return 0
+          fi
+          docker compose exec -T wordcamp.test wp post create --post_type=page \
+            --post_title="$2" --post_name="$1" --post_status=publish --url="$SITE_URL"
+        }
+        create_page members Members
+
     - name: Run Playwright tests
       run: npx playwright test
 

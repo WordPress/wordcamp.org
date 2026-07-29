@@ -63,8 +63,11 @@ jobs:
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
 
-    - name: Build the groups frontend plugin
-      run: npm run build --workspace=public_html/wp-content/mu-plugins/wporg-groups-frontend
+    - name: Build all workspace assets
+      # The site fatals on boot (including for wp-cli) if any mu-plugin's
+      # built assets are missing — not just wporg-groups-frontend's — so
+      # build every workspace, same as `npm run setup` does for local dev.
+      run: npm run build
 
     - name: Clone WordPress core (develop trunk) into public_html/mu
       run: git clone --depth=1 https://github.com/WordPress/WordPress.git public_html/mu

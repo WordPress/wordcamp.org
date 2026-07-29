@@ -62,17 +62,13 @@ jobs:
 
     - name: Wait for the site to respond
       run: |
-        # A from-scratch CI runner has to build both images, cold-boot
-        # MariaDB, and import the wordcamp_dev.sql fixture before
-        # `wp core is-installed` can succeed — there's no persisted
-        # `.docker/mariadb-database` volume like local dev has after the
-        # first run, and no depends_on/healthcheck between the two
-        # containers, so give this more headroom than a warm local re-run
-        # would need.
-        for i in $(seq 1 60); do
-          if docker compose exec -T wordcamp.test wp core is-installed 2>/dev/null; then
+        # Don't swallow stderr here — a real (non-timing) failure needs to
+        # be visible in the log, not silently retried for the full timeout.
+        for i in $(seq 1 20); do
+          if docker compose exec -T wordcamp.test wp core is-installed; then
             exit 0
           fi
+          echo "Attempt $i/20 failed, retrying in 3s..."
           sleep 3
         done
         echo "WordPress did not become ready in time" >&2

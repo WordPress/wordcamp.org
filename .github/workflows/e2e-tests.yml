@@ -1,11 +1,22 @@
 name: E2E Tests (Groups/GatherPress)
 
-# Manually triggered only, for now — this stands up real docker-based
-# provisioning (WordPress core checkout, TLS cert, DB import, third-party
-# plugin install) and is new/unproven infrastructure. Promote to a
-# `pull_request` trigger once it's shown to be stable.
+# Runs on PRs that touch the Groups/GatherPress front end, plus manual
+# dispatch for ad-hoc runs. Scoped to these paths (rather than every PR)
+# because this stands up real docker-based provisioning (WordPress core
+# checkout, TLS cert, DB import, third-party plugin install).
 on:
+  pull_request:
+    paths:
+    - public_html/wp-content/mu-plugins/wporg-groups-frontend/**
+    - public_html/wp-content/mu-plugins/groups/**
+    - tests/e2e/**
+    - playwright.config.js
+    - .github/workflows/e2e-tests.yml
   workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   e2e:

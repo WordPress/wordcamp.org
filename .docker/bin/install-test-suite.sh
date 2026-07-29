@@ -58,7 +58,8 @@ else
 		&& rm -f /tmp/gatherpress.zip; then
 		echo "GatherPress installed."
 	else
-		echo "WARNING: GatherPress install failed (e.g. a download timeout). The WordCamp Groups PHPUnit suite will not run correctly without it."
+		echo "ERROR: GatherPress install failed (e.g. a download timeout). The WordCamp Groups PHPUnit suites cannot run without it." >&2
+		exit 1
 	fi
 fi
 

@@ -13,7 +13,7 @@ test.describe( 'anonymous visitor', () => {
 	} );
 
 	test( 'no management UI is rendered on the front page', async ( { page } ) => {
-		await page.goto( '/' );
+		await page.goto( '' );
 
 		// The "Manage" button from the `wporg/event-manage` block should be
 		// entirely absent for a logged-out visitor, not merely disabled.

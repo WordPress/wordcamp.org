@@ -16,9 +16,13 @@ if ( 'cli' !== php_sapi_name() ) {
 function manually_load_plugin() {
 	$gatherpress_file = WP_PLUGIN_DIR . '/gatherpress/gatherpress.php';
 
-	if ( file_exists( $gatherpress_file ) ) {
-		require_once $gatherpress_file;
+	if ( ! file_exists( $gatherpress_file ) ) {
+		throw new \RuntimeException(
+			"GatherPress is required by this suite but was not found at {$gatherpress_file}. Run `.docker/bin/install-test-suite.sh` (see also `.github/workflows/unit-tests.yml`) first."
+		);
 	}
+
+	require_once $gatherpress_file;
 
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
 }

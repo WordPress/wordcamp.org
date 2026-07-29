@@ -178,10 +178,24 @@ class Test_SpeakerFeedback_Comment extends WP_UnitTestCase {
 	 * The assertions here assume that a filter has been applied to the comment query
 	 * to exclude feedback comments unless they are specifically requested.
 	 *
+	 * `\WordCamp\SpeakerFeedback\Query\pre_get_comments()` must run at priority 1,
+	 * before GatherPress's own `pre_get_comments` callback (priority 99) expands an
+	 * empty `type` into an explicit list of every comment_type present, which would
+	 * make this exclusion look like an explicit request for feedback comments. This
+	 * suite alone can't reproduce that regression (GatherPress isn't loaded here),
+	 * so the priority is pinned directly below rather than relying on interaction
+	 * with another plugin's callback.
+	 *
 	 * @covers \WordCamp\SpeakerFeedback\Comment\get_feedback()
 	 * @covers \WordCamp\SpeakerFeedback\Query\pre_get_comments()
 	 */
 	public function test_get_feedback_exclude_other_comments() {
+		$this->assertSame(
+			1,
+			has_filter( 'pre_get_comments', 'WordCamp\SpeakerFeedback\Query\pre_get_comments' ),
+			'pre_get_comments() must run at priority 1 so it reads the caller\'s actual requested type, before another plugin (e.g. GatherPress at priority 99) can normalize/expand it.'
+		);
+
 		self::factory()->comment->create_many( 3 );
 		self::factory()->comment->create_many(
 			3,

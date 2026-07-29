@@ -72,12 +72,18 @@ jobs:
 
     - name: Create role-tier test users
       run: |
-        docker compose exec -T wordcamp.test wp user create organiser1 organiser1@example.test \
-          --role=editor --user_pass=password --url=events.wordpress.test/group/sunshine-coast-qld/ || true
-        docker compose exec -T wordcamp.test wp user create eventorganiser1 eventorganiser1@example.test \
-          --role=author --user_pass=password --url=events.wordpress.test/group/sunshine-coast-qld/ || true
-        docker compose exec -T wordcamp.test wp user create member1 member1@example.test \
-          --role=subscriber --user_pass=password --url=events.wordpress.test/group/sunshine-coast-qld/ || true
+        SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
+        create_user() {
+          if docker compose exec -T wordcamp.test wp user get "$1" --field=ID --url="$SITE_URL" >/dev/null 2>&1; then
+            echo "User $1 already exists."
+            return 0
+          fi
+          docker compose exec -T wordcamp.test wp user create "$1" "$1@example.test" \
+            --role="$2" --user_pass=password --url="$SITE_URL"
+        }
+        create_user organiser1 editor
+        create_user eventorganiser1 author
+        create_user member1 subscriber
 
     - name: Run Playwright tests
       run: npx playwright test

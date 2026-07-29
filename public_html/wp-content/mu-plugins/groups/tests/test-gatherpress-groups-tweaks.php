@@ -55,27 +55,13 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	 * the whole test run; `WP_UnitTestCase::tearDown()` unregisters all meta
 	 * keys after every test (a known core testing quirk), so by the time
 	 * this test runs the registration from bootstrap is long gone. Re-fire
-	 * just this one `init` callback's effect directly (rather than
+	 * the real registration function directly (rather than
 	 * `do_action( 'init' )`, which would also re-run block registration and
-	 * trip "already registered" `_doing_it_wrong` notices) — this must stay
-	 * in sync with the real registration in `gatherpress-groups-tweaks.php`.
+	 * trip "already registered" `_doing_it_wrong` notices) so there's only
+	 * one place the args can drift from.
 	 */
 	public function test_event_speakers_meta_registered_with_array_default() {
-		register_post_meta(
-			'gatherpress_event',
-			'_event_speakers',
-			array(
-				'type'         => 'array',
-				'single'       => true,
-				'default'      => array(),
-				'show_in_rest' => array(
-					'schema' => array(
-						'type'  => 'array',
-						'items' => array( 'type' => 'integer' ),
-					),
-				),
-			)
-		);
+		\WordCamp\Groups\GatherPress_Tweaks\register_event_speakers_meta();
 
 		$registered = get_registered_meta_keys( 'post', 'gatherpress_event' );
 

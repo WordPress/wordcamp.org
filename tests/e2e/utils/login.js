@@ -14,6 +14,12 @@ async function login( page, username, password ) {
 	await page.locator( '#user_pass' ).fill( password );
 	await page.locator( '#wp-submit' ).click();
 	await page.waitForLoadState( 'networkidle' );
+
+	// Fail here, with the real reason, rather than downstream on a missing
+	// group-site element, if authentication did not actually succeed.
+	if ( new URL( page.url() ).pathname.endsWith( 'wp-login.php' ) ) {
+		throw new Error( `login( '${ username }' ) failed — still on wp-login.php.` );
+	}
 }
 
 module.exports = { login };

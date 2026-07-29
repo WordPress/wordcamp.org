@@ -72,9 +72,7 @@ abstract class Groups_TestCase extends Database_TestCase {
 		// GatherPress's own public, idempotent self-heal for exactly this
 		// scenario ("site created before plugin activation") — safe to
 		// call every test.
-		if ( class_exists( '\GatherPress\Core\Setup' ) ) {
-			\GatherPress\Core\Setup::get_instance()->check_plugin_version();
-		}
+		\GatherPress\Core\Setup::get_instance()->check_plugin_version();
 	}
 
 	/**

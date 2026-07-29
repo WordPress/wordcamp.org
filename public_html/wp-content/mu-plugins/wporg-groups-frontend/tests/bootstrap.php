@@ -12,16 +12,20 @@ if ( 'cli' !== php_sapi_name() ) {
  * GatherPress is gitignored/third-party (not a composer dependency), so it's
  * only present if the phpunit environment installed it first — see
  * `.docker/bin/install-test-suite.sh` / `.github/workflows/unit-tests.yml`.
- * Without it, this plugin's own bootstrap no-ops (see its `class_exists()`
- * guard), so tests that need real behavior will fail with a clear reason
- * rather than a fatal.
+ * Required unconditionally: without it, this plugin's own bootstrap no-ops
+ * (see its `class_exists()` guard) and the suite would report a misleading
+ * green run instead of failing with the actual cause.
  */
 function manually_load_plugins() {
 	$gatherpress_file = WP_PLUGIN_DIR . '/gatherpress/gatherpress.php';
 
-	if ( file_exists( $gatherpress_file ) ) {
-		require_once $gatherpress_file;
+	if ( ! file_exists( $gatherpress_file ) ) {
+		throw new \RuntimeException(
+			"GatherPress is required by this suite but was not found at {$gatherpress_file}. Run `.docker/bin/install-test-suite.sh` (see also `.github/workflows/unit-tests.yml`) first."
+		);
 	}
+
+	require_once $gatherpress_file;
 
 	require_once dirname( __DIR__ ) . '/wporg-groups-frontend.php';
 

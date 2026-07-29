@@ -53,6 +53,10 @@ store( 'wporg/group-membership', {
 
 				const data = await resp.json();
 
+				if ( ! resp.ok ) {
+					throw new Error( data?.message || resp.statusText );
+				}
+
 				if ( data.success ) {
 					ctx.isMember = true;
 					ctx.roleLabel = ctx.memberLabel;
@@ -60,8 +64,9 @@ store( 'wporg/group-membership', {
 					// Reload to get the full member UI server-rendered.
 					window.location.reload();
 				}
-			} catch {
-				// Silently fail.
+			} catch ( error ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Group join failed:', error );
 			} finally {
 				ctx.loading = false;
 			}
@@ -89,13 +94,18 @@ store( 'wporg/group-membership', {
 
 				const data = await resp.json();
 
+				if ( ! resp.ok ) {
+					throw new Error( data?.message || resp.statusText );
+				}
+
 				if ( data.success ) {
 					ctx.isMember = false;
 					ctx.memberCount = Math.max( 0, ctx.memberCount - 1 );
 					window.location.reload();
 				}
-			} catch {
-				// Silently fail.
+			} catch ( error ) {
+				// eslint-disable-next-line no-console
+				console.error( 'Group leave failed:', error );
 			} finally {
 				ctx.loading = false;
 			}

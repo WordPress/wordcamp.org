@@ -23,6 +23,9 @@ if ( $is_member ) {
 	$role_label = $labels[ $user_role ] ?? __( 'Member', 'wporg-groups-frontend' );
 }
 
+// Only logged-in visitors can join or leave, and only their markup should carry a nonce.
+$rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
+
 $is_organiser        = in_array( $user_role, array( 'administrator', 'editor' ), true );
 $user_count          = count_users( 'time', get_current_blog_id() );
 $member_count        = $user_count['total_users'] ?? 0;
@@ -51,7 +54,7 @@ $context = array(
 	'joinApi'       => $join_api,
 	'leaveApi'      => $leave_api,
 	'preferenceApi' => $preference_api,
-	'restNonce'     => wp_create_nonce( 'wp_rest' ),
+	'restNonce'     => $rest_nonce,
 	'loginUrl'      => $login_url,
 	'loading'       => false,
 	'notificationOptIn'     => $notification_opt_in,

@@ -1,0 +1,158 @@
+name: E2E Tests (Groups/GatherPress)
+
+# Runs on PRs that touch the Groups/GatherPress front end, plus manual
+# dispatch for ad-hoc runs. Scoped to these paths (rather than every PR)
+# because this stands up real docker-based provisioning (WordPress core
+# checkout, TLS cert, DB import, third-party plugin install).
+on:
+  pull_request:
+    paths:
+    - public_html/wp-content/mu-plugins/wporg-groups-frontend/**
+    - public_html/wp-content/mu-plugins/groups/**
+    - tests/e2e/**
+    - playwright.config.js
+    - .github/workflows/e2e-tests.yml
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright E2E
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install SVN
+      # A composer dependency uses --prefer-source, which needs svn on PATH.
+      run: |
+        sudo rm -f /var/lib/man-db/auto-update # https://github.com/actions/runner-images/issues/10977
+        sudo apt-get update && sudo apt-get install -y subversion
+
+    - name: Set PHP version
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        coverage: none
+        tools: composer:v2
+      env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install PHP dependencies
+      # wporg-mu-plugins (installed via composer, then moved into place by a
+      # post-install script — see composer.json's installer-paths) is loaded
+      # unconditionally by load-other-mu-plugins.php; without it every
+      # request, including wp-cli, fatals.
+      run: |
+        rm composer.lock || true
+        composer install
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: npm
+
+    - name: Install dependencies
+      run: npm ci --no-audit --no-fund
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+
+    - name: Build all workspace assets
+      # The site fatals on boot (including for wp-cli) if any mu-plugin's
+      # built assets are missing — not just wporg-groups-frontend's — so
+      # build every workspace, same as `npm run setup` does for local dev.
+      run: npm run build
+
+    - name: Clone WordPress core (develop trunk) into public_html/mu
+      run: git clone --depth=1 https://github.com/WordPress/WordPress.git public_html/mu
+
+    - name: Generate a self-signed TLS cert for local hostnames
+      # Playwright's `ignoreHTTPSErrors: true` (see playwright.config.js)
+      # means this only needs to satisfy nginx, not a trust store — no
+      # mkcert/browser-trust step needed here, unlike the local dev setup
+      # documented in .docker/readme.md.
+      run: |
+        openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
+          -keyout .docker/wordcamp.test.key.pem \
+          -out .docker/wordcamp.test.pem \
+          -subj "/CN=wordcamp.test" \
+          -addext "subjectAltName=DNS:wordcamp.test,DNS:*.wordcamp.test,DNS:events.wordpress.test,DNS:*.wordpress.test"
+
+    - name: Boot the docker environment
+      run: docker compose up --build -d
+
+    - name: Wait for the site to respond
+      run: |
+        # Don't swallow stderr here — a real (non-timing) failure needs to
+        # be visible in the log, not silently retried for the full timeout.
+        for i in $(seq 1 20); do
+          if docker compose exec -T wordcamp.test wp core is-installed; then
+            exit 0
+          fi
+          echo "Attempt $i/20 failed, retrying in 3s..."
+          sleep 3
+        done
+        echo "WordPress did not become ready in time" >&2
+        echo "::group::docker compose logs"
+        docker compose logs
+        echo "::endgroup::"
+        exit 1
+
+    - name: Add local hostnames to /etc/hosts
+      run: |
+        echo "127.0.0.1 wordcamp.test central.wordcamp.test seattle.wordcamp.test shinynew.wordcamp.test events.wordpress.test" | sudo tee -a /etc/hosts
+
+    - name: Install GatherPress on the groups site
+      run: |
+        docker compose exec -T wordcamp.test wp plugin install \
+          https://github.com/GatherPress/gatherpress/releases/download/0.34.0-alpha.2/gatherpress.0.34.0-alpha.2.zip \
+          --activate --url=events.wordpress.test/group/sunshine-coast-qld/
+
+    - name: Create role-tier test users
+      run: |
+        SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
+        create_user() {
+          if docker compose exec -T wordcamp.test wp user get "$1" --field=ID --url="$SITE_URL" >/dev/null 2>&1; then
+            echo "User $1 already exists."
+            return 0
+          fi
+          docker compose exec -T wordcamp.test wp user create "$1" "$1@example.test" \
+            --role="$2" --user_pass=password --url="$SITE_URL"
+        }
+        create_user organiser1 editor
+        create_user eventorganiser1 author
+        create_user member1 subscriber
+
+    - name: Create required pages
+      # `page-members.html` (public_html/wp-content/themes/groups-site/templates/)
+      # is a block-theme template keyed on the page slug — it ignores
+      # post_content entirely, but only applies once a published Page with
+      # that slug actually exists. Not part of the wordcamp_dev.sql fixture.
+      run: |
+        SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
+        create_page() {
+          if docker compose exec -T wordcamp.test wp post list --post_type=page --name="$1" --field=ID --url="$SITE_URL" | grep -q .; then
+            echo "Page '$1' already exists."
+            return 0
+          fi
+          docker compose exec -T wordcamp.test wp post create --post_type=page \
+            --post_title="$2" --post_name="$1" --post_status=publish --url="$SITE_URL"
+        }
+        create_page members Members
+
+    - name: Run Playwright tests
+      run: npx playwright test
+
+    - name: Upload Playwright report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 14

@@ -1,5 +1,6 @@
 const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
+const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
 
 /**
  * Automatic "event published" notification (#1829): publishing a
@@ -39,6 +40,8 @@ test.describe( 'event publish notification', () => {
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();
 		await editorCanvas.getByRole( 'textbox', { name: 'Add title' } ).fill( title );
 		await editorCanvas.getByRole( 'textbox', { name: 'Add title' } ).press( 'Tab' );
+
+		await pinEventFarInFuture( page );
 
 		const publishButton = page
 			.getByLabel( 'Editor top bar' )
@@ -110,11 +113,34 @@ test.describe( 'event publish notification', () => {
 	}
 
 	/**
+	 * Waits until at least one matching email has arrived, re-triggering
+	 * cron on every poll attempt — on a slower CI runner, a single
+	 * `runDueCron()` call can race the scheduled event's own timestamp, or
+	 * wp-cron's spawn can simply take a moment to complete.
+	 *
+	 * @param {import('@playwright/test').Page} page
+	 * @param {string}                          title
+	 */
+	async function waitForEmailsToArrive( page, title ) {
+		await expect
+			.poll(
+				async () => {
+					await runDueCron( page );
+					return ( await matchingEmails( page, title ) ).length;
+				},
+				{ timeout: 20000, intervals: [ 1000 ] }
+			)
+			.toBeGreaterThan( 0 );
+	}
+
+	/**
 	 * The "all members" job delivers to each recipient in the same request,
 	 * but MailCatcher's message list can still be read mid-append — polling
 	 * for "count > 0" alone can catch a batch still arriving. Waits until
 	 * the count holds steady across a few checks before treating it as the
-	 * settled total.
+	 * settled total. Callers must ensure at least one email has already
+	 * arrived (see `waitForEmailsToArrive()`) before calling this, or a
+	 * still-zero count will just as validly look "stable".
 	 *
 	 * @param {import('@playwright/test').Page} page
 	 * @param {string}                          title
@@ -145,12 +171,14 @@ test.describe( 'event publish notification', () => {
 		const title = `Auto-notify E2E ${ Date.now() }`;
 		const postId = await createAndPublishEvent( page, title );
 
-		await runDueCron( page );
+		await waitForEmailsToArrive( page, title );
 		const countAfterPublish = await stableMatchingCount( page, title );
 		expect( countAfterPublish ).toBeGreaterThan( 0 );
 
 		await editPublishedEvent( page, postId );
 		await runDueCron( page );
+		// Give a genuine duplicate a moment to land before settling the count.
+		await page.waitForTimeout( 3000 );
 		const countAfterEdit = await stableMatchingCount( page, title );
 
 		expect( countAfterEdit ).toBe( countAfterPublish );

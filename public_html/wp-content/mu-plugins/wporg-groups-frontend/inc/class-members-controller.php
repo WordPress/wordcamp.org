@@ -20,6 +20,7 @@ defined( 'WPINC' ) || die();
  *   GET    /wporg-groups/v1/members/{id}  — single member
  *   POST   /wporg-groups/v1/members/join  — join group
  *   DELETE /wporg-groups/v1/members/leave — leave group
+ *   POST   /wporg-groups/v1/members/notification-preference — update event email preference
  */
 class Members_Controller extends \WP_REST_Users_Controller {
 
@@ -165,6 +166,26 @@ class Members_Controller extends \WP_REST_Users_Controller {
 					'methods'             => \WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'leave_group' ),
 					'permission_callback' => array( $this, 'leave_permissions_check' ),
+				),
+			)
+		);
+
+		// Event email preference: POST /members/notification-preference.
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/notification-preference',
+			array(
+				array(
+					'methods'             => \WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'update_notification_preference' ),
+					'permission_callback' => array( $this, 'notification_preference_permissions_check' ),
+					'args'                => array(
+						'opt_in' => array(
+							'type'              => 'boolean',
+							'required'          => true,
+							'sanitize_callback' => 'rest_sanitize_boolean',
+						),
+					),
 				),
 			)
 		);
@@ -318,6 +339,54 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		remove_user_from_blog( $user_id, $blog_id );
 
 		return rest_ensure_response( array( 'success' => true ) );
+	}
+
+	/**
+	 * Check permissions for updating the current user's notification preference.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function notification_preference_permissions_check() {
+		if ( ! is_user_logged_in() ) {
+			return new \WP_Error(
+				'rest_not_logged_in',
+				__( 'You must be logged in.', 'wporg-groups-frontend' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		if ( ! is_user_member_of_blog() ) {
+			return new \WP_Error(
+				'not_a_member',
+				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Update the current user's GatherPress event email preference.
+	 *
+	 * @param \WP_REST_Request $request Full details about the request.
+	 * @return \WP_REST_Response
+	 */
+	public function update_notification_preference( $request ) {
+		$opt_in = (bool) $request->get_param( 'opt_in' );
+
+		update_user_meta(
+			get_current_user_id(),
+			'gatherpress_event_updates_opt_in',
+			$opt_in ? 1 : 0
+		);
+
+		return rest_ensure_response(
+			array(
+				'success' => true,
+				'optIn'   => $opt_in,
+			)
+		);
 	}
 
 	/**

@@ -57,14 +57,17 @@ if ( ! empty( $comment_event_ids ) ) {
 	}
 }
 
-// Find events this user organizes (is the author of).
+// Find events this user organizes (is the author of). Not capped: the
+// default `orderby` is post_date (creation date) descending, so a cap here
+// could drop an upcoming event that was simply created earlier than the
+// organizer's 100 most recently created events.
 $organized_ids = get_posts(
 	array(
 		'post_type'      => 'gatherpress_event',
 		'post_status'    => 'publish',
 		'author'         => $user_id,
 		'fields'         => 'ids',
-		'posts_per_page' => 100,
+		'posts_per_page' => -1,
 	)
 );
 

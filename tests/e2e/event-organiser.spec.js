@@ -52,10 +52,14 @@ test.describe( 'event organiser (author role)', () => {
 		await expect( page.getByTestId( 'snackbar' ).getByText( 'Event published.' ) ).toBeVisible( { timeout: 15000 } );
 
 		await page.goto( '' );
-		// The my-events block now also lists events the organiser created
-		// (see the "my-events block" change), so the title appears twice on
-		// the front page — scope to the main event link to avoid a
-		// strict-mode violation.
-		await expect( page.getByRole( 'link', { name: title, exact: true } ) ).toBeVisible();
+		// The my-events block now also lists events the organiser created,
+		// so the title can appear more than once on the front page (event
+		// card, my-events entry, and potentially a featured-image link) —
+		// scope to the "Upcoming events" card grid (`#upcoming`), which the
+		// my-events block renders outside of, to avoid a strict-mode
+		// violation regardless of what else ends up sharing the title text.
+		await expect(
+			page.locator( '#upcoming' ).getByRole( 'link', { name: title, exact: true } )
+		).toBeVisible();
 	} );
 } );

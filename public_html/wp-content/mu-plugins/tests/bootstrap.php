@@ -33,6 +33,7 @@ function manually_load_plugins() {
 	require_once dirname( __DIR__ ) . '/latest-site-hints.php';
 	require_once dirname( __DIR__ ) . '/trusted-deputy-capabilities.php';
 	require_once dirname( __DIR__ ) . '/wcorg-subroles.php';
+	require_once dirname( __DIR__ ) . '/wcorg-network-theme-control.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugins' );

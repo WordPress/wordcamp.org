@@ -15,8 +15,15 @@
  *   POST /event/{id}
  *        Updates an existing gatherpress_event.
  *
- * All routes require the `current_user_can_manage_events()` capability,
- * plus post-specific capabilities when operating on an existing event.
+ *   GET  /group-info
+ *   POST /group-info
+ *        Reads and writes the group's name and description. Exists because
+ *        core's /wp/v2/settings requires `manage_options`, which Organisers
+ *        (editors) do not have.
+ *
+ * The event routes require the `current_user_can_manage_events()` capability,
+ * plus post-specific capabilities when operating on an existing event. The
+ * group-info routes require `current_user_can_manage_group_settings()`.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -36,6 +43,7 @@ use WP_REST_Server;
 use const WordCamp\Groups\Frontend\Defaults\DESCRIPTION_BLOCK_NAMES;
 
 use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_events;
+use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 use function WordCamp\Groups\Frontend\Defaults\extract_description_blocks;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
@@ -171,6 +179,93 @@ function register_routes(): void {
 			) + event_args_schema(),
 		)
 	);
+
+	// ----- Group info -----------------------------------------------------
+	//
+	// The Settings > About tab edits `blogname` and `blogdescription`. Core's
+	// /wp/v2/settings gates both behind `manage_options`, which only network
+	// administrators have, so Organisers got a 403 on every read and write.
+	// These routes expose just those two fields, behind the same capability
+	// check that gates the settings UI itself.
+
+	register_rest_route(
+		NAMESPACE_V1,
+		'/group-info',
+		array(
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => __NAMESPACE__ . '\get_group_info',
+				'permission_callback' => __NAMESPACE__ . '\manage_group_settings_permissions_check',
+			),
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => __NAMESPACE__ . '\update_group_info',
+				'permission_callback' => __NAMESPACE__ . '\manage_group_settings_permissions_check',
+				'args'                => array(
+					'title'       => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'description' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			),
+		)
+	);
+}
+
+/**
+ * Capability check for the group-info routes.
+ */
+function manage_group_settings_permissions_check(): bool {
+	return current_user_can_manage_group_settings();
+}
+
+/**
+ * Return the group's name and description.
+ */
+function get_group_info(): WP_REST_Response {
+	return new WP_REST_Response(
+		array(
+			'title'       => get_option( 'blogname', '' ),
+			'description' => get_option( 'blogdescription', '' ),
+		)
+	);
+}
+
+/**
+ * Update the group's name and description.
+ *
+ * Only the fields present in the request are written, so a client can send
+ * one without clobbering the other.
+ *
+ * @return WP_Error|WP_REST_Response
+ */
+function update_group_info( WP_REST_Request $request ) {
+	$title       = $request->get_param( 'title' );
+	$description = $request->get_param( 'description' );
+
+	// An empty group name is not recoverable from this UI: the next load
+	// returns the blank value, so there is nothing left to restore it from.
+	// Checked after sanitization, because `sanitize_text_field()` can empty
+	// an input that was not empty when it was sent.
+	if ( null !== $title && '' === trim( $title ) ) {
+		return new WP_Error( 'wporg_groups_empty_group_name', 'Group name is required.', array( 'status' => 400 ) );
+	}
+
+	if ( null !== $title ) {
+		update_option( 'blogname', $title );
+	}
+
+	if ( null !== $description ) {
+		update_option( 'blogdescription', $description );
+	}
+
+	return get_group_info();
 }
 
 /**

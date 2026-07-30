@@ -155,4 +155,49 @@ class Test_Groups_Notifications extends Groups_TestCase {
 
 		$this->assertFalse( $this->is_notification_scheduled( $event_id ), 'Editing an already-published event must not schedule another notification.' );
 	}
+
+	/**
+	 * When `wp_schedule_single_event()` fails (e.g. blocked by a
+	 * `pre_schedule_event` filter, simulated here), a warning must surface
+	 * rather than the failure being silent, and the meta flag must stay
+	 * unset so a later publish can still retry.
+	 *
+	 * Uses a temporary `set_error_handler()` rather than PHPUnit's
+	 * warning-to-exception conversion: this repo's own error handler
+	 * (`0-error-handling.php`) is registered ahead of PHPUnit's and handles
+	 * `trigger_error()` itself, so nothing reaches PHPUnit as a catchable
+	 * exception to assert against.
+	 */
+	public function test_logs_a_warning_and_leaves_meta_unset_when_scheduling_fails() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+
+		add_filter( 'pre_schedule_event', '__return_false' );
+
+		$captured = null;
+		set_error_handler( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Intentional, test-only: capturing the warning under test, not debug code.
+			static function ( $errno, $errstr ) use ( &$captured ) {
+				$captured = array( $errno, $errstr );
+				return true;
+			}
+		);
+
+		try {
+			schedule_new_event_notification( 'publish', 'draft', get_post( $event_id ) );
+		} finally {
+			restore_error_handler();
+			remove_filter( 'pre_schedule_event', '__return_false' );
+		}
+
+		$this->assertNotNull( $captured, 'schedule_new_event_notification() should have triggered a warning.' );
+		$this->assertSame( E_USER_WARNING, $captured[0] );
+		$this->assertStringContainsString( (string) $event_id, $captured[1] );
+
+		$this->assertFalse( $this->is_notification_scheduled( $event_id ) );
+		$this->assertSame( '', get_post_meta( $event_id, PUBLISH_NOTIFICATION_SCHEDULED_META, true ) );
+	}
 }

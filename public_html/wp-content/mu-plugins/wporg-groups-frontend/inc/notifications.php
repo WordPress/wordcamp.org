@@ -40,6 +40,13 @@ function schedule_new_event_notification( string $new_status, string $old_status
 		return;
 	}
 
+	// `all => true` reuses GatherPress's existing "Message all members"
+	// path (`Event_Rest_Api::get_recipients()`), which resolves recipients
+	// via an unbatched `get_users()` and emails each one synchronously in
+	// the same request. That's an existing GatherPress-level constraint,
+	// not something this hook can fix, but it now also runs on every
+	// automatic first-publish rather than only when an organizer
+	// deliberately clicks "Message all members".
 	$recipients = array(
 		'all'           => true,
 		'attending'     => false,
@@ -55,5 +62,14 @@ function schedule_new_event_notification( string $new_status, string $old_status
 
 	if ( $scheduled ) {
 		update_post_meta( $post->ID, PUBLISH_NOTIFICATION_SCHEDULED_META, 1 );
+		return;
 	}
+
+	trigger_error(
+		sprintf(
+			'Failed to schedule the publish notification for event %d -- `wp_schedule_single_event()` returned false. Members were not notified.',
+			$post->ID // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
+		),
+		E_USER_WARNING
+	);
 }

@@ -1,5 +1,6 @@
 const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
+const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
 
 /**
  * The `wporg/event-manage` block's "Message attendees" action (#1822),
@@ -36,6 +37,8 @@ test.describe( 'event manage — message attendees', () => {
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();
 		await editorCanvas.getByRole( 'textbox', { name: 'Add title' } ).fill( title );
 		await editorCanvas.getByRole( 'textbox', { name: 'Add title' } ).press( 'Tab' );
+
+		await pinEventFarInFuture( page );
 
 		const publishButton = page
 			.getByLabel( 'Editor top bar' )

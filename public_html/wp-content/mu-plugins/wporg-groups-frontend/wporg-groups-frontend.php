@@ -21,6 +21,7 @@ require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
 require_once __DIR__ . '/inc/my-events.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
+require_once __DIR__ . '/inc/notifications.php';
 
 /**
  * Bootstrap the plugin.
@@ -36,6 +37,7 @@ function bootstrap(): void {
 	Blocks\bootstrap();
 	REST\bootstrap();
 	Modal\bootstrap();
+	Notifications\bootstrap();
 
 	add_action(
 		'rest_api_init',

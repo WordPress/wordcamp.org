@@ -52,6 +52,19 @@ test.describe( 'event organiser (author role)', () => {
 		await expect( page.getByTestId( 'snackbar' ).getByText( 'Event published.' ) ).toBeVisible( { timeout: 15000 } );
 
 		await page.goto( '' );
-		await expect( page.getByText( title ) ).toBeVisible();
+
+		// Scoped rather than a bare getByText: the title now appears twice on
+		// the front page, once in the events list and once in the my-events
+		// block, because an organiser sees the events they organise there even
+		// without an RSVP (#1810).
+		await expect(
+			page.getByRole( 'link', { name: title, exact: true } )
+		).toBeVisible();
+
+		// The my-events entry is the #1810 behaviour itself: this organiser
+		// published the event and never RSVP'd to it.
+		await expect(
+			page.locator( '.wporg-my-events__title', { hasText: title } )
+		).toBeVisible();
 	} );
 } );

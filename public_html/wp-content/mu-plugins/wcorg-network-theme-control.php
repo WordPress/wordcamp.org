@@ -47,7 +47,7 @@ function _get_network_restricted_themes() {
  */
 function filter_prepared_themes( $prepared_themes ) {
 	foreach ( _get_network_restricted_themes() as $stylesheet => $network_id ) {
-		if ( $network_id !== get_current_network_id() ) {
+		if ( get_current_network_id() !== $network_id ) {
 			unset( $prepared_themes[ $stylesheet ] );
 		}
 	}
@@ -66,7 +66,7 @@ function revert_wrong_network_activation( $old_name, $old_theme ) {
 	$restricted = _get_network_restricted_themes();
 	$stylesheet = get_stylesheet();
 
-	if ( ! isset( $restricted[ $stylesheet ] ) || $restricted[ $stylesheet ] === get_current_network_id() ) {
+	if ( ! isset( $restricted[ $stylesheet ] ) || get_current_network_id() === $restricted[ $stylesheet ] ) {
 		return;
 	}
 

@@ -32,13 +32,22 @@ class Test_WCORG_Network_Theme_Control extends Groups_TestCase {
 		search_theme_directories( true );
 	}
 
+	/**
+	 * Stash the current network global, so `set_current_network()` can
+	 * restore it in `tearDown()`.
+	 */
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->original_current_site = $GLOBALS['current_site'];
 	}
 
+	/**
+	 * Restore the network global that `set_current_network()` overwrote,
+	 * so state doesn't leak into other tests.
+	 */
 	protected function tearDown(): void {
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
 		$GLOBALS['current_site'] = $this->original_current_site;
 
 		parent::tearDown();
@@ -54,6 +63,7 @@ class Test_WCORG_Network_Theme_Control extends Groups_TestCase {
 	 * `switch_to_blog()` alone.
 	 */
 	private function set_current_network( int $network_id ) {
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Necessary for testing multisite global state.
 		$GLOBALS['current_site'] = get_network( $network_id );
 	}
 
@@ -106,7 +116,7 @@ class Test_WCORG_Network_Theme_Control extends Groups_TestCase {
 		$this->assertNotSame( 'groups-site', get_stylesheet() );
 		$this->assertSame( $previous_stylesheet, get_stylesheet() );
 
-		switch_theme( $previous_stylesheet );
+		// Already back on $previous_stylesheet -- the backstop reverted it above.
 		restore_current_blog();
 	}
 
@@ -124,6 +134,9 @@ class Test_WCORG_Network_Theme_Control extends Groups_TestCase {
 
 		$this->assertSame( 'groups-site', get_stylesheet() );
 
+		// Restore the previous theme and let the deferred switch clear itself,
+		// so the `theme_switched` option doesn't leak into other tests.
 		switch_theme( $previous_stylesheet );
+		check_theme_switched();
 	}
 }

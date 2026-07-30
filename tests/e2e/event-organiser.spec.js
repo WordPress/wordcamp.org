@@ -52,6 +52,10 @@ test.describe( 'event organiser (author role)', () => {
 		await expect( page.getByTestId( 'snackbar' ).getByText( 'Event published.' ) ).toBeVisible( { timeout: 15000 } );
 
 		await page.goto( '' );
-		await expect( page.getByText( title ) ).toBeVisible();
+		// The my-events block now also lists events the organiser created
+		// (see the "my-events block" change), so the title appears twice on
+		// the front page — scope to the main event link to avoid a
+		// strict-mode violation.
+		await expect( page.getByRole( 'link', { name: title, exact: true } ) ).toBeVisible();
 	} );
 } );

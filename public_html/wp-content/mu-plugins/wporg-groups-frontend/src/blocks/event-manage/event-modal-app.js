@@ -819,9 +819,10 @@ const NS =
 			return null;
 		}
 
-		if ( state.mode === 'message-all' ) {
+		if ( [ 'message-all', 'message-attendees' ].includes( state.mode ) ) {
 			return h( MessageMembersModal, {
 				eventId: state.eventId,
+				recipientMode: state.mode,
 				onClose: () => setState( { open: false, mode: 'create', eventId: 0 } ),
 			} );
 		}

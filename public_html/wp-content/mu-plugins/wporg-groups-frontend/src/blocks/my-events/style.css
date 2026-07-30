@@ -45,3 +45,9 @@
 	font-weight: 600;
 	color: #1a1919;
 }
+
+.wporg-my-events__empty {
+	margin: 0;
+	font-size: 14px;
+	color: #50575e;
+}

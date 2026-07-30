@@ -19,6 +19,7 @@ require_once __DIR__ . '/inc/defaults.php';
 require_once __DIR__ . '/inc/rest.php';
 require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';
+require_once __DIR__ . '/inc/my-events.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
 

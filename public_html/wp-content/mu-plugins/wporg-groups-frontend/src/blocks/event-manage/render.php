@@ -70,6 +70,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			data-wporg-groups-modal="message-all"
 			data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
 		><?php esc_html_e( 'Message all members', 'wporg-groups-frontend' ); ?></button>
+
+		<button
+			type="button"
+			class="wporg-event-manage__button wporg-event-manage__button--message wp-element-button"
+			data-wporg-groups-modal="message-attendees"
+			data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
+		><?php esc_html_e( 'Message attendees', 'wporg-groups-frontend' ); ?></button>
 	<?php endif; ?>
 
 	<?php if ( $show_create ) : ?>

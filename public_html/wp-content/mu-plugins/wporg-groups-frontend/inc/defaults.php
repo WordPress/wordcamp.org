@@ -123,31 +123,6 @@ const DESCRIPTION_BLOCK_NAMES = array(
 );
 
 /**
- * Pull a plain-text description out of an existing event's `post_content`.
- *
- * Concatenates the inner text of every `core/paragraph` block, ignoring all
- * the GatherPress metadata blocks (event-date, venue, RSVP, etc.) so when
- * the form reopens an existing event the description box only contains the
- * prose the user originally typed.
- */
-function extract_description_text( int $event_id ): string {
-	$content = (string) get_post_field( 'post_content', $event_id );
-	if ( '' === $content ) {
-		return '';
-	}
-
-	$parts = array();
-	foreach ( parse_blocks( $content ) as $block ) {
-		if ( 'core/paragraph' !== $block['blockName'] ) {
-			continue;
-		}
-		$parts[] = trim( wp_strip_all_tags( $block['innerHTML'] ) );
-	}
-
-	return trim( implode( "\n\n", array_filter( $parts ) ) );
-}
-
-/**
  * Pull the description blocks (only) out of an existing event's post_content.
  *
  * Used by the REST `event-form-data` endpoint when loading an event for

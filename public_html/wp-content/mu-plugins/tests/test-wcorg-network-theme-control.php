@@ -44,11 +44,15 @@ class Test_WCORG_Network_Theme_Control extends Groups_TestCase {
 
 	/**
 	 * Restore the network global that `set_current_network()` overwrote,
-	 * so state doesn't leak into other tests.
+	 * and clear the request-scoped "did this request just switch a theme"
+	 * flag `mark_theme_switched_this_request()` sets, so neither leaks into
+	 * other tests -- PHPUnit runs the whole suite in one process, unlike
+	 * the real one-flag-per-HTTP-request lifecycle this is designed for.
 	 */
 	protected function tearDown(): void {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restoring original state.
 		$GLOBALS['current_site'] = $this->original_current_site;
+		unset( $GLOBALS['wcorg_network_theme_control_switched_this_request'] );
 
 		parent::tearDown();
 	}
@@ -138,5 +142,86 @@ class Test_WCORG_Network_Theme_Control extends Groups_TestCase {
 		// so the `theme_switched` option doesn't leak into other tests.
 		switch_theme( $previous_stylesheet );
 		check_theme_switched();
+	}
+
+	/**
+	 * The actual gap `prevent_wrong_network_theme_boot()` closes: on the
+	 * *next* request after a wrong-network switch -- after `switch_theme()`
+	 * ran on a previous request, but before *this* request's
+	 * `check_theme_switched()`/`after_switch_theme` gets a chance to run --
+	 * `get_stylesheet()` and `get_template()` must already report the
+	 * previous theme, not the restricted one. Otherwise the restricted
+	 * theme's `functions.php` would load once regardless of the deferred
+	 * backstop.
+	 *
+	 * @covers \WordCamp\Themes\Network\prevent_wrong_network_theme_boot()
+	 */
+	public function test_stylesheet_reports_previous_theme_before_backstop_runs() {
+		switch_to_blog( self::$central_site_id );
+		$this->set_current_network( WORDCAMP_NETWORK_ID );
+
+		$previous_stylesheet = get_stylesheet();
+		$previous_template   = get_template();
+
+		switch_theme( 'groups-site' );
+
+		// A real "next request" wouldn't have this set at all -- unlike
+		// PHPUnit, which shares one process across the switch above and the
+		// assertions below, a fresh request never ran the switch itself.
+		unset( $GLOBALS['wcorg_network_theme_control_switched_this_request'] );
+
+		// No `check_theme_switched()` call here -- this is the point.
+		$this->assertSame( $previous_stylesheet, get_stylesheet() );
+		$this->assertSame( $previous_template, get_template() );
+
+		// Now let the deferred backstop persist the correction, so
+		// `theme_switched` doesn't leak into other tests.
+		check_theme_switched();
+		restore_current_blog();
+	}
+
+	/**
+	 * On the theme's own network, `prevent_wrong_network_theme_boot()` must
+	 * not interfere -- `get_stylesheet()` should report the just-switched-to
+	 * restricted theme immediately, same as core's default behavior.
+	 *
+	 * @covers \WordCamp\Themes\Network\prevent_wrong_network_theme_boot()
+	 */
+	public function test_stylesheet_not_overridden_on_correct_network() {
+		// Groups_TestCase::setUp() already switches to the groups-network fixture site.
+		$this->set_current_network( GROUPS_NETWORK_ID );
+
+		$previous_stylesheet = get_stylesheet();
+
+		switch_theme( 'groups-site' );
+
+		$this->assertSame( 'groups-site', get_stylesheet() );
+
+		switch_theme( $previous_stylesheet );
+		check_theme_switched();
+	}
+
+	/**
+	 * Regression test: the request that itself calls `switch_theme()` to a
+	 * wrong-network restricted theme must still see `get_stylesheet()`
+	 * report that theme immediately afterwards -- e.g. `wp theme activate`
+	 * (and wp-admin) checks `get_stylesheet()` right after switching to
+	 * confirm success, and would otherwise wrongly report failure even
+	 * though the switch did take effect (and will be reverted, correctly,
+	 * starting from the *next* request).
+	 *
+	 * @covers \WordCamp\Themes\Network\mark_theme_switched_this_request()
+	 * @covers \WordCamp\Themes\Network\prevent_wrong_network_theme_boot()
+	 */
+	public function test_stylesheet_not_overridden_for_the_request_performing_the_switch() {
+		switch_to_blog( self::$central_site_id );
+		$this->set_current_network( WORDCAMP_NETWORK_ID );
+
+		switch_theme( 'groups-site' );
+
+		$this->assertSame( 'groups-site', get_stylesheet() );
+
+		check_theme_switched();
+		restore_current_blog();
 	}
 }

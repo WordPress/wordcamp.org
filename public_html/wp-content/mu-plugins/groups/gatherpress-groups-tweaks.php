@@ -298,29 +298,27 @@ add_action(
  *
  * Stores an array of user IDs who are speaking at the event.
  */
-add_action(
-	'init',
-	static function (): void {
-		register_post_meta(
-			'gatherpress_event',
-			'_event_speakers',
-			array(
-				'type'          => 'array',
-				'single'        => true,
-				'default'       => array(),
-				'show_in_rest'  => array(
-					'schema' => array(
-						'type'  => 'array',
-						'items' => array( 'type' => 'integer' ),
-					),
+function register_event_speakers_meta(): void {
+	register_post_meta(
+		'gatherpress_event',
+		'_event_speakers',
+		array(
+			'type'          => 'array',
+			'single'        => true,
+			'default'       => array(),
+			'show_in_rest'  => array(
+				'schema' => array(
+					'type'  => 'array',
+					'items' => array( 'type' => 'integer' ),
 				),
-				'auth_callback' => static function () {
-					return current_user_can( 'edit_posts' );
-				},
-			)
-		);
-	}
-);
+			),
+			'auth_callback' => static function () {
+				return current_user_can( 'edit_posts' );
+			},
+		)
+	);
+}
+add_action( 'init', __NAMESPACE__ . '\register_event_speakers_meta' );
 
 /**
  * Rewrite the search block form action on the events archive to submit

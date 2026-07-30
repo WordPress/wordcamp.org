@@ -120,5 +120,28 @@ jobs:
       run: |
         bash .docker/bin/install-wp-tests.sh wcorg_test root root "127.0.0.1:${DB_PORT}" latest true
 
+    - name: Install GatherPress
+      # Pinned to the same release used by local dev (see the
+      # groups-gatherpress-compat-test skill). GatherPress is gitignored/
+      # third-party; the WordCamp Groups PHPUnit suite needs it present.
+      run: |
+        curl -sL "https://github.com/GatherPress/gatherpress/releases/download/0.34.0-alpha.2/gatherpress.0.34.0-alpha.2.zip" -o /tmp/gatherpress.zip
+        unzip -q -o /tmp/gatherpress.zip -d public_html/wp-content/plugins/
+        rm -f /tmp/gatherpress.zip
+
+    - name: Use Node.js 20.x
+      # The WordCamp Groups PHPUnit suite asserts on registered block types,
+      # which register_block_type_from_metadata() silently no-ops for if
+      # build/blocks/ doesn't exist yet.
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: npm
+
+    - name: Build the groups frontend blocks
+      run: |
+        npm ci --no-audit --no-fund
+        npm run build --workspace=public_html/wp-content/mu-plugins/wporg-groups-frontend
+
     - name: Running unit tests
       run: ./public_html/wp-content/mu-plugins/vendor/bin/phpunit -c phpunit.xml.dist

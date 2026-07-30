@@ -13,7 +13,6 @@ import {
 } from '@wordpress/element';
 import {
 	TextControl,
-	TextareaControl,
 	Button,
 	Notice,
 	Spinner,
@@ -23,6 +22,7 @@ import { __ } from '@wordpress/i18n';
 
 export default function AboutTab() {
 	const [ loading, setLoading ] = useState( true );
+	const [ loadFailed, setLoadFailed ] = useState( false );
 	const [ saving, setSaving ] = useState( false );
 	const [ notice, setNotice ] = useState( '' );
 	const [ noticeType, setNoticeType ] = useState( 'success' );
@@ -32,7 +32,7 @@ export default function AboutTab() {
 	} );
 
 	useEffect( () => {
-		apiFetch( { path: '/wp/v2/settings' } )
+		apiFetch( { path: '/wporg-groups/v1/group-info' } )
 			.then( ( data ) => {
 				setForm( {
 					blogname: data.title || '',
@@ -40,7 +40,20 @@ export default function AboutTab() {
 				} );
 				setLoading( false );
 			} )
-			.catch( () => setLoading( false ) );
+			.catch( ( err ) => {
+				// Don't leave the fields silently blank: a failed load looks
+				// identical to an empty group name otherwise. Lock the form as
+				// well, so a save can't write those blanks back over the real
+				// values — a failed read followed by a successful write is all
+				// it takes to wipe the group's name and description.
+				setLoadFailed( true );
+				setNoticeType( 'error' );
+				setNotice(
+					err.message ||
+						__( 'Could not load group settings.', 'wporg-groups-frontend' )
+				);
+				setLoading( false );
+			} );
 	}, [] );
 
 	const handleSave = async () => {
@@ -48,7 +61,7 @@ export default function AboutTab() {
 		setNotice( '' );
 		try {
 			await apiFetch( {
-				path: '/wp/v2/settings',
+				path: '/wporg-groups/v1/group-info',
 				method: 'POST',
 				data: {
 					title: form.blogname,
@@ -86,14 +99,18 @@ export default function AboutTab() {
 			label: __( 'Group name', 'wporg-groups-frontend' ),
 			value: form.blogname,
 			onChange: ( v ) => setForm( { ...form, blogname: v } ),
+			disabled: loadFailed,
 			__nextHasNoMarginBottom: true,
 		} ),
-		h( TextareaControl, {
+		// Single-line on purpose: the value is stored in `blogdescription`
+		// and sanitized with `sanitize_text_field()`, which silently flattens
+		// line breaks, so a textarea would invite input it can't keep.
+		h( TextControl, {
 			label: __( 'Description', 'wporg-groups-frontend' ),
 			value: form.blogdescription,
 			onChange: ( v ) => setForm( { ...form, blogdescription: v } ),
-			rows: 3,
-			help: __( 'A short description of your group shown on the homepage.', 'wporg-groups-frontend' ),
+			disabled: loadFailed,
+			help: __( 'A short tagline for your group, used in the browser title and search results.', 'wporg-groups-frontend' ),
 			__nextHasNoMarginBottom: true,
 		} ),
 		h(
@@ -105,7 +122,7 @@ export default function AboutTab() {
 					variant: 'primary',
 					onClick: handleSave,
 					isBusy: saving,
-					disabled: saving,
+					disabled: saving || loadFailed || '' === form.blogname.trim(),
 				},
 				__( 'Save', 'wporg-groups-frontend' )
 			)

@@ -55,6 +55,7 @@ require_once WP_PLUGIN_DIR . '/wordcamp-speaker-feedback/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-payments-network/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-coming-soon-page/tests/bootstrap.php';
+require_once SUT_WP_CONTENT_DIR . 'themes/wporg-events-2023/tests/bootstrap.php';
 
 /*
  * This has to be the last plugin bootstrapper, because it includes the Core test bootstrapper, which would

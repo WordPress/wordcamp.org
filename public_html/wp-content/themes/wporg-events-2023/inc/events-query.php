@@ -24,6 +24,7 @@ add_action( 'wp', __NAMESPACE__ . '\redirect_to_pretty_query_vars' );
 add_action( 'wporg_query_filter_in_form', __NAMESPACE__ . '\inject_other_filters' );
 add_filter( 'document_title_parts', __NAMESPACE__ . '\add_filters_to_page_title' );
 add_filter( 'wporg_query_total_label', __NAMESPACE__ . '\update_query_total_label', 10, 3 );
+add_filter( 'render_block_core/search', __NAMESPACE__ . '\inject_filters_into_search_form' );
 add_filter( 'wporg_query_filter_options_format_type', __NAMESPACE__ . '\get_format_type_options' );
 add_filter( 'wporg_query_filter_options_event_type', __NAMESPACE__ . '\get_event_type_options' );
 add_filter( 'wporg_query_filter_options_month', __NAMESPACE__ . '\get_month_options' );
@@ -330,6 +331,54 @@ function inject_other_filters( string $key ): void {
 }
 
 /**
+ * Inject active filter values as hidden inputs into the search form.
+ *
+ * The core/search block submits only `?s=term` to the home URL, losing any
+ * active filters and redirecting away from the events page. This modifies
+ * the form to submit to the events page and includes active filters as
+ * hidden inputs.
+ *
+ * @param string $block_content The block HTML.
+ *
+ * @return string Modified block HTML with hidden filter inputs.
+ */
+function inject_filters_into_search_form( string $block_content ): string {
+	$query_vars = array( 'event_type', 'format_type', 'month', 'country' );
+	$hidden_inputs = '';
+
+	foreach ( $query_vars as $query_var ) {
+		$values = (array) get_query_var( $query_var, array() );
+
+		foreach ( $values as $value ) {
+			if ( '' !== $value ) {
+				$hidden_inputs .= sprintf(
+					'<input type="hidden" name="%s[]" value="%s" />',
+					esc_attr( $query_var ),
+					esc_attr( $value )
+				);
+			}
+		}
+	}
+
+	// Update the form action to stay on an events listing rather than going to
+	// the default WordPress search results page. Use the search-specific helper
+	// here because build_form_action_url() returns home_url() when is_search()
+	// is true, which would bump subsequent searches off the events network.
+	$action_url    = build_search_form_action_url();
+	$block_content = preg_replace(
+		'/action="[^"]*"/',
+		'action="' . esc_url( $action_url ) . '"',
+		$block_content
+	);
+
+	if ( $hidden_inputs ) {
+		$block_content = str_replace( '</form>', $hidden_inputs . '</form>', $block_content );
+	}
+
+	return $block_content;
+}
+
+/**
  * Append facets to the page title.
  *
  * @param array $parts {
@@ -435,6 +484,24 @@ function build_form_action_url(): string {
 	}
 
 	return $url;
+}
+
+/**
+ * Build the `action` URL for the Search block on event listing pages.
+ *
+ * This must never resolve to `home_url()` — even on search results pages — or
+ * subsequent searches would post to the network root and drop the user off the
+ * events listing entirely. Always land on an events listing instead.
+ */
+function build_search_form_action_url(): string {
+	if ( ! is_search() && ! is_front_page() ) {
+		$url = get_permalink();
+		if ( $url ) {
+			return $url;
+		}
+	}
+
+	return home_url( 'upcoming-events' );
 }
 
 /**

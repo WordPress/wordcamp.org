@@ -1,0 +1,49 @@
+{
+	"apiVersion": 2,
+	"name": "wordcamp/camptix",
+	"title": "Tickets",
+	"category": "wordcamp",
+	"description": "Display a ticket purchase form for this event.",
+	"textdomain": "wordcamporg",
+	"postTypes": [ "page" ],
+	"attributes": {
+		"ticketIds": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "number"
+			}
+		},
+		"maxTicketsPerOrder": {
+			"type": "number",
+			"default": 10
+		},
+		"coupon": {
+			"type": "string",
+			"default": ""
+		},
+		"noTicketsMessage": {
+			"type": "string",
+			"default": ""
+		},
+		"eventClosedMessage": {
+			"type": "string",
+			"default": ""
+		},
+		"showRemainingTickets": {
+			"type": "boolean",
+			"default": true
+		},
+		"showCouponField": {
+			"type": "string",
+			"default": "auto",
+			"enum": [ "auto", "show", "hide" ]
+		}
+	},
+	"supports": {
+		"html": false,
+		"multiple": false
+	},
+	"editorScript": "wordcamp-blocks",
+	"style": "wordcamp-blocks"
+}

@@ -1,0 +1,29 @@
+.wp-block-wordcamp-camptix {
+	.tix-tickets-preview {
+		width: 100%;
+		border-collapse: collapse;
+
+		th,
+		td {
+			padding: 8px 12px;
+			border: 1px solid #ddd;
+			text-align: left;
+		}
+
+		th {
+			background-color: #f6f7f7;
+			font-weight: 600;
+		}
+
+		select {
+			min-width: 60px;
+		}
+	}
+
+	.tix-coupon-preview {
+		margin-top: 12px;
+		padding: 8px 12px;
+		background-color: #f0f6fc;
+		border-left: 4px solid #3858e9;
+	}
+}

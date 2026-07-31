@@ -12,6 +12,7 @@ import * as sessions from './sessions';
 import * as speakerSessions from './speaker-sessions';
 import * as speakers from './speakers';
 import * as sponsors from './sponsors';
+import * as camptix from './camptix';
 
 export const BLOCKS = [
 	avatar,
@@ -25,4 +26,5 @@ export const BLOCKS = [
 	speakerSessions,
 	speakers,
 	sponsors,
+	camptix,
 ];

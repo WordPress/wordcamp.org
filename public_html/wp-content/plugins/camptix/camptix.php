@@ -61,6 +61,7 @@ class CampTix_Plugin {
 
 	// Allow others to use this.
 	public $filter_post_meta = false;
+	public $block_attributes = array();
 
 	public const PAYMENT_STATUS_CANCELLED = 1;
 	public const PAYMENT_STATUS_COMPLETED = 2;
@@ -4178,17 +4179,23 @@ class CampTix_Plugin {
 	function template_redirect() {
 		global $post;
 
-		if ( ! is_page() || ! $post instanceof WP_Post || ! stristr( $post->post_content, '[camptix' ) ) {
+		if ( ! is_page() || ! $post instanceof WP_Post ) {
 			return;
 		}
 
-		// Allow [camptix attr="value"] but not [camptix_attendees] etc.
-		if ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $post->post_content, $matches ) ) {
+		$block         = $this->get_camptix_block( $post->post_content );
+		$shortcode_str = $this->get_camptix_shortcode_string( $post->post_content );
+
+		if ( $block ) {
+			$this->block_attributes = $block['attrs'];
+			$this->shortcode_str    = '[camptix]';
+		} elseif ( $shortcode_str ) {
+			$this->block_attributes = array();
+			// Keep this in the case where we'd like to remove things around the shortcode.
+			$this->shortcode_str = $shortcode_str;
+		} else {
 			return;
 		}
-
-		// Keep this in the case where we'd like to remove things around the shortcode.
-		$this->shortcode_str = $matches[0];
 
 		$this->error_flags = array();
 
@@ -4205,7 +4212,13 @@ class CampTix_Plugin {
 		$this->tickets_selected = array();
 		$coupon_used_count = 0;
 		$via_reservation = false;
-		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
+
+		$max_tickets_per_order = $this->get_max_tickets_per_order();
+
+		// Auto-apply coupon from block attributes.
+		if ( empty( $_REQUEST['tix_coupon'] ) && ! empty( $this->block_attributes['coupon'] ) ) {
+			$_REQUEST['tix_coupon'] = sanitize_text_field( $this->block_attributes['coupon'] );
+		}
 
 		if ( count( $this->get_enabled_payment_methods() ) < 1 ) {
 			$this->error_flags['no_payment_methods'] = true;
@@ -4273,6 +4286,41 @@ class CampTix_Plugin {
 			}
 
 			$this->tickets[$ticket->ID] = $ticket;
+		}
+
+		// Filter tickets to only those specified by the block. If every value
+		// sanitizes to 0/invalid (e.g. the referenced tickets have all been
+		// deleted), this intentionally narrows to zero tickets rather than
+		// silently falling back to "show all" — the editor explicitly opted
+		// into a selection.
+		if ( ! empty( $this->block_attributes['ticketIds'] ) ) {
+			$ticket_ids = array_unique(
+				array_filter(
+					array_map(
+						'absint',
+						array_filter( (array) $this->block_attributes['ticketIds'], 'is_scalar' )
+					)
+				)
+			);
+
+			$this->tickets = array_intersect_key(
+				$this->tickets,
+				array_flip( $ticket_ids )
+			);
+		}
+
+		// Apply block attribute for remaining tickets visibility.
+		if ( isset( $this->block_attributes['showRemainingTickets'] ) && false === $this->block_attributes['showRemainingTickets'] ) {
+			add_filter( 'camptix_show_remaining_tickets', '__return_false' );
+		}
+
+		// Apply block attribute for coupon field visibility.
+		if ( ! empty( $this->block_attributes['showCouponField'] ) ) {
+			if ( 'hide' === $this->block_attributes['showCouponField'] ) {
+				add_filter( 'camptix_have_coupons', '__return_false' );
+			} elseif ( 'show' === $this->block_attributes['showCouponField'] ) {
+				add_filter( 'camptix_have_coupons', '__return_true' );
+			}
 		}
 
 		unset( $tickets, $ticket );
@@ -4430,6 +4478,88 @@ class CampTix_Plugin {
 	}
 
 	/**
+	 * Find the first CampTix block in post content.
+	 *
+	 * @param string $content Post content.
+	 *
+	 * @return array|false Block data if found. False otherwise.
+	 */
+	protected function get_camptix_block( $content ) {
+		if ( ! has_block( 'wordcamp/camptix', $content ) ) {
+			return false;
+		}
+
+		return $this->find_camptix_block( parse_blocks( $content ) );
+	}
+
+	/**
+	 * Recursively find the first CampTix block in parsed blocks.
+	 *
+	 * @param array $blocks Parsed block list.
+	 *
+	 * @return array|false Block data if found. False otherwise.
+	 */
+	protected function find_camptix_block( array $blocks ) {
+		foreach ( $blocks as $block ) {
+			if ( 'wordcamp/camptix' === $block['blockName'] ) {
+				return $block;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) ) {
+				$inner_block = $this->find_camptix_block( $block['innerBlocks'] );
+
+				if ( $inner_block ) {
+					return $inner_block;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Find the CampTix shortcode string in post content.
+	 *
+	 * @param string $content Post content.
+	 *
+	 * @return string|false Shortcode string if found. False otherwise.
+	 */
+	protected function get_camptix_shortcode_string( $content ) {
+		if ( false === stristr( $content, '[camptix' ) ) {
+			return false;
+		}
+
+		// Allow [camptix attr="value"] but not [camptix_attendees] etc.
+		if ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $content, $matches ) ) {
+			return false;
+		}
+
+		return $matches[0];
+	}
+
+	/**
+	 * Determine if post content contains a CampTix ticket form.
+	 *
+	 * @param string $content Post content.
+	 *
+	 * @return bool Whether the post content contains the shortcode or block.
+	 */
+	protected function has_camptix_ticket_form( $content ) {
+		return (bool) $this->get_camptix_shortcode_string( $content ) || (bool) $this->get_camptix_block( $content );
+	}
+
+	/**
+	 * Get the maximum number of tickets allowed per order.
+	 *
+	 * @return int Maximum tickets per order.
+	 */
+	protected function get_max_tickets_per_order() {
+		$default_max = max( 1, min( 10, (int) ( $this->block_attributes['maxTicketsPerOrder'] ?? 10 ) ) );
+
+		return apply_filters( 'camptix_max_tickets_per_order', $default_max );
+	}
+
+	/**
 	 * Set the reservation members if we have a valid request
 	 */
 	protected function maybe_set_reservation() {
@@ -4472,7 +4602,7 @@ class CampTix_Plugin {
 	 */
 	function form_start() {
 		$available_tickets = 0;
-		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
+		$max_tickets_per_order = $this->get_max_tickets_per_order();
 
 		foreach ( $this->tickets as $ticket ) {
 			if ( $this->is_ticket_valid_for_purchase( $ticket->ID ) ) {
@@ -4492,12 +4622,20 @@ class CampTix_Plugin {
 			$this->error( __( "It doesn't look like your form submitted any attendee information. Please try again.", 'wordcamporg' ) );
 		}
 
+		if ( isset( $this->error_flags['attendee_info_mismatch'] ) ) {
+			$this->error( __( 'The attendee information submitted does not match the selected tickets. Please review your order and try again.', 'wordcamporg' ) );
+		}
+
 		if ( ! $available_tickets && ! $this->is_wordcamp_closed() ) {
-			$this->notice( __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' ) );
+			$no_tickets_msg = ( $this->block_attributes['noTicketsMessage'] ?? '' )
+				?: __( 'Sorry, but there are currently no tickets for sale. Please try again later.', 'wordcamporg' );
+			$this->notice( $no_tickets_msg );
 		}
 
 		if ( $this->is_wordcamp_closed() ) {
-			$this->notice( __( 'This event has completed.', 'wordcamporg' ) );
+			$event_closed_msg = ( $this->block_attributes['eventClosedMessage'] ?? '' )
+				?: __( 'This event has completed.', 'wordcamporg' );
+			$this->notice( $event_closed_msg );
 		}
 
 		if ( $available_tickets && isset( $this->reservation ) && $this->reservation ) {
@@ -4564,6 +4702,8 @@ class CampTix_Plugin {
 
 		do_action( 'camptix_form_start_errors', $redirected_error_flags );
 
+		$show_remaining_tickets = apply_filters( 'camptix_show_remaining_tickets', true );
+
 		ob_start();
 		?>
 		<div id="tix">
@@ -4581,7 +4721,7 @@ class CampTix_Plugin {
 						<tr>
 							<th scope="col" class="tix-column-description"><?php _e( 'Description', 'wordcamporg' ); ?></th>
 							<th scope="col" class="tix-column-price"><?php _e( 'Price', 'wordcamporg' ); ?></th>
-							<?php if ( apply_filters( 'camptix_show_remaining_tickets', true ) ) : ?>
+							<?php if ( $show_remaining_tickets ) : ?>
 								<th scope="col" class="tix-column-remaining"><?php _e( 'Remaining', 'wordcamporg' ); ?></th>
 							<?php endif; ?>
 							<th scope="col" class="<?php echo esc_attr( implode( ' ', apply_filters( 'camptix_quantity_row_classes', array( 'tix-column-quantity' ) ) ) ); ?>">
@@ -4641,7 +4781,7 @@ class CampTix_Plugin {
 										<?php _e( 'Free', 'wordcamporg' ); ?>
 									<?php endif; ?>
 								</td>
-								<?php if ( apply_filters( 'camptix_show_remaining_tickets', true ) ) : ?>
+								<?php if ( $show_remaining_tickets ) : ?>
 									<td class="tix-column-remaining">
 										<?php echo esc_html( apply_filters( 'camptix_form_start_tix_remaining', $ticket->tix_remaining, $ticket ) ); ?>
 									</td>
@@ -4661,7 +4801,7 @@ class CampTix_Plugin {
 						<?php endforeach; ?>
 						<?php if ( $this->have_coupons() ) : ?>
 							<tr class="tix-row-coupon">
-								<td colspan="4" style="text-align: right;">
+								<td colspan="<?php echo esc_attr( $show_remaining_tickets ? 4 : 3 ); ?>" style="text-align: right;">
 									<?php if ( $this->coupon ) : ?>
 										<input type="hidden" name="tix_coupon" value="<?php echo esc_attr( $this->coupon->post_title ); ?>" />
 										<?php
@@ -5760,7 +5900,7 @@ class CampTix_Plugin {
 	}
 
 	/**
-	 * Looks for the [camptix] page and returns the page's id.
+	 * Looks for the ticket form page and returns the page's id.
 	 */
 	function get_tickets_post_id() {
 		$params = apply_filters( 'camptix_get_tickets_post_id_params', array(
@@ -5771,17 +5911,24 @@ class CampTix_Plugin {
 			'update_post_term_cache' => false,
 			'update_post_meta_cache' => false,
 		) );
-		$posts = get_posts( $params );
+		$block_params      = $params;
+		$block_params['s'] = 'wp:wordcamp/camptix';
+
+		// Key both result sets by post ID before merging so that numeric indexes
+		// from get_posts() can't collide and overwrite each other when a block
+		// page's ID happens to match an existing index from the shortcode search.
+		$posts = array();
+		foreach ( array_merge( get_posts( $params ), get_posts( $block_params ) ) as $post ) {
+			$posts[ $post->ID ] = $post;
+		}
 
 		if ( ! $posts )
 			return false;
 
 		foreach ( $posts as $post ) {
-
-			$matches = array();
-			// Allow [camptix attr="value"] but not [camptix_attendees] etc.
-			if ( ! preg_match( "#\\[camptix(\s[^\\]]+)?\\]#", $post->post_content, $matches ) )
+			if ( ! $this->has_camptix_ticket_form( $post->post_content ) ) {
 				continue;
+			}
 
 			return $post->ID;
 		}
@@ -5935,7 +6082,7 @@ class CampTix_Plugin {
 		}
 
 		if (
-			apply_filters( 'camptix_hide_empty_tickets', true ) &&
+			apply_filters( 'camptix_hide_empty_tickets', false ) &&
 			$this->get_remaining_tickets( $post->ID, $via_reservation ) < 1
 		) {
 			return false;
@@ -6094,11 +6241,16 @@ class CampTix_Plugin {
 	 */
 	function have_coupons() {
 		$coupons = $this->get_all_coupons();
-		foreach ( $coupons as $coupon )
-			if ( $this->is_coupon_valid_for_use( $coupon->ID ) )
-				return true;
+		$has_valid = false;
 
-		return false;
+		foreach ( $coupons as $coupon ) {
+			if ( $this->is_coupon_valid_for_use( $coupon->ID ) ) {
+				$has_valid = true;
+				break;
+			}
+		}
+
+		return apply_filters( 'camptix_have_coupons', $has_valid );
 	}
 
 	/**
@@ -6233,6 +6385,8 @@ class CampTix_Plugin {
 		}
 
 		do_action( 'camptix_checkout_start', $_POST['tix_attendee_info'], $this->order );
+		$attendee_ticket_counts = array_fill_keys( array_keys( $this->tickets_selected ), 0 );
+
 		foreach( (array) $_POST['tix_attendee_info'] as $i => $attendee_info ) {
 			$attendee = new stdClass;
 
@@ -6241,12 +6395,22 @@ class CampTix_Plugin {
 			$attendee_info = array_map( 'strip_tags', $attendee_info );
 			$attendee_info = array_map( 'trim', $attendee_info );
 
-			if ( ! isset( $attendee_info['ticket_id'] ) || ! array_key_exists( $attendee_info['ticket_id'], $this->tickets_selected ) ) {
+			$ticket_id = isset( $attendee_info['ticket_id'] ) ? absint( $attendee_info['ticket_id'] ) : 0;
+
+			if ( ! $ticket_id || ! array_key_exists( $ticket_id, $this->tickets_selected ) ) {
 				$this->error_flags['no_ticket_id'] = true;
 				continue;
 			}
 
-			$ticket = $this->tickets[ $attendee_info['ticket_id'] ];
+			$attendee_info['ticket_id'] = $ticket_id;
+			$attendee_ticket_counts[ $ticket_id ]++;
+
+			if ( $attendee_ticket_counts[ $ticket_id ] > $this->tickets_selected[ $ticket_id ] ) {
+				$this->error_flags['attendee_info_mismatch'] = true;
+				continue;
+			}
+
+			$ticket = $this->tickets[ $ticket_id ];
 			if ( ! $this->is_ticket_valid_for_purchase( $ticket->ID ) ) {
 				$this->error_flags['tickets_excess'] = true;
 				continue;
@@ -6310,6 +6474,13 @@ class CampTix_Plugin {
 			unset( $attendee, $answers, $questions, $ticket );
 		}
 
+		foreach ( $this->tickets_selected as $ticket_id => $selected_count ) {
+			if ( $attendee_ticket_counts[ $ticket_id ] !== (int) $selected_count ) {
+				$this->error_flags['attendee_info_mismatch'] = true;
+				break;
+			}
+		}
+
 		// @todo maybe check if email is one of the attendees emails
 		if ( isset( $_POST['tix_receipt_email_js'] ) && is_email( $_POST['tix_receipt_email_js'] ) )
 			$receipt_email = wp_unslash( $_POST['tix_receipt_email_js'] );
@@ -6323,6 +6494,10 @@ class CampTix_Plugin {
 		}
 
 		$this->verify_order( $this->order );
+
+		if ( $this->error_flags ) {
+			return $this->form_attendee_info();
+		}
 
 		$reservation_quantity = 0;
 		if ( isset( $this->reservation ) && $this->reservation )
@@ -6441,7 +6616,7 @@ class CampTix_Plugin {
 		$coupon = null;
 		$reservation = null;
 		$via_reservation = false;
-		$max_tickets_per_order = apply_filters( 'camptix_max_tickets_per_order', 10 );
+		$max_tickets_per_order = $this->get_max_tickets_per_order();
 
 		// Let's check the coupon first.
 		if ( ! empty( $order['coupon'] ) ) {

@@ -76,11 +76,15 @@ class Test_Helpers_WCPT_Sites extends Database_TestCase {
 	/**
 	 * Create a `wordcamp` post with the given meta.
 	 *
+	 * Created on the root blog, which is where `get_wordcamp_site_id()` looks for it.
+	 *
 	 * @param array $meta
 	 *
 	 * @return WP_Post
 	 */
 	protected function create_wordcamp( array $meta ) {
+		switch_to_blog( WORDCAMP_ROOT_BLOG_ID );
+
 		$post_id = self::factory()->post->create( array(
 			'post_type'   => 'wordcamp',
 			'post_status' => 'publish',
@@ -90,6 +94,10 @@ class Test_Helpers_WCPT_Sites extends Database_TestCase {
 			add_post_meta( $post_id, $key, $value );
 		}
 
-		return get_post( $post_id );
+		$wordcamp = get_post( $post_id );
+
+		restore_current_blog();
+
+		return $wordcamp;
 	}
 }

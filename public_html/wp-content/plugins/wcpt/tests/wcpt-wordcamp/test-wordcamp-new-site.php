@@ -46,7 +46,10 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 	 * Clean up after each test.
 	 */
 	public function tear_down() {
+		global $wcorg_subroles;
+
 		unset( $_POST['wcpt_url'], $_POST['wcpt_secondary_site'] );
+		$wcorg_subroles = array();
 		wp_set_current_user( 0 );
 
 		parent::tear_down();
@@ -76,11 +79,16 @@ class Test_WordCamp_New_Site extends Database_TestCase {
 
 	/**
 	 * Switch the current user to a WordCamp wrangler.
+	 *
+	 * The capability has to come through the subroles system: `omit_usermeta_caps()` deliberately strips
+	 * anything granted with `WP_User::add_cap()`.
 	 */
 	protected function become_wrangler() {
+		global $wcorg_subroles;
+
 		$wrangler = self::factory()->user->create( array( 'role' => 'administrator' ) );
 
-		get_user_by( 'id', $wrangler )->add_cap( 'wordcamp_wrangle_wordcamps' );
+		$wcorg_subroles = array( $wrangler => array( 'wordcamp_wrangler' ) );
 		wp_set_current_user( $wrangler );
 	}
 

@@ -65,7 +65,7 @@ if ( empty( $attending_ids ) ) {
 $now = current_time( 'mysql', true );
 global $wpdb;
 
-$table        = $wpdb->prefix . 'gatherpress_events';
+$table        = sprintf( \GatherPress\Core\Event\Event::TABLE_FORMAT, $wpdb->prefix );
 $placeholders = implode( ', ', array_fill( 0, count( $attending_ids ), '%d' ) );
 $query_args   = array_merge( $attending_ids, array( $now ) );
 

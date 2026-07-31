@@ -312,6 +312,7 @@ add_filter(
 
 		if ( 'past' === $time_filter ) {
 			$query_vars['gatherpress_event_query'] = 'past';
+			$query_vars['include_unfinished']      = 0;
 			$query_vars['order']                   = 'DESC';
 		} elseif ( 'all' === $time_filter ) {
 			unset( $query_vars['gatherpress_event_query'] );

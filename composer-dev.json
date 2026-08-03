@@ -16,6 +16,7 @@
 	"extra": {
 		"installer-paths": {
 			"public_html/wp-content/themes/{$name}": ["wporg/wporg-parent-2021"],
+			"public_html/wp-content/mu-plugins-private/{$name}/tmp": ["wporg/wporg-mu-plugins"],
 			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
 			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
 		}
@@ -24,6 +25,10 @@
 		{
 			"type": "vcs",
 			"url": "git@github.com:WordPress/wporg-parent-2021.git"
+		},
+		{
+			"type": "vcs",
+			"url": "https://github.com/WordPress/wporg-mu-plugins.git"
 		},
 		{
 			"type": "package",
@@ -225,6 +230,7 @@
 	"require": {
 		"composer/installers": "^2.2",
 		"wporg/wporg-parent-2021": "dev-build",
+		"wporg/wporg-mu-plugins": "dev-build",
 		"wordpress-plugin/akismet": "*",
 		"wordpress-plugin/bbpress": "*",
 		"wordpress-plugin/classic-editor": "*",
@@ -246,5 +252,20 @@
 		"wordpress-theme/twentytwentytwo": "*",
 		"wordpress-theme/twentytwentythree": "*",
 		"wordpress-theme/twentytwentyfour": "*"
+	},
+	"scripts": {
+		"_pub_sync_comment": "`wporg/wporg-mu-plugins` installs to `tmp/`, and its mu-plugins are then moved into place. This lives here rather than in the root manifest because the deploy checkout gets `pub-sync/` from the `mu-plugins-private/wporg-mu-plugins` external -- where it is versioned -- so Composer must never write to it there.",
+		"post-install-cmd": [
+			"@pub-sync"
+		],
+		"post-update-cmd": [
+			"@pub-sync"
+		],
+		"pub-sync": [
+			"mkdir -p public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync/*",
+			"mv public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/mu-plugins/* public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
+			"rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/"
+		]
 	}
 }

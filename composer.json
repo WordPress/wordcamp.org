@@ -21,17 +21,10 @@
 	"extra": {
 		"_installer_paths_comment": "Nothing here may install into `wp-content/plugins` or `wp-content/themes` -- those paths are managed by `svn:externals` on the deploy checkout, and Composer replaces a package's directory wholesale. WordPress plugins and themes needed for local development live in `composer-dev.json` instead.",
 		"installer-paths": {
-			"public_html/wp-content/mu-plugins-private/{$name}/tmp": ["wporg/wporg-mu-plugins"],
 			"public_html/wp-content/mu-plugins/vendor/{$vendor}/{$name}/": ["wordpress/mcp-adapter"],
 			"public_html/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"]
 		}
 	},
-	"repositories": [
-		{
-			"type": "vcs",
-			"url": "https://github.com/WordPress/wporg-mu-plugins.git"
-		}
-	],
 	"require": {
 		"adhocore/jwt": "^1.0",
 		"scssphp/scssphp": "^2.1.0",
@@ -46,7 +39,6 @@
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^4.0",
 		"composer/installers": "^2.2",
-		"wporg/wporg-mu-plugins": "dev-build",
 		"quickbooks/v3-php-sdk": "*"
 	},
 	"scripts": {
@@ -70,11 +62,7 @@
 			"[ $COMPOSER_DEV_MODE -eq 0 ] || COMPOSER=composer-dev.json composer install --no-interaction"
 		],
 		"post-update-cmd": [
-			"[ $COMPOSER_DEV_MODE -eq 0 ] || COMPOSER=composer-dev.json composer update --no-interaction",
-			"[ $COMPOSER_DEV_MODE -eq 0 ] || mkdir -p public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
-			"[ $COMPOSER_DEV_MODE -eq 0 ] || rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync/*",
-			"[ $COMPOSER_DEV_MODE -eq 0 ] || mv public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/mu-plugins/* public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
-			"[ $COMPOSER_DEV_MODE -eq 0 ] || rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/"
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || COMPOSER=composer-dev.json composer update --no-interaction"
 		]
 	}
 }

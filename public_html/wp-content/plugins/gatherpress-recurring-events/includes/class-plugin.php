@@ -54,7 +54,7 @@ final class Plugin {
 
 		add_action( 'rest_api_init', array( Rest_API::class, 'register' ) );
 		add_action( 'enqueue_block_editor_assets', array( Admin::class, 'enqueue' ) );
-		add_action( 'wp_enqueue_scripts', array( $this, 'styles' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'save_post_gatherpress_event', array( $this, 'save_event' ), 100, 2 );
 		add_filter( 'update_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
 		add_action( 'before_delete_post', array( $this, 'delete_event' ), 10, 2 );
@@ -112,9 +112,13 @@ final class Plugin {
 		}
 	}
 
-	/** Enqueues occurrence selector styling. */
-	public function styles(): void {
-		wp_enqueue_style( 'gpre', plugin_dir_url( FILE ) . 'assets/style.css', array(), VERSION );
+	/** Enqueues occurrence selector assets. */
+	public function assets(): void {
+		$style_path  = DIR . '/assets/style.css';
+		$script_path = DIR . '/assets/view.js';
+
+		wp_enqueue_style( 'gpre', plugin_dir_url( FILE ) . 'assets/style.css', array(), (string) filemtime( $style_path ) );
+		wp_enqueue_script( 'gpre', plugin_dir_url( FILE ) . 'assets/view.js', array(), (string) filemtime( $script_path ), true );
 	}
 
 	/**

@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use WP_REST_Request;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
@@ -110,6 +111,67 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertSame( 'weekly', get_post_meta( $event_id, Rule::META_PREFIX . 'frequency', true ) );
 		$this->assertSame( 3, (int) get_post_meta( $event_id, Rule::META_PREFIX . 'count', true ) );
 		$this->assertCount( 3, Occurrences::all( $event_id ) );
+	}
+
+	/**
+	 * Occurrence navigation retains earlier upcoming dates.
+	 */
+	public function test_occurrence_navigation_retains_earlier_upcoming_dates(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
+		$params  = array_merge(
+			$this->base_event_params(),
+			array(
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( $weekday ),
+					'end_type'  => 'count',
+					'count'     => 8,
+				),
+			)
+		);
+
+		Recurring_Events_Database::maybe_install();
+		$response    = create_event( $this->event_request( $params ) );
+		$event_id    = $response->get_data()['id'];
+		$occurrences = Occurrences::all( $event_id );
+		$compact     = Occurrences::around( $event_id, 6 );
+
+		$this->assertSame(
+			array_slice( wp_list_pluck( $occurrences, 'recurrence_id' ), 0, 6 ),
+			wp_list_pluck( $compact, 'recurrence_id' )
+		);
+
+		Context::set( $occurrences[6] );
+		$selector = Context::selector( $event_id );
+
+		$this->assertStringNotContainsString( 'gpre-view-all', $selector );
+		$this->assertStringNotContainsString( 'View all dates', $selector );
+
+		Context::set( null );
+	}
+
+	/**
+	 * The occurrence nonce endpoint restores cookie authentication.
+	 */
+	public function test_occurrence_nonce_authenticates_current_user(): void {
+		$user_id      = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$authenticate = static fn() => $user_id;
+
+		wp_set_current_user( 0 );
+		add_filter( 'determine_current_user', $authenticate, 99 );
+		$response = rest_do_request( '/gpre/v1/event/20260817T100000/nonce' );
+		remove_filter( 'determine_current_user', $authenticate, 99 );
+
+		wp_set_current_user( $user_id );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertNotFalse( wp_verify_nonce( $response->get_data()['nonce'], 'wp_rest' ) );
 	}
 
 	/**

@@ -182,10 +182,8 @@ final class Context {
 	 * @return string Selector markup.
 	 */
 	public static function selector( int $post_id ): string {
-		$current = self::recurrence_id();
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display preference.
-		$show_all    = isset( $_GET['gpre_all_dates'] );
-		$occurrences = $show_all ? Occurrences::all( $post_id, 'upcoming' ) : Occurrences::around( $post_id, $current, 6 );
+		$current     = self::recurrence_id();
+		$occurrences = Occurrences::around( $post_id, 6 );
 		$items       = '';
 
 		foreach ( $occurrences as $occurrence ) {
@@ -213,11 +211,9 @@ final class Context {
 		}
 
 		return sprintf(
-			'<nav class="gpre-occurrence-selector" aria-label="%1$s"><ul>%2$s</ul><a class="gpre-view-all" href="%3$s">%4$s</a></nav>%5$s',
+			'<nav class="gpre-occurrence-selector" aria-label="%1$s"><ul>%2$s</ul></nav>%3$s',
 			esc_attr__( 'Event dates', 'gpre' ),
 			$items,
-			esc_url( $show_all ? get_permalink( $post_id ) : add_query_arg( 'gpre_all_dates', '1', get_permalink( $post_id ) ) ),
-			$show_all ? esc_html__( 'Show fewer dates', 'gpre' ) : esc_html__( 'View all dates', 'gpre' ),
 			$notice
 		);
 	}

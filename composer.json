@@ -19,226 +19,23 @@
 		}
 	},
 	"extra": {
+		"_installer_paths_comment": "Nothing here may install into `wp-content/plugins` or `wp-content/themes` -- those paths are managed by `svn:externals` on the deploy checkout, and Composer replaces a package's directory wholesale. WordPress plugins and themes needed for local development live in `composer-dev.json` instead.",
 		"installer-paths": {
-			"public_html/wp-content/themes/{$name}": ["wporg/wporg-parent-2021"],
 			"public_html/wp-content/mu-plugins-private/{$name}/tmp": ["wporg/wporg-mu-plugins"],
 			"public_html/wp-content/mu-plugins/vendor/{$vendor}/{$name}/": ["wordpress/mcp-adapter"],
-			"public_html/wp-content/plugins/{$name}/": ["type:wordpress-plugin"],
-			"public_html/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"],
-			"public_html/wp-content/themes/{$name}/": ["type:wordpress-theme"]
+			"public_html/wp-content/mu-plugins/{$name}/": ["type:wordpress-muplugin"]
 		}
 	},
 	"repositories": [
 		{
 			"type": "vcs",
-			"url": "git@github.com:WordPress/wporg-parent-2021.git"
-		},
-		{
-			"type": "vcs",
 			"url": "https://github.com/WordPress/wporg-mu-plugins.git"
-		},
-		{
-			"type": "package",
-			"package": [
-				{
-					"name": "wordpress-plugin/akismet",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/akismet.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/bbpress",
-					"type": "wordpress-plugin",
-					"version": "2.6",
-					"source": {
-						"type": "svn",
-						"url": "https://plugins.svn.wordpress.org/bbpress/",
-						"reference": "branches/2.6/"
-					}
-				},
-				{
-					"name": "wordpress-plugin/classic-editor",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/classic-editor.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/custom-content-width",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/custom-content-width.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/edit-flow",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/edit-flow.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/email-post-changes",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/email-post-changes.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/gutenberg",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/gutenberg.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/jetpack",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/jetpack.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/liveblog",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/liveblog.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/public-post-preview",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/public-post-preview.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/pwa",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/pwa.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/tagregator",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/tagregator.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/wordpress-importer",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/wordpress-importer.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/wp-cldr",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/wp-cldr.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-plugin/wp-super-cache",
-					"type": "wordpress-plugin",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/plugin/wp-super-cache.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-theme/p2",
-					"type": "wordpress-theme",
-					"version": "1.5.8",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/theme/p2.1.5.8.zip"
-					}
-				},
-				{
-					"name": "wordpress-theme/twentyten",
-					"type": "wordpress-theme",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/theme/twentyten.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-theme/twentytwentytwo",
-					"type": "wordpress-theme",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/theme/twentytwentytwo.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-theme/twentytwentythree",
-					"type": "wordpress-theme",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/theme/twentytwentythree.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-theme/twentytwentyfour",
-					"type": "wordpress-theme",
-					"version": "999",
-					"dist": {
-						"type": "zip",
-						"url": "https://downloads.wordpress.org/theme/twentytwentyfour.latest-stable.zip"
-					}
-				},
-				{
-					"name": "wordpress-meta/wporg-profiles-wp-activity-notifier",
-					"type": "wordpress-plugin",
-					"version": "1.1",
-					"source": {
-						"type": "svn",
-						"url": "https://meta.svn.wordpress.org/sites/trunk/wordpress.org/public_html/wp-content/plugins/",
-						"reference": "wporg-profiles-wp-activity-notifier/"
-					}
-				}
-			]
 		}
 	],
 	"require": {
 		"adhocore/jwt": "^1.0",
 		"scssphp/scssphp": "^2.1.0",
-		"wordpress/mcp-adapter": "^0.5.0",
-		"wporg/wporg-parent-2021": "dev-build"
+		"wordpress/mcp-adapter": "^0.5.0"
 	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0.0",
@@ -249,28 +46,7 @@
 		"spatie/phpunit-watcher": "^1.23",
 		"yoast/phpunit-polyfills": "^4.0",
 		"composer/installers": "^2.2",
-		"wordpress-plugin/akismet": "*",
-		"wordpress-plugin/bbpress": "*",
-		"wordpress-plugin/classic-editor": "*",
-		"wordpress-plugin/custom-content-width": "*",
-		"wordpress-plugin/edit-flow": "*",
-		"wordpress-plugin/email-post-changes": "*",
-		"wordpress-plugin/gutenberg": "*",
-		"wordpress-plugin/jetpack": "*",
-		"wordpress-plugin/liveblog": "*",
-		"wordpress-plugin/public-post-preview": "*",
-		"wordpress-plugin/pwa": "*",
-		"wordpress-plugin/tagregator": "*",
-		"wordpress-plugin/wordpress-importer": "*",
-		"wordpress-plugin/wp-cldr": "*",
-		"wordpress-plugin/wp-super-cache": "*",
-		"wordpress-meta/wporg-profiles-wp-activity-notifier": "*",
 		"wporg/wporg-mu-plugins": "dev-build",
-		"wordpress-theme/p2": "*",
-		"wordpress-theme/twentyten": "*",
-		"wordpress-theme/twentytwentytwo": "*",
-		"wordpress-theme/twentytwentythree": "*",
-		"wordpress-theme/twentytwentyfour": "*",
 		"quickbooks/v3-php-sdk": "*"
 	},
 	"scripts": {
@@ -289,7 +65,12 @@
 		"phpcbf": "phpcbf -p",
 		"tw": "@test:watch",
 		"twg": "@test:watch:group",
+		"_composer_dev_comment": "`composer-dev.json` installs the WordPress plugins and themes that only the local environment needs. Chaining it here keeps `composer install` and `composer update` doing what they always have. The deploy checkout skips it by passing `--no-scripts`, so Composer never touches the `svn:externals` directories there.",
+		"post-install-cmd": [
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || COMPOSER=composer-dev.json composer install --no-interaction"
+		],
 		"post-update-cmd": [
+			"[ $COMPOSER_DEV_MODE -eq 0 ] || COMPOSER=composer-dev.json composer update --no-interaction",
 			"[ $COMPOSER_DEV_MODE -eq 0 ] || mkdir -p public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",
 			"[ $COMPOSER_DEV_MODE -eq 0 ] || rm -rf public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync/*",
 			"[ $COMPOSER_DEV_MODE -eq 0 ] || mv public_html/wp-content/mu-plugins-private/wporg-mu-plugins/tmp/mu-plugins/* public_html/wp-content/mu-plugins-private/wporg-mu-plugins/pub-sync",

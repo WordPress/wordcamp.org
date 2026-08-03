@@ -47,6 +47,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
+import RecurrenceControls, { normalizeRecurrence } from '../../components/recurrence-controls';
 
 const NS =
 	( window.wporgGroupsEventModal &&
@@ -343,6 +344,7 @@ const NS =
 		const [ form, setForm ] = useState( EMPTY_FORM );
 		const [ initialDescription, setInitialDescription ] = useState( '' );
 		const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
+		const [ recurrence, setRecurrence ] = useState( null );
 		const [ venues, setVenues ] = useState( [] );
 		const descriptionRef = useRef( () => '' );
 
@@ -392,6 +394,7 @@ const NS =
 						id: res.fields.featured_image_id || 0,
 						url: res.fields.featured_image_url || '',
 					} );
+					setRecurrence( normalizeRecurrence( res.fields.recurrence ) );
 					setForm( {
 						title: res.fields.title || '',
 						date: res.fields.date || '',
@@ -451,6 +454,7 @@ const NS =
 				new_venue_name: isAddingNewVenue ? form.new_venue_name : '',
 				new_venue_address: isAddingNewVenue ? form.new_venue_address : '',
 				featured_image_id: featuredImage.id,
+				recurrence,
 			};
 		};
 
@@ -487,7 +491,7 @@ const NS =
 			}, AUTOSAVE_INTERVAL_MS );
 			return () => clearInterval( interval );
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		}, [ isEdit, draftId, saving, loading, form ] );
+		}, [ isEdit, draftId, saving, loading, form, recurrence ] );
 
 		const updateField = ( field, value ) => {
 			setForm( ( prev ) => ( { ...prev, [ field ]: value } ) );
@@ -712,6 +716,15 @@ const NS =
 							},
 						} )
 					),
+
+					h( RecurrenceControls, {
+						value: recurrence,
+						eventDate: form.date,
+						onChange: ( value ) => {
+							setRecurrence( value );
+							markDirty();
+						},
+					} ),
 
 					h( VenueField, {
 						venues: venues,

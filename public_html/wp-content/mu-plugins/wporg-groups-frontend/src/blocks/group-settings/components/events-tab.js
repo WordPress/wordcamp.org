@@ -35,6 +35,7 @@ import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from '../../event-manage/venue-editor';
+import RecurrenceControls, { normalizeRecurrence } from '../../../components/recurrence-controls';
 
 const NS =
 	( window.wporgGroupsEventModal &&
@@ -188,6 +189,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 	} );
 	const [ initialDescription, setInitialDescription ] = useState( '' );
 	const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
+	const [ recurrence, setRecurrence ] = useState( null );
 	const [ venues, setVenues ] = useState( [] );
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
 	const [ speakers, setSpeakers ] = useState( [] );
@@ -212,6 +214,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 				} );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( { id: res.fields.featured_image_id || 0, url: res.fields.featured_image_url || '' } );
+				setRecurrence( normalizeRecurrence( res.fields.recurrence ) );
 				setVenues( res.venues || [] );
 
 				// Load speakers for this event and member list for autocomplete.
@@ -268,6 +271,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					is_online: form.is_online,
 					online_event_link: form.is_online ? form.online_event_link : '',
 					featured_image_id: featuredImage.id,
+					recurrence,
 				},
 			} );
 
@@ -307,6 +311,11 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( TextControl, { label: __( 'Start time', 'wporg-groups-frontend' ), type: 'time', value: form.time_start, onChange: ( v ) => updateField( 'time_start', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( DurationField, { timeStart: form.time_start, timeEnd: form.time_end, onChange: ( v ) => updateField( 'time_end', v ) } ) ),
+		h( RecurrenceControls, {
+			value: recurrence,
+			eventDate: form.date,
+			onChange: setRecurrence,
+		} ),
 		h( VenueField, {
 			venues, venueId: form.venue_select,
 			onSelect: ( v ) => updateField( 'venue_select', v ),

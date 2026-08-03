@@ -29,6 +29,7 @@ function manually_load_plugin() {
 
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
 	require_once WP_PLUGIN_DIR . '/gatherpress-recurring-events/plugin.php';
+	require_once dirname( __DIR__ ) . '/gatherpress-recurring-events.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

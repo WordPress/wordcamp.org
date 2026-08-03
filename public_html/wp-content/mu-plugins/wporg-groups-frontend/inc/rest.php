@@ -397,7 +397,7 @@ function draft_args_schema(): array {
  * Argument schema shared between POST /event and POST /event/{id}.
  */
 function event_args_schema(): array {
-	return array(
+	$args = array(
 		'title'             => array(
 			'type'              => 'string',
 			'required'          => true,
@@ -471,6 +471,13 @@ function event_args_schema(): array {
 			'sanitize_callback' => 'absint',
 		),
 	);
+
+	/**
+	 * Filters the arguments accepted by the frontend event endpoints.
+	 *
+	 * @param array $args REST argument schema.
+	 */
+	return apply_filters( 'wporg_groups_frontend_event_args_schema', $args );
 }
 
 /**
@@ -535,6 +542,15 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	// `undefined` checks.
 	$fields['featured_image_id']  = $fields['featured_image_id'] ?? 0;
 	$fields['featured_image_url'] = $fields['featured_image_url'] ?? '';
+
+	/**
+	 * Filters the fields returned to the frontend event form.
+	 *
+	 * @param array $fields     Event form fields.
+	 * @param int   $event_id   Requested event ID, or zero when creating.
+	 * @param bool  $is_editing Whether an existing event is being edited.
+	 */
+	$fields = apply_filters( 'wporg_groups_frontend_event_form_fields', $fields, $event_id, $is_editing );
 
 	$venues = array_map(
 		static function ( $post ) {
@@ -687,6 +703,14 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		set_post_thumbnail( $saved_id, $featured_image_id );
 	}
 
+	/**
+	 * Fires after a frontend event draft has been saved.
+	 *
+	 * @param int             $saved_id Saved draft ID.
+	 * @param WP_REST_Request $request  REST request.
+	 */
+	do_action( 'wporg_groups_frontend_event_draft_saved', $saved_id, $request );
+
 	return new WP_REST_Response(
 		array(
 			'id'           => $saved_id,
@@ -754,7 +778,8 @@ function resolve_event_end_date( string $date, string $time_start, string $time_
  * navigate to it.
  */
 function persist_event( int $event_id, WP_REST_Request $request ) {
-	$fields = array(
+	$schedule_editable = 0 === $event_id || 'publish' !== get_post_status( $event_id );
+	$fields            = array(
 		'title'             => (string) $request->get_param( 'title' ),
 		'description'       => (string) $request->get_param( 'description' ),
 		'date'              => (string) $request->get_param( 'date' ),
@@ -767,6 +792,20 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		'featured_image_id' => (int) $request->get_param( 'featured_image_id' ),
 	);
+
+	/**
+	 * Filters frontend event request validation before anything is persisted.
+	 *
+	 * Extensions may return a WP_Error to reject their request fields.
+	 *
+	 * @param null|WP_Error   $error    Validation error, if any.
+	 * @param WP_REST_Request $request  REST request.
+	 * @param int             $event_id Existing event ID, or zero when creating.
+	 */
+	$validation_error = apply_filters( 'wporg_groups_frontend_validate_event_request', null, $request, $event_id );
+	if ( is_wp_error( $validation_error ) ) {
+		return $validation_error;
+	}
 
 	if ( '' === trim( $fields['title'] ) ) {
 		return new WP_Error( 'wporg_groups_missing_title', 'Title is required.', array( 'status' => 400 ) );
@@ -829,6 +868,15 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		// Explicit clear on edit.
 		delete_post_thumbnail( $saved_id );
 	}
+
+	/**
+	 * Fires after a frontend event has been published and its core fields saved.
+	 *
+	 * @param int             $saved_id          Saved event ID.
+	 * @param WP_REST_Request $request           REST request.
+	 * @param bool            $schedule_editable Whether the schedule was editable before this save.
+	 */
+	do_action( 'wporg_groups_frontend_event_saved', $saved_id, $request, $schedule_editable );
 
 	return new WP_REST_Response(
 		array(

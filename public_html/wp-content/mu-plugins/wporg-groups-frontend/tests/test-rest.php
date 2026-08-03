@@ -3,8 +3,13 @@
 namespace WordCamp\Groups\Tests;
 
 use WP_REST_Request;
+use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
+use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 
 use function WordCamp\Groups\Frontend\REST\create_event;
+use function WordCamp\Groups\Frontend\REST\event_args_schema;
+use function WordCamp\Groups\Frontend\REST\get_event_form_data;
 use function WordCamp\Groups\Frontend\REST\update_event;
 use function WordCamp\Groups\Frontend\REST\save_draft;
 use function WordCamp\Groups\Frontend\REST\publish_draft;
@@ -58,6 +63,85 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertArrayHasKey( 'id', $data );
 		$this->assertSame( 'gatherpress_event', get_post_type( $data['id'] ) );
 		$this->assertSame( 'publish', get_post_status( $data['id'] ) );
+	}
+
+	/**
+	 * The frontend form exposes recurrence controls when the extension is active.
+	 */
+	public function test_event_form_exposes_recurrence_fields(): void {
+		$response   = get_event_form_data( new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' ) );
+		$recurrence = $response->get_data()['fields']['recurrence'];
+
+		$this->assertTrue( $recurrence['available'] );
+		$this->assertFalse( $recurrence['locked'] );
+		$this->assertSame( '', $recurrence['frequency'] );
+		$this->assertSame( 12, $recurrence['count'] );
+		$this->assertTrue( rest_validate_value_from_schema( $recurrence, event_args_schema()['recurrence'], 'recurrence' ) );
+	}
+
+	/**
+	 * Creating a recurring event through the frontend projects its occurrences.
+	 */
+	public function test_create_recurring_event_from_frontend(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
+		$params  = array_merge(
+			$this->base_event_params(),
+			array(
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( $weekday ),
+					'end_type'  => 'count',
+					'count'     => 3,
+				),
+			)
+		);
+
+		Recurring_Events_Database::maybe_install();
+		$response = create_event( $this->event_request( $params ) );
+
+		$this->assertNotWPError( $response );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( 'weekly', get_post_meta( $event_id, Rule::META_PREFIX . 'frequency', true ) );
+		$this->assertSame( 3, (int) get_post_meta( $event_id, Rule::META_PREFIX . 'count', true ) );
+		$this->assertCount( 3, Occurrences::all( $event_id ) );
+	}
+
+	/**
+	 * Draft autosaves retain recurrence data without locking the schedule.
+	 */
+	public function test_recurring_event_draft_round_trip(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
+		$request->set_param( 'title', 'Recurring draft' );
+		$request->set_param( 'date', gmdate( 'Y-m-d', strtotime( '+14 days' ) ) );
+		$request->set_param( 'time_start', '18:00' );
+		$request->set_param( 'time_end', '20:00' );
+		$request->set_param(
+			'recurrence',
+			array(
+				'frequency'  => 'monthly',
+				'interval'   => 1,
+				'end_type'   => 'count',
+				'count'      => 4,
+			)
+		);
+
+		$draft_id = save_draft( $request )->get_data()['id'];
+		$load     = new WP_REST_Request( 'GET', '/wporg-groups/v1/event-form-data' );
+		$load->set_param( 'event_id', $draft_id );
+		$fields = get_event_form_data( $load )->get_data()['fields'];
+
+		$this->assertSame( 'monthly', $fields['recurrence']['frequency'] );
+		$this->assertSame( 4, $fields['recurrence']['count'] );
+		$this->assertFalse( $fields['recurrence']['locked'] );
 	}
 
 	/**

@@ -6233,6 +6233,7 @@ class CampTix_Plugin {
 		}
 
 		do_action( 'camptix_checkout_start', $_POST['tix_attendee_info'], $this->order );
+		$issued_count_by_ticket = array();
 		foreach( (array) $_POST['tix_attendee_info'] as $i => $attendee_info ) {
 			$attendee = new stdClass;
 
@@ -6248,6 +6249,13 @@ class CampTix_Plugin {
 
 			$ticket = $this->tickets[ $attendee_info['ticket_id'] ];
 			if ( ! $this->is_ticket_valid_for_purchase( $ticket->ID ) ) {
+				$this->error_flags['tickets_excess'] = true;
+				continue;
+			}
+
+			// Cap issued tickets at the quantity that was priced into the order.
+			$issued_count_by_ticket[ $ticket->ID ] = ( $issued_count_by_ticket[ $ticket->ID ] ?? 0 ) + 1;
+			if ( $issued_count_by_ticket[ $ticket->ID ] > (int) ( $this->tickets_selected[ $ticket->ID ] ?? 0 ) ) {
 				$this->error_flags['tickets_excess'] = true;
 				continue;
 			}

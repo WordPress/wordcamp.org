@@ -8,6 +8,7 @@ on:
     - .github/workflows/**
     - phpunit.*
     - composer.json
+    - composer-dev.json
   push:
     branches: [production]
     paths:
@@ -15,6 +16,7 @@ on:
     - .github/workflows/**
     - phpunit.*
     - composer.json
+    - composer-dev.json
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -104,7 +106,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.composer-cache.outputs.dir }}
-        key: composer-${{ runner.os }}-${{ hashFiles('composer.json') }}
+        key: composer-${{ runner.os }}-${{ hashFiles('composer.json', 'composer-dev.json') }}
         restore-keys: |
           composer-${{ runner.os }}-
 

@@ -142,7 +142,7 @@ function filter_to_upcoming( array $event_ids ): array {
 		return array();
 	}
 
-	$table        = $wpdb->prefix . 'gatherpress_events';
+	$table        = sprintf( \GatherPress\Core\Event\Event::TABLE_FORMAT, $wpdb->prefix );
 	$placeholders = implode( ', ', array_fill( 0, count( $event_ids ), '%d' ) );
 	$query_args   = array_merge( $event_ids, array( current_time( 'mysql', true ) ) );
 

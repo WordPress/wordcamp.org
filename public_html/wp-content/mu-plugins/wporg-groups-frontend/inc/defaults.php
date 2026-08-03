@@ -31,17 +31,21 @@ use GatherPress\Core\Venue\Setup as Venue_Setup;
  *     date:string,
  *     time_start:string,
  *     time_end:string,
- *     venue_id:int
+ *     venue_id:int,
+ *     is_online:bool,
+ *     online_event_link:string
  * }
  */
 function get_default_event_data(): array {
 	$defaults = array(
-		'title'       => '',
-		'description' => '',
-		'date'        => wp_date( 'Y-m-d', strtotime( '+7 days' ) ),
-		'time_start'  => '18:00',
-		'time_end'    => '20:00',
-		'venue_id'    => 0,
+		'title'             => '',
+		'description'       => '',
+		'date'              => wp_date( 'Y-m-d', strtotime( '+7 days' ) ),
+		'time_start'        => '18:00',
+		'time_end'          => '20:00',
+		'venue_id'          => 0,
+		'is_online'         => false,
+		'online_event_link' => '',
 	);
 
 	$most_recent = get_most_recent_event_id();
@@ -117,31 +121,6 @@ const DESCRIPTION_BLOCK_NAMES = array(
 	'core/columns',
 	'core/column',
 );
-
-/**
- * Pull a plain-text description out of an existing event's `post_content`.
- *
- * Concatenates the inner text of every `core/paragraph` block, ignoring all
- * the GatherPress metadata blocks (event-date, venue, RSVP, etc.) so when
- * the form reopens an existing event the description box only contains the
- * prose the user originally typed.
- */
-function extract_description_text( int $event_id ): string {
-	$content = (string) get_post_field( 'post_content', $event_id );
-	if ( '' === $content ) {
-		return '';
-	}
-
-	$parts = array();
-	foreach ( parse_blocks( $content ) as $block ) {
-		if ( 'core/paragraph' !== $block['blockName'] ) {
-			continue;
-		}
-		$parts[] = trim( wp_strip_all_tags( $block['innerHTML'] ) );
-	}
-
-	return trim( implode( "\n\n", array_filter( $parts ) ) );
-}
 
 /**
  * Pull the description blocks (only) out of an existing event's post_content.

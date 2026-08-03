@@ -25,9 +25,12 @@
 	],
 	"scripts": {
 		"setup": "composer install && npm ci && npm run build --workspaces --if-present",
-		"build": "npm run build --workspaces --if-present"
+		"build": "npm run build --workspaces --if-present",
+		"test:e2e": "playwright test"
 	},
 	"devDependencies": {
+		"@playwright/test": "1.61.1",
+		"@wordpress/e2e-test-utils-playwright": "1.51.0",
 		"@wordpress/eslint-plugin": "25.4.0",
 		"@wordpress/jest-preset-default": "12.48.0",
 		"@wordpress/prettier-config": "4.48.0",

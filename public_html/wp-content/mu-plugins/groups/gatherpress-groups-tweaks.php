@@ -195,29 +195,27 @@ add_action(
  *
  * Stores an array of user IDs who are speaking at the event.
  */
-add_action(
-	'init',
-	static function (): void {
-		register_post_meta(
-			'gatherpress_event',
-			'_event_speakers',
-			array(
-				'type'          => 'array',
-				'single'        => true,
-				'default'       => array(),
-				'show_in_rest'  => array(
-					'schema' => array(
-						'type'  => 'array',
-						'items' => array( 'type' => 'integer' ),
-					),
+function register_event_speakers_meta(): void {
+	register_post_meta(
+		'gatherpress_event',
+		'_event_speakers',
+		array(
+			'type'          => 'array',
+			'single'        => true,
+			'default'       => array(),
+			'show_in_rest'  => array(
+				'schema' => array(
+					'type'  => 'array',
+					'items' => array( 'type' => 'integer' ),
 				),
-				'auth_callback' => static function () {
-					return current_user_can( 'edit_posts' );
-				},
-			)
-		);
-	}
-);
+			),
+			'auth_callback' => static function () {
+				return current_user_can( 'edit_posts' );
+			},
+		)
+	);
+}
+add_action( 'init', __NAMESPACE__ . '\register_event_speakers_meta' );
 
 /**
  * Rewrite the search block form action on the events archive to submit
@@ -443,4 +441,70 @@ add_filter(
 	},
 	10,
 	2
+);
+
+/**
+ * Require an editing capability to read venues over the REST API.
+ *
+ * Making the post type non-public closes the front-end routes, but it does
+ * not close the REST ones: WP_REST_Posts_Controller gates anonymous reads on
+ * `show_in_rest` alone, and grants them for any `publish` post. GatherPress
+ * needs `show_in_rest` for block-editor venue authoring, so it cannot simply
+ * be turned off, and the collection endpoint otherwise hands out venue
+ * addresses, descriptions and meta to unauthenticated callers.
+ *
+ * Wrap the read handlers' permission callbacks rather than replacing them,
+ * so the controller's own checks still run for anyone who passes this gate.
+ * Front-end venue output is server-rendered (see the
+ * `render_block_gatherpress/venue` filter above) and the event form's venue
+ * list comes from `wporg-groups/v1`, so neither depends on these routes.
+ */
+add_filter(
+	'rest_endpoints',
+	static function ( array $endpoints ): array {
+		$post_type = get_post_type_object( 'gatherpress_venue' );
+
+		if ( ! $post_type || empty( $post_type->show_in_rest ) ) {
+			return $endpoints;
+		}
+
+		$base   = '/' . ( $post_type->rest_namespace ?: 'wp/v2' ) . '/' . ( $post_type->rest_base ?: $post_type->name );
+		$routes = array_filter(
+			array_keys( $endpoints ),
+			static function ( string $route ) use ( $base ): bool {
+				return $route === $base || str_starts_with( $route, $base . '/' );
+			}
+		);
+
+		foreach ( $routes as $route ) {
+			foreach ( $endpoints[ $route ] as $index => $handler ) {
+				$methods = $handler['methods'] ?? array();
+
+				if ( is_string( $methods ) ) {
+					$methods = array_fill_keys( array_map( 'trim', explode( ',', $methods ) ), true );
+				}
+
+				// Writes already require capabilities; only reads are open.
+				if ( empty( $methods['GET'] ) ) {
+					continue;
+				}
+
+				$original = $handler['permission_callback'] ?? null;
+
+				$endpoints[ $route ][ $index ]['permission_callback'] = static function ( $request ) use ( $original ) {
+					if ( ! current_user_can( 'edit_posts' ) ) {
+						return new \WP_Error(
+							'rest_forbidden',
+							__( 'Sorry, you are not allowed to view venues.', 'wporg-groups-frontend' ),
+							array( 'status' => rest_authorization_required_code() )
+						);
+					}
+
+					return is_callable( $original ) ? $original( $request ) : true;
+				};
+			}
+		}
+
+		return $endpoints;
+	}
 );

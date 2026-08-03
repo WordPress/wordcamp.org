@@ -2,122 +2,72 @@
 /**
  * Server-side rendering for the wporg/my-events block.
  *
- * Shows the current logged-in user their upcoming RSVPed events.
+ * Shows the current logged-in member their upcoming events, meaning both the
+ * ones they have RSVP'd to as attending and the ones they authored, which on a
+ * group site are the ones they organise. Authorship is unioned into the query
+ * rather than written into the RSVP data, so "attending" keeps meaning that the
+ * person said they are coming (#1810).
+ *
+ * The heading renders with an explanatory line when a member has no upcoming
+ * events, rather than the block disappearing: a block that renders nothing is
+ * indistinguishable from a broken one, which is how #1810 came to be reported.
  *
  * @package WordCamp\Groups\Frontend
  */
+
+use function WordCamp\Groups\Frontend\My_Events\get_upcoming_event_ids;
 
 if ( ! is_user_logged_in() || ! is_user_member_of_blog() ) {
 	return;
 }
 
-$user_id = get_current_user_id();
+$wporg_upcoming_ids = get_upcoming_event_ids( get_current_user_id() );
 
-// Find RSVP comments by this user with "attending" status.
-$rsvp_comments = get_comments(
-	array(
-		'user_id' => $user_id,
-		'type'    => 'gatherpress_rsvp',
-		'status'  => 'approve',
-		'number'  => 100,
-	)
-);
+$wporg_upcoming_events = empty( $wporg_upcoming_ids )
+	? array()
+	: get_posts(
+		array(
+			'post_type'      => 'gatherpress_event',
+			'post_status'    => 'publish',
+			'post__in'       => $wporg_upcoming_ids,
+			'orderby'        => 'post__in',
+			'posts_per_page' => count( $wporg_upcoming_ids ),
+		)
+	);
 
-if ( empty( $rsvp_comments ) ) {
-	return;
-}
-
-$comment_event_ids = array();
-foreach ( $rsvp_comments as $rsvp_comment ) {
-	$comment_event_ids[ (int) $rsvp_comment->comment_ID ] = (int) $rsvp_comment->comment_post_ID;
-}
-
-$rsvp_terms = wp_get_object_terms(
-	array_keys( $comment_event_ids ),
-	'_gatherpress_rsvp_status',
-	array( 'fields' => 'all_with_object_id' )
-);
-
-if ( is_wp_error( $rsvp_terms ) ) {
-	return;
-}
-
-// Filter to only attending RSVPs without re-querying per event.
-$attending_ids = array();
-foreach ( $rsvp_terms as $rsvp_term ) {
-	if ( 'attending' !== $rsvp_term->slug ) {
-		continue;
-	}
-
-	$event_id = $comment_event_ids[ (int) $rsvp_term->object_id ] ?? 0;
-	if ( $event_id ) {
-		$attending_ids[ $event_id ] = $event_id;
-	}
-}
-
-$attending_ids = array_values( $attending_ids );
-
-if ( empty( $attending_ids ) ) {
-	return;
-}
-
-// Get event posts, filter to upcoming only.
-$now = current_time( 'mysql', true );
-global $wpdb;
-
-$table        = sprintf( \GatherPress\Core\Event\Event::TABLE_FORMAT, $wpdb->prefix );
-$placeholders = implode( ', ', array_fill( 0, count( $attending_ids ), '%d' ) );
-$query_args   = array_merge( $attending_ids, array( $now ) );
-
-// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name and placeholders are generated locally.
-$upcoming_ids = $wpdb->get_col( $wpdb->prepare( "SELECT post_id FROM {$table} WHERE post_id IN ( {$placeholders} ) AND datetime_end_gmt >= %s", $query_args ) );
-$upcoming_ids = array_map( 'intval', $upcoming_ids );
-$upcoming_ids = array_values( array_intersect( $attending_ids, $upcoming_ids ) );
-
-if ( empty( $upcoming_ids ) ) {
-	return;
-}
-
-$upcoming_events = get_posts(
-	array(
-		'post_type'      => 'gatherpress_event',
-		'post_status'    => 'publish',
-		'post__in'       => $upcoming_ids,
-		'orderby'        => 'post__in',
-		'posts_per_page' => count( $upcoming_ids ),
-	)
-);
-
-if ( empty( $upcoming_events ) ) {
-	return;
-}
-
-$wrapper_attributes = get_block_wrapper_attributes(
+$wporg_wrapper_attributes = get_block_wrapper_attributes(
 	array( 'class' => 'wporg-my-events' )
 );
 ?>
-<div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+<div <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<h3 class="wporg-my-events__heading">
 		<?php esc_html_e( 'My upcoming events', 'wporg-groups-frontend' ); ?>
 	</h3>
-	<div class="wporg-my-events__list">
-		<?php foreach ( $upcoming_events as $event_post ) :
-			$event = new \GatherPress\Core\Event\Event( $event_post->ID );
-			$start = get_post_meta( $event_post->ID, 'gatherpress_datetime_start', true );
-			$date_label = '';
-			if ( $start ) {
-				try {
-					$dt = new \DateTime( $start );
-					$date_label = $dt->format( 'M j, Y · g:i A' );
-				} catch ( \Exception $e ) {
-					$date_label = $start;
+	<?php if ( empty( $wporg_upcoming_events ) ) : ?>
+		<p class="wporg-my-events__empty">
+			<?php esc_html_e( 'Nothing on your calendar yet. Events you RSVP to, and events you organise, will show up here.', 'wporg-groups-frontend' ); ?>
+		</p>
+	<?php else : ?>
+		<div class="wporg-my-events__list">
+			<?php
+			foreach ( $wporg_upcoming_events as $wporg_event_post ) :
+				$wporg_start      = get_post_meta( $wporg_event_post->ID, 'gatherpress_datetime_start', true );
+				$wporg_date_label = '';
+
+				if ( $wporg_start ) {
+					try {
+						$wporg_datetime   = new \DateTime( $wporg_start );
+						$wporg_date_label = $wporg_datetime->format( 'M j, Y · g:i A' );
+					} catch ( \Exception $e ) {
+						$wporg_date_label = $wporg_start;
+					}
 				}
-			}
-			?>
-			<a class="wporg-my-events__item" href="<?php echo esc_url( get_permalink( $event_post->ID ) ); ?>">
-				<span class="wporg-my-events__date"><?php echo esc_html( $date_label ); ?></span>
-				<span class="wporg-my-events__title"><?php echo esc_html( get_the_title( $event_post->ID ) ); ?></span>
-			</a>
-		<?php endforeach; ?>
-	</div>
+				?>
+				<a class="wporg-my-events__item" href="<?php echo esc_url( get_permalink( $wporg_event_post->ID ) ); ?>">
+					<span class="wporg-my-events__date"><?php echo esc_html( $wporg_date_label ); ?></span>
+					<span class="wporg-my-events__title"><?php echo esc_html( get_the_title( $wporg_event_post->ID ) ); ?></span>
+				</a>
+			<?php endforeach; ?>
+		</div>
+	<?php endif; ?>
 </div>

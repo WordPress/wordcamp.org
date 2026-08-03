@@ -67,6 +67,15 @@
 				./public_html/wp-content/plugins/wordcamp-coming-soon-page/tests/
 			</directory>
 		</testsuite>
+
+		<testsuite name="WordCamp Groups">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests/
+			</directory>
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/mu-plugins/groups/tests/
+			</directory>
+		</testsuite>
 	</testsuites>
 
 	<coverage cacheDirectory=".phpunit/coverage-cache">
@@ -89,6 +98,10 @@
 		<exclude>
 			<directory>./public_html/wp-content/mu-plugins/tests</directory>
 			<directory>./public_html/wp-content/mu-plugins/vendor</directory>
+			<directory>./public_html/wp-content/mu-plugins/wporg-groups-frontend/tests</directory>
+			<directory>./public_html/wp-content/mu-plugins/wporg-groups-frontend/build</directory>
+			<directory>./public_html/wp-content/mu-plugins/wporg-groups-frontend/node_modules</directory>
+			<directory>./public_html/wp-content/mu-plugins/groups/tests</directory>
 			<directory>./public_html/wp-content/plugins/*/tests</directory>
 			<directory>./public_html/wp-content/plugins/*/node_modules</directory>
 		</exclude>

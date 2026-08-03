@@ -29,6 +29,7 @@ import {
 	TextControl,
 	Button,
 	SelectControl,
+	ToggleControl,
 	Notice,
 	Spinner,
 } from '@wordpress/components';
@@ -45,6 +46,7 @@ import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from './venue-editor';
+import MessageMembersModal from './message-members-modal';
 
 const NS =
 	( window.wporgGroupsEventModal &&
@@ -322,6 +324,8 @@ const NS =
 		time_end: '',
 		venue_id: 0,
 		venue_select: '',
+		is_online: false,
+		online_event_link: '',
 		new_venue_name: '',
 		new_venue_address: '',
 	};
@@ -395,6 +399,8 @@ const NS =
 						time_end: res.fields.time_end || '',
 						venue_id: res.fields.venue_id || 0,
 						venue_select: res.fields.venue_id ? String( res.fields.venue_id ) : '',
+						is_online: !! res.fields.is_online,
+						online_event_link: res.fields.online_event_link || '',
 						new_venue_name: '',
 						new_venue_address: '',
 					} );
@@ -440,6 +446,8 @@ const NS =
 				time_start: form.time_start,
 				time_end: form.time_end,
 				venue_id: isAddingNewVenue ? 0 : ( parseInt( form.venue_select, 10 ) || 0 ),
+				is_online: form.is_online,
+				online_event_link: form.is_online ? form.online_event_link : '',
 				new_venue_name: isAddingNewVenue ? form.new_venue_name : '',
 				new_venue_address: isAddingNewVenue ? form.new_venue_address : '',
 				featured_image_id: featuredImage.id,
@@ -720,6 +728,26 @@ const NS =
 
 					h(
 						'div',
+						{ className: 'wporg-groups-event-modal__online-event' },
+						h( ToggleControl, {
+							label: __( 'This is an online event', 'wporg-groups-frontend' ),
+							checked: form.is_online,
+							onChange: ( value ) => updateField( 'is_online', value ),
+							__nextHasNoMarginBottom: true,
+						} ),
+						form.is_online && h( TextControl, {
+							label: __( 'Online event link', 'wporg-groups-frontend' ),
+							type: 'url',
+							value: form.online_event_link,
+							onChange: ( value ) => updateField( 'online_event_link', value ),
+							placeholder: 'https://',
+							required: true,
+							__nextHasNoMarginBottom: true,
+						} )
+					),
+
+					h(
+						'div',
 						{ className: 'wporg-groups-event-modal__actions' },
 						h(
 							'span',
@@ -789,6 +817,14 @@ const NS =
 
 		if ( ! state.open ) {
 			return null;
+		}
+
+		if ( [ 'message-all', 'message-attendees' ].includes( state.mode ) ) {
+			return h( MessageMembersModal, {
+				eventId: state.eventId,
+				recipientMode: state.mode,
+				onClose: () => setState( { open: false, mode: 'create', eventId: 0 } ),
+			} );
 		}
 
 		return h( EventModal, {

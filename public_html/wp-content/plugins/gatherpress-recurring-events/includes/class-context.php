@@ -211,9 +211,17 @@ final class Context {
 		}
 
 		return sprintf(
-			'<nav class="gpre-occurrence-selector" aria-label="%1$s"><ul>%2$s</ul></nav>%3$s',
+			'<nav class="gpre-occurrence-selector" aria-label="%1$s">' .
+			'<button class="gpre-occurrence-selector__control is-previous" type="button" aria-label="%2$s">' .
+			'<span aria-hidden="true">‹</span></button>' .
+			'<ul>%3$s</ul>' .
+			'<button class="gpre-occurrence-selector__control is-next" type="button" aria-label="%4$s">' .
+			'<span aria-hidden="true">›</span></button>' .
+			'</nav>%5$s',
 			esc_attr__( 'Event dates', 'gpre' ),
+			esc_attr__( 'Previous event dates', 'gpre' ),
 			$items,
+			esc_attr__( 'Next event dates', 'gpre' ),
 			$notice
 		);
 	}

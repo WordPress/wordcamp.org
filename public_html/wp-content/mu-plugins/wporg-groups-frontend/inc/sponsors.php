@@ -263,9 +263,15 @@ function save_sponsor_url( int $post_id ): void {
 		return;
 	}
 
-	if ( ! isset( $_POST['wporg_sponsor_url_nonce'] )
-		|| ! wp_verify_nonce( sanitize_key( $_POST['wporg_sponsor_url_nonce'] ), 'wporg_sponsor_url' )
-	) {
+	// Sanitised with `sanitize_text_field()` rather than `sanitize_key()`: the
+	// latter lowercases, which only happens to be harmless because
+	// `wp_create_nonce()` returns lowercase hex from `wp_hash()`. No reason to
+	// depend on that.
+	$nonce = isset( $_POST['wporg_sponsor_url_nonce'] )
+		? sanitize_text_field( wp_unslash( $_POST['wporg_sponsor_url_nonce'] ) )
+		: '';
+
+	if ( ! wp_verify_nonce( $nonce, 'wporg_sponsor_url' ) ) {
 		return;
 	}
 

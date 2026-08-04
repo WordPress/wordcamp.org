@@ -12,7 +12,6 @@ import {
 } from '@wordpress/components';
 import { createElement as h } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
-import './recurrence-controls.css';
 
 const WEEKDAYS = [
 	{ value: 'MO', label: __( 'Mon', 'wporg-groups-frontend' ) },

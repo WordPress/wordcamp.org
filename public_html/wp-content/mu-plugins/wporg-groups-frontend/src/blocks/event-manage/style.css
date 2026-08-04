@@ -2,6 +2,8 @@
  * WPorg Groups Frontend — event manage block + modal styles.
  */
 
+@import '../../components/recurrence-controls.css';
+
 /* === Trigger buttons === */
 
 .wporg-event-manage {

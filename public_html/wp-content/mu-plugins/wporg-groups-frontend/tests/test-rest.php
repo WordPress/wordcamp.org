@@ -61,6 +61,22 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * A new event cannot be created with a past date.
+	 */
+	public function test_create_event_rejects_past_date() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$params         = $this->base_event_params();
+		$params['date'] = wp_date( 'Y-m-d', time() - DAY_IN_SECONDS );
+
+		$response = create_event( $this->event_request( $params ) );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'wporg_groups_past_event_date', $response->get_error_code() );
+	}
+
+	/**
 	 * An event whose end time equals its start time is rejected.
 	 */
 	public function test_zero_length_event_rejected() {
@@ -139,6 +155,26 @@ class Test_Groups_REST extends Groups_TestCase {
 		$response = update_event( $request );
 		$this->assertNotWPError( $response );
 		$this->assertSame( 'Updated Title', get_the_title( $event_id ) );
+	}
+
+	/**
+	 * A published event with a past date remains editable.
+	 */
+	public function test_published_past_event_remains_editable() {
+		$author_id = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $author_id );
+
+		$create_response = create_event( $this->event_request( $this->base_event_params() ) );
+		$event_id        = $create_response->get_data()['id'];
+		$params          = array( 'title' => 'Updated Past Event' ) + $this->base_event_params();
+		$params['date']  = wp_date( 'Y-m-d', time() - DAY_IN_SECONDS );
+		$request         = $this->event_request( $params );
+		$request->set_param( 'id', $event_id );
+
+		$response = update_event( $request );
+
+		$this->assertNotWPError( $response );
+		$this->assertSame( 'Updated Past Event', get_the_title( $event_id ) );
 	}
 
 	/**

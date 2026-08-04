@@ -16,6 +16,7 @@ const VERSION = '0.2.0';
 
 require_once __DIR__ . '/inc/capabilities.php';
 require_once __DIR__ . '/inc/defaults.php';
+require_once __DIR__ . '/inc/rsvp-questions.php';
 require_once __DIR__ . '/inc/rest.php';
 require_once __DIR__ . '/inc/modal.php';
 require_once __DIR__ . '/inc/blocks.php';

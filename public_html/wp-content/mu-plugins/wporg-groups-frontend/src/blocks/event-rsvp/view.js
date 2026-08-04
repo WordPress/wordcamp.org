@@ -74,23 +74,17 @@ const { state } = store( 'wporg/event-rsvp', {
 
 	actions: {
 		openModal() {
-			const ctx = getContext();
-			ctx.modalOpen = true;
-			document.body.style.overflow = 'hidden';
+			openModal( getContext() );
 		},
 
 		closeModal() {
-			const ctx = getContext();
-			ctx.modalOpen = false;
-			document.body.style.overflow = '';
+			closeModal( getContext() );
 		},
 
 		handleBackdropClick( event ) {
 			const { ref } = getElement();
 			if ( event.target === ref ) {
-				const ctx = getContext();
-				ctx.modalOpen = false;
-				document.body.style.overflow = '';
+				closeModal( getContext() );
 			}
 		},
 
@@ -98,8 +92,7 @@ const { state } = store( 'wporg/event-rsvp', {
 			if ( event.key === 'Escape' ) {
 				const ctx = getContext();
 				if ( ctx.modalOpen ) {
-					ctx.modalOpen = false;
-					document.body.style.overflow = '';
+					closeModal( ctx );
 				}
 			}
 		},
@@ -110,9 +103,10 @@ const { state } = store( 'wporg/event-rsvp', {
 				window.location.href = ctx.loginUrl;
 				return;
 			}
-			if ( ctx.currentUserStatus === 'attending' ) {
-				ctx.modalOpen = true;
-				document.body.style.overflow = 'hidden';
+			// Attending already, or there are questions to answer first —
+			// either way the modal is where the next step lives.
+			if ( ctx.currentUserStatus === 'attending' || ctx.hasQuestions ) {
+				openModal( ctx );
 				return;
 			}
 			doToggleRsvp( ctx );
@@ -121,9 +115,7 @@ const { state } = store( 'wporg/event-rsvp', {
 		handleSummaryKeydown( event ) {
 			if ( event.key === 'Enter' || event.key === ' ' ) {
 				event.preventDefault();
-				const ctx = getContext();
-				ctx.modalOpen = true;
-				document.body.style.overflow = 'hidden';
+				openModal( getContext() );
 			}
 		},
 
@@ -134,6 +126,45 @@ const { state } = store( 'wporg/event-rsvp', {
 	},
 } );
 
+function openModal( ctx ) {
+	ctx.modalOpen = true;
+	document.body.style.overflow = 'hidden';
+}
+
+function closeModal( ctx ) {
+	ctx.modalOpen = false;
+	ctx.rsvpError = '';
+	document.body.style.overflow = '';
+}
+
+/**
+ * Read the custom registration questions out of the modal.
+ *
+ * The inputs are server-rendered from the event's stored questions, so they're
+ * read straight from the DOM rather than mirrored into interactivity state.
+ *
+ * @return {{answers: Object, missingRequired: boolean}} Collected answers.
+ */
+function collectAnswers() {
+	const answers = {};
+	let missingRequired = false;
+
+	document
+		.querySelectorAll( '.wporg-event-rsvp__question-input' )
+		.forEach( ( input ) => {
+			const value = input.value.trim();
+			if ( ! value ) {
+				if ( input.required ) {
+					missingRequired = true;
+				}
+				return;
+			}
+			answers[ input.dataset.questionId ] = value;
+		} );
+
+	return { answers, missingRequired };
+}
+
 async function doToggleRsvp( ctx ) {
 	if ( ! ctx.isLoggedIn ) {
 		window.location.href = ctx.loginUrl;
@@ -143,6 +174,8 @@ async function doToggleRsvp( ctx ) {
 	if ( ctx.isPastEvent || ctx.rsvpLoading ) {
 		return;
 	}
+
+	ctx.rsvpError = '';
 
 	// Join group first if not a member.
 	if ( ! ctx.isMember && ctx.joinApi ) {
@@ -170,6 +203,18 @@ async function doToggleRsvp( ctx ) {
 	const newStatus =
 		ctx.currentUserStatus === 'attending' ? 'not_attending' : 'attending';
 
+	const { answers, missingRequired } = ctx.hasQuestions
+		? collectAnswers()
+		: { answers: {}, missingRequired: false };
+
+	// The server rejects this too — checking here just saves a round trip and
+	// keeps whatever the attendee already typed on screen.
+	if ( newStatus === 'attending' && missingRequired ) {
+		ctx.rsvpError = labelFromContext( ctx, 'missingAnswers' );
+		openModal( ctx );
+		return;
+	}
+
 	const oldStatus = ctx.currentUserStatus;
 	const oldCount = ctx.attendingCount;
 	ctx.currentUserStatus = newStatus;
@@ -177,19 +222,34 @@ async function doToggleRsvp( ctx ) {
 	ctx.rsvpLoading = true;
 
 	try {
-		const data = await sendRsvp( ctx, newStatus );
+		const data = await sendRsvp( ctx, newStatus, answers );
 
 		if ( data && data.success ) {
 			ctx.currentUserStatus = data.status;
 			ctx.attendingCount = data.responses.attending.count;
+
+			// Organizers see the answers inline in the attendee list, which
+			// the client-side refresh below can't rebuild — reload instead so
+			// their view stays complete.
+			if ( ctx.canViewAnswers ) {
+				window.location.reload();
+				return;
+			}
+
 			refreshAttendees( ctx );
 		} else {
 			ctx.currentUserStatus = oldStatus;
 			ctx.attendingCount = oldCount;
+			ctx.rsvpError =
+				( data && data.message ) ||
+				labelFromContext( ctx, 'rsvpFailed' );
+			openModal( ctx );
 		}
 	} catch {
 		ctx.currentUserStatus = oldStatus;
 		ctx.attendingCount = oldCount;
+		ctx.rsvpError = labelFromContext( ctx, 'rsvpFailed' );
+		openModal( ctx );
 	} finally {
 		ctx.rsvpLoading = false;
 	}
@@ -207,26 +267,26 @@ async function getNonce( apiBase ) {
 	return cachedNonce;
 }
 
-async function sendRsvp( ctx, status, retry = false ) {
+/**
+ * Save the RSVP through our own endpoint rather than GatherPress's, so the
+ * status and the answers to the event's custom registration questions are
+ * written in one request and required questions can block the RSVP.
+ */
+async function sendRsvp( ctx, status, answers, retry = false ) {
 	const nonce = await getNonce( ctx.apiBase );
-	const resp = await fetch( ctx.apiBase + '/rsvp', {
+	const resp = await fetch( ctx.rsvpApi, {
 		method: 'POST',
 		credentials: 'same-origin',
 		headers: {
 			'Content-Type': 'application/json',
 			'X-WP-Nonce': nonce,
 		},
-		body: JSON.stringify( {
-			post_id: ctx.postId,
-			status,
-			guests: 0,
-			anonymous: 0,
-		} ),
+		body: JSON.stringify( { status, answers: answers || {} } ),
 	} );
 
 	if ( resp.status === 403 && ! retry ) {
 		cachedNonce = null;
-		return sendRsvp( ctx, status, true );
+		return sendRsvp( ctx, status, answers, true );
 	}
 
 	return resp.json();

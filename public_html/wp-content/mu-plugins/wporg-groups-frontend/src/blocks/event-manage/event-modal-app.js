@@ -47,6 +47,7 @@ import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
+import RsvpQuestionsEditor from './rsvp-questions-editor';
 
 const NS =
 	( window.wporgGroupsEventModal &&
@@ -328,6 +329,7 @@ const NS =
 		online_event_link: '',
 		new_venue_name: '',
 		new_venue_address: '',
+		rsvp_questions: [],
 	};
 
 	function EventModal( { mode, eventId, onClose } ) {
@@ -403,6 +405,7 @@ const NS =
 						online_event_link: res.fields.online_event_link || '',
 						new_venue_name: '',
 						new_venue_address: '',
+						rsvp_questions: res.fields.rsvp_questions || [],
 					} );
 					setEditorKey( ( k ) => k + 1 );
 					setDirty( false );
@@ -451,6 +454,11 @@ const NS =
 				new_venue_name: isAddingNewVenue ? form.new_venue_name : '',
 				new_venue_address: isAddingNewVenue ? form.new_venue_address : '',
 				featured_image_id: featuredImage.id,
+				// Blank-labelled rows are just an empty slot the organizer
+				// added and never filled in; the server drops them too.
+				rsvp_questions: ( form.rsvp_questions || [] ).filter(
+					( q ) => q.label.trim() !== ''
+				),
 			};
 		};
 
@@ -745,6 +753,11 @@ const NS =
 							__nextHasNoMarginBottom: true,
 						} )
 					),
+
+					h( RsvpQuestionsEditor, {
+						questions: form.rsvp_questions,
+						onChange: ( value ) => updateField( 'rsvp_questions', value ),
+					} ),
 
 					h(
 						'div',

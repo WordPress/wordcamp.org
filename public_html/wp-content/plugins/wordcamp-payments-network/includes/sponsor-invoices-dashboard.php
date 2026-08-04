@@ -201,7 +201,7 @@ function upgrade_database() {
 			last_modified  datetime                  NOT NULL default '0000-00-00 00:00:00',
 
 			PRIMARY KEY (blog_id, invoice_id),
-			KEY status (status)
+			KEY status (status),
 			KEY last_modified (last_modified)
 		)
 		$charset_collate

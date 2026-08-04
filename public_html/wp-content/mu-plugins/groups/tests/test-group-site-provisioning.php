@@ -20,6 +20,9 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 	 */
 	protected static $organizer_id;
 
+	/**
+	 * @param \WP_UnitTest_Factory $factory
+	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		parent::wpSetUpBeforeClass( $factory );
 

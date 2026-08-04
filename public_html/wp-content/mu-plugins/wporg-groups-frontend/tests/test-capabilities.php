@@ -84,17 +84,17 @@ class Test_Groups_Capabilities extends Groups_TestCase {
 	 */
 	public function test_super_admin_can_manage_events_despite_subscriber_role() {
 		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
-		$user    = get_userdata( $user_id );
 
-		// Overrides the `$super_admins` global directly rather than going through
-		// `grant_super_admin()`/the `site_admins` site option, which is shared,
-		// mutable state that other tests in the suite can leave in a bad shape.
-		$GLOBALS['super_admins'] = array( $user->user_login );
+		// Reset to a clean array first -- `site_admins` is shared, mutable state
+		// scoped to the current network, and other tests in the suite can leave
+		// it in a shape `grant_super_admin()` doesn't expect.
+		update_site_option( 'site_admins', array() );
+		grant_super_admin( $user_id );
 		wp_set_current_user( $user_id );
 
 		$this->assertTrue( current_user_can_manage_events() );
 
-		unset( $GLOBALS['super_admins'] );
+		revoke_super_admin( $user_id );
 	}
 
 	/**

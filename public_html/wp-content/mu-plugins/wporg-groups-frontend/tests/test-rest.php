@@ -38,7 +38,7 @@ class Test_Groups_REST extends Groups_TestCase {
 	private function base_event_params(): array {
 		return array(
 			'title'      => 'Test Event',
-			'date'       => '2026-08-15',
+			'date'       => current_datetime()->modify( '+1 week' )->format( 'Y-m-d' ),
 			'time_start' => '18:00',
 			'time_end'   => '20:00',
 		);
@@ -68,7 +68,7 @@ class Test_Groups_REST extends Groups_TestCase {
 		wp_set_current_user( $editor_id );
 
 		$params         = $this->base_event_params();
-		$params['date'] = wp_date( 'Y-m-d', time() - DAY_IN_SECONDS );
+		$params['date'] = current_datetime()->modify( '-1 day' )->format( 'Y-m-d' );
 
 		$response = create_event( $this->event_request( $params ) );
 
@@ -102,8 +102,9 @@ class Test_Groups_REST extends Groups_TestCase {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );
 
+		$event_date           = current_datetime()->modify( '+2 weeks' );
 		$params               = $this->base_event_params();
-		$params['date']       = '2026-08-20';
+		$params['date']       = $event_date->format( 'Y-m-d' );
 		$params['time_start'] = '22:00';
 		$params['time_end']   = '01:00';
 
@@ -113,7 +114,7 @@ class Test_Groups_REST extends Groups_TestCase {
 		$event_id = $response->get_data()['id'];
 		$end      = get_post_meta( $event_id, 'gatherpress_datetime_end', true );
 
-		$this->assertSame( '2026-08-21 01:00:00', $end );
+		$this->assertSame( $event_date->modify( '+1 day' )->format( 'Y-m-d' ) . ' 01:00:00', $end );
 	}
 
 	/**
@@ -165,10 +166,12 @@ class Test_Groups_REST extends Groups_TestCase {
 		wp_set_current_user( $author_id );
 
 		$create_response = create_event( $this->event_request( $this->base_event_params() ) );
-		$event_id        = $create_response->get_data()['id'];
-		$params          = array( 'title' => 'Updated Past Event' ) + $this->base_event_params();
-		$params['date']  = wp_date( 'Y-m-d', time() - DAY_IN_SECONDS );
-		$request         = $this->event_request( $params );
+		$this->assertNotWPError( $create_response );
+
+		$event_id       = $create_response->get_data()['id'];
+		$params         = array( 'title' => 'Updated Past Event' ) + $this->base_event_params();
+		$params['date'] = current_datetime()->modify( '-1 day' )->format( 'Y-m-d' );
+		$request        = $this->event_request( $params );
 		$request->set_param( 'id', $event_id );
 
 		$response = update_event( $request );
@@ -238,6 +241,7 @@ class Test_Groups_REST extends Groups_TestCase {
 	public function test_draft_save_list_update_publish_flow() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );
+		$event_date = current_datetime()->modify( '+1 month' )->format( 'Y-m-d' );
 
 		// Save a partial draft (title only).
 		$save_request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft' );
@@ -256,7 +260,7 @@ class Test_Groups_REST extends Groups_TestCase {
 		$update_request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft/' . $draft_id );
 		$update_request->set_param( 'id', $draft_id );
 		$update_request->set_param( 'title', 'Draft Test (updated)' );
-		$update_request->set_param( 'date', '2026-09-01' );
+		$update_request->set_param( 'date', $event_date );
 		$update_request->set_param( 'time_start', '19:00' );
 		$update_request->set_param( 'time_end', '21:00' );
 		save_draft( $update_request );
@@ -268,7 +272,7 @@ class Test_Groups_REST extends Groups_TestCase {
 		$publish_request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft/' . $draft_id . '/publish' );
 		$publish_request->set_param( 'id', $draft_id );
 		$publish_request->set_param( 'title', 'Draft Now Published' );
-		$publish_request->set_param( 'date', '2026-09-01' );
+		$publish_request->set_param( 'date', $event_date );
 		$publish_request->set_param( 'time_start', '19:00' );
 		$publish_request->set_param( 'time_end', '21:00' );
 		$publish_response = publish_draft( $publish_request );

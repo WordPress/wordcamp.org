@@ -44,7 +44,7 @@ jobs:
 
     - name: Install PHP dependencies
       # wporg-mu-plugins (installed via composer, then moved into place by a
-      # post-install script — see composer.json's installer-paths) is loaded
+      # post-install script — see composer-dev.json's installer-paths) is loaded
       # unconditionally by load-other-mu-plugins.php; without it every
       # request, including wp-cli, fatals.
       run: |

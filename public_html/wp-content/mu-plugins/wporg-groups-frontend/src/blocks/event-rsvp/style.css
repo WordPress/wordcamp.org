@@ -5,14 +5,26 @@
  */
 
 /* === Summary (avatar stack + count) === */
-
 .wporg-event-rsvp__summary {
+	display: block;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
 	cursor: pointer;
 	margin-bottom: 16px;
 }
 
 .wporg-event-rsvp__summary:hover {
 	opacity: 0.85;
+}
+
+.wporg-event-rsvp__summary:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 4px;
 }
 
 .wporg-event-rsvp__avatars {
@@ -55,7 +67,6 @@
 }
 
 /* === RSVP button === */
-
 .wporg-event-rsvp__button {
 	width: 100%;
 	justify-content: center;
@@ -78,7 +89,6 @@
 }
 
 /* === Full-screen modal === */
-
 .wporg-event-rsvp__modal {
 	display: none;
 	position: fixed;
@@ -143,7 +153,6 @@
 }
 
 /* === RSVP action area inside modal === */
-
 .wporg-event-rsvp__modal-action {
 	padding: 16px 24px;
 	border-bottom: 1px solid #d9d9d9;
@@ -181,7 +190,6 @@
 }
 
 /* === Attendee list === */
-
 .wporg-event-rsvp__attendee-list {
 	padding: 8px 0;
 	flex: 1 1 auto;

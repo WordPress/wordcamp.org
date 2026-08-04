@@ -62,6 +62,17 @@ $questions        = get_questions( $event_post_id );
 $can_view_answers = $questions && current_user_can_view_answers( $event_post_id );
 $own_answers      = ( $questions && $is_login ) ? get_user_answers( $event_post_id, get_current_user_id() ) : array();
 
+// Same treatment for the answers, which live in commentmeta on each RSVP.
+// GatherPress primes this incidentally while *building* `responses()`, but
+// that result is object-cached for 15 minutes — on a cache hit the loop never
+// runs and the reads below would be one query per attendee.
+if ( $can_view_answers ) {
+	$attendee_comment_ids = array_filter( wp_list_pluck( $records, 'commentId' ) );
+	if ( $attendee_comment_ids ) {
+		update_meta_cache( 'comment', $attendee_comment_ids );
+	}
+}
+
 $attendees = array();
 foreach ( $records as $record ) {
 	$bio = '';

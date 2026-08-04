@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/event-rsvp",
+	"version": "1.0.0",
+	"title": "Event RSVP",
+	"category": "widgets",
+	"icon": "groups",
+	"description": "Displays RSVP status, avatar stack, and a full-screen attendee modal for GatherPress events.",
+	"usesContext": [ "postId" ],
+	"supports": {
+		"html": false,
+		"interactivity": true,
+		"inserter": false
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
+	"viewScriptModule": "file:./view.js",
+	"style": "file:./style-index.css"
+}

@@ -91,8 +91,7 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		if ( $this->is_gateway_enable() ) {
 			add_action( 'template_redirect', array( $this, 'template_redirect' ) );
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
-			add_filter( 'camptix_register_order_summary_header', array( $this, 'add_order_id_field' ), 10, 3 );
-			add_filter( 'camptix_indian_payments_localize_vars', array( $this, 'add_localize_vars' ), 10, 1 );
+			add_filter( 'camptix_indian_payments_localize_vars', array( $this, 'add_localize_vars' ) );
 		}
 	}
 
@@ -159,53 +158,6 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		);
 
 		return array_merge( $localize, $data );
-	}
-
-
-	/**
-	 * @param $form_heading
-	 *
-	 * @return mixed
-	 */
-	public function add_order_id_field( $form_heading ) {
-		global $camptix;
-
-		// $api         = $this->get_razjorpay_api();
-		$tickets_info = ! empty( $_POST['tix_tickets_selected'] ) ? array_map( 'esc_attr', (array) $_POST['tix_tickets_selected'] ) : array();
-		if ( isset( $_POST['tix_coupon'] ) ) {
-			$coupon_id = sanitize_text_field( $_POST['tix_coupon'] );
-		} else {
-			$coupon_id = '';
-		}
-
-		try {
-			// Order info.
-			$order      = $this->razorpay_order_info( $tickets_info, $coupon_id );
-			$receipt_id = uniqid( 'camtix-razorpay' );
-
-			// Creates order.
-			$api   = $this->get_razjorpay_api();
-			$order = $api->order->create(
-				array(
-					'receipt'         => uniqid( 'camtix-razorpay' ),
-					'amount'          => $order['total'] * 100,
-					'currency'        => 'INR',
-					'payment_capture' => true,
-				)
-			);
-
-			echo sprintf(
-				'<input type="hidden" name="razorpay_order_id" value="%s"><input type="hidden" name="razorpay_receipt_id" value="%s">',
-				$order->id,
-				$receipt_id
-			);
-		} catch ( Exception $e ) {
-			echo '<div id="tix-errors"><div class="tix-error">';
-			echo sprintf( esc_html__( 'Razorpay error: %s', 'campt-indian-payment-gateway' ), $e->getMessage() );
-			echo '</div></div>';
-		}
-
-		return $form_heading;
 	}
 
 
@@ -357,23 +309,106 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 			return;
 		}
 
+		$info   = $this->get_order( $payment_token );
+		$amount = (int) round( $info['total'] * 100 );
+
+		/*
+		 * Create the Razorpay order here, rather than while rendering the attendee
+		 * form, so that it can be tied to this CampTix order. `notes` and `receipt`
+		 * carry the binding on Razorpay's side; the post meta written below carries
+		 * it on ours. payment_return() completes the order only when the two agree.
+		 */
+		try {
+			$api            = $this->get_razjorpay_api();
+			$razorpay_order = $api->order->create(
+				array(
+					'receipt'         => $payment_token, // An md5, so 32 of the 40 characters Razorpay allows.
+					'amount'          => $amount,
+					'currency'        => 'INR',
+					'payment_capture' => true,
+					'notes'           => array(
+						'site_id'       => get_current_blog_id(),
+						'payment_token' => $payment_token,
+					),
+				)
+			);
+		} catch ( Exception $e ) {
+			$this->log( 'Could not create the Razorpay order.', $info['attendee_id'], array( 'error' => $e->getMessage() ) );
+
+			wp_send_json_error( array(
+				'message' => __( 'We could not start the payment. Please try again.', 'campt-indian-payment-gateway' ),
+			) );
+		}
+
+		$this->bind_razorpay_order( $payment_token, $razorpay_order['id'], $amount );
+
 		$return_url = add_query_arg( array(
 			'tix_action'         => 'payment_return',
 			'tix_payment_token'  => $payment_token,
 			'tix_payment_method' => $this->id,
 		), $camptix->get_tickets_url() );
 
-		$info       = $this->get_order( $payment_token );
 		$extra_info = array(
-			'fullname'       => trim( get_post_meta( $info['attendee_id'], 'tix_first_name', true ) . ' ' . get_post_meta( $info['attendee_id'], 'tix_last_name', true ) ),
-			'email'          => get_post_meta( $info['attendee_id'], 'tix_email', true ),
-			'phone'          => get_post_meta( $info['attendee_id'], 'tix_phone', true ),
-			'total_in_paisa' => ( $info['total'] * 100 ),
-			'return_url'     => $return_url,
-			'popup_title'    => $this->options['razorpay_popup_title'],
+			'fullname'          => trim( get_post_meta( $info['attendee_id'], 'tix_first_name', true ) . ' ' . get_post_meta( $info['attendee_id'], 'tix_last_name', true ) ),
+			'email'             => get_post_meta( $info['attendee_id'], 'tix_email', true ),
+			'phone'             => get_post_meta( $info['attendee_id'], 'tix_phone', true ),
+			'razorpay_order_id' => $razorpay_order['id'],
+			'total_in_paisa'    => $amount,
+			'return_url'        => $return_url,
+			'popup_title'       => $this->options['razorpay_popup_title'],
 		);
 
 		wp_send_json_success( array_merge( $info, $extra_info ) );
+	}
+
+	/**
+	 * Get every attendee post that belongs to a CampTix payment token.
+	 *
+	 * @since  1.9
+	 * @access protected
+	 *
+	 * @param string $payment_token
+	 *
+	 * @return WP_Post[]
+	 */
+	protected function get_attendees_for_token( $payment_token ) {
+		return get_posts(
+			array(
+				'posts_per_page' => -1,
+				'post_type'      => 'tix_attendee',
+				'post_status'    => array( 'draft', 'pending', 'publish', 'cancel', 'refund', 'failed' ),
+				'meta_query'     => array(
+					array(
+						'key'     => 'tix_payment_token',
+						'compare' => '=',
+						'value'   => $payment_token,
+						'type'    => 'CHAR',
+					),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Record which Razorpay order, and for how much, this CampTix order was sent to pay.
+	 *
+	 * Written to every attendee on the token so that the return path does not depend
+	 * on picking the same "first" attendee that checkout did.
+	 *
+	 * @since  1.9
+	 * @access protected
+	 *
+	 * @param string $payment_token
+	 * @param string $razorpay_order_id
+	 * @param int    $amount            The amount sent to Razorpay, in paise.
+	 *
+	 * @return void
+	 */
+	protected function bind_razorpay_order( $payment_token, $razorpay_order_id, $amount ) {
+		foreach ( $this->get_attendees_for_token( $payment_token ) as $attendee ) {
+			update_post_meta( $attendee->ID, '_razorpay_order_id', $razorpay_order_id );
+			update_post_meta( $attendee->ID, '_razorpay_amount', $amount );
+		}
 	}
 
 	/**
@@ -388,33 +423,18 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 
 		// Set logs.
 		$this->log( sprintf( 'Running payment_return. Request data attached.' ), null, $_REQUEST );
-		$this->log( sprintf( 'Running payment_return. Server data attached.' ), null, $_SERVER );
 
-		$payment_token  = ( isset( $_REQUEST['tix_payment_token'] ) ) ? trim( $_REQUEST['tix_payment_token'] ) : '';
-		$transaction_id = esc_attr( $_GET['transaction_id'] );
-		// $receipt_id     = esc_attr( $_GET['receipt_id'] );
+		$payment_token       = sanitize_text_field( wp_unslash( $_REQUEST['tix_payment_token'] ?? '' ) );
+		$razorpay_order_id   = sanitize_text_field( wp_unslash( $_GET['transaction_id'] ?? '' ) );
+		$razorpay_payment_id = sanitize_text_field( wp_unslash( $_GET['razorpay_payment_id'] ?? '' ) );
+		$razorpay_signature  = sanitize_text_field( wp_unslash( $_GET['razorpay_signature'] ?? '' ) );
 
 		// Bailout.
-		if ( empty( $payment_token ) || empty( $transaction_id ) ) {
+		if ( empty( $payment_token ) || empty( $razorpay_order_id ) ) {
 			return;
 		}
 
-		// Get all attendees for order.
-		$attendees = get_posts(
-			array(
-				'posts_per_page' => 1,
-				'post_type'      => 'tix_attendee',
-				'post_status'    => array( 'draft', 'pending', 'publish', 'cancel', 'refund', 'failed' ),
-				'meta_query'     => array(
-					array(
-						'key'     => 'tix_payment_token',
-						'compare' => '=',
-						'value'   => $payment_token,
-						'type'    => 'CHAR',
-					),
-				),
-			)
-		);
+		$attendees = $this->get_attendees_for_token( $payment_token );
 
 		// Bailout.
 		if ( empty( $attendees ) ) {
@@ -422,10 +442,47 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		}
 
 		// Reset attendees.
-		$attendee = reset( $attendees );
+		$attendee          = reset( $attendees );
+		$expected_order_id = (string) get_post_meta( $attendee->ID, '_razorpay_order_id', true );
 
-		// Complete payment
-		$camptix->payment_result( $payment_token, CampTix_Plugin::PAYMENT_STATUS_COMPLETED, $_GET );
+		/*
+		 * This request is public and entirely attacker-controlled, so the Razorpay
+		 * order id it names proves nothing on its own — a paid order id from any
+		 * other purchase would otherwise complete this one. Only the id recorded at
+		 * checkout counts. A request that fails this check says nothing about the
+		 * real order, so refuse it without touching that order's status.
+		 */
+		if ( $expected_order_id && ! hash_equals( $expected_order_id, $razorpay_order_id ) ) {
+			$this->log(
+				'Refusing Razorpay return: the order id does not belong to this CampTix order.',
+				$attendee->ID,
+				compact( 'payment_token', 'razorpay_order_id', 'expected_order_id' )
+			);
+
+			wp_die( esc_html__( 'We could not verify this payment. Please contact the organizers.', 'campt-indian-payment-gateway' ) );
+		}
+
+		$status = $this->verify_razorpay_payment( $attendee->ID, $razorpay_order_id, $razorpay_payment_id, $razorpay_signature );
+
+		/*
+		 * Razorpay reported that nothing was ever paid against this order, so this
+		 * request is no more meaningful than one naming somebody else's order id.
+		 * Refuse it the same way. Recording it as pending would consume a ticket
+		 * from the event's inventory and email a ticket, both for free.
+		 */
+		if ( null === $status ) {
+			wp_die( esc_html__( 'We could not verify this payment. Please contact the organizers.', 'campt-indian-payment-gateway' ) );
+		}
+
+		// Record the verified payment result.
+		$camptix->payment_result(
+			$payment_token,
+			$status,
+			array(
+				'transaction_id'      => $razorpay_payment_id ? $razorpay_payment_id : $razorpay_order_id,
+				'transaction_details' => array( 'raw' => $_GET ),
+			)
+		);
 
 		// Show ticket to attendee.
 		$access_token = get_post_meta( $attendee->ID, 'tix_access_token', true );
@@ -438,6 +495,128 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		wp_safe_redirect( esc_url_raw( $url . '#tix' ) );
 
 		exit();
+	}
+
+	/**
+	 * Confirm a Razorpay payment before the CampTix order is completed.
+	 *
+	 * The outcome is decided by what Razorpay reports about the order, not by what
+	 * the return request claims, and it distinguishes three cases:
+	 *
+	 * - Paid in full: complete the order.
+	 * - Nothing was ever paid: refuse, and leave the order untouched. Recording
+	 *   this as pending would consume a ticket from the event's inventory and
+	 *   email a ticket, so anyone could drain a WordCamp's stock by starting
+	 *   orders and returning without paying.
+	 * - Anything else — Razorpay unreachable, payment in flight, or paid for the
+	 *   wrong amount: pending, so an order whose buyer may already have been
+	 *   charged surfaces for an organizer instead of being dropped.
+	 *
+	 * @since  1.9
+	 * @access protected
+	 *
+	 * @param int    $attendee_id         The attendee to log against.
+	 * @param string $razorpay_order_id   The Razorpay order id, already confirmed to be this order's.
+	 * @param string $razorpay_payment_id The Razorpay payment id from the return request.
+	 * @param string $razorpay_signature  The Razorpay signature from the return request.
+	 *
+	 * @return int|null One of the CampTix_Plugin::PAYMENT_STATUS_{status} constants,
+	 *                  or null to refuse the request without recording a result.
+	 */
+	protected function verify_razorpay_payment( $attendee_id, $razorpay_order_id, $razorpay_payment_id, $razorpay_signature ) {
+		$expected_amount = (int) get_post_meta( $attendee_id, '_razorpay_amount', true );
+
+		if ( ! $expected_amount ) {
+			/*
+			 * Checkout predates this binding, so there is nothing to check the return
+			 * against. Only orders started before this code shipped can reach here, and
+			 * their buyers may have paid, so leave them for an organizer to reconcile.
+			 * Once no such orders remain, this branch can refuse instead.
+			 */
+			$this->log( 'Razorpay return with no recorded order binding; holding as pending.', $attendee_id, compact( 'razorpay_order_id' ) );
+
+			return CampTix_Plugin::PAYMENT_STATUS_PENDING;
+		}
+
+		/*
+		 * The signature is an HMAC of "<order_id>|<payment_id>" under the secret key,
+		 * so a valid one shows the buyer really came back through Razorpay's checkout.
+		 * It is recorded rather than acted on: the order id is already known to be
+		 * this order's, and the authenticated fetch below is what decides whether any
+		 * money moved, so a mangled redirect should not cost a paying buyer a ticket.
+		 * Note that it throws on mismatch rather than returning false.
+		 */
+		try {
+			$api = $this->get_razjorpay_api();
+
+			$api->utility->verifyPaymentSignature(
+				array(
+					'razorpay_order_id'   => $razorpay_order_id,
+					'razorpay_payment_id' => $razorpay_payment_id,
+					'razorpay_signature'  => $razorpay_signature,
+				)
+			);
+		} catch ( Exception $e ) {
+			$this->log( 'Razorpay signature verification failed.', $attendee_id, array( 'error' => $e->getMessage() ) );
+		}
+
+		// Authoritative check, server to server, authenticated with the secret key.
+		try {
+			$razorpay_order = $this->fetch_razorpay_order( $razorpay_order_id );
+		} catch ( Exception $e ) {
+			$this->log( 'Razorpay order fetch failed during payment return.', $attendee_id, array( 'error' => $e->getMessage() ) );
+
+			return CampTix_Plugin::PAYMENT_STATUS_PENDING;
+		}
+
+		$razorpay_status = isset( $razorpay_order['status'] ) ? $razorpay_order['status'] : '';
+		$amount_paid     = isset( $razorpay_order['amount_paid'] ) ? (int) $razorpay_order['amount_paid'] : -1;
+
+		if ( 'paid' === $razorpay_status && $amount_paid === $expected_amount ) {
+			return CampTix_Plugin::PAYMENT_STATUS_COMPLETED;
+		}
+
+		/*
+		 * `created` means no payment was ever attempted against this order, so the
+		 * request carries no evidence of anything. `attempted` means one was, and it
+		 * may still settle.
+		 */
+		if ( 'created' === $razorpay_status ) {
+			$this->log(
+				'Refusing Razorpay return: no payment was attempted against this order.',
+				$attendee_id,
+				compact( 'razorpay_order_id', 'razorpay_status' )
+			);
+
+			return null;
+		}
+
+		$this->log(
+			'Razorpay order is not paid in full; holding as pending.',
+			$attendee_id,
+			compact( 'razorpay_order_id', 'razorpay_status', 'amount_paid', 'expected_amount' )
+		);
+
+		return CampTix_Plugin::PAYMENT_STATUS_PENDING;
+	}
+
+	/**
+	 * Fetch an order from the Razorpay API.
+	 *
+	 * Isolated in its own method so that the authenticated remote call can be
+	 * overridden in tests.
+	 *
+	 * @since  1.9
+	 * @access protected
+	 *
+	 * @param string $razorpay_order_id
+	 *
+	 * @return mixed The Razorpay order entity.
+	 */
+	protected function fetch_razorpay_order( $razorpay_order_id ) {
+		$api = $this->get_razjorpay_api();
+
+		return $api->order->fetch( $razorpay_order_id );
 	}
 
 	/**
@@ -465,72 +644,5 @@ class CampTix_Payment_Method_RazorPay extends CampTix_Payment_Method {
 		$merchant = $this->get_merchant_credentials();
 
 		return new Api( $merchant['key_id'], $merchant['key_secret'] );
-	}
-
-	/**
-	 * Array of selected ticket and there quantity
-	 * key:value ticket_id:quantity
-	 *
-	 * @since  0.2
-	 * @access pricate
-	 *
-	 * @param array  $tickets
-	 * @param string $coupon_code
-	 *
-	 * @return array
-	 */
-	private function razorpay_order_info( $tickets, $coupon_code ) {
-		/* @var  CampTix_Plugin $camptix */
-		global $camptix, $wpdb;
-
-		$order_info = array(
-			'tickets'  => array(),
-			'quantity' => 0,
-			'total'    => 0,
-		);
-
-		$total = $coupon_percentage = $coupon_price = $coupon_id = 0;
-
-		// Bailout.
-		if ( empty( $tickets ) ) {
-			return $order_info;
-		}
-
-		// Get coupon detail.
-		if ( ! empty( $coupon_code ) ) {
-			// Get coupon.
-			$coupon_id = $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT ID FROM $wpdb->posts WHERE post_title = %s",
-					$coupon_code
-				)
-			);
-
-			// Get coupon info.
-			if ( ! empty( $coupon_id ) ) {
-				$coupon            = get_post( $coupon_id );
-				$coupon_percentage = get_post_meta( $coupon->ID, 'tix_discount_percent', true );
-				$coupon_price      = get_post_meta( $coupon->ID, 'tix_discount_price', true );
-			}
-		}
-
-		// Calculate total.
-		foreach ( $tickets as $ticket_id => $count ) {
-			$order_info['tickets'][] = $ticket_id;
-			$order_info['quantity']  += $count;
-
-			$price = get_post_meta( $ticket_id, 'tix_price', true );
-			if ( $coupon_percentage ) {
-				$price -= ( ( $price * $coupon_percentage ) / 100 );
-			} elseif ( $coupon_price ) {
-				$price -= $coupon_price;
-			}
-
-			$total += $price * $count;
-		}
-
-		$order_info['total'] = $total;
-
-		return $order_info;
 	}
 }

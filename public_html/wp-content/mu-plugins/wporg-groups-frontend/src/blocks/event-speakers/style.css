@@ -1,0 +1,70 @@
+/**
+ * Event Speakers block styles.
+ */
+
+.wporg-event-speakers__heading {
+	font-size: 18px;
+	font-weight: 600;
+	margin: 0 0 16px !important;
+	padding: 0 !important;
+}
+
+.wporg-event-speakers__list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.wporg-event-speakers__card {
+	display: flex;
+	align-items: flex-start;
+	gap: 14px;
+	padding: 16px;
+	border: 1px solid #d9d9d9;
+	border-radius: 4px;
+	text-decoration: none;
+	color: inherit;
+	transition: border-color 0.12s ease;
+}
+
+.wporg-event-speakers__card:hover {
+	border-color: #3858e9;
+	text-decoration: none;
+}
+
+.wporg-event-speakers__avatar {
+	width: 64px;
+	height: 64px;
+	border-radius: 9999px;
+	object-fit: cover;
+	flex: 0 0 auto;
+}
+
+.wporg-event-speakers__info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.wporg-event-speakers__name {
+	font-size: 16px;
+	font-weight: 600;
+	color: #1a1919;
+}
+
+.wporg-event-speakers__badge {
+	display: inline-block;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #3858e9;
+}
+
+.wporg-event-speakers__bio {
+	font-size: 13px;
+	color: #656a71;
+	line-height: 1.4;
+	margin-top: 4px;
+}

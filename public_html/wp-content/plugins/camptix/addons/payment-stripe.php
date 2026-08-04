@@ -414,6 +414,27 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		$payment_intent = $session['payment_intent'] ?? array();
 		$intent_status  = is_array( $payment_intent ) ? ( $payment_intent['status'] ?? '' ) : '';
 
+		// Confirm the fetched session actually belongs to this order before acting on
+		// it. The interactive return path (payment_return()) reads the CampTix payment
+		// token and the Stripe session id as two independent request values, so without
+		// this check any complete/paid session from this account could be replayed to
+		// complete any order. `client_reference_id` is the same value the webhook path
+		// already trusts to locate the order, so this is a no-op there.
+		$expected_reference = get_current_blog_id() . ':' . $payment_token;
+		if ( ( $session['client_reference_id'] ?? '' ) !== $expected_reference ) {
+			$camptix->log(
+				'Refusing Stripe session: client_reference_id does not belong to this order.',
+				$order['attendee_id'] ?? null,
+				compact( 'payment_token', 'expected_reference', 'session' )
+			);
+
+			if ( $interactive ) {
+				wp_die( 'could not verify payment for this order' );
+			}
+
+			return false;
+		}
+
 		if ( ! $session_status ) {
 			$camptix->log( "Dying because couldn't get Payment status", $order['attendee_id'], compact( 'payment_token', 'session' ) );
 
@@ -452,6 +473,39 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 			'complete' === $session_status &&
 			in_array( $payment_status, array( 'paid', 'no_payment_required' ), true )
 		) {
+			// Confirm the amount paid matches the order total before completing, so a
+			// correctly-referenced but cheaper session can't complete a pricier order.
+			// The expected total is summed per line item exactly as create_session()
+			// builds them (each item's fractional unit amount times its quantity), so
+			// it equals Stripe's amount_total. Converting the whole order total in one
+			// step would not match, because the per-unit fractional conversion truncates.
+			$expected_amount = $this->get_expected_fractional_total( $order );
+
+			if ( null === $expected_amount || (int) ( $session['amount_total'] ?? -1 ) !== $expected_amount ) {
+				$camptix->log(
+					'Stripe amount_total does not match the order total; marking the order pending for organizer review instead of completing it.',
+					$order['attendee_id'] ?? null,
+					compact( 'payment_token', 'expected_amount', 'session' )
+				);
+
+				// The buyer may well have been charged, so don't strand the order in
+				// draft. Mark it pending non-interactively (so we control the buyer
+				// message below); this surfaces it in the attendee list for an
+				// organizer to reconcile.
+				$camptix->payment_result(
+					$payment_token,
+					CampTix_Plugin::PAYMENT_STATUS_PENDING,
+					$this->get_payment_data_for_session( $session, $transaction_details_extra ),
+					false
+				);
+
+				if ( $interactive ) {
+					wp_die( esc_html__( 'We could not automatically confirm the amount paid for your order. If you were charged, your payment was received — please contact the event organizers to have your ticket confirmed.', 'wordcamporg' ) );
+				}
+
+				return false;
+			}
+
 			return $camptix->payment_result(
 				$payment_token,
 				CampTix_Plugin::PAYMENT_STATUS_COMPLETED,
@@ -479,6 +533,43 @@ class CampTix_Payment_Method_Stripe extends CampTix_Payment_Method {
 		}
 
 		return false;
+	}
+
+	/**
+	 * The order total in Stripe's fractional currency unit (e.g. cents).
+	 *
+	 * Stripe's amount_total is the sum of each line item's unit_amount times its
+	 * quantity, and create_session() sets unit_amount to
+	 * get_fractional_unit_amount( item price ). That conversion truncates, so the
+	 * expected total must be summed per line item the same way — converting the
+	 * whole order total in a single step can differ by a few fractional units and
+	 * would reject a legitimately fully-paid order.
+	 *
+	 * @param array $order The CampTix order (from get_order()).
+	 *
+	 * @return int|null Fractional total, or null if it cannot be determined.
+	 */
+	protected function get_expected_fractional_total( $order ) {
+		if ( empty( $order['items'] ) || ! is_array( $order['items'] ) ) {
+			return null;
+		}
+
+		$total = 0;
+
+		foreach ( $order['items'] as $item ) {
+			try {
+				$unit_amount = (int) $this->get_fractional_unit_amount(
+					$this->camptix_options['currency'],
+					$item['price'] ?? 0
+				);
+			} catch ( Exception $e ) {
+				return null;
+			}
+
+			$total += $unit_amount * (int) ( $item['quantity'] ?? 0 );
+		}
+
+		return $total;
 	}
 
 	/**

@@ -84,11 +84,13 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 	 * An unknown organizer username is rejected before any site is created.
 	 */
 	public function test_rejects_unknown_organizer() {
+		$existing_count = count( get_sites( array( 'network_id' => GROUPS_NETWORK_ID ) ) );
+
 		$result = create_group_site( 'Nowhere Group', 'nowhere', 'this-user-does-not-exist' );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'organizer_not_found', $result->get_error_code() );
-		$this->assertNull( get_page_by_path( 'nowhere' ) ); // Sanity: nothing else ran.
+		$this->assertCount( $existing_count, get_sites( array( 'network_id' => GROUPS_NETWORK_ID ) ) );
 	}
 
 	/**
@@ -99,5 +101,19 @@ class Test_Group_Site_Provisioning extends Groups_TestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'invalid_slug', $result->get_error_code() );
+	}
+
+	/**
+	 * A timezone that isn't a real PHP timezone identifier is rejected before
+	 * any site is created.
+	 */
+	public function test_rejects_invalid_timezone() {
+		$existing_count = count( get_sites( array( 'network_id' => GROUPS_NETWORK_ID ) ) );
+
+		$result = create_group_site( 'Bad Timezone Group', 'bad-timezone', 'grouporganizer', 'Not/A_Real_Zone' );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'invalid_timezone', $result->get_error_code() );
+		$this->assertCount( $existing_count, get_sites( array( 'network_id' => GROUPS_NETWORK_ID ) ) );
 	}
 }

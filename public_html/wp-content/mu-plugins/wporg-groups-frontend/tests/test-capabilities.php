@@ -92,9 +92,13 @@ class Test_Groups_Capabilities extends Groups_TestCase {
 		grant_super_admin( $user_id );
 		wp_set_current_user( $user_id );
 
-		$this->assertTrue( current_user_can_manage_events() );
-
-		revoke_super_admin( $user_id );
+		// `revoke_super_admin()` must run even if the assertion fails, or this
+		// user's super-admin status leaks into later tests in the suite.
+		try {
+			$this->assertTrue( current_user_can_manage_events() );
+		} finally {
+			revoke_super_admin( $user_id );
+		}
 	}
 
 	/**

@@ -172,6 +172,11 @@ function create_group_site( string $title, string $slug, string $organizer_login
 		return new WP_Error( 'organizer_not_found', __( 'No user was found with that WordPress.org username.', 'wordcamporg' ) );
 	}
 
+	if ( $timezone_string && ! in_array( $timezone_string, timezone_identifiers_list(), true ) ) {
+		Logger\log( 'invalid_timezone', compact( 'title', 'slug', 'organizer_login', 'timezone_string' ) );
+		return new WP_Error( 'invalid_timezone', __( 'Please select a valid timezone.', 'wordcamporg' ) );
+	}
+
 	$site_id = wp_insert_site(
 		array(
 			'domain'     => $network->domain,
@@ -210,15 +215,20 @@ function create_group_site( string $title, string $slug, string $organizer_login
 
 	// `templates/page-members.html` in the `groups-site` theme only resolves
 	// at `/members/` if a page with this slug actually exists.
-	wp_insert_post(
+	$members_page = wp_insert_post(
 		array(
 			'post_type'   => 'page',
 			'post_title'  => __( 'Members', 'wordcamporg' ),
 			'post_name'   => 'members',
 			'post_status' => 'publish',
 			'post_author' => $organizer->ID,
-		)
+		),
+		true
 	);
+
+	if ( is_wp_error( $members_page ) ) {
+		Logger\log( 'members_page_failed', compact( 'title', 'slug', 'organizer_login', 'site_id' ) );
+	}
 
 	restore_current_blog();
 

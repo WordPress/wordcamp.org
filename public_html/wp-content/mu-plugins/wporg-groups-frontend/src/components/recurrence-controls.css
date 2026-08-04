@@ -2,15 +2,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
-	padding: 16px;
-	border: 1px solid #d9d9d9;
-	border-radius: 2px;
-	background: #f6f6f6;
-}
-
-.wporg-event-recurrence legend {
-	padding: 0 4px;
-	font-weight: 600;
 }
 
 .wporg-event-recurrence__row {
@@ -30,9 +21,17 @@
 	gap: 8px 16px;
 }
 
-.wporg-event-recurrence__weekdays > span {
+.wporg-event-recurrence__label {
+	box-sizing: border-box;
+	display: block;
 	width: 100%;
-	font-weight: 600;
+	max-width: 100%;
+	padding-top: 0;
+	padding-bottom: 0;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
 }
 
 @media (max-width: 600px) {

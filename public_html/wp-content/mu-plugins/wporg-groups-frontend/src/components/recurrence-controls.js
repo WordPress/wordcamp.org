@@ -108,8 +108,7 @@ export default function RecurrenceControls( { value, eventDate, onChange } ) {
 		} );
 	};
 
-	return h( 'fieldset', { className: 'wporg-event-recurrence' },
-		h( 'legend', {}, __( 'Repeating event', 'wporg-groups-frontend' ) ),
+	return h( 'div', { className: 'wporg-event-recurrence' },
 		locked && h( Notice, { status: 'info', isDismissible: false },
 			__( 'The recurrence schedule is locked after publication.', 'wporg-groups-frontend' )
 		),
@@ -133,14 +132,18 @@ export default function RecurrenceControls( { value, eventDate, onChange } ) {
 				onChange: ( interval ) => update( { interval: Math.max( 1, Number( interval ) || 1 ) } ),
 				__nextHasNoMarginBottom: true,
 			} ),
-			h( 'span', { className: 'wporg-event-recurrence__unit' },
+			h( 'span', { className: 'wporg-event-recurrence__unit components-checkbox-control__label' },
 				value.frequency === 'weekly' ? __( 'week(s)', 'wporg-groups-frontend' ) :
 				value.frequency === 'monthly' ? __( 'month(s)', 'wporg-groups-frontend' ) :
 				__( 'year(s)', 'wporg-groups-frontend' )
 			)
 		),
-		value.frequency === 'weekly' && h( 'div', { className: 'wporg-event-recurrence__weekdays' },
-			h( 'span', {}, __( 'Repeat on', 'wporg-groups-frontend' ) ),
+		value.frequency === 'weekly' && h( 'div', {
+			className: 'wporg-event-recurrence__weekdays',
+			role: 'group',
+			'aria-label': __( 'Repeat on', 'wporg-groups-frontend' ),
+		},
+			h( 'span', { className: 'wporg-event-recurrence__label' }, __( 'Repeat on', 'wporg-groups-frontend' ) ),
 			...WEEKDAYS.map( ( day ) => h( CheckboxControl, {
 				key: day.value,
 				label: day.label,

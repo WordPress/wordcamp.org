@@ -78,17 +78,19 @@ class Test_Group_Archive extends Groups_TestCase {
 			)
 		);
 
-		$all_group_ids = array_map( 'intval', wp_list_pluck( get_group_sites( true ), 'blog_id' ) );
-		$first_page    = get_group_sites( true, 1, 0 );
-		$second_page   = get_group_sites( true, 1, 1 );
+		try {
+			$all_group_ids = array_map( 'intval', wp_list_pluck( get_group_sites( true ), 'blog_id' ) );
+			$first_page    = get_group_sites( true, 1, 0 );
+			$second_page   = get_group_sites( true, 1, 1 );
 
-		$this->assertCount( count( $all_group_ids ), get_group_sites( true ) );
-		$this->assertSame( count( $all_group_ids ), get_group_site_count( true ) );
-		$this->assertCount( 1, $first_page );
-		$this->assertCount( 1, $second_page );
-		$this->assertNotSame( $first_page[0]->blog_id, $second_page[0]->blog_id );
-
-		wp_delete_site( $second_group_site_id );
+			$this->assertCount( count( $all_group_ids ), get_group_sites( true ) );
+			$this->assertSame( count( $all_group_ids ), get_group_site_count( true ) );
+			$this->assertCount( 1, $first_page );
+			$this->assertCount( 1, $second_page );
+			$this->assertNotSame( $first_page[0]->blog_id, $second_page[0]->blog_id );
+		} finally {
+			wp_delete_site( $second_group_site_id );
+		}
 	}
 
 	/**
@@ -140,12 +142,15 @@ class Test_Group_Archive extends Groups_TestCase {
 	 */
 	public function test_rejects_site_from_another_network() {
 		$other_site_id = self::factory()->blog->create();
-		$result        = update_group_archive_status( $other_site_id, true );
 
-		$this->assertWPError( $result );
-		$this->assertSame( 'invalid_group_site', $result->get_error_code() );
+		try {
+			$result = update_group_archive_status( $other_site_id, true );
 
-		wp_delete_site( $other_site_id );
+			$this->assertWPError( $result );
+			$this->assertSame( 'invalid_group_site', $result->get_error_code() );
+		} finally {
+			wp_delete_site( $other_site_id );
+		}
 	}
 
 	/**

@@ -62,12 +62,35 @@ function renderModal() {
 	};
 }
 
+function renderTwoModals() {
+	document.body.innerHTML = `
+		<div class="wp-block-wporg-event-rsvp" data-instance="first">
+			<button class="wporg-event-rsvp__summary" type="button">View first attendees</button>
+			<div class="wporg-event-rsvp__modal">
+				<button class="wporg-event-rsvp__modal-close" type="button">Close first</button>
+			</div>
+		</div>
+		<div class="wp-block-wporg-event-rsvp" data-instance="second">
+			<button class="wporg-event-rsvp__summary" type="button">View second attendees</button>
+			<div class="wporg-event-rsvp__modal">
+				<button class="wporg-event-rsvp__modal-close" type="button">Close second</button>
+			</div>
+		</div>
+	`;
+
+	return Array.from( document.querySelectorAll( '.wp-block-wporg-event-rsvp' ) ).map( ( block ) => ( {
+		close: block.querySelector( '.wporg-event-rsvp__modal-close' ),
+		summary: block.querySelector( '.wporg-event-rsvp__summary' ),
+	} ) );
+}
+
 describe( 'event RSVP accessibility', () => {
 	beforeEach( () => {
 		mockContext = createContext();
 		mockElement = null;
 		mockStoreConfig = null;
 		global.fetch = jest.fn();
+		document.body.style.overflow = '';
 		window.requestAnimationFrame = jest.fn( ( callback ) => {
 			callback();
 			return 1;
@@ -76,6 +99,7 @@ describe( 'event RSVP accessibility', () => {
 
 	afterEach( () => {
 		document.body.innerHTML = '';
+		document.body.style.overflow = '';
 		jest.restoreAllMocks();
 	} );
 
@@ -94,6 +118,37 @@ describe( 'event RSVP accessibility', () => {
 
 		expect( mockContext.modalOpen ).toBe( false );
 		expect( document.activeElement ).toBe( elements.summary );
+	} );
+
+	test( 'keeps focus and scroll state consistent when a second block opens its modal', () => {
+		const [ first, second ] = renderTwoModals();
+		const firstContext = createContext();
+		const secondContext = createContext();
+		const { actions } = loadStore();
+
+		document.body.style.overflow = 'clip';
+		mockContext = firstContext;
+		mockElement = first.summary;
+		actions.openModal();
+
+		mockContext = secondContext;
+		mockElement = second.summary;
+		actions.openModal();
+
+		expect( firstContext.modalOpen ).toBe( false );
+		expect( secondContext.modalOpen ).toBe( true );
+		expect( document.activeElement ).toBe( second.close );
+		expect( document.body.style.overflow ).toBe( 'hidden' );
+
+		mockContext = firstContext;
+		actions.closeModal();
+		expect( document.activeElement ).toBe( second.close );
+		expect( document.body.style.overflow ).toBe( 'hidden' );
+
+		mockContext = secondContext;
+		actions.closeModal();
+		expect( document.activeElement ).toBe( second.summary );
+		expect( document.body.style.overflow ).toBe( 'clip' );
 	} );
 
 	test( 'traps Tab and Shift+Tab at the modal boundaries', () => {

@@ -10,9 +10,7 @@
 import { getContext, getElement, store } from '@wordpress/interactivity';
 
 let cachedNonce = null;
-let activeModal = null;
-let modalTrigger = null;
-let previousBodyOverflow = '';
+let activeModalState = null;
 
 const focusableSelector = [
 	'a[href]',
@@ -97,7 +95,7 @@ store( 'wporg/event-rsvp', {
 
 		handleModalKeydown( event ) {
 			const ctx = getContext();
-			if ( ! ctx.modalOpen ) {
+			if ( ! ctx.modalOpen || activeModalState?.context !== ctx ) {
 				return;
 			}
 
@@ -107,21 +105,22 @@ store( 'wporg/event-rsvp', {
 				return;
 			}
 
-			if ( event.key !== 'Tab' || ! activeModal ) {
+			if ( event.key !== 'Tab' ) {
 				return;
 			}
 
-			const focusable = getFocusableElements( activeModal );
+			const { modal } = activeModalState;
+			const focusable = getFocusableElements( modal );
 			if ( ! focusable.length ) {
 				event.preventDefault();
-				activeModal.focus();
+				modal.focus();
 				return;
 			}
 
 			const first = focusable[ 0 ];
 			const last = focusable[ focusable.length - 1 ];
-			const activeElement = activeModal.ownerDocument.activeElement;
-			const focusOutsideModal = ! activeModal.contains( activeElement );
+			const activeElement = modal.ownerDocument.activeElement;
+			const focusOutsideModal = ! modal.contains( activeElement );
 
 			if (
 				( event.shiftKey && ( activeElement === first || focusOutsideModal ) ) ||
@@ -160,9 +159,18 @@ function openRsvpModal( ctx, trigger ) {
 		return;
 	}
 
-	modalTrigger = trigger;
-	activeModal = modal;
-	previousBodyOverflow = document.body.style.overflow;
+	const previousBodyOverflow = activeModalState?.previousBodyOverflow ?? document.body.style.overflow;
+	if ( activeModalState ) {
+		// Full-screen, aria-modal dialogs must not remain open behind one another.
+		activeModalState.context.modalOpen = false;
+	}
+
+	activeModalState = {
+		context: ctx,
+		modal,
+		previousBodyOverflow,
+		trigger,
+	};
 	ctx.modalOpen = true;
 	document.body.style.overflow = 'hidden';
 
@@ -171,13 +179,14 @@ function openRsvpModal( ctx, trigger ) {
 }
 
 function closeRsvpModal( ctx ) {
-	const trigger = modalTrigger;
-
 	ctx.modalOpen = false;
+	if ( activeModalState?.context !== ctx ) {
+		return;
+	}
+
+	const { previousBodyOverflow, trigger } = activeModalState;
+	activeModalState = null;
 	document.body.style.overflow = previousBodyOverflow;
-	activeModal = null;
-	modalTrigger = null;
-	previousBodyOverflow = '';
 
 	scheduleFocus( trigger );
 }

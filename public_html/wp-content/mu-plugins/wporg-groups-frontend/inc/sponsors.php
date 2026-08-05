@@ -54,9 +54,23 @@ const URL_META_KEY = '_wporg_sponsor_url';
 const CACHE_KEY = 'wporg_groups_sponsors';
 
 /**
- * How long the sponsor list stays cached, in seconds.
+ * How long a non-empty sponsor list stays cached, in seconds.
  */
 const CACHE_TTL = HOUR_IN_SECONDS;
+
+/**
+ * How long an *empty* sponsor list stays cached, in seconds.
+ *
+ * Empty results are cached, because "no sponsors yet" is the normal state of
+ * a group site and leaving it uncached would mean a `switch_to_blog()` and a
+ * query on every page view of every group site. But an empty result is also
+ * what a failure looks like — a database blip, a stray `pre_get_posts`
+ * filter, `EVENTS_ROOT_BLOG_ID` pointing at a site that no longer exists —
+ * and those are indistinguishable from the real thing here. A shorter expiry
+ * keeps the common path cached while bounding how long a bad read can hide
+ * every sponsor network-wide.
+ */
+const EMPTY_CACHE_TTL = 5 * MINUTE_IN_SECONDS;
 
 /**
  * Bootstrap the sponsors feature.
@@ -71,6 +85,7 @@ function bootstrap(): void {
 	add_action( 'init', __NAMESPACE__ . '\register_post_type' );
 	add_action( 'add_meta_boxes', __NAMESPACE__ . '\add_meta_boxes' );
 	add_action( 'save_post_' . POST_TYPE, __NAMESPACE__ . '\save_sponsor_url' );
+	add_action( 'admin_notices', __NAMESPACE__ . '\render_invalid_url_notice' );
 
 	// Keep the cached list honest.
 	add_action( 'save_post_' . POST_TYPE, __NAMESPACE__ . '\flush_cache' );
@@ -279,13 +294,72 @@ function save_sponsor_url( int $post_id ): void {
 		return;
 	}
 
-	$url = sanitize_url( wp_unslash( $_POST['wporg_sponsor_url'] ) );
+	$raw = trim( (string) wp_unslash( $_POST['wporg_sponsor_url'] ) );
+	$url = sanitize_url( $raw );
 
-	if ( '' === $url ) {
+	if ( '' === $raw ) {
 		delete_post_meta( $post_id, URL_META_KEY );
-	} else {
-		update_post_meta( $post_id, URL_META_KEY, $url );
+
+		return;
 	}
+
+	// `sanitize_url()` returns '' for anything it can't parse — a mistyped
+	// scheme (`htps://…`), a disallowed one (`javascript:…`) — which is
+	// indistinguishable from the field having been cleared. Deleting on that
+	// would let a typo silently wipe a working sponsor link, so keep what's
+	// stored and tell whoever saved it that their input didn't take.
+	if ( '' === $url ) {
+		set_transient( invalid_url_notice_key( $post_id ), $raw, MINUTE_IN_SECONDS );
+
+		return;
+	}
+
+	update_post_meta( $post_id, URL_META_KEY, $url );
+}
+
+/**
+ * Transient key for the "that URL wasn't usable" notice.
+ *
+ * Scoped to the user as well as the post so a notice raised by one editor
+ * isn't shown to — or swallowed by — another editing the same sponsor.
+ *
+ * @param int $post_id The sponsor being edited.
+ */
+function invalid_url_notice_key( int $post_id ): string {
+	return sprintf( 'wporg_sponsor_url_invalid_%d_%d', $post_id, get_current_user_id() );
+}
+
+/**
+ * Show the notice raised by `save_sponsor_url()` for an unusable URL.
+ */
+function render_invalid_url_notice(): void {
+	$screen = get_current_screen();
+
+	if ( ! $screen || POST_TYPE !== $screen->post_type || 'post' !== $screen->base ) {
+		return;
+	}
+
+	$post_id = (int) get_the_ID();
+	$key     = invalid_url_notice_key( $post_id );
+	$raw     = get_transient( $key );
+
+	if ( false === $raw ) {
+		return;
+	}
+
+	delete_transient( $key );
+
+	wp_admin_notice(
+		sprintf(
+			/* translators: %s: the URL the user entered. */
+			esc_html__( '%s isn\'t a usable web address, so the sponsor\'s existing link was kept. Include a full address, e.g. https://example.org/.', 'wporg-groups-frontend' ),
+			'<code>' . esc_html( $raw ) . '</code>'
+		),
+		array(
+			'type'               => 'warning',
+			'additional_classes' => array( 'is-dismissible' ),
+		)
+	);
 }
 
 /**
@@ -349,7 +423,11 @@ function get_sponsors(): array {
 
 			$sponsors = array_map( __NAMESPACE__ . '\prepare_sponsor', $posts );
 
-			set_transient( CACHE_KEY, $sponsors, CACHE_TTL );
+			set_transient(
+				CACHE_KEY,
+				$sponsors,
+				$sponsors ? CACHE_TTL : EMPTY_CACHE_TTL
+			);
 
 			return $sponsors;
 		}
@@ -379,25 +457,58 @@ function get_sponsors(): array {
  * @return string The URL a visitor can actually load.
  */
 function correct_switched_upload_url( string $url ): string {
-	if ( '' === $url || ! ms_is_switched() || ! defined( 'UPLOADS' ) ) {
-		return $url;
-	}
-
-	if ( ! get_site_option( 'ms_files_rewriting' ) ) {
-		return $url;
-	}
-
-	if ( is_main_network() && is_main_site() && defined( 'MULTISITE' ) ) {
+	if ( ! upload_url_needs_correcting( $url ) ) {
 		return $url;
 	}
 
 	$uploads = wp_get_upload_dir();
 
-	return str_replace(
-		untrailingslashit( $uploads['baseurl'] ),
-		trailingslashit( get_option( 'siteurl' ) ) . 'files',
-		$url
+	return rebase_url(
+		$url,
+		$uploads['baseurl'],
+		trailingslashit( get_option( 'siteurl' ) ) . 'files'
 	);
+}
+
+/**
+ * Whether `correct_switched_upload_url()` has anything to fix.
+ *
+ * Split out from the rewriting itself so the rewriting can be tested without
+ * a live ms-files network: the conditions here are all process-level state
+ * (`UPLOADS`, the switch stack) that a test can't reasonably fake.
+ *
+ * @param string $url The URL about to be rewritten.
+ */
+function upload_url_needs_correcting( string $url ): bool {
+	if ( '' === $url || ! ms_is_switched() || ! defined( 'UPLOADS' ) ) {
+		return false;
+	}
+
+	if ( ! get_site_option( 'ms_files_rewriting' ) ) {
+		return false;
+	}
+
+	// Mirrors `_wp_upload_dir()`: the main site of the main network keeps
+	// using `wp-content/uploads`, so its URLs are already right.
+	return ! ( is_main_network() && is_main_site() && defined( 'MULTISITE' ) );
+}
+
+/**
+ * Swap the upload base URL at the front of an attachment URL.
+ *
+ * @param string $url       The attachment URL.
+ * @param string $from_base The base URL the URL currently carries.
+ * @param string $to_base   The base URL it should carry.
+ * @return string The rebased URL, or the original when it wasn't under `$from_base`.
+ */
+function rebase_url( string $url, string $from_base, string $to_base ): string {
+	$from_base = untrailingslashit( $from_base );
+
+	if ( '' === $from_base || ! str_starts_with( $url, $from_base ) ) {
+		return $url;
+	}
+
+	return untrailingslashit( $to_base ) . substr( $url, strlen( $from_base ) );
 }
 
 /**

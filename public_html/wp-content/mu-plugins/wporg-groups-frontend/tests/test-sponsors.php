@@ -48,10 +48,30 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 	 * @inheritDoc
 	 */
 	protected function tearDown(): void {
+		unset( $GLOBALS['super_admins'] );
 		wp_delete_site( $this->other_group_id );
 		Sponsors\flush_cache();
 
 		parent::tearDown();
+	}
+
+	/**
+	 * Becomes a network admin for the rest of the test.
+	 *
+	 * `grant_super_admin()` reads `site_admins` out of `sitemeta`, which
+	 * `Database_TestCase` truncates; setting the global that
+	 * `get_super_admins()` checks first is the fixture-safe equivalent.
+	 * `tearDown()` clears it.
+	 *
+	 * @return int The new user's ID.
+	 */
+	protected function act_as_network_admin(): int {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		$GLOBALS['super_admins'] = array( get_userdata( $user_id )->user_login ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( $user_id );
+
+		return $user_id;
 	}
 
 	/**
@@ -276,13 +296,7 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 	 * Network admins are the ones who can.
 	 */
 	public function test_network_admins_can_edit_sponsors() {
-		$super_admin = self::factory()->user->create( array( 'role' => 'administrator' ) );
-
-		// `grant_super_admin()` reads `site_admins` out of `sitemeta`, which
-		// `Database_TestCase` truncates; setting the global that
-		// `get_super_admins()` checks first is the fixture-safe equivalent.
-		$GLOBALS['super_admins'] = array( get_userdata( $super_admin )->user_login ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
-		wp_set_current_user( $super_admin );
+		$this->act_as_network_admin();
 
 		$post_id   = $this->create_sponsor();
 		$post_type = get_post_type_object( Sponsors\POST_TYPE );
@@ -291,8 +305,6 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 		$can_edit_any = current_user_can( $post_type->cap->edit_posts );
 		$can_edit_one = current_user_can( 'edit_post', $post_id );
 		restore_current_blog();
-
-		unset( $GLOBALS['super_admins'] );
 
 		$this->assertTrue( $can_edit_any );
 		$this->assertTrue( $can_edit_one );
@@ -370,5 +382,220 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 		restore_current_blog();
 
 		$this->assertStringNotContainsString( 'wporg-sponsors__show-all', $output );
+	}
+
+	/**
+	 * Submits the sponsor URL meta box for a post, as wp-admin would.
+	 *
+	 * @param int    $post_id The sponsor being saved.
+	 * @param string $url     The value typed into the field.
+	 * @param bool   $valid_nonce Whether to send a valid nonce.
+	 */
+	protected function submit_url_form( int $post_id, string $url, bool $valid_nonce = true ): void {
+		$_POST['wporg_sponsor_url']       = addslashes( $url );
+		$_POST['wporg_sponsor_url_nonce'] = $valid_nonce
+			? wp_create_nonce( 'wporg_sponsor_url' )
+			: 'not-a-nonce';
+
+		Sponsors\save_sponsor_url( $post_id );
+
+		unset( $_POST['wporg_sponsor_url'], $_POST['wporg_sponsor_url_nonce'] );
+	}
+
+	/**
+	 * The happy path: a valid URL is sanitised and stored.
+	 */
+	public function test_meta_box_saves_a_valid_url() {
+		$this->act_as_network_admin();
+
+		$post_id = $this->create_sponsor();
+
+		switch_to_blog( self::$events_root_site_id );
+		$this->submit_url_form( $post_id, 'https://example.org/new/' );
+		$saved = get_post_meta( $post_id, Sponsors\URL_META_KEY, true );
+		restore_current_blog();
+
+		$this->assertSame( 'https://example.org/new/', $saved );
+	}
+
+	/**
+	 * Clearing the field removes the link, as the field's own help text
+	 * promises.
+	 */
+	public function test_meta_box_clears_the_url_when_the_field_is_emptied() {
+		$this->act_as_network_admin();
+
+		$post_id = $this->create_sponsor();
+
+		switch_to_blog( self::$events_root_site_id );
+		$this->submit_url_form( $post_id, '   ' );
+		$saved = get_post_meta( $post_id, Sponsors\URL_META_KEY, true );
+		restore_current_blog();
+
+		$this->assertSame( '', $saved );
+	}
+
+	/**
+	 * Data provider for test_meta_box_keeps_the_url_when_input_is_unusable().
+	 */
+	public function data_unusable_urls(): array {
+		return array(
+			'mistyped scheme'     => array( 'htps://example.org/' ),
+			'disallowed protocol' => array( 'javascript:alert(1)' ),
+		);
+	}
+
+	/**
+	 * Input that `sanitize_url()` can't parse must not wipe a working link.
+	 *
+	 * `sanitize_url()` returns '' for these, which is indistinguishable from
+	 * the field having been cleared — so a single mistyped character used to
+	 * silently delete the sponsor's URL.
+	 *
+	 * @dataProvider data_unusable_urls
+	 */
+	public function test_meta_box_keeps_the_url_when_input_is_unusable( string $typed ) {
+		$this->act_as_network_admin();
+
+		$post_id = $this->create_sponsor();
+
+		switch_to_blog( self::$events_root_site_id );
+		$this->submit_url_form( $post_id, $typed );
+		$saved  = get_post_meta( $post_id, Sponsors\URL_META_KEY, true );
+		$notice = get_transient( Sponsors\invalid_url_notice_key( $post_id ) );
+		delete_transient( Sponsors\invalid_url_notice_key( $post_id ) );
+		restore_current_blog();
+
+		$this->assertSame( 'https://example.org/sponsor/', $saved, 'The existing URL should survive unusable input.' );
+		$this->assertSame( $typed, $notice, 'The editor should be told their input was rejected.' );
+	}
+
+	/**
+	 * A missing or forged nonce leaves the meta alone.
+	 */
+	public function test_meta_box_ignores_a_bad_nonce() {
+		$this->act_as_network_admin();
+
+		$post_id = $this->create_sponsor();
+
+		switch_to_blog( self::$events_root_site_id );
+		$this->submit_url_form( $post_id, 'https://evil.example/', false );
+		$saved = get_post_meta( $post_id, Sponsors\URL_META_KEY, true );
+		restore_current_blog();
+
+		$this->assertSame( 'https://example.org/sponsor/', $saved );
+	}
+
+	/**
+	 * A user without the capability can't write the field even with a valid
+	 * nonce — the nonce proves intent, not permission.
+	 */
+	public function test_meta_box_ignores_a_user_without_the_capability() {
+		$post_id = $this->create_sponsor();
+
+		$organiser = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		wp_set_current_user( $organiser );
+
+		switch_to_blog( self::$events_root_site_id );
+		$this->submit_url_form( $post_id, 'https://evil.example/' );
+		$saved = get_post_meta( $post_id, Sponsors\URL_META_KEY, true );
+		restore_current_blog();
+
+		$this->assertSame( 'https://example.org/sponsor/', $saved );
+	}
+
+	/**
+	 * Data provider for test_rebase_url().
+	 */
+	public function data_rebase_url(): array {
+		return array(
+			'ms-files rewrite'      => array(
+				'https://events.wordpress.test/wp-content/uploads/2026/08/logo.png',
+				'https://events.wordpress.test/wp-content/uploads',
+				'https://events.wordpress.test/files',
+				'https://events.wordpress.test/files/2026/08/logo.png',
+			),
+			'trailing slashes'      => array(
+				'https://events.wordpress.test/wp-content/uploads/logo.png',
+				'https://events.wordpress.test/wp-content/uploads/',
+				'https://events.wordpress.test/files/',
+				'https://events.wordpress.test/files/logo.png',
+			),
+			'url outside the base'  => array(
+				'https://cdn.example/logo.png',
+				'https://events.wordpress.test/wp-content/uploads',
+				'https://events.wordpress.test/files',
+				'https://cdn.example/logo.png',
+			),
+			'empty base is a no-op' => array(
+				'https://events.wordpress.test/wp-content/uploads/logo.png',
+				'',
+				'https://events.wordpress.test/files',
+				'https://events.wordpress.test/wp-content/uploads/logo.png',
+			),
+		);
+	}
+
+	/**
+	 * The rewriting half of the ms-files logo fix, in isolation — the
+	 * end-to-end behaviour is covered by
+	 * `test_sponsor_logo_url_is_loadable_from_a_group_site()`.
+	 *
+	 * @dataProvider data_rebase_url
+	 */
+	public function test_rebase_url( string $url, string $from, string $to, string $expected ) {
+		$this->assertSame( $expected, Sponsors\rebase_url( $url, $from, $to ) );
+	}
+
+	/**
+	 * The logo URL a group site renders has to be one a visitor can load.
+	 *
+	 * This is the regression guard for the ms-files fix. The fixture network
+	 * reproduces the real condition — ms-files rewriting on, `UPLOADS`
+	 * defined, the read happening while switched — so without
+	 * `correct_switched_upload_url()` the logo comes back as
+	 * `…/wp-content/blogs.dir/{id}/files/…`, which 404s in production.
+	 */
+	public function test_sponsor_logo_url_is_loadable_from_a_group_site() {
+		$post_id = $this->create_sponsor();
+
+		switch_to_blog( self::$events_root_site_id );
+
+		$attachment_id = wp_insert_attachment(
+			array(
+				'post_title'     => 'Logo',
+				'post_mime_type' => 'image/png',
+				'post_status'    => 'inherit',
+			),
+			'2026/08/logo.png',
+			$post_id
+		);
+		set_post_thumbnail( $post_id, $attachment_id );
+
+		$expected = trailingslashit( get_option( 'siteurl' ) ) . 'files/2026/08/logo.png';
+
+		restore_current_blog();
+		Sponsors\flush_cache();
+
+		switch_to_blog( $this->other_group_id );
+		$sponsors = Sponsors\get_sponsors();
+		$rendered = do_blocks( '<!-- wp:wporg/sponsors /-->' );
+		restore_current_blog();
+
+		$this->assertSame( $expected, $sponsors[0]['logo'] );
+		$this->assertStringContainsString( $expected, $rendered );
+		$this->assertStringNotContainsString(
+			'blogs.dir',
+			$sponsors[0]['logo'],
+			"The raw ms-files path isn't publicly servable — see correct_switched_upload_url()."
+		);
+	}
+
+	/**
+	 * An empty URL — a sponsor with no logo — is never rewritten.
+	 */
+	public function test_empty_upload_url_is_untouched() {
+		$this->assertSame( '', Sponsors\correct_switched_upload_url( '' ) );
+		$this->assertFalse( Sponsors\upload_url_needs_correcting( '' ) );
 	}
 }

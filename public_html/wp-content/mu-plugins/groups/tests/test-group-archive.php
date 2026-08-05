@@ -3,6 +3,7 @@
 namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Archive\get_group_sites;
+use function WordCamp\Groups\Archive\get_group_site_count;
 use function WordCamp\Groups\Archive\update_group_archive_status;
 
 defined( 'WPINC' ) || die();
@@ -63,6 +64,31 @@ class Test_Group_Archive extends Groups_TestCase {
 
 		$this->assertNotContains( $this->group_site_id, $active_group_ids );
 		$this->assertContains( $this->group_site_id, $all_group_ids );
+	}
+
+	/**
+	 * Group queries can return stable pages and an accurate total.
+	 */
+	public function test_group_query_can_be_paginated() {
+		$second_group_site_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/archive-test-second/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+
+		$all_group_ids = array_map( 'intval', wp_list_pluck( get_group_sites( true ), 'blog_id' ) );
+		$first_page    = get_group_sites( true, 1, 0 );
+		$second_page   = get_group_sites( true, 1, 1 );
+
+		$this->assertCount( count( $all_group_ids ), get_group_sites( true ) );
+		$this->assertSame( count( $all_group_ids ), get_group_site_count( true ) );
+		$this->assertCount( 1, $first_page );
+		$this->assertCount( 1, $second_page );
+		$this->assertNotSame( $first_page[0]->blog_id, $second_page[0]->blog_id );
+
+		wp_delete_site( $second_group_site_id );
 	}
 
 	/**

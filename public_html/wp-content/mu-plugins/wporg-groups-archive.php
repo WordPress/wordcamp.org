@@ -18,6 +18,7 @@ defined( 'WPINC' ) || die();
 
 const PAGE_SLUG     = 'wporg-groups';
 const UPDATE_ACTION = 'wporg_groups_update_archive_status';
+const PER_PAGE      = 50;
 
 add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_page' );
 add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_update' );
@@ -29,16 +30,19 @@ add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_upd
  * The Groups network placeholder site is never a group and is always omitted.
  *
  * @param bool $include_archived Whether archived groups should be returned.
+ * @param int  $number           Maximum number of groups to return; 0 returns all.
+ * @param int  $offset           Number of groups to skip.
  * @return WP_Site[]
  */
-function get_group_sites( bool $include_archived = false ): array {
+function get_group_sites( bool $include_archived = false, int $number = 0, int $offset = 0 ): array {
 	$args = array(
 		'network_id'   => GROUPS_NETWORK_ID,
-		'number'       => 0,
+		'number'       => max( 0, $number ),
+		'offset'       => max( 0, $offset ),
 		'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
 		'deleted'      => 0,
 		'spam'         => 0,
-		'orderby'      => 'domain',
+		'orderby'      => 'id',
 		'order'        => 'ASC',
 	);
 
@@ -47,6 +51,27 @@ function get_group_sites( bool $include_archived = false ): array {
 	}
 
 	return get_sites( $args );
+}
+
+/**
+ * Count the group sites on the Groups network.
+ *
+ * @param bool $include_archived Whether archived groups should be counted.
+ */
+function get_group_site_count( bool $include_archived = false ): int {
+	$args = array(
+		'network_id'   => GROUPS_NETWORK_ID,
+		'site__not_in' => array( GROUPS_ROOT_BLOG_ID ),
+		'deleted'      => 0,
+		'spam'         => 0,
+		'count'        => true,
+	);
+
+	if ( ! $include_archived ) {
+		$args['archived'] = 0;
+	}
+
+	return (int) get_sites( $args );
 }
 
 /**
@@ -145,8 +170,12 @@ function render_page(): void {
 		wp_die( esc_html__( 'Sorry, you are not allowed to manage groups.', 'wordcamporg' ) );
 	}
 
-	$groups  = get_group_sites( true );
-	$updated = isset( $_GET['updated'] ) ? sanitize_key( wp_unslash( $_GET['updated'] ) ) : '';
+	$total_groups = get_group_site_count( true );
+	$total_pages  = max( 1, (int) ceil( $total_groups / PER_PAGE ) );
+	$current_page = isset( $_GET['paged'] ) ? max( 1, absint( wp_unslash( $_GET['paged'] ) ) ) : 1;
+	$current_page = min( $current_page, $total_pages );
+	$groups       = get_group_sites( true, PER_PAGE, ( $current_page - 1 ) * PER_PAGE );
+	$updated      = isset( $_GET['updated'] ) ? sanitize_key( wp_unslash( $_GET['updated'] ) ) : '';
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Groups', 'wordcamporg' ); ?></h1>
@@ -218,6 +247,26 @@ function render_page(): void {
 				<?php endif; ?>
 			</tbody>
 		</table>
+
+		<?php if ( $total_pages > 1 ) : ?>
+			<div class="tablenav bottom">
+				<div class="tablenav-pages">
+					<?php
+					echo wp_kses_post(
+						paginate_links(
+							array(
+								'base'      => network_admin_url( 'sites.php?page=' . PAGE_SLUG . '&paged=%#%' ),
+								'current'   => $current_page,
+								'total'     => $total_pages,
+								'prev_text' => __( '&laquo; Previous', 'wordcamporg' ),
+								'next_text' => __( 'Next &raquo;', 'wordcamporg' ),
+							)
+						)
+					);
+					?>
+				</div>
+			</div>
+		<?php endif; ?>
 	</div>
 	<?php
 }

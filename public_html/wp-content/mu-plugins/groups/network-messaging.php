@@ -242,7 +242,15 @@ function schedule_next_batch(): void {
 }
 
 /**
- * Send up to `BATCH_SIZE` emails from the oldest queued job.
+ * Do up to `BATCH_SIZE` units of work on the oldest queued job.
+ *
+ * A unit is one recipient taken off the queue or one per-site recipient
+ * lookup — not one email sent. Bounding on emails instead would leave a run
+ * unbounded whenever the work doesn't produce mail: someone who organises a
+ * dozen groups is skipped as a duplicate, and a group with no members yields
+ * nothing, so a run could walk any number of sites and queries before hitting
+ * a send-based limit. Counting the work itself is what keeps a single cron
+ * run inside the time limit.
  *
  * Reschedules itself until the queue is empty. Core's `doing_cron` lock keeps
  * two runs from overlapping; the `sent` map means that even if a run were
@@ -255,14 +263,16 @@ function process_batch(): void {
 		return;
 	}
 
-	$job  = array_shift( $jobs );
-	$sent = 0;
+	$job       = array_shift( $jobs );
+	$processed = 0;
 
-	while ( $sent < BATCH_SIZE ) {
+	while ( $processed < BATCH_SIZE ) {
 		if ( empty( $job['queue'] ) ) {
 			if ( empty( $job['pending_sites'] ) ) {
 				break;
 			}
+
+			++$processed;
 
 			$site_id = (int) $job['pending_sites'][0];
 			$batch   = get_site_recipients( $site_id, $job['audience'], BATCH_SIZE, $job['site_offset'] );
@@ -281,6 +291,8 @@ function process_batch(): void {
 		$recipient = array_shift( $job['queue'] );
 		$key       = strtolower( $recipient['email'] );
 
+		++$processed;
+
 		if ( isset( $job['sent'][ $key ] ) ) {
 			continue;
 		}
@@ -290,8 +302,6 @@ function process_batch(): void {
 		if ( send_message( $recipient, $job ) ) {
 			++$job['sent_count'];
 		}
-
-		++$sent;
 	}
 
 	if ( empty( $job['queue'] ) && empty( $job['pending_sites'] ) ) {

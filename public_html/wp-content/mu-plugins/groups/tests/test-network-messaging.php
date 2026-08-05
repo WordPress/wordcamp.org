@@ -365,6 +365,53 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 	}
 
 	/**
+	 * Duplicates are work too. A recipient who belongs to many selected groups
+	 * is skipped rather than mailed, and a run made entirely of such skips
+	 * must still stop at the batch limit instead of draining the whole queue.
+	 */
+	public function test_duplicate_recipients_still_count_against_the_batch() {
+		$queue = array();
+		$sent  = array();
+
+		for ( $i = 0; $i < Messaging\BATCH_SIZE + 10; $i++ ) {
+			$queue[] = array(
+				'email' => "recipient$i@example.test",
+				'name'  => "Recipient $i",
+			);
+
+			$sent[ "recipient$i@example.test" ] = true;
+		}
+
+		update_site_option(
+			Messaging\JOBS_OPTION,
+			array(
+				array(
+					'id'            => 'test-job',
+					'subject'       => 'Hello',
+					'body'          => 'Body',
+					'audience'      => Messaging\AUDIENCE_ORGANIZERS,
+					'sites'         => array_values( $this->group_sites ),
+					'pending_sites' => array(),
+					'site_offset'   => 0,
+					'queue'         => $queue,
+					'sent'          => $sent,
+					'sent_count'    => 0,
+					'author'        => 0,
+					'created'       => time(),
+				),
+			)
+		);
+
+		Messaging\process_batch();
+
+		$jobs = Messaging\get_jobs();
+
+		$this->assertSame( array(), $this->sent_mail, 'Already-mailed addresses should not be mailed again.' );
+		$this->assertCount( 1, $jobs, 'The job should not have drained in one run.' );
+		$this->assertCount( 10, $jobs[0]['queue'] );
+	}
+
+	/**
 	 * A finished job leaves the queue and is summarised for the admin screen.
 	 */
 	public function test_completed_job_is_summarised() {

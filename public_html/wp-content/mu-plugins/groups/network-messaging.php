@@ -25,6 +25,8 @@
 
 namespace WordCamp\Groups\Messaging;
 
+use WordCamp\Logger;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -49,6 +51,24 @@ const JOBS_OPTION = 'wporg_groups_message_jobs';
 /** Network option holding a summary of the last completed job. */
 const SUMMARY_OPTION = 'wporg_groups_message_last_send';
 
+/** Object-cache key serialising read-modify-write cycles on `JOBS_OPTION`. */
+const LOCK_KEY = 'jobs_lock';
+
+/** Object-cache group for `LOCK_KEY`. Registered global, see below. */
+const LOCK_GROUP = 'wporg-groups-messaging';
+
+/**
+ * Seconds before an abandoned lock expires on its own, so a process that dies
+ * mid-update can't wedge the queue permanently.
+ */
+const LOCK_TIMEOUT = 30;
+
+/** Lock acquisition attempts, `LOCK_RETRY_DELAY` apart. */
+const LOCK_ATTEMPTS = 20;
+
+/** Microseconds between lock acquisition attempts. */
+const LOCK_RETRY_DELAY = 50000;
+
 /**
  * Emails sent per cron run. Small enough that a single run stays well inside
  * PHP's time limit even when the mail transport is slow.
@@ -71,6 +91,17 @@ const ORGANIZER_ROLES = array( 'administrator', 'editor' );
 add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page' );
 add_action( 'admin_post_' . FORM_ACTION, __NAMESPACE__ . '\handle_form_post' );
 add_action( CRON_HOOK, __NAMESPACE__ . '\process_batch' );
+
+/*
+ * `JOBS_OPTION` is a network option, but `process_batch()` runs under whatever
+ * blog happens to be current. Non-global cache groups are keyed per blog, so
+ * without this two runs on different blogs would take two different locks and
+ * not exclude each other at all.
+ *
+ * The object cache is started in `wp-settings.php` well before mu-plugins
+ * load, so this is safe at file scope.
+ */
+wp_cache_add_global_groups( array( LOCK_GROUP ) );
 
 /**
  * Whether the current user may use this tool.
@@ -182,7 +213,8 @@ function get_site_recipients( int $site_id, string $audience, int $number, int $
  * @param string $body     Message body (plain text).
  * @param string $audience One of the `AUDIENCE_*` constants.
  * @param int[]  $site_ids Group sites to message.
- * @return string The queued job's ID.
+ * @return string The queued job's ID, or an empty string if the queue was
+ *                locked by a concurrent update and the job wasn't stored.
  */
 function queue_message( string $subject, string $body, string $audience, array $site_ids ): string {
 	$job = array(
@@ -198,18 +230,74 @@ function queue_message( string $subject, string $body, string $audience, array $
 		// to more than one of the selected groups.
 		'sent'          => array(),
 		'sent_count'    => 0,
+		'failed_count'  => 0,
 		'author'        => get_current_user_id(),
 		'created'       => time(),
 	);
 
-	$jobs   = get_jobs();
-	$jobs[] = $job;
+	$queued = with_jobs_lock(
+		function () use ( $job ) {
+			$jobs   = get_jobs();
+			$jobs[] = $job;
 
-	update_site_option( JOBS_OPTION, $jobs );
+			update_site_option( JOBS_OPTION, $jobs );
+
+			return true;
+		}
+	);
+
+	if ( ! $queued ) {
+		return '';
+	}
 
 	schedule_next_batch();
 
 	return $job['id'];
+}
+
+/**
+ * Run `$callback` with exclusive access to `JOBS_OPTION`.
+ *
+ * Both the compose form and the cron batch read the whole job list, change
+ * one part of it, and write the whole thing back. Interleave two of those and
+ * one silently overwrites the other — cron reads `[A]`, an admin queues `B`
+ * and writes `[A, B]`, cron finishes `A` and writes back `[]`, and `B` is
+ * gone. Core's `doing_cron` lock only stops cron racing cron, not cron racing
+ * a form submission.
+ *
+ * `wp_cache_add()` is atomic on a shared backend (memcached in production),
+ * which makes it a usable cross-process mutex. Without a persistent object
+ * cache the lock is per-process and this degrades to the unsynchronised
+ * behaviour it replaces — no worse than not having it.
+ *
+ * @param callable $callback Runs while the lock is held.
+ * @param bool     $steal    Run the callback anyway if the lock can't be
+ *                           acquired. For updates where dropping the write
+ *                           loses more than a rare clobber would.
+ * @return mixed The callback's return value, or null if the lock wasn't
+ *               acquired and `$steal` is false.
+ */
+function with_jobs_lock( callable $callback, bool $steal = false ) {
+	$acquired = false;
+
+	for ( $attempt = 0; $attempt < LOCK_ATTEMPTS; $attempt++ ) {
+		if ( wp_cache_add( LOCK_KEY, 1, LOCK_GROUP, LOCK_TIMEOUT ) ) {
+			$acquired = true;
+			break;
+		}
+
+		usleep( LOCK_RETRY_DELAY );
+	}
+
+	if ( ! $acquired && ! $steal ) {
+		return null;
+	}
+
+	try {
+		return $callback();
+	} finally {
+		wp_cache_delete( LOCK_KEY, LOCK_GROUP );
+	}
 }
 
 /**
@@ -255,15 +343,36 @@ function schedule_next_batch(): void {
  * Reschedules itself until the queue is empty. Core's `doing_cron` lock keeps
  * two runs from overlapping; the `sent` map means that even if a run were
  * duplicated, an address already mailed wouldn't be mailed again.
+ *
+ * The job is claimed off `JOBS_OPTION` under `with_jobs_lock()` and written
+ * back the same way, but the sending in between runs unlocked — holding the
+ * lock across `BATCH_SIZE` `wp_mail()` calls would block the compose form for
+ * as long as the mail transport takes.
  */
 function process_batch(): void {
-	$jobs = get_jobs();
+	$job = with_jobs_lock(
+		function () {
+			$jobs = get_jobs();
 
-	if ( empty( $jobs ) ) {
+			if ( empty( $jobs ) ) {
+				return null;
+			}
+
+			$claimed = array_shift( $jobs );
+
+			// Claiming removes the job from the option for the duration of
+			// the batch, so a concurrent queue_message() appends to a list
+			// that no longer contains it and can't resurrect stale progress.
+			update_site_option( JOBS_OPTION, $jobs );
+
+			return $claimed;
+		}
+	);
+
+	if ( empty( $job ) ) {
 		return;
 	}
 
-	$job       = array_shift( $jobs );
 	$processed = 0;
 
 	while ( $processed < BATCH_SIZE ) {
@@ -297,20 +406,50 @@ function process_batch(): void {
 			continue;
 		}
 
-		$job['sent'][ $key ] = true;
-
+		/*
+		 * Only mark the address done once the mail is actually away. Marking
+		 * first meant a transient transport failure retired the recipient for
+		 * good — no send, no retry, no trace. Left unmarked, the same person
+		 * gets another chance if they turn up again via another group, and
+		 * the failure is at least on the record either way.
+		 */
 		if ( send_message( $recipient, $job ) ) {
+			$job['sent'][ $key ] = true;
+
 			++$job['sent_count'];
+		} else {
+			$job['failed_count'] = ( $job['failed_count'] ?? 0 ) + 1;
+
+			Logger\log(
+				'groups_message_send_failed',
+				array(
+					'job'       => $job['id'],
+					'recipient' => $recipient['email'],
+				)
+			);
 		}
 	}
 
-	if ( empty( $job['queue'] ) && empty( $job['pending_sites'] ) ) {
-		record_summary( $job );
-	} else {
-		array_unshift( $jobs, $job );
-	}
+	$finished = empty( $job['queue'] ) && empty( $job['pending_sites'] );
 
-	update_site_option( JOBS_OPTION, $jobs );
+	$jobs = with_jobs_lock(
+		function () use ( $job, $finished ) {
+			$jobs = get_jobs();
+
+			if ( $finished ) {
+				record_summary( $job );
+			} else {
+				array_unshift( $jobs, $job );
+
+				update_site_option( JOBS_OPTION, $jobs );
+			}
+
+			return $jobs;
+		},
+		// The batch's progress only exists in memory at this point, so
+		// abandoning the write would re-send everything this run just sent.
+		true
+	);
 
 	if ( ! empty( $jobs ) ) {
 		schedule_next_batch();
@@ -329,8 +468,15 @@ function send_message( array $recipient, array $job ): bool {
 		? sprintf( '%s <%s>', $recipient['name'], $recipient['email'] )
 		: $recipient['email'];
 
+	/*
+	 * Passed a string, `wp_mail()` splits it on commas to support multiple
+	 * recipients — so a display name containing one ("evil@example.test, Jane")
+	 * would smuggle an extra address into every message of a broadcast. Users
+	 * pick their own display name, so that's attacker-controlled. An array
+	 * skips the split entirely and this stays one address.
+	 */
 	return wp_mail(
-		$to,
+		array( $to ),
 		$job['subject'],
 		$job['body'],
 		array( 'Content-Type: text/plain; charset=UTF-8' )
@@ -346,12 +492,13 @@ function record_summary( array $job ): void {
 	update_site_option(
 		SUMMARY_OPTION,
 		array(
-			'subject'    => $job['subject'],
-			'audience'   => $job['audience'],
-			'site_count' => count( $job['sites'] ),
-			'sent_count' => (int) $job['sent_count'],
-			'author'     => (int) $job['author'],
-			'finished'   => time(),
+			'subject'      => $job['subject'],
+			'audience'     => $job['audience'],
+			'site_count'   => count( $job['sites'] ),
+			'sent_count'   => (int) $job['sent_count'],
+			'failed_count' => (int) ( $job['failed_count'] ?? 0 ),
+			'author'       => (int) $job['author'],
+			'finished'     => time(),
 		)
 	);
 }
@@ -394,7 +541,9 @@ function handle_form_post(): void {
 		redirect_with_notice( 'no-groups' );
 	}
 
-	queue_message( $subject, $body, $audience, $group_ids );
+	if ( ! queue_message( $subject, $body, $audience, $group_ids ) ) {
+		redirect_with_notice( 'queue-busy' );
+	}
 
 	redirect_with_notice( 'queued', count( $group_ids ) );
 }
@@ -450,6 +599,7 @@ function render_notice(): void {
 		'empty-message'    => array( 'error', 'Please provide both a subject and a message.' ),
 		'no-groups'        => array( 'error', 'Please select at least one group.' ),
 		'invalid-audience' => array( 'error', 'Please choose who should receive the message.' ),
+		'queue-busy'       => array( 'error', 'The message queue was busy and your message was not queued. Please try again.' ),
 	);
 
 	if ( ! isset( $messages[ $notice ] ) ) {
@@ -476,17 +626,25 @@ function render_summary(): void {
 	}
 
 	$author = get_userdata( (int) $summary['author'] );
+	$failed = (int) ( $summary['failed_count'] ?? 0 );
 
 	printf(
 		'<p class="description">%s</p>',
 		esc_html(
 			sprintf(
-				'Last send: "%1$s" reached %2$s recipient(s) across %3$s group(s), sent by %4$s on %5$s.',
+				'Last send: "%1$s" reached %2$s recipient(s) across %3$s group(s), sent by %4$s on %5$s.%6$s',
 				$summary['subject'],
 				number_format_i18n( (int) $summary['sent_count'] ),
 				number_format_i18n( (int) $summary['site_count'] ),
 				$author ? $author->display_name : 'an unknown user',
-				wp_date( 'Y-m-d H:i', (int) $summary['finished'] )
+				wp_date( 'Y-m-d H:i', (int) $summary['finished'] ),
+				$failed
+					? sprintf(
+						/* translators: %s: number of failed recipients. */
+						' %s message(s) could not be sent — see the error log.',
+						number_format_i18n( $failed )
+					)
+					: ''
 			)
 		)
 	);

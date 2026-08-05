@@ -434,6 +434,151 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 	}
 
 	/**
+	 * A display name is user-controlled, and `wp_mail()` splits a string `to`
+	 * on commas — so one containing a comma must not be able to add a second
+	 * recipient to every message of a broadcast.
+	 */
+	public function test_display_name_cannot_smuggle_in_an_extra_recipient() {
+		$user_id = $this->add_member( $this->group_sites['brisbane'], 'editor', 'organiser@example.test' );
+
+		wp_update_user(
+			array(
+				'ID'           => $user_id,
+				'display_name' => 'evil@example.test, Jane',
+			)
+		);
+
+		Messaging\queue_message(
+			'Hello',
+			'Body',
+			Messaging\AUDIENCE_ORGANIZERS,
+			array( $this->group_sites['brisbane'] )
+		);
+		$this->process_queue();
+
+		$this->assertCount( 1, $this->sent_mail );
+
+		$to = $this->sent_mail[0]['to'];
+
+		// Mirror what core does with the value it was handed: a string `to` is
+		// split on commas, an array is taken as-is. Passing the string form
+		// here would yield two addresses.
+		$recipients = is_array( $to ) ? $to : explode( ',', $to );
+
+		$this->assertCount( 1, $recipients, 'The display name must not be split into a second recipient.' );
+		$this->assertStringContainsString( 'organiser@example.test', $recipients[0] );
+	}
+
+	/**
+	 * A transport failure must not retire the recipient. Marking the address
+	 * done before `wp_mail()` returned meant a transient failure dropped that
+	 * person from the send permanently, with nothing recorded.
+	 */
+	public function test_a_failed_send_is_not_marked_as_delivered() {
+		$this->add_member( $this->group_sites['brisbane'], 'editor', 'organiser@example.test' );
+
+		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
+		add_filter( 'pre_wp_mail', '__return_false' );
+
+		Messaging\queue_message(
+			'Hello',
+			'Body',
+			Messaging\AUDIENCE_ORGANIZERS,
+			array( $this->group_sites['brisbane'] )
+		);
+		$this->process_queue();
+
+		remove_filter( 'pre_wp_mail', '__return_false' );
+
+		$summary = get_site_option( Messaging\SUMMARY_OPTION );
+
+		$this->assertSame( 0, $summary['sent_count'] );
+		$this->assertSame( 1, $summary['failed_count'], 'The failure should be counted, not silently swallowed.' );
+	}
+
+	/**
+	 * A recipient who failed on one group is retried when they turn up again
+	 * through another — the `sent` map is a record of delivery, not of
+	 * attempts.
+	 */
+	public function test_a_failed_recipient_is_retried_via_another_group() {
+		$user_id = $this->add_member( $this->group_sites['brisbane'], 'editor', 'both@example.test' );
+
+		add_user_to_blog( $this->group_sites['hobart'], $user_id, 'editor' );
+
+		$attempts = 0;
+
+		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
+
+		$fail_first = function () use ( &$attempts ) {
+			++$attempts;
+
+			return 1 === $attempts ? false : true;
+		};
+
+		add_filter( 'pre_wp_mail', $fail_first );
+
+		Messaging\queue_message( 'Hello', 'Body', Messaging\AUDIENCE_ORGANIZERS, array_values( $this->group_sites ) );
+		$this->process_queue();
+
+		remove_filter( 'pre_wp_mail', $fail_first );
+
+		$this->assertSame( 2, $attempts, 'The second membership should give the failed address another attempt.' );
+
+		$summary = get_site_option( Messaging\SUMMARY_OPTION );
+
+		$this->assertSame( 1, $summary['sent_count'] );
+		$this->assertSame( 1, $summary['failed_count'] );
+	}
+
+	/**
+	 * A message queued while a batch is mid-flight must survive the batch
+	 * writing its own progress back. Both sides read-modify-write the same
+	 * option, so without the lock the batch's write would drop the new job.
+	 */
+	public function test_a_message_queued_during_a_batch_is_not_lost() {
+		$this->add_member( $this->group_sites['brisbane'], 'editor', 'organiser@example.test' );
+
+		Messaging\queue_message(
+			'First',
+			'Body',
+			Messaging\AUDIENCE_ORGANIZERS,
+			array( $this->group_sites['brisbane'] )
+		);
+
+		// Queue a second message from "another request" while the first job is
+		// claimed and mid-send, which is exactly the interleaving that used to
+		// lose it.
+		$queue_during_send = function ( $short_circuit, $atts ) {
+			static $queued = false;
+
+			if ( ! $queued ) {
+				$queued = true;
+
+				Messaging\queue_message(
+					'Second',
+					'Body',
+					Messaging\AUDIENCE_ORGANIZERS,
+					array( $this->group_sites['hobart'] )
+				);
+			}
+
+			return $this->capture_mail( $short_circuit, $atts );
+		};
+
+		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
+		add_filter( 'pre_wp_mail', $queue_during_send, 10, 2 );
+
+		Messaging\process_batch();
+
+		remove_filter( 'pre_wp_mail', $queue_during_send, 10 );
+
+		$subjects = wp_list_pluck( Messaging\get_jobs(), 'subject' );
+
+		$this->assertContains( 'Second', $subjects, 'The concurrently queued job should still be in the queue.' );
+	}
+
+	/**
 	 * Group organisers — even administrators of their own group — can't reach
 	 * the whole network.
 	 */

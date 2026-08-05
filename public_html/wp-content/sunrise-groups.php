@@ -97,15 +97,43 @@ function set_network_and_site() {
 }
 
 /**
+ * Whether the current request is for one of core's own `wp-*.php` entry
+ * points (`wp-login.php`, `wp-signup.php`, `wp-activate.php`, …) rather than
+ * a front-end URL.
+ *
+ * Uses `REQUEST_URI` rather than `is_login()`, which can't run this early —
+ * it calls `wp_login_url()`, and that needs the blog's options, which don't
+ * exist until long after sunrise. `SCRIPT_NAME` would work on the current
+ * nginx config (`/group/wp-login.php` is rewritten to `/wp-login.php`) but
+ * would silently stop matching if the rewrites changed; `REQUEST_URI` is
+ * what the rest of this file already resolves the site from.
+ *
+ * @return bool
+ */
+function is_core_endpoint_request() {
+	$path = parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH );
+
+	return is_string( $path ) && 1 === preg_match( '~/wp-[\w-]+\.php$~', $path );
+}
+
+/**
  * Handle any redirects needed on the Groups network.
  */
 function do_redirects() {
 	global $blog_id, $site_id;
 
-	// The groups network root (`events.wordpress.org/group/`) is a placeholder
-	// that exists only because WordPress multisite requires every network to
-	// have a root site. Front-end requests bounce to the events root.
-	if ( GROUPS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() ) {
+	/*
+	 * The groups network root (`events.wordpress.org/group/`) is a placeholder
+	 * that exists only because WordPress multisite requires every network to
+	 * have a root site. Front-end requests bounce to the events root.
+	 *
+	 * `wp-login.php` is exempt because it lives on that placeholder root and
+	 * is the only way to get a session on this network: `is_admin()` is false
+	 * for it, so bouncing it left every Network Admin screen here permanently
+	 * unreachable — you'd be redirected to the events root, whose login sets
+	 * an admin cookie scoped to `/wp-admin`, never `/group/wp-admin`.
+	 */
+	if ( GROUPS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() && ! is_core_endpoint_request() ) {
 		header( 'X-Redirect-By: Groups/Sunrise::do_redirects' );
 		header( 'Location: https://events.wordpress.' . get_top_level_domain() . '/', true, 302 );
 		exit;

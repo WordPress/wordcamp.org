@@ -74,6 +74,28 @@
 }
 
 /* ==========================================================================
+   Front-page lower sections ("About this group", sponsors)
+
+   Constrained and spaced here rather than by wrapper groups in the template.
+   Both blocks render nothing when they have no content, and a wrapper would
+   leave its top margin behind as a gap on every group site that hasn't
+   written an About page or been given a sponsor.
+   ========================================================================== */
+
+.groups-site-about,
+.groups-site-sponsors {
+	max-width: 768px;
+	margin-top: var(--wp--preset--spacing--70);
+}
+
+/* The rule between the events sections and About/Sponsors has nothing to
+   separate when both of those render empty, which is the common case for a
+   brand-new group. Drop it when it ends up last in the main column. */
+main > .groups-site-content-separator:last-child {
+	display: none;
+}
+
+/* ==========================================================================
    Query Loop event cards — make the entire card clickable via the
    post-title link and add hover state.
    ========================================================================== */

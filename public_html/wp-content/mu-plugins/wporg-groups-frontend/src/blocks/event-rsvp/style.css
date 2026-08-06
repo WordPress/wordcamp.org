@@ -23,7 +23,7 @@
 }
 
 .wporg-event-rsvp__summary:focus-visible {
-	outline: 2px solid currentColor;
+	outline: 2px solid;
 	outline-offset: 4px;
 }
 

@@ -5,8 +5,6 @@
  * and attendee list display.
  */
 
-// WordPress provides this as a script-module dependency.
-// eslint-disable-next-line import/no-extraneous-dependencies
 import { getContext, getElement, store } from '@wordpress/interactivity';
 
 let cachedNonce = null;

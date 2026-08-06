@@ -10,7 +10,7 @@ use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
-const LATEST_DATABASE_VERSION = 4;
+const LATEST_DATABASE_VERSION = 5;
 
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );

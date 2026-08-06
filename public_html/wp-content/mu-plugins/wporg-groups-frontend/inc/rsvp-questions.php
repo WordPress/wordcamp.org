@@ -42,6 +42,95 @@ const MAX_QUESTIONS = 5;
 const MAX_ANSWER_LENGTH = 500;
 
 /**
+ * Hook the guard on GatherPress's own RSVP route.
+ */
+function bootstrap(): void {
+	add_filter( 'rest_endpoints', __NAMESPACE__ . '\guard_gatherpress_rsvp_route' );
+}
+
+/**
+ * Stop GatherPress's `/gatherpress/v1/event/rsvp` route being used to attend an
+ * event while skipping its required questions.
+ *
+ * Our own `wporg-groups/v1/event/{id}/rsvp` validates the answers, but
+ * GatherPress's route stays registered and accepts any logged-in member, so
+ * without this the "required" flag is only a front-end suggestion.
+ *
+ * The permission callback is wrapped rather than replaced, so GatherPress's own
+ * token/membership checks still run. Only the case that can produce bad data is
+ * refused — attending an event with unanswered required questions. Cancelling,
+ * events without questions, and members whose stored answers already satisfy
+ * the questions all pass through untouched.
+ *
+ * @param array $endpoints Registered REST endpoints.
+ * @return array Filtered endpoints.
+ */
+function guard_gatherpress_rsvp_route( array $endpoints ): array {
+	$route = '/gatherpress/v1/event/rsvp';
+
+	if ( empty( $endpoints[ $route ] ) ) {
+		return $endpoints;
+	}
+
+	foreach ( $endpoints[ $route ] as $index => $handler ) {
+		if ( ! isset( $handler['permission_callback'] ) ) {
+			continue;
+		}
+
+		$original = $handler['permission_callback'];
+
+		$endpoints[ $route ][ $index ]['permission_callback'] = static function ( $request ) use ( $original ) {
+			$allowed = call_user_func( $original, $request );
+
+			if ( true !== $allowed ) {
+				return $allowed;
+			}
+
+			return rsvp_answers_satisfied( $request );
+		};
+	}
+
+	return $endpoints;
+}
+
+/**
+ * Whether a GatherPress RSVP request would leave required questions unanswered.
+ *
+ * @param \WP_REST_Request $request The RSVP request.
+ * @return true|\WP_Error True when the request is fine to proceed.
+ */
+function rsvp_answers_satisfied( $request ) {
+	if ( 'attending' !== sanitize_key( (string) $request->get_param( 'status' ) ) ) {
+		return true;
+	}
+
+	$post_id   = (int) $request->get_param( 'post_id' );
+	$questions = $post_id ? get_questions( $post_id ) : array();
+
+	if ( ! $questions ) {
+		return true;
+	}
+
+	$user_id = (int) $request->get_param( 'user_id' );
+	$user_id = $user_id ? $user_id : get_current_user_id();
+	$missing = get_missing_required( $questions, get_user_answers( $post_id, $user_id ) );
+
+	if ( ! $missing ) {
+		return true;
+	}
+
+	return new \WP_Error(
+		'wporg_groups_missing_answers',
+		sprintf(
+			/* translators: %s: comma-separated list of question labels. */
+			__( 'Please answer: %s', 'wporg-groups-frontend' ),
+			implode( ', ', $missing )
+		),
+		array( 'status' => 400 )
+	);
+}
+
+/**
  * The questions defined on an event, in display order.
  *
  * @param int $event_id Event post ID.
@@ -136,9 +225,14 @@ function next_question_id( array $used_ids ): string {
 /**
  * Filter a raw answer map down to the questions the event actually asks.
  *
+ * A key that is **present but blank** is kept as `''` — that's how the caller
+ * tells "the attendee cleared this answer" apart from "this question wasn't
+ * submitted at all", which `merge_answers()` then treats differently. Keys the
+ * request didn't mention are dropped entirely.
+ *
  * @param array $questions Sanitized question list.
  * @param mixed $raw       Raw `question id => answer` map from the request.
- * @return array Sanitized `question id => answer` map, blanks omitted.
+ * @return array Sanitized `question id => answer` map of submitted keys only.
  */
 function sanitize_answers( array $questions, $raw ): array {
 	if ( ! is_array( $raw ) ) {
@@ -148,17 +242,55 @@ function sanitize_answers( array $questions, $raw ): array {
 	$answers = array();
 
 	foreach ( $questions as $question ) {
-		$value = sanitize_text_field( (string) ( $raw[ $question['id'] ] ?? '' ) );
-		$value = trim( $value );
-
-		if ( '' === $value ) {
+		if ( ! array_key_exists( $question['id'], $raw ) ) {
 			continue;
 		}
+
+		$value = trim( sanitize_text_field( (string) $raw[ $question['id'] ] ) );
 
 		$answers[ $question['id'] ] = mb_substr( $value, 0, MAX_ANSWER_LENGTH );
 	}
 
 	return $answers;
+}
+
+/**
+ * Apply a submitted answer map on top of what's already stored.
+ *
+ * Only the questions the request actually mentioned are touched, so a client
+ * that renders a stale form — or any caller that omits the field — can't wipe
+ * answers it never showed. A submitted blank is an explicit clear.
+ *
+ * @param array $stored    Currently stored `question id => answer` map.
+ * @param array $submitted Sanitized submitted map (blanks preserved).
+ * @return array The resulting map.
+ */
+function merge_answers( array $stored, array $submitted ): array {
+	foreach ( $submitted as $id => $value ) {
+		if ( '' === $value ) {
+			unset( $stored[ $id ] );
+			continue;
+		}
+
+		$stored[ $id ] = $value;
+	}
+
+	return $stored;
+}
+
+/**
+ * Whether a question has an answer.
+ *
+ * Deliberately not `empty()`: an answer of `"0"` is a real answer (a count, a
+ * guest number, a size), and `empty( '0' )` is true in PHP while the browser
+ * treats the same string as filled in — so the two ends would disagree about
+ * whether a required question had been answered.
+ *
+ * @param array  $answers Answer map.
+ * @param string $id      Question ID.
+ */
+function has_answer( array $answers, string $id ): bool {
+	return isset( $answers[ $id ] ) && '' !== $answers[ $id ];
 }
 
 /**
@@ -172,7 +304,7 @@ function get_missing_required( array $questions, array $answers ): array {
 	$missing = array();
 
 	foreach ( $questions as $question ) {
-		if ( $question['required'] && empty( $answers[ $question['id'] ] ) ) {
+		if ( $question['required'] && ! has_answer( $answers, $question['id'] ) ) {
 			$missing[] = $question['label'];
 		}
 	}
@@ -187,7 +319,7 @@ function get_missing_required( array $questions, array $answers ): array {
  * @param array $answers    Sanitized answer map.
  */
 function save_answers( int $comment_id, array $answers ): void {
-	if ( empty( $answers ) ) {
+	if ( ! $answers ) {
 		delete_comment_meta( $comment_id, ANSWERS_META );
 		return;
 	}
@@ -222,7 +354,7 @@ function get_labelled_answers( int $comment_id, array $questions ): array {
 	$labelled = array();
 
 	foreach ( $questions as $question ) {
-		if ( empty( $answers[ $question['id'] ] ) ) {
+		if ( ! has_answer( $answers, $question['id'] ) ) {
 			continue;
 		}
 

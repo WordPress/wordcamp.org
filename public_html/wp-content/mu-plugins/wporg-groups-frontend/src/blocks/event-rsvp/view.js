@@ -25,6 +25,10 @@ store( 'wporg/event-rsvp', {
 			return getContext().currentUserStatus === 'attending';
 		},
 
+		get isNotAttending() {
+			return getContext().currentUserStatus !== 'attending';
+		},
+
 		get countLabel() {
 			const count = getContext().attendingCount;
 			return formatLabel( label( 1 === count ? 'countSingular' : 'countPlural' ), [
@@ -149,6 +153,11 @@ store( 'wporg/event-rsvp', {
 			const ctx = getContext();
 			return doToggleRsvp( ctx, getElement().ref );
 		},
+
+		async saveAnswers() {
+			const ctx = getContext();
+			return doSaveAnswers( ctx, getElement().ref );
+		},
 	},
 } );
 
@@ -227,12 +236,11 @@ function collectAnswers( block ) {
 
 	block?.querySelectorAll( '.wporg-event-rsvp__question-input' ).forEach( ( input ) => {
 		const value = input.value.trim();
-		if ( ! value ) {
-			if ( input.required ) {
-				missingRequired = true;
-			}
-			return;
+		if ( ! value && input.required ) {
+			missingRequired = true;
 		}
+		// Blanks are sent too, so the server can tell "cleared this answer"
+		// from "never rendered this question".
 		answers[ input.dataset.questionId ] = value;
 	} );
 
@@ -240,6 +248,24 @@ function collectAnswers( block ) {
 }
 
 async function doToggleRsvp( ctx, actionElement ) {
+	const newStatus = ctx.currentUserStatus === 'attending' ? 'not_attending' : 'attending';
+
+	return submitRsvp( ctx, actionElement, newStatus );
+}
+
+/**
+ * Save edited answers without changing the attendance itself.
+ *
+ * Re-sending `attending` is idempotent in `Rsvp::save()`, so this updates the
+ * answers on the existing RSVP rather than requiring a cancel/re-RSVP round
+ * trip — which would delete the answers and, on a capped event, surrender the
+ * seat to the waiting list.
+ */
+async function doSaveAnswers( ctx, actionElement ) {
+	return submitRsvp( ctx, actionElement, 'attending' );
+}
+
+async function submitRsvp( ctx, actionElement, newStatus ) {
 	if ( ! ctx.isLoggedIn ) {
 		window.location.href = ctx.loginUrl;
 		return;
@@ -274,8 +300,6 @@ async function doToggleRsvp( ctx, actionElement ) {
 		}
 	}
 
-	const newStatus = ctx.currentUserStatus === 'attending' ? 'not_attending' : 'attending';
-
 	const { answers, missingRequired } = ctx.hasQuestions
 		? collectAnswers( actionElement?.closest( '.wp-block-wporg-event-rsvp' ) )
 		: { answers: {}, missingRequired: false };
@@ -292,8 +316,11 @@ async function doToggleRsvp( ctx, actionElement ) {
 
 	const oldStatus = ctx.currentUserStatus;
 	const oldCount = ctx.attendingCount;
+	const statusChanged = newStatus !== oldStatus;
 	ctx.currentUserStatus = newStatus;
-	ctx.attendingCount += newStatus === 'attending' ? 1 : -1;
+	if ( statusChanged ) {
+		ctx.attendingCount += newStatus === 'attending' ? 1 : -1;
+	}
 	ctx.rsvpLoading = true;
 
 	try {
@@ -301,7 +328,9 @@ async function doToggleRsvp( ctx, actionElement ) {
 
 		ctx.currentUserStatus = data.status;
 		ctx.attendingCount = data.responses.attending.count;
-		ctx.rsvpNotice = getRsvpSuccessNotice( ctx, data.status );
+		ctx.rsvpNotice = statusChanged
+			? getRsvpSuccessNotice( ctx, data.status )
+			: labelFromContext( ctx, 'answersSaved' );
 
 		// Organizers see the answers inline in the attendee list, which the
 		// client-side refresh can't rebuild — reload so their view stays
@@ -312,10 +341,19 @@ async function doToggleRsvp( ctx, actionElement ) {
 		}
 
 		refreshAttendees( ctx, actionElement );
-	} catch {
+	} catch ( error ) {
 		ctx.currentUserStatus = oldStatus;
 		ctx.attendingCount = oldCount;
-		ctx.rsvpNotice = labelFromContext( ctx, 'rsvpError' );
+
+		// Our own validation failures carry a message the attendee can act on
+		// ("Please answer: Dietary requirements"). Anything else — a network
+		// blip, a 500 — gets the generic retry wording.
+		const ours = error?.code?.startsWith?.( 'wporg_groups_' ) && error.message;
+		ctx.rsvpNotice = ours ? error.message : labelFromContext( ctx, 'rsvpError' );
+		if ( ours ) {
+			ctx.questionsError = error.message;
+			openRsvpModal( ctx, actionElement );
+		}
 	} finally {
 		ctx.rsvpLoading = false;
 	}
@@ -357,7 +395,11 @@ async function sendRsvp( ctx, status, answers, retry = false ) {
 
 	const data = await resp.json();
 	if ( ! resp.ok || ! data?.success ) {
-		throw new Error( data?.message || resp.statusText );
+		const error = new Error( data?.message || resp.statusText );
+		// Keep the code so the caller can tell a message meant for the
+		// attendee ("Please answer: …") from an opaque transport failure.
+		error.code = data?.code || '';
+		throw error;
 	}
 
 	return data;

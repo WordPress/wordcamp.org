@@ -55,6 +55,8 @@ use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_missing_required;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_user_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\merge_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\sanitize_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\save_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\save_questions;
@@ -406,7 +408,11 @@ function save_rsvp( WP_REST_Request $request ) {
 
 	$event = new Event( $event_id );
 
-	if ( ! $event->rsvp ) {
+	// `$event->rsvp` is set for anything supporting `gatherpress-event-date`,
+	// which the post-type check above already guarantees. The meaningful gate
+	// is whether RSVP is switched on for this event — without it
+	// `Rsvp::save()` is a no-op that would otherwise look like success.
+	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
 		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
 	}
 
@@ -414,8 +420,14 @@ function save_rsvp( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_event_past', 'This event has already happened.', array( 'status' => 400 ) );
 	}
 
+	$user_id   = get_current_user_id();
 	$questions = get_questions( $event_id );
-	$answers   = sanitize_answers( $questions, $request->get_param( 'answers' ) );
+
+	// Only the questions this request actually submitted are applied on top of
+	// what's already stored, so a stale form can't blank out answers it never
+	// rendered. Required questions are checked against that merged result.
+	$submitted = sanitize_answers( $questions, $request->get_param( 'answers' ) );
+	$answers   = merge_answers( get_user_answers( $event_id, $user_id ), $submitted );
 
 	if ( 'attending' === $status ) {
 		$missing = get_missing_required( $questions, $answers );
@@ -436,7 +448,6 @@ function save_rsvp( WP_REST_Request $request ) {
 	// Group sites are open to join, and RSVPing is the point at which someone
 	// becomes a member — same as GatherPress's own endpoint and our
 	// /members/join route.
-	$user_id = get_current_user_id();
 	if ( ! is_user_member_of_blog( $user_id ) ) {
 		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
 	}
@@ -444,15 +455,24 @@ function save_rsvp( WP_REST_Request $request ) {
 	$record     = $event->rsvp->save( $user_id, $status );
 	$comment_id = (int) ( $record['comment_id'] ?? 0 );
 
-	if ( $comment_id ) {
-		// Answers belong to an attendance, not to a declined invitation — a
-		// cancelled RSVP drops them.
-		save_answers( $comment_id, 'attending' === $record['status'] ? $answers : array() );
+	if ( ! $comment_id ) {
+		return new WP_Error(
+			'wporg_groups_rsvp_failed',
+			'Your RSVP could not be saved.',
+			array( 'status' => 500 )
+		);
 	}
+
+	// Answers belong to an attendance, not to a declined invitation — a
+	// cancelled RSVP drops them. Keyed off the *requested* status, not the
+	// saved one: a full event downgrades `attending` to `waiting_list`, and
+	// `check_waiting_list()` later promotes the RSVP without ever restoring
+	// answers deleted here.
+	save_answers( $comment_id, 'attending' === $status ? $answers : array() );
 
 	return new WP_REST_Response(
 		array(
-			'success'   => (bool) $comment_id,
+			'success'   => true,
 			'status'    => $record['status'] ?? 'no_status',
 			'responses' => $event->rsvp->responses(),
 		)

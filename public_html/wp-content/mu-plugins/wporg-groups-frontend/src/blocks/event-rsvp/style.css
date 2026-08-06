@@ -184,6 +184,16 @@
 	display: none;
 }
 
+.wporg-event-rsvp__save-answers {
+	align-self: flex-start;
+	font-size: 13px;
+	padding: 6px 12px;
+}
+
+.wporg-event-rsvp__save-answers.is-hidden {
+	display: none;
+}
+
 .wporg-event-rsvp__question {
 	display: flex;
 	flex-direction: column;

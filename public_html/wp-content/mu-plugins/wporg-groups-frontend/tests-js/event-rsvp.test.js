@@ -329,6 +329,27 @@ describe( 'event RSVP custom registration questions', () => {
 		} );
 	} );
 
+	function mockRsvpSuccess() {
+		global.fetch
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { nonce: 'nonce' } ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				status: 200,
+				json: async () => ( {
+					success: true,
+					status: 'attending',
+					responses: { attending: { count: 1 } },
+				} ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { success: false } ),
+			} );
+	}
+
 	function renderModalWithQuestions() {
 		document.body.innerHTML = `
 			<div class="wp-block-wporg-event-rsvp">
@@ -410,11 +431,47 @@ describe( 'event RSVP custom registration questions', () => {
 		expect( mockContext.currentUserStatus ).toBe( 'attending' );
 	} );
 
-	test( 'omits blank optional answers', async () => {
+	test( 'sends blank optional answers so the server can tell cleared from absent', async () => {
 		const { actions } = loadStore();
 		const { diet, rsvp } = renderModalWithQuestions();
 		mockElement = rsvp;
 		diet.value = '  Vegetarian  ';
+
+		mockRsvpSuccess();
+
+		await actions.toggleRsvp();
+
+		expect( JSON.parse( global.fetch.mock.calls[ 1 ][ 1 ].body ).answers ).toEqual( {
+			company: '',
+			diet: 'Vegetarian',
+		} );
+	} );
+
+	test( 'saves edited answers without changing attendance', async () => {
+		const { actions } = loadStore();
+		const { diet, rsvp } = renderModalWithQuestions();
+		mockElement = rsvp;
+		mockContext.currentUserStatus = 'attending';
+		mockContext.attendingCount = 1;
+		mockContext.labels.answersSaved = 'Your answers have been saved.';
+		diet.value = 'Vegan';
+
+		mockRsvpSuccess();
+
+		await actions.saveAnswers();
+
+		expect( JSON.parse( global.fetch.mock.calls[ 1 ][ 1 ].body ).status ).toBe( 'attending' );
+		expect( mockContext.currentUserStatus ).toBe( 'attending' );
+		expect( mockContext.attendingCount ).toBe( 1 );
+		expect( mockContext.rsvpNotice ).toBe( 'Your answers have been saved.' );
+	} );
+
+	test( 'surfaces the server validation message instead of the generic error', async () => {
+		const { actions } = loadStore();
+		const { diet, rsvp } = renderModalWithQuestions();
+		mockElement = rsvp;
+		// Passes the client check — "0" is a filled-in field in the browser.
+		diet.value = '0';
 
 		global.fetch
 			.mockResolvedValueOnce( {
@@ -422,23 +479,43 @@ describe( 'event RSVP custom registration questions', () => {
 				json: async () => ( { nonce: 'nonce' } ),
 			} )
 			.mockResolvedValueOnce( {
-				ok: true,
-				status: 200,
+				ok: false,
+				status: 400,
+				statusText: 'Bad Request',
 				json: async () => ( {
-					success: true,
-					status: 'attending',
-					responses: { attending: { count: 1 } },
+					code: 'wporg_groups_missing_answers',
+					message: 'Please answer: Dietary requirements',
 				} ),
-			} )
-			.mockResolvedValueOnce( {
-				ok: true,
-				json: async () => ( { success: false } ),
 			} );
 
 		await actions.toggleRsvp();
 
-		expect( JSON.parse( global.fetch.mock.calls[ 1 ][ 1 ].body ).answers ).toEqual( {
-			diet: 'Vegetarian',
-		} );
+		expect( mockContext.rsvpNotice ).toBe( 'Please answer: Dietary requirements' );
+		expect( mockContext.questionsError ).toBe( 'Please answer: Dietary requirements' );
+		expect( mockContext.currentUserStatus ).toBe( 'no_status' );
+	} );
+
+	test( 'keeps the generic wording for failures that are not ours', async () => {
+		const { actions } = loadStore();
+		const { diet, rsvp } = renderModalWithQuestions();
+		mockElement = rsvp;
+		diet.value = 'Vegetarian';
+
+		global.fetch
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { nonce: 'nonce' } ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: false,
+				status: 500,
+				statusText: 'Internal Server Error',
+				json: async () => ( {} ),
+			} );
+
+		await actions.toggleRsvp();
+
+		expect( mockContext.rsvpNotice ).toBe( 'Your RSVP could not be updated. Please try again.' );
+		expect( mockContext.questionsError ).toBe( '' );
 	} );
 } );

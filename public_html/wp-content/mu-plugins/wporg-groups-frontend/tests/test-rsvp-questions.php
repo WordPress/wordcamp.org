@@ -411,6 +411,230 @@ class Test_Groups_RSVP_Questions extends Groups_TestCase {
 	}
 
 	/**
+	 * An answer of "0" is a real answer — `empty()` would call it missing,
+	 * while the browser treats the same string as filled in.
+	 */
+	public function test_zero_is_a_valid_answer() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'       => 'guests',
+					'label'    => 'How many guests?',
+					'required' => true,
+				),
+			)
+		);
+
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $user_id );
+
+		$response = save_rsvp( $this->rsvp_request( $event_id, 'attending', array( 'guests' => '0' ) ) );
+
+		$this->assertNotWPError( $response );
+		$this->assertTrue( $response->get_data()['success'] );
+
+		$rsvp       = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( $user_id );
+		$comment_id = (int) $rsvp['comment_id'];
+
+		$this->assertSame( array( 'guests' => '0' ), get_answers( $comment_id ) );
+		$this->assertSame(
+			array(
+				array(
+					'label'  => 'How many guests?',
+					'answer' => '0',
+				),
+			),
+			get_labelled_answers( $comment_id, get_questions( $event_id ) )
+		);
+	}
+
+	/**
+	 * A request that doesn't mention a question leaves its stored answer
+	 * alone — a stale form can't blank out answers it never rendered.
+	 */
+	public function test_omitted_questions_keep_their_stored_answers() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'    => 'company',
+					'label' => 'Company name',
+				),
+			)
+		);
+
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $user_id );
+
+		save_rsvp( $this->rsvp_request( $event_id, 'attending', array( 'company' => 'Automattic' ) ) );
+
+		// A second, stale tab re-sends "attending" with nothing filled in.
+		save_rsvp( $this->rsvp_request( $event_id, 'attending', array() ) );
+
+		$rsvp = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( $user_id );
+
+		$this->assertSame( array( 'company' => 'Automattic' ), get_answers( (int) $rsvp['comment_id'] ) );
+	}
+
+	/**
+	 * Submitting a question with a blank value does clear it, which is how an
+	 * attendee removes an answer they'd rather not share.
+	 */
+	public function test_submitted_blank_clears_the_answer() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'    => 'company',
+					'label' => 'Company name',
+				),
+			)
+		);
+
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $user_id );
+
+		save_rsvp( $this->rsvp_request( $event_id, 'attending', array( 'company' => 'Automattic' ) ) );
+		save_rsvp( $this->rsvp_request( $event_id, 'attending', array( 'company' => '' ) ) );
+
+		$rsvp = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( $user_id );
+
+		$this->assertSame( array(), get_answers( (int) $rsvp['comment_id'] ) );
+	}
+
+	/**
+	 * A full event downgrades the RSVP to the waiting list. The answers have
+	 * to survive that, because the later promotion to attending never
+	 * restores them.
+	 */
+	public function test_waiting_list_rsvp_keeps_its_answers() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'    => 'company',
+					'label' => 'Company name',
+				),
+			)
+		);
+
+		// One seat, already taken, so the next RSVP lands on the waiting list.
+		update_post_meta( $event_id, 'gatherpress_max_attendance_limit', 1 );
+
+		$first = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $first );
+		save_rsvp( $this->rsvp_request( $event_id, 'attending', array( 'company' => 'First' ) ) );
+
+		$second = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $second );
+		$response = save_rsvp( $this->rsvp_request( $event_id, 'attending', array( 'company' => 'Second' ) ) );
+
+		$this->assertNotWPError( $response );
+		$this->assertSame( 'waiting_list', $response->get_data()['status'] );
+
+		$rsvp = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( $second );
+
+		$this->assertSame( array( 'company' => 'Second' ), get_answers( (int) $rsvp['comment_id'] ) );
+	}
+
+	/**
+	 * An event with RSVP switched off reports the failure instead of
+	 * returning a 200 that the client can only read as "OK".
+	 */
+	public function test_rsvp_disabled_event_returns_an_error() {
+		$event_id = $this->create_event();
+
+		// The groups tweaks plugin short-circuits `gatherpress_settings` via
+		// `pre_option_*`, so the stored option is never read — the mode has to
+		// be injected through the same filter. `disabled` makes
+		// `Rsvp::is_enabled()` false regardless of the per-event meta.
+		$disable_rsvp = static function ( $value ) {
+			$value = is_array( $value ) ? $value : array();
+
+			$value['rsvp_mode'] = 'disabled';
+
+			return $value;
+		};
+		add_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$response = save_rsvp( $this->rsvp_request( $event_id, 'attending' ) );
+
+		remove_filter( 'pre_option_gatherpress_settings', $disable_rsvp, 20 );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'wporg_groups_rsvp_unavailable', $response->get_error_code() );
+	}
+
+	/**
+	 * GatherPress's own RSVP route can't be used to attend while skipping the
+	 * required questions our endpoint enforces.
+	 */
+	public function test_gatherpress_route_is_guarded() {
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'       => 'diet',
+					'label'    => 'Dietary requirements',
+					'required' => true,
+				),
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$request = new WP_REST_Request( 'POST', '/gatherpress/v1/event/rsvp' );
+		$request->set_param( 'post_id', $event_id );
+		$request->set_param( 'status', 'attending' );
+
+		$result = \WordCamp\Groups\Frontend\RSVP_Questions\rsvp_answers_satisfied( $request );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'wporg_groups_missing_answers', $result->get_error_code() );
+
+		// Cancelling is never blocked.
+		$cancel = new WP_REST_Request( 'POST', '/gatherpress/v1/event/rsvp' );
+		$cancel->set_param( 'post_id', $event_id );
+		$cancel->set_param( 'status', 'not_attending' );
+
+		$this->assertTrue( \WordCamp\Groups\Frontend\RSVP_Questions\rsvp_answers_satisfied( $cancel ) );
+	}
+
+	/**
+	 * The guard is wired onto the real route, not just callable in isolation.
+	 */
+	public function test_gatherpress_route_guard_is_registered() {
+		$endpoints = apply_filters(
+			'rest_endpoints',
+			array(
+				'/gatherpress/v1/event/rsvp' => array(
+					array( 'permission_callback' => '__return_true' ),
+				),
+			)
+		);
+
+		$callback = $endpoints['/gatherpress/v1/event/rsvp'][0]['permission_callback'];
+
+		$this->assertNotSame( '__return_true', $callback );
+
+		$event_id = $this->create_event(
+			array(
+				array(
+					'id'       => 'diet',
+					'label'    => 'Dietary requirements',
+					'required' => true,
+				),
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+
+		$request = new WP_REST_Request( 'POST', '/gatherpress/v1/event/rsvp' );
+		$request->set_param( 'post_id', $event_id );
+		$request->set_param( 'status', 'attending' );
+
+		$this->assertWPError( call_user_func( $callback, $request ) );
+	}
+
+	/**
 	 * Render the `wporg/event-rsvp` block in the context of an event.
 	 */
 	private function render_rsvp_block( int $event_id ): string {

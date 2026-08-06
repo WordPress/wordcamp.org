@@ -43,6 +43,7 @@ function bootstrap(): void {
 
 	Blocks\bootstrap();
 	REST\bootstrap();
+	RSVP_Questions\bootstrap();
 	Modal\bootstrap();
 	Notifications\bootstrap();
 

@@ -126,6 +126,7 @@ $rsvp_labels    = array(
 	'rsvpSuccessWaitingList'  => __( 'You have joined the event waiting list.', 'wporg-groups-frontend' ),
 	'rsvpError'               => __( 'Your RSVP could not be updated. Please try again.', 'wporg-groups-frontend' ),
 	'missingAnswers'          => __( 'Please answer the required questions.', 'wporg-groups-frontend' ),
+	'answersSaved'            => __( 'Your answers have been saved.', 'wporg-groups-frontend' ),
 );
 
 $context = array(
@@ -155,6 +156,7 @@ wp_interactivity_state(
 	'wporg/event-rsvp',
 	array(
 		'isAttending'    => $is_attending,
+		'isNotAttending' => ! $is_attending,
 		'countLabel'     => sprintf(
 			/* translators: %s: attendee count. */
 			_n( '%s going', '%s going', $count, 'wporg-groups-frontend' ),
@@ -290,7 +292,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 						<?php if ( $questions ) : ?>
 							<?php $error_id = 'wporg-event-rsvp-questions-error-' . $event_post_id; ?>
-							<fieldset class="wporg-event-rsvp__questions" data-wp-class--is-hidden="state.isAttending">
+							<?php // Stays visible while attending: an organizer can add a required question after people have signed up, and correcting an answer shouldn't mean cancelling the RSVP. ?>
+							<fieldset class="wporg-event-rsvp__questions">
 								<legend class="screen-reader-text">
 									<?php esc_html_e( 'Registration questions', 'wporg-groups-frontend' ); ?>
 								</legend>
@@ -320,6 +323,15 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									id="<?php echo esc_attr( $error_id ); ?>"
 									data-wp-text="context.questionsError"
 								></p>
+								<button
+									type="button"
+									class="wporg-event-rsvp__save-answers wp-element-button<?php echo $is_attending ? '' : ' is-hidden'; ?>"
+									data-wp-on--click="actions.saveAnswers"
+									data-wp-class--is-hidden="state.isNotAttending"
+									data-wp-bind--disabled="context.rsvpLoading"
+								>
+									<?php esc_html_e( 'Save answers', 'wporg-groups-frontend' ); ?>
+								</button>
 							</fieldset>
 						<?php endif; ?>
 

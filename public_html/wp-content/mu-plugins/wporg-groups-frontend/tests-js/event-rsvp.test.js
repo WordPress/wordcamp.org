@@ -65,21 +65,34 @@ function renderModal() {
 function renderTwoModals() {
 	document.body.innerHTML = `
 		<div class="wp-block-wporg-event-rsvp" data-instance="first">
-			<button class="wporg-event-rsvp__summary" type="button">View first attendees</button>
+			<button class="wporg-event-rsvp__summary" type="button">
+				<span class="wporg-event-rsvp__avatars">First avatars untouched</span>
+				View first attendees
+			</button>
+			<button class="wporg-event-rsvp__button" type="button">RSVP first</button>
 			<div class="wporg-event-rsvp__modal">
 				<button class="wporg-event-rsvp__modal-close" type="button">Close first</button>
+				<div class="wporg-event-rsvp__attendee-list">First list untouched</div>
 			</div>
 		</div>
 		<div class="wp-block-wporg-event-rsvp" data-instance="second">
-			<button class="wporg-event-rsvp__summary" type="button">View second attendees</button>
+			<button class="wporg-event-rsvp__summary" type="button">
+				<span class="wporg-event-rsvp__avatars">Second avatars pending</span>
+				View second attendees
+			</button>
+			<button class="wporg-event-rsvp__button" type="button">RSVP second</button>
 			<div class="wporg-event-rsvp__modal">
 				<button class="wporg-event-rsvp__modal-close" type="button">Close second</button>
+				<div class="wporg-event-rsvp__attendee-list">Second list pending</div>
 			</div>
 		</div>
 	`;
 
 	return Array.from( document.querySelectorAll( '.wp-block-wporg-event-rsvp' ) ).map( ( block ) => ( {
+		avatars: block.querySelector( '.wporg-event-rsvp__avatars' ),
 		close: block.querySelector( '.wporg-event-rsvp__modal-close' ),
+		list: block.querySelector( '.wporg-event-rsvp__attendee-list' ),
+		rsvp: block.querySelector( '.wporg-event-rsvp__button' ),
 		summary: block.querySelector( '.wporg-event-rsvp__summary' ),
 	} ) );
 }
@@ -149,6 +162,55 @@ describe( 'event RSVP accessibility', () => {
 		actions.closeModal();
 		expect( document.activeElement ).toBe( second.summary );
 		expect( document.body.style.overflow ).toBe( 'clip' );
+	} );
+
+	test( 'refreshes attendees only in the block whose RSVP changed', async () => {
+		const [ first, second ] = renderTwoModals();
+		const { actions } = loadStore();
+
+		mockElement = second.rsvp;
+		global.fetch
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( { nonce: 'nonce' } ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				status: 200,
+				json: async () => ( {
+					success: true,
+					status: 'attending',
+					responses: { attending: { count: 1 } },
+				} ),
+			} )
+			.mockResolvedValueOnce( {
+				ok: true,
+				json: async () => ( {
+					success: true,
+					data: {
+						attending: {
+							count: 1,
+							records: [
+								{
+									name: 'Second attendee',
+									photo: 'https://example.com/second.jpg',
+									profile: 'https://example.com/second',
+								},
+							],
+						},
+					},
+				} ),
+			} );
+
+		await actions.handleRsvpButton();
+		await new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+
+		expect( first.list.textContent ).toBe( 'First list untouched' );
+		expect( first.avatars.textContent ).toBe( 'First avatars untouched' );
+		expect( second.list.textContent ).toContain( 'Second attendee' );
+		expect( second.avatars.querySelector( 'img' ).getAttribute( 'src' ) ).toBe(
+			'https://example.com/second.jpg'
+		);
 	} );
 
 	test( 'traps Tab and Shift+Tab at the modal boundaries', () => {

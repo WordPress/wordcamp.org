@@ -131,20 +131,21 @@ store( 'wporg/event-rsvp', {
 
 		async handleRsvpButton() {
 			const ctx = getContext();
+			const { ref } = getElement();
 			if ( ! ctx.isLoggedIn ) {
 				window.location.href = ctx.loginUrl;
 				return;
 			}
 			if ( ctx.currentUserStatus === 'attending' ) {
-				openRsvpModal( ctx, getElement().ref );
+				openRsvpModal( ctx, ref );
 				return;
 			}
-			return doToggleRsvp( ctx );
+			return doToggleRsvp( ctx, ref );
 		},
 
 		async toggleRsvp() {
 			const ctx = getContext();
-			return doToggleRsvp( ctx );
+			return doToggleRsvp( ctx, getElement().ref );
 		},
 	},
 } );
@@ -207,7 +208,7 @@ function scheduleFocus( element ) {
 	} );
 }
 
-async function doToggleRsvp( ctx ) {
+async function doToggleRsvp( ctx, actionElement ) {
 	if ( ! ctx.isLoggedIn ) {
 		window.location.href = ctx.loginUrl;
 		return;
@@ -255,7 +256,7 @@ async function doToggleRsvp( ctx ) {
 		ctx.currentUserStatus = data.status;
 		ctx.attendingCount = data.responses.attending.count;
 		ctx.rsvpNotice = getRsvpSuccessNotice( ctx, data.status );
-		refreshAttendees( ctx );
+		refreshAttendees( ctx, actionElement );
 	} catch {
 		ctx.currentUserStatus = oldStatus;
 		ctx.attendingCount = oldCount;
@@ -317,13 +318,18 @@ function getRsvpSuccessNotice( ctx, status ) {
 	return labelFromContext( ctx, 'rsvpSuccessNotAttending' );
 }
 
-async function refreshAttendees( ctx ) {
+async function refreshAttendees( ctx, actionElement ) {
+	const block = actionElement?.closest( '.wp-block-wporg-event-rsvp' );
+	if ( ! block ) {
+		return;
+	}
+
 	try {
 		const resp = await fetch( ctx.apiBase + '/rsvp-responses?post_id=' + ctx.postId );
 		const data = await resp.json();
 
 		if ( data.success && data.data?.attending?.records ) {
-			const list = document.querySelector( '.wporg-event-rsvp__attendee-list' );
+			const list = block.querySelector( '.wporg-event-rsvp__attendee-list' );
 			if ( ! list ) {
 				return;
 			}
@@ -352,7 +358,7 @@ async function refreshAttendees( ctx ) {
 				  escHtml( labelFromContext( ctx, 'emptyAttendees' ) ) +
 				  '</p>';
 
-			const avatars = document.querySelector( '.wporg-event-rsvp__avatars' );
+			const avatars = block.querySelector( '.wporg-event-rsvp__avatars' );
 			if ( avatars ) {
 				const maxAvatars = 12;
 				const visible = records.slice( 0, maxAvatars );

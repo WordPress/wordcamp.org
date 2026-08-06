@@ -3,15 +3,23 @@
  *
  * Handles the avatar-stack click → full-screen modal, RSVP toggling,
  * and attendee list display.
- *
- * @package WordCamp\Groups\Frontend
  */
 
-import { store, getContext, getElement } from '@wordpress/interactivity';
+import { getContext, getElement, store } from '@wordpress/interactivity';
 
 let cachedNonce = null;
+let activeModalState = null;
 
-const { state } = store( 'wporg/event-rsvp', {
+const focusableSelector = [
+	'a[href]',
+	'button:not([disabled])',
+	'input:not([disabled])',
+	'select:not([disabled])',
+	'textarea:not([disabled])',
+	'[tabindex]:not([tabindex="-1"])',
+].join( ',' );
+
+store( 'wporg/event-rsvp', {
 	state: {
 		get isAttending() {
 			return getContext().currentUserStatus === 'attending';
@@ -19,22 +27,17 @@ const { state } = store( 'wporg/event-rsvp', {
 
 		get countLabel() {
 			const count = getContext().attendingCount;
-			return formatLabel(
-				label( 1 === count ? 'countSingular' : 'countPlural' ),
-				[ formatNumber( count ) ]
-			);
+			return formatLabel( label( 1 === count ? 'countSingular' : 'countPlural' ), [
+				formatNumber( count ),
+			] );
 		},
 
 		get modalTitle() {
 			const ctx = getContext();
-			return formatLabel(
-				label(
-					1 === ctx.attendingCount
-						? 'modalTitleSingular'
-						: 'modalTitlePlural'
-				),
-				[ formatNumber( ctx.attendingCount ), ctx.eventTitle ]
-			);
+			return formatLabel( label( 1 === ctx.attendingCount ? 'modalTitleSingular' : 'modalTitlePlural' ), [
+				formatNumber( ctx.attendingCount ),
+				ctx.eventTitle,
+			] );
 		},
 
 		get rsvpButtonLabel() {
@@ -74,67 +77,138 @@ const { state } = store( 'wporg/event-rsvp', {
 
 	actions: {
 		openModal() {
-			const ctx = getContext();
-			ctx.modalOpen = true;
-			document.body.style.overflow = 'hidden';
+			openRsvpModal( getContext(), getElement().ref );
 		},
 
 		closeModal() {
-			const ctx = getContext();
-			ctx.modalOpen = false;
-			document.body.style.overflow = '';
+			closeRsvpModal( getContext() );
 		},
 
 		handleBackdropClick( event ) {
 			const { ref } = getElement();
 			if ( event.target === ref ) {
-				const ctx = getContext();
-				ctx.modalOpen = false;
-				document.body.style.overflow = '';
+				closeRsvpModal( getContext() );
 			}
 		},
 
-		handleEscape( event ) {
-			if ( event.key === 'Escape' ) {
-				const ctx = getContext();
-				if ( ctx.modalOpen ) {
-					ctx.modalOpen = false;
-					document.body.style.overflow = '';
-				}
-			}
-		},
-
-		handleRsvpButton() {
+		handleModalKeydown( event ) {
 			const ctx = getContext();
+			if ( ! ctx.modalOpen || activeModalState?.context !== ctx ) {
+				return;
+			}
+
+			if ( event.key === 'Escape' ) {
+				event.preventDefault();
+				closeRsvpModal( ctx );
+				return;
+			}
+
+			if ( event.key !== 'Tab' ) {
+				return;
+			}
+
+			const { modal } = activeModalState;
+			const focusable = getFocusableElements( modal );
+			if ( ! focusable.length ) {
+				event.preventDefault();
+				modal.focus();
+				return;
+			}
+
+			const first = focusable[ 0 ];
+			const last = focusable[ focusable.length - 1 ];
+			const activeElement = modal.ownerDocument.activeElement;
+			const focusOutsideModal = ! modal.contains( activeElement );
+
+			if (
+				( event.shiftKey && ( activeElement === first || focusOutsideModal ) ) ||
+				( ! event.shiftKey && ( activeElement === last || focusOutsideModal ) )
+			) {
+				event.preventDefault();
+				( event.shiftKey ? last : first ).focus();
+			}
+		},
+
+		async handleRsvpButton() {
+			const ctx = getContext();
+			const { ref } = getElement();
 			if ( ! ctx.isLoggedIn ) {
 				window.location.href = ctx.loginUrl;
 				return;
 			}
 			if ( ctx.currentUserStatus === 'attending' ) {
-				ctx.modalOpen = true;
-				document.body.style.overflow = 'hidden';
+				openRsvpModal( ctx, ref );
 				return;
 			}
-			doToggleRsvp( ctx );
-		},
-
-		handleSummaryKeydown( event ) {
-			if ( event.key === 'Enter' || event.key === ' ' ) {
-				event.preventDefault();
-				const ctx = getContext();
-				ctx.modalOpen = true;
-				document.body.style.overflow = 'hidden';
-			}
+			return doToggleRsvp( ctx, ref );
 		},
 
 		async toggleRsvp() {
 			const ctx = getContext();
-			doToggleRsvp( ctx );
+			return doToggleRsvp( ctx, getElement().ref );
 		},
 	},
 } );
 
-async function doToggleRsvp( ctx ) {
+function openRsvpModal( ctx, trigger ) {
+	const block = trigger?.closest( '.wp-block-wporg-event-rsvp' );
+	const modal = block?.querySelector( '.wporg-event-rsvp__modal' );
+
+	if ( ! modal ) {
+		return;
+	}
+
+	const previousBodyOverflow = activeModalState?.previousBodyOverflow ?? document.body.style.overflow;
+	if ( activeModalState ) {
+		// Full-screen, aria-modal dialogs must not remain open behind one another.
+		activeModalState.context.modalOpen = false;
+	}
+
+	activeModalState = {
+		context: ctx,
+		modal,
+		previousBodyOverflow,
+		trigger,
+	};
+	ctx.modalOpen = true;
+	document.body.style.overflow = 'hidden';
+
+	const focusable = getFocusableElements( modal );
+	scheduleFocus( focusable[ 0 ] || modal );
+}
+
+function closeRsvpModal( ctx ) {
+	ctx.modalOpen = false;
+	if ( activeModalState?.context !== ctx ) {
+		return;
+	}
+
+	const { previousBodyOverflow, trigger } = activeModalState;
+	activeModalState = null;
+	document.body.style.overflow = previousBodyOverflow;
+
+	scheduleFocus( trigger );
+}
+
+function getFocusableElements( modal ) {
+	return Array.from( modal.querySelectorAll( focusableSelector ) ).filter(
+		( element ) => ! element.hasAttribute( 'hidden' ) && element.getAttribute( 'aria-hidden' ) !== 'true'
+	);
+}
+
+function scheduleFocus( element ) {
+	if ( ! element ) {
+		return;
+	}
+
+	window.requestAnimationFrame( () => {
+		if ( document.contains( element ) ) {
+			element.focus();
+		}
+	} );
+}
+
+async function doToggleRsvp( ctx, actionElement ) {
 	if ( ! ctx.isLoggedIn ) {
 		window.location.href = ctx.loginUrl;
 		return;
@@ -143,6 +217,8 @@ async function doToggleRsvp( ctx ) {
 	if ( ctx.isPastEvent || ctx.rsvpLoading ) {
 		return;
 	}
+
+	ctx.rsvpNotice = '';
 
 	// Join group first if not a member.
 	if ( ! ctx.isMember && ctx.joinApi ) {
@@ -155,20 +231,18 @@ async function doToggleRsvp( ctx ) {
 				headers: { 'X-WP-Nonce': nonce },
 			} );
 			const joinData = await joinResp.json();
-			if ( joinData.success ) {
-				ctx.isMember = true;
-			} else {
-				ctx.rsvpLoading = false;
-				return;
+			if ( ! joinResp.ok || ! joinData.success ) {
+				throw new Error( 'Unable to join the group.' );
 			}
+			ctx.isMember = true;
 		} catch {
 			ctx.rsvpLoading = false;
+			ctx.rsvpNotice = labelFromContext( ctx, 'rsvpError' );
 			return;
 		}
 	}
 
-	const newStatus =
-		ctx.currentUserStatus === 'attending' ? 'not_attending' : 'attending';
+	const newStatus = ctx.currentUserStatus === 'attending' ? 'not_attending' : 'attending';
 
 	const oldStatus = ctx.currentUserStatus;
 	const oldCount = ctx.attendingCount;
@@ -179,17 +253,14 @@ async function doToggleRsvp( ctx ) {
 	try {
 		const data = await sendRsvp( ctx, newStatus );
 
-		if ( data && data.success ) {
-			ctx.currentUserStatus = data.status;
-			ctx.attendingCount = data.responses.attending.count;
-			refreshAttendees( ctx );
-		} else {
-			ctx.currentUserStatus = oldStatus;
-			ctx.attendingCount = oldCount;
-		}
+		ctx.currentUserStatus = data.status;
+		ctx.attendingCount = data.responses.attending.count;
+		ctx.rsvpNotice = getRsvpSuccessNotice( ctx, data.status );
+		refreshAttendees( ctx, actionElement );
 	} catch {
 		ctx.currentUserStatus = oldStatus;
 		ctx.attendingCount = oldCount;
+		ctx.rsvpNotice = labelFromContext( ctx, 'rsvpError' );
 	} finally {
 		ctx.rsvpLoading = false;
 	}
@@ -229,20 +300,36 @@ async function sendRsvp( ctx, status, retry = false ) {
 		return sendRsvp( ctx, status, true );
 	}
 
-	return resp.json();
+	const data = await resp.json();
+	if ( ! resp.ok || ! data?.success ) {
+		throw new Error( data?.message || resp.statusText );
+	}
+
+	return data;
 }
 
-async function refreshAttendees( ctx ) {
+function getRsvpSuccessNotice( ctx, status ) {
+	if ( status === 'attending' ) {
+		return labelFromContext( ctx, 'rsvpSuccessAttending' );
+	}
+	if ( status === 'waiting_list' ) {
+		return labelFromContext( ctx, 'rsvpSuccessWaitingList' );
+	}
+	return labelFromContext( ctx, 'rsvpSuccessNotAttending' );
+}
+
+async function refreshAttendees( ctx, actionElement ) {
+	const block = actionElement?.closest( '.wp-block-wporg-event-rsvp' );
+	if ( ! block ) {
+		return;
+	}
+
 	try {
-		const resp = await fetch(
-			ctx.apiBase + '/rsvp-responses?post_id=' + ctx.postId
-		);
+		const resp = await fetch( ctx.apiBase + '/rsvp-responses?post_id=' + ctx.postId );
 		const data = await resp.json();
 
 		if ( data.success && data.data?.attending?.records ) {
-			const list = document.querySelector(
-				'.wporg-event-rsvp__attendee-list'
-			);
+			const list = block.querySelector( '.wporg-event-rsvp__attendee-list' );
 			if ( ! list ) {
 				return;
 			}
@@ -253,51 +340,40 @@ async function refreshAttendees( ctx ) {
 			list.innerHTML = records.length
 				? records
 						.map(
-							( r ) =>
+							( record ) =>
 								'<a class="wporg-event-rsvp__attendee" href="' +
-								escAttr( r.profile ) +
+								escAttr( record.profile ) +
 								'" target="_blank" rel="noopener">' +
 								'<img class="wporg-event-rsvp__attendee-avatar" src="' +
-								escAttr( r.photo ) +
+								escAttr( record.photo ) +
 								'" alt="" width="48" height="48" loading="lazy" />' +
 								'<div class="wporg-event-rsvp__attendee-info">' +
 								'<span class="wporg-event-rsvp__attendee-name">' +
-								escHtml( r.name ) +
+								escHtml( record.name ) +
 								'</span>' +
 								'</div></a>'
 						)
 						.join( '' )
 				: '<p class="wporg-event-rsvp__empty">' +
-					escHtml( labelFromContext( ctx, 'emptyAttendees' ) ) +
-					'</p>';
+				  escHtml( labelFromContext( ctx, 'emptyAttendees' ) ) +
+				  '</p>';
 
-			const avatars = document.querySelector(
-				'.wporg-event-rsvp__avatars'
-			);
+			const avatars = block.querySelector( '.wporg-event-rsvp__avatars' );
 			if ( avatars ) {
 				const maxAvatars = 12;
 				const visible = records.slice( 0, maxAvatars );
-				const overflow = Math.max(
-					0,
-					data.data.attending.count - maxAvatars
-				);
+				const overflow = Math.max( 0, data.data.attending.count - maxAvatars );
 
 				avatars.innerHTML =
 					visible
 						.map(
-							( r ) =>
+							( record ) =>
 								'<img class="wporg-event-rsvp__avatar" src="' +
-								escAttr( r.photo ) +
-								'" alt="' +
-								escAttr( r.name ) +
-								'" width="40" height="40" loading="lazy" />'
+								escAttr( record.photo ) +
+								'" alt="" width="40" height="40" loading="lazy" />'
 						)
 						.join( '' ) +
-					( overflow > 0
-						? '<span class="wporg-event-rsvp__overflow">+' +
-							overflow +
-							'</span>'
-						: '' );
+					( overflow > 0 ? '<span class="wporg-event-rsvp__overflow">+' + overflow + '</span>' : '' );
 			}
 		}
 	} catch {
@@ -327,15 +403,11 @@ function formatLabel( format, values ) {
 }
 
 function escHtml( str ) {
-	const el = document.createElement( 'span' );
-	el.textContent = str;
-	return el.innerHTML;
+	const element = document.createElement( 'span' );
+	element.textContent = str;
+	return element.innerHTML;
 }
 
 function escAttr( str ) {
-	return str
-		.replace( /&/g, '&amp;' )
-		.replace( /"/g, '&quot;' )
-		.replace( /</g, '&lt;' )
-		.replace( />/g, '&gt;' );
+	return str.replace( /&/g, '&amp;' ).replace( /"/g, '&quot;' ).replace( /</g, '&lt;' ).replace( />/g, '&gt;' );
 }

@@ -53,9 +53,11 @@ jobs:
           npm ci --no-audit --no-fund
         fi
 
-    # Run the Blocks unit tests. If/when other workspaces get tests, those would be added here.
+    # Run JavaScript tests for each workspace that currently provides them.
     - name: Running the tests
-      run: npm run test --workspace=wordcamp-blocks
+      run: |
+        npm run test --workspace=wordcamp-blocks
+        npm run test --workspace=wporg-groups-frontend
 
   unit-php:
     name: PHP Tests

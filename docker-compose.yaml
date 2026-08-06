@@ -8,6 +8,7 @@ services:
             - ".docker/bin:/var/scripts"
             - ".docker/data:/usr/src/data"
             - ".docker/wp-config.php:/usr/src/public_html/wp-config.php"
+            - ".docker/local:/usr/src/local"
             - ".docker/wp-cli.yml:/usr/src/public_html/wp-cli.yml"
             - ".docker/config/nginx.conf:/etc/nginx/sites-enabled/default"
             - ".docker/config/php-fpm.conf:/usr/local/etc/php-fpm.d/zz-www.conf"

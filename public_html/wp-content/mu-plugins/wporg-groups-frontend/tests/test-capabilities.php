@@ -69,6 +69,39 @@ class Test_Groups_Capabilities extends Groups_TestCase {
 	}
 
 	/**
+	 * Regression test: a super admin whose nominal role on a given group is
+	 * `subscriber` (e.g. a deputy checking in on a group they don't
+	 * personally organise) must still be treated as able to manage events.
+	 *
+	 * `current_user_can_manage_group_settings()` naturally picks up core's
+	 * super-admin capability elevation (it calls `current_user_can()`), so
+	 * the "Set up your group" button renders for such a user. But this
+	 * function is a role-array check, which does NOT pick up that
+	 * elevation -- without the `is_super_admin()` check, the
+	 * `wp-components`/`wp-block-editor` styles gated on it in
+	 * `Modal::enqueue_supplementary_assets()` never load, and the settings
+	 * modal renders with no CSS (invisible, but present in the DOM).
+	 */
+	public function test_super_admin_can_manage_events_despite_subscriber_role() {
+		$user_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		// Reset to a clean array first -- `site_admins` is shared, mutable state
+		// scoped to the current network, and other tests in the suite can leave
+		// it in a shape `grant_super_admin()` doesn't expect.
+		update_site_option( 'site_admins', array() );
+		grant_super_admin( $user_id );
+		wp_set_current_user( $user_id );
+
+		// `revoke_super_admin()` must run even if the assertion fails, or this
+		// user's super-admin status leaks into later tests in the suite.
+		try {
+			$this->assertTrue( current_user_can_manage_events() );
+		} finally {
+			revoke_super_admin( $user_id );
+		}
+	}
+
+	/**
 	 * Regression test for the privilege-escalation bug fixed before #1793
 	 * shipped: editors were briefly granted `promote_users` so this plugin
 	 * could let them manage member roles, which also silently unlocked the

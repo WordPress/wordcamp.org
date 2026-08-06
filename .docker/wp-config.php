@@ -114,18 +114,31 @@ define( 'JETPACK_DEV_DEBUG', true );
 /*
  * Salts
  *
- * It doesn't matter for local environments, but use `wp config shuffle-salts` to change this in production
- * environments, because generating the keys locally is safer than using the API (and exposing the keys to
- * your OS/browser if you copy/paste, etc).
+ * These must be real, unique values rather than the WP default placeholder. WordPress detects the
+ * placeholder and silently falls back to a secret auto-generated per network (cached in
+ * `wp_sitemeta`/site_option), which breaks auth cookie validation whenever a single hostname resolves to
+ * more than one network (e.g. events.wordpress.test vs events.wordpress.test/group/, see
+ * sunrise-groups.php). Generate them once on first boot into a gitignored file mounted from
+ * .docker/local (see docker-compose.yaml) so they're real, stable across restarts, shared by every
+ * network on this install, and never committed.
  */
-define( 'AUTH_KEY',                          'put your unique phrase here' );
-define( 'SECURE_AUTH_KEY',                   'put your unique phrase here' );
-define( 'LOGGED_IN_KEY',                     'put your unique phrase here' );
-define( 'NONCE_KEY',                         'put your unique phrase here' );
-define( 'AUTH_SALT',                         'put your unique phrase here' );
-define( 'SECURE_AUTH_SALT',                  'put your unique phrase here' );
-define( 'LOGGED_IN_SALT',                    'put your unique phrase here' );
-define( 'NONCE_SALT',                        'put your unique phrase here' );
+$wc_salts_file = '/usr/src/local/salts.php';
+if ( ! file_exists( $wc_salts_file ) ) {
+	$wc_salt_keys  = array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT' );
+	$wc_salt_lines = array( '<?php' );
+
+	foreach ( $wc_salt_keys as $wc_salt_key ) {
+		$wc_salt_lines[] = sprintf( "define( '%s', %s );", $wc_salt_key, var_export( base64_encode( random_bytes( 48 ) ), true ) );
+	}
+
+	// Write atomically so concurrent PHP-FPM workers on first boot can't read a half-written file.
+	$wc_salts_tmp_file = $wc_salts_file . '.' . getmypid() . '.tmp';
+	file_put_contents( $wc_salts_tmp_file, implode( "\n", $wc_salt_lines ) . "\n" );
+	rename( $wc_salts_tmp_file, $wc_salts_file );
+}
+require $wc_salts_file;
+unset( $wc_salts_file, $wc_salt_keys, $wc_salt_lines, $wc_salt_key, $wc_salts_tmp_file );
+
 define( 'ORGANIZER_SURVEY_ACCESS_TOKEN_KEY', 'put your unique phrase here' );
 
 

@@ -374,63 +374,98 @@ function process_batch(): void {
 	}
 
 	$processed = 0;
+	$crashed   = false;
 
-	while ( $processed < BATCH_SIZE ) {
-		if ( empty( $job['queue'] ) ) {
-			if ( empty( $job['pending_sites'] ) ) {
-				break;
+	/*
+	 * The job was already removed from `JOBS_OPTION` by the claim above, and
+	 * isn't written back until the commit below -- so a `Throwable` escaping
+	 * this loop (a rogue `pre_wp_mail`/`wp_mail` filter, a transport that
+	 * exhausts the request instead of returning cleanly) must not skip that
+	 * commit, or the job -- and every recipient still in it -- disappears
+	 * with nothing sent, re-queued, or recorded. `send_message()` already
+	 * turns an ordinary transport failure into `false`, so this is only
+	 * reached by something that couldn't be handled that way.
+	 */
+	try {
+		while ( $processed < BATCH_SIZE ) {
+			if ( empty( $job['queue'] ) ) {
+				if ( empty( $job['pending_sites'] ) ) {
+					break;
+				}
+
+				++$processed;
+
+				$site_id = (int) $job['pending_sites'][0];
+				$batch   = get_site_recipients( $site_id, $job['audience'], BATCH_SIZE, $job['site_offset'] );
+
+				if ( empty( $batch ) ) {
+					array_shift( $job['pending_sites'] );
+					$job['site_offset'] = 0;
+				} else {
+					$job['site_offset'] += count( $batch );
+					$job['queue']        = $batch;
+				}
+
+				continue;
 			}
+
+			$recipient = array_shift( $job['queue'] );
+			$key       = strtolower( $recipient['email'] );
 
 			++$processed;
 
-			$site_id = (int) $job['pending_sites'][0];
-			$batch   = get_site_recipients( $site_id, $job['audience'], BATCH_SIZE, $job['site_offset'] );
-
-			if ( empty( $batch ) ) {
-				array_shift( $job['pending_sites'] );
-				$job['site_offset'] = 0;
-			} else {
-				$job['site_offset'] += count( $batch );
-				$job['queue']        = $batch;
+			if ( isset( $job['sent'][ $key ] ) ) {
+				continue;
 			}
 
-			continue;
+			/*
+			 * Only mark the address done once the mail is actually away. Marking
+			 * first meant a transient transport failure retired the recipient for
+			 * good — no send, no retry, no trace. Left unmarked, the same person
+			 * gets another chance if they turn up again via another group, and
+			 * the failure is at least on the record either way.
+			 */
+			if ( send_message( $recipient, $job ) ) {
+				$job['sent'][ $key ] = true;
+
+				++$job['sent_count'];
+			} else {
+				$job['failed_count'] = ( $job['failed_count'] ?? 0 ) + 1;
+
+				Logger\log(
+					'groups_message_send_failed',
+					array(
+						'job'       => $job['id'],
+						'recipient' => $recipient['email'],
+					)
+				);
+			}
 		}
-
-		$recipient = array_shift( $job['queue'] );
-		$key       = strtolower( $recipient['email'] );
-
-		++$processed;
-
-		if ( isset( $job['sent'][ $key ] ) ) {
-			continue;
-		}
+	} catch ( \Throwable $error ) {
+		$crashed = true;
 
 		/*
-		 * Only mark the address done once the mail is actually away. Marking
-		 * first meant a transient transport failure retired the recipient for
-		 * good — no send, no retry, no trace. Left unmarked, the same person
-		 * gets another chance if they turn up again via another group, and
-		 * the failure is at least on the record either way.
+		 * Not just `compact( 'error' )`: `redact_keys()` only special-cases
+		 * `Exception`, not `Throwable` generally, so a plain `Error` (e.g. a
+		 * `TypeError`) would fall through to an `(array)` cast instead --
+		 * mangled keys for its private/protected properties that `wp_json_encode()`
+		 * silently drops, per that function's own docblock.
 		 */
-		if ( send_message( $recipient, $job ) ) {
-			$job['sent'][ $key ] = true;
-
-			++$job['sent_count'];
-		} else {
-			$job['failed_count'] = ( $job['failed_count'] ?? 0 ) + 1;
-
-			Logger\log(
-				'groups_message_send_failed',
-				array(
-					'job'       => $job['id'],
-					'recipient' => $recipient['email'],
-				)
-			);
-		}
+		Logger\log(
+			'groups_message_batch_crashed',
+			array(
+				'job'     => $job['id'],
+				'error'   => array(
+					'class'   => get_class( $error ),
+					'message' => $error->getMessage(),
+					'file'    => $error->getFile(),
+					'line'    => $error->getLine(),
+				),
+			)
+		);
 	}
 
-	$finished = empty( $job['queue'] ) && empty( $job['pending_sites'] );
+	$finished = ! $crashed && empty( $job['queue'] ) && empty( $job['pending_sites'] );
 
 	$jobs = with_jobs_lock(
 		function () use ( $job, $finished ) {

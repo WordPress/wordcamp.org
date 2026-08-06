@@ -497,6 +497,46 @@ class Test_Groups_Network_Messaging extends Groups_TestCase {
 	}
 
 	/**
+	 * A `Throwable` escaping the send loop -- a rogue mail filter, a `TypeError`,
+	 * anything `send_message()` doesn't turn into a clean `false` -- must not
+	 * lose the job. The claim step already removed it from `JOBS_OPTION` before
+	 * the loop runs, so without a `catch` around the loop, a crash skips the
+	 * commit and the job -- and everyone still in it -- vanishes: not sent,
+	 * not re-queued, not summarised, nothing in the log to explain why.
+	 */
+	public function test_a_crash_mid_batch_does_not_lose_the_job() {
+		$this->add_member( $this->group_sites['brisbane'], 'editor', 'organiser@example.test' );
+
+		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
+
+		$throw = function () {
+			throw new \Error( 'Simulated fatal mid-batch' );
+		};
+
+		add_filter( 'pre_wp_mail', $throw );
+
+		Messaging\queue_message(
+			'Hello',
+			'Body',
+			Messaging\AUDIENCE_ORGANIZERS,
+			array( $this->group_sites['brisbane'] )
+		);
+		Messaging\process_batch();
+
+		remove_filter( 'pre_wp_mail', $throw );
+
+		$jobs = Messaging\get_jobs();
+
+		$this->assertCount( 1, $jobs, 'The job must still be queued for retry, not silently dropped.' );
+		$this->assertContains(
+			$this->group_sites['brisbane'],
+			$jobs[0]['pending_sites'],
+			'The recipient the crash was mid-send to must still be pending.'
+		);
+		$this->assertIsInt( wp_next_scheduled( Messaging\CRON_HOOK ), 'A retry must still be scheduled.' );
+	}
+
+	/**
 	 * A recipient who failed on one group is retried when they turn up again
 	 * through another — the `sent` map is a record of delivery, not of
 	 * attempts.

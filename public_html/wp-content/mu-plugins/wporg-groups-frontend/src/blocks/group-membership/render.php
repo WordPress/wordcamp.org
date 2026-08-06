@@ -2,8 +2,29 @@
 /**
  * Server-side rendering for the wporg/group-membership block.
  *
+ * The block renders a set of independently toggleable parts, so the same
+ * interactivity store and REST wiring can back placements that answer quite
+ * different questions:
+ *
+ *   - `showIdentity` (default true) — the join button for visitors, or the
+ *     role badge plus member count for members. Answers "what is this group
+ *     and am I in it?", which is what earns hero placement.
+ *   - `showLeave` — the "Leave group" action. Destructive account management,
+ *     not identity, so it sits with the member directory rather than the hero.
+ *   - `showPreference` — the GatherPress event-email opt-in. Stored as
+ *     `gatherpress_event_updates_opt_in` usermeta, which on multisite is
+ *     shared across the whole install: this toggle is not scoped to the group
+ *     rendering it. It therefore belongs with the member's own content
+ *     (alongside `wporg/my-events`, which is gated on the same
+ *     logged-in-and-a-member condition) rather than anywhere that reads as a
+ *     property of this particular group.
+ *
  * @package WordCamp\Groups\Frontend
  */
+
+$show_identity   = ! isset( $attributes['showIdentity'] ) || ! empty( $attributes['showIdentity'] );
+$show_leave      = ! isset( $attributes['showLeave'] ) || ! empty( $attributes['showLeave'] );
+$show_preference = ! isset( $attributes['showPreference'] ) || ! empty( $attributes['showPreference'] );
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
@@ -26,7 +47,22 @@ if ( $is_member ) {
 // Only logged-in visitors can join or leave, and only their markup should carry a nonce.
 $rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
 
-$is_organiser        = in_array( $user_role, array( 'administrator', 'editor' ), true );
+$is_organiser = in_array( $user_role, array( 'administrator', 'editor' ), true );
+
+/*
+ * Bail before rendering a wrapper that would hold nothing. Every part except
+ * the identity row is member-only, so a placement that asks for the leave
+ * action or the email preference alone has nothing to show a logged-out
+ * visitor. Returning here also skips the `count_users()` call below, which is
+ * only needed for the member count in the identity row.
+ */
+$renders_leave      = $show_leave && $is_member && ! $is_organiser;
+$renders_preference = $show_preference && $is_member;
+
+if ( ! $show_identity && ! $renders_leave && ! $renders_preference ) {
+	return;
+}
+
 $user_count          = count_users( 'time', get_current_blog_id() );
 $member_count        = $user_count['total_users'] ?? 0;
 $join_api            = rest_url( 'wporg-groups/v1/members/join' );
@@ -85,38 +121,41 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<?php if ( $is_member ) : ?>
-		<span class="wporg-group-membership__badge" data-wp-text="state.buttonLabel">
-			<?php echo esc_html( $role_label ); ?>
-		</span>
-		<?php if ( ! $is_organiser ) : ?>
+	<?php if ( $show_identity ) : ?>
+		<?php if ( $is_member ) : ?>
+			<span class="wporg-group-membership__badge" data-wp-text="state.buttonLabel">
+				<?php echo esc_html( $role_label ); ?>
+			</span>
+		<?php else : ?>
 			<button
-				class="wporg-group-membership__leave"
-				data-wp-on--click="actions.leave"
+				class="wporg-group-membership__join wp-element-button"
+				data-wp-on--click="actions.join"
+				data-wp-text="state.buttonLabel"
 				data-wp-bind--disabled="context.loading"
-			><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
+			><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
 		<?php endif; ?>
-	<?php else : ?>
-		<button
-			class="wporg-group-membership__join wp-element-button"
-			data-wp-on--click="actions.join"
-			data-wp-text="state.buttonLabel"
-			data-wp-bind--disabled="context.loading"
-		><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
+
+		<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
+			<?php
+			echo esc_html(
+				sprintf(
+					_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
+					number_format_i18n( $member_count )
+				)
+			);
+			?>
+		</span>
 	<?php endif; ?>
 
-	<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
-		<?php
-		echo esc_html(
-			sprintf(
-				_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
-				number_format_i18n( $member_count )
-			)
-		);
-		?>
-	</span>
+	<?php if ( $renders_leave ) : ?>
+		<button
+			class="wporg-group-membership__leave"
+			data-wp-on--click="actions.leave"
+			data-wp-bind--disabled="context.loading"
+		><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
+	<?php endif; ?>
 
-	<?php if ( $is_member ) : ?>
+	<?php if ( $renders_preference ) : ?>
 		<div class="wporg-group-membership__preference">
 			<label>
 				<input

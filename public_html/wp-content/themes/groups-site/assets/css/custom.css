@@ -53,6 +53,22 @@
 
 
 /* ==========================================================================
+   Front-page hero
+   ========================================================================== */
+
+/* The hero carries the group's own description (`blogdescription`), which is
+   often a single short line. Cap its measure so it stays readable rather than
+   stretching the full 720px content width.
+
+   When it's unset the hero simply omits it — no placeholder. Organisers are
+   already prompted by `wporg/group-settings`, whose trigger button switches to
+   "Set up your group" on exactly this condition and opens the About tab. */
+.groups-site-hero .wp-block-site-tagline {
+	max-width: 52ch;
+	text-wrap: pretty;
+}
+
+/* ==========================================================================
    Query Loop event cards — make the entire card clickable via the
    post-title link and add hover state.
    ========================================================================== */

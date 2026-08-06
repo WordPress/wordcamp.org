@@ -7,6 +7,20 @@
 	"category": "widgets",
 	"icon": "groups",
 	"description": "Displays a join/leave button for group membership.",
+	"attributes": {
+		"showIdentity": {
+			"type": "boolean",
+			"default": true
+		},
+		"showLeave": {
+			"type": "boolean",
+			"default": true
+		},
+		"showPreference": {
+			"type": "boolean",
+			"default": true
+		}
+	},
 	"supports": {
 		"html": false,
 		"interactivity": true,

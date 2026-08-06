@@ -68,6 +68,11 @@
 	text-wrap: pretty;
 }
 
+/* Page-level spacing for the email preference in the member's own section. */
+.groups-site-my-preference {
+	margin-top: var(--wp--preset--spacing--20);
+}
+
 /* ==========================================================================
    Query Loop event cards — make the entire card clickable via the
    post-title link and add hover state.

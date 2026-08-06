@@ -75,7 +75,16 @@
 	</div>
 	<!-- /wp:group -->
 
+	<!-- The member's own corner of the page. The event-email opt-in sits here
+	     rather than in the hero or on the Members page: it's a per-user
+	     setting that spans every group, so it belongs with the member's own
+	     content, not anywhere that reads as a property of this group. Both
+	     blocks are gated on the same logged-in-and-a-member condition, so
+	     they appear and disappear together — and neither is wrapped, so a
+	     logged-out visitor is left with no empty container holding margin. -->
 	<!-- wp:wporg/my-events {"style":{"spacing":{"margin":{"top":"var:preset|spacing|50"}}}} /-->
+
+	<!-- wp:wporg/group-membership {"showIdentity":false,"showLeave":false,"showPreference":true,"className":"groups-site-my-preference","lock":{"move":true,"remove":true}} /-->
 
 	<!-- wp:separator {"className":"is-style-wide","backgroundColor":"light-grey-1"} -->
 	<hr class="wp-block-separator has-text-color has-light-grey-1-color has-alpha-channel-opacity has-light-grey-1-background-color has-background is-style-wide"/>

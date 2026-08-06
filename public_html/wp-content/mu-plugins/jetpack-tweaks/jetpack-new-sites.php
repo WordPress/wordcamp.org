@@ -61,6 +61,9 @@ function run_partner_provision() {
 		return;
 	}
 
+	// `https://events.wordpress.org/group/` is a placeholder site with no real front-end.
+	// As per `sunrise-groups.php`, xmlrpc.php always redirects to the events root, so the
+	// connectivity check inside Jetpack_Provision::partner_provision() can never succeed.
 	if ( defined( 'GROUPS_ROOT_BLOG_ID' ) && GROUPS_ROOT_BLOG_ID === get_current_blog_id() ) {
 		return;
 	}

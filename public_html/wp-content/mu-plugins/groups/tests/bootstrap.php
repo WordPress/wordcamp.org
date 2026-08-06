@@ -28,6 +28,7 @@ function manually_load_plugin() {
 	require_once $gatherpress_file;
 
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
+	require_once dirname( __DIR__ ) . '/network-messaging.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

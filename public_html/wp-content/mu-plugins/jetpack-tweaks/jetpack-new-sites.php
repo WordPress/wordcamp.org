@@ -61,6 +61,10 @@ function run_partner_provision() {
 		return;
 	}
 
+	if ( defined( 'GROUPS_ROOT_BLOG_ID' ) && GROUPS_ROOT_BLOG_ID === get_current_blog_id() ) {
+		return;
+	}
+
 	if (
 		! defined( 'WORDCAMP_JETPACK_START_PARTNER_ID' ) ||
 		! defined( 'WORDCAMP_JETPACK_START_PARTNER_SECRET' ) ||

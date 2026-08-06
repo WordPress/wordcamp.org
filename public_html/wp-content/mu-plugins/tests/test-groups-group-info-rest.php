@@ -11,6 +11,7 @@ use function WordCamp\Groups\Frontend\REST\register_routes;
 defined( 'WPINC' ) || die();
 
 require_once dirname( __DIR__ ) . '/wporg-groups-frontend/inc/capabilities.php';
+require_once dirname( __DIR__ ) . '/wporg-groups-frontend/inc/group-location.php';
 require_once dirname( __DIR__ ) . '/wporg-groups-frontend/inc/rest.php';
 
 /**
@@ -18,9 +19,9 @@ require_once dirname( __DIR__ ) . '/wporg-groups-frontend/inc/rest.php';
  *
  * These exist because core's `/wp/v2/settings` gates `blogname` and
  * `blogdescription` behind `manage_options`, which Organisers don't have.
- * The routes hand Organisers write access to two options that the group
- * cannot restore from anywhere else in this UI, so the interesting cases
- * are the ones where a write should be refused.
+ * The routes hand Organisers write access to those options and the site's
+ * location metadata, so the interesting cases are the ones where a write
+ * should be refused or existing data should be preserved.
  *
  * @group mu-plugins
  * @group groups-frontend
@@ -46,6 +47,9 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 
 		update_option( 'blogname', 'Warsaw WordPress Group' );
 		update_option( 'blogdescription', 'We meet monthly.' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_type' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_country' );
 	}
 
 	/**
@@ -73,13 +77,12 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 		$response = $this->dispatch( 'GET' );
 
 		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame(
-			array(
-				'title'       => 'Warsaw WordPress Group',
-				'description' => 'We meet monthly.',
-			),
-			$response->get_data()
-		);
+		$data = $response->get_data();
+		$this->assertSame( 'Warsaw WordPress Group', $data['title'] );
+		$this->assertSame( 'We meet monthly.', $data['description'] );
+		$this->assertNull( $data['location'] );
+		$this->assertNotEmpty( $data['countries'] );
+		$this->assertContains( 'TR', wp_list_pluck( $data['countries'], 'code' ) );
 	}
 
 	/**
@@ -202,5 +205,110 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 
 		$this->assertSame( 'Warsaw WordPress Group', get_option( 'blogname' ) );
 		$this->assertSame( 'Now quarterly.', get_option( 'blogdescription' ) );
+	}
+
+	/**
+	 * An Organiser can save a physical group location.
+	 */
+	public function test_editor_can_save_physical_location() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = $this->dispatch(
+			'POST',
+			array(
+				'location' => array(
+					'type'        => 'physical',
+					'city'        => 'İstanbul',
+					'countryCode' => 'tr',
+				),
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame(
+			array(
+				'type'        => 'physical',
+				'city'        => 'İstanbul',
+				'countryCode' => 'TR',
+			),
+			$response->get_data()['location']
+		);
+		$this->assertSame( 'physical', get_site_meta( get_current_blog_id(), 'wporg_group_location_type', true ) );
+		$this->assertSame( 'İstanbul', get_site_meta( get_current_blog_id(), 'wporg_group_location_city', true ) );
+		$this->assertSame( 'TR', get_site_meta( get_current_blog_id(), 'wporg_group_location_country', true ) );
+	}
+
+	/**
+	 * Online is a complete group location without platform details.
+	 */
+	public function test_editor_can_save_online_location() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'Warsaw' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'PL' );
+
+		$response = $this->dispatch(
+			'POST',
+			array( 'location' => array( 'type' => 'online' ) )
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( 'type' => 'online' ), $response->get_data()['location'] );
+		$this->assertSame( 'online', get_site_meta( get_current_blog_id(), 'wporg_group_location_type', true ) );
+		$this->assertSame( '', get_site_meta( get_current_blog_id(), 'wporg_group_location_city', true ) );
+		$this->assertSame( '', get_site_meta( get_current_blog_id(), 'wporg_group_location_country', true ) );
+	}
+
+	/**
+	 * Null clears all location metadata and restores the unspecified state.
+	 */
+	public function test_editor_can_clear_location() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'Warsaw' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'PL' );
+
+		$response = $this->dispatch( 'POST', array( 'location' => null ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertNull( $response->get_data()['location'] );
+		$this->assertSame( '', get_site_meta( get_current_blog_id(), 'wporg_group_location_type', true ) );
+		$this->assertSame( '', get_site_meta( get_current_blog_id(), 'wporg_group_location_city', true ) );
+		$this->assertSame( '', get_site_meta( get_current_blog_id(), 'wporg_group_location_country', true ) );
+	}
+
+	/**
+	 * Physical locations require a city and a recognized country.
+	 */
+	public function test_incomplete_physical_location_is_rejected_without_partial_updates() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = $this->dispatch(
+			'POST',
+			array(
+				'title'    => 'This should not be saved',
+				'location' => array(
+					'type'        => 'physical',
+					'city'        => '',
+					'countryCode' => 'PL',
+				),
+			)
+		);
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'wporg_groups_incomplete_location', $response->get_data()['code'] );
+		$this->assertSame( 'Warsaw WordPress Group', get_option( 'blogname' ) );
+		$this->assertNull( $this->dispatch( 'GET' )->get_data()['location'] );
+	}
+
+	/**
+	 * Omitting location leaves existing location metadata untouched.
+	 */
+	public function test_omitted_location_is_not_clobbered() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'online' );
+
+		$this->dispatch( 'POST', array( 'description' => 'Now quarterly.' ) );
+
+		$this->assertSame( array( 'type' => 'online' ), $this->dispatch( 'GET' )->get_data()['location'] );
 	}
 }

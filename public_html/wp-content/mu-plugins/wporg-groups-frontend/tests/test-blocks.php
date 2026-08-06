@@ -17,6 +17,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/event-speakers',
 		'wporg/group-members',
 		'wporg/group-membership',
+		'wporg/group-location',
 		'wporg/group-settings',
 		'wporg/my-events',
 		'wporg/page-content',
@@ -24,8 +25,8 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	);
 
 	/**
-	 * Exactly these 9 `wporg/*` blocks should be registered. The original
-	 * set of 10 also included `event-rsvp-count` and `event-venue-name`;
+	 * Exactly these 10 `wporg/*` blocks should be registered. An earlier
+	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
 	 * "Review fixes" for why) — if either reappears, or a new custom block
@@ -132,5 +133,45 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'aria-live="polite"', $output );
 		$this->assertStringContainsString( 'aria-atomic="true"', $output );
 		$this->assertStringContainsString( 'data-wp-text="context.rsvpNotice"', $output );
+	}
+
+	/**
+	 * An unspecified group location leaves no empty header element behind.
+	 */
+	public function test_group_location_block_is_hidden_when_unspecified() {
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_type' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_country' );
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-location /-->' ) ) );
+	}
+
+	/**
+	 * A physical group location is rendered as its city and localized country.
+	 */
+	public function test_group_location_block_renders_physical_location() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'TR' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'İstanbul', $output );
+		$this->assertStringContainsString( wcorg_get_country_name_from_code( 'TR' ), $output );
+		$this->assertStringContainsString( '<svg', $output );
+		$this->assertStringContainsString( 'aria-hidden="true"', $output );
+	}
+
+	/**
+	 * Online is derived from the location type; no event platform is needed.
+	 */
+	public function test_group_location_block_renders_online_location() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'online' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_country' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'Online', $output );
 	}
 }

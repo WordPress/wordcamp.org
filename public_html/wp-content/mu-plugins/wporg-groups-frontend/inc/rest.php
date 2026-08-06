@@ -17,9 +17,9 @@
  *
  *   GET  /group-info
  *   POST /group-info
- *        Reads and writes the group's name and description. Exists because
- *        core's /wp/v2/settings requires `manage_options`, which Organisers
- *        (editors) do not have.
+ *        Reads and writes the group's name, description, and location.
+ *        Exists because core's /wp/v2/settings requires `manage_options`,
+ *        which Organisers (editors) do not have.
  *
  * The event routes require the `current_user_can_manage_events()` capability,
  * plus post-specific capabilities when operating on an existing event. The
@@ -47,6 +47,10 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group
 use function WordCamp\Groups\Frontend\Defaults\extract_description_blocks;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
+use function WordCamp\Groups\Frontend\Group_Location\get_country_options;
+use function WordCamp\Groups\Frontend\Group_Location\get_location;
+use function WordCamp\Groups\Frontend\Group_Location\normalize_location;
+use function WordCamp\Groups\Frontend\Group_Location\save_location;
 
 const NAMESPACE_V1 = 'wporg-groups/v1';
 
@@ -182,10 +186,11 @@ function register_routes(): void {
 
 	// ----- Group info -----------------------------------------------------
 	//
-	// The Settings > About tab edits `blogname` and `blogdescription`. Core's
+	// The Settings > About tab edits `blogname`, `blogdescription`, and the
+	// group-level location. Core's
 	// /wp/v2/settings gates both behind `manage_options`, which only network
 	// administrators have, so Organisers got a 403 on every read and write.
-	// These routes expose just those two fields, behind the same capability
+	// These routes expose just those group fields, behind the same capability
 	// check that gates the settings UI itself.
 
 	register_rest_route(
@@ -212,6 +217,12 @@ function register_routes(): void {
 						'required'          => false,
 						'sanitize_callback' => 'sanitize_text_field',
 					),
+					'location'    => array(
+						'required'          => false,
+						'validate_callback' => static function ( $location ) {
+							return null === $location || is_array( $location );
+						},
+					),
 				),
 			),
 		)
@@ -226,19 +237,21 @@ function manage_group_settings_permissions_check(): bool {
 }
 
 /**
- * Return the group's name and description.
+ * Return the group's name, description, location, and location form options.
  */
 function get_group_info(): WP_REST_Response {
 	return new WP_REST_Response(
 		array(
 			'title'       => get_option( 'blogname', '' ),
 			'description' => get_option( 'blogdescription', '' ),
+			'location'    => get_location(),
+			'countries'   => get_country_options(),
 		)
 	);
 }
 
 /**
- * Update the group's name and description.
+ * Update the group's name, description, and location.
  *
  * Only the fields present in the request are written, so a client can send
  * one without clobbering the other.
@@ -246,8 +259,10 @@ function get_group_info(): WP_REST_Response {
  * @return WP_Error|WP_REST_Response
  */
 function update_group_info( WP_REST_Request $request ) {
-	$title       = $request->get_param( 'title' );
-	$description = $request->get_param( 'description' );
+	$title        = $request->get_param( 'title' );
+	$description  = $request->get_param( 'description' );
+	$has_location = $request->has_param( 'location' );
+	$location     = null;
 
 	// An empty group name is not recoverable from this UI: the next load
 	// returns the blank value, so there is nothing left to restore it from.
@@ -257,12 +272,24 @@ function update_group_info( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_empty_group_name', 'Group name is required.', array( 'status' => 400 ) );
 	}
 
+	if ( $has_location ) {
+		$location = normalize_location( $request->get_param( 'location' ) );
+
+		if ( is_wp_error( $location ) ) {
+			return $location;
+		}
+	}
+
 	if ( null !== $title ) {
 		update_option( 'blogname', $title );
 	}
 
 	if ( null !== $description ) {
 		update_option( 'blogdescription', $description );
+	}
+
+	if ( $has_location ) {
+		save_location( $location );
 	}
 
 	return get_group_info();

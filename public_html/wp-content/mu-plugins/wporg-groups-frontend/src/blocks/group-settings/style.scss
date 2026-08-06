@@ -133,6 +133,22 @@
 		font-style: italic;
 	}
 
+	&__location {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	&__location-fields {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 16px;
+
+		@media (max-width: 600px) {
+			grid-template-columns: 1fr;
+		}
+	}
+
 	&__section-title {
 		font-size: 14px;
 		font-weight: 600;

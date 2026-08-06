@@ -53,6 +53,7 @@ const NS =
 	( window.wporgGroupsEventModal &&
 		window.wporgGroupsEventModal.restNamespace ) ||
 	'wporg-groups/v1';
+const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 
 	let coreBlocksRegistered = false;
 	function ensureCoreBlocksRegistered() {
@@ -699,6 +700,7 @@ const NS =
 							label: __( 'Date', 'wporg-groups-frontend' ),
 							type: 'date',
 							value: form.date,
+							min: isEdit ? undefined : MINIMUM_EVENT_DATE,
 							onChange: ( v ) => updateField( 'date', v ),
 							required: true,
 							__nextHasNoMarginBottom: true,

@@ -40,6 +40,7 @@ const NS =
 	( window.wporgGroupsEventModal &&
 		window.wporgGroupsEventModal.restNamespace ) ||
 	'wporg-groups/v1';
+const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 
 let coreBlocksRegistered = false;
 
@@ -304,7 +305,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			h( 'label', { className: 'wporg-event-form__label' }, __( 'Featured image', 'wporg-groups-frontend' ) ),
 			h( FeaturedImagePicker, { imageId: featuredImage.id, imageUrl: featuredImage.url, onChange: ( id, url ) => setFeaturedImage( { id, url } ) } ) ),
 		h( 'div', { className: 'wporg-event-form__row' },
-			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
+			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, min: isEdit ? undefined : MINIMUM_EVENT_DATE, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( TextControl, { label: __( 'Start time', 'wporg-groups-frontend' ), type: 'time', value: form.time_start, onChange: ( v ) => updateField( 'time_start', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( DurationField, { timeStart: form.time_start, timeEnd: form.time_end, onChange: ( v ) => updateField( 'time_end', v ) } ) ),
 		h( VenueField, {

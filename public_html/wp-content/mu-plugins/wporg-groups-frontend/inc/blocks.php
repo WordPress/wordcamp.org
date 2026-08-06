@@ -32,6 +32,7 @@ function register_blocks(): void {
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/event-speakers' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/my-events' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/page-content' );
+	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/sponsors' );
 }
 
 /**

@@ -10,7 +10,7 @@ use const WordCamp\Budgets\Sponsor_Invoices\POST_TYPE;
 
 defined( 'WPINC' ) || die();
 
-const LATEST_DATABASE_VERSION = 4;
+const LATEST_DATABASE_VERSION = 5;
 
 if ( defined( 'DOING_AJAX' ) ) {
 	add_action( 'wp_ajax_wcbdsi_approve_invoice', __NAMESPACE__ . '\handle_approve_invoice_request'       );
@@ -201,7 +201,7 @@ function upgrade_database() {
 			last_modified  datetime                  NOT NULL default '0000-00-00 00:00:00',
 
 			PRIMARY KEY (blog_id, invoice_id),
-			KEY status (status)
+			KEY status (status),
 			KEY last_modified (last_modified)
 		)
 		$charset_collate

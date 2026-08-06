@@ -5,14 +5,26 @@
  */
 
 /* === Summary (avatar stack + count) === */
-
 .wporg-event-rsvp__summary {
+	display: block;
+	width: 100%;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
 	cursor: pointer;
 	margin-bottom: 16px;
 }
 
 .wporg-event-rsvp__summary:hover {
 	opacity: 0.85;
+}
+
+.wporg-event-rsvp__summary:focus-visible {
+	outline: 2px solid;
+	outline-offset: 4px;
 }
 
 .wporg-event-rsvp__avatars {
@@ -55,7 +67,6 @@
 }
 
 /* === RSVP button === */
-
 .wporg-event-rsvp__button {
 	width: 100%;
 	justify-content: center;
@@ -78,7 +89,6 @@
 }
 
 /* === Full-screen modal === */
-
 .wporg-event-rsvp__modal {
 	display: none;
 	position: fixed;
@@ -143,7 +153,6 @@
 }
 
 /* === RSVP action area inside modal === */
-
 .wporg-event-rsvp__modal-action {
 	padding: 16px 24px;
 	border-bottom: 1px solid #d9d9d9;
@@ -162,6 +171,13 @@
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+
+	/* Reset the browser's default fieldset chrome — the element is a
+	   fieldset for the grouping semantics, not for the border. */
+	border: 0;
+	margin: 0;
+	padding: 0;
+	min-width: 0;
 }
 
 .wporg-event-rsvp__questions.is-hidden {
@@ -192,14 +208,13 @@
 	border-radius: 2px;
 }
 
-.wporg-event-rsvp__error {
-	flex: 1 0 100%;
+.wporg-event-rsvp__questions-error {
 	margin: 0;
 	font-size: 14px;
 	color: #cc1818;
 }
 
-.wporg-event-rsvp__error:empty {
+.wporg-event-rsvp__questions-error:empty {
 	display: none;
 }
 
@@ -230,7 +245,6 @@
 }
 
 /* === Attendee list === */
-
 .wporg-event-rsvp__attendee-list {
 	padding: 8px 0;
 	flex: 1 1 auto;

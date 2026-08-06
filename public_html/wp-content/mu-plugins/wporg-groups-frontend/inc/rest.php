@@ -930,6 +930,13 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	if ( '' === trim( $fields['title'] ) ) {
 		return new WP_Error( 'wporg_groups_missing_title', 'Title is required.', array( 'status' => 400 ) );
 	}
+	if ( ( 0 === $event_id || 'publish' !== get_post_status( $event_id ) ) && $fields['date'] < wp_date( 'Y-m-d' ) ) {
+		return new WP_Error(
+			'wporg_groups_past_event_date',
+			__( 'Event date cannot be in the past.', 'wporg-groups-frontend' ),
+			array( 'status' => 400 )
+		);
+	}
 	if ( $fields['time_start'] === $fields['time_end'] ) {
 		return new WP_Error( 'wporg_groups_bad_time_range', 'End time must be after start time.', array( 'status' => 400 ) );
 	}

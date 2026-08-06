@@ -22,6 +22,7 @@ require_once __DIR__ . '/inc/blocks.php';
 require_once __DIR__ . '/inc/my-events.php';
 require_once __DIR__ . '/inc/class-members-controller.php';
 require_once __DIR__ . '/inc/notifications.php';
+require_once __DIR__ . '/inc/sponsors.php';
 
 /**
  * Bootstrap the plugin.
@@ -30,6 +31,11 @@ require_once __DIR__ . '/inc/notifications.php';
  * GatherPress there's no event post type and no work to do.
  */
 function bootstrap(): void {
+	// Sponsors are network-level data with no connection to events, and the
+	// network root site where they're edited doesn't run GatherPress at all,
+	// so this has to be registered before the guard below.
+	Sponsors\bootstrap();
+
 	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
 		return;
 	}

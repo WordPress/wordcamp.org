@@ -20,10 +20,11 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/group-settings',
 		'wporg/my-events',
 		'wporg/page-content',
+		'wporg/sponsors',
 	);
 
 	/**
-	 * Exactly these 8 `wporg/*` blocks should be registered. The original
+	 * Exactly these 9 `wporg/*` blocks should be registered. The original
 	 * set of 10 also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's

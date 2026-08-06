@@ -89,10 +89,19 @@ iframe {
    ========================================================================== */
 
 @media (min-width: 1024px) {
-	/* Stick the event sidebar info card to the top while scrolling. */
-	.groups-site-event-sidebar .groups-site-event-info-card {
+	/*
+	 * Stick the event sidebar to the top while scrolling.
+	 *
+	 * Applied to the whole column rather than just the info card, because a
+	 * sticky card scrolls *over* anything after it in the same container —
+	 * with the sponsors block below it, the card would slide down and cover
+	 * it. `align-self` stops the column stretching to the row's full height,
+	 * which would leave `sticky` no room to travel in.
+	 */
+	.groups-site-event-sidebar {
 		position: sticky;
 		top: 96px;
 		z-index: 100;
+		align-self: flex-start;
 	}
 }

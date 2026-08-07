@@ -109,27 +109,12 @@
 	box-sizing: border-box;
 	width: 100%;
 	padding: 0;
+	margin: 0 !important;
 	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+	line-height: 1.4;
 	color: var(--wp--preset--color--charcoal-1);
-}
-
-.groups-site-sidebar .wporg-group-membership__heading {
-	margin: 0 !important;
-	font-size: var(--wp--preset--font-size--normal);
-	font-weight: 600;
-	line-height: 1.4;
-}
-
-.groups-site-sidebar .wporg-group-membership__preference-heading {
-	margin: var(--wp--preset--spacing--10) 0 0 !important;
-	font-size: var(--wp--preset--font-size--small);
-	font-weight: 600;
-	line-height: 1.4;
-}
-
-.groups-site-sidebar .wporg-group-membership__preference-heading--standalone {
-	margin: 0 !important;
-	font-size: var(--wp--preset--font-size--normal);
 }
 
 .groups-site-sidebar:has(.wporg-event-manage) .groups-site-sidebar-preference {

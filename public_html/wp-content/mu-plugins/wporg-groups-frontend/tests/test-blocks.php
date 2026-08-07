@@ -88,7 +88,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 				'post_title'  => 'Accessible RSVP Event',
 			)
 		);
-		$user_id = self::factory()->user->create(
+		$user_id  = self::factory()->user->create(
 			array(
 				'display_name' => 'Avatar Name Must Stay Decorative',
 			)
@@ -177,40 +177,59 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
-	 * Combined identity and preference sections use an h2/h3 heading hierarchy.
+	 * The default combined variant preserves the original unheaded output.
 	 */
-	public function test_group_membership_block_renders_optional_sidebar_headings() {
+	public function test_group_membership_block_defaults_to_combined_variant() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership /-->' );
+
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertStringContainsString( 'class="wporg-group-membership__preference"', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__heading', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__preference-heading', $output );
+	}
+
+	/**
+	 * Membership placements include their heading and omit the preference.
+	 */
+	public function test_group_membership_block_renders_membership_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $member_id );
 
 		$output = do_blocks(
-			'<!-- wp:wporg/group-membership {"showLeave":false,"showPreference":true,"showHeadings":true} /-->'
+			'<!-- wp:wporg/group-membership {"variant":"membership"} /-->'
 		);
 
 		$this->assertStringContainsString( '<h2 class="wporg-group-membership__heading">', $output );
 		$this->assertStringContainsString( 'Membership', $output );
-		$this->assertStringContainsString( '<h3 class="wporg-group-membership__preference-heading">', $output );
-		$this->assertStringContainsString( 'Email preferences', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__preference', $output );
 	}
 
 	/**
-	 * Preference-only placements use an h2 and omit identity markup.
+	 * Preference placements include their heading and omit membership controls.
 	 */
-	public function test_group_membership_block_renders_standalone_preference_heading() {
+	public function test_group_membership_block_renders_preference_variant() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $member_id );
 
 		$output = do_blocks(
-			'<!-- wp:wporg/group-membership {"showIdentity":false,"showLeave":false,"showPreference":true,"showHeadings":true} /-->'
+			'<!-- wp:wporg/group-membership {"variant":"preference"} /-->'
 		);
 
-		$this->assertStringContainsString(
-			'<h2 class="wporg-group-membership__preference-heading wporg-group-membership__preference-heading--standalone">',
-			$output
-		);
+		$this->assertStringContainsString( '<h2 class="wporg-group-membership__preference-heading">', $output );
+		$this->assertStringContainsString( 'Email preferences', $output );
+		$this->assertStringContainsString( 'class="wporg-group-membership__preference"', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__heading', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
 		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__leave', $output );
 	}
 
 	/**

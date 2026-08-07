@@ -5,17 +5,20 @@
  * @package WordCamp\Groups\Frontend
  */
 
-$show_identity   = ! isset( $attributes['showIdentity'] ) || ! empty( $attributes['showIdentity'] );
-$show_leave      = ! isset( $attributes['showLeave'] ) || ! empty( $attributes['showLeave'] );
-$show_preference = ! isset( $attributes['showPreference'] ) || ! empty( $attributes['showPreference'] );
-$show_headings   = ! empty( $attributes['showHeadings'] );
+$variant = $attributes['variant'] ?? 'combined';
+if ( ! in_array( $variant, array( 'combined', 'membership', 'preference' ), true ) ) {
+	$variant = 'combined';
+}
+
+$shows_membership = in_array( $variant, array( 'combined', 'membership' ), true );
+$shows_preference = in_array( $variant, array( 'combined', 'preference' ), true );
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
 $user_role    = '';
 $role_label   = '';
 
-if ( $is_member ) {
+if ( $shows_membership && $is_member ) {
 	$user      = wp_get_current_user();
 	$user_role = reset( $user->roles ) ?: 'subscriber';
 
@@ -28,67 +31,82 @@ if ( $is_member ) {
 	$role_label = $labels[ $user_role ] ?? __( 'Member', 'wporg-groups-frontend' );
 }
 
-// Only logged-in visitors can join or leave, and only their markup should carry a nonce.
-$rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
+$is_organiser       = in_array( $user_role, array( 'administrator', 'editor' ), true );
+$renders_leave      = $shows_membership && $is_member && ! $is_organiser;
+$renders_preference = $shows_preference && $is_member;
 
-$is_organiser = in_array( $user_role, array( 'administrator', 'editor' ), true );
-
-$renders_leave      = $show_leave && $is_member && ! $is_organiser;
-$renders_preference = $show_preference && $is_member;
-
-// Avoid count_users() when this block placement has nothing to render.
-if ( ! $show_identity && ! $renders_leave && ! $renders_preference ) {
+if ( ! $shows_membership && ! $renders_preference ) {
 	return;
 }
 
-$user_count          = count_users( 'time', get_current_blog_id() );
-$member_count        = $user_count['total_users'] ?? 0;
-$join_api            = rest_url( 'wporg-groups/v1/members/join' );
-$leave_api           = rest_url( 'wporg-groups/v1/members/leave' );
-$preference_api      = rest_url( 'wporg-groups/v1/members/notification-preference' );
-$login_url           = wp_login_url( get_permalink() ?: home_url() );
-$notification_opt_in = $is_member
+// Only logged-in visitors can mutate membership or preferences, and only their markup should carry a nonce.
+$rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
+
+$member_count = 0;
+$count_label  = '';
+
+if ( $shows_membership ) {
+	$user_count   = count_users( 'time', get_current_blog_id() );
+	$member_count = $user_count['total_users'] ?? 0;
+	$count_label  = sprintf(
+		_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
+		number_format_i18n( $member_count )
+	);
+}
+
+$notification_opt_in = $renders_preference
 	? \GatherPress\Core\User::get_instance()->has_event_updates_opt_in( get_current_user_id() )
 	: false;
-$count_label         = sprintf(
-	_n( '%s member', '%s members', $member_count, 'wporg-groups-frontend' ),
-	number_format_i18n( $member_count )
-);
 
 $context = array(
-	'isLoggedIn'    => $is_logged_in,
-	'isMember'      => $is_member,
-	'isOrganiser'   => $is_organiser,
-	'roleLabel'     => $role_label,
-	'memberCount'   => $member_count,
-	'memberLabel'   => __( 'Member', 'wporg-groups-frontend' ),
-	'joinLabel'     => __( 'Join this group', 'wporg-groups-frontend' ),
-	'countLabel'    => $count_label,
-	'leaveConfirm' => __( 'Leave this group?', 'wporg-groups-frontend' ),
-	'joinApi'       => $join_api,
-	'leaveApi'      => $leave_api,
-	'preferenceApi' => $preference_api,
-	'restNonce'     => $rest_nonce,
-	'loginUrl'      => $login_url,
-	'loading'       => false,
-	'notificationOptIn'     => $notification_opt_in,
-	'preferenceSaving'      => false,
-	'preferenceMessage'     => '',
-	'preferenceNoticeSuccess' => false,
-	'preferenceNoticeError'   => false,
-	'preferenceSavedLabel'  => __( 'Email preference saved.', 'wporg-groups-frontend' ),
-	'preferenceErrorLabel'  => __( 'The email preference could not be saved. Please try again.', 'wporg-groups-frontend' ),
+	'isLoggedIn' => $is_logged_in,
+	'isMember'   => $is_member,
+	'restNonce'  => $rest_nonce,
 );
 
-wp_interactivity_state(
-	'wporg/group-membership',
-	array(
-		'buttonLabel'  => $is_member ? $role_label : __( 'Join this group', 'wporg-groups-frontend' ),
-		'isMember'     => $is_member,
-		'memberCount'  => $member_count,
-		'countLabel'   => $count_label,
-	)
-);
+if ( $shows_membership ) {
+	$context = array_merge(
+		$context,
+		array(
+			'roleLabel'    => $role_label,
+			'memberCount'  => $member_count,
+			'memberLabel'  => __( 'Member', 'wporg-groups-frontend' ),
+			'joinLabel'    => __( 'Join this group', 'wporg-groups-frontend' ),
+			'countLabel'   => $count_label,
+			'leaveConfirm' => __( 'Leave this group?', 'wporg-groups-frontend' ),
+			'joinApi'      => rest_url( 'wporg-groups/v1/members/join' ),
+			'leaveApi'     => rest_url( 'wporg-groups/v1/members/leave' ),
+			'loginUrl'     => wp_login_url( get_permalink() ?: home_url() ),
+			'loading'      => false,
+		)
+	);
+
+	wp_interactivity_state(
+		'wporg/group-membership',
+		array(
+			'buttonLabel' => $is_member ? $role_label : __( 'Join this group', 'wporg-groups-frontend' ),
+			'isMember'    => $is_member,
+			'memberCount' => $member_count,
+			'countLabel'  => $count_label,
+		)
+	);
+}
+
+if ( $renders_preference ) {
+	$context = array_merge(
+		$context,
+		array(
+			'preferenceApi'           => rest_url( 'wporg-groups/v1/members/notification-preference' ),
+			'notificationOptIn'       => $notification_opt_in,
+			'preferenceSaving'        => false,
+			'preferenceMessage'       => '',
+			'preferenceNoticeSuccess' => false,
+			'preferenceNoticeError'   => false,
+			'preferenceSavedLabel'    => __( 'Email preference saved.', 'wporg-groups-frontend' ),
+			'preferenceErrorLabel'    => __( 'The email preference could not be saved. Please try again.', 'wporg-groups-frontend' ),
+		)
+	);
+}
 
 $wrapper_attributes = get_block_wrapper_attributes(
 	array(
@@ -99,8 +117,8 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<?php if ( $show_identity ) : ?>
-		<?php if ( $show_headings ) : ?>
+	<?php if ( $shows_membership ) : ?>
+		<?php if ( 'membership' === $variant ) : ?>
 			<h2 class="wporg-group-membership__heading">
 				<?php esc_html_e( 'Membership', 'wporg-groups-frontend' ); ?>
 			</h2>
@@ -143,16 +161,10 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php endif; ?>
 
 	<?php if ( $renders_preference ) : ?>
-		<?php if ( $show_headings ) : ?>
-			<?php if ( $show_identity ) : ?>
-				<h3 class="wporg-group-membership__preference-heading">
-					<?php esc_html_e( 'Email preferences', 'wporg-groups-frontend' ); ?>
-				</h3>
-			<?php else : ?>
-				<h2 class="wporg-group-membership__preference-heading wporg-group-membership__preference-heading--standalone">
-					<?php esc_html_e( 'Email preferences', 'wporg-groups-frontend' ); ?>
-				</h2>
-			<?php endif; ?>
+		<?php if ( 'preference' === $variant ) : ?>
+			<h2 class="wporg-group-membership__preference-heading">
+				<?php esc_html_e( 'Email preferences', 'wporg-groups-frontend' ); ?>
+			</h2>
 		<?php endif; ?>
 
 		<div class="wporg-group-membership__preference">

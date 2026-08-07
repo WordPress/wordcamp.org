@@ -12,16 +12,22 @@
 	gap: 8px;
 	flex-wrap: wrap;
 
+	// Secondary button — same size/shape as the primary "Create event" CTA
+	// in the event-manage block, just outlined instead of filled, so the
+	// two read as one hierarchy rather than two unrelated buttons.
 	&__trigger {
+		box-sizing: border-box;
 		display: inline-flex;
 		align-items: center;
 		gap: 6px;
-		padding: 6px 14px;
+		padding: 10px 22px;
 		background: none;
-		border: 1px solid #d9d9d9;
+		border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9);
 		border-radius: 2px;
-		font-size: 13px;
-		color: #656a71;
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.3;
+		color: var(--wp--preset--color--charcoal-3, #40464d);
 		cursor: pointer;
 
 		.dashicons {
@@ -31,21 +37,21 @@
 		}
 
 		&:hover {
-			border-color: #3858e9;
-			color: #3858e9;
+			border-color: var(--wp--preset--color--blueberry-1, #3858e9);
+			color: var(--wp--preset--color--blueberry-1, #3858e9);
 		}
 
+		// Incomplete setup promotes this to a filled primary CTA in its own
+		// right, since finishing setup outranks creating an event.
 		&--setup {
-			background: #3858e9;
-			border-color: #3858e9;
-			color: #fff;
-			font-weight: 600;
-			padding: 10px 20px;
+			background: var(--wp--preset--color--blueberry-1, #3858e9);
+			border-color: var(--wp--preset--color--blueberry-1, #3858e9);
+			color: var(--wp--preset--color--white, #fff);
 
 			&:hover {
-				background: #213fd4;
-				border-color: #213fd4;
-				color: #fff;
+				background: var(--wp--preset--color--deep-blueberry, #213fd4);
+				border-color: var(--wp--preset--color--deep-blueberry, #213fd4);
+				color: var(--wp--preset--color--white, #fff);
 			}
 		}
 	}

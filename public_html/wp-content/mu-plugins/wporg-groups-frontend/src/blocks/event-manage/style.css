@@ -11,8 +11,29 @@
 }
 
 .wporg-event-manage__button {
+	box-sizing: border-box;
+	padding: 10px 22px;
+	border: 1px solid transparent;
+	border-radius: 2px;
 	font-size: 14px;
+	font-weight: 600;
+	line-height: 1.3;
 	cursor: pointer;
+}
+
+/* The primary CTA — same shape as every secondary button here, but filled
+   with the theme's default button color (theme.json's blueberry-1/white/
+   deep-blueberry-hover) made explicit so it doesn't depend on `wp-element-
+   button` load order. */
+.wporg-event-manage__button--create {
+	background: var(--wp--preset--color--blueberry-1, #3858e9);
+	border-color: var(--wp--preset--color--blueberry-1, #3858e9);
+	color: var(--wp--preset--color--white, #fff);
+}
+
+.wporg-event-manage__button--create:hover {
+	background: var(--wp--preset--color--deep-blueberry, #213fd4);
+	border-color: var(--wp--preset--color--deep-blueberry, #213fd4);
 }
 
 .wporg-event-manage__button--edit {

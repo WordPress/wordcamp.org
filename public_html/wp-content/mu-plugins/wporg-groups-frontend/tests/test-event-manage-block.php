@@ -57,10 +57,7 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 		$this->assertStringContainsString( (string) $event_id, $output );
 	}
 
-	/**
-	 * A placement can opt into a section heading without changing the
-	 * unlabelled event-management controls used elsewhere.
-	 */
+	// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
 	public function test_optional_organiser_tools_heading_is_rendered() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );

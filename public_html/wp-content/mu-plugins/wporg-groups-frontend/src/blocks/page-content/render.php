@@ -4,13 +4,6 @@
  *
  * Renders a page's content by slug, with an edit link for organisers.
  *
- * The optional `heading` attribute renders a section heading *inside* the
- * block rather than beside it in the template. The block renders nothing at
- * all when the target page is missing and the viewer can't create it, so a
- * heading placed in the template would be left stranded above empty space —
- * which is what happened on the front page's "About this group" section for
- * every group that hadn't written an about page yet.
- *
  * @package WordCamp\Groups\Frontend
  */
 
@@ -19,14 +12,6 @@ $heading       = trim( (string) ( $attributes['heading'] ?? '' ) );
 $heading_level = (int) ( $attributes['headingLevel'] ?? 2 );
 $heading_level = min( 6, max( 1, $heading_level ) );
 
-/**
- * Build the optional section heading.
- *
- * Called only from branches that are about to emit content, so the heading
- * never appears on its own.
- *
- * @return string Escaped heading HTML, or an empty string when unset.
- */
 $wporg_get_heading = static function () use ( $heading, $heading_level ): string {
 	if ( '' === $heading ) {
 		return '';
@@ -46,10 +31,6 @@ if ( empty( $slug ) ) {
 $target_page = get_page_by_path( $slug );
 
 if ( ! $target_page || 'publish' !== $target_page->post_status ) {
-	// If the page doesn't exist yet, show a prompt for organisers. Rendered
-	// inside the block wrapper so the section keeps the layout classes the
-	// template gave it — without it the prompt loses the front page's section
-	// spacing and collides with whatever precedes it.
 	if ( current_user_can( 'edit_pages' ) ) {
 		$create_url = admin_url( 'post-new.php?post_type=page&post_title=' . urlencode( ucfirst( $slug ) ) );
 
@@ -72,9 +53,6 @@ if ( ! $target_page || 'publish' !== $target_page->post_status ) {
 
 $can_edit = current_user_can( 'edit_page', $target_page->ID );
 
-// A published-but-empty page is the same dead end as a missing one for a
-// visitor: render nothing rather than a heading over blank space. Organisers
-// still get the block so they have somewhere to click through and write it.
 if ( '' === trim( (string) $target_page->post_content ) && ! $can_edit ) {
 	return;
 }

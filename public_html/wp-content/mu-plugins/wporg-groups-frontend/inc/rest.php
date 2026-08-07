@@ -185,13 +185,6 @@ function register_routes(): void {
 	);
 
 	// ----- Group info -----------------------------------------------------
-	//
-	// The Settings > About tab edits `blogname`, `blogdescription`, and the
-	// group-level location. Core's
-	// /wp/v2/settings gates both behind `manage_options`, which only network
-	// administrators have, so Organisers got a 403 on every read and write.
-	// These routes expose just those group fields, behind the same capability
-	// check that gates the settings UI itself.
 
 	register_rest_route(
 		NAMESPACE_V1,
@@ -236,9 +229,7 @@ function manage_group_settings_permissions_check(): bool {
 	return current_user_can_manage_group_settings();
 }
 
-/**
- * Return the group's name, description, location, and location form options.
- */
+// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
 function get_group_info(): WP_REST_Response {
 	return new WP_REST_Response(
 		array(
@@ -251,10 +242,7 @@ function get_group_info(): WP_REST_Response {
 }
 
 /**
- * Update the group's name, description, and location.
- *
- * Only the fields present in the request are written, so a client can send
- * one without clobbering the other.
+ * Only fields present in the request are written.
  *
  * @return WP_Error|WP_REST_Response
  */

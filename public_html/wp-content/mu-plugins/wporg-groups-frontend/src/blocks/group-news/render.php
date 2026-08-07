@@ -17,8 +17,6 @@ $wporg_posts = get_posts(
 	)
 );
 
-// A heading with no posts would advertise an empty section, so the entire
-// block disappears until the group publishes its first update.
 if ( empty( $wporg_posts ) ) {
 	return;
 }

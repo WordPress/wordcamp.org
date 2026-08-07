@@ -52,11 +52,7 @@ export default function AboutTab() {
 				setLoading( false );
 			} )
 			.catch( ( err ) => {
-				// Don't leave the fields silently blank: a failed load looks
-				// identical to an empty group name otherwise. Lock the form as
-				// well, so a save can't write those blanks back over the real
-				// values — a failed read followed by a successful write is all
-				// it takes to wipe the group's name and description.
+				// Prevent a failed read from being saved back as blank values.
 				setLoadFailed( true );
 				setNoticeType( 'error' );
 				setNotice(
@@ -129,9 +125,7 @@ export default function AboutTab() {
 			disabled: loadFailed,
 			__nextHasNoMarginBottom: true,
 		} ),
-		// Single-line on purpose: the value is stored in `blogdescription`
-		// and sanitized with `sanitize_text_field()`, which silently flattens
-		// line breaks, so a textarea would invite input it can't keep.
+		// blogdescription is sanitized as a single line.
 		h( TextControl, {
 			label: __( 'Description', 'wporg-groups-frontend' ),
 			value: form.blogdescription,

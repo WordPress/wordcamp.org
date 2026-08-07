@@ -56,13 +56,6 @@
    Front-page hero
    ========================================================================== */
 
-/* The hero carries the group's own description (`blogdescription`), which is
-   often a single short line. Cap its measure so it stays readable rather than
-   stretching the full 720px content width.
-
-   When it's unset the hero simply omits it — no placeholder. Organisers are
-   already prompted by `wporg/group-settings`, whose trigger button switches to
-   "Set up your group" on exactly this condition and opens the About tab. */
 .groups-site-hero .wp-block-site-tagline {
 	max-width: 52ch;
 	text-wrap: pretty;
@@ -140,10 +133,6 @@
 	margin: 0 !important;
 	font-size: var(--wp--preset--font-size--normal);
 }
-
-/* The separator is only needed when organiser controls render above the
-   preference. Ordinary members see the preference as the sidebar's first
-   and only section. */
 
 .groups-site-sidebar:has(.wporg-event-manage) .groups-site-sidebar-preference {
 	margin-top: var(--wp--preset--spacing--10) !important;

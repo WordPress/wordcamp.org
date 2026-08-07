@@ -22,12 +22,7 @@ const TYPE_PHYSICAL = 'physical';
 const TYPE_ONLINE   = 'online';
 
 /**
- * Get the current group's location.
- *
  * Missing or incomplete metadata is treated as an unspecified location.
- *
- * @param int $site_id Site ID. Defaults to the current site.
- * @return array|null Normalized location, or null when it is not specified.
  */
 function get_location( int $site_id = 0 ): ?array {
 	$site_id = $site_id ?: get_current_blog_id();
@@ -55,11 +50,7 @@ function get_location( int $site_id = 0 ): ?array {
 	);
 }
 
-/**
- * Get the country options used by the organizer settings form.
- *
- * @return array[] Each option has a `code` and localized `name`.
- */
+// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
 function get_country_options(): array {
 	return array_values(
 		array_map(
@@ -79,7 +70,6 @@ function get_country_options(): array {
  *
  * Null explicitly means that the existing location should be cleared.
  *
- * @param mixed $location Submitted location.
  * @return array|WP_Error|null
  */
 function normalize_location( $location ) {
@@ -138,7 +128,6 @@ function normalize_location( $location ) {
 /**
  * Save or clear the current group's location.
  *
- * @param mixed $location Submitted location.
  * @return array|WP_Error|null The normalized saved value.
  */
 function save_location( $location ) {
@@ -173,9 +162,7 @@ function save_location( $location ) {
 	return $location;
 }
 
-/**
- * Get the public label shown in the group header.
- */
+// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
 function get_location_label(): string {
 	$location = get_location();
 

@@ -12,9 +12,6 @@
 	gap: 8px;
 	flex-wrap: wrap;
 
-	// Secondary button — same size/shape as the primary "Create event" CTA
-	// in the event-manage block, just outlined instead of filled, so the
-	// two read as one hierarchy rather than two unrelated buttons.
 	&__trigger {
 		box-sizing: border-box;
 		display: inline-flex;
@@ -41,8 +38,6 @@
 			color: var(--wp--preset--color--blueberry-1, #3858e9);
 		}
 
-		// Incomplete setup promotes this to a filled primary CTA in its own
-		// right, since finishing setup outranks creating an event.
 		&--setup {
 			background: var(--wp--preset--color--blueberry-1, #3858e9);
 			border-color: var(--wp--preset--color--blueberry-1, #3858e9);

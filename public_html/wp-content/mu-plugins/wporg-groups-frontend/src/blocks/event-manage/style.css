@@ -21,10 +21,6 @@
 	cursor: pointer;
 }
 
-/* The primary CTA — same shape as every secondary button here, but filled
-   with the theme's default button color (theme.json's blueberry-1/white/
-   deep-blueberry-hover) made explicit so it doesn't depend on `wp-element-
-   button` load order. */
 .wporg-event-manage__button--create {
 	background: var(--wp--preset--color--blueberry-1, #3858e9);
 	border-color: var(--wp--preset--color--blueberry-1, #3858e9);

@@ -2,24 +2,6 @@
 /**
  * Server-side rendering for the wporg/group-membership block.
  *
- * The block renders a set of independently toggleable parts, so the same
- * interactivity store and REST wiring can back placements that answer quite
- * different questions:
- *
- *   - `showIdentity` (default true) — the join button for visitors, or the
- *     role badge plus member count for members. Answers "what is this group
- *     and am I in it?", which belongs with the group's supporting details.
- *   - `showLeave` — the "Leave group" action. Destructive account management,
- *     not identity, so it sits with the member directory rather than the hero.
- *   - `showPreference` — the GatherPress event-email opt-in. Stored as
- *     `gatherpress_event_updates_opt_in` usermeta, which on multisite is
- *     shared across the whole install: this toggle is not scoped to the group
- *     rendering it. It therefore belongs with the member controls rather
- *     than anywhere that reads as a property of this particular group.
- *   - `showHeadings` (default false) — labels the rendered membership and
- *     preference sections. When identity is hidden, the preference receives
- *     a standalone section heading instead of a subordinate heading.
- *
  * @package WordCamp\Groups\Frontend
  */
 
@@ -51,16 +33,10 @@ $rest_nonce = $is_logged_in ? wp_create_nonce( 'wp_rest' ) : '';
 
 $is_organiser = in_array( $user_role, array( 'administrator', 'editor' ), true );
 
-/*
- * Bail before rendering a wrapper that would hold nothing. Every part except
- * the identity row is member-only, so a placement that asks for the leave
- * action or the email preference alone has nothing to show a logged-out
- * visitor. Returning here also skips the `count_users()` call below, which is
- * only needed for the member count in the identity row.
- */
 $renders_leave      = $show_leave && $is_member && ! $is_organiser;
 $renders_preference = $show_preference && $is_member;
 
+// Avoid count_users() when this block placement has nothing to render.
 if ( ! $show_identity && ! $renders_leave && ! $renders_preference ) {
 	return;
 }

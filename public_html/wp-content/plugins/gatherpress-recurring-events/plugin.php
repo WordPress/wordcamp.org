@@ -5,7 +5,7 @@
  * Version: 0.1.0
  * Requires PHP: 8.1
  * Requires Plugins: gatherpress
- * Network: true
+ * Text Domain: gpre
  *
  * @package WordPressdotorg\GatherPress_Recurring_Events
  */
@@ -27,6 +27,8 @@ require_once DIR . '/includes/class-rest-api.php';
 require_once DIR . '/includes/class-admin.php';
 require_once DIR . '/includes/class-query.php';
 require_once DIR . '/includes/class-plugin.php';
+
+register_deactivation_hook( FILE, array( Plugin::class, 'deactivate' ) );
 
 add_action(
 	'plugins_loaded',

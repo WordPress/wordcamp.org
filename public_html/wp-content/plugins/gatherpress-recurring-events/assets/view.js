@@ -35,6 +35,6 @@ document.querySelectorAll( '.gpre-occurrence-selector' ).forEach( ( selector ) =
 	updateControls();
 
 	if ( 'ResizeObserver' in window ) {
-		new ResizeObserver( updateControls ).observe( list );
+		new window.ResizeObserver( updateControls ).observe( list );
 	}
 } );

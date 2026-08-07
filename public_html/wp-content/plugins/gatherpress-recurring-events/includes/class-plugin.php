@@ -13,7 +13,8 @@ defined( 'WPINC' ) || die();
 
 final class Plugin {
 
-	private static ?self $instance = null;
+	private static ?self $instance               = null;
+	private static bool $schedule_update_allowed = false;
 
 	/** Gets the singleton instance. */
 	public static function get_instance(): self {
@@ -26,6 +27,47 @@ final class Plugin {
 
 	/** Prevents direct construction. */
 	private function __construct() {}
+
+	/**
+	 * Removes scheduled projection jobs when the plugin is deactivated.
+	 *
+	 * @param bool $network_wide Whether the plugin is being network-deactivated.
+	 */
+	public static function deactivate( bool $network_wide ): void {
+		if ( ! $network_wide || ! is_multisite() ) {
+			Occurrences::clear_cron();
+			return;
+		}
+
+		$site_ids = get_sites(
+			array(
+				'fields' => 'ids',
+				'number' => 0,
+			)
+		);
+		foreach ( $site_ids as $site_id ) {
+			switch_to_blog( (int) $site_id );
+			Occurrences::clear_cron();
+			restore_current_blog();
+		}
+	}
+
+	/**
+	 * Applies the dedicated, monotonic end-series mutation.
+	 *
+	 * @param int    $post_id Event post ID.
+	 * @param string $until   Inclusive final occurrence date.
+	 */
+	public static function update_end_condition( int $post_id, string $until ): void {
+		self::$schedule_update_allowed = true;
+
+		try {
+			update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'until' );
+			update_post_meta( $post_id, Rule::META_PREFIX . 'until', $until );
+		} finally {
+			self::$schedule_update_allowed = false;
+		}
+	}
 
 	/** Registers extension hooks. */
 	public function register(): void {
@@ -162,10 +204,12 @@ final class Plugin {
 			Rule::META_PREFIX . 'monthly_day',
 			Rule::META_PREFIX . 'monthly_order',
 			Rule::META_PREFIX . 'monthly_weekday',
+			Rule::META_PREFIX . 'end_type',
+			Rule::META_PREFIX . 'until',
 			Rule::META_PREFIX . 'count',
 		);
 
-		if ( 'publish' !== get_post_status( $object_id ) || ! Rule::is_recurring( $object_id ) || ! in_array( $meta_key, $locked, true ) || ! metadata_exists( 'post', $object_id, $meta_key ) ) {
+		if ( self::$schedule_update_allowed || 'publish' !== get_post_status( $object_id ) || ! Rule::is_recurring( $object_id ) || ! in_array( $meta_key, $locked, true ) || ! metadata_exists( 'post', $object_id, $meta_key ) ) {
 			return $check;
 		}
 

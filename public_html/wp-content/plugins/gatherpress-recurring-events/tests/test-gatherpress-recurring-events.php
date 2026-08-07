@@ -2,20 +2,21 @@
 /**
  * Tests for GatherPress recurring rule expansion.
  *
- * @package WordCamp\Groups\Tests
+ * @package WordPressdotorg\GatherPress_Recurring_Events\Tests
  */
 
-namespace WordCamp\Groups\Tests;
+namespace WordPressdotorg\GatherPress_Recurring_Events\Tests;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
+use WordPressdotorg\GatherPress_Recurring_Events\Plugin;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
 
 /**
- * @group groups
  * @group gatherpress-recurring-events
  */
 final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
@@ -83,6 +84,50 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 			array( '2024-02-29', '2028-02-29', '2032-02-29' ),
 			$this->format( Rule::expand( $start, $this->rule( 'yearly', 3 ), $start->modify( '+9 years' ) ) )
 		);
+	}
+
+	/** Published end conditions can only change through the dedicated mutation. */
+	public function test_published_end_condition_is_locked(): void {
+		global $wpdb;
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'never' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'until', '' );
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_status' => 'publish',
+			),
+			array( 'ID' => $post_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		clean_post_cache( $post_id );
+
+		$plugin = Plugin::get_instance();
+		$this->assertFalse( $plugin->lock_published_schedule( null, $post_id, Rule::META_PREFIX . 'end_type', 'until' ) );
+		$this->assertFalse( $plugin->lock_published_schedule( null, $post_id, Rule::META_PREFIX . 'until', '2026-12-31' ) );
+
+		$until = current_datetime()->modify( '+1 month' )->format( 'Y-m-d' );
+		Plugin::update_end_condition( $post_id, $until );
+		$this->assertSame( 'until', get_post_meta( $post_id, Rule::META_PREFIX . 'end_type', true ) );
+		$this->assertSame( $until, get_post_meta( $post_id, Rule::META_PREFIX . 'until', true ) );
+	}
+
+	/** Deactivation removes the site's projection cron event. */
+	public function test_deactivation_clears_projection_cron(): void {
+		Occurrences::clear_cron();
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', Occurrences::CRON_HOOK );
+		$this->assertNotFalse( wp_next_scheduled( Occurrences::CRON_HOOK ) );
+
+		Plugin::deactivate( false );
+		$this->assertFalse( wp_next_scheduled( Occurrences::CRON_HOOK ) );
 	}
 
 	/**

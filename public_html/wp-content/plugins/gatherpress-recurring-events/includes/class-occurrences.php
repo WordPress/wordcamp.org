@@ -25,6 +25,11 @@ final class Occurrences {
 		}
 	}
 
+	/** Removes the per-site occurrence projection job. */
+	public static function clear_cron(): void {
+		wp_clear_scheduled_hook( self::CRON_HOOK );
+	}
+
 	/** Projects every published recurring series on the current site. */
 	public static function project_all(): void {
 		$post_ids = get_posts(
@@ -286,8 +291,15 @@ final class Occurrences {
 			return false;
 		}
 
-		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'until' );
-		update_post_meta( $post_id, Rule::META_PREFIX . 'until', substr( $occurrence->datetime_start, 0, 10 ) );
+		$until         = substr( $occurrence->datetime_start, 0, 10 );
+		$current_type  = get_post_meta( $post_id, Rule::META_PREFIX . 'end_type', true );
+		$current_until = get_post_meta( $post_id, Rule::META_PREFIX . 'until', true );
+
+		if ( 'until' === $current_type && $current_until && $current_until <= $until ) {
+			return false;
+		}
+
+		Plugin::update_end_condition( $post_id, $until );
 
 		global $wpdb;
 		// Keep projected later rows as stable, cancelled URLs with their existing discussion and RSVP history.

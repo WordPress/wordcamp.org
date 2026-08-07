@@ -65,26 +65,8 @@ function get_country_options(): array {
 	);
 }
 
-/**
- * Normalize and validate a location supplied by an organizer.
- *
- * Null explicitly means that the existing location should be cleared.
- *
- * @return array|WP_Error|null
- */
-function normalize_location( $location ) {
-	if ( null === $location ) {
-		return null;
-	}
-
-	if ( ! is_array( $location ) ) {
-		return new WP_Error(
-			'wporg_groups_invalid_location',
-			__( 'Location must be an object or null.', 'wporg-groups-frontend' ),
-			array( 'status' => 400 )
-		);
-	}
-
+// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+function normalize_location( array $location ): array|WP_Error {
 	$type = sanitize_key( $location['type'] ?? '' );
 
 	if ( TYPE_ONLINE === $type ) {
@@ -124,28 +106,9 @@ function normalize_location( $location ) {
 		'countryCode' => $country_code,
 	);
 }
-
-/**
- * Save or clear the current group's location.
- *
- * @return array|WP_Error|null The normalized saved value.
- */
-function save_location( $location ) {
-	$location = normalize_location( $location );
-
-	if ( is_wp_error( $location ) ) {
-		return $location;
-	}
-
+// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+function save_location( array $location ): void {
 	$site_id = get_current_blog_id();
-
-	if ( null === $location ) {
-		delete_site_meta( $site_id, TYPE_META_KEY );
-		delete_site_meta( $site_id, CITY_META_KEY );
-		delete_site_meta( $site_id, COUNTRY_META_KEY );
-
-		return null;
-	}
 
 	update_site_meta( $site_id, TYPE_META_KEY, $location['type'] );
 
@@ -153,13 +116,20 @@ function save_location( $location ) {
 		delete_site_meta( $site_id, CITY_META_KEY );
 		delete_site_meta( $site_id, COUNTRY_META_KEY );
 
-		return $location;
+		return;
 	}
 
 	update_site_meta( $site_id, CITY_META_KEY, $location['city'] );
 	update_site_meta( $site_id, COUNTRY_META_KEY, $location['countryCode'] );
+}
 
-	return $location;
+// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+function clear_location(): void {
+	$site_id = get_current_blog_id();
+
+	delete_site_meta( $site_id, TYPE_META_KEY );
+	delete_site_meta( $site_id, CITY_META_KEY );
+	delete_site_meta( $site_id, COUNTRY_META_KEY );
 }
 
 // phpcs:ignore Squiz.Commenting.FunctionComment.Missing

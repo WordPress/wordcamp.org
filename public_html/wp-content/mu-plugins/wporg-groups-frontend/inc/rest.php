@@ -47,6 +47,7 @@ use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group
 use function WordCamp\Groups\Frontend\Defaults\extract_description_blocks;
 use function WordCamp\Groups\Frontend\Defaults\get_default_event_data;
 use function WordCamp\Groups\Frontend\Defaults\get_event_venue_post_id;
+use function WordCamp\Groups\Frontend\Group_Location\clear_location;
 use function WordCamp\Groups\Frontend\Group_Location\get_country_options;
 use function WordCamp\Groups\Frontend\Group_Location\get_location;
 use function WordCamp\Groups\Frontend\Group_Location\normalize_location;
@@ -261,10 +262,14 @@ function update_group_info( WP_REST_Request $request ) {
 	}
 
 	if ( $has_location ) {
-		$location = normalize_location( $request->get_param( 'location' ) );
+		$location = $request->get_param( 'location' );
 
-		if ( is_wp_error( $location ) ) {
-			return $location;
+		if ( null !== $location ) {
+			$location = normalize_location( $location );
+
+			if ( is_wp_error( $location ) ) {
+				return $location;
+			}
 		}
 	}
 
@@ -277,7 +282,11 @@ function update_group_info( WP_REST_Request $request ) {
 	}
 
 	if ( $has_location ) {
-		save_location( $location );
+		if ( null === $location ) {
+			clear_location();
+		} else {
+			save_location( $location );
+		}
 	}
 
 	return get_group_info();

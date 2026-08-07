@@ -54,6 +54,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+	<?php if ( ! empty( $attributes['showHeading'] ) ) : ?>
+		<h2 class="wporg-event-manage__heading">
+			<?php esc_html_e( 'Organiser tools', 'wporg-groups-frontend' ); ?>
+		</h2>
+	<?php endif; ?>
+
 	<?php if ( $show_edit_button && $event_post_id ) : ?>
 		<button
 			type="button"

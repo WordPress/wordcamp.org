@@ -40,9 +40,9 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<h3 class="wporg-my-events__heading">
+	<h2 class="wporg-my-events__heading">
 		<?php esc_html_e( 'My upcoming events', 'wporg-groups-frontend' ); ?>
-	</h3>
+	</h2>
 	<?php if ( empty( $wporg_upcoming_events ) ) : ?>
 		<p class="wporg-my-events__empty">
 			<?php esc_html_e( 'Nothing on your calendar yet. Events you RSVP to, and events you organise, will show up here.', 'wporg-groups-frontend' ); ?>

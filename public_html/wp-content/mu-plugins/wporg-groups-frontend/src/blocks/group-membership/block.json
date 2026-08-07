@@ -19,6 +19,10 @@
 		"showPreference": {
 			"type": "boolean",
 			"default": true
+		},
+		"showHeadings": {
+			"type": "boolean",
+			"default": false
 		}
 	},
 	"supports": {

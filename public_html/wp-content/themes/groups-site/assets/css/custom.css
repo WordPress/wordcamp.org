@@ -68,31 +68,96 @@
 	text-wrap: pretty;
 }
 
-/* Page-level spacing for the email preference in the member's own section. */
-.groups-site-my-preference {
-	margin-top: var(--wp--preset--spacing--20);
+.groups-site-hero .wp-block-wporg-group-location,
+.groups-site-hero .wp-block-wporg-group-membership {
+	padding-top: var(--wp--preset--spacing--10);
+}
+
+.groups-site-hero .wp-block-wporg-group-membership {
+	margin-block-start: 0;
 }
 
 /* ==========================================================================
-   Front-page lower sections ("About this group", sponsors)
-
-   Constrained and spaced here rather than by wrapper groups in the template.
-   Both blocks render nothing when they have no content, and a wrapper would
-   leave its top margin behind as a gap on every group site that hasn't
-   written an About page or been given a sponsor.
+   Front-page content and sidebar
    ========================================================================== */
 
-.groups-site-about,
-.groups-site-sponsors {
-	max-width: 768px;
-	margin-top: var(--wp--preset--spacing--70);
+.groups-site-home-layout {
+	align-items: flex-start !important;
 }
 
-/* The rule between the events sections and About/Sponsors has nothing to
-   separate when both of those render empty, which is the common case for a
-   brand-new group. Drop it when it ends up last in the main column. */
-main > .groups-site-content-separator:last-child {
-	display: none;
+.groups-site-sidebar-column {
+	order: 2;
+}
+
+.groups-site-main-column-wrapper {
+	order: 1;
+}
+
+.groups-site-sidebar {
+	box-sizing: border-box;
+	width: 100%;
+	padding-left: var(--wp--preset--spacing--40);
+	border-left: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-settings-block,
+.groups-site-sidebar .wporg-group-membership {
+	width: 100%;
+}
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-membership {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.groups-site-sidebar .wporg-event-manage {
+	gap: 12px;
+}
+
+.groups-site-sidebar .wporg-event-manage__heading,
+.groups-site-sidebar .wporg-group-membership__heading,
+.groups-site-sidebar .wporg-group-membership__preference-heading {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0;
+	font-family: var(--wp--preset--font-family--inter);
+	color: var(--wp--preset--color--charcoal-1);
+}
+
+.groups-site-sidebar .wporg-event-manage__heading,
+.groups-site-sidebar .wporg-group-membership__heading {
+	margin: 0 !important;
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.groups-site-sidebar .wporg-group-membership__preference-heading {
+	margin: var(--wp--preset--spacing--10) 0 0 !important;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	line-height: 1.4;
+}
+
+.groups-site-sidebar .wporg-group-membership__preference-heading--standalone {
+	margin: 0 !important;
+	font-size: var(--wp--preset--font-size--normal);
+}
+
+/* The separator is only needed when organiser controls render above the
+   preference. Ordinary members see the preference as the sidebar's first
+   and only section. */
+
+.groups-site-sidebar:has(.wporg-event-manage) .groups-site-sidebar-preference {
+	margin-top: var(--wp--preset--spacing--10) !important;
+	padding-top: var(--wp--preset--spacing--20);
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.groups-site-main-column {
+	min-width: 0;
 }
 
 /* ==========================================================================

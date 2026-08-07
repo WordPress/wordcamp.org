@@ -58,6 +58,20 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 	}
 
 	/**
+	 * A placement can opt into a section heading without changing the
+	 * unlabelled event-management controls used elsewhere.
+	 */
+	public function test_optional_organiser_tools_heading_is_rendered() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$output = do_blocks( '<!-- wp:wporg/event-manage {"mode":"create","showHeading":true} /-->' );
+
+		$this->assertStringContainsString( '<h2 class="wporg-event-manage__heading">', $output );
+		$this->assertStringContainsString( 'Organiser tools', $output );
+	}
+
+	/**
 	 * An Event Organiser (author) viewing their own event sees both
 	 * messaging buttons.
 	 */
@@ -88,10 +102,11 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 		$other_author_id = self::factory()->user->create( array( 'role' => 'author' ) );
 		wp_set_current_user( $other_author_id );
 
-		$output = do_blocks( '<!-- wp:wporg/event-manage /-->' );
+		$output = do_blocks( '<!-- wp:wporg/event-manage {"showHeading":true} /-->' );
 
 		$this->assertStringNotContainsString( 'data-wporg-groups-modal="message-all"', $output );
 		$this->assertStringNotContainsString( 'data-wporg-groups-modal="message-attendees"', $output );
+		$this->assertStringNotContainsString( 'Organiser tools', $output );
 	}
 
 	/**

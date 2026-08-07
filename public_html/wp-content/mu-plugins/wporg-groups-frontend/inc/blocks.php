@@ -29,6 +29,7 @@ function register_blocks(): void {
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-settings' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-location' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-membership' );
+	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-news' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/group-members' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/event-speakers' );
 	register_block_type_from_metadata( dirname( __DIR__ ) . '/build/blocks/my-events' );

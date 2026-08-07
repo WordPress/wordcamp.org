@@ -11,6 +11,34 @@ iframe {
 	height: auto;
 }
 
+/* Give the home-page columns enough room before switching to a stacked
+   information hierarchy. The sidebar stays first when stacked so membership
+   and organiser actions do not fall below the entire event feed. */
+@media (max-width: 960px) {
+	.groups-site-home-layout {
+		flex-wrap: wrap !important;
+	}
+
+	.groups-site-home-layout > .wp-block-column {
+		flex-basis: 100% !important;
+	}
+
+	.groups-site-sidebar-column {
+		order: 1;
+	}
+
+	.groups-site-main-column-wrapper {
+		order: 2;
+	}
+
+	.groups-site-sidebar {
+		padding-left: 0;
+		padding-bottom: var(--wp--preset--spacing--50);
+		border-left: 0;
+		border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+	}
+}
+
 /* ==========================================================================
    Mobile (up to 781px)
    ========================================================================== */

@@ -19,13 +19,14 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/group-membership',
 		'wporg/group-location',
 		'wporg/group-settings',
+		'wporg/group-news',
 		'wporg/my-events',
 		'wporg/page-content',
 		'wporg/sponsors',
 	);
 
 	/**
-	 * Exactly these 10 `wporg/*` blocks should be registered. An earlier
+	 * Exactly these 11 `wporg/*` blocks should be registered. An earlier
 	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
@@ -173,5 +174,83 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
 
 		$this->assertStringContainsString( 'Online', $output );
+	}
+
+	/**
+	 * The front-page sidebar can opt into labels for its membership and email
+	 * preference sections without adding headings to other block placements.
+	 */
+	public function test_group_membership_block_renders_optional_sidebar_headings() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks(
+			'<!-- wp:wporg/group-membership {"showLeave":false,"showPreference":true,"showHeadings":true} /-->'
+		);
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-membership__heading">', $output );
+		$this->assertStringContainsString( 'Membership', $output );
+		$this->assertStringContainsString( '<h3 class="wporg-group-membership__preference-heading">', $output );
+		$this->assertStringContainsString( 'Email preferences', $output );
+	}
+
+	/**
+	 * A preference-only placement promotes its label to a standalone section
+	 * heading and leaves the identity markup to another block placement.
+	 */
+	public function test_group_membership_block_renders_standalone_preference_heading() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks(
+			'<!-- wp:wporg/group-membership {"showIdentity":false,"showLeave":false,"showPreference":true,"showHeadings":true} /-->'
+		);
+
+		$this->assertStringContainsString(
+			'<h2 class="wporg-group-membership__preference-heading wporg-group-membership__preference-heading--standalone">',
+			$output
+		);
+		$this->assertStringNotContainsString( 'wporg-group-membership__heading', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
+	}
+
+	/**
+	 * News leaves no heading or wrapper behind until a post is published.
+	 */
+	public function test_group_news_block_is_hidden_without_posts() {
+		$existing_posts = get_posts(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+		foreach ( $existing_posts as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-news /-->' ) ) );
+	}
+
+	/**
+	 * Published group posts render as a conditional News section.
+	 */
+	public function test_group_news_block_renders_published_posts() {
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'post',
+				'post_status'  => 'publish',
+				'post_title'   => 'A group update',
+				'post_excerpt' => 'What the group has been working on.',
+			)
+		);
+
+		$output = do_blocks( '<!-- wp:wporg/group-news /-->' );
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-news__heading">News</h2>', $output );
+		$this->assertStringContainsString( 'A group update', $output );
+		$this->assertStringContainsString( 'What the group has been working on.', $output );
 	}
 }

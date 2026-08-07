@@ -8,16 +8,17 @@
  *
  *   - `showIdentity` (default true) — the join button for visitors, or the
  *     role badge plus member count for members. Answers "what is this group
- *     and am I in it?", which is what earns hero placement.
+ *     and am I in it?", which belongs with the group's supporting details.
  *   - `showLeave` — the "Leave group" action. Destructive account management,
  *     not identity, so it sits with the member directory rather than the hero.
  *   - `showPreference` — the GatherPress event-email opt-in. Stored as
  *     `gatherpress_event_updates_opt_in` usermeta, which on multisite is
  *     shared across the whole install: this toggle is not scoped to the group
- *     rendering it. It therefore belongs with the member's own content
- *     (alongside `wporg/my-events`, which is gated on the same
- *     logged-in-and-a-member condition) rather than anywhere that reads as a
- *     property of this particular group.
+ *     rendering it. It therefore belongs with the member controls rather
+ *     than anywhere that reads as a property of this particular group.
+ *   - `showHeadings` (default false) — labels the rendered membership and
+ *     preference sections. When identity is hidden, the preference receives
+ *     a standalone section heading instead of a subordinate heading.
  *
  * @package WordCamp\Groups\Frontend
  */
@@ -25,6 +26,7 @@
 $show_identity   = ! isset( $attributes['showIdentity'] ) || ! empty( $attributes['showIdentity'] );
 $show_leave      = ! isset( $attributes['showLeave'] ) || ! empty( $attributes['showLeave'] );
 $show_preference = ! isset( $attributes['showPreference'] ) || ! empty( $attributes['showPreference'] );
+$show_headings   = ! empty( $attributes['showHeadings'] );
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
@@ -122,6 +124,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<?php if ( $show_identity ) : ?>
+		<?php if ( $show_headings ) : ?>
+			<h2 class="wporg-group-membership__heading">
+				<?php esc_html_e( 'Membership', 'wporg-groups-frontend' ); ?>
+			</h2>
+		<?php endif; ?>
+
 		<?php if ( $is_member ) : ?>
 			<span class="wporg-group-membership__badge" data-wp-text="state.buttonLabel">
 				<?php echo esc_html( $role_label ); ?>
@@ -156,6 +164,18 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	<?php endif; ?>
 
 	<?php if ( $renders_preference ) : ?>
+		<?php if ( $show_headings ) : ?>
+			<?php if ( $show_identity ) : ?>
+				<h3 class="wporg-group-membership__preference-heading">
+					<?php esc_html_e( 'Email preferences', 'wporg-groups-frontend' ); ?>
+				</h3>
+			<?php else : ?>
+				<h2 class="wporg-group-membership__preference-heading wporg-group-membership__preference-heading--standalone">
+					<?php esc_html_e( 'Email preferences', 'wporg-groups-frontend' ); ?>
+				</h2>
+			<?php endif; ?>
+		<?php endif; ?>
+
 		<div class="wporg-group-membership__preference">
 			<label>
 				<input

@@ -3,7 +3,7 @@
 	const { useSelect, useDispatch } = wp.data;
 	const { useEffect, useState } = wp.element;
 	const { PluginDocumentSettingPanel } = wp.editPost;
-	const { CheckboxControl, DatePicker, Notice, RadioControl, SelectControl, TextControl } = wp.components;
+	const { Button, DatePicker, Notice, RadioControl, SelectControl, TextControl, Tooltip } = wp.components;
 	const { __ } = wp.i18n;
 	const prefix = '_gpre_';
 	const controlStackStyle = {
@@ -13,9 +13,31 @@
 	};
 	const weekdaysStyle = {
 		display: 'flex',
-		flexWrap: 'wrap',
+		flexDirection: 'column',
+		alignItems: 'stretch',
+		gap: '8px',
+	};
+	const weekdayButtonsStyle = {
+		display: 'flex',
 		alignItems: 'center',
-		gap: '8px 16px',
+		justifyContent: 'space-between',
+		gap: '4px',
+	};
+	const weekdayButtonStyle = {
+		display: 'inline-flex',
+		alignItems: 'center',
+		justifyContent: 'center',
+		width: '30px',
+		minWidth: '30px',
+		height: '30px',
+		padding: 0,
+		border: 0,
+		borderRadius: '50%',
+		background: '#f0f0f0',
+		color: 'var(--wp-admin-theme-color, #3858e9)',
+		fontSize: '13px',
+		fontWeight: 500,
+		lineHeight: 1,
 	};
 	const sectionLabelStyle = {
 		boxSizing: 'border-box',
@@ -52,6 +74,15 @@
 		const frequency = get( 'frequency', '' );
 		const weekdays = get( 'weekdays', [] );
 		const dayLabels = { MO: __( 'Mon', 'gpre' ), TU: __( 'Tue', 'gpre' ), WE: __( 'Wed', 'gpre' ), TH: __( 'Thu', 'gpre' ), FR: __( 'Fri', 'gpre' ), SA: __( 'Sat', 'gpre' ), SU: __( 'Sun', 'gpre' ) };
+		const dayButtonLabels = {
+			MO: { short: __( 'M', 'gpre' ), full: __( 'Monday', 'gpre' ) },
+			TU: { short: __( 'T', 'gpre' ), full: __( 'Tuesday', 'gpre' ) },
+			WE: { short: __( 'W', 'gpre' ), full: __( 'Wednesday', 'gpre' ) },
+			TH: { short: __( 'T', 'gpre' ), full: __( 'Thursday', 'gpre' ) },
+			FR: { short: __( 'F', 'gpre' ), full: __( 'Friday', 'gpre' ) },
+			SA: { short: __( 'S', 'gpre' ), full: __( 'Saturday', 'gpre' ) },
+			SU: { short: __( 'S', 'gpre' ), full: __( 'Sunday', 'gpre' ) },
+		};
 
 		useEffect( () => {
 			if ( locked && frequency ) {
@@ -88,7 +119,22 @@
 			frequency && el( TextControl, { label: __( 'Repeat every', 'gpre' ), type: 'number', min: 1, value: get( 'interval', 1 ), disabled: locked, onChange: ( value ) => set( 'interval', Math.max( 1, Number( value ) ) ) } ),
 			frequency === 'weekly' && el( 'div', { style: weekdaysStyle, role: 'group', 'aria-label': __( 'Repeat on', 'gpre' ) },
 				el( 'span', { style: sectionLabelStyle }, __( 'Repeat on', 'gpre' ) ),
-				Object.keys( dayLabels ).map( ( day ) => el( CheckboxControl, { key: day, label: dayLabels[ day ], checked: weekdays.includes( day ), disabled: locked, onChange: ( checked ) => set( 'weekdays', checked ? [ ...weekdays, day ] : weekdays.filter( ( value ) => value !== day ) ) } ) )
+				el( 'div', { style: weekdayButtonsStyle },
+					Object.keys( dayButtonLabels ).map( ( day ) => {
+						const selected = weekdays.includes( day );
+						const buttonStyle = selected ? { ...weekdayButtonStyle, background: 'var(--wp-admin-theme-color, #3858e9)', color: '#fff' } : weekdayButtonStyle;
+
+						return el( Tooltip, { key: day, text: dayButtonLabels[ day ].full },
+							el( Button, {
+								style: buttonStyle,
+								disabled: locked,
+								'aria-label': dayButtonLabels[ day ].full,
+								'aria-pressed': selected,
+								onClick: () => set( 'weekdays', selected ? weekdays.filter( ( value ) => value !== day ) : [ ...weekdays, day ] ),
+							}, dayButtonLabels[ day ].short )
+						);
+					} )
+				)
 			),
 			frequency === 'monthly' && el( RadioControl, { label: __( 'Monthly pattern', 'gpre' ), selected: get( 'monthly_mode', 'day' ), disabled: locked, options: [ { label: __( 'Day of month', 'gpre' ), value: 'day' }, { label: __( 'Ordinal weekday', 'gpre' ), value: 'weekday' } ], onChange: ( value ) => set( 'monthly_mode', value ) } ),
 			frequency === 'monthly' && get( 'monthly_mode', 'day' ) === 'day' && el( TextControl, { label: __( 'Day', 'gpre' ), type: 'number', min: 1, max: 31, value: get( 'monthly_day', 1 ), disabled: locked, onChange: ( value ) => set( 'monthly_day', Math.min( 31, Math.max( 1, Number( value ) ) ) ) } ),

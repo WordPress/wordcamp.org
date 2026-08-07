@@ -6,6 +6,28 @@
 	const { CheckboxControl, DatePicker, Notice, RadioControl, SelectControl, TextControl } = wp.components;
 	const { __ } = wp.i18n;
 	const prefix = '_gpre_';
+	const controlStackStyle = {
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '16px',
+	};
+	const weekdaysStyle = {
+		display: 'flex',
+		flexWrap: 'wrap',
+		alignItems: 'center',
+		gap: '8px 16px',
+	};
+	const sectionLabelStyle = {
+		boxSizing: 'border-box',
+		display: 'block',
+		width: '100%',
+		maxWidth: '100%',
+		padding: 0,
+		fontSize: '11px',
+		fontWeight: 500,
+		lineHeight: 1.4,
+		textTransform: 'uppercase',
+	};
 
 	function Panel() {
 		const [ occurrences, setOccurrences ] = useState( [] );
@@ -52,6 +74,7 @@
 		};
 
 		return el( PluginDocumentSettingPanel, { name: 'gpre', title: __( 'Repeating event', 'gpre' ) },
+			el( 'div', { style: controlStackStyle },
 			locked && el( Notice, { status: 'info', isDismissible: false }, __( 'The recurrence schedule is locked after publication. Shared event content can still be edited.', 'gpre' ) ),
 			el( SelectControl, {
 				label: __( 'Repeats', 'gpre' ), value: frequency, disabled: locked,
@@ -63,8 +86,8 @@
 				], onChange: ( value ) => set( 'frequency', value ),
 			} ),
 			frequency && el( TextControl, { label: __( 'Repeat every', 'gpre' ), type: 'number', min: 1, value: get( 'interval', 1 ), disabled: locked, onChange: ( value ) => set( 'interval', Math.max( 1, Number( value ) ) ) } ),
-			frequency === 'weekly' && el( 'fieldset', {},
-				el( 'legend', {}, __( 'Repeat on', 'gpre' ) ),
+			frequency === 'weekly' && el( 'div', { style: weekdaysStyle, role: 'group', 'aria-label': __( 'Repeat on', 'gpre' ) },
+				el( 'span', { style: sectionLabelStyle }, __( 'Repeat on', 'gpre' ) ),
 				Object.keys( dayLabels ).map( ( day ) => el( CheckboxControl, { key: day, label: dayLabels[ day ], checked: weekdays.includes( day ), disabled: locked, onChange: ( checked ) => set( 'weekdays', checked ? [ ...weekdays, day ] : weekdays.filter( ( value ) => value !== day ) ) } ) )
 			),
 			frequency === 'monthly' && el( RadioControl, { label: __( 'Monthly pattern', 'gpre' ), selected: get( 'monthly_mode', 'day' ), disabled: locked, options: [ { label: __( 'Day of month', 'gpre' ), value: 'day' }, { label: __( 'Ordinal weekday', 'gpre' ), value: 'weekday' } ], onChange: ( value ) => set( 'monthly_mode', value ) } ),
@@ -83,6 +106,7 @@
 					el( wp.components.Button, { variant: 'secondary', size: 'small', onClick: () => changeStatus( occurrence, occurrence.status === 'cancelled' ? 'scheduled' : 'cancelled' ) }, occurrence.status === 'cancelled' ? __( 'Restore', 'gpre' ) : __( 'Cancel', 'gpre' ) ),
 					occurrence.status !== 'cancelled' && el( wp.components.Button, { variant: 'tertiary', size: 'small', onClick: () => endSeries( occurrence ) }, __( 'End series here', 'gpre' ) )
 				) )
+			)
 			)
 		);
 	}

@@ -136,8 +136,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'data-wp-text="context.rsvpNotice"', $output );
 	}
 
-	// phpcs:disable Squiz.Commenting.FunctionComment.Missing
-
+	/**
+	 * Unspecified locations leave no empty header markup.
+	 */
 	public function test_group_location_block_is_hidden_when_unspecified() {
 		delete_site_meta( get_current_blog_id(), 'wporg_group_location_type' );
 		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
@@ -146,6 +147,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-location /-->' ) ) );
 	}
 
+	/**
+	 * Physical locations render their city and localized country.
+	 */
 	public function test_group_location_block_renders_physical_location() {
 		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
 		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'İstanbul' );
@@ -159,6 +163,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'aria-hidden="true"', $output );
 	}
 
+	/**
+	 * The online label depends only on the group location type.
+	 */
 	public function test_group_location_block_renders_online_location() {
 		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'online' );
 		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
@@ -169,6 +176,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'Online', $output );
 	}
 
+	/**
+	 * Combined identity and preference sections use an h2/h3 heading hierarchy.
+	 */
 	public function test_group_membership_block_renders_optional_sidebar_headings() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $member_id );
@@ -183,6 +193,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'Email preferences', $output );
 	}
 
+	/**
+	 * Preference-only placements use an h2 and omit identity markup.
+	 */
 	public function test_group_membership_block_renders_standalone_preference_heading() {
 		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
 		wp_set_current_user( $member_id );
@@ -200,6 +213,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
 	}
 
+	/**
+	 * Empty news blocks leave no heading or wrapper markup.
+	 */
 	public function test_group_news_block_is_hidden_without_posts() {
 		$existing_posts = get_posts(
 			array(
@@ -216,6 +232,9 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-news /-->' ) ) );
 	}
 
+	/**
+	 * Published posts render their title and excerpt in the News section.
+	 */
 	public function test_group_news_block_renders_published_posts() {
 		self::factory()->post->create(
 			array(
@@ -232,6 +251,4 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'A group update', $output );
 		$this->assertStringContainsString( 'What the group has been working on.', $output );
 	}
-
-	// phpcs:enable Squiz.Commenting.FunctionComment.Missing
 }

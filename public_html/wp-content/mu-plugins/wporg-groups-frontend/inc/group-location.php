@@ -50,7 +50,9 @@ function get_location( int $site_id = 0 ): ?array {
 	);
 }
 
-// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+/**
+ * Build localized country options for the group settings form.
+ */
 function get_country_options(): array {
 	return array_values(
 		array_map(
@@ -65,7 +67,11 @@ function get_country_options(): array {
 	);
 }
 
-// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+/**
+ * Normalize and validate a submitted location.
+ *
+ * Online locations contain only their type; physical locations require a city and recognized country.
+ */
 function normalize_location( array $location ): array|WP_Error {
 	$type = sanitize_key( $location['type'] ?? '' );
 
@@ -106,7 +112,11 @@ function normalize_location( array $location ): array|WP_Error {
 		'countryCode' => $country_code,
 	);
 }
-// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+/**
+ * Persist a normalized location for the current group.
+ *
+ * Saving an online location removes any stale city and country metadata.
+ */
 function save_location( array $location ): void {
 	$site_id = get_current_blog_id();
 
@@ -123,7 +133,9 @@ function save_location( array $location ): void {
 	update_site_meta( $site_id, COUNTRY_META_KEY, $location['countryCode'] );
 }
 
-// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+/**
+ * Remove all location metadata for the current group.
+ */
 function clear_location(): void {
 	$site_id = get_current_blog_id();
 
@@ -132,7 +144,9 @@ function clear_location(): void {
 	delete_site_meta( $site_id, COUNTRY_META_KEY );
 }
 
-// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+/**
+ * Build the public location label, or an empty string when unspecified.
+ */
 function get_location_label(): string {
 	$location = get_location();
 

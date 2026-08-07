@@ -57,7 +57,9 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 		$this->assertStringContainsString( (string) $event_id, $output );
 	}
 
-	// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+	/**
+	 * Create-event placements can opt into an Organiser tools heading.
+	 */
 	public function test_optional_organiser_tools_heading_is_rendered() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 		wp_set_current_user( $editor_id );

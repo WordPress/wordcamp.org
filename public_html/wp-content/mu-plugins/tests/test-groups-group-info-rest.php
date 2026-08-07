@@ -207,8 +207,9 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 		$this->assertSame( 'Now quarterly.', get_option( 'blogdescription' ) );
 	}
 
-	// phpcs:disable Squiz.Commenting.FunctionComment.Missing
-
+	/**
+	 * Physical locations are normalized before being saved.
+	 */
 	public function test_editor_can_save_physical_location() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 
@@ -237,6 +238,9 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 		$this->assertSame( 'TR', get_site_meta( get_current_blog_id(), 'wporg_group_location_country', true ) );
 	}
 
+	/**
+	 * Online locations discard stale physical metadata.
+	 */
 	public function test_editor_can_save_online_location() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'Warsaw' );
@@ -254,6 +258,9 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 		$this->assertSame( '', get_site_meta( get_current_blog_id(), 'wporg_group_location_country', true ) );
 	}
 
+	/**
+	 * An explicit null location clears all location metadata.
+	 */
 	public function test_editor_can_clear_location() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
@@ -269,6 +276,9 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 		$this->assertSame( '', get_site_meta( get_current_blog_id(), 'wporg_group_location_country', true ) );
 	}
 
+	/**
+	 * Invalid location data prevents every requested field from being written.
+	 */
 	public function test_incomplete_physical_location_is_rejected_without_partial_updates() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 
@@ -290,6 +300,9 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 		$this->assertNull( $this->dispatch( 'GET' )->get_data()['location'] );
 	}
 
+	/**
+	 * Omitting location leaves existing location metadata untouched.
+	 */
 	public function test_omitted_location_is_not_clobbered() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'online' );
@@ -298,6 +311,4 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 
 		$this->assertSame( array( 'type' => 'online' ), $this->dispatch( 'GET' )->get_data()['location'] );
 	}
-
-	// phpcs:enable Squiz.Commenting.FunctionComment.Missing
 }

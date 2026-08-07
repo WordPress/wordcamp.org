@@ -230,7 +230,9 @@ function manage_group_settings_permissions_check(): bool {
 	return current_user_can_manage_group_settings();
 }
 
-// phpcs:ignore Squiz.Commenting.FunctionComment.Missing
+/**
+ * Return the editable group details and location options.
+ */
 function get_group_info(): WP_REST_Response {
 	return new WP_REST_Response(
 		array(

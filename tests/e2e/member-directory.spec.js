@@ -20,7 +20,7 @@ test.describe( 'member directory', () => {
 	} );
 
 	test( 'keeps the leave action in the homepage sidebar', async ( { page } ) => {
-		await login( page, 'grouptestmember', 'password' );
+		await login( page, 'member1', 'password' );
 		await page.goto( '' );
 
 		const sidebar = page.locator( '.groups-site-sidebar' );

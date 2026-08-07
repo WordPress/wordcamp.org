@@ -111,12 +111,15 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<?php echo esc_html( $role_label ); ?>
 			</span>
 		<?php else : ?>
-			<button
-				class="wporg-group-membership__join wp-element-button"
-				data-wp-on--click="actions.join"
-				data-wp-text="state.buttonLabel"
-				data-wp-bind--disabled="context.loading"
-			><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
+			<div class="wp-block-button">
+				<button
+					type="button"
+					class="wp-block-button__link wp-element-button"
+					data-wp-on--click="actions.join"
+					data-wp-text="state.buttonLabel"
+					data-wp-bind--disabled="context.loading"
+				><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
+			</div>
 		<?php endif; ?>
 
 		<span class="wporg-group-membership__count" data-wp-text="state.countLabel">

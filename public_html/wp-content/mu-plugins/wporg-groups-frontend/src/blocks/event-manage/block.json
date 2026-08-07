@@ -13,10 +13,6 @@
 			"type": "string",
 			"default": "auto",
 			"enum": [ "auto", "create", "edit" ]
-		},
-		"showHeading": {
-			"type": "boolean",
-			"default": false
 		}
 	},
 	"supports": {

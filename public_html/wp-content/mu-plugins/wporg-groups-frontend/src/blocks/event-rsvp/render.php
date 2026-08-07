@@ -185,28 +185,35 @@ $wrapper_attributes = get_block_wrapper_attributes(
 	</button>
 
 	<?php if ( ! $is_past ) : ?>
-		<button
-			type="button"
-			class="wporg-event-rsvp__button wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
-			data-wp-on--click="actions.handleRsvpButton"
-			data-wp-text="state.rsvpButtonLabel"
-			data-wp-class--is-attending="state.isAttending"
-			data-wp-bind--disabled="context.rsvpLoading"
+		<div
+			class="wp-block-button<?php echo $is_attending ? ' is-style-outline' : ''; ?>"
+			data-wp-class--is-style-outline="state.isAttending"
 		>
-			<?php
-			if ( $is_attending ) {
-				echo "\u{2713} " . esc_html__( 'Attending', 'wporg-groups-frontend' );
-			} elseif ( $is_member ) {
-				esc_html_e( 'RSVP', 'wporg-groups-frontend' );
-			} else {
-				esc_html_e( 'Join & RSVP', 'wporg-groups-frontend' );
-			}
-			?>
-		</button>
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
+				data-wp-on--click="actions.handleRsvpButton"
+				data-wp-text="state.rsvpButtonLabel"
+				data-wp-class--is-attending="state.isAttending"
+				data-wp-bind--disabled="context.rsvpLoading"
+			>
+				<?php
+				if ( $is_attending ) {
+					echo "\u{2713} " . esc_html__( 'Attending', 'wporg-groups-frontend' );
+				} elseif ( $is_member ) {
+					esc_html_e( 'RSVP', 'wporg-groups-frontend' );
+				} else {
+					esc_html_e( 'Join & RSVP', 'wporg-groups-frontend' );
+				}
+				?>
+			</button>
+		</div>
 	<?php else : ?>
-		<button type="button" class="wporg-event-rsvp__button wp-element-button is-past" disabled>
-			<?php esc_html_e( 'Past Event', 'wporg-groups-frontend' ); ?>
-		</button>
+		<div class="wp-block-button is-style-outline">
+			<button type="button" class="wp-block-button__link wp-element-button is-past" disabled>
+				<?php esc_html_e( 'Past Event', 'wporg-groups-frontend' ); ?>
+			</button>
+		</div>
 	<?php endif; ?>
 
 	<p

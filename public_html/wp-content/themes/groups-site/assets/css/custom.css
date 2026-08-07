@@ -104,7 +104,6 @@
 	gap: 12px;
 }
 
-.groups-site-sidebar .wporg-event-manage__heading,
 .groups-site-sidebar .wporg-group-membership__heading,
 .groups-site-sidebar .wporg-group-membership__preference-heading {
 	box-sizing: border-box;
@@ -114,7 +113,6 @@
 	color: var(--wp--preset--color--charcoal-1);
 }
 
-.groups-site-sidebar .wporg-event-manage__heading,
 .groups-site-sidebar .wporg-group-membership__heading {
 	margin: 0 !important;
 	font-size: var(--wp--preset--font-size--normal);

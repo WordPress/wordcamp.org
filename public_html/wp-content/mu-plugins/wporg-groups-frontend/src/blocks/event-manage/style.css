@@ -2,60 +2,6 @@
  * WPorg Groups Frontend — event manage block + modal styles.
  */
 
-/* === Trigger buttons === */
-
-.wporg-event-manage {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-}
-
-.wporg-event-manage__button {
-	box-sizing: border-box;
-	padding: 10px 22px;
-	border: 1px solid transparent;
-	border-radius: 2px;
-	font-size: 14px;
-	font-weight: 600;
-	line-height: 1.3;
-	cursor: pointer;
-}
-
-.wporg-event-manage__button--create {
-	background: var(--wp--preset--color--blueberry-1, #3858e9);
-	border-color: var(--wp--preset--color--blueberry-1, #3858e9);
-	color: var(--wp--preset--color--white, #fff);
-}
-
-.wporg-event-manage__button--create:hover {
-	background: var(--wp--preset--color--deep-blueberry, #213fd4);
-	border-color: var(--wp--preset--color--deep-blueberry, #213fd4);
-}
-
-.wporg-event-manage__button--edit {
-	background: transparent !important;
-	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
-	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
-}
-
-.wporg-event-manage__button--edit:hover {
-	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
-}
-
-.wporg-event-manage__button--message {
-	background: transparent !important;
-	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
-	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
-}
-
-.wporg-event-manage__button--message:hover {
-	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
-}
-
 /* === Message members modal === */
 
 .wporg-groups-message-modal .components-modal__content {

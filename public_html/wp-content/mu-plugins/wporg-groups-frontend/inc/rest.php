@@ -18,8 +18,6 @@
  *   GET  /group-info
  *   POST /group-info
  *        Reads and writes the group's name, description, and location.
- *        Exists because core's /wp/v2/settings requires `manage_options`,
- *        which Organisers (editors) do not have.
  *
  * The event routes require the `current_user_can_manage_events()` capability,
  * plus post-specific capabilities when operating on an existing event. The
@@ -186,6 +184,10 @@ function register_routes(): void {
 	);
 
 	// ----- Group info -----------------------------------------------------
+	//
+	// Organisers cannot use core's /wp/v2/settings endpoint because it requires
+	// `manage_options`. Expose only the fields managed by this UI behind the
+	// group-settings capability instead.
 
 	register_rest_route(
 		NAMESPACE_V1,

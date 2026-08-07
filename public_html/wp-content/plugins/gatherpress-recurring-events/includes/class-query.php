@@ -66,12 +66,12 @@ final class Query {
 		$request = trim( (string) $query->request );
 		$request = preg_replace(
 			'/^SELECT\s+(?:SQL_CALC_FOUND_ROWS\s+)?(?:DISTINCT\s+)?[^\n]+?\s+FROM\s+/i',
-			'SELECT ' . $wpdb->posts . '.ID, gpre_occ_query.recurrence_id FROM ',
+			'SELECT ' . $wpdb->posts . '.ID, gpre_occ_query.* FROM ',
 			$request,
 			1
 		);
 
-		if ( ! is_string( $request ) || ! str_contains( $request, 'gpre_occ_query.recurrence_id' ) ) {
+		if ( ! is_string( $request ) || ! str_contains( $request, 'gpre_occ_query.*' ) ) {
 			return $posts;
 		}
 
@@ -87,11 +87,8 @@ final class Query {
 				continue;
 			}
 
-			$occurrence = Occurrences::get( (int) $post->ID, (string) $rows[ $index ]->recurrence_id );
-			if ( $occurrence ) {
-				$posts[ $index ]                                     = clone $post;
-				self::$contexts[ spl_object_id( $posts[ $index ] ) ] = $occurrence;
-			}
+			$posts[ $index ]                                     = clone $post;
+			self::$contexts[ spl_object_id( $posts[ $index ] ) ] = $rows[ $index ];
 		}
 
 		return $posts;

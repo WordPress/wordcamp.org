@@ -68,13 +68,8 @@
 	text-wrap: pretty;
 }
 
-.groups-site-hero .wp-block-wporg-group-location,
-.groups-site-hero .wp-block-wporg-group-membership {
+.groups-site-hero .wp-block-wporg-group-location {
 	padding-top: var(--wp--preset--spacing--10);
-}
-
-.groups-site-hero .wp-block-wporg-group-membership {
-	margin-block-start: 0;
 }
 
 /* ==========================================================================

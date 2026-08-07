@@ -16,15 +16,13 @@ test.describe( 'recurring events frontend', () => {
 		const dialog = page.getByRole( 'dialog' );
 		await dialog.getByRole( 'button', { name: '+ Create event', exact: true } ).click();
 
-		const recurrence = dialog.getByRole( 'group', { name: 'Repeating event' } );
-		await expect( recurrence ).toBeVisible();
-		await recurrence.getByLabel( 'Repeats' ).selectOption( 'weekly' );
+		await dialog.getByLabel( 'Repeats' ).selectOption( 'weekly' );
 
-		await expect( recurrence.getByLabel( 'Repeat every' ) ).toHaveValue( '1' );
-		await expect( recurrence.locator( 'input[type="checkbox"]:checked' ) ).toHaveCount( 1 );
+		await expect( dialog.getByLabel( 'Repeat every' ) ).toHaveValue( '1' );
+		await expect( dialog.getByRole( 'group', { name: 'Repeat on' } ).locator( 'input[type="checkbox"]:checked' ) ).toHaveCount( 1 );
 
-		await recurrence.getByLabel( 'Ends' ).selectOption( 'count' );
-		await recurrence.getByLabel( 'Occurrences' ).fill( '3' );
-		await expect( recurrence.getByLabel( 'Occurrences' ) ).toHaveValue( '3' );
+		await dialog.getByLabel( 'Ends' ).selectOption( 'count' );
+		await dialog.getByLabel( 'Occurrences' ).fill( '3' );
+		await expect( dialog.getByLabel( 'Occurrences' ) ).toHaveValue( '3' );
 	} );
 } );

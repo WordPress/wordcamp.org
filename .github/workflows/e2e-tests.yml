@@ -108,11 +108,14 @@ jobs:
       run: |
         echo "127.0.0.1 wordcamp.test central.wordcamp.test seattle.wordcamp.test shinynew.wordcamp.test events.wordpress.test" | sudo tee -a /etc/hosts
 
-    - name: Install GatherPress on the groups site
+    - name: Install GatherPress and activate the Groups event plugins
       run: |
         docker compose exec -T wordcamp.test wp plugin install \
           https://github.com/GatherPress/gatherpress/releases/download/0.34.0-alpha.2/gatherpress.0.34.0-alpha.2.zip \
-          --activate --url=events.wordpress.test/group/sunshine-coast-qld/
+          --url=events.wordpress.test/group/sunshine-coast-qld/
+        docker compose exec -T wordcamp.test wp plugin activate \
+          gatherpress gatherpress-recurring-events \
+          --network --url=events.wordpress.test/group/sunshine-coast-qld/
 
     - name: Create role-tier test users
       run: |

@@ -76,12 +76,19 @@
 				./public_html/wp-content/mu-plugins/groups/tests/
 			</directory>
 		</testsuite>
+
+		<testsuite name="GatherPress Recurring Events">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/plugins/gatherpress-recurring-events/tests/
+			</directory>
+		</testsuite>
 	</testsuites>
 
 	<coverage cacheDirectory=".phpunit/coverage-cache">
 		<include>
 			<directory suffix=".php">./public_html/wp-content/mu-plugins</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/camptix</directory>
+			<directory suffix=".php">./public_html/wp-content/plugins/gatherpress-recurring-events</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wc-post-types</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wcpt</directory>
 			<directory suffix=".php">./public_html/wp-content/plugins/wordcamp-coming-soon-page</directory>

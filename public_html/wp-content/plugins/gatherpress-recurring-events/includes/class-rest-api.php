@@ -9,6 +9,7 @@ namespace WordPressdotorg\GatherPress_Recurring_Events;
 
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
+use GatherPress\Core\Utility;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
@@ -39,7 +40,10 @@ final class Rest_API {
 			'/event/(?P<recurrence_id>[0-9]{8}(?:T[0-9]{6})?)/nonce',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => static fn() => new WP_REST_Response( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) ),
+				'callback'            => static function (): WP_REST_Response {
+					Utility::ensure_user_authentication();
+					return new WP_REST_Response( array( 'nonce' => wp_create_nonce( 'wp_rest' ) ) );
+				},
 				'permission_callback' => '__return_true',
 			)
 		);

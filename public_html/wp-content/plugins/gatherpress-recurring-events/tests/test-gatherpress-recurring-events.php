@@ -2,10 +2,10 @@
 /**
  * Tests for GatherPress recurring rule expansion.
  *
- * @package WordCamp\Groups\Tests
+ * @package WordPressdotorg\GatherPress_Recurring_Events\Tests
  */
 
-namespace WordCamp\Groups\Tests;
+namespace WordPressdotorg\GatherPress_Recurring_Events\Tests;
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -17,7 +17,6 @@ use WP_UnitTestCase;
 defined( 'WPINC' ) || die();
 
 /**
- * @group groups
  * @group gatherpress-recurring-events
  */
 final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {

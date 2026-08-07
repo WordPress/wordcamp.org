@@ -183,26 +183,18 @@ final class Occurrences {
 	}
 
 	/**
-	 * Gets a compact list of dates around a selected occurrence.
+	 * Gets the earliest compact list of upcoming dates.
 	 *
-	 * @param int    $post_id Series post ID.
-	 * @param string $selected Selected recurrence identifier.
-	 * @param int    $limit Maximum number of rows.
+	 * @param int $post_id Series post ID.
+	 * @param int $limit   Maximum number of rows.
 	 * @return object[] Occurrence rows.
 	 */
-	public static function around( int $post_id, string $selected = '', int $limit = 6 ): array {
+	public static function around( int $post_id, int $limit = 6 ): array {
 		self::maybe_project( $post_id );
 
 		global $wpdb;
 		$table = Database::occurrences_table();
 		$now   = current_time( 'mysql', true );
-
-		if ( $selected ) {
-			$current = self::get( $post_id, $selected );
-			$from    = $current ? $current->datetime_start_gmt : $now;
-		} else {
-			$from = $now;
-		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 		return $wpdb->get_results(
@@ -210,7 +202,7 @@ final class Occurrences {
 				'SELECT * FROM %i WHERE series_post_id = %d AND datetime_start_gmt >= %s ORDER BY datetime_start_gmt ASC LIMIT %d',
 				$table,
 				$post_id,
-				$from,
+				$now,
 				$limit
 			)
 		);

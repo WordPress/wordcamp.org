@@ -13,8 +13,10 @@ defined( 'WPINC' ) || die();
 
 final class Plugin {
 
-	private static ?self $instance               = null;
-	private static bool $schedule_update_allowed = false;
+	private static ?self $instance = null;
+
+	/** @var array<int, array<string, true>> Schedule metadata allowed through the published-series lock. */
+	private static array $schedule_updates_allowed = array();
 
 	/** Gets the singleton instance. */
 	public static function get_instance(): self {
@@ -39,17 +41,27 @@ final class Plugin {
 			return;
 		}
 
-		$site_ids = get_sites(
-			array(
-				'fields' => 'ids',
-				'number' => 0,
-			)
-		);
-		foreach ( $site_ids as $site_id ) {
-			switch_to_blog( (int) $site_id );
-			Occurrences::clear_cron();
-			restore_current_blog();
-		}
+		$offset     = 0;
+		$batch_size = 100;
+
+		do {
+			$site_ids = get_sites(
+				array(
+					'fields' => 'ids',
+					'number' => $batch_size,
+					'offset' => $offset,
+				)
+			);
+
+			foreach ( $site_ids as $site_id ) {
+				switch_to_blog( (int) $site_id );
+				Occurrences::clear_cron();
+				restore_current_blog();
+			}
+
+			$site_count = count( $site_ids );
+			$offset    += $site_count;
+		} while ( $site_count === $batch_size );
 	}
 
 	/**
@@ -59,13 +71,19 @@ final class Plugin {
 	 * @param string $until   Inclusive final occurrence date.
 	 */
 	public static function update_end_condition( int $post_id, string $until ): void {
-		self::$schedule_update_allowed = true;
+		$end_type_key = Rule::META_PREFIX . 'end_type';
+		$until_key    = Rule::META_PREFIX . 'until';
+
+		self::$schedule_updates_allowed[ $post_id ] = array(
+			$end_type_key => true,
+			$until_key    => true,
+		);
 
 		try {
-			update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'until' );
-			update_post_meta( $post_id, Rule::META_PREFIX . 'until', $until );
+			update_post_meta( $post_id, $end_type_key, 'until' );
+			update_post_meta( $post_id, $until_key, $until );
 		} finally {
-			self::$schedule_update_allowed = false;
+			unset( self::$schedule_updates_allowed[ $post_id ] );
 		}
 	}
 
@@ -99,6 +117,7 @@ final class Plugin {
 		add_action( 'wp_enqueue_scripts', array( $this, 'assets' ) );
 		add_action( 'save_post_gatherpress_event', array( $this, 'save_event' ), 100, 2 );
 		add_filter( 'update_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
+		add_filter( 'delete_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
 		add_action( 'before_delete_post', array( $this, 'delete_event' ), 10, 2 );
 		add_action( Occurrences::CRON_HOOK, array( Occurrences::class, 'project_all' ) );
 	}
@@ -137,7 +156,7 @@ final class Plugin {
 
 		if ( 'publish' === $post->post_status && Rule::is_recurring( $post_id ) ) {
 			Occurrences::project( $post_id );
-		} elseif ( ! Rule::is_recurring( $post_id ) && 'publish' !== $post->post_status ) {
+		} else {
 			Database::delete_series( $post_id );
 		}
 	}
@@ -184,15 +203,15 @@ final class Plugin {
 	}
 
 	/**
-	 * Blocks schedule mutations after publishing a recurring series.
+	 * Blocks schedule updates and deletions after publishing a recurring series.
 	 *
 	 * Ending and cancelling remain available through their dedicated controls.
 	 *
 	 * @param mixed  $check      Existing short-circuit value.
 	 * @param int    $object_id  Event post ID.
 	 * @param string $meta_key   Metadata key.
-	 * @param mixed  $meta_value Proposed value.
-	 * @return mixed Existing value or false to block an update.
+	 * @param mixed  $meta_value Proposed value or deletion match value.
+	 * @return mixed Existing value or false to block a mutation.
 	 */
 	public function lock_published_schedule( $check, int $object_id, string $meta_key, $meta_value ) {
 		$locked = array(
@@ -209,7 +228,7 @@ final class Plugin {
 			Rule::META_PREFIX . 'count',
 		);
 
-		if ( self::$schedule_update_allowed || 'publish' !== get_post_status( $object_id ) || ! Rule::is_recurring( $object_id ) || ! in_array( $meta_key, $locked, true ) || ! metadata_exists( 'post', $object_id, $meta_key ) ) {
+		if ( isset( self::$schedule_updates_allowed[ $object_id ][ $meta_key ] ) || 'publish' !== get_post_status( $object_id ) || ! Rule::is_recurring( $object_id ) || ! in_array( $meta_key, $locked, true ) || ! metadata_exists( 'post', $object_id, $meta_key ) ) {
 			return $check;
 		}
 

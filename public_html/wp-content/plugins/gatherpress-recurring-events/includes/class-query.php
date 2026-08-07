@@ -7,6 +7,7 @@
 
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
+use WeakMap;
 use WP_Post;
 use WP_Query;
 
@@ -14,7 +15,8 @@ defined( 'WPINC' ) || die();
 
 final class Query {
 
-	private static array $contexts = array();
+	/** @var WeakMap<WP_Post, object>|null Occurrence context keyed by the exact cloned post object. */
+	private static ?WeakMap $contexts = null;
 
 	/**
 	 * Joins projected occurrences into GatherPress archive queries.
@@ -82,13 +84,15 @@ final class Query {
 			return $posts;
 		}
 
+		self::$contexts ??= new WeakMap();
+
 		foreach ( $posts as $index => $post ) {
 			if ( empty( $rows[ $index ]->recurrence_id ) ) {
 				continue;
 			}
 
-			$posts[ $index ]                                     = clone $post;
-			self::$contexts[ spl_object_id( $posts[ $index ] ) ] = $rows[ $index ];
+			$posts[ $index ]                    = clone $post;
+			self::$contexts[ $posts[ $index ] ] = $rows[ $index ];
 		}
 
 		return $posts;
@@ -100,8 +104,8 @@ final class Query {
 	 * @param WP_Post $post Current post.
 	 */
 	public static function activate( WP_Post $post ): void {
-		if ( self::$contexts ) {
-			Context::set( self::$contexts[ spl_object_id( $post ) ] ?? null );
+		if ( null !== self::$contexts ) {
+			Context::set( self::$contexts[ $post ] ?? null );
 		}
 	}
 

@@ -228,23 +228,46 @@ function scheduleFocus( element ) {
  * the block so a page listing several events reads the right one.
  *
  * @param {Element} block The `.wp-block-wporg-event-rsvp` element.
- * @return {{answers: Object, missingRequired: boolean}} Collected answers.
+ * @return {{answers: Object, missingRequired: boolean, missingInputs: Element[]}} Collected answers.
  */
 function collectAnswers( block ) {
 	const answers = {};
-	let missingRequired = false;
+	const missingInputs = [];
 
 	block?.querySelectorAll( '.wporg-event-rsvp__question-input' ).forEach( ( input ) => {
 		const value = input.value.trim();
 		if ( ! value && input.required ) {
-			missingRequired = true;
+			missingInputs.push( input );
 		}
 		// Blanks are sent too, so the server can tell "cleared this answer"
 		// from "never rendered this question".
 		answers[ input.dataset.questionId ] = value;
 	} );
 
-	return { answers, missingRequired };
+	return { answers, missingRequired: 0 < missingInputs.length, missingInputs };
+}
+
+/**
+ * Marks the unanswered required inputs so assistive tech can find them.
+ *
+ * The error text itself is announced through the block's live region, but that
+ * only tells someone that an answer is missing. With several questions the
+ * field in error also has to be identifiable, which is the other half of
+ * WCAG 2.1 3.3.1, so flag them and move focus to the first.
+ *
+ * @param {Element}   block         The `.wp-block-wporg-event-rsvp` element.
+ * @param {Element[]} missingInputs Inputs that are required and still empty.
+ */
+function flagMissingAnswers( block, missingInputs ) {
+	block?.querySelectorAll( '.wporg-event-rsvp__question-input' ).forEach( ( input ) => {
+		if ( missingInputs.includes( input ) ) {
+			input.setAttribute( 'aria-invalid', 'true' );
+		} else {
+			input.removeAttribute( 'aria-invalid' );
+		}
+	} );
+
+	scheduleFocus( missingInputs[ 0 ] );
 }
 
 async function doToggleRsvp( ctx, actionElement ) {
@@ -300,9 +323,10 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		}
 	}
 
-	const { answers, missingRequired } = ctx.hasQuestions
-		? collectAnswers( actionElement?.closest( '.wp-block-wporg-event-rsvp' ) )
-		: { answers: {}, missingRequired: false };
+	const block = actionElement?.closest( '.wp-block-wporg-event-rsvp' );
+	const { answers, missingRequired, missingInputs } = ctx.hasQuestions
+		? collectAnswers( block )
+		: { answers: {}, missingRequired: false, missingInputs: [] };
 
 	// The server rejects this too — checking here just saves a round trip and
 	// keeps whatever the attendee already typed on screen.
@@ -311,7 +335,12 @@ async function submitRsvp( ctx, actionElement, newStatus ) {
 		ctx.questionsError = message;
 		ctx.rsvpNotice = message;
 		openRsvpModal( ctx, actionElement );
+		flagMissingAnswers( block, missingInputs );
 		return;
+	}
+
+	if ( ctx.hasQuestions ) {
+		flagMissingAnswers( block, [] );
 	}
 
 	const oldStatus = ctx.currentUserStatus;

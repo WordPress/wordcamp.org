@@ -394,6 +394,33 @@ describe( 'event RSVP custom registration questions', () => {
 		expect( mockContext.questionsError ).toBe( 'Please answer the required questions.' );
 	} );
 
+	test( 'identifies which required question is unanswered', async () => {
+		const { actions } = loadStore();
+		const { company, diet, rsvp } = renderModalWithQuestions();
+		mockElement = rsvp;
+
+		await actions.toggleRsvp();
+
+		// The generic error is announced via the live region, but the field in
+		// error also has to be identifiable. WCAG 2.1 3.3.1.
+		expect( diet.getAttribute( 'aria-invalid' ) ).toBe( 'true' );
+		expect( company.hasAttribute( 'aria-invalid' ) ).toBe( false );
+	} );
+
+	test( 'clears the invalid flag once the required question is answered', async () => {
+		const { actions } = loadStore();
+		const { diet, rsvp } = renderModalWithQuestions();
+		mockElement = rsvp;
+
+		await actions.toggleRsvp();
+		expect( diet.getAttribute( 'aria-invalid' ) ).toBe( 'true' );
+
+		diet.value = 'Vegetarian';
+		await actions.toggleRsvp();
+
+		expect( diet.hasAttribute( 'aria-invalid' ) ).toBe( false );
+	} );
+
 	test( 'sends the answers alongside the RSVP', async () => {
 		const { actions } = loadStore();
 		const { company, diet, rsvp } = renderModalWithQuestions();

@@ -150,6 +150,7 @@ class Test_Groups_REST extends Groups_TestCase {
 		Context::set( $occurrences[6] );
 		$selector = Context::selector( $event_id );
 
+		$this->assertStringContainsString( $occurrences[6]->recurrence_id, $selector );
 		$this->assertStringNotContainsString( 'gpre-view-all', $selector );
 		$this->assertStringNotContainsString( 'View all dates', $selector );
 

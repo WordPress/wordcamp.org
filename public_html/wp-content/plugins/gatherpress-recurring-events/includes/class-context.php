@@ -186,6 +186,11 @@ final class Context {
 		$occurrences = Occurrences::around( $post_id, 6 );
 		$items       = '';
 
+		if ( ! in_array( $current, wp_list_pluck( $occurrences, 'recurrence_id' ), true ) ) {
+			$occurrences[] = self::$occurrence;
+			usort( $occurrences, static fn( object $first, object $second ): int => strcmp( $first->datetime_start_gmt, $second->datetime_start_gmt ) );
+		}
+
 		foreach ( $occurrences as $occurrence ) {
 			$timezone = new DateTimeZone( $occurrence->timezone );
 			$date     = new DateTimeImmutable( $occurrence->datetime_start, $timezone );

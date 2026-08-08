@@ -9,9 +9,13 @@ namespace WordPressdotorg\GatherPress_Recurring_Events\Tests;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use WordPressdotorg\GatherPress_Recurring_Events\Comments;
+use WordPressdotorg\GatherPress_Recurring_Events\Context;
+use WordPressdotorg\GatherPress_Recurring_Events\Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 use WordPressdotorg\GatherPress_Recurring_Events\Plugin;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
+use WP_Comment_Query;
 use WP_UnitTestCase;
 
 defined( 'WPINC' ) || die();
@@ -120,6 +124,101 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( $until, get_post_meta( $post_id, Rule::META_PREFIX . 'until', true ) );
 	}
 
+	/** Published recurrence metadata cannot be deleted to bypass the lock. */
+	public function test_published_recurrence_metadata_cannot_be_deleted(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->assertFalse( delete_post_meta( $post_id, Rule::META_PREFIX . 'frequency' ) );
+		$this->assertSame( 'weekly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+	}
+
+	/** The controlled end-series bypass applies only to its post and metadata keys. */
+	public function test_end_condition_bypass_is_scoped(): void {
+		$post_id       = $this->create_published_recurring_event();
+		$other_post_id = $this->create_published_recurring_event();
+		$attempted     = false;
+		$callback      = static function ( int $meta_id, int $object_id, string $meta_key ) use ( $post_id, $other_post_id, &$attempted ): void {
+			if ( $attempted || $post_id !== $object_id || Rule::META_PREFIX . 'end_type' !== $meta_key ) {
+				return;
+			}
+
+			$attempted = true;
+			update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 2 );
+			update_post_meta( $other_post_id, Rule::META_PREFIX . 'frequency', 'monthly' );
+		};
+		add_action( 'updated_post_meta', $callback, 10, 3 );
+
+		try {
+			Plugin::update_end_condition( $post_id, '2026-12-31' );
+		} finally {
+			remove_action( 'updated_post_meta', $callback, 10 );
+		}
+
+		$this->assertTrue( $attempted );
+		$this->assertSame( '1', get_post_meta( $post_id, Rule::META_PREFIX . 'interval', true ) );
+		$this->assertSame( 'weekly', get_post_meta( $other_post_id, Rule::META_PREFIX . 'frequency', true ) );
+	}
+
+	/** Unpublishing a recurring series removes its projected occurrence data. */
+	public function test_unpublishing_recurring_event_removes_series_data(): void {
+		global $wpdb;
+
+		$post_id    = $this->create_published_recurring_event();
+		$comment_id = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post_id,
+			)
+		);
+		$now        = current_time( 'mysql', true );
+		$wpdb->insert(
+			Database::occurrences_table(),
+			array(
+				'series_post_id'    => $post_id,
+				'recurrence_id'     => '20260810T100000',
+				'datetime_start'    => '2026-08-10 10:00:00',
+				'datetime_start_gmt' => '2026-08-10 10:00:00',
+				'datetime_end'      => '2026-08-10 11:00:00',
+				'datetime_end_gmt'  => '2026-08-10 11:00:00',
+				'timezone'          => 'UTC',
+				'status'            => 'scheduled',
+				'created_gmt'       => $now,
+				'updated_gmt'       => $now,
+			)
+		);
+		Database::map_comment( $comment_id, $post_id, '20260810T100000' );
+
+		$post              = get_post( $post_id );
+		$post->post_status = 'draft';
+		Plugin::get_instance()->save_event( $post_id, $post );
+
+		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::occurrences_table(), $post_id ) ) );
+		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::comments_table(), $post_id ) ) );
+	}
+
+	/** Only comment queries for the active series are occurrence-scoped. */
+	public function test_comment_query_scoping_targets_series_only(): void {
+		$post_id    = $this->create_published_recurring_event();
+		$occurrence = (object) array(
+			'series_post_id' => $post_id,
+			'recurrence_id'  => '20260810T100000',
+		);
+		Context::set( $occurrence );
+
+		try {
+			$other_query             = new WP_Comment_Query();
+			$other_query->query_vars = array( 'post_id' => $post_id + 1 );
+			Comments::prepare_query( $other_query );
+			$this->assertArrayNotHasKey( 'gpre_occurrence', $other_query->query_vars );
+
+			$series_query             = new WP_Comment_Query();
+			$series_query->query_vars = array( 'post_id' => $post_id );
+			Comments::prepare_query( $series_query );
+			$this->assertSame( '20260810T100000', $series_query->query_vars['gpre_occurrence'] );
+		} finally {
+			Context::set( null );
+		}
+	}
+
 	/** Deactivation removes the site's projection cron event. */
 	public function test_deactivation_clears_projection_cron(): void {
 		Occurrences::clear_cron();
@@ -128,6 +227,36 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 		Plugin::deactivate( false );
 		$this->assertFalse( wp_next_scheduled( Occurrences::CRON_HOOK ) );
+	}
+
+	/**
+	 * Creates a published weekly event with locked recurrence metadata.
+	 *
+	 * @return int Event post ID.
+	 */
+	private function create_published_recurring_event(): int {
+		global $wpdb;
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'never' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'until', '' );
+		$wpdb->update(
+			$wpdb->posts,
+			array( 'post_status' => 'publish' ),
+			array( 'ID' => $post_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+		clean_post_cache( $post_id );
+
+		return $post_id;
 	}
 
 	/**

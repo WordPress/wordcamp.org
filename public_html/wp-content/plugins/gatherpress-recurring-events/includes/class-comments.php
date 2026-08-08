@@ -21,7 +21,7 @@ final class Comments {
 	 */
 	public static function prepare_query( WP_Comment_Query $query ): void {
 		$occurrence = Context::get();
-		if ( $occurrence ) {
+		if ( $occurrence && self::targets_series( $query, $occurrence ) ) {
 			$query->query_vars['gpre_occurrence'] = $occurrence->recurrence_id;
 			$query->query_vars['cache_domain']    = 'gpre-' . $occurrence->recurrence_id;
 		}
@@ -36,7 +36,7 @@ final class Comments {
 	 */
 	public static function clauses( array $clauses, WP_Comment_Query $query ): array {
 		$occurrence = Context::get();
-		if ( ! $occurrence || empty( $query->query_vars['gpre_occurrence'] ) ) {
+		if ( ! $occurrence || ! self::targets_series( $query, $occurrence ) || empty( $query->query_vars['gpre_occurrence'] ) ) {
 			return $clauses;
 		}
 
@@ -53,6 +53,17 @@ final class Comments {
 		);
 
 		return $clauses;
+	}
+
+	/**
+	 * Checks whether a comment query explicitly targets the active series.
+	 *
+	 * @param WP_Comment_Query $query      Comment query.
+	 * @param object           $occurrence Active occurrence row.
+	 * @return bool Whether the query targets the occurrence's series post.
+	 */
+	private static function targets_series( WP_Comment_Query $query, object $occurrence ): bool {
+		return (int) ( $query->query_vars['post_id'] ?? 0 ) === (int) $occurrence->series_post_id;
 	}
 
 	/** Prints occurrence identity into the standard comment form. */

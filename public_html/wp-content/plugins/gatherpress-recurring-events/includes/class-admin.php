@@ -103,7 +103,7 @@ final class Admin {
 			'gpre-editor',
 			plugin_dir_url( FILE ) . 'assets/editor.js',
 			array( 'wp-api-fetch', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-element', 'wp-i18n', 'wp-plugins' ),
-			VERSION,
+			(string) filemtime( DIR . '/assets/editor.js' ),
 			true
 		);
 	}

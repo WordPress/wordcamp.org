@@ -98,4 +98,42 @@ describe( 'group membership notification preference', () => {
 		expect( mockContext.preferenceNoticeError ).toBe( true );
 		expect( mockContext.preferenceSaving ).toBe( false );
 	} );
+
+	test( 'ignores preference changes while a save is pending', async () => {
+		let resolveResponse;
+		global.fetch.mockImplementation(
+			() =>
+				new Promise( ( resolve ) => {
+					resolveResponse = resolve;
+				} )
+		);
+		const { actions } = loadStore();
+
+		const firstSave = actions.updateNotificationPreference( {
+			target: { checked: true },
+		} );
+
+		expect( mockContext.notificationOptIn ).toBe( true );
+		expect( mockContext.preferenceSaving ).toBe( true );
+
+		const secondSave = actions.updateNotificationPreference( {
+			target: { checked: false },
+		} );
+		await secondSave;
+		await Promise.resolve();
+
+		expect( global.fetch ).toHaveBeenCalledTimes( 1 );
+		expect( mockContext.notificationOptIn ).toBe( true );
+
+		resolveResponse( {
+			ok: true,
+			json: async () => ( { success: true, optIn: true } ),
+		} );
+		await firstSave;
+
+		expect( mockContext.notificationOptIn ).toBe( true );
+		expect( mockContext.preferenceNoticeSuccess ).toBe( true );
+		expect( mockContext.preferenceNoticeError ).toBe( false );
+		expect( mockContext.preferenceSaving ).toBe( false );
+	} );
 } );

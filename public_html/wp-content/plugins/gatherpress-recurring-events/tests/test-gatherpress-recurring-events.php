@@ -124,6 +124,52 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( $until, get_post_meta( $post_id, Rule::META_PREFIX . 'until', true ) );
 	}
 
+	/**
+	 * A caller that earned the right to write the schedule before publication
+	 * can still persist it afterwards.
+	 *
+	 * The Groups frontend publishes the post and only then saves the rule, so
+	 * without the lift every field the organiser just changed is dropped.
+	 */
+	public function test_schedule_unlock_persists_writes_on_a_published_series(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		$this->assertFalse( update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'monthly' ) );
+		$this->assertSame( 'weekly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+
+		$returned = Plugin::with_schedule_unlocked(
+			$post_id,
+			static function () use ( $post_id ) {
+				update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'monthly' );
+				delete_post_meta( $post_id, Rule::META_PREFIX . 'interval' );
+
+				return 'callback-return';
+			}
+		);
+
+		$this->assertSame( 'callback-return', $returned );
+		$this->assertSame( 'monthly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+		$this->assertSame( '', get_post_meta( $post_id, Rule::META_PREFIX . 'interval', true ) );
+	}
+
+	/** The lift is released afterwards, and confined to its own post. */
+	public function test_schedule_unlock_is_scoped_and_released(): void {
+		$post_id       = $this->create_published_recurring_event();
+		$other_post_id = $this->create_published_recurring_event();
+
+		Plugin::with_schedule_unlocked(
+			$post_id,
+			static function () use ( $other_post_id ) {
+				update_post_meta( $other_post_id, Rule::META_PREFIX . 'frequency', 'monthly' );
+			}
+		);
+
+		$this->assertSame( 'weekly', get_post_meta( $other_post_id, Rule::META_PREFIX . 'frequency', true ) );
+
+		$this->assertFalse( update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'yearly' ) );
+		$this->assertSame( 'weekly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+	}
+
 	/** Published recurrence metadata cannot be deleted to bypass the lock. */
 	public function test_published_recurrence_metadata_cannot_be_deleted(): void {
 		$post_id = $this->create_published_recurring_event();

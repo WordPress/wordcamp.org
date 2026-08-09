@@ -118,6 +118,13 @@ final class Plugin {
 		}
 	}
 
+	/**
+	 * Pins a series to end on a given date, bypassing the published-schedule lock.
+	 *
+	 * @param int    $post_id Event post ID.
+	 * @param string $until   Date the series should run until.
+	 * @return void
+	 */
 	public static function update_end_condition( int $post_id, string $until ): void {
 		$end_type_key = Rule::META_PREFIX . 'end_type';
 		$until_key    = Rule::META_PREFIX . 'until';

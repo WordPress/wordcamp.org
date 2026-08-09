@@ -70,6 +70,54 @@ final class Plugin {
 	 * @param int    $post_id Event post ID.
 	 * @param string $until   Inclusive final occurrence date.
 	 */
+	/**
+	 * The schedule metadata that is frozen once a series is published.
+	 *
+	 * @return string[]
+	 */
+	public static function locked_schedule_meta_keys(): array {
+		return array(
+			'gatherpress_datetime',
+			Rule::META_PREFIX . 'frequency',
+			Rule::META_PREFIX . 'interval',
+			Rule::META_PREFIX . 'weekdays',
+			Rule::META_PREFIX . 'monthly_mode',
+			Rule::META_PREFIX . 'monthly_day',
+			Rule::META_PREFIX . 'monthly_order',
+			Rule::META_PREFIX . 'monthly_weekday',
+			Rule::META_PREFIX . 'end_type',
+			Rule::META_PREFIX . 'until',
+			Rule::META_PREFIX . 'count',
+		);
+	}
+
+	/**
+	 * Runs a callback with the published-schedule lock lifted for one post.
+	 *
+	 * Needed by callers that established the right to write the schedule
+	 * before the post reached `publish`, and only then persist it. Without
+	 * this the write is short-circuited to `false` and silently lost.
+	 *
+	 * @param int      $post_id  Event post ID.
+	 * @param callable $callback Work to run while the lock is lifted.
+	 * @return mixed Whatever the callback returns.
+	 */
+	public static function with_schedule_unlocked( int $post_id, callable $callback ) {
+		$previous = self::$schedule_updates_allowed[ $post_id ] ?? null;
+
+		self::$schedule_updates_allowed[ $post_id ] = array_fill_keys( self::locked_schedule_meta_keys(), true );
+
+		try {
+			return $callback();
+		} finally {
+			if ( null === $previous ) {
+				unset( self::$schedule_updates_allowed[ $post_id ] );
+			} else {
+				self::$schedule_updates_allowed[ $post_id ] = $previous;
+			}
+		}
+	}
+
 	public static function update_end_condition( int $post_id, string $until ): void {
 		$end_type_key = Rule::META_PREFIX . 'end_type';
 		$until_key    = Rule::META_PREFIX . 'until';
@@ -214,19 +262,7 @@ final class Plugin {
 	 * @return mixed Existing value or false to block a mutation.
 	 */
 	public function lock_published_schedule( $check, int $object_id, string $meta_key, $meta_value ) {
-		$locked = array(
-			'gatherpress_datetime',
-			Rule::META_PREFIX . 'frequency',
-			Rule::META_PREFIX . 'interval',
-			Rule::META_PREFIX . 'weekdays',
-			Rule::META_PREFIX . 'monthly_mode',
-			Rule::META_PREFIX . 'monthly_day',
-			Rule::META_PREFIX . 'monthly_order',
-			Rule::META_PREFIX . 'monthly_weekday',
-			Rule::META_PREFIX . 'end_type',
-			Rule::META_PREFIX . 'until',
-			Rule::META_PREFIX . 'count',
-		);
+		$locked = self::locked_schedule_meta_keys();
 
 		if ( isset( self::$schedule_updates_allowed[ $object_id ][ $meta_key ] ) || 'publish' !== get_post_status( $object_id ) || ! Rule::is_recurring( $object_id ) || ! in_array( $meta_key, $locked, true ) || ! metadata_exists( 'post', $object_id, $meta_key ) ) {
 			return $check;

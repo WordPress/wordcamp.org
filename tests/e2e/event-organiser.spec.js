@@ -1,5 +1,6 @@
 const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
+const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
  * Event Organisers (author role) manage events through wp-admin's native
@@ -18,18 +19,9 @@ test.describe( 'event organiser (author role)', () => {
 		await login( page, 'eventorganiser1', 'password' );
 
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
-		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 20000 } );
+		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
 
-		// First-time editor visits show a "Welcome to the editor" guide modal
-		// (client-side preference, so it reappears in every fresh browser
-		// context) that blocks the rest of the UI until dismissed.
-		const welcomeGuideHeading = page.getByRole( 'heading', { name: 'Welcome to the editor' } );
-		try {
-			await welcomeGuideHeading.waitFor( { state: 'visible', timeout: 3000 } );
-			await page.keyboard.press( 'Escape' );
-		} catch {
-			// Guide didn't appear (already dismissed for this user) — nothing to do.
-		}
+		await dismissEditorOnboarding( page );
 
 		const title = `E2E Test Event ${ Date.now() }`;
 		// The block editor's canvas (including the title field) renders
@@ -53,16 +45,14 @@ test.describe( 'event organiser (author role)', () => {
 
 		await page.goto( '' );
 
-		// Scoped rather than a bare getByText: the title now appears twice on
-		// the front page, once in the events list and once in the my-events
-		// block, because an organiser sees the events they organise there even
-		// without an RSVP (#1810).
-		await expect(
-			page.getByRole( 'link', { name: title, exact: true } )
-		).toBeVisible();
-
-		// The my-events entry is the #1810 behaviour itself: this organiser
-		// published the event and never RSVP'd to it.
+		// Not the homepage's "Upcoming events" widget — it's capped, and on a
+		// long-lived dev DB (or after this suite has run many times) it fills
+		// up with older same-day events, so a brand-new one isn't guaranteed a
+		// slot in it (the same issue event-manage-messaging.spec.js hit and
+		// worked around). The my-events block has no such cap: it's the
+		// #1810 behaviour itself — this organiser published the event and
+		// never RSVP'd to it — and reliably shows it regardless of how many
+		// other events exist.
 		await expect(
 			page.locator( '.wporg-my-events__title', { hasText: title } )
 		).toBeVisible();

@@ -12,6 +12,27 @@ covers three plugins: `mu-plugins/wporg-groups-frontend` (front-end
 event/member management), `mu-plugins/groups/gatherpress-groups-tweaks.php`
 (settings/capability/query overrides), and the `groups-site` block theme.
 
+**Keep this skill current.** This file is a living record, not a one-time
+checklist — whenever a session working on this integration (a version bump,
+a bug fix, a test-flakiness investigation, anything touching the plugins or
+theme above) turns up an essential finding — a real root cause, a bug in
+GatherPress or this integration and its fix, a test-environment gotcha, a
+methodology that generalizes — add it here before the session ends, in the
+section it belongs to (or a new one, if it doesn't fit an existing one).
+"Essential" means: would the next person hit the same wall without it?
+Prefer folding a finding into existing prose over appending a new bullet
+list per session — this file should read as current best understanding, not
+a changelog.
+
+**Compact it periodically.** Growth without pruning eventually makes this
+file slower to read than it's worth. Every so often (when a section is
+getting long, or findings start to overlap/repeat), reread the whole file
+and tighten it: merge redundant points, cut anything superseded by a later
+fix or no longer true of the current code, and re-verify specifics (file
+paths, function names, version numbers) against the actual repo rather than
+trusting older prose. Compacting is itself worth a small dedicated pass, not
+just an incidental side effect of adding one more finding.
+
 Two automated layers exist alongside this manual checklist — run them
 first, then use this checklist for what they can't cover (real browser
 interaction, cross-plugin capability leaks, exploratory checks):
@@ -24,13 +45,102 @@ interaction, cross-plugin capability leaks, exploratory checks):
 - **E2E (Playwright)** — `npx playwright test` (or trigger the
   `e2e-tests.yml` GitHub Action manually — it's `workflow_dispatch`-only).
   Covers anonymous front-page rendering, an author creating an event
-  end-to-end through the real browser UI, and the member directory.
-  **If a spec times out waiting on a UI interaction (e.g. a sidebar
-  panel/button that should obviously be there), re-run with
-  `--workers=1` before concluding it's a regression.** `fullyParallel: true`
-  against a single local docker container is a real, repeatable source of
-  90s timeouts that have nothing to do with GatherPress — confirmed during
-  the 0.35.0 bump: 3 "failures" all passed in under 10s each serially.
+  end-to-end through the real browser UI, per-event messaging, the
+  auto-publish-notification email, and the member directory. Needs
+  `organiser1`/`eventorganiser1`/`eventorganiser2`/`eventorganiser3`/
+  `eventorganiser4`/`eventorganiser5`/`member1` (all `password`) — **every
+  individual test that logs in as an author has its own dedicated
+  `eventorganiser*` account, not just every spec *file*.**
+  `event-manage-messaging.spec.js` alone needs three (`2`/`4`/`5`) because
+  its own three tests also run concurrently against each other under
+  `fullyParallel`, not just against other files. Don't consolidate any of
+  these back onto a shared account.
+  **If a spec times out waiting on a UI interaction, don't assume it's
+  `fullyParallel` contention and reach for `--workers=1` — read the actual
+  failure first.** Every Playwright failure writes an `error-context.md`
+  (path is in the terminal output) with a full accessibility-tree snapshot
+  of the page at the moment of timeout: read it before touching the test.
+  Several real, deterministic bugs were all initially mistaken for "just
+  flaky":
+    - A "Choose a pattern" starter-pattern dialog appears on every fresh
+      `post-new.php` visit for a post type with starter patterns
+      (`gatherpress_event` has them) and — unlike the separate "Welcome to
+      the editor" guide the specs already handled — its own Close button
+      and Escape do **not** dismiss it. It silently sat on top of the
+      sidebar, and every subsequent interaction hung until the test
+      timeout. Fixed by `tests/e2e/utils/dismiss-editor-onboarding.js`,
+      which every spec creating an event must call.
+    - Sharing one login across concurrent tests. This environment only
+      supports one active session per user (see the comment in
+      `tests/e2e/utils/login.js`), so under `fullyParallel` one worker's
+      fresh login can invalidate another's already-established session
+      mid-test — the `error-context.md` for that failure shows the page
+      stuck on a login form instead of the expected editor. `login()`'s own
+      retry loop only covers a collision *during the login request itself*;
+      it can't help once a later worker's login invalidates an earlier
+      worker's session that already succeeded. The only real fix is one
+      account per concurrently-running test, including within a single
+      spec file (see above).
+    - GatherPress's "Event settings" document panel (which
+      `tests/e2e/utils/pin-event-far-future.js`'s "Date & time start"
+      button lives inside) is a collapsible `PanelBody` whose open/closed
+      state is a **preference persisted server-side per WordPress user**
+      (WordPress's editor-preferences API), not freshly defaulted each
+      browser session. GatherPress force-opens it once via a `domReady`
+      callback that checks `core/editor`'s `isEditorPanelOpened()` — but
+      that can race the preferences store's own async hydration of that
+      user's saved state, and if it loses the race the panel renders
+      collapsed. Once that happens for a given test account, it stays
+      collapsed on every later editor load too (GatherPress never re-checks
+      after that first callback), which is why this reproduced
+      deterministically for whichever account had ever hit the race, not
+      randomly. Fixed in `pin-event-far-future.js`: check whether the
+      "Date & time start" button is visible first, and if not, click the
+      "Event settings" panel header to expand it before proceeding — don't
+      assume the panel is already open.
+  If a timeout's `error-context.md` shows the *expected* page mid-load
+  (not stuck on a login form, error page, or unrelated dialog), *then*
+  it's reasonable to suspect genuine environment slowness — but confirm
+  that from the evidence, don't default to it.
+  **A test can also be right that something is broken in production, not
+  just in the test.** The auto-publish-notification test
+  (`event-publish-notification.spec.js`) intermittently found zero email
+  after a real publish, with no error logged anywhere. Root cause: multiple
+  events publishing within the same second — which this suite's own
+  `fullyParallel` execution reliably does, and which real usage can do too
+  — raced on `wp_schedule_single_event()`. WordPress core's cron store is a
+  single `wp_options` row (`option_name = 'cron'`) updated via a plain,
+  unsynchronized read-modify-write (`_get_cron_array()` /
+  `_set_cron_array()` in `wp-includes/cron.php`, no locking); two nearly
+  simultaneous callers can silently clobber each other's scheduled job at
+  any point up until wp-cron actually executes it, and
+  `wp_schedule_single_event()`'s own return value can't detect this since
+  it only reflects the calling request's own write. A bounded retry with
+  re-verification around the *scheduling* call closes the common case
+  (confirmed via a dedicated PHPUnit regression test, `pre_option_cron`
+  forced empty to simulate the race) but not the deeper one — a job can
+  still be clobbered *after* being confirmed scheduled, by a totally
+  unrelated later publish, since every `wp_schedule_single_event()` caller
+  on the site shares the same unsynchronized option. The real fix
+  (`schedule_new_event_notification()` in
+  `mu-plugins/wporg-groups-frontend/inc/notifications.php`) bypasses
+  WP-Cron for this entirely: it calls
+  `\GatherPress\Core\Event\Rest_Api::get_instance()->send_emails()`
+  directly and synchronously from `transition_post_status`, the same
+  method GatherPress's own `gatherpress_send_emails` cron handler and its
+  "Message all members" REST action both call — trading a brief
+  publish-request delay (already true of GatherPress's own dispatch once
+  cron picks it up) for eliminating the race category outright. **Going
+  synchronous has a real blast radius beyond the notification feature
+  itself**: since `transition_post_status` now runs this on *every*
+  `gatherpress_event` publish, any PHPUnit test that publishes one — not
+  just tests about notifications — started executing real email-template
+  rendering, which needs runtime (theme template functions, etc.) most
+  test bootstraps don't load. `Groups_TestCase::setUp()` now removes this
+  action for every test by default; `Test_Groups_Notifications` is the one
+  class that re-adds it, for its own coverage. Keep this in mind before
+  converting any other deferred-to-cron integration point to a synchronous
+  call — check whether other tests publish through the same hook first.
 
 If either automated suite fails, stop and fix that before doing the manual
 pass below — don't duplicate debugging effort across layers.
@@ -52,6 +162,16 @@ pass below — don't duplicate debugging effort across layers.
   a test that indexed it directly), and classes marked `final` (harmless
   unless something here extends one — check with
   `grep -rn "extends.*GatherPress"`).
+  **Checking that a class still exists is not enough** — verify every
+  individual method/constant/property call site, not just the class. A
+  wrong-but-existing class import (`Blocks\Event_Query` vs. the real
+  `Event\Query`) passed every "does this class exist" check across two
+  GatherPress versions and only surfaced as a live production fatal,
+  because nothing had verified the *specific methods called* actually
+  existed on *that specific class*. Section 8 below has the exhaustive,
+  mechanical version of this check — run it now too, not just after
+  landing, since catching this before the bump is cheaper than catching it
+  in production.
 - **Grep theme templates for GatherPress block usage**, not just PHP:
   `grep -rn "wp:gatherpress" public_html/wp-content/themes/groups-site`.
   GatherPress Alpha's migration (see below) only rewrites block content
@@ -389,6 +509,110 @@ the 0.35.0 rollout on `events.wordpress.org`.
   ```bash
   wp eval 'global $wpdb; foreach ( $wpdb->get_results( "SHOW FULL PROCESSLIST" ) as $row ) { if ( "Sleep" !== $row->Command ) { print_r( $row ); } }' --url=<site>
   ```
+
+## 8. Post-upgrade code audit (mandatory, run after every version bump lands)
+
+Run this once the plugin update is live (locally after bumping the pin, and
+again after the production rollout) — it's what would have caught the
+`Blocks\Event_Query` vs. `Event\Query` wrong-class bug (#1874) before it hit
+production instead of after, since that bug passed every class-existence
+check across two GatherPress versions and only surfaced as a live fatal.
+The point isn't spot-checking "the classes we remember using" — it's
+mechanically verifying *every* call site, including the ones nobody's
+thought about in months.
+
+1. **Extract every GatherPress class this integration actually imports**,
+   across all three plugins:
+   ```bash
+   grep -rn "^use GatherPress\|GatherPress\\\\Core" \
+     public_html/wp-content/mu-plugins/groups \
+     public_html/wp-content/mu-plugins/wporg-groups-frontend \
+     public_html/wp-content/themes/groups-site \
+     --include="*.php" | grep -v "/tests/\|/build/"
+   ```
+   (Exclude `/build/` — it's compiled from `/src/`; diff the two afterward
+   with plain `diff` to confirm they're actually in sync rather than
+   assuming it.)
+
+2. **For each imported class, extract every method/constant/property call
+   site** — not just the ones near the `use` statement. A call several
+   functions away from the import, or reached through a differently-named
+   local variable, is exactly the kind of thing a quick skim misses. Grep
+   broadly per class/alias: `ClassName::`, `new ClassName(`, and
+   `$lowercase_var->method(` for every plausible variable name that
+   instance might be assigned to (`$event`, `$rsvp`, `$venue`, `$query`,
+   `$setup` — check the surrounding code when a grep for `$obj->` comes up
+   empty, since the call is often on the next line rather than the same
+   one, e.g. `$venue = new Venue(...);` then `$term = $venue->get_term();`
+   two lines later).
+
+3. **Cross-check each one against the actual GatherPress source** for the
+   *now-installed* version (not the old one):
+   ```bash
+   # from a local clone of github.com/GatherPress/gatherpress
+   git show <new-tag>:path/to/class-file.php | grep -n "function method_name\|const CONST_NAME"
+   ```
+   A hit confirms it; nothing confirms a break. Also diff the whole file
+   against the previous tag (`git diff <old-tag> <new-tag> -- path`) — an
+   empty diff is the strongest possible signal that nothing there changed.
+
+4. **Report clean only when every single call site has been individually
+   confirmed** — "the class exists" or "the file's diff was small" are not
+   substitutes for "this exact method still exists with this signature."
+
+5. Note the audit's scope and result in the version-bump PR description and
+   the tracking issue, the same way the manual/automated test passes are
+   recorded.
+
+## 9. Extend automated test coverage (mandatory, run after every version bump)
+
+Every version bump so far has surfaced at least one thing the automated
+suites didn't catch — that's exactly the gap tracked by
+[issue #1863](https://github.com/WordPress/wordcamp.org/issues/1863)
+("Identify gaps in unit and e2e test coverage"). Manually re-discovering
+the same class of bug on the *next* upgrade is a wasted rediscovery — turn
+what this pass found into a permanent regression test before moving on,
+not a one-off fix.
+
+Two tests written after the 0.35.0 bump are the reference examples for
+what this looks like in practice — both live in
+`mu-plugins/groups/tests/` (not `themes/groups-site/tests/`, which doesn't
+exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
+there by including the real theme files directly, see the first example):
+
+- **`test-groups-site-event-cards-patterns.php`** — executes the actual
+  `groups-site` theme pattern files GatherPress renders via the
+  block-patterns REST endpoint (the exact code path #1874's bug lived in
+  and nothing else exercises), asserting real output for both the
+  has-events and no-events branches of each pattern. The template for
+  "this class of bug had zero coverage because nothing calls this code
+  path" — find other such gaps by asking what *does* exercise a given file
+  today, and whether "nothing" is an acceptable answer.
+- **`test-gatherpress-api-contract.php`** — a data-provider-driven test
+  asserting every GatherPress class/method/constant/property this
+  integration calls still exists, sourced from the same list Section 8's
+  audit builds. This is what makes Section 8's audit durable instead of
+  a one-time manual pass that has to be redone by hand on every future
+  bump — extend `CONTRACT` in that file whenever the audit finds a call
+  site it doesn't cover yet, rather than leaving the gap for next time.
+
+When a version bump (or this checklist) surfaces something that wasn't
+caught automatically, before moving on:
+
+1. Identify *why* it wasn't caught — what code path was it in, and what
+   (if anything) currently exercises that path in CI.
+2. Write the smallest test that would have failed before the fix and
+   passes after it. Verify this concretely, not just in principle — run
+   the test against the broken state (e.g. `git stash` the fix, run the
+   test, confirm it fails with a clear message, `git stash pop`) before
+   trusting it as a regression guard.
+3. Prefer extending an existing data-provider/contract-style test (like
+   `test-gatherpress-api-contract.php`'s `CONTRACT` list) over writing a
+   narrow one-off test, when the gap is really "we don't check X across
+   the board" rather than "this one specific call is wrong."
+4. Note what was added (and why) in the version-bump PR description, the
+   tracking issue, and — if it changes the shape of *how* this integration
+   should be tested going forward, not just *what* — issue #1863 too.
 
 ## Known-issues appendix
 

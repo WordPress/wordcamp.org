@@ -207,7 +207,7 @@ class Test_Groups_REST extends Groups_TestCase {
 		$this->assertFalse( $fields['recurrence']['locked'] );
 	}
 
-  /**
+	/**
 	 * A new event cannot be created with a past date.
 	 */
 	public function test_create_event_rejects_past_date() {
@@ -221,7 +221,7 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertWPError( $response );
 		$this->assertSame( 'wporg_groups_past_event_date', $response->get_error_code() );
-  }
+	}
 
 	/**
 	 * An event whose end time equals its start time is rejected.

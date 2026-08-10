@@ -1064,7 +1064,7 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 	 */
 	do_action( 'wporg_groups_frontend_event_saved', $saved_id, $request, $schedule_editable );
 
-  maybe_save_rsvp_questions( $saved_id, $request );
+	maybe_save_rsvp_questions( $saved_id, $request );
 
 	return new WP_REST_Response(
 		array(

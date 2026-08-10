@@ -12,6 +12,27 @@ covers three plugins: `mu-plugins/wporg-groups-frontend` (front-end
 event/member management), `mu-plugins/groups/gatherpress-groups-tweaks.php`
 (settings/capability/query overrides), and the `groups-site` block theme.
 
+**Keep this skill current.** This file is a living record, not a one-time
+checklist — whenever a session working on this integration (a version bump,
+a bug fix, a test-flakiness investigation, anything touching the plugins or
+theme above) turns up an essential finding — a real root cause, a bug in
+GatherPress or this integration and its fix, a test-environment gotcha, a
+methodology that generalizes — add it here before the session ends, in the
+section it belongs to (or a new one, if it doesn't fit an existing one).
+"Essential" means: would the next person hit the same wall without it?
+Prefer folding a finding into existing prose over appending a new bullet
+list per session — this file should read as current best understanding, not
+a changelog.
+
+**Compact it periodically.** Growth without pruning eventually makes this
+file slower to read than it's worth. Every so often (when a section is
+getting long, or findings start to overlap/repeat), reread the whole file
+and tighten it: merge redundant points, cut anything superseded by a later
+fix or no longer true of the current code, and re-verify specifics (file
+paths, function names, version numbers) against the actual repo rather than
+trusting older prose. Compacting is itself worth a small dedicated pass, not
+just an incidental side effect of adding one more finding.
+
 Two automated layers exist alongside this manual checklist — run them
 first, then use this checklist for what they can't cover (real browser
 interaction, cross-plugin capability leaks, exploratory checks):
@@ -24,13 +45,102 @@ interaction, cross-plugin capability leaks, exploratory checks):
 - **E2E (Playwright)** — `npx playwright test` (or trigger the
   `e2e-tests.yml` GitHub Action manually — it's `workflow_dispatch`-only).
   Covers anonymous front-page rendering, an author creating an event
-  end-to-end through the real browser UI, and the member directory.
-  **If a spec times out waiting on a UI interaction (e.g. a sidebar
-  panel/button that should obviously be there), re-run with
-  `--workers=1` before concluding it's a regression.** `fullyParallel: true`
-  against a single local docker container is a real, repeatable source of
-  90s timeouts that have nothing to do with GatherPress — confirmed during
-  the 0.35.0 bump: 3 "failures" all passed in under 10s each serially.
+  end-to-end through the real browser UI, per-event messaging, the
+  auto-publish-notification email, and the member directory. Needs
+  `organiser1`/`eventorganiser1`/`eventorganiser2`/`eventorganiser3`/
+  `eventorganiser4`/`eventorganiser5`/`member1` (all `password`) — **every
+  individual test that logs in as an author has its own dedicated
+  `eventorganiser*` account, not just every spec *file*.**
+  `event-manage-messaging.spec.js` alone needs three (`2`/`4`/`5`) because
+  its own three tests also run concurrently against each other under
+  `fullyParallel`, not just against other files. Don't consolidate any of
+  these back onto a shared account.
+  **If a spec times out waiting on a UI interaction, don't assume it's
+  `fullyParallel` contention and reach for `--workers=1` — read the actual
+  failure first.** Every Playwright failure writes an `error-context.md`
+  (path is in the terminal output) with a full accessibility-tree snapshot
+  of the page at the moment of timeout: read it before touching the test.
+  Several real, deterministic bugs were all initially mistaken for "just
+  flaky":
+    - A "Choose a pattern" starter-pattern dialog appears on every fresh
+      `post-new.php` visit for a post type with starter patterns
+      (`gatherpress_event` has them) and — unlike the separate "Welcome to
+      the editor" guide the specs already handled — its own Close button
+      and Escape do **not** dismiss it. It silently sat on top of the
+      sidebar, and every subsequent interaction hung until the test
+      timeout. Fixed by `tests/e2e/utils/dismiss-editor-onboarding.js`,
+      which every spec creating an event must call.
+    - Sharing one login across concurrent tests. This environment only
+      supports one active session per user (see the comment in
+      `tests/e2e/utils/login.js`), so under `fullyParallel` one worker's
+      fresh login can invalidate another's already-established session
+      mid-test — the `error-context.md` for that failure shows the page
+      stuck on a login form instead of the expected editor. `login()`'s own
+      retry loop only covers a collision *during the login request itself*;
+      it can't help once a later worker's login invalidates an earlier
+      worker's session that already succeeded. The only real fix is one
+      account per concurrently-running test, including within a single
+      spec file (see above).
+    - GatherPress's "Event settings" document panel (which
+      `tests/e2e/utils/pin-event-far-future.js`'s "Date & time start"
+      button lives inside) is a collapsible `PanelBody` whose open/closed
+      state is a **preference persisted server-side per WordPress user**
+      (WordPress's editor-preferences API), not freshly defaulted each
+      browser session. GatherPress force-opens it once via a `domReady`
+      callback that checks `core/editor`'s `isEditorPanelOpened()` — but
+      that can race the preferences store's own async hydration of that
+      user's saved state, and if it loses the race the panel renders
+      collapsed. Once that happens for a given test account, it stays
+      collapsed on every later editor load too (GatherPress never re-checks
+      after that first callback), which is why this reproduced
+      deterministically for whichever account had ever hit the race, not
+      randomly. Fixed in `pin-event-far-future.js`: check whether the
+      "Date & time start" button is visible first, and if not, click the
+      "Event settings" panel header to expand it before proceeding — don't
+      assume the panel is already open.
+  If a timeout's `error-context.md` shows the *expected* page mid-load
+  (not stuck on a login form, error page, or unrelated dialog), *then*
+  it's reasonable to suspect genuine environment slowness — but confirm
+  that from the evidence, don't default to it.
+  **A test can also be right that something is broken in production, not
+  just in the test.** The auto-publish-notification test
+  (`event-publish-notification.spec.js`) intermittently found zero email
+  after a real publish, with no error logged anywhere. Root cause: multiple
+  events publishing within the same second — which this suite's own
+  `fullyParallel` execution reliably does, and which real usage can do too
+  — raced on `wp_schedule_single_event()`. WordPress core's cron store is a
+  single `wp_options` row (`option_name = 'cron'`) updated via a plain,
+  unsynchronized read-modify-write (`_get_cron_array()` /
+  `_set_cron_array()` in `wp-includes/cron.php`, no locking); two nearly
+  simultaneous callers can silently clobber each other's scheduled job at
+  any point up until wp-cron actually executes it, and
+  `wp_schedule_single_event()`'s own return value can't detect this since
+  it only reflects the calling request's own write. A bounded retry with
+  re-verification around the *scheduling* call closes the common case
+  (confirmed via a dedicated PHPUnit regression test, `pre_option_cron`
+  forced empty to simulate the race) but not the deeper one — a job can
+  still be clobbered *after* being confirmed scheduled, by a totally
+  unrelated later publish, since every `wp_schedule_single_event()` caller
+  on the site shares the same unsynchronized option. The real fix
+  (`schedule_new_event_notification()` in
+  `mu-plugins/wporg-groups-frontend/inc/notifications.php`) bypasses
+  WP-Cron for this entirely: it calls
+  `\GatherPress\Core\Event\Rest_Api::get_instance()->send_emails()`
+  directly and synchronously from `transition_post_status`, the same
+  method GatherPress's own `gatherpress_send_emails` cron handler and its
+  "Message all members" REST action both call — trading a brief
+  publish-request delay (already true of GatherPress's own dispatch once
+  cron picks it up) for eliminating the race category outright. **Going
+  synchronous has a real blast radius beyond the notification feature
+  itself**: since `transition_post_status` now runs this on *every*
+  `gatherpress_event` publish, any PHPUnit test that publishes one — not
+  just tests about notifications — started executing real email-template
+  rendering, which needs runtime (theme template functions, etc.) most
+  test bootstraps don't load. `Groups_TestCase::setUp()` now removes this
+  action for every test by default; `Test_Groups_Notifications` is the one
+  class that re-adds it, for its own coverage. Keep this in mind before
+  converting any other deferred-to-cron integration point to a synchronous
+  call — check whether other tests publish through the same hook first.
 
 If either automated suite fails, stop and fix that before doing the manual
 pass below — don't duplicate debugging effort across layers.

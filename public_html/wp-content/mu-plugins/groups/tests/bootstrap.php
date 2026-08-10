@@ -32,6 +32,7 @@ function manually_load_plugin() {
 	require_once dirname( __DIR__, 2 ) . '/1-logger.php';
 
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
+	require_once dirname( __DIR__, 2 ) . '/wporg-groups-archive.php';
 	require_once dirname( __DIR__ ) . '/group-site-provisioning.php';
 	require_once dirname( __DIR__ ) . '/network-messaging.php';
 }

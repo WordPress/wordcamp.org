@@ -25,9 +25,50 @@ interaction, cross-plugin capability leaks, exploratory checks):
   `e2e-tests.yml` GitHub Action manually — it's `workflow_dispatch`-only).
   Covers anonymous front-page rendering, an author creating an event
   end-to-end through the real browser UI, and the member directory.
+  **If a spec times out waiting on a UI interaction (e.g. a sidebar
+  panel/button that should obviously be there), re-run with
+  `--workers=1` before concluding it's a regression.** `fullyParallel: true`
+  against a single local docker container is a real, repeatable source of
+  90s timeouts that have nothing to do with GatherPress — confirmed during
+  the 0.35.0 bump: 3 "failures" all passed in under 10s each serially.
 
 If either automated suite fails, stop and fix that before doing the manual
 pass below — don't duplicate debugging effort across layers.
+
+## 0. Before bumping the pinned version
+
+- **Confirm the target version is actually stable**, not a beta/RC:
+  `curl -s https://api.wordpress.org/plugins/info/1.0/gatherpress.json | python3 -c "import json,sys; print(json.load(sys.stdin)['version'])"`.
+- **Diff GatherPress core itself** for breaking API changes before touching
+  any code here. Clone/pull `github.com/GatherPress/gatherpress` locally and
+  run `git diff <old-tag> <new-tag>` (and `git log <old-tag>..<new-tag>
+  --oneline` for the human-readable summary). Specifically check every class
+  this integration touches directly —
+  `GatherPress\Core\{Rsvp\Rsvp,Event\Event,Venue\Venue,Venue\Setup,User,Setup,Blocks\Setup,Blocks\Event_Query}`
+  (grep `GatherPress\\\\` across `mu-plugins/groups`,
+  `mu-plugins/wporg-groups-frontend`, and `themes/groups-site` to get the
+  current list) — for renamed/removed constants, changed return types
+  (`Rsvp::get()` went from always-`array` to `array|null` in 0.35.0 and broke
+  a test that indexed it directly), and classes marked `final` (harmless
+  unless something here extends one — check with
+  `grep -rn "extends.*GatherPress"`).
+- **Grep theme templates for GatherPress block usage**, not just PHP:
+  `grep -rn "wp:gatherpress" public_html/wp-content/themes/groups-site`.
+  GatherPress Alpha's migration (see below) only rewrites block content
+  *stored in the database* — it does not touch theme `.html` template
+  files. If a version bump removes/renames a block GatherPress itself used
+  to ship (e.g. `gatherpress/icon` → core `core/icon` in 0.35.0), any
+  in-repo template using it needs a manual, matching edit or it silently
+  renders blank.
+- **Find every place the version string is pinned** — there is no single
+  source of truth, so grep for the old version across the whole repo before
+  declaring the bump done:
+  `grep -rln "<old-version>" . --include="*.yml" --include="*.php" --include="*.md" --include="*.sh" | grep -v "plugins/gatherpress"`.
+  As of the 0.35.0 bump these were: `.github/workflows/e2e-tests.yml`,
+  `.github/workflows/unit-tests.yml`, `.docker/bin/install-test-suite.sh`
+  (which was *already* stale at a different, older version than the two
+  CI workflows — don't assume they're in sync), and this skill's own
+  install command below.
 
 ## 1. Environment setup
 
@@ -163,7 +204,12 @@ don't just check curl responses render correctly, click through:
   Organiser-only tabs are entirely absent (not just disabled) for lower
   roles.
 - **Member directory** (`/members/`) — role labels correct, join/leave
-  buttons behave.
+  buttons behave. If this 404s, check `wp post list --post_type=page` for a
+  page with slug `members` before assuming it's broken — the theme resolves
+  it via the `page-members.html` template, so it needs an actual WP page
+  with that slug to exist; a fresh/reset dev site may simply be missing it
+  (`wp post create --post_type=page --post_title=Members --post_name=members
+  --post_status=publish`).
 - **wp-admin, not just the front end** — capability leaks (like the fixed
   `promote_users` escalation) only show up here. Log in as each non-admin
   role and check: can they reach Users → a role-promotion UI beyond what

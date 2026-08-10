@@ -52,6 +52,16 @@ pass below — don't duplicate debugging effort across layers.
   a test that indexed it directly), and classes marked `final` (harmless
   unless something here extends one — check with
   `grep -rn "extends.*GatherPress"`).
+  **Checking that a class still exists is not enough** — verify every
+  individual method/constant/property call site, not just the class. A
+  wrong-but-existing class import (`Blocks\Event_Query` vs. the real
+  `Event\Query`) passed every "does this class exist" check across two
+  GatherPress versions and only surfaced as a live production fatal,
+  because nothing had verified the *specific methods called* actually
+  existed on *that specific class*. Section 8 below has the exhaustive,
+  mechanical version of this check — run it now too, not just after
+  landing, since catching this before the bump is cheaper than catching it
+  in production.
 - **Grep theme templates for GatherPress block usage**, not just PHP:
   `grep -rn "wp:gatherpress" public_html/wp-content/themes/groups-site`.
   GatherPress Alpha's migration (see below) only rewrites block content
@@ -389,6 +399,110 @@ the 0.35.0 rollout on `events.wordpress.org`.
   ```bash
   wp eval 'global $wpdb; foreach ( $wpdb->get_results( "SHOW FULL PROCESSLIST" ) as $row ) { if ( "Sleep" !== $row->Command ) { print_r( $row ); } }' --url=<site>
   ```
+
+## 8. Post-upgrade code audit (mandatory, run after every version bump lands)
+
+Run this once the plugin update is live (locally after bumping the pin, and
+again after the production rollout) — it's what would have caught the
+`Blocks\Event_Query` vs. `Event\Query` wrong-class bug (#1874) before it hit
+production instead of after, since that bug passed every class-existence
+check across two GatherPress versions and only surfaced as a live fatal.
+The point isn't spot-checking "the classes we remember using" — it's
+mechanically verifying *every* call site, including the ones nobody's
+thought about in months.
+
+1. **Extract every GatherPress class this integration actually imports**,
+   across all three plugins:
+   ```bash
+   grep -rn "^use GatherPress\|GatherPress\\\\Core" \
+     public_html/wp-content/mu-plugins/groups \
+     public_html/wp-content/mu-plugins/wporg-groups-frontend \
+     public_html/wp-content/themes/groups-site \
+     --include="*.php" | grep -v "/tests/\|/build/"
+   ```
+   (Exclude `/build/` — it's compiled from `/src/`; diff the two afterward
+   with plain `diff` to confirm they're actually in sync rather than
+   assuming it.)
+
+2. **For each imported class, extract every method/constant/property call
+   site** — not just the ones near the `use` statement. A call several
+   functions away from the import, or reached through a differently-named
+   local variable, is exactly the kind of thing a quick skim misses. Grep
+   broadly per class/alias: `ClassName::`, `new ClassName(`, and
+   `$lowercase_var->method(` for every plausible variable name that
+   instance might be assigned to (`$event`, `$rsvp`, `$venue`, `$query`,
+   `$setup` — check the surrounding code when a grep for `$obj->` comes up
+   empty, since the call is often on the next line rather than the same
+   one, e.g. `$venue = new Venue(...);` then `$term = $venue->get_term();`
+   two lines later).
+
+3. **Cross-check each one against the actual GatherPress source** for the
+   *now-installed* version (not the old one):
+   ```bash
+   # from a local clone of github.com/GatherPress/gatherpress
+   git show <new-tag>:path/to/class-file.php | grep -n "function method_name\|const CONST_NAME"
+   ```
+   A hit confirms it; nothing confirms a break. Also diff the whole file
+   against the previous tag (`git diff <old-tag> <new-tag> -- path`) — an
+   empty diff is the strongest possible signal that nothing there changed.
+
+4. **Report clean only when every single call site has been individually
+   confirmed** — "the class exists" or "the file's diff was small" are not
+   substitutes for "this exact method still exists with this signature."
+
+5. Note the audit's scope and result in the version-bump PR description and
+   the tracking issue, the same way the manual/automated test passes are
+   recorded.
+
+## 9. Extend automated test coverage (mandatory, run after every version bump)
+
+Every version bump so far has surfaced at least one thing the automated
+suites didn't catch — that's exactly the gap tracked by
+[issue #1863](https://github.com/WordPress/wordcamp.org/issues/1863)
+("Identify gaps in unit and e2e test coverage"). Manually re-discovering
+the same class of bug on the *next* upgrade is a wasted rediscovery — turn
+what this pass found into a permanent regression test before moving on,
+not a one-off fix.
+
+Two tests written after the 0.35.0 bump are the reference examples for
+what this looks like in practice — both live in
+`mu-plugins/groups/tests/` (not `themes/groups-site/tests/`, which doesn't
+exist and isn't wired into `phpunit.xml.dist` — theme code is tested from
+there by including the real theme files directly, see the first example):
+
+- **`test-groups-site-event-cards-patterns.php`** — executes the actual
+  `groups-site` theme pattern files GatherPress renders via the
+  block-patterns REST endpoint (the exact code path #1874's bug lived in
+  and nothing else exercises), asserting real output for both the
+  has-events and no-events branches of each pattern. The template for
+  "this class of bug had zero coverage because nothing calls this code
+  path" — find other such gaps by asking what *does* exercise a given file
+  today, and whether "nothing" is an acceptable answer.
+- **`test-gatherpress-api-contract.php`** — a data-provider-driven test
+  asserting every GatherPress class/method/constant/property this
+  integration calls still exists, sourced from the same list Section 8's
+  audit builds. This is what makes Section 8's audit durable instead of
+  a one-time manual pass that has to be redone by hand on every future
+  bump — extend `CONTRACT` in that file whenever the audit finds a call
+  site it doesn't cover yet, rather than leaving the gap for next time.
+
+When a version bump (or this checklist) surfaces something that wasn't
+caught automatically, before moving on:
+
+1. Identify *why* it wasn't caught — what code path was it in, and what
+   (if anything) currently exercises that path in CI.
+2. Write the smallest test that would have failed before the fix and
+   passes after it. Verify this concretely, not just in principle — run
+   the test against the broken state (e.g. `git stash` the fix, run the
+   test, confirm it fails with a clear message, `git stash pop`) before
+   trusting it as a regression guard.
+3. Prefer extending an existing data-provider/contract-style test (like
+   `test-gatherpress-api-contract.php`'s `CONTRACT` list) over writing a
+   narrow one-off test, when the gap is really "we don't check X across
+   the board" rather than "this one specific call is wrong."
+4. Note what was added (and why) in the version-bump PR description, the
+   tracking issue, and — if it changes the shape of *how* this integration
+   should be tested going forward, not just *what* — issue #1863 too.
 
 ## Known-issues appendix
 

@@ -1,6 +1,7 @@
 const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
 const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
+const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
  * Automatic "event published" notification (#1829): publishing a
@@ -8,34 +9,32 @@ const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
  * "all members" email exactly once; editing an already-published event
  * afterwards does not schedule (and therefore does not send) a duplicate.
  *
- * Requires the `eventorganiser1` / `password` test user from the
+ * Requires the `eventorganiser3` / `password` test user from the
  * groups-gatherpress-compat-test skill's environment-setup step, and a
  * reachable MailCatcher instance at http://localhost:1080 (the local dev
- * stack's mail sink — see .docker/readme.md).
+ * stack's mail sink — see .docker/readme.md). Uses a dedicated account
+ * (not `eventorganiser1`, shared by event-organiser.spec.js) since this
+ * spec can run concurrently with the others under `fullyParallel` — this
+ * environment only supports one active session per user, so sharing an
+ * account risked one worker's login invalidating another's mid-test.
  */
 test.describe( 'event publish notification', () => {
 	const MAILCATCHER_URL = 'http://localhost:1080';
 
 	/**
-	 * Creates and publishes a fresh event as `eventorganiser1` via the
+	 * Creates and publishes a fresh event as `eventorganiser3` via the
 	 * wp-admin block editor, and returns its post id.
 	 *
 	 * @param {import('@playwright/test').Page} page
 	 * @param {string}                          title
 	 */
 	async function createAndPublishEvent( page, title ) {
-		await login( page, 'eventorganiser1', 'password' );
+		await login( page, 'eventorganiser3', 'password' );
 
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
-		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 20000 } );
+		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
 
-		const welcomeGuideHeading = page.getByRole( 'heading', { name: 'Welcome to the editor' } );
-		try {
-			await welcomeGuideHeading.waitFor( { state: 'visible', timeout: 3000 } );
-			await page.keyboard.press( 'Escape' );
-		} catch {
-			// Guide didn't appear (already dismissed for this user) — nothing to do.
-		}
+		await dismissEditorOnboarding( page );
 
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();
 		await editorCanvas.getByRole( 'textbox', { name: 'Add title' } ).fill( title );
@@ -72,7 +71,7 @@ test.describe( 'event publish notification', () => {
 	 */
 	async function editPublishedEvent( page, postId ) {
 		await page.goto( `wp-admin/post.php?post=${ postId }&action=edit` );
-		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 20000 } );
+		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
 
 		await page.getByRole( 'button', { name: 'Add an excerpt' } ).click();
 		await page.getByRole( 'textbox', { name: 'Excerpt' } ).fill( 'Edited without changing publish state.' );

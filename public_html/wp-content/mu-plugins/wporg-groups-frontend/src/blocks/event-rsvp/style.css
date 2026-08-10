@@ -165,6 +165,71 @@
 	justify-content: space-between;
 	gap: 16px;
 	flex-shrink: 0;
+	flex-wrap: wrap;
+}
+
+/* === Custom registration questions === */
+
+.wporg-event-rsvp__questions {
+	flex: 1 0 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+
+	/* Reset the browser's default fieldset chrome — the element is a
+	   fieldset for the grouping semantics, not for the border. */
+	border: 0;
+	margin: 0;
+	padding: 0;
+	min-width: 0;
+}
+
+.wporg-event-rsvp__questions.is-hidden {
+	display: none;
+}
+
+.wporg-event-rsvp__save-answers {
+	align-self: flex-start;
+	font-size: 13px;
+	padding: 6px 12px;
+}
+
+.wporg-event-rsvp__save-answers.is-hidden {
+	display: none;
+}
+
+.wporg-event-rsvp__question {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.wporg-event-rsvp__question-label {
+	font-size: 14px;
+	font-weight: 600;
+	color: #1a1919;
+}
+
+.wporg-event-rsvp__question-required {
+	color: #cc1818;
+}
+
+.wporg-event-rsvp__question-input {
+	width: 100%;
+	padding: 8px 12px;
+	font-size: 14px;
+	border: 1px solid #d9d9d9;
+	border-radius: 2px;
+}
+
+.wporg-event-rsvp__questions-error {
+	margin: 0;
+	font-size: 14px;
+	color: #cc1818;
+}
+
+.wporg-event-rsvp__questions-error:empty {
+	display: none;
 }
 
 .wporg-event-rsvp__modal-status {
@@ -245,6 +310,12 @@
 	display: -webkit-box;
 	-webkit-line-clamp: 2;
 	-webkit-box-orient: vertical;
+}
+
+.wporg-event-rsvp__attendee-answer {
+	font-size: 13px;
+	color: #40464d;
+	line-height: 1.4;
 }
 
 .wporg-event-rsvp__empty {

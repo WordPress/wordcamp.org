@@ -199,7 +199,6 @@ function upgrade_database() {
 			due_date       int( 11 )        unsigned NOT NULL default '0',
 			amount         numeric( 10, 2 ) unsigned NOT NULL default '0',
 			last_modified  datetime                  NOT NULL default '0000-00-00 00:00:00',
-
 			PRIMARY KEY (blog_id, invoice_id),
 			KEY status (status),
 			KEY last_modified (last_modified)

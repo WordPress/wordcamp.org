@@ -384,3 +384,30 @@
 	font-size: 12px;
 	margin-top: 4px;
 }
+
+/* === Registration questions === */
+
+.wporg-groups-rsvp-questions__help {
+	font-size: 12px;
+	color: #757575;
+	margin: 0 0 8px;
+}
+
+.wporg-groups-rsvp-questions__row {
+	display: flex;
+	align-items: flex-end;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.wporg-groups-rsvp-questions__row > .components-base-control {
+	flex: 1 1 auto;
+}
+
+.wporg-groups-rsvp-questions__row-actions {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-shrink: 0;
+	padding-bottom: 4px;
+}

@@ -15,6 +15,12 @@
  *   POST /event/{id}
  *        Updates an existing gatherpress_event.
  *
+ *   POST /event/{id}/rsvp
+ *        RSVPs the current user to an event, together with their answers to
+ *        the event's custom registration questions. Wraps GatherPress's own
+ *        RSVP save so the answers and the RSVP are written in one request and
+ *        required questions are enforced server-side.
+ *
  *   GET  /group-info
  *   POST /group-info
  *        Reads and writes the group's name, description, and location.
@@ -50,6 +56,13 @@ use function WordCamp\Groups\Frontend\Group_Location\get_country_options;
 use function WordCamp\Groups\Frontend\Group_Location\get_location;
 use function WordCamp\Groups\Frontend\Group_Location\normalize_location;
 use function WordCamp\Groups\Frontend\Group_Location\save_location;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_missing_required;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_user_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\merge_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\sanitize_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\save_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\save_questions;
 
 const NAMESPACE_V1 = 'wporg-groups/v1';
 
@@ -109,6 +122,36 @@ function register_routes(): void {
 					},
 				),
 			) + event_args_schema(),
+		)
+	);
+
+	register_rest_route(
+		NAMESPACE_V1,
+		'/event/(?P<id>\d+)/rsvp',
+		array(
+			'methods'             => WP_REST_Server::CREATABLE,
+			'callback'            => __NAMESPACE__ . '\save_rsvp',
+			'permission_callback' => __NAMESPACE__ . '\rsvp_permissions_check',
+			'args'                => array(
+				'id'      => array(
+					'type'              => 'integer',
+					'required'          => true,
+					'sanitize_callback' => 'absint',
+				),
+				'status'  => array(
+					'type'              => 'string',
+					'required'          => true,
+					'sanitize_callback' => 'sanitize_key',
+					'validate_callback' => static function ( $param ) {
+						return in_array( $param, array( 'attending', 'not_attending' ), true );
+					},
+				),
+				'answers' => array(
+					'type'     => 'object',
+					'required' => false,
+					'default'  => array(),
+				),
+			),
 		)
 	);
 
@@ -361,6 +404,110 @@ function publish_existing_event_permissions_check( WP_REST_Request $request ): b
 }
 
 /**
+ * Capability check for the RSVP route — any logged-in visitor may RSVP to a
+ * published event, exactly as with GatherPress's own RSVP endpoint.
+ */
+function rsvp_permissions_check(): bool {
+	return is_user_logged_in();
+}
+
+/**
+ * POST /event/{id}/rsvp
+ *
+ * RSVP the current user, storing their answers to the event's custom
+ * registration questions on the same request.
+ *
+ * This exists rather than posting answers to GatherPress's RSVP endpoint and
+ * then storing them in a follow-up call, because a required question has to be
+ * able to *block* the RSVP. Splitting it in two would leave an RSVP recorded
+ * with the answers rejected — exactly the "the RSVP data is wrong" failure the
+ * feature is meant to prevent.
+ *
+ * @return WP_Error|WP_REST_Response
+ */
+function save_rsvp( WP_REST_Request $request ) {
+	$event_id = (int) $request->get_param( 'id' );
+	$status   = (string) $request->get_param( 'status' );
+	$post     = get_post( $event_id );
+
+	if ( ! $post || Event::POST_TYPE !== $post->post_type || 'publish' !== $post->post_status ) {
+		return new WP_Error( 'wporg_groups_invalid_event', 'Invalid event ID', array( 'status' => 404 ) );
+	}
+
+	$event = new Event( $event_id );
+
+	// `$event->rsvp` is set for anything supporting `gatherpress-event-date`,
+	// which the post-type check above already guarantees. The meaningful gate
+	// is whether RSVP is switched on for this event — without it
+	// `Rsvp::save()` is a no-op that would otherwise look like success.
+	if ( ! $event->rsvp || ! $event->rsvp->is_enabled() ) {
+		return new WP_Error( 'wporg_groups_rsvp_unavailable', 'RSVP is not available for this event.', array( 'status' => 400 ) );
+	}
+
+	if ( $event->has_event_past() ) {
+		return new WP_Error( 'wporg_groups_event_past', 'This event has already happened.', array( 'status' => 400 ) );
+	}
+
+	$user_id   = get_current_user_id();
+	$questions = get_questions( $event_id );
+
+	// Only the questions this request actually submitted are applied on top of
+	// what's already stored, so a stale form can't blank out answers it never
+	// rendered. Required questions are checked against that merged result.
+	$submitted = sanitize_answers( $questions, $request->get_param( 'answers' ) );
+	$answers   = merge_answers( get_user_answers( $event_id, $user_id ), $submitted );
+
+	if ( 'attending' === $status ) {
+		$missing = get_missing_required( $questions, $answers );
+
+		if ( $missing ) {
+			return new WP_Error(
+				'wporg_groups_missing_answers',
+				sprintf(
+					/* translators: %s: comma-separated list of question labels. */
+					__( 'Please answer: %s', 'wporg-groups-frontend' ),
+					implode( ', ', $missing )
+				),
+				array( 'status' => 400 )
+			);
+		}
+	}
+
+	// Group sites are open to join, and RSVPing is the point at which someone
+	// becomes a member — same as GatherPress's own endpoint and our
+	// /members/join route.
+	if ( ! is_user_member_of_blog( $user_id ) ) {
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+	}
+
+	$record     = $event->rsvp->save( $user_id, $status );
+	$comment_id = (int) ( $record['comment_id'] ?? 0 );
+
+	if ( ! $comment_id ) {
+		return new WP_Error(
+			'wporg_groups_rsvp_failed',
+			'Your RSVP could not be saved.',
+			array( 'status' => 500 )
+		);
+	}
+
+	// Answers belong to an attendance, not to a declined invitation — a
+	// cancelled RSVP drops them. Keyed off the *requested* status, not the
+	// saved one: a full event downgrades `attending` to `waiting_list`, and
+	// `check_waiting_list()` later promotes the RSVP without ever restoring
+	// answers deleted here.
+	save_answers( $comment_id, 'attending' === $status ? $answers : array() );
+
+	return new WP_REST_Response(
+		array(
+			'success'   => true,
+			'status'    => $record['status'] ?? 'no_status',
+			'responses' => $event->rsvp->responses(),
+		)
+	);
+}
+
+/**
  * Whether the current user can create a GatherPress event on this site.
  */
 function current_user_can_create_event(): bool {
@@ -498,7 +645,36 @@ function event_args_schema(): array {
 			'default'           => 0,
 			'sanitize_callback' => 'absint',
 		),
+		// Custom registration questions. Deliberately has no `default` — an
+		// absent parameter means "leave the existing questions alone", which
+		// an empty-array default would turn into "delete them all".
+		'rsvp_questions'    => array(
+			'type'     => 'array',
+			'required' => false,
+			'items'    => array(
+				'type'       => 'object',
+				'properties' => array(
+					'id'       => array( 'type' => 'string' ),
+					'label'    => array( 'type' => 'string' ),
+					'required' => array( 'type' => 'boolean' ),
+				),
+			),
+		),
 	);
+}
+
+/**
+ * Write the event's custom registration questions, if the request carried any.
+ *
+ * @param int             $event_id Saved event post ID.
+ * @param WP_REST_Request $request  The create/update/draft request.
+ */
+function maybe_save_rsvp_questions( int $event_id, WP_REST_Request $request ): void {
+	$questions = $request->get_param( 'rsvp_questions' );
+
+	if ( is_array( $questions ) ) {
+		save_questions( $event_id, $questions );
+	}
 }
 
 /**
@@ -563,6 +739,7 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	// `undefined` checks.
 	$fields['featured_image_id']  = $fields['featured_image_id'] ?? 0;
 	$fields['featured_image_url'] = $fields['featured_image_url'] ?? '';
+	$fields['rsvp_questions']     = $is_editing ? get_questions( $event_id ) : array();
 
 	$venues = array_map(
 		static function ( $post ) {
@@ -715,6 +892,8 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		set_post_thumbnail( $saved_id, $featured_image_id );
 	}
 
+	maybe_save_rsvp_questions( $saved_id, $request );
+
 	return new WP_REST_Response(
 		array(
 			'id'           => $saved_id,
@@ -864,6 +1043,8 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		// Explicit clear on edit.
 		delete_post_thumbnail( $saved_id );
 	}
+
+	maybe_save_rsvp_questions( $saved_id, $request );
 
 	return new WP_REST_Response(
 		array(

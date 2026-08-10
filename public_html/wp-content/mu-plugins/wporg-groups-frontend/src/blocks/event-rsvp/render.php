@@ -8,6 +8,13 @@
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 
+use function WordCamp\Groups\Frontend\RSVP_Questions\current_user_can_view_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_labelled_answers;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
+use function WordCamp\Groups\Frontend\RSVP_Questions\get_user_answers;
+
+use const WordCamp\Groups\Frontend\RSVP_Questions\MAX_ANSWER_LENGTH;
+
 $event_post_id = ! empty( $block->context['postId'] )
 	? (int) $block->context['postId']
 	: ( get_the_ID() ?: get_queried_object_id() );
@@ -48,6 +55,24 @@ if ( $attendee_user_ids ) {
 	update_meta_cache( 'user', $attendee_user_ids );
 }
 
+// Custom registration questions. Answers hold things attendees wouldn't post
+// publicly (dietary needs, accessibility requirements), so they're only
+// rendered for organizers.
+$questions        = get_questions( $event_post_id );
+$can_view_answers = $questions && current_user_can_view_answers( $event_post_id );
+$own_answers      = ( $questions && $is_login ) ? get_user_answers( $event_post_id, get_current_user_id() ) : array();
+
+// Same treatment for the answers, which live in commentmeta on each RSVP.
+// GatherPress primes this incidentally while *building* `responses()`, but
+// that result is object-cached for 15 minutes — on a cache hit the loop never
+// runs and the reads below would be one query per attendee.
+if ( $can_view_answers ) {
+	$attendee_comment_ids = array_filter( wp_list_pluck( $records, 'commentId' ) );
+	if ( $attendee_comment_ids ) {
+		update_meta_cache( 'comment', $attendee_comment_ids );
+	}
+}
+
 $attendees = array();
 foreach ( $records as $record ) {
 	$bio = '';
@@ -62,6 +87,9 @@ foreach ( $records as $record ) {
 		'photo'   => $record['photo'] ?? '',
 		'profile' => $record['profile'] ?? '',
 		'bio'     => $bio,
+		'answers' => $can_view_answers
+			? get_labelled_answers( (int) ( $record['commentId'] ?? 0 ), $questions )
+			: array(),
 	);
 }
 
@@ -97,6 +125,8 @@ $rsvp_labels    = array(
 	'rsvpSuccessNotAttending' => __( 'Your RSVP has been cancelled.', 'wporg-groups-frontend' ),
 	'rsvpSuccessWaitingList'  => __( 'You have joined the event waiting list.', 'wporg-groups-frontend' ),
 	'rsvpError'               => __( 'Your RSVP could not be updated. Please try again.', 'wporg-groups-frontend' ),
+	'missingAnswers'          => __( 'Please answer the required questions.', 'wporg-groups-frontend' ),
+	'answersSaved'            => __( 'Your answers have been saved.', 'wporg-groups-frontend' ),
 );
 
 $context = array(
@@ -110,9 +140,13 @@ $context = array(
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
 	'joinApi'           => rest_url( 'wporg-groups/v1/members/join' ),
+	'rsvpApi'           => rest_url( sprintf( 'wporg-groups/v1/event/%d/rsvp', $event_post_id ) ),
+	'hasQuestions'      => ! empty( $questions ),
+	'canViewAnswers'    => $can_view_answers,
 	'modalOpen'         => false,
 	'rsvpLoading'       => false,
 	'rsvpNotice'        => '',
+	'questionsError'    => '',
 	'labels'            => $rsvp_labels,
 );
 
@@ -122,6 +156,7 @@ wp_interactivity_state(
 	'wporg/event-rsvp',
 	array(
 		'isAttending'    => $is_attending,
+		'isNotAttending' => ! $is_attending,
 		'countLabel'     => sprintf(
 			/* translators: %s: attendee count. */
 			_n( '%s going', '%s going', $count, 'wporg-groups-frontend' ),
@@ -261,6 +296,52 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							}
 							?>
 						</p>
+
+						<?php if ( $questions ) : ?>
+							<?php $error_id = 'wporg-event-rsvp-questions-error-' . $event_post_id; ?>
+							<?php // Stays visible while attending: an organizer can add a required question after people have signed up, and correcting an answer shouldn't mean cancelling the RSVP. ?>
+							<fieldset class="wporg-event-rsvp__questions">
+								<legend class="screen-reader-text">
+									<?php esc_html_e( 'Registration questions', 'wporg-groups-frontend' ); ?>
+								</legend>
+								<?php foreach ( $questions as $question ) : ?>
+									<?php $field_id = 'wporg-event-rsvp-question-' . $event_post_id . '-' . $question['id']; ?>
+									<div class="wporg-event-rsvp__question">
+										<label class="wporg-event-rsvp__question-label" for="<?php echo esc_attr( $field_id ); ?>">
+											<?php echo esc_html( $question['label'] ); ?>
+											<?php if ( $question['required'] ) : ?>
+												<span class="wporg-event-rsvp__question-required" aria-hidden="true">*</span>
+											<?php endif; ?>
+										</label>
+										<input
+											type="text"
+											id="<?php echo esc_attr( $field_id ); ?>"
+											class="wporg-event-rsvp__question-input"
+											data-question-id="<?php echo esc_attr( $question['id'] ); ?>"
+											maxlength="<?php echo (int) MAX_ANSWER_LENGTH; ?>"
+											value="<?php echo esc_attr( $own_answers[ $question['id'] ] ?? '' ); ?>"
+											aria-describedby="<?php echo esc_attr( $error_id ); ?>"
+											<?php echo $question['required'] ? 'required aria-required="true"' : ''; ?>
+										/>
+									</div>
+								<?php endforeach; ?>
+								<p
+									class="wporg-event-rsvp__questions-error"
+									id="<?php echo esc_attr( $error_id ); ?>"
+									data-wp-text="context.questionsError"
+								></p>
+								<button
+									type="button"
+									class="wporg-event-rsvp__save-answers wp-element-button<?php echo $is_attending ? '' : ' is-hidden'; ?>"
+									data-wp-on--click="actions.saveAnswers"
+									data-wp-class--is-hidden="state.isNotAttending"
+									data-wp-bind--disabled="context.rsvpLoading"
+								>
+									<?php esc_html_e( 'Save answers', 'wporg-groups-frontend' ); ?>
+								</button>
+							</fieldset>
+						<?php endif; ?>
+
 						<button
 							type="button"
 							class="wporg-event-rsvp__modal-rsvp-btn wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
@@ -310,6 +391,12 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							<?php if ( ! empty( $attendee['bio'] ) ) : ?>
 								<span class="wporg-event-rsvp__attendee-bio"><?php echo esc_html( $attendee['bio'] ); ?></span>
 							<?php endif; ?>
+							<?php foreach ( $attendee['answers'] as $answer ) : ?>
+								<span class="wporg-event-rsvp__attendee-answer">
+									<strong><?php echo esc_html( $answer['label'] ); ?>:</strong>
+									<?php echo esc_html( $answer['answer'] ); ?>
+								</span>
+							<?php endforeach; ?>
 						</div>
 					</a>
 				<?php endforeach; ?>

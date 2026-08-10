@@ -89,7 +89,22 @@ function register_page(): void {
 }
 
 /**
+ * Whether the current user may archive or reactivate groups.
+ *
+ * Extracted so the capability is named in one place and can be asserted
+ * directly in tests, matching `Groups\Messaging\current_user_can_send_messages()`.
+ *
+ * @return bool
+ */
+function current_user_can_archive_groups(): bool {
+	return current_user_can( 'manage_sites' );
+}
+
+/**
  * Archive or reactivate a group using WordPress core's site status.
+ *
+ * Callers are responsible for the capability check; use
+ * `current_user_can_archive_groups()`. Both entry points in this file do.
  *
  * @param int  $site_id  Site ID to update.
  * @param bool $archived Whether the group should be archived.
@@ -127,7 +142,7 @@ function update_group_archive_status( int $site_id, bool $archived ) {
  * Process an archive/reactivate request from Network Admin.
  */
 function handle_update(): void {
-	if ( ! current_user_can( 'manage_sites' ) ) {
+	if ( ! current_user_can_archive_groups() ) {
 		wp_die(
 			esc_html__( 'Sorry, you are not allowed to manage groups.', 'wordcamporg' ),
 			'',
@@ -166,7 +181,7 @@ function handle_update(): void {
  * Render the Groups management screen.
  */
 function render_page(): void {
-	if ( ! current_user_can( 'manage_sites' ) ) {
+	if ( ! current_user_can_archive_groups() ) {
 		wp_die( esc_html__( 'Sorry, you are not allowed to manage groups.', 'wordcamporg' ) );
 	}
 

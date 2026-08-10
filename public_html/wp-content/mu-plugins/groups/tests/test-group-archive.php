@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use function WordCamp\Groups\Archive\current_user_can_archive_groups;
 use function WordCamp\Groups\Archive\get_group_sites;
 use function WordCamp\Groups\Archive\get_group_site_count;
 use function WordCamp\Groups\Archive\update_group_archive_status;
@@ -161,5 +162,36 @@ class Test_Group_Archive extends Groups_TestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'invalid_group_site', $result->get_error_code() );
+	}
+
+	/**
+	 * Administrators of a group site manage that group, not the network,
+	 * so archiving has to stay out of reach for them.
+	 */
+	public function test_group_administrators_cannot_archive_groups() {
+		$user_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		wp_set_current_user( $user_id );
+
+		$this->assertFalse( current_user_can_archive_groups() );
+	}
+
+	/**
+	 * Network site managers can.
+	 */
+	public function test_network_admins_can_archive_groups() {
+		$user_id = self::factory()->user->create();
+
+		// `grant_super_admin()` reads `site_admins` off whichever network is
+		// current, which in this fixture isn't the groups network. Set the
+		// option `get_super_admins()` actually consults instead.
+		$original = get_site_option( 'site_admins' );
+
+		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
+		wp_set_current_user( $user_id );
+
+		$this->assertTrue( current_user_can_archive_groups() );
+
+		update_site_option( 'site_admins', $original );
 	}
 }

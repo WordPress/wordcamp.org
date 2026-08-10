@@ -289,7 +289,7 @@ class Test_Groups_RSVP_Questions extends Groups_TestCase {
 		$this->assertSame( 'wporg_groups_missing_answers', $response->get_error_code() );
 
 		$rsvp = ( new \GatherPress\Core\Rsvp\Rsvp( $event_id ) )->get( $user_id );
-		$this->assertSame( 'no_status', $rsvp['status'] );
+		$this->assertSame( 'no_status', $rsvp['status'] ?? 'no_status' );
 	}
 
 	/**

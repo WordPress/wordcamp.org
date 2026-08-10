@@ -49,14 +49,16 @@ function get_scoped_opt_in_meta_key( ?int $blog_id = null ): string {
  * lookup -- until a member makes an explicit choice on this group's site,
  * so existing opt-outs aren't silently reset to the default.
  *
- * @param mixed  $value    The filtered meta value. Untouched (null) unless a plugin upstream already set it.
+ * @param mixed  $value    The filtered meta value. A non-null value means an earlier
+ *                         `get_user_metadata` callback already short-circuited the read,
+ *                         which this filter must not override.
  * @param int    $object_id User ID.
  * @param string $meta_key  Meta key being read.
  * @param bool   $single    Whether to return a single value.
  * @return mixed
  */
 function scope_opt_in_read_to_current_group( $value, int $object_id, string $meta_key, bool $single ) {
-	if ( GATHERPRESS_OPT_IN_META_KEY !== $meta_key ) {
+	if ( GATHERPRESS_OPT_IN_META_KEY !== $meta_key || null !== $value ) {
 		return $value;
 	}
 
@@ -78,20 +80,20 @@ function scope_opt_in_read_to_current_group( $value, int $object_id, string $met
  * GatherPress's own network-wide meta key is never touched from a group
  * site -- each group keeps an independent value.
  *
- * @param mixed  $check     Whether to short-circuit the write. Untouched (null) unless a plugin upstream already handled it.
+ * @param mixed  $check     Whether to short-circuit the write. A non-null value means an
+ *                          earlier `update_user_metadata` callback already handled it, and
+ *                          this filter must not write again.
  * @param int    $object_id User ID.
  * @param string $meta_key  Meta key being written.
  * @param mixed  $meta_value New value.
  * @return mixed
  */
 function scope_opt_in_write_to_current_group( $check, int $object_id, string $meta_key, $meta_value ) {
-	if ( GATHERPRESS_OPT_IN_META_KEY !== $meta_key ) {
+	if ( GATHERPRESS_OPT_IN_META_KEY !== $meta_key || null !== $check ) {
 		return $check;
 	}
 
-	update_user_meta( $object_id, get_scoped_opt_in_meta_key(), $meta_value );
-
-	return true;
+	return update_user_meta( $object_id, get_scoped_opt_in_meta_key(), $meta_value );
 }
 
 /**

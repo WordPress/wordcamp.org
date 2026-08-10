@@ -14,6 +14,7 @@
 
 namespace WordCamp\Groups\Archive;
 
+use WordCamp\Groups\Frontend\Sponsors;
 use WP_Error;
 use WP_Site;
 
@@ -28,6 +29,9 @@ const PER_PAGE      = 50;
 // before add_submenu_page() reads it to build those pages' hookname. Otherwise WordPress
 // registers their hooks under the wrong name and denies access to both screens.
 add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_page', 9 );
+// Priority 20, after Site_Provisioning's and Messaging's default-priority tabs, so this
+// link always lands last regardless of file load order.
+add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_sponsors_link', 20 );
 add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_update' );
 
 /**
@@ -108,6 +112,31 @@ function register_page(): void {
 		'manage_sites',
 		PAGE_SLUG,
 		__NAMESPACE__ . '\\render_page'
+	);
+}
+
+/**
+ * Add a "Sponsors" tab that links out to the sponsor post type's edit screen.
+ *
+ * Sponsors are stored on the events network, not this one -- see the file
+ * header of `wporg-groups-frontend/inc/sponsors.php` for why -- so this is a
+ * plain link to that site's own `edit.php`, not a page registered here. No
+ * callback is passed, so WordPress renders the raw URL as the menu item's
+ * `href` instead of routing it through `admin.php?page=`.
+ */
+function register_sponsors_link(): void {
+	$store_blog_id = Sponsors\get_store_blog_id();
+
+	if ( ! $store_blog_id ) {
+		return;
+	}
+
+	add_submenu_page(
+		PAGE_SLUG,
+		__( 'Sponsors', 'wordcamporg' ),
+		__( 'Sponsors', 'wordcamporg' ),
+		'manage_network',
+		get_admin_url( $store_blog_id, 'edit.php?post_type=' . Sponsors\POST_TYPE )
 	);
 }
 

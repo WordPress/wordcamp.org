@@ -1,37 +1,42 @@
 const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
 const { pinEventFarInFuture } = require( './utils/pin-event-far-future' );
+const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding' );
 
 /**
  * The `wporg/event-manage` block's "Message attendees" action (#1822),
  * stacked on top of the pre-existing "Message all members" action (#1821).
  *
- * Requires the `eventorganiser1` / `password` and `member1` / `password`
- * test users from the groups-gatherpress-compat-test skill's
- * environment-setup step.
+ * Requires the `eventorganiser2` / `eventorganiser4` / `eventorganiser5`
+ * (all `password`) and `member1` / `password` test users from the
+ * groups-gatherpress-compat-test skill's environment-setup step. Each of
+ * this file's three tests uses its own dedicated account, not just a
+ * different account from OTHER spec files — this file's own three tests
+ * also run concurrently against each other under `fullyParallel`, and
+ * sharing one account between them hit the same session-collision failure
+ * as sharing one across files (this environment only supports one active
+ * session per user; see the comment in `login.js`). `login()`'s own retry
+ * only covers a collision during the login request itself — it can't help
+ * once a later worker's login invalidates an earlier worker's
+ * already-established session mid-test.
  */
 test.describe( 'event manage — message attendees', () => {
 	/**
-	 * Creates a fresh event as `eventorganiser1` via the wp-admin block
-	 * editor (same flow as event-organiser.spec.js) and returns its
-	 * front-end permalink, so this spec doesn't depend on any
+	 * Creates a fresh event as the given organiser account via the
+	 * wp-admin block editor (same flow as event-organiser.spec.js) and
+	 * returns its front-end permalink, so this spec doesn't depend on any
 	 * hand-seeded event data.
 	 *
 	 * @param {import('@playwright/test').Page} page
+	 * @param {string}                          username
 	 */
-	async function createEventAsOrganiser( page ) {
-		await login( page, 'eventorganiser1', 'password' );
+	async function createEventAsOrganiser( page, username ) {
+		await login( page, username, 'password' );
 
 		await page.goto( 'wp-admin/post-new.php?post_type=gatherpress_event' );
-		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 20000 } );
+		await page.locator( 'iframe[name="editor-canvas"]' ).waitFor( { state: 'attached', timeout: 60000 } );
 
-		const welcomeGuideHeading = page.getByRole( 'heading', { name: 'Welcome to the editor' } );
-		try {
-			await welcomeGuideHeading.waitFor( { state: 'visible', timeout: 3000 } );
-			await page.keyboard.press( 'Escape' );
-		} catch {
-			// Guide didn't appear (already dismissed for this user) — nothing to do.
-		}
+		await dismissEditorOnboarding( page );
 
 		const title = `Messaging Test Event ${ Date.now() }`;
 		const editorCanvas = page.locator( 'iframe[name="editor-canvas"]' ).contentFrame();
@@ -74,7 +79,7 @@ test.describe( 'event manage — message attendees', () => {
 	} ) => {
 		test.slow(); // Shares the block editor's cold-boot cost from createEventAsOrganiser().
 
-		await createEventAsOrganiser( page );
+		await createEventAsOrganiser( page, 'eventorganiser2' );
 
 		await page.getByRole( 'button', { name: 'Message attendees' } ).click();
 
@@ -124,7 +129,7 @@ test.describe( 'event manage — message attendees', () => {
 	test( 'Message all members has no recipient checkboxes', async ( { page } ) => {
 		test.slow();
 
-		await createEventAsOrganiser( page );
+		await createEventAsOrganiser( page, 'eventorganiser4' );
 
 		await page.getByRole( 'button', { name: 'Message all members' } ).click();
 
@@ -140,7 +145,7 @@ test.describe( 'event manage — message attendees', () => {
 		test.slow();
 
 		const organiserPage = await ( await browser.newContext() ).newPage();
-		const eventUrl = await createEventAsOrganiser( organiserPage );
+		const eventUrl = await createEventAsOrganiser( organiserPage, 'eventorganiser5' );
 		await organiserPage.close();
 
 		await login( page, 'member1', 'password' );

@@ -23,7 +23,11 @@ const PAGE_SLUG     = 'wporg-groups';
 const UPDATE_ACTION = 'wporg_groups_update_archive_status';
 const PER_PAGE      = 50;
 
-add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_page' );
+// Priority 9, before Site_Provisioning's and Messaging's default-priority submenu
+// registrations -- add_menu_page() must run first so it sets $admin_page_hooks[PAGE_SLUG]
+// before add_submenu_page() reads it to build those pages' hookname. Otherwise WordPress
+// registers their hooks under the wrong name and denies access to both screens.
+add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_page', 9 );
 add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_update' );
 
 /**

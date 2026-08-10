@@ -48,6 +48,24 @@ docker compose exec wordcamp.test wp plugin install \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
+**After bumping the pinned GatherPress version, also install/update
+[GatherPress Alpha](https://github.com/GatherPress/gatherpress-alpha)
+(version-locked to core) and run its one-time migration.** GatherPress ships
+breaking *content* migrations (old `gatherpress/icon` block usage, old
+`gatherpress/venue-map` width/height attributes, renamed RSVP settings
+values) through this companion plugin rather than an automatic upgrade
+routine. Skipping this step is exactly what it looks like when a venue's
+address/phone/website/map silently vanish from the front end after a version
+bump — it reads like a GatherPress regression but is actually just unmigrated
+data:
+
+```bash
+docker compose exec wordcamp.test wp plugin install \
+  https://github.com/GatherPress/gatherpress-alpha/releases/download/0.35.0/gatherpress-alpha.0.35.0.zip \
+  --activate --url=events.wordpress.test/group/sunshine-coast-qld/
+docker compose exec wordcamp.test wp gatherpress alpha fix --url=events.wordpress.test/group/sunshine-coast-qld/
+```
+
 Create one test user per role tier, with **both** a browser login password
 and a REST application password (the browser pass needs the former, the
 REST pass needs the latter):

@@ -65,12 +65,6 @@ final class Plugin {
 	}
 
 	/**
-	 * Applies the dedicated, monotonic end-series mutation.
-	 *
-	 * @param int    $post_id Event post ID.
-	 * @param string $until   Inclusive final occurrence date.
-	 */
-	/**
 	 * The schedule metadata that is frozen once a series is published.
 	 *
 	 * @return string[]
@@ -103,9 +97,30 @@ final class Plugin {
 	 * @return mixed Whatever the callback returns.
 	 */
 	public static function with_schedule_unlocked( int $post_id, callable $callback ) {
+		return self::with_schedule_keys_allowed( $post_id, self::locked_schedule_meta_keys(), $callback );
+	}
+
+	/**
+	 * Runs a callback with specific schedule keys writable for one post.
+	 *
+	 * The allowlist entry is merged into whatever is already there and put back
+	 * afterwards, so an inner lift never narrows or cancels an outer one. Both
+	 * public entry points go through here for that reason: two hand-rolled
+	 * save/restore blocks would only have to drift once to reintroduce the
+	 * silent-loss bug they exist to prevent.
+	 *
+	 * @param int      $post_id  Event post ID.
+	 * @param string[] $keys     Meta keys to make writable for the duration.
+	 * @param callable $callback Work to run while the lock is lifted.
+	 * @return mixed Whatever the callback returns.
+	 */
+	private static function with_schedule_keys_allowed( int $post_id, array $keys, callable $callback ) {
 		$previous = self::$schedule_updates_allowed[ $post_id ] ?? null;
 
-		self::$schedule_updates_allowed[ $post_id ] = array_fill_keys( self::locked_schedule_meta_keys(), true );
+		self::$schedule_updates_allowed[ $post_id ] = array_merge(
+			$previous ?? array(),
+			array_fill_keys( $keys, true )
+		);
 
 		try {
 			return $callback();
@@ -129,17 +144,14 @@ final class Plugin {
 		$end_type_key = Rule::META_PREFIX . 'end_type';
 		$until_key    = Rule::META_PREFIX . 'until';
 
-		self::$schedule_updates_allowed[ $post_id ] = array(
-			$end_type_key => true,
-			$until_key    => true,
+		self::with_schedule_keys_allowed(
+			$post_id,
+			array( $end_type_key, $until_key ),
+			static function () use ( $post_id, $end_type_key, $until_key, $until ): void {
+				update_post_meta( $post_id, $end_type_key, 'until' );
+				update_post_meta( $post_id, $until_key, $until );
+			}
 		);
-
-		try {
-			update_post_meta( $post_id, $end_type_key, 'until' );
-			update_post_meta( $post_id, $until_key, $until );
-		} finally {
-			unset( self::$schedule_updates_allowed[ $post_id ] );
-		}
 	}
 
 	/** Registers extension hooks. */

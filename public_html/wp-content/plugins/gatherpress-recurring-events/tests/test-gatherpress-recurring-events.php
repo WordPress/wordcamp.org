@@ -170,6 +170,33 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 'weekly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
 	}
 
+	/**
+	 * A nested end-condition write does not cancel the surrounding lift.
+	 *
+	 * Both entry points share one allowlist slot, so an inner lift that
+	 * replaced and then cleared that slot would re-lock the schedule for the
+	 * rest of the outer callback, silently dropping the writes that follow it.
+	 */
+	public function test_schedule_unlock_survives_a_nested_end_condition_write(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		Plugin::with_schedule_unlocked(
+			$post_id,
+			static function () use ( $post_id ): void {
+				Plugin::update_end_condition( $post_id, '2026-12-31' );
+
+				update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'monthly' );
+			}
+		);
+
+		$this->assertSame( 'until', get_post_meta( $post_id, Rule::META_PREFIX . 'end_type', true ) );
+		$this->assertSame( '2026-12-31', get_post_meta( $post_id, Rule::META_PREFIX . 'until', true ) );
+		$this->assertSame( 'monthly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+
+		$this->assertFalse( update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'yearly' ) );
+		$this->assertSame( 'monthly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+	}
+
 	/** Published recurrence metadata cannot be deleted to bypass the lock. */
 	public function test_published_recurrence_metadata_cannot_be_deleted(): void {
 		$post_id = $this->create_published_recurring_event();

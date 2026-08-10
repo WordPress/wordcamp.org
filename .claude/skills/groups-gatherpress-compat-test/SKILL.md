@@ -198,6 +198,17 @@ don't just check curl responses render correctly, click through:
 
 - **Event create/edit** — via the front-end modal (not wp-admin). Confirm
   the venue picker, date/time fields, and featured image work.
+- **Also open the block editor for a `gatherpress_event` post in wp-admin**
+  (not just the front-end modal) and check the browser console / PHP error
+  log for fatals. WordPress enumerates *every* registered block pattern —
+  including `Inserter: no` ones never placed in any template — via
+  `/wp/v2/block-patterns/patterns` on every block-editor page load,
+  executing each pattern's PHP to build the response. A pattern that's
+  broken but unused on the front end (wrong query, undefined method, etc.)
+  only surfaces here. This is exactly how a pre-existing bug (three
+  `groups-site` event-cards patterns importing the wrong GatherPress class —
+  fixed in #1874) went undetected through multiple GatherPress versions
+  until a real production rollout finally hit it.
 - **RSVP** — as Member and as Event Organiser.
 - **Group settings tabs** (Events / Venues / Members / Design / About) —
   confirm each tab loads without a console error or 403, and that
@@ -305,6 +316,79 @@ docker compose exec wordcamp.test mv wp-content/plugins/gatherpress.disabled wp-
   lookups rather than querying per row (this was a specific fix in #1793 —
   confirm it hasn't regressed by checking query count on a page with many
   members/RSVPs, e.g. via Query Monitor or `$wpdb->num_queries`).
+
+## 7. Production rollout notes
+
+Once the passes above are green and the version-bump PR is merged, the
+actual production deploy has its own gotchas — found the hard way during
+the 0.35.0 rollout on `events.wordpress.org`.
+
+- **`wp plugin update` alone is not sufficient/durable on production.**
+  `wp-content/plugins` there is managed via `svn:externals` pinned to a
+  specific tag per plugin. Check what's actually tracked *before* updating
+  anything: `svn propget svn:externals -R` (run from `wp-content/plugins`).
+  `wp plugin update` only replaces files on disk — it does **not** update
+  the tracked external pin, so the change is a silent, undurable override
+  that the next `svn update` (run by anyone, any time, for any reason)
+  would silently revert. To make it durable: `svn propedit svn:externals .`
+  and hand-edit only the one plugin's line (this property holds ~30
+  plugins' pins in a single multi-line blob — don't reconstruct it with a
+  scripted find/replace, one wrong character corrupts every other plugin's
+  pin too). Review with `svn diff --depth=empty .` and confirm **only**
+  that one line changed before committing. Then `svn commit` and
+  `svn update` — this should reconcile with zero file churn, since it's
+  the same code `wp plugin update` already fetched from the same wp.org
+  release.
+
+- **Run GatherPress Alpha's fix per-site with visible progress, not the
+  bare `wp gatherpress alpha fix` command** — not only because of the
+  100-site cap (see the `[gatherpress-alpha#66]` note above), but because
+  the bare command is completely silent until it finishes, which reads as
+  "hung" on a slow/first-ever run and invites a premature Ctrl-C. Call the
+  same underlying method directly instead, scoped to one site:
+  ```bash
+  wp eval '
+  $setup = \GatherPress_Alpha\Setup::get_instance();
+  $ref = new ReflectionMethod( $setup, "run_fixes" );
+  $ref->setAccessible( true );
+  echo "Starting...\n";
+  $start = microtime( true );
+  $ref->invoke( $setup );
+  echo "Done in " . round( microtime( true ) - $start, 2 ) . "s\n";
+  echo "gatherpress_alpha_last_version: " . get_option( "gatherpress_alpha_last_version" ) . "\n";
+  ' --url=<site>
+  ```
+  This runs the exact same code `fix()` would call — `fix()` itself only
+  adds a capability check (irrelevant under CLI) and the buggy/capped
+  multisite loop, both irrelevant/skipped here since `--url` already scopes
+  wp-cli to one site. If a run does get interrupted early, it's safe:
+  GatherPress Alpha's fixes are idempotent (confirmed by an upstream
+  reviewer on PR #1873, and again live here — an interrupted run left no
+  `gatherpress_alpha_last_version` recorded at all, so re-running just
+  started clean with nothing partially applied).
+
+- **Checking whether a site is exposed to the RSVP migration-gap bug
+  (gatherpress#2135) needs the raw DB value, not `wp option get`.**
+  `gatherpress-groups-tweaks.php` installs a `pre_option_gatherpress_settings`
+  filter that unconditionally returns a synthetic
+  `{show_timezone, enable_anonymous_rsvp}` array regardless of what's
+  actually in the database — so `wp option get gatherpress_settings`
+  always looks identical and tells you nothing about `rsvp_mode`. Query
+  the DB directly instead:
+  ```bash
+  wp eval 'global $wpdb; var_dump( $wpdb->get_var( $wpdb->prepare(
+    "SELECT option_value FROM $wpdb->options WHERE option_name = %s",
+    "gatherpress_settings" ) ) );' --url=<site>
+  ```
+
+- **A WP-CLI command producing no output for N seconds is not the same as
+  a hung one** — don't judge by wall-clock time alone, check for an
+  actually-live query. This environment didn't have the `mysqladmin`/`mysql`
+  CLI binaries available (DB reachable only through PHP's own driver), so
+  use `wp eval` with `$wpdb` instead:
+  ```bash
+  wp eval 'global $wpdb; foreach ( $wpdb->get_results( "SHOW FULL PROCESSLIST" ) as $row ) { if ( "Sleep" !== $row->Command ) { print_r( $row ); } }' --url=<site>
+  ```
 
 ## Known-issues appendix
 

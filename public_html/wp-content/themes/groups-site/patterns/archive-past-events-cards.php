@@ -13,7 +13,7 @@
 
 namespace WordCamp\Groups\Site\Patterns\ArchivePastEventsCards;
 
-use GatherPress\Core\Blocks\Event_Query;
+use GatherPress\Core\Event\Query as Event_Query;
 use function WordCamp\Groups\Site\Event_Cards\render_event_cards;
 
 defined( 'ABSPATH' ) || exit;

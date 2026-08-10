@@ -182,7 +182,7 @@ class WordCamp_New_Site {
 			return;
 		}
 
-		$validate_url = static function ( $url ) use ( $wordcamp_id ) {
+		$validate_url       = static function ( $url ) use ( $wordcamp_id, $key ) {
 			$url = str_starts_with( $url, 'http' ) ? $url : 'http://' . $url;
 			$url = set_url_scheme( esc_url_raw( $url ), 'https' );
 
@@ -196,10 +196,44 @@ class WordCamp_New_Site {
 			$parsed_url = wp_parse_url( $url );
 
 			if ( ! self::url_matches_expected_format( $parsed_url['host'], $parsed_url['path'], $wordcamp_id ) ) {
-				wp_die( "The URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code>, <code>events.wordpress.org/city/year/type/</code>, or <code>campus.wordpress.org/campus-name/</code>. Please press the back button and update it." );
+				wp_die(
+					"The URL doesn't match the expected format. It should be either <code>city.wordcamp.org/year/</code>, <code>events.wordpress.org/city/year/type/</code>, or <code>campus.wordpress.org/campus-name/</code>.",
+					'',
+					array( 'back_link' => true )
+				);
 			}
 
-			return esc_url( $url );
+			$url = esc_url( $url );
+
+			// Normalised so that a save which leaves the field alone is always allowed through.
+			$stored_urls = array_map(
+				static function ( $stored_url ) {
+					return esc_url( trailingslashit( set_url_scheme( $stored_url, 'https' ) ) );
+				},
+				(array) get_post_meta( $wordcamp_id, $key, false )
+			);
+
+			if ( ! in_array( $url, $stored_urls, true ) && ! current_user_can( 'wordcamp_wrangle_wordcamps' ) ) {
+				// Site creation needs `manage_sites`, so anyone else naming a live site is aiming `_site_id` at another event's.
+				if ( self::url_names_an_existing_site( $url ) ) {
+					wp_die(
+						'That URL already belongs to a site on the network. Update it, or ask a WordCamp wrangler for help.',
+						'',
+						array( 'back_link' => true )
+					);
+				}
+
+				// The site doesn't exist yet, but two events waiting on the same URL would both resolve to it.
+				if ( self::url_is_claimed( $url, $wordcamp_id ) ) {
+					wp_die(
+						'That URL is already in use by another event. Update it, or ask a WordCamp wrangler for help.',
+						'',
+						array( 'back_link' => true )
+					);
+				}
+			}
+
+			return $url;
 		};
 		$find_existing_site = static function ( $url ) {
 			if ( ! $url ) {
@@ -207,7 +241,7 @@ class WordCamp_New_Site {
 			}
 
 			$parsed_url = wp_parse_url( $url );
-			$network_id = get_domain_network_id( $parsed_url['host'] );
+			$network_id = get_domain_network_id( $parsed_url['host'], $parsed_url['path'] );
 
 			return domain_exists( $parsed_url['host'], $parsed_url['path'], $network_id );
 		};
@@ -287,6 +321,68 @@ class WordCamp_New_Site {
 		}
 
 		return 1 === $match;
+	}
+
+	/**
+	 * Check if a URL names a site that already exists on the network.
+	 *
+	 * @param string $url The normalised URL being saved.
+	 *
+	 * @return bool
+	 */
+	protected static function url_names_an_existing_site( $url ) {
+		$parsed_url = wp_parse_url( $url );
+
+		if ( ! isset( $parsed_url['host'], $parsed_url['path'] ) ) {
+			return true;
+		}
+
+		return (bool) domain_exists( $parsed_url['host'], $parsed_url['path'], get_domain_network_id( $parsed_url['host'], $parsed_url['path'] ) );
+	}
+
+	/**
+	 * Check if a URL has already been claimed by a different event post.
+	 *
+	 * Callers reject URLs that name an existing site first, so nothing can be pointing a `_site_id` at it yet.
+	 *
+	 * @param string $url         The normalised URL being saved.
+	 * @param int    $wordcamp_id The event post being saved.
+	 *
+	 * @return bool
+	 */
+	protected static function url_is_claimed( $url, $wordcamp_id ) {
+		// Expanded rather than normalising the stored side, which would mean loading every event's URL meta.
+		$url_variants = array();
+
+		foreach ( array( 'https', 'http' ) as $scheme ) {
+			$variant        = set_url_scheme( $url, $scheme );
+			$url_variants[] = $variant;
+			$url_variants[] = untrailingslashit( $variant );
+		}
+
+		return (bool) get_posts( array(
+			'post_type'      => WCPT_POST_TYPE_ID,
+
+			// Not `any`, which would exclude trashed events -- their sites outlive the post.
+			'post_status'    => array_merge(
+				array_keys( WordCamp_Loader::get_post_statuses() ),
+				array( 'draft', 'pending', 'publish', 'private', 'future', 'trash' )
+			),
+
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+			'post__not_in'   => array( $wordcamp_id ),
+			'cache_results'  => false,
+
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Only runs when an event's URL is saved.
+			'meta_query'     => array(
+				array(
+					'key'     => array( 'URL', 'Secondary Site' ),
+					'value'   => array_values( array_unique( $url_variants ) ),
+					'compare' => 'IN',
+				),
+			),
+		) );
 	}
 
 	/**

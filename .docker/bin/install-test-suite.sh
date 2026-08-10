@@ -16,7 +16,7 @@ TESTS_CONFIG="/tmp/wp/wordpress-tests-lib/wp-tests-config.php"
 # Same pinned release used by local dev (see the groups-gatherpress-compat-test
 # skill and PR #1793's test plan). GatherPress is gitignored/third-party, so the
 # `wporg-groups-frontend`/`groups` PHPUnit suites need it installed before they run.
-GATHERPRESS_VERSION="0.34.0-alpha.2"
+GATHERPRESS_VERSION="0.35.0"
 GATHERPRESS_DIR="/app/public_html/wp-content/plugins/gatherpress"
 
 db_ready() {

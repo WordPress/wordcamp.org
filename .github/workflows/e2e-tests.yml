@@ -44,7 +44,7 @@ jobs:
 
     - name: Install PHP dependencies
       # wporg-mu-plugins (installed via composer, then moved into place by a
-      # post-install script — see composer.json's installer-paths) is loaded
+      # post-install script — see composer-dev.json's installer-paths) is loaded
       # unconditionally by load-other-mu-plugins.php; without it every
       # request, including wp-cli, fatals.
       run: |
@@ -111,7 +111,7 @@ jobs:
     - name: Install GatherPress and activate the Groups event plugins
       run: |
         docker compose exec -T wordcamp.test wp plugin install \
-          https://github.com/GatherPress/gatherpress/releases/download/0.34.0-alpha.2/gatherpress.0.34.0-alpha.2.zip \
+          https://github.com/GatherPress/gatherpress/releases/download/0.35.0/gatherpress.0.35.0.zip \
           --url=events.wordpress.test/group/sunshine-coast-qld/
         docker compose exec -T wordcamp.test wp plugin activate \
           gatherpress gatherpress-recurring-events \
@@ -130,6 +130,18 @@ jobs:
         }
         create_user organiser1 editor
         create_user eventorganiser1 author
+        # Dedicated per-spec accounts, not a shared eventorganiser1, for
+        # every spec that logs in as an author and can run concurrently
+        # under fullyParallel — this environment only supports one active
+        # session per user, so sharing an account risks one worker's login
+        # invalidating another's already-established session mid-test (see
+        # the comment in tests/e2e/utils/login.js). event-manage-messaging.spec.js
+        # needs THREE of its own (eventorganiser2/4/5) since its own three
+        # tests also run concurrently against each other.
+        create_user eventorganiser2 author
+        create_user eventorganiser3 author
+        create_user eventorganiser4 author
+        create_user eventorganiser5 author
         create_user member1 subscriber
 
     - name: Create required pages

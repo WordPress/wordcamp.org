@@ -181,8 +181,12 @@ if ( ! class_exists( 'WordCamp_Admin' ) ) :
 				return;
 			}
 
+			if ( ! current_user_can( 'wordcamp_manage_mentors' ) ) {
+				return;
+			}
+
 			//phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in `metabox_save` in class-event-admin.php.
-			$username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ];
+			$username = $_POST[ wcpt_key_to_str( 'Mentor WordPress.org User Name', 'wcpt_' ) ] ?? '';
 
 			$this->add_mentor( get_post( $post_id ), $username );
 

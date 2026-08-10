@@ -36,11 +36,13 @@ import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from '../../event-manage/venue-editor';
 import RecurrenceControls, { normalizeRecurrence } from '../../../components/recurrence-controls';
+import RsvpQuestionsEditor from '../../event-manage/rsvp-questions-editor';
 
 const NS =
 	( window.wporgGroupsEventModal &&
 		window.wporgGroupsEventModal.restNamespace ) ||
 	'wporg-groups/v1';
+const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 
 let coreBlocksRegistered = false;
 
@@ -186,6 +188,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 		venue_select: '',
 		is_online: false,
 		online_event_link: '',
+		rsvp_questions: [],
 	} );
 	const [ initialDescription, setInitialDescription ] = useState( '' );
 	const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
@@ -211,6 +214,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					venue_select: res.fields.venue_id ? String( res.fields.venue_id ) : '',
 					is_online: !! res.fields.is_online,
 					online_event_link: res.fields.online_event_link || '',
+					rsvp_questions: res.fields.rsvp_questions || [],
 				} );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( { id: res.fields.featured_image_id || 0, url: res.fields.featured_image_url || '' } );
@@ -272,6 +276,9 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					online_event_link: form.is_online ? form.online_event_link : '',
 					featured_image_id: featuredImage.id,
 					recurrence,
+					// Blank-labelled rows are an empty slot the organizer added
+					// and never filled in; the server drops them too.
+					rsvp_questions: ( form.rsvp_questions || [] ).filter( ( question ) => question.label.trim() !== '' ),
 				},
 			} );
 
@@ -308,7 +315,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			h( 'label', { className: 'wporg-event-form__label' }, __( 'Featured image', 'wporg-groups-frontend' ) ),
 			h( FeaturedImagePicker, { imageId: featuredImage.id, imageUrl: featuredImage.url, onChange: ( id, url ) => setFeaturedImage( { id, url } ) } ) ),
 		h( 'div', { className: 'wporg-event-form__row' },
-			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
+			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, min: isEdit ? undefined : MINIMUM_EVENT_DATE, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( TextControl, { label: __( 'Start time', 'wporg-groups-frontend' ), type: 'time', value: form.time_start, onChange: ( v ) => updateField( 'time_start', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( DurationField, { timeStart: form.time_start, timeEnd: form.time_end, onChange: ( v ) => updateField( 'time_end', v ) } ) ),
 		h( RecurrenceControls, {
@@ -338,6 +345,10 @@ function EventForm( { eventId, onDone, onCancel } ) {
 				__nextHasNoMarginBottom: true,
 			} )
 		),
+		h( RsvpQuestionsEditor, {
+			questions: form.rsvp_questions,
+			onChange: ( value ) => updateField( 'rsvp_questions', value ),
+		} ),
 		h( 'div', { className: 'wporg-event-form__field' },
 			h( FormTokenField, {
 				label: __( 'Speakers', 'wporg-groups-frontend' ),

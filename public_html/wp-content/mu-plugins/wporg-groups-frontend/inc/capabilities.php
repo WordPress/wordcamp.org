@@ -32,13 +32,24 @@ const EVENT_MANAGER_ROLES = array( 'administrator', 'editor', 'author' );
  * REST layer's per-post capability checks (`edit_post`/`publish_post`)
  * already restrict them to events they own. Editors and administrators
  * ("Organisers") can manage everyone's events.
+ *
+ * Super admins are recognised explicitly because this is a role-array check
+ * rather than a `current_user_can()` capability check (see the docblock on
+ * `EVENT_MANAGER_ROLES`) — unlike `current_user_can_manage_group_settings()`,
+ * it doesn't automatically pick up core's super-admin capability elevation.
+ * Without this, a super admin whose nominal role on a given group is
+ * `subscriber` (e.g. a deputy who isn't the group's own organiser) would see
+ * the "Set up your group" button — gated by `current_user_can_manage_group_settings()`,
+ * which does elevate — but the modal would render invisibly, because the
+ * `wp-components`/`wp-block-editor` styles enqueued in `Modal::enqueue_supplementary_assets()`
+ * are gated on this function.
  */
 function current_user_can_manage_events(): bool {
 	if ( ! is_user_logged_in() ) {
 		return false;
 	}
 
-	$user_can = (bool) array_intersect( EVENT_MANAGER_ROLES, wp_get_current_user()->roles );
+	$user_can = is_super_admin() || (bool) array_intersect( EVENT_MANAGER_ROLES, wp_get_current_user()->roles );
 
 	/**
 	 * Filters the capability check used by the front-end event management UI.

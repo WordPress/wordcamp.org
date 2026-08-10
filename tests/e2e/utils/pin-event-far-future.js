@@ -14,10 +14,28 @@
  *
  * Must be called after the event's title is set and before publishing.
  *
+ * The "Date & time start" control lives inside GatherPress's "Event
+ * settings" document panel, which GatherPress force-opens on first load
+ * via a `domReady` callback — but that callback checks
+ * `isEditorPanelOpened()` before the panel-open preference (persisted
+ * server-side per WordPress user, not freshly defaulted each session) has
+ * necessarily finished loading, so it can race and leave the panel
+ * collapsed. Once that happens for a given test account, the panel stays
+ * collapsed on every later editor load too, since GatherPress never
+ * re-opens it after that first check. This isn't timing flakiness in the
+ * test itself, so this opens the panel explicitly instead of assuming it's
+ * already expanded.
+ *
  * @param {import('@playwright/test').Page} page
  */
 async function pinEventFarInFuture( page ) {
-	await page.getByRole( 'button', { name: 'Date & time start' } ).click();
+	const dateTimeStartButton = page.getByRole( 'button', { name: 'Date & time start' } );
+
+	if ( ! ( await dateTimeStartButton.isVisible() ) ) {
+		await page.getByRole( 'button', { name: 'Event settings', exact: true } ).click();
+	}
+
+	await dateTimeStartButton.click();
 	await page.getByRole( 'spinbutton', { name: 'Year' } ).fill( '2099' );
 	await page.keyboard.press( 'Tab' );
 	await page.keyboard.press( 'Escape' );

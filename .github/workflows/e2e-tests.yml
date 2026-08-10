@@ -130,6 +130,18 @@ jobs:
         }
         create_user organiser1 editor
         create_user eventorganiser1 author
+        # Dedicated per-spec accounts, not a shared eventorganiser1, for
+        # every spec that logs in as an author and can run concurrently
+        # under fullyParallel — this environment only supports one active
+        # session per user, so sharing an account risks one worker's login
+        # invalidating another's already-established session mid-test (see
+        # the comment in tests/e2e/utils/login.js). event-manage-messaging.spec.js
+        # needs THREE of its own (eventorganiser2/4/5) since its own three
+        # tests also run concurrently against each other.
+        create_user eventorganiser2 author
+        create_user eventorganiser3 author
+        create_user eventorganiser4 author
+        create_user eventorganiser5 author
         create_user member1 subscriber
 
     - name: Create required pages

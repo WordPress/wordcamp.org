@@ -179,7 +179,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				<span><?php esc_html_e( 'Email me updates and information about events from organisers.', 'wporg-groups-frontend' ); ?></span>
 			</label>
 			<span class="wporg-group-membership__preference-help">
-				<?php esc_html_e( 'This preference applies to all your groups.', 'wporg-groups-frontend' ); ?>
+				<?php esc_html_e( 'This preference applies to this group only. Set it separately for each group you belong to.', 'wporg-groups-frontend' ); ?>
 			</span>
 			<span
 				class="wporg-group-membership__preference-status"

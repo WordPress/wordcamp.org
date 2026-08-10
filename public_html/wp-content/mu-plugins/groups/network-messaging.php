@@ -115,7 +115,7 @@ function current_user_can_send_messages(): bool {
  */
 function add_page(): void {
 	add_submenu_page(
-		'settings.php',
+		\WordCamp\Groups\Archive\PAGE_SLUG,
 		'Message Groups',
 		'Message Groups',
 		CAPABILITY,
@@ -596,7 +596,7 @@ function redirect_with_notice( string $notice, int $groups = 0 ): void {
 			'notice' => $notice,
 			'groups' => $groups,
 		),
-		network_admin_url( 'settings.php' )
+		network_admin_url( 'admin.php' )
 	);
 
 	wp_safe_redirect( $url );

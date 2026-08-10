@@ -6,11 +6,15 @@
  * RSVPs, and memberships remain intact. Organisers cannot request archival
  * in v1; only users who can manage network sites can use this screen.
  *
+ * Only loaded on the Groups network, via
+ * `load-other-mu-plugins.php::wcorg_include_network_only_plugins()`.
+ *
  * @package WordCamp\Groups
  */
 
 namespace WordCamp\Groups\Archive;
 
+use WordCamp\Groups\Frontend\Sponsors;
 use WP_Error;
 use WP_Site;
 
@@ -20,7 +24,14 @@ const PAGE_SLUG     = 'wporg-groups';
 const UPDATE_ACTION = 'wporg_groups_update_archive_status';
 const PER_PAGE      = 50;
 
-add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_page' );
+// Priority 9, before Site_Provisioning's and Messaging's default-priority submenu
+// registrations -- add_menu_page() must run first so it sets $admin_page_hooks[PAGE_SLUG]
+// before add_submenu_page() reads it to build those pages' hookname. Otherwise WordPress
+// registers their hooks under the wrong name and denies access to both screens.
+add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_page', 9 );
+// Priority 20, after Site_Provisioning's and Messaging's default-priority tabs, so this
+// link always lands last regardless of file load order.
+add_action( 'network_admin_menu', __NAMESPACE__ . '\\register_sponsors_link', 20 );
 add_action( 'network_admin_edit_' . UPDATE_ACTION, __NAMESPACE__ . '\\handle_update' );
 
 /**
@@ -75,16 +86,57 @@ function get_group_site_count( bool $include_archived = false ): int {
 }
 
 /**
- * Register the Groups management screen in Network Admin.
+ * Register the top-level "Groups" Network Admin menu.
+ *
+ * This screen is the landing page for the menu -- Site_Provisioning and
+ * Messaging add their own screens as submenus of `PAGE_SLUG` so the three
+ * Groups admin tools live in one place instead of being scattered across
+ * `sites.php` and `settings.php`.
  */
 function register_page(): void {
+	add_menu_page(
+		__( 'Groups', 'wordcamporg' ),
+		__( 'Groups', 'wordcamporg' ),
+		'manage_sites',
+		PAGE_SLUG,
+		__NAMESPACE__ . '\\render_page',
+		'dashicons-groups'
+	);
+
+	// Explicit, so this screen -- not a duplicate "Groups" label -- is the
+	// first submenu tab under the top-level item.
 	add_submenu_page(
-		'sites.php',
+		PAGE_SLUG,
 		__( 'Groups', 'wordcamporg' ),
 		__( 'Groups', 'wordcamporg' ),
 		'manage_sites',
 		PAGE_SLUG,
 		__NAMESPACE__ . '\\render_page'
+	);
+}
+
+/**
+ * Add a "Sponsors" tab that links out to the sponsor post type's edit screen.
+ *
+ * Sponsors are stored on the events network, not this one -- see the file
+ * header of `wporg-groups-frontend/inc/sponsors.php` for why -- so this is a
+ * plain link to that site's own `edit.php`, not a page registered here. No
+ * callback is passed, so WordPress renders the raw URL as the menu item's
+ * `href` instead of routing it through `admin.php?page=`.
+ */
+function register_sponsors_link(): void {
+	$store_blog_id = Sponsors\get_store_blog_id();
+
+	if ( ! $store_blog_id ) {
+		return;
+	}
+
+	add_submenu_page(
+		PAGE_SLUG,
+		__( 'Sponsors', 'wordcamporg' ),
+		__( 'Sponsors', 'wordcamporg' ),
+		'manage_network',
+		get_admin_url( $store_blog_id, 'edit.php?post_type=' . Sponsors\POST_TYPE )
 	);
 }
 
@@ -170,7 +222,7 @@ function handle_update(): void {
 			'page'    => PAGE_SLUG,
 			'updated' => $archived ? 'archived' : 'reactivated',
 		),
-		network_admin_url( 'sites.php' )
+		network_admin_url( 'admin.php' )
 	);
 
 	wp_safe_redirect( $redirect_url );
@@ -270,7 +322,7 @@ function render_page(): void {
 					echo wp_kses_post(
 						paginate_links(
 							array(
-								'base'      => network_admin_url( 'sites.php?page=' . PAGE_SLUG . '&paged=%#%' ),
+								'base'      => network_admin_url( 'admin.php?page=' . PAGE_SLUG . '&paged=%#%' ),
 								'current'   => $current_page,
 								'total'     => $total_pages,
 								'prev_text' => __( '&laquo; Previous', 'wordcamporg' ),

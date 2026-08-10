@@ -3,7 +3,7 @@
  * Network-admin tool for provisioning new Group sites.
  *
  * Deputies/Program Managers can create a fully configured Group site
- * (`events.wordpress.org/group/{slug}/`) from Network Admin > Sites, instead
+ * (`events.wordpress.org/group/{slug}/`) from Network Admin > Groups, instead
  * of hand-running `wp_insert_site()`/`wp site create` on the sandbox.
  *
  * Only loaded on the Groups network, via
@@ -27,11 +27,11 @@ add_action( 'network_admin_menu', __NAMESPACE__ . '\register_admin_page' );
 add_action( 'admin_init', __NAMESPACE__ . '\handle_form_submission' );
 
 /**
- * Add the "Add Group Site" screen under Network Admin > Sites.
+ * Add the "Add Group Site" screen under Network Admin > Groups.
  */
 function register_admin_page() {
 	add_submenu_page(
-		'sites.php',
+		\WordCamp\Groups\Archive\PAGE_SLUG,
 		__( 'Add Group Site', 'wordcamporg' ),
 		__( 'Add Group Site', 'wordcamporg' ),
 		'manage_sites',

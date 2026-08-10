@@ -27,8 +27,15 @@ function manually_load_plugin() {
 
 	require_once $gatherpress_file;
 
+	// `group-site-provisioning.php` calls `WordCamp\Logger\log()`, which isn't
+	// autoloaded in the test environment the way it is on a real request.
+	require_once dirname( __DIR__, 2 ) . '/1-logger.php';
+
 	require_once dirname( __DIR__ ) . '/gatherpress-groups-tweaks.php';
 	require_once dirname( __DIR__ ) . '/gatherpress-recurring-events.php';
+	require_once dirname( __DIR__ ) . '/wporg-groups-archive.php';
+	require_once dirname( __DIR__ ) . '/group-site-provisioning.php';
+	require_once dirname( __DIR__ ) . '/network-messaging.php';
 }
 
 tests_add_filter( 'muplugins_loaded', __NAMESPACE__ . '\manually_load_plugin' );

@@ -54,7 +54,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ${{ steps.composer-cache.outputs.dir }}
-        key: composer-${{ runner.os }}-${{ hashFiles('composer.json') }}
+        key: composer-${{ runner.os }}-${{ hashFiles('composer.json', 'composer-dev.json') }}
         restore-keys: |
           composer-${{ runner.os }}-
 

@@ -4,6 +4,7 @@ namespace WordCamp\Groups\Tests;
 
 use function WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification;
 use const WordCamp\Groups\Frontend\Notifications\PUBLISH_NOTIFICATION_SCHEDULED_META;
+use const WordCamp\Groups\Frontend\Notifications\GATHERPRESS_OPT_IN_META_KEY;
 
 defined( 'WPINC' ) || die();
 
@@ -199,5 +200,80 @@ class Test_Groups_Notifications extends Groups_TestCase {
 
 		$this->assertFalse( $this->is_notification_scheduled( $event_id ) );
 		$this->assertSame( '', get_post_meta( $event_id, PUBLISH_NOTIFICATION_SCHEDULED_META, true ) );
+	}
+
+	/**
+	 * Event-updates opt-in is scoped per group: each group site keeps an
+	 * independent value, because GatherPress's own
+	 * `gatherpress_event_updates_opt_in` user meta is network-wide (not
+	 * per-site) and would otherwise leak a member's choice on one group to
+	 * every other group they belong to.
+	 */
+	public function test_opt_in_preference_is_isolated_per_group() {
+		$user_id = self::factory()->user->create();
+
+		update_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, 1 );
+		$this->assertSame( '1', get_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, true ) );
+
+		$other_group_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/other-group/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+
+		switch_to_blog( $other_group_id );
+		\GatherPress\Core\Setup::get_instance()->check_plugin_version();
+
+		update_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, 0 );
+		$this->assertSame(
+			'0',
+			get_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, true ),
+			"The other group must not inherit the first group's opt-in."
+		);
+
+		restore_current_blog();
+
+		$this->assertSame(
+			'1',
+			get_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, true ),
+			"Switching back must not have lost the first group's opt-in."
+		);
+
+		wp_delete_site( $other_group_id );
+	}
+
+	/**
+	 * Until a member makes an explicit choice on a given group's site, the
+	 * preference falls back to any pre-existing network-wide value, so
+	 * moving to per-group storage doesn't silently reset existing opt-outs.
+	 */
+	public function test_opt_in_falls_back_to_legacy_global_value_when_unset_for_this_group() {
+		$user_id = self::factory()->user->create();
+
+		// `add_user_meta()` bypasses the `update_user_metadata` redirect --
+		// it fires a different, unhooked filter -- so this seeds the real
+		// legacy network-wide meta key directly, as if it were written
+		// before per-group scoping existed.
+		add_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, '0' );
+
+		$this->assertSame( '0', get_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, true ) );
+		$this->assertFalse( \GatherPress\Core\User::get_instance()->has_event_updates_opt_in( $user_id ) );
+	}
+
+	/**
+	 * A group-specific override, once made, takes priority over the legacy
+	 * network-wide value for that group -- read through GatherPress's own
+	 * `has_event_updates_opt_in()`, the actual integration point that
+	 * decides whether an email goes out.
+	 */
+	public function test_opt_in_override_takes_priority_over_legacy_value_through_gatherpress_core() {
+		$user_id = self::factory()->user->create();
+
+		add_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, '1' );
+		update_user_meta( $user_id, GATHERPRESS_OPT_IN_META_KEY, 0 );
+
+		$this->assertFalse( \GatherPress\Core\User::get_instance()->has_event_updates_opt_in( $user_id ) );
 	}
 }

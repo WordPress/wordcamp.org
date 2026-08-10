@@ -64,8 +64,9 @@ function localize_block_script( string $content, array $block ): string {
 	}
 
 	$config = array(
-		'restNamespace' => 'wporg-groups/v1',
-		'siteEditorUrl' => admin_url( 'site-editor.php' ),
+		'restNamespace'   => 'wporg-groups/v1',
+		'siteEditorUrl'   => admin_url( 'site-editor.php' ),
+		'minimumEventDate' => wp_date( 'Y-m-d' ),
 	);
 
 	if ( wp_localize_script( $handle, 'wporgGroupsEventModal', $config ) ) {

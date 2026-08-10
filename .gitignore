@@ -3,6 +3,7 @@
 #
 .docker/data/*.bkp
 .docker/database
+.docker/local
 .docker/mariadb-database
 .docker/wordcamp*.pem
 .docker/test_suite
@@ -21,6 +22,8 @@ google*.html
 wp-cli.yml
 script-backups/
 node_modules/
+.composer-dev/
+composer-dev.lock
 public_html/.well-known/
 public_html/mu/
 public_html/bin/

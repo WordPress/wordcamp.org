@@ -460,3 +460,37 @@
 		color: #656a71;
 	}
 }
+
+/* === Registration questions ===
+   The editor component is shared with the event-manage modal, so these mirror
+   the rules in `event-manage/style.css` — the two blocks load separate
+   stylesheets and this one isn't on the page in the settings context. */
+
+.wporg-groups-rsvp-questions {
+	margin-bottom: 16px;
+
+	&__help {
+		font-size: 12px;
+		color: #757575;
+		margin: 0 0 8px;
+	}
+
+	&__row {
+		display: flex;
+		align-items: flex-end;
+		gap: 12px;
+		margin-bottom: 12px;
+
+		> .components-base-control {
+			flex: 1 1 auto;
+		}
+	}
+
+	&__row-actions {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		flex-shrink: 0;
+		padding-bottom: 4px;
+	}
+}

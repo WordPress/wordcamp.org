@@ -73,6 +73,22 @@ abstract class Groups_TestCase extends Database_TestCase {
 		// scenario ("site created before plugin activation") — safe to
 		// call every test.
 		\GatherPress\Core\Setup::get_instance()->check_plugin_version();
+
+		// `schedule_new_event_notification()` (#1829) sends GatherPress's
+		// "all members" email directly and synchronously from
+		// `transition_post_status` (see its own docblock for why it isn't
+		// deferred through wp-cron). Any test in this suite that publishes
+		// a `gatherpress_event` post -- most of them, incidentally, not
+		// just tests actually about notifications -- would otherwise
+		// trigger real email-template rendering, which needs runtime
+		// (theme template functions, etc.) this bootstrap doesn't load.
+		// Test_Groups_Notifications, the one test class that wants this
+		// hook active, re-adds it itself.
+		remove_action(
+			'transition_post_status',
+			'WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification',
+			10
+		);
 	}
 
 	/**

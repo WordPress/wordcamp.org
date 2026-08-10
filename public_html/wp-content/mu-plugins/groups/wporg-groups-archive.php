@@ -6,6 +6,9 @@
  * RSVPs, and memberships remain intact. Organisers cannot request archival
  * in v1; only users who can manage network sites can use this screen.
  *
+ * Only loaded on the Groups network, via
+ * `load-other-mu-plugins.php::wcorg_include_network_only_plugins()`.
+ *
  * @package WordCamp\Groups
  */
 
@@ -75,11 +78,27 @@ function get_group_site_count( bool $include_archived = false ): int {
 }
 
 /**
- * Register the Groups management screen in Network Admin.
+ * Register the top-level "Groups" Network Admin menu.
+ *
+ * This screen is the landing page for the menu -- Site_Provisioning and
+ * Messaging add their own screens as submenus of `PAGE_SLUG` so the three
+ * Groups admin tools live in one place instead of being scattered across
+ * `sites.php` and `settings.php`.
  */
 function register_page(): void {
+	add_menu_page(
+		__( 'Groups', 'wordcamporg' ),
+		__( 'Groups', 'wordcamporg' ),
+		'manage_sites',
+		PAGE_SLUG,
+		__NAMESPACE__ . '\\render_page',
+		'dashicons-groups'
+	);
+
+	// Explicit, so this screen -- not a duplicate "Groups" label -- is the
+	// first submenu tab under the top-level item.
 	add_submenu_page(
-		'sites.php',
+		PAGE_SLUG,
 		__( 'Groups', 'wordcamporg' ),
 		__( 'Groups', 'wordcamporg' ),
 		'manage_sites',
@@ -170,7 +189,7 @@ function handle_update(): void {
 			'page'    => PAGE_SLUG,
 			'updated' => $archived ? 'archived' : 'reactivated',
 		),
-		network_admin_url( 'sites.php' )
+		network_admin_url( 'admin.php' )
 	);
 
 	wp_safe_redirect( $redirect_url );
@@ -270,7 +289,7 @@ function render_page(): void {
 					echo wp_kses_post(
 						paginate_links(
 							array(
-								'base'      => network_admin_url( 'sites.php?page=' . PAGE_SLUG . '&paged=%#%' ),
+								'base'      => network_admin_url( 'admin.php?page=' . PAGE_SLUG . '&paged=%#%' ),
 								'current'   => $current_page,
 								'total'     => $total_pages,
 								'prev_text' => __( '&laquo; Previous', 'wordcamporg' ),

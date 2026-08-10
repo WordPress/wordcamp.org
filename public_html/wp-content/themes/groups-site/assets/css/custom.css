@@ -50,6 +50,11 @@
 	height: auto;
 }
 
+/* Keep the parent theme's 404 heading readable over its dark background. */
+body.error404 .site-content-container h1 {
+	color: inherit;
+}
+
 
 
 /* ==========================================================================

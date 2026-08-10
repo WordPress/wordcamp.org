@@ -33,6 +33,10 @@ class Test_Groups_Site_Event_Cards_Patterns extends Groups_TestCase {
 
 	const PATTERNS_DIR = SUT_WP_CONTENT_DIR . 'themes/groups-site/patterns';
 
+	/**
+	 * Loads the theme helper the patterns depend on, in addition to the
+	 * groups-network fixture site the parent sets up.
+	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		parent::wpSetUpBeforeClass( $factory );
 
@@ -95,6 +99,10 @@ class Test_Groups_Site_Event_Cards_Patterns extends Groups_TestCase {
 		return (string) ob_get_clean();
 	}
 
+	/**
+	 * `upcoming-events-cards` (the front-page compact list) shows an
+	 * upcoming event's title.
+	 */
 	public function test_upcoming_events_cards_renders_with_an_event() {
 		$event_id = $this->create_upcoming_event();
 		$title    = get_the_title( $event_id );
@@ -105,12 +113,20 @@ class Test_Groups_Site_Event_Cards_Patterns extends Groups_TestCase {
 		$this->assertStringContainsString( 'groups-site-event-cards--compact', $output );
 	}
 
+	/**
+	 * `upcoming-events-cards` falls back to its empty-state message when
+	 * there are no upcoming events.
+	 */
 	public function test_upcoming_events_cards_renders_empty_state_with_no_events() {
 		$output = $this->render_pattern( 'upcoming-events-cards' );
 
 		$this->assertStringContainsString( 'No upcoming events scheduled', $output );
 	}
 
+	/**
+	 * `archive-upcoming-events-cards` (the archive page's expanded grid)
+	 * shows an upcoming event's title.
+	 */
 	public function test_archive_upcoming_events_cards_renders_with_an_event() {
 		$event_id = $this->create_upcoming_event();
 		$title    = get_the_title( $event_id );
@@ -121,12 +137,20 @@ class Test_Groups_Site_Event_Cards_Patterns extends Groups_TestCase {
 		$this->assertStringContainsString( 'groups-site-event-cards--expanded', $output );
 	}
 
+	/**
+	 * `archive-upcoming-events-cards` falls back to its empty-state
+	 * message when there are no upcoming events.
+	 */
 	public function test_archive_upcoming_events_cards_renders_empty_state_with_no_events() {
 		$output = $this->render_pattern( 'archive-upcoming-events-cards' );
 
 		$this->assertStringContainsString( 'No upcoming events scheduled', $output );
 	}
 
+	/**
+	 * `archive-past-events-cards` — the exact pattern #1874's fatal lived
+	 * in — shows a past event's title.
+	 */
 	public function test_archive_past_events_cards_renders_with_an_event() {
 		$event_id = $this->create_past_event();
 		$title    = get_the_title( $event_id );
@@ -137,6 +161,10 @@ class Test_Groups_Site_Event_Cards_Patterns extends Groups_TestCase {
 		$this->assertStringContainsString( 'groups-site-event-cards--expanded', $output );
 	}
 
+	/**
+	 * `archive-past-events-cards` falls back to its empty-state message
+	 * when there are no past events.
+	 */
 	public function test_archive_past_events_cards_renders_empty_state_with_no_events() {
 		$output = $this->render_pattern( 'archive-past-events-cards' );
 

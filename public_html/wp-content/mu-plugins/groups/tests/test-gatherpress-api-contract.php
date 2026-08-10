@@ -109,6 +109,9 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		);
 	}
 
+	/**
+	 * Data provider: one case per class in CONTRACT.
+	 */
 	public function provide_contract_classes(): array {
 		$cases = array();
 		foreach ( array_keys( self::CONTRACT ) as $class ) {
@@ -117,6 +120,9 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		return $cases;
 	}
 
+	/**
+	 * Data provider: one case per class/method pair in CONTRACT.
+	 */
 	public function provide_contract_methods(): array {
 		$cases = array();
 		foreach ( self::CONTRACT as $class => $members ) {
@@ -127,6 +133,9 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		return $cases;
 	}
 
+	/**
+	 * Data provider: one case per class/constant pair in CONTRACT.
+	 */
 	public function provide_contract_constants(): array {
 		$cases = array();
 		foreach ( self::CONTRACT as $class => $members ) {
@@ -137,6 +146,9 @@ class Test_GatherPress_Api_Contract extends Groups_TestCase {
 		return $cases;
 	}
 
+	/**
+	 * Data provider: one case per class/property pair in CONTRACT.
+	 */
 	public function provide_contract_properties(): array {
 		$cases = array();
 		foreach ( self::CONTRACT as $class => $members ) {

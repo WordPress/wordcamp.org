@@ -194,6 +194,17 @@ function create_group_site( string $title, string $slug, string $organizer_login
 
 	switch_to_blog( $site_id );
 
+	// The recurring-events extension only installs its schema from its own
+	// `plugins_loaded`/`init` handling, which never runs for this brand-new
+	// site within this request -- only for whichever site initiated it. The
+	// "Hello world!" cleanup below deletes a post (and its default comment),
+	// which the extension listens for on every site; without this, that
+	// delete hits tables that don't exist yet on every single group site
+	// creation.
+	if ( class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
+		\WordPressdotorg\GatherPress_Recurring_Events\Database::maybe_install();
+	}
+
 	switch_theme( 'groups-site' );
 
 	update_option( 'siteurl', set_url_scheme( get_option( 'siteurl' ), 'https' ) );

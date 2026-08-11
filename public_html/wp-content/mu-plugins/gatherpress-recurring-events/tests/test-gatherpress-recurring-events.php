@@ -201,8 +201,8 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	public function test_deleting_series_before_init_hook_creates_tables_without_error(): void {
 		global $wpdb;
 
-		$wpdb->query( 'DROP TABLE IF EXISTS ' . Database::comments_table() );
-		$wpdb->query( 'DROP TABLE IF EXISTS ' . Database::occurrences_table() );
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', Database::comments_table() ) );
+		$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', Database::occurrences_table() ) );
 		delete_option( Database::OPTION_NAME );
 		$wpdb->last_error = '';
 

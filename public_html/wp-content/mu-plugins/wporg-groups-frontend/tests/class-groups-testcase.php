@@ -74,6 +74,17 @@ abstract class Groups_TestCase extends Database_TestCase {
 		// call every test.
 		\GatherPress\Core\Setup::get_instance()->check_plugin_version();
 
+		// Same situation for the recurring-events extension's own tables: its
+		// install step only runs once, from 'plugins_loaded', for whichever
+		// site happened to be current when this PHPUnit process bootstrapped
+		// — not this fixture blog. maybe_install() is the equivalent
+		// idempotent self-heal. Guarded because this plugin is only loaded by
+		// the combined, repo-wide suite (see phpunit-bootstrap.php), not by
+		// this plugin's own standalone tests/bootstrap.php.
+		if ( class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
+			\WordPressdotorg\GatherPress_Recurring_Events\Database::maybe_install();
+		}
+
 		// `schedule_new_event_notification()` (#1829) sends GatherPress's
 		// "all members" email directly and synchronously from
 		// `transition_post_status` (see its own docblock for why it isn't

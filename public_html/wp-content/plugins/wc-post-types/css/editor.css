@@ -33,7 +33,7 @@
 
 .wordcamp-panel-session-info__duration input {
 	-moz-appearance: textfield;
-	max-width: 4rem;
+	max-width: 5rem;
 }
 
 .wordcamp-panel-session-info__duration label + input {

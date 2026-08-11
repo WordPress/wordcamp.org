@@ -99,6 +99,23 @@ class Test_CampTix_Plugin extends \WP_UnitTestCase {
 	}
 
 	/**
+	 * `is_wordcamp_closed()` switch_to_blog()s to WORDCAMP_ROOT_BLOG_ID via
+	 * get_wordcamp_post(). This test class doesn't provision that site, so this
+	 * should report "not closed" rather than let core emit DB errors for a site
+	 * with no tables.
+	 *
+	 * @covers CampTix_Plugin::is_wordcamp_closed
+	 */
+	public function test_is_wordcamp_closed_handles_missing_root_site() {
+		global $wpdb, $camptix;
+
+		$wpdb->last_error = '';
+
+		$this->assertFalse( $camptix->is_wordcamp_closed() );
+		$this->assertSame( '', $wpdb->last_error );
+	}
+
+	/**
 	 * Attendee IDs created during a test, cleaned up in tear_down.
 	 *
 	 * @var int[]

@@ -1,6 +1,11 @@
 <?php
 /**
- * Integrates GatherPress Recurring Events with the Groups frontend.
+ * Loads GatherPress Recurring Events and integrates it with the Groups frontend.
+ *
+ * The plugin itself lives at `mu-plugins/gatherpress-recurring-events/` so its
+ * asset paths and folder structure stay self-contained. This file is picked up
+ * by `wcorg_include_network_only_plugins()` because it sits in the `groups/`
+ * network folder, which only loads when `SITE_ID_CURRENT_SITE === GROUPS_NETWORK_ID`.
  *
  * @package WordPressdotorg\GatherPress_Recurring_Events
  */
@@ -16,6 +21,8 @@ use WP_Error;
 use WP_REST_Request;
 
 defined( 'WPINC' ) || die();
+
+require_once dirname( __DIR__ ) . '/gatherpress-recurring-events/plugin.php';
 
 const RECURRING_EVENT_META_FIELDS = array(
 	'interval',

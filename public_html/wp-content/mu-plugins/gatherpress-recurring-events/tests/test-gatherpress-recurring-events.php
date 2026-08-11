@@ -9,6 +9,8 @@ namespace WordPressdotorg\GatherPress_Recurring_Events\Tests;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Cache;
 use WordPressdotorg\GatherPress_Recurring_Events\Comments;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database;
@@ -217,6 +219,116 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		} finally {
 			Context::set( null );
 		}
+	}
+
+	/**
+	 * Activating an occurrence's request context invalidates the series'
+	 * GatherPress RSVP cache, so a subsequent RSVP-count read reflects the
+	 * occurrence that's actually active rather than a stale cached value
+	 * from a previously viewed occurrence. This is a regression test for
+	 * the GATHERPRESS_CACHE_GROUP bug: that bug used an undefined constant
+	 * and fataled immediately, but a class_exists()-only guard would have
+	 * let a *renamed* Cache API fail just as silently as a no-op.
+	 */
+	public function test_context_set_invalidates_rsvp_cache(): void {
+		$post_id    = $this->create_published_recurring_event();
+		$occurrence = (object) array(
+			'series_post_id' => $post_id,
+			'recurrence_id'  => '20260810T100000',
+		);
+
+		Cache::set( $post_id, array( 'attending' => array( 1 ) ) );
+		$this->assertNotNull( Cache::get( $post_id ), 'Precondition: the cache entry exists before activating the occurrence context.' );
+
+		try {
+			Context::set( $occurrence );
+			$this->assertNull( Cache::get( $post_id ) );
+		} finally {
+			Context::set( null );
+		}
+	}
+
+	/** Mapping a comment to its occurrence also invalidates the series' RSVP cache. */
+	public function test_comment_mapping_invalidates_rsvp_cache(): void {
+		$post_id    = $this->create_published_recurring_event();
+		$occurrence = (object) array(
+			'series_post_id' => $post_id,
+			'recurrence_id'  => '20260810T100000',
+		);
+		$comment_id = self::factory()->comment->create( array( 'comment_post_ID' => $post_id ) );
+
+		Context::set( $occurrence );
+		Cache::set( $post_id, array( 'attending' => array( 1 ) ) );
+
+		try {
+			Comments::map_inserted( $comment_id, get_comment( $comment_id ) );
+			$this->assertNull( Cache::get( $post_id ) );
+		} finally {
+			Context::set( null );
+		}
+	}
+
+	/**
+	 * Publishing a real weekly series through the actual save_post_gatherpress_event
+	 * hook projects correct occurrence rows into the database — not just correct
+	 * dates from the pure Rule::expand() function the other tests here exercise.
+	 * This is the only test that seeds a real GatherPress event date via
+	 * Event::save_datetimes(), the same way the block editor does, so it also
+	 * covers Occurrences::master_datetime()'s direct read of GatherPress's own
+	 * {$wpdb->prefix}gatherpress_events table.
+	 */
+	public function test_publishing_recurring_event_projects_occurrence_rows(): void {
+		global $wpdb;
+
+		$post_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+
+		( new Event( $post_id ) )->save_datetimes(
+			array(
+				'post_id'        => $post_id,
+				'datetime_start' => '2026-08-10 10:00:00', // A Monday.
+				'datetime_end'   => '2026-08-10 11:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'weekly' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'interval', 1 );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'weekdays', array( 'MO' ) );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'end_type', 'count' );
+		update_post_meta( $post_id, Rule::META_PREFIX . 'count', 4 );
+
+		wp_update_post(
+			array(
+				'ID'          => $post_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE series_post_id = %d ORDER BY datetime_start_gmt ASC',
+				Database::occurrences_table(),
+				$post_id
+			)
+		);
+
+		$this->assertSame(
+			array( '20260810T100000', '20260817T100000', '20260824T100000', '20260831T100000' ),
+			array_map( static fn( object $row ): string => $row->recurrence_id, $rows )
+		);
+
+		foreach ( $rows as $row ) {
+			$this->assertSame( 'scheduled', $row->status );
+			$this->assertSame( 'UTC', $row->timezone );
+		}
+
+		$this->assertSame( '2026-08-10 11:00:00', $rows[0]->datetime_end );
+		$this->assertSame( 'FREQ=WEEKLY;INTERVAL=1;BYDAY=MO;COUNT=4', get_post_meta( $post_id, Rule::META_PREFIX . 'rrule', true ) );
 	}
 
 	/** Deactivation removes the site's projection cron event. */

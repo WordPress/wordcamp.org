@@ -7,6 +7,7 @@
 
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
+use GatherPress\Core\Rsvp\Cache;
 use WP_Comment;
 use WP_Comment_Query;
 
@@ -126,7 +127,7 @@ final class Comments {
 		$occurrence = Context::get();
 		if ( $occurrence && (int) $occurrence->series_post_id === (int) $comment->comment_post_ID ) {
 			Database::map_comment( $comment_id, (int) $occurrence->series_post_id, (string) $occurrence->recurrence_id );
-			wp_cache_delete( sprintf( 'gatherpress_rsvp_%d', $occurrence->series_post_id ), GATHERPRESS_CACHE_GROUP );
+			Cache::delete( (int) $occurrence->series_post_id );
 		}
 	}
 }

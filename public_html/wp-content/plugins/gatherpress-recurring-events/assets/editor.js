@@ -63,6 +63,7 @@
 		}, [] );
 		const { editPost } = useDispatch( 'core/editor' );
 		const postId = useSelect( ( select ) => select( 'core/editor' ).getCurrentPostId(), [] );
+		const dateTimeStart = useSelect( ( select ) => select( 'gatherpress/datetime' )?.getDateTimeStart?.() ?? '', [] );
 
 		if ( data.postType !== 'gatherpress_event' ) {
 			return null;
@@ -83,6 +84,10 @@
 			SA: { short: __( 'S', 'gpre' ), full: __( 'Saturday', 'gpre' ) },
 			SU: { short: __( 'S', 'gpre' ), full: __( 'Sunday', 'gpre' ) },
 		};
+		const weekdayCodes = [ 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA' ];
+		const startDate = dateTimeStart ? new Date( dateTimeStart.replace( ' ', 'T' ) ) : null;
+		const startWeekday = startDate && ! isNaN( startDate ) ? weekdayCodes[ startDate.getDay() ] : '';
+		const startWeekdayMismatch = frequency === 'weekly' && weekdays.length > 0 && startWeekday && ! weekdays.includes( startWeekday );
 
 		useEffect( () => {
 			if ( locked && frequency ) {
@@ -135,6 +140,9 @@
 						);
 					} )
 				)
+			),
+			startWeekdayMismatch && ! locked && el( Notice, { status: 'warning', isDismissible: false },
+				__( 'The event start date doesn’t fall on a selected repeat day. Publishing will add an extra occurrence on the start date, one day before the weekly pattern begins.', 'gpre' )
 			),
 			frequency === 'monthly' && el( RadioControl, { label: __( 'Monthly pattern', 'gpre' ), selected: get( 'monthly_mode', 'day' ), disabled: locked, options: [ { label: __( 'Day of month', 'gpre' ), value: 'day' }, { label: __( 'Ordinal weekday', 'gpre' ), value: 'weekday' } ], onChange: ( value ) => set( 'monthly_mode', value ) } ),
 			frequency === 'monthly' && get( 'monthly_mode', 'day' ) === 'day' && el( TextControl, { label: __( 'Day', 'gpre' ), type: 'number', min: 1, max: 31, value: get( 'monthly_day', 1 ), disabled: locked, onChange: ( value ) => set( 'monthly_day', Math.min( 31, Math.max( 1, Number( value ) ) ) ) } ),

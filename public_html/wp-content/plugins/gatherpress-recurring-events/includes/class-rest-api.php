@@ -130,7 +130,7 @@ final class Rest_API {
 		$occurrence = self::set_context( $post_id, (string) $request['recurrence_id'] );
 		$status     = sanitize_key( (string) $request->get_param( 'status' ) );
 
-		if ( ! $occurrence || 'cancelled' === $occurrence->status || ! in_array( $status, array( 'attending', 'not_attending' ), true ) ) {
+		if ( 'publish' !== get_post_status( $post_id ) || ! $occurrence || 'cancelled' === $occurrence->status || ! in_array( $status, array( 'attending', 'not_attending' ), true ) ) {
 			return new WP_REST_Response( array( 'success' => false ), 400 );
 		}
 
@@ -166,7 +166,7 @@ final class Rest_API {
 		$post_id    = (int) $request->get_param( 'post_id' );
 		$occurrence = self::set_context( $post_id, (string) $request['recurrence_id'] );
 
-		if ( ! $occurrence ) {
+		if ( 'publish' !== get_post_status( $post_id ) || ! $occurrence ) {
 			return new WP_REST_Response( array( 'success' => false ), 404 );
 		}
 

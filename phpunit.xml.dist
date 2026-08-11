@@ -76,6 +76,12 @@
 				./public_html/wp-content/mu-plugins/groups/tests/
 			</directory>
 		</testsuite>
+
+		<testsuite name="GatherPress Recurring Events">
+			<directory prefix="test-" suffix=".php">
+				./public_html/wp-content/mu-plugins/gatherpress-recurring-events/tests/
+			</directory>
+		</testsuite>
 	</testsuites>
 
 	<coverage cacheDirectory=".phpunit/coverage-cache">

@@ -32,6 +32,9 @@ trait CampTix_Root_Blog_Fixture {
 		) );
 	}
 
+	/**
+	 * Tears down the root blog created by `create_wordcamp_root_blog()`.
+	 */
 	protected static function delete_wordcamp_root_blog() {
 		wp_delete_site( self::$wordcamp_root_blog_id );
 	}

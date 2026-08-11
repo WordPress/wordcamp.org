@@ -5,6 +5,16 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 }
 
+/*
+ * Several suites (group-site-provisioning, network-messaging, etc.) exercise
+ * code paths that intentionally call `WordCamp\Logger\log()` -- a thin
+ * wrapper around `error_log()` -- to test that failures get logged. With no
+ * `error_log` destination configured, PHP writes those to stderr, which CI
+ * captures inline with the test output. Route them to a file instead so the
+ * `Running unit tests` step only shows PHPUnit's own output.
+ */
+ini_set( 'error_log', sys_get_temp_dir() . '/wordcamp-phpunit-error.log' );
+
 const WORDCAMP_NETWORK_ID   = 1;
 const WORDCAMP_ROOT_BLOG_ID = 5;
 const EVENTS_NETWORK_ID     = 2;

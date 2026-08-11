@@ -13,10 +13,16 @@ if ( ! defined( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET' ) ) {
 class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	use CampTix_Root_Blog_Fixture;
 
+	/**
+	 * @param WP_UnitTest_Factory $factory
+	 */
 	public static function wpSetUpBeforeClass( $factory ) {
 		self::create_wordcamp_root_blog( $factory );
 	}
 
+	/**
+	 * Tears down the shared fixtures created in wpSetUpBeforeClass().
+	 */
 	public static function wpTearDownAfterClass() {
 		self::delete_wordcamp_root_blog();
 	}

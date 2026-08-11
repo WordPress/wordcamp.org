@@ -68,6 +68,9 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 		self::$camptix->init();
 	}
 
+	/**
+	 * Tears down the shared fixtures created in wpSetUpBeforeClass().
+	 */
 	public static function wpTearDownAfterClass() {
 		self::delete_wordcamp_root_blog();
 	}

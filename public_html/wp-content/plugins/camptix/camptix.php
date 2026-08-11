@@ -7752,13 +7752,6 @@ class CampTix_Plugin {
 	 * @return bool
 	 */
 	public function is_wordcamp_closed() {
-		// get_wordcamp_post() unconditionally switch_to_blog()s to WORDCAMP_ROOT_BLOG_ID; guard
-		// against that site not existing (e.g. test suites that don't provision it) rather than
-		// letting core emit DB errors for a site with no tables.
-		if ( ! defined( 'WORDCAMP_ROOT_BLOG_ID' ) || ! get_site( (int) WORDCAMP_ROOT_BLOG_ID ) ) {
-			return false;
-		}
-
 		$wordcamp = get_wordcamp_post();
 		// get_wordcamp_post() returns false if no post exists, so avoid breaking by returning here since it is not explicitly closed.
 		if ( false === $wordcamp ) {

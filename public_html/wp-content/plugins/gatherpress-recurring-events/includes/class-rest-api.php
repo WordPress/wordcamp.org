@@ -9,6 +9,7 @@ namespace WordPressdotorg\GatherPress_Recurring_Events;
 
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Cache;
+use GatherPress\Core\Rsvp\Response\Status;
 use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Utility;
 use WP_REST_Request;
@@ -146,7 +147,7 @@ final class Rest_API {
 		return new WP_REST_Response(
 			array(
 				'event_id'    => $post_id,
-				'success'     => in_array( $user_record['status'], $event->rsvp->statuses, true ),
+				'success'     => in_array( $user_record['status'], Status::values(), true ),
 				'status'      => $user_record['status'],
 				'guests'      => $user_record['guests'],
 				'anonymous'   => $user_record['anonymous'],

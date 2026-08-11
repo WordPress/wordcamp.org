@@ -25,7 +25,7 @@ defined( 'WPINC' ) || die();
  * for the sibling Groups integration.
  *
  * Keep this list in sync with what the extension actually calls — grep
- * `GatherPress\\Core` across `plugins/gatherpress-recurring-events/includes`
+ * `GatherPress\\Core` across `mu-plugins/gatherpress-recurring-events/includes`
  * to find anything this list is missing. A method/constant/property this
  * list doesn't cover isn't protected by this test — the coverage is only as
  * good as the list.
@@ -78,7 +78,7 @@ final class Test_GatherPress_Api_Contract extends WP_UnitTestCase {
 	public function test_method_exists( string $class, string $method ) {
 		$this->assertTrue(
 			method_exists( $class, $method ),
-			"Expected {$class}::{$method}() to exist. If GatherPress renamed or removed it, find every call site with `grep -rn '{$method}(' public_html/wp-content/plugins/gatherpress-recurring-events/includes` and update them."
+			"Expected {$class}::{$method}() to exist. If GatherPress renamed or removed it, find every call site with `grep -rn '{$method}(' public_html/wp-content/mu-plugins/gatherpress-recurring-events/includes` and update them."
 		);
 	}
 

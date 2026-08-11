@@ -130,12 +130,12 @@ function register_routes(): void {
 			'callback'            => __NAMESPACE__ . '\save_rsvp',
 			'permission_callback' => __NAMESPACE__ . '\rsvp_permissions_check',
 			'args'                => array(
-				'id'      => array(
+				'id'            => array(
 					'type'              => 'integer',
 					'required'          => true,
 					'sanitize_callback' => 'absint',
 				),
-				'status'  => array(
+				'status'        => array(
 					'type'              => 'string',
 					'required'          => true,
 					'sanitize_callback' => 'sanitize_key',
@@ -143,10 +143,15 @@ function register_routes(): void {
 						return in_array( $param, array( 'attending', 'not_attending' ), true );
 					},
 				),
-				'answers' => array(
+				'answers'       => array(
 					'type'     => 'object',
 					'required' => false,
 					'default'  => array(),
+				),
+				'recurrence_id' => array(
+					'type'              => 'string',
+					'required'          => false,
+					'sanitize_callback' => 'sanitize_text_field',
 				),
 			),
 		)
@@ -406,6 +411,14 @@ function save_rsvp( WP_REST_Request $request ) {
 		return new WP_Error( 'wporg_groups_invalid_event', 'Invalid event ID', array( 'status' => 404 ) );
 	}
 
+	// Lets an occurrence-aware integration (e.g. recurring events) resolve and
+	// validate which occurrence this RSVP targets before the comment is saved,
+	// so it can be mapped to that occurrence rather than left unscoped.
+	$context_error = apply_filters( 'wporg_groups_frontend_before_rsvp', null, $event_id, $request );
+	if ( is_wp_error( $context_error ) ) {
+		return $context_error;
+	}
+
 	$event = new Event( $event_id );
 
 	// `$event->rsvp` is set for anything supporting `gatherpress-event-date`,
@@ -544,7 +557,7 @@ function draft_args_schema(): array {
  * Argument schema shared between POST /event and POST /event/{id}.
  */
 function event_args_schema(): array {
-	return array(
+	$args = array(
 		'title'             => array(
 			'type'              => 'string',
 			'required'          => true,
@@ -633,6 +646,13 @@ function event_args_schema(): array {
 			),
 		),
 	);
+
+	/**
+	 * Filters the arguments accepted by the frontend event endpoints.
+	 *
+	 * @param array $args REST argument schema.
+	 */
+	return apply_filters( 'wporg_groups_frontend_event_args_schema', $args );
 }
 
 /**
@@ -712,6 +732,15 @@ function get_event_form_data( WP_REST_Request $request ): WP_REST_Response {
 	$fields['featured_image_id']  = $fields['featured_image_id'] ?? 0;
 	$fields['featured_image_url'] = $fields['featured_image_url'] ?? '';
 	$fields['rsvp_questions']     = $is_editing ? get_questions( $event_id ) : array();
+
+	/**
+	 * Filters the fields returned to the frontend event form.
+	 *
+	 * @param array $fields     Event form fields.
+	 * @param int   $event_id   Requested event ID, or zero when creating.
+	 * @param bool  $is_editing Whether an existing event is being edited.
+	 */
+	$fields = apply_filters( 'wporg_groups_frontend_event_form_fields', $fields, $event_id, $is_editing );
 
 	$venues = array_map(
 		static function ( $post ) {
@@ -864,6 +893,14 @@ function save_draft( WP_REST_Request $request ): WP_REST_Response {
 		set_post_thumbnail( $saved_id, $featured_image_id );
 	}
 
+	/**
+	 * Fires after a frontend event draft has been saved.
+	 *
+	 * @param int             $saved_id Saved draft ID.
+	 * @param WP_REST_Request $request  REST request.
+	 */
+	do_action( 'wporg_groups_frontend_event_draft_saved', $saved_id, $request );
+
 	maybe_save_rsvp_questions( $saved_id, $request );
 
 	return new WP_REST_Response(
@@ -933,7 +970,8 @@ function resolve_event_end_date( string $date, string $time_start, string $time_
  * navigate to it.
  */
 function persist_event( int $event_id, WP_REST_Request $request ) {
-	$fields = array(
+	$schedule_editable = 0 === $event_id || 'publish' !== get_post_status( $event_id );
+	$fields            = array(
 		'title'             => (string) $request->get_param( 'title' ),
 		'description'       => (string) $request->get_param( 'description' ),
 		'date'              => (string) $request->get_param( 'date' ),
@@ -946,6 +984,20 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		'new_venue_address' => (string) $request->get_param( 'new_venue_address' ),
 		'featured_image_id' => (int) $request->get_param( 'featured_image_id' ),
 	);
+
+	/**
+	 * Filters frontend event request validation before anything is persisted.
+	 *
+	 * Extensions may return a WP_Error to reject their request fields.
+	 *
+	 * @param null|WP_Error   $error    Validation error, if any.
+	 * @param WP_REST_Request $request  REST request.
+	 * @param int             $event_id Existing event ID, or zero when creating.
+	 */
+	$validation_error = apply_filters( 'wporg_groups_frontend_validate_event_request', null, $request, $event_id );
+	if ( is_wp_error( $validation_error ) ) {
+		return $validation_error;
+	}
 
 	if ( '' === trim( $fields['title'] ) ) {
 		return new WP_Error( 'wporg_groups_missing_title', 'Title is required.', array( 'status' => 400 ) );
@@ -1015,6 +1067,15 @@ function persist_event( int $event_id, WP_REST_Request $request ) {
 		// Explicit clear on edit.
 		delete_post_thumbnail( $saved_id );
 	}
+
+	/**
+	 * Fires after a frontend event has been published and its core fields saved.
+	 *
+	 * @param int             $saved_id          Saved event ID.
+	 * @param WP_REST_Request $request           REST request.
+	 * @param bool            $schedule_editable Whether the schedule was editable before this save.
+	 */
+	do_action( 'wporg_groups_frontend_event_saved', $saved_id, $request, $schedule_editable );
 
 	maybe_save_rsvp_questions( $saved_id, $request );
 

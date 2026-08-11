@@ -251,8 +251,9 @@ final class Context {
 		if ( $tag->next_tag() ) {
 			$context = json_decode( (string) $tag->get_attribute( 'data-wp-context' ), true );
 			if ( is_array( $context ) ) {
-				$context['apiBase']  = rest_url( 'gpre/v1/event/' . self::recurrence_id() );
-				$context['loginUrl'] = wp_login_url( self::occurrence_url( (int) self::$occurrence->series_post_id, self::recurrence_id() ) );
+				$context['apiBase']      = rest_url( 'gpre/v1/event/' . self::recurrence_id() );
+				$context['loginUrl']     = wp_login_url( self::occurrence_url( (int) self::$occurrence->series_post_id, self::recurrence_id() ) );
+				$context['recurrenceId'] = self::recurrence_id();
 				$tag->set_attribute( 'data-wp-context', wp_json_encode( $context ) );
 				return $tag->get_updated_html();
 			}

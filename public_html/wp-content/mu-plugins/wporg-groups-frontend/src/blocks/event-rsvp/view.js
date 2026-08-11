@@ -414,7 +414,7 @@ async function sendRsvp( ctx, status, answers, retry = false ) {
 			'Content-Type': 'application/json',
 			'X-WP-Nonce': nonce,
 		},
-		body: JSON.stringify( { status, answers: answers || {} } ),
+		body: JSON.stringify( { status, answers: answers || {}, recurrence_id: ctx.recurrenceId || undefined } ),
 	} );
 
 	if ( resp.status === 403 && ! retry ) {

@@ -35,6 +35,7 @@ import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from '../../event-manage/venue-editor';
+import RecurrenceControls, { normalizeRecurrence } from '../../../components/recurrence-controls';
 import RsvpQuestionsEditor from '../../event-manage/rsvp-questions-editor';
 
 const NS =
@@ -191,6 +192,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 	} );
 	const [ initialDescription, setInitialDescription ] = useState( '' );
 	const [ featuredImage, setFeaturedImage ] = useState( { id: 0, url: '' } );
+	const [ recurrence, setRecurrence ] = useState( null );
 	const [ venues, setVenues ] = useState( [] );
 	const [ venueEditorId, setVenueEditorId ] = useState( null );
 	const [ speakers, setSpeakers ] = useState( [] );
@@ -216,6 +218,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 				} );
 				setInitialDescription( res.fields.description || '' );
 				setFeaturedImage( { id: res.fields.featured_image_id || 0, url: res.fields.featured_image_url || '' } );
+				setRecurrence( normalizeRecurrence( res.fields.recurrence ) );
 				setVenues( res.venues || [] );
 
 				// Load speakers for this event and member list for autocomplete.
@@ -272,6 +275,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					is_online: form.is_online,
 					online_event_link: form.is_online ? form.online_event_link : '',
 					featured_image_id: featuredImage.id,
+					recurrence,
 					// Blank-labelled rows are an empty slot the organizer added
 					// and never filled in; the server drops them too.
 					rsvp_questions: ( form.rsvp_questions || [] ).filter( ( question ) => question.label.trim() !== '' ),
@@ -314,6 +318,11 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			h( TextControl, { label: __( 'Date', 'wporg-groups-frontend' ), type: 'date', value: form.date, min: isEdit ? undefined : MINIMUM_EVENT_DATE, onChange: ( v ) => updateField( 'date', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( TextControl, { label: __( 'Start time', 'wporg-groups-frontend' ), type: 'time', value: form.time_start, onChange: ( v ) => updateField( 'time_start', v ), required: true, __nextHasNoMarginBottom: true } ),
 			h( DurationField, { timeStart: form.time_start, timeEnd: form.time_end, onChange: ( v ) => updateField( 'time_end', v ) } ) ),
+		h( RecurrenceControls, {
+			value: recurrence,
+			eventDate: form.date,
+			onChange: setRecurrence,
+		} ),
 		h( VenueField, {
 			venues, venueId: form.venue_select,
 			onSelect: ( v ) => updateField( 'venue_select', v ),

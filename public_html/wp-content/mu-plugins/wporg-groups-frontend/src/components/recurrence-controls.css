@@ -1,0 +1,46 @@
+.wporg-event-recurrence {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.wporg-event-recurrence__row {
+	display: flex;
+	align-items: flex-end;
+	gap: 12px;
+}
+
+.wporg-event-recurrence__unit {
+	padding-bottom: 8px;
+}
+
+.wporg-event-recurrence__weekdays {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+}
+
+.wporg-event-recurrence__label {
+	box-sizing: border-box;
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	padding-top: 0;
+	padding-bottom: 0;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+	.wporg-event-recurrence__row {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.wporg-event-recurrence__unit {
+		padding-bottom: 0;
+	}
+}

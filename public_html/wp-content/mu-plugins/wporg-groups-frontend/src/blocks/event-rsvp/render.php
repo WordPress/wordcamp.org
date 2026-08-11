@@ -141,6 +141,7 @@ $context = array(
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
 	'joinApi'           => rest_url( 'wporg-groups/v1/members/join' ),
 	'rsvpApi'           => rest_url( sprintf( 'wporg-groups/v1/event/%d/rsvp', $event_post_id ) ),
+	'recurrenceId'      => '',
 	'hasQuestions'      => ! empty( $questions ),
 	'canViewAnswers'    => $can_view_answers,
 	'modalOpen'         => false,

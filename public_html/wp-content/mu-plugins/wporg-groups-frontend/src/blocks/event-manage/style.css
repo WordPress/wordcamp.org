@@ -2,6 +2,8 @@
  * WPorg Groups Frontend — event manage block + modal styles.
  */
 
+@import '../../components/recurrence-controls.css';
+
 /* === Message members modal === */
 
 .wporg-groups-message-modal .components-modal__content {

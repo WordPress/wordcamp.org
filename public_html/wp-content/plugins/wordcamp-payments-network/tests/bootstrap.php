@@ -16,6 +16,11 @@ function manually_load_plugin() {
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 	require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/encryption.php';
 
+	// Registers the `wcp_payment_request` post type on `init`. Without this,
+	// the dashboard tests create posts of that type before it's registered,
+	// which trips a "map_meta_cap called incorrectly" notice.
+	new \WCP_Payment_Request();
+
 	require_once dirname( __DIR__ )  . '/includes/payment-requests-dashboard.php';
 	require_once dirname( __DIR__ )  . '/includes/wordcamp-budgets-dashboard.php';
 }

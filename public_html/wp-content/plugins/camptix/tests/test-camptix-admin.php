@@ -2,6 +2,8 @@
 
 defined( 'WPINC' ) || die();
 
+require_once __DIR__ . '/trait-wordcamp-root-blog.php';
+
 /**
  * Tests for CampTix_Plugin admin-related functionality.
  *
@@ -12,6 +14,7 @@ defined( 'WPINC' ) || die();
  * @covers CampTix_Plugin
  */
 class Test_CampTix_Admin extends WP_UnitTestCase {
+	use CampTix_Root_Blog_Fixture;
 
 	/**
 	 * @var CampTix_Plugin
@@ -45,6 +48,8 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	 * @param WP_UnitTest_Factory $factory Test factory.
 	 */
 	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
+		self::create_wordcamp_root_blog( $factory );
+
 		self::$camptix = $GLOBALS['camptix'];
 
 		// Ensure options are initialised via the public API.
@@ -61,6 +66,13 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 		// Force re-read of options on next access.
 		self::$camptix->init();
+	}
+
+	/**
+	 * Tears down the shared fixtures created in wpSetUpBeforeClass().
+	 */
+	public static function wpTearDownAfterClass() {
+		self::delete_wordcamp_root_blog();
 	}
 
 	/**

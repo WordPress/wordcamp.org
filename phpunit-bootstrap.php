@@ -5,6 +5,16 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 	require_once __DIR__ . '/vendor/autoload.php';
 }
 
+/*
+ * Several suites (group-site-provisioning, network-messaging, etc.) exercise
+ * code paths that intentionally call `WordCamp\Logger\log()` -- a thin
+ * wrapper around `error_log()` -- to test that failures get logged. With no
+ * `error_log` destination configured, PHP writes those to stderr, which CI
+ * captures inline with the test output. Route them to a file instead so the
+ * `Running unit tests` step only shows PHPUnit's own output.
+ */
+ini_set( 'error_log', sys_get_temp_dir() . '/wordcamp-phpunit-error.log' );
+
 const WORDCAMP_NETWORK_ID   = 1;
 const WORDCAMP_ROOT_BLOG_ID = 5;
 const EVENTS_NETWORK_ID     = 2;
@@ -58,6 +68,26 @@ require_once SUT_WPMU_PLUGIN_DIR . '/wporg-groups-frontend/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/gatherpress-recurring-events/tests/bootstrap.php';
 require_once SUT_WPMU_PLUGIN_DIR . '/groups/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-coming-soon-page/tests/bootstrap.php';
+
+/*
+ * GatherPress hooks `send_headers` to set a novelty HTTP header ("Go
+ * Bills!"). By the time that fires in this suite, the core test bootstrap
+ * has already written to stdout via `system()` (installing the test DB),
+ * so calling header() anywhere afterwards trips a "headers already sent"
+ * warning. It has no effect on WordCamp's use of GatherPress, so drop it
+ * before any test runs. Priority 30 ensures GatherPress -- loaded by the
+ * `muplugins_loaded` callbacks above, all at the default priority -- has
+ * already registered the hook by the time this runs.
+ */
+tests_add_filter(
+	'muplugins_loaded',
+	static function () {
+		if ( class_exists( 'GatherPress\Core\Setup' ) ) {
+			remove_action( 'send_headers', array( GatherPress\Core\Setup::get_instance(), 'smash_table' ) );
+		}
+	},
+	30
+);
 
 /*
  * This has to be the last plugin bootstrapper, because it includes the Core test bootstrapper, which would

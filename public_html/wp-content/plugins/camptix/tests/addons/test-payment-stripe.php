@@ -1,6 +1,8 @@
 <?php
 defined( 'WPINC' ) || die();
 
+require_once dirname( __DIR__ ) . '/trait-wordcamp-root-blog.php';
+
 if ( ! defined( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET' ) ) {
 	define( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET', 'whsec_test_secret' );
 }
@@ -9,6 +11,16 @@ if ( ! defined( 'WORDCAMP_CAMPTIX_STRIPE_LIVE_WEBHOOK_SECRET' ) ) {
  * @covers CampTix_Payment_Method_Stripe
  */
 class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
+	use CampTix_Root_Blog_Fixture;
+
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::create_wordcamp_root_blog( $factory );
+	}
+
+	public static function wpTearDownAfterClass() {
+		self::delete_wordcamp_root_blog();
+	}
+
 	/**
 	 * Provide a test case for the function "CampTix_Payment_Method_Stripe->get_fractional_unit_amount".
 	 **/
@@ -188,7 +200,6 @@ class Test_Camptix_Payment_Stripe_Addon extends \WP_UnitTestCase {
 	protected function invoke_return( $stripe, $payment_token, $session ) {
 		$order  = $stripe->get_order( $payment_token );
 		$method = new ReflectionMethod( 'CampTix_Payment_Method_Stripe', 'process_payment_return_session' );
-		$method->setAccessible( true );
 
 		return $method->invoke( $stripe, $payment_token, $session, $order, false, array() );
 	}

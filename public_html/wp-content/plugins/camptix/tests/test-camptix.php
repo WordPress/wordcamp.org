@@ -2,10 +2,22 @@
 
 defined( 'WPINC' ) or die();
 
+require_once __DIR__ . '/trait-wordcamp-root-blog.php';
+
 /**
  * @covers CampTix_Plugin
  */
 class Test_CampTix_Plugin extends \WP_UnitTestCase {
+	use CampTix_Root_Blog_Fixture;
+
+	public static function wpSetUpBeforeClass( $factory ) {
+		self::create_wordcamp_root_blog( $factory );
+	}
+
+	public static function wpTearDownAfterClass() {
+		self::delete_wordcamp_root_blog();
+	}
+
 	/**
 	 * @covers CampTix_Plugin::esc_csv
 	 */

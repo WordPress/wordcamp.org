@@ -60,6 +60,26 @@ require_once SUT_WPMU_PLUGIN_DIR . '/groups/tests/bootstrap.php';
 require_once WP_PLUGIN_DIR . '/wordcamp-coming-soon-page/tests/bootstrap.php';
 
 /*
+ * GatherPress hooks `send_headers` to set a novelty HTTP header ("Go
+ * Bills!"). By the time that fires in this suite, the core test bootstrap
+ * has already written to stdout via `system()` (installing the test DB),
+ * so calling header() anywhere afterwards trips a "headers already sent"
+ * warning. It has no effect on WordCamp's use of GatherPress, so drop it
+ * before any test runs. Priority 30 ensures GatherPress -- loaded by the
+ * `muplugins_loaded` callbacks above, all at the default priority -- has
+ * already registered the hook by the time this runs.
+ */
+tests_add_filter(
+	'muplugins_loaded',
+	static function () {
+		if ( class_exists( 'GatherPress\Core\Setup' ) ) {
+			remove_action( 'send_headers', array( GatherPress\Core\Setup::get_instance(), 'smash_table' ) );
+		}
+	},
+	30
+);
+
+/*
  * This has to be the last plugin bootstrapper, because it includes the Core test bootstrapper, which would
  * short-circuits any other plugin bootstrappers than run after it. We can remove that when we remove CampTix
  * from the w.org directory and make it a wordcamp.org-only plugin.

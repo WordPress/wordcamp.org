@@ -36,6 +36,12 @@ class Test_Group_Archive extends Groups_TestCase {
 
 		switch_to_blog( $this->group_site_id );
 		\GatherPress\Core\Setup::get_instance()->check_plugin_version();
+
+		// Same self-heal as Groups_TestCase::setUp(), but for this extra
+		// site created here rather than the shared root fixture.
+		if ( class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
+			\WordPressdotorg\GatherPress_Recurring_Events\Database::maybe_install();
+		}
 	}
 
 	/**

@@ -12,8 +12,51 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
  * `error_log` destination configured, PHP writes those to stderr, which CI
  * captures inline with the test output. Route them to a file instead so the
  * `Running unit tests` step only shows PHPUnit's own output.
+ *
+ * This redirects every `error_log()` call in the process, not just the
+ * intentional `WordCamp\Logger\log()` ones -- but ordinary PHP warnings/
+ * notices raised during a test are already turned into failures by
+ * `convertWarningsToExceptions`/`convertNoticesToExceptions` in
+ * phpunit.xml.dist, so they never reach `error_log()` in the first place.
+ * What can still land in this file is either an expected logger entry, or
+ * something that bypassed PHPUnit's handler (e.g. a fatal error). The
+ * shutdown function below re-reads the file once the run ends and fails the
+ * build if it contains anything that isn't a recognized `WordCamp\Logger`
+ * entry, so a real error can't silently accumulate in a file CI never
+ * publishes.
  */
-ini_set( 'error_log', sys_get_temp_dir() . '/wordcamp-phpunit-error.log' );
+$wordcamp_phpunit_error_log = sys_get_temp_dir() . '/wordcamp-phpunit-error.log';
+ini_set( 'error_log', $wordcamp_phpunit_error_log );
+
+register_shutdown_function(
+	static function () use ( $wordcamp_phpunit_error_log ) {
+		if ( ! file_exists( $wordcamp_phpunit_error_log ) ) {
+			return;
+		}
+
+		// Matches `[dd-mon-yyyy hh:mm:ss tz] [request-id] file:line - function:code -- {json}`,
+		// the format written by `WordCamp\Logger\log()` (see 1-logger.php).
+		$logger_entry_pattern = '/^\[[^\]]+\] \[[^\]]+\] \S+:\d+ - \S+:\S* -- \{.*\}$/';
+		$unexpected           = array();
+
+		foreach ( file( $wordcamp_phpunit_error_log, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ) as $line ) {
+			if ( ! preg_match( $logger_entry_pattern, $line ) ) {
+				$unexpected[] = $line;
+			}
+		}
+
+		if ( $unexpected ) {
+			fwrite(
+				STDERR,
+				"\nUnexpected entries were written to PHP's error log during the test run " .
+				"(i.e. not WordCamp\\Logger\\log() calls) -- fix the underlying error instead of " .
+				"letting it accumulate silently in " . $wordcamp_phpunit_error_log . ":\n\n" .
+				implode( "\n", $unexpected ) . "\n"
+			);
+			exit( 1 );
+		}
+	}
+);
 
 const WORDCAMP_NETWORK_ID   = 1;
 const WORDCAMP_ROOT_BLOG_ID = 5;

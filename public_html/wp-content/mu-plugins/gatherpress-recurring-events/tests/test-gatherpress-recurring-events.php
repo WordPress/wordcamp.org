@@ -388,6 +388,29 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A brand-new multisite site gets its occurrence tables installed via the
+	 * `wp_initialize_site` hook, not just on the site that happens to serve
+	 * `init`. Regression test for the production/cron failure where a new
+	 * site's tables didn't exist yet the first time a cross-site cron run
+	 * tried to use them.
+	 */
+	public function test_new_site_gets_occurrence_tables_installed(): void {
+		global $wpdb;
+
+		$site_id = self::factory()->blog->create();
+
+		switch_to_blog( $site_id );
+
+		try {
+			$this->assertSame( Database::SCHEMA_VERSION, get_option( Database::OPTION_NAME ) );
+			$this->assertSame( Database::occurrences_table(), $wpdb->get_var( "SHOW TABLES LIKE '" . Database::occurrences_table() . "'" ) );
+			$this->assertSame( Database::comments_table(), $wpdb->get_var( "SHOW TABLES LIKE '" . Database::comments_table() . "'" ) );
+		} finally {
+			restore_current_blog();
+		}
+	}
+
+	/**
 	 * Creates a published weekly event with locked recurrence metadata.
 	 *
 	 * @return int Event post ID.

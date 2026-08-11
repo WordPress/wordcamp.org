@@ -197,6 +197,28 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 0, (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE series_post_id = %d', Database::comments_table(), $post_id ) ) );
 	}
 
+	/** Saving a non-recurring event before the extension's own `init` handler has run does not error. */
+	public function test_deleting_series_before_init_hook_creates_tables_without_error(): void {
+		global $wpdb;
+
+		$wpdb->query( 'DROP TABLE IF EXISTS ' . Database::comments_table() );
+		$wpdb->query( 'DROP TABLE IF EXISTS ' . Database::occurrences_table() );
+		delete_option( Database::OPTION_NAME );
+		$wpdb->last_error = '';
+
+		// Simulates another `init` callback (at an equal-or-lower priority) saving a post
+		// before this extension's own schema-install step has necessarily run.
+		Plugin::get_instance()->register();
+
+		$post_id = self::factory()->post->create( array( 'post_type' => 'gatherpress_event' ) );
+		$post    = get_post( $post_id );
+
+		Plugin::get_instance()->save_event( $post_id, $post );
+
+		$this->assertSame( '', $wpdb->last_error );
+		$this->assertSame( Database::SCHEMA_VERSION, get_option( Database::OPTION_NAME ) );
+	}
+
 	/** Only comment queries for the active series are occurrence-scoped. */
 	public function test_comment_query_scoping_targets_series_only(): void {
 		$post_id    = $this->create_published_recurring_event();

@@ -89,6 +89,11 @@ final class Plugin {
 
 	/** Registers extension hooks. */
 	public function register(): void {
+		// Installed eagerly (rather than deferred to 'init') so the schema exists
+		// before any 'init' callback — including our own, at any priority — can
+		// trigger a save/delete of event data.
+		Database::maybe_install();
+
 		add_action( 'init', array( $this, 'init' ), 20 );
 		add_filter( 'query_vars', array( Context::class, 'query_vars' ) );
 		add_action( 'template_redirect', array( Context::class, 'resolve' ), 1 );
@@ -122,9 +127,8 @@ final class Plugin {
 		add_action( Occurrences::CRON_HOOK, array( Occurrences::class, 'project_all' ) );
 	}
 
-	/** Registers runtime metadata, schema, routing, and cron. */
+	/** Registers runtime metadata, routing, and cron. */
 	public function init(): void {
-		Database::maybe_install();
 		Admin::register_meta();
 		Context::register();
 		Occurrences::schedule_cron();

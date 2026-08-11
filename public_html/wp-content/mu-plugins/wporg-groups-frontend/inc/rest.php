@@ -130,12 +130,12 @@ function register_routes(): void {
 			'callback'            => __NAMESPACE__ . '\save_rsvp',
 			'permission_callback' => __NAMESPACE__ . '\rsvp_permissions_check',
 			'args'                => array(
-				'id'      => array(
+				'id'            => array(
 					'type'              => 'integer',
 					'required'          => true,
 					'sanitize_callback' => 'absint',
 				),
-				'status'  => array(
+				'status'        => array(
 					'type'              => 'string',
 					'required'          => true,
 					'sanitize_callback' => 'sanitize_key',
@@ -143,10 +143,15 @@ function register_routes(): void {
 						return in_array( $param, array( 'attending', 'not_attending' ), true );
 					},
 				),
-				'answers' => array(
+				'answers'       => array(
 					'type'     => 'object',
 					'required' => false,
 					'default'  => array(),
+				),
+				'recurrence_id' => array(
+					'type'              => 'string',
+					'required'          => false,
+					'sanitize_callback' => 'sanitize_text_field',
 				),
 			),
 		)
@@ -404,6 +409,14 @@ function save_rsvp( WP_REST_Request $request ) {
 
 	if ( ! $post || Event::POST_TYPE !== $post->post_type || 'publish' !== $post->post_status ) {
 		return new WP_Error( 'wporg_groups_invalid_event', 'Invalid event ID', array( 'status' => 404 ) );
+	}
+
+	// Lets an occurrence-aware integration (e.g. recurring events) resolve and
+	// validate which occurrence this RSVP targets before the comment is saved,
+	// so it can be mapped to that occurrence rather than left unscoped.
+	$context_error = apply_filters( 'wporg_groups_frontend_before_rsvp', null, $event_id, $request );
+	if ( is_wp_error( $context_error ) ) {
+		return $context_error;
 	}
 
 	$event = new Event( $event_id );

@@ -49,6 +49,7 @@ add_action(
 		add_filter( 'wporg_groups_frontend_validate_event_request', __NAMESPACE__ . '\\validate_recurring_event_request', 10, 3 );
 		add_action( 'wporg_groups_frontend_event_draft_saved', __NAMESPACE__ . '\\save_recurring_event_draft', 10, 2 );
 		add_action( 'wporg_groups_frontend_event_saved', __NAMESPACE__ . '\\save_recurring_event', 10, 3 );
+		add_filter( 'wporg_groups_frontend_before_rsvp', __NAMESPACE__ . '\\set_rsvp_occurrence_context', 10, 3 );
 	},
 	30
 );
@@ -268,4 +269,37 @@ function normalize_recurring_event_rule( array $input, string $date ): array {
 		'until'           => sanitize_text_field( (string) ( $input['until'] ?? '' ) ),
 		'count'           => max( 1, (int) ( $input['count'] ?? 12 ) ),
 	);
+}
+
+/**
+ * Resolves and activates occurrence context for an RSVP request.
+ *
+ * REST requests never fire `template_redirect`, so `Context::resolve()`
+ * never runs for them — without this, an RSVP submitted from an occurrence
+ * page is saved as an unscoped comment that the occurrence-scoped attendee
+ * list then filters out, making it look like the RSVP was never saved.
+ *
+ * @param null|WP_Error   $error    Existing validation error.
+ * @param int             $event_id Series post ID.
+ * @param WP_REST_Request $request  REST request.
+ * @return null|WP_Error Validation result.
+ */
+function set_rsvp_occurrence_context( $error, int $event_id, WP_REST_Request $request ) {
+	if ( is_wp_error( $error ) ) {
+		return $error;
+	}
+
+	$recurrence_id = sanitize_text_field( (string) $request->get_param( 'recurrence_id' ) );
+	if ( '' === $recurrence_id ) {
+		return $error;
+	}
+
+	$occurrence = Occurrences::get( $event_id, $recurrence_id );
+	if ( ! $occurrence || 'cancelled' === $occurrence->status ) {
+		return new WP_Error( 'wporg_groups_invalid_recurrence', 'This occurrence is not available for RSVP.', array( 'status' => 400 ) );
+	}
+
+	Context::set( $occurrence );
+
+	return $error;
 }

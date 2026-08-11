@@ -9,6 +9,7 @@ namespace WordPressdotorg\GatherPress_Recurring_Events;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use GatherPress\Core\Rsvp\Cache;
 use WP_HTML_Tag_Processor;
 
 defined( 'WPINC' ) || die();
@@ -69,7 +70,7 @@ final class Context {
 	public static function set( ?object $occurrence ): void {
 		self::$occurrence = $occurrence;
 		if ( $occurrence ) {
-			wp_cache_delete( sprintf( 'gatherpress_rsvp_%d', $occurrence->series_post_id ), GATHERPRESS_CACHE_GROUP );
+			Cache::delete( (int) $occurrence->series_post_id );
 		}
 	}
 

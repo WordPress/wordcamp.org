@@ -8,6 +8,7 @@
 namespace WordPressdotorg\GatherPress_Recurring_Events;
 
 use GatherPress\Core\Event\Event;
+use GatherPress\Core\Rsvp\Cache;
 use GatherPress\Core\Rsvp\Rsvp;
 use GatherPress\Core\Utility;
 use WP_REST_Request;
@@ -139,7 +140,7 @@ final class Rest_API {
 		}
 
 		$user_record = $event->rsvp->save( get_current_user_id(), $status );
-		wp_cache_delete( sprintf( 'gatherpress_rsvp_%d', $post_id ), GATHERPRESS_CACHE_GROUP );
+		Cache::delete( $post_id );
 		$responses = $event->rsvp->responses();
 
 		return new WP_REST_Response(
@@ -169,7 +170,7 @@ final class Rest_API {
 			return new WP_REST_Response( array( 'success' => false ), 404 );
 		}
 
-		wp_cache_delete( sprintf( 'gatherpress_rsvp_%d', $post_id ), GATHERPRESS_CACHE_GROUP );
+		Cache::delete( $post_id );
 		return new WP_REST_Response(
 			array(
 				'success' => true,

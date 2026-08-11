@@ -102,7 +102,7 @@ final class Admin {
 		wp_enqueue_script(
 			'gpre-editor',
 			plugin_dir_url( FILE ) . 'assets/editor.js',
-			array( 'wp-api-fetch', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-element', 'wp-i18n', 'wp-plugins' ),
+			array( 'gatherpress-panels', 'wp-api-fetch', 'wp-components', 'wp-data', 'wp-edit-post', 'wp-element', 'wp-i18n', 'wp-plugins' ),
 			(string) filemtime( DIR . '/assets/editor.js' ),
 			true
 		);

@@ -134,11 +134,10 @@ final class Plugin {
 	}
 
 	/**
-	 * Pins a series to end on a given date, bypassing the published-schedule lock.
+	 * Applies the dedicated, monotonic end-series mutation.
 	 *
 	 * @param int    $post_id Event post ID.
-	 * @param string $until   Date the series should run until.
-	 * @return void
+	 * @param string $until   Inclusive final occurrence date.
 	 */
 	public static function update_end_condition( int $post_id, string $until ): void {
 		$end_type_key = Rule::META_PREFIX . 'end_type';

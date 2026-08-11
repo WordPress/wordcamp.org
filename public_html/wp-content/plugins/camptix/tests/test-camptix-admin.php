@@ -40,12 +40,38 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 	protected static $attendees = array();
 
 	/**
+	 * Whether this class created the WORDCAMP_ROOT_BLOG_ID fixture site, and so
+	 * is responsible for tearing it down again.
+	 *
+	 * @var bool
+	 */
+	protected static $created_wordcamp_root_site = false;
+
+	/**
 	 * Set up shared fixtures before any tests run.
 	 *
 	 * @param WP_UnitTest_Factory $factory Test factory.
 	 */
 	public static function wpSetUpBeforeClass( WP_UnitTest_Factory $factory ) {
 		self::$camptix = $GLOBALS['camptix'];
+
+		// cron_camptix_stats_ticket_validation() -- hooked to every attendee save
+		// via edit_post_tix_attendee -- calls is_wordcamp_closed() and
+		// is_ticket_valid_for_purchase(), both of which switch_to_blog() into
+		// WORDCAMP_ROOT_BLOG_ID via get_wordcamp_post(). That constant only
+		// exists when this suite runs as part of the combined, repo-wide
+		// bootstrap (see phpunit-bootstrap.php); ensure the site it points to
+		// actually exists there, so the switch lands on a real, installed site
+		// instead of DB errors for every attendee-post save in this class.
+		if ( defined( 'WORDCAMP_ROOT_BLOG_ID' ) && ! get_site( (int) WORDCAMP_ROOT_BLOG_ID ) ) {
+			$factory->blog->create(
+				array(
+					'blog_id'    => WORDCAMP_ROOT_BLOG_ID,
+					'network_id' => WORDCAMP_NETWORK_ID,
+				)
+			);
+			self::$created_wordcamp_root_site = true;
+		}
 
 		// Ensure options are initialised via the public API.
 		update_option(
@@ -61,6 +87,18 @@ class Test_CampTix_Admin extends WP_UnitTestCase {
 
 		// Force re-read of options on next access.
 		self::$camptix->init();
+	}
+
+	/**
+	 * Tears down the WORDCAMP_ROOT_BLOG_ID fixture site created above, if any.
+	 */
+	public static function wpTearDownAfterClass() {
+		if ( self::$created_wordcamp_root_site ) {
+			wp_delete_site( WORDCAMP_ROOT_BLOG_ID );
+			self::$created_wordcamp_root_site = false;
+		}
+
+		parent::wpTearDownAfterClass();
 	}
 
 	/**

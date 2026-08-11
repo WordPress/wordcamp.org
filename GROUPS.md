@@ -58,6 +58,8 @@ WordCamp-authored front-end management UI for group sites on `events.wordpress.o
 - `build/` — compiled JS/CSS output (built via `npm run build`, not committed to run)
 - `tests/`, `tests-js/` — PHPUnit and JS (Jest) tests
 
+After any GatherPress version bump, or any change to `mu-plugins/wporg-groups-frontend`, `mu-plugins/groups`, or `themes/groups-site`, run the [`groups-gatherpress-compat-test`](https://github.com/WordPress/wordcamp.org/blob/production/.claude/skills/groups-gatherpress-compat-test/SKILL.md) skill to check front-end integration compatibility.
+
 ### `mu-plugins/gatherpress-recurring-events`
 
 WordCamp-authored experimental GatherPress extension that stores recurring events as one editable series post with lightweight projected occurrence rows, instead of GatherPress's default of one post per occurrence.

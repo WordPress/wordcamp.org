@@ -16,6 +16,7 @@ use DateTimeImmutable;
 use WordPressdotorg\GatherPress_Recurring_Events\Context;
 use WordPressdotorg\GatherPress_Recurring_Events\Database;
 use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
+use WordPressdotorg\GatherPress_Recurring_Events\Plugin;
 use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 use WP_Error;
 use WP_REST_Request;
@@ -194,9 +195,20 @@ function save_recurring_event_draft( int $post_id, WP_REST_Request $request ): v
  * @param bool            $schedule_editable Whether the schedule may still be initialized.
  */
 function save_recurring_event( int $post_id, WP_REST_Request $request, bool $schedule_editable ): void {
-	if ( $schedule_editable ) {
-		persist_recurring_event_rule( $post_id, $request, true );
+	if ( ! $schedule_editable ) {
+		return;
 	}
+
+	// The post is already `publish` by the time this fires, so the extension's
+	// published-schedule lock would block the very write the caller was
+	// entitled to make. `$schedule_editable` records that entitlement as of
+	// before the transition, so honour it.
+	Plugin::with_schedule_unlocked(
+		$post_id,
+		static function () use ( $post_id, $request ) {
+			persist_recurring_event_rule( $post_id, $request, true );
+		}
+	);
 }
 
 /**

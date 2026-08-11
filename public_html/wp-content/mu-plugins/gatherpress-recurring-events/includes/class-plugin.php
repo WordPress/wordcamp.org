@@ -65,6 +65,75 @@ final class Plugin {
 	}
 
 	/**
+	 * The schedule metadata that is frozen once a series is published.
+	 *
+	 * @return string[]
+	 */
+	public static function locked_schedule_meta_keys(): array {
+		return array(
+			'gatherpress_datetime',
+			Rule::META_PREFIX . 'frequency',
+			Rule::META_PREFIX . 'interval',
+			Rule::META_PREFIX . 'weekdays',
+			Rule::META_PREFIX . 'monthly_mode',
+			Rule::META_PREFIX . 'monthly_day',
+			Rule::META_PREFIX . 'monthly_order',
+			Rule::META_PREFIX . 'monthly_weekday',
+			Rule::META_PREFIX . 'end_type',
+			Rule::META_PREFIX . 'until',
+			Rule::META_PREFIX . 'count',
+		);
+	}
+
+	/**
+	 * Runs a callback with the published-schedule lock lifted for one post.
+	 *
+	 * Needed by callers that established the right to write the schedule
+	 * before the post reached `publish`, and only then persist it. Without
+	 * this the write is short-circuited to `false` and silently lost.
+	 *
+	 * @param int      $post_id  Event post ID.
+	 * @param callable $callback Work to run while the lock is lifted.
+	 * @return mixed Whatever the callback returns.
+	 */
+	public static function with_schedule_unlocked( int $post_id, callable $callback ) {
+		return self::with_schedule_keys_allowed( $post_id, self::locked_schedule_meta_keys(), $callback );
+	}
+
+	/**
+	 * Runs a callback with specific schedule keys writable for one post.
+	 *
+	 * The allowlist entry is merged into whatever is already there and put back
+	 * afterwards, so an inner lift never narrows or cancels an outer one. Both
+	 * public entry points go through here for that reason: two hand-rolled
+	 * save/restore blocks would only have to drift once to reintroduce the
+	 * silent-loss bug they exist to prevent.
+	 *
+	 * @param int      $post_id  Event post ID.
+	 * @param string[] $keys     Meta keys to make writable for the duration.
+	 * @param callable $callback Work to run while the lock is lifted.
+	 * @return mixed Whatever the callback returns.
+	 */
+	private static function with_schedule_keys_allowed( int $post_id, array $keys, callable $callback ) {
+		$previous = self::$schedule_updates_allowed[ $post_id ] ?? null;
+
+		self::$schedule_updates_allowed[ $post_id ] = array_merge(
+			$previous ?? array(),
+			array_fill_keys( $keys, true )
+		);
+
+		try {
+			return $callback();
+		} finally {
+			if ( null === $previous ) {
+				unset( self::$schedule_updates_allowed[ $post_id ] );
+			} else {
+				self::$schedule_updates_allowed[ $post_id ] = $previous;
+			}
+		}
+	}
+
+	/**
 	 * Applies the dedicated, monotonic end-series mutation.
 	 *
 	 * @param int    $post_id Event post ID.
@@ -74,17 +143,14 @@ final class Plugin {
 		$end_type_key = Rule::META_PREFIX . 'end_type';
 		$until_key    = Rule::META_PREFIX . 'until';
 
-		self::$schedule_updates_allowed[ $post_id ] = array(
-			$end_type_key => true,
-			$until_key    => true,
+		self::with_schedule_keys_allowed(
+			$post_id,
+			array( $end_type_key, $until_key ),
+			static function () use ( $post_id, $end_type_key, $until_key, $until ): void {
+				update_post_meta( $post_id, $end_type_key, 'until' );
+				update_post_meta( $post_id, $until_key, $until );
+			}
 		);
-
-		try {
-			update_post_meta( $post_id, $end_type_key, 'until' );
-			update_post_meta( $post_id, $until_key, $until );
-		} finally {
-			unset( self::$schedule_updates_allowed[ $post_id ] );
-		}
 	}
 
 	/** Registers extension hooks. */
@@ -214,19 +280,7 @@ final class Plugin {
 	 * @return mixed Existing value or false to block a mutation.
 	 */
 	public function lock_published_schedule( $check, int $object_id, string $meta_key, $meta_value ) {
-		$locked = array(
-			'gatherpress_datetime',
-			Rule::META_PREFIX . 'frequency',
-			Rule::META_PREFIX . 'interval',
-			Rule::META_PREFIX . 'weekdays',
-			Rule::META_PREFIX . 'monthly_mode',
-			Rule::META_PREFIX . 'monthly_day',
-			Rule::META_PREFIX . 'monthly_order',
-			Rule::META_PREFIX . 'monthly_weekday',
-			Rule::META_PREFIX . 'end_type',
-			Rule::META_PREFIX . 'until',
-			Rule::META_PREFIX . 'count',
-		);
+		$locked = self::locked_schedule_meta_keys();
 
 		if ( isset( self::$schedule_updates_allowed[ $object_id ][ $meta_key ] ) || 'publish' !== get_post_status( $object_id ) || ! Rule::is_recurring( $object_id ) || ! in_array( $meta_key, $locked, true ) || ! metadata_exists( 'post', $object_id, $meta_key ) ) {
 			return $check;

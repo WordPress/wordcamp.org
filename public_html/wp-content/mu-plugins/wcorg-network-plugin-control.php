@@ -99,7 +99,6 @@ function _get_network_plugin_state_list( $state ) {
 		$network_plugin_state['activated']   = array(
 			'akismet/akismet.php',
 			'gatherpress/gatherpress.php',
-			'gatherpress-recurring-events/plugin.php',
 			'gutenberg/gutenberg.php',
 			'jetpack/jetpack.php',
 			'two-factor/two-factor.php',

@@ -32,25 +32,35 @@
  * be visible, be stable, and actually receive the click, which rides out
  * exactly this kind of hydration race instead of hoping a keypress lands.
  *
+ * That alone still wasn't enough: a trace showed the *fill* right after
+ * this function returns failing with the dialog open again, despite this
+ * function already having dismissed it. The editor's app state appears to
+ * reinitialize a second time shortly after the first load (a duplicate
+ * wave of editor asset requests shows up ~1-2s after the first), bringing
+ * a fresh, not-yet-dismissed instance of the same dialog back with it. One
+ * dismissal isn't durable, so this loops -- checking again after each
+ * dismissal -- until the dialog genuinely stops reappearing.
+ *
  * @param {import('@playwright/test').Page} page
  */
 async function dismissEditorOnboarding( page ) {
 	const welcomeGuideCloseButton = page
 		.getByRole( 'dialog', { name: 'Welcome to the editor' } )
 		.getByRole( 'button', { name: 'Close' } );
-	let welcomeGuideAppeared = true;
-	try {
-		// Only "never appeared" is expected/swallowed here. Once we know it's
-		// there, the click itself runs outside the try -- if that fails for
-		// some other reason, the test should fail loudly at the real cause
-		// instead of this silently misclassifying it as "didn't appear" and
-		// leaving the same dialog open to block everything after it.
-		await welcomeGuideCloseButton.waitFor( { state: 'visible', timeout: 15000 } );
-	} catch {
-		// Guide didn't appear (already dismissed for this user) — nothing to do.
-		welcomeGuideAppeared = false;
-	}
-	if ( welcomeGuideAppeared ) {
+
+	// First check is generous (cold JS boot); rechecks after a dismissal are
+	// shorter, since by then we're only confirming a reappearance didn't
+	// happen, not waiting through an initial render.
+	for ( let attempt = 0; attempt < 3; attempt++ ) {
+		try {
+			await welcomeGuideCloseButton.waitFor( {
+				state: 'visible',
+				timeout: attempt === 0 ? 15000 : 5000,
+			} );
+		} catch {
+			// Didn't (re)appear — nothing left to dismiss.
+			break;
+		}
 		// Bounded, rather than inheriting the test's full (90s under
 		// test.slow()) default action timeout -- by this point we already
 		// know the dialog exists, so a normal click shouldn't need long. If

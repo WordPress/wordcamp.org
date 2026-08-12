@@ -239,7 +239,7 @@ class csstidy_print { // phpcs:ignore
 					if ( $this->parser->get_cfg( 'lowercase_s' ) ) {
 						$token[1] = strtolower( $token[1] );
 					}
-					$out .= ( $token[1][0] !== '@' ) ? $template[2] . $this->htmlsp( $token[1], $plain ) : $template[0] . $this->htmlsp( $token[1], $plain );
+					$out .= ( ( $token[1][0] ?? '' ) !== '@' ) ? $template[2] . $this->htmlsp( $token[1], $plain ) : $template[0] . $this->htmlsp( $token[1], $plain );
 					$out .= $template[3];
 					break;
 

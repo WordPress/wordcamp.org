@@ -1,0 +1,102 @@
+.gpre-occurrence-selector {
+	position: relative;
+	margin-block: 0 2rem;
+}
+
+nav.gpre-occurrence-selector > ul {
+	display: flex;
+	gap: 0.75rem;
+	margin: 0 -1.25rem;
+	overflow-x: auto;
+	padding: 0 1.25rem;
+	list-style: none;
+	-webkit-mask-image: linear-gradient(
+		to right,
+		transparent,
+		#000 1.25rem,
+		#000 calc(100% - 1.25rem),
+		transparent
+	);
+	mask-image: linear-gradient(to right, transparent, #000 1.25rem, #000 calc(100% - 1.25rem), transparent);
+	scroll-padding-inline: 1.25rem;
+	scroll-snap-type: x proximity;
+	scrollbar-width: none;
+}
+
+nav.gpre-occurrence-selector > ul::-webkit-scrollbar {
+	display: none;
+}
+
+.gpre-occurrence-selector__control {
+	position: absolute;
+	top: 50%;
+	z-index: 1;
+	display: grid !important;
+	width: 2.5rem;
+	height: 2.5rem;
+	min-width: 2.5rem !important;
+	padding: 0 !important;
+	transform: translateY(-50%);
+	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
+	border-radius: 50% !important;
+	background: #fff !important;
+	box-shadow: 0 1px 4px rgb(0 0 0 / 18%);
+	color: var(--wp--preset--color--charcoal-1, #1e1e1e) !important;
+	cursor: pointer;
+	font-size: 2rem !important;
+	line-height: 1 !important;
+	place-items: center;
+}
+
+.gpre-occurrence-selector__control.is-previous {
+	left: 0.25rem;
+}
+
+.gpre-occurrence-selector__control.is-next {
+	right: 0.25rem;
+}
+
+.gpre-occurrence-selector__control:disabled,
+.gpre-occurrence-selector:not(.is-scrollable) .gpre-occurrence-selector__control {
+	visibility: hidden;
+	pointer-events: none;
+}
+
+nav.gpre-occurrence-selector > ul > li {
+	flex: 0 0 auto;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	scroll-snap-align: center;
+}
+
+.gpre-occurrence-link {
+	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
+	color: var(--wp--preset--color--charcoal-1, #1e1e1e) !important;
+	display: block;
+	padding: 0.65rem 1rem;
+	font-weight: 700;
+	text-decoration: none !important;
+	white-space: nowrap;
+}
+
+.gpre-occurrence-link:hover {
+	text-decoration: underline !important;
+}
+
+.gpre-occurrence-link[aria-current="date"] {
+	background: var(--wp--preset--color--charcoal-1, #1e1e1e);
+	color: #fff !important;
+}
+
+.gpre-occurrence-link.is-cancelled {
+	text-decoration: line-through;
+}
+
+.gpre-cancelled-notice,
+.gpre-rsvp-closed,
+.gpre-series-ended {
+	padding: 1rem;
+	border-left: 4px solid #d63638;
+	background: #fcf0f1;
+}

@@ -1,0 +1,27 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/event-manage",
+	"version": "1.0.0",
+	"title": "Event Manage",
+	"category": "widgets",
+	"icon": "edit",
+	"description": "Renders create/edit event buttons for organizers, with a full-screen modal for event management.",
+	"usesContext": [ "postId" ],
+	"attributes": {
+		"mode": {
+			"type": "string",
+			"default": "auto",
+			"enum": [ "auto", "create", "edit" ]
+		}
+	},
+	"supports": {
+		"html": false,
+		"interactivity": true,
+		"inserter": false
+	},
+	"render": "file:./render.php",
+	"editorScript": "file:./index.js",
+	"viewScript": "file:./view.js",
+	"style": "file:./style-index.css"
+}

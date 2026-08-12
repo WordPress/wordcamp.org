@@ -1,0 +1,107 @@
+/**
+ * Responsive styles for the WordPress Group theme.
+ *
+ * @package WordCamp\Groups\Site
+ */
+
+img,
+video,
+iframe {
+	max-width: 100%;
+	height: auto;
+}
+
+/* ==========================================================================
+   Mobile (up to 781px)
+   ========================================================================== */
+
+@media (max-width: 781px) {
+
+	/* Single event: collapse two-column layout to stacked. */
+	.groups-site-event-layout {
+		flex-direction: column !important;
+	}
+
+	.groups-site-event-layout .wp-block-column {
+		flex-basis: 100% !important;
+	}
+
+	/* Date header: let text wrap. */
+	.groups-site-event-date-header {
+		gap: 12px !important;
+	}
+
+	/* Query Loop event cards: single column. */
+	.wp-block-post-template.is-layout-grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Archive filters: stack search and filter vertically. */
+	.wporg-query-filters {
+		width: 100%;
+	}
+
+	/* Members grid: single column on small phones. */
+	.wporg-group-members__grid {
+		grid-template-columns: 1fr !important;
+	}
+
+	/* Group membership block: wrap and center. */
+	.wporg-group-membership {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	/* RSVP modal: full screen. */
+	.wporg-event-rsvp__modal {
+		padding: 0 !important;
+	}
+
+	.wporg-event-rsvp__modal-content {
+		border-radius: 0 !important;
+		max-width: none !important;
+		max-height: none !important;
+		height: 100% !important;
+	}
+
+	/* Cover block hero: reduce padding. */
+	.wp-block-cover.alignfull {
+		min-height: auto !important;
+	}
+}
+
+/* ==========================================================================
+   Small tablet (481-781px): two-column grids
+   ========================================================================== */
+
+@media (min-width: 481px) and (max-width: 781px) {
+	.wp-block-post-template.is-layout-grid {
+		grid-template-columns: 1fr 1fr !important;
+	}
+
+	.wporg-group-members__grid {
+		grid-template-columns: 1fr 1fr !important;
+	}
+}
+
+/* ==========================================================================
+   Desktop (1024px+)
+   ========================================================================== */
+
+@media (min-width: 1024px) {
+	/*
+	 * Stick the event sidebar to the top while scrolling.
+	 *
+	 * Applied to the whole column rather than just the info card, because a
+	 * sticky card scrolls *over* anything after it in the same container —
+	 * with the sponsors block below it, the card would slide down and cover
+	 * it. `align-self` stops the column stretching to the row's full height,
+	 * which would leave `sticky` no room to travel in.
+	 */
+	.groups-site-event-sidebar {
+		position: sticky;
+		top: 96px;
+		z-index: 100;
+		align-self: flex-start;
+	}
+}

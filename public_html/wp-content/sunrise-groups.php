@@ -97,15 +97,71 @@ function set_network_and_site() {
 }
 
 /**
+ * Whether the current request targets a core entry point that must stay
+ * reachable on the groups network root, rather than being bounced to the
+ * events root by `do_redirects()`.
+ *
+ * The allowlist is deliberately exact rather than a `wp-*.php` pattern. A
+ * pattern would also un-bounce `wp-signup.php`, `wp-mail.php`,
+ * `wp-trackback.php`, `wp-comments-post.php` and friends on what is only a
+ * placeholder site — none of which anything here needs, and all of which
+ * have been unreachable until now.
+ *
+ * - `wp-login.php` is the only way to get a session on this network, and
+ *   without one every Network Admin screen here is unreachable.
+ * - `wp-cron.php` is where `spawn_cron()` POSTs for this blog. Scheduled work
+ *   owned by the root site — the group messaging queue, for one — lives in
+ *   this blog's `cron` option, and the spawn is non-blocking, so a redirect
+ *   is never followed: the job simply never ran.
+ *
+ * The list is a local rather than a namespace constant on purpose: this file
+ * is `require`d from inside `load_network_sunrise()`, so a file-scope `const`
+ * here is evaluated in function scope and never actually declared. That's
+ * also why `sunrise.php` is where this namespace's constants live.
+ *
+ * Reads `REQUEST_URI` rather than using `is_login()`, which can't run this
+ * early — it calls `wp_login_url()`, needing blog options that don't exist
+ * until long after sunrise. `SCRIPT_NAME` would work under the current nginx
+ * config (`/group/wp-login.php` is rewritten to `/wp-login.php`) but would
+ * stop matching silently if those rewrites changed; `REQUEST_URI` is what the
+ * rest of this file already resolves the current site from.
+ *
+ * Anything that doesn't match falls through to the redirect, so an encoded or
+ * otherwise unrecognised spelling fails closed, back to today's behaviour.
+ *
+ * @return bool
+ */
+function is_reachable_root_endpoint() {
+	$reachable = array( 'wp-login.php', 'wp-cron.php' );
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- `wp_parse_url()` isn't available this early.
+	$path = parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH );
+
+	if ( ! is_string( $path ) || '' === $path ) {
+		return false;
+	}
+
+	return in_array( basename( $path ), $reachable, true );
+}
+
+/**
  * Handle any redirects needed on the Groups network.
  */
 function do_redirects() {
 	global $blog_id, $site_id;
 
-	// The groups network root (`events.wordpress.org/group/`) is a placeholder
-	// that exists only because WordPress multisite requires every network to
-	// have a root site. Front-end requests bounce to the events root.
-	if ( GROUPS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() ) {
+	/*
+	 * The groups network root (`events.wordpress.org/group/`) is a placeholder
+	 * that exists only because WordPress multisite requires every network to
+	 * have a root site. Front-end requests bounce to the events root.
+	 *
+	 * `REACHABLE_ROOT_ENDPOINTS` are exempt: `is_admin()` is false for them,
+	 * so bouncing `wp-login.php` left every Network Admin screen here
+	 * permanently unreachable — you'd be sent to the events root, whose login
+	 * sets an admin cookie scoped to `/wp-admin`, never `/group/wp-admin` —
+	 * and bouncing `wp-cron.php` silently dropped this blog's scheduled work.
+	 */
+	if ( GROUPS_ROOT_BLOG_ID === $blog_id && ! is_admin() && ! is_network_admin() && ! is_reachable_root_endpoint() ) {
 		header( 'X-Redirect-By: Groups/Sunrise::do_redirects' );
 		header( 'Location: https://events.wordpress.' . get_top_level_domain() . '/', true, 302 );
 		exit;

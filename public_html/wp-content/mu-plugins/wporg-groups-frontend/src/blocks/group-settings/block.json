@@ -1,0 +1,19 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "wporg/group-settings",
+	"version": "1.0.0",
+	"title": "Group Settings",
+	"category": "widgets",
+	"icon": "admin-generic",
+	"description": "Organiser settings panel for managing events, venues, members, design, and group info.",
+	"usesContext": [ "postId" ],
+	"supports": {
+		"html": false,
+		"inserter": false
+	},
+	"render": "file:./render.php",
+	"viewScript": "file:./view.js",
+	"editorScript": "file:./index.js",
+	"style": "file:./style-index.css"
+}

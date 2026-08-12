@@ -802,7 +802,7 @@ class WordCamp_Post_Types_Plugin {
 	protected function is_single_cpt_post( $post_type ) {
 		global $wp_query;
 
-		return isset( $wp_query->query[ $post_type ] ) && $post_type === $wp_query->query['post_type'];
+		return isset( $wp_query->query[ $post_type ], $wp_query->query['post_type'] ) && $post_type === $wp_query->query['post_type'];
 	}
 
 	/**

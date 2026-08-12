@@ -1,0 +1,16 @@
+{
+	"name": "wporg-groups-frontend",
+	"private": true,
+	"scripts": {
+		"build": "wp-scripts build --webpack-src-dir=src/blocks --output-path=build/blocks --experimental-modules",
+		"start": "wp-scripts start --webpack-src-dir=src/blocks --output-path=build/blocks --experimental-modules",
+		"test": "wp-scripts test-unit-js"
+	},
+	"devDependencies": {
+		"@wordpress/interactivity": "6.48.0",
+		"@wordpress/scripts": "^30.0.0"
+	},
+	"dependencies": {
+		"leaflet": "^1.9.4"
+	}
+}

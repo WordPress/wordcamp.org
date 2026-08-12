@@ -431,7 +431,12 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			}
 		}
 
-		rename( $tmp_path, $invoices_dirname . '/' . $filename );
+		// `rename()` can fail with "Operation not permitted" when the source and destination
+		// are on different filesystems/mounts (e.g. a `/tmp` tmpfs vs. the uploads volume).
+		if ( ! @rename( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
+			copy( $tmp_path, $invoices_dirname . '/' . $filename );
+			unlink( $tmp_path );
+		}
 
 		update_post_meta( $invoice_id, 'invoice_document', $filename );
 	}

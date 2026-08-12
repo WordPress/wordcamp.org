@@ -20,12 +20,23 @@
  * and every subsequent interaction (filling in the date, clicking Publish)
  * hung until the test timeout.
  *
+ * The wait windows below are generous (not the usual few seconds) for the
+ * same reason: on a loaded CI runner (see #1883), the guide can render
+ * later than a short window accounts for. A too-short wait here doesn't
+ * fail fast -- it silently returns as if the dialog isn't coming, and the
+ * dialog then appears anyway a moment later and blocks every interaction
+ * for the rest of the test until *its* timeout expires. A trace captured
+ * via #1883's investigation confirmed exactly this: `dismissEditorOnboarding`
+ * had already returned by the time "Welcome to the editor" rendered and
+ * intercepted the title field, hanging the test for its full 90s budget on
+ * a `.fill()` that could never succeed.
+ *
  * @param {import('@playwright/test').Page} page
  */
 async function dismissEditorOnboarding( page ) {
 	const welcomeGuideHeading = page.getByRole( 'heading', { name: 'Welcome to the editor' } );
 	try {
-		await welcomeGuideHeading.waitFor( { state: 'visible', timeout: 3000 } );
+		await welcomeGuideHeading.waitFor( { state: 'visible', timeout: 15000 } );
 		await page.keyboard.press( 'Escape' );
 	} catch {
 		// Guide didn't appear (already dismissed for this user) — nothing to do.
@@ -33,7 +44,7 @@ async function dismissEditorOnboarding( page ) {
 
 	const patternDialogHeading = page.getByRole( 'heading', { name: 'Choose a pattern' } );
 	try {
-		await patternDialogHeading.waitFor( { state: 'visible', timeout: 3000 } );
+		await patternDialogHeading.waitFor( { state: 'visible', timeout: 15000 } );
 		await page.getByRole( 'option' ).first().click();
 	} catch {
 		// Dialog didn't appear (already dismissed for this user/session, or a

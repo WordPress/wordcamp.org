@@ -275,7 +275,10 @@ function EventForm( { eventId, onDone, onCancel } ) {
 					is_online: form.is_online,
 					online_event_link: form.is_online ? form.online_event_link : '',
 					featured_image_id: featuredImage.id,
-					recurrence,
+					// Recurrence is locked (uneditable) once an event is published,
+					// so editing an existing event never needs to resend it — and
+					// must not send `null`, which fails the endpoint's object schema.
+					...( isEdit ? {} : { recurrence } ),
 					// Blank-labelled rows are an empty slot the organizer added
 					// and never filled in; the server drops them too.
 					rsvp_questions: ( form.rsvp_questions || [] ).filter( ( question ) => question.label.trim() !== '' ),

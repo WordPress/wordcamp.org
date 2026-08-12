@@ -51,6 +51,26 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
+	 * Dispatches a JSON body through the full REST pipeline, the same way
+	 * the frontend's `apiFetch()` does.
+	 *
+	 * Unlike `event_request()` (which builds a `WP_REST_Request` via
+	 * `set_param()`), this goes through `rest_do_request()` /
+	 * `WP_REST_Server::dispatch()`, which is what actually runs
+	 * `sanitize_params()` / schema validation against the registered route
+	 * args. A request built with `set_param()` alone skips that step
+	 * entirely, so it can't catch a schema-validation bug like the one
+	 * these tests exist to cover.
+	 */
+	private function dispatch_json_request( string $method, string $route, array $body ) {
+		$request = new WP_REST_Request( $method, $route );
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( wp_json_encode( $body ) );
+
+		return rest_do_request( $request );
+	}
+
+	/**
 	 * An editor (Organiser) can create and publish an event in one request.
 	 */
 	public function test_create_event_as_editor() {
@@ -325,6 +345,105 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertNotWPError( $response );
 		$this->assertSame( 'Updated Past Event', get_the_title( $event_id ) );
+	}
+
+	/**
+	 * Regression test for a production incident: editing an existing,
+	 * non-recurring, published event failed with
+	 * "Invalid parameter(s): recurrence".
+	 *
+	 * The frontend's save payload always included a `recurrence` key, even
+	 * when its local state was still `null` (e.g. before the initial
+	 * `GET /event-form-data` fetch had populated it). `apiFetch()` then
+	 * serialized that as literal JSON `null`, but `recurrence`'s REST arg
+	 * is typed strictly as `object` (`recurring_event_args_schema()`), and
+	 * `object` schemas don't accept `null` — so the whole request was
+	 * rejected before `update_event()` ever ran, even though every other
+	 * field was valid and recurrence wasn't being changed at all. Fixed by
+	 * having the frontend omit `recurrence` entirely on edit (recurrence
+	 * is `required =&gt; false`, and is locked/uneditable after publish
+	 * anyway) instead of ever sending it as `null`.
+	 *
+	 * None of the other `create_event()`/`update_event()` tests in this
+	 * file would have caught this: they build requests with
+	 * `WP_REST_Request::set_param()`, which skips `sanitize_params()` /
+	 * schema validation entirely. This test dispatches through
+	 * `rest_do_request()` instead, exercising the same validation path a
+	 * real save from the browser hits.
+	 */
+	public function test_update_event_omitting_recurrence_succeeds(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$create = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $create );
+		$event_id = $create->get_data()['id'];
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'title' => 'Edited Without Recurrence' ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'Edited Without Recurrence', get_the_title( $event_id ) );
+	}
+
+	/**
+	 * Pins the exact failure mode from the incident above: a literal JSON
+	 * `null` for `recurrence` is rejected by schema validation, for the
+	 * whole request, with `rest_invalid_param` / `recurrence` — never
+	 * `wporg_groups_invalid_recurrence` (the app-level validator in
+	 * `mu-plugins/groups/gatherpress-recurring-events.php`, which never
+	 * even runs here). Frontend code must omit the key rather than send
+	 * `null`.
+	 */
+	public function test_update_event_rejects_null_recurrence(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$create = create_event( $this->event_request( $this->base_event_params() ) );
+		$this->assertNotWPError( $create );
+		$event_id = $create->get_data()['id'];
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			"/wporg-groups/v1/event/{$event_id}",
+			array( 'recurrence' => null ) + $this->base_event_params()
+		);
+
+		$this->assertSame( 400, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertSame( 'rest_invalid_param', $data['code'] );
+		$this->assertArrayHasKey( 'recurrence', $data['data']['params'] );
+	}
+
+	/**
+	 * Creating an event is the other half of this "crucial functionality":
+	 * confirms the full REST pipeline (schema validation included) accepts
+	 * a real create payload with `recurrence` present, the way the
+	 * frontend's create flow sends it.
+	 */
+	public function test_create_event_via_rest_dispatch(): void {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$response = $this->dispatch_json_request(
+			'POST',
+			'/wporg-groups/v1/event',
+			array(
+				'recurrence' => array(
+					'available' => true,
+					'locked'    => false,
+					'frequency' => '',
+				),
+			) + $this->base_event_params()
+		);
+
+		$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+		$event_id = $response->get_data()['id'];
+		$this->assertSame( 'gatherpress_event', get_post_type( $event_id ) );
+		$this->assertSame( 'publish', get_post_status( $event_id ) );
 	}
 
 	/**

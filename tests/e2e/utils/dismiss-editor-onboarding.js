@@ -6,7 +6,7 @@
  * client-side/per-user preferences rather than anything this test controls,
  * so a given run may see either, both, or neither:
  *
- *   - The "Welcome to the editor" guide — dismissed with Escape.
+ *   - The "Welcome to the editor" guide — dismissed via its own Close button.
  *   - The "Choose a pattern" starter-pattern picker, which `gatherpress_event`
  *     registers starter patterns for. Unlike the welcome guide, this one's
  *     own Close button and Escape do **not** dismiss it (confirmed manually
@@ -20,24 +20,24 @@
  * and every subsequent interaction (filling in the date, clicking Publish)
  * hung until the test timeout.
  *
- * The wait windows below are generous (not the usual few seconds) for the
- * same reason: on a loaded CI runner (see #1883), the guide can render
- * later than a short window accounts for. A too-short wait here doesn't
- * fail fast -- it silently returns as if the dialog isn't coming, and the
- * dialog then appears anyway a moment later and blocks every interaction
- * for the rest of the test until *its* timeout expires. A trace captured
- * via #1883's investigation confirmed exactly this: `dismissEditorOnboarding`
- * had already returned by the time "Welcome to the editor" rendered and
- * intercepted the title field, hanging the test for its full 90s budget on
- * a `.fill()` that could never succeed.
+ * The welcome guide used to be dismissed with a global `page.keyboard.press(
+ * 'Escape' )` after waiting for its heading to become visible. Traces from
+ * #1883 showed the dialog still open and blocking the page well after that
+ * wait resolved -- Escape is a blind keypress that depends on focus already
+ * being in the right place and the dialog's own event handlers already
+ * being wired up, and evidently that's not reliable here (a heading can be
+ * visible in the DOM slightly before React finishes attaching its
+ * handlers). Clicking the dialog's own Close button instead is a real
+ * actionability-checked interaction -- Playwright waits for it to exist,
+ * be visible, be stable, and actually receive the click, which rides out
+ * exactly this kind of hydration race instead of hoping a keypress lands.
  *
  * @param {import('@playwright/test').Page} page
  */
 async function dismissEditorOnboarding( page ) {
-	const welcomeGuideHeading = page.getByRole( 'heading', { name: 'Welcome to the editor' } );
+	const welcomeGuideDialog = page.getByRole( 'dialog', { name: 'Welcome to the editor' } );
 	try {
-		await welcomeGuideHeading.waitFor( { state: 'visible', timeout: 15000 } );
-		await page.keyboard.press( 'Escape' );
+		await welcomeGuideDialog.getByRole( 'button', { name: 'Close' } ).click( { timeout: 15000 } );
 	} catch {
 		// Guide didn't appear (already dismissed for this user) — nothing to do.
 	}

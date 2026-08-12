@@ -21,6 +21,7 @@ on:
     - .docker/config/error-logging.ini
     - .docker/config/uploads.ini
     - .docker/config/msmtprc
+    - .docker/data/wordcamp_dev.sql
     - .github/workflows/e2e-image.yml
   schedule:
     # Weekly, to pick up upstream base-image security patches even when
@@ -38,6 +39,15 @@ permissions:
 jobs:
   build:
     name: Build & publish (${{ matrix.name }})
+
+    # `schedule` and the `push` above always run against `production`, but
+    # `workflow_dispatch` doesn't have a built-in branch restriction -- it
+    # can be fired against any ref. Without this guard, a manual dispatch
+    # of unmerged code would still publish to (and overwrite) the shared
+    # `:latest` tag that every E2E run pulls. This keeps dispatch usable
+    # (e.g. forcing a rebuild without waiting for the weekly cron) while
+    # requiring it to target production.
+    if: github.ref == 'refs/heads/production'
 
     runs-on: ubuntu-latest
 

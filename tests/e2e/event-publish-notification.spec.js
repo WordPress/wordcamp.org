@@ -165,13 +165,7 @@ test.describe( 'event publish notification', () => {
 	test( 'publishing an event notifies members once, and editing it afterwards does not duplicate', async ( {
 		page,
 	} ) => {
-		// Two full block-editor round trips (create+publish, then edit+save)
-		// plus two email-arrival polling phases. `test.slow()`'s 3x (90s) was
-		// occasionally not enough headroom under CI's slower/more-variable
-		// conditions -- runs sat close enough to that ceiling to intermittently
-		// exceed it, surfacing as either a bare timeout or a mid-step "page,
-		// context or browser has been closed" once Playwright force-aborted.
-		test.setTimeout( 150_000 );
+		test.slow(); // Shares the block editor's cold-boot cost, plus cron + MailCatcher round trips.
 
 		const title = `Auto-notify E2E ${ Date.now() }`;
 		const postId = await createAndPublishEvent( page, title );

@@ -86,7 +86,12 @@ jobs:
         path: |
           node_modules
           public_html/wp-content/**/node_modules
-        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+        # Includes package.json (root + every workspace), not just the
+        # lockfile: a manifest edited without a matching lockfile update
+        # must invalidate the cache too, so `npm ci` runs and rejects the
+        # mismatch instead of a stale cache hit silently skipping install
+        # (and any changed lifecycle scripts) entirely.
+        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
 
     - name: Install dependencies
       run: |

@@ -244,38 +244,7 @@ jobs:
         create_page members Members
 
     - name: Run Playwright tests
-      # TEMPORARY (wordcamp.org#1883): samples memory/process state every 5s
-      # while the suite runs, to test the theory that intermittent
-      # "context or browser has been closed" / timeout flakes are caused by
-      # CI-runner resource pressure (e.g. Chromium OOM kills) rather than a
-      # bug in any one spec. Remove once #1883 is diagnosed either way.
-      run: |
-        set +e
-        ( while true; do
-            echo "=== $(date -u +%H:%M:%S) ==="
-            free -h
-            echo "--- docker stats ---"
-            docker stats --no-stream
-            echo "--- top memory consumers (host) ---"
-            ps aux --sort=-%mem | head -15
-            echo "--- top memory consumers (wordcamp.test) ---"
-            docker compose exec -T wordcamp.test sh -c "ps aux --sort=-%mem | head -10" 2>/dev/null
-            sleep 5
-          done ) > /tmp/resource-monitor.log 2>&1 &
-        monitor_pid=$!
-        npx playwright test
-        test_exit=$?
-        kill "$monitor_pid" 2>/dev/null
-        wait "$monitor_pid" 2>/dev/null
-        exit "$test_exit"
-
-    - name: Upload resource monitor log
-      if: ${{ !cancelled() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: resource-monitor-log
-        path: /tmp/resource-monitor.log
-        retention-days: 14
+      run: npx playwright test
 
     - name: Upload Playwright report
       if: ${{ !cancelled() }}

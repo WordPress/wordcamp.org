@@ -51,7 +51,13 @@ async function dismissEditorOnboarding( page ) {
 		welcomeGuideAppeared = false;
 	}
 	if ( welcomeGuideAppeared ) {
-		await welcomeGuideCloseButton.click();
+		// Bounded, rather than inheriting the test's full (90s under
+		// test.slow()) default action timeout -- by this point we already
+		// know the dialog exists, so a normal click shouldn't need long. If
+		// something's actually wrong (e.g. the dialog stuck detaching and
+		// reattaching in a render loop), this fails fast and loud instead of
+		// burning the whole test budget on one action.
+		await welcomeGuideCloseButton.click( { timeout: 10000 } );
 	}
 
 	// Independent of the welcome guide above -- a given run may see either,

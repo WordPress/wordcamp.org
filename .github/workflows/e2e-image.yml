@@ -64,6 +64,11 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Set up Docker Buildx
+      # The default `docker` driver can't export a cache (needed for
+      # cache-to below) -- this switches to the `docker-container` driver.
+      uses: docker/setup-buildx-action@v3
+
     - name: Build and push
       uses: docker/build-push-action@v6
       with:

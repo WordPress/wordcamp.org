@@ -122,8 +122,17 @@ jobs:
       # build every workspace, same as `npm run setup` does for local dev.
       run: npm run build
 
-    - name: Clone WordPress core (develop trunk) into public_html/mu
-      run: git clone --depth=1 https://github.com/WordPress/WordPress.git public_html/mu
+    - name: Download WordPress core (latest stable) into public_html/mu
+      # Was a fresh `develop trunk` clone -- bleeding-edge core can (and
+      # did) drift ahead of the plugins pinned in composer-dev.json. E.g.
+      # WP_Icons_Registry landed in trunk with a public register() method
+      # before Gutenberg's stable release updated its override to match,
+      # producing a "must be public" PHP fatal on every run. Latest stable
+      # is what GatherPress/Gutenberg's stable releases actually target.
+      run: |
+        curl -sL https://wordpress.org/latest.zip -o /tmp/wordpress.zip
+        unzip -q /tmp/wordpress.zip -d /tmp
+        mv /tmp/wordpress public_html/mu
 
     - name: Lowercase the image repository path
       # GHCR requires lowercase image references; github.repository

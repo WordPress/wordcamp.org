@@ -361,7 +361,7 @@ class Test_Groups_REST extends Groups_TestCase {
 	 * rejected before `update_event()` ever ran, even though every other
 	 * field was valid and recurrence wasn't being changed at all. Fixed by
 	 * having the frontend omit `recurrence` entirely on edit (recurrence
-	 * is `required =&gt; false`, and is locked/uneditable after publish
+	 * is `required => false`, and is locked/uneditable after publish
 	 * anyway) instead of ever sending it as `null`.
 	 *
 	 * None of the other `create_event()`/`update_event()` tests in this

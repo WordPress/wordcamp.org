@@ -14,8 +14,13 @@ on:
     paths:
     - .docker/Dockerfile.php-fpm
     - .docker/Dockerfile.mariadb
-    - .docker/config/**
-    - .docker/wp-cli.yml
+    # Only the config files actually COPY'd into an image belong here --
+    # nginx.conf, php-fpm.conf, and wp-cli.yml are bind-mounted at runtime
+    # (see docker-compose.yaml's volumes) and take effect without a rebuild.
+    - .docker/config/opcache-recommended.ini
+    - .docker/config/error-logging.ini
+    - .docker/config/uploads.ini
+    - .docker/config/msmtprc
     - .github/workflows/e2e-image.yml
   schedule:
     # Weekly, to pick up upstream base-image security patches even when

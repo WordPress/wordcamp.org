@@ -1,8 +1,12 @@
 services:
     wordcamp.test:
-        build:
-            context: .docker
-            dockerfile: Dockerfile.php-fpm
+        # Local dev builds this from Dockerfile.php-fpm via the `build:` in
+        # docker-compose.override.yml, which `docker compose` merges in
+        # automatically. CI (`.github/workflows/e2e-tests.yml`) sets
+        # WORDCAMP_TEST_IMAGE to a prebuilt ghcr.io tag and runs against
+        # this base file alone, so it pulls instead of rebuilding from
+        # scratch every run -- see `.github/workflows/e2e-image.yml`.
+        image: "${WORDCAMP_TEST_IMAGE:-wordcamp-test-local}"
         volumes:
             - "./public_html:/usr/src/public_html"
             - ".docker/bin:/var/scripts"
@@ -21,9 +25,8 @@ services:
             - WP_CLI_ALLOW_ROOT=true
 
     wordcamp.db:
-        build:
-            context: .docker
-            dockerfile: Dockerfile.mariadb
+        # See wordcamp.test's comment above -- same local-dev-vs-CI split.
+        image: "${WORDCAMP_DB_IMAGE:-wordcamp-db-local}"
         volumes:
             - ".docker/mariadb-database:/var/lib/mysql"
             - ".docker/bin:/var/scripts"

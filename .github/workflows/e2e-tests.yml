@@ -18,11 +18,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   e2e:
     name: Playwright E2E
 
     runs-on: ubuntu-latest
+
+    env:
+      # Every `docker compose` call in this job should see only the base
+      # file -- not docker-compose.override.yml, which is what makes local
+      # dev's `docker compose up --build` rebuild from Dockerfile.php-fpm.
+      COMPOSE_FILE: docker-compose.yaml
 
     steps:
     - uses: actions/checkout@v4
@@ -42,6 +52,18 @@ jobs:
       env:
           COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Get Composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Composer downloads
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: composer-${{ runner.os }}-${{ hashFiles('composer.json', 'composer-dev.json') }}
+        restore-keys: |
+          composer-${{ runner.os }}-
+
     - name: Install PHP dependencies
       # wporg-mu-plugins (installed via composer, then moved into place by a
       # post-install script — see composer-dev.json's installer-paths) is loaded
@@ -57,11 +79,47 @@ jobs:
         node-version: 20.x
         cache: npm
 
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          public_html/wp-content/**/node_modules
+        # Includes package.json (root + every workspace), not just the
+        # lockfile: a manifest edited without a matching lockfile update
+        # must invalidate the cache too, so `npm ci` runs and rejects the
+        # mismatch instead of a stale cache hit silently skipping install
+        # (and any changed lifecycle scripts) entirely.
+        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json', 'package.json', 'public_html/wp-content/**/package.json') }}
+
     - name: Install dependencies
-      run: npm ci --no-audit --no-fund
+      run: |
+        if [ "${{ steps.node-modules-cache.outputs.cache-hit }}" != 'true' ]; then
+          npm ci --no-audit --no-fund
+        fi
+
+    - name: Get installed Playwright version
+      id: playwright-version
+      run: echo "version=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
     - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
+      # On a cache hit the browser binaries are already present, but the
+      # runner's OS-level deps (apt packages) still need installing --
+      # `install-deps` alone skips the (slow) browser download.
+      run: |
+        if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = 'true' ]; then
+          npx playwright install-deps chromium
+        else
+          npx playwright install --with-deps chromium
+        fi
 
     - name: Build all workspace assets
       # The site fatals on boot (including for wp-cli) if any mu-plugin's
@@ -69,23 +127,41 @@ jobs:
       # build every workspace, same as `npm run setup` does for local dev.
       run: npm run build
 
-    - name: Clone WordPress core (develop trunk) into public_html/mu
-      run: git clone --depth=1 https://github.com/WordPress/WordPress.git public_html/mu
-
-    - name: Generate a self-signed TLS cert for local hostnames
-      # Playwright's `ignoreHTTPSErrors: true` (see playwright.config.js)
-      # means this only needs to satisfy nginx, not a trust store — no
-      # mkcert/browser-trust step needed here, unlike the local dev setup
-      # documented in .docker/readme.md.
+    - name: Download WordPress core (latest stable) into public_html/mu
+      # Was a fresh `develop trunk` clone -- bleeding-edge core can (and
+      # did) drift ahead of the plugins pinned in composer-dev.json. E.g.
+      # WP_Icons_Registry landed in trunk with a public register() method
+      # before Gutenberg's stable release updated its override to match,
+      # producing a "must be public" PHP fatal on every run. Latest stable
+      # is what GatherPress/Gutenberg's stable releases actually target.
       run: |
-        openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-          -keyout .docker/wordcamp.test.key.pem \
-          -out .docker/wordcamp.test.pem \
-          -subj "/CN=wordcamp.test" \
-          -addext "subjectAltName=DNS:wordcamp.test,DNS:*.wordcamp.test,DNS:events.wordpress.test,DNS:*.wordpress.test"
+        curl -sL https://wordpress.org/latest.zip -o /tmp/wordpress.zip
+        unzip -q /tmp/wordpress.zip -d /tmp
+        mv /tmp/wordpress public_html/mu
+
+    - name: Lowercase the image repository path
+      # GHCR requires lowercase image references; github.repository
+      # preserves the repo's actual casing (WordPress/wordcamp.org).
+      id: image
+      run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Boot the docker environment
-      run: docker compose up --build -d
+      # Pulls the prebuilt images published by e2e-image.yml instead of
+      # rebuilding wordcamp.test/wordcamp.db from their Dockerfiles (the
+      # former does apt-get + PHP extension compilation) on every run --
+      # see that workflow for the image builds, including the baked-in TLS
+      # cert for local hostnames.
+      env:
+        WORDCAMP_TEST_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-php-fpm:latest
+        WORDCAMP_DB_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-mariadb:latest
+      run: docker compose up -d
 
     - name: Wait for the site to respond
       run: |
@@ -115,6 +191,9 @@ jobs:
           --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 
     - name: Create role-tier test users
+      # Users are independent rows (different usernames), so creating them
+      # concurrently is safe -- backgrounded rather than sequential to avoid
+      # paying `docker compose exec`'s per-call overhead 7 times over.
       run: |
         SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
         create_user() {
@@ -125,8 +204,9 @@ jobs:
           docker compose exec -T wordcamp.test wp user create "$1" "$1@example.test" \
             --role="$2" --user_pass=password --url="$SITE_URL"
         }
-        create_user organiser1 editor
-        create_user eventorganiser1 author
+        pids=()
+        create_user organiser1 editor & pids+=( "$!" )
+        create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently
         # under fullyParallel — this environment only supports one active
@@ -135,11 +215,16 @@ jobs:
         # the comment in tests/e2e/utils/login.js). event-manage-messaging.spec.js
         # needs THREE of its own (eventorganiser2/4/5) since its own three
         # tests also run concurrently against each other.
-        create_user eventorganiser2 author
-        create_user eventorganiser3 author
-        create_user eventorganiser4 author
-        create_user eventorganiser5 author
-        create_user member1 subscriber
+        create_user eventorganiser2 author & pids+=( "$!" )
+        create_user eventorganiser3 author & pids+=( "$!" )
+        create_user eventorganiser4 author & pids+=( "$!" )
+        create_user eventorganiser5 author & pids+=( "$!" )
+        create_user member1 subscriber & pids+=( "$!" )
+        status=0
+        for pid in "${pids[@]}"; do
+          wait "$pid" || status=1
+        done
+        exit "$status"
 
     - name: Create required pages
       # `page-members.html` (public_html/wp-content/themes/groups-site/templates/)

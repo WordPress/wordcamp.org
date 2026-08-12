@@ -436,10 +436,10 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 		// volume, so cross-device renames are never possible in this environment. Copy
 		// across and remove the source instead of attempting (and logging a warning for)
 		// a rename that cannot succeed.
-		copy( $tmp_path, $invoices_dirname . '/' . $filename );
-		unlink( $tmp_path );
-
-		update_post_meta( $invoice_id, 'invoice_document', $filename );
+		if ( copy( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
+			unlink( $tmp_path );
+			update_post_meta( $invoice_id, 'invoice_document', $filename );
+		}
 	}
 
 	/**

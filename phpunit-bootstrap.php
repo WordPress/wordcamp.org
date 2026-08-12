@@ -28,6 +28,9 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
 $wordcamp_phpunit_error_log = sys_get_temp_dir() . '/wordcamp-phpunit-error.log';
 ini_set( 'error_log', $wordcamp_phpunit_error_log );
 
+// Start each run with an empty log, so a stale entry can't fail a later run.
+file_put_contents( $wordcamp_phpunit_error_log, '' );
+
 register_shutdown_function(
 	static function () use ( $wordcamp_phpunit_error_log ) {
 		if ( ! file_exists( $wordcamp_phpunit_error_log ) ) {

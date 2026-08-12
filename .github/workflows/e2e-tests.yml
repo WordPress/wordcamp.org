@@ -42,6 +42,18 @@ jobs:
       env:
           COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Get Composer cache directory
+      id: composer-cache
+      run: echo "dir=$(composer config cache-dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Composer downloads
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: composer-${{ runner.os }}-${{ hashFiles('composer.json', 'composer-dev.json') }}
+        restore-keys: |
+          composer-${{ runner.os }}-
+
     - name: Install PHP dependencies
       # wporg-mu-plugins (installed via composer, then moved into place by a
       # post-install script — see composer-dev.json's installer-paths) is loaded
@@ -57,11 +69,42 @@ jobs:
         node-version: 20.x
         cache: npm
 
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          public_html/wp-content/**/node_modules
+        key: node-modules-${{ runner.os }}-node20-${{ hashFiles('package-lock.json') }}
+
     - name: Install dependencies
-      run: npm ci --no-audit --no-fund
+      run: |
+        if [ "${{ steps.node-modules-cache.outputs.cache-hit }}" != 'true' ]; then
+          npm ci --no-audit --no-fund
+        fi
+
+    - name: Get installed Playwright version
+      id: playwright-version
+      run: echo "version=$(node -e "console.log(require('./package-lock.json').packages['node_modules/@playwright/test'].version)")" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
     - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
+      # On a cache hit the browser binaries are already present, but the
+      # runner's OS-level deps (apt packages) still need installing --
+      # `install-deps` alone skips the (slow) browser download.
+      run: |
+        if [ "${{ steps.playwright-cache.outputs.cache-hit }}" = 'true' ]; then
+          npx playwright install-deps chromium
+        else
+          npx playwright install --with-deps chromium
+        fi
 
     - name: Build all workspace assets
       # The site fatals on boot (including for wp-cli) if any mu-plugin's

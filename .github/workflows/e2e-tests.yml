@@ -191,6 +191,9 @@ jobs:
           --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 
     - name: Create role-tier test users
+      # Users are independent rows (different usernames), so creating them
+      # concurrently is safe -- backgrounded rather than sequential to avoid
+      # paying `docker compose exec`'s per-call overhead 7 times over.
       run: |
         SITE_URL=events.wordpress.test/group/sunshine-coast-qld/
         create_user() {
@@ -201,8 +204,9 @@ jobs:
           docker compose exec -T wordcamp.test wp user create "$1" "$1@example.test" \
             --role="$2" --user_pass=password --url="$SITE_URL"
         }
-        create_user organiser1 editor
-        create_user eventorganiser1 author
+        pids=()
+        create_user organiser1 editor & pids+=( "$!" )
+        create_user eventorganiser1 author & pids+=( "$!" )
         # Dedicated per-spec accounts, not a shared eventorganiser1, for
         # every spec that logs in as an author and can run concurrently
         # under fullyParallel — this environment only supports one active
@@ -211,11 +215,16 @@ jobs:
         # the comment in tests/e2e/utils/login.js). event-manage-messaging.spec.js
         # needs THREE of its own (eventorganiser2/4/5) since its own three
         # tests also run concurrently against each other.
-        create_user eventorganiser2 author
-        create_user eventorganiser3 author
-        create_user eventorganiser4 author
-        create_user eventorganiser5 author
-        create_user member1 subscriber
+        create_user eventorganiser2 author & pids+=( "$!" )
+        create_user eventorganiser3 author & pids+=( "$!" )
+        create_user eventorganiser4 author & pids+=( "$!" )
+        create_user eventorganiser5 author & pids+=( "$!" )
+        create_user member1 subscriber & pids+=( "$!" )
+        status=0
+        for pid in "${pids[@]}"; do
+          wait "$pid" || status=1
+        done
+        exit "$status"
 
     - name: Create required pages
       # `page-members.html` (public_html/wp-content/themes/groups-site/templates/)

@@ -148,12 +148,14 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Boot the docker environment
-      # Pulls the prebuilt image published by e2e-image.yml instead of
-      # rebuilding wordcamp.test from Dockerfile.php-fpm (apt-get + PHP
-      # extension compilation) on every run -- see that workflow for the
-      # image build, including the baked-in TLS cert for local hostnames.
+      # Pulls the prebuilt images published by e2e-image.yml instead of
+      # rebuilding wordcamp.test/wordcamp.db from their Dockerfiles (the
+      # former does apt-get + PHP extension compilation) on every run --
+      # see that workflow for the image builds, including the baked-in TLS
+      # cert for local hostnames.
       env:
         WORDCAMP_TEST_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-php-fpm:latest
+        WORDCAMP_DB_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-mariadb:latest
       run: docker compose up -d
 
     - name: Wait for the site to respond

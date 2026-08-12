@@ -13,6 +13,10 @@ module.exports = defineConfig( {
 	fullyParallel: true,
 	forbidOnly: !! process.env.CI,
 	retries: process.env.CI ? 2 : 0,
+	// Playwright's default is half of the runner's CPUs; ubuntu-latest
+	// GitHub-hosted runners have 4, and the app server (docker) isn't
+	// competing for that CPU, so using all 4 here is safe.
+	workers: process.env.CI ? 4 : undefined,
 	reporter: process.env.CI ? 'github' : 'list',
 	use: {
 		// Trailing slash matters: Playwright/URL resolution treats a

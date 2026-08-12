@@ -49,8 +49,8 @@ register_shutdown_function(
 			fwrite(
 				STDERR,
 				"\nUnexpected entries were written to PHP's error log during the test run " .
-				"(i.e. not WordCamp\\Logger\\log() calls) -- fix the underlying error instead of " .
-				"letting it accumulate silently in " . $wordcamp_phpunit_error_log . ":\n\n" .
+				'(i.e. not WordCamp\\Logger\\log() calls) -- fix the underlying error instead of ' .
+				'letting it accumulate silently in ' . $wordcamp_phpunit_error_log . ":\n\n" .
 				implode( "\n", $unexpected ) . "\n"
 			);
 			exit( 1 );

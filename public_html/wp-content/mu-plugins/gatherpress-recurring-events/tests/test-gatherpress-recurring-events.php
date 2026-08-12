@@ -403,8 +403,8 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 		try {
 			$this->assertSame( Database::SCHEMA_VERSION, get_option( Database::OPTION_NAME ) );
-			$this->assertSame( Database::occurrences_table(), $wpdb->get_var( "SHOW TABLES LIKE '" . Database::occurrences_table() . "'" ) );
-			$this->assertSame( Database::comments_table(), $wpdb->get_var( "SHOW TABLES LIKE '" . Database::comments_table() . "'" ) );
+			$this->assertSame( Database::occurrences_table(), $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', Database::occurrences_table() ) ) );
+			$this->assertSame( Database::comments_table(), $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', Database::comments_table() ) ) );
 		} finally {
 			restore_current_blog();
 		}

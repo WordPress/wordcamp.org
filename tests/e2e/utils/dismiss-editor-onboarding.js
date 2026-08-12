@@ -35,20 +35,37 @@
  * @param {import('@playwright/test').Page} page
  */
 async function dismissEditorOnboarding( page ) {
-	const welcomeGuideDialog = page.getByRole( 'dialog', { name: 'Welcome to the editor' } );
+	const welcomeGuideCloseButton = page
+		.getByRole( 'dialog', { name: 'Welcome to the editor' } )
+		.getByRole( 'button', { name: 'Close' } );
+	let welcomeGuideAppeared = true;
 	try {
-		await welcomeGuideDialog.getByRole( 'button', { name: 'Close' } ).click( { timeout: 15000 } );
+		// Only "never appeared" is expected/swallowed here. Once we know it's
+		// there, the click itself runs outside the try -- if that fails for
+		// some other reason, the test should fail loudly at the real cause
+		// instead of this silently misclassifying it as "didn't appear" and
+		// leaving the same dialog open to block everything after it.
+		await welcomeGuideCloseButton.waitFor( { state: 'visible', timeout: 15000 } );
 	} catch {
 		// Guide didn't appear (already dismissed for this user) — nothing to do.
+		welcomeGuideAppeared = false;
+	}
+	if ( welcomeGuideAppeared ) {
+		await welcomeGuideCloseButton.click();
 	}
 
+	// Independent of the welcome guide above -- a given run may see either,
+	// both, or neither, so this always runs regardless of the outcome above.
 	const patternDialogHeading = page.getByRole( 'heading', { name: 'Choose a pattern' } );
 	try {
-		await patternDialogHeading.waitFor( { state: 'visible', timeout: 15000 } );
+		await patternDialogHeading.waitFor( { state: 'visible', timeout: 3000 } );
 		await page.getByRole( 'option' ).first().click();
 	} catch {
 		// Dialog didn't appear (already dismissed for this user/session, or a
-		// post type with no starter patterns) — nothing to do.
+		// post type with no starter patterns) — nothing to do. Not implicated
+		// in #1883's investigation, so this keeps its original short timeout
+		// rather than paying the welcome guide's longer one on every run
+		// where it's absent (the common case).
 	}
 }
 

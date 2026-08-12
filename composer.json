@@ -15,7 +15,8 @@
 		"process-timeout": 0,
 		"allow-plugins": {
 			"dealerdirect/phpcodesniffer-composer-installer": true,
-			"composer/installers": true
+			"composer/installers": true,
+			"automattic/jetpack-autoloader": true
 		}
 	},
 	"extra": {

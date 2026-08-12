@@ -10,7 +10,7 @@ name: E2E Docker Image
 # docker-compose.override.yml.
 on:
   push:
-    branches: [production]
+    branches: [production, e2e-cache-speedup] # TODO: drop e2e-cache-speedup before merging -- temporary, to test this workflow pre-merge (workflow_dispatch only works for workflows already on the default branch).
     paths:
     - .docker/Dockerfile.php-fpm
     - .docker/config/**

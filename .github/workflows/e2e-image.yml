@@ -1,0 +1,77 @@
+name: E2E Docker Image
+
+# Builds and publishes a prebuilt ghcr.io image for the `wordcamp.test`
+# container that the Playwright E2E workflow (e2e-tests.yml) provisions.
+# `docker compose up --build` there used to rebuild this from scratch every
+# run -- a dozen apt-get packages plus compiling PHP extensions, ~1m45s with
+# zero layer caching on ephemeral GitHub-hosted runners. Publishing it here
+# instead lets the E2E workflow just pull a pinned tag. Local dev is
+# unaffected -- it still builds from Dockerfile.php-fpm directly, via
+# docker-compose.override.yml.
+on:
+  push:
+    branches: [production]
+    paths:
+    - .docker/Dockerfile.php-fpm
+    - .docker/config/**
+    - .docker/wp-cli.yml
+    - .github/workflows/e2e-image.yml
+  schedule:
+    # Weekly, to pick up upstream base-image (php:8.4-fpm) security patches
+    # even when nothing here has changed.
+    - cron: '17 4 * * 1'
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build & publish
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Generate a self-signed TLS cert for local hostnames
+      # Baked into the image (rather than generated per E2E run) since
+      # Playwright's `ignoreHTTPSErrors: true` (see playwright.config.js)
+      # means this only needs to satisfy nginx, not a trust store -- a
+      # long-lived cert is fine, and this way the image is fully self
+      # contained.
+      run: |
+        openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+          -keyout .docker/wordcamp.test.key.pem \
+          -out .docker/wordcamp.test.pem \
+          -subj "/CN=wordcamp.test" \
+          -addext "subjectAltName=DNS:wordcamp.test,DNS:*.wordcamp.test,DNS:events.wordpress.test,DNS:*.wordpress.test"
+
+    - name: Lowercase the image repository path
+      # GHCR requires lowercase image references; github.repository
+      # preserves the repo's actual casing (WordPress/wordcamp.org).
+      id: image
+      run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: .docker
+        file: .docker/Dockerfile.php-fpm
+        push: true
+        tags: |
+          ghcr.io/${{ steps.image.outputs.repo }}/e2e-php-fpm:latest
+          ghcr.io/${{ steps.image.outputs.repo }}/e2e-php-fpm:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

@@ -1,0 +1,10 @@
+### Automatically merged into `docker-compose.yaml` by `docker compose` when
+### no `-f` flags are passed -- this is what makes `docker compose up --build`
+### keep building wordcamp.test from the Dockerfile for local dev. CI invokes
+### `docker compose -f docker-compose.yaml ...` explicitly to skip this file
+### and pull the prebuilt image instead (see `.github/workflows/e2e-tests.yml`).
+services:
+    wordcamp.test:
+        build:
+            context: .docker
+            dockerfile: Dockerfile.php-fpm

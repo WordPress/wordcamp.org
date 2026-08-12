@@ -18,11 +18,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   e2e:
     name: Playwright E2E
 
     runs-on: ubuntu-latest
+
+    env:
+      # Every `docker compose` call in this job should see only the base
+      # file -- not docker-compose.override.yml, which is what makes local
+      # dev's `docker compose up --build` rebuild from Dockerfile.php-fpm.
+      COMPOSE_FILE: docker-compose.yaml
 
     steps:
     - uses: actions/checkout@v4
@@ -115,20 +125,27 @@ jobs:
     - name: Clone WordPress core (develop trunk) into public_html/mu
       run: git clone --depth=1 https://github.com/WordPress/WordPress.git public_html/mu
 
-    - name: Generate a self-signed TLS cert for local hostnames
-      # Playwright's `ignoreHTTPSErrors: true` (see playwright.config.js)
-      # means this only needs to satisfy nginx, not a trust store — no
-      # mkcert/browser-trust step needed here, unlike the local dev setup
-      # documented in .docker/readme.md.
-      run: |
-        openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-          -keyout .docker/wordcamp.test.key.pem \
-          -out .docker/wordcamp.test.pem \
-          -subj "/CN=wordcamp.test" \
-          -addext "subjectAltName=DNS:wordcamp.test,DNS:*.wordcamp.test,DNS:events.wordpress.test,DNS:*.wordpress.test"
+    - name: Lowercase the image repository path
+      # GHCR requires lowercase image references; github.repository
+      # preserves the repo's actual casing (WordPress/wordcamp.org).
+      id: image
+      run: echo "repo=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Boot the docker environment
-      run: docker compose up --build -d
+      # Pulls the prebuilt image published by e2e-image.yml instead of
+      # rebuilding wordcamp.test from Dockerfile.php-fpm (apt-get + PHP
+      # extension compilation) on every run -- see that workflow for the
+      # image build, including the baked-in TLS cert for local hostnames.
+      env:
+        WORDCAMP_TEST_IMAGE: ghcr.io/${{ steps.image.outputs.repo }}/e2e-php-fpm:latest
+      run: docker compose up -d
 
     - name: Wait for the site to respond
       run: |

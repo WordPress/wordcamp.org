@@ -284,3 +284,18 @@ jobs:
         name: playwright-report
         path: playwright-report/
         retention-days: 14
+
+    - name: Upload Playwright traces
+      # `playwright-report/` above is consistently empty -- the `github`
+      # reporter (see playwright.config.js) doesn't produce an HTML report
+      # there. `trace: 'on-first-retry'` traces actually land in Playwright's
+      # default `test-results/` output dir instead, and were never
+      # uploaded -- meaning every flaky/failed run to date had no trace
+      # artifact to actually inspect (network, console, DOM snapshots at
+      # the moment of failure), for #1883.
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-traces
+        path: test-results/
+        retention-days: 14

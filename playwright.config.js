@@ -13,13 +13,6 @@ module.exports = defineConfig( {
 	fullyParallel: true,
 	forbidOnly: !! process.env.CI,
 	retries: process.env.CI ? 2 : 0,
-	// TEMPORARY EXPERIMENT (#1883): serializing to test the CPU-contention
-	// theory -- diagnostics showed combined CPU across concurrent Chromium
-	// instances spiking to 200-370% on the runner's 4 vCPUs, cyclically,
-	// consistent with two workers' page loads (each executing the full
-	// Gutenberg editor bundle) overlapping and starving whatever UI wait
-	// was in flight. Revert once confirmed/refuted either way.
-	workers: process.env.CI ? 1 : undefined,
 	reporter: process.env.CI ? 'github' : 'list',
 	use: {
 		// Trailing slash matters: Playwright/URL resolution treats a

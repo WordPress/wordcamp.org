@@ -29,9 +29,11 @@ import {
 	WritingFlow,
 	ObserveTyping,
 	BlockTools,
+	store as blockEditorStore,
 } from '@wordpress/block-editor';
+import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
-import { parse, serialize } from '@wordpress/blocks';
+import { createBlock, parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from '../../event-manage/venue-editor';
@@ -83,9 +85,39 @@ function getMinutesBetween( start, end ) {
 
 // === Sub-components ===
 
+// `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
+// registry, so this dispatch only reaches it from a component rendered
+// *inside* the provider — a sibling effect would select a block in the
+// wrong (default) store and `BlockToolbar` would never see it.
+function SelectFirstBlockOnMount( { clientId } ) {
+	const { selectBlock } = useDispatch( blockEditorStore );
+
+	useEffect( () => {
+		if ( clientId ) {
+			// `null` (instead of the default `0`) selects the block
+			// without also moving real DOM focus into it — see
+			// `useFocusFirstElement` in `@wordpress/block-editor`. We only
+			// need the toolbar to appear, not to steal focus from the
+			// modal on open.
+			selectBlock( clientId, null );
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [] );
+
+	return null;
+}
+
 function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
-	const [ blocks, setBlocks ] = useState( () => parse( initialValue || '' ) );
+	// A description with no supported blocks (empty string, or markup that
+	// doesn't parse into anything) yields `[]`, leaving no block to select
+	// and the toolbar permanently empty — fall back to an empty paragraph
+	// so there's always a first block.
+	const [ blocks, setBlocks ] = useState( () => {
+		const parsed = parse( initialValue || '' );
+		return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
+	} );
 	if ( getValueRef ) getValueRef.current = () => serialize( blocks );
+
 	const handleChange = ( newBlocks ) => {
 		setBlocks( newBlocks );
 		if ( onDirty ) onDirty();
@@ -95,6 +127,7 @@ function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
 			value: blocks, onInput: handleChange, onChange: handleChange,
 			settings: { hasFixedToolbar: true },
 		},
+			h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),
 			h( 'div', { className: 'wporg-event-form__editor-toolbar' },
 				h( BlockToolbar, { hideDragHandle: true } ) ),
 			h( BlockTools, {},

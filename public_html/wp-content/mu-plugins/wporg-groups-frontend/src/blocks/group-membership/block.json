@@ -6,7 +6,14 @@
 	"title": "Group Membership",
 	"category": "widgets",
 	"icon": "groups",
-	"description": "Displays a join/leave button for group membership.",
+	"description": "Displays group membership controls or event email preferences.",
+	"attributes": {
+		"variant": {
+			"type": "string",
+			"enum": [ "combined", "membership", "preference" ],
+			"default": "combined"
+		}
+	},
 	"supports": {
 		"html": false,
 		"interactivity": true,

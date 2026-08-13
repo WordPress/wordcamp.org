@@ -4,43 +4,6 @@
 
 @import '../../components/recurrence-controls.css';
 
-/* === Trigger buttons === */
-
-.wporg-event-manage {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-}
-
-.wporg-event-manage__button {
-	font-size: 14px;
-	cursor: pointer;
-}
-
-.wporg-event-manage__button--edit {
-	background: transparent !important;
-	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
-	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
-}
-
-.wporg-event-manage__button--edit:hover {
-	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
-}
-
-.wporg-event-manage__button--message {
-	background: transparent !important;
-	border: 1px solid var(--wp--preset--color--light-grey-1, #d9d9d9) !important;
-	color: var(--wp--preset--color--charcoal-3, #40464d) !important;
-}
-
-.wporg-event-manage__button--message:hover {
-	border-color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	color: var(--wp--preset--color--blueberry-1, #3858e9) !important;
-	background: var(--wp--preset--color--blueberry-4, #eff2ff) !important;
-}
-
 /* === Message members modal === */
 
 .wporg-groups-message-modal .components-modal__content {

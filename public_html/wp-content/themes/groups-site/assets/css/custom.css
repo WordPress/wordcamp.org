@@ -58,6 +58,81 @@ body.error404 .site-content-container h1 {
 
 
 /* ==========================================================================
+   Front-page hero
+   ========================================================================== */
+
+.groups-site-hero .wp-block-site-tagline {
+	max-width: 52ch;
+	text-wrap: pretty;
+}
+
+.groups-site-hero .wp-block-wporg-group-location {
+	padding-top: var(--wp--preset--spacing--10);
+}
+
+/* ==========================================================================
+   Front-page content and sidebar
+   ========================================================================== */
+
+.groups-site-home-layout {
+	align-items: flex-start !important;
+}
+
+.groups-site-sidebar-column {
+	order: 2;
+}
+
+.groups-site-main-column-wrapper {
+	order: 1;
+}
+
+.groups-site-sidebar {
+	box-sizing: border-box;
+	width: 100%;
+	padding-left: var(--wp--preset--spacing--40);
+	border-left: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-settings-block,
+.groups-site-sidebar .wporg-group-membership {
+	width: 100%;
+}
+
+.groups-site-sidebar .wporg-event-manage,
+.groups-site-sidebar .wporg-group-membership {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.groups-site-sidebar .wporg-event-manage {
+	gap: 12px;
+}
+
+.groups-site-sidebar .wporg-group-membership__heading,
+.groups-site-sidebar .wporg-group-membership__preference-heading {
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0;
+	margin: 0 !important;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--normal);
+	font-weight: 600;
+	line-height: 1.4;
+	color: var(--wp--preset--color--charcoal-1);
+}
+
+.groups-site-sidebar:has(.wporg-event-manage) .groups-site-sidebar-preference {
+	margin-top: var(--wp--preset--spacing--10) !important;
+	padding-top: var(--wp--preset--spacing--20);
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
+}
+
+.groups-site-main-column {
+	min-width: 0;
+}
+
+/* ==========================================================================
    Query Loop event cards — make the entire card clickable via the
    post-title link and add hover state.
    ========================================================================== */

@@ -11,10 +11,19 @@
 		"slug": {
 			"type": "string",
 			"default": ""
+		},
+		"heading": {
+			"type": "string",
+			"default": ""
+		},
+		"headingLevel": {
+			"type": "number",
+			"default": 2
 		}
 	},
 	"supports": {
-		"html": false
+		"html": false,
+		"anchor": true
 	},
 	"render": "file:./render.php",
 	"editorScript": "file:./index.js"

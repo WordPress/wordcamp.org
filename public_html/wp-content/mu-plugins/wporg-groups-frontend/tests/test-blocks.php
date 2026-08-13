@@ -17,15 +17,17 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		'wporg/event-speakers',
 		'wporg/group-members',
 		'wporg/group-membership',
+		'wporg/group-location',
 		'wporg/group-settings',
+		'wporg/group-news',
 		'wporg/my-events',
 		'wporg/page-content',
 		'wporg/sponsors',
 	);
 
 	/**
-	 * Exactly these 9 `wporg/*` blocks should be registered. The original
-	 * set of 10 also included `event-rsvp-count` and `event-venue-name`;
+	 * Exactly these 11 `wporg/*` blocks should be registered. An earlier
+	 * set also included `event-rsvp-count` and `event-venue-name`;
 	 * both were intentionally removed in favor of GatherPress core's own
 	 * `gatherpress/rsvp-count` and `gatherpress/venue` blocks (see #1793's
 	 * "Review fixes" for why) — if either reappears, or a new custom block
@@ -86,7 +88,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 				'post_title'  => 'Accessible RSVP Event',
 			)
 		);
-		$user_id = self::factory()->user->create(
+		$user_id  = self::factory()->user->create(
 			array(
 				'display_name' => 'Avatar Name Must Stay Decorative',
 			)
@@ -132,5 +134,156 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( 'aria-live="polite"', $output );
 		$this->assertStringContainsString( 'aria-atomic="true"', $output );
 		$this->assertStringContainsString( 'data-wp-text="context.rsvpNotice"', $output );
+	}
+
+	/**
+	 * Unspecified locations leave no empty header markup.
+	 */
+	public function test_group_location_block_is_hidden_when_unspecified() {
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_type' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_country' );
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-location /-->' ) ) );
+	}
+
+	/**
+	 * Physical locations render their city and localized country.
+	 */
+	public function test_group_location_block_renders_physical_location() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'TR' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'İstanbul', $output );
+		$this->assertStringContainsString( wcorg_get_country_name_from_code( 'TR' ), $output );
+		$this->assertStringContainsString( '<svg', $output );
+		$this->assertStringContainsString( 'aria-hidden="true"', $output );
+	}
+
+	/**
+	 * The online label depends only on the group location type.
+	 */
+	public function test_group_location_block_renders_online_location() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'online' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_city' );
+		delete_site_meta( get_current_blog_id(), 'wporg_group_location_country' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'Online', $output );
+	}
+
+	/**
+	 * A city with a country code that no longer resolves to a name (e.g.
+	 * CLDR data changed since it was saved) still renders — with just the
+	 * city — rather than disappearing or printing a dangling "City, ".
+	 */
+	public function test_group_location_block_renders_city_when_country_code_is_stale() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'Warsaw' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'ZZ' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'Warsaw', $output );
+		$this->assertStringNotContainsString( 'Warsaw,', $output );
+	}
+
+	/**
+	 * The default combined variant preserves the original unheaded output.
+	 */
+	public function test_group_membership_block_defaults_to_combined_variant() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks( '<!-- wp:wporg/group-membership /-->' );
+
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertStringContainsString( 'class="wporg-group-membership__preference"', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__heading', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__preference-heading', $output );
+	}
+
+	/**
+	 * Membership placements include their heading and omit the preference.
+	 */
+	public function test_group_membership_block_renders_membership_variant() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks(
+			'<!-- wp:wporg/group-membership {"variant":"membership"} /-->'
+		);
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-membership__heading">', $output );
+		$this->assertStringContainsString( 'Membership', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringContainsString( 'wporg-group-membership__leave', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__preference', $output );
+	}
+
+	/**
+	 * Preference placements include their heading and omit membership controls.
+	 */
+	public function test_group_membership_block_renders_preference_variant() {
+		$member_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $member_id );
+
+		$output = do_blocks(
+			'<!-- wp:wporg/group-membership {"variant":"preference"} /-->'
+		);
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-membership__preference-heading">', $output );
+		$this->assertStringContainsString( 'Email preferences', $output );
+		$this->assertStringContainsString( 'class="wporg-group-membership__preference"', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__heading', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__badge', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__count', $output );
+		$this->assertStringNotContainsString( 'wporg-group-membership__leave', $output );
+	}
+
+	/**
+	 * Empty news blocks leave no heading or wrapper markup.
+	 */
+	public function test_group_news_block_is_hidden_without_posts() {
+		$existing_posts = get_posts(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+			)
+		);
+		foreach ( $existing_posts as $post_id ) {
+			wp_delete_post( $post_id, true );
+		}
+
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:wporg/group-news /-->' ) ) );
+	}
+
+	/**
+	 * Published posts render their title and excerpt in the News section.
+	 */
+	public function test_group_news_block_renders_published_posts() {
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'post',
+				'post_status'  => 'publish',
+				'post_title'   => 'A group update',
+				'post_excerpt' => 'What the group has been working on.',
+			)
+		);
+
+		$output = do_blocks( '<!-- wp:wporg/group-news /-->' );
+
+		$this->assertStringContainsString( '<h2 class="wporg-group-news__heading">News</h2>', $output );
+		$this->assertStringContainsString( 'A group update', $output );
+		$this->assertStringContainsString( 'What the group has been working on.', $output );
 	}
 }

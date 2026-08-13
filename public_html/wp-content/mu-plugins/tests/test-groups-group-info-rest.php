@@ -311,4 +311,63 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 
 		$this->assertSame( array( 'type' => 'online' ), $this->dispatch( 'GET' )->get_data()['location'] );
 	}
+
+	/**
+	 * A country code that no longer resolves (e.g. CLDR data changed since
+	 * it was saved) is still returned, not collapsed to null. Otherwise the
+	 * About tab's form loses the selection, and the next save of any field
+	 * — even just the group name — would post `location: null` and silently
+	 * wipe the stored location via `clear_location()`.
+	 */
+	public function test_stale_country_code_is_still_returned() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'Warsaw' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'ZZ' );
+
+		$this->assertSame(
+			array(
+				'type'        => 'physical',
+				'city'        => 'Warsaw',
+				'countryCode' => 'ZZ',
+			),
+			$this->dispatch( 'GET' )->get_data()['location']
+		);
+	}
+
+	/**
+	 * This is the actual failure mode: the About tab always resubmits the
+	 * location it read, so an unrelated field edit (here, the title) round-
+	 * trips the stale country code straight back to the server. Before the
+	 * fix, the GET had already nulled it out, so this same request posted
+	 * `location: null` and `clear_location()` wiped it. Now `normalize_location()`
+	 * rejects the stale code atomically — the title isn't saved either, but
+	 * the stored location survives, so the user can fix or clear it instead
+	 * of losing it outright.
+	 */
+	public function test_resubmitting_stale_country_code_is_rejected_without_wiping_stored_location() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'Warsaw' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'ZZ' );
+
+		$response = $this->dispatch(
+			'POST',
+			array(
+				'title'    => 'This should not be saved either',
+				'location' => array(
+					'type'        => 'physical',
+					'city'        => 'Warsaw',
+					'countryCode' => 'ZZ',
+				),
+			)
+		);
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'wporg_groups_invalid_country', $response->get_data()['code'] );
+		$this->assertSame( 'Warsaw WordPress Group', get_option( 'blogname' ) );
+		$this->assertSame( 'physical', get_site_meta( get_current_blog_id(), 'wporg_group_location_type', true ) );
+		$this->assertSame( 'Warsaw', get_site_meta( get_current_blog_id(), 'wporg_group_location_city', true ) );
+		$this->assertSame( 'ZZ', get_site_meta( get_current_blog_id(), 'wporg_group_location_country', true ) );
+	}
 }

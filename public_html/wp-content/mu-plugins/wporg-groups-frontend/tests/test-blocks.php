@@ -177,6 +177,22 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * A city with a country code that no longer resolves to a name (e.g.
+	 * CLDR data changed since it was saved) still renders — with just the
+	 * city — rather than disappearing or printing a dangling "City, ".
+	 */
+	public function test_group_location_block_renders_city_when_country_code_is_stale() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'Warsaw' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'ZZ' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'Warsaw', $output );
+		$this->assertStringNotContainsString( 'Warsaw,', $output );
+	}
+
+	/**
 	 * The default combined variant preserves the original unheaded output.
 	 */
 	public function test_group_membership_block_defaults_to_combined_variant() {

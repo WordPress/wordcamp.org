@@ -22,7 +22,13 @@ const TYPE_PHYSICAL = 'physical';
 const TYPE_ONLINE   = 'online';
 
 /**
- * Missing or incomplete metadata is treated as an unspecified location.
+ * Missing metadata is treated as an unspecified location.
+ *
+ * A stored country code that no longer resolves to a name (e.g. CLDR data
+ * changed) is still returned rather than collapsed to null here: the About
+ * tab builds its form from this response, and a null location would make
+ * the next save of any field — even just the group name — post
+ * `location: null` and silently wipe the type, city, and country.
  */
 function get_location( int $site_id = 0 ): ?array {
 	$site_id = $site_id ?: get_current_blog_id();
@@ -39,7 +45,7 @@ function get_location( int $site_id = 0 ): ?array {
 	$city         = trim( (string) get_site_meta( $site_id, CITY_META_KEY, true ) );
 	$country_code = strtoupper( (string) get_site_meta( $site_id, COUNTRY_META_KEY, true ) );
 
-	if ( '' === $city || '' === $country_code || ! wcorg_get_country_name_from_code( $country_code ) ) {
+	if ( '' === $city || '' === $country_code ) {
 		return null;
 	}
 
@@ -160,6 +166,10 @@ function get_location_label(): string {
 	}
 
 	$country_name = wcorg_get_country_name_from_code( $location['countryCode'] );
+
+	if ( '' === $country_name ) {
+		return $location['city'];
+	}
 
 	return sprintf(
 		/* translators: 1: city name, 2: country name. */

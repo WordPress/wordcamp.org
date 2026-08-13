@@ -39,7 +39,10 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 				</time>
 				<h3 class="wporg-group-news__title">
 					<a href="<?php echo esc_url( get_permalink( $wporg_post ) ); ?>">
-						<?php echo esc_html( get_the_title( $wporg_post ) ); ?>
+						<?php
+						$wporg_title = get_the_title( $wporg_post );
+						echo esc_html( '' !== $wporg_title ? $wporg_title : __( '(Untitled)', 'wporg-groups-frontend' ) );
+						?>
 					</a>
 				</h3>
 				<?php if ( has_excerpt( $wporg_post ) ) : ?>

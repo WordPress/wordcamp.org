@@ -172,6 +172,34 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 		$this->assertSame( 'weekly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
 	}
 
+	/**
+	 * A nested end-condition write does not cancel the surrounding lift.
+	 *
+	 * Both entry points share one allowlist slot, so an inner lift that
+	 * replaced and then cleared that slot would re-lock the schedule for the
+	 * rest of the outer callback, silently dropping the writes that follow it
+	 * -- the same silent loss the lift exists to prevent, one level down.
+	 */
+	public function test_schedule_unlock_survives_a_nested_end_condition_write(): void {
+		$post_id = $this->create_published_recurring_event();
+
+		Plugin::with_schedule_unlocked(
+			$post_id,
+			static function () use ( $post_id ): void {
+				Plugin::update_end_condition( $post_id, '2026-12-31' );
+
+				update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'monthly' );
+			}
+		);
+
+		$this->assertSame( 'until', get_post_meta( $post_id, Rule::META_PREFIX . 'end_type', true ) );
+		$this->assertSame( '2026-12-31', get_post_meta( $post_id, Rule::META_PREFIX . 'until', true ) );
+		$this->assertSame( 'monthly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+
+		$this->assertFalse( update_post_meta( $post_id, Rule::META_PREFIX . 'frequency', 'yearly' ) );
+		$this->assertSame( 'monthly', get_post_meta( $post_id, Rule::META_PREFIX . 'frequency', true ) );
+	}
+
 	/** Published recurrence metadata cannot be deleted to bypass the lock. */
 	public function test_published_recurrence_metadata_cannot_be_deleted(): void {
 		$post_id = $this->create_published_recurring_event();
@@ -385,6 +413,29 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 
 		Plugin::deactivate( false );
 		$this->assertFalse( wp_next_scheduled( Occurrences::CRON_HOOK ) );
+	}
+
+	/**
+	 * A brand-new multisite site gets its occurrence tables installed via the
+	 * `wp_initialize_site` hook, not just on the site that happens to serve
+	 * `init`. Regression test for the production/cron failure where a new
+	 * site's tables didn't exist yet the first time a cross-site cron run
+	 * tried to use them.
+	 */
+	public function test_new_site_gets_occurrence_tables_installed(): void {
+		global $wpdb;
+
+		$site_id = self::factory()->blog->create();
+
+		switch_to_blog( $site_id );
+
+		try {
+			$this->assertSame( Database::SCHEMA_VERSION, get_option( Database::OPTION_NAME ) );
+			$this->assertSame( Database::occurrences_table(), $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', Database::occurrences_table() ) ) );
+			$this->assertSame( Database::comments_table(), $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', Database::comments_table() ) ) );
+		} finally {
+			restore_current_blog();
+		}
 	}
 
 	/**

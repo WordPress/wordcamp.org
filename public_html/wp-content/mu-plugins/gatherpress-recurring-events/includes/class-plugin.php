@@ -156,6 +156,7 @@ final class Plugin {
 	/** Registers extension hooks. */
 	public function register(): void {
 		add_action( 'init', array( $this, 'init' ), 20 );
+		add_action( 'wp_initialize_site', array( $this, 'on_site_create' ), 20 );
 		add_filter( 'query_vars', array( Context::class, 'query_vars' ) );
 		add_action( 'template_redirect', array( Context::class, 'resolve' ), 1 );
 		add_action( 'template_redirect', array( $this, 'series_ical' ), 5 );
@@ -186,6 +187,25 @@ final class Plugin {
 		add_filter( 'delete_post_metadata', array( $this, 'lock_published_schedule' ), 10, 4 );
 		add_action( 'before_delete_post', array( $this, 'delete_event' ), 10, 2 );
 		add_action( Occurrences::CRON_HOOK, array( Occurrences::class, 'project_all' ) );
+	}
+
+	/**
+	 * Creates this extension's tables for a newly created multisite site.
+	 *
+	 * `Database::maybe_install()` is otherwise only reached from `init`,
+	 * which fires once per request in the context of whichever site
+	 * handled it -- not once per site a request happens to `switch_to_blog()`
+	 * into. A brand-new site never gets its own `init` request until
+	 * something visits it, so without this its occurrence tables wouldn't
+	 * exist yet the first time a recurring event tried to use them (e.g. a
+	 * cross-site cron run, or a switch_to_blog() in a test).
+	 *
+	 * @param \WP_Site $new_site The newly created site.
+	 */
+	public function on_site_create( \WP_Site $new_site ): void {
+		switch_to_blog( (int) $new_site->blog_id );
+		Database::maybe_install();
+		restore_current_blog();
 	}
 
 	/** Registers runtime metadata, schema, routing, and cron. */

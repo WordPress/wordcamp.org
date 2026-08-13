@@ -92,8 +92,8 @@ function render( $attributes, $content, $block ) {
 		'wporg-event-list-view-script-2',
 		sprintf(
 			'var globalEventsPayload = globalEventsPayload || {};
-			globalEventsPayload["%s"] = %s;',
-			$attributes['id'],
+			globalEventsPayload[%s] = %s;',
+			wp_json_encode( (string) $attributes['id'] ),
 			wp_json_encode( $payload )
 		),
 		'before'

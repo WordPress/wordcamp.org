@@ -24,7 +24,12 @@ module.exports = defineConfig( {
 		// The local dev cert is self-signed (matches the `-k` flag used
 		// throughout the project's curl-based test plans).
 		ignoreHTTPSErrors: true,
-		trace: 'on-first-retry',
+		// 'on-first-retry' only captures starting from the first retry --
+		// for a flaky test that recovers, that's the attempt that PASSED,
+		// leaving nothing to actually debug the failure with (see #1883).
+		// 'retain-on-failure' traces every attempt and keeps the ones that
+		// failed, whichever attempt number that is.
+		trace: 'retain-on-failure',
 	},
 	projects: [
 		{

@@ -458,7 +458,10 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 				new_venue_name: isAddingNewVenue ? form.new_venue_name : '',
 				new_venue_address: isAddingNewVenue ? form.new_venue_address : '',
 				featured_image_id: featuredImage.id,
-				recurrence,
+				// Recurrence is locked (uneditable) once an event is published,
+				// so editing an existing event never needs to resend it — and
+				// must not send `null`, which fails the endpoint's object schema.
+				...( isEdit ? {} : { recurrence } ),
 				// Blank-labelled rows are just an empty slot the organizer
 				// added and never filled in; the server drops them too.
 				rsvp_questions: ( form.rsvp_questions || [] ).filter(

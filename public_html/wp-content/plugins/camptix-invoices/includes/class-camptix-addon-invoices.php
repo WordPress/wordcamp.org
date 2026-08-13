@@ -431,14 +431,15 @@ class CampTix_Addon_Invoices extends \CampTix_Addon {
 			}
 		}
 
-		// `rename()` can fail with "Operation not permitted" when the source and destination
-		// are on different filesystems/mounts (e.g. a `/tmp` tmpfs vs. the uploads volume).
-		if ( ! @rename( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
-			copy( $tmp_path, $invoices_dirname . '/' . $filename );
+		// `rename()` always fails with "Operation not permitted" here because the PDF is
+		// generated into a `/tmp` mount that is a different filesystem from the uploads
+		// volume, so cross-device renames are never possible in this environment. Copy
+		// across and remove the source instead of attempting (and logging a warning for)
+		// a rename that cannot succeed.
+		if ( copy( $tmp_path, $invoices_dirname . '/' . $filename ) ) {
 			unlink( $tmp_path );
+			update_post_meta( $invoice_id, 'invoice_document', $filename );
 		}
-
-		update_post_meta( $invoice_id, 'invoice_document', $filename );
 	}
 
 	/**

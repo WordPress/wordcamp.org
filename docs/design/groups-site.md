@@ -20,7 +20,7 @@ It is intended for designers, contributors, reviewers, and coding agents. Specif
 |---|---|---|
 | Body/UI | Inter, 16px/1.7, weight 400 | `var(--wp--preset--font-family--inter)`, `var(--wp--preset--font-size--normal)`, `var(--wp--custom--body--typography--line-height)` |
 | Secondary text | Inter, 14px/1.55, weight 400 | Inter and `var(--wp--preset--font-size--small)` |
-| Metadata and dates | Inter, 12–14px/600, uppercase, `0.04em` letter spacing | `extra-small` or `small` font-size token, according to context |
+| Metadata and dates | Inter, 12–14px, weight 600, uppercase, `0.04em` letter spacing | `extra-small` or `small` font-size token, according to context |
 | Group title | EB Garamond, `clamp(40px, 5vw, 70px)`, weight 400, line-height 1.05–1.1 | `var(--wp--preset--font-family--eb-garamond)` and `var(--wp--preset--font-size--heading-1)` |
 | Main-section `h2` | EB Garamond, `clamp(28px, 2.4vw, 36px)`, weight 400, line-height 1.3 | Semantic `h2` with the `heading-3` visual token |
 | Card `h3` | EB Garamond, 26px/1.2, weight 400 | Semantic `h3` with `var(--wp--preset--font-size--heading-5)` |
@@ -43,7 +43,7 @@ Avoid arbitrary gap and margin values when one of these tokens fits the composit
 
 | Component | Specification |
 |---|---|
-| Primary button | Inter 16px/600, 14px 32px padding, 2px radius |
+| Primary button | Inter 16px, weight 600, 14px 32px padding, 2px radius |
 | Card | 1px border using `light-grey-1`, 4px radius, 24px internal padding |
 | Input | 1px border, 2px radius, approximately 8px 12px padding |
 | Focus indicator | 2px `blueberry-1` outline with a 2px offset |
@@ -108,7 +108,7 @@ This is a provisional treatment. Ask Brand whether the placeholder should eventu
 ### Heading hierarchy
 
 - Every main-column section heading—including “My upcoming events,” “Upcoming events,” “About this group,” “News,” and “Sponsors”—uses the main-section `h2` treatment: EB Garamond with the `heading-3` visual token.
-- Reserve Inter 16px/600 for utility and sidebar headings.
+- Reserve Inter 16px, weight 600 for utility and sidebar headings.
 - Historical examples of the inconsistency are the pinned [My Events CSS](https://github.com/WordPress/wordcamp.org/blob/31e76e7effa1a8021cfc7571d3a12bfd50365707/public_html/wp-content/mu-plugins/wporg-groups-frontend/src/blocks/my-events/style.css#L5-L10) and [News CSS](https://github.com/WordPress/wordcamp.org/blob/31e76e7effa1a8021cfc7571d3a12bfd50365707/public_html/wp-content/mu-plugins/wporg-groups-frontend/src/blocks/group-news/style.css#L1-L6).
 
 ### Content and fixtures

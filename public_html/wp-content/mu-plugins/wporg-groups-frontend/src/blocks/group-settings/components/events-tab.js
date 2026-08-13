@@ -33,7 +33,7 @@ import {
 } from '@wordpress/block-editor';
 import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
-import { parse, serialize } from '@wordpress/blocks';
+import { createBlock, parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import VenueEditor from '../../event-manage/venue-editor';
@@ -108,7 +108,14 @@ function SelectFirstBlockOnMount( { clientId } ) {
 }
 
 function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
-	const [ blocks, setBlocks ] = useState( () => parse( initialValue || '' ) );
+	// A description with no supported blocks (empty string, or markup that
+	// doesn't parse into anything) yields `[]`, leaving no block to select
+	// and the toolbar permanently empty — fall back to an empty paragraph
+	// so there's always a first block.
+	const [ blocks, setBlocks ] = useState( () => {
+		const parsed = parse( initialValue || '' );
+		return parsed.length ? parsed : [ createBlock( 'core/paragraph' ) ];
+	} );
 	if ( getValueRef ) getValueRef.current = () => serialize( blocks );
 
 	const handleChange = ( newBlocks ) => {

@@ -112,6 +112,7 @@ function normalize_location( array $location ): array|WP_Error {
 		'countryCode' => $country_code,
 	);
 }
+
 /**
  * Persist a normalized location for the current group.
  *

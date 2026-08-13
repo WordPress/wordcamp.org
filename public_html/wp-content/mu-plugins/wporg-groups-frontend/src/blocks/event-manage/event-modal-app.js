@@ -40,7 +40,9 @@ import {
 	WritingFlow,
 	ObserveTyping,
 	BlockTools,
+	store as blockEditorStore,
 } from '@wordpress/block-editor';
+import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
@@ -88,6 +90,28 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 	 * breaking the slash inserter (parent re-renders were tearing down the
 	 * editor's internal state on every input event).
 	 */
+	// `BlockEditorProvider` gives its subtree an isolated `core/block-editor`
+	// registry, so this dispatch only reaches it from a component rendered
+	// *inside* the provider — a sibling effect would select a block in the
+	// wrong (default) store and `BlockToolbar` would never see it.
+	function SelectFirstBlockOnMount( { clientId } ) {
+		const { selectBlock } = useDispatch( blockEditorStore );
+
+		useEffect( () => {
+			if ( clientId ) {
+				// `null` (instead of the default `0`) selects the block
+				// without also moving real DOM focus into it — see
+				// `useFocusFirstElement` in `@wordpress/block-editor`. We
+				// only need the toolbar to appear, not to steal focus from
+				// the modal on open.
+				selectBlock( clientId, null );
+			}
+			// eslint-disable-next-line react-hooks/exhaustive-deps
+		}, [] );
+
+		return null;
+	}
+
 	function DescriptionEditor( { initialValue, getValueRef, onDirty } ) {
 		const [ blocks, setBlocks ] = useState( () => parse( initialValue || '' ) );
 
@@ -115,6 +139,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 						hasFixedToolbar: true,
 					},
 				},
+				h( SelectFirstBlockOnMount, { clientId: blocks[ 0 ]?.clientId } ),
 				h(
 					'div',
 					{ className: 'wporg-groups-event-modal__editor-toolbar' },

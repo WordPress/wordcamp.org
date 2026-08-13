@@ -7,7 +7,7 @@
 import apiFetch from '@wordpress/api-fetch';
 import { Button, CheckboxControl, Modal, Notice, TextareaControl } from '@wordpress/components';
 import { createElement as h, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
 
 export default function MessageMembersModal( { eventId, recipientMode, onClose } ) {
 	const isAllMembers = 'message-all' === recipientMode;
@@ -151,7 +151,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 								onClick: onClose,
 								disabled: sending,
 							},
-							__( 'Cancel', 'wporg-groups-frontend' )
+							_x( 'Cancel', 'button to close a dialog without saving', 'wporg-groups-frontend' )
 						),
 						h(
 							Button,

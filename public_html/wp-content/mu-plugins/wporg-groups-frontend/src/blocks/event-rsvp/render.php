@@ -118,7 +118,7 @@ $rsvp_labels    = array(
 	'joinRsvp'                => __( 'Join & RSVP', 'wporg-groups-frontend' ),
 	'statusAttending'         => __( 'You are attending this event.', 'wporg-groups-frontend' ),
 	'statusNotAttending'      => __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
-	'cancelRsvp'              => __( 'Cancel RSVP', 'wporg-groups-frontend' ),
+	'cancelRsvp'              => _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' ),
 	'attend'                  => __( 'Attend', 'wporg-groups-frontend' ),
 	'emptyAttendees'          => __( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ),
 	'rsvpSuccessAttending'    => __( 'You are now attending this event.', 'wporg-groups-frontend' ),
@@ -172,7 +172,7 @@ wp_interactivity_state(
 			? __( 'You are attending this event.', 'wporg-groups-frontend' )
 			: __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
 		'modalRsvpLabel' => $is_attending
-			? __( 'Cancel RSVP', 'wporg-groups-frontend' )
+			? _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' )
 			: __( 'Attend', 'wporg-groups-frontend' ),
 	)
 );
@@ -346,7 +346,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						>
 							<?php
 							if ( $is_attending ) {
-								esc_html_e( 'Cancel RSVP', 'wporg-groups-frontend' );
+								echo esc_html_x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' );
 							} else {
 								esc_html_e( 'Attend', 'wporg-groups-frontend' );
 							}

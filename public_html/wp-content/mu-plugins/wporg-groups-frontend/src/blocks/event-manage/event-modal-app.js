@@ -44,7 +44,7 @@ import {
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
 import RecurrenceControls, { normalizeRecurrence } from '../../components/recurrence-controls';
@@ -790,7 +790,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 						h(
 							Button,
 							{ variant: 'tertiary', onClick: handleClose, disabled: saving },
-							__( 'Cancel', 'wporg-groups-frontend' )
+							_x( 'Cancel', 'button to close a dialog without saving', 'wporg-groups-frontend' )
 						),
 						h(
 							Button,

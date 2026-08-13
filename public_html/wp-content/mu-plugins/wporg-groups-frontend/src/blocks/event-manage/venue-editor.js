@@ -23,7 +23,7 @@ import {
 	Notice,
 } from '@wordpress/components';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
 
 const PHOTON_API = 'https://photon.komoot.io/api/';
 
@@ -414,7 +414,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 						onClick: onCancel,
 						disabled: saving,
 					},
-					__( 'Cancel', 'wporg-groups-frontend' )
+					_x( 'Cancel', 'button to close a dialog without saving', 'wporg-groups-frontend' )
 				),
 				h(
 					Button,

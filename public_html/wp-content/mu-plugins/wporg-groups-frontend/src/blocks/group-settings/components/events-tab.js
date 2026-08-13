@@ -33,7 +33,7 @@ import {
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
 import VenueEditor from '../../event-manage/venue-editor';
 import RecurrenceControls, { normalizeRecurrence } from '../../../components/recurrence-controls';
 import RsvpQuestionsEditor from '../../event-manage/rsvp-questions-editor';
@@ -372,7 +372,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			} )
 		),
 		h( 'div', { className: 'wporg-event-form__actions' },
-			h( Button, { variant: 'tertiary', onClick: onCancel, disabled: saving }, __( 'Cancel', 'wporg-groups-frontend' ) ),
+			h( Button, { variant: 'tertiary', onClick: onCancel, disabled: saving }, _x( 'Cancel', 'button to close a dialog without saving', 'wporg-groups-frontend' ) ),
 			h( Button, { variant: 'primary', type: 'submit', isBusy: saving, disabled: saving },
 				isEdit ? __( 'Save changes', 'wporg-groups-frontend' ) : __( 'Create event', 'wporg-groups-frontend' ) )
 		)

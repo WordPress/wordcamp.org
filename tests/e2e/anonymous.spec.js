@@ -10,6 +10,11 @@ test.describe( 'anonymous visitor', () => {
 	test( 'front page renders', async ( { page } ) => {
 		const response = await page.goto( '' );
 		expect( response.status() ).toBe( 200 );
+
+		const sidebar = page.locator( '.groups-site-sidebar' );
+		await expect( sidebar.getByRole( 'button', { name: 'Join this group' } ) ).toBeVisible();
+		await expect( sidebar.locator( '.wporg-group-membership__count' ) ).toHaveText( /\d+ members?/ );
+		await expect( page.locator( '.groups-site-hero .wporg-group-membership' ) ).toHaveCount( 0 );
 	} );
 
 	test( 'no management UI is rendered on the front page', async ( { page } ) => {

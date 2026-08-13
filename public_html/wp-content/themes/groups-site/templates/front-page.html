@@ -7,111 +7,101 @@
 	<!-- /wp:navigation -->
 <!-- /wp:wporg/local-navigation-bar -->
 
-<!-- wp:cover {"overlayColor":"blueberry-4","isUserOverlayColor":true,"minHeight":300,"align":"full","lock":{"move":true,"remove":true},"style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|edge-space","right":"var:preset|spacing|edge-space"}}},"layout":{"type":"constrained","wideSize":"1280px"}} -->
-<div class="wp-block-cover alignfull" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--edge-space);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--edge-space);min-height:300px"><span aria-hidden="true" class="wp-block-cover__background has-blueberry-4-background-color has-background-dim-100 has-background-dim"></span><div class="wp-block-cover__inner-container">
+<!-- wp:cover {"overlayColor":"blueberry-4","isUserOverlayColor":true,"align":"full","lock":{"move":true,"remove":true},"style":{"dimensions":{"minHeight":"0"},"spacing":{"padding":{"top":"var:preset|spacing|50","bottom":"var:preset|spacing|50","left":"var:preset|spacing|edge-space","right":"var:preset|spacing|edge-space"}}},"layout":{"type":"constrained","wideSize":"1280px"}} -->
+<div class="wp-block-cover alignfull" style="min-height:0;padding-top:var(--wp--preset--spacing--50);padding-right:var(--wp--preset--spacing--edge-space);padding-bottom:var(--wp--preset--spacing--50);padding-left:var(--wp--preset--spacing--edge-space)"><span aria-hidden="true" class="wp-block-cover__background has-blueberry-4-background-color has-background-dim-100 has-background-dim"></span><div class="wp-block-cover__inner-container">
 
-	<!-- wp:group {"style":{"dimensions":{"minHeight":"0"}},"layout":{"type":"constrained","contentSize":"600px","justifyContent":"left"}} -->
-	<div class="wp-block-group" style="min-height:0">
-		<!-- wp:paragraph {"fontSize":"small","textColor":"blueberry-1","style":{"typography":{"textTransform":"uppercase","letterSpacing":"0.08em","fontWeight":"600"},"spacing":{"margin":{"bottom":"var:preset|spacing|20"}}}} -->
-		<p class="has-blueberry-1-color has-text-color has-small-font-size" style="margin-bottom:var(--wp--preset--spacing--20);font-weight:600;letter-spacing:0.08em;text-transform:uppercase">A WordPress Group</p>
-		<!-- /wp:paragraph -->
+	<!-- wp:group {"className":"groups-site-hero","style":{"dimensions":{"minHeight":"0"},"spacing":{"blockGap":"var:preset|spacing|30"}},"layout":{"type":"constrained","contentSize":"720px","justifyContent":"left"}} -->
+	<div class="wp-block-group groups-site-hero" style="min-height:0">
+		<!-- wp:site-title {"level":1,"fontSize":"heading-1","style":{"spacing":{"margin":{"top":"0","bottom":"0"}},"typography":{"lineHeight":"1.05"}}} /-->
 
-		<!-- wp:site-title {"level":1,"fontSize":"heading-1","style":{"spacing":{"margin":{"bottom":"var:preset|spacing|30"}},"typography":{"lineHeight":"1.05"}}} /-->
+		<!-- wp:site-tagline {"fontSize":"large","textColor":"charcoal-3","style":{"spacing":{"margin":{"top":"0","bottom":"0"}}}} /-->
 
-		<!-- wp:paragraph {"fontSize":"large","textColor":"charcoal-3","style":{"spacing":{"margin":{"bottom":"var:preset|spacing|40"}}}} -->
-		<p class="has-charcoal-3-color has-text-color has-large-font-size" style="margin-bottom:var(--wp--preset--spacing--40)">Connect with fellow WordPress enthusiasts. Join us for local meetups, workshops, and hands-on learning — all skill levels welcome.</p>
-		<!-- /wp:paragraph -->
-
-		<!-- wp:buttons {"layout":{"type":"flex","flexWrap":"wrap"}} -->
-		<div class="wp-block-buttons">
-			<!-- wp:button -->
-			<div class="wp-block-button"><a class="wp-block-button__link wp-element-button" href="#upcoming">Browse events</a></div>
-			<!-- /wp:button -->
-
-			<!-- wp:button {"className":"is-style-outline","style":{"border":{"color":"var:preset|color|blueberry-1","width":"1px"},"color":{"text":"var:preset|color|blueberry-1"}}} -->
-			<div class="wp-block-button is-style-outline"><a class="wp-block-button__link has-text-color has-border-color wp-element-button" href="#about" style="border-color:var(--wp--preset--color--blueberry-1);border-width:1px;color:var(--wp--preset--color--blueberry-1)">About this group</a></div>
-			<!-- /wp:button -->
-		</div>
-		<!-- /wp:buttons -->
-
-		<!-- wp:wporg/group-membership {"lock":{"move":true,"remove":true}} /-->
+		<!-- wp:wporg/group-location {"fontSize":"small","textColor":"charcoal-3","style":{"spacing":{"margin":{"top":"0","bottom":"0"}}},"lock":{"move":true,"remove":true}} /-->
 	</div>
 	<!-- /wp:group -->
 
 </div></div>
 <!-- /wp:cover -->
 
-<!-- wp:group {"tagName":"main","style":{"spacing":{"padding":{"top":"var:preset|spacing|70","bottom":"var:preset|spacing|70","left":"var:preset|spacing|edge-space","right":"var:preset|spacing|edge-space"}}},"layout":{"type":"constrained","wideSize":"1160px"}} -->
-<main class="wp-block-group" id="main" style="padding-top:var(--wp--preset--spacing--70);padding-right:var(--wp--preset--spacing--edge-space);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--edge-space)">
+<!-- wp:group {"tagName":"main","style":{"spacing":{"padding":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|70","left":"var:preset|spacing|edge-space","right":"var:preset|spacing|edge-space"}}},"layout":{"type":"constrained","wideSize":"1160px"}} -->
+<main class="wp-block-group" id="main" style="padding-top:var(--wp--preset--spacing--60);padding-right:var(--wp--preset--spacing--edge-space);padding-bottom:var(--wp--preset--spacing--70);padding-left:var(--wp--preset--spacing--edge-space)">
 
-	<!-- wp:wporg/my-events {"style":{"spacing":{"margin":{"bottom":"var:preset|spacing|50"}}}} /-->
+	<!-- wp:columns {"align":"wide","className":"groups-site-home-layout","style":{"spacing":{"blockGap":{"left":"var:preset|spacing|60"}}}} -->
+	<div class="wp-block-columns alignwide groups-site-home-layout">
+		<!-- wp:column {"width":"26%","className":"groups-site-sidebar-column"} -->
+		<div class="wp-block-column groups-site-sidebar-column" style="flex-basis:26%">
+			<!-- wp:group {"tagName":"aside","className":"groups-site-sidebar","style":{"spacing":{"blockGap":"var:preset|spacing|10"}},"layout":{"type":"flex","orientation":"vertical","flexWrap":"nowrap"}} -->
+			<aside class="wp-block-group groups-site-sidebar">
+				<!-- wp:wporg/group-membership {"variant":"membership","lock":{"move":true,"remove":true}} /-->
 
-	<!-- wp:group {"className":"groups-site-section","anchor":"upcoming","style":{"spacing":{"margin":{"bottom":"var:preset|spacing|70"}}},"layout":{"type":"constrained","contentSize":"1160px","justifyContent":"left"}} -->
-	<div id="upcoming" class="wp-block-group groups-site-section" style="margin-bottom:var(--wp--preset--spacing--70)">
-		<!-- wp:group {"align":"wide","style":{"spacing":{"margin":{"bottom":"var:preset|spacing|40"}}},"layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
-		<div class="wp-block-group alignwide" style="margin-bottom:var(--wp--preset--spacing--40)">
-			<!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap","verticalAlignment":"center"},"style":{"spacing":{"blockGap":"var:preset|spacing|30"}}} -->
-			<div class="wp-block-group">
-				<!-- wp:heading {"level":2,"fontSize":"heading-3","style":{"spacing":{"margin":{"bottom":"0"}}}} -->
-				<h2 class="wp-block-heading has-heading-3-font-size" style="margin-bottom:0">Upcoming events</h2>
-				<!-- /wp:heading -->
+				<!-- wp:wporg/event-manage {"mode":"create","lock":{"move":true,"remove":true}} /-->
 
 				<!-- wp:wporg/group-settings {"lock":{"move":true,"remove":true}} /-->
-			</div>
+
+				<!-- wp:wporg/group-membership {"variant":"preference","className":"groups-site-sidebar-preference","lock":{"move":true,"remove":true}} /-->
+			</aside>
 			<!-- /wp:group -->
-
-			<!-- wp:pattern {"slug":"groups-site/view-all-events-link"} /-->
 		</div>
-		<!-- /wp:group -->
+		<!-- /wp:column -->
 
-		<!-- wp:query {"query":{"postType":"gatherpress_event","perPage":3,"offset":0,"order":"asc","orderBy":"datetime","gatherpress_event_query":"upcoming","include_unfinished":1,"inherit":false},"namespace":"gatherpress-event-query","className":"gatherpress-event-query","align":"wide"} -->
-		<div class="wp-block-query alignwide gatherpress-event-query">
-			<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
-				<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20"},"border":{"width":"1px","color":"var:preset|color|light-grey-1","radius":"4px"}},"layout":{"type":"constrained"}} -->
-				<div class="wp-block-group has-border-color" style="border-color:var(--wp--preset--color--light-grey-1);border-width:1px;border-radius:4px">
-					<!-- wp:post-featured-image {"isLink":true,"aspectRatio":"16/9","style":{"border":{"radius":{"topLeft":"3px","topRight":"3px","bottomLeft":"0px","bottomRight":"0px"}}}} /-->
-					<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|30","right":"var:preset|spacing|30","bottom":"var:preset|spacing|30","left":"var:preset|spacing|30"},"blockGap":"var:preset|spacing|10"}},"layout":{"type":"constrained"}} -->
-					<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--30);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--30);padding-left:var(--wp--preset--spacing--30)">
-						<!-- wp:gatherpress/event-date {"displayType":"start","startDateFormat":"M j, Y","showTimezone":"no","fontSize":"small","textColor":"blueberry-1","style":{"typography":{"fontWeight":"600","textTransform":"uppercase","letterSpacing":"0.04em"}}} /-->
-						<!-- wp:post-title {"level":3,"isLink":true,"fontSize":"heading-5","style":{"spacing":{"margin":{"top":"0"}},"typography":{"lineHeight":"1.3"}}} /-->
-						<!-- wp:post-excerpt {"moreText":"","excerptLength":18,"fontSize":"small","textColor":"charcoal-3"} /-->
-						<!-- wp:wporg/event-rsvp-count {"fontSize":"small","textColor":"charcoal-4","style":{"typography":{"fontWeight":"600"}}} /-->
-						<!-- wp:wporg/event-venue-name {"fontSize":"small","textColor":"charcoal-4"} /-->
+		<!-- wp:column {"width":"74%","className":"groups-site-main-column-wrapper"} -->
+		<div class="wp-block-column groups-site-main-column-wrapper" style="flex-basis:74%">
+			<!-- wp:group {"className":"groups-site-main-column","style":{"spacing":{"blockGap":"var:preset|spacing|70"}},"layout":{"type":"constrained"}} -->
+			<div class="wp-block-group groups-site-main-column">
+				<!-- wp:wporg/my-events {"lock":{"move":true,"remove":true}} /-->
+
+				<!-- wp:group {"className":"groups-site-section","anchor":"upcoming","layout":{"type":"constrained","justifyContent":"left"}} -->
+				<div id="upcoming" class="wp-block-group groups-site-section">
+					<!-- wp:group {"style":{"spacing":{"margin":{"bottom":"var:preset|spacing|40"}}},"layout":{"type":"flex","justifyContent":"space-between","flexWrap":"wrap","verticalAlignment":"center"}} -->
+					<div class="wp-block-group" style="margin-bottom:var(--wp--preset--spacing--40)">
+						<!-- wp:heading {"level":2,"fontSize":"heading-3","style":{"spacing":{"margin":{"bottom":"0"}}}} -->
+						<h2 class="wp-block-heading has-heading-3-font-size" style="margin-bottom:0">Upcoming events</h2>
+						<!-- /wp:heading -->
+
+						<!-- wp:pattern {"slug":"groups-site/view-all-events-link"} /-->
 					</div>
 					<!-- /wp:group -->
+
+					<!-- wp:query {"query":{"postType":"gatherpress_event","perPage":3,"offset":0,"order":"asc","orderBy":"datetime","gatherpress_event_query":"upcoming","include_unfinished":1,"inherit":false},"namespace":"gatherpress-event-query","className":"gatherpress-event-query"} -->
+					<div class="wp-block-query gatherpress-event-query">
+						<!-- wp:post-template {"layout":{"type":"grid","columnCount":3}} -->
+							<!-- wp:group {"style":{"spacing":{"blockGap":"var:preset|spacing|20"},"border":{"width":"1px","color":"var:preset|color|light-grey-1","radius":"4px"}},"layout":{"type":"constrained"}} -->
+							<div class="wp-block-group has-border-color" style="border-color:var(--wp--preset--color--light-grey-1);border-width:1px;border-radius:4px">
+								<!-- wp:post-featured-image {"isLink":true,"aspectRatio":"16/9","style":{"border":{"radius":{"topLeft":"3px","topRight":"3px","bottomLeft":"0px","bottomRight":"0px"}}}} /-->
+								<!-- wp:group {"style":{"spacing":{"padding":{"top":"var:preset|spacing|30","right":"var:preset|spacing|30","bottom":"var:preset|spacing|30","left":"var:preset|spacing|30"},"blockGap":"var:preset|spacing|10"}},"layout":{"type":"constrained"}} -->
+								<div class="wp-block-group" style="padding-top:var(--wp--preset--spacing--30);padding-right:var(--wp--preset--spacing--30);padding-bottom:var(--wp--preset--spacing--30);padding-left:var(--wp--preset--spacing--30)">
+									<!-- wp:gatherpress/event-date {"displayType":"start","startDateFormat":"M j, Y","showTimezone":"no","fontSize":"small","textColor":"blueberry-1","style":{"typography":{"fontWeight":"600","textTransform":"uppercase","letterSpacing":"0.04em"}}} /-->
+									<!-- wp:post-title {"level":3,"isLink":true,"fontSize":"heading-5","style":{"spacing":{"margin":{"top":"0"}},"typography":{"lineHeight":"1.3"}}} /-->
+									<!-- wp:post-excerpt {"moreText":"","excerptLength":18,"fontSize":"small","textColor":"charcoal-3"} /-->
+									<!-- wp:gatherpress/rsvp-count {"fontSize":"small","textColor":"charcoal-4","style":{"typography":{"fontWeight":"600"}}} /-->
+									<!-- wp:gatherpress/venue -->
+										<!-- wp:post-title {"level":4,"fontSize":"small","textColor":"charcoal-4","style":{"spacing":{"margin":{"top":"0","bottom":"0"}}}} /-->
+									<!-- /wp:gatherpress/venue -->
+								</div>
+								<!-- /wp:group -->
+							</div>
+							<!-- /wp:group -->
+						<!-- /wp:post-template -->
+
+						<!-- wp:query-no-results -->
+							<!-- wp:paragraph {"textColor":"charcoal-4"} -->
+							<p class="has-charcoal-4-color has-text-color">No upcoming events yet. Check back soon!</p>
+							<!-- /wp:paragraph -->
+						<!-- /wp:query-no-results -->
+					</div>
+					<!-- /wp:query -->
 				</div>
 				<!-- /wp:group -->
-			<!-- /wp:post-template -->
 
-			<!-- wp:query-no-results -->
-				<!-- wp:paragraph {"textColor":"charcoal-4"} -->
-				<p class="has-charcoal-4-color has-text-color">No upcoming events yet. Check back soon!</p>
-				<!-- /wp:paragraph -->
-			<!-- /wp:query-no-results -->
+				<!-- wp:wporg/group-news {"limit":3,"lock":{"move":true,"remove":true}} /-->
+
+				<!-- wp:wporg/sponsors {"lock":{"move":true,"remove":true},"className":"groups-site-sponsors"} /-->
+			</div>
+			<!-- /wp:group -->
 		</div>
-		<!-- /wp:query -->
+		<!-- /wp:column -->
 	</div>
-	<!-- /wp:group -->
-
-	<!-- wp:separator {"className":"is-style-wide","backgroundColor":"light-grey-1"} -->
-	<hr class="wp-block-separator has-text-color has-light-grey-1-color has-alpha-channel-opacity has-light-grey-1-background-color has-background is-style-wide"/>
-	<!-- /wp:separator -->
-
-	<!-- wp:group {"className":"groups-site-section","anchor":"about","style":{"spacing":{"margin":{"top":"var:preset|spacing|70"}}},"layout":{"type":"constrained","contentSize":"768px","justifyContent":"left"}} -->
-	<div id="about" class="wp-block-group groups-site-section" style="margin-top:var(--wp--preset--spacing--70)">
-		<!-- wp:heading {"level":2,"fontSize":"heading-3","style":{"spacing":{"margin":{"bottom":"var:preset|spacing|30"}}}} -->
-		<h2 class="wp-block-heading has-heading-3-font-size" style="margin-bottom:var(--wp--preset--spacing--30)">About this group</h2>
-		<!-- /wp:heading -->
-
-		<!-- wp:wporg/page-content {"slug":"about"} /-->
-	</div>
-	<!-- /wp:group -->
-
-	<!-- wp:group {"className":"groups-site-section","anchor":"sponsors","style":{"spacing":{"margin":{"top":"var:preset|spacing|70"}}},"layout":{"type":"constrained","contentSize":"768px","justifyContent":"left"}} -->
-	<div id="sponsors" class="wp-block-group groups-site-section" style="margin-top:var(--wp--preset--spacing--70)">
-		<!-- wp:wporg/sponsors {"lock":{"move":true,"remove":true}} /-->
-	</div>
-	<!-- /wp:group -->
+	<!-- /wp:columns -->
 
 </main>
 <!-- /wp:group -->

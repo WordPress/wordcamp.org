@@ -1,0 +1,12 @@
+.wp-block-wporg-group-location {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.wporg-group-location__icon {
+	width: 1em;
+	height: 1em;
+	flex: 0 0 auto;
+	fill: currentColor;
+}

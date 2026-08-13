@@ -69,7 +69,9 @@ function renderTwoModals() {
 				<span class="wporg-event-rsvp__avatars">First avatars untouched</span>
 				View first attendees
 			</button>
-			<button class="wporg-event-rsvp__button" type="button">RSVP first</button>
+			<div class="wp-block-button">
+				<button class="wp-block-button__link wp-element-button" type="button">RSVP first</button>
+			</div>
 			<div class="wporg-event-rsvp__modal">
 				<button class="wporg-event-rsvp__modal-close" type="button">Close first</button>
 				<div class="wporg-event-rsvp__attendee-list">First list untouched</div>
@@ -80,7 +82,9 @@ function renderTwoModals() {
 				<span class="wporg-event-rsvp__avatars">Second avatars pending</span>
 				View second attendees
 			</button>
-			<button class="wporg-event-rsvp__button" type="button">RSVP second</button>
+			<div class="wp-block-button">
+				<button class="wp-block-button__link wp-element-button" type="button">RSVP second</button>
+			</div>
 			<div class="wporg-event-rsvp__modal">
 				<button class="wporg-event-rsvp__modal-close" type="button">Close second</button>
 				<div class="wporg-event-rsvp__attendee-list">Second list pending</div>
@@ -92,7 +96,7 @@ function renderTwoModals() {
 		avatars: block.querySelector( '.wporg-event-rsvp__avatars' ),
 		close: block.querySelector( '.wporg-event-rsvp__modal-close' ),
 		list: block.querySelector( '.wporg-event-rsvp__attendee-list' ),
-		rsvp: block.querySelector( '.wporg-event-rsvp__button' ),
+		rsvp: block.querySelector( '.wp-block-button button' ),
 		summary: block.querySelector( '.wporg-event-rsvp__summary' ),
 	} ) );
 }
@@ -353,7 +357,9 @@ describe( 'event RSVP custom registration questions', () => {
 	function renderModalWithQuestions() {
 		document.body.innerHTML = `
 			<div class="wp-block-wporg-event-rsvp">
-				<button class="wporg-event-rsvp__button" type="button">RSVP</button>
+				<div class="wp-block-button">
+					<button class="wp-block-button__link wp-element-button" type="button">RSVP</button>
+				</div>
 				<div class="wporg-event-rsvp__modal">
 					<fieldset class="wporg-event-rsvp__questions">
 						<input class="wporg-event-rsvp__question-input" data-question-id="diet" required />
@@ -367,7 +373,7 @@ describe( 'event RSVP custom registration questions', () => {
 		return {
 			company: document.querySelector( '[data-question-id="company"]' ),
 			diet: document.querySelector( '[data-question-id="diet"]' ),
-			rsvp: document.querySelector( '.wporg-event-rsvp__button' ),
+			rsvp: document.querySelector( '.wp-block-button button' ),
 		};
 	}
 

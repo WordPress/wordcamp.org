@@ -50,41 +50,49 @@ if ( ! $show_edit && ! $show_create ) {
 }
 
 $wrapper_attributes = get_block_wrapper_attributes(
-	array( 'class' => 'wporg-event-manage' )
+	array( 'class' => 'wp-block-buttons wporg-event-manage' )
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<?php if ( $show_edit_button && $event_post_id ) : ?>
-		<button
-			type="button"
-			class="wporg-event-manage__button wporg-event-manage__button--edit wp-element-button"
-			data-wporg-groups-modal="edit"
-			data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-		>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
+		<div class="wp-block-button is-style-outline">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wporg-groups-modal="edit"
+				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
+			>&#9998; <?php esc_html_e( 'Edit this event', 'wporg-groups-frontend' ); ?></button>
+		</div>
 	<?php endif; ?>
 
 	<?php if ( $show_edit && $event_post_id ) : ?>
-		<button
-			type="button"
-			class="wporg-event-manage__button wporg-event-manage__button--message wp-element-button"
-			data-wporg-groups-modal="message-all"
-			data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-		><?php esc_html_e( 'Message all members', 'wporg-groups-frontend' ); ?></button>
+		<div class="wp-block-button is-style-outline">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wporg-groups-modal="message-all"
+				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
+			><?php esc_html_e( 'Message all members', 'wporg-groups-frontend' ); ?></button>
+		</div>
 
-		<button
-			type="button"
-			class="wporg-event-manage__button wporg-event-manage__button--message wp-element-button"
-			data-wporg-groups-modal="message-attendees"
-			data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
-		><?php esc_html_e( 'Message attendees', 'wporg-groups-frontend' ); ?></button>
+		<div class="wp-block-button is-style-outline">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wporg-groups-modal="message-attendees"
+				data-wporg-groups-event-id="<?php echo (int) $event_post_id; ?>"
+			><?php esc_html_e( 'Message attendees', 'wporg-groups-frontend' ); ?></button>
+		</div>
 	<?php endif; ?>
 
 	<?php if ( $show_create ) : ?>
-		<button
-			type="button"
-			class="wporg-event-manage__button wporg-event-manage__button--create wp-element-button"
-			data-wporg-groups-modal="create"
-		>+ <?php esc_html_e( 'Create event', 'wporg-groups-frontend' ); ?></button>
+		<div class="wp-block-button">
+			<button
+				type="button"
+				class="wp-block-button__link wp-element-button"
+				data-wporg-groups-modal="create"
+			>+ <?php esc_html_e( 'Create event', 'wporg-groups-frontend' ); ?></button>
+		</div>
 	<?php endif; ?>
 
 	<div id="wporg-groups-event-modal-root"></div>

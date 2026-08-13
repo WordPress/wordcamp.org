@@ -9,60 +9,10 @@
 // === Trigger button ===
 
 .wporg-group-settings-block {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	flex-wrap: wrap;
-
-	&__trigger {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		padding: 6px 14px;
-		background: none;
-		border: 1px solid #d9d9d9;
-		border-radius: 2px;
-		font-size: 13px;
-		color: #656a71;
-		cursor: pointer;
-
-		.dashicons {
-			font-size: 16px;
-			width: 16px;
-			height: 16px;
-		}
-
-		&:hover {
-			border-color: #3858e9;
-			color: #3858e9;
-		}
-
-		&--setup {
-			background: #3858e9;
-			border-color: #3858e9;
-			color: #fff;
-			font-weight: 600;
-			padding: 10px 20px;
-
-			&:hover {
-				background: #213fd4;
-				border-color: #213fd4;
-				color: #fff;
-			}
-		}
-	}
-
-	&__edit {
-		background: transparent !important;
-		border: 1px solid #d9d9d9 !important;
-		color: #40464d !important;
-		font-size: 14px;
-
-		&:hover {
-			border-color: #3858e9 !important;
-			color: #3858e9 !important;
-			background: #eff2ff !important;
-		}
+	.dashicons {
+		font-size: 16px;
+		width: 16px;
+		height: 16px;
 	}
 }
 
@@ -133,6 +83,22 @@
 	&__empty {
 		color: #656a71;
 		font-style: italic;
+	}
+
+	&__location {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+
+	&__location-fields {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 16px;
+
+		@media (max-width: 600px) {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	&__section-title {

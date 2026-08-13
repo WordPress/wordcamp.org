@@ -67,23 +67,27 @@
 }
 
 /* === RSVP button === */
-.wporg-event-rsvp__button {
+.wp-block-wporg-event-rsvp .wp-block-button {
 	width: 100%;
+}
+
+.wp-block-wporg-event-rsvp .wp-block-button__link {
+	width: 100%;
+	text-align: center;
 	justify-content: center;
-	margin-bottom: 0;
 }
 
-.wporg-event-rsvp__button.is-attending {
-	background: #e2ffed;
-	color: #1a1919;
-	border: 1px solid #33f078;
+.wp-block-wporg-event-rsvp .wp-block-button__link.is-attending {
+	background: var(--wp--preset--color--acid-green-3, #e2ffed);
+	color: var(--wp--preset--color--charcoal-0, #1a1919);
+	border: 1px solid var(--wp--preset--color--acid-green-1, #33f078);
 }
 
-.wporg-event-rsvp__button.is-attending:hover {
+.wp-block-wporg-event-rsvp .wp-block-button__link.is-attending:hover {
 	background: #c8f5d9;
 }
 
-.wporg-event-rsvp__button.is-past {
+.wp-block-wporg-event-rsvp .wp-block-button__link.is-past {
 	opacity: 0.5;
 	cursor: not-allowed;
 }

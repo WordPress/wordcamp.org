@@ -249,7 +249,12 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 		$current_user = wp_get_current_user();
 		$pending      = Transfer\get_pending_transfer( $site_id );
 
-		$can_initiate = Transfer\current_user_can_initiate( $site_id ) && ! $pending;
+		// Whether this viewer is in the initiate-eligible audience (owner or
+		// super admin) — independent of whether a transfer is *currently*
+		// pending, since the client also uses this to decide whether to show
+		// the "Cancel transfer" action on an in-flight one. The client gates
+		// the initiate *form* itself separately, on `! pending`.
+		$can_initiate = Transfer\current_user_can_initiate( $site_id );
 		$can_accept   = $pending
 			&& Transfer\STATUS_PENDING_ACCEPTANCE === $pending['status']
 			&& (int) $pending['to_user_id'] === $current_user->ID;

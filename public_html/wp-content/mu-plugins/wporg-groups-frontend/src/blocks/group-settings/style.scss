@@ -429,6 +429,51 @@
 	}
 }
 
+// === Ownership transfer panel (inside Members tab) ===
+
+.wporg-ownership-transfer {
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid #e0e0e0;
+
+	&__status {
+		margin-bottom: 12px;
+	}
+
+	&__actions {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	&__form {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		max-width: 400px;
+	}
+
+	&__history {
+		margin-top: 12px;
+		font-size: 13px;
+		color: #656a71;
+
+		summary {
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+		ul {
+			margin: 8px 0 0;
+			padding-left: 20px;
+		}
+
+		li {
+			margin-bottom: 4px;
+		}
+	}
+}
+
 /* === Registration questions ===
    The editor component is shared with the event-manage modal, so these mirror
    the rules in `event-manage/style.css` — the two blocks load separate

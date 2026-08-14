@@ -32,6 +32,15 @@ const STATUS_LABELS = {
 	pending_approval: __( 'Accepted — awaiting network admin approval', 'wporg-groups-frontend' ),
 };
 
+// Mirrors the `finalize_transfer()` `$final_status` values this codebase's
+// PHP side ever writes — see `group-ownership-transfer.php`.
+const FINAL_STATUS_LABELS = {
+	declined: __( 'Declined', 'wporg-groups-frontend' ),
+	cancelled: __( 'Cancelled', 'wporg-groups-frontend' ),
+	completed: __( 'Completed', 'wporg-groups-frontend' ),
+	rejected: __( 'Rejected', 'wporg-groups-frontend' ),
+};
+
 export default function OwnershipTransferPanel() {
 	const [ loading, setLoading ] = useState( true );
 	const [ state, setState ] = useState( null );
@@ -209,7 +218,7 @@ export default function OwnershipTransferPanel() {
 								__( '%1$s → %2$s: %3$s', 'wporg-groups-frontend' ),
 								entry.fromUserName,
 								entry.toUserName,
-								entry.status
+								FINAL_STATUS_LABELS[ entry.status ] || entry.status
 							)
 						)
 					)

@@ -105,11 +105,19 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 	}
 
 	/**
-	 * Permission check shared by every route: must be logged in and a member
-	 * of this group. Identity/role-specific rules (is this the candidate? the
-	 * owner?) are enforced by the `Transfer\*` state functions themselves,
-	 * the same split `Members_Controller::update_member_role()` uses between
-	 * its permission callback and its handler.
+	 * Permission check shared by every route: must be logged in and either a
+	 * member of this group or a super admin. Identity/role-specific rules (is
+	 * this the candidate? the owner?) are enforced by the `Transfer\*` state
+	 * functions themselves, the same split `Members_Controller::update_member_role()`
+	 * uses between its permission callback and its handler.
+	 *
+	 * Super admins are exempt from the membership requirement so the
+	 * abandoned-group path (`Transfer\current_user_can_initiate()`'s
+	 * `is_super_admin()` branch) actually works for a network admin who
+	 * isn't personally a member of the group in question — otherwise this
+	 * check would 403 them before that override is ever consulted, on
+	 * every route including the initial `GET` the front-end panel needs
+	 * just to render the initiate form.
 	 *
 	 * @return true|WP_Error
 	 */
@@ -122,7 +130,7 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 			);
 		}
 
-		if ( ! is_user_member_of_blog() ) {
+		if ( ! is_super_admin() && ! is_user_member_of_blog() ) {
 			return new WP_Error(
 				'not_a_member',
 				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),

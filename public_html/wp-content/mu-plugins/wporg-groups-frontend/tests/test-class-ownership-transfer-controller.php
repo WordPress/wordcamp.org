@@ -76,6 +76,27 @@ class Test_Groups_Ownership_Transfer_Controller extends Groups_TestCase {
 	}
 
 	/**
+	 * A super admin who isn't personally a member of the group is exempt
+	 * from the membership requirement — required for the abandoned-group
+	 * path, where the network admin initiating on the owner's behalf may
+	 * never have joined this particular group.
+	 */
+	public function test_super_admin_can_view_state_without_membership() {
+		$admin_id = self::factory()->user->create();
+		remove_user_from_blog( $admin_id, self::$groups_root_site_id );
+
+		$GLOBALS['super_admins'] = array( get_userdata( $admin_id )->user_login ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		wp_set_current_user( $admin_id );
+
+		try {
+			$this->assertTrue( self::$controller->view_permissions_check() );
+			$this->assertTrue( self::$controller->initiate_permissions_check() );
+		} finally {
+			unset( $GLOBALS['super_admins'] );
+		}
+	}
+
+	/**
 	 * GET returns eligible candidates (editor tier) and current owners
 	 * (administrator tier), and reflects whether the viewer can initiate.
 	 */

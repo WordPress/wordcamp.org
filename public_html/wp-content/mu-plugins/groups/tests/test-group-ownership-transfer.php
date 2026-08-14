@@ -8,12 +8,17 @@ use function WordCamp\Groups\Ownership_Transfer\current_user_can_approve;
 use function WordCamp\Groups\Ownership_Transfer\current_user_can_initiate;
 use function WordCamp\Groups\Ownership_Transfer\decline_transfer;
 use function WordCamp\Groups\Ownership_Transfer\execute_transfer;
+use function WordCamp\Groups\Ownership_Transfer\get_final_status_label;
 use function WordCamp\Groups\Ownership_Transfer\get_pending_transfer;
+use function WordCamp\Groups\Ownership_Transfer\get_recent_decided_transfers;
+use function WordCamp\Groups\Ownership_Transfer\get_sites_with_pending_transfers;
 use function WordCamp\Groups\Ownership_Transfer\get_transfer_history;
 use function WordCamp\Groups\Ownership_Transfer\initiate_transfer;
 use function WordCamp\Groups\Ownership_Transfer\reject_transfer;
 use function WordCamp\Groups\Ownership_Transfer\validate_candidate;
 use const WordCamp\Groups\Ownership_Transfer\HISTORY_LIMIT;
+use const WordCamp\Groups\Ownership_Transfer\LOCK_GROUP;
+use const WordCamp\Groups\Ownership_Transfer\LOCK_TIMEOUT;
 use const WordCamp\Groups\Ownership_Transfer\STATUS_PENDING_ACCEPTANCE;
 use const WordCamp\Groups\Ownership_Transfer\STATUS_PENDING_APPROVAL;
 
@@ -216,6 +221,29 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	}
 
 	/**
+	 * Every transition is serialized per site: while another request holds
+	 * this group's lock, a concurrent transition is refused outright rather
+	 * than racing the read-then-write against site meta.
+	 */
+	public function test_concurrent_transition_is_refused_while_locked() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		$lock_key = 'transfer_' . $this->group_site_id;
+		$this->assertTrue( wp_cache_add( $lock_key, 1, LOCK_GROUP, LOCK_TIMEOUT ) );
+
+		try {
+			$result = initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		} finally {
+			wp_cache_delete( $lock_key, LOCK_GROUP );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'transfer_busy', $result->get_error_code() );
+		$this->assertNull( get_pending_transfer( $this->group_site_id ), 'A refused initiate must not leave a partial record.' );
+	}
+
+	/**
 	 * Only the nominated candidate can accept or decline.
 	 */
 	public function test_only_the_candidate_can_accept_or_decline() {
@@ -308,6 +336,50 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 		$result = execute_transfer( $this->group_site_id, self::factory()->user->create() );
 		$this->assertWPError( $result );
 		$this->assertSame( 'transfer_not_awaiting_approval', $result->get_error_code() );
+	}
+
+	/**
+	 * `execute_transfer()` re-validates the candidate immediately before
+	 * mutating roles -- if they were removed from the group between
+	 * acceptance and approval, execution must refuse rather than silently
+	 * re-adding them to the site as a full administrator.
+	 */
+	public function test_cannot_execute_if_candidate_no_longer_a_member() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		remove_user_from_blog( $candidate_id, $this->group_site_id );
+
+		$result = execute_transfer( $this->group_site_id, self::factory()->user->create() );
+		$this->assertWPError( $result );
+		$this->assertSame( 'candidate_not_found', $result->get_error_code() );
+
+		$this->assertFalse( is_user_member_of_blog( $candidate_id, $this->group_site_id ) );
+	}
+
+	/**
+	 * Same, but for the old owner having already been demoted by someone
+	 * else in the meantime.
+	 */
+	public function test_cannot_execute_if_owner_no_longer_administrator() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		$owner = get_userdata( $owner_id );
+		$owner->set_role( 'editor' );
+
+		$result = execute_transfer( $this->group_site_id, self::factory()->user->create() );
+		$this->assertWPError( $result );
+		$this->assertSame( 'transfer_owner_no_longer_administrator', $result->get_error_code() );
+
+		// The candidate must not have been promoted despite the rejection.
+		$this->assertNotContains( 'administrator', get_userdata( $candidate_id )->roles );
 	}
 
 	/**
@@ -419,5 +491,74 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 
 		// The most recently declined candidate is first.
 		$this->assertSame( $candidate_id, $history[0]['to_user_id'] );
+	}
+
+	/**
+	 * The Network Admin listing functions query for sites that actually
+	 * carry transfer meta, rather than iterating every group on the
+	 * network -- a site with no transfer activity must not show up in
+	 * either listing.
+	 */
+	public function test_listing_functions_only_include_sites_with_transfer_activity() {
+		$untouched_site_id = self::factory()->blog->create(
+			array(
+				'domain'     => 'events.wordpress.test',
+				'path'       => '/group/ownership-transfer-untouched/',
+				'network_id' => GROUPS_NETWORK_ID,
+			)
+		);
+
+		try {
+			$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+			$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+			initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+
+			$pending_site_ids = $this->site_ids_from_rows( get_sites_with_pending_transfers() );
+			$this->assertContains( $this->group_site_id, $pending_site_ids );
+			$this->assertNotContains( $untouched_site_id, $pending_site_ids );
+
+			decline_transfer( $this->group_site_id, $candidate_id );
+
+			$recent_site_ids = $this->site_ids_from_rows( get_recent_decided_transfers() );
+			$this->assertContains( $this->group_site_id, $recent_site_ids );
+			$this->assertNotContains( $untouched_site_id, $recent_site_ids );
+
+			// The now-declined transfer must no longer appear as pending.
+			$this->assertNotContains( $this->group_site_id, $this->site_ids_from_rows( get_sites_with_pending_transfers() ) );
+		} finally {
+			wp_delete_site( $untouched_site_id );
+		}
+	}
+
+	/**
+	 * Every `final_status` `finalize_transfer()` can write has a translated
+	 * label; anything unrecognised still shows the raw value rather than
+	 * going blank.
+	 */
+	public function test_get_final_status_label_covers_every_final_status() {
+		foreach ( array( 'declined', 'cancelled', 'completed', 'rejected' ) as $status ) {
+			$label = get_final_status_label( $status );
+			$this->assertNotSame( $status, $label );
+			$this->assertNotSame( '', $label );
+		}
+
+		$this->assertSame( 'something_new', get_final_status_label( 'something_new' ) );
+	}
+
+	/**
+	 * Pull `blog_id`s out of the `{site, pending|entry}` row shape both
+	 * listing functions return.
+	 *
+	 * @param array $rows Rows from `get_sites_with_pending_transfers()` or `get_recent_decided_transfers()`.
+	 * @return int[]
+	 */
+	private function site_ids_from_rows( array $rows ): array {
+		return array_map(
+			static function ( array $row ): int {
+				return (int) $row['site']->blog_id;
+			},
+			$rows
+		);
 	}
 }

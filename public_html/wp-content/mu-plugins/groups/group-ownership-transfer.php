@@ -60,8 +60,83 @@ const MENU_SLUG = 'wporg-groups-ownership-transfer';
 /** `admin_post_` action the approve/reject forms submit to. */
 const DECIDE_ACTION = 'wporg_groups_ownership_transfer_decide';
 
+/** Object-cache group for per-site transfer locks. Registered global, see below. */
+const LOCK_GROUP = 'wporg-groups-ownership-transfer';
+
+/**
+ * Seconds before an abandoned lock expires on its own, so a process that
+ * dies mid-transition can't wedge a group's transfer state permanently.
+ */
+const LOCK_TIMEOUT = 10;
+
+/** Lock acquisition attempts, `LOCK_RETRY_DELAY` apart. */
+const LOCK_ATTEMPTS = 20;
+
+/** Microseconds between lock acquisition attempts. */
+const LOCK_RETRY_DELAY = 50000;
+
 add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page' );
 add_action( 'admin_post_' . DECIDE_ACTION, __NAMESPACE__ . '\handle_decision' );
+
+/*
+ * A lock is keyed by site ID and acquired from contexts where the current
+ * blog varies (the REST routes run on the group's own site; the Network
+ * Admin handler runs after `switch_to_blog()`). Non-global cache groups are
+ * keyed per blog, so without this, the same site's lock key would resolve
+ * to different cache buckets depending on which blog happens to be current
+ * -- mirrors `Groups\Messaging`'s identical reasoning for its own lock.
+ */
+wp_cache_add_global_groups( array( LOCK_GROUP ) );
+
+/**
+ * Run `$callback` with exclusive access to one group's transfer state.
+ *
+ * Every state transition (initiate/accept/decline/cancel/execute/reject)
+ * does a read-then-write against this group's site meta with no
+ * database-level locking of its own. Two concurrent requests -- a
+ * double-click, a retried request, a network admin approving while the
+ * candidate is declining -- would otherwise race: both read the same "no
+ * pending transfer" (or the same pending record), and the second write
+ * silently clobbers the first, potentially after both sides have already
+ * been emailed. `wp_cache_add()` is atomic on a shared backend (memcached
+ * in production), making it a usable cross-process mutex per group --
+ * mirrors `Groups\Messaging\with_jobs_lock()`, scoped to one site instead
+ * of one global job queue. Without a persistent object cache this
+ * degrades to the unsynchronised behaviour it replaces -- no worse than
+ * not having it.
+ *
+ * @param int      $site_id  Group site ID being locked.
+ * @param callable $callback Runs while the lock is held.
+ * @return mixed The callback's return value, or a `WP_Error` if the lock
+ *               could not be acquired.
+ */
+function with_transfer_lock( int $site_id, callable $callback ) {
+	$lock_key = 'transfer_' . $site_id;
+	$acquired = false;
+
+	for ( $attempt = 0; $attempt < LOCK_ATTEMPTS; $attempt++ ) {
+		if ( wp_cache_add( $lock_key, 1, LOCK_GROUP, LOCK_TIMEOUT ) ) {
+			$acquired = true;
+			break;
+		}
+
+		usleep( LOCK_RETRY_DELAY );
+	}
+
+	if ( ! $acquired ) {
+		return new WP_Error(
+			'transfer_busy',
+			__( "This group's ownership transfer is being updated by another request. Please try again.", 'wordcamporg' ),
+			array( 'status' => 409 )
+		);
+	}
+
+	try {
+		return $callback();
+	} finally {
+		wp_cache_delete( $lock_key, LOCK_GROUP );
+	}
+}
 
 /*
  * ----------------------------------------------------------------------
@@ -285,6 +360,18 @@ function validate_candidate( int $candidate_id, int $from_user_id, int $site_id 
  * @return true|WP_Error
  */
 function initiate_transfer( int $site_id, int $from_user_id, int $to_user_id, int $initiated_by ) {
+	return with_transfer_lock(
+		$site_id,
+		static function () use ( $site_id, $from_user_id, $to_user_id, $initiated_by ) {
+			return initiate_transfer_unlocked( $site_id, $from_user_id, $to_user_id, $initiated_by );
+		}
+	);
+}
+
+/**
+ * @see initiate_transfer() -- runs under that function's per-site lock.
+ */
+function initiate_transfer_unlocked( int $site_id, int $from_user_id, int $to_user_id, int $initiated_by ) {
 	if ( get_pending_transfer( $site_id ) ) {
 		return new WP_Error(
 			'transfer_already_pending',
@@ -348,6 +435,18 @@ function initiate_transfer( int $site_id, int $from_user_id, int $to_user_id, in
  * @return true|WP_Error
  */
 function accept_transfer( int $site_id, int $user_id ) {
+	return with_transfer_lock(
+		$site_id,
+		static function () use ( $site_id, $user_id ) {
+			return accept_transfer_unlocked( $site_id, $user_id );
+		}
+	);
+}
+
+/**
+ * @see accept_transfer() -- runs under that function's per-site lock.
+ */
+function accept_transfer_unlocked( int $site_id, int $user_id ) {
 	$pending = get_pending_transfer( $site_id );
 
 	if ( ! $pending ) {
@@ -388,6 +487,18 @@ function accept_transfer( int $site_id, int $user_id ) {
  * @return true|WP_Error
  */
 function decline_transfer( int $site_id, int $user_id ) {
+	return with_transfer_lock(
+		$site_id,
+		static function () use ( $site_id, $user_id ) {
+			return decline_transfer_unlocked( $site_id, $user_id );
+		}
+	);
+}
+
+/**
+ * @see decline_transfer() -- runs under that function's per-site lock.
+ */
+function decline_transfer_unlocked( int $site_id, int $user_id ) {
 	$pending = get_pending_transfer( $site_id );
 
 	if ( ! $pending ) {
@@ -421,6 +532,18 @@ function decline_transfer( int $site_id, int $user_id ) {
  * @return true|WP_Error
  */
 function cancel_transfer( int $site_id, int $user_id ) {
+	return with_transfer_lock(
+		$site_id,
+		static function () use ( $site_id, $user_id ) {
+			return cancel_transfer_unlocked( $site_id, $user_id );
+		}
+	);
+}
+
+/**
+ * @see cancel_transfer() -- runs under that function's per-site lock.
+ */
+function cancel_transfer_unlocked( int $site_id, int $user_id ) {
 	$pending = get_pending_transfer( $site_id );
 
 	if ( ! $pending ) {
@@ -461,6 +584,18 @@ function cancel_transfer( int $site_id, int $user_id ) {
  * @return true|WP_Error
  */
 function execute_transfer( int $site_id, int $decided_by ) {
+	return with_transfer_lock(
+		$site_id,
+		static function () use ( $site_id, $decided_by ) {
+			return execute_transfer_unlocked( $site_id, $decided_by );
+		}
+	);
+}
+
+/**
+ * @see execute_transfer() -- runs under that function's per-site lock.
+ */
+function execute_transfer_unlocked( int $site_id, int $decided_by ) {
 	$pending = get_pending_transfer( $site_id );
 
 	if ( ! $pending ) {
@@ -480,6 +615,26 @@ function execute_transfer( int $site_id, int $decided_by ) {
 
 	if ( ! $old_owner || ! $new_owner ) {
 		return new WP_Error( 'transfer_user_missing', __( 'One of the users in this transfer no longer exists.', 'wordcamporg' ), array( 'status' => 400 ) );
+	}
+
+	// Re-validate both parties immediately before mutating roles. Approval
+	// can land long after acceptance, long enough for either side to have
+	// changed hands in the meantime (candidate removed from the group,
+	// demoted, or promoted elsewhere; old owner already demoted by someone
+	// else) -- without this, a removed candidate would be silently re-added
+	// to the site as a full administrator, and an unrelated user's role
+	// would be overwritten.
+	if ( ! in_array( 'administrator', $old_owner->roles, true ) ) {
+		return new WP_Error(
+			'transfer_owner_no_longer_administrator',
+			__( 'The current owner named in this transfer no longer holds the administrator role. Reject this transfer and ask the owner to start a new one.', 'wordcamporg' ),
+			array( 'status' => 409 )
+		);
+	}
+
+	$candidate_check = validate_candidate( $new_owner->ID, $old_owner->ID, $site_id );
+	if ( is_wp_error( $candidate_check ) ) {
+		return $candidate_check;
 	}
 
 	$new_owner->set_role( 'administrator' );
@@ -554,6 +709,18 @@ function execute_transfer( int $site_id, int $decided_by ) {
  * @return true|WP_Error
  */
 function reject_transfer( int $site_id, int $decided_by, string $reason = '' ) {
+	return with_transfer_lock(
+		$site_id,
+		static function () use ( $site_id, $decided_by, $reason ) {
+			return reject_transfer_unlocked( $site_id, $decided_by, $reason );
+		}
+	);
+}
+
+/**
+ * @see reject_transfer() -- runs under that function's per-site lock.
+ */
+function reject_transfer_unlocked( int $site_id, int $decided_by, string $reason = '' ) {
 	$pending = get_pending_transfer( $site_id );
 
 	if ( ! $pending ) {
@@ -619,7 +786,7 @@ function add_page(): void {
 function get_sites_with_pending_transfers(): array {
 	$rows = array();
 
-	foreach ( Archive\get_group_sites( true ) as $site ) {
+	foreach ( get_group_sites_with_meta_key( META_KEY_PENDING ) as $site ) {
 		$pending = get_pending_transfer( (int) $site->blog_id );
 
 		if ( $pending ) {
@@ -642,7 +809,7 @@ function get_sites_with_pending_transfers(): array {
 function get_recent_decided_transfers( int $limit = 20 ): array {
 	$rows = array();
 
-	foreach ( Archive\get_group_sites( true ) as $site ) {
+	foreach ( get_group_sites_with_meta_key( META_KEY_HISTORY ) as $site ) {
 		foreach ( get_transfer_history( (int) $site->blog_id ) as $entry ) {
 			$rows[] = array(
 				'site'  => $site,
@@ -659,6 +826,69 @@ function get_recent_decided_transfers( int $limit = 20 ): array {
 	);
 
 	return array_slice( $rows, 0, $limit );
+}
+
+/**
+ * Get the Groups-network sites carrying a specific blog meta key.
+ *
+ * The Network Admin screen only ever needs sites that actually HAVE a
+ * pending transfer or decided-transfer history -- almost always a tiny
+ * fraction of the network. Querying `wp_blogmeta` directly for that key
+ * scales with how many groups have ever used this feature, instead of
+ * `Archive\get_group_sites( true )`'s O(every group on the network), which
+ * the existing Archive screen paginates at `wporg-groups-archive.php::PER_PAGE`
+ * precisely because it doesn't scale otherwise.
+ *
+ * @param string $meta_key Blog meta key to look for.
+ * @return \WP_Site[]
+ */
+function get_group_sites_with_meta_key( string $meta_key ): array {
+	global $wpdb;
+
+	$site_ids = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT DISTINCT blog_id FROM {$wpdb->blogmeta} WHERE meta_key = %s",
+			$meta_key
+		)
+	);
+
+	$sites = array();
+
+	foreach ( $site_ids as $site_id ) {
+		$site_id = (int) $site_id;
+		$site    = get_site( $site_id );
+
+		// Same exclusions as `Archive\get_group_sites()`: only sites on this
+		// network, never the placeholder root, never a deleted site.
+		if ( ! $site || GROUPS_ROOT_BLOG_ID === $site_id || GROUPS_NETWORK_ID !== (int) $site->network_id || $site->deleted ) {
+			continue;
+		}
+
+		$sites[] = $site;
+	}
+
+	return $sites;
+}
+
+/**
+ * Translate a stored `final_status` value for display.
+ *
+ * Mirrors the `$final_status` values `finalize_transfer()` ever writes.
+ * Falls back to the raw value for anything unrecognised, so a status this
+ * function hasn't been updated for still shows something instead of blank.
+ *
+ * @param string $status Stored final-status value.
+ * @return string
+ */
+function get_final_status_label( string $status ): string {
+	$labels = array(
+		'declined'  => __( 'Declined', 'wordcamporg' ),
+		'cancelled' => __( 'Cancelled', 'wordcamporg' ),
+		'completed' => __( 'Completed', 'wordcamporg' ),
+		'rejected'  => __( 'Rejected', 'wordcamporg' ),
+	);
+
+	return $labels[ $status ] ?? $status;
 }
 
 /**
@@ -850,7 +1080,7 @@ function render_page(): void {
 								<td><?php echo esc_html( get_blog_option( $site_id, 'blogname' ) ?: $row['site']->domain . $row['site']->path ); ?></td>
 								<td><?php echo esc_html( $from_user ? $from_user->display_name : __( '(deleted user)', 'wordcamporg' ) ); ?></td>
 								<td><?php echo esc_html( $to_user ? $to_user->display_name : __( '(deleted user)', 'wordcamporg' ) ); ?></td>
-								<td><?php echo esc_html( $entry['final_status'] ?? '' ); ?></td>
+								<td><?php echo esc_html( get_final_status_label( $entry['final_status'] ?? '' ) ); ?></td>
 								<td><?php echo esc_html( ! empty( $entry['decided_at'] ) ? wp_date( 'Y-m-d', (int) $entry['decided_at'] ) : '' ); ?></td>
 							</tr>
 						<?php endforeach; ?>

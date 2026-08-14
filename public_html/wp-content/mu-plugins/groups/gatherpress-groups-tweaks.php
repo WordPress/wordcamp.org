@@ -68,17 +68,21 @@ function get_event_venue_post_id( int $event_id ): int {
  * Disable the "Show Timezone" GatherPress setting so event date blocks
  * never append "GMT+0000" or similar suffixes.
  *
- * Also disable anonymous RSVP at the global setting level.
+ * Also disable anonymous RSVP and Open RSVP at the global setting level.
+ *
+ * Uses `option_` (not `pre_option_`) so the forced keys overlay the stored
+ * settings instead of replacing them.
  */
 add_filter(
-	'pre_option_gatherpress_settings',
+	'option_gatherpress_settings',
 	static function ( $value ) {
 		if ( ! is_array( $value ) ) {
 			$value = array();
 		}
 
-		$value['show_timezone']        = 0;
+		$value['show_timezone']         = 0;
 		$value['enable_anonymous_rsvp'] = 0;
+		$value['enable_open_rsvp']      = 0;
 
 		return $value;
 	}

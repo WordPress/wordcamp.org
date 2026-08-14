@@ -405,7 +405,7 @@ function EventForm( { eventId, onDone, onCancel } ) {
 			} )
 		),
 		h( 'div', { className: 'wporg-event-form__actions' },
-			h( Button, { variant: 'tertiary', onClick: onCancel, disabled: saving }, _x( 'Cancel', 'button to close a dialog without saving', 'wporg-groups-frontend' ) ),
+			h( Button, { variant: 'tertiary', onClick: onCancel, disabled: saving }, _x( 'Cancel', 'button to abort the current action', 'wporg-groups-frontend' ) ),
 			h( Button, { variant: 'primary', type: 'submit', isBusy: saving, disabled: saving },
 				isEdit ? __( 'Save changes', 'wporg-groups-frontend' ) : __( 'Create event', 'wporg-groups-frontend' ) )
 		)

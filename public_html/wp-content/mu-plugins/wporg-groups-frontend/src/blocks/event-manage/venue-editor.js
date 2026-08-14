@@ -414,7 +414,7 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 						onClick: onCancel,
 						disabled: saving,
 					},
-					_x( 'Cancel', 'button to close a dialog without saving', 'wporg-groups-frontend' )
+					_x( 'Cancel', 'button to abort the current action', 'wporg-groups-frontend' )
 				),
 				h(
 					Button,

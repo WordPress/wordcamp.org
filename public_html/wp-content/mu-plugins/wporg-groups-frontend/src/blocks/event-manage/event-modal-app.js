@@ -822,7 +822,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 						h(
 							Button,
 							{ variant: 'tertiary', onClick: handleClose, disabled: saving },
-							_x( 'Cancel', 'button to close a dialog without saving', 'wporg-groups-frontend' )
+							_x( 'Cancel', 'button to abort the current action', 'wporg-groups-frontend' )
 						),
 						h(
 							Button,

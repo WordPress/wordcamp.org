@@ -103,6 +103,10 @@ $modal_title    = sprintf(
 	number_format_i18n( $count ),
 	$event_title
 );
+// Shared across the labels array, the SSR label, and the modal button
+// below — keep in a local so the translator context can't drift.
+$cancel_rsvp = _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' );
+
 $rsvp_labels    = array(
 	/* translators: %s: attendee count. */
 	'countSingular'           => _n( '%s going', '%s going', 1, 'wporg-groups-frontend' ),
@@ -118,7 +122,7 @@ $rsvp_labels    = array(
 	'joinRsvp'                => __( 'Join & RSVP', 'wporg-groups-frontend' ),
 	'statusAttending'         => __( 'You are attending this event.', 'wporg-groups-frontend' ),
 	'statusNotAttending'      => __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
-	'cancelRsvp'              => _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' ),
+	'cancelRsvp'              => $cancel_rsvp,
 	'attend'                  => __( 'Attend', 'wporg-groups-frontend' ),
 	'emptyAttendees'          => __( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ),
 	'rsvpSuccessAttending'    => __( 'You are now attending this event.', 'wporg-groups-frontend' ),
@@ -172,7 +176,7 @@ wp_interactivity_state(
 			? __( 'You are attending this event.', 'wporg-groups-frontend' )
 			: __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
 		'modalRsvpLabel' => $is_attending
-			? _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' )
+			? $cancel_rsvp
 			: __( 'Attend', 'wporg-groups-frontend' ),
 	)
 );
@@ -353,7 +357,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 						>
 							<?php
 							if ( $is_attending ) {
-								echo esc_html_x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' );
+								echo esc_html( $cancel_rsvp );
 							} else {
 								esc_html_e( 'Attend', 'wporg-groups-frontend' );
 							}

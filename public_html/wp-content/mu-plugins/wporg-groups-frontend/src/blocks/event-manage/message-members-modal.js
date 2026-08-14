@@ -151,7 +151,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 								onClick: onClose,
 								disabled: sending,
 							},
-							_x( 'Cancel', 'button to abort the current action', 'wporg-groups-frontend' )
+							_x( 'Cancel', 'abort current action', 'wporg-groups-frontend' )
 						),
 						h(
 							Button,

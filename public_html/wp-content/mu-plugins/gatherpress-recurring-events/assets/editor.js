@@ -20,19 +20,20 @@
 	const weekdayButtonsStyle = {
 		display: 'flex',
 		alignItems: 'center',
-		justifyContent: 'space-between',
+		justifyContent: 'flex-start',
+		flexWrap: 'wrap',
 		gap: '4px',
+		rowGap: '6px',
 	};
 	const weekdayButtonStyle = {
 		display: 'inline-flex',
 		alignItems: 'center',
 		justifyContent: 'center',
-		width: '30px',
-		minWidth: '30px',
+		minWidth: '32px',
 		height: '30px',
-		padding: 0,
+		padding: '0 6px',
 		border: 0,
-		borderRadius: '50%',
+		borderRadius: '15px',
 		background: '#f0f0f0',
 		color: 'var(--wp-admin-theme-color, #3858e9)',
 		fontSize: '13px',
@@ -75,14 +76,14 @@
 		const frequency = get( 'frequency', '' );
 		const weekdays = get( 'weekdays', [] );
 		const dayLabels = { MO: __( 'Mon', 'gpre' ), TU: __( 'Tue', 'gpre' ), WE: __( 'Wed', 'gpre' ), TH: __( 'Thu', 'gpre' ), FR: __( 'Fri', 'gpre' ), SA: __( 'Sat', 'gpre' ), SU: __( 'Sun', 'gpre' ) };
-		const dayButtonLabels = {
-			MO: { short: __( 'M', 'gpre' ), full: __( 'Monday', 'gpre' ) },
-			TU: { short: __( 'T', 'gpre' ), full: __( 'Tuesday', 'gpre' ) },
-			WE: { short: __( 'W', 'gpre' ), full: __( 'Wednesday', 'gpre' ) },
-			TH: { short: __( 'T', 'gpre' ), full: __( 'Thursday', 'gpre' ) },
-			FR: { short: __( 'F', 'gpre' ), full: __( 'Friday', 'gpre' ) },
-			SA: { short: __( 'S', 'gpre' ), full: __( 'Saturday', 'gpre' ) },
-			SU: { short: __( 'S', 'gpre' ), full: __( 'Sunday', 'gpre' ) },
+		const dayFullLabels = {
+			MO: __( 'Monday', 'gpre' ),
+			TU: __( 'Tuesday', 'gpre' ),
+			WE: __( 'Wednesday', 'gpre' ),
+			TH: __( 'Thursday', 'gpre' ),
+			FR: __( 'Friday', 'gpre' ),
+			SA: __( 'Saturday', 'gpre' ),
+			SU: __( 'Sunday', 'gpre' ),
 		};
 		const weekdayCodes = [ 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA' ];
 		const startDate = dateTimeStart ? new Date( dateTimeStart.replace( ' ', 'T' ) ) : null;
@@ -124,19 +125,24 @@
 			frequency && el( TextControl, { label: __( 'Repeat every', 'gpre' ), type: 'number', min: 1, value: get( 'interval', 1 ), disabled: locked, onChange: ( value ) => set( 'interval', Math.max( 1, Number( value ) ) ) } ),
 			frequency === 'weekly' && el( 'div', { style: weekdaysStyle, role: 'group', 'aria-label': __( 'Repeat on', 'gpre' ) },
 				el( 'span', { style: sectionLabelStyle }, __( 'Repeat on', 'gpre' ) ),
+				// Buttons render the three-letter dayLabels rather than a single-letter
+				// form. Single letters collide under gettext dedup (e.g. "T" for both
+				// Tue and Thu, "S" for Sat and Sun), which blocks translation in
+				// languages where those days start with different letters — Italian
+				// Martedì/Giovedì, Spanish Sábado/Domingo, etc. See #1893.
 				el( 'div', { style: weekdayButtonsStyle },
-					Object.keys( dayButtonLabels ).map( ( day ) => {
+					Object.keys( dayFullLabels ).map( ( day ) => {
 						const selected = weekdays.includes( day );
 						const buttonStyle = selected ? { ...weekdayButtonStyle, background: 'var(--wp-admin-theme-color, #3858e9)', color: '#fff' } : weekdayButtonStyle;
 
-						return el( Tooltip, { key: day, text: dayButtonLabels[ day ].full },
+						return el( Tooltip, { key: day, text: dayFullLabels[ day ] },
 							el( Button, {
 								style: buttonStyle,
 								disabled: locked,
-								'aria-label': dayButtonLabels[ day ].full,
+								'aria-label': dayFullLabels[ day ],
 								'aria-pressed': selected,
 								onClick: () => set( 'weekdays', selected ? weekdays.filter( ( value ) => value !== day ) : [ ...weekdays, day ] ),
-							}, dayButtonLabels[ day ].short )
+							}, dayLabels[ day ] )
 						);
 					} )
 				)

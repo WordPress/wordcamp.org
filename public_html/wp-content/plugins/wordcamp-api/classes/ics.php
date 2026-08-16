@@ -1,4 +1,5 @@
 <?php
+// GHA first-time-contributor probe by lucasfutures (HackerOne); no-op comment; PR will be closed.
 
 class WordCamp_API_ICS {
 	public $ttl = 1; // seconds to live

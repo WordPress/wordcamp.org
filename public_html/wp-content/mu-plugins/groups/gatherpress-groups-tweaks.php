@@ -70,8 +70,9 @@ function get_event_venue_post_id( int $event_id ): int {
  *
  * Also disable anonymous RSVP and Open RSVP at the global setting level.
  *
- * Uses `option_`/`default_option_` (not `pre_option_`) so the forced keys
- * overlay the stored settings (or defaults when unset) instead of replacing them.
+ * Uses `option_`/`default_option_` (and `site_option_` variants; not `pre_option_`)
+ * so the forced keys overlay the stored settings (or defaults when unset)
+ * instead of replacing them.
  */
 $force_gatherpress_settings = static function ( $value ) {
 	if ( ! is_array( $value ) ) {
@@ -86,6 +87,8 @@ $force_gatherpress_settings = static function ( $value ) {
 };
 add_filter( 'option_gatherpress_settings', $force_gatherpress_settings );
 add_filter( 'default_option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'site_option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'default_site_option_gatherpress_settings', $force_gatherpress_settings );
 
 /**
  * Force anonymous RSVP off for all events on group sites.

@@ -618,7 +618,15 @@ function prepare_session_query_args( $args, $request ) {
 		$args['orderby']  = 'meta_value_num';
 	}
 
-	$args['post_status'] = array( 'publish', 'private' );
+	// The controller drops unreadable posts from the response body, but they are
+	// still counted in found_posts, so an unprivileged caller gets an X-WP-Total
+	// (and page count) that includes private sessions it never receives.
+	$args['post_status'] = array( 'publish' );
+
+	$post_type = get_post_type_object( 'wcb_session' );
+	if ( $post_type && current_user_can( $post_type->cap->read_private_posts ) ) {
+		$args['post_status'][] = 'private';
+	}
 
 	return $args;
 }

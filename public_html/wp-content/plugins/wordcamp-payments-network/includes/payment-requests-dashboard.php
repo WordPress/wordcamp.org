@@ -4,6 +4,8 @@ class Payment_Requests_Dashboard {
 	public static $list_table;
 	public static $db_version = 7;
 
+	const AGGREGATE_BATCH_SIZE = 250;
+
 	/**
 	 * Runs during plugins_loaded, doh.
 	 */
@@ -16,7 +18,7 @@ class Payment_Requests_Dashboard {
 				wp_schedule_event( time(), 'daily', 'wordcamp_payments_aggregate' );
 			}
 
-			add_action( 'wordcamp_payments_aggregate', array( __CLASS__, 'aggregate' ) );
+			add_action( 'wordcamp_payments_aggregate', array( __CLASS__, 'aggregate' ), 10, 1 );
 		}
 
 		add_action( 'network_admin_menu', array( __CLASS__, 'network_admin_menu' ) );
@@ -90,24 +92,29 @@ class Payment_Requests_Dashboard {
 	 * This is a backup for the diff-based updates in `save_post()` / `delete_post()`. Those are fast but have the
 	 * chance of getting out of sync over time if an error occurs, etc. This is slow but more likely to be accurate.
 	 * The diff-based updates keep things up to date in-between the full updates done here.
+	 *
+	 * Runs in batches of self-rescheduled single events to keep peak memory bounded, since a single request
+	 * iterating all sites was pushing peak memory usage above 90%.
 	 */
-	public static function aggregate() {
+	public static function aggregate( $offset = 0 ) {
 		global $wpdb, $wp_object_cache;
 
 		// Register the custom payment statuses so that we can filter posts to include only them, in order to exclude trashed posts.
 		require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 		WCP_Payment_Request::register_post_statuses();
 
-		// Truncate existing table.
-		$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() );
+		// Only truncate at the start of a fresh run, not on every batch.
+		if ( 0 === $offset ) {
+			$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() );
+		}
 
-		// This may need to be refactored in the future to use batching to avoid out-of-memory-issues.
 		$blogs = $wpdb->get_col( $wpdb->prepare( "
 			SELECT blog_id
 			FROM `{$wpdb->blogs}`
 			ORDER BY last_updated DESC
-			LIMIT %d;",
-			3000
+			LIMIT %d OFFSET %d;",
+			self::AGGREGATE_BATCH_SIZE,
+			$offset
 		) );
 
 		foreach ( $blogs as $blog_id ) {
@@ -129,6 +136,11 @@ class Payment_Requests_Dashboard {
 			$wp_object_cache->delete( 'alloptions', 'options' );
 
 			restore_current_blog();
+		}
+
+		// More blogs left? Schedule the next batch as a separate request instead of looping further in this one.
+		if ( count( $blogs ) === self::AGGREGATE_BATCH_SIZE ) {
+			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $offset + self::AGGREGATE_BATCH_SIZE ) );
 		}
 	}
 

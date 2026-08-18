@@ -112,15 +112,76 @@ function get_count_label( int $count, bool $is_attending ): string {
  * counts until the next page load re-renders the line through
  * `get_count_label()`.
  *
+ * Keyed positionally by `COUNT_FORMAT_KEYS` rather than spelling the keys
+ * out a second time, so the two can't drift from each other.
+ *
  * @return array<string, string> Keyed by `COUNT_FORMAT_KEYS`.
  */
 function get_count_formats(): array {
+	return array_combine(
+		COUNT_FORMAT_KEYS,
+		array(
+			get_count_parts( 0, false )[0],
+			get_count_parts( 1, false )[0],
+			get_count_parts( 2, false )[0],
+			get_count_parts( 1, true )[0],
+			get_count_parts( 2, true )[0],
+			get_count_parts( 3, true )[0],
+		)
+	);
+}
+
+/**
+ * The keys `get_modal_title_formats()` returns, which are also the keys
+ * `modalTitle` in `view.js` selects between.
+ */
+const MODAL_TITLE_FORMAT_KEYS = array( 'modalTitleSingular', 'modalTitlePlural' );
+
+/**
+ * The RSVP modal title's format string and the count to substitute.
+ *
+ * Same one-`_n()`-call-serves-both-callers shape as `get_count_parts()`:
+ * `get_modal_title_label()` finishes the server-rendered title,
+ * `get_modal_title_formats()` harvests the singular/plural formats for the
+ * view module.
+ *
+ * @param int $count Number of attendees.
+ * @return array{0: string, 1: int} The format, and the count to substitute.
+ */
+function get_modal_title_parts( int $count ): array {
 	return array(
-		'countZero'           => get_count_parts( 0, false )[0],
-		'countSingular'       => get_count_parts( 1, false )[0],
-		'countPlural'         => get_count_parts( 2, false )[0],
-		'countYouFirst'       => get_count_parts( 1, true )[0],
-		'countYouAndOneOther' => get_count_parts( 2, true )[0],
-		'countYouAndOthers'   => get_count_parts( 3, true )[0],
+		/* translators: 1: attendee count, 2: event title */
+		_n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', $count, 'wporg-groups-frontend' ),
+		$count,
+	);
+}
+
+/**
+ * The finished modal title for the server-rendered markup.
+ *
+ * @param int    $count       Number of attendees.
+ * @param string $event_title Event title.
+ * @return string
+ */
+function get_modal_title_label( int $count, string $event_title ): string {
+	list( $format, $value ) = get_modal_title_parts( $count );
+
+	return sprintf( $format, number_format_i18n( $value ), $event_title );
+}
+
+/**
+ * The modal-title formats the view module picks between, keyed for
+ * `context.labels`. Resolved at n=1 and n=2 — the same two-entry-table
+ * tradeoff `get_count_formats()` makes, for the same reason.
+ *
+ * @return array<string, string> Keyed by `MODAL_TITLE_FORMAT_KEYS`.
+ */
+function get_modal_title_formats(): array {
+	return array_combine(
+		MODAL_TITLE_FORMAT_KEYS,
+		array(
+			get_modal_title_parts( 1 )[0],
+			get_modal_title_parts( 2 )[0],
+		)
 	);
 }

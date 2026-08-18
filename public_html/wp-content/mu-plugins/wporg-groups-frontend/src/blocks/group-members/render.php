@@ -57,7 +57,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<h2 class="wporg-group-members__heading">
+	<h2 class="wporg-section-heading wporg-group-members__heading">
 		<?php
 		echo esc_html(
 			sprintf(

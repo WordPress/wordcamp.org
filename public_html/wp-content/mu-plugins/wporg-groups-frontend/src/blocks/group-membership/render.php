@@ -5,6 +5,9 @@
  * @package WordCamp\Groups\Frontend
  */
 
+use function WordCamp\Groups\Frontend\Capabilities\get_role_tier_label;
+use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
+
 $variant = $attributes['variant'] ?? 'combined';
 if ( ! in_array( $variant, array( 'combined', 'membership', 'preference' ), true ) ) {
 	$variant = 'combined';
@@ -19,19 +22,12 @@ $user_role    = '';
 $role_label   = '';
 
 if ( $shows_membership && $is_member ) {
-	$user      = wp_get_current_user();
-	$user_role = reset( $user->roles ) ?: 'subscriber';
-
-	$labels = array(
-		'administrator' => __( 'Organizer', 'wporg-groups-frontend' ),
-		'editor'        => __( 'Organizer', 'wporg-groups-frontend' ),
-		'author'        => __( 'Event Organizer', 'wporg-groups-frontend' ),
-	);
-
-	$role_label = $labels[ $user_role ] ?? __( 'Member', 'wporg-groups-frontend' );
+	$user       = wp_get_current_user();
+	$user_role  = reset( $user->roles ) ?: 'subscriber';
+	$role_label = get_role_tier_label( $user_role );
 }
 
-$is_organizer       = in_array( $user_role, array( 'administrator', 'editor' ), true );
+$is_organizer       = in_array( $user_role, ORGANIZER_ROLES, true );
 $renders_leave      = $shows_membership && $is_member && ! $is_organizer;
 $renders_preference = $shows_preference && $is_member;
 

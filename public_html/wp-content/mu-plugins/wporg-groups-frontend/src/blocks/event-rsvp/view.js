@@ -490,10 +490,8 @@ async function refreshAttendees( ctx, actionElement ) {
 
 			const avatars = block.querySelector( '.wporg-event-rsvp__avatars' );
 			if ( avatars ) {
-				// Keep in step with `$max_avatars` in render.php.
-				const maxAvatars = 5;
-				const visible = records.slice( 0, maxAvatars );
-				const overflow = Math.max( 0, data.data.attending.count - maxAvatars );
+				const visible = records.slice( 0, ctx.maxAvatars );
+				const overflow = Math.max( 0, data.data.attending.count - ctx.maxAvatars );
 
 				avatars.innerHTML =
 					visible

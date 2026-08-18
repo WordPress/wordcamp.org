@@ -26,6 +26,35 @@ defined( 'WPINC' ) || die();
 const EVENT_MANAGER_ROLES = array( 'administrator', 'editor', 'author' );
 
 /**
+ * WordPress roles that make up the full "Organizer" tier — a narrower set
+ * than `EVENT_MANAGER_ROLES`, since it excludes authors ("Event
+ * Organizers"), who only manage their own events. Single source for the
+ * role-set checked when deciding whether a member can be left without an
+ * organizer, or whether they're shown the "Organizer" label.
+ */
+const ORGANIZER_ROLES = array( 'administrator', 'editor' );
+
+/**
+ * Translated display label for a member's role tier.
+ *
+ * Mirrors `Members_Controller::ROLE_LABELS`, which stays untranslated
+ * because it's also read directly by `group-members/render.php` and
+ * asserted against verbatim in `test-class-members-controller.php`'s REST
+ * response checks. This is the translated counterpart for front-end markup
+ * rendered directly by PHP (not consumed as REST JSON), such as the
+ * `group-membership` block.
+ */
+function get_role_tier_label( string $role ): string {
+	$labels = array(
+		'administrator' => __( 'Organizer', 'wporg-groups-frontend' ),
+		'editor'        => __( 'Organizer', 'wporg-groups-frontend' ),
+		'author'        => __( 'Event Organizer', 'wporg-groups-frontend' ),
+	);
+
+	return $labels[ $role ] ?? __( 'Member', 'wporg-groups-frontend' );
+}
+
+/**
  * Whether the current user is allowed to create / edit events on this group.
  *
  * Authors ("Event Organizers") can create and manage their own events; the

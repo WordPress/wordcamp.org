@@ -8,15 +8,7 @@
  * Kept in step with `.groups-site-event-card` in the theme's custom.css.
  */
 
-.wporg-my-events__heading {
-	margin: 0 0 var(--wp--preset--spacing--30) !important;
-	padding: 0 !important;
-	font-family: var(--wp--preset--font-family--eb-garamond);
-	font-size: var(--wp--preset--font-size--heading-3);
-	font-weight: 400;
-	line-height: 1.3;
-	color: var(--wp--preset--color--charcoal-0);
-}
+@import '../../components/section-heading.css';
 
 /*
  * One card per row, full width of the column, so the serif title fits on one

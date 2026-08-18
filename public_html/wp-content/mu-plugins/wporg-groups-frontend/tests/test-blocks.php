@@ -320,7 +320,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-news /-->' );
 
-		$this->assertStringContainsString( '<h2 class="wporg-group-news__heading">News</h2>', $output );
+		$this->assertStringContainsString( '<h2 class="wporg-section-heading wporg-group-news__heading">News</h2>', $output );
 		$this->assertStringContainsString( 'A group update', $output );
 		$this->assertStringContainsString( 'What the group has been working on.', $output );
 	}

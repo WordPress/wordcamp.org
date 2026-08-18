@@ -6,14 +6,15 @@
  * off ours on hover and active. Setting them is the supported way to recolor
  * it — the alternative is overriding every component's rules by hand.
  *
- * Every modal is listed because `Modal` renders at the end of <body>, not
- * inside the block — so there's no shared parent to hang the variables on.
+ * `Modal` renders at the end of <body>, not inside the block — so there's no
+ * shared parent to hang the variables on. Every one of this plugin's modals
+ * (and the venue editor's hand-rolled overlay, which isn't a `Modal` but
+ * behaves like one) carries this class alongside its own, so a new modal
+ * only needs the class added where it's rendered — nothing to keep in step
+ * with here.
  */
 
-.wporg-groups-event-modal,
-.wporg-groups-message-modal,
-.wporg-groups-venue-editor,
-.wporg-group-settings-modal {
+.wporg-groups-modal-accent {
 	--wp-components-color-accent: var(--wp--preset--color--blueberry-1, #3858e9);
 	--wp-components-color-accent-darker-10: var(--wp--preset--color--deep-blueberry, #213fd4);
 	--wp-components-color-accent-darker-20: var(--wp--preset--color--dark-blueberry, #1d35b4);

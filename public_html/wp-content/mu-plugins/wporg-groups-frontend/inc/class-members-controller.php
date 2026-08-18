@@ -10,6 +10,8 @@
 
 namespace WordCamp\Groups\Frontend\Members;
 
+use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -328,7 +330,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$user    = get_userdata( $user_id );
 
 		// Prevent organizers from leaving without demotion.
-		if ( $user && array_intersect( $user->roles, array( 'administrator', 'editor' ) ) ) {
+		if ( $user && array_intersect( $user->roles, ORGANIZER_ROLES ) ) {
 			return new \WP_Error(
 				'cannot_leave',
 				__( 'Organizers cannot leave the group. Ask another organizer to change your role first.', 'wporg-groups-frontend' ),
@@ -623,16 +625,14 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 * @return bool
 	 */
 	private function can_demote_organizer( \WP_User $user, string $new_role ): bool {
-		$organizer_roles = array( 'administrator', 'editor' );
-
-		if ( ! array_intersect( $user->roles, $organizer_roles ) || in_array( $new_role, $organizer_roles, true ) ) {
+		if ( ! array_intersect( $user->roles, ORGANIZER_ROLES ) || in_array( $new_role, ORGANIZER_ROLES, true ) ) {
 			return true;
 		}
 
 		$other_organizers = get_users(
 			array(
 				'blog_id'     => get_current_blog_id(),
-				'role__in'    => $organizer_roles,
+				'role__in'    => ORGANIZER_ROLES,
 				'exclude'     => array( $user->ID ),
 				'number'      => 1,
 				'count_total' => false,

@@ -10,6 +10,8 @@ use GatherPress\Core\Rsvp\Rsvp;
 
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_formats;
 use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_label;
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_modal_title_formats;
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_modal_title_label;
 use function WordCamp\Groups\Frontend\RSVP_Questions\current_user_can_view_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_labelled_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
@@ -98,16 +100,12 @@ foreach ( $records as $record ) {
 // Show at most $max_avatars avatars; the remaining $overflow_count is
 // rendered as a "+N" pill, and the modal lists every attendee. Five avatars
 // fit on one line at any card width — more would wrap onto a second row.
-$max_avatars    = 5;
-$overflow_count = max( 0, $count - $max_avatars );
-$event_title    = get_the_title( $event_post_id );
-$is_attending   = 'attending' === $current_status;
-$modal_title    = sprintf(
-	/* translators: 1: attendee count, 2: event title */
-	_n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', $count, 'wporg-groups-frontend' ),
-	number_format_i18n( $count ),
-	$event_title
-);
+$max_avatars     = 5;
+$overflow_count  = max( 0, $count - $max_avatars );
+$event_title     = get_the_title( $event_post_id );
+$is_attending    = 'attending' === $current_status;
+$has_no_attendees = 0 === $count;
+$modal_title     = get_modal_title_label( $count, $event_title );
 
 // Shared across the labels array, the SSR label, and the modal button
 // below — keep in a local so the translator context can't drift.
@@ -120,11 +118,8 @@ $count_label = get_count_label( $count, $is_attending );
 
 $rsvp_labels = array_merge(
 	get_count_formats(),
+	get_modal_title_formats(),
 	array(
-		/* translators: 1: attendee count, 2: event title. */
-		'modalTitleSingular'      => _n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', 1, 'wporg-groups-frontend' ),
-		/* translators: 1: attendee count, 2: event title. */
-		'modalTitlePlural'        => _n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', 2, 'wporg-groups-frontend' ),
 		'loading'                 => "\u{2026}",
 		'attending'               => "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' ),
 		'rsvp'                    => __( 'RSVP', 'wporg-groups-frontend' ),
@@ -150,6 +145,7 @@ $context = array(
 	'isPastEvent'       => $is_past,
 	'currentUserStatus' => $current_status,
 	'attendingCount'    => $count,
+	'maxAvatars'        => $max_avatars,
 	'eventTitle'        => $event_title,
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
@@ -172,7 +168,7 @@ wp_interactivity_state(
 	array(
 		'isAttending'    => $is_attending,
 		'isNotAttending' => ! $is_attending,
-		'hasNoAttendees' => 0 === $count,
+		'hasNoAttendees' => $has_no_attendees,
 		'countLabel'     => $count_label,
 		'modalTitle'     => $modal_title,
 		'isMember'        => $is_member,
@@ -239,7 +235,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 
 	<button
 		type="button"
-		class="wporg-event-rsvp__summary<?php echo 0 === $count ? ' has-no-attendees' : ''; ?>"
+		class="wporg-event-rsvp__summary<?php echo $has_no_attendees ? ' has-no-attendees' : ''; ?>"
 		data-wp-class--has-no-attendees="state.hasNoAttendees"
 		data-wp-on--click="actions.openModal"
 		aria-label="<?php esc_attr_e( 'View attendees', 'wporg-groups-frontend' ); ?>">

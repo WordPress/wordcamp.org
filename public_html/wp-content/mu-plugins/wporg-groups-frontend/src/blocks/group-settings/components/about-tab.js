@@ -36,6 +36,16 @@ export default function AboutTab() {
 		city: '',
 		countryCode: '',
 	} );
+	// A stored code the country list no longer recognizes has no option to
+	// select in the dropdown, so the field starts blank — which would make
+	// the location look incomplete even though the user hasn't touched it.
+	// Tracking whether they've actually edited the location lets save leave
+	// it out of the request entirely when they haven't, so the backend's own
+	// re-validation (which would reject that same stale code right back)
+	// never runs, and unrelated fields like the group name can still be
+	// saved. Only an explicit edit — including "Clear location" — should
+	// submit a location change.
+	const [ locationDirty, setLocationDirty ] = useState( false );
 
 	useEffect( () => {
 		apiFetch( { path: '/wporg-groups/v1/group-info' } )
@@ -43,20 +53,14 @@ export default function AboutTab() {
 				const location = data.location || {};
 				const countryOptions = data.countries || [];
 				const storedCountry = location.countryCode || '';
-
-				// A stored code the country list no longer recognizes has no
-				// option to select, so blank it and let the required-field check
-				// prompt for a replacement instead of posting a code the server
-				// would reject.
 				const isKnownCountry = countryOptions.some( ( country ) => country.code === storedCountry );
-				const countryCode = isKnownCountry ? storedCountry : '';
 
 				setForm( {
 					blogname: data.title || '',
 					blogdescription: data.description || '',
 					locationType: location.type || '',
 					city: location.city || '',
-					countryCode,
+					countryCode: isKnownCountry ? storedCountry : '',
 				} );
 				setCountries( countryOptions );
 				setLoading( false );
@@ -77,25 +81,29 @@ export default function AboutTab() {
 		setSaving( true );
 		setNotice( '' );
 		try {
-			let location = null;
-			if ( 'online' === form.locationType ) {
-				location = { type: 'online' };
-			} else if ( 'physical' === form.locationType ) {
-				location = {
-					type: 'physical',
-					city: form.city,
-					countryCode: form.countryCode,
-				};
+			const data = {
+				title: form.blogname,
+				description: form.blogdescription,
+			};
+
+			if ( locationDirty ) {
+				if ( 'online' === form.locationType ) {
+					data.location = { type: 'online' };
+				} else if ( 'physical' === form.locationType ) {
+					data.location = {
+						type: 'physical',
+						city: form.city,
+						countryCode: form.countryCode,
+					};
+				} else {
+					data.location = null;
+				}
 			}
 
 			await apiFetch( {
 				path: '/wporg-groups/v1/group-info',
 				method: 'POST',
-				data: {
-					title: form.blogname,
-					description: form.blogdescription,
-					location,
-				},
+				data,
 			} );
 			setNoticeType( 'success' );
 			setNotice( __( 'Settings saved.', 'wporg-groups-frontend' ) );
@@ -108,6 +116,7 @@ export default function AboutTab() {
 	};
 
 	const physicalLocationIsIncomplete =
+		locationDirty &&
 		'physical' === form.locationType &&
 		( '' === form.city.trim() || '' === form.countryCode );
 
@@ -157,7 +166,10 @@ export default function AboutTab() {
 					{ label: __( 'In person', 'wporg-groups-frontend' ), value: 'physical' },
 					{ label: __( 'Online', 'wporg-groups-frontend' ), value: 'online' },
 				],
-				onChange: ( v ) => setForm( { ...form, locationType: v } ),
+				onChange: ( v ) => {
+					setLocationDirty( true );
+					setForm( { ...form, locationType: v } );
+				},
 			} ),
 			'physical' === form.locationType &&
 				h(
@@ -166,7 +178,10 @@ export default function AboutTab() {
 					h( TextControl, {
 						label: __( 'City', 'wporg-groups-frontend' ),
 						value: form.city,
-						onChange: ( v ) => setForm( { ...form, city: v } ),
+						onChange: ( v ) => {
+							setLocationDirty( true );
+							setForm( { ...form, city: v } );
+						},
 						disabled: loadFailed,
 						required: true,
 						__nextHasNoMarginBottom: true,
@@ -182,7 +197,10 @@ export default function AboutTab() {
 								value: country.code,
 							} ) )
 						),
-						onChange: ( v ) => setForm( { ...form, countryCode: v } ),
+						onChange: ( v ) => {
+							setLocationDirty( true );
+							setForm( { ...form, countryCode: v } );
+						},
 						disabled: loadFailed,
 						required: true,
 						__nextHasNoMarginBottom: true,
@@ -201,12 +219,15 @@ export default function AboutTab() {
 						variant: 'link',
 						isDestructive: true,
 						disabled: loadFailed,
-						onClick: () => setForm( {
-							...form,
-							locationType: '',
-							city: '',
-							countryCode: '',
-						} ),
+						onClick: () => {
+							setLocationDirty( true );
+							setForm( {
+								...form,
+								locationType: '',
+								city: '',
+								countryCode: '',
+							} );
+						},
 					},
 					__( 'Clear location', 'wporg-groups-frontend' )
 				)

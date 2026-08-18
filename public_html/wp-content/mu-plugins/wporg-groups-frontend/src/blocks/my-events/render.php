@@ -44,7 +44,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <section <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
-	<h2 class="wporg-my-events__heading">
+	<h2 class="wporg-section-heading wporg-my-events__heading">
 		<?php esc_html_e( 'My upcoming events', 'wporg-groups-frontend' ); ?>
 	</h2>
 	<?php if ( empty( $wporg_upcoming_events ) ) : ?>

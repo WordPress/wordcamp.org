@@ -5,6 +5,7 @@
  */
 
 @import '../../components/recurrence-controls.css';
+@import '../../components/component-accents.css';
 
 // === Trigger button ===
 
@@ -19,6 +20,8 @@
 // === Full-screen modal ===
 
 .wporg-group-settings-modal {
+	// Accent tokens come from `components/component-accents.css`.
+
 	.components-modal__content {
 		padding: 0;
 		display: flex;
@@ -129,7 +132,7 @@
 		transition: border-color 0.12s ease;
 
 		&:hover {
-			border-color: #3858e9;
+			border-color: var(--wp--preset--color--blueberry-1);
 		}
 
 		&-info {
@@ -196,8 +199,8 @@
 		isolation: isolate;
 
 		&:focus-within {
-			border-color: #3858e9;
-			box-shadow: 0 0 0 1px #3858e9;
+			border-color: var(--wp--preset--color--blueberry-1);
+			box-shadow: 0 0 0 1px var(--wp--preset--color--blueberry-1);
 		}
 
 		.block-editor-block-list__layout {

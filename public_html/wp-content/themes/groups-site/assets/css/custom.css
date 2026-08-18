@@ -55,7 +55,106 @@ body.error404 .site-content-container h1 {
 	color: inherit;
 }
 
+/* ==========================================================================
+   Buttons
 
+   The parent theme already drives every button state from
+   `--wp--custom--button--*` custom properties, including the filled/outline
+   size parity core can't express on its own: the filled variant gets
+   `padding + border-width` with no border, the outline variant gets the bare
+   padding plus a 1px border, so both resolve to the same box.
+
+   So the values that differ from the parent's — the active blues, and the
+   whole outline ramp — are set as token overrides in `theme.json`
+   (`settings.custom.button`), where the parent's own rules pick them up.
+   Buttons given a colour in the editor are unaffected: core emits its
+   `has-*-color` / `has-*-background-color` classes with `!important`, which
+   outranks the token-driven rules in every state. That's what keeps the
+   footer's pomegranate CTA pomegranate.
+
+   What's left here is only what the token system has no slot for.
+
+   The compact size — Inter 14px/600 in 10px 20px — is deliberately *not*
+   the parent's `is-small`: that variant is 7px/12px and only applies under a
+   `[class*="wp-block"]` wrapper, while both users here (the comment form's
+   submit and the RSVP answers fieldset's) are plain `.wp-element-button`s
+   with no block wrapper at all. Each carries its own rule.
+   ========================================================================== */
+
+.wp-block-button > .wp-block-button__link.wp-element-button {
+	transition: background-color 0.15s ease, border-color 0.15s ease,
+		color 0.15s ease;
+}
+
+/* ----------  Disabled  ---------- */
+
+/*
+ * The parent has no disabled token, so the treatment lives here. One rule
+ * for both variants, so a disabled outline button doesn't stay blue and read
+ * as still-actionable. Grey on the light surface rather than a faded blue:
+ * `opacity` on the live colours would drop the label to roughly 2:1, and
+ * while disabled controls are exempt from the contrast minimum,
+ * "unavailable" shouldn't also mean "unreadable".
+ *
+ * The outline selector is listed separately to outweigh the parent's
+ * `[class*="wp-block"].is-style-outline .wp-block-button__link:hover`, which
+ * would otherwise repaint a disabled button on hover from equal weight.
+ */
+.wp-block-button > .wp-block-button__link.wp-element-button:disabled,
+.wp-block-button.is-style-outline > .wp-block-button__link.wp-element-button:disabled {
+	background-color: var(--wp--preset--color--light-grey-2);
+	border-color: var(--wp--preset--color--light-grey-1);
+	color: var(--wp--preset--color--charcoal-4);
+	cursor: not-allowed;
+}
+
+/* ----------  Loading  ---------- */
+
+/*
+ * Draws the in-flight spinner for buttons the blocks mark `aria-busy` — see
+ * the note in `event-rsvp/render.php` for why they set it alongside
+ * `disabled`. The label stays put: replacing it with a spinner would reflow
+ * the row and drop the accessible name mid-action.
+ */
+/* Second selector only exists to outweigh the parent theme's
+   `[class*="wp-block"] .wp-block-button__link { cursor: pointer }`, which
+   ties with the first on specificity and wins on source order. */
+.wp-element-button[aria-busy="true"],
+.wp-block-button > .wp-block-button__link.wp-element-button[aria-busy="true"] {
+	cursor: progress;
+}
+
+.wp-element-button[aria-busy="true"]::after {
+	content: '';
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin-left: 10px;
+	vertical-align: -1px;
+	border: 2px solid currentColor;
+	border-right-color: transparent;
+	border-radius: 9999px;
+	animation: groups-site-spin 0.7s linear infinite;
+}
+
+@keyframes groups-site-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/*
+ * The blanket reduced-motion rule below only shortens durations, which for
+ * an infinite animation means strobing rather than stopping. Close the ring
+ * and mute it instead: still legibly "working", with nothing moving.
+ */
+@media (prefers-reduced-motion: reduce) {
+	.wp-element-button[aria-busy="true"]::after {
+		animation-name: none;
+		border-right-color: currentColor;
+		opacity: 0.5;
+	}
+}
 
 /* ==========================================================================
    Front-page hero

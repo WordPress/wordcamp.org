@@ -520,9 +520,8 @@ function register_additional_rest_fields() {
 					return $speakers;
 				}
 
-				// Resolve the ids through a query so that the post type is enforced
-				// and the posts are fetched together. This runs for every session in
-				// a collection response, so a lookup per speaker adds up.
+				// One query rather than a lookup per speaker: this runs for every
+				// session in a collection response.
 				$speaker_posts = get_posts( array(
 					'post_type'      => 'wcb_speaker',
 					'post__in'       => array_map( 'absint', $speaker_ids ),
@@ -536,17 +535,14 @@ function register_additional_rest_fields() {
 				) );
 
 				foreach ( $speaker_posts as $speaker ) {
-					// This field is served in the anonymous `view` context, and the
-					// controller's own read check covers the session, not the posts
-					// this dereferences. Published posts are readable by everyone,
-					// including logged out callers, who hold no capabilities at all.
+					// Served in the anonymous `view` context, and the controller's own
+					// read check covers the session, not the posts dereferenced here.
 					if ( 'publish' !== $speaker->post_status && ! current_user_can( 'read_post', $speaker->ID ) ) {
 						continue;
 					}
 
 					$speakers[] = array(
-						// Emitted as the stored meta string since this field was added;
-						// left alone here so the response shape does not change.
+						// Kept as the stored meta string so the response shape is unchanged.
 						'id'   => (string) $speaker->ID,
 						'slug' => $speaker->post_name,
 						'name' => get_the_title( $speaker->ID ),
@@ -642,9 +638,8 @@ function prepare_session_query_args( $args, $request ) {
 		$args['orderby']  = 'meta_value_num';
 	}
 
-	// The controller drops unreadable posts from the response body, but they are
-	// still counted in found_posts, so an unprivileged caller gets an X-WP-Total
-	// (and page count) that includes private sessions it never receives.
+	// The controller drops unreadable posts from the body but still counts them
+	// in found_posts, so X-WP-Total would include what the caller never receives.
 	$args['post_status'] = array( 'publish' );
 
 	$post_type = get_post_type_object( 'wcb_session' );

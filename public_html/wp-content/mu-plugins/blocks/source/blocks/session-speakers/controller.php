@@ -40,9 +40,8 @@ function render( $attributes, $content, $block ) {
 		return '';
 	}
 
-	// Resolve the ids through a query, the way add_speaker_info_to_session_posts()
-	// does for the classic themes, so that the post type is enforced and the
-	// posts are fetched together rather than one lookup at a time.
+	// Resolve the ids the way add_speaker_info_to_session_posts() does, so the
+	// post type is enforced in SQL and the posts are fetched in one query.
 	$speakers = get_posts( array(
 		'post_type'      => 'wcb_speaker',
 		'post__in'       => array_map( 'absint', $speaker_ids ),
@@ -55,9 +54,8 @@ function render( $attributes, $content, $block ) {
 		'update_post_term_cache' => false,
 	) );
 
-	// Mirrors WP_REST_Posts_Controller::check_read_permission(): published posts
-	// are readable by everyone, including logged out visitors, who hold no
-	// capabilities at all.
+	// Mirrors WP_REST_Posts_Controller::check_read_permission(). Logged out
+	// visitors hold no capabilities, so published has to be allowed for first.
 	$speakers = array_filter(
 		$speakers,
 		function ( $speaker ) {

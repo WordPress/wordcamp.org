@@ -24,11 +24,10 @@ add_action( 'init', __NAMESPACE__ . '\init' );
 /**
  * Get the session statuses the current user is allowed to see.
  *
- * Note that get_posts() passes no `perm` to WP_Query, and without it WP_Query
- * skips the read_private_posts test entirely, so asking for `private` returns
- * private sessions to everyone. Passing `perm => 'readable'` is not enough
- * either: it falls back to matching on post_author, and a session with no
- * author (0) matches a logged-out visitor (also 0).
+ * WP_Query skips the read_private_posts test unless `perm` is set, and
+ * get_posts() never sets it. `perm => 'readable'` doesn't fix it either: it
+ * falls back to post_author, and a session with no author (0) matches a
+ * logged out visitor (also 0).
  *
  * @return array
  */
@@ -73,9 +72,8 @@ function render( $attributes, $content, $block ) {
 
 	$sessions = get_posts( $session_args );
 
-	// Second pass, mirroring WP_REST_Posts_Controller::check_read_permission().
-	// Published posts are readable by everyone, including logged-out visitors,
-	// who hold no capabilities at all.
+	// Mirrors WP_REST_Posts_Controller::check_read_permission(). Logged out
+	// visitors hold no capabilities, so published has to be allowed for first.
 	$sessions = array_filter(
 		$sessions,
 		function ( $session ) {

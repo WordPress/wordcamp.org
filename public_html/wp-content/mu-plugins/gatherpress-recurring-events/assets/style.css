@@ -1,6 +1,16 @@
 .gpre-occurrence-selector {
 	position: relative;
 	margin-block: 0 2rem;
+	/* The scroll strip's negative margin (below) intentionally bleeds past
+	   this container so its content lines up flush with the container's own
+	   edges once the matching padding is subtracted back out. Without
+	   clipping that bleed here, nothing else in the page does either — every
+	   ancestor up to <body> is `overflow: visible` — so it was propagating
+	   into page-level horizontal scroll on any viewport narrower than the
+	   bleed amount. The prev/next controls stay visible: they're positioned
+	   relative to this element, not the bled-out list, and sit well inside
+	   its box on every side. */
+	overflow: hidden;
 }
 
 /* The fade zone and scroll padding match the prev/next control's full

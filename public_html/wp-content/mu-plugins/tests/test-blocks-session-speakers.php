@@ -148,6 +148,27 @@ class Test_Session_Speakers_Block extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Test that a session with nothing readable renders nothing at all.
+	 *
+	 * The byline is emitted before the speaker names, so returning early matters:
+	 * otherwise the page shows "Presented by" followed by no one.
+	 */
+	public function test_logged_out_gets_nothing_when_no_speaker_is_readable() {
+		$speaker_ids = get_post_meta( $this->session_id, '_wcpt_speaker_id', false );
+
+		foreach ( $speaker_ids as $speaker_id ) {
+			wp_update_post( array(
+				'ID'          => $speaker_id,
+				'post_status' => 'draft',
+			) );
+		}
+
+		wp_set_current_user( 0 );
+
+		$this->assertSame( '', $this->render_block() );
+	}
+
+	/**
 	 * Test that a user who can read the speakers still sees all of them.
 	 */
 	public function test_editor_sees_every_speaker() {

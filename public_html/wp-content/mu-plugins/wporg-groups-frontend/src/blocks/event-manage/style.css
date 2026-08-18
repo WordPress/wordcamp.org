@@ -2,8 +2,8 @@
  * WPorg Groups Frontend — event manage block + modal styles.
  */
 
-@import '../../components/recurrence-controls.css';
-@import '../../components/component-accents.css';
+@import "../../components/recurrence-controls.css";
+@import "../../components/component-accents.css";
 
 /* === Message members modal === */
 
@@ -40,8 +40,10 @@
 
 /* === Modal — override wp-components Modal defaults === */
 
+/* Prevent modal body scroll leak when editor is focused. */
 .wporg-groups-event-modal .components-modal__content {
 	padding: 24px 32px 32px;
+	overscroll-behavior: contain;
 }
 
 .wporg-groups-event-modal {
@@ -93,6 +95,7 @@
 }
 
 @media (max-width: 600px) {
+
 	.wporg-groups-event-modal__row {
 		grid-template-columns: 1fr;
 	}
@@ -270,11 +273,6 @@
 
 .wporg-groups-event-modal__editor li {
 	margin-block: 0.35em;
-}
-
-/* Prevent modal body scroll leak when editor is focused. */
-.wporg-groups-event-modal .components-modal__content {
-	overscroll-behavior: contain;
 }
 
 /* === Venue editor overlay === */

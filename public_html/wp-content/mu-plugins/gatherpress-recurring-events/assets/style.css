@@ -3,22 +3,30 @@
 	margin-block: 0 2rem;
 }
 
+/* The fade zone and scroll padding match the prev/next control's full
+   footprint (0.25rem offset + 2.5rem width = 2.75rem from each edge), not
+   just its offset — otherwise the control's near edge lands past where the
+   content has faded out, so it visually overlaps a still-fully-opaque chip
+   instead of one that's already faded to transparent underneath it. This
+   showed up worst on narrow viewports, where fewer chips fit and the
+   overlapped one is more likely to be a chip the user hasn't scrolled past
+   yet, but the underlying mismatch exists at any width. */
 nav.gpre-occurrence-selector > ul {
 	display: flex;
 	gap: 0.75rem;
-	margin: 0 -1.25rem;
+	margin: 0 -2.75rem;
 	overflow-x: auto;
-	padding: 0 1.25rem;
+	padding: 0 2.75rem;
 	list-style: none;
 	-webkit-mask-image: linear-gradient(
 		to right,
 		transparent,
-		#000 1.25rem,
-		#000 calc(100% - 1.25rem),
+		#000 2.75rem,
+		#000 calc(100% - 2.75rem),
 		transparent
 	);
-	mask-image: linear-gradient(to right, transparent, #000 1.25rem, #000 calc(100% - 1.25rem), transparent);
-	scroll-padding-inline: 1.25rem;
+	mask-image: linear-gradient(to right, transparent, #000 2.75rem, #000 calc(100% - 2.75rem), transparent);
+	scroll-padding-inline: 2.75rem;
 	scroll-snap-type: x proximity;
 	scrollbar-width: none;
 }

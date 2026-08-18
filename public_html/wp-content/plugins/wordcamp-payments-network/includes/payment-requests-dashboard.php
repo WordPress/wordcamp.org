@@ -107,6 +107,8 @@ class Payment_Requests_Dashboard {
 	public static function aggregate( $after_blog_id = 0 ) {
 		global $wpdb, $wp_object_cache;
 
+		$after_blog_id = (int) $after_blog_id;
+
 		// Register the custom payment statuses so that we can filter posts to include only them, in order to exclude trashed posts.
 		require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 		WCP_Payment_Request::register_post_statuses();
@@ -116,7 +118,7 @@ class Payment_Requests_Dashboard {
 			$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name isn't user input, can't be a bound placeholder.
 		}
 
-		$batch_size = apply_filters( 'wordcamp_payments_aggregate_batch_size', self::AGGREGATE_BATCH_SIZE );
+		$batch_size = (int) apply_filters( 'wordcamp_payments_aggregate_batch_size', self::AGGREGATE_BATCH_SIZE );
 
 		// Keyset pagination on `blog_id` rather than LIMIT/OFFSET on `last_updated`, since `last_updated`
 		// changes constantly as sites get traffic, which would shift rows across the offset boundary
@@ -156,7 +158,10 @@ class Payment_Requests_Dashboard {
 		// and persist the cursor so `watchdog()` can resume the chain if that scheduling call is ever lost to
 		// WordPress core's unsynchronized read-modify-write of the shared `cron` option.
 		if ( count( $blogs ) === $batch_size ) {
-			$next_cursor = end( $blogs );
+			// Cast to int: `get_col()` returns strings, and cron identifies an event by
+			// `md5( serialize( $args ) )`, so a string cursor here wouldn't match the int one
+			// `watchdog()` looks up -- leaving it to schedule a duplicate run every hour.
+			$next_cursor = (int) end( $blogs );
 			update_site_option( self::AGGREGATE_CURSOR_OPTION, $next_cursor );
 			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $next_cursor ) );
 		} else {

@@ -87,6 +87,18 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Counts the rows currently in the payment index table.
+	 */
+	private function count_index_rows(): int {
+		global $wpdb;
+
+		$table = Payment_Requests_Dashboard::get_table_name();
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name isn't user input, can't be a bound placeholder.
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+	}
+
+	/**
 	 * @covers Payment_Requests_Dashboard::aggregate
 	 * @covers Payment_Requests_Dashboard::watchdog
 	 */
@@ -94,9 +106,12 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		global $wpdb;
 
 		// Force one blog per batch, so two new sites are enough to exercise a multi-batch chain.
-		add_filter( 'wordcamp_payments_aggregate_batch_size', function () {
-			return 1;
-		} );
+		add_filter(
+			'wordcamp_payments_aggregate_batch_size',
+			function () {
+				return 1;
+			}
+		);
 
 		$start_blog_id = (int) $wpdb->get_var( "SELECT MAX(blog_id) FROM $wpdb->blogs" );
 		$blog_a        = self::factory()->blog->create();
@@ -122,8 +137,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 			restore_current_blog();
 		}
 
-		$table       = Payment_Requests_Dashboard::get_table_name();
-		$rows_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$rows_before = $this->count_index_rows();
 		$this->assertGreaterThan( 0, $rows_before, 'The wpSetUpBeforeClass fixture should already have indexed rows.' );
 
 		// Batch 1: starting the cursor at $start_blog_id skips every pre-existing blog, so this batch
@@ -136,7 +150,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		);
 		$this->assertSame( $blog_a, (int) get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
 
-		$rows_after_batch_1 = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$rows_after_batch_1 = $this->count_index_rows();
 		$this->assertSame(
 			$rows_before + 1,
 			$rows_after_batch_1,
@@ -163,7 +177,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		$this->assertNotFalse( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_b ) ) );
 		$this->assertSame( $blog_b, (int) get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
 
-		$rows_after_batch_2 = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$rows_after_batch_2 = $this->count_index_rows();
 		$this->assertSame( $rows_after_batch_1 + 1, $rows_after_batch_2, 'Batch 2 should have indexed blog_b, on top of batch 1.' );
 
 		// Batch 3: $blog_b was the last blog in the network, so this finds nothing -- the chain
@@ -173,7 +187,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 
 		$this->assertFalse( get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
 
-		$rows_after_batch_3 = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$rows_after_batch_3 = $this->count_index_rows();
 		$this->assertSame( $rows_after_batch_2, $rows_after_batch_3, 'The empty final batch must not truncate or duplicate prior rows.' );
 
 		// watchdog() must be a no-op once the chain has already completed cleanly.

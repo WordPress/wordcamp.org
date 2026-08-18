@@ -28,13 +28,8 @@
 		flex-basis: 100% !important;
 	}
 
-	/*
-	 * The sidebar is second in the source, so wrapping puts it *below* the
-	 * main column — its divider belongs on the leading edge. It used to
-	 * draw a bottom border here, left over from when the sidebar came
-	 * first in the DOM and CSS `order` moved it; that ordering was removed
-	 * in favour of one semantic order, and this is the last piece of it.
-	 */
+	/* The sidebar is second in the source, so wrapping puts it *below* the
+	   main column — its divider belongs on the leading edge. */
 	.groups-site-sidebar {
 		padding-left: 0;
 		padding-top: var(--wp--preset--spacing--40);

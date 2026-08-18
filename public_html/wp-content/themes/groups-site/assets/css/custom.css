@@ -58,21 +58,10 @@ body.error404 .site-content-container h1 {
 /* ==========================================================================
    Buttons
 
-   The parent theme already drives every button state from
-   `--wp--custom--button--*` custom properties, including the filled/outline
-   size parity core can't express on its own: the filled variant gets
-   `padding + border-width` with no border, the outline variant gets the bare
-   padding plus a 1px border, so both resolve to the same box.
-
-   So the values that differ from the parent's — the active blues, and the
-   whole outline ramp — are set as token overrides in `theme.json`
-   (`settings.custom.button`), where the parent's own rules pick them up.
-   Buttons given a colour in the editor are unaffected: core emits its
-   `has-*-color` / `has-*-background-color` classes with `!important`, which
-   outranks the token-driven rules in every state. That's what keeps the
-   footer's pomegranate CTA pomegranate.
-
-   What's left here is only what the token system has no slot for.
+   The parent theme drives every state from `--wp--custom--button--*` custom
+   properties; the values that differ are token overrides in `theme.json`
+   (`settings.custom.button`). What's left here is only what the token system
+   has no slot for.
 
    The compact size — Inter 14px/600 in 10px 20px — is deliberately *not*
    the parent's `is-small`: that variant is 7px/12px and only applies under a
@@ -160,12 +149,8 @@ body.error404 .site-content-container h1 {
    Front-page identity row
    ========================================================================== */
 
-/*
- * The local navigation bar directly above is blueberry-4 and already carries
- * the group name. Giving this row a background of its own merged the two into
- * a single pale slab that restated the name 60px lower at three times the
- * size; it stays on the page background and closes with a hairline instead.
- */
+/* The nav bar above already carries the group name — this row stays on the
+   page background and closes with a hairline instead of a second slab. */
 .groups-site-identity {
 	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 }

@@ -2,7 +2,12 @@
 
 namespace WordCamp\Groups\Tests;
 
+use WP_REST_Request;
+
+use function WordCamp\Groups\Frontend\Notifications\pending_notification_queue;
 use function WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification;
+use function WordCamp\Groups\Frontend\Notifications\send_pending_new_event_notifications;
+use function WordCamp\Groups\Frontend\REST\publish_draft;
 use const WordCamp\Groups\Frontend\Notifications\PUBLISH_NOTIFICATION_SCHEDULED_META;
 use const WordCamp\Groups\Frontend\Notifications\GATHERPRESS_OPT_IN_META_KEY;
 
@@ -41,9 +46,12 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	}
 
 	/**
-	 * Remove the mail interceptor and the hook re-added above.
+	 * Remove the mail interceptor and the hook re-added above. Draining the
+	 * request-static queue keeps events enqueued here from leaking into the
+	 * next test (or into PHPUnit's own real shutdown).
 	 */
 	protected function tearDown(): void {
+		pending_notification_queue( null, true );
 		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
 		remove_action( 'transition_post_status', 'WordCamp\Groups\Frontend\Notifications\schedule_new_event_notification', 10 );
 
@@ -66,36 +74,78 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	/**
 	 * Whether the "all members" notification has been sent for the given event.
 	 *
-	 * `schedule_new_event_notification()` calls `Rest_Api::send_emails()`
-	 * directly and synchronously now (no cron hand-off — see its own
-	 * docblock), so the post meta flag it sets on success is the
-	 * authoritative signal, same as before.
+	 * `send_pending_new_event_notifications()` calls `Rest_Api::send_emails()`
+	 * directly and synchronously (no cron hand-off — see its own docblock),
+	 * so the post meta flag it sets on success is the authoritative signal,
+	 * same as before.
 	 */
 	private function notification_was_sent( int $event_id ): bool {
 		return '1' === get_post_meta( $event_id, PUBLISH_NOTIFICATION_SCHEDULED_META, true );
 	}
 
 	/**
-	 * A first-time `draft` -> `publish` transition on an event sends the
-	 * "all members" email and marks it as sent.
-	 *
-	 * Doesn't assert on `$this->sent_mail` directly -- recipient resolution
-	 * (`Rest_Api::get_recipients()`) depends on which users this fixture
-	 * site actually has, which is incidental to what's under test here (the
-	 * `capture_mail()` interceptor exists so that IF this fixture site does
-	 * have opted-in users, no real mail goes out).
+	 * An event with saved datetimes, so the drain's dateless guard passes.
+	 * Creating it as `publish` enqueues it through the real hook.
+	 * 
+	 * @param string $status Post status.
+	 * @return int
 	 */
-	public function test_sends_notification_on_first_publish() {
+	private function create_dated_event( string $status = 'publish' ): int {
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
-				'post_status' => 'draft',
+				'post_status' => $status,
 			)
 		);
 
-		schedule_new_event_notification( 'publish', 'draft', get_post( $event_id ) );
+		( new \GatherPress\Core\Event\Event( $event_id ) )->save_datetimes(
+			array(
+				'post_id'        => $event_id,
+				'datetime_start' => '2031-05-20 10:00:00',
+				'datetime_end'   => '2031-05-20 12:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		return $event_id;
+	}
+
+	/**
+	 * A group member the drain will email (no opt-in meta: the default is opted-in),
+	 * so mail-count assertions don't depend on incidental fixture-site users.
+	 * 
+	 * @return int
+	 */
+	private function create_member(): int {
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( get_current_blog_id(), $user_id, 'subscriber' );
+
+		return $user_id;
+	}
+
+	/**
+	 * A first-time `draft` -> `publish` transition on an event queues the
+	 * "all members" email; nothing sends inside the publish request itself,
+	 * and the shutdown drain then sends and marks it as sent.
+	 */
+	public function test_sends_notification_on_first_publish() {
+		$this->create_member();
+		$event_id = $this->create_dated_event( 'draft' );
+
+		wp_update_post(
+			array(
+				'ID'          => $event_id,
+				'post_status' => 'publish',
+			)
+		);
+
+		$this->assertEmpty( $this->sent_mail, 'Nothing may send inside the publish request itself.' );
+		$this->assertFalse( $this->notification_was_sent( $event_id ) );
+
+		send_pending_new_event_notifications();
 
 		$this->assertTrue( $this->notification_was_sent( $event_id ) );
+		$this->assertNotEmpty( $this->sent_mail );
 	}
 
 	/**
@@ -117,6 +167,7 @@ class Test_Groups_Notifications extends Groups_TestCase {
 		);
 
 		schedule_new_event_notification( 'publish', 'publish', get_post( $event_id ) );
+		send_pending_new_event_notifications();
 
 		$this->assertFalse( $this->notification_was_sent( $event_id ) );
 		$this->assertEmpty( $this->sent_mail );
@@ -135,6 +186,7 @@ class Test_Groups_Notifications extends Groups_TestCase {
 		);
 
 		schedule_new_event_notification( 'publish', 'draft', get_post( $post_id ) );
+		send_pending_new_event_notifications();
 
 		$this->assertFalse( $this->notification_was_sent( $post_id ) );
 		$this->assertEmpty( $this->sent_mail );
@@ -156,6 +208,7 @@ class Test_Groups_Notifications extends Groups_TestCase {
 		update_post_meta( $event_id, PUBLISH_NOTIFICATION_SCHEDULED_META, 1 );
 
 		schedule_new_event_notification( 'publish', 'draft', get_post( $event_id ) );
+		send_pending_new_event_notifications();
 
 		$this->assertEmpty( $this->sent_mail );
 	}
@@ -167,12 +220,8 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	 * one. Mirrors the PR's own manual test plan (step 4).
 	 */
 	public function test_publish_then_edit_via_real_hook_does_not_duplicate() {
-		$event_id = self::factory()->post->create(
-			array(
-				'post_type'   => 'gatherpress_event',
-				'post_status' => 'draft',
-			)
-		);
+		$this->create_member();
+		$event_id = $this->create_dated_event( 'draft' );
 
 		wp_update_post(
 			array(
@@ -180,9 +229,11 @@ class Test_Groups_Notifications extends Groups_TestCase {
 				'post_status' => 'publish',
 			)
 		);
+		send_pending_new_event_notifications();
 
 		$this->assertTrue( $this->notification_was_sent( $event_id ), 'Publishing should send the notification.' );
 		$count_after_publish = count( $this->sent_mail );
+		$this->assertGreaterThan( 0, $count_after_publish );
 
 		wp_update_post(
 			array(
@@ -191,6 +242,7 @@ class Test_Groups_Notifications extends Groups_TestCase {
 				'post_excerpt' => 'Edited without changing publish state.',
 			)
 		);
+		send_pending_new_event_notifications();
 
 		$this->assertSame(
 			$count_after_publish,
@@ -204,22 +256,16 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	 * unsynchronized read-modify-write of a single `cron` option -- two
 	 * events publishing close together can silently clobber each other's
 	 * scheduled job, at any point up until wp-cron actually gets around to
-	 * running it (see `schedule_new_event_notification()`'s own docblock).
+	 * running it (see `send_pending_new_event_notifications()`'s own docblock).
 	 * This is why that path calls `Rest_Api::send_emails()` directly and
-	 * synchronously instead: confirm nothing in this function still goes
-	 * through `wp_schedule_single_event()` / the `gatherpress_send_emails`
+	 * synchronously instead: confirm nothing in the enqueue-plus-drain flow
+	 * goes through `wp_schedule_single_event()` / the `gatherpress_send_emails`
 	 * cron hook for this at all, since a regression back to that dispatch
 	 * path would silently reintroduce the race.
 	 */
 	public function test_does_not_use_wp_cron() {
-		$event_id = self::factory()->post->create(
-			array(
-				'post_type'   => 'gatherpress_event',
-				'post_status' => 'draft',
-			)
-		);
-
-		schedule_new_event_notification( 'publish', 'draft', get_post( $event_id ) );
+		$this->create_dated_event();
+		send_pending_new_event_notifications();
 
 		$this->assertFalse(
 			wp_next_scheduled( 'gatherpress_send_emails' ),
@@ -228,18 +274,9 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	}
 
 	/**
-	 * `Rest_Api::send_emails()` only returns `false` when the post it's
-	 * given no longer has the expected post type -- a warning must surface
-	 * rather than the failure being silent, and the meta flag must stay
-	 * unset so a later publish can still retry.
-	 *
-	 * Simulated via a stale `$post` object: `schedule_new_event_notification()`'s
-	 * own outer guard trusts the `$post->post_type` it was handed (the real
-	 * `transition_post_status` hook always passes a fresh one, but this
-	 * function takes whatever `WP_Post` it's given), while `send_emails()`
-	 * re-checks via a live `get_post_type( $post_id )` lookup -- changing
-	 * the post's real type after taking the snapshot makes the two disagree,
-	 * the same as if the post had been altered between the two checks.
+	 * An event that reaches the drain without saved datetimes must be
+	 * skipped with a warning rather than emailed dateless -- and the meta
+	 * flag must stay unset so the failure is not recorded as a send.
 	 *
 	 * Uses a temporary `set_error_handler()` rather than PHPUnit's
 	 * warning-to-exception conversion: this repo's own error handler
@@ -247,20 +284,12 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	 * `trigger_error()` itself, so nothing reaches PHPUnit as a catchable
 	 * exception to assert against.
 	 */
-	public function test_logs_a_warning_and_leaves_meta_unset_when_send_fails() {
+	public function test_dateless_event_is_skipped_with_warning() {
+		$this->create_member();
 		$event_id = self::factory()->post->create(
 			array(
 				'post_type'   => 'gatherpress_event',
-				'post_status' => 'draft',
-			)
-		);
-
-		$stale_post = get_post( $event_id );
-
-		wp_update_post(
-			array(
-				'ID'        => $event_id,
-				'post_type' => 'post',
+				'post_status' => 'publish',
 			)
 		);
 
@@ -273,17 +302,88 @@ class Test_Groups_Notifications extends Groups_TestCase {
 		);
 
 		try {
-			schedule_new_event_notification( 'publish', 'draft', $stale_post );
+			send_pending_new_event_notifications();
 		} finally {
 			restore_error_handler();
 		}
 
-		$this->assertNotNull( $captured, 'schedule_new_event_notification() should have triggered a warning.' );
+		$this->assertNotNull( $captured, 'send_pending_new_event_notifications() should have triggered a warning.' );
 		$this->assertSame( E_USER_WARNING, $captured[0] );
 		$this->assertStringContainsString( (string) $event_id, $captured[1] );
 
 		$this->assertEmpty( $this->sent_mail );
 		$this->assertSame( '', get_post_meta( $event_id, PUBLISH_NOTIFICATION_SCHEDULED_META, true ) );
+	}
+
+	/**
+	 * The regression this file exists for (#1862 follow-up): the email must
+	 * render the data the publish request persisted, not whatever the draft
+	 * held when `transition_post_status` fired inside `wp_insert_post()`.
+	 * Publishes through the real REST path (`publish_draft()` ->
+	 * `persist_event()`) with a draft that carries stale datetime meta.
+	 */
+	public function test_rest_publish_sends_the_persisted_data() {
+		$this->create_member();
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$draft_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'draft',
+			)
+		);
+		( new \GatherPress\Core\Event\Event( $draft_id ) )->save_datetimes(
+			array(
+				'post_id'        => $draft_id,
+				'datetime_start' => '2030-01-01 10:00:00',
+				'datetime_end'   => '2030-01-01 12:00:00',
+				'timezone'       => 'UTC',
+			)
+		);
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/draft/publish' );
+		$request->set_param( 'id', $draft_id );
+		$request->set_param( 'title', 'Persisted Data Event' );
+		$request->set_param( 'date', '2031-05-20' );
+		$request->set_param( 'time_start', '10:00' );
+		$request->set_param( 'time_end', '12:00' );
+		$request->set_param( 'new_venue_name', 'Persisted Venue' );
+		$request->set_param( 'new_venue_address', '1 Persisted St' );
+
+		$response = publish_draft( $request );
+		$this->assertNotWPError( $response );
+		$this->assertEmpty( $this->sent_mail, 'Nothing may send inside the publish request itself.' );
+
+		send_pending_new_event_notifications();
+
+		$this->assertTrue( $this->notification_was_sent( $draft_id ) );
+		$this->assertNotEmpty( $this->sent_mail );
+
+		$body = $this->sent_mail[0]['message'];
+		$this->assertStringContainsString( 'May 20, 2031', $body );
+		$this->assertStringContainsString( 'Persisted Venue', $body );
+		$this->assertStringNotContainsString( 'January 1, 2030', $body );
+	}
+
+	/**
+	 * One drain sends everything queued in the request, exactly once.
+	 */
+	public function test_drain_consumes_the_queue() {
+		$this->create_member();
+		$first_id  = $this->create_dated_event();
+		$second_id = $this->create_dated_event();
+
+		send_pending_new_event_notifications();
+
+		$this->assertTrue( $this->notification_was_sent( $first_id ) );
+		$this->assertTrue( $this->notification_was_sent( $second_id ) );
+		$count_after_drain = count( $this->sent_mail );
+		$this->assertGreaterThan( 0, $count_after_drain );
+
+		send_pending_new_event_notifications();
+
+		$this->assertSame( $count_after_drain, count( $this->sent_mail ) );
 	}
 
 	/**

@@ -205,6 +205,110 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
+	 * The start handler itself rejects non-network-admins — the capability
+	 * gate must live in the handler, not only in the menu registration.
+	 */
+	public function test_start_handler_rejects_group_administrators() {
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( $this->group_sites['brisbane'], $user_id, 'administrator' );
+		wp_set_current_user( $user_id );
+
+		$this->expectException( 'WPDieException' );
+		$this->expectExceptionMessage( 'permission' );
+
+		Network_Export\handle_start_export();
+	}
+
+	/**
+	 * The download handler rejects non-network-admins the same way.
+	 */
+	public function test_download_handler_rejects_group_administrators() {
+		$user_id = self::factory()->user->create();
+		add_user_to_blog( $this->group_sites['brisbane'], $user_id, 'administrator' );
+		wp_set_current_user( $user_id );
+
+		$this->expectException( 'WPDieException' );
+		$this->expectExceptionMessage( 'permission' );
+
+		Network_Export\handle_download();
+	}
+
+	/**
+	 * Even a network admin can't start or download without a valid nonce.
+	 */
+	public function test_handlers_require_a_valid_nonce() {
+		$user_id  = self::factory()->user->create();
+		$original = get_site_option( 'site_admins' );
+
+		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
+		wp_set_current_user( $user_id );
+
+		try {
+			$died = 0;
+
+			foreach ( array( 'handle_start_export', 'handle_download' ) as $handler ) {
+				try {
+					call_user_func( "WordCamp\Groups\Network_Export\\{$handler}" );
+				} catch ( \WPDieException $e ) {
+					++$died;
+				}
+			}
+
+			$this->assertSame( 2, $died, 'Both handlers must die on a missing nonce.' );
+		} finally {
+			update_site_option( 'site_admins', $original );
+		}
+	}
+
+	/**
+	 * A batch in progress holds a lease on the job: a concurrent run must
+	 * not double-process it, and a new start must still see it as busy.
+	 */
+	public function test_batch_claim_blocks_concurrent_runs() {
+		$job = array(
+			'id'            => 'leased-job',
+			'sites'         => array_values( $this->group_sites ),
+			'pending_sites' => array_values( $this->group_sites ),
+			'rows'          => array(),
+			'failed_sites'  => array(),
+			'author'        => 0,
+			'created'       => time(),
+			'claimed_until' => time() + 100,
+		);
+		update_site_option( Network_Export\JOB_OPTION, $job );
+
+		Network_Export\process_batch();
+
+		$this->assertSame( $job, Network_Export\get_job(), 'A leased job must not be double-processed.' );
+		$this->assertSame( '', Network_Export\queue_export( array_values( $this->group_sites ) ) );
+	}
+
+	/**
+	 * An expired lease — a batch whose process died — is resumed by the next
+	 * run instead of stalling the export forever.
+	 */
+	public function test_expired_claim_is_resumed() {
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			array(
+				'id'            => 'abandoned-job',
+				'sites'         => array( $this->group_sites['brisbane'] ),
+				'pending_sites' => array( $this->group_sites['brisbane'] ),
+				'rows'          => array(),
+				'failed_sites'  => array(),
+				'author'        => 0,
+				'created'       => time(),
+				'claimed_until' => time() - 10,
+			)
+		);
+
+		$this->drain_export();
+
+		$this->assertSame( array(), Network_Export\get_job() );
+		$this->assertIsArray( get_site_option( Network_Export\EXPORT_OPTION ) );
+	}
+
+	/**
 	 * Only one export can be in flight; a second start is refused and does
 	 * not disturb the running job.
 	 */

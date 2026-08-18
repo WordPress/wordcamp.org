@@ -92,6 +92,13 @@ const LOCK_RETRY_DELAY = 50000;
 const SITES_PER_BATCH = 10;
 
 /**
+ * Seconds a batch's claim on the job stays valid. Long enough for a slow
+ * `SITES_PER_BATCH` sites; short enough that a process killed mid-batch
+ * doesn't stall the export for long before another run can resume it.
+ */
+const CLAIM_LEASE = 5 * MINUTE_IN_SECONDS;
+
+/**
  * Column order for the CSV download: one flat row per event, aggregate
  * counts only.
  */
@@ -160,6 +167,8 @@ function queue_export( array $site_ids ): string {
 		'failed_sites'  => array(),
 		'author'        => get_current_user_id(),
 		'created'       => time(),
+		// Set while a batch is running; see process_batch()'s claim.
+		'claimed_until' => 0,
 	);
 
 	$queued = with_job_lock(
@@ -256,10 +265,14 @@ function schedule_next_batch(): void {
 /**
  * Process up to `SITES_PER_BATCH` group sites of the in-flight export.
  *
- * The job is claimed off `JOB_OPTION` under the lock and committed back the
- * same way, but the per-site collection in between runs unlocked — holding
- * the lock across several sites' bulk queries would block the start form for
- * that long.
+ * The job is claimed by stamping a lease onto `JOB_OPTION` under the lock —
+ * not by deleting it, which would make the run invisible to the busy check
+ * and let a concurrent start queue a second job for this batch to later
+ * clobber. The per-site collection then runs unlocked (holding the lock
+ * across several sites' bulk queries would block the start form for that
+ * long), and the commit re-checks that the stored job is still this one.
+ * If the process dies mid-batch, the lease expires and a later run resumes
+ * from the last committed cursor.
  */
 function process_batch(): void {
 	$job = with_job_lock(
@@ -270,11 +283,13 @@ function process_batch(): void {
 				return null;
 			}
 
-			// Claiming removes the job for the duration of the batch, so a
-			// concurrent start can't resurrect stale progress. It also means
-			// a concurrent start would begin a *new* run — which is why the
-			// commit below uses `$steal` rather than giving up.
-			delete_site_option( JOB_OPTION );
+			if ( ! empty( $job['claimed_until'] ) && $job['claimed_until'] > time() ) {
+				return null; // Another run holds the lease.
+			}
+
+			$job['claimed_until'] = time() + CLAIM_LEASE;
+
+			update_site_option( JOB_OPTION, $job );
 
 			return $job;
 		}
@@ -354,13 +369,25 @@ function process_batch(): void {
 
 	with_job_lock(
 		function () use ( $job, $finished ) {
+			$current = get_job();
+
+			// Only commit onto our own job. An expired lease means another
+			// run may have taken over (or an admin restarted the export);
+			// their copy of the progress is the durable one, not ours.
+			if ( empty( $current ) || $current['id'] !== $job['id'] ) {
+				return;
+			}
+
 			if ( $finished ) {
 				record_artifact( $job );
+				delete_site_option( JOB_OPTION );
 			} else {
+				$job['claimed_until'] = 0;
+
 				update_site_option( JOB_OPTION, $job );
 			}
 		},
-		// The batch's progress only exists in memory at this point, so
+		// This batch's progress only exists in memory at this point, so
 		// abandoning the write would redo — or lose — this run's work.
 		true
 	);

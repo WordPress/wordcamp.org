@@ -119,22 +119,37 @@ function register_routes(): void {
 					'required'          => false,
 					'default'           => '',
 					'sanitize_callback' => 'sanitize_text_field',
-					'validate_callback' => static function ( $param ) {
-						return '' === $param || (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $param );
-					},
+					'validate_callback' => __NAMESPACE__ . '\validate_date_param',
 				),
 				'before'  => array(
 					'type'              => 'string',
 					'required'          => false,
 					'default'           => '',
 					'sanitize_callback' => 'sanitize_text_field',
-					'validate_callback' => static function ( $param ) {
-						return '' === $param || (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $param );
-					},
+					'validate_callback' => __NAMESPACE__ . '\validate_date_param',
 				),
 			),
 		)
 	);
+}
+
+/**
+ * Whether a date filter param is empty or a real `Y-m-d` calendar date.
+ *
+ * A shape-only regex would accept impossible dates like `2026-99-99`, which
+ * PHP would silently roll over into a different date; the format round-trip
+ * rejects them with the route's 400 instead.
+ *
+ * @param mixed $param The raw param value.
+ */
+function validate_date_param( $param ): bool {
+	if ( '' === $param ) {
+		return true;
+	}
+
+	$parsed = \DateTimeImmutable::createFromFormat( 'Y-m-d', (string) $param );
+
+	return $parsed && $parsed->format( 'Y-m-d' ) === (string) $param;
 }
 
 /**
@@ -443,7 +458,7 @@ function filter_events_by_range( array $events, array $dates, string $range, str
  * Column selection is defined in CSV terms (the names the UI shows); this
  * maps each CSV column to the JSON fields it covers so both formats honour
  * the same selection. The `anonymous` flag travels with `attendee_name`,
- * and the series occurrence list with `occurrence_start_gmt`. With no
+ * and the series occurrence list with either occurrence column. With no
  * RSVP-level column selected the `rsvps` list is dropped entirely.
  *
  * @param array    $data    Export data from `collect_export_data()`.
@@ -501,8 +516,20 @@ function filter_json_fields( array $data, array $columns ): array {
 			unset( $event['counts'] );
 		}
 
-		if ( ! isset( $selected['occurrence_start_gmt'] ) ) {
+		// The series occurrence list stays when either occurrence column is
+		// selected, trimmed to the selected value(s).
+		if ( ! isset( $selected['occurrence_start_gmt'] ) && ! isset( $selected['occurrence_end_gmt'] ) ) {
 			unset( $event['is_recurring'], $event['occurrences'] );
+		} elseif ( isset( $event['occurrences'] ) ) {
+			foreach ( $event['occurrences'] as &$series_occurrence ) {
+				if ( ! isset( $selected['occurrence_start_gmt'] ) ) {
+					unset( $series_occurrence['start_gmt'] );
+				}
+				if ( ! isset( $selected['occurrence_end_gmt'] ) ) {
+					unset( $series_occurrence['end_gmt'] );
+				}
+			}
+			unset( $series_occurrence );
 		}
 
 		if ( ! $keep_rsvps ) {
@@ -877,17 +904,44 @@ function csv_row_cells( array $event, ?array $rsvp ): array {
 /**
  * Neutralise spreadsheet formula injection in a CSV cell.
  *
- * Cells starting with `=`, `+`, `-`, `@`, tab, or CR are treated as formulas
- * by Excel and Sheets; a leading apostrophe forces them to plain text. Same
- * policy as CampTix's `esc_csv()`, implemented locally because CampTix isn't
- * loaded on group sites.
+ * A formula trigger (`=`, `+`, `-`, `@`) gets a leading apostrophe when it
+ * starts the cell — but also when it follows any common delimiter, because
+ * the reader chooses the delimiter on import (`;` is the default in some
+ * locales), which can split one of our comma-quoted cells into several.
+ * Same policy as CampTix's `esc_csv()`, implemented locally because CampTix
+ * isn't loaded on group sites.
  *
  * @param string $value Cell value.
  */
 function esc_csv_cell( string $value ): string {
-	if ( '' !== $value && strpbrk( $value[0], "=+-@\t\r" ) !== false ) {
-		return "'" . $value;
+	if ( '' === $value || is_numeric( $value ) ) {
+		return $value;
 	}
 
-	return $value;
+	$triggers   = array( '=', '+', '-', '@' );
+	$delimiters = array( ',', ';', ':', '|', '^', "\n", "\r", "\t", ' ' );
+
+	$escaped = '';
+
+	// A leading delimiter itself gets escaped, so the cell can't smuggle an
+	// extra empty column past a re-split.
+	if ( in_array( mb_substr( $value, 0, 1 ), $delimiters, true ) ) {
+		$escaped .= "'";
+	}
+
+	$length            = mb_strlen( $value );
+	$prev_is_delimiter = true; // Start-of-cell counts as a boundary.
+
+	for ( $i = 0; $i < $length; $i++ ) {
+		$char = mb_substr( $value, $i, 1 );
+
+		if ( $prev_is_delimiter && in_array( $char, $triggers, true ) ) {
+			$escaped .= "'";
+		}
+
+		$escaped          .= $char;
+		$prev_is_delimiter = in_array( $char, $delimiters, true );
+	}
+
+	return $escaped;
 }

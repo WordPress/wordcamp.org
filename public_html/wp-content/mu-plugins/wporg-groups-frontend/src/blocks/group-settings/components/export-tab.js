@@ -68,18 +68,43 @@ export default function ExportTab() {
 	const [ before, setBefore ] = useState( '' );
 
 	useEffect( () => {
-		apiFetch( {
-			path: '/wp/v2/gatherpress_events?per_page=100&_fields=id,title&status=publish&orderby=date&order=desc',
-		} )
-			.then( ( events ) =>
-				setEventOptions(
-					events.map( ( e ) => ( { id: e.id, title: e.title.rendered } ) )
-				)
-			)
-			.catch( () => {
-				// The picker degrades to "all events"; downloads still work.
+		let cancelled = false;
+
+		// Walk every page so long-running groups can pick any event, the same
+		// X-WP-TotalPages pattern the members tab paginates with.
+		const loadAllEvents = async () => {
+			const collected = [];
+			let page = 1;
+			let totalPages = 1;
+
+			do {
+				const response = await apiFetch( {
+					path: `/wp/v2/gatherpress_events?per_page=100&page=${ page }&_fields=id,title&status=publish&orderby=date&order=desc`,
+					parse: false,
+				} );
+				const batch = await response.json();
+				collected.push(
+					...batch.map( ( e ) => ( { id: e.id, title: e.title.rendered } ) )
+				);
+				totalPages = Number( response.headers.get( 'X-WP-TotalPages' ) ) || 1;
+				page++;
+			} while ( page <= totalPages );
+
+			if ( ! cancelled ) {
+				setEventOptions( collected );
+			}
+		};
+
+		loadAllEvents().catch( () => {
+			// The picker degrades to "all events"; downloads still work.
+			if ( ! cancelled ) {
 				setEventOptions( [] );
-			} );
+			}
+		} );
+
+		return () => {
+			cancelled = true;
+		};
 	}, [] );
 
 	const downloadExport = useCallback(

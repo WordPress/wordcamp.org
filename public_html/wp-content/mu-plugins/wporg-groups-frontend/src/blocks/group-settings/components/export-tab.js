@@ -144,7 +144,17 @@ export default function ExportTab() {
 				link.remove();
 				window.URL.revokeObjectURL( url );
 			} catch ( err ) {
-				setNotice( err.message || __( 'Export failed.', 'wporg-groups-frontend' ) );
+				// With `parse: false`, apiFetch rejects with the raw Response —
+				// the server's error message is in its (JSON) body.
+				let message = err?.message;
+				if ( ! message && typeof err?.json === 'function' ) {
+					try {
+						message = ( await err.json() ).message;
+					} catch ( parseErr ) {
+						// Non-JSON error body; fall through to the generic notice.
+					}
+				}
+				setNotice( message || __( 'Export failed.', 'wporg-groups-frontend' ) );
 			} finally {
 				setDownloading( '' );
 			}

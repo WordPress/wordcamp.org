@@ -153,6 +153,20 @@ function validate_date_param( $param ): bool {
 }
 
 /**
+ * The 500 returned when one of the export's bulk reads fails.
+ *
+ * A failed read must fail the request — treating it as "no rows" would ship
+ * an incomplete file that looks complete.
+ */
+function export_db_error(): WP_Error {
+	return new WP_Error(
+		'export_failed',
+		__( 'The export could not be generated. Please try again.', 'wporg-groups-frontend' ),
+		array( 'status' => 500 )
+	);
+}
+
+/**
  * Capability check for the export route.
  *
  * Distinguishes "not logged in" from "not an Organiser" so clients get the
@@ -184,8 +198,10 @@ function export_permissions_check() {
  * Route callback: build the export in the requested format.
  *
  * @param WP_REST_Request $request The request.
+ *
+ * @return WP_REST_Response|WP_Error
  */
-function get_export( WP_REST_Request $request ): WP_REST_Response {
+function get_export( WP_REST_Request $request ) {
 	$data = collect_export_data(
 		array(
 			'events' => array_map( 'absint', (array) $request->get_param( 'events' ) ),
@@ -194,6 +210,10 @@ function get_export( WP_REST_Request $request ): WP_REST_Response {
 			'before' => (string) $request->get_param( 'before' ),
 		)
 	);
+
+	if ( is_wp_error( $data ) ) {
+		return $data;
+	}
 
 	// An empty selection means "all columns"; a subset is reordered into the
 	// canonical column order so the output is stable regardless of the order
@@ -266,9 +286,9 @@ function serve_raw_csv( bool $served, $result, $request ): bool {
  *     @type string $before `Y-m-d`; with range 'custom', keep events starting on/before this day.
  * }
  *
- * @return array{generated_gmt: string, group: array{name: string, url: string}, events: array[]}
+ * @return array{generated_gmt: string, group: array{name: string, url: string}, events: array[]}|WP_Error
  */
-function collect_export_data( array $filters = array() ): array {
+function collect_export_data( array $filters = array() ) {
 	$filters += array(
 		'events' => array(),
 		'range'  => 'all',
@@ -292,13 +312,24 @@ function collect_export_data( array $filters = array() ): array {
 
 	// The date filter needs the dates table, so it runs after that one query;
 	// everything else is only fetched for the events that survive it.
-	$dates  = get_event_dates( wp_list_pluck( $events, 'ID' ) );
+	$dates = get_event_dates( wp_list_pluck( $events, 'ID' ) );
+	if ( is_wp_error( $dates ) ) {
+		return $dates;
+	}
 	$events = filter_events_by_range( $events, $dates, $filters['range'], $filters['after'], $filters['before'] );
 
-	$event_ids  = wp_list_pluck( $events, 'ID' );
-	$venues     = get_event_venue_names( $event_ids );
-	$rsvps      = get_event_rsvps( $event_ids );
+	$event_ids = wp_list_pluck( $events, 'ID' );
+	$venues    = get_event_venue_names( $event_ids );
+
+	$rsvps = get_event_rsvps( $event_ids );
+	if ( is_wp_error( $rsvps ) ) {
+		return $rsvps;
+	}
+
 	$occurrence = get_occurrence_data( $event_ids );
+	if ( is_wp_error( $occurrence ) ) {
+		return $occurrence;
+	}
 
 	// Resolve organiser and attendee names in one user query.
 	$user_ids = array_merge(
@@ -560,9 +591,9 @@ function filter_json_fields( array $data, array $columns ): array {
  *
  * @param int[] $event_ids Event post IDs.
  *
- * @return array<int, array{start_gmt: string, end_gmt: string}>
+ * @return array<int, array{start_gmt: string, end_gmt: string}>|WP_Error
  */
-function get_event_dates( array $event_ids ): array {
+function get_event_dates( array $event_ids ) {
 	global $wpdb;
 
 	if ( empty( $event_ids ) ) {
@@ -580,6 +611,12 @@ function get_event_dates( array $event_ids ): array {
 			$event_ids
 		)
 	);
+
+	// A failed query must not read as "no dates" — the range filters would
+	// silently turn that into an empty-but-200 export.
+	if ( '' !== $wpdb->last_error ) {
+		return export_db_error();
+	}
 
 	$dates = array();
 	foreach ( (array) $rows as $row ) {
@@ -670,9 +707,9 @@ function get_event_venue_names( array $event_ids ): array {
  *
  * @param int[] $event_ids Event post IDs.
  *
- * @return array<int, array{comment_id: int, event_id: int, user_id: int, status: string, timestamp_gmt: string, guests: int, anonymous: bool}>
+ * @return array<int, array{comment_id: int, event_id: int, user_id: int, status: string, timestamp_gmt: string, guests: int, anonymous: bool}>|WP_Error
  */
-function get_event_rsvps( array $event_ids ): array {
+function get_event_rsvps( array $event_ids ) {
 	if ( empty( $event_ids ) ) {
 		return array();
 	}
@@ -701,11 +738,15 @@ function get_event_rsvps( array $event_ids ): array {
 		array( 'fields' => 'all_with_object_id' )
 	);
 
+	// Swallowing this would export every RSVP as `no_status` and zero out
+	// all the counts — misleading data, not a degraded export.
+	if ( is_wp_error( $status_terms ) ) {
+		return export_db_error();
+	}
+
 	$status_by_comment = array();
-	if ( ! is_wp_error( $status_terms ) ) {
-		foreach ( $status_terms as $term ) {
-			$status_by_comment[ (int) $term->object_id ] = $term->slug;
-		}
+	foreach ( $status_terms as $term ) {
+		$status_by_comment[ (int) $term->object_id ] = $term->slug;
 	}
 
 	$rsvps = array();
@@ -737,9 +778,9 @@ function get_event_rsvps( array $event_ids ): array {
  *
  * @param int[] $event_ids Event post IDs.
  *
- * @return array{map: array<int, string>, occurrences: array<string, array{recurrence_id: string, start_gmt: string, end_gmt: string}>}
+ * @return array{map: array<int, string>, occurrences: array<string, array{recurrence_id: string, start_gmt: string, end_gmt: string, status: string}>}|WP_Error
  */
-function get_occurrence_data( array $event_ids ): array {
+function get_occurrence_data( array $event_ids ) {
 	global $wpdb;
 
 	$empty = array(
@@ -759,10 +800,15 @@ function get_occurrence_data( array $event_ids ): array {
 	$occurrence_rows = $wpdb->get_results(
 		$wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- As above.
-			"SELECT series_post_id, recurrence_id, datetime_start_gmt, datetime_end_gmt FROM {$occurrences_table} WHERE series_post_id IN ( {$placeholders} ) ORDER BY datetime_start_gmt ASC",
+			"SELECT series_post_id, recurrence_id, datetime_start_gmt, datetime_end_gmt, status FROM {$occurrences_table} WHERE series_post_id IN ( {$placeholders} ) ORDER BY datetime_start_gmt ASC",
 			$event_ids
 		)
 	);
+
+	// Checked per query — the second query resets `$wpdb->last_error`.
+	if ( '' !== $wpdb->last_error ) {
+		return export_db_error();
+	}
 
 	// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- As above.
 	$mapping_rows = $wpdb->get_results(
@@ -773,12 +819,19 @@ function get_occurrence_data( array $event_ids ): array {
 		)
 	);
 
+	if ( '' !== $wpdb->last_error ) {
+		return export_db_error();
+	}
+
 	$occurrences = array();
 	foreach ( (array) $occurrence_rows as $row ) {
 		$occurrences[ $row->series_post_id . '|' . $row->recurrence_id ] = array(
 			'recurrence_id' => $row->recurrence_id,
 			'start_gmt'     => $row->datetime_start_gmt,
 			'end_gmt'       => $row->datetime_end_gmt,
+			// Cancelled occurrences must be tellable apart from scheduled
+			// ones in a history export.
+			'status'        => $row->status,
 		);
 	}
 
@@ -846,7 +899,7 @@ function build_csv( array $data, ?array $columns = null ): string {
 
 	// UTF-8 BOM so Excel detects the encoding.
 	fwrite( $handle, "\xEF\xBB\xBF" );
-	fputcsv( $handle, $columns, ',', '"', '\\' );
+	fputcsv( $handle, $columns, ',', '"', '' );
 
 	foreach ( $data['events'] as $event ) {
 		foreach ( empty( $event['rsvps'] ) ? array( null ) : $event['rsvps'] as $rsvp ) {
@@ -857,7 +910,7 @@ function build_csv( array $data, ?array $columns = null ): string {
 				$line[] = $cells[ $column ];
 			}
 
-			fputcsv( $handle, $line, ',', '"', '\\' );
+			fputcsv( $handle, $line, ',', '"', '' );
 		}
 	}
 

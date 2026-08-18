@@ -106,7 +106,13 @@ class Test_Groups_Export extends Groups_TestCase {
 		$csv   = preg_replace( '/^\xEF\xBB\xBF/', '', $csv );
 		$lines = array_filter( explode( "\n", trim( $csv ) ), 'strlen' );
 
-		return array_map( 'str_getcsv', $lines );
+		return array_map(
+			// Empty escape = strict RFC 4180, matching how the CSV is written.
+			static function ( $line ) {
+				return str_getcsv( $line, ',', '"', '' );
+			},
+			$lines
+		);
 	}
 
 	/**
@@ -341,6 +347,16 @@ class Test_Groups_Export extends Groups_TestCase {
 		$this->assertSame( CSV_COLUMNS, $rows[0] );
 		$this->assertCount( 3, $rows ); // Header + one row per RSVP.
 		$this->assertSame( 'Title, with "quotes"', $rows[1][1] );
+
+		// RFC 4180: a backslash before a quote is data, not an escape — the
+		// row must still parse to the right number of columns, with the
+		// stored title intact.
+		$tricky_id = $this->create_test_event( array( 'title' => 'Bad \\ slash, "and" quotes' ) );
+		$rows      = $this->parse_csv_rows( build_csv( collect_export_data() ) );
+		foreach ( $rows as $row ) {
+			$this->assertCount( count( CSV_COLUMNS ), $row );
+		}
+		$this->assertContains( get_post_field( 'post_title', $tricky_id, 'raw' ), array_column( $rows, 1 ) );
 	}
 
 	/**
@@ -532,6 +548,7 @@ class Test_Groups_Export extends Groups_TestCase {
 		$this->assertNotEmpty( $event['occurrences'] );
 		$this->assertArrayHasKey( 'end_gmt', $event['occurrences'][0] );
 		$this->assertArrayNotHasKey( 'start_gmt', $event['occurrences'][0] );
+		$this->assertSame( 'scheduled', $event['occurrences'][0]['status'] );
 	}
 
 	/**

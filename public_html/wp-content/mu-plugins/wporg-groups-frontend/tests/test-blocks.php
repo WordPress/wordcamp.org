@@ -110,6 +110,29 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The RSVP action should precede the attendee summary in the rendered block.
+	 */
+	public function test_event_rsvp_action_precedes_attendee_summary() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'RSVP Action Order Event',
+			)
+		);
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$action_position  = strpos( $output, 'class="wp-block-button__link wp-element-button' );
+		$summary_position = strpos( $output, 'class="wporg-event-rsvp__summary' );
+
+		$this->assertNotFalse( $action_position );
+		$this->assertNotFalse( $summary_position );
+		$this->assertLessThan( $summary_position, $action_position );
+	}
+
+	/**
 	 * RSVP success and failure messages need an always-present live region;
 	 * the modal itself is hidden for the main RSVP-button flow.
 	 */

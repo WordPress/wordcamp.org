@@ -29,11 +29,15 @@ store( 'wporg/event-rsvp', {
 			return getContext().currentUserStatus !== 'attending';
 		},
 
+		get hasNoAttendees() {
+			return 0 === getContext().attendingCount;
+		},
+
 		get countLabel() {
-			const count = getContext().attendingCount;
-			return formatLabel( label( 1 === count ? 'countSingular' : 'countPlural' ), [
-				formatNumber( count ),
-			] );
+			const ctx = getContext();
+			const [ key, value ] = getCountParts( ctx.attendingCount, ctx.currentUserStatus === 'attending' );
+
+			return null === value ? label( key ) : formatLabel( label( key ), [ formatNumber( value ) ] );
 		},
 
 		get modalTitle() {
@@ -486,7 +490,8 @@ async function refreshAttendees( ctx, actionElement ) {
 
 			const avatars = block.querySelector( '.wporg-event-rsvp__avatars' );
 			if ( avatars ) {
-				const maxAvatars = 12;
+				// Keep in step with `$max_avatars` in render.php.
+				const maxAvatars = 5;
 				const visible = records.slice( 0, maxAvatars );
 				const overflow = Math.max( 0, data.data.attending.count - maxAvatars );
 
@@ -496,7 +501,7 @@ async function refreshAttendees( ctx, actionElement ) {
 							( record ) =>
 								'<img class="wporg-event-rsvp__avatar" src="' +
 								escAttr( record.photo ) +
-								'" alt="" width="40" height="40" loading="lazy" />'
+								'" alt="" width="28" height="28" loading="lazy" />'
 						)
 						.join( '' ) +
 					( overflow > 0 ? '<span class="wporg-event-rsvp__overflow">+' + overflow + '</span>' : '' );
@@ -505,6 +510,41 @@ async function refreshAttendees( ctx, actionElement ) {
 	} catch {
 		// The optimistic context update already reflects the new state.
 	}
+}
+
+/**
+ * The count line's label key and the number that goes into it.
+ *
+ * The browser-side half of `get_count_parts()` in `inc/rsvp-labels.php`, which
+ * this mirrors branch for branch: PHP renders the line initially, this
+ * re-renders it when an RSVP changes the count without a reload. Script
+ * modules can't depend on `wp-i18n`, so the translated formats arrive
+ * pre-resolved in `context.labels` and this only picks between them — see
+ * `get_count_formats()` for how that table is built. Adding a state means
+ * editing both functions.
+ *
+ * @param {number}  count       Number of attendees.
+ * @param {boolean} isAttending Whether the current user is one of them.
+ * @return {[string, number|null]} Key into `context.labels`, and the number to
+ *                                 substitute — or null when the format takes
+ *                                 no argument.
+ */
+function getCountParts( count, isAttending ) {
+	const others = Math.max( 0, count - 1 );
+
+	if ( isAttending && others > 0 ) {
+		return [ 1 === others ? 'countYouAndOneOther' : 'countYouAndOthers', others ];
+	}
+
+	if ( isAttending ) {
+		return [ 'countYouFirst', null ];
+	}
+
+	if ( count > 0 ) {
+		return [ 1 === count ? 'countSingular' : 'countPlural', count ];
+	}
+
+	return [ 'countZero', null ];
 }
 
 function label( key ) {

@@ -1,6 +1,7 @@
 .gpre-occurrence-selector {
 	position: relative;
 	margin-block: 0 2rem;
+
 	/* The scroll strip's negative margin (below) intentionally bleeds past
 	   this container so its content lines up flush with the container's own
 	   edges once the matching padding is subtracted back out. Without
@@ -21,6 +22,7 @@
    showed up worst on narrow viewports, where fewer chips fit and the
    overlapped one is more likely to be a chip the user hasn't scrolled past
    yet, but the underlying mismatch exists at any width. */
+
 nav.gpre-occurrence-selector > ul {
 	display: flex;
 	gap: 0.75rem;

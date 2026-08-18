@@ -10,6 +10,7 @@
    applied to every `img` on the site: UI chrome (avatars, logos) sets its own
    dimensions, and a global rule fights those instead of helping them.
    Editor-inserted images and featured images are already handled by core. */
+
 :where(.wp-block-post-content, .wp-block-comment-content, .wp-block-wporg-page-content)
 	:where(img, video, iframe) {
 	max-width: 100%;
@@ -19,6 +20,7 @@
 @media (max-width: 960px) {
 	.groups-site-home-layout {
 		flex-wrap: wrap !important;
+
 		/* Columns only carry `blockGap.left`, which becomes `column-gap` —
 		   once they wrap there is nothing holding the two apart vertically. */
 		row-gap: var(--wp--preset--spacing--60);
@@ -30,6 +32,7 @@
 
 	/* The sidebar is second in the source, so wrapping puts it *below* the
 	   main column — its divider belongs on the leading edge. */
+
 	.groups-site-sidebar {
 		padding-left: 0;
 		padding-top: var(--wp--preset--spacing--40);
@@ -104,11 +107,13 @@
    ========================================================================== */
 
 @media (min-width: 481px) and (max-width: 781px) {
+
 	/* `minmax(0, 1fr)` rather than a bare `1fr` — a plain `1fr` track's
 	   implicit `min-width: auto` sizes it to its content's min-content
 	   width, which for a member/event card is wider than half the viewport
 	   at this breakpoint and forces the grid to overflow horizontally
 	   instead of letting the card's own content wrap. */
+
 	.wp-block-post-template.is-layout-grid {
 		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
 	}
@@ -123,6 +128,7 @@
    ========================================================================== */
 
 @media (min-width: 1024px) {
+
 	/*
 	 * Stick the event sidebar to the top while scrolling.
 	 *
@@ -132,6 +138,7 @@
 	 * it. `align-self` stops the column stretching to the row's full height,
 	 * which would leave `sticky` no room to travel in.
 	 */
+
 	.groups-site-event-sidebar {
 		position: sticky;
 		top: 96px;

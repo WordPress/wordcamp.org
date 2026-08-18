@@ -6,7 +6,7 @@
  * follows the shared card spec.
  */
 
-@import '../../components/section-heading.css';
+@import "../../components/section-heading.css";
 
 .wporg-group-members__grid {
 	display: grid;
@@ -18,6 +18,7 @@
 	display: flex;
 	align-items: flex-start;
 	gap: var(--wp--preset--spacing--20);
+
 	/* 20px rather than 24px: an avatar-plus-two-lines row is a compact card,
 	   the same call made for `.wporg-my-events__card`. */
 	padding: var(--wp--preset--spacing--20);

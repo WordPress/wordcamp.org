@@ -8,7 +8,7 @@
  * Kept in step with `.groups-site-event-card` in the theme's custom.css.
  */
 
-@import '../../components/section-heading.css';
+@import "../../components/section-heading.css";
 
 /*
  * One card per row, full width of the column, so the serif title fits on one
@@ -27,6 +27,7 @@
 	display: flex;
 	flex-direction: column;
 	gap: var(--wp--preset--spacing--10);
+
 	/*
 	 * 20px all round rather than the 24px card spec — the same compact-card
 	 * value `.wporg-group-members__card` uses, for the same reason: the card
@@ -36,14 +37,17 @@
 	background: var(--wp--preset--color--white);
 	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
-	transition: border-color 0.18s ease, box-shadow 0.18s ease,
+	transition:
+		border-color 0.18s ease,
+		box-shadow 0.18s ease,
 		transform 0.18s ease;
 }
 
 .wporg-my-events__card:hover,
 .wporg-my-events__card:has(a:focus-visible) {
 	border-color: var(--wp--preset--color--blueberry-1);
-	box-shadow: 0 18px 36px -16px rgba(56, 88, 233, 0.22),
+	box-shadow:
+		0 18px 36px -16px rgba(56, 88, 233, 0.22),
 		0 4px 12px rgba(30, 30, 30, 0.04);
 	transform: translateY(-2px);
 }
@@ -55,6 +59,7 @@
  * without that the link keeps the global ring rather than losing it.
  */
 @supports selector(:has(*)) {
+
 	.wporg-my-events__card:has(a:focus-visible) {
 		outline: 2px solid var(--wp--preset--color--blueberry-1);
 		outline-offset: 2px;
@@ -86,6 +91,7 @@
 	color: var(--wp--preset--color--blueberry-1);
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
+
 	/* "Wednesday, September 13, 2026 · 6:00 PM" is wider than the card at
 	   320px, and uppercase with tracking is wider still. */
 	overflow-wrap: break-word;
@@ -107,13 +113,13 @@
 
 /* Stretch the title's link over the whole card. */
 .wporg-my-events__title a::after {
-	content: '';
+	content: "";
 	position: absolute;
 	inset: 0;
 }
 
-.wporg-my-events__card:hover .wporg-my-events__title a,
-.wporg-my-events__title a:focus-visible {
+.wporg-my-events__title a:focus-visible,
+.wporg-my-events__card:hover .wporg-my-events__title a {
 	color: var(--wp--preset--color--blueberry-1);
 	text-decoration: none;
 }

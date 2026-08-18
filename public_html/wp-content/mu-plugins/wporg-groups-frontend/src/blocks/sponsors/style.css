@@ -8,7 +8,7 @@
  * the list used to have inside the card's own.
  */
 
-@import '../../components/section-heading.css';
+@import "../../components/section-heading.css";
 
 .wporg-sponsors {
 	padding: 24px;
@@ -139,6 +139,7 @@ a.wporg-sponsors__link:hover .wporg-sponsors__external {
  * sponsor name still get a usable measure between them.
  */
 @media (max-width: 480px) {
+
 	.wporg-sponsors__link {
 		grid-template-columns: 64px 1fr auto;
 		gap: var(--wp--preset--spacing--10);
@@ -146,6 +147,7 @@ a.wporg-sponsors__link:hover .wporg-sponsors__external {
 }
 
 @media (max-width: 380px) {
+
 	.wporg-sponsors {
 		padding: var(--wp--preset--spacing--20);
 	}

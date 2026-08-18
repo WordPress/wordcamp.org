@@ -4,12 +4,13 @@
  * Uses SCSS for nesting and maintainability.
  */
 
-@import '../../components/recurrence-controls.css';
-@import '../../components/component-accents.css';
+@import "../../components/recurrence-controls.css";
+@import "../../components/component-accents.css";
 
 // === Trigger button ===
 
 .wporg-group-settings-block {
+
 	.dashicons {
 		font-size: 16px;
 		width: 16px;
@@ -207,10 +208,23 @@
 			padding: 12px 16px;
 		}
 
-		ul, ol { padding-inline-start: 1.5em; margin-block: 1em; }
-		ul { list-style: disc outside; }
-		ol { list-style: decimal outside; }
-		li { margin-block: 0.35em; }
+		ul,
+		ol {
+			padding-inline-start: 1.5em;
+			margin-block: 1em;
+		}
+
+		ul {
+			list-style: disc outside;
+		}
+
+		ol {
+			list-style: decimal outside;
+		}
+
+		li {
+			margin-block: 0.35em;
+		}
 	}
 
 	&__editor-toolbar {
@@ -293,6 +307,7 @@
 // === Inline venue editor (no overlay) ===
 
 .wporg-groups-venue-editor--inline {
+
 	.wporg-groups-venue-editor__inner {
 		max-width: 640px;
 	}
@@ -352,7 +367,8 @@
 			cursor: pointer;
 			font-size: 14px;
 
-			&:hover, &:focus {
+			&:hover,
+			&:focus {
 				background: #f0f0f0;
 			}
 		}
@@ -362,6 +378,7 @@
 // === Members tab ===
 
 .wporg-members-tab {
+
 	&__controls {
 		display: flex;
 		align-items: center;

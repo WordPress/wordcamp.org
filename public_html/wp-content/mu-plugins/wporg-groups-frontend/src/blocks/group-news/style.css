@@ -6,7 +6,7 @@
  * the sidebar gets the Inter 16px/600 utility heading.
  */
 
-@import '../../components/section-heading.css';
+@import "../../components/section-heading.css";
 
 .wporg-group-news__list {
 	border-top: 1px solid var(--wp--preset--color--light-grey-1);

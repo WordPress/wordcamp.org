@@ -41,14 +41,24 @@ export default function AboutTab() {
 		apiFetch( { path: '/wporg-groups/v1/group-info' } )
 			.then( ( data ) => {
 				const location = data.location || {};
+				const countryOptions = data.countries || [];
+				const storedCountry = location.countryCode || '';
+
+				// A stored code the country list no longer recognizes has no
+				// option to select, so blank it and let the required-field check
+				// prompt for a replacement instead of posting a code the server
+				// would reject.
+				const isKnownCountry = countryOptions.some( ( country ) => country.code === storedCountry );
+				const countryCode = isKnownCountry ? storedCountry : '';
+
 				setForm( {
 					blogname: data.title || '',
 					blogdescription: data.description || '',
 					locationType: location.type || '',
 					city: location.city || '',
-					countryCode: location.countryCode || '',
+					countryCode,
 				} );
-				setCountries( data.countries || [] );
+				setCountries( countryOptions );
 				setLoading( false );
 			} )
 			.catch( ( err ) => {

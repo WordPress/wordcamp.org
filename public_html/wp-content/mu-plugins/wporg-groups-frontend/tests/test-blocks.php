@@ -164,6 +164,21 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * A country code that no longer resolves is dropped from the label.
+	 */
+	public function test_group_location_block_omits_unrecognized_country() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'ZZ' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'İstanbul', $output );
+		$this->assertStringNotContainsString( 'İstanbul,', $output );
+		$this->assertStringNotContainsString( 'ZZ', $output );
+	}
+
+	/**
 	 * The online label depends only on the group location type.
 	 */
 	public function test_group_location_block_renders_online_location() {

@@ -202,6 +202,13 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			class="wp-block-button<?php echo $is_attending ? ' is-style-outline' : ''; ?>"
 			data-wp-class--is-style-outline="state.isAttending"
 		>
+			<?php
+			/*
+			 * `aria-busy="true"` does two things: the theme's custom.css
+			 * draws the loading spinner from it, and screen readers use it
+			 * to announce the button as busy rather than unavailable.
+			 */
+			?>
 			<button
 				type="button"
 				class="wp-block-button__link wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
@@ -209,6 +216,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				data-wp-text="state.rsvpButtonLabel"
 				data-wp-class--is-attending="state.isAttending"
 				data-wp-bind--disabled="context.rsvpLoading"
+				data-wp-bind--aria-busy="context.rsvpLoading"
 			>
 				<?php
 				if ( $is_attending ) {
@@ -342,6 +350,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									data-wp-on--click="actions.saveAnswers"
 									data-wp-class--is-hidden="state.isNotAttending"
 									data-wp-bind--disabled="context.rsvpLoading"
+									data-wp-bind--aria-busy="context.rsvpLoading"
 								>
 									<?php esc_html_e( 'Save answers', 'wporg-groups-frontend' ); ?>
 								</button>
@@ -355,6 +364,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							data-wp-text="state.modalRsvpLabel"
 							data-wp-class--is-attending="state.isAttending"
 							data-wp-bind--disabled="context.rsvpLoading"
+							data-wp-bind--aria-busy="context.rsvpLoading"
 						>
 							<?php
 							if ( $is_attending ) {

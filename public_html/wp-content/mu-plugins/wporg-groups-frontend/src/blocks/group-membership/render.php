@@ -136,6 +136,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 					data-wp-on--click="actions.join"
 					data-wp-text="state.buttonLabel"
 					data-wp-bind--disabled="context.loading"
+					data-wp-bind--aria-busy="context.loading"
 				><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
 			</div>
 		<?php endif; ?>
@@ -157,6 +158,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			class="wporg-group-membership__leave"
 			data-wp-on--click="actions.leave"
 			data-wp-bind--disabled="context.loading"
+			data-wp-bind--aria-busy="context.loading"
 		><?php esc_html_e( 'Leave group', 'wporg-groups-frontend' ); ?></button>
 	<?php endif; ?>
 

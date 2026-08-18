@@ -365,6 +365,16 @@ class Test_Groups_Export extends Groups_TestCase {
 		}
 		$this->assertSame( 'safe', esc_csv_cell( 'safe' ) );
 		$this->assertSame( '', esc_csv_cell( '' ) );
+
+		// Triggers after a delimiter are escaped too — a reader importing
+		// with `;` (or space, etc.) would otherwise split them into their
+		// own formula cell.
+		$this->assertSame( "safe;'=1+1", esc_csv_cell( 'safe;=1+1' ) );
+		$this->assertSame( "a,'-b", esc_csv_cell( 'a,-b' ) );
+		$this->assertSame( "x '@y", esc_csv_cell( 'x @y' ) );
+		$this->assertSame( 'a;b', esc_csv_cell( 'a;b' ) );
+		// Negative numbers are numeric, not formulas.
+		$this->assertSame( '-5', esc_csv_cell( '-5' ) );
 	}
 
 	/**
@@ -492,6 +502,39 @@ class Test_Groups_Export extends Groups_TestCase {
 	}
 
 	/**
+	 * Either occurrence column keeps the series occurrence list, trimmed to
+	 * the selected value(s).
+	 */
+	public function test_export_json_occurrence_field_selection() {
+		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
+
+		Recurring_Events_Database::maybe_install();
+
+		$this->create_test_event(
+			array(
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( $weekday ),
+					'end_type'  => 'count',
+					'count'     => 2,
+				),
+			)
+		);
+
+		$event = filter_json_fields(
+			collect_export_data(),
+			array( 'event_id', 'occurrence_end_gmt' )
+		)['events'][0];
+
+		$this->assertNotEmpty( $event['occurrences'] );
+		$this->assertArrayHasKey( 'end_gmt', $event['occurrences'][0] );
+		$this->assertArrayNotHasKey( 'start_gmt', $event['occurrences'][0] );
+	}
+
+	/**
 	 * Filter params are validated on real dispatches.
 	 */
 	public function test_export_route_validates_filter_params() {
@@ -505,6 +548,12 @@ class Test_Groups_Export extends Groups_TestCase {
 
 		$response = $this->dispatch_export_request( array(
 			'range' => 'custom', 'after' => 'not-a-date',
+		) );
+		$this->assertSame( 400, $response->get_status() );
+
+		// Right shape, impossible calendar date.
+		$response = $this->dispatch_export_request( array(
+			'range' => 'custom', 'before' => '2026-99-99',
 		) );
 		$this->assertSame( 400, $response->get_status() );
 	}

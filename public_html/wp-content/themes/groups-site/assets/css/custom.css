@@ -89,6 +89,7 @@ body.error404 .site-content-container h1 {
  * `[class*="wp-block"].is-style-outline .wp-block-button__link:hover`, which
  * would otherwise repaint a disabled button on hover from equal weight.
  */
+
 .wp-block-button > .wp-block-button__link.wp-element-button:disabled,
 .wp-block-button.is-style-outline > .wp-block-button__link.wp-element-button:disabled {
 	background-color: var(--wp--preset--color--light-grey-2);
@@ -105,9 +106,11 @@ body.error404 .site-content-container h1 {
  * `disabled`. The label stays put: replacing it with a spinner would reflow
  * the row and drop the accessible name mid-action.
  */
+
 /* Second selector only exists to outweigh the parent theme's
    `[class*="wp-block"] .wp-block-button__link { cursor: pointer }`, which
    ties with the first on specificity and wins on source order. */
+
 .wp-element-button[aria-busy="true"],
 .wp-block-button > .wp-block-button__link.wp-element-button[aria-busy="true"] {
 	cursor: progress;
@@ -151,6 +154,7 @@ body.error404 .site-content-container h1 {
 
 /* The nav bar above already carries the group name — this row stays on the
    page background and closes with a hairline instead of a second slab. */
+
 .groups-site-identity {
 	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 }
@@ -165,6 +169,14 @@ body.error404 .site-content-container h1 {
 
 .groups-site-home-layout {
 	align-items: flex-start !important;
+}
+
+.groups-site-sidebar-column {
+	order: 2;
+}
+
+.groups-site-main-column-wrapper {
+	order: 1;
 }
 
 .groups-site-sidebar {
@@ -197,6 +209,7 @@ body.error404 .site-content-container h1 {
  * serif; a 36px serif in a 26%-wide rail would outrank the section it
  * labels. Sponsors is listed because it renders in both places.
  */
+
 .groups-site-sidebar .wporg-sponsors__heading,
 .groups-site-event-sidebar .wporg-sponsors__heading,
 .groups-site-sidebar .wporg-group-membership__heading,
@@ -236,74 +249,16 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
-   Front-page content and sidebar
-   ========================================================================== */
-
-.groups-site-home-layout {
-	align-items: flex-start !important;
-}
-
-.groups-site-sidebar-column {
-	order: 2;
-}
-
-.groups-site-main-column-wrapper {
-	order: 1;
-}
-
-.groups-site-sidebar {
-	box-sizing: border-box;
-	width: 100%;
-	padding-left: var(--wp--preset--spacing--40);
-	border-left: 1px solid var(--wp--preset--color--light-grey-1);
-}
-
-.groups-site-sidebar .wporg-event-manage,
-.groups-site-sidebar .wporg-group-settings-block,
-.groups-site-sidebar .wporg-group-membership {
-	width: 100%;
-}
-
-.groups-site-sidebar .wporg-event-manage,
-.groups-site-sidebar .wporg-group-membership {
-	flex-direction: column;
-	align-items: flex-start;
-}
-
-.groups-site-sidebar .wporg-event-manage {
-	gap: 12px;
-}
-
-.groups-site-sidebar .wporg-group-membership__heading,
-.groups-site-sidebar .wporg-group-membership__preference-heading {
-	box-sizing: border-box;
-	width: 100%;
-	padding: 0;
-	margin: 0 !important;
-	font-family: var(--wp--preset--font-family--inter);
-	font-size: var(--wp--preset--font-size--normal);
-	font-weight: 600;
-	line-height: 1.4;
-	color: var(--wp--preset--color--charcoal-1);
-}
-
-.groups-site-sidebar:has(.wporg-event-manage) .groups-site-sidebar-preference {
-	margin-top: var(--wp--preset--spacing--10) !important;
-	padding-top: var(--wp--preset--spacing--20);
-	border-top: 1px solid var(--wp--preset--color--light-grey-1);
-}
-
-.groups-site-main-column {
-	min-width: 0;
-}
-
-/* ==========================================================================
    Query Loop event cards — make the entire card clickable via the
    post-title link and add hover state.
    ========================================================================== */
 
+/* Card is clickable everywhere via the stretched title link below, so it
+   shows a pointer cursor everywhere too. */
+
 .wp-block-post-template .wp-block-group.has-border-color {
 	position: relative;
+	cursor: pointer;
 	transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
@@ -323,12 +278,6 @@ body.error404 .site-content-container h1 {
 
 .wp-block-post-template .wp-block-post-title a {
 	text-decoration: none;
-}
-
-
-/* Make the card show a pointer cursor everywhere. */
-.wp-block-post-template .wp-block-group.has-border-color {
-	cursor: pointer;
 }
 
 .gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color {
@@ -360,6 +309,7 @@ body.error404 .site-content-container h1 {
  * group never chose, and it competes with the real photography in the cards
  * beside it.
  */
+
 .groups-site-featured-placeholder {
 	aspect-ratio: 16 / 9;
 	background: var(--wp--preset--color--blueberry-4);
@@ -414,7 +364,6 @@ body.error404 .site-content-container h1 {
 }
 
 /* ----------  Venue extras (description + access) ---------- */
-
 .wporg-venue-extra {
 	margin-top: 12px;
 	font-size: var(--wp--preset--font-size--small);
@@ -426,7 +375,6 @@ body.error404 .site-content-container h1 {
 }
 
 /* ----------  Event info card  ---------- */
-
 .groups-site-event-info-card {
 	box-shadow: 0 1px 2px rgba(30, 30, 30, 0.04),
 		0 2px 8px rgba(30, 30, 30, 0.04);
@@ -447,6 +395,7 @@ body.error404 .site-content-container h1 {
  * Generous, symmetric room (more than the 20px `blockGap` used *within* a
  * zone) so it reads as a hard boundary rather than another item in the list.
  */
+
 .groups-site-event-info-card > .groups-site-event-zone {
 	margin-top: 32px;
 	border-top: 1px solid var(--wp--preset--color--light-grey-1);
@@ -456,6 +405,7 @@ body.error404 .site-content-container h1 {
 /* GatherPress's wrapper-`<div>` blocks seed their inner blocks in the editor,
    so one rendered from a theme template can arrive as an empty wrapper rather
    than as no element at all. Hiding the zone takes its border with it. */
+
 .groups-site-event-info-card > .groups-site-event-zone:empty {
 	display: none;
 }
@@ -469,6 +419,7 @@ body.error404 .site-content-container h1 {
  * event title and the main-column card headings. The three sizes live on
  * the blocks in single-event.html; only the label's tracking needs CSS.
  */
+
 .groups-site-event-info-card .groups-site-event-label {
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
@@ -483,6 +434,7 @@ body.error404 .site-content-container h1 {
  * One muted tone for all of them, so they don't compete with the blue links
  * beside them.
  */
+
 .groups-site-event-info-card .gatherpress--has-venue-address .wp-block-icon,
 .groups-site-event-info-card .gatherpress--has-venue-phone .wp-block-icon,
 .groups-site-event-info-card .gatherpress--has-venue-website .wp-block-icon,
@@ -494,12 +446,14 @@ body.error404 .site-content-container h1 {
 /* GatherPress renders the address in an <address>, which every browser
    italicises by default — next to the upright phone and website lines it
    read as a pull quote rather than the third fact in the list. */
+
 .groups-site-event-info-card .gatherpress-venue-detail__address {
 	font-style: normal;
 }
 
 /* A wrapping address puts the pin halfway down the block if it stays
    centred, so anchor it to the first line instead. */
+
 .groups-site-event-info-card .gatherpress--has-venue-address {
 	align-items: flex-start;
 }
@@ -512,6 +466,7 @@ body.error404 .site-content-container h1 {
    block markup splits them across two groups, which lets the wrap push
    phone flush under the address and leave the website adrift below —
    force one rhythm over the three regardless of how they break. */
+
 .groups-site-event-info-card .groups-site-venue-contact {
 	flex-direction: column;
 	align-items: flex-start;
@@ -685,6 +640,7 @@ body.error404 .site-content-container h1 {
 
 /* An About page is prose, not a layout — hold it to a comfortable measure
    rather than letting it run the full 860px of the main column. */
+
 .groups-site-about p {
 	max-width: 68ch;
 	text-wrap: pretty;
@@ -692,6 +648,7 @@ body.error404 .site-content-container h1 {
 
 /* Organizer-only affordance. Deliberately quiet: it's a maintenance link on
    someone else's reading experience, not a call to action. */
+
 .wporg-page-content__edit {
 	margin: var(--wp--preset--spacing--20) 0 0;
 	font-size: var(--wp--preset--font-size--small);
@@ -713,6 +670,7 @@ body.error404 .site-content-container h1 {
  * one indicator that did pass. The global `:focus-visible` outline now
  * does that job; this just confirms the field is the active one.
  */
+
 .wp-block-search__input:focus {
 	border-color: var(--wp--preset--color--blueberry-1) !important;
 }
@@ -748,6 +706,7 @@ body.error404 .site-content-container h1 {
    radius of its own — only the `is-style-rounded` variation adds one, and
    that isn't registered here — so the comment avatars were the one square
    set among the RSVP, speaker, and member stacks. */
+
 .wp-block-avatar img {
 	border-radius: 9999px;
 }
@@ -763,6 +722,7 @@ body.error404 .site-content-container h1 {
 
 /* Suppress the auto "Leave a Reply" heading and any logged-in-as boilerplate
    that core might re-inject despite our comment_form_defaults filter. */
+
 .wp-block-post-comments-form .comment-reply-title,
 .wp-block-post-comments-form #reply-title,
 .wp-block-post-comments-form .logged-in-as,
@@ -823,6 +783,7 @@ body.error404 .site-content-container h1 {
 /* Hide the author/email/url fields that core injects for guests — keep the
    composer minimal. Logged-out users still see the "you must be logged in"
    notice from core in place of the textarea. */
+
 .wp-block-post-comments-form .comment-form-author,
 .wp-block-post-comments-form .comment-form-email,
 .wp-block-post-comments-form .comment-form-url,
@@ -839,6 +800,7 @@ body.error404 .site-content-container h1 {
 /* Compact size — see the note in the Buttons section. The composer is a
    16px textarea in a 16px-padded well; a 32px-padded submit under it would
    outweigh the thing it submits. */
+
 .wp-block-post-comments-form .form-submit .submit {
 	padding: 10px 20px;
 	background: var(--wp--preset--color--blueberry-1);
@@ -996,6 +958,7 @@ body.error404 .site-content-container h1 {
 	*::after {
 		transition-duration: 0.01ms !important;
 		animation-duration: 0.01ms !important;
+
 		/* Without this, a looping animation doesn't stop — it just loops
 		   0.01ms at a time, which is worse than the motion it replaced. */
 		animation-iteration-count: 1 !important;

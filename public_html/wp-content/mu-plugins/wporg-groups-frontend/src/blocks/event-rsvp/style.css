@@ -5,10 +5,10 @@
  */
 
 /* === Summary (avatar stack + count) ===
-   The button under the RSVP button that opens the attendee modal. `inline-flex`
-   keeps the avatars and the "N attending" label on a single row, and shrinks the
-   button to the width of that row instead of the full column, so the clickable
-   area matches the visible content. */
+   The button under the RSVP button that opens the attendee modal.
+   `inline-flex` keeps the avatars and the "N attending" label on a single
+   row, and shrinks the button to the width of that row instead of the full
+   column, so the clickable area matches the visible content. */
 .wporg-event-rsvp__summary {
 	display: inline-flex;
 	align-items: center;
@@ -374,6 +374,7 @@
 /* === Responsive === */
 
 @media (max-width: 600px) {
+
 	.wporg-event-rsvp__modal {
 		padding: 0;
 	}

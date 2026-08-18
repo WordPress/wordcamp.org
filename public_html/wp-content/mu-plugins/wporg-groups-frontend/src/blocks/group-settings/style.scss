@@ -503,6 +503,16 @@
 	}
 }
 
+// === Export tab ===
+
+.wporg-export-tab {
+	&__buttons {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+	}
+}
+
 /* === Registration questions ===
    The editor component is shared with the event-manage modal, so these mirror
    the rules in `event-manage/style.css` — the two blocks load separate

@@ -40,6 +40,29 @@ function render( $attributes, $content, $block ) {
 		return '';
 	}
 
+	// The ids come straight from post meta, so check them before dereferencing.
+	// Mirrors WP_REST_Posts_Controller::check_read_permission(): published posts
+	// are readable by everyone, including logged out visitors, who hold no
+	// capabilities at all. The post type check keeps a stray id from printing
+	// unrelated content.
+	$speaker_ids = array_filter(
+		$speaker_ids,
+		function ( $speaker_id ) {
+			$speaker = get_post( $speaker_id );
+
+			if ( ! $speaker instanceof \WP_Post || 'wcb_speaker' !== $speaker->post_type ) {
+				return false;
+			}
+
+			return 'publish' === $speaker->post_status
+				|| current_user_can( 'read_post', $speaker->ID );
+		}
+	);
+
+	if ( empty( $speaker_ids ) ) {
+		return '';
+	}
+
 	$byline  = ! empty( $attributes['byline'] ) ? $attributes['byline'] : false;
 	$classes = array_filter( array(
 		isset( $attributes['textAlign'] ) ? 'has-text-align-' . $attributes['textAlign'] : false,

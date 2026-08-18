@@ -519,15 +519,26 @@ function register_additional_rest_fields() {
 				foreach ( $speaker_ids as $speaker_id ) {
 					$speaker = get_post( $speaker_id );
 
-					// Make sure the speaker post hasn't been deleted.
-					if ( $speaker instanceof WP_Post ) {
-						$speakers[] = array(
-							'id'   => $speaker_id,
-							'slug' => $speaker->post_name,
-							'name' => get_the_title( $speaker_id ),
-							'link' => get_permalink( $speaker_id ),
-						);
+					// Make sure the speaker post hasn't been deleted, and that the
+					// id names a speaker rather than whatever else the meta holds.
+					if ( ! $speaker instanceof WP_Post || 'wcb_speaker' !== $speaker->post_type ) {
+						continue;
 					}
+
+					// This field is served in the anonymous `view` context, and the
+					// controller's own read check covers the session, not the posts
+					// this dereferences. Published posts are readable by everyone,
+					// including logged out callers, who hold no capabilities at all.
+					if ( 'publish' !== $speaker->post_status && ! current_user_can( 'read_post', $speaker->ID ) ) {
+						continue;
+					}
+
+					$speakers[] = array(
+						'id'   => $speaker_id,
+						'slug' => $speaker->post_name,
+						'name' => get_the_title( $speaker_id ),
+						'link' => get_permalink( $speaker_id ),
+					);
 				}
 
 				return $speakers;

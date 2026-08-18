@@ -12,6 +12,14 @@ defined( 'WPINC' ) || die();
 require_once dirname( __DIR__, 2 ) . '/wporg-groups-frontend/tests/class-groups-testcase.php';
 
 /**
+ * Marks the exception thrown in place of the redirect-then-`exit` the
+ * admin-post handlers end with, so their success paths are reachable from a
+ * test. A sentinel message rather than a subclass, because this file may hold
+ * only one class.
+ */
+const REDIRECT_SENTINEL = 'wporg-groups-export-redirected';
+
+/**
  * @group groups
  */
 class Test_Groups_Network_Export extends Groups_TestCase {
@@ -43,6 +51,8 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		}
 
 		$this->group_sites = array();
+
+		unset( $_REQUEST['_wpnonce'], $_POST['_wpnonce'], $_GET['_wpnonce'], $_GET['format'] );
 
 		delete_site_option( Network_Export\JOB_OPTION );
 		delete_site_option( Network_Export\EXPORT_OPTION );
@@ -93,6 +103,83 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		} finally {
 			restore_current_blog();
 		}
+	}
+
+	/**
+	 * Make the current user a network admin of the groups network.
+	 *
+	 * `grant_super_admin()` reads `site_admins` off whichever network is
+	 * current, which in this fixture isn't the groups network, so set the
+	 * option `get_super_admins()` actually consults.
+	 *
+	 * @return array The previous `site_admins` value, for restoring.
+	 */
+	protected function become_network_admin(): array {
+		$original = (array) get_site_option( 'site_admins', array() );
+		$user_id  = self::factory()->user->create();
+
+		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
+		wp_set_current_user( $user_id );
+
+		return $original;
+	}
+
+	/**
+	 * Make the current user an administrator of one group site only.
+	 */
+	protected function become_group_administrator(): void {
+		$user_id = self::factory()->user->create();
+
+		add_user_to_blog( $this->group_sites['brisbane'], $user_id, 'administrator' );
+		wp_set_current_user( $user_id );
+	}
+
+	/**
+	 * Put a valid nonce where `check_admin_referer()` and the download
+	 * validator look for it.
+	 *
+	 * @param string $action Nonce action, or a raw string for an invalid one.
+	 * @param bool   $valid  Whether to mint a real nonce for `$action`.
+	 */
+	protected function set_nonce( string $action, bool $valid = true ): void {
+		$nonce = $valid ? wp_create_nonce( $action ) : 'not-a-nonce';
+
+		$_REQUEST['_wpnonce'] = $nonce;
+		$_POST['_wpnonce']    = $nonce;
+		$_GET['_wpnonce']     = $nonce;
+	}
+
+	/**
+	 * Run a handler whose success path ends in a redirect, and return where it
+	 * tried to send the browser.
+	 *
+	 * @param callable $callback Handler to run.
+	 * @throws \Exception Anything the handler throws other than the redirect
+	 *                    sentinel this method installs.
+	 */
+	protected function catch_redirect( callable $callback ): string {
+		$location = '';
+
+		$catcher = function ( $target ) use ( &$location ) {
+			$location = (string) $target;
+
+			throw new \Exception( esc_html( REDIRECT_SENTINEL ) );
+		};
+
+		add_filter( 'wp_redirect', $catcher );
+
+		try {
+			$callback();
+		} catch ( \Exception $thrown ) {
+			// Anything else is a real failure, not the redirect being caught.
+			if ( REDIRECT_SENTINEL !== $thrown->getMessage() ) {
+				throw $thrown;
+			}
+		} finally {
+			remove_filter( 'wp_redirect', $catcher );
+		}
+
+		return $location;
 	}
 
 	/**
@@ -173,14 +260,29 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
+	 * Parse a CSV body into rows, with the same strict RFC 4180 rules it was
+	 * written under. The BOM is asserted by its own test, not stripped here.
+	 *
+	 * @param string $csv File body.
+	 */
+	protected function parse_csv( string $csv ): array {
+		$csv   = preg_replace( '/^\xEF\xBB\xBF/', '', $csv );
+		$lines = array_values( array_filter( explode( "\n", trim( $csv ) ), 'strlen' ) );
+
+		return array_map(
+			static function ( $line ) {
+				return str_getcsv( $line, ',', '"', '' );
+			},
+			$lines
+		);
+	}
+
+	/**
 	 * Group organisers — even administrators of their own group — can't
 	 * export the whole network.
 	 */
 	public function test_group_administrators_cannot_export() {
-		$user_id = self::factory()->user->create();
-		add_user_to_blog( $this->group_sites['brisbane'], $user_id, 'administrator' );
-
-		wp_set_current_user( $user_id );
+		$this->become_group_administrator();
 
 		$this->assertFalse( Network_Export\current_user_can_export() );
 	}
@@ -189,15 +291,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	 * Network admins (Program Managers) can.
 	 */
 	public function test_network_admins_can_export() {
-		$user_id = self::factory()->user->create();
-
-		// `grant_super_admin()` reads `site_admins` off whichever network is
-		// current, which in this fixture isn't the groups network. Set the
-		// option `get_super_admins()` actually consults instead.
-		$original = get_site_option( 'site_admins' );
-
-		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
-		wp_set_current_user( $user_id );
+		$original = $this->become_network_admin();
 
 		$this->assertTrue( Network_Export\current_user_can_export() );
 
@@ -209,9 +303,8 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	 * gate must live in the handler, not only in the menu registration.
 	 */
 	public function test_start_handler_rejects_group_administrators() {
-		$user_id = self::factory()->user->create();
-		add_user_to_blog( $this->group_sites['brisbane'], $user_id, 'administrator' );
-		wp_set_current_user( $user_id );
+		$this->become_group_administrator();
+		$this->set_nonce( Network_Export\FORM_ACTION );
 
 		$this->expectException( 'WPDieException' );
 		$this->expectExceptionMessage( 'permission' );
@@ -220,12 +313,24 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
-	 * The download handler rejects non-network-admins the same way.
+	 * The cancel handler rejects them too.
+	 */
+	public function test_cancel_handler_rejects_group_administrators() {
+		$this->become_group_administrator();
+		$this->set_nonce( Network_Export\CANCEL_ACTION );
+
+		$this->expectException( 'WPDieException' );
+		$this->expectExceptionMessage( 'permission' );
+
+		Network_Export\handle_cancel_export();
+	}
+
+	/**
+	 * The download handler rejects them with a 403 rather than serving a file.
 	 */
 	public function test_download_handler_rejects_group_administrators() {
-		$user_id = self::factory()->user->create();
-		add_user_to_blog( $this->group_sites['brisbane'], $user_id, 'administrator' );
-		wp_set_current_user( $user_id );
+		$this->become_group_administrator();
+		$this->set_nonce( Network_Export\DOWNLOAD_ACTION );
 
 		$this->expectException( 'WPDieException' );
 		$this->expectExceptionMessage( 'permission' );
@@ -234,30 +339,143 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
-	 * Even a network admin can't start or download without a valid nonce.
+	 * A network admin still can't start an export without a valid nonce.
 	 */
-	public function test_handlers_require_a_valid_nonce() {
-		$user_id  = self::factory()->user->create();
-		$original = get_site_option( 'site_admins' );
-
-		update_site_option( 'site_admins', array( get_userdata( $user_id )->user_login ) );
-		wp_set_current_user( $user_id );
+	public function test_start_handler_requires_a_valid_nonce() {
+		$original = $this->become_network_admin();
+		$this->set_nonce( Network_Export\FORM_ACTION, false );
 
 		try {
-			$died = 0;
+			$this->expectException( 'WPDieException' );
 
-			foreach ( array( 'handle_start_export', 'handle_download' ) as $handler ) {
-				try {
-					call_user_func( "WordCamp\Groups\Network_Export\\{$handler}" );
-				} catch ( \WPDieException $e ) {
-					++$died;
-				}
-			}
-
-			$this->assertSame( 2, $died, 'Both handlers must die on a missing nonce.' );
+			Network_Export\handle_start_export();
 		} finally {
 			update_site_option( 'site_admins', $original );
 		}
+	}
+
+	/**
+	 * The download gate checks a nonce minted for its own action — not any
+	 * other action's, which would 403 every real download link.
+	 */
+	public function test_download_validation_checks_the_download_nonce() {
+		$original = $this->become_network_admin();
+
+		try {
+			$this->set_nonce( Network_Export\DOWNLOAD_ACTION, false );
+			$invalid = Network_Export\validate_download_request();
+			$this->assertWPError( $invalid );
+			$this->assertSame( 'export_bad_nonce', $invalid->get_error_code() );
+
+			// A nonce for the *start* action must not unlock a download.
+			$this->set_nonce( Network_Export\FORM_ACTION );
+			$wrong_action = Network_Export\validate_download_request();
+			$this->assertWPError( $wrong_action );
+			$this->assertSame( 'export_bad_nonce', $wrong_action->get_error_code() );
+
+			// The nonce the summary screen actually mints does.
+			$this->set_nonce( Network_Export\DOWNLOAD_ACTION );
+			$this->assertSame( 'csv', Network_Export\validate_download_request() );
+		} finally {
+			update_site_option( 'site_admins', $original );
+		}
+	}
+
+	/**
+	 * The format parameter is allow-listed, not passed through.
+	 */
+	public function test_download_validation_resolves_format() {
+		$original = $this->become_network_admin();
+		$this->set_nonce( Network_Export\DOWNLOAD_ACTION );
+
+		try {
+			$_GET['format'] = 'json';
+			$this->assertSame( 'json', Network_Export\validate_download_request() );
+
+			$_GET['format'] = 'xml';
+			$this->assertSame( 'csv', Network_Export\validate_download_request(), 'An unknown format must fall back to CSV.' );
+		} finally {
+			update_site_option( 'site_admins', $original );
+		}
+	}
+
+	/**
+	 * The happy path: a nonce'd submission from a network admin queues a job
+	 * and redirects back with the "queued" notice.
+	 */
+	public function test_start_handler_queues_an_export() {
+		$original = $this->become_network_admin();
+		$this->set_nonce( Network_Export\FORM_ACTION );
+
+		try {
+			$location = $this->catch_redirect( 'WordCamp\Groups\Network_Export\handle_start_export' );
+
+			$this->assertStringContainsString( 'notice=queued', $location );
+			$this->assertNotEmpty( Network_Export\get_job() );
+		} finally {
+			update_site_option( 'site_admins', $original );
+		}
+	}
+
+	/**
+	 * Cancelling clears the run and unblocks a fresh start, without touching
+	 * the last completed export.
+	 */
+	public function test_cancel_handler_clears_the_running_job() {
+		$original = $this->become_network_admin();
+		$this->set_nonce( Network_Export\CANCEL_ACTION );
+
+		try {
+			update_site_option(
+				Network_Export\EXPORT_OPTION,
+				array(
+					'rows'          => array(),
+					'generated_gmt' => '2026-01-01 00:00:00',
+				)
+			);
+			Network_Export\queue_export( array_values( $this->group_sites ) );
+
+			$location = $this->catch_redirect( 'WordCamp\Groups\Network_Export\handle_cancel_export' );
+
+			$this->assertStringContainsString( 'notice=cancelled', $location );
+			$this->assertSame( array(), Network_Export\get_job() );
+			$this->assertFalse( wp_next_scheduled( Network_Export\CRON_HOOK ) );
+			$this->assertIsArray( get_site_option( Network_Export\EXPORT_OPTION ), 'The previous export must survive a cancel.' );
+		} finally {
+			update_site_option( 'site_admins', $original );
+		}
+	}
+
+	/**
+	 * Starting a run leaves the previous export downloadable, so a failed run
+	 * can't destroy the last good file.
+	 */
+	public function test_starting_a_run_keeps_the_previous_artifact() {
+		update_site_option(
+			Network_Export\EXPORT_OPTION,
+			array(
+				'rows'          => array(),
+				'generated_gmt' => '2026-01-01 00:00:00',
+			)
+		);
+
+		Network_Export\queue_export( array_values( $this->group_sites ) );
+
+		$this->assertIsArray( get_site_option( Network_Export\EXPORT_OPTION ) );
+	}
+
+	/**
+	 * Only one export can be in flight; a second start is refused and does
+	 * not disturb the running job.
+	 */
+	public function test_second_start_is_refused_while_running() {
+		$first = Network_Export\queue_export( array_values( $this->group_sites ) );
+		$this->assertNotSame( '', $first );
+
+		$job_before = Network_Export\get_job();
+
+		$this->assertSame( '', Network_Export\queue_export( array_values( $this->group_sites ) ) );
+		$this->assertSame( $job_before, Network_Export\get_job(), 'The in-flight job must be untouched.' );
 	}
 
 	/**
@@ -265,15 +483,12 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	 * not double-process it, and a new start must still see it as busy.
 	 */
 	public function test_batch_claim_blocks_concurrent_runs() {
-		$job = array(
-			'id'            => 'leased-job',
-			'sites'         => array_values( $this->group_sites ),
-			'pending_sites' => array_values( $this->group_sites ),
-			'rows'          => array(),
-			'failed_sites'  => array(),
-			'author'        => 0,
-			'created'       => time(),
-			'claimed_until' => time() + 100,
+		$job = $this->build_job(
+			array(
+				'id'            => 'leased-job',
+				'claimed_until' => time() + 100,
+				'claim_token'   => 'held-by-another-run',
+			)
 		);
 		update_site_option( Network_Export\JOB_OPTION, $job );
 
@@ -290,15 +505,14 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	public function test_expired_claim_is_resumed() {
 		update_site_option(
 			Network_Export\JOB_OPTION,
-			array(
-				'id'            => 'abandoned-job',
-				'sites'         => array( $this->group_sites['brisbane'] ),
-				'pending_sites' => array( $this->group_sites['brisbane'] ),
-				'rows'          => array(),
-				'failed_sites'  => array(),
-				'author'        => 0,
-				'created'       => time(),
-				'claimed_until' => time() - 10,
+			$this->build_job(
+				array(
+					'id'            => 'abandoned-job',
+					'sites'         => array( $this->group_sites['brisbane'] ),
+					'pending_sites' => array( $this->group_sites['brisbane'] ),
+					'claimed_until' => time() - 10,
+					'claim_token'   => 'stale-token',
+				)
 			)
 		);
 
@@ -309,17 +523,137 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
-	 * Only one export can be in flight; a second start is refused and does
-	 * not disturb the running job.
+	 * A batch that overran its lease must not commit its stale cursor over
+	 * the progress of the run that took the job over — the job ID is shared
+	 * by every batch, so only the per-claim token can tell them apart.
 	 */
-	public function test_second_start_is_refused_while_running() {
-		$first = Network_Export\queue_export( array_values( $this->group_sites ) );
-		$this->assertNotSame( '', $first );
+	public function test_overrunning_batch_cannot_commit_over_a_newer_claim() {
+		$sites = array_values( $this->group_sites );
 
-		$job_before = Network_Export\get_job();
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			$this->build_job(
+				array(
+					'id'            => 'shared-id',
+					'sites'         => $sites,
+					'pending_sites' => $sites,
+					'claim_token'   => 'run-b',
+					'claimed_until' => time() + 100,
+				)
+			)
+		);
 
-		$this->assertSame( '', Network_Export\queue_export( array_values( $this->group_sites ) ) );
-		$this->assertSame( $job_before, Network_Export\get_job(), 'The in-flight job must be untouched.' );
+		// Run A: same job ID, its own (now superseded) claim token, and a
+		// cursor from before run B took over.
+		$stale_job = $this->build_job(
+			array(
+				'id'            => 'shared-id',
+				'sites'         => $sites,
+				'pending_sites' => array(),
+				'rows'          => array( array( 'event_title' => 'stale' ) ),
+				'claim_token'   => 'run-a',
+			)
+		);
+
+		$committed = Network_Export\commit_job( $stale_job, true );
+
+		$this->assertFalse( $committed, 'A stale claim must not commit.' );
+		$this->assertSame( 'run-b', Network_Export\get_job()['claim_token'], "Run B's lease must be intact." );
+		$this->assertSame( $sites, Network_Export\get_job()['pending_sites'], 'The cursor must not rewind.' );
+		$this->assertFalse( get_site_option( Network_Export\EXPORT_OPTION ), 'No artifact may be published by a stale claim.' );
+	}
+
+	/**
+	 * If the artifact can't be stored, the job stays put for another attempt
+	 * instead of the run's work disappearing.
+	 */
+	public function test_failed_artifact_write_keeps_the_job() {
+		$job = $this->build_job(
+			array(
+				'id'            => 'finishing-job',
+				'pending_sites' => array(),
+				'rows'          => array( array( 'event_title' => 'Kept' ) ),
+				'claim_token'   => 'mine',
+			)
+		);
+		update_site_option( Network_Export\JOB_OPTION, $job );
+
+		$block_write = function ( $value, $old_value ) {
+			unset( $value );
+
+			// Returning the old value makes update_site_option() a no-op, so
+			// it reports failure the way a real write failure would.
+			return $old_value;
+		};
+		add_filter( 'pre_update_site_option_' . Network_Export\EXPORT_OPTION, $block_write, 10, 2 );
+
+		$committed = Network_Export\commit_job( $job, true );
+
+		remove_filter( 'pre_update_site_option_' . Network_Export\EXPORT_OPTION, $block_write, 10 );
+
+		$this->assertFalse( $committed );
+		$this->assertNotEmpty( Network_Export\get_job(), 'The job must survive a failed artifact write.' );
+		$this->assertSame( 'Kept', Network_Export\get_job()['rows'][0]['event_title'] );
+	}
+
+	/**
+	 * A site that keeps killing the process is abandoned after
+	 * `MAX_SITE_ATTEMPTS` claims, so one poisonous group can't stall the
+	 * export forever.
+	 */
+	public function test_repeatedly_claimed_site_is_abandoned() {
+		$brisbane = $this->group_sites['brisbane'];
+		$hobart   = $this->group_sites['hobart'];
+
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			$this->build_job(
+				array(
+					'sites'         => array( $brisbane, $hobart ),
+					'pending_sites' => array( $brisbane, $hobart ),
+					'site_attempts' => array( $brisbane => Network_Export\MAX_SITE_ATTEMPTS ),
+				)
+			)
+		);
+
+		$claim = Network_Export\claim_job();
+
+		$this->assertSame( 'claimed', $claim['status'] );
+		$this->assertSame( array( $hobart ), $claim['job']['pending_sites'], 'The poisonous site must be skipped.' );
+		$this->assertArrayHasKey( $brisbane, $claim['job']['failed_sites'] );
+	}
+
+	/**
+	 * A site deleted or archived between queueing and its batch is reported
+	 * as failed, not silently exported as a group with no events.
+	 */
+	public function test_unavailable_site_is_reported_as_failed() {
+		$archived = $this->group_sites['hobart'];
+		update_blog_status( $archived, 'archived', '1' );
+
+		Network_Export\queue_export( array( $this->group_sites['brisbane'], $archived ) );
+		$this->drain_export();
+
+		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
+
+		$this->assertArrayHasKey( $archived, $artifact['failed_sites'] );
+		$this->assertSame( 1, $artifact['exported_site_count'] );
+		$this->assertSame( 2, $artifact['site_count'] );
+
+		// The gap has to reach whoever reads the file, not just the screen.
+		$json     = json_decode( Network_Export\get_download_payload( 'json' )['body'], true );
+		$expected = array(
+			array(
+				'site_id' => $archived,
+				'name'    => '/group/hobart',
+			),
+		);
+
+		$this->assertSame( $expected, $json['failed_sites'] );
+		$this->assertSame( 1, $json['exported_site_count'] );
+		$this->assertSame( 2, $json['site_count'] );
+
+		update_blog_status( $archived, 'archived', '0' );
 	}
 
 	/**
@@ -345,6 +679,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
 		$this->assertIsArray( $artifact );
 		$this->assertSame( 2, $artifact['site_count'] );
+		$this->assertSame( 2, $artifact['exported_site_count'] );
 		$this->assertSame( 2, $artifact['event_count'] );
 		$this->assertSame( array(), $artifact['failed_sites'] );
 
@@ -362,25 +697,33 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
-	 * A single run processes at most `SITES_PER_BATCH` sites, then
-	 * reschedules; draining finishes the job.
+	 * A run stops at the batch boundary and every batch's rows survive into
+	 * the artifact — a resume that dropped its accumulated rows would leave
+	 * only the last batch's.
 	 */
-	public function test_a_run_processes_at_most_one_batch() {
+	public function test_each_batch_keeps_its_rows() {
+		$brisbane = $this->group_sites['brisbane'];
+		$hobart   = $this->group_sites['hobart'];
+
+		$this->create_site_event( $brisbane, 'Brisbane Meetup' );
+		$this->create_site_event( $hobart, 'Hobart Social' );
+
+		// One entry per unit of work, alternating sites: each entry yields
+		// exactly one event row, so the totals below pin down per-batch
+		// accumulation rather than just "it finished".
+		$total   = Network_Export\SITES_PER_BATCH + 3;
 		$pending = array();
-		for ( $i = 0; $i < Network_Export\SITES_PER_BATCH + 3; $i++ ) {
-			$pending[] = array_values( $this->group_sites )[ $i % 2 ];
+		for ( $i = 0; $i < $total; $i++ ) {
+			$pending[] = 0 === $i % 2 ? $brisbane : $hobart;
 		}
 
 		update_site_option(
 			Network_Export\JOB_OPTION,
-			array(
-				'id'            => 'test-job',
-				'sites'         => $pending,
-				'pending_sites' => $pending,
-				'rows'          => array(),
-				'failed_sites'  => array(),
-				'author'        => 0,
-				'created'       => time(),
+			$this->build_job(
+				array(
+					'sites'         => $pending,
+					'pending_sites' => $pending,
+				)
 			)
 		);
 
@@ -388,12 +731,15 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 
 		$job = Network_Export\get_job();
 		$this->assertCount( 3, $job['pending_sites'], 'One run must stop at the batch boundary.' );
+		$this->assertCount( Network_Export\SITES_PER_BATCH, $job['rows'], "The first batch's rows must be committed." );
 		$this->assertNotFalse( wp_next_scheduled( Network_Export\CRON_HOOK ), 'The remainder must be rescheduled.' );
 
 		$this->drain_export();
 
+		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
 		$this->assertSame( array(), Network_Export\get_job() );
-		$this->assertIsArray( get_site_option( Network_Export\EXPORT_OPTION ) );
+		$this->assertCount( $total, $artifact['rows'], 'Every batch must contribute its rows.' );
+		$this->assertSame( $total, $artifact['event_count'] );
 	}
 
 	/**
@@ -407,6 +753,8 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->create_site_event( $brisbane, 'Brisbane Meetup' );
 
 		$sabotage = function ( $new_blog_id, $prev_blog_id, $context ) use ( $hobart ) {
+			unset( $prev_blog_id );
+
 			if ( 'switch' === $context && (int) $new_blog_id === $hobart ) {
 				throw new \RuntimeException( 'boom' );
 			}
@@ -422,6 +770,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->assertIsArray( $artifact, 'The export must still complete.' );
 		$this->assertArrayHasKey( $hobart, $artifact['failed_sites'] );
 		$this->assertSame( array( 'Brisbane Meetup' ), array_column( $artifact['rows'], 'event_title' ) );
+		$this->assertSame( 1, $artifact['exported_site_count'] );
 	}
 
 	/**
@@ -441,14 +790,9 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$csv = Network_Export\get_download_payload( 'csv' );
 		$this->assertStringStartsWith( 'text/csv', $csv['content_type'] );
 		$this->assertMatchesRegularExpression( '/^groups-network-events-\d{4}-\d{2}-\d{2}\.csv$/', $csv['filename'] );
+		$this->assertStringStartsWith( "\xEF\xBB\xBF", $csv['body'], 'Excel needs the UTF-8 BOM.' );
 
-		$lines = array_filter( explode( "\n", trim( preg_replace( '/^\xEF\xBB\xBF/', '', $csv['body'] ) ) ), 'strlen' );
-		$rows  = array_map(
-			static function ( $line ) {
-				return str_getcsv( $line, ',', '"', '' );
-			},
-			array_values( $lines )
-		);
+		$rows = $this->parse_csv( $csv['body'] );
 		$this->assertSame( Network_Export\CSV_COLUMNS, $rows[0] );
 		$this->assertCount( 2, $rows );
 		$this->assertSame( 'Brisbane Meetup', $rows[1][3] );
@@ -458,8 +802,101 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->assertStringStartsWith( 'application/json', $json['content_type'] );
 		$data = json_decode( $json['body'], true );
 		$this->assertSame( 1, $data['event_count'] );
+		$this->assertSame( 1, $data['exported_site_count'] );
 		$this->assertSame( 'Brisbane', $data['groups'][0]['name'] );
 		$this->assertSame( 1, $data['groups'][0]['events'][0]['counts']['attending'] );
+	}
+
+	/**
+	 * The CSV is strict RFC 4180: quotes are doubled, a backslash is data,
+	 * and separators inside a cell survive the round-trip.
+	 */
+	public function test_csv_quoting_round_trips() {
+		$row = $this->build_row(
+			array(
+				'group_name'  => 'Group, Inc. "HQ"',
+				// A backslash immediately before a quote: under PHP's default
+				// escape character this field would not be quoted correctly
+				// and the record would gain a column.
+				'event_title' => 'Bad\\", Name',
+				'venue'       => "Line\nbreak",
+			)
+		);
+
+		$body = Network_Export\build_network_csv( array( $row ) );
+		$this->assertStringStartsWith( "\xEF\xBB\xBF", $body );
+
+		// Read it back with fgetcsv, which handles the newline inside the
+		// venue cell as part of one record — the way a real reader does.
+		$records = $this->read_csv_records( $body );
+
+		$this->assertCount( 2, $records );
+		$this->assertSame( Network_Export\CSV_COLUMNS, $records[0] );
+
+		$record = $records[1];
+		$this->assertCount( count( Network_Export\CSV_COLUMNS ), $record );
+		$this->assertSame( 'Group, Inc. "HQ"', $record[0] );
+		$this->assertSame( 'Bad\\", Name', $record[3] );
+		$this->assertSame( "Line\nbreak", $record[6] );
+	}
+
+	/**
+	 * Spreadsheet formula triggers are neutralised in every string column the
+	 * export writes, not only in event titles.
+	 */
+	public function test_csv_cells_are_formula_escaped() {
+		$row = $this->build_row(
+			array(
+				'group_name'  => '=cmd|"/c calc"!A1',
+				'event_title' => '@SUM(A1)',
+				'venue'       => '+1 Main Street',
+			)
+		);
+
+		$rows = $this->parse_csv( Network_Export\build_network_csv( array( $row ) ) );
+
+		$this->assertSame( "'=cmd|\"/c calc\"!A1", $rows[1][0], 'group_name must be escaped.' );
+		$this->assertSame( "'@SUM(A1)", $rows[1][3], 'event_title must be escaped.' );
+		$this->assertSame( "'+1 Main Street", $rows[1][6], 'venue must be escaped.' );
+	}
+
+	/**
+	 * Data that can't be JSON-encoded fails the download loudly instead of
+	 * serving a zero-byte file with a 200, and the CSV still works.
+	 */
+	public function test_unencodable_json_fails_loudly() {
+		$artifact = array(
+			'generated_gmt'       => '2026-01-02 03:04:05',
+			'author'              => 0,
+			'site_count'          => 1,
+			'exported_site_count' => 1,
+			'event_count'         => 1,
+			'failed_sites'        => array(),
+
+			/*
+			 * A value `json_encode()` refuses outright. Invalid UTF-8 would
+			 * not do: `wp_json_encode()` strips that rather than failing. This
+			 * stands in for any encode failure — what's under test is that the
+			 * failure becomes an error instead of a zero-byte 200.
+			 */
+			'rows'                => array( $this->build_row( array( 'attending_count' => INF ) ) ),
+		);
+
+		$inject = function () use ( $artifact ) {
+			return $artifact;
+		};
+		add_filter( 'pre_site_option_' . Network_Export\EXPORT_OPTION, $inject );
+
+		try {
+			$json = Network_Export\get_download_payload( 'json' );
+			$this->assertWPError( $json );
+			$this->assertSame( 'export_encode_failed', $json->get_error_code() );
+
+			$csv = Network_Export\get_download_payload( 'csv' );
+			$this->assertIsArray( $csv, 'The CSV download must still work.' );
+		} finally {
+			remove_filter( 'pre_site_option_' . Network_Export\EXPORT_OPTION, $inject );
+		}
 	}
 
 	/**
@@ -493,7 +930,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->drain_export();
 
 		$haystacks = array(
-			'artifact' => serialize( get_site_option( Network_Export\EXPORT_OPTION ) ), // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Flattening for a substring assertion only.
+			'artifact' => wp_json_encode( get_site_option( Network_Export\EXPORT_OPTION ) ),
 			'csv'      => Network_Export\get_download_payload( 'csv' )['body'],
 			'json'     => Network_Export\get_download_payload( 'json' )['body'],
 		);
@@ -507,18 +944,79 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
-	 * Spreadsheet formula triggers in group data are neutralised in the CSV.
+	 * Read a CSV body back into records with `fgetcsv()`, which handles
+	 * newlines inside quoted cells the way a real reader does.
+	 *
+	 * @param string $csv File body.
 	 */
-	public function test_csv_cells_are_formula_escaped() {
-		$brisbane = $this->group_sites['brisbane'];
-		$this->create_site_event( $brisbane, '=HYPERLINK("https://evil.example")' );
+	protected function read_csv_records( string $csv ): array {
+		$csv = preg_replace( '/^\xEF\xBB\xBF/', '', $csv );
 
-		Network_Export\queue_export( array( $brisbane ) );
-		$this->drain_export();
+		// phpcs:disable WordPress.WP.AlternativeFunctions -- In-memory stream, not a filesystem read.
+		$handle = fopen( 'php://temp', 'r+' );
+		fwrite( $handle, $csv );
+		rewind( $handle );
 
-		$body = Network_Export\get_download_payload( 'csv' )['body'];
+		$records = array();
+		while ( true ) {
+			$record = fgetcsv( $handle, 0, ',', '"', '' );
 
-		$this->assertStringContainsString( "'=HYPERLINK", $body );
-		$this->assertStringNotContainsString( "\n\"=HYPERLINK", $body );
+			if ( false === $record || null === $record ) {
+				break;
+			}
+
+			$records[] = $record;
+		}
+
+		fclose( $handle );
+		// phpcs:enable WordPress.WP.AlternativeFunctions
+
+		return $records;
+	}
+
+	/**
+	 * A job in the shape `process_batch()` expects, with overrides applied.
+	 *
+	 * @param array $overrides Fields to replace.
+	 */
+	protected function build_job( array $overrides = array() ): array {
+		return array_merge(
+			array(
+				'id'            => 'test-job',
+				'sites'         => array_values( $this->group_sites ),
+				'pending_sites' => array_values( $this->group_sites ),
+				'rows'          => array(),
+				'failed_sites'  => array(),
+				'site_attempts' => array(),
+				'author'        => 0,
+				'created'       => time(),
+				'claimed_until' => 0,
+				'claim_token'   => '',
+			),
+			$overrides
+		);
+	}
+
+	/**
+	 * An artifact row, with overrides applied.
+	 *
+	 * @param array $overrides Fields to replace.
+	 */
+	protected function build_row( array $overrides = array() ): array {
+		return array_merge(
+			array(
+				'group_name'          => 'Brisbane',
+				'group_url'           => 'https://events.wordpress.test/group/brisbane',
+				'event_id'            => 1,
+				'event_title'         => 'Brisbane Meetup',
+				'event_start_gmt'     => '2026-02-01 08:00:00',
+				'event_end_gmt'       => '2026-02-01 10:00:00',
+				'venue'               => 'Salty Spaces',
+				'attending_count'     => 1,
+				'waiting_list_count'  => 0,
+				'not_attending_count' => 0,
+			),
+			$overrides
+		);
 	}
 }

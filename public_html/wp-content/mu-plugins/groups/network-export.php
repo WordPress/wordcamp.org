@@ -10,7 +10,10 @@
  * Deliberately aggregate-only: per event, the RSVP counts by status — never
  * attendee names, logins, or emails. A network-wide file travels further than
  * any one group's, so identities stay out of it until there's an explicit
- * consent basis for including them (see the issue's privacy discussion).
+ * consent basis for including them (see the issue's privacy discussion). The
+ * per-site collector below counts RSVPs in SQL rather than reusing the
+ * per-group collector, so attendee rows are never even loaded into this
+ * process.
  *
  * Generation runs on cron, a few sites per batch, rather than in the request:
  * walking every group site's events and RSVPs synchronously would time out as
@@ -41,6 +44,9 @@ const MENU_SLUG = 'wporg-groups-export';
 
 /** `admin_post_` action the start-export form submits to. */
 const FORM_ACTION = 'wporg_groups_start_network_export';
+
+/** `admin_post_` action the cancel button submits to. */
+const CANCEL_ACTION = 'wporg_groups_cancel_network_export';
 
 /** `admin_post_` action the download links point at. */
 const DOWNLOAD_ACTION = 'wporg_groups_download_network_export';
@@ -99,6 +105,14 @@ const SITES_PER_BATCH = 10;
 const CLAIM_LEASE = 5 * MINUTE_IN_SECONDS;
 
 /**
+ * How many times a single site may be claimed before the export gives up on
+ * it. A site whose collection kills the process (an uncatchable fatal, an
+ * OOM) never gets to record itself as failed, so without this the same site
+ * would be re-claimed after every lease expiry, forever.
+ */
+const MAX_SITE_ATTEMPTS = 3;
+
+/**
  * Column order for the CSV download: one flat row per event, aggregate
  * counts only.
  */
@@ -119,6 +133,7 @@ const CSV_COLUMNS = array(
 // at priority 9, and submenus registered before their parent break.
 add_action( 'network_admin_menu', __NAMESPACE__ . '\add_page', 11 );
 add_action( 'admin_post_' . FORM_ACTION, __NAMESPACE__ . '\handle_start_export' );
+add_action( 'admin_post_' . CANCEL_ACTION, __NAMESPACE__ . '\handle_cancel_export' );
 add_action( 'admin_post_' . DOWNLOAD_ACTION, __NAMESPACE__ . '\handle_download' );
 add_action( CRON_HOOK, __NAMESPACE__ . '\process_batch' );
 
@@ -154,6 +169,10 @@ function add_page(): void {
 /**
  * Start an export run, unless one is already in flight.
  *
+ * The previous artifact is deliberately left in place until the new run
+ * finishes and replaces it: an export that fails halfway shouldn't also
+ * destroy the last good file.
+ *
  * @param int[] $site_ids Group sites to export.
  * @return string The job's ID, or an empty string when a run is already in
  *                flight or the job store was locked by a concurrent update.
@@ -165,10 +184,12 @@ function queue_export( array $site_ids ): string {
 		'pending_sites' => array_values( $site_ids ),
 		'rows'          => array(),
 		'failed_sites'  => array(),
+		'site_attempts' => array(),
 		'author'        => get_current_user_id(),
 		'created'       => time(),
-		// Set while a batch is running; see process_batch()'s claim.
+		// Both set while a batch holds the job; see claim_job().
 		'claimed_until' => 0,
+		'claim_token'   => '',
 	);
 
 	$queued = with_job_lock(
@@ -176,10 +197,6 @@ function queue_export( array $site_ids ): string {
 			if ( get_job() ) {
 				return false;
 			}
-
-			// The new run supersedes the previous artifact; leaving it up
-			// while a fresher one generates invites downloading stale data.
-			delete_site_option( EXPORT_OPTION );
 
 			update_site_option( JOB_OPTION, $job );
 
@@ -210,7 +227,9 @@ function queue_export( array $site_ids ): string {
  *                           acquired, for writes where dropping the update
  *                           loses more than a rare clobber would.
  * @return mixed The callback's return value, or null if the lock wasn't
- *               acquired and `$steal` is false.
+ *               acquired and `$steal` is false. Callers that need to tell
+ *               "lock lost" from a legitimate result must return something
+ *               non-null from the callback.
  */
 function with_job_lock( callable $callback, bool $steal = false ) {
 	$acquired = false;
@@ -245,6 +264,21 @@ function get_job(): array {
 }
 
 /**
+ * A short human label for a site, for failure reporting.
+ *
+ * Uses the path rather than the blogname: reading a blogname means switching
+ * into the site, which for a site that just failed to collect could fail
+ * again — outside any restore.
+ *
+ * @param int $site_id Site ID.
+ */
+function site_label( int $site_id ): string {
+	$site = get_site( $site_id );
+
+	return $site ? untrailingslashit( $site->path ) : "site {$site_id}";
+}
+
+/**
  * Schedule the next batch, unless one is already due.
  */
 function schedule_next_batch(): void {
@@ -263,51 +297,118 @@ function schedule_next_batch(): void {
 }
 
 /**
- * Process up to `SITES_PER_BATCH` group sites of the in-flight export.
+ * Take the in-flight job for this run, if it's available to take.
  *
- * The job is claimed by stamping a lease onto `JOB_OPTION` under the lock —
- * not by deleting it, which would make the run invisible to the busy check
- * and let a concurrent start queue a second job for this batch to later
- * clobber. The per-site collection then runs unlocked (holding the lock
- * across several sites' bulk queries would block the start form for that
- * long), and the commit re-checks that the stored job is still this one.
- * If the process dies mid-batch, the lease expires and a later run resumes
- * from the last committed cursor.
+ * Claiming stamps a lease and a per-claim token onto the stored job rather
+ * than removing it: deleting it would make the run invisible to the busy
+ * check, letting a concurrent start queue a second job for this batch to
+ * later clobber. The token is what makes the commit safe — the job ID is the
+ * same for every batch of a run, so an overrunning batch could otherwise
+ * commit its stale cursor over the progress of the batch that replaced it.
+ *
+ * Call inside `with_job_lock()`.
+ *
+ * @return array{status: string, job: array} `status` is one of `claimed`,
+ *         `none` (nothing to do) or `leased` (another run holds it).
  */
-function process_batch(): void {
-	$job = with_job_lock(
-		function () {
-			$job = get_job();
-
-			if ( empty( $job ) ) {
-				return null;
-			}
-
-			if ( ! empty( $job['claimed_until'] ) && $job['claimed_until'] > time() ) {
-				return null; // Another run holds the lease.
-			}
-
-			$job['claimed_until'] = time() + CLAIM_LEASE;
-
-			update_site_option( JOB_OPTION, $job );
-
-			return $job;
-		}
-	);
+function claim_job(): array {
+	$job = get_job();
 
 	if ( empty( $job ) ) {
+		return array(
+			'status' => 'none',
+			'job'    => array(),
+		);
+	}
+
+	if ( ! empty( $job['claimed_until'] ) && $job['claimed_until'] > time() ) {
+		return array(
+			'status' => 'leased',
+			'job'    => array(),
+		);
+	}
+
+	/*
+	 * Count the attempt on the site this run will start with, before doing any
+	 * of the work — this write is the only trace that survives a fatal
+	 * mid-collect. Past the limit the site is recorded as failed and skipped,
+	 * so one poisonous site can't stall the whole export indefinitely.
+	 */
+	if ( ! empty( $job['pending_sites'] ) ) {
+		$head     = (int) $job['pending_sites'][0];
+		$attempts = (int) ( $job['site_attempts'][ $head ] ?? 0 ) + 1;
+
+		$job['site_attempts'][ $head ] = $attempts;
+
+		if ( $attempts > MAX_SITE_ATTEMPTS ) {
+			array_shift( $job['pending_sites'] );
+
+			$job['failed_sites'][ $head ] = site_label( $head );
+
+			Logger\log(
+				'groups_export_site_abandoned',
+				array(
+					'job'      => $job['id'],
+					'site'     => $head,
+					'attempts' => $attempts,
+				)
+			);
+		}
+	}
+
+	$job['claim_token']   = wp_generate_uuid4();
+	$job['claimed_until'] = time() + CLAIM_LEASE;
+
+	update_site_option( JOB_OPTION, $job );
+
+	return array(
+		'status' => 'claimed',
+		'job'    => $job,
+	);
+}
+
+/**
+ * Process up to `SITES_PER_BATCH` group sites of the in-flight export.
+ *
+ * The job is claimed under the lock, the per-site collection runs unlocked
+ * (holding the lock across several sites' queries would block the start form
+ * for that long), and the commit re-checks that the stored job still carries
+ * this run's claim token. If the process dies mid-batch, the lease expires
+ * and a later run resumes from the last committed cursor.
+ */
+function process_batch(): void {
+	$claim = with_job_lock( __NAMESPACE__ . '\claim_job' );
+
+	if ( null === $claim ) {
+		/*
+		 * Lock contention, not "nothing to do" — and the cron event that got
+		 * us here is already consumed, so without rescheduling the export
+		 * would sit idle until someone loaded the screen.
+		 */
+		schedule_next_batch();
+
 		return;
 	}
 
+	if ( 'claimed' !== $claim['status'] ) {
+		if ( 'leased' === $claim['status'] ) {
+			// Another run holds the job; make sure a tick is still queued for
+			// whatever it leaves behind.
+			schedule_next_batch();
+		}
+
+		return;
+	}
+
+	$job       = $claim['job'];
 	$processed = 0;
 	$crashed   = false;
 
 	/*
-	 * The job only exists in memory between the claim above and the commit
-	 * below, so a `Throwable` escaping the loop must not skip the commit —
-	 * the whole run's progress would vanish. Per-site failures are handled
-	 * inside the loop and recorded on the job; this outer guard is only for
-	 * something that couldn't be contained that way.
+	 * Progress made in this loop only exists in memory until the commit below,
+	 * so a `Throwable` escaping it must not skip that commit. Per-site
+	 * failures are handled inside the loop and recorded on the job; this outer
+	 * guard is only for something that couldn't be contained that way.
 	 */
 	try {
 		while ( $processed < SITES_PER_BATCH && ! empty( $job['pending_sites'] ) ) {
@@ -324,12 +425,8 @@ function process_batch(): void {
 			if ( is_wp_error( $rows ) ) {
 				// A failed site is recorded, not silently omitted — a file
 				// that quietly misses a group reads as "that group had no
-				// events". Labelled by path, not blogname: reading the
-				// blogname means switching into the very site that just
-				// failed, which could throw again outside any restore.
-				$site = get_site( $site_id );
-
-				$job['failed_sites'][ $site_id ] = $site ? untrailingslashit( $site->path ) : "site {$site_id}";
+				// events".
+				$job['failed_sites'][ $site_id ] = site_label( $site_id );
 
 				Logger\log(
 					'groups_export_site_failed',
@@ -367,74 +464,162 @@ function process_batch(): void {
 
 	$finished = ! $crashed && empty( $job['pending_sites'] );
 
-	with_job_lock(
+	$committed = with_job_lock(
 		function () use ( $job, $finished ) {
-			$current = get_job();
-
-			// Only commit onto our own job. An expired lease means another
-			// run may have taken over (or an admin restarted the export);
-			// their copy of the progress is the durable one, not ours.
-			if ( empty( $current ) || $current['id'] !== $job['id'] ) {
-				return;
-			}
-
-			if ( $finished ) {
-				record_artifact( $job );
-				delete_site_option( JOB_OPTION );
-			} else {
-				$job['claimed_until'] = 0;
-
-				update_site_option( JOB_OPTION, $job );
-			}
+			return commit_job( $job, $finished );
 		},
 		// This batch's progress only exists in memory at this point, so
 		// abandoning the write would redo — or lose — this run's work.
 		true
 	);
 
-	if ( ! $finished ) {
+	if ( ! $finished || ! $committed ) {
 		schedule_next_batch();
 	}
 }
 
 /**
+ * Write a batch's progress back, or store the finished artifact.
+ *
+ * Call inside `with_job_lock()`.
+ *
+ * @param array $job      The claimed job, as this batch left it.
+ * @param bool  $finished Whether the whole export is done.
+ * @return bool Whether the commit was applied.
+ */
+function commit_job( array $job, bool $finished ): bool {
+	$current = get_job();
+
+	/*
+	 * Only commit onto our own claim. A different token means this batch
+	 * overran its lease and another run has taken the job over: their cursor
+	 * is ahead of ours, so writing ours back would rewind the export and
+	 * re-process sites they already committed — and clear the live lease of
+	 * the run that is collecting right now.
+	 */
+	if ( empty( $current ) || ( $current['claim_token'] ?? '' ) !== $job['claim_token'] ) {
+		return false;
+	}
+
+	$job['claimed_until'] = 0;
+	$job['claim_token']   = '';
+
+	if ( ! $finished ) {
+		update_site_option( JOB_OPTION, $job );
+
+		return true;
+	}
+
+	/*
+	 * Clear the job only once the artifact is safely stored: dropping it after
+	 * a failed write would leave the screen looking as if no export had ever
+	 * run, with this run's work gone.
+	 */
+	if ( ! record_artifact( $job ) ) {
+		update_site_option( JOB_OPTION, $job );
+
+		Logger\log( 'groups_export_artifact_write_failed', array( 'job' => $job['id'] ) );
+
+		return false;
+	}
+
+	delete_site_option( JOB_OPTION );
+
+	return true;
+}
+
+/**
  * Collect one group site's events as aggregate export rows.
  *
- * Reuses the per-group collector, which resolves venues, dates, and status
- * counts with all its table lookups re-derived from the switched blog's
- * prefix. The attendee-level data it also returns is dropped here: nothing
- * identifying leaves this function.
+ * Counts RSVPs with one grouped SQL query rather than reusing the per-group
+ * collector: that one loads every RSVP comment, its meta, and a `WP_User` per
+ * attendee to build records this export immediately discards — unbounded work
+ * in an unattended cron process, and it would materialise attendee PII inside
+ * the network-wide run this file exists to keep identities out of.
  *
  * @param int $site_id Group site ID.
- * @return array[]|WP_Error Aggregate rows, or the collector's error.
+ * @return array[]|WP_Error Aggregate rows, or an error describing why this
+ *                          site couldn't be read.
  */
 function collect_site_rows( int $site_id ) {
-	// The switch sits inside the try: it pushes the switched-blog stack
-	// before firing its action, so a Throwable from a `switch_blog` listener
-	// would otherwise leave the process stuck on the wrong blog.
+	$site = get_site( $site_id );
+
+	/*
+	 * `get_group_site_ids()` is evaluated once when the export starts, and
+	 * batches run minutes or hours later. A site deleted or archived in
+	 * between would point `$wpdb` at dropped tables and quietly collect zero
+	 * events, which reads exactly like a group that held none.
+	 */
+	if ( ! $site || $site->deleted || $site->archived || $site->spam ) {
+		return new WP_Error( 'export_site_unavailable', 'The site is no longer available for export.' );
+	}
+
+	if ( ! class_exists( '\GatherPress\Core\Event\Event' ) ) {
+		return new WP_Error( 'export_gatherpress_missing', 'GatherPress is not loaded.' );
+	}
+
+	// The switch sits inside the try: it pushes the switched-blog stack before
+	// firing its action, so a Throwable from a `switch_blog` listener would
+	// otherwise leave the process stuck on the wrong blog.
 	try {
 		switch_to_blog( $site_id );
 
-		$data = \WordCamp\Groups\Frontend\Export\collect_export_data();
+		$events = get_posts(
+			array(
+				'post_type'              => \GatherPress\Core\Event\Event::POST_TYPE,
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => 'ID',
+				'order'                  => 'ASC',
+				// Only IDs and titles are exported; priming meta and term
+				// caches for every event would be pure overhead here.
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
 
-		if ( is_wp_error( $data ) ) {
-			return $data;
+		if ( empty( $events ) ) {
+			return array();
 		}
+
+		$event_ids = array_map( 'intval', wp_list_pluck( $events, 'ID' ) );
+
+		$dates = \WordCamp\Groups\Frontend\Export\get_event_dates( $event_ids );
+
+		if ( is_wp_error( $dates ) ) {
+			return $dates;
+		}
+
+		$counts = get_rsvp_counts( $event_ids );
+
+		if ( is_wp_error( $counts ) ) {
+			return $counts;
+		}
+
+		$venues     = \WordCamp\Groups\Frontend\Export\get_event_venue_names( $event_ids );
+		$group_name = get_bloginfo( 'name' );
+		$group_url  = home_url();
 
 		$rows = array();
 
-		foreach ( $data['events'] as $event ) {
+		foreach ( $events as $event ) {
+			$event_id     = (int) $event->ID;
+			$event_counts = $counts[ $event_id ] ?? array();
+
 			$rows[] = array(
-				'group_name'          => $data['group']['name'],
-				'group_url'           => $data['group']['url'],
-				'event_id'            => (int) $event['id'],
-				'event_title'         => $event['title'],
-				'event_start_gmt'     => $event['start_gmt'],
-				'event_end_gmt'       => $event['end_gmt'],
-				'venue'               => $event['venue'],
-				'attending_count'     => (int) $event['counts']['attending'],
-				'waiting_list_count'  => (int) $event['counts']['waiting_list'],
-				'not_attending_count' => (int) $event['counts']['not_attending'],
+				'group_name'          => $group_name,
+				'group_url'           => $group_url,
+				'event_id'            => $event_id,
+				// Raw title: texturizing and entity-encoding belong to HTML
+				// output, not to a data export.
+				'event_title'         => $event->post_title,
+				'event_start_gmt'     => $dates[ $event_id ]['start_gmt'] ?? '',
+				'event_end_gmt'       => $dates[ $event_id ]['end_gmt'] ?? '',
+				'venue'               => $venues[ $event_id ] ?? '',
+				'attending_count'     => (int) ( $event_counts['attending'] ?? 0 ),
+				'waiting_list_count'  => (int) ( $event_counts['waiting_list'] ?? 0 ),
+				'not_attending_count' => (int) ( $event_counts['not_attending'] ?? 0 ),
 			);
 		}
 
@@ -445,20 +630,84 @@ function collect_site_rows( int $site_id ) {
 }
 
 /**
+ * Count approved RSVPs per event and status on the current site.
+ *
+ * One grouped query over the comment/term join. GatherPress stores an RSVP as
+ * a `gatherpress_rsvp` comment carrying one `_gatherpress_rsvp_status` term,
+ * so counting in SQL needs no comment or user objects at all.
+ *
+ * @param int[] $event_ids Event post IDs.
+ * @return array<int, array<string, int>>|WP_Error Counts keyed by event ID
+ *                                                 then status slug.
+ */
+function get_rsvp_counts( array $event_ids ) {
+	global $wpdb;
+
+	if ( empty( $event_ids ) ) {
+		return array();
+	}
+
+	$placeholders = implode( ', ', array_fill( 0, count( $event_ids ), '%d' ) );
+
+	/*
+	 * Disabled across the whole statement rather than per line: the query is a
+	 * multi-line string, so a single-line ignore wouldn't cover the
+	 * interpolation. Only table names and a locally generated `%d` list are
+	 * interpolated; every value goes through `prepare()`.
+	 */
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+	$rows = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT comments.comment_post_ID AS event_id, terms.slug AS status, COUNT(*) AS total
+			FROM {$wpdb->comments} AS comments
+			INNER JOIN {$wpdb->term_relationships} AS relationships ON relationships.object_id = comments.comment_ID
+			INNER JOIN {$wpdb->term_taxonomy} AS taxonomy ON taxonomy.term_taxonomy_id = relationships.term_taxonomy_id
+			INNER JOIN {$wpdb->terms} AS terms ON terms.term_id = taxonomy.term_id
+			WHERE comments.comment_post_ID IN ( {$placeholders} )
+				AND comments.comment_type = 'gatherpress_rsvp'
+				AND comments.comment_approved = '1'
+				AND taxonomy.taxonomy = '_gatherpress_rsvp_status'
+			GROUP BY comments.comment_post_ID, terms.slug",
+			$event_ids
+		)
+	);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+
+	if ( '' !== $wpdb->last_error ) {
+		return new WP_Error( 'export_rsvp_count_failed', 'Could not count RSVPs for this site.' );
+	}
+
+	$counts = array();
+
+	foreach ( (array) $rows as $row ) {
+		$counts[ (int) $row->event_id ][ $row->status ] = (int) $row->total;
+	}
+
+	return $counts;
+}
+
+/**
  * Store the finished export, so the screen can offer it for download.
  *
  * @param array $job Completed job.
+ * @return bool Whether the artifact was stored.
  */
-function record_artifact( array $job ): void {
-	update_site_option(
+function record_artifact( array $job ): bool {
+	$failed = (array) $job['failed_sites'];
+
+	return update_site_option(
 		EXPORT_OPTION,
 		array(
-			'generated_gmt' => gmdate( 'Y-m-d H:i:s' ),
-			'author'        => (int) $job['author'],
-			'site_count'    => count( $job['sites'] ),
-			'event_count'   => count( $job['rows'] ),
-			'failed_sites'  => $job['failed_sites'],
-			'rows'          => $job['rows'],
+			'generated_gmt'       => gmdate( 'Y-m-d H:i:s' ),
+			'author'              => (int) $job['author'],
+			'site_count'          => count( $job['sites'] ),
+			// The file only covers the sites that were actually read; keeping
+			// the queued total as the headline number would claim coverage the
+			// rows don't have.
+			'exported_site_count' => count( $job['sites'] ) - count( $failed ),
+			'event_count'         => count( $job['rows'] ),
+			'failed_sites'        => $failed,
+			'rows'                => $job['rows'],
 		)
 	);
 }
@@ -491,26 +740,52 @@ function handle_start_export(): void {
 }
 
 /**
+ * Handle the cancel-export form submission.
+ *
+ * The escape hatch for a run that can't finish on its own — a site whose
+ * collection keeps killing the process gets abandoned automatically after
+ * `MAX_SITE_ATTEMPTS`, but an admin shouldn't have to wait for that, or for a
+ * lease, to start a fresh run.
+ */
+function handle_cancel_export(): void {
+	if ( ! current_user_can_export() ) {
+		wp_die( 'You do not have permission to cancel this export.', 403 );
+	}
+
+	check_admin_referer( CANCEL_ACTION );
+
+	$job = get_job();
+
+	with_job_lock(
+		function () {
+			delete_site_option( JOB_OPTION );
+		},
+		true
+	);
+
+	wp_clear_scheduled_hook( CRON_HOOK );
+
+	if ( $job ) {
+		Logger\log( 'groups_export_cancelled', array( 'job' => $job['id'] ) );
+	}
+
+	redirect_with_notice( 'cancelled' );
+}
+
+/**
  * Handle a download request for the last completed export.
  */
 function handle_download(): void {
-	if ( ! current_user_can_export() ) {
-		wp_die( 'You do not have permission to download group data.', 403 );
-	}
+	$format = validate_download_request();
 
-	check_admin_referer( DOWNLOAD_ACTION );
-
-	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified by check_admin_referer() above.
-	$format = sanitize_key( wp_unslash( $_GET['format'] ?? 'csv' ) );
-
-	if ( ! in_array( $format, array( 'csv', 'json' ), true ) ) {
-		$format = 'csv';
+	if ( is_wp_error( $format ) ) {
+		wp_die( esc_html( $format->get_error_message() ), 403 );
 	}
 
 	$payload = get_download_payload( $format );
 
 	if ( is_wp_error( $payload ) ) {
-		redirect_with_notice( 'no-export' );
+		redirect_with_notice( 'no_export' === $payload->get_error_code() ? 'no-export' : 'download-failed' );
 	}
 
 	nocache_headers();
@@ -520,6 +795,32 @@ function handle_download(): void {
 
 	echo $payload['body']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- File body; CSV cells are escaped by esc_csv_cell(), JSON by wp_json_encode().
 	exit;
+}
+
+/**
+ * Check a download request's capability and nonce, and resolve its format.
+ *
+ * Split out of `handle_download()` so the gates are reachable from tests
+ * without the handler's terminal `exit`.
+ *
+ * @return string|WP_Error The requested format, or why the request was refused.
+ */
+function validate_download_request() {
+	if ( ! current_user_can_export() ) {
+		return new WP_Error( 'export_forbidden', 'You do not have permission to download group data.' );
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This *is* the nonce check.
+	$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+
+	if ( ! wp_verify_nonce( $nonce, DOWNLOAD_ACTION ) ) {
+		return new WP_Error( 'export_bad_nonce', 'This download link has expired. Reload the page and try again.' );
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified immediately above.
+	$format = sanitize_key( wp_unslash( $_GET['format'] ?? 'csv' ) );
+
+	return in_array( $format, array( 'csv', 'json' ), true ) ? $format : 'csv';
 }
 
 /**
@@ -542,17 +843,36 @@ function get_download_payload( string $format ) {
 	$filename = sprintf( 'groups-network-events-%s.%s', $date, $format );
 
 	if ( 'json' === $format ) {
+		$body = wp_json_encode( build_network_json( $artifact ) );
+
+		/*
+		 * `wp_json_encode()` returns false for a document it can't encode — it
+		 * repairs invalid UTF-8, but not a non-finite number or nesting past
+		 * its depth limit. Returning `(string) false` would then serve an empty
+		 * file with a 200 and an attachment header: an export that looks
+		 * complete and contains nothing.
+		 */
+		if ( false === $body ) {
+			return new WP_Error( 'export_encode_failed', 'The export could not be encoded as JSON. Try the CSV download.' );
+		}
+
 		return array(
 			'filename'     => $filename,
 			'content_type' => 'application/json; charset=utf-8',
-			'body'         => (string) wp_json_encode( build_network_json( $artifact ) ),
+			'body'         => $body,
 		);
+	}
+
+	$body = build_network_csv( $artifact['rows'] );
+
+	if ( null === $body ) {
+		return new WP_Error( 'export_render_failed', 'The export could not be rendered as CSV.' );
 	}
 
 	return array(
 		'filename'     => $filename,
 		'content_type' => 'text/csv; charset=utf-8',
-		'body'         => build_network_csv( $artifact['rows'] ),
+		'body'         => $body,
 	);
 }
 
@@ -564,10 +884,15 @@ function get_download_payload( string $format ) {
  * escaping on every string cell.
  *
  * @param array[] $rows Aggregate rows.
+ * @return string|null The file body, or null if the stream failed.
  */
-function build_network_csv( array $rows ): string {
+function build_network_csv( array $rows ): ?string {
 	// phpcs:disable WordPress.WP.AlternativeFunctions -- php://temp is an in-memory stream for fputcsv(), not a filesystem write; WP_Filesystem doesn't apply.
 	$handle = fopen( 'php://temp', 'r+' );
+
+	if ( false === $handle ) {
+		return null;
+	}
 
 	fwrite( $handle, "\xEF\xBB\xBF" );
 	fputcsv( $handle, CSV_COLUMNS, ',', '"', '' );
@@ -590,7 +915,8 @@ function build_network_csv( array $rows ): string {
 	fclose( $handle );
 	// phpcs:enable WordPress.WP.AlternativeFunctions
 
-	return $csv;
+	// A `false` here would become an empty file rather than a failed request.
+	return false === $csv ? null : $csv;
 }
 
 /**
@@ -635,11 +961,12 @@ function build_network_json( array $artifact ): array {
 	}
 
 	return array(
-		'generated_gmt' => $artifact['generated_gmt'],
-		'site_count'    => (int) $artifact['site_count'],
-		'event_count'   => (int) $artifact['event_count'],
-		'failed_sites'  => $failed,
-		'groups'        => array_values( $groups ),
+		'generated_gmt'       => $artifact['generated_gmt'],
+		'site_count'          => (int) $artifact['site_count'],
+		'exported_site_count' => (int) ( $artifact['exported_site_count'] ?? $artifact['site_count'] ),
+		'event_count'         => (int) $artifact['event_count'],
+		'failed_sites'        => $failed,
+		'groups'              => array_values( $groups ),
 	);
 }
 
@@ -678,7 +1005,7 @@ function render_notice(): void {
 	$groups = isset( $_GET['groups'] ) ? absint( $_GET['groups'] ) : 0;
 
 	$messages = array(
-		'queued'       => array(
+		'queued'          => array(
 			'success',
 			sprintf(
 				/* translators: %s: number of groups. */
@@ -691,10 +1018,12 @@ function render_notice(): void {
 				number_format_i18n( $groups )
 			),
 		),
-		'busy'         => array( 'error', 'An export is already running. Wait for it to finish before starting another.' ),
-		'no-groups'    => array( 'error', 'There are no group sites to export.' ),
-		'queue-locked' => array( 'error', 'The export could not be started because another update was in progress. Please try again.' ),
-		'no-export'    => array( 'error', 'No completed export is available to download. Start one first.' ),
+		'cancelled'       => array( 'success', 'The running export was cancelled.' ),
+		'busy'            => array( 'error', 'An export is already running. Wait for it to finish, or cancel it, before starting another.' ),
+		'no-groups'       => array( 'error', 'There are no group sites to export.' ),
+		'queue-locked'    => array( 'error', 'The export could not be started because another update was in progress. Please try again.' ),
+		'no-export'       => array( 'error', 'No completed export is available to download. Start one first.' ),
+		'download-failed' => array( 'error', 'The export could not be prepared for download — see the error log.' ),
 	);
 
 	if ( ! isset( $messages[ $notice ] ) ) {
@@ -720,15 +1049,17 @@ function render_summary(): void {
 		return;
 	}
 
-	$author = get_userdata( (int) $artifact['author'] );
-	$failed = (array) ( $artifact['failed_sites'] ?? array() );
+	$author   = get_userdata( (int) $artifact['author'] );
+	$failed   = (array) ( $artifact['failed_sites'] ?? array() );
+	$exported = (int) ( $artifact['exported_site_count'] ?? $artifact['site_count'] );
 
 	printf(
 		'<h2>Last export</h2><p class="description">%s</p>',
 		esc_html(
 			sprintf(
-				'%1$s event(s) across %2$s group(s), generated by %3$s on %4$s (UTC).%5$s',
+				'%1$s event(s) across %2$s of %3$s group(s), generated by %4$s on %5$s (UTC).%6$s',
 				number_format_i18n( (int) $artifact['event_count'] ),
+				number_format_i18n( $exported ),
 				number_format_i18n( (int) $artifact['site_count'] ),
 				$author ? $author->display_name : 'an unknown user',
 				$artifact['generated_gmt'],
@@ -789,6 +1120,13 @@ function render_page(): void {
 				</strong>
 				Reload this page to see progress.
 			</p>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( CANCEL_ACTION ); ?>" />
+				<?php wp_nonce_field( CANCEL_ACTION ); ?>
+				<?php submit_button( 'Cancel export', 'secondary', 'submit', false ); ?>
+				<span class="description">Stops the run so you can start a fresh one. The last completed export stays downloadable.</span>
+			</form>
 			<?php
 			// Self-heal: if the cron event was lost (see schedule_next_batch's
 			// warning path), visiting this page re-arms it.

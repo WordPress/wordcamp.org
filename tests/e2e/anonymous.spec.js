@@ -3,7 +3,7 @@ const { test, expect } = require( '@playwright/test' );
 /**
  * A logged-out visitor should be able to browse the group site normally,
  * and should never see any event/member management UI (that's gated to
- * Organiser/Event Organiser roles — see the group settings + event-manage
+ * Organizer/Event Organizer roles — see the group settings + event-manage
  * block permission checks in the groups-gatherpress-compat-test skill).
  */
 test.describe( 'anonymous visitor', () => {

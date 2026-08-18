@@ -131,7 +131,7 @@ final class Test_GatherPress_Recurring_Events extends WP_UnitTestCase {
 	 * can still persist it afterwards.
 	 *
 	 * The Groups frontend publishes the post and only then saves the rule, so
-	 * without the lift every field the organiser just changed is dropped.
+	 * without the lift every field the organizer just changed is dropped.
 	 */
 	public function test_schedule_unlock_persists_writes_on_a_published_series(): void {
 		$post_id = $this->create_published_recurring_event();

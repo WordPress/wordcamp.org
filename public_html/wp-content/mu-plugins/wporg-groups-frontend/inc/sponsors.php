@@ -136,7 +136,7 @@ function with_store_site( callable $callback ) {
 /**
  * Register the sponsor post type.
  *
- * The admin UI is only exposed on the store site, so a group organiser never
+ * The admin UI is only exposed on the store site, so a group organizer never
  * sees the post type on their own site, and every capability maps to
  * `manage_network` so only network admins can add, edit or delete sponsors
  * even if they somehow reach the screen.

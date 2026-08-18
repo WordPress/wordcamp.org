@@ -39,7 +39,7 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 	}
 
 	/**
-	 * An Organiser (editor) viewing any event, including one they don't
+	 * An Organizer (editor) viewing any event, including one they don't
 	 * own, sees both messaging buttons — editors can edit any event via
 	 * `edit_others_posts`.
 	 */
@@ -58,7 +58,7 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 	}
 
 	/**
-	 * An Event Organiser (author) viewing their own event sees both
+	 * An Event Organizer (author) viewing their own event sees both
 	 * messaging buttons.
 	 */
 	public function test_message_buttons_rendered_for_event_organiser_on_own_event() {
@@ -75,7 +75,7 @@ class Test_Event_Manage_Block extends Groups_TestCase {
 
 	/**
 	 * IDOR check mirroring `test_author_cannot_edit_another_authors_event`
-	 * in test-rest.php: an Event Organiser (author) viewing another
+	 * in test-rest.php: an Event Organizer (author) viewing another
 	 * author's event lacks `edit_post` on it, so `$show_edit` is false and
 	 * neither messaging button — nor any other management UI — should
 	 * render, even though this author otherwise passes

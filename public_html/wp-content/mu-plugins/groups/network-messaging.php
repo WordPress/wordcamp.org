@@ -6,10 +6,10 @@
  * emailing group people, covering two audiences that were previously
  * impossible to reach without hand-assembling address lists:
  *
- * - Every group organiser across the whole Groups network (#1775).
+ * - Every group organizer across the whole Groups network (#1775).
  * - Every member of a hand-picked set of groups (#1776).
  *
- * Both are the same underlying tool: an audience filter (organisers only vs.
+ * Both are the same underlying tool: an audience filter (organizers only vs.
  * all members) crossed with a group filter (all groups vs. selected ones).
  *
  * Delivery runs on cron in small batches rather than in the submit request,
@@ -75,15 +75,15 @@ const LOCK_RETRY_DELAY = 50000;
  */
 const BATCH_SIZE = 50;
 
-/** Audience: editors and administrators only ("Organisers"). */
+/** Audience: editors and administrators only ("Organizers"). */
 const AUDIENCE_ORGANIZERS = 'organizers';
 
 /** Audience: everyone on the site, whatever their role. */
 const AUDIENCE_MEMBERS = 'members';
 
 /**
- * Roles that make someone a group organiser. Mirrors the "Organiser" tier in
- * `Members_Controller::ROLE_LABELS` — authors are "Event Organisers" and are
+ * Roles that make someone a group organizer. Mirrors the "Organizer" tier in
+ * `Members_Controller::ROLE_LABELS` — authors are "Event Organizers" and are
  * deliberately not included, since they only manage their own events.
  */
 const ORGANIZER_ROLES = array( 'administrator', 'editor' );
@@ -334,7 +334,7 @@ function schedule_next_batch(): void {
  *
  * A unit is one recipient taken off the queue or one per-site recipient
  * lookup — not one email sent. Bounding on emails instead would leave a run
- * unbounded whenever the work doesn't produce mail: someone who organises a
+ * unbounded whenever the work doesn't produce mail: someone who organizes a
  * dozen groups is skipped as a duplicate, and a group with no members yields
  * nothing, so a run could walk any number of sites and queries before hitting
  * a send-based limit. Counting the work itself is what keeps a single cron
@@ -702,7 +702,7 @@ function render_page(): void {
 		<?php render_notice(); ?>
 
 		<p>
-			Send an email to group organisers or members across the Groups network.
+			Send an email to group organizers or members across the Groups network.
 			Messages are delivered in the background, in batches.
 		</p>
 
@@ -718,7 +718,7 @@ function render_page(): void {
 							<legend class="screen-reader-text">Who should receive this message?</legend>
 							<label>
 								<input type="radio" name="audience" value="<?php echo esc_attr( AUDIENCE_ORGANIZERS ); ?>" checked="checked" />
-								Organisers only (editors and administrators)
+								Organizers only (editors and administrators)
 							</label>
 							<br />
 							<label>

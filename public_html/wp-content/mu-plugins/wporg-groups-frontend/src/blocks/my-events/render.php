@@ -4,7 +4,7 @@
  *
  * Shows the current logged-in member their upcoming events, meaning both the
  * ones they have RSVP'd to as attending and the ones they authored, which on a
- * group site are the ones they organise. Authorship is unioned into the query
+ * group site are the ones they organize. Authorship is unioned into the query
  * rather than written into the RSVP data, so "attending" keeps meaning that the
  * person said they are coming (#1810).
  *
@@ -45,7 +45,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 	</h2>
 	<?php if ( empty( $wporg_upcoming_events ) ) : ?>
 		<p class="wporg-my-events__empty">
-			<?php esc_html_e( 'Nothing on your calendar yet. Events you RSVP to, and events you organise, will show up here.', 'wporg-groups-frontend' ); ?>
+			<?php esc_html_e( 'Nothing on your calendar yet. Events you RSVP to, and events you organize, will show up here.', 'wporg-groups-frontend' ); ?>
 		</p>
 	<?php else : ?>
 		<div class="wporg-my-events__list">

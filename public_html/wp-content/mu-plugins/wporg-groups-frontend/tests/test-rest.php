@@ -71,7 +71,7 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
-	 * An editor (Organiser) can create and publish an event in one request.
+	 * An editor (Organizer) can create and publish an event in one request.
 	 */
 	public function test_create_event_as_editor() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );

@@ -25,7 +25,7 @@ $users = get_users(
 // `get_the_author_meta( 'description', ... )` call per user below.
 update_meta_cache( 'user', wp_list_pluck( $users, 'ID' ) );
 
-// Sort: organisers first, then event organisers, then members.
+// Sort: organizers first, then event organizers, then members.
 $weights = array(
 	'administrator' => 0,
 	'editor'        => 1,

@@ -13,7 +13,7 @@ require_once dirname( __DIR__ ) . '/wporg-groups-frontend/inc/my-events.php';
 /**
  * Tests for the my-events block's notion of "my events".
  *
- * The block used to answer purely from RSVP data, so an organiser who had
+ * The block used to answer purely from RSVP data, so an organizer who had
  * created events but never clicked RSVP saw an empty block (#1810). These
  * cover both halves of the definition and the boundaries between them:
  * authored events count, attending events count, an event that is both is
@@ -137,7 +137,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The reported case: an organiser who created events and never RSVP'd.
+	 * The reported case: an organizer who created events and never RSVP'd.
 	 */
 	public function test_authored_events_are_included_without_an_rsvp() {
 		$organiser = self::factory()->user->create();
@@ -146,7 +146,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		$this->assertSame(
 			array( $event_id ),
 			get_upcoming_event_ids( $organiser ),
-			'An event the member organises should be listed even with no RSVP.'
+			'An event the member organizes should be listed even with no RSVP.'
 		);
 	}
 
@@ -168,7 +168,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An organiser who also RSVPs to their own event sees it once.
+	 * An organizer who also RSVPs to their own event sees it once.
 	 */
 	public function test_authored_and_attending_event_is_listed_once() {
 		$organiser = self::factory()->user->create();
@@ -179,7 +179,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		$this->assertSame(
 			array( $event_id ),
 			get_upcoming_event_ids( $organiser ),
-			'An event that is both organised and RSVPed should not be duplicated.'
+			'An event that is both organized and RSVPed should not be duplicated.'
 		);
 	}
 
@@ -198,7 +198,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		$this->assertSame(
 			array(),
 			get_upcoming_event_ids( $organiser ),
-			'A finished event the member organised should not be listed.'
+			'A finished event the member organized should not be listed.'
 		);
 		$this->assertSame(
 			array(),
@@ -219,7 +219,7 @@ class Test_Groups_My_Events extends WP_UnitTestCase {
 		$this->assertSame(
 			array(),
 			get_upcoming_event_ids( $stranger ),
-			'A member should not see events they neither organise nor attend.'
+			'A member should not see events they neither organize nor attend.'
 		);
 	}
 

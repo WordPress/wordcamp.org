@@ -506,6 +506,20 @@
 // === Export tab ===
 
 .wporg-export-tab {
+	&__field {
+		max-width: 480px;
+		margin-bottom: 20px;
+	}
+
+	&__dates {
+		display: flex;
+		gap: 16px;
+
+		> div {
+			flex: 1;
+		}
+	}
+
 	&__buttons {
 		display: flex;
 		align-items: center;

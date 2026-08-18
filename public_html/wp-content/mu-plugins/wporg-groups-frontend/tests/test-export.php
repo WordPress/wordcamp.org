@@ -10,6 +10,7 @@ use function WordCamp\Groups\Frontend\Export\build_csv;
 use function WordCamp\Groups\Frontend\Export\collect_export_data;
 use function WordCamp\Groups\Frontend\Export\esc_csv_cell;
 use function WordCamp\Groups\Frontend\Export\export_permissions_check;
+use function WordCamp\Groups\Frontend\Export\filter_json_fields;
 use function WordCamp\Groups\Frontend\REST\create_event;
 
 use const WordCamp\Groups\Frontend\Export\CSV_COLUMNS;
@@ -364,6 +365,148 @@ class Test_Groups_Export extends Groups_TestCase {
 		}
 		$this->assertSame( 'safe', esc_csv_cell( 'safe' ) );
 		$this->assertSame( '', esc_csv_cell( '' ) );
+	}
+
+	/**
+	 * The events filter narrows the export to the selected event IDs.
+	 */
+	public function test_export_filters_by_events() {
+		$kept_id = $this->create_test_event( array( 'title' => 'Kept' ) );
+		$this->create_test_event( array( 'title' => 'Dropped' ) );
+
+		$data = collect_export_data( array( 'events' => array( $kept_id ) ) );
+
+		$this->assertCount( 1, $data['events'] );
+		$this->assertSame( $kept_id, $data['events'][0]['id'] );
+	}
+
+	/**
+	 * Rewrites an event's dates-table row, so tests can build past events —
+	 * the create endpoint itself refuses dates in the past.
+	 */
+	private function backdate_event( int $event_id, string $start_gmt, string $end_gmt ): void {
+		global $wpdb;
+
+		$table = sprintf( \GatherPress\Core\Event\Event::TABLE_FORMAT, $wpdb->prefix );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture writing to GatherPress's custom table.
+		$wpdb->update(
+			$table,
+			array(
+				'datetime_start_gmt' => $start_gmt,
+				'datetime_end_gmt'   => $end_gmt,
+			),
+			array( 'post_id' => $event_id )
+		);
+	}
+
+	/**
+	 * The range filter keeps upcoming, past, or a custom start-date window.
+	 */
+	public function test_export_filters_by_range() {
+		$past_id = $this->create_test_event( array( 'title' => 'Past Event' ) );
+		$this->backdate_event(
+			$past_id,
+			gmdate( 'Y-m-d H:i:s', strtotime( '-2 weeks' ) ),
+			gmdate( 'Y-m-d H:i:s', strtotime( '-2 weeks +2 hours' ) )
+		);
+		$future_id = $this->create_test_event( array( 'title' => 'Future Event' ) ); // +1 week.
+
+		$upcoming = collect_export_data( array( 'range' => 'upcoming' ) );
+		$this->assertSame( array( $future_id ), array_column( $upcoming['events'], 'id' ) );
+
+		$past = collect_export_data( array( 'range' => 'past' ) );
+		$this->assertSame( array( $past_id ), array_column( $past['events'], 'id' ) );
+
+		// A window around the past event only, one day of slack on each side.
+		$custom = collect_export_data(
+			array(
+				'range'  => 'custom',
+				'after'  => gmdate( 'Y-m-d', strtotime( '-2 weeks -1 day' ) ),
+				'before' => gmdate( 'Y-m-d', strtotime( '-2 weeks +1 day' ) ),
+			)
+		);
+		$this->assertSame( array( $past_id ), array_column( $custom['events'], 'id' ) );
+
+		// Open-ended lower bound keeps everything from the past event on.
+		$open = collect_export_data(
+			array(
+				'range' => 'custom',
+				'after' => gmdate( 'Y-m-d', strtotime( '-3 weeks' ) ),
+			)
+		);
+		$this->assertCount( 2, $open['events'] );
+	}
+
+	/**
+	 * A column subset trims the CSV to those columns, in canonical order.
+	 */
+	public function test_export_csv_column_selection() {
+		$event_id = $this->create_test_event( array( 'title' => 'Column Test' ) );
+		$this->create_rsvp(
+			$event_id,
+			self::factory()->user->create( array( 'display_name' => 'Jane Doe' ) ),
+			'attending'
+		);
+
+		$rows = $this->parse_csv_rows(
+			build_csv(
+				collect_export_data(),
+				array( 'event_title', 'attendee_name', 'rsvp_status' )
+			)
+		);
+
+		$this->assertSame( array( 'event_title', 'attendee_name', 'rsvp_status' ), $rows[0] );
+		$this->assertSame( array( 'Column Test', 'Jane Doe', 'attending' ), $rows[1] );
+	}
+
+	/**
+	 * The same column selection trims the JSON export's fields.
+	 */
+	public function test_export_json_field_selection() {
+		$event_id = $this->create_test_event( array( 'title' => 'JSON Fields' ) );
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'attending' );
+
+		$data  = filter_json_fields(
+			collect_export_data(),
+			array( 'event_title', 'attendee_name', 'rsvp_status' )
+		);
+		$event = $data['events'][0];
+
+		$this->assertSame( 'JSON Fields', $event['title'] );
+		$this->assertArrayNotHasKey( 'venue', $event );
+		$this->assertArrayNotHasKey( 'counts', $event );
+		$this->assertArrayNotHasKey( 'occurrences', $event );
+
+		$rsvp = $event['rsvps'][0];
+		$this->assertArrayHasKey( 'attendee_name', $rsvp );
+		$this->assertArrayHasKey( 'anonymous', $rsvp ); // Travels with attendee_name.
+		$this->assertSame( 'attending', $rsvp['status'] );
+		$this->assertArrayNotHasKey( 'timestamp_gmt', $rsvp );
+		$this->assertArrayNotHasKey( 'guests', $rsvp );
+
+		// No RSVP-level columns selected → the rsvps list is dropped.
+		$counts_only = filter_json_fields( collect_export_data(), array( 'attending_count' ) );
+		$this->assertArrayNotHasKey( 'rsvps', $counts_only['events'][0] );
+		$this->assertSame( array( 'attending' => 1 ), $counts_only['events'][0]['counts'] );
+	}
+
+	/**
+	 * Filter params are validated on real dispatches.
+	 */
+	public function test_export_route_validates_filter_params() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = $this->dispatch_export_request( array( 'columns' => array( 'bogus_column' ) ) );
+		$this->assertSame( 400, $response->get_status() );
+
+		$response = $this->dispatch_export_request( array( 'range' => 'someday' ) );
+		$this->assertSame( 400, $response->get_status() );
+
+		$response = $this->dispatch_export_request( array(
+			'range' => 'custom', 'after' => 'not-a-date',
+		) );
+		$this->assertSame( 400, $response->get_status() );
 	}
 
 	/**

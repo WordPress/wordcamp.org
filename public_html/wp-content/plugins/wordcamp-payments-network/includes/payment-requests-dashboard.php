@@ -5,6 +5,7 @@ class Payment_Requests_Dashboard {
 	public static $db_version = 7;
 
 	const AGGREGATE_BATCH_SIZE = 250;
+	const AGGREGATE_CURSOR_OPTION = 'wcp_network_aggregate_cursor';
 
 	/**
 	 * Runs during plugins_loaded, doh.
@@ -18,7 +19,14 @@ class Payment_Requests_Dashboard {
 				wp_schedule_event( time(), 'daily', 'wordcamp_payments_aggregate' );
 			}
 
+			// Resumes a batch chain within the hour if a `wordcamp_payments_aggregate` continuation
+			// ever fails to schedule -- see `watchdog()`.
+			if ( get_current_blog_id() == $current_site->blog_id && ! wp_next_scheduled( 'wordcamp_payments_aggregate_watchdog' ) ) {
+				wp_schedule_event( time(), 'hourly', 'wordcamp_payments_aggregate_watchdog' );
+			}
+
 			add_action( 'wordcamp_payments_aggregate', array( __CLASS__, 'aggregate' ), 10, 1 );
+			add_action( 'wordcamp_payments_aggregate_watchdog', array( __CLASS__, 'watchdog' ) );
 		}
 
 		add_action( 'network_admin_menu', array( __CLASS__, 'network_admin_menu' ) );
@@ -108,6 +116,8 @@ class Payment_Requests_Dashboard {
 			$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name isn't user input, can't be a bound placeholder.
 		}
 
+		$batch_size = apply_filters( 'wordcamp_payments_aggregate_batch_size', self::AGGREGATE_BATCH_SIZE );
+
 		// Keyset pagination on `blog_id` rather than LIMIT/OFFSET on `last_updated`, since `last_updated`
 		// changes constantly as sites get traffic, which would shift rows across the offset boundary
 		// mid-run and cause blogs to be skipped or double-processed.
@@ -118,7 +128,7 @@ class Payment_Requests_Dashboard {
 			ORDER BY blog_id ASC
 			LIMIT %d;",
 			$after_blog_id,
-			self::AGGREGATE_BATCH_SIZE
+			$batch_size
 		) );
 
 		foreach ( $blogs as $blog_id ) {
@@ -142,9 +152,31 @@ class Payment_Requests_Dashboard {
 			restore_current_blog();
 		}
 
-		// More blogs left? Schedule the next batch as a separate request instead of looping further in this one.
-		if ( count( $blogs ) === self::AGGREGATE_BATCH_SIZE ) {
-			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( end( $blogs ) ) );
+		// More blogs left? Schedule the next batch as a separate request instead of looping further in this one,
+		// and persist the cursor so `watchdog()` can resume the chain if that scheduling call is ever lost to
+		// WordPress core's unsynchronized read-modify-write of the shared `cron` option.
+		if ( count( $blogs ) === $batch_size ) {
+			$next_cursor = end( $blogs );
+			update_site_option( self::AGGREGATE_CURSOR_OPTION, $next_cursor );
+			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $next_cursor ) );
+		} else {
+			delete_site_option( self::AGGREGATE_CURSOR_OPTION );
+		}
+	}
+
+	/**
+	 * Resumes an aggregate() batch chain if its next scheduled continuation was lost.
+	 *
+	 * `wp_schedule_single_event()` writes into the same site-wide `cron` option that every other cron
+	 * call on the network writes to, unsynchronized -- so a concurrent scheduling call elsewhere can
+	 * clobber the continuation aggregate() just scheduled for itself. Runs hourly; harmless no-op when
+	 * there's no run in progress or the continuation is already scheduled.
+	 */
+	public static function watchdog() {
+		$cursor = (int) get_site_option( self::AGGREGATE_CURSOR_OPTION, 0 );
+
+		if ( $cursor > 0 && ! wp_next_scheduled( 'wordcamp_payments_aggregate', array( $cursor ) ) ) {
+			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $cursor ) );
 		}
 	}
 

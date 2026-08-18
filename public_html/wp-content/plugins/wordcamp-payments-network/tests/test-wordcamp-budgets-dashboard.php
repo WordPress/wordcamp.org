@@ -87,6 +87,101 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	}
 
 	/**
+	 * @covers Payment_Requests_Dashboard::aggregate
+	 * @covers Payment_Requests_Dashboard::watchdog
+	 */
+	public function test_aggregate_batches_across_multiple_sites(): void {
+		global $wpdb;
+
+		// Force one blog per batch, so two new sites are enough to exercise a multi-batch chain.
+		add_filter( 'wordcamp_payments_aggregate_batch_size', function () {
+			return 1;
+		} );
+
+		$start_blog_id = (int) $wpdb->get_var( "SELECT MAX(blog_id) FROM $wpdb->blogs" );
+		$blog_a        = self::factory()->blog->create();
+		$blog_b        = self::factory()->blog->create();
+
+		foreach ( array( $blog_a, $blog_b ) as $blog_id ) {
+			switch_to_blog( $blog_id );
+			wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+			self::factory()->post->create( array(
+				'post_type'   => 'wcp_payment_request',
+				'post_status' => 'wcb-approved',
+				'meta_input'  => array(
+					'_wcb_updated_timestamp'         => strtotime( 'Yesterday 10am' ),
+					'_camppayments_description'      => 'Batch Test Request',
+					'_camppayments_due_by'           => strtotime( 'Next Tuesday' ),
+					'_camppayments_payment_amount'   => '100',
+					'_camppayments_currency'         => 'USD',
+					'_camppayments_payment_method'   => 'Wire',
+					'_camppayments_invoice_number'   => 'Batch Invoice',
+					'_camppayments_payment_category' => 'audio-visual',
+				),
+			) );
+			restore_current_blog();
+		}
+
+		$table       = Payment_Requests_Dashboard::get_table_name();
+		$rows_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$this->assertGreaterThan( 0, $rows_before, 'The wpSetUpBeforeClass fixture should already have indexed rows.' );
+
+		// Batch 1: starting the cursor at $start_blog_id skips every pre-existing blog, so this batch
+		// should pick up exactly $blog_a and schedule a continuation for it.
+		Payment_Requests_Dashboard::aggregate( $start_blog_id );
+
+		$this->assertNotFalse(
+			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ),
+			'A full batch should schedule a continuation for the next blog_id.'
+		);
+		$this->assertSame( $blog_a, (int) get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
+
+		$rows_after_batch_1 = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$this->assertSame(
+			$rows_before + 1,
+			$rows_after_batch_1,
+			'A mid-chain batch must add rows, not truncate the ones earlier batches already indexed.'
+		);
+
+		// Simulate the batch 1 continuation getting lost to a clobbered `cron` option (the race
+		// `watchdog()` exists to recover from), instead of ever firing.
+		wp_unschedule_event( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ), 'wordcamp_payments_aggregate', array( $blog_a ) );
+		$this->assertFalse( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ), 'Precondition: the continuation is now lost.' );
+
+		Payment_Requests_Dashboard::watchdog();
+
+		$this->assertNotFalse(
+			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ),
+			'watchdog() should resume the chain from the persisted cursor when a continuation goes missing.'
+		);
+
+		// Consume the (re-)scheduled batch 2: picks up $blog_b, and since that still fills the
+		// batch, schedules one more (empty) check before the chain can be considered done.
+		wp_unschedule_event( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ), 'wordcamp_payments_aggregate', array( $blog_a ) );
+		Payment_Requests_Dashboard::aggregate( $blog_a );
+
+		$this->assertNotFalse( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_b ) ) );
+		$this->assertSame( $blog_b, (int) get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
+
+		$rows_after_batch_2 = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$this->assertSame( $rows_after_batch_1 + 1, $rows_after_batch_2, 'Batch 2 should have indexed blog_b, on top of batch 1.' );
+
+		// Batch 3: $blog_b was the last blog in the network, so this finds nothing -- the chain
+		// ends here, with no further continuation and the cursor cleared.
+		wp_unschedule_event( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_b ) ), 'wordcamp_payments_aggregate', array( $blog_b ) );
+		Payment_Requests_Dashboard::aggregate( $blog_b );
+
+		$this->assertFalse( get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
+
+		$rows_after_batch_3 = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table" );
+		$this->assertSame( $rows_after_batch_2, $rows_after_batch_3, 'The empty final batch must not truncate or duplicate prior rows.' );
+
+		// watchdog() must be a no-op once the chain has already completed cleanly.
+		Payment_Requests_Dashboard::watchdog();
+		$this->assertFalse( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_b ) ) );
+	}
+
+	/**
 	 * @covers WordCamp\Budgets_Dashboard\generate_payment_report
 	 * @covers WordCamp\Budgets_Dashboard\_generate_payment_report_jpm_wires
 	 * @covers WCP_Payment_Request::_generate_payment_report_jpm_wires

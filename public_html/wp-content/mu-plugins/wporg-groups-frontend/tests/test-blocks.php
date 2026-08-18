@@ -110,6 +110,29 @@ class Test_Groups_Blocks extends Groups_TestCase {
 	}
 
 	/**
+	 * The RSVP action should precede the attendee summary in the rendered block.
+	 */
+	public function test_event_rsvp_action_precedes_attendee_summary() {
+		$event_id = self::factory()->post->create(
+			array(
+				'post_type'   => 'gatherpress_event',
+				'post_status' => 'publish',
+				'post_title'  => 'RSVP Action Order Event',
+			)
+		);
+
+		$this->go_to( home_url( "?p={$event_id}&post_type=gatherpress_event" ) );
+		$output = do_blocks( '<!-- wp:wporg/event-rsvp /-->' );
+
+		$action_position  = strpos( $output, 'class="wp-block-button__link wp-element-button' );
+		$summary_position = strpos( $output, 'class="wporg-event-rsvp__summary' );
+
+		$this->assertNotFalse( $action_position );
+		$this->assertNotFalse( $summary_position );
+		$this->assertLessThan( $summary_position, $action_position );
+	}
+
+	/**
 	 * RSVP success and failure messages need an always-present live region;
 	 * the modal itself is hidden for the main RSVP-button flow.
 	 */
@@ -161,6 +184,21 @@ class Test_Groups_Blocks extends Groups_TestCase {
 		$this->assertStringContainsString( wcorg_get_country_name_from_code( 'TR' ), $output );
 		$this->assertStringContainsString( '<svg', $output );
 		$this->assertStringContainsString( 'aria-hidden="true"', $output );
+	}
+
+	/**
+	 * A country code that no longer resolves is dropped from the label.
+	 */
+	public function test_group_location_block_omits_unrecognized_country() {
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_type', 'physical' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( get_current_blog_id(), 'wporg_group_location_country', 'ZZ' );
+
+		$output = do_blocks( '<!-- wp:wporg/group-location /-->' );
+
+		$this->assertStringContainsString( 'İstanbul', $output );
+		$this->assertStringNotContainsString( 'İstanbul,', $output );
+		$this->assertStringNotContainsString( 'ZZ', $output );
 	}
 
 	/**
@@ -282,7 +320,7 @@ class Test_Groups_Blocks extends Groups_TestCase {
 
 		$output = do_blocks( '<!-- wp:wporg/group-news /-->' );
 
-		$this->assertStringContainsString( '<h2 class="wporg-group-news__heading">News</h2>', $output );
+		$this->assertStringContainsString( '<h2 class="wporg-section-heading wporg-group-news__heading">News</h2>', $output );
 		$this->assertStringContainsString( 'A group update', $output );
 		$this->assertStringContainsString( 'What the group has been working on.', $output );
 	}

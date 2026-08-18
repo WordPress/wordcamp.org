@@ -14,8 +14,8 @@ test.describe( 'member directory', () => {
 		const grid = page.locator( '.wporg-group-members__grid' );
 		await expect( grid ).toBeVisible();
 
-		await expect( grid.locator( '.wporg-group-members__role--editor' ).first() ).toHaveText( /Organiser/ );
-		await expect( grid.locator( '.wporg-group-members__role--author' ).first() ).toHaveText( /Event Organiser/ );
+		await expect( grid.locator( '.wporg-group-members__role--editor' ).first() ).toHaveText( /Organizer/ );
+		await expect( grid.locator( '.wporg-group-members__role--author' ).first() ).toHaveText( /Event Organizer/ );
 		await expect( grid.locator( '.wporg-group-members__role--subscriber' ).first() ).toHaveText( /Member/ );
 	} );
 

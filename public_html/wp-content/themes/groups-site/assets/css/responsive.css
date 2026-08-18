@@ -4,9 +4,14 @@
  * @package WordCamp\Groups\Site
  */
 
-img,
-video,
-iframe {
+/* Keep authored media inside its column — an oversized image in a group's
+   page content would otherwise force the whole page to scroll sideways on a
+   phone. Scoped to the containers that render authored HTML rather than
+   applied to every `img` on the site: UI chrome (avatars, logos) sets its own
+   dimensions, and a global rule fights those instead of helping them.
+   Editor-inserted images and featured images are already handled by core. */
+:where(.wp-block-post-content, .wp-block-comment-content, .wp-block-wporg-page-content)
+	:where(img, video, iframe) {
 	max-width: 100%;
 	height: auto;
 }
@@ -14,25 +19,22 @@ iframe {
 @media (max-width: 960px) {
 	.groups-site-home-layout {
 		flex-wrap: wrap !important;
+		/* Columns only carry `blockGap.left`, which becomes `column-gap` —
+		   once they wrap there is nothing holding the two apart vertically. */
+		row-gap: var(--wp--preset--spacing--60);
 	}
 
 	.groups-site-home-layout > .wp-block-column {
 		flex-basis: 100% !important;
 	}
 
-	.groups-site-sidebar-column {
-		order: 1;
-	}
-
-	.groups-site-main-column-wrapper {
-		order: 2;
-	}
-
+	/* The sidebar is second in the source, so wrapping puts it *below* the
+	   main column — its divider belongs on the leading edge. */
 	.groups-site-sidebar {
 		padding-left: 0;
-		padding-bottom: var(--wp--preset--spacing--50);
+		padding-top: var(--wp--preset--spacing--40);
 		border-left: 0;
-		border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
+		border-top: 1px solid var(--wp--preset--color--light-grey-1);
 	}
 }
 
@@ -41,19 +43,26 @@ iframe {
    ========================================================================== */
 
 @media (max-width: 781px) {
-
-	/* Single event: collapse two-column layout to stacked. */
-	.groups-site-event-layout {
-		flex-direction: column !important;
+	.wp-block-columns.groups-site-event-layout {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
+		column-gap: 0;
+		row-gap: var(--wp--preset--spacing--20);
 	}
 
-	.groups-site-event-layout .wp-block-column {
-		flex-basis: 100% !important;
+	.groups-site-event-title,
+	.groups-site-event-sidebar,
+	.groups-site-event-content {
+		grid-column: 1;
+		grid-row: auto;
+		max-width: 100%;
 	}
 
-	/* Date header: let text wrap. */
-	.groups-site-event-date-header {
-		gap: 12px !important;
+	.groups-site-event-content {
+		display: flex;
+		flex-direction: column;
+		gap: var(--wp--preset--spacing--20);
+		padding-top: var(--wp--preset--spacing--20);
 	}
 
 	/* Query Loop event cards: single column. */
@@ -87,11 +96,6 @@ iframe {
 		max-width: none !important;
 		max-height: none !important;
 		height: 100% !important;
-	}
-
-	/* Cover block hero: reduce padding. */
-	.wp-block-cover.alignfull {
-		min-height: auto !important;
 	}
 }
 

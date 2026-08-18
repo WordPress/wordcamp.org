@@ -3,7 +3,7 @@ const { test, expect } = require( '@playwright/test' );
 /**
  * A logged-out visitor should be able to browse the group site normally,
  * and should never see any event/member management UI (that's gated to
- * Organiser/Event Organiser roles — see the group settings + event-manage
+ * Organizer/Event Organizer roles — see the group settings + event-manage
  * block permission checks in the groups-gatherpress-compat-test skill).
  */
 test.describe( 'anonymous visitor', () => {
@@ -14,7 +14,7 @@ test.describe( 'anonymous visitor', () => {
 		const sidebar = page.locator( '.groups-site-sidebar' );
 		await expect( sidebar.getByRole( 'button', { name: 'Join this group' } ) ).toBeVisible();
 		await expect( sidebar.locator( '.wporg-group-membership__count' ) ).toHaveText( /\d+ members?/ );
-		await expect( page.locator( '.groups-site-hero .wporg-group-membership' ) ).toHaveCount( 0 );
+		await expect( page.locator( '.groups-site-identity .wporg-group-membership' ) ).toHaveCount( 0 );
 	} );
 
 	test( 'no management UI is rendered on the front page', async ( { page } ) => {

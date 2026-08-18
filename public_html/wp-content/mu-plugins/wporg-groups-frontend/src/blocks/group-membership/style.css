@@ -1,11 +1,16 @@
 /**
  * Group Membership block styles.
+ *
+ * Two variants share this file: the membership block (join button or role
+ * badge, plus the member count) and the notification-preference checkbox.
+ * Both live in the front page's sidebar, so text here is the 14px secondary
+ * size rather than the 16px body size used in the main column.
  */
 
 .wporg-group-membership {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: var(--wp--preset--spacing--10);
 	flex-wrap: wrap;
 }
 
@@ -14,95 +19,116 @@
 	align-items: center;
 	gap: 4px;
 	padding: 6px 14px;
-	font-size: 13px;
+	font-size: var(--wp--preset--font-size--small);
 	font-weight: 600;
-	color: #1a1919;
-	background: #e2ffed;
-	border: 1px solid #33f078;
+	color: var(--wp--preset--color--charcoal-0);
+	background: var(--wp--preset--color--acid-green-3);
+	border: 1px solid var(--wp--preset--color--acid-green-1);
 	border-radius: 100px;
 }
 
 .wporg-group-membership__leave {
 	background: none;
 	border: none;
+	border-radius: 2px;
 	padding: 0;
-	font-size: 12px;
-	color: #656a71;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
 	cursor: pointer;
 	text-decoration: underline;
 }
 
 .wporg-group-membership__leave:hover {
-	color: #d63638;
+	color: #b32d0f;
+}
+
+.wporg-group-membership__leave:disabled {
+	color: var(--wp--preset--color--charcoal-5);
+	cursor: not-allowed;
+	text-decoration: none;
 }
 
 .wporg-group-membership__count {
-	font-size: 13px;
-	color: #656a71;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
 }
 
 .wporg-group-membership__preference {
 	display: flex;
 	flex-basis: 100%;
 	flex-direction: column;
-	gap: 2px;
-	font-size: 13px;
+	gap: 4px;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
 }
 
 .wporg-group-membership__preference label {
 	display: flex;
 	align-items: flex-start;
 	gap: 8px;
-	color: #1a1919;
+	color: var(--wp--preset--color--charcoal-0);
 	cursor: pointer;
 }
 
 .wporg-group-membership__preference input {
 	margin-top: 3px;
+	flex: 0 0 auto;
+}
+
+.wporg-group-membership__preference input:disabled,
+.wporg-group-membership__preference input:disabled + span {
+	cursor: not-allowed;
+	color: var(--wp--preset--color--charcoal-4);
 }
 
 .wporg-group-membership__preference-help {
 	padding-left: 24px;
-	color: #656a71;
+	color: var(--wp--preset--color--charcoal-4);
 }
 
 .wporg-group-membership__preference-status:empty {
 	display: none;
 }
 
+/*
+ * Success and error use the theme's status treatment: a bordered strip in
+ * the palette's green or pomegranate rather than the WP-admin notice
+ * colours this used to borrow. Left-aligned with an icon in the leading
+ * position — centring the text made a one-line "Saved" read as a banner.
+ */
 .wporg-group-membership__preference-status:not(:empty) {
 	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	margin-top: 10px;
-	padding: 12px 16px;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--10);
+	margin-top: var(--wp--preset--spacing--10);
+	padding: 10px 20px;
 	border: 1px solid;
 	border-radius: 2px;
-	font-weight: 600;
-	text-align: center;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
 }
 
 .wporg-group-membership__preference-status.is-success {
-	border-color: #00a32a;
-	background: #edfaef;
-	color: #1a1919;
+	border-color: #007a2f;
+	background: var(--wp--preset--color--acid-green-3);
+	color: var(--wp--preset--color--charcoal-0);
 }
 
 .wporg-group-membership__preference-status.is-success::before {
 	content: "\2713";
-	font-size: 18px;
-	line-height: 1;
+	font-weight: 600;
+	line-height: 1.55;
 }
 
 .wporg-group-membership__preference-status.is-error {
-	border-color: #d63638;
-	background: #fcf0f1;
-	color: #8a2424;
+	border-color: #b32d0f;
+	background: var(--wp--preset--color--pomegranate-3);
+	color: var(--wp--preset--color--charcoal-0);
 }
 
 .wporg-group-membership__preference-status.is-error::before {
 	content: "!";
-	font-size: 18px;
-	line-height: 1;
+	font-weight: 600;
+	line-height: 1.55;
 }

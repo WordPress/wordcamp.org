@@ -3,6 +3,7 @@
  */
 
 @import '../../components/recurrence-controls.css';
+@import '../../components/component-accents.css';
 
 /* === Message members modal === */
 
@@ -186,7 +187,7 @@
 }
 
 .wporg-groups-event-modal__autosave--saving {
-	color: #2271b1;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-groups-event-modal__autosave--saved {
@@ -219,8 +220,8 @@
 }
 
 .wporg-groups-event-modal__editor:focus-within {
-	border-color: #3858e9;
-	box-shadow: 0 0 0 1px #3858e9;
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-groups-event-modal__editor .block-editor-block-list__layout {

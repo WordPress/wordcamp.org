@@ -552,3 +552,84 @@ describe( 'event RSVP custom registration questions', () => {
 		expect( mockContext.questionsError ).toBe( '' );
 	} );
 } );
+
+/**
+ * The browser-side half of the RSVP count line.
+ *
+ * These cases mirror `data_count_labels()` in `tests/test-rsvp-labels.php` —
+ * same counts, same expected wording — because the branching exists twice by
+ * necessity: PHP renders the line, this re-renders it after an RSVP changes
+ * the count without a reload. A change to one set of branches should fail the
+ * other suite.
+ *
+ * The fixture below is what `get_count_formats()` produces for English, and it
+ * carries only the six documented keys, so asking for a key PHP doesn't ship
+ * renders empty and fails the assertion rather than passing quietly.
+ */
+describe( 'event RSVP count label', () => {
+	const countFormats = {
+		countZero: 'Be the first to RSVP',
+		countSingular: '%s going',
+		countPlural: '%s going',
+		countYouFirst: 'First one in',
+		countYouAndOneOther: 'You and %s other',
+		countYouAndOthers: 'You and %s others',
+	};
+
+	beforeEach( () => {
+		mockContext = createContext();
+		mockContext.labels = countFormats;
+		mockElement = null;
+		mockStoreConfig = null;
+	} );
+
+	test.each( [
+		[ 'nobody yet', 0, 'no_status', 'Be the first to RSVP' ],
+		[ 'one other person', 1, 'no_status', '1 going' ],
+		[ 'several other people', 14, 'no_status', '14 going' ],
+		[ 'you, alone', 1, 'attending', 'First one in' ],
+		[ 'you and one other', 2, 'attending', 'You and 1 other' ],
+		[ 'you and several others', 15, 'attending', 'You and 14 others' ],
+		[ 'attending with a zero count', 0, 'attending', 'First one in' ],
+	] )( 'describes %s', ( _name, attendingCount, currentUserStatus, expected ) => {
+		const { state } = loadStore();
+		mockContext.attendingCount = attendingCount;
+		mockContext.currentUserStatus = currentUserStatus;
+
+		expect( state.countLabel ).toBe( expected );
+	} );
+
+	test( 'follows the count as an RSVP changes it', () => {
+		const { state } = loadStore();
+		mockContext.attendingCount = 3;
+		mockContext.currentUserStatus = 'no_status';
+
+		expect( state.countLabel ).toBe( '3 going' );
+
+		mockContext.attendingCount = 4;
+		mockContext.currentUserStatus = 'attending';
+
+		expect( state.countLabel ).toBe( 'You and 3 others' );
+	} );
+
+	test( 'only asks for keys the server ships', () => {
+		const { state } = loadStore();
+		const asked = new Set();
+		mockContext.labels = new Proxy( countFormats, {
+			get( target, key ) {
+				asked.add( key );
+				return target[ key ];
+			},
+		} );
+
+		for ( const count of [ 0, 1, 2, 15 ] ) {
+			for ( const status of [ 'no_status', 'attending' ] ) {
+				mockContext.attendingCount = count;
+				mockContext.currentUserStatus = status;
+				expect( state.countLabel ).not.toBe( '' );
+			}
+		}
+
+		expect( [ ...asked ].sort() ).toEqual( Object.keys( countFormats ).sort() );
+	} );
+} );

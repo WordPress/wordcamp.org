@@ -76,7 +76,7 @@ function register_routes(): void {
 			'callback'            => __NAMESPACE__ . '\get_export',
 			'permission_callback' => __NAMESPACE__ . '\export_permissions_check',
 			'args'                => array(
-				'format' => array(
+				'format'  => array(
 					'type'              => 'string',
 					'required'          => false,
 					'default'           => 'csv',
@@ -84,6 +84,53 @@ function register_routes(): void {
 					'sanitize_callback' => 'sanitize_key',
 					// `enum` isn't enforced unless a validate_callback runs it.
 					'validate_callback' => 'rest_validate_request_arg',
+				),
+				'columns' => array(
+					'type'              => 'array',
+					'required'          => false,
+					'default'           => array(),
+					'items'             => array(
+						'type' => 'string',
+						'enum' => CSV_COLUMNS,
+					),
+					'sanitize_callback' => 'rest_sanitize_request_arg',
+					'validate_callback' => 'rest_validate_request_arg',
+				),
+				'events'  => array(
+					'type'              => 'array',
+					'required'          => false,
+					'default'           => array(),
+					'items'             => array(
+						'type' => 'integer',
+					),
+					'sanitize_callback' => 'rest_sanitize_request_arg',
+					'validate_callback' => 'rest_validate_request_arg',
+				),
+				'range'   => array(
+					'type'              => 'string',
+					'required'          => false,
+					'default'           => 'all',
+					'enum'              => array( 'all', 'upcoming', 'past', 'custom' ),
+					'sanitize_callback' => 'sanitize_key',
+					'validate_callback' => 'rest_validate_request_arg',
+				),
+				'after'   => array(
+					'type'              => 'string',
+					'required'          => false,
+					'default'           => '',
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => static function ( $param ) {
+						return '' === $param || (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $param );
+					},
+				),
+				'before'  => array(
+					'type'              => 'string',
+					'required'          => false,
+					'default'           => '',
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => static function ( $param ) {
+						return '' === $param || (bool) preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $param );
+					},
 				),
 			),
 		)
@@ -124,7 +171,21 @@ function export_permissions_check() {
  * @param WP_REST_Request $request The request.
  */
 function get_export( WP_REST_Request $request ): WP_REST_Response {
-	$data     = collect_export_data();
+	$data = collect_export_data(
+		array(
+			'events' => array_map( 'absint', (array) $request->get_param( 'events' ) ),
+			'range'  => (string) $request->get_param( 'range' ),
+			'after'  => (string) $request->get_param( 'after' ),
+			'before' => (string) $request->get_param( 'before' ),
+		)
+	);
+
+	// An empty selection means "all columns"; a subset is reordered into the
+	// canonical column order so the output is stable regardless of the order
+	// the client sent them in.
+	$columns = (array) $request->get_param( 'columns' );
+	$columns = $columns ? array_values( array_intersect( CSV_COLUMNS, $columns ) ) : CSV_COLUMNS;
+
 	$format   = $request->get_param( 'format' );
 	$filename = sprintf(
 		'%s-events-%s.%s',
@@ -134,13 +195,13 @@ function get_export( WP_REST_Request $request ): WP_REST_Response {
 	);
 
 	if ( 'json' === $format ) {
-		$response = new WP_REST_Response( $data );
+		$response = new WP_REST_Response( filter_json_fields( $data, $columns ) );
 		$response->header( 'Content-Disposition', 'attachment; filename="' . $filename . '"' );
 
 		return $response;
 	}
 
-	$response = new WP_REST_Response( build_csv( $data ) );
+	$response = new WP_REST_Response( build_csv( $data, $columns ) );
 	$response->header( 'Content-Type', 'text/csv; charset=utf-8' );
 	$response->header( 'Content-Disposition', 'attachment; filename="' . $filename . '"' );
 
@@ -181,21 +242,45 @@ function serve_raw_csv( bool $served, $result, $request ): bool {
  * Everything is fetched in a fixed number of bulk queries — one per data
  * source — so the cost doesn't grow per event or per RSVP.
  *
+ * @param array $filters {
+ *     Optional. Narrows which events are exported.
+ *
+ *     @type int[]  $events Event post IDs to export. Empty means all.
+ *     @type string $range  One of 'all', 'upcoming', 'past', 'custom'.
+ *     @type string $after  `Y-m-d`; with range 'custom', keep events starting on/after this day.
+ *     @type string $before `Y-m-d`; with range 'custom', keep events starting on/before this day.
+ * }
+ *
  * @return array{generated_gmt: string, group: array{name: string, url: string}, events: array[]}
  */
-function collect_export_data(): array {
-	$events = get_posts(
-		array(
-			'post_type'      => Event::POST_TYPE,
-			'post_status'    => 'publish',
-			'posts_per_page' => -1,
-			'orderby'        => 'ID',
-			'order'          => 'ASC',
-		)
+function collect_export_data( array $filters = array() ): array {
+	$filters += array(
+		'events' => array(),
+		'range'  => 'all',
+		'after'  => '',
+		'before' => '',
 	);
 
+	$query = array(
+		'post_type'      => Event::POST_TYPE,
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+		'orderby'        => 'ID',
+		'order'          => 'ASC',
+	);
+
+	if ( ! empty( $filters['events'] ) ) {
+		$query['post__in'] = array_map( 'intval', $filters['events'] );
+	}
+
+	$events = get_posts( $query );
+
+	// The date filter needs the dates table, so it runs after that one query;
+	// everything else is only fetched for the events that survive it.
+	$dates  = get_event_dates( wp_list_pluck( $events, 'ID' ) );
+	$events = filter_events_by_range( $events, $dates, $filters['range'], $filters['after'], $filters['before'] );
+
 	$event_ids  = wp_list_pluck( $events, 'ID' );
-	$dates      = get_event_dates( $event_ids );
 	$venues     = get_event_venue_names( $event_ids );
 	$rsvps      = get_event_rsvps( $event_ids );
 	$occurrence = get_occurrence_data( $event_ids );
@@ -294,6 +379,149 @@ function collect_export_data(): array {
 		),
 		'events'        => $export_events,
 	);
+}
+
+/**
+ * Reduce events to the requested date range.
+ *
+ * Compares against the GatherPress dates table rows (GMT). Events without a
+ * dates row can't be placed in time, so any range other than 'all' drops
+ * them. Recurring series are judged by their series dates row, the same way
+ * the events archive treats them.
+ *
+ * @param \WP_Post[] $events Candidate events.
+ * @param array      $dates  Start/end rows from `get_event_dates()`, keyed by event ID.
+ * @param string     $range  One of 'all', 'upcoming', 'past', 'custom'.
+ * @param string     $after  `Y-m-d` lower bound for 'custom', or empty.
+ * @param string     $before `Y-m-d` upper bound for 'custom', or empty.
+ *
+ * @return \WP_Post[]
+ */
+function filter_events_by_range( array $events, array $dates, string $range, string $after, string $before ): array {
+	if ( 'all' === $range ) {
+		return $events;
+	}
+
+	$now = current_time( 'mysql', true );
+
+	return array_values(
+		array_filter(
+			$events,
+			static function ( $event ) use ( $dates, $range, $after, $before, $now ) {
+				$row = $dates[ (int) $event->ID ] ?? null;
+
+				if ( ! $row ) {
+					return false;
+				}
+
+				if ( 'upcoming' === $range ) {
+					return $row['end_gmt'] >= $now;
+				}
+
+				if ( 'past' === $range ) {
+					return $row['end_gmt'] < $now;
+				}
+
+				// 'custom': either bound may be open.
+				if ( '' !== $after && $row['start_gmt'] < $after . ' 00:00:00' ) {
+					return false;
+				}
+
+				if ( '' !== $before && $row['start_gmt'] > $before . ' 23:59:59' ) {
+					return false;
+				}
+
+				return true;
+			}
+		)
+	);
+}
+
+/**
+ * Drop unselected fields from the JSON export.
+ *
+ * Column selection is defined in CSV terms (the names the UI shows); this
+ * maps each CSV column to the JSON fields it covers so both formats honour
+ * the same selection. The `anonymous` flag travels with `attendee_name`,
+ * and the series occurrence list with `occurrence_start_gmt`. With no
+ * RSVP-level column selected the `rsvps` list is dropped entirely.
+ *
+ * @param array    $data    Export data from `collect_export_data()`.
+ * @param string[] $columns Selected CSV column names, in canonical order.
+ */
+function filter_json_fields( array $data, array $columns ): array {
+	if ( count( $columns ) === count( CSV_COLUMNS ) ) {
+		return $data;
+	}
+
+	$selected = array_flip( $columns );
+
+	$event_fields = array(
+		'id'        => 'event_id',
+		'title'     => 'event_title',
+		'start_gmt' => 'event_start_gmt',
+		'end_gmt'   => 'event_end_gmt',
+		'venue'     => 'venue',
+		'organiser' => 'organiser',
+	);
+
+	$count_fields = array(
+		'attending'     => 'attending_count',
+		'waiting_list'  => 'waiting_list_count',
+		'not_attending' => 'not_attending_count',
+	);
+
+	$rsvp_fields = array(
+		'attendee_name'        => 'attendee_name',
+		'anonymous'            => 'attendee_name',
+		'attendee_login'       => 'attendee_login',
+		'status'               => 'rsvp_status',
+		'timestamp_gmt'        => 'rsvp_timestamp_gmt',
+		'guests'               => 'rsvp_guests',
+		'occurrence_start_gmt' => 'occurrence_start_gmt',
+		'occurrence_end_gmt'   => 'occurrence_end_gmt',
+	);
+
+	$keep_rsvps = (bool) array_intersect_key( $selected, array_flip( $rsvp_fields ) );
+
+	foreach ( $data['events'] as &$event ) {
+		foreach ( $event_fields as $field => $column ) {
+			if ( ! isset( $selected[ $column ] ) ) {
+				unset( $event[ $field ] );
+			}
+		}
+
+		foreach ( $count_fields as $field => $column ) {
+			if ( ! isset( $selected[ $column ] ) ) {
+				unset( $event['counts'][ $field ] );
+			}
+		}
+
+		if ( empty( $event['counts'] ) ) {
+			unset( $event['counts'] );
+		}
+
+		if ( ! isset( $selected['occurrence_start_gmt'] ) ) {
+			unset( $event['is_recurring'], $event['occurrences'] );
+		}
+
+		if ( ! $keep_rsvps ) {
+			unset( $event['rsvps'] );
+			continue;
+		}
+
+		foreach ( $event['rsvps'] as &$rsvp ) {
+			foreach ( $rsvp_fields as $field => $column ) {
+				if ( ! isset( $selected[ $column ] ) ) {
+					unset( $rsvp[ $field ] );
+				}
+			}
+		}
+		unset( $rsvp );
+	}
+	unset( $event );
+
+	return $data;
 }
 
 /**
@@ -579,53 +807,30 @@ function anonymous_token( int $comment_id ): string {
 /**
  * Flatten the export data into a CSV file body.
  *
- * @param array $data Export data from `collect_export_data()`.
+ * @param array         $data    Export data from `collect_export_data()`.
+ * @param string[]|null $columns Column names to emit, in canonical order.
+ *                               Null means all of CSV_COLUMNS.
  */
-function build_csv( array $data ): string {
+function build_csv( array $data, ?array $columns = null ): string {
+	$columns = $columns ?? CSV_COLUMNS;
+
 	// phpcs:disable WordPress.WP.AlternativeFunctions -- php://temp is an in-memory stream for fputcsv(), not a filesystem write; WP_Filesystem doesn't apply.
 	$handle = fopen( 'php://temp', 'r+' );
 
 	// UTF-8 BOM so Excel detects the encoding.
 	fwrite( $handle, "\xEF\xBB\xBF" );
-	fputcsv( $handle, CSV_COLUMNS, ',', '"', '\\' );
+	fputcsv( $handle, $columns, ',', '"', '\\' );
 
 	foreach ( $data['events'] as $event ) {
-		$event_columns = array(
-			$event['id'],
-			esc_csv_cell( $event['title'] ),
-			$event['start_gmt'],
-			$event['end_gmt'],
-			esc_csv_cell( $event['venue'] ),
-			esc_csv_cell( $event['organiser'] ),
-			$event['counts']['attending'],
-			$event['counts']['waiting_list'],
-			$event['counts']['not_attending'],
-		);
+		foreach ( empty( $event['rsvps'] ) ? array( null ) : $event['rsvps'] as $rsvp ) {
+			$cells = csv_row_cells( $event, $rsvp );
+			$line  = array();
 
-		if ( empty( $event['rsvps'] ) ) {
-			fputcsv( $handle, array_merge( $event_columns, array_fill( 0, 7, '' ) ), ',', '"', '\\' );
-			continue;
-		}
+			foreach ( $columns as $column ) {
+				$line[] = $cells[ $column ];
+			}
 
-		foreach ( $event['rsvps'] as $rsvp ) {
-			fputcsv(
-				$handle,
-				array_merge(
-					$event_columns,
-					array(
-						$rsvp['occurrence_start_gmt'] ?? '',
-						$rsvp['occurrence_end_gmt'] ?? '',
-						esc_csv_cell( $rsvp['attendee_name'] ),
-						esc_csv_cell( $rsvp['attendee_login'] ),
-						$rsvp['status'],
-						$rsvp['timestamp_gmt'],
-						$rsvp['guests'],
-					)
-				),
-				',',
-				'"',
-				'\\'
-			);
+			fputcsv( $handle, $line, ',', '"', '\\' );
 		}
 	}
 
@@ -635,6 +840,38 @@ function build_csv( array $data ): string {
 	// phpcs:enable WordPress.WP.AlternativeFunctions
 
 	return $csv;
+}
+
+/**
+ * The full set of CSV cells for one event/RSVP pair, keyed by column name.
+ *
+ * Zero-RSVP events pass a null RSVP and get blank RSVP cells, so they stay
+ * visible in the file.
+ *
+ * @param array      $event One event from `collect_export_data()`.
+ * @param array|null $rsvp  One of its RSVPs, or null for the event-only row.
+ *
+ * @return array<string, string|int>
+ */
+function csv_row_cells( array $event, ?array $rsvp ): array {
+	return array(
+		'event_id'             => $event['id'],
+		'event_title'          => esc_csv_cell( $event['title'] ),
+		'event_start_gmt'      => $event['start_gmt'],
+		'event_end_gmt'        => $event['end_gmt'],
+		'venue'                => esc_csv_cell( $event['venue'] ),
+		'organiser'            => esc_csv_cell( $event['organiser'] ),
+		'attending_count'      => $event['counts']['attending'],
+		'waiting_list_count'   => $event['counts']['waiting_list'],
+		'not_attending_count'  => $event['counts']['not_attending'],
+		'occurrence_start_gmt' => $rsvp['occurrence_start_gmt'] ?? '',
+		'occurrence_end_gmt'   => $rsvp['occurrence_end_gmt'] ?? '',
+		'attendee_name'        => esc_csv_cell( $rsvp['attendee_name'] ?? '' ),
+		'attendee_login'       => esc_csv_cell( $rsvp['attendee_login'] ?? '' ),
+		'rsvp_status'          => $rsvp['status'] ?? '',
+		'rsvp_timestamp_gmt'   => $rsvp['timestamp_gmt'] ?? '',
+		'rsvp_guests'          => $rsvp['guests'] ?? '',
+	);
 }
 
 /**

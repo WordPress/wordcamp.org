@@ -18,8 +18,8 @@ require_once dirname( __DIR__ ) . '/wporg-groups-frontend/inc/rest.php';
  * Tests for the `wporg-groups/v1/group-info` routes.
  *
  * These exist because core's `/wp/v2/settings` gates `blogname` and
- * `blogdescription` behind `manage_options`, which Organisers don't have.
- * The routes hand Organisers write access to those options and the site's
+ * `blogdescription` behind `manage_options`, which Organizers don't have.
+ * The routes hand Organizers write access to those options and the site's
  * location metadata, so the interesting cases are the ones where a write
  * should be refused or existing data should be preserved.
  *
@@ -69,7 +69,7 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An Organiser (editor) can read the group's name and description.
+	 * An Organizer (editor) can read the group's name and description.
 	 */
 	public function test_editor_can_read_group_info() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
@@ -86,7 +86,7 @@ class Test_Groups_Group_Info_REST extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An Organiser (editor) can write both fields.
+	 * An Organizer (editor) can write both fields.
 	 */
 	public function test_editor_can_update_group_info() {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );

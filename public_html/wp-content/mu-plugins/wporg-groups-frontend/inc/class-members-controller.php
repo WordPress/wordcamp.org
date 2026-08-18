@@ -10,6 +10,8 @@
 
 namespace WordCamp\Groups\Frontend\Members;
 
+use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
+
 defined( 'WPINC' ) || die();
 
 /**
@@ -37,9 +39,9 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 * @var array<string, string>
 	 */
 	const ROLE_LABELS = array(
-		'administrator' => 'Organiser',
-		'editor'        => 'Organiser',
-		'author'        => 'Event Organiser',
+		'administrator' => 'Organizer',
+		'editor'        => 'Organizer',
+		'author'        => 'Event Organizer',
 		'contributor'   => 'Member',
 		'subscriber'    => 'Member',
 	);
@@ -219,7 +221,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$query = new \WP_User_Query( $query_args );
 		$users = $query->get_results();
 
-		// Sort: organisers first, then event organisers, then members.
+		// Sort: organizers first, then event organizers, then members.
 		usort( $users, array( $this, 'sort_by_role' ) );
 
 		$data = array();
@@ -327,11 +329,11 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		$blog_id = get_current_blog_id();
 		$user    = get_userdata( $user_id );
 
-		// Prevent organisers from leaving without demotion.
-		if ( $user && array_intersect( $user->roles, array( 'administrator', 'editor' ) ) ) {
+		// Prevent organizers from leaving without demotion.
+		if ( $user && array_intersect( $user->roles, ORGANIZER_ROLES ) ) {
 			return new \WP_Error(
 				'cannot_leave',
-				__( 'Organisers cannot leave the group. Ask another organiser to change your role first.', 'wporg-groups-frontend' ),
+				__( 'Organizers cannot leave the group. Ask another organizer to change your role first.', 'wporg-groups-frontend' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -472,7 +474,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 		if ( ! $this->can_demote_organizer( $user, $role ) ) {
 			return new \WP_Error(
 				'cannot_remove_last_organizer',
-				__( 'A group must have at least one organiser.', 'wporg-groups-frontend' ),
+				__( 'A group must have at least one organizer.', 'wporg-groups-frontend' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -506,7 +508,7 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	}
 
 	/**
-	 * Sort users by role weight (organisers first).
+	 * Sort users by role weight (organizers first).
 	 *
 	 * @param \WP_User $a First user.
 	 * @param \WP_User $b Second user.
@@ -623,16 +625,14 @@ class Members_Controller extends \WP_REST_Users_Controller {
 	 * @return bool
 	 */
 	private function can_demote_organizer( \WP_User $user, string $new_role ): bool {
-		$organizer_roles = array( 'administrator', 'editor' );
-
-		if ( ! array_intersect( $user->roles, $organizer_roles ) || in_array( $new_role, $organizer_roles, true ) ) {
+		if ( ! array_intersect( $user->roles, ORGANIZER_ROLES ) || in_array( $new_role, ORGANIZER_ROLES, true ) ) {
 			return true;
 		}
 
 		$other_organizers = get_users(
 			array(
 				'blog_id'     => get_current_blog_id(),
-				'role__in'    => $organizer_roles,
+				'role__in'    => ORGANIZER_ROLES,
 				'exclude'     => array( $user->ID ),
 				'number'      => 1,
 				'count_total' => false,

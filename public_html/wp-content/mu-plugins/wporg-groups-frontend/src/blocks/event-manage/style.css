@@ -2,7 +2,8 @@
  * WPorg Groups Frontend — event manage block + modal styles.
  */
 
-@import '../../components/recurrence-controls.css';
+@import "../../components/recurrence-controls.css";
+@import "../../components/component-accents.css";
 
 /* === Message members modal === */
 
@@ -39,8 +40,10 @@
 
 /* === Modal — override wp-components Modal defaults === */
 
+/* Prevent modal body scroll leak when editor is focused. */
 .wporg-groups-event-modal .components-modal__content {
 	padding: 24px 32px 32px;
+	overscroll-behavior: contain;
 }
 
 .wporg-groups-event-modal {
@@ -92,6 +95,7 @@
 }
 
 @media (max-width: 600px) {
+
 	.wporg-groups-event-modal__row {
 		grid-template-columns: 1fr;
 	}
@@ -186,7 +190,7 @@
 }
 
 .wporg-groups-event-modal__autosave--saving {
-	color: #2271b1;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-groups-event-modal__autosave--saved {
@@ -219,8 +223,8 @@
 }
 
 .wporg-groups-event-modal__editor:focus-within {
-	border-color: #3858e9;
-	box-shadow: 0 0 0 1px #3858e9;
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 0 0 1px var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-groups-event-modal__editor .block-editor-block-list__layout {
@@ -269,11 +273,6 @@
 
 .wporg-groups-event-modal__editor li {
 	margin-block: 0.35em;
-}
-
-/* Prevent modal body scroll leak when editor is focused. */
-.wporg-groups-event-modal .components-modal__content {
-	overscroll-behavior: contain;
 }
 
 /* === Venue editor overlay === */

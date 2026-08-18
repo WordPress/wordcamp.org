@@ -657,7 +657,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 					? __( 'Edit event', 'wporg-groups-frontend' )
 					: __( 'Create event', 'wporg-groups-frontend' ),
 				onRequestClose: handleClose,
-				className: 'wporg-groups-event-modal',
+				className: 'wporg-groups-modal-accent wporg-groups-event-modal',
 				size: 'large',
 				shouldCloseOnClickOutside: false,
 			},

@@ -259,7 +259,9 @@ export default function VenueEditor( { venueId, onSave, onCancel, inline, hideHe
 			document.removeEventListener( 'keydown', onEscape, true );
 	}, [ onCancel ] );
 
-	const wrapperClass = inline ? 'wporg-groups-venue-editor--inline' : 'wporg-groups-venue-editor';
+	const wrapperClass = inline
+		? 'wporg-groups-venue-editor--inline'
+		: 'wporg-groups-modal-accent wporg-groups-venue-editor';
 
 	if ( loading ) {
 		return h(

@@ -1,0 +1,413 @@
+<?php
+
+namespace WordCamp\Groups\Tests;
+
+use WP_REST_Request;
+use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
+
+use function WordCamp\Groups\Frontend\Export\build_csv;
+use function WordCamp\Groups\Frontend\Export\collect_export_data;
+use function WordCamp\Groups\Frontend\Export\esc_csv_cell;
+use function WordCamp\Groups\Frontend\Export\export_permissions_check;
+use function WordCamp\Groups\Frontend\REST\create_event;
+
+use const WordCamp\Groups\Frontend\Export\CSV_COLUMNS;
+
+defined( 'WPINC' ) || die();
+
+require_once __DIR__ . '/class-groups-testcase.php';
+
+/**
+ * @group groups
+ */
+class Test_Groups_Export extends Groups_TestCase {
+
+	/**
+	 * Creates a published event via the REST create path, so the GatherPress
+	 * dates table and venue terms are written exactly as production does.
+	 *
+	 * Runs as a temporary editor, then restores the previous user, so tests
+	 * can set up fixtures without disturbing their own current-user state.
+	 */
+	private function create_test_event( array $params = array() ): int {
+		$previous_user = get_current_user_id();
+		$editor_id     = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event' );
+		foreach (
+			$params + array(
+				'title'      => 'Test Event',
+				'date'       => current_datetime()->modify( '+1 week' )->format( 'Y-m-d' ),
+				'time_start' => '18:00',
+				'time_end'   => '20:00',
+			) as $key => $value
+		) {
+			$request->set_param( $key, $value );
+		}
+
+		$response = create_event( $request );
+		wp_set_current_user( $previous_user );
+
+		$this->assertNotWPError( $response );
+
+		return (int) $response->get_data()['id'];
+	}
+
+	/**
+	 * Inserts an approved RSVP comment with the given status term and meta,
+	 * mirroring how GatherPress stores RSVPs.
+	 */
+	private function create_rsvp( int $event_id, int $user_id, string $status, array $args = array() ): int {
+		$comment_id = wp_insert_comment(
+			array(
+				'comment_post_ID'  => $event_id,
+				'comment_type'     => 'gatherpress_rsvp',
+				'comment_approved' => 1,
+				'user_id'          => $user_id,
+				'comment_date_gmt' => $args['timestamp_gmt'] ?? current_time( 'mysql', true ),
+			)
+		);
+
+		if ( 'no_status' !== $status ) {
+			wp_set_object_terms( $comment_id, $status, '_gatherpress_rsvp_status' );
+		}
+
+		if ( ! empty( $args['guests'] ) ) {
+			update_comment_meta( $comment_id, 'gatherpress_rsvp_guests', (int) $args['guests'] );
+		}
+
+		if ( ! empty( $args['anonymous'] ) ) {
+			update_comment_meta( $comment_id, 'gatherpress_rsvp_anonymous', 1 );
+		}
+
+		return $comment_id;
+	}
+
+	/**
+	 * Dispatches GET /export through the full REST pipeline, so route
+	 * registration, arg validation, and permission callbacks all run.
+	 */
+	private function dispatch_export_request( array $params = array() ) {
+		$request = new WP_REST_Request( 'GET', '/wporg-groups/v1/export' );
+		foreach ( $params as $key => $value ) {
+			$request->set_param( $key, $value );
+		}
+
+		return rest_do_request( $request );
+	}
+
+	/**
+	 * Parses CSV body rows (BOM and header stripped) into arrays.
+	 */
+	private function parse_csv_rows( string $csv ): array {
+		$csv   = preg_replace( '/^\xEF\xBB\xBF/', '', $csv );
+		$lines = array_filter( explode( "\n", trim( $csv ) ), 'strlen' );
+
+		return array_map( 'str_getcsv', $lines );
+	}
+
+	/**
+	 * A logged-out request is rejected as unauthenticated, not just forbidden.
+	 */
+	public function test_export_requires_login() {
+		wp_set_current_user( 0 );
+
+		$permission = export_permissions_check();
+
+		$this->assertWPError( $permission );
+		$this->assertSame( 'rest_not_logged_in', $permission->get_error_code() );
+		$this->assertSame( 401, $permission->get_error_data()['status'] );
+	}
+
+	/**
+	 * Members and Event Organisers (authors) are below the Organiser tier
+	 * and cannot export.
+	 */
+	public function test_export_denied_below_organiser_tier() {
+		foreach ( array( 'subscriber', 'author' ) as $role ) {
+			wp_set_current_user( self::factory()->user->create( array( 'role' => $role ) ) );
+
+			$permission = export_permissions_check();
+
+			$this->assertWPError( $permission, "A {$role} must not be able to export." );
+			$this->assertSame( 'rest_forbidden', $permission->get_error_code() );
+			$this->assertSame( 403, $permission->get_error_data()['status'] );
+		}
+	}
+
+	/**
+	 * Organisers (editors) and administrators can export.
+	 */
+	public function test_export_allowed_for_organiser_tier() {
+		foreach ( array( 'editor', 'administrator' ) as $role ) {
+			wp_set_current_user( self::factory()->user->create( array( 'role' => $role ) ) );
+
+			$this->assertTrue( export_permissions_check(), "An {$role} must be able to export." );
+		}
+	}
+
+	/**
+	 * The route enforces the permission callback on real dispatches too, and
+	 * rejects unknown formats via the arg schema.
+	 */
+	public function test_export_route_dispatch() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$response = $this->dispatch_export_request();
+		$this->assertSame( 403, $response->get_status() );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = $this->dispatch_export_request( array( 'format' => 'xml' ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	/**
+	 * The default format is a CSV attachment; JSON gets its own filename.
+	 */
+	public function test_export_response_headers() {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+		$response = $this->dispatch_export_request();
+		$headers  = $response->get_headers();
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertStringStartsWith( 'text/csv', $headers['Content-Type'] );
+		$this->assertStringContainsString( '.csv"', $headers['Content-Disposition'] );
+
+		$response = $this->dispatch_export_request( array( 'format' => 'json' ) );
+		$headers  = $response->get_headers();
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertStringContainsString( '.json"', $headers['Content-Disposition'] );
+	}
+
+	/**
+	 * Counts are broken down by status; RSVPs GatherPress left in `no_status`
+	 * appear as records but don't inflate any of the three counts.
+	 */
+	public function test_export_counts_by_status() {
+		$event_id = $this->create_test_event();
+
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'attending' );
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'attending' );
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'waiting_list' );
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'not_attending' );
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'no_status' );
+
+		$data  = collect_export_data();
+		$event = $data['events'][0];
+
+		$this->assertSame( $event_id, $event['id'] );
+		$this->assertSame(
+			array(
+				'attending'     => 2,
+				'waiting_list'  => 1,
+				'not_attending' => 1,
+			),
+			$event['counts']
+		);
+		$this->assertCount( 5, $event['rsvps'] );
+	}
+
+	/**
+	 * Event fields carry through: dates from the GatherPress table, the
+	 * organiser's display name, and the attendee's identity and RSVP details.
+	 */
+	public function test_export_event_and_rsvp_fields() {
+		$event_id = $this->create_test_event( array( 'title' => 'Coffee Meetup' ) );
+		$user_id  = self::factory()->user->create(
+			array(
+				'display_name' => 'Jane Doe',
+				'user_login'   => 'janedoe',
+			)
+		);
+		$this->create_rsvp(
+			$event_id,
+			$user_id,
+			'attending',
+			array(
+				'guests'        => 2,
+				'timestamp_gmt' => '2026-01-02 03:04:05',
+			)
+		);
+
+		$event = collect_export_data()['events'][0];
+
+		$this->assertSame( 'Coffee Meetup', $event['title'] );
+		$this->assertNotEmpty( $event['start_gmt'] );
+		$this->assertNotEmpty( $event['end_gmt'] );
+		$this->assertSame( get_userdata( (int) get_post_field( 'post_author', $event_id ) )->display_name, $event['organiser'] );
+
+		$rsvp = $event['rsvps'][0];
+		$this->assertSame( 'Jane Doe', $rsvp['attendee_name'] );
+		$this->assertSame( 'janedoe', $rsvp['attendee_login'] );
+		$this->assertSame( 'attending', $rsvp['status'] );
+		$this->assertSame( '2026-01-02 03:04:05', $rsvp['timestamp_gmt'] );
+		$this->assertSame( 2, $rsvp['guests'] );
+		$this->assertFalse( $rsvp['anonymous'] );
+	}
+
+	/**
+	 * Venue resolves to the venue post's title for physical events, the
+	 * "Online" label for online events, and stays empty with no venue.
+	 */
+	public function test_export_venue_names() {
+		$physical_id = $this->create_test_event( array( 'new_venue_name' => 'Community Hall' ) );
+
+		// The `online-event` sentinel term normally exists on a production
+		// site; the fixture blog starts without it.
+		if ( ! term_exists( 'online-event', '_gatherpress_venue' ) ) {
+			wp_insert_term( 'Online event', '_gatherpress_venue', array( 'slug' => 'online-event' ) );
+		}
+		$online_id = $this->create_test_event(
+			array(
+				'is_online'         => true,
+				'online_event_link' => 'https://meet.example.org/coffee',
+			)
+		);
+
+		$bare_id = $this->create_test_event();
+
+		$venues = array_column( collect_export_data()['events'], 'venue', 'id' );
+
+		$this->assertSame( 'Community Hall', $venues[ $physical_id ] );
+		$this->assertSame( 'Online', $venues[ $online_id ] );
+		$this->assertSame( '', $venues[ $bare_id ] );
+	}
+
+	/**
+	 * Anonymous RSVPs export a stable, non-identifying token — never the
+	 * member's name or login.
+	 */
+	public function test_export_anonymous_rsvp_token() {
+		$event_id = $this->create_test_event();
+		$user_id  = self::factory()->user->create(
+			array(
+				'display_name' => 'Secret Sam',
+				'user_login'   => 'secretsam',
+			)
+		);
+		$this->create_rsvp( $event_id, $user_id, 'attending', array( 'anonymous' => true ) );
+
+		$rsvp = collect_export_data()['events'][0]['rsvps'][0];
+
+		$this->assertMatchesRegularExpression( '/^anonymous-[0-9a-f]{12}$/', $rsvp['attendee_name'] );
+		$this->assertSame( '', $rsvp['attendee_login'] );
+		$this->assertTrue( $rsvp['anonymous'] );
+
+		// Stable across exports, so re-exports stay comparable.
+		$again = collect_export_data()['events'][0]['rsvps'][0];
+		$this->assertSame( $rsvp['attendee_name'], $again['attendee_name'] );
+
+		// The token must not leak the identity anywhere in the export.
+		$serialized = wp_json_encode( collect_export_data() );
+		$this->assertStringNotContainsString( 'Secret Sam', $serialized );
+		$this->assertStringNotContainsString( 'secretsam', $serialized );
+	}
+
+	/**
+	 * Events with no RSVPs still appear: as an empty list in JSON, and as a
+	 * single row with blank RSVP columns in CSV.
+	 */
+	public function test_export_includes_zero_rsvp_events() {
+		$event_id = $this->create_test_event( array( 'title' => 'Lonely Event' ) );
+
+		$data = collect_export_data();
+		$this->assertSame( array(), $data['events'][0]['rsvps'] );
+
+		$rows = $this->parse_csv_rows( build_csv( $data ) );
+		$this->assertCount( 2, $rows ); // Header + one event row.
+		$this->assertSame( (string) $event_id, $rows[1][0] );
+		$this->assertSame( 'Lonely Event', $rows[1][1] );
+		$this->assertSame( '', $rows[1][11], 'attendee_name must be blank on a zero-RSVP row.' );
+	}
+
+	/**
+	 * CSV structure: exact header, one row per RSVP, BOM for Excel, and
+	 * values with commas/quotes surviving a round-trip.
+	 */
+	public function test_export_csv_structure() {
+		$event_id = $this->create_test_event( array( 'title' => 'Title, with "quotes"' ) );
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'attending' );
+		$this->create_rsvp( $event_id, self::factory()->user->create(), 'waiting_list' );
+
+		$csv = build_csv( collect_export_data() );
+
+		$this->assertStringStartsWith( "\xEF\xBB\xBF", $csv );
+
+		$rows = $this->parse_csv_rows( $csv );
+		$this->assertSame( CSV_COLUMNS, $rows[0] );
+		$this->assertCount( 3, $rows ); // Header + one row per RSVP.
+		$this->assertSame( 'Title, with "quotes"', $rows[1][1] );
+	}
+
+	/**
+	 * Cells that a spreadsheet would execute as formulas are neutralised.
+	 */
+	public function test_export_csv_escapes_formulas() {
+		$event_id = $this->create_test_event( array( 'title' => '=HYPERLINK("https://evil.example")' ) );
+		$this->create_rsvp(
+			$event_id,
+			self::factory()->user->create( array( 'display_name' => '+SUM(A1:A9)' ) ),
+			'attending'
+		);
+
+		$rows = $this->parse_csv_rows( build_csv( collect_export_data() ) );
+
+		$this->assertStringStartsWith( "'=", $rows[1][1] );
+		$this->assertStringStartsWith( "'+", $rows[1][11] );
+
+		// Unit-level: every trigger character is prefixed, plain text is not.
+		foreach ( array( '=x', '+x', '-x', '@x', "\tx", "\rx" ) as $dangerous ) {
+			$this->assertSame( "'" . $dangerous, esc_csv_cell( $dangerous ) );
+		}
+		$this->assertSame( 'safe', esc_csv_cell( 'safe' ) );
+		$this->assertSame( '', esc_csv_cell( '' ) );
+	}
+
+	/**
+	 * RSVPs mapped to an occurrence carry that occurrence's dates; unmapped
+	 * RSVPs on the same series don't.
+	 */
+	public function test_export_occurrence_attribution() {
+		$date    = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$weekday = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
+
+		Recurring_Events_Database::maybe_install();
+
+		$event_id = $this->create_test_event(
+			array(
+				'date'       => $date,
+				'recurrence' => array(
+					'frequency' => 'weekly',
+					'interval'  => 1,
+					'weekdays'  => array( $weekday ),
+					'end_type'  => 'count',
+					'count'     => 3,
+				),
+			)
+		);
+
+		$occurrences = Occurrences::all( $event_id, 'upcoming', 10 );
+		$this->assertNotEmpty( $occurrences, 'The recurring event must project occurrences.' );
+		$first = $occurrences[0];
+
+		$mapped_id   = $this->create_rsvp( $event_id, self::factory()->user->create(), 'attending' );
+		$unmapped_id = $this->create_rsvp( $event_id, self::factory()->user->create(), 'attending' );
+		Recurring_Events_Database::map_comment( $mapped_id, $event_id, $first->recurrence_id );
+
+		$event = collect_export_data()['events'][0];
+		$this->assertTrue( $event['is_recurring'] );
+		$this->assertCount( 3, $event['occurrences'] );
+
+		$rsvps_by_comment = array();
+		foreach ( $event['rsvps'] as $index => $rsvp ) {
+			$rsvps_by_comment[ array( $mapped_id, $unmapped_id )[ $index ] ] = $rsvp;
+		}
+
+		$this->assertSame( $first->datetime_start_gmt, $rsvps_by_comment[ $mapped_id ]['occurrence_start_gmt'] );
+		$this->assertSame( $first->datetime_end_gmt, $rsvps_by_comment[ $mapped_id ]['occurrence_end_gmt'] );
+		$this->assertNull( $rsvps_by_comment[ $unmapped_id ]['occurrence_start_gmt'] );
+	}
+}

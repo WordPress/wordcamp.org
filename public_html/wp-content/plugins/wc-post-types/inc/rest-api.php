@@ -514,17 +514,28 @@ function register_additional_rest_fields() {
 		array(
 			'get_callback' => function ( $post ) {
 				$speaker_ids = get_post_meta( $post['id'], '_wcpt_speaker_id', false );
-				$speakers = array();
+				$speakers    = array();
 
-				foreach ( $speaker_ids as $speaker_id ) {
-					$speaker = get_post( $speaker_id );
+				if ( empty( $speaker_ids ) ) {
+					return $speakers;
+				}
 
-					// Make sure the speaker post hasn't been deleted, and that the
-					// id names a speaker rather than whatever else the meta holds.
-					if ( ! $speaker instanceof WP_Post || 'wcb_speaker' !== $speaker->post_type ) {
-						continue;
-					}
+				// Resolve the ids through a query so that the post type is enforced
+				// and the posts are fetched together. This runs for every session in
+				// a collection response, so a lookup per speaker adds up.
+				$speaker_posts = get_posts( array(
+					'post_type'      => 'wcb_speaker',
+					'post__in'       => array_map( 'absint', $speaker_ids ),
+					'post_status'    => 'any',
+					'posts_per_page' => -1,
+					'orderby'        => 'post__in',
+					'no_found_rows'  => true,
+					// Only the title, slug, permalink and status are used below.
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+				) );
 
+				foreach ( $speaker_posts as $speaker ) {
 					// This field is served in the anonymous `view` context, and the
 					// controller's own read check covers the session, not the posts
 					// this dereferences. Published posts are readable by everyone,
@@ -534,10 +545,12 @@ function register_additional_rest_fields() {
 					}
 
 					$speakers[] = array(
-						'id'   => $speaker_id,
+						// Emitted as the stored meta string since this field was added;
+						// left alone here so the response shape does not change.
+						'id'   => (string) $speaker->ID,
 						'slug' => $speaker->post_name,
-						'name' => get_the_title( $speaker_id ),
-						'link' => get_permalink( $speaker_id ),
+						'name' => get_the_title( $speaker->ID ),
+						'link' => get_permalink( $speaker->ID ),
 					);
 				}
 

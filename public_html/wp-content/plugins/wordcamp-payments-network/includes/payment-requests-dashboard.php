@@ -96,7 +96,7 @@ class Payment_Requests_Dashboard {
 	 * Runs in batches of self-rescheduled single events to keep peak memory bounded, since a single request
 	 * iterating all sites was pushing peak memory usage above 90%.
 	 */
-	public static function aggregate( $offset = 0 ) {
+	public static function aggregate( $after_blog_id = 0 ) {
 		global $wpdb, $wp_object_cache;
 
 		// Register the custom payment statuses so that we can filter posts to include only them, in order to exclude trashed posts.
@@ -104,17 +104,21 @@ class Payment_Requests_Dashboard {
 		WCP_Payment_Request::register_post_statuses();
 
 		// Only truncate at the start of a fresh run, not on every batch.
-		if ( 0 === $offset ) {
-			$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() );
+		if ( 0 === $after_blog_id ) {
+			$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name isn't user input, can't be a bound placeholder.
 		}
 
+		// Keyset pagination on `blog_id` rather than LIMIT/OFFSET on `last_updated`, since `last_updated`
+		// changes constantly as sites get traffic, which would shift rows across the offset boundary
+		// mid-run and cause blogs to be skipped or double-processed.
 		$blogs = $wpdb->get_col( $wpdb->prepare( "
 			SELECT blog_id
 			FROM `{$wpdb->blogs}`
-			ORDER BY last_updated DESC
-			LIMIT %d OFFSET %d;",
-			self::AGGREGATE_BATCH_SIZE,
-			$offset
+			WHERE blog_id > %d
+			ORDER BY blog_id ASC
+			LIMIT %d;",
+			$after_blog_id,
+			self::AGGREGATE_BATCH_SIZE
 		) );
 
 		foreach ( $blogs as $blog_id ) {
@@ -140,7 +144,7 @@ class Payment_Requests_Dashboard {
 
 		// More blogs left? Schedule the next batch as a separate request instead of looping further in this one.
 		if ( count( $blogs ) === self::AGGREGATE_BATCH_SIZE ) {
-			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $offset + self::AGGREGATE_BATCH_SIZE ) );
+			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( end( $blogs ) ) );
 		}
 	}
 

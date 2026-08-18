@@ -28,7 +28,7 @@
 			]
 		},
 		"typography": {
-			"fluid": true,
+			"fluid": false,
 			"fontFamilies": [
 				{
 					"fontFamily": "'EB Garamond', serif",

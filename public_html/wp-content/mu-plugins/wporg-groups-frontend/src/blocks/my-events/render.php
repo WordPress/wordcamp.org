@@ -23,6 +23,10 @@ if ( ! is_user_logged_in() || ! is_user_member_of_blog() ) {
 
 $wporg_upcoming_ids = get_upcoming_event_ids( get_current_user_id() );
 
+/*
+ * Uncapped on purpose: the block exists so a member can confirm their event is
+ * listed (#1810), and truncating could hide the one they came to check.
+ */
 $wporg_upcoming_events = empty( $wporg_upcoming_ids )
 	? array()
 	: get_posts(
@@ -39,7 +43,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 	array( 'class' => 'wporg-my-events' )
 );
 ?>
-<div <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+<section <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 	<h2 class="wporg-my-events__heading">
 		<?php esc_html_e( 'My upcoming events', 'wporg-groups-frontend' ); ?>
 	</h2>
@@ -53,21 +57,42 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 			foreach ( $wporg_upcoming_events as $wporg_event_post ) :
 				$wporg_start      = get_post_meta( $wporg_event_post->ID, 'gatherpress_datetime_start', true );
 				$wporg_date_label = '';
+				$wporg_date_attr  = '';
 
 				if ( $wporg_start ) {
 					try {
 						$wporg_datetime   = new \DateTime( $wporg_start );
 						$wporg_date_label = $wporg_datetime->format( 'M j, Y · g:i A' );
+
+						/*
+						 * Local time with no offset. The stored value is
+						 * already in the event's own timezone, and PHP's
+						 * default timezone — which `c` would stamp on it —
+						 * is not necessarily that one.
+						 */
+						$wporg_date_attr = $wporg_datetime->format( 'Y-m-d\TH:i' );
 					} catch ( \Exception $e ) {
 						$wporg_date_label = $wporg_start;
 					}
 				}
 				?>
-				<a class="wporg-my-events__item" href="<?php echo esc_url( get_permalink( $wporg_event_post->ID ) ); ?>">
-					<span class="wporg-my-events__date"><?php echo esc_html( $wporg_date_label ); ?></span>
-					<span class="wporg-my-events__title"><?php echo esc_html( get_the_title( $wporg_event_post->ID ) ); ?></span>
-				</a>
+				<div class="wporg-my-events__card">
+					<?php if ( $wporg_date_label ) : ?>
+						<p class="wporg-my-events__date">
+							<?php if ( $wporg_date_attr ) : ?>
+								<time datetime="<?php echo esc_attr( $wporg_date_attr ); ?>"><?php echo esc_html( $wporg_date_label ); ?></time>
+							<?php else : ?>
+								<?php echo esc_html( $wporg_date_label ); ?>
+							<?php endif; ?>
+						</p>
+					<?php endif; ?>
+					<h3 class="wporg-my-events__title">
+						<a href="<?php echo esc_url( get_permalink( $wporg_event_post->ID ) ); ?>">
+							<?php echo esc_html( get_the_title( $wporg_event_post->ID ) ); ?>
+						</a>
+					</h3>
+				</div>
 			<?php endforeach; ?>
 		</div>
 	<?php endif; ?>
-</div>
+</section>

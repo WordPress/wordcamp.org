@@ -14,7 +14,7 @@ test.describe( 'anonymous visitor', () => {
 		const sidebar = page.locator( '.groups-site-sidebar' );
 		await expect( sidebar.getByRole( 'button', { name: 'Join this group' } ) ).toBeVisible();
 		await expect( sidebar.locator( '.wporg-group-membership__count' ) ).toHaveText( /\d+ members?/ );
-		await expect( page.locator( '.groups-site-hero .wporg-group-membership' ) ).toHaveCount( 0 );
+		await expect( page.locator( '.groups-site-identity .wporg-group-membership' ) ).toHaveCount( 0 );
 	} );
 
 	test( 'no management UI is rendered on the front page', async ( { page } ) => {

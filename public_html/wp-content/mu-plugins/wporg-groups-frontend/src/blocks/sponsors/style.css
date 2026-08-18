@@ -1,40 +1,53 @@
 /**
  * Sponsors block styles.
+ *
+ * Renders in two places: the front page's main column, where it's the last
+ * section, and the single-event sidebar, where it's a card beside the event
+ * details. One treatment covers both — a bordered card whose rows are
+ * separated by rules rather than by a second nested border, which is what
+ * the list used to have inside the card's own.
  */
 
 .wporg-sponsors {
 	padding: 24px;
-	border: 1px solid #d9d9d9;
-	border-radius: 8px;
-	background: #fff;
+	border: 1px solid var(--wp--preset--color--light-grey-1);
+	border-radius: 4px;
+	background: var(--wp--preset--color--white);
 }
 
 .wporg-sponsors__header {
 	display: flex;
 	align-items: baseline;
 	justify-content: space-between;
-	gap: 16px;
-	margin-bottom: 16px;
+	gap: var(--wp--preset--spacing--20);
+	margin-bottom: var(--wp--preset--spacing--10);
 }
 
 .wporg-sponsors__heading {
-	font-size: 24px;
-	font-weight: 700;
 	margin: 0 !important;
 	padding: 0 !important;
+	font-family: var(--wp--preset--font-family--eb-garamond);
+	font-size: var(--wp--preset--font-size--heading-3);
+	font-weight: 400;
+	line-height: 1.3;
+	color: var(--wp--preset--color--charcoal-0);
 }
 
 .wporg-sponsors__show-all {
+	flex-shrink: 0;
 	background: none;
 	border: 0;
+	border-radius: 2px;
 	padding: 0;
-	font-size: 14px;
-	font-weight: 500;
-	color: #3858e9;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	color: var(--wp--preset--color--blueberry-1);
 	cursor: pointer;
 }
 
 .wporg-sponsors__show-all:hover {
+	color: var(--wp--preset--color--deep-blueberry);
 	text-decoration: underline;
 }
 
@@ -42,12 +55,21 @@
 	list-style: none;
 	margin: 0;
 	padding: 0;
-	border: 1px solid #e0e0e0;
-	border-radius: 8px;
+}
+
+/*
+ * Negative inline margin pulls each row out to the card's edge, so both the
+ * divider and the hover fill span the full card instead of floating inside
+ * a 24px moat. The row's own padding puts the text back on the card's text
+ * column. Applied to the item rather than the link so the two stay in
+ * register — a bled hover under an inset rule reads as a mistake.
+ */
+.wporg-sponsors__item {
+	margin: 0 -24px;
 }
 
 .wporg-sponsors__item + .wporg-sponsors__item {
-	border-top: 1px solid #e0e0e0;
+	border-top: 1px solid var(--wp--preset--color--light-grey-1);
 }
 
 .wporg-sponsors__item[hidden] {
@@ -58,15 +80,15 @@
 	display: grid;
 	grid-template-columns: 96px 1fr auto;
 	align-items: center;
-	gap: 16px;
-	padding: 16px;
+	gap: var(--wp--preset--spacing--20);
+	padding: var(--wp--preset--spacing--20) 24px;
 	text-decoration: none;
 	color: inherit;
 }
 
 a.wporg-sponsors__link:hover {
 	text-decoration: none;
-	background: #f6f7f7;
+	background: var(--wp--preset--color--light-grey-2);
 }
 
 .wporg-sponsors__logo {
@@ -92,30 +114,49 @@ a.wporg-sponsors__link:hover {
 }
 
 .wporg-sponsors__name {
-	font-size: 16px;
+	font-size: var(--wp--preset--font-size--normal);
 	font-weight: 600;
-	color: #1a1919;
+	color: var(--wp--preset--color--charcoal-0);
 }
 
 .wporg-sponsors__description {
-	font-size: 14px;
-	line-height: 1.4;
-	color: #40464d;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	color: var(--wp--preset--color--charcoal-3);
 }
 
 .wporg-sponsors__external {
 	display: flex;
 	align-items: center;
-	color: #40464d;
+	color: var(--wp--preset--color--charcoal-3);
 }
 
 a.wporg-sponsors__link:hover .wporg-sponsors__external {
-	color: #3858e9;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
+/*
+ * Below 480px the logo column gives up a third of its width, and at the
+ * very narrowest the card's own padding drops so the 64px logo and the
+ * sponsor name still get a usable measure between them.
+ */
 @media (max-width: 480px) {
 	.wporg-sponsors__link {
 		grid-template-columns: 64px 1fr auto;
-		gap: 12px;
+		gap: var(--wp--preset--spacing--10);
+	}
+}
+
+@media (max-width: 380px) {
+	.wporg-sponsors {
+		padding: var(--wp--preset--spacing--20);
+	}
+
+	.wporg-sponsors__item {
+		margin: 0 calc(-1 * var(--wp--preset--spacing--20));
+	}
+
+	.wporg-sponsors__link {
+		padding: var(--wp--preset--spacing--20);
 	}
 }

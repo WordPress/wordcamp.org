@@ -1,53 +1,135 @@
 /**
  * My Events block styles.
+ *
+ * A compact variant of the theme's event card: same border, radius, hover
+ * treatment, and date/title typography, but without the 16:9 media region,
+ * excerpt, attendee count, or venue. That leaves two lines per card.
+ *
+ * Kept in step with `.groups-site-event-card` in the theme's custom.css.
  */
 
 .wporg-my-events__heading {
-	font-size: 18px;
-	font-weight: 600;
-	margin: 0 0 12px !important;
+	margin: 0 0 var(--wp--preset--spacing--30) !important;
 	padding: 0 !important;
+	font-family: var(--wp--preset--font-family--eb-garamond);
+	font-size: var(--wp--preset--font-size--heading-3);
+	font-weight: 400;
+	line-height: 1.3;
+	color: var(--wp--preset--color--charcoal-0);
 }
 
+/*
+ * One card per row, full width of the column, so the serif title fits on one
+ * line — in the "Upcoming events" grid the same title wraps to three. Also
+ * keeps this list visually distinct from that grid despite the shared card
+ * treatment.
+ */
 .wporg-my-events__list {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--wp--preset--spacing--10);
 }
 
-.wporg-my-events__item {
+.wporg-my-events__card {
+	position: relative;
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
-	padding: 12px 16px;
-	border: 1px solid #d9d9d9;
+	gap: var(--wp--preset--spacing--10);
+	/*
+	 * 20px all round rather than the 24px card spec — the same compact-card
+	 * value `.wporg-group-members__card` uses, for the same reason: the card
+	 * holds only a 12px eyebrow and a one-line title.
+	 */
+	padding: var(--wp--preset--spacing--20);
+	background: var(--wp--preset--color--white);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
-	text-decoration: none;
-	color: inherit;
-	transition: border-color 0.12s ease;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease,
+		transform 0.18s ease;
 }
 
-.wporg-my-events__item:hover {
-	border-color: #3858e9;
-	text-decoration: none;
+.wporg-my-events__card:hover,
+.wporg-my-events__card:has(a:focus-visible) {
+	border-color: var(--wp--preset--color--blueberry-1);
+	box-shadow: 0 18px 36px -16px rgba(56, 88, 233, 0.22),
+		0 4px 12px rgba(30, 30, 30, 0.04);
+	transform: translateY(-2px);
 }
 
+/*
+ * The title's link covers the whole card, so the focus ring belongs on the
+ * card too — on the link alone it would trace the text and leave the rest
+ * of the click target unmarked. Only swapped in where `:has()` can move it;
+ * without that the link keeps the global ring rather than losing it.
+ */
+@supports selector(:has(*)) {
+	.wporg-my-events__card:has(a:focus-visible) {
+		outline: 2px solid var(--wp--preset--color--blueberry-1);
+		outline-offset: 2px;
+	}
+
+	.wporg-my-events__title a:focus-visible {
+		outline: none;
+	}
+}
+
+/*
+ * 12px, the low end of the 12–14px metadata range, matching the News list's
+ * date rather than the event card's 14px — on a full-width card holding only
+ * a date and a one-line title, 14px tracked uppercase competes with the title.
+ *
+ * The metadata spec pins no line-height, and the secondary-text default of
+ * 1.55 leaves half-leading that reads as a gap above the title; 1.2 removes it
+ * while keeping two wrapped lines of caps clear of each other.
+ *
+ * Blueberry, like every date eyebrow on the site — see the note on
+ * `.groups-site-event-card__date` in the theme's custom.css.
+ */
 .wporg-my-events__date {
-	font-size: 12px;
+	margin: 0;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
 	font-weight: 600;
+	line-height: 1.2;
+	color: var(--wp--preset--color--blueberry-1);
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
-	color: #3858e9;
+	/* "Wednesday, September 13, 2026 · 6:00 PM" is wider than the card at
+	   320px, and uppercase with tracking is wider still. */
+	overflow-wrap: break-word;
 }
 
 .wporg-my-events__title {
-	font-size: 15px;
-	font-weight: 600;
-	color: #1a1919;
+	margin: 0 !important;
+	padding: 0 !important;
+	font-family: var(--wp--preset--font-family--eb-garamond);
+	font-size: var(--wp--preset--font-size--heading-6);
+	font-weight: 400;
+	line-height: 1.2;
+}
+
+.wporg-my-events__title a {
+	color: var(--wp--preset--color--charcoal-0);
+	text-decoration: none;
+}
+
+/* Stretch the title's link over the whole card. */
+.wporg-my-events__title a::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+}
+
+.wporg-my-events__card:hover .wporg-my-events__title a,
+.wporg-my-events__title a:focus-visible {
+	color: var(--wp--preset--color--blueberry-1);
+	text-decoration: none;
 }
 
 .wporg-my-events__empty {
 	margin: 0;
-	font-size: 14px;
-	color: #50575e;
+	max-width: 68ch;
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
+	color: var(--wp--preset--color--charcoal-3);
 }

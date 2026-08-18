@@ -1,8 +1,19 @@
+/**
+ * Group News block styles.
+ *
+ * A main-column section, so its heading takes the same Heading 3 treatment
+ * as "My upcoming events", "Upcoming events" and "About this group". Only
+ * the sidebar gets the Inter 16px/600 utility heading.
+ */
+
 .wporg-group-news__heading {
-	margin: 0 0 16px !important;
+	margin: 0 0 var(--wp--preset--spacing--30) !important;
 	padding: 0 !important;
-	font-size: 24px;
-	font-weight: 700;
+	font-family: var(--wp--preset--font-family--eb-garamond);
+	font-size: var(--wp--preset--font-size--heading-3);
+	font-weight: 400;
+	line-height: 1.3;
+	color: var(--wp--preset--color--charcoal-0);
 }
 
 .wporg-group-news__list {
@@ -10,36 +21,51 @@
 }
 
 .wporg-group-news__item {
-	padding: 20px 0;
+	padding: var(--wp--preset--spacing--20) 0;
 	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 }
 
+/* Blueberry, like every date eyebrow on the site — see the note on
+   `.groups-site-event-card__date` in the theme's custom.css. A post's date
+   matters less than an event's, but splitting the two by colour just read
+   as an inconsistency between two adjacent, identically shaped lists. */
 .wporg-group-news__date {
 	display: block;
-	margin-bottom: 4px;
-	color: var(--wp--preset--color--charcoal-4);
-	font-size: 12px;
+	margin-bottom: var(--wp--preset--spacing--10);
+	color: var(--wp--preset--color--blueberry-1);
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
 	font-weight: 600;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
 }
 
+/* Card H3 treatment — the same size a post title takes in an event card, so
+   a news item and an event item read as the same weight of thing. */
 .wporg-group-news__title {
 	margin: 0 !important;
 	padding: 0 !important;
-	font-size: 20px;
-	line-height: 1.3;
+	font-family: var(--wp--preset--font-family--eb-garamond);
+	font-size: var(--wp--preset--font-size--heading-6);
+	font-weight: 400;
+	line-height: 1.2;
 }
 
 .wporg-group-news__title a {
+	color: var(--wp--preset--color--charcoal-0);
 	text-decoration: none;
 }
 
-.wporg-group-news__title a:hover {
+.wporg-group-news__title a:hover,
+.wporg-group-news__title a:focus-visible {
+	color: var(--wp--preset--color--blueberry-1);
 	text-decoration: underline;
 }
 
 .wporg-group-news__excerpt {
-	margin: 8px 0 0;
+	margin: var(--wp--preset--spacing--10) 0 0;
+	max-width: 68ch;
 	color: var(--wp--preset--color--charcoal-3);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.55;
 }

@@ -107,12 +107,19 @@
    ========================================================================== */
 
 @media (min-width: 481px) and (max-width: 781px) {
+
+	/* `minmax(0, 1fr)` rather than a bare `1fr` — a plain `1fr` track's
+	   implicit `min-width: auto` sizes it to its content's min-content
+	   width, which for a member/event card is wider than half the viewport
+	   at this breakpoint and forces the grid to overflow horizontally
+	   instead of letting the card's own content wrap. */
+
 	.wp-block-post-template.is-layout-grid {
-		grid-template-columns: 1fr 1fr !important;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
 	}
 
 	.wporg-group-members__grid {
-		grid-template-columns: 1fr 1fr !important;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
 	}
 }
 

@@ -3,7 +3,7 @@
  * Network administration for archiving and reactivating group sites.
  *
  * Uses WordPress multisite's native archived-site flag so group content,
- * RSVPs, and memberships remain intact. Organisers cannot request archival
+ * RSVPs, and memberships remain intact. Organizers cannot request archival
  * in v1; only users who can manage network sites can use this screen.
  *
  * Only loaded on the Groups network, via

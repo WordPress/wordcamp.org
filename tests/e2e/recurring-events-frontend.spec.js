@@ -2,13 +2,13 @@ const { test, expect } = require( '@playwright/test' );
 const { login } = require( './utils/login' );
 
 /**
- * Recurrence controls in the organiser-facing group settings block.
+ * Recurrence controls in the organizer-facing group settings block.
  *
  * Requires the `organiser1` / `password` test user from the local Groups
  * environment setup.
  */
 test.describe( 'recurring events frontend', () => {
-	test( 'an organiser can configure a weekly recurrence', async ( { page } ) => {
+	test( 'an organizer can configure a weekly recurrence', async ( { page } ) => {
 		await login( page, 'organiser1', 'password' );
 		await page.goto( '' );
 

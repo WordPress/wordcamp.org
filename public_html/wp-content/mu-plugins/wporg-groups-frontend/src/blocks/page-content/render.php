@@ -2,7 +2,7 @@
 /**
  * Server-side rendering for the wporg/page-content block.
  *
- * Renders a page's content by slug, with an edit link for organisers.
+ * Renders a page's content by slug, with an edit link for organizers.
  *
  * @package WordCamp\Groups\Frontend
  */

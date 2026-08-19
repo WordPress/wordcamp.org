@@ -26,7 +26,7 @@ $wporg_wrapper_attributes = get_block_wrapper_attributes(
 );
 ?>
 <section <?php echo $wporg_wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by core. ?>>
-	<h2 class="wporg-group-news__heading"><?php esc_html_e( 'News', 'wporg-groups-frontend' ); ?></h2>
+	<h2 class="wporg-section-heading wporg-group-news__heading"><?php esc_html_e( 'News', 'wporg-groups-frontend' ); ?></h2>
 
 	<div class="wporg-group-news__list">
 		<?php foreach ( $wporg_posts as $wporg_post ) : ?>

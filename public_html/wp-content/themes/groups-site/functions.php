@@ -54,20 +54,37 @@ add_action( 'wp_enqueue_scripts', __NAMESPACE__ . '\enqueue_assets' );
 add_action( 'enqueue_block_editor_assets', __NAMESPACE__ . '\enqueue_assets' );
 
 /**
- * Remove the featured image link from keyboard tab order in event card grids.
+ * Adjust the featured image inside event card grids.
  *
- * The title link already provides keyboard access to the event. A second
- * focusable link on the image is redundant and slows tab navigation.
+ * Two changes, both scoped so the single-event hero is left alone. The guard
+ * tests `is_singular( 'gatherpress_event' )` rather than a bare
+ * `is_singular()`: the group front page is a static Page, so it is singular
+ * too, and the broader test excluded the very cards this is meant to fix.
+ *
+ *   - Drop the image link from the keyboard tab order. The title link already
+ *     provides keyboard access to the event, so a second focusable link on
+ *     the image is redundant and slows tab navigation.
+ *   - Substitute a placeholder when the event has no thumbnail. Core renders
+ *     the block as an empty string in that case, so one image-less event in a
+ *     row of three used to start its date where its neighbours started their
+ *     image — the cards shared a grid row but no baseline. The placeholder
+ *     holds the same 16:9 region; `custom.css` fills it with flat
+ *     Blueberry 4 rather than invented artwork.
  */
 add_filter(
 	'render_block_core/post-featured-image',
 	static function ( string $content, array $block ): string {
 		$post_type = $block['context']['postType'] ?? get_post_type();
 
-		if ( ! is_singular() && 'gatherpress_event' === $post_type ) {
-			$content = str_replace( '<a href=', '<a tabindex="-1" href=', $content );
+		if ( 'gatherpress_event' !== $post_type || is_singular( 'gatherpress_event' ) ) {
+			return $content;
 		}
-		return $content;
+
+		if ( '' === trim( $content ) ) {
+			return '<div class="wp-block-post-featured-image groups-site-featured-placeholder" aria-hidden="true"></div>';
+		}
+
+		return str_replace( '<a href=', '<a tabindex="-1" href=', $content );
 	},
 	10,
 	2

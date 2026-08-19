@@ -157,7 +157,7 @@ add_filter(
 			return $allcaps;
 		}
 
-		// Grant to editors (group organisers).
+		// Grant to editors (group organizers).
 		if ( ! empty( $allcaps['edit_others_posts'] ) ) {
 			$allcaps['edit_theme_options'] = true;
 		}

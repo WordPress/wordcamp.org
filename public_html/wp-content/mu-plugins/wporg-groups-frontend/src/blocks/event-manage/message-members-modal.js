@@ -7,7 +7,7 @@
 import apiFetch from '@wordpress/api-fetch';
 import { Button, CheckboxControl, Modal, Notice, TextareaControl } from '@wordpress/components';
 import { createElement as h, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
 
 export default function MessageMembersModal( { eventId, recipientMode, onClose } ) {
 	const isAllMembers = 'message-all' === recipientMode;
@@ -72,7 +72,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 				? __( 'Message all members', 'wporg-groups-frontend' )
 				: __( 'Message event attendees', 'wporg-groups-frontend' ),
 			onRequestClose: onClose,
-			className: 'wporg-groups-message-modal',
+			className: 'wporg-groups-modal-accent wporg-groups-message-modal',
 			shouldCloseOnClickOutside: false,
 		},
 		sent
@@ -151,7 +151,7 @@ export default function MessageMembersModal( { eventId, recipientMode, onClose }
 								onClick: onClose,
 								disabled: sending,
 							},
-							__( 'Cancel', 'wporg-groups-frontend' )
+							_x( 'Cancel', 'abort current action', 'wporg-groups-frontend' )
 						),
 						h(
 							Button,

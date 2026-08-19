@@ -46,7 +46,7 @@ import { useDispatch } from '@wordpress/data';
 import { registerCoreBlocks } from '@wordpress/block-library';
 import { createBlock, parse, serialize } from '@wordpress/blocks';
 import apiFetch from '@wordpress/api-fetch';
-import { __ } from '@wordpress/i18n';
+import { __, _x } from '@wordpress/i18n';
 import VenueEditor from './venue-editor';
 import MessageMembersModal from './message-members-modal';
 import RecurrenceControls, { normalizeRecurrence } from '../../components/recurrence-controls';
@@ -657,7 +657,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 					? __( 'Edit event', 'wporg-groups-frontend' )
 					: __( 'Create event', 'wporg-groups-frontend' ),
 				onRequestClose: handleClose,
-				className: 'wporg-groups-event-modal',
+				className: 'wporg-groups-modal-accent wporg-groups-event-modal',
 				size: 'large',
 				shouldCloseOnClickOutside: false,
 			},
@@ -822,7 +822,7 @@ const MINIMUM_EVENT_DATE = window.wporgGroupsEventModal?.minimumEventDate || '';
 						h(
 							Button,
 							{ variant: 'tertiary', onClick: handleClose, disabled: saving },
-							__( 'Cancel', 'wporg-groups-frontend' )
+							_x( 'Cancel', 'abort current action', 'wporg-groups-frontend' )
 						),
 						h(
 							Button,

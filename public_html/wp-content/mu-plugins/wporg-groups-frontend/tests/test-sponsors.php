@@ -117,7 +117,7 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 	}
 
 	/**
-	 * The admin screens only exist on the store site. A group organiser
+	 * The admin screens only exist on the store site. A group organizer
 	 * browsing their own wp-admin should never find a Sponsors menu, quite
 	 * apart from not having the capability to use one.
 	 *
@@ -265,7 +265,7 @@ class Test_Groups_Sponsors extends Groups_TestCase {
 	}
 
 	/**
-	 * A group organiser — an administrator on their own group site, but not a
+	 * A group organizer — an administrator on their own group site, but not a
 	 * network admin — must not be able to edit the shared sponsor list.
 	 */
 	public function test_group_organisers_cannot_edit_sponsors() {

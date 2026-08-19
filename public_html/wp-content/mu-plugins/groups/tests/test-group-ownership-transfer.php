@@ -18,12 +18,15 @@ use function WordCamp\Groups\Ownership_Transfer\get_transfer_history;
 use function WordCamp\Groups\Ownership_Transfer\handle_decision;
 use function WordCamp\Groups\Ownership_Transfer\initiate_transfer;
 use function WordCamp\Groups\Ownership_Transfer\reject_transfer;
+use function WordCamp\Groups\Ownership_Transfer\render_page;
+use function WordCamp\Groups\Ownership_Transfer\sanitize_reason;
 use function WordCamp\Groups\Ownership_Transfer\validate_candidate;
 use const WordCamp\Groups\Ownership_Transfer\DECIDE_ACTION;
 use const WordCamp\Groups\Ownership_Transfer\HISTORY_LIMIT;
 use const WordCamp\Groups\Ownership_Transfer\LOCK_GROUP;
 use const WordCamp\Groups\Ownership_Transfer\LOCK_TIMEOUT;
 use const WordCamp\Groups\Ownership_Transfer\META_KEY_PENDING;
+use const WordCamp\Groups\Ownership_Transfer\REASON_MAX_LENGTH;
 use const WordCamp\Groups\Ownership_Transfer\STATUS_PENDING_ACCEPTANCE;
 use const WordCamp\Groups\Ownership_Transfer\STATUS_PENDING_APPROVAL;
 
@@ -852,6 +855,73 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 			$this->assertNotNull( get_pending_transfer( $this->group_site_id ) );
 			$this->assertSame( array(), get_transfer_history( $this->group_site_id ) );
 		}
+	}
+
+	/**
+	 * The reject form has to actually collect a reason. `reject_transfer()`
+	 * stores one and the rejection email has a line for it, but neither can do
+	 * anything if the only screen that rejects transfers never asks.
+	 */
+	public function test_reject_form_collects_a_reason() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		wp_set_current_user( $admin_id );
+
+		ob_start();
+		render_page();
+		$html = ob_get_clean();
+
+		$this->assertStringContainsString( 'name="reason"', $html );
+		$this->assertStringContainsString( 'id="wporg-transfer-reason-' . $this->group_site_id . '"', $html );
+
+		// Labelled, since it renders as a bare box in a table cell.
+		$this->assertStringContainsString( 'for="wporg-transfer-reason-' . $this->group_site_id . '"', $html );
+
+		// And it belongs to the reject form, not the approve one -- approving
+		// has no reason to give.
+		$reject_form = strstr( $html, 'value="reject"' );
+		$this->assertStringContainsString( 'name="reason"', $reject_form );
+		$this->assertStringNotContainsString( 'name="reason"', strstr( $html, 'value="reject"', true ) );
+	}
+
+	/**
+	 * A reason typed into that field survives the round trip into the history
+	 * entry the notification reads from.
+	 */
+	public function test_a_rejection_reason_is_recorded() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		wp_set_current_user( $admin_id );
+		$this->assertTrue( reject_transfer( $this->group_site_id, $admin_id, 'Candidate asked us to hold off.' ) );
+
+		$this->assertSame( 'Candidate asked us to hold off.', get_transfer_history( $this->group_site_id )[0]['reason'] );
+	}
+
+	/**
+	 * `maxlength` on the input is a courtesy to whoever is typing; the POST can
+	 * carry any length regardless, so the cap is enforced server-side too.
+	 */
+	public function test_reason_is_capped_and_sanitized() {
+		$this->assertSame( REASON_MAX_LENGTH, mb_strlen( sanitize_reason( str_repeat( 'a', REASON_MAX_LENGTH * 2 ) ) ) );
+		$this->assertSame( 'ok', sanitize_reason( 'ok' ) );
+		$this->assertSame( '', sanitize_reason( '' ) );
+
+		// Counted in characters, not bytes -- a multibyte reason must not be
+		// cut mid-character.
+		$multibyte = str_repeat( 'é', REASON_MAX_LENGTH * 2 );
+		$this->assertSame( REASON_MAX_LENGTH, mb_strlen( sanitize_reason( $multibyte ) ) );
+
+		$this->assertStringNotContainsString( '<script>', sanitize_reason( 'nope <script>alert(1)</script>' ) );
 	}
 
 	/**

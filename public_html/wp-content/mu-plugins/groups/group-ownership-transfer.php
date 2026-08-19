@@ -54,6 +54,14 @@ const STATUS_PENDING_APPROVAL = 'pending_approval';
  */
 const CANDIDATE_ROLE = 'editor';
 
+/**
+ * Longest rejection reason kept. The field is network-admin-only, so this
+ * isn't a trust boundary -- it just stops a stray paste from bloating the
+ * site meta this history is stored in, which is capped by entry count
+ * (`HISTORY_LIMIT`) but not by size.
+ */
+const REASON_MAX_LENGTH = 500;
+
 /** Network Admin page slug. */
 const MENU_SLUG = 'wporg-groups-ownership-transfer';
 
@@ -1185,6 +1193,20 @@ function get_final_status_label( string $status ): string {
 }
 
 /**
+ * Clean up a rejection reason for storage and email.
+ *
+ * `maxlength` on the input is a courtesy to whoever is typing, not a
+ * constraint -- the POST can carry any length regardless of what the form
+ * said.
+ *
+ * @param string $reason Raw reason from the request.
+ * @return string
+ */
+function sanitize_reason( string $reason ): string {
+	return mb_substr( sanitize_text_field( $reason ), 0, REASON_MAX_LENGTH );
+}
+
+/**
  * Process an approve/reject decision from the Network Admin screen.
  */
 function handle_decision(): void {
@@ -1194,7 +1216,7 @@ function handle_decision(): void {
 
 	$site_id  = isset( $_POST['site_id'] ) ? absint( wp_unslash( $_POST['site_id'] ) ) : 0;
 	$decision = isset( $_POST['decision'] ) ? sanitize_key( wp_unslash( $_POST['decision'] ) ) : '';
-	$reason   = isset( $_POST['reason'] ) ? sanitize_text_field( wp_unslash( $_POST['reason'] ) ) : '';
+	$reason   = isset( $_POST['reason'] ) ? sanitize_reason( wp_unslash( $_POST['reason'] ) ) : '';
 
 	check_admin_referer( DECIDE_ACTION . '_' . $site_id );
 
@@ -1285,7 +1307,7 @@ function render_page(): void {
 					<th scope="col"><?php esc_html_e( 'Current owner', 'wordcamporg' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Nominated owner', 'wordcamporg' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Initiated', 'wordcamporg' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Action', 'wordcamporg' ); ?></th>
+					<th scope="col" style="width:22%;"><?php esc_html_e( 'Action', 'wordcamporg' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
@@ -1342,7 +1364,7 @@ function render_page(): void {
 								<?php if ( $awaiting ) : ?>
 									<p class="description"><?php esc_html_e( 'Not yet accepted by the candidate.', 'wordcamporg' ); ?></p>
 								<?php else : ?>
-									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;">
+									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:block; margin-bottom:8px;">
 										<input type="hidden" name="action" value="<?php echo esc_attr( DECIDE_ACTION ); ?>" />
 										<input type="hidden" name="site_id" value="<?php echo esc_attr( $site_id ); ?>" />
 										<input type="hidden" name="decision" value="approve" />
@@ -1354,11 +1376,34 @@ function render_page(): void {
 										><?php esc_html_e( 'Approve', 'wordcamporg' ); ?></button>
 									</form>
 								<?php endif; ?>
-								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline-block;">
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:block;">
 									<input type="hidden" name="action" value="<?php echo esc_attr( DECIDE_ACTION ); ?>" />
 									<input type="hidden" name="site_id" value="<?php echo esc_attr( $site_id ); ?>" />
 									<input type="hidden" name="decision" value="reject" />
 									<?php wp_nonce_field( DECIDE_ACTION . '_' . $site_id ); ?>
+									<?php
+									/*
+									 * Optional, but worth offering: a rejection is the one
+									 * outcome where both parties are told "no" by someone
+									 * they never spoke to, and this is the only thing in the
+									 * notification that can tell them why. Left blank, the
+									 * email simply omits the reason line.
+									 */
+									$reason_field_id = 'wporg-transfer-reason-' . $site_id;
+									?>
+									<label class="screen-reader-text" for="<?php echo esc_attr( $reason_field_id ); ?>">
+										<?php esc_html_e( 'Reason for rejecting this transfer. Optional; included in the email to both parties.', 'wordcamporg' ); ?>
+									</label>
+									<input
+										type="text"
+										id="<?php echo esc_attr( $reason_field_id ); ?>"
+										name="reason"
+										value=""
+										maxlength="<?php echo esc_attr( REASON_MAX_LENGTH ); ?>"
+										placeholder="<?php esc_attr_e( 'Reason (optional)', 'wordcamporg' ); ?>"
+										title="<?php esc_attr_e( 'Included in the email sent to both parties.', 'wordcamporg' ); ?>"
+										style="display:block; width:100%; margin-bottom:4px;"
+									/>
 									<button
 										type="submit"
 										class="button button-link-delete"

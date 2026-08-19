@@ -99,6 +99,26 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Returns the `blog_id` the persisted run state would resume after, or `null` if no run is in progress.
+	 */
+	private function get_run_cursor(): ?int {
+		$run = get_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION );
+
+		return is_array( $run ) && isset( $run['cursor'] ) ? (int) $run['cursor'] : null;
+	}
+
+	/**
+	 * Backdates the run state's heartbeat past the stall timeout, so watchdog() sees a dead run.
+	 */
+	private function stall_run_state(): void {
+		$run = get_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION );
+
+		$run['updated'] = time() - Payment_Requests_Dashboard::AGGREGATE_STALL_TIMEOUT - 1;
+
+		update_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION, $run );
+	}
+
+	/**
 	 * @covers Payment_Requests_Dashboard::aggregate
 	 * @covers Payment_Requests_Dashboard::watchdog
 	 */
@@ -148,7 +168,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ),
 			'A full batch should schedule a continuation for the next blog_id.'
 		);
-		$this->assertSame( $blog_a, (int) get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
+		$this->assertSame( $blog_a, $this->get_run_cursor() );
 
 		$rows_after_batch_1 = $this->count_index_rows();
 		$this->assertSame(
@@ -162,11 +182,20 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		wp_unschedule_event( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ), 'wordcamp_payments_aggregate', array( $blog_a ) );
 		$this->assertFalse( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ), 'Precondition: the continuation is now lost.' );
 
+		// A missing continuation alone isn't enough to resume on: that's also what an in-flight batch
+		// looks like, since cron deletes a single event before firing it.
+		Payment_Requests_Dashboard::watchdog();
+		$this->assertFalse(
+			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ),
+			'watchdog() must not resume a run whose heartbeat is still fresh -- that batch may be running right now.'
+		);
+
+		$this->stall_run_state();
 		Payment_Requests_Dashboard::watchdog();
 
 		$this->assertNotFalse(
 			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_a ) ),
-			'watchdog() should resume the chain from the persisted cursor when a continuation goes missing.'
+			'watchdog() should resume the chain from the persisted cursor once the run has stopped making progress.'
 		);
 
 		// Consume the (re-)scheduled batch 2: picks up $blog_b, and since that still fills the
@@ -175,17 +204,17 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		Payment_Requests_Dashboard::aggregate( $blog_a );
 
 		$this->assertNotFalse( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_b ) ) );
-		$this->assertSame( $blog_b, (int) get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
+		$this->assertSame( $blog_b, $this->get_run_cursor() );
 
 		$rows_after_batch_2 = $this->count_index_rows();
 		$this->assertSame( $rows_after_batch_1 + 1, $rows_after_batch_2, 'Batch 2 should have indexed blog_b, on top of batch 1.' );
 
 		// Batch 3: $blog_b was the last blog in the network, so this finds nothing -- the chain
-		// ends here, with no further continuation and the cursor cleared.
+		// ends here, with no further continuation and the run state cleared.
 		wp_unschedule_event( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_b ) ), 'wordcamp_payments_aggregate', array( $blog_b ) );
 		Payment_Requests_Dashboard::aggregate( $blog_b );
 
-		$this->assertFalse( get_site_option( Payment_Requests_Dashboard::AGGREGATE_CURSOR_OPTION ) );
+		$this->assertFalse( get_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION ) );
 
 		$rows_after_batch_3 = $this->count_index_rows();
 		$this->assertSame( $rows_after_batch_2, $rows_after_batch_3, 'The empty final batch must not truncate or duplicate prior rows.' );
@@ -193,6 +222,77 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 		// watchdog() must be a no-op once the chain has already completed cleanly.
 		Payment_Requests_Dashboard::watchdog();
 		$this->assertFalse( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $blog_b ) ) );
+	}
+
+	/**
+	 * A batch that dies partway through leaves nothing scheduled, so the run state has to be written
+	 * before the batch does any work -- otherwise there'd be nothing for watchdog() to resume from.
+	 *
+	 * @covers Payment_Requests_Dashboard::aggregate
+	 */
+	public function test_aggregate_records_resume_point_before_doing_any_work(): void {
+		global $wpdb;
+
+		$start_blog_id  = (int) $wpdb->get_var( "SELECT MAX(blog_id) FROM $wpdb->blogs" );
+		$state_at_start = null;
+
+		// This filter is read after the run state is saved but before any blog is indexed, so it's a
+		// stand-in for "the batch died here".
+		add_filter(
+			'wordcamp_payments_aggregate_batch_size',
+			function ( $batch_size ) use ( &$state_at_start ) {
+				$state_at_start = get_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION );
+
+				return $batch_size;
+			}
+		);
+
+		Payment_Requests_Dashboard::aggregate( $start_blog_id );
+
+		$this->assertIsArray( $state_at_start, 'The run state should already be persisted when the batch begins work.' );
+		$this->assertSame( $start_blog_id, (int) $state_at_start['cursor'] );
+		$this->assertLessThanOrEqual( time(), (int) $state_at_start['updated'] );
+	}
+
+	/**
+	 * A fresh run truncates the index, so a continuation left queued by a run that never finished would
+	 * index its remaining blogs a second time, on top of what this run inserts for the same blogs.
+	 *
+	 * @covers Payment_Requests_Dashboard::aggregate
+	 */
+	public function test_a_fresh_run_retires_a_stalled_chain(): void {
+		$stale_cursor = PHP_INT_MAX - 1;
+
+		// A run that got as far as $stale_cursor and then stopped, leaving its continuation queued.
+		wp_schedule_single_event( time() + HOUR_IN_SECONDS, 'wordcamp_payments_aggregate', array( $stale_cursor ) );
+		update_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION, array(
+			'cursor'  => $stale_cursor,
+			'updated' => time() - Payment_Requests_Dashboard::AGGREGATE_STALL_TIMEOUT - 1,
+		) );
+
+		// The recurring event that *starts* a run, which must survive the cleanup.
+		if ( ! wp_next_scheduled( 'wordcamp_payments_aggregate' ) ) {
+			wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'wordcamp_payments_aggregate' );
+		}
+
+		$this->assertNotFalse(
+			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $stale_cursor ) ),
+			'Precondition: the stalled run left a continuation queued.'
+		);
+
+		Payment_Requests_Dashboard::aggregate();
+
+		$this->assertFalse(
+			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $stale_cursor ) ),
+			'A fresh run must retire the previous run\'s continuation, or it will index into the table this run just truncated.'
+		);
+		$this->assertNotFalse(
+			wp_next_scheduled( 'wordcamp_payments_aggregate' ),
+			'The recurring daily event must not be swept up along with the stale continuations.'
+		);
+
+		// This network is smaller than a batch, so the run finished and cleared its own state too.
+		$this->assertFalse( get_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION ) );
 	}
 
 	/**

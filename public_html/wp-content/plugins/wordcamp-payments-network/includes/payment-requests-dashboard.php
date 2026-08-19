@@ -5,7 +5,21 @@ class Payment_Requests_Dashboard {
 	public static $db_version = 7;
 
 	const AGGREGATE_BATCH_SIZE = 250;
-	const AGGREGATE_CURSOR_OPTION = 'wcp_network_aggregate_cursor';
+
+	/**
+	 * Durable state of an in-progress `aggregate()` run: `array( 'cursor' => int, 'updated' => int )`.
+	 * Absent when no run is in progress. See `watchdog()`.
+	 */
+	const AGGREGATE_RUN_OPTION = 'wcp_network_aggregate_run';
+
+	/**
+	 * How long a run's state may go untouched before `watchdog()` treats the run as dead and resumes it.
+	 *
+	 * Has to be comfortably longer than a single batch takes, because a batch that is running right now
+	 * looks identical to one that died: cron deletes a single event before firing it, so in both cases
+	 * the state names a cursor with no event scheduled for it.
+	 */
+	const AGGREGATE_STALL_TIMEOUT = HOUR_IN_SECONDS;
 
 	/**
 	 * Runs during plugins_loaded, doh.
@@ -19,8 +33,8 @@ class Payment_Requests_Dashboard {
 				wp_schedule_event( time(), 'daily', 'wordcamp_payments_aggregate' );
 			}
 
-			// Resumes a batch chain within the hour if a `wordcamp_payments_aggregate` continuation
-			// ever fails to schedule -- see `watchdog()`.
+			// Resumes an `aggregate()` run that stopped making progress, whether because a continuation
+			// failed to schedule or because a batch died mid-request -- see `watchdog()`.
 			if ( get_current_blog_id() == $current_site->blog_id && ! wp_next_scheduled( 'wordcamp_payments_aggregate_watchdog' ) ) {
 				wp_schedule_event( time(), 'hourly', 'wordcamp_payments_aggregate_watchdog' );
 			}
@@ -113,12 +127,28 @@ class Payment_Requests_Dashboard {
 		require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 		WCP_Payment_Request::register_post_statuses();
 
+		// A fresh run is about to empty the index, which makes any continuation still queued from an
+		// earlier run that never finished stale: it would index its remaining blogs into a table it no
+		// longer owns, duplicating every row this run's own batches also insert. Retire those first,
+		// before this run claims the state option for itself.
+		if ( 0 === $after_blog_id ) {
+			self::abandon_stalled_chain();
+		}
+
+		// Record where this batch starts *before* doing any of its work, so that a batch which dies partway
+		// through -- OOM, request timeout, deploy mid-flight -- still leaves behind enough state for
+		// `watchdog()` to run it again. Without this, only the very last completed batch is recoverable,
+		// and a first batch that dies loses the whole run until the next daily event.
+		self::save_run_state( $after_blog_id );
+
 		// Only truncate at the start of a fresh run, not on every batch.
 		if ( 0 === $after_blog_id ) {
 			$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name isn't user input, can't be a bound placeholder.
 		}
 
-		$batch_size = (int) apply_filters( 'wordcamp_payments_aggregate_batch_size', self::AGGREGATE_BATCH_SIZE );
+		// `max( 1, ... )` so a filter returning 0 can't make every batch look "not full" while indexing
+		// nothing, which would schedule continuations forever.
+		$batch_size = max( 1, (int) apply_filters( 'wordcamp_payments_aggregate_batch_size', self::AGGREGATE_BATCH_SIZE ) );
 
 		// Keyset pagination on `blog_id` rather than LIMIT/OFFSET on `last_updated`, since `last_updated`
 		// changes constantly as sites get traffic, which would shift rows across the offset boundary
@@ -155,34 +185,95 @@ class Payment_Requests_Dashboard {
 		}
 
 		// More blogs left? Schedule the next batch as a separate request instead of looping further in this one,
-		// and persist the cursor so `watchdog()` can resume the chain if that scheduling call is ever lost to
-		// WordPress core's unsynchronized read-modify-write of the shared `cron` option.
+		// and advance the persisted cursor so `watchdog()` can resume the chain if that scheduling call is
+		// ever lost to WordPress core's unsynchronized read-modify-write of the shared `cron` option.
 		if ( count( $blogs ) === $batch_size ) {
 			// Cast to int: `get_col()` returns strings, and cron identifies an event by
 			// `md5( serialize( $args ) )`, so a string cursor here wouldn't match the int one
 			// `watchdog()` looks up -- leaving it to schedule a duplicate run every hour.
 			$next_cursor = (int) end( $blogs );
-			update_site_option( self::AGGREGATE_CURSOR_OPTION, $next_cursor );
+			self::save_run_state( $next_cursor );
 			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $next_cursor ) );
 		} else {
-			delete_site_option( self::AGGREGATE_CURSOR_OPTION );
+			delete_site_option( self::AGGREGATE_RUN_OPTION );
 		}
 	}
 
 	/**
-	 * Resumes an aggregate() batch chain if its next scheduled continuation was lost.
+	 * Discards everything left over from a run that never reached its final batch.
 	 *
-	 * `wp_schedule_single_event()` writes into the same site-wide `cron` option that every other cron
-	 * call on the network writes to, unsynchronized -- so a concurrent scheduling call elsewhere can
-	 * clobber the continuation aggregate() just scheduled for itself. Runs hourly; harmless no-op when
-	 * there's no run in progress or the continuation is already scheduled.
+	 * Sweeps the queue rather than only unscheduling the continuation named by the run state, so that an
+	 * orphaned event is still cleared when the state itself was lost -- the two are written separately and
+	 * either one can go missing on its own.
+	 *
+	 * The recurring daily event is left alone: it's the one `wordcamp_payments_aggregate` event with no
+	 * arguments, and it's what starts a run rather than continuing one.
+	 */
+	protected static function abandon_stalled_chain() {
+		$crons = _get_cron_array();
+
+		if ( is_array( $crons ) ) {
+			foreach ( $crons as $timestamp => $hooks ) {
+				foreach ( $hooks['wordcamp_payments_aggregate'] ?? array() as $event ) {
+					if ( ! empty( $event['args'] ) ) {
+						wp_unschedule_event( $timestamp, 'wordcamp_payments_aggregate', $event['args'] );
+					}
+				}
+			}
+		}
+
+		delete_site_option( self::AGGREGATE_RUN_OPTION );
+	}
+
+	/**
+	 * Records the point an `aggregate()` run can be resumed from.
+	 *
+	 * The timestamp is a heartbeat, not just bookkeeping -- `watchdog()` uses it to tell a batch that is
+	 * still running from one that died.
+	 *
+	 * @param int $cursor The `blog_id` to resume after. `0` restarts the run from the beginning.
+	 */
+	protected static function save_run_state( $cursor ) {
+		update_site_option( self::AGGREGATE_RUN_OPTION, array(
+			'cursor'  => (int) $cursor,
+			'updated' => time(),
+		) );
+	}
+
+	/**
+	 * Resumes an aggregate() run that stopped making progress.
+	 *
+	 * The run state in `AGGREGATE_RUN_OPTION` -- not the queued cron event -- is the durable record of
+	 * progress, because `wp_schedule_single_event()` writes into the same site-wide `cron` option that
+	 * every other cron call on the network writes to, unsynchronized: a concurrent scheduling call
+	 * elsewhere can clobber the continuation `aggregate()` just scheduled for itself. The state also
+	 * survives a batch dying mid-request, which no cron entry would.
+	 *
+	 * Runs hourly; a no-op unless a run is genuinely stuck.
 	 */
 	public static function watchdog() {
-		$cursor = (int) get_site_option( self::AGGREGATE_CURSOR_OPTION, 0 );
+		$run = get_site_option( self::AGGREGATE_RUN_OPTION );
 
-		if ( $cursor > 0 && ! wp_next_scheduled( 'wordcamp_payments_aggregate', array( $cursor ) ) ) {
-			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $cursor ) );
+		// No run in progress.
+		if ( ! is_array( $run ) || ! isset( $run['cursor'], $run['updated'] ) ) {
+			return;
 		}
+
+		$cursor = (int) $run['cursor'];
+
+		// The continuation is queued and will fire on its own.
+		if ( wp_next_scheduled( 'wordcamp_payments_aggregate', array( $cursor ) ) ) {
+			return;
+		}
+
+		// Nothing queued, but the state was touched recently, so that batch is most likely executing right
+		// now -- cron deletes a single event before firing it. Resuming here would run a second chain
+		// alongside it and index every remaining blog twice.
+		if ( time() - (int) $run['updated'] < self::AGGREGATE_STALL_TIMEOUT ) {
+			return;
+		}
+
+		wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $cursor ) );
 	}
 
 	/**

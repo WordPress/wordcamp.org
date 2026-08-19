@@ -296,6 +296,14 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 
 		// This network is smaller than a batch, so the run finished and cleared its own state too.
 		$this->assertFalse( get_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION ) );
+
+		// This is the only test that exercises a *fresh* run, so it's the only one that reaches the
+		// TRUNCATE. That's DDL: MySQL commits it implicitly and won't roll it back with the rest of this
+		// test, while the rows aggregate() re-inserted afterwards *would* be rolled back -- leaving the
+		// index empty for every test below, which reads it via generate_payment_report(). Commit the
+		// rebuilt index instead, once this test's own cron entries are cleared so they don't leak with it.
+		wp_unschedule_hook( 'wordcamp_payments_aggregate' );
+		self::commit_transaction();
 	}
 
 	/**

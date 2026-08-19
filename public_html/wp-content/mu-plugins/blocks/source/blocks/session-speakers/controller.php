@@ -40,6 +40,35 @@ function render( $attributes, $content, $block ) {
 		return '';
 	}
 
+	// Resolve the ids the way add_speaker_info_to_session_posts() does, so the
+	// post type is enforced in SQL and the posts are fetched in one query.
+	$speakers = get_posts( array(
+		'post_type'      => 'wcb_speaker',
+		'post__in'       => array_map( 'absint', $speaker_ids ),
+		'post_status'    => 'any',
+		'posts_per_page' => -1,
+		'orderby'        => 'post__in',
+		'no_found_rows'  => true,
+		// Only the title, slug, permalink and status are used below.
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+	) );
+
+	// Mirrors WP_REST_Posts_Controller::check_read_permission(). Logged out
+	// visitors hold no capabilities, so published has to be allowed for first.
+	$speakers = array_filter(
+		$speakers,
+		function ( $speaker ) {
+			return 'publish' === $speaker->post_status
+				|| current_user_can( 'read_post', $speaker->ID );
+		}
+	);
+
+	// Session has no speakers this viewer can read.
+	if ( empty( $speakers ) ) {
+		return '';
+	}
+
 	$byline  = ! empty( $attributes['byline'] ) ? $attributes['byline'] : false;
 	$classes = array_filter( array(
 		isset( $attributes['textAlign'] ) ? 'has-text-align-' . $attributes['textAlign'] : false,
@@ -50,12 +79,12 @@ function render( $attributes, $content, $block ) {
 		$content .= '<span class="wp-block-wordcamp-session-speakers__byline">' . wp_kses_post( $byline ) . '</span>';
 	}
 
-	foreach ( $speaker_ids as $speaker_id ) {
+	foreach ( $speakers as $speaker ) {
 		$content .= '<span class="wp-block-wordcamp-session-speakers__name">';
 		if ( isset( $attributes['isLink'] ) && $attributes['isLink'] ) {
-			$content .= sprintf( '<a href="%1$s">%2$s</a>', get_the_permalink( $speaker_id ), get_the_title( $speaker_id ) );
+			$content .= sprintf( '<a href="%1$s">%2$s</a>', get_the_permalink( $speaker->ID ), get_the_title( $speaker->ID ) );
 		} else {
-			$content .= get_the_title( $speaker_id );
+			$content .= get_the_title( $speaker->ID );
 		}
 		$content .= '</span>';
 	}

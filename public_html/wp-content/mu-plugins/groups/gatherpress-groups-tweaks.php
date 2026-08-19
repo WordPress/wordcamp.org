@@ -68,21 +68,27 @@ function get_event_venue_post_id( int $event_id ): int {
  * Disable the "Show Timezone" GatherPress setting so event date blocks
  * never append "GMT+0000" or similar suffixes.
  *
- * Also disable anonymous RSVP at the global setting level.
+ * Also disable anonymous RSVP and Open RSVP at the global setting level.
+ *
+ * Uses `option_`/`default_option_` (and `site_option_` variants; not `pre_option_`)
+ * so the forced keys overlay the stored settings (or defaults when unset)
+ * instead of replacing them.
  */
-add_filter(
-	'pre_option_gatherpress_settings',
-	static function ( $value ) {
-		if ( ! is_array( $value ) ) {
-			$value = array();
-		}
-
-		$value['show_timezone']        = 0;
-		$value['enable_anonymous_rsvp'] = 0;
-
-		return $value;
+$force_gatherpress_settings = static function ( $value ) {
+	if ( ! is_array( $value ) ) {
+		$value = array();
 	}
-);
+
+	$value['show_timezone']         = 0;
+	$value['enable_anonymous_rsvp'] = 0;
+	$value['enable_open_rsvp']      = 0;
+
+	return $value;
+};
+add_filter( 'option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'default_option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'site_option_gatherpress_settings', $force_gatherpress_settings );
+add_filter( 'default_site_option_gatherpress_settings', $force_gatherpress_settings );
 
 /**
  * Force anonymous RSVP off for all events on group sites.
@@ -151,7 +157,7 @@ add_filter(
 			return $allcaps;
 		}
 
-		// Grant to editors (group organisers).
+		// Grant to editors (group organizers).
 		if ( ! empty( $allcaps['edit_others_posts'] ) ) {
 			$allcaps['edit_theme_options'] = true;
 		}

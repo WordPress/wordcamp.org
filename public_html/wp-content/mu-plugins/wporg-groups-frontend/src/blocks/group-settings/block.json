@@ -6,7 +6,7 @@
 	"title": "Group Settings",
 	"category": "widgets",
 	"icon": "admin-generic",
-	"description": "Organiser settings panel for managing events, venues, members, design, and group info.",
+	"description": "Organizer settings panel for managing events, venues, members, design, and group info.",
 	"usesContext": [ "postId" ],
 	"supports": {
 		"html": false,

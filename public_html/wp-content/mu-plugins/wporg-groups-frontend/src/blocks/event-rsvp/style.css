@@ -4,10 +4,16 @@
  * @package WordCamp\Groups\Frontend
  */
 
-/* === Summary (avatar stack + count) === */
+/* === Summary (avatar stack + count) ===
+   The button under the RSVP button that opens the attendee modal.
+   `inline-flex` keeps the avatars and the "N attending" label on a single
+   row, and shrinks the button to the width of that row instead of the full
+   column, so the clickable area matches the visible content. */
 .wporg-event-rsvp__summary {
-	display: block;
-	width: 100%;
+	display: inline-flex;
+	align-items: center;
+	gap: 10px;
+	max-width: 100%;
 	padding: 0;
 	border: 0;
 	background: transparent;
@@ -15,55 +21,71 @@
 	font: inherit;
 	text-align: left;
 	cursor: pointer;
-	margin-bottom: 16px;
-}
-
-.wporg-event-rsvp__summary:hover {
-	opacity: 0.85;
+	margin: 10px 0 0;
+	border-radius: 2px;
 }
 
 .wporg-event-rsvp__summary:focus-visible {
-	outline: 2px solid;
+	outline: 2px solid var(--wp--preset--color--blueberry-1, #3858e9);
 	outline-offset: 4px;
 }
 
 .wporg-event-rsvp__avatars {
 	display: flex;
-	flex-wrap: wrap;
-	margin-left: 10px;
-	margin-bottom: 8px;
+	flex: 0 0 auto;
+}
+
+/* Overlap the faces by offsetting each one onto the previous. Only between
+   siblings, so a lone avatar keeps its full width and the row never measures
+   narrower than the circle inside it. */
+.wporg-event-rsvp__avatars > * + * {
+	margin-left: -6px;
+}
+
+/* No one's going yet, so there's no stack to show. */
+.wporg-event-rsvp__summary.has-no-attendees .wporg-event-rsvp__avatars {
+	display: none;
+}
+
+.wporg-event-rsvp__avatar,
+.wporg-event-rsvp__overflow {
+	width: 28px;
+	height: 28px;
+	border-radius: 9999px;
+	border: 2px solid #fff;
+	flex: 0 0 auto;
 }
 
 .wporg-event-rsvp__avatar {
-	width: 40px;
-	height: 40px;
-	border-radius: 9999px;
-	border: 2px solid #fff;
 	box-shadow: 0 1px 2px rgba(30, 30, 30, 0.08);
-	margin-left: -10px;
 	object-fit: cover;
-	flex: 0 0 auto;
 }
 
 .wporg-event-rsvp__overflow {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 40px;
-	height: 40px;
-	border-radius: 9999px;
-	border: 2px solid #fff;
-	margin-left: -10px;
-	background: #f6f6f6;
+	background: #f0f0f1;
 	color: #656a71;
-	font-size: 12px;
+	font-size: 11px;
 	font-weight: 600;
-	flex: 0 0 auto;
+	letter-spacing: -0.02em;
 }
 
 .wporg-event-rsvp__count {
 	font-size: 14px;
 	color: #656a71;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Hovering anywhere on the button highlights only the count, not the avatars:
+   the avatars are decorative (`aria-hidden`), so the count is the part that
+   should read as the link into the attendee modal. */
+.wporg-event-rsvp__summary:hover .wporg-event-rsvp__count {
+	color: #1a1919;
+	text-decoration: underline;
 }
 
 /* === RSVP button === */
@@ -77,20 +99,31 @@
 	justify-content: center;
 }
 
-.wp-block-wporg-event-rsvp .wp-block-button__link.is-attending {
-	background: var(--wp--preset--color--acid-green-3, #e2ffed);
-	color: var(--wp--preset--color--charcoal-0, #1a1919);
-	border: 1px solid var(--wp--preset--color--acid-green-1, #33f078);
+/*
+ * The site's one non-blue button. Attending reports a state instead of
+ * offering an action, so green reads as "done", not "click me again".
+ *
+ * Set as an override of the parent theme's outline tokens rather than as a
+ * competing rule — the same idiom the parent uses for its own
+ * `is-style-fill-on-dark` variant. The wrapper carries `is-style-outline`
+ * exactly when the link carries `is-attending` (both are bound to
+ * `state.isAttending`), so scoping to the wrapper needs no extra weight and
+ * nothing here has to outrank anything.
+ */
+.wp-block-wporg-event-rsvp .wp-block-button.is-style-outline {
+	--wp--custom--button--outline--color--background: var(--wp--preset--color--acid-green-3, #e2ffed);
+	--wp--custom--button--outline--color--text: var(--wp--preset--color--charcoal-0, #1a1919);
+	--wp--custom--button--outline--border--color: var(--wp--preset--color--acid-green-1, #33f078);
+	--wp--custom--button--outline--hover--color--background: #c8f5d9;
+	--wp--custom--button--outline--hover--color--text: var(--wp--preset--color--charcoal-0, #1a1919);
+	--wp--custom--button--outline--hover--border--color: #17c257;
+	--wp--custom--button--outline--active--color--background: #c8f5d9;
+	--wp--custom--button--outline--active--color--text: var(--wp--preset--color--charcoal-0, #1a1919);
+	--wp--custom--button--outline--active--border--color: #17c257;
 }
 
-.wp-block-wporg-event-rsvp .wp-block-button__link.is-attending:hover {
-	background: #c8f5d9;
-}
-
-.wp-block-wporg-event-rsvp .wp-block-button__link.is-past {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
+/* A past event's button is `disabled`, so the theme's disabled treatment
+   already greys it out — the class is left as a styling hook only. */
 
 /* === Full-screen modal === */
 .wporg-event-rsvp__modal {
@@ -188,10 +221,22 @@
 	display: none;
 }
 
+/* Compact button size — matches the comment composer's submit. */
 .wporg-event-rsvp__save-answers {
 	align-self: flex-start;
-	font-size: 13px;
-	padding: 6px 12px;
+	padding: 10px 20px;
+	font-size: var(--wp--preset--font-size--small, 14px);
+	font-weight: 600;
+	line-height: 1.3;
+	border: 1px solid transparent;
+	border-radius: 2px;
+}
+
+.wporg-event-rsvp__save-answers:disabled {
+	background: var(--wp--preset--color--light-grey-2, #f6f6f6);
+	border-color: var(--wp--preset--color--light-grey-1, #d9d9d9);
+	color: var(--wp--preset--color--charcoal-4, #656a71);
+	cursor: not-allowed;
 }
 
 .wporg-event-rsvp__save-answers.is-hidden {
@@ -239,7 +284,7 @@
 }
 
 .wporg-event-rsvp__modal-status a {
-	color: #3858e9;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-event-rsvp__modal-rsvp-btn {
@@ -329,6 +374,7 @@
 /* === Responsive === */
 
 @media (max-width: 600px) {
+
 	.wporg-event-rsvp__modal {
 		padding: 0;
 	}

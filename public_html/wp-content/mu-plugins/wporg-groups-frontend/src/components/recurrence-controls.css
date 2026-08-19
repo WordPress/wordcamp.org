@@ -35,6 +35,7 @@
 }
 
 @media (max-width: 600px) {
+
 	.wporg-event-recurrence__row {
 		align-items: stretch;
 		flex-direction: column;

@@ -16,7 +16,7 @@ defined( 'WPINC' ) || die();
  * WordPress roles that can create and manage their own events on a group
  * site. Mirrors the role tiers surfaced elsewhere in this plugin (see
  * `Members_Controller::ROLE_LABELS`): administrators and editors are full
- * "Organisers", authors are "Event Organisers".
+ * "Organizers", authors are "Event Organizers".
  *
  * Checked by role rather than by a raw capability (e.g. `edit_posts`) so
  * that a stray `contributor` account doesn't slip in — contributors also
@@ -26,19 +26,48 @@ defined( 'WPINC' ) || die();
 const EVENT_MANAGER_ROLES = array( 'administrator', 'editor', 'author' );
 
 /**
+ * WordPress roles that make up the full "Organizer" tier — a narrower set
+ * than `EVENT_MANAGER_ROLES`, since it excludes authors ("Event
+ * Organizers"), who only manage their own events. Single source for the
+ * role-set checked when deciding whether a member can be left without an
+ * organizer, or whether they're shown the "Organizer" label.
+ */
+const ORGANIZER_ROLES = array( 'administrator', 'editor' );
+
+/**
+ * Translated display label for a member's role tier.
+ *
+ * Mirrors `Members_Controller::ROLE_LABELS`, which stays untranslated
+ * because it's also read directly by `group-members/render.php` and
+ * asserted against verbatim in `test-class-members-controller.php`'s REST
+ * response checks. This is the translated counterpart for front-end markup
+ * rendered directly by PHP (not consumed as REST JSON), such as the
+ * `group-membership` block.
+ */
+function get_role_tier_label( string $role ): string {
+	$labels = array(
+		'administrator' => __( 'Organizer', 'wporg-groups-frontend' ),
+		'editor'        => __( 'Organizer', 'wporg-groups-frontend' ),
+		'author'        => __( 'Event Organizer', 'wporg-groups-frontend' ),
+	);
+
+	return $labels[ $role ] ?? __( 'Member', 'wporg-groups-frontend' );
+}
+
+/**
  * Whether the current user is allowed to create / edit events on this group.
  *
- * Authors ("Event Organisers") can create and manage their own events; the
+ * Authors ("Event Organizers") can create and manage their own events; the
  * REST layer's per-post capability checks (`edit_post`/`publish_post`)
  * already restrict them to events they own. Editors and administrators
- * ("Organisers") can manage everyone's events.
+ * ("Organizers") can manage everyone's events.
  *
  * Super admins are recognised explicitly because this is a role-array check
  * rather than a `current_user_can()` capability check (see the docblock on
  * `EVENT_MANAGER_ROLES`) — unlike `current_user_can_manage_group_settings()`,
  * it doesn't automatically pick up core's super-admin capability elevation.
  * Without this, a super admin whose nominal role on a given group is
- * `subscriber` (e.g. a deputy who isn't the group's own organiser) would see
+ * `subscriber` (e.g. a deputy who isn't the group's own organizer) would see
  * the "Set up your group" button — gated by `current_user_can_manage_group_settings()`,
  * which does elevate — but the modal would render invisibly, because the
  * `wp-components`/`wp-block-editor` styles enqueued in `Modal::enqueue_supplementary_assets()`
@@ -64,7 +93,7 @@ function current_user_can_manage_events(): bool {
 
 /**
  * Whether the current user is allowed to access the group settings UI
- * (venues, group info, member role management) — the full "Organiser"
+ * (venues, group info, member role management) — the full "Organizer"
  * tier only (editors and administrators), distinct from event management.
  */
 function current_user_can_manage_group_settings(): bool {

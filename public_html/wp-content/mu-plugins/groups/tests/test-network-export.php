@@ -4,6 +4,8 @@ namespace WordCamp\Groups\Tests;
 
 use WP_REST_Request;
 use WordCamp\Groups\Network_Export;
+use WordPressdotorg\GatherPress_Recurring_Events\Database as Recurring_Events_Database;
+use WordPressdotorg\GatherPress_Recurring_Events\Occurrences;
 
 use function WordCamp\Groups\Frontend\REST\create_event;
 
@@ -55,6 +57,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		unset( $_REQUEST['_wpnonce'], $_POST['_wpnonce'], $_GET['_wpnonce'], $_GET['format'] );
 
 		delete_site_option( Network_Export\JOB_OPTION );
+		delete_site_option( Network_Export\ROWS_OPTION );
 		delete_site_option( Network_Export\EXPORT_OPTION );
 		wp_clear_scheduled_hook( Network_Export\CRON_HOOK );
 
@@ -248,6 +251,36 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	}
 
 	/**
+	 * RSVP to one occurrence of a recurring series, mapping the comment to
+	 * that occurrence the way the front end does.
+	 *
+	 * @param int    $site_id       Group site.
+	 * @param int    $event_id      Series post ID.
+	 * @param string $recurrence_id Occurrence to attribute the RSVP to.
+	 * @param string $status        RSVP status term slug.
+	 */
+	protected function rsvp_to_occurrence( int $site_id, int $event_id, string $recurrence_id, string $status ): void {
+		$user_id = self::factory()->user->create();
+
+		$this->with_site(
+			$site_id,
+			function () use ( $event_id, $recurrence_id, $status, $user_id ) {
+				$comment_id = wp_insert_comment(
+					array(
+						'comment_post_ID'  => $event_id,
+						'comment_type'     => 'gatherpress_rsvp',
+						'comment_approved' => 1,
+						'user_id'          => $user_id,
+					)
+				);
+
+				wp_set_object_terms( $comment_id, $status, '_gatherpress_rsvp_status' );
+				Recurring_Events_Database::map_comment( $comment_id, $event_id, $recurrence_id );
+			}
+		);
+	}
+
+	/**
 	 * Drain the in-flight export, however many batches it takes.
 	 */
 	protected function drain_export(): void {
@@ -257,6 +290,10 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 			Network_Export\process_batch();
 			++$guard;
 		}
+
+		// A run that never converges must fail here, not surface later as a
+		// puzzling assertion about the artifact.
+		$this->assertSame( array(), Network_Export\get_job(), 'The export did not converge within 50 batches.' );
 	}
 
 	/**
@@ -470,11 +507,15 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	 */
 	public function test_second_start_is_refused_while_running() {
 		$first = Network_Export\queue_export( array_values( $this->group_sites ) );
-		$this->assertNotSame( '', $first );
+		$this->assertSame( 'queued', $first['status'] );
+		$this->assertNotSame( '', $first['id'] );
 
 		$job_before = Network_Export\get_job();
+		$second     = Network_Export\queue_export( array_values( $this->group_sites ) );
 
-		$this->assertSame( '', Network_Export\queue_export( array_values( $this->group_sites ) ) );
+		// "Busy" and "lock lost" need different notices: only one is worth
+		// retrying.
+		$this->assertSame( 'busy', $second['status'] );
 		$this->assertSame( $job_before, Network_Export\get_job(), 'The in-flight job must be untouched.' );
 	}
 
@@ -495,7 +536,11 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		Network_Export\process_batch();
 
 		$this->assertSame( $job, Network_Export\get_job(), 'A leased job must not be double-processed.' );
-		$this->assertSame( '', Network_Export\queue_export( array_values( $this->group_sites ) ) );
+		$this->assertSame( 'busy', Network_Export\queue_export( array_values( $this->group_sites ) )['status'] );
+
+		// The only safety net for a lease-holder that dies without
+		// rescheduling.
+		$this->assertNotFalse( wp_next_scheduled( Network_Export\CRON_HOOK ), 'A leased job must leave a tick queued.' );
 	}
 
 	/**
@@ -543,23 +588,16 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 			)
 		);
 
-		// Run A: same job ID, its own (now superseded) claim token, and a
-		// cursor from before run B took over.
-		$stale_job = $this->build_job(
-			array(
-				'id'            => 'shared-id',
-				'sites'         => $sites,
-				'pending_sites' => array(),
-				'rows'          => array( array( 'event_title' => 'stale' ) ),
-				'claim_token'   => 'run-a',
-			)
-		);
+		// Run A holds the same job ID but a superseded claim token: none of
+		// its writes may land on run B's job.
+		$this->assertFalse( Network_Export\finalize_job( 'run-a' ), 'A stale claim must not finalize.' );
+		Network_Export\finish_site( 'run-a', $sites[0], array( $this->build_row() ) );
+		$this->assertSame( 0, Network_Export\begin_site( 'run-a' ), 'A stale claim must not take a site.' );
 
-		$committed = Network_Export\commit_job( $stale_job, true );
-
-		$this->assertFalse( $committed, 'A stale claim must not commit.' );
-		$this->assertSame( 'run-b', Network_Export\get_job()['claim_token'], "Run B's lease must be intact." );
-		$this->assertSame( $sites, Network_Export\get_job()['pending_sites'], 'The cursor must not rewind.' );
+		$job = Network_Export\get_job();
+		$this->assertSame( 'run-b', $job['claim_token'], "Run B's lease must be intact." );
+		$this->assertSame( $sites, $job['pending_sites'], 'The cursor must not rewind.' );
+		$this->assertSame( array(), Network_Export\get_collected_rows(), 'A stale claim must not contribute rows.' );
 		$this->assertFalse( get_site_option( Network_Export\EXPORT_OPTION ), 'No artifact may be published by a stale claim.' );
 	}
 
@@ -568,15 +606,23 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	 * instead of the run's work disappearing.
 	 */
 	public function test_failed_artifact_write_keeps_the_job() {
-		$job = $this->build_job(
-			array(
-				'id'            => 'finishing-job',
-				'pending_sites' => array(),
-				'rows'          => array( array( 'event_title' => 'Kept' ) ),
-				'claim_token'   => 'mine',
+		$site_id = $this->group_sites['brisbane'];
+
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			$this->build_job(
+				array(
+					'id'            => 'finishing-job',
+					'sites'         => array( $site_id ),
+					'pending_sites' => array(),
+					'claim_token'   => 'mine',
+				)
 			)
 		);
-		update_site_option( Network_Export\JOB_OPTION, $job );
+		update_site_option(
+			Network_Export\ROWS_OPTION,
+			array( $site_id => array( $this->build_row( array( 'event_title' => 'Kept' ) ) ) )
+		);
 
 		$block_write = function ( $value, $old_value ) {
 			unset( $value );
@@ -587,13 +633,13 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		};
 		add_filter( 'pre_update_site_option_' . Network_Export\EXPORT_OPTION, $block_write, 10, 2 );
 
-		$committed = Network_Export\commit_job( $job, true );
+		$committed = Network_Export\finalize_job( 'mine' );
 
 		remove_filter( 'pre_update_site_option_' . Network_Export\EXPORT_OPTION, $block_write, 10 );
 
 		$this->assertFalse( $committed );
 		$this->assertNotEmpty( Network_Export\get_job(), 'The job must survive a failed artifact write.' );
-		$this->assertSame( 'Kept', Network_Export\get_job()['rows'][0]['event_title'] );
+		$this->assertSame( 'Kept', Network_Export\get_collected_rows()[ $site_id ][0]['event_title'] );
 	}
 
 	/**
@@ -617,10 +663,99 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		);
 
 		$claim = Network_Export\claim_job();
-
 		$this->assertSame( 'claimed', $claim['status'] );
-		$this->assertSame( array( $hobart ), $claim['job']['pending_sites'], 'The poisonous site must be skipped.' );
-		$this->assertArrayHasKey( $brisbane, $claim['job']['failed_sites'] );
+
+		$next = Network_Export\begin_site( $claim['job']['claim_token'] );
+
+		$this->assertSame( $hobart, $next, 'The poisonous site must be skipped.' );
+
+		$job = Network_Export\get_job();
+		$this->assertSame( array( $hobart ), $job['pending_sites'] );
+		$this->assertArrayHasKey( $brisbane, $job['failed_sites'] );
+	}
+
+	/**
+	 * The attempt is charged to the site actually being read, not to whichever
+	 * one happened to be first in the batch — otherwise a site that kills the
+	 * process partway through a batch would get healthy groups abandoned in
+	 * its place.
+	 */
+	public function test_attempts_are_charged_per_site() {
+		$brisbane = $this->group_sites['brisbane'];
+		$hobart   = $this->group_sites['hobart'];
+
+		Network_Export\queue_export( array( $brisbane, $hobart ) );
+		Network_Export\process_batch();
+
+		$this->assertSame( array(), Network_Export\get_job(), 'Both sites fit in one batch.' );
+
+		// Re-run the same shape, stopping after the first site, to read the
+		// counter mid-batch.
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			$this->build_job(
+				array(
+					'sites'         => array( $brisbane, $hobart ),
+					'pending_sites' => array( $brisbane, $hobart ),
+				)
+			)
+		);
+
+		$claim = Network_Export\claim_job();
+		$token = $claim['job']['claim_token'];
+
+		$first = Network_Export\begin_site( $token );
+		Network_Export\finish_site( $token, $first, array() );
+		$second = Network_Export\begin_site( $token );
+
+		$attempts = Network_Export\get_job()['site_attempts'];
+
+		$this->assertSame( $brisbane, $first );
+		$this->assertSame( $hobart, $second );
+		$this->assertSame( 1, $attempts[ $brisbane ] );
+		$this->assertSame( 1, $attempts[ $hobart ], 'The second site must be charged its own attempt.' );
+	}
+
+	/**
+	 * A site whose collection keeps killing the process before its result can
+	 * be recorded is eventually abandoned — and the healthy sites around it
+	 * are exported rather than blamed.
+	 */
+	public function test_a_repeatedly_crashing_site_converges() {
+		$brisbane = $this->group_sites['brisbane'];
+		$hobart   = $this->group_sites['hobart'];
+
+		$this->create_site_event( $brisbane, 'Brisbane Meetup' );
+
+		// Stand in for a fatal during collection: the site is read, but its
+		// result never gets written.
+		$kill = function ( $value, $old_value ) use ( $hobart ) {
+			unset( $old_value );
+
+			if ( is_array( $value ) && array_key_exists( $hobart, $value ) ) {
+				throw new \RuntimeException( 'process died before the write' );
+			}
+
+			return $value;
+		};
+		add_filter( 'pre_update_site_option_' . Network_Export\ROWS_OPTION, $kill, 10, 2 );
+
+		Network_Export\queue_export( array( $brisbane, $hobart ) );
+
+		$guard = 0;
+		while ( Network_Export\get_job() && $guard < 20 ) {
+			Network_Export\process_batch();
+			++$guard;
+		}
+
+		remove_filter( 'pre_update_site_option_' . Network_Export\ROWS_OPTION, $kill, 10 );
+
+		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
+
+		$this->assertIsArray( $artifact, 'The export must converge, not retry forever.' );
+		$this->assertArrayHasKey( $hobart, $artifact['failed_sites'], 'The crashing site must be the one abandoned.' );
+		$this->assertArrayNotHasKey( $brisbane, $artifact['failed_sites'], 'A healthy site must not be blamed.' );
+		$this->assertSame( array( 'Brisbane Meetup' ), array_column( $artifact['rows'], 'event_title' ) );
 	}
 
 	/**
@@ -705,41 +840,154 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$brisbane = $this->group_sites['brisbane'];
 		$hobart   = $this->group_sites['hobart'];
 
+		// One site per unit of work, each holding exactly one event, so the
+		// totals below pin down per-batch accumulation rather than just "it
+		// finished".
+		$total = Network_Export\SITES_PER_BATCH + 3;
+		$sites = array( $brisbane, $hobart );
+
 		$this->create_site_event( $brisbane, 'Brisbane Meetup' );
 		$this->create_site_event( $hobart, 'Hobart Social' );
 
-		// One entry per unit of work, alternating sites: each entry yields
-		// exactly one event row, so the totals below pin down per-batch
-		// accumulation rather than just "it finished".
-		$total   = Network_Export\SITES_PER_BATCH + 3;
-		$pending = array();
-		for ( $i = 0; $i < $total; $i++ ) {
-			$pending[] = 0 === $i % 2 ? $brisbane : $hobart;
+		for ( $i = count( $sites ); $i < $total; $i++ ) {
+			$site_id                         = $this->create_group_site( "batch-$i" );
+			$this->group_sites[ "batch-$i" ] = $site_id;
+			$sites[]                         = $site_id;
+
+			$this->create_site_event( $site_id, "Batch Event $i" );
 		}
 
-		update_site_option(
-			Network_Export\JOB_OPTION,
-			$this->build_job(
-				array(
-					'sites'         => $pending,
-					'pending_sites' => $pending,
-				)
-			)
-		);
-
+		Network_Export\queue_export( $sites );
 		Network_Export\process_batch();
 
 		$job = Network_Export\get_job();
 		$this->assertCount( 3, $job['pending_sites'], 'One run must stop at the batch boundary.' );
-		$this->assertCount( Network_Export\SITES_PER_BATCH, $job['rows'], "The first batch's rows must be committed." );
+		$this->assertCount( Network_Export\SITES_PER_BATCH, Network_Export\get_collected_rows(), "The first batch's rows must be persisted." );
 		$this->assertNotFalse( wp_next_scheduled( Network_Export\CRON_HOOK ), 'The remainder must be rescheduled.' );
 
 		$this->drain_export();
 
 		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
-		$this->assertSame( array(), Network_Export\get_job() );
 		$this->assertCount( $total, $artifact['rows'], 'Every batch must contribute its rows.' );
 		$this->assertSame( $total, $artifact['event_count'] );
+		$this->assertSame( 'Brisbane Meetup', $artifact['rows'][0]['event_title'], 'Rows follow the queued site order.' );
+		$this->assertSame( array(), get_site_option( Network_Export\ROWS_OPTION, array() ), 'The working rows must be cleaned up.' );
+	}
+
+	/**
+	 * A recurring series exports one row per occurrence, each with its own
+	 * date and counts — collapsing it into a single row dated at the first
+	 * occurrence would report an active group as dormant.
+	 */
+	public function test_recurring_series_expands_per_occurrence() {
+		$brisbane = $this->group_sites['brisbane'];
+
+		Recurring_Events_Database::maybe_install();
+
+		$date     = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
+		$weekday  = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );
+		$event_id = $this->with_site(
+			$brisbane,
+			function () use ( $date, $weekday ) {
+				$previous_user = get_current_user_id();
+				wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+
+				$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/event' );
+				foreach ( array(
+					'title'      => 'Weekly Meetup',
+					'date'       => $date,
+					'time_start' => '18:00',
+					'time_end'   => '20:00',
+					'recurrence' => array(
+						'frequency' => 'weekly',
+						'interval'  => 1,
+						'weekdays'  => array( $weekday ),
+						'end_type'  => 'count',
+						'count'     => 3,
+					),
+				) as $key => $value ) {
+					$request->set_param( $key, $value );
+				}
+
+				$response = create_event( $request );
+				wp_set_current_user( $previous_user );
+				$this->assertNotWPError( $response );
+
+				return (int) $response->get_data()['id'];
+			}
+		);
+
+		// RSVP to two different occurrences of the same series, and cancel a
+		// third occurrence.
+		$occurrences = $this->with_site(
+			$brisbane,
+			function () use ( $event_id ) {
+				return Occurrences::all( $event_id, 'upcoming', 10 );
+			}
+		);
+		$this->assertCount( 3, $occurrences );
+
+		$this->rsvp_to_occurrence( $brisbane, $event_id, $occurrences[0]->recurrence_id, 'attending' );
+		$this->rsvp_to_occurrence( $brisbane, $event_id, $occurrences[0]->recurrence_id, 'attending' );
+		$this->rsvp_to_occurrence( $brisbane, $event_id, $occurrences[1]->recurrence_id, 'not_attending' );
+
+		$this->with_site(
+			$brisbane,
+			function () use ( $event_id, $occurrences ) {
+				Occurrences::set_status( $event_id, $occurrences[2]->recurrence_id, 'cancelled' );
+			}
+		);
+
+		Network_Export\queue_export( array( $brisbane ) );
+		$this->drain_export();
+
+		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
+		$rows     = array_values(
+			array_filter(
+				$artifact['rows'],
+				static function ( $row ) use ( $event_id ) {
+					return (int) $row['event_id'] === $event_id;
+				}
+			)
+		);
+
+		$this->assertCount( 3, $rows, 'Each occurrence is its own row.' );
+		$this->assertSame( 3, $artifact['event_count'], 'Instances are counted, not series.' );
+
+		$by_recurrence = array_column( $rows, null, 'recurrence_id' );
+
+		$first = $by_recurrence[ $occurrences[0]->recurrence_id ];
+		$this->assertSame( 2, $first['attending_count'] );
+		$this->assertSame( $occurrences[0]->datetime_start_gmt, $first['event_start_gmt'], 'Each row carries its own date.' );
+
+		$second = $by_recurrence[ $occurrences[1]->recurrence_id ];
+		$this->assertSame( 0, $second['attending_count'], 'Counts must not bleed across occurrences.' );
+		$this->assertSame( 1, $second['not_attending_count'] );
+		$this->assertSame( $occurrences[1]->datetime_start_gmt, $second['event_start_gmt'] );
+
+		// A cancelled instance is filterable rather than silently counted as
+		// activity.
+		$this->assertSame( 'cancelled', $by_recurrence[ $occurrences[2]->recurrence_id ]['occurrence_status'] );
+		$this->assertSame( 'scheduled', $first['occurrence_status'] );
+	}
+
+	/**
+	 * A one-off event still exports as a single row with no occurrence
+	 * dimension.
+	 */
+	public function test_one_off_event_has_no_occurrence_fields() {
+		$brisbane = $this->group_sites['brisbane'];
+		$event_id = $this->create_site_event( $brisbane, 'Brisbane Meetup' );
+		$this->create_site_rsvp( $brisbane, $event_id, 'attending' );
+
+		Network_Export\queue_export( array( $brisbane ) );
+		$this->drain_export();
+
+		$row = get_site_option( Network_Export\EXPORT_OPTION )['rows'][0];
+
+		$this->assertSame( '', $row['recurrence_id'] );
+		$this->assertSame( '', $row['occurrence_status'] );
+		$this->assertSame( 1, $row['attending_count'] );
 	}
 
 	/**
@@ -796,7 +1044,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->assertSame( Network_Export\CSV_COLUMNS, $rows[0] );
 		$this->assertCount( 2, $rows );
 		$this->assertSame( 'Brisbane Meetup', $rows[1][3] );
-		$this->assertSame( '1', $rows[1][7], 'attending_count column must carry the count.' );
+		$this->assertSame( '1', $rows[1][9], 'attending_count column must carry the count.' );
 
 		$json = Network_Export\get_download_payload( 'json' );
 		$this->assertStringStartsWith( 'application/json', $json['content_type'] );
@@ -837,7 +1085,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->assertCount( count( Network_Export\CSV_COLUMNS ), $record );
 		$this->assertSame( 'Group, Inc. "HQ"', $record[0] );
 		$this->assertSame( 'Bad\\", Name', $record[3] );
-		$this->assertSame( "Line\nbreak", $record[6] );
+		$this->assertSame( "Line\nbreak", $record[8] );
 	}
 
 	/**
@@ -857,7 +1105,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 
 		$this->assertSame( "'=cmd|\"/c calc\"!A1", $rows[1][0], 'group_name must be escaped.' );
 		$this->assertSame( "'@SUM(A1)", $rows[1][3], 'event_title must be escaped.' );
-		$this->assertSame( "'+1 Main Street", $rows[1][6], 'venue must be escaped.' );
+		$this->assertSame( "'+1 Main Street", $rows[1][8], 'venue must be escaped.' );
 	}
 
 	/**
@@ -985,7 +1233,6 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 				'id'            => 'test-job',
 				'sites'         => array_values( $this->group_sites ),
 				'pending_sites' => array_values( $this->group_sites ),
-				'rows'          => array(),
 				'failed_sites'  => array(),
 				'site_attempts' => array(),
 				'author'        => 0,
@@ -1011,6 +1258,8 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 				'event_title'         => 'Brisbane Meetup',
 				'event_start_gmt'     => '2026-02-01 08:00:00',
 				'event_end_gmt'       => '2026-02-01 10:00:00',
+				'recurrence_id'       => '',
+				'occurrence_status'   => '',
 				'venue'               => 'Salty Spaces',
 				'attending_count'     => 1,
 				'waiting_list_count'  => 0,

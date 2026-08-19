@@ -15,10 +15,18 @@
  * per-group collector, so attendee rows are never even loaded into this
  * process.
  *
+ * One row per event *instance*: a recurring series contributes a row per
+ * occurrence, dated and counted separately, because the questions this export
+ * answers — which groups are active, which have gone quiet, is attendance
+ * growing — are all about instances held. Collapsing a year of monthly
+ * meetups into one row dated last January would report an active group as
+ * dormant.
+ *
  * Generation runs on cron, a few sites per batch, rather than in the request:
  * walking every group site's events and RSVPs synchronously would time out as
- * the network grows. The in-progress job and the finished artifact each live
- * in a network option; downloads are rendered from the artifact on demand.
+ * the network grows. The cursor, the rows collected so far, and the finished
+ * artifact each live in a network option; downloads are rendered from the
+ * artifact on demand.
  *
  * Loaded on the groups network only (sits in the `groups/` mu-plugins folder).
  *
@@ -61,6 +69,16 @@ const CRON_HOOK = 'wporg_groups_export_batch';
  * is just refused.
  */
 const JOB_OPTION = 'wporg_groups_export_job';
+
+/**
+ * Network option holding the rows collected so far, keyed by site ID.
+ *
+ * Kept out of `JOB_OPTION` so the cursor stays small: it's read and written
+ * once per site, and the screen reads it on every load just to show progress.
+ * Keying by site also makes a re-collected site idempotent — a site retried
+ * after a crash overwrites its own rows instead of appending them twice.
+ */
+const ROWS_OPTION = 'wporg_groups_export_job_rows';
 
 /**
  * Network option holding the last completed export's rows and metadata.
@@ -113,8 +131,12 @@ const CLAIM_LEASE = 5 * MINUTE_IN_SECONDS;
 const MAX_SITE_ATTEMPTS = 3;
 
 /**
- * Column order for the CSV download: one flat row per event, aggregate
- * counts only.
+ * Column order for the CSV download: one flat row per event instance,
+ * aggregate counts only.
+ *
+ * `recurrence_id` and `occurrence_status` are empty for one-off events. For a
+ * recurring series they identify the instance, so a cancelled occurrence can
+ * be filtered out rather than silently counting as activity.
  */
 const CSV_COLUMNS = array(
 	'group_name',
@@ -123,6 +145,8 @@ const CSV_COLUMNS = array(
 	'event_title',
 	'event_start_gmt',
 	'event_end_gmt',
+	'recurrence_id',
+	'occurrence_status',
 	'venue',
 	'attending_count',
 	'waiting_list_count',
@@ -174,15 +198,16 @@ function add_page(): void {
  * destroy the last good file.
  *
  * @param int[] $site_ids Group sites to export.
- * @return string The job's ID, or an empty string when a run is already in
- *                flight or the job store was locked by a concurrent update.
+ * @return array{status: string, id: string} `status` is `queued`, `busy` (a
+ *         run is already in flight) or `locked` (a concurrent update held the
+ *         job store). The two failures need different notices: one is worth
+ *         retrying, the other isn't.
  */
-function queue_export( array $site_ids ): string {
+function queue_export( array $site_ids ): array {
 	$job = array(
 		'id'            => wp_generate_uuid4(),
 		'sites'         => array_values( $site_ids ),
 		'pending_sites' => array_values( $site_ids ),
-		'rows'          => array(),
 		'failed_sites'  => array(),
 		'site_attempts' => array(),
 		'author'        => get_current_user_id(),
@@ -198,19 +223,34 @@ function queue_export( array $site_ids ): string {
 				return false;
 			}
 
+			// Rows from any abandoned previous run are not this run's.
+			delete_site_option( ROWS_OPTION );
 			update_site_option( JOB_OPTION, $job );
 
 			return true;
 		}
 	);
 
+	if ( null === $queued ) {
+		return array(
+			'status' => 'locked',
+			'id'     => '',
+		);
+	}
+
 	if ( ! $queued ) {
-		return '';
+		return array(
+			'status' => 'busy',
+			'id'     => '',
+		);
 	}
 
 	schedule_next_batch();
 
-	return $job['id'];
+	return array(
+		'status' => 'queued',
+		'id'     => $job['id'],
+	);
 }
 
 /**
@@ -273,9 +313,26 @@ function get_job(): array {
  * @param int $site_id Site ID.
  */
 function site_label( int $site_id ): string {
-	$site = get_site( $site_id );
+	try {
+		$site = get_site( $site_id );
+	} catch ( \Throwable $error ) {
+		// This runs on the failure path; it must not become a second failure
+		// that escapes before the site is recorded.
+		return "site {$site_id}";
+	}
 
 	return $site ? untrailingslashit( $site->path ) : "site {$site_id}";
+}
+
+/**
+ * The rows collected so far, keyed by site ID.
+ *
+ * @return array<int, array[]>
+ */
+function get_collected_rows(): array {
+	$rows = get_site_option( ROWS_OPTION, array() );
+
+	return is_array( $rows ) ? $rows : array();
 }
 
 /**
@@ -328,34 +385,6 @@ function claim_job(): array {
 		);
 	}
 
-	/*
-	 * Count the attempt on the site this run will start with, before doing any
-	 * of the work — this write is the only trace that survives a fatal
-	 * mid-collect. Past the limit the site is recorded as failed and skipped,
-	 * so one poisonous site can't stall the whole export indefinitely.
-	 */
-	if ( ! empty( $job['pending_sites'] ) ) {
-		$head     = (int) $job['pending_sites'][0];
-		$attempts = (int) ( $job['site_attempts'][ $head ] ?? 0 ) + 1;
-
-		$job['site_attempts'][ $head ] = $attempts;
-
-		if ( $attempts > MAX_SITE_ATTEMPTS ) {
-			array_shift( $job['pending_sites'] );
-
-			$job['failed_sites'][ $head ] = site_label( $head );
-
-			Logger\log(
-				'groups_export_site_abandoned',
-				array(
-					'job'      => $job['id'],
-					'site'     => $head,
-					'attempts' => $attempts,
-				)
-			);
-		}
-	}
-
 	$job['claim_token']   = wp_generate_uuid4();
 	$job['claimed_until'] = time() + CLAIM_LEASE;
 
@@ -400,21 +429,29 @@ function process_batch(): void {
 		return;
 	}
 
-	$job       = $claim['job'];
+	$token     = $claim['job']['claim_token'];
 	$processed = 0;
-	$crashed   = false;
 
 	/*
-	 * Progress made in this loop only exists in memory until the commit below,
-	 * so a `Throwable` escaping it must not skip that commit. Per-site
-	 * failures are handled inside the loop and recorded on the job; this outer
-	 * guard is only for something that couldn't be contained that way.
+	 * Each site's outcome is persisted as it goes, so a `Throwable` escaping
+	 * here costs at most the site in flight — but log it and fall through to
+	 * `finalize_job()` anyway, which clears the lease so the next tick can
+	 * resume immediately instead of waiting it out.
 	 */
 	try {
-		while ( $processed < SITES_PER_BATCH && ! empty( $job['pending_sites'] ) ) {
-			++$processed;
+		while ( $processed < SITES_PER_BATCH ) {
+			$site_id = with_job_lock(
+				function () use ( $token ) {
+					return begin_site( $token );
+				},
+				true
+			);
 
-			$site_id = (int) array_shift( $job['pending_sites'] );
+			if ( ! $site_id ) {
+				break;
+			}
+
+			++$processed;
 
 			try {
 				$rows = collect_site_rows( $site_id );
@@ -422,36 +459,23 @@ function process_batch(): void {
 				$rows = new WP_Error( 'export_site_crashed', $site_error->getMessage() );
 			}
 
-			if ( is_wp_error( $rows ) ) {
-				// A failed site is recorded, not silently omitted — a file
-				// that quietly misses a group reads as "that group had no
-				// events".
-				$job['failed_sites'][ $site_id ] = site_label( $site_id );
-
-				Logger\log(
-					'groups_export_site_failed',
-					array(
-						'job'   => $job['id'],
-						'site'  => $site_id,
-						'error' => $rows->get_error_code(),
-					)
-				);
-
-				continue;
-			}
-
-			$job['rows'] = array_merge( $job['rows'], $rows );
+			with_job_lock(
+				function () use ( $token, $site_id, $rows ) {
+					finish_site( $token, $site_id, $rows );
+				},
+				// The site's rows only exist in memory at this point;
+				// abandoning the write would mean collecting it all over again.
+				true
+			);
 		}
 	} catch ( \Throwable $error ) {
-		$crashed = true;
-
 		// Hand-built array rather than the Throwable itself; see the
-		// equivalent note in `Messaging\process_batch()` about
-		// `redact_keys()` mangling non-Exception Throwables.
+		// equivalent note in `Messaging\process_batch()` about `redact_keys()`
+		// mangling non-Exception Throwables.
 		Logger\log(
 			'groups_export_batch_crashed',
 			array(
-				'job'   => $job['id'],
+				'job'   => $claim['job']['id'],
 				'error' => array(
 					'class'   => get_class( $error ),
 					'message' => $error->getMessage(),
@@ -462,52 +486,147 @@ function process_batch(): void {
 		);
 	}
 
-	$finished = ! $crashed && empty( $job['pending_sites'] );
-
-	$committed = with_job_lock(
-		function () use ( $job, $finished ) {
-			return commit_job( $job, $finished );
+	$finished = with_job_lock(
+		function () use ( $token ) {
+			return finalize_job( $token );
 		},
-		// This batch's progress only exists in memory at this point, so
-		// abandoning the write would redo — or lose — this run's work.
 		true
 	);
 
-	if ( ! $finished || ! $committed ) {
+	if ( ! $finished ) {
 		schedule_next_batch();
 	}
 }
 
 /**
- * Write a batch's progress back, or store the finished artifact.
+ * Take the next pending site, charging an attempt against it first.
+ *
+ * The attempt is persisted *before* the site is read, and the cursor is left
+ * pointing at it, so a fatal during collection is charged to the site that
+ * actually died. Counting at claim time instead would charge every retry to
+ * whichever site happened to be first in the batch — dropping healthy groups
+ * from the export while the poisonous one kept running.
  *
  * Call inside `with_job_lock()`.
  *
- * @param array $job      The claimed job, as this batch left it.
- * @param bool  $finished Whether the whole export is done.
- * @return bool Whether the commit was applied.
+ * @param string $token This run's claim token.
+ * @return int The site to collect, or 0 when there's nothing left to do.
  */
-function commit_job( array $job, bool $finished ): bool {
-	$current = get_job();
+function begin_site( string $token ): int {
+	$job = get_job();
+
+	if ( empty( $job ) || ( $job['claim_token'] ?? '' ) !== $token ) {
+		return 0;
+	}
+
+	while ( ! empty( $job['pending_sites'] ) ) {
+		$head     = (int) $job['pending_sites'][0];
+		$attempts = (int) ( $job['site_attempts'][ $head ] ?? 0 ) + 1;
+
+		$job['site_attempts'][ $head ] = $attempts;
+
+		if ( $attempts <= MAX_SITE_ATTEMPTS ) {
+			update_site_option( JOB_OPTION, $job );
+
+			return $head;
+		}
+
+		/*
+		 * A site that has killed the process this many times never gets to
+		 * record itself as failed, so record it here and move on — otherwise
+		 * it would be re-claimed after every lease expiry, forever.
+		 */
+		array_shift( $job['pending_sites'] );
+
+		$job['failed_sites'][ $head ] = site_label( $head );
+
+		Logger\log(
+			'groups_export_site_abandoned',
+			array(
+				'job'      => $job['id'],
+				'site'     => $head,
+				'attempts' => $attempts,
+			)
+		);
+	}
+
+	update_site_option( JOB_OPTION, $job );
+
+	return 0;
+}
+
+/**
+ * Record one site's result and advance the cursor past it.
+ *
+ * Call inside `with_job_lock()`.
+ *
+ * @param string         $token   This run's claim token.
+ * @param int            $site_id The site just collected.
+ * @param array[]|object $rows    Its rows, or a `WP_Error`.
+ */
+function finish_site( string $token, int $site_id, $rows ): void {
+	$job = get_job();
+
+	// A different token means another run took the job over while this site
+	// was being read; its cursor is authoritative, not ours.
+	if ( empty( $job ) || ( $job['claim_token'] ?? '' ) !== $token ) {
+		return;
+	}
+
+	if ( ! empty( $job['pending_sites'] ) && (int) $job['pending_sites'][0] === $site_id ) {
+		array_shift( $job['pending_sites'] );
+	}
+
+	if ( is_wp_error( $rows ) ) {
+		// A failed site is recorded, not silently omitted — a file that
+		// quietly misses a group reads as "that group had no events".
+		$job['failed_sites'][ $site_id ] = site_label( $site_id );
+
+		Logger\log(
+			'groups_export_site_failed',
+			array(
+				'job'   => $job['id'],
+				'site'  => $site_id,
+				'error' => $rows->get_error_code(),
+			)
+		);
+	} else {
+		$collected             = get_collected_rows();
+		$collected[ $site_id ] = $rows;
+
+		update_site_option( ROWS_OPTION, $collected );
+	}
+
+	update_site_option( JOB_OPTION, $job );
+}
+
+/**
+ * Store the artifact and clear the job, once nothing is pending.
+ *
+ * Call inside `with_job_lock()`.
+ *
+ * @param string $token This run's claim token.
+ * @return bool Whether the export is finished and stored.
+ */
+function finalize_job( string $token ): bool {
+	$job = get_job();
 
 	/*
-	 * Only commit onto our own claim. A different token means this batch
-	 * overran its lease and another run has taken the job over: their cursor
-	 * is ahead of ours, so writing ours back would rewind the export and
-	 * re-process sites they already committed — and clear the live lease of
-	 * the run that is collecting right now.
+	 * Only finalize our own claim. A different token means this batch overran
+	 * its lease and another run took the job over — finishing on their behalf
+	 * would publish a snapshot mid-collection.
 	 */
-	if ( empty( $current ) || ( $current['claim_token'] ?? '' ) !== $job['claim_token'] ) {
+	if ( empty( $job ) || ( $job['claim_token'] ?? '' ) !== $token ) {
 		return false;
 	}
 
 	$job['claimed_until'] = 0;
 	$job['claim_token']   = '';
 
-	if ( ! $finished ) {
+	if ( ! empty( $job['pending_sites'] ) ) {
 		update_site_option( JOB_OPTION, $job );
 
-		return true;
+		return false;
 	}
 
 	/*
@@ -524,6 +643,7 @@ function commit_job( array $job, bool $finished ): bool {
 	}
 
 	delete_site_option( JOB_OPTION );
+	delete_site_option( ROWS_OPTION );
 
 	return true;
 }
@@ -597,6 +717,12 @@ function collect_site_rows( int $site_id ) {
 			return $counts;
 		}
 
+		$occurrences = get_occurrences( $event_ids );
+
+		if ( is_wp_error( $occurrences ) ) {
+			return $occurrences;
+		}
+
 		$venues     = \WordCamp\Groups\Frontend\Export\get_event_venue_names( $event_ids );
 		$group_name = get_bloginfo( 'name' );
 		$group_url  = home_url();
@@ -604,23 +730,50 @@ function collect_site_rows( int $site_id ) {
 		$rows = array();
 
 		foreach ( $events as $event ) {
-			$event_id     = (int) $event->ID;
-			$event_counts = $counts[ $event_id ] ?? array();
+			$event_id          = (int) $event->ID;
+			$event_counts      = $counts[ $event_id ] ?? array();
+			$event_occurrences = $occurrences[ $event_id ] ?? array();
 
-			$rows[] = array(
-				'group_name'          => $group_name,
-				'group_url'           => $group_url,
-				'event_id'            => $event_id,
-				// Raw title: texturizing and entity-encoding belong to HTML
-				// output, not to a data export.
-				'event_title'         => $event->post_title,
-				'event_start_gmt'     => $dates[ $event_id ]['start_gmt'] ?? '',
-				'event_end_gmt'       => $dates[ $event_id ]['end_gmt'] ?? '',
-				'venue'               => $venues[ $event_id ] ?? '',
-				'attending_count'     => (int) ( $event_counts['attending'] ?? 0 ),
-				'waiting_list_count'  => (int) ( $event_counts['waiting_list'] ?? 0 ),
-				'not_attending_count' => (int) ( $event_counts['not_attending'] ?? 0 ),
-			);
+			/*
+			 * One row per instance: each projected occurrence, plus a row for
+			 * any RSVPs that carry no occurrence (a one-off event, or RSVPs
+			 * predating the recurring-events plugin) so no count is dropped.
+			 * A recurrence with no occurrence row left — a deleted instance —
+			 * keeps its own row for the same reason.
+			 */
+			$keys = array_keys( $event_occurrences );
+
+			foreach ( array_keys( $event_counts ) as $counted ) {
+				if ( ! isset( $event_occurrences[ $counted ] ) ) {
+					$keys[] = $counted;
+				}
+			}
+
+			if ( empty( $keys ) ) {
+				$keys = array( '' );
+			}
+
+			foreach ( $keys as $key ) {
+				$occurrence     = $event_occurrences[ $key ] ?? null;
+				$instance_count = $event_counts[ $key ] ?? array();
+
+				$rows[] = array(
+					'group_name'          => $group_name,
+					'group_url'           => $group_url,
+					'event_id'            => $event_id,
+					// Raw title: texturizing and entity-encoding belong to
+					// HTML output, not to a data export.
+					'event_title'         => $event->post_title,
+					'event_start_gmt'     => $occurrence['start_gmt'] ?? $dates[ $event_id ]['start_gmt'] ?? '',
+					'event_end_gmt'       => $occurrence['end_gmt'] ?? $dates[ $event_id ]['end_gmt'] ?? '',
+					'recurrence_id'       => (string) $key,
+					'occurrence_status'   => $occurrence['status'] ?? '',
+					'venue'               => $venues[ $event_id ] ?? '',
+					'attending_count'     => (int) ( $instance_count['attending'] ?? 0 ),
+					'waiting_list_count'  => (int) ( $instance_count['waiting_list'] ?? 0 ),
+					'not_attending_count' => (int) ( $instance_count['not_attending'] ?? 0 ),
+				);
+			}
 		}
 
 		return $rows;
@@ -630,15 +783,20 @@ function collect_site_rows( int $site_id ) {
 }
 
 /**
- * Count approved RSVPs per event and status on the current site.
+ * Count approved RSVPs per event instance and status on the current site.
  *
  * One grouped query over the comment/term join. GatherPress stores an RSVP as
  * a `gatherpress_rsvp` comment carrying one `_gatherpress_rsvp_status` term,
  * so counting in SQL needs no comment or user objects at all.
  *
+ * Every occurrence of a recurring series hangs its RSVPs off the same series
+ * post, so the recurring-events plugin's mapping table is joined in to split
+ * them by occurrence. Without that join a year of monthly meetups would count
+ * as one event. RSVPs with no mapping row land under the empty key.
+ *
  * @param int[] $event_ids Event post IDs.
- * @return array<int, array<string, int>>|WP_Error Counts keyed by event ID
- *                                                 then status slug.
+ * @return array<int, array<string, array<string, int>>>|WP_Error Counts keyed
+ *         by event ID, then recurrence ID (empty when unmapped), then status.
  */
 function get_rsvp_counts( array $event_ids ) {
 	global $wpdb;
@@ -649,6 +807,18 @@ function get_rsvp_counts( array $event_ids ) {
 
 	$placeholders = implode( ', ', array_fill( 0, count( $event_ids ), '%d' ) );
 
+	$recurrence_select = "'' AS recurrence_id";
+	$recurrence_join   = '';
+
+	if ( class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
+		$mapping_table     = \WordPressdotorg\GatherPress_Recurring_Events\Database::comments_table();
+		$recurrence_select = 'COALESCE( occurrences.recurrence_id, %s ) AS recurrence_id';
+		$recurrence_join   = "LEFT JOIN {$mapping_table} AS occurrences ON occurrences.comment_id = comments.comment_ID";
+	}
+
+	// The `%s` above, when present, comes first in the argument list.
+	$query_args = '' === $recurrence_join ? $event_ids : array_merge( array( '' ), $event_ids );
+
 	/*
 	 * Disabled across the whole statement rather than per line: the query is a
 	 * multi-line string, so a single-line ignore wouldn't cover the
@@ -658,17 +828,18 @@ function get_rsvp_counts( array $event_ids ) {
 	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT comments.comment_post_ID AS event_id, terms.slug AS status, COUNT(*) AS total
+			"SELECT comments.comment_post_ID AS event_id, {$recurrence_select}, terms.slug AS status, COUNT(*) AS total
 			FROM {$wpdb->comments} AS comments
 			INNER JOIN {$wpdb->term_relationships} AS relationships ON relationships.object_id = comments.comment_ID
 			INNER JOIN {$wpdb->term_taxonomy} AS taxonomy ON taxonomy.term_taxonomy_id = relationships.term_taxonomy_id
 			INNER JOIN {$wpdb->terms} AS terms ON terms.term_id = taxonomy.term_id
+			{$recurrence_join}
 			WHERE comments.comment_post_ID IN ( {$placeholders} )
 				AND comments.comment_type = 'gatherpress_rsvp'
 				AND comments.comment_approved = '1'
 				AND taxonomy.taxonomy = '_gatherpress_rsvp_status'
-			GROUP BY comments.comment_post_ID, terms.slug",
-			$event_ids
+			GROUP BY event_id, recurrence_id, terms.slug",
+			$query_args
 		)
 	);
 	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
@@ -680,10 +851,56 @@ function get_rsvp_counts( array $event_ids ) {
 	$counts = array();
 
 	foreach ( (array) $rows as $row ) {
-		$counts[ (int) $row->event_id ][ $row->status ] = (int) $row->total;
+		$counts[ (int) $row->event_id ][ (string) $row->recurrence_id ][ $row->status ] = (int) $row->total;
 	}
 
 	return $counts;
+}
+
+/**
+ * The projected occurrences of any recurring series among these events.
+ *
+ * @param int[] $event_ids Event post IDs.
+ * @return array<int, array<string, array{start_gmt: string, end_gmt: string, status: string}>>|WP_Error
+ *         Occurrences keyed by event ID then recurrence ID, oldest first.
+ */
+function get_occurrences( array $event_ids ) {
+	global $wpdb;
+
+	if ( empty( $event_ids ) || ! class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
+		return array();
+	}
+
+	$table        = \WordPressdotorg\GatherPress_Recurring_Events\Database::occurrences_table();
+	$placeholders = implode( ', ', array_fill( 0, count( $event_ids ), '%d' ) );
+
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- As in get_rsvp_counts().
+	$rows = $wpdb->get_results(
+		$wpdb->prepare(
+			"SELECT series_post_id, recurrence_id, datetime_start_gmt, datetime_end_gmt, status
+			FROM {$table}
+			WHERE series_post_id IN ( {$placeholders} )
+			ORDER BY datetime_start_gmt ASC",
+			$event_ids
+		)
+	);
+	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+
+	if ( '' !== $wpdb->last_error ) {
+		return new WP_Error( 'export_occurrence_read_failed', 'Could not read occurrences for this site.' );
+	}
+
+	$occurrences = array();
+
+	foreach ( (array) $rows as $row ) {
+		$occurrences[ (int) $row->series_post_id ][ (string) $row->recurrence_id ] = array(
+			'start_gmt' => $row->datetime_start_gmt,
+			'end_gmt'   => $row->datetime_end_gmt,
+			'status'    => $row->status,
+		);
+	}
+
+	return $occurrences;
 }
 
 /**
@@ -693,7 +910,19 @@ function get_rsvp_counts( array $event_ids ) {
  * @return bool Whether the artifact was stored.
  */
 function record_artifact( array $job ): bool {
-	$failed = (array) $job['failed_sites'];
+	$failed    = (array) $job['failed_sites'];
+	$collected = get_collected_rows();
+	$rows      = array();
+
+	// Flatten in the order the sites were queued, so the file reads
+	// group-by-group rather than in whatever order the batches finished.
+	foreach ( $job['sites'] as $site_id ) {
+		if ( ! empty( $collected[ $site_id ] ) ) {
+			$rows = array_merge( $rows, $collected[ $site_id ] );
+
+			unset( $collected[ $site_id ] );
+		}
+	}
 
 	return update_site_option(
 		EXPORT_OPTION,
@@ -705,9 +934,11 @@ function record_artifact( array $job ): bool {
 			// the queued total as the headline number would claim coverage the
 			// rows don't have.
 			'exported_site_count' => count( $job['sites'] ) - count( $failed ),
-			'event_count'         => count( $job['rows'] ),
+			// Instances, not series: a recurring meetup contributes one row
+			// per occurrence.
+			'event_count'         => count( $rows ),
 			'failed_sites'        => $failed,
-			'rows'                => $job['rows'],
+			'rows'                => $rows,
 		)
 	);
 }
@@ -728,11 +959,13 @@ function handle_start_export(): void {
 		redirect_with_notice( 'no-groups' );
 	}
 
-	if ( get_job() ) {
+	$queued = queue_export( $site_ids );
+
+	if ( 'busy' === $queued['status'] ) {
 		redirect_with_notice( 'busy' );
 	}
 
-	if ( ! queue_export( $site_ids ) ) {
+	if ( 'queued' !== $queued['status'] ) {
 		redirect_with_notice( 'queue-locked' );
 	}
 
@@ -759,6 +992,7 @@ function handle_cancel_export(): void {
 	with_job_lock(
 		function () {
 			delete_site_option( JOB_OPTION );
+			delete_site_option( ROWS_OPTION );
 		},
 		true
 	);
@@ -939,12 +1173,15 @@ function build_network_json( array $artifact ): array {
 		}
 
 		$groups[ $key ]['events'][] = array(
-			'id'        => $row['event_id'],
-			'title'     => $row['event_title'],
-			'start_gmt' => $row['event_start_gmt'],
-			'end_gmt'   => $row['event_end_gmt'],
-			'venue'     => $row['venue'],
-			'counts'    => array(
+			'id'                => $row['event_id'],
+			'title'             => $row['event_title'],
+			'start_gmt'         => $row['event_start_gmt'],
+			'end_gmt'           => $row['event_end_gmt'],
+			// Empty for one-off events; set per instance for a series.
+			'recurrence_id'     => $row['recurrence_id'] ?? '',
+			'occurrence_status' => $row['occurrence_status'] ?? '',
+			'venue'             => $row['venue'],
+			'counts'            => array(
 				'attending'     => $row['attending_count'],
 				'waiting_list'  => $row['waiting_list_count'],
 				'not_attending' => $row['not_attending_count'],
@@ -1102,6 +1339,8 @@ function render_page(): void {
 		<p>
 			Download every group's event history with its RSVP breakdown as CSV or JSON.
 			The export contains aggregate RSVP counts only — no attendee names or emails.
+			Recurring events are listed one row per occurrence, each with its own date
+			and counts.
 		</p>
 
 		<?php if ( $job ) : ?>

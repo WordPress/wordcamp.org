@@ -153,7 +153,7 @@ function wcpt_get_wordcamp_id() {
  * @uses wcpt_get_wordcamp_permalink()
  */
 function wcpt_wordcamp_permalink( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_permalink( $wordcamp_id );
+	echo esc_url( wcpt_get_wordcamp_permalink( $wordcamp_id ) );
 }
 
 /**
@@ -460,7 +460,7 @@ function wcpt_get_wordcamp_venue_name( $wordcamp_id = 0 ) {
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_url( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_url( $wordcamp_id );
+	echo esc_url( wcpt_get_wordcamp_url( $wordcamp_id ) );
 }
 
 /**

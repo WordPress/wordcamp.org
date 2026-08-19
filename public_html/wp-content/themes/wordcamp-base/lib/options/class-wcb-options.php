@@ -184,7 +184,7 @@ class WCB_Options extends WCB_Loader {
 
 				</table>
 				<p class="submit">
-					<input type="submit" class="button-primary" value="<?php _e( 'Save Options', 'wordcamporg' ); ?>" />
+					<input type="submit" class="button-primary" value="<?php esc_attr_e( 'Save Options', 'wordcamporg' ); ?>" />
 				</p>
 			</form>
 		</div>

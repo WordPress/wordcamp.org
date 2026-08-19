@@ -108,6 +108,49 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Counts the index rows for one payment request.
+	 */
+	private function count_rows_for( int $blog_id, int $post_id ): int {
+		global $wpdb;
+
+		$table = Payment_Requests_Dashboard::get_table_name();
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name isn't user input, can't be a bound placeholder.
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table WHERE blog_id = %d AND post_id = %d", $blog_id, $post_id ) );
+	}
+
+	/**
+	 * Creates a site with a single approved payment request on it.
+	 *
+	 * @return array{0: int, 1: int} The new `blog_id` and the request's `post_id`.
+	 */
+	private function create_blog_with_payment_request( string $invoice ): array {
+		$blog_id = self::factory()->blog->create();
+
+		switch_to_blog( $blog_id );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$post_id = self::factory()->post->create( array(
+			'post_type'   => 'wcp_payment_request',
+			'post_status' => 'wcb-approved',
+			'meta_input'  => array(
+				'_wcb_updated_timestamp'         => strtotime( 'Yesterday 10am' ),
+				'_camppayments_description'      => 'Batch Test Request',
+				'_camppayments_due_by'           => strtotime( 'Next Tuesday' ),
+				'_camppayments_payment_amount'   => '100',
+				'_camppayments_currency'         => 'USD',
+				'_camppayments_payment_method'   => 'Wire',
+				'_camppayments_invoice_number'   => $invoice,
+				'_camppayments_payment_category' => 'audio-visual',
+			),
+		) );
+
+		restore_current_blog();
+
+		return array( $blog_id, $post_id );
+	}
+
+	/**
 	 * Backdates the run state's heartbeat past the stall timeout, so watchdog() sees a dead run.
 	 */
 	private function stall_run_state(): void {
@@ -255,8 +298,8 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A fresh run truncates the index, so a continuation left queued by a run that never finished would
-	 * index its remaining blogs a second time, on top of what this run inserts for the same blogs.
+	 * Two chains walking the network at once interleave their per-blog delete/insert pairs, so a fresh run
+	 * has to retire a continuation left queued by a run that never finished.
 	 *
 	 * @covers Payment_Requests_Dashboard::aggregate
 	 */
@@ -287,7 +330,7 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 
 		$this->assertFalse(
 			wp_next_scheduled( 'wordcamp_payments_aggregate', array( $stale_cursor ) ),
-			'A fresh run must retire the previous run\'s continuation, or it will index into the table this run just truncated.'
+			'A fresh run must retire the previous run\'s continuation, or the two chains will race over the same blogs.'
 		);
 		$this->assertNotFalse(
 			wp_next_scheduled( 'wordcamp_payments_aggregate' ),
@@ -296,14 +339,138 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 
 		// This network is smaller than a batch, so the run finished and cleared its own state too.
 		$this->assertFalse( get_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION ) );
+	}
 
-		// This is the only test that exercises a *fresh* run, so it's the only one that reaches the
-		// TRUNCATE. That's DDL: MySQL commits it implicitly and won't roll it back with the rest of this
-		// test, while the rows aggregate() re-inserted afterwards *would* be rolled back -- leaving the
-		// index empty for every test below, which reads it via generate_payment_report(). Commit the
-		// rebuilt index instead, once this test's own cron entries are cleared so they don't leak with it.
-		wp_unschedule_hook( 'wordcamp_payments_aggregate' );
-		self::commit_transaction();
+	/**
+	 * Resuming uses the cursor recorded at the *start* of a batch, so a batch that died partway is re-run
+	 * over blogs it had already indexed. Indexing a blog therefore has to be idempotent.
+	 *
+	 * @covers Payment_Requests_Dashboard::aggregate
+	 */
+	public function test_re_running_a_batch_does_not_duplicate_rows(): void {
+		list( $blog_id, $post_id ) = $this->create_blog_with_payment_request( 'Resumed Batch' );
+
+		Payment_Requests_Dashboard::aggregate( $blog_id - 1 );
+		$this->assertSame( 1, $this->count_rows_for( $blog_id, $post_id ), 'Precondition: the batch indexed the request once.' );
+
+		// What watchdog() does after that batch dies: run it again from the same resume point.
+		Payment_Requests_Dashboard::aggregate( $blog_id - 1 );
+
+		$this->assertSame(
+			1,
+			$this->count_rows_for( $blog_id, $post_id ),
+			'Resuming a batch must not index a request it had already covered a second time -- in an export, a duplicated row is a duplicated payment.'
+		);
+	}
+
+	/**
+	 * A run spans many requests, so organizers keep editing payment requests while it is in flight.
+	 * `save_post()` indexes those immediately; the batch that later reaches that blog must not add a
+	 * second row for the same request.
+	 *
+	 * @covers Payment_Requests_Dashboard::aggregate
+	 * @covers Payment_Requests_Dashboard::save_post
+	 */
+	public function test_a_request_saved_mid_run_is_not_indexed_twice(): void {
+		list( $blog_id, $post_id ) = $this->create_blog_with_payment_request( 'Saved Mid Run' );
+
+		// An organizer saves the request while the run is still working its way toward this blog.
+		switch_to_blog( $blog_id );
+		Payment_Requests_Dashboard::save_post( $post_id );
+		restore_current_blog();
+
+		$this->assertSame( 1, $this->count_rows_for( $blog_id, $post_id ), 'Precondition: save_post() indexed the request once.' );
+
+		// The run now reaches that blog.
+		Payment_Requests_Dashboard::aggregate( $blog_id - 1 );
+
+		$this->assertSame(
+			1,
+			$this->count_rows_for( $blog_id, $post_id ),
+			'A request already indexed by save_post() must be replaced, not duplicated, when the run reaches its blog.'
+		);
+	}
+
+	/**
+	 * `generate_payment_report()` builds the wire and SEPA payment files straight out of this index, and a
+	 * run now spans many requests. So the index has to stay readable throughout -- a run that emptied it up
+	 * front would let an export taken mid-run come out short, or empty, with nothing to signal it.
+	 *
+	 * @covers Payment_Requests_Dashboard::aggregate
+	 */
+	public function test_the_index_stays_complete_during_a_run(): void {
+		// One blog per batch, so the run below stops after its first batch with most blogs still to go.
+		add_filter(
+			'wordcamp_payments_aggregate_batch_size',
+			function () {
+				return 1;
+			}
+		);
+
+		$rows_before = $this->count_index_rows();
+		$this->assertGreaterThan( 0, $rows_before, 'Precondition: the fixture is indexed.' );
+
+		// The first batch of a fresh run.
+		Payment_Requests_Dashboard::aggregate();
+
+		$this->assertGreaterThanOrEqual(
+			$rows_before,
+			$this->count_index_rows(),
+			'A run in progress must never leave the index with fewer rows than it started with.'
+		);
+
+		$report = generate_payment_report( array(
+			'status'      => 'wcb-approved',
+			'start_date'  => strtotime( '3 days ago' ),
+			'end_date'    => time(),
+			'post_type'   => 'wcp_payment_request',
+
+			'export_type' => array(
+				'label'     => 'JP Morgan Access - Wire Payments',
+				'mime_type' => 'text/csv',
+				'callback'  => 'WordCamp\Budgets_Dashboard\_generate_payment_report_jpm_wires',
+				'filename'  => 'wordcamp-payments-%s-%s-jpm-wires.csv',
+			),
+		) );
+
+		$this->assertStringContainsString(
+			'Invoice 1234',
+			$report,
+			'An export generated while a run is in flight must not silently omit approved payments.'
+		);
+	}
+
+	/**
+	 * Refreshing each blog in place means a site deleted since the last run is never visited, so its rows
+	 * have to be cleaned up explicitly once the run has covered the whole network.
+	 *
+	 * @covers Payment_Requests_Dashboard::aggregate
+	 */
+	public function test_a_completed_run_prunes_rows_for_deleted_sites(): void {
+		global $wpdb;
+
+		// Past the end of the network, so it stands in for a site deleted since the last run.
+		$deleted_blog_id = (int) $wpdb->get_var( "SELECT MAX(blog_id) FROM $wpdb->blogs" ) + 1000;
+
+		$wpdb->insert(
+			Payment_Requests_Dashboard::get_table_name(),
+			array(
+				'blog_id' => $deleted_blog_id,
+				'post_id' => 1,
+				'status'  => 'wcb-approved',
+			)
+		);
+
+		$this->assertSame( 1, $this->count_rows_for( $deleted_blog_id, 1 ), 'Precondition: the orphaned row is indexed.' );
+
+		// This network is smaller than a batch, so one call covers it and completes the run.
+		Payment_Requests_Dashboard::aggregate();
+
+		$this->assertSame(
+			0,
+			$this->count_rows_for( $deleted_blog_id, 1 ),
+			'A completed run must drop rows belonging to sites that no longer exist.'
+		);
 	}
 
 	/**

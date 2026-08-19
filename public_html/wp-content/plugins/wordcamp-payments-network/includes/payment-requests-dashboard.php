@@ -117,6 +117,13 @@ class Payment_Requests_Dashboard {
 	 *
 	 * Runs in batches of self-rescheduled single events to keep peak memory bounded, since a single request
 	 * iterating all sites was pushing peak memory usage above 90%.
+	 *
+	 * Each blog's rows are replaced as the run reaches that blog, rather than the whole table being emptied
+	 * up front. Spreading a rebuild over many requests rules out the empty-table approach: `generate_payment_report()`
+	 * builds the actual wire/SEPA payment files straight out of this index, so a run that emptied the table
+	 * and refilled it over the following minutes would let an export taken in that window silently come out
+	 * short -- or completely empty. Replacing per blog keeps the index continuously readable, and makes
+	 * indexing a blog idempotent, so a resumed batch can safely re-cover ground it already did.
 	 */
 	public static function aggregate( $after_blog_id = 0 ) {
 		global $wpdb, $wp_object_cache;
@@ -127,10 +134,10 @@ class Payment_Requests_Dashboard {
 		require_once WP_PLUGIN_DIR . '/wordcamp-payments/includes/payment-request.php';
 		WCP_Payment_Request::register_post_statuses();
 
-		// A fresh run is about to empty the index, which makes any continuation still queued from an
-		// earlier run that never finished stale: it would index its remaining blogs into a table it no
-		// longer owns, duplicating every row this run's own batches also insert. Retire those first,
-		// before this run claims the state option for itself.
+		// Retire any continuation still queued from an earlier run that never finished, before this run
+		// claims the state option for itself. Two chains walking the network at once would interleave
+		// their per-blog delete/insert pairs, and a delete landing between the other chain's delete and
+		// its inserts leaves that blog indexed twice.
 		if ( 0 === $after_blog_id ) {
 			self::abandon_stalled_chain();
 		}
@@ -140,11 +147,6 @@ class Payment_Requests_Dashboard {
 		// `watchdog()` to run it again. Without this, only the very last completed batch is recoverable,
 		// and a first batch that dies loses the whole run until the next daily event.
 		self::save_run_state( $after_blog_id );
-
-		// Only truncate at the start of a fresh run, not on every batch.
-		if ( 0 === $after_blog_id ) {
-			$wpdb->query( 'TRUNCATE TABLE ' . self::get_table_name() ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- table name isn't user input, can't be a bound placeholder.
-		}
 
 		// `max( 1, ... )` so a filter returning 0 can't make every batch look "not full" while indexing
 		// nothing, which would schedule continuations forever.
@@ -164,6 +166,15 @@ class Payment_Requests_Dashboard {
 		) );
 
 		foreach ( $blogs as $blog_id ) {
+			$blog_id = (int) $blog_id;
+
+			// Clear this blog's slice of the index before rebuilding it, so that indexing a blog is
+			// idempotent. Without this the inserts below are additive, and every path that can cover the
+			// same blog twice -- a resumed batch, or `save_post()` having indexed a request while the run
+			// was still working its way toward that blog -- leaves a duplicate row behind. In an export,
+			// a duplicated row is a duplicated payment.
+			$wpdb->delete( self::get_table_name(), array( 'blog_id' => $blog_id ), array( '%d' ) );
+
 			switch_to_blog( $blog_id );
 
 			$paged = 1;
@@ -195,8 +206,32 @@ class Payment_Requests_Dashboard {
 			self::save_run_state( $next_cursor );
 			wp_schedule_single_event( time(), 'wordcamp_payments_aggregate', array( $next_cursor ) );
 		} else {
+			// The run has covered every blog, so anything still indexed against a blog that no longer
+			// exists belongs to a site deleted since the last run. Dropping the whole table up front used
+			// to take care of these implicitly; now that each blog is refreshed in place, a site that is
+			// gone is never visited and has to be cleaned up explicitly.
+			self::prune_orphaned_rows();
+
 			delete_site_option( self::AGGREGATE_RUN_OPTION );
 		}
+	}
+
+	/**
+	 * Removes index rows belonging to blogs that are no longer in the network.
+	 */
+	protected static function prune_orphaned_rows() {
+		global $wpdb;
+
+		$table = self::get_table_name();
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table names aren't user input, and there isn't a good way to escape them yet, see https://core.trac.wordpress.org/ticket/52506.
+		$wpdb->query( "
+			DELETE payments_index
+			FROM `{$table}` AS payments_index
+			LEFT JOIN `{$wpdb->blogs}` AS blogs ON payments_index.blog_id = blogs.blog_id
+			WHERE blogs.blog_id IS NULL
+		" );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**

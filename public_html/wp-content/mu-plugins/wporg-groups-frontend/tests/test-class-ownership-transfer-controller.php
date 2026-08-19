@@ -49,6 +49,24 @@ class Test_Groups_Ownership_Transfer_Controller extends Groups_TestCase {
 	}
 
 	/**
+	 * Grant `manage_sites` to a new user.
+	 *
+	 * `grant_super_admin()` reads `site_admins` out of `sitemeta`, which
+	 * `Database_TestCase` truncates; setting the global that
+	 * `get_super_admins()` checks first is the fixture-safe equivalent (see
+	 * `test-sponsors.php::act_as_network_admin()`). `tearDown()` clears it.
+	 *
+	 * @return int User ID.
+	 */
+	private function create_network_admin(): int {
+		$user_id = self::factory()->user->create();
+
+		$GLOBALS['super_admins'] = array( get_userdata( $user_id )->user_login ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		return $user_id;
+	}
+
+	/**
 	 * A logged-out visitor cannot view the transfer state.
 	 */
 	public function test_logged_out_visitor_cannot_view_state() {
@@ -230,6 +248,12 @@ class Test_Groups_Ownership_Transfer_Controller extends Groups_TestCase {
 	public function test_accept_decline_cancel_report_updated_state() {
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		// Accepting emails the network admins for approval, and a network with
+		// nobody to approve is a warning-worthy state in its own right -- see
+		// `Notifications\warn_no_recipient()`. Give this fixture a network
+		// admin so it exercises the ordinary path rather than that alarm.
+		$this->create_network_admin();
 
 		wp_set_current_user( $owner_id );
 		$request = $this->request( 'POST', '/ownership-transfer/initiate' );

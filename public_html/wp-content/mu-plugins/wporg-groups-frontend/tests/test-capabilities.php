@@ -71,7 +71,7 @@ class Test_Groups_Capabilities extends Groups_TestCase {
 	/**
 	 * Regression test: a super admin whose nominal role on a given group is
 	 * `subscriber` (e.g. a deputy checking in on a group they don't
-	 * personally organise) must still be treated as able to manage events.
+	 * personally organize) must still be treated as able to manage events.
 	 *
 	 * `current_user_can_manage_group_settings()` naturally picks up core's
 	 * super-admin capability elevation (it calls `current_user_can()`), so

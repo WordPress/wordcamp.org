@@ -24,11 +24,11 @@ const TYPE_ONLINE   = 'online';
 /**
  * Missing metadata is treated as an unspecified location.
  *
- * A stored country code that no longer resolves to a name (e.g. CLDR data
- * changed) is still returned rather than collapsed to null here: the About
- * tab builds its form from this response, and a null location would make
- * the next save of any field — even just the group name — post
- * `location: null` and silently wipe the type, city, and country.
+ * Whatever is stored is reported back verbatim, including a country code that no
+ * longer resolves to a name. Collapsing that to `null` would leave the settings
+ * form with no location selected, so the next save of any other field would post
+ * `location: null` and silently wipe the city and country. Validation belongs on
+ * the write path, in `normalize_location()`.
  */
 function get_location( int $site_id = 0 ): ?array {
 	$site_id = $site_id ?: get_current_blog_id();
@@ -45,7 +45,7 @@ function get_location( int $site_id = 0 ): ?array {
 	$city         = trim( (string) get_site_meta( $site_id, CITY_META_KEY, true ) );
 	$country_code = strtoupper( (string) get_site_meta( $site_id, COUNTRY_META_KEY, true ) );
 
-	if ( '' === $city || '' === $country_code ) {
+	if ( '' === $city && '' === $country_code ) {
 		return null;
 	}
 
@@ -153,6 +153,9 @@ function clear_location(): void {
 
 /**
  * Build the public location label, or an empty string when unspecified.
+ *
+ * A stored country code that no longer resolves is dropped from the label rather
+ * than shown as a bare code or an empty half of "City, ".
  */
 function get_location_label(): string {
 	$location = get_location();
@@ -165,16 +168,17 @@ function get_location_label(): string {
 		return __( 'Online', 'wporg-groups-frontend' );
 	}
 
-	$country_name = wcorg_get_country_name_from_code( $location['countryCode'] );
+	$city         = $location['city'];
+	$country_name = (string) wcorg_get_country_name_from_code( $location['countryCode'] );
 
-	if ( '' === $country_name ) {
-		return $location['city'];
+	if ( '' === $city || '' === $country_name ) {
+		return $city . $country_name;
 	}
 
 	return sprintf(
 		/* translators: 1: city name, 2: country name. */
 		__( '%1$s, %2$s', 'wporg-groups-frontend' ),
-		$location['city'],
+		$city,
 		$country_name
 	);
 }

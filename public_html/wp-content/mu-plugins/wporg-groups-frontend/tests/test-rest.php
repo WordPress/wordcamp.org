@@ -10,6 +10,8 @@ use WordPressdotorg\GatherPress_Recurring_Events\Rule;
 
 use function WordCamp\Groups\Frontend\REST\create_event;
 use function WordCamp\Groups\Frontend\REST\event_args_schema;
+use function WordCamp\Groups\Frontend\REST\get_group_info;
+use function WordCamp\Groups\Frontend\REST\update_group_info;
 use function WordCamp\Groups\Frontend\REST\get_event_form_data;
 use function WordCamp\Groups\Frontend\REST\update_event;
 use function WordCamp\Groups\Frontend\REST\save_draft;
@@ -71,7 +73,7 @@ class Test_Groups_REST extends Groups_TestCase {
 	}
 
 	/**
-	 * An editor (Organiser) can create and publish an event in one request.
+	 * An editor (Organizer) can create and publish an event in one request.
 	 */
 	public function test_create_event_as_editor() {
 		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
@@ -545,5 +547,80 @@ class Test_Groups_REST extends Groups_TestCase {
 
 		$this->assertNotWPError( $publish_response );
 		$this->assertSame( 'publish', get_post_status( $draft_id ) );
+	}
+
+	/**
+	 * A country code that no longer resolves still reports the stored location.
+	 *
+	 * The settings form is built from this response, so collapsing it to `null`
+	 * would leave the location unselected and let the next save of any other
+	 * field wipe the city and country.
+	 */
+	public function test_group_info_reports_location_with_unrecognized_country() {
+		$site_id = get_current_blog_id();
+
+		update_site_meta( $site_id, 'wporg_group_location_type', 'physical' );
+		update_site_meta( $site_id, 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( $site_id, 'wporg_group_location_country', 'ZZ' );
+
+		$this->assertSame( '', wcorg_get_country_name_from_code( 'ZZ' ), 'ZZ is expected to be an unrecognized code.' );
+
+		$location = get_group_info()->get_data()['location'];
+
+		$this->assertSame(
+			array(
+				'type'        => 'physical',
+				'city'        => 'İstanbul',
+				'countryCode' => 'ZZ',
+			),
+			$location
+		);
+	}
+
+	/**
+	 * Saving an unrelated field leaves a location with a stale country intact.
+	 */
+	public function test_group_info_update_without_location_preserves_stale_country() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$site_id = get_current_blog_id();
+
+		update_site_meta( $site_id, 'wporg_group_location_type', 'physical' );
+		update_site_meta( $site_id, 'wporg_group_location_city', 'İstanbul' );
+		update_site_meta( $site_id, 'wporg_group_location_country', 'ZZ' );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/group-info' );
+		$request->set_param( 'description', 'A new tagline.' );
+
+		$response = update_group_info( $request );
+
+		$this->assertNotWPError( $response );
+		$this->assertSame( 'physical', get_site_meta( $site_id, 'wporg_group_location_type', true ) );
+		$this->assertSame( 'İstanbul', get_site_meta( $site_id, 'wporg_group_location_city', true ) );
+		$this->assertSame( 'ZZ', get_site_meta( $site_id, 'wporg_group_location_country', true ) );
+	}
+
+	/**
+	 * A stale country code cannot be saved back; the write path still validates.
+	 */
+	public function test_group_info_update_rejects_unrecognized_country() {
+		$editor_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor_id );
+
+		$request = new WP_REST_Request( 'POST', '/wporg-groups/v1/group-info' );
+		$request->set_param(
+			'location',
+			array(
+				'type'        => 'physical',
+				'city'        => 'İstanbul',
+				'countryCode' => 'ZZ',
+			)
+		);
+
+		$response = update_group_info( $request );
+
+		$this->assertWPError( $response );
+		$this->assertSame( 'wporg_groups_invalid_country', $response->get_error_code() );
 	}
 }

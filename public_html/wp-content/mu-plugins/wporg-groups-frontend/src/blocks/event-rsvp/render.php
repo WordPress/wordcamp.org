@@ -8,6 +8,10 @@
 use GatherPress\Core\Event\Event;
 use GatherPress\Core\Rsvp\Rsvp;
 
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_formats;
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_count_label;
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_modal_title_formats;
+use function WordCamp\Groups\Frontend\RSVP_Labels\get_modal_title_label;
 use function WordCamp\Groups\Frontend\RSVP_Questions\current_user_can_view_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_labelled_answers;
 use function WordCamp\Groups\Frontend\RSVP_Questions\get_questions;
@@ -93,44 +97,45 @@ foreach ( $records as $record ) {
 	);
 }
 
-$max_avatars    = 12;
-$overflow_count = max( 0, $count - $max_avatars );
-$event_title    = get_the_title( $event_post_id );
-$is_attending   = 'attending' === $current_status;
-$modal_title    = sprintf(
-	/* translators: 1: attendee count, 2: event title */
-	_n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', $count, 'wporg-groups-frontend' ),
-	number_format_i18n( $count ),
-	$event_title
-);
+// Show at most $max_avatars avatars; the remaining $overflow_count is
+// rendered as a "+N" pill, and the modal lists every attendee. Five avatars
+// fit on one line at any card width — more would wrap onto a second row.
+$max_avatars     = 5;
+$overflow_count  = max( 0, $count - $max_avatars );
+$event_title     = get_the_title( $event_post_id );
+$is_attending    = 'attending' === $current_status;
+$has_no_attendees = 0 === $count;
+$modal_title     = get_modal_title_label( $count, $event_title );
+
 // Shared across the labels array, the SSR label, and the modal button
 // below — keep in a local so the translator context can't drift.
 $cancel_rsvp = _x( 'Cancel RSVP', 'button to withdraw attendance from an event', 'wporg-groups-frontend' );
 
-$rsvp_labels    = array(
-	/* translators: %s: attendee count. */
-	'countSingular'           => _n( '%s going', '%s going', 1, 'wporg-groups-frontend' ),
-	/* translators: %s: attendee count. */
-	'countPlural'             => _n( '%s going', '%s going', 2, 'wporg-groups-frontend' ),
-	/* translators: 1: attendee count, 2: event title. */
-	'modalTitleSingular'      => _n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', 1, 'wporg-groups-frontend' ),
-	/* translators: 1: attendee count, 2: event title. */
-	'modalTitlePlural'        => _n( '%1$s Attendee of %2$s', '%1$s Attendees of %2$s', 2, 'wporg-groups-frontend' ),
-	'loading'                 => "\u{2026}",
-	'attending'               => "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' ),
-	'rsvp'                    => __( 'RSVP', 'wporg-groups-frontend' ),
-	'joinRsvp'                => __( 'Join & RSVP', 'wporg-groups-frontend' ),
-	'statusAttending'         => __( 'You are attending this event.', 'wporg-groups-frontend' ),
-	'statusNotAttending'      => __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
-	'cancelRsvp'              => $cancel_rsvp,
-	'attend'                  => __( 'Attend', 'wporg-groups-frontend' ),
-	'emptyAttendees'          => __( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ),
-	'rsvpSuccessAttending'    => __( 'You are now attending this event.', 'wporg-groups-frontend' ),
-	'rsvpSuccessNotAttending' => __( 'Your RSVP has been cancelled.', 'wporg-groups-frontend' ),
-	'rsvpSuccessWaitingList'  => __( 'You have joined the event waiting list.', 'wporg-groups-frontend' ),
-	'rsvpError'               => __( 'Your RSVP could not be updated. Please try again.', 'wporg-groups-frontend' ),
-	'missingAnswers'          => __( 'Please answer the required questions.', 'wporg-groups-frontend' ),
-	'answersSaved'            => __( 'Your answers have been saved.', 'wporg-groups-frontend' ),
+// Both the count line and the formats the view module re-renders it from come
+// out of `inc/rsvp-labels.php`, so the wording lives in one place. See
+// `getCountParts()` in view.js for the browser-side half of the branching.
+$count_label = get_count_label( $count, $is_attending );
+
+$rsvp_labels = array_merge(
+	get_count_formats(),
+	get_modal_title_formats(),
+	array(
+		'loading'                 => "\u{2026}",
+		'attending'               => "\u{2713} " . __( 'Attending', 'wporg-groups-frontend' ),
+		'rsvp'                    => __( 'RSVP', 'wporg-groups-frontend' ),
+		'joinRsvp'                => __( 'Join & RSVP', 'wporg-groups-frontend' ),
+		'statusAttending'         => __( 'You are attending this event.', 'wporg-groups-frontend' ),
+		'statusNotAttending'      => __( 'You have not RSVPed to this event.', 'wporg-groups-frontend' ),
+		'cancelRsvp'              => $cancel_rsvp,
+		'attend'                  => __( 'Attend', 'wporg-groups-frontend' ),
+		'emptyAttendees'          => __( 'No attendees yet. Be the first to RSVP!', 'wporg-groups-frontend' ),
+		'rsvpSuccessAttending'    => __( 'You are now attending this event.', 'wporg-groups-frontend' ),
+		'rsvpSuccessNotAttending' => __( 'Your RSVP has been cancelled.', 'wporg-groups-frontend' ),
+		'rsvpSuccessWaitingList'  => __( 'You have joined the event waiting list.', 'wporg-groups-frontend' ),
+		'rsvpError'               => __( 'Your RSVP could not be updated. Please try again.', 'wporg-groups-frontend' ),
+		'missingAnswers'          => __( 'Please answer the required questions.', 'wporg-groups-frontend' ),
+		'answersSaved'            => __( 'Your answers have been saved.', 'wporg-groups-frontend' ),
+	)
 );
 
 $context = array(
@@ -140,6 +145,7 @@ $context = array(
 	'isPastEvent'       => $is_past,
 	'currentUserStatus' => $current_status,
 	'attendingCount'    => $count,
+	'maxAvatars'        => $max_avatars,
 	'eventTitle'        => $event_title,
 	'loginUrl'          => wp_login_url( get_permalink( $event_post_id ) ),
 	'apiBase'           => rest_url( 'gatherpress/v1/event' ),
@@ -162,11 +168,8 @@ wp_interactivity_state(
 	array(
 		'isAttending'    => $is_attending,
 		'isNotAttending' => ! $is_attending,
-		'countLabel'     => sprintf(
-			/* translators: %s: attendee count. */
-			_n( '%s going', '%s going', $count, 'wporg-groups-frontend' ),
-			number_format_i18n( $count )
-		),
+		'hasNoAttendees' => $has_no_attendees,
+		'countLabel'     => $count_label,
 		'modalTitle'     => $modal_title,
 		'isMember'        => $is_member,
 		'rsvpButtonLabel' => $is_attending
@@ -190,45 +193,18 @@ $wrapper_attributes = get_block_wrapper_attributes(
 ?>
 <div <?php echo $wrapper_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- get_block_wrapper_attributes escapes. ?>>
 
-	<button
-		type="button"
-		class="wporg-event-rsvp__summary"
-		data-wp-on--click="actions.openModal"
-		aria-label="<?php esc_attr_e( 'View attendees', 'wporg-groups-frontend' ); ?>">
-
-		<span class="wporg-event-rsvp__avatars" aria-hidden="true">
-			<?php foreach ( array_slice( $attendees, 0, $max_avatars ) as $attendee ) : ?>
-				<img
-					class="wporg-event-rsvp__avatar"
-					src="<?php echo esc_url( $attendee['photo'] ); ?>"
-					alt=""
-					width="40"
-					height="40"
-					loading="lazy"
-				/>
-			<?php endforeach; ?>
-			<?php if ( $overflow_count > 0 ) : ?>
-				<span class="wporg-event-rsvp__overflow">+<?php echo (int) $overflow_count; ?></span>
-			<?php endif; ?>
-		</span>
-
-		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
-			<?php
-			echo esc_html(
-				sprintf(
-					_n( '%s going', '%s going', $count, 'wporg-groups-frontend' ),
-					number_format_i18n( $count )
-				)
-			);
-			?>
-		</span>
-	</button>
-
 	<?php if ( ! $is_past ) : ?>
 		<div
 			class="wp-block-button<?php echo $is_attending ? ' is-style-outline' : ''; ?>"
 			data-wp-class--is-style-outline="state.isAttending"
 		>
+			<?php
+			/*
+			 * `aria-busy="true"` does two things: the theme's custom.css
+			 * draws the loading spinner from it, and screen readers use it
+			 * to announce the button as busy rather than unavailable.
+			 */
+			?>
 			<button
 				type="button"
 				class="wp-block-button__link wp-element-button<?php echo $is_attending ? ' is-attending' : ''; ?>"
@@ -236,6 +212,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				data-wp-text="state.rsvpButtonLabel"
 				data-wp-class--is-attending="state.isAttending"
 				data-wp-bind--disabled="context.rsvpLoading"
+				data-wp-bind--aria-busy="context.rsvpLoading"
 			>
 				<?php
 				if ( $is_attending ) {
@@ -255,6 +232,34 @@ $wrapper_attributes = get_block_wrapper_attributes(
 			</button>
 		</div>
 	<?php endif; ?>
+
+	<button
+		type="button"
+		class="wporg-event-rsvp__summary<?php echo $has_no_attendees ? ' has-no-attendees' : ''; ?>"
+		data-wp-class--has-no-attendees="state.hasNoAttendees"
+		data-wp-on--click="actions.openModal"
+		aria-label="<?php esc_attr_e( 'View attendees', 'wporg-groups-frontend' ); ?>">
+
+		<span class="wporg-event-rsvp__avatars" aria-hidden="true">
+			<?php foreach ( array_slice( $attendees, 0, $max_avatars ) as $attendee ) : ?>
+				<img
+					class="wporg-event-rsvp__avatar"
+					src="<?php echo esc_url( $attendee['photo'] ); ?>"
+					alt=""
+					width="28"
+					height="28"
+					loading="lazy"
+				/>
+			<?php endforeach; ?>
+			<?php if ( $overflow_count > 0 ) : ?>
+				<span class="wporg-event-rsvp__overflow">+<?php echo (int) $overflow_count; ?></span>
+			<?php endif; ?>
+		</span>
+
+		<span class="wporg-event-rsvp__count" data-wp-text="state.countLabel">
+			<?php echo esc_html( $count_label ); ?>
+		</span>
+	</button>
 
 	<p
 		class="screen-reader-text wporg-event-rsvp__notice"
@@ -341,6 +346,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 									data-wp-on--click="actions.saveAnswers"
 									data-wp-class--is-hidden="state.isNotAttending"
 									data-wp-bind--disabled="context.rsvpLoading"
+									data-wp-bind--aria-busy="context.rsvpLoading"
 								>
 									<?php esc_html_e( 'Save answers', 'wporg-groups-frontend' ); ?>
 								</button>
@@ -354,6 +360,7 @@ $wrapper_attributes = get_block_wrapper_attributes(
 							data-wp-text="state.modalRsvpLabel"
 							data-wp-class--is-attending="state.isAttending"
 							data-wp-bind--disabled="context.rsvpLoading"
+							data-wp-bind--aria-busy="context.rsvpLoading"
 						>
 							<?php
 							if ( $is_attending ) {

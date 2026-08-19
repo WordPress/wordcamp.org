@@ -22,7 +22,7 @@ const { dismissEditorOnboarding } = require( './utils/dismiss-editor-onboarding'
  */
 test.describe( 'event manage — message attendees', () => {
 	/**
-	 * Creates a fresh event as the given organiser account via the
+	 * Creates a fresh event as the given organizer account via the
 	 * wp-admin block editor (same flow as event-organiser.spec.js) and
 	 * returns its front-end permalink, so this spec doesn't depend on any
 	 * hand-seeded event data.

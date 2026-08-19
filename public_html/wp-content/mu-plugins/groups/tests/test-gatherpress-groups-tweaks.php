@@ -20,6 +20,32 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 
 		$this->assertSame( 0, $settings['show_timezone'] );
 		$this->assertSame( 0, $settings['enable_anonymous_rsvp'] );
+		$this->assertSame( 0, $settings['enable_open_rsvp'] );
+	}
+
+	/**
+	 * Unrelated GatherPress settings saved on a group site must survive the
+	 * forced overrides: the filter overlays the forced keys, it does not
+	 * replace the whole option.
+	 */
+	public function test_gatherpress_settings_preserved() {
+		update_option(
+			'gatherpress_settings',
+			array(
+				'max_guest_limit'  => 5,
+				'enable_open_rsvp' => 1,
+				'show_timezone'    => 1,
+			)
+		);
+
+		$settings = get_option( 'gatherpress_settings' );
+
+		// Unrelated stored setting is preserved.
+		$this->assertSame( 5, $settings['max_guest_limit'] );
+
+		// Forced keys win regardless of what was stored.
+		$this->assertSame( 0, $settings['show_timezone'] );
+		$this->assertSame( 0, $settings['enable_open_rsvp'] );
 	}
 
 	/**
@@ -30,7 +56,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * Editors ("Organisers") are granted `edit_theme_options` so they can use
+	 * Editors ("Organizers") are granted `edit_theme_options` so they can use
 	 * the Site Editor to customise their group site — but nothing broader.
 	 * See the `promote_users` regression test in test-capabilities.php for
 	 * the capability that must NOT be granted this way.

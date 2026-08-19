@@ -6,7 +6,7 @@
 	"title": "Page Content",
 	"category": "widgets",
 	"icon": "media-text",
-	"description": "Embeds a page's content by slug. Organisers see an edit link to modify the page.",
+	"description": "Embeds a page's content by slug. Organizers see an edit link to modify the page.",
 	"attributes": {
 		"slug": {
 			"type": "string",

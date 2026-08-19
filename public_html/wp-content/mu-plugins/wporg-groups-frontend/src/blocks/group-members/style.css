@@ -1,34 +1,37 @@
 /**
  * Group Members block styles.
+ *
+ * The members page's only section, so its heading takes the same main-column
+ * Heading 3 treatment as the front page's sections, and each member card
+ * follows the shared card spec.
  */
 
-.wporg-group-members__heading {
-	font-size: 24px;
-	font-weight: 600;
-	margin: 0 0 24px !important;
-	padding: 0 !important;
-}
+@import "../../components/section-heading.css";
 
 .wporg-group-members__grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-	gap: 16px;
+	gap: var(--wp--preset--spacing--20);
 }
 
 .wporg-group-members__card {
 	display: flex;
 	align-items: flex-start;
-	gap: 14px;
-	padding: 16px;
-	border: 1px solid #d9d9d9;
+	gap: var(--wp--preset--spacing--20);
+
+	/* 20px rather than 24px: an avatar-plus-two-lines row is a compact card,
+	   the same call made for `.wporg-my-events__card`. */
+	padding: var(--wp--preset--spacing--20);
+	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
 	text-decoration: none;
 	color: inherit;
 	transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.wporg-group-members__card:hover {
-	border-color: #3858e9;
+.wporg-group-members__card:hover,
+.wporg-group-members__card:focus-visible {
+	border-color: var(--wp--preset--color--blueberry-1);
 	box-shadow: 0 2px 8px rgba(56, 88, 233, 0.1);
 	text-decoration: none;
 }
@@ -49,32 +52,33 @@
 }
 
 .wporg-group-members__name {
-	font-size: 15px;
+	font-size: var(--wp--preset--font-size--normal);
 	font-weight: 600;
-	color: #1a1919;
+	color: var(--wp--preset--color--charcoal-0);
 }
 
 .wporg-group-members__role {
-	font-size: 12px;
+	font-family: var(--wp--preset--font-family--inter);
+	font-size: var(--wp--preset--font-size--extra-small);
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
-	color: #656a71;
+	color: var(--wp--preset--color--charcoal-4);
 }
 
 .wporg-group-members__role--administrator,
 .wporg-group-members__role--editor {
-	color: #3858e9;
+	color: var(--wp--preset--color--blueberry-1);
 }
 
 .wporg-group-members__role--author {
-	color: #008a20;
+	color: #007a2f;
 }
 
 .wporg-group-members__bio {
-	font-size: 13px;
-	color: #656a71;
-	line-height: 1.4;
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--wp--preset--color--charcoal-4);
+	line-height: 1.55;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: -webkit-box;

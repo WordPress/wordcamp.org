@@ -15,17 +15,17 @@ defined( 'WPINC' ) || die();
 /**
  * Upcoming event IDs for a member, soonest first.
  *
- * "Mine" means either of two things, and an organiser is usually both:
+ * "Mine" means either of two things, and an organizer is usually both:
  *
  * - events the member has RSVP'd to as attending,
  * - events the member authored, which on a group site means the ones they
- *   organise.
+ *   organize.
  *
  * Authorship is unioned in rather than written into the RSVP data, so
  * "attending" keeps meaning that the person said they are coming. That
  * distinction matters because the RSVP data feeds attendee counts, and
- * an organiser who creates an event they will not personally attend is a
- * normal thing on a group with several organisers.
+ * an organizer who creates an event they will not personally attend is a
+ * normal thing on a group with several organizers.
  *
  * @param int $user_id Member to resolve events for.
  *

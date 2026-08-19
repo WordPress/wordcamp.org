@@ -86,7 +86,7 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	/**
 	 * An event with saved datetimes, so the drain's dateless guard passes.
 	 * Creating it as `publish` enqueues it through the real hook.
-	 * 
+	 *
 	 * @param string $status Post status.
 	 * @return int
 	 */
@@ -113,7 +113,7 @@ class Test_Groups_Notifications extends Groups_TestCase {
 	/**
 	 * A group member the drain will email (no opt-in meta: the default is opted-in),
 	 * so mail-count assertions don't depend on incidental fixture-site users.
-	 * 
+	 *
 	 * @return int
 	 */
 	private function create_member(): int {

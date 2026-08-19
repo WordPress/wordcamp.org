@@ -352,7 +352,7 @@ function wcpt_get_wordcamp_end_date( $wordcamp_id = 0, $format = 'F j, Y' ) {
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_location( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_location( $wordcamp_id );
+	echo esc_html( wcpt_get_wordcamp_location( $wordcamp_id ) );
 }
 
 /**
@@ -388,7 +388,7 @@ function wcpt_get_wordcamp_location( $wordcamp_id = 0 ) {
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_organizer_name( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_organizer_name( $wordcamp_id );
+	echo esc_html( wcpt_get_wordcamp_organizer_name( $wordcamp_id ) );
 }
 
 /**
@@ -424,7 +424,7 @@ function wcpt_get_wordcamp_organizer_name( $wordcamp_id = 0 ) {
  * @param int $wordcamp_id optional
  */
 function wcpt_wordcamp_venue_name( $wordcamp_id = 0 ) {
-	echo wcpt_get_wordcamp_venue_name( $wordcamp_id );
+	echo esc_html( wcpt_get_wordcamp_venue_name( $wordcamp_id ) );
 }
 
 /**

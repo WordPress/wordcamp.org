@@ -265,10 +265,13 @@ class Test_Budgets_Dashboard extends WP_UnitTestCase {
 
 		// A run that got as far as $stale_cursor and then stopped, leaving its continuation queued.
 		wp_schedule_single_event( time() + HOUR_IN_SECONDS, 'wordcamp_payments_aggregate', array( $stale_cursor ) );
-		update_site_option( Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION, array(
-			'cursor'  => $stale_cursor,
-			'updated' => time() - Payment_Requests_Dashboard::AGGREGATE_STALL_TIMEOUT - 1,
-		) );
+		update_site_option(
+			Payment_Requests_Dashboard::AGGREGATE_RUN_OPTION,
+			array(
+				'cursor'  => $stale_cursor,
+				'updated' => time() - Payment_Requests_Dashboard::AGGREGATE_STALL_TIMEOUT - 1,
+			)
+		);
 
 		// The recurring event that *starts* a run, which must survive the cleanup.
 		if ( ! wp_next_scheduled( 'wordcamp_payments_aggregate' ) ) {

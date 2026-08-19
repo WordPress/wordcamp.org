@@ -234,10 +234,13 @@ class Payment_Requests_Dashboard {
 	 * @param int $cursor The `blog_id` to resume after. `0` restarts the run from the beginning.
 	 */
 	protected static function save_run_state( $cursor ) {
-		update_site_option( self::AGGREGATE_RUN_OPTION, array(
-			'cursor'  => (int) $cursor,
-			'updated' => time(),
-		) );
+		update_site_option(
+			self::AGGREGATE_RUN_OPTION,
+			array(
+				'cursor'  => (int) $cursor,
+				'updated' => time(),
+			)
+		);
 	}
 
 	/**

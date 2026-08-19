@@ -121,12 +121,22 @@
 						</div><!-- .entry-attachment -->
 						<div class="entry-caption"><?php if ( !empty( $post->post_excerpt ) ) the_excerpt(); ?></div>
 
-<?php the_content( sprintf(
-	/* translators: %s - the title of the post to continue reading */
-	esc_html__( 'Continue reading %s', 'wordcamporg' ),
-	'<span class="screen-reader-text">' . esc_html( get_the_title() ) . '</span> '
-) . '<span class="meta-nav">&rarr;</span>' ); ?>
-<?php wp_link_pages( array( 'before' => '<div class="page-link">' . esc_html__( 'Pages:', 'wordcamporg' ), 'after' => '</div>' ) ); ?>
+						<?php
+						the_content(
+							sprintf(
+								/* translators: %s - the title of the post to continue reading */
+								esc_html__( 'Continue reading %s', 'wordcamporg' ),
+								'<span class="screen-reader-text">' . esc_html( get_the_title() ) . '</span> '
+							) . '<span class="meta-nav">&rarr;</span>'
+						);
+
+						wp_link_pages(
+							array(
+								'before' => '<div class="page-link">' . esc_html__( 'Pages:', 'wordcamporg' ),
+								'after'  => '</div>',
+							)
+						);
+						?>
 
 					</div><!-- .entry-content -->
 

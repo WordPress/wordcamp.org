@@ -76,6 +76,35 @@ class Test_Groups_Ownership_Transfer_Controller extends Groups_TestCase {
 	}
 
 	/**
+	 * Membership alone isn't enough: this endpoint reports who is lined up to
+	 * replace the owner, and the free-text reason a network admin gave for
+	 * rejecting an earlier attempt. Like every other route behind the group
+	 * settings UI, it takes `current_user_can_manage_group_settings()`.
+	 *
+	 * The nominated candidate holds the Organiser (`editor`) tier by
+	 * definition — `Transfer\CANDIDATE_ROLE` — so nobody who has something to
+	 * do here is shut out by this.
+	 */
+	public function test_member_without_settings_access_cannot_view_state() {
+		$subscriber_id = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		wp_set_current_user( $subscriber_id );
+
+		$result = self::$controller->view_permissions_check();
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'rest_forbidden', $result->get_error_code() );
+
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $candidate_id );
+
+		$this->assertTrue(
+			self::$controller->view_permissions_check(),
+			'A nominated candidate must still be able to accept or decline.'
+		);
+	}
+
+	/**
 	 * A super admin who isn't personally a member of the group is exempt
 	 * from the membership requirement — required for the abandoned-group
 	 * path, where the network admin initiating on the owner's behalf may

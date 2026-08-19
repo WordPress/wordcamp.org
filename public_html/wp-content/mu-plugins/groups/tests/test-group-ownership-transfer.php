@@ -2,6 +2,7 @@
 
 namespace WordCamp\Groups\Tests;
 
+use WPDieException;
 use function WordCamp\Groups\Ownership_Transfer\accept_transfer;
 use function WordCamp\Groups\Ownership_Transfer\cancel_transfer;
 use function WordCamp\Groups\Ownership_Transfer\current_user_can_approve;
@@ -9,16 +10,20 @@ use function WordCamp\Groups\Ownership_Transfer\current_user_can_initiate;
 use function WordCamp\Groups\Ownership_Transfer\decline_transfer;
 use function WordCamp\Groups\Ownership_Transfer\execute_transfer;
 use function WordCamp\Groups\Ownership_Transfer\get_final_status_label;
+use function WordCamp\Groups\Ownership_Transfer\get_group_sites_with_meta_key;
 use function WordCamp\Groups\Ownership_Transfer\get_pending_transfer;
 use function WordCamp\Groups\Ownership_Transfer\get_recent_decided_transfers;
 use function WordCamp\Groups\Ownership_Transfer\get_sites_with_pending_transfers;
 use function WordCamp\Groups\Ownership_Transfer\get_transfer_history;
+use function WordCamp\Groups\Ownership_Transfer\handle_decision;
 use function WordCamp\Groups\Ownership_Transfer\initiate_transfer;
 use function WordCamp\Groups\Ownership_Transfer\reject_transfer;
 use function WordCamp\Groups\Ownership_Transfer\validate_candidate;
+use const WordCamp\Groups\Ownership_Transfer\DECIDE_ACTION;
 use const WordCamp\Groups\Ownership_Transfer\HISTORY_LIMIT;
 use const WordCamp\Groups\Ownership_Transfer\LOCK_GROUP;
 use const WordCamp\Groups\Ownership_Transfer\LOCK_TIMEOUT;
+use const WordCamp\Groups\Ownership_Transfer\META_KEY_PENDING;
 use const WordCamp\Groups\Ownership_Transfer\STATUS_PENDING_ACCEPTANCE;
 use const WordCamp\Groups\Ownership_Transfer\STATUS_PENDING_APPROVAL;
 
@@ -35,6 +40,13 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	 * @var int
 	 */
 	private $group_site_id;
+
+	/**
+	 * `[errno, errstr]` pairs collected by `capture_warnings()`.
+	 *
+	 * @var array[]
+	 */
+	private $captured_warnings = array();
 
 	/**
 	 * Create a real group subsite for each test.
@@ -59,6 +71,12 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	 */
 	protected function tearDown(): void {
 		unset( $GLOBALS['super_admins'] );
+
+		// `handle_decision()` reads these directly; leaving them set would
+		// leak a nonce and a decision into whatever test runs next.
+		$_POST    = array();
+		$_REQUEST = array();
+
 		restore_current_blog();
 		wp_delete_site( $this->group_site_id );
 
@@ -249,6 +267,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	public function test_only_the_candidate_can_accept_or_decline() {
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
 		$bystander_id = self::factory()->user->create( array( 'role' => 'editor' ) );
 
 		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
@@ -330,6 +349,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	public function test_cannot_execute_before_acceptance() {
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
 
 		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
 
@@ -347,6 +367,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	public function test_cannot_execute_if_candidate_no_longer_a_member() {
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
 
 		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
 		accept_transfer( $this->group_site_id, $candidate_id );
@@ -367,6 +388,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	public function test_cannot_execute_if_owner_no_longer_administrator() {
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
 
 		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
 		accept_transfer( $this->group_site_id, $candidate_id );
@@ -389,6 +411,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 	public function test_promotes_new_owner_before_demoting_old_owner() {
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
 
 		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
 		accept_transfer( $this->group_site_id, $candidate_id );
@@ -429,6 +452,7 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 
 		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
 		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
 
 		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
 		accept_transfer( $this->group_site_id, $candidate_id );
@@ -544,6 +568,336 @@ class Test_Group_Ownership_Transfer extends Groups_TestCase {
 		}
 
 		$this->assertSame( 'something_new', get_final_status_label( 'something_new' ) );
+	}
+
+	/**
+	 * Declining is the candidate's half of the acceptance step. Once they've
+	 * accepted, the decision belongs to a network admin -- a stale panel (or a
+	 * second click) must not be able to pull an accepted transfer back out
+	 * from under the admin about to approve it.
+	 */
+	public function test_decline_is_refused_once_the_transfer_has_been_accepted() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		$result = decline_transfer( $this->group_site_id, $candidate_id );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'transfer_not_awaiting_acceptance', $result->get_error_code() );
+
+		// The accepted transfer is still there, waiting on its approval.
+		$pending = get_pending_transfer( $this->group_site_id );
+		$this->assertNotNull( $pending );
+		$this->assertSame( STATUS_PENDING_APPROVAL, $pending['status'] );
+		$this->assertSame( array(), get_transfer_history( $this->group_site_id ) );
+	}
+
+	/**
+	 * If the promotion doesn't land, the demotion must not run either -- in a
+	 * single-owner group, demoting on the assumption that `set_role()` worked
+	 * is what leaves the site with zero administrators.
+	 */
+	public function test_failed_promotion_does_not_demote_the_old_owner() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		// Stands in for anything that swallows the promotion -- another
+		// plugin's `set_user_role` handler, a failed write -- by putting the
+		// candidate straight back on `editor` as the promotion completes.
+		$undo = static function ( $user_id, $role ) use ( $candidate_id ) {
+			if ( $candidate_id === $user_id && 'administrator' === $role ) {
+				update_user_meta( $user_id, self::capabilities_meta_key(), array( 'editor' => true ) );
+			}
+		};
+		add_action( 'set_user_role', $undo, 10, 2 );
+
+		$demotions = array();
+		$recorder  = static function ( $user_id, $role ) use ( &$demotions, $owner_id ) {
+			if ( $owner_id === $user_id ) {
+				$demotions[] = $role;
+			}
+		};
+		add_action( 'set_user_role', $recorder, 10, 2 );
+
+		$this->capture_warnings();
+
+		try {
+			$result = execute_transfer( $this->group_site_id, self::factory()->user->create() );
+		} finally {
+			restore_error_handler();
+			remove_action( 'set_user_role', $undo, 10 );
+			remove_action( 'set_user_role', $recorder, 10 );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'transfer_promotion_failed', $result->get_error_code() );
+		$this->assertNotEmpty( $this->captured_warnings );
+
+		$this->assertSame( array(), $demotions, 'The old owner must not be touched once the promotion is known to have failed.' );
+		$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
+		$this->assertNotNull( get_pending_transfer( $this->group_site_id ), 'The transfer stays pending so it can simply be retried.' );
+	}
+
+	/**
+	 * A demotion that leaves the old owner with no roles at all is a failure,
+	 * not a success: "not an administrator any more" is satisfied by a user
+	 * locked out of the group entirely. Both parties are put back as they
+	 * were, so the decision can be retried rather than needing hand-repair.
+	 */
+	public function test_demotion_that_lands_nowhere_is_rolled_back() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		// Wipe the old owner's capabilities as their demotion completes,
+		// standing in for a concurrent write racing the same swap.
+		$wipe = static function ( $user_id, $role ) use ( $owner_id ) {
+			if ( $owner_id === $user_id && 'editor' === $role ) {
+				update_user_meta( $user_id, self::capabilities_meta_key(), array() );
+			}
+		};
+		add_action( 'set_user_role', $wipe, 10, 2 );
+
+		$this->capture_warnings();
+
+		try {
+			$result = execute_transfer( $this->group_site_id, self::factory()->user->create() );
+		} finally {
+			restore_error_handler();
+			remove_action( 'set_user_role', $wipe, 10 );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'transfer_execution_inconsistent', $result->get_error_code() );
+		$this->assertNotEmpty( $this->captured_warnings );
+
+		// Rolled back: the group has exactly the owner it started with, and
+		// the candidate wasn't left holding `administrator`, which would have
+		// made every retry fail on `candidate_already_administrator`.
+		$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
+		$this->assertNotContains( 'administrator', get_userdata( $candidate_id )->roles );
+		$this->assertContains( 'editor', get_userdata( $candidate_id )->roles );
+		$this->assertNotNull( get_pending_transfer( $this->group_site_id ) );
+	}
+
+	/**
+	 * A group that has been archived or marked as spam is out of circulation;
+	 * a transfer request made before that must not still be sitting on the
+	 * approvals screen with a live Approve button next to it.
+	 */
+	public function test_archived_and_spammed_groups_are_excluded_from_listings() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		$this->assertContains( $this->group_site_id, $this->site_ids_from_rows( get_sites_with_pending_transfers() ) );
+
+		foreach ( array( 'archived', 'spam' ) as $flag ) {
+			update_blog_status( $this->group_site_id, $flag, '1' );
+
+			$this->assertNotContains(
+				$this->group_site_id,
+				$this->site_ids_from_rows( get_sites_with_pending_transfers() ),
+				"A {$flag} group must not appear on the approvals screen."
+			);
+
+			update_blog_status( $this->group_site_id, $flag, '0' );
+		}
+
+		// ...and it comes back once the group does.
+		$this->assertContains( $this->group_site_id, $this->site_ids_from_rows( get_sites_with_pending_transfers() ) );
+	}
+
+	/**
+	 * A failed lookup must not be indistinguishable from "nothing to approve"
+	 * -- that is the one wrong answer this screen can give the people
+	 * responsible for acting on these requests.
+	 */
+	public function test_a_failed_lookup_is_reported_rather_than_read_as_empty() {
+		global $wpdb;
+
+		$break = static function ( $query ) {
+			return false !== strpos( $query, $GLOBALS['wpdb']->blogmeta ) ? 'SELECT * FROM a_table_that_is_not_there' : $query;
+		};
+
+		$suppressed = $wpdb->suppress_errors( true );
+		add_filter( 'query', $break );
+
+		$this->capture_warnings();
+
+		try {
+			$sites   = get_group_sites_with_meta_key( META_KEY_PENDING );
+			$pending = get_sites_with_pending_transfers();
+			$recent  = get_recent_decided_transfers();
+		} finally {
+			restore_error_handler();
+			remove_filter( 'query', $break );
+			$wpdb->suppress_errors( $suppressed );
+			$wpdb->last_error = '';
+		}
+
+		$this->assertWPError( $sites );
+		$this->assertSame( 'transfer_query_failed', $sites->get_error_code() );
+		$this->assertWPError( $pending );
+		$this->assertWPError( $recent );
+		$this->assertNotEmpty( $this->captured_warnings );
+	}
+
+	/**
+	 * A decision whose site-meta write doesn't land is reported, not reported
+	 * as done -- otherwise the transfer keeps showing up as awaiting a
+	 * decision that everyone has been told was already made.
+	 */
+	public function test_a_decision_that_cannot_be_saved_is_reported() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+
+		add_filter( 'update_blog_metadata', '__return_false' );
+
+		$this->capture_warnings();
+
+		try {
+			$result = reject_transfer( $this->group_site_id, $admin_id, 'Nope' );
+		} finally {
+			restore_error_handler();
+			remove_filter( 'update_blog_metadata', '__return_false' );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'transfer_not_recorded', $result->get_error_code() );
+		$this->assertNotEmpty( $this->captured_warnings );
+
+		// The pending record survives the failure, so the decision can be
+		// made again rather than the request disappearing unrecorded.
+		$this->assertNotNull( get_pending_transfer( $this->group_site_id ) );
+	}
+
+	/**
+	 * The Network Admin form handler is the only way to approve or reject, so
+	 * its own capability check and nonce are load-bearing rather than
+	 * decoration on top of a check further in: `execute_transfer()` and
+	 * `reject_transfer()` don't re-check who is asking.
+	 */
+	public function test_handle_decision_requires_manage_sites() {
+		$owner_id = self::factory()->user->create( array( 'role' => 'administrator' ) );
+
+		wp_set_current_user( $owner_id );
+		$this->assertFalse( current_user_can_approve(), 'Precondition: a group owner is not a network admin.' );
+
+		$this->post_decision( $this->group_site_id, 'approve', true );
+
+		$this->expectException( WPDieException::class );
+
+		handle_decision();
+	}
+
+	/**
+	 * Same, for the nonce: a valid network admin session must not be enough
+	 * on its own to approve a transfer from a cross-site request.
+	 */
+	public function test_handle_decision_requires_a_valid_nonce() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		accept_transfer( $this->group_site_id, $candidate_id );
+
+		wp_set_current_user( $admin_id );
+		$this->post_decision( $this->group_site_id, 'approve', false );
+
+		try {
+			handle_decision();
+			$this->fail( 'handle_decision() should have died on the missing nonce.' );
+		} catch ( WPDieException $exception ) {
+			$this->assertNotNull( get_pending_transfer( $this->group_site_id ), 'No decision may be applied without a valid nonce.' );
+		}
+
+		$this->assertContains( 'administrator', get_userdata( $owner_id )->roles );
+		$this->assertNotContains( 'administrator', get_userdata( $candidate_id )->roles );
+	}
+
+	/**
+	 * Anything other than approve/reject is refused outright, rather than
+	 * falling through to the reject branch of the ternary that picks between them.
+	 */
+	public function test_handle_decision_rejects_an_unknown_decision() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$admin_id     = $this->create_network_admin();
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+
+		wp_set_current_user( $admin_id );
+		$this->post_decision( $this->group_site_id, 'delete', true );
+
+		try {
+			handle_decision();
+			$this->fail( 'handle_decision() should have died on the unknown decision.' );
+		} catch ( WPDieException $exception ) {
+			$this->assertNotNull( get_pending_transfer( $this->group_site_id ) );
+			$this->assertSame( array(), get_transfer_history( $this->group_site_id ) );
+		}
+	}
+
+	/**
+	 * Populate the `$_POST`/`$_REQUEST` a `handle_decision()` call reads.
+	 * `tearDown()` clears them.
+	 *
+	 * @param int    $site_id  Group site being decided.
+	 * @param string $decision 'approve', 'reject', or something invalid.
+	 * @param bool   $nonce    Whether to include a valid nonce.
+	 */
+	private function post_decision( int $site_id, string $decision, bool $nonce ): void {
+		$_POST['site_id']  = (string) $site_id;
+		$_POST['decision'] = $decision;
+
+		if ( $nonce ) {
+			$_POST['_wpnonce'] = wp_create_nonce( DECIDE_ACTION . '_' . $site_id );
+		}
+
+		$_REQUEST = $_POST;
+	}
+
+	/**
+	 * Swap in an error handler that collects `trigger_error()` calls into
+	 * `$this->captured_warnings` instead of letting them surface. Callers
+	 * MUST `restore_error_handler()`.
+	 */
+	private function capture_warnings(): void {
+		$this->captured_warnings = array();
+
+		set_error_handler( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Intentional, test-only: capturing the warnings under test, not debug code.
+			function ( $errno, $errstr ) {
+				$this->captured_warnings[] = array( $errno, $errstr );
+				return true;
+			}
+		);
+	}
+
+	/**
+	 * The user-meta key holding a user's roles on the group site under test.
+	 *
+	 * @return string
+	 */
+	private static function capabilities_meta_key(): string {
+		global $wpdb;
+
+		return $wpdb->get_blog_prefix( get_current_blog_id() ) . 'capabilities';
 	}
 
 	/**

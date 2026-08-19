@@ -32,6 +32,7 @@ use WP_REST_Controller;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
+use function WordCamp\Groups\Frontend\Capabilities\current_user_can_manage_group_settings;
 
 defined( 'WPINC' ) || die();
 
@@ -105,11 +106,22 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 	}
 
 	/**
-	 * Permission check shared by every route: must be logged in and either a
-	 * member of this group or a super admin. Identity/role-specific rules (is
-	 * this the candidate? the owner?) are enforced by the `Transfer\*` state
-	 * functions themselves, the same split `Members_Controller::update_member_role()`
-	 * uses between its permission callback and its handler.
+	 * Permission check shared by every route: must be logged in, a member of
+	 * this group, and able to manage the group's settings — the same
+	 * `current_user_can_manage_group_settings()` gate every other route behind
+	 * this settings UI uses (see `rest.php::manage_group_settings_permissions_check()`).
+	 * Identity/role-specific rules (is this the candidate? the owner?) are
+	 * enforced by the `Transfer\*` state functions themselves, the same split
+	 * `Members_Controller::update_member_role()` uses between its permission
+	 * callback and its handler.
+	 *
+	 * Membership alone would be too broad for what this endpoint returns:
+	 * every member of the group, down to subscriber tier, could read who is
+	 * being lined up to replace the owner and the free-text reason a network
+	 * admin gave for rejecting a previous attempt. The settings gate keeps
+	 * that to the Organiser tier, which is also exactly the audience that has
+	 * anything to do here — the nominated candidate holds `CANDIDATE_ROLE`
+	 * (`editor`) by definition, so accept/decline still work.
 	 *
 	 * Super admins are exempt from the membership requirement so the
 	 * abandoned-group path (`Transfer\current_user_can_initiate()`'s
@@ -130,11 +142,23 @@ class Ownership_Transfer_Controller extends WP_REST_Controller {
 			);
 		}
 
-		if ( ! is_super_admin() && ! is_user_member_of_blog() ) {
+		if ( is_super_admin() ) {
+			return true;
+		}
+
+		if ( ! is_user_member_of_blog() ) {
 			return new WP_Error(
 				'not_a_member',
 				__( 'You are not a member of this group.', 'wporg-groups-frontend' ),
 				array( 'status' => 403 )
+			);
+		}
+
+		if ( ! current_user_can_manage_group_settings() ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'Sorry, you are not allowed to view this group\'s ownership transfers.', 'wporg-groups-frontend' ),
+				array( 'status' => rest_authorization_required_code() )
 			);
 		}
 

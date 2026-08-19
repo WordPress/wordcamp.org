@@ -8,6 +8,7 @@ use function WordCamp\Groups\Ownership_Transfer\decline_transfer;
 use function WordCamp\Groups\Ownership_Transfer\execute_transfer;
 use function WordCamp\Groups\Ownership_Transfer\initiate_transfer;
 use function WordCamp\Groups\Ownership_Transfer\reject_transfer;
+use function WordCamp\Groups\Ownership_Transfer\Notifications\notify_candidate_nominated;
 
 defined( 'WPINC' ) || die();
 
@@ -285,6 +286,71 @@ class Test_Group_Ownership_Transfer_Notifications extends Groups_TestCase {
 		}
 
 		$this->assertNotNull( $captured, 'A failed notification send should have triggered a warning.' );
+		$this->assertSame( E_USER_WARNING, $captured[0] );
+	}
+
+	/**
+	 * A notification with nobody to send to is the same class of problem as
+	 * one that fails to send, and gets the same treatment. Silence here is
+	 * indistinguishable from a transfer nobody has got round to yet: the
+	 * candidate never finds out they were nominated.
+	 */
+	public function test_a_notification_with_no_usable_recipient_triggers_a_warning() {
+		$captured = null;
+		set_error_handler( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Intentional, test-only: capturing the warning under test, not debug code.
+			static function ( $errno, $errstr ) use ( &$captured ) {
+				$captured = array( $errno, $errstr );
+				return true;
+			}
+		);
+
+		try {
+			notify_candidate_nominated(
+				$this->group_site_id,
+				array(
+					'from_user_id' => self::factory()->user->create(),
+					'to_user_id'   => PHP_INT_MAX, // No such user.
+					'initiated_by' => 0,
+				)
+			);
+		} finally {
+			restore_error_handler();
+		}
+
+		$this->assertSame( array(), $this->sent_mail );
+		$this->assertNotNull( $captured, 'A notification with no recipient should have triggered a warning.' );
+		$this->assertSame( E_USER_WARNING, $captured[0] );
+	}
+
+	/**
+	 * Same, for the other end: a network with no reachable admins means an
+	 * accepted transfer sits waiting for an approval nobody was told about.
+	 */
+	public function test_an_acceptance_with_no_network_admins_triggers_a_warning() {
+		$owner_id     = self::factory()->user->create( array( 'role' => 'administrator' ) );
+		$candidate_id = self::factory()->user->create( array( 'role' => 'editor' ) );
+
+		initiate_transfer( $this->group_site_id, $owner_id, $candidate_id, $owner_id );
+		$this->sent_mail = array();
+
+		$GLOBALS['super_admins'] = array(); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+
+		$captured = null;
+		set_error_handler( // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Intentional, test-only: capturing the warning under test, not debug code.
+			static function ( $errno, $errstr ) use ( &$captured ) {
+				$captured = array( $errno, $errstr );
+				return true;
+			}
+		);
+
+		try {
+			accept_transfer( $this->group_site_id, $candidate_id );
+		} finally {
+			restore_error_handler();
+		}
+
+		$this->assertSame( array(), $this->sent_mail );
+		$this->assertNotNull( $captured, 'An acceptance nobody can approve should have triggered a warning.' );
 		$this->assertSame( E_USER_WARNING, $captured[0] );
 	}
 }

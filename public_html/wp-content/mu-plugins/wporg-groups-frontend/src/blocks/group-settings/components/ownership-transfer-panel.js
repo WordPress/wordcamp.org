@@ -41,6 +41,35 @@ const FINAL_STATUS_LABELS = {
 	rejected: __( 'Rejected', 'wporg-groups-frontend' ),
 };
 
+/**
+ * Reject a response body the panel can't render.
+ *
+ * A 200 with an empty or non-object body would otherwise leave `state` null
+ * and `notice` empty, which renders as nothing at all — the panel silently
+ * disappearing from the Members tab, indistinguishable from "this viewer has
+ * nothing to see here". Throwing routes it to the existing error notice.
+ *
+ * @param {*} data Parsed response body.
+ * @return {Object} The same body, once it's known to be usable.
+ */
+function assertUsable( data ) {
+	if ( ! data || typeof data !== 'object' ) {
+		throw new Error( __( 'Could not load ownership transfer status.', 'wporg-groups-frontend' ) );
+	}
+
+	return data;
+}
+
+/**
+ * Coerce a payload field to something safe to `.map()` over.
+ *
+ * @param {*} value Field from the REST response.
+ * @return {Array} The value, or an empty array if it isn't one.
+ */
+function asList( value ) {
+	return Array.isArray( value ) ? value : [];
+}
+
 export default function OwnershipTransferPanel() {
 	const [ loading, setLoading ] = useState( true );
 	const [ state, setState ] = useState( null );
@@ -52,7 +81,7 @@ export default function OwnershipTransferPanel() {
 
 	const fetchState = useCallback( () => {
 		return apiFetch( { path: '/wporg-groups/v1/ownership-transfer' } ).then( ( data ) => {
-			setState( data );
+			setState( assertUsable( data ) );
 			setLoading( false );
 		} );
 	}, [] );
@@ -70,7 +99,7 @@ export default function OwnershipTransferPanel() {
 		setNotice( '' );
 		apiFetch( { path: `/wporg-groups/v1/ownership-transfer/${ path }`, method: 'POST', data } )
 			.then( ( result ) => {
-				setState( result );
+				setState( assertUsable( result ) );
 				setCandidateId( '' );
 				setFromUserId( '' );
 			} )
@@ -91,7 +120,25 @@ export default function OwnershipTransferPanel() {
 			: null;
 	}
 
-	const { pending, history, currentOwners, eligibleCandidates, canInitiate, canAccept, viewerIsOwner } = state;
+	// Defaulted rather than destructured bare: this panel renders inside
+	// `MembersTab` with no error boundary above it, so a payload missing any
+	// one of these — an older cached response, a filtered REST response —
+	// would take the whole Members tab down with it, not just this panel.
+	// `asList()` on top of the defaults because a default only covers
+	// `undefined`, and an explicit `null` is just as fatal to `.map()`.
+	const {
+		pending = null,
+		history = [],
+		currentOwners = [],
+		eligibleCandidates = [],
+		canInitiate = false,
+		canAccept = false,
+		viewerIsOwner = false,
+	} = state;
+
+	const historyEntries = asList( history );
+	const owners = asList( currentOwners );
+	const candidates = asList( eligibleCandidates );
 
 	// Nothing to show if there's no pending transfer and this viewer can't start one.
 	if ( ! pending && ! canInitiate ) {
@@ -157,7 +204,7 @@ export default function OwnershipTransferPanel() {
 			h(
 				'div',
 				{ className: 'wporg-ownership-transfer__form' },
-				eligibleCandidates.length === 0
+				candidates.length === 0
 					? h(
 						'p',
 						{ className: 'wporg-settings-tab__empty' },
@@ -170,7 +217,7 @@ export default function OwnershipTransferPanel() {
 								label: __( 'Current owner being replaced', 'wporg-groups-frontend' ),
 								value: fromUserId,
 								options: [ { label: __( 'Select an owner…', 'wporg-groups-frontend' ), value: '' } ]
-									.concat( currentOwners.map( ( owner ) => ( { label: owner.name, value: String( owner.id ) } ) ) ),
+									.concat( owners.map( ( owner ) => ( { label: owner.name, value: String( owner.id ) } ) ) ),
 								onChange: setFromUserId,
 								__nextHasNoMarginBottom: true,
 							} ),
@@ -179,7 +226,7 @@ export default function OwnershipTransferPanel() {
 							label: __( 'Transfer ownership to', 'wporg-groups-frontend' ),
 							value: candidateId,
 							options: [ { label: __( 'Select a member…', 'wporg-groups-frontend' ), value: '' } ]
-								.concat( eligibleCandidates.map( ( c ) => ( { label: c.name, value: String( c.id ) } ) ) ),
+								.concat( candidates.map( ( c ) => ( { label: c.name, value: String( c.id ) } ) ) ),
 							onChange: setCandidateId,
 							__nextHasNoMarginBottom: true,
 						} ),
@@ -201,7 +248,7 @@ export default function OwnershipTransferPanel() {
 					]
 			),
 
-		history.length > 0 &&
+		historyEntries.length > 0 &&
 			h(
 				'details',
 				{ className: 'wporg-ownership-transfer__history' },
@@ -209,7 +256,7 @@ export default function OwnershipTransferPanel() {
 				h(
 					'ul',
 					{},
-					history.map( ( entry, index ) =>
+					historyEntries.map( ( entry, index ) =>
 						h(
 							'li',
 							{ key: index },

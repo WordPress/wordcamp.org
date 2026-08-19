@@ -105,6 +105,14 @@ wp_cache_add_global_groups( array( LOCK_GROUP ) );
  * degrades to the unsynchronised behaviour it replaces -- no worse than
  * not having it.
  *
+ * `$callback` must stay short: nothing slower than the site-meta reads and
+ * writes the transition itself needs. Anything that can outlast
+ * `LOCK_TIMEOUT` -- `wp_mail()` fan-out above all -- runs after the lock is
+ * released, exactly as `Groups\Messaging\process_batch()` sends outside
+ * `with_jobs_lock()`. That is what makes the ownership check below a
+ * belt-and-braces measure rather than the only thing standing between an
+ * expired lock and a caller deleting a lock someone else now holds.
+ *
  * @param int      $site_id  Group site ID being locked.
  * @param callable $callback Runs while the lock is held.
  * @return mixed The callback's return value, or a `WP_Error` if the lock
@@ -114,8 +122,16 @@ function with_transfer_lock( int $site_id, callable $callback ) {
 	$lock_key = 'transfer_' . $site_id;
 	$acquired = false;
 
+	/*
+	 * A value unique to this acquisition, so the release below can tell "my
+	 * lock" from "a lock someone else acquired after mine expired". Without
+	 * it, a critical section that outran LOCK_TIMEOUT would end by deleting
+	 * the next holder's lock and let a third request in alongside them.
+	 */
+	$token = uniqid( 'transfer_lock_', true );
+
 	for ( $attempt = 0; $attempt < LOCK_ATTEMPTS; $attempt++ ) {
-		if ( wp_cache_add( $lock_key, 1, LOCK_GROUP, LOCK_TIMEOUT ) ) {
+		if ( wp_cache_add( $lock_key, $token, LOCK_GROUP, LOCK_TIMEOUT ) ) {
 			$acquired = true;
 			break;
 		}
@@ -134,7 +150,13 @@ function with_transfer_lock( int $site_id, callable $callback ) {
 	try {
 		return $callback();
 	} finally {
-		wp_cache_delete( $lock_key, LOCK_GROUP );
+		// Not atomic -- there is no portable compare-and-delete across
+		// object-cache backends -- but it turns "always steals" into "only
+		// on a read/delete interleave that is itself narrower than the
+		// window it protects".
+		if ( wp_cache_get( $lock_key, LOCK_GROUP ) === $token ) {
+			wp_cache_delete( $lock_key, LOCK_GROUP );
+		}
 	}
 }
 
@@ -181,14 +203,20 @@ function set_pending_transfer( int $site_id, array $record ): void {
 /**
  * Move a decided transfer from "pending" into the capped history list.
  *
+ * History is written before the pending record is cleared, and the clear is
+ * skipped entirely if that write failed: the failure mode of this order is a
+ * transfer that is still pending and can be decided again, while the reverse
+ * order's is a decided transfer that vanished without a trace. Callers MUST
+ * check the return value -- a dropped write here is what turns "rejected" or
+ * "completed" into a record that keeps showing up as awaiting a decision.
+ *
  * @param int    $site_id      Group site ID.
  * @param array  $pending      The pending record being decided.
  * @param string $final_status One of 'declined', 'cancelled', 'completed', 'rejected'.
  * @param array  $extra        Extra fields to merge in (e.g. `decided_by`, `reason`).
+ * @return bool Whether both meta writes landed.
  */
-function finalize_transfer( int $site_id, array $pending, string $final_status, array $extra = array() ): void {
-	delete_site_meta( $site_id, META_KEY_PENDING );
-
+function finalize_transfer( int $site_id, array $pending, string $final_status, array $extra = array() ): bool {
 	$entry = array_merge(
 		$pending,
 		array(
@@ -202,7 +230,43 @@ function finalize_transfer( int $site_id, array $pending, string $final_status, 
 	array_unshift( $history, $entry );
 	$history = array_slice( $history, 0, HISTORY_LIMIT );
 
-	update_site_meta( $site_id, META_KEY_HISTORY, $history );
+	if ( ! update_site_meta( $site_id, META_KEY_HISTORY, $history ) ) {
+		return false;
+	}
+
+	return (bool) delete_site_meta( $site_id, META_KEY_PENDING );
+}
+
+/**
+ * The `WP_Error` returned when `finalize_transfer()` couldn't persist a decision.
+ *
+ * @param int    $site_id      Group site ID.
+ * @param string $final_status The decision that couldn't be recorded.
+ * @return WP_Error
+ */
+function finalize_failed_error( int $site_id, string $final_status ): WP_Error {
+	trigger_error(
+		sprintf(
+			'Could not record the "%1$s" ownership-transfer decision for site %2$d -- the site-meta write failed. The transfer is still listed as pending.',
+			$final_status, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
+			$site_id // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+		),
+		E_USER_WARNING
+	);
+
+	Logger\log(
+		'groups_ownership_transfer_finalize_failed',
+		array(
+			'site_id'      => $site_id,
+			'final_status' => $final_status,
+		)
+	);
+
+	return new WP_Error(
+		'transfer_not_recorded',
+		__( 'The decision could not be saved. Please try again.', 'wordcamporg' ),
+		array( 'status' => 500 )
+	);
 }
 
 /*
@@ -346,6 +410,15 @@ function validate_candidate( int $candidate_id, int $from_user_id, int $site_id 
 /*
  * ----------------------------------------------------------------------
  * State transitions.
+ *
+ * Each transition is a thin public wrapper around a `*_unlocked()` worker.
+ * The wrapper holds the per-site lock for exactly as long as the worker's
+ * site-meta reads and writes take, then fires the transition's `do_action`
+ * once the lock is released -- the notification layer hanging off those
+ * hooks does `wp_mail()` fan-out, and mail transport can easily outlast
+ * `LOCK_TIMEOUT`. The workers therefore return the record the hook needs
+ * rather than a bare `true`, and the wrappers normalise that back to
+ * `true|WP_Error` for callers.
  * ----------------------------------------------------------------------
  */
 
@@ -360,16 +433,32 @@ function validate_candidate( int $candidate_id, int $from_user_id, int $site_id 
  * @return true|WP_Error
  */
 function initiate_transfer( int $site_id, int $from_user_id, int $to_user_id, int $initiated_by ) {
-	return with_transfer_lock(
+	$record = with_transfer_lock(
 		$site_id,
 		static function () use ( $site_id, $from_user_id, $to_user_id, $initiated_by ) {
 			return initiate_transfer_unlocked( $site_id, $from_user_id, $to_user_id, $initiated_by );
 		}
 	);
+
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+
+	/**
+	 * Fires after a transfer has been initiated.
+	 *
+	 * @param int   $site_id Group site ID.
+	 * @param array $record  The new pending-transfer record.
+	 */
+	do_action( 'wporg_groups_ownership_transfer_initiated', $site_id, $record );
+
+	return true;
 }
 
 /**
  * @see initiate_transfer() -- runs under that function's per-site lock.
+ *
+ * @return array|WP_Error The new pending record, for the caller to announce.
  */
 function initiate_transfer_unlocked( int $site_id, int $from_user_id, int $to_user_id, int $initiated_by ) {
 	if ( get_pending_transfer( $site_id ) ) {
@@ -416,15 +505,7 @@ function initiate_transfer_unlocked( int $site_id, int $from_user_id, int $to_us
 		)
 	);
 
-	/**
-	 * Fires after a transfer has been initiated.
-	 *
-	 * @param int   $site_id Group site ID.
-	 * @param array $record  The new pending-transfer record.
-	 */
-	do_action( 'wporg_groups_ownership_transfer_initiated', $site_id, $record );
-
-	return true;
+	return $record;
 }
 
 /**
@@ -435,16 +516,32 @@ function initiate_transfer_unlocked( int $site_id, int $from_user_id, int $to_us
  * @return true|WP_Error
  */
 function accept_transfer( int $site_id, int $user_id ) {
-	return with_transfer_lock(
+	$record = with_transfer_lock(
 		$site_id,
 		static function () use ( $site_id, $user_id ) {
 			return accept_transfer_unlocked( $site_id, $user_id );
 		}
 	);
+
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+
+	/**
+	 * Fires after the candidate accepts a transfer.
+	 *
+	 * @param int   $site_id Group site ID.
+	 * @param array $record  The updated pending-transfer record.
+	 */
+	do_action( 'wporg_groups_ownership_transfer_accepted', $site_id, $record );
+
+	return true;
 }
 
 /**
  * @see accept_transfer() -- runs under that function's per-site lock.
+ *
+ * @return array|WP_Error The updated pending record, for the caller to announce.
  */
 function accept_transfer_unlocked( int $site_id, int $user_id ) {
 	$pending = get_pending_transfer( $site_id );
@@ -468,15 +565,7 @@ function accept_transfer_unlocked( int $site_id, int $user_id ) {
 
 	Logger\log( 'groups_ownership_transfer_accepted', array( 'site_id' => $site_id ) + $pending );
 
-	/**
-	 * Fires after the candidate accepts a transfer.
-	 *
-	 * @param int   $site_id Group site ID.
-	 * @param array $pending The updated pending-transfer record.
-	 */
-	do_action( 'wporg_groups_ownership_transfer_accepted', $site_id, $pending );
-
-	return true;
+	return $pending;
 }
 
 /**
@@ -487,16 +576,32 @@ function accept_transfer_unlocked( int $site_id, int $user_id ) {
  * @return true|WP_Error
  */
 function decline_transfer( int $site_id, int $user_id ) {
-	return with_transfer_lock(
+	$record = with_transfer_lock(
 		$site_id,
 		static function () use ( $site_id, $user_id ) {
 			return decline_transfer_unlocked( $site_id, $user_id );
 		}
 	);
+
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+
+	/**
+	 * Fires after the candidate declines a transfer.
+	 *
+	 * @param int   $site_id Group site ID.
+	 * @param array $record  The declined pending-transfer record.
+	 */
+	do_action( 'wporg_groups_ownership_transfer_declined', $site_id, $record );
+
+	return true;
 }
 
 /**
  * @see decline_transfer() -- runs under that function's per-site lock.
+ *
+ * @return array|WP_Error The declined record, for the caller to announce.
  */
 function decline_transfer_unlocked( int $site_id, int $user_id ) {
 	$pending = get_pending_transfer( $site_id );
@@ -505,23 +610,27 @@ function decline_transfer_unlocked( int $site_id, int $user_id ) {
 		return new WP_Error( 'no_pending_transfer', __( 'There is no pending transfer for this group.', 'wordcamporg' ), array( 'status' => 404 ) );
 	}
 
+	// Same guard as `accept_transfer_unlocked()`, for the same reason:
+	// declining is the candidate's half of the acceptance step, and once
+	// they have accepted, the decision belongs to a network admin. Without
+	// this, a candidate could pull an already-accepted transfer out from
+	// under the admin about to approve it -- and, since `finalize_transfer()`
+	// is unconditional, do it from a stale panel that never saw the accept.
+	if ( STATUS_PENDING_ACCEPTANCE !== $pending['status'] ) {
+		return new WP_Error( 'transfer_not_awaiting_acceptance', __( 'This transfer is not awaiting acceptance. Ask a network admin to reject it instead.', 'wordcamporg' ), array( 'status' => 400 ) );
+	}
+
 	if ( (int) $pending['to_user_id'] !== $user_id ) {
 		return new WP_Error( 'not_the_candidate', __( 'Only the nominated candidate can decline this transfer.', 'wordcamporg' ), array( 'status' => 403 ) );
 	}
 
-	finalize_transfer( $site_id, $pending, 'declined' );
+	if ( ! finalize_transfer( $site_id, $pending, 'declined' ) ) {
+		return finalize_failed_error( $site_id, 'declined' );
+	}
 
 	Logger\log( 'groups_ownership_transfer_declined', array( 'site_id' => $site_id ) + $pending );
 
-	/**
-	 * Fires after the candidate declines a transfer.
-	 *
-	 * @param int   $site_id Group site ID.
-	 * @param array $pending The declined pending-transfer record.
-	 */
-	do_action( 'wporg_groups_ownership_transfer_declined', $site_id, $pending );
-
-	return true;
+	return $pending;
 }
 
 /**
@@ -532,16 +641,32 @@ function decline_transfer_unlocked( int $site_id, int $user_id ) {
  * @return true|WP_Error
  */
 function cancel_transfer( int $site_id, int $user_id ) {
-	return with_transfer_lock(
+	$record = with_transfer_lock(
 		$site_id,
 		static function () use ( $site_id, $user_id ) {
 			return cancel_transfer_unlocked( $site_id, $user_id );
 		}
 	);
+
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+
+	/**
+	 * Fires after a pending transfer is cancelled.
+	 *
+	 * @param int   $site_id Group site ID.
+	 * @param array $record  The cancelled pending-transfer record.
+	 */
+	do_action( 'wporg_groups_ownership_transfer_cancelled', $site_id, $record );
+
+	return true;
 }
 
 /**
  * @see cancel_transfer() -- runs under that function's per-site lock.
+ *
+ * @return array|WP_Error The cancelled record, for the caller to announce.
  */
 function cancel_transfer_unlocked( int $site_id, int $user_id ) {
 	$pending = get_pending_transfer( $site_id );
@@ -554,46 +679,57 @@ function cancel_transfer_unlocked( int $site_id, int $user_id ) {
 		return new WP_Error( 'cannot_cancel_transfer', __( 'Sorry, you are not allowed to cancel this transfer.', 'wordcamporg' ), array( 'status' => 403 ) );
 	}
 
-	finalize_transfer( $site_id, $pending, 'cancelled', array( 'decided_by' => $user_id ) );
+	if ( ! finalize_transfer( $site_id, $pending, 'cancelled', array( 'decided_by' => $user_id ) ) ) {
+		return finalize_failed_error( $site_id, 'cancelled' );
+	}
 
 	Logger\log( 'groups_ownership_transfer_cancelled', array( 'site_id' => $site_id ) + $pending );
 
-	/**
-	 * Fires after a pending transfer is cancelled.
-	 *
-	 * @param int   $site_id Group site ID.
-	 * @param array $pending The cancelled pending-transfer record.
-	 */
-	do_action( 'wporg_groups_ownership_transfer_cancelled', $site_id, $pending );
-
-	return true;
+	return $pending;
 }
 
 /**
  * A network admin approves an accepted transfer, executing the role swap.
  *
  * Promotes the new owner to `administrator` before demoting the old owner to
- * `editor`, so the site is never briefly without an administrator — see the
- * file docblock section on atomicity for why this isn't wrapped in a raw SQL
- * transaction instead. After both role changes, re-reads both users and
- * bails with a `WP_Error` (and a Slack-relayed warning) if the result isn't
- * exactly what was expected, rather than reporting false success.
+ * `editor`, so the site is never briefly without an administrator. Each half
+ * is verified by re-reading the user before the next step depends on it:
+ * a promotion that didn't land stops the transfer before anything is demoted,
+ * and a demotion that didn't land cleanly is rolled back. Either way the
+ * result is a `WP_Error` plus a Slack-relayed warning, and the transfer stays
+ * pending so it can be retried -- never a false report of success.
  *
  * @param int $site_id    Group site ID. The current blog MUST already be this site.
  * @param int $decided_by The approving network admin.
  * @return true|WP_Error
  */
 function execute_transfer( int $site_id, int $decided_by ) {
-	return with_transfer_lock(
+	$record = with_transfer_lock(
 		$site_id,
 		static function () use ( $site_id, $decided_by ) {
 			return execute_transfer_unlocked( $site_id, $decided_by );
 		}
 	);
+
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+
+	/**
+	 * Fires after a transfer has executed and roles were swapped.
+	 *
+	 * @param int   $site_id Group site ID.
+	 * @param array $record  The completed pending-transfer record.
+	 */
+	do_action( 'wporg_groups_ownership_transfer_executed', $site_id, $record );
+
+	return true;
 }
 
 /**
  * @see execute_transfer() -- runs under that function's per-site lock.
+ *
+ * @return array|WP_Error The completed record, for the caller to announce.
  */
 function execute_transfer_unlocked( int $site_id, int $decided_by ) {
 	$pending = get_pending_transfer( $site_id );
@@ -638,6 +774,29 @@ function execute_transfer_unlocked( int $site_id, int $decided_by ) {
 	}
 
 	$new_owner->set_role( 'administrator' );
+
+	/*
+	 * Confirm the promotion actually landed BEFORE demoting anyone.
+	 * `WP_User::set_role()` returns nothing, and another plugin hooked to
+	 * `set_user_role` can undo or replace what it just wrote, so "the call
+	 * returned" is not evidence the new owner is an administrator. Demoting
+	 * on that assumption is precisely how a single-owner group ends up with
+	 * zero administrators. Bailing here instead leaves every role exactly as
+	 * it was and the record still pending, so the decision can simply be
+	 * retried once whatever interfered is dealt with.
+	 */
+	$new_owner_after = get_userdata( (int) $pending['to_user_id'] );
+
+	if ( ! $new_owner_after || ! in_array( 'administrator', $new_owner_after->roles, true ) ) {
+		report_inconsistent_execution( $site_id, $pending, 'promotion_failed', false );
+
+		return new WP_Error(
+			'transfer_promotion_failed',
+			__( 'The new owner could not be promoted, so no roles were changed. Please try again, or check wp-admin → Users for this site directly.', 'wordcamporg' ),
+			array( 'status' => 500 )
+		);
+	}
+
 	$old_owner->set_role( CANDIDATE_ROLE );
 
 	// Re-read both users; `set_role()` above may have been intercepted by
@@ -645,41 +804,60 @@ function execute_transfer_unlocked( int $site_id, int $decided_by ) {
 	$old_owner_after = get_userdata( (int) $pending['from_user_id'] );
 	$new_owner_after = get_userdata( (int) $pending['to_user_id'] );
 
-	$old_is_admin = $old_owner_after && in_array( 'administrator', $old_owner_after->roles, true );
-	$new_is_admin = $new_owner_after && in_array( 'administrator', $new_owner_after->roles, true );
+	// `$old_is_candidate` is checked as well as `$old_is_admin` because "no
+	// longer an administrator" is also satisfied by a user whose capabilities
+	// were wiped entirely -- that would pass as a clean demotion while
+	// actually locking them out of the group they still co-organise.
+	$old_is_admin     = $old_owner_after && in_array( 'administrator', $old_owner_after->roles, true );
+	$new_is_admin     = $new_owner_after && in_array( 'administrator', $new_owner_after->roles, true );
+	$old_is_candidate = $old_owner_after && in_array( CANDIDATE_ROLE, $old_owner_after->roles, true );
 
-	if ( $old_is_admin || ! $new_is_admin ) {
+	if ( $old_is_admin || ! $old_is_candidate || ! $new_is_admin ) {
+		$rolled_back = roll_back_execution( $pending );
+
+		report_inconsistent_execution( $site_id, $pending, 'swap_incomplete', $rolled_back );
+
+		return new WP_Error(
+			'transfer_execution_inconsistent',
+			$rolled_back
+				? __( 'The ownership transfer did not complete cleanly and the previous roles were restored. Please try again.', 'wordcamporg' )
+				: __( 'The ownership transfer did not complete cleanly. Please check wp-admin → Users for this site directly.', 'wordcamporg' ),
+			array( 'status' => 500 )
+		);
+	}
+
+	if ( ! finalize_transfer( $site_id, $pending, 'completed', array( 'decided_by' => $decided_by ) ) ) {
+		/*
+		 * The roles ARE swapped at this point, so this is deliberately not
+		 * rolled back -- undoing a transfer that succeeded because its
+		 * bookkeeping didn't is the worse outcome. The pending record
+		 * lingering means the group keeps appearing on the approvals screen,
+		 * where a second approve now fails on `candidate_already_administrator`
+		 * and a reject clears it without touching roles, which is the correct
+		 * way out. Loud, because nothing about the UI would otherwise say so.
+		 */
 		trigger_error(
 			sprintf(
-				'Ownership transfer execution left inconsistent roles for site %1$d (old owner %2$d admin=%3$s, new owner %4$d admin=%5$s). Manual review required in wp-admin -> Users.',
-				$site_id, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
-				$pending['from_user_id'], // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
-				$old_is_admin ? 'yes' : 'no',
-				$pending['to_user_id'], // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
-				$new_is_admin ? 'yes' : 'no'
+				'Ownership transfer for site %1$d swapped roles successfully but could not clear its pending record. The transfer is complete; reject the leftover request on the Ownership Transfers screen to clear it.',
+				$site_id // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
 			),
 			E_USER_WARNING
 		);
 
 		Logger\log(
-			'groups_ownership_transfer_inconsistent',
+			'groups_ownership_transfer_finalize_failed',
 			array(
 				'site_id'      => $site_id,
-				'from_user_id' => $pending['from_user_id'],
-				'to_user_id'   => $pending['to_user_id'],
-				'old_is_admin' => $old_is_admin,
-				'new_is_admin' => $new_is_admin,
-			)
+				'final_status' => 'completed',
+			) + $pending
 		);
 
 		return new WP_Error(
-			'transfer_execution_inconsistent',
-			__( 'The ownership transfer did not complete cleanly. Please check wp-admin → Users for this site directly.', 'wordcamporg' ),
+			'transfer_not_recorded',
+			__( 'The roles were swapped, but the transfer record could not be cleared. Reject the leftover request to tidy it up — the ownership change itself is done.', 'wordcamporg' ),
 			array( 'status' => 500 )
 		);
 	}
-
-	finalize_transfer( $site_id, $pending, 'completed', array( 'decided_by' => $decided_by ) );
 
 	Logger\log(
 		'groups_ownership_transfer_executed',
@@ -689,15 +867,78 @@ function execute_transfer_unlocked( int $site_id, int $decided_by ) {
 		) + $pending
 	);
 
-	/**
-	 * Fires after a transfer has executed and roles were swapped.
-	 *
-	 * @param int   $site_id Group site ID.
-	 * @param array $pending The completed pending-transfer record.
-	 */
-	do_action( 'wporg_groups_ownership_transfer_executed', $site_id, $pending );
+	return $pending;
+}
 
-	return true;
+/**
+ * Put both parties back the way they were after a half-applied role swap.
+ *
+ * Restores the old owner first, so the group is never momentarily without an
+ * administrator during the rollback either, then puts the candidate back on
+ * `CANDIDATE_ROLE`. Verifies the result the same way the forward path does --
+ * a rollback that silently failed would be worse than none, since it would
+ * turn a reported failure into a reported-and-supposedly-clean one.
+ *
+ * @param array $pending The pending record being executed.
+ * @return bool Whether both parties are back in their original roles.
+ */
+function roll_back_execution( array $pending ): bool {
+	$old_owner = get_userdata( (int) $pending['from_user_id'] );
+	$new_owner = get_userdata( (int) $pending['to_user_id'] );
+
+	if ( ! $old_owner || ! $new_owner ) {
+		return false;
+	}
+
+	$old_owner->set_role( 'administrator' );
+	$new_owner->set_role( CANDIDATE_ROLE );
+
+	$old_owner_after = get_userdata( (int) $pending['from_user_id'] );
+	$new_owner_after = get_userdata( (int) $pending['to_user_id'] );
+
+	return $old_owner_after && in_array( 'administrator', $old_owner_after->roles, true )
+		&& $new_owner_after && ! in_array( 'administrator', $new_owner_after->roles, true )
+		&& in_array( CANDIDATE_ROLE, $new_owner_after->roles, true );
+}
+
+/**
+ * Raise the alarm about a role swap that didn't come out as expected.
+ *
+ * @param int    $site_id     Group site ID.
+ * @param array  $pending     The pending record being executed.
+ * @param string $stage       Which check failed: 'promotion_failed' or 'swap_incomplete'.
+ * @param bool   $rolled_back Whether the original roles were successfully restored.
+ */
+function report_inconsistent_execution( int $site_id, array $pending, string $stage, bool $rolled_back ): void {
+	$old_owner = get_userdata( (int) $pending['from_user_id'] );
+	$new_owner = get_userdata( (int) $pending['to_user_id'] );
+
+	$context = array(
+		'site_id'      => $site_id,
+		'stage'        => $stage,
+		'rolled_back'  => $rolled_back,
+		'from_user_id' => (int) $pending['from_user_id'],
+		'to_user_id'   => (int) $pending['to_user_id'],
+		'from_roles'   => $old_owner ? $old_owner->roles : array(),
+		'to_roles'     => $new_owner ? $new_owner->roles : array(),
+	);
+
+	trigger_error(
+		sprintf(
+			'Ownership transfer execution failed at "%1$s" for site %2$d (old owner %3$d roles=[%4$s], new owner %5$d roles=[%6$s], rolled back: %7$s). %8$s',
+			$stage, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
+			$site_id, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+			$context['from_user_id'], // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+			implode( ',', $context['from_roles'] ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+			$context['to_user_id'], // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+			implode( ',', $context['to_roles'] ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+			$rolled_back ? 'yes' : 'no',
+			$rolled_back ? 'The transfer can be retried.' : 'Manual review required in wp-admin -> Users.' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+		),
+		E_USER_WARNING
+	);
+
+	Logger\log( 'groups_ownership_transfer_inconsistent', $context );
 }
 
 /**
@@ -709,16 +950,33 @@ function execute_transfer_unlocked( int $site_id, int $decided_by ) {
  * @return true|WP_Error
  */
 function reject_transfer( int $site_id, int $decided_by, string $reason = '' ) {
-	return with_transfer_lock(
+	$record = with_transfer_lock(
 		$site_id,
 		static function () use ( $site_id, $decided_by, $reason ) {
 			return reject_transfer_unlocked( $site_id, $decided_by, $reason );
 		}
 	);
+
+	if ( is_wp_error( $record ) ) {
+		return $record;
+	}
+
+	/**
+	 * Fires after a transfer is rejected by a network admin.
+	 *
+	 * @param int    $site_id Group site ID.
+	 * @param array  $record  The rejected pending-transfer record.
+	 * @param string $reason  Optional reason given by the network admin.
+	 */
+	do_action( 'wporg_groups_ownership_transfer_rejected', $site_id, $record, $reason );
+
+	return true;
 }
 
 /**
  * @see reject_transfer() -- runs under that function's per-site lock.
+ *
+ * @return array|WP_Error The rejected record, for the caller to announce.
  */
 function reject_transfer_unlocked( int $site_id, int $decided_by, string $reason = '' ) {
 	$pending = get_pending_transfer( $site_id );
@@ -727,7 +985,7 @@ function reject_transfer_unlocked( int $site_id, int $decided_by, string $reason
 		return new WP_Error( 'no_pending_transfer', __( 'There is no pending transfer for this group.', 'wordcamporg' ), array( 'status' => 404 ) );
 	}
 
-	finalize_transfer(
+	$finalized = finalize_transfer(
 		$site_id,
 		$pending,
 		'rejected',
@@ -736,6 +994,10 @@ function reject_transfer_unlocked( int $site_id, int $decided_by, string $reason
 			'reason'     => $reason,
 		)
 	);
+
+	if ( ! $finalized ) {
+		return finalize_failed_error( $site_id, 'rejected' );
+	}
 
 	Logger\log(
 		'groups_ownership_transfer_rejected',
@@ -746,16 +1008,7 @@ function reject_transfer_unlocked( int $site_id, int $decided_by, string $reason
 		) + $pending
 	);
 
-	/**
-	 * Fires after a transfer is rejected by a network admin.
-	 *
-	 * @param int    $site_id Group site ID.
-	 * @param array  $pending The rejected pending-transfer record.
-	 * @param string $reason  Optional reason given by the network admin.
-	 */
-	do_action( 'wporg_groups_ownership_transfer_rejected', $site_id, $pending, $reason );
-
-	return true;
+	return $pending;
 }
 
 /*
@@ -781,12 +1034,18 @@ function add_page(): void {
 /**
  * Get every group site with a transfer awaiting a decision.
  *
- * @return array{site: \WP_Site, pending: array}[]
+ * @return array{site: \WP_Site, pending: array}[]|WP_Error
  */
-function get_sites_with_pending_transfers(): array {
+function get_sites_with_pending_transfers() {
+	$sites = get_group_sites_with_meta_key( META_KEY_PENDING );
+
+	if ( is_wp_error( $sites ) ) {
+		return $sites;
+	}
+
 	$rows = array();
 
-	foreach ( get_group_sites_with_meta_key( META_KEY_PENDING ) as $site ) {
+	foreach ( $sites as $site ) {
 		$pending = get_pending_transfer( (int) $site->blog_id );
 
 		if ( $pending ) {
@@ -804,12 +1063,18 @@ function get_sites_with_pending_transfers(): array {
  * Get the most recently decided transfers across every group site, newest first.
  *
  * @param int $limit Maximum rows to return.
- * @return array{site: \WP_Site, entry: array}[]
+ * @return array{site: \WP_Site, entry: array}[]|WP_Error
  */
-function get_recent_decided_transfers( int $limit = 20 ): array {
+function get_recent_decided_transfers( int $limit = 20 ) {
+	$sites = get_group_sites_with_meta_key( META_KEY_HISTORY );
+
+	if ( is_wp_error( $sites ) ) {
+		return $sites;
+	}
+
 	$rows = array();
 
-	foreach ( get_group_sites_with_meta_key( META_KEY_HISTORY ) as $site ) {
+	foreach ( $sites as $site ) {
 		foreach ( get_transfer_history( (int) $site->blog_id ) as $entry ) {
 			$rows[] = array(
 				'site'  => $site,
@@ -840,9 +1105,9 @@ function get_recent_decided_transfers( int $limit = 20 ): array {
  * precisely because it doesn't scale otherwise.
  *
  * @param string $meta_key Blog meta key to look for.
- * @return \WP_Site[]
+ * @return \WP_Site[]|WP_Error
  */
-function get_group_sites_with_meta_key( string $meta_key ): array {
+function get_group_sites_with_meta_key( string $meta_key ) {
 	global $wpdb;
 
 	$site_ids = $wpdb->get_col(
@@ -852,6 +1117,30 @@ function get_group_sites_with_meta_key( string $meta_key ): array {
 		)
 	);
 
+	/*
+	 * An empty result set and a failed query are the same `array()` here, and
+	 * the screen renders the former as "No transfers are awaiting approval."
+	 * Silently reporting "nothing to do" to the people responsible for acting
+	 * on these is the one outcome this screen must never produce, so the
+	 * difference is surfaced rather than swallowed.
+	 */
+	if ( $wpdb->last_error ) {
+		trigger_error(
+			sprintf(
+				'Could not list group sites carrying "%1$s": %2$s',
+				$meta_key, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; an internal log message this repo's error handler (0-error-handling.php) relays to Slack.
+				$wpdb->last_error // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+			),
+			E_USER_WARNING
+		);
+
+		return new WP_Error(
+			'transfer_query_failed',
+			__( 'The list of ownership transfers could not be loaded. Please reload the page.', 'wordcamporg' ),
+			array( 'status' => 500 )
+		);
+	}
+
 	$sites = array();
 
 	foreach ( $site_ids as $site_id ) {
@@ -859,8 +1148,12 @@ function get_group_sites_with_meta_key( string $meta_key ): array {
 		$site    = get_site( $site_id );
 
 		// Same exclusions as `Archive\get_group_sites()`: only sites on this
-		// network, never the placeholder root, never a deleted site.
-		if ( ! $site || GROUPS_ROOT_BLOG_ID === $site_id || GROUPS_NETWORK_ID !== (int) $site->network_id || $site->deleted ) {
+		// network, never the placeholder root, and never a site that is
+		// deleted, spammed, or archived. The last two matter most here: those
+		// groups are out of circulation, and an Approve button next to one
+		// would hand a live group's ownership over on the strength of a
+		// request made before it was taken down.
+		if ( ! $site || GROUPS_ROOT_BLOG_ID === $site_id || GROUPS_NETWORK_ID !== (int) $site->network_id || $site->deleted || $site->spam || $site->archived ) {
 			continue;
 		}
 
@@ -949,9 +1242,25 @@ function render_page(): void {
 	$pending_rows = get_sites_with_pending_transfers();
 	$recent_rows  = get_recent_decided_transfers();
 	$updated      = isset( $_GET['updated'] ) ? sanitize_key( wp_unslash( $_GET['updated'] ) ) : '';
+
+	// A failed lookup must read as "we could not check", never as the
+	// identical-looking "there is nothing to approve" empty state below.
+	$pending_error = is_wp_error( $pending_rows ) ? $pending_rows : null;
+
+	if ( $pending_error ) {
+		$pending_rows = array();
+	}
+
+	if ( is_wp_error( $recent_rows ) ) {
+		$recent_rows = array();
+	}
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'Ownership Transfers', 'wordcamporg' ); ?></h1>
+
+		<?php if ( $pending_error ) : ?>
+			<div class="notice notice-error"><p><?php echo esc_html( $pending_error->get_error_message() ); ?></p></div>
+		<?php endif; ?>
 
 		<?php if ( in_array( $updated, array( 'approved', 'rejected' ), true ) ) : ?>
 			<div class="notice notice-success is-dismissible"><p>
@@ -981,7 +1290,15 @@ function render_page(): void {
 			</thead>
 			<tbody>
 				<?php if ( empty( $pending_rows ) ) : ?>
-					<tr><td colspan="5"><?php esc_html_e( 'No transfers are awaiting approval.', 'wordcamporg' ); ?></td></tr>
+					<tr><td colspan="5">
+						<?php
+						echo esc_html(
+							$pending_error
+								? __( 'The list of pending transfers could not be loaded.', 'wordcamporg' )
+								: __( 'No transfers are awaiting approval.', 'wordcamporg' )
+						);
+						?>
+					</td></tr>
 				<?php else : ?>
 					<?php foreach ( $pending_rows as $row ) : ?>
 						<?php

@@ -118,12 +118,40 @@ function recipient_for_user( int $user_id ): ?array {
 }
 
 /**
+ * Report a notification that had no one to go to.
+ *
+ * A transfer whose emails silently go nowhere looks, to everyone involved,
+ * exactly like a transfer nobody has got round to yet: the candidate never
+ * learns they were nominated, or the network admins never learn something is
+ * waiting on them. `send_notification()` already warns when handing a message
+ * to `wp_mail()` fails; this covers the other half -- never getting that far
+ * because there was no usable address to send to.
+ *
+ * @param string $event   Which notification was being sent.
+ * @param int    $site_id Group site ID.
+ * @param string $who     Who the message was meant for.
+ */
+function warn_no_recipient( string $event, int $site_id, string $who ): void {
+	trigger_error(
+		sprintf(
+			'Skipped the "%1$s" ownership-transfer notification for site %2$d: no usable email address for %3$s.',
+			$event, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Not HTML output; relayed to Slack by this repo's error handler.
+			$site_id, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+			$who // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Ditto.
+		),
+		E_USER_WARNING
+	);
+}
+
+/**
  * Notify the candidate that they've been nominated.
  */
 function notify_candidate_nominated( int $site_id, array $pending ): void {
 	$recipient = recipient_for_user( (int) $pending['to_user_id'] );
 
 	if ( ! $recipient ) {
+		warn_no_recipient( 'nominated', $site_id, sprintf( 'the candidate (user %d)', (int) $pending['to_user_id'] ) );
+
 		return;
 	}
 
@@ -146,6 +174,14 @@ function notify_candidate_nominated( int $site_id, array $pending ): void {
  * Notify network admins that a transfer needs their approval.
  */
 function notify_admins_awaiting_approval( int $site_id, array $pending ): void {
+	$recipients = get_network_admin_emails();
+
+	if ( empty( $recipients ) ) {
+		warn_no_recipient( 'awaiting approval', $site_id, 'any network admin' );
+
+		return;
+	}
+
 	$group_name = get_blog_option( $site_id, 'blogname' );
 	$from_user  = get_userdata( (int) $pending['from_user_id'] );
 	$to_user    = get_userdata( (int) $pending['to_user_id'] );
@@ -159,7 +195,7 @@ function notify_admins_awaiting_approval( int $site_id, array $pending ): void {
 		network_admin_url( 'admin.php?page=' . Transfer\MENU_SLUG )
 	);
 
-	foreach ( get_network_admin_emails() as $recipient ) {
+	foreach ( $recipients as $recipient ) {
 		send_notification(
 			$recipient,
 			sprintf( __( 'Approval needed: ownership transfer for "%s"', 'wordcamporg' ), $group_name ),
@@ -175,6 +211,8 @@ function notify_initiator_declined( int $site_id, array $pending ): void {
 	$recipient = recipient_for_user( (int) $pending['initiated_by'] );
 
 	if ( ! $recipient ) {
+		warn_no_recipient( 'declined', $site_id, sprintf( 'the initiator (user %d)', (int) $pending['initiated_by'] ) );
+
 		return;
 	}
 
@@ -198,6 +236,8 @@ function notify_candidate_cancelled( int $site_id, array $pending ): void {
 	$recipient = recipient_for_user( (int) $pending['to_user_id'] );
 
 	if ( ! $recipient ) {
+		warn_no_recipient( 'cancelled', $site_id, sprintf( 'the candidate (user %d)', (int) $pending['to_user_id'] ) );
+
 		return;
 	}
 
@@ -231,13 +271,17 @@ function notify_parties_executed( int $site_id, array $pending ): void {
 	foreach ( array( $pending['from_user_id'], $pending['to_user_id'] ) as $user_id ) {
 		$recipient = recipient_for_user( (int) $user_id );
 
-		if ( $recipient ) {
-			send_notification(
-				$recipient,
-				sprintf( __( 'Ownership transfer completed for "%s"', 'wordcamporg' ), $group_name ),
-				$body
-			);
+		if ( ! $recipient ) {
+			warn_no_recipient( 'completed', $site_id, sprintf( 'user %d', (int) $user_id ) );
+
+			continue;
 		}
+
+		send_notification(
+			$recipient,
+			sprintf( __( 'Ownership transfer completed for "%s"', 'wordcamporg' ), $group_name ),
+			$body
+		);
 	}
 }
 
@@ -257,12 +301,16 @@ function notify_parties_rejected( int $site_id, array $pending, string $reason )
 	foreach ( array( $pending['from_user_id'], $pending['to_user_id'] ) as $user_id ) {
 		$recipient = recipient_for_user( (int) $user_id );
 
-		if ( $recipient ) {
-			send_notification(
-				$recipient,
-				sprintf( __( 'Ownership transfer rejected for "%s"', 'wordcamporg' ), $group_name ),
-				$body
-			);
+		if ( ! $recipient ) {
+			warn_no_recipient( 'rejected', $site_id, sprintf( 'user %d', (int) $user_id ) );
+
+			continue;
 		}
+
+		send_notification(
+			$recipient,
+			sprintf( __( 'Ownership transfer rejected for "%s"', 'wordcamporg' ), $group_name ),
+			$body
+		);
 	}
 }

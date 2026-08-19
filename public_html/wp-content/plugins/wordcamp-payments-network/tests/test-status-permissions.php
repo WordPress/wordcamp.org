@@ -99,8 +99,14 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		$draft = $this->create_draft( 'wcb_reimbursement' );
 
 		$result = set_request_status(
-			array( 'post_type' => 'wcb_reimbursement', 'post_status' => 'wcb-approved' ),
-			array( 'ID' => $draft, 'post_status' => 'wcb-approved' )
+			array(
+				'post_type'   => 'wcb_reimbursement',
+				'post_status' => 'wcb-approved',
+			),
+			array(
+				'ID'          => $draft,
+				'post_status' => 'wcb-approved',
+			)
 		);
 
 		$this->assertSame( 'wcb-pending-approval', $result['post_status'] );
@@ -114,8 +120,15 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		$draft = $this->create_draft( 'wcb_reimbursement' );
 
 		$result = set_request_status(
-			array( 'post_type' => 'wcb_reimbursement', 'post_status' => 'draft' ),
-			array( 'ID' => $draft, 'post_status' => 'draft', 'wcb-update' => 'Submit for Review' )
+			array(
+				'post_type'   => 'wcb_reimbursement',
+				'post_status' => 'draft',
+			),
+			array(
+				'ID'          => $draft,
+				'post_status' => 'draft',
+				'wcb-update'  => 'Submit for Review',
+			)
 		);
 
 		$this->assertSame( 'wcb-pending-approval', $result['post_status'] );
@@ -129,8 +142,14 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		$draft = $this->create_draft( 'wcb_reimbursement' );
 
 		$result = set_request_status(
-			array( 'post_type' => 'wcb_reimbursement', 'post_status' => 'wcb-approved' ),
-			array( 'ID' => $draft, 'post_status' => 'wcb-approved' )
+			array(
+				'post_type'   => 'wcb_reimbursement',
+				'post_status' => 'wcb-approved',
+			),
+			array(
+				'ID'          => $draft,
+				'post_status' => 'wcb-approved',
+			)
 		);
 
 		$this->assertSame( 'wcb-approved', $result['post_status'] );
@@ -152,7 +171,10 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 				'post_date'     => '2020-01-01 00:00:00',
 				'post_date_gmt' => '2020-01-01 00:00:00',
 			),
-			array( 'ID' => $draft, 'post_status' => 'wcb-approved' )
+			array(
+				'ID'          => $draft,
+				'post_status' => 'wcb-approved',
+			)
 		);
 
 		$this->assertSame( 'wcb-pending-approval', $result['post_status'] );
@@ -172,7 +194,10 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 				'post_date'     => '2020-01-01 00:00:00',
 				'post_date_gmt' => '2020-01-01 00:00:00',
 			),
-			array( 'ID' => $draft, 'post_status' => 'wcb-approved' )
+			array(
+				'ID'          => $draft,
+				'post_status' => 'wcb-approved',
+			)
 		);
 
 		$this->assertSame( 'wcb-approved', $result['post_status'] );
@@ -189,9 +214,15 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		$draft   = $this->create_draft( 'wcb_sponsor_invoice' );
 
 		$result = set_invoice_status(
-			array( 'post_type' => 'wcb_sponsor_invoice', 'post_status' => 'wcbsi_approved' ),
+			array(
+				'post_type'   => 'wcb_sponsor_invoice',
+				'post_status' => 'wcbsi_approved',
+			),
 			array_merge(
-				array( 'ID' => $draft, 'post_status' => 'wcbsi_approved' ),
+				array(
+					'ID'          => $draft,
+					'post_status' => 'wcbsi_approved',
+				),
 				$this->complete_invoice_fields( $sponsor )
 			)
 		);
@@ -208,9 +239,15 @@ class Test_Status_Permissions extends WP_UnitTestCase {
 		$draft   = $this->create_draft( 'wcb_sponsor_invoice' );
 
 		$result = set_invoice_status(
-			array( 'post_type' => 'wcb_sponsor_invoice', 'post_status' => 'wcbsi_approved' ),
+			array(
+				'post_type'   => 'wcb_sponsor_invoice',
+				'post_status' => 'wcbsi_approved',
+			),
 			array_merge(
-				array( 'ID' => $draft, 'post_status' => 'wcbsi_approved' ),
+				array(
+					'ID'          => $draft,
+					'post_status' => 'wcbsi_approved',
+				),
 				$this->complete_invoice_fields( $sponsor )
 			)
 		);

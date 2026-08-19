@@ -739,6 +739,10 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 
 		$this->create_site_event( $brisbane, 'Brisbane Meetup' );
 
+		// The crashing site needs rows of its own: a site that collects
+		// nothing has nothing to write, so the write below would never run.
+		$this->create_site_event( $hobart, 'Hobart Social' );
+
 		// Stand in for a fatal during collection: the site is read, but its
 		// result never gets written.
 		$kill = function () {
@@ -920,6 +924,74 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->assertArrayHasKey( $site_id, $artifact['failed_sites'] );
 		$this->assertSame( array(), $artifact['rows'], 'A site reported unreadable must contribute no rows.' );
 		$this->assertSame( 0, $artifact['exported_site_count'] );
+	}
+
+	/**
+	 * A site whose rows can't be stored is reported as failed, rather than
+	 * advancing past it and putting an empty group in the file.
+	 */
+	public function test_unstorable_rows_fail_the_site() {
+		$site_id = $this->group_sites['brisbane'];
+
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			$this->build_job(
+				array(
+					'sites'         => array( $site_id ),
+					'pending_sites' => array( $site_id ),
+					'claim_token'   => 'mine',
+				)
+			)
+		);
+
+		$block_write = function ( $value, $old_value ) {
+			unset( $value );
+
+			// A no-op write is how update_site_option() reports failure.
+			return $old_value;
+		};
+		add_filter( 'pre_update_site_option_' . Network_Export\rows_option_key( $site_id ), $block_write, 10, 2 );
+
+		Network_Export\finish_site( 'mine', $site_id, array( $this->build_row() ) );
+
+		remove_filter( 'pre_update_site_option_' . Network_Export\rows_option_key( $site_id ), $block_write, 10 );
+
+		$this->assertArrayHasKey( $site_id, Network_Export\get_job()['failed_sites'] );
+
+		Network_Export\finalize_job( 'mine' );
+
+		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
+		$this->assertSame( array(), $artifact['rows'] );
+		$this->assertSame( 0, $artifact['exported_site_count'], 'A site with no stored rows must not count as exported.' );
+	}
+
+	/**
+	 * Re-collecting a site that already has identical rows stored is not a
+	 * write failure — `update_site_option()` reports false for an unchanged
+	 * value, which would otherwise fail a perfectly good retry.
+	 */
+	public function test_recollecting_identical_rows_is_not_a_failure() {
+		$site_id = $this->group_sites['brisbane'];
+		$rows    = array( $this->build_row() );
+
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			$this->build_job(
+				array(
+					'sites'         => array( $site_id ),
+					'pending_sites' => array( $site_id ),
+					'claim_token'   => 'mine',
+				)
+			)
+		);
+
+		// An earlier attempt already stored exactly these rows.
+		Network_Export\store_site_rows( $site_id, $rows );
+
+		Network_Export\finish_site( 'mine', $site_id, $rows );
+
+		$this->assertSame( array(), Network_Export\get_job()['failed_sites'], 'An unchanged rewrite is not a failure.' );
+		$this->assertSame( $rows, Network_Export\get_site_rows( $site_id ) );
 	}
 
 	/**

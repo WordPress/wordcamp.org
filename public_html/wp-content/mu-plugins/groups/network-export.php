@@ -355,8 +355,18 @@ function get_site_rows( int $site_id ): array {
  * @param int     $site_id Site ID.
  * @param array[] $rows    Its aggregate rows.
  */
-function store_site_rows( int $site_id, array $rows ): void {
-	update_site_option( rows_option_key( $site_id ), $rows );
+function store_site_rows( int $site_id, array $rows ): bool {
+	/*
+	 * `update_site_option()` also reports false when the stored value is
+	 * already identical — which is exactly what a retry that re-collected the
+	 * same rows produces. Treat that as stored, or the retry would be
+	 * misreported as a failed site.
+	 */
+	if ( get_site_rows( $site_id ) === $rows ) {
+		return true;
+	}
+
+	return update_site_option( rows_option_key( $site_id ), $rows );
 }
 
 /**
@@ -623,6 +633,13 @@ function finish_site( string $token, int $site_id, $rows ): void {
 		array_shift( $job['pending_sites'] );
 	}
 
+	if ( ! is_wp_error( $rows ) && ! store_site_rows( $site_id, $rows ) ) {
+		// The rows couldn't be stored, so this site has no data in the export
+		// — record that rather than advancing past it silently, which would
+		// put an empty group in the file as if it had held no events.
+		$rows = new WP_Error( 'export_rows_write_failed', 'Could not store the rows collected for this site.' );
+	}
+
 	if ( is_wp_error( $rows ) ) {
 		// A failed site is recorded, not silently omitted — a file that
 		// quietly misses a group reads as "that group had no events".
@@ -643,8 +660,6 @@ function finish_site( string $token, int $site_id, $rows ): void {
 				'error' => $rows->get_error_code(),
 			)
 		);
-	} else {
-		store_site_rows( $site_id, $rows );
 	}
 
 	update_site_option( JOB_OPTION, $job );

@@ -22,6 +22,8 @@ import {
 import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 
+import OwnershipTransferPanel from './ownership-transfer-panel';
+
 const ROLE_OPTIONS = [
 	{ label: __( 'Member', 'wporg-groups-frontend' ), value: 'subscriber' },
 	{ label: __( 'Event Organizer', 'wporg-groups-frontend' ), value: 'author' },
@@ -123,6 +125,7 @@ export default function MembersTab( { canManageRoles = false } ) {
 		{ className: 'wporg-settings-tab' },
 		notice &&
 			h( Notice, { status: 'info', isDismissible: true, onDismiss: () => setNotice( '' ) }, notice ),
+		h( OwnershipTransferPanel ),
 		h(
 			'div',
 			{ className: 'wporg-members-tab__controls' },

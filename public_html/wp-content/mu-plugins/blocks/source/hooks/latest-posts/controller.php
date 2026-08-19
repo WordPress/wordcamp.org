@@ -81,19 +81,71 @@ add_action( 'init', __NAMESPACE__ . '\init', 21 ); // 21 to be after block regis
 /**
  * Allow all users to read the "Latest Posts" renderer endpoint.
  *
+ * The front-end block polls this route with no session, so core's `edit_posts`
+ * check denies it and the callback has to run again here. This filter fires
+ * whether or not that check passed, so each guard below keeps the re-run
+ * pinned to the request the live block actually makes.
+ *
  * @param WP_HTTP_Response|WP_Error $response Result to send to the client. Usually a WP_REST_Response or WP_Error.
  * @param array                     $handler  Route handler used for the request.
  * @param WP_REST_Request           $request  Request used to generate the response.
- * @return WP_REST_Response Response returned by the callback.
+ * @return WP_HTTP_Response|WP_Error Response returned by the callback.
  */
 function safelist_block_renderer( $response, $handler, $request ) {
 	// Only apply to the latest posts block.
-	if ( '/wp/v2/block-renderer/core/latest-posts' === $request->get_route() ) {
-		return call_user_func( $handler['callback'], $request );
+	if ( '/wp/v2/block-renderer/core/latest-posts' !== $request->get_route() ) {
+		return $response;
 	}
-	return $response;
+
+	// In `get_param()` the query string outranks the route path, so the path does
+	// not say which block renders.
+	if ( 'core/latest-posts' !== $request->get_param( 'name' ) ) {
+		return $response;
+	}
+
+	// `post_id` is what core gates on `edit_post`; this block never sends one.
+	if ( (int) $request->get_param( 'post_id' ) > 0 ) {
+		return $response;
+	}
+
+	// Leave any other objection standing, including the Coming Soon lockdown.
+	if ( ! is_wp_error( $response ) || 'block_cannot_read' !== $response->get_error_code() ) {
+		return $response;
+	}
+
+	return call_user_func( $handler['callback'], $request );
 }
 add_filter( 'rest_request_after_callbacks', __NAMESPACE__ . '\safelist_block_renderer', 10, 3 );
+
+/**
+ * Whether the markup is one `<ul>` container spanning the whole string.
+ *
+ * The tag swap below renames the first `<ul` and the last `</ul>`, so both have to
+ * belong to the same element. A sibling list would otherwise leave
+ * `<div>…</ul><ul>…</div>`.
+ *
+ * @param string $markup Rendered block markup.
+ * @return bool
+ */
+function is_swappable_container( $markup ) {
+	if ( ! preg_match( '#\A\s*<ul\b#', $markup ) || ! preg_match( '#</ul>\s*\z#', $markup ) ) {
+		return false;
+	}
+
+	preg_match_all( '#<(/?)ul\b#i', $markup, $matches );
+	$depth = 0;
+
+	foreach ( $matches[1] as $index => $slash ) {
+		$depth += '' === $slash ? 1 : -1;
+
+		// The container closed, so it has to be the last `</ul>` in the markup.
+		if ( 0 === $depth ) {
+			return count( $matches[1] ) - 1 === $index;
+		}
+	}
+
+	return false;
+}
 
 /**
  * Filter the content of the latest posts block.
@@ -114,22 +166,32 @@ function render( $block_content, $block ) {
 	$enabled = isset( $block['attrs']['liveUpdateEnabled'] ) && $block['attrs']['liveUpdateEnabled'];
 	// Order by date, desc is the default, so these properties are not set.
 	$order_date_desc = ! isset( $block['attrs']['orderBy'] ) && ! isset( $block['attrs']['order'] );
-	if ( $enabled && $order_date_desc ) {
-		$block_content = str_replace(
-			'wp-block-latest-posts ',
-			'wp-block-latest-posts has-live-update is-loading ',
-			$block_content
-		);
+	if ( $enabled && $order_date_desc && is_swappable_container( $block_content ) ) {
+		/*
+		 * Rewrite the container through the HTML API, not by string content:
+		 * `str_replace()` also matched its needle inside attribute values (the
+		 * featured image's `alt`, the post title's `aria-label`) and injected a `"`
+		 * that closed them. `set_attribute()` escapes, and neither it nor
+		 * `add_class()` can address anything but a real tag.
+		 */
+		$processor = new \WP_HTML_Tag_Processor( $block_content );
 
-		// Inject our attributes onto the container element, switch container element to div.
-		$block_content = str_replace(
-			'ul class=',
-			sprintf( 'div data-attributes="%s" class=', rawurlencode( wp_json_encode( $block['attrs'] ) ) ),
-			$block_content
-		);
+		if ( $processor->next_tag() && 'UL' === $processor->get_tag() ) {
+			$processor->add_class( 'has-live-update' );
+			$processor->add_class( 'is-loading' );
+			$processor->set_attribute( 'data-attributes', rawurlencode( wp_json_encode( $block['attrs'] ) ) );
 
-		// Replace the final closing ul with a closing div, since we changed this above.
-		$block_content = preg_replace( '/<\/ul>$/', '</div>', $block_content );
+			$block_content = $processor->get_updated_html();
+
+			/*
+			 * `render-frontend.js` renders the polled markup into this element, and that
+			 * markup has been through this filter too, so it arrives as a `<div>`. A
+			 * `<ul>` cannot hold it. Anchored to the ends of the string, where an
+			 * attribute value cannot match.
+			 */
+			$block_content = preg_replace( '#\A(\s*)<ul\b#', '$1<div', $block_content, 1 );
+			$block_content = preg_replace( '#</ul>(\s*)\z#', '</div>$1', $block_content, 1 );
+		}
 	}
 
 	return $block_content;

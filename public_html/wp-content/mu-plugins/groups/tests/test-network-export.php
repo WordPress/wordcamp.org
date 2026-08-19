@@ -33,6 +33,14 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	protected $group_sites = array();
 
 	/**
+	 * Every group site created for the current test, including ones removed
+	 * from `$group_sites`, so their row options can be cleaned up.
+	 *
+	 * @var int[]
+	 */
+	protected $group_site_ids = array();
+
+	/**
 	 * Create two group sites with working GatherPress tables.
 	 */
 	protected function setUp(): void {
@@ -52,13 +60,18 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 			wp_delete_site( $site_id );
 		}
 
-		$this->group_sites = array();
-
 		unset( $_REQUEST['_wpnonce'], $_POST['_wpnonce'], $_GET['_wpnonce'], $_GET['format'] );
 
 		delete_site_option( Network_Export\JOB_OPTION );
-		delete_site_option( Network_Export\ROWS_OPTION );
 		delete_site_option( Network_Export\EXPORT_OPTION );
+
+		foreach ( $this->group_site_ids as $site_id ) {
+			Network_Export\delete_site_rows( $site_id );
+		}
+
+		$this->group_sites    = array();
+		$this->group_site_ids = array();
+
 		wp_clear_scheduled_hook( Network_Export\CRON_HOOK );
 
 		parent::tearDown();
@@ -79,6 +92,8 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 				'network_id' => GROUPS_NETWORK_ID,
 			)
 		);
+
+		$this->group_site_ids[] = $site_id;
 
 		$this->with_site(
 			$site_id,
@@ -597,7 +612,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$job = Network_Export\get_job();
 		$this->assertSame( 'run-b', $job['claim_token'], "Run B's lease must be intact." );
 		$this->assertSame( $sites, $job['pending_sites'], 'The cursor must not rewind.' );
-		$this->assertSame( array(), Network_Export\get_collected_rows(), 'A stale claim must not contribute rows.' );
+		$this->assertSame( array(), Network_Export\get_site_rows( $sites[0] ), 'A stale claim must not contribute rows.' );
 		$this->assertFalse( get_site_option( Network_Export\EXPORT_OPTION ), 'No artifact may be published by a stale claim.' );
 	}
 
@@ -619,10 +634,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 				)
 			)
 		);
-		update_site_option(
-			Network_Export\ROWS_OPTION,
-			array( $site_id => array( $this->build_row( array( 'event_title' => 'Kept' ) ) ) )
-		);
+		Network_Export\store_site_rows( $site_id, array( $this->build_row( array( 'event_title' => 'Kept' ) ) ) );
 
 		$block_write = function ( $value, $old_value ) {
 			unset( $value );
@@ -639,7 +651,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 
 		$this->assertFalse( $committed );
 		$this->assertNotEmpty( Network_Export\get_job(), 'The job must survive a failed artifact write.' );
-		$this->assertSame( 'Kept', Network_Export\get_collected_rows()[ $site_id ][0]['event_title'] );
+		$this->assertSame( 'Kept', Network_Export\get_site_rows( $site_id )[0]['event_title'] );
 	}
 
 	/**
@@ -729,16 +741,10 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 
 		// Stand in for a fatal during collection: the site is read, but its
 		// result never gets written.
-		$kill = function ( $value, $old_value ) use ( $hobart ) {
-			unset( $old_value );
-
-			if ( is_array( $value ) && array_key_exists( $hobart, $value ) ) {
-				throw new \RuntimeException( 'process died before the write' );
-			}
-
-			return $value;
+		$kill = function () {
+			throw new \RuntimeException( 'process died before the write' );
 		};
-		add_filter( 'pre_update_site_option_' . Network_Export\ROWS_OPTION, $kill, 10, 2 );
+		add_filter( 'pre_update_site_option_' . Network_Export\rows_option_key( $hobart ), $kill );
 
 		Network_Export\queue_export( array( $brisbane, $hobart ) );
 
@@ -748,7 +754,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 			++$guard;
 		}
 
-		remove_filter( 'pre_update_site_option_' . Network_Export\ROWS_OPTION, $kill, 10 );
+		remove_filter( 'pre_update_site_option_' . Network_Export\rows_option_key( $hobart ), $kill );
 
 		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
 
@@ -862,7 +868,11 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 
 		$job = Network_Export\get_job();
 		$this->assertCount( 3, $job['pending_sites'], 'One run must stop at the batch boundary.' );
-		$this->assertCount( Network_Export\SITES_PER_BATCH, Network_Export\get_collected_rows(), "The first batch's rows must be persisted." );
+		$collected = 0;
+		foreach ( $sites as $site_id ) {
+			$collected += count( Network_Export\get_site_rows( $site_id ) );
+		}
+		$this->assertSame( Network_Export\SITES_PER_BATCH, $collected, "The first batch's rows must be persisted." );
 		$this->assertNotFalse( wp_next_scheduled( Network_Export\CRON_HOOK ), 'The remainder must be rescheduled.' );
 
 		$this->drain_export();
@@ -871,7 +881,84 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 		$this->assertCount( $total, $artifact['rows'], 'Every batch must contribute its rows.' );
 		$this->assertSame( $total, $artifact['event_count'] );
 		$this->assertSame( 'Brisbane Meetup', $artifact['rows'][0]['event_title'], 'Rows follow the queued site order.' );
-		$this->assertSame( array(), get_site_option( Network_Export\ROWS_OPTION, array() ), 'The working rows must be cleaned up.' );
+		foreach ( $sites as $site_id ) {
+			$this->assertSame( array(), Network_Export\get_site_rows( $site_id ), 'The working rows must be cleaned up.' );
+		}
+	}
+
+	/**
+	 * When a retried site fails, the rows an earlier attempt stored are
+	 * discarded — otherwise the group would appear in the file *and* in the
+	 * "could not be read" list.
+	 */
+	public function test_failure_discards_rows_from_an_earlier_attempt() {
+		$site_id = $this->group_sites['brisbane'];
+
+		update_site_option(
+			Network_Export\JOB_OPTION,
+			$this->build_job(
+				array(
+					'sites'         => array( $site_id ),
+					'pending_sites' => array( $site_id ),
+					'claim_token'   => 'mine',
+				)
+			)
+		);
+
+		// Attempt one got as far as storing rows, then died before the cursor
+		// moved on.
+		Network_Export\store_site_rows( $site_id, array( $this->build_row( array( 'event_title' => 'Half-collected' ) ) ) );
+
+		// Attempt two fails outright.
+		Network_Export\finish_site( 'mine', $site_id, new \WP_Error( 'export_site_unavailable', 'gone' ) );
+
+		$this->assertSame( array(), Network_Export\get_site_rows( $site_id ), 'Stale rows must not survive a failure.' );
+
+		Network_Export\finalize_job( 'mine' );
+
+		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
+		$this->assertArrayHasKey( $site_id, $artifact['failed_sites'] );
+		$this->assertSame( array(), $artifact['rows'], 'A site reported unreadable must contribute no rows.' );
+		$this->assertSame( 0, $artifact['exported_site_count'] );
+	}
+
+	/**
+	 * A group site that has never had a request of its own gets its
+	 * recurring-events schema installed before its occurrence queries run —
+	 * those tables are per-site and created lazily, from hooks that never
+	 * fire for a `switch_to_blog()` in cron.
+	 */
+	public function test_missing_occurrence_schema_is_installed_before_reading() {
+		$site_id = $this->group_sites['brisbane'];
+		$this->create_site_event( $site_id, 'Brisbane Meetup' );
+
+		// Stand in for a site provisioned before the plugin existed.
+		$this->with_site(
+			$site_id,
+			function () {
+				delete_option( Recurring_Events_Database::OPTION_NAME );
+			}
+		);
+
+		Network_Export\queue_export( array( $site_id ) );
+		$this->drain_export();
+
+		$installed = $this->with_site(
+			$site_id,
+			function () {
+				return get_option( Recurring_Events_Database::OPTION_NAME );
+			}
+		);
+
+		$this->assertSame(
+			Recurring_Events_Database::SCHEMA_VERSION,
+			$installed,
+			"The site's occurrence schema must be ensured before it is queried."
+		);
+
+		$artifact = get_site_option( Network_Export\EXPORT_OPTION );
+		$this->assertSame( array(), $artifact['failed_sites'] );
+		$this->assertSame( array( 'Brisbane Meetup' ), array_column( $artifact['rows'], 'event_title' ) );
 	}
 
 	/**
@@ -882,7 +969,7 @@ class Test_Groups_Network_Export extends Groups_TestCase {
 	public function test_recurring_series_expands_per_occurrence() {
 		$brisbane = $this->group_sites['brisbane'];
 
-		Recurring_Events_Database::maybe_install();
+		$this->with_site( $brisbane, array( Recurring_Events_Database::class, 'maybe_install' ) );
 
 		$date     = gmdate( 'Y-m-d', strtotime( '+14 days' ) );
 		$weekday  = strtoupper( substr( gmdate( 'D', strtotime( $date ) ), 0, 2 ) );

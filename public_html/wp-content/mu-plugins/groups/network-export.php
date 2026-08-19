@@ -71,14 +71,17 @@ const CRON_HOOK = 'wporg_groups_export_batch';
 const JOB_OPTION = 'wporg_groups_export_job';
 
 /**
- * Network option holding the rows collected so far, keyed by site ID.
+ * Prefix for the network options holding collected rows, one per site.
  *
- * Kept out of `JOB_OPTION` so the cursor stays small: it's read and written
- * once per site, and the screen reads it on every load just to show progress.
- * Keying by site also makes a re-collected site idempotent — a site retried
- * after a crash overwrites its own rows instead of appending them twice.
+ * Kept out of `JOB_OPTION` so the cursor stays small — the screen reads the
+ * cursor on every load, and a batch rewrites it for every site it finishes.
+ * Split one option *per* site rather than one keyed array, so finishing a
+ * site costs its own rows rather than every row collected so far: a large
+ * network would otherwise re-serialize a multi-megabyte blob hundreds of
+ * times over a run. Per-site keys also make a re-collected site idempotent —
+ * a retry after a crash overwrites its own rows instead of duplicating them.
  */
-const ROWS_OPTION = 'wporg_groups_export_job_rows';
+const ROWS_OPTION_PREFIX = 'wporg_groups_export_rows_';
 
 /**
  * Network option holding the last completed export's rows and metadata.
@@ -123,10 +126,10 @@ const SITES_PER_BATCH = 10;
 const CLAIM_LEASE = 5 * MINUTE_IN_SECONDS;
 
 /**
- * How many times a single site may be claimed before the export gives up on
- * it. A site whose collection kills the process (an uncatchable fatal, an
- * OOM) never gets to record itself as failed, so without this the same site
- * would be re-claimed after every lease expiry, forever.
+ * How many times `begin_site()` may hand out the same site before the export
+ * gives up on it. A site whose collection kills the process (an uncatchable
+ * fatal, an OOM) never gets to record itself as failed, so without this the
+ * cursor would hand out the same site on every resume, forever.
  */
 const MAX_SITE_ATTEMPTS = 3;
 
@@ -224,7 +227,7 @@ function queue_export( array $site_ids ): array {
 			}
 
 			// Rows from any abandoned previous run are not this run's.
-			delete_site_option( ROWS_OPTION );
+			delete_job_rows( $job );
 			update_site_option( JOB_OPTION, $job );
 
 			return true;
@@ -325,14 +328,55 @@ function site_label( int $site_id ): string {
 }
 
 /**
- * The rows collected so far, keyed by site ID.
+ * The network option holding one site's collected rows.
  *
- * @return array<int, array[]>
+ * @param int $site_id Site ID.
  */
-function get_collected_rows(): array {
-	$rows = get_site_option( ROWS_OPTION, array() );
+function rows_option_key( int $site_id ): string {
+	return ROWS_OPTION_PREFIX . $site_id;
+}
+
+/**
+ * The rows collected for one site, if it has been read yet.
+ *
+ * @param int $site_id Site ID.
+ * @return array[]
+ */
+function get_site_rows( int $site_id ): array {
+	$rows = get_site_option( rows_option_key( $site_id ), array() );
 
 	return is_array( $rows ) ? $rows : array();
+}
+
+/**
+ * Store one site's collected rows, replacing anything a previous attempt
+ * left behind.
+ *
+ * @param int     $site_id Site ID.
+ * @param array[] $rows    Its aggregate rows.
+ */
+function store_site_rows( int $site_id, array $rows ): void {
+	update_site_option( rows_option_key( $site_id ), $rows );
+}
+
+/**
+ * Discard one site's collected rows.
+ *
+ * @param int $site_id Site ID.
+ */
+function delete_site_rows( int $site_id ): void {
+	delete_site_option( rows_option_key( $site_id ) );
+}
+
+/**
+ * Discard the working rows of every site in a job.
+ *
+ * @param array $job Job whose rows should go.
+ */
+function delete_job_rows( array $job ): void {
+	foreach ( array_unique( (array) ( $job['sites'] ?? array() ) ) as $site_id ) {
+		delete_site_rows( (int) $site_id );
+	}
 }
 
 /**
@@ -359,9 +403,11 @@ function schedule_next_batch(): void {
  * Claiming stamps a lease and a per-claim token onto the stored job rather
  * than removing it: deleting it would make the run invisible to the busy
  * check, letting a concurrent start queue a second job for this batch to
- * later clobber. The token is what makes the commit safe — the job ID is the
- * same for every batch of a run, so an overrunning batch could otherwise
- * commit its stale cursor over the progress of the batch that replaced it.
+ * later clobber. The token is what every later write checks — `begin_site()`,
+ * `finish_site()` and `finalize_job()` all refuse to act on a job carrying
+ * someone else's token. The job ID can't serve that purpose: it's the same
+ * for every batch of a run, so a batch that overran its lease would look
+ * indistinguishable from the run that replaced it.
  *
  * Call inside `with_job_lock()`.
  *
@@ -582,6 +628,13 @@ function finish_site( string $token, int $site_id, $rows ): void {
 		// quietly misses a group reads as "that group had no events".
 		$job['failed_sites'][ $site_id ] = site_label( $site_id );
 
+		/*
+		 * An earlier attempt may have stored rows and died before advancing
+		 * the cursor. Leaving them would put the group in the file *and* in
+		 * the "could not be read" list.
+		 */
+		delete_site_rows( $site_id );
+
 		Logger\log(
 			'groups_export_site_failed',
 			array(
@@ -591,10 +644,7 @@ function finish_site( string $token, int $site_id, $rows ): void {
 			)
 		);
 	} else {
-		$collected             = get_collected_rows();
-		$collected[ $site_id ] = $rows;
-
-		update_site_option( ROWS_OPTION, $collected );
+		store_site_rows( $site_id, $rows );
 	}
 
 	update_site_option( JOB_OPTION, $job );
@@ -643,7 +693,7 @@ function finalize_job( string $token ): bool {
 	}
 
 	delete_site_option( JOB_OPTION );
-	delete_site_option( ROWS_OPTION );
+	delete_job_rows( $job );
 
 	return true;
 }
@@ -683,6 +733,17 @@ function collect_site_rows( int $site_id ) {
 	// otherwise leave the process stuck on the wrong blog.
 	try {
 		switch_to_blog( $site_id );
+
+		/*
+		 * The recurring-events tables are per-site and created lazily, from
+		 * hooks that don't fire for a `switch_to_blog()` in cron. A group site
+		 * that predates the plugin and hasn't served a request since would
+		 * otherwise fail its occurrence queries and drop out of the export
+		 * entirely. The call is a no-op once the site's schema is current.
+		 */
+		if ( class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
+			\WordPressdotorg\GatherPress_Recurring_Events\Database::maybe_install();
+		}
 
 		$events = get_posts(
 			array(
@@ -807,17 +868,16 @@ function get_rsvp_counts( array $event_ids ) {
 
 	$placeholders = implode( ', ', array_fill( 0, count( $event_ids ), '%d' ) );
 
-	$recurrence_select = "'' AS recurrence_id";
-	$recurrence_join   = '';
+	// Grouped by the same expression the SELECT emits, so two source rows can
+	// never collapse into one key after the fact.
+	$recurrence_expression = "''";
+	$recurrence_join       = '';
 
 	if ( class_exists( '\WordPressdotorg\GatherPress_Recurring_Events\Database' ) ) {
-		$mapping_table     = \WordPressdotorg\GatherPress_Recurring_Events\Database::comments_table();
-		$recurrence_select = 'COALESCE( occurrences.recurrence_id, %s ) AS recurrence_id';
-		$recurrence_join   = "LEFT JOIN {$mapping_table} AS occurrences ON occurrences.comment_id = comments.comment_ID";
+		$mapping_table         = \WordPressdotorg\GatherPress_Recurring_Events\Database::comments_table();
+		$recurrence_expression = "COALESCE( occurrences.recurrence_id, '' )";
+		$recurrence_join       = "LEFT JOIN {$mapping_table} AS occurrences ON occurrences.comment_id = comments.comment_ID";
 	}
-
-	// The `%s` above, when present, comes first in the argument list.
-	$query_args = '' === $recurrence_join ? $event_ids : array_merge( array( '' ), $event_ids );
 
 	/*
 	 * Disabled across the whole statement rather than per line: the query is a
@@ -828,7 +888,7 @@ function get_rsvp_counts( array $event_ids ) {
 	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT comments.comment_post_ID AS event_id, {$recurrence_select}, terms.slug AS status, COUNT(*) AS total
+			"SELECT comments.comment_post_ID AS event_id, {$recurrence_expression} AS recurrence_id, terms.slug AS status, COUNT(*) AS total
 			FROM {$wpdb->comments} AS comments
 			INNER JOIN {$wpdb->term_relationships} AS relationships ON relationships.object_id = comments.comment_ID
 			INNER JOIN {$wpdb->term_taxonomy} AS taxonomy ON taxonomy.term_taxonomy_id = relationships.term_taxonomy_id
@@ -838,8 +898,8 @@ function get_rsvp_counts( array $event_ids ) {
 				AND comments.comment_type = 'gatherpress_rsvp'
 				AND comments.comment_approved = '1'
 				AND taxonomy.taxonomy = '_gatherpress_rsvp_status'
-			GROUP BY event_id, recurrence_id, terms.slug",
-			$query_args
+			GROUP BY comments.comment_post_ID, {$recurrence_expression}, terms.slug",
+			$event_ids
 		)
 	);
 	// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
@@ -851,7 +911,13 @@ function get_rsvp_counts( array $event_ids ) {
 	$counts = array();
 
 	foreach ( (array) $rows as $row ) {
-		$counts[ (int) $row->event_id ][ (string) $row->recurrence_id ][ $row->status ] = (int) $row->total;
+		$event_id      = (int) $row->event_id;
+		$recurrence_id = (string) $row->recurrence_id;
+		$status        = (string) $row->status;
+
+		// Accumulate rather than assign: two source rows collapsing to the
+		// same key must add up, not overwrite each other.
+		$counts[ $event_id ][ $recurrence_id ][ $status ] = ( $counts[ $event_id ][ $recurrence_id ][ $status ] ?? 0 ) + (int) $row->total;
 	}
 
 	return $counts;
@@ -910,17 +976,16 @@ function get_occurrences( array $event_ids ) {
  * @return bool Whether the artifact was stored.
  */
 function record_artifact( array $job ): bool {
-	$failed    = (array) $job['failed_sites'];
-	$collected = get_collected_rows();
-	$rows      = array();
+	$failed = (array) $job['failed_sites'];
+	$rows   = array();
 
 	// Flatten in the order the sites were queued, so the file reads
 	// group-by-group rather than in whatever order the batches finished.
-	foreach ( $job['sites'] as $site_id ) {
-		if ( ! empty( $collected[ $site_id ] ) ) {
-			$rows = array_merge( $rows, $collected[ $site_id ] );
+	foreach ( array_unique( (array) $job['sites'] ) as $site_id ) {
+		$site_rows = get_site_rows( (int) $site_id );
 
-			unset( $collected[ $site_id ] );
+		if ( $site_rows ) {
+			$rows = array_merge( $rows, $site_rows );
 		}
 	}
 
@@ -990,9 +1055,9 @@ function handle_cancel_export(): void {
 	$job = get_job();
 
 	with_job_lock(
-		function () {
+		function () use ( $job ) {
 			delete_site_option( JOB_OPTION );
-			delete_site_option( ROWS_OPTION );
+			delete_job_rows( $job );
 		},
 		true
 	);

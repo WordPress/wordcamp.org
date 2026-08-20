@@ -159,7 +159,6 @@ body.error404 .site-content-container h1 {
 
 .groups-site-page-header {
 	background-color: var(--wp--preset--color--blueberry-4);
-	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 	padding: var(--wp--preset--spacing--30) var(--wp--preset--spacing--edge-space);
 }
 
@@ -212,7 +211,6 @@ body.error404 .site-content-container h1 {
 	box-sizing: border-box;
 	width: 100%;
 	padding-left: var(--wp--preset--spacing--40);
-	border-left: 1px solid var(--wp--preset--color--light-grey-1);
 }
 
 .groups-site-sidebar .wporg-event-manage,
@@ -753,7 +751,6 @@ body.error404 .site-content-container h1 {
 	gap: 12px;
 	padding: 16px;
 	background: var(--wp--preset--color--light-grey-2);
-	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
 }
 
@@ -858,7 +855,6 @@ body.error404 .site-content-container h1 {
 .wp-block-comments .wp-block-comment-template > li {
 	padding: 16px;
 	background: var(--wp--preset--color--light-grey-2);
-	border: 1px solid var(--wp--preset--color--light-grey-1);
 	border-radius: 4px;
 }
 

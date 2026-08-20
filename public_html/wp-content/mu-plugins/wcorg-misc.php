@@ -295,8 +295,11 @@ add_filter( 'change_locale', function() {
 
 // WordCamp.org QBO Integration.
 add_filter( 'wordcamp_qbo_options', function( $options ) {
-	// Secrets.
-	$options['hmac_key'] = WORDCAMP_QBO_HMAC_KEY;
+	// Secrets. The plugin withholds its REST routes when the key is absent, so leaving this unset is safer
+	// than fataling on an undefined constant.
+	if ( defined( 'WORDCAMP_QBO_HMAC_KEY' ) ) {
+		$options['hmac_key'] = WORDCAMP_QBO_HMAC_KEY;
+	}
 
 	// WordCamp Payments to QBO categories mapping.
 	$options['categories_map'] = array(

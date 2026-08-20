@@ -637,7 +637,7 @@ class WordCamp_Post_Types_Plugin {
 					}
 				}
 
-				$columns_html .= sprintf( '<td colspan="%d" class="%s" data-track-title="%s" data-session-id="%s">%s</td>', $colspan, esc_attr( implode( ' ', $classes ) ), $session_track_titles, esc_attr( $session->ID ), $content );
+				$columns_html .= sprintf( '<td colspan="%d" class="%s" data-track-title="%s" data-session-id="%s">%s</td>', (int) $colspan, esc_attr( implode( ' ', $classes ) ), esc_attr( $session_track_titles ), esc_attr( $session->ID ), $content );
 			}
 
 			$global_session      = count( $columns ) === $colspan ? ' global-session' : '';

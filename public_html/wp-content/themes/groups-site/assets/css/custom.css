@@ -310,20 +310,103 @@ body.error404 .site-content-container h1 {
  * substitutes this element instead, keeping the same 16:9 region and the
  * same rounded top corners.
  *
- * Flat Blueberry 4 and nothing else: a generated pattern would be artwork the
- * group never chose, and it competes with the real photography in the cards
- * beside it.
+ * The fill is shared with `.groups-site-event-card__media--placeholder`
+ * below — the archive and the front page render the same events, so an
+ * image-less event must look the same in both places. Two tones of the
+ * same blue plus a faint diagonal: quiet enough not to compete with real
+ * photography in the cards beside it, but not a flat empty slab.
  */
 
 .groups-site-featured-placeholder {
 	aspect-ratio: 16 / 9;
-	background: var(--wp--preset--color--blueberry-4);
 	border-radius: 3px 3px 0 0;
 }
 
 .wp-block-post-template .wp-block-post-title a:hover {
 	text-decoration: none;
 	color: var(--wp--preset--color--blueberry-1);
+}
+
+/*
+ * Pin the meta cluster (RSVP count + venue) to the card's bottom edge. The
+ * cards in a grid row share a height, but their excerpts don't share a
+ * length, so without this the venue lines end at three different heights
+ * across one row. The card and its body become flex columns; the meta group
+ * takes the leftover space as top margin. Mirrors the front-page PHP cards,
+ * which pin their `__rsvp` line the same way.
+ */
+
+.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color {
+	display: flex;
+	flex-direction: column;
+}
+
+.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > .wp-block-group {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+}
+
+/* The card group is `is-layout-constrained`, which puts
+   `margin-inline: auto !important` on every child. In block flow that's
+   inert, but flex/grid items with auto inline margins shrink to content
+   width and float to the middle — short lines like "2 attendees" drifted
+   off the left edge. An explicit full width zeroes the auto margins out. */
+
+.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > *,
+.gatherpress-event-query .wp-block-post-template .wp-block-group.has-border-color > .wp-block-group > * {
+	width: 100%;
+}
+
+.gatherpress-event-query .groups-site-card-meta {
+	margin-block-start: auto;
+	padding-top: 16px;
+}
+
+/* GatherPress renders both the RSVP count and the venue as empty strings
+   when there's nothing to say, which leaves this wrapper as an empty div
+   with padding — an event with neither would get a mystery gap. */
+
+.gatherpress-event-query .groups-site-card-meta:not(:has(*)) {
+	display: none;
+}
+
+/*
+ * Past events (the `?event_time=past` view — class set in `functions.php`)
+ * drop the blue "coming up" date treatment and mute their photography a
+ * touch. Same grid, but the page no longer dresses history as future.
+ */
+
+.groups-site-events-view-past .gatherpress-event-query .wp-block-gatherpress-event-date.has-blueberry-1-color {
+	color: var(--wp--preset--color--charcoal-4) !important;
+}
+
+.groups-site-events-view-past .gatherpress-event-query .wp-block-post-featured-image img {
+	filter: saturate(0.7);
+	opacity: 0.92;
+}
+
+/* ==========================================================================
+   Events archive — hero intro and empty state
+   ========================================================================== */
+
+/* The measure cap only left-aligns because the hero's heading group sets
+   `justifyContent: left` — a plain constrained layout would recentre any
+   child narrower than the content width. */
+
+.groups-site-events-intro {
+	max-width: 56ch;
+	text-wrap: pretty;
+}
+
+.groups-site-events-empty {
+	max-width: 52ch;
+	padding: var(--wp--preset--spacing--40) 0 var(--wp--preset--spacing--30);
+}
+
+.groups-site-events-empty__title {
+	font-weight: 600;
+	color: var(--wp--preset--color--charcoal-1);
 }
 
 /* Venue map: constrain to sidebar card width. */
@@ -530,7 +613,14 @@ body.error404 .site-content-container h1 {
 	border-bottom: 1px solid var(--wp--preset--color--light-grey-1);
 }
 
+/* Shared with the archive's `.groups-site-featured-placeholder` (see the
+   query-loop section above): an image-less event must look the same in the
+   front-page cards and the archive grid. Must stay after the
+   `background-size: cover` above, which it overrides for the placeholder. */
+
+.groups-site-featured-placeholder,
 .groups-site-event-card__media--placeholder {
+	background-color: var(--wp--preset--color--blueberry-4);
 	background-image: linear-gradient(
 			135deg,
 			var(--wp--preset--color--blueberry-4),

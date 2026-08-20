@@ -91,6 +91,32 @@ add_filter(
 );
 
 /**
+ * Describe the events archive's view state on `<body>` so the stylesheet can
+ * react to it.
+ *
+ * Adds `groups-site-events-view-{upcoming|past|all}`, mirroring the Time
+ * filter. Past events shouldn't wear the same blue "coming up" date
+ * treatment as upcoming ones, and the query loop itself has no idea which
+ * mode it rendered in.
+ */
+function event_archive_body_classes( array $classes ): array {
+	if ( ! is_post_type_archive( 'gatherpress_event' ) ) {
+		return $classes;
+	}
+
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only view state.
+	$time = isset( $_GET['event_time'] ) ? sanitize_key( wp_unslash( $_GET['event_time'] ) ) : 'upcoming';
+	if ( ! in_array( $time, array( 'upcoming', 'past', 'all' ), true ) ) {
+		$time = 'upcoming';
+	}
+
+	$classes[] = 'groups-site-events-view-' . $time;
+
+	return $classes;
+}
+add_filter( 'body_class', __NAMESPACE__ . '\event_archive_body_classes' );
+
+/**
  * Register a block pattern category for the theme.
  */
 function register_pattern_category() {

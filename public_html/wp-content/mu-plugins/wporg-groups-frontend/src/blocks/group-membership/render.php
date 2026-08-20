@@ -10,12 +10,18 @@ use const WordCamp\Groups\Frontend\Capabilities\EVENT_MANAGER_ROLES;
 use const WordCamp\Groups\Frontend\Capabilities\ORGANIZER_ROLES;
 
 $variant = $attributes['variant'] ?? 'combined';
-if ( ! in_array( $variant, array( 'combined', 'membership', 'preference' ), true ) ) {
+if ( ! in_array( $variant, array( 'combined', 'membership', 'preference', 'count' ), true ) ) {
 	$variant = 'combined';
 }
 
 $shows_membership = in_array( $variant, array( 'combined', 'membership' ), true );
 $shows_preference = in_array( $variant, array( 'combined', 'preference' ), true );
+
+// The standalone count lives in the hero's meta row next to the group
+// location; the sidebar membership variant leaves it out so the number
+// isn't stated twice on the same page.
+$shows_count      = in_array( $variant, array( 'combined', 'count' ), true );
+$needs_count_data = $shows_count || $shows_membership;
 
 $is_logged_in = is_user_logged_in();
 $is_member    = $is_logged_in && is_user_member_of_blog();
@@ -38,7 +44,7 @@ $renders_preference = $shows_preference && $is_member;
 // roles the label actually distinguishes.
 $renders_role_badge = $shows_membership && $is_member && in_array( $user_role, EVENT_MANAGER_ROLES, true );
 
-if ( ! $shows_membership && ! $renders_preference ) {
+if ( ! $shows_membership && ! $renders_preference && ! $shows_count ) {
 	return;
 }
 
@@ -49,7 +55,7 @@ $member_count = 0;
 $count_label  = '';
 $members_url  = '';
 
-if ( $shows_membership ) {
+if ( $needs_count_data ) {
 	$user_count   = count_users( 'time', get_current_blog_id() );
 	$member_count = $user_count['total_users'] ?? 0;
 	$count_label  = sprintf(
@@ -73,6 +79,18 @@ $context = array(
 	'restNonce'  => $rest_nonce,
 );
 
+// The count markup reads its label through the store's context-backed
+// getter, so the standalone variant needs these two keys as well.
+if ( 'count' === $variant ) {
+	$context = array_merge(
+		$context,
+		array(
+			'memberCount' => $member_count,
+			'countLabel'  => $count_label,
+		)
+	);
+}
+
 if ( $shows_membership ) {
 	$context = array_merge(
 		$context,
@@ -89,7 +107,12 @@ if ( $shows_membership ) {
 			'loading'      => false,
 		)
 	);
+}
 
+// Registered for every variant that prints the count: the server-side
+// directive processor resolves `state.countLabel` from here, so without
+// it the standalone count would render empty until hydration.
+if ( $needs_count_data ) {
 	wp_interactivity_state(
 		'wporg/group-membership',
 		array(
@@ -151,20 +174,27 @@ $wrapper_attributes = get_block_wrapper_attributes(
 				><?php esc_html_e( 'Join this group', 'wporg-groups-frontend' ); ?></button>
 			</div>
 		<?php endif; ?>
+	<?php endif; ?>
 
+	<?php if ( $shows_count || $renders_leave ) : ?>
 		<div class="wporg-group-membership__meta">
-			<?php if ( $members_url ) : ?>
-				<a class="wporg-group-membership__count" href="<?php echo esc_url( $members_url ); ?>">
-					<span data-wp-text="state.countLabel"><?php echo esc_html( $count_label ); ?></span>
-				</a>
-			<?php else : ?>
-				<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
-					<?php echo esc_html( $count_label ); ?>
-				</span>
+			<?php if ( $shows_count ) : ?>
+				<?php if ( $members_url ) : ?>
+					<a class="wporg-group-membership__count" href="<?php echo esc_url( $members_url ); ?>">
+						<span data-wp-text="state.countLabel"><?php echo esc_html( $count_label ); ?></span>
+					</a>
+				<?php else : ?>
+					<span class="wporg-group-membership__count" data-wp-text="state.countLabel">
+						<?php echo esc_html( $count_label ); ?>
+					</span>
+				<?php endif; ?>
+			<?php endif; ?>
+
+			<?php if ( $shows_count && $renders_leave ) : ?>
+				<span class="wporg-group-membership__meta-divider" aria-hidden="true">&middot;</span>
 			<?php endif; ?>
 
 			<?php if ( $renders_leave ) : ?>
-				<span class="wporg-group-membership__meta-divider" aria-hidden="true">&middot;</span>
 				<button
 					class="wporg-group-membership__count wporg-group-membership__leave"
 					data-wp-on--click="actions.leave"

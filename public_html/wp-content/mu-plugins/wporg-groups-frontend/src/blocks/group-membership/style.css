@@ -1,9 +1,10 @@
 /**
  * Group Membership block styles.
  *
- * Two variants share this file: the membership block (join button or role
- * badge, plus the member count) and the notification-preference checkbox.
- * Both live in the front page's sidebar, so text here is the 14px secondary
+ * Three variants share this file: the membership block (join button or
+ * role badge, plus leave), the notification-preference checkbox, and the
+ * standalone member count that renders in the front page hero. The first
+ * two live in the front page's sidebar, so text here is the 14px secondary
  * size rather than the 16px body size used in the main column.
  */
 

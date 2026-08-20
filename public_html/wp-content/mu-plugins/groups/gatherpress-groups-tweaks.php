@@ -267,10 +267,13 @@ add_filter(
 			'all'      => __( 'All events', 'wporg-groups-frontend' ),
 		);
 
-		$selected = array();
+		if ( ! isset( $options[ $current ] ) ) {
+			$current = 'upcoming';
+		}
+
+		$selected = array( $current );
 		$label    = __( 'Time', 'wporg-groups-frontend' );
-		if ( 'upcoming' !== $current && isset( $options[ $current ] ) ) {
-			$selected[] = $current;
+		if ( 'upcoming' !== $current ) {
 
 			// Single-select filters hide the wporg count badge, so carry the
 			// applied choice in the toggle text itself.

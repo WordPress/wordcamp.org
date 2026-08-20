@@ -179,14 +179,14 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 	}
 
 	/**
-	 * "Upcoming" is the default view, so it stays unannotated — labelling it
-	 * would imply a filter the visitor didn't choose.
+	 * "Upcoming" is the default view, so the toggle stays unannotated — but its
+	 * radio remains selected so the filter exposes the view currently on screen.
 	 */
-	public function test_event_time_filter_label_is_plain_on_the_default_view() {
+	public function test_event_time_filter_marks_upcoming_selected_on_the_default_view() {
 		$filter = $this->get_event_time_filter( null );
 
 		$this->assertSame( 'Time', $filter['label'] );
-		$this->assertSame( array(), $filter['selected'] );
+		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
 	}
 
 	/**
@@ -197,7 +197,7 @@ class Test_Groups_GatherPress_Tweaks extends Groups_TestCase {
 		$filter = $this->get_event_time_filter( 'whenever' );
 
 		$this->assertSame( 'Time', $filter['label'] );
-		$this->assertSame( array(), $filter['selected'] );
+		$this->assertSame( array( 'upcoming' ), $filter['selected'] );
 	}
 
 	/**

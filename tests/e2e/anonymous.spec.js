@@ -32,4 +32,13 @@ test.describe( 'anonymous visitor', () => {
 		// entirely absent for a logged-out visitor, not merely disabled.
 		await expect( page.locator( '.wp-element-button', { hasText: /manage/i } ) ).toHaveCount( 0 );
 	} );
+
+	test( '404 page keeps a route back to the group', async ( { page } ) => {
+		const response = await page.goto( `missing-page-${ Date.now() }` );
+		expect( response.status() ).toBe( 404 );
+
+		const groupBackLink = page.locator( '.groups-site-page-header a' );
+		await expect( groupBackLink ).toBeVisible();
+		await expect( groupBackLink ).toHaveAttribute( 'href', /\/group\/sunshine-coast-qld\/$/ );
+	} );
 } );

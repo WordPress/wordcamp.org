@@ -837,10 +837,14 @@ body.error404 .site-content-container h1 {
    Single post (news)
    ========================================================================== */
 
-/* The header band shows the featured image as a side thumbnail so it adds
-   no height above the fold. When a post has no featured image the block
-   renders nothing, which would leave a blank column and a squeezed title —
-   drop the column entirely so the title takes the full width. */
+/* The header band puts the featured image beside the title rather than
+   above it, so it costs no height above the fold. The band runs on the
+   same 1160px rail as every other inner page, which is what gives the
+   image room to read as a picture rather than a thumbnail; the article
+   below stays at 680px because that is the readable measure for prose.
+   When a post has no featured image the block renders nothing, which
+   would leave a blank column and a squeezed title — drop the column
+   entirely so the title takes the full width. */
 
 .groups-site-post-hero-media:not(:has(.wp-block-post-featured-image)) {
 	display: none;

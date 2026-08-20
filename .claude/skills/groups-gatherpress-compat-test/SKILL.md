@@ -209,6 +209,26 @@ docker compose exec wordcamp.test wp plugin install \
   --activate --url=events.wordpress.test/group/sunshine-coast-qld/
 ```
 
+Environment gotchas that look like code bugs but aren't:
+
+- **A new `groups-site` pattern file silently doesn't register** (its
+  `wp:pattern` reference renders empty, no error). WordPress caches the
+  theme's `patterns/` directory scan keyed by the theme's `Version:` header
+  — and `wp cache flush` does *not* clear it. Locally, run
+  `wp eval 'wp_get_theme()->delete_pattern_cache();' --url=<site>`; for a
+  deploy, bump the theme `Version:` in `style.css` (which invalidates the
+  cache everywhere) whenever adding/removing a pattern file.
+- **The phpunit container reports `Could not read "phpunit.xml.dist"`**
+  even though `ls /app` lists the file. Its bind mounts go stale when a
+  mounted file's inode changes on the host (macOS Docker); fix with
+  `docker compose -f docker-compose.phpunit.yml up -d --force-recreate phpunit_wp`.
+- **Freshly created `eventorganiser*`/`member*` accounts commonly fail
+  their first E2E run** at `dismissEditorOnboarding` — a brand-new account
+  hits the welcome-guide reinit race hardest because nothing is dismissed
+  in its server-side preferences yet. If the `error-context.md` shows the
+  editor with the welcome dialog (not a login form), just re-run once; the
+  account's stored dismissal makes later runs stable.
+
 **After bumping the pinned GatherPress version, also install/update
 [GatherPress Alpha](https://github.com/GatherPress/gatherpress-alpha)
 (version-locked to core) and run its one-time migration.** GatherPress ships

@@ -700,6 +700,19 @@ body.error404 .site-content-container h1 {
 }
 
 /* ==========================================================================
+   Single post (news)
+   ========================================================================== */
+
+/* The header band shows the featured image as a side thumbnail so it adds
+   no height above the fold. When a post has no featured image the block
+   renders nothing, which would leave a blank column and a squeezed title —
+   drop the column entirely so the title takes the full width. */
+
+.groups-site-post-hero-media:not(:has(.wp-block-post-featured-image)) {
+	display: none;
+}
+
+/* ==========================================================================
    Comments
    ========================================================================== */
 
